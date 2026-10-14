@@ -195,6 +195,23 @@ describe('android-proof.py blocked', () => {
     expect(r.present).toEqual([]);
   });
 
+  it('stopper med exit 1 når manifestet ikke har noen uses-permission å lese', () => {
+    // Et manifest med pakke, men uten en eneste tillatelse, er ikke et ekte
+    // butikkmanifest (INTERNET står alltid der); da er dumpen ufullstendig.
+    const isPermissionLine = (line, previous) =>
+      line.includes('E: uses-permission') ||
+      (previous ?? '').includes('E: uses-permission') ||
+      (line.includes('android:name') && line.includes('permission'));
+    const noPermissions = STORE.split('\n')
+      .filter((line, i, lines) => !isPermissionLine(line, lines[i - 1]))
+      .join('\n');
+    expect(noPermissions).toContain('A: package=');
+    const r = blocked(noPermissions, appJson({ blockedPermissions: LIST }));
+    expect(r.status).toBe(1);
+    expect(r.present).toEqual([]);
+    expect(r.stderr).not.toBe('');
+  });
+
   it.each([
     ['tom stdin', ''],
     ['stdin uten <manifest>', 'N: android=http://schemas.android.com/apk/res/android\n'],

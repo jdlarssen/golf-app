@@ -151,6 +151,8 @@ else
   (cd "$WORK/proto" && "$ZIP" -q "$WORK/proto.apk" AndroidManifest.xml resources.pb)
   if ! "$AAPT2" dump xmltree --file AndroidManifest.xml "$WORK/proto.apk" > "$WORK/manifest.xmltree" 2> "$WORK/aapt2.err"; then
     fail "aapt2 kunne ikke lese manifestet: $(head -c 200 "$WORK/aapt2.err" | tr '\n' ' ')"
+    # En halv dump skal aldri gi PASS i tillatelsesregelen under.
+    : > "$WORK/manifest.xmltree"
   elif ! "$PYTHON3" "$ANDROID_PROOF_PY" manifest < "$WORK/manifest.xmltree" > "$FACTS"; then
     fail "fant ikke <manifest> i aapt2-utdataene"
     : > "$FACTS"

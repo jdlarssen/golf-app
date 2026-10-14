@@ -22,8 +22,9 @@
 #       skriver først `blocked-count=<N>` (antall navn i lista), så én
 #       `blocked-present=<navn>` per blokkert tillatelse som likevel står i
 #       manifestet. Fail-closed på begge sider: en app.json som ikke kan leses,
-#       mangler lista eller har den tom, og et manifest uten `<manifest>` eller
-#       `package`, gir exit 1 og ingen `blocked-present=`-linje.
+#       mangler lista eller har den tom, og et manifest uten `<manifest>`,
+#       `package` eller en eneste `uses-permission`, gir exit 1 og ingen
+#       `blocked-present=`-linje.
 #
 #   android-proof.py elf-align <fil.so>
 #       Minste `p_align` blant PT_LOAD-segmentene i en ELF-fil (32 eller 64 bit,
@@ -156,8 +157,14 @@ def blocked_permissions(app_json_path, text):
     manifest = read_manifest(text)
     if manifest is None:
         return 1
+    found = permissions(manifest)
+    if not found:
+        # Butikkmanifestet har alltid INTERNET. Ingen tillatelse å lese er en
+        # ufullstendig dump, ikke «ingen blokkert tillatelse».
+        print('fant ingen uses-permission i manifestet: ufullstendig dump fra aapt2', file=sys.stderr)
+        return 1
     print(f'blocked-count={len(blocked)}')
-    present = set(permissions(manifest))
+    present = set(found)
     for name in blocked:
         if name in present:
             print(f'blocked-present={name}')
