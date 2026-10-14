@@ -7,7 +7,15 @@
 
 import type { useTranslations } from 'next-intl';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { placeKind, sentenceName, toneKey, type BoardPlaceRow } from '@/lib/leaderboard/boardRules';
+import {
+  boardRowSrParts,
+  boardTotalSr,
+  placeKind,
+  sentenceName,
+  type BoardPlaceRow,
+  type BoardRowSrPart,
+  type BoardTotalSr,
+} from '@/lib/leaderboard/boardRules';
 import type {
   LiveBoardRow,
   LiveBoardUnit,
@@ -45,12 +53,51 @@ export function followTotalLabel(tf: FollowT, unit: LiveBoardUnit, total: number
   return tf('totalNet', { total });
 }
 
+function totalSrText(t: BoardT, total: BoardTotalSr): string {
+  switch (total.kind) {
+    case 'none':
+      return t('srNoTotal');
+    case 'points':
+      return t('srPoints', { total: total.value });
+    case 'net':
+      return t('srNet', { total: total.value });
+    case 'even':
+      return t('srEven');
+    case 'over':
+      return t('srOverPar', { count: total.value });
+    case 'under':
+      return t('srUnderPar', { count: total.value });
+  }
+}
+
 export function totalSr(t: BoardT, unit: LiveBoardUnit, total: number | null): string {
-  if (total === null) return t('srNoTotal');
-  if (unit === 'points') return t('srPoints', { total });
-  if (unit === 'net') return t('srNet', { total });
-  if (total === 0) return t('srEven');
-  return total > 0 ? t('srOverPar', { count: total }) : t('srUnderPar', { count: -total });
+  return totalSrText(t, boardTotalSr(unit, total));
+}
+
+/** One part of a row's spoken line in the web's words; the order is `boardRowSrParts`. */
+function rowSrPartText(t: BoardT, tc: BoardCommonT, part: BoardRowSrPart): string | null {
+  switch (part.key) {
+    case 'place':
+      return part.tied ? t('srTiedPlace', { rank: part.rank }) : t('srPlace', { rank: part.rank });
+    case 'total':
+      return totalSrText(t, part.total);
+    case 'movement':
+      return part.direction === 'up'
+        ? t('srUp', { count: part.count })
+        : part.direction === 'down'
+          ? t('srDown', { count: part.count })
+          : t('srSame');
+    case 'recent':
+      return t('srRecent', { tones: part.tones.map((tone) => t(`tone.${tone}`)).join(', ') });
+    case 'holes':
+      return tc('holesPlayedCount', { count: part.count });
+    case 'you':
+      return t('srYou');
+    // The live web board has no winner or tie note.
+    case 'winner':
+    case 'note':
+      return null;
+  }
 }
 
 /** The screen-reader line for one board row. */
@@ -59,23 +106,8 @@ export function boardRowSr(
   tc: BoardCommonT,
   opts: { row: LiveBoardRow; unit: LiveBoardUnit; showRank: boolean; isYou: boolean },
 ): string {
-  const { row, unit, showRank, isYou } = opts;
-  return [
-    !showRank ? null : row.tied ? t('srTiedPlace', { rank: row.rank }) : t('srPlace', { rank: row.rank }),
-    totalSr(t, unit, row.total),
-    row.movement === null
-      ? null
-      : row.movement > 0
-        ? t('srUp', { count: row.movement })
-        : row.movement < 0
-          ? t('srDown', { count: -row.movement })
-          : t('srSame'),
-    row.recent.length > 0
-      ? t('srRecent', { tones: row.recent.map((tone) => t(`tone.${toneKey(tone)}`)).join(', ') })
-      : null,
-    tc('holesPlayedCount', { count: row.holesPlayed }),
-    isYou ? t('srYou') : null,
-  ]
+  return boardRowSrParts(opts)
+    .map((part) => rowSrPartText(t, tc, part))
     .filter(Boolean)
     .join('. ');
 }

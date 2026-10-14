@@ -5,6 +5,7 @@ import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
 import {
   behindLeaderText,
   boardDisplayName,
+  boardRowSr,
   followTotalLabel,
   pillText,
   type BoardCommonT,
@@ -80,5 +81,33 @@ describe('pillText — the live pill (#2275)', () => {
     [7, 'pillLiveAfter {"holes":7}'],
   ] as const)('%s holes played → %s', (holes, expected) => {
     expect(pillText(echo, holes)).toBe(expected);
+  });
+});
+
+// #2579: the screen-reader line per row, locked before its order moved to
+// lib/leaderboard/boardRules.ts (the app reads the same order).
+describe('boardRowSr — one spoken line per board row', () => {
+  const base = row('a', 'Marte Lie', 3);
+  it.each([
+    [
+      'points, up, the last holes, you',
+      { row: { ...base, total: 15, movement: 2, recent: ['under', 'par', 'over1', 'over2'] as const, holesPlayed: 7 }, unit: 'points', showRank: true, isYou: true },
+      '3. plass. 15 poeng. Opp 2 plasser siden forrige hull. Siste hull: under par, par, bogey, dobbel bogey eller verre. 7 hull spilt. Dette er deg',
+    ],
+    [
+      'shared place, under par, down one',
+      { row: { ...base, rank: 4, tied: true, total: -3, movement: -1, holesPlayed: 7 }, unit: 'toPar', showRank: true, isYou: false },
+      'Delt 4. plass. 3 under par. Ned 1 plass siden forrige hull. 7 hull spilt',
+    ],
+    [
+      'before anyone has played',
+      { row: { ...base, total: null, movement: 0, holesPlayed: 0 }, unit: 'net', showRank: false, isYou: false },
+      'Ingen hull spilt ennå. Uendret siden forrige hull. 0 hull spilt',
+    ],
+    ['even', { row: { ...base, total: 0 }, unit: 'toPar', showRank: true, isYou: false }, '3. plass. På par. 9 hull spilt'],
+    ['over par', { row: { ...base, total: 2 }, unit: 'toPar', showRank: true, isYou: false }, '3. plass. 2 over par. 9 hull spilt'],
+    ['net strokes', { row: { ...base, total: 74 }, unit: 'net', showRank: true, isYou: false }, '3. plass. 74 slag netto. 9 hull spilt'],
+  ] as const)('%s', (_name, opts, expected) => {
+    expect(boardRowSr(t, tc, { ...opts, row: { ...opts.row, recent: [...opts.row.recent] } })).toBe(expected);
   });
 });

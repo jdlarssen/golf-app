@@ -14,15 +14,16 @@
 import { STATUS_LABELS } from '../../../../lib/games/status';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import {
+  boardRowSrParts,
   boardShowsRank,
   isBoardLeader,
   placeKind,
   sentenceName,
-  toneKey,
   totalLabel,
   type BoardPlaceRow,
+  type BoardRowSrPart,
 } from '../../../../lib/leaderboard/boardRules';
-import { viewerStanding, type LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
+import { viewerStanding, type LiveBoardRow, type LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
 import {
   resultStanding,
   soloResultBoard,
@@ -154,59 +155,67 @@ const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
 const rowName = (row: { name: string | null; nickname: string | null }) =>
   row.name ? formatRevealName(row.name, row.nickname) : BOARD_COMMON_TEXT.unknownPlayerFull;
 
-/** Tallet for skjermleseren: «18 poeng», «2 over par», «På par», «74 slag netto». */
-function totalSr(unit: LiveBoardUnit, total: number | null): string {
-  if (total === null) return BOARD_TEXT.srNoTotal;
-  if (unit === 'points') return formatMessage(BOARD_TEXT.srPoints, { total });
-  if (unit === 'net') return formatMessage(BOARD_TEXT.srNet, { total });
-  if (total === 0) return BOARD_TEXT.srEven;
-  return total > 0
-    ? formatMessage(BOARD_TEXT.srOverPar, { count: total })
-    : formatMessage(BOARD_TEXT.srUnderPar, { count: -total });
+/** Én del av radens opplesning med webbens ord; rekkefølgen er `boardRowSrParts`. */
+function srPartText(part: BoardRowSrPart, note: string | null): string | null {
+  switch (part.key) {
+    case 'place':
+      return formatMessage(part.tied ? BOARD_TEXT.srTiedPlace : BOARD_TEXT.srPlace, { rank: part.rank });
+    case 'winner':
+      return BOARD_APP_TEXT.winner;
+    case 'total': {
+      const total = part.total;
+      switch (total.kind) {
+        case 'none':
+          return BOARD_TEXT.srNoTotal;
+        case 'points':
+          return formatMessage(BOARD_TEXT.srPoints, { total: total.value });
+        case 'net':
+          return formatMessage(BOARD_TEXT.srNet, { total: total.value });
+        case 'even':
+          return BOARD_TEXT.srEven;
+        case 'over':
+          return formatMessage(BOARD_TEXT.srOverPar, { count: total.value });
+        case 'under':
+          return formatMessage(BOARD_TEXT.srUnderPar, { count: total.value });
+      }
+      break;
+    }
+    case 'movement':
+      return part.direction === 'up'
+        ? formatMessage(BOARD_TEXT.srUp, { count: part.count })
+        : part.direction === 'down'
+          ? formatMessage(BOARD_TEXT.srDown, { count: part.count })
+          : BOARD_TEXT.srSame;
+    case 'recent':
+      return formatMessage(BOARD_TEXT.srRecent, {
+        tones: part.tones.map((tone) => BOARD_TEXT.tone[tone]).join(', '),
+      });
+    case 'holes':
+      return formatMessage(BOARD_COMMON_TEXT.holesPlayedCount, { count: part.count });
+    case 'note':
+      return note;
+    case 'you':
+      return BOARD_TEXT.srYou;
+  }
+  return null;
 }
 
 /**
- * Raden lest opp i én linje, i webbens rekkefølge (`boardRowSr`) med navnet
- * først: plass, tall, bevegelse, siste hull, hull spilt, og til slutt «Dette
- * er deg». Ferdig tavle legger «Vinner» etter plassen og likt-linja til slutt.
+ * Raden lest opp i én linje: navnet først (webben leser det fra skiltet rett
+ * før), så delene i den delte rekkefølgen (`boardRowSrParts`).
  */
 function rowSr(opts: {
   name: string;
-  row: BoardPlaceRow & { total: number | null };
+  row: BoardPlaceRow & Pick<LiveBoardRow, 'total' | 'movement' | 'recent'>;
   showRank: boolean;
   unit: LiveBoardUnit;
-  movement: number | null;
-  recent: readonly ScoreTone[];
   winner: boolean;
   note: string | null;
   you: boolean;
 }): string {
-  const { name, row, showRank, unit, movement, recent, winner, note, you } = opts;
-  return [
-    name,
-    !showRank
-      ? null
-      : formatMessage(row.tied ? BOARD_TEXT.srTiedPlace : BOARD_TEXT.srPlace, { rank: row.rank }),
-    winner ? BOARD_APP_TEXT.winner : null,
-    totalSr(unit, row.total),
-    movement === null
-      ? null
-      : movement > 0
-        ? formatMessage(BOARD_TEXT.srUp, { count: movement })
-        : movement < 0
-          ? formatMessage(BOARD_TEXT.srDown, { count: -movement })
-          : BOARD_TEXT.srSame,
-    recent.length > 0
-      ? formatMessage(BOARD_TEXT.srRecent, {
-          tones: recent.map((tone) => BOARD_TEXT.tone[toneKey(tone)]).join(', '),
-        })
-      : null,
-    formatMessage(BOARD_COMMON_TEXT.holesPlayedCount, { count: row.holesPlayed }),
-    note,
-    you ? BOARD_TEXT.srYou : null,
-  ]
-    .filter(Boolean)
-    .join('. ');
+  const { name, row, showRank, unit, winner, note, you } = opts;
+  const parts = boardRowSrParts({ row, unit, showRank, isYou: you, winner, hasNote: note !== null });
+  return [name, ...parts.map((part) => srPartText(part, note))].filter(Boolean).join('. ');
 }
 
 /**
@@ -306,8 +315,6 @@ function liveBoard(
         row,
         showRank,
         unit: board.unit,
-        movement: row.movement,
-        recent: row.recent,
         winner: false,
         note: null,
         you: row.userId === userId,
@@ -382,11 +389,9 @@ function finishedBoard(
       note: note(row),
       a11y: rowSr({
         name: rowName(row),
-        row,
+        row: { ...row, movement: null, recent: [] },
         showRank,
         unit: board.unit,
-        movement: null,
-        recent: [],
         winner: isBoardLeader(row),
         note: note(row),
         you: row.userId === userId,
