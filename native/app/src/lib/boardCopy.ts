@@ -3,9 +3,10 @@
 // To blokker, samme mønster som `sideTournamentCopy.ts`:
 //
 //  1. **Webbens strenger**, tegn for tegn fra `messages/no.json`
-//     (`leaderboard.board`). Hver streng i appen som er lik en verdi der, står
-//     her og er paritetslåst i `boardCopy.test.ts`. Appen importerer ikke
-//     kildefila (den er stor, og Metro shaker ikke JSON).
+//     (`leaderboard.board`, og sideturneringens to panel-etiketter). Hver
+//     streng i appen som er lik en verdi der, står her og er paritetslåst i
+//     `boardCopy.test.ts`. Appen importerer ikke kildefila (den er stor, og
+//     Metro shaker ikke JSON).
 //  2. **Appens egne**, for det tegningene viser og webben ikke har: den
 //     ferdige tavla, den korte avstanden i stripa og ordene i tegnforklaringen.
 //     Testen holder dem ulike alle verdiene i `leaderboard.board`.
@@ -41,6 +42,15 @@ export const BOARD_TEXT = {
   stripSubmit: 'Lever scorekort →',
 } as const;
 
+/**
+ * `leaderboard.sideTournament.panel.rows`: etikettene for lengste drive og
+ * nærmest pinnen i sideturneringen under tavla (#2579).
+ */
+export const SIDE_PANEL_TEXT = {
+  longestDrive: 'Lengste drive',
+  closestToPin: 'Nærmest pinnen',
+} as const;
+
 /** Appens egne tekster på tavla. Ingen av dem finnes i `leaderboard.board`. */
 export const BOARD_APP_TEXT = {
   pillFinished: 'Sluttresultat · {holes} hull',
@@ -58,4 +68,6 @@ export const BOARD_APP_TEXT = {
   /** Tegnforklaringen: «under», «par» (webbens `tone.par`) og «over». */
   legendUnder: 'under',
   legendOver: 'over',
+  /** Plassen når kategorien har flere enn én: «Lengste drive #2». */
+  sidePosition: ' #{pos}',
 } as const;

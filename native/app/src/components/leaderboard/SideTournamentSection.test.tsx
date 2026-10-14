@@ -80,8 +80,9 @@ describe('SideTournamentSection', () => {
     const { rerender } = await render(<SideTournamentSection {...props} />);
 
     // 1 + 2: én linje per KÅRET slot. Samme mann to ganger er to premier.
-    expect(screen.getByTestId('side-headline-ld-1')).toHaveTextContent(/#1.*Per/);
-    expect(screen.getByTestId('side-headline-ld-2')).toHaveTextContent(/#2.*Per/);
+    // Ved to plasser har hver linje nummeret, og navnet er det hele (#2579).
+    expect(screen.getByTestId('side-headline-ld-1')).toHaveTextContent(/#1.*Per Hansen/);
+    expect(screen.getByTestId('side-headline-ld-2')).toHaveTextContent(/#2.*Per Hansen/);
     expect(screen.queryByTestId('side-headline-ctp-1')).toBeNull();
 
     // Radtitlene: makkerparet står som «Lag 1» med fornavnene under, mannen

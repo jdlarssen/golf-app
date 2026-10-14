@@ -44,11 +44,20 @@ const UNMIRRORED_SOURCE_KEYS = ['achievementRules', 'panel', 'rulesPanel'];
  */
 const UNMAPPED_AWARD_KEYS = ['holeWinsOn'];
 
+/** Webbens setningsform for LD/CTP; appen bruker panelets etiketter (#2579). */
+const UNMIRRORED_MATCHPLAY_SIDE_KEYS = ['closestToPin', 'longestDrive'];
+
+const matchplaySideSource = Object.fromEntries(
+  Object.entries(source.leaderboard.matchplaySide).filter(
+    ([key]) => !UNMIRRORED_MATCHPLAY_SIDE_KEYS.includes(key),
+  ),
+);
+
 describe('paritet med messages/no.json', () => {
   it.each([
     ['awards', SIDE_AWARD_LABELS, source.leaderboard.sideTournament.awards],
     ['groups', SIDE_GROUP_LABELS, source.leaderboard.sideTournament.groups],
-    ['matchplaySide', MATCHPLAY_SIDE_TEXT, source.leaderboard.matchplaySide],
+    ['matchplaySide', MATCHPLAY_SIDE_TEXT, matchplaySideSource],
   ])('%s er identisk med kilden', (_name, mirrored, sourceNode) => {
     expect(mirrored).toStrictEqual(sourceNode);
   });
