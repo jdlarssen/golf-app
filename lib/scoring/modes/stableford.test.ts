@@ -85,8 +85,8 @@ describe('compute (full stableford leaderboard, solo)', () => {
     expect(result.variant).toBe('solo');
     if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players).toEqual([
-      { userId: 'u1', totalPoints: 5, rank: 1, holesPlayed: 2, tiedWith: [] },
-      { userId: 'u2', totalPoints: 3, rank: 2, holesPlayed: 2, tiedWith: [] },
+      { userId: 'u1', totalPoints: 5, rank: 1, holesPlayed: 2, tiedWith: [], decidedBy: null },
+      { userId: 'u2', totalPoints: 3, rank: 2, holesPlayed: 2, tiedWith: [], decidedBy: 'total' },
     ]);
   });
 

@@ -183,6 +183,7 @@ export function computeScramble(
       ...l,
       rank: r.rank,
       tiedWith: r.tiedWith,
+      decidedBy: r.decidedBy,
     };
   });
 
