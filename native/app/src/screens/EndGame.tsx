@@ -105,6 +105,7 @@ import {
 import {
   activeChoices,
   buildFinishPlan,
+  canFinish,
   confirmSummary,
   deliveryCounts,
   finishBlockers,
@@ -372,10 +373,9 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const candidates = winnerCandidates(plan, acknowledged);
   const liveChoices = activeChoices(choices, candidates);
   const blockers = finishBlockers(plan, acknowledged, liveChoices);
-  const ready =
-    blockers.unapproved.length === 0 &&
-    blockers.unacknowledged.length === 0 &&
-    !blockers.winnersOpen;
+  // Sperren er `canFinish`; `blockers` gir bare linja under knappen. Begge
+  // leser `finishBlockers`, så de kan ikke bli uenige.
+  const ready = canFinish(plan, acknowledged, liveChoices);
 
   if (confirming) {
     const summary = confirmSummary(plan, acknowledged, liveChoices);
@@ -817,7 +817,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
       <WinnerSheet
         slot={sheetSlot}
         candidates={candidates}
-        value={sheetSlot ? (liveChoices[sheetSlot.key] ?? null) : null}
+        choices={liveChoices}
         withdrawalSupported={plan.withdrawalSupported}
         onPick={(value) => {
           if (sheetSlot) setChoices((prev) => ({ ...prev, [sheetSlot.key]: value }));
