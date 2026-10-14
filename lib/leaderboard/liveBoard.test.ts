@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { computeLeaderboard } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
-import type { GameModeConfig } from '@/lib/scoring/modes/types';
+import type {
+  GameModeConfig,
+  SoloStrokeplayResult,
+  StablefordSoloResult,
+} from '@/lib/scoring/modes/types';
 import {
   boardUnit,
   comparableGap,
@@ -13,6 +17,7 @@ import {
   type LiveBoardGame,
   type LiveBoardPlayerRow,
   type LiveBoardRow,
+  type LiveBoardUnit,
 } from './liveBoard';
 
 // Type A (#2253): the live board's own logic — movement since the previous
@@ -278,11 +283,11 @@ describe('computeLiveBoard — units and order', () => {
 
 // #2579: the unit has one home, read by the live board and the finished board.
 describe('boardUnit — what the number column counts', () => {
-  it.each([
+  it.each<[StablefordSoloResult | SoloStrokeplayResult, LiveBoardUnit]>([
     [{ kind: 'stableford', variant: 'solo', players: [], holes: [] }, 'points'],
     [{ kind: 'solo_strokeplay', ranking: 'net_to_par', players: [], holes: [] }, 'toPar'],
     [{ kind: 'solo_strokeplay', ranking: 'net_total', players: [], holes: [] }, 'net'],
-  ] as const)('%o → %s', (result, unit) => {
+  ])('%o → %s', (result, unit) => {
     expect(boardUnit(result)).toBe(unit);
   });
 });
