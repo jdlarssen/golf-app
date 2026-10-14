@@ -14,9 +14,11 @@ import {
   birdieUnit,
   greeting,
   headlineUnit,
+  highlightSpoken,
   highlightText,
   missingSpoken,
   missingText,
+  numberSpoken,
   placeNumber,
   placeSpoken,
   placeUnit,
@@ -160,7 +162,7 @@ function Band({ model }: { model: RoundDoneModel }) {
             key={cell.id}
             style={[styles.cell, i > 0 && { borderLeftWidth: 1, borderLeftColor: stroke }]}
             accessible
-            accessibilityLabel={'label' in cell ? cell.label : `${cell.value} ${cell.unit}`}
+            accessibilityLabel={'label' in cell ? cell.label : numberSpoken(cell.value, cell.unit)}
             testID={cell.id}
           >
             <Text style={[styles.number, ui.num, { color: ink }]}>{cell.value}</Text>
@@ -188,8 +190,7 @@ function HighlightRow({
     <View
       style={[styles.highlightRow, divided && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}
       accessible
-      // «Dagens beste hull: hull 7, birdie på par 3», med liten forbokstav etter kolon.
-      accessibilityLabel={`${kicker}: ${spoken(text).replace(/^Hull/, 'hull')}`}
+      accessibilityLabel={highlightSpoken(hole, which)}
       testID={`round-done-${which}`}
     >
       <ScoreShape strokes={hole.strokes} par={hole.par} size={34} toned />
@@ -303,8 +304,15 @@ const styles = StyleSheet.create({
   },
   // Raden er 41 pt i designet; den som kan trykkes, får 44 å treffe på.
   missingRow: { minHeight: TAP },
+  // Begge kan krympe: en lang «Mangler hull …» bryter linja i stedet for å
+  // skyve navnet ut av raden.
   flightName: { ...interLine(14, 17), fontFamily: FONTS.sans, flexShrink: 1 },
-  flightStatus: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
+  flightStatus: {
+    ...interLine(14, 17),
+    fontFamily: FONTS.sansSemiBold,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
   // Designets knapper: 54 pt pille og 44 pt tekstknapp, 6 pt mellom.
   actions: { paddingTop: 16, paddingHorizontal: 16, gap: 6 },
   review: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
