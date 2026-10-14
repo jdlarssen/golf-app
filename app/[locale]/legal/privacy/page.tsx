@@ -4,12 +4,9 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { DATA_CONTROLLER_NAME } from '../dataController';
 
 type Params = Promise<{ locale: string }>;
-
-// The owner runs Tørny as a private individual, so they are the data
-// controller (#2234). One home for the name — both locales read it via {name}.
-const DATA_CONTROLLER_NAME = 'Jørgen Larssen';
 
 export async function generateMetadata({
   params,
