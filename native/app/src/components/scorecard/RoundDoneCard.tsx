@@ -226,7 +226,13 @@ function FlightRow({
         style={[rowStyle, styles.missingRow]}
         testID={`round-done-missing-${row.userId}`}
       >
-        <Text style={[styles.flightName, styles.missingName, { color: colors.text }]}>{row.name}</Text>
+        <Text
+          style={[styles.flightName, styles.missingName, { color: colors.text }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {row.name}
+        </Text>
         <Text style={[styles.flightStatus, styles.missingStatus, { color: colors.scoreOver1Fg }]}>
           {missingText(row.holes)}
         </Text>
@@ -307,10 +313,11 @@ const styles = StyleSheet.create({
   // En lang navneliste bryter linja; statusen ved siden av er kort.
   flightName: { ...interLine(14, 17), fontFamily: FONTS.sans, flexShrink: 1 },
   flightStatus: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
-  // Mangler noen mange hull, er det statusen som bryter linja. Navnet er ett
-  // fornavn og står helt.
-  missingName: { flexShrink: 0 },
-  missingStatus: { flexShrink: 1, textAlign: 'right' },
+  // Mangler noen mange hull, er det statusen som bryter linja. Navnet står helt
+  // opp til halve raden; et langt kallenavn får ellipse, så statusen alltid har
+  // plass.
+  missingName: { flexShrink: 0, maxWidth: '50%' },
+  missingStatus: { flexShrink: 1, minWidth: 120, textAlign: 'right' },
   // Designets knapper: 54 pt pille og 44 pt tekstknapp, 6 pt mellom.
   actions: { paddingTop: 16, paddingHorizontal: 16, gap: 6 },
   review: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
