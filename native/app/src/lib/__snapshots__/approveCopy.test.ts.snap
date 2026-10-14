@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`arket gjest på lagkort 1`] = `
+{
+  "body": "Lagkortet blir ulevert igjen for hele laget. Hullene kan rettes og kortet leveres på nytt.",
+  "hint": null,
+  "title": "Send kortet tilbake til Gjest?",
+}
+`;
+
+exports[`arket gjestekort 1`] = `
+{
+  "body": "Kortet blir ulevert igjen. Hullene kan rettes og kortet leveres på nytt.",
+  "hint": null,
+  "title": "Send kortet tilbake til Gjest?",
+}
+`;
+
+exports[`arket lagkort 1`] = `
+{
+  "body": "Lagkortet blir ulevert igjen for hele laget. Marte får beskjed og kan rette hullene og levere på nytt.",
+  "hint": "Marte ser grunnen på spillsiden.",
+  "title": "Send kortet tilbake til Marte?",
+}
+`;
+
+exports[`arket vanlig kort 1`] = `
+{
+  "body": "Kortet blir ulevert igjen. Marte får beskjed og kan rette hullene og levere på nytt.",
+  "hint": "Marte ser grunnen på spillsiden.",
+  "title": "Send kortet tilbake til Marte?",
+}
+`;
