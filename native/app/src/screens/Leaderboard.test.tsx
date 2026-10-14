@@ -223,6 +223,20 @@ describe('Leaderboard', () => {
   });
 });
 
+describe('Leaderboard — ferdig tavle (#2579)', () => {
+  afterEach(() => {
+    mockBundleOverride.current = null;
+  });
+
+  it('stripas knapp åpner scorekortet', async () => {
+    mockBundleOverride.current = { ...mockBundle, game: { ...bundleGame, status: 'finished' } };
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-strip-action')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('board-strip-action'));
+    expect(mockNavigate).toHaveBeenCalledWith('Scorecard', { gameId: GAME_ID });
+  });
+});
+
 describe('Leaderboard — hentingen av slagene (#2255 PR 3a)', () => {
   it('feiler den (uten nett): tavla fra telefonens slag, og en linje som sier det', async () => {
     const { seedGameScores } = require('../data/seedScores') as { seedGameScores: jest.Mock };
