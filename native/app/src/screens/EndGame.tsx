@@ -72,7 +72,7 @@ import {
 } from '../data/remind';
 import { withdrawSelf } from '../data/withdrawSelf';
 import { describeFailure } from '../lib/actionFeedback';
-import { displayName, formatClock } from '../lib/display';
+import { displayName, formatClock, formatNameList } from '../lib/display';
 import {
   allDeliveredLine,
   approveConfirmBody,
@@ -86,7 +86,6 @@ import {
   describeReminderPreviewFailure,
   END_GAME_TEXT,
   endGameKicker,
-  nameList,
   ofTotal,
   opensWhenNote,
   ownRowHint,
@@ -416,7 +415,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                 {
                   key: 'withdrawn',
                   label: END_GAME_TEXT.withdrawnLabel,
-                  value: nameList(summary.withdrawn.map(displayName)),
+                  value: formatNameList(summary.withdrawn.map(displayName)),
                 },
               ]
             : []),
@@ -425,7 +424,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                 {
                   key: 'no-card',
                   label: END_GAME_TEXT.noCardRowLabel,
-                  value: nameList(summary.noCard.map(displayName)),
+                  value: formatNameList(summary.noCard.map(displayName)),
                 },
               ]
             : []),
