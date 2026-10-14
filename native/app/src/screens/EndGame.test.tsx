@@ -20,19 +20,29 @@
 //     alt finnes — og henter bundelen på nytt etterpå, uansett utfall.
 //  7. **En valgt vinner som trakk seg (#2284)** gir ny henting, og valget som
 //     pekte på hen, faller bort før neste trykk.
+//  8. **Bekreft-steget (#2578)** viser hva som lagres, og tilbake (pila, sveip)
+//     går til lista med valgene i behold — men `replace` til tavla slipper
+//     gjennom. Navigasjons-mocken etterligner hindringen, ellers kunne den
+//     testen aldri bli rød.
 //
 // Selve setningene er dekket av `lib/endGameCopy.test.ts`; det som testes her
 // er at riktig oversetter brukes på riktig sted.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Alert } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { finishRound } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { refreshGameBundle } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
 import { fetchReminderPreview, sendReminder } from '../data/remind';
 import type { ReminderFailure } from '../data/remind';
-import { describeReminderFailure, unremindableNotes } from '../lib/endGameCopy';
+import { fetchOwnProfile } from '../data/profile';
+import {
+  describeReminderFailure,
+  END_GAME_TEXT,
+  reminderNote,
+  unremindableNotes,
+} from '../lib/endGameCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { EndGame } from './EndGame';
@@ -134,19 +144,66 @@ jest.mock('../data/withdrawSelf', () => ({
 }));
 jest.mock('../session', () => ({ useSession: () => ({ userId: mockMe }) }));
 jest.mock('../lib/useMarkVisitRead');
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
+// Lås-linja på bekreft-steget leser `isAdmin`. Uten mocken gikk kallet til
+// `supabaseMock`, som kaster på `users`.
+jest.mock('../data/profile', () => ({
+  fetchOwnProfile: jest.fn(async () => ({ isAdmin: false })),
+}));
+
+type PreventCallback = (options: { data: { action: { type: string; payload?: unknown } } }) => void;
+// Siste `usePreventRemove` skjermen rendret med: om den hindrer, og
+// tilbakekallet. Som i core leses begge fra siste render.
+const mockPrevent: { current: { prevent: boolean; cb: PreventCallback } | null } = {
+  current: null,
+};
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) =>
     require('react').useEffect(callback, [callback]),
+  usePreventRemove: (prevent: boolean, cb: PreventCallback) => {
+    mockPrevent.current = { prevent, cb };
+  },
 }));
 
-const replace = jest.fn();
+/**
+ * `replace` som en ekte native-stack: mens skjermen hindrer fjerning, lander
+ * den ikke, men går til tilbakekallet. Skjermen må da sende handlingen videre
+ * selv (`dispatch`).
+ */
+const landed: { name: string; params: unknown }[] = [];
+const replace = jest.fn((name: string, params: unknown) => {
+  if (mockPrevent.current?.prevent) {
+    mockPrevent.current.cb({ data: { action: { type: 'REPLACE', payload: { name, params } } } });
+    return;
+  }
+  landed.push({ name, params });
+});
+const dispatch = jest.fn();
+const setOptions = jest.fn();
+
+/** «Landet på tavla»: `replace` uten hindring, eller den samme handlingen sendt videre. */
+function landedOnBoard(): boolean {
+  const viaReplace = landed.some(
+    ({ name, params }) =>
+      name === 'Leaderboard' && (params as { gameId: string }).gameId === GAME_ID,
+  );
+  const viaDispatch = dispatch.mock.calls.some(
+    ([action]) =>
+      action.type === 'REPLACE' &&
+      action.payload.name === 'Leaderboard' &&
+      action.payload.params.gameId === GAME_ID,
+  );
+  return viaReplace || viaDispatch;
+}
 
 async function renderScreen() {
   await render(
     <EndGame
       {...({
         route: { params: { gameId: GAME_ID } },
-        navigation: { replace },
+        navigation: { replace, dispatch, setOptions, goBack: jest.fn() },
       } as unknown as ScreenProps<'EndGame'>)}
     />,
   );
@@ -155,11 +212,16 @@ async function renderScreen() {
   });
 }
 
-/** Bekreftelses-dialogen svarer ja: det som testes er skrivingen bak knappen. */
-function autoConfirm(): void {
-  jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
-    buttons?.find((button) => button.style === 'destructive')?.onPress?.();
-  });
+/** «Avslutt runden» og så «Ja, avslutt runden» på bekreft-steget. */
+async function submitAndConfirm(): Promise<void> {
+  await fireEvent.press(screen.getByTestId('end-game-submit'));
+  await fireEvent.press(screen.getByTestId('end-game-confirm-submit'));
+}
+
+/** Kår en slot: raden åpner arket, og et trykk på valget lukker det. */
+async function pickWinner(slotKey: string, value: string): Promise<void> {
+  await fireEvent.press(screen.getByTestId(`end-game-slot-${slotKey}`));
+  await fireEvent.press(screen.getByTestId(`end-game-slot-${slotKey}-${value}`));
 }
 
 /**
@@ -185,6 +247,7 @@ function setMissing(count: number): void {
 describe('EndGame', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    landed.length = 0;
   });
 
   it('kvitterer ut manglende kort, kårer slotene og sender alt inn i skrivingen', async () => {
@@ -198,10 +261,11 @@ describe('EndGame', () => {
       ],
       { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 1 },
     );
-    autoConfirm();
     await renderScreen();
 
-    // Leveringsstatusen står per spiller — arrangøren skal se hva hen avslutter.
+    // Leveringsstatusen står per spiller i den utfoldede lista — arrangøren
+    // skal kunne se hva hen avslutter.
+    await fireEvent.press(screen.getByTestId('end-game-deliveries-toggle'));
     expect(screen.getByTestId(`end-game-status-${mockMe}`)).toHaveTextContent(
       'Levert',
     );
@@ -211,23 +275,26 @@ describe('EndGame', () => {
 
     // Knappen er sperret: makkeren er ikke kvittert ut, og ingen slot er kåret.
     await fireEvent.press(screen.getByTestId('end-game-submit'));
-    expect(finishRound).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('end-game-confirm')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${MATE}`));
+    await pickWinner('ld-1', MATE);
     await fireEvent.press(screen.getByTestId(`end-game-check-${MATE}`));
     // #2284: makkeren er huket av for frafall og er ikke lenger et vinnervalg.
     // Valget som pekte på hen, faller bort — databasen (0193) ville nektet
     // kåringen etter at frafallet alt var skrevet.
+    await fireEvent.press(screen.getByTestId('end-game-slot-ld-1'));
     expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
+    expect(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
     await fireEvent.press(screen.getByTestId('end-game-submit'));
-    expect(finishRound).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('end-game-confirm')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`));
+    await pickWinner('ld-1', mockMe);
     // «Ingen kvalifiserte» er et VALG, ikke en tom verdi — uten den ville
     // sloten stått som en null ingen tok stilling til.
-    await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1-none'));
+    await pickWinner('ctp-1', 'none');
 
-    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    await submitAndConfirm();
 
     await waitFor(() => {
       expect(finishRound).toHaveBeenCalledWith(GAME_ID, {
@@ -241,7 +308,7 @@ describe('EndGame', () => {
     });
     // Resultatskjermen ERSTATTER avslutt-flaten: «tilbake» skal ikke lande på
     // en avslutt-side for en runde som nettopp ble lukket.
-    expect(replace).toHaveBeenCalledWith('Leaderboard', { gameId: GAME_ID });
+    expect(landedOnBoard()).toBe(true);
   });
 
   it('#2203: åpner du skjermen, er «Alle har levert» og påminnelsen for spillet lest', async () => {
@@ -258,7 +325,6 @@ describe('EndGame', () => {
       ],
       { requirePeerApproval: true },
     );
-    autoConfirm();
     await renderScreen();
 
     // Godkjenningen navngis, men får ingen avkryssing — verken for makkeren
@@ -268,6 +334,7 @@ describe('EndGame', () => {
     expect(screen.queryByTestId(`end-game-check-${MATE}`)).toBeNull();
 
     await fireEvent.press(screen.getByTestId('end-game-submit'));
+    expect(screen.queryByTestId('end-game-confirm')).toBeNull();
     expect(finishRound).not.toHaveBeenCalled();
   });
 
@@ -278,7 +345,6 @@ describe('EndGame', () => {
       player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
       player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z' }),
     ]);
-    autoConfirm();
     (finishRound as jest.Mock).mockResolvedValueOnce({
       ok: false,
       reason: 'not-all-approved',
@@ -286,15 +352,17 @@ describe('EndGame', () => {
     });
     await renderScreen();
 
-    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    await submitAndConfirm();
 
     await waitFor(() => {
       expect(screen.getByTestId('end-game-notice')).toHaveTextContent(
         /Makker Makkersen mangler godkjenning/,
       );
     });
+    // Setningen står på bekreft-steget: en ny liste løser ikke dette avslaget.
+    expect(screen.getByTestId('end-game-confirm')).toBeTruthy();
     // Et avslag skal ikke se ut som en avslutning: ingen navigasjon videre.
-    expect(replace).not.toHaveBeenCalled();
+    expect(landedOnBoard()).toBe(false);
   });
 
   it('henter lista på nytt når en valgt vinner har trukket seg, og glemmer det valget (#2284)', async () => {
@@ -309,7 +377,6 @@ describe('EndGame', () => {
       ],
       sideOn,
     );
-    autoConfirm();
     (finishRound as jest.Mock).mockImplementationOnce(async () => {
       // Det neste hentingen ser: makkeren har trukket seg.
       setBundle(
@@ -327,31 +394,34 @@ describe('EndGame', () => {
     });
     await renderScreen();
 
-    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${MATE}`));
-    await fireEvent.press(screen.getByTestId(`end-game-slot-ctp-1-${mockMe}`));
+    await pickWinner('ld-1', MATE);
+    await pickWinner('ctp-1', mockMe);
     const before = (refreshGameBundle as jest.Mock).mock.calls.length;
-    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    await submitAndConfirm();
 
+    // Avslaget sender skjermen tilbake til lista (`returnsToList`), med
+    // setningen over den grå knappen.
     await waitFor(() => {
-      expect(screen.getByTestId('end-game-notice')).toHaveTextContent(
-        /har trukket seg/,
-      );
+      expect(screen.queryByTestId('end-game-confirm')).toBeNull();
     });
-    await waitFor(() => {
-      expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
-    });
+    expect(screen.getByTestId('end-game-submit')).toBeTruthy();
+    expect(screen.getByTestId('end-game-notice')).toHaveTextContent(/har trukket seg/);
     expect((refreshGameBundle as jest.Mock).mock.calls.length).toBeGreaterThan(
       before,
     );
-    expect(replace).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('end-game-slot-ld-1'));
+    expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+    expect(landedOnBoard()).toBe(false);
 
     // LD-valget er borte, så knappen er sperret til arrangøren velger på nytt.
     await fireEvent.press(screen.getByTestId('end-game-submit'));
+    expect(screen.queryByTestId('end-game-confirm')).toBeNull();
     expect(finishRound).toHaveBeenCalledTimes(1);
 
     // CTP-valget pekte på en aktiv spiller og står.
-    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`));
-    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    await pickWinner('ld-1', mockMe);
+    await submitAndConfirm();
     await waitFor(() => {
       expect(finishRound).toHaveBeenLastCalledWith(GAME_ID, {
         allowMissing: false,
@@ -396,13 +466,10 @@ describe('EndGame', () => {
         'Purr på dem som mangler (1)',
       );
     });
-    expect(screen.getByTestId('end-game-reminder-unremindable')).toHaveTextContent(
-      unremindableNotes(unremindable).join(' '),
-    );
-    // Suiten kjører med TZ=UTC (`jest.config.js`): dette er enhetens
+    // Suiten kjører med TZ=UTC (`jest.config.js`): «12:05» er enhetens
     // veggklokke, ikke en Oslo-konvertering — Hermes har ikke tidssonene.
-    expect(screen.getByTestId('end-game-reminder-last')).toHaveTextContent(
-      'Sist purret kl. 12:05',
+    expect(screen.getByTestId('end-game-reminder-note')).toHaveTextContent(
+      reminderNote(unremindableNotes(unremindable), '12:05').join(' '),
     );
 
     await fireEvent.press(screen.getByTestId('end-game-remind'));
@@ -431,8 +498,8 @@ describe('EndGame', () => {
     await renderScreen();
 
     await waitFor(() => {
-      expect(screen.getByTestId('end-game-reminder-unremindable')).toHaveTextContent(
-        unremindableNotes(unremindable).join(' '),
+      expect(screen.getByTestId('end-game-reminder-note')).toHaveTextContent(
+        reminderNote(unremindableNotes(unremindable), null).join(' '),
       );
     });
     // Ingen knapp: en «Purr på dem som mangler (0)» ville sendt null varsler
@@ -576,5 +643,50 @@ describe('EndGame', () => {
     await renderScreen();
 
     expect(screen.getByTestId('end-game-withdraw-self')).toBeTruthy();
+  });
+  it('viser bekreft-steget, går tilbake med valgene i behold, og lander på tavla (#2578)', async () => {
+    (fetchOwnProfile as jest.Mock).mockResolvedValue({ isAdmin: true });
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z' }),
+      ],
+      { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 0 },
+    );
+    await renderScreen();
+
+    await pickWinner('ld-1', MATE);
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+
+    // Bekreft-steget: det som lagres, og hvem som kan åpne runden igjen.
+    expect(screen.getByTestId('end-game-confirm')).toBeTruthy();
+    expect(screen.getByTestId('end-game-saved-ld-1')).toHaveTextContent(/Makker Makkersen/);
+    await waitFor(() => {
+      expect(screen.getByTestId('end-game-reopen')).toHaveTextContent(
+        END_GAME_TEXT.reopenAdmin,
+      );
+    });
+    expect(finishRound).not.toHaveBeenCalled();
+
+    // Pila (eller sveipet) fjerner skjermen; hindringen sender den til lista.
+    expect(mockPrevent.current?.prevent).toBe(true);
+    await act(async () => {
+      mockPrevent.current?.cb({ data: { action: { type: 'GO_BACK' } } });
+    });
+    expect(screen.queryByTestId('end-game-confirm')).toBeNull();
+    expect(screen.getByTestId('end-game-slot-ld-1')).toHaveTextContent(/Makker Makkersen/);
+    expect(dispatch).not.toHaveBeenCalled();
+
+    await submitAndConfirm();
+    await waitFor(() => {
+      expect(finishRound).toHaveBeenCalledWith(GAME_ID, {
+        allowMissing: false,
+        withdrawUserIds: [],
+        sideWinners: [{ category: 'longest_drive', position: 1, winner_user_id: MATE }],
+      });
+    });
+    await waitFor(() => {
+      expect(landedOnBoard()).toBe(true);
+    });
   });
 });

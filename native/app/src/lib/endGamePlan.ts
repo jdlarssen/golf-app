@@ -19,6 +19,7 @@ import {
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
 import { splitFinishRoster } from '../../../../lib/games/finishGate';
+import type { EndRoundFailure } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
 
@@ -133,7 +134,7 @@ export function buildFinishPlan(
 }
 
 /**
- * Er «Avslutt runden» klar?
+ * Det som står mellom arrangøren og «Avslutt runden» (#2578).
  *
  * Tre betingelser, og ingen av dem har en snarvei:
  *  1. **Ingen manglende godkjenning.** Den kan ikke krysses bort — verken her
@@ -143,17 +144,69 @@ export function buildFinishPlan(
  *     ingen blir stående som «ikke levert» ved et uhell.
  *  3. **Hver slot har et valg** — en spiller eller «Ingen kvalifiserte».
  *     Ingen implisitt null.
+ *
+ * Både sperren ({@link canFinish}) og linja under knappen («Åpner når …»)
+ * leses herfra, så de kan ikke bli uenige (AGENTS.md felle 4).
  */
+export interface FinishBlockers {
+  /** Leverte kort som venter på godkjenning, i roster-rekkefølge. */
+  unapproved: BundlePlayer[];
+  /** Spillere uten kort som ikke er huket av. */
+  unacknowledged: BundlePlayer[];
+  /** Minst én slot mangler et valg. */
+  winnersOpen: boolean;
+}
+
+export function finishBlockers(
+  plan: FinishPlan,
+  acknowledged: ReadonlySet<string>,
+  choices: Readonly<Record<string, string>>,
+): FinishBlockers {
+  return {
+    unapproved: plan.unapproved,
+    unacknowledged: plan.missing
+      .filter((entry) => !acknowledged.has(entry.player.userId))
+      .map((entry) => entry.player),
+    winnersOpen: plan.slots.some((slot) => choices[slot.key] === undefined),
+  };
+}
+
+/** Er «Avslutt runden» klar? Ja når {@link finishBlockers} ikke har noe igjen. */
 export function canFinish(
   plan: FinishPlan,
   acknowledged: ReadonlySet<string>,
   choices: Readonly<Record<string, string>>,
 ): boolean {
-  if (plan.unapproved.length > 0) return false;
-  if (!plan.missing.every((entry) => acknowledged.has(entry.player.userId))) {
-    return false;
-  }
-  return plan.slots.every((slot) => choices[slot.key] !== undefined);
+  const blockers = finishBlockers(plan, acknowledged, choices);
+  return (
+    blockers.unapproved.length === 0 &&
+    blockers.unacknowledged.length === 0 &&
+    !blockers.winnersOpen
+  );
+}
+
+/**
+ * Tallene i fremdriftskortet (#2578): «6 av 8» og «5 godkjent · 1 venter på
+ * godkjenning · 2 mangler kort».
+ *
+ * Trukne spillere er ute av `plan.active` og teller ikke. Uten krav om
+ * godkjenning er `waiting` alltid 0, og `approved` er det samme som
+ * `delivered`.
+ */
+export interface DeliveryCounts {
+  total: number;
+  delivered: number;
+  approved: number;
+  waiting: number;
+  missing: number;
+}
+
+export function deliveryCounts(plan: FinishPlan): DeliveryCounts {
+  const total = plan.active.length;
+  const missing = plan.missing.length;
+  const delivered = total - missing;
+  const waiting = plan.unapproved.length;
+  return { total, delivered, approved: delivered - waiting, waiting, missing };
 }
 
 /**
@@ -238,4 +291,103 @@ export function toSideWinners(
     });
   }
   return rows;
+}
+
+/** Én kåringsrad på bekreft-siden: vinneren, eller `null` for «Ingen kvalifiserte». */
+export interface SlotWinner {
+  slot: FinishSlot;
+  winner: BundlePlayer | null;
+}
+
+/** Det bekreft-siden viser under «Dette lagres» (#2578). */
+export interface ConfirmSummary {
+  /** Spillerne i resultatet: de aktive minus dem som trekkes (beslutning 6). */
+  resultCount: number;
+  /** Av dem: hvor mange som har levert. */
+  deliveredCount: number;
+  /** Huket av og trekkes ({@link withdrawUserIds}). */
+  withdrawn: BundlePlayer[];
+  /** Huket av, men kan ikke trekkes: avsluttes uten kort. */
+  noCard: BundlePlayer[];
+  /** Én rad per slot med et valg, i `plan.slots`-rekkefølge. */
+  winners: SlotWinner[];
+}
+
+/**
+ * Oppsummeringen før noe låses.
+ *
+ * @param choices valgene som fortsatt gjelder ({@link activeChoices}). Knappen
+ *   til bekreft-siden er sperret til hver slot har et valg, så en slot uten
+ *   valg gir ingen rad.
+ */
+export function confirmSummary(
+  plan: FinishPlan,
+  acknowledged: ReadonlySet<string>,
+  choices: Readonly<Record<string, string>>,
+): ConfirmSummary {
+  const leaving = new Set(withdrawUserIds(plan, acknowledged));
+  const withdrawn = plan.missing
+    .filter((entry) => leaving.has(entry.player.userId))
+    .map((entry) => entry.player);
+  const noCard = plan.missing
+    .filter(
+      (entry) =>
+        acknowledged.has(entry.player.userId) && !leaving.has(entry.player.userId),
+    )
+    .map((entry) => entry.player);
+  const resultCount = plan.active.length - withdrawn.length;
+  const winners: SlotWinner[] = [];
+  for (const slot of plan.slots) {
+    const choice = choices[slot.key];
+    if (choice === undefined) continue;
+    winners.push({
+      slot,
+      winner:
+        choice === NO_WINNER
+          ? null
+          : (plan.active.find((player) => player.userId === choice) ?? null),
+    });
+  }
+  return {
+    resultCount,
+    deliveredCount: resultCount - noCard.length,
+    withdrawn,
+    noCard,
+    winners,
+  };
+}
+
+/**
+ * Sender avslaget skjermen tilbake til lista (#2578, beslutning 7)?
+ *
+ * Tre grunner betyr at lista på skjermen er utdatert: et avkrysset kort kom
+ * inn (`withdraw-after-submit`, `-partial`, #1896), eller en valgt vinner har
+ * trukket seg (`winner-withdrawn`, #2284). Da hentes bundelen på nytt, og
+ * arrangøren må se lista igjen for å gjøre noe med det. De andre avslagene
+ * løses ikke av en ny liste, så bekreft-siden står med setningen.
+ *
+ * Ingen `default`-gren: en ny kode i `EndRoundFailure` gir rød `tsc` her.
+ */
+export function returnsToList(reason: EndRoundFailure): boolean {
+  switch (reason) {
+    case 'withdraw-after-submit':
+    case 'withdraw-after-submit-partial':
+    case 'winner-withdrawn':
+      return true;
+    case 'no-session':
+    case 'offline':
+    case 'not-found':
+    case 'cup-game':
+    case 'not-active':
+    case 'no-players':
+    case 'not-all-submitted':
+    case 'not-all-approved':
+    case 'withdrawal-unsupported':
+    case 'db-withdraw':
+    case 'db-winners':
+    case 'rls-denied':
+    case 'no-rows':
+    case 'db':
+      return false;
+  }
 }
