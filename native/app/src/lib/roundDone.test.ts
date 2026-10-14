@@ -156,6 +156,20 @@ describe('buildRoundDoneModel', () => {
         expect(m?.flight).toEqual([{ kind: 'complete', names: 'Jonas Berg, Jonas Rud og Marte' }]),
     },
     {
+      name: 'to med samme kallenavn får hele navnet',
+      run: () =>
+        model({
+          players: [
+            homePlayer({ userId: ME }),
+            homePlayer({ userId: 'pp', name: 'Per Putter', nickname: 'Jonas' }),
+            homePlayer({ userId: 'kn', name: 'Kari Nord', nickname: 'Jonas' }),
+            homePlayer({ userId: 'marte', name: 'Marte Lie' }),
+          ],
+        }),
+      check: (m: ReturnType<typeof model>) =>
+        expect(m?.flight).toEqual([{ kind: 'complete', names: 'Per Putter, Kari Nord og Marte' }]),
+    },
+    {
       name: 'fullt kort uten netto faller til slag',
       run: () => model({ game: { gameMode: 'solo_strokeplay' }, totals: { netto: null } }),
       check: (m: ReturnType<typeof model>) => expect(m?.headline.kind).toBe('gross'),
