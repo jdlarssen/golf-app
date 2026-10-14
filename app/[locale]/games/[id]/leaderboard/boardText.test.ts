@@ -7,7 +7,6 @@ import {
   boardDisplayName,
   followTotalLabel,
   pillText,
-  sentenceName,
   type BoardCommonT,
   type BoardT,
   type FollowT,
@@ -67,22 +66,6 @@ describe('behindLeaderText — who the gap is to', () => {
     const rows = [row('a', 'Marte Lie', 1), row('b', 'Jonas Berg', 1), row('c', 'Anders Moe', 3)];
     expect(behindLeaderText(t, { ...standing, leaderUserIds: ['a', 'b'] }, 'net', rows, name)).toBe('2 slag bak ledelsen');
     expect(behindLeaderText(t, { ...standing, gap: 0 }, 'points', rows, name)).toBeNull();
-  });
-});
-
-describe('sentenceName — a player inside a sentence (#2275)', () => {
-  const name = (r: LiveBoardRow) => boardDisplayName(r, tc);
-
-  it('is the first name', () => {
-    const rows = [row('a', 'Marte Lie', 1), row('b', 'Jonas Berg', 2)];
-    expect(sentenceName(rows[0], rows, name)).toBe('Marte');
-  });
-
-  it('is the full name when another player on the board has the same first name', () => {
-    const rows = [row('a', 'Marte Lie', 1), row('b', 'Jonas Berg', 2), row('c', 'Marte Dahl', 3)];
-    expect(sentenceName(rows[0], rows, name)).toBe('Marte Lie');
-    expect(sentenceName(rows[2], rows, name)).toBe('Marte Dahl');
-    expect(sentenceName(rows[1], rows, name)).toBe('Jonas');
   });
 });
 

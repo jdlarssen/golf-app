@@ -25,17 +25,19 @@ import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import type { UnderParMoment } from '@/lib/stats/achievements';
 import {
+  boardShowsRank,
+  isBoardLeader,
+  totalLabel,
+  visibleBoardRows,
+} from '@/lib/leaderboard/boardRules';
+import {
   behindLeaderText,
   boardDisplayName,
   boardRowSr,
-  boardShowsRank,
   followTotalLabel,
-  isBoardLeader,
   pillText,
   placeLabel,
-  totalLabel,
   totalSr,
-  visibleBoardRows,
   type FollowT,
 } from './boardText';
 
@@ -107,7 +109,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
     .filter(Boolean)
     .join('. ');
 
-  const { visible, canCollapse } = visibleBoardRows(board.rows, row.userId, showAll);
+  const { visible, canCollapse } = visibleBoardRows(board.rows, row.userId, showAll, (r) => r.userId);
 
   const seeBoard = (placement: string) => (
     <Link

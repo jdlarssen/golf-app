@@ -5,13 +5,11 @@ import { useTranslations } from 'next-intl';
 import type { LiveBoard, LiveBoardRow, LiveBoardUnit } from '@/lib/leaderboard/liveBoard';
 import { TV_PAGE_MS, tvPageCount, tvPageRows } from '@/lib/leaderboard/tvBoard';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
+import { boardShowsRank, isBoardLeader, totalLabel } from '@/lib/leaderboard/boardRules';
 import {
   boardDisplayName,
   boardRowSr,
-  boardShowsRank,
-  isBoardLeader,
   placeLabel,
-  totalLabel,
 } from '@/app/[locale]/games/[id]/leaderboard/boardText';
 
 /** PLASS · SPILLER · SISTE 5 HULL · HULL · POENG, as drawn. */
@@ -28,9 +26,10 @@ const DOT: Record<ScoreTone, string> = {
 /**
  * The big screen's board (#2275): five players a page, turning every ten
  * seconds without animation. All numbers come ready from `computeLiveBoard`,
- * and the board's text rules from `boardText.ts`. The page index is local
- * state with no `key` tied to the data, so it survives the 20-second
- * `router.refresh()`; a refresh that leaves fewer pages wraps it around.
+ * and the board's rules from `boardRules.ts` and `boardText.ts`. The page
+ * index is local state with no `key` tied to the data, so it survives the
+ * 20-second `router.refresh()`; a refresh that leaves fewer pages wraps it
+ * around.
  */
 export function TvBoard({ board }: { board: LiveBoard }) {
   const t = useTranslations('leaderboard.board');

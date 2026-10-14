@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
 import type { TvFeedEvent } from '@/lib/leaderboard/tvBoard';
-import { boardDisplayName, sentenceName } from '@/app/[locale]/games/[id]/leaderboard/boardText';
+import { sentenceName } from '@/lib/leaderboard/boardRules';
+import { boardDisplayName } from '@/app/[locale]/games/[id]/leaderboard/boardText';
 
 const KEY = {
   lead: 'feedLead',
@@ -22,7 +23,7 @@ export function TvFeed({ events, rows }: { events: TvFeedEvent[]; rows: LiveBoar
   const tc = useTranslations('leaderboard.common');
   const nameOf = (userId: string) => {
     const row = rows.find((r) => r.userId === userId);
-    return row ? sentenceName(row, rows, (r) => boardDisplayName(r, tc)) : '';
+    return row ? sentenceName(row, rows, (r) => boardDisplayName(r, tc), (r) => r.userId) : '';
   };
 
   return (
