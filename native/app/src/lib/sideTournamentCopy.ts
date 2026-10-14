@@ -13,8 +13,9 @@
 //     Endrer noen en streng på web uten å følge etter her, blir CI rød — så
 //     kopien kan ikke sile ut av takt uten at noen ser det.
 //  3. **Regelpanelet er utenfor v1.** `rulesPanel`, `achievementRules` og
-//     `panel` («Slik gis poengene») speiles bevisst ikke; appen viser bare
-//     resultatet, ikke regelverket.
+//     `panel` («Slik gis poengene») speiles bevisst ikke her; appen viser bare
+//     resultatet, ikke regelverket. Panelets to etiketter for lengste drive og
+//     nærmest pinnen står i `boardCopy.ts` (#2579).
 //
 // Strengene er hentet programmatisk ut av `no.json` — ingen av dem er skrevet
 // for hånd.
@@ -114,11 +115,12 @@ export const SIDE_TEXT = {
   comebackDetail: '{name}, snudd {delta} slag',
 } as const;
 
-/** Den kompakte sideturnerings-seksjonen under matchplay-duellkortet. */
+/**
+ * Den kompakte sideturnerings-seksjonen under matchplay-duellkortet. Lengste
+ * drive og nærmest pinnen står med panelets etiketter (`boardCopy.ts`, #2579).
+ */
 export const MATCHPLAY_SIDE_TEXT = {
   heading: 'Sideturnering',
-  longestDrive: 'Lengste drive #{pos}: {name}',
-  closestToPin: 'Nærmest pinnen #{pos}: {name}',
   showBasis: 'Vis poenggrunnlaget',
 } as const;
 

@@ -3,7 +3,7 @@
 // (aldri bundlet) og krever tegn-for-tegn likhet for webbens strenger, og at
 // appens egne ikke er en av dem.
 import source from '../../../../messages/no.json';
-import { BOARD_APP_TEXT, BOARD_TEXT } from './boardCopy';
+import { BOARD_APP_TEXT, BOARD_TEXT, SIDE_PANEL_TEXT } from './boardCopy';
 
 /** Alle blader i et tre, med punktum-sti. */
 function leaves(node: unknown, prefix = ''): [string, string][] {
@@ -19,6 +19,14 @@ const sourceLeaves = new Map(leaves(board));
 describe('paritet med messages/no.json', () => {
   it.each(leaves(BOARD_TEXT))('leaderboard.board.%s er identisk med kilden', (path, value) => {
     expect(sourceLeaves.get(path)).toBe(value);
+  });
+
+  it('sideturneringens etiketter er panelets', () => {
+    const rows: Record<string, string> = source.leaderboard.sideTournament.panel.rows;
+    expect(SIDE_PANEL_TEXT).toStrictEqual({
+      longestDrive: rows.longestDrive,
+      closestToPin: rows.closestToPin,
+    });
   });
 
   it('appens egne tekster er ingen av verdiene i leaderboard.board', () => {

@@ -48,7 +48,8 @@ import {
   SIDE_TEXT,
   type SideGroupId,
 } from '../../lib/sideTournamentCopy';
-import { FONTS, fraunces, TAP, useTheme } from '../../theme';
+import { BOARD_APP_TEXT, SIDE_PANEL_TEXT } from '../../lib/boardCopy';
+import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
 import { CalmNote } from './Table';
 
 /**
@@ -218,8 +219,10 @@ export type SideTournamentSectionProps = SideTournamentData & {
 /**
  * Sideturneringen for ett spill.
  *
- * Tre lag på skjermen: overskriften, de kårede LD/CTP-slotene, og poengjakten
- * — én utvidbar rad per lag, rangert på totalpoeng.
+ * Tre lag på skjermen: kortet med overskriften og de kårede LD/CTP-slotene
+ * (#2579, `Tavle-ferdig-forslag`: etiketten til venstre, hele navnet til
+ * høyre), og poengjakten under — én utvidbar rad per lag, rangert på
+ * totalpoeng.
  */
 export function SideTournamentSection({
   teams,
@@ -231,7 +234,7 @@ export function SideTournamentSection({
   sideWinnersUnavailable = false,
   sideWinnersLoading = false,
 }: SideTournamentSectionProps) {
-  const { colors, ui } = useTheme();
+  const { colors } = useTheme();
   // `<details>` finnes ikke i RN, så utvidelsen er vår egen. Et sett, ikke én
   // id: webbens rader åpnes uavhengig av hverandre, og et lag som lukker seg
   // selv når du åpner nabolaget ville vært en ny regel.
@@ -270,18 +273,23 @@ export function SideTournamentSection({
 
   return (
     <View testID="side-tournament-section">
-      <Text style={ui.sectionTitle}>{MATCHPLAY_SIDE_TEXT.heading}</Text>
-
-      {!winnersMissing &&
-        headlineLines.map((line) => (
-          <Text
-            key={line.key}
-            style={[styles.headline, { color: colors.text }]}
-            testID={`side-headline-${line.key}`}
-          >
-            {line.text}
-          </Text>
-        ))}
+      <View
+        style={[styles.headCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        testID="side-tournament-card"
+      >
+        <Text style={[styles.heading, { color: colors.muted }]} accessibilityRole="header">
+          {MATCHPLAY_SIDE_TEXT.heading}
+        </Text>
+        {!winnersMissing &&
+          headlineLines.map((line) => (
+            <View key={line.key} style={styles.headline} testID={`side-headline-${line.key}`}>
+              <Text style={[styles.headlineLabel, { color: colors.muted }]}>{line.label}</Text>
+              <Text style={[styles.headlineName, { color: colors.text }]} numberOfLines={1}>
+                {line.name}
+              </Text>
+            </View>
+          ))}
+      </View>
 
       {winnersMissing ? (
         <CalmNote
@@ -514,24 +522,28 @@ function rankByPoints<T extends { totalPoints: number }>(
  * `position` er hvilket hull sloten gjelder, ikke en plassering — samme spiller
  * kan derfor stå på begge slots, og da er to linjer riktig svar. Slots uten
  * kåret vinner hoppes stille over: «ingen vant ennå» er ikke en nyhet.
+ *
+ * Etiketten er panelets («Lengste drive»). Har kategorien flere plasser, får
+ * hver linje nummeret, også den første («Lengste drive #1»). Navnet er det
+ * hele (#2579), som i tegningen.
  */
 function buildHeadlineLines(
   teams: readonly SideTournamentTeam[],
   sideWinners: readonly SideTournamentSlotWinner[],
   ldCount: number,
   ctpCount: number,
-): Array<{ key: string; text: string }> {
-  const firstNameById = new Map<string, string>();
+): Array<{ key: string; label: string; name: string }> {
+  const nameById = new Map<string, string>();
   for (const team of teams) {
     for (const member of team.members) {
-      firstNameById.set(member.userId, member.firstName);
+      nameById.set(member.userId, member.displayName);
     }
   }
 
-  const lines: Array<{ key: string; text: string }> = [];
+  const lines: Array<{ key: string; label: string; name: string }> = [];
   const push = (
     category: SideTournamentSlotWinner['category'],
-    template: string,
+    label: string,
     prefix: string,
     count: number,
   ) => {
@@ -542,16 +554,14 @@ function buildHeadlineLines(
       if (!winner?.winnerUserId) continue;
       lines.push({
         key: `${prefix}-${pos}`,
-        text: fillCopy(template, {
-          pos,
-          name: firstNameById.get(winner.winnerUserId) ?? '?',
-        }),
+        label: count > 1 ? label + fillCopy(BOARD_APP_TEXT.sidePosition, { pos }) : label,
+        name: nameById.get(winner.winnerUserId) ?? '?',
       });
     }
   };
 
-  push('longest_drive', MATCHPLAY_SIDE_TEXT.longestDrive, 'ld', ldCount);
-  push('closest_to_pin', MATCHPLAY_SIDE_TEXT.closestToPin, 'ctp', ctpCount);
+  push('longest_drive', SIDE_PANEL_TEXT.longestDrive, 'ld', ldCount);
+  push('closest_to_pin', SIDE_PANEL_TEXT.closestToPin, 'ctp', ctpCount);
   return lines;
 }
 
@@ -1091,7 +1101,23 @@ function buildAwardRows({
 const LINE_15 = fraunces(500, 15, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
-  headline: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },
+  // Kortet øverst (`Tavle-ferdig-forslag`): 12/14 pt luft og 8 mellom linjene.
+  headCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  heading: {
+    ...interLine(10, 12),
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  headline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
+  headlineLabel: { ...interLine(13, 16), fontFamily: FONTS.sans },
+  headlineName: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
   teamCard: {
     borderRadius: 12,
     borderWidth: 1,
