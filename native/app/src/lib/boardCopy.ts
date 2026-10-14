@@ -60,9 +60,10 @@ export const BOARD_TEXT = {
   stripSubmit: 'Lever scorekort →',
 } as const;
 
-/** `leaderboard.common`: antall hull i radens opplesning. */
+/** `leaderboard.common`: antall hull i radens opplesning, og navnet som mangler. */
 export const BOARD_COMMON_TEXT = {
   holesPlayedCount: '{count} hull spilt',
+  unknownPlayerFull: '(ukjent spiller)',
 } as const;
 
 /**

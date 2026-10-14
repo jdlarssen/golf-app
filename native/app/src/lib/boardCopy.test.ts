@@ -21,8 +21,11 @@ describe('paritet med messages/no.json', () => {
     expect(sourceLeaves.get(path)).toBe(value);
   });
 
-  it('antall hull i opplesningen er leaderboard.common sin', () => {
-    expect(BOARD_COMMON_TEXT.holesPlayedCount).toBe(source.leaderboard.common.holesPlayedCount);
+  it('tekstene fra leaderboard.common er kildens', () => {
+    expect(BOARD_COMMON_TEXT).toStrictEqual({
+      holesPlayedCount: source.leaderboard.common.holesPlayedCount,
+      unknownPlayerFull: source.leaderboard.common.unknownPlayerFull,
+    });
   });
 
   it('sideturneringens etiketter er panelets', () => {
