@@ -271,17 +271,24 @@ export function SideTournamentSection({
   // som ikke har skjedd ennå. Uten slots er det ingenting å vente på.
   if (sideWinnersLoading && ldCount + ctpCount > 0) return null;
 
+  const heading = (
+    <Text style={[styles.heading, { color: colors.muted }]} accessibilityRole="header">
+      {MATCHPLAY_SIDE_TEXT.heading}
+    </Text>
+  );
+  const lines = winnersMissing ? [] : headlineLines;
+
   return (
     <View testID="side-tournament-section">
-      <View
-        style={[styles.headCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        testID="side-tournament-card"
-      >
-        <Text style={[styles.heading, { color: colors.muted }]} accessibilityRole="header">
-          {MATCHPLAY_SIDE_TEXT.heading}
-        </Text>
-        {!winnersMissing &&
-          headlineLines.map((line) => (
+      {/* Kortet holder overskriften og de kårede linjene. Uten en kåret linje
+          står overskriften alene, ikke i en tom boks. */}
+      {lines.length > 0 ? (
+        <View
+          style={[styles.headCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="side-tournament-card"
+        >
+          {heading}
+          {lines.map((line) => (
             <View key={line.key} style={styles.headline} testID={`side-headline-${line.key}`}>
               <Text style={[styles.headlineLabel, { color: colors.muted }]}>{line.label}</Text>
               <Text style={[styles.headlineName, { color: colors.text }]} numberOfLines={1}>
@@ -289,7 +296,10 @@ export function SideTournamentSection({
               </Text>
             </View>
           ))}
-      </View>
+        </View>
+      ) : (
+        heading
+      )}
 
       {winnersMissing ? (
         <CalmNote
