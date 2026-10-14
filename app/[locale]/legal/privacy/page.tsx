@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
+import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { DATA_CONTROLLER_NAME } from '../dataController';
@@ -38,6 +39,24 @@ export default async function PrivacyPage() {
   const term = (chunks: React.ReactNode) => (
     <span className="font-medium text-text">{chunks}</span>
   );
+  // #2561: s4 links to the public deletion page (locale-aware), s5 to the
+  // Norwegian Data Protection Authority.
+  const deletePageLink = (chunks: React.ReactNode) => (
+    <Link
+      href="/legal/slett-konto"
+      className="font-medium text-primary underline underline-offset-2"
+    >
+      {chunks}
+    </Link>
+  );
+  const datatilsynetLink = (chunks: React.ReactNode) => (
+    <a
+      href="https://www.datatilsynet.no"
+      className="font-medium text-primary underline underline-offset-2"
+    >
+      {chunks}
+    </a>
+  );
 
   return (
     <AppShell>
@@ -72,6 +91,8 @@ export default async function PrivacyPage() {
             <li>{t('s1Item3')}</li>
             <li>{t('s1Item4')}</li>
             <li>{t('s1Item5')}</li>
+            <li>{t('s1Item6')}</li>
+            <li>{t('s1Item7')}</li>
           </ul>
         </section>
 
@@ -83,6 +104,22 @@ export default async function PrivacyPage() {
           <p className="text-text">
             {t.rich('s2Body', { supabase: term })}
           </p>
+        </section>
+
+        {/* Varsler (#2561): push_subscriptions og apns_tokens */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('pushHeading')}
+          </h2>
+          <p className="text-text">{t('pushBody')}</p>
+        </section>
+
+        {/* Posisjon ved greenen (#2561): green_pins og avstand til green */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('greenPinHeading')}
+          </h2>
+          <p className="text-text">{t('greenPinBody')}</p>
         </section>
 
         {/* Underleverandører (#2234) */}
@@ -117,12 +154,27 @@ export default async function PrivacyPage() {
           <p className="text-text">{t('s3Para2')}</p>
         </section>
 
+        {/* Rettslig grunnlag (#2561), ett punkt per formål */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('legalBasisHeading')}
+          </h2>
+          <p className="text-text mb-2">{t('legalBasisIntro')}</p>
+          <ul className="list-disc list-outside pl-5 space-y-1 text-text">
+            <li>{t.rich('legalBasisAccount', { term })}</li>
+            <li>{t.rich('legalBasisNotifications', { term })}</li>
+            <li>{t.rich('legalBasisAnalytics', { term })}</li>
+          </ul>
+        </section>
+
         {/* Section 4 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s4Heading')}
           </h2>
-          <p className="text-text">{t('s4Body')}</p>
+          <p className="text-text">
+            {t.rich('s4Body', { link: deletePageLink })}
+          </p>
         </section>
 
         {/* Section 5 */}
@@ -137,6 +189,9 @@ export default async function PrivacyPage() {
             <li>{t.rich('s5Right3', { term })}</li>
             <li>{t.rich('s5Right4', { term })}</li>
           </ul>
+          <p className="text-text mt-2">
+            {t.rich('s5Complaint', { link: datatilsynetLink })}
+          </p>
         </section>
 
         {/* Section 6 */}
