@@ -275,6 +275,14 @@ async function renderHole(holeNumber = 1) {
 }
 
 describe('Hole', () => {
+  // Spionen på skjermleser-kunngjøringen (#2228) gjenopprettes etter hver
+  // test, så den ikke lekker kall eller mock inn i neste.
+  let announceSpy: jest.SpyInstance | null = null;
+  afterEach(() => {
+    announceSpy?.mockRestore();
+    announceSpy = null;
+  });
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockState.bundle = mockSoloBundle;
@@ -396,7 +404,7 @@ describe('Hole', () => {
     // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
     // og skinna står fast på meg, så neste trykk på tallet treffer riktig.
     const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    announceSpy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
     (writeScore as jest.Mock).mockRejectedValueOnce(new Error('SQLITE_FULL'));
     await fireEvent.press(screen.getByTestId('rail-option-4'));
     await waitFor(() => {
@@ -405,7 +413,7 @@ describe('Hole', () => {
     expect(logged).toHaveBeenCalledWith('[Hole] lagring feilet', expect.any(Error));
     logged.mockRestore();
     // Skjermleseren får samme setning som banneret.
-    expect(announce).toHaveBeenCalledWith(LOCAL_SAVE_FAILED.strokes);
+    expect(announceSpy).toHaveBeenCalledWith(LOCAL_SAVE_FAILED.strokes);
     expect(writeScore).toHaveBeenCalledWith({
       gameId: GAME_ID,
       userId: 'me',

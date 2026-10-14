@@ -1,5 +1,6 @@
 // #2228: hvilken variant feilskjermen får per skjerm (Type A). Spillskjermene
 // lover at slagene er trygge, Hjem har ingen tilbakeknapp å vise til.
+import type { RootStackParamList } from '../navigation';
 import { errorBoundaryVariantFor } from './errorBoundaryCopy';
 
 describe('errorBoundaryVariantFor', () => {
@@ -13,7 +14,7 @@ describe('errorBoundaryVariantFor', () => {
     ['Approve', 'default'],
     ['EndGame', 'default'],
     ['Profile', 'default'],
-  ])('%s → %s', (routeName, variant) => {
+  ] as [keyof RootStackParamList, string][])('%s → %s', (routeName, variant) => {
     expect(errorBoundaryVariantFor(routeName)).toBe(variant);
   });
 });

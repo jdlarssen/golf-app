@@ -222,8 +222,12 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   // under, og Sollys og pokalen til høyre. I sollys står ingen tittel, som på
   // `Hull-sollys`. Et langt navn kuttes på skjermen, men leses helt.
   const sunlight = useSunlight();
-  const gameName = bundle?.game.name ?? '';
-  const topLine = bundle ? holeTopLine(bundle.game.gameMode, bundle.courseName) : '';
+  // Til bundelen er lest, står toppen fra parametrene (#2228), så den ikke
+  // blankes i mellomtiden.
+  const gameName = bundle?.game.name ?? route.params.gameName ?? '';
+  const topLine = bundle
+    ? holeTopLine(bundle.game.gameMode, bundle.courseName)
+    : (route.params.topLine ?? '');
   useLayoutEffect(() => {
     navigation.setOptions({
       ...kickerHeader(sunlight ? '' : gameName, `Hull ${holeNumber}`, {
