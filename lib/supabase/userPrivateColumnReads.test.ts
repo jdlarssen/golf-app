@@ -200,6 +200,11 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending av produktnytt',
   },
+  'lib/users/deleteAccount.ts': {
+    receivers: ['admin'],
+    reason:
+      'konto-sletting bak self-/admin-vakta: adressen sletter invitasjonene til den før full sletting (#2561), går aldri ut',
+  },
   'lib/users/getTeamCandidates.ts': {
     receivers: ['admin'],
     reason: '(D6) maskeres på serveren; full adresse bare for id-er kapteinen valgte',
