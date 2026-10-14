@@ -278,3 +278,30 @@ export function missingSpoken(row: { name: string; holes: readonly number[]; fir
   const holes = formatNameList(row.holes.map(String));
   return `${row.name} ${ROUND_DONE_TEXT.missingSpoken} ${holes}. ${ROUND_DONE_TEXT.openHole} ${row.firstHole}.`;
 }
+
+/**
+ * Er scorekortets egen «Lever scorekort» kommet til syne i rulla? Toppen av
+ * knappen (i innholdets koordinater) er over underkanten av det synlige
+ * vinduet. Før knappen eller rulla er målt, er svaret nei.
+ */
+export function submitInView(g: {
+  scrollY: number;
+  viewportHeight: number;
+  submitTop: number | null;
+}): boolean {
+  if (g.submitTop == null || g.viewportHeight <= 0) return false;
+  return g.submitTop < g.scrollY + g.viewportHeight;
+}
+
+/**
+ * Bunnlinja med «Se over og lever scorekortet» står når oppsummeringen vises,
+ * og viker når scorekortets egen leverknapp er i syne: to leverknapper på
+ * skjermen samtidig er ikke lov (eierens valg B, #2299).
+ *
+ * Linja ligger under rulla, ikke over den. Når den viker, blir rulla høyere,
+ * og knappen er fortsatt i syne; når den kommer tilbake, blir rulla lavere,
+ * og knappen er fortsatt ute av syne. Derfor blinker den ikke på grensen.
+ */
+export function roundDoneBarVisible(opts: { hasSummary: boolean; submitInView: boolean }): boolean {
+  return opts.hasSummary && !opts.submitInView;
+}

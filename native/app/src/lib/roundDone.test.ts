@@ -15,6 +15,8 @@ import {
   missingSpoken,
   placeSpoken,
   placeUnit,
+  roundDoneBarVisible,
+  submitInView,
 } from './roundDone';
 import type { ScorecardRow } from './scorecardRows';
 
@@ -255,5 +257,27 @@ describe('tekstene', () => {
     },
   ])('$name', ({ text, expected }) => {
     expect(text).toBe(expected);
+  });
+});
+
+describe('bunnlinja', () => {
+  // Rulla er 600 pt høy; scorekortets «Lever scorekort» står 1100 pt ned i innholdet.
+  it.each([
+    { name: 'øverst: knappen er under rulla', g: { scrollY: 0, viewportHeight: 600, submitTop: 1100 }, inView: false },
+    { name: 'knappen står akkurat i underkanten', g: { scrollY: 500, viewportHeight: 600, submitTop: 1100 }, inView: false },
+    { name: 'ett punkt til: knappen er i syne', g: { scrollY: 501, viewportHeight: 600, submitTop: 1100 }, inView: true },
+    { name: 'linja har veket, rulla er høyere', g: { scrollY: 400, viewportHeight: 737, submitTop: 1100 }, inView: true },
+    { name: 'knappens plass er ikke målt ennå', g: { scrollY: 900, viewportHeight: 600, submitTop: null }, inView: false },
+    { name: 'rulla er ikke målt ennå', g: { scrollY: 0, viewportHeight: 0, submitTop: 1100 }, inView: false },
+  ])('$name', ({ g, inView }) => {
+    expect(submitInView(g)).toBe(inView);
+  });
+
+  it.each([
+    { name: 'oppsummeringen vises, knappen er ikke i syne', hasSummary: true, inView: false, shown: true },
+    { name: 'knappen er i syne: linja viker', hasSummary: true, inView: true, shown: false },
+    { name: 'ingen oppsummering (17 hull eller levert)', hasSummary: false, inView: false, shown: false },
+  ])('$name', ({ hasSummary, inView, shown }) => {
+    expect(roundDoneBarVisible({ hasSummary, submitInView: inView })).toBe(shown);
   });
 });
