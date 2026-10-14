@@ -1,6 +1,6 @@
 // The board's text-free rules (#2253, moved here in #2579): how it collapses,
-// when places show, who leads, the place kind, the number and a name inside a
-// sentence. One home for the web board, the follow page, the big screen and
+// when places show, who leads, the place kind, the number, a name inside a
+// sentence and the order of a row read aloud. One home for the web board, the follow page, the big screen and
 // the app (native/app never imports from app/). The web's `t()` wrappers stay
 // in `app/[locale]/games/[id]/leaderboard/boardText.ts`.
 //
@@ -85,4 +85,65 @@ export function sentenceName<Row extends { name: string | null }>(
   const key = keyOf(row);
   const others = rows.filter((r) => keyOf(r) !== key).map((r) => r.name);
   return sharesFirstName(row.name, others) ? displayName(row) : (firstName(row.name) ?? displayName(row));
+}
+
+/** The number in a spoken line, by kind; each surface words it. */
+export type BoardTotalSr =
+  | { kind: 'none' }
+  | { kind: 'points'; value: number }
+  | { kind: 'net'; value: number }
+  | { kind: 'even' }
+  | { kind: 'over'; value: number }
+  | { kind: 'under'; value: number };
+
+/** «18 poeng», «74 slag netto», «På par», «2 over par», or no total yet. */
+export function boardTotalSr(unit: LiveBoardUnit, total: number | null): BoardTotalSr {
+  if (total === null) return { kind: 'none' };
+  if (unit === 'points') return { kind: 'points', value: total };
+  if (unit === 'net') return { kind: 'net', value: total };
+  if (total === 0) return { kind: 'even' };
+  return total > 0 ? { kind: 'over', value: total } : { kind: 'under', value: -total };
+}
+
+export type BoardRowSrPart =
+  | { key: 'place'; rank: number; tied: boolean }
+  | { key: 'winner' }
+  | { key: 'total'; total: BoardTotalSr }
+  | { key: 'movement'; direction: 'up' | 'down' | 'same'; count: number }
+  | { key: 'recent'; tones: ('under' | 'par' | 'over1' | 'over2')[] }
+  | { key: 'holes'; count: number }
+  | { key: 'note' }
+  | { key: 'you' };
+
+/**
+ * A board row read aloud, in order (#2253, one home since #2579): the place
+ * (once anyone has played), «Vinner» on a finished board, the number, the
+ * movement, the last holes, holes played, a finished board's tie note, and
+ * «you». The web's `boardRowSr` and the app's row label word the parts.
+ */
+export function boardRowSrParts(opts: {
+  row: Pick<LiveBoardRow, 'rank' | 'tied' | 'total' | 'holesPlayed' | 'movement' | 'recent'>;
+  unit: LiveBoardUnit;
+  showRank: boolean;
+  isYou: boolean;
+  winner?: boolean;
+  hasNote?: boolean;
+}): BoardRowSrPart[] {
+  const { row, unit, showRank, isYou, winner = false, hasNote = false } = opts;
+  const parts: BoardRowSrPart[] = [];
+  if (showRank) parts.push({ key: 'place', rank: row.rank, tied: row.tied });
+  if (winner) parts.push({ key: 'winner' });
+  parts.push({ key: 'total', total: boardTotalSr(unit, row.total) });
+  if (row.movement !== null) {
+    parts.push({
+      key: 'movement',
+      direction: row.movement > 0 ? 'up' : row.movement < 0 ? 'down' : 'same',
+      count: Math.abs(row.movement),
+    });
+  }
+  if (row.recent.length > 0) parts.push({ key: 'recent', tones: row.recent.map(toneKey) });
+  parts.push({ key: 'holes', count: row.holesPlayed });
+  if (hasNote) parts.push({ key: 'note' });
+  if (isYou) parts.push({ key: 'you' });
+  return parts;
 }

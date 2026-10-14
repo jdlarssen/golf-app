@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
 import {
   COLLAPSED_ROWS,
+  boardRowSrParts,
   isBoardLeader,
   placeKind,
   sentenceName,
@@ -96,5 +97,58 @@ describe('placeKind and isBoardLeader — read rank, tie and holes, any row', ()
     expect(placeKind(r, showRank)).toBe(kind);
     expect(isBoardLeader(r)).toBe(leader);
     expect(isBoardLeader({ ...team(4, r.rank), holesPlayed: r.holesPlayed })).toBe(leader);
+  });
+});
+
+// #2579: the order of a row's spoken line, one home for the web board's
+// boardRowSr and the app's row label. Text-free: each surface words the parts.
+describe('boardRowSrParts — the order of a row read aloud', () => {
+  const r = { ...row('a', 'Marte Lie', 3), total: 15, movement: 2, recent: ['under', 'par', 'over1'] as ('under' | 'par' | 'over1')[], holesPlayed: 7 };
+
+  it('place, number, movement, last holes, holes played, then you', () => {
+    expect(boardRowSrParts({ row: r, unit: 'points', showRank: true, isYou: true })).toEqual([
+      { key: 'place', rank: 3, tied: false },
+      { key: 'total', total: { kind: 'points', value: 15 } },
+      { key: 'movement', direction: 'up', count: 2 },
+      { key: 'recent', tones: ['under', 'par', 'over1'] },
+      { key: 'holes', count: 7 },
+      { key: 'you' },
+    ]);
+  });
+
+  it('a finished row adds the winner after the place and the note before you', () => {
+    const parts = boardRowSrParts({
+      row: { ...r, rank: 1, movement: null, recent: [] },
+      unit: 'points',
+      showRank: true,
+      isYou: true,
+      winner: true,
+      hasNote: true,
+    });
+    expect(parts.map((p) => p.key)).toEqual(['place', 'winner', 'total', 'holes', 'note', 'you']);
+  });
+
+  it('leaves out the place before anyone has played', () => {
+    expect(boardRowSrParts({ row: r, unit: 'points', showRank: false, isYou: false })[0].key).toBe('total');
+  });
+
+  it.each([
+    ['points', 15, { kind: 'points', value: 15 }],
+    ['net', 74, { kind: 'net', value: 74 }],
+    ['toPar', 0, { kind: 'even' }],
+    ['toPar', 2, { kind: 'over', value: 2 }],
+    ['toPar', -3, { kind: 'under', value: 3 }],
+    ['points', null, { kind: 'none' }],
+  ] as const)('%s %s → %o', (unit, total, expected) => {
+    const total0 = boardRowSrParts({ row: { ...r, total }, unit, showRank: true, isYou: false })[1];
+    expect(total0).toEqual({ key: 'total', total: expected });
+  });
+
+  it.each([
+    [3, { key: 'movement', direction: 'up', count: 3 }],
+    [-1, { key: 'movement', direction: 'down', count: 1 }],
+    [0, { key: 'movement', direction: 'same', count: 0 }],
+  ] as const)('movement %s → %o', (movement, expected) => {
+    expect(boardRowSrParts({ row: { ...r, movement }, unit: 'points', showRank: true, isYou: false })[2]).toEqual(expected);
   });
 });
