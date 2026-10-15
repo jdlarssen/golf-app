@@ -85,6 +85,8 @@ insert into fk_coverage (tbl, col, handling) values
   ('reactions',                  'target_user_id',                      'kept_history'),
   ('scores',                     'entered_by',                          'kept_history'),
   ('scores',                     'user_id',                             'kept_history'),
+  ('team_tee_shots',             'entered_by',                          'kept_history'),
+  ('team_tee_shots',             'tee_shot_by',                         'kept_history'),
   ('tournament_side_awards',     'winner_user_id',                      'kept_history'),
   ('wolf_hole_choices',          'entered_by',                          'kept_history'),
   ('wolf_hole_choices',          'partner_user_id',                     'kept_history'),

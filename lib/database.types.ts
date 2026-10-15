@@ -1822,6 +1822,58 @@ export type Database = {
           },
         ]
       }
+      team_tee_shots: {
+        Row: {
+          client_updated_at: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          team_number: number
+          tee_shot_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_updated_at: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          team_number: number
+          tee_shot_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_updated_at?: string
+          entered_by?: string
+          game_id?: string
+          hole_number?: number
+          team_number?: number
+          tee_shot_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_tee_shots_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tee_shots_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tee_shots_tee_shot_by_fkey"
+            columns: ["tee_shot_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tee_boxes: {
         Row: {
           archived_at: string | null
@@ -2418,7 +2470,34 @@ export type Database = {
         }
         Returns: string
       }
+      set_team_tee_shot_if_newer: {
+        Args: {
+          p_client_updated_at: string
+          p_game_id: string
+          p_hole_number: number
+          p_team_number: number
+          p_tee_shot_by: string
+        }
+        Returns: {
+          client_updated_at: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          team_number: number
+          tee_shot_by: string
+          updated_at: string
+          was_applied: boolean
+        }[]
+      }
       slugify_course_name: { Args: { input: string }; Returns: string }
+      team_tee_shot_shortfall: {
+        Args: {
+          p_extra_member?: string
+          p_game_id: string
+          p_team_number: number
+        }
+        Returns: number
+      }
       transfer_team_captaincy: {
         Args: {
           p_actor_user_id: string

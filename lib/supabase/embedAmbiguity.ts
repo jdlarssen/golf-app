@@ -45,6 +45,7 @@ export const MULTI_FK_TO_USERS: readonly string[] = [
   'courses', // created_by, updated_by
   'reactions', // user_id, target_user_id
   'cup_lineup_sessions', // created_by, team_1_submitted_by, team_2_submitted_by
+  'team_tee_shots', // tee_shot_by, entered_by
 ] as const;
 
 const MULTI_FK_SET = new Set(MULTI_FK_TO_USERS);
