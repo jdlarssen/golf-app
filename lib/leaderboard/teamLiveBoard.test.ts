@@ -87,6 +87,48 @@ describe('teamLiveBoard — total, unit and tone per format', () => {
   });
 });
 
+describe('teamLiveBoard — the tone is net, and the lowest net in team stableford', () => {
+  // One stroke on every hole: CH 18 for the player (best ball, stableford), or
+  // team handicap 18 in texas (50 % of 18 + 18). Gross 4, 5, 6 on par 4 is net
+  // 3, 4, 5: under, par, bogey, where gross would say par, bogey, double.
+  const rest = { b1: { team: 2, gross: [4, 4, 4] }, b2: { team: 2, gross: [4, 4, 4] } };
+  it.each([
+    [
+      'texas',
+      ctx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 50 }, {
+        a1: { team: 1, ch: 18, gross: [4, 5, 6] },
+        a2: { team: 1, ch: 18, gross: [4, 5, 6] },
+        ...rest,
+      }),
+    ],
+    [
+      // The mate's ball (CH 0, net 5, 6, 7) never counts; the team's gross
+      // (4, 5, 6) would give the gross tones.
+      'best ball',
+      ctx('best_ball', { kind: 'best_ball', team_size: 2, teams_count: 2 }, {
+        a1: { team: 1, ch: 18, gross: [4, 5, 6] },
+        a2: { team: 1, gross: [5, 6, 7] },
+        ...rest,
+      }),
+    ],
+  ])('%s: the tone follows the team’s net', (_name, context) => {
+    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName);
+    expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'over1']);
+  });
+
+  it('team stableford: the lowest net of the players who played the hole', () => {
+    // a1 (CH 18) nets 3, 4, 5; a2 (CH 0) nets 3, 6, 4. Lowest: 3, 4, 4. The
+    // first player's net, the highest net or the lowest gross all differ.
+    const context = ctx('stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, {
+      a1: { team: 1, ch: 18, gross: [4, 5, 6] },
+      a2: { team: 1, gross: [3, 6, 4] },
+      ...rest,
+    });
+    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName);
+    expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'par']);
+  });
+});
+
 describe('teamLiveBoard — movement since each team’s latest hole', () => {
   // After hole 1 team 2 leads (4 against 5); after hole 2 team 1 leads (8 against 9).
   const moving: Plan = {
@@ -130,7 +172,54 @@ describe('teamLiveBoard — movement since each team’s latest hole', () => {
   });
 });
 
-describe('scrambleHoleCard — «DITT LAG PÅ HULL N» for the scramble family', () => {
+describe('«DITT LAG PÅ HULL N» — the model per format', () => {
+  // Scramble: gross strokes and the word on gross. Best ball: CH 18 gives a
+  // stroke on every hole, so gross 7 on a par 5 is net 6, a bogey on net (a
+  // double on gross), and the mate's net 7 does not count. The number and the
+  // word always describe the same score.
+  it.each([
+    [
+      'scramble',
+      () =>
+        scrambleHoleCard(
+          computeLeaderboard(
+            ctx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 0 }, {
+              ...plan,
+              a1: { team: 1, gross: [3, 4, 3] },
+              a2: { team: 1, gross: [3, 4, 3] },
+            }),
+          ) as TexasScrambleResult,
+          1,
+        ),
+      { holeNumber: 3, strokes: 3, term: 'birdie', overPar: -1 },
+    ],
+    [
+      'best ball',
+      () =>
+        bestBallHoleCard(
+          computeLeaderboard(
+            ctx(
+              'best_ball',
+              { kind: 'best_ball', team_size: 2, teams_count: 2 },
+              {
+                k: { team: 1, ch: 18, gross: [7] },
+                d: { team: 1, ch: 0, gross: [7] },
+                x: { team: 2, gross: [5] },
+                y: { team: 2, gross: [5] },
+              },
+              [5],
+            ),
+          ) as BestBallResult,
+          1,
+        ),
+      { holeNumber: 1, net: 6, term: 'bogey', overPar: 1, contributorIds: ['k'] },
+    ],
+  ])('%s', (_name, card, expected) => {
+    expect(card()).toEqual(expected);
+  });
+});
+
+describe('scrambleHoleCard — no card', () => {
   const texas = computeLeaderboard(
     ctx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 0 }, {
       ...plan,
@@ -139,10 +228,6 @@ describe('scrambleHoleCard — «DITT LAG PÅ HULL N» for the scramble family',
     }),
   ) as TexasScrambleResult;
 
-  it('is the team’s last played hole, its strokes and the word for them', () => {
-    expect(scrambleHoleCard(texas, 1)).toEqual({ holeNumber: 3, strokes: 3, term: 'birdie', overPar: -1 });
-  });
-
   it('is null for a team without a played hole, or no team', () => {
     const none = { ...texas, teams: texas.teams.map((t) => ({ ...t, holes: t.holes.map((h) => ({ ...h, teamGross: null, teamNet: null })) })) };
     expect(scrambleHoleCard(none, 1)).toBeNull();
@@ -150,27 +235,7 @@ describe('scrambleHoleCard — «DITT LAG PÅ HULL N» for the scramble family',
   });
 });
 
-describe('bestBallHoleCard — «Ballen til X talte»', () => {
-  // CH 18 gives a stroke on every hole: gross 7 on a par 5 is net 6, a bogey
-  // on net (a double on gross). The mate's net 7 does not count.
-  const bb = computeLeaderboard(
-    ctx(
-      'best_ball',
-      { kind: 'best_ball', team_size: 2, teams_count: 2 },
-      {
-        k: { team: 1, ch: 18, gross: [7] },
-        d: { team: 1, ch: 0, gross: [7] },
-        x: { team: 2, gross: [5] },
-        y: { team: 2, gross: [5] },
-      },
-      [5],
-    ),
-  ) as BestBallResult;
-
-  it('reads the word on the net the number shows, with whose ball counted', () => {
-    expect(bestBallHoleCard(bb, 1)).toEqual({ holeNumber: 1, net: 6, term: 'bogey', overPar: 1, contributorIds: ['k'] });
-  });
-
+describe('bestBallHoleCard — the first half', () => {
   it('never reaches past hole 9 on a board clipped to the first half', () => {
     const twelve: Plan = {
       k: { team: 1, gross: Array(12).fill(4) },
