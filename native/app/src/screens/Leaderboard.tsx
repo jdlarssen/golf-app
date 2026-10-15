@@ -19,14 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  firstHalfHoleNumbersForSegment,
-  lastHoleForSegment,
-} from '../../../../lib/games/holeScope';
-import type { GameStatus } from '../../../../lib/games/status';
-import type { ScoreVisibility } from '../../../../lib/games/visibility';
-import { firstHalfTableView } from '../../../../lib/leaderboard/firstHalfReveal';
-import { isFrontNineOpen } from '../../../../lib/leaderboard/frontNineGate';
+import { lastHoleForSegment } from '../../../../lib/games/holeScope';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { settlementForResult } from '../../../../lib/scoring/settlement';
 import {
@@ -50,6 +43,7 @@ import {
 import {
   FIRST_HALF_WAITING_NOTE,
   firstHalfLockedNote,
+  firstHalfScope,
   grossLines,
   hasAnyStroke,
   leaderboardVisibility,
@@ -367,51 +361,15 @@ export function LeaderboardBody({
     return <GrossOnlyTable bundle={bundle} scores={scores} />;
   }
 
-  // #1978: lag-formatenes avsløring. Webben viser bare første halvdel av en
-  // best ball-runde som pågår, og skriver at resten kommer når arrangøren
-  // avslutter. Appen viste hele 18-hulls-tavla: én spiller med appen så
-  // fasiten mens en med nettsiden ikke gjorde det, i samme runde.
-  //
-  // `gateReason` stenger alle segment-spill ('segment'), så vi er alltid på
-  // hele runden her og porten er hull 1-9 — samme liste webben regner ut.
-  const gateHoles = firstHalfHoleNumbersForSegment('full');
-  const openHoles = new Set(gateHoles);
-  const revealView = firstHalfTableView({
-    gameMode: game.gameMode as GameMode,
-    status: game.status as GameStatus,
-    scoreVisibility: game.scoreVisibility as ScoreVisibility,
-    gateOpen: isFrontNineOpen({
-      // HELE rosteret, trukne inkludert — webben mater porten med den
-      // ufiltrerte lista (`leaderboardContent.tsx`), mens radene i tabellen
-      // filtrerer. Filtrerte vi her, ville et lag med en trukket spiller
-      // åpnet porten i appen og ikke på nettsiden.
-      //
-      // `teamNumber` er nullable i bundelen; en spiller uten lag hører ikke
-      // til noen port. Best ball har alltid lag, så filteret er defensivt.
-      players: bundle.players
-        .filter((p) => p.teamNumber != null)
-        .map((p) => ({ user_id: p.userId, team_number: p.teamNumber as number })),
-      scores: scores.map((s) => ({
-        user_id: s.userId,
-        hole_number: s.holeNumber,
-        strokes: s.strokes,
-      })),
-      gateHoles,
-    }),
-  });
-
-  if (revealView === 'waiting') {
+  // #1978: best ball viser bare første halvdel mens runden pågår, som webben.
+  // Porten og klippet bor i `firstHalfScope` (delt med lagtavla, #2579).
+  const scope = firstHalfScope(bundle, scores);
+  if (scope.view === 'waiting') {
     return <CalmNote text={FIRST_HALF_WAITING_NOTE} testID="leaderboard-first-half-waiting" />;
   }
-
-  // Klipper BEGGE veier, som webbens state3.5: både hull-lista og slagene,
-  // og så regnes tabellen om over det. Summen blir dermed en ekte
-  // ni-hulls-sum (23), ikke en 18-hulls-sum med rader gjemt (51).
-  const clipped = revealView === 'first-half';
-  const scopedScores = clipped ? scores.filter((s) => openHoles.has(s.holeNumber)) : scores;
-  const scopedBundle = clipped
-    ? { ...bundle, holes: bundle.holes.filter((h) => openHoles.has(h.holeNumber)) }
-    : bundle;
+  const clipped = scope.view === 'first-half';
+  const scopedScores = scope.scores;
+  const scopedBundle = scope.bundle;
 
   const outcome = computeGameLeaderboard(scopedBundle, scopedScores, extras);
   if (!outcome.ok) {

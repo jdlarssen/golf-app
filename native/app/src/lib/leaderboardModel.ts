@@ -5,7 +5,13 @@
 // motoren (`holesUp`, `result.formatted`), og dette laget setter norske ord på
 // den. En egen «hvem leder»-formel i appen ville vært et tredje hjem for en
 // regel som alt har to.
-import { revealActiveTable } from '../../../../lib/leaderboard/firstHalfReveal';
+import { firstHalfHoleNumbersForSegment } from '../../../../lib/games/holeScope';
+import {
+  firstHalfTableView,
+  revealActiveTable,
+  type FirstHalfTableView,
+} from '../../../../lib/leaderboard/firstHalfReveal';
+import { isFrontNineOpen } from '../../../../lib/leaderboard/frontNineGate';
 import { revealState, shouldHideNetto } from '../../../../lib/games/visibility';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -23,7 +29,8 @@ import {
   type WolfChoiceKey,
   type WolfOutcomeKey,
 } from '../../../../lib/wolf/holeLabels';
-import type { BundlePlayer } from '../data/gameBundle';
+import type { LocalScore } from '../data/db';
+import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { displayName } from './display';
 
 /**
@@ -231,6 +238,55 @@ export const NASSAU_SECTION_LABELS: Record<
  */
 export function firstHalfLockedNote(lastHole: number): string {
   return `Front 9 · 🤫 Vi sees ved hull ${lastHole}. Resten av tabellen vises når arrangøren avslutter spillet.`;
+}
+
+/**
+ * #1978: lag-formatenes avsløring. Webben viser bare første halvdel av en
+ * best ball-runde som pågår, og skriver at resten kommer når arrangøren
+ * avslutter. Her er porten ett sted for Resultater-skjermen og lagtavla
+ * (#2579): hva tabellen får vise, og spillet og slagene klippet til det.
+ *
+ * `gateReason` stenger alle segment-spill ('segment'), så vi er alltid på hele
+ * runden her og porten er hull 1-9 — samme liste webben regner ut. Klippet går
+ * BEGGE veier, som webbens state3.5: både hull-lista og slagene, så summen
+ * blir en ekte ni-hulls-sum (23), ikke en 18-hulls-sum med rader gjemt (51).
+ */
+export function firstHalfScope(
+  bundle: GameBundle,
+  scores: readonly LocalScore[],
+): { view: FirstHalfTableView; bundle: GameBundle; scores: readonly LocalScore[] } {
+  const { game } = bundle;
+  const gateHoles = firstHalfHoleNumbersForSegment('full');
+  const openHoles = new Set(gateHoles);
+  const view = firstHalfTableView({
+    gameMode: game.gameMode as GameMode,
+    status: game.status as GameStatus,
+    scoreVisibility: game.scoreVisibility as ScoreVisibility,
+    gateOpen: isFrontNineOpen({
+      // HELE rosteret, trukne inkludert — webben mater porten med den
+      // ufiltrerte lista (`leaderboardContent.tsx`), mens radene i tabellen
+      // filtrerer. Filtrerte vi her, ville et lag med en trukket spiller
+      // åpnet porten i appen og ikke på nettsiden.
+      //
+      // `teamNumber` er nullable i bundelen; en spiller uten lag hører ikke
+      // til noen port. Best ball har alltid lag, så filteret er defensivt.
+      players: bundle.players
+        .filter((p) => p.teamNumber != null)
+        .map((p) => ({ user_id: p.userId, team_number: p.teamNumber as number })),
+      scores: scores.map((s) => ({
+        user_id: s.userId,
+        hole_number: s.holeNumber,
+        strokes: s.strokes,
+      })),
+      gateHoles,
+    }),
+  });
+  if (view !== 'first-half') return { view, bundle, scores };
+  return {
+    view,
+    bundle: { ...bundle, holes: bundle.holes.filter((h) => openHoles.has(h.holeNumber)) },
+    scores: scores.filter((s) => openHoles.has(s.holeNumber)),
+  };
 }
 
 /**
