@@ -30,6 +30,7 @@ import { withSystemArrows } from '../SystemArrow';
 
 /** Plass-kolonnen i tegningen. */
 const PLACE_W = 34;
+const NBSP = '\u00A0';
 
 /**
  * Stripas tekst i tegningen er ett 14 px-spenn: kickeren (10 px) står på en
@@ -39,6 +40,7 @@ const PLACE_W = 34;
 const STRIP_KICKER = interLine(10, 17);
 const STRIP_KICKER_DROP = browserBaseline('inter', 14, 17) - browserBaseline('inter', 10, 17);
 const STRIP_LINE = fraunces(600, 18);
+const LOCK_SUB = interLine(13, 13 * 1.35, { multiline: true });
 
 export function TeamBoard({ model }: { model: TeamBoardModel }) {
   const { colors } = useTheme();
@@ -348,9 +350,12 @@ export function TeamStrip({
     >
       <View style={styles.shrink}>
         <Text style={[styles.stripKicker, { color: withAlpha(ink, 0.8) }]}>{strip.kicker}</Text>
-        <Text style={[styles.stripLine, { color: ink }, tabular && styles.tabular]} numberOfLines={1}>
+        {/* «Delt 3. plass · 9 slag bak Lag 2» får ikke plass ved knappen på
+            390 pt: da bryter linja heller enn å kutte avstanden, og avstanden
+            flytter samlet ned (harde mellomrom), aldri «Lag» uten tallet. */}
+        <Text style={[styles.stripLine, { color: ink }, tabular && styles.tabular]}>
           <Text style={styles.stripPlace}>{strip.place}</Text>
-          {strip.detail ? ` · ${strip.detail}` : null}
+          {strip.detail ? `${NBSP}· ${strip.detail.replace(/ /g, NBSP)}` : null}
         </Text>
       </View>
       {strip.action ? (
@@ -451,7 +456,12 @@ const styles = StyleSheet.create({
   },
   lockBadge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   lockHeading: { ...fraunces(600, 17) },
-  lockSub: { ...interLine(13, 13 * 1.35), fontFamily: FONTS.sans, marginTop: 2 + interLine(13, 13 * 1.35).marginTop },
+  // Underteksten bryter over to linjer, med tegningens linjehøyde 1,35.
+  lockSub: {
+    ...LOCK_SUB,
+    fontFamily: FONTS.sans,
+    marginTop: 2 + LOCK_SUB.marginTop,
+  },
   holeCard: { marginTop: 12, marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 14 },
   holeHeading: {
     ...interLine(10, 12),
