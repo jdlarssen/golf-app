@@ -212,21 +212,24 @@ export type TeamBoardModel = {
   strip: TeamBoardStrip | null;
 };
 
-/** Medlemmene i navnelinjas rekkefølge: seeren først («Deg»), så motorens. */
+/**
+ * Medlemmene i navnelinjas rekkefølge: seeren først («Deg»), så resten etter
+ * navn. Motorens rekkefølge er bruker-id-ens, og rosterets følger ikke
+ * radene stabilt, så navnet er den rekkefølgen som står stille.
+ */
 function members(
   bundle: GameBundle,
   memberIds: readonly string[],
   userId: string | null,
 ): { names: string[]; initials: string[] } {
   const byId = new Map(bundle.players.map((player) => [player.userId, player]));
+  const nameOf = (id: string) => shortDisplayName(byId.get(id) ?? { name: null, nickname: null });
   const ordered = [
     ...memberIds.filter((id) => id === userId),
-    ...memberIds.filter((id) => id !== userId),
+    ...memberIds.filter((id) => id !== userId).sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'no')),
   ];
   return {
-    names: ordered.map((id) =>
-      id === userId ? BOARD_TEAM_TEXT.you : shortDisplayName(byId.get(id) ?? { name: null, nickname: null }),
-    ),
+    names: ordered.map((id) => (id === userId ? BOARD_TEAM_TEXT.you : nameOf(id))),
     initials: ordered.map((id) => nameInitials(byId.get(id)?.name)),
   };
 }

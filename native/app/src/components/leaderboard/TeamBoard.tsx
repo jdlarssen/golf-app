@@ -17,8 +17,8 @@ import {
   FONTS,
   TAP,
   boardRing,
+  browserBaseline,
   fraunces,
-  frauncesNormalLine,
   interLine,
   teamLiveRing,
   useTheme,
@@ -30,6 +30,15 @@ import { withSystemArrows } from '../SystemArrow';
 
 /** Plass-kolonnen i tegningen. */
 const PLACE_W = 34;
+
+/**
+ * Stripas tekst i tegningen er ett 14 px-spenn: kickeren (10 px) står på en
+ * Inter 14-linje (17 px, grunnlinja der 14-teksten har sin), og neste linje
+ * er like høy som «2. plass» i Fraunces 18 (23 px, grunnlinja 18).
+ */
+const STRIP_KICKER = interLine(10, 17);
+const STRIP_KICKER_DROP = browserBaseline('inter', 14, 17) - browserBaseline('inter', 10, 17);
+const STRIP_LINE = fraunces(600, 18);
 
 export function TeamBoard({ model }: { model: TeamBoardModel }) {
   const { colors } = useTheme();
@@ -203,8 +212,13 @@ function YouTag({ colors }: { colors: ThemeColors }) {
   );
 }
 
-/** Initialene, 5 pt over hverandre, med en ring i kortets farge rundt hver. */
+/**
+ * Initialene, 5 pt over hverandre, med en ring i kortets farge rundt hver.
+ * Fyllet er `youFill` som tegnet; leder ditt lag, er kortet selv `youFill`,
+ * og da får avatarene kortflaten så de ikke forsvinner.
+ */
 function Avatars({ initials, fill, colors }: { initials: string[]; fill: string; colors: ThemeColors }) {
+  const avatarFill = fill === colors.youFill ? colors.surface : colors.youFill;
   return (
     <View style={styles.avatars} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {initials.map((text, index) => (
@@ -213,7 +227,7 @@ function Avatars({ initials, fill, colors }: { initials: string[]; fill: string;
           style={[
             styles.avatar,
             index > 0 && styles.avatarOverlap,
-            { backgroundColor: colors.youFill, boxShadow: `0 0 0 2px ${fill}` },
+            { backgroundColor: avatarFill, boxShadow: `0 0 0 2px ${fill}` },
           ]}
           testID="team-avatar"
         >
@@ -459,14 +473,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stripKicker: {
-    ...interLine(10, 12),
+    ...STRIP_KICKER,
+    marginTop: STRIP_KICKER.marginTop + STRIP_KICKER_DROP,
+    marginBottom: STRIP_KICKER.marginBottom - STRIP_KICKER_DROP,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
-  // Linja er like høy som det store tallet i Fraunces 18; resten står i Inter 14.
-  stripLine: { ...interLine(14, frauncesNormalLine(18)), fontFamily: FONTS.sans },
-  stripPlace: { fontFamily: fraunces(600, 18).fontFamily, fontSize: 18 },
+  // Linja får linjeboksen til det store tallet (Fraunces 18); resten står i Inter 14.
+  stripLine: {
+    fontSize: 14,
+    fontFamily: FONTS.sans,
+    marginTop: STRIP_LINE.marginTop,
+    marginBottom: STRIP_LINE.marginBottom,
+  },
+  stripPlace: { fontFamily: STRIP_LINE.fontFamily, fontSize: 18 },
   stripButton: {
     height: TAP,
     paddingHorizontal: 16,
