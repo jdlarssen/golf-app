@@ -289,6 +289,8 @@ export function selectableOnHole(
  * - `teamShortGone`: the same, but no active member has a hole to give: every
  *   extra hole is held by someone no longer on the team (withdrawn, or moved),
  *   so the swap goes there.
+ * - `teamShortMixed`: members in `surplus` have holes to give, but fewer than
+ *   the swaps needed; the rest are held by someone no longer on the team.
  * - `partial`: a shamble card is in; swaps only while everyone has enough.
  */
 export type TeeShotHoleLine =
@@ -297,6 +299,7 @@ export type TeeShotHoleLine =
   | { kind: 'locked'; names: string[]; holesLeft: number }
   | { kind: 'teamShort'; short: TeeShotPlayerStatus[]; holesLeft: number; surplus: string[] }
   | { kind: 'teamShortGone'; short: TeeShotPlayerStatus[]; holesLeft: number }
+  | { kind: 'teamShortMixed'; short: TeeShotPlayerStatus[]; holesLeft: number; surplus: string[] }
   | { kind: 'partial' };
 
 function othersEach(status: TeeShotStatus): number | null {
@@ -320,18 +323,28 @@ export function teeShotHoleLine(status: TeeShotStatus, delivery: TeeShotDelivery
       holesLeft: status.openHoles.length,
     };
   }
-  // excess > 0 means some chosen holes must change hands. They are held by a
-  // member above the minimum or by someone no longer on the team; with no
-  // member above it, it is only the latter.
-  if (status.surplusPlayers.length === 0) {
-    return { kind: 'teamShortGone', short: status.short, holesLeft: status.openHoles.length };
+  const holesLeft = status.openHoles.length;
+  switch (swapSource(status)) {
+    case 'gone':
+      return { kind: 'teamShortGone', short: status.short, holesLeft };
+    case 'mixed':
+      return { kind: 'teamShortMixed', short: status.short, holesLeft, surplus: status.surplusPlayers };
+    case 'members':
+      return { kind: 'teamShort', short: status.short, holesLeft, surplus: status.surplusPlayers };
   }
-  return {
-    kind: 'teamShort',
-    short: status.short,
-    holesLeft: status.openHoles.length,
-    surplus: status.surplusPlayers,
-  };
+}
+
+/**
+ * Who holds the holes the team must swap when `excess > 0`. A chosen hole
+ * that must change hands is held by a member above the minimum or by someone
+ * no longer on the team (withdrawn, or moved). `members`: the members above
+ * the minimum have enough holes to give between them; `gone`: none of them
+ * has any; `mixed`: they have some, but fewer than `excess`.
+ */
+function swapSource(status: TeeShotStatus): 'members' | 'gone' | 'mixed' {
+  const toGive = status.players.reduce((sum, p) => sum + Math.max(p.count - status.minimum, 0), 0);
+  if (toGive === 0) return 'gone';
+  return toGive < status.excess ? 'mixed' : 'members';
 }
 
 /**
@@ -346,9 +359,11 @@ export function teeShotHoleLine(status: TeeShotStatus, delivery: TeeShotDelivery
  *   hole left is a `pickOpen`.
  * - `swapGone`: the same swap, but no active member has a hole to give, so
  *   the holes are those of someone no longer on the team (`surplus` empty).
+ * - `swapMixed`: the members in `surplus` have some holes to give, but fewer
+ *   than the swaps needed; the rest are those of someone no longer on the team.
  */
 export interface TeeShotDeliveryAdvice {
-  kind: 'swap' | 'swapGone' | 'pickOpen';
+  kind: 'swap' | 'swapGone' | 'swapMixed' | 'pickOpen';
   short: TeeShotPlayerStatus[];
   shortNames: string[];
   holes: number;
@@ -361,8 +376,9 @@ export function teeShotDeliveryAdvice(status: TeeShotStatus): TeeShotDeliveryAdv
   if (status.excess <= 0) {
     return { kind: 'pickOpen', short: status.short, shortNames, holes: status.totalShort, surplus: status.surplusPlayers };
   }
+  const source = swapSource(status);
   return {
-    kind: status.surplusPlayers.length === 0 ? 'swapGone' : 'swap',
+    kind: source === 'gone' ? 'swapGone' : source === 'mixed' ? 'swapMixed' : 'swap',
     short: status.short,
     shortNames,
     holes: status.excess,

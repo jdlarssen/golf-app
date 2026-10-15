@@ -65,6 +65,12 @@ describe('the artboard sentences, with the real messages', () => {
   const status = (owners: string[]) =>
     teeShotStatus({ minimum: 4, memberIds: TEAM, picks: owners.map((teeShotBy, i) => ({ holeNumber: i + 1, teeShotBy })) });
 
+  const X = 'withdrawn';
+  const boxFor = (owners: string[]) => {
+    const st = status(owners);
+    return teeShotBoxText(teeShotDeliveryAdvice(st)!, st, true, nameOf, t, 'no').body;
+  };
+
   it('Utslag 2, 2b, 3 and 5', () => {
     const levering = status(LEVERING);
     const box = teeShotBoxText(teeShotDeliveryAdvice(levering)!, levering, true, nameOf, t, 'no');
@@ -82,6 +88,27 @@ describe('the artboard sentences, with the real messages', () => {
         "Utslag 3 (boks, setning)": "Alle må ha minst 4 utslag før lagets kort kan leveres. Trykk «Rediger hullene» og bytt til Per på to hull der Marte eller Jonas står.",
         "Utslag 3 (boks, tittel)": "Per mangler 2 utslag",
         "Utslag 5 (shamble, hull 7)": "Per mangler 3, de andre 2 hver · 2 hull å velge fritt på",
+      }
+    `);
+  });
+
+  it('not drawn: the swap when someone no longer on the team holds the holes, alone or with a member', () => {
+    const sentences = {
+      // Marte, Jonas and Sigrid on 4, Per 2, X 3, one open.
+      'hull, bare en som ikke er med': teeShotHoleLineText(teeShotHoleLine(status([M, M, M, M, J, J, J, J, S, S, S, S, P, P, X, X, X]), 'none'), nameOf, t, 'no'),
+      // Marte, Jonas and Sigrid on 4, Per 2, X 4: every hole chosen.
+      'boks, bare en som ikke er med': boxFor([M, M, M, M, J, J, J, J, S, S, S, S, P, P, X, X, X, X]),
+      // Marte 5, Jonas 4, Sigrid 4, Per 1, X 3, one open.
+      'hull, Marte og en som ikke er med': teeShotHoleLineText(teeShotHoleLine(status([M, M, M, M, M, J, J, J, J, S, S, S, S, P, X, X, X]), 'none'), nameOf, t, 'no'),
+      // The review's probe: Marte 5, Jonas 4, Sigrid 4, Per 1, X 4.
+      'boks, Marte og en som ikke er med': boxFor([M, M, M, M, M, J, J, J, J, S, S, S, S, P, X, X, X, X]),
+    };
+    expect(sentences).toMatchInlineSnapshot(`
+      {
+        "boks, Marte og en som ikke er med": "Alle må ha minst 4 utslag før lagets kort kan leveres. Trykk «Rediger hullene» og bytt til Per på tre hull der Marte eller en som ikke er med på laget lenger står.",
+        "boks, bare en som ikke er med": "Alle må ha minst 4 utslag før lagets kort kan leveres. Trykk «Rediger hullene» og bytt til Per på to hull der en som ikke er med på laget lenger står.",
+        "hull, Marte og en som ikke er med": "Per mangler 3, og bare 1 hull er igjen. Bytt på et tidligere hull der Marte eller en som ikke er med på laget lenger står.",
+        "hull, bare en som ikke er med": "Per mangler 2, og bare 1 hull er igjen. Bytt på et tidligere hull der en som ikke er med på laget lenger står.",
       }
     `);
   });

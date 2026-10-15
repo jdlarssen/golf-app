@@ -65,17 +65,30 @@ export function teeShotHoleLineText(
         holes: line.holesLeft,
       });
     case 'teamShort':
+    case 'teamShortMixed':
+    case 'teamShortGone':
       return t('teamShortLine', {
         who: shortListText(line.short, nameOf, t, locale),
         holes: line.holesLeft,
-        surplus: formatListLocale(line.surplus.map(nameOf), locale, 'disjunction'),
-      });
-    case 'teamShortGone':
-      return t('teamShortGoneLine', {
-        who: shortListText(line.short, nameOf, t, locale),
-        holes: line.holesLeft,
+        surplus: swapPlacesText(line.kind === 'teamShortGone' ? [] : line.surplus, line.kind !== 'teamShort', nameOf, t, locale),
       });
   }
+}
+
+/**
+ * «Marte eller Jonas», and «… eller en som ikke er med på laget lenger» when
+ * someone no longer on the team holds holes the team must swap (#2580).
+ */
+function swapPlacesText(
+  surplus: readonly string[],
+  alsoGone: boolean,
+  nameOf: NameOf,
+  t: TeeShotT,
+  locale: AppLocale,
+): string {
+  const places = surplus.map(nameOf);
+  if (alsoGone) places.push(t('goneMember'));
+  return formatListLocale(places, locale, 'disjunction');
 }
 
 /** The delivery box (`Utslag-forslag-levering`): title and sentence. */
@@ -90,17 +103,15 @@ export function teeShotBoxText(
   const delivery = wholeTeamDelivers ? 'team' : 'each';
   const names = formatListLocale(advice.shortNames.map(nameOf), locale);
   const body =
-    advice.kind === 'swap'
-      ? t('boxSwap', {
+    advice.kind === 'pickOpen'
+      ? t('boxPickOpen', { min: status.minimum, delivery, names })
+      : t('boxSwap', {
           min: status.minimum,
           delivery,
           names,
           holes: advice.holes,
-          surplus: formatListLocale(advice.surplus.map(nameOf), locale, 'disjunction'),
-        })
-      : advice.kind === 'swapGone'
-        ? t('boxSwapGone', { min: status.minimum, delivery, names, holes: advice.holes })
-        : t('boxPickOpen', { min: status.minimum, delivery, names });
+          surplus: swapPlacesText(advice.surplus, advice.kind !== 'swap', nameOf, t, locale),
+        });
   return {
     title: t('boxTitle', {
       who: shortListText(advice.short, nameOf, t, locale),

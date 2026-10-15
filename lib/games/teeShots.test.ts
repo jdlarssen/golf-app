@@ -475,6 +475,20 @@ describe('teeShotHoleLine', () => {
     });
   });
 
+  it('a team short where an active member and a player no longer on it hold the extra holes: the mixed line', () => {
+    // Marte 5 (one to give), Jonas 4, Sigrid 4, Per 1, X 3, one open: Per short
+    // 3, excess 2, but Marte has only one hole to give, so the second swap is on
+    // one of X's holes.
+    const X = 'withdrawn';
+    const owners = [M, M, M, M, M, J, J, J, J, S, S, S, S, P, X, X, X];
+    expect(teeShotHoleLine(teeShotStatus(input(4, owners)), 'none')).toEqual({
+      kind: 'teamShortMixed',
+      short: [{ userId: P, count: 1, missing: 3 }],
+      holesLeft: 1,
+      surplus: [M],
+    });
+  });
+
   it("'partial' has its own line, 'all' none", () => {
     const status = teeShotStatus(input(3, HULL_7));
     expect(teeShotHoleLine(status, 'partial')).toEqual({ kind: 'partial' });
@@ -507,6 +521,20 @@ describe('teeShotDeliveryAdvice', () => {
       shortNames: [P],
       holes: 2,
       surplus: [],
+    });
+  });
+
+  it('every hole chosen, Marte has one hole to give and X holds the rest: swapMixed', () => {
+    // The probe from the review: Marte 5, Jonas 4, Sigrid 4, Per 1, X 4. Per
+    // needs three swaps; only one of them can be Marte's.
+    const X = 'withdrawn';
+    const owners = [M, M, M, M, M, J, J, J, J, S, S, S, S, P, X, X, X, X];
+    expect(teeShotDeliveryAdvice(teeShotStatus(input(4, owners)))).toEqual({
+      kind: 'swapMixed',
+      short: [{ userId: P, count: 1, missing: 3 }],
+      shortNames: [P],
+      holes: 3,
+      surplus: [M],
     });
   });
 
