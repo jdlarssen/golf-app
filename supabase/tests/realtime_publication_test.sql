@@ -8,7 +8,7 @@
 -- bingo_bango_bongo_holes shipped from 0049/0053 until 0175 added them.
 --
 -- Every table with a client-side postgres_changes subscription must therefore
--- be a member of the publication. This asserts all six, so the Migrations gate
+-- be a member of the publication. This asserts all seven, so the Migrations gate
 -- (.github/workflows/migrations-gate.yml, which runs `supabase test db` over
 -- supabase/tests/) turns red if one is ever dropped — or if a new subscription
 -- is added without publishing its table.
@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(6);
+select plan(7);
 
 -- ── 1. bingo_bango_bongo_holes (0175 / #1836) ────────────────────────────────
 select ok(
@@ -78,7 +78,18 @@ select ok(
   'scores is in the supabase_realtime publication'
 );
 
--- ── 6. wolf_hole_choices (0175 / #1836) ──────────────────────────────────────
+-- ── 6. team_tee_shots (0209 / #2580) ─────────────────────────────────────────
+select ok(
+  exists(
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'team_tee_shots'
+  ),
+  '#2580: team_tee_shots is in the supabase_realtime publication'
+);
+
+-- ── 7. wolf_hole_choices (0175 / #1836) ──────────────────────────────────────
 select ok(
   exists(
     select 1 from pg_publication_tables
