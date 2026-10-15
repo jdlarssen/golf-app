@@ -1043,7 +1043,8 @@ describe('HoleClient — score rail (#2251)', () => {
 });
 
 describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
-  const teeShots: HoleClientProps['teeShots'] = {
+  // `withdrawnFor`: the members whose game_players row is withdrawn.
+  const teeShots = (withdrawnFor: string[] = []): HoleClientProps['teeShots'] => ({
     minimum: 4,
     teams: [
       {
@@ -1052,19 +1053,21 @@ describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
           userId,
           name: userId,
           submittedAt: null,
-          withdrawnAt: null,
+          withdrawnAt: withdrawnFor.includes(userId) ? '2026-10-15T10:00:00.000Z' : null,
         })),
       },
     ],
-  };
+  });
 
   it('a player in the game can pick', () => {
-    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots })} />);
+    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots: teeShots() })} />);
     expect(screen.getByTestId('tee-shot-u2')).toBeEnabled();
   });
 
   it('a withdrawn player cannot pick, as with the score rows (the RPC refuses them)', () => {
-    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots, withdrawn: true })} />);
+    render(
+      <HoleClient {...baseProps({ gameMode: 'shamble', teeShots: teeShots(['u1']), withdrawn: true })} />,
+    );
     expect(screen.getByTestId('tee-shot-u2')).toBeDisabled();
   });
 });
