@@ -145,6 +145,12 @@ describe('teamBoardFor — live scramble', () => {
     });
   });
 
+  it('gives your team no dots before its first hole, only «hull 0» under the sum', () => {
+    const fresh = teamBoardFor({ bundle, scores: scores.filter((s) => s.userId !== ME && s.userId !== 'marte'), userId: ME })!;
+    const mine = fresh.rows.find((r) => r.you)!;
+    expect([mine.dots, mine.holesNote, mine.movement, mine.under, mine.total]).toEqual([null, null, null, 'hull 0', '—']);
+  });
+
   it('has no hole card or strip for a viewer without a team', () => {
     const outside = teamBoardFor({ bundle, scores, userId: 'organiser' })!;
     expect([outside.viewerTeam, outside.holeCard, outside.strip]).toEqual([null, null, null]);
