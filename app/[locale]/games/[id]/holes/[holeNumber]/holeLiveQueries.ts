@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore, type LocalTeeShot } from '@/lib/sync/db';
-import { isActiveForGame } from '@/lib/sync/queueScope';
+import { belongsToGame, isActiveForGame } from '@/lib/sync/queueScope';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { ClientPlayer, HoleStripSibling } from './holeClientProps';
@@ -208,4 +208,17 @@ export function useTeamTeeShots(gameId: string): LocalTeeShot[] | undefined {
     () => localDb.teeShots.where('gameId').equals(gameId).toArray(),
     [gameId],
   );
+}
+
+/**
+ * Live-query #6 — #2580: how many of the game's tee-shot choices the sync has
+ * given up on (the server refused them, or the retries ran out). The picker
+ * refreshes the page when the number grows: a refusal usually means the team's
+ * delivery changed, and the server-rendered delivery state must catch up.
+ * `undefined` until Dexie has answered.
+ */
+export function useGivenUpTeeShotCount(gameId: string): number | undefined {
+  const items = useLiveQuery(() => localDb.teeShotQueue.toArray(), []);
+  if (items === undefined) return undefined;
+  return items.filter((item) => item.abandonedAt != null && belongsToGame(item.teeShotId, gameId)).length;
 }
