@@ -62,9 +62,10 @@ export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
 /**
  * Each hole's tone for one team, in hole order. Net in every net format;
  * shamble against the par of every counted ball; team stableford from the
- * points the team got (the better partner's, `teamPoints`) in the game's
- * table, so a mixed team with different pars from the men's and ladies'
- * tees gets the tone its points say.
+ * best points among the partners who played the hole, in the game's table,
+ * so a mixed team
+ * with different pars from the men's and ladies' tees gets the tone its
+ * points say.
  */
 export function teamHoleTones(
   result: TeamBoardResult,
@@ -89,11 +90,20 @@ export function teamHoleTones(
       });
     case 'stableford': {
       const team = result.teams.find((t) => t.teamNumber === teamNumber);
-      // A hole nobody on the team has played also scores 0: no tone for it.
-      return (team?.holes ?? []).map((h) => ({
-        holeNumber: h.holeNumber,
-        tone: h.players.some((p) => p.gross !== null) ? stablefordTone(h.teamPoints, stablefordTable) : 'unset',
-      }));
+      return (team?.holes ?? []).map((h) => {
+        // The engine counts a partner without a score as 0 points (its
+        // `teamPoints` is the max over the whole team), and 0 is a par in the
+        // modified table. The tone takes the best points among the partners
+        // who played; a hole nobody played has no tone.
+        const played = h.players.filter((p) => p.gross !== null);
+        return {
+          holeNumber: h.holeNumber,
+          tone:
+            played.length === 0
+              ? 'unset'
+              : stablefordTone(Math.max(...played.map((p) => p.points)), stablefordTable),
+        };
+      });
     }
   }
 }

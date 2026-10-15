@@ -171,6 +171,14 @@ describe('teamHoleTones — team stableford follows the points the team got', ()
     expect(toneOf(mixed('modified_stableford', 4, 4), 'modified')).toEqual(['under']);
   });
 
+  it('modified: only the partners who played count, so a lone double bogey stays over', () => {
+    // The engine counts a partner without a score as 0 points, and in the
+    // modified table 0 is a par: the team's max would read par over a −3.
+    const context = mixed('modified_stableford', 6, 4);
+    const lone = { ...context, scores: context.scores.filter((sc) => sc.userId !== 'she') };
+    expect(toneOf(lone, 'modified')).toEqual(['over2']);
+  });
+
   it('a hole nobody on the team has played has no tone, though it scores 0', () => {
     const context = mixed('stableford', 5, 5);
     const unplayed = { ...context, scores: context.scores.filter((sc) => sc.userId === 'x' || sc.userId === 'y') };
