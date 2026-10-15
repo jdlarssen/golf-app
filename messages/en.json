@@ -2561,9 +2561,11 @@
     "freeLine": "{who} · {holes, plural, one {# hole} other {# holes}} to choose freely",
     "lockedLine": "{names} {count, plural, one {needs} other {need}} the tee {holes, plural, =1 {shot on the last hole} other {shots on the # holes left}}.",
     "teamShortLine": "{who}, and {holes, plural, =0 {no holes are left} one {only # hole is left} other {only # holes are left}}. Swap on an earlier hole where {surplus} stands.",
+    "teamShortGoneLine": "{who}, and {holes, plural, =0 {no holes are left} one {only # hole is left} other {only # holes are left}}. Swap on an earlier hole where someone no longer on the team stands.",
     "partialLine": "A card on the team is delivered. You can only swap while everyone has enough.",
     "boxTitle": "{who} tee {total, plural, one {shot} other {shots}}",
     "boxSwap": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and switch to {names} on {holes, plural, one {# hole} other {# holes}} where {surplus} stands.",
+    "boxSwapGone": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and switch to {names} on {holes, plural, one {# hole} other {# holes}} where someone no longer on the team stands.",
     "boxPickOpen": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and pick {names} on the holes without a tee shot.",
     "boxEdit": "Edit holes",
     "organizerLine": "{name} has {count} of {min} tee shots"

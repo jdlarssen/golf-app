@@ -462,6 +462,19 @@ describe('teeShotHoleLine', () => {
     });
   });
 
+  it('a team short where only players no longer on it hold the extra holes gets its own line', () => {
+    // X has withdrawn (or moved) and is not in memberIds; their picks fill holes
+    // but give no credit. Marte, Jonas and Sigrid on 4, Per 2, X 3, one open:
+    // nobody active has a hole to give, so «der {surplus} står» would be empty.
+    const X = 'withdrawn';
+    const owners = [M, M, M, M, J, J, J, J, S, S, S, S, P, P, X, X, X];
+    expect(teeShotHoleLine(teeShotStatus(input(4, owners)), 'none')).toEqual({
+      kind: 'teamShortGone',
+      short: [{ userId: P, count: 2, missing: 2 }],
+      holesLeft: 1,
+    });
+  });
+
   it("'partial' has its own line, 'all' none", () => {
     const status = teeShotStatus(input(3, HULL_7));
     expect(teeShotHoleLine(status, 'partial')).toEqual({ kind: 'partial' });
@@ -482,6 +495,30 @@ describe('teeShotDeliveryAdvice', () => {
       shortNames: [P],
       holes: 2,
       surplus: [M, J],
+    });
+  });
+
+  it('every hole chosen and only a player no longer on the team holds extra holes: swapGone', () => {
+    const X = 'withdrawn';
+    const owners = [M, M, M, M, J, J, J, J, S, S, S, S, P, P, X, X, X, X];
+    expect(teeShotDeliveryAdvice(teeShotStatus(input(4, owners)))).toEqual({
+      kind: 'swapGone',
+      short: [{ userId: P, count: 2, missing: 2 }],
+      shortNames: [P],
+      holes: 2,
+      surplus: [],
+    });
+  });
+
+  it('open holes left but too few for the shortfall: swap on the holes beyond them, not pickOpen', () => {
+    // Marte 7, Jonas 4, Sigrid 4, Per 1, two open: Per short 3, excess 1.
+    const owners = [M, M, M, M, M, M, M, J, J, J, J, S, S, S, S, P, null, null];
+    expect(teeShotDeliveryAdvice(teeShotStatus(input(4, owners)))).toEqual({
+      kind: 'swap',
+      short: [{ userId: P, count: 1, missing: 3 }],
+      shortNames: [P],
+      holes: 1,
+      surplus: [M],
     });
   });
 

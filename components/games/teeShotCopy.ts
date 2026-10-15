@@ -70,6 +70,11 @@ export function teeShotHoleLineText(
         holes: line.holesLeft,
         surplus: formatListLocale(line.surplus.map(nameOf), locale, 'disjunction'),
       });
+    case 'teamShortGone':
+      return t('teamShortGoneLine', {
+        who: shortListText(line.short, nameOf, t, locale),
+        holes: line.holesLeft,
+      });
   }
 }
 
@@ -93,7 +98,9 @@ export function teeShotBoxText(
           holes: advice.holes,
           surplus: formatListLocale(advice.surplus.map(nameOf), locale, 'disjunction'),
         })
-      : t('boxPickOpen', { min: status.minimum, delivery, names });
+      : advice.kind === 'swapGone'
+        ? t('boxSwapGone', { min: status.minimum, delivery, names, holes: advice.holes })
+        : t('boxPickOpen', { min: status.minimum, delivery, names });
   return {
     title: t('boxTitle', {
       who: shortListText(advice.short, nameOf, t, locale),

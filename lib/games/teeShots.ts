@@ -286,6 +286,9 @@ export function selectableOnHole(
  *   igjen», `names` in team order.
  * - `teamShort`: the team is already short; swap on an earlier hole where one
  *   of `surplus` stands.
+ * - `teamShortGone`: the same, but no active member has a hole to give: every
+ *   extra hole is held by someone no longer on the team (withdrawn, or moved),
+ *   so the swap goes there.
  * - `partial`: a shamble card is in; swaps only while everyone has enough.
  */
 export type TeeShotHoleLine =
@@ -293,6 +296,7 @@ export type TeeShotHoleLine =
   | { kind: 'free'; short: TeeShotPlayerStatus[]; othersEach: number | null; freeHoles: number }
   | { kind: 'locked'; names: string[]; holesLeft: number }
   | { kind: 'teamShort'; short: TeeShotPlayerStatus[]; holesLeft: number; surplus: string[] }
+  | { kind: 'teamShortGone'; short: TeeShotPlayerStatus[]; holesLeft: number }
   | { kind: 'partial' };
 
 function othersEach(status: TeeShotStatus): number | null {
@@ -316,6 +320,12 @@ export function teeShotHoleLine(status: TeeShotStatus, delivery: TeeShotDelivery
       holesLeft: status.openHoles.length,
     };
   }
+  // excess > 0 means some chosen holes must change hands. They are held by a
+  // member above the minimum or by someone no longer on the team; with no
+  // member above it, it is only the latter.
+  if (status.surplusPlayers.length === 0) {
+    return { kind: 'teamShortGone', short: status.short, holesLeft: status.openHoles.length };
+  }
   return {
     kind: 'teamShort',
     short: status.short,
@@ -327,12 +337,18 @@ export function teeShotHoleLine(status: TeeShotStatus, delivery: TeeShotDelivery
 /**
  * What the delivery box tells the team (`Utslag-forslag-levering`). Null when
  * nobody is short. `short` is for the title (biggest shortfall first);
- * `shortNames` and `surplus` for the sentence, in team order. `swap` when
- * every hole is chosen: «bytt til Per på to hull der Marte eller Jonas står».
- * `pickOpen` while holes without a choice remain.
+ * `shortNames` and `surplus` for the sentence, in team order.
+ *
+ * - `pickOpen` when the holes without a choice cover the shortfall
+ *   (`excess <= 0`): «velg Per på hullene som ikke har utslag ennå».
+ * - `swap` otherwise, on the `excess` holes beyond the open ones: «bytt til
+ *   Per på to hull der Marte eller Jonas står». Once that is done, any open
+ *   hole left is a `pickOpen`.
+ * - `swapGone`: the same swap, but no active member has a hole to give, so
+ *   the holes are those of someone no longer on the team (`surplus` empty).
  */
 export interface TeeShotDeliveryAdvice {
-  kind: 'swap' | 'pickOpen';
+  kind: 'swap' | 'swapGone' | 'pickOpen';
   short: TeeShotPlayerStatus[];
   shortNames: string[];
   holes: number;
@@ -341,11 +357,15 @@ export interface TeeShotDeliveryAdvice {
 
 export function teeShotDeliveryAdvice(status: TeeShotStatus): TeeShotDeliveryAdvice | null {
   if (status.totalShort === 0) return null;
+  const shortNames = status.players.filter((p) => p.missing > 0).map((p) => p.userId);
+  if (status.excess <= 0) {
+    return { kind: 'pickOpen', short: status.short, shortNames, holes: status.totalShort, surplus: status.surplusPlayers };
+  }
   return {
-    kind: status.openHoles.length > 0 ? 'pickOpen' : 'swap',
+    kind: status.surplusPlayers.length === 0 ? 'swapGone' : 'swap',
     short: status.short,
-    shortNames: status.players.filter((p) => p.missing > 0).map((p) => p.userId),
-    holes: status.totalShort,
+    shortNames,
+    holes: status.excess,
     surplus: status.surplusPlayers,
   };
 }
