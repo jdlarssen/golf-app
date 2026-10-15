@@ -205,3 +205,37 @@ describe('buildPlayersForClient — per-spiller-slag som motoren (#2218)', () =>
     expect(teamCardStrokes({ game: GREENSOME, allPlayers, me, strokeIndex: 6 })).toEqual({ 1: 0, 2: 0 });
   });
 });
+
+// #2580 — Type A: with «Hvem sitt utslag» on, the team line «Lag 1 · …» names
+// the members in the picker's order (sortByTeeShotName), so the line and the
+// buttons under it agree. Without the setting the line is as before (roster
+// order).
+describe('buildPlayersForClient — the team line follows the tee-shot picker (#2580)', () => {
+  const roster = [player('Per Hauge', 1, 10), player('Marte Lie', 1, 10), player('Jonas Berg', 1, 10), player('Sigrid Aas', 1, 10)];
+  const texas = (withSetting: boolean) =>
+    game('texas_scramble', {
+      kind: 'texas_scramble',
+      team_size: 4,
+      teams_count: 1,
+      team_handicap_pct: 10,
+      ...(withSetting ? { min_tee_shots: 4 } : {}),
+    } as GameForHole['mode_config']);
+  const teamLine = (g: GameForHole) =>
+    buildPlayersForClient({
+      game: g,
+      holeNumber: 7,
+      flight: roster,
+      allPlayers: roster,
+      strokeIndex: 7,
+      scoresByUser: {},
+      unknownPlayer: 'Ukjent',
+    })[0].name;
+
+  it('with the setting: the picker order (short name, Norwegian collation)', () => {
+    expect(teamLine(texas(true))).toBe('Lag 1 · Jonas, Marte, Per, Sigrid');
+  });
+
+  it('without the setting: the roster order, as before', () => {
+    expect(teamLine(texas(false))).toBe('Lag 1 · Per, Marte, Jonas, Sigrid');
+  });
+});

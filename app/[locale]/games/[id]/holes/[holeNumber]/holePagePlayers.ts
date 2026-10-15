@@ -217,7 +217,13 @@ export function buildPlayersForClient(args: {
     const captainId = teamScoreOwnerId(teamPlayers) ?? teamPlayers[0].user_id;
     const teamHCP = teamHandicapFor(teamNum);
     const captainScoreRow = scoresByUser[captainId];
-    const memberNames = teamPlayers
+    // #2580: with «Hvem sitt utslag» on, the names stand in the picker's
+    // order (`sortByTeeShotName`), so this line and the buttons under it agree.
+    const namedPlayers =
+      readMinTeeShots(game.game_mode, game.mode_config) !== null
+        ? sortByTeeShotName(teamPlayers, unknownPlayer)
+        : teamPlayers;
+    const memberNames = namedPlayers
       .map((p) => p.users?.name ?? '')
       .map((n) => n.split(/\s+/)[0])
       .filter((n) => n.length > 0)
