@@ -43,17 +43,26 @@ import { hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
 import { asModeConfig, computeGameLeaderboard, toPlayerRows } from './scoringContext';
 
 /**
+ * Stableford (også modifisert) slik motoren regner den: lag når `team_size`
+ * er 2, ellers solo, også når feltet mangler (samme valg som
+ * `stableford.ts`). `null` for andre formater og når oppsettet mangler. Det
+ * ene hjemmet i appen for valget mellom solotavla og lagtavla.
+ */
+export function stablefordVariant(game: Pick<BundleGame, 'gameMode' | 'modeConfig'>): 'solo' | 'team' | null {
+  const mode = game.gameMode as GameMode;
+  if (mode !== 'stableford' && mode !== 'modified_stableford') return null;
+  const config = asModeConfig(mode, game.modeConfig);
+  if (config === null) return null;
+  return (config as { team_size?: unknown }).team_size === 2 ? 'team' : 'solo';
+}
+
+/**
  * Formatene med den nye tavla: slagspill, og stableford (også modifisert)
- * når motoren regner solo: `team_size` er ikke 2, også når feltet mangler
- * (samme valg som `stableford.ts`). Lest fra bundelen, så båndet står før
- * noe er regnet.
+ * når motoren regner solo. Lest fra bundelen, så båndet står før noe er
+ * regnet.
  */
 export function hasSoloBoard(game: Pick<BundleGame, 'gameMode' | 'modeConfig'>): boolean {
-  const mode = game.gameMode as GameMode;
-  if (mode === 'solo_strokeplay') return true;
-  if (mode !== 'stableford' && mode !== 'modified_stableford') return false;
-  const config = asModeConfig(mode, game.modeConfig);
-  return config !== null && (config as { team_size?: unknown }).team_size !== 2;
+  return game.gameMode === 'solo_strokeplay' || stablefordVariant(game) === 'solo';
 }
 
 /**
