@@ -21,3 +21,11 @@ export const SHORT_LABELS: Partial<Record<StrokeTerm, string>> = {
   doubleBogey: 'Dobbel',
   tripleBogey: 'Trippel',
 };
+
+/**
+ * Ordet for en score: «Birdie», eller bare diffen («+4») forbi trippelbogey
+ * (`over`). Skinna på hullsiden og lagtavlas «Ditt lag på hull N» (#2579).
+ */
+export function termText(term: StrokeTerm, overPar: number): string {
+  return term === 'over' ? `+${overPar}` : TERM_LABELS[term];
+}

@@ -30,7 +30,7 @@ import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
-import { SHORT_LABELS, TERM_LABELS } from '../../lib/strokeTermText';
+import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
 import { withSystemArrows } from '../SystemArrow';
 
@@ -107,12 +107,12 @@ export const PUTTS_LABEL = 'Putter';
 const CHIP_VALUES = [1, 2] as const;
 const PLUS_START = 3;
 
-function termText(option: RailOption, par: number): string {
-  return option.term === 'over' ? `+${option.strokes - par}` : TERM_LABELS[option.term];
+function optionTermText(option: RailOption, par: number): string {
+  return termText(option.term, option.strokes - par);
 }
 
 function shortTermText(option: RailOption, par: number): string {
-  return SHORT_LABELS[option.term] ?? termText(option, par);
+  return SHORT_LABELS[option.term] ?? optionTermText(option, par);
 }
 
 /** Linja til høyre for navnet: slagene setet får og hva par blir netto. */
@@ -181,7 +181,7 @@ export function ScoreRail({
   };
 
   const labelText = (option: RailOption): string => {
-    const base = `Sett ${option.strokes} slag for ${active.name}: ${termText(option, par)}`;
+    const base = `Sett ${option.strokes} slag for ${active.name}: ${optionTermText(option, par)}`;
     if (display === 'points' && option.points != null) return `${base}, ${option.points} poeng`;
     if (display === 'netto') return `${base}, netto ${option.netto}`;
     return base;
