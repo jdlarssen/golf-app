@@ -61,11 +61,12 @@ import { gateReason } from './formatGate';
 import { heroAction } from './homeHero';
 import { formatMessage } from './kavalkadeCopy';
 import { firstHalfScope, hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
-import { asModeConfig, computeGameLeaderboard } from './scoringContext';
+import { computeGameLeaderboard } from './scoringContext';
 import {
   DECIDED_TEXT,
   placeText,
   srPartText,
+  stablefordVariant,
   stripAction,
   stripPlace,
   type SoloBoardStripAction,
@@ -74,24 +75,20 @@ import { termText } from './strokeTermText';
 
 /**
  * Formatene med lagtavla: scramble-familien, shamble, best ball, og
- * stableford (også modifisert) når motoren regner lag (`team_size` 2, samme
- * valg som `stableford.ts`; resten er solotavla, `hasSoloBoard`). Lest fra
- * bundelen, så båndet står før noe er regnet.
+ * stableford (også modifisert) når motoren regner lag (`stablefordVariant`,
+ * samme regel som solotavla leser). Lest fra bundelen, så båndet står før
+ * noe er regnet.
  */
 export function hasTeamBoard(game: Pick<BundleGame, 'gameMode' | 'modeConfig'>): boolean {
   const mode = game.gameMode as GameMode;
-  if (
+  return (
     mode === 'texas_scramble' ||
     mode === 'ambrose' ||
     mode === 'florida_scramble' ||
     mode === 'shamble' ||
-    mode === 'best_ball'
-  ) {
-    return true;
-  }
-  if (mode !== 'stableford' && mode !== 'modified_stableford') return false;
-  const config = asModeConfig(mode, game.modeConfig);
-  return config !== null && (config as { team_size?: unknown }).team_size === 2;
+    mode === 'best_ball' ||
+    stablefordVariant(game) === 'team'
+  );
 }
 
 /**
