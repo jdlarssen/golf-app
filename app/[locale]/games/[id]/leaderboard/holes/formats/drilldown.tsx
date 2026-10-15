@@ -20,7 +20,7 @@ import { formatOtherGendersPar } from '@/lib/games/parDisplay';
 import {
   isHoleInSegment,
   firstHalfHoleNumbersForSegment,
-  holeNumbersForSegment,
+  hiddenHoleNumbersForSegment,
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
@@ -175,11 +175,9 @@ function DrilldownView({
   // segmentets FØRSTE halvdel, så resten av segmentet er det som venter —
   // 10–18 i et fullt spill, 6–9 i et front9-spill, 15–18 i et back9-spill.
   // Teksten må følge segmentet; ellers lover kortet hull som hører til
-  // søsterspillet på en splittet cup-dag og aldri dukker opp her.
-  const firstHalf = new Set(firstHalfHoleNumbersForSegment(holeSegment));
-  const hiddenHoles = holeNumbersForSegment(holeSegment).filter(
-    (n) => !firstHalf.has(n),
-  );
+  // søsterspillet på en splittet cup-dag og aldri dukker opp her. Spennet
+  // har ett hjem (`hiddenHoleNumbersForSegment`), delt med tavla (#2579).
+  const hiddenHoles = hiddenHoleNumbersForSegment(holeSegment);
   const hiddenFrom = hiddenHoles[0];
   const hiddenTo = hiddenHoles[hiddenHoles.length - 1];
 

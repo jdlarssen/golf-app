@@ -7,6 +7,7 @@ import {
   lastHoleForSegment,
   isHoleInSegment,
   firstHalfHoleNumbersForSegment,
+  hiddenHoleNumbersForSegment,
   positionInSegment,
 } from './holeScope';
 
@@ -79,5 +80,17 @@ describe('firstHalfHoleNumbersForSegment', () => {
     { segment: 'back9', expected: [10, 11, 12, 13, 14] },
   ])('$segment → $expected', ({ segment, expected }) => {
     expect(firstHalfHoleNumbersForSegment(segment)).toEqual(expected);
+  });
+});
+
+// #2579: the holes a first-half board keeps back. The web board, the
+// hole-by-hole page and the app's team board name the same span.
+describe('hiddenHoleNumbersForSegment', () => {
+  it.each<{ segment: HoleSegment; expected: number[] }>([
+    { segment: 'full', expected: [10, 11, 12, 13, 14, 15, 16, 17, 18] },
+    { segment: 'front9', expected: [6, 7, 8, 9] },
+    { segment: 'back9', expected: [15, 16, 17, 18] },
+  ])('$segment → $expected', ({ segment, expected }) => {
+    expect(hiddenHoleNumbersForSegment(segment)).toEqual(expected);
   });
 });

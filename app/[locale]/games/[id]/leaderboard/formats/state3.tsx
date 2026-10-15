@@ -27,7 +27,7 @@ import {
 } from '@/lib/leaderboard/navContext';
 import {
   firstHalfHoleNumbersForSegment,
-  holeNumbersForSegment,
+  hiddenHoleNumbersForSegment,
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
@@ -336,9 +336,9 @@ export async function renderState35(opts: {
 
   const openHoleNumbers = firstHalfHoleNumbersForSegment(holeSegment);
   const openHoles = new Set(openHoleNumbers);
-  // The locked card names the holes it hides (#2579), the same way the
-  // hole-by-hole page does: the segment's holes outside the open half.
-  const hiddenHoleNumbers = holeNumbersForSegment(holeSegment).filter((n) => !openHoles.has(n));
+  // The locked card names the holes it hides (#2579), the same span as the
+  // hole-by-hole page and the app's team board.
+  const hiddenHoleNumbers = hiddenHoleNumbersForSegment(holeSegment);
   const frontNineHoles = holes.filter((h) => openHoles.has(h.holeNumber));
   const frontNineScores = scores.filter((s) => openHoles.has(s.holeNumber));
   // Pillen navngir halvdelen som ER åpen. 'full' beholder «FRONT 9» — det er
