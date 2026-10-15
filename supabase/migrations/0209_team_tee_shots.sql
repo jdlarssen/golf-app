@@ -13,7 +13,8 @@
 --      captain's id, because the team row's owner can change
 --      (formerTeamRowOwnerIds, lib/games/teamCaptain.ts).
 --
---   2. RLS on, one SELECT policy, no write policy: every write goes through
+--   2. RLS on, one SELECT policy, no write policy and no write grants for
+--      anon/authenticated: every write goes through
 --      set_team_tee_shot_if_newer. Readers are the game's players
 --      (is_in_game, as «game_players select shared game») and the creator or an
 --      admin (is_game_creator_or_admin, as «game_players creator select»): any
@@ -22,9 +23,13 @@
 --      is short on the end-game pages.
 --
 --   3. set_team_tee_shot_if_newer: last write wins per row, like
---      upsert_score_if_newer. A refusal answers with one row of NULLs, the
---      shape a locked refusal from upsert_score_if_newer has, so
---      interpretUpsertReply (lib/sync/upsertReply.ts) reads it as 'refused'.
+--      upsert_score_if_newer, decided by the guard on the upsert itself so two
+--      first writes at the same moment keep the newer stamp. The team's
+--      game_players rows are locked FOR SHARE before the delivery check, so a
+--      delivery at the same moment waits and then counts the write. A
+--      refusal answers with one row of NULLs, the shape a locked refusal from
+--      upsert_score_if_newer has, so interpretUpsertReply
+--      (lib/sync/upsertReply.ts) reads it as 'refused'.
 --      Writers mirror the scores policies: an admin, an active member of the
 --      team, or someone who can_score_for an active member of the team (the
 --      one keeping the flight's card enters every team in the flight). The
@@ -83,6 +88,11 @@ create policy "team_tee_shots select players and organiser"
   for select
   to authenticated
   using (public.is_game_creator_or_admin(game_id) or public.is_in_game(game_id));
+
+-- No write grants either: with no write policy RLS already refuses them, and
+-- without the grants a write policy added later still cannot open the table.
+-- authenticated keeps SELECT (the policy above, and realtime).
+revoke insert, update, delete, truncate on public.team_tee_shots from anon, authenticated;
 
 -- ── 4. Shortfall (defined before its callers) ──────────────────────────────
 create or replace function public.team_tee_shot_shortfall(
@@ -223,6 +233,16 @@ begin
 
   -- Delivery: scramble is frozen once the team card is in; shamble once every
   -- card is in. teamTeeShotDelivery in lib/games/teeShots.ts is the mirror.
+  -- The team's rows are locked FOR SHARE first: a delivery at the same moment
+  -- waits for this write, and its guard (guard_game_players_tee_shots) then
+  -- counts it; a write after a delivery sees the delivery here.
+  perform 1
+    from public.game_players gp
+   where gp.game_id = p_game_id
+     and gp.team_number = p_team_number
+   order by gp.user_id
+     for share;
+
   select count(*), count(gp.submitted_at)
     into v_active, v_delivered
     from public.game_players gp
@@ -235,29 +255,10 @@ begin
     return;
   end if;
 
-  -- Last write wins per row.
-  select t.*
-    into v_existing
-    from public.team_tee_shots t
-   where t.game_id = p_game_id
-     and t.team_number = p_team_number
-     and t.hole_number = p_hole_number
-     for update;
-
-  if found and not (p_client_updated_at > v_existing.client_updated_at) then
-    game_id := v_existing.game_id;
-    team_number := v_existing.team_number;
-    hole_number := v_existing.hole_number;
-    tee_shot_by := v_existing.tee_shot_by;
-    entered_by := v_existing.entered_by;
-    client_updated_at := v_existing.client_updated_at;
-    updated_at := v_existing.updated_at;
-    was_applied := false;
-    return next;
-    return;
-  end if;
-
   begin
+    -- Last write wins per row, decided in this one statement: two first
+    -- writes at the same moment both reach the INSERT, and the guard on DO
+    -- UPDATE keeps the newer stamp whichever of them commits first.
     insert into public.team_tee_shots as t (
       game_id, team_number, hole_number, tee_shot_by, entered_by, client_updated_at
     ) values (
@@ -268,10 +269,32 @@ begin
           entered_by = excluded.entered_by,
           client_updated_at = excluded.client_updated_at,
           updated_at = now()
+      where t.client_updated_at < excluded.client_updated_at
     returning t.game_id, t.team_number, t.hole_number, t.tee_shot_by,
               t.entered_by, t.client_updated_at, t.updated_at, true
     into game_id, team_number, hole_number, tee_shot_by,
          entered_by, client_updated_at, updated_at, was_applied;
+
+    if not found then
+      -- An older or equal stamp: nothing changed. Answer with the row that
+      -- stands, as upsert_score_if_newer does.
+      select t.*
+        into v_existing
+        from public.team_tee_shots t
+       where t.game_id = p_game_id
+         and t.team_number = p_team_number
+         and t.hole_number = p_hole_number;
+      game_id := v_existing.game_id;
+      team_number := v_existing.team_number;
+      hole_number := v_existing.hole_number;
+      tee_shot_by := v_existing.tee_shot_by;
+      entered_by := v_existing.entered_by;
+      client_updated_at := v_existing.client_updated_at;
+      updated_at := v_existing.updated_at;
+      was_applied := false;
+      return next;
+      return;
+    end if;
 
     -- Shamble after the first card: only while nobody is short afterwards,
     -- clearing included.
