@@ -87,6 +87,24 @@ describe('teamBoardFor — live scramble', () => {
   const bundle = homeBundle({ game: { gameMode: 'texas_scramble', modeConfig: TEXAS }, players: teams });
   const model = teamBoardFor({ bundle, scores, userId: ME })!;
 
+  it('names you first, then the rest of the team by name', () => {
+    const named = teamBoardFor({
+      bundle: homeBundle({
+        game: { gameMode: 'texas_scramble', modeConfig: TEXAS },
+        players: [
+          homePlayer({ userId: 'zz', name: 'Anders Moe', teamNumber: 1 }),
+          homePlayer({ userId: ME, name: 'Sigrid Aas', teamNumber: 1 }),
+          homePlayer({ userId: 'aa', name: 'Marte Lie', teamNumber: 1 }),
+          ...teams.slice(2),
+        ],
+      }),
+      scores: [...teamScores(['aa'], [4, 4, 4, 4, 3]), ...scores.filter((s) => s.userId !== ME && s.userId !== 'marte')],
+      userId: ME,
+    })!;
+    const mine = named.rows.find((r) => r.you)!;
+    expect([mine.members, mine.initials]).toEqual(['Deg, Anders og Marte', ['SA', 'AM', 'ML']]);
+  });
+
   it('reads the cards: place, leader with initials, your team with the names line', () => {
     expect(model).toMatchObject({ variant: 'live', pill: { text: 'Live · etter 5 hull', live: true }, viewerTeam: 1 });
     expect(

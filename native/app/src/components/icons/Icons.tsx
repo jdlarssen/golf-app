@@ -24,7 +24,7 @@
 // feil uten.
 //
 // Dette er appens ENESTE import-flate for `react-native-svg`.
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, {
   Circle,
@@ -32,7 +32,7 @@ import Svg, {
   Ellipse,
   Line,
   Path,
-  Pattern,
+  Polygon,
   Polyline,
   RadialGradient,
   Rect,
@@ -253,6 +253,11 @@ export const TavleLaasIcon = (props: IconProps) => (
  * striper, 3 pt `hatch` og 3 pt `track` langs 135°, og en hårlinje i `hatch`
  * rundt (tegningens `repeating-linear-gradient(135deg, …)` med
  * `inset 0 0 0 1px`). Kallstedet gir størrelsen. Alltid dekor.
+ *
+ * Stripene er tegnet som parallellogrammer ut fra den målte bredden: et
+ * rotert `Pattern` blir trekanter i react-native-svg. Langs 135° er perioden
+ * 6 pt; langs x blir den 6√2 og hver stripe 3√2, med første stripe fra
+ * øvre venstre hjørne, som i nettleseren.
  */
 export function HatchBar({
   track,
@@ -265,21 +270,36 @@ export function HatchBar({
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const period = 6 * Math.SQRT2;
+  const band = 3 * Math.SQRT2;
+  const { width, height } = size;
+  const stripes = width > 0 ? Math.ceil((width + height) / period) + 1 : 0;
   return (
     <View
       style={[hatchStyles.bar, { backgroundColor: track }, style]}
+      onLayout={(event) =>
+        setSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })
+      }
       testID={testID}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-        <Defs>
-          <Pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-            <Rect x="0" y="0" width="3" height="6" fill={hatch} />
-          </Pattern>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#hatch)" />
-      </Svg>
+      {stripes > 0 ? (
+        <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
+          {Array.from({ length: stripes }, (_, k) => {
+            const left = k * period;
+            const right = left + band;
+            return (
+              <Polygon
+                key={k}
+                points={`${left},0 ${right},0 ${right - height},${height} ${left - height},${height}`}
+                fill={hatch}
+              />
+            );
+          })}
+        </Svg>
+      ) : null}
       <View style={[StyleSheet.absoluteFill, hatchStyles.ring, { borderColor: hatch }]} />
     </View>
   );
