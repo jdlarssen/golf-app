@@ -227,11 +227,17 @@ describe('teamResultBoard — the rows of a finished team board', () => {
   });
 
   it('carries the team handicap where the result has it (the texas family)', () => {
-    const texas = computeLeaderboard(
-      teamCtx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 }),
-    ) as TeamBoardResult;
+    // Team 1 has course handicaps 20 and 12: 25 % of 32 is a team handicap of 8.
+    const context = teamCtx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 });
+    const texas = computeLeaderboard({
+      ...context,
+      players: context.players.map((p) => ({ ...p, courseHandicap: p.userId === 'p1' ? 20 : p.userId === 'p2' ? 12 : 0 })),
+    }) as TeamBoardResult;
     const bb = computeLeaderboard(teamCtx('best_ball', { kind: 'best_ball', team_size: 2, teams_count: 2 })) as TeamBoardResult;
-    expect(teamResultBoard(texas, teamName).rows.map((r) => r.teamHandicap)).toEqual([0, 0]);
+    expect(Object.fromEntries(teamResultBoard(texas, teamName).rows.map((r) => [r.teamNumber, r.teamHandicap]))).toEqual({
+      1: 8,
+      2: 0,
+    });
     expect(teamResultBoard(bb, teamName).rows.map((r) => r.teamHandicap)).toEqual([null, null]);
   });
 
