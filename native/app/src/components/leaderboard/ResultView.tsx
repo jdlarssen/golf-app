@@ -14,12 +14,14 @@ import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
 import type { SoloBoardModel } from '../../lib/soloBoard';
+import type { TeamBoardModel } from '../../lib/teamBoard';
 import { WebLinkButton } from '../WebLinkButton';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { NassauView, SkinsView } from './PotViews';
 import { SettlementCard } from './SettlementCard';
 import { SoloBoard } from './SoloBoard';
+import { TeamBoard } from './TeamBoard';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
 
@@ -67,6 +69,7 @@ export function ResultView({
   settlement,
   nameOf,
   soloBoard = null,
+  teamBoard = null,
 }: {
   result: ModeResult;
   status: string;
@@ -84,6 +87,11 @@ export function ResultView({
    * den står tabellen under, som før.
    */
   soloBoard?: SoloBoardModel | null;
+  /**
+   * Lagtavla (#2579 PR 2) for scramble, lag-stableford, shamble og best ball,
+   * fra `teamBoardFor`. Uten den står tabellen under, som før.
+   */
+  teamBoard?: TeamBoardModel | null;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
@@ -150,6 +158,7 @@ export function ResultView({
           />
         );
       }
+      if (teamBoard) return <TeamBoard model={teamBoard} />;
       return (
         <LeaderTable
           testID="leaderboard-table"
@@ -169,6 +178,7 @@ export function ResultView({
 
     // Ambrose og florida scramble kommer også ut som `texas_scramble`.
     case 'texas_scramble': {
+      if (teamBoard) return <TeamBoard model={teamBoard} />;
       const showHoles = showHolesColumn(status, result.teams.map(teamHolesPlayed));
       return (
         <LeaderTable
@@ -202,6 +212,7 @@ export function ResultView({
     }
 
     case 'best_ball': {
+      if (teamBoard) return <TeamBoard model={teamBoard} />;
       const showHoles = showHolesColumn(status, result.teams.map(teamHolesPlayed));
       return (
         <LeaderTable
@@ -227,6 +238,7 @@ export function ResultView({
     }
 
     case 'shamble': {
+      if (teamBoard) return <TeamBoard model={teamBoard} />;
       const showHoles = showHolesColumn(
         status,
         result.teams.map((team) => team.holesCounted),

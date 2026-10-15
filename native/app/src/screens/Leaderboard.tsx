@@ -11,15 +11,15 @@
 // den DELTE motoren. Denne fila velger visning og passer på hva reveal-runden
 // får lov å vise.
 //
-// #2579: slagspill og solo stableford har tavla fra designlerretet. Båndet er
-// navigatorens header (`boardHeader`), så pila står i alle tilstander; stripa
-// nederst ligger fast utenfor rullingen.
+// #2579: slagspill og solo stableford har tavla fra designlerretet, og
+// lagformatene (scramble, lag-stableford, shamble, best ball) lagtavla. Båndet
+// er navigatorens header (`boardHeader`), så pila står i alle tilstander;
+// stripa nederst ligger fast utenfor rullingen.
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { lastHoleForSegment } from '../../../../lib/games/holeScope';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { settlementForResult } from '../../../../lib/scoring/settlement';
 import {
@@ -28,12 +28,13 @@ import {
 } from '../components/leaderboard/ResultView';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { BoardStrip } from '../components/leaderboard/SoloBoard';
+import { TeamStrip } from '../components/leaderboard/TeamBoard';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
 import { boardHeader } from '../components/KickerHeader';
 import { WebLinkButton } from '../components/WebLinkButton';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
-import { BOARD_TEXT } from '../lib/boardCopy';
+import { BOARD_TEAM_TEXT, BOARD_TEXT } from '../lib/boardCopy';
 import {
   GATE_LINK_LABEL,
   gameWebPath,
@@ -42,7 +43,6 @@ import {
 } from '../lib/formatGate';
 import {
   FIRST_HALF_WAITING_NOTE,
-  firstHalfLockedNote,
   firstHalfScope,
   grossLines,
   hasAnyStroke,
@@ -57,7 +57,20 @@ import {
 import { holeHeaderParams } from '../lib/holeHeader';
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
-import { boardBand, hasSoloBoard, soloBoardFor, type SoloBoardModel } from '../lib/soloBoard';
+import {
+  boardBand,
+  hasSoloBoard,
+  soloBoardFor,
+  type SoloBoardModel,
+  type SoloBoardStripAction,
+} from '../lib/soloBoard';
+import {
+  hasTeamBoard,
+  teamBandVariant,
+  teamBoardBand,
+  teamBoardFor,
+  type TeamBoardModel,
+} from '../lib/teamBoard';
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
@@ -178,27 +191,40 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   // ser ellers ferdig ut (#2255 PR 3a, samme som «Hull for hull»).
   const { seedFailed } = useScoreCatchUp(gameId, reload, { live: true });
 
-  // #2579: tavla, når formatet har den og skjermen tegner den. Den samme
-  // modellen gir pillen i båndet og stripa nederst.
-  const boardFormat = bundle != null && hasSoloBoard(bundle.game);
+  // #2579: tavla (solo) eller lagtavla, når formatet har den og skjermen
+  // tegner den. Den samme modellen gir pillen i båndet og stripa nederst.
+  const soloFormat = bundle != null && hasSoloBoard(bundle.game);
+  const teamFormat = bundle != null && hasTeamBoard(bundle.game);
+  const boardFormat = soloFormat || teamFormat;
   const soloBoard = useMemo(
-    () => (bundle && boardFormat ? soloBoardFor({ bundle, scores, userId }) : null),
-    [bundle, boardFormat, scores, userId],
+    () => (bundle && soloFormat ? soloBoardFor({ bundle, scores, userId }) : null),
+    [bundle, soloFormat, scores, userId],
   );
-  const pillText = soloBoard?.pill.text ?? null;
-  const pillLive = soloBoard?.pill.live ?? false;
+  const teamBoard = useMemo(
+    () => (bundle && teamFormat ? teamBoardFor({ bundle, scores, userId }) : null),
+    [bundle, teamFormat, scores, userId],
+  );
+  // Lagtavlas linje i båndet regnes fra motoren uten slag: én gang per bundel.
+  const teamBand = useMemo(
+    () => (bundle && teamFormat ? teamBoardBand(bundle) : null),
+    [bundle, teamFormat],
+  );
+  const pill = (soloBoard ?? teamBoard)?.pill ?? null;
+  const pillText = pill?.text ?? null;
+  const pillLive = pill?.live ?? false;
   useLayoutEffect(() => {
     if (!bundle || !boardFormat) return;
-    const band = boardBand(bundle);
+    const band = teamBand ?? boardBand(bundle);
     navigation.setOptions(
       boardHeader({
         pill: pillText ? { text: pillText, live: pillLive } : undefined,
         kicker: band.kicker,
-        title: BOARD_TEXT.title,
+        title: teamBand ? BOARD_TEAM_TEXT.title : BOARD_TEXT.title,
         subtitle: band.subtitle,
+        variant: teamBand ? teamBandVariant(bundle.game) : 'solo',
       }),
     );
-  }, [navigation, bundle, boardFormat, pillText, pillLive]);
+  }, [navigation, bundle, boardFormat, teamBand, pillText, pillLive]);
   const [stripHeight, setStripHeight] = useState(STRIP_ESTIMATE);
 
   if (!bundle || choicesPending) {
@@ -210,6 +236,59 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
         )}
+      </View>
+    );
+  }
+
+  const onStripAction = (action: SoloBoardStripAction | null) => {
+    if (action?.kind === 'hole') {
+      navigation.navigate('Hole', {
+        gameId,
+        holeNumber: action.holeNumber,
+        ...holeHeaderParams(bundle.game, bundle.courseName),
+      });
+    } else if (action) {
+      navigation.navigate('Scorecard', { gameId });
+    }
+  };
+
+  if (teamFormat) {
+    const strip = teamBoard?.strip ?? null;
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        {focused ? <StatusBar style="light" /> : null}
+        <ScrollView
+          contentContainerStyle={[
+            styles.boardScroll,
+            // Stripa står i full bredde mot bunnen; ingenting skal havne bak den.
+            { paddingBottom: strip ? stripHeight + 12 : STRIP_BOTTOM + insets.bottom },
+          ]}
+          testID="leaderboard-screen"
+        >
+          {seedFailed ? (
+            <Text style={[ui.muted, styles.boardSeed]} testID="leaderboard-seed-failed">
+              {SEED_FAILED_TEXT}
+            </Text>
+          ) : null}
+          <View style={teamBoard ? null : styles.plainBody}>
+            <LeaderboardBody
+              bundle={bundle}
+              scores={scores}
+              extras={extras}
+              sideWinners={sideWinners}
+              teamBoard={teamBoard}
+            />
+          </View>
+        </ScrollView>
+        {strip ? (
+          <TeamStrip
+            strip={strip}
+            tabular={teamBoard?.variant !== 'live'}
+            bottomInset={insets.bottom}
+            onLayout={setStripHeight}
+            onAction={() => onStripAction(strip.action)}
+          />
+        ) : null}
       </View>
     );
   }
@@ -251,18 +330,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
             finished={soloBoard?.variant === 'finished'}
             bottom={stripBottom}
             onLayout={setStripHeight}
-            onAction={() => {
-              const action = strip.action;
-              if (action?.kind === 'hole') {
-                navigation.navigate('Hole', {
-                  gameId,
-                  holeNumber: action.holeNumber,
-                  ...holeHeaderParams(bundle.game, bundle.courseName),
-                });
-              } else if (action) {
-                navigation.navigate('Scorecard', { gameId });
-              }
-            }}
+            onAction={() => onStripAction(strip.action)}
           />
         ) : null}
       </View>
@@ -302,6 +370,7 @@ export function LeaderboardBody({
   extras = {},
   sideWinners = NO_SIDE_WINNERS,
   soloBoard = null,
+  teamBoard = null,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
@@ -315,6 +384,8 @@ export function LeaderboardBody({
   sideWinners?: SideWinnersState;
   /** Tavla (#2579) fra skjermen, eller `null` når formatet ikke har den. */
   soloBoard?: SoloBoardModel | null;
+  /** Lagtavla (#2579 PR 2) fra skjermen, med best balls låskort i seg. */
+  teamBoard?: TeamBoardModel | null;
 }) {
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
@@ -367,7 +438,6 @@ export function LeaderboardBody({
   if (scope.view === 'waiting') {
     return <CalmNote text={FIRST_HALF_WAITING_NOTE} testID="leaderboard-first-half-waiting" />;
   }
-  const clipped = scope.view === 'first-half';
   const scopedScores = scope.scores;
   const scopedBundle = scope.bundle;
 
@@ -443,15 +513,15 @@ export function LeaderboardBody({
         settlement={settlement}
         nameOf={nameOf}
         soloBoard={soloBoard}
+        teamBoard={teamBoard}
       />
-      {clipped && (
-        <CalmNote
-          text={firstHalfLockedNote(lastHoleForSegment('full'))}
-          testID="leaderboard-first-half-locked"
-        />
+      {/* Under tavla står sideturneringen 12 pt fra sidene, under lagtavla 16,
+          som i tegningene. */}
+      {(soloBoard || teamBoard) && sideSection ? (
+        <View style={teamBoard ? styles.teamSide : styles.boardSide}>{sideSection}</View>
+      ) : (
+        sideSection
       )}
-      {/* Under tavla står sideturneringen 12 pt fra sidene, som i tegningen. */}
-      {soloBoard && sideSection ? <View style={styles.boardSide}>{sideSection}</View> : sideSection}
     </>
   );
 }
@@ -499,4 +569,5 @@ const styles = StyleSheet.create({
   // Notene og tomtilstanden får skjermens vanlige luft (`ui.scroll`).
   plainBody: { padding: 20, gap: 8 },
   boardSide: { marginTop: 12, marginHorizontal: 12 },
+  teamSide: { marginTop: 12, marginHorizontal: 16 },
 });

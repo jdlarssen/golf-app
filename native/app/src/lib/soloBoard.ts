@@ -37,7 +37,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT } from './boardCopy';
 import { gateReason } from './formatGate';
-import { heroAction, liveBoardFor } from './homeHero';
+import { heroAction, liveBoardFor, type HeroAction } from './homeHero';
 import { formatMessage } from './kavalkadeCopy';
 import { hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
 import { asModeConfig, computeGameLeaderboard, toPlayerRows } from './scoringContext';
@@ -124,8 +124,11 @@ export type SoloBoardModel = {
   strip: SoloBoardStrip | null;
 };
 
+// Plassen, likt-linja, opplesningen og stripas knapp deles med lagtavla
+// (`teamBoard.ts`): samme ord og samme regel på begge tavlene.
+
 /** Plassen i skiva og i stripa: «–», «T4» eller «3». */
-function placeText(row: BoardPlaceRow, showRank: boolean): string {
+export function placeText(row: BoardPlaceRow, showRank: boolean): string {
   const kind = placeKind(row, showRank);
   return kind === 'none'
     ? '–'
@@ -134,13 +137,13 @@ function placeText(row: BoardPlaceRow, showRank: boolean): string {
       : String(row.rank);
 }
 
-function stripPlace(standing: { rank: number; tied: boolean }): string {
+export function stripPlace(standing: { rank: number; tied: boolean }): string {
   return formatMessage(standing.tied ? BOARD_TEXT.stripTiedPlace : BOARD_TEXT.stripPlace, {
     rank: standing.rank,
   });
 }
 
-const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
+export const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
   back9: BOARD_APP_TEXT.decidedBack9,
   back6: BOARD_APP_TEXT.decidedBack6,
   back3: BOARD_APP_TEXT.decidedBack3,
@@ -156,7 +159,7 @@ const rowName = (row: { name: string | null; nickname: string | null }) =>
   row.name ? formatRevealName(row.name, row.nickname) : BOARD_COMMON_TEXT.unknownPlayerFull;
 
 /** Én del av radens opplesning med webbens ord; rekkefølgen er `boardRowSrParts`. */
-function srPartText(part: BoardRowSrPart, note: string | null): string | null {
+export function srPartText(part: BoardRowSrPart, note: string | null): string | null {
   switch (part.key) {
     case 'place':
       return formatMessage(part.tied ? BOARD_TEXT.srTiedPlace : BOARD_TEXT.srPlace, { rank: part.rank });
@@ -219,6 +222,22 @@ function rowSr(opts: {
 }
 
 /**
+ * Stripas knapp, med Hjem-kortets regel (`heroAction`): neste hull, eller
+ * «Lever scorekort» når alle hull er ført. `open` og `null` gir ingen knapp.
+ */
+export function stripAction(action: HeroAction): SoloBoardStripAction | null {
+  return action?.kind === 'hole'
+    ? {
+        kind: 'hole',
+        holeNumber: action.holeNumber,
+        label: formatMessage(BOARD_TEXT.stripHole, { hole: action.holeNumber }),
+      }
+    : action?.kind === 'submit'
+      ? { kind: 'submit', label: BOARD_TEXT.stripSubmit }
+      : null;
+}
+
+/**
  * Tavla for skjermen, eller `null` når Resultater-skjermen viser noe annet
  * (et annet format, et stengt spill, en reveal-runde som skjuler netto, ingen
  * slag, eller når motoren ikke kan svare).
@@ -271,16 +290,7 @@ function liveBoard(
     strip = {
       kicker: BOARD_TEXT.stripKicker,
       text: [stripPlace(standing), behind].filter(Boolean).join(' · '),
-      action:
-        action?.kind === 'hole'
-          ? {
-              kind: 'hole',
-              holeNumber: action.holeNumber,
-              label: formatMessage(BOARD_TEXT.stripHole, { hole: action.holeNumber }),
-            }
-          : action?.kind === 'submit'
-            ? { kind: 'submit', label: BOARD_TEXT.stripSubmit }
-            : null,
+      action: stripAction(action),
     };
   }
 
