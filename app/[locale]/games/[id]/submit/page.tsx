@@ -721,11 +721,6 @@ type TeeShotBoxData = {
   editLabel: string;
 };
 
-/**
- * #2580: the first team in this delivery where someone lacks tee shots (mine
- * first), as the box's text. Null when the setting is off or nobody is short.
- * The count and the advice come from lib/games/teeShots.ts.
- */
 /** The cards a tap on «Lever» sends in: my own (unless it is in) and the flight's. */
 function deliveringCardIds(
   userId: string,
@@ -735,6 +730,11 @@ function deliveringCardIds(
   return [...(mySubmittedAt ? [] : [userId]), ...flightCards.map((c) => c.userId)];
 }
 
+/**
+ * #2580: the first team in this delivery where someone lacks tee shots (mine
+ * first), as the box's text. Null when the setting is off or nobody is short.
+ * The count and the advice come from lib/games/teeShots.ts.
+ */
 async function teeShotBoxFor(args: {
   supabase: Awaited<ReturnType<typeof getServerClient>>;
   gameId: string;
