@@ -29,7 +29,7 @@ import { formatNameList, shortDisplayName } from './display';
 import { liveStanding } from './homeHero';
 import { findInRoster, resolveFlight, toRoster } from './roster';
 import type { ScorecardRow } from './scorecardRows';
-import { SHORT_LABELS, TERM_LABELS } from './strokeTermText';
+import { SHORT_LABELS, termText } from './strokeTermText';
 
 /** Appen fører bare hele runder (`formatGate`), så hull 18 er alltid det siste. */
 const LAST_HOLE = 18;
@@ -243,12 +243,11 @@ export function numberSpoken(value: string, unit: string): string {
  */
 export function highlightText(hole: RoundHighlight, which: 'best' | 'worst'): string {
   const prefix = `${ROUND_DONE_TEXT.hole} ${hole.holeNumber} · `;
-  if (hole.term === 'over') return `${prefix}+${hole.strokes - hole.par}`;
-  if (which === 'worst') {
-    return prefix + (SHORT_LABELS[hole.term] ?? TERM_LABELS[hole.term]).toLowerCase();
-  }
+  // Ordet og «+N» forbi trippel har ett hjem (`termText`, #2579).
+  const word = termText(hole.term, hole.strokes - hole.par).toLowerCase();
+  if (hole.term === 'over') return `${prefix}${word}`;
+  if (which === 'worst') return prefix + (SHORT_LABELS[hole.term]?.toLowerCase() ?? word);
   if (hole.holeInOne) return `${prefix}${ROUND_DONE_TEXT.holeInOne}`;
-  const word = TERM_LABELS[hole.term].toLowerCase();
   if (hole.term === 'par') return `${prefix}${word}`;
   return `${prefix}${word} ${ROUND_DONE_TEXT.onPar} ${hole.par}`;
 }
