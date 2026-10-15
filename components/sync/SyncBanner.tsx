@@ -11,6 +11,13 @@ import {
   type SyncQueueItem,
   type TeeShotQueueItem,
 } from '@/lib/sync/db';
+import { drainQueue } from '@/lib/sync/syncWorker';
+import {
+  summarizeQuarantine,
+  formatHoleList,
+} from '@/lib/sync/quarantineSummary';
+import { isActiveForGame } from '@/lib/sync/queueScope';
+import { Disclosure } from '@/components/ui/Disclosure';
 
 /**
  * #2580: an item from either queue — strokes (`syncQueue`) or tee shots
@@ -22,13 +29,6 @@ type BannerQueueItem = SyncQueueItem | TeeShotQueueItem;
 function isTeeShotItem(item: BannerQueueItem): item is TeeShotQueueItem {
   return 'teeShotId' in item;
 }
-import { drainQueue } from '@/lib/sync/syncWorker';
-import {
-  summarizeQuarantine,
-  formatHoleList,
-} from '@/lib/sync/quarantineSummary';
-import { isActiveForGame } from '@/lib/sync/queueScope';
-import { Disclosure } from '@/components/ui/Disclosure';
 
 const STUCK_THRESHOLD_MS = 30_000;
 const RETRY_MIN_FEEDBACK_MS = 500;
