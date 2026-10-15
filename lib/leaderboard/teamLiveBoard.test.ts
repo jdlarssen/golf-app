@@ -12,6 +12,7 @@ import {
   scrambleHoleCard,
   teamDisplayUnit,
   teamHoleTones,
+  type StablefordTable,
   teamLiveBoard,
   withoutLatestHolePerTeam,
 } from './teamLiveBoard';
@@ -22,6 +23,8 @@ import {
 // «DITT LAG PÅ HULL N» models.
 
 const teamName = (n: number) => `Lag ${n}`;
+/** The standard stableford table; only the mixed-team tests use the modified one. */
+const STANDARD: { stablefordTable: StablefordTable } = { stablefordTable: 'standard' };
 
 type Plan = Record<string, { team: number; ch?: number; gross: (number | null)[] }>;
 
@@ -76,7 +79,7 @@ const FORMATS: [string, ScoringContext, number, 'net' | 'gross' | 'points'][] = 
 describe('teamLiveBoard — total, unit and tone per format', () => {
   it.each(FORMATS)('%s', (_name, context, total, unit) => {
     const result = computeLeaderboard(context) as TeamBoardResult;
-    const board = teamLiveBoard(result, null, teamName);
+    const board = teamLiveBoard(result, null, teamName, STANDARD);
     expect(teamDisplayUnit(result)).toBe(unit);
     const t1 = board.rows.find((r) => r.teamNumber === 1)!;
     const t2 = board.rows.find((r) => r.teamNumber === 2)!;
@@ -113,7 +116,7 @@ describe('teamLiveBoard — the tone is net, and the better partner’s points i
       }),
     ],
   ])('%s: the tone follows the team’s net', (_name, context) => {
-    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName);
+    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName, STANDARD);
     expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'over1']);
   });
 
@@ -126,7 +129,7 @@ describe('teamLiveBoard — the tone is net, and the better partner’s points i
       a2: { team: 1, gross: [3, 6, 4] },
       ...rest,
     });
-    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName);
+    const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName, STANDARD);
     expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'par']);
   });
 });
@@ -209,6 +212,7 @@ describe('teamLiveBoard — movement since each team’s latest hole', () => {
       computeLeaderboard(now) as TeamBoardResult,
       computeLeaderboard(previous) as TeamBoardResult,
       teamName,
+      STANDARD,
     );
     expect(board.rows.map((r) => [r.teamNumber, r.movement])).toEqual([
       [1, 1],
@@ -218,13 +222,13 @@ describe('teamLiveBoard — movement since each team’s latest hole', () => {
 
   it('has no movement before a team has two holes, or without a previous result', () => {
     const one = ctx('best_ball', config, { ...moving, a1: { team: 1, gross: [5, null] }, a2: { team: 1, gross: [5, null] } }, [4, 4]);
-    const board = teamLiveBoard(computeLeaderboard(one) as TeamBoardResult, null, teamName);
+    const board = teamLiveBoard(computeLeaderboard(one) as TeamBoardResult, null, teamName, STANDARD);
     expect(board.rows.map((r) => r.movement)).toEqual([null, null]);
   });
 
   it('gives no gap between teams with a different number of holes', () => {
     const one = ctx('best_ball', config, { ...moving, a1: { team: 1, gross: [5, null] }, a2: { team: 1, gross: [5, null] } }, [4, 4]);
-    const board = teamLiveBoard(computeLeaderboard(one) as TeamBoardResult, null, teamName);
+    const board = teamLiveBoard(computeLeaderboard(one) as TeamBoardResult, null, teamName, STANDARD);
     expect(resultStanding(board, (r) => r.teamNumber, 1)?.gap).toBeNull();
   });
 });
@@ -308,7 +312,7 @@ describe('bestBallHoleCard — the first half', () => {
       scores: full.scores.filter((s) => open.has(s.holeNumber)),
     }) as BestBallResult;
     expect(bestBallHoleCard(clipped, 1)?.holeNumber).toBe(9);
-    const board = teamLiveBoard(clipped, null, teamName);
+    const board = teamLiveBoard(clipped, null, teamName, STANDARD);
     expect(board.holesPlayed).toBe(9);
     expect(Math.max(...board.rows.flatMap((r) => r.tones.map((h) => h.holeNumber)))).toBe(9);
   });
