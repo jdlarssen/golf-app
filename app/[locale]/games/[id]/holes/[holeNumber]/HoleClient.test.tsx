@@ -13,6 +13,8 @@ vi.mock('./holeLiveQueries', () => ({
   useMyScoredHoles: vi.fn(),
   useSiblingScoredHoles: vi.fn(),
   usePendingSyncCount: vi.fn(),
+  // #2580: the tee-shot picker's rows (empty: nobody picked yet).
+  useTeamTeeShots: vi.fn(() => []),
 }));
 
 // #1611: the hole seed now goes through the shared server->local merge, which
@@ -28,6 +30,10 @@ vi.mock('@/lib/sync/currentUser', () => ({
 
 vi.mock('@/lib/sync/writeScore', () => ({
   writeScore: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/sync/writeTeeShot', () => ({
+  writeTeeShot: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/sync/syncWorker', () => ({
@@ -1033,5 +1039,32 @@ describe('HoleClient — score rail (#2251)', () => {
     for (const row of screen.getAllByTestId('flight-row')) {
       expect((row as HTMLButtonElement).disabled).toBe(true);
     }
+  });
+});
+
+describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
+  const teeShots: HoleClientProps['teeShots'] = {
+    minimum: 4,
+    teams: [
+      {
+        teamNumber: 1,
+        members: ['u1', 'u2', 'u3', 'u4'].map((userId) => ({
+          userId,
+          name: userId,
+          submittedAt: null,
+          withdrawnAt: null,
+        })),
+      },
+    ],
+  };
+
+  it('a player in the game can pick', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots })} />);
+    expect(screen.getByTestId('tee-shot-u2')).toBeEnabled();
+  });
+
+  it('a withdrawn player cannot pick, as with the score rows (the RPC refuses them)', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots, withdrawn: true })} />);
+    expect(screen.getByTestId('tee-shot-u2')).toBeDisabled();
   });
 });
