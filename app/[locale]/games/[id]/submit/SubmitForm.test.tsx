@@ -14,7 +14,7 @@ vi.mock('@/lib/sync/syncWorker', () => ({
 }));
 
 import { useLiveQuery } from 'dexie-react-hooks';
-import { localDb, type SyncQueueItem } from '@/lib/sync/db';
+import { localDb, type SyncQueueItem, type TeeShotQueueItem } from '@/lib/sync/db';
 import { SubmitForm } from './SubmitForm';
 
 /**
@@ -44,16 +44,28 @@ function qItem(scoreId: string): SyncQueueItem {
   };
 }
 
+/** #2580: a tee-shot queue item, keyed `${gameId}:${teamNumber}:${holeNumber}`. */
+function teeShotItem(teeShotId: string): TeeShotQueueItem {
+  return {
+    id: teeShotId,
+    teeShotId,
+    attemptCount: 0,
+    lastError: null,
+    createdAt: '2026-08-14T10:00:00.000Z',
+    abandonedAt: null,
+  };
+}
+
 /**
  * Komponenten spør `syncQueue.filter(pred).count()`. Kjør det ekte
  * predikatet over `items` så tellingen er den samme som Dexie ville gitt.
  */
-function setQueue(items: SyncQueueItem[], teeShots: SyncQueueItem[] = []) {
+function setQueue(items: SyncQueueItem[], teeShots: TeeShotQueueItem[] = []) {
   filterMock.mockImplementation((pred: (item: SyncQueueItem) => boolean) => ({
     count: () => items.filter(pred).length,
   }));
   // #2580: the tee-shot queue is asked the same way.
-  teeShotFilterMock.mockImplementation((pred: (item: SyncQueueItem) => boolean) => ({
+  teeShotFilterMock.mockImplementation((pred: (item: TeeShotQueueItem) => boolean) => ({
     count: () => teeShots.filter(pred).length,
   }));
 }
@@ -87,7 +99,7 @@ describe('SubmitForm', () => {
     expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
 
     // #2580: a tee shot for this round still in its queue locks it too.
-    setQueue([], [qItem('g1:1:7')]);
+    setQueue([], [teeShotItem('g1:1:7')]);
     rerender(<SubmitForm {...props} />);
     expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
 
