@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { SyncQueueItem } from './db';
+import type { SyncQueueItem, TeeShotQueueItem } from './db';
 import { summarizeQuarantine, formatHoleList } from './quarantineSummary';
-import { REFUSED_WRITE_ERROR } from './classifyError';
+import { REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from './classifyError';
 
 function qItem(
   overrides: Partial<SyncQueueItem> & { scoreId: string },
@@ -17,6 +17,23 @@ function qItem(
 }
 
 describe('summarizeQuarantine', () => {
+  // #2580: a tee shot in quarantine (key `${gameId}:${teamNumber}:${holeNumber}`)
+  // is read through the same id as a stroke.
+  it('a quarantined tee shot in the round on screen names its hole and counts', () => {
+    const teeShot: TeeShotQueueItem = {
+      id: 'g1:2:9',
+      teeShotId: 'g1:2:9',
+      attemptCount: 1,
+      lastError: REFUSED_TEE_SHOT_ERROR,
+      createdAt: '2026-10-14T10:00:00.000Z',
+      abandonedAt: '2026-10-14T10:01:00.000Z',
+    };
+    const s = summarizeQuarantine([qItem({ scoreId: 'g1:u1:3', lastError: REFUSED_WRITE_ERROR }), teeShot], 'g1');
+    expect(s.currentGame).toEqual({ gameId: 'g1', holes: [3, 9], count: 2 });
+    expect(s.totalCount).toBe(2);
+    expect(s.lockedOnly).toBe(true);
+  });
+
   it('empty queue → empty summary', () => {
     const s = summarizeQuarantine([], 'g1');
     expect(s.currentGame).toBeNull();

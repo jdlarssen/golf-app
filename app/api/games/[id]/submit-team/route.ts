@@ -50,6 +50,7 @@ import {
 //        400 { error: 'bad_request' }    kroppen er ikke JSON, eller `alsoFor` er feilformet
 //        401 { error: 'unauthorized' }   403 { error: 'forbidden' }
 //        404 { error: 'not_found' }      409 { error: 'not_active' }
+//        412 { error: 'tee_shots_short' }   (#2580: someone on the team lacks tee shots)
 //        422 { error: 'withdrawn' }      500 { error: 'submit_failed' }
 //
 // Ingen id fra body eller query identifiserer spillet eller kalleren. Den eneste
@@ -83,6 +84,8 @@ const FAILURE: Record<
   not_active: { status: 409, error: 'not_active' },
   not_player: { status: 403, error: 'forbidden' },
   withdrawn: { status: 422, error: 'withdrawn' },
+  // #2580: «Hvem sitt utslag» — a precondition the team has to meet first.
+  tee_shots_short: { status: 412, error: 'tee_shots_short' },
   db: { status: 500, error: 'submit_failed' },
 };
 

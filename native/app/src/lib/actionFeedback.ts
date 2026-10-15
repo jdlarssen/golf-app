@@ -135,6 +135,9 @@ export function describeSubmitFailure(reason: SubmitCardFailure): string {
       return 'Spillet er ikke aktivt lenger.';
     case 'withdrawn':
       return 'Du er trukket fra dette spillet.';
+    // #2580: older builds fall back to «Fikk ikke levert kortet», which is fine.
+    case 'tee_shots_short':
+      return 'Noen på laget mangler utslag. Se over hullene og prøv igjen.';
     case 'network':
     // #2200: appen bygde kroppen (`alsoFor`), så spilleren kan ikke rette noe.
     case 'bad_request':

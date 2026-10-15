@@ -29,6 +29,8 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Velg en tee-boks.';
     case 'bad_allowance':
       return 'HCP-andelen må være et helt tall mellom 0 og 100.';
+    case 'bad_min_tee_shots':
+      return 'Velg et antall utslag som går opp på 18 hull for laget.';
     case 'duplicate_player':
       return 'Samme spiller kan ikke velges flere ganger.';
     case 'mode_required':

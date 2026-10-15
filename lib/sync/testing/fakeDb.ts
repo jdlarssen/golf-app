@@ -1,5 +1,11 @@
 import { vi } from 'vitest';
-import type { ConflictRecord, LocalScore, SyncQueueItem } from '../db';
+import type {
+  ConflictRecord,
+  LocalScore,
+  LocalTeeShot,
+  SyncQueueItem,
+  TeeShotQueueItem,
+} from '../db';
 
 /**
  * In-memory stand-in for the Dexie database, for unit tests that exercise the
@@ -25,20 +31,55 @@ export interface FakeDb {
   scores: Map<string, LocalScore>;
   syncQueue: Map<string, SyncQueueItem>;
   conflicts: Map<string, ConflictRecord>;
+  /** #2580: the tee-shot tables (Dexie version 3). */
+  teeShots: Map<string, LocalTeeShot>;
+  teeShotQueue: Map<string, TeeShotQueueItem>;
   /** Drop-in for the real `localDb`; every method is a spy. */
   localDb: ReturnType<typeof buildLocalDb>;
   /** Same key shape as the real `scoreKey`. */
   scoreKey: (gameId: string, userId: string, holeNumber: number) => string;
+  /** Same key shape as the real `teeShotKey`. */
+  teeShotKey: (gameId: string, teamNumber: number, holeNumber: number) => string;
   /** Empty every table and re-install the spy implementations. */
   reset: () => void;
+}
+
+/** A keyed table with the Dexie methods the sync modules call. */
+function tableOf<T extends { id: string }>(rows: Map<string, T>) {
+  return {
+    get: vi.fn(async (id: string) => rows.get(id)),
+    bulkGet: vi.fn(async (ids: string[]) => ids.map((id) => rows.get(id))),
+    orderBy: vi.fn(() => ({ toArray: async () => [...rows.values()] })),
+    toArray: vi.fn(async () => [...rows.values()]),
+    put: vi.fn(async (row: T) => {
+      rows.set(row.id, row);
+    }),
+    bulkPut: vi.fn(async (items: T[]) => {
+      for (const row of items) rows.set(row.id, row);
+    }),
+    update: vi.fn(async (id: string, patch: Partial<T>) => {
+      const row = rows.get(id);
+      if (row) rows.set(id, { ...row, ...patch });
+    }),
+    delete: vi.fn(async (id: string) => {
+      rows.delete(id);
+    }),
+    bulkDelete: vi.fn(async (ids: string[]) => {
+      for (const id of ids) rows.delete(id);
+    }),
+  };
 }
 
 function buildLocalDb(
   scores: Map<string, LocalScore>,
   syncQueue: Map<string, SyncQueueItem>,
   conflicts: Map<string, ConflictRecord>,
+  teeShots: Map<string, LocalTeeShot>,
+  teeShotQueue: Map<string, TeeShotQueueItem>,
 ) {
   return {
+    teeShots: tableOf(teeShots),
+    teeShotQueue: tableOf(teeShotQueue),
     scores: {
       get: vi.fn(async (id: string) => scores.get(id)),
       bulkGet: vi.fn(async (ids: string[]) => ids.map((id) => scores.get(id))),
@@ -104,7 +145,9 @@ export function createFakeDb(): FakeDb {
   const scores = new Map<string, LocalScore>();
   const syncQueue = new Map<string, SyncQueueItem>();
   const conflicts = new Map<string, ConflictRecord>();
-  const localDb = buildLocalDb(scores, syncQueue, conflicts);
+  const teeShots = new Map<string, LocalTeeShot>();
+  const teeShotQueue = new Map<string, TeeShotQueueItem>();
+  const localDb = buildLocalDb(scores, syncQueue, conflicts, teeShots, teeShotQueue);
 
   // A test file that runs vi.clearAllMocks()/resetAllMocks() between cases can
   // strip the implementations off these spies, so reset() re-installs them from
@@ -113,8 +156,10 @@ export function createFakeDb(): FakeDb {
     scores.clear();
     syncQueue.clear();
     conflicts.clear();
-    const fresh = buildLocalDb(scores, syncQueue, conflicts);
-    for (const table of ['scores', 'syncQueue', 'conflicts'] as const) {
+    teeShots.clear();
+    teeShotQueue.clear();
+    const fresh = buildLocalDb(scores, syncQueue, conflicts, teeShots, teeShotQueue);
+    for (const table of ['scores', 'syncQueue', 'conflicts', 'teeShots', 'teeShotQueue'] as const) {
       for (const [name, spy] of Object.entries(fresh[table])) {
         (localDb[table] as Record<string, ReturnType<typeof vi.fn>>)[
           name
@@ -130,9 +175,13 @@ export function createFakeDb(): FakeDb {
     scores,
     syncQueue,
     conflicts,
+    teeShots,
+    teeShotQueue,
     localDb,
     scoreKey: (gameId, userId, holeNumber) =>
       `${gameId}:${userId}:${holeNumber}`,
+    teeShotKey: (gameId, teamNumber, holeNumber) =>
+      `${gameId}:${teamNumber}:${holeNumber}`,
     reset,
   };
 }

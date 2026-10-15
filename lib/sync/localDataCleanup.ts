@@ -35,17 +35,27 @@ const LOGOUT_DRAIN_TIMEOUT_MS = 4_000;
 export async function clearAllLocalData(): Promise<void> {
   await localDb.transaction(
     'rw',
-    localDb.scores,
-    localDb.syncQueue,
-    localDb.conflicts,
+    [localDb.scores, localDb.syncQueue, localDb.conflicts, localDb.teeShots, localDb.teeShotQueue],
     async () => {
       await Promise.all([
         localDb.scores.clear(),
         localDb.syncQueue.clear(),
         localDb.conflicts.clear(),
+        // #2580: the tee-shot tables go with the rest.
+        localDb.teeShots.clear(),
+        localDb.teeShotQueue.clear(),
       ]);
     },
   );
+}
+
+/**
+ * Items still waiting in either queue (#2580: tee shots too). A non-empty
+ * tee-shot queue blocks the cleanup exactly like `syncQueue` does.
+ */
+async function pendingQueueCount(): Promise<number> {
+  const [strokes, teeShots] = await Promise.all([localDb.syncQueue.count(), localDb.teeShotQueue.count()]);
+  return strokes + teeShots;
 }
 
 export type OwnerChange = 'first' | 'same' | 'switched';
@@ -290,7 +300,7 @@ export async function prepareLogoutBrowser(
       ownerMatches: () =>
         stored == null || sessionUserId == null || stored === sessionUserId,
       drain: drainQueue,
-      pendingCount: () => localDb.syncQueue.count(),
+      pendingCount: pendingQueueCount,
       clear: clearAllLocalData,
       clearStoredOwner: clearStoredOwnerBrowser,
       cleanupPush,

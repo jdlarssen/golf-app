@@ -484,6 +484,12 @@ export type GameModeConfig =
       team_size: 2 | 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
+      /**
+       * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
+       * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
+       * Never read by the scoring.
+       */
+      min_tee_shots?: 3 | 4 | 5 | 6;
     }
   | {
       /**
@@ -503,6 +509,12 @@ export type GameModeConfig =
       team_size: 2 | 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
+      /**
+       * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
+       * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
+       * Never read by the scoring.
+       */
+      min_tee_shots?: 3 | 4 | 5 | 6;
     }
   | {
       /**
@@ -522,6 +534,12 @@ export type GameModeConfig =
       team_size: 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
+      /**
+       * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
+       * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
+       * Never read by the scoring.
+       */
+      min_tee_shots?: 3 | 4 | 5 | 6;
     }
   | {
       kind: 'fourball_matchplay';
@@ -763,6 +781,12 @@ export type GameModeConfig =
       shamble_count: 1 | 2 | 3;
       /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Default 'net'. Speiler skins_scoring. */
       shamble_scoring: 'gross' | 'net';
+      /**
+       * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
+       * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
+       * Never read by the scoring.
+       */
+      min_tee_shots?: 3 | 4 | 5 | 6;
     }
   | {
       kind: 'patsome';

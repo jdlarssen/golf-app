@@ -10,7 +10,11 @@ import { createFakeDb } from './testing/fakeDb';
  */
 
 const fake = createFakeDb();
-vi.mock('./db', () => ({ localDb: fake.localDb, scoreKey: fake.scoreKey }));
+vi.mock('./db', () => ({
+  localDb: fake.localDb,
+  scoreKey: fake.scoreKey,
+  teeShotKey: fake.teeShotKey,
+}));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/client', () => ({ getBrowserClient: () => supabaseMock }));
@@ -128,6 +132,66 @@ describe('catchUpGameScores', () => {
     expect(supabaseMock.__fromCalls.filter((c) => c.method === 'gte')).toEqual([
       // Newest row 09:45:00 minus the 2 min overlap.
       { table: 'scores', method: 'gte', args: ['updated_at', '2026-09-27T09:43:00.000Z'] },
+    ]);
+  });
+});
+
+// #2580: realtime only delivers changes, so a new device or a PWA that wakes
+// up reads the game's tee shots in full and merges them last-write-wins.
+describe('catchUpGameTeeShots', () => {
+  const row = (hole: number, teeShotBy: string, clientUpdatedAt: string) => ({
+    game_id: 'g1',
+    team_number: 1,
+    hole_number: hole,
+    tee_shot_by: teeShotBy,
+    entered_by: 'u2',
+    client_updated_at: clientUpdatedAt,
+    updated_at: clientUpdatedAt,
+  });
+
+  it('merges newer server rows and leaves a row that waits in the queue alone', async () => {
+    const local = (hole: number, teeShotBy: string, clientUpdatedAt: string) => ({
+      id: `g1:1:${hole}`,
+      gameId: 'g1',
+      teamNumber: 1,
+      holeNumber: hole,
+      teeShotBy,
+      enteredBy: 'u0',
+      clientUpdatedAt,
+      serverUpdatedAt: null,
+    });
+    // Hole 1: older locally → the server wins. Hole 2: newer locally → kept.
+    // Hole 3: waits in the queue → never overwritten.
+    fake.teeShots.set('g1:1:1', local(1, 'marte', '2026-10-14T09:00:00.000Z'));
+    fake.teeShots.set('g1:1:2', local(2, 'jonas', '2026-10-14T11:00:00.000Z'));
+    fake.teeShots.set('g1:1:3', local(3, 'per', '2026-10-14T09:00:00.000Z'));
+    fake.teeShotQueue.set('g1:1:3', {
+      id: 'g1:1:3',
+      teeShotId: 'g1:1:3',
+      attemptCount: 0,
+      lastError: null,
+      createdAt: '2026-10-14T09:00:00.000Z',
+    });
+    supabaseMock = buildSupabaseMock([
+      {
+        data: [
+          row(1, 'sigrid', '2026-10-14T10:00:00+00:00'),
+          row(2, 'sigrid', '2026-10-14T10:00:00+00:00'),
+          row(3, 'sigrid', '2026-10-14T10:00:00+00:00'),
+          row(4, 'sigrid', '2026-10-14T10:00:00+00:00'),
+        ],
+      },
+    ]);
+    const { catchUpGameTeeShots } = await import('./catchUp');
+
+    await catchUpGameTeeShots('g1');
+
+    expect(supabaseMock.__fromCalls[0]).toMatchObject({ table: 'team_tee_shots' });
+    expect([1, 2, 3, 4].map((h) => fake.teeShots.get(`g1:1:${h}`)?.teeShotBy)).toEqual([
+      'sigrid',
+      'jonas',
+      'per',
+      'sigrid',
     ]);
   });
 });

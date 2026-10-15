@@ -32,6 +32,7 @@ import {
 import {
   buildPlayersForClient,
   buildRoundRobinPlayers,
+  buildTeeShotTeams,
   resolveFlight,
 } from './holePagePlayers';
 import {
@@ -383,6 +384,7 @@ export default async function HolePage({ params }: { params: Params }) {
         segmentSibling={segmentSibling}
         holeStripSibling={holeStripSibling}
         broBridge={broBridge}
+        teeShots={buildTeeShotTeams({ game, allPlayers, flight, unknownPlayer })}
         players={playersForClient}
       />
     </main>

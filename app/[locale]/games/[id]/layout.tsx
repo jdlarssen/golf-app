@@ -2,6 +2,7 @@ import { RealtimeMount } from './RealtimeMount';
 import { SyncBanner } from '@/components/sync/SyncBanner';
 import { SyncBoot } from '@/components/sync/SyncBoot';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { readMinTeeShots } from '@/lib/games/teeShots';
 
 type Params = Promise<{ id: string }>;
 
@@ -28,7 +29,14 @@ export default async function GameLayout({
     gwp?.game.status === 'active' || gwp?.game.status === 'finished';
   return (
     <>
-      {playable && <RealtimeMount gameId={id} />}
+      {playable && (
+        <RealtimeMount
+          gameId={id}
+          // #2580: only a game with «Hvem sitt utslag» on opens the tee-shot
+          // channel and catch-up.
+          tracksTeeShots={readMinTeeShots(gwp.game.game_mode, gwp.game.mode_config) !== null}
+        />
+      )}
       <SyncBoot />
       <SyncBanner gameId={id} />
       {children}

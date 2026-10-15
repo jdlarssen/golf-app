@@ -17,6 +17,7 @@ import type {
   WolfHoleChoice,
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
+import type { TeeShotPickerTeam } from './TeeShotPicker';
 
 export type ClientPlayer = {
   userId: string;
@@ -257,6 +258,12 @@ export interface HoleClientProps {
    * secondary bridge link. Null on the back9 side and off broModus.
    */
   broBridge?: SegmentSiblingLink | null;
+  /**
+   * #2580 «Hvem sitt utslag»: the minimum and the flight's teams for the tee
+   * shot picker (`buildTeeShotTeams`). Null when the game does not have the
+   * setting; the picker is not shown then.
+   */
+  teeShots?: { minimum: number; teams: TeeShotPickerTeam[] } | null;
   players: ClientPlayer[];
 }
 
@@ -285,6 +292,7 @@ export type ResolvedHoleClientProps = HoleClientProps &
       | 'segmentSibling'
       | 'holeStripSibling'
       | 'broBridge'
+      | 'teeShots'
     >
   >;
 
@@ -309,6 +317,7 @@ export function resolveHoleClientProps(
     segmentSibling = null,
     holeStripSibling = null,
     broBridge = null,
+    teeShots = null,
   } = props;
   return {
     ...props,
@@ -328,5 +337,6 @@ export function resolveHoleClientProps(
     segmentSibling,
     holeStripSibling,
     broBridge,
+    teeShots,
   };
 }

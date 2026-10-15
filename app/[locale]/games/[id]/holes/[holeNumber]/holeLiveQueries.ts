@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
+import { localDb, scoreKey, type LocalScore, type LocalTeeShot } from '@/lib/sync/db';
 import { isActiveForGame } from '@/lib/sync/queueScope';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -184,8 +184,28 @@ export function useSiblingScoredHoles(args: {
  * gameId index (db.ts).
  */
 export function usePendingSyncCount(gameId: string): number {
-  const syncQueue = useLiveQuery(() => localDb.syncQueue.toArray(), []);
-  return (syncQueue ?? []).filter(
+  // #2580: tee shots waiting in their own queue count too.
+  const queued = useLiveQuery(async () => {
+    const [strokes, teeShots] = await Promise.all([
+      localDb.syncQueue.toArray(),
+      localDb.teeShotQueue.toArray(),
+    ]);
+    return [...strokes, ...teeShots];
+  }, []);
+  return (queued ?? []).filter(
     (item) => item != null && isActiveForGame(item, gameId),
   ).length;
+}
+
+/**
+ * Live-query #5 — #2580: the game's tee-shot choices from Dexie, filled by
+ * catch-up and realtime (`RealtimeMount`) and by the picker's own writes. Read
+ * like the strokes, never through `getGameWithPlayers`, so a choice made in the
+ * app needs no cache revalidation. `undefined` until Dexie has answered.
+ */
+export function useTeamTeeShots(gameId: string): LocalTeeShot[] | undefined {
+  return useLiveQuery(
+    () => localDb.teeShots.where('gameId').equals(gameId).toArray(),
+    [gameId],
+  );
 }

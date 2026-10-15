@@ -24,6 +24,7 @@ import { endGameMarkingWithdrawals } from './actions';
 // (`requireAdmin`), og `surface` sier bare hvor brukeren skal tilbake (#1889).
 import { remindMissingPlayers } from '../avslutt/actions';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
 
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med —
@@ -155,6 +156,8 @@ export default async function AvsluttLikevelPage({
       />
 
       <div className="space-y-4 px-1">
+        {/* #2580: who lacks tee shots; «Avslutt likevel» still ends the game. */}
+        <TeeShotOrganizerNotice gameId={gameId} className="" />
         {error === 'roster_changed' && (
           <Banner tone="error" testId="roster-changed-banner">
             {t('rosterChanged')}

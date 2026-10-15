@@ -7,6 +7,7 @@ import {
 } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { safeParsePrizes } from '@/lib/games/prizes';
+import { readMinTeeShots } from '@/lib/games/teeShots';
 import { isClubTournament } from './registration';
 import type { StartType } from './startType';
 
@@ -223,6 +224,9 @@ export function buildEditInitialValues(
     // mode_config fields so useGameFormState restores the admin's choices.
     // buildSetupStepInitialValues returns {} for all other mode kinds.
     ...buildSetupStepInitialValues(game.mode_config),
+    // #2580 «Hvem sitt utslag»: one home for all four formats. A scheduled
+    // game shows it locked; the hidden field posts it back on save.
+    min_tee_shots: readMinTeeShots(game.game_mode, game.mode_config),
     texas_team_handicap_pct:
       game.mode_config.kind === 'texas_scramble'
         ? storedTeamHandicapPct(game.mode_config.team_handicap_pct)

@@ -8,6 +8,7 @@ import { localDb } from '@/lib/sync/db';
 import { isBlockingItem } from '@/lib/sync/queueScope';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { TEE_SHOT_SHORT_BOX_ID } from '@/components/games/TeeShotShortBox';
 
 type Props = {
   submitAction: (formData: FormData) => void | Promise<void>;
@@ -26,6 +27,13 @@ type Props = {
   alsoFor?: readonly string[];
   /** #2200: button text when it covers more than my own card. */
   label?: string;
+  /**
+   * #2580: someone on a team in this delivery lacks tee shots. The button
+   * stays in the focus order (`aria-disabled`, not `disabled`), is described
+   * by the box over it, and a tap moves focus to that box instead of
+   * delivering. The server refuses the delivery anyway (`tee_shots_short`).
+   */
+  teeShotBlocked?: boolean;
 };
 
 /**
@@ -59,6 +67,7 @@ export function SubmitForm({
   blockingGameIds,
   alsoFor = [],
   label,
+  teeShotBlocked = false,
 }: Props) {
   const t = useTranslations('game.submit');
   const router = useRouter();
@@ -66,13 +75,26 @@ export function SubmitForm({
   // Dexie query deps must be value-stable; the prop is a fresh array on every
   // render, so key the query on its contents instead.
   const blockingKey = blockingGameIds.join(',');
-  const pendingCount = useLiveQuery(
+  const pendingStrokes = useLiveQuery(
     () =>
       localDb.syncQueue
         .filter((i) => isBlockingItem(i, blockingGameIds))
         .count(),
     [blockingKey],
   );
+  // #2580: a tee shot still in its queue blocks the delivery like a stroke —
+  // the server counts only what reached it.
+  const pendingTeeShots = useLiveQuery(
+    () =>
+      localDb.teeShotQueue
+        .filter((i) => isBlockingItem(i, blockingGameIds))
+        .count(),
+    [blockingKey],
+  );
+  const pendingCount =
+    pendingStrokes === undefined || pendingTeeShots === undefined
+      ? undefined
+      : pendingStrokes + pendingTeeShots;
   const syncing = pendingCount !== undefined && pendingCount > 0;
   const blocked = pendingCount === undefined || syncing;
 
@@ -122,14 +144,27 @@ export function SubmitForm({
       {alsoFor.map((userId) => (
         <input key={userId} type="hidden" name="alsoFor" value={userId} />
       ))}
-      <SubmitButton
-        data-testid="submit-scorecard"
-        className="w-full"
-        pendingLabel={t('submitPending')}
-        disabled={blocked}
-      >
-        {syncing ? t('syncingPending') : (label ?? t('submitButton'))}
-      </SubmitButton>
+      {teeShotBlocked ? (
+        <button
+          type="button"
+          data-testid="submit-scorecard"
+          aria-disabled="true"
+          aria-describedby={TEE_SHOT_SHORT_BOX_ID}
+          onClick={() => document.getElementById(TEE_SHOT_SHORT_BOX_ID)?.focus()}
+          className="inline-flex min-h-[44px] w-full cursor-not-allowed items-center justify-center rounded-full bg-meter-track px-[18px] py-2.5 font-medium tracking-tight text-muted"
+        >
+          {label ?? t('submitButton')}
+        </button>
+      ) : (
+        <SubmitButton
+          data-testid="submit-scorecard"
+          className="w-full"
+          pendingLabel={t('submitPending')}
+          disabled={blocked}
+        >
+          {syncing ? t('syncingPending') : (label ?? t('submitButton'))}
+        </SubmitButton>
+      )}
     </form>
   );
 }

@@ -1,13 +1,16 @@
-import type { SyncQueueItem } from './db';
+import type { QueueItemBase } from './db';
+import { queueItemKey } from './queueScope';
 import { isLockedCardError } from './classifyError';
 
 /**
  * Pure summary of quarantined (#668 `abandonedAt`) sync-queue items, grouped
  * per game so SyncBanner can name the affected holes and link to them (#1369).
  *
- * No Dexie lookups: `scoreId` IS the score key `${gameId}:${userId}:${holeNumber}`
- * (see `scoreKey` in db.ts) and both uuids are colon-free, so a plain split
- * recovers gameId + holeNumber synchronously.
+ * No Dexie lookups: an item's row key (`queueItemKey`) is the score key
+ * `${gameId}:${userId}:${holeNumber}` (`scoreKey` in db.ts) or, for a tee shot
+ * (#2580), `${gameId}:${teamNumber}:${holeNumber}` (`teeShotKey`). Both have
+ * three colon-free parts, so one split recovers gameId + holeNumber for both
+ * queues synchronously.
  */
 
 export interface QuarantinedGame {
@@ -23,7 +26,7 @@ export interface QuarantineSummary {
   currentGame: QuarantinedGame | null;
   /** Remaining games, sorted by gameId for deterministic rendering. */
   otherGames: QuarantinedGame[];
-  /** Quarantined items whose scoreId could not be parsed (never expected, but
+  /** Quarantined items whose id could not be parsed (never expected, but
    * a malformed id must degrade to the generic message, not crash the banner). */
   unparsedCount: number;
   /** All quarantined items, parsed or not. */
@@ -38,20 +41,20 @@ export interface QuarantineSummary {
   lockedOnly: boolean;
 }
 
-function parseScoreId(
-  scoreId: string,
+function parseRowKey(
+  key: string,
 ): { gameId: string; holeNumber: number } | null {
-  const parts = scoreId.split(':');
+  const parts = key.split(':');
   if (parts.length !== 3) return null;
-  const [gameId, userId, holePart] = parts;
-  if (!gameId || !userId) return null;
+  const [gameId, middle, holePart] = parts;
+  if (!gameId || !middle) return null;
   const holeNumber = Number(holePart);
   if (!Number.isInteger(holeNumber) || holeNumber < 1) return null;
   return { gameId, holeNumber };
 }
 
 export function summarizeQuarantine(
-  items: readonly SyncQueueItem[],
+  items: readonly QueueItemBase[],
   currentGameId: string | null,
 ): QuarantineSummary {
   const abandoned = items.filter((i) => i.abandonedAt != null);
@@ -64,7 +67,7 @@ export function summarizeQuarantine(
     if (item.lastError && !errors.includes(item.lastError)) {
       errors.push(item.lastError);
     }
-    const parsed = parseScoreId(item.scoreId);
+    const parsed = parseRowKey(queueItemKey(item));
     if (!parsed) {
       unparsedCount++;
       continue;

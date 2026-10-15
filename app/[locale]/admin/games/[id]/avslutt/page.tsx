@@ -13,6 +13,7 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
 import { endGameWithSideWinners, remindMissingPlayers } from './actions';
+import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
 
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med
@@ -136,6 +137,8 @@ export default async function AvsluttPage({
         title={t('title')}
         subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
+      {/* #2580: who lacks tee shots («Hvem sitt utslag»). */}
+      <TeeShotOrganizerNotice gameId={gameId} />
       {missing.length > 0 && (
         // Purreknappen (#1889) hører til her, i blokken som sier hvem som
         // mangler — ikke på status-siden i et annet rom.

@@ -717,3 +717,119 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     ]);
   });
 });
+
+// #2580 «Hvem sitt utslag»: no card on a team where someone is short goes in.
+// The count itself is Type A in teeShots.test.ts; here the wiring.
+describe('submitScorecardCore — hvem sitt utslag (#2580)', () => {
+  const MATE = 'mate-2';
+  const OLA = 'ola';
+
+  function texasGame(withSetting = true) {
+    return activeGame({
+      game_mode: 'texas_scramble',
+      mode_config: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 25,
+        ...(withSetting ? { min_tee_shots: 3 } : {}),
+      },
+    });
+  }
+
+  it('own card on a team that is short → tee_shots_short, nothing written', async () => {
+    const supabase = buildSupabaseMock([
+      { data: texasGame(), error: null },
+      { data: membership({ team_number: 1 }), error: null },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: [
+          { user_id: USER_ID, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      // Three each are needed; the mate has one.
+      {
+        data: [1, 2, 3, 4].map((hole) => ({
+          team_number: 1,
+          hole_number: hole,
+          tee_shot_by: hole === 4 ? MATE : USER_ID,
+        })),
+        error: null,
+      },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(result).toEqual({ ok: false, reason: 'tee_shots_short' });
+    expect(updateCalls(supabase)).toEqual([]);
+    expect(updateCalls(adminMock)).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('a flightmate card (alsoFor) on another team that is short → tee_shots_short', async () => {
+    loadCardsMock.mockResolvedValueOnce([{ userId: OLA, name: 'Ola Nordmann', isGuest: false }]);
+    const supabase = buildSupabaseMock([
+      {
+        data: activeGame({
+          game_mode: 'shamble',
+          mode_config: {
+            kind: 'shamble',
+            team_size: 2,
+            teams_count: 2,
+            shamble_variant: 'shamble',
+            shamble_count: 2,
+            shamble_scoring: 'net',
+            min_tee_shots: 3,
+          },
+        }),
+        error: null,
+      },
+      { data: membership({ team_number: 1 }), error: null },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: [
+          { user_id: USER_ID, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+          { user_id: OLA, team_number: 2, withdrawn_at: null },
+          { user_id: 'kari', team_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      // Team 1 has three each; team 2 has nothing yet.
+      {
+        data: [1, 2, 3, 4, 5, 6].map((hole) => ({
+          team_number: 1,
+          hole_number: hole,
+          tee_shot_by: hole <= 3 ? USER_ID : MATE,
+        })),
+        error: null,
+      },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, { alsoFor: [OLA] });
+
+    expect(result).toEqual({ ok: false, reason: 'tee_shots_short' });
+    expect(updateCalls(supabase)).toEqual([]);
+    expect(
+      adminMock.__fromCalls.find((c) => c.table === 'team_tee_shots' && c.method === 'in')?.args,
+    ).toEqual(['team_number', [1, 2]]);
+  });
+
+  it('without the setting, team_tee_shots is never read', async () => {
+    const supabase = buildSupabaseMock([
+      { data: texasGame(false), error: null },
+      { data: membership({ team_number: 1 }), error: null },
+      { data: { name: 'Anders Berg' }, error: null },
+    ]);
+    adminMock = buildSupabaseMock([{ data: [{ user_id: USER_ID }, { user_id: MATE }], error: null }]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(result).toMatchObject({ ok: true, submitted: 2 });
+    expect(adminMock.__fromCalls.some((c) => c.table === 'team_tee_shots')).toBe(false);
+  });
+});

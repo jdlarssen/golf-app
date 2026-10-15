@@ -4752,3 +4752,72 @@ describe('buildGameInsertPayload — handicapprosenten følger formatet (#2210)'
     expect(result.errorCode).toBe('bad_allowance');
   });
 });
+
+// #2580 «Hvem sitt utslag»: the four formats read the same field through one
+// parser. Off = the key is left out of mode_config; a value that is not an
+// option or does not fit 18 holes is bad_min_tee_shots, in draft too.
+describe('buildGameInsertPayload — min_tee_shots (#2580)', () => {
+  const FORMATS: Array<[string, Record<string, string>]> = [
+    ['texas_scramble', { texas_team_size: '4', texas_team_handicap_pct: '10' }],
+    ['ambrose', { ambrose_team_size: '4', ambrose_team_handicap_pct: '12.5' }],
+    ['florida_scramble', { florida_team_size: '4', florida_team_handicap_pct: '10' }],
+    ['shamble', { shamble_team_size: '4', shamble_variant: 'shamble', shamble_scoring: 'net' }],
+  ];
+  const CASES: Array<[string, string | undefined, number | null | 'bad_min_tee_shots']> = [
+    ['valid', '4', 4],
+    ['off (empty)', '', null],
+    ['off (missing)', undefined, null],
+    ['not an option', '7', 'bad_min_tee_shots'],
+    ['not a number', 'fire', 'bad_min_tee_shots'],
+    ['does not fit 18 holes for four', '5', 'bad_min_tee_shots'],
+  ];
+  const ROWS = FORMATS.flatMap(([mode, fields]) =>
+    CASES.map(([label, value, expected]) => [mode, label, fields, value, expected] as const),
+  );
+
+  it.each(ROWS)('%s, %s', (mode, _label, fields, value, expected) => {
+    const entries: Record<string, string> = {
+      name: 'Firmagolfen',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: mode,
+      ...fields,
+    };
+    if (value !== undefined) entries.min_tee_shots = value;
+    const result = buildGameInsertPayload(fd(entries), 'draft');
+    if (expected === 'bad_min_tee_shots') {
+      expect(result.errorCode).toBe('bad_min_tee_shots');
+      return;
+    }
+    expect(result.errorCode).toBeUndefined();
+    const config = result.mode_config as Record<string, unknown>;
+    if (expected === null) expect(config).not.toHaveProperty('min_tee_shots');
+    else expect(config.min_tee_shots).toBe(expected);
+  });
+
+  it('a pair can take 6', () => {
+    const result = buildGameInsertPayload(
+      fd({
+        name: 'Firmagolfen',
+        course_id: 'c1',
+        tee_box_id: 't1',
+        game_mode: 'texas_scramble',
+        texas_team_size: '2',
+        texas_team_handicap_pct: '25',
+        min_tee_shots: '6',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect((result.mode_config as Record<string, unknown>).min_tee_shots).toBe(6);
+  });
+
+  it('a format that does not count tee shots ignores the field', () => {
+    const result = buildGameInsertPayload(
+      fd({ name: 'Firmagolfen', course_id: 'c1', tee_box_id: 't1', game_mode: 'best_ball', min_tee_shots: '4' }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).not.toHaveProperty('min_tee_shots');
+  });
+});

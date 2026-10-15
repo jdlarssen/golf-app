@@ -138,6 +138,8 @@ describe('levering', () => {
     [403, 'forbidden'],
     [404, 'not_found'],
     [409, 'not_active'],
+    // #2580: someone on the team lacks tee shots («Hvem sitt utslag»).
+    [412, 'tee_shots_short'],
     [422, 'withdrawn'],
     [500, 'submit_failed'],
   ])('oversetter %i til %s', async (status, reason) => {

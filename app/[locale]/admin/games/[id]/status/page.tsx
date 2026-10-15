@@ -25,6 +25,7 @@ import { RemindButton } from './RemindButton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -276,6 +277,9 @@ export default async function GameStatusPage({
           </Banner>
         </div>
       )}
+
+      {/* #2580: who lacks tee shots («Hvem sitt utslag»), active games only. */}
+      {isActive && <TeeShotOrganizerNotice gameId={id} className="mt-4" />}
 
       {/* Purre-seksjon — kun aktive spill. */}
       {isActive && (

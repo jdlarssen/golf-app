@@ -20,7 +20,7 @@
 //   POST /api/games/{id}/submit-team   [{ alsoFor: string[] }]  (0–20 uuid-er)
 //     200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
 //     400 bad_request · 401 unauthorized · 403 forbidden · 404 not_found
-//     409 not_active · 422 withdrawn · 500 submit_failed
+//     409 not_active · 412 tee_shots_short · 422 withdrawn · 500 submit_failed
 //
 // **Makkerne i samme kall (#2200).** Den som fører for flighten, leverer
 // makkernes kort med det samme trykket: id-ene står i `alsoFor`. Lista er et
@@ -54,6 +54,8 @@ export type SubmitCardFailure =
   | 'not_found'
   | 'not_active'
   | 'withdrawn'
+  // #2580: «Hvem sitt utslag» is on and someone on the team is short.
+  | 'tee_shots_short'
   | 'submit_failed';
 
 /**
@@ -91,6 +93,7 @@ function failureForStatus(status: number): SubmitCardFailure {
   if (status === 403) return 'forbidden';
   if (status === 404) return 'not_found';
   if (status === 409) return 'not_active';
+  if (status === 412) return 'tee_shots_short';
   if (status === 422) return 'withdrawn';
   return 'submit_failed';
 }

@@ -1,4 +1,4 @@
-import type { SyncQueueItem } from './db';
+import type { QueueItemBase } from './db';
 
 /**
  * Which round does a queued stroke belong to? (#1370)
@@ -29,6 +29,22 @@ export function belongsToGame(scoreId: string, gameId: string): boolean {
 }
 
 /**
+ * #2580: the row key of a queue item, whichever queue it is in. Both keys have
+ * three colon-free parts with the game first and the hole last, so
+ * `belongsToGame` and the quarantine summary read both the same way. Here and
+ * not in `db.ts`, so it stays Dexie-free (tests mock `db.ts` whole).
+ */
+export function queueItemKey(item: { scoreId: string } | { teeShotId: string }): string {
+  return 'teeShotId' in item ? item.teeShotId : item.scoreId;
+}
+
+/**
+ * #2580: the two functions below take either queue's item; `queueItemKey`
+ * gives the score key or the tee-shot key `${gameId}:${teamNumber}:${holeNumber}`
+ * (`teeShotKey`), so the same prefix test scopes both.
+ */
+
+/**
  * True for items that still retry (not quarantined by #668) AND belong to
  * `gameId` — the set that drives "N strokes waiting", the error copy, the
  * stuck-queue check and the retry button for the round on screen.
@@ -38,8 +54,8 @@ export function belongsToGame(scoreId: string, gameId: string): boolean {
  * intentionally sees the UNFILTERED queue so stranded strokes from other rounds
  * stay visible.
  */
-export function isActiveForGame(item: SyncQueueItem, gameId: string): boolean {
-  return item.abandonedAt == null && belongsToGame(item.scoreId, gameId);
+export function isActiveForGame(item: QueueItemBase, gameId: string): boolean {
+  return item.abandonedAt == null && belongsToGame(queueItemKey(item), gameId);
 }
 
 /**
@@ -58,11 +74,11 @@ export function isActiveForGame(item: SyncQueueItem, gameId: string): boolean {
  * forever — they are excluded.
  */
 export function isBlockingItem(
-  item: SyncQueueItem,
+  item: QueueItemBase,
   blockingGameIds: readonly string[],
 ): boolean {
   return (
     item.abandonedAt == null &&
-    blockingGameIds.some((gameId) => belongsToGame(item.scoreId, gameId))
+    blockingGameIds.some((gameId) => belongsToGame(queueItemKey(item), gameId))
   );
 }

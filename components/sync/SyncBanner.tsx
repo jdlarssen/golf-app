@@ -5,7 +5,23 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
-import { localDb, type SyncQueueItem, type ConflictRecord } from '@/lib/sync/db';
+import {
+  localDb,
+  type ConflictRecord,
+  type SyncQueueItem,
+  type TeeShotQueueItem,
+} from '@/lib/sync/db';
+
+/**
+ * #2580: an item from either queue — strokes (`syncQueue`) or tee shots
+ * (`teeShotQueue`, the ones with `teeShotId`). Counting, scoping and the
+ * quarantine summary read both alike; «fjern» deletes each from its own table.
+ */
+type BannerQueueItem = SyncQueueItem | TeeShotQueueItem;
+
+function isTeeShotItem(item: BannerQueueItem): item is TeeShotQueueItem {
+  return 'teeShotId' in item;
+}
 import { drainQueue } from '@/lib/sync/syncWorker';
 import {
   summarizeQuarantine,
@@ -117,10 +133,13 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
   const locale = useLocale();
   const pathname = usePathname();
-  const queue = useLiveQuery<SyncQueueItem[] | undefined>(
-    () => localDb.syncQueue.toArray(),
-    [],
-  );
+  const queue = useLiveQuery<BannerQueueItem[] | undefined>(async () => {
+    const [strokes, teeShots] = await Promise.all([
+      localDb.syncQueue.toArray(),
+      localDb.teeShotQueue.toArray(),
+    ]);
+    return [...strokes, ...teeShots];
+  }, []);
   // Conflicts (#688 Part 2): records written by syncWorker when server silently
   // overwrites a score the current user had entered. One notice per record,
   // dismissed individually. Scoped to the round on screen (#1370) — a conflict
@@ -215,7 +234,12 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         ) {
           return;
         }
-        await localDb.syncQueue.bulkDelete(abandoned.map((i) => i.id));
+        const teeShotIds = abandoned.filter(isTeeShotItem).map((i) => i.id);
+        const strokeIds = abandoned.filter((i) => !isTeeShotItem(i)).map((i) => i.id);
+        await Promise.all([
+          strokeIds.length > 0 ? localDb.syncQueue.bulkDelete(strokeIds) : null,
+          teeShotIds.length > 0 ? localDb.teeShotQueue.bulkDelete(teeShotIds) : null,
+        ]);
       };
 
       return (

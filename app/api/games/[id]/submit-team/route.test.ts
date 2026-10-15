@@ -55,6 +55,10 @@ let db: {
   updated: { user_id: string }[];
   /** Settes for å bevise at et kast fra kjernen blir 500, ikke en halv 200. */
   coreThrows: boolean;
+  /** #2580: games.mode_config — `min_tee_shots` slår på «Hvem sitt utslag». */
+  modeConfig: Record<string, unknown>;
+  /** #2580: lagets valg i `team_tee_shots`. */
+  teeShots: { team_number: number; hole_number: number; tee_shot_by: string | null }[];
 };
 
 function respond(op: QueryOp): QueryResponse {
@@ -71,6 +75,7 @@ function respond(op: QueryOp): QueryResponse {
               status: db.status,
               require_peer_approval: false,
               game_mode: db.gameMode,
+              mode_config: db.modeConfig,
               // `full` holder søsken-kaskaden (#1466) utenfor: den nås aldri fra
               // appen, som stenger segment-avledede spill i formatGate.
               hole_segment: 'full',
@@ -93,6 +98,16 @@ function respond(op: QueryOp): QueryResponse {
       data: [rosterRow(PLAYER), rosterRow(OLA), rosterRow(GUEST, true), rosterRow(PER)],
     };
   }
+  // #2580: the tee-shot check reads the roster and the team's choices.
+  if (op.table === 'game_players' && op.columns === 'user_id, team_number, withdrawn_at') {
+    return {
+      data: [
+        { user_id: PLAYER, team_number: 1, withdrawn_at: null },
+        { user_id: 'lagkameraten', team_number: 1, withdrawn_at: null },
+      ],
+    };
+  }
+  if (op.table === 'team_tee_shots') return { data: db.teeShots };
   if (op.table === 'scores') {
     return {
       data:
@@ -204,6 +219,8 @@ beforeEach(() => {
     me: { withdrawn_at: null, submitted_at: null, team_number: 1 },
     updated: [{ user_id: PLAYER }, { user_id: 'lagkameraten' }],
     coreThrows: false,
+    modeConfig: {},
+    teeShots: [],
   };
 });
 
@@ -269,6 +286,24 @@ describe('porten', () => {
 
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toEqual({ error: 'withdrawn' });
+    expect(updates()).toEqual([]);
+  });
+
+  it('#2580: noen på laget mangler utslag → 412 tee_shots_short, ingenting markert', async () => {
+    db.gameMode = 'texas_scramble';
+    db.modeConfig = {
+      kind: 'texas_scramble',
+      team_size: 2,
+      teams_count: 1,
+      team_handicap_pct: 25,
+      min_tee_shots: 3,
+    };
+    db.teeShots = [{ team_number: 1, hole_number: 1, tee_shot_by: PLAYER }];
+
+    const res = await POST(request({ token: `Bearer ${PLAYER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(412);
+    await expect(res.json()).resolves.toEqual({ error: 'tee_shots_short' });
     expect(updates()).toEqual([]);
   });
 });

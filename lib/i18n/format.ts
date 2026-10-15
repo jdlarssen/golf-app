@@ -351,8 +351,12 @@ export function formatRelativeLocale(
  * Locale-aware "A, B and C" list (#2280). Use instead of joining with a
  * hard-coded word such as `' og '`, which leaks Norwegian into English pages.
  */
-export function formatListLocale(items: readonly string[], locale: AppLocale): string {
-  return new Intl.ListFormat(intlLocaleTag(locale), { type: 'conjunction' }).format(items);
+export function formatListLocale(
+  items: readonly string[],
+  locale: AppLocale,
+  type: 'conjunction' | 'disjunction' = 'conjunction',
+): string {
+  return new Intl.ListFormat(intlLocaleTag(locale), { type }).format(items);
 }
 
 /**

@@ -16,6 +16,9 @@ import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRob
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { ClientPlayer } from './holeClientProps';
 import type { ScoreRow } from './holePageData';
+import { readMinTeeShots } from '@/lib/games/teeShots';
+import { sortByTeeShotName, teeShotNames } from '@/components/games/teeShotCopy';
+import type { TeeShotPickerTeam } from './TeeShotPicker';
 
 /**
  * Hvem som vises som kort på hull-siden. Regelen (#543: én flight ved ≤4
@@ -238,4 +241,44 @@ export function buildPlayersForClient(args: {
       teamNumber: teamNum,
     };
   });
+}
+
+/**
+ * #2580 «Hvem sitt utslag»: the teams the picker shows on this hole — every
+ * team in the flight (scramble: one block per team card; shamble: the
+ * flight's team) with all its members, withdrawn ones included so a pick on
+ * them still fills the hole. Null when the game does not have the setting.
+ * Names are short like the artboards (nickname, else first name), and the full
+ * name when two on the team share a first name (#2286); the team is ordered by
+ * them (`sortByTeeShotName`).
+ */
+export function buildTeeShotTeams(args: {
+  game: GameForHole;
+  allPlayers: PlayerForHole[];
+  flight: PlayerForHole[];
+  unknownPlayer: string;
+}): { minimum: number; teams: TeeShotPickerTeam[] } | null {
+  const { game, allPlayers, flight, unknownPlayer } = args;
+  const minimum = readMinTeeShots(game.game_mode, game.mode_config);
+  if (minimum === null) return null;
+  const teamNumbers = [...new Set(flight.map((p) => p.team_number).filter((n) => n != null))].sort(
+    (a, b) => a - b,
+  );
+  const teams = teamNumbers.map((teamNumber) => {
+    const members = sortByTeeShotName(
+      allPlayers.filter((p) => p.team_number === teamNumber),
+      unknownPlayer,
+    );
+    const names = teeShotNames(members, unknownPlayer);
+    return {
+      teamNumber,
+      members: members.map((p) => ({
+        userId: p.user_id,
+        name: names.get(p.user_id) ?? unknownPlayer,
+        submittedAt: p.submitted_at,
+        withdrawnAt: p.withdrawn_at,
+      })),
+    };
+  });
+  return { minimum, teams };
 }

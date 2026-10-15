@@ -1,6 +1,7 @@
 import { subscribeRealtimeChannel } from './realtimeChannel';
 import { currentDeviceUserId } from './currentUser';
 import { mergeServerScore } from './mergeServerScore';
+import { fromTeeShotRow, mergeServerTeeShots, type TeeShotRowFromDb } from './writeTeeShot';
 
 type ScoreRowFromDb = {
   game_id: string;
@@ -62,6 +63,34 @@ export function subscribeGameScores(
         if (!row || !row.game_id || !row.user_id || row.hole_number == null)
           return;
         void mergeIncoming(row as ScoreRowFromDb);
+      },
+    ),
+    opts,
+  );
+}
+
+/**
+ * #2580: tee-shot changes for one game (`team_tee_shots`, in the realtime
+ * publication since 0209). Merged last-write-wins; a row still in the local
+ * queue is left alone (`mergeServerTeeShots`).
+ */
+export function subscribeGameTeeShots(
+  gameId: string,
+  opts: { onResubscribed?: () => void } = {},
+): () => void {
+  return subscribeRealtimeChannel(`team_tee_shots:${gameId}`, (channel) =>
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'team_tee_shots',
+        filter: `game_id=eq.${gameId}`,
+      },
+      (payload) => {
+        const row = payload.new as Partial<TeeShotRowFromDb> | null;
+        if (!row || !row.game_id || row.team_number == null || row.hole_number == null) return;
+        void mergeServerTeeShots([fromTeeShotRow(row as TeeShotRowFromDb)]);
       },
     ),
     opts,
