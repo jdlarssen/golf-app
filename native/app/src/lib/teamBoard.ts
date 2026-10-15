@@ -346,7 +346,10 @@ function liveBoard(
   // Best ball viser ingen bevegelse, så den regnes ikke.
   const before = firstHalf ? null : computeGameLeaderboard(scope.bundle, withoutLatestHole(bundle, scope.scores));
   const previous = before?.ok ? asTeamResult(before.result) : null;
-  const board = teamLiveBoard(result, previous, teamName);
+  // Modifisert stableford har sin egen poengtabell; resultatet sier det ikke.
+  const board = teamLiveBoard(result, previous, teamName, {
+    stablefordTable: bundle.game.gameMode === 'modified_stableford' ? 'modified' : 'standard',
+  });
   if (board.rows.length === 0) return null;
 
   const unit = teamDisplayUnit(result);

@@ -259,6 +259,25 @@ describe('teamBoardFor — finished scramble', () => {
   });
 });
 
+describe('teamBoardFor — modified stableford reads its own table', () => {
+  it('a birdie is 2 points there, and the dot says under', () => {
+    // Par 4: my 3 is a birdie (2 points in the modified table), Marte's 5 a
+    // bogey (−1). The team gets 2 on hole 1 and 0 (my par) on hole 2.
+    const model = teamBoardFor({
+      bundle: homeBundle({
+        game: {
+          gameMode: 'modified_stableford',
+          modeConfig: { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
+        },
+        players: teams,
+      }),
+      scores: [...teamScores([ME], [3, 4]), ...teamScores(['marte'], [5, 5]), ...teamScores(['jonas', 'kari', 'ola', 'per'], [5, 5])],
+      userId: ME,
+    })!;
+    expect(model.rows.find((r) => r.you)?.dots).toEqual(['under', 'par']);
+  });
+});
+
 describe('teamBoardFor — units without a team handicap', () => {
   it('says «poeng» for team stableford and «brutto» for gross shamble', () => {
     const scores = teamScores(teams.map((p) => p.userId), [4, 4]);
