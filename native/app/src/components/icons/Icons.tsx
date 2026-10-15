@@ -25,12 +25,14 @@
 //
 // Dette er appens ENESTE import-flate for `react-native-svg`.
 import type { ReactNode } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, {
   Circle,
   Defs,
   Ellipse,
   Line,
   Path,
+  Pattern,
   Polyline,
   RadialGradient,
   Rect,
@@ -233,6 +235,60 @@ export const LaasIcon = (props: IconProps) => (
     <Path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </LineIcon>
 );
+
+/**
+ * Låsen på lagtavla (#2579, `Lagtavle-bestball-forslag-*`: «Hull 10–18 er
+ * skjult» og låskortet). Som {@link LaasIcon}, men bøylen går én enhet høyere,
+ * som tegningen.
+ */
+export const TavleLaasIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Rect x="5" y="11" width="14" height="10" rx="2" />
+    <Path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </LineIcon>
+);
+
+/**
+ * Den skraverte staven for hullene best ball holder skjult (#2579): skrå
+ * striper, 3 pt `hatch` og 3 pt `track` langs 135°, og en hårlinje i `hatch`
+ * rundt (tegningens `repeating-linear-gradient(135deg, …)` med
+ * `inset 0 0 0 1px`). Kallstedet gir størrelsen. Alltid dekor.
+ */
+export function HatchBar({
+  track,
+  hatch,
+  style,
+  testID,
+}: {
+  track: string;
+  hatch: string;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  return (
+    <View
+      style={[hatchStyles.bar, { backgroundColor: track }, style]}
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+        <Defs>
+          <Pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+            <Rect x="0" y="0" width="3" height="6" fill={hatch} />
+          </Pattern>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#hatch)" />
+      </Svg>
+      <View style={[StyleSheet.absoluteFill, hatchStyles.ring, { borderColor: hatch }]} />
+    </View>
+  );
+}
+
+const hatchStyles = StyleSheet.create({
+  bar: { borderRadius: 999, overflow: 'hidden' },
+  ring: { borderRadius: 999, borderWidth: 1 },
+});
 
 /**
  * Hero-flagget fra webbens tomtilstand på hjem (64×64-rutenett). Stanga i

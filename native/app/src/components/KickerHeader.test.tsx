@@ -65,10 +65,11 @@ it('uten ord er raden bare pila, og pila bærer designets etikett', async () => 
   expect(screen.queryByRole('header')).toBeNull();
 });
 
-it('tavlas bånd: pila går tilbake, pillen står bare når den er gitt, og prikken bare live', async () => {
+// Solotavla og lagtavlas to snitt (#2579 PR 2) er samme bånd for navigatoren.
+it.each(['solo', 'team', 'team-live'] as const)('tavlas bånd (%s): pila går tilbake, pillen står bare når den er gitt, og prikken bare live', async (variant) => {
   const goBack = jest.fn();
   const band = (pill?: { text: string; live: boolean }) =>
-    boardHeader({ pill, kicker: 'Lørdagsrunden · Byneset', title: 'Tavla', subtitle: 'Stableford · 12 spillere' });
+    boardHeader({ pill, kicker: 'Lørdagsrunden · Byneset', title: 'Tavla', subtitle: 'Stableford · 12 spillere', variant });
   const { rerender } = await render(<>{headerElement(true, goBack, band())}</>);
 
   await fireEvent.press(screen.getByLabelText('Tilbake'));

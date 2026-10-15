@@ -12,7 +12,9 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
+import type { GameBundle } from '../data/gameBundle';
 import { soloBoardFor } from '../lib/soloBoard';
+import { teamBoardFor } from '../lib/teamBoard';
 import type { ScreenProps } from '../navigation';
 import { fireForeground } from '../test/syncTriggersMock';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
@@ -138,6 +140,13 @@ function cell(rowKey: string, columnKey: string): string {
   return String(
     screen.getByTestId(`leaderboard-table-row-${rowKey}-${columnKey}`).props.children,
   );
+}
+
+/** Rekkefølgen på lagtavlas kort (#2579 PR 2), som lagnumre. */
+function teamOrder(): string[] {
+  return screen
+    .getAllByTestId(/^team-row-\d+$/)
+    .map((row) => String(row.props.testID).replace('team-row-', ''));
 }
 
 /** Rekkefølgen på tavlas rader (#2579), som userId-er. */
@@ -348,35 +357,39 @@ describe('LeaderboardBody', () => {
       })),
     );
 
+  // Lagtavla (#2579 PR 2) får modellen fra skjermen, som i appen.
+  const bestBallBody = (holesScored: number, holesByTeam: Record<number, number> = {}) => {
+    const bundle = bestBallBundle(holesScored);
+    const scores = bestBallScores(holesScored, holesByTeam);
+    return { bundle, scores, teamBoard: teamBoardFor({ bundle, scores, userId: 'me' }) };
+  };
+
   it('klipper best ball til front 9 mens runden går — som nettsiden', async () => {
     // Alle 18 hull ført. Webben viser likevel bare front 9 og skriver at
     // resten kommer når arrangøren avslutter; appen viste 18-hulls-summen.
-    await render(
-      <LeaderboardBody bundle={bestBallBundle(18)} scores={bestBallScores(18)} />,
-    );
+    await render(<LeaderboardBody {...bestBallBody(18)} />);
 
     expect(screen.getByTestId('leaderboard-first-half-locked')).toBeTruthy();
     // 36/45 er ni-hulls-summen. 72/90 ville vært lekkasjen.
-    expect(cell('1', 'net')).toBe('36');
-    expect(cell('2', 'net')).toBe('45');
-    // Runden går, så Hull-kolonnen står (#1982) — og teller bare front 9.
-    expect(cell('1', 'holes')).toBe('9');
-    expect(cell('2', 'holes')).toBe('9');
+    expect(teamOrder()).toEqual(['1', '2']);
+    expect(screen.getByTestId('team-row-1-total')).toHaveTextContent('36');
+    expect(screen.getByTestId('team-row-2-total')).toHaveTextContent('45');
+    // Hullene står ved summen (#1982), og teller bare front 9.
+    expect(screen.getByTestId('team-row-1-under')).toHaveTextContent(/^9\D/);
+    expect(screen.getByTestId('team-row-2-under')).toHaveTextContent(/^9\D/);
   });
 
   it('viser hvor mange hull hvert lag har spilt når lagene er ulikt langt (#1982)', async () => {
     // Lag 1 er gjennom hull 9 og åpner porten; lag 2 har ført 7. Motoren
     // teller hullene som mangler som 0, så lag 2 leder på 35 mot 36. Uten
-    // Hull-kolonnen sa ingenting på skjermen at summene gjelder ulikt antall hull.
-    await render(
-      <LeaderboardBody bundle={bestBallBundle(9)} scores={bestBallScores(9, { 2: 7 })} />,
-    );
+    // hullene ved summen sa ingenting på skjermen at summene gjelder ulikt antall hull.
+    await render(<LeaderboardBody {...bestBallBody(9, { 2: 7 })} />);
 
     expect(screen.getByTestId('leaderboard-first-half-locked')).toBeTruthy();
-    expect(cell('1', 'holes')).toBe('9');
-    expect(cell('2', 'holes')).toBe('7');
-    expect(cell('2', 'net')).toBe('35');
-    expect(cell('2', 'rank')).toBe('1');
+    expect(teamOrder()).toEqual(['2', '1']);
+    expect(screen.getByTestId('team-row-1-under')).toHaveTextContent(/^9\D/);
+    expect(screen.getByTestId('team-row-2-under')).toHaveTextContent(/^7\D/);
+    expect(screen.getByTestId('team-row-2-total')).toHaveTextContent('35');
   });
 
   it('sier fra før noe lag er gjennom hull 9', async () => {
@@ -755,37 +768,28 @@ describe('ResultView', () => {
     expect(screen.getByTestId('board-row-me-holes')).toHaveTextContent('12');
   });
 
-  // #1982: samme regel på lag-tabellene. Texas-grenen tegner også ambrose og
-  // florida scramble — motoren sender `texas_scramble` for alle tre.
-  it('viser Hull-kolonnen i Texas scramble når et ferdig lag mangler hull', async () => {
-    const holes = Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1 }));
-    const team = (teamNumber: number, userId: string, totalNet: number, missingHoles: number[]) => ({
-      teamNumber,
-      members: [{ userId, courseHandicap: 12, isCaptain: true }],
-      teamHandicap: 3,
-      holes,
-      totalNet,
-      missingHoles,
-      rank: teamNumber,
-      tiedWith: [],
-    });
-    const result = {
-      kind: 'texas_scramble',
-      teams: [team(1, 'me', 58, [17, 18]), team(2, 'mate', 66, [])],
-    } as unknown as ModeResult;
-
+  // #1982: samme regel på lagtavla (#2579 PR 2). Texas-grenen tegner også
+  // ambrose og florida scramble — motoren sender `texas_scramble` for alle tre.
+  it('viser hullene i Texas scramble når et ferdig lag mangler hull', async () => {
+    const texas = finishedBoard(
+      { me: 16, mate: 18 },
+      { gameMode: 'texas_scramble', modeConfig: { kind: 'texas_scramble', team_size: 1, teams_count: 2, team_handicap_pct: 0 } },
+    );
+    const bundle = {
+      ...(texas.bundle as GameBundle),
+      players: (texas.bundle as GameBundle).players.map((p, i) => ({ ...p, teamNumber: i + 1 })),
+    };
     await render(
-      <ResultView
-        result={result}
-        status="finished"
-        gameId={GAME_ID}
-        settlement={null}
-        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      <LeaderboardBody
+        bundle={bundle}
+        scores={texas.scores}
+        teamBoard={teamBoardFor({ bundle, scores: texas.scores, userId: 'me' })}
       />,
     );
 
-    expect(cell('1', 'holes')).toBe('16');
-    expect(cell('2', 'holes')).toBe('18');
+    const team = (userId: string) => String(bundle.players.find((p) => p.userId === userId)?.teamNumber);
+    expect(screen.getByTestId(`team-row-${team('me')}-under`)).toHaveTextContent(/16$/);
+    expect(screen.getByTestId(`team-row-${team('mate')}-under`)).toHaveTextContent(/18$/);
   });
 
   it('viser Hull-kolonnen i slagspill og beholder streken for den som ikke har ført noe', async () => {

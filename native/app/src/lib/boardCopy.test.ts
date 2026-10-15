@@ -3,7 +3,14 @@
 // (aldri bundlet) og krever tegn-for-tegn likhet for webbens strenger, og at
 // appens egne ikke er en av dem.
 import source from '../../../../messages/no.json';
-import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT, SIDE_PANEL_TEXT } from './boardCopy';
+import {
+  BOARD_APP_TEXT,
+  BOARD_COMMON_TEXT,
+  BOARD_TEAM_TEXT,
+  BOARD_TEXT,
+  SIDE_PANEL_TEXT,
+  STATE35_TEXT,
+} from './boardCopy';
 
 /** Alle blader i et tre, med punktum-sti. */
 function leaves(node: unknown, prefix = ''): [string, string][] {
@@ -25,6 +32,17 @@ describe('paritet med messages/no.json', () => {
     expect(BOARD_COMMON_TEXT).toStrictEqual({
       holesPlayedCount: source.leaderboard.common.holesPlayedCount,
       unknownPlayerFull: source.leaderboard.common.unknownPlayerFull,
+      teamLabel: source.leaderboard.common.teamLabel,
+      poengLabel: source.leaderboard.common.poengLabel,
+    });
+  });
+
+  it('best balls første halvdel og låskortet er state35-tekstene', () => {
+    const state35 = source.leaderboard.state35;
+    expect(STATE35_TEXT).toStrictEqual({
+      segmentHalfLabel: state35.segmentHalfLabel,
+      lockedHeading: state35.lockedHeading,
+      lockedSub: state35.lockedSub,
     });
   });
 
@@ -36,8 +54,11 @@ describe('paritet med messages/no.json', () => {
     });
   });
 
-  it('appens egne tekster er ingen av verdiene i leaderboard.board', () => {
+  it.each([
+    ['BOARD_APP_TEXT', BOARD_APP_TEXT],
+    ['BOARD_TEAM_TEXT', BOARD_TEAM_TEXT],
+  ])('appens egne tekster (%s) er ingen av verdiene i leaderboard.board', (_name, block) => {
     const web = new Set(sourceLeaves.values());
-    expect(Object.values(BOARD_APP_TEXT).filter((value) => web.has(value))).toEqual([]);
+    expect(Object.values(block).filter((value) => web.has(value))).toEqual([]);
   });
 });

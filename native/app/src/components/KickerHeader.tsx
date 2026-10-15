@@ -23,6 +23,8 @@
 // Tavla (#2579) har sitt eget bånd på skogflaten (`boardHeader`): pila,
 // pillen, spillnavnet, «Tavla» og formatlinja. Det er også navigatorens
 // header, så pila står når skjermen kaster eller ikke har tegnet tavla.
+// Lagtavla (PR 2) har sitt eget snitt av båndet: pillen midt på med fyll,
+// dempet kicker og «Lagtavla» i Fraunces 28/500.
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -94,6 +96,13 @@ export function kickerHeader(
 export type BoardPill = { text: string; live: boolean };
 
 /**
+ * Hvilken tegning båndet følger: solotavla, eller lagtavla. Lagtavla live
+ * (`Lagtavle-forslag`) tegner linja med 85 % krem og pillens tall uten faste
+ * sifre; ferdig og best ball (`team`) har 80 % og faste sifre.
+ */
+export type BoardBandVariant = 'solo' | 'team' | 'team-live';
+
+/**
  * Tavlas bånd (#2579, `Tavle-forslag`): skogflaten med pila og pillen øverst,
  * så spillnavnet, «Tavla» og formatlinja. Pillen står bare når tavla har tall;
  * uten den er båndet det samme, så pila er der i alle tilstander.
@@ -103,23 +112,94 @@ export function boardHeader({
   kicker,
   title,
   subtitle,
+  variant = 'solo',
 }: {
   pill?: BoardPill;
   kicker: string;
   title: string;
   subtitle: string;
+  variant?: BoardBandVariant;
 }): NativeStackNavigationOptions {
   return {
-    header: ({ back, navigation }) => (
-      <BoardTopBar
-        pill={pill}
-        kicker={kicker}
-        title={title}
-        subtitle={subtitle}
-        onBack={back ? () => navigation.goBack() : undefined}
-      />
-    ),
+    header: ({ back, navigation }) =>
+      variant === 'solo' ? (
+        <BoardTopBar
+          pill={pill}
+          kicker={kicker}
+          title={title}
+          subtitle={subtitle}
+          onBack={back ? () => navigation.goBack() : undefined}
+        />
+      ) : (
+        <TeamBoardTopBar
+          pill={pill}
+          kicker={kicker}
+          title={title}
+          subtitle={subtitle}
+          live={variant === 'team-live'}
+          onBack={back ? () => navigation.goBack() : undefined}
+        />
+      ),
   };
+}
+
+/**
+ * Lagtavlas bånd (`Lagtavle-forslag`, `Lagtavle-ferdig-forslag-*`,
+ * `Lagtavle-bestball-forslag-*`): 8 pt luft rundt raden og 16 pt under
+ * linja (ingen tavleflate går opp i båndet her), pillen midt mellom pila og
+ * like mye luft til høyre, og alt i den varme kremen.
+ */
+function TeamBoardTopBar({
+  pill,
+  kicker,
+  title,
+  subtitle,
+  live,
+  onBack,
+}: {
+  pill?: BoardPill;
+  kicker: string;
+  title: string;
+  subtitle: string;
+  live: boolean;
+  onBack?: () => void;
+}) {
+  const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
+  const ink = colors.onStrongWarm;
+  return (
+    <View
+      style={[styles.teamBoard, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong }]}
+      testID="board-top-bar"
+    >
+      <View style={styles.boardRow}>
+        <View style={styles.side}>
+          {onBack ? <BareBack label={BACK_LABEL} large={false} color={ink} onPress={onBack} /> : null}
+        </View>
+        {pill ? (
+          <View style={[styles.teamPill, { backgroundColor: withAlpha(ink, 0.14) }]} testID="board-pill">
+            {pill.live ? (
+              <View style={[styles.teamPillDot, { backgroundColor: colors.live }]} testID="board-pill-dot" />
+            ) : null}
+            <Text style={[styles.teamPillText, { color: ink }, !live && ui.num]}>{pill.text}</Text>
+          </View>
+        ) : null}
+        <View style={styles.side} />
+      </View>
+      <View
+        style={styles.teamTitle}
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
+      >
+        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.teamKicker, { color: withAlpha(ink, 0.8) }]}>
+          {kicker}
+        </Text>
+        <Text style={[styles.teamHeading, { color: ink }]}>{title}</Text>
+        <Text style={[styles.teamSubtitle, { color: withAlpha(ink, live ? 0.85 : 0.8) }]}>{subtitle}</Text>
+      </View>
+    </View>
+  );
 }
 
 /**
@@ -322,4 +402,31 @@ const styles = StyleSheet.create({
   },
   boardHeading: { ...fraunces(600, 40, 42), marginTop: 4 + fraunces(600, 40, 42).marginTop },
   boardSubtitle: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 2 + interLine(13, 16).marginTop },
+  // Lagtavla: pillen 24 pt høy med 10 pt luft, prikken 6 pt; kicker og linje
+  // uten luft mellom seg, som i tegningene.
+  teamBoard: { paddingHorizontal: BAR_INSET, paddingBottom: 16, gap: 4 },
+  teamPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 24,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  teamPillDot: { width: 6, height: 6, borderRadius: 3 },
+  teamPillText: {
+    ...interLine(10, 12),
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+  },
+  teamTitle: { paddingHorizontal: 12 },
+  teamKicker: {
+    ...interLine(10, 12),
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+  },
+  teamHeading: { ...fraunces(500, 28) },
+  teamSubtitle: { ...interLine(13, 16), fontFamily: FONTS.sans },
 });

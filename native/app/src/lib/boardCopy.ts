@@ -8,7 +8,8 @@
 //     `boardCopy.test.ts`. Appen importerer ikke kildefila (den er stor, og
 //     Metro shaker ikke JSON).
 //  2. **Appens egne**, for det tegningene viser og webben ikke har: den
-//     ferdige tavla, den korte avstanden i stripa og ordene i tegnforklaringen.
+//     ferdige tavla, den korte avstanden i stripa, ordene i tegnforklaringen
+//     og lagtavla (#2579 PR 2; webben har ingen lagtavle ennå, #2316).
 //     Testen holder dem ulike alle verdiene i `leaderboard.board`.
 //
 // Malene fylles med `formatMessage` (ICU som next-intl, også flertall).
@@ -60,10 +61,25 @@ export const BOARD_TEXT = {
   stripSubmit: 'Lever scorekort →',
 } as const;
 
-/** `leaderboard.common`: antall hull i radens opplesning, og navnet som mangler. */
+/**
+ * `leaderboard.common`: antall hull i radens opplesning, navnet som mangler,
+ * lagets navn og «poeng» under en poengsum (som webbens podier).
+ */
 export const BOARD_COMMON_TEXT = {
   holesPlayedCount: '{count} hull spilt',
   unknownPlayerFull: '(ukjent spiller)',
+  teamLabel: 'Lag {number}',
+  poengLabel: 'poeng',
+} as const;
+
+/**
+ * `leaderboard.state35`: best ball mens runden pågår (#2579 PR 2). Overskriften
+ * over lagene og låskortet, de samme ordene som webbens tavle.
+ */
+export const STATE35_TEXT = {
+  segmentHalfLabel: 'HULL {from}–{to}',
+  lockedHeading: 'Vi sees ved hull {last}',
+  lockedSub: 'Hull {from}–{to} vises når arrangøren avslutter spillet.',
 } as const;
 
 /**
@@ -94,4 +110,42 @@ export const BOARD_APP_TEXT = {
   legendOver: 'over',
   /** Plassen når kategorien har flere enn én: «Lengste drive #2». */
   sidePosition: ' #{pos}',
+} as const;
+
+/**
+ * Lagtavlas egne tekster (#2579 PR 2, `Lagtavle-forslag`,
+ * `Lagtavle-ferdig-forslag-*`, `Lagtavle-bestball-forslag-*`). Ingen av dem
+ * finnes i `leaderboard.board`.
+ */
+export const BOARD_TEAM_TEXT = {
+  title: 'Lagtavla',
+  /** Båndets linje: «4 lag à 4», eller «4 lag» når lagene er ulikt store. */
+  teams: '{count} lag',
+  teamsOfSize: '{count} lag à {size}',
+  /** Enheten under summen og i båndet; poeng er webbens `common.poengLabel`. */
+  net: 'netto',
+  gross: 'brutto',
+  /** Seeren i navnelinja og i «Ballen til …». */
+  you: 'Deg',
+  yourTeam: 'Ditt lag',
+  winnerTeam: 'Vinnerlaget',
+  stripKicker: 'Laget ditt',
+  /** Hullene laget har spilt: ved prikkene, eller under summen. */
+  holes: 'hull {holes}',
+  /** Best ball: «8 av 9» under summen og «8 av 9 hull» i stripa. */
+  ofHoles: '{played} av {total}',
+  stripOfHoles: '{played} av {total} hull',
+  /** Under summen på den ferdige tavla, der laget har handicap: «netto · lag-hcp 7». */
+  teamHandicap: '{unit} · lag-hcp {hcp}',
+  holeCardHeading: 'Ditt lag på hull {hole}',
+  /** Scramble: slagene laget slo og ordet for dem, «3 slag, birdie». */
+  scrambleScore: '{strokes} slag, {term}',
+  /** Best ball: hvem sin ball som talte, og lagets netto med ordet for den. */
+  bestBallBall: 'Ballen til {names} talte',
+  bestBallScore: 'netto {net}, {term}',
+  /** Overskriften til høyre over lagene i best ball: «HULL 10–18 ER SKJULT». */
+  hiddenHalf: 'Hull {from}–{to} er skjult',
+  /** Opplesningen: brutto-shamble, og ditt lag. */
+  srGross: '{total} slag brutto',
+  srYourTeam: 'Dette er laget ditt',
 } as const;

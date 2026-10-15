@@ -144,6 +144,10 @@ describe('PALETTES', () => {
     expect([PALETTES.light.boardSlabBorder, PALETTES.dark.boardSlabBorder]).toEqual(['#14201A', '#2F3F34']);
     expect([PALETTES.light.youFill, PALETTES.dark.youFill]).toEqual(['#E8EFE8', '#243429']);
     expect([PALETTES.light.dotOver, PALETTES.dark.dotOver]).toEqual(['#D89B3A', '#E5B26F']);
+    // Lagtavla (`Lagtavle-ferdig-forslag-*`, `Lagtavle-bestball-forslag-*`).
+    expect([PALETTES.light.youBorder, PALETTES.dark.youBorder]).toEqual(['#B9D3C0', 'rgba(126, 170, 128, 0.45)']);
+    expect([PALETTES.light.boardHatch, PALETTES.dark.boardHatch]).toEqual(['#D9D1BD', '#3D4F43']);
+    expect([PALETTES.light.avatarInk, PALETTES.dark.avatarInk]).toEqual(['#1B4332', '#ECE5D2']);
   });
 
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {

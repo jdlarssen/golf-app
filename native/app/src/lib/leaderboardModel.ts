@@ -228,19 +228,6 @@ export const NASSAU_SECTION_LABELS: Record<
 // ---------------------------------------------------------------------------
 
 /**
- * Noten under den klippede tabellen.
- *
- * Ordene etter halvdel-etiketten er webbens, ord for ord
- * (`messages/no.json` → `leaderboard.state35.lockedHeading` + `.lockedSub`).
- * Etiketten foran svarer på det webben svarer med en pille over tabellen: at
- * tallene gjelder ni hull, ikke atten. Uten den ser 23 ut som en 18-hulls-sum
- * som er altfor lav.
- */
-export function firstHalfLockedNote(lastHole: number): string {
-  return `Front 9 · 🤫 Vi sees ved hull ${lastHole}. Resten av tabellen vises når arrangøren avslutter spillet.`;
-}
-
-/**
  * #1978: lag-formatenes avsløring. Webben viser bare første halvdel av en
  * best ball-runde som pågår, og skriver at resten kommer når arrangøren
  * avslutter. Her er porten ett sted for Resultater-skjermen og lagtavla

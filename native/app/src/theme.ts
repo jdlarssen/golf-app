@@ -135,6 +135,15 @@ export type ThemeColors = {
   youFill: string;
   /** Prikken for et hull over par på tavla (#2579). `scoreOver1Fg` er tekstfargen, mørkere. */
   dotOver: string;
+  /** Kanten rundt ditt lags kort på lagtavla (#2579, `--youline`). */
+  youBorder: string;
+  /** Stripene i den skraverte staven for de skjulte hullene i best ball (#2579, `--hatch`). */
+  boardHatch: string;
+  /**
+   * Initialene i avatarene på lagtavla (#2579, `--avatartext`): skogen i lys,
+   * kremen i natt. Ingen annen rolle har de to verdiene.
+   */
+  avatarInk: string;
 };
 
 /**
@@ -184,6 +193,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     boardSlabBorder: '#14201A',
     youFill: '#E8EFE8',
     dotOver: '#D89B3A',
+    youBorder: '#B9D3C0',
+    boardHatch: '#D9D1BD',
+    avatarInk: '#1B4332',
   },
   dark: {
     bg: '#14201A',
@@ -224,6 +236,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     boardSlabBorder: '#2F3F34',
     youFill: '#243429',
     dotOver: '#E5B26F',
+    youBorder: 'rgba(126, 170, 128, 0.45)',
+    boardHatch: '#3D4F43',
+    avatarInk: '#ECE5D2',
   },
 };
 
@@ -532,6 +547,9 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   boardSlabBorder: '#14201A',
   youFill: '#E8EFE8',
   dotOver: '#D89B3A',
+  youBorder: '#B9D3C0',
+  boardHatch: '#D9D1BD',
+  avatarInk: '#1B4332',
 };
 
 /**
@@ -578,6 +596,15 @@ export const BOARD_PLAQUE_SHADOW = 'inset 0 -2px 0 rgba(0, 0, 0, 0.08)';
  */
 export function boardRing(colors: ThemeColors, scheme: Scheme): string {
   return withAlpha(colors.accent, scheme === 'dark' ? 0.95 : 0.9);
+}
+
+/**
+ * Gullringen rundt lederlaget på lagtavla mens runden pågår (#2579,
+ * `Lagtavle-forslag` og `Lagtavle-bestball-forslag-*`): svakere enn
+ * {@link boardRing}, 70 % i lys og 80 % i klubbhus-natt.
+ */
+export function teamLiveRing(colors: ThemeColors, scheme: Scheme): string {
+  return withAlpha(colors.accent, scheme === 'dark' ? 0.8 : 0.7);
 }
 
 /**
