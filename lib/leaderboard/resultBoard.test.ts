@@ -226,6 +226,15 @@ describe('teamResultBoard — the rows of a finished team board', () => {
     expect(board.rows[0]).toMatchObject({ name: 'Lag 2', memberIds: ['t2a', 't2b'], total: 70 });
   });
 
+  it('carries the team handicap where the result has it (the texas family)', () => {
+    const texas = computeLeaderboard(
+      teamCtx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 }),
+    ) as TeamBoardResult;
+    const bb = computeLeaderboard(teamCtx('best_ball', { kind: 'best_ball', team_size: 2, teams_count: 2 })) as TeamBoardResult;
+    expect(teamResultBoard(texas, teamName).rows.map((r) => r.teamHandicap)).toEqual([0, 0]);
+    expect(teamResultBoard(bb, teamName).rows.map((r) => r.teamHandicap)).toEqual([null, null]);
+  });
+
   it('reads N, total and unit from the engine, and gives the strip its gap', () => {
     const result = computeLeaderboard(
       teamCtx('stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }),
