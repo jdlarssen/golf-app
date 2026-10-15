@@ -27,6 +27,7 @@ import {
 } from '@/lib/leaderboard/navContext';
 import {
   firstHalfHoleNumbersForSegment,
+  holeNumbersForSegment,
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
@@ -335,6 +336,9 @@ export async function renderState35(opts: {
 
   const openHoleNumbers = firstHalfHoleNumbersForSegment(holeSegment);
   const openHoles = new Set(openHoleNumbers);
+  // The locked card names the holes it hides (#2579), the same way the
+  // hole-by-hole page does: the segment's holes outside the open half.
+  const hiddenHoleNumbers = holeNumbersForSegment(holeSegment).filter((n) => !openHoles.has(n));
   const frontNineHoles = holes.filter((h) => openHoles.has(h.holeNumber));
   const frontNineScores = scores.filter((s) => openHoles.has(s.holeNumber));
   // Pillen navngir halvdelen som ER åpen. 'full' beholder «FRONT 9» — det er
@@ -413,7 +417,10 @@ export async function renderState35(opts: {
           {ts35('lockedHeading', { last: lastHoleForSegment(holeSegment) })}
         </p>
         <p className="mt-2 font-sans text-xs text-muted">
-          {ts35('lockedSub')}
+          {ts35('lockedSub', {
+            from: hiddenHoleNumbers[0],
+            to: hiddenHoleNumbers[hiddenHoleNumbers.length - 1],
+          })}
         </p>
       </div>
 
