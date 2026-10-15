@@ -905,6 +905,17 @@
         "scoringGrossTitle": "Gross",
         "scoringGrossDesc": "Raw strokes"
       },
+      "teeShots": {
+        "legend": "Tee shots",
+        "switchTitle": "Whose tee shot",
+        "switchHelpTeamCard": "The team taps whose tee shot they used. The card can't be delivered until everyone has at least the number you choose.",
+        "switchHelpEachCard": "The team taps whose tee shot they used. Nobody on the team can deliver until everyone has at least the number you choose.",
+        "minLabel": "Minimum tee shots per player",
+        "tileHint": "tee shots",
+        "tileUnavailable": "won't fit",
+        "unavailableNote": "With {size, select, 2 {two} 3 {three} other {four}} on the team, {options} won't fit on 18 holes.",
+        "freeNote": "With {min} each, the team has {free, plural, =0 {no holes} one {# hole} other {# holes}} to choose freely."
+      },
       "patsome": {
         "legend": "Patsome setup",
         "segment1Holes": "Holes 1–6",
@@ -1400,6 +1411,7 @@
       "course_required": "Choose a course.",
       "tee_required": "Choose a tee box.",
       "bad_allowance": "HCP allowance must be a whole number between 0 and 100.",
+      "bad_min_tee_shots": "Choose a number of tee shots that fits 18 holes for the team.",
       "duplicate_player": "The same player cannot be selected more than once.",
       "bad_team": "Every player must be on a team before you publish.",
       "bad_flight": "Every player needs a flight before you publish.",
@@ -1619,7 +1631,7 @@
           },
           {
             "heading": "Common house rules",
-            "body": "Most social rounds add a minimum requirement that each player must contribute a certain number of drives, typically three or four over 18 holes. It stops the team leaning on the longest hitter and keeps everyone involved. Some add a rule that approach shots into the green must come from different players. Ambrose is the same idea with a different handicap sum, and Florida scramble takes the owner of the chosen ball out of play for the next shot. Agree the rules on the first tee, not on the 14th."
+            "body": "Most social rounds add a minimum requirement that each player must contribute a certain number of drives, typically three or four over 18 holes. It stops the team leaning on the longest hitter and keeps everyone involved. If the organiser turns on «Whose tee shot» when setting up the tournament, Tørny keeps the count: the team taps whose tee shot they used, and the card can't be delivered until everyone has enough. Some add a rule that approach shots into the green must come from different players. Ambrose is the same idea with a different handicap sum, and Florida scramble takes the owner of the chosen ball out of play for the next shot. Agree the rules on the first tee, not on the 14th."
           }
         ],
         "example": "Hole 2, par 4: A hits 200 m straight, B hits 185 m into the rough, C hits 220 m down the fairway — you choose C's spot. Everyone drops at 220 m and plays. The best second shot finishes 4 m from the hole. Everyone drops and putts, and the closest holes it in 2 putts. Team score: 4 (2 shots + 2 putts).",
@@ -2208,7 +2220,8 @@
       "kickerSolo": "Submit your scorecard",
       "errors": {
         "db": "Could not save your submission. Please try again.",
-        "not_active": "The game is not active — you can't submit right now."
+        "not_active": "The game is not active — you can't submit right now.",
+        "tee_shots_short": "Someone on the team is short of tee shots. Check the holes and try again."
       },
       "unknownCourse": "(unknown course)",
       "teePrefix": "Tee: ",
@@ -2532,6 +2545,28 @@
     "backToHole": "Back to hole {hole} →",
     "toGameOverview": "Game overview",
     "withdrawnNotice": "You have withdrawn. Your strokes stay on the card but don't count in the standings."
+  },
+  "teeShots": {
+    "question": "Whose tee shot was used?",
+    "minimum": "at least {min} each",
+    "teamLabel": "Team {team}",
+    "countShort": "{count} of {min}",
+    "countReached": "has {count}",
+    "a11yShort": "{name}, {count} of {min} tee shots",
+    "a11yReached": "{name}, has {count} tee shots",
+    "a11yLockedSuffix": "{label}, can't be chosen now",
+    "shortFirst": "{name} needs {count}",
+    "shortRest": "{name} {count}",
+    "othersEach": "{first}, the others {count} each",
+    "freeLine": "{who} · {holes, plural, one {# hole} other {# holes}} to choose freely",
+    "lockedLine": "{names} {count, plural, one {needs} other {need}} the tee {holes, plural, =1 {shot on the last hole} other {shots on the # holes left}}.",
+    "teamShortLine": "{who}, and {holes, plural, =0 {no holes are left} one {only # hole is left} other {only # holes are left}}. Swap on an earlier hole where {surplus} stands.",
+    "partialLine": "A card on the team is delivered. You can only swap while everyone has enough.",
+    "boxTitle": "{who} tee {total, plural, one {shot} other {shots}}",
+    "boxSwap": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and switch to {names} on {holes, plural, one {# hole} other {# holes}} where {surplus} stands.",
+    "boxPickOpen": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and pick {names} on the holes without a tee shot.",
+    "boxEdit": "Edit holes",
+    "organizerLine": "{name} has {count} of {min} tee shots"
   },
   "holes": {
     "entry": {

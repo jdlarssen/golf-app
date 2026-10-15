@@ -26,6 +26,7 @@
 
 import type { Intent } from '@/lib/wizard/intent';
 import { prizeListFromDraft } from '@/lib/games/prizes';
+import { asMinTeeShots } from '@/lib/games/teeShots';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import type { GameFormState } from './useGameFormState';
 
@@ -83,6 +84,7 @@ export type PersistedInitialValues = Pick<
   | 'shamble_variant'
   | 'shamble_count'
   | 'shamble_scoring'
+  | 'min_tee_shots'
   | 'patsome_scoring'
   | 'kr_per_unit'
   | 'entry_fee_kr'
@@ -222,6 +224,7 @@ export function wizardDraftFromState({
       shamble_variant: state.shambleVariant,
       shamble_count: state.shambleCount,
       shamble_scoring: state.shambleScoring,
+      min_tee_shots: state.minTeeShots,
       patsome_scoring: state.patsomeScoring,
       kr_per_unit: numericOrUndefined(state.krPerUnit),
       // Hooken leser bare beløp > 0 (tomt/0 = ingen kontingent), så vi
@@ -291,6 +294,11 @@ export function reconcileWizardDraft(
     values.player_genders = Object.fromEntries(
       Object.entries(values.player_genders).filter(([pid]) => knownIds.has(pid)),
     );
+  }
+
+  // #2580: storage is not trusted; a value that is no option comes back off.
+  if (values.min_tee_shots !== undefined) {
+    values.min_tee_shots = asMinTeeShots(values.min_tee_shots);
   }
 
   return { ...draft, values };

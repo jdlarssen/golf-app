@@ -4,7 +4,8 @@ import { Fragment, useState } from 'react';
 import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
-import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type {
@@ -35,6 +36,7 @@ import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
+import { TeeShotSection } from './sections/TeeShotSection';
 import type { StartType } from '@/lib/games/startType';
 
 export type CourseOption = {
@@ -273,6 +275,12 @@ export type InitialValues = {
    */
   shamble_scoring?: 'gross' | 'net';
   /**
+   * #2580 «Hvem sitt utslag»: minimum tee shots per player, or null when the
+   * setting is off. Filled from mode_config via readMinTeeShots in
+   * buildEditInitialValues; the wizard's session draft keeps it too.
+   */
+  min_tee_shots?: MinTeeShots | null;
+  /**
    * Patsome (#286): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
    */
@@ -469,6 +477,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           modus-payloads. */}
       <input type="hidden" name="game_mode" value={gameMode} />
       <input type="hidden" name="team_size" value={teamSize} />
+      {/* #2580: always mounted, also when the section is locked — a disabled
+          control does not post, and without the field a save of a scheduled
+          game would drop the setting from mode_config. */}
+      {formatTracksTeeShots(gameMode) && (
+        <input
+          type="hidden"
+          name={MIN_TEE_SHOTS_FIELD}
+          value={state.minTeeShots === null ? '' : String(state.minTeeShots)}
+        />
+      )}
       <input
         type="hidden"
         name="registration_mode"
@@ -722,6 +740,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             )}
           </>
         )}
+        {isScrambleFamily(gameMode) && (
+          <TeeShotSection
+            mode={gameMode}
+            teamSize={teamSize}
+            value={state.minTeeShots}
+            onChange={state.setMinTeeShots}
+            disabled={lockGameMode}
+          />
+        )}
         {gameMode === 'fourball_matchplay' && (
           <AllowanceField
             fieldName="fourball_allowance_pct"
@@ -913,6 +940,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             onScoringChange={state.setShambleScoring}
             teamSize={teamSize as 3 | 4}
             onTeamSizeChange={handleTeamSizeChange as (next: 3 | 4) => void}
+            disabled={lockGameMode}
+          />
+        )}
+        {state.isShamble && (
+          <TeeShotSection
+            mode={gameMode}
+            teamSize={teamSize}
+            value={state.minTeeShots}
+            onChange={state.setMinTeeShots}
             disabled={lockGameMode}
           />
         )}

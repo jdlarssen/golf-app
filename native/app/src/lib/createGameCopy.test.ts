@@ -33,6 +33,7 @@ const FAILURE_MAP = {
   course_required: 'course_required',
   tee_required: 'tee_required',
   bad_allowance: 'bad_allowance',
+  bad_min_tee_shots: 'bad_min_tee_shots',
   duplicate_player: 'duplicate_player',
   mode_required: 'mode_required',
   unsupported_mode_size_combo: 'unsupported_mode_size_combo',

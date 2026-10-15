@@ -36,6 +36,7 @@ import { endGameWithSideWinners } from '@/app/[locale]/admin/games/[id]/avslutt/
 import { endGame } from '@/app/[locale]/admin/games/[id]/actions';
 import { endGameMarkingWithdrawals } from '@/app/[locale]/admin/games/[id]/avslutt-likevel/actions';
 import { remindMissingPlayers } from './actions';
+import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
 
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med
@@ -382,6 +383,10 @@ export default async function CreatorAvsluttPage({
           </Banner>
         </div>
       )}
+      {/* #2580: who lacks tee shots; «Avslutt likevel» still ends the game. */}
+      <div className="px-1">
+        <TeeShotOrganizerNotice gameId={gameId} />
+      </div>
       {body}
     </AppShell>
   );

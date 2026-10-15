@@ -3,6 +3,7 @@ import { currentDeviceUserId } from './currentUser';
 import { mergeServerScores } from './mergeServerScore';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { SERVER_TEE_SHOT_COLUMNS, fromTeeShotRow, mergeServerTeeShots } from './writeTeeShot';
 
 /**
  * Pulls the game's scores from the server into Dexie. `RealtimeMount` runs it
@@ -114,4 +115,22 @@ export async function catchUpGameScores(gameId: string): Promise<void> {
 
   // Only after the merge landed, so a failed merge is read again next time.
   states.set(key, nextCatchUpState(states.get(key), plan, data, Date.now()));
+}
+
+/**
+ * #2580: the game's tee shots into Dexie. Realtime only delivers changes, so a
+ * new device or an iOS PWA that wakes up would otherwise show the wrong counts
+ * and the wrong lock. A game has at most 18 rows per team, so a full read each
+ * time is enough. `RealtimeMount` runs it where it runs `catchUpGameScores`. A
+ * row still waiting in the local queue is never overwritten.
+ */
+export async function catchUpGameTeeShots(gameId: string): Promise<void> {
+  const supabase = getBrowserClient();
+  const { data, error } = await supabase
+    .from('team_tee_shots')
+    .select(SERVER_TEE_SHOT_COLUMNS)
+    .eq('game_id', gameId);
+  // A failed read changes nothing; the next trigger tries again.
+  if (error || !data) return;
+  await mergeServerTeeShots(data.map(fromTeeShotRow));
 }

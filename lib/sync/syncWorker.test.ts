@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFakeDb } from './testing/fakeDb';
 import { REFUSED_REPLY_FIXTURE } from './testing/refusedReplyFixture';
-import { REFUSED_WRITE_ERROR } from './classifyError';
+import { REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from './classifyError';
 import type { LocalScore } from './db';
 
 // ── Dexie mock ────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ const fake = createFakeDb();
 vi.mock('./db', () => ({
   localDb: fake.localDb,
   scoreKey: fake.scoreKey,
+  teeShotKey: fake.teeShotKey,
 }));
 
 // Kontrollerbar RPC: hver test setter sin egen implementasjon.
@@ -514,5 +515,89 @@ describe('drainQueue — kall under en pågående drain (#2211)', () => {
     expect(rpcMock).toHaveBeenCalledTimes(2);
     const second = rpcMock.mock.calls[1]?.[1] as { p_hole_number: number };
     expect(second.p_hole_number).toBe(6);
+  });
+});
+
+// #2580: the tee-shot branch drains after the strokes with the same rules.
+describe('drainQueue — tee shots (#2580)', () => {
+  const TID = 'g1:1:7';
+  function seedTeeShot(teeShotBy: string | null, clientUpdatedAt: string) {
+    fake.teeShots.set(TID, {
+      id: TID,
+      gameId: 'g1',
+      teamNumber: 1,
+      holeNumber: 7,
+      teeShotBy,
+      enteredBy: 'u1',
+      clientUpdatedAt,
+      serverUpdatedAt: null,
+    });
+    fake.teeShotQueue.set(TID, {
+      id: TID,
+      teeShotId: TID,
+      attemptCount: 0,
+      lastError: null,
+      createdAt: clientUpdatedAt,
+    });
+  }
+
+  it('sends the row with set_team_tee_shot_if_newer and dequeues it when applied', async () => {
+    seedTeeShot('marte', '2026-10-14T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({
+      data: [{ was_applied: true, client_updated_at: '2026-10-14T10:00:00+00:00', updated_at: '2026-10-14T10:00:01+00:00' }],
+      error: null,
+    });
+    const { drainQueue } = await import('./syncWorker');
+
+    const result = await drainQueue();
+
+    expect(rpcMock).toHaveBeenCalledWith('set_team_tee_shot_if_newer', {
+      p_game_id: 'g1',
+      p_team_number: 1,
+      p_hole_number: 7,
+      p_tee_shot_by: 'marte',
+      p_client_updated_at: '2026-10-14T10:00:00.000Z',
+    });
+    expect(result.pushed).toBe(1);
+    expect(fake.teeShotQueue.size).toBe(0);
+    expect(fake.teeShots.get(TID)?.serverUpdatedAt).toBe('2026-10-14T10:00:01+00:00');
+  });
+
+  it('a refusal puts the server row back and quarantines the item', async () => {
+    seedTeeShot('per', '2026-10-14T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        tee_shot_by: 'marte',
+        entered_by: 'u2',
+        client_updated_at: '2026-10-14T09:00:00+00:00',
+        updated_at: '2026-10-14T09:00:01+00:00',
+      },
+      error: null,
+    });
+    const { drainQueue } = await import('./syncWorker');
+
+    const result = await drainQueue();
+
+    expect(result.abandoned).toBe(1);
+    expect(fromMock).toHaveBeenCalledWith('team_tee_shots');
+    expect(fake.teeShots.get(TID)?.teeShotBy).toBe('marte');
+    expect(fake.teeShotQueue.get(TID)).toMatchObject({
+      lastError: REFUSED_TEE_SHOT_ERROR,
+      abandonedAt: expect.any(String),
+    });
+  });
+
+  it('a network error keeps the item for the next drain', async () => {
+    seedTeeShot('per', '2026-10-14T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: null, error: { message: 'Failed to fetch' } });
+    const { drainQueue } = await import('./syncWorker');
+
+    const result = await drainQueue();
+
+    expect(result.errored).toBe(1);
+    expect(fake.teeShotQueue.get(TID)).toMatchObject({ attemptCount: 1, lastError: 'Failed to fetch' });
+    expect(fake.teeShotQueue.get(TID)?.abandonedAt).toBeUndefined();
+    expect(fake.teeShots.get(TID)?.teeShotBy).toBe('per');
   });
 });

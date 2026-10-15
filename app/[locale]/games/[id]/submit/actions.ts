@@ -24,6 +24,9 @@ function failureHref(
       // Game-home viser «Du har trukket deg»-banneret, og `notFound()`-er en
       // som ikke er med i spillet i det hele tatt.
       return `/games/${gameId}`;
+    case 'tee_shots_short':
+      // #2580: the page shows the tee-shot box; the message says why.
+      return `/games/${gameId}/submit?error=tee_shots_short`;
     case 'db':
       return `/games/${gameId}/submit?error=db`;
   }

@@ -49,6 +49,8 @@ export const ROOT_CLIENT_NAMESPACES = [
   'scorecard',
   'signup',
   'spectate',
+  // #2580: the hole page's tee-shot picker (≈2 kB).
+  'teeShots',
 ] as const satisfies readonly Namespace[];
 
 /** The heavy namespaces only some routes need; `<IntlScope>` adds them. */

@@ -65,6 +65,7 @@ import {
 } from './holeScreenState';
 import { useHoleModeContextLine } from './useHoleModeContextLine';
 import { PuttsTogglePill } from './PuttsTogglePill';
+import { TeeShotPicker } from './TeeShotPicker';
 import {
   HoleFlightList,
   HoleScoreCardList,
@@ -189,6 +190,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     segmentSibling,
     holeStripSibling,
     broBridge,
+    teeShots,
     players,
   } = resolveHoleClientProps(rawProps);
 
@@ -611,6 +613,19 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
             onSetScore={onSetScore}
             onLongPress={onLongPress}
             onClear={onClearFromCard}
+          />
+        )}
+        {/* #2580: under the flight, not in the rail (the rail shrinks to one
+            line once every row is scored). */}
+        {teeShots && (
+          <TeeShotPicker
+            gameId={gameId}
+            holeNumber={currentHole}
+            gameMode={gameMode}
+            minimum={teeShots.minimum}
+            teams={teeShots.teams}
+            myUserId={myUserId}
+            disabled={gameInactive}
           />
         )}
         <HoleSyncFooter

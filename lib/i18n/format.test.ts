@@ -802,4 +802,12 @@ describe('formatListLocale (#2280)', () => {
   ])('%j in %s → %s', (items, locale, expected) => {
     expect(formatListLocale(items, locale)).toBe(expected);
   });
+  // #2580: «der Marte eller Jonas står».
+  it.each<[readonly string[], AppLocale, string]>([
+    [['Marte', 'Jonas'], 'no', 'Marte eller Jonas'],
+    [['Marte', 'Jonas'], 'en', 'Marte or Jonas'],
+    [['Marte', 'Jonas', 'Sigrid'], 'no', 'Marte, Jonas eller Sigrid'],
+  ])('disjunction %j in %s → %s', (items, locale, expected) => {
+    expect(formatListLocale(items, locale, 'disjunction')).toBe(expected);
+  });
 });

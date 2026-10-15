@@ -60,11 +60,20 @@ const PERMANENT_TEXT_PATTERNS = [
 export const REFUSED_WRITE_ERROR =
   'Write refused: row-level security filtered the update (card submitted/withdrawn or round not active)';
 
+// #2580: the lastError a drain stores when `set_team_tee_shot_if_newer`
+// answers with the all-NULL row: the team's card is in, the round is not
+// active, or the change would leave someone short after a shamble card is in.
+// Same rules as REFUSED_WRITE_ERROR: technical text, no TRANSIENT_PATTERNS
+// marker, and it carries the locked marker below.
+export const REFUSED_TEE_SHOT_ERROR =
+  'Tee shot refused by set_team_tee_shot_if_newer (team card delivered, round not active, or someone would be short)';
+
 // Markers of a write refused because the card is locked. 'row-level security'
 // covers the INSERT's RLS violation and REFUSED_WRITE_ERROR; the second is the
 // 0148 finished-game trigger (supabase/migrations/0148_putts_backfill.sql),
-// which used to match nothing and so retried forever.
-const LOCKED_CARD_PATTERNS = ['row-level security', 'only putts may be changed'];
+// which used to match nothing and so retried forever; the third is
+// REFUSED_TEE_SHOT_ERROR (#2580).
+const LOCKED_CARD_PATTERNS = ['row-level security', 'only putts may be changed', 'tee shot refused'];
 
 /**
  * True when the server refused the write because the card is locked

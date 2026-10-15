@@ -16,6 +16,7 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
 import { isValidTeamHandicapSumPct } from './teamHandicapUnit';
+import { MIN_TEE_SHOTS_FIELD, minTeeShotsFeasible, type MinTeeShots } from './teeShots';
 import { START_COUNT_RANGES, type StartCountMode } from './startPlayerCount';
 import {
   gameModeSupportsTeams,
@@ -171,6 +172,10 @@ export type GameValidationErrorCode =
   | 'course_required'
   | 'tee_required'
   | 'bad_allowance'
+  // #2580: «Hvem sitt utslag» — the minimum is not 3–6 or does not fit 18
+  // holes for the team size (`minTeeShotsFeasible`). Draft too, like
+  // bad_allowance.
+  | 'bad_min_tee_shots'
   | 'duplicate_player'
   | 'bad_team'
   | 'bad_flight'
@@ -892,6 +897,29 @@ function validateSoloStrokeplay(
 }
 
 /**
+ * #2580 «Hvem sitt utslag»: the minimum tee shots per player, read the same
+ * way by the four formats that count tee shots (Texas, Ambrose, Florida,
+ * shamble). An empty field means the setting is off. A value that is not an
+ * option, or does not fit 18 holes for the team size, is refused in draft too
+ * (the CHECK `games_min_tee_shots_valid` would refuse it at insert anyway).
+ */
+function parseMinTeeShots(
+  formData: FormData,
+  teamSize: number,
+): { ok: true; value: MinTeeShots | null } | { ok: false } {
+  const raw = String(formData.get(MIN_TEE_SHOTS_FIELD) ?? '').trim();
+  if (raw === '') return { ok: true, value: null };
+  const value = Number(raw);
+  if (!minTeeShotsFeasible(value, teamSize)) return { ok: false };
+  return { ok: true, value: value as MinTeeShots };
+}
+
+/** Off leaves the key out of `mode_config`, so every older game is unchanged. */
+function withMinTeeShots(value: MinTeeShots | null): { [MIN_TEE_SHOTS_FIELD]?: MinTeeShots } {
+  return value === null ? {} : { [MIN_TEE_SHOTS_FIELD]: value };
+}
+
+/**
  * Texas scramble-validator (issue #44).
  *
  * Lagene spiller én ball — én score per lag per hull lagres på lag-kapteinens
@@ -935,6 +963,11 @@ function validateTexasScramble(
   const handicapPct = parseTexasHandicapPct(formData, teamSize);
   if (handicapPct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const minTeeShots = parseMinTeeShots(formData, teamSize);
+  if (!minTeeShots.ok) {
+    return { ok: false, errorCode: 'bad_min_tee_shots' };
   }
 
   const players: GamePlayerInput[] = [];
@@ -981,6 +1014,7 @@ function validateTexasScramble(
       team_size: teamSize,
       teams_count,
       team_handicap_pct: handicapPct,
+      ...withMinTeeShots(minTeeShots.value),
     },
   };
 }
@@ -1058,6 +1092,11 @@ function validateAmbrose(
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
+  const minTeeShots = parseMinTeeShots(formData, teamSize);
+  if (!minTeeShots.ok) {
+    return { ok: false, errorCode: 'bad_min_tee_shots' };
+  }
+
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
   for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
@@ -1102,6 +1141,7 @@ function validateAmbrose(
       team_size: teamSize,
       teams_count,
       team_handicap_pct: handicapPct,
+      ...withMinTeeShots(minTeeShots.value),
     },
   };
 }
@@ -1173,6 +1213,11 @@ function validateFloridaScramble(
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
+  const minTeeShots = parseMinTeeShots(formData, teamSize);
+  if (!minTeeShots.ok) {
+    return { ok: false, errorCode: 'bad_min_tee_shots' };
+  }
+
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
   for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
@@ -1217,6 +1262,7 @@ function validateFloridaScramble(
       team_size: teamSize,
       teams_count,
       team_handicap_pct: handicapPct,
+      ...withMinTeeShots(minTeeShots.value),
     },
   };
 }
@@ -2052,6 +2098,11 @@ function validateShamble(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
+  const minTeeShots = parseMinTeeShots(formData, teamSize);
+  if (!minTeeShots.ok) {
+    return { ok: false, errorCode: 'bad_min_tee_shots' };
+  }
+
   const variant = parseShambleVariant(formData);
   const scoring = parseScoringToggle(formData, 'shamble_scoring');
   const count = parseShambleCount(formData, variant);
@@ -2101,6 +2152,7 @@ function validateShamble(
       shamble_variant: variant,
       shamble_count: count,
       shamble_scoring: scoring,
+      ...withMinTeeShots(minTeeShots.value),
     },
   };
 }

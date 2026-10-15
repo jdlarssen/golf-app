@@ -12,6 +12,7 @@ import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
 import type { DeliveryGame } from '@/lib/games/flightDelivery';
 import { deliveryCoversWholeTeam } from '@/lib/games/teamDelivery';
+import { readMinTeeShots, teeShotStatus } from '@/lib/games/teeShots';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // Leverings-kjernen (#1453/#1466 → #1918): ett hjem for «marker kortet som
@@ -82,7 +83,13 @@ export type SubmitScorecardResult =
     }
   | {
       ok: false;
-      reason: 'not_found' | 'not_active' | 'not_player' | 'withdrawn' | 'db';
+      /**
+       * `tee_shots_short` (#2580): «Hvem sitt utslag» is on and someone on a
+       * team in this delivery has fewer tee shots than the minimum. Nothing
+       * is written. The DB trigger guard_game_players_tee_shots (0209) refuses
+       * the same delivery for every other path.
+       */
+      reason: 'not_found' | 'not_active' | 'not_player' | 'withdrawn' | 'tee_shots_short' | 'db';
     };
 
 /**
@@ -125,7 +132,7 @@ export async function submitScorecardCore(
   const { data: game } = await supabase
     .from('games')
     .select(
-      'name, status, require_peer_approval, game_mode, hole_segment, tournament_id, source_game_id, created_by',
+      'name, status, require_peer_approval, game_mode, mode_config, hole_segment, tournament_id, source_game_id, created_by',
     )
     .eq('id', gameId)
     .single<{
@@ -133,6 +140,8 @@ export async function submitScorecardCore(
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       require_peer_approval: boolean;
       game_mode: string;
+      // #2580: read for «Hvem sitt utslag» (min_tee_shots) only.
+      mode_config: unknown;
       hole_segment: 'full' | 'front9' | 'back9';
       tournament_id: string | null;
       source_game_id: string | null;
@@ -183,6 +192,17 @@ export async function submitScorecardCore(
     expireGameCache(gameId);
     revalidatePath(`/games/${gameId}`);
     return { ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 };
+  }
+
+  // #2580 «Hvem sitt utslag»: no card on a team where someone is short goes
+  // in — the caller's own, nor any flightmate's. Without the setting nothing
+  // new is read.
+  const minTeeShots = readMinTeeShots(mode, game.mode_config);
+  if (minTeeShots !== null) {
+    const deliveringIds = [...(meRow.submitted_at ? [] : [userId]), ...mates.map((m) => m.userId)];
+    const short = await deliveryHasTeeShotShortfall(gameId, minTeeShots, deliveringIds);
+    if (short === null) return { ok: false, reason: 'db' };
+    if (short) return { ok: false, reason: 'tee_shots_short' };
   }
 
   // #1453: én-ball-lagformat (scramble-familien + alternate-shot-matchplay) —
@@ -471,6 +491,55 @@ export async function submitScorecardCore(
   expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
   return { ok: true, alreadySubmitted: false, submitted, alsoDelivered };
+}
+
+/**
+ * #2580: is anyone short of tee shots on a team this delivery covers? The
+ * teams are those of the cards being delivered; each is counted with
+ * `teeShotStatus` over its active members (lib/games/teeShots.ts, the only
+ * count in TypeScript). Read with the admin client, as the team cascade
+ * writes: the caller is already verified. `null` = a read failed.
+ */
+async function deliveryHasTeeShotShortfall(
+  gameId: string,
+  minimum: number,
+  deliveringIds: readonly string[],
+): Promise<boolean | null> {
+  if (deliveringIds.length === 0) return false;
+  const admin = getAdminClient();
+  const { data: roster, error: rosterError } = await admin
+    .from('game_players')
+    .select('user_id, team_number, withdrawn_at')
+    .eq('game_id', gameId)
+    .returns<{ user_id: string; team_number: number | null; withdrawn_at: string | null }[]>();
+  if (rosterError || !roster) return null;
+
+  const teams = new Set<number>();
+  for (const row of roster) {
+    if (row.team_number != null && deliveringIds.includes(row.user_id)) teams.add(row.team_number);
+  }
+  if (teams.size === 0) return false;
+
+  const { data: picks, error: picksError } = await admin
+    .from('team_tee_shots')
+    .select('team_number, hole_number, tee_shot_by')
+    .eq('game_id', gameId)
+    .in('team_number', [...teams]);
+  if (picksError || !picks) return null;
+
+  for (const team of teams) {
+    const status = teeShotStatus({
+      minimum,
+      memberIds: roster
+        .filter((r) => r.team_number === team && r.withdrawn_at == null)
+        .map((r) => r.user_id),
+      picks: picks
+        .filter((p) => p.team_number === team)
+        .map((p) => ({ holeNumber: p.hole_number, teeShotBy: p.tee_shot_by })),
+    });
+    if (!status.canDeliver) return true;
+  }
+  return false;
 }
 
 /**

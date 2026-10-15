@@ -1,10 +1,18 @@
-import { localDb, type LocalScore, type SyncQueueItem } from './db';
+import {
+  localDb,
+  type LocalScore,
+  type LocalTeeShot,
+  type SyncQueueItem,
+  type TeeShotQueueItem,
+} from './db';
 import { getBrowserClient } from '@/lib/supabase/client';
 import {
   isLockedCardError,
+  REFUSED_TEE_SHOT_ERROR,
   REFUSED_WRITE_ERROR,
   syncRetryDecision,
 } from './classifyError';
+import { SERVER_TEE_SHOT_COLUMNS } from './writeTeeShot';
 import { conflictRecordFor } from './conflict';
 import { currentDeviceUserId } from './currentUser';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
@@ -32,7 +40,9 @@ export async function drainQueue(): Promise<{
   inFlight = true;
   try {
     const queue = await localDb.syncQueue.orderBy('createdAt').toArray();
-    if (queue.length === 0)
+    // #2580: tee shots drain after the strokes, with the same rules.
+    const teeShotQueue = await localDb.teeShotQueue.orderBy('createdAt').toArray();
+    if (queue.length === 0 && teeShotQueue.length === 0)
       return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
 
     const supabase = getBrowserClient();
@@ -203,7 +213,14 @@ export async function drainQueue(): Promise<{
       else if (outcome === 'server-wins') rejected++;
     }
 
-    return { pushed, rejected, errored, abandoned };
+    const tee = await drainTeeShots(teeShotQueue, currentUserId);
+
+    return {
+      pushed: pushed + tee.pushed,
+      rejected: rejected + tee.rejected,
+      errored: errored + tee.errored,
+      abandoned: abandoned + tee.abandoned,
+    };
   } finally {
     inFlight = false;
     if (rerunRequested) {
@@ -297,6 +314,163 @@ async function settleLockedRefusal(
       return 'abandoned' as const;
     },
   );
+}
+
+/**
+ * #2580: the tee-shot branch of the drain. Same retry, quarantine and refusal
+ * rules as the strokes: a permanent error is quarantined after
+ * MAX_PERMANENT_ATTEMPTS, a transient one retries, and a refusal (the RPC's
+ * all-NULL row) puts the local row back to the server's and quarantines the
+ * item so the banner explains it. Nothing is dropped in silence.
+ */
+async function drainTeeShots(
+  queue: readonly TeeShotQueueItem[],
+  currentUserId: string | null,
+): Promise<{ pushed: number; rejected: number; errored: number; abandoned: number }> {
+  const counts = { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  if (queue.length === 0) return counts;
+  const supabase = getBrowserClient();
+
+  for (const item of queue) {
+    if (item.abandonedAt) continue;
+
+    const shot = await localDb.teeShots.get(item.teeShotId);
+    if (!shot) {
+      await localDb.teeShotQueue.delete(item.id);
+      continue;
+    }
+
+    const { data, error } = await supabase.rpc('set_team_tee_shot_if_newer', {
+      p_game_id: shot.gameId,
+      p_team_number: shot.teamNumber,
+      p_hole_number: shot.holeNumber,
+      // Null clears the choice; the generated arg type is non-null, so cast.
+      p_tee_shot_by: shot.teeShotBy as string,
+      p_client_updated_at: shot.clientUpdatedAt,
+    });
+
+    if (error) {
+      const decision = syncRetryDecision({
+        attemptCount: item.attemptCount,
+        errorMessage: error.message,
+      });
+      await localDb.teeShotQueue.update(item.id, {
+        attemptCount: item.attemptCount + 1,
+        lastError: error.message,
+        ...(decision === 'abandon' ? { abandonedAt: new Date().toISOString() } : {}),
+      });
+      if (decision === 'abandon') counts.abandoned++;
+      else counts.errored++;
+      continue;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const reply = interpretUpsertReply(row, shot.clientUpdatedAt);
+
+    if (reply === 'refused') {
+      const settled = await settleRefusedTeeShot(item, shot, currentUserId);
+      if (settled === 'abandoned') counts.abandoned++;
+      else if (settled === 'errored') counts.errored++;
+      continue;
+    }
+
+    // #1457: the team may have tapped again while the RPC was in the air;
+    // writeTeeShot then re-queued the newer value under the same id.
+    const outcome = await localDb.transaction('rw', localDb.teeShots, localDb.teeShotQueue, async () => {
+      const current = await localDb.teeShots.get(item.teeShotId);
+      if (!current || current.clientUpdatedAt !== shot.clientUpdatedAt) {
+        return 'edited-mid-flight' as const;
+      }
+      if (reply === 'applied') {
+        await localDb.teeShots.update(item.teeShotId, { serverUpdatedAt: row.updated_at });
+        await localDb.teeShotQueue.delete(item.id);
+        return 'applied' as const;
+      }
+      if (reply === 'server-wins') {
+        await localDb.teeShots.update(item.teeShotId, {
+          teeShotBy: row.tee_shot_by,
+          enteredBy: row.entered_by,
+          clientUpdatedAt: row.client_updated_at,
+          serverUpdatedAt: row.updated_at,
+        });
+        await localDb.teeShotQueue.delete(item.id);
+        return 'server-wins' as const;
+      }
+      await localDb.teeShotQueue.delete(item.id);
+      return 'kept-local' as const;
+    });
+
+    if (outcome === 'applied') counts.pushed++;
+    else if (outcome === 'server-wins') counts.rejected++;
+  }
+
+  return counts;
+}
+
+/**
+ * #2580: settle a tee shot the RPC refused. As `settleLockedRefusal`: without
+ * a session, or when the server read fails, count the attempt and keep the
+ * item; otherwise the local row goes back to the server's (or is deleted when
+ * the server has none) and the item is quarantined with REFUSED_TEE_SHOT_ERROR,
+ * which the banner reads as locked.
+ */
+async function settleRefusedTeeShot(
+  item: TeeShotQueueItem,
+  shot: LocalTeeShot,
+  currentUserId: string | null,
+): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
+  const keepForRetry = async () => {
+    await localDb.teeShotQueue.update(item.id, {
+      attemptCount: item.attemptCount + 1,
+      lastError: REFUSED_TEE_SHOT_ERROR,
+    });
+    return 'errored' as const;
+  };
+
+  if (currentUserId == null) return keepForRetry();
+
+  let serverRow: {
+    tee_shot_by: string | null;
+    entered_by: string;
+    client_updated_at: string;
+    updated_at: string;
+  } | null;
+  try {
+    const { data, error } = await getBrowserClient()
+      .from('team_tee_shots')
+      .select(SERVER_TEE_SHOT_COLUMNS)
+      .eq('game_id', shot.gameId)
+      .eq('team_number', shot.teamNumber)
+      .eq('hole_number', shot.holeNumber)
+      .maybeSingle();
+    if (error) return keepForRetry();
+    serverRow = data;
+  } catch {
+    return keepForRetry();
+  }
+
+  return localDb.transaction('rw', localDb.teeShots, localDb.teeShotQueue, async () => {
+    const current = await localDb.teeShots.get(item.teeShotId);
+    if (!current || current.clientUpdatedAt !== shot.clientUpdatedAt) {
+      return 'edited-mid-flight' as const;
+    }
+    if (serverRow) {
+      await localDb.teeShots.update(item.teeShotId, {
+        teeShotBy: serverRow.tee_shot_by,
+        enteredBy: serverRow.entered_by,
+        clientUpdatedAt: serverRow.client_updated_at,
+        serverUpdatedAt: serverRow.updated_at,
+      });
+    } else {
+      await localDb.teeShots.delete(item.teeShotId);
+    }
+    await localDb.teeShotQueue.update(item.id, {
+      attemptCount: item.attemptCount + 1,
+      lastError: REFUSED_TEE_SHOT_ERROR,
+      abandonedAt: new Date().toISOString(),
+    });
+    return 'abandoned' as const;
+  });
 }
 
 // Client-side bootstrap: start listening to online events and a fallback interval.

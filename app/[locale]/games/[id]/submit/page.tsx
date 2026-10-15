@@ -43,6 +43,18 @@ import {
   type ScoringGender,
 } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
+import type { AppLocale } from '@/i18n/routing';
+import { readMinTeeShots, teeShotDeliveryAdvice } from '@/lib/games/teeShots';
+import { readTeamTeeShotStatuses } from '@/lib/games/teeShotRead';
+import { deliveryCoversWholeTeam } from '@/lib/games/teamDelivery';
+import {
+  sortByTeeShotName,
+  teeShotBoxText,
+  teeShotCountText,
+  teeShotNames,
+  type TeeShotT,
+} from '@/components/games/teeShotCopy';
+import { TeeShotShortBox, type TeeShotShortBoxPlayer } from '@/components/games/TeeShotShortBox';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -175,6 +187,18 @@ export default async function SubmitPage({
     redirect({ href: `/games/${id}`, locale });
   }
 
+  // #2580 «Hvem sitt utslag»: the box over the button when someone on a team
+  // this delivery covers (mine, or a flightmate's) lacks tee shots.
+  const teeShotBox = await teeShotBoxFor({
+    supabase,
+    gameId: id,
+    game,
+    players,
+    deliveringIds: [...(me.submitted_at ? [] : [userId]), ...flightCards.map((c) => c.userId)],
+    locale: locale as AppLocale,
+    unknownPlayer: t('unknownPlayer'),
+  });
+
   // Error ≠ absence (#1441): throw on query failure (error boundary), 404
   // only when the row is genuinely gone.
   if (courseTeeRes.error) throw courseTeeRes.error;
@@ -237,7 +261,13 @@ export default async function SubmitPage({
 
         {me.submitted_at ? (
           // #2200: my own card is in; only the flightmates' cards are left.
-          <FlightOnlyBody gameId={id} cards={flightCards} submitAction={submitAction} />
+          <FlightOnlyBody
+            gameId={id}
+            cards={flightCards}
+            submitAction={submitAction}
+            teeShotBox={teeShotBox}
+            holeSegment={game.hole_segment}
+          />
         ) : (
         <Suspense fallback={<ReviewBodySkeleton />}>
           <ReviewBody
@@ -254,6 +284,7 @@ export default async function SubmitPage({
             tournamentId={game.tournament_id}
             submitAction={submitAction}
             flightCards={flightCards}
+            teeShotBox={teeShotBox}
           />
         </Suspense>
         )}
@@ -274,6 +305,7 @@ async function ReviewBody({
   tournamentId,
   submitAction,
   flightCards,
+  teeShotBox,
 }: {
   gameId: string;
   courseId: string;
@@ -291,6 +323,8 @@ async function ReviewBody({
   submitAction: (formData: FormData) => void | Promise<void>;
   /** #2200: the flightmates' cards this delivery also covers. */
   flightCards: readonly FlightDeliveryCard[];
+  /** #2580: someone on a team in this delivery lacks tee shots. */
+  teeShotBox: TeeShotBoxData | null;
 }) {
   const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
@@ -523,6 +557,8 @@ async function ReviewBody({
 
       {flightCards.length > 0 && <FlightDeliveryNotice cards={flightCards} />}
 
+      {teeShotBox && <TeeShotBoxOnPage box={teeShotBox} gameId={gameId} holeSegment={holeSegment} />}
+
       {/* #1793: gap-6 (24px) gir feiltrykk-margin mellom Rediger og Lever —
           de to knappene har motsatt konsekvens. */}
       <div className="grid grid-cols-2 gap-6">
@@ -547,6 +583,7 @@ async function ReviewBody({
               ? t('flight.submitButton', { count: flightCards.length + 1 })
               : undefined
           }
+          teeShotBlocked={teeShotBox != null}
         />
       </div>
     </>
@@ -591,10 +628,15 @@ async function FlightOnlyBody({
   gameId,
   cards,
   submitAction,
+  teeShotBox,
+  holeSegment,
 }: {
   gameId: string;
   cards: readonly FlightDeliveryCard[];
   submitAction: (formData: FormData) => void | Promise<void>;
+  /** #2580: someone on a team in this delivery lacks tee shots. */
+  teeShotBox: TeeShotBoxData | null;
+  holeSegment: HoleSegment;
 }) {
   const t = await getTranslations('game.submit.flight');
   const joinNames = await nameJoiner();
@@ -604,12 +646,14 @@ async function FlightOnlyBody({
         <p className="text-sm text-text">{t('ownDelivered')}</p>
       </Card>
       <FlightDeliveryNotice cards={cards} />
+      {teeShotBox && <TeeShotBoxOnPage box={teeShotBox} gameId={gameId} holeSegment={holeSegment} />}
       <SubmitForm
         submitAction={submitAction}
         missingHoles={0}
         blockingGameIds={[gameId]}
         alsoFor={cards.map((c) => c.userId)}
         label={t('submitOthersButton', { names: joinNames(cards) })}
+        teeShotBlocked={teeShotBox != null}
       />
     </>
   );
@@ -666,5 +710,107 @@ function ReviewBodySkeleton() {
         <Skeleton className="h-11 rounded-full" delay={60} />
       </div>
     </>
+  );
+}
+
+/** #2580: what the tee-shot box shows; built once on the page. */
+type TeeShotBoxData = {
+  title: string;
+  body: string;
+  players: TeeShotShortBoxPlayer[];
+  editLabel: string;
+};
+
+/**
+ * #2580: the first team in this delivery where someone lacks tee shots (mine
+ * first), as the box's text. Null when the setting is off or nobody is short.
+ * The count and the advice come from lib/games/teeShots.ts.
+ */
+async function teeShotBoxFor(args: {
+  supabase: Awaited<ReturnType<typeof getServerClient>>;
+  gameId: string;
+  game: { game_mode: GameMode; mode_config: unknown };
+  players: readonly {
+    user_id: string;
+    team_number: number | null;
+    withdrawn_at: string | null;
+    users: { name: string | null; nickname: string | null } | null;
+  }[];
+  deliveringIds: readonly string[];
+  locale: AppLocale;
+  unknownPlayer: string;
+}): Promise<TeeShotBoxData | null> {
+  const { supabase, gameId, game, players, deliveringIds, locale, unknownPlayer } = args;
+  const minimum = readMinTeeShots(game.game_mode, game.mode_config);
+  if (minimum === null || deliveringIds.length === 0) return null;
+  const statuses = await readTeamTeeShotStatuses(
+    supabase,
+    gameId,
+    minimum,
+    sortByTeeShotName(players, unknownPlayer),
+  );
+  const teams = [
+    ...new Set(
+      deliveringIds
+        .map((uid) => players.find((p) => p.user_id === uid)?.team_number)
+        .filter((n): n is number => n != null),
+    ),
+  ];
+  const team = teams.find((n) => statuses.get(n)?.canDeliver === false);
+  if (team === undefined) return null;
+  const status = statuses.get(team)!;
+  const advice = teeShotDeliveryAdvice(status);
+  if (!advice) return null;
+
+  const t = (await getTranslations('teeShots')) as unknown as TeeShotT;
+  const names = teeShotNames(
+    players.filter((p) => p.team_number === team),
+    unknownPlayer,
+  );
+  const nameOf = (uid: string) => names.get(uid) ?? unknownPlayer;
+  const { title, body } = teeShotBoxText(
+    advice,
+    status,
+    deliveryCoversWholeTeam(game.game_mode),
+    nameOf,
+    t,
+    locale,
+  );
+  return {
+    title,
+    body,
+    players: status.players.map((p) => ({
+      userId: p.userId,
+      name: nameOf(p.userId),
+      countText: teeShotCountText(p, minimum, t),
+      short: p.missing > 0,
+    })),
+    editLabel: t('boxEdit'),
+  };
+}
+
+function TeeShotBoxOnPage({
+  box,
+  gameId,
+  holeSegment,
+}: {
+  box: TeeShotBoxData;
+  gameId: string;
+  holeSegment: HoleSegment;
+}) {
+  return (
+    <TeeShotShortBox
+      title={box.title}
+      body={box.body}
+      players={box.players}
+      action={
+        <SmartLink
+          href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
+          className="self-start font-sans text-sm font-semibold text-primary underline underline-offset-2"
+        >
+          {box.editLabel}
+        </SmartLink>
+      }
+    />
   );
 }

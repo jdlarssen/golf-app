@@ -13,6 +13,7 @@ import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { isValidTeamHandicapSumPct } from '@/lib/games/teamHandicapUnit';
+import { clampMinTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -732,6 +733,12 @@ export function useGameFormState({
   const [shambleScoring, setShambleScoring] = useState<'gross' | 'net'>(
     initialValues?.shamble_scoring === 'gross' ? 'gross' : 'net',
   );
+  // #2580 «Hvem sitt utslag»: null = off. Texas, Ambrose, Florida and shamble
+  // post it (TeeShotSection + the hidden field); lib/games/teeShots.ts owns
+  // which minimums fit a team size, so a size change only asks it to clamp.
+  const [minTeeShots, setMinTeeShots] = useState<MinTeeShots | null>(
+    initialValues?.min_tee_shots ?? null,
+  );
   // Patsome (#286): lag à 2, 2+ lag. Scoring-toggle (net vs gross). Default
   // 'net' speiler Tørny's ethos. Validatoren (`validatePatsome`) leser
   // feltet og faller defensivt tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1032,6 +1039,9 @@ export function useGameFormState({
     ) as TeamSize;
     setTeamSize(nextSize);
     releasePlayersOutsideGrid(next, nextSize);
+    // #2580: a format switch sets the size straight away, past
+    // handleTeamSizeChange; Texas pair with 6 → shamble four keeps 4, not 6.
+    setMinTeeShots((current) => clampMinTeeShots(current, nextSize));
     // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
@@ -1064,6 +1074,8 @@ export function useGameFormState({
   function handleTeamSizeChange(next: TeamSize) {
     setTeamSize(next);
     releasePlayersOutsideGrid(gameMode, next);
+    // #2580: a four-player team with 5 or 6 chosen falls back to 4.
+    setMinTeeShots((current) => clampMinTeeShots(current, next));
     if (gameMode === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(next));
     }
@@ -2115,6 +2127,8 @@ export function useGameFormState({
     setShambleCount,
     shambleScoring,
     setShambleScoring,
+    minTeeShots,
+    setMinTeeShots,
     patsomeScoring,
     setPatsomeScoring,
     requirePeerApproval,

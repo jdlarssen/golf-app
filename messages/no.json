@@ -905,6 +905,17 @@
         "scoringGrossTitle": "Brutto",
         "scoringGrossDesc": "Rå slag"
       },
+      "teeShots": {
+        "legend": "Utslag",
+        "switchTitle": "Hvem sitt utslag",
+        "switchHelpTeamCard": "Laget trykker på hvem sitt utslag de brukte. Kortet kan ikke leveres før alle har minst så mange som du velger.",
+        "switchHelpEachCard": "Laget trykker på hvem sitt utslag de brukte. Ingen på laget kan levere før alle har minst så mange som du velger.",
+        "minLabel": "Minst antall utslag per spiller",
+        "tileHint": "utslag",
+        "tileUnavailable": "går ikke",
+        "unavailableNote": "Med {size, select, 2 {to} 3 {tre} other {fire}} på laget går ikke {options} opp på 18 hull.",
+        "freeNote": "Med {min} hver har laget {free, plural, =0 {ingen hull} other {# hull}} å velge fritt på."
+      },
       "patsome": {
         "legend": "Patsome-oppsett",
         "segment1Holes": "Hull 1–6",
@@ -1400,6 +1411,7 @@
       "course_required": "Velg en bane.",
       "tee_required": "Velg en tee-boks.",
       "bad_allowance": "HCP-andelen må være et helt tall mellom 0 og 100.",
+      "bad_min_tee_shots": "Velg et antall utslag som går opp på 18 hull for laget.",
       "duplicate_player": "Samme spiller kan ikke velges flere ganger.",
       "bad_team": "Alle spillerne må ha et lag før du publiserer.",
       "bad_flight": "Alle spillerne må ha en flight før du publiserer.",
@@ -1619,7 +1631,7 @@
           },
           {
             "heading": "Vanlige husregler",
-            "body": "De fleste selskapsrunder legger på et minstekrav om at hver spiller må bidra med et visst antall utslag, typisk tre eller fire på 18 hull. Det hindrer at laget bare bruker den lengste, og gjør at alle får være med. Noen legger til at kortslag inn mot green må komme fra ulike spillere. Ambrose er samme idé med et annet handicap-regnestykke, og florida scramble tar den som eide den valgte ballen ut av spill på neste slag. Bli enige om reglene på første tee, ikke på hull 14."
+            "body": "De fleste selskapsrunder legger på et minstekrav om at hver spiller må bidra med et visst antall utslag, typisk tre eller fire på 18 hull. Det hindrer at laget bare bruker den lengste, og gjør at alle får være med. Slår arrangøren på «Hvem sitt utslag» når turneringen settes opp, holder Tørny tellingen: laget trykker på hvem sitt utslag de brukte, og kortet kan ikke leveres før alle har nok. Noen legger til at kortslag inn mot green må komme fra ulike spillere. Ambrose er samme idé med et annet handicap-regnestykke, og florida scramble tar den som eide den valgte ballen ut av spill på neste slag. Bli enige om reglene på første tee, ikke på hull 14."
           }
         ],
         "example": "Hull 2, par 4: A slår 200 m rett frem, B slår 185 m i ruff, C slår 220 m på fairway — dere velger C sitt utslagsted. Alle legger ned til 220 m og slår. Beste andreslag ender 4 m fra hullet. Alle legger ned og putter, og den korteste putter inn på 2 putter. Lagets score: 4 (2 slag + 2 putter).",
@@ -2208,7 +2220,8 @@
       "kickerSolo": "Lever ditt scorekort",
       "errors": {
         "db": "Klarte ikke å lagre leveringen. Prøv igjen.",
-        "not_active": "Spillet er ikke aktivt — du kan ikke levere nå."
+        "not_active": "Spillet er ikke aktivt — du kan ikke levere nå.",
+        "tee_shots_short": "Noen på laget mangler utslag. Se over hullene og prøv igjen."
       },
       "unknownCourse": "(ukjent bane)",
       "teePrefix": "Tee: ",
@@ -2532,6 +2545,28 @@
     "backToHole": "Tilbake til hull {hole} →",
     "toGameOverview": "Til spilloversikt",
     "withdrawnNotice": "Du har trukket deg. Slagene dine blir stående her, men teller ikke i rangeringen."
+  },
+  "teeShots": {
+    "question": "Hvem sitt utslag ble brukt?",
+    "minimum": "minst {min} hver",
+    "teamLabel": "Lag {team}",
+    "countShort": "{count} av {min}",
+    "countReached": "har {count}",
+    "a11yShort": "{name}, {count} av {min} utslag",
+    "a11yReached": "{name}, har {count} utslag",
+    "a11yLockedSuffix": "{label}, kan ikke velges nå",
+    "shortFirst": "{name} mangler {count}",
+    "shortRest": "{name} {count}",
+    "othersEach": "{first}, de andre {count} hver",
+    "freeLine": "{who} · {holes, plural, one {# hull} other {# hull}} å velge fritt på",
+    "lockedLine": "{names} trenger {holes, plural, =1 {utslaget på det siste hullet} =2 {utslagene på de to hullene som er igjen} =3 {utslagene på de tre hullene som er igjen} =4 {utslagene på de fire hullene som er igjen} =5 {utslagene på de fem hullene som er igjen} =6 {utslagene på de seks hullene som er igjen} other {utslagene på de # hullene som er igjen}}.",
+    "teamShortLine": "{who}, og {holes, plural, =0 {ingen hull er igjen} other {bare # hull er igjen}}. Bytt på et tidligere hull der {surplus} står.",
+    "partialLine": "Et kort på laget er levert. Du kan bare bytte så lenge alle har nok.",
+    "boxTitle": "{who} utslag",
+    "boxSwap": "Alle må ha minst {min} utslag før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}. Trykk «Rediger hullene» og bytt til {names} på {holes, plural, =1 {ett hull} =2 {to hull} =3 {tre hull} =4 {fire hull} =5 {fem hull} =6 {seks hull} other {# hull}} der {surplus} står.",
+    "boxPickOpen": "Alle må ha minst {min} utslag før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}. Trykk «Rediger hullene» og velg {names} på hullene som ikke har utslag ennå.",
+    "boxEdit": "Rediger hullene",
+    "organizerLine": "{name} har {count} av {min} utslag"
   },
   "holes": {
     "entry": {

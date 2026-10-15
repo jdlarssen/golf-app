@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { Mock } from 'vitest';
 
 // IMPORTANT: mocks must be declared before importing the component under test.
@@ -7,7 +7,7 @@ import type { Mock } from 'vitest';
 // logic and stays REAL so the render test proves the wiring, not a stub.
 vi.mock('dexie-react-hooks', () => ({ useLiveQuery: vi.fn() }));
 vi.mock('@/lib/sync/db', () => ({
-  localDb: { syncQueue: { filter: vi.fn() } },
+  localDb: { syncQueue: { filter: vi.fn() }, teeShotQueue: { filter: vi.fn() } },
 }));
 vi.mock('@/lib/sync/syncWorker', () => ({
   drainQueue: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +31,7 @@ import { SubmitForm } from './SubmitForm';
 
 const useLiveQueryMock = useLiveQuery as unknown as Mock;
 const filterMock = localDb.syncQueue.filter as unknown as Mock;
+const teeShotFilterMock = localDb.teeShotQueue.filter as unknown as Mock;
 
 function qItem(scoreId: string): SyncQueueItem {
   return {
@@ -47,9 +48,13 @@ function qItem(scoreId: string): SyncQueueItem {
  * Komponenten spør `syncQueue.filter(pred).count()`. Kjør det ekte
  * predikatet over `items` så tellingen er den samme som Dexie ville gitt.
  */
-function setQueue(items: SyncQueueItem[]) {
+function setQueue(items: SyncQueueItem[], teeShots: SyncQueueItem[] = []) {
   filterMock.mockImplementation((pred: (item: SyncQueueItem) => boolean) => ({
     count: () => items.filter(pred).length,
+  }));
+  // #2580: the tee-shot queue is asked the same way.
+  teeShotFilterMock.mockImplementation((pred: (item: SyncQueueItem) => boolean) => ({
+    count: () => teeShots.filter(pred).length,
   }));
 }
 
@@ -80,5 +85,27 @@ describe('SubmitForm', () => {
     setQueue([qItem('g2:u1:7')]);
     rerender(<SubmitForm {...props} />);
     expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
+
+    // #2580: a tee shot for this round still in its queue locks it too.
+    setQueue([], [qItem('g1:1:7')]);
+    rerender(<SubmitForm {...props} />);
+    expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+
+    // #2580: someone lacks tee shots — the button stays focusable, is
+    // described by the box, and a tap moves focus there instead of delivering.
+    setQueue([]);
+    rerender(
+      <>
+        <div id="tee-shot-short" tabIndex={-1} data-testid="box" />
+        <SubmitForm {...props} teeShotBlocked />
+      </>,
+    );
+    const locked = screen.getByTestId('submit-scorecard');
+    expect(locked).toBeEnabled();
+    expect(locked).toHaveAttribute('aria-disabled', 'true');
+    expect(locked).toHaveAttribute('aria-describedby', 'tee-shot-short');
+    fireEvent.click(locked);
+    expect(screen.getByTestId('box')).toHaveFocus();
+    expect(props.submitAction).not.toHaveBeenCalled();
   });
 });

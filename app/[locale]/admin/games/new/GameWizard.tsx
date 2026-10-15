@@ -83,7 +83,8 @@ import {
   type StepFourInstruction,
 } from '@/lib/wizard/pickerSubtitle';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
-import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots } from '@/lib/games/teeShots';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
@@ -109,6 +110,7 @@ import { NinesSetup } from './sections/NinesSetup';
 import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { WagerStakeSetup } from './sections/WagerStakeSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
+import { TeeShotSection } from './sections/TeeShotSection';
 import { PatsomeSetup } from './sections/PatsomeSetup';
 import { useTranslations } from 'next-intl';
 import type {
@@ -1169,6 +1171,15 @@ function WizardBody({
                   }
                 />
               )}
+              {isScrambleFamily(state.gameMode) && (
+                <TeeShotSection
+                  mode={state.gameMode}
+                  teamSize={state.teamSize}
+                  value={state.minTeeShots}
+                  onChange={state.setMinTeeShots}
+                  disabled={state.lockGameMode}
+                />
+              )}
               {state.isWolf && (
                 <WolfSetup
                   scoring={state.wolfScoring}
@@ -1235,6 +1246,15 @@ function WizardBody({
                   playerCount={
                     state.intent === 'kompis' ? state.expectedPlayerCount : undefined
                   }
+                />
+              )}
+              {state.isShamble && (
+                <TeeShotSection
+                  mode={state.gameMode}
+                  teamSize={state.teamSize}
+                  value={state.minTeeShots}
+                  onChange={state.setMinTeeShots}
+                  disabled={state.lockGameMode}
                 />
               )}
               {state.isPatsome && (
@@ -1456,6 +1476,7 @@ function FormDataInputs({
     shambleVariant,
     shambleCount,
     shambleScoring,
+    minTeeShots,
     patsomeScoring,
     orderedPayload,
     unassignedPlayerIds,
@@ -1520,6 +1541,16 @@ function FormDataInputs({
       <input type="hidden" name="registration_type" value={registrationType} />
       <input type="hidden" name="let_friends_skip_gate" value={letFriendsSkipGate ? '1' : ''} />
       <input type="hidden" name="group_id" value={groupId} />
+      {/* #2580: mounted whatever the step, and also when the section is locked
+          (a disabled control does not post; a save of a scheduled game would
+          otherwise drop the setting). Empty = off. */}
+      {formatTracksTeeShots(gameMode) && (
+        <input
+          type="hidden"
+          name={MIN_TEE_SHOTS_FIELD}
+          value={minTeeShots === null ? '' : String(minTeeShots)}
+        />
+      )}
       {isStablefordFamily(gameMode) && (
         <input type="hidden" name="stableford_team_size" value={teamSize} />
       )}
