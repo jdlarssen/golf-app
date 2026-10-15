@@ -116,7 +116,7 @@ export default async function CreatorAvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -125,6 +125,8 @@ export default async function CreatorAvsluttPage({
       status: GameStatus;
       require_peer_approval: boolean;
       game_mode: GameMode;
+      // #2580: for the tee-shot notice.
+      mode_config: unknown;
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
@@ -385,7 +387,7 @@ export default async function CreatorAvsluttPage({
       )}
       {/* #2580: who lacks tee shots; «Avslutt likevel» still ends the game. */}
       <div className="px-1">
-        <TeeShotOrganizerNotice gameId={gameId} />
+        <TeeShotOrganizerNotice gameId={gameId} gameMode={game.game_mode} modeConfig={game.mode_config} />
       </div>
       {body}
     </AppShell>

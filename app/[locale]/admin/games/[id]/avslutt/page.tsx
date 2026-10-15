@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { RemindMissing } from '@/components/games/RemindMissing';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
@@ -56,7 +57,7 @@ export default async function AvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -64,6 +65,9 @@ export default async function AvsluttPage({
       name: string;
       status: GameStatus;
       require_peer_approval: boolean;
+      game_mode: GameMode;
+      // #2580: for the tee-shot notice.
+      mode_config: unknown;
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
@@ -138,7 +142,7 @@ export default async function AvsluttPage({
         subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
       {/* #2580: who lacks tee shots («Hvem sitt utslag»). */}
-      <TeeShotOrganizerNotice gameId={gameId} />
+      <TeeShotOrganizerNotice gameId={gameId} gameMode={game.game_mode} modeConfig={game.mode_config} />
       {missing.length > 0 && (
         // Purreknappen (#1889) hører til her, i blokken som sier hvem som
         // mangler — ikke på status-siden i et annet rom.

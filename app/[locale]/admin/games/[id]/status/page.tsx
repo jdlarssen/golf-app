@@ -46,6 +46,8 @@ type GameRow = {
   // #2041: decides who owns each hole's row. DB type is `string`;
   // games_game_mode_check constrains it to GameMode.
   game_mode: GameMode;
+  // #2580: for the tee-shot notice.
+  mode_config: unknown;
 };
 
 type PlayerRow = {
@@ -92,7 +94,7 @@ export default async function GameStatusPage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, name, status, require_peer_approval, courses(name), hole_segment, game_mode')
+    .select('id, name, status, require_peer_approval, courses(name), hole_segment, game_mode, mode_config')
     .eq('id', id)
     .maybeSingle<GameRow>();
   // Error ≠ absence (#1445): a transient query failure must reach the error
@@ -279,7 +281,9 @@ export default async function GameStatusPage({
       )}
 
       {/* #2580: who lacks tee shots («Hvem sitt utslag»), active games only. */}
-      {isActive && <TeeShotOrganizerNotice gameId={id} className="mt-4" />}
+      {isActive && (
+        <TeeShotOrganizerNotice gameId={id} gameMode={game.game_mode} modeConfig={game.mode_config} className="mt-4" />
+      )}
 
       {/* Purre-seksjon — kun aktive spill. */}
       {isActive && (
