@@ -129,6 +129,8 @@ export type TeamResultBoardRow = {
   /** «Lag 4», from the caller, so a sentence names the team like a player. */
   name: string;
   memberIds: string[];
+  /** The team handicap where the result has one (the texas family), else `null`. */
+  teamHandicap: number | null;
   rank: number;
   tied: boolean;
   /** `null` for a team without a played hole. */
@@ -142,13 +144,18 @@ export type TeamResultBoardRow = {
 function teamLines(result: TeamBoardResult) {
   switch (result.kind) {
     case 'texas_scramble':
-      return result.teams.map((t) => ({ ...t, memberIds: t.members.map((m) => m.userId), total: t.totalNet }));
+      return result.teams.map((t) => ({
+        ...t,
+        memberIds: t.members.map((m) => m.userId),
+        total: t.totalNet,
+        teamHandicap: t.teamHandicap as number | null,
+      }));
     case 'best_ball':
-      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.total }));
+      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.total, teamHandicap: null }));
     case 'shamble':
-      return result.teams.map((t) => ({ ...t, memberIds: t.members, total: t.totalScore }));
+      return result.teams.map((t) => ({ ...t, memberIds: t.members, total: t.totalScore, teamHandicap: null }));
     case 'stableford':
-      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.totalPoints }));
+      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.totalPoints, teamHandicap: null }));
   }
 }
 
@@ -169,6 +176,7 @@ export function teamResultBoard(
       teamNumber: l.teamNumber,
       name: teamName(l.teamNumber),
       memberIds: l.memberIds,
+      teamHandicap: l.teamHandicap,
       rank: l.rank,
       tied: (counts.get(l.rank) ?? 0) > 1,
       total: played > 0 ? l.total : null,
