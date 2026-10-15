@@ -44,15 +44,9 @@ export function teamHoleTones(
 ): { holeNumber: number; tone: TeamHoleTone }[] {
   switch (result.kind) {
     case 'texas_scramble':
-    case 'best_ball': {
-      const team = (result.teams as readonly { teamNumber: number; holes: readonly { holeNumber: number; par: number; teamNet: number | null }[] }[]).find(
-        (t) => t.teamNumber === teamNumber,
-      );
-      return (team?.holes ?? []).map((h) => ({
-        holeNumber: h.holeNumber,
-        tone: h.teamNet === null ? 'unset' : vsParTone(h.teamNet - h.par),
-      }));
-    }
+      return netTones(result.teams.find((t) => t.teamNumber === teamNumber)?.holes ?? []);
+    case 'best_ball':
+      return netTones(result.teams.find((t) => t.teamNumber === teamNumber)?.holes ?? []);
     case 'shamble':
       return result.holes.map((h) => {
         const cell = h.teams.find((c) => c.teamNumber === teamNumber);
@@ -72,6 +66,16 @@ export function teamHoleTones(
       });
     }
   }
+}
+
+/** The team's net against par per hole (texas and best ball rows). */
+function netTones(
+  holes: readonly { holeNumber: number; par: number; teamNet: number | null }[],
+): { holeNumber: number; tone: TeamHoleTone }[] {
+  return holes.map((h) => ({
+    holeNumber: h.holeNumber,
+    tone: h.teamNet === null ? 'unset' : vsParTone(h.teamNet - h.par),
+  }));
 }
 
 export type TeamLiveRow = TeamResultBoardRow & {
