@@ -262,7 +262,11 @@ export async function submitScorecardCore(
           .is('submitted_at', null)
           .select('user_id');
 
-  if (error) return { ok: false, reason: 'db' };
+  // #2580: the base's guard (guard_game_players_tee_shots) has the last word.
+  // A teammate who changed a pick after the check above leaves the team short,
+  // and the guard refuses the UPDATE with P0001 'tee_shots_short'; nothing was
+  // written, so it is the same answer as the check's.
+  if (error) return { ok: false, reason: deliveryErrorReason(error) };
 
   const writtenIds = (updated ?? []).map((r) => r.user_id);
 
@@ -491,6 +495,15 @@ export async function submitScorecardCore(
   expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
   return { ok: true, alreadySubmitted: false, submitted, alsoDelivered };
+}
+
+/**
+ * #2580: the delivery UPDATE's error as an answer. The delivery guard
+ * (0209, guard_game_players_tee_shots) refuses with P0001 'tee_shots_short';
+ * anything else is 'db'.
+ */
+function deliveryErrorReason(error: { code?: string; message?: string }): 'tee_shots_short' | 'db' {
+  return error.code === 'P0001' && error.message === 'tee_shots_short' ? 'tee_shots_short' : 'db';
 }
 
 /**

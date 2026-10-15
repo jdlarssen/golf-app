@@ -819,6 +819,86 @@ describe('submitScorecardCore — hvem sitt utslag (#2580)', () => {
     ).toEqual(['team_number', [1, 2]]);
   });
 
+  // The check above reads the picks, then the UPDATE runs. A teammate who
+  // changes a pick in between leaves the team short, and the base's guard
+  // (guard_game_players_tee_shots) refuses with P0001 'tee_shots_short'.
+  const TRIGGER_REFUSAL = { code: 'P0001', message: 'tee_shots_short', details: null, hint: null };
+
+  it('team card: the guard refuses the UPDATE → tee_shots_short, not db', async () => {
+    const supabase = buildSupabaseMock([
+      { data: texasGame(), error: null },
+      { data: membership({ team_number: 1 }), error: null },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: [
+          { user_id: USER_ID, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      {
+        data: [1, 2, 3, 4, 5, 6].map((hole) => ({
+          team_number: 1,
+          hole_number: hole,
+          tee_shot_by: hole <= 3 ? USER_ID : MATE,
+        })),
+        error: null,
+      },
+      { data: null, error: TRIGGER_REFUSAL },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(result).toEqual({ ok: false, reason: 'tee_shots_short' });
+    expect(updateCalls(adminMock)).toHaveLength(1);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('own card (shamble): the guard refuses the UPDATE → tee_shots_short, not db', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: activeGame({
+          game_mode: 'shamble',
+          mode_config: {
+            kind: 'shamble',
+            team_size: 2,
+            teams_count: 1,
+            shamble_variant: 'shamble',
+            shamble_count: 2,
+            shamble_scoring: 'net',
+            min_tee_shots: 3,
+          },
+        }),
+        error: null,
+      },
+      { data: membership({ team_number: 1 }), error: null },
+      { data: null, error: TRIGGER_REFUSAL },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: [
+          { user_id: USER_ID, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      {
+        data: [1, 2, 3, 4, 5, 6].map((hole) => ({
+          team_number: 1,
+          hole_number: hole,
+          tee_shot_by: hole <= 3 ? USER_ID : MATE,
+        })),
+        error: null,
+      },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(result).toEqual({ ok: false, reason: 'tee_shots_short' });
+    expect(updateCalls(supabase)).toHaveLength(1);
+  });
+
   it('without the setting, team_tee_shots is never read', async () => {
     const supabase = buildSupabaseMock([
       { data: texasGame(false), error: null },
