@@ -2561,9 +2561,11 @@
     "freeLine": "{who} · {holes, plural, one {# hull} other {# hull}} å velge fritt på",
     "lockedLine": "{names} trenger {holes, plural, =1 {utslaget på det siste hullet} =2 {utslagene på de to hullene som er igjen} =3 {utslagene på de tre hullene som er igjen} =4 {utslagene på de fire hullene som er igjen} =5 {utslagene på de fem hullene som er igjen} =6 {utslagene på de seks hullene som er igjen} other {utslagene på de # hullene som er igjen}}.",
     "teamShortLine": "{who}, og {holes, plural, =0 {ingen hull er igjen} other {bare # hull er igjen}}. Bytt på et tidligere hull der {surplus} står.",
+    "teamShortGoneLine": "{who}, og {holes, plural, =0 {ingen hull er igjen} other {bare # hull er igjen}}. Bytt på et tidligere hull der en som ikke er med på laget lenger står.",
     "partialLine": "Et kort på laget er levert. Du kan bare bytte så lenge alle har nok.",
     "boxTitle": "{who} utslag",
     "boxSwap": "Alle må ha minst {min} utslag før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}. Trykk «Rediger hullene» og bytt til {names} på {holes, plural, =1 {ett hull} =2 {to hull} =3 {tre hull} =4 {fire hull} =5 {fem hull} =6 {seks hull} other {# hull}} der {surplus} står.",
+    "boxSwapGone": "Alle må ha minst {min} utslag før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}. Trykk «Rediger hullene» og bytt til {names} på {holes, plural, =1 {ett hull} =2 {to hull} =3 {tre hull} =4 {fire hull} =5 {fem hull} =6 {seks hull} other {# hull}} der en som ikke er med på laget lenger står.",
     "boxPickOpen": "Alle må ha minst {min} utslag før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}. Trykk «Rediger hullene» og velg {names} på hullene som ikke har utslag ennå.",
     "boxEdit": "Rediger hullene",
     "organizerLine": "{name} har {count} av {min} utslag"
