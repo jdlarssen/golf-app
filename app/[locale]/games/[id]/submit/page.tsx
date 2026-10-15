@@ -194,7 +194,7 @@ export default async function SubmitPage({
     gameId: id,
     game,
     players,
-    deliveringIds: [...(me.submitted_at ? [] : [userId]), ...flightCards.map((c) => c.userId)],
+    deliveringIds: deliveringCardIds(userId, me.submitted_at, flightCards),
     locale: locale as AppLocale,
     unknownPlayer: t('unknownPlayer'),
   });
@@ -726,6 +726,15 @@ type TeeShotBoxData = {
  * first), as the box's text. Null when the setting is off or nobody is short.
  * The count and the advice come from lib/games/teeShots.ts.
  */
+/** The cards a tap on «Lever» sends in: my own (unless it is in) and the flight's. */
+function deliveringCardIds(
+  userId: string,
+  mySubmittedAt: string | null,
+  flightCards: readonly { userId: string }[],
+): string[] {
+  return [...(mySubmittedAt ? [] : [userId]), ...flightCards.map((c) => c.userId)];
+}
+
 async function teeShotBoxFor(args: {
   supabase: Awaited<ReturnType<typeof getServerClient>>;
   gameId: string;
@@ -806,7 +815,9 @@ function TeeShotBoxOnPage({
       action={
         <SmartLink
           href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
-          className="self-start font-sans text-sm font-semibold text-primary underline underline-offset-2"
+          // 20 px of text; tap-extend makes the target 44 px (8 up into the
+          // gap above, 16 down into the box's padding) without moving the box.
+          className="tap-extend self-start font-sans text-sm font-semibold text-primary underline underline-offset-2 [--tap-extend:-8px_0_-16px]"
         >
           {box.editLabel}
         </SmartLink>
