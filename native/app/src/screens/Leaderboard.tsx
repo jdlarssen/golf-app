@@ -434,6 +434,10 @@ export function LeaderboardBody({
 
   // #1978: best ball viser bare første halvdel mens runden pågår, som webben.
   // Porten og klippet bor i `firstHalfScope` (delt med lagtavla, #2579).
+  // Låskortet står i lagtavla alene: en klippet tavle har alltid `teamBoard`,
+  // fordi porten åpner bare når et lag har spilt første halvdel, og da har
+  // `teamBoardFor` både lag og slag å tegne. Den gamle tabellen under
+  // (`ResultView` uten `teamBoard`) nås ikke klippet fra skjermen.
   const scope = firstHalfScope(bundle, scores);
   if (scope.view === 'waiting') {
     return <CalmNote text={FIRST_HALF_WAITING_NOTE} testID="leaderboard-first-half-waiting" />;
