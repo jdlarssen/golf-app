@@ -14,30 +14,29 @@ import { sortByTeeShotName, teeShotNames, teeShotOrganizerLines, type TeeShotT }
  * and the organiser's own «Avslutt»). Renders nothing when the game does not
  * have the setting, or nobody is short.
  *
- * The game and `team_tee_shots` are read with the ordinary server client: the
- * SELECT policy lets the creator in (`is_game_creator_or_admin`), so an
- * organiser who neither plays nor is admin sees the rows too. The roster with
- * names comes from the admin client, as those pages read it; each page has
- * checked the caller (admin, or admin-or-creator) before it renders this.
+ * The page passes the game's mode and `mode_config` from the row it already
+ * read, so a game without the setting costs no read at all. `team_tee_shots`
+ * is read with the ordinary server client: the SELECT policy lets the creator
+ * in (`is_game_creator_or_admin`), so an organiser who neither plays nor is
+ * admin sees the rows too. The roster with names comes from the admin client,
+ * as those pages read it; each page has checked the caller (admin, or
+ * admin-or-creator) before it renders this.
  */
 export async function TeeShotOrganizerNotice({
   gameId,
+  gameMode,
+  modeConfig,
   className = 'mb-4',
 }: {
   gameId: string;
+  gameMode: GameMode;
+  modeConfig: unknown;
   /** Spacing around the block, to fit each page's rhythm. */
   className?: string;
 }) {
-  const supabase = await getServerClient();
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('game_mode, mode_config')
-    .eq('id', gameId)
-    .maybeSingle<{ game_mode: GameMode; mode_config: unknown }>();
-  if (gameError) throw gameError;
-  if (!game) return null;
-  const minimum = readMinTeeShots(game.game_mode, game.mode_config);
+  const minimum = readMinTeeShots(gameMode, modeConfig);
   if (minimum === null) return null;
+  const supabase = await getServerClient();
 
   const { data: roster, error: rosterError } = await getAdminClient()
     .from('game_players')

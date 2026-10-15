@@ -73,7 +73,7 @@ export default async function AvsluttLikevelPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, game_mode, mode_config, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -81,6 +81,8 @@ export default async function AvsluttLikevelPage({
       name: string;
       status: GameStatus;
       game_mode: GameMode;
+      // #2580: for the tee-shot notice.
+      mode_config: unknown;
       require_peer_approval: boolean;
       side_tournament_enabled: boolean;
       side_ld_count: number;
@@ -157,7 +159,7 @@ export default async function AvsluttLikevelPage({
 
       <div className="space-y-4 px-1">
         {/* #2580: who lacks tee shots; «Avslutt likevel» still ends the game. */}
-        <TeeShotOrganizerNotice gameId={gameId} className="" />
+        <TeeShotOrganizerNotice gameId={gameId} gameMode={game.game_mode} modeConfig={game.mode_config} className="" />
         {error === 'roster_changed' && (
           <Banner tone="error" testId="roster-changed-banner">
             {t('rosterChanged')}
