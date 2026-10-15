@@ -64,6 +64,11 @@ export function TeeShotPicker({
   const rows = useTeamTeeShots(gameId);
   // Until Dexie has answered, counts and locks would be wrong; show nothing.
   if (rows === undefined) return null;
+  // A withdrawn player is locked out, as their score rows are (the RPC
+  // refuses them); their own row in the team list says so.
+  const viewerWithdrawn = teams.some((team) =>
+    team.members.some((m) => m.userId === myUserId && m.withdrawnAt != null),
+  );
   return (
     <div data-testid="tee-shot-picker" className="flex flex-col gap-3">
       {teams.map((team) => (
@@ -77,7 +82,7 @@ export function TeeShotPicker({
           rows={rows}
           showTeamLabel={teams.length > 1}
           myUserId={myUserId}
-          disabled={disabled}
+          disabled={disabled || viewerWithdrawn}
         />
       ))}
     </div>

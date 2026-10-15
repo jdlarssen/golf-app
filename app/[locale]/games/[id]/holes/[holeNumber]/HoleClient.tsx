@@ -625,9 +625,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
             minimum={teeShots.minimum}
             teams={teeShots.teams}
             myUserId={myUserId}
-            // A withdrawn player is locked out like their score rows; the
-            // RPC would refuse the pick anyway.
-            disabled={gameInactive || withdrawn}
+            disabled={gameInactive}
           />
         )}
         <HoleSyncFooter
