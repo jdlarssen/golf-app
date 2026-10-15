@@ -13,8 +13,10 @@ vi.mock('./holeLiveQueries', () => ({
   useMyScoredHoles: vi.fn(),
   useSiblingScoredHoles: vi.fn(),
   usePendingSyncCount: vi.fn(),
-  // #2580: the tee-shot picker's rows (empty: nobody picked yet).
+  // #2580: the tee-shot picker's rows (empty: nobody picked yet) and the
+  // choices the sync gave up (none).
   useTeamTeeShots: vi.fn(() => []),
+  useGivenUpTeeShotCount: vi.fn(() => 0),
 }));
 
 // #1611: the hole seed now goes through the shared server->local merge, which
@@ -1043,8 +1045,9 @@ describe('HoleClient — score rail (#2251)', () => {
 });
 
 describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
-  // `withdrawnFor`: the members whose game_players row is withdrawn.
-  const teeShots = (withdrawnFor: string[] = []): HoleClientProps['teeShots'] => ({
+  // The picker's own behaviour (locks, withdrawn viewer, writes) is in
+  // TeeShotPicker.test.tsx; here only that the hole page mounts it.
+  const teeShots: HoleClientProps['teeShots'] = {
     minimum: 4,
     teams: [
       {
@@ -1053,21 +1056,20 @@ describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
           userId,
           name: userId,
           submittedAt: null,
-          withdrawnAt: withdrawnFor.includes(userId) ? '2026-10-15T10:00:00.000Z' : null,
+          withdrawnAt: null,
         })),
       },
     ],
-  });
+  };
 
-  it('a player in the game can pick', () => {
-    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots: teeShots() })} />);
+  it('a game with the setting gets the picker under the flight', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'shamble', teeShots })} />);
+    expect(screen.getByTestId('tee-shot-picker')).toBeInTheDocument();
     expect(screen.getByTestId('tee-shot-u2')).toBeEnabled();
   });
 
-  it('a withdrawn player cannot pick, as with the score rows (the RPC refuses them)', () => {
-    render(
-      <HoleClient {...baseProps({ gameMode: 'shamble', teeShots: teeShots(['u1']), withdrawn: true })} />,
-    );
-    expect(screen.getByTestId('tee-shot-u2')).toBeDisabled();
+  it('a game without it has no picker', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'shamble' })} />);
+    expect(screen.queryByTestId('tee-shot-picker')).toBeNull();
   });
 });

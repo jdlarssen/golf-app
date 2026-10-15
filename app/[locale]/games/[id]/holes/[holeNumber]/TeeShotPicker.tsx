@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -17,7 +17,8 @@ import {
 } from '@/lib/games/teeShots';
 import { teeShotCountText, teeShotHoleLineText } from '@/components/games/teeShotCopy';
 import { TeeShotCheck } from '@/components/games/TeeShotCheck';
-import { useTeamTeeShots } from './holeLiveQueries';
+import { useRouter } from '@/i18n/navigation';
+import { useGivenUpTeeShotCount, useTeamTeeShots } from './holeLiveQueries';
 
 export interface TeeShotPickerMember {
   userId: string;
@@ -62,6 +63,7 @@ export function TeeShotPicker({
   disabled,
 }: TeeShotPickerProps) {
   const rows = useTeamTeeShots(gameId);
+  useRefreshWhenSyncGivesUp(gameId);
   // Until Dexie has answered, counts and locks would be wrong; show nothing.
   if (rows === undefined) return null;
   // A withdrawn player is locked out, as their score rows are (the RPC
@@ -87,6 +89,24 @@ export function TeeShotPicker({
       ))}
     </div>
   );
+}
+
+/**
+ * When the sync gives up a tee shot (refused, or out of retries), the server
+ * usually knows something the page does not: a card on the team is in. The
+ * synced row is already back in Dexie; refresh so the delivery state the
+ * server rendered (who has delivered, and so what is locked) is fresh too.
+ * Only a rise counts: choices given up before the page opened do not refresh.
+ */
+function useRefreshWhenSyncGivesUp(gameId: string) {
+  const router = useRouter();
+  const givenUp = useGivenUpTeeShotCount(gameId);
+  const seen = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (givenUp === undefined) return;
+    if (seen.current !== undefined && givenUp > seen.current) router.refresh();
+    seen.current = givenUp;
+  }, [givenUp, router]);
 }
 
 function TeamBlock({
