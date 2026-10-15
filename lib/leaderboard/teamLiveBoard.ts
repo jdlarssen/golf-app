@@ -12,6 +12,8 @@ import { playOrder } from '@/lib/games/nextHole';
 import type { StartType } from '@/lib/games/startType';
 import { strokeTerm, type StrokeTerm } from '@/lib/scorecard/scoreRail';
 import type { HoleSegment } from '@/lib/scoring/holeSegment';
+import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
+import { computeStablefordPoints, type StablefordPointsInput } from '@/lib/scoring/modes/stableford';
 import type { BestBallResult, TexasScrambleResult } from '@/lib/scoring/modes/types';
 import { vsParTone, type VsParTone } from './bestBallHoles';
 import { teamResultBoard, type ResultBoard, type TeamBoardResult, type TeamResultBoardRow } from './resultBoard';
@@ -21,6 +23,31 @@ export type TeamHoleTone = VsParTone | 'unset';
 
 /** The unit under the total and in the band's line: net, gross (shamble) or points. */
 export type TeamDisplayUnit = 'net' | 'gross' | 'points';
+
+/**
+ * The table a team stableford game's points are in. The result says
+ * `kind: 'stableford'` for both, so the caller tells (from the game mode).
+ */
+export type StablefordTable = 'standard' | 'modified';
+
+const POINTS_FOR: Record<StablefordTable, (input: StablefordPointsInput) => number> = {
+  standard: computeStablefordPoints,
+  modified: computeModifiedStablefordPoints,
+};
+
+/**
+ * The tone for the points a team got on a hole: the score against par that
+ * gives those points, read from the engine's own table (the first such
+ * score, so «double bogey or worse» reads as two over). Points beyond the
+ * table's best are under par.
+ */
+function stablefordTone(points: number, table: StablefordTable): VsParTone {
+  const pointsFor = POINTS_FOR[table];
+  for (let vsPar = -4; vsPar <= 2; vsPar++) {
+    if (pointsFor({ par: 0, netStrokes: vsPar }) === points) return vsParTone(vsPar);
+  }
+  return points > pointsFor({ par: 0, netStrokes: 0 }) ? 'under' : 'over2';
+}
 
 const RECENT_HOLES = 5;
 /** Played holes before a team gets movement, as on the solo board. */
@@ -35,12 +62,14 @@ export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
 /**
  * Each hole's tone for one team, in hole order. Net in every net format;
  * shamble against the par of every counted ball; team stableford from the
- * lowest net of the players who played the hole (the lowest net gives the
- * most points in both points tables).
+ * points the team got (the better partner's, `teamPoints`) in the game's
+ * table, so a mixed team with different pars from the men's and ladies'
+ * tees gets the tone its points say.
  */
 export function teamHoleTones(
   result: TeamBoardResult,
   teamNumber: number,
+  stablefordTable: StablefordTable = 'standard',
 ): { holeNumber: number; tone: TeamHoleTone }[] {
   switch (result.kind) {
     case 'texas_scramble':
@@ -60,10 +89,11 @@ export function teamHoleTones(
       });
     case 'stableford': {
       const team = result.teams.find((t) => t.teamNumber === teamNumber);
-      return (team?.holes ?? []).map((h) => {
-        const nets = h.players.filter((p) => p.gross !== null && p.netStrokes !== null).map((p) => p.netStrokes as number);
-        return { holeNumber: h.holeNumber, tone: nets.length === 0 ? 'unset' : vsParTone(Math.min(...nets) - h.par) };
-      });
+      // A hole nobody on the team has played also scores 0: no tone for it.
+      return (team?.holes ?? []).map((h) => ({
+        holeNumber: h.holeNumber,
+        tone: h.players.some((p) => p.gross !== null) ? stablefordTone(h.teamPoints, stablefordTable) : 'unset',
+      }));
     }
   }
 }
@@ -96,6 +126,7 @@ export function teamLiveBoard(
   now: TeamBoardResult,
   previous: TeamBoardResult | null,
   teamName: (teamNumber: number) => string,
+  { stablefordTable = 'standard' }: { stablefordTable?: StablefordTable } = {},
 ): ResultBoard<TeamLiveRow> {
   const board = teamResultBoard(now, teamName);
   const before = previous
@@ -104,7 +135,7 @@ export function teamLiveBoard(
   return {
     ...board,
     rows: board.rows.map((row) => {
-      const tones = teamHoleTones(now, row.teamNumber);
+      const tones = teamHoleTones(now, row.teamNumber, stablefordTable);
       const rankBefore = before.get(row.teamNumber);
       return {
         ...row,

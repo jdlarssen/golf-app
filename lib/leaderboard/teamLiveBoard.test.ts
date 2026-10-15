@@ -11,6 +11,7 @@ import {
   bestBallHoleCard,
   scrambleHoleCard,
   teamDisplayUnit,
+  teamHoleTones,
   teamLiveBoard,
   withoutLatestHolePerTeam,
 } from './teamLiveBoard';
@@ -87,7 +88,7 @@ describe('teamLiveBoard — total, unit and tone per format', () => {
   });
 });
 
-describe('teamLiveBoard — the tone is net, and the lowest net in team stableford', () => {
+describe('teamLiveBoard — the tone is net, and the better partner’s points in team stableford', () => {
   // One stroke on every hole: CH 18 for the player (best ball, stableford), or
   // team handicap 18 in texas (50 % of 18 + 18). Gross 4, 5, 6 on par 4 is net
   // 3, 4, 5: under, par, bogey, where gross would say par, bogey, double.
@@ -116,9 +117,10 @@ describe('teamLiveBoard — the tone is net, and the lowest net in team stablefo
     expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'over1']);
   });
 
-  it('team stableford: the lowest net of the players who played the hole', () => {
-    // a1 (CH 18) nets 3, 4, 5; a2 (CH 0) nets 3, 6, 4. Lowest: 3, 4, 4. The
-    // first player's net, the highest net or the lowest gross all differ.
+  it('team stableford: the points of the better partner on each hole', () => {
+    // a1 (CH 18) nets 3, 4, 5 (3, 2, 1 points); a2 (CH 0) nets 3, 6, 4 (3, 0,
+    // 2). The team gets 3, 2, 2. The first player's, the worse player's or
+    // the gross scores all give other tones.
     const context = ctx('stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, {
       a1: { team: 1, ch: 18, gross: [4, 5, 6] },
       a2: { team: 1, gross: [3, 6, 4] },
@@ -126,6 +128,53 @@ describe('teamLiveBoard — the tone is net, and the lowest net in team stablefo
     });
     const board = teamLiveBoard(computeLeaderboard(context) as TeamBoardResult, null, teamName);
     expect(board.rows.find((r) => r.teamNumber === 1)!.tones.map((h) => h.tone)).toEqual(['under', 'par', 'par']);
+  });
+});
+
+describe('teamHoleTones — team stableford follows the points the team got', () => {
+  // A mixed team on a hole that is par 4 from the men's tee and par 5 from the
+  // ladies'. The team's points are the better partner's (`teamPoints`), so the
+  // tone is read from those points, in the game's own table.
+  function mixed(kind: 'stableford' | 'modified_stableford', he: number, she: number): ScoringContext {
+    return {
+      game: {
+        id: 'g',
+        game_mode: kind,
+        mode_config:
+          kind === 'stableford'
+            ? { kind, team_size: 2, points_table: 'standard' }
+            : { kind, team_size: 2, points_table: 'modified' },
+      },
+      players: [
+        { userId: 'he', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'she', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
+        { userId: 'x', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'y', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: [{ number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }],
+      scores: [
+        { userId: 'he', holeNumber: 1, gross: he },
+        { userId: 'she', holeNumber: 1, gross: she },
+        { userId: 'x', holeNumber: 1, gross: 4 },
+        { userId: 'y', holeNumber: 1, gross: 4 },
+      ],
+    };
+  }
+  const toneOf = (context: ScoringContext, table: 'standard' | 'modified') =>
+    teamHoleTones(computeLeaderboard(context) as TeamBoardResult, 1, table).map((h) => h.tone);
+
+  it('standard: he makes a bogey (1), she a par (2), and the team’s 2 points are a par', () => {
+    expect(toneOf(mixed('stableford', 5, 5), 'standard')).toEqual(['par']);
+  });
+
+  it('modified: her birdie gives the team 2 points, a birdie in that table', () => {
+    expect(toneOf(mixed('modified_stableford', 4, 4), 'modified')).toEqual(['under']);
+  });
+
+  it('a hole nobody on the team has played has no tone, though it scores 0', () => {
+    const context = mixed('stableford', 5, 5);
+    const unplayed = { ...context, scores: context.scores.filter((sc) => sc.userId === 'x' || sc.userId === 'y') };
+    expect(toneOf(unplayed, 'standard')).toEqual(['unset']);
   });
 });
 
