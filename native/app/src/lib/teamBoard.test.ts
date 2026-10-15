@@ -202,6 +202,21 @@ describe('teamBoardFor — best ball, first half', () => {
     });
   });
 
+  it('says «deg» in the middle of the sentence when your own ball counted', () => {
+    const card = (me8: number, marte8: number) =>
+      teamBoardFor({
+        bundle: homeBundle({ game: { gameMode: 'best_ball', modeConfig: BEST_BALL }, players: bestBall }),
+        scores: [
+          ...scores.filter((s) => !((s.userId === ME || s.userId === 'marte') && s.holeNumber === 8)),
+          ...holeScores('g-live', ME, 8, me8, 8),
+          ...holeScores('g-live', 'marte', 8, marte8, 8),
+        ],
+        userId: ME,
+      })!.holeCard?.lead?.names;
+    expect(card(4, 5)).toBe('deg');
+    expect(card(4, 4)).toBe('deg og Marte');
+  });
+
   it('gives the strip the holes played of nine', () => {
     expect(model.strip).toMatchObject({ place: '2. plass', detail: '8 av 9 hull', action: { kind: 'hole', holeNumber: 9 } });
   });

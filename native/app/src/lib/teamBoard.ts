@@ -221,6 +221,7 @@ function members(
   bundle: GameBundle,
   memberIds: readonly string[],
   userId: string | null,
+  you: string = BOARD_TEAM_TEXT.you,
 ): { names: string[]; initials: string[] } {
   const byId = new Map(bundle.players.map((player) => [player.userId, player]));
   const nameOf = (id: string) => shortDisplayName(byId.get(id) ?? { name: null, nickname: null });
@@ -229,7 +230,7 @@ function members(
     ...memberIds.filter((id) => id !== userId).sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'no')),
   ];
   return {
-    names: ordered.map((id) => (id === userId ? BOARD_TEAM_TEXT.you : nameOf(id))),
+    names: ordered.map((id) => (id === userId ? you : nameOf(id))),
     initials: ordered.map((id) => nameInitials(byId.get(id)?.name)),
   };
 }
@@ -491,7 +492,12 @@ function holeCard(
     const [before, after] = BOARD_TEAM_TEXT.bestBallBall.split('{names}');
     return {
       heading: formatMessage(BOARD_TEAM_TEXT.holeCardHeading, { hole: card.holeNumber }),
-      lead: { before, names: formatNameList(members(bundle, card.contributorIds, userId).names), after },
+      // Inne i setningen er seeren «deg», ikke «Deg» som først i navnelinja.
+      lead: {
+        before,
+        names: formatNameList(members(bundle, card.contributorIds, userId, BOARD_TEAM_TEXT.youInSentence).names),
+        after,
+      },
       score: formatMessage(BOARD_TEAM_TEXT.bestBallScore, {
         net: card.net,
         term: termText(card.term, card.overPar).toLowerCase(),
