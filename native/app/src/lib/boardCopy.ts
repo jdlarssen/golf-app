@@ -125,8 +125,9 @@ export const BOARD_TEAM_TEXT = {
   /** Enheten under summen og i båndet; poeng er webbens `common.poengLabel`. */
   net: 'netto',
   gross: 'brutto',
-  /** Seeren i navnelinja og i «Ballen til …». */
+  /** Seeren først i navnelinja, og inne i setningen «Ballen til deg talte». */
   you: 'Deg',
+  youInSentence: 'deg',
   yourTeam: 'Ditt lag',
   winnerTeam: 'Vinnerlaget',
   stripKicker: 'Laget ditt',
