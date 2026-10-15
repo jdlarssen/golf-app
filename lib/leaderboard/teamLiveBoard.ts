@@ -62,15 +62,15 @@ export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
 /**
  * Each hole's tone for one team, in hole order. Net in every net format;
  * shamble against the par of every counted ball; team stableford from the
- * best points among the partners who played the hole, in the game's table,
- * so a mixed team
+ * best points among the partners who played the hole, in the game's table
+ * (required: the result says `stableford` for both tables), so a mixed team
  * with different pars from the men's and ladies' tees gets the tone its
  * points say.
  */
 export function teamHoleTones(
   result: TeamBoardResult,
   teamNumber: number,
-  stablefordTable: StablefordTable = 'standard',
+  stablefordTable: StablefordTable,
 ): { holeNumber: number; tone: TeamHoleTone }[] {
   switch (result.kind) {
     case 'texas_scramble':
@@ -136,7 +136,7 @@ export function teamLiveBoard(
   now: TeamBoardResult,
   previous: TeamBoardResult | null,
   teamName: (teamNumber: number) => string,
-  { stablefordTable = 'standard' }: { stablefordTable?: StablefordTable } = {},
+  { stablefordTable }: { stablefordTable: StablefordTable },
 ): ResultBoard<TeamLiveRow> {
   const board = teamResultBoard(now, teamName);
   const before = previous
