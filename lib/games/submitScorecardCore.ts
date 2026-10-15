@@ -140,7 +140,7 @@ export async function submitScorecardCore(
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       require_peer_approval: boolean;
       game_mode: string;
-      // #2580: read for «Hvem sitt utslag» (min_tee_shots) only.
+      // #2580: read for the «Hvem sitt utslag» minimum only.
       mode_config: unknown;
       hole_segment: 'full' | 'front9' | 'back9';
       tournament_id: string | null;
