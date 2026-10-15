@@ -21,6 +21,7 @@
 --      is three players on six each.
 --   G4 shamble, team_size 4, minimum 3, active: the Type A partial case.
 --   G5 Texas, active, setting off. G6 Texas, scheduled, setting on.
+--   G7 Texas, team_size 2, minimum 3, active: w1 active, w2 withdrawn.
 --   tt_creator creates every game and plays in none; tt_out is in no game.
 --
 -- The organiser's INSERTs pass the invite-eligibility guard (0115/0208) by
@@ -35,7 +36,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(60);
 
 \ir fixtures/rls_helpers.psql
 
@@ -57,22 +58,37 @@ create or replace function torny_rls.tt_sj()      returns uuid language sql immu
 create or replace function torny_rls.tt_ss()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-258000000043'::uuid $$;
 create or replace function torny_rls.tt_sp()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-258000000044'::uuid $$;
 
+create or replace function torny_rls.tt_w1()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-258000000051'::uuid $$;
+create or replace function torny_rls.tt_w2()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-258000000052'::uuid $$;
+
 create or replace function torny_rls.tt_game(n int) returns uuid language sql immutable as $$ select ('00000000-0000-4000-a000-25800000010' || n::text)::uuid $$;
 
--- Tries a draft Texas game with the given team size and minimum; false when
--- the CHECK refuses it. Runs as the service role.
-create or replace function torny_rls.tt_check_accepts(p_size int, p_min int) returns boolean
+-- Tries a draft game of the given format with the given team size and
+-- minimum; false when games_min_tee_shots_valid refuses it. Any other error
+-- (another CHECK included) is raised, so it cannot pass for «går ikke».
+-- Runs as the service role.
+create or replace function torny_rls.tt_check_accepts(p_mode text, p_size int, p_min int) returns boolean
   language plpgsql
   as $$
+  declare
+    v_config jsonb;
+    v_constraint text;
   begin
+    v_config := case p_mode
+      when 'shamble' then jsonb_build_object('kind', 'shamble', 'team_size', p_size, 'teams_count', 2,
+                                             'shamble_variant', 'shamble', 'shamble_count', 2, 'shamble_scoring', 'net')
+      else jsonb_build_object('kind', p_mode, 'team_size', p_size, 'teams_count', 2, 'team_handicap_pct', 25)
+    end || jsonb_build_object('min_tee_shots', p_min);
     insert into public.games (name, course_id, tee_box_id, status, game_mode, mode_config, created_by)
-    values ('TT check', torny_rls.course_id(), torny_rls.tee_box_id(), 'draft', 'texas_scramble',
-            jsonb_build_object('kind', 'texas_scramble', 'team_size', p_size, 'teams_count', 2,
-                               'team_handicap_pct', 25, 'min_tee_shots', p_min),
-            torny_rls.tt_creator());
+    values ('TT check', torny_rls.course_id(), torny_rls.tee_box_id(), 'draft', p_mode, v_config, torny_rls.tt_creator());
     return true;
   exception
-    when check_violation then return false;
+    when check_violation then
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint = 'games_min_tee_shots_valid' then
+        return false;
+      end if;
+      raise;
   end;
   $$;
 
@@ -94,7 +110,8 @@ select uid, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'auth
     torny_rls.tt_g2_p(4), torny_rls.tt_g2_p(5), torny_rls.tt_g2_p(6),
     torny_rls.tt_marte(), torny_rls.tt_jonas(), torny_rls.tt_sigrid(), torny_rls.tt_per(),
     torny_rls.tt_x(1), torny_rls.tt_x(2), torny_rls.tt_x(3),
-    torny_rls.tt_sm(), torny_rls.tt_sj(), torny_rls.tt_ss(), torny_rls.tt_sp()
+    torny_rls.tt_sm(), torny_rls.tt_sj(), torny_rls.tt_ss(), torny_rls.tt_sp(),
+    torny_rls.tt_w1(), torny_rls.tt_w2()
   ]) as uid;
 
 update public.users set is_admin = false, name = 'TT ' || right(id::text, 2)
@@ -112,7 +129,9 @@ insert into public.games (id, name, course_id, tee_box_id, status, game_mode, mo
   (torny_rls.tt_game(5), 'TT G5', torny_rls.course_id(), torny_rls.tee_box_id(), 'active', 'texas_scramble',
    '{"kind":"texas_scramble","team_size":2,"teams_count":2,"team_handicap_pct":25}', torny_rls.tt_creator(), now()),
   (torny_rls.tt_game(6), 'TT G6', torny_rls.course_id(), torny_rls.tee_box_id(), 'scheduled', 'texas_scramble',
-   '{"kind":"texas_scramble","team_size":2,"teams_count":2,"team_handicap_pct":25,"min_tee_shots":3}', torny_rls.tt_creator(), null);
+   '{"kind":"texas_scramble","team_size":2,"teams_count":2,"team_handicap_pct":25,"min_tee_shots":3}', torny_rls.tt_creator(), null),
+  (torny_rls.tt_game(7), 'TT G7', torny_rls.course_id(), torny_rls.tee_box_id(), 'active', 'texas_scramble',
+   '{"kind":"texas_scramble","team_size":2,"teams_count":1,"team_handicap_pct":25,"min_tee_shots":3}', torny_rls.tt_creator(), now());
 
 insert into public.game_players (game_id, user_id, team_number, flight_number) values
   (torny_rls.tt_game(1), torny_rls.tt_g1_a1(), 1, 1),
@@ -138,6 +157,10 @@ insert into public.game_players (game_id, user_id, team_number, flight_number) v
   (torny_rls.tt_game(4), torny_rls.tt_sp(), 1, 1),
   (torny_rls.tt_game(5), torny_rls.tt_g1_a1(), 1, 1),
   (torny_rls.tt_game(6), torny_rls.tt_g1_a1(), 1, 1);
+
+insert into public.game_players (game_id, user_id, team_number, flight_number, withdrawn_at) values
+  (torny_rls.tt_game(7), torny_rls.tt_w1(), 1, 1, null),
+  (torny_rls.tt_game(7), torny_rls.tt_w2(), 1, 1, now());
 
 -- G3 team 1, Utslag 3 (`Utslag-forslag-levering`), hole by hole:
 -- Sigrid, Marte, Marte, Jonas, Sigrid, Marte, Marte, Jonas, Per,
@@ -190,15 +213,17 @@ select throws_ok(
   '23514', null,
   'CHECK: a four-player team cannot have a minimum of 5 (UPDATE of mode_config)');
 
--- The same table stands in lib/games/teeShots.test.ts (minTeeShotsFeasible).
+-- The same table stands in lib/games/teeShots.test.ts (minTeeShotsFeasible),
+-- and holds for each of the four formats.
 select results_eq(
-  $$ select s, m, torny_rls.tt_check_accepts(s, m)
-       from (values (2,3),(2,4),(2,5),(2,6),(3,3),(3,4),(3,5),(3,6),(4,3),(4,4),(4,5),(4,6)) as v(s, m)
-      order by s, m $$,
+  format($$ select s, m, torny_rls.tt_check_accepts(%L, s, m)
+              from (values (2,3),(2,4),(2,5),(2,6),(3,3),(3,4),(3,5),(3,6),(4,3),(4,4),(4,5),(4,6)) as v(s, m)
+             order by s, m $$, f),
   $$ values (2,3,true),(2,4,true),(2,5,true),(2,6,true),
             (3,3,true),(3,4,true),(3,5,true),(3,6,true),
             (4,3,true),(4,4,true),(4,5,false),(4,6,false) $$,
-  'CHECK agrees with minTeeShotsFeasible on all twelve team size × minimum pairs');
+  format('CHECK agrees with minTeeShotsFeasible on all twelve team size × minimum pairs (%s)', f))
+  from unnest(array['texas_scramble', 'ambrose', 'florida_scramble', 'shamble']) as f;
 
 select throws_ok(
   $$ insert into public.games (name, course_id, tee_box_id, status, game_mode, mode_config, created_by)
@@ -235,6 +260,18 @@ select ok(has_function_privilege('authenticated', 'public.set_team_tee_shot_if_n
   'authenticated can run set_team_tee_shot_if_newer');
 select ok(not has_function_privilege('anon', 'public.set_team_tee_shot_if_newer(uuid, integer, integer, uuid, timestamptz)', 'execute'),
   'anon cannot run set_team_tee_shot_if_newer');
+select ok(not (has_table_privilege('authenticated', 'public.team_tee_shots', 'INSERT')
+            or has_table_privilege('authenticated', 'public.team_tee_shots', 'UPDATE')
+            or has_table_privilege('authenticated', 'public.team_tee_shots', 'DELETE')
+            or has_table_privilege('authenticated', 'public.team_tee_shots', 'TRUNCATE')),
+  'authenticated has no INSERT, UPDATE, DELETE or TRUNCATE on team_tee_shots');
+select ok(not (has_table_privilege('anon', 'public.team_tee_shots', 'INSERT')
+            or has_table_privilege('anon', 'public.team_tee_shots', 'UPDATE')
+            or has_table_privilege('anon', 'public.team_tee_shots', 'DELETE')
+            or has_table_privilege('anon', 'public.team_tee_shots', 'TRUNCATE')),
+  'anon has no INSERT, UPDATE, DELETE or TRUNCATE on team_tee_shots');
+select ok(has_table_privilege('authenticated', 'public.team_tee_shots', 'SELECT'),
+  'authenticated keeps SELECT on team_tee_shots (the policy decides the rows)');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Reading
@@ -274,17 +311,19 @@ select throws_ok(
   '42501', null,
   'a player cannot INSERT into team_tee_shots directly');
 
-select lives_ok(
+select throws_ok(
   $$ update public.team_tee_shots set tee_shot_by = torny_rls.tt_per()
       where game_id = torny_rls.tt_game(3) and team_number = 1 and hole_number = 1 $$,
-  'a direct UPDATE as a player runs (and matches nothing)');
+  '42501', null,
+  'a player cannot UPDATE team_tee_shots directly');
 select is((select tee_shot_by from public.team_tee_shots where game_id = torny_rls.tt_game(3) and team_number = 1 and hole_number = 1),
   torny_rls.tt_sigrid(),
   'the direct UPDATE changed nothing');
 
-select lives_ok(
+select throws_ok(
   $$ delete from public.team_tee_shots where game_id = torny_rls.tt_game(3) $$,
-  'a direct DELETE as a player runs (and matches nothing)');
+  '42501', null,
+  'a player cannot DELETE from team_tee_shots directly');
 select is((select count(*)::int from public.team_tee_shots where game_id = torny_rls.tt_game(3) and team_number = 1), 18,
   'the direct DELETE removed nothing');
 
@@ -365,6 +404,16 @@ select is((select was_applied from public.set_team_tee_shot_if_newer(torny_rls.t
   null::boolean,
   'refused: the organiser who does not play is not a writer');
 
+select torny_rls.as_user(torny_rls.tt_w2());
+select is((select was_applied from public.set_team_tee_shot_if_newer(torny_rls.tt_game(7), 1, 1, torny_rls.tt_w1(), now() - interval '1 hour')),
+  null::boolean,
+  'refused: a withdrawn player cannot write for their own team');
+
+select torny_rls.as_user(torny_rls.tt_w1());
+select is((select was_applied from public.set_team_tee_shot_if_newer(torny_rls.tt_game(7), 1, 1, torny_rls.tt_w2(), now() - interval '1 hour')),
+  null::boolean,
+  'refused: an active teammate cannot give the tee shot to a withdrawn player');
+
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Who may write
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -401,6 +450,18 @@ select is((select was_applied from public.set_team_tee_shot_if_newer(torny_rls.t
 select is((select tee_shot_by from public.team_tee_shots where game_id = torny_rls.tt_game(1) and team_number = 1 and hole_number = 1),
   torny_rls.tt_g1_a1(),
   'last write wins: the row keeps the newer choice');
+-- The guard sits on the upsert itself, so two first writes at the same moment
+-- cannot let the older stamp win either (both reach DO UPDATE). A refused
+-- write answers with the row that stands.
+select is((select tee_shot_by from public.set_team_tee_shot_if_newer(torny_rls.tt_game(1), 1, 1, torny_rls.tt_g1_a2(), now() - interval '30 minutes')),
+  torny_rls.tt_g1_a1(),
+  'last write wins: an older write is answered with the row that stands');
+select is((select was_applied
+             from public.set_team_tee_shot_if_newer(torny_rls.tt_game(1), 1, 1, torny_rls.tt_g1_a2(),
+                    (select client_updated_at from public.team_tee_shots
+                      where game_id = torny_rls.tt_game(1) and team_number = 1 and hole_number = 1))),
+  false,
+  'last write wins: the same stamp does not overwrite');
 
 select ok((select was_applied from public.upsert_score_if_newer(torny_rls.tt_game(1), torny_rls.tt_g1_a1(), 3, 4, torny_rls.tt_g1_a1(), now() - interval '5 minutes')),
   'score first on hole 3');
