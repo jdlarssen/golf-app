@@ -361,8 +361,9 @@ function liveBoard(
     const memberNames = formatNameList(team.names);
     const holes = formatMessage(BOARD_TEAM_TEXT.holes, { holes: row.holesPlayed });
     // Live har bare lederen og ditt lag prikker og bevegelse; best ball har
-    // prikker på alle lag og ingen bevegelse.
-    const marked = leader || you;
+    // prikker på alle lag og ingen bevegelse. Før lagets første hull har ditt
+    // lag ingen prikker å vise, og står som de andre med «hull 0».
+    const marked = (leader || you) && row.holesPlayed > 0;
     const movement = !firstHalf && marked ? row.movement : null;
     const recent = firstHalf || marked ? row.recent : [];
     return {
