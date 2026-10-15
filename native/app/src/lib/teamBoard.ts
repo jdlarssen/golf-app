@@ -14,7 +14,7 @@
 // `firstHalfScope`; stripas knapp er Hjem-kortets (`heroAction`).
 import {
   firstHalfHoleNumbersForSegment,
-  holeNumbersForSegment,
+  hiddenHoleNumbersForSegment,
   lastHoleForSegment,
 } from '../../../../lib/games/holeScope';
 import { STATUS_LABELS } from '../../../../lib/games/status';
@@ -433,12 +433,11 @@ function liveBoard(
   };
 }
 
-/** Hullene i første halvdel og resten, som webbens tavle regner dem (`state3.tsx`). */
+/** Hullene i første halvdel og resten, samme spenn som webbens tavle (`holeScope.ts`). */
 function halves(): { open: number[]; hidden: number[]; last: number } {
-  const open = firstHalfHoleNumbersForSegment('full');
   return {
-    open,
-    hidden: holeNumbersForSegment('full').filter((hole) => !open.includes(hole)),
+    open: firstHalfHoleNumbersForSegment('full'),
+    hidden: hiddenHoleNumbersForSegment('full'),
     last: lastHoleForSegment('full'),
   };
 }

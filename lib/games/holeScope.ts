@@ -68,3 +68,14 @@ export function firstHalfHoleNumbersForSegment(segment: HoleSegment): number[] {
   const nums = holeNumbersForSegment(segment);
   return nums.slice(0, Math.ceil(nums.length / 2));
 }
+
+/**
+ * The rest of `segment`'s holes: the ones a first-half board keeps back until
+ * the organiser ends the game (#2579). 'full' → [10..18]. The web board's
+ * lock card, the hole-by-hole page and the app's team board all name this
+ * span («Hull 10–18 vises når arrangøren avslutter spillet.»).
+ */
+export function hiddenHoleNumbersForSegment(segment: HoleSegment): number[] {
+  const open = new Set(firstHalfHoleNumbersForSegment(segment));
+  return holeNumbersForSegment(segment).filter((hole) => !open.has(hole));
+}
