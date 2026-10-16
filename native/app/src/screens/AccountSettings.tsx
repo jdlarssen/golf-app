@@ -18,7 +18,7 @@
 // nederst i rødt med luft over. Luften er ikke pynt — den er avstanden en
 // tommel på vei mot raden over trenger for ikke å treffe sletting.
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DesignSwitch } from '../components/DesignSwitch';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
@@ -258,6 +258,7 @@ function AiConsentSetting() {
     if (!result.ok) {
       setValue(!next);
       setFailed(true);
+      AccessibilityInfo.announceForAccessibility(AI_CONSENT_TEXT.toggleFailed);
       return;
     }
     await rememberAiConsentAnswered(userId);
@@ -269,7 +270,11 @@ function AiConsentSetting() {
         <Text style={[styles.aiTitle, { color: colors.text }]}>{AI_CONSENT_TEXT.toggleTitle}</Text>
         <Text style={[styles.aiSub, { color: colors.muted }]}>{AI_CONSENT_TEXT.toggleSubtitle}</Text>
         {failed ? (
-          <Text style={[styles.aiSub, { color: colors.danger }]} testID="account-ai-consent-error">
+          <Text
+            style={[styles.aiSub, { color: colors.danger }]}
+            accessibilityLiveRegion="polite"
+            testID="account-ai-consent-error"
+          >
             {AI_CONSENT_TEXT.toggleFailed}
           </Text>
         ) : null}
@@ -281,10 +286,12 @@ function AiConsentSetting() {
           onValueChange={(next) => void onToggle(next)}
           label={AI_CONSENT_TEXT.toggleTitle}
           // Varsler-tegningens bryter på en lys liste: skog når den er på,
-          // varm grå når den er av. Mørk drakt har ingen tegning; av-sporet tar
-          // listens kantfarge der.
+          // varm grå når den er av. Mørk drakt har ingen tegning; av-sporet er
+          // den dempede tekstfargen med 45 % dekning (samme grep som
+          // `NotificationsAndTheme`), så det synes mot kortet. Kantfargen
+          // forsvant nesten.
           onColor={colors.primary}
-          offColor={scheme === 'dark' ? colors.border : SWITCH_OFF_LIGHT}
+          offColor={scheme === 'dark' ? `${colors.muted}73` : SWITCH_OFF_LIGHT}
           testID="account-ai-consent-switch"
         />
       ) : null}

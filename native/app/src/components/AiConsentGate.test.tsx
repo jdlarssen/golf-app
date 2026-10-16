@@ -6,7 +6,8 @@
 // begge knappene finnes, lagrer riktig svar, og slipper spilleren inn i appen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { AccessibilityInfo, Text } from 'react-native';
+import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { saveAiConsent } from '../data/aiConsent';
 import { aiConsentStepFor, rememberAiConsentAnswered } from '../data/aiConsentGate';
 import { AiConsentGate } from './AiConsentGate';
@@ -33,7 +34,9 @@ describe('AiConsentGate', () => {
   it.each([
     { button: 'ai-consent-yes', granted: true },
     { button: 'ai-consent-no', granted: false },
-  ])('$button lagrer svaret og slipper spilleren inn', async ({ button, granted }) => {
+  ])('$button lagrer svaret og slipper spilleren inn, også etter en lagring som feilet', async ({ button, granted }) => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    (saveAiConsent as jest.Mock).mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true });
     await render(
       <AiConsentGate userId="user-me">
         <Text testID="app-stack">Appen</Text>
@@ -44,7 +47,11 @@ describe('AiConsentGate', () => {
     expect(screen.getByTestId('ai-consent-no')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId(button));
+    // Feilet: skjermen står, sier fra og leser det opp.
+    await waitFor(() => expect(screen.getByTestId('ai-consent-error')).toBeTruthy());
+    expect(announce).toHaveBeenCalledWith(AI_CONSENT_TEXT.saveFailed);
 
+    await fireEvent.press(screen.getByTestId(button));
     await waitFor(() => expect(screen.getByTestId('app-stack')).toBeTruthy());
     expect(saveAiConsent).toHaveBeenCalledWith('user-me', granted);
     expect(rememberAiConsentAnswered).toHaveBeenCalledWith('user-me');

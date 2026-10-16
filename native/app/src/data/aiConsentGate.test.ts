@@ -3,9 +3,9 @@
 // vises?
 //
 // Spørsmålet kommer én gang, når spilleren ikke har svart. Appen er
-// offline-først, så porten slipper deg inn ved tvil. Det er trygt, fordi bare
-// «ja» sender noe til AI-en (lib/ai/consent.ts): en som slipper forbi, er
-// ikke med i noen tekst før hen har svart.
+// offline-først, så porten slipper deg inn ved tvil. Det er trygt, fordi
+// navnet bare går til AI-en med «ja» (lib/ai/consent.ts): en som slipper
+// forbi, står ikke med navn i noen tekst før hen har svart.
 //
 //  1. **Husket svar → inn, uten å lese.** Et svar enheten har sett, leses ikke
 //     igjen; bryteren i «Personvern og konto» endrer det senere.
@@ -17,7 +17,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync } from 'expo-network';
 import { fetchOwnAiConsent } from './aiConsent';
-import { aiConsentStepFor, rememberAiConsentAnswered } from './aiConsentGate';
+import { aiConsentStepFor, forgetAiConsentAnswers, rememberAiConsentAnswered } from './aiConsentGate';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest'),
@@ -95,4 +95,15 @@ describe('aiConsentStepFor', () => {
 
     expect(await aiConsentStepFor(USER)).toBe(true);
   });
+});
+
+// #2561: slettes kontoen i appen, skal enheten ikke huske svaret heller.
+it('forgetAiConsentAnswers fjerner alle husket svar på enheten, og bare dem', async () => {
+  await rememberAiConsentAnswered('a');
+  await rememberAiConsentAnswered('b');
+  await AsyncStorage.setItem('torny:noe-annet', '1');
+
+  await forgetAiConsentAnswers();
+
+  expect(await AsyncStorage.getAllKeys()).toEqual(['torny:noe-annet']);
 });
