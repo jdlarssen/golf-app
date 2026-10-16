@@ -164,6 +164,9 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
   runden settes tilbake til «pågår», og alle leveringer nullstilles.
 - **Runden står på feil person?** Den flyttes til arrangøren. Det gjelder også
   gamle demo-runder som fortsatt står på review-kontoen.
+- **Svart på spørsmålet om AI-tekster?** Svaret slettes, så neste reviewer får
+  spørsmålet når hen logger inn. På en telefon der appen alt har sett et svar,
+  kommer spørsmålet ikke igjen før appen er installert på nytt.
 
 Den slutter med «✅ Allerede provisjonert — resatt til frisk demo.» og en
 `Arrangør`-linje som viser hvem runden står på. Les den linja — det er den som
