@@ -53,12 +53,10 @@ const INTERNAL_ID_KEYS = new Set(['userId', 'gameId']);
 export function factsForModel(
   facts: KavalkadeFacts,
   allowed: ReadonlySet<string>,
-  blockedGameIds: ReadonlySet<string> = NO_GAMES,
+  blockedGameIds: ReadonlySet<string>,
 ): unknown {
   return withoutInternalIds(withoutUnconsentedNames(facts, allowed, blockedGameIds));
 }
-
-const NO_GAMES: ReadonlySet<string> = new Set();
 
 /** The input rounds the facts mention (by `gameId`), in input order. */
 export function gamesInFacts(facts: KavalkadeFacts, games: readonly KavalkadeGame[]): KavalkadeGame[] {
@@ -148,7 +146,7 @@ function withoutInternalIds(value: unknown): unknown {
 export function buildKavalkadeNarrativePrompt(
   facts: KavalkadeFacts,
   allowed: ReadonlySet<string>,
-  blockedGameIds: ReadonlySet<string> = NO_GAMES,
+  blockedGameIds: ReadonlySet<string>,
 ): KavalkadeNarrativePrompt {
   return {
     system: buildSystemPrompt(facts),

@@ -26,8 +26,10 @@ export type AiConsentRow = { user_id: string; granted: boolean };
 
 /**
  * Some PostgREST hosts start refusing a long `.in()` list somewhere between
- * 200 and 400 ids (the URL gets too long). A game holds at most ~150 players
- * and a Kavalkade a handful, but the reader chunks anyway.
+ * 200 and 400 ids (the URL gets too long). A game holds at most ~150 players,
+ * but a Kavalkade asks about everyone in every round its facts mention, which
+ * for a club player can reach about 1 500 ids. The reader asks in chunks of
+ * 100, in parallel.
  */
 const IN_LIST_CHUNK = 100;
 

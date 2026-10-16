@@ -121,7 +121,12 @@ export async function generateAndPersistRoundReport(
 
     // #2561 PR B: only players who said yes reach the model. Nobody → no
     // report and no model call. A read error reads as nobody (fail closed).
-    const aiAllowedUserIds = await readAiAllowedUserIds(admin, [...nameByUserId.keys()]);
+    // Everyone in the game is read, withdrawn players too: they are not in
+    // the facts, but the game name may name them.
+    const aiAllowedUserIds = await readAiAllowedUserIds(
+      admin,
+      players.map((p) => p.user_id),
+    );
     if (aiAllowedUserIds.size === 0) return { status: 'skipped', report: null };
     // The game name is free text and may name someone who said no («Olas
     // 50-årsdag»). Everyone in the game counts, withdrawn players too.

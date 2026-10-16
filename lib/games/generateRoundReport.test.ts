@@ -219,6 +219,24 @@ describe('generateAndPersistRoundReport', () => {
     expect(request.messages[0].content).toMatch(/"gameName":\s*null/);
   });
 
+  it('#2561: reads the answer of a withdrawn player too, so a yes keeps a game name that names them', async () => {
+    getGameWithPlayersMock.mockResolvedValue({
+      ...GAME_ROW,
+      game: { ...GAME_ROW.game, name: 'Carls minnecup' },
+      players: [
+        ...GAME_ROW.players,
+        { user_id: 'u3', withdrawn_at: '2026-07-01T10:00:00.000Z', users: { name: 'Carl', nickname: null } },
+      ],
+    });
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u1', 'u2', 'u3']));
+
+    await generateAndPersistRoundReport(GAME_ID);
+
+    expect(readAiAllowedUserIdsMock).toHaveBeenCalledWith(expect.anything(), ['u1', 'u2', 'u3']);
+    const request = messagesCreateMock.mock.calls[0][0] as { messages: { content: string }[] };
+    expect(request.messages[0].content).toContain('Carls minnecup');
+  });
+
   it("returns 'skipped' without constructing the SDK client when ANTHROPIC_API_KEY is missing", async () => {
     delete process.env.ANTHROPIC_API_KEY;
 

@@ -9,14 +9,17 @@
  * A match is a whole word, in any case: the full name, any part of it, or the
  * nickname. A trailing genitive s counts («Olas», «Store Pers»), and hyphens
  * and apostrophes split words («Nordmann-cupen», «Ola's»). A single letter
- * does not count on its own, so an initial like the N in «Ola N.» does not
- * match «Lag N». Pure: no I/O.
+ * does not count on its own, whether it is a name part, the whole name or the
+ * nickname, so neither the N in «Ola N.» nor a nickname «N» matches «Lag N».
+ * Both texts are NFC-normalised first, so a decomposed «Åse» (A + ring) is the
+ * same word as a composed one. Pure: no I/O.
  */
 
 export type NamedPerson = { name: string | null; nickname?: string | null };
 
 function words(text: string): string[] {
   return text
+    .normalize('NFC')
     .toLocaleLowerCase('nb')
     .split(/[^\p{L}\p{N}]+/u)
     .filter((w) => w.length > 0);
@@ -44,9 +47,11 @@ export function gameNameMentions(gameName: string, people: readonly NamedPerson[
     if (person.name) {
       const parts = words(person.name);
       phrases.push(parts);
-      for (const part of parts) if (part.length > 1) phrases.push([part]);
+      for (const part of parts) phrases.push([part]);
     }
     if (person.nickname) phrases.push(words(person.nickname));
-    return phrases.some((phrase) => containsPhrase(haystack, phrase));
+    return phrases
+      .filter((phrase) => !(phrase.length === 1 && phrase[0].length === 1))
+      .some((phrase) => containsPhrase(haystack, phrase));
   });
 }
