@@ -10,31 +10,35 @@
 --   ALLOWED:
 --     1. eieren setter inn sin egen rad                       → PASS
 --     2. eieren leser sin egen rad                            → 1 rad
---     3. eieren endrer sin egen rad                           → PASS
+--     3. eieren lagrer svaret med upsert (insert … on conflict do update),
+--        slik appen og nettet gjør                            → PASS, verdien endret
+--     4. eieren endrer sin egen rad                           → PASS
 --
 --   FORBIDDEN (den fiendtlige direkte-forespørselen):
---     4. en annen innlogget leser raden                       → 0 rader (RLS using)
---     5. en annen setter inn en rad med eierens user_id       → REJECTED (with check)
---     6. en annen endrer eierens rad (hostile PATCH)          → 0 rader
---     7. eieren flytter raden til en annen user_id            → REJECTED (with check)
---     8. eieren sletter sin egen rad                          → REJECTED (rettighet)
---     9. authenticated har ingen DELETE-rettighet på tabellen (låser revoke-en;
---        punkt 8 alene ville stått grønt uten den, fordi ingen DELETE-policy
+--     5. en annen innlogget leser raden                       → 0 rader (RLS using)
+--     6. en annen setter inn en rad for en tredje bruker      → REJECTED (with check)
+--     7. en annen endrer eierens rad (hostile PATCH)          → 0 rader
+--     8. en annen upserter over eierens rad                   → REJECTED (RLS using)
+--     9. eieren flytter raden til en annen user_id            → REJECTED (with check)
+--    10. eieren sletter sin egen rad                          → REJECTED (rettighet)
+--    11. authenticated har ingen DELETE-rettighet på tabellen (låser revoke-en;
+--        punkt 10 alene ville stått grønt uten den, fordi ingen DELETE-policy
 --        finnes og slettingen da treffer null rader)
+--    12. authenticated har heller ingen TRUNCATE, REFERENCES eller TRIGGER
 --
 --   Triggeren:
---    10. en klient-sendt answered_at overstyres med now() ved INSERT
---    11. … og ved UPDATE
+--    13. en klient-sendt answered_at overstyres med now() ved INSERT
+--    14. … og ved UPDATE
 --
 --   anon:
---    12. anon leser hva som helst                             → REJECTED (rettighet)
---    13. anon har ingen SELECT-rettighet på tabellen
+--    15. anon leser hva som helst                             → REJECTED (rettighet)
+--    16. anon har ingen SELECT-rettighet på tabellen
 --
 --   Sletting:
---    14. sletting av brukeren (auth.users) sletter raden      → CASCADE
+--    17. sletting av brukeren (auth.users) sletter raden      → CASCADE
 --
 --   Kontroll:
---    15. service-rollen ser eierens rad med verdien fra punkt 3
+--    18. service-rollen ser eierens rad med verdien fra punkt 4
 --
 -- Anonymiseringen (spilleren som har spilt) dekkes i users_anonymize_test.sql
 -- og users_anonymize_fk_coverage_test.sql.
@@ -46,7 +50,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(18);
 
 \ir fixtures/rls_helpers.psql
 
@@ -94,6 +98,23 @@ create or replace function torny_rls.try_update_ai_consent(p_owner uuid, p_grant
     update public.ai_consents set granted = p_granted where user_id = p_owner;
     get diagnostics v_rows = row_count;
     return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;
+  end;
+  $$;
+
+-- try_upsert_ai_consent(owner, granted): PostgREST sin upsert. TRUE hvis raden
+-- etterpå har verdien. Krever både INSERT- og UPDATE-retten og -policyen.
+create or replace function torny_rls.try_upsert_ai_consent(p_owner uuid, p_granted boolean)
+  returns boolean
+  language plpgsql
+  as $$
+  begin
+    insert into public.ai_consents (user_id, granted) values (p_owner, p_granted)
+      on conflict (user_id) do update set granted = excluded.granted;
+    return exists (
+      select 1 from public.ai_consents where user_id = p_owner and granted = p_granted
+    );
   exception
     when insufficient_privilege then return false;
   end;
@@ -163,6 +184,11 @@ select is(
 );
 
 select ok(
+  torny_rls.try_upsert_ai_consent(torny_rls.active_id(), false),
+  'eieren kan lagre svaret med upsert (insert … on conflict do update)'
+);
+
+select ok(
   torny_rls.try_update_ai_consent(torny_rls.active_id(), false),
   'eieren kan endre sin egen rad (ombestemme seg)'
 );
@@ -188,6 +214,11 @@ select ok(
   'en annen kan IKKE endre eierens rad (hostile PATCH treffer 0 rader)'
 );
 
+select ok(
+  not torny_rls.try_upsert_ai_consent(torny_rls.active_id(), true),
+  'en annen kan IKKE upserte over eierens rad'
+);
+
 select torny_rls.as_user(torny_rls.active_id());
 
 select ok(
@@ -203,6 +234,13 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.ai_consents', 'delete'),
   'authenticated mangler DELETE-rettigheten på ai_consents'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.ai_consents', 'truncate')
+    and not has_table_privilege('authenticated', 'public.ai_consents', 'references')
+    and not has_table_privilege('authenticated', 'public.ai_consents', 'trigger'),
+  'authenticated mangler TRUNCATE, REFERENCES og TRIGGER på ai_consents'
 );
 
 -- ═════════════════════════════════════════════════════════════════════════════
