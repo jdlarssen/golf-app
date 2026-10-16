@@ -40,11 +40,11 @@ import 'server-only';
  * andre får `closed` og ser teaseren (K5).
  */
 
-import { readAiAllowedUserIds } from '@/lib/ai/consent';
+import { readAiAllowedUserIdsOrNull } from '@/lib/ai/consent';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { buildKavalkadeFacts, type KavalkadeFacts } from './buildKavalkadeFacts';
+import { buildKavalkadeFacts, type KavalkadeFacts, type KavalkadeInput } from './buildKavalkadeFacts';
 import { generateKavalkadeNarrative } from './generateKavalkadeNarrative';
-import { collectUserIds } from './kavalkadeNarrativePrompt';
+import { collectUserIds, gamesInFacts, gamesNamingUnconsenting } from './kavalkadeNarrativePrompt';
 import { loadKavalkadeInput } from './loadKavalkadeInput';
 import {
   KAVALKADE_CUTOFF,
@@ -112,19 +112,32 @@ export async function getOrCreateKavalkade(
     // spilles mellom forhåndsvisningen og slippet kommer til — men ingen runde
     // som ikke teller ved slippet er med, for frysegrensen er alltid
     // KAVALKADE_CUTOFF og aldri «nå».
-    return { status: 'preview', facts: await computeFacts(viewerUserId, year) };
+    return { status: 'preview', facts: (await computeFacts(viewerUserId, year)).facts };
   }
 
   const existing = await readStoredKavalkade(viewerUserId, year);
   if (existing) return { status: 'ready', ...existing };
 
-  const facts = await computeFacts(viewerUserId, year);
+  const { facts, input } = await computeFacts(viewerUserId, year);
   // #2561 PR B: the opening text is written only for a viewer who said yes to
   // AI texts, and other players without a yes are named null in what the
-  // model sees. One read for the viewer and everyone in the facts.
-  const allowed = await readAiAllowedUserIds(supabase, [viewerUserId, ...collectUserIds(facts)]);
+  // model sees. One read covers the viewer, everyone in the facts, and
+  // everyone in the rounds the facts mention: a round's name is free text and
+  // may name any of them («Olas 50-årsdag»), so such a name goes as null.
+  const rounds = gamesInFacts(facts, input.games);
+  const allowed = await readAiAllowedUserIdsOrNull(supabase, [
+    viewerUserId,
+    ...collectUserIds(facts),
+    ...rounds.flatMap((g) => g.players.map((p) => p.userId)),
+  ]);
+  // The answers could not be read: show the cards without an opening text,
+  // and store nothing, so the next opening tries again instead of keeping
+  // «no text» for the whole year.
+  if (allowed === null) {
+    return { status: 'ready', facts, narrative: null, generatedAt: now.toISOString() };
+  }
   const narrative = allowed.has(viewerUserId)
-    ? await generateKavalkadeNarrative(facts, allowed)
+    ? await generateKavalkadeNarrative(facts, allowed, gamesNamingUnconsenting(rounds, allowed))
     : null;
 
   const inserted = await supabase
@@ -239,12 +252,12 @@ function toStored(row: KavalkadeRow): StoredKavalkade {
 async function computeFacts(
   viewerUserId: string,
   year: number,
-): Promise<KavalkadeFacts> {
+): Promise<{ facts: KavalkadeFacts; input: KavalkadeInput }> {
   const input = await loadKavalkadeInput(viewerUserId, {
     year,
     cutoff: KAVALKADE_CUTOFF,
   });
-  return buildKavalkadeFacts(input);
+  return { facts: buildKavalkadeFacts(input), input };
 }
 
 /**

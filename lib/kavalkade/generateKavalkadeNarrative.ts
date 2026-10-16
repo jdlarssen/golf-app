@@ -48,6 +48,8 @@ export async function generateKavalkadeNarrative(
   facts: KavalkadeFacts,
   /** #2561: the players who said yes to AI texts; others are named null. */
   allowed: ReadonlySet<string>,
+  /** #2561: rounds whose name names someone without «ja»; their gameName is null. */
+  blockedGameIds: ReadonlySet<string> = new Set(),
 ): Promise<string | null> {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -57,7 +59,7 @@ export async function generateKavalkadeNarrative(
     // ingen grunn til å koste et modellkall.
     if (facts.rounds === 0) return null;
 
-    const { system, user } = buildKavalkadeNarrativePrompt(facts, allowed);
+    const { system, user } = buildKavalkadeNarrativePrompt(facts, allowed, blockedGameIds);
 
     const client = new Anthropic({
       apiKey,

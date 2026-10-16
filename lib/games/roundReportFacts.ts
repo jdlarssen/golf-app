@@ -79,7 +79,8 @@ export type RoundReportSkinsFacts = {
 };
 
 export type RoundReportFacts = {
-  gameName: string;
+  /** #2561: null when the name mentions a player without «ja» (`lib/ai/gameNameGuard.ts`). */
+  gameName: string | null;
   courseName: string | null;
   endedAt: string | null;
   formatLabel: string;
@@ -108,7 +109,8 @@ export type BuildRoundReportFactsOpts = {
   result: ModeResult;
   /** userId -> already-resolved display name (formatRevealName applied by caller). */
   nameByUserId: Map<string, string>;
-  gameName: string;
+  /** #2561: null when the name mentions a player without «ja» (`lib/ai/gameNameGuard.ts`). */
+  gameName: string | null;
   courseName: string | null;
   endedAt: string | null;
   gameMode: GameMode;

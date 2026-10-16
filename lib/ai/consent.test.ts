@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-const { aiAllowedUserIds, readAiAllowedUserIds, readOwnAiConsent } = await import('./consent');
+const { aiAllowedUserIds, readAiAllowedUserIds, readAiAllowedUserIdsOrNull, readOwnAiConsent } =
+  await import('./consent');
 
 /**
  * The client is the system boundary. One canned answer for every read, plus a
@@ -66,6 +67,16 @@ describe('readAiAllowedUserIds', () => {
     const { client } = fakeClient({ data: null, error: { message: 'boom' } });
     expect((await readAiAllowedUserIds(client, ['a'])).size).toBe(0);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringMatching(/^\[aiConsent\]/), expect.anything());
+  });
+
+  // #2561: the Kavalkade must tell a failed read from «nobody said yes», so a
+  // read error does not store a year without an opening text.
+  it('the OrNull variant gives null on a read error, and the same set otherwise', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failing = fakeClient({ data: null, error: { message: 'boom' } });
+    expect(await readAiAllowedUserIdsOrNull(failing.client, ['a'])).toBeNull();
+    const working = fakeClient({ data: [{ user_id: 'a', granted: true }], error: null });
+    expect([...((await readAiAllowedUserIdsOrNull(working.client, ['a'])) ?? [])]).toEqual(['a']);
   });
 
   it('asks nothing for an empty list', async () => {

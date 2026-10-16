@@ -9,8 +9,9 @@
  * Ren og I/O-fri (Type A, `docs/test-discipline.md`).
  */
 
+import { gameNameMentions } from '@/lib/ai/gameNameGuard';
 import { sanitizeNarrative } from '@/lib/ai/narrative';
-import type { KavalkadeFacts } from './buildKavalkadeFacts';
+import type { KavalkadeFacts, KavalkadeGame } from './buildKavalkadeFacts';
 
 export type KavalkadeNarrativePrompt = {
   system: string;
@@ -39,16 +40,58 @@ const INTERNAL_ID_KEYS = new Set(['userId', 'gameId']);
  * Navnene til dem som har sagt ja blir igjen — modellen skal kunne nevne
  * rivalen, lagkameraten og banen din ved navn. Står en annen spiller uten «ja»
  * i et kort, blir `name` null, og tallene står (systemteksten sier hva null
- * betyr). Personnavn står alltid ved siden av en `userId`; runder og baner
- * heter `gameName` og `courseName` og røres ikke.
+ * betyr). Personnavn står alltid ved siden av en `userId`. Runder heter
+ * `gameName` ved siden av en `gameId`: en runde i `blockedGameIds` (navnet
+ * nevner en deltaker uten «ja», `gamesNamingUnconsenting`) får `gameName`
+ * null. Baner (`courseName`) røres ikke.
  *
  * Begge vaskene skjer rekursivt på nøkkelnavn i stedet for felt for felt:
  * fakta har åtte nøstede typer med id-er spredt utover, og en håndskrevet
  * kopi av dem ville vært en ny kopi å vedlikeholde hver gang K1 legger til et
  * kort. Den vaskede kopien lagres aldri.
  */
-export function factsForModel(facts: KavalkadeFacts, allowed: ReadonlySet<string>): unknown {
-  return withoutInternalIds(withoutUnconsentedNames(facts, allowed));
+export function factsForModel(
+  facts: KavalkadeFacts,
+  allowed: ReadonlySet<string>,
+  blockedGameIds: ReadonlySet<string> = NO_GAMES,
+): unknown {
+  return withoutInternalIds(withoutUnconsentedNames(facts, allowed, blockedGameIds));
+}
+
+const NO_GAMES: ReadonlySet<string> = new Set();
+
+/** The input rounds the facts mention (by `gameId`), in input order. */
+export function gamesInFacts(facts: KavalkadeFacts, games: readonly KavalkadeGame[]): KavalkadeGame[] {
+  const ids = new Set<string>();
+  const walk = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
+      if (key === 'gameId' && typeof inner === 'string') ids.add(inner);
+      else walk(inner);
+    }
+  };
+  walk(facts);
+  return games.filter((g) => ids.has(g.gameId));
+}
+
+/**
+ * #2561: the rounds whose name mentions a participant without «ja» — anyone in
+ * the round, not only those on a card (`lib/ai/gameNameGuard.ts`).
+ */
+export function gamesNamingUnconsenting(
+  games: readonly KavalkadeGame[],
+  allowed: ReadonlySet<string>,
+): Set<string> {
+  const blocked = new Set<string>();
+  for (const game of games) {
+    const unconsenting = game.players.filter((p) => !allowed.has(p.userId));
+    if (gameNameMentions(game.gameName, unconsenting)) blocked.add(game.gameId);
+  }
+  return blocked;
 }
 
 /** Alle `userId`-er i fakta, for å spørre om samtykket deres én gang. */
@@ -69,15 +112,23 @@ export function collectUserIds(facts: KavalkadeFacts): string[] {
   return [...ids];
 }
 
-function withoutUnconsentedNames(value: unknown, allowed: ReadonlySet<string>): unknown {
-  if (Array.isArray(value)) return value.map((inner) => withoutUnconsentedNames(inner, allowed));
+function withoutUnconsentedNames(
+  value: unknown,
+  allowed: ReadonlySet<string>,
+  blockedGameIds: ReadonlySet<string>,
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((inner) => withoutUnconsentedNames(inner, allowed, blockedGameIds));
+  }
   if (value === null || typeof value !== 'object') return value;
 
   const record = value as Record<string, unknown>;
   const hideName = typeof record.userId === 'string' && !allowed.has(record.userId);
+  const hideGameName = typeof record.gameId === 'string' && blockedGameIds.has(record.gameId);
   const out: Record<string, unknown> = {};
   for (const [key, inner] of Object.entries(record)) {
-    out[key] = hideName && key === 'name' ? null : withoutUnconsentedNames(inner, allowed);
+    if ((hideName && key === 'name') || (hideGameName && key === 'gameName')) out[key] = null;
+    else out[key] = withoutUnconsentedNames(inner, allowed, blockedGameIds);
   }
   return out;
 }
@@ -97,10 +148,11 @@ function withoutInternalIds(value: unknown): unknown {
 export function buildKavalkadeNarrativePrompt(
   facts: KavalkadeFacts,
   allowed: ReadonlySet<string>,
+  blockedGameIds: ReadonlySet<string> = NO_GAMES,
 ): KavalkadeNarrativePrompt {
   return {
     system: buildSystemPrompt(facts),
-    user: buildUserPrompt(facts, allowed),
+    user: buildUserPrompt(facts, allowed, blockedGameIds),
   };
 }
 
@@ -112,7 +164,7 @@ function buildSystemPrompt(facts: KavalkadeFacts): string {
     'Tone: varm og sporty kompis som har fulgt året på nært hold. Du kan erte litt, men godmodig.',
     'Bruk KUN tall og navn fra fakta-objektet under. Finn ALDRI på runder, hull, navn eller tall som ikke står der, og regn aldri ut noe selv. Er et kort tomt (null), lat som det ikke finnes.',
     // #2561 PR B: a player without AI consent keeps their numbers, not their name.
-    'Er et navn null, vil personen ikke være med. Ikke nevn, beskriv eller hint til den personen.',
+    'Er et navn null, vil personen ikke være med. Ikke nevn, beskriv eller hint til den personen. Er gameName null, nevner du ikke navnet på runden.',
     'Plukk ut det mest fortellerverdige i året og bygg åpningen rundt det. Ikke ramse opp alle kortene; resten får spilleren se selv.',
     'Ikke avslutt med en generell oppsummering av typen «et år som viser …». Avslutt heller med en konkret detalj eller et vennskapelig stikk.',
     'Varier setningslengden, og la minst én setning være kort.',
@@ -137,8 +189,12 @@ function buildSystemPrompt(facts: KavalkadeFacts): string {
   return lines.join(' ');
 }
 
-function buildUserPrompt(facts: KavalkadeFacts, allowed: ReadonlySet<string>): string {
-  return `Skriv åpningen på golfåret ${facts.year}, basert utelukkende på fakta-objektet under:\n\n${JSON.stringify(factsForModel(facts, allowed), null, 2)}`;
+function buildUserPrompt(
+  facts: KavalkadeFacts,
+  allowed: ReadonlySet<string>,
+  blockedGameIds: ReadonlySet<string>,
+): string {
+  return `Skriv åpningen på golfåret ${facts.year}, basert utelukkende på fakta-objektet under:\n\n${JSON.stringify(factsForModel(facts, allowed, blockedGameIds), null, 2)}`;
 }
 
 /**

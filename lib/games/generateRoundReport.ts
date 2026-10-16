@@ -13,6 +13,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import { readAiAllowedUserIds } from '@/lib/ai/consent';
 import { getGameWithPlayers } from './getGameWithPlayers';
 import { buildRoundReportFacts, factsShowAnyPlayer } from './roundReportFacts';
+import { gameNameMentions } from '@/lib/ai/gameNameGuard';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
 import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
@@ -122,6 +123,11 @@ export async function generateAndPersistRoundReport(
     // report and no model call. A read error reads as nobody (fail closed).
     const aiAllowedUserIds = await readAiAllowedUserIds(admin, [...nameByUserId.keys()]);
     if (aiAllowedUserIds.size === 0) return { status: 'skipped', report: null };
+    // The game name is free text and may name someone who said no («Olas
+    // 50-årsdag»). Everyone in the game counts, withdrawn players too.
+    const unconsenting = players
+      .filter((p) => !aiAllowedUserIds.has(p.user_id))
+      .map((p) => ({ name: p.users?.name ?? null, nickname: p.users?.nickname ?? null }));
 
     const [courseRes, holesRes] = await Promise.all([
       admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
@@ -150,7 +156,7 @@ export async function generateAndPersistRoundReport(
     const facts = buildRoundReportFacts({
       result,
       nameByUserId,
-      gameName: game.name,
+      gameName: gameNameMentions(game.name, unconsenting) ? null : game.name,
       courseName,
       endedAt,
       gameMode: game.game_mode,
