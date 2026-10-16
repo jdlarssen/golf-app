@@ -436,7 +436,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       const who = bundle.players.find((player) => player.userId === row.teeShotBy);
       teeShotCells.set(row.holeNumber, {
         initials: nameInitials(who?.name ?? null),
-        fullName: who?.name ?? UNKNOWN_PLAYER,
+        // Står midt i skjermleserens setning («…, utslaget til ukjent spiller»).
+        fullName: who?.name ?? UNKNOWN_PLAYER.toLowerCase(),
         short: (status.players.find((p) => p.userId === row.teeShotBy)?.missing ?? 0) > 0,
       });
     }
