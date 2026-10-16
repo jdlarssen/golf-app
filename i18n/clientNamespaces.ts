@@ -19,6 +19,8 @@ type Namespace = keyof typeof messages;
 /** Namespaces client modules use on routes without a scope (≈100 kB). */
 export const ROOT_CLIENT_NAMESPACES = [
   'SyncBanner',
+  // #2561: the AI question on Home and the switch on Profil.
+  'aiConsent',
   'allowance',
   'auth',
   'common',

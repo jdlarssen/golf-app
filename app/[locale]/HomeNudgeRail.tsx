@@ -11,6 +11,7 @@ import { PushNudge } from '@/components/pwa/PushNudge';
 import { PasskeyEnrollmentPrompt } from '@/components/passkey/PasskeyEnrollmentPrompt';
 import { ProductUpdateBannerClient } from '@/components/products/ProductUpdateBannerClient';
 import { KavalkadeHomeNudge } from '@/components/kavalkade/KavalkadeHomeNudge';
+import { AiConsentHomeNudge } from '@/components/aiConsent/AiConsentHomeNudge';
 import type { KavalkadeHomeSlot } from '@/lib/kavalkade/release';
 
 export type ProductUpdateNudge = {
@@ -23,7 +24,8 @@ export type ProductUpdateNudge = {
 
 /**
  * Klient-orkestratoren for nudge-køen på Hjem (#1797, kontrakt #1069 K6).
- * Server-avgjorte fakta (produktnytt, passkey-utrulling og Kavalkaden, #2131)
+ * Server-avgjorte fakta (produktnytt, passkey-utrulling, Kavalkaden #2131 og
+ * spørsmålet om AI-tekster #2561)
  * kommer som props fra `HomeNudges`; Install/Push/Passkey avklarer seg selv i
  * klienten og melder verdikt via `onVerdict`. `resolveVisibleNudge` peker ut
  * plassen som vises.
@@ -38,14 +40,19 @@ export function HomeNudgeRail({
   passkeyEligible,
   kavalkade,
   kavalkadeYear,
+  aiConsentUnanswered,
 }: {
   productUpdate: ProductUpdateNudge | null;
   passkeyEligible: boolean;
   /** #2131: teaser, lenke eller ingenting — hele vinduet avgjøres på serveren. */
   kavalkade: KavalkadeHomeSlot | null;
   kavalkadeYear: number;
+  /** #2561: spilleren har ikke svart på spørsmålet om AI-tekster. */
+  aiConsentUnanswered: boolean;
 }) {
   const [statuses, setStatuses] = useState<NudgeSlotStatuses>({
+    // Server-decided, like kavalkade and productUpdate below.
+    aiConsent: aiConsentUnanswered ? 'yes' : 'no',
     install: 'pending',
     push: 'pending',
     // Server-decided slots start resolved — no client probe needed.
@@ -84,6 +91,7 @@ export function HomeNudgeRail({
 
   return (
     <>
+      {aiConsentUnanswered && visible === 'aiConsent' && <AiConsentHomeNudge />}
       <InstallBanner
         visible={visible === 'install'}
         onVerdict={reportInstall}

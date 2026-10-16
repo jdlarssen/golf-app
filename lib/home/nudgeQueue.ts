@@ -9,6 +9,11 @@
  * desember-målet i #1040, mens Install og Push er engangs-spørsmål som melder
  * seg 'no' med én gang de er besvart.
  *
+ * #2561 la spørsmålet om AI-tekster først, foran Install. Bare «ja» sender noe
+ * til språkmodellen (`lib/ai/consent.ts`), så en spiller som ikke har svart,
+ * står ikke i rundereferatene. Spørsmålet er et engangs-spørsmål som Install og
+ * Push, avgjøres på serveren og melder seg 'no' når raden finnes.
+ *
  * Kvalifiseringen er blandet server/klient og asynkron, så hver plass
  * rapporterer 'pending' → 'yes'/'no' etter hvert som den avklares. Regelen som
  * hindrer synlig banner-bytting ved sidelast: en plass vises først når ALLE
@@ -18,6 +23,7 @@
  */
 
 export const NUDGE_PRIORITY = [
+  'aiConsent',
   'install',
   'push',
   'kavalkade',

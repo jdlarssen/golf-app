@@ -1,5 +1,6 @@
 import { getServerClient } from '@/lib/supabase/server';
 import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
+import { readOwnAiConsent } from '@/lib/ai/consent';
 import { hasFinishedRoundInKavalkadeYear } from '@/lib/kavalkade/hasKavalkadeRound';
 import {
   KAVALKADE_YEAR,
@@ -14,17 +15,19 @@ import {
 /**
  * Server-halvdelen av nudge-køen på Hjem (#1797, kontrakt #1069 K6). Avklarer
  * de server-avgjorte plassene parallelt — siste uleste produktnytt (RLS via
- * session-client → brukeren ser kun egne rader), passkey-utrullingsgaten og
- * Kavalkaden (#2131) — og gir klient-orkestratoren `HomeNudgeRail` et ferdig
- * verdikt for alle. Suspense-wrappes på mount-stedet så oppslagene aldri
- * blokkerer side-skallet.
+ * session-client → brukeren ser kun egne rader), passkey-utrullingsgaten,
+ * Kavalkaden (#2131) og spørsmålet om AI-tekster (#2561) — og gir
+ * klient-orkestratoren `HomeNudgeRail` et ferdig verdikt for alle.
+ * Suspense-wrappes på mount-stedet så oppslagene aldri blokkerer side-skallet.
  */
 export async function HomeNudges({ userId }: { userId: string }) {
-  const [passkeyEligible, productUpdate, kavalkade] = await Promise.all([
-    getPasskeyEnrollAccess(),
-    fetchLatestProductUpdate(userId),
-    resolveKavalkadeSlot(userId),
-  ]);
+  const [passkeyEligible, productUpdate, kavalkade, aiConsentUnanswered] =
+    await Promise.all([
+      getPasskeyEnrollAccess(),
+      fetchLatestProductUpdate(userId),
+      resolveKavalkadeSlot(userId),
+      resolveAiConsentUnanswered(),
+    ]);
 
   return (
     <HomeNudgeRail
@@ -32,8 +35,24 @@ export async function HomeNudges({ userId }: { userId: string }) {
       passkeyEligible={passkeyEligible}
       kavalkade={kavalkade}
       kavalkadeYear={KAVALKADE_YEAR}
+      aiConsentUnanswered={aiConsentUnanswered}
     />
   );
+}
+
+/**
+ * Spørsmålet om AI-tekster (#2561): kortet står så lenge spilleren ikke har
+ * svart. Klarer vi ikke å lese svaret, vises ikke kortet. Det er trygt, fordi
+ * bare «ja» sender noe til språkmodellen (`lib/ai/consent.ts`).
+ */
+async function resolveAiConsentUnanswered(): Promise<boolean> {
+  try {
+    const supabase = await getServerClient();
+    return (await readOwnAiConsent(supabase)) === null;
+  } catch (err) {
+    console.error('[aiConsent] Home could not read the answer, no card', err);
+    return false;
+  }
 }
 
 /**
