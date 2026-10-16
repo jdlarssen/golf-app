@@ -167,7 +167,10 @@ export async function generateAndPersistRoundReport(
 
     if (facts.scoredHoles < MIN_SCORED_HOLES) return { status: 'skipped', report: null };
     // #2561: someone said yes, but nobody the facts may show did.
-    if (!factsShowAnyPlayer(facts)) return { status: 'skipped', report: null };
+    const shownNames = new Set(
+      [...aiAllowedUserIds].flatMap((id) => nameByUserId.get(id) ?? []),
+    );
+    if (!factsShowAnyPlayer(facts, shownNames)) return { status: 'skipped', report: null };
 
     const { system, user } = buildRoundReportPrompt(facts);
 
