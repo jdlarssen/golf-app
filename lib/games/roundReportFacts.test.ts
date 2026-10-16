@@ -27,7 +27,7 @@ import type {
   WolfResult,
 } from '@/lib/scoring/modes/types';
 
-import { buildRoundReportFacts, type RoundReportMatchplayFacts } from './roundReportFacts';
+import { buildRoundReportFacts, factsShowAnyPlayer, type RoundReportMatchplayFacts } from './roundReportFacts';
 
 /** Narrows the decided-match branch so tests can read winnerName/margin/momentum directly. */
 function decided(
@@ -1071,5 +1071,34 @@ describe('#2561 — a player without «ja» never reaches the facts', () => {
       aiAllowedUserIds: new Set(['u2', 'u3']),
     });
     expect(facts.winnerName).toBeNull();
+  });
+
+  // #2561: a «Lag N» row or a skins block without big skins names nobody.
+  it.each([
+    ['team rows named only «Lag N»', bestBall, 'best_ball' as const, teamNames, ['u9'], false],
+    ['a team row with a member who said yes', bestBall, 'best_ball' as const, teamNames, ['u1'], true],
+    ['a solo row with a player who said yes', solo, 'solo_strokeplay' as const, soloNames, ['u3'], true],
+  ])('factsShowAnyPlayer: %s', (_label, result, gameMode, nameByUserId, allowed, expected) => {
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode,
+      ...BASE,
+      aiAllowedUserIds: new Set(allowed),
+    });
+    const shown = new Set(allowed.flatMap((id) => nameByUserId.get(id) ?? []));
+    expect(factsShowAnyPlayer(facts, shown)).toBe(expected);
+  });
+
+  it('factsShowAnyPlayer: a skins block without big skins names nobody', () => {
+    const noBigSkins: SkinsResult = { ...skins, holes: [] };
+    const facts = buildRoundReportFacts({
+      result: noBigSkins,
+      nameByUserId: soloNames,
+      gameMode: 'skins',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u9']),
+    });
+    expect(factsShowAnyPlayer(facts, new Set())).toBe(false);
   });
 });

@@ -238,17 +238,27 @@ export function buildRoundReportFacts(
 }
 
 /**
- * #2561: whether the facts show any player at all. When the only players who
+ * #2561: whether the facts name anyone who said yes. When the only players who
  * said yes are off the podium, every row, the winner and every checkpoint are
- * gone, and a report would be about nobody.
+ * gone (or a row reads «Lag N»), and a report would be about nobody.
+ *
+ * `shownNames` are the display names of the players who said yes. A team row
+ * counts when one of its « / »-joined names is among them. A matchplay block
+ * is only kept when both parties said yes, so it counts as it is; a skins
+ * block counts only through a named big-skin winner.
  */
-export function factsShowAnyPlayer(facts: RoundReportFacts): boolean {
+export function factsShowAnyPlayer(
+  facts: RoundReportFacts,
+  shownNames: ReadonlySet<string>,
+): boolean {
+  const named = (name: string | null | undefined) =>
+    name != null && name.split(' / ').some((part) => shownNames.has(part));
   return (
-    facts.standings.length > 0 ||
-    facts.winnerName !== null ||
+    facts.standings.some((row) => named(row.name)) ||
+    named(facts.winnerName) ||
     facts.matchplay !== undefined ||
-    facts.skins !== undefined ||
-    (facts.checkpoints?.length ?? 0) > 0
+    (facts.skins?.bigSkinHoles ?? []).some((hole) => named(hole.winnerName)) ||
+    (facts.checkpoints ?? []).some((c) => named(c.leaderName))
   );
 }
 
