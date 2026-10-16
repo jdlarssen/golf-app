@@ -56,7 +56,9 @@ export function serverTeeShotWins(
 ): boolean {
   if (queued) return false;
   if (!existing) return true;
-  return Date.parse(incoming.clientUpdatedAt) > Date.parse(existing.clientUpdatedAt);
+  // Skipped only when the stored stamp is at or after the incoming one, so an
+  // unreadable stamp (NaN) lets the server row in, as the web's merge did.
+  return !(Date.parse(existing.clientUpdatedAt) >= Date.parse(incoming.clientUpdatedAt));
 }
 
 /**

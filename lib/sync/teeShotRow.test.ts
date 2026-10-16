@@ -22,6 +22,13 @@ describe('serverTeeShotWins', () => {
     expect(serverTeeShotWins(local, at('2026-10-15T09:59:59.999Z'), false)).toBe(false);
   });
 
+  it('an unreadable stamp lets the server row in, as the web did before the rule moved here', () => {
+    // The web's merge skipped a server row only when the stored stamp was at
+    // or after it (`stored >= incoming`); NaN is never that, so it wrote.
+    expect(serverTeeShotWins(at('not a date'), at('2026-10-15T10:00:00.000Z'), false)).toBe(true);
+    expect(serverTeeShotWins(at('2026-10-15T10:00:00.000Z'), at('not a date'), false)).toBe(true);
+  });
+
   it('compares instants, not text (#2211: the server echoes +00:00)', () => {
     // As text "…000+00:00" sorts before "…000Z", but they are the same instant.
     expect(serverTeeShotWins(at('2026-10-15T10:00:00.000Z'), at('2026-10-15T10:00:00.000+00:00'), false)).toBe(false);
