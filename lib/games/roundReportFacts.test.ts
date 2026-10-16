@@ -239,6 +239,34 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
     });
     expect(facts.decidedByTiebreak).toBeUndefined();
   });
+
+  // #2561: the tie is Karl's result too. Without his «ja» the facts may not
+  // say that the winner was level with someone.
+  it('#2561: omits decidedByTiebreak when the tied runner-up has not said yes', () => {
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'stableford',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u2']),
+    });
+    expect(facts.winnerName).toBe('Jørgen');
+    expect(facts.decidedByTiebreak).toBeUndefined();
+  });
+
+  // #2561: the tiebreak winner is hidden, the raw leader is not. The final
+  // checkpoint must go rather than crown Karl.
+  it('#2561: drops the final checkpoint when the tiebreak winner has not said yes', () => {
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId,
+      gameMode: 'stableford',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u1']),
+    });
+    expect(facts.winnerName).toBeNull();
+    expect(facts.checkpoints?.some((c) => c.afterHole === 7) ?? false).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -905,5 +933,143 @@ describe('scoredHoles — deterministic per-kind hole counting', () => {
       ...BASE,
     });
     expect(facts.scoredHoles).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2561 PR B — players without AI consent are nowhere in the facts
+// ---------------------------------------------------------------------------
+describe('#2561 — a player without «ja» never reaches the facts', () => {
+  /** Bob leads after hole 6, Alice wins on hole 7, Carl is third. */
+  function soloHole(holeNumber: number, alice: number, bob: number, carl: number) {
+    return {
+      holeNumber,
+      par: 4,
+      strokeIndex: holeNumber,
+      perPlayer: [
+        { userId: 'u1', gross: alice, net: alice, par: 4 },
+        { userId: 'u2', gross: bob, net: bob, par: 4 },
+        { userId: 'u3', gross: carl, net: carl, par: 4 },
+      ],
+      bestUserIds: [],
+    };
+  }
+  const solo: SoloStrokeplayResult = {
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [
+      ...[1, 2, 3, 4, 5, 6].map((h) => soloHole(h, 4, 3, 5)),
+      soloHole(7, 1, 10, 5),
+    ],
+    players: [
+      { userId: 'u1', totalNetStrokes: 25, totalGrossStrokes: 25, holesPlayed: 7, netToPar: -3, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 28, totalGrossStrokes: 28, holesPlayed: 7, netToPar: 0, rank: 2, tiedWith: [] },
+      { userId: 'u3', totalNetStrokes: 35, totalGrossStrokes: 35, holesPlayed: 7, netToPar: 7, rank: 3, tiedWith: [] },
+    ],
+  };
+  const soloNames = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Carl']);
+
+  const bestBall: BestBallResult = {
+    kind: 'best_ball',
+    teams: [
+      { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 68, missingHoles: [], rank: 1, tiedWith: [] },
+      { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 71, missingHoles: [], rank: 2, tiedWith: [] },
+    ],
+  };
+  const teamNames = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Carl'], ['u4', 'Dana']);
+
+  const singles: SinglesMatchplayResult = {
+    kind: 'singles_matchplay',
+    sides: [
+      { sideNumber: 1, userId: 'u1', courseHandicap: 5 },
+      { sideNumber: 2, userId: 'u2', courseHandicap: 8 },
+    ],
+    holes: [
+      { holeNumber: 1, par: 4, side1Par: 4, side2Par: 4, strokeIndex: 1, side1Gross: 4, side2Gross: 5, side1Net: 4, side2Net: 5, side1Extra: 0, side2Extra: 0, result: 'side1_wins' },
+    ],
+    holesUp: 3,
+    holesPlayed: 16,
+    holesRemaining: 2,
+    result: { winner: 'side1', marginUp: 3, decidedAtHole: 16, remainingAtDecision: 2, formatted: '3&2' },
+  };
+
+  const skins: SkinsResult = {
+    kind: 'skins',
+    scoring: 'net',
+    holes: [
+      {
+        holeNumber: 1, par: 4, strokeIndex: 1, carriedIn: 1, atStake: 2, outcome: 'won', winnerUserId: 'u1', skinsAwarded: 2,
+        perPlayer: [
+          { userId: 'u1', gross: 3, effectiveScore: 3, isWinner: true },
+          { userId: 'u2', gross: 5, effectiveScore: 5, isWinner: false },
+        ],
+      },
+    ],
+    players: [
+      { userId: 'u1', totalSkins: 2, holesWon: 1, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalSkins: 0, holesWon: 0, rank: 2, tiedWith: [] },
+    ],
+    carriedPot: 0,
+  };
+
+  type Case = {
+    result: SoloStrokeplayResult | BestBallResult | SinglesMatchplayResult | SkinsResult;
+    gameMode: 'solo_strokeplay' | 'best_ball' | 'singles_matchplay' | 'skins';
+    nameByUserId: Map<string, string>;
+    allowed: string[];
+    absent: string;
+    ranks: number[];
+  };
+
+  it.each<[string, Case]>([
+    ['standings row and a mid-round checkpoint (Bob led after 6)', { result: solo, gameMode: 'solo_strokeplay', nameByUserId: soloNames, allowed: ['u1', 'u3'], absent: 'Bob', ranks: [1, 3] }],
+    ['winnerName and the final checkpoint (Alice won)', { result: solo, gameMode: 'solo_strokeplay', nameByUserId: soloNames, allowed: ['u2', 'u3'], absent: 'Alice', ranks: [2, 3] }],
+    ['matchplay block (Alice won the match)', { result: singles, gameMode: 'singles_matchplay', nameByUserId: soloNames, allowed: ['u2'], absent: 'Alice', ranks: [] }],
+    ['skins block (Alice took the big skin)', { result: skins, gameMode: 'skins', nameByUserId: soloNames, allowed: ['u2'], absent: 'Alice', ranks: [2] }],
+    ['team name built from members', { result: bestBall, gameMode: 'best_ball', nameByUserId: teamNames, allowed: ['u1', 'u3', 'u4'], absent: 'Bob', ranks: [1, 2] }],
+  ])('%s', (_label, c) => {
+    const facts = buildRoundReportFacts({
+      result: c.result,
+      nameByUserId: c.nameByUserId,
+      gameMode: c.gameMode,
+      ...BASE,
+      aiAllowedUserIds: new Set(c.allowed),
+    });
+    expect(JSON.stringify(facts)).not.toContain(c.absent);
+    expect(facts.standings.map((s) => s.rank)).toEqual(c.ranks);
+  });
+
+  it('keeps the checkpoints and names of players who said yes', () => {
+    const facts = buildRoundReportFacts({
+      result: solo,
+      nameByUserId: soloNames,
+      gameMode: 'solo_strokeplay',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u1', 'u3']),
+    });
+    expect(facts.winnerName).toBe('Alice');
+    expect(facts.checkpoints).toEqual([{ afterHole: 7, leaderName: 'Alice' }]);
+  });
+
+  it('a team with nobody who said yes is «Lag N»', () => {
+    const facts = buildRoundReportFacts({
+      result: bestBall,
+      nameByUserId: teamNames,
+      gameMode: 'best_ball',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u1']),
+    });
+    expect(facts.standings.map((s) => s.name)).toEqual(['Alice', 'Lag 2']);
+  });
+
+  it('a winner without «ja» leaves winnerName null', () => {
+    const facts = buildRoundReportFacts({
+      result: solo,
+      nameByUserId: soloNames,
+      gameMode: 'solo_strokeplay',
+      ...BASE,
+      aiAllowedUserIds: new Set(['u2', 'u3']),
+    });
+    expect(facts.winnerName).toBeNull();
   });
 });

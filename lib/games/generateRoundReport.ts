@@ -10,8 +10,9 @@ import {
 import { getAdminClient } from '@/lib/supabase/admin';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { readAiAllowedUserIds } from '@/lib/ai/consent';
 import { getGameWithPlayers } from './getGameWithPlayers';
-import { buildRoundReportFacts } from './roundReportFacts';
+import { buildRoundReportFacts, factsShowAnyPlayer } from './roundReportFacts';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
 import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
@@ -117,6 +118,11 @@ export async function generateAndPersistRoundReport(
       nameByUserId.set(p.user_id, formatRevealName(p.users.name ?? PLAYER_FALLBACK, p.users.nickname));
     }
 
+    // #2561 PR B: only players who said yes reach the model. Nobody → no
+    // report and no model call. A read error reads as nobody (fail closed).
+    const aiAllowedUserIds = await readAiAllowedUserIds(admin, [...nameByUserId.keys()]);
+    if (aiAllowedUserIds.size === 0) return { status: 'skipped', report: null };
+
     const [courseRes, holesRes] = await Promise.all([
       admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
       admin
@@ -150,9 +156,12 @@ export async function generateAndPersistRoundReport(
       gameMode: game.game_mode,
       parByHole,
       totalHoles: holeCountForSegment(game.hole_segment),
+      aiAllowedUserIds,
     });
 
     if (facts.scoredHoles < MIN_SCORED_HOLES) return { status: 'skipped', report: null };
+    // #2561: someone said yes, but nobody the facts may show did.
+    if (!factsShowAnyPlayer(facts)) return { status: 'skipped', report: null };
 
     const { system, user } = buildRoundReportPrompt(facts);
 

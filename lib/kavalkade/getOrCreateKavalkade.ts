@@ -40,9 +40,11 @@ import 'server-only';
  * andre får `closed` og ser teaseren (K5).
  */
 
+import { readAiAllowedUserIds } from '@/lib/ai/consent';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { buildKavalkadeFacts, type KavalkadeFacts } from './buildKavalkadeFacts';
 import { generateKavalkadeNarrative } from './generateKavalkadeNarrative';
+import { collectUserIds } from './kavalkadeNarrativePrompt';
 import { loadKavalkadeInput } from './loadKavalkadeInput';
 import {
   KAVALKADE_CUTOFF,
@@ -117,7 +119,13 @@ export async function getOrCreateKavalkade(
   if (existing) return { status: 'ready', ...existing };
 
   const facts = await computeFacts(viewerUserId, year);
-  const narrative = await generateKavalkadeNarrative(facts);
+  // #2561 PR B: the opening text is written only for a viewer who said yes to
+  // AI texts, and other players without a yes are named null in what the
+  // model sees. One read for the viewer and everyone in the facts.
+  const allowed = await readAiAllowedUserIds(supabase, [viewerUserId, ...collectUserIds(facts)]);
+  const narrative = allowed.has(viewerUserId)
+    ? await generateKavalkadeNarrative(facts, allowed)
+    : null;
 
   const inserted = await supabase
     .from('kavalkades')

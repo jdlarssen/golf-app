@@ -28,6 +28,9 @@ describe('buildRoundReportPrompt', () => {
     const { system } = buildRoundReportPrompt(FACTS);
     expect(system).toContain('golfrunde');
     expect(system).toContain('norsk bokmål');
+    // #2561: players without AI consent are missing on purpose, and a null
+    // winnerName means no winner is named.
+    expect(system).toContain('Er winnerName null, kårer du ingen vinner.');
     expect(system).not.toMatch(/[a-z]{4,}\s(the|and|score|winner)\s/i); // no stray English sentences
   });
 
