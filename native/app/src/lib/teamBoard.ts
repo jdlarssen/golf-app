@@ -72,6 +72,8 @@ import {
   type SoloBoardStripAction,
 } from './soloBoard';
 import { termText } from './strokeTermText';
+import { teamTeeShotState, teeShotMinimum, teeShotTeam, type TeeShotRowLike } from './teeShotTeams';
+import { TEE_SHOTS_APP_TEXT, teeShotButtonLabel, teeShotsT } from './teeShotsCopy';
 
 /**
  * Formatene med lagtavla: scramble-familien, shamble, best ball, og
@@ -184,6 +186,26 @@ export type TeamHoleCard = {
   score: string;
 };
 
+/**
+ * #2580: «Utslag som ble brukt · ditt lag» på den ferdige lagtavla
+ * (contract-2579 punkt 13), flest valgte hull først.
+ */
+export type TeamTeeShotCard = {
+  heading: string;
+  /** «minst 3 hver». */
+  minimum: string;
+  players: {
+    userId: string;
+    count: number;
+    /** Navnelinjas navn: kort navn, «Deg» for seeren. */
+    name: string;
+    /** «minst 3» ved tallet til en spiller under minimum, ellers `null`. */
+    short: string | null;
+    /** «Marte, har 6 utslag» for skjermleseren. */
+    a11y: string;
+  }[];
+};
+
 export type TeamBoardStrip = {
   kicker: string;
   /** «2. plass», stort. */
@@ -205,6 +227,8 @@ export type TeamBoardModel = {
   /** Best ball: låskortet under lagene. */
   lock: { heading: string; sub: string } | null;
   holeCard: TeamHoleCard | null;
+  /** #2580: utslagskortet på den ferdige tavla, eller `null`. */
+  teeShotCard: TeamTeeShotCard | null;
   /** «Laget ditt», eller `null` når seeren ikke er med på et lag. */
   strip: TeamBoardStrip | null;
 };
@@ -219,7 +243,7 @@ function members(
   memberIds: readonly string[],
   userId: string | null,
   you: string = BOARD_TEAM_TEXT.you,
-): { names: string[]; initials: string[] } {
+): { ids: string[]; names: string[]; initials: string[] } {
   const byId = new Map(bundle.players.map((player) => [player.userId, player]));
   const nameOf = (id: string) => shortDisplayName(byId.get(id) ?? { name: null, nickname: null });
   const ordered = [
@@ -227,6 +251,7 @@ function members(
     ...memberIds.filter((id) => id !== userId).sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'no')),
   ];
   return {
+    ids: ordered,
     names: ordered.map((id) => (id === userId ? you : nameOf(id))),
     initials: ordered.map((id) => nameInitials(byId.get(id)?.name)),
   };
@@ -294,8 +319,15 @@ export function teamBoardFor(opts: {
   /** Foldet (`useTeamScores`), som tavla og Hjem-kortet får dem. */
   scores: readonly LocalScore[];
   userId: string | null;
+  /**
+   * #2580: lagenes utslag fra den lokale basen (`useTeamTeeShots`). Bare
+   * spill med «Hvem sitt utslag» får utslagsdelene; uten radene står tavla
+   * som før.
+   */
+  teeShots?: readonly TeeShotRowLike[] | null;
 }): TeamBoardModel | null {
   const { bundle, scores, userId } = opts;
+  const teeShots = opts.teeShots && teeShotMinimum(bundle.game) !== null ? opts.teeShots : null;
   const { game } = bundle;
   if (!hasTeamBoard(game) || gateReason(game) !== null) return null;
   if (leaderboardVisibility(game.scoreVisibility, game.status, game.gameMode as GameMode) !== 'full') {
@@ -304,8 +336,8 @@ export function teamBoardFor(opts: {
   const scope = firstHalfScope(bundle, scores);
   if (scope.view === 'waiting' || !hasAnyStroke(scope.scores)) return null;
   return game.status === 'finished'
-    ? finishedBoard(bundle, scores, userId)
-    : liveBoard(bundle, scores, scope, userId);
+    ? finishedBoard(bundle, scores, userId, teeShots)
+    : liveBoard(bundle, scores, scope, userId, teeShots);
 }
 
 /** Slagene uten hvert lags siste hull (i hullrekkefølge), for bevegelsen. */
@@ -336,6 +368,7 @@ function liveBoard(
   scores: readonly LocalScore[],
   scope: ReturnType<typeof firstHalfScope>,
   userId: string | null,
+  teeShots: readonly TeeShotRowLike[] | null,
 ): TeamBoardModel | null {
   const outcome = computeGameLeaderboard(scope.bundle, scope.scores);
   const result = outcome.ok ? asTeamResult(outcome.result) : null;
@@ -429,7 +462,9 @@ function liveBoard(
     viewerTeam,
     halves: firstHalf ? halvesText() : null,
     lock: firstHalf ? lockText() : null,
-    holeCard: viewerTeam === null ? null : holeCard(bundle, result, viewerTeam, firstHalf, userId),
+    holeCard:
+      viewerTeam === null ? null : holeCard(bundle, result, viewerTeam, firstHalf, userId, teeShots),
+    teeShotCard: null,
     strip,
   };
 }
@@ -470,13 +505,27 @@ function holeCard(
   viewerTeam: number,
   firstHalf: boolean,
   userId: string | null,
+  teeShots: readonly TeeShotRowLike[] | null,
 ): TeamHoleCard | null {
   if (result.kind === 'texas_scramble' && !firstHalf) {
     const card = scrambleHoleCard(result, viewerTeam);
     if (!card) return null;
+    // #2580 (contract-2579 punkt 13): «Utslaget til Marte ble brukt · » når
+    // hullet har et registrert utslag. Inne i setningen er seeren «deg».
+    const teeShotBy =
+      teeShots?.find((row) => row.teamNumber === viewerTeam && row.holeNumber === card.holeNumber)
+        ?.teeShotBy ?? null;
+    const [before, after] = TEE_SHOTS_APP_TEXT.holeCardLead.split('{name}');
     return {
       heading: formatMessage(BOARD_TEAM_TEXT.holeCardHeading, { hole: card.holeNumber }),
-      lead: null,
+      lead:
+        teeShotBy === null
+          ? null
+          : {
+              before,
+              names: members(bundle, [teeShotBy], userId, BOARD_TEAM_TEXT.youInSentence).names[0] ?? '',
+              after,
+            },
       score: formatMessage(BOARD_TEAM_TEXT.scrambleScore, {
         strokes: card.strokes,
         term: termText(card.term, card.overPar).toLowerCase(),
@@ -508,6 +557,7 @@ function finishedBoard(
   bundle: GameBundle,
   scores: readonly LocalScore[],
   userId: string | null,
+  teeShots: readonly TeeShotRowLike[] | null,
 ): TeamBoardModel | null {
   const outcome = computeGameLeaderboard(bundle, scores);
   const result = outcome.ok ? asTeamResult(outcome.result) : null;
@@ -580,6 +630,7 @@ function finishedBoard(
     halves: null,
     lock: null,
     holeCard: null,
+    teeShotCard: viewerTeam === null || teeShots === null ? null : teeShotCard(bundle, viewerTeam, userId, teeShots),
     strip: standing
       ? {
           kicker: BOARD_TEAM_TEXT.stripKicker,
@@ -588,5 +639,42 @@ function finishedBoard(
           action: { kind: 'scorecard', label: BOARD_APP_TEXT.scorecard },
         }
       : null,
+  };
+}
+
+/**
+ * #2580: utslagskortet for seerens lag (contract-2579 punkt 13). Tellingen er
+ * den delte `teeShotStatus` over de aktive medlemmene; rekkefølgen er flest
+ * valgte hull først, og ved likt antall navnelinjas (seeren først).
+ */
+function teeShotCard(
+  bundle: GameBundle,
+  viewerTeam: number,
+  userId: string | null,
+  rows: readonly TeeShotRowLike[],
+): TeamTeeShotCard | null {
+  const minimum = teeShotMinimum(bundle.game);
+  if (minimum === null) return null;
+  const { status } = teamTeeShotState(teeShotTeam(bundle.players, viewerTeam), minimum, rows);
+  if (status.players.length === 0) return null;
+  const named = members(
+    bundle,
+    status.players.map((p) => p.userId),
+    userId,
+  );
+  const players = named.ids
+    .map((id, index) => ({ index, player: status.players.find((p) => p.userId === id)! }))
+    .sort((a, b) => b.player.count - a.player.count || a.index - b.index)
+    .map(({ index, player }) => ({
+      userId: player.userId,
+      count: player.count,
+      name: named.names[index]!,
+      short: player.missing > 0 ? formatMessage(TEE_SHOTS_APP_TEXT.boardMinimum, { min: minimum }) : null,
+      a11y: teeShotButtonLabel(named.names[index]!, player, minimum, true),
+    }));
+  return {
+    heading: TEE_SHOTS_APP_TEXT.boardHeading,
+    minimum: teeShotsT('minimum', { min: minimum }),
+    players,
   };
 }

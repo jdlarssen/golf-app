@@ -2,9 +2,11 @@
 // er låst i `lib/teamBoard.test.ts`; her gjelder det formen: kortene i
 // modellens rekkefølge, gullskiva og avatarene bare på lederen, prikkene der
 // modellen gir dem, best balls overskrift, skraverte stav og låskort, likt-
-// linja ferdig, «Ditt lag på hull N», og stripas knapp.
+// linja ferdig, «Ditt lag på hull N», og stripas knapp. #2580: utslagskortet
+// på den ferdige tavla, med en spiller under minimum i `warningText`.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { TeamBoardModel, TeamBoardRow } from '../../lib/teamBoard';
+import { themeFor } from '../../theme';
 import { TeamBoard, TeamStrip } from './TeamBoard';
 
 const row = (teamNumber: number, rank: number, extra: Partial<TeamBoardRow> = {}): TeamBoardRow => ({
@@ -42,6 +44,7 @@ const live: TeamBoardModel = {
   halves: null,
   lock: null,
   holeCard: { heading: 'heading', lead: null, score: 'score' },
+  teeShotCard: null,
   strip: null,
 };
 
@@ -84,8 +87,21 @@ it('tegner live, best ball og ferdig lagtavle i modellens form, og stripas knapp
     variant: 'finished',
     rows: [row(3, 1), row(1, 2, { you: true }), row(4, 3, { note: 'note' })],
     holeCard: null,
+    teeShotCard: {
+      heading: 'heading',
+      minimum: 'minimum',
+      players: [
+        { userId: 'a', count: 7, name: 'a', short: null, a11y: 'a' },
+        { userId: 'b', count: 2, name: 'b', short: 'short', a11y: 'b' },
+      ],
+    },
   };
   await rerender(<TeamBoard model={finished} />);
+  expect(screen.getByTestId('team-tee-shot-card')).toBeTruthy();
+  expect(screen.getAllByTestId('tee-shot-count')).toHaveLength(1);
+  expect(screen.getByTestId('tee-shot-count-short')).toHaveStyle({
+    color: themeFor('light').colors.warningText,
+  });
   expect(screen.queryAllByTestId('board-dot', HIDDEN)).toHaveLength(0);
   expect(screen.queryAllByTestId('team-avatar', HIDDEN)).toHaveLength(0);
   expect(screen.getAllByTestId('board-tie-note')).toHaveLength(1);

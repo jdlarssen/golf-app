@@ -4,7 +4,8 @@
 //
 // Ett kort per lag: plassen, «Lag N» med navnelinja (lederen live har
 // avatarene i stedet), prikkene og summen. Under kortene står låskortet
-// (best ball) og «Ditt lag på hull N». Alle tall og tekster kommer ferdige fra
+// (best ball) og «Ditt lag på hull N», og på den ferdige tavla «Utslag som ble
+// brukt · ditt lag» (#2580). Alle tall og tekster kommer ferdige fra
 // `teamBoardFor` (`lib/teamBoard.ts`); her tegnes de.
 //
 // Stripa nederst («Laget ditt») er en egen komponent fordi skjermen legger den
@@ -12,7 +13,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { TeamHoleTone } from '../../../../../lib/leaderboard/teamLiveBoard';
 import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
-import type { TeamBoardModel, TeamBoardRow, TeamBoardStrip, TeamHoleCard } from '../../lib/teamBoard';
+import type {
+  TeamBoardModel,
+  TeamBoardRow,
+  TeamBoardStrip,
+  TeamHoleCard,
+  TeamTeeShotCard,
+} from '../../lib/teamBoard';
 import {
   FONTS,
   TAP,
@@ -78,6 +85,7 @@ export function TeamBoard({ model }: { model: TeamBoardModel }) {
       ) : null}
 
       {model.holeCard ? <HoleCard card={model.holeCard} /> : null}
+      {model.teeShotCard ? <TeeShotCard card={model.teeShotCard} /> : null}
     </View>
   );
 }
@@ -322,6 +330,47 @@ function HoleCard({ card }: { card: TeamHoleCard }) {
 }
 
 /**
+ * #2580: «Utslag som ble brukt · ditt lag» (`Lagtavle-ferdig-forslag`), mellom
+ * lagkortene og sideturneringen. En spiller under minimum står med tallet og
+ * «minst N» i `warningText` (ikke tegnet: tegningen viser et lag der alle nådde
+ * minimum).
+ */
+function TeeShotCard({ card }: { card: TeamTeeShotCard }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={[styles.card, styles.teeShotCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      testID="team-tee-shot-card"
+    >
+      <View style={styles.teeShotHead}>
+        <Text style={[styles.holeHeading, styles.shrink, { color: colors.muted }]} accessibilityRole="header">
+          {card.heading}
+        </Text>
+        <Text style={[styles.teeShotMinimum, { color: colors.muted }]} numberOfLines={1}>
+          {card.minimum}
+        </Text>
+      </View>
+      <View style={styles.teeShotGrid}>
+        {card.players.map((player) => (
+          <View key={player.userId} style={styles.teeShotCell} accessible accessibilityLabel={player.a11y}>
+            <Text
+              style={[styles.teeShotCount, { color: player.short ? colors.warningText : colors.text }]}
+              testID={player.short ? 'tee-shot-count-short' : 'tee-shot-count'}
+            >
+              {player.count}
+              {player.short ? <Text style={styles.teeShotShort}>{` ${player.short}`}</Text> : null}
+            </Text>
+            <Text style={[styles.teeShotName, { color: colors.muted }]} numberOfLines={1}>
+              {player.name}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
  * Stripa nederst i full bredde: «Laget ditt» med plassen stort og avstanden
  * eller hullene etter, og knappen. Skjermen legger den fast mot bunnen;
  * `bottomInset` er den sikre sonen under de 20 pt tegningen har.
@@ -463,6 +512,14 @@ const styles = StyleSheet.create({
     marginTop: 2 + LOCK_SUB.marginTop,
   },
   holeCard: { marginTop: 12, marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 14 },
+  teeShotCard: { marginTop: 12, marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 14, gap: 8 },
+  teeShotHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  teeShotMinimum: { ...interLine(12, 15), fontFamily: FONTS.sans },
+  teeShotGrid: { flexDirection: 'row', gap: 8 },
+  teeShotCell: { flex: 1, minWidth: 0, gap: 1 },
+  teeShotCount: { ...fraunces(600, 22), fontVariant: ['tabular-nums'] },
+  teeShotShort: { fontFamily: FONTS.sans, fontSize: 12 },
+  teeShotName: { ...interLine(12, 15), fontFamily: FONTS.sans },
   holeHeading: {
     ...interLine(10, 12),
     fontFamily: FONTS.sansSemiBold,

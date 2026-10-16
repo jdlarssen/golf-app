@@ -1,7 +1,7 @@
 // #2579 PR 2 (Type A): lagtavla i appen. Tallene er motorens og tavlas
 // (testet i `lib/leaderboard/`); her låses hva appen setter sammen av dem:
 // når lagtavla finnes, båndets linje, pillen, kortene, «Ditt lag på hull N»,
-// låskortet og stripa. Par 4 og indeks lik hullnummeret overalt
+// låskortet og stripa, og utslagsdelene fra #2580. Par 4 og indeks lik hullnummeret overalt
 // (`homeBundle`), banehandicap 0 der ikke annet står.
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import type { LocalScore } from '../data/db';
@@ -136,6 +136,25 @@ describe('teamBoardFor — live scramble', () => {
     expect(model.lock).toBeNull();
   });
 
+  it('#2580: names whose tee shot the team used on that hole, «deg» for your own', () => {
+    const withSetting = homeBundle({
+      game: { gameMode: 'texas_scramble', modeConfig: { ...TEXAS, min_tee_shots: 3 } },
+      players: teams,
+    });
+    const pick = (teeShotBy: string) => [{ teamNumber: 1, holeNumber: 5, teeShotBy }];
+    expect(teamBoardFor({ bundle: withSetting, scores, userId: ME, teeShots: pick('marte') })!.holeCard).toEqual({
+      heading: 'Ditt lag på hull 5',
+      lead: { before: 'Utslaget til ', names: 'Marte', after: ' ble brukt' },
+      score: '3 slag, birdie',
+    });
+    expect(teamBoardFor({ bundle: withSetting, scores, userId: ME, teeShots: pick(ME) })!.holeCard?.lead?.names).toBe(
+      'deg',
+    );
+    // Uten valg på hullet, eller uten innstillingen, står bare scoren.
+    expect(teamBoardFor({ bundle: withSetting, scores, userId: ME, teeShots: [] })!.holeCard?.lead).toBeNull();
+    expect(teamBoardFor({ bundle, scores, userId: ME, teeShots: pick('marte') })!.holeCard?.lead).toBeNull();
+  });
+
   it('gives the strip the place, the gap in strokes to the leading team, and the next hole', () => {
     expect(model.strip).toEqual({
       kicker: 'Laget ditt',
@@ -262,6 +281,43 @@ describe('teamBoardFor — finished scramble', () => {
     })!;
     expect(short.rows.find((r) => r.teamNumber === 3)?.under).toBe('netto · lag-hcp 6 · hull 16');
     expect(short.rows.find((r) => r.teamNumber === 2)?.under).toBe('netto · lag-hcp 8 · hull 18');
+  });
+
+  it('#2580: counts your team’s tee shots, most first, with the one under the minimum marked', () => {
+    const withSetting = homeBundle({
+      game: {
+        gameMode: 'texas_scramble',
+        status: 'finished',
+        modeConfig: { ...TEXAS, team_handicap_pct: 50, min_tee_shots: 3 },
+      },
+      players,
+    });
+    const picks = (owners: string[]) => owners.map((teeShotBy, i) => ({ teamNumber: 1, holeNumber: i + 1, teeShotBy }));
+    const short = teamBoardFor({
+      bundle: withSetting,
+      scores,
+      userId: ME,
+      teeShots: picks([...Array<string>(16).fill('marte'), ME, ME]),
+    })!;
+    expect(short.teeShotCard).toEqual({
+      heading: 'Utslag som ble brukt · ditt lag',
+      minimum: 'minst 3 hver',
+      players: [
+        { userId: 'marte', count: 16, name: 'Marte', short: null, a11y: 'Marte, har 16 utslag' },
+        { userId: ME, count: 2, name: 'Deg', short: 'minst 3', a11y: 'Deg, 2 av 3 utslag' },
+      ],
+    });
+    // Likt antall: navnelinjas rekkefølge, deg først.
+    const tied = teamBoardFor({
+      bundle: withSetting,
+      scores,
+      userId: ME,
+      teeShots: picks([...Array<string>(9).fill('marte'), ...Array<string>(9).fill(ME)]),
+    })!;
+    expect(tied.teeShotCard?.players.map((p) => p.name)).toEqual(['Deg', 'Marte']);
+    // Uten radene, eller uten innstillingen: ingen kort.
+    expect(teamBoardFor({ bundle: withSetting, scores, userId: ME })!.teeShotCard).toBeNull();
+    expect(model.teeShotCard).toBeNull();
   });
 
   it('gives the long gap and the scorecard', () => {
