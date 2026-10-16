@@ -43,7 +43,7 @@ export async function HomeNudges({ userId }: { userId: string }) {
 /**
  * Spørsmålet om AI-tekster (#2561): kortet står så lenge spilleren ikke har
  * svart. Klarer vi ikke å lese svaret, vises ikke kortet. Det er trygt, fordi
- * bare «ja» sender noe til språkmodellen (`lib/ai/consent.ts`).
+ * navnet bare går til språkmodellen med «ja» (`lib/ai/consent.ts`).
  */
 async function resolveAiConsentUnanswered(): Promise<boolean> {
   try {

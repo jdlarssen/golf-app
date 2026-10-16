@@ -5,8 +5,8 @@
 //
 // **Slipper gjennom ved tvil.** Avgjørelsen bor i `data/aiConsentGate.ts`: et
 // svar enheten har sett, leses ikke igjen; uten nett, når lesingen feiler, og
-// når den henger lenger enn taket, rendres barna. Det er trygt, fordi bare «ja»
-// sender noe til AI-en. Spørsmålet kommer da neste gang appen starter med nett.
+// når den henger lenger enn taket, rendres barna. Det er trygt, fordi navnet
+// bare går til AI-en med «ja». Spørsmålet kommer da neste gang appen starter med nett.
 //
 // **Et svar som ikke ble lagret, slipper ikke spilleren inn.** Skjermen står
 // med en linje om at svaret ikke ble lagret, og knappene kan trykkes igjen.

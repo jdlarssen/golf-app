@@ -9,7 +9,7 @@ export const AI_CONSENT_TEXT = {
   title: 'Kan AI-en skrive om deg?',
   body: 'Etter hvert spill skriver Tørny et kort referat, og i romjula får du Kavalkaden, en oppsummering av golfåret. Tekstene skriver språkmodellen Claude fra Anthropic, et amerikansk selskap. Da får Anthropic navn og kallenavn, resultater, spill- og banenavn og datoer.',
   noMeans:
-    'Sier du nei, står du ikke i noen av tekstene. Du kan ombestemme deg når som helst under «Personvern og konto» i appen eller på profilen på nettsiden.',
+    'Sier du nei, står ikke navnet ditt i nye tekster. Du kan ombestemme deg når som helst under «Personvern og konto» i appen eller på profilen på nettsiden.',
   yes: 'Ja, det er greit',
   no: 'Nei takk',
   saving: 'Lagrer …',
