@@ -11,9 +11,10 @@
 // **Et svar som ikke ble lagret, slipper ikke spilleren inn.** Skjermen står
 // med en linje om at svaret ikke ble lagret, og knappene kan trykkes igjen.
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, View } from 'react-native';
 import { saveAiConsent } from '../data/aiConsent';
 import { aiConsentStepFor, rememberAiConsentAnswered } from '../data/aiConsentGate';
+import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { AiConsentQuestion } from '../screens/AiConsentQuestion';
 import { useTheme } from '../theme';
 
@@ -43,6 +44,8 @@ export function AiConsentGate({ userId, children }: { userId: string; children: 
     setPending(null);
     if (!result.ok) {
       setFailed(true);
+      // Skjermleseren skal høre det også, som i `CompleteProfile`.
+      AccessibilityInfo.announceForAccessibility(AI_CONSENT_TEXT.saveFailed);
       return;
     }
     await rememberAiConsentAnswered(userId);

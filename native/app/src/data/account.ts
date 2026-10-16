@@ -36,6 +36,7 @@
 // slettet, og den er testet som rekkefølge, ikke bare som «begge ble kalt».
 import type { AccountDeleteFailure, DeleteBlockReason } from '../lib/accountCopy';
 import { supabase } from '../supabase';
+import { forgetAiConsentAnswers } from './aiConsentGate';
 import { wipeLocalData } from './db';
 import { callWebRoute } from './webApi';
 
@@ -167,6 +168,9 @@ export async function deleteAccount(): Promise<AccountDeleteResult> {
       // ender uten vei tilbake til dataene. Logg og gå videre.
       console.error('[deleteAccount] lokal wipe feilet', err);
     }
+    // #2561: svaret på AI-spørsmålet husket i AsyncStorage går med kontoen.
+    // Kaster aldri.
+    await forgetAiConsentAnswers();
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (err) {

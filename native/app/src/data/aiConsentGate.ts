@@ -31,6 +31,20 @@ export async function rememberAiConsentAnswered(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Glem alle svar enheten husker, for alle brukere. Kalles når kontoen slettes
+ * i appen (`data/account.ts`), så slettesidens «appen tømmer det den har
+ * lagret på telefonen» også gjelder svaret. Kaster aldri.
+ */
+export async function forgetAiConsentAnswers(): Promise<void> {
+  try {
+    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY_PREFIX));
+    if (keys.length > 0) await AsyncStorage.removeMany(keys);
+  } catch (err) {
+    console.error('[aiConsentGate] kunne ikke glemme svarene', err);
+  }
+}
+
 async function rememberedAnswered(userId: string): Promise<boolean> {
   try {
     return (await AsyncStorage.getItem(`${KEY_PREFIX}${userId}`)) === '1';

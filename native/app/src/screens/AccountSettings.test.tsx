@@ -24,9 +24,10 @@
 // de samme testene før flyttingen (Profil v2).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert, type AlertButton } from 'react-native';
+import { AccessibilityInfo, Alert, type AlertButton } from 'react-native';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { logOut } from '../data/logout';
+import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
@@ -84,6 +85,7 @@ describe('AccountSettings', () => {
 
   it('#2561: the AI switch shows the answer and saves when flipped, rolling back on failure', async () => {
     (saveAiConsent as jest.Mock).mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false });
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
     await renderScreen();
 
     const aiSwitch = await screen.findByTestId('account-ai-consent-switch');
@@ -100,6 +102,7 @@ describe('AccountSettings', () => {
     });
     expect(screen.getByTestId('account-ai-consent-switch')).not.toBeChecked();
     expect(screen.getByTestId('account-ai-consent-error')).toBeTruthy();
+    expect(announce).toHaveBeenCalledWith(AI_CONSENT_TEXT.toggleFailed);
   });
 
   it('shows the e-mail, opens the privacy policy, and leads to the delete confirmation', async () => {
