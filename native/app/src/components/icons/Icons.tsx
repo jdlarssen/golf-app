@@ -189,6 +189,27 @@ export const HakeIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * Den lille haken foran «har 4» i utslagsflatene (#2580), 11 pt med strek 3 som
+ * webbens `TeeShotCheck` og `Utslag-forslag-*`.
+ */
+export const UtslagHakeIcon = ({ size = 11, strokeWidth = 3, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M5 12l5 5 9-10" />
+  </LineIcon>
+);
+
+/**
+ * Varseltrekanten i utslagsboksen på scorekortet (#2580), 18 pt med strek 2
+ * som webbens `TeeShotShortBox` og `Utslag-forslag-levering`.
+ */
+export const UtslagVarselIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M12 3l9.5 17h-19z" />
+    <Path d="M12 10v4M12 17.5v.01" />
+  </LineIcon>
+);
+
 export const PlussIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Line x1="12" y1="5" x2="12" y2="19" />

@@ -24,13 +24,25 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ScorecardCell, ScorecardGrid as Grid, ScorecardHalf } from '../../../../../lib/scorecard/scorecardGrid';
 import { FONTS, fraunces, useTheme } from '../../theme';
+import { TEE_SHOTS_APP_TEXT } from '../../lib/teeShotsCopy';
 import { ScoreShape, scoreShapeRings } from './ScoreShape';
 
-export type ScorecardRowKind = 'strokes' | 'net' | 'points' | 'enteredBy';
+export type ScorecardRowKind = 'strokes' | 'net' | 'points' | 'teeShots' | 'enteredBy';
 
 export interface EnteredByName {
   initials: string;
   fullName: string;
+}
+
+/**
+ * #2580: hvem sitt utslag laget brukte på et hull (raden «Utslag»). `short`:
+ * spilleren mangler utslag, og initialene står i en pille
+ * (`Utslag-forslag-levering`).
+ */
+export interface TeeShotName {
+  initials: string;
+  fullName: string;
+  short: boolean;
 }
 
 /** Formene er 22 pt; hver ring til legger 7 pt utenpå (1,5 strek og 2 luft). */
@@ -38,6 +50,8 @@ const SHAPE = 22;
 const RING_GROWTH = 7;
 /** Designets kolonner: etiketter 44, sum 38, og hullene deler resten. */
 const LABEL_WIDTH = 44;
+/** #2580: `Utslag-forslag-levering` har 52 pt til etikettene, så «UTSLAG» får plass. */
+const LABEL_WIDTH_TEE_SHOTS = 52;
 const SUM_WIDTH = 38;
 const MIN_COLUMN = 26;
 /**
@@ -51,6 +65,7 @@ const ROW_HEIGHTS: Record<'hole' | 'par' | ScorecardRowKind, number> = {
   strokes: 36,
   net: 31,
   points: 31,
+  teeShots: 31,
   enteredBy: 31,
 };
 
@@ -73,6 +88,7 @@ const ROW_LABELS: Record<'hole' | 'par' | ScorecardRowKind, string> = {
   strokes: 'Slag',
   net: 'Netto',
   points: 'Poeng',
+  teeShots: TEE_SHOTS_APP_TEXT.scorecardRow,
   enteredBy: 'Ført av',
 };
 
@@ -91,6 +107,7 @@ function holeLabel(
   cell: ScorecardCell,
   rows: readonly ScorecardRowKind[],
   enteredBy: ReadonlyMap<number, EnteredByName> | undefined,
+  teeShots: ReadonlyMap<number, TeeShotName> | undefined,
 ): string {
   const parts = [`Hull ${cell.holeNumber}`, `par ${cell.par}`];
   if (cell.strokes == null) {
@@ -100,6 +117,8 @@ function holeLabel(
     if (rows.includes('net') && cell.net != null) parts.push(`netto ${cell.net}`);
     if (rows.includes('points') && cell.points != null) parts.push(`${cell.points} poeng`);
   }
+  const teeShot = rows.includes('teeShots') ? teeShots?.get(cell.holeNumber) : undefined;
+  if (teeShot) parts.push(`utslaget til ${teeShot.fullName}`);
   const who = rows.includes('enteredBy') ? enteredBy?.get(cell.holeNumber) : undefined;
   if (who) parts.push(`ført av ${who.fullName}`);
   return parts.join(', ');
@@ -155,10 +174,12 @@ function Half({
   half,
   rows,
   enteredBy,
+  teeShots,
 }: {
   half: ScorecardHalf;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
+  teeShots?: ReadonlyMap<number, TeeShotName>;
 }) {
   const { colors, ui, scheme } = useTheme();
   const kinds: ('hole' | 'par' | ScorecardRowKind)[] = ['hole', 'par', ...rows];
@@ -205,6 +226,20 @@ function Half({
         </Text>
       );
     }
+    if (kind === 'teeShots') {
+      const shot = teeShots?.get(cell.holeNumber);
+      if (shot?.short) {
+        return (
+          <View
+            style={[styles.pill, { backgroundColor: colors.warningSoft }]}
+            testID={`scorecard-tee-shot-short-${cell.holeNumber}`}
+          >
+            <Text style={[styles.initials, styles.strong, { color: colors.warningText }]}>{shot.initials}</Text>
+          </View>
+        );
+      }
+      return <Text style={[styles.initials, { color: colors.muted }]}>{shot?.initials ?? ''}</Text>;
+    }
     if (kind === 'enteredBy') {
       return (
         <Text style={[styles.initials, { color: colors.muted }]}>
@@ -217,7 +252,7 @@ function Half({
   };
 
   const sumValue = (kind: ScorecardRowKind) => {
-    if (kind === 'enteredBy') return null;
+    if (kind === 'enteredBy' || kind === 'teeShots') return null;
     const value =
       kind === 'strokes' ? (played ? half.sum.strokes : null) : kind === 'net' ? half.sum.net : half.sum.points;
     if (kind === 'strokes' && value != null) return <Text style={strokeNum}>{value}</Text>;
@@ -237,7 +272,7 @@ function Half({
       <ScrollView horizontal contentContainerStyle={styles.columns} showsHorizontalScrollIndicator={false}>
         {/* Radetikettene er for øyet; kolonnene sier alt til skjermleseren. */}
         <View
-          style={styles.labelColumn}
+          style={[styles.labelColumn, rows.includes('teeShots') && styles.labelColumnTeeShots]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           testID={`scorecard-labels-${half.key}`}
@@ -264,7 +299,7 @@ function Half({
             key={cell.holeNumber}
             style={styles.column}
             accessible
-            accessibilityLabel={holeLabel(cell, rows, enteredBy)}
+            accessibilityLabel={holeLabel(cell, rows, enteredBy, teeShots)}
             testID={`scorecard-col-${cell.holeNumber}`}
           >
             <Cell kind="hole" role="data">
@@ -314,12 +349,15 @@ export function ScorecardGrid({
   grid,
   rows,
   enteredBy,
+  teeShots,
   footer,
   overlay,
 }: {
   grid: Grid;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
+  /** #2580: raden «Utslag», per hull. */
+  teeShots?: ReadonlyMap<number, TeeShotName>;
   footer?: ReactNode;
   overlay?: ReactNode;
 }) {
@@ -330,7 +368,7 @@ export function ScorecardGrid({
       testID="scorecard-grid"
     >
       {grid.halves.map((half) => (
-        <Half key={half.key} half={half} rows={rows} enteredBy={enteredBy} />
+        <Half key={half.key} half={half} rows={rows} enteredBy={enteredBy} teeShots={teeShots} />
       ))}
       {footer ? (
         <View style={[styles.footer, { borderTopColor: colors.primary }]} testID="scorecard-footer">
@@ -360,6 +398,7 @@ const styles = StyleSheet.create({
   a11yHeader: { width: 1, height: 1, position: 'absolute' },
   columns: { flexGrow: 1 },
   labelColumn: { width: LABEL_WIDTH },
+  labelColumnTeeShots: { width: LABEL_WIDTH_TEE_SHOTS },
   // Like brede hullkolonner, som designets `minmax(0, 1fr)`. Inne i en
   // vannrett ScrollView har innholdet ingen fast bredde, og da bruker Yoga
   // innholdets bredde som utgangspunkt i stedet for `flex: 1` sin 0, så
@@ -383,4 +422,6 @@ const styles = StyleSheet.create({
   // Stempelet står 18 pt fra høyre og stikker 34 pt ned under kortet.
   overlay: { position: 'absolute', right: 18, bottom: -34 },
   initials: { fontSize: 11, fontFamily: FONTS.sansMedium, textAlign: 'center' },
+  // #2580: pillen rundt initialene til en som mangler utslag (1 og 4 pt luft).
+  pill: { borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1, marginTop: -1 },
 });

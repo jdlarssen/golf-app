@@ -122,3 +122,71 @@ describe('seedGameScores', () => {
     await expect(seedGameScores(GAME)).rejects.toThrow('Network request failed');
   });
 });
+
+// #2580: utslagene hentes på samme måte, i en egen henting (team_tee_shots er en
+// egen tabell, og en routeFrom uten den skal ikke knekke slag-seeden).
+describe('seedGameTeeShots (#2580)', () => {
+  useFreshModules();
+
+  function teeRow(teamNumber: number, holeNumber: number, teeShotBy: string | null, clientUpdatedAt = '2026-08-30T09:00:00.000Z') {
+    return {
+      game_id: GAME,
+      team_number: teamNumber,
+      hole_number: holeNumber,
+      tee_shot_by: teeShotBy,
+      entered_by: MATE,
+      client_updated_at: clientUpdatedAt,
+      updated_at: '2026-08-30T09:00:01.000Z',
+    };
+  }
+
+  it('henter spillets utslag sidevis og merger dem i én transaksjon', async () => {
+    const { queryStub, routeFrom } = mocks();
+    const shots = queryStub({ data: [teeRow(1, 1, ME), teeRow(1, 2, MATE), teeRow(2, 1, null)], error: null });
+    routeFrom({ team_tee_shots: [shots] });
+
+    const { getDb } = require('./db') as Db;
+    await getDb();
+    const { MockSQLiteDatabase } = require('../test/sqliteMock') as typeof import('../test/sqliteMock');
+    const txnSpy = jest.spyOn(MockSQLiteDatabase.prototype, 'withExclusiveTransactionAsync');
+
+    const { seedGameTeeShots } = require('./seedScores') as typeof import('./seedScores');
+    expect(await seedGameTeeShots(GAME)).toBe(3);
+    expect(txnSpy).toHaveBeenCalledTimes(1);
+    txnSpy.mockRestore();
+
+    expect(shots.steps.filter((s) => s.method !== 'select')).toEqual([
+      { method: 'eq', args: ['game_id', GAME] },
+      { method: 'order', args: ['team_number'] },
+      { method: 'order', args: ['hole_number'] },
+      { method: 'range', args: [0, 999] },
+    ]);
+    const { listTeeShotsForGame } = require('./db') as Db;
+    expect((await listTeeShotsForGame(await getDb(), GAME)).map((r) => [r.teamNumber, r.holeNumber, r.teeShotBy])).toEqual([
+      [1, 1, ME],
+      [1, 2, MATE],
+      [2, 1, null],
+    ]);
+  });
+
+  it('kaster ikke bort et valg som venter i køen', async () => {
+    const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+    await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 1, teeShotBy: ME, enteredBy: ME });
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({ team_tee_shots: [queryStub({ data: [teeRow(1, 1, MATE, '2030-01-01T00:00:00.000Z')], error: null })] });
+
+    const { seedGameTeeShots } = require('./seedScores') as typeof import('./seedScores');
+    await seedGameTeeShots(GAME);
+
+    const { getDb, getTeeShot } = require('./db') as Db;
+    expect((await getTeeShot(await getDb(), `${GAME}:1:1`))?.teeShotBy).toBe(ME);
+  });
+
+  it('kaster videre når hentingen feiler, så skjermen kan si fra', async () => {
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({ team_tee_shots: [queryStub({ data: null, error: { message: 'nett' } })] });
+
+    const { seedGameTeeShots } = require('./seedScores') as typeof import('./seedScores');
+    await expect(seedGameTeeShots(GAME)).rejects.toBeTruthy();
+  });
+});

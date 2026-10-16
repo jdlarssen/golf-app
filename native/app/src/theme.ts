@@ -41,6 +41,13 @@ export type ThemeColors = {
    */
   dangerSoft: string;
   dangerBorder: string;
+  /**
+   * #2580: «Hvem sitt utslag» — tekst og flate i boksen over leverknappen,
+   * pillene på scorekortet og arrangørlinja. Webbens `--warning-text` og
+   * `--warning-soft`.
+   */
+  warningText: string;
+  warningSoft: string;
   /** Aktiv rad i flighten på hullsiden (#2252), webbens `--primary-soft`. */
   primarySoft: string;
   /**
@@ -167,6 +174,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     danger: '#B8463E',
     dangerSoft: '#FBF4F3',
     dangerBorder: 'rgba(184, 70, 62, 0.28)',
+    warningText: '#7A5410',
+    warningSoft: '#FBEED6',
     primarySoft: '#E8EFE8',
     scoreUnderFg: '#2F5A3C',
     scoreParFg: '#5C5347',
@@ -210,6 +219,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     danger: '#D67268',
     dangerSoft: '#242720',
     dangerBorder: 'rgba(214, 114, 104, 0.32)',
+    warningText: '#E5B26F',
+    warningSoft: '#2E2A1C',
     primarySoft: '#1F2C24',
     scoreUnderFg: '#7DAA8A',
     scoreParFg: '#9A9180',
@@ -506,6 +517,9 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   // hel rød ramme, så banneret står med full kontrast.
   dangerSoft: '#FFFFFF',
   dangerBorder: '#B8463E',
+  // #2580: samme rav som `scoreOver1Fg` her; ingen tonet flate i sollys.
+  warningText: '#7A5410',
+  warningSoft: '#FFFFFF',
   primarySoft: '#FFFFFF',
   scoreUnderFg: '#2F5A3C',
   scoreParFg: '#5C5347',

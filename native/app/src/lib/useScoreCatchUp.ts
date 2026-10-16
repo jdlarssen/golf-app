@@ -12,8 +12,8 @@
 // `data/seedScores`.
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { subscribeGameScores } from '../data/realtime';
-import { seedGameScores } from '../data/seedScores';
+import { subscribeGameScores, subscribeGameTeeShots } from '../data/realtime';
+import { seedGameScores, seedGameTeeShots } from '../data/seedScores';
 import { useOnResume } from './useOnResume';
 
 /**
@@ -21,30 +21,36 @@ import { useOnResume } from './useOnResume';
  * @param opts.live abonner også på spillets realtime-kanal: hver merge leser
  *   basen på nytt, og en kanal som er tilbake etter et brudd seeder (#2093).
  *   Én kanal per spill, i en vanlig effekt og ikke per fokus (#1366).
+ * @param opts.reloadTeeShots #2580: spillet har «Hvem sitt utslag». Utslagene
+ *   hentes da på de samme tidspunktene som slagene (`seedGameTeeShots`), og med
+ *   `live` abonnerer hooken også på `subscribeGameTeeShots`; etterpå leses de
+ *   lokale utslagene på nytt med denne (`useTeamTeeShots().reload`). Uten den
+ *   spørres det aldri etter utslag.
  * @returns `seedFailed`: siste henting feilet (typisk uten nett). Tavla sier
  *   det med en linje, så et resultat fra bare telefonens slag ikke ser ferdig ut.
  */
 export function useScoreCatchUp(
   gameId: string,
   reload: () => Promise<void>,
-  opts: { live?: boolean } = {},
+  opts: { live?: boolean; reloadTeeShots?: () => Promise<void> } = {},
 ): { seedFailed: boolean } {
   const live = opts.live ?? false;
+  const reloadTeeShots = opts.reloadTeeShots;
   const [seedFailed, setSeedFailed] = useState(false);
 
   // Kjeden avviser aldri: en feilet henting lar de lokale radene stå, og
   // basen leses uansett.
   const seed = useCallback(() => {
-    void seedGameScores(gameId)
+    void Promise.all([seedGameScores(gameId), reloadTeeShots ? seedGameTeeShots(gameId) : null])
       .then(
         () => setSeedFailed(false),
         () => setSeedFailed(true),
       )
-      .then(() => reload())
+      .then(() => Promise.all([reload(), reloadTeeShots?.()]))
       .catch((err: unknown) => {
         console.error('[useScoreCatchUp] reload', err);
       });
-  }, [gameId, reload]);
+  }, [gameId, reload, reloadTeeShots]);
 
   // Kanalen først, så seeden, i samme rekkefølge som før: en rad som lander
   // mens seeden går, kommer da som en merge.
@@ -57,6 +63,17 @@ export function useScoreCatchUp(
       onResubscribed: seed,
     });
   }, [gameId, reload, seed, live]);
+
+  // #2580: utslagskanalen, bare for spill med innstillingen.
+  useEffect(() => {
+    if (!live || !reloadTeeShots) return;
+    return subscribeGameTeeShots(gameId, {
+      onMerge: () => {
+        void reloadTeeShots();
+      },
+      onResubscribed: seed,
+    });
+  }, [gameId, reloadTeeShots, seed, live]);
 
   useFocusEffect(seed);
   useOnResume(seed);

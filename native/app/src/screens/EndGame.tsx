@@ -59,6 +59,7 @@ import { WinnerSheet } from '../components/endGame/WinnerSheet';
 import { ChevronIcon, HakeIcon, LaasIcon } from '../components/icons/Icons';
 import { kickerHeader } from '../components/KickerHeader';
 import { PageTitle } from '../components/PageTitle';
+import { TeeShotOrganizerNoticeLive } from '../components/TeeShotOrganizerNotice';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { finishRound } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
@@ -121,6 +122,7 @@ import {
   describeSelfWithdrawFailure,
   WITHDRAW_SELF,
 } from '../lib/rosterCopy';
+import { teeShotMinimum } from '../lib/teeShotTeams';
 import { useGameBundle } from '../lib/useGameData';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
@@ -498,6 +500,8 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     </Pressable>
   );
 
+  // #2580: «Per har 2 av 4 utslag», bare med innstillingen på.
+  const minTeeShots = teeShotMinimum(bundle.game);
   const anyWithdrawable = plan.missing.some((entry) => entry.withdrawable);
   const ownMissing = plan.missing.some((entry) => entry.player.userId === userId);
   const ownUnapproved = plan.unapproved.some((player) => player.userId === userId);
@@ -552,6 +556,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           title={END_GAME_TEXT.heading}
           subtitle={titleSubtitle(bundle.courseName, plan.active.length)}
         />
+
+        {minTeeShots != null ? (
+          <View style={styles.teeShotNotice}>
+            <TeeShotOrganizerNoticeLive gameId={gameId} players={bundle.players} minimum={minTeeShots} />
+          </View>
+        ) : null}
 
         {allIn ? (
           <View
@@ -1367,6 +1377,8 @@ const styles = StyleSheet.create({
 
   // Fremdriftskortet.
   progress: { marginTop: 12, paddingVertical: 12, paddingHorizontal: 14, gap: 6 },
+  // #2580: arrangørens utslagslinjer står som kortene, 16 pt fra kanten og 12 over.
+  teeShotNotice: { marginTop: 12, marginHorizontal: 16 },
   // Tallet står på samme grunnlinje som etiketten: Fraunces 22 har grunnlinja
   // 22 ned i sin 28-boks, Inter 13 har den 13 ned, altså 9 lavere.
   progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },

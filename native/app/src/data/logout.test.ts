@@ -321,6 +321,18 @@ describe('logOut', () => {
     expect(await getScore(await getDb(), scoreKey(GAME, ME, 1))).toBeUndefined();
   });
 
+  // #2580: et utslag som ikke kom fram, stopper utloggingen som et slag.
+  it('nekter å logge ut når et utslag ikke kom fram', async () => {
+    const { supabase } = mocks();
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'Network request failed' } });
+    const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+    await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 3, teeShotBy: ME, enteredBy: ME });
+
+    expect(await logout().logOut()).toEqual({ ok: false, reason: 'unsent', pending: 1 });
+    expect(mockCalls).toEqual([]);
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+  });
+
   it('teller en karantene-rad som et slag som ikke kom fram', async () => {
     // #668: raden ga opp etter fem permanente feil og prøver aldri igjen. For
     // spilleren er det likevel et slag som ikke nådde fram, og det skal stoppe

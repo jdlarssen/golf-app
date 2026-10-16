@@ -13,16 +13,18 @@ import * as SQLite from 'expo-sqlite';
 import type {
   ConflictRecord,
   LocalScore,
+  LocalTeeShot,
   SyncQueueItem,
+  TeeShotQueueItem,
 } from '../../../../lib/sync/db';
 
-export type { ConflictRecord, LocalScore, SyncQueueItem };
+export type { ConflictRecord, LocalScore, LocalTeeShot, SyncQueueItem, TeeShotQueueItem };
 
 /** Eksportert for migrasjonstesten — filnavnet er skjemaets identitet. */
 export const DATABASE_NAME = 'torny.db';
 
 /** Bumpes når skjemaet endres; styrer `PRAGMA user_version`-migrasjonen. */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 /**
  * Nøkkelen for én score-rad. Speiler `scoreKey` i `lib/sync/db.ts` — den kan
@@ -35,6 +37,16 @@ export function scoreKey(
   holeNumber: number,
 ): string {
   return `${gameId}:${userId}:${holeNumber}`;
+}
+
+/**
+ * #2580: nøkkelen for lagets utslag på ett hull. Speiler `teeShotKey` i
+ * `lib/sync/db.ts` (som ikke kan importeres som verdi, se `scoreKey`). Tre deler
+ * uten kolon, spillet først, så `queueScope.belongsToGame` leser den som en
+ * score-nøkkel.
+ */
+export function teeShotKey(gameId: string, teamNumber: number, holeNumber: number): string {
+  return `${gameId}:${teamNumber}:${holeNumber}`;
 }
 
 /**
@@ -114,6 +126,36 @@ export const MIGRATION_V4 = `
 DROP TABLE IF EXISTS device_settings;
 `;
 
+/**
+ * #2580: «Hvem sitt utslag». Lagets valg per hull og køen som sender dem med
+ * `set_team_tee_shot_if_newer`, felt for felt som webbens Dexie-tabeller
+ * (`teeShots`, `teeShotQueue`). Rent additiv: en telefon på v4 beholder hver
+ * rad.
+ */
+export const MIGRATION_V5 = `
+CREATE TABLE IF NOT EXISTS tee_shots (
+  id TEXT PRIMARY KEY NOT NULL,
+  game_id TEXT NOT NULL,
+  team_number INTEGER NOT NULL,
+  hole_number INTEGER NOT NULL,
+  tee_shot_by TEXT,
+  entered_by TEXT NOT NULL,
+  client_updated_at TEXT NOT NULL,
+  server_updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS tee_shots_game_idx ON tee_shots (game_id);
+
+CREATE TABLE IF NOT EXISTS tee_shot_queue (
+  id TEXT PRIMARY KEY NOT NULL,
+  tee_shot_id TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  created_at TEXT NOT NULL,
+  abandoned_at TEXT
+);
+CREATE INDEX IF NOT EXISTS tee_shot_queue_created_idx ON tee_shot_queue (created_at);
+`;
+
 /** Verdiene `device_settings` hadde da v4 fjernet den, til noen tar dem. */
 const legacyDeviceSettings = new Map<string, string>();
 
@@ -142,9 +184,9 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     'PRAGMA user_version;',
   );
   const current = versionRow?.user_version ?? 0;
-  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → 2 → 3 →
-  // 4, en enhet som alt kjørte N2 går 1 → 2 → 3 → 4 og beholder radene sine.
-  // Skrittene rører aldri spillernes data: 1–3 legger til tabeller, og 4
+  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → … → 5,
+  // en enhet som alt kjørte N2 går 1 → 2 → … → 5 og beholder radene sine.
+  // Skrittene rører aldri spillernes data: 1–3 og 5 legger til tabeller, og 4
   // fjerner bare `device_settings`, etter at verdiene i den er lest.
   if (current < 1) await db.execAsync(MIGRATION_V1);
   if (current < 2) await db.execAsync(MIGRATION_V2);
@@ -153,6 +195,7 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     await readLegacyDeviceSettings(db);
     await db.execAsync(MIGRATION_V4);
   }
+  if (current < 5) await db.execAsync(MIGRATION_V5);
   if (current < SCHEMA_VERSION) {
     // PRAGMA tar ikke bind-parametre; SCHEMA_VERSION er en tallkonstant i denne
     // fila, aldri brukerdata.
@@ -243,6 +286,8 @@ export async function wipeLocalData(): Promise<void> {
     await txn.runAsync('DELETE FROM sync_queue;');
     await txn.runAsync('DELETE FROM conflicts;');
     await txn.runAsync('DELETE FROM cache_entries;');
+    await txn.runAsync('DELETE FROM tee_shots;');
+    await txn.runAsync('DELETE FROM tee_shot_queue;');
   });
 }
 
@@ -260,6 +305,26 @@ interface ScoreRow {
   entered_by: string;
   client_updated_at: string;
   server_updated_at: string | null;
+}
+
+interface TeeShotRow {
+  id: string;
+  game_id: string;
+  team_number: number;
+  hole_number: number;
+  tee_shot_by: string | null;
+  entered_by: string;
+  client_updated_at: string;
+  server_updated_at: string | null;
+}
+
+interface TeeShotQueueRow {
+  id: string;
+  tee_shot_id: string;
+  attempt_count: number;
+  last_error: string | null;
+  created_at: string;
+  abandoned_at: string | null;
 }
 
 interface QueueRow {
@@ -316,6 +381,30 @@ function toQueueItem(row: QueueRow): SyncQueueItem {
   return {
     id: row.id,
     scoreId: row.score_id,
+    attemptCount: row.attempt_count,
+    lastError: row.last_error,
+    createdAt: row.created_at,
+    abandonedAt: row.abandoned_at,
+  };
+}
+
+function toLocalTeeShot(row: TeeShotRow): LocalTeeShot {
+  return {
+    id: row.id,
+    gameId: row.game_id,
+    teamNumber: row.team_number,
+    holeNumber: row.hole_number,
+    teeShotBy: row.tee_shot_by,
+    enteredBy: row.entered_by,
+    clientUpdatedAt: row.client_updated_at,
+    serverUpdatedAt: row.server_updated_at,
+  };
+}
+
+function toTeeShotQueueItem(row: TeeShotQueueRow): TeeShotQueueItem {
+  return {
+    id: row.id,
+    teeShotId: row.tee_shot_id,
     attemptCount: row.attempt_count,
     lastError: row.last_error,
     createdAt: row.created_at,
@@ -557,4 +646,111 @@ export async function deleteConflict(
   id: string,
 ): Promise<void> {
   await db.runAsync('DELETE FROM conflicts WHERE id = $id;', { $id: id });
+}
+
+// ---------------------------------------------------------------------------
+// #2580: utslagene og køen deres. Samme mønster som slagene over.
+// ---------------------------------------------------------------------------
+
+export async function getTeeShot(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+): Promise<LocalTeeShot | undefined> {
+  const row = await db.getFirstAsync<TeeShotRow>('SELECT * FROM tee_shots WHERE id = $id;', { $id: id });
+  return row ? toLocalTeeShot(row) : undefined;
+}
+
+export async function putTeeShot(db: SQLite.SQLiteDatabase, shot: LocalTeeShot): Promise<void> {
+  await db.runAsync(
+    `INSERT OR REPLACE INTO tee_shots
+       (id, game_id, team_number, hole_number, tee_shot_by, entered_by, client_updated_at, server_updated_at)
+     VALUES
+       ($id, $game_id, $team_number, $hole_number, $tee_shot_by, $entered_by, $client_updated_at, $server_updated_at);`,
+    {
+      $id: shot.id,
+      $game_id: shot.gameId,
+      $team_number: shot.teamNumber,
+      $hole_number: shot.holeNumber,
+      $tee_shot_by: shot.teeShotBy,
+      $entered_by: shot.enteredBy,
+      $client_updated_at: shot.clientUpdatedAt,
+      $server_updated_at: shot.serverUpdatedAt,
+    },
+  );
+}
+
+/** Et avslått førstegangsvalg: serveren har ingen rad, så den lokale slettes. */
+export async function deleteTeeShot(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM tee_shots WHERE id = $id;', { $id: id });
+}
+
+export async function listTeeShotsForGame(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+): Promise<LocalTeeShot[]> {
+  const rows = await db.getAllAsync<TeeShotRow>(
+    'SELECT * FROM tee_shots WHERE game_id = $game_id ORDER BY team_number, hole_number;',
+    { $game_id: gameId },
+  );
+  return rows.map(toLocalTeeShot);
+}
+
+/** Hele utslagskøen i `createdAt`-rekkefølge, global som slagkøen. */
+export async function listTeeShotQueue(db: SQLite.SQLiteDatabase): Promise<TeeShotQueueItem[]> {
+  const rows = await db.getAllAsync<TeeShotQueueRow>('SELECT * FROM tee_shot_queue ORDER BY created_at;');
+  return rows.map(toTeeShotQueueItem);
+}
+
+export async function getTeeShotQueueItem(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+): Promise<TeeShotQueueItem | undefined> {
+  const row = await db.getFirstAsync<TeeShotQueueRow>('SELECT * FROM tee_shot_queue WHERE id = $id;', { $id: id });
+  return row ? toTeeShotQueueItem(row) : undefined;
+}
+
+export async function putTeeShotQueueItem(db: SQLite.SQLiteDatabase, item: TeeShotQueueItem): Promise<void> {
+  await db.runAsync(
+    `INSERT OR REPLACE INTO tee_shot_queue
+       (id, tee_shot_id, attempt_count, last_error, created_at, abandoned_at)
+     VALUES
+       ($id, $tee_shot_id, $attempt_count, $last_error, $created_at, $abandoned_at);`,
+    {
+      $id: item.id,
+      $tee_shot_id: item.teeShotId,
+      $attempt_count: item.attemptCount,
+      $last_error: item.lastError,
+      $created_at: item.createdAt,
+      $abandoned_at: item.abandonedAt ?? null,
+    },
+  );
+}
+
+export async function deleteTeeShotQueueItem(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM tee_shot_queue WHERE id = $id;', { $id: id });
+}
+
+export async function markTeeShotQueueRetry(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+  patch: { attemptCount: number; lastError: string | null },
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE tee_shot_queue SET attempt_count = $attempt_count, last_error = $last_error WHERE id = $id;',
+    { $id: id, $attempt_count: patch.attemptCount, $last_error: patch.lastError },
+  );
+}
+
+/** Karantene (#668), som for slag: raden står igjen som spor av feilen. */
+export async function markTeeShotQueueAbandoned(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+  patch: { attemptCount: number; lastError: string | null; abandonedAt: string },
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE tee_shot_queue
+        SET attempt_count = $attempt_count, last_error = $last_error, abandoned_at = $abandoned_at
+      WHERE id = $id;`,
+    { $id: id, $attempt_count: patch.attemptCount, $last_error: patch.lastError, $abandoned_at: patch.abandonedAt },
+  );
 }

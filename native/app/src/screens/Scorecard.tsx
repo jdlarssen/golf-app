@@ -52,7 +52,7 @@
 // når scorekortets egen «Lever scorekort» kommer til syne: aldri to
 // leverknapper. Innholdet har like mye luft nederst som linja er høy, så rulla
 // er like stor med og uten linja, og ingenting hopper når den går.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import {
   AccessibilityInfo,
   Alert,
@@ -74,6 +74,7 @@ import {
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
 import { nameInitials } from '../../../../lib/names/initials';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
 import { resolveScorecardStamp } from '../../../../lib/scorecard/scorecardStamp';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
@@ -83,7 +84,13 @@ import {
   ScorecardGrid,
   type EnteredByName,
   type ScorecardRowKind,
+  type TeeShotName,
 } from '../components/scorecard/ScorecardGrid';
+import {
+  TeeShotLockedSubmit,
+  TeeShotShortBox,
+  type TeeShotShortBoxPlayer,
+} from '../components/scorecard/TeeShotShortBox';
 import { kickerHeader } from '../components/KickerHeader';
 import {
   RoundDoneBar,
@@ -96,10 +103,11 @@ import {
   ScorecardStatusList,
 } from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
-import { getDb, listQueue } from '../data/db';
+import { getDb, listQueue, listTeeShotQueue } from '../data/db';
 import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
+import { formatNameList } from '../lib/display';
 import { isScoringSupported } from '../lib/formatGate';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { nameLookup } from '../lib/leaderboardModel';
@@ -122,6 +130,8 @@ import {
   teamScorecardKicker,
 } from '../lib/scorecardHeader';
 import { buildScorecardRows } from '../lib/scorecardRows';
+import { teeShotDeliveryLock, teeShotMinimum, teeShotNameOf, teeShotTeam, teamTeeShotState } from '../lib/teeShotTeams';
+import { teeShotBoxText, teeShotCountText } from '../lib/teeShotsCopy';
 import { computeGameLeaderboard } from '../lib/scoringContext';
 import {
   buildTeamCards,
@@ -131,6 +141,7 @@ import {
 } from '../lib/teamPlay';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
+import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -153,7 +164,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // noe annet leser slagene.
   const scores = useTeamScores(localScores, bundle);
   // `null` til køen er lest første gang (#2219). Da er lever-knappen sperret.
-  const [queued, setQueued] = useState<number | null>(null);
+  // #2580: utslag som venter, sperrer som slagene; serveren teller bare det
+  // som er framme.
+  const [queueCounts, setQueueCounts] = useState<{ strokes: number; teeShots: number } | null>(null);
+  const queued = queueCounts ? queueCounts.strokes + queueCounts.teeShots : null;
+  // #2580: «Hvem sitt utslag». Før bundelen har landet, spørres det ikke.
+  const minTeeShots = bundle ? teeShotMinimum(bundle.game) : null;
+  const teeShots = useTeamTeeShots(gameId, { enabled: minTeeShots != null, pollMs: QUEUE_POLL_MS });
+  const reloadTeeShots = teeShots.reload;
+  // Boksen over leverknappen; et trykk på den sperrede knappen gir den fokus.
+  const teeShotBoxRef = useRef<View>(null);
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [noticeText, setNoticeText] = useState<string | null>(null);
@@ -193,8 +213,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const refreshQueue = useCallback(async () => {
     try {
       const db = await getDb();
-      const items = await listQueue(db);
-      setQueued(items.filter((item) => isActiveForGame(item, gameId)).length);
+      const [items, teeShotItems] = await Promise.all([listQueue(db), listTeeShotQueue(db)]);
+      setQueueCounts({
+        strokes: items.filter((item) => isActiveForGame(item, gameId)).length,
+        teeShots: teeShotItems.filter((item) => isActiveForGame(item, gameId)).length,
+      });
     } catch (err: unknown) {
       console.error('[Scorecard] listQueue', err);
     }
@@ -220,10 +243,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       void drainQueue('lever')
         .catch(() => undefined)
         .then(() => refreshQueue())
-        .then(() => reload());
-    }, [refreshQueue, reload]),
+        .then(() => Promise.all([reload(), reloadTeeShots()]));
+    }, [refreshQueue, reload, reloadTeeShots]),
   );
-  useScoreCatchUp(gameId, reload);
+  useScoreCatchUp(gameId, reload, {
+    reloadTeeShots: minTeeShots != null ? reloadTeeShots : undefined,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -390,9 +415,30 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       });
     }
   }
+  // #2580: raden «Utslag», lagets valg per hull, i rekkefølgen Slag, Netto,
+  // Utslag, Ført av. I shamble viser hver spillers kort lagets rad. Den som
+  // mangler utslag, står i pille.
+  const teeShotsReady = minTeeShots != null && teeShots.loaded;
+  const myTeeShotTeamNumber = myTeamCard?.teamNumber ?? me.player.teamNumber;
+  const myTeeShotTeam =
+    teeShotsReady && myTeeShotTeamNumber != null ? teeShotTeam(bundle.players, myTeeShotTeamNumber) : null;
+  const teeShotCells = new Map<number, TeeShotName>();
+  if (myTeeShotTeam && minTeeShots != null) {
+    const { status } = teamTeeShotState(myTeeShotTeam, minTeeShots, teeShots.rows);
+    for (const row of teeShots.rows) {
+      if (row.teamNumber !== myTeeShotTeam.teamNumber || row.teeShotBy == null) continue;
+      const who = bundle.players.find((player) => player.userId === row.teeShotBy);
+      teeShotCells.set(row.holeNumber, {
+        initials: nameInitials(who?.name ?? null),
+        fullName: who?.name ?? 'ukjent',
+        short: (status.players.find((p) => p.userId === row.teeShotBy)?.missing ?? 0) > 0,
+      });
+    }
+  }
   const gridRows: ScorecardRowKind[] = [
     'strokes',
     ...valueRows,
+    ...(myTeeShotTeam ? (['teeShots'] as const) : []),
     ...(showEnteredBy ? (['enteredBy'] as const) : []),
   ];
 
@@ -407,6 +453,21 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     me.submitted_at != null &&
     me.withdrawn_at == null &&
     isScoringSupported(bundle.game);
+
+  // #2580: mangler noen på et av lagene som skal leveres utslag, står boksen
+  // over knappene og leverknappen er sperret, som serveren (412
+  // `tee_shots_short`). «Lever likevel» finnes ikke da.
+  const mateIds = flightMates.map((player) => player.userId);
+  const teeShotLock =
+    teeShotsReady && minTeeShots != null
+      ? teeShotDeliveryLock({
+          players: bundle.players,
+          minimum: minTeeShots,
+          rows: teeShots.rows,
+          deliveringIds: canSubmit ? [userId, ...mateIds] : canDeliverForFlight ? mateIds : [],
+        })
+      : null;
+  const teeShotBox = teeShotLock ? teeShotBoxFor(teeShotLock, mode) : null;
 
   const doSubmit = async () => {
     setBusy(true);
@@ -437,12 +498,24 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     setErrorText(describeSubmitFailure(result.reason));
   };
 
+  const submitLabel = teamMode
+    ? 'Lever lagets kort'
+    : flightMates.length > 0
+      ? flightDeliveryButton(flightMates)
+      : 'Lever scorekort';
+  const submitTestID = teamMode
+    ? 'submit-team-card'
+    : flightMates.length > 0
+      ? 'submit-flight'
+      : 'submit-scorecard';
+
   // Sperret til køen er lest (`null`) og mens den har slag for spillet.
   const queueBlocked = queued === null || queued > 0;
   const syncing = queued !== null && queued > 0;
+  const syncingLabel = queueCounts && queueCounts.strokes === 0 ? 'Synker utslag …' : 'Synker slag …';
 
   const onSubmitPress = () => {
-    if (queueBlocked || busy) return;
+    if (queueBlocked || busy || teeShotLock) return;
     if (missing === 0) {
       void doSubmit();
       return;
@@ -462,7 +535,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   };
 
   const onDeliverForPress = () => {
-    if (queueBlocked || busy) return;
+    if (queueBlocked || busy || teeShotLock) return;
     void doSubmit();
   };
 
@@ -478,9 +551,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           : 'Kortet er levert. Dette er lesevisning.';
 
   const queueGuard =
-    syncing ? (
+    syncing && queueCounts ? (
       <Text style={ui.muted} testID="queue-guard">
-        {queued} slag venter på å bli sendt. Knappen åpner når de er framme.
+        {queueGuardText(queueCounts)}
       </Text>
     ) : null;
 
@@ -534,6 +607,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           grid={grid}
           rows={gridRows}
           enteredBy={enteredBy}
+          teeShots={teeShotCells}
           footer={
             <ScorecardTotals
               totals={grid.totals}
@@ -555,6 +629,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 
         {canSubmit ? (
           <>
+            {teeShotsReady ? <TeeShotBoxSlot box={teeShotBox} boxRef={teeShotBoxRef} /> : null}
             {/* Står også mens kø-vakta holder lever-knappen igjen: det er lov å
                 rette mens slagene synker. Avstanden ned til lever-knappen er
                 minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
@@ -567,31 +642,30 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             </Pressable>
             {flightBlock}
             {queueGuard}
+            {teeShotBox ? (
+              <TeeShotLockedSubmit
+                label={submitLabel}
+                boxRef={teeShotBoxRef}
+                testID={submitTestID}
+                onLayout={onSubmitLayout}
+              />
+            ) : (
             <Pressable
               style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
               onLayout={onSubmitLayout}
               onPress={onSubmitPress}
               disabled={queueBlocked || busy}
-              testID={
-                teamMode
-                  ? 'submit-team-card'
-                  : flightMates.length > 0
-                    ? 'submit-flight'
-                    : 'submit-scorecard'
-              }
+              testID={submitTestID}
             >
               <Text style={ui.buttonText}>
                 {busy
                   ? 'Leverer …'
                   : syncing
-                    ? 'Synker slag …'
-                    : teamMode
-                      ? 'Lever lagets kort'
-                      : flightMates.length > 0
-                        ? flightDeliveryButton(flightMates)
-                        : 'Lever scorekort'}
+                    ? syncingLabel
+                    : submitLabel}
               </Text>
             </Pressable>
+            )}
           </>
         ) : (
           <>
@@ -602,8 +676,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             ) : null}
             {canDeliverForFlight ? (
               <>
+                {teeShotsReady ? <TeeShotBoxSlot box={teeShotBox} boxRef={teeShotBoxRef} /> : null}
                 {flightBlock}
                 {queueGuard}
+                {teeShotBox ? (
+                  <TeeShotLockedSubmit
+                    label={deliverForButton(flightMates)}
+                    boxRef={teeShotBoxRef}
+                    testID="deliver-for-flight"
+                  />
+                ) : (
                 <Pressable
                   style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
                   onPress={onDeliverForPress}
@@ -614,10 +696,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                     {busy
                       ? 'Leverer …'
                       : syncing
-                        ? 'Synker slag …'
+                        ? syncingLabel
                         : deliverForButton(flightMates)}
                   </Text>
                 </Pressable>
+                )}
               </>
             ) : null}
           </>
@@ -664,6 +747,54 @@ function HeaderKicker({
   return null;
 }
 
+/** Kø-vakta: «3 slag venter …», «1 utslag venter …» eller begge (#2580). */
+function queueGuardText(counts: { strokes: number; teeShots: number }): string {
+  const parts = [
+    counts.strokes > 0 ? `${counts.strokes} slag` : null,
+    counts.teeShots > 0 ? `${counts.teeShots} utslag` : null,
+  ].filter((part): part is string => part != null);
+  return `${formatNameList(parts)} venter på å bli sendt. Knappen åpner når de er framme.`;
+}
+
+type TeeShotLock = NonNullable<ReturnType<typeof teeShotDeliveryLock>>;
+type TeeShotBox = { title: string; body: string; players: TeeShotShortBoxPlayer[] };
+
+/** Boksens tittel, setning og antall per spiller (#2580, `Utslag-forslag-levering`). */
+function teeShotBoxFor(lock: TeeShotLock, mode: GameMode): TeeShotBox {
+  const nameOf = teeShotNameOf(lock.team);
+  const { title, body } = teeShotBoxText(lock.advice, lock.status, deliveryCoversWholeTeam(mode), nameOf);
+  return {
+    title,
+    body,
+    players: lock.status.players.map((p) => ({
+      userId: p.userId,
+      name: nameOf(p.userId),
+      countText: teeShotCountText(p, lock.status.minimum),
+      short: p.missing > 0,
+    })),
+  };
+}
+
+/**
+ * Plassen til boksen (#2580). Den leses opp bare når den dukker opp etter en
+ * endring på kortet (en makker byttet utslag), ikke når kortet åpnes med den.
+ */
+function TeeShotBoxSlot({ box, boxRef }: { box: TeeShotBox | null; boxRef: RefObject<View | null> }) {
+  const shown = box != null;
+  const [prevShown, setPrevShown] = useState(shown);
+  const [announce, setAnnounce] = useState(false);
+  if (shown !== prevShown) {
+    setPrevShown(shown);
+    setAnnounce(shown);
+  }
+  if (!box) return null;
+  return (
+    <View style={styles.teeShotBox}>
+      <TeeShotShortBox ref={boxRef} title={box.title} body={box.body} players={box.players} announce={announce} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   // Designet: tittelen står rett under toppen.
   fill: { flex: 1 },
@@ -675,4 +806,8 @@ const styles = StyleSheet.create({
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.
   editButton: { marginBottom: 16 },
+  // #2580: boksen står 16 pt fra kanten (skjermens padding er 20), 12 under
+  // kortet og 12 over «Rediger hullene» (skjermens `gap` er 8, knappens
+  // `marginTop` 8).
+  teeShotBox: { marginHorizontal: -4, marginTop: 4, marginBottom: -4 },
 });

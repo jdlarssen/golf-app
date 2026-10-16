@@ -67,6 +67,14 @@ describe('formatMessage', () => {
     expect(kavalkadeT('teamBestTeammate', { count: 2, names: 'Ada, Bo' })).toBe('Beste lagkamerater: Ada, Bo');
   });
 
+  // #2580: the tee-shot box picks its wording with `select` («team» or «each»).
+  it('picks a select branch by value, else «other», and fills what is inside', () => {
+    const template = 'før {delivery, select, team {lagets kort kan leveres} other {noen på laget kan levere}}, {min} hver';
+    expect(formatMessage(template, { delivery: 'team', min: 4 })).toBe('før lagets kort kan leveres, 4 hver');
+    expect(formatMessage(template, { delivery: 'each', min: 4 })).toBe('før noen på laget kan levere, 4 hver');
+    expect(formatMessage('{who, select, me {Deg} other {{name}}}', { who: 'x', name: 'Ada' })).toBe('Ada');
+  });
+
   it('throws on a missing value or an unknown key instead of showing braces', () => {
     expect(() => kavalkadeT('heading')).toThrow('missing value');
     expect(() => kavalkadeShareT('year.nope')).toThrow('unknown key');

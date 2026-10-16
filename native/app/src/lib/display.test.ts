@@ -106,4 +106,13 @@ describe('formatNameList', () => {
   ])('%j gir «%s»', (names, expected) => {
     expect(formatNameList(names)).toBe(expected);
   });
+
+  // #2580: «bytt der Marte eller Jonas står».
+  it.each([
+    [['Marte'], 'Marte'],
+    [['Marte', 'Jonas'], 'Marte eller Jonas'],
+    [['Marte', 'Jonas', 'Kristian'], 'Marte, Jonas eller Kristian'],
+  ])('%j med «eller» gir «%s»', (names, expected) => {
+    expect(formatNameList(names, 'eller')).toBe(expected);
+  });
 });

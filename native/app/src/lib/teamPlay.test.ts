@@ -148,6 +148,18 @@ describe('buildTeamCards', () => {
     expect(buildTeamCards(roster, nameOf)[0]!.label).toBe('Lag 1 · Anna, Bjørn');
   });
 
+  it('#2580: med labelOrder står navnene i den rekkefølgen, mens memberIds står på id', () => {
+    const roster = toRoster([
+      player({ userId: 'anna', teamNumber: 1 }),
+      player({ userId: 'bjorn', teamNumber: 1 }),
+    ]);
+
+    const [card] = buildTeamCards(roster, nameOf, (_team, ids) => [...ids].reverse());
+
+    expect(card!.label).toBe('Lag 1 · Bjørn, Anna');
+    expect(card!.memberIds).toEqual(['anna', 'bjorn']);
+  });
+
   it('et helt trukket lag faller ut — ingen kan taste på det', () => {
     const roster = toRoster([
       player({ userId: 'anna', teamNumber: 1 }),

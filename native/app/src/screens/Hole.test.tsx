@@ -23,7 +23,9 @@ import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { useMemo, useState, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
+import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
+import { writeTeeShot } from '../data/writeTeeShot';
 import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
@@ -156,9 +158,10 @@ const mockWithdrawnCaptainBundle = {
 
 // Hvilken bundel skjermen får, satt per test. Navnet må starte med `mock` —
 // jest.mock-factoryene heises over importene og ser bare slike variabler.
-const mockState: { bundle: unknown; scores: unknown[] } = {
+const mockState: { bundle: unknown; scores: unknown[]; teeShots: unknown[] } = {
   bundle: mockSoloBundle,
   scores: [],
+  teeShots: [],
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -184,21 +187,29 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('../data/writeScore', () => ({
   writeScore: jest.fn(async () => undefined),
 }));
+jest.mock('../data/writeTeeShot', () => ({
+  writeTeeShot: jest.fn(async () => undefined),
+}));
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockState.bundle),
   refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/seedScores', () => ({
   seedGameScores: jest.fn(async () => 0),
+  seedGameTeeShots: jest.fn(async () => 0),
 }));
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
+  subscribeGameTeeShots: jest.fn(() => () => undefined),
 }));
-jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
+jest.mock('../data/syncWorker', () => ({
+  drainQueue: jest.fn(async () => ({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 })),
+}));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
+  listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -287,6 +298,7 @@ describe('Hole', () => {
     jest.clearAllMocks();
     mockState.bundle = mockSoloBundle;
     mockState.scores = [];
+    mockState.teeShots = [];
     mockScheme.value = 'light';
     mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
@@ -795,5 +807,43 @@ describe('Hole', () => {
     expect(
       (writeScore as jest.Mock).mock.calls.map(([args]) => args.userId),
     ).toEqual(['me']);
+  });
+  // #2580: velgeren står under flighten, lagkortets navnelinje følger
+  // knappenes rekkefølge, og et trykk går til `writeTeeShot` (aldri
+  // `writeScore`) og så ut med drainen.
+  it('«Hvem sitt utslag»: velgeren står under flighten, og et trykk skriver lagets valg', async () => {
+    mockState.bundle = {
+      ...mockTeamBundle,
+      game: {
+        ...GAME_BASE,
+        gameMode: 'texas_scramble',
+        modeConfig: { kind: 'texas_scramble', team_size: 4, min_tee_shots: 4 },
+      },
+      players: [
+        { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', teamNumber: 1, courseHandicap: 20 },
+        { ...PLAYER_BASE, userId: 'marte', name: 'Marte Moe', teamNumber: 1, courseHandicap: 10 },
+        { ...PLAYER_BASE, userId: 'jonas', name: 'Jonas Berg', teamNumber: 1, courseHandicap: 12 },
+        { ...PLAYER_BASE, userId: 'per', name: 'Per Hauge', teamNumber: 1, courseHandicap: 30 },
+      ],
+    };
+    await renderHole(7);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tee-shot-picker')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('flight-row-jonas')).getByText('Lag 1 · Jonas, Marte, Meg, Per')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('tee-shot-per'));
+    await waitFor(() => {
+      expect(drainQueue).toHaveBeenCalledWith('utslag');
+    });
+    expect(writeTeeShot).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      teamNumber: 1,
+      holeNumber: 7,
+      teeShotBy: 'per',
+      enteredBy: 'me',
+    });
+    expect(writeScore).not.toHaveBeenCalled();
   });
 });

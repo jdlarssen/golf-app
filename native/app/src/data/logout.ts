@@ -27,7 +27,7 @@
 // lover derfor ikke levering, og sier forbeholdet rett ut.)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { currentDeviceUserId, supabase } from '../supabase';
-import { getDb, listQueue, wipeLocalData } from './db';
+import { getDb, listQueue, listTeeShotQueue, wipeLocalData } from './db';
 import { forgetPushBeforeSignOut } from './pushDevice';
 import { LOCAL_DATA_OWNER_KEY } from './localOwner';
 import { drainQueue } from './syncWorker';
@@ -63,11 +63,11 @@ export type LogoutResult =
  * En karantene-rad er et slag som ga opp etter fem permanente feil; den kommer
  * aldri til å gå opp av seg selv. For spilleren er det likevel et slag som ikke
  * kom fram, og det teller like mye som et som fortsatt prøver. `listQueue`
- * leser hele tabellen, og det er med vilje.
+ * leser hele tabellen, og det er med vilje. #2580: utslagskøen teller likt.
  */
 async function pendingCount(): Promise<number> {
   const db = await getDb();
-  return (await listQueue(db)).length;
+  return (await listQueue(db)).length + (await listTeeShotQueue(db)).length;
 }
 
 /**

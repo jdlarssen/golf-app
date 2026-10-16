@@ -41,14 +41,15 @@ export function shortDisplayName(player: {
 
 /**
  * «Marte», «Marte og Jonas», «Marte, Jonas og Kristian» — norsk oppramsing,
- * komma hele veien og «og» før den siste. Tom liste gir «».
+ * komma hele veien og «og» før den siste. Tom liste gir «». Med `'eller'`
+ * (#2580): «Marte, Jonas eller Kristian».
  *
  * Det ene hjemmet for oppramsingen i appen (#2577). Bygget for hånd fordi
  * Hermes ikke kan stoles på for `Intl.ListFormat`.
  */
-export function formatNameList(names: readonly string[]): string {
+export function formatNameList(names: readonly string[], word: 'og' | 'eller' = 'og'): string {
   if (names.length <= 1) return names.join('');
-  return `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(', ')} ${word} ${names[names.length - 1]}`;
 }
 
 function pad(n: number): string {

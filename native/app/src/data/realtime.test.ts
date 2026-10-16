@@ -259,3 +259,98 @@ describe('subscribeGameStatus (#2219)', () => {
     stop();
   });
 });
+
+// #2580: utslagene går inn lokalt etter den delte regelen `serverTeeShotWins`
+// (lib/sync/teeShotRow.ts): en rad som venter i køen overskrives aldri, ellers
+// vinner bare et strengt nyere stempel, sammenlignet som øyeblikk.
+describe('mergeServerTeeShots (#2580)', () => {
+  useFreshModules();
+
+  const KEY = `${GAME}:1:7`;
+  const server = (teeShotBy: string, clientUpdatedAt: string) => ({
+    gameId: GAME,
+    teamNumber: 1,
+    holeNumber: 7,
+    teeShotBy,
+    enteredBy: MATE,
+    clientUpdatedAt,
+    serverUpdatedAt: SERVER_TIME,
+  });
+
+  it('legger inn en rad som ikke finnes, og lar bare en nyere vinne', async () => {
+    const { mergeServerTeeShots } = require('./realtime') as typeof import('./realtime');
+    const { getDb, getTeeShot } = require('./db') as Db;
+
+    await mergeServerTeeShots([server(MATE, FROZEN)]);
+    expect((await getTeeShot(await getDb(), KEY))?.teeShotBy).toBe(MATE);
+
+    await mergeServerTeeShots([server(ME, OLDER), server(ME, '2026-08-30T10:00:00.000+00:00')]);
+    expect((await getTeeShot(await getDb(), KEY))?.teeShotBy).toBe(MATE);
+
+    await mergeServerTeeShots([server(ME, NEWER)]);
+    expect(await getTeeShot(await getDb(), KEY)).toMatchObject({ teeShotBy: ME, clientUpdatedAt: NEWER, serverUpdatedAt: SERVER_TIME });
+  });
+
+  it('overskriver aldri en rad som venter i køen', async () => {
+    const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+    const { mergeServerTeeShots } = require('./realtime') as typeof import('./realtime');
+    const { getDb, getTeeShot } = require('./db') as Db;
+    await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy: ME, enteredBy: ME });
+
+    await mergeServerTeeShots([server(MATE, '2030-01-01T00:00:00.000Z')]);
+
+    expect((await getTeeShot(await getDb(), KEY))?.teeShotBy).toBe(ME);
+  });
+});
+
+describe('subscribeGameTeeShots (#2580)', () => {
+  useFreshModules();
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('lytter på spillets team_tee_shots og merger det som kommer', async () => {
+    const { subscribeGameTeeShots } = require('./realtime') as typeof import('./realtime');
+    const { realtimeChannels } = require('../test/supabaseMock') as typeof import('../test/supabaseMock');
+    const onMerge = jest.fn();
+    const stop = subscribeGameTeeShots(GAME, { onMerge });
+    await jest.advanceTimersByTimeAsync(0);
+
+    const channel = realtimeChannels.at(-1)!;
+    // The channel helper adds a counter after «#» so a rebuilt channel is new.
+    expect(channel.topic.split('#')[0]).toBe(`team_tee_shots:${GAME}`);
+    const [event, filter, handler] = channel.bindings[0] as [string, Record<string, string>, (p: unknown) => void];
+    expect(event).toBe('postgres_changes');
+    expect(filter).toEqual({ event: '*', schema: 'public', table: 'team_tee_shots', filter: `game_id=eq.${GAME}` });
+
+    handler({
+      new: {
+        game_id: GAME,
+        team_number: 1,
+        hole_number: 7,
+        tee_shot_by: MATE,
+        entered_by: MATE,
+        client_updated_at: FROZEN,
+        updated_at: SERVER_TIME,
+      },
+    });
+    jest.useRealTimers();
+    const { getDb, getTeeShot } = require('./db') as Db;
+    await waitForRow(async () => (await getTeeShot(await getDb(), `${GAME}:1:7`))?.teeShotBy === MATE);
+    expect(onMerge).toHaveBeenCalled();
+    stop();
+  });
+});
+
+async function waitForRow(check: () => Promise<boolean>): Promise<void> {
+  for (let i = 0; i < 50; i++) {
+    if (await check()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('row never arrived');
+}

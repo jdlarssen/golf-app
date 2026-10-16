@@ -213,6 +213,14 @@ function formatArgument(body: string, values: MessageValues): string {
   const value = values[name.trim()];
   if (value === undefined) throw new Error(`formatMessage: missing value «${name.trim()}»`);
   if (type === undefined) return formatValue(value);
+  if (type.trim() === 'select') {
+    // #2580: `{delivery, select, team {…} other {…}}` — the branch named by
+    // the value, else `other`, as next-intl picks it.
+    const options = pluralBranches(rest.join(','));
+    const chosen = options[String(value)] ?? options.other;
+    if (chosen === undefined) throw new Error(`formatMessage: no branch for «${String(value)}» in «${body}»`);
+    return formatMessage(chosen, values);
+  }
   if (type.trim() !== 'plural') throw new Error(`formatMessage: unsupported type «${type.trim()}»`);
   const n = Number(value);
   const branches = pluralBranches(rest.join(','));

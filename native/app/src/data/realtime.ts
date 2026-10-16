@@ -13,13 +13,23 @@ import type {
   MergeOutcome,
   ServerScoreRow,
 } from '../../../../lib/sync/mergeServerScore';
+import {
+  fromTeeShotRow,
+  serverTeeShotWins,
+  type ServerTeeShotRow,
+  type TeeShotRowFromDb,
+} from '../../../../lib/sync/teeShotRow';
 import { currentDeviceUserId, supabase } from '../supabase';
 import {
   deleteQueueItem,
   getScore,
+  getTeeShot,
+  getTeeShotQueueItem,
   putConflict,
   putScore,
+  putTeeShot,
   scoreKey,
+  teeShotKey,
   withTxn,
 } from './db';
 import { addOnlineListener, isDeviceOnline } from './syncTriggers';
@@ -365,6 +375,66 @@ export function subscribeGameScores(
           if (!row || !row.game_id || !row.user_id || row.hole_number == null)
             return;
           void mergeIncoming(row as ScoreRowFromDb, handlers.onMerge);
+        },
+      ),
+    handlers,
+  );
+}
+
+/**
+ * #2580: utslag fra serveren (realtime, seed) inn i den lokale basen, alle i én
+ * transaksjon, etter den delte regelen `serverTeeShotWins`: en rad som venter i
+ * køen overskrives aldri (drainen sender den, og RPC-ens svar gjør den opp),
+ * ellers vinner bare et strengt nyere stempel. Ulikt slagene slettes aldri
+ * kø-elementet her, og stemplene sammenlignes som øyeblikk (#2211), som på
+ * webben (`mergeServerTeeShots` i lib/sync/writeTeeShot.ts).
+ */
+export async function mergeServerTeeShots(rows: readonly ServerTeeShotRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  return withTxn(async (txn) => {
+    let merged = 0;
+    for (const incoming of rows) {
+      const id = teeShotKey(incoming.gameId, incoming.teamNumber, incoming.holeNumber);
+      const [existing, queued] = await Promise.all([getTeeShot(txn, id), getTeeShotQueueItem(txn, id)]);
+      if (!serverTeeShotWins(existing, incoming, queued != null)) continue;
+      await putTeeShot(txn, { id, ...incoming });
+      merged++;
+    }
+    return merged;
+  });
+}
+
+/**
+ * #2580: abonner på lagenes utslag i ett spill, med samme oppbygging som
+ * `subscribeGameScores` (topic som webbens `subscribeGameTeeShots`).
+ * `onResubscribed` fyrer når kanalen er tilbake etter et brudd (#2093).
+ */
+export function subscribeGameTeeShots(
+  gameId: string,
+  handlers: {
+    onStatus?: (status: RealtimeStatus) => void;
+    onMerge?: () => void;
+    onResubscribed?: () => void;
+  } = {},
+): () => void {
+  return subscribeRealtimeChannel(
+    `team_tee_shots:${gameId}`,
+    (channel) =>
+      channel.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_tee_shots',
+          filter: `game_id=eq.${gameId}`,
+        },
+        (payload) => {
+          const row = payload.new as Partial<TeeShotRowFromDb> | null;
+          if (!row || !row.game_id || row.team_number == null || row.hole_number == null) return;
+          void mergeServerTeeShots([fromTeeShotRow(row as TeeShotRowFromDb)]).then(
+            () => handlers.onMerge?.(),
+            (err: unknown) => console.error('[realtime] utslag', err),
+          );
         },
       ),
     handlers,
