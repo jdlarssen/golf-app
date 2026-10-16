@@ -7,6 +7,9 @@ import {
   sanitizeKavalkadeNarrative,
 } from './kavalkadeNarrativePrompt';
 
+/** Everyone in the fixture said yes to AI texts (#2561). */
+const ALL = new Set(['u1', 'u2', 'u3', 'u4', 'u5', 'u6']);
+
 function makeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
   return {
     year: 2026,
@@ -68,7 +71,7 @@ function makeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
 
 describe('factsForModel', () => {
   it('fjerner alle interne id-er, uansett hvor dypt de ligger', () => {
-    const json = JSON.stringify(factsForModel(makeFacts()));
+    const json = JSON.stringify(factsForModel(makeFacts(), ALL));
 
     expect(json).not.toContain('userId');
     expect(json).not.toContain('gameId');
@@ -81,7 +84,7 @@ describe('factsForModel', () => {
   });
 
   it('beholder navnene og tallene', () => {
-    const json = JSON.stringify(factsForModel(makeFacts()));
+    const json = JSON.stringify(factsForModel(makeFacts(), ALL));
 
     expect(json).toContain('Ola');
     expect(json).toContain('Kari');
@@ -91,7 +94,7 @@ describe('factsForModel', () => {
 
   it('rører ikke fakta-objektet den fikk', () => {
     const facts = makeFacts();
-    factsForModel(facts);
+    factsForModel(facts, ALL);
 
     expect(facts.personal?.rival?.userId).toBe('u2');
     expect(facts.personal?.bestRound?.gameId).toBe('g1');
@@ -100,6 +103,7 @@ describe('factsForModel', () => {
   it('beholder null og tomme lister', () => {
     const stripped = factsForModel(
       makeFacts({ personal: null, team: null }),
+      ALL,
     ) as Record<string, unknown>;
 
     expect(stripped.personal).toBeNull();
@@ -107,9 +111,47 @@ describe('factsForModel', () => {
   });
 });
 
+// #2561 PR B: a player who did not say yes to AI texts is never named.
+describe('factsForModel — players without «ja»', () => {
+  const tightestFinish = {
+    gameId: 'g5',
+    gameName: 'Onsdagsrunden',
+    courseName: 'Losby',
+    playedAt: '2026-09-02T16:00:00.000Z',
+    strokeMargin: 1,
+    leader: { userId: 'u5', name: 'Eva', brutto: 84 },
+    runnerUp: { userId: 'u6', name: 'Siv', brutto: 85 },
+  };
+  const withFinish = () =>
+    makeFacts({
+      gang: { ...(makeFacts().gang as NonNullable<KavalkadeFacts['gang']>), tightestFinish },
+    });
+
+  it.each([
+    ['rivalen og gjengens vinner', 'u2', 'Ola'],
+    ['lagkameraten', 'u3', 'Kari'],
+    ['flest birdies', 'u1', 'Per'],
+    ['flest snømenn', 'u4', 'Nils'],
+    ['jevneste avslutning, lederen', 'u5', 'Eva'],
+    ['jevneste avslutning, nummer to', 'u6', 'Siv'],
+  ])('%s', (_label, userId, name) => {
+    const allowed = new Set([...ALL].filter((id) => id !== userId));
+    expect(JSON.stringify(factsForModel(withFinish(), allowed))).not.toContain(name);
+  });
+
+  it('keeps the numbers next to a name it hides, and the names of those who said yes', () => {
+    const stripped = factsForModel(withFinish(), new Set(['u1', 'u3', 'u4', 'u5', 'u6'])) as {
+      personal: { rival: { name: string | null; wins: number } };
+      team: { teammates: { name: string | null }[] };
+    };
+    expect(stripped.personal.rival).toEqual({ name: null, met: 8, decided: 8, wins: 3, losses: 4, ties: 1 });
+    expect(stripped.team.teammates[0].name).toBe('Kari');
+  });
+});
+
 describe('buildKavalkadeNarrativePrompt', () => {
   it('legger ved fakta uten id-er, og aldri rå scorer', () => {
-    const { user } = buildKavalkadeNarrativePrompt(makeFacts());
+    const { user } = buildKavalkadeNarrativePrompt(makeFacts(), ALL);
 
     expect(user).toContain('2026');
     expect(user).toContain('Lørdagscup');
@@ -118,16 +160,19 @@ describe('buildKavalkadeNarrativePrompt', () => {
   });
 
   it('ber om 2–4 setninger på norsk uten markdown', () => {
-    const { system } = buildKavalkadeNarrativePrompt(makeFacts());
+    const { system } = buildKavalkadeNarrativePrompt(makeFacts(), ALL);
 
     expect(system).toContain('2–4');
     expect(system).toContain('bokmål');
     expect(system).toContain('ingen markdown');
+    // #2561: a null name is a player who said no to AI texts.
+    expect(system).toContain('Er et navn null, vil personen ikke være med');
   });
 
   it('sier ifra når spilleren er under terskelen', () => {
     const { system } = buildKavalkadeNarrativePrompt(
       makeFacts({ personal: null, soloRounds: 2, rounds: 2, teamRounds: 0, team: null }),
+      ALL,
     );
 
     expect(system).toContain('2 runder');
@@ -137,21 +182,22 @@ describe('buildKavalkadeNarrativePrompt', () => {
   it('bøyer «runde» riktig i entall', () => {
     const { system } = buildKavalkadeNarrativePrompt(
       makeFacts({ personal: null, soloRounds: 1, rounds: 1, teamRounds: 0, team: null }),
+      ALL,
     );
 
     expect(system).toContain('1 runde ');
   });
 
   it('nevner ikke terskelen når spilleren har personlige tall', () => {
-    const { system } = buildKavalkadeNarrativePrompt(makeFacts());
+    const { system } = buildKavalkadeNarrativePrompt(makeFacts(), ALL);
 
     expect(system).not.toContain('terskelen på');
   });
 
   it('ber om «dere» bare når det finnes lagrunder', () => {
-    expect(buildKavalkadeNarrativePrompt(makeFacts()).system).toContain('«dere»');
+    expect(buildKavalkadeNarrativePrompt(makeFacts(), ALL).system).toContain('«dere»');
     expect(
-      buildKavalkadeNarrativePrompt(makeFacts({ team: null })).system,
+      buildKavalkadeNarrativePrompt(makeFacts({ team: null }), ALL).system,
     ).not.toContain('«dere»');
   });
 });

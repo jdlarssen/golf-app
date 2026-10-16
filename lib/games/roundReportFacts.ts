@@ -24,7 +24,7 @@
 import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { runningMatchStatus } from '@/lib/scoring/modes/matchplayRunningStatus';
-import { buildShareCardData, type ShareCardBand } from './buildShareCardData';
+import { buildShareCardData, type ShareCardBand, type ShareCardRow } from './buildShareCardData';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -129,6 +129,16 @@ export type BuildRoundReportFactsOpts = {
    * full array, so relying on it would make facts silently wrong.
    */
   totalHoles?: number;
+  /**
+   * #2561 PR B: the players who said yes to AI texts (`readAiAllowedUserIds`).
+   * Everyone else is left out wherever a name or a result would reach the
+   * facts: their standings row is dropped (the others keep their real rank),
+   * a team is named after its members who said yes («Lag N» when none did),
+   * winnerName is null when the winner did not, a checkpoint they lead is
+   * dropped, and the matchplay or skins block goes when any party did not.
+   * Omitted = everyone (pure callers and the existing fixtures).
+   */
+  aiAllowedUserIds?: ReadonlySet<string>;
 };
 
 // nb-only surface by design (#1527) — rundereferatet skrives på norsk.
@@ -143,6 +153,8 @@ export function buildRoundReportFacts(
 ): RoundReportFacts {
   const { result, nameByUserId, gameName, courseName, endedAt, gameMode, parByHole } = opts;
   const totalHoles = opts.totalHoles ?? 18;
+  const allowed = opts.aiAllowedUserIds;
+  const isAllowed = (userId: string) => allowed === undefined || allowed.has(userId);
 
   const card = buildShareCardData({
     result,
@@ -151,13 +163,33 @@ export function buildRoundReportFacts(
     parByHole,
     sideWinners: [],
     playerFallback: PLAYER_FALLBACK,
+    withUserIds: true,
   });
 
-  const standings: RoundReportStandingRow[] = card.podium.map((row) => ({
-    rank: row.rank,
-    name: row.name,
-    scoreLabel: formatScoreLabel(row.score),
-  }));
+  /** The row's name as the facts may show it, or null when the row must go. */
+  const visibleName = (row: ShareCardRow): string | null => {
+    const ids = row.userIds;
+    // A row without ids cannot be checked, so with a filter it never shows.
+    if (ids === undefined) return allowed === undefined ? row.name : null;
+    const allowedIds = ids.filter(isAllowed);
+    if (allowedIds.length === ids.length) return row.name;
+    if (row.teamNumber === undefined) return null;
+    if (allowedIds.length === 0) return `Lag ${row.teamNumber}`;
+    return joinNames(allowedIds, nameByUserId);
+  };
+
+  const standings: RoundReportStandingRow[] = card.podium.flatMap((row) => {
+    const name = visibleName(row);
+    return name === null ? [] : [{ rank: row.rank, name, scoreLabel: formatScoreLabel(row.score) }];
+  });
+
+  const winnerRow = card.winners[0];
+  const matchplayVisible = card.band !== 'matchplay' || matchplayPartiesAllowed(result, isAllowed);
+  const winnerName = winnerRow
+    ? visibleName(winnerRow)
+    : matchplayVisible
+      ? matchplayWinnerNameFallback(card)
+      : null;
 
   const facts: RoundReportFacts = {
     gameName,
@@ -165,28 +197,57 @@ export function buildRoundReportFacts(
     endedAt,
     formatLabel: MODE_LABELS[gameMode],
     band: card.band,
-    winnerName: card.winners[0]?.name ?? matchplayWinnerNameFallback(card),
+    winnerName,
     standings,
     scoredHoles: computeScoredHoles(result),
   };
 
   if (card.band === 'matchplay') {
-    facts.matchplay = buildMatchplayFacts(result, nameByUserId, totalHoles);
+    if (matchplayVisible) facts.matchplay = buildMatchplayFacts(result, nameByUserId, totalHoles);
   } else if (card.band === 'skins' && result.kind === 'skins') {
-    facts.skins = buildSkinsFacts(result, nameByUserId);
+    const skins = buildSkinsFacts(result, nameByUserId);
+    if (skins.winnerUserIds.every(isAllowed)) facts.skins = skins.facts;
   } else if (card.band === 'placement') {
-    const checkpoints = buildCheckpoints(result, nameByUserId, facts.winnerName);
+    const finalLeader: FinalLeader =
+      winnerRow === undefined
+        ? { kind: 'none' }
+        : winnerName === null
+          ? { kind: 'hidden' }
+          : { kind: 'name', name: winnerName };
+    const checkpoints = buildCheckpoints(result, nameByUserId, finalLeader, isAllowed);
     if (checkpoints) facts.checkpoints = checkpoints;
+    // The tiebreak flag says the winner was level with the runner-up, so it
+    // is read off the full podium and kept only when both may be shown: a tie
+    // is the runner-up's result too.
+    const [first, second] = card.podium;
     if (
-      standings.length >= 2 &&
-      standings[0].rank !== standings[1].rank &&
-      standings[0].scoreLabel === standings[1].scoreLabel
+      winnerName !== null &&
+      first !== undefined &&
+      second !== undefined &&
+      visibleName(second) !== null &&
+      first.rank !== second.rank &&
+      formatScoreLabel(first.score) === formatScoreLabel(second.score)
     ) {
       facts.decidedByTiebreak = true;
     }
   }
 
   return facts;
+}
+
+/**
+ * #2561: whether the facts show any player at all. When the only players who
+ * said yes are off the podium, every row, the winner and every checkpoint are
+ * gone, and a report would be about nobody.
+ */
+export function factsShowAnyPlayer(facts: RoundReportFacts): boolean {
+  return (
+    facts.standings.length > 0 ||
+    facts.winnerName !== null ||
+    facts.matchplay !== undefined ||
+    facts.skins !== undefined ||
+    (facts.checkpoints?.length ?? 0) > 0
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -373,6 +434,21 @@ function matchplaySideUserIds(
   return result.sides[sideNumber - 1].players.map((p) => p.userId);
 }
 
+/** #2561: every player in the match said yes (always true outside matchplay). */
+function matchplayPartiesAllowed(
+  result: ModeResult,
+  isAllowed: (userId: string) => boolean,
+): boolean {
+  if (
+    result.kind !== 'singles_matchplay' &&
+    result.kind !== 'fourball_matchplay' &&
+    result.kind !== 'foursomes_matchplay'
+  ) {
+    return true;
+  }
+  return [...matchplaySideUserIds(result, 1), ...matchplaySideUserIds(result, 2)].every(isAllowed);
+}
+
 /**
  * Momentum from the `runningMatchStatus` sequence: lead changes = number of
  * sign flips (positive <-> negative, ignoring zero/AS plateaus), plus the
@@ -407,17 +483,19 @@ function computeMomentum(running: number[]): {
 function buildSkinsFacts(
   result: Extract<ModeResult, { kind: 'skins' }>,
   nameByUserId: Map<string, string>,
-): RoundReportSkinsFacts {
-  const bigSkinHoles = result.holes
-    .filter((h) => h.skinsAwarded >= 2 && h.winnerUserId !== null)
-    .map((h) => ({
-      holeNumber: h.holeNumber,
-      skinsAwarded: h.skinsAwarded,
-      winnerName: nameByUserId.get(h.winnerUserId as string) ?? PLAYER_FALLBACK,
-      carriedIn: h.carriedIn,
-    }));
+): { facts: RoundReportSkinsFacts; winnerUserIds: string[] } {
+  const bigSkins = result.holes.filter((h) => h.skinsAwarded >= 2 && h.winnerUserId !== null);
+  const bigSkinHoles = bigSkins.map((h) => ({
+    holeNumber: h.holeNumber,
+    skinsAwarded: h.skinsAwarded,
+    winnerName: nameByUserId.get(h.winnerUserId as string) ?? PLAYER_FALLBACK,
+    carriedIn: h.carriedIn,
+  }));
 
-  return { bigSkinHoles, carriedPot: result.carriedPot };
+  return {
+    facts: { bigSkinHoles, carriedPot: result.carriedPot },
+    winnerUserIds: bigSkins.map((h) => h.winnerUserId as string),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -425,10 +503,18 @@ function buildSkinsFacts(
 // cumulative-leader lookup at fixed hole markers).
 // ---------------------------------------------------------------------------
 
+/**
+ * Who the last checkpoint names: the standings winner (`name`), nobody because
+ * the winner did not say yes to AI texts (`hidden`, #2561: the checkpoint is
+ * dropped), or the raw leader because there is no winner row (`none`).
+ */
+type FinalLeader = { kind: 'name'; name: string } | { kind: 'hidden' } | { kind: 'none' };
+
 function buildCheckpoints(
   result: ModeResult,
   nameByUserId: Map<string, string>,
-  finalLeaderName: string | null,
+  finalLeader: FinalLeader,
+  isAllowed: (userId: string) => boolean,
 ): RoundReportCheckpoint[] | null {
   if (result.kind === 'solo_strokeplay') {
     return checkpointsFromCumulative(
@@ -439,7 +525,8 @@ function buildCheckpoints(
       nameByUserId,
       // Lower cumulative net strokes = leading.
       (a, b) => a - b,
-      finalLeaderName,
+      finalLeader,
+      isAllowed,
     );
   }
 
@@ -452,7 +539,8 @@ function buildCheckpoints(
       nameByUserId,
       // Higher cumulative points = leading.
       (a, b) => b - a,
-      finalLeaderName,
+      finalLeader,
+      isAllowed,
     );
   }
 
@@ -471,16 +559,20 @@ function buildCheckpoints(
  * winner, tiebreak included), never the raw-sum leader. A raw tie otherwise
  * produces facts where «ledet etter siste hull» contradicts `winnerName`
  * (#1029).
+ *
+ * #2561: a checkpoint led by a player without AI consent is dropped, and so is
+ * the last one when the winner is hidden (`finalLeader.kind === 'hidden'`).
  */
 function checkpointsFromCumulative(
   holes: Array<{ holeNumber: number; perPlayer: Array<{ userId: string; value: number | null }> }>,
   nameByUserId: Map<string, string>,
   compare: (a: number, b: number) => number,
-  finalLeaderName: string | null,
+  finalLeader: FinalLeader,
+  isAllowed: (userId: string) => boolean,
 ): RoundReportCheckpoint[] | null {
   const sorted = [...holes].sort((a, b) => a.holeNumber - b.holeNumber);
   const cumulative = new Map<string, number>();
-  const checkpoints: RoundReportCheckpoint[] = [];
+  const leaders: Array<{ afterHole: number; userId: string }> = [];
 
   const markers = new Set([6, 12]);
   let lastScoredHole: number | null = null;
@@ -494,27 +586,36 @@ function checkpointsFromCumulative(
     }
     if (anyScored) lastScoredHole = hole.holeNumber;
     if (markers.has(hole.holeNumber) && cumulative.size > 0) {
-      const leaderName = leaderFromCumulative(cumulative, nameByUserId, compare);
-      if (leaderName) checkpoints.push({ afterHole: hole.holeNumber, leaderName });
+      const leader = leaderFromCumulative(cumulative, compare);
+      if (leader) leaders.push({ afterHole: hole.holeNumber, userId: leader });
     }
   }
 
   if (lastScoredHole !== null && !markers.has(lastScoredHole) && cumulative.size > 0) {
-    const leaderName = leaderFromCumulative(cumulative, nameByUserId, compare);
-    if (leaderName) checkpoints.push({ afterHole: lastScoredHole, leaderName });
+    const leader = leaderFromCumulative(cumulative, compare);
+    if (leader) leaders.push({ afterHole: lastScoredHole, userId: leader });
   }
 
-  if (checkpoints.length > 0 && finalLeaderName !== null) {
-    const last = checkpoints[checkpoints.length - 1];
-    checkpoints[checkpoints.length - 1] = { ...last, leaderName: finalLeaderName };
-  }
+  const checkpoints: RoundReportCheckpoint[] = [];
+  leaders.forEach((leader, i) => {
+    const isFinal = i === leaders.length - 1;
+    if (isFinal && finalLeader.kind === 'name') {
+      checkpoints.push({ afterHole: leader.afterHole, leaderName: finalLeader.name });
+      return;
+    }
+    if (isFinal && finalLeader.kind === 'hidden') return;
+    if (!isAllowed(leader.userId)) return;
+    checkpoints.push({
+      afterHole: leader.afterHole,
+      leaderName: nameByUserId.get(leader.userId) ?? PLAYER_FALLBACK,
+    });
+  });
 
   return checkpoints.length > 0 ? checkpoints : null;
 }
 
 function leaderFromCumulative(
   cumulative: Map<string, number>,
-  nameByUserId: Map<string, string>,
   compare: (a: number, b: number) => number,
 ): string | null {
   let bestUserId: string | null = null;
@@ -525,8 +626,7 @@ function leaderFromCumulative(
       bestValue = value;
     }
   }
-  if (bestUserId === null) return null;
-  return nameByUserId.get(bestUserId) ?? PLAYER_FALLBACK;
+  return bestUserId;
 }
 
 // ---------------------------------------------------------------------------

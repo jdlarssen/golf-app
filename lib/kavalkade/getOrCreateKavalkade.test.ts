@@ -76,6 +76,12 @@ vi.mock('./generateKavalkadeNarrative', () => ({
   generateKavalkadeNarrative: (...args: unknown[]) => generateNarrativeMock(...args),
 }));
 
+// #2561 PR B: who said yes to AI texts.
+const readAiAllowedUserIdsMock = vi.fn();
+vi.mock('@/lib/ai/consent', () => ({
+  readAiAllowedUserIds: (...args: unknown[]) => readAiAllowedUserIdsMock(...args),
+}));
+
 import { getOrCreateKavalkade } from './getOrCreateKavalkade';
 import { KAVALKADE_CUTOFF, KAVALKADE_YEAR } from './release';
 
@@ -111,6 +117,7 @@ beforeEach(() => {
     games: [],
   });
   generateNarrativeMock.mockResolvedValue('Året ditt ble langt.');
+  readAiAllowedUserIdsMock.mockResolvedValue(new Set([VIEWER]));
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -234,6 +241,27 @@ describe('etter frysegrensen', () => {
       user_id: VIEWER,
       year: 2026,
     });
+  });
+
+  it('#2561: kaller ikke modellen og lagrer null når seeren ikke har sagt ja', async () => {
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set());
+    kavalkadeUpsert = { data: [storedRow({ narrative: null })], error: null };
+
+    const view = await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV });
+
+    expect(view.status).toBe('ready');
+    expect(generateNarrativeMock).not.toHaveBeenCalled();
+    expect(upsertSpy.mock.calls[0][0]).toMatchObject({ narrative: null });
+  });
+
+  it('#2561: spør om seeren én gang og gir modellen mengden som sa ja', async () => {
+    kavalkadeUpsert = { data: [storedRow()], error: null };
+
+    await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV });
+
+    expect(readAiAllowedUserIdsMock).toHaveBeenCalledTimes(1);
+    expect(readAiAllowedUserIdsMock.mock.calls[0][1]).toContain(VIEWER);
+    expect(generateNarrativeMock).toHaveBeenCalledWith(expect.anything(), new Set([VIEWER]));
   });
 
   it('lagrer null som tekst når modellen ikke svarte', async () => {

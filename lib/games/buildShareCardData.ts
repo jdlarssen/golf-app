@@ -38,6 +38,14 @@ export type ShareCardRow = {
   score: ShareCardScore;
   /** True when this row is the sharer (for podium-row highlight). */
   isSharer: boolean;
+  /**
+   * The competitor's members, only when the caller asked for them
+   * (`withUserIds`). The round report needs them to leave out players without
+   * AI consent (#2561); the share card never sees ids.
+   */
+  userIds?: string[];
+  /** The team's number for team rows, only with `withUserIds`. */
+  teamNumber?: number;
 };
 
 export type ShareCardSide = { label: string; winnerName: string; isSharer: boolean };
@@ -103,6 +111,11 @@ export function buildShareCardData(opts: {
    * `t('playerFallback')`; defaults to '' for unit tests that always supply names.
    */
   playerFallback?: string;
+  /**
+   * #2561: put `userIds` (and `teamNumber` on team rows) on the placement
+   * rows. Off by default, so the share card's rows are unchanged.
+   */
+  withUserIds?: boolean;
 }): ShareCardModel {
   const {
     result,
@@ -111,6 +124,7 @@ export function buildShareCardData(opts: {
     parByHole,
     sideWinners,
     playerFallback = '',
+    withUserIds = false,
   } = opts;
   const vsParScore = makeVsParScore(parByHole);
 
@@ -155,7 +169,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'skins', value: p.totalSkins },
       }));
-      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     // -----------------------------------------------------------------------
@@ -168,15 +182,16 @@ export function buildShareCardData(opts: {
           rank: p.rank,
           score: { kind: 'points', value: p.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       } else {
         // team stableford
         const rows: IndividualCompetitor[] = result.teams.map((t) => ({
           userIds: t.playerIds,
+          teamNumber: t.teamNumber,
           rank: t.rank,
           score: { kind: 'points', value: t.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       }
     }
 
@@ -195,7 +210,7 @@ export function buildShareCardData(opts: {
             ? { kind: 'vsPar', label: vsParLabel(p.netToPar) }
             : vsParScore(p.totalNetStrokes, soloUnplayedHoles(result.holes, p.userId), result.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     // -----------------------------------------------------------------------
@@ -204,25 +219,28 @@ export function buildShareCardData(opts: {
     case 'best_ball': {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.playerIds,
+        teamNumber: t.teamNumber,
         rank: t.rank,
         // best_ball uses `total` (net total strokes)
         score: vsParScore(t.total, teamUnplayedHoles(t.holes), t.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'texas_scramble': {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.members.map((m) => m.userId),
+        teamNumber: t.teamNumber,
         rank: t.rank,
         score: vsParScore(t.totalNet, teamUnplayedHoles(t.holes), t.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'shamble': {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.members,
+        teamNumber: t.teamNumber,
         rank: t.rank,
         // shamble uses `totalScore` (net strokes sum) — the `count` lowest
         // balls per hole, so par counts `count` times (#2217).
@@ -233,17 +251,18 @@ export function buildShareCardData(opts: {
           result.count,
         ),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'patsome': {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.playerIds,
+        teamNumber: t.teamNumber,
         rank: t.rank,
         // patsome uses stableford points
         score: { kind: 'points', value: t.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     // -----------------------------------------------------------------------
@@ -255,7 +274,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'nassau': {
@@ -265,7 +284,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.units },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'bingo_bango_bongo': {
@@ -274,7 +293,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'nines': {
@@ -283,7 +302,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'round_robin': {
@@ -293,7 +312,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalHoleWins },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     case 'acey_deucey': {
@@ -303,7 +322,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.total },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
 
     default: {
@@ -325,6 +344,8 @@ export function buildShareCardData(opts: {
 type IndividualCompetitor = {
   /** All userId members for this competitor slot (1 for individual, N for team). */
   userIds: string[];
+  /** Set on team competitors only (#2561, for the round report's «Lag N»). */
+  teamNumber?: number;
   rank: number;
   score: ShareCardScore;
 };
@@ -341,6 +362,7 @@ function buildPlacementModel(
   sharerId: string | null,
   sideTournaments: ShareCardSide[],
   playerFallback: string,
+  withUserIds: boolean,
 ): ShareCardModel {
   // Sort: rank ascending, then name ascending for stable tie ordering
   const sorted = [...competitors].sort((a, b) => {
@@ -356,6 +378,9 @@ function buildPlacementModel(
     name: resolveTeamName(c.userIds, nameByUserId, playerFallback),
     score: c.score,
     isSharer: sharerId !== null && c.userIds.includes(sharerId),
+    ...(withUserIds
+      ? { userIds: c.userIds, ...(c.teamNumber !== undefined ? { teamNumber: c.teamNumber } : {}) }
+      : {}),
   }));
 
   const podium = allRows.slice(0, 3);

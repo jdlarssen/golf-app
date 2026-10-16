@@ -53,6 +53,12 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
+// #2561 PR B: who said yes to AI texts. Default: everyone in the fixture.
+const readAiAllowedUserIdsMock = vi.fn();
+vi.mock('@/lib/ai/consent', () => ({
+  readAiAllowedUserIds: (...args: unknown[]) => readAiAllowedUserIdsMock(...args),
+}));
+
 import { generateAndPersistRoundReport } from './generateRoundReport';
 
 const GAME_ID = '11111111-1111-1111-1111-111111111111';
@@ -126,6 +132,7 @@ beforeEach(() => {
 
   getGameWithPlayersMock.mockResolvedValue(GAME_ROW);
   buildModeResultForGameMock.mockResolvedValue(makeSoloStrokeplayResult(18));
+  readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u1', 'u2']));
   messagesCreateMock.mockResolvedValue({
     stop_reason: 'end_turn',
     content: [{ type: 'text', text: 'Alice vant Lørdagscup med solid margin foran Bob.' }],
@@ -138,6 +145,66 @@ afterEach(() => {
 });
 
 describe('generateAndPersistRoundReport', () => {
+  it("#2561: returns 'skipped' without a model call when nobody said yes", async () => {
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set());
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(result).toEqual({ status: 'skipped', report: null });
+    expect(anthropicConstructorMock).not.toHaveBeenCalled();
+    expect(messagesCreateMock).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it("#2561: returns 'skipped' without a model call when only a player the facts cannot show said yes", async () => {
+    // Only the 4th place said yes: the podium, the winner and every
+    // checkpoint leader are hidden, so the facts would name nobody.
+    const ids = ['u1', 'u2', 'u3', 'u4'];
+    getGameWithPlayersMock.mockResolvedValue({
+      ...GAME_ROW,
+      players: ids.map((id, i) => ({
+        user_id: id,
+        withdrawn_at: null,
+        users: { name: ['Alice', 'Bob', 'Carl', 'Dina'][i], nickname: null },
+      })),
+    });
+    buildModeResultForGameMock.mockResolvedValue({
+      kind: 'solo_strokeplay' as const,
+      holes: Array.from({ length: 18 }, (_, h) => ({
+        holeNumber: h + 1,
+        par: 4,
+        strokeIndex: h + 1,
+        perPlayer: ids.map((userId, i) => ({ userId, gross: 4 + i, net: 4 + i, par: 4 })),
+        bestUserIds: ['u1'],
+      })),
+      players: ids.map((userId, i) => ({
+        userId,
+        totalNetStrokes: 72 + 18 * i,
+        totalGrossStrokes: 72 + 18 * i,
+        holesPlayed: 18,
+        rank: i + 1,
+        tiedWith: [],
+      })),
+    });
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u4']));
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(result).toEqual({ status: 'skipped', report: null });
+    expect(messagesCreateMock).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('#2561: asks about the active players and leaves a player without «ja» out of the prompt', async () => {
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u1']));
+
+    await generateAndPersistRoundReport(GAME_ID);
+
+    expect(readAiAllowedUserIdsMock).toHaveBeenCalledWith(expect.anything(), ['u1', 'u2']);
+    const request = messagesCreateMock.mock.calls[0][0] as { messages: { content: string }[] };
+    expect(request.messages[0].content).not.toContain('Bob');
+  });
+
   it("returns 'skipped' without constructing the SDK client when ANTHROPIC_API_KEY is missing", async () => {
     delete process.env.ANTHROPIC_API_KEY;
 
