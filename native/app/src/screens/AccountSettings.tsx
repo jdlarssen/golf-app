@@ -17,16 +17,20 @@
 // **Hierarkiet.** «Logg ut» er en helt vanlig rad, og «Slett konto» står alene
 // nederst i rødt med luft over. Luften er ikke pynt — den er avstanden en
 // tommel på vei mot raden over trenger for ikke å treffe sletting.
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { DesignSwitch } from '../components/DesignSwitch';
 import { SettingList, SettingRow } from '../components/SettingRow';
+import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
+import { rememberAiConsentAnswered } from '../data/aiConsentGate';
 import { logOut } from '../data/logout';
+import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { useTheme } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) {
   const { email } = useSession();
@@ -161,6 +165,7 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
 
       <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionYouDecide}</Text>
       <SettingList testID="account-you-decide">
+        <AiConsentSetting />
         <SettingRow
           label={PROFILE_TEXT.privacyRow}
           sublabel={PROFILE_TEXT.privacySublabel}
@@ -211,6 +216,95 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
   );
 }
 
+/**
+ * #2561 PR B: bryteren for AI-tekstene, der svaret på spørsmålet kan endres.
+ *
+ * Raden følger listekortet «HVA SOM VARSLES» i Varsler-tegningen (tittel
+ * 15/600, undertekst 12, bryteren 52 × 32 til høyre, 12 i gap, 12 × 14 i luft);
+ * selve raden har ingen egen tegning. Bryteren vises først når svaret er lest,
+ * så den aldri viser et gjettet samtykke; feiler lesingen, står raden uten
+ * bryter. En lagring som ikke gikk gjennom, ruller tilbake og sier fra.
+ */
+function AiConsentSetting() {
+  const { userId } = useSession();
+  const { colors, scheme } = useTheme();
+  const [value, setValue] = useState<boolean | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchOwnAiConsent(userId)
+      .then((answer) => {
+        if (cancelled) return;
+        setValue(answer === true);
+        setLoaded(true);
+      })
+      .catch((err: unknown) => {
+        console.error('[AccountSettings] AI-svaret kunne ikke leses', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const onToggle = async (next: boolean) => {
+    setBusy(true);
+    setFailed(false);
+    setValue(next);
+    const result = await saveAiConsent(userId, next);
+    setBusy(false);
+    if (!result.ok) {
+      setValue(!next);
+      setFailed(true);
+      return;
+    }
+    await rememberAiConsentAnswered(userId);
+  };
+
+  return (
+    <View style={styles.aiRow} testID="account-ai-consent">
+      <View style={styles.aiTexts}>
+        <Text style={[styles.aiTitle, { color: colors.text }]}>{AI_CONSENT_TEXT.toggleTitle}</Text>
+        <Text style={[styles.aiSub, { color: colors.muted }]}>{AI_CONSENT_TEXT.toggleSubtitle}</Text>
+        {failed ? (
+          <Text style={[styles.aiSub, { color: colors.danger }]} testID="account-ai-consent-error">
+            {AI_CONSENT_TEXT.toggleFailed}
+          </Text>
+        ) : null}
+      </View>
+      {loaded ? (
+        <DesignSwitch
+          value={value === true}
+          disabled={busy}
+          onValueChange={(next) => void onToggle(next)}
+          label={AI_CONSENT_TEXT.toggleTitle}
+          // Varsler-tegningens bryter på en lys liste: skog når den er på,
+          // varm grå når den er av. Mørk drakt har ingen tegning; av-sporet tar
+          // listens kantfarge der.
+          onColor={colors.primary}
+          offColor={scheme === 'dark' ? colors.border : SWITCH_OFF_LIGHT}
+          testID="account-ai-consent-switch"
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/** Av-sporet i Varsler-tegningens liste (`#d9d2c2`). */
+const SWITCH_OFF_LIGHT = '#D9D2C2';
+
 const styles = StyleSheet.create({
   dangerGap: { marginTop: 24 },
+  aiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  aiTexts: { flex: 1, gap: 2 },
+  aiTitle: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  aiSub: { fontSize: 12, fontFamily: FONTS.sans },
 });

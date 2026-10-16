@@ -35,6 +35,7 @@ import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import type { Session } from '@supabase/supabase-js';
+import { AiConsentGate } from './src/components/AiConsentGate';
 import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
 import { FRAUNCES_FILES } from './src/fonts';
@@ -135,7 +136,10 @@ export default function App() {
           {/* #2216: steget for navn og handicap står foran stacken når
               profilen ikke er fullført, samme regel som nettsidens `/`. */}
           <ProfileGate userId={session.user.id}>
-            <RootNavigator />
+            {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
+            <AiConsentGate userId={session.user.id}>
+              <RootNavigator />
+            </AiConsentGate>
           </ProfileGate>
         </SessionProvider>
       </OwnerGate>

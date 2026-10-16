@@ -6066,6 +6066,18 @@
       "posterFooter": "Tørny — fire up your golf tournament in a couple of minutes"
     }
   },
+  "aiConsent": {
+    "title": "Can the AI write about you?",
+    "body": "After each game, Tørny writes a short round report, and between Christmas and New Year you get the cavalcade, a look back at your golf year. The texts are written by the language model Claude from Anthropic, an American company. Anthropic then receives names and nicknames, results, game and course names, and dates.",
+    "noMeans": "If you say no, you are not in any of the texts. You can change your mind at any time under \"Personvern og konto\" in the app or on your profile on the website.",
+    "yes": "Yes, go ahead",
+    "no": "No thanks",
+    "saving": "Saving …",
+    "saveFailed": "Could not save your answer. Try again.",
+    "toggleTitle": "AI texts about me",
+    "toggleSubtitle": "Round reports and the cavalcade",
+    "toggleFailed": "Could not save. Try again."
+  },
   "legal": {
     "privacy": {
       "metaTitle": "Privacy",
