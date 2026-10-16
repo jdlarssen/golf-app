@@ -59,6 +59,11 @@ describe('teeShotTeams', () => {
     expect(teeShotTeams(PLAYERS, [2, 1, null, 2]).map((t) => t.teamNumber)).toEqual([1, 2]);
   });
 
+  it('et lag der alle har trukket seg, er ikke med', () => {
+    const gone = PLAYERS.map((p) => (p.teamNumber === 2 ? { ...p, withdrawnAt: '2026-10-16T10:00:00Z' } : p));
+    expect(teeShotTeams(gone, [1, 2]).map((t) => t.teamNumber)).toEqual([1]);
+  });
+
   it('minimum leses bare for formater som teller utslag, med et gjennomførbart tall', () => {
     expect(teeShotMinimum({ gameMode: 'texas_scramble', modeConfig: { team_size: 4, min_tee_shots: 4 } })).toBe(4);
     expect(teeShotMinimum({ gameMode: 'texas_scramble', modeConfig: { team_size: 4 } })).toBeNull();
@@ -79,11 +84,11 @@ describe('teeShotTeams', () => {
 
   it('arrangøren får én linje per spiller under minimum, med lagnavn når spillet har flere lag', () => {
     expect(teeShotOrganizerNotice(PLAYERS, 4, [...TEAM_1_SHORT, ...TEAM_2_SHORT])).toEqual([
-      'Lag 1 · Per har 2 av 4 utslag',
-      'Lag 2 · Ola har 1 av 4 utslag',
+      { key: '1:u-per', text: 'Lag 1 · Per har 2 av 4 utslag' },
+      { key: '2:u-ola', text: 'Lag 2 · Ola har 1 av 4 utslag' },
     ]);
     const oneTeam = PLAYERS.filter((p) => p.teamNumber === 1);
-    expect(teeShotOrganizerNotice(oneTeam, 4, TEAM_1_SHORT)).toEqual(['Per har 2 av 4 utslag']);
+    expect(teeShotOrganizerNotice(oneTeam, 4, TEAM_1_SHORT)).toEqual([{ key: '1:u-per', text: 'Per har 2 av 4 utslag' }]);
     // En trukket spiller teller ikke med.
     const withdrawn = oneTeam.map((p) => (p.userId === 'u-per' ? { ...p, withdrawnAt: '2026-10-16T10:00:00Z' } : p));
     expect(teeShotOrganizerNotice(withdrawn, 4, TEAM_1_SHORT)).toEqual([]);

@@ -16,9 +16,15 @@ export function useTeamTeeShots(
     /** Bare spill med «Hvem sitt utslag» leser noe. */
     enabled: boolean;
     pollMs?: number;
+    /**
+     * Feiler første lesing, kastes feilen ikke, og `loaded` blir stående
+     * `false`. For en flate som er et tillegg på skjermen (arrangørlinjene på
+     * avslutt-skjermen), der skjermen ikke skal falle for den.
+     */
+    failQuietly?: boolean;
   },
 ): { rows: LocalTeeShot[]; reload: () => Promise<void>; loaded: boolean } {
-  const { enabled, pollMs } = opts;
+  const { enabled, pollMs, failQuietly = false } = opts;
   const [rows, setRows] = useState<LocalTeeShot[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [firstReadFailure, setFirstReadFailure] = useState<{ error: unknown } | null>(null);
@@ -44,13 +50,15 @@ export function useTeamTeeShots(
           setLoaded(true);
         }
       } catch (err: unknown) {
-        if (!cancelled) setFirstReadFailure({ error: err });
+        if (cancelled) return;
+        if (failQuietly) console.error('[useTeamTeeShots] første lesing feilet', err);
+        else setFirstReadFailure({ error: err });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [enabled, gameId]);
+  }, [enabled, gameId, failQuietly]);
 
   useEffect(() => {
     if (!enabled || !pollMs) return;
