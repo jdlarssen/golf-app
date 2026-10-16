@@ -117,6 +117,12 @@ authenticated_security_definer_function_executable_public_respond_friend_request
 authenticated_security_definer_function_executable_public_send_friend_request_p_addressee uuid
 authenticated_security_definer_function_executable_public_send_friend_request_by_email_p_email text
 authenticated_security_definer_function_executable_public_set_club_member_role_p_group_id uuid, p_user_id uuid, p_role public.group_role
+#   #2580 (0209) - set_team_tee_shot_if_newer: writes team_tee_shots, the only
+#     path in since the table has no write policy or grants. search_path
+#     locked, anon revoked. Internal authz mirrors the scores policies: an
+#     admin, an active member of the team, or someone who can_score_for an
+#     active member - never a bare parameter.
+authenticated_security_definer_function_executable_public_set_team_tee_shot_if_newer_p_game_id uuid, p_team_number integer, p_hole_number integer, p_tee_shot_by uuid, p_client_updated_at timestamp with time zone
 #
 # #2207 (0185) - profil-porten og cup-kontrollen:
 #   - incomplete_profile_ids: svarer bare med id-er, og bare for de uferdige
