@@ -12,13 +12,15 @@
 --     2. eieren leser sin egen rad                            → 1 rad
 --     3. eieren lagrer svaret med upsert (insert … on conflict do update),
 --        slik appen og nettet gjør                            → PASS, verdien endret
---     4. eieren endrer sin egen rad                           → PASS
+--     4. eieren endrer sin egen rad (false → true)            → PASS, verdien endret
 --
 --   FORBIDDEN (den fiendtlige direkte-forespørselen):
 --     5. en annen innlogget leser raden                       → 0 rader (RLS using)
 --     6. en annen setter inn en rad for en tredje bruker      → REJECTED (with check)
 --     7. en annen endrer eierens rad (hostile PATCH)          → 0 rader
---     8. en annen upserter over eierens rad                   → REJECTED (RLS using)
+--     8. en annen upserter over eierens rad                   → eierens verdi står
+--        uendret, lest som service-rollen (flightmaten ser ikke raden, så et
+--        svar fra flightmaten selv ville bestått uansett)
 --     9. eieren flytter raden til en annen user_id            → REJECTED (with check)
 --    10. eieren sletter sin egen rad                          → REJECTED (rettighet)
 --    11. authenticated har ingen DELETE-rettighet på tabellen (låser revoke-en;
@@ -38,7 +40,7 @@
 --    17. sletting av brukeren (auth.users) sletter raden      → CASCADE
 --
 --   Kontroll:
---    18. service-rollen ser eierens rad med verdien fra punkt 4
+--    18. service-rollen ser eierens rad med verdien fra punkt 4 (true)
 --
 -- Anonymiseringen (spilleren som har spilt) dekkes i users_anonymize_test.sql
 -- og users_anonymize_fk_coverage_test.sql.
@@ -189,7 +191,7 @@ select ok(
 );
 
 select ok(
-  torny_rls.try_update_ai_consent(torny_rls.active_id(), false),
+  torny_rls.try_update_ai_consent(torny_rls.active_id(), true),
   'eieren kan endre sin egen rad (ombestemme seg)'
 );
 
@@ -210,13 +212,16 @@ select ok(
 );
 
 select ok(
-  not torny_rls.try_update_ai_consent(torny_rls.active_id(), true),
+  not torny_rls.try_update_ai_consent(torny_rls.active_id(), false),
   'en annen kan IKKE endre eierens rad (hostile PATCH treffer 0 rader)'
 );
 
-select ok(
-  not torny_rls.try_upsert_ai_consent(torny_rls.active_id(), true),
-  'en annen kan IKKE upserte over eierens rad'
+select torny_rls.try_upsert_ai_consent(torny_rls.active_id(), false);
+select torny_rls.as_service();
+select is(
+  (select granted from public.ai_consents where user_id = torny_rls.active_id()),
+  true,
+  'en annen kan IKKE upserte over eierens rad (verdien står uendret)'
 );
 
 select torny_rls.as_user(torny_rls.active_id());
@@ -297,8 +302,8 @@ select is(
 -- Kontroll: eierens rad finnes, med verdien fra endringen over.
 select is(
   (select granted from public.ai_consents where user_id = torny_rls.active_id()),
-  false,
-  'service-rollen ser eierens rad med granted = false etter endringen'
+  true,
+  'service-rollen ser eierens rad med granted = true etter endringen'
 );
 
 select * from finish();
