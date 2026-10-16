@@ -29,8 +29,10 @@
 --    10. the preserved row in an ACTIVE game is marked withdrawn (#1909)
 --    11–14. device and Kavalkade rows deleted (#1899, 0184): push_subscriptions,
 --        apns_tokens, kavalkades, kavalkade_shares
---    15. idempotent — a second call succeeds without error
---    16. admin target → REJECTED (42501 — admin accounts can't be anonymized)
+--    15. ai_consents deleted (#2561, 0210)
+--    16. level reset to 'normal' (#2561, 0210 — the player category is personal)
+--    17. idempotent — a second call succeeds without error
+--    18. admin target → REJECTED (42501 — admin accounts can't be anonymized)
 --
 -- Runs as the `authenticated` role with a forged JWT `sub` claim — the same
 -- runtime path the app uses. See supabase/tests/README.md for how to run.
@@ -40,7 +42,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(18);
 
 \ir fixtures/rls_helpers.psql
 
@@ -69,6 +71,11 @@ insert into public.kavalkades (user_id, year, facts, narrative)
   values (torny_rls.active_id(), 2026, '{"rounds": 1}'::jsonb, 'Et golfår.');
 insert into public.kavalkade_shares (user_id, year, card_kind)
   values (torny_rls.active_id(), 2026, 'year');
+-- #2561 (0210): the AI consent and a non-default player category, both
+-- personal, both cleared by anonymize_user.
+insert into public.ai_consents (user_id, granted)
+  values (torny_rls.active_id(), true);
+update public.users set level = 'junior' where id = torny_rls.active_id();
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- GUARD — a non-admin cannot touch their own deleted_at
@@ -181,6 +188,18 @@ select is(
   (select count(*) from public.kavalkade_shares where user_id = torny_rls.active_id()),
   0::bigint,
   '#1899: kavalkade_shares are deleted'
+);
+
+select is(
+  (select count(*) from public.ai_consents where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#2561: ai_consents are deleted'
+);
+
+select is(
+  (select level::text from public.users where id = torny_rls.active_id()),
+  'normal',
+  '#2561: level is reset to the default (normal)'
 );
 
 select lives_ok(
