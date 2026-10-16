@@ -270,11 +270,7 @@ function AiConsentSetting() {
         <Text style={[styles.aiTitle, { color: colors.text }]}>{AI_CONSENT_TEXT.toggleTitle}</Text>
         <Text style={[styles.aiSub, { color: colors.muted }]}>{AI_CONSENT_TEXT.toggleSubtitle}</Text>
         {failed ? (
-          <Text
-            style={[styles.aiSub, { color: colors.danger }]}
-            accessibilityLiveRegion="polite"
-            testID="account-ai-consent-error"
-          >
+          <Text style={[styles.aiSub, { color: colors.danger }]} testID="account-ai-consent-error">
             {AI_CONSENT_TEXT.toggleFailed}
           </Text>
         ) : null}
