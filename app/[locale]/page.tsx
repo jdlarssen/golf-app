@@ -129,8 +129,9 @@ export default async function Home({
         <BrandMark />
       </div>
 
-      {/* #1797 (kontrakt #1069 K6): maks én nudge om gangen — Install > Push >
-          Nytt-i-Tørny > Passkey. HomeNudges avgjør server-plassene og
+      {/* #1797 (kontrakt #1069 K6): maks én nudge om gangen — AI-spørsmålet
+          (#2561) > Install > Push > Kavalkaden > Nytt-i-Tørny > Passkey
+          (`lib/home/nudgeQueue.ts`). HomeNudges avgjør server-plassene og
           HomeNudgeRail orkestrerer køen i klienten. Suksess-bannerne under står
           med vilje UTENFOR køen. */}
       <Suspense fallback={null}>

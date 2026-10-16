@@ -158,3 +158,34 @@ export async function toggleProductUpdates(
   }
   return { ok: true };
 }
+
+/**
+ * Lagre svaret på spørsmålet om AI-tekster (#2561), fra kortet på Hjem og
+ * bryteren på Profil. Regelen (bare «ja» sender noe til språkmodellen) bor i
+ * `lib/ai/consent.ts`; dette er nettets eneste skriving til `ai_consents`.
+ *
+ * Brukerklienten, så RLS gjelder: spilleren kan bare sette inn og endre sin
+ * egen rad. `answered_at` settes av databasen. Upsert på `user_id` med raden
+ * lest tilbake (`expectAffected`, AGENTS.md trap 2): et svar som ikke ble
+ * lagret, skal aldri se lagret ut.
+ */
+export async function setAiConsent(
+  granted: boolean,
+): Promise<{ ok: boolean }> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) return { ok: false };
+  const supabase = await getServerClient();
+  try {
+    expectAffected(
+      await supabase
+        .from('ai_consents')
+        .upsert({ user_id: userId, granted }, { onConflict: 'user_id' })
+        .select('user_id'),
+      'setAiConsent',
+    );
+  } catch (err) {
+    console.error('[profile] setAiConsent failed', err);
+    return { ok: false };
+  }
+  return { ok: true };
+}

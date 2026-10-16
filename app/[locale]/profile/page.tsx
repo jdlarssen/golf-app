@@ -24,6 +24,8 @@ import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { MonthlyDigestToggle } from './MonthlyDigestToggle';
+import { AiConsentToggle } from './AiConsentToggle';
+import { readOwnAiConsent } from '@/lib/ai/consent';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatDate } from '@/lib/i18n/format';
@@ -144,6 +146,10 @@ export default async function ProfilePage({
             {/* #2263, eiersvar 16: månedsbrevet står her, rett over push-varslene. */}
             <Suspense fallback={null}>
               <MonthlyDigestSetting />
+            </Suspense>
+            {/* #2561: AI-tekstene, ved siden av månedsbrevet. */}
+            <Suspense fallback={null}>
+              <AiConsentSetting />
             </Suspense>
           </SettingList>
         </section>
@@ -413,4 +419,21 @@ async function MonthlyDigestSetting() {
   if (!result) return null;
   if (result.error) throw result.error;
   return <MonthlyDigestToggle initialOptIn={result.data?.product_updates_unsubscribed_at == null} />;
+}
+
+/**
+ * The AI texts row in «App» (#2561). No answer shows as off, the same as «nei»
+ * (`lib/ai/consent.ts`). Unlike the digest row, a failed read hides the row
+ * instead of throwing: a missing switch misreports nothing, and the rest of
+ * Profil (export, delete, log out) stays usable.
+ */
+async function AiConsentSetting() {
+  let granted: boolean | null;
+  try {
+    granted = await readOwnAiConsent(await getServerClient());
+  } catch (err) {
+    console.error('[profile] could not read the AI answer, row hidden', err);
+    return null;
+  }
+  return <AiConsentToggle initialGranted={granted === true} />;
 }
