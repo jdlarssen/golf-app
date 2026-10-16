@@ -75,6 +75,9 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   leaderFill: '--leader-fill-bottom',
   skeleton: '--skel-base',
   skeletonTint: '--skel-tint',
+  // #2580: the tee-shot box, pills and organiser line.
+  warningText: '--warning-text',
+  warningSoft: '--warning-soft',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');
@@ -523,8 +526,15 @@ describe('SUNLIGHT_THEME', () => {
     'scoreOver1Fg',
     'scoreOver2Fg',
     'accentText',
+    'warningText',
   ] as const)('%s holder minst 4,5:1 mot hvit', (role) => {
     expect(contrast(c[role], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // #2580: sollyset har ingen tonede flater (som `dangerSoft`), og teksten er
+  // samme rav som `scoreOver1Fg` der.
+  it('har utslagsrollene som hvit flate og rav tekst', () => {
+    expect([c.warningText, c.warningSoft]).toEqual(['#7A5410', '#FFFFFF']);
   });
 
   it('har lesbart blekk på de fylte flatene', () => {

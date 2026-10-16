@@ -18,11 +18,14 @@ import { summarizeQuarantine } from '../../../../../lib/sync/quarantineSummary';
 import {
   deleteConflict,
   deleteQueueItem,
+  deleteTeeShotQueueItem,
   getDb,
   listConflictsForGame,
   listQueue,
+  listTeeShotQueue,
   type ConflictRecord,
   type SyncQueueItem,
+  type TeeShotQueueItem,
 } from '../../data/db';
 import { drainQueue } from '../../data/syncWorker';
 import {
@@ -34,6 +37,24 @@ import {
 } from '../../lib/syncBannerCopy';
 import { FONTS, TAP, useTheme } from '../../theme';
 
+/**
+ * #2580: et element fra en av køene, slag (`sync_queue`) eller utslag
+ * (`tee_shot_queue`, de med `teeShotId`). Opptellingen, avgrensningen og
+ * oppsummeringen leser begge likt; «Fjern varselet» sletter hvert fra sin tabell.
+ */
+type BannerQueueItem = SyncQueueItem | TeeShotQueueItem;
+
+function isTeeShotItem(item: BannerQueueItem): item is TeeShotQueueItem {
+  return 'teeShotId' in item;
+}
+
+/** Begge køene, sekvensielt på samme forbindelse. */
+async function listBothQueues(db: Awaited<ReturnType<typeof getDb>>): Promise<BannerQueueItem[]> {
+  const scores = await listQueue(db);
+  const teeShots = await listTeeShotQueue(db);
+  return [...scores, ...teeShots];
+}
+
 /** Samme takt som hull-skjermens SQLite-lesing. */
 const POLL_MS = 1500;
 /** Webbens `RETRY_MIN_FEEDBACK_MS`: «Sender…» skal rekke å synes. */
@@ -41,7 +62,7 @@ const RETRY_MIN_FEEDBACK_MS = 500;
 
 export function SyncBanner({ gameId }: { gameId: string }) {
   const { colors, hole } = useTheme();
-  const [queue, setQueue] = useState<SyncQueueItem[]>([]);
+  const [queue, setQueue] = useState<BannerQueueItem[]>([]);
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([]);
   const [retrying, setRetrying] = useState(false);
 
@@ -49,7 +70,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     try {
       const db = await getDb();
       // Sekvensielt: én forbindelse, én setning om gangen.
-      const nextQueue = await listQueue(db);
+      const nextQueue = await listBothQueues(db);
       const nextConflicts = await listConflictsForGame(db, gameId);
       setQueue(nextQueue);
       setConflicts(nextConflicts);
@@ -65,7 +86,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     void (async () => {
       try {
         const db = await getDb();
-        const nextQueue = await listQueue(db);
+        const nextQueue = await listBothQueues(db);
         const nextConflicts = await listConflictsForGame(db, gameId);
         if (cancelled) return;
         setQueue(nextQueue);
@@ -104,12 +125,15 @@ export function SyncBanner({ gameId }: { gameId: string }) {
   // Bare id-ene som sto i karantene da varselet ble tegnet: et slag som
   // fortsatt prøver, blir aldri feid med.
   const dismissQuarantine = () => {
-    const ids = abandoned.map((i) => i.id);
+    const stranded = [...abandoned];
     const remove = () => {
       void (async () => {
         try {
           const db = await getDb();
-          for (const id of ids) await deleteQueueItem(db, id);
+          for (const item of stranded) {
+            if (isTeeShotItem(item)) await deleteTeeShotQueueItem(db, item.id);
+            else await deleteQueueItem(db, item.id);
+          }
         } catch {
           // Varselet blir stående; neste trykk prøver igjen.
         }

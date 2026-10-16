@@ -19,7 +19,7 @@ import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
 /** Hvilken skriving på hull-siden som feilet (#2228): slag, putter eller «Angre»/X. */
-export type LocalSaveAction = 'strokes' | 'putts' | 'clear';
+export type LocalSaveAction = 'strokes' | 'putts' | 'clear' | 'teeShot';
 
 /**
  * Banneret når hull-siden ikke fikk lagret et trykk i den lokale basen
@@ -31,6 +31,8 @@ export const LOCAL_SAVE_FAILED: Record<LocalSaveAction, string> = {
   strokes: 'Fikk ikke lagret scoren. Trykk på tallet én gang til.',
   putts: 'Fikk ikke lagret puttene. Trykk på tallet én gang til.',
   clear: 'Fikk ikke fjernet scoren. Prøv én gang til.',
+  // #2580: «Hvem sitt utslag ble brukt?».
+  teeShot: 'Fikk ikke lagret utslaget. Trykk på navnet én gang til.',
 };
 
 /**

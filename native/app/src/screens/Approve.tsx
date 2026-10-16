@@ -59,6 +59,9 @@ import { displayName, formatClock, shortDisplayName } from '../lib/display';
 import { findInRoster, toRoster, toStampPlayers, type RosterEntry } from '../lib/roster';
 import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
+import { useTeamTeeShots } from '../lib/useTeamTeeShots';
+import { teeShotMinimum } from '../lib/teeShotTeams';
+import { TeeShotOrganizerNotice } from '../components/TeeShotOrganizerNotice';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
@@ -87,8 +90,13 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   // Grunnen står igjen hvis kallet feilet og arket åpnes for samme kort på nytt.
   const [reasonDraft, setReasonDraft] = useState<{ userId: string; text: string } | null>(null);
 
-  // Slagene hentes ved fokus, i forgrunnen og med nett igjen (#2228).
-  useScoreCatchUp(gameId, reload);
+  // Slagene hentes ved fokus, i forgrunnen og med nett igjen (#2228). #2580:
+  // utslagene på de samme tidspunktene, bare med innstillingen på.
+  const minTeeShots = bundle ? teeShotMinimum(bundle.game) : null;
+  const teeShots = useTeamTeeShots(gameId, { enabled: minTeeShots != null });
+  useScoreCatchUp(gameId, reload, {
+    reloadTeeShots: minTeeShots != null ? teeShots.reload : undefined,
+  });
 
   // Spillnavnet står i toppen når bundelen er lest (navigatoren har «Godkjenn»
   // uten ord til da).
@@ -158,6 +166,14 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     return grid.totals.played === 0 ? null : grid.totals.brutto;
   };
 
+  // #2580: «Per har 2 av 4 utslag» på laget for hver spiller under minimum.
+  const teeShotNotice =
+    minTeeShots != null && teeShots.loaded ? (
+      <View style={styles.teeShotNotice}>
+        <TeeShotOrganizerNotice players={bundle.players} minimum={minTeeShots} rows={teeShots.rows} />
+      </View>
+    ) : null;
+
   if (state.kind === 'empty') {
     return (
       <ScrollView contentContainerStyle={ui.scroll} testID="approve-screen">
@@ -191,6 +207,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
             </Text>
             <Text style={[styles.intro, { color: colors.muted }]}>{APPROVE_TEXT.intro}</Text>
           </View>
+          {teeShotNotice}
 
           <View style={styles.nameRow}>
             <Text style={[ui.value, styles.cardName]} numberOfLines={1}>
@@ -369,6 +386,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
             </Text>
           ) : null}
         </View>
+        {teeShotNotice}
 
         {approvedRows.length > 0 ? (
           <>
@@ -550,6 +568,8 @@ const styles = StyleSheet.create({
   pendingScroll: { flexGrow: 1, paddingBottom: 32 },
   // Designet: 4 pt under toppen, 20 pt på sidene og 14 pt ned til navnet.
   headingBlock: { paddingTop: 4, paddingHorizontal: 20, paddingBottom: 14 },
+  // #2580: arrangørens utslagslinjer, med skjermens 20 pt fra kanten.
+  teeShotNotice: { paddingHorizontal: 20, paddingBottom: 14 },
   heading: { ...fraunces(500, 26, 31.2, { multiline: true }) },
   intro: { ...INTRO_LINE, fontFamily: FONTS.sans, marginTop: INTRO_LINE.marginTop + 4 },
   // Kortet har selv 4 pt over seg (`ScorecardGrid`), så raden tar 4 av designets 8.

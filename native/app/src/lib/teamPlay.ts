@@ -80,10 +80,15 @@ function firstStamp(
  * ingen står igjen. Et helt trukket lag faller dermed ut av lista i stedet for
  * å bli et kort ingen kan taste på. Spillere uten lagnummer hører ikke hjemme i
  * et lag-format og hoppes over.
+ *
+ * `labelOrder` (#2580): rekkefølgen navnene står i etiketten. Med «Hvem sitt
+ * utslag» er det utslagsknappenes rekkefølge, så linja og knappene under den
+ * er like, som på nettet. `memberIds` (og kapteinen) står uansett på id.
  */
 export function buildTeamCards(
   entries: readonly RosterEntry[],
   nameOf: (userId: string) => string,
+  labelOrder?: (teamNumber: number, memberIds: readonly string[]) => readonly string[],
 ): TeamCard[] {
   const byTeam = new Map<number, RosterEntry[]>();
   for (const entry of entries) {
@@ -110,7 +115,11 @@ export function buildTeamCards(
       memberIds,
       // Fornavn: «Lag 1 · Anna Andersen, Bjørn Berg» blir en linje ingen rekker
       // å lese på banen. Samme kutt som webbens lag-kort gjør.
-      label: teamLabel(teamNumber, memberIds, (id) => nameOf(id).split(' ')[0] ?? ''),
+      label: teamLabel(
+        teamNumber,
+        labelOrder ? labelOrder(teamNumber, memberIds) : memberIds,
+        (id) => nameOf(id).split(' ')[0] ?? '',
+      ),
       submittedAt: firstStamp(members, (entry) => entry.submitted_at),
       approvedAt: firstStamp(members, (entry) => entry.approved_at),
     });

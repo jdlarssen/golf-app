@@ -23,6 +23,7 @@ import {
   getDb,
   listConflictsForGame,
   listQueue,
+  listTeeShotQueue,
   listScoresForGame,
   type LocalScore,
 } from './data/db';
@@ -71,9 +72,14 @@ export function SyncLab({
     // Sekvensielt: én forbindelse, én setning om gangen.
     const rows = await listScoresForGame(db, gameId);
     const queue = await listQueue(db);
+    // #2580: utslagene står i sin egen kø og teller med.
+    const teeShotQueue = await listTeeShotQueue(db);
     const conflicts = await listConflictsForGame(db, gameId);
     setScores(rows);
-    setQueueCount(queue.filter((item) => isActiveForGame(item, gameId)).length);
+    setQueueCount(
+      queue.filter((item) => isActiveForGame(item, gameId)).length +
+        teeShotQueue.filter((item) => isActiveForGame(item, gameId)).length,
+    );
     setConflictCount(conflicts.length);
     setDrain(getLastDrain());
   }, [gameId]);

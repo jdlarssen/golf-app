@@ -1,13 +1,16 @@
 import type { useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatListLocale } from '@/lib/i18n/format';
-import { firstName, sharesFirstName } from '@/lib/firstName';
 import type {
   TeeShotDeliveryAdvice,
   TeeShotHoleLine,
   TeeShotPlayerStatus,
   TeeShotStatus,
 } from '@/lib/games/teeShots';
+
+// The short names and the team order are shared with the app, so they live in
+// lib/games/teeShotNames.ts; re-exported for the web's importers.
+export { sortByTeeShotName, teeShotNames } from '@/lib/games/teeShotNames';
 
 /**
  * «Hvem sitt utslag» (#2580): the web's sentences from the shared `teeShots.*`
@@ -133,46 +136,4 @@ export function teeShotCountText(player: TeeShotPlayerStatus, minimum: number, t
   return player.missing > 0
     ? t('countShort', { count: player.count, min: minimum })
     : t('countReached', { count: player.count });
-}
-
-/**
- * Short names for a team, as the artboards write them: the nickname, else the
- * first name, and the full name when two on the team share a first name
- * (#2286). `members` is the team in team order.
- */
-export function teeShotNames(
-  members: readonly {
-    user_id: string;
-    users?: { name: string | null; nickname: string | null } | null;
-  }[],
-  unknownPlayer: string,
-): Map<string, string> {
-  const fullNames = members.map((m) => m.users?.name ?? null);
-  return new Map(
-    members.map((m, i) => {
-      const nickname = m.users?.nickname?.trim();
-      const fullName = fullNames[i] ?? null;
-      const others = fullNames.filter((_, j) => j !== i);
-      const name =
-        nickname || (sharesFirstName(fullName, others) ? fullName : firstName(fullName)) || unknownPlayer;
-      return [m.user_id, name];
-    }),
-  );
-}
-
-/**
- * The team order every tee-shot surface uses: by short name (Norwegian
- * collation), then by id. PostgREST returns `game_players` in no set order, and
- * a delivered row can move, so without this the buttons, the lock line («Sigrid
- * og Per trenger …») and the box would shuffle between page loads.
- */
-export function sortByTeeShotName<
-  T extends { user_id: string; users?: { name: string | null; nickname: string | null } | null },
->(members: readonly T[], unknownPlayer: string): T[] {
-  const names = teeShotNames(members, unknownPlayer);
-  return [...members].sort(
-    (a, b) =>
-      (names.get(a.user_id) ?? '').localeCompare(names.get(b.user_id) ?? '', 'nb') ||
-      a.user_id.localeCompare(b.user_id),
-  );
 }

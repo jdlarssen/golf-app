@@ -42,14 +42,15 @@ async function countRows(
 describe('lokalt skjema', () => {
   useFreshModules();
 
-  it('åpner en fersk base rett på v4, uten device_settings', async () => {
+  it('åpner en fersk base rett på v5, uten device_settings og med utslagstabellene', async () => {
     const { getCacheEntry, getDb, putCacheEntry } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 4 });
+    ).toEqual({ user_version: 5 });
     expect(await tableNames(db)).not.toContain('device_settings');
+    expect(await tableNames(db)).toEqual(expect.arrayContaining(['tee_shots', 'tee_shot_queue']));
 
     await putCacheEntry(db, {
       key: 'game:1',
@@ -63,7 +64,7 @@ describe('lokalt skjema', () => {
     });
   });
 
-  it('løfter en v1-base til v4 med N2-dataene i behold', async () => {
+  it('løfter en v1-base til v5 med N2-dataene i behold', async () => {
     const { DATABASE_NAME, MIGRATION_V1 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -90,7 +91,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 4 });
+    ).toEqual({ user_version: 5 });
 
     // Slaget står, uendret.
     expect(await listScoresForGame(db, GAME)).toEqual([
@@ -121,7 +122,7 @@ describe('lokalt skjema', () => {
   // #2256: en telefon som alt har appen, står på v2 med hjem-lista og spill i
   // cachen. Løftet til v4 går gjennom v3 (lager `device_settings`) og v4
   // (fjerner den igjen), og cachen står.
-  it('løfter en v2-base til v4 med cachen i behold', async () => {
+  it('løfter en v2-base til v5 med cachen i behold', async () => {
     const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -139,7 +140,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 4 });
+    ).toEqual({ user_version: 5 });
     expect(await getCacheEntry(db, 'home')).toMatchObject({ payload: '{"cards":[]}' });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
@@ -148,7 +149,7 @@ describe('lokalt skjema', () => {
   // #2256: telefonens innstillinger har ett hjem, AsyncStorage. En telefon som
   // fikk v3 fra #2256 PR 1 kan ha temaet i `device_settings`: v4 leser verdiene
   // før tabellen fjernes, og alt annet i basen står.
-  it('løfter en v3-base til v4, tar vare på temaet og lar resten av basen stå', async () => {
+  it('løfter en v3-base til v5, tar vare på temaet og lar resten av basen stå', async () => {
     const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2, MIGRATION_V3 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -177,7 +178,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 4 });
+    ).toEqual({ user_version: 5 });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(await countRows(db, ['scores', 'sync_queue', 'cache_entries'])).toEqual({
       scores: 1,
@@ -187,6 +188,105 @@ describe('lokalt skjema', () => {
     // Verdien leveres én gang; den som tar den, eier den.
     expect(takeLegacyDeviceSetting('theme')).toBe('dark');
     expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
+  });
+
+  // #2580 (kriterium 13): en telefon på v4 med slag, kø og cache går til v5 og
+  // beholder hver rad; v5 legger bare til utslagstabellene.
+  it('løfter en v4-base til v5 og beholder hver rad', async () => {
+    const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4 } = require('./db') as Db;
+    const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
+
+    const existing = await openDatabaseAsync(DATABASE_NAME);
+    await existing.execAsync(MIGRATION_V1);
+    await existing.execAsync(MIGRATION_V2);
+    await existing.execAsync(MIGRATION_V3);
+    await existing.execAsync(MIGRATION_V4);
+    await existing.execAsync('PRAGMA user_version = 4;');
+    await existing.runAsync(
+      `INSERT INTO scores
+         (id, game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, server_updated_at)
+       VALUES ('${GAME}:${ME}:5', '${GAME}', '${ME}', 5, 3, 1, '${ME}', '2026-10-15T09:00:00.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO sync_queue (id, score_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('${GAME}:${ME}:5', '${GAME}:${ME}:5', 2, 'nett', '2026-10-15T09:00:01.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO conflicts
+         (id, game_id, user_id, hole_number, local_strokes, server_strokes, resolved_at, for_own_score)
+       VALUES ('konflikt-1', '${GAME}', '${ME}', 4, 4, 5, '2026-10-15T09:00:02.000Z', 1);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO cache_entries (key, payload, fetched_at)
+       VALUES ('game:${GAME}', '{"game":{}}', '2026-10-15T09:00:03.000Z');`,
+    );
+
+    const { getDb, getScore, listQueue } = require('./db') as Db;
+    const db = await getDb();
+
+    expect(
+      await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
+    ).toEqual({ user_version: 5 });
+    expect(await countRows(db, ['scores', 'sync_queue', 'conflicts', 'cache_entries', 'tee_shots', 'tee_shot_queue'])).toEqual({
+      scores: 1,
+      sync_queue: 1,
+      conflicts: 1,
+      cache_entries: 1,
+      tee_shots: 0,
+      tee_shot_queue: 0,
+    });
+    expect(await getScore(db, `${GAME}:${ME}:5`)).toMatchObject({ strokes: 3, putts: 1 });
+    expect(await listQueue(db)).toEqual([
+      expect.objectContaining({ scoreId: `${GAME}:${ME}:5`, attemptCount: 2, lastError: 'nett' }),
+    ]);
+  });
+
+  // #2580: utslagene og køen deres, felt for felt som webbens Dexie-typer.
+  it('lagrer, leser og køer utslag per spill', async () => {
+    const {
+      deleteTeeShotQueueItem,
+      getDb,
+      getTeeShot,
+      listTeeShotQueue,
+      listTeeShotsForGame,
+      markTeeShotQueueAbandoned,
+      markTeeShotQueueRetry,
+      putTeeShot,
+      putTeeShotQueueItem,
+      teeShotKey,
+    } = require('./db') as Db;
+    const db = await getDb();
+    const id = teeShotKey(GAME, 1, 7);
+    expect(id).toBe(`${GAME}:1:7`);
+
+    const row = {
+      id,
+      gameId: GAME,
+      teamNumber: 1,
+      holeNumber: 7,
+      teeShotBy: ME,
+      enteredBy: ME,
+      clientUpdatedAt: '2026-10-15T10:00:00.000Z',
+      serverUpdatedAt: null,
+    };
+    await putTeeShot(db, row);
+    await putTeeShot(db, { ...row, id: teeShotKey('annet-spill', 1, 7), gameId: 'annet-spill' });
+    await putTeeShot(db, { ...row, id: teeShotKey(GAME, 1, 3), holeNumber: 3, teeShotBy: null });
+    expect(await getTeeShot(db, id)).toEqual(row);
+    expect((await listTeeShotsForGame(db, GAME)).map((r) => [r.holeNumber, r.teeShotBy])).toEqual([
+      [3, null],
+      [7, ME],
+    ]);
+
+    await putTeeShotQueueItem(db, { id, teeShotId: id, attemptCount: 0, lastError: null, createdAt: '2026-10-15T10:00:00.000Z' });
+    await markTeeShotQueueRetry(db, id, { attemptCount: 1, lastError: 'nett' });
+    expect(await listTeeShotQueue(db)).toEqual([
+      { id, teeShotId: id, attemptCount: 1, lastError: 'nett', createdAt: '2026-10-15T10:00:00.000Z', abandonedAt: null },
+    ]);
+    await markTeeShotQueueAbandoned(db, id, { attemptCount: 2, lastError: 'tee shot refused', abandonedAt: '2026-10-15T10:01:00.000Z' });
+    expect((await listTeeShotQueue(db))[0]).toMatchObject({ attemptCount: 2, abandonedAt: '2026-10-15T10:01:00.000Z' });
+    await deleteTeeShotQueueItem(db, id);
+    expect(await listTeeShotQueue(db)).toEqual([]);
   });
 
   it('erstatter en cache-nøkkel i stedet for å legge på en ny rad', async () => {
@@ -233,6 +333,8 @@ describe('wipeLocalData', () => {
       putConflict,
       putQueueItem,
       putScore,
+      putTeeShot,
+      putTeeShotQueueItem,
       wipeLocalData,
     } = require('./db') as Db;
     const db = await getDb();
@@ -271,6 +373,23 @@ describe('wipeLocalData', () => {
       payload: '{"game":{}}',
       fetchedAt: '2026-09-01T09:00:03.000Z',
     });
+    await putTeeShot(db, {
+      id: `${GAME}:1:1`,
+      gameId: GAME,
+      teamNumber: 1,
+      holeNumber: 1,
+      teeShotBy: ME,
+      enteredBy: ME,
+      clientUpdatedAt: '2026-09-01T09:00:04.000Z',
+      serverUpdatedAt: null,
+    });
+    await putTeeShotQueueItem(db, {
+      id: `${GAME}:1:1`,
+      teeShotId: `${GAME}:1:1`,
+      attemptCount: 0,
+      lastError: null,
+      createdAt: '2026-09-01T09:00:04.000Z',
+    });
 
     const tables = await tableNames(db);
 
@@ -284,6 +403,8 @@ describe('wipeLocalData', () => {
       conflicts: 1,
       scores: 1,
       sync_queue: 1,
+      tee_shot_queue: 1,
+      tee_shots: 1,
     });
 
     await wipeLocalData();
@@ -311,7 +432,7 @@ describe('wipeLocalData', () => {
     // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 4 });
+    ).toEqual({ user_version: 5 });
     expect(await getCacheEntry(db, 'home')).toBeUndefined();
 
     await putCacheEntry(db, {

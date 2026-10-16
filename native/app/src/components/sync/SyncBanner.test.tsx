@@ -9,22 +9,27 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { ConflictRecord, SyncQueueItem } from '../../data/db';
-import { REFUSED_WRITE_ERROR } from '../../../../../lib/sync/classifyError';
+import type { ConflictRecord, SyncQueueItem, TeeShotQueueItem } from '../../data/db';
+import { REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from '../../../../../lib/sync/classifyError';
 import { SyncBanner } from './SyncBanner';
 
 const GAME = 'game-1';
 const OTHER = 'game-2';
 const ME = 'user-me';
 
-const mockState: { queue: SyncQueueItem[]; conflicts: ConflictRecord[] } = {
+const mockState: { queue: SyncQueueItem[]; teeShots: TeeShotQueueItem[]; conflicts: ConflictRecord[] } = {
   queue: [],
+  teeShots: [],
   conflicts: [],
 };
 
 jest.mock('../../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listQueue: jest.fn(async () => mockState.queue),
+  listTeeShotQueue: jest.fn(async () => mockState.teeShots),
+  deleteTeeShotQueueItem: jest.fn(async (_db: unknown, id: string) => {
+    mockState.teeShots = mockState.teeShots.filter((i) => i.id !== id);
+  }),
   listConflictsForGame: jest.fn(async () => mockState.conflicts),
   deleteQueueItem: jest.fn(async (_db: unknown, id: string) => {
     mockState.queue = mockState.queue.filter((i) => i.id !== id);
@@ -35,9 +40,10 @@ jest.mock('../../data/db', () => ({
 }));
 jest.mock('../../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
 
-const { deleteQueueItem, deleteConflict } = require('../../data/db') as {
+const { deleteQueueItem, deleteConflict, deleteTeeShotQueueItem } = require('../../data/db') as {
   deleteQueueItem: jest.Mock;
   deleteConflict: jest.Mock;
+  deleteTeeShotQueueItem: jest.Mock;
 };
 const { drainQueue } = require('../../data/syncWorker') as { drainQueue: jest.Mock };
 
@@ -63,6 +69,7 @@ function item(
 beforeEach(() => {
   jest.clearAllMocks();
   mockState.queue = [];
+  mockState.teeShots = [];
   mockState.conflicts = [];
 });
 
@@ -128,6 +135,33 @@ describe('SyncBanner', () => {
     await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
     expect(alert).not.toHaveBeenCalled();
     expect(deleteQueueItem.mock.calls.map((c) => c[1])).toEqual(['q4']);
+    alert.mockRestore();
+  });
+
+  // #2580: et utslag som ble avvist (laget har levert), står i utslagskøen. Det
+  // navngis som hullet sitt, leses som låst, og fjernes fra sin egen tabell.
+  it('viser et avvist utslag som låst og fjerner det fra utslagskøen', async () => {
+    mockState.teeShots = [
+      {
+        id: `${GAME}:1:7`,
+        teeShotId: `${GAME}:1:7`,
+        attemptCount: 1,
+        lastError: REFUSED_TEE_SHOT_ERROR,
+        createdAt: '2026-10-15T10:00:00.000Z',
+        abandonedAt: '2026-10-15T10:00:05.000Z',
+      },
+    ];
+    const alert = jest.spyOn(Alert, 'alert');
+
+    await render(<SyncBanner gameId={GAME} />);
+
+    await waitFor(() => expect(screen.getByTestId('quarantine-holes')).toHaveTextContent('Hull 7 ble ikke lagret.'));
+    expect(screen.getByTestId('quarantine-locked-hint')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('quarantine-dismiss'));
+    await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
+    expect(alert).not.toHaveBeenCalled();
+    expect(deleteTeeShotQueueItem.mock.calls.map((c) => c[1])).toEqual([`${GAME}:1:7`]);
+    expect(deleteQueueItem).not.toHaveBeenCalled();
     alert.mockRestore();
   });
 

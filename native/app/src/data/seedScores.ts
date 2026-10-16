@@ -12,9 +12,10 @@
 // én transaksjon, #2227), som dropper alt som ikke er strengt nyere. En seed kan
 // derfor aldri kaste et slag spilleren nettopp tastet offline.
 import { SERVER_SCORE_COLUMNS } from '../../../../lib/sync/conflict';
+import { SERVER_TEE_SHOT_COLUMNS, fromTeeShotRow } from '../../../../lib/sync/teeShotRow';
 import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
 import { currentDeviceUserId, supabase } from '../supabase';
-import { mergeServerScores } from './realtime';
+import { mergeServerScores, mergeServerTeeShots } from './realtime';
 
 /**
  * Sync ned alle synlige scores for spillet. Returnerer antall rader som ble
@@ -52,5 +53,28 @@ export async function seedGameScores(gameId: string): Promise<number> {
     currentUserId,
   );
 
+  return data.length;
+}
+
+/**
+ * #2580: lagenes utslag i spillet, inn lokalt gjennom `mergeServerTeeShots`
+ * (en rad i køen overskrives aldri). Egen henting ved siden av slagene, så et
+ * spill uten «Hvem sitt utslag» aldri spør etter dem. RLS slipper inn spillets
+ * deltakere og arrangøren. Returnerer antall rader som ble vurdert.
+ */
+export async function seedGameTeeShots(gameId: string): Promise<number> {
+  const data = await selectAllRows(
+    (from, to) =>
+      supabase
+        .from('team_tee_shots')
+        .select(SERVER_TEE_SHOT_COLUMNS)
+        .eq('game_id', gameId)
+        .order('team_number')
+        .order('hole_number')
+        .range(from, to),
+    'seedGameTeeShots',
+  );
+  if (data.length === 0) return 0;
+  await mergeServerTeeShots(data.map(fromTeeShotRow));
   return data.length;
 }

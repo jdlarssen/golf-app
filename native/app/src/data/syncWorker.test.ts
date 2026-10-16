@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { waitFor } from '@testing-library/react-native';
 import { useFreshModules } from '../test/harness';
-import { REFUSED_WRITE_ERROR } from '../../../../lib/sync/classifyError';
+import { REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from '../../../../lib/sync/classifyError';
 import { REFUSED_REPLY_FIXTURE } from '../../../../lib/sync/testing/refusedReplyFixture';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -399,5 +399,133 @@ describe('drainQueue', () => {
     await waitFor(async () => expect(await listQueue(db)).toHaveLength(0));
     expect(supabase.rpc).toHaveBeenCalledTimes(2);
     expect(supabase.rpc.mock.calls[1]![1]).toMatchObject({ p_hole_number: 2 });
+  });
+
+  // #2580: utslagsgrenen, med samme regler som slagene (webbens drainTeeShots).
+  describe('utslag (#2580)', () => {
+    const TEE_REFUSED = [
+      {
+        game_id: null,
+        team_number: null,
+        hole_number: null,
+        tee_shot_by: null,
+        entered_by: null,
+        client_updated_at: null,
+        updated_at: null,
+        was_applied: null,
+      },
+    ];
+
+    function teeReply(overrides: Record<string, unknown> = {}) {
+      return {
+        data: [
+          {
+            game_id: GAME,
+            team_number: 1,
+            hole_number: 7,
+            tee_shot_by: MATE,
+            entered_by: ME,
+            client_updated_at: FROZEN,
+            updated_at: SERVER_TIME,
+            was_applied: true,
+            ...overrides,
+          },
+        ],
+        error: null,
+      };
+    }
+
+    async function tapTeeShot(teeShotBy: string | null = MATE): Promise<void> {
+      const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+      await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy, enteredBy: ME });
+    }
+
+    it('lagret: sendes med set_team_tee_shot_if_newer og tas ut av køen', async () => {
+      const { supabase } = mocks();
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue(teeReply());
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 1, rejected: 0, errored: 0, abandoned: 0 });
+      expect(supabase.rpc).toHaveBeenCalledWith('set_team_tee_shot_if_newer', {
+        p_game_id: GAME,
+        p_team_number: 1,
+        p_hole_number: 7,
+        p_tee_shot_by: MATE,
+        p_client_updated_at: FROZEN,
+      });
+      const { getDb, getTeeShot, listTeeShotQueue, teeShotKey } = require('./db') as Db;
+      const db = await getDb();
+      expect(await listTeeShotQueue(db)).toEqual([]);
+      expect(await getTeeShot(db, teeShotKey(GAME, 1, 7))).toMatchObject({ serverUpdatedAt: SERVER_TIME });
+    });
+
+    it('serveren har en nyere rad: den skrives over den lokale', async () => {
+      const { supabase } = mocks();
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue(
+        teeReply({ tee_shot_by: ME, entered_by: MATE, client_updated_at: '2026-08-30T10:00:05.000+00:00', was_applied: false }),
+      );
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 0, rejected: 1, errored: 0, abandoned: 0 });
+      const { getDb, getTeeShot, listTeeShotQueue, teeShotKey } = require('./db') as Db;
+      const db = await getDb();
+      expect(await getTeeShot(db, teeShotKey(GAME, 1, 7))).toMatchObject({
+        teeShotBy: ME,
+        enteredBy: MATE,
+        clientUpdatedAt: '2026-08-30T10:00:05.000+00:00',
+      });
+      expect(await listTeeShotQueue(db)).toEqual([]);
+    });
+
+    it('avslått: raden settes tilbake til serverens og kø-elementet går i karantene', async () => {
+      const { supabase, queryStub, routeFrom, stepArgs } = mocks();
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue({ data: TEE_REFUSED, error: null });
+      const read = queryStub({
+        data: { tee_shot_by: ME, entered_by: MATE, client_updated_at: '2026-08-30T09:59:00+00:00', updated_at: '2026-08-30T09:59:00.5+00:00' },
+        error: null,
+      });
+      routeFrom({ team_tee_shots: [read] });
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 1 });
+      expect(stepArgs(read, 'eq')).toEqual([
+        ['game_id', GAME],
+        ['team_number', 1],
+        ['hole_number', 7],
+      ]);
+      const { getDb, getTeeShot, listTeeShotQueue, teeShotKey } = require('./db') as Db;
+      const db = await getDb();
+      expect(await getTeeShot(db, teeShotKey(GAME, 1, 7))).toMatchObject({ teeShotBy: ME, enteredBy: MATE });
+      const [item] = await listTeeShotQueue(db);
+      expect(item).toMatchObject({ attemptCount: 1, lastError: REFUSED_TEE_SHOT_ERROR });
+      expect(item!.abandonedAt).not.toBeNull();
+    });
+
+    it('avslått førstegangsvalg: serveren har ingen rad, så den lokale slettes', async () => {
+      const { supabase, queryStub, routeFrom } = mocks();
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue({ data: TEE_REFUSED, error: null });
+      routeFrom({ team_tee_shots: [queryStub({ data: null, error: null })] });
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await drainQueue('test');
+      const { getDb, getTeeShot, teeShotKey } = require('./db') as Db;
+      expect(await getTeeShot(await getDb(), teeShotKey(GAME, 1, 7))).toBeUndefined();
+    });
+
+    it('nettfeil: prøver igjen, aldri karantene', async () => {
+      const { supabase } = mocks();
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue({ data: null, error: { message: 'TypeError: Network request failed' } });
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 0, rejected: 0, errored: 1, abandoned: 0 });
+      const { getDb, listTeeShotQueue } = require('./db') as Db;
+      const [item] = await listTeeShotQueue(await getDb());
+      expect(item).toMatchObject({ attemptCount: 1, lastError: 'TypeError: Network request failed', abandonedAt: null });
+    });
   });
 });

@@ -7,7 +7,7 @@
 // flighten, og hva blokken over knappen sier, er `lib/roster.test.ts` sitt.
 // Ingen av dem gjentas her.
 //
-// Det som blir igjen er fem koblinger:
+// Det som blir igjen er sju koblinger:
 //
 //  1. **I et format som kollapser til ett lagkort leverer appen selv.** Fram
 //     til #1918 sto det en setning og en lenke ut («Levering av lagkort gjøres
@@ -38,6 +38,10 @@
 //     så langt at «Lever scorekort» kommer over linja, viker den, og ruller du
 //     opp igjen, kommer den tilbake. Uten oppsummering står ingen linje.
 //     Regelen selv er `roundDone.test.ts` sin; her låses koblingen til rulla.
+//  7. **Utslagene (#2580).** Mangler noen på laget utslag, står raden
+//     «Utslag» med pille, boksen over knappene og den sperrede leverknappen,
+//     og «Lever likevel» kan ikke nås. Tekstene er `teeShotsCopy.test.ts` sine
+//     og regelen `teeShots.test.ts` sin; her låses koblingen.
 //
 // Innlesingen ved fokus testes ikke: mocken under gjør `useFocusEffect` om til
 // `useEffect`, så testen kan ikke skille fokus fra mount.
@@ -151,10 +155,16 @@ const mockDeliveredBundle = {
 const HIDDEN = { includeHiddenElements: true };
 
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
-const mockState: { bundle: unknown; queue: Promise<unknown[]>; scores: unknown[] } = {
+const mockState: {
+  bundle: unknown;
+  queue: Promise<unknown[]>;
+  scores: unknown[];
+  teeShots: unknown[];
+} = {
   bundle: mockBundle,
   queue: Promise.resolve([]),
   scores: [],
+  teeShots: [],
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -170,7 +180,10 @@ jest.mock('../data/gameBundle', () => ({
 jest.mock('../data/submitCard', () => ({
   submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false, alsoDelivered: 0 })),
 }));
-jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+jest.mock('../data/seedScores', () => ({
+  seedGameScores: jest.fn(async () => 0),
+  seedGameTeeShots: jest.fn(async () => 0),
+}));
 // Slag-innhentingen (#2228) drar inn realtime-modulen.
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
@@ -180,6 +193,9 @@ jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listQueue: jest.fn(() => mockState.queue),
   listScoresForGame: jest.fn(async () => mockState.scores),
+  // #2580: utslagskøen leses ved siden av slagkøen; tom her.
+  listTeeShotQueue: jest.fn(async () => []),
+  listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -348,5 +364,64 @@ describe('Scorecard', () => {
     expect(screen.queryByTestId('scorecard-row-label-net', HIDDEN)).toBeNull();
     expect(screen.queryByTestId('total-netto')).toBeNull();
     expect(screen.getByTestId('total-brutto')).toBeTruthy();
+  });
+  it('#2580: mangler noen utslag, er leveringen sperret og «Lever likevel» kan ikke nås', async () => {
+    const { Alert } = require('react-native');
+    const { submitCard } = require('../data/submitCard');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    // Texas scramble med firemannslag og minst 4 hver. Utslag 3: Marte 7,
+    // Jonas 5, jeg 4 og Per 2 på alle 18 hull.
+    mockState.queue = Promise.resolve([]);
+    mockState.scores = [];
+    mockState.bundle = {
+      ...mockBundle,
+      game: {
+        ...mockBundle.game,
+        id: 'game-6',
+        gameMode: 'texas_scramble',
+        modeConfig: { kind: 'texas_scramble', team_size: 4, min_tee_shots: 4 },
+      },
+      players: [
+        { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', teamNumber: 1, courseHandicap: 20 },
+        { ...PLAYER_BASE, userId: 'marte', name: 'Marte Moe', teamNumber: 1, courseHandicap: 10 },
+        { ...PLAYER_BASE, userId: 'jonas', name: 'Jonas Berg', teamNumber: 1, courseHandicap: 12 },
+        { ...PLAYER_BASE, userId: 'per', name: 'Per Hauge', teamNumber: 1, courseHandicap: 30 },
+      ],
+    };
+    const owners = [
+      ...Array<string>(7).fill('marte'),
+      ...Array<string>(5).fill('jonas'),
+      ...Array<string>(4).fill('me'),
+      ...Array<string>(2).fill('per'),
+    ];
+    mockState.teeShots = owners.map((teeShotBy, i) => ({
+      id: `game-6:1:${i + 1}`,
+      gameId: 'game-6',
+      teamNumber: 1,
+      holeNumber: i + 1,
+      teeShotBy,
+      enteredBy: 'me',
+      clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+      serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+    }));
+
+    await render(scorecardElement('game-6', jest.fn()));
+    await waitFor(() => {
+      expect(screen.getByTestId('tee-shot-short-box')).toBeTruthy();
+    });
+    expect(screen.getAllByTestId('scorecard-row-label-teeShots', HIDDEN)).toHaveLength(2);
+    // Per valgt på hull 17 og 18: initialene i pille.
+    expect(screen.getByTestId('scorecard-tee-shot-short-18', HIDDEN)).toBeTruthy();
+    expect(screen.queryByTestId('scorecard-tee-shot-short-1', HIDDEN)).toBeNull();
+
+    const button = screen.getByTestId('submit-team-card');
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(button);
+    // 18 hull uten slag ville ellers spurt «Lever likevel?».
+    expect(alert).not.toHaveBeenCalled();
+    expect(submitCard).not.toHaveBeenCalled();
+
+    alert.mockRestore();
+    mockState.teeShots = [];
   });
 });

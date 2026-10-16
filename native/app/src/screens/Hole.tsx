@@ -94,19 +94,22 @@ import {
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
 import { SaveErrorBanner } from '../components/hole/SaveErrorBanner';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
+import { TeeShotPicker } from '../components/hole/TeeShotPicker';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { PokalHankerIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
-import type { LocalScore } from '../data/db';
+import type { LocalScore, LocalTeeShot } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
+import { writeTeeShot } from '../data/writeTeeShot';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
 import { holeTopLine } from '../lib/holeHeader';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
+import { teeShotMinimum, teeShotTeams } from '../lib/teeShotTeams';
 import { computeGameLeaderboard, playerExtraForHole } from '../lib/scoringContext';
 import {
   buildTeamCards,
@@ -122,6 +125,7 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
+import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { setSunlight, useSunlight } from '../lib/sunlight';
 import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
@@ -197,7 +201,16 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   // kanalen er tilbake etter et brudd (#2093), når appen kommer i forgrunnen og
   // når nettet er tilbake (#1980), samme hook som de andre spillskjermene
   // (#2228).
-  useScoreCatchUp(gameId, reload, { live: true });
+  //
+  // #2580: med «Hvem sitt utslag» hentes lagenes utslag på de samme
+  // tidspunktene, i samme hook. Før bundelen har landet vet vi ikke om spillet
+  // har innstillingen, så da spørres det ikke.
+  const minTeeShots = bundle ? teeShotMinimum(bundle.game) : null;
+  const teeShots = useTeamTeeShots(gameId, { enabled: minTeeShots != null, pollMs: POLL_MS });
+  useScoreCatchUp(gameId, reload, {
+    live: true,
+    reloadTeeShots: minTeeShots != null ? teeShots.reload : undefined,
+  });
 
   // #2219: «Neste» bytter bare parameteren og gir ikke nytt fokus. Status
   // leses likevel på nytt ved hvert hullbytte, som på nettsiden: er runden
@@ -283,6 +296,12 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
       reload={reload}
       choices={choices}
       putts={putts}
+      teeShots={
+        minTeeShots != null && teeShots.loaded
+          ? { minimum: minTeeShots, rows: teeShots.rows, reload: teeShots.reload }
+          : null
+      }
+      refreshBundle={refreshBundle}
       goToHole={goToHole}
       onSubmit={() => navigation.navigate('Scorecard', { gameId })}
     />
@@ -346,6 +365,8 @@ function HoleView({
   reload,
   choices,
   putts,
+  teeShots,
+  refreshBundle,
   goToHole,
   onSubmit,
 }: {
@@ -361,6 +382,12 @@ function HoleView({
   reload: () => Promise<void>;
   choices: GameChoices;
   putts: PuttsTracking;
+  /**
+   * #2580: «Hvem sitt utslag». Null når spillet ikke har innstillingen, eller
+   * før den lokale basen er lest (tellingen og låsene ville vært feil).
+   */
+  teeShots: { minimum: number; rows: LocalTeeShot[]; reload: () => Promise<void> } | null;
+  refreshBundle: () => Promise<void>;
   goToHole: (next: number) => void;
   onSubmit: () => void;
 }) {
@@ -402,7 +429,19 @@ function HoleView({
   const myCaptainId = myTeamCaptainId(roster, userId);
   const collapsed = myCaptainId != null && modeCollapsesToTeamCard(mode, holeNumber);
   const nameOf = nameLookup(bundle.players);
-  const teamCards = collapsed ? buildTeamCards(flight, nameOf) : [];
+  // #2580: lagene i flighten med utslagsvalg (scramble: ett per lagkort,
+  // shamble: flightens lag), i samme rekkefølge som på nettet. Lagkortets
+  // navnelinje står da i knappenes rekkefølge.
+  const teeShotTeamsHere = teeShots
+    ? teeShotTeams(bundle.players, flight.map((entry) => entry.player.teamNumber))
+    : [];
+  const teeShotLabelOrder = teeShots
+    ? (teamNumber: number, memberIds: readonly string[]) => {
+        const order = teeShotTeamsHere.find((team) => team.teamNumber === teamNumber)?.members ?? [];
+        return order.map((m) => m.userId).filter((id) => memberIds.includes(id));
+      }
+    : undefined;
+  const teamCards = collapsed ? buildTeamCards(flight, nameOf, teeShotLabelOrder) : [];
   const myCard = findMyTeamCard(teamCards, userId);
   // Hull-stripen teller radene JEG fører i: lagets i de kollapsede modiene,
   // mine egne ellers. Den delte regelen svarer per hull.
@@ -524,6 +563,28 @@ function HoleView({
     await reload();
     void drainQueue('tasting');
     return true;
+  };
+
+  // #2580: «Hvem sitt utslag ble brukt?». Bare til `team_tee_shots` og køen
+  // (`writeTeeShot`), aldri via `writeScore`. Feiler skrivingen, sier banneret
+  // fra, som for slagene. Avviser serveren valget (et kort på laget er levert),
+  // har den lokale raden fått serverens verdi tilbake, og bundelen leses på
+  // nytt så leveringslåsen stemmer; banneret forklarer avslaget.
+  const pickTeeShot = async (teamNumber: number, teeShotBy: string | null) => {
+    if (!teeShots) return;
+    try {
+      await writeTeeShot({ gameId, teamNumber, holeNumber, teeShotBy, enteredBy: userId });
+    } catch (err: unknown) {
+      console.error('[Hole] utslaget ble ikke lagret', err);
+      setSaveFailed('teeShot');
+      AccessibilityInfo.announceForAccessibility(LOCAL_SAVE_FAILED.teeShot);
+      return;
+    }
+    setSaveFailed(null);
+    await teeShots.reload();
+    const drained = await drainQueue('utslag');
+    await teeShots.reload();
+    if (drained.abandoned > 0) void refreshBundle();
   };
 
   // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
@@ -793,6 +854,19 @@ function HoleView({
           ))}
           </View>
         )}
+
+        {/* #2580: under flighten, ikke i skinna (Utslag-forslag-hull). */}
+        {teeShots && teeShotTeamsHere.length > 0 ? (
+          <TeeShotPicker
+            holeNumber={holeNumber}
+            gameMode={mode}
+            minimum={teeShots.minimum}
+            teams={teeShotTeamsHere}
+            rows={teeShots.rows}
+            disabled={bundle.game.status !== 'active' || me.withdrawn_at != null}
+            onPick={(teamNumber, teeShotBy) => void pickTeeShot(teamNumber, teeShotBy)}
+          />
+        ) : null}
 
         <View style={styles.pad}>
 

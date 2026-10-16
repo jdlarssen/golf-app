@@ -8,25 +8,36 @@
 // dequeue.
 import {
   isLockedCardError,
+  REFUSED_TEE_SHOT_ERROR,
   REFUSED_WRITE_ERROR,
   syncRetryDecision,
 } from '../../../../lib/sync/classifyError';
+import { SERVER_TEE_SHOT_COLUMNS } from '../../../../lib/sync/teeShotRow';
 import { conflictRecordFor } from '../../../../lib/sync/conflict';
 import { interpretUpsertReply } from '../../../../lib/sync/upsertReply';
 import { currentDeviceUserId, supabase } from '../supabase';
 import {
   deleteQueueItem,
   deleteScore,
+  deleteTeeShot,
+  deleteTeeShotQueueItem,
   getDb,
   getScore,
+  getTeeShot,
   listQueue,
+  listTeeShotQueue,
   markQueueAbandoned,
   markQueueRetry,
+  markTeeShotQueueAbandoned,
+  markTeeShotQueueRetry,
   putConflict,
   putScore,
+  putTeeShot,
   withTxn,
   type LocalScore,
+  type LocalTeeShot,
   type SyncQueueItem,
+  type TeeShotQueueItem,
 } from './db';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
 
@@ -74,6 +85,8 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
   try {
     const db = await getDb();
     const queue = await listQueue(db);
+    // #2580: utslagskøen leses samtidig og drenes etter slagene, som på webben.
+    const teeShotQueue = await listTeeShotQueue(db);
 
     // #1368: hvem er innlogget på DENNE enheten. Leses én gang per drain —
     // konflikt-porten under trenger den for hvert element.
@@ -231,12 +244,18 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       else if (outcome === 'server-wins') rejected++;
     }
 
-    const result: DrainResult = { pushed, rejected, errored, abandoned };
+    const tee = await drainTeeShots(teeShotQueue, currentUserId);
+    const result: DrainResult = {
+      pushed: pushed + tee.pushed,
+      rejected: rejected + tee.rejected,
+      errored: errored + tee.errored,
+      abandoned: abandoned + tee.abandoned,
+    };
     lastDrain = {
       ...result,
       at: new Date().toISOString(),
       reason,
-      queued: queue.length,
+      queued: queue.length + teeShotQueue.length,
     };
     return result;
   } finally {
@@ -322,6 +341,161 @@ async function settleLockedRefusal(
     await markQueueAbandoned(txn, item.id, {
       attemptCount: item.attemptCount + 1,
       lastError,
+      abandonedAt: new Date().toISOString(),
+    });
+    return 'abandoned' as const;
+  });
+}
+
+/**
+ * #2580: utslagsgrenen av drainen, speil av webbens `drainTeeShots`. Samme
+ * regler som slagene: en permanent feil går i karantene etter taket, en
+ * forbigående prøves igjen, og et avslag (RPC-ens rad med bare NULL) setter den
+ * lokale raden tilbake til serverens og karantenerer elementet, så banneret kan
+ * forklare det. Ingenting forsvinner i stillhet.
+ */
+async function drainTeeShots(
+  queue: readonly TeeShotQueueItem[],
+  currentUserId: string | null,
+): Promise<DrainResult> {
+  const counts = { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  if (queue.length === 0) return counts;
+  const db = await getDb();
+
+  for (const item of queue) {
+    if (item.abandonedAt) continue;
+
+    const shot = await getTeeShot(db, item.teeShotId);
+    if (!shot) {
+      await withTxn((txn) => deleteTeeShotQueueItem(txn, item.id));
+      continue;
+    }
+
+    const { data, error } = await supabase.rpc('set_team_tee_shot_if_newer', {
+      p_game_id: shot.gameId,
+      p_team_number: shot.teamNumber,
+      p_hole_number: shot.holeNumber,
+      // null tømmer valget; den genererte arg-typen er non-null, derav castet.
+      p_tee_shot_by: shot.teeShotBy as string,
+      p_client_updated_at: shot.clientUpdatedAt,
+    });
+
+    if (error) {
+      const decision = syncRetryDecision({ attemptCount: item.attemptCount, errorMessage: error.message });
+      await withTxn((txn) =>
+        decision === 'abandon'
+          ? markTeeShotQueueAbandoned(txn, item.id, {
+              attemptCount: item.attemptCount + 1,
+              lastError: error.message,
+              abandonedAt: new Date().toISOString(),
+            })
+          : markTeeShotQueueRetry(txn, item.id, { attemptCount: item.attemptCount + 1, lastError: error.message }),
+      );
+      if (decision === 'abandon') counts.abandoned++;
+      else counts.errored++;
+      continue;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const reply = interpretUpsertReply(row, shot.clientUpdatedAt);
+
+    if (reply === 'refused') {
+      const settled = await settleRefusedTeeShot(item, shot, currentUserId);
+      if (settled === 'abandoned') counts.abandoned++;
+      else if (settled === 'errored') counts.errored++;
+      continue;
+    }
+
+    // #1457: laget kan ha trykket igjen mens RPC-en var i lufta; da har
+    // writeTeeShot lagt den nyere verdien i køen under samme id.
+    const outcome = await withTxn(async (txn) => {
+      const current = await getTeeShot(txn, item.teeShotId);
+      if (!current || current.clientUpdatedAt !== shot.clientUpdatedAt) return 'edited-mid-flight' as const;
+      if (reply === 'applied' && row) {
+        await putTeeShot(txn, { ...current, serverUpdatedAt: row.updated_at });
+        await deleteTeeShotQueueItem(txn, item.id);
+        return 'applied' as const;
+      }
+      if (reply === 'server-wins' && row) {
+        await putTeeShot(txn, {
+          ...current,
+          teeShotBy: row.tee_shot_by,
+          enteredBy: row.entered_by,
+          clientUpdatedAt: row.client_updated_at,
+          serverUpdatedAt: row.updated_at,
+        });
+        await deleteTeeShotQueueItem(txn, item.id);
+        return 'server-wins' as const;
+      }
+      await deleteTeeShotQueueItem(txn, item.id);
+      return 'kept-local' as const;
+    });
+
+    if (outcome === 'applied') counts.pushed++;
+    else if (outcome === 'server-wins') counts.rejected++;
+  }
+
+  return counts;
+}
+
+/**
+ * #2580: gjør opp et utslag RPC-en avviste, som `settleLockedRefusal`: uten
+ * sesjon, eller når serverlesingen feiler, telles forsøket og elementet står;
+ * ellers settes den lokale raden tilbake til serverens (eller slettes når
+ * serveren ikke har noen), og elementet karantenereres med
+ * REFUSED_TEE_SHOT_ERROR, som banneret leser som låst.
+ */
+async function settleRefusedTeeShot(
+  item: TeeShotQueueItem,
+  shot: LocalTeeShot,
+  currentUserId: string | null,
+): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
+  const keepForRetry = async () => {
+    await withTxn((txn) =>
+      markTeeShotQueueRetry(txn, item.id, { attemptCount: item.attemptCount + 1, lastError: REFUSED_TEE_SHOT_ERROR }),
+    );
+    return 'errored' as const;
+  };
+
+  if (currentUserId == null) return keepForRetry();
+
+  let serverRow: {
+    tee_shot_by: string | null;
+    entered_by: string;
+    client_updated_at: string;
+    updated_at: string;
+  } | null;
+  try {
+    const { data, error } = await supabase
+      .from('team_tee_shots')
+      .select(SERVER_TEE_SHOT_COLUMNS)
+      .eq('game_id', shot.gameId)
+      .eq('team_number', shot.teamNumber)
+      .eq('hole_number', shot.holeNumber)
+      .maybeSingle();
+    if (error) return keepForRetry();
+    serverRow = data;
+  } catch {
+    return keepForRetry();
+  }
+
+  return withTxn(async (txn) => {
+    const current = await getTeeShot(txn, item.teeShotId);
+    if (!current || current.clientUpdatedAt !== shot.clientUpdatedAt) return 'edited-mid-flight' as const;
+    if (serverRow) {
+      await putTeeShot(txn, {
+        ...current,
+        teeShotBy: serverRow.tee_shot_by,
+        enteredBy: serverRow.entered_by,
+        clientUpdatedAt: serverRow.client_updated_at,
+        serverUpdatedAt: serverRow.updated_at,
+      });
+    } else {
+      await deleteTeeShot(txn, item.teeShotId);
+    }
+    await markTeeShotQueueAbandoned(txn, item.id, {
+      attemptCount: item.attemptCount + 1,
+      lastError: REFUSED_TEE_SHOT_ERROR,
       abandonedAt: new Date().toISOString(),
     });
     return 'abandoned' as const;
