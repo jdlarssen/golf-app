@@ -18,9 +18,13 @@ describe('gameNameMentions', () => {
     ['only part of a longer word', 'Olav-cupen', [ola], false],
     ['nobody', 'Lørdagscup', [ola], false],
     ['a single-letter name part on its own', 'Lag N', [{ name: 'Ola N.', nickname: null }], false],
+    ['a single-letter nickname', 'Lag N', [{ name: 'Nils Berg', nickname: 'N' }], false],
+    ['a single-letter name', 'Lag A', [{ name: 'A', nickname: null }], false],
+    ['a name written in decomposed form (NFD)', 'Åses cup', [{ name: 'A\u030Ase Lund', nickname: null }], true],
+    ['a game name written in decomposed form (NFD)', 'A\u030Ases cup', [{ name: 'Åse Lund', nickname: null }], true],
     ['a person without a name', 'Lørdagscup', [{ name: null, nickname: null }], false],
     ['an empty list', 'Olas 50-årsdag', [], false],
-  ] as const)('%s: %s → %s', (_label, gameName, people, expected) => {
+  ] as const)('%s: %s', (_label, gameName, people, expected) => {
     expect(gameNameMentions(gameName, people)).toBe(expected);
   });
 });

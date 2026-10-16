@@ -77,7 +77,7 @@ describe('generateKavalkadeNarrative', () => {
   it('skriver innledningen og vasker svaret', async () => {
     messagesCreateMock.mockResolvedValue(textResponse('```\nÅret ditt ble langt.\n```'));
 
-    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE)).resolves.toBe(
+    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set())).resolves.toBe(
       'Året ditt ble langt.',
     );
     expect(messagesCreateMock).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe('generateKavalkadeNarrative', () => {
   it('sender fakta, men aldri id-er', async () => {
     messagesCreateMock.mockResolvedValue(textResponse('Et fint år.'));
 
-    await generateKavalkadeNarrative(makeFacts(), EVERYONE);
+    await generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set());
 
     const call = messagesCreateMock.mock.calls[0][0];
     expect(call.model).toBe('claude-sonnet-5');
@@ -100,7 +100,7 @@ describe('generateKavalkadeNarrative', () => {
   it('gjør ingenting uten API-nøkkel', async () => {
     delete process.env.ANTHROPIC_API_KEY;
 
-    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE)).resolves.toBeNull();
+    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set())).resolves.toBeNull();
     expect(anthropicConstructorMock).not.toHaveBeenCalled();
     expect(messagesCreateMock).not.toHaveBeenCalled();
   });
@@ -110,6 +110,7 @@ describe('generateKavalkadeNarrative', () => {
       generateKavalkadeNarrative(
         makeFacts({ rounds: 0, soloRounds: 0, personal: null, gang: null }),
         EVERYONE,
+        new Set(),
       ),
     ).resolves.toBeNull();
     expect(messagesCreateMock).not.toHaveBeenCalled();
@@ -121,18 +122,18 @@ describe('generateKavalkadeNarrative', () => {
       content: [{ type: 'text', text: 'Året ditt ble' }],
     });
 
-    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE)).resolves.toBeNull();
+    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set())).resolves.toBeNull();
   });
 
   it('svarer null når vasken forkaster svaret', async () => {
     messagesCreateMock.mockResolvedValue(textResponse('a'.repeat(1000)));
 
-    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE)).resolves.toBeNull();
+    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set())).resolves.toBeNull();
   });
 
   it('kaster aldri når modellen feiler', async () => {
     messagesCreateMock.mockRejectedValue(new Error('timeout'));
 
-    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE)).resolves.toBeNull();
+    await expect(generateKavalkadeNarrative(makeFacts(), EVERYONE, new Set())).resolves.toBeNull();
   });
 });

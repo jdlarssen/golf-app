@@ -24,15 +24,20 @@ const FACTS: RoundReportFacts = {
 };
 
 describe('buildRoundReportPrompt', () => {
-  it('system prompt is Norwegian, forbids invented numbers, mentions the winner requirement', () => {
-    const { system } = buildRoundReportPrompt(FACTS);
-    expect(system).toContain('golfrunde');
-    expect(system).toContain('norsk bokmål');
+  it.each([
+    ['the subject', 'golfrunde'],
+    ['the language', 'norsk bokmål'],
     // #2561: players without AI consent are missing on purpose, and a null
     // winnerName means no winner is named.
-    expect(system).toContain('Er winnerName null, kårer du ingen vinner.');
-    expect(system).toContain('Er gameName null, nevner du ikke navnet på spillet.');
-    expect(system).not.toMatch(/[a-z]{4,}\s(the|and|score|winner)\s/i); // no stray English sentences
+    ['a null winnerName', 'Er winnerName null, kårer du ingen vinner.'],
+    // #2561: a null gameName named someone who said no.
+    ['a null gameName', 'Er gameName null, nevner du ikke navnet på spillet.'],
+  ])('system prompt says what holds for %s', (_label, phrase) => {
+    expect(buildRoundReportPrompt(FACTS).system).toContain(phrase);
+  });
+
+  it('system prompt has no stray English sentences', () => {
+    expect(buildRoundReportPrompt(FACTS).system).not.toMatch(/[a-z]{4,}\s(the|and|score|winner)\s/i);
   });
 
   it('system prompt caps sentence count to 3 when scoredHoles < 9', () => {
