@@ -403,19 +403,6 @@ describe('drainQueue', () => {
 
   // #2580: utslagsgrenen, med samme regler som slagene (webbens drainTeeShots).
   describe('utslag (#2580)', () => {
-    const TEE_REFUSED = [
-      {
-        game_id: null,
-        team_number: null,
-        hole_number: null,
-        tee_shot_by: null,
-        entered_by: null,
-        client_updated_at: null,
-        updated_at: null,
-        was_applied: null,
-      },
-    ];
-
     function teeReply(overrides: Record<string, unknown> = {}) {
       return {
         data: [
@@ -482,7 +469,7 @@ describe('drainQueue', () => {
     it('avslått: raden settes tilbake til serverens og kø-elementet går i karantene', async () => {
       const { supabase, queryStub, routeFrom, stepArgs } = mocks();
       await tapTeeShot();
-      supabase.rpc.mockResolvedValue({ data: TEE_REFUSED, error: null });
+      supabase.rpc.mockResolvedValue({ data: REFUSED_REPLY_FIXTURE, error: null });
       const read = queryStub({
         data: { tee_shot_by: ME, entered_by: MATE, client_updated_at: '2026-08-30T09:59:00+00:00', updated_at: '2026-08-30T09:59:00.5+00:00' },
         error: null,
@@ -507,7 +494,7 @@ describe('drainQueue', () => {
     it('avslått førstegangsvalg: serveren har ingen rad, så den lokale slettes', async () => {
       const { supabase, queryStub, routeFrom } = mocks();
       await tapTeeShot();
-      supabase.rpc.mockResolvedValue({ data: TEE_REFUSED, error: null });
+      supabase.rpc.mockResolvedValue({ data: REFUSED_REPLY_FIXTURE, error: null });
       routeFrom({ team_tee_shots: [queryStub({ data: null, error: null })] });
 
       const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
