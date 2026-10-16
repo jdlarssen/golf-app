@@ -32,4 +32,12 @@ describe('AiConsentToggle', () => {
     expect(setAiConsentMock).toHaveBeenLastCalledWith(false);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
   });
+
+  // #2561: answered on Home earlier in the same visit, the server now says
+  // yes; the switch must not keep the answer it mounted with.
+  it('follows a new answer from the server', () => {
+    const { rerender } = render(<AiConsentToggle initialGranted={false} />);
+    rerender(<AiConsentToggle initialGranted={true} />);
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+  });
 });

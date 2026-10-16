@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -187,5 +188,9 @@ export async function setAiConsent(
     console.error('[profile] setAiConsent failed', err);
     return { ok: false };
   }
+  // Profil reads the answer on the server; a later visit must not show the
+  // one from before the answer on Home (or the other way round).
+  revalidatePath('/profile');
+  revalidatePath('/');
   return { ok: true };
 }
