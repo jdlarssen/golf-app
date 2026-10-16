@@ -395,7 +395,8 @@ export async function mergeServerTeeShots(rows: readonly ServerTeeShotRow[]): Pr
     let merged = 0;
     for (const incoming of rows) {
       const id = teeShotKey(incoming.gameId, incoming.teamNumber, incoming.holeNumber);
-      const [existing, queued] = await Promise.all([getTeeShot(txn, id), getTeeShotQueueItem(txn, id)]);
+      const existing = await getTeeShot(txn, id);
+      const queued = await getTeeShotQueueItem(txn, id);
       if (!serverTeeShotWins(existing, incoming, queued != null)) continue;
       await putTeeShot(txn, { id, ...incoming });
       merged++;
