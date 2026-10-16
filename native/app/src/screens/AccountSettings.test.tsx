@@ -25,6 +25,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
+import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { logOut } from '../data/logout';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
@@ -45,6 +46,9 @@ jest.mock('../lib/webLink', () => ({
   openWeb: jest.fn(),
 }));
 jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
+// #2561: the AI consent row reads and writes its own row.
+jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiConsent: jest.fn() }));
+jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
 
 const openWebMock = openWeb as jest.Mock;
@@ -66,6 +70,8 @@ describe('AccountSettings', () => {
     openWebMock.mockResolvedValue({ ok: true });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
+    (fetchOwnAiConsent as jest.Mock).mockResolvedValue(true);
+    (saveAiConsent as jest.Mock).mockResolvedValue({ ok: true });
     // Spionen settes for HVER test, ikke bare den som venter dialogen: uten den
     // er `Alert.alert` den ekte funksjonen, og «ble ikke spurt» kunne ikke
     // uttrykkes som en assert i det hele tatt.
@@ -74,6 +80,26 @@ describe('AccountSettings', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it('#2561: the AI switch shows the answer and saves when flipped, rolling back on failure', async () => {
+    (saveAiConsent as jest.Mock).mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false });
+    await renderScreen();
+
+    const aiSwitch = await screen.findByTestId('account-ai-consent-switch');
+    expect(aiSwitch).toBeChecked();
+
+    await act(async () => {
+      fireEvent.press(aiSwitch);
+    });
+    expect(saveAiConsent).toHaveBeenLastCalledWith('user-me', false);
+    expect(screen.getByTestId('account-ai-consent-switch')).not.toBeChecked();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('account-ai-consent-switch'));
+    });
+    expect(screen.getByTestId('account-ai-consent-switch')).not.toBeChecked();
+    expect(screen.getByTestId('account-ai-consent-error')).toBeTruthy();
   });
 
   it('shows the e-mail, opens the privacy policy, and leads to the delete confirmation', async () => {
