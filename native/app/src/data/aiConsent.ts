@@ -1,8 +1,8 @@
 // native/app/src/data/aiConsent.ts
 // #2561 PR B: spillerens svar på spørsmålet om AI-tekster, i `ai_consents`
 // (migrasjon 0210). Bare eieren leser og skriver raden (RLS); serveren leser
-// alle svar med service-rollen (`lib/ai/consent.ts`, der regelen bor: bare «ja»
-// sender noe til språkmodellen).
+// alle svar med service-rollen (`lib/ai/consent.ts`, der regelen bor: navnet
+// går bare til språkmodellen med «ja»).
 //
 // Appen bruker sin egen Supabase-klient her, ikke serverens modul, som er
 // server-only. `answered_at` settes av databasen.

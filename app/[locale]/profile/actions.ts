@@ -161,7 +161,7 @@ export async function toggleProductUpdates(
 
 /**
  * Lagre svaret på spørsmålet om AI-tekster (#2561), fra kortet på Hjem og
- * bryteren på Profil. Regelen (bare «ja» sender noe til språkmodellen) bor i
+ * bryteren på Profil. Regelen (navnet går bare til språkmodellen med «ja») bor i
  * `lib/ai/consent.ts`; dette er nettets eneste skriving til `ai_consents`.
  *
  * Brukerklienten, så RLS gjelder: spilleren kan bare sette inn og endre sin

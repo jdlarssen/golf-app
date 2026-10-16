@@ -4,8 +4,8 @@
 //
 // Spørsmålet kommer én gang, når spilleren ikke har svart. Porten slipper
 // spilleren inn ved enhver tvil, og ingen oppstart skal vente på nettet unødig.
-// Det er trygt fordi bare «ja» sender noe til AI-en (`lib/ai/consent.ts`): en
-// spiller som slipper forbi uten å ha svart, står ikke i noen tekst.
+// Det er trygt fordi navnet bare går til AI-en med «ja» (`lib/ai/consent.ts`):
+// en spiller som slipper forbi uten å ha svart, står ikke med navn i noen tekst.
 //
 // - **Husket svar.** Har enheten sett et svar for denne brukeren, leses det
 //   ikke igjen. Bryteren i «Personvern og konto» endrer svaret senere.
