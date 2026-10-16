@@ -13,13 +13,23 @@ import { setAiConsent } from './actions';
  *
  * Same optimistic switch as `MonthlyDigestToggle`: it rolls back and says so
  * when the save did not go through. This is a consent signal, and a switch
- * showing «ja» while the database holds «nei» would misreport it.
+ * showing «ja» while the database holds «nei» would misreport it. For the
+ * same reason it follows a new answer from the server (answered on Home in the
+ * same visit) instead of keeping the one it mounted with, and it is locked
+ * while a save is under way.
  */
 export function AiConsentToggle({ initialGranted }: { initialGranted: boolean }) {
   const t = useTranslations('aiConsent');
   const [granted, setGranted] = useState(initialGranted);
+  const [serverValue, setServerValue] = useState(initialGranted);
   const [failed, setFailed] = useState(false);
-  const [, startTransition] = useTransition();
+  const [saving, startTransition] = useTransition();
+
+  // Adjusting state during render: a new server answer replaces the local one.
+  if (serverValue !== initialGranted) {
+    setServerValue(initialGranted);
+    setGranted(initialGranted);
+  }
 
   function toggle() {
     const previous = granted;
@@ -56,7 +66,7 @@ export function AiConsentToggle({ initialGranted }: { initialGranted: boolean })
           </p>
         )}
       </div>
-      <Switch checked={granted} onToggle={toggle} label={t('toggleTitle')} />
+      <Switch checked={granted} onToggle={toggle} label={t('toggleTitle')} disabled={saving} />
     </div>
   );
 }
