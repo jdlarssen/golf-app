@@ -466,6 +466,20 @@ async function main() {
   );
   console.log(`2. Profil satt (${REVIEW_USER_NAME}, hcp ${REVIEW_HCP_INDEX}, locale en).`);
 
+  // ------------------------------------------------- 2b. AI-spørsmålet (#2561)
+  // Revieweren skal møte spørsmålet om AI-tekster ved første innlogging (App
+  // Review 5.1.2(i)), så et svar fra en tidligere review slettes. Null rader er
+  // ingen feil: kontoen kan være ny eller aldri ha svart.
+  const consentRows = ok(
+    'slett AI-svaret',
+    await db.from('ai_consents').delete().eq('user_id', reviewUserId).select('user_id'),
+  );
+  console.log(
+    consentRows.length > 0
+      ? '2b. AI-svaret slettet, så revieweren får spørsmålet igjen.'
+      : '2b. Ikke noe AI-svar å slette.',
+  );
+
   // -------------------------------------------------------- 3. demo-spillet
   // Oppslag på NAVN, ikke på creator: arrangøren kan ha blitt flyttet (og et
   // spill fra før #1909 står fortsatt på review-kontoen). Nyeste vinner.
