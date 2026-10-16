@@ -158,10 +158,29 @@ const mockWithdrawnCaptainBundle = {
 
 // Hvilken bundel skjermen får, satt per test. Navnet må starte med `mock` —
 // jest.mock-factoryene heises over importene og ser bare slike variabler.
-const mockState: { bundle: unknown; scores: unknown[]; teeShots: unknown[] } = {
+const mockState: { bundle: unknown; scores: unknown[]; teeShots: unknown[]; teeShotQueue: unknown[] } = {
   bundle: mockSoloBundle,
   scores: [],
   teeShots: [],
+  teeShotQueue: [],
+};
+
+// #2580: Texas med firemannslag og minst 4 hver. Id-ene står i en annen
+// rekkefølge enn navnene (a-per, me, x-marte, z-jonas mot Jonas, Marte, Meg,
+// Per), så en test av utslagsrekkefølgen biter. Kapteinen er lex-min: a-per.
+const mockTeeShotBundle = {
+  ...mockTeamBundle,
+  game: {
+    ...GAME_BASE,
+    gameMode: 'texas_scramble',
+    modeConfig: { kind: 'texas_scramble', team_size: 4, min_tee_shots: 4 },
+  },
+  players: [
+    { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', teamNumber: 1, courseHandicap: 20 },
+    { ...PLAYER_BASE, userId: 'x-marte', name: 'Marte Moe', teamNumber: 1, courseHandicap: 10 },
+    { ...PLAYER_BASE, userId: 'z-jonas', name: 'Jonas Berg', teamNumber: 1, courseHandicap: 12 },
+    { ...PLAYER_BASE, userId: 'a-per', name: 'Per Hauge', teamNumber: 1, courseHandicap: 30 },
+  ],
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -210,6 +229,7 @@ jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
   listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
+  listTeeShotQueue: jest.fn(async () => mockState.teeShotQueue),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -299,6 +319,7 @@ describe('Hole', () => {
     mockState.bundle = mockSoloBundle;
     mockState.scores = [];
     mockState.teeShots = [];
+    mockState.teeShotQueue = [];
     mockScheme.value = 'light';
     mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
@@ -811,29 +832,20 @@ describe('Hole', () => {
   // #2580: velgeren står under flighten, lagkortets navnelinje følger
   // knappenes rekkefølge, og et trykk går til `writeTeeShot` (aldri
   // `writeScore`) og så ut med drainen.
-  it('«Hvem sitt utslag»: velgeren står under flighten, og et trykk skriver lagets valg', async () => {
-    mockState.bundle = {
-      ...mockTeamBundle,
-      game: {
-        ...GAME_BASE,
-        gameMode: 'texas_scramble',
-        modeConfig: { kind: 'texas_scramble', team_size: 4, min_tee_shots: 4 },
-      },
-      players: [
-        { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', teamNumber: 1, courseHandicap: 20 },
-        { ...PLAYER_BASE, userId: 'marte', name: 'Marte Moe', teamNumber: 1, courseHandicap: 10 },
-        { ...PLAYER_BASE, userId: 'jonas', name: 'Jonas Berg', teamNumber: 1, courseHandicap: 12 },
-        { ...PLAYER_BASE, userId: 'per', name: 'Per Hauge', teamNumber: 1, courseHandicap: 30 },
-      ],
-    };
+  it('«Hvem sitt utslag»: velgeren står under flighten i navnerekkefølgen, og et trykk skriver lagets valg', async () => {
+    mockState.bundle = mockTeeShotBundle;
     await renderHole(7);
 
     await waitFor(() => {
       expect(screen.getByTestId('tee-shot-picker')).toBeTruthy();
     });
-    expect(within(screen.getByTestId('flight-row-jonas')).getByText('Lag 1 · Jonas, Marte, Meg, Per')).toBeTruthy();
+    // Knappene og lagkortets navnelinje i navnerekkefølgen, ikke id-ens.
+    expect(
+      screen.getAllByTestId(/^tee-shot-(me|x-marte|z-jonas|a-per)$/).map((b) => b.props.testID),
+    ).toEqual(['tee-shot-z-jonas', 'tee-shot-x-marte', 'tee-shot-me', 'tee-shot-a-per']);
+    expect(within(screen.getByTestId('flight-row-a-per')).getByText('Lag 1 · Jonas, Marte, Meg, Per')).toBeTruthy();
 
-    await fireEvent.press(screen.getByTestId('tee-shot-per'));
+    await fireEvent.press(screen.getByTestId('tee-shot-a-per'));
     await waitFor(() => {
       expect(drainQueue).toHaveBeenCalledWith('utslag');
     });
@@ -841,9 +853,43 @@ describe('Hole', () => {
       gameId: GAME_ID,
       teamNumber: 1,
       holeNumber: 7,
-      teeShotBy: 'per',
+      teeShotBy: 'a-per',
       enteredBy: 'me',
     });
     expect(writeScore).not.toHaveBeenCalled();
+  });
+
+  // Som webben: øker antallet utslag som er gitt opp i køen, uansett hvilken
+  // drain som fant det, hentes spillet på nytt så leveringslåsen stemmer.
+  it('«Hvem sitt utslag»: et utslag som blir gitt opp i køen, henter spillet på nytt', async () => {
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    const { listTeeShotQueue } = require('../data/db') as { listTeeShotQueue: jest.Mock };
+    mockState.bundle = mockTeeShotBundle;
+    await renderHole(7);
+    await waitFor(() => {
+      expect(screen.getByTestId('tee-shot-picker')).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(listTeeShotQueue).toHaveBeenCalled();
+    });
+    await act(async () => {});
+    const before = refreshGameBundle.mock.calls.length;
+
+    mockState.teeShotQueue = [
+      {
+        id: `${GAME_ID}:1:7`,
+        teeShotId: `${GAME_ID}:1:7`,
+        attemptCount: 1,
+        lastError: 'refused',
+        createdAt: '2026-08-30T10:00:00.000Z',
+        abandonedAt: '2026-08-30T10:05:00.000Z',
+      },
+    ];
+    await waitFor(
+      () => {
+        expect(refreshGameBundle.mock.calls.length).toBeGreaterThan(before);
+      },
+      { timeout: 4000 },
+    );
   });
 });

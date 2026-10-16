@@ -125,6 +125,7 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
+import { useGivenUpTeeShotCount } from '../lib/useGivenUpTeeShotCount';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { setSunlight, useSunlight } from '../lib/sunlight';
 import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
@@ -211,6 +212,17 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
     live: true,
     reloadTeeShots: minTeeShots != null ? teeShots.reload : undefined,
   });
+  // Avviser serveren et utslag (et kort på laget er levert), vet den noe
+  // siden ikke vet. Øker antallet utslag som er gitt opp, uansett hvilken
+  // drain som fant det, hentes bundelen på nytt så leveringslåsen stemmer.
+  // Bare en økning teller: det som var gitt opp før siden åpnet, gjør ikke det.
+  const givenUp = useGivenUpTeeShotCount(gameId, { enabled: minTeeShots != null, pollMs: POLL_MS });
+  const seenGivenUp = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (givenUp === undefined) return;
+    if (seenGivenUp.current !== undefined && givenUp > seenGivenUp.current) void refreshBundle();
+    seenGivenUp.current = givenUp;
+  }, [givenUp, refreshBundle]);
 
   // #2219: «Neste» bytter bare parameteren og gir ikke nytt fokus. Status
   // leses likevel på nytt ved hvert hullbytte, som på nettsiden: er runden
@@ -301,7 +313,6 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
           ? { minimum: minTeeShots, rows: teeShots.rows, reload: teeShots.reload }
           : null
       }
-      refreshBundle={refreshBundle}
       goToHole={goToHole}
       onSubmit={() => navigation.navigate('Scorecard', { gameId })}
     />
@@ -366,7 +377,6 @@ function HoleView({
   choices,
   putts,
   teeShots,
-  refreshBundle,
   goToHole,
   onSubmit,
 }: {
@@ -387,7 +397,6 @@ function HoleView({
    * før den lokale basen er lest (tellingen og låsene ville vært feil).
    */
   teeShots: { minimum: number; rows: LocalTeeShot[]; reload: () => Promise<void> } | null;
-  refreshBundle: () => Promise<void>;
   goToHole: (next: number) => void;
   onSubmit: () => void;
 }) {
@@ -567,9 +576,9 @@ function HoleView({
 
   // #2580: «Hvem sitt utslag ble brukt?». Bare til `team_tee_shots` og køen
   // (`writeTeeShot`), aldri via `writeScore`. Feiler skrivingen, sier banneret
-  // fra, som for slagene. Avviser serveren valget (et kort på laget er levert),
-  // har den lokale raden fått serverens verdi tilbake, og bundelen leses på
-  // nytt så leveringslåsen stemmer; banneret forklarer avslaget.
+  // fra, som for slagene. Avviser serveren valget, har den lokale raden fått
+  // serverens verdi tilbake (leses på nytt under), og banneret forklarer
+  // avslaget; bundelen hentes på nytt av `useGivenUpTeeShotCount` i skjermen.
   const pickTeeShot = async (teamNumber: number, teeShotBy: string | null) => {
     if (!teeShots) return;
     try {
@@ -582,9 +591,8 @@ function HoleView({
     }
     setSaveFailed(null);
     await teeShots.reload();
-    const drained = await drainQueue('utslag');
+    await drainQueue('utslag');
     await teeShots.reload();
-    if (drained.abandoned > 0) void refreshBundle();
   };
 
   // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
