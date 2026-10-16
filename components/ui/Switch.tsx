@@ -46,7 +46,7 @@ export function Switch({
       onClick={onToggle}
       disabled={disabled}
       style={SWITCH_TAP_STYLE}
-      className={`tap-extend flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 disabled:opacity-50 ${
+      className={`tap-extend flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 disabled:opacity-50 aria-disabled:opacity-50 ${
         checked ? 'bg-primary' : 'bg-text/20'
       }`}
     >
