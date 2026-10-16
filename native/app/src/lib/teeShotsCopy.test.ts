@@ -15,6 +15,7 @@ import {
   teeShotCountText,
   teeShotHoleLineText,
   teeShotOrganizerLines,
+  queueGuardText,
 } from './teeShotsCopy';
 import { formatMessage } from './kavalkadeCopy';
 
@@ -99,5 +100,18 @@ describe('the sentences, as on the web', () => {
     expect(teeShotCountText(marte!, 4)).toBe('har 7');
     expect(teeShotButtonLabel('Per', per!, 4, true)).toBe('Per, 2 av 4 utslag');
     expect(teeShotButtonLabel('Marte', marte!, 4, false)).toBe('Marte, har 7 utslag, kan ikke velges nå');
+  });
+
+  it('the queue guard: strokes alone read as before, tee shots and both are named', () => {
+    // Slagene alene: samme setning som scorekortet hadde før #2580.
+    expect(queueGuardText({ strokes: 3, teeShots: 0 })).toBe(
+      '3 slag venter på å bli sendt. Knappen åpner når de er framme.',
+    );
+    expect(queueGuardText({ strokes: 0, teeShots: 1 })).toBe(
+      '1 utslag venter på å bli sendt. Knappen åpner når de er framme.',
+    );
+    expect(queueGuardText({ strokes: 2, teeShots: 1 })).toBe(
+      '2 slag og 1 utslag venter på å bli sendt. Knappen åpner når de er framme.',
+    );
   });
 });
