@@ -63,11 +63,7 @@ export function AiConsentQuestion({
 
       <View style={styles.bottom}>
         {failed ? (
-          <Text
-            style={[styles.error, { color: colors.danger }]}
-            accessibilityLiveRegion="polite"
-            testID="ai-consent-error"
-          >
+          <Text style={[styles.error, { color: colors.danger }]} testID="ai-consent-error">
             {AI_CONSENT_TEXT.saveFailed}
           </Text>
         ) : null}
