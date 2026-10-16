@@ -48,7 +48,7 @@ function buildSystemPrompt(facts: RoundReportFacts): string {
     'Avslutt med en konkret detalj eller et vennskapelig stikk — aldri med en generell oppsummering av typen «en runde som viser …» eller «det var X sin dag», og ikke med klisjeen «kan trøste seg med».',
     'Unngå ordene «viste at», «understreker», «markerer», «imponerende», og unngå passiv form og engelske ord.',
     // #2561 PR B: players without AI consent are left out of the facts.
-    'Noen spillere kan mangle i fakta-objektet fordi de selv har sagt nei til tekster fra språkmodellen. Nevn bare spillerne som står der, og antyd aldri at noen mangler. Er winnerName null, kårer du ingen vinner.',
+    'Noen spillere kan mangle i fakta-objektet fordi de selv har sagt nei til tekster fra språkmodellen. Nevn bare spillerne som står der, og antyd aldri at noen mangler. Er winnerName null, kårer du ingen vinner. Er gameName null, nevner du ikke navnet på spillet.',
   ].join(' ');
 }
 

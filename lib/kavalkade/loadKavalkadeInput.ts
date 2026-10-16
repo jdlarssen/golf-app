@@ -70,7 +70,7 @@ type GamePlayerRow = {
   course_handicap: number | null;
   result_summary: ResultSummary | null;
   tee_gender: ScoringGender | null;
-  users: { name: string | null } | null;
+  users: { name: string | null; nickname: string | null } | null;
 };
 
 type ScoreRow = {
@@ -147,7 +147,7 @@ export async function loadKavalkadeInput(
         supabase
           .from('game_players')
           .select(
-            'game_id, user_id, withdrawn_at, team_number, course_handicap, result_summary, tee_gender, users!game_players_user_id_fkey(name)',
+            'game_id, user_id, withdrawn_at, team_number, course_handicap, result_summary, tee_gender, users!game_players_user_id_fkey(name, nickname)',
           )
           .in('game_id', gameIds)
           // Paging må ordne på noe unikt — nøkkelen her er (game_id, user_id).
@@ -220,6 +220,7 @@ export async function loadKavalkadeInput(
     ).map((row) => ({
       userId: row.user_id,
       name: row.users?.name ?? null,
+      nickname: row.users?.nickname ?? null,
       withdrawnAt: row.withdrawn_at,
       resultSummary: row.result_summary,
       courseHandicap: row.course_handicap,

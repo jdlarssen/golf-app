@@ -205,6 +205,20 @@ describe('generateAndPersistRoundReport', () => {
     expect(request.messages[0].content).not.toContain('Bob');
   });
 
+  it('#2561: leaves out a game name that names a player without «ja»', async () => {
+    getGameWithPlayersMock.mockResolvedValue({
+      ...GAME_ROW,
+      game: { ...GAME_ROW.game, name: 'Bobs 50-årsdag' },
+    });
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u1']));
+
+    await generateAndPersistRoundReport(GAME_ID);
+
+    const request = messagesCreateMock.mock.calls[0][0] as { messages: { content: string }[] };
+    expect(request.messages[0].content).not.toContain('Bobs');
+    expect(request.messages[0].content).toMatch(/"gameName":\s*null/);
+  });
+
   it("returns 'skipped' without constructing the SDK client when ANTHROPIC_API_KEY is missing", async () => {
     delete process.env.ANTHROPIC_API_KEY;
 

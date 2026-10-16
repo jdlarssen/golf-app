@@ -79,7 +79,7 @@ vi.mock('./generateKavalkadeNarrative', () => ({
 // #2561 PR B: who said yes to AI texts.
 const readAiAllowedUserIdsMock = vi.fn();
 vi.mock('@/lib/ai/consent', () => ({
-  readAiAllowedUserIds: (...args: unknown[]) => readAiAllowedUserIdsMock(...args),
+  readAiAllowedUserIdsOrNull: (...args: unknown[]) => readAiAllowedUserIdsMock(...args),
 }));
 
 import { getOrCreateKavalkade } from './getOrCreateKavalkade';
@@ -254,6 +254,18 @@ describe('etter frysegrensen', () => {
     expect(upsertSpy.mock.calls[0][0]).toMatchObject({ narrative: null });
   });
 
+  it('#2561: lagrer ingenting når samtykket ikke kunne leses, så neste åpning prøver igjen', async () => {
+    readAiAllowedUserIdsMock.mockResolvedValue(null);
+
+    const view = await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV });
+
+    expect(view.status).toBe('ready');
+    if (view.status !== 'ready') throw new Error('forventet ready');
+    expect(view.narrative).toBeNull();
+    expect(generateNarrativeMock).not.toHaveBeenCalled();
+    expect(upsertSpy).not.toHaveBeenCalled();
+  });
+
   it('#2561: spør om seeren én gang og gir modellen mengden som sa ja', async () => {
     kavalkadeUpsert = { data: [storedRow()], error: null };
 
@@ -261,7 +273,50 @@ describe('etter frysegrensen', () => {
 
     expect(readAiAllowedUserIdsMock).toHaveBeenCalledTimes(1);
     expect(readAiAllowedUserIdsMock.mock.calls[0][1]).toContain(VIEWER);
-    expect(generateNarrativeMock).toHaveBeenCalledWith(expect.anything(), new Set([VIEWER]));
+    expect(generateNarrativeMock).toHaveBeenCalledWith(expect.anything(), new Set([VIEWER]), new Set());
+  });
+
+  it('#2561: spør om alle i rundene fakta nevner, og blokkerer et rundenavn som navngir en uten ja', async () => {
+    const day = new Date(KAVALKADE_CUTOFF.getTime() - 86_400_000);
+    const holes18 = (strokes: number) =>
+      Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, strokes, par: 4 }));
+    const player = (userId: string, name: string, strokes: number) => ({
+      userId,
+      name,
+      nickname: null,
+      withdrawnAt: null,
+      resultSummary: null,
+      courseHandicap: null,
+      teamNumber: null,
+      holes: holes18(strokes),
+    });
+    loadKavalkadeInputMock.mockResolvedValue({
+      viewerUserId: VIEWER,
+      year: KAVALKADE_YEAR,
+      cutoff: KAVALKADE_CUTOFF,
+      games: [
+        {
+          gameId: 'g-bob',
+          gameName: 'Bobs 50-årsdag',
+          courseName: null,
+          gameMode: 'stableford',
+          year: KAVALKADE_YEAR,
+          endedAt: day,
+          playedAt: day,
+          players: [player(VIEWER, 'Vera', 4), player('u-bob', 'Bob Berg', 5)],
+        },
+      ],
+    });
+    kavalkadeUpsert = { data: [storedRow()], error: null };
+
+    await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV });
+
+    expect(readAiAllowedUserIdsMock.mock.calls[0][1]).toContain('u-bob');
+    expect(generateNarrativeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      new Set([VIEWER]),
+      new Set(['g-bob']),
+    );
   });
 
   it('lagrer null som tekst når modellen ikke svarte', async () => {

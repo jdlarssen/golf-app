@@ -73,6 +73,8 @@ const TEAMMATE_MIN_ROUNDS = 2;
 export type KavalkadePlayerRound = {
   userId: string;
   name: string | null;
+  /** #2561: only for the game-name guard; no card shows it. */
+  nickname?: string | null;
   /** `withdrawn_at` — satt ⇒ spilleren trakk seg og utelates helt. */
   withdrawnAt: string | null;
   /** Lagret, modus-riktig utfall (#572). `null` ⇒ spillet teller ikke som seier. */

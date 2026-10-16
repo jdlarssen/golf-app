@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import type { KavalkadeFacts } from './buildKavalkadeFacts';
+import type { KavalkadeFacts, KavalkadeGame } from './buildKavalkadeFacts';
 import {
   MAX_KAVALKADE_NARRATIVE_LENGTH,
   buildKavalkadeNarrativePrompt,
+  collectUserIds,
   factsForModel,
+  gamesInFacts,
+  gamesNamingUnconsenting,
   sanitizeKavalkadeNarrative,
 } from './kavalkadeNarrativePrompt';
 
@@ -159,14 +162,16 @@ describe('buildKavalkadeNarrativePrompt', () => {
     expect(user).not.toContain('gameId');
   });
 
-  it('ber om 2–4 setninger på norsk uten markdown', () => {
-    const { system } = buildKavalkadeNarrativePrompt(makeFacts(), ALL);
-
-    expect(system).toContain('2–4');
-    expect(system).toContain('bokmål');
-    expect(system).toContain('ingen markdown');
+  it.each([
+    ['lengden', '2–4'],
+    ['språket', 'bokmål'],
+    ['formen', 'ingen markdown'],
     // #2561: a null name is a player who said no to AI texts.
-    expect(system).toContain('Er et navn null, vil personen ikke være med');
+    ['et navn som er null', 'Er et navn null, vil personen ikke være med'],
+    // #2561: a null game name named someone who said no.
+    ['et rundenavn som er null', 'Er gameName null, nevner du ikke navnet på runden'],
+  ])('systemteksten sier hva som gjelder for %s', (_label, phrase) => {
+    expect(buildKavalkadeNarrativePrompt(makeFacts(), ALL).system).toContain(phrase);
   });
 
   it('sier ifra når spilleren er under terskelen', () => {
@@ -218,5 +223,70 @@ describe('sanitizeKavalkadeNarrative', () => {
 
   it('forkaster et tomt svar', () => {
     expect(sanitizeKavalkadeNarrative('   ')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2561: who the consent read covers, and game names that name someone
+// ---------------------------------------------------------------------------
+
+function game(
+  gameId: string,
+  gameName: string,
+  players: { userId: string; name: string | null; nickname?: string | null }[],
+): KavalkadeGame {
+  return {
+    gameId,
+    gameName,
+    courseName: null,
+    gameMode: 'stableford',
+    year: 2026,
+    endedAt: null,
+    playedAt: null,
+    players: players.map((p) => ({
+      ...p,
+      withdrawnAt: null,
+      resultSummary: null,
+      courseHandicap: null,
+      teamNumber: null,
+      holes: [],
+    })),
+  };
+}
+
+describe('collectUserIds', () => {
+  it('finds every player the facts name, once each', () => {
+    expect(collectUserIds(makeFacts()).sort()).toEqual(['u1', 'u2', 'u3', 'u4']);
+  });
+});
+
+describe('gamesInFacts', () => {
+  it('keeps only the rounds the facts mention', () => {
+    const games = [game('g1', 'Lørdagscup', []), game('g2', 'Onsdag', []), game('g9', 'Texas', [])];
+    expect(gamesInFacts(makeFacts(), games).map((g) => g.gameId)).toEqual(['g1', 'g9']);
+  });
+});
+
+describe('gamesNamingUnconsenting', () => {
+  const games = [
+    game('g1', 'Olas 50-årsdag', [{ userId: 'u1', name: 'Per' }, { userId: 'u7', name: 'Ola Nordmann' }]),
+    game('g9', 'Texas', [{ userId: 'u3', name: 'Kari' }]),
+    game('g4', 'Karis cup', [{ userId: 'u3', name: 'Kari' }]),
+  ];
+
+  it('blocks a round whose name names a participant without «ja», and only that', () => {
+    expect([...gamesNamingUnconsenting(games, new Set(['u1', 'u3']))]).toEqual(['g1']);
+  });
+
+  it('blocks nothing when everyone named said yes', () => {
+    expect(gamesNamingUnconsenting(games, new Set(['u1', 'u3', 'u7'])).size).toBe(0);
+  });
+});
+
+describe('factsForModel — blocked game names (#2561)', () => {
+  it('sets a blocked round\'s gameName to null and leaves the others', () => {
+    const json = JSON.stringify(factsForModel(makeFacts(), ALL, new Set(['g1'])));
+    expect(json).not.toContain('Lørdagscup');
+    expect(json).toContain('Texas');
   });
 });

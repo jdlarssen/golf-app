@@ -5,9 +5,11 @@ import type { Database } from '@/lib/database.types';
 /**
  * The AI consent rule (#2561 PR B), one home on the server.
  *
- * Only «ja» sends anything to the language model. No row (never asked) and
- * «nei» are treated alike: the player is left out of the round report and of
- * other players' Kavalkade texts. The app lets a player past its question when
+ * Only with «ja» does a player's name reach the language model. No row (never
+ * asked) and «nei» are treated alike: the player's name is left out of the
+ * round report and of other players' Kavalkade texts, and so is a game name
+ * that mentions them (`gameNameGuard.ts`). Numbers without a name can still
+ * go, such as a team's result or a rival's record. The app lets a player past its question when
  * it is offline (the same rule as `ProfileGate`), so «not answered = yes»
  * would send a player's data before they answered (Apple 5.1.2(i)).
  *
@@ -51,6 +53,18 @@ export async function readAiAllowedUserIds(
   admin: Client,
   userIds: readonly string[],
 ): Promise<Set<string>> {
+  return (await readAiAllowedUserIdsOrNull(admin, userIds)) ?? new Set();
+}
+
+/**
+ * The same read, but `null` on a read error (logged). For a caller that must
+ * not store «nobody said yes» when the answers could not be read: the
+ * Kavalkade, which keeps its first opening text for the whole year.
+ */
+export async function readAiAllowedUserIdsOrNull(
+  admin: Client,
+  userIds: readonly string[],
+): Promise<Set<string> | null> {
   const unique = [...new Set(userIds)];
   if (unique.length === 0) return new Set();
 
@@ -71,7 +85,7 @@ export async function readAiAllowedUserIds(
         error,
         count: unique.length,
       });
-      return new Set();
+      return null;
     }
     rows.push(...((data ?? []) as AiConsentRow[]));
   }
@@ -83,8 +97,8 @@ export async function readAiAllowedUserIds(
  * their row): `true`, `false`, or `null` when they have not answered.
  *
  * Throws on a read error. A switch or a card shown on a guess would misreport
- * consent, so the page decides what to do instead (error boundary on Profil,
- * no card on Home).
+ * consent, so the caller shows nothing instead: no row on Profil, no card on
+ * Home.
  */
 export async function readOwnAiConsent(supabase: Client): Promise<boolean | null> {
   const { data, error } = await supabase
