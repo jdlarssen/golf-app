@@ -107,7 +107,6 @@ import { getDb, listQueue, listTeeShotQueue } from '../data/db';
 import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
-import { formatNameList } from '../lib/display';
 import { isScoringSupported } from '../lib/formatGate';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { nameLookup } from '../lib/leaderboardModel';
@@ -130,8 +129,15 @@ import {
   teamScorecardKicker,
 } from '../lib/scorecardHeader';
 import { buildScorecardRows } from '../lib/scorecardRows';
-import { teeShotDeliveryLock, teeShotMinimum, teeShotNameOf, teeShotTeam, teamTeeShotState } from '../lib/teeShotTeams';
-import { teeShotBoxText, teeShotCountText } from '../lib/teeShotsCopy';
+import {
+  UNKNOWN_PLAYER,
+  teeShotDeliveryLock,
+  teeShotMinimum,
+  teeShotNameOf,
+  teeShotTeam,
+  teamTeeShotState,
+} from '../lib/teeShotTeams';
+import { TEE_SHOTS_APP_TEXT, queueGuardText, teeShotBoxText, teeShotCountText } from '../lib/teeShotsCopy';
 import { computeGameLeaderboard } from '../lib/scoringContext';
 import {
   buildTeamCards,
@@ -430,7 +436,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       const who = bundle.players.find((player) => player.userId === row.teeShotBy);
       teeShotCells.set(row.holeNumber, {
         initials: nameInitials(who?.name ?? null),
-        fullName: who?.name ?? 'ukjent',
+        fullName: who?.name ?? UNKNOWN_PLAYER,
         short: (status.players.find((p) => p.userId === row.teeShotBy)?.missing ?? 0) > 0,
       });
     }
@@ -509,10 +515,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       ? 'submit-flight'
       : 'submit-scorecard';
 
-  // Sperret til køen er lest (`null`) og mens den har slag for spillet.
-  const queueBlocked = queued === null || queued > 0;
+  // Sperret til køen er lest (`null`) og mens den har slag for spillet. #2580:
+  // også til utslagene er lest, som køen (#2219): før det vet vi ikke om noen
+  // mangler.
+  const queueBlocked = queued === null || queued > 0 || (minTeeShots != null && !teeShots.loaded);
   const syncing = queued !== null && queued > 0;
-  const syncingLabel = queueCounts && queueCounts.strokes === 0 ? 'Synker utslag …' : 'Synker slag …';
+  const syncingLabel =
+    queueCounts && queueCounts.strokes === 0 ? TEE_SHOTS_APP_TEXT.syncingTeeShots : 'Synker slag …';
 
   const onSubmitPress = () => {
     if (queueBlocked || busy || teeShotLock) return;
@@ -745,15 +754,6 @@ function HeaderKicker({
     navigation.setOptions(kickerHeader(kicker, SCORECARD_TEXT.screenTitle));
   }, [navigation, kicker]);
   return null;
-}
-
-/** Kø-vakta: «3 slag venter …», «1 utslag venter …» eller begge (#2580). */
-function queueGuardText(counts: { strokes: number; teeShots: number }): string {
-  const parts = [
-    counts.strokes > 0 ? `${counts.strokes} slag` : null,
-    counts.teeShots > 0 ? `${counts.teeShots} utslag` : null,
-  ].filter((part): part is string => part != null);
-  return `${formatNameList(parts)} venter på å bli sendt. Knappen åpner når de er framme.`;
 }
 
 type TeeShotLock = NonNullable<ReturnType<typeof teeShotDeliveryLock>>;

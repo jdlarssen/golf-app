@@ -160,11 +160,13 @@ const mockState: {
   queue: Promise<unknown[]>;
   scores: unknown[];
   teeShots: unknown[];
+  teeShotQueue: unknown[];
 } = {
   bundle: mockBundle,
   queue: Promise.resolve([]),
   scores: [],
   teeShots: [],
+  teeShotQueue: [],
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -193,8 +195,8 @@ jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listQueue: jest.fn(() => mockState.queue),
   listScoresForGame: jest.fn(async () => mockState.scores),
-  // #2580: utslagskøen leses ved siden av slagkøen; tom her.
-  listTeeShotQueue: jest.fn(async () => []),
+  // #2580: utslagskøen leses ved siden av slagkøen.
+  listTeeShotQueue: jest.fn(async () => mockState.teeShotQueue),
   listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
 }));
 jest.mock('../session', () => ({
@@ -220,6 +222,15 @@ function scorecardElement(gameId: string, navigate: jest.Mock) {
 }
 
 describe('Scorecard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockState.bundle = mockBundle;
+    mockState.queue = Promise.resolve([]);
+    mockState.scores = [];
+    mockState.teeShots = [];
+    mockState.teeShotQueue = [];
+  });
+
   it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {
@@ -365,14 +376,33 @@ describe('Scorecard', () => {
     expect(screen.queryByTestId('total-netto')).toBeNull();
     expect(screen.getByTestId('total-brutto')).toBeTruthy();
   });
+  it('#2580: et utslag som venter i køen, sperrer leveringen som et slag gjør', async () => {
+    // Slagkøen er tom. Uten utslagskøen i kø-vakta ville knappen stått åpen,
+    // og serveren ville talt bare utslagene som var framme.
+    mockState.teeShotQueue = [
+      {
+        id: `${GAME_ID}:1:7`,
+        teeShotId: `${GAME_ID}:1:7`,
+        attemptCount: 0,
+        lastError: null,
+        createdAt: '2026-09-01T10:00:00.000Z',
+        abandonedAt: null,
+      },
+    ];
+    await render(scorecardElement(GAME_ID, jest.fn()));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('queue-guard')).toBeTruthy();
+    });
+    expect(screen.getByTestId('submit-team-card')).toBeDisabled();
+  });
+
   it('#2580: mangler noen utslag, er leveringen sperret og «Lever likevel» kan ikke nås', async () => {
     const { Alert } = require('react-native');
     const { submitCard } = require('../data/submitCard');
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     // Texas scramble med firemannslag og minst 4 hver. Utslag 3: Marte 7,
     // Jonas 5, jeg 4 og Per 2 på alle 18 hull.
-    mockState.queue = Promise.resolve([]);
-    mockState.scores = [];
     mockState.bundle = {
       ...mockBundle,
       game: {
@@ -422,6 +452,5 @@ describe('Scorecard', () => {
     expect(submitCard).not.toHaveBeenCalled();
 
     alert.mockRestore();
-    mockState.teeShots = [];
   });
 });

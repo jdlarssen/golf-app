@@ -49,6 +49,15 @@ export const TEE_SHOTS_APP_TEXT = {
   boardHeading: 'Utslag som ble brukt · ditt lag',
   /** Ved tallet til en spiller under minimum i kortet over (contract-2579 punkt 13). */
   boardMinimum: 'minst {min}',
+  /**
+   * Kø-vakta på scorekortet (#1370), nå med utslagene: «3 slag venter …»,
+   * «1 utslag venter …» eller begge, satt sammen med formatNameList.
+   */
+  queueGuard: '{waiting} venter på å bli sendt. Knappen åpner når de er framme.',
+  queueGuardStrokes: '{count} slag',
+  queueGuardTeeShots: '{count} utslag',
+  /** Leverknappen mens bare utslag venter (slagene har «Synker slag …»). */
+  syncingTeeShots: 'Synker utslag …',
 } as const;
 
 export type TeeShotsKey = keyof typeof TEE_SHOTS_TEXT;
@@ -151,6 +160,15 @@ export function teeShotCountText(player: TeeShotPlayerStatus, minimum: number): 
   return player.missing > 0
     ? teeShotsT('countShort', { count: player.count, min: minimum })
     : teeShotsT('countReached', { count: player.count });
+}
+
+/** Kø-vakta: hvor mange slag og utslag som venter på å bli sendt. */
+export function queueGuardText(counts: { strokes: number; teeShots: number }): string {
+  const parts = [
+    counts.strokes > 0 ? formatMessage(TEE_SHOTS_APP_TEXT.queueGuardStrokes, { count: counts.strokes }) : null,
+    counts.teeShots > 0 ? formatMessage(TEE_SHOTS_APP_TEXT.queueGuardTeeShots, { count: counts.teeShots }) : null,
+  ].filter((part): part is string => part != null);
+  return formatMessage(TEE_SHOTS_APP_TEXT.queueGuard, { waiting: formatNameList(parts) });
 }
 
 /** Skjermlesernavnet på en navneknapp, med «kan ikke velges nå» når den er låst. */
