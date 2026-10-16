@@ -75,6 +75,8 @@ import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
+import { teeShotMinimum } from '../lib/teeShotTeams';
+import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -189,7 +191,16 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   // Samme kanal og samme innhenting som hull-siden (#2228). Feilet hentingen
   // (uten nett), sier en linje det: et sluttresultat fra bare telefonens slag
   // ser ellers ferdig ut (#2255 PR 3a, samme som «Hull for hull»).
-  const { seedFailed } = useScoreCatchUp(gameId, reload, { live: true });
+  //
+  // #2580: lagtavla viser utslagene med «Hvem sitt utslag», hentet på de
+  // samme tidspunktene. Uten innstillingen spørres det ikke.
+  const minTeeShots = bundle ? teeShotMinimum(bundle.game) : null;
+  const teeShots = useTeamTeeShots(gameId, { enabled: minTeeShots != null, pollMs: POLL_MS });
+  const { seedFailed } = useScoreCatchUp(gameId, reload, {
+    live: true,
+    reloadTeeShots: minTeeShots != null ? teeShots.reload : undefined,
+  });
+  const teeShotRows = minTeeShots != null && teeShots.loaded ? teeShots.rows : null;
 
   // #2579: tavla (solo) eller lagtavla, når formatet har den og skjermen
   // tegner den. Den samme modellen gir pillen i båndet og stripa nederst.
@@ -201,8 +212,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
     [bundle, soloFormat, scores, userId],
   );
   const teamBoard = useMemo(
-    () => (bundle && teamFormat ? teamBoardFor({ bundle, scores, userId }) : null),
-    [bundle, teamFormat, scores, userId],
+    () => (bundle && teamFormat ? teamBoardFor({ bundle, scores, userId, teeShots: teeShotRows }) : null),
+    [bundle, teamFormat, scores, userId, teeShotRows],
   );
   // Lagtavlas linje i båndet regnes fra motoren uten slag: én gang per bundel.
   const teamBand = useMemo(

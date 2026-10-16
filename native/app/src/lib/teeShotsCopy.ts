@@ -47,6 +47,8 @@ export const TEE_SHOTS_APP_TEXT = {
   holeCardLead: 'Utslaget til {name} ble brukt',
   /** Kortet på den ferdige lagtavla (`Lagtavle-ferdig-forslag`). */
   boardHeading: 'Utslag som ble brukt · ditt lag',
+  /** Ved tallet til en spiller under minimum i kortet over (contract-2579 punkt 13). */
+  boardMinimum: 'minst {min}',
 } as const;
 
 export type TeeShotsKey = keyof typeof TEE_SHOTS_TEXT;
