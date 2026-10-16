@@ -16,28 +16,35 @@ beforeEach(() => {
 });
 
 describe('AiConsentToggle', () => {
-  it('shows the answer, saves a flip, and rolls back with a line when the save fails', async () => {
-    setAiConsentMock.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false });
-    render(<AiConsentToggle initialGranted={false} />);
+  it('shows the answer, locks while saving, rolls back with a line on failure, and follows the server', async () => {
+    let finishFirst: (value: { ok: boolean }) => void = () => {};
+    setAiConsentMock
+      .mockImplementationOnce(() => new Promise((resolve) => { finishFirst = resolve; }))
+      .mockResolvedValueOnce({ ok: false });
+    const { rerender } = render(<AiConsentToggle initialGranted={false} />);
     const toggle = screen.getByRole('switch');
     expect(toggle).toHaveAttribute('aria-checked', 'false');
 
+    // Saving: the switch says so, stays focusable, and ignores a second click.
     fireEvent.click(toggle);
-    await waitFor(() => expect(setAiConsentMock).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-disabled', 'true'));
+    expect(toggle).not.toBeDisabled();
+    fireEvent.click(toggle);
+    expect(setAiConsentMock).toHaveBeenCalledTimes(1);
+    finishFirst({ ok: true });
+    await waitFor(() => expect(toggle).not.toHaveAttribute('aria-disabled'));
     expect(toggle).toHaveAttribute('aria-checked', 'true');
-    expect(screen.queryByTestId('ai-consent-toggle-error')).not.toBeInTheDocument();
 
+    // A failed save rolls back and says so.
     fireEvent.click(toggle);
     await waitFor(() => expect(screen.getByTestId('ai-consent-toggle-error')).toBeInTheDocument());
     expect(setAiConsentMock).toHaveBeenLastCalledWith(false);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
-  });
 
-  // #2561: answered on Home earlier in the same visit, the server now says
-  // yes; the switch must not keep the answer it mounted with.
-  it('follows a new answer from the server', () => {
-    const { rerender } = render(<AiConsentToggle initialGranted={false} />);
+    // #2561: the server answer changes (the save above, then an answer given
+    // elsewhere in the same visit); the switch takes it instead of its own.
     rerender(<AiConsentToggle initialGranted={true} />);
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    rerender(<AiConsentToggle initialGranted={false} />);
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   });
 });

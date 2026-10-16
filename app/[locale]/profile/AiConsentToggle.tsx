@@ -32,6 +32,8 @@ export function AiConsentToggle({ initialGranted }: { initialGranted: boolean })
   }
 
   function toggle() {
+    // Locked while a save is under way (`busy` on the switch keeps focus).
+    if (saving) return;
     const previous = granted;
     const next = !granted;
     setGranted(next);
@@ -66,7 +68,7 @@ export function AiConsentToggle({ initialGranted }: { initialGranted: boolean })
           </p>
         )}
       </div>
-      <Switch checked={granted} onToggle={toggle} label={t('toggleTitle')} disabled={saving} />
+      <Switch checked={granted} onToggle={toggle} label={t('toggleTitle')} busy={saving} />
     </div>
   );
 }

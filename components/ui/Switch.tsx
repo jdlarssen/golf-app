@@ -23,11 +23,18 @@ export function Switch({
   onToggle,
   label,
   disabled,
+  busy,
 }: {
   checked: boolean;
   onToggle: () => void;
   label: string;
   disabled?: boolean;
+  /**
+   * A save is under way: `aria-disabled` instead of `disabled`, so the switch
+   * keeps focus and stays in the tab order (#2561). The consumer ignores the
+   * click while busy.
+   */
+  busy?: boolean;
 }) {
   return (
     <button
@@ -35,6 +42,7 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      aria-disabled={busy || undefined}
       onClick={onToggle}
       disabled={disabled}
       style={SWITCH_TAP_STYLE}
