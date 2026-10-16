@@ -51,6 +51,7 @@ create temporary table fk_coverage (
 
 insert into fk_coverage (tbl, col, handling) values
   -- Personal/social rows
+  ('ai_consents',                'user_id',                             'deleted'),
   ('apns_tokens',                'user_id',                             'deleted'),
   ('friendships',                'addressee_id',                        'deleted'),
   ('friendships',                'requester_id',                        'deleted'),

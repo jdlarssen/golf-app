@@ -73,6 +73,32 @@ export type Database = {
           },
         ]
       }
+      ai_consents: {
+        Row: {
+          answered_at: string
+          granted: boolean
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          granted: boolean
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          granted?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_consents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apns_tokens: {
         Row: {
           created_at: string
