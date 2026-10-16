@@ -24,8 +24,8 @@ export function TeeShotOrganizerNotice({
   return (
     <View style={[styles.box, { backgroundColor: colors.warningSoft }]} testID="tee-shot-organizer">
       {lines.map((line) => (
-        <Text key={line} style={[styles.line, { color: colors.warningText }]}>
-          {line}
+        <Text key={line.key} style={[styles.line, { color: colors.warningText }]}>
+          {line.text}
         </Text>
       ))}
     </View>
@@ -38,7 +38,8 @@ const noReload = async () => undefined;
  * Samme blokk med egen henting, for avslutt-skjermen, som ellers ikke leser
  * den lokale basen. Monteres bare for spill med innstillingen, så et spill uten
  * den henter ingenting nytt. Arrangøren som ikke spiller, får radene fordi
- * lesepolicyen slipper inn den som laget spillet.
+ * lesepolicyen slipper inn den som laget spillet. Feiler første lesing, står
+ * ingenting: blokka er et tillegg, og avslutt-skjermen skal ikke falle for den.
  */
 export function TeeShotOrganizerNoticeLive({
   gameId,
@@ -49,7 +50,7 @@ export function TeeShotOrganizerNoticeLive({
   players: readonly BundlePlayer[];
   minimum: number;
 }) {
-  const { rows, reload, loaded } = useTeamTeeShots(gameId, { enabled: true });
+  const { rows, reload, loaded } = useTeamTeeShots(gameId, { enabled: true, failQuietly: true });
   useScoreCatchUp(gameId, noReload, { reloadTeeShots: reload });
   if (!loaded) return null;
   return <TeeShotOrganizerNotice players={players} minimum={minimum} rows={rows} />;

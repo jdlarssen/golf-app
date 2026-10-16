@@ -17,7 +17,7 @@ import type { BundleGame, BundlePlayer } from '../data/gameBundle';
 import { teeShotOrganizerLines, teeShotsT, type NameOf } from './teeShotsCopy';
 
 /** Plassholderen `displayName` bruker når en spiller mangler navn. */
-const UNKNOWN_PLAYER = 'Ukjent spiller';
+export const UNKNOWN_PLAYER = 'Ukjent spiller';
 
 export interface TeeShotMember {
   userId: string;
@@ -60,13 +60,19 @@ export function teeShotTeam(players: readonly BundlePlayer[], teamNumber: number
   };
 }
 
-/** Ett lag per lagnummer i `teamNumbers` (dubletter og null hoppes over), i stigende rekkefølge. */
+/**
+ * Ett lag per lagnummer i `teamNumbers` (dubletter og null hoppes over), i
+ * stigende rekkefølge. Et lag der alle har trukket seg, er med i ingen flate:
+ * det har ingen å velge og ingen som kan mangle.
+ */
 export function teeShotTeams(
   players: readonly BundlePlayer[],
   teamNumbers: Iterable<number | null>,
 ): TeeShotTeam[] {
   const unique = [...new Set([...teamNumbers].filter((n): n is number => n != null))].sort((a, b) => a - b);
-  return unique.map((teamNumber) => teeShotTeam(players, teamNumber));
+  return unique
+    .map((teamNumber) => teeShotTeam(players, teamNumber))
+    .filter((team) => team.members.some((m) => !m.withdrawnAt));
 }
 
 /** Navnet en knapp, en linje eller en boks setter inn for en spiller på laget. */
@@ -138,14 +144,17 @@ export function teeShotOrganizerNotice(
   players: readonly BundlePlayer[],
   minimum: number,
   rows: readonly TeeShotRowLike[],
-): string[] {
+): { key: string; text: string }[] {
   const teams = teeShotTeams(players, players.map((p) => p.teamNumber));
   const showTeam = teams.length > 1;
   return teams.flatMap((team) => {
     const { status } = teamTeeShotState(team, minimum, rows);
     if (status.canDeliver) return [];
-    return teeShotOrganizerLines(status, teeShotNameOf(team)).map((text) =>
-      showTeam ? `${teeShotsT('teamLabel', { team: team.teamNumber })} · ${text}` : text,
-    );
+    const lines = teeShotOrganizerLines(status, teeShotNameOf(team));
+    // `teeShotOrganizerLines` gir én linje per spiller i `status.short`.
+    return status.short.map((player, i) => ({
+      key: `${team.teamNumber}:${player.userId}`,
+      text: showTeam ? `${teeShotsT('teamLabel', { team: team.teamNumber })} · ${lines[i]}` : lines[i]!,
+    }));
   });
 }
