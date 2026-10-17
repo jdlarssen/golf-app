@@ -13,6 +13,7 @@
 // publisering.
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '../../../../../lib/scoring/settlement';
+import { SHOW_KRONER_IN_APP } from '../../lib/launchRules';
 import { Text, TextInput, View } from 'react-native';
 import {
   ALLOWANCE_TEXT,
@@ -70,7 +71,9 @@ export function SetupStep({
   const hasScoringToggle = mode === 'wolf' || mode === 'skins';
   // Om formatet spiller om penger, og i hvilken enhet, er den delte regelen
   // resultattavla også leser (#2221): skins sier «per skin», ikke «per poeng».
-  const wagerUnit = settlementUnitKeyFor(mode);
+  // #2561: appen spør ikke om kroner ved lansering (`lib/launchRules.ts`), for
+  // noe format; kronene settes på nettet.
+  const wagerUnit = SHOW_KRONER_IN_APP ? settlementUnitKeyFor(mode) : null;
 
   return (
     <View testID="create-step-setup">

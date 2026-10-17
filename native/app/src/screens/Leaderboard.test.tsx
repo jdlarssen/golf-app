@@ -484,11 +484,13 @@ describe('LeaderboardBody', () => {
     expect(screen.getByTestId('leaderboard-empty')).toBeTruthy();
   });
 
-  // #2221: veiviseren spør etter kroner per enhet, så resultatskjermen må vise
-  // oppgjøret. Makker vinner hull 1, hull 2 er likt: 1 skin mot 0. Beløpene er
-  // Type A-dekket i `lib/scoring/settlement.test.ts`; her gjelder det bare at
-  // `kr_per_unit` i den cachede konfigurasjonen faktisk blir til et kort.
-  it('viser pengeoppgjøret bare når spillet har kroner per enhet', async () => {
+  // #2221 ga resultatskjermen et pengeoppgjør når spillet har kroner per enhet.
+  // #2561: appen viser ingen kroner ved lansering (eieren 13.10,
+  // `lib/launchRules.ts`), så kortet står ikke, heller ikke med `kr_per_unit`.
+  // Nettsiden viser oppgjøret som før. Selve kortet er dekket under
+  // (`SettlementCard` rendret direkte), og beløpene i
+  // `lib/scoring/settlement.test.ts`.
+  it('#2561: viser ikke pengeoppgjøret i appen, heller ikke når spillet har kroner per enhet', async () => {
     const skinsConfig = { kind: 'skins', team_size: 1, skins_scoring: 'gross' };
     const { rerender } = await render(
       <LeaderboardBody
@@ -508,14 +510,8 @@ describe('LeaderboardBody', () => {
         scores={mockLocalScores}
       />,
     );
-    expect(screen.getByTestId('settlement')).toBeTruthy();
-    expect(screen.getByTestId('settlement-stake').props.children).toBe('50 kr per skin');
-    expect(screen.getAllByTestId(/^settlement-player-[a-z]+$/)).toHaveLength(2);
-    expect(screen.getByTestId('settlement-player-mate-net').props.children).toMatch(/^\+/);
-    expect(screen.getByTestId('settlement-player-me-net').props.children).toMatch(/^−/);
-    expect(screen.getByTestId('settlement-payment-0-line').props.children).toBe(
-      'Meg Selv → Makker Makkersen',
-    );
+    expect(screen.getByTestId('skins-view')).toBeTruthy();
+    expect(screen.queryByTestId('settlement')).toBeNull();
   });
 });
 
