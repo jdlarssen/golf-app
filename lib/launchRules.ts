@@ -9,7 +9,9 @@
 // - appens resultatskjerm viser ikke pengeoppgjøret (`Leaderboard.tsx`)
 // - «Opprett spill» i appen spør ikke om kroner per enhet (`SetupStep.tsx`)
 // - push til appen (APNs) sier ikke beløpet i påminnelsen om startkontingent
-//   (`lib/notifications/push/sendPush.ts`, `surface: 'app'`).
+//   (`lib/notifications/push/sendPush.ts`, `surface: 'app'`). APNs når også
+//   Capacitor-skallet (iOS-nettappen), så de brukerne får push uten beløp mens
+//   skjermene der, som er nettsiden, viser kronene.
 // Nettsiden viser kronene som før: oppgjøret, feltet i veiviseren, varselet i
 // innboksen og web push med beløp, og e-posten.
 //
