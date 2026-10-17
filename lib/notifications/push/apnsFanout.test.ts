@@ -86,7 +86,14 @@ vi.mock('@/lib/notifications/inboxTranslator', () => ({
   getInboxTranslator: async () => (key: string) => key,
 }));
 // #2561: the app text differs from the web text only where the kind says so
-// (the entry-fee amount); 'D-app' marks which one a channel got.
+// (the entry-fee amount); 'D-app' marks which one a channel got. The kroner
+// switch (lib/launchRules.ts) decides whether APNs gets it.
+const launch = vi.hoisted(() => ({ kroner: false }));
+vi.mock('@/lib/launchRules', () => ({
+  get SHOW_KRONER_IN_APP() {
+    return launch.kroner;
+  },
+}));
 vi.mock('@/lib/notifications/cardContent', () => ({
   buildNotificationText: (_kind: unknown, _payload: unknown, _t: unknown, opts?: { surface?: string }) => ({
     title: 'T',
@@ -121,6 +128,7 @@ beforeEach(() => {
   apnsConfigured = true;
   sendApnsMock.mockReset();
   sendNotificationMock.mockReset();
+  launch.kroner = false;
   apnsRows.length = 0;
   webRows.length = 0;
   tablesQueried.length = 0;
@@ -177,7 +185,11 @@ describe('sendPushToUser — APNs channel', () => {
     });
   });
 
-  it('#2561: the app gets the app text, web push the web text, for the same notification', async () => {
+  it.each([
+    { kroner: false, apns: 'D-app' },
+    { kroner: true, apns: 'D' },
+  ])('#2561: with SHOW_KRONER_IN_APP $kroner the app gets $apns, web push always the web text', async ({ kroner, apns }) => {
+    launch.kroner = kroner;
     webConfigured = true;
     webRows.push({ id: '1', endpoint: 'https://push/x', p256dh: 'k', auth: 'a' });
     sendNotificationMock.mockResolvedValueOnce({ statusCode: 201 });
@@ -187,7 +199,7 @@ describe('sendPushToUser — APNs channel', () => {
     await send();
 
     expect(JSON.parse(sendNotificationMock.mock.calls[0][1] as string).body).toBe('D');
-    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ aps: { alert: { body: 'D-app' } } });
+    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ aps: { alert: { body: apns } } });
   });
 
   it('unknown environment → tries production first and persists it on success', async () => {

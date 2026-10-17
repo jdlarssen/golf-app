@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildNotificationText } from './cardContent';
 import { formatKr } from '@/lib/format/formatKr';
+import { testPayloads } from './testPayloads';
 import type { NotificationKind, NotificationPayload } from './types';
 
 // A fake translator: returns "key" or "key|json(values)" so assertions can check
@@ -47,7 +48,13 @@ describe('buildNotificationText', () => {
     });
   });
 
-  it.each(cases)('#2561: $kind reads the same for the app', ({ kind, payload }) => {
+  // Every kind but the entry-fee reminder reads the same for the app. The
+  // fixture has one payload per kind, so a new kind is covered by itself.
+  it.each(
+    (Object.entries(testPayloads) as [NotificationKind, NotificationPayload][]).filter(
+      ([kind]) => kind !== 'payment_reminder',
+    ),
+  )('#2561: %s reads the same for the app', (kind, payload) => {
     expect(buildNotificationText(kind, payload, t, { surface: 'app' })).toEqual(
       buildNotificationText(kind, payload, t),
     );
