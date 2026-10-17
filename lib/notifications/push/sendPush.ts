@@ -10,6 +10,7 @@ import {
   type ApnsEnvironment,
 } from './apns';
 import { buildNotificationText } from '@/lib/notifications/cardContent';
+import { SHOW_KRONER_IN_APP } from '@/lib/launchRules';
 import { notificationDestination } from '@/lib/notifications/deeplink';
 import { withReadMarker } from '@/lib/notifications/readMarker';
 import { getInboxTranslator } from '@/lib/notifications/inboxTranslator';
@@ -77,9 +78,12 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
       kind: opts.kind,
     });
 
-    // #2561: the iOS app shows no kroner at launch, so APNs gets the app text
-    // (the entry-fee reminder without its amount). Web push keeps the web text.
-    const appText = buildNotificationText(opts.kind, opts.payload, t, { surface: 'app' });
+    // #2561: the app shows no kroner at launch (lib/launchRules.ts, the same
+    // switch the app's screens read), so APNs gets the app text: the entry-fee
+    // reminder without its amount. Web push keeps the web text.
+    const appText = SHOW_KRONER_IN_APP
+      ? { title, detail }
+      : buildNotificationText(opts.kind, opts.payload, t, { surface: 'app' });
     const apnsPayload = buildApnsPayload(appText.title, appText.detail, url, opts.kind);
 
     await Promise.allSettled([

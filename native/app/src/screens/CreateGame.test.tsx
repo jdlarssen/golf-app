@@ -29,6 +29,16 @@ import { CreateGame } from './CreateGame';
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
 // den må stå her selv om ingen spørring kjøres i denne testen.
+// #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
+const mockKroner = { on: false };
+jest.mock('../../../../lib/launchRules', () => ({
+  get SHOW_KRONER_IN_APP() {
+    return mockKroner.on;
+  },
+}));
+beforeEach(() => {
+  mockKroner.on = false;
+});
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
 jest.mock('../data/syncTriggers', () => ({
@@ -296,6 +306,22 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-allowance').props.value).toBe('');
   });
 
+  // #2561: wolf spiller om poeng med enhet, og appen spør om kroner per poeng
+  // bare når kronebryteren (rot-`lib/launchRules.ts`) er på. Ved lansering er
+  // den av.
+  it.each([
+    { on: false, field: false },
+    { on: true, field: true },
+  ])('#2561: «Kroner per …» i oppsettet følger kronebryteren ($on)', async ({ on, field }) => {
+    mockKroner.on = on;
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-wolf'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-step-setup')).toBeTruthy();
+    expect(screen.queryByTestId('create-kr-per-unit') !== null).toBe(field);
+    mockKroner.on = false;
+  });
+
   it('kaster modus-spesifikke valg naar formatet byttes, og lar dobbelttrykk staa', async () => {
     await renderWizard();
 
@@ -319,10 +345,6 @@ describe('CreateGame', () => {
     await fireEvent.press(screen.getByTestId('create-format-wolf'));
     await fireEvent.press(screen.getByTestId('create-next'));
     expect(screen.queryByTestId('create-team-size-2')).toBeNull();
-    // #2561: wolf spiller om poeng med enhet, men appen spør ikke om kroner
-    // ved lansering (`lib/launchRules.ts`).
-    expect(screen.getByTestId('create-step-setup')).toBeTruthy();
-    expect(screen.queryByTestId('create-kr-per-unit')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('create-back'));
     await fireEvent.press(screen.getByTestId('create-format-stableford'));

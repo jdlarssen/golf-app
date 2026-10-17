@@ -16,10 +16,11 @@ export type NotificationTranslator = (
 ) => string;
 
 /**
- * Where the text is shown. `'app'` is the iOS app (APNs): it shows no kroner at
- * launch (owner 13.10, `native/app/src/lib/launchRules.ts`), so a kind that
- * names an amount says it without one there (#2561). Default `'web'`: the
- * inbox, web push and e-mail, unchanged.
+ * Where the text is shown (#2561). `'app'` is what APNs delivers: the native
+ * app and the iOS Capacitor shell. A kind that names an amount says it without
+ * one there; `sendPush` asks for it only while `SHOW_KRONER_IN_APP`
+ * (`lib/launchRules.ts`) is off. Default `'web'`: the inbox and web push.
+ * E-mail is built elsewhere and does not use this function.
  */
 export type NotificationSurface = 'web' | 'app';
 

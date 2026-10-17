@@ -102,6 +102,16 @@ const mockLocalScores = [
   ...row,
 }));
 
+// #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
+const mockKroner = { on: false };
+jest.mock('../../../../lib/launchRules', () => ({
+  get SHOW_KRONER_IN_APP() {
+    return mockKroner.on;
+  },
+}));
+beforeEach(() => {
+  mockKroner.on = false;
+});
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // #2579: tavla vet hvem som ser den («DU», stripa), og stripa står over sikker sone.
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me', email: null }) }));
@@ -485,12 +495,12 @@ describe('LeaderboardBody', () => {
   });
 
   // #2221 ga resultatskjermen et pengeoppgjør når spillet har kroner per enhet.
-  // #2561: appen viser ingen kroner ved lansering (eieren 13.10,
-  // `lib/launchRules.ts`), så kortet står ikke, heller ikke med `kr_per_unit`.
-  // Nettsiden viser oppgjøret som før. Selve kortet er dekket under
-  // (`SettlementCard` rendret direkte), og beløpene i
+  // #2561: appen viser ingen kroner ved lansering (eieren 13.10, rot-
+  // `lib/launchRules.ts`), så kortet står bare når bryteren er på. Makker vinner
+  // hull 1, hull 2 er likt: 1 skin mot 0. Beløpene er Type A-dekket i
   // `lib/scoring/settlement.test.ts`.
-  it('#2561: viser ikke pengeoppgjøret i appen, heller ikke når spillet har kroner per enhet', async () => {
+  it('#2561: pengeoppgjøret følger kronebryteren', async () => {
+    mockKroner.on = false;
     const skinsConfig = { kind: 'skins', team_size: 1, skins_scoring: 'gross' };
     const { rerender } = await render(
       <LeaderboardBody
@@ -512,6 +522,27 @@ describe('LeaderboardBody', () => {
     );
     expect(screen.getByTestId('skins-view')).toBeTruthy();
     expect(screen.queryByTestId('settlement')).toBeNull();
+
+    // Bryteren på: kortet fra #2221 står som før.
+    mockKroner.on = true;
+    await rerender(
+      <LeaderboardBody
+        bundle={withGame({
+          gameMode: 'skins',
+          modeConfig: { ...skinsConfig, kr_per_unit: 50 },
+        })}
+        scores={mockLocalScores}
+      />,
+    );
+    expect(screen.getByTestId('settlement')).toBeTruthy();
+    expect(screen.getByTestId('settlement-stake').props.children).toBe('50 kr per skin');
+    expect(screen.getAllByTestId(/^settlement-player-[a-z]+$/)).toHaveLength(2);
+    expect(screen.getByTestId('settlement-player-mate-net').props.children).toMatch(/^\+/);
+    expect(screen.getByTestId('settlement-player-me-net').props.children).toMatch(/^−/);
+    expect(screen.getByTestId('settlement-payment-0-line').props.children).toBe(
+      'Meg Selv → Makker Makkersen',
+    );
+    mockKroner.on = false;
   });
 });
 
