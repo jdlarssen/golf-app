@@ -319,6 +319,10 @@ describe('CreateGame', () => {
     await fireEvent.press(screen.getByTestId('create-format-wolf'));
     await fireEvent.press(screen.getByTestId('create-next'));
     expect(screen.queryByTestId('create-team-size-2')).toBeNull();
+    // #2561: wolf spiller om poeng med enhet, men appen spør ikke om kroner
+    // ved lansering (`lib/launchRules.ts`).
+    expect(screen.getByTestId('create-step-setup')).toBeTruthy();
+    expect(screen.queryByTestId('create-kr-per-unit')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('create-back'));
     await fireEvent.press(screen.getByTestId('create-format-stableford'));
