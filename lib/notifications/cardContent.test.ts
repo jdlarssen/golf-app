@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildNotificationText } from './cardContent';
+import { formatKr } from '@/lib/format/formatKr';
 import type { NotificationKind, NotificationPayload } from './types';
 
 // A fake translator: returns "key" or "key|json(values)" so assertions can check
@@ -30,6 +31,26 @@ const cases: Array<{ kind: NotificationKind; payload: NotificationPayload; title
 describe('buildNotificationText', () => {
   it.each(cases)('$kind → resolves the inbox title key', ({ kind, payload, title }) => {
     expect(buildNotificationText(kind, payload, t).title).toBe(title);
+  });
+
+  // #2561: the iOS app shows no kroner at launch (owner 13.10), so the APNs
+  // text for the entry-fee reminder leaves the amount out. The web text and
+  // every other kind are the same with or without the option.
+  it('#2561: payment_reminder for the app has no amount; the web text is unchanged', () => {
+    const payload = { game_id: 'g', game_name: 'Sommercup', entry_fee_kr: 200 } as NotificationPayload;
+    expect(buildNotificationText('payment_reminder', payload, t).detail).toBe(
+      `kinds.paymentReminder.detail|${JSON.stringify({ gameName: 'Sommercup', amount: formatKr(200) })}`,
+    );
+    expect(buildNotificationText('payment_reminder', payload, t, { surface: 'app' })).toEqual({
+      title: 'kinds.paymentReminder.title',
+      detail: 'kinds.paymentReminder.detailApp|{"gameName":"Sommercup"}',
+    });
+  });
+
+  it.each(cases)('#2561: $kind reads the same for the app', ({ kind, payload }) => {
+    expect(buildNotificationText(kind, payload, t, { surface: 'app' })).toEqual(
+      buildNotificationText(kind, payload, t),
+    );
   });
 
   it('product_update renders DB content verbatim (no catalog key)', () => {

@@ -35,6 +35,7 @@ vi.mock('./apns', async (importOriginal) => {
 type ApnsRow = { id: string; token: string; environment: string | null };
 
 const apnsRows: ApnsRow[] = [];
+const webRows: Array<{ id: string; endpoint: string; p256dh: string; auth: string }> = [];
 const tablesQueried: string[] = [];
 const apnsUpdates: Array<{ patch: Record<string, unknown>; token: unknown }> = [];
 const apnsDeletes: unknown[] = [];
@@ -47,7 +48,7 @@ vi.mock('@/lib/supabase/admin', () => ({
           select: () => ({
             eq: () => {
               tablesQueried.push(table);
-              return Promise.resolve({ data: [], error: null });
+              return Promise.resolve({ data: webRows, error: null });
             },
           }),
           update: () => ({ eq: () => Promise.resolve({ error: null }) }),
@@ -84,8 +85,13 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/notifications/inboxTranslator', () => ({
   getInboxTranslator: async () => (key: string) => key,
 }));
+// #2561: the app text differs from the web text only where the kind says so
+// (the entry-fee amount); 'D-app' marks which one a channel got.
 vi.mock('@/lib/notifications/cardContent', () => ({
-  buildNotificationText: () => ({ title: 'T', detail: 'D' }),
+  buildNotificationText: (_kind: unknown, _payload: unknown, _t: unknown, opts?: { surface?: string }) => ({
+    title: 'T',
+    detail: opts?.surface === 'app' ? 'D-app' : 'D',
+  }),
 }));
 vi.mock('@/lib/notifications/deeplink', () => ({
   notificationDestination: () => '/games/abc',
@@ -116,6 +122,7 @@ beforeEach(() => {
   sendApnsMock.mockReset();
   sendNotificationMock.mockReset();
   apnsRows.length = 0;
+  webRows.length = 0;
   tablesQueried.length = 0;
   apnsUpdates.length = 0;
   apnsDeletes.length = 0;
@@ -164,10 +171,23 @@ describe('sendPushToUser — APNs channel', () => {
     await send();
 
     expect(sendApnsMock.mock.calls[0][1]).toEqual({
-      aps: { alert: { title: 'T', body: 'D' }, sound: 'default' },
+      aps: { alert: { title: 'T', body: 'D-app' }, sound: 'default' },
       url: '/games/abc',
       kind: 'game_finished',
     });
+  });
+
+  it('#2561: the app gets the app text, web push the web text, for the same notification', async () => {
+    webConfigured = true;
+    webRows.push({ id: '1', endpoint: 'https://push/x', p256dh: 'k', auth: 'a' });
+    sendNotificationMock.mockResolvedValueOnce({ statusCode: 201 });
+    apnsRows.push({ id: '1', token: TOKEN, environment: 'production' });
+    sendApnsMock.mockResolvedValueOnce(OK);
+
+    await send();
+
+    expect(JSON.parse(sendNotificationMock.mock.calls[0][1] as string).body).toBe('D');
+    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ aps: { alert: { body: 'D-app' } } });
   });
 
   it('unknown environment → tries production first and persists it on success', async () => {

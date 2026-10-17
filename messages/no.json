@@ -164,7 +164,8 @@
       },
       "paymentReminder": {
         "title": "Betal startkontingenten",
-        "detail": "Du mangler {amount} i {gameName}"
+        "detail": "Du mangler {amount} i {gameName}",
+        "detailApp": "Du mangler å betale startkontingenten i {gameName}"
       },
       "cupFinished": {
         "title": "Cupen er ferdigspilt",
