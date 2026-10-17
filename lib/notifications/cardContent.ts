@@ -16,6 +16,14 @@ export type NotificationTranslator = (
 ) => string;
 
 /**
+ * Where the text is shown. `'app'` is the iOS app (APNs): it shows no kroner at
+ * launch (owner 13.10, `native/app/src/lib/launchRules.ts`), so a kind that
+ * names an amount says it without one there (#2561). Default `'web'`: the
+ * inbox, web push and e-mail, unchanged.
+ */
+export type NotificationSurface = 'web' | 'app';
+
+/**
  * Builds the title + one-line detail for a notification, per kind, from the
  * `inbox` catalog. Single source of truth used by both the inbox card (client)
  * and Web Push (server). Moved out of NotificationCard so push reuses it (#24).
@@ -24,6 +32,7 @@ export function buildNotificationText(
   kind: NotificationKind,
   payload: NotificationPayload,
   t: NotificationTranslator,
+  { surface = 'web' }: { surface?: NotificationSurface } = {},
 ): { title: string; detail: string } {
   switch (kind) {
     case 'invite': {
@@ -365,10 +374,14 @@ export function buildNotificationText(
       const p = payload as NotificationPayload<'payment_reminder'>;
       return {
         title: t('kinds.paymentReminder.title'),
-        detail: t('kinds.paymentReminder.detail', {
-          gameName: p.game_name,
-          amount: formatKr(p.entry_fee_kr),
-        }),
+        // The only kind with kroner (#2561): the app's text has no amount.
+        detail:
+          surface === 'app'
+            ? t('kinds.paymentReminder.detailApp', { gameName: p.game_name })
+            : t('kinds.paymentReminder.detail', {
+                gameName: p.game_name,
+                amount: formatKr(p.entry_fee_kr),
+              }),
       };
     }
   }
