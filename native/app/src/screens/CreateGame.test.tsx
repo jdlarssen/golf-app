@@ -29,6 +29,8 @@ import { CreateGame } from './CreateGame';
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
 // den må stå her selv om ingen spørring kjøres i denne testen.
+jest.mock('../supabase', () => require('../test/supabaseMock'));
+
 // #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
 const mockKroner = { on: false };
 jest.mock('../../../../lib/launchRules', () => ({
@@ -39,7 +41,6 @@ jest.mock('../../../../lib/launchRules', () => ({
 beforeEach(() => {
   mockKroner.on = false;
 });
-jest.mock('../supabase', () => require('../test/supabaseMock'));
 
 jest.mock('../data/syncTriggers', () => ({
   isDeviceOnline: () => true,
