@@ -165,6 +165,8 @@ describe('gameBundle', () => {
       {
         userId: ME,
         name: 'Jørgen',
+        // #1954 A3: profilen kunne leses (users-raden finnes).
+        hasProfile: true,
         nickname: 'Jøgge',
         teamNumber: null,
         flightNumber: 1,

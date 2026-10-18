@@ -424,6 +424,12 @@ export function LeaderboardBody({
     );
   }
 
+  // #1954 A3: «Trukne spillere» etter webbens regel per visning (ett hjem:
+  // `lib/withdrawnBoard.ts`). Stableford-familien og slagspill har lista på
+  // alle stier under, best ball bare når spillet er ferdig.
+  const withdrawn = withdrawnOnBoard(game, bundle.players);
+  const withdrawnSection = withdrawn.length > 0 ? <WithdrawnPlayers players={withdrawn} /> : null;
+
   const visibility = leaderboardVisibility(
     game.scoreVisibility,
     game.status,
@@ -443,7 +449,12 @@ export function LeaderboardBody({
   }
 
   if (visibility === 'gross-only') {
-    return <GrossOnlyTable bundle={bundle} scores={scores} />;
+    return (
+      <>
+        <GrossOnlyTable bundle={bundle} scores={scores} />
+        {withdrawnSection}
+      </>
+    );
   }
 
   // #1978: best ball viser bare første halvdel mens runden pågår, som webben.
@@ -487,8 +498,6 @@ export function LeaderboardBody({
   // allerede under duellkortet, #585), og de øvrige formatene en RN-tilpasning
   // av fanen. Appen har ingen fane-primitiv, og #1830-mandatet er
   // native-følelse framfor pikselparitet.
-  const withdrawn = withdrawnOnBoard(game.gameMode, bundle.players);
-
   const sideSection = sideTournamentVisible(bundle) ? (
     <SideTournamentSection
       {...buildSideTournament({
@@ -519,6 +528,7 @@ export function LeaderboardBody({
           text="Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller."
           testID="leaderboard-empty"
         />
+        {withdrawnSection}
         {sideSection}
       </>
     );
@@ -537,9 +547,9 @@ export function LeaderboardBody({
       />
       {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
           nettsiden, med samme sidemarg som sideturneringen. */}
-      {withdrawn.length > 0 ? (
+      {withdrawnSection ? (
         <View style={soloBoard ? styles.boardSide : teamBoard ? styles.teamSide : null}>
-          <WithdrawnPlayers players={withdrawn} />
+          {withdrawnSection}
         </View>
       ) : null}
       {/* Under tavla står sideturneringen 12 pt fra sidene, under lagtavla 16,
