@@ -978,6 +978,10 @@ export default async function GameHomePage({
           })()}
         </Card>
 
+        {/* #2562: «Hent appen» rett under startbilletten. Rendrer ingenting
+            før appen er ute (NEXT_PUBLIC_APP_LAUNCH). */}
+        <GetTheApp className="mx-4 mt-4" />
+
         {/* Spillform — gir spilleren en rask forklaring av modusen før start
             (#299). Synlig uavhengig av om de kjenner formatet fra før. */}
         <div className="mx-4 mt-4">
@@ -1032,22 +1036,19 @@ export default async function GameHomePage({
                   })}
             </Banner>
           </div>
-        ) : /* Countdown banner + flight-velger (#543). #2562: «Hent appen»
-             står mellom nedtellingen og flightvelgeren, eller alene uten
-             tee-tid; kortet rendrer ingenting før appen er ute. */
-        teeOffDate ? (
-          <div className="mx-4 mt-4">
-            <ScheduledWaitingRoom
-              gameId={id}
-              teeOffAt={game.scheduled_tee_off_at!}
-              flightOptions={flightOptions}
-              currentFlightNumber={me.flight_number}
-              blockedReason={structuralBlock?.reason ?? null}
-              appCard={<GetTheApp />}
-            />
-          </div>
         ) : (
-          <GetTheApp className="mx-4 mt-4" />
+          /* Countdown banner + flight-velger (#543) */
+          teeOffDate && (
+            <div className="mx-4 mt-4">
+              <ScheduledWaitingRoom
+                gameId={id}
+                teeOffAt={game.scheduled_tee_off_at!}
+                flightOptions={flightOptions}
+                currentFlightNumber={me.flight_number}
+                blockedReason={structuralBlock?.reason ?? null}
+              />
+            </div>
+          )
         )}
 
         {/* #544: venter-banner etter tee-tid når sidene ikke er fulltallige */}
