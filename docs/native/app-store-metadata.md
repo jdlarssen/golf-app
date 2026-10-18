@@ -360,7 +360,8 @@ reverteringen (48 grønne, 2 snapshots) og er beviset på at fasitene står som 
 
 ### 1.1.0 (3): fiksturen på staging
 
-Bildene for 1.2.0 bruker den ikke (se README-en i `native/assets/store/`). Fire oppdiktede spillere på et fantasidomene, der hovedpersonen — den ene som
+Bildene for 1.2.0 bruker den ikke (se README-en i `native/assets/store/`).
+Fire oppdiktede spillere på et fantasidomene, der hovedpersonen — den ene som
 vises på profil-skjermbildet — ligger på en `.example`-adresse. Den toppdomenen
 er reservert av RFC 2606 og kan aldri bli en ekte postkasse, så adressen i bildet
 kan ikke tilhøre noen. De spiller tre runder på Byneset North: «Søndagsrunden» (pågår, 7 hull tastet),
