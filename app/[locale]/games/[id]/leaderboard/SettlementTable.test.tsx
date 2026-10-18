@@ -88,6 +88,18 @@ describe('SettlementTable', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('settlement-copy')).not.toBeInTheDocument();
 
+    // The stake is formatted like the amounts: «1 000», not «1000».
+    rerender(
+      <SettlementTable
+        settlement={{ ...SETTLEMENT, krPerUnit: 1000 }}
+        playersById={PLAYERS}
+        gameName="Lørdagsrunden"
+        mode="skins"
+        isFinal
+      />,
+    );
+    expect(screen.getByText('1 000 kr per skin · 4 spillere')).toBeInTheDocument();
+
     // Inside a club's iframe (/embed) the browser refuses the clipboard: no button.
     const top = vi.spyOn(window, 'top', 'get').mockReturnValue({} as Window);
     try {
