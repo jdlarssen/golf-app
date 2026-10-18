@@ -30,8 +30,10 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  OFFLINE_NOTE,
   PLAYER_WITHDRAW,
   playerWithdrawConfirmTitle,
+  describePlayerWithdrawFailure,
   REOPEN_SCORECARD,
   reopenConfirmBody,
   reopenHint,
@@ -387,6 +389,20 @@ describe('PLAYER_WITHDRAW', () => {
     expect(PLAYER_WITHDRAW.bodyPreStart).toBe(source.game.withdraw.warningPreStart);
     expect(PLAYER_WITHDRAW.bodyActive).toBe(source.game.withdraw.warningActive);
     expect(PLAYER_WITHDRAW.confirmCta).toBe(source.game.withdraw.withdrawButton);
+  });
+
+  it('feiler trekket, er tekstene webbens (game.withdraw.errors og captainHasTeamBody)', () => {
+    // Serverens nei for en kaptein med et lag som har takket ja får webbens
+    // forklaring; alle andre avslag fra ruta får webbens generelle feiltekst.
+    expect(describePlayerWithdrawFailure('captain_has_team')).toBe(
+      source.game.withdraw.captainHasTeamBody,
+    );
+    for (const reason of ['withdraw_failed', 'game_locked', 'not_registered', 'not_found', 'withdrawn_by_other'] as const) {
+      expect(describePlayerWithdrawFailure(reason)).toBe(source.game.withdraw.errors.withdraw_failed);
+    }
+    // Det appen alene kan møte (ingen nett, ingen sesjon), har ingen webbtekst.
+    expect(describePlayerWithdrawFailure('offline')).toBe(OFFLINE_NOTE);
+    expect(describePlayerWithdrawFailure('network')).toBe(OFFLINE_NOTE);
   });
 });
 
