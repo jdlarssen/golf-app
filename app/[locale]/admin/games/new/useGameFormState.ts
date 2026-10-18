@@ -363,6 +363,10 @@ type UseGameFormStateInput = {
   // #2321: the wizard's «Inviter på e-post» addresses, restored from a
   // sessionStorage draft. Left out = an empty list.
   initialInviteEmails?: string[];
+  // #2570: false when the form only saves a round that is already scheduled
+  // (GameForm's edit-scheduled). The guest stop is a publish rule, so it
+  // never greys out «Lagre endringer» there. Left out = the form publishes.
+  publishes?: boolean;
 };
 
 /** #2439: stabil standard for `clubIds`. */
@@ -441,6 +445,7 @@ export function useGameFormState({
   currentUserId,
   initialExpectedPlayerCount,
   initialInviteEmails,
+  publishes = true,
 }: UseGameFormStateInput) {
   const tMissing = useTranslations('wizard.form.missing');
 
@@ -1836,12 +1841,15 @@ export function useGameFormState({
   // #2570: only guests chosen → nobody can log in and enter scores. The rule
   // (and when it is a warning rather than a stop) lives in guestOnlyRoster;
   // the publish actions read the same rule from the stored guest flag.
-  const guestOnly = guestOnlyRoster({
-    playerIds: selectedPlayerIds,
-    guestIds: new Set(allPlayers.filter((p) => p.isGuest === true).map((p) => p.id)),
-    inviteEmailCount: inviteEmails.length,
-    rosterOptional: playersStepOptional,
-  });
+  // Editing a scheduled round publishes nothing, so the rule does not apply.
+  const guestOnly = publishes
+    ? guestOnlyRoster({
+        playerIds: selectedPlayerIds,
+        guestIds: new Set(allPlayers.filter((p) => p.isGuest === true).map((p) => p.id)),
+        inviteEmailCount: inviteEmails.length,
+        rosterOptional: playersStepOptional,
+      })
+    : 'none';
 
   const teamHandicapPctValid = isTexas
     ? texasHandicapPctValid
