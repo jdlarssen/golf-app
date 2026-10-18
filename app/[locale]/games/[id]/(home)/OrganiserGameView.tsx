@@ -15,6 +15,8 @@ import type { GameRow } from './gameHomeSelect';
 import { CreatorControls } from './CreatorControls';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
+import { CeremonyEntry } from './CeremonyEntry';
+import { ceremonySupported } from '@/lib/games/ceremony';
 import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
@@ -50,6 +52,7 @@ export async function OrganiserGameView({
   startBlockNotice?: ReactNode;
 }) {
   const t = await getTranslations('game.home');
+  const tCeremony = await getTranslations('ceremony');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
   // The board door decides when the organiser gets the link: once the round
   // runs (#2202, owner's choice C) and after it. «Følg live» stays for sharing
@@ -122,6 +125,12 @@ export async function OrganiserGameView({
                 </span>
               </Card>
             </SmartLink>
+          )}
+
+          {/* #2298: the prize-giving on the big screen — above all for the
+              organiser who runs the evening without playing. */}
+          {game.status === 'finished' && ceremonySupported(game.game_mode) && (
+            <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
           )}
 
           {game.status === 'active' && (
