@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
+import { useStorePlatform } from '@/hooks/useStorePlatform';
+import {
+  appBannerStores,
+  appLaunchFlag,
+  isAppLaunched,
+} from '@/lib/app/appLaunch';
+import type { Store } from '@/lib/app/storeLinks';
+import { StoreBadges } from '@/components/app/StoreBadges';
 import { InstallInstructionsModal } from './InstallInstructionsModal';
 
 const DISMISS_KEY = 'torny-install-banner-dismissed';
@@ -49,44 +57,18 @@ const getVisitSnapshot = () => {
 // flashes before the client-side visit count is read.
 const getVisitServerSnapshot = () => false;
 
-export function InstallBanner({
-  visible,
-  onVerdict,
-}: {
-  /** #1797: nudge-køen (HomeNudgeRail) styrer hvilken plass som faktisk vises. */
-  visible: boolean;
-  /** Meldes når kvalifiseringen er avklart — og på nytt om den endrer seg. */
-  onVerdict: (qualified: boolean) => void;
-}) {
-  const t = useTranslations('installBanner');
-  const { status, install } = useInstallPrompt();
-  const dismissed = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
-  // Visit gate (#1186). Read the count reactively so the banner reveals after
-  // the increment effect below fires, with no SSR flash.
+/**
+ * Visit gate (#1186), shared by both banners. Reads the Home-visit count
+ * reactively so the banner reveals after the increment fires, with no SSR
+ * flash, and counts this mount as one visit.
+ */
+function useHomeVisitGate(): boolean {
   const passedVisitGate = useSyncExternalStore(
     visitSubscribe,
     getVisitSnapshot,
     getVisitServerSnapshot,
   );
-  const [modalOpen, setModalOpen] = useState(false);
   const countedRef = useRef(false);
-
-  const qualified =
-    status !== 'loading' &&
-    status !== 'standalone' &&
-    !dismissed &&
-    passedVisitGate;
-
-  useEffect(() => {
-    // 'loading' = miljøet er uavklart — hold køens plass på 'pending' så
-    // ingen lavere nudge vises på en gjetning (#1797).
-    if (status === 'loading') return;
-    onVerdict(qualified);
-  }, [status, qualified, onVerdict]);
 
   useEffect(() => {
     // Count this mount as one Home visit. Guard against React StrictMode's
@@ -103,6 +85,61 @@ export function InstallBanner({
     }
     window.dispatchEvent(new Event(VISITS_EVENT));
   }, []);
+
+  return passedVisitGate;
+}
+
+type BannerProps = {
+  /** #1797: nudge-køen (HomeNudgeRail) styrer hvilken plass som faktisk vises. */
+  visible: boolean;
+  /** Meldes når kvalifiseringen er avklart — og på nytt om den endrer seg. */
+  onVerdict: (qualified: boolean) => void;
+};
+
+/**
+ * The home-screen banner's slot on Hjem (#1797). Once the app is out (#2562,
+ * owner's answer 2) the slot shows «Hent Tørny-appen» with the store badges
+ * where the app is (`appBannerStores`: with `ios` iPhone/iPad, with `on`
+ * everyone), and the banner that adds Tørny to the home screen elsewhere.
+ * With the switch off it is the home-screen banner, as before. The platform
+ * is known only after hydration, so until then the slot stays pending.
+ */
+export function InstallBanner(props: BannerProps) {
+  const platform = useStorePlatform();
+  const flag = appLaunchFlag();
+  if (!isAppLaunched(flag)) return <HomeScreenBanner {...props} />;
+  if (platform === 'unknown') return null;
+  const stores = appBannerStores(flag, platform);
+  return stores.length > 0 ? (
+    <AppBanner {...props} stores={stores} />
+  ) : (
+    <HomeScreenBanner {...props} />
+  );
+}
+
+function HomeScreenBanner({ visible, onVerdict }: BannerProps) {
+  const t = useTranslations('installBanner');
+  const { status, install } = useInstallPrompt();
+  const dismissed = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+  const passedVisitGate = useHomeVisitGate();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const qualified =
+    status !== 'loading' &&
+    status !== 'standalone' &&
+    !dismissed &&
+    passedVisitGate;
+
+  useEffect(() => {
+    // 'loading' = miljøet er uavklart — hold køens plass på 'pending' så
+    // ingen lavere nudge vises på en gjetning (#1797).
+    if (status === 'loading') return;
+    onVerdict(qualified);
+  }, [status, qualified, onVerdict]);
 
   if (!visible) return null; // #1797: en annen nudge holder plassen
   if (!qualified) return null; // loading/standalone/dismissed/visit gate (#1186)
@@ -169,5 +206,77 @@ export function InstallBanner({
         variant={modalVariant}
       />
     </>
+  );
+}
+
+// ─── «Hent Tørny-appen» (#2562) ────────────────────────────────────────────
+// Its own dismiss key: someone who closed «Installer» once still sees the app
+// once. Shown in an installed PWA too, since that is where the app replaces
+// something; the visit gate is the same as the home-screen banner's.
+const APP_DISMISS_KEY = 'torny-get-app-banner-dismissed';
+const APP_DISMISS_EVENT = 'torny-get-app-banner-change';
+
+const appSubscribe = (cb: () => void) => {
+  window.addEventListener(APP_DISMISS_EVENT, cb);
+  return () => window.removeEventListener(APP_DISMISS_EVENT, cb);
+};
+const getAppSnapshot = () => {
+  try {
+    return localStorage.getItem(APP_DISMISS_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+function AppBanner({
+  visible,
+  onVerdict,
+  stores,
+}: BannerProps & { stores: Store[] }) {
+  const t = useTranslations('installBanner');
+  const dismissed = useSyncExternalStore(
+    appSubscribe,
+    getAppSnapshot,
+    getServerSnapshot,
+  );
+  const passedVisitGate = useHomeVisitGate();
+  const qualified = !dismissed && passedVisitGate;
+
+  useEffect(() => {
+    onVerdict(qualified);
+  }, [qualified, onVerdict]);
+
+  if (!visible || !qualified) return null;
+
+  function dismiss() {
+    try {
+      localStorage.setItem(APP_DISMISS_KEY, '1');
+    } catch {
+      // Storage unavailable (private mode) — banner re-appears next load.
+    }
+    window.dispatchEvent(new Event(APP_DISMISS_EVENT));
+  }
+
+  return (
+    <div
+      data-testid="get-app-banner"
+      className="mb-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 flex items-start gap-3"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm text-text">{t('appTitle')}</p>
+        <p className="text-xs text-text mt-0.5 leading-relaxed">
+          {t('appBody')}
+        </p>
+        <StoreBadges stores={stores} className="mt-1.5" />
+      </div>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label={t('closeAria')}
+        className="text-text px-1.5 py-1 min-h-11 min-w-11 flex items-center justify-center shrink-0"
+      >
+        ✕
+      </button>
+    </div>
   );
 }

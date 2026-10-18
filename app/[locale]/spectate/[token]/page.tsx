@@ -10,6 +10,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { renderLeaderboardContent } from '../../games/[id]/leaderboard/leaderboardContent';
 import { SpectateLiveStatus } from './SpectateLiveStatus';
 import { SpectateCta } from './SpectateCta';
+import { GetTheApp } from '@/components/app/GetTheApp';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { safeParsePrizes } from '@/lib/games/prizes';
@@ -200,6 +201,10 @@ export default async function SpectatePage({
           Statisk, utenfor poller-treet, så 20s-refreshen ikke remounter den.
           Kun spectate (ikke embed — tredjeparts klubbsider har EmbedFooter). */}
       <div data-spectate-default-cta>
+        {/* #2562: «Hent appen» som en rolig linje under tavla, over
+            «Lag din egen turnering». Ingenting før appen er ute; følg-siden
+            skjuler den sammen med CTA-en. */}
+        <GetTheApp variant="inline" className="px-4 pt-8" />
         <SpectateCta href={`/${locale}/login`} label={t('ctaLabel')} />
       </div>
     </>

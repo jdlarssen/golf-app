@@ -55,6 +55,7 @@ import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
+import { GetTheApp } from '@/components/app/GetTheApp';
 import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { WithdrawnBanner } from './WithdrawnBanner';
@@ -1031,19 +1032,22 @@ export default async function GameHomePage({
                   })}
             </Banner>
           </div>
+        ) : /* Countdown banner + flight-velger (#543). #2562: «Hent appen»
+             står mellom nedtellingen og flightvelgeren, eller alene uten
+             tee-tid; kortet rendrer ingenting før appen er ute. */
+        teeOffDate ? (
+          <div className="mx-4 mt-4">
+            <ScheduledWaitingRoom
+              gameId={id}
+              teeOffAt={game.scheduled_tee_off_at!}
+              flightOptions={flightOptions}
+              currentFlightNumber={me.flight_number}
+              blockedReason={structuralBlock?.reason ?? null}
+              appCard={<GetTheApp />}
+            />
+          </div>
         ) : (
-          /* Countdown banner + flight-velger (#543) */
-          teeOffDate && (
-            <div className="mx-4 mt-4">
-              <ScheduledWaitingRoom
-                gameId={id}
-                teeOffAt={game.scheduled_tee_off_at!}
-                flightOptions={flightOptions}
-                currentFlightNumber={me.flight_number}
-                blockedReason={structuralBlock?.reason ?? null}
-              />
-            </div>
-          )
+          <GetTheApp className="mx-4 mt-4" />
         )}
 
         {/* #544: venter-banner etter tee-tid når sidene ikke er fulltallige */}
