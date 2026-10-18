@@ -20,7 +20,7 @@ vi.mock('@/lib/auth/userId', () => ({ getProxyVerifiedUserId: vi.fn() }));
 vi.mock('@/lib/games/getGameWithPlayers', () => ({ getGameWithPlayers: vi.fn() }));
 vi.mock('@/lib/scoring/buildModeResultForGame', () => ({ buildModeResultForGame: vi.fn() }));
 vi.mock('@/lib/og/fonts', () => ({
-  loadFonts: async () => ({ fonts: [], hasFraunces: false, hasInter: false }),
+  loadFonts: async () => ({ fonts: [], hasFraunces: false, hasInter: false, hasFrauncesDisplay: false }),
 }));
 // The element the route handed to ImageResponse, to compare cards between viewers.
 const rendered: { element: unknown } = { element: null };
