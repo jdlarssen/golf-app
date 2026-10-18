@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { GetTheApp } from '@/components/app/GetTheApp';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { REGISTRATION_MESSAGE_MAX } from '@/lib/games/registration';
 import {
@@ -102,6 +103,8 @@ export function RegistrationForm({
         <Banner tone="success" testId="request-sent-banner">
           {t('requestSentBanner')}
         </Banner>
+        {/* #2562: rendrer ingenting før appen er ute. */}
+        <GetTheApp />
         <LinkButton href="/finn-turneringer" variant="secondary" full>
           {t('findMoreButton')}
         </LinkButton>

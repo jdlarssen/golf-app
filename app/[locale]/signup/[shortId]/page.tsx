@@ -11,6 +11,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
+import { GetTheApp } from '@/components/app/GetTheApp';
 import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
@@ -481,6 +482,8 @@ function renderBody({
     return (
       <div className="space-y-4">
         <Banner tone="success">{t('alreadyRegisteredBanner')}</Banner>
+        {/* #2562: «Hent appen» under kvitteringen; ingenting før appen er ute. */}
+        <GetTheApp />
         <LinkButton href={`/games/${game.id}`} full>
           {t('goToGameButton')}
         </LinkButton>
@@ -506,9 +509,12 @@ function renderBody({
 
   if (requestView === 'self_request') {
     return (
-      <Banner tone="info">
-        {t('pendingRequestBanner')}
-      </Banner>
+      <>
+        <Banner tone="info">
+          {t('pendingRequestBanner')}
+        </Banner>
+        <GetTheApp className="mt-4" />
+      </>
     );
   }
 
@@ -516,9 +522,12 @@ function renderBody({
   // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
   if (requestView === 'team_awaiting_approval') {
     return (
-      <Banner tone="info" testId="team-awaiting-approval">
-        {t('pendingRequestBanner')}
-      </Banner>
+      <>
+        <Banner tone="info" testId="team-awaiting-approval">
+          {t('pendingRequestBanner')}
+        </Banner>
+        <GetTheApp className="mt-4" />
+      </>
     );
   }
 

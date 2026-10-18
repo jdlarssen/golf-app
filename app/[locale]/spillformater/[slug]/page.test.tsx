@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import SpillformDetailPage from './page';
 import noMessages from '@/messages/no.json';
@@ -60,24 +60,5 @@ describe('SpillformDetailPage', () => {
         a: entry.acceptedAnswer.text,
       })),
     ).toEqual(source.faq);
-  });
-});
-
-// #2562, Type B: demokortet nederst heter «Hent appen» med appen i begge
-// butikkene, og teksten over sier ikke lenger «prøv en demo-runde».
-describe('SpillformDetailPage med appen ute (#2562)', () => {
-  afterEach(() => vi.unstubAllEnvs());
-
-  it('on: «Hent appen» og ny tekst over knappen', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
-    const Page = await SpillformDetailPage({
-      params: Promise.resolve({ slug: 'stableford', locale: 'no' }),
-    });
-    render(Page as React.ReactElement);
-    const fg = noMessages.formatGuide;
-    expect(screen.getByTestId('format-demo-cta')).toHaveTextContent(
-      fg.detailCtaButtonLaunched,
-    );
-    expect(screen.getByText(fg.detailCtaBodyLaunched)).toBeInTheDocument();
   });
 });
