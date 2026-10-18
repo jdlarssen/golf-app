@@ -1377,3 +1377,15 @@ body:has(
   [data-bottom-nav] {
   display: none;
 }
+
+/* ---------------------------------------------------------------------------
+ * #2296: the settlement receipt's «Kopier til gruppechatten» cannot work in
+ * the embed: the iframe snippet clubs paste has no allow="clipboard-write",
+ * so the browser refuses the clipboard. The embed page sets `data-embed` on
+ * its outer wrapper and the button block is hidden here. Pure CSS because
+ * the marker is in the server HTML, so the block never flashes in;
+ * SettlementTable also checks for an iframe on the client, as a fallback.
+ * ---------------------------------------------------------------------------*/
+[data-embed] [data-settlement-copy] {
+  display: none;
+}

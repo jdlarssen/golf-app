@@ -212,7 +212,9 @@ export function SettlementTable({
       </div>
 
       {showCopy && (
-        <div className="flex flex-col gap-2 px-0.5 pt-[22px]">
+        // data-settlement-copy: hidden inside the /embed iframe by a CSS rule in
+        // app/globals.css, so the block never flashes in before hydration.
+        <div data-settlement-copy className="flex flex-col gap-2 px-0.5 pt-[22px]">
           {/* `!`: the Button base writes font-medium, tracking-tight and a
               shadow; the artboard's pill is 600, normal tracking, flat. */}
           <Button
