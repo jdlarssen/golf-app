@@ -43,6 +43,7 @@ Så hakes disse av, én rad per datatype:
 | Identifiers | **Device ID** | Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en og iOS-versjonen («Tørny-appen iOS …», `userAgent()`), bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:110-137`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 | User Content | **Gameplay Content** | Slagene, resultatene og handicapet poengregningen bygger på, og hvem som spiller i hvilken runde (`lib/scoring/`, `CompleteProfile.tsx`, feltet `complete-profile-hcp`). Apple: «Such as saved games, multiplayer matching or gameplay logic, or user-generated content in-game». | App Functionality | **Yes** | **No** |
 | User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`), og grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake (`Approve.tsx`), som spilleren ser på spillsiden (`GameHome.tsx:268`). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
+| Usage Data | **Product Interaction** | At spilleren delte et kort fra Kavalkaden, hvilket kort og hvilket år, og når (`ShareKavalkadeCardButton.tsx` → `logKavalkadeShare` → tabellen `kavalkade_shares`). Vi bruker det bare til å telle hvor mange spillere som har delt (`lib/kavalkade/countKavalkadeSharers.ts`). Apple: «other information about how the user interacts with the app». | Analytics | **Yes** | **No** |
 | Other Data | **Other Data Types** | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`, `GENDER_OPTIONS` og `LEVEL_OPTIONS`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 
 **Varsel-tokenet er en tolkning.** Apple har ingen regel som nevner varsel-tokens ved
@@ -73,15 +74,17 @@ Dette hakes **ikke** av, og her er grunnen:
   blant avhengighetene, og `native/app/src` har null treff på geolokasjon.
   «Vis på kart» på startbilletten åpner Kart med banens navn
   (`TicketStub.tsx`, `mapSearchUrl`), ikke med telefonens posisjon.
-- **Usage Data og Diagnostics.** Appen har ingen analyse- eller krasj-SDK.
-  `expo-network` sier bare om telefonen har nett, og sender ingenting.
+- **Resten av Usage Data, og Diagnostics.** Appen har ingen analyse- eller krasj-SDK.
+  `expo-network` sier bare om telefonen har nett, og sender ingenting. Det eneste vi
+  teller, er delte Kavalkade-kort (raden Product Interaction).
 - **Kalenderen.** «Legg til i kalender» åpner iOS sitt eget ark for ny hendelse
   (`native/app/src/lib/addToCalendar.ts`). Hendelsen blir på telefonen, og vi får
   ingenting tilbake, så den er ikke samlet inn.
 - **Delingen.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis til
   iOS sitt delingsark (`native/app/src/lib/shareImage.ts`), og «følg live»-lenka
   (når arrangøren har slått på live-følging) deles på samme måte (`shareLive.ts`). Spilleren velger selv hvor det
-  går, og vi får ikke noe nytt.
+  går. Vi får aldri bildet eller vet hvor det gikk. Deler spilleren et Kavalkade-kort,
+  lagrer vi bare at det ble delt (raden Product Interaction).
 - **AI-tekstene.** Anthropic (språkmodellen Claude) skriver Kavalkaden og
   rundereferatet på serveren for oss. De får bare data som alt står i radene over
   (navn, resultater, spill- og banenavn, datoer), og navnet bare for spillere som har
@@ -94,7 +97,19 @@ Siste spørsmål, «Do you use this data to track you or your device across apps
 websites owned by other companies?», er **No** for alle radene.
 
 Etterpå skal oppsummeringen på siden vise **Data Linked to You** med Contact Info,
-Contacts, Identifiers, User Content og Other Data, og **Data Not Used to Track You**.
+Contacts, Identifiers, Usage Data, User Content og Other Data, og **Data Not Used to
+Track You**.
+
+**Grunnen når et kort sendes tilbake** står under Other User Content hos Apple, men
+under «Other in-app messages» hos Google. Apples meldingstype er «Emails or Text
+Messages» («Including subject line, sender, recipients, and contents of the email or
+message»), altså e-post og SMS, mens Google har en egen type for meldinger i appen.
+Begge oppgir den samme teksten.
+
+**Formålet Analytics** for Kavalkade-delingen er Apples «Using data to evaluate user
+behavior, including to understand the effectiveness of existing product features».
+Vi teller delinger for å vite om Kavalkaden blir brukt, og personvernerklæringen sier
+det (`legal.privacy.analyticsBody`).
 
 **Endring fra #1284-utkastet:** posisjon er tatt ut. Utkastet hadde et forbehold om
 green-pins (#1210); den funksjonen bor på nettsiden, og native-appen leser ikke
