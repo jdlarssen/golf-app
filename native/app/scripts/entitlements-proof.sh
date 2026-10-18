@@ -19,8 +19,9 @@
 #    åpnes i Safari, der sesjonen finnes (`app.config.ts`, kontrakt §Research).
 #
 # Plist-en leses med python3 og `plistlib`, ikke plutil eller PlistBuddy: testen
-# kjører i CI på ubuntu-latest, der de ikke finnes. En fil som ikke kan leses,
-# gir én FAIL og ingen PASS.
+# kjører i CI på ubuntu-latest, der de ikke finnes. En tom fil er en app uten
+# entitlements (`codesign` skriver da ingenting), og den gir FAIL på
+# `aps-environment`. En fil som ikke kan leses, gir én FAIL og ingen PASS.
 
 # `bundle-proof.sh` setter `PYTHON3` når den er sourcet først; testen sourcer
 # bare denne fila.
@@ -32,7 +33,8 @@ ENTITLEMENTS_PY='
 import plistlib, sys
 try:
     with open(sys.argv[1], "rb") as f:
-        ent = plistlib.load(f)
+        raw = f.read()
+    ent = plistlib.loads(raw) if raw.strip() else {}
 except Exception as e:
     sys.stderr.write(type(e).__name__ + "\n")
     sys.exit(1)
@@ -66,14 +68,14 @@ entitlements_rules() {
       pass "aps-environment = ${value}"
       say "      (arkivet viser ikke hva eksporten til App Store setter; production i det opplastede bygget bevises av et varsel til TestFlight)"
       ;;
-    missing) fail "aps-environment mangler — appen har varsler på iOS (#2561), så arkivet må ha push-entitlementen" ;;
-    other) fail "aps-environment = ${value} — bare development eller production er gyldig" ;;
+    missing) fail "aps-environment mangler. Appen har varsler på iOS (#2561), så arkivet må ha push-entitlementen" ;;
+    other) fail "aps-environment = ${value}. Bare development eller production er gyldig" ;;
     *) fail "kunne ikke lese aps-environment (${file}): ${facts}" ;;
   esac
 
   case "$ad" in
     absent) pass "ingen com.apple.developer.associated-domains" ;;
-    present) fail "com.apple.developer.associated-domains er satt — appen skal IKKE claime lenker (kontrakt §Research)" ;;
+    present) fail "com.apple.developer.associated-domains er satt. Appen skal IKKE claime lenker (kontrakt §Research)" ;;
     *) fail "kunne ikke lese com.apple.developer.associated-domains (${file}): ${facts}" ;;
   esac
 }
