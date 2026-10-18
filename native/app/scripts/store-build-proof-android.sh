@@ -7,8 +7,8 @@
 # Fem kilder, hver med egne regler:
 #  1. `base/assets/index.android.bundle` (Hermes-bytekode): ALLE bundel-reglene
 #     fra iOS-beviset, lest fra `bundle-proof.sh` (ett hjem for reglene). Prod-
-#     adressen og web-adressen kreves; staging, Mac-en, LAN og loopback er
-#     forbudt; anon-nøkkelen fra miljøet må finnes; ingen verdi fra appens
+#     adressen og web-adressen kreves; staging, Mac-en og LAN er forbudt,
+#     og loopback bare som supabase-js sin bare literal; anon-nøkkelen fra miljøet må finnes; ingen verdi fra appens
 #     `.env`-filer. Begrunnelsen for hver regel står øverst i
 #     `store-build-proof.sh`.
 #  2. Manifestet (`base/manifest/AndroidManifest.xml`, protobuf). `aapt2` fra

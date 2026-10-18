@@ -9,16 +9,20 @@
 // etter «127.0.0.1», og regelen bommet. I 1.2.0 (4) sto den alene og ga FAIL.
 // Reglene skal derfor:
 //
-//  1. godta én BAR forekomst av hver literal, uansett nabo;
-//  2. gi FAIL når adressen har skjema (`://`) eller port (`:<siffer>`), for da
-//     er det en adresse fra miljøet;
-//  3. gi FAIL for flere enn én bar forekomst av 127.0.0.1 og [::1];
-//  4. la de andre LAN-reglene stå som før (192.168-saken).
+//  1. godta så mange BARE forekomster av hver literal som supabase-js-pakken
+//     som er installert forklarer (1 når `getDefaultPropagationTargets` har den,
+//     ellers 0), uansett nabo;
+//  2. gi FAIL når adressen har skjema (`://`) eller port (`:<siffer>`), og for
+//     `localhost` også underdomene (`.localhost`) og bruker (`@localhost`), for
+//     da er det en adresse fra miljøet;
+//  3. la de kjente `localhost`-formene fra Metro og auth-js stå;
+//  4. la de andre LAN-reglene stå som før.
 //
 // `bundle_proof` kjøres på en falsk bundel: strengene skilt med NUL, så
 // `strings` gir én linje per streng, slik den gir én per pakket løp i en ekte
-// bundel. Bare linja for regelen under test sjekkes; de andre reglene (prod-
-// adressen, UTF-16-tabellen) gir FAIL her og er ikke det testen spør om.
+// bundel. Sakene i første blokk sjekker bare linja for sin egen regel; de andre
+// reglene (prod-adressen, UTF-16-tabellen) gir FAIL her og er ikke det de spør
+// om. Blokka for hele beviset sammenligner antall FAIL.
 import { spawnSync } from 'child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -54,7 +58,7 @@ bundle_proof_require
 bundle_proof "$2"
 printf 'TOTAL %s %s\\n' "$PASS" "$FAIL"`;
 
-function proof(strings) {
+function proof(strings, env = {}) {
   n += 1;
   const bundle = join(tmp, `bundle-${n}.bin`);
   const out = join(tmp, `bevis-${n}.txt`);
@@ -62,7 +66,7 @@ function proof(strings) {
   writeFileSync(out, '');
   const result = spawnSync('bash', ['-c', HARNESS, 'bash', LIB, bundle, out], {
     encoding: 'utf8',
-    env: { ...process.env, TORNY_APP_ENV_DIR: tmp, EXPO_PUBLIC_SUPABASE_ANON_KEY: '' },
+    env: { ...process.env, TORNY_APP_ENV_DIR: tmp, EXPO_PUBLIC_SUPABASE_ANON_KEY: '', ...env },
   });
   const lines = result.stdout.split('\n').filter(Boolean);
   const verdicts = lines.filter((l) => /^(PASS|FAIL) {2}/.test(l));
@@ -83,11 +87,13 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     ['bar [::1] (supabase-js)', 'PASS', ['WebSocket closed - code[::1]isForwardRef'], 'loopback [::1]'],
     ['[::1] med skjema', 'FAIL', ['wss://[::1]/realtime/v1'], 'loopback [::1]'],
     ['[::1] med port', 'FAIL', ['host[::1]:3111/x'], 'loopback [::1]'],
-    ['bar localhost (supabase-js)', 'PASS', ['set-thingslocalhostx-relay-error'], '«localhost»'],
-    ['localhost med ukjent port', 'FAIL', ['set-thingslocalhost:3000/x'], '«localhost»'],
-    ['https://localhost uten port', 'FAIL', ['xxhttps://localhost/auth/v1'], 'localhost med skjema'],
-    ['ws://localhost uten port', 'FAIL', ['ws://localhostfoo'], 'localhost med skjema'],
-    ['localhost med skjema og kjent port (Metro, auth-js)', 'PASS', ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'], 'localhost med skjema'],
+    ['bar localhost (supabase-js)', 'PASS', ['set-thingslocalhostx-relay-error'], 'loopback localhost'],
+    ['localhost med kjente porter (Metro, auth-js)', 'PASS', ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'], 'loopback localhost'],
+    ['localhost med ukjent port', 'FAIL', ['set-thingslocalhost:3000/x'], 'loopback localhost'],
+    ['https://localhost uten port', 'FAIL', ['xxhttps://localhost/auth/v1'], 'loopback localhost'],
+    ['localhost som underdomene', 'FAIL', ['https://torny.localhost/x'], 'loopback localhost'],
+    ['localhost med bruker@', 'FAIL', ['postgres://u@localhost/db'], 'loopback localhost'],
+    ['to bare localhost', 'FAIL', ['aalocalhostbb', 'cclocalhostdd'], 'loopback localhost'],
     ['192.168-adresse, som før', 'FAIL', ['ip192.168.1.20/x'], '192\\.168'],
     ['10.0-adresse, som før', 'FAIL', ['ip10.0.0.5/x'], '10\\.0'],
     ['IPv6 med skjema, som før', 'FAIL', ['http://[fe80::1]/x'], '://\\[[0-9a-fA-F'],
@@ -105,16 +111,32 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     const line = r.verdicts.find((l) => l.includes('loopback 127.0.0.1'));
     expect(line).toContain('getDefaultPropagationTargets');
   });
+
+  // Unntaket er bundet til pakken som er installert: uten literalen i
+  // `getDefaultPropagationTargets` er ingen bar forekomst forklart.
+  it.each([
+    ['127.0.0.1', 'create-next-hint127.0.0.1x-relay-error', 'loopback 127.0.0.1'],
+    ['[::1]', 'WebSocket closed - code[::1]isForwardRef', 'loopback [::1]'],
+    ['localhost', 'set-thingslocalhostx-relay-error', 'loopback localhost'],
+  ])('bar %s gir FAIL når supabase-js ikke har literalen', (_literal, string, label) => {
+    const r = proof([string], { TORNY_SUPABASE_JS_ENTRY: join(tmp, 'finnes-ikke.cjs') });
+    const hits = r.verdicts.filter((l) => l.includes(label));
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatch(/^FAIL .*høyst 0/);
+  });
 });
 
-// Hver sak over sjekker bare linja for sin egen regel. Her sjekkes hele
-// beviset: legges en lekket adresse til bibliotek-literalene, må antallet FAIL
-// øke, uansett hvilken regel som fanger den. Adressen står både alene og limt
-// inn mellom to nabo-strenger, fordi Hermes pakker uten skilletegn.
-describe('hele beviset: en lekket adresse gir alltid en FAIL til', () => {
+// Hele beviset. Bibliotek-literalene, også i Hermes-formen fra 1.1.0 (3) med
+// sifre limt på, skal gi nøyaktig like mange FAIL som en tom bundel. Legges en
+// lekket adresse til, må antallet FAIL øke, uansett hvilken regel som fanger
+// den. Adressen står både alene og limt inn mellom to nabo-strenger, fordi
+// Hermes pakker uten skilletegn.
+describe('hele beviset', () => {
   const LIBRARY = [
     'create-next-hint127.0.0.1x-relay-error',
+    'rotation slot write failedraft-2020-127.0.0.15.2.0.0_loop',
     'WebSocket closed - code[::1]isForwardRef',
+    'set-thingslocalhostx-relay-error',
     'heighttp://localhost:8081/assets/x',
     'Lighttp://localhost:9999__get',
   ];
@@ -123,23 +145,33 @@ describe('hele beviset: en lekket adresse gir alltid en FAIL til', () => {
     'ws://localhost',
     'http://localhost',
     'http://localhost:3111',
+    'https://torny.localhost',
+    'wss://app.localhost/ws',
+    'http://torny.localhost:3111',
+    'postgres://u@localhost/db',
     'http://127.0.0.1:3111',
     'wss://127.0.0.1',
     'http://[::1]:3111',
     'http://192.168.1.10:3111',
     'exp://192.168.1.10:8081',
   ];
-  let baseline;
+  let empty;
+  let library;
   beforeAll(() => {
-    baseline = proof(LIBRARY).fails;
+    empty = proof([]).fails;
+    library = proof(LIBRARY).fails;
+  });
+
+  it('bibliotek-literalene gir ingen FAIL', () => {
+    expect(library).toBe(empty);
   });
 
   it.each(LEAKS.flatMap((leak) => [[leak, 'alene', leak], [leak, 'limt inn', `abc${leak}Def`]]))(
-    '%s (%s)',
+    'lekket %s (%s) gir en FAIL til',
     (_leak, _shape, string) => {
       const r = proof([...LIBRARY, string]);
       expect(r.status).toBe(0);
-      expect(r.fails).toBeGreaterThan(baseline);
+      expect(r.fails).toBeGreaterThan(library);
     },
   );
 });
