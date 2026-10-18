@@ -204,6 +204,9 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 - Ny `STORE_VERSION` når appen endrer seg for brukerne, og alltid når App Store Connect har
   godkjent den forrige: en godkjent versjon tar ikke nye bygg (`1.1.0` (3) ble godkjent, så
   neste er `1.2.0`, #2561). Hold den over skallets `1.0`.
+- Buildnummeret er brukt opp først når bygget er lastet opp. Et kandidatarkiv som aldri er
+  lastet opp, kan slettes (`rm -rf` på `.xcarchive`-en) og bygges på nytt, også fra main, med
+  samme (versjon, build) (#2561).
 - Skriptet nekter å kompilere hvis arkivet for (versjon, build) alt finnes. Skal det
   arkivet lastes opp, er veien `--upload-only <arkiv>` — ikke en bump.
 - Et merke flyttes aldri: `native-ios/v1.1.0-3` peker for alltid på commiten bygg 3 kom fra.
