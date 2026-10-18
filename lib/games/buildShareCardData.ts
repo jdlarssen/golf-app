@@ -34,6 +34,12 @@ export type ShareCardRow = {
   rank: number;
   /** Display name, already resolved by the caller (formatRevealName applied). */
   name: string;
+  /**
+   * The names `name` is joined from, one per member in the order the caller's
+   * ids had (one for a single player). The result card shortens a long team
+   * name to first names from these (#2319).
+   */
+  memberNames: string[];
   /** Mode-framed score, structured for locale-aware rendering in the route. */
   score: ShareCardScore;
   /** True when this row is the sharer (for podium-row highlight). */
@@ -62,10 +68,21 @@ export type ShareCardMatchHeadline =
   | { kind: 'tied' }
   | { kind: 'undecided' };
 
+/** One side of a matchplay card (#2319). */
+export type ShareCardMatchSide = {
+  /** Members joined with « / ». */
+  name: string;
+  memberNames: string[];
+  /** False on both sides when the match is halved or has no result yet. */
+  won: boolean;
+};
+
 export type ShareCardMatch = {
   /** The sharer's outcome, or null when they aren't a participant. */
   sharerOutcome: ShareCardMatchOutcome | null;
   headline: ShareCardMatchHeadline;
+  /** Both sides, side 1 first, for the card's two rows (#2319). */
+  sides: [ShareCardMatchSide, ShareCardMatchSide];
 };
 
 export type ShareCardModel = {
@@ -376,6 +393,7 @@ function buildPlacementModel(
   const allRows: ShareCardRow[] = sorted.map((c) => ({
     rank: c.rank,
     name: resolveTeamName(c.userIds, nameByUserId, playerFallback),
+    memberNames: resolveMemberNames(c.userIds, nameByUserId, playerFallback),
     score: c.score,
     isSharer: sharerId !== null && c.userIds.includes(sharerId),
     ...(withUserIds
@@ -415,9 +433,16 @@ function resolveTeamName(
   nameByUserId: Map<string, string>,
   playerFallback: string,
 ): string {
-  return userIds
-    .map((id) => nameByUserId.get(id) ?? playerFallback)
-    .join(' / ');
+  return resolveMemberNames(userIds, nameByUserId, playerFallback).join(' / ');
+}
+
+/** One resolved name per member, with the same fallback as `resolveTeamName`. */
+function resolveMemberNames(
+  userIds: readonly string[],
+  nameByUserId: Map<string, string>,
+  playerFallback: string,
+): string[] {
+  return userIds.map((id) => nameByUserId.get(id) ?? playerFallback);
 }
 
 /**
@@ -494,9 +519,19 @@ function buildMatchplayMatch(
   nameByUserId: Map<string, string>,
   playerFallback: string,
 ): ShareCardMatch {
+  const sideOf = (ids: ReadonlyArray<string>, won: boolean): ShareCardMatchSide => ({
+    name: resolveTeamName([...ids], nameByUserId, playerFallback),
+    memberNames: resolveMemberNames(ids, nameByUserId, playerFallback),
+    won,
+  });
+
   if (matchResult === null) {
     // Match not yet decided
-    return { sharerOutcome: null, headline: { kind: 'undecided' } };
+    return {
+      sharerOutcome: null,
+      headline: { kind: 'undecided' },
+      sides: [sideOf(side1UserIds, false), sideOf(side2UserIds, false)],
+    };
   }
 
   const { winner, formatted } = matchResult;
@@ -531,7 +566,14 @@ function buildMatchplayMatch(
     headline = { kind: 'winner', winnerName, margin: formatted };
   }
 
-  return { sharerOutcome, headline };
+  return {
+    sharerOutcome,
+    headline,
+    sides: [
+      sideOf(side1UserIds, winner === 'side1'),
+      sideOf(side2UserIds, winner === 'side2'),
+    ],
+  };
 }
 
 /**

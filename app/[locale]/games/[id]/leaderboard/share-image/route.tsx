@@ -1,3 +1,4 @@
+import { isValidElement, type ReactNode } from 'react';
 import { ImageResponse } from 'next/og';
 import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
@@ -7,69 +8,220 @@ import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   buildShareCardData,
   type ShareCardModel,
+  type ShareCardRow,
   type ShareCardScore,
-  type ShareCardMatchHeadline,
 } from '@/lib/games/buildShareCardData';
-import { formatRevealName } from '@/lib/names/formatRevealName';
+import { formatPublicName } from '@/lib/names/formatPublicName';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
-import { computeCardHeight } from '@/lib/og/shareCardHeight';
+import {
+  SHARE_CARD_HEIGHT,
+  SHARE_CARD_WIDTH,
+  cardKicker,
+  chooseHeadline,
+  rowDisplayName,
+  shareCardHeight,
+} from '@/lib/og/shareCardLayout';
+import { headlineSpec, type HeadlineSpec } from '@/lib/og/shareCardHeadline';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
   CHAMP,
-  CHAMP_DARK,
-  LINEN,
-  MUTED,
-  TAUPE,
-  CHAMP_TINT,
-  CHAMP_PILL,
-  DISC,
-  WHITE,
-  HAIRLINE,
-  ROW_HAIRLINE,
+  ON_STRONG,
+  ACCENT_ON_STRONG,
+  HILL_FAR,
+  HILL_NEAR,
+  MEDAL_INK,
+  MEDAL_SILVER,
+  MEDAL_BRONZE,
 } from '@/lib/og/palette';
 
 /** The `leaderboard.shareCard` translator, resolved on the request locale (#971). */
 type ShareT = Awaited<ReturnType<typeof getTranslations>>;
 
-/** Renders a structured competitor score for the card, locale-aware (#971). */
-function renderScore(score: ShareCardScore, t: ShareT): string {
+/** Muted light text on the green: the kicker, the labels and the tagline. */
+const ON_STRONG_MUTED = 'rgba(236,229,210,0.8)';
+const ON_STRONG_META = 'rgba(236,229,210,0.85)';
+
+/** The number in a row: just the figure, locale-neutral («38», «−4», «6»). */
+function scoreFigure(score: ShareCardScore): string {
   switch (score.kind) {
     case 'points':
-      return t('points', { n: score.value });
     case 'skins':
-      return t('skins', { n: score.value });
+      return score.value < 0 ? `−${Math.abs(score.value)}` : String(score.value);
     case 'vsPar':
-      return score.label; // locale-neutral golf notation (−2 / E / +3)
+      return score.label; // −2 / E / +3
   }
 }
 
-/** Renders the neutral matchplay headline, locale-aware (#971). */
-function renderMatchHeadline(
-  headline: ShareCardMatchHeadline,
+/** The result as the headline words it: «38 poeng», «6 skins», «−4», «par». */
+function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
+  switch (score.kind) {
+    case 'points':
+      return { text: t('points', { n: score.value }), at: false };
+    case 'skins':
+      return { text: t('skins', { n: score.value }), at: false };
+    case 'vsPar':
+      return { text: score.label === 'E' ? t('par') : score.label, at: true };
+  }
+}
+
+/**
+ * The headline as rich text. `gold` wraps the result; the same call with a
+ * pass-through `gold` gives the plain text the layout is measured on.
+ */
+function headlineNode(
+  spec: HeadlineSpec,
   t: ShareT,
-): string {
-  switch (headline.kind) {
-    case 'winner':
-      return t('winnerWon', {
-        name: headline.winnerName,
-        margin: headline.margin,
-      });
+  locale: AppLocale,
+  gold: (chunks: ReactNode) => ReactNode,
+): ReactNode {
+  const list = new Intl.ListFormat(locale === 'en' ? 'en-GB' : 'nb-NO', {
+    type: 'conjunction',
+  });
+  switch (spec.kind) {
+    case 'finished':
+      return t('gameFinished');
     case 'tied':
       return t('tied');
-    case 'undecided':
-      return t('matchplay');
+    case 'matchWon':
+      return t.rich('winnerWon', { name: list.format(spec.names), margin: spec.margin, gold });
+    case 'won':
+    case 'shared':
+    case 'sharedMany': {
+      const { text, at } = resultText(spec.result, t);
+      const names = spec.kind === 'sharedMany' ? '' : list.format(spec.names);
+      const base = spec.kind === 'won' ? 'headlineWon' : spec.kind === 'shared' ? 'headlineShared' : 'headlineSharedMany';
+      return t.rich(at ? `${base}At` : base, { names, result: text, gold });
+    }
   }
 }
 
-/** The matchplay band's headline as rendered (also sizes the card). */
-function matchHeadlineText(model: ShareCardModel | null, t: ShareT): string {
-  return model?.match ? renderMatchHeadline(model.match.headline, t) : t('matchplay');
+/** Marks the gold part of a rich-text message; `inlineWords` reads it back. */
+function Gold({ children }: { children?: ReactNode }) {
+  return <>{children}</>;
+}
+
+type Word = { text: string; gold: boolean };
+
+/** Rich text as a flat list of words, each marked gold or not. */
+function inlineWords(node: ReactNode, gold = false): Word[] {
+  if (node === null || node === undefined || typeof node === 'boolean') return [];
+  if (Array.isArray(node)) return node.flatMap((n) => inlineWords(n, gold));
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node)
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((text) => ({ text, gold }));
+  }
+  if (isValidElement(node)) {
+    const { children } = node.props as { children?: ReactNode };
+    return inlineWords(children, gold || node.type === Gold);
+  }
+  return [];
+}
+
+/** Joins a run of gold words into one item, so «38 poeng» never splits across lines. */
+function keepGoldTogether(words: Word[]): Word[] {
+  const out: Word[] = [];
+  for (const w of words) {
+    const last = out[out.length - 1];
+    if (w.gold && last?.gold) last.text += ` ${w.text}`;
+    else out.push({ ...w });
+  }
+  return out;
+}
+
+/**
+ * The headline's words in lines. A result headline breaks before its
+ * preposition, as the artboard does («Marte vant» / «med 38 poeng»); the other
+ * headlines run as one block that wraps on width.
+ */
+function headlineWordLines(words: Word[], spec: HeadlineSpec): Word[][] {
+  const resultHeadline =
+    spec.kind === 'won' || spec.kind === 'shared' || spec.kind === 'sharedMany';
+  const gold = words.findIndex((w) => w.gold);
+  if (!resultHeadline || gold < 1) return [words];
+  return [words.slice(0, gold - 1), words.slice(gold - 1)];
+}
+
+/** The lines as one string, «\n» between them, for `headlineLayout`. */
+function lineText(lines: Word[][]): string {
+  return lines.map((line) => line.map((w) => w.text).join(' ')).join('\n');
+}
+
+/**
+ * Text with a gold part, drawn word by word. Satori cannot mix styled spans
+ * into one running line (a string next to a span becomes two flex items that
+ * lose the space between them), so each word is its own flex item that wraps
+ * like text, with `gap` standing in for the space. Each entry of `lines` is
+ * its own wrapping block.
+ */
+function InlineText({
+  lines,
+  gap,
+  italic = false,
+}: {
+  lines: Word[][];
+  gap: number;
+  italic?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {lines.map((words, li) => (
+        <div key={li} style={{ display: 'flex', flexWrap: 'wrap', columnGap: gap }}>
+          {keepGoldTogether(words).map((w, i) => (
+            <span
+              key={i}
+              style={
+                w.gold
+                  ? { color: ACCENT_ON_STRONG, ...(italic ? { fontStyle: 'italic' } : {}) }
+                  : undefined
+              }
+            >
+              {w.text}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** One row of the card, before it is drawn. */
+type CardRow = {
+  /** The rank printed in the medallion; null for a matchplay side. */
+  rank: number | null;
+  name: string;
+  /** The figure on the right; null on a losing or halved matchplay side. */
+  figure: string | null;
+  winner: boolean;
+};
+
+function placementRows(model: ShareCardModel): CardRow[] {
+  const winnerRank = model.winners.length > 0 ? model.winners[0].rank : null;
+  return model.podium.slice(0, 3).map((r: ShareCardRow) => ({
+    rank: r.rank,
+    name: rowDisplayName(r.memberNames),
+    figure: scoreFigure(r.score),
+    winner: winnerRank !== null && r.rank === winnerRank,
+  }));
+}
+
+function matchRows(model: ShareCardModel): CardRow[] {
+  const match = model.match;
+  if (!match) return [];
+  const margin = match.headline.kind === 'winner' ? match.headline.margin : null;
+  return match.sides.map((side) => ({
+    rank: null,
+    name: rowDisplayName(side.memberNames),
+    figure: side.won ? margin : null,
+    winner: side.won,
+  }));
 }
 
 /**
@@ -79,10 +231,12 @@ function matchHeadlineText(model: ShareCardModel | null, t: ShareT): string {
  * player fires into a group chat via the Web Share API — self-contained so
  * recipients never hit the auth wall a shared *link* would.
  *
- * The card is personalized for the signed-in user, read from the session —
- * there is no `?p=` override (#2312): a participant outside the top 3 gets a
- * «Din runde»-strip; a participant in the top 3 is highlighted in the podium;
- * a signed-in non-participant gets the neutral card.
+ * A fixed 1080×1350 portrait on forest green (#2319): who won in the headline,
+ * and just the podium (three rows, two sides in matchplay) under it. The card
+ * is the same for everyone who fetches it — it has no row for the person who
+ * shares and no side-prize badges, so nothing on it depends on the session.
+ * The session only opens the gate (#2312): a participant or not, `?p=` is
+ * ignored.
  *
  * Only `status='finished'` games render — never leak in-progress scores via an
  * image. A finished game is NOT world-readable in RLS (#1542); the data is read
@@ -94,8 +248,6 @@ function matchHeadlineText(model: ShareCardModel | null, t: ShareT): string {
  * which `ImageResponse` and the admin client both need.
  */
 
-const WIDTH = 1080;
-
 function osloDate(iso: string | null, locale: AppLocale): string | null {
   if (!iso) return null;
   try {
@@ -103,7 +255,8 @@ function osloDate(iso: string | null, locale: AppLocale): string | null {
       timeZone: 'Europe/Oslo',
       day: 'numeric',
       month: 'long',
-    }).format(new Date(iso));
+      // Satori draws a no-break space wider than a space.
+    }).format(new Date(iso)).replace(/\u00a0/g, ' ');
   } catch {
     return null;
   }
@@ -121,19 +274,18 @@ export async function GET(
   const resolvedLocale: AppLocale = hasLocale(routing.locales, locale)
     ? locale
     : routing.defaultLocale;
-  const t = await getTranslations({
-    locale: resolvedLocale,
-    namespace: 'leaderboard.shareCard',
-  });
+  const [t, tModes] = await Promise.all([
+    getTranslations({ locale: resolvedLocale, namespace: 'leaderboard.shareCard' }),
+    getTranslations({ locale: resolvedLocale, namespace: 'modes' }),
+  ]);
   const playerFallback = t('playerFallback');
   // Gate: signed in + finished game, on purpose — owner choice B in #1632, the
   // same gate as `leaderboard/page.tsx` and `leaderboard/export/route.ts`. The
   // data below is read with the service role, so this check IS the access
   // control. Tighten or loosen it here and change those two in the same commit.
-  // The sharer is the session user only (#2312); a non-participant gets the
-  // neutral card.
-  const sharerId = await getProxyVerifiedUserId();
-  if (!sharerId) return notFound();
+  // The session opens the gate and nothing more: the card is neutral (#2319).
+  const viewerId = await getProxyVerifiedUserId();
+  if (!viewerId) return notFound();
 
   const gwp = await getGameWithPlayers(id);
   if (!gwp || gwp.game.status !== 'finished') return notFound();
@@ -141,34 +293,30 @@ export async function GET(
   const { game, players } = gwp;
   const admin = getAdminClient();
 
-  const [result, holesRes, courseRes, gameMetaRes, sideWinners] =
-    await Promise.all([
-      // #2217: a cup match on 9 holes is scored over its own holes, and a
-      // derived single reads the host's strokes — like the stored result
-      // (runFinishPipeline). Without them a front9 match came out halved and
-      // a derived single had no winner on the card.
-      buildModeResultForGame(admin, {
-        id: game.id,
-        game_mode: game.game_mode,
-        mode_config: game.mode_config,
-        course_id: game.course_id,
-        hole_segment: game.hole_segment,
-        source_game_id: game.source_game_id,
-      }),
-      admin
-        .from('course_holes')
-        .select('hole_number, par_mens')
-        .eq('course_id', game.course_id)
-        .returns<{ hole_number: number; par_mens: number }[]>(),
-      admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
-      admin.from('games').select('ended_at').eq('id', game.id).single<{ ended_at: string | null }>(),
-      // The sharer's actual notable side-tournament wins this round (Turkey,
-      // flest birdier, Konge av par 3, Snowman, LD/CTP …) — varies per round.
-      computeSharerSideAwards(admin, game, sharerId, 3),
-    ]);
+  const [result, holesRes, courseRes, gameMetaRes] = await Promise.all([
+    // #2217: a cup match on 9 holes is scored over its own holes, and a
+    // derived single reads the host's strokes — like the stored result
+    // (runFinishPipeline). Without them a front9 match came out halved and
+    // a derived single had no winner on the card.
+    buildModeResultForGame(admin, {
+      id: game.id,
+      game_mode: game.game_mode,
+      mode_config: game.mode_config,
+      course_id: game.course_id,
+      hole_segment: game.hole_segment,
+      source_game_id: game.source_game_id,
+    }),
+    admin
+      .from('course_holes')
+      .select('hole_number, par_mens')
+      .eq('course_id', game.course_id)
+      .returns<{ hole_number: number; par_mens: number }[]>(),
+    admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
+    admin.from('games').select('ended_at').eq('id', game.id).single<{ ended_at: string | null }>(),
+  ]);
 
   const courseName = courseRes.data?.name ?? null;
-  // Par and the «N hull» meta line cover the game's own holes (#2217), same
+  // Par and the «9 hull» meta note cover the game's own holes (#2217), same
   // filter as the round report (generateRoundReport.ts).
   const holeRows = (holesRes.data ?? []).filter((h) =>
     isHoleInSegment(h.hole_number, game.hole_segment),
@@ -176,22 +324,21 @@ export async function GET(
   const parByHole = new Map(holeRows.map((h) => [h.hole_number, h.par_mens]));
   const holeCount = holeRows.length;
   const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale);
-  // Satori wraps on spaces but clips a single long unbroken token; cap the
-  // name so pathological/very-long titles stay ≤2 lines and never overflow.
-  const rawName = localizeGameName(game.name, courseName, resolvedLocale);
-  const gameName = rawName.length > 30 ? `${rawName.slice(0, 29).trimEnd()}…` : rawName;
+  const gameName = localizeGameName(game.name, courseName, resolvedLocale);
+  const kicker = cardKicker(gameName, courseName);
 
+  // Public names («Marte L.»), the same as the sign-up page shows (#2319).
   const nameByUserId = new Map<string, string>();
   for (const p of players) {
     if (p.users) {
-      nameByUserId.set(
-        p.user_id,
-        formatRevealName(p.users.name ?? playerFallback, p.users.nickname),
-      );
+      nameByUserId.set(p.user_id, formatPublicName(p.users) ?? playerFallback);
     }
   }
 
-  const { fonts, hasFraunces, hasInter } = await loadFonts();
+  const { fonts, hasFraunces, hasInter } = await loadFonts({
+    frauncesItalic: true,
+    inter600: true,
+  });
   const serif = hasFraunces ? 'Fraunces' : 'serif';
   const sans = hasInter ? 'Inter' : 'sans-serif';
 
@@ -202,23 +349,39 @@ export async function GET(
       : buildShareCardData({
           result,
           nameByUserId,
-          sharerId,
+          sharerId: null,
           parByHole,
-          sideWinners,
+          sideWinners: [],
           playerFallback,
         });
 
-  const metaParts = [
-    dateLabel,
-    courseName,
-    holeCount ? t('holes', { n: holeCount }) : null,
-  ].filter(Boolean);
+  const spec = headlineSpec(model);
+  const gold = (chunks: ReactNode) => <Gold>{chunks}</Gold>;
+  // The headline breaks before its preposition when that fits the artboard's
+  // 116px on three lines; otherwise it runs as one wrapping block.
+  const headlineWords = inlineWords(headlineNode(spec, t, resolvedLocale, gold));
+  const headlineVariants = [headlineWordLines(headlineWords, spec), [headlineWords]];
+  const headlineChoice = chooseHeadline(headlineVariants.map(lineText));
+  const headlineLines = headlineVariants[headlineChoice.index];
 
-  const cardHeight = computeCardHeight(model, {
-    nameLines: gameName.length > 16 ? 2 : 1,
-    hasMeta: metaParts.length > 0,
-    headline: matchHeadlineText(model, t),
+  const activePlayers = players.filter((p) => !p.withdrawn_at).length;
+  const metaParts = [
+    tModes(formatDisplayLabelKey(game.game_mode, game.mode_config) as Parameters<typeof tModes>[0]),
+    t('players', { n: activePlayers }),
+    dateLabel,
+    holeCount === 9 ? t('holes', { n: holeCount }) : null,
+  ].filter(Boolean);
+  const meta = metaParts.join(' · ');
+
+  const rows: CardRow[] =
+    model === null ? [] : model.band === 'matchplay' ? matchRows(model) : placementRows(model);
+  const cardHeight = shareCardHeight(model, {
+    headlineLines: headlineChoice.lines,
+    headlineFontSize: headlineChoice.fontSize,
+    kicker,
+    meta,
   });
+  const upper = (text: string) => text.toLocaleUpperCase(resolvedLocale === 'en' ? 'en' : 'nb');
 
   return new ImageResponse(
     (
@@ -228,310 +391,190 @@ export async function GET(
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: LINEN,
-          padding: 72,
+          position: 'relative',
+          background: FOREST,
+          padding: '68px 72px',
           fontFamily: sans,
+          color: ON_STRONG,
         }}
       >
+        {/* Two hills along the bottom edge, the artboard's paths in full size. */}
+        <svg
+          width={SHARE_CARD_WIDTH}
+          height={SHARE_CARD_HEIGHT}
+          viewBox="0 0 540 675"
+          style={{ position: 'absolute', left: 0, bottom: 0 }}
+        >
+          <path
+            d="M-40 560 C 120 500, 260 620, 420 540 S 600 520, 620 560 L620 700 L-40 700 Z"
+            fill={HILL_FAR}
+          />
+          <path
+            d="M-40 610 C 140 570, 300 660, 460 600 S 620 590, 640 620 L640 700 L-40 700 Z"
+            fill={HILL_NEAR}
+          />
+        </svg>
+
         {/* Header row */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            minHeight: 54,
           }}
         >
-          <OgWordmark fontFamily={serif} fontSize={56} fontWeight={500} />
+          <OgWordmark fontFamily={serif} fontSize={44} fontWeight={600} color={ON_STRONG} />
+          <span
+            style={{
+              fontSize: 24,
+              fontWeight: 600,
+              letterSpacing: 5.76,
+              color: ON_STRONG_MUTED,
+            }}
+          >
+            {upper(t('finalResult'))}
+          </span>
+        </div>
+
+        {/* Kicker, headline and meta line */}
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 68 }}>
+          <span
+            style={{
+              fontSize: 26,
+              fontWeight: 600,
+              letterSpacing: 6.76,
+              color: ON_STRONG_MUTED,
+            }}
+          >
+            {upper(kicker)}
+          </span>
           <div
             style={{
               display: 'flex',
-              background: CHAMP_PILL,
-              borderRadius: 999,
-              paddingTop: 12,
-              paddingBottom: 12,
-              paddingLeft: 28,
-              paddingRight: 28,
-            }}
-          >
-            <span style={{ fontSize: 28, color: CHAMP_DARK }}>{t('finalResult')}</span>
-          </div>
-        </div>
-
-        {/* Game name + meta — grouped so Satori reserves the (possibly
-            multi-line) title height before the meta line. */}
-        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 36 }}>
-          <span
-            style={{
+              marginTop: 20,
               fontFamily: serif,
-              fontSize: 64,
-              fontWeight: 600,
-              color: FOREST,
-              lineHeight: 1.12,
+              fontSize: headlineChoice.fontSize,
+              fontWeight: 500,
+              lineHeight: 1.02,
+              color: ON_STRONG,
             }}
           >
-            {gameName}
-          </span>
-          {metaParts.length > 0 && (
-            <span style={{ fontSize: 32, color: MUTED, marginTop: 16 }}>
-              {metaParts.join(' · ')}
-            </span>
-          )}
+            <InlineText
+              lines={headlineLines}
+              gap={Math.round(headlineChoice.fontSize * 0.22)}
+              italic
+            />
+          </div>
+          <span style={{ fontSize: 30, color: ON_STRONG_META, marginTop: 20 }}>{meta}</span>
         </div>
 
-        <div style={{ height: 2, background: HAIRLINE, marginTop: 32, marginBottom: 8 }} />
-
-        {/* Body */}
-        {model === null ? (
-          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: serif, fontSize: 48, color: TAUPE }}>{t('gameFinished')}</span>
-          </div>
-        ) : model.band === 'matchplay' ? (
-          <MatchplayBody model={model} serif={serif} t={t} />
-        ) : (
-          <PlacementBody model={model} serif={serif} t={t} />
-        )}
-
-        {/* Side tournaments */}
-        {model && model.sideTournaments.length > 0 && (
-          <div style={{ display: 'flex', marginTop: 28, gap: 20 }}>
-            {model.sideTournaments.slice(0, 3).map((s, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flex: 1,
-                  // Champagne tint marks the sharer's own achievement; others
-                  // stay neutral white and name whoever took them.
-                  background: s.isSharer ? CHAMP_TINT : WHITE,
-                  border: `2px solid ${HAIRLINE}`,
-                  borderRadius: 24,
-                  paddingTop: 22,
-                  paddingBottom: 22,
-                  paddingLeft: 28,
-                  paddingRight: 28,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 32,
-                    fontWeight: 500,
-                    color: s.isSharer ? CHAMP_DARK : FOREST,
-                  }}
-                >
-                  {s.label}
-                </span>
-                {!s.isSharer && s.winnerName ? (
-                  <span style={{ fontSize: 26, color: MUTED, marginTop: 6 }}>{s.winnerName}</span>
-                ) : null}
-              </div>
+        {/* The podium: up to three rows, two sides in matchplay */}
+        {rows.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 60, gap: 20 }}>
+            {rows.map((row, i) => (
+              <ResultRow key={i} row={row} serif={serif} />
             ))}
           </div>
         )}
 
-        {/* Footer pinned to bottom */}
-        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto' }}>
-          <div style={{ height: 2, background: HAIRLINE, marginBottom: 24 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontFamily: serif, fontSize: 34, fontWeight: 500, color: FOREST }}>
-              tornygolf.no
-            </span>
-            <span style={{ fontSize: 26, color: '#8C8475', marginTop: 8 }}>
-              {t('tagline')}
-            </span>
+        {/* Bottom line pinned to the bottom */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            marginTop: 'auto',
+          }}
+        >
+          <div style={{ display: 'flex', fontSize: 26, color: ON_STRONG_MUTED }}>
+            <InlineText lines={[inlineWords(t.rich('taglinePun', { gold }))]} gap={6} />
           </div>
+          <span style={{ fontSize: 26, fontWeight: 600, color: ON_STRONG }}>tornygolf.no</span>
         </div>
       </div>
     ),
     {
-      width: WIDTH,
+      width: SHARE_CARD_WIDTH,
       height: cardHeight,
       fonts: fonts.length > 0 ? fonts : undefined,
       headers: {
-        // Personalized per viewer (session cookie), so cache privately only.
         // The button prefetches once per leaderboard view; the recipient gets
-        // the shared *file*, never this URL — so no CDN sharing is needed.
+        // the shared *file*, never this URL — so no CDN sharing is needed, and
+        // the gate depends on the session cookie, so cache privately only.
         'Cache-Control': 'private, max-age=300',
       },
     },
   );
 }
 
-function PlacementBody({
-  model,
-  serif,
-  t,
-}: {
-  model: ShareCardModel;
-  serif: string;
-  t: ShareT;
-}) {
-  // A tied first place gets one hero block per winner (#2318).
-  const rest = model.podium.slice(model.winners.length);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
-      {/* Winner blocks */}
-      {model.winners.map((winner, i) => (
-        <div
-          key={`winner-${i}`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            background: CHAMP_TINT,
-            border: `2px solid ${HAIRLINE}`,
-            borderRadius: 32,
-            padding: 36,
-            marginTop: i === 0 ? 0 : 16,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 110,
-              height: 110,
-              borderRadius: '50%',
-              background: CHAMP,
-            }}
-          >
-            <span style={{ fontFamily: serif, fontSize: 60, fontWeight: 600, color: FOREST }}>1</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 32, flex: 1 }}>
-            <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>{t('winner')}</span>
-            <span style={{ fontFamily: serif, fontSize: 56, fontWeight: 500, color: FOREST, marginTop: 4 }}>
-              {winner.name}
-            </span>
-            <span style={{ fontSize: 36, color: TAUPE, marginTop: 8 }}>
-              {renderScore(winner.score, t)}
-            </span>
-          </div>
-        </div>
-      ))}
-
-      {/* Runner-up rows */}
-      {rest.map((row) => (
-        <div
-          key={row.rank}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            paddingTop: 26,
-            paddingBottom: 26,
-            borderBottom: `2px solid ${ROW_HAIRLINE}`,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              background: row.isSharer ? CHAMP_PILL : DISC,
-            }}
-          >
-            <span style={{ fontSize: 32, fontWeight: 500, color: row.isSharer ? CHAMP_DARK : TAUPE }}>
-              {row.rank}
-            </span>
-          </div>
-          <span
-            style={{
-              fontSize: 40,
-              color: row.isSharer ? CHAMP_DARK : FOREST,
-              fontWeight: row.isSharer ? 500 : 400,
-              marginLeft: 28,
-              flex: 1,
-            }}
-          >
-            {row.name}
-          </span>
-          <span style={{ fontSize: 36, color: MUTED }}>{renderScore(row.score, t)}</span>
-        </div>
-      ))}
-
-      {/* Sharer's own row — shown when the sharer finished outside the top 3.
-          Named + champagne-highlighted so recipients see exactly who it is. A
-          "···" marker signals a jump down the field when ranks are skipped. */}
-      {model.sharerStrip && (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {model.sharerStrip.rank > model.podium.length + 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 6 }}>
-              <span style={{ fontSize: 36, color: MUTED, letterSpacing: '6px' }}>···</span>
-            </div>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: CHAMP_TINT,
-              border: `2px solid ${HAIRLINE}`,
-              borderRadius: 24,
-              paddingTop: 22,
-              paddingBottom: 22,
-              paddingLeft: 24,
-              paddingRight: 32,
-              marginTop: 16,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: CHAMP_PILL,
-              }}
-            >
-              <span style={{ fontSize: 32, fontWeight: 500, color: CHAMP_DARK }}>
-                {model.sharerStrip.rank}
-              </span>
-            </div>
-            <span
-              style={{ fontSize: 40, fontWeight: 500, color: CHAMP_DARK, marginLeft: 28, flex: 1 }}
-            >
-              {model.sharerStrip.name}
-            </span>
-            <span style={{ fontSize: 36, color: TAUPE }}>
-              {renderScore(model.sharerStrip.score, t)}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+/** The medallion's fill: gold for a winner, silver for 2, bronze for 3. */
+function medallionFill(rank: number, winner: boolean): Record<string, string> {
+  if (winner) return { background: CHAMP };
+  if (rank === 2) return { backgroundImage: MEDAL_SILVER };
+  if (rank >= 3) return { backgroundImage: MEDAL_BRONZE };
+  // Rank 1 without a winner (a skins round nobody won): a plain disc, no gold.
+  return { background: 'rgba(236,229,210,0.18)' };
 }
 
-function MatchplayBody({
-  model,
-  serif,
-  t,
-}: {
-  model: ShareCardModel;
-  serif: string;
-  t: ShareT;
-}) {
-  const headline = matchHeadlineText(model, t);
+function ResultRow({ row, serif }: { row: CardRow; serif: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
-      <div
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        background: row.winner ? 'rgba(236,229,210,0.1)' : 'rgba(236,229,210,0.06)',
+        ...(row.winner ? { border: '2px solid rgba(201,169,97,0.7)' } : {}),
+        borderRadius: 32,
+        padding: '24px 32px',
+      }}
+    >
+      {row.rank !== null && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 76,
+            height: 76,
+            borderRadius: 999,
+            flexShrink: 0,
+            marginRight: 28,
+            ...medallionFill(row.rank, row.winner),
+          }}
+        >
+          <span style={{ fontFamily: serif, fontSize: 36, fontWeight: 600, color: MEDAL_INK }}>
+            {row.rank}
+          </span>
+        </div>
+      )}
+      <span
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          background: CHAMP_TINT,
-          border: `2px solid ${HAIRLINE}`,
-          borderRadius: 32,
-          padding: 48,
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 0,
+          fontFamily: serif,
+          fontSize: 48,
+          fontWeight: 500,
+          color: ON_STRONG,
         }}
       >
-        <span style={{ fontSize: 28, color: CHAMP_DARK, letterSpacing: '2px' }}>{t('matchplay')}</span>
-        <span style={{ fontFamily: serif, fontSize: 64, fontWeight: 500, color: FOREST, marginTop: 12 }}>
-          {headline}
+        {row.name}
+      </span>
+      {row.figure !== null && (
+        <span
+          style={{
+            flexShrink: 0,
+            marginLeft: 28,
+            fontFamily: serif,
+            fontSize: 52,
+            fontWeight: 600,
+            color: row.winner ? ACCENT_ON_STRONG : ON_STRONG,
+          }}
+        >
+          {row.figure}
         </span>
-      </div>
+      )}
     </div>
   );
 }
