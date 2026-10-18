@@ -254,10 +254,11 @@ Matrisen bor i én kommentar på #1954, og den oppdateres på plass:
 [Paritetsmatrisen N8 v2](https://github.com/jdlarssen/golf-app/issues/1954#issuecomment-6254489176).
 Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 
-- **iOS-kolonnen (18.10.2026)** gjelder JS-en fra `origin/main` ed58f7e1d pluss
-  rettingene A2 og A4 i samme PR. Den kjørte i dev-varianten mot `torny-staging`.
-  Butikkandidaten **1.2.0 (4)** har samme JS fram til ed58f7e1d. Rettingene kommer med i
-  neste kandidat.
+- **iOS-kolonnen (18.10.2026)** kjørte i dev-varianten mot `torny-staging`, med JS-en fra
+  `origin/main` ed58f7e1d. Det er samme JS som i butikkandidaten **1.2.0 (4)**. Avvikene
+  den fant, A1–A4 (A2 og A4 rettet, A1 og A3 bygget etter eierens svar), er i #2609. De ble
+  prøvd på nytt i simulatoren på den nye JS-en (A1, A3, og A4 med fem tavler) og kommer med
+  i neste kandidat.
 - **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
   versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
   appen, hører til der.
