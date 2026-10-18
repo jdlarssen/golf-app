@@ -245,10 +245,12 @@
 
   /* Settlement receipt (#2296): the paper, its dashed rules and the arrow
    * between two names, and the plus and minus totals — values from the
-   * artboard «Forslag: oppgjøret som kvittering». Their own tokens, not
-   * palette: only the receipt uses them. */
-  --receipt-paper: #fbf9f3;
-  --receipt-rule: #9a8f7c;
+   * artboard «Forslag: oppgjøret som kvittering». The paper is the
+   * invitation card's paper and the rule is the wizard's dashed line, so
+   * those two point at their tokens (and follow them at night); the totals
+   * are the receipt's own. */
+  --receipt-paper: var(--invitation-paper);
+  --receipt-rule: var(--slot-dashed);
   --receipt-plus: #1f6b3a;
   --receipt-minus: #a33a2f;
 
@@ -457,10 +459,8 @@
     --invitation-avatar-3: #94bf96;
 
     /* Settlement receipt (#2296) — see :root. The artboard is light only:
-     * the paper is the card surface, the rule is --slot-dashed at night,
-     * and the totals take the night success and danger text. */
-    --receipt-paper: var(--surface);
-    --receipt-rule: #8a8170;
+     * the paper and rule follow their tokens, and the totals take the night
+     * success and danger text. */
     --receipt-plus: var(--success-text);
     --receipt-minus: var(--danger);
 
@@ -597,8 +597,6 @@
   --invitation-avatar-1: #2d5a40;
   --invitation-avatar-2: #5a8a66;
   --invitation-avatar-3: #94bf96;
-  --receipt-paper: var(--surface);
-  --receipt-rule: #8a8170;
   --receipt-plus: var(--success-text);
   --receipt-minus: var(--danger);
   --danger-deep: #c46868;
