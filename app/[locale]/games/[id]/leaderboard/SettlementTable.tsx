@@ -96,6 +96,9 @@ export function SettlementTable({
       totalsHeading: `${t('totalHeading')}:`,
     });
     window.clearTimeout(resetTimer.current);
+    // Clear the status first, so a second try (or a second failure) is
+    // announced again instead of leaving the same text in place.
+    setCopyState('idle');
     try {
       await navigator.clipboard.writeText(text);
       setCopyState('copied');
