@@ -301,13 +301,28 @@ bildene flates til RGB. iPad trengs ikke (`supportsTablet: false` i
 `native/app/app.json`). Fra april 2027 kreves også bilder for iPhone Duo for apper
 bygget med iOS 27.1 SDK eller nyere. Sjekk SDK-en før en innsending etter det.
 
-Nye bilder tas i del E7 av #2561, etter at tavlekjeden og PR C er merget, så de viser
-appen slik den sendes inn. Bildene fra `1.1.0 (3)` ligger i
-`~/Desktop/Tørny-skjermbilder/`, nummerert i den rekkefølgen de skal ligge i
-oppføringen: hjem, hull-føring, tavle, sluttresultat, profil. Avsnittene under
-forteller hvordan de ble tatt, og samme vei gjelder for de nye.
+### Bildene for 1.2.0
 
-### Hvordan de ble tatt — og hvorfor ikke mot prod
+Bildene for 1.2.0 ble tatt i del E7 av #2561, etter at tavlekjeden og PR C var merget.
+De ligger i [`native/assets/store/`](../../native/assets/store/), og README-en der
+forteller hvordan de ble laget:
+
+| Mappe | Plass i App Store Connect | Størrelse |
+|---|---|---|
+| `ios-6.9-1320x2868/` | «iPhone with Dynamic Island (large display)» (6,9") | 1320 × 2868 |
+| `ios-6.3-1206x2622/` | «iPhone with Dynamic Island (medium display)» (6,3"), påkrevd | 1206 × 2622 |
+
+Åtte bilder per størrelse, i rekkefølgen filnavnene har: hjem, hullet, tavla, utslaget
+(«Hvem sitt utslag ble brukt?»), runden er ferdig, godkjenning, resultat og lagtavla.
+Ingen kroner, ingen e-postadresse og bare oppdiktede spillere. Bildene viser koden på
+`main` `69a2d2dae`, samme kilde som bygget 1.2.0 (4).
+
+Bildene fra 1.1.0 (3) ligger i feltet for 6,5" i App Store Connect (og i
+`~/Desktop/Tørny-skjermbilder/` hos eieren): hjem, hull-føring, tavle, sluttresultat og
+profil. Ligger de igjen der, ser 6,5"-telefoner de gamle bildene, så de byttes ut når de
+nye lastes opp (E7-oppskriften i PR-tråden).
+
+### 1.1.0 (3): hvordan de ble tatt — og hvorfor ikke mot prod
 
 Den foretrukne veien var butikk-varianten mot **prod**, innlogget som
 review-kontoen gjennom den skjulte inngangen. Tre ting stoppet den, hver for seg
@@ -342,9 +357,9 @@ bare hvilken skjerm appen åpner på — skjermene selv er urørte. Også revers
 `npx jest app.config.test.ts src/lib/stagingGate.test.ts` er kjørt etter
 reverteringen (48 grønne, 2 snapshots) og er beviset på at fasitene står som før.
 
-### Fiksturen på staging
+### 1.1.0 (3): fiksturen på staging
 
-Fire oppdiktede spillere på et fantasidomene, der hovedpersonen — den ene som
+Bildene for 1.2.0 bruker den ikke (se README-en i `native/assets/store/`). Fire oppdiktede spillere på et fantasidomene, der hovedpersonen — den ene som
 vises på profil-skjermbildet — ligger på en `.example`-adresse. Den toppdomenen
 er reservert av RFC 2606 og kan aldri bli en ekte postkasse, så adressen i bildet
 kan ikke tilhøre noen. De spiller tre runder på Byneset North: «Søndagsrunden» (pågår, 7 hull tastet),

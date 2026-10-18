@@ -1,0 +1,48 @@
+# Butikkbildene for 1.2.0 (#2561, E7)
+
+Bildene eieren laster opp i App Store Connect og Play Console. Kravene og tekstene står i
+[`docs/native/app-store-metadata.md`](../../../docs/native/app-store-metadata.md) «Skjermbilder» og
+[`docs/native/play-store-metadata.md`](../../../docs/native/play-store-metadata.md) «Skjermbilder og
+feature-grafikk». Klikkstiene står i E7-oppskriften i PR-tråden.
+
+| Fil eller mappe | Hvor den lastes opp | Størrelse og format |
+|---|---|---|
+| `ios-6.9-1320x2868/` | App Store Connect, iPhone 6,9" («iPhone with Dynamic Island (large display)») | 8 bilder, 1320 × 2868, PNG uten alfakanal |
+| `ios-6.3-1206x2622/` | App Store Connect, iPhone 6,3" («iPhone with Dynamic Island (medium display)», påkrevd) | 8 bilder, 1206 × 2622, PNG uten alfakanal |
+| `android-1080x1920/` | Play Console, telefonskjermbilder | 8 bilder, 1080 × 1920 (9:16), PNG uten alfakanal |
+| `play-feature-graphic-1024x500.png` | Play Console, feature-grafikk | 1024 × 500, PNG uten alfakanal |
+| [`../../android/store_icon.png`](../../android/store_icon.png) | Play Console, app-ikon | 512 × 512, PNG med alfakanal (laget av `generate-icons.mjs`) |
+
+Bildene lastes opp i rekkefølgen filnavnene har:
+
+| Nr. | Skjerm | Alt-tekst (Play, maks 140 tegn) |
+|---|---|---|
+| 01 | Hjem | Hjem-siden med runden som pågår, neste start og forrige runde |
+| 02 | Hullet | Hull 7 med slagene og poengene til hele flighten |
+| 03 | Tavla | Tavla mens turneringen pågår, med tolv spillere i tre flighter |
+| 04 | Utslaget | Texas scramble: laget taster scoren og velger hvem sitt utslag de brukte |
+| 05 | Runden er ferdig | Runden er ferdig: poeng, birdier, plassering og dagens beste hull |
+| 06 | Godkjenning | Godkjenn kortet til en makker i flighten, eller send det tilbake |
+| 07 | Resultat | Sluttresultatet med vinneren øverst på tavla |
+| 08 | Lagtavla | Lagtavla etter en lagkonkurranse, med vinnerlaget øverst |
+| Feature-grafikk | Ordmerket og slagordet | Tørny. Fyr opp golfturneringen på et par minutter |
+
+## Slik ble de laget
+
+- **Koden:** `main` på `69a2d2dae`, samme kilde som bygget 1.2.0 (4) i TestFlight. Appen kjørte
+  som Debug-bygg med JavaScript fra Metro, i en iPhone 17 Pro Max-simulator (iOS 26.5) og i
+  Android-emulatoren `torny_api36` (Pixel 7-profil, API 36) med skjermen satt til 1080 × 1920.
+- **Dataene:** en midlertidig probe byttet bare `native/app/src/supabase.ts` mot en lokal fikstur.
+  Alt annet i appen var ekte: hjem-lista, spillhentingen, den lokale basen, poengutregningen og
+  tavlene. Spillerne er tolv oppdiktede personer med genererte id-er. Banen (Byneset North: hull,
+  par, indeks og slope for herrer) er lest fra staging. Tee-navnet «Gul» og slope og CR for damer er
+  satt i fiksturen.
+  Ingenting ble skrevet til staging eller prod, og ingen e-postadresse vises. Proben og fiksturen
+  er ikke committet.
+- **Statuslinja:** klokka står på 15:41, i tråd med «God dag» på Hjem. iOS brukte
+  `simctl status_bar`, og Android brukte demomodus uten varselikoner.
+- **Etterbehandling:** alle bildene er flatet til RGB uten alfakanal. 6,3"-settet er det samme
+  som 6,9"-settet, skalert likt i begge retninger (faktor 0,9142) og beskåret 1 px i bredden.
+- **Feature-grafikken:** `node native/assets/store/generate-feature-graphic.mjs` lager den på nytt
+  fra ordmerke-masteren. Skriptet feiler hvis størrelsen er feil, hvis bildet har alfakanal eller
+  hvis Fraunces ikke lastet.
