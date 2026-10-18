@@ -130,6 +130,26 @@ describe('refreshHomeCards', () => {
     expect(list.cards).toHaveLength(1);
     expect(await cacheRow()).toBeUndefined();
   });
+
+  it('venter på en åpen transaksjon i stedet for å feile med «database is locked» (#1954 A4)', async () => {
+    // Hjem henter lista mens en drain eller en slag-seed står i `withTxn` på
+    // en egen forbindelse. Cache-skrivingen må stå i samme kø.
+    mocks().currentDeviceUserId.mockResolvedValue(ME);
+    routeOneList();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const openTxn = db().withTxn(() => gate);
+
+    const refreshing = home().refreshHomeCards(ME);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    release();
+
+    await expect(refreshing).resolves.toMatchObject({ cards: [{ gameId: 'game-1' }] });
+    await openTxn;
+    expect(await cacheRow()).toBeDefined();
+  });
 });
 
 // #2254: startboden trenger mer fra samme spørring — formatet, segmentet,

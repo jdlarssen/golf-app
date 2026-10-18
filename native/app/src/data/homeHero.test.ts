@@ -21,6 +21,9 @@ jest.mock('./choices', () => ({
 }));
 jest.mock('./db', () => ({
   getDb: jest.fn(async () => ({})),
+  // #1954 A4: skrivinger står i transaksjonskøen; testen ser hvilken
+  // forbindelse de fikk.
+  withTxn: jest.fn(async (task: (txn: unknown) => Promise<unknown>) => task({ txn: true })),
   listScoresForGame: jest.fn(),
   getCacheEntry: jest.fn(),
   putCacheEntry: jest.fn(),
@@ -122,8 +125,11 @@ describe('forrige runde hentes komplett én gang (Hjem v2, #2385)', () => {
     await refreshFinishedRound('last');
     expect(bundleMod.refreshGameBundle).toHaveBeenCalledWith('last');
     expect(seedMod.seedGameScores).toHaveBeenCalledWith('last');
+    // Gjennom `withTxn`, ikke på den delte forbindelsen: seeden over skriver i
+    // en transaksjon, og en skriving utenfor køen gir «database is locked»
+    // på enheten (#1954 A4).
     expect(dbMod.putCacheEntry).toHaveBeenCalledWith(
-      {},
+      { txn: true },
       expect.objectContaining({ key: 'last-round:last' }),
     );
   });

@@ -34,14 +34,37 @@ function bindable(params: BindParams): BindParams {
   return stripped;
 }
 
+/**
+ * Bases med en åpen `withExclusiveTransactionAsync`. På enheten går den
+ * transaksjonen på en EGEN forbindelse og holder skrivelåsen; en skriving på
+ * den delte forbindelsen i mellomtiden får SQLITE_BUSY («database is locked»)
+ * med en gang, fordi ingen av forbindelsene har busy_timeout (#1954 A4).
+ * Lesinger går fint i WAL, så bare skrivinger avvises.
+ */
+const lockedBases = new WeakSet<BetterSqlite3.Database>();
+
+const WRITE_SQL = /^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i;
+
 export class MockSQLiteDatabase {
   private readonly raw: BetterSqlite3.Database;
+  /** Sann for forbindelsen en transaksjon kjører på. */
+  private readonly isTxnConnection: boolean;
 
-  constructor(raw: BetterSqlite3.Database) {
+  constructor(raw: BetterSqlite3.Database, isTxnConnection = false) {
     this.raw = raw;
+    this.isTxnConnection = isTxnConnection;
+  }
+
+  /** Enhetens SQLITE_BUSY for en skriving utenfor den åpne transaksjonen. */
+  private assertWritable(source: string): void {
+    if (this.isTxnConnection || !lockedBases.has(this.raw) || !WRITE_SQL.test(source)) return;
+    throw new Error(
+      "Calling the 'runAsync' function has failed\n→ Caused by: SQLiteErrorException: Error code 5: database is locked",
+    );
   }
 
   async execAsync(source: string): Promise<void> {
+    this.assertWritable(source);
     this.raw.exec(source);
   }
 
@@ -63,6 +86,7 @@ export class MockSQLiteDatabase {
     source: string,
     params?: BindParams,
   ): Promise<SQLiteRunResult> {
+    this.assertWritable(source);
     const statement = this.raw.prepare(source);
     const result =
       params === undefined ? statement.run() : statement.run(bindable(params));
@@ -74,21 +98,25 @@ export class MockSQLiteDatabase {
 
   /**
    * expo-sqlite kjører oppgaven på en EGEN forbindelse; en in-memory-base kan
-   * ikke deles mellom forbindelser, så her får oppgaven samme objekt. Det som
-   * betyr noe for testene er transaksjons-semantikken: kaster oppgaven, rulles
-   * ALT tilbake — det er den `writeScore` hviler på (score + kø-rad, aldri den
-   * ene uten den andre).
+   * ikke deles mellom forbindelser, så her får oppgaven et eget objekt over
+   * den samme motoren. To ting fra enheten er modellert: kaster oppgaven,
+   * rulles ALT tilbake — det er den `writeScore` hviler på (score + kø-rad,
+   * aldri den ene uten den andre). Og mens transaksjonen er åpen, avvises en
+   * skriving på den delte forbindelsen med «database is locked».
    */
   async withExclusiveTransactionAsync(
     task: (txn: MockSQLiteDatabase) => Promise<void>,
   ): Promise<void> {
     this.raw.exec('BEGIN IMMEDIATE;');
+    lockedBases.add(this.raw);
     try {
-      await task(this);
+      await task(new MockSQLiteDatabase(this.raw, true));
       this.raw.exec('COMMIT;');
     } catch (err: unknown) {
       if (this.raw.inTransaction) this.raw.exec('ROLLBACK;');
       throw err;
+    } finally {
+      lockedBases.delete(this.raw);
     }
   }
 
