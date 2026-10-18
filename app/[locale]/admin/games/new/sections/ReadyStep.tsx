@@ -332,7 +332,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     if (row.guestsOnly) {
       const missing = row.messages.filter((m) => m !== accountPlayerMessage);
       value = [
-        missing.length > 0 ? t('missingPrefix', { items: missing.join(', ') }) : null,
+        // A full stop ends the «Mangler: …» part before the guest sentence.
+        missing.length > 0 ? `${t('missingPrefix', { items: missing.join(', ') })}.` : null,
         // Amber: others can still sign up, so the sentence says «so far».
         t(guestOnly === 'warn' ? 'checklist.playersGuestsOnlyWarn' : 'checklist.playersGuestsOnly'),
       ]

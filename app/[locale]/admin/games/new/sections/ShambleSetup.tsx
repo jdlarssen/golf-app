@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FormSection, FormSectionHeading } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
@@ -70,6 +71,10 @@ export function ShambleSetup({
   const reasonFor = useTeamSizeReason();
   // The sizes and which of them fit the count live in teamFormatLimits (#2453).
   const sizes = selectableTeamSizes('shamble').sizes as readonly (3 | 4)[];
+  // #2570: what the organiser types, kept apart from the committed share so
+  // an emptied field never commits 0 (which would play the round gross under
+  // Netto). Leaving the field puts the last committed share back.
+  const [allowanceText, setAllowanceText] = useState(String(allowancePct));
   return (
     <FormSection legend={t('legend')}>
       <FormSectionHeading title={t('teamSizeLabel')} />
@@ -168,14 +173,18 @@ export function ShambleSetup({
           min={0}
           max={100}
           step={1}
-          value={allowancePct}
+          value={allowanceText}
           // Not locked with the format: like the general field, the share can
           // still change on a published round.
           onChange={(e) => {
-            // Only a whole 0–100 is committed, as in AllowanceField.
+            setAllowanceText(e.target.value);
+            // Only a whole 0–100 is committed, as in AllowanceField; an empty
+            // field is not 0.
+            if (e.target.value.trim() === '') return;
             const v = Number(e.target.value);
             if (Number.isInteger(v) && v >= 0 && v <= 100) onAllowanceChange(v);
           }}
+          onBlur={() => setAllowanceText(String(allowancePct))}
           inputClassName="tabular-nums"
         />
       )}
