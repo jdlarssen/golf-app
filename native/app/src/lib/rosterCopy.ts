@@ -114,8 +114,8 @@ export const PLAYER_WITHDRAW = {
  * Hvorfor en spillers eget trekk ikke gikk (#1954 A1), med webbens ord der
  * webben har dem: kapteinens nei får `captainHasTeamBody`, alle andre avslag
  * fra ruta webbens generelle feiltekst (webben viser bare de to). Det bare
- * appen kan møte — ingen nett, ingen sesjon, manglende adresse i bygget —
- * har ingen webbtekst og får appens egne setninger.
+ * appen kan møte (ingen nett, ingen sesjon, manglende adresse i bygget) har
+ * ingen webbtekst og får appens egne setninger.
  */
 export function describePlayerWithdrawFailure(reason: SelfWithdrawFailure): string {
   switch (reason) {

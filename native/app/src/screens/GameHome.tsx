@@ -56,6 +56,7 @@ import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
+import { GAME_LOAD_FAILED_TEXT } from '../lib/seedCopy';
 import {
   calendarEvent,
   slotField,
@@ -186,7 +187,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     return (
       <View style={ui.centered} testID="game-error">
         <Text style={ui.error}>
-          Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.
+          {`${GAME_LOAD_FAILED_TEXT} Sjekk nettet og prøv igjen.`}
         </Text>
       </View>
     );

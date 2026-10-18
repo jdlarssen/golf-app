@@ -75,7 +75,7 @@ import {
   type TeamBoardModel,
 } from '../lib/teamBoard';
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
-import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { CHOICES_MISSING_BOARD_TEXT, GAME_LOAD_FAILED_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { teeShotMinimum } from '../lib/teeShotTeams';
@@ -248,7 +248,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="leaderboard-spinner" />
         ) : (
-          <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
+          <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
         )}
       </View>
     );

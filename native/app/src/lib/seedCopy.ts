@@ -4,6 +4,13 @@
 // lokale. Feiler hentingen, ser et kort med bare telefonens slag ferdig ut, så
 // en linje sier det. Setningen finnes bare i appen og har ett hjem her.
 
+/**
+ * Når selve spillet ikke kom (første henting feilet, ingenting i cachen).
+ * Hull, tavla, «Hull for hull», scorekortet og godkjenningen viser den samme
+ * setningen (#1954 A2), og den har ett hjem her.
+ */
+export const GAME_LOAD_FAILED_TEXT = 'Fikk ikke tak i spillet.';
+
 export const SEED_FAILED_TEXT =
   'Fikk ikke hentet slagene fra serveren. Dette er det som ligger på telefonen.';
 
