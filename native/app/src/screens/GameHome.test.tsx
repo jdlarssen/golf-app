@@ -757,5 +757,43 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     expect(withdrawSelf).toHaveBeenCalledWith('game-1');
     alert.mockRestore();
   });
+
+  it('under runden: advarselen for et pågående spill, og spilleren blir på siden', async () => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'active', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+    const { withdrawSelf } = require('../data/withdrawSelf') as { withdrawSelf: jest.Mock };
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    withdrawSelf.mockClear();
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation,
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('player-withdraw')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('player-withdraw'));
+    expect(alert.mock.calls[0]![1]).toBe(
+      'Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.',
+    );
+    const fetchesBefore = refreshGameBundle.mock.calls.length;
+    const buttons = alert.mock.calls[0]![2] as { text: string; onPress?: () => void }[];
+    await act(async () => {
+      buttons.find((b) => b.text === 'Trekk meg fra spillet')!.onPress!();
+    });
+    await waitFor(() => expect(withdrawSelf).toHaveBeenCalledWith('game-1'));
+    // Bundelen hentes på nytt (banneret tar over), og appen blir på siden.
+    await waitFor(() => expect(refreshGameBundle.mock.calls.length).toBeGreaterThan(fetchesBefore));
+    expect(navigation.navigate).not.toHaveBeenCalledWith('Home');
+    alert.mockRestore();
+  });
 });
 
