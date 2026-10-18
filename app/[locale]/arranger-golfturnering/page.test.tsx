@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ArrangerGolfturneringPage from './page';
 import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
@@ -48,5 +48,38 @@ describe('ArrangerGolfturneringPage', () => {
         a: entry.acceptedAnswer.text,
       })),
     ).toEqual(sourceFaq);
+  });
+});
+
+// #2562, Type B: med appen ute byttes siste setning om påmelding, og
+// slutt-knappen heter «Hent appen».
+describe('ArrangerGolfturneringPage med appen ute (#2562)', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('on: påmeldingsavsnittet sier ikke lenger «ingen app»', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    const ui = await ArrangerGolfturneringPage();
+    const { container } = render(ui as React.ReactElement);
+    const guide = noMessages.arrangeGuide;
+
+    const section = container.querySelector(`#${guide.sections[2].id}`)!;
+    expect(section.textContent).toContain(
+      'Appen er gratis, men ingen må ha den.',
+    );
+    expect(container.textContent).not.toMatch(/ingen app å laste ned/i);
+    expect(screen.getByTestId('arrange-guide-demo-cta')).toHaveTextContent(
+      guide.ctaPrimaryLaunched,
+    );
+    expect(screen.getByText(guide.ctaBodyLaunched)).toBeInTheDocument();
+  });
+
+  it('ios: avsnittet byttes, men knappen er fortsatt demoen', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'ios');
+    const ui = await ArrangerGolfturneringPage();
+    const { container } = render(ui as React.ReactElement);
+    expect(container.textContent).not.toMatch(/ingen app å laste ned/i);
+    expect(screen.getByTestId('arrange-guide-demo-cta')).toHaveTextContent(
+      noMessages.arrangeGuide.ctaPrimary,
+    );
   });
 });

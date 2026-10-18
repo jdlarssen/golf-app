@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ArrangeAudiencePage from './page';
 import noMessages from '@/messages/no.json';
@@ -41,5 +41,21 @@ describe('ArrangeAudiencePage', () => {
         a: entry.acceptedAnswer.text,
       })),
     ).toEqual(source.faq);
+  });
+});
+
+// #2562, Type B: slutt-knappen heter «Hent appen» med appen i begge butikkene.
+describe('ArrangeAudiencePage med appen ute (#2562)', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('on: «Hent appen» i stedet for «Prøv demoen»', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    const ui = await ArrangeAudiencePage({
+      params: Promise.resolve({ audience: 'firmagolf', locale: 'no' }),
+    });
+    render(ui as React.ReactElement);
+    const cta = screen.getByTestId('arrange-guide-audience-demo-cta');
+    expect(cta).toHaveTextContent(noMessages.arrangeGuide.ctaPrimaryLaunched);
+    expect(cta).toHaveAttribute('href', '/demo');
   });
 });

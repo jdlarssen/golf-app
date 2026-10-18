@@ -16,6 +16,7 @@ import { LandingLiveBoard } from './LandingLiveBoard';
 import { FRAMES } from './landingLiveBoardFrames';
 import type { ArrangeAudience } from '@/lib/seo/arrangeAudiences';
 import type { AppLocale } from '@/i18n/routing';
+import { appLaunchFlag, appLaunchKey, isLaunchSwap } from '@/lib/app/appLaunch';
 
 /**
  * Offentlig forside (#1265, epic #1021 «Vindu ut»). Den anonyme grenen av `/`:
@@ -43,9 +44,19 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
     (entry): entry is NonNullable<typeof entry> => Boolean(entry),
   );
 
+  // #2562: bryteren for lanseringsdagen. `off` gir de gamle nøklene.
+  const launch = appLaunchFlag();
+
   // ETT array mater både synlig FAQ og FAQPage-JSON-LD (Googles krav om
-  // identisk tekst — oppfylt per konstruksjon).
-  const faq = t.raw('faq') as FaqEntry[];
+  // identisk tekst — oppfylt per konstruksjon). Med appen ute byttes svaret
+  // om appen (punkt 2) i arrayet, så JSON-LD-en følger med av seg selv.
+  const faq = [...(t.raw('faq') as FaqEntry[])];
+  if (isLaunchSwap('landing', 'faq.2', launch)) {
+    faq[2] = {
+      q: t('faq2Launched.q'),
+      a: t('faq2Launched.a', { stores: launch }),
+    };
+  }
 
   // Snarveiene under knappene går til undersidene av «Arranger golfturnering»,
   // med titlene fra «For hvem»-kortene lenger ned.
@@ -164,8 +175,9 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
               variant="onStrongGold"
               data-testid="anon-demo-cta"
               className="h-[54px] text-base"
+              appCta
             >
-              {t('hero.primaryCta')}
+              {t(appLaunchKey('landing', 'hero.primaryCta', launch))}
             </LinkButton>
             <LinkButton
               href="/login"
@@ -177,7 +189,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
             </LinkButton>
           </div>
           <p className="pt-3 text-center text-xs leading-[15px] text-on-strong/80">
-            {t('hero.trust')}
+            {t(appLaunchKey('landing', 'hero.trust', launch))}
           </p>
 
           <nav
@@ -210,7 +222,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
             <Step
               number={2}
               title={t('how.step2Title')}
-              body={t('how.step2Body')}
+              body={t(appLaunchKey('landing', 'how.step2Body', launch))}
               linkHref="/login"
               linkLabel={t('how.step2LinkLabel')}
             />
@@ -323,8 +335,8 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
             <LinkButton href="/login" full>
               {t('endCta.primaryCta')}
             </LinkButton>
-            <TextLink href="/demo" className="text-center">
-              {t('endCta.secondaryCta')}
+            <TextLink href="/demo" className="text-center" appCta>
+              {t(appLaunchKey('landing', 'endCta.secondaryCta', launch))}
             </TextLink>
           </div>
         </section>
@@ -337,7 +349,9 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </FooterLink>
           <FooterLink href="/spillformater">{t('footer.formats')}</FooterLink>
           <FooterLink href="/baner">{t('footer.courses')}</FooterLink>
-          <FooterLink href="/demo">{t('footer.demo')}</FooterLink>
+          <FooterLink href="/demo" appCta>
+            {t(appLaunchKey('landing', 'footer.demo', launch))}
+          </FooterLink>
           <FooterLink href="/finn-turneringer">
             {t('footer.openGames')}
           </FooterLink>

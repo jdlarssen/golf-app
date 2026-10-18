@@ -11,6 +11,7 @@ import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { appLaunchFlag, appLaunchKey, isLaunchSwap } from '@/lib/app/appLaunch';
 
 type Params = Promise<{ locale: string }>;
 
@@ -67,7 +68,13 @@ export async function generateMetadata({
 export default async function ArrangerGolfturneringPage() {
   const t = await getTranslations('arrangeGuide');
 
-  const sections = t.raw('sections') as GuideSection[];
+  // #2562: med appen ute byttes siste setning i avsnittet om påmelding
+  // («Ingen app å laste ned heller …»).
+  const launch = appLaunchFlag();
+  const sections = [...(t.raw('sections') as GuideSection[])];
+  if (isLaunchSwap('arrangeGuide', 'sections.2.body', launch)) {
+    sections[2] = { ...sections[2], body: t('sections2BodyLaunched') };
+  }
   const faq = t.raw('faq') as FaqEntry[];
 
   // Format-velgeren gjenbruker den delte kureringen (lib/formats/featuredFormats)
@@ -248,11 +255,16 @@ export default async function ArrangerGolfturneringPage() {
             {t('ctaHeading')}
           </h2>
           <p className="mt-2 font-sans text-[14px] leading-relaxed text-muted">
-            {t('ctaBody')}
+            {t(appLaunchKey('arrangeGuide', 'ctaBody', launch))}
           </p>
           <div className="mt-4 flex flex-col gap-3">
-            <LinkButton href="/demo" full data-testid="arrange-guide-demo-cta">
-              {t('ctaPrimary')}
+            <LinkButton
+              href="/demo"
+              full
+              data-testid="arrange-guide-demo-cta"
+              appCta
+            >
+              {t(appLaunchKey('arrangeGuide', 'ctaPrimary', launch))}
             </LinkButton>
             <LinkButton href="/" full variant="secondary">
               {t('ctaSecondary')}

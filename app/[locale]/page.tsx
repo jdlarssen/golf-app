@@ -58,6 +58,7 @@ import type { HoleSegment } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
 import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
 
 type SearchParams = Promise<{
   profile?: string | string[];
@@ -93,7 +94,8 @@ export async function generateMetadata({
   return {
     // Absolute (not the «%s – Tørny» template): the front page is navigation
     // search's landing surface — the template form would hide the brand name.
-    title: { absolute: t('metaTitle') },
+    // #2562: «i appen eller på nettet» når appen er ute.
+    title: { absolute: t(appLaunchKey('landing', 'metaTitle', appLaunchFlag())) },
     description: t('metaDescription'),
     alternates: { canonical: canonicalPath(locale, '/') },
   };
