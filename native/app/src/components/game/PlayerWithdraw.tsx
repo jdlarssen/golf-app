@@ -6,9 +6,10 @@
 // går gjennom samme rute og feiltekster som arrangørens «Trekk meg»
 // (`data/withdrawSelf.ts`, `describeSelfWithdrawFailure`).
 //
-// Før start slettes påmeldingen, så spilleren har ikke noe å gjøre på siden
-// etterpå: da går appen til Hjem, som nettsiden gjør. Under runden blir
-// spilleren stående, og trukket-banneret med «Angre trekk» tar over.
+// Slettes påmeldingen (`kept: false`, før start), har spilleren ikke noe å gjøre
+// på siden etterpå: da går appen til Hjem, som nettsiden gjør. Beholdes raden
+// (det myke trekket under runden), blir spilleren stående, og trukket-banneret
+// med «Angre trekk» tar over.
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { withdrawSelf } from '../../data/withdrawSelf';
@@ -44,7 +45,9 @@ export function PlayerWithdraw({
       const result = await withdrawSelf(gameId);
       if (!result.ok) {
         setNotice(describeSelfWithdrawFailure(result.reason));
-      } else if (kind === 'pre-start') {
+      } else if (!result.kept) {
+        // Påmeldingen er slettet: ingen side å bli på. Svaret avgjør, ikke
+        // `kind` fra da lenka ble tegnet: runden kan ha startet imens.
         onLeft();
         return;
       }

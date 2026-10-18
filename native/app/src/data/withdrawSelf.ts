@@ -55,6 +55,18 @@ export type SelfWithdrawResult =
   | { ok: false; reason: SelfWithdrawFailure };
 
 /**
+ * Svaret på et trekk (#1954 A1). `kept` er om `game_players`-raden finnes
+ * etterpå: `false` når påmeldingen ble slettet før start, `true` for det myke
+ * trekket i en pågående runde. Webben velger landing ut fra den, og det gjør
+ * appen også. Runden kan ha startet mens skjermen sto åpen, så det er svaret
+ * som avgjør. Mangler feltet, er svaret `true`: bli på siden og la bundelen vise
+ * hva som gjelder.
+ */
+export type WithdrawSelfResult =
+  | { ok: true; kept: boolean }
+  | { ok: false; reason: SelfWithdrawFailure };
+
+/**
  * Stien for ett spill. `encodeURIComponent` selv om id-en er en uuid fra vår
  * egen bundle: en sti bygget av data skal kodes der den bygges, ikke der noen
  * senere antar at den var trygg.
@@ -90,11 +102,11 @@ function failureForStatus(
 }
 
 /** Trekk deg selv fra runden. */
-export async function withdrawSelf(gameId: string): Promise<SelfWithdrawResult> {
+export async function withdrawSelf(gameId: string): Promise<WithdrawSelfResult> {
   const call = await callWebRoute(withdrawSelfPath(gameId), 'POST');
   if (!call.ok) return call;
 
-  if (call.status === 200) return { ok: true };
+  if (call.status === 200) return { ok: true, kept: call.body.kept !== false };
 
   return { ok: false, reason: failureForStatus(call.status, call.body) };
 }
