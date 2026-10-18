@@ -600,6 +600,9 @@ export async function reopenGame(gameId: string) {
           ended_at: null,
           round_report: null,
           finish_pipeline_at: null,
+          // #2298: a game finished again starts without a prize-giving on the
+          // big screen; the old ceremony's step belongs to the old result.
+          ceremony_step: null,
         })
         .eq('id', gameId)
         .select('id'),
@@ -626,6 +629,7 @@ export async function reopenGame(gameId: string) {
     // Same reason as the host patch above (#1856): a derived game reopened
     // with its marker still set would never get its tail re-run either.
     finish_pipeline_at: null,
+    ceremony_step: null,
   });
 
   await logAdminEvent({
