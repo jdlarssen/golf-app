@@ -52,6 +52,7 @@ type SearchParams = Promise<{
   // #2569: the team a removal left short, and how many are left on it.
   team?: string;
   count?: string;
+  missing?: string;
 }>;
 
 const STATUS_KEYS = new Set([
@@ -178,6 +179,7 @@ export default async function CreatorSpillerePage({
     email: emailParam,
     team: teamParam,
     count: countParam,
+    missing: missingParam,
   } = await searchParams;
   const detailPath = `/games/${gameId}`;
 
@@ -347,6 +349,7 @@ export default async function CreatorSpillerePage({
         email: emailParam ?? '',
         team: Number(teamParam ?? 0),
         count: Number(countParam ?? 0),
+        missing: Number(missingParam ?? 1),
       })}
     </Banner>
   ) : errorParam && ERROR_KEYS.has(errorParam) ? (

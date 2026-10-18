@@ -13,6 +13,7 @@ import {
   readShambleCount,
   teamSizeStatus,
 } from '@/lib/games/teamScope';
+import { allowedTeamSizes } from '@/lib/games/teamFormatLimits';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
@@ -140,14 +141,16 @@ async function teamStatusAfterRemoval(
   const count = data.length;
   if (count === 0) return null;
 
-  const status = teamSizeStatus(mode, teamSize, count, readShambleCount(game.mode_config));
+  const shambleCount = readShambleCount(game.mode_config);
+  const status = teamSizeStatus(mode, teamSize, count, shambleCount);
   if (status === 'full') return null;
-  const code =
-    status === 'outside'
-      ? 'player_removed_team_uneven'
-      : mode === 'shamble'
-        ? 'player_removed_team_short_shamble'
-        : 'player_removed_team_short';
+  if (status === 'outside') {
+    // How many the team lacks up to the smallest size it may have: 2 → 1 in
+    // a game à 4 lacks two, so the banner says «Flytt 2 spillere dit».
+    const missing = Math.min(...allowedTeamSizes(mode, teamSize, shambleCount)) - count;
+    return `status=player_removed_team_uneven&team=${team}&count=${count}&missing=${missing}`;
+  }
+  const code = mode === 'shamble' ? 'player_removed_team_short_shamble' : 'player_removed_team_short';
   return `status=${code}&team=${team}&count=${count}`;
 }
 
