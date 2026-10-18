@@ -70,6 +70,16 @@ export function isOpenForSignups(
 }
 
 /**
+ * #2570: the absolute signup link an organiser shares: the copy field on the
+ * admin card and on «Styr spillere», and the poster's QR code (with
+ * `?src=plakat`). Always the main domain, so a copied link works wherever it
+ * is pasted. Show it only when `isPubliclyViewable` holds.
+ */
+export function signupShareUrl(shortId: string): string {
+  return `https://tornygolf.no/signup/${shortId}`;
+}
+
+/**
  * Mapper `?src=`-query-parameteren til `game_players.signup_source`-verdien.
  * Allowlist-basert: ukjente verdier (og gjentatte params, som Next leverer
  * som array) droppes stille til null — attribusjon er best-effort og skal

@@ -21,6 +21,7 @@ const PROPS = {
   registrationMode: 'manual_approval' as const,
   gameStatus: 'scheduled' as const,
   shortId: 'abc123',
+  signupsClosedAt: null as string | null,
   selfRegisteredCount: 0,
 };
 
@@ -48,5 +49,21 @@ describe('RegistrationOverviewSection', () => {
       expect(screen.getByTestId('pending-block')).toBeTruthy();
       expect(screen.getByTestId('pending-count').textContent).toBe(shown);
     }
+  });
+
+  // #2570: the copy field and the poster follow isPubliclyViewable, the same
+  // rule as the poster page and «Styr spillere».
+  it.each<{ name: string; props: Partial<typeof PROPS>; shown: boolean }>([
+    { name: 'planlagt, godkjenning, åpen påmelding', props: {}, shown: true },
+    { name: 'planlagt, åpen påmelding', props: { registrationMode: 'open' as never }, shown: true },
+    { name: 'påmeldingen stengt', props: { signupsClosedAt: '2026-10-18T10:00:00Z' }, shown: false },
+    { name: 'bare inviterte', props: { registrationMode: 'invite_only' as never }, shown: false },
+    { name: 'utkast', props: { gameStatus: 'draft' as never }, shown: false },
+  ])('$name → delelenke $shown', async ({ props, shown }) => {
+    serverMock = buildSupabaseMock([{ data: null, error: null, count: 0 }]);
+    const { RegistrationOverviewSection } = await import('./RegistrationOverviewSection');
+    render(await RegistrationOverviewSection({ ...PROPS, ...props }));
+    expect(screen.queryByTestId('poster-link') !== null).toBe(shown);
+    expect(screen.queryByDisplayValue('https://tornygolf.no/signup/abc123') !== null).toBe(shown);
   });
 });
