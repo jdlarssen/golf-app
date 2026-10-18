@@ -130,8 +130,11 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   });
 
   // #2256 PR 4: varsler i begge varianter. Pluginen setter `aps-environment`
-  // (development i bygget, production i arkivet), og butikkbygget beholder
-  // `no.tornygolf.app`, som er temaet dagens APNs-sender bruker.
+  // (`development` når `mode` ikke er satt, og `app.json` setter den ikke), og
+  // butikkbygget beholder `no.tornygolf.app`, som er temaet dagens APNs-sender
+  // bruker. Beviset krever bare at verdien er `development` eller `production`
+  // (#2561, `scripts/entitlements-proof.sh`). At det opplastede bygget har
+  // `production`, er ikke vist her.
   it('har varsel-pluginen i begge varianter, med butikkens bundle-ID', () => {
     expect(resolveConfig(base, DEV_ENV).plugins).toContain('expo-notifications');
     const store = resolveConfig(base, STORE_ENV);
