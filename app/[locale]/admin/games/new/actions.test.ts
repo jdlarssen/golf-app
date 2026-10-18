@@ -86,6 +86,12 @@ vi.mock('@/lib/games/createGuestPlayer', () => ({
   findGuestIds: vi.fn(async () => new Set<string>()),
 }));
 
+// #2570: the guest-only tests insert guest rows through the service role.
+// Only they reach it; every other fixture has no guests.
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => buildSupabaseMock([{ data: null, error: null }]),
+}));
+
 // F2 (#272): server-action kaller isValidActiveGameMode før insert. Mocker
 // til true så happy-path-testene fortsatt slipper gjennom; egne tester for
 // validerings-stien er i lib/formats/validateGameMode.test.ts.
@@ -904,5 +910,86 @@ describe('klubb-turnering uten spillere (#2433)', () => {
 
     expect(res).toEqual({ error: 'min_players_for_mode' });
     expect(supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert')).toBe(false);
+  });
+});
+
+// #2570: a published round with only guests has nobody who can log in and
+// enter scores. The action reads the same rule as the wizard (guestOnlyRoster)
+// from the stored guest flag (findGuestIds).
+describe('bare gjester ved publisering (#2570)', () => {
+  const ALL_EIGHT = new Set(['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7']);
+
+  async function guestsAre(ids: Set<string>) {
+    const { findGuestIds } = await import('@/lib/games/createGuestPlayer');
+    vi.mocked(findGuestIds).mockResolvedValueOnce(ids);
+  }
+
+  function insertedGame() {
+    return supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+  }
+
+  it('bare inviterte og bare gjester: only_guests, ingenting skrives', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
+    signIn('org-1');
+    await guestsAre(ALL_EIGHT);
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(fullPublishFormData())).resolves.toEqual({
+      error: 'only_guests',
+    });
+    expect(insertedGame()).toBeUndefined();
+  });
+
+  it.each<[string, Record<string, string>]>([
+    ['åpen påmelding (andre kan melde seg på)', { registration_mode: 'open' }],
+    ['én spiller med konto blant gjestene', {}],
+  ])('%s: publiseres', async (label, overrides) => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate
+      { data: { id: 'g-ok' }, error: null }, // games.insert.select.single
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('admin-1');
+    await guestsAre(
+      label.startsWith('én') ? new Set(['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6']) : ALL_EIGHT,
+    );
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(fullPublishFormData(overrides))).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect((insertedGame()!.args[0] as { status: string }).status).toBe('scheduled');
+  });
+
+  it('en e-postinvitasjon teller som en spiller med konto', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { id: 'g-mail' }, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    signIn('admin-1');
+    await guestsAre(ALL_EIGHT);
+
+    const form = fullPublishFormData();
+    form.append('invite_email', 'venn@example.com');
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(form)).rejects.toBeInstanceOf(RedirectError);
+    expect(insertedGame()).toBeDefined();
+  });
+
+  it('et utkast med bare gjester lagres', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { id: 'g-draft' }, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    signIn('admin-1');
+    await guestsAre(ALL_EIGHT);
+
+    const { createGameDraft } = await import('./actions');
+    await expect(createGameDraft(fullPublishFormData())).rejects.toBeInstanceOf(RedirectError);
+    expect((insertedGame()!.args[0] as { status: string }).status).toBe('draft');
   });
 });

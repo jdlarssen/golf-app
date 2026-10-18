@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ShambleSetup } from './ShambleSetup';
 
 // Én Type C render-test per docs/test-discipline.md — bekrefter at ShambleSetup
@@ -18,6 +18,8 @@ describe('ShambleSetup', () => {
       onScoringChange: noop,
       teamSize: 4 as const,
       onTeamSizeChange: noop,
+      allowancePct: 100,
+      onAllowanceChange: noop,
     };
 
     const { rerender } = render(<ShambleSetup variant="shamble" {...props} />);
@@ -47,5 +49,39 @@ describe('ShambleSetup', () => {
     rerender(<ShambleSetup variant="shamble" {...props} teamSize={3} playerCount={6} />);
     expect(screen.getByRole('radio', { name: /3-mannslag/i })).toBeChecked();
     expect(screen.getByRole('radio', { name: /4-mannslag.*trenger 8/i })).toBeDisabled();
+  });
+
+  // #2570: the percentage field sits under «Tellemåte», only with Netto.
+  it('handicap-andelen vises med Netto og er borte med Brutto', () => {
+    const noop = vi.fn();
+    const onAllowanceChange = vi.fn();
+    const props = {
+      variant: 'shamble' as const,
+      onVariantChange: noop,
+      count: 2 as const,
+      onCountChange: noop,
+      onScoringChange: noop,
+      teamSize: 4 as const,
+      onTeamSizeChange: noop,
+      allowancePct: 80,
+      onAllowanceChange,
+    };
+
+    const { rerender } = render(<ShambleSetup scoring="net" {...props} />);
+    const field = screen.getByLabelText('Handicap-andel (%)');
+    expect(field).toHaveValue(80);
+    expect(
+      screen.getByText('Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard).'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(field, { target: { value: '75' } });
+    expect(onAllowanceChange).toHaveBeenLastCalledWith(75);
+    // Outside 0–100 is not committed, as in the general field.
+    onAllowanceChange.mockClear();
+    fireEvent.change(field, { target: { value: '120' } });
+    expect(onAllowanceChange).not.toHaveBeenCalled();
+
+    rerender(<ShambleSetup scoring="gross" {...props} />);
+    expect(screen.queryByLabelText('Handicap-andel (%)')).not.toBeInTheDocument();
   });
 });

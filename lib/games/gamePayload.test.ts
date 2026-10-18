@@ -4753,6 +4753,61 @@ describe('buildGameInsertPayload — handicapprosenten følger formatet (#2210)'
   });
 });
 
+// #2570: shamble and champagne scramble take the general percentage when
+// «Tellemåte» is Netto. Brutto plays on raw strokes, so the stored value is
+// pinned to 100 and a stale number in the form never blocks a publish.
+describe('buildGameInsertPayload — handicapprosent i shamble (#2570)', () => {
+  function shamble(
+    scoring: 'net' | 'gross',
+    pct: string,
+    extra: Record<string, string> = {},
+  ): FormData {
+    return fd({
+      name: 'Shamble',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      game_mode: 'shamble',
+      shamble_team_size: '4',
+      shamble_scoring: scoring,
+      hcp_allowance_pct: pct,
+      registration_mode: 'open',
+      ...extra,
+    });
+  }
+
+  it('netto med 80 lagres som 80', () => {
+    const result = buildGameInsertPayload(shamble('net', '80'), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(80);
+  });
+
+  it('champagne netto med 80 lagres som 80', () => {
+    const result = buildGameInsertPayload(
+      shamble('net', '80', { shamble_variant: 'champagne', shamble_count: '1' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(80);
+  });
+
+  it('brutto med 80 i skjemaet lagres som 100', () => {
+    const result = buildGameInsertPayload(shamble('gross', '80'), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(100);
+  });
+
+  it('netto med 120 ved publisering gir bad_allowance', () => {
+    const result = buildGameInsertPayload(shamble('net', '120'), 'publish');
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('brutto med 120 ved publisering gir 100, ikke bad_allowance', () => {
+    const result = buildGameInsertPayload(shamble('gross', '120'), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(100);
+  });
+});
+
 // #2580 «Hvem sitt utslag»: the four formats read the same field through one
 // parser. Off = the key is left out of mode_config; a value that is not an
 // option or does not fit 18 holes is bad_min_tee_shots, in draft too.

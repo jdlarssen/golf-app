@@ -904,7 +904,9 @@
         "scoringNetTitle": "Net",
         "scoringNetDesc": "Handicap-adjusted",
         "scoringGrossTitle": "Gross",
-        "scoringGrossDesc": "Raw strokes"
+        "scoringGrossDesc": "Raw strokes",
+        "allowanceLabel": "Allowance (%)",
+        "allowanceHint": "Share of the player's handicap that counts. 100 = full course handicap (standard)."
       },
       "teeShots": {
         "legend": "Tee shots",
@@ -1121,6 +1123,7 @@
         "allowancePct": "{pct}% handicap",
         "gross": "gross",
         "playersWarn": "{selected} of {expected}. You can add more later.",
+        "playersGuestsOnly": "Only guests. Guests can't log in, so nobody can enter scores. Join yourself, or add a player with an account.",
         "pendingProfiles": "{count, plural, one {1 awaiting profile} other {# awaiting profile}}"
       },
       "advancedToggle": "Show advanced settings",
@@ -1267,6 +1270,7 @@
         "teamMatchplayTooMany": "too many players (2 per side)",
         "teamMatchplayAssign": "side assignment (2 per side)",
         "soloMin": "at least one player",
+        "accountPlayer": "a player with an account",
         "invalidAllowance": "valid HCP allowance",
         "categoryMissingRating": "one or more players have a category the tee does not rate",
         "club": "club"
@@ -1412,6 +1416,7 @@
       "course_required": "Choose a course.",
       "tee_required": "Choose a tee box.",
       "bad_allowance": "HCP allowance must be a whole number between 0 and 100.",
+      "only_guests": "The round only has guests, and they can't log in. Add yourself or a player with an account before you publish.",
       "bad_min_tee_shots": "Choose a number of tee shots that fits 18 holes for the team.",
       "duplicate_player": "The same player cannot be selected more than once.",
       "bad_team": "Every player must be on a team before you publish.",

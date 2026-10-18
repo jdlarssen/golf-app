@@ -1,7 +1,8 @@
 import type { MissingForPublishCode } from '../useGameFormState';
 import type { Intent } from '@/lib/wizard/intent';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
+import type { GuestOnlyVerdict } from '@/lib/games/guestOnlyRoster';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 
 /**
@@ -24,6 +25,11 @@ export type ReadyRow = {
   /** The translated messages behind a `block`, in the gate's order. */
   messages: string[];
   target: ReadyRowTarget;
+  /**
+   * #2570: the Spillere row is red or amber because every chosen player is a
+   * guest (`guestOnlyRoster`). The caller shows the guest sentence then.
+   */
+  guestsOnly: boolean;
 };
 
 /**
@@ -50,6 +56,8 @@ export function readyChecklist({
   expectedPlayerCount,
   selectedCount,
   lockGameMode,
+  gameMode,
+  guestOnly,
 }: {
   codes: readonly MissingForPublishCode[];
   /** `missingForPublish`: same length and order as `codes`. */
@@ -60,6 +68,13 @@ export function readyChecklist({
   expectedPlayerCount: number | undefined;
   selectedCount: number;
   lockGameMode: boolean;
+  gameMode: GameMode;
+  /**
+   * #2570: `guestOnlyRoster` for the chosen players. `block` arrives as a
+   * 'players' code from the gate too; `warn` (others can still sign up) only
+   * turns the row amber.
+   */
+  guestOnly: GuestOnlyVerdict;
 }): ReadyRow[] {
   const byRow: Record<ReadyRowKey, string[]> = {
     course: [],
@@ -78,13 +93,16 @@ export function readyChecklist({
   // A broken percentage must stay reachable even when the format is locked,
   // or the row would be red with no way on. #2439: a missing club comes
   // first; it is chosen on step 2 and is the first message on the row.
+  // #2570: shamble's percentage sits on step 2, under «Tellemåte».
   const hasAllowanceCode = codes.includes('allowance');
   const target: Record<ReadyRowKey, ReadyRowTarget> = {
     course: 3,
     format: codes.includes('club')
       ? 2
       : hasAllowanceCode
-        ? 'advanced'
+        ? gameMode === 'shamble'
+          ? 2
+          : 'advanced'
         : lockGameMode
           ? null
           : 2,
@@ -103,7 +121,9 @@ export function readyChecklist({
     ) {
       status = 'warn';
     }
-    return { key, status, messages: byRow[key], target: target[key] };
+    if (key === 'players' && status === 'ok' && guestOnly === 'warn') status = 'warn';
+    const guestsOnly = key === 'players' && guestOnly !== 'none' && status !== 'ok';
+    return { key, status, messages: byRow[key], target: target[key], guestsOnly };
   });
 }
 
@@ -198,7 +218,9 @@ export function formatRowParts({
 } {
   return {
     teamSize: teamSize > 1 ? teamSize : null,
-    allowance: usesGameHcpAllowance(gameMode)
+    // #2570: shamble's share is set under «Tellemåte» on step 2, and the row
+    // follows the general field, so it names none there.
+    allowance: showsGeneralAllowanceField(gameMode)
       ? hcpAllowance === 0
         ? { kind: 'gross' }
         : { kind: 'pct', pct: hcpAllowance }

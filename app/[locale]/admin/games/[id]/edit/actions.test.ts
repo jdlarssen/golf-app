@@ -1496,3 +1496,26 @@ describe('held e-mail invitations when a draft is published (#2445)', () => {
     consoleError.mockRestore();
   });
 });
+
+// #2570: publishing a draft whose players are all guests is refused with the
+// same rule as the wizard (guestOnlyRoster). Saving the draft still works.
+describe('bare gjester når et utkast publiseres (#2570)', () => {
+  const ALL_EIGHT = new Set(['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7']);
+
+  it('publish med bare gjester: tilbake til skjemaet med only_guests, ingen games.update', async () => {
+    supabaseMock = draftPublishMock([{ data: { is_admin: true }, error: null }]);
+    signIn('admin-1');
+    const { findGuestIds } = await import('@/lib/games/createGuestPlayer');
+    vi.mocked(findGuestIds).mockResolvedValueOnce(ALL_EIGHT);
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toContain('error=only_guests');
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'update'),
+    ).toBe(false);
+  });
+});

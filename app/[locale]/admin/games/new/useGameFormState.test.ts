@@ -9,6 +9,7 @@ import type { CourseOption, PlayerOption } from './GameForm';
 import type { TeamSize } from './TeamSizeSelector';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { teamGridShape } from '@/lib/games/teamFormatLimits';
+import { wizardDraftFromState } from './wizardStatePersistence';
 
 const COURSES: CourseOption[] = [
   {
@@ -2248,5 +2249,101 @@ describe('useGameFormState — kompis-lagstørrelsen følger antallet (#2435)', 
     });
     expect(result.current.teamSize).toBe(2);
     expect(result.current.texasHandicapPct).toBe(25);
+  });
+});
+
+// ─── #2570 ───────────────────────────────────────────────────────────────────
+
+/** A stableford round that is publishable apart from the players. */
+function readyStableford(players: PlayerOption[]) {
+  const { result } = renderHook(() => useGameFormState({ players, courses: COURSES }));
+  act(() => {
+    result.current.handleModeChange('stableford');
+    result.current.setCourseId('course-a');
+  });
+  act(() => {
+    result.current.setTeeBoxId('tee-a1');
+    result.current.setScheduledTeeOffAt(toDatetimeLocal(new Date(Date.now() + 86_400_000)));
+  });
+  return { result };
+}
+
+describe('useGameFormState — bare gjester (#2570)', () => {
+  const ROSTER = [
+    makePlayer('g1', { isGuest: true }),
+    makePlayer('g2', { isGuest: true }),
+    makePlayer('u1'),
+  ];
+
+  it('bare inviterte og bare gjester: stoppet, med en players-mangel', () => {
+    const { result } = readyStableford(ROSTER);
+    act(() => {
+      result.current.togglePlayer('g1');
+      result.current.togglePlayer('g2');
+    });
+    expect(result.current.guestOnly).toBe('block');
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toEqual(['players']);
+
+    // The organiser adds a player with an account: the round can publish.
+    act(() => {
+      result.current.togglePlayer('u1');
+    });
+    expect(result.current.guestOnly).toBe('none');
+    expect(result.current.canPublish).toBe(true);
+    expect(result.current.missingForPublishCodes).toEqual([]);
+  });
+
+  it('åpen påmelding og bare gjester: varsel, kan publiseres', () => {
+    const { result } = readyStableford(ROSTER);
+    act(() => {
+      result.current.togglePlayer('g1');
+      result.current.setRegistrationMode('open');
+    });
+    expect(result.current.guestOnly).toBe('warn');
+    expect(result.current.canPublish).toBe(true);
+  });
+
+  it('en e-postinvitasjon teller som en spiller med konto', () => {
+    const { result } = readyStableford(ROSTER);
+    act(() => {
+      result.current.togglePlayer('g1');
+      result.current.addInviteEmail('venn@example.com');
+    });
+    expect(result.current.guestOnly).toBe('none');
+    expect(result.current.canPublish).toBe(true);
+  });
+});
+
+describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
+  function shamble(initial: Record<string, unknown>) {
+    return renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'shamble', ...initial },
+      }),
+    ).result;
+  }
+
+  it('netto med en ugyldig prosent gir allowance-mangelen', () => {
+    const result = shamble({ hcp_allowance_pct: '150', shamble_scoring: 'net' });
+    expect(result.current.missingForPublishCodes).toContain('allowance');
+  });
+
+  it('brutto skjuler feltet, så en ugyldig prosent stopper ingenting', () => {
+    const result = shamble({ hcp_allowance_pct: '150', shamble_scoring: 'gross' });
+    expect(result.current.missingForPublishCodes).not.toContain('allowance');
+  });
+
+  it('prosenten overlever lagring og gjenopptak av et utkast', () => {
+    const result = shamble({ hcp_allowance_pct: '80', shamble_scoring: 'net' });
+    expect(result.current.hcpAllowance).toBe(80);
+    const draft = wizardDraftFromState({ state: result.current, nameTouched: false });
+    expect(draft.values.hcp_allowance_pct).toBe('80');
+
+    const resumed = shamble({ ...draft.values });
+    expect(resumed.current.hcpAllowance).toBe(80);
+    expect(resumed.current.shambleScoring).toBe('net');
   });
 });

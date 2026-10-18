@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { ALL_CUP_MATCH_FORMATS, cupMatchAllowance } from '@/lib/cup/cupMatchAllowance';
-import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
+import {
+  effectiveHcpAllowancePct,
+  hcpAllowanceInPlay,
+  showsGeneralAllowanceField,
+  usesGameHcpAllowance,
+} from './hcpAllowance';
 
 /**
  * #2210 — which formats use the general `games.hcp_allowance_pct`. Formats
@@ -31,7 +36,9 @@ const EXPECTED: Record<GameMode, boolean> = {
   nines: false,
   round_robin: false,
   acey_deucey: false,
-  shamble: false,
+  // #2570: shamble and champagne scramble (a shamble variant) take the
+  // general percentage too.
+  shamble: true,
   patsome: false,
   gruesome_matchplay: false,
 };
@@ -54,6 +61,7 @@ describe('effectiveHcpAllowancePct (#2210)', () => {
     ['fourball_matchplay', 85, 100],
     ['skins', 0, 100],
     ['texas_scramble', 150, 100],
+    ['shamble', 85, 85],
     ['not_a_mode', 85, 100],
   ])('%s with stored %i → %i', (mode, stored, expected) => {
     expect(effectiveHcpAllowancePct(mode, stored)).toBe(expected);
@@ -78,4 +86,40 @@ describe('usesGameHcpAllowance agrees with the cup generator (#2210)', () => {
       expect(cupMatchAllowance(format, PCTS).hcpAllowancePct).toBe(100);
     },
   );
+});
+
+/**
+ * #2570: shamble has its own «Tellemåte» (Netto/Brutto) on step 2, so the
+ * percentage field lives there, under it, and the general field (with its own
+ * Netto/Brutto switch) is hidden for shamble alone.
+ */
+const SHOWS_GENERAL_FIELD: Record<GameMode, boolean> = {
+  ...EXPECTED,
+  shamble: false,
+};
+
+describe('showsGeneralAllowanceField (#2570)', () => {
+  it.each(Object.entries(SHOWS_GENERAL_FIELD))('%s → %s', (mode, expected) => {
+    expect(showsGeneralAllowanceField(mode)).toBe(expected);
+  });
+
+  it('an unknown format shows nothing', () => {
+    expect(showsGeneralAllowanceField('not_a_mode')).toBe(false);
+  });
+});
+
+describe('hcpAllowanceInPlay (#2570)', () => {
+  it.each<[string, 'gross' | 'net' | undefined, boolean]>([
+    ['shamble', 'net', true],
+    ['shamble', undefined, true],
+    // Gross shamble plays on raw strokes: the percentage is not in play.
+    ['shamble', 'gross', false],
+    // Only shamble reads the scoring toggle; the others follow usesGameHcpAllowance.
+    ['stableford', 'gross', true],
+    ['best_ball', undefined, true],
+    ['skins', 'net', false],
+    ['texas_scramble', undefined, false],
+  ])('%s with %s → %s', (mode, scoring, expected) => {
+    expect(hcpAllowanceInPlay(mode, scoring)).toBe(expected);
+  });
 });

@@ -19,7 +19,8 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
-import { isClubTournament } from '@/lib/games/registration';
+import { isClubTournament, rosterOptionalAtPublish } from '@/lib/games/registration';
+import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
@@ -37,6 +38,7 @@ export type CreateGameErrorCode =
   | 'invalid_game_mode'
   | 'tee_off_required'
   | 'tee_off_in_past'
+  | 'only_guests'
   | 'bad_side_ld_count'
   | 'bad_side_ctp_count'
   | 'db_game'
@@ -105,12 +107,36 @@ async function createGameInternal(
   // #2433: a club tournament publishes without players (members sign up
   // themselves). The club signal is the DB-checked groupId, never the raw
   // form value, so a forged group_id never unlocks an empty roster.
-  const payload = buildGameInsertPayload(formData, mode, {
-    clubScoped: isClubTournament({ groupId, tournamentId: rawTournamentId }),
-  });
+  const clubScoped = isClubTournament({ groupId, tournamentId: rawTournamentId });
+  const payload = buildGameInsertPayload(formData, mode, { clubScoped });
 
   if (payload.errorCode) {
     return { error: payload.errorCode };
+  }
+
+  // #1009: gjeste-rader (skygge-brukere fra veiviserens «Legg til gjest») må
+  // inn via service-role, se game_players-insertene under. Slått opp her så
+  // #2570-sperren under kan lese samme sett.
+  const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
+
+  // #2570: a published round with only guests has nobody who can log in and
+  // enter scores. Same rule as the wizard's gate (guestOnlyRoster); a failed
+  // guest lookup gives an empty set and lets the publish through, so the
+  // wizard stays the primary gate.
+  if (
+    mode === 'publish' &&
+    guestOnlyRoster({
+      playerIds: payload.players.map((p) => p.user_id),
+      guestIds,
+      inviteEmailCount: parseInviteEmailList(formData.getAll('invite_email')).length,
+      rosterOptional: rosterOptionalAtPublish({
+        registrationMode: payload.registration_mode,
+        registrationType: payload.registration_type,
+        clubScoped,
+      }),
+    }) === 'block'
+  ) {
+    return { error: 'only_guests' };
   }
 
   // F2 (#272): valider game_mode-slug mot formats-tabellen. Erstatter den
@@ -263,13 +289,11 @@ async function createGameInternal(
     return { error: 'db_game' };
   }
 
-  // #1009: gjeste-rader (skygge-brukere fra veiviserens «Legg til gjest») må
-  // inn via service-role — invite-eligibility-guarden (0115) blokkerer en
-  // ikke-admin-arrangørs klient-insert av en gjest (verken venn, medspiller
-  // eller klubbmedlem). Vanlige rader beholder request-klienten så RLS-
-  // dekningen er uendret; kompensasjonen (delete game) dekker begge inserts.
-  const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
-
+  // #1009: gjeste-radene (`guestIds`, slått opp over) må inn via service-role
+  // — invite-eligibility-guarden (0115) blokkerer en ikke-admin-arrangørs
+  // klient-insert av en gjest (verken venn, medspiller eller klubbmedlem).
+  // Vanlige rader beholder request-klienten så RLS-dekningen er uendret;
+  // kompensasjonen (delete game) dekker begge inserts.
   const rowAcceptedAt = new Date().toISOString();
   const rows = payload.players.map((p) => {
     const playerGenderUi = asTeeChoice(

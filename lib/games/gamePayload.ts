@@ -13,7 +13,7 @@
 
 import { parseStartType, type StartType } from './startType';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
+import { hcpAllowanceInPlay } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
 import { isValidTeamHandicapSumPct } from './teamHandicapUnit';
 import { MIN_TEE_SHOTS_FIELD, minTeeShotsFeasible, type MinTeeShots } from './teeShots';
@@ -2329,10 +2329,17 @@ export function buildGameInsertPayload(
 
   // #2210: the 0–100 check applies only to formats that use the general
   // percentage. For the others the field is hidden, and a stale value must
-  // never block a publish — it is replaced by 100 below.
+  // never block a publish — it is replaced by 100 below. #2570: gross shamble
+  // is one of the others (its field is hidden under «Brutto»).
+  // Only shamble reads its scoring toggle; hcpAllowanceInPlay ignores it for
+  // the other formats.
+  const allowanceInPlay = hcpAllowanceInPlay(
+    gameMode,
+    parseScoringToggle(formData, 'shamble_scoring'),
+  );
   if (
     mode === 'publish' &&
-    usesGameHcpAllowance(gameMode) &&
+    allowanceInPlay &&
     (!Number.isInteger(base.hcp_allowance_pct) ||
       base.hcp_allowance_pct < 0 ||
       base.hcp_allowance_pct > 100)
@@ -2416,8 +2423,9 @@ export function buildGameInsertPayload(
   return {
     ...base,
     // #2210: formats with their own percentage in mode_config store 100, the
-    // same as the cup generator does.
-    hcp_allowance_pct: effectiveHcpAllowancePct(gameMode, base.hcp_allowance_pct),
+    // same as the cup generator does. #2570: so does gross shamble, so an old
+    // number never stays on a gross round.
+    hcp_allowance_pct: allowanceInPlay ? base.hcp_allowance_pct : 100,
     players,
     game_mode: gameMode,
     mode_config: modeResult.mode_config,
