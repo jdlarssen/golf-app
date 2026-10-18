@@ -92,6 +92,8 @@ describe('cardKicker', () => {
     ['an English auto name «course day Month»', 'Byneset North 27 September', 'Byneset North', 'Byneset North'],
     ['an own name that starts with the course', 'Bogstad Open', 'Bogstad', 'Bogstad Open · Bogstad'],
     ['a club championship on its own club', 'Oslo GK Klubbmesterskap', 'Oslo GK', 'Oslo GK Klubbmesterskap · Oslo GK'],
+    ['a name ending in a number and a word, not a date', 'Bogstad 9 hull', 'Bogstad', 'Bogstad 9 hull · Bogstad'],
+    ['a numbered round on the course', 'Oslo GK 2 Runde', 'Oslo GK', 'Oslo GK 2 Runde · Oslo GK'],
     ['no course', 'Lørdagsrunden', null, 'Lørdagsrunden'],
   ])('%s', (_label, name, course, expected) => {
     expect(cardKicker(name, course)).toBe(expected);
@@ -109,7 +111,7 @@ describe('cardKicker', () => {
   });
 
   it('counts emoji as one character each, never splitting a pair', () => {
-    const kicker = cardKicker('⛳'.repeat(CHARS_PER_LINE.kicker + 5), null);
+    const kicker = cardKicker('🏆'.repeat(CHARS_PER_LINE.kicker + 5), null);
     expect(Array.from(kicker)).toHaveLength(CHARS_PER_LINE.kicker);
     expect(kicker).not.toMatch(/[\ud800-\udfff]$/);
   });

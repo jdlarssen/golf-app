@@ -89,7 +89,11 @@ export async function loadFonts(
   if (in500) fonts.push({ name: 'Inter', data: in500, weight: 500, style: 'normal' });
   if (disp) fonts.push({ name: 'FrauncesDisplay', data: disp, weight: 500, style: 'normal' });
   if (dispItalic) {
-    fonts.push({ name: 'FrauncesDisplay', data: dispItalic, weight: 500, style: 'italic' });
+    // Under the display family when its upright cut loaded; otherwise under
+    // plain Fraunces, which the headline then falls back to, so the gold word
+    // keeps its italic.
+    const name = disp ? 'FrauncesDisplay' : 'Fraunces';
+    fonts.push({ name, data: dispItalic, weight: 500, style: 'italic' });
   }
   if (in600) fonts.push({ name: 'Inter', data: in600, weight: 600, style: 'normal' });
   return {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { suggestGameName, localizeGameName } from './autoGameName';
+import { suggestGameName, localizeGameName, isAutoGameNameDate } from './autoGameName';
 
 describe('suggestGameName', () => {
   it('returnerer tom streng når courseName er null', () => {
@@ -187,4 +187,17 @@ describe('localizeGameName', () => {
     const en = suggestGameName({ courseName: 'X', scheduledTeeOffAt: teeOffAt, locale: 'en' });
     expect(localizeGameName(no, 'X', 'en')).toBe(en);
   });
+});
+
+describe('isAutoGameNameDate', () => {
+  it.each(['27. september', '1. mai', '27 September', '1 May'])('accepts «%s»', (suffix) => {
+    expect(isAutoGameNameDate(suffix)).toBe(true);
+  });
+
+  it.each(['9 hull', '2 Runde', 'Open', '27. foo', '27 Foo', '27. September ', ''])(
+    'rejects «%s»',
+    (suffix) => {
+      expect(isAutoGameNameDate(suffix)).toBe(false);
+    },
+  );
 });

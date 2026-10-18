@@ -76,3 +76,14 @@ export function headlineSpec(model: ShareCardModel | null): HeadlineSpec {
 export function signedCount(value: number, format: (abs: number) => string): string {
   return `${value < 0 ? '\u2212' : ''}${format(Math.abs(value))}`;
 }
+
+/** The number in a row: just the figure, locale-neutral («38», «−4», «6»). */
+export function scoreFigure(score: ShareCardScore): string {
+  switch (score.kind) {
+    case 'points':
+    case 'skins':
+      return signedCount(score.value, String);
+    case 'vsPar':
+      return score.label; // −2 / E / +3
+  }
+}

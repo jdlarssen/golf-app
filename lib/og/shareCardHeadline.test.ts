@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ShareCardModel, ShareCardRow } from '@/lib/games/buildShareCardData';
 
-import { headlineSpec, signedCount } from './shareCardHeadline';
+import { headlineSpec, scoreFigure, signedCount } from './shareCardHeadline';
 
 function row(rank: number, members: string[], score: ShareCardRow['score']): ShareCardRow {
   return { rank, name: members.join(' / '), memberNames: members, score, isSharer: false };
@@ -178,5 +178,17 @@ describe('signedCount', () => {
   it('words the absolute value, so the plural follows the size', () => {
     const word = (n: number) => `${n} ${n === 1 ? 'point' : 'points'}`;
     expect(signedCount(-1, word)).toBe('\u22121 point');
+  });
+});
+
+describe('scoreFigure', () => {
+  it.each([
+    [{ kind: 'points', value: 38 }, '38'],
+    [{ kind: 'points', value: -3 }, '\u22123'],
+    [{ kind: 'skins', value: 6 }, '6'],
+    [{ kind: 'vsPar', label: '\u22124' }, '\u22124'],
+    [{ kind: 'vsPar', label: 'E' }, 'E'],
+  ] as const)('%j → %s', (score, expected) => {
+    expect(scoreFigure(score)).toBe(expected);
   });
 });

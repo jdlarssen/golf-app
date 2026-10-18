@@ -26,7 +26,12 @@ import {
   rowDisplayName,
   shareCardHeight,
 } from '@/lib/og/shareCardLayout';
-import { headlineSpec, signedCount, type HeadlineSpec } from '@/lib/og/shareCardHeadline';
+import {
+  headlineSpec,
+  scoreFigure,
+  signedCount,
+  type HeadlineSpec,
+} from '@/lib/og/shareCardHeadline';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
@@ -46,17 +51,6 @@ type ShareT = Awaited<ReturnType<typeof getTranslations>>;
 /** Muted light text on the green: the kicker, the labels and the tagline. */
 const ON_STRONG_MUTED = 'rgba(236,229,210,0.8)';
 const ON_STRONG_META = 'rgba(236,229,210,0.85)';
-
-/** The number in a row: just the figure, locale-neutral («38», «−4», «6»). */
-function scoreFigure(score: ShareCardScore): string {
-  switch (score.kind) {
-    case 'points':
-    case 'skins':
-      return score.value < 0 ? `−${Math.abs(score.value)}` : String(score.value);
-    case 'vsPar':
-      return score.label; // −2 / E / +3
-  }
-}
 
 /** The result as the headline words it: «38 poeng», «6 skins», «−4», «par». */
 function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
