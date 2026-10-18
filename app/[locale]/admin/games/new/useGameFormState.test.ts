@@ -420,6 +420,24 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
     expect(result.current.orderedPayload).toHaveLength(count);
   });
 
+  // #2569 evaluator round 1: the missing list read the shamble roster check
+  // for every scramble format, and shamble à 3 has no team of 2, so a legal
+  // Texas/Ambrose 3/3/2 showed «lag-fordeling (lag à 3)» while Publiser was on.
+  it.each([
+    ['texas_scramble', 3, 5],
+    ['ambrose', 3, 8],
+    ['texas_scramble', 4, 11],
+    ['florida_scramble', 4, 7],
+    ['shamble', 4, 10],
+  ] as const)('%s à %i med %i trukket: mangel-lista melder ikke spillere', (mode, teamSize, count) => {
+    const result = setupDraw(mode, teamSize, count);
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    expect(result.current.playersValidForMode).toBe(true);
+    expect(result.current.missingForPublishCodes).not.toContain('players');
+  });
+
   it('Florida à 3 med 10 spillere → knappen er av (ingen lag på 2 i Florida)', () => {
     const result = setupDraw('florida_scramble', 3, 10);
     expect(result.current.canDrawRandomTeams).toBe(false);

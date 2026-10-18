@@ -1143,6 +1143,7 @@
       "teamsBestBall": "{teams} lag à 2 spillere",
       "teamsParStableford": "{teams} lag à 2 spillere",
       "teamsScramble": "{teams} lag à {size} spillere",
+      "teamsScrambleUneven": "{full, plural, one {ett lag} other {# lag}} à {size} og {short, plural, one {ett} other {#}} à {shortSize} spillere",
       "teamSize2": "2-mannslag",
       "teamSize3": "3-mannslag",
       "teamSize4": "4-mannslag",
