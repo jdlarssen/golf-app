@@ -62,10 +62,10 @@ function mockGame(overrides: Record<string, unknown> = {}) {
   } as any);
 }
 
-function callRoute(query = '') {
+function callRoute(query = '', locale = 'no') {
   return GET(
-    new Request(`https://tornygolf.no/no/games/${GAME_ID}/leaderboard/share-image${query}`),
-    { params: Promise.resolve({ locale: 'no', id: GAME_ID }) },
+    new Request(`https://tornygolf.no/${locale}/games/${GAME_ID}/leaderboard/share-image${query}`),
+    { params: Promise.resolve({ locale, id: GAME_ID }) },
   );
 }
 

@@ -89,20 +89,29 @@ describe('cardKicker', () => {
     ['an own name and the course', 'Lørdagsrunden', 'Byneset North', 'Lørdagsrunden · Byneset North'],
     ['an auto name «course date»', 'Byneset North 27. september', 'Byneset North', 'Byneset North'],
     ['a name equal to the course', 'Byneset North', 'Byneset North', 'Byneset North'],
+    ['an English auto name «course day Month»', 'Byneset North 27 September', 'Byneset North', 'Byneset North'],
+    ['an own name that starts with the course', 'Bogstad Open', 'Bogstad', 'Bogstad Open · Bogstad'],
+    ['a club championship on its own club', 'Oslo GK Klubbmesterskap', 'Oslo GK', 'Oslo GK Klubbmesterskap · Oslo GK'],
     ['no course', 'Lørdagsrunden', null, 'Lørdagsrunden'],
   ])('%s', (_label, name, course, expected) => {
     expect(cardKicker(name, course)).toBe(expected);
   });
 
-  it('cuts anything over 40 characters with «…»', () => {
+  it('cuts anything over one line with «…»', () => {
     const kicker = cardKicker('Den store årlige høstturneringen for kompisgjengen', 'Byneset North');
-    expect(kicker).toHaveLength(40);
+    expect(Array.from(kicker)).toHaveLength(CHARS_PER_LINE.kicker);
     expect(kicker.endsWith('…')).toBe(true);
   });
 
-  it('keeps exactly 40 characters', () => {
-    const name = 'x'.repeat(40);
+  it('keeps exactly one line of characters', () => {
+    const name = 'x'.repeat(CHARS_PER_LINE.kicker);
     expect(cardKicker(name, null)).toBe(name);
+  });
+
+  it('counts emoji as one character each, never splitting a pair', () => {
+    const kicker = cardKicker('⛳'.repeat(CHARS_PER_LINE.kicker + 5), null);
+    expect(Array.from(kicker)).toHaveLength(CHARS_PER_LINE.kicker);
+    expect(kicker).not.toMatch(/[\ud800-\udfff]$/);
   });
 });
 
@@ -158,7 +167,7 @@ describe('chooseHeadline', () => {
     });
   });
 
-  it('falls back to the running block when the broken one needs four lines', () => {
+  it('falls back to the running block when the broken one needs more than three lines', () => {
     // Broken: 5 lines at 116px. Running: 3 lines at 116px.
     const choice = chooseHeadline([
       'Marte, Jonas, Sigrid og Ola vant\npå −12',
@@ -200,7 +209,9 @@ describe('shareCardHeight', () => {
       ['Christopher', 'Alexander', 'Sebastian', 'Magnus'],
       ['Ingeborg', 'Fredrik', 'Henrik', 'Silje'],
     );
+    // Same input as the rig's «worst116» card (kicker and meta on one line each).
     const h = shareCardHeight(model, { headlineLines: 3, headlineFontSize: 116 });
+    expect(h).toBeGreaterThan(SHARE_CARD_HEIGHT);
     expect(h).toBeGreaterThanOrEqual(1294 + 40);
   });
 
@@ -225,7 +236,7 @@ describe('shareCardHeight', () => {
   it('a wrapping kicker adds a line', () => {
     const model = placement(['Alice'], ['Bob'], ['Charlie'], ['Dina']);
     const base = { headlineLines: 8, headlineFontSize: 116 };
-    expect(shareCardHeight(model, { ...base, kicker: 'x'.repeat(40) })).toBeGreaterThan(
+    expect(shareCardHeight(model, { ...base, kicker: 'x'.repeat(80) })).toBeGreaterThan(
       shareCardHeight(model, { ...base, kicker: 'x' }),
     );
   });

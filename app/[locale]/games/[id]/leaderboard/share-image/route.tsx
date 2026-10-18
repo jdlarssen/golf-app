@@ -26,7 +26,7 @@ import {
   rowDisplayName,
   shareCardHeight,
 } from '@/lib/og/shareCardLayout';
-import { headlineSpec, type HeadlineSpec } from '@/lib/og/shareCardHeadline';
+import { headlineSpec, signedCount, type HeadlineSpec } from '@/lib/og/shareCardHeadline';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
@@ -62,11 +62,7 @@ function scoreFigure(score: ShareCardScore): string {
 function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
   switch (score.kind) {
     case 'points':
-      // A real minus sign, like the figure in the row (U+2212, not a hyphen).
-      return {
-        text: `${score.value < 0 ? '−' : ''}${t('points', { n: Math.abs(score.value) })}`,
-        at: false,
-      };
+      return { text: signedCount(score.value, (n) => t('points', { n })), at: false };
     case 'skins':
       return { text: t('skins', { n: score.value }), at: false };
     case 'vsPar':
@@ -228,6 +224,24 @@ function matchRows(model: ShareCardModel): CardRow[] {
   }));
 }
 
+function osloDate(iso: string | null, locale: AppLocale): string | null {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'nb-NO', {
+      timeZone: 'Europe/Oslo',
+      day: 'numeric',
+      month: 'long',
+      // Satori draws a no-break space wider than a space.
+    }).format(new Date(iso)).replace(/\u00a0/g, ' ');
+  } catch {
+    return null;
+  }
+}
+
+function notFound(): Response {
+  return new Response('Not found', { status: 404 });
+}
+
 /**
  * Shareable result-card PNG for a finished game (#942). Rendered server-side
  * with next/og's `ImageResponse` (Satori → PNG, flexbox-only CSS), with fonts
@@ -251,25 +265,6 @@ function matchRows(model: ShareCardModel): CardRow[] {
  * route-segment runtime config; the handler runs on the default Node runtime,
  * which `ImageResponse` and the admin client both need.
  */
-
-function osloDate(iso: string | null, locale: AppLocale): string | null {
-  if (!iso) return null;
-  try {
-    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'nb-NO', {
-      timeZone: 'Europe/Oslo',
-      day: 'numeric',
-      month: 'long',
-      // Satori draws a no-break space wider than a space.
-    }).format(new Date(iso)).replace(/\u00a0/g, ' ');
-  } catch {
-    return null;
-  }
-}
-
-function notFound(): Response {
-  return new Response('Not found', { status: 404 });
-}
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ locale: string; id: string }> },
@@ -547,7 +542,15 @@ function ResultRow({ row, serif }: { row: CardRow; serif: string }) {
             ...medallionFill(row.rank, row.winner),
           }}
         >
-          <span style={{ fontFamily: serif, fontSize: 36, fontWeight: 600, color: MEDAL_INK }}>
+          <span
+            style={{
+              fontFamily: serif,
+              fontSize: 36,
+              fontWeight: 600,
+              // The plain disc of a skins round nobody won is dark: light digit there.
+              color: row.winner || row.rank >= 2 ? MEDAL_INK : ON_STRONG,
+            }}
+          >
             {row.rank}
           </span>
         </div>
