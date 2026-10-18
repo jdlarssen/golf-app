@@ -114,7 +114,12 @@ Svarene øverst i skjemaet:
 | Personal info → Other info | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Google: «Any other personal information such as date of birth, gender identity, veteran status, etc.» | Nei | Valgfri (kjønn kan stå tomt, `lib/users/profileInput.ts:128-139`, og spillerklassen står som voksen til spilleren velger noe annet) | App functionality |
 | Contacts | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner og invitasjoner er ikke nødvendig for å spille) | App functionality |
 | Messages → Other in-app messages | Grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake, som spilleren ser på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Google: «Any other types of messages. For example, instant messages or chat content.» | Nei | Valgfri (grunnen kan stå tom) | App functionality |
+| App activity → App interactions | At spilleren delte et kort fra Kavalkaden, hvilket kort og hvilket år, og når (`ShareKavalkadeCardButton.tsx` → `kavalkade_shares`). Vi bruker det bare til å telle hvor mange spillere som har delt. Google: «Information about how a user interacts with the app». | Nei | Valgfri (bare når spilleren deler) | Analytics |
 | App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. | Nei | Påkrevd | App functionality |
+
+Grunnen når et kort sendes tilbake står under «Other in-app messages» her, men under
+«Other User Content» hos Apple, fordi Apples meldingstype gjelder e-post og SMS. Begge
+oppgir den samme teksten (se `app-store-metadata.md`).
 
 Dette hakes **ikke** av, og her er grunnen:
 
@@ -127,10 +132,12 @@ Dette hakes **ikke** av, og her er grunnen:
   `blockedPermissions`. Hendelsen blir på telefonen.
 - **Photos and videos.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis
   til telefonens delingsark (`native/app/src/lib/shareImage.ts`). Det lastes ikke opp til
-  oss.
-- **App info and performance.** Appen har ingen krasj- eller analyse-SDK.
-- **Financial info, Health and fitness, Messages, Audio, Files and docs, Web browsing.**
-  Ingen.
+  oss. For Kavalkade-kort lagrer vi bare at det ble delt (raden App interactions).
+- **App info and performance.** Appen har ingen krasj- eller analyse-SDK. Det eneste vi
+  teller, er delte Kavalkade-kort (raden App interactions).
+- **Messages → Emails og SMS or MMS.** Appen leser verken e-post eller SMS. Den eneste
+  meldingen er grunnen når et kort sendes tilbake (raden Other in-app messages).
+- **Financial info, Health and fitness, Audio, Files and docs, Web browsing.** Ingen.
 
 ## Innholdsvurdering (IARC)
 
@@ -173,8 +180,10 @@ Velg «All or some functionality in my app is restricted» og legg inn instruksj
 under. Adressen og passordet står i feltene i Play Console, aldri i denne fila. Google
 krever innlogging som kan brukes igjen og omgår engangskoden, som virker til enhver tid
 og hvor som helst, og at instruksjonene er på engelsk
-(<https://support.google.com/googleplay/android-developer/answer/15748846>). Det er
-samme review-konto og samme inngang som for Apple (`app-store-review-konto.md`).
+(<https://support.google.com/googleplay/android-developer/answer/15748846>). Inngangen
+er den samme som for Apple (langtrykket på tittelen), men Google har sin egen
+review-konto med egen adresse, eget passord og egen demo-runde
+(`app-store-review-konto.md`).
 
 ```text
 Signing in normally uses a one-time code sent by email. For review we have prepared a
