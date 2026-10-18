@@ -109,8 +109,8 @@ Flater som med vilje viser resultater til et bredere publikum — cup-sidene
 (`getCupSnapshot`), `/spectate/[token]`, og kamp-leaderboardet OG hull-drilldownen
 via `getResultReadClient` (#1632, eiervalg B: begge svarer likt), og
 resultatbildet (`leaderboard/share-image`) og CSV-eksporten (`leaderboard/export`)
-med samme gate som tavla (innlogget + ferdig; bildet er likt for alle som henter det,
-sesjonen åpner bare døra, #2312/#2319) — leser derfor med service-role og holder autorisasjonen på call-site. Det
+med samme gate som tavla (innlogget + ferdig; delern fra sesjonen, aldri fra URL-en,
+#2312) — leser derfor med service-role og holder autorisasjonen på call-site. Det
 samme gjør arrangøren som ikke spiller: mens runden pågår, ser hen tavla og
 hull-drilldownen via `getResultReadClient` (#2202, eierens valg C). Døra er
 `nonPlayerGameDoor` (flaten `board`), og vilkåret er `organiserFollowsLiveBoard`
