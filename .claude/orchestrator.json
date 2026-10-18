@@ -1,5 +1,5 @@
 {
-  "max_parallel": 2,
+  "max_parallel": 3,
   "bootstrap": "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && npm install --no-audit --no-fund",
   "env_files": [
     ".env.local",
