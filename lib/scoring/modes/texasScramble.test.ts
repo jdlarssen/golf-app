@@ -797,3 +797,92 @@ describe('texasScramble.compute — flere enn fire lag (#2148)', () => {
     expect(ranked[9].totalNet).toBe(81);
   });
 });
+
+// #2569 — ujevne lag. Et lag på 3 i et 4-mannsspill får arrangørens prosent av
+// SNITTET, ikke av summen regnet for fire. Lagret 20 % av summen = 80 % av
+// snittet à 4 (#2009). Lag på 3 med 10/20/30: snitt 20 × 0,8 = 16.
+describe('texasScramble.compute — ujevne lag (#2569)', () => {
+  const FOUR_AND_THREE: ScoringPlayer[] = [
+    { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 10 },
+    { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 20 },
+    { userId: 'a3', teamNumber: 1, flightNumber: 1, courseHandicap: 30 },
+    { userId: 'a4', teamNumber: 1, flightNumber: 1, courseHandicap: 40 },
+    { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 10 },
+    { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 20 },
+    { userId: 'b3', teamNumber: 2, flightNumber: 2, courseHandicap: 30 },
+  ];
+  const AT_FOUR_80_PCT_OF_AVERAGE: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 4,
+    teams_count: 2,
+    team_handicap_pct: 20,
+  };
+
+  it('lag på 4 (10/20/30/40) → 20, lag på 3 (10/20/30) → 16', () => {
+    const result = compute(
+      makeCtx({
+        players: FOUR_AND_THREE,
+        holes: par4Holes(18),
+        scores: [],
+        modeConfig: AT_FOUR_80_PCT_OF_AVERAGE,
+      }),
+    );
+    const team = (n: number) => result.teams.find((t) => t.teamNumber === n)!;
+    expect(team(1).combinedCourseHandicap).toBe(100);
+    expect(team(1).teamHandicap).toBe(20);
+    expect(team(2).combinedCourseHandicap).toBe(60);
+    expect(team(2).teamHandicap).toBe(16);
+  });
+
+  it('det korte lagets slag fordeles på hullene fra 16, ikke 12', () => {
+    const result = compute(
+      makeCtx({
+        players: FOUR_AND_THREE,
+        holes: par4Holes(18),
+        scores: [],
+        modeConfig: AT_FOUR_80_PCT_OF_AVERAGE,
+      }),
+    );
+    const short = result.teams.find((t) => t.teamNumber === 2)!;
+    const strokes = short.holes.reduce((s, h) => s + h.teamExtraStrokes, 0);
+    expect(strokes).toBe(16);
+    // SI 1–16 får ett slag, SI 17–18 ingen.
+    expect(short.holes.find((h) => h.strokeIndex === 16)!.teamExtraStrokes).toBe(1);
+    expect(short.holes.find((h) => h.strokeIndex === 17)!.teamExtraStrokes).toBe(0);
+  });
+
+  it('NGF 10 % av summen à 4 gir laget på 3 40 % av snittet (8), ikke tabellens 15 % à 3 (9)', () => {
+    const result = compute(
+      makeCtx({
+        players: FOUR_AND_THREE,
+        holes: par4Holes(18),
+        scores: [],
+        modeConfig: { ...AT_FOUR_80_PCT_OF_AVERAGE, team_handicap_pct: 10 },
+      }),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 1)!.teamHandicap).toBe(10);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.teamHandicap).toBe(8);
+  });
+
+  it('et trukket medlem som blir stående på laget (#2067) teller i lagstørrelsen som før', () => {
+    // Kaptein a trekkes midt i runden på et 2-mannslag; laget regnes fortsatt
+    // som to: CH 10 + 20 = 30 × 25 % = 7,5 → 8. Som ett lag på én ville det
+    // blitt 30 × 25 × 2 ÷ 100 = 15.
+    const result = compute(
+      buildUniformContext({
+        gameId: 'g1',
+        gameMode: 'texas_scramble',
+        modeConfig: {
+          kind: 'texas_scramble',
+          team_size: 2,
+          teams_count: 2,
+          team_handicap_pct: 25,
+        },
+        players: twoTeamRoster({ captainWithdrawn: true }),
+        holesRows: HOLES_18,
+        scoresRows: [],
+      }),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 1)!.teamHandicap).toBe(8);
+  });
+});

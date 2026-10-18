@@ -603,3 +603,73 @@ describe('shamble.compute — flere enn fire lag (#2148)', () => {
     expect(ranked.map((t) => t.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2569 — ujevne lag. Et lag teller sine N beste uansett størrelse (eierens
+// svar 18.10: «Laget teller sine beste som de andre»). Laget på 3 har ett valg
+// mindre, men ingen fantomscore. Validatoren sørger for at N ≤ minste lag.
+// ---------------------------------------------------------------------------
+
+describe('shamble.compute — ujevne lag (#2569)', () => {
+  it('Shamble «2 beste» à 4: laget på 3 teller 2 av sine 3 (4+5=9)', () => {
+    const ctx = makeCtx({
+      players: [
+        makePlayer('a1', 1),
+        makePlayer('a2', 1),
+        makePlayer('a3', 1),
+        makePlayer('a4', 1),
+        makePlayer('b1', 2),
+        makePlayer('b2', 2),
+        makePlayer('b3', 2),
+      ],
+      holes: par4Holes(1),
+      scores: holeScores(1, [
+        ['a1', 3],
+        ['a2', 4],
+        ['a3', 6],
+        ['a4', 7],
+        ['b1', 6],
+        ['b2', 4],
+        ['b3', 5],
+      ]),
+      variant: 'shamble',
+      scoring: 'gross',
+      teamSize: 4,
+    });
+    const result = compute(ctx);
+    expect(teamCell(result, 1, 1).teamScore).toBe(7);
+    expect(teamCell(result, 1, 2).teamScore).toBe(9);
+  });
+
+  it('Champagne «3 beste» à 4: alle tre på laget med 3 teller (6+4+5=15)', () => {
+    const ctx = makeCtx({
+      players: [
+        makePlayer('a1', 1),
+        makePlayer('a2', 1),
+        makePlayer('a3', 1),
+        makePlayer('a4', 1),
+        makePlayer('b1', 2),
+        makePlayer('b2', 2),
+        makePlayer('b3', 2),
+      ],
+      holes: par4Holes(1),
+      scores: holeScores(1, [
+        ['a1', 3],
+        ['a2', 4],
+        ['a3', 6],
+        ['a4', 7],
+        ['b1', 6],
+        ['b2', 4],
+        ['b3', 5],
+      ]),
+      variant: 'champagne',
+      count: 3,
+      scoring: 'gross',
+      teamSize: 4,
+    });
+    const result = compute(ctx);
+    expect(teamCell(result, 1, 1).teamScore).toBe(13);
+    expect(teamCell(result, 1, 2).teamScore).toBe(15);
+    expect(teamCell(result, 1, 2).pending).toBe(false);
+  });
+});
