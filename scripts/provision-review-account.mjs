@@ -1,13 +1,23 @@
 #!/usr/bin/env node
 /**
- * Provisjonerer App Store-review-kontoen (#1284) med demo-data, så Apple sin
- * reviewer ser kjernen i appen uten å sette opp noe selv.
+ * Provisjonerer review-kontoen for én butikk (#1284, #2561) med demo-data, så
+ * revieweren ser kjernen i appen uten å sette opp noe selv.
  *
  *   REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… \
- *     node scripts/provision-review-account.mjs [--env staging|prod]
+ *     node scripts/provision-review-account.mjs [--env staging|prod] [--store apple|google]
  *
  * Default er staging. `--env prod` må skrives eksplisitt, og skriptet printer
  * hvilken Supabase-URL det skriver til FØR første skriv.
+ *
+ * Én konto per butikk (#2561). Apple-revieweren skal kunne slette kontoen sin
+ * (5.1.1(v)), mens Google krever at innloggingen virker til enhver tid, og de
+ * to vurderingene kan gå samtidig. `--store` (default `apple`) velger kontoens
+ * env-variabler og demo-runden: `apple` leser `REVIEW_ACCOUNT_EMAIL` og
+ * `REVIEW_ACCOUNT_PASSWORD` og bruker «Demo Round — Tørny», `google` leser
+ * `REVIEW_ACCOUNT_EMAIL_GOOGLE` og `REVIEW_ACCOUNT_PASSWORD_GOOGLE` og bruker
+ * en egen runde. Egne variabler og egen runde er poenget: en kjøring for den
+ * ene butikken roterer aldri passordet til den andre og feier aldri dens
+ * rosterrader eller scores.
  *
  * Kontoen og passordet ligger ALDRI i repoet: begge leses fra prosess-env, og
  * passordet skrives aldri til logg. Se docs/native/app-store-review-konto.md.
@@ -33,8 +43,24 @@ const STAGING_ENV = '.env.staging.local';
 /** Runbookens krav (steg 1 genererer 28 tegn). Porten under er fail-closed. */
 const MIN_PASSWORD_LENGTH = 24;
 
-/** Gjenkjennbart navn så gjenkjøringer finner spillet igjen. Engelsk — revieweren leser det. */
-const DEMO_GAME_NAME = 'Demo Round — Tørny';
+/**
+ * Kontoen og demo-runden per butikk. Rundenavnet er gjenkjennbart, så
+ * gjenkjøringer finner spillet igjen, og engelsk, fordi revieweren leser det.
+ */
+const STORES = {
+  apple: {
+    emailVar: 'REVIEW_ACCOUNT_EMAIL',
+    passwordVar: 'REVIEW_ACCOUNT_PASSWORD',
+    demoGameName: 'Demo Round — Tørny',
+    signIn: '/en/review-login, eller langtrykk på tittelen i appen',
+  },
+  google: {
+    emailVar: 'REVIEW_ACCOUNT_EMAIL_GOOGLE',
+    passwordVar: 'REVIEW_ACCOUNT_PASSWORD_GOOGLE',
+    demoGameName: 'Demo Round (Google Play) — Tørny',
+    signIn: 'langtrykk på tittelen i appen',
+  },
+};
 
 /** Formatet demo-runden spilles i. Speiles av `DEMO_MODE_CONFIG`. */
 const DEMO_GAME_MODE = 'stableford';
@@ -355,29 +381,49 @@ async function main() {
   // ------------------------------------------------------------- argumenter
   const args = process.argv.slice(2);
   let target = 'staging';
+  let storeName = 'apple';
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--env') {
       target = args[i + 1];
       i++;
     } else if (args[i].startsWith('--env=')) {
       target = args[i].slice('--env='.length);
+    } else if (args[i] === '--store') {
+      storeName = args[i + 1];
+      i++;
+    } else if (args[i].startsWith('--store=')) {
+      storeName = args[i].slice('--store='.length);
     } else {
-      throw new Error(`Ukjent argument: ${args[i]} (bruk --env staging|prod)`);
+      throw new Error(`Ukjent argument: ${args[i]} (bruk --env staging|prod og --store apple|google)`);
     }
   }
   if (target !== 'staging' && target !== 'prod') {
     throw new Error(`--env må være staging eller prod (fikk «${target ?? ''}»)`);
   }
+  const store = Object.hasOwn(STORES, storeName ?? '') ? STORES[storeName] : null;
+  if (!store) {
+    throw new Error(`--store må være apple eller google (fikk «${storeName ?? ''}»)`);
+  }
+  const DEMO_GAME_NAME = store.demoGameName;
 
-  const email = (process.env.REVIEW_ACCOUNT_EMAIL ?? '').trim().toLowerCase();
-  const password = process.env.REVIEW_ACCOUNT_PASSWORD ?? '';
+  const email = (process.env[store.emailVar] ?? '').trim().toLowerCase();
+  const password = process.env[store.passwordVar] ?? '';
   if (!email || !password) {
     throw new Error(
-      'REVIEW_ACCOUNT_EMAIL og REVIEW_ACCOUNT_PASSWORD må settes i miljøet.\n' +
-        '  REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… node scripts/provision-review-account.mjs',
+      `${store.emailVar} og ${store.passwordVar} må settes i miljøet.\n` +
+        `  ${store.emailVar}=… ${store.passwordVar}=… node scripts/provision-review-account.mjs --store ${storeName}`,
     );
   }
   assertStrongPassword(password);
+  // To butikker, to kontoer: samme adresse ville rotert den andre butikkens
+  // passord og slått sammen to vurderinger som kan gå samtidig.
+  const otherStore = storeName === 'apple' ? STORES.google : STORES.apple;
+  const otherEmail = (process.env[otherStore.emailVar] ?? '').trim().toLowerCase();
+  if (otherEmail && otherEmail === email) {
+    throw new Error(
+      `${store.emailVar} og ${otherStore.emailVar} er samme adresse. Hver butikk skal ha sin egen review-konto.`,
+    );
+  }
 
   const envFile = target === 'prod' ? PROD_ENV : STAGING_ENV;
   const env = loadEnv(envFile);
@@ -400,6 +446,7 @@ async function main() {
   }
 
   console.log(`Miljø:        ${target}  (${envFile})`);
+  console.log(`Butikk:       ${storeName}  (demo-runden «${DEMO_GAME_NAME}»)`);
   console.log(`Skriver til:  ${env.NEXT_PUBLIC_SUPABASE_URL}`);
   console.log(`Konto:        ${email}`);
 
@@ -820,7 +867,7 @@ async function main() {
   console.log(`   Arrangør: ${organizerLabel}`);
   console.log(`   Spillere: ${finalRoster.length}  (review-kontoen + ${CO_PLAYERS.length} gjester)`);
   console.log(`   Scores:   ${finalScores.length}`);
-  console.log('   Innlogging: /en/review-login (passordet står ikke her og skal ikke logges)');
+  console.log(`   Innlogging: ${store.signIn} (passordet står ikke her og skal ikke logges)`);
 }
 
 main().catch((err) => {

@@ -6,6 +6,12 @@ inn med, blir appen avvist på 2.1 («unable to review»). Derfor finnes én
 dedikert konto med passord-innlogging, ferdig utfylte demo-data og en egen,
 skjult inngang i appen.
 
+**Fra #2561 finnes én konto per butikk.** Apple-revieweren skal kunne slette
+kontoen (5.1.1(v)), mens Google krever at innloggingen virker til enhver tid, og de
+to vurderingene kan gå samtidig. Apple-kontoen og Google-kontoen har hver sin
+adresse, sitt eget passord og sin egen demo-runde. Skriptet velger med
+`--store apple` (standard) eller `--store google`.
+
 Bygget i #1284 (del 1) for skallet. Fra N8 (#1954, P1b) er det native-appen som
 sendes inn, og inngangen revieweren bruker er langtrykket på innloggingsskjermen
 beskrevet under — ikke lenger nettsida `/review-login` (den består, men er
@@ -18,7 +24,7 @@ webbens egen).
 | Inngangen i appen | Innloggingsskjermen: hold overskriften («Tørny») inne i 1,5 s | Et passordfelt og knappen «Logg inn med passord» dukker opp under e-postfeltet. Ingen synlig lenke, ingen env-gate. |
 | Innloggingssida (web) | `/review-login` (`/en/review-login` for engelsk) | E-post + passord. Ulenket, `noindex`. Gjelder nettsida, ikke app-innsendingen. |
 | Env-porten (web) | `REVIEW_ACCOUNT_EMAIL` i Vercel | Er den ikke satt, svarer web-sida «finnes ikke». Appen har ingen slik port — se sikkerhetsmodellen. |
-| Provisjonering | `scripts/provision-review-account.mjs` | Lager kontoen, demo-runden og medspillerne. |
+| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-runden og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD` og «Demo Round — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE` og «Demo Round (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
 | Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-runden skal stå på når det ikke finnes nøyaktig én admin-konto. |
 
 ## Sikkerhetsmodellen
@@ -61,10 +67,10 @@ steder: i Supabase (hashet) og i App Store Connect. Aldri i repoet, aldri i en
 
 Alle fire stegene gjør du selv. Steg 3 skriver til produksjonsdatabasen.
 
-### 1. Lag passordet
+### 1. Lag passordene
 
-Kjør lokalt i et terminalvindu og ta vare på det du får ut — det vises ikke
-igjen:
+Kjør lokalt i et terminalvindu, én gang for Apple-kontoen og én gang for
+Google-kontoen, og ta vare på det du får ut — det vises ikke igjen:
 
 ```bash
 LC_ALL=C tr -dc 'A-Za-z0-9!@#%^&*-_' < /dev/urandom | head -c 28; echo
@@ -114,12 +120,25 @@ REVIEW_ACCOUNT_PASSWORD='<passordet>' \
 node scripts/provision-review-account.mjs --env prod
 ```
 
+Google-kontoen lages på samme måte, med sine egne variabler og `--store google`:
+
+```bash
+REVIEW_ACCOUNT_EMAIL_GOOGLE='<google-review-epost>' \
+REVIEW_ACCOUNT_PASSWORD_GOOGLE='<det-andre-passordet>' \
+node scripts/provision-review-account.mjs --env prod --store google
+```
+
 **Forventet resultat:** en oppsummering som slutter med «✅ Provisjonert.» og
-linjene `Spill`, `Kortnavn`, `Arrangør`, `Spillere: 4`, `Scores: 21`. Feiler
+linjene `Spill`, `Kortnavn`, `Arrangør`, `Spillere: 4`, `Scores: 21`. Linja
+`Butikk:` øverst viser hvilken butikk og demo-runde kjøringen gjelder. Feiler
 noe, stopper skriptet med «❌» og en forklaring — ingenting er halvveis skrevet
 ut over det som allerede står i loggen.
 
-### 4. Legg inn i App Store Connect
+### 4. Legg inn i butikkene
+
+Apple-kontoen går i **App Store Connect → appen → App Review Information** (og i
+TestFlight → Test Information). Google-kontoen går i **Play Console → Policy → App
+content → App access**, med teksten i `play-store-metadata.md`. Aldri bytt om på dem.
 
 **App Store Connect → appen → App Review Information**:
 
@@ -132,7 +151,8 @@ ut over det som allerede står i loggen.
 
 På telefonen (TestFlight-kandidaten): hold overskriften inne til passordfeltet
 dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
-**Forventet:** hjem-skjermen med «Demo Round — Tørny». Feil passord skal gi
+**Forventet:** hjem-skjermen med «Demo Round — Tørny» (Google-kontoen: «Demo Round
+(Google Play) — Tørny»). Feil passord skal gi
 «Feil e-post eller passord.» og ingenting annet.
 
 ## Reset før hver innsending — og etter hver review
@@ -144,8 +164,11 @@ som arrangør av demo-runden, ikke review-kontoen — den er bare deltaker. Pris
 er at demo-runden ligger blant dine egne runder i appen. Det er en avtalt
 kostnad, ikke en feil.
 
-Kjør samme kommando som i steg 3 på nytt **før hver innsending, og etter hver
-review der kontoen kan ha blitt slettet**:
+Kjør samme kommando som i steg 3 på nytt, for den butikken det gjelder: Apple-kontoen
+**før hver innsending til Apple, og etter hver review der kontoen kan ha blitt
+slettet**. Google-kontoen **før det lukkede sporet og produksjonen sendes til
+vurdering**, og sjekk etter hver vurdering at innloggingen fortsatt virker, fordi
+Google krever at den virker hele tiden. Apple-kommandoen:
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
@@ -172,8 +195,11 @@ Den slutter med «✅ Allerede provisjonert — resatt til frisk demo.» og en
 `Arrangør`-linje som viser hvem runden står på. Les den linja — det er den som
 avgjør om revieweren får slette kontoen sin.
 
-Sender du inn med et nytt passord, må steg 4 gjøres om — App Store Connect
-husker det gamle.
+Google-kontoen tilbakestilles med `--store google` og sine egne variabler (steg 3).
+
+Sender du inn med et nytt passord, må steg 4 gjøres om — App Store Connect og Play
+Console husker det gamle. Skriptet roterer passordet til det du gir det, så gi det
+samme passord som står i butikken hvis du ikke vil endre det.
 
 ## Demo-dataene revieweren møter
 
@@ -199,8 +225,10 @@ husker det gamle.
 
 Skrevet for native-appen som sendes inn i N8 (#1954, build `1.1.0 (3)`), og
 oppdatert i #2561 for neste innsending: AI-spørsmålet etter innlogging, varsler
-på iOS, ingen kroner i appen og bare Norge. Lim den inn som den er, med adressen
-og passordet i feltene over — notatet nevner ingen av delene selv.
+på iOS, ingen kroner i appen, bare Norge, og slettingen på Apple-kontoen. Lim den
+inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over —
+notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
+tekst (`play-store-metadata.md`, «App-tilgang»).
 
 Navnene står med de tegnene appen faktisk viser («Tørny», «Demo Round — Tørny»).
 Anmelderen skal lete etter det som står på skjermen, ikke etter en forenklet
@@ -229,7 +257,9 @@ writes these texts.
 - "Ja, det er greit" (Yes, that is fine): the player's name can appear in the
   texts, and Anthropic receives the names, results, game and course names and
   dates the texts are written from.
-- "Nei takk" (No thanks): the player's name is left out of new texts.
+- "Nei takk" (No thanks): the player's name is left out of new texts. Numbers
+  without names, such as placings and team results, can still be used, as our
+  privacy policy says.
 Both answers take you into the app. The answer can be changed at any time under
 "Profil" -> "Personvern og konto" -> "AI-tekster om meg". The review account is
 reset before every submission, so you will see the question.
@@ -245,6 +275,8 @@ The app is in Norwegian, its home market. The labels you will need:
 "Slett konto" = Delete account
 "Varsler og tema" = Notifications and theme
 "Personvern og konto" = Privacy and account
+"Start runden nå" = Start the round now
+"Avslutt runden" = End the round
 
 WHAT YOU WILL SEE
 The account plays in an active demo round called "Demo Round — Tørny", with
@@ -256,10 +288,17 @@ account's view.
 
 FEATURES WORTH TESTING
 - Account deletion (5.1.1(v)): "Profil" (top right) -> "Personvern og konto"
-  -> "Slett konto" -> confirm. It goes through. The account is withdrawn from the demo round
-  automatically, you are signed out, and these credentials stop working
-  afterwards. That is the expected result: we restore the account and the demo
-  data before every submission.
+  -> "Slett konto" -> confirm. Please test it last. It goes through, the account
+  is withdrawn from the demo round automatically, you are signed out, and these
+  credentials stop working afterwards. That is the expected result: this account
+  is for Apple review only, and we restore it and the demo data before every
+  submission.
+  One case blocks deletion: a round you created yourself during review that is
+  still planned or in progress, so its players are not left without an
+  organiser. Open that round, tap "Start runden nå" if it has not started, then
+  "Avslutt runden" and confirm. After that, deletion goes through. Please do not
+  use the "Åpne Klubbhuset" button on the deletion screen: it opens our website,
+  which signs in with an email code.
 - Offline scoring: turn on Airplane Mode while entering scores on a hole. The
   scores are kept on the device and sync by themselves once it is back online.
   Nothing is lost.
@@ -274,13 +313,16 @@ an invitation, a scorecard to approve or a result that is ready.
 WHAT THE APP DOES NOT DO
 - No location access. The app does not read the device location at all.
 - No money. The app shows points and results only, never amounts, and there are
-  no payments of any kind in the app. Skins, Wolf, Nassau and Bingo Bango Bongo
-  are ways of counting points in golf; in the app they have no stakes, prizes or
-  money. "Blind Wolf-potter" in the Wolf results is the number of holes a player
-  won as a blind wolf.
+  no payments of any kind in the app. Skins, Wolf, Bingo Bango Bongo, Nines,
+  Acey Deucey and Nassau are ways of counting points in golf; in the app they
+  have no stakes, prizes or money. "Blind Wolf-potter" in the Wolf results is the
+  number of holes a player won as a blind wolf.
 - No purchases, no advertising, no third-party tracking.
 - The app plays eight golf formats. A round in any other format opens on our
   website instead, and the app says so with a button that opens Safari.
+- The year summary (Kavalkaden) opens at Christmas for players who finished a
+  round that year. The demo round is still in progress, so this account does not
+  show it.
 
 The app is available in Norway only. The account exists for review only and
 holds no real player data.
