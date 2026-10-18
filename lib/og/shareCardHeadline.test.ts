@@ -80,6 +80,19 @@ describe('headlineSpec — placement', () => {
     expect(spec).toMatchObject({ kind: 'won', result: score });
   });
 
+  it('four tied singles are all named', () => {
+    const rows = ['Marte L.', 'Jonas B.', 'Ola N.', 'Kari H.'].map((n) => row(1, [n], POINTS_38));
+    expect(headlineSpec(placement(rows))).toMatchObject({
+      kind: 'shared',
+      names: ['Marte', 'Jonas', 'Ola', 'Kari'],
+    });
+  });
+
+  it('five tied singles read «Delt seier»', () => {
+    const rows = ['A', 'B', 'C', 'D', 'E'].map((n) => row(1, [n], POINTS_38));
+    expect(headlineSpec(placement(rows))).toMatchObject({ kind: 'sharedMany' });
+  });
+
   it('skins nobody won (no winners) is just «finished»', () => {
     expect(headlineSpec(placement([], [row(1, ['A'], { kind: 'skins', value: 0 })]))).toEqual({
       kind: 'finished',

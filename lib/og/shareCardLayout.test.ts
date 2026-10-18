@@ -204,6 +204,17 @@ describe('shareCardHeight', () => {
     expect(h).toBeGreaterThanOrEqual(1294 + 40);
   });
 
+  it('longer row names make a tall card taller (the 1350 floor aside)', () => {
+    const base = { headlineLines: 8, headlineFontSize: 116 };
+    const short = placement(['Alice'], ['Bob'], ['Charlie']);
+    const long = placement(
+      ['Christopher', 'Alexander', 'Sebastian', 'Magnus'],
+      ['Ingeborg', 'Fredrik', 'Henrik', 'Silje'],
+      ['Christopher', 'Alexander', 'Sebastian', 'Magnus'],
+    );
+    expect(shareCardHeight(long, base)).toBeGreaterThan(shareCardHeight(short, base));
+  });
+
   it('more lines in the headline never make the card shorter', () => {
     const model = placement(['Alice'], ['Bob'], ['Charlie']);
     const two = shareCardHeight(model, { headlineLines: 2, headlineFontSize: 116 });

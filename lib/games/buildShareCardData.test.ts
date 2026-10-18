@@ -998,3 +998,37 @@ describe('match.sides (#2319)', () => {
     ]);
   });
 });
+
+describe('winners past the podium (#2319)', () => {
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dan'], ['u5', 'Eli']);
+  const tiedOnTop = (count: number): SoloStrokeplayResult => ({
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [],
+    players: ['u1', 'u2', 'u3', 'u4', 'u5'].map((userId, i) => ({
+      userId,
+      totalNetStrokes: i < count ? 70 : 80,
+      totalGrossStrokes: 74,
+      holesPlayed: 18,
+      netToPar: i < count ? -2 : 8,
+      rank: i < count ? 1 : count + 1,
+      tiedWith: [],
+    })),
+  });
+
+  it.each([[3, 3], [4, 4], [5, 5]])(
+    '%i tied on top: the podium shows 3 rows, %i are winners',
+    (count, winners) => {
+      const card = buildShareCardData({
+        result: tiedOnTop(count),
+        nameByUserId: nameMap,
+        sharerId: null,
+        parByHole: PAR_72,
+        sideWinners: [],
+      });
+      expect(card.podium).toHaveLength(3);
+      expect(card.winners).toHaveLength(winners);
+      expect(card.winners.every((w) => w.rank === 1)).toBe(true);
+    },
+  );
+});
