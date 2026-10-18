@@ -29,9 +29,9 @@ function shareImageUrl(): string | null {
  * blob is ready, so the tap handler calls `navigator.share` synchronously
  * inside the user-gesture window.
  *
- * Personalization is handled server-side via the session cookie, so the button
- * passes no viewer id. When Web Share (with files) is unavailable — desktop —
- * it falls back to downloading the PNG.
+ * The card is the same for everyone (the session cookie only opens the gate on
+ * the route, #2312/#2319), so the button passes no viewer id. When Web Share
+ * (with files) is unavailable — desktop — it falls back to downloading the PNG.
  *
  * All of that now lives in `lib/share/useSharePng` (#2130), shared with
  * Kavalkadens card button. This component only decides which URL to prefetch
