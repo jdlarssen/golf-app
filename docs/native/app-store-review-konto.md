@@ -190,15 +190,17 @@ husker det gamle.
 - **Så langt går det:** taste slag, følge leaderboardet og **levere
   scorekortet**. Å avslutte hele runden er arrangørens knapp, og den ser
   revieweren ikke.
-- **Slett konto:** «Profil» (oppe til høyre på hjem) → «Slett konto» virker for
-  denne kontoen. Brukes den, trekkes kontoen automatisk ut av runden, runden
-  blir stående hos arrangøren, og neste kjøring av skriptet setter alt tilbake.
+- **Slett konto:** «Profil» (oppe til høyre på hjem) → «Personvern og konto» →
+  «Slett konto» virker for denne kontoen. Brukes den, trekkes kontoen automatisk
+  ut av runden, runden blir stående hos arrangøren, og neste kjøring av skriptet
+  setter alt tilbake.
 
 ## Notes-mal til App Store Connect
 
-Skrevet for native-appen som sendes inn i N8 (#1954, build `1.1.0 (3)`). Lim den
-inn som den er, med adressen og passordet i feltene over — notatet nevner ingen
-av delene selv.
+Skrevet for native-appen som sendes inn i N8 (#1954, build `1.1.0 (3)`), og
+oppdatert i #2561 for neste innsending: AI-spørsmålet etter innlogging, varsler
+på iOS, ingen kroner i appen og bare Norge. Lim den inn som den er, med adressen
+og passordet i feltene over — notatet nevner ingen av delene selv.
 
 Navnene står med de tegnene appen faktisk viser («Tørny», «Demo Round — Tørny»).
 Anmelderen skal lete etter det som står på skjermen, ikke etter en forenklet
@@ -219,6 +221,19 @@ HOW TO SIGN IN
    "Logg inn med passord". The password is long and random, so pasting it is
    the surest way in.
 
+AFTER SIGNING IN: ONE QUESTION ABOUT AI TEXTS
+Right after signing in, the app asks "Kan AI-en skrive om deg?" (Can the AI
+write about you?). After each round Tørny writes a short round report, and at
+Christmas a summary of the golf year. The language model Claude from Anthropic
+writes these texts.
+- "Ja, det er greit" (Yes, that is fine): the player's name can appear in the
+  texts, and Anthropic receives the names, results, game and course names and
+  dates the texts are written from.
+- "Nei takk" (No thanks): the player's name is left out of new texts.
+Both answers take you into the app. The answer can be changed at any time under
+"Profil" -> "Personvern og konto" -> "AI-tekster om meg". The review account is
+reset before every submission, so you will see the question.
+
 LANGUAGE
 The app is in Norwegian, its home market. The labels you will need:
 "Profil" = Profile (top right on the home screen)
@@ -228,6 +243,8 @@ The app is in Norwegian, its home market. The labels you will need:
 "Resultater" = Results (the leaderboard)
 "Logg ut" = Sign out
 "Slett konto" = Delete account
+"Varsler og tema" = Notifications and theme
+"Personvern og konto" = Privacy and account
 
 WHAT YOU WILL SEE
 The account plays in an active demo round called "Demo Round — Tørny", with
@@ -238,8 +255,8 @@ is hosted by a different account, so ending the round itself is not part of this
 account's view.
 
 FEATURES WORTH TESTING
-- Account deletion (5.1.1(v)): "Profil" (top right) -> "Slett konto" ->
-  confirm. It goes through. The account is withdrawn from the demo round
+- Account deletion (5.1.1(v)): "Profil" (top right) -> "Personvern og konto"
+  -> "Slett konto" -> confirm. It goes through. The account is withdrawn from the demo round
   automatically, you are signed out, and these credentials stop working
   afterwards. That is the expected result: we restore the account and the demo
   data before every submission.
@@ -247,14 +264,23 @@ FEATURES WORTH TESTING
   scores are kept on the device and sync by themselves once it is back online.
   Nothing is lost.
 
+NOTIFICATIONS
+The app does not ask for notification permission on its own, at sign-in or
+later. The system prompt appears only when the player turns on
+"Varsler på denne telefonen" (Notifications on this phone) under "Profil" ->
+"Varsler og tema". The notifications are about the player's own rounds, such as
+an invitation, a scorecard to approve or a result that is ready.
+
 WHAT THE APP DOES NOT DO
-- No push notifications. The app never asks for notification permission.
 - No location access. The app does not read the device location at all.
+- No money. The app shows points and results only, never amounts, and there are
+  no payments of any kind in the app.
 - No purchases, no advertising, no third-party tracking.
 - The app plays eight golf formats. A round in any other format opens on our
   website instead, and the app says so with a button that opens Safari.
 
-The account exists for review only and holds no real player data.
+The app is available in Norway only. The account exists for review only and
+holds no real player data.
 ```
 
 ## Hva som bevisst IKKE ligger i repoet
