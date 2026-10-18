@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
@@ -30,6 +30,12 @@ interface SettlementTableProps {
   /** `games.status === 'finished'`: the final title and the copy button. */
   isFinal: boolean;
 }
+
+// Inside an iframe (a club's /embed snippet has no allow="clipboard-write"),
+// the browser refuses the clipboard, so the button would only ever fail there.
+const noSubscribe = () => () => {};
+const isFramed = () => window.self !== window.top;
+const notFramedOnServer = () => false;
 
 /** The totals carry no «kr» on the artboard: «+100», «−60», «0». */
 function signedAmount(netKr: number): string {
@@ -76,7 +82,8 @@ export function SettlementTable({
   });
   const paymentSentence = (from: string, to: string, amount: string) =>
     t('paymentSentence', { from, to, amount });
-  const showCopy = isFinal && settlement.payments.length > 0;
+  const framed = useSyncExternalStore(noSubscribe, isFramed, notFramedOnServer);
+  const showCopy = isFinal && settlement.payments.length > 0 && !framed;
   // Fill the grid column by column, so the engine's order (winner first)
   // reads down the left column and on into the right one, as drawn.
   const totalsRows = Math.ceil(settlement.perPlayer.length / 2);
@@ -211,12 +218,13 @@ export function SettlementTable({
           >
             {copyState === 'copied' ? t('copied') : t('copyButton')}
           </Button>
-          {/* The label swap alone is silent to screen readers; this announces it. */}
+          {/* The label swap and the error line are silent to screen readers on
+              their own; this always-mounted region announces both. */}
           <span role="status" className="sr-only">
-            {copyState === 'copied' ? t('copied') : ''}
+            {copyState === 'copied' ? t('copied') : copyState === 'error' ? t('copyFailed') : ''}
           </span>
           {copyState === 'error' && (
-            <p role="status" className="text-center text-xs leading-[normal] text-danger">
+            <p aria-hidden="true" className="text-center text-xs leading-[normal] text-danger">
               {t('copyFailed')}
             </p>
           )}

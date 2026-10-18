@@ -87,6 +87,24 @@ describe('SettlementTable', () => {
     );
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('settlement-copy')).not.toBeInTheDocument();
+
+    // Inside a club's iframe (/embed) the browser refuses the clipboard: no button.
+    const top = vi.spyOn(window, 'top', 'get').mockReturnValue({} as Window);
+    try {
+      rerender(
+        <SettlementTable
+          settlement={SETTLEMENT}
+          playersById={PLAYERS}
+          gameName="Lørdagsrunden"
+          mode="skins"
+          isFinal
+        />,
+      );
+      expect(screen.getAllByRole('listitem')).toHaveLength(2);
+      expect(screen.queryByTestId('settlement-copy')).not.toBeInTheDocument();
+    } finally {
+      top.mockRestore();
+    }
   });
 
   it('copies the settlement as plain text and says so', async () => {
