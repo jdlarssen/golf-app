@@ -16,6 +16,22 @@ const NORWEGIAN_MONTHS = [
   'desember',
 ] as const;
 
+const ENGLISH_MONTHS = Array.from({ length: 12 }, (_, i) =>
+  new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(2000, i, 15)),
+);
+
+/**
+ * Is `suffix` the date `suggestGameName` appends to a course name? «27. september»
+ * (no) or «27 September» (en): a day and a real month, nothing else. «9 hull»
+ * and «2 Runde» are not.
+ */
+export function isAutoGameNameDate(suffix: string): boolean {
+  const no = /^\d{1,2}\. (\p{L}+)$/u.exec(suffix);
+  if (no) return (NORWEGIAN_MONTHS as readonly string[]).includes(no[1]);
+  const en = /^\d{1,2} (\p{L}+)$/u.exec(suffix);
+  return en !== null && ENGLISH_MONTHS.includes(en[1]);
+}
+
 export interface SuggestGameNameInput {
   /** Bane-navn fra valgt course. `null` eller `''` returnerer tom streng. */
   courseName: string | null;
