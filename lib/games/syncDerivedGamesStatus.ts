@@ -24,6 +24,11 @@ export type DerivedStatusPatch = {
    * here — the server claims it inside `runFinishPipeline`.
    */
   finish_pipeline_at?: null;
+  /**
+   * #2298: only ever passed as `null`, by `reopenGame`. A game reopened and
+   * finished again starts without a prize-giving on the big screen.
+   */
+  ceremony_step?: null;
 };
 
 /**
