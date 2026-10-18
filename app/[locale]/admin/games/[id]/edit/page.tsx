@@ -74,6 +74,7 @@ type UserRow = {
   profile_completed_at: string | null;
   gender: 'mens' | 'ladies' | null;
   level: 'junior' | 'normal' | 'senior';
+  is_guest: boolean;
 };
 
 const getEditContext = cache(async () => {
@@ -259,7 +260,7 @@ const getOptions = cache(async () => {
       (from, to) =>
         getAdminClient()
           .from('users')
-          .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
+          .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level, is_guest')
           // #1012/#2323: anonymised accounts must not be selectable.
           .is('deleted_at', null)
           .order('profile_completed_at', { ascending: true, nullsFirst: false })
@@ -305,6 +306,9 @@ const getOptions = cache(async () => {
     pending: u.profile_completed_at === null,
     gender: u.gender,
     level: u.level,
+    // #2570: a resumed draft needs the guest flag too, or «Klar?» could not
+    // stop a round with only guests (the same flag /opprett-spill sends).
+    isGuest: u.is_guest,
   }));
 
   return { courses, playerOptions };
