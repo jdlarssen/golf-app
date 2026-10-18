@@ -389,14 +389,18 @@ describe('LeaderboardBody', () => {
     expect(screen.getByTestId('team-row-2-under')).toHaveTextContent(/^9\D/);
   });
 
-  it('lister trukne spillere under tavla, som nettsiden (#1954 A3)', async () => {
-    const bundle = bestBallBundle(9) as unknown as {
+  it('lister trukne spillere under den ferdige best ball-tavla, som nettsiden (#1954 A3)', async () => {
+    // Best ball viser lista bare når spillet er ferdig (webbens `full`); regelen
+    // per visning er testet som ren funksjon i `withdrawnBoard.test.ts`.
+    const bundle = bestBallBundle(18) as unknown as {
+      game: Record<string, unknown>;
       players: { userId: string; withdrawnAt: string | null }[];
     };
+    bundle.game = { ...bundle.game, status: 'finished' };
     bundle.players = bundle.players.map((p) =>
       p.userId === 'rival2' ? { ...p, withdrawnAt: '2026-08-30T11:00:00.000Z' } : p,
     );
-    const scores = bestBallScores(9);
+    const scores = bestBallScores(18);
     await render(
       <LeaderboardBody
         bundle={bundle as never}

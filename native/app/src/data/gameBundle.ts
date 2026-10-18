@@ -118,6 +118,11 @@ export interface BundleGame {
 export interface BundlePlayer {
   userId: string;
   name: string | null;
+  /**
+   * #1954 A3: `false` når spillerens `users`-rad ikke kunne leses. Valgfri, så
+   * en bundel i cachen fra før feltet fantes leses som «lest» (ikke skjult).
+   */
+  hasProfile?: boolean;
   nickname: string | null;
   teamNumber: number | null;
   flightNumber: number | null;
@@ -346,6 +351,9 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
     players: players.map((row) => ({
       userId: row.user_id,
       name: row.users?.name ?? null,
+      // #1954 A3: om profilen kunne leses. Tavlas «Trukne spillere» viser,
+      // som webben, bare spillere med en lesbar `users`-rad.
+      hasProfile: row.users != null,
       nickname: row.users?.nickname ?? null,
       teamNumber: row.team_number,
       flightNumber: row.flight_number,
