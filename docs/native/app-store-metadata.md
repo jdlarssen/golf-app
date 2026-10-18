@@ -3,7 +3,7 @@
 Alt eieren limer inn i App Store Connect for iOS-appen, samlet ett sted. Skrevet for
 N8 (#1954, P6) og oppdatert i #2561 for neste innsending: varsler på iOS,
 AI-spørsmålet, ingen kroner i appen og bare Norge. Klikkstien og «hva du skal se
-etter» ligger i eier-kommentaren på issuet; denne fila er kilden tekstene kopieres
+etter» står i oppskriftene på PR #2596 (E6); denne fila er kilden tekstene kopieres
 fra, så neste innsending ikke må finne dem opp på nytt.
 
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
@@ -37,12 +37,13 @@ Så hakes disse av, én rad per datatype:
 | Kategori i skjemaet | Datatype | Hva det er hos oss, og kilden | Purposes | Linked to the user? | Used for tracking? |
 |---|---|---|---|---|---|
 | Contact Info | **Email Address** | Adressen kontoen logger inn med engangskoden (`native/app/src/screens/Login.tsx`, `requestLoginCode`). | App Functionality | **Yes** | **No** |
-| Contact Info | **Name** | Navnet spilleren fyller inn i profilen, og som medspillerne ser på tavla (`CompleteProfile.tsx`, feltet `complete-profile-name`). | App Functionality | **Yes** | **No** |
-| Contacts | **Contacts** | Vennelista, og e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`, `addFriendByEmail` og `inviteFriend`). Apple regner en «social graph» som kontakter. Appen leser aldri kontaktene på telefonen. | App Functionality | **Yes** | **No** |
+| Contact Info | **Name** | Navnet og kallenavnet spilleren fyller inn i profilen, og som medspillerne ser på tavla (`CompleteProfile.tsx`, feltet `complete-profile-name`; `EditProfile.tsx`, feltet `edit-profile-nickname`). | App Functionality | **Yes** | **No** |
+| Contacts | **Contacts** | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`, `addFriendByEmail` og `inviteFriend`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Apple regner en «social graph» som kontakter. Appen leser aldri kontaktene på telefonen. | App Functionality | **Yes** | **No** |
 | Identifiers | **User ID** | Konto-id-en radene i databasen henger på (Supabase Auth). | App Functionality | **Yes** | **No** |
-| Identifiers | **Device ID** | Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en, bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:115`). Se tolkningen under. | App Functionality | **Yes** | **No** |
+| Identifiers | **Device ID** | Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en og iOS-versjonen («Tørny-appen iOS …», `userAgent()`), bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:110-137`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 | User Content | **Gameplay Content** | Slagene, resultatene og handicapet poengregningen bygger på, og hvem som spiller i hvilken runde (`lib/scoring/`, `CompleteProfile.tsx`, feltet `complete-profile-hcp`). Apple: «Such as saved games, multiplayer matching or gameplay logic, or user-generated content in-game». | App Functionality | **Yes** | **No** |
-| User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
+| User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`), og grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake (`Approve.tsx`), som spilleren ser på spillsiden (`GameHome.tsx:268`). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
+| Other Data | **Other Data Types** | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`, `GENDER_OPTIONS` og `LEVEL_OPTIONS`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 
 **Varsel-tokenet er en tolkning.** Apple har ingen regel som nevner varsel-tokens ved
 navn. Vi oppgir det som Device ID ut fra to sitater:
@@ -54,7 +55,17 @@ navn. Vi oppgir det som Device ID ut fra to sitater:
   (<https://developer.apple.com/documentation/usernotifications/registering-your-app-with-apns>).
 
 Tokenet blir liggende i databasen så lenge varslene er på, og det er koblet til kontoen,
-så det er samlet inn etter definisjonen over.
+så det er samlet inn etter definisjonen over. iOS-versjonen lagres i samme rad for å
+kjenne igjen telefonen og oppgis derfor sammen med tokenet.
+
+**Kjønn og spillerklasse er også en tolkning.** Apple har ingen egen datatype for dem.
+«Sensitive Info» er «racial or ethnic data, sexual orientation, pregnancy or childbirth
+information, disability, religious or philosophical beliefs, trade union membership,
+political opinion, genetic information, or biometric data», og der står verken kjønn
+eller alder. Ingen annen type passer heller, så de oppgis under «Other Data Types»
+(«Any other data types not mentioned»). Spillerklassen sier noe om alderen
+(junior eller senior), og det er en grunn til å oppgi den heller enn å la den ligge
+under spilldataene.
 
 Dette hakes **ikke** av, og her er grunnen:
 
@@ -83,7 +94,7 @@ Siste spørsmål, «Do you use this data to track you or your device across apps
 websites owned by other companies?», er **No** for alle radene.
 
 Etterpå skal oppsummeringen på siden vise **Data Linked to You** med Contact Info,
-Contacts, Identifiers og User Content, og **Data Not Used to Track You**.
+Contacts, Identifiers, User Content og Other Data, og **Data Not Used to Track You**.
 
 **Endring fra #1284-utkastet:** posisjon er tatt ut. Utkastet hadde et forbehold om
 green-pins (#1210); den funksjonen bor på nettsiden, og native-appen leser ikke
@@ -93,7 +104,9 @@ og en etikett som underrapporterer er en avvisningsgrunn.
 **Endring i #2561:** **Contacts** er lagt til (vennene kom i appen med #2256), og
 **Device ID** for varsel-tokenet (varslene kom med #2256 PR 4). User Content er delt i
 **Gameplay Content** (slag, resultater, handicap, hvem som spiller) og **Other User
-Content** (rundenavnet).
+Content** (rundenavnet og grunnen når et kort sendes tilbake). Kallenavnet står under
+Name, og kjønn og spillerklasse under **Other Data Types**. De tre feltene fantes i
+appen også ved forrige innsending, men sto ikke på etiketten.
 
 ## App-navn og URL-er
 
@@ -105,6 +118,7 @@ Content** (rundenavnet).
 | Personvern-URL | `https://tornygolf.no/legal/privacy` |
 | Aldersgrense | Regnes ut av Apples spørreskjema. Med svarene i «Aldersgrense (Apple)» blir den 13+ (var 4+). |
 | Tilgjengelighet | Bare Norge (Pricing and Availability → App Availability). |
+| Handelsstatus (DSA) | «This is not a trader account.» (Business → Agreements → Compliance → Digital Services Act). Apple: den som bare distribuerer utenfor EU, er «not acting as a trader on the App Store», men statusen må oppgis likevel (<https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements>). |
 | Kategori | Sports (primær). Anbefaling — sjekk hva som faktisk står i App Store Connect før innsending; den ble satt da appen ble opprettet (#1283) og er ikke lest av i denne økta. |
 
 ## Aldersgrense (Apple)
@@ -122,27 +136,35 @@ Klikkstien: Apps → Tørny → General → App Information → «Set Up Age Rat
 «Edit») → gå gjennom stegene. Orkestratoren sjekker at spørsmålene står slik i
 konsollen før eieren svarer.
 
+Svarene står med skjemaets egne valg. Kontroller og funksjoner er en liste der du
+krysser av for det appen har («Valgt» eller «Ikke valgt»). Innholdsspørsmålene har
+None, Infrequent og Frequent, og pengespill og loot boxes har Yes og No
+(<https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating>).
+For de to helsespørsmålene viser ikke Apples dokumentasjon valgene, så der står begge.
+Velg det som betyr «ingen».
+
 | Del og spørsmål | Svar | Hvorfor |
 |---|---|---|
-| In-App Controls: Parental Controls | No | Appen har ingen foreldrekontroll. |
-| In-App Controls: Age Assurance | No | Appen sjekker ikke alder. |
-| Capabilities: Unrestricted Web Access | No | Appen har ingen nettleser. Lenker til tornygolf.no åpnes i Safari, utenfor appen (`native/app/src/lib/webLink.ts`, `Linking.openURL`). Verken `react-native-webview` eller `expo-web-browser` er avhengigheter. |
-| Capabilities: User-Generated Content | No | Det spillerne skriver (navn, spillnavn, slag), ser bare medspillerne og vennene, ikke folk flest. Apples definisjon krever «broad distribution». «Yes» gir også 4+, så svaret flytter ikke aldersgrensen. |
-| Capabilities: Social Media | No | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er innhold som spres «through a social feed or similar discovery method that visibly spreads content to many users». Appen har ingen strøm og ingen måte å spre innhold til mange på. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
-| Capabilities: Messaging and Chat | No | Spillerne kan ikke skrive til hverandre i appen. En venneforespørsel er ingen melding. |
-| Capabilities: Advertising | No | Appen har ingen reklame. |
+| In-App Controls: Parental Controls | Ikke valgt | Appen har ingen foreldrekontroll. |
+| In-App Controls: Age Assurance | Ikke valgt | Appen sjekker ikke alder. |
+| Capabilities: Unrestricted Web Access | Ikke valgt | Appen har ingen nettleser. Lenker til tornygolf.no åpnes i Safari, utenfor appen (`native/app/src/lib/webLink.ts`, `Linking.openURL`). Verken `react-native-webview` eller `expo-web-browser` er avhengigheter. |
+| Capabilities: User-Generated Content | Ikke valgt | Det spillerne skriver (navn, rundenavn, slag, grunnen når et kort sendes tilbake), ser bare medspillerne og vennene, ikke folk flest. Apples definisjon krever «broad distribution». Valgt gir også 4+, så svaret flytter ikke aldersgrensen. |
+| Capabilities: Social Media | Ikke valgt | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er innhold som spres «through a social feed or similar discovery method that visibly spreads content to many users». Appen har ingen strøm og ingen måte å spre innhold til mange på. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
+| Capabilities: Social Media Disabled for Users Under 13 | Ikke valgt | Gjelder bare apper med sosiale medier. |
+| Capabilities: Messaging and Chat | **Valgt** | Apples definisjon: «Users can directly communicate with one another through features within the app». En makker eller arrangøren kan sende et scorekort tilbake med en grunn i fritekst, og spilleren leser den på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Det er en kort melding fra én spiller til en annen. Valgt gir 4+. |
+| Capabilities: Advertising | Ikke valgt | Appen har ingen reklame. |
 | Mature Themes: Profanity or Crude Humor | None | Ingen. |
 | Mature Themes: Horror/Fear Themes | None | Ingen. |
 | Mature Themes: Alcohol, Tobacco, or Drug Use or References | None | Appen nevner det ikke (`native/app/src` har null treff på «baren» og «alkohol»). Beskrivelsen sa før «i baren etterpå»; nå står det «i klubbhuset», så butikkteksten heller ikke nevner alkohol. |
-| Medical or Wellness: Medical or Treatment Information | No | Ingen. |
-| Medical or Wellness: Health or Wellness Topics | No | Appen gir ingen råd om trening eller helse. Handicapet er et golfmål. |
+| Medical or Wellness: Medical or Treatment Information | None / No | Ingen. |
+| Medical or Wellness: Health or Wellness Topics | None / No | Appen gir ingen råd om trening eller helse. Handicapet er et golfmål. |
 | Sexuality or Nudity (alle) | None | Ingen. |
 | Violence (alle, også våpen) | None | Ingen. |
 | Chance-Based Activities: Gambling | No | Appen har ingen pengespill og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
-| Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». Skins, Wolf og Bingo Bango Bongo er måter å telle poeng på, og i appen er det ingen innsats: kronene er skjult (`lib/launchRules.ts`). |
-| Chance-Based Activities: Contests | Frequent | Hver runde er en konkurranse med tavle og plasseringer. Det er hele appen. «Frequent» gir 13+. |
+| Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats: kronene er skjult (`lib/launchRules.ts`). |
+| Chance-Based Activities: Contests | Frequent | Hver runde er en konkurranse med tavle og plasseringer. Det er hele appen. Frequent gir 13+. |
 | Chance-Based Activities: Loot Boxes | No | Appen har ingen kjøp. |
-| Additional Information: Override to Higher Age Rating | Nei | Ikke nødvendig. |
+| Additional Information: Override to Higher Age Rating | No | Ikke nødvendig. |
 
 Med disse svarene blir aldersgrensen **13+** (Contests: Frequent). Det var 4+ ved
 forrige innsending. Appen er laget for voksne golfspillere, så det stenger ingen ute.
@@ -221,10 +243,32 @@ Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen p
 - **Rundereferatet.** AI-referatet etter runden står på nettsiden og i e-posten, ikke i
   appen. Kavalkaden er i appen, så den står i beskrivelsen.
 - **Scramble, cup og liga.** Finnes på nettsiden, ikke i appen.
-- **Invitasjoner til en runde.** I appen velger du blant dem du allerede spiller med; å
-  invitere noen ny til en runde skjer på nettsiden (`PlayersStep` sender deg dit). En
-  venn kan inviteres på e-post fra vennelista i appen (`inviteFriend`), men det er ikke
-  et salgsargument.
+- **Invitasjoner som eget punkt.** Appen kan invitere: arrangøren inviterer en
+  e-postadresse inn i runden fra runden selv (`OrganiserSection.tsx`, `inviteToGame`), og
+  en venn kan inviteres fra vennelista (`inviteFriend`). Når runden settes opp, velger du
+  blant dem du alt spiller med, og hint-teksten peker til nettsiden for nye folk
+  (`PlayersStep`). «Sett opp spillerne» i beskrivelsen dekker begge veiene, så
+  invitasjonen står ikke som eget løfte.
+
+## Nytt i denne versjonen («What's New in This Version», maks 4000 tegn)
+
+Kreves for en oppdatering, og 1.1.0 (3) er alt godkjent. Alt i lista er kommet i appen
+etter 1.1.0 (3), som ble bygget 2026-09-06 (taggen `native-ios/v1.1.0-3`).
+
+```text
+Nytt i denne versjonen:
+- Varsler på iPhone når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du slår dem på under Profil, Varsler og tema.
+- Venner: legg til venner og se hvor mange runder dere har spilt sammen.
+- Arrangøren kan invitere nye spillere på e-post rett fra runden.
+- Legg runden inn i kalenderen med ett trykk, og del lenka så andre kan følge tavla live.
+- Kavalkaden: oppsummeringen av golfåret ditt, i romjula.
+- Du bestemmer selv om navnet ditt kan stå i tekstene språkmodellen skriver.
+```
+
+Kildene: varslene (`pushDevice.ts`, 2026-09-30), vennene (`friends.ts`, 2026-09-29),
+invitasjonen (`inviteToGame.ts`, 2026-09-20), kalenderen og live-lenka
+(`addToCalendar.ts`, `shareLive.ts`, 2026-09-29 og 2026-09-30), Kavalkaden
+(`kavalkade.ts`, 2026-10-01) og AI-spørsmålet (`AiConsentGate.tsx`, 2026-10-16).
 
 ## Skjermbilder
 
