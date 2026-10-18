@@ -34,8 +34,13 @@ export const GENERIC_DB = 'Noe gikk galt mot serveren.';
 /**
  * Nett-linja. Én formulering for alle skrivingene, så den ikke driver fra
  * hverandre — også avslutt-copyen (`endGameCopy.ts`) leser den herfra.
+ *
+ * #1954: ber spilleren prøve igjen. Ingen av handlingene som bruker den
+ * (levering, godkjenning, roster, avslutning, trekk, innlogging) legges i kø,
+ * så den gamle «Koble til, så går det gjennom» lovet noe som ikke skjedde. Det
+ * er bare slagene som går gjennom av seg selv, og de har sin egen tekst.
  */
-export const OFFLINE_NOTE = 'Du er uten nett. Koble til, så går det gjennom.';
+export const OFFLINE_NOTE = 'Du er uten nett. Prøv igjen når nettet er tilbake.';
 
 /**
  * Bekreftelsen før «Start runden nå» (#1980). Flippen er enveis, så appen spør
