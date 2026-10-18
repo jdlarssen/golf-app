@@ -251,7 +251,9 @@ ren (Androids demomodus, klokka 15:41).
 
 Feature-grafikken er ordmerket fra `wordmark-master.svg` i lin på skogsgrønn flis, med
 slagordet «Fyr opp golfturneringen på et par minutter» (`docs/style-and-brand.md`). Den
-gjentar ikke app-ikonet, har ingen enhet og ingen påstander om rangering eller pris, slik
-Googles retningslinjer ber om. Den lages på nytt med
+oppfyller kravene til format, og har ingen enhet og ingen påstander om rangering eller pris.
+Google anbefaler i tillegg å unngå merkevare som ligner app-ikonet, og å vise hva appen gjør.
+Grafikken bruker ordmerket, ikke ikonet, men på samme grønne flate, og den viser ingen skjerm
+fra appen. Eieren har fått valget (bevissiden i PR-en for E7). Den lages på nytt med
 `node native/assets/store/generate-feature-graphic.mjs`. Ikonet lages av
 `native/assets/generate-icons.mjs` fra `icon-master-full-bleed.svg`.

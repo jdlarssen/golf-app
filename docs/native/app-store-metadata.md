@@ -319,8 +319,9 @@ Ingen kroner, ingen e-postadresse og bare oppdiktede spillere. Bildene viser kod
 
 Bildene fra 1.1.0 (3) ligger i feltet for 6,5" i App Store Connect (og i
 `~/Desktop/Tørny-skjermbilder/` hos eieren): hjem, hull-føring, tavle, sluttresultat og
-profil. Ligger de igjen der, ser 6,5"-telefoner de gamle bildene, så de byttes ut når de
-nye lastes opp (E7-oppskriften i PR-tråden).
+profil. Denne leveransen har ingen egne 6,5"-bilder. De gamle slettes fra 6,5"-feltet,
+og da skalerer Apple 6,9"-bildene dit selv. Ligger de igjen, ser 6,5"-telefoner de gamle
+bildene. Stegene står under «Opplasting» i `native/assets/store/README.md`.
 
 ### 1.1.0 (3): hvordan de ble tatt — og hvorfor ikke mot prod
 
@@ -337,7 +338,7 @@ nok:
 
 Bildene er derfor tatt av **samme kildekode som kandidat `1.1.0 (3)`**, kjørt som
 Release-bygg i simulator (iPhone 17 Pro Max, 6,9") mot **staging**, med en
-fikstur av oppdiktede spillere. Kontrakt §5 og runbooken foreskriver begge
+fikstur av oppdiktede spillere. Kontrakt §5 og runbooken foreskrev da begge
 staging-data til nettopp dette.
 
 To build-tids-verdier ble satt lik butikkbyggets under kjøringen, slik at
