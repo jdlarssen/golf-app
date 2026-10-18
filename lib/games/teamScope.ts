@@ -132,6 +132,24 @@ export function activeTeamCounts(players: readonly TeamPlayer[]): Map<number, nu
 }
 
 /**
+ * Hvordan ett lag med `count` aktive står mot regelen (#2569): fullt, kort
+ * men lovlig (spiller med én mindre, handicapet regnes for dem som er igjen),
+ * eller utenfor (`allowedTeamSizes`), og da stopper startvakta runden.
+ * «Fjern spiller» og Lag-seksjonen leser herfra. Kalles for lag-formatene.
+ */
+export type TeamSizeStatus = 'full' | 'short' | 'outside';
+
+export function teamSizeStatus(
+  mode: GameMode,
+  teamSize: number,
+  count: number,
+  shambleCount?: number,
+): TeamSizeStatus {
+  if (count === teamSize) return 'full';
+  return allowedTeamSizes(mode, teamSize, shambleCount).has(count) ? 'short' : 'outside';
+}
+
+/**
  * Lagene med en aktiv størrelse regelen ikke tillater (#2569), stigende. Et
  * lag kan ha `team_size` eller én færre der formatet har den størrelsen
  * (`allowedTeamSizes`): et par med én igjen etter et forfall, eller et lag på
@@ -146,9 +164,8 @@ export function unevenTeamNumbers(
   shambleCount?: number,
 ): number[] {
   if (!modeRequiresTeamNumber(mode, teamSize)) return [];
-  const allowed = allowedTeamSizes(mode, teamSize, shambleCount);
   return [...activeTeamCounts(players)]
-    .filter(([, count]) => !allowed.has(count))
+    .filter(([, count]) => teamSizeStatus(mode, teamSize, count, shambleCount) === 'outside')
     .map(([team]) => team)
     .sort((a, b) => a - b);
 }

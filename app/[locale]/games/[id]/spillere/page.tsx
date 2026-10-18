@@ -45,13 +45,24 @@ import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ status?: string; error?: string; email?: string }>;
+type SearchParams = Promise<{
+  status?: string;
+  error?: string;
+  email?: string;
+  // #2569: the team a removal left short, and how many are left on it.
+  team?: string;
+  count?: string;
+}>;
 
 const STATUS_KEYS = new Set([
   'invite_added',
   'invite_sent',
   'invite_held',
   'player_removed',
+  // #2569: the removal left a team one short, or with too few.
+  'player_removed_team_short',
+  'player_removed_team_short_shamble',
+  'player_removed_team_uneven',
   'player_withdrawn',
   'player_reinstated',
   'admin_approved',
@@ -165,6 +176,8 @@ export default async function CreatorSpillerePage({
     status: statusParam,
     error: errorParam,
     email: emailParam,
+    team: teamParam,
+    count: countParam,
   } = await searchParams;
   const detailPath = `/games/${gameId}`;
 
@@ -328,9 +341,12 @@ export default async function CreatorSpillerePage({
   // section further down, and a banner up here would force a scroll back to
   // page top, undoing the whole point of the anchor jump.
   const banner = statusParam && statusParam !== 'admin_approved' && STATUS_KEYS.has(statusParam) ? (
-    <Banner tone="success">
+    // #2569: a team left with too few is a warning; the rest report success.
+    <Banner tone={statusParam === 'player_removed_team_uneven' ? 'warning' : 'success'}>
       {t(`statusMessages.${statusParam}` as Parameters<typeof t>[0], {
         email: emailParam ?? '',
+        team: Number(teamParam ?? 0),
+        count: Number(countParam ?? 0),
       })}
     </Banner>
   ) : errorParam && ERROR_KEYS.has(errorParam) ? (

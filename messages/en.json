@@ -2449,6 +2449,9 @@
         "invite_sent": "Invitation sent.",
         "invite_held": "Invitation saved. The email goes out when you publish the game.",
         "player_removed": "Player removed.",
+        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count} players.",
+        "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
+        "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. Move a player there before the round can start.",
         "player_withdrawn": "Player withdrawn from game.",
         "player_reinstated": "Player is back in the game.",
         "admin_approved": "Scorecard approved.",
@@ -3907,6 +3910,9 @@
         "flight_updated": "✓ Player's flight updated.",
         "team_suggested": "✓ Teams set up and saved.",
         "team_updated": "✓ Player's team updated.",
+        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count} players.",
+        "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
+        "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. Move a player there before the round can start.",
         "signups_closed": "✓ Signups closed. New requests will be declined.",
         "signups_reopened": "✓ Signups reopened.",
         "guest_added": "The guest has been added to the game.",
@@ -4063,7 +4069,11 @@
         "movePlayerLabel": "Move player",
         "moveButton": "Move",
         "teamAriaLabel": "Team for {name}",
-        "teamOptionN": "Team {n}"
+        "teamOptionN": "Team {n}",
+        "teamShortHandicap": "{count} players, handicap worked out for {count}",
+        "teamShortShamble": "{count} players, counts its best scores on each hole",
+        "teamTooFew": "Only {count, plural, one {# player} other {# players}}. Move a player here before the round can start.",
+        "teamTooMany": "{count} players, but teams are {size}. Move a player out before the round can start."
       },
       "edit": {
         "kicker": "Edit game",
