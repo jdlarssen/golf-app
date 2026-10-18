@@ -4,6 +4,7 @@ import {
   teamScoreOwnerId,
 } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
   playerStrokeHandicap,
@@ -147,7 +148,9 @@ interface ColumnFormatter {
  * Regler:
  *  - Texas scramble: Layout A med lagets rad-eier (lex-min aktive) som primær.
  *    Lag-handicap = round(sum(member.course_handicap) × team_handicap_pct / 100),
- *    over hele laget, også et trukket medlem (#2067, som scoring-motoren).
+ *    over hele laget, også et trukket medlem (#2067, som scoring-motoren). Et
+ *    lag med færre enn `team_size` får samme prosent av snittet
+ *    (`scrambleTeamHandicap`, #2569).
  *  - Reveal-active (visibility=reveal + status=active): Layout A med me,
  *    uansett modus. Beholder reveal-prinsippet om å skjule andres data.
  *  - Solo-modi (stableford team_size=1, solo strokeplay): Layout A med me.
@@ -181,7 +184,12 @@ export function resolveScorecardLayout(
       cfg.kind === 'texas_scramble' || cfg.kind === 'ambrose' || cfg.kind === 'florida_scramble'
         ? cfg.team_handicap_pct
         : 0;
-    const teamHandicap = Math.round((combinedCH * pct) / 100);
+    const teamHandicap = scrambleTeamHandicap(
+      combinedCH,
+      pct,
+      cfg.team_size,
+      teamMembers.length,
+    );
     return {
       variant: 'a',
       columns: [],
