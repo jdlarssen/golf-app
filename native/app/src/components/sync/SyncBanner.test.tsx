@@ -25,6 +25,9 @@ const mockState: { queue: SyncQueueItem[]; teeShots: TeeShotQueueItem[]; conflic
 
 jest.mock('../../data/db', () => ({
   getDb: jest.fn(async () => ({})),
+  // #1954 A4: slettingene står i transaksjonskøen; testen ser hvilken
+  // forbindelse de fikk.
+  withTxn: jest.fn(async (task: (txn: unknown) => Promise<unknown>) => task({ txn: true })),
   listQueue: jest.fn(async () => mockState.queue),
   listTeeShotQueue: jest.fn(async () => mockState.teeShots),
   deleteTeeShotQueueItem: jest.fn(async (_db: unknown, id: string) => {
@@ -120,6 +123,9 @@ describe('SyncBanner', () => {
     await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
     // Bare karantene-radene — hull 5 prøver fortsatt og blir liggende.
     expect(deleteQueueItem.mock.calls.map((c) => c[1]).sort()).toEqual(['q3', 'q7', 'q9']);
+    // Gjennom `withTxn`: en sletting på den delte forbindelsen mens en drain står
+    // i en transaksjon gir «database is locked» på enheten (#1954 A4).
+    expect(deleteQueueItem.mock.calls.every((c) => (c[0] as { txn?: boolean }).txn)).toBe(true);
     expect(mockState.queue.map((i) => i.id)).toEqual(['q5']);
 
     // #2211: bare låste avslag → varselet sier hvorfor, og fjernes uten å
@@ -161,6 +167,7 @@ describe('SyncBanner', () => {
     await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
     expect(alert).not.toHaveBeenCalled();
     expect(deleteTeeShotQueueItem.mock.calls.map((c) => c[1])).toEqual([`${GAME}:1:7`]);
+    expect(deleteTeeShotQueueItem).toHaveBeenCalledWith({ txn: true }, `${GAME}:1:7`);
     expect(deleteQueueItem).not.toHaveBeenCalled();
     alert.mockRestore();
   });
@@ -187,7 +194,7 @@ describe('SyncBanner', () => {
       ).toBeTruthy(),
     );
     await fireEvent.press(screen.getByTestId('conflict-dismiss'));
-    expect(deleteConflict).toHaveBeenCalledWith({}, 'k1');
+    expect(deleteConflict).toHaveBeenCalledWith({ txn: true }, 'k1');
     await waitFor(() => expect(screen.queryByTestId('sync-banner')).toBeNull());
   });
 });

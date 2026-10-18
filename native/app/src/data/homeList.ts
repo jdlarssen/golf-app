@@ -24,7 +24,7 @@ import { computeRoundScore } from '../../../../lib/games/roundScore';
 import { finishedCupBlocksPlay } from '../../../../lib/cup/finishedCup';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { currentDeviceUserId, supabase } from '../supabase';
-import { getCacheEntry, getDb, putCacheEntry } from './db';
+import { getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
 
 export const HOME_CACHE_KEY = 'home';
 
@@ -241,12 +241,15 @@ export async function refreshHomeCards(userId: string): Promise<HomeList> {
   // dekning like godt som på wifi. Null dekkes av samme sammenligning.
   if ((await currentDeviceUserId()) !== userId) return list;
 
-  const db = await getDb();
-  await putCacheEntry(db, {
-    key: HOME_CACHE_KEY,
-    payload: JSON.stringify(list),
-    fetchedAt: list.fetchedAt,
-  });
+  // Transaksjonskøen, som alle skrivinger: en drain eller seed kan stå i en
+  // transaksjon akkurat nå (#1954 A4).
+  await withTxn((txn) =>
+    putCacheEntry(txn, {
+      key: HOME_CACHE_KEY,
+      payload: JSON.stringify(list),
+      fetchedAt: list.fetchedAt,
+    }),
+  );
   return list;
 }
 

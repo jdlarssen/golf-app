@@ -11,7 +11,7 @@
 // seg. Ingen scores her — de eier `scores`-tabellen og LWW-regelen.
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { supabase } from '../supabase';
-import { getCacheEntry, getDb, putCacheEntry } from './db';
+import { getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
 
 /**
  * Nyttelast-versjonen som ligger lagret sammen med bundelen.
@@ -459,12 +459,16 @@ export async function loadGameBundle(
  */
 export async function refreshGameBundle(gameId: string): Promise<GameBundle> {
   const bundle = await fetchGameBundle(gameId);
-  const db = await getDb();
   const payload: CachedBundlePayload = { v: BUNDLE_PAYLOAD_VERSION, bundle };
-  await putCacheEntry(db, {
-    key: gameBundleCacheKey(gameId),
-    payload: JSON.stringify(payload),
-    fetchedAt: bundle.fetchedAt,
-  });
+  // I transaksjonskøen, ikke på den delte forbindelsen: skjermene henter
+  // bundelen mens slag-seeden skriver i en transaksjon, og to skrivere
+  // samtidig gir «database is locked» på enheten (#1954 A4).
+  await withTxn((txn) =>
+    putCacheEntry(txn, {
+      key: gameBundleCacheKey(gameId),
+      payload: JSON.stringify(payload),
+      fetchedAt: bundle.fetchedAt,
+    }),
+  );
   return bundle;
 }

@@ -242,6 +242,29 @@ describe('gameBundle', () => {
     expect(await loadGameBundle(GAME)).toEqual(first);
   });
 
+  it('venter på en åpen transaksjon i stedet for å feile med «database is locked» (#1954 A4)', async () => {
+    // Tavla henter bundelen og slagene samtidig: slag-seeden står i `withTxn`
+    // på en egen forbindelse mens bundelen skal i cachen. Skrivingen må stå i
+    // samme kø, ellers svarer enheten SQLITE_BUSY.
+    riggFetch();
+    const { loadGameBundle, refreshGameBundle } = bundleModule();
+    const { withTxn } = require('./db') as typeof import('./db');
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const openTxn = withTxn(() => gate);
+
+    const refreshing = refreshGameBundle(GAME);
+    // Gi fetchen tid til å komme fram til cache-skrivingen mens transaksjonen står.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    release();
+
+    await expect(refreshing).resolves.toMatchObject({ game: { id: GAME } });
+    await openTxn;
+    expect(await loadGameBundle(GAME)).toBeDefined();
+  });
+
   it('gir undefined når spillet aldri er hentet', async () => {
     expect(await bundleModule().loadGameBundle('ukjent')).toBeUndefined();
   });

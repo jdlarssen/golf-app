@@ -16,7 +16,14 @@
 import { choiceSourceFor } from '../lib/choiceSource';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { fetchBingoBangoBongoHoles, fetchWolfChoices } from './choices';
-import { getCacheEntry, getDb, listScoresForGame, putCacheEntry, type LocalScore } from './db';
+import {
+  getCacheEntry,
+  getDb,
+  listScoresForGame,
+  putCacheEntry,
+  withTxn,
+  type LocalScore,
+} from './db';
 import { loadGameBundle, refreshGameBundle, type GameBundle } from './gameBundle';
 import { seedGameScores } from './seedScores';
 
@@ -99,11 +106,15 @@ export async function refreshFinishedRound(gameId: string): Promise<void> {
     }
     const [bundle] = await Promise.all([refreshGameBundle(gameId), seedGameScores(gameId)]);
     if (bundle.game.status !== 'finished') return;
-    await putCacheEntry(db, {
-      key: finishedRoundKey(gameId),
-      payload: '1',
-      fetchedAt: new Date().toISOString(),
-    });
+    // Transaksjonskøen: seeden like over skrev i en transaksjon, og en skriving
+    // utenfor køen gir «database is locked» på enheten (#1954 A4).
+    await withTxn((txn) =>
+      putCacheEntry(txn, {
+        key: finishedRoundKey(gameId),
+        payload: '1',
+        fetchedAt: new Date().toISOString(),
+      }),
+    );
   } catch {
     // Best-effort, som resten av fila: neste besøk prøver igjen.
   }

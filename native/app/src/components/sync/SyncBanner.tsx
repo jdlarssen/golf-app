@@ -23,6 +23,7 @@ import {
   listConflictsForGame,
   listQueue,
   listTeeShotQueue,
+  withTxn,
   type ConflictRecord,
   type SyncQueueItem,
   type TeeShotQueueItem,
@@ -129,11 +130,14 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     const remove = () => {
       void (async () => {
         try {
-          const db = await getDb();
-          for (const item of stranded) {
-            if (isTeeShotItem(item)) await deleteTeeShotQueueItem(db, item.id);
-            else await deleteQueueItem(db, item.id);
-          }
+          // Transaksjonskøen: en drain kan stå i en transaksjon akkurat nå, og
+          // en sletting utenfor køen gir «database is locked» (#1954 A4).
+          await withTxn(async (txn) => {
+            for (const item of stranded) {
+              if (isTeeShotItem(item)) await deleteTeeShotQueueItem(txn, item.id);
+              else await deleteQueueItem(txn, item.id);
+            }
+          });
         } catch {
           // Varselet blir stående; neste trykk prøver igjen.
         }
@@ -158,8 +162,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
 
   const dismissConflict = async (id: string) => {
     try {
-      const db = await getDb();
-      await deleteConflict(db, id);
+      await withTxn((txn) => deleteConflict(txn, id));
     } catch {
       // Som over: varselet blir stående.
     }
