@@ -11,7 +11,8 @@ import {
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
-import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { hcpAllowanceInPlay } from '@/lib/games/hcpAllowance';
+import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { isValidTeamHandicapSumPct } from '@/lib/games/teamHandicapUnit';
 import { clampMinTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
@@ -1826,6 +1827,16 @@ export function useGameFormState({
     (pid) => allPlayers.find((p) => p.id === pid)?.pending === true,
   ).length;
 
+  // #2570: only guests chosen → nobody can log in and enter scores. The rule
+  // (and when it is a warning rather than a stop) lives in guestOnlyRoster;
+  // the publish actions read the same rule from the stored guest flag.
+  const guestOnly = guestOnlyRoster({
+    playerIds: selectedPlayerIds,
+    guestIds: new Set(allPlayers.filter((p) => p.isGuest === true).map((p) => p.id)),
+    inviteEmailCount: inviteEmails.length,
+    rosterOptional: playersStepOptional,
+  });
+
   const teamHandicapPctValid = isTexas
     ? texasHandicapPctValid
     : isAmbrose
@@ -1842,10 +1853,11 @@ export function useGameFormState({
     teamHandicapPctValid &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : !usesGameHcpAllowance(gameMode) || allowanceValid) &&
+      : !hcpAllowanceInPlay(gameMode, shambleScoring) || allowanceValid) &&
     hasTeeOff &&
     !teeOffInPast &&
-    playersWithUnratedCategory.length === 0;
+    playersWithUnratedCategory.length === 0 &&
+    guestOnly !== 'block';
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
   // best-ball-stien krever et partall spillere + lag-/flight-fordeling,
@@ -2039,14 +2051,18 @@ export function useGameFormState({
     // isSolo
     pushMissing('players', tMissing('soloMin'));
   }
+  // #2570: after the format's own player messages, so step 4's hint still
+  // names those first.
+  if (guestOnly === 'block') pushMissing('players', tMissing('accountPlayer'));
   // Lag-handicapet i scramble-familien kommer rett etter spillerne, uansett
   // `playersStepOptional` (#2566).
   if (!teamHandicapPctValid) pushMissing('allowance', tMissing('teamHandicapPct'));
   // hcp_allowance_pct gjelder bare formatene som bruker den generelle
   // prosenten (#2210, `usesGameHcpAllowance`). De andre har sin egen
   // scoring-konfig i mode_config, og feltet er skjult for dem — så admin ikke
-  // får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (usesGameHcpAllowance(gameMode) && !allowanceValid)
+  // får mismatch mellom UI-skjult-felt og publish-feilmelding. #2570: brutto
+  // shamble skjuler feltet også (`hcpAllowanceInPlay`).
+  if (hcpAllowanceInPlay(gameMode, shambleScoring) && !allowanceValid)
     pushMissing('allowance', tMissing('invalidAllowance'));
 
   return {
@@ -2229,6 +2245,7 @@ export function useGameFormState({
     teamMatchplayPlayersValid,
     playersValidForMode,
     canPublish,
+    guestOnly,
     pendingProfileCount,
     missingForPublish,
     missingForPublishCodes,

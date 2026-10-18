@@ -85,7 +85,7 @@ import {
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots } from '@/lib/games/teeShots';
-import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { hcpAllowanceInPlay } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
@@ -1240,6 +1240,8 @@ function WizardBody({
                   onCountChange={state.setShambleCount}
                   scoring={state.shambleScoring}
                   onScoringChange={state.setShambleScoring}
+                  allowancePct={state.hcpAllowance}
+                  onAllowanceChange={state.setHcpAllowance}
                   teamSize={state.teamSize as 3 | 4}
                   onTeamSizeChange={state.handleTeamSizeChange as (next: 3 | 4) => void}
                   disabled={state.lockGameMode}
@@ -1700,11 +1702,14 @@ function FormDataInputs({
       <input type="hidden" name="name" value={name} />
       {/* #2210: formats with their own percentage in mode_config get 100 —
           a value left over from an earlier format must never be applied on
-          top of theirs. The server normalises too (gamePayload.ts). */}
+          top of theirs. #2570: so does gross shamble. The server normalises
+          too (gamePayload.ts). */}
       <input
         type="hidden"
         name="hcp_allowance_pct"
-        value={usesGameHcpAllowance(gameMode) ? String(hcpAllowance) : '100'}
+        value={
+          hcpAllowanceInPlay(gameMode, shambleScoring) ? String(hcpAllowance) : '100'
+        }
       />
       {requirePeerApproval && (
         <input type="hidden" name="require_peer_approval" value="on" />

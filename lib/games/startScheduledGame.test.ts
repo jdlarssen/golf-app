@@ -1761,3 +1761,64 @@ describe('readStartBlock (#2204)', () => {
     expect({ block, writes: writes(supabase).length }).toEqual({ block: null, writes: 0 });
   });
 });
+
+// ─── shamble freezes with the game's percentage (#2570) ──────────────────────
+
+/**
+ * #2570: shamble and champagne scramble use `games.hcp_allowance_pct`. The
+ * start freezes `applyAllowance(raw, pct)` on each row. VALID_TEE is the
+ * neutral tee (slope 113, CR = par), so the raw course handicap equals the
+ * index: 20 → 16 at 80 %. A gross round is stored with 100 (gamePayload), so
+ * it freezes the full 20.
+ */
+describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
+  async function frozenHandicap(pct: number, variant: 'shamble' | 'champagne') {
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          id: 'game-id',
+          status: 'scheduled',
+          hcp_allowance_pct: pct,
+          tee_box_id: 'tee-id',
+          game_mode: 'shamble',
+          mode_config: {
+            kind: 'shamble',
+            team_size: 4,
+            teams_count: 1,
+            shamble_variant: variant,
+            shamble_count: 2,
+            shamble_scoring: pct === 100 ? 'gross' : 'net',
+          },
+          tee_boxes: VALID_TEE,
+        },
+        error: null,
+      },
+      {
+        data: [{ ...PLAYER('user-1', 1), users: { hcp_index: 20 } }],
+        error: null,
+      },
+      WROTE_ROW, // course_handicap
+      { data: [{ id: 'game-id' }], error: null }, // status flip
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+    const chUpdate = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls.find((c) => c.table === 'game_players' && c.method === 'update');
+    return chUpdate?.args[0];
+  }
+
+  it('shamble netto 80 %: rått 20 fryses til 16', async () => {
+    expect(await frozenHandicap(80, 'shamble')).toEqual({ course_handicap: 16 });
+  });
+
+  it('champagne netto 80 %: rått 20 fryses til 16', async () => {
+    expect(await frozenHandicap(80, 'champagne')).toEqual({ course_handicap: 16 });
+  });
+
+  it('brutto (lagret 100): rått 20 fryses fullt', async () => {
+    expect(await frozenHandicap(100, 'shamble')).toEqual({ course_handicap: 20 });
+  });
+});

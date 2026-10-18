@@ -37,7 +37,7 @@ import { ToggleCard } from '@/components/ui/ToggleCard';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { RegistrationSection } from './RegistrationSection';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { invitationWhen } from '@/lib/games/invitationCard';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
@@ -91,6 +91,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     name,
     setName,
     canPublish,
+    guestOnly,
     pendingProfileCount,
     missingForPublish,
     missingForPublishCodes,
@@ -257,6 +258,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     expectedPlayerCount,
     selectedCount: selectedPlayerIds.length,
     lockGameMode,
+    gameMode,
+    guestOnly,
   });
 
   function playersValue(): string {
@@ -320,9 +323,21 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       : null;
   const PART_SEPARATOR = ' · ';
 
+  // #2570: the gate's «Mangler» fragment for a round with only guests. The row
+  // says the whole guest sentence instead, after any other missing player.
+  const accountPlayerMessage = tWizard('form.missing.accountPlayer');
+
   const checklistItems: ReadyChecklistItem[] = rows.map((row) => {
     let value: string;
-    if (row.status === 'block') {
+    if (row.guestsOnly) {
+      const missing = row.messages.filter((m) => m !== accountPlayerMessage);
+      value = [
+        missing.length > 0 ? t('missingPrefix', { items: missing.join(', ') }) : null,
+        t('checklist.playersGuestsOnly'),
+      ]
+        .filter(Boolean)
+        .join(' ');
+    } else if (row.status === 'block') {
       // «Mangler: …» for det som mangler; den passerte tee-offen står med sin
       // egen setning.
       const missing = row.messages.filter((m) => m !== teeOffPastMessage);
@@ -504,7 +519,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
                   hideHiddenInput
                 />
               )}
-              {usesGameHcpAllowance(gameMode) && (
+              {showsGeneralAllowanceField(gameMode) && (
                 <AllowanceField
                   fieldName="hcp_allowance_pct"
                   defaultPct={100}

@@ -29,7 +29,8 @@ import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPaylo
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
-import { isClubTournament } from '@/lib/games/registration';
+import { isClubTournament, rosterOptionalAtPublish } from '@/lib/games/registration';
+import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
@@ -147,15 +148,34 @@ async function updateGameInternal(
   const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
   // #2433: a club tournament publishes without players (members sign up
   // themselves). The club signal is the DB row, never a form field.
-  const payload = buildGameInsertPayload(formData, payloadMode, {
-    clubScoped: isClubTournament({
-      groupId: savedGroupId,
-      tournamentId: existing.tournament_id,
-    }),
+  const clubScoped = isClubTournament({
+    groupId: savedGroupId,
+    tournamentId: existing.tournament_id,
   });
+  const payload = buildGameInsertPayload(formData, payloadMode, { clubScoped });
 
   if (payload.errorCode) {
     redirect({ href: editHref({ error: payload.errorCode }), locale });
+  }
+
+  // #2570: publishing a draft with only guests is refused, the same rule as
+  // the wizard's gate and the create action (guestOnlyRoster). Editing an
+  // already scheduled round is left alone (the issue is about the wizard).
+  if (mode === 'publish') {
+    const playerIds = payload.players.map((p) => p.user_id);
+    const verdict = guestOnlyRoster({
+      playerIds,
+      guestIds: await findGuestIds(playerIds),
+      inviteEmailCount: parseInviteEmailList(formData.getAll('invite_email')).length,
+      rosterOptional: rosterOptionalAtPublish({
+        registrationMode: payload.registration_mode,
+        registrationType: payload.registration_type,
+        clubScoped,
+      }),
+    });
+    if (verdict === 'block') {
+      redirect({ href: editHref({ error: 'only_guests' }), locale });
+    }
   }
 
   // Tee-off is required when publishing or editing a scheduled game (you

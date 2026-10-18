@@ -37,7 +37,9 @@ const USES_GAME_HCP_ALLOWANCE: Record<GameMode, boolean> = {
   nines: false,
   round_robin: false,
   acey_deucey: false,
-  shamble: false,
+  // #2570: covers champagne scramble too (a `shamble_variant`). Its field sits
+  // under shamble's own «Tellemåte»; see `showsGeneralAllowanceField`.
+  shamble: true,
   patsome: false,
   gruesome_matchplay: false,
 };
@@ -64,4 +66,31 @@ export function effectiveHcpAllowancePct(
   storedPct: number,
 ): number {
   return usesGameHcpAllowance(mode) ? storedPct : 100;
+}
+
+/**
+ * #2570: whether the general «Handicap-andel» card (Netto/Brutto + percent)
+ * shows for the format. Shamble is the exception: its setup on step 2 already
+ * has a drawn Netto/Brutto choice («Tellemåte»), so its percentage field sits
+ * right under that instead, and a second Netto/Brutto switch would ask the
+ * same thing twice. Field visibility only — the publish gate and the stored
+ * value go through `hcpAllowanceInPlay`.
+ */
+export function showsGeneralAllowanceField(mode: string): boolean {
+  return usesGameHcpAllowance(mode) && mode !== 'shamble';
+}
+
+/**
+ * #2570: whether the percentage counts for this game. Same as
+ * `usesGameHcpAllowance`, except gross shamble: it plays on raw strokes, the
+ * percentage field is hidden, so its value is neither checked at publish nor
+ * stored (the payload stores 100). Shamble's scoring lives in `mode_config`,
+ * so the caller passes it; the other formats ignore it.
+ */
+export function hcpAllowanceInPlay(
+  mode: string,
+  shambleScoring: 'gross' | 'net' | undefined,
+): boolean {
+  if (mode === 'shamble' && shambleScoring === 'gross') return false;
+  return usesGameHcpAllowance(mode);
 }

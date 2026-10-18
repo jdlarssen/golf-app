@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { FormSection, FormSectionHeading } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
+import { Input } from '@/components/ui/Input';
 import { selectableTeamSizes } from '@/lib/games/teamFormatLimits';
 import { useTeamSizeReason } from '../TeamSizeSelector';
 
@@ -17,6 +18,14 @@ interface ShambleSetupProps {
   onCountChange: (next: ShambleCount) => void;
   scoring: ShambleScoring;
   onScoringChange: (next: ShambleScoring) => void;
+  /**
+   * #2570: the game's handicap share (`games.hcp_allowance_pct`), the same
+   * state the general field writes. Shown under «Tellemåte», only with Netto.
+   * The caller posts the value (GameWizard's central hidden input, GameForm's
+   * own hidden input).
+   */
+  allowancePct: number;
+  onAllowanceChange: (next: number) => void;
   /** Lagstørrelse: 3 eller 4. Styres av ShambleSetup sin egen velger. */
   teamSize: 3 | 4;
   onTeamSizeChange: (next: 3 | 4) => void;
@@ -36,7 +45,8 @@ interface ShambleSetupProps {
  * - Lagstørrelse: 3- eller 4-mannslag.
  * - Variant: Shamble (best 2 låst) eller Champagne Scramble (velg antall).
  * - Antall som teller: kun synlig ved Champagne Scramble (1 / 2 / 3).
- * - Tellemåte: Netto (default) eller Brutto.
+ * - Tellemåte: Netto (default) eller Brutto. Med Netto står handicap-andelen
+ *   rett under (#2570), samme felt og regel som de andre formatene.
  *
  * Lag-størrelse 3 er ny i Tørny — validatoren (`validateShamble` i
  * gamePayload.ts) håndhever at alle lag har eksakt teamSize spillere ved
@@ -51,6 +61,8 @@ export function ShambleSetup({
   onScoringChange,
   teamSize,
   onTeamSizeChange,
+  allowancePct,
+  onAllowanceChange,
   disabled = false,
   playerCount,
 }: ShambleSetupProps) {
@@ -146,6 +158,27 @@ export function ShambleSetup({
           hint={t('scoringGrossDesc')}
         />
       </ChoiceCardGrid>
+      {scoring === 'net' && (
+        <Input
+          variant="card"
+          id="shamble_hcp_allowance"
+          label={t('allowanceLabel')}
+          hint={t('allowanceHint')}
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={allowancePct}
+          // Not locked with the format: like the general field, the share can
+          // still change on a published round.
+          onChange={(e) => {
+            // Only a whole 0–100 is committed, as in AllowanceField.
+            const v = Number(e.target.value);
+            if (Number.isInteger(v) && v >= 0 && v <= 100) onAllowanceChange(v);
+          }}
+          inputClassName="tabular-nums"
+        />
+      )}
     </FormSection>
   );
 }

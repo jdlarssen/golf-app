@@ -7,10 +7,10 @@ import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 // readyChecklistRules.test.ts; her er spørsmålet om lista rendrer dem riktig.
 // Setup-stubben (vitest.setup.ts) resolver next-intl mot no.json.
 const ITEMS: ReadyChecklistItem[] = [
-  { key: 'course', status: 'ok', messages: [], target: 3, label: 'Bane', value: 'Byneset North, Gul tee' },
-  { key: 'format', status: 'ok', messages: [], target: null, label: 'Format', value: 'Stableford, 85 % handicap' },
-  { key: 'teeOff', status: 'block', messages: ['tee-off-tid'], target: 3, label: 'Tee-off', value: 'Mangler: tee-off-tid' },
-  { key: 'players', status: 'warn', messages: [], target: 4, label: 'Spillere', value: '3 av 4. Du kan legge til flere senere.' },
+  { key: 'course', status: 'ok', messages: [], target: 3, guestsOnly: false, label: 'Bane', value: 'Byneset North, Gul tee' },
+  { key: 'format', status: 'ok', messages: [], target: null, guestsOnly: false, label: 'Format', value: 'Stableford, 85 % handicap' },
+  { key: 'teeOff', status: 'block', messages: ['tee-off-tid'], target: 3, guestsOnly: false, label: 'Tee-off', value: 'Mangler: tee-off-tid' },
+  { key: 'players', status: 'warn', messages: [], target: 4, guestsOnly: false, label: 'Spillere', value: '3 av 4. Du kan legge til flere senere.' },
 ];
 
 describe('ReadyChecklist (#2282)', () => {

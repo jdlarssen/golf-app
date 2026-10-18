@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MissingForPublishCode } from '../useGameFormState';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GuestOnlyVerdict } from '@/lib/games/guestOnlyRoster';
 import {
   formatRowParts,
   playersSummary,
@@ -20,6 +22,8 @@ const BASE = {
   expectedPlayerCount: 4 as number | undefined,
   selectedCount: 4,
   lockGameMode: false,
+  gameMode: 'stableford' as GameMode,
+  guestOnly: 'none' as GuestOnlyVerdict,
 };
 
 function row(rows: ReadyRow[], key: ReadyRow['key']): ReadyRow {
@@ -97,6 +101,71 @@ describe('readyChecklist — rows and targets', () => {
       messages: ['ugyldig andel'],
     });
     expect(row(rows, 'format')).toMatchObject({ status: 'block', target: 'advanced' });
+  });
+
+  // #2570: shamble's percentage sits under «Tellemåte» on step 2, not in the
+  // advanced settings.
+  it('shamble with a broken allowance leads to step 2', () => {
+    const rows = readyChecklist({
+      ...BASE,
+      gameMode: 'shamble',
+      codes: ['allowance'],
+      messages: ['ugyldig andel'],
+    });
+    expect(row(rows, 'format')).toMatchObject({ status: 'block', target: 2 });
+  });
+});
+
+// #2570: a round with only guests. The gate (useGameFormState) pushes a
+// 'players' code when guestOnlyRoster says block; with open signup it says
+// warn and nothing is pushed.
+describe('readyChecklist — only guests (#2570)', () => {
+  it('all guests, invite only: the gate\'s code makes the row red and flags it', () => {
+    const rows = readyChecklist({
+      ...BASE,
+      guestOnly: 'block',
+      codes: ['players'],
+      messages: ['en spiller med konto'],
+    });
+    expect(row(rows, 'players')).toMatchObject({
+      status: 'block',
+      messages: ['en spiller med konto'],
+      guestsOnly: true,
+    });
+  });
+
+  it('all guests, open signup: amber and flagged', () => {
+    const rows = readyChecklist({ ...BASE, guestOnly: 'warn' });
+    expect(row(rows, 'players')).toMatchObject({ status: 'warn', guestsOnly: true });
+  });
+
+  it('all guests, open signup, and too few for kompis: still the guest flag', () => {
+    const rows = readyChecklist({ ...BASE, guestOnly: 'warn', selectedCount: 2 });
+    expect(row(rows, 'players')).toMatchObject({ status: 'warn', guestsOnly: true });
+  });
+
+  it('one registered player among the guests (none): no guest flag', () => {
+    const rows = readyChecklist({ ...BASE, guestOnly: 'none' });
+    expect(row(rows, 'players')).toMatchObject({ status: 'ok', guestsOnly: false });
+  });
+
+  it('red from another players reason wins and keeps both messages', () => {
+    const rows = readyChecklist({
+      ...BASE,
+      guestOnly: 'block',
+      codes: ['players', 'players'],
+      messages: ['1 spiller til', 'en spiller med konto'],
+    });
+    expect(row(rows, 'players')).toMatchObject({
+      status: 'block',
+      messages: ['1 spiller til', 'en spiller med konto'],
+      guestsOnly: true,
+    });
+  });
+
+  it('only the players row carries the flag', () => {
+    const rows = readyChecklist({ ...BASE, guestOnly: 'warn' });
+    expect(rows.filter((r) => r.guestsOnly)).toHaveLength(1);
   });
 });
 
@@ -184,6 +253,8 @@ describe('formatRowParts', () => {
     ['best ball in pairs', { gameMode: 'best_ball', teamSize: 2, hcpAllowance: 85 }, { teamSize: 2, allowance: { kind: 'pct', pct: 85 } }],
     ['texas, own percentage', { gameMode: 'texas_scramble', teamSize: 4, hcpAllowance: 100 }, { teamSize: 4, allowance: null }],
     ['skins, own percentage', { gameMode: 'skins', teamSize: 1, hcpAllowance: 100 }, { teamSize: null, allowance: null }],
+    // #2570: shamble's share is set under «Tellemåte»; the row names none.
+    ['shamble, field on step 2', { gameMode: 'shamble', teamSize: 4, hcpAllowance: 80 }, { teamSize: 4, allowance: null }],
   ])('%s', (_label, input, expected) => {
     expect(formatRowParts(input)).toEqual(expected);
   });

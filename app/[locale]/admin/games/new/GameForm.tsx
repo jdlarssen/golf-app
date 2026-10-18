@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
-import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { hcpAllowanceInPlay, showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type {
   RegistrationMode,
@@ -817,8 +817,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         {/* Non-fourball / non-texas allowance-toggle (#266). GameForm-pathen
             har ingen sentral hidden input for hcp_allowance_pct — toggle-en
             emitter sin egen (ingen hideHiddenInput). State persisterer i
-            useGameFormState via controlled-modus. */}
-        {usesGameHcpAllowance(gameMode) && (
+            useGameFormState via controlled-modus. #2570: shamble has its
+            field under «Tellemåte» instead (ShambleSetup below). */}
+        {showsGeneralAllowanceField(gameMode) && (
           <AllowanceField
             fieldName="hcp_allowance_pct"
             defaultPct={100}
@@ -938,9 +939,25 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             onCountChange={state.setShambleCount}
             scoring={state.shambleScoring}
             onScoringChange={state.setShambleScoring}
+            allowancePct={state.hcpAllowance}
+            onAllowanceChange={state.setHcpAllowance}
             teamSize={teamSize as 3 | 4}
             onTeamSizeChange={handleTeamSizeChange as (next: 3 | 4) => void}
             disabled={lockGameMode}
+          />
+        )}
+        {/* #2570: ShambleSetup's percentage field posts nothing itself (the
+            wizard has a central hidden input); this form has none, so shamble
+            gets its own. Gross shamble sends 100. */}
+        {state.isShamble && (
+          <input
+            type="hidden"
+            name="hcp_allowance_pct"
+            value={
+              hcpAllowanceInPlay(gameMode, state.shambleScoring)
+                ? String(state.hcpAllowance)
+                : '100'
+            }
           />
         )}
         {state.isShamble && (
