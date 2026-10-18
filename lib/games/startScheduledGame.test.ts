@@ -1794,10 +1794,18 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
         error: null,
       },
       {
-        data: [{ ...PLAYER('user-1', 1), users: { hcp_index: 20 } }],
+        // A full team of four: since #2569 a team of one in a game à 4 is
+        // outside the team-size rule and the start guard says uneven_teams.
+        data: ['user-1', 'user-2', 'user-3', 'user-4'].map((id) => ({
+          ...PLAYER(id, 1),
+          users: { hcp_index: 20 },
+        })),
         error: null,
       },
-      WROTE_ROW, // course_handicap
+      WROTE_ROW, // course_handicap × 4
+      WROTE_ROW,
+      WROTE_ROW,
+      WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null }, // status flip
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
