@@ -62,7 +62,11 @@ function scoreFigure(score: ShareCardScore): string {
 function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
   switch (score.kind) {
     case 'points':
-      return { text: t('points', { n: score.value }), at: false };
+      // A real minus sign, like the figure in the row (U+2212, not a hyphen).
+      return {
+        text: `${score.value < 0 ? '−' : ''}${t('points', { n: Math.abs(score.value) })}`,
+        at: false,
+      };
     case 'skins':
       return { text: t('skins', { n: score.value }), at: false };
     case 'vsPar':

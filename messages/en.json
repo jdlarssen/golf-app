@@ -2809,7 +2809,7 @@
       "players": "{n, plural, one {# player} other {# players}}",
       "playerFallback": "Player",
       "tagline": "Fire up your golf tournament in a couple of minutes",
-      "taglinePun": "Fire up your golf tournament in a <gold>couple</gold> of minutes"
+      "taglinePun": "Fire up your golf tournament in a couple of minutes"
     },
     "common": {
       "settlement": {

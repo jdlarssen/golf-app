@@ -90,8 +90,8 @@ export type ShareCardModel = {
   /** Top 3 (or fewer) by rank. Empty for the matchplay band. */
   podium: ShareCardRow[];
   /**
-   * Every podium row sharing podium[0]'s rank — each gets the champagne hero
-   * block, so a tied first place names all its winners (#2318). Empty for the
+   * Every row sharing first place, also past the three on the podium, so a
+   * tied first place names all its winners (#2318, #2319). Empty for the
    * matchplay band, an empty field and a skins round where nobody won a skin.
    */
   winners: ShareCardRow[];
@@ -406,7 +406,9 @@ function buildPlacementModel(
   // whole field shares rank 1: plain rows, no «VINNER» on «0 skins».
   const nobodyWon =
     band === 'skins' && podium[0]?.score.kind === 'skins' && podium[0].score.value === 0;
-  const winners = nobodyWon ? [] : podium.filter((r) => r.rank === podium[0].rank);
+  // Every row sharing first place, also past the third: four tied on 38 are four
+  // winners, even though the podium shows three rows.
+  const winners = nobodyWon ? [] : allRows.filter((r) => r.rank === allRows[0].rank);
 
   // sharerStrip: null if sharerId null, null if sharer in top 3, otherwise their row
   let sharerStrip: ShareCardRow | null = null;
