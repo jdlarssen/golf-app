@@ -118,7 +118,7 @@ appen også ved forrige innsending, men sto ikke på etiketten.
 | Personvern-URL | `https://tornygolf.no/legal/privacy` |
 | Aldersgrense | Regnes ut av Apples spørreskjema. Med svarene i «Aldersgrense (Apple)» blir den 13+ (var 4+). |
 | Tilgjengelighet | Bare Norge (Pricing and Availability → App Availability). |
-| Handelsstatus (DSA) | «This is not a trader account.» (Business → Agreements → Compliance → Digital Services Act). Apple: den som bare distribuerer utenfor EU, er «not acting as a trader on the App Store», men statusen må oppgis likevel (<https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements>). |
+| Handelsstatus (DSA) | «This is not a trader account.» (Business → Agreements → Compliance → Digital Services Act; stien sjekkes i konsollen av orkestratoren). Apple: den som bare distribuerer utenfor EU, er «not acting as a trader on the App Store», men statusen må oppgis likevel (<https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements>). |
 | Kategori | Sports (primær). Anbefaling — sjekk hva som faktisk står i App Store Connect før innsending; den ble satt da appen ble opprettet (#1283) og er ikke lest av i denne økta. |
 
 ## Aldersgrense (Apple)

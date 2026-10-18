@@ -101,7 +101,7 @@ Svarene øverst i skjemaet:
 |---|---|
 | Does your app collect or share any of the required user data types? | Yes |
 | Is all of the user data collected by your app encrypted in transit? | Yes. Appen snakker bare med `https://` (Supabase og `https://tornygolf.no`; beviset krever begge adressene i bundelen). |
-| Which of the following methods of account creation does your app support? | Kryss av for **Username and other authentication**. Brukernavnet er e-postadressen, og «other authentication» er engangskoden på e-post (`native/app/src/screens/Login.tsx`). Passordinnloggingen finnes bare for review-kontoene, og ingen kan lage en konto med passord. Valgene er lest fra tredjepartsveiledninger for skjemaet (Googles egen side lister dem ikke); orkestratoren sjekker dem i konsollen. |
+| Which of the following methods of account creation does your app support? | Kryss av for **Username and other authentication**. Brukernavnet er e-postadressen, og «other authentication» er engangskoden på e-post (`native/app/src/screens/Login.tsx`). Passordinnloggingen finnes bare for review-kontoene, og ingen kan lage en konto med passord. Valgene er lest fra tredjepartsveiledninger for skjemaet (Googles egen side lister dem ikke). Sjekkes i konsollen av orkestratoren. |
 | Delete account URL | `https://tornygolf.no/legal/slett-konto` (#2561 PR A). I appen: «Profil» → «Personvern og konto» → «Slett konto». |
 
 Én rad per datatype som hakes av:
@@ -144,7 +144,7 @@ spør om.
 
 | Tema | Svar | Hvorfor |
 |---|---|---|
-| Kategori | **All Other App Types** | IARC skiller mellom spill, apper for sosialt eller kommunikasjon, og alle andre apper (Epic Games' gjennomgang av IARC-skjemaet, <https://dev.epicgames.com/documentation/fortnite/rating-screen-in-fortnite>). Tørny er et verktøy for golfrunder. Den korte grunnen når et kort sendes tilbake, gjør ikke appen til en app for kommunikasjon. |
+| Kategori | **All Other App Types** | IARC skiller mellom spill, apper for sosialt eller kommunikasjon, og alle andre apper (Epic Games' gjennomgang av IARC-skjemaet, <https://dev.epicgames.com/documentation/fortnite/rating-screen-in-fortnite>). Tørny er et verktøy for golfrunder. Den korte grunnen når et kort sendes tilbake, gjør ikke appen til en app for kommunikasjon. Sjekkes i konsollen av orkestratoren. |
 | Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
 | Pengespill med ekte penger | Nei | Appen har ingen innsats og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
 | Simulert pengespill | Nei | De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
