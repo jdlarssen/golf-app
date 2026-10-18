@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { AppCtaLink } from '@/components/app/AppCtaLink';
 
 /**
  * Delte presentasjons-primitiver for de offentlige markedsføringssidene
@@ -26,18 +27,25 @@ export function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-/** Tekstlenke med pil. Pilen er dekor og legges på her, ikke i katalogen. */
+/**
+ * Tekstlenke med pil. Pilen er dekor og legges på her, ikke i katalogen.
+ * `appCta` (#2562): demolenka som går rett til butikken på telefon når appen
+ * er ute (`AppCtaLink`).
+ */
 export function TextLink({
   href,
   children,
   className = '',
+  appCta = false,
 }: {
   href: string;
   children: ReactNode;
   className?: string;
+  appCta?: boolean;
 }) {
+  const Link = appCta ? AppCtaLink : SmartLink;
   return (
-    <SmartLink
+    <Link
       href={href}
       className={`inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover ${className}`}
     >
@@ -45,24 +53,27 @@ export function TextLink({
       <span aria-hidden className="ml-1">
         →
       </span>
-    </SmartLink>
+    </Link>
   );
 }
 
-/** Lenke i bunnraden. 44 px tap-mål selv om teksten er liten. */
+/** Lenke i bunnraden. 44 px tap-mål selv om teksten er liten. `appCta` som over. */
 export function FooterLink({
   href,
   children,
+  appCta = false,
 }: {
   href: string;
   children: ReactNode;
+  appCta?: boolean;
 }) {
+  const Link = appCta ? AppCtaLink : SmartLink;
   return (
-    <SmartLink
+    <Link
       href={href}
       className="tap-extend inline-flex min-h-[44px] items-center hover:text-primary [--tap-extend:0_-5px]"
     >
       {children}
-    </SmartLink>
+    </Link>
   );
 }

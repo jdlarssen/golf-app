@@ -1,6 +1,11 @@
-import { ButtonHTMLAttributes, type ReactNode } from 'react';
+import {
+  ButtonHTMLAttributes,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { type LinkProps } from 'next/link';
 import { SmartLink } from './SmartLink';
+import { AppCtaLink } from '@/components/app/AppCtaLink';
 import { Spinner } from './Spinner';
 
 type Variant =
@@ -202,12 +207,16 @@ export function Button({
  * Anchor styled as a Button. Use anywhere navigation is the action — the
  * Next.js Link gets the same pill shape, forest fill, and hover-lift as
  * <Button>. `full` stretches to the parent's width.
+ *
+ * `appCta` (#2562): a demo button that goes straight to the store on a phone
+ * once the app is out (`AppCtaLink`). Until then it renders the same link.
  */
 export function LinkButton({
   variant = 'primary',
   size = 'default',
   full = false,
   className = '',
+  appCta = false,
   children,
   ...props
 }: LinkProps & {
@@ -215,13 +224,23 @@ export function LinkButton({
   size?: Size;
   full?: boolean;
   className?: string;
+  appCta?: boolean;
   children?: React.ReactNode;
 }) {
+  const classes = `${buttonClasses(variant, size)} ${full ? 'w-full' : ''} ${className}`;
+  if (appCta) {
+    return (
+      <AppCtaLink
+        {...(props as Omit<ComponentProps<'a'>, 'href'>)}
+        href={String(props.href)}
+        className={classes}
+      >
+        {children}
+      </AppCtaLink>
+    );
+  }
   return (
-    <SmartLink
-      {...props}
-      className={`${buttonClasses(variant, size)} ${full ? 'w-full' : ''} ${className}`}
-    >
+    <SmartLink {...props} className={classes}>
       {children}
     </SmartLink>
   );
