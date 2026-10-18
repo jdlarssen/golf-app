@@ -104,16 +104,16 @@ describe('fitsPlayerCount — texas_scramble (2–4 per lag, minst 2 lag, opptil
     [2, false],  // bare 1 lag à 2 — ingen turnering
     [3, false],  // bare 1 lag à 3 — ingen turnering
     [4, true],   // 2 lag à 2
-    [5, false],
+    [5, true],   // 3/2 (#2569)
     [6, true],   // 3 lag à 2 ELLER 2 lag à 3
-    [7, false],
+    [7, true],   // 4/3 (#2569)
     [8, true],   // 4 lag à 2 ELLER 2 lag à 4
     [9, true],   // 3 lag à 3 (#2009)
     [10, true],  // 5 lag à 2 (#2148)
     [12, true],  // 4 lag à 3 (#2009)
     [14, true],  // 7 lag à 2
     [16, true],  // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true],  // 4/4/3/3/3 (#2569)
     [20, true],  // 10 par / 5 lag à 4
     [40, true],  // 20 par / 10 lag à 4
     [42, false], // over taket
@@ -133,14 +133,14 @@ describe('fitsPlayerCount — ambrose (2–4 per lag, minst 2 lag, opptil 40 spi
     [2, false],
     [3, false],
     [4, true],   // 2 lag à 2
-    [5, false],
+    [5, true],   // 3/2 (#2569)
     [6, true],   // 3 lag à 2 ELLER 2 lag à 3
     [8, true],   // 2 lag à 4 ELLER 4 lag à 2
     [9, true],   // 3 lag à 3 (#2009)
     [10, true],  // 5 lag à 2 (#2148)
     [12, true],  // 4 lag à 3 (#2009)
     [16, true],  // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true],  // 4/4/3/3/3 (#2569)
     [39, true],  // 13 lag à 3
     [42, false], // over taket
   ])('ambrose n=%i → %s', (n, expected) => {
@@ -160,13 +160,13 @@ describe('fitsPlayerCount — florida_scramble (3–4 per lag, minst 2 lag, oppt
     [4, false],  // 1 lag à 4 — ingen turnering
     [5, false],
     [6, true],   // 2 lag à 3
-    [7, false],
+    [7, true],   // 4/3 (#2569)
     [8, true],   // 2 lag à 4
     [9, true],   // 3 lag à 3 (#2009)
-    [10, false], // går ikke opp i 3 eller 4
+    [10, true],  // 4/3/3 (#2569); à 3 ville gitt et lag på 1
     [12, true],  // 4 lag à 3 ELLER 3 lag à 4
     [16, true],  // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true],  // 4/4/3/3/3 (#2569)
     [20, true],  // 5 lag à 4 (#2148)
     [40, true],  // 10 lag à 4
     [44, false], // over taket
@@ -330,12 +330,12 @@ describe('fitsPlayerCount — shamble (3–4 per lag, minst 2 lag, opptil 40 spi
     [4, false],  // 1 lag à 4 — ingen turnering
     [5, false],
     [6, true],   // 2 lag à 3
-    [7, false],
+    [7, true],   // 4/3 (#2569)
     [8, true],   // 2 lag à 4
     [9, true],   // 3 lag à 3 (#2009)
     [12, true],  // 4 lag à 3 ELLER 3 lag à 4
     [16, true],  // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true],  // 4/4/3/3/3 (#2569)
     [20, true],  // 5 lag à 4 (#2148)
     [40, true],  // 10 lag à 4
     [44, false], // over taket

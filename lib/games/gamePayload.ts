@@ -14,7 +14,12 @@
 import { parseStartType, type StartType } from './startType';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
-import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
+import {
+  MAX_TEAM_FORMAT_PLAYERS,
+  MAX_TEAM_NUMBER,
+  allowedTeamSizes,
+  teamRosterBalance,
+} from './teamFormatLimits';
 import { isValidTeamHandicapSumPct } from './teamHandicapUnit';
 import { MIN_TEE_SHOTS_FIELD, minTeeShotsFeasible, type MinTeeShots } from './teeShots';
 import { START_COUNT_RANGES, type StartCountMode } from './startPlayerCount';
@@ -509,28 +514,32 @@ function parseSoloPlayers(
 }
 
 /**
- * Sjekker at hvert ikke-tomt lag har EKSAKT `requiredSize` spillere. Returnerer
- * `'team_balance'` ved første lag i ubalanse, ellers `null`. Delt helper for
- * lag-formatene som teller per team_number og krever en fast lagstørrelse
- * (best-ball/par-stableford = 2; texas/ambrose/florida/shamble = team_size;
- * patsome = 2). Ekskluderer 2v2-matchplay-validatorene (foursomes-familien),
- * som bruker en distinkt side-1/side-2-sjekk.
+ * Sjekker at hvert ikke-tomt lag har en lovlig størrelse (`allowed`), og at
+ * minst ett lag er fullt (`teamSize`). Returnerer `'team_balance'` ellers.
+ * Delt helper for lag-formatene som teller per team_number: best-ball,
+ * par-stableford og patsome sender `{2}`; texas/ambrose/florida/shamble sender
+ * `allowedTeamSizes(...)`, så et lag kan ha én spiller mindre (#2569: 4/4/3).
+ * Regelen bor i `teamFormatLimits.ts`, som veiviseren og startvakta også
+ * leser. Ekskluderer 2v2-matchplay-validatorene (foursomes-familien), som
+ * bruker en distinkt side-1/side-2-sjekk.
  */
 function validateTeamBalance(
   players: GamePlayerInput[],
-  requiredSize: number,
+  teamSize: number,
+  allowed: ReadonlySet<number>,
 ): 'team_balance' | null {
   const teamCounts = new Map<number, number>();
   for (const p of players) {
     if (p.team_number === null) continue;
     teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
   }
-  for (const [, count] of teamCounts) {
-    if (count !== requiredSize) {
-      return 'team_balance';
-    }
-  }
-  return null;
+  if (teamCounts.size === 0) return null;
+  const { allAllowed, hasFullTeam } = teamRosterBalance(
+    teamCounts.values(),
+    teamSize,
+    allowed,
+  );
+  return allAllowed && hasFullTeam ? null : 'team_balance';
 }
 
 /**
@@ -590,7 +599,7 @@ function validateBestBall(
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert ikke-tomt lag må ha EKSAKT 2 spillere
-    const balanceError = validateTeamBalance(players, 2);
+    const balanceError = validateTeamBalance(players, 2, allowedTeamSizes('best_ball', 2));
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -755,7 +764,7 @@ function validateStablefordTeam(
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert lag må ha EKSAKT 2 spillere — det er kjernen i 4BBB.
-    const balanceError = validateTeamBalance(players, 2);
+    const balanceError = validateTeamBalance(players, 2, allowedTeamSizes('stableford', 2));
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -939,7 +948,8 @@ function withMinTeeShots(value: MinTeeShots | null): { [MIN_TEE_SHOTS_FIELD]?: M
  * Regler ved publish:
  *  - Minst 1 spiller (ellers min_players_for_mode).
  *  - Maks `MAX_TEAM_FORMAT_PLAYERS` spillere (too_many_players_for_mode).
- *  - Hvert lag må ha EKSAKT `team_size` spillere (team_balance ved feil).
+ *  - Hvert lag må ha `team_size` eller én spiller mindre, og minst ett lag
+ *    må være fullt (`allowedTeamSizes`, #2569; team_balance ved feil).
  *  - Hvert team_number må være ≥1 (bad_team).
  *  - flight_number = team_number per spiller — oppfyller DB-CHECK
  *    `game_players_team_flight_consistency` (begge satt sammen).
@@ -998,7 +1008,11 @@ function validateTexasScramble(
     if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    const balanceError = validateTeamBalance(players, teamSize);
+    const balanceError = validateTeamBalance(
+      players,
+      teamSize,
+      allowedTeamSizes('texas_scramble', teamSize),
+    );
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -1073,8 +1087,9 @@ function parseTexasHandicapPct(
  *  - `player_${i}_team`: positivt heltall, fri antall lag (klubb-turnering)
  *
  * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
- * (too_many_players_for_mode), EKSAKT team_size per lag (team_balance),
- * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK
+ * (too_many_players_for_mode), team_size eller én mindre per lag og minst ett
+ * fullt lag (`allowedTeamSizes`, #2569; team_balance), team_number ≥ 1
+ * (bad_team). flight_number = team_number oppfyller DB-CHECK
  * `game_players_team_flight_consistency`. Draft tolererer partial state.
  * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct}`.
  */
@@ -1125,7 +1140,11 @@ function validateAmbrose(
     if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    const balanceError = validateTeamBalance(players, teamSize);
+    const balanceError = validateTeamBalance(
+      players,
+      teamSize,
+      allowedTeamSizes('ambrose', teamSize),
+    );
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -1195,8 +1214,9 @@ function parseAmbroseHandicapPct(
  *  - `player_${i}_team`: positivt heltall, fri antall lag
  *
  * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
- * (too_many_players_for_mode), EKSAKT team_size per lag (team_balance),
- * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK.
+ * (too_many_players_for_mode), team_size per lag, à 4 også lag på 3, og minst
+ * ett fullt lag (`allowedTeamSizes`, #2569; team_balance), team_number ≥ 1
+ * (bad_team). flight_number = team_number oppfyller DB-CHECK.
  * Mode_config-output: `{kind: 'florida_scramble', team_size, teams_count, team_handicap_pct}`.
  */
 function validateFloridaScramble(
@@ -1246,7 +1266,11 @@ function validateFloridaScramble(
     if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    const balanceError = validateTeamBalance(players, teamSize);
+    const balanceError = validateTeamBalance(
+      players,
+      teamSize,
+      allowedTeamSizes('florida_scramble', teamSize),
+    );
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -2084,7 +2108,8 @@ function parseShambleCount(
  * count (1/2/3, laveste som teller per hull) og scoring (gross/net).
  *
  * Publish-grensene er familiens felles: maks `MAX_TEAM_FORMAT_PLAYERS` spillere
- * (too_many_players_for_mode) fordelt på hele lag (team_balance).
+ * (too_many_players_for_mode) fordelt på lag à `team_size`, à 4 også lag på 3
+ * (`allowedTeamSizes` med `shamble_count`, #2569; team_balance).
  *
  * Mode_config-output:
  *   `{kind, team_size, teams_count, shamble_variant, shamble_count, shamble_scoring}`.
@@ -2134,7 +2159,11 @@ function validateShamble(
     if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    const balanceError = validateTeamBalance(players, teamSize);
+    const balanceError = validateTeamBalance(
+      players,
+      teamSize,
+      allowedTeamSizes('shamble', teamSize, count),
+    );
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }
@@ -2210,7 +2239,7 @@ function validatePatsome(
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert lag må ha EKSAKT 2 spillere — Patsome er 2-spiller-format.
-    const balanceError = validateTeamBalance(players, 2);
+    const balanceError = validateTeamBalance(players, 2, allowedTeamSizes('patsome', 2));
     if (balanceError) {
       return { ok: false, errorCode: balanceError };
     }

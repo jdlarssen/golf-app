@@ -93,6 +93,7 @@ export function rowFigure(lineup: Lineup): LineupFigure {
       return row([...rowDots(PAIR_X.slice(0, 2), SIDE_A), ...rowDots(PAIR_X.slice(2), SIDE_B)]);
     case 'teams':
       return row(rowDots(lineup.teams === 1 ? PAIR_X.slice(0, 2) : PAIR_X, TEAM));
+    case 'unevenTeams':
     case 'teamSizes':
       return row(rowDots(PAIR_X, TEAM));
   }
@@ -201,6 +202,13 @@ export function useLineupText(): (lineup: Lineup) => string {
         return t('sides', { count: lineup.perSide });
       case 'teams':
         return t('teams', { teams: lineup.teams, size: lineup.size });
+      case 'unevenTeams':
+        return t('unevenTeams', {
+          full: lineup.full,
+          size: lineup.size,
+          short: lineup.short,
+          shortSize: lineup.size - 1,
+        });
       case 'teamSizes':
         if (lineup.sizes.length === 2) {
           return t('teamSizesTwo', { first: lineup.sizes[0], second: lineup.sizes[1] });

@@ -8,7 +8,8 @@
  *     as sides, three or more are teams.
  *  3. The scramble family reads `teamSizesThatFit`: more than one size is a
  *     choice («2 eller 4 per lag»), one size with two teams is two sides,
- *     otherwise teams.
+ *     otherwise teams. Teams one short (#2569) are their own line-up: Florida
+ *     with 11 is «2 lag à 4 og ett à 3» (`scrambleTeamsLineup`).
  *  4. Wolf is one against the rest, Skins is a pot, everything else is
  *     everyone on their own.
  *
@@ -18,11 +19,17 @@
 
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
-import { teamSizesThatFit } from '@/lib/games/teamFormatLimits';
+import {
+  allowedTeamSizes,
+  splitIntoTeams,
+  teamSizesThatFit,
+} from '@/lib/games/teamFormatLimits';
 
 export type FormatLineup =
   | { kind: 'sides'; perSide: number }
   | { kind: 'teams'; teams: number; size: number }
+  /** #2569: `full` teams of `size` and `short` teams of `size − 1`. */
+  | { kind: 'unevenTeams'; full: number; size: number; short: number }
   | { kind: 'teamSizes'; sizes: number[] }
   | { kind: 'wolf'; opponents: number }
   | { kind: 'pot'; players: number }
@@ -46,12 +53,25 @@ export function formatLineup(mode: GameMode, count: number): FormatLineup {
   ) {
     const sizes = teamSizesThatFit(mode, count);
     if (sizes.length !== 1) return { kind: 'teamSizes', sizes };
-    const [size] = sizes;
-    const teams = count / size;
-    return teams === 2 ? { kind: 'sides', perSide: size } : { kind: 'teams', teams, size };
+    return scrambleTeamsLineup(mode, count, sizes[0]);
   }
 
   if (mode === 'wolf') return { kind: 'wolf', opponents: count - 1 };
   if (mode === 'skins') return { kind: 'pot', players: count };
   return { kind: 'solo', players: count };
+}
+
+/**
+ * How `count` players line up at one scramble team size (#2569): teams one
+ * short where the count does not divide (`splitIntoTeams`), else two sides or
+ * teams. The format cards and the step 4 subtitle both read it. Callers pass
+ * a size that fits the count.
+ */
+export function scrambleTeamsLineup(mode: GameMode, count: number, size: number): FormatLineup {
+  const split = splitIntoTeams(count, size, allowedTeamSizes(mode, size)) ?? [];
+  const short = split.filter((teamSize) => teamSize < size).length;
+  if (short > 0) return { kind: 'unevenTeams', full: split.length - short, size, short };
+  return split.length === 2
+    ? { kind: 'sides', perSide: size }
+    : { kind: 'teams', teams: split.length, size };
 }

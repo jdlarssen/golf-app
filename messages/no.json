@@ -657,6 +657,7 @@
       "lineup": {
         "sides": "{count} mot {count}",
         "teams": "{teams, plural, one {ett lag à {size}} other {# lag à {size}}}",
+        "unevenTeams": "{full, plural, one {ett lag} other {# lag}} à {size} og {short, plural, one {ett} other {#}} à {shortSize}",
         "teamSizesTwo": "{first} eller {second} per lag",
         "teamSizesRange": "{min}–{max} per lag",
         "wolf": "1 mot {opponents}",
@@ -1246,7 +1247,9 @@
         "minCountPlayers": "minst {count} spillere",
         "teamOdd2": "partall antall spillere (lag à 2)",
         "teamOdd4": "antall spillere delelig på 4 (lag à 4)",
+        "teamOdd4Short": "antall spillere som kan deles i lag på 4 og 3 (lag à 4)",
         "teamOdd3": "antall spillere delelig på 3 (lag à 3)",
+        "teamOdd3Short": "antall spillere som kan deles i lag på 3 og 2 (lag à 3)",
         "teamAssign2": "lag-fordeling (lag à 2)",
         "teamAssign4": "lag-fordeling (lag à 4)",
         "teamAssign3": "lag-fordeling (lag à 3)",

@@ -15,11 +15,17 @@ describe('formatLineup (#2260)', () => {
     ['singles_matchplay', 2, { kind: 'sides', perSide: 1 }],
     ['texas_scramble', 4, { kind: 'sides', perSide: 2 }],
     ['texas_scramble', 6, { kind: 'teamSizes', sizes: [2, 3] }],
-    ['texas_scramble', 8, { kind: 'teamSizes', sizes: [2, 4] }],
+    ['texas_scramble', 8, { kind: 'teamSizes', sizes: [2, 3, 4] }], // 3/3/2 (#2569)
+    ['texas_scramble', 11, { kind: 'teamSizes', sizes: [3, 4] }], // #2569
     ['texas_scramble', 12, { kind: 'teamSizes', sizes: [2, 3, 4] }],
     ['ambrose', 9, { kind: 'teams', teams: 3, size: 3 }],
     ['florida_scramble', 6, { kind: 'sides', perSide: 3 }],
     ['shamble', 8, { kind: 'sides', perSide: 4 }],
+    // #2569: one size fits, with teams one short. Never «2,75 lag à 4».
+    ['florida_scramble', 11, { kind: 'unevenTeams', full: 2, size: 4, short: 1 }],
+    ['florida_scramble', 10, { kind: 'unevenTeams', full: 1, size: 4, short: 2 }],
+    ['florida_scramble', 7, { kind: 'unevenTeams', full: 1, size: 4, short: 1 }],
+    ['shamble', 13, { kind: 'unevenTeams', full: 1, size: 4, short: 3 }],
     ['stableford', 1, { kind: 'solo', players: 1 }],
     ['stableford', 4, { kind: 'solo', players: 4 }],
     ['nassau', 3, { kind: 'solo', players: 3 }],

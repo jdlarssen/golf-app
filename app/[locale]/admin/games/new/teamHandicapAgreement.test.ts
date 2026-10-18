@@ -56,9 +56,10 @@ function serverAccepts(mode: ScrambleMode, teamSize: number, sumPct: number) {
   return buildGameInsertPayload(form, 'publish');
 }
 
-function formAccepts(teamSize: number, sumPct: number): boolean {
+function formAccepts(mode: ScrambleMode, teamSize: number, sumPct: number): boolean {
   const { ids, playersByTeam, teamByPlayer } = fullTeams(teamSize);
   return validateTeamSizeFormat({
+    mode,
     playersByTeam,
     selectedPlayerIds: ids,
     teamByPlayer,
@@ -83,7 +84,7 @@ describe('team handicap cap for Texas 2/3/4, Ambrose 2/3/4 and Florida 3/4: wiza
       const payload = serverAccepts(mode, size, sumPct);
       expect(payload.errorCode, `server, ${avg} % of the average`).toBeUndefined();
       expect(payload.mode_config).toMatchObject({ team_handicap_pct: sumPct });
-      expect(formAccepts(size, sumPct), `form, ${avg} % of the average`).toBe(true);
+      expect(formAccepts(mode, size, sumPct), `form, ${avg} % of the average`).toBe(true);
       expect(isValidTeamHandicapSumPct(sumPct, size), `helper, ${avg} %`).toBe(true);
     }
   });
@@ -93,7 +94,7 @@ describe('team handicap cap for Texas 2/3/4, Ambrose 2/3/4 and Florida 3/4: wiza
     const overCap = averagePctToSumPct(TEAM_HANDICAP_AVERAGE_PCT_MAX, size) + 0.01;
     for (const sumPct of [overAverage, overCap]) {
       expect(serverAccepts(mode, size, sumPct).errorCode, `server, ${sumPct}`).toBe('bad_allowance');
-      expect(formAccepts(size, sumPct), `form, ${sumPct}`).toBe(false);
+      expect(formAccepts(mode, size, sumPct), `form, ${sumPct}`).toBe(false);
       expect(isValidTeamHandicapSumPct(sumPct, size), `helper, ${sumPct}`).toBe(false);
     }
   });
@@ -108,7 +109,7 @@ describe('team handicap cap for Texas 2/3/4, Ambrose 2/3/4 and Florida 3/4: wiza
     ['florida_scramble', 4, 10],
   ] as const)('stored value: %s, %i-player teams, %s is accepted by all three', (mode, size, sumPct) => {
     expect(serverAccepts(mode, size, sumPct).errorCode).toBeUndefined();
-    expect(formAccepts(size, sumPct)).toBe(true);
+    expect(formAccepts(mode, size, sumPct)).toBe(true);
     expect(isValidTeamHandicapSumPct(sumPct, size)).toBe(true);
   });
 });

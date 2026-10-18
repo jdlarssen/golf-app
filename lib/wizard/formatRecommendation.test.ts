@@ -78,7 +78,8 @@ describe('splitFormatsForCount — anbefalt, tre andre og resten (#2260)', () =>
       5,
       'stableford',
       ['wolf', 'skins', 'bingo_bango_bongo'],
-      ['nassau', 'modified_stableford', 'solo_strokeplay'],
+      // #2569: Ambrose and Texas fit 5 as 3/2.
+      ['ambrose', 'texas_scramble', 'nassau', 'modified_stableford', 'solo_strokeplay'],
     ],
     [
       8,

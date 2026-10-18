@@ -35,12 +35,15 @@ import {
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import {
   MAX_TEAM_NUMBER,
+  allowedTeamSizes,
   defaultFlightForTeam,
   fitAssignmentsToGrid,
   randomDrawTeamCount,
+  splitIntoTeams,
   startTeamSize,
   teamGridShape,
   teamNumberRange,
+  teamRosterBalance,
 } from '@/lib/games/teamFormatLimits';
 import { playerTarget } from '@/lib/wizard/playerTarget';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
@@ -121,9 +124,13 @@ function teamNumbersOf(playersByTeam: Record<number, string[]>): number[] {
 // scramble-family formats (Texas, Ambrose, Shamble, Florida). Previously this
 // logic was copy-pasted verbatim in four consecutive blocks inside the hook.
 //
-// Callers supply the current team-assignment maps and a `handicapPct` value
-// (% of the sum, as stored). The pct must lie within 0–100 % of the team
-// average — `isValidTeamHandicapSumPct`, the cap's one home (#2566):
+// Callers supply the format, the current team-assignment maps and a
+// `handicapPct` value (% of the sum, as stored). Every non-empty team must have
+// a size `allowedTeamSizes` allows — the team size, or one fewer where the
+// format has it (#2569: 4/4/3) — and at least one team must be full; that rule
+// lives in `lib/games/teamFormatLimits.ts` with the server validator. The pct
+// must lie within 0–100 % of the team average — `isValidTeamHandicapSumPct`,
+// the cap's one home (#2566):
 //   Texas    → requireIntegerPct=false (fractional since #2009: 80 % of the
 //                                       average on a 3-team is 26.67)
 //   Ambrose  → requireIntegerPct=false (12.5 is the 4-team default)
@@ -133,6 +140,9 @@ function teamNumbersOf(playersByTeam: Record<number, string[]>): number[] {
 // Mirrors the server-side validators in lib/games/gamePayload.ts — if those
 // change, this function must change too ("a rule has one home", AGENTS.md).
 export interface ValidateTeamSizeFormatArgs {
+  mode: GameMode;
+  /** Champagne's «N beste» (#2569): a team needs at least N players. */
+  shambleCount?: number;
   playersByTeam: Record<number, string[]>;
   selectedPlayerIds: string[];
   teamByPlayer: Record<string, number>;
@@ -149,6 +159,8 @@ export interface ValidateTeamSizeFormatResult {
 }
 
 export function validateTeamSizeFormat({
+  mode,
+  shambleCount,
   playersByTeam,
   selectedPlayerIds,
   teamByPlayer,
@@ -156,14 +168,13 @@ export function validateTeamSizeFormat({
   handicapPct,
   requireIntegerPct,
 }: ValidateTeamSizeFormatArgs): ValidateTeamSizeFormatResult {
-  const teams = teamNumbersOf(playersByTeam);
-  const teamsBalanced = teams.every(
-    (t) =>
-      playersByTeam[t].length === 0 ||
-      playersByTeam[t].length === teamSize,
-  );
-  const hasAtLeastOneTeam = teams.some(
-    (t) => playersByTeam[t].length === teamSize,
+  const teamCounts = teamNumbersOf(playersByTeam)
+    .map((t) => playersByTeam[t].length)
+    .filter((count) => count > 0);
+  const { allAllowed: teamsBalanced, hasFullTeam: hasAtLeastOneTeam } = teamRosterBalance(
+    teamCounts,
+    teamSize,
+    allowedTeamSizes(mode, teamSize, shambleCount),
   );
   const handicapPctValid =
     handicapPct === undefined
@@ -172,7 +183,6 @@ export function validateTeamSizeFormat({
         isValidTeamHandicapSumPct(handicapPct, teamSize);
   const playersValid =
     selectedPlayerIds.length >= teamSize &&
-    selectedPlayerIds.length % teamSize === 0 &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
     teamsBalanced &&
     hasAtLeastOneTeam &&
@@ -405,12 +415,17 @@ export type MissingForPublishCode =
  * Mangel-meldingene for lag-formatene finnes i tre varianter (lag à 2/3/4).
  * Én mapping i stedet for en `teamSize === 2 ? … : …`-kjede per format, slik at
  * en ny lagstørrelse ikke lander på feil tekst — 3-mannslag i Texas/Ambrose
- * (#2009) traff nettopp den fellen i Texas-grenen.
+ * (#2009) traff nettopp den fellen i Texas-grenen. Der et lag kan ha én
+ * spiller mindre (#2569, `allowedTeamSizes`), nevner «går ikke opp»-linja
+ * begge størrelsene: «lag på 4 og 3».
  */
-function teamOddKey(teamSize: number): 'teamOdd2' | 'teamOdd3' | 'teamOdd4' {
+function teamOddKey(
+  teamSize: number,
+  shortAllowed: boolean,
+): 'teamOdd2' | 'teamOdd3' | 'teamOdd4' | 'teamOdd3Short' | 'teamOdd4Short' {
   if (teamSize === 2) return 'teamOdd2';
-  if (teamSize === 3) return 'teamOdd3';
-  return 'teamOdd4';
+  if (teamSize === 3) return shortAllowed ? 'teamOdd3Short' : 'teamOdd3';
+  return shortAllowed ? 'teamOdd4Short' : 'teamOdd4';
 }
 
 function teamAssignKey(
@@ -739,6 +754,9 @@ export function useGameFormState({
   const [shambleScoring, setShambleScoring] = useState<'gross' | 'net'>(
     initialValues?.shamble_scoring === 'gross' ? 'gross' : 'net',
   );
+  // The count that will be stored: the Shamble preset is always 2 (#285).
+  // A champagne team needs at least this many players (#2569).
+  const effectiveShambleCount = shambleVariant === 'champagne' ? shambleCount : 2;
   // #2580 «Hvem sitt utslag»: null = off. Texas, Ambrose, Florida and shamble
   // post it (TeeShotSection + the hidden field); lib/games/teeShots.ts owns
   // which minimums fit a team size, so a size change only asks it to clamp.
@@ -1363,26 +1381,32 @@ export function useGameFormState({
   }
 
   // «Trekk tilfeldig» (#2012): best ball, par-stableford and the scramble
-  // family. The draw deals teams of the chosen size, so the count must divide
-  // evenly and stay under the player cap; `randomDrawTeamCount` owns that rule.
+  // family. The draw deals teams of the chosen size, the scramble family also
+  // one short where the format allows it (#2569: 11 à 4 → 4/4/3), and stays
+  // under the player cap; `randomDrawTeamCount` owns that rule.
   // It reads the size at click time because `handleTeamSizeChange` keeps the
-  // selection (and every team that still fits the grid, #2079): 13 players
-  // picked at 3 per team can never be dealt.
+  // selection (and every team that still fits the grid, #2079): 9 players
+  // picked at 4 per team can never be dealt (3/3/3 has no full team).
+  const teamSizesAllowed = allowedTeamSizes(gameMode, teamSize, effectiveShambleCount);
   const canDrawRandomTeams =
     (isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) &&
-    randomDrawTeamCount(teamSize, selectedPlayerIds.length) !== null;
+    randomDrawTeamCount(teamSize, selectedPlayerIds.length, teamSizesAllowed) !== null;
 
   function drawRandomTeams() {
     if (!canDrawRandomTeams) return;
     const shuffled = cryptoShuffle(selectedPlayerIds);
+    const split = splitIntoTeams(shuffled.length, teamSize, teamSizesAllowed) ?? [];
     const nextTeams: Record<string, number> = {};
     const nextFlights: Record<string, number> = {};
-    for (let i = 0; i < shuffled.length; i++) {
-      const team = Math.floor(i / teamSize) + 1;
-      nextTeams[shuffled[i]] = team;
-      // Only best ball reads these flights; the other modes publish flight = team.
-      nextFlights[shuffled[i]] = teamDefaultFlight(team);
-    }
+    let i = 0;
+    split.forEach((size, index) => {
+      const team = index + 1;
+      for (let seat = 0; seat < size; seat++, i++) {
+        nextTeams[shuffled[i]] = team;
+        // Only best ball reads these flights; the other modes publish flight = team.
+        nextFlights[shuffled[i]] = teamDefaultFlight(team);
+      }
+    });
     setTeamByPlayer(nextTeams);
     setFlightByPlayer(nextFlights);
   }
@@ -1628,9 +1652,10 @@ export function useGameFormState({
     flexTeamsBalanced &&
     flexTeamsHasAtLeastOneTeam;
 
-  // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
-  // (2, 3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
-  // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
+  // Texas-validitet: hvert ikke-tomt lag må ha teamSize spillere (2, 3 eller
+  // 4), eller én mindre der formatet har den størrelsen (#2569: 4/4/3), alle
+  // valgte spillere må ha team_number satt, og minst ett lag må være fullt.
+  // Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
   // Taket eies av `lib/games/teamFormatLimits.ts` (#2009, #2148): opptil 40
   // spillere — 20 par, 13 lag à 3 eller 10 lag à 4.
   // Prosenten kan være fraksjonell (#2009): feltet tar imot prosent av snittet
@@ -1640,6 +1665,7 @@ export function useGameFormState({
     handicapPctValid: texasHandicapPctValid,
     playersValid: texasPlayersValid,
   } = validateTeamSizeFormat({
+    mode: 'texas_scramble',
     playersByTeam,
     selectedPlayerIds,
     teamByPlayer,
@@ -1655,6 +1681,7 @@ export function useGameFormState({
     handicapPctValid: ambroseHandicapPctValid,
     playersValid: ambrosePlayersValid,
   } = validateTeamSizeFormat({
+    mode: 'ambrose',
     playersByTeam,
     selectedPlayerIds,
     teamByPlayer,
@@ -1663,13 +1690,16 @@ export function useGameFormState({
     requireIntegerPct: false,
   });
 
-  // Shamble-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
-  // (3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
-  // lag må være fullt. Speiler `validateShamble` i `lib/games/gamePayload.ts`.
+  // Shamble-validitet: hvert ikke-tomt lag må ha teamSize spillere (3 eller
+  // 4), à 4 også lag på 3 (#2569; Champagne: minst «N beste» på hvert lag),
+  // alle valgte spillere må ha team_number satt, og minst ett lag må være
+  // fullt. Speiler `validateShamble` i `lib/games/gamePayload.ts`.
   // Ingen handicap-pct-sjekk (shamble bruker full course handicap per spiller).
   const {
     playersValid: shamblePlayersValid,
   } = validateTeamSizeFormat({
+    mode: 'shamble',
+    shambleCount: effectiveShambleCount,
     playersByTeam,
     selectedPlayerIds,
     teamByPlayer,
@@ -1681,6 +1711,11 @@ export function useGameFormState({
   // teksten om lag-fordeling leser den, så et lag-handicap over taket ikke også
   // melder fulle lag som ufullstendige (#2566).
   const teamRosterValid = shamblePlayersValid;
+  // #2569: går antallet opp i lag à teamSize, med lag på én mindre der
+  // formatet har den størrelsen? Mangel-teksten og «Trekk tilfeldig» leser
+  // samme regel (`allowedTeamSizes` + `splitIntoTeams`) som validatoren.
+  const teamCountSplits =
+    splitIntoTeams(selectedPlayerIds.length, teamSize, teamSizesAllowed) !== null;
 
   // Florida Scramble-validitet (#283): speiler Ambrose-validitets-reglene.
   // Fraksjonell prosent innenfor 0–100 % av snittet (#2566).
@@ -1688,6 +1723,7 @@ export function useGameFormState({
     handicapPctValid: floridaHandicapPctValid,
     playersValid: floridaPlayersValid,
   } = validateTeamSizeFormat({
+    mode: 'florida_scramble',
     playersByTeam,
     selectedPlayerIds,
     teamByPlayer,
@@ -1950,8 +1986,8 @@ export function useGameFormState({
     // `validateTexasScramble`-feilene fra payload-laget.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
-    } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', tMissing(teamOddKey(teamSize)));
+    } else if (!teamCountSplits) {
+      pushMissing('players', tMissing(teamOddKey(teamSize, teamSizesAllowed.has(teamSize - 1))));
     } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
@@ -1959,8 +1995,8 @@ export function useGameFormState({
     // Ambrose (#284): lagstørrelse 2, 3 eller 4. Speiler Texas-mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
-    } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', tMissing(teamOddKey(teamSize)));
+    } else if (!teamCountSplits) {
+      pushMissing('players', tMissing(teamOddKey(teamSize, teamSizesAllowed.has(teamSize - 1))));
     } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
@@ -1970,8 +2006,8 @@ export function useGameFormState({
     // `validateShamble`-feilene fra payload-laget.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
-    } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', tMissing(teamOddKey(teamSize)));
+    } else if (!teamCountSplits) {
+      pushMissing('players', tMissing(teamOddKey(teamSize, teamSizesAllowed.has(teamSize - 1))));
     } else if (!shamblePlayersValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
@@ -1980,8 +2016,8 @@ export function useGameFormState({
     // mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
-    } else if (selectedPlayerIds.length % teamSize !== 0) {
-      pushMissing('players', tMissing(teamOddKey(teamSize)));
+    } else if (!teamCountSplits) {
+      pushMissing('players', tMissing(teamOddKey(teamSize, teamSizesAllowed.has(teamSize - 1))));
     } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
@@ -2268,6 +2304,7 @@ export function useGameFormState({
     handleModeChange,
     handleTeamSizeChange,
     canDrawRandomTeams,
+    teamCountSplits,
     drawRandomTeams,
     clearTeams,
     assignPlayerToSlot,
