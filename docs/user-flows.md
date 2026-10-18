@@ -23,6 +23,14 @@ Uinnlogget → `/login?next=<path>`. Innlogget uten fullført profil → `/compl
 får sitt personlige Hjem uendret (proxyen beholder verified-user-headeren, så bunn-nav-en
 består).
 
+**Lanseringsdagen (#2562):** bryteren `NEXT_PUBLIC_APP_LAUNCH` (`off` | `ios` | `on`, regelen i
+`lib/app/appLaunch.ts`) slås på samme dag som appen er i butikken. Med `ios` eller `on` byttes
+tekstene som sier at det ikke finnes noen app: tillitslinja, steg 2, FAQ-en (og JSON-LD-en) og
+`<title>` på forsiden, hintet ved innlogging fra en invitasjon, guiden og «Hvorfor Tørny». Med
+`on` heter demoknappene «Hent appen» på samme plass (butikken på telefon, `/demo` på PC), og
+`/demo` viser en side som peker til appen (`DemoAppPointer`) i stedet for demorunden. Med `ios`
+står demoen, og en iPhone får App Store-kortet over den.
+
 ```mermaid
 flowchart TD
   Req[Forespørsel] --> P{proxy.ts:<br/>innlogget?}
@@ -44,7 +52,7 @@ flowchart TD
 ```
 
 **Persistente nav-elementer** (verifisert i `app/[locale]/layout.tsx` + sidene):
-`BrandMark` (logo, ikke klikkbar) · `InstallBanner` (PWA) · `ProductUpdateBanner` ·
+`BrandMark` (logo, ikke klikkbar) · `InstallBanner` (PWA; med appen ute blir den «Hent Tørny-appen» der appen er, #2562) · `ProductUpdateBanner` ·
 `TopBar` (tilbake-pil + tittel, på indre sider) · `AppVersionFooter` (versjon + Personvern).
 
 **Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
@@ -134,6 +142,8 @@ flowchart LR
 
 **To mailer per invitasjon:** Resend-notifikasjon (`lib/mail/inviteNotification.ts`) når noen inviterer, så kode-mail når invitéen ber om kode på `/login`.
 
+**Med appen ute (#2562, `NEXT_PUBLIC_APP_LAUNCH`):** hintet under invitasjonsskjemaet sier ikke lenger «Ingen app å laste ned», og invitéen lander på spill-hjem, der «Hent appen» (`GetTheApp`) står under nedtellingen.
+
 ### P2 — Selv-påmelding (offentlig lenke)
 
 `/signup/[shortId]` (offentlig). Tre moduser styrt av `games.registration_mode`:
@@ -148,6 +158,8 @@ flowchart TD
 ```
 
 Lag-flyt (`/signup/[shortId]/team`): kaptein navngir lag + fyller medspiller-slots (kjent bruker oppslag eller ukjent e-post). Kjente → in-app-varsel + auto-`game_players`. Ukjente → Resend-invitasjon (`lib/mail/teamInvitation.ts`) → OTP → profil → «Bli med på lag».
+
+**Med appen ute (#2562, `NEXT_PUBLIC_APP_LAUNCH`):** «Hent appen» (`GetTheApp`) står under kvitteringen: forespørselen ved manuell godkjenning, «Du er påmeldt» og de to bannerne for ventende forespørsel. Åpen påmelding går rett til spill-hjem, der kortet står under nedtellingen.
 
 ### P3 — Spille en runde
 
@@ -167,7 +179,7 @@ flowchart LR
 
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
-| Spill-hjem | `app/[locale]/games/[id]/(home)/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Er ditt eget kort levert og du har ført kort i flighten som ikke er levert, viser siden «Lever kortene du har ført (N)» til lever-siden (#2200). Står auto-starten fast, sier siden hvorfor i stedet for «Starter snart», og en cup-kamp som aldri blir spilt, sier det med en gang (`lib/games/startBlockReason.ts`, #2204). Cachet `getGameWithPlayers` (tag `game-${id}`). |
+| Spill-hjem | `app/[locale]/games/[id]/(home)/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Er ditt eget kort levert og du har ført kort i flighten som ikke er levert, viser siden «Lever kortene du har ført (N)» til lever-siden (#2200). Står auto-starten fast, sier siden hvorfor i stedet for «Starter snart», og en cup-kamp som aldri blir spilt, sier det med en gang (`lib/games/startBlockReason.ts`, #2204). Med appen ute står «Hent appen» mellom nedtellingen og flightvelgeren (#2562). Cachet `getGameWithPlayers` (tag `game-${id}`). |
 | Taste slag | `app/[locale]/games/[id]/holes/[holeNumber]/page.tsx` + `HoleClient.tsx` | Alle formater unntatt Bingo Bango Bongo taster på scoreskinna nederst (`ScoreRail` + `useScoreRail`, #2251): ett trykk setter scoren og går videre til neste spiller uten score. Appen har den samme skinna (`native/app/src/screens/Hole.tsx`, #2252). `writeScore()` → Dexie → sync-kø → `upsert_score_if_newer` RPC. Sync-worker drainer på online/focus/30s + service worker bakgrunns-sync. Realtime-merge per flight. RLS: eget + samme-flight under `active`. |
 | Gjennomgå | `app/[locale]/games/[id]/scorecard/page.tsx` | `resolveScorecardLayout` (solo 1 kolonne / lag fler-kolonne). Netto skjult under `reveal`-aktiv. I appen (`native/app/src/screens/Scorecard.tsx`) er kortet klassisk: UT og INN med POENG eller NETTO (`lib/scorecard/scorecardGrid.ts`), og etter levering et stempel med tidspunkt, hvem som signerte og hvem som godkjente (`lib/scorecard/scorecardStamp.ts`, #2262). |
 | Lever | `app/[locale]/games/[id]/submit/page.tsx` + `actions.ts` → `submitScorecard` | Setter `game_players.submitted_at`. Idempotent (`.is('submitted_at', null)`). Lever-siden tilbyr også kortene til dem i flighten du har ført alle hullene for, og gjestekort som er fullt ført, siden en gjest aldri kan logge inn: «Lever 3 kort ✓» leverer dem sammen med ditt eget (skjemafeltet `alsoFor` → `submitScorecardCore`, #2200). Regelen bor i `lib/games/flightDelivery.ts`, lesingen i `lib/games/loadFlightDelivery.ts`, appen sender dem i `alsoFor` til `POST /api/games/[id]/submit-team`, og hvem som leverte, står i `submitted_by_user_id` (0191). Varsler peers og arrangøren (`games.created_by`, ikke admin-ene): `scorecard_submitted` i innboksen og som push, ingen e-post per levering. Arrangøren får det ikke for et kort hen leverte, står på eller skal godkjenne (`deliveryNoticeRecipient`, #2203). Gjør leveringen spillet klart til å avsluttes, får arrangøren én «Alle har levert» (`all_scorecards_delivered`, lenke til `/games/[id]/avslutt`; e-post bare når hen ikke er i appen). Påminnelsen: et kvarter etter siste hull får den som kan levere kortet, ett `deliver_reminder` (sveipen `POST /api/cron/delivery-reminder`, pg_cron fra 0192; regelen i `lib/games/deliveryReminderSweep.ts`). Spillsiden sender den ikke lenger. Når alle hullene er ført, starter appens scorekort med en oppsummering: tallene, dagens beste hull og det som svidde, og hvem i flighten som mangler hull (`native/app/src/lib/roundDone.ts`; reglene i `lib/scorecard/roundSummary.ts`, #2299). Har arrangøren slått på «Hvem sitt utslag», stopper leveringen så lenge noen på laget har færre utslag enn minstekravet: lever-siden viser hvem som mangler, serveren svarer `tee_shots_short`, og triggeren `guard_game_players_tee_shots` nekter den samme leveringen i basen (`team_tee_shots`, 0209, #2580). |
@@ -180,6 +192,8 @@ flowchart LR
 **Tavla (#2253):** live solo stableford (også modifisert) og solo slagspill vises som en tavle: skoggrønt hode, mørk tavle med skilt i fire kolonner (plass, spiller, hull, poeng/netto), pil for plassendring siden forrige hull, fem prikker for de siste hullene og din egen rad merket «DU». Tavla viser topp 5 til du trykker «Vis alle», og du trykker på et skilt for å gi reaksjoner. Stripen «Din runde» nederst viser plassen din og knappen videre («Hull N →» eller «Lever scorekort →»); den vises ikke for arrangør som ikke spiller, trukket spiller eller på spectate/embed. Utregningen bor i `lib/leaderboard/liveBoard.ts`. Nye solo slagspill rangeres etter netto mot par over hullene hver spiller har spilt (`mode_config.ranking = 'net_to_par'`, stemplet ved opprettelse); eldre spill og ligarunder beholder netto slag. Lagstableford, reveal-spill og ferdige spill (pall eller duell) har egen visning.
 
 **Heiagjengen (#2286):** på live-lenka (spectate) er skiltene følg-lenker. Trykk på et navn gir `?folg=<user_id>` og følg-siden (`FollowView`): plass og total, de fem siste hullene, flighten og tavla. Valget huskes per spill på telefonen (`FollowMemory`, nøkkel `torny:folg:<token>`).
+
+**Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/tv`) og innbyggingen (`/embed`) får den ikke.
 
 ### P5 — Profil, historikk & konto
 
