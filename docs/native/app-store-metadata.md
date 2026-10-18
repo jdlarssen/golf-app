@@ -40,21 +40,21 @@ Så hakes disse av, én rad per datatype:
 | Contact Info | **Name** | Navnet spilleren fyller inn i profilen, og som medspillerne ser på tavla (`CompleteProfile.tsx`, feltet `complete-profile-name`). | App Functionality | **Yes** | **No** |
 | Contacts | **Contacts** | Vennelista, og e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`, `addFriendByEmail` og `inviteFriend`). Apple regner en «social graph» som kontakter. Appen leser aldri kontaktene på telefonen. | App Functionality | **Yes** | **No** |
 | Identifiers | **User ID** | Konto-id-en radene i databasen henger på (Supabase Auth). | App Functionality | **Yes** | **No** |
-| Identifiers | **Device ID** | `UVISST:` (se under). Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en, bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:115`). | App Functionality | **Yes** | **No** |
-| User Content | **Other User Content** | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir i profilen (`CompleteProfile.tsx`, feltet `complete-profile-hcp`). | App Functionality | **Yes** | **No** |
+| Identifiers | **Device ID** | Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en, bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:115`). Se tolkningen under. | App Functionality | **Yes** | **No** |
+| User Content | **Gameplay Content** | Slagene, resultatene og handicapet poengregningen bygger på, og hvem som spiller i hvilken runde (`lib/scoring/`, `CompleteProfile.tsx`, feltet `complete-profile-hcp`). Apple: «Such as saved games, multiplayer matching or gameplay logic, or user-generated content in-game». | App Functionality | **Yes** | **No** |
+| User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
 
-`UVISST:` **varsel-tokenet.** Apples side nevner ikke push, APNs eller varsel-tokens
-med ett ord. To tolkninger:
+**Varsel-tokenet er en tolkning.** Apple har ingen regel som nevner varsel-tokens ved
+navn. Vi oppgir det som Device ID ut fra to sitater:
 
-1. **Oppgi det som Device ID** («Such as the device's advertising identifier, or
-   other device-level ID»). Tokenet blir liggende i databasen så lenge varslene er på,
-   og det er koblet til kontoen. Da er det samlet inn etter definisjonen over.
-2. **Ikke oppgi det.** Tokenet hører til appen på én telefon og er ikke en id for
-   selve telefonen, og det brukes bare til å levere varslene spilleren har slått på.
+- Etiketten: Device ID er «Such as the device's advertising identifier, or other
+  device-level ID» (<https://developer.apple.com/app-store/app-privacy-details/>).
+- APNs-dokumentasjonen: «This address takes the form of a device token unique to both
+  the device and your app»
+  (<https://developer.apple.com/documentation/usernotifications/registering-your-app-with-apns>).
 
-Anbefaling: tolkning 1. Å oppgi for mye koster ingenting, siden Identifiers alt står
-under «Data Linked to You», mens en etikett som oppgir for lite, er en grunn til
-avslag. Orkestratoren avgjør.
+Tokenet blir liggende i databasen så lenge varslene er på, og det er koblet til kontoen,
+så det er samlet inn etter definisjonen over.
 
 Dette hakes **ikke** av, og her er grunnen:
 
@@ -90,9 +90,10 @@ green-pins (#1210); den funksjonen bor på nettsiden, og native-appen leser ikke
 posisjon i det hele tatt. **Name** er lagt til i Contact Info: profilen krever navn,
 og en etikett som underrapporterer er en avvisningsgrunn.
 
-**Endring i #2561:** **Contacts** er lagt til (vennene kom i appen med #2256),
-**Device ID** står med `UVISST:` (varslene kom med #2256 PR 4), og handicapet er
-nevnt under User Content.
+**Endring i #2561:** **Contacts** er lagt til (vennene kom i appen med #2256), og
+**Device ID** for varsel-tokenet (varslene kom med #2256 PR 4). User Content er delt i
+**Gameplay Content** (slag, resultater, handicap, hvem som spiller) og **Other User
+Content** (rundenavnet).
 
 ## App-navn og URL-er
 
@@ -127,7 +128,7 @@ konsollen før eieren svarer.
 | In-App Controls: Age Assurance | No | Appen sjekker ikke alder. |
 | Capabilities: Unrestricted Web Access | No | Appen har ingen nettleser. Lenker til tornygolf.no åpnes i Safari, utenfor appen (`native/app/src/lib/webLink.ts`, `Linking.openURL`). Verken `react-native-webview` eller `expo-web-browser` er avhengigheter. |
 | Capabilities: User-Generated Content | No | Det spillerne skriver (navn, spillnavn, slag), ser bare medspillerne og vennene, ikke folk flest. Apples definisjon krever «broad distribution». «Yes» gir også 4+, så svaret flytter ikke aldersgrensen. |
-| Capabilities: Social Media | No | Appen har ingen strøm og ingen måte å spre innhold til mange på. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
+| Capabilities: Social Media | No | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er innhold som spres «through a social feed or similar discovery method that visibly spreads content to many users». Appen har ingen strøm og ingen måte å spre innhold til mange på. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
 | Capabilities: Messaging and Chat | No | Spillerne kan ikke skrive til hverandre i appen. En venneforespørsel er ingen melding. |
 | Capabilities: Advertising | No | Appen har ingen reklame. |
 | Mature Themes: Profanity or Crude Humor | None | Ingen. |
@@ -138,7 +139,7 @@ konsollen før eieren svarer.
 | Sexuality or Nudity (alle) | None | Ingen. |
 | Violence (alle, også våpen) | None | Ingen. |
 | Chance-Based Activities: Gambling | No | Appen har ingen pengespill og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
-| Chance-Based Activities: Simulated Gambling | None | `UVISST:` Skins, Wolf og Bingo Bango Bongo er kjent som spill om penger på banen, men i appen spilles de om poeng, uten innsats og uten kroner. Leser Apple dem som simulert pengespill, gir «Infrequent» 13+, altså det samme som konkurransene under. |
+| Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». Skins, Wolf og Bingo Bango Bongo er måter å telle poeng på, og i appen er det ingen innsats: kronene er skjult (`lib/launchRules.ts`). |
 | Chance-Based Activities: Contests | Frequent | Hver runde er en konkurranse med tavle og plasseringer. Det er hele appen. «Frequent» gir 13+. |
 | Chance-Based Activities: Loot Boxes | No | Appen har ingen kjøp. |
 | Additional Information: Override to Higher Age Rating | Nei | Ikke nødvendig. |

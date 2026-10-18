@@ -139,7 +139,7 @@ spør om.
 | Kategori | Ikke spill, ikke sosialt nettverk, ikke nyheter | Tørny er et verktøy for golfrunder. Velg kategorien som passer det; ordlyden er ikke bekreftet. |
 | Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
 | Pengespill med ekte penger | Nei | Appen har ingen innsats og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
-| Simulert pengespill | Nei | `UVISST:` som for Apple: Skins, Wolf og Bingo Bango Bongo er kjent som spill om penger, men i appen spilles de om poeng, uten innsats. Orkestratoren avgjør. |
+| Simulert pengespill | Nei | Skins, Wolf og Bingo Bango Bongo er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
 | Kan brukerne samhandle eller dele innhold? | Ja | Spillerne ser hverandres navn, slag og resultater i felles runder og kan legge til venner. Appen har ingen chat. Svar «Ja» bare hvis spørsmålet handler om å se hverandre; handler det om å skrive til hverandre, er svaret nei. |
 | Deler appen brukerens posisjon? | Nei | Appen leser ikke posisjon. |
 | Digitale kjøp | Nei | Appen har ingen kjøp. |
