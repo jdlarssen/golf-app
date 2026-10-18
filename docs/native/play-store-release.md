@@ -4,7 +4,8 @@ Native-appen i `native/app/` skal inn i Google Play under pakken `no.tornygolf.a
 pakken TWA-en (`native/android/`) bruker i dag. Denne runboken dekker veien fra kode til en
 signert AAB: forutsetningene, byggeskriptet, bevis-steget og tilbake til dev. Den slutter med
 spike-funnene fra første Android-bygg. Opplasting, lukket test og Play-oppføringen hører til
-#2561.
+#2561. Teksten, Data safety og erklæringene eieren limer inn i Play Console, står i
+[`play-store-metadata.md`](play-store-metadata.md).
 
 Kontrakten ligger som kommentar på [#2560](https://github.com/jdlarssen/golf-app/issues/2560).
 iOS-motstykket er `app-store-release.md`. Variantene (dev og butikk) er de samme der, og

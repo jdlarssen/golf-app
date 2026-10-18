@@ -1,0 +1,217 @@
+# Play-oppføringen: tekst, Data safety og erklæringene
+
+Alt eieren limer inn i Play Console for Android-appen, samlet ett sted (#2561).
+iOS-motstykket er [`app-store-metadata.md`](app-store-metadata.md), og byggeveien står i
+[`play-store-release.md`](play-store-release.md). Reglene er hentet fra Googles egne
+hjelpesider, lest 2026-10-18. Lenken står ved hvert avsnitt. Der Google ikke viser
+ordlyden i skjemaet, står det, og orkestratoren sjekker i konsollen før eieren svarer.
+
+**Samme regel som iOS:** vi lover bare det Android-appen gjør. **Android har ingen
+varsler.** Serveren sender bare til iPhone: `canUsePush` i
+`native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
+står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
+(eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
+pengeoppgjør, aldri rundereferatet (det står på nettsiden og i e-posten), aldri
+scramble, cup eller liga.
+
+## Oppføringen (Main store listing)
+
+Grensene er 30 tegn for navnet, 80 for kort beskrivelse og 4000 for full beskrivelse
+(<https://support.google.com/googleplay/android-developer/answer/9859152>).
+
+| Felt | Verdi |
+|---|---|
+| App name | `Tørny – golfturneringer` (23 tegn, samme som i App Store) |
+| Kategori | Sports |
+| Kontakt-e-post | `personvern@tornygolf.no` |
+| Nettsted | `https://tornygolf.no` |
+| Personvern-URL | `https://tornygolf.no/legal/privacy` |
+
+### Kort beskrivelse (maks 80 tegn)
+
+```text
+Sett opp golfturneringen, tast slag hull for hull og følg tavla underveis.
+```
+
+74 tegn.
+
+### Full beskrivelse (maks 4000 tegn)
+
+Samme tekst som i App Store, uten varslene, og med e-posten i stedet.
+
+```text
+Tørny er turneringen i lomma.
+
+Sett opp runden på et par minutter: velg bane og tee, velg format, sett opp spillerne og trykk start. Så taster du slag hull for hull mens dere går, og tavla oppdaterer seg underveis.
+
+Handicapet regnes etter WHS, slik at alle spiller på like vilkår. Ingen sitter med kalkulator på hull 3.
+
+Ryker dekningen ute på banen, går det fint: slagene blir liggende på telefonen og sendes av seg selv når nettet er tilbake.
+
+FORMATER DU KAN SPILLE
+- Stableford og Modifisert Stableford
+- Matchplay
+- Best ball og Greensome
+- Wolf, Skins og Bingo Bango Bongo
+
+SIDETURNERINGER
+Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
+
+FØR OG UNDER RUNDEN
+Legg runden inn i kalenderen med ett trykk. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
+
+NÅR RUNDEN ER FERDIG
+Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med. Du får det på e-post også.
+
+I romjula får du Kavalkaden, en oppsummering av golfåret ditt som du kan dele med gjengen. En språkmodell skriver teksten, og navnet ditt er bare med hvis du har sagt ja til det.
+
+Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen på tornygolf.no.
+```
+
+Hva som med vilje ikke står der, og hvorfor, står i `app-store-metadata.md` («Hva som
+med vilje IKKE står der»). Det gjelder Android også, og i tillegg varslene.
+
+## Data safety
+
+Definisjonene er Googles
+(<https://support.google.com/googleplay/android-developer/answer/10787469>):
+
+- **Samle inn:** «'Collect' means transmitting data from your app off a user's device.»
+  Det som bare behandles på telefonen, skal ikke oppgis.
+- **Dele:** «transferring user data collected from your app to a third party». Unntaket
+  vi bruker: «Transferring user data to a 'service provider' that processes it on
+  behalf of the developer. 'Service provider' means an entity that processes user data
+  on behalf of the developer and based on the developer's instructions.»
+  Tjenesteleverandørene våre er Supabase (database og innlogging), Vercel (serveren),
+  Resend (e-post) og Anthropic (AI-tekstene, se personvernerklæringen). Ingen av dem
+  bruker dataene til noe eget, så vi **deler ikke** data.
+- **Valgfritt:** bare når alle brukere kan la være å gi dataene («You can declare that
+  your app collects certain data optionally only if all users … can either optionally
+  provide information, opt-out, or opt-in»).
+
+Svarene øverst i skjemaet:
+
+| Spørsmål | Svar |
+|---|---|
+| Does your app collect or share any of the required user data types? | Yes |
+| Is all of the user data collected by your app encrypted in transit? | Yes. Appen snakker bare med `https://` (Supabase og `https://tornygolf.no`; beviset krever begge adressene i bundelen). |
+| Which of the following methods of account creation does your app support? | Konto lages med e-post og engangskode, i appen eller på nettsiden. |
+| Delete account URL | `https://tornygolf.no/legal/slett-konto` (#2561 PR A). I appen: «Profil» → «Personvern og konto» → «Slett konto». |
+
+Én rad per datatype som hakes av:
+
+| Datatype (Google) | Hva det er hos oss, og kilden | Delt? | Påkrevd eller valgfri | Formål |
+|---|---|---|---|---|
+| Personal info → Name | Navnet i profilen, som medspillerne ser på tavla (`native/app/src/screens/CompleteProfile.tsx`). | Nei | Påkrevd | App functionality, Account management |
+| Personal info → Email address | Adressen kontoen logger inn med (`native/app/src/screens/Login.tsx`). | Nei | Påkrevd | App functionality, Account management |
+| Personal info → User IDs | Konto-id-en radene i databasen henger på (Supabase Auth). | Nei | Påkrevd | App functionality, Account management |
+| Contacts | Vennelista, og e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner er ikke nødvendig for å spille) | App functionality |
+| App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. | Nei | Påkrevd | App functionality |
+
+Dette hakes **ikke** av, og her er grunnen:
+
+- **Location.** Appen leser aldri hvor telefonen er (ingen `expo-location`, null treff på
+  geolokasjon i `native/app/src`). «Vis på kart» åpner kartappen med banens navn.
+- **Device or other IDs.** Android har ingen varsler, så appen registrerer ikke noe
+  varsel-token. Appen har ingen reklame-id.
+- **Calendar.** «Legg til i kalender» åpner telefonens eget skjema for ny hendelse
+  (`native/app/src/lib/addToCalendar.ts`), og `READ_CALENDAR` og `WRITE_CALENDAR` står i
+  `blockedPermissions`. Hendelsen blir på telefonen.
+- **Photos and videos.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis
+  til telefonens delingsark (`native/app/src/lib/shareImage.ts`). Det lastes ikke opp til
+  oss.
+- **App info and performance.** Appen har ingen krasj- eller analyse-SDK.
+- **Financial info, Health and fitness, Messages, Audio, Files and docs, Web browsing.**
+  Ingen.
+
+## Innholdsvurdering (IARC)
+
+Klikkstien: Policy → App content → Content rating → Start → e-post
+(`personvern@tornygolf.no`) → kategori → spørreskjemaet
+(<https://support.google.com/googleplay/android-developer/answer/188189>). For Norge
+gjelder PEGI (<https://support.google.com/googleplay/android-developer/answer/9859655>).
+Google viser ikke ordlyden i spørreskjemaet på noen side jeg fant, så svarene står etter
+tema. Orkestratoren sjekker spørsmålene i konsollen og svarer etter det skjemaet faktisk
+spør om.
+
+| Tema | Svar | Hvorfor |
+|---|---|---|
+| Kategori | Ikke spill, ikke sosialt nettverk, ikke nyheter | Tørny er et verktøy for golfrunder. Velg kategorien som passer det; ordlyden er ikke bekreftet. |
+| Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
+| Pengespill med ekte penger | Nei | Appen har ingen innsats og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
+| Simulert pengespill | Nei | `UVISST:` som for Apple: Skins, Wolf og Bingo Bango Bongo er kjent som spill om penger, men i appen spilles de om poeng, uten innsats. Orkestratoren avgjør. |
+| Kan brukerne samhandle eller dele innhold? | Ja | Spillerne ser hverandres navn, slag og resultater i felles runder og kan legge til venner. Appen har ingen chat. Svar «Ja» bare hvis spørsmålet handler om å se hverandre; handler det om å skrive til hverandre, er svaret nei. |
+| Deler appen brukerens posisjon? | Nei | Appen leser ikke posisjon. |
+| Digitale kjøp | Nei | Appen har ingen kjøp. |
+| Ubegrenset tilgang til internett | Nei | Appen har ingen nettleser. Lenker åpnes i nettleseren, utenfor appen. |
+
+Google regner ut aldersgrensen fra svarene.
+
+## Målgruppe og innhold
+
+| Erklæring | Svar | Kilde |
+|---|---|---|
+| Target audience | **18 and over** (anbefaling: voksne golfspillere, og det holder appen utenfor familieprogrammet). Eieren velger i konsollen. | Velger du en aldersgruppe under 13, gjelder familieprogrammets regler (<https://support.google.com/googleplay/android-developer/answer/9867159>). |
+| Ads | **No, my app does not contain ads** | <https://support.google.com/googleplay/android-developer/answer/9859455> |
+| Advertising ID | Nei, appen bruker ikke reklame-id | Appen har ingen reklame. |
+| News app | Nei | Kategorien er Sports, og appen kaller seg ikke nyheter (<https://support.google.com/googleplay/android-developer/answer/10523915>). |
+| Health apps | «My app doesn't provide any health features» | Skjemaet er påkrevd for alle apper, også testspor (<https://support.google.com/googleplay/android-developer/answer/14738291>). |
+| Financial features | «My app doesn't provide any financial features» | Påkrevd for alle apper (<https://support.google.com/googleplay/android-developer/answer/13849271>). |
+| Government app | Nei | Ingen. |
+
+## App-tilgang (App access)
+
+Velg «All or some functionality in my app is restricted» og legg inn instruksjonene
+under. Adressen og passordet står i feltene i Play Console, aldri i denne fila. Google
+krever innlogging som kan brukes igjen og omgår engangskoden, som virker til enhver tid
+og hvor som helst, og at instruksjonene er på engelsk
+(<https://support.google.com/googleplay/android-developer/answer/15748846>). Det er
+samme review-konto og samme inngang som for Apple (`app-store-review-konto.md`).
+
+```text
+Signing in normally uses a one-time code sent by email. For review we have prepared a
+dedicated account with a password. The password field is hidden behind a long press:
+
+1. Open the app. You land on the sign-in screen, titled "Tørny".
+2. Press and hold the title "Tørny" for about two seconds. A password field and a
+   button labelled "Logg inn med passord" (Sign in with password) appear.
+3. Enter the user name and password above, then tap "Logg inn med passord".
+
+Right after signing in, the app asks whether the AI may write about you
+("Kan AI-en skrive om deg?"). Both answers take you into the app.
+
+The account plays in an active demo round called "Demo Round — Tørny". The app is in
+Norwegian and is available in Norway only.
+```
+
+«Til enhver tid» betyr at kontoen må virke gjennom hele det lukkede sporet, ikke bare
+ved én innsending. Kjør `scripts/provision-review-account.mjs` før sporet sendes til
+vurdering, og sjekk at innloggingen virker etter hver vurdering
+(`app-store-review-konto.md` §Reset).
+
+## Land
+
+Bare Norge, både i testsporene og i produksjon (Testing / Production → Countries /
+regions).
+
+## Skjermbilder og feature-grafikk
+
+Kravene (<https://support.google.com/googleplay/android-developer/answer/9866151>):
+
+| Ressurs | Krav |
+|---|---|
+| Skjermbilder | Opptil 8 per enhetstype. JPEG eller 24-bit PNG uten alfakanal. Hver side mellom 320 og 3840 px, og den lange siden kan ikke være mer enn dobbelt så lang som den korte. For at Google skal kunne anbefale appen: minst fire bilder på minst 1080 px, 9:16 i portrett (minst 1080 × 1920). |
+| Feature-grafikk | Påkrevd. 1024 × 500 px, JPEG eller 24-bit PNG uten alfakanal. |
+| App-ikon | 512 × 512 px, 32-bit PNG med alfakanal, maks 1024 KB. |
+
+**Pass på høyden.** Et skjermbilde rett fra en moderne Android-telefon er rundt 20:9
+(for eksempel 1080 × 2400). Da er den lange siden mer enn dobbelt så lang som den korte,
+og Play avviser bildet. Ta bildene i 9:16 (1080 × 1920), for eksempel på en emulator med
+den skjermstørrelsen, eller beskjær dem dit.
+
+Bildene tas i del E7 av #2561, etter at tavlekjeden og PR C er merget, samme vei som for
+iOS (`app-store-metadata.md` «Skjermbilder»): et butikklikt bygg mot **staging** med den
+oppdiktede fiksturen, aldri mot prod, og alfakanalen flates bort. Samme fem skjermer som
+for iOS: hjem, hull-føring, tavle, sluttresultat, profil. Feature-grafikken og ikonet
+lages fra merkevare-masteren i `native/assets/` (`icon-master-full-bleed.svg`,
+`wordmark-master.svg`) i forest-and-champagne-paletten (`DESIGN.md`).
