@@ -89,6 +89,14 @@ ikke `bubblewrap update` til ikonene: den henter `iconUrl` fra prod, som servere
 det gamle merket fram til en deploy. `twa-manifest.json` røres ikke. Et nytt ikon
 når Google Play først med neste AAB (`docs/native/android-twa.md`).
 
+## Butikkgrafikken (#2561)
+
+Play-feature-grafikken (`store/play-feature-graphic-1024x500.png`) lages av
+`store/generate-feature-graphic.mjs`, som leser `wordmark-master.svg` og bare bytter
+tekstfargen fra skogsgrønn til lin. Merket har dermed fortsatt én kilde. Play-ikonet er
+`native/android/store_icon.png` fra generatoren over. Butikkskjermbildene og
+alt-tekstene står i `store/README.md`.
+
 ## Mekaniske vakter
 
 Scriptet leser PNG-enes IHDR-header direkte (byte 16–23 = bredde/høyde, byte 25 =
