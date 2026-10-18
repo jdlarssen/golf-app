@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { SettlementTable, type SettlementPlayerInfo } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
+import { block } from '@/app/__tests__/cssTokens';
 
 /**
  * Type C (#2296): the receipt's structure and the copy button. The amounts are
@@ -141,5 +142,32 @@ describe('SettlementTable', () => {
       Anders −20 kr
       Jonas −40 kr"
     `);
+  });
+
+  it('hides the copy block inside the embed page, from the server HTML on', () => {
+    // The real rule from app/globals.css, so markup and selector must agree.
+    const style = document.createElement('style');
+    style.textContent = `[data-embed] [data-settlement-copy] {${block('[data-embed] [data-settlement-copy] {')}}`;
+    document.head.appendChild(style);
+    try {
+      const { unmount } = renderTable({ isFinal: true });
+      expect(screen.getByTestId('settlement-copy')).toBeVisible();
+      unmount();
+
+      render(
+        <div data-embed>
+          <SettlementTable
+            settlement={SETTLEMENT}
+            playersById={PLAYERS}
+            gameName="Lørdagsrunden"
+            mode="skins"
+            isFinal
+          />
+        </div>,
+      );
+      expect(screen.getByTestId('settlement-copy')).not.toBeVisible();
+    } finally {
+      style.remove();
+    }
   });
 });

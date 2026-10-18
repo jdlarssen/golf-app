@@ -84,7 +84,9 @@ export default async function EmbedGamePage({
   });
 
   return (
-    <>
+    // data-embed: CSS in app/globals.css hides what cannot work in an iframe
+    // without a session or clipboard access (the settlement copy button, #2296).
+    <div data-embed>
       <EmbedThemeScript theme={theme} />
       {leaderboardNode}
       {/* #1051: sponsorstripe over embed-footeren (self-hider uten sponsor). */}
@@ -95,6 +97,6 @@ export default async function EmbedGamePage({
         statusLabel={live ? t('liveStatus') : t('resultStatus')}
       />
       <SpectatePoller live={live} />
-    </>
+    </div>
   );
 }
