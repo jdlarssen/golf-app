@@ -2336,6 +2336,38 @@ describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
     expect(result.current.missingForPublishCodes).not.toContain('allowance');
   });
 
+  // A «Brutto» picked in the general field on another format is 0. Shamble
+  // has its own Brutto, so 0 under Netto would quietly play the round gross.
+  it('brutto (0) fra et annet format blir 100 når arrangøren bytter til shamble', () => {
+    const { result } = renderHook(() => useGameFormState({ players: PLAYERS, courses: COURSES }));
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setHcpAllowance(0);
+    });
+    act(() => {
+      result.current.handleModeChange('shamble');
+    });
+    expect(result.current.hcpAllowance).toBe(100);
+    // Another format keeps the organiser's 0 (its own field shows «Brutto»).
+    act(() => {
+      result.current.setHcpAllowance(0);
+      result.current.handleModeChange('best_ball');
+    });
+    expect(result.current.hcpAllowance).toBe(0);
+  });
+
+  it('en valgt prosent (85) følger med inn i shamble', () => {
+    const { result } = renderHook(() => useGameFormState({ players: PLAYERS, courses: COURSES }));
+    act(() => {
+      result.current.handleModeChange('best_ball');
+      result.current.setHcpAllowance(85);
+    });
+    act(() => {
+      result.current.handleModeChange('shamble');
+    });
+    expect(result.current.hcpAllowance).toBe(85);
+  });
+
   it('prosenten overlever lagring og gjenopptak av et utkast', () => {
     const result = shamble({ hcp_allowance_pct: '80', shamble_scoring: 'net' });
     expect(result.current.hcpAllowance).toBe(80);

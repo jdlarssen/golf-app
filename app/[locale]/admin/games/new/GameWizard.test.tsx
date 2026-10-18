@@ -1036,6 +1036,39 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     expect(screen.getByRole('checkbox', { name: /spiller 1/i })).toBeChecked();
   });
 
+  // #2570: shamble's percentage sits under «Tellemåte» on step 2. Step 5
+  // shows no general «Handicap-andel» card for it, and the form posts the
+  // value exactly once (GameWizard's central hidden input): 80 with Netto,
+  // 100 with Brutto.
+  it.each<['net' | 'gross', string]>([
+    ['net', '80'],
+    ['gross', '100'],
+  ])('shamble %s: ingen generell andel på steg 5, sender %s én gang', (scoring, posted) => {
+    seedDraft({
+      game_mode: 'shamble',
+      team_size: 4,
+      shamble_scoring: scoring,
+      hcp_allowance_pct: '80',
+      players: [0, 1, 2, 3].map((i) => ({
+        user_id: `u${i}`,
+        team_number: 1,
+        flight_number: 1,
+      })),
+    });
+    const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 4) });
+
+    for (let i = 0; i < 6 && !screen.queryByRole('button', { name: /lagre som utkast/i }); i++) {
+      // Step 4 says «Neste: lagene» for a team format, then the teams screen.
+      fireEvent.click(screen.getByRole('button', { name: /^neste/i }));
+    }
+    expectStep(5);
+    openAdvanced();
+
+    expect(screen.queryByLabelText('Handicap-andel (%)')).not.toBeInTheDocument();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('hcp_allowance_pct')).toEqual([posted]);
+  });
+
   it('starter blankt når utkastet ble skrevet i en annen mount-kontekst', () => {
     seedDraft();
     // Cup-lenke: samme sti, men formatet er låst av ruta. Et utkast fra et

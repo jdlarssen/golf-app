@@ -1058,6 +1058,12 @@ export function useGameFormState({
     if (next === 'florida_scramble') {
       setFloridaHandicapPct(defaultFloridaHandicapPct(nextSize));
     }
+    // #2570: 0 is «Brutto» in the general field. Shamble has its own Brutto
+    // under «Tellemåte», so a 0 carried over would show under Netto and play
+    // the round gross without saying so; it starts at 100 instead.
+    if (next === 'shamble') {
+      setHcpAllowance((current) => (current === 0 ? 100 : current));
+    }
     // #199: hvis ny modus ikke har lag-konsept, force-reset registration_type
     // til 'solo' — ellers ville payload-validatoren feilet med
     // `team_registration_unsupported_mode` ved publish.
