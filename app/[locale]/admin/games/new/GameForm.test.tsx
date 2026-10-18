@@ -1999,3 +1999,49 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
     expect(screen.getByTestId('save-changes')).toBeEnabled();
   });
 });
+
+// #2570: the guest stop is a publish rule. Saving a round that is already
+// scheduled is never blocked by it; publishing a draft with only guests and
+// «bare inviterte» still is.
+describe('GameForm — bare gjester (#2570)', () => {
+  const guest = { ...makePlayer('g-1', 'Gjest En'), isGuest: true };
+  const initialValues = {
+    name: 'Gjesterunden',
+    course_id: 'course-1',
+    tee_box_id: 'tee-1',
+    scheduled_tee_off_at: FUTURE_TEE_OFF,
+    game_mode: 'stableford' as const,
+    team_size: 1 as const,
+    players: [{ user_id: 'g-1', team_number: null, flight_number: null }],
+  };
+
+  it('edit-scheduled med bare gjester og bare inviterte: «Lagre endringer» er aktiv', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={[guest]}
+        initialValues={initialValues}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /lagre endringer/i })).toBeEnabled();
+    expect(document.getElementById('publish-missing')).not.toBeInTheDocument();
+  });
+
+  it('edit-draft med bare gjester: publiseringen er fortsatt stengt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={[guest]}
+        initialValues={initialValues}
+        mode={{
+          kind: 'edit-draft',
+          gameId: 'game-1',
+          saveDraftAction: async () => {},
+          publishAction: async () => {},
+        }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /^publiser/i })).toBeDisabled();
+  });
+});

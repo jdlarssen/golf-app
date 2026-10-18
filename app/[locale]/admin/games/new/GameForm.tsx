@@ -355,7 +355,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const tAllowance = useTranslations('allowance');
   const tModes = useTranslations('modes');
   const tReg = useTranslations('wizard.sections.registration');
-  const state = useGameFormState({ initialValues, players, courses });
+  // #2570: saving a scheduled round publishes nothing; the guest stop stays
+  // out of «Lagre endringer».
+  const state = useGameFormState({
+    initialValues,
+    players,
+    courses,
+    publishes: mode.kind !== 'edit-scheduled',
+  });
   // #2210: captured at mount, like the selection itself (see rosterEdit.ts).
   const [rosterLoadedIds] = useState(() =>
     rosterLoadedIdsValue(initialValues?.players),

@@ -306,8 +306,9 @@ const getOptions = cache(async () => {
     pending: u.profile_completed_at === null,
     gender: u.gender,
     level: u.level,
-    // #2570: a resumed draft needs the guest flag too, or «Klar?» could not
-    // stop a round with only guests (the same flag /opprett-spill sends).
+    // #2570: the same guest flag /opprett-spill sends. A resumed draft needs
+    // it for the guest stop on «Klar?»; a scheduled round (GameForm) gets the
+    // «Gjest» chip from it, but never the stop (`publishes: false`).
     isGuest: u.is_guest,
   }));
 
