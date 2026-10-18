@@ -233,9 +233,25 @@ Kravene (<https://support.google.com/googleplay/android-developer/answer/9866151
 og Play avviser bildet. Ta bildene i 9:16 (1080 × 1920), for eksempel på en emulator med
 den skjermstørrelsen, eller beskjær dem dit.
 
-Bildene tas i del E7 av #2561, etter at tavlekjeden og PR C er merget, samme vei som for
-iOS (`app-store-metadata.md` «Skjermbilder»): et butikklikt bygg mot **staging** med den
-oppdiktede fiksturen, aldri mot prod, og alfakanalen flates bort. Samme fem skjermer som
-for iOS: hjem, hull-føring, tavle, sluttresultat, profil. Feature-grafikken og ikonet
-lages fra merkevare-masteren i `native/assets/` (`icon-master-full-bleed.svg`,
-`wordmark-master.svg`) i forest-and-champagne-paletten (`DESIGN.md`).
+Bildene ble tatt i del E7 av #2561, etter at tavlekjeden og PR C var merget. Alt ligger
+i [`native/assets/store/`](../../native/assets/store/), og README-en der har
+alt-tekstene og forteller hvordan bildene ble laget:
+
+| Ressurs | Fil | Format |
+|---|---|---|
+| Telefonskjermbilder | `native/assets/store/android-1080x1920/01-hjem.png` … `08-lagtavla.png` | 8 bilder, 1080 × 1920 (9:16), PNG uten alfakanal |
+| Feature-grafikk | `native/assets/store/play-feature-graphic-1024x500.png` | 1024 × 500, PNG uten alfakanal |
+| App-ikon | `native/android/store_icon.png` | 512 × 512, PNG med alfakanal, 25 KB |
+
+Skjermbildene er tatt i Android-emulatoren med skjermen satt til 1080 × 1920, så de
+oppfyller kravet til anbefaling uten beskjæring. De viser de samme åtte skjermene som
+iOS-settet: hjem, hullet, tavla, utslaget, runden er ferdig, godkjenning, resultat og
+lagtavla. Ingen kroner, ingen e-postadresse og bare oppdiktede spillere. Statuslinja er
+ren (Androids demomodus, klokka 15:41).
+
+Feature-grafikken er ordmerket fra `wordmark-master.svg` i lin på skogsgrønn flis, med
+slagordet «Fyr opp golfturneringen på et par minutter» (`docs/style-and-brand.md`). Den
+gjentar ikke app-ikonet, har ingen enhet og ingen påstander om rangering eller pris, slik
+Googles retningslinjer ber om. Den lages på nytt med
+`node native/assets/store/generate-feature-graphic.mjs`. Ikonet lages av
+`native/assets/generate-icons.mjs` fra `icon-master-full-bleed.svg`.
