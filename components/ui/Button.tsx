@@ -229,12 +229,22 @@ export function LinkButton({
 }) {
   const classes = `${buttonClasses(variant, size)} ${full ? 'w-full' : ''} ${className}`;
   if (appCta) {
+    // Link-only props would land on the plain store <a> as unknown attributes.
+    const {
+      href,
+      as: _as,
+      replace: _replace,
+      scroll: _scroll,
+      shallow: _shallow,
+      passHref: _passHref,
+      prefetch: _prefetch,
+      locale: _locale,
+      legacyBehavior: _legacyBehavior,
+      onNavigate: _onNavigate,
+      ...anchorProps
+    } = props as LinkProps & Omit<ComponentProps<'a'>, 'href'>;
     return (
-      <AppCtaLink
-        {...(props as Omit<ComponentProps<'a'>, 'href'>)}
-        href={String(props.href)}
-        className={classes}
-      >
+      <AppCtaLink {...anchorProps} href={String(href)} className={classes}>
         {children}
       </AppCtaLink>
     );

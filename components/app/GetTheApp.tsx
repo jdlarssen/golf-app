@@ -20,14 +20,18 @@ import { StoreBadges } from './StoreBadges';
  * - `badges`: the badges alone, for the `/demo` page that points to the app.
  * - `deviceOnly`: only on a phone or tablet whose store is out. `/demo` uses
  *   it with `ios`, where the demo stays and an iPhone gets the card above it.
+ * - `visitor`: the card's line for someone who may have no account (`/demo`):
+ *   it does not mention logging in with the same email.
  */
 export function GetTheApp({
   variant = 'card',
   deviceOnly = false,
+  visitor = false,
   className = '',
 }: {
   variant?: 'card' | 'inline' | 'badges';
   deviceOnly?: boolean;
+  visitor?: boolean;
   className?: string;
 }) {
   const t = useTranslations('getTheApp');
@@ -72,7 +76,9 @@ export function GetTheApp({
       >
         {t('title')}
       </h2>
-      <p className="mt-1 text-[14px] leading-relaxed text-muted">{t('body')}</p>
+      <p className="mt-1 text-[14px] leading-relaxed text-muted">
+        {t(visitor ? 'bodyVisitor' : 'body')}
+      </p>
       <StoreBadges stores={stores} className="mt-2" />
     </section>
   );

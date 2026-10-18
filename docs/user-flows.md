@@ -159,7 +159,7 @@ flowchart TD
 
 Lag-flyt (`/signup/[shortId]/team`): kaptein navngir lag + fyller medspiller-slots (kjent bruker oppslag eller ukjent e-post). Kjente → in-app-varsel + auto-`game_players`. Ukjente → Resend-invitasjon (`lib/mail/teamInvitation.ts`) → OTP → profil → «Bli med på lag».
 
-**Med appen ute (#2562, `NEXT_PUBLIC_APP_LAUNCH`):** «Hent appen» (`GetTheApp`) står under kvitteringen: forespørselen ved manuell godkjenning, «Du er påmeldt» og de to bannerne for ventende forespørsel. Åpen påmelding går rett til spill-hjem, der kortet står rett under startbilletten.
+**Med appen ute (#2562, `NEXT_PUBLIC_APP_LAUNCH`):** «Hent appen» (`GetTheApp`) står under kvitteringen: forespørselen ved manuell godkjenning, lagpåmeldingen, «Du er påmeldt» og de to bannerne for ventende forespørsel. Åpen påmelding går rett til spill-hjem, der kortet står rett under startbilletten.
 
 ### P3 — Spille en runde
 
