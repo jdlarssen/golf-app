@@ -254,6 +254,6 @@ slagordet «Fyr opp golfturneringen på et par minutter» (`docs/style-and-brand
 oppfyller kravene til format, og har ingen enhet og ingen påstander om rangering eller pris.
 Google anbefaler i tillegg å unngå merkevare som ligner app-ikonet, og å vise hva appen gjør.
 Grafikken bruker ordmerket, ikke ikonet, men på samme grønne flate, og den viser ingen skjerm
-fra appen. Eieren har fått valget (bevissiden i PR-en for E7). Den lages på nytt med
+fra appen. Eieren avgjør om den heller skal vise et utsnitt av appen. Den lages på nytt med
 `node native/assets/store/generate-feature-graphic.mjs`. Ikonet lages av
 `native/assets/generate-icons.mjs` fra `icon-master-full-bleed.svg`.
