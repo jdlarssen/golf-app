@@ -2362,12 +2362,21 @@ Oppskriften:
   `email_otp`). Kode-steget nås uten mail ved å sette `step` til `'code'` gjennom
   `useState`-køen til `Login`. Det trengs fordi staging-kvoten for e-post ofte er brukt opp.
 - **Web-fasiten** innlogget uten mail: `generateLink` → `verifyOtp` → `@supabase/ssr` gir
-  cookien, og Playwright legger den i konteksten. Veiviseren kjøres med feltene i
-  «Veiviser-orakel uten tekst». En direkte SQL-skriving etter at siden er vist, krever
+  cookien, og Playwright legger den i konteksten. Veiviseren (`/opprett-spill`) kjøres
+  uten å lese norsk tekst: steg 1 er `[data-testid=intent-tile-kompis]`, formatet er
+  `[role=radio][aria-labelledby*="-<slug>-name"]` (best ball er anbefalt-kortet, radioen
+  «Velg best ball»), og antallet spillere endres med knappene «Én spiller færre» og «Én
+  spiller til». Steg 3 er `select[name=course_id]`, `select[name=tee_box_id]` og
+  `input[name=scheduled_tee_off_at]`. Steg 4 har en avkrysning per spiller, og lagene
+  ligger i `team-card-N` med én `<select>` per plass. Steg 5 har `textarea[name=name]` og
+  `[data-testid=wizard-publish]`. De skjulte feltene (`input[type=hidden][name=…]`) er det
+  veiviseren faktisk sender. En direkte SQL-skriving etter at siden er vist, krever
   `POST /api/games/<id>/refresh` med Bearer, ellers viser webben cachen.
 - **Halen.** `POST /api/cron/finish-pipeline` på staging tar alle ferdige spill uten
   markør, også andres. Kjør heller `runFinishPipelineForGame` for ditt eget spill to ganger
   (`ran: true`, så `false`), og les varslene etterpå.
-- **SQLITE_BUSY i jest.** `src/test/sqliteMock.ts` avviser nå en skriving på den delte
-  forbindelsen mens en `withExclusiveTransactionAsync` er åpen, slik enheten gjør. En ny
-  skriving utenfor `withTxn` blir dermed rød i testen, ikke først på telefonen (#1954 A4).
+- **SQLITE_BUSY i jest.** `src/test/sqliteMock.ts` avviser en skriving på den delte
+  forbindelsen mens en `withExclusiveTransactionAsync` er åpen, slik enheten gjør (#1954
+  A4). En ny skriving utenfor `withTxn` blir rød bare i en test der den overlapper med en
+  åpen transaksjon. Mocken avviser ikke en slik skriving når ingen transaksjon står åpen,
+  så testen for et nytt kallested må åpne en transaksjon selv (se `gameBundle.test.ts`).
