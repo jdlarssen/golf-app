@@ -59,9 +59,10 @@ feilmelding uansett årsak, samme rate-limit-buckets som vanlig innlogging (5
 forsøk per adresse og 30 per IP per kvarter), og sida finnes ikke uten
 env-varen.
 
-Passordet skal være **minst 24 tegn**, tilfeldig generert, og bo nøyaktig to
-steder: i Supabase (hashet) og i App Store Connect. Aldri i repoet, aldri i en
-`.env`-fil som er sjekket inn, aldri i en logg, aldri i appen.
+Passordet skal være **minst 24 tegn**, tilfeldig generert, og bo bare der det trengs:
+i Supabase (hashet), i nøkkelringen på eierens Mac, og i butikken kontoen hører til
+(App Store Connect for Apple-kontoen, Play Console for Google-kontoen). Aldri i repoet,
+aldri i en `.env`-fil som er sjekket inn, aldri i en logg, aldri i appen.
 
 ## Førstegangs-oppsett i produksjon
 
@@ -69,15 +70,16 @@ steder: i Supabase (hashet) og i App Store Connect. Aldri i repoet, aldri i en
 gjør steg 2 og 4 i nettleseren. Steg 3 skriver til produksjonsdatabasen.
 
 **Hvor adressene og passordene ligger:** i nøkkelringen på eierens Mac, aldri i repoet,
-på GitHub eller i en logg. Én adresse og ett passord per butikk:
+på GitHub eller i en logg. Ett element per butikk, med adressen i feltet «Konto» og
+passordet som passord:
 
-| Butikk | Adresse (`-s`) | Passord (`-s`) |
-|---|---|---|
-| Apple | `torny-review-apple-email` | `torny-review-apple` |
-| Google | `torny-review-google-email` | `torny-review-google` |
+| Butikk | Element i nøkkelringen | Feltet «Konto» | Passordet |
+|---|---|---|---|
+| Apple | `torny-review-apple` | adressen til Apple-kontoen | passordet til Apple-kontoen |
+| Google | `torny-review-google` | adressen til Google-kontoen | passordet til Google-kontoen |
 
-Alle står med kontonavnet `-a torny-review`. Kommandoene under leser dem derfra, så en
-tilbakestilling bruker alltid det passordet som står i butikken.
+Kommandoene under leser dem derfra, så en tilbakestilling bruker alltid det passordet
+som står i butikken.
 
 ### 1. Lag passordene og legg dem i nøkkelringen
 
@@ -85,15 +87,29 @@ tilbakestilling bruker alltid det passordet som står i butikken.
 er en alias-adresse eieren styrer:
 
 ```bash
-security add-generic-password -a torny-review -s torny-review-apple-email -w '<review-epost>'
-security add-generic-password -a torny-review -s torny-review-apple \
+security add-generic-password -s torny-review-apple -a '<review-epost>' \
   -w "$(LC_ALL=C tr -dc 'A-Za-z0-9!@#%^&*-_' < /dev/urandom | head -c 28)"
 ```
 
 Passordet vises ikke. Eieren trenger det for å lime det inn i butikken (steg 4) og
-henter det selv: åpne appen **Nøkkelring** (Keychain Access) på Mac-en, søk etter
-`torny-review-apple`, dobbeltklikk på raden og huk av for «Vis passord». Adressen står
-på raden `torny-review-apple-email`. Ingen av delene sendes i chatten.
+henter det selv i appen **Nøkkelringtilgang**:
+
+1. Trykk ⌘ og mellomrom (Spotlight), skriv «Nøkkelringtilgang» og trykk Enter.
+2. Skriv `torny-review-apple` i søkefeltet øverst til høyre, og dobbeltklikk på raden.
+3. Adressen står i feltet **«Konto»**.
+4. Huk av for **«Vis passord»** og skriv Mac-passordet ditt. Da vises passordet.
+
+Ingen av delene sendes i chatten.
+
+### Første kjøring etter #2561 (engangssteg)
+
+Apple-kontoen finnes alt i prod, med passordet fra innsendingen av 1.1.0 (3). Skriptet
+beholder passordet til en konto som finnes, så første kjøring må bytte det til det nye i
+nøkkelringen: orkestratoren kjører kommandoen i steg 3 med `--rotate-password` lagt til,
+og eieren limer det nye passordet inn i App Store Connect (App Review Information og
+TestFlight → Test Information). Det samme gjelder Google første gang. Finnes ikke
+kontoen, lages den med passordet fra nøkkelringen, og flagget gjør ingen forskjell.
+Etter første kjøring brukes flagget aldri, med mindre passordet skal byttes med vilje.
 
 ### 2. Sett env-varen i Vercel (kun for web-sida)
 
@@ -120,10 +136,11 @@ alltid, så skriptet kan stoppe hvis de to butikkene har samme adresse:
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
-kc() { security find-generic-password -a torny-review -s "$1" -w; }
-REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
-REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
-REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+kc_pass() { security find-generic-password -s "$1" -w; }
+kc_addr() { security find-generic-password -s "$1" | awk -F'"' '/"acct"/ {print $4}'; }
+REVIEW_ACCOUNT_EMAIL="$(kc_addr torny-review-apple)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc_pass torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc_addr torny-review-google)" \
 node scripts/provision-review-account.mjs --env prod --store apple
 ```
 
@@ -137,18 +154,18 @@ selv. Har du flere (eller ingen), stopper det og ber deg si hvem det skal være:
 
 ```bash
 REVIEW_DEMO_ORGANIZER_EMAIL='<din-admin-epost>' \
-REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
-REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
-REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+REVIEW_ACCOUNT_EMAIL="$(kc_addr torny-review-apple)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc_pass torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc_addr torny-review-google)" \
 node scripts/provision-review-account.mjs --env prod --store apple
 ```
 
 Google-kontoen lages på samme måte, med sine egne variabler og `--store google`:
 
 ```bash
-REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
-REVIEW_ACCOUNT_PASSWORD_GOOGLE="$(kc torny-review-google)" \
-REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc_addr torny-review-google)" \
+REVIEW_ACCOUNT_PASSWORD_GOOGLE="$(kc_pass torny-review-google)" \
+REVIEW_ACCOUNT_EMAIL="$(kc_addr torny-review-apple)" \
 node scripts/provision-review-account.mjs --env prod --store google
 ```
 
@@ -201,10 +218,11 @@ steg 3):
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
-kc() { security find-generic-password -a torny-review -s "$1" -w; }
-REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
-REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
-REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+kc_pass() { security find-generic-password -s "$1" -w; }
+kc_addr() { security find-generic-password -s "$1" | awk -F'"' '/"acct"/ {print $4}'; }
+REVIEW_ACCOUNT_EMAIL="$(kc_addr torny-review-apple)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc_pass torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc_addr torny-review-google)" \
 node scripts/provision-review-account.mjs --env prod --store apple
 ```
 

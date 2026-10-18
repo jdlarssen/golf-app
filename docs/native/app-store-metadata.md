@@ -26,8 +26,9 @@ Etiketten følger Apples egne definisjoner på
   advertising measurement purposes», eller å dele dem med en datamegler. Det gjør vi
   ikke.
 
-Alt appen samler, er for at appen skal virke (App Functionality), og alt er koblet
-til kontoen. Ingenting brukes til sporing.
+Alt appen samler, unntatt Kavalkade-tellingen, er for at appen skal virke (App
+Functionality). Kavalkade-tellingen har formålet Analytics (raden Product Interaction).
+Alt er koblet til kontoen, og ingenting brukes til sporing.
 
 Første spørsmål i skjemaet: **«Do you or your third-party partners collect data from
 this app?» → Yes.**
