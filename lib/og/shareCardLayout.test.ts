@@ -192,7 +192,7 @@ describe('shareCardHeight', () => {
 
   // Worst case in the font render (job rig, Fraunces/Inter from Google): a team
   // of four that wins alone, a three-line headline at 116px and two-line row
-  // names on all three rows. The render needed 1289px up to the bottom line's
+  // names on all three rows. The render needed 1294px up to the bottom line's
   // top plus the 40px air this estimate keeps; the estimate must not be lower.
   it('a three-line headline over three two-line rows is lifted above the frame', () => {
     const model = placement(
@@ -201,7 +201,7 @@ describe('shareCardHeight', () => {
       ['Ingeborg', 'Fredrik', 'Henrik', 'Silje'],
     );
     const h = shareCardHeight(model, { headlineLines: 3, headlineFontSize: 116 });
-    expect(h).toBeGreaterThanOrEqual(1289 + 40);
+    expect(h).toBeGreaterThanOrEqual(1294 + 40);
   });
 
   it('more lines in the headline never make the card shorter', () => {
