@@ -49,6 +49,7 @@ export function PlayersSection({
     isFlorida,
     teamSize,
     teamCountSplits,
+    pairCountSplits,
   } = state;
 
   const count = selectedPlayerIds.length;
@@ -69,7 +70,7 @@ export function PlayersSection({
   ) : (
     <>
       {count === 1 ? t('counterSingular', { count }) : t('counterPlural', { count })}
-      {(isBestBall || isParStableford) && count >= 2 && count % 2 !== 0 && (
+      {(isBestBall || isParStableford) && count >= 2 && !pairCountSplits && (
         <span className="ml-1">{t('teamHintPair')}</span>
       )}
       {/* #2569: «går opp» counts teams one short where the format has them (4/4/3). */}
