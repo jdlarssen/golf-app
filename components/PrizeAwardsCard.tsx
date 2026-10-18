@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { SponsorCredit } from '@/components/SponsorCredit';
 import type { PrizeAward } from '@/lib/games/prizeAwards';
+import { sideLabel } from '@/lib/games/sideLabel';
 
 /**
  * #1051: «Premieutdeling»-seksjonen under podiet på et avsluttet spill. Tar
@@ -30,10 +31,6 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
     .filter((a) => a.prize.category === 'closest_to_pin')
     .sort((x, y) => x.prize.position - y.prize.position);
   const sideCount = longestDrive.length + closestToPin.length;
-
-  function sideLabel(base: string, position: number, total: number): string {
-    return total > 1 ? `${base} ${position}` : base;
-  }
 
   return (
     <Card className="mx-4">
