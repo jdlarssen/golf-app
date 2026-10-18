@@ -23,7 +23,7 @@ jest.mock('./db', () => ({
   getDb: jest.fn(async () => ({})),
   // #1954 A4: skrivinger står i transaksjonskøen; testen ser hvilken
   // forbindelse de fikk.
-  withTxn: jest.fn(async (task: (txn: unknown) => Promise<unknown>) => task({ txn: true })),
+  withTxn: require('../test/txnPassthrough').txnPassthrough(),
   listScoresForGame: jest.fn(),
   getCacheEntry: jest.fn(),
   putCacheEntry: jest.fn(),

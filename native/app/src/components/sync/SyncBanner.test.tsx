@@ -27,7 +27,7 @@ jest.mock('../../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   // #1954 A4: slettingene står i transaksjonskøen; testen ser hvilken
   // forbindelse de fikk.
-  withTxn: jest.fn(async (task: (txn: unknown) => Promise<unknown>) => task({ txn: true })),
+  withTxn: require('../../test/txnPassthrough').txnPassthrough(),
   listQueue: jest.fn(async () => mockState.queue),
   listTeeShotQueue: jest.fn(async () => mockState.teeShots),
   deleteTeeShotQueueItem: jest.fn(async (_db: unknown, id: string) => {
