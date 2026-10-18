@@ -53,7 +53,7 @@ jest.mock('../lib/shareLive', () => ({
 }));
 // #1954 A1: spillerens eget trekk går via ruta; her holder det å se kallet.
 jest.mock('../data/withdrawSelf', () => ({
-  withdrawSelf: jest.fn(async () => ({ ok: true })),
+  withdrawSelf: jest.fn(async () => ({ ok: true, kept: true })),
   undoSelfWithdraw: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('@react-navigation/native', () => ({
@@ -730,6 +730,8 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
     const { withdrawSelf } = require('../data/withdrawSelf') as { withdrawSelf: jest.Mock };
+    // Før start slettes påmeldingen (`kept: false`): spilleren har ingen side å bli på.
+    withdrawSelf.mockResolvedValueOnce({ ok: true, kept: false });
 
     await render(
       <GameHome
@@ -792,6 +794,39 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     await waitFor(() => expect(withdrawSelf).toHaveBeenCalledWith('game-1'));
     // Bundelen hentes på nytt (banneret tar over), og appen blir på siden.
     await waitFor(() => expect(refreshGameBundle.mock.calls.length).toBeGreaterThan(fetchesBefore));
+    expect(navigation.navigate).not.toHaveBeenCalledWith('Home');
+    alert.mockRestore();
+  });
+
+  it('runden startet mens siden sto åpen: serveren beholdt raden (kept), og spilleren blir på siden', async () => {
+    // Lenka ble tegnet før start, men trekket ble det myke: landingen følger
+    // svaret, ikke det skjermen trodde da den ble tegnet.
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'scheduled', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+    const { withdrawSelf } = require('../data/withdrawSelf') as { withdrawSelf: jest.Mock };
+    withdrawSelf.mockResolvedValueOnce({ ok: true, kept: true });
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation,
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('player-withdraw')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('player-withdraw'));
+    const buttons = alert.mock.calls[0]![2] as { text: string; onPress?: () => void }[];
+    await act(async () => {
+      buttons.find((b) => b.text === 'Trekk meg fra spillet')!.onPress!();
+    });
+    await waitFor(() => expect(withdrawSelf).toHaveBeenCalledWith('game-1'));
     expect(navigation.navigate).not.toHaveBeenCalledWith('Home');
     alert.mockRestore();
   });

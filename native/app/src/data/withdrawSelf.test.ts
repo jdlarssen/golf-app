@@ -47,7 +47,7 @@ describe('selv-frafall', () => {
     it('trekker med POST og Bearer-token, uten kropp og uten query', async () => {
       respondWith(200, { ok: true, kept: true });
 
-      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: true });
+      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: true, kept: true });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       // Eksakt URL: runden identifiseres av STIEN, spilleren av tokenet. Sender
@@ -61,13 +61,21 @@ describe('selv-frafall', () => {
       expect(init.body).toBeUndefined();
     });
 
-    it('er trukket selv om svaret ikke sa noe om raden', async () => {
-      // Appen leser ikke `kept`: kallstedet henter bundelen på nytt, og den er
-      // fasiten for hva skjermen viser. Et felt appen tolket selv ville vært en
-      // andre sannhet om samme tilstand.
+    it('sender med om påmeldingen ble slettet (kept: false) — som webben leser for å velge landing (#1954 A1)', async () => {
+      // Før start slettes raden, og spilleren har ingen side å bli på. Runden
+      // kan ha startet mens skjermen sto åpen, så det er svaret som avgjør, ikke
+      // hva skjermen trodde da den ble tegnet.
+      respondWith(200, { ok: true, kept: false });
+
+      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: true, kept: false });
+    });
+
+    it('er trukket og blir på siden når svaret ikke sa noe om raden', async () => {
+      // Uten `kept` velger appen det trygge: bli stående, hent bundelen på nytt,
+      // og la den vise trukket-banneret eller at spilleren ikke er med lenger.
       respondWith(200, {});
 
-      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: true });
+      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: true, kept: true });
     });
 
     it.each([
