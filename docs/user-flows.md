@@ -195,6 +195,8 @@ flowchart LR
 
 **Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/tv`) og innbyggingen (`/embed`) får den ikke.
 
+**Oppgjøret som kvittering (#2296):** spiller dere Skins, Nassau, Wolf, Bingo Bango Bongo, Acey Deucey eller Nines med kroner, står oppgjøret som en kvittering under tavla (og under duellkortet med to spillere): hvem betaler hvem og sluttsummen, med tittelen «Oppgjøret så langt» mens runden pågår; når spillet er ferdig og noen skal betale, kopierer «Kopier til gruppechatten» det som ren tekst (`lib/format/settlementText.ts`).
+
 ### P5 — Profil, historikk & konto
 
 | Flyt | Rute | Teknisk |
