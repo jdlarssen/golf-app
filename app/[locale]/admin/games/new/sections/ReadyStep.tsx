@@ -333,7 +333,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       const missing = row.messages.filter((m) => m !== accountPlayerMessage);
       value = [
         missing.length > 0 ? t('missingPrefix', { items: missing.join(', ') }) : null,
-        t('checklist.playersGuestsOnly'),
+        // Amber: others can still sign up, so the sentence says «so far».
+        t(guestOnly === 'warn' ? 'checklist.playersGuestsOnlyWarn' : 'checklist.playersGuestsOnly'),
       ]
         .filter(Boolean)
         .join(' ');
