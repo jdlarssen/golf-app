@@ -84,6 +84,28 @@ export const WITHDRAW_SELF = {
 } as const;
 
 /**
+ * En vanlig spiller trekker seg fra spillets side (#1954 A1).
+ *
+ * Webbens ord tegn for tegn (`game.home.withdrawLink` og `game.withdraw.*`,
+ * låst i `rosterCopy.test.ts`): nettsiden har en egen bekreftelsesside, appen
+ * stiller det samme spørsmålet i en dialog. Advarselen skiller før start
+ * (påmeldingen slettes) fra under runden (ute av rangeringen, kan angres).
+ */
+export const PLAYER_WITHDRAW = {
+  link: 'Trekk deg fra spillet',
+  bodyPreStart:
+    'Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
+  bodyActive:
+    'Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.',
+  confirmCta: 'Trekk meg fra spillet',
+} as const;
+
+/** Webbens `game.withdraw.heading` med spillets navn satt inn. */
+export function playerWithdrawConfirmTitle(gameName: string): string {
+  return `Trekk deg fra «${gameName}»?`;
+}
+
+/**
  * Gjenåpning av et levert kort (#2220).
  *
  * `label`, `done` og bekreftelsen ({@link reopenConfirmBody}) er webbens ord
