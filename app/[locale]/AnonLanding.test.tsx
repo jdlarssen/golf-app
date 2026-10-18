@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { AnonLanding } from './AnonLanding';
 import noMessages from '@/messages/no.json';
+import { APP_STORE_URL } from '@/lib/app/storeLinks';
 
 // Discovery-seksjonen (seksjon 6) er en DB-avhengig Suspense-gren; en tom liste
 // gjør at den ikke rendres i det hele tatt. Stubb den til [] så render-testen
@@ -103,5 +104,81 @@ describe('AnonLanding', () => {
 
     // Identisk med kilde-arrayet, i samme rekkefølge (Googles krav).
     expect(jsonLdFaq).toEqual(sourceFaq);
+  });
+});
+
+/**
+ * #2562, Type B: bryteren for lanseringsdagen. Med `off` (over) er forsiden
+ * som før. Med `on` byttes tillitslinja, steg 2 og FAQ-svaret om appen, og
+ * JSON-LD-en følger det synlige svaret. Demoknappen heter «Hent appen».
+ */
+describe('AnonLanding med appen ute (#2562)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  function faqJsonLd(container: HTMLElement) {
+    const script = container.querySelector('script[type="application/ld+json"]');
+    const graph = JSON.parse(script!.textContent ?? '{}')['@graph'] as Array<{
+      '@type': string;
+      mainEntity?: Array<{ name: string; acceptedAnswer: { text: string } }>;
+    }>;
+    return graph.find((node) => node['@type'] === 'FAQPage')!.mainEntity!;
+  }
+
+  it('on: nye tekster, FAQ-en i JSON-LD-en følger svaret, og ingen «ingen app»', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    const ui = await AnonLanding({ locale: 'no' });
+    const { container } = render(ui as React.ReactElement);
+    const landing = noMessages.landing;
+
+    expect(screen.getByText(landing.hero.trustLaunched)).toBeInTheDocument();
+    expect(screen.queryByText(landing.hero.trust)).toBeNull();
+    expect(screen.getByText(landing.how.step2BodyLaunched)).toBeInTheDocument();
+
+    const answer =
+      'Nei, men dere kan. Påmelding og tavla virker i nettleseren, og appen er gratis i App Store og Google Play.';
+    expect(screen.getByText(answer)).toBeInTheDocument();
+    expect(faqJsonLd(container)[2]).toEqual({
+      '@type': 'Question',
+      name: landing.faq2Launched.q,
+      acceptedAnswer: { '@type': 'Answer', text: answer },
+    });
+
+    // Demoknappen heter «Hent appen» og peker til /demo på en PC.
+    const cta = screen.getByTestId('anon-demo-cta');
+    expect(cta).toHaveTextContent(landing.hero.primaryCtaLaunched);
+    expect(cta).toHaveAttribute('href', '/demo');
+
+    expect(container.textContent).not.toMatch(/ingen app|uten app/i);
+  });
+
+  it('on: demoknappen går rett til App Store på en iPhone', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    );
+    const ui = await AnonLanding({ locale: 'no' });
+    render(ui as React.ReactElement);
+    expect(screen.getByTestId('anon-demo-cta')).toHaveAttribute(
+      'href',
+      APP_STORE_URL,
+    );
+  });
+
+  it('ios: tekstene byttes og FAQ-en sier App Store, men demoknappen står', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'ios');
+    const ui = await AnonLanding({ locale: 'no' });
+    const { container } = render(ui as React.ReactElement);
+    const landing = noMessages.landing;
+
+    expect(screen.getByText(landing.hero.trustLaunched)).toBeInTheDocument();
+    expect(faqJsonLd(container)[2].acceptedAnswer.text).toBe(
+      'Nei, men dere kan. Påmelding og tavla virker i nettleseren, og appen er gratis i App Store.',
+    );
+    const cta = screen.getByTestId('anon-demo-cta');
+    expect(cta).toHaveTextContent(landing.hero.primaryCta);
+    expect(cta).toHaveAttribute('href', '/demo');
   });
 });

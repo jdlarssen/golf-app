@@ -8,6 +8,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { appLaunchFlag, appLaunchKey, isLaunchSwap } from '@/lib/app/appLaunch';
 import { SectionHeading, TextLink, FooterLink } from '../marketing-primitives';
 
 const ORIGIN = 'https://tornygolf.no';
@@ -90,7 +91,16 @@ export default async function HvorforTornyPage({
   const boardRows = t.raw('board.rows') as BoardRow[];
   const chips = t.raw('board.chips') as Chip[];
   const iconPoints = t.raw('points.items') as IconPoint[];
-  const faq = t.raw('faq') as FaqEntry[];
+  // #2562: med appen ute byttes svaret om installering (punkt 1) i arrayet,
+  // så FAQPage-JSON-LD-en følger med.
+  const launch = appLaunchFlag();
+  const faq = [...(t.raw('faq') as FaqEntry[])];
+  if (isLaunchSwap('whyTorny', 'faq.1', launch)) {
+    faq[1] = {
+      q: t('faq1Launched.q'),
+      a: t('faq1Launched.a', { stores: launch }),
+    };
+  }
 
   const canonical = canonicalPath(locale, '/hvorfor-torny');
   const jsonLd = {
@@ -327,11 +337,16 @@ export default async function HvorforTornyPage({
             {t('endCta.headingPost')}
           </h2>
           <p className="mx-auto mt-3 max-w-[300px] font-sans text-[14px] leading-relaxed text-muted">
-            {t('endCta.body')}
+            {t(appLaunchKey('whyTorny', 'endCta.body', launch))}
           </p>
           <div className="mt-6 flex flex-col gap-3">
-            <LinkButton href="/demo" full data-testid="why-torny-demo-cta">
-              {t('endCta.primaryCta')}
+            <LinkButton
+              href="/demo"
+              full
+              data-testid="why-torny-demo-cta"
+              appCta
+            >
+              {t(appLaunchKey('whyTorny', 'endCta.primaryCta', launch))}
             </LinkButton>
             <TextLink href="/login" className="justify-center">
               {t('endCta.secondaryCta')}
@@ -343,7 +358,9 @@ export default async function HvorforTornyPage({
         <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-border pt-8 font-sans text-[13px] text-muted">
           <FooterLink href="/spillformater">{t('footer.formats')}</FooterLink>
           <FooterLink href="/baner">{t('footer.courses')}</FooterLink>
-          <FooterLink href="/demo">{t('footer.demo')}</FooterLink>
+          <FooterLink href="/demo" appCta>
+            {t(appLaunchKey('whyTorny', 'footer.demo', launch))}
+          </FooterLink>
           <FooterLink href="/login">{t('footer.login')}</FooterLink>
           <FooterLink href="/legal/privacy">{t('footer.privacy')}</FooterLink>
         </nav>

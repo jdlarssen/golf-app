@@ -8,13 +8,14 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
-import { SmartLink } from '@/components/ui/SmartLink';
+import { AppCtaLink } from '@/components/app/AppCtaLink';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
 import { LoginBand, type LoginBandInvite } from './_components/LoginBand';
 import { InvitationCard } from '@/components/games/InvitationCard';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
 import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
+import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
 import { selfRegistrationOpen } from '@/lib/auth/sendLoginCode';
 import {
   getInviteLoginContext,
@@ -257,7 +258,7 @@ export default async function LoginPage({
               next={next}
               invite={invite}
               variant="invite"
-              hint={t('sendCode.inviteHint')}
+              hint={t(appLaunchKey('auth', 'sendCode.inviteHint', appLaunchFlag()))}
             />
           </section>
         </div>
@@ -302,13 +303,14 @@ export default async function LoginPage({
               </span>
               <span className="h-px flex-1 bg-border" />
             </div>
-            <SmartLink
+            <AppCtaLink
               href="/demo"
               data-testid="try-demo-link"
               className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
             >
-              {t('tryDemo')} <span aria-hidden="true">→</span>
-            </SmartLink>
+              {t(appLaunchKey('auth', 'tryDemo', appLaunchFlag()))}{' '}
+              <span aria-hidden="true">→</span>
+            </AppCtaLink>
           </Card>
         </div>
       </div>

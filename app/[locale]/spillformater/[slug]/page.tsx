@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
 
 type Params = Promise<{ slug: string; locale: string }>;
 
@@ -210,11 +211,11 @@ export default async function SpillformDetailPage({ params }: { params: Params }
           {tFg('detailCtaHeading')}
         </h2>
         <p className="mt-2 text-[14px] text-muted leading-relaxed">
-          {tFg('detailCtaBody')}
+          {tFg(appLaunchKey('formatGuide', 'detailCtaBody', appLaunchFlag()))}
         </p>
         <div className="mt-4">
-          <LinkButton href="/demo" full data-testid="format-demo-cta">
-            {tFg('detailCtaButton')}
+          <LinkButton href="/demo" full data-testid="format-demo-cta" appCta>
+            {tFg(appLaunchKey('formatGuide', 'detailCtaButton', appLaunchFlag()))}
           </LinkButton>
         </div>
       </div>

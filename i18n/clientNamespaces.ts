@@ -30,6 +30,8 @@ export const ROOT_CLIENT_NAMESPACES = [
   // #2263: the inbox's result row (place for screen readers, matchplay outcome).
   'finishedCard',
   'game',
+  // #2562: «Hent appen» on the confirmations, the live board and /demo.
+  'getTheApp',
   'holes',
   'inbox',
   'installBanner',

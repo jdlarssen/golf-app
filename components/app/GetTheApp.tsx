@@ -17,6 +17,7 @@ import { StoreBadges } from './StoreBadges';
  *
  * - `card`: the confirmations (game page before start, sign-up) and `/demo`.
  * - `inline`: one quiet line with the badges, for the live board.
+ * - `badges`: the badges alone, for the `/demo` page that points to the app.
  * - `deviceOnly`: only on a phone or tablet whose store is out. `/demo` uses
  *   it with `ios`, where the demo stays and an iPhone gets the card above it.
  */
@@ -25,7 +26,7 @@ export function GetTheApp({
   deviceOnly = false,
   className = '',
 }: {
-  variant?: 'card' | 'inline';
+  variant?: 'card' | 'inline' | 'badges';
   deviceOnly?: boolean;
   className?: string;
 }) {
@@ -38,6 +39,14 @@ export function GetTheApp({
   }
   const stores = storesFor(appLaunchFlag(), platform);
   if (stores.length === 0) return null;
+
+  if (variant === 'badges') {
+    return (
+      <div data-testid="get-the-app" className={className}>
+        <StoreBadges stores={stores} />
+      </div>
+    );
+  }
 
   if (variant === 'inline') {
     return (

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import HvorforTornyPage from './page';
 import noMessages from '@/messages/no.json';
@@ -43,5 +43,39 @@ describe('HvorforTornyPage', () => {
         a: entry.acceptedAnswer.text,
       })),
     ).toEqual(sourceFaq);
+  });
+});
+
+// #2562, Type B: med appen ute byttes svaret om installering (punkt 1) i både
+// den synlige FAQ-en og JSON-LD-en, og demoknappen heter «Hent appen».
+describe('HvorforTornyPage med appen ute (#2562)', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('on: FAQ-svaret og JSON-LD-en nevner butikkene, demoknappen heter «Hent appen»', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    const ui = await HvorforTornyPage({
+      params: Promise.resolve({ locale: 'no' }),
+    });
+    const { container } = render(ui as React.ReactElement);
+    const why = noMessages.whyTorny;
+
+    const answer =
+      'Nei, ingen må. Alle kan bli med rett fra nettleseren. Vil du ha appen, henter du den gratis i App Store og Google Play.';
+    expect(screen.getByText(answer)).toBeInTheDocument();
+    const graph = JSON.parse(
+      container.querySelector('script[type="application/ld+json"]')!
+        .textContent ?? '{}',
+    )['@graph'] as Array<{
+      '@type': string;
+      mainEntity?: Array<{ acceptedAnswer: { text: string } }>;
+    }>;
+    const faqNode = graph.find((node) => node['@type'] === 'FAQPage')!;
+    expect(faqNode.mainEntity![1].acceptedAnswer.text).toBe(answer);
+
+    expect(screen.getByTestId('why-torny-demo-cta')).toHaveTextContent(
+      why.endCta.primaryCtaLaunched,
+    );
+    expect(screen.getByText(why.endCta.bodyLaunched)).toBeInTheDocument();
+    expect(container.textContent).not.toContain(why.faq[1].a);
   });
 });

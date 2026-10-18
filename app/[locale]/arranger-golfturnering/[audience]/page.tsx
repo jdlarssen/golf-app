@@ -12,6 +12,7 @@ import {
   type ArrangeAudience,
 } from '@/lib/seo/arrangeAudiences';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
 
 type Params = Promise<{ audience: string; locale: string }>;
 
@@ -177,15 +178,16 @@ export default async function ArrangeAudiencePage({
             {t('ctaHeading')}
           </h2>
           <p className="mt-2 font-sans text-[14px] leading-relaxed text-muted">
-            {t('ctaBody')}
+            {t(appLaunchKey('arrangeGuide', 'ctaBody', appLaunchFlag()))}
           </p>
           <div className="mt-4">
             <LinkButton
               href="/demo"
               full
               data-testid="arrange-guide-audience-demo-cta"
+              appCta
             >
-              {t('ctaPrimary')}
+              {t(appLaunchKey('arrangeGuide', 'ctaPrimary', appLaunchFlag()))}
             </LinkButton>
           </div>
         </section>
