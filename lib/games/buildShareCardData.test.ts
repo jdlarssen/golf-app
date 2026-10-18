@@ -9,6 +9,7 @@ import type {
   AceyDeuceyResult,
   BestBallResult,
   BingoBangoBongoResult,
+  FourballMatchplayResult,
   NassauResult,
   NinesResult,
   RoundRobinResult,
@@ -866,6 +867,134 @@ describe('solo_strokeplay — ranked on net to par', () => {
     expect(card.podium.map((r) => r.score)).toEqual([
       { kind: 'vsPar', label: '+2' },
       { kind: 'vsPar', label: '+1' },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2319: the result card names every member, and both matchplay sides
+// ---------------------------------------------------------------------------
+describe('memberNames on placement rows (#2319)', () => {
+  const nameMap = names(
+    ['u1', 'Alice'],
+    ['u2', 'Bob'],
+    ['u3', 'Cleo'],
+    ['u4', 'Dan'],
+    ['u5', 'Eli'],
+    ['u6', 'Fay'],
+  );
+
+  const solo: SoloStrokeplayResult = {
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [],
+    players: [
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+    ],
+  };
+
+  function bestBall(teamSize: number): BestBallResult {
+    const ids = ['u1', 'u2', 'u3', 'u4'].slice(0, teamSize);
+    return {
+      kind: 'best_ball',
+      teams: [
+        { teamNumber: 1, playerIds: ids, holes: [], total: 70, rank: 1, tiedWith: [] },
+      ],
+    } as unknown as BestBallResult;
+  }
+
+  it.each([
+    ['a single player', solo, ['Alice']],
+    ['a team of two', bestBall(2), ['Alice', 'Bob']],
+    ['a team of four', bestBall(4), ['Alice', 'Bob', 'Cleo', 'Dan']],
+  ])('%s keeps one name per member', (_label, result, expected) => {
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].memberNames).toEqual(expected);
+    expect(card.podium[0].name).toBe(expected.join(' / '));
+  });
+
+  it('a member missing from the name map falls back, never to the id', () => {
+    const card = buildShareCardData({
+      result: bestBall(2),
+      nameByUserId: names(['u1', 'Alice']),
+      sharerId: null,
+      parByHole: PAR_72,
+      sideWinners: [],
+      playerFallback: 'Spiller',
+    });
+    expect(card.podium[0].memberNames).toEqual(['Alice', 'Spiller']);
+  });
+});
+
+describe('match.sides (#2319)', () => {
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dan']);
+
+  function singles(winner: 'side1' | 'side2' | 'tied' | null): SinglesMatchplayResult {
+    return {
+      kind: 'singles_matchplay',
+      sides: [
+        { sideNumber: 1, userId: 'u1', courseHandicap: 5 },
+        { sideNumber: 2, userId: 'u2', courseHandicap: 8 },
+      ],
+      holes: [],
+      holesUp: 0,
+      holesPlayed: 0,
+      holesRemaining: 0,
+      result:
+        winner === null
+          ? null
+          : { winner, marginUp: 0, decidedAtHole: 16, remainingAtDecision: 2, formatted: winner === 'tied' ? 'AS' : '3&2' },
+    };
+  }
+
+  it.each([
+    ['side 1 won', 'side1', [true, false]],
+    ['side 2 won', 'side2', [false, true]],
+    ['halved', 'tied', [false, false]],
+    ['no result yet', null, [false, false]],
+  ] as const)('singles, %s', (_label, winner, expectedWon) => {
+    const card = buildShareCardData({
+      result: singles(winner),
+      nameByUserId: nameMap,
+      sharerId: null,
+      parByHole: PAR_72,
+      sideWinners: [],
+    });
+    expect(card.match!.sides).toEqual([
+      { name: 'Alice', memberNames: ['Alice'], won: expectedWon[0] },
+      { name: 'Bob', memberNames: ['Bob'], won: expectedWon[1] },
+    ]);
+  });
+
+  it('fourball: two names per side, joined for the display name', () => {
+    const result: FourballMatchplayResult = {
+      kind: 'fourball_matchplay',
+      sides: [
+        {
+          sideNumber: 1,
+          players: [
+            { userId: 'u1', courseHandicap: 5, effectiveHandicap: 5 },
+            { userId: 'u2', courseHandicap: 8, effectiveHandicap: 8 },
+          ],
+        },
+        {
+          sideNumber: 2,
+          players: [
+            { userId: 'u3', courseHandicap: 5, effectiveHandicap: 5 },
+            { userId: 'u4', courseHandicap: 8, effectiveHandicap: 8 },
+          ],
+        },
+      ],
+      holes: [],
+      holesUp: -2,
+      holesPlayed: 18,
+      holesRemaining: 0,
+      result: { winner: 'side2', marginUp: 2, decidedAtHole: 18, remainingAtDecision: 0, formatted: '2up' },
+    };
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.match!.sides).toEqual([
+      { name: 'Alice / Bob', memberNames: ['Alice', 'Bob'], won: false },
+      { name: 'Cleo / Dan', memberNames: ['Cleo', 'Dan'], won: true },
     ]);
   });
 });

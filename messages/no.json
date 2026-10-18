@@ -2786,15 +2786,22 @@
     "shareCard": {
       "finalResult": "Sluttresultat",
       "gameFinished": "Spillet er ferdig",
-      "winner": "VINNER",
-      "matchplay": "MATCHPLAY",
-      "winnerWon": "{name} vant {margin}",
+      "winnerWon": "{name} vant <gold>{margin}</gold>",
       "tied": "Uavgjort",
+      "headlineWon": "{names} vant med <gold>{result}</gold>",
+      "headlineWonAt": "{names} vant på <gold>{result}</gold>",
+      "headlineShared": "{names} delte seieren med <gold>{result}</gold>",
+      "headlineSharedAt": "{names} delte seieren på <gold>{result}</gold>",
+      "headlineSharedMany": "Delt seier med <gold>{result}</gold>",
+      "headlineSharedManyAt": "Delt seier på <gold>{result}</gold>",
       "points": "{n} poeng",
       "skins": "{n} skins",
+      "par": "par",
       "holes": "{n} hull",
+      "players": "{n, plural, one {# spiller} other {# spillere}}",
       "playerFallback": "Spiller",
-      "tagline": "Fyr opp golfturneringen på et par minutter"
+      "tagline": "Fyr opp golfturneringen på et par minutter",
+      "taglinePun": "Fyr opp golfturneringen på et <gold>par</gold> minutter"
     },
     "common": {
       "settlement": {

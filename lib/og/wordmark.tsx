@@ -27,17 +27,20 @@ export function OgWordmark({
   fontFamily,
   fontSize,
   fontWeight,
+  color = FOREST,
 }: {
   fontFamily: string;
   fontSize: number;
   fontWeight: 500 | 600;
+  /** Text colour; the ball stays champagne. Light on the result card (#2319). */
+  color?: string;
 }) {
   const d = BALL_DIAMETER_EM * fontSize;
   const clearance =
     Math.max(0, BALL_DIAMETER_EM + T_CAP_HEIGHT_EM - SATORI_BASELINE_EM) * fontSize;
   return (
     <div style={{ display: 'flex', position: 'relative', paddingTop: clearance }}>
-      <span style={{ fontFamily, fontSize, fontWeight, color: FOREST, lineHeight: 1 }}>
+      <span style={{ fontFamily, fontSize, fontWeight, color, lineHeight: 1 }}>
         Tørny
       </span>
       <div

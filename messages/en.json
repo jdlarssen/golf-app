@@ -2786,15 +2786,22 @@
     "shareCard": {
       "finalResult": "Final result",
       "gameFinished": "Game finished",
-      "winner": "WINNER",
-      "matchplay": "MATCHPLAY",
-      "winnerWon": "{name} won {margin}",
+      "winnerWon": "{name} won <gold>{margin}</gold>",
       "tied": "Halved",
+      "headlineWon": "{names} won with <gold>{result}</gold>",
+      "headlineWonAt": "{names} won at <gold>{result}</gold>",
+      "headlineShared": "{names} shared the win with <gold>{result}</gold>",
+      "headlineSharedAt": "{names} shared the win at <gold>{result}</gold>",
+      "headlineSharedMany": "Shared win with <gold>{result}</gold>",
+      "headlineSharedManyAt": "Shared win at <gold>{result}</gold>",
       "points": "{n} points",
       "skins": "{n} skins",
+      "par": "par",
       "holes": "{n} holes",
+      "players": "{n, plural, one {# player} other {# players}}",
       "playerFallback": "Player",
-      "tagline": "Fire up your golf tournament in a couple of minutes"
+      "tagline": "Fire up your golf tournament in a couple of minutes",
+      "taglinePun": "Fire up your golf tournament in a <gold>couple</gold> of minutes"
     },
     "common": {
       "settlement": {
