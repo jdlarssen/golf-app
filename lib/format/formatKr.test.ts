@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatKr } from './formatKr';
+import { formatKr, formatKrAmount } from './formatKr';
 
 describe('formatKr', () => {
   it('formaterer hele kr med kr-suffiks', () => {
@@ -20,5 +20,13 @@ describe('formatKr', () => {
   it('avrunder til hele kr og unngår «−0 kr»', () => {
     expect(formatKr(66.7)).toBe('67 kr');
     expect(formatKr(-0.4)).toBe('0 kr');
+  });
+});
+
+describe('formatKrAmount', () => {
+  it('er beløpet uten «kr», med tusenskille og ekte minus (#2296)', () => {
+    expect(formatKrAmount(1000)).toBe('1 000');
+    expect(formatKrAmount(-60)).toBe('\u221260');
+    expect(formatKrAmount(0)).toBe('0');
   });
 });

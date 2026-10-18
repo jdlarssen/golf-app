@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
-import { formatKr } from '@/lib/format/formatKr';
+import { formatKr, formatKrAmount } from '@/lib/format/formatKr';
 import { buildSettlementText } from '@/lib/format/settlementText';
 import type { Settlement } from '@/lib/scoring/settlement';
 
@@ -39,7 +39,7 @@ const notFramedOnServer = () => false;
 
 /** The totals carry no «kr» on the artboard: «+100», «−60», «0». */
 function signedAmount(netKr: number): string {
-  return `${netKr > 0 ? '+' : ''}${formatKr(netKr).replace(/ kr$/, '')}`;
+  return `${netKr > 0 ? '+' : ''}${formatKrAmount(netKr)}`;
 }
 
 /**
@@ -76,7 +76,7 @@ export function SettlementTable({
   };
   const modeName = tModes(mode);
   const stakeLine = t('stakeLine', {
-    kr: settlement.krPerUnit,
+    kr: formatKrAmount(settlement.krPerUnit),
     unit: settlement.unitLabel,
     count: settlement.perPlayer.length,
   });
