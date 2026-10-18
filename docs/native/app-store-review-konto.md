@@ -65,16 +65,35 @@ steder: i Supabase (hashet) og i App Store Connect. Aldri i repoet, aldri i en
 
 ## Førstegangs-oppsett i produksjon
 
-Alle fire stegene gjør du selv. Steg 3 skriver til produksjonsdatabasen.
+**Hvem gjør hva (#2561):** orkestratoren gjør steg 1 og 3 på eierens Mac, og eieren
+gjør steg 2 og 4 i nettleseren. Steg 3 skriver til produksjonsdatabasen.
 
-### 1. Lag passordene
+**Hvor adressene og passordene ligger:** i nøkkelringen på eierens Mac, aldri i repoet,
+på GitHub eller i en logg. Én adresse og ett passord per butikk:
 
-Kjør lokalt i et terminalvindu, én gang for Apple-kontoen og én gang for
-Google-kontoen, og ta vare på det du får ut — det vises ikke igjen:
+| Butikk | Adresse (`-s`) | Passord (`-s`) |
+|---|---|---|
+| Apple | `torny-review-apple-email` | `torny-review-apple` |
+| Google | `torny-review-google-email` | `torny-review-google` |
+
+Alle står med kontonavnet `-a torny-review`. Kommandoene under leser dem derfra, så en
+tilbakestilling bruker alltid det passordet som står i butikken.
+
+### 1. Lag passordene og legg dem i nøkkelringen
+
+Én gang per butikk (her Apple; bytt `apple` med `google` for Google-kontoen). Adressen
+er en alias-adresse eieren styrer:
 
 ```bash
-LC_ALL=C tr -dc 'A-Za-z0-9!@#%^&*-_' < /dev/urandom | head -c 28; echo
+security add-generic-password -a torny-review -s torny-review-apple-email -w '<review-epost>'
+security add-generic-password -a torny-review -s torny-review-apple \
+  -w "$(LC_ALL=C tr -dc 'A-Za-z0-9!@#%^&*-_' < /dev/urandom | head -c 28)"
 ```
+
+Passordet vises ikke. Eieren trenger det for å lime det inn i butikken (steg 4) og
+henter det selv: åpne appen **Nøkkelring** (Keychain Access) på Mac-en, søk etter
+`torny-review-apple`, dobbeltklikk på raden og huk av for «Vis passord». Adressen står
+på raden `torny-review-apple-email`. Ingen av delene sendes i chatten.
 
 ### 2. Sett env-varen i Vercel (kun for web-sida)
 
@@ -96,13 +115,16 @@ deployen står som Ready og last på nytt.
 
 ### 3. Provisjoner kontoen
 
-Fra rota av repoet, med `.env.local` på plass (prod-nøklene):
+Fra rota av repoet, med `.env.local` på plass (prod-nøklene). Begge adressene settes
+alltid, så skriptet kan stoppe hvis de to butikkene har samme adresse:
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
-REVIEW_ACCOUNT_EMAIL='<review-epost>' \
-REVIEW_ACCOUNT_PASSWORD='<passordet-fra-steg-1>' \
-node scripts/provision-review-account.mjs --env prod
+kc() { security find-generic-password -a torny-review -s "$1" -w; }
+REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+node scripts/provision-review-account.mjs --env prod --store apple
 ```
 
 Skriptet printer hvilken Supabase-URL det skriver til før første skriv — les
@@ -115,18 +137,24 @@ selv. Har du flere (eller ingen), stopper det og ber deg si hvem det skal være:
 
 ```bash
 REVIEW_DEMO_ORGANIZER_EMAIL='<din-admin-epost>' \
-REVIEW_ACCOUNT_EMAIL='<review-epost>' \
-REVIEW_ACCOUNT_PASSWORD='<passordet>' \
-node scripts/provision-review-account.mjs --env prod
+REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+node scripts/provision-review-account.mjs --env prod --store apple
 ```
 
 Google-kontoen lages på samme måte, med sine egne variabler og `--store google`:
 
 ```bash
-REVIEW_ACCOUNT_EMAIL_GOOGLE='<google-review-epost>' \
-REVIEW_ACCOUNT_PASSWORD_GOOGLE='<det-andre-passordet>' \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+REVIEW_ACCOUNT_PASSWORD_GOOGLE="$(kc torny-review-google)" \
+REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
 node scripts/provision-review-account.mjs --env prod --store google
 ```
+
+**Passordet beholdes.** Finnes kontoen fra før, rører skriptet ikke passordet, så det
+som står i butikken, fortsatt virker. Bare `--rotate-password` setter et nytt fra
+nøkkelringen. Bytt det der først, og lim det nye inn i butikken etterpå (steg 4).
 
 **Forventet resultat:** en oppsummering som slutter med «✅ Provisjonert.» og
 linjene `Spill`, `Kortnavn`, `Arrangør`, `Spillere: 4`, `Scores: 21`. Linja
@@ -168,19 +196,23 @@ Kjør samme kommando som i steg 3 på nytt, for den butikken det gjelder: Apple-
 **før hver innsending til Apple, og etter hver review der kontoen kan ha blitt
 slettet**. Google-kontoen **før det lukkede sporet og produksjonen sendes til
 vurdering**, og sjekk etter hver vurdering at innloggingen fortsatt virker, fordi
-Google krever at den virker hele tiden. Apple-kommandoen:
+Google krever at den virker hele tiden. Apple-kommandoen (Google-kommandoen står i
+steg 3):
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
-REVIEW_ACCOUNT_EMAIL='<review-epost>' \
-REVIEW_ACCOUNT_PASSWORD='<passordet>' \
-node scripts/provision-review-account.mjs --env prod
+kc() { security find-generic-password -a torny-review -s "$1" -w; }
+REVIEW_ACCOUNT_EMAIL="$(kc torny-review-apple-email)" \
+REVIEW_ACCOUNT_PASSWORD="$(kc torny-review-apple)" \
+REVIEW_ACCOUNT_EMAIL_GOOGLE="$(kc torny-review-google-email)" \
+node scripts/provision-review-account.mjs --env prod --store apple
 ```
 
 Kjøringen rydder opp etter alt revieweren kan ha gjort:
 
 - **Slettet kontoen?** Adressen blir frigitt når kontoen anonymiseres, så
-  kjøringen lager kontoen på nytt med samme adresse og setter passordet.
+  kjøringen lager kontoen på nytt med samme adresse og passordet fra nøkkelringen,
+  altså det som står i butikken.
 - **Står det en «Slettet bruker» igjen i runden?** Den raden fjernes. Etterpå er
   rosteret nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
 - **Spilt, levert eller trukket seg?** Scorene slettes og legges inn på nytt,
@@ -197,9 +229,9 @@ avgjør om revieweren får slette kontoen sin.
 
 Google-kontoen tilbakestilles med `--store google` og sine egne variabler (steg 3).
 
-Sender du inn med et nytt passord, må steg 4 gjøres om — App Store Connect og Play
-Console husker det gamle. Skriptet roterer passordet til det du gir det, så gi det
-samme passord som står i butikken hvis du ikke vil endre det.
+En tilbakestilling endrer ikke passordet, så steg 4 trenger ikke gjøres om. Bare hvis
+passordet byttes med vilje (`--rotate-password`), må det nye limes inn i App Store
+Connect eller Play Console, fordi de husker det gamle.
 
 ## Demo-dataene revieweren møter
 
@@ -230,102 +262,58 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 083 byte, målt med
+`wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
+målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
+
 Navnene står med de tegnene appen faktisk viser («Tørny», «Demo Round — Tørny»).
 Anmelderen skal lete etter det som står på skjermen, ikke etter en forenklet
 skrivemåte.
 
 ```text
-Tørny is a Norwegian golf tournament app. Signing in normally uses a one-time
-code sent by email, which is not practical for review, so we have prepared a
-dedicated account with a password. The password field is hidden behind a long
-press, so that players never meet a sign-in method they cannot use.
+Tørny is a Norwegian golf tournament app. Sign-in normally uses a one-time code sent by email, so this review account has a password instead. The password field is hidden behind a long press.
 
 HOW TO SIGN IN
-1. Open the app. You land on the sign-in screen, titled "Tørny".
-2. Press and hold the title "Tørny" for about two seconds. A password field and
-   a button labelled "Logg inn med passord" (Sign in with password) appear
-   below the email field.
-3. Enter the user name and password from the fields above, then tap
-   "Logg inn med passord". The password is long and random, so pasting it is
-   the surest way in.
+1. Open the app. The sign-in screen is titled "Tørny".
+2. Press and hold the title for about two seconds. A password field and "Logg inn med passord" (Sign in with password) appear.
+3. Paste the user name and password from the fields above and tap "Logg inn med passord".
 
-AFTER SIGNING IN: ONE QUESTION ABOUT AI TEXTS
-Right after signing in, the app asks "Kan AI-en skrive om deg?" (Can the AI
-write about you?). After each round Tørny writes a short round report, and at
-Christmas a summary of the golf year. The language model Claude from Anthropic
-writes these texts.
-- "Ja, det er greit" (Yes, that is fine): the player's name can appear in the
-  texts, and Anthropic receives the names, results, game and course names and
-  dates the texts are written from.
-- "Nei takk" (No thanks): the player's name is left out of new texts. Numbers
-  without names, such as placings and team results, can still be used, as our
-  privacy policy says.
-Both answers take you into the app. The answer can be changed at any time under
-"Profil" -> "Personvern og konto" -> "AI-tekster om meg". The review account is
-reset before every submission, so you will see the question.
+AI QUESTION AFTER SIGN-IN
+The app asks "Kan AI-en skrive om deg?" (Can the AI write about you?). Tørny writes a short report after each round and a year summary at Christmas, using Claude from Anthropic.
+- "Ja, det er greit" (Yes): the player's name can appear, and Anthropic receives names, results, game and course names and dates.
+- "Nei takk" (No thanks): the name is left out of new texts. Numbers without names can still be used, as our privacy policy says.
+Both answers open the app. Change it under "Profil" > "Personvern og konto" > "AI-tekster om meg".
 
-LANGUAGE
-The app is in Norwegian, its home market. The labels you will need:
-"Profil" = Profile (top right on the home screen)
+WORDS YOU WILL NEED
+"Profil" = Profile (top right on home)
 "Fortsett runden" = Continue the round
-"Scorekort" = Scorecard
 "Lever scorekort" = Submit scorecard
-"Resultater" = Results (the leaderboard)
-"Logg ut" = Sign out
+"Resultater" = Results
 "Slett konto" = Delete account
 "Varsler og tema" = Notifications and theme
 "Personvern og konto" = Privacy and account
-"Start runden nå" = Start the round now
-"Avslutt runden" = End the round
 
 WHAT YOU WILL SEE
-The account plays in an active demo round called "Demo Round — Tørny", with
-three co-players. Holes 1-6 are already scored for the co-players and holes 1-3
-for the review account, so you can tap "Fortsett runden", continue on hole 4,
-watch "Resultater" update, and submit the card with "Lever scorekort". The round
-is hosted by a different account, so ending the round itself is not part of this
-account's view.
+An active round, "Demo Round — Tørny", with three co-players. Tap "Fortsett runden", continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort". Another account hosts the round.
 
-FEATURES WORTH TESTING
-- Account deletion (5.1.1(v)): "Profil" (top right) -> "Personvern og konto"
-  -> "Slett konto" -> confirm. Please test it last. It goes through, the account
-  is withdrawn from the demo round automatically, you are signed out, and these
-  credentials stop working afterwards. That is the expected result: this account
-  is for Apple review only, and we restore it and the demo data before every
-  submission.
-  One case blocks deletion: a round you created yourself during review that is
-  still planned or in progress, so its players are not left without an
-  organiser. Open that round, tap "Start runden nå" if it has not started, then
-  "Avslutt runden" and confirm. After that, deletion goes through. Please do not
-  use the "Åpne Klubbhuset" button on the deletion screen: it opens our website,
-  which signs in with an email code.
-- Offline scoring: turn on Airplane Mode while entering scores on a hole. The
-  scores are kept on the device and sync by themselves once it is back online.
-  Nothing is lost.
+ACCOUNT DELETION (5.1.1(v))
+"Profil" > "Personvern og konto" > "Slett konto" > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
+If you created a round yourself that is still planned or in progress, deletion is blocked so its players keep an organiser. Open that round, tap "Start runden nå" (Start the round now) if it has not started, then "Avslutt runden" (End the round). Tick every player under "Mangler kort", for example with "Avslutt uten kortet", and confirm. Please do not use the "Åpne Klubbhuset" button on the deletion screen: it opens our website, which needs an email code.
+
+OFFLINE
+Enter scores in Airplane Mode. They stay on the phone and sync when it is back online.
 
 NOTIFICATIONS
-The app does not ask for notification permission on its own, at sign-in or
-later. The system prompt appears only when the player turns on
-"Varsler på denne telefonen" (Notifications on this phone) under "Profil" ->
-"Varsler og tema". The notifications are about the player's own rounds, such as
-an invitation, a scorecard to approve or a result that is ready.
+The app never asks on its own. The system prompt appears only when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema". Notifications are about the player's own rounds.
 
-WHAT THE APP DOES NOT DO
-- No location access. The app does not read the device location at all.
-- No money. The app shows points and results only, never amounts, and there are
-  no payments of any kind in the app. Skins, Wolf, Bingo Bango Bongo, Nines,
-  Acey Deucey and Nassau are ways of counting points in golf; in the app they
-  have no stakes, prizes or money. "Blind Wolf-potter" in the Wolf results is the
-  number of holes a player won as a blind wolf.
-- No purchases, no advertising, no third-party tracking.
-- The app plays eight golf formats. A round in any other format opens on our
-  website instead, and the app says so with a button that opens Safari.
-- The year summary (Kavalkaden) opens at Christmas for players who finished a
-  round that year. The demo round is still in progress, so this account does not
-  show it.
+NOT IN THE APP
+- No location access.
+- No money: points and results only, no amounts, no payments. Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey and Nassau are ways of counting points. "Blind Wolf-potter" is the number of holes won as a blind wolf.
+- No purchases, ads or third-party tracking.
+- Eight formats. Other rounds open on our website in Safari.
+- The year summary (Kavalkaden) opens at Christmas for players with a finished round, so this account does not show it.
 
-The app is available in Norway only. The account exists for review only and
-holds no real player data.
+Norway only. The account holds no real player data.
 ```
 
 ## Hva som bevisst IKKE ligger i repoet

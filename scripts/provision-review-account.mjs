@@ -4,7 +4,7 @@
  * revieweren ser kjernen i appen uten å sette opp noe selv.
  *
  *   REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… \
- *     node scripts/provision-review-account.mjs [--env staging|prod] [--store apple|google]
+ *     node scripts/provision-review-account.mjs [--env staging|prod] [--store apple|google] [--rotate-password]
  *
  * Default er staging. `--env prod` må skrives eksplisitt, og skriptet printer
  * hvilken Supabase-URL det skriver til FØR første skriv.
@@ -23,8 +23,12 @@
  * passordet skrives aldri til logg. Se docs/native/app-store-review-konto.md.
  *
  * Idempotent — kjør så mange ganger du vil. Andre kjøring finner alt som
- * finnes, roterer passordet og resetter demo-spillet til kjent tilstand
- * («frisk demo før hver innsending»).
+ * finnes og resetter demo-spillet til kjent tilstand («frisk demo før hver
+ * innsending»). Passordet til en konto som finnes, beholdes (#2561): det står i
+ * App Store Connect eller Play Console, og en tilbakestilling skal ikke gjøre det
+ * ugyldig der. `--rotate-password` setter det nye passordet fra miljøet. Lages
+ * kontoen på nytt (revieweren slettet den), får den passordet fra miljøet, så
+ * miljøet må alltid ha passordet som står i butikken.
  *
  * Kjøringen tåler også at revieweren har SLETTET kontoen sin — det skal gå an
  * (App Store 5.1.1(v), #1909). Derfor er det ADMIN-kontoen som står som
@@ -49,12 +53,14 @@ const MIN_PASSWORD_LENGTH = 24;
  */
 const STORES = {
   apple: {
+    name: 'apple',
     emailVar: 'REVIEW_ACCOUNT_EMAIL',
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD',
     demoGameName: 'Demo Round — Tørny',
     signIn: '/en/review-login, eller langtrykk på tittelen i appen',
   },
   google: {
+    name: 'google',
     emailVar: 'REVIEW_ACCOUNT_EMAIL_GOOGLE',
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD_GOOGLE',
     demoGameName: 'Demo Round (Google Play) — Tørny',
@@ -263,7 +269,7 @@ async function createGuest(db, profile) {
  * og REVIEW_DEMO_ORGANIZER_EMAIL må si hvem det er. Er env-varen satt, vinner
  * den uansett: en adresse noen har skrevet inn skal aldri bli stille ignorert.
  */
-async function resolveOrganizer(db) {
+async function resolveOrganizer(db, store) {
   const override = (process.env.REVIEW_DEMO_ORGANIZER_EMAIL ?? '').trim().toLowerCase();
   if (override) {
     // `ilike` fanger store/små bokstaver, men behandler `%` og `_` som
@@ -303,8 +309,8 @@ async function resolveOrganizer(db) {
     `${why}\n` +
       '  Sett REVIEW_DEMO_ORGANIZER_EMAIL til e-postadressen til den som skal stå som\n' +
       '  arrangør, og kjør på nytt:\n' +
-      '    REVIEW_DEMO_ORGANIZER_EMAIL=… REVIEW_ACCOUNT_EMAIL=… REVIEW_ACCOUNT_PASSWORD=… \\\n' +
-      '      node scripts/provision-review-account.mjs',
+      `    REVIEW_DEMO_ORGANIZER_EMAIL=… ${store.emailVar}=… ${store.passwordVar}=… \\\n` +
+      `      node scripts/provision-review-account.mjs --store ${store.name}`,
   );
 }
 
@@ -358,11 +364,11 @@ const PASSWORD_GENERATOR_HINT =
  * passordstyrken er den bærende sperren. Da kan ikke et for kort passord være
  * en advarsel midt i en lang logg; den blir ikke lest.
  */
-function assertStrongPassword(password) {
+function assertStrongPassword(password, passwordVar) {
   const bare = password.trim().toLowerCase();
   if (PASSWORD_PLACEHOLDERS.includes(bare)) {
     throw new Error(
-      `REVIEW_ACCOUNT_PASSWORD ser ut som en plassholder («${password.trim()}»), ikke et passord.\n` +
+      `${passwordVar} ser ut som en plassholder («${password.trim()}»), ikke et passord.\n` +
         PASSWORD_GENERATOR_HINT,
     );
   }
@@ -382,6 +388,7 @@ async function main() {
   const args = process.argv.slice(2);
   let target = 'staging';
   let storeName = 'apple';
+  let rotatePassword = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--env') {
       target = args[i + 1];
@@ -393,8 +400,12 @@ async function main() {
       i++;
     } else if (args[i].startsWith('--store=')) {
       storeName = args[i].slice('--store='.length);
+    } else if (args[i] === '--rotate-password') {
+      rotatePassword = true;
     } else {
-      throw new Error(`Ukjent argument: ${args[i]} (bruk --env staging|prod og --store apple|google)`);
+      throw new Error(
+        `Ukjent argument: ${args[i]} (bruk --env staging|prod, --store apple|google og eventuelt --rotate-password)`,
+      );
     }
   }
   if (target !== 'staging' && target !== 'prod') {
@@ -414,7 +425,7 @@ async function main() {
         `  ${store.emailVar}=… ${store.passwordVar}=… node scripts/provision-review-account.mjs --store ${storeName}`,
     );
   }
-  assertStrongPassword(password);
+  assertStrongPassword(password, store.passwordVar);
   // To butikker, to kontoer: samme adresse ville rotert den andre butikkens
   // passord og slått sammen to vurderinger som kan gå samtidig.
   const otherStore = storeName === 'apple' ? STORES.google : STORES.apple;
@@ -452,7 +463,7 @@ async function main() {
 
   // Arrangøren løses FØR første skriv — mangler den, skal ingenting være
   // halvveis gjort når skriptet stopper.
-  const organizer = await resolveOrganizer(db);
+  const organizer = await resolveOrganizer(db, store);
   const organizerLabel = `${organizer.name ?? '(uten navn)'} <${organizer.email}>`;
   console.log(`Arrangør:     ${organizerLabel}  [${organizer.source}]`);
   if (target === 'prod') {
@@ -464,12 +475,16 @@ async function main() {
   let reviewUserId = await findAuthUserId(db, email);
   let created = false;
   if (reviewUserId) {
-    const { error } = await db.auth.admin.updateUserById(reviewUserId, {
-      password,
-      email_confirm: true,
-    });
+    const { error } = await db.auth.admin.updateUserById(
+      reviewUserId,
+      rotatePassword ? { password, email_confirm: true } : { email_confirm: true },
+    );
     if (error) throw new Error(`updateUserById: ${error.message}`);
-    console.log('1. Auth-bruker fantes — passordet er rotert.');
+    console.log(
+      rotatePassword
+        ? '1. Auth-bruker fantes — passordet er byttet (--rotate-password). Lim det nye inn i butikken.'
+        : '1. Auth-bruker fantes — passordet er beholdt.',
+    );
   } else {
     const { data, error } = await db.auth.admin.createUser({
       email,
