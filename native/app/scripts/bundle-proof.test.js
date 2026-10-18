@@ -12,11 +12,18 @@
 //  1. godta så mange BARE forekomster av hver literal som supabase-js-pakken
 //     som er installert forklarer (1 når `getDefaultPropagationTargets` har den,
 //     ellers 0), uansett nabo;
-//  2. gi FAIL når adressen har skjema (`://`) eller port (`:<siffer>`), og for
-//     `localhost` også underdomene (`.localhost`) og bruker (`@localhost`), for
-//     da er det en adresse fra miljøet;
-//  3. la de kjente `localhost`-formene fra Metro og auth-js stå;
+//  2. gi FAIL når literalen står som adresse: skjema (`://`), bruker (`@`),
+//     URL-koding (`%2F`, `%40`, `%3A` foran, `%3A<siffer>` etter, `%5B::1%5D`)
+//     eller port (`:<siffer>`), og for `localhost` også underdomene
+//     (`.localhost`), uansett store og små bokstaver;
+//  3. la de kjente `localhost`-formene fra Metro og auth-js stå, bare med
+//     `http://` rett foran og med avgrenset port;
 //  4. la de andre LAN-reglene stå som før.
+//
+// Hermes lar en kort streng dele lagring med en lengre (den bare «localhost»
+// ligger inne i auth-js sin «http://localhost:9999» i de ekte bundlene). Derfor
+// to modeller for hele beviset: én der bibliotek-literalene står for seg selv,
+// og én der literalen ligger inne i den lekkede strengen og ikke finnes alene.
 //
 // `bundle_proof` kjøres på en falsk bundel: strengene skilt med NUL, så
 // `strings` gir én linje per streng, slik den gir én per pakket løp i en ekte
@@ -87,6 +94,10 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     ['bar [::1] (supabase-js)', 'PASS', ['WebSocket closed - code[::1]isForwardRef'], 'loopback [::1]'],
     ['[::1] med skjema', 'FAIL', ['wss://[::1]/realtime/v1'], 'loopback [::1]'],
     ['[::1] med port', 'FAIL', ['host[::1]:3111/x'], 'loopback [::1]'],
+    ['127.0.0.1 med bruker@', 'FAIL', ['postgres://postgres:postgres@127.0.0.1/postgres'], 'loopback 127.0.0.1'],
+    ['127.0.0.1 URL-kodet', 'FAIL', ['http%3A%2F%2F127.0.0.1%3A54321'], 'loopback 127.0.0.1'],
+    ['[::1] med bruker@', 'FAIL', ['postgres://u@[::1]/db'], 'loopback [::1]'],
+    ['[::1] URL-kodet', 'FAIL', ['http%3A%2F%2F%5B::1%5D%3A3000'], 'loopback [::1]'],
     ['bar localhost (supabase-js)', 'PASS', ['set-thingslocalhostx-relay-error'], 'loopback localhost'],
     ['localhost med kjente porter (Metro, auth-js)', 'PASS', ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'], 'loopback localhost'],
     ['localhost med ukjent port', 'FAIL', ['set-thingslocalhost:3000/x'], 'loopback localhost'],
@@ -94,6 +105,10 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     ['localhost som underdomene', 'FAIL', ['https://torny.localhost/x'], 'loopback localhost'],
     ['localhost med bruker@', 'FAIL', ['postgres://u@localhost/db'], 'loopback localhost'],
     ['to bare localhost', 'FAIL', ['aalocalhostbb', 'cclocalhostdd'], 'loopback localhost'],
+    ['localhost URL-kodet', 'FAIL', ['http%3A%2F%2Flocalhost%3A3000'], 'loopback localhost'],
+    ['LOCALHOST med store bokstaver', 'FAIL', ['https://LOCALHOST/x'], 'loopback localhost'],
+    ['Metro-formen uten http:// foran', 'FAIL', ['xxlocalhost:8081/assets/x'], 'loopback localhost'],
+    ['auth-js-porten med ett siffer til', 'FAIL', ['Lighttp://localhost:99999__get'], 'loopback localhost'],
     ['192.168-adresse, som før', 'FAIL', ['ip192.168.1.20/x'], '192\\.168'],
     ['10.0-adresse, som før', 'FAIL', ['ip10.0.0.5/x'], '10\\.0'],
     ['IPv6 med skjema, som før', 'FAIL', ['http://[fe80::1]/x'], '://\\[[0-9a-fA-F'],
@@ -124,6 +139,22 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]).toMatch(/^FAIL .*høyst 0/);
   });
+
+  // Funksjonen leses fra «function getDefaultPropagationTargets(» til «}» på
+  // samme innrykk. Finnes ikke slutten (minifisert fil), er literalen ikke
+  // forklart, også når den står et annet sted i fila.
+  it.each([
+    ['innrykket, literalen i funksjonen', 'PASS', '  function getDefaultPropagationTargets(u) {\n    targets.push("localhost", "127.0.0.1", "[::1]");\n  }\n'],
+    ['innrykket, literalen etter funksjonen', 'FAIL', '  function getDefaultPropagationTargets(u) {\n    return [];\n  }\n  const x = "127.0.0.1";\n'],
+    ['minifisert på én linje', 'FAIL', 'function getDefaultPropagationTargets(u){const t=[];t.push("localhost","127.0.0.1","[::1]");return t}\n'],
+  ])('supabase-js %s gir %s for bar 127.0.0.1', (name, verdict, source) => {
+    const entry = join(tmp, `entry-${name.replace(/[^a-z]/g, '-')}.cjs`);
+    writeFileSync(entry, source);
+    const r = proof(['create-next-hint127.0.0.1x-relay-error'], { TORNY_SUPABASE_JS_ENTRY: entry });
+    const hits = r.verdicts.filter((l) => l.includes('loopback 127.0.0.1'));
+    expect(hits).toHaveLength(1);
+    expect(hits[0].slice(0, 4)).toBe(verdict);
+  });
 });
 
 // Hele beviset. Bibliotek-literalene, også i Hermes-formen fra 1.1.0 (3) med
@@ -152,14 +183,27 @@ describe('hele beviset', () => {
     'http://127.0.0.1:3111',
     'wss://127.0.0.1',
     'http://[::1]:3111',
+    'https://user@127.0.0.1/x',
+    'postgres://postgres:postgres@127.0.0.1/postgres',
+    'http%3A%2F%2F127.0.0.1%3A54321',
+    'postgres://u@[::1]/db',
+    'http%3A%2F%2F%5B::1%5D%3A3000',
+    'http%3A%2F%2Flocalhost%3A3000',
+    'https://LOCALHOST/x',
     'http://192.168.1.10:3111',
     'exp://192.168.1.10:8081',
   ];
+  // Modellen der literalen ligger inne i den lekkede strengen: bare de kjente
+  // localhost-formene står for seg selv.
+  const MERGED_LIBRARY = ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'];
+  const MERGED_LEAKS = LEAKS.filter((leak) => /127\.0\.0\.1|::1|localhost/i.test(leak));
   let empty;
   let library;
+  let merged;
   beforeAll(() => {
     empty = proof([]).fails;
     library = proof(LIBRARY).fails;
+    merged = proof(MERGED_LIBRARY).fails;
   });
 
   it('bibliotek-literalene gir ingen FAIL', () => {
@@ -172,6 +216,15 @@ describe('hele beviset', () => {
       const r = proof([...LIBRARY, string]);
       expect(r.status).toBe(0);
       expect(r.fails).toBeGreaterThan(library);
+    },
+  );
+
+  it.each(MERGED_LEAKS.flatMap((leak) => [[leak, 'alene', leak], [leak, 'limt inn', `abc${leak}Def`]]))(
+    'lekket %s (%s) med literalen inne i seg gir en FAIL til',
+    (_leak, _shape, string) => {
+      const r = proof([...MERGED_LIBRARY, string]);
+      expect(r.status).toBe(0);
+      expect(r.fails).toBeGreaterThan(merged);
     },
   );
 });

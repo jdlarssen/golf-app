@@ -38,7 +38,7 @@ STAGING_REF='snwmueecmfqqdurxedxv'
 ALLOW_HTTP=(
   '^http://json-schema\.org/draft-0[47]/schema#'   # zod (JSON Schema-$schema)
   '^http://localhost:8081/assets/'                   # Metro sin asset-URL (expo-asset/google-fonts), brukes ikke i Release
-  '^http://localhost:9999'                           # @supabase/auth-js: standardverdi for GoTrue-URL
+  '^http://localhost:9999([^0-9]|$)'                 # @supabase/auth-js: standardverdi for GoTrue-URL
   # @supabase/phoenix (longpoll) har en bar «http://»-literal. Den har ingen
   # vert selv, så det som følger i den pakkede tabellen er NABO-strengen.
   # Kjent igjen på at halen ikke er en vert: et ord uten punktum, kolon eller
@@ -46,11 +46,11 @@ ALLOW_HTTP=(
   '^http://[A-Za-z0-9_-]{0,64}([^A-Za-z0-9._:/-]|$)'
   '^http://https?://'
 )
-# Kjente `localhost`-former fra bibliotekene, målt fra «localhost». Brukes av
-# localhost-regelen i `bundle_proof` (#2561).
+# Kjente `localhost`-former fra bibliotekene, målt fra «localhost» og bare med
+# `http://` rett foran. Brukes av localhost-regelen i `bundle_proof` (#2561).
 ALLOW_LOCALHOST=(
-  '^localhost:8081/assets/'
-  '^localhost:9999'
+  '^localhost:8081/assets/'      # Metro sin asset-URL
+  '^localhost:9999([^0-9]|$)'    # @supabase/auth-js: standardverdi for GoTrue-URL
 )
 
 # React Native-inngangen til @supabase/supabase-js (`exports["."]["react-native"]`
@@ -59,12 +59,19 @@ ALLOW_LOCALHOST=(
 SUPABASE_JS_ENTRY=${TORNY_SUPABASE_JS_ENTRY:-"$BUNDLE_PROOF_DIR/../node_modules/@supabase/supabase-js/dist/index.cjs"}
 
 # 1 når `getDefaultPropagationTargets` i supabase-js-pakken som er installert
-# har literalen (med anførselstegn), ellers 0. Mangler pakken eller funksjonen,
+# har literalen (med anførselstegn), ellers 0. Funksjonen leses fra
+# «function getDefaultPropagationTargets(» til linja som er bare «}» på samme
+# innrykk. Mangler pakken, funksjonen eller slutten på den (en minifisert fil),
 # er ingen bar forekomst forklart, og regelen gir FAIL (fail-closed).
 supabase_literal_max() {
+  local fn
   [ -f "$SUPABASE_JS_ENTRY" ] || { echo 0; return; }
-  if awk '/function getDefaultPropagationTargets\(/ { on = 1 } on { print } on && /^}/ { exit }' "$SUPABASE_JS_ENTRY" \
-      | "$GREP" -qF -- "\"$1\""; then
+  fn=$(awk '
+    !on && /function getDefaultPropagationTargets\(/ { on = 1; match($0, /^[ \t]*/); ind = substr($0, 1, RLENGTH) }
+    on { print }
+    on && $0 == ind "}" { found = 1; exit }
+    END { exit found ? 0 : 1 }' "$SUPABASE_JS_ENTRY") || { echo 0; return; }
+  if printf '%s\n' "$fn" | "$GREP" -qF -- "\"$1\""; then
     echo 1
   else
     echo 0
@@ -260,12 +267,15 @@ bundle_proof() {
   # installert forklarer, er lov (`supabase_literal_max`: 1 eller 0), men
   # naboen i den pakkede tabellen varierer: i 1.1.0 (3) sto «draft-2020-12»
   # foran og «15.2.0.0» rett etter («draft-2020-127.0.0.15.2.0.0», og den gamle
-  # regelen bommet), i 1.2.0 (4) sto den alene (#2561). Med skjema (`://`) eller
-  # port (`:<siffer>`) er det en adresse fra miljøet, og den skal ikke finnes.
-  # Havner literalen rett etter en streng som slutter på `://`, blir det FAIL
-  # uten lekkasje: les konteksten. Den feilen er den trygge.
+  # regelen bommet), i 1.2.0 (4) sto den alene (#2561). Som adresse er den fra
+  # miljøet og skal ikke finnes: skjema (`://`), bruker (`@`), URL-koding foran
+  # (`%2F`, `%40`, `%3A`) eller port etter (`:<siffer>`, `%3A<siffer>`). Hermes
+  # kan lagre den bare literalen inne i en slik streng, så adresseformen gir
+  # FAIL selv når antallet bare treff er innenfor taket. Havner literalen rett
+  # etter en streng som slutter på `://`, blir det FAIL uten lekkasje: les
+  # konteksten. Den feilen er den trygge.
   loopback_note() {
-    [ "$1" = "0" ] && printf ', fant ikke literalen i getDefaultPropagationTargets i %s' "$SUPABASE_JS_ENTRY"
+    [ "$1" = "0" ] && printf ', fant ikke literalen, eller slutten på funksjonen, i getDefaultPropagationTargets i %s' "$SUPABASE_JS_ENTRY"
     return 0
   }
   loopback_literal() {
@@ -277,57 +287,60 @@ bundle_proof() {
       ("$GREP" -aoE -- ".{0,30}(${bare}|${addr}).{0,50}" "$STR" || true) | utf8_trim | sed 's/^/      /' | tee -a "$OUT"
     fi
     if [ "$m" != "0" ]; then
-      fail "loopback $label med skjema eller port: $m treff — en adresse fra miljøet er bakt inn"
+      fail "loopback $label som adresse (skjema, bruker@, URL-koding eller port): $m treff — en adresse fra miljøet er bakt inn"
     elif [ "$n" -le "$max" ]; then
-      pass "loopback $label: $n bart treff, høyst $max (supabase-js getDefaultPropagationTargets), ingen med skjema eller port"
+      pass "loopback $label: $n bart treff, høyst $max (supabase-js getDefaultPropagationTargets), ingen som adresse"
     else
       fail "loopback $label: $n bare treff — forventet høyst $max (supabase-js getDefaultPropagationTargets$(loopback_note "$max"))"
     fi
   }
-  loopback_literal '127.0.0.1' '(^|[^0-9.])127\.0\.0\.1([^0-9]|$)' '://127\.0\.0\.1|(^|[^0-9.])127\.0\.0\.1:[0-9]'
-  loopback_literal '[::1]' '\[::1\]' '://\[::1\]|\[::1\]:[0-9]'
+  loopback_literal '127.0.0.1' '(^|[^0-9.])127\.0\.0\.1([^0-9]|$)' \
+    '(://|@|%2[Ff]|%40|%3[Aa])127\.0\.0\.1|(^|[^0-9.])127\.0\.0\.1(:|%3[Aa])[0-9]'
+  loopback_literal '[::1]' '\[::1\]' \
+    '(://|@|%2[Ff]|%40|%3[Aa])\[::1\]|\[::1\](:|%3[Aa])[0-9]|%5[Bb](::|%3[Aa]%3[Aa])1%5[Dd]'
 
-  # «localhost», ett treff om gangen (Hermes lar en kort streng dele lagring med
-  # en lengre, så den bare literalen kan ligge inne i en kjent form). Hvert
+  # «localhost», ett treff om gangen, uten hensyn til store og små bokstaver
+  # (Hermes lar en kort streng dele lagring med en lengre, så den bare
+  # literalen kan ligge inne i en kjent form, eller i en lekket adresse). Hvert
   # treff er ett av tre:
   #  - kjent: en form på ALLOW_LOCALHOST (Metro sin `:8081/assets/`, auth-js sin
-  #    `:9999`), uten `.` eller `@` rett foran;
+  #    `:9999`) med `http://` rett foran;
   #  - adresse: `.`, `@`, `/` eller `:` rett foran (skjema, underdomene,
-  #    bruker@), eller port etter (`localhost:<siffer>`). FAIL;
+  #    bruker@), URL-koding foran (`%2F`, `%40`, `%3A`), eller port etter
+  #    (`:<siffer>`, `%3A<siffer>`). FAIL;
   #  - bar: alt annet. En bokstav eller et siffer inntil er en nabo-streng i den
   #    pakkede tabellen, som for 127.0.0.1. Høyst så mange som supabase-js
   #    forklarer.
   localhost_rule() {
-    local max off before tail ctx re ok known=0 bare=0 addr=0
+    local max off before pre tail ctx re ok known=0 bare=0 addr=0
     max=$(supabase_literal_max localhost)
     while read -r off; do
       [ -n "$off" ] || continue
       before=$(slice "$((off - 1))" 1)
+      pre=$(slice "$((off - 7))" 7)
       tail=$(slice "$off" 120)
       ctx=$(slice "$((off - 20))" 70)
       ok=0
-      case "$before" in
-        .|@) ;;
-        *)
-          for re in "${ALLOW_LOCALHOST[@]}"; do
-            if printf '%s' "$tail" | "$GREP" -qE -- "$re"; then ok=1; break; fi
-          done
-          ;;
-      esac
+      if [ "$pre" = "http://" ]; then
+        for re in "${ALLOW_LOCALHOST[@]}"; do
+          if printf '%s' "$tail" | "$GREP" -qE -- "$re"; then ok=1; break; fi
+        done
+      fi
       if [ "$ok" = "1" ]; then
         known=$((known + 1))
         say "      kjent   «${ctx}»"
       elif case "$before" in .|@|/|:) true ;; *) false ;; esac \
-          || printf '%s' "$tail" | "$GREP" -qE -- '^localhost:[0-9]'; then
+          || printf '%s' "$pre" | "$GREP" -qiE -- '(%2f|%40|%3a)$' \
+          || printf '%s' "$tail" | "$GREP" -qiE -- '^localhost(:|%3a)[0-9]'; then
         addr=$((addr + 1))
         say "      ADRESSE «${ctx}»"
       else
         bare=$((bare + 1))
         say "      bar     «${ctx}»"
       fi
-    done < <(offsets_of 'localhost')
+    done < <(("$GREP" -aobiF -- 'localhost' "$STR" || true) | cut -d: -f1)
     if [ "$addr" != "0" ]; then
-      fail "loopback localhost som adresse (skjema, underdomene, bruker@ eller port): $addr treff — en adresse fra miljøet er bakt inn"
+      fail "loopback localhost som adresse (skjema, underdomene, bruker@, URL-koding eller port): $addr treff — en adresse fra miljøet er bakt inn"
     elif [ "$bare" -le "$max" ]; then
       pass "loopback localhost: $bare bart treff, høyst $max (supabase-js getDefaultPropagationTargets), $known kjente (Metro :8081/assets/, auth-js :9999), ingen som adresse"
     else

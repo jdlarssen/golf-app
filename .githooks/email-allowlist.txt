@@ -33,6 +33,12 @@
 # slipper ikke gjennom noe som peker på et menneske.
 @[0-9]+x\.png$
 
+# Loopback-adressen etter `@` i en URL med bruker («postgres://u@127.0.0.1/db»).
+# Testfiksturene i native/app/scripts/bundle-proof.test.js (#2561) viser at
+# butikkbeviset stopper en slik lekket adresse. 127.0.0.1 er maskinen selv og
+# kan ikke ta imot e-post, så mønsteret peker ikke på noen.
+@127\.0\.0\.1$
+
 # Bevisste, offentlige kontaktadresser (står i copy og i changeloggen)
 ^klubb@tornygolf\.no$
 ^personvern@tornygolf\.no$
