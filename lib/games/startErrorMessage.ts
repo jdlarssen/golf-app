@@ -20,6 +20,7 @@ const START_REFUSAL: Record<StartRefusal, true> = {
   decided_by_withdrawal: true,
   cup_finished: true,
   unassigned_teams: true,
+  uneven_teams: true,
   unassigned_flights: true,
   rotation_player_count: true,
   db_players: true,

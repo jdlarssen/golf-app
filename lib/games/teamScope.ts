@@ -20,6 +20,7 @@
 
 import { isSoloFormat, type GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from './matchplaySides';
+import { allowedTeamSizes } from './teamFormatLimits';
 
 /**
  * Fallback når `mode_config.team_size` mangler: 1 (solo). Alle lag-formater
@@ -109,6 +110,47 @@ export function needsTeamAssignment(
 ): boolean {
   if (!modeRequiresTeamNumber(mode, teamSize)) return false;
   return unassignedTeamPlayers(players).length > 0;
+}
+
+/**
+ * Champagne's «N beste» from a raw `mode_config` (#2569), or `undefined`
+ * outside shamble. Read defensively, like `expectedTeamSize`.
+ */
+export function readShambleCount(modeConfig: unknown): number | undefined {
+  const count = (modeConfig as { shamble_count?: unknown } | null)?.shamble_count;
+  return typeof count === 'number' && Number.isInteger(count) ? count : undefined;
+}
+
+/** Aktive spillere per lagnummer. Lag uten aktive spillere er ikke med. */
+export function activeTeamCounts(players: readonly TeamPlayer[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const p of activePlayers(players)) {
+    if (p.team_number == null) continue;
+    counts.set(p.team_number, (counts.get(p.team_number) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Lagene med en aktiv størrelse regelen ikke tillater (#2569), stigende. Et
+ * lag kan ha `team_size` eller én færre der formatet har den størrelsen
+ * (`allowedTeamSizes`): et par med én igjen etter et forfall, eller et lag på
+ * 2 i et 4-mannsspill, stopper start. Startvakta (`uneven_teams`) og
+ * Lag-seksjonen leser herfra. Formater uten lag gir tom liste; et lag på 3/3/3
+ * à 4 er lovlig her (alle lag får samme prosent av snittet).
+ */
+export function unevenTeamNumbers(
+  mode: GameMode,
+  teamSize: number,
+  players: readonly TeamPlayer[],
+  shambleCount?: number,
+): number[] {
+  if (!modeRequiresTeamNumber(mode, teamSize)) return [];
+  const allowed = allowedTeamSizes(mode, teamSize, shambleCount);
+  return [...activeTeamCounts(players)]
+    .filter(([, count]) => !allowed.has(count))
+    .map(([team]) => team)
+    .sort((a, b) => a - b);
 }
 
 /**
