@@ -4,6 +4,7 @@ import {
   isOpenForSignups,
   isOrganisedBy,
   isSignupWindowOpen,
+  signupShareUrl,
   signupSourceFromParam,
   type PublicSignupVisibilityInput,
 } from './publicSignupVisibility';
@@ -102,5 +103,13 @@ describe('signupSourceFromParam', () => {
     ['array is dropped (no guessing on repeated params)', ['public', 'plakat'], null],
   ])('%s', (_label, input, expected) => {
     expect(signupSourceFromParam(input)).toBe(expected);
+  });
+});
+
+// #2570: one home for the link the organiser copies (admin card, «Styr
+// spillere») and the poster's QR code.
+describe('signupShareUrl', () => {
+  it('builds the absolute signup link on the main domain', () => {
+    expect(signupShareUrl('abc123')).toBe('https://tornygolf.no/signup/abc123');
   });
 });

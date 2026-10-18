@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
-import { isPubliclyViewable } from '@/lib/games/publicSignupVisibility';
+import { isPubliclyViewable, signupShareUrl } from '@/lib/games/publicSignupVisibility';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { PrintButton } from './PrintButton';
@@ -41,9 +41,9 @@ export default async function PlakatPage({ params }: { params: Params }) {
     redirect({ href: `/signup/${shortId}`, locale });
   }
 
-  // Absolutt prod-URL med vilje (presedens: RegistrationOverviewSection) —
-  // plakaten skal virke uansett hvor den ble generert fra.
-  const signupUrl = `https://tornygolf.no/signup/${shortId}?src=plakat`;
+  // Absolutt prod-URL med vilje (signupShareUrl, #2570) — plakaten skal virke
+  // uansett hvor den ble generert fra.
+  const signupUrl = `${signupShareUrl(shortId)}?src=plakat`;
   const qrSvg = await QRCode.toString(signupUrl, {
     type: 'svg',
     errorCorrectionLevel: 'M',

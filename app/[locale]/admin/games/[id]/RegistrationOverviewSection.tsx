@@ -4,12 +4,15 @@ import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyShareLinkButton } from './CopyShareLinkButton';
 import type { GameStatus } from '@/lib/games/status';
+import { isPubliclyViewable, signupShareUrl } from '@/lib/games/publicSignupVisibility';
 
 type Props = {
   gameId: string;
   registrationMode: 'invite_only' | 'manual_approval' | 'open';
   gameStatus: GameStatus;
   shortId: string;
+  /** #2570: the share link hides once the organiser has closed signups. */
+  signupsClosedAt: string | null;
   selfRegisteredCount: number;
 };
 
@@ -30,6 +33,7 @@ export async function RegistrationOverviewSection({
   registrationMode,
   gameStatus,
   shortId,
+  signupsClosedAt,
   selfRegisteredCount,
 }: Props) {
   const supabase = await getServerClient();
@@ -58,7 +62,14 @@ export async function RegistrationOverviewSection({
     }
   }
 
-  const shareUrl = `https://tornygolf.no/signup/${shortId}`;
+  const shareUrl = signupShareUrl(shortId);
+  // #2570: the same rule as the poster and the public page: a link to a
+  // closed, private or unpublished signup leads nowhere.
+  const showShareLink = isPubliclyViewable({
+    status: gameStatus,
+    registration_mode: registrationMode,
+    signups_closed_at: signupsClosedAt,
+  });
   const modeLabel =
     registrationMode === 'open'
       ? t('modeFreeSignup')
@@ -112,8 +123,9 @@ export async function RegistrationOverviewSection({
           {/* invite_only er privat — ikke nudge arrangøren til å kringkaste
               lenken. Forespørsel-veien (#368) tjener folk som alt har den.
               #2445: only on a scheduled game; on a draft both links 404 for
-              everyone else. */}
-          {gameStatus === 'scheduled' && registrationMode !== 'invite_only' && (
+              everyone else. #2570: and not after «Steng påmeldingen»
+              (isPubliclyViewable, shared with «Styr spillere»). */}
+          {showShareLink && (
             <>
               <CopyShareLinkButton shareUrl={shareUrl} />
               <SmartLink

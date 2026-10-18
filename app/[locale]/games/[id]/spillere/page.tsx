@@ -37,6 +37,8 @@ import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { showsSignupsLink } from '@/lib/games/signupInbox';
+import { isPubliclyViewable, signupShareUrl } from '@/lib/games/publicSignupVisibility';
+import { ShareLinkField } from '@/components/ui/ShareLinkField';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
@@ -188,15 +190,19 @@ export default async function CreatorSpillerePage({
   // the signups page only. When the link shows is `showsSignupsLink`. RLS
   // lets the creator read both (0071, is_game_creator_or_admin). A failed
   // read hides the link, and a failed count hides «N venter» rather than
-  // claiming 0.
+  // claiming 0. #2570: the same read carries what the share link needs, fresh
+  // rather than from the game cache, so «Steng påmeldingen» hides it at once.
   const [modeRes, pendingRes] = await Promise.all([
     supabase
       .from('games')
-      .select('registration_mode, group_id')
+      .select('registration_mode, group_id, status, signups_closed_at, short_id')
       .eq('id', gameId)
       .maybeSingle<{
         registration_mode: 'invite_only' | 'manual_approval' | 'open';
         group_id: string | null;
+        status: 'draft' | 'scheduled' | 'active' | 'finished';
+        signups_closed_at: string | null;
+        short_id: string;
       }>(),
     supabase
       .from('game_registration_requests')
@@ -225,6 +231,10 @@ export default async function CreatorSpillerePage({
       tournamentId: game.tournament_id,
       pendingCount,
     });
+  // #2570: an organiser without the admin role shares the signup link from
+  // here (the admin card is behind requireAdmin). Same rule as the admin card
+  // and the poster: isPubliclyViewable. A failed read shows nothing.
+  const shareShortId = modeRow != null && isPubliclyViewable(modeRow) ? modeRow.short_id : null;
   const status = game.status;
   // #2289: the organiser's way to the Startlista, where they split the players
   // into flights. Same guard as the page itself and the game page's row.
@@ -412,6 +422,29 @@ export default async function CreatorSpillerePage({
               </span>
             )}
           </SmartLink>
+        )}
+
+        {shareShortId && (
+          <section data-testid="share-signup-section">
+            <MiniRibbon>{t('shareSection')}</MiniRibbon>
+            <div className="space-y-3">
+              <ShareLinkField
+                url={signupShareUrl(shareShortId)}
+                ariaLabel={t('shareUrlAriaLabel')}
+                copyLabel={t('shareCopy')}
+                copiedLabel={t('shareCopied')}
+                errorText={t('shareCopyFailure')}
+                testId="share-signup-link"
+              />
+              <SmartLink
+                href={`/signup/${shareShortId}/plakat`}
+                data-testid="poster-link"
+                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+              >
+                {t('sharePoster')}
+              </SmartLink>
+            </div>
+          </section>
         )}
 
         {showStartlistaLink && (
