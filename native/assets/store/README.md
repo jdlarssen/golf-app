@@ -3,7 +3,7 @@
 Bildene eieren laster opp i App Store Connect og Play Console. Kravene og tekstene står i
 [`docs/native/app-store-metadata.md`](../../../docs/native/app-store-metadata.md) «Skjermbilder» og
 [`docs/native/play-store-metadata.md`](../../../docs/native/play-store-metadata.md) «Skjermbilder og
-feature-grafikk». Klikkstiene står i E7-oppskriften i PR-tråden.
+feature-grafikk». Klikkstiene står under «Opplasting» nederst.
 
 | Fil eller mappe | Hvor den lastes opp | Størrelse og format |
 |---|---|---|
@@ -17,7 +17,7 @@ Bildene lastes opp i rekkefølgen filnavnene har:
 
 | Nr. | Skjerm | Alt-tekst (Play, maks 140 tegn) |
 |---|---|---|
-| 01 | Hjem | Hjem-siden med runden som pågår, neste start og forrige runde |
+| 01 | Hjem | Hjem-siden med runden som pågår, flere runder i gang og neste start |
 | 02 | Hullet | Hull 7 med slagene og poengene til hele flighten |
 | 03 | Tavla | Tavla mens turneringen pågår, med tolv spillere i tre flighter |
 | 04 | Utslaget | Texas scramble: laget taster scoren og velger hvem sitt utslag de brukte |
@@ -46,3 +46,26 @@ Bildene lastes opp i rekkefølgen filnavnene har:
 - **Feature-grafikken:** `node native/assets/store/generate-feature-graphic.mjs` lager den på nytt
   fra ordmerke-masteren. Skriptet feiler hvis størrelsen er feil, hvis bildet har alfakanal eller
   hvis Fraunces ikke lastet.
+
+## Opplasting
+
+Eieren laster opp, sammen med orkestratoren. Navnene på feltene sjekker orkestratoren i
+konsollen først.
+
+**App Store Connect** (versjon 1.2.0, «Prepare for Submission»): Apps → Tørny → 1.2.0 →
+**Previews and Screenshots** → iPhone.
+
+1. En ny versjon arver bildene fra forrige versjon, og grensen er 10 per felt. Slett derfor
+   de gamle bildene fra 1.1.0 i hvert iPhone-felt først, også i 6,5"-feltet. Med 6,9"-bildene
+   på plass skalerer Apple dem til 6,5" selv.
+2. Dra de åtte bildene fra `ios-6.9-1320x2868/` inn i 6,9"-feltet, i rekkefølge 01 til 08.
+3. Dra de åtte bildene fra `ios-6.3-1206x2622/` inn i 6,3"-feltet, i samme rekkefølge.
+4. Trykk **Save**. Du skal se åtte bilder i hvert felt og ingen melding om feil størrelse.
+
+**Play Console:** Tørny → Grow users → Store presence → **Main store listing** → Graphics.
+
+1. App icon: `native/android/store_icon.png`.
+2. Feature graphic: `play-feature-graphic-1024x500.png`.
+3. Phone screenshots: de åtte bildene fra `android-1080x1920/`, i rekkefølge 01 til 08.
+   Ber konsollen om alt-tekst, bruk tabellen over.
+4. Trykk **Save**. Du skal se «Saved», og meldingen om at grafikken mangler er borte.

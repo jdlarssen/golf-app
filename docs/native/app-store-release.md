@@ -236,8 +236,9 @@ beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
    demo-runden, aldri en syntetisk runde.
 3. **App Review-pakken (P6)** — kontrakten §5: revidert personvern-etikett (radene og
    grunnene står i `app-store-metadata.md`; fra #2561 med kontakter og varsel-tokenet),
-   omskrevet beskrivelse (bare det appen kan), skjermbilder med oppdiktede spillere
-   (`native/assets/store/`, aldri fra prod), review-notatet
+   omskrevet beskrivelse (bare det appen kan), skjermbilder (kontrakten sa staging-data;
+   1.2.0-bildene i `native/assets/store/` er tatt med en lokal fikstur med oppdiktede
+   spillere, aldri fra prod), review-notatet
    i `app-store-review-konto.md`. Alt eieren limer inn — klikk-tabellen for personvern,
    undertittel, nøkkelord, promotekst, beskrivelse og skjermbilde-kravene — står i
    [`app-store-metadata.md`](app-store-metadata.md). Eieren re-provisjonerer review-kontoen FØR innsending og

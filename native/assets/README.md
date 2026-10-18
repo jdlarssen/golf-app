@@ -1,10 +1,12 @@
 # Merket fra én kilde (#1278, #1975, #1985)
 
-Alle rasterkopier av Tørny-merket bygges av `generate-icons.mjs` fra de tre
-master-SVG-ene i denne mappen: App Store-ikonet, Android-lagene, splash, Expo-appens
+Alle rasterkopier av Tørny-merket bygges fra de tre master-SVG-ene i denne mappen.
+`generate-icons.mjs` lager App Store-ikonet, Android-lagene, splash, Expo-appens
 assets, nettets PWA-ikoner (`/icon`, `/icon0`, `/apple-icon`), ikonene i
-Google Play-skallet (`native/android/`) og ordmerket i e-postheaderen. Ingen andre
-filer tegner merket. Kjør på nytt med:
+Google Play-skallet (`native/android/`) og ordmerket i e-postheaderen.
+Play-feature-grafikken lages av `store/generate-feature-graphic.mjs` fra
+`wordmark-master.svg` (se «Butikkgrafikken» under). Ingen andre filer tegner merket.
+Kjør generatoren på nytt med:
 
 ```
 PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium node native/assets/generate-icons.mjs
@@ -31,8 +33,9 @@ skrives bare `<mappe>/contact-sheet.png`.
   `public/icons/maskable-*.png` og Play-skallets `ic_maskable` (lagt oppå flisen),
   og `ios-splash-logo.png`.
 - `wordmark-master.svg` — ordmerket «Tørny» med ballen på T-en, til flater som ikke
-  kan sette Fraunces selv (i dag e-postheaderen). `width`/`height` er visningsstørrelsen
-  i mailen; generatoren rendrer den i 2×.
+  kan sette Fraunces selv (i dag e-postheaderen og Play-feature-grafikken). `width`/`height`
+  er visningsstørrelsen i mailen; generatoren rendrer den i 2×, og feature-grafikk-skriptet
+  setter sin egen størrelse og tekstfarge.
 
 T-en er satt i Fraunces 500. Masterne låser optisk størrelse med
 `font-variation-settings` (ikon: 48, ordmerke: 32), så generatoren laster
