@@ -47,17 +47,20 @@ export const STORE_BUNDLE_ID = 'no.tornygolf.app';
 export const STORE_APP_NAME = 'Tørny';
 export const STORE_SLUG = 'torny';
 
-/** Må ligge over skallets `1.0` — App Store Connect avviser lavere versjon. */
-export const STORE_VERSION = '1.1.0';
+/**
+ * Må ligge over siste godkjente versjon — App Store Connect tar ikke nye bygg
+ * på en godkjent versjon. Skallet var `1.0`; `1.1.0` (3) ble godkjent (#1954).
+ */
+export const STORE_VERSION = '1.2.0';
 
 /**
  * `CFBundleVersion`. **Bump før hver opplasting** — App Store Connect avviser
  * et duplikat (versjon, build). Skallet brukte `1`; første kandidat var `2`.
  */
-export const STORE_IOS_BUILD_NUMBER = '3';
+export const STORE_IOS_BUILD_NUMBER = '4';
 
 /** Android-motstykket. **Bump før hver opplasting** — Play Console avviser en versionCode den har sett. */
-export const STORE_ANDROID_VERSION_CODE = 3;
+export const STORE_ANDROID_VERSION_CODE = 4;
 
 /**
  * Config-pluginen som signerer release-AAB-en med opplastingsnøkkelen (#2560).

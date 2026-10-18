@@ -117,7 +117,7 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     const cfg = resolveConfig(base, STORE_ENV);
     expect(cfg.name).toBe('Tørny');
     expect(cfg.slug).toBe('torny');
-    expect(cfg.version).toBe('1.1.0');
+    expect(cfg.version).toBe('1.2.0');
     expect(cfg.ios?.bundleIdentifier).toBe(STORE_BUNDLE_ID);
     // Build-nummeret leses fra konstanten, ikke som literal: tallet bumpes
     // før hver opplasting, og en kopi her ville bare vært et sted til å

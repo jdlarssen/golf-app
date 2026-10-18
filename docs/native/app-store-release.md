@@ -16,7 +16,7 @@ Android-bygget (signert AAB, bevis og spike-funn): `play-store-release.md`.
 |---|---|---|
 | Navn | Tørny Dev | Tørny |
 | Bundle-id / Android-pakke | `no.tornygolf.dev` / `no.tornygolf.dev` | `no.tornygolf.app` / `no.tornygolf.app` |
-| Versjon (build) | 1.0.0 | 1.1.0 (2) — se bump-regelen |
+| Versjon (build) | 1.0.0 | `STORE_VERSION` (`STORE_IOS_BUILD_NUMBER`) i `app.config.ts` — se bump-regelen |
 | Supabase | staging, fra `native/app/.env.local` | prod, fra repo-rotas `.env.local` — kun via skriptet |
 | Web | `http://localhost:<port>` under staging-verify | `https://tornygolf.no`, nøyaktig |
 | `ITSAppUsesNonExemptEncryption` | — | `false` (som skallet) |
@@ -200,7 +200,9 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 
 - `STORE_IOS_BUILD_NUMBER` i `native/app/app.config.ts` +1 (og `STORE_ANDROID_VERSION_CODE`
   i takt — Android-oppfølgeren arver tallet).
-- Ny `STORE_VERSION` når appen endrer seg for brukerne; hold den over skallets `1.0`.
+- Ny `STORE_VERSION` når appen endrer seg for brukerne, og alltid når App Store Connect har
+  godkjent den forrige: en godkjent versjon tar ikke nye bygg (`1.1.0` (3) ble godkjent, så
+  neste er `1.2.0`, #2561). Hold den over skallets `1.0`.
 - Skriptet nekter å kompilere hvis arkivet for (versjon, build) alt finnes. Skal det
   arkivet lastes opp, er veien `--upload-only <arkiv>` — ikke en bump.
 - Et merke flyttes aldri: `native-ios/v1.1.0-3` peker for alltid på commiten bygg 3 kom fra.
@@ -246,7 +248,7 @@ beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
 |---|---|---|
 | Kandidat i TestFlight | Paritetsbrudd, prod-avslutning feiler | Ingen offentlig endring har skjedd. Fiks → bump → nytt bygg. Eierens telefon: installer skallet `1.0 (1)` igjen fra TestFlight (gyldig til 28.11.2026) eller rebuild skallet (`ios-shell.md`). |
 | Under review | Avvisning | «Developer Rejected» / fjern fra køen i App Store Connect; fiks; bump; nytt bygg. Ingenting er publisert. |
-| Etter slipp | Kritisk feil i appen | (1) App Store Connect → Pricing and Availability → **Remove from Sale** (oppføringen bort, installerte apper virker). (2) Send skallet som ny versjon (`1.2.0`, build høyere enn native) fra `native/ios/` — be om Expedited Review. (3) Alle har hele tiden nettsiden: «bruk tornygolf.no i nettleseren til vi har rettet» er den reelle nød-utgangen. |
+| Etter slipp | Kritisk feil i appen | (1) App Store Connect → Pricing and Availability → **Remove from Sale** (oppføringen bort, installerte apper virker). (2) Send skallet som ny versjon (over den native versjonen som er ute, build høyere enn native) fra `native/ios/` — be om Expedited Review. (3) Alle har hele tiden nettsiden: «bruk tornygolf.no i nettleseren til vi har rettet» er den reelle nød-utgangen. |
 | Data | — | Ingen DB-migrasjon i N8, ingen skjema-endring; appen skriver gjennom de samme kontraktene som web. Uleverte slag i appens kø: åpne appen med nett før du bytter tilbake — køen tømmer seg selv. |
 
 Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app-oppdatering.

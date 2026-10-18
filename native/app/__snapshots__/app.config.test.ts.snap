@@ -36,11 +36,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
     ],
     "package": "no.tornygolf.app",
     "predictiveBackGestureEnabled": false,
-    "versionCode": 3,
+    "versionCode": 4,
   },
   "icon": "./assets/icon.png",
   "ios": {
-    "buildNumber": "3",
+    "buildNumber": "4",
     "bundleIdentifier": "no.tornygolf.app",
     "config": {
       "usesNonExemptEncryption": false,
@@ -78,7 +78,7 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
   ],
   "slug": "torny",
   "userInterfaceStyle": "automatic",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "web": {
     "favicon": "./assets/favicon.png",
   },
