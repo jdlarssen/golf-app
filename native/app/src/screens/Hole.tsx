@@ -133,6 +133,7 @@ import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
+import { GAME_LOAD_FAILED_TEXT } from '../lib/seedCopy';
 
 const HOLE_COUNT = 18;
 /**
@@ -275,7 +276,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
-          <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
+          <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
         )}
       </View>
     );

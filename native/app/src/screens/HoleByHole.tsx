@@ -32,7 +32,7 @@ import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { buildHoleByHole, waitsForChoices } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
-import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { CHOICES_MISSING_HOLES_TEXT, GAME_LOAD_FAILED_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
@@ -86,7 +86,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="hole-by-hole-spinner" />
         ) : (
-          <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
+          <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
         )}
       </View>
     );
