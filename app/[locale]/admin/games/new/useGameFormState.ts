@@ -1293,20 +1293,25 @@ export function useGameFormState({
   // Fleksibel best-ball-validitet (#374): speiler parStablefordTeamsBalanced /
   // parStablefordHasAtLeastOneTeam — deles mellom best ball og par-stableford
   // for å unngå duplisering av samme logikk.
+  // #2569: par-formatene leser samme regel som scramble-familien og serveren
+  // (`allowedTeamSizes(mode, 2)` = {2}, minst ett fullt lag), låst i
+  // teamBalanceAgreement.test.ts. `pairCountSplits` er «går antallet opp i par».
   const teamNumbers = teamNumbersOf(playersByTeam);
-  const flexTeamsBalanced = teamNumbers.every(
-    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
-  );
-  const flexTeamsHasAtLeastOneTeam = teamNumbers.some(
-    (t) => playersByTeam[t].length === 2,
-  );
+  const pairTeams = validateTeamSizeFormat({
+    mode: gameMode,
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize: 2,
+    handicapPct: undefined,
+    requireIntegerPct: false,
+  });
+  const flexTeamsBalanced = pairTeams.teamsBalanced;
+  const flexTeamsHasAtLeastOneTeam = pairTeams.hasAtLeastOneTeam;
+  const pairCountSplits =
+    splitIntoTeams(selectedPlayerIds.length, 2, allowedTeamSizes(gameMode, 2)) !== null;
 
-  const teamsComplete =
-    selectedPlayerIds.length >= 2 &&
-    selectedPlayerIds.length % 2 === 0 &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    flexTeamsBalanced &&
-    flexTeamsHasAtLeastOneTeam;
+  const teamsComplete = pairTeams.playersValid && pairCountSplits;
 
   // Default flights: two pairs per flight (`defaultFlightForTeam`, #2148) —
   // lag 1–2 = flight 1, lag 3–4 = flight 2, lag 5–6 = flight 3. Recomputed any
@@ -1647,7 +1652,7 @@ export function useGameFormState({
   // logikk — deles mellom best-ball og par-stableford.
   const parStablefordPlayersValid =
     selectedPlayerIds.length >= 2 &&
-    selectedPlayerIds.length % 2 === 0 &&
+    pairCountSplits &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
     flexTeamsBalanced &&
     flexTeamsHasAtLeastOneTeam;
@@ -1783,7 +1788,7 @@ export function useGameFormState({
   const patsomePlayersValid =
     isPatsome &&
     selectedPlayerIds.length >= 4 &&
-    selectedPlayerIds.length % 2 === 0 &&
+    pairCountSplits &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
     patsomeTeamsBalanced &&
     patsomeHasAtLeastOneTeam;
@@ -1973,7 +1978,7 @@ export function useGameFormState({
   } else if (isBestBall) {
     if (selectedPlayerIds.length < 2) {
       pushMissing('players', tMissing('bestBallMin'));
-    } else if (selectedPlayerIds.length % 2 !== 0) {
+    } else if (!pairCountSplits) {
       pushMissing('players', tMissing('bestBallOdd'));
     } else if (!teamsComplete) {
       pushMissing('players', tMissing('bestBallAssign'));
@@ -1983,7 +1988,7 @@ export function useGameFormState({
   } else if (isParStableford) {
     if (selectedPlayerIds.length < 2) {
       pushMissing('players', tMissing('min2players'));
-    } else if (selectedPlayerIds.length % 2 !== 0) {
+    } else if (!pairCountSplits) {
       pushMissing('players', tMissing('evenCount'));
     } else if (!parStablefordPlayersValid) {
       // Spillere er valgt og partall, men ikke alle er tilordnet et lag
@@ -2092,7 +2097,7 @@ export function useGameFormState({
     if (selectedPlayerIds.length < 4) {
       const remaining = 4 - selectedPlayerIds.length;
       pushMissing('players', tMissing('patsomeUnderMin', { remaining }));
-    } else if (selectedPlayerIds.length % 2 !== 0) {
+    } else if (!pairCountSplits) {
       pushMissing('players', tMissing('patsomeOdd'));
     } else if (!patsomePlayersValid) {
       pushMissing('players', tMissing('patsomeAssign'));
@@ -2316,6 +2321,8 @@ export function useGameFormState({
     handleTeamSizeChange,
     canDrawRandomTeams,
     teamCountSplits,
+    pairCountSplits,
+    teamSizesAllowed,
     drawRandomTeams,
     clearTeams,
     assignPlayerToSlot,

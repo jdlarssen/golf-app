@@ -170,6 +170,7 @@ export function playersSummary({
   teamSize,
   fullTeamsCount = 0,
   shortTeamsCount = 0,
+  shortTeamAllowed = false,
 }: {
   count: number;
   isSolo: boolean;
@@ -188,6 +189,8 @@ export function playersSummary({
   /** #2569: teams with exactly `teamSize`, and with one fewer. */
   fullTeamsCount?: number;
   shortTeamsCount?: number;
+  /** #2569: the format allows a team one short (`allowedTeamSizes`). */
+  shortTeamAllowed?: boolean;
 }): PlayersSummary {
   const players: PlayersSummary = {
     key: count === 1 ? 'playersSolo' : 'playersPlural',
@@ -203,8 +206,14 @@ export function playersSummary({
   if (teamsCount === 0) return { key: 'playersUnassigned', values: { count } };
   if (isBestBall) return { key: 'teamsBestBall', values: { teams: teamsCount } };
   if (isParStableford) return { key: 'teamsParStableford', values: { teams: teamsCount } };
-  // #2569: full teams and teams one short make up every team → name both.
-  if (isScramble && shortTeamsCount > 0 && fullTeamsCount + shortTeamsCount === teamsCount) {
+  // #2569: full teams and teams one short make up every team, and the format
+  // allows the shorter size → name both.
+  if (
+    isScramble &&
+    shortTeamAllowed &&
+    shortTeamsCount > 0 &&
+    fullTeamsCount + shortTeamsCount === teamsCount
+  ) {
     return {
       key: 'teamsScrambleUneven',
       values: { full: fullTeamsCount, size: teamSize, short: shortTeamsCount, shortSize: teamSize - 1 },

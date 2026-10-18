@@ -120,3 +120,54 @@ describe('team sizes: wizard, edit form and validator agree with allowedTeamSize
     expect(formAccepts('texas_scramble', 4, [4, 4, 2])).toBe(false);
   });
 });
+
+// The pair formats read the same rule (#2569 review): `allowedTeamSizes(mode, 2)`
+// is {2}, and the wizard's pair checks go through `validateTeamSizeFormat` with
+// team size 2. Best ball, par-stableford and patsome on the server must agree.
+type PairMode = 'best_ball' | 'stableford' | 'patsome';
+
+function pairServerAccepts(mode: PairMode, teams: number[]) {
+  const form = new FormData();
+  form.set('name', 'Parkamp');
+  form.set('course_id', 'c1');
+  form.set('tee_box_id', 't1');
+  form.set('game_mode', mode);
+  if (mode === 'stableford') form.set('stableford_team_size', '2');
+  rosterOf(teams).ids.forEach((id, i) => {
+    const team = id.slice(1, id.indexOf('-'));
+    form.set(`player_${i}_id`, id);
+    form.set(`player_${i}_team`, team);
+    form.set(`player_${i}_flight`, team);
+  });
+  const result = buildGameInsertPayload(form, 'publish');
+  if (result.errorCode && result.errorCode !== 'team_balance') {
+    throw new Error(`unexpected ${result.errorCode} for ${mode} ${teams.join('/')}`);
+  }
+  return result.errorCode === undefined;
+}
+
+describe('pair formats: wizard and validator agree with allowedTeamSizes(mode, 2) (#2569)', () => {
+  it.each<PairMode>(['best_ball', 'stableford', 'patsome'])('%s: every roster up to three teams', (mode) => {
+    const allowed = allowedTeamSizes(mode, 2);
+    expect([...allowed]).toEqual([2]);
+    // Patsome needs four players before it looks at the teams.
+    const all = rosters(2).filter((teams) => mode !== 'patsome' || teams.reduce((a, b) => a + b, 0) >= 4);
+    expect(all.length).toBeGreaterThan(5);
+    for (const teams of all) {
+      const expected = teams.every((n) => allowed.has(n)) && teams.includes(2);
+      const { playersByTeam, teamByPlayer, ids } = rosterOf(teams);
+      const form = validateTeamSizeFormat({
+        mode,
+        playersByTeam,
+        selectedPlayerIds: ids,
+        teamByPlayer,
+        teamSize: 2,
+        handicapPct: undefined,
+        requireIntegerPct: false,
+      }).playersValid;
+      const label = `${mode} ${teams.join('/')}`;
+      expect(pairServerAccepts(mode, teams), `server ${label}`).toBe(expected);
+      expect(form, `form ${label}`).toBe(expected);
+    }
+  });
+});

@@ -279,6 +279,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       shortTeamsCount: Object.values(playersByTeam).filter(
         (m) => m.length > 0 && m.length === teamSize - 1,
       ).length,
+      shortTeamAllowed: state.teamSizesAllowed.has(teamSize - 1),
     });
     return t(summary.key, summary.values);
   }
