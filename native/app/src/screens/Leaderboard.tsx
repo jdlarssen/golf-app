@@ -27,6 +27,7 @@ import {
   UNKNOWN_FORMAT_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
+import { WithdrawnPlayers } from '../components/leaderboard/WithdrawnPlayers';
 import { BoardStrip } from '../components/leaderboard/SoloBoard';
 import { TeamStrip } from '../components/leaderboard/TeamBoard';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
@@ -58,6 +59,7 @@ import { holeHeaderParams } from '../lib/holeHeader';
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { SHOW_KRONER_IN_APP } from '../../../../lib/launchRules';
 import { buildSideTournament } from '../lib/sideTournament';
+import { withdrawnOnBoard } from '../lib/withdrawnBoard';
 import {
   boardBand,
   hasSoloBoard,
@@ -485,6 +487,8 @@ export function LeaderboardBody({
   // allerede under duellkortet, #585), og de øvrige formatene en RN-tilpasning
   // av fanen. Appen har ingen fane-primitiv, og #1830-mandatet er
   // native-følelse framfor pikselparitet.
+  const withdrawn = withdrawnOnBoard(game.gameMode, bundle.players);
+
   const sideSection = sideTournamentVisible(bundle) ? (
     <SideTournamentSection
       {...buildSideTournament({
@@ -531,6 +535,13 @@ export function LeaderboardBody({
         soloBoard={soloBoard}
         teamBoard={teamBoard}
       />
+      {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
+          nettsiden, med samme sidemarg som sideturneringen. */}
+      {withdrawn.length > 0 ? (
+        <View style={soloBoard ? styles.boardSide : teamBoard ? styles.teamSide : null}>
+          <WithdrawnPlayers players={withdrawn} />
+        </View>
+      ) : null}
       {/* Under tavla står sideturneringen 12 pt fra sidene, under lagtavla 16,
           som i tegningene. */}
       {(soloBoard || teamBoard) && sideSection ? (

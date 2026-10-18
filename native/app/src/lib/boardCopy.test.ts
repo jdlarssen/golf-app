@@ -10,6 +10,7 @@ import {
   BOARD_TEXT,
   SIDE_PANEL_TEXT,
   STATE35_TEXT,
+  WITHDRAWN_BOARD_TEXT,
 } from './boardCopy';
 
 /** Alle blader i et tre, med punktum-sti. */
@@ -32,6 +33,7 @@ describe('paritet med messages/no.json', () => {
     expect(BOARD_COMMON_TEXT).toStrictEqual({
       holesPlayedCount: source.leaderboard.common.holesPlayedCount,
       unknownPlayerFull: source.leaderboard.common.unknownPlayerFull,
+      unknownPlayer: source.leaderboard.common.unknownPlayer,
       teamLabel: source.leaderboard.common.teamLabel,
       poengLabel: source.leaderboard.common.poengLabel,
     });
@@ -62,3 +64,10 @@ describe('paritet med messages/no.json', () => {
     expect(Object.values(block).filter((value) => web.has(value))).toEqual([]);
   });
 });
+
+describe('WITHDRAWN_BOARD_TEXT (#1954 A3)', () => {
+  it('er leaderboard.withdrawn fra kilden', () => {
+    expect(WITHDRAWN_BOARD_TEXT).toStrictEqual(source.leaderboard.withdrawn);
+  });
+});
+
