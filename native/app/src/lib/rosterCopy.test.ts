@@ -30,6 +30,8 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  PLAYER_WITHDRAW,
+  playerWithdrawConfirmTitle,
   REOPEN_SCORECARD,
   reopenConfirmBody,
   reopenHint,
@@ -373,3 +375,18 @@ describe('REOPEN_SCORECARD', () => {
     expect(reopenHint(true)).not.toBe(reopenHint(false));
   });
 });
+
+describe('PLAYER_WITHDRAW', () => {
+  // #1954 A1: en vanlig spiller trekker seg i appen med webbens ord — lenka på
+  // spillsiden, overskriften, advarselen før og under runden, og knappen.
+  it('bruker webbens ord for lenka, bekreftelsen og knappen', () => {
+    expect(PLAYER_WITHDRAW.link).toBe(source.game.home.withdrawLink);
+    expect(playerWithdrawConfirmTitle('Torsdagsrunden')).toBe(
+      source.game.withdraw.heading.replace('{name}', 'Torsdagsrunden'),
+    );
+    expect(PLAYER_WITHDRAW.bodyPreStart).toBe(source.game.withdraw.warningPreStart);
+    expect(PLAYER_WITHDRAW.bodyActive).toBe(source.game.withdraw.warningActive);
+    expect(PLAYER_WITHDRAW.confirmCta).toBe(source.game.withdraw.withdrawButton);
+  });
+});
+

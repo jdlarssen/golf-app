@@ -51,6 +51,11 @@ jest.mock('../lib/shareLive', () => ({
   shareLiveFollow: jest.fn(async () => ({ ok: true })),
   canShareLiveFollow: jest.fn((token: string | null) => token !== null),
 }));
+// #1954 A1: spillerens eget trekk går via ruta; her holder det å se kallet.
+jest.mock('../data/withdrawSelf', () => ({
+  withdrawSelf: jest.fn(async () => ({ ok: true })),
+  undoSelfWithdraw: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -712,6 +717,45 @@ describe('GameHome — «Hull for hull»-flisa (#2255 PR 3a)', () => {
       route,
       route === 'HoleByHole' ? { gameId: 'game-1', gameName: mockState.bundle!.game.name } : { gameId: 'game-1' },
     );
+  });
+});
+
+describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
+  it('før start: lenka spør med webbens ord, trekker spilleren via ruta og går til Hjem', async () => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'scheduled', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+    const { withdrawSelf } = require('../data/withdrawSelf') as { withdrawSelf: jest.Mock };
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation,
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('player-withdraw')).toHaveTextContent('Trekk deg fra spillet'));
+    await fireEvent.press(screen.getByTestId('player-withdraw'));
+    expect(alert).toHaveBeenCalledWith(
+      'Trekk deg fra «Torsdagsrunden»?',
+      'Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
+      expect.any(Array),
+    );
+    expect(withdrawSelf).not.toHaveBeenCalled();
+
+    const buttons = alert.mock.calls[0]![2] as { text: string; onPress?: () => void }[];
+    await act(async () => {
+      buttons.find((b) => b.text === 'Trekk meg fra spillet')!.onPress!();
+    });
+    await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith('Home'));
+    expect(withdrawSelf).toHaveBeenCalledWith('game-1');
+    alert.mockRestore();
   });
 });
 

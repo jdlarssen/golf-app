@@ -45,6 +45,7 @@ import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
+import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
@@ -54,6 +55,7 @@ import { fetchOwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
+import { playerWithdrawKind } from '../lib/playerWithdraw';
 import {
   calendarEvent,
   slotField,
@@ -259,6 +261,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Eierens svar på #2255: lista står bare før runden. Når den pågår eller er
   // avsluttet, er avatarraden i billetten eneste spillerliste.
   const showRoster = game.status === 'scheduled' || game.status === 'draft';
+  // #1954 A1: «Trekk deg fra spillet» med webbens regler (lib/playerWithdraw.ts).
+  const withdrawKind = playerWithdrawKind(game, me?.player, game.createdBy === userId);
 
   return (
     <ScrollView ref={scrollRef} contentContainerStyle={[ui.scroll, styles.scroll]} testID="game-home-screen">
@@ -346,6 +350,16 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           rulesY.current = event.nativeEvent.layout.y;
         }}
       />
+
+      {withdrawKind ? (
+        <PlayerWithdraw
+          gameId={gameId}
+          gameName={game.name}
+          kind={withdrawKind}
+          onChanged={refresh}
+          onLeft={() => navigation.navigate('Home')}
+        />
+      ) : null}
 
       {/* Arrangør-seksjonen henger på `created_by`, ikke på et admin-flagg:
           appen er arrangørens flate, Sekretariatet bor på nettsiden. */}
