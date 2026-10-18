@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="880" viewBox="0 0 1180 880" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="986" viewBox="0 0 1180 986" font-family="-apple-system, Helvetica, Arial, sans-serif">
   <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
-  <rect width="1180" height="880" fill="#F8F6F0"/>
+  <rect width="1180" height="986" fill="#F8F6F0"/>
   <text x="120" y="60" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">5 · Kjør og avslutt spillet (arrangør)</text>
   <text x="121" y="90" font-size="15" fill="#6B7770">Fra start til resultat på mail. Den siste milen — gir runden en tydelig, delt avslutning.</text>
 
@@ -38,6 +38,15 @@
   <text x="400" y="602" text-anchor="middle" font-size="12.5" fill="#9C8552">leaderboard åpen for alle · «Resultatet er klart»-mail sendes</text>
   <text x="400" y="619" text-anchor="middle" font-size="11.5" fill="#9C8552">(kan gjenåpnes hvis noe må rettes)</text>
 
+  <line x1="400" y1="628" x2="400" y2="652" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 4b optional: the prize-giving on the big screen (#2298) -->
+  <rect x="120" y="654" width="560" height="80" rx="14" fill="#FFFFFF" stroke="#C9A961" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="156" y="700" font-size="19">🏆</text>
+  <text x="190" y="684" font-size="15" font-weight="600" fill="#7A5E13">Valgfritt: Premieutdelingen på TV-en, styrt fra mobilen</text>
+  <text x="190" y="704" font-size="12.5" fill="#8A7333">sidepremiene → 3. plass → 2. plass → «Avslør vinneren»</text>
+  <text x="190" y="722" font-size="12.5" fill="#8A7333">slagspill, stableford og lagformatene · spillerne har resultatet alt</text>
+
   <!-- right rail: status lifecycle vertical chips -->
   <rect x="760" y="232" width="320" height="396" rx="16" fill="#FFFFFF" stroke="#D8D2C4" stroke-width="1.4"/>
   <text x="920" y="266" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Spillets status</text>
@@ -54,8 +63,8 @@
   <text x="920" y="583" text-anchor="middle" font-size="11.5" fill="#8A8472">trinn (Pågående starter</text>
   <text x="920" y="600" text-anchor="middle" font-size="11.5" fill="#8A8472">automatisk ved tee-off)</text>
 
-  <text x="120" y="678" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
-  <text x="120" y="704" font-size="13" fill="#46524B">Planlagt → ser «Du er påmeldt» · Pågående → kan taste slag · Avsluttet → får resultat-mail + endelig leaderboard.</text>
+  <text x="120" y="784" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
+  <text x="120" y="810" font-size="13" fill="#46524B">Planlagt → ser «Du er påmeldt» · Pågående → kan taste slag · Avsluttet → får resultat-mail + endelig leaderboard.</text>
 
-  <text x="120" y="752" font-size="12.5" fill="#9A937F">⚠ = forbedringspunkt sporet som issue · Speiler spiller-flyten (flyt 3) sett fra arrangørens side.</text>
+  <text x="120" y="858" font-size="12.5" fill="#9A937F">⚠ = forbedringspunkt sporet som issue · Speiler spiller-flyten (flyt 3) sett fra arrangørens side.</text>
 </svg>
