@@ -3,6 +3,11 @@ import { render, screen, within } from '@testing-library/react';
 import { AnonLanding } from './AnonLanding';
 import noMessages from '@/messages/no.json';
 import { APP_STORE_URL } from '@/lib/app/storeLinks';
+import {
+  resetLaunchAndDevice,
+  setDevice,
+  setLaunch,
+} from '@/lib/app/__tests__/_helpers';
 
 // Discovery-seksjonen (seksjon 6) er en DB-avhengig Suspense-gren; en tom liste
 // gjør at den ikke rendres i det hele tatt. Stubb den til [] så render-testen
@@ -113,10 +118,7 @@ describe('AnonLanding', () => {
  * JSON-LD-en følger det synlige svaret. Demoknappen heter «Hent appen».
  */
 describe('AnonLanding med appen ute (#2562)', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
+  afterEach(resetLaunchAndDevice);
 
   function faqJsonLd(container: HTMLElement) {
     const script = container.querySelector('script[type="application/ld+json"]');
@@ -128,7 +130,7 @@ describe('AnonLanding med appen ute (#2562)', () => {
   }
 
   it('on: nye tekster, FAQ-en i JSON-LD-en følger svaret, og ingen «ingen app»', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
+    setLaunch('on');
     const ui = await AnonLanding({ locale: 'no' });
     const { container } = render(ui as React.ReactElement);
     const landing = noMessages.landing;
@@ -155,10 +157,8 @@ describe('AnonLanding med appen ute (#2562)', () => {
   });
 
   it('on: demoknappen går rett til App Store på en iPhone', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'on');
-    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
-    );
+    setLaunch('on');
+    setDevice('iphone');
     const ui = await AnonLanding({ locale: 'no' });
     render(ui as React.ReactElement);
     expect(screen.getByTestId('anon-demo-cta')).toHaveAttribute(
@@ -168,7 +168,7 @@ describe('AnonLanding med appen ute (#2562)', () => {
   });
 
   it('ios: tekstene byttes og FAQ-en sier App Store, men demoknappen står', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_LAUNCH', 'ios');
+    setLaunch('ios');
     const ui = await AnonLanding({ locale: 'no' });
     const { container } = render(ui as React.ReactElement);
     const landing = noMessages.landing;
