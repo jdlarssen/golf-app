@@ -389,6 +389,28 @@ describe('LeaderboardBody', () => {
     expect(screen.getByTestId('team-row-2-under')).toHaveTextContent(/^9\D/);
   });
 
+  it('lister trukne spillere under tavla, som nettsiden (#1954 A3)', async () => {
+    const bundle = bestBallBundle(9) as unknown as {
+      players: { userId: string; withdrawnAt: string | null }[];
+    };
+    bundle.players = bundle.players.map((p) =>
+      p.userId === 'rival2' ? { ...p, withdrawnAt: '2026-08-30T11:00:00.000Z' } : p,
+    );
+    const scores = bestBallScores(9);
+    await render(
+      <LeaderboardBody
+        bundle={bundle as never}
+        scores={scores}
+        teamBoard={teamBoardFor({ bundle: bundle as never, scores, userId: 'me' })}
+      />,
+    );
+
+    const section = screen.getByTestId('withdrawn-players');
+    expect(section).toHaveTextContent(/^Trukne spillere/);
+    expect(screen.getByTestId('withdrawn-player-rival2')).toHaveTextContent('Andre RivalTrukket');
+    expect(screen.queryByTestId('withdrawn-player-me')).toBeNull();
+  });
+
   it('viser hvor mange hull hvert lag har spilt når lagene er ulikt langt (#1982)', async () => {
     // Lag 1 er gjennom hull 9 og åpner porten; lag 2 har ført 7. Motoren
     // teller hullene som mangler som 0, så lag 2 leder på 35 mot 36. Uten

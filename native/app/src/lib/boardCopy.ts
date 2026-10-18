@@ -68,8 +68,19 @@ export const BOARD_TEXT = {
 export const BOARD_COMMON_TEXT = {
   holesPlayedCount: '{count} hull spilt',
   unknownPlayerFull: '(ukjent spiller)',
+  // #1954 A3: navnet under «Trukne spillere» når profilen mangler det.
+  unknownPlayer: '(ukjent)',
   teamLabel: 'Lag {number}',
   poengLabel: 'poeng',
+} as const;
+
+/**
+ * `leaderboard.withdrawn`: seksjonen under tavla med spillerne som har trukket
+ * seg (#1954 A3), ordene fra webbens `WithdrawnPlayersSection`.
+ */
+export const WITHDRAWN_BOARD_TEXT = {
+  sectionTitle: 'Trukne spillere',
+  badge: 'Trukket',
 } as const;
 
 /**
