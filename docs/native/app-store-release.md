@@ -246,6 +246,32 @@ beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
 5. **Etterkontroll (P7)** — kontrakten §6: installer fra App Store over TestFlight-bygget,
    OTP-innlogging, åpne et ferdig spill, en mail-lenke skal åpne Safari.
 
+## Nettsiden samme dag
+
+Nettsiden har en bryter for lanseringsdagen (#2562): `NEXT_PUBLIC_APP_LAUNCH`, med regelen i
+`lib/app/appLaunch.ts`.
+
+| Verdi | Nettsiden |
+|---|---|
+| `off` (eller usatt) | Som før. |
+| `ios` | Appen er i App Store. Tekstene som sier at det ikke finnes noen app, byttes. «Hent appen» står på spillsiden før start, påmeldingskvitteringen og live-tavla, med App Store-merket. Android-telefoner får ikke kortet. Hjem-banneret blir «Hent Tørny-appen» på iPhone og iPad. Demoknappene står, og `/demo` får App Store-kortet over demoen på iPhone. |
+| `on` | Begge butikkene (se `play-store-release.md`). |
+
+`NEXT_PUBLIC_*` bakes inn ved bygg, så bryteren slås på med en ny deploy. Samme dag som eieren
+trykker «Release This Version»:
+
+1. Åpne `https://apps.apple.com/no/app/id6806675951` (står i `lib/app/storeLinks.ts`) i en
+   nettleser. Viser den ikke Tørny, venter du. Lenka kan ikke prøves før oppføringen er
+   offentlig.
+2. Eieren setter `NEXT_PUBLIC_APP_LAUNCH` til `ios` i Vercel → Settings → Environment
+   Variables, bare for Production (instruksen etter malen i `docs/collaboration.md`).
+3. Ny deploy av prod: Deployments → siste prod-deploy → Redeploy.
+4. Sjekk i prod, på iPhone og på PC: forsiden (tillitslinja, FAQ-en, og `<title>` og FAQ-en
+   i JSON-LD-en i kildekoden), innloggingen fra en invitasjon (hintet under e-postfeltet),
+   spillsiden før start og påmeldingskvitteringen (kortet), live-tavla (linja under tavla) og
+   `/demo` (App Store-kortet over demoen på iPhone). App Store-merket åpner oppføringen.
+5. Tilbake: sett `off` og deploy på nytt. Bryteren endrer bare tekst og lenker, ingen data.
+
 ## Rollback
 
 | Fase | Hva kan gå galt | Tilbake slik |

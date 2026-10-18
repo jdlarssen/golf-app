@@ -122,6 +122,22 @@ telefonen, og den signeres med debug-nøkkelen som før. Den får også
 `android.builder.sdkDownload=false`, så `expo run:android` stopper og navngir en SDK-pakke som
 mangler i stedet for å laste den ned.
 
+## Nettsiden samme dag
+
+Bryteren for lanseringsdagen (#2562) står i `app-store-release.md` §«Nettsiden samme dag». Med
+`on` er appen i begge butikkene. Da viser «Hent appen» Google Play-merket på Android og begge
+merkene på PC. Demoknappene heter «Hent appen» og går rett til butikken på telefon (til
+`/demo` på PC), og `/demo` peker til appen i stedet for å kjøre demorunden.
+
+1. Åpne `https://play.google.com/store/apps/details?id=no.tornygolf.app` (står i
+   `lib/app/storeLinks.ts`) i en nettleser. Viser den ikke Tørny, venter du.
+2. Eieren setter `NEXT_PUBLIC_APP_LAUNCH` til `on` i Vercel (Production), og prod deployes på
+   nytt.
+3. Sjekk i prod, på Android og på PC: de samme stedene som for `ios`, og i tillegg
+   demoknappen på forsiden (går til Google Play på Android, til `/demo` på PC) og `/demo`
+   (begge merkene, ingen demorunde).
+4. Tilbake: sett `ios` igjen (eller `off`) og deploy på nytt.
+
 ## Feilsøking
 
 - **«SDK-pakker mangler»:** kjør `sdkmanager`-kommandoen skriptet skriver ut. Nye versjoner
