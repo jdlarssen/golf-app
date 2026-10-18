@@ -32,6 +32,14 @@
       "effort": "high",
       "why": "prøveordning: billigste modell først (#2599)"
     },
+    "trial": {
+      "from": "2026-10-18",
+      "until": "2026-11-01",
+      "probeEvery": 10,
+      "moveToOpus": { "attempts": 5, "escalations": 2 },
+      "moveBack": { "probes": 3 },
+      "fixWindowDays": 14
+    },
     "heavyLabels": [
       "area:scoring",
       "area:auth",
