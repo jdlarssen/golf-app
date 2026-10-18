@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type ReactNode,
-} from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { countdownParts } from '@/lib/i18n/format';
@@ -33,12 +27,6 @@ type WaitingRoomProps = {
    * instead of «Starter snart» and the promise to notify.
    */
   blockedReason?: StartBlockReason | null;
-  /**
-   * #2562: «Hent appen», right under the countdown and above the flight
-   * picker. The page passes `<GetTheApp />`, which renders nothing until the
-   * app is out.
-   */
-  appCard?: ReactNode;
 };
 
 /**
@@ -72,7 +60,6 @@ export function ScheduledWaitingRoom({
   flightOptions = null,
   currentFlightNumber = null,
   blockedReason = null,
-  appCard = null,
 }: WaitingRoomProps) {
   const blocked = blockedReason != null;
   const router = useRouter();
@@ -175,8 +162,6 @@ export function ScheduledWaitingRoom({
           </>
         )}
       </div>
-
-      {appCard}
 
       {/* #543: flight-velger — kun når spillet trenger inndeling */}
       {flightOptions && flightOptions.length > 0 && (
