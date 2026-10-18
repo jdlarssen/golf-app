@@ -21,9 +21,9 @@
 #         grensetegn på IP-mønstrene. Loopback-literalene i supabase-js
 #         («127.0.0.1», «[::1]», «localhost») er lov bare, så mange ganger som
 #         pakken som er installert forklarer: i 1.1.0 (3) sto «127.0.0.1» inne
-#         i «draft-2020-127.0.0.15.2.0.0», i 1.2.0 (4) alene (#2561). Med
-#         skjema eller port, og «localhost» også med underdomene eller
-#         bruker@, er de forbudt.
+#         i «draft-2020-127.0.0.15.2.0.0», i 1.2.0 (4) alene (#2561). Som
+#         adresse (skjema, bruker@, URL-koding, port, og for «localhost» også
+#         underdomene) er de forbudt.
 #       - En delstreng deler lagring med den lengre strengen den er en del av.
 #         `src/lib/stagingGate.ts` har staging-verten som literal (gaten for
 #         utvikler-raden), så ETT bart treff på staging-ref-en er forventet i
