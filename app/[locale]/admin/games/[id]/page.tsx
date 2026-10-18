@@ -98,6 +98,7 @@ import { PultTabs } from './_pult/PultTabs';
 import { NeedsYouList, type NeedsYouGap } from './_pult/NeedsYouList';
 import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
+import { ceremonySupported } from '@/lib/games/ceremony';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -608,6 +609,7 @@ async function buildSections({
   const tSections = await getTranslations('admin.game.sections');
   const tRows = await getTranslations('admin.game.rows');
   const tCta = await getTranslations('admin.game.cta');
+  const tCeremony = await getTranslations('ceremony');
   const tModes = await getTranslations('modes');
   const tRegistration = await getTranslations('admin.game.registration');
   const tApprove = await getTranslations('game.approve');
@@ -1272,6 +1274,17 @@ async function buildSections({
         >
           {tCta('leaderboardButton')}
         </SmartLink>
+        {/* #2298: the prize-giving on the big screen, for the podium formats. */}
+        {ceremonySupported(game.game_mode) && (
+          <SmartLink
+            href={`/games/${gameId}/premieutdeling`}
+            data-testid="ceremony-entry"
+            className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+          >
+            {tCeremony('entryLink')}
+            <span aria-hidden>→</span>
+          </SmartLink>
+        )}
         <ReopenGameButton reopenAction={reopenGameAction} />
       </div>
     </SectionCard>

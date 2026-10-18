@@ -7305,5 +7305,41 @@
       "caption": "separated the top two",
       "whereLabel": "Where"
     }
+  },
+  "ceremony": {
+    "metaTitle": "Prize-giving",
+    "entryLink": "Prize-giving",
+    "title": "Prize-giving",
+    "intro": "The TV shows the podium, and you turn the cards from here, one at a time.",
+    "tvTitle": "Big screen",
+    "tvBody": "Open the link in the browser on the PC connected to the TV.",
+    "tvLinkAria": "Link to the big screen",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "copyError": "Could not copy. Select the link and copy it yourself.",
+    "tvOffBody": "The live link is off for this game, and the big screen needs it.",
+    "tvTurnOn": "Turn on the big screen",
+    "start": "Start the prize-giving",
+    "showSide": "Show the side prizes",
+    "showPlace": "Show {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place",
+    "revealWinner": "Reveal the winner",
+    "back": "One step back",
+    "restart": "Start over",
+    "close": "Close the prize-giving",
+    "next": "Next: {text}",
+    "nowShowing": "Showing now: {text}",
+    "nowHidden": "Showing now: the podium with hidden cards",
+    "notStarted": "The TV shows «Finished» until you start.",
+    "allShown": "Every card is turned.",
+    "playersHaveResult": "The players already have the result in the app.",
+    "error": "Could not connect. Try again.",
+    "empty": "Nobody played any holes in this game, so there is no podium to show.",
+    "sideTitle": "Side prizes",
+    "placeTitle": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place",
+    "tv": {
+      "hiddenWinner": "The winner",
+      "hiddenBody": "The organiser reveals it on the phone",
+      "hiddenSr": "{place}, not shown yet"
+    }
   }
 }

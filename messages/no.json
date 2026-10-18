@@ -7306,5 +7306,41 @@
       "caption": "skilte de to beste",
       "whereLabel": "Hvor"
     }
+  },
+  "ceremony": {
+    "metaTitle": "Premieutdelingen",
+    "entryLink": "Premieutdelingen",
+    "title": "Premieutdelingen",
+    "intro": "TV-en viser pallen, og du snur kortene herfra, ett om gangen.",
+    "tvTitle": "Storskjermen",
+    "tvBody": "Åpne lenken i nettleseren på PC-en som er koblet til TV-en.",
+    "tvLinkAria": "Lenken til storskjermen",
+    "copy": "Kopier",
+    "copied": "Kopiert!",
+    "copyError": "Fikk ikke kopiert. Merk lenken og kopier den selv.",
+    "tvOffBody": "Live-lenken er slått av for dette spillet, og storskjermen trenger den.",
+    "tvTurnOn": "Slå på storskjermen",
+    "start": "Start premieutdelingen",
+    "showSide": "Vis sidepremiene",
+    "showPlace": "Vis {rank}. plass",
+    "revealWinner": "Avslør vinneren",
+    "back": "Ett steg tilbake",
+    "restart": "Start på nytt",
+    "close": "Lukk premieutdelingen",
+    "next": "Neste: {text}",
+    "nowShowing": "Vises nå: {text}",
+    "nowHidden": "Vises nå: pallen med skjulte kort",
+    "notStarted": "TV-en viser «Ferdig spilt» til du starter.",
+    "allShown": "Alle kortene er snudd.",
+    "playersHaveResult": "Resultatet ligger allerede i appen til spillerne.",
+    "error": "Fikk ikke kontakt. Prøv igjen.",
+    "empty": "Ingen har spilt noen hull i dette spillet, så det er ingen pall å vise.",
+    "sideTitle": "Sidepremiene",
+    "placeTitle": "{rank}. plass",
+    "tv": {
+      "hiddenWinner": "Vinneren",
+      "hiddenBody": "Arrangøren avslører den på mobilen",
+      "hiddenSr": "{place}, ikke vist ennå"
+    }
   }
 }

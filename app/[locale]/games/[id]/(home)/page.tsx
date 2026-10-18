@@ -86,6 +86,8 @@ import { OrganiserGameView } from './OrganiserGameView';
 import { CreatorStartBlockNotice } from './CreatorStartBlockNotice';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
+import { CeremonyEntry } from './CeremonyEntry';
+import { ceremonySupported } from '@/lib/games/ceremony';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
@@ -177,6 +179,7 @@ export default async function GameHomePage({
   const t = await getTranslations('game.home');
   const tModes = await getTranslations('modes');
   const tScorecard = await getTranslations('scorecard');
+  const tCeremony = await getTranslations('ceremony');
   // #1361: cross-namespace read from a server component — same precedent as
   // the Sekretariat page. The strings have one home; a reword hits both.
   const tGameErrors = await getTranslations('admin.game.errors');
@@ -1558,6 +1561,11 @@ export default async function GameHomePage({
             liga-runder (`tournament_id`/`league_round_id`) — de eies av
             cupen/ligaen sin egen rematch-mekanikk, ikke en frittstående
             knapp her. Rent navigasjons-lenke; ingenting skrives til DB. */}
+        {/* #2298: the organiser runs the prize-giving on the big screen. */}
+        {isFinished && isCreator && ceremonySupported(game.game_mode) && (
+          <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
+        )}
+
         {isFinished && !game.tournament_id && !game.league_round_id && (
           <LinkButton
             href={`/opprett-spill?fra=${id}`}
