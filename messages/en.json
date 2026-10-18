@@ -1143,6 +1143,7 @@
       "teamsBestBall": "{teams} teams of 2",
       "teamsParStableford": "{teams} teams of 2",
       "teamsScramble": "{teams} teams of {size}",
+      "teamsScrambleUneven": "{full, plural, one {one team} other {# teams}} of {size} and {short, plural, one {one} other {#}} of {shortSize}",
       "teamSize2": "2-player teams",
       "teamSize3": "3-player teams",
       "teamSize4": "4-player teams",

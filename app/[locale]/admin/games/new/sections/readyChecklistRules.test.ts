@@ -187,6 +187,8 @@ const PLAYERS = {
   isParStableford: false,
   isScramble: false,
   teamSize: 1,
+  fullTeamsCount: 0,
+  shortTeamsCount: 0,
 };
 
 describe('playersSummary', () => {
@@ -208,6 +210,10 @@ describe('playersSummary', () => {
     ['best ball', { requiresTeams: true, teamSize: 2, isBestBall: true, teamsCount: 2, count: 4 }, { key: 'teamsBestBall', values: { teams: 2 } }],
     ['par stableford', { requiresTeams: true, teamSize: 2, isParStableford: true, teamsCount: 3, count: 6 }, { key: 'teamsParStableford', values: { teams: 3 } }],
     ['scramble', { requiresTeams: true, teamSize: 4, isScramble: true, teamsCount: 2, count: 8 }, { key: 'teamsScramble', values: { teams: 2, size: 4 } }],
+    // #2569: 4/4/3 is «2 lag à 4 og ett à 3», not «3 lag à 4».
+    ['scramble 4/4/3', { requiresTeams: true, teamSize: 4, isScramble: true, teamsCount: 3, count: 11, fullTeamsCount: 2, shortTeamsCount: 1 }, { key: 'teamsScrambleUneven', values: { full: 2, size: 4, short: 1, shortSize: 3 } }],
+    // A team outside the rule (4/4/2) keeps the plain line; the missing list says what is wrong.
+    ['scramble 4/4/2', { requiresTeams: true, teamSize: 4, isScramble: true, teamsCount: 3, count: 10, fullTeamsCount: 2, shortTeamsCount: 0 }, { key: 'teamsScramble', values: { teams: 3, size: 4 } }],
     ['other team format', { requiresTeams: true, teamSize: 2, teamsCount: 2, count: 4 }, { key: 'playersPlural', values: { count: 4 } }],
   ])('%s', (_label, overrides, expected) => {
     expect(playersSummary({ ...PLAYERS, ...overrides })).toEqual(expected);

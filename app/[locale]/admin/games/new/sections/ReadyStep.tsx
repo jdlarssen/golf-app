@@ -275,6 +275,10 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       isParStableford,
       isScramble: isTexas || isAmbrose || isShamble,
       teamSize,
+      fullTeamsCount: Object.values(playersByTeam).filter((m) => m.length === teamSize).length,
+      shortTeamsCount: Object.values(playersByTeam).filter(
+        (m) => m.length > 0 && m.length === teamSize - 1,
+      ).length,
     });
     return t(summary.key, summary.values);
   }

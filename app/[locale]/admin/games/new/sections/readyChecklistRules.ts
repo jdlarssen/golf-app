@@ -144,7 +144,12 @@ export type PlayersSummary =
   | { key: 'playersSolo' | 'playersPlural' | 'playersUnassigned'; values: { count: number } }
   | { key: 'players1v1' | 'playersUnassignedMatchplay'; values: Record<string, never> }
   | { key: 'teamsBestBall' | 'teamsParStableford'; values: { teams: number } }
-  | { key: 'teamsScramble'; values: { teams: number; size: number } };
+  | { key: 'teamsScramble'; values: { teams: number; size: number } }
+  /** #2569: «2 lag à 4 og ett à 3 spillere». */
+  | {
+      key: 'teamsScrambleUneven';
+      values: { full: number; size: number; short: number; shortSize: number };
+    };
 
 /**
  * The Spillere row's value as a `wizard.ready.*` key: «4 spillere», «2 lag à
@@ -163,6 +168,8 @@ export function playersSummary({
   isParStableford,
   isScramble,
   teamSize,
+  fullTeamsCount = 0,
+  shortTeamsCount = 0,
 }: {
   count: number;
   isSolo: boolean;
@@ -178,6 +185,9 @@ export function playersSummary({
   /** Texas, Ambrose or Shamble. */
   isScramble: boolean;
   teamSize: number;
+  /** #2569: teams with exactly `teamSize`, and with one fewer. */
+  fullTeamsCount?: number;
+  shortTeamsCount?: number;
 }): PlayersSummary {
   const players: PlayersSummary = {
     key: count === 1 ? 'playersSolo' : 'playersPlural',
@@ -193,6 +203,13 @@ export function playersSummary({
   if (teamsCount === 0) return { key: 'playersUnassigned', values: { count } };
   if (isBestBall) return { key: 'teamsBestBall', values: { teams: teamsCount } };
   if (isParStableford) return { key: 'teamsParStableford', values: { teams: teamsCount } };
+  // #2569: full teams and teams one short make up every team → name both.
+  if (isScramble && shortTeamsCount > 0 && fullTeamsCount + shortTeamsCount === teamsCount) {
+    return {
+      key: 'teamsScrambleUneven',
+      values: { full: fullTeamsCount, size: teamSize, short: shortTeamsCount, shortSize: teamSize - 1 },
+    };
+  }
   if (isScramble) return { key: 'teamsScramble', values: { teams: teamsCount, size: teamSize } };
   return players;
 }

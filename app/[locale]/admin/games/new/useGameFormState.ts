@@ -1707,10 +1707,21 @@ export function useGameFormState({
     handicapPct: undefined,
     requireIntegerPct: false,
   });
-  // Samme sjekk er lagfordelingen alene for Texas, Ambrose og Florida. Mangel-
-  // teksten om lag-fordeling leser den, så et lag-handicap over taket ikke også
-  // melder fulle lag som ufullstendige (#2566).
-  const teamRosterValid = shamblePlayersValid;
+  // Lagfordelingen alene, for formatet som er valgt: samme sjekk uten
+  // prosent-leddet. Mangel-teksten om lag-fordeling leser den, så et lag-
+  // handicap over taket ikke også melder fulle lag som ufullstendige (#2566).
+  // Lånt fra shamble-sjekken før #2569, men shamble à 3 har ingen lag på 2, og
+  // Texas/Ambrose à 3 har det: 3/3/2 meldte «lag-fordeling» med Publiser på.
+  const { playersValid: teamRosterValid } = validateTeamSizeFormat({
+    mode: gameMode,
+    shambleCount: effectiveShambleCount,
+    playersByTeam,
+    selectedPlayerIds,
+    teamByPlayer,
+    teamSize,
+    handicapPct: undefined,
+    requireIntegerPct: false,
+  });
   // #2569: går antallet opp i lag à teamSize, med lag på én mindre der
   // formatet har den størrelsen? Mangel-teksten og «Trekk tilfeldig» leser
   // samme regel (`allowedTeamSizes` + `splitIntoTeams`) som validatoren.
