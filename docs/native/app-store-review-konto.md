@@ -274,7 +274,10 @@ an invitation, a scorecard to approve or a result that is ready.
 WHAT THE APP DOES NOT DO
 - No location access. The app does not read the device location at all.
 - No money. The app shows points and results only, never amounts, and there are
-  no payments of any kind in the app.
+  no payments of any kind in the app. Skins, Wolf, Nassau and Bingo Bango Bongo
+  are ways of counting points in golf; in the app they have no stakes, prizes or
+  money. "Blind Wolf-potter" in the Wolf results is the number of holes a player
+  won as a blind wolf.
 - No purchases, no advertising, no third-party tracking.
 - The app plays eight golf formats. A round in any other format opens on our
   website instead, and the app says so with a button that opens Safari.
