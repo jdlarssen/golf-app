@@ -18,6 +18,7 @@ import {
   flightForTeam,
   modeRequiresTeamNumber,
   expectedTeamSize,
+  readShambleCount,
   type TeamPlayer,
 } from '@/lib/games/teamScope';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -389,7 +390,7 @@ async function loadTeamGame(
   gameId: string,
   detailPath: string,
   locale: Awaited<ReturnType<typeof getLocale>>,
-): Promise<{ mode: GameMode; teamSize: number }> {
+): Promise<{ mode: GameMode; teamSize: number; shambleCount?: number }> {
   const game = await readActionGame<FlightGameRow>(
     admin,
     gameId,
@@ -406,7 +407,7 @@ async function loadTeamGame(
     // Solo-format eller matchplay — ingen lag å tildele her.
     redirect({ href: detailPath, locale });
   }
-  return { mode: game.game_mode, teamSize };
+  return { mode: game.game_mode, teamSize, shambleCount: readShambleCount(game.mode_config) };
 }
 
 /**
@@ -420,14 +421,14 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
   const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
-  const { mode, teamSize } = await loadTeamGame(admin, gameId, detailPath, locale);
+  const { mode, teamSize, shambleCount } = await loadTeamGame(admin, gameId, detailPath, locale);
 
   // Error (if any) is logged at source in fetchTeamPlayers — the call site
   // only sees null, so logging here would add nothing but a `null`.
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
-  const assignments = suggestTeamSplit(mode, players, teamSize);
+  const assignments = suggestTeamSplit(mode, players, teamSize, shambleCount);
   if (assignments.length === 0) {
     // Alle har allerede lag — ingenting å gjøre.
     redirect({ href: detailPath, locale });

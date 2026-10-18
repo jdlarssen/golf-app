@@ -241,6 +241,35 @@ describe('suggestTeamSplit', () => {
     ).toEqual([1, 1, 1, 1, 2, 2]);
   });
 
+  // #2569: «Foreslå laginndeling» deler etter regelen (`splitIntoTeams` +
+  // `allowedTeamSizes`), så forslaget aldri gir et lag startvakta nekter.
+  it.each([
+    [10, [1, 1, 1, 1, 2, 2, 2, 3, 3, 3]], // 4/3/3, ikke 4/4/2
+    [11, [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3]], // 4/4/3
+    [13, [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]], // 4/3/3/3
+  ] as const)('Texas à 4 med %i utildelte → %j (#2569)', (n, teams) => {
+    const players = Array.from({ length: n }, (_, i) => p(`u${String(i + 1).padStart(2, '0')}`));
+    expect(suggestTeamSplit('texas_scramble', players, 4).map((a) => a.team_number)).toEqual([...teams]);
+  });
+
+  it('et lag som alt er fullt, tar en av de fulle plassene (#2569)', () => {
+    // 10 à 4 = 4/3/3. Lag 1 er alt fullt, så de seks andre blir 3/3.
+    const players = [
+      ...['a', 'b', 'c', 'd'].map((id) => p(id, 1, 1)),
+      ...Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`)),
+    ];
+    expect(suggestTeamSplit('texas_scramble', players, 4).map((a) => a.team_number)).toEqual([
+      2, 2, 2, 3, 3, 3,
+    ]);
+  });
+
+  it('Florida à 3 har ingen lag på 2: 10 går ikke opp, og forslaget fyller som før (3/3/3/1)', () => {
+    const players = Array.from({ length: 10 }, (_, i) => p(`u${String(i + 1).padStart(2, '0')}`));
+    expect(
+      suggestTeamSplit('florida_scramble', players, 3).map((a) => a.team_number),
+    ).toEqual([1, 1, 1, 2, 2, 2, 3, 3, 3, 4]);
+  });
+
   it('foreslår kun for de utildelte — rører aldri spillere som har lag', () => {
     const players = [p('u1', 1, 1), p('u2', 1, 1), p('u3'), p('u4')];
     const result = suggestTeamSplit('best_ball', players, 2);
