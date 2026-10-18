@@ -915,6 +915,7 @@ async function buildSections({
         teamSize={teamSize}
         gameMode={game.game_mode}
         shambleCount={readShambleCount(game.mode_config)}
+        beforeStart={game.status === 'scheduled'}
         players={activePlayers.map((p) => ({
           user_id: p.user_id,
           displayName: displayName(p),

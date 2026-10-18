@@ -13,7 +13,7 @@ vi.mock('./flightActions', () => ({
  * for one outside the rule, and none for a full team.
  */
 describe('LagSeksjon — lag mot lagstørrelsen (#2569)', () => {
-  it('Texas à 4 med 4/3/2: fullt lag uten linje, kort lag med linje, for få med advarsel', async () => {
+  it('Texas à 4 med 4/3/2: før start fullt lag uten linje, kort lag med linje, for få med advarsel; i gang ingen linjer', async () => {
     const { LagSeksjon } = await import('./LagSeksjon');
     const players = [4, 3, 2].flatMap((count, t) =>
       Array.from({ length: count }, (_, m) => ({
@@ -23,7 +23,9 @@ describe('LagSeksjon — lag mot lagstørrelsen (#2569)', () => {
         displayName: `Spiller ${t + 1}.${m}`,
       })),
     );
-    render(<LagSeksjon gameId="g1" teamSize={4} gameMode="texas_scramble" players={players} />);
+    const { rerender } = render(
+      <LagSeksjon gameId="g1" teamSize={4} gameMode="texas_scramble" players={players} beforeStart />,
+    );
 
     expect(screen.getByTestId('team-card-1').dataset.sizeStatus).toBe('full');
     expect(screen.queryByTestId('team-card-1-size-line')).toBeNull();
@@ -31,5 +33,12 @@ describe('LagSeksjon — lag mot lagstørrelsen (#2569)', () => {
     expect(screen.getByTestId('team-card-2-size-line')).toBeInTheDocument();
     expect(screen.getByTestId('team-card-3').dataset.sizeStatus).toBe('outside');
     expect(screen.getByTestId('team-card-3-size-line')).toBeInTheDocument();
+
+    // A round in progress: no start to wait for, so no size lines at all.
+    rerender(
+      <LagSeksjon gameId="g1" teamSize={4} gameMode="texas_scramble" players={players} beforeStart={false} />,
+    );
+    expect(screen.queryByTestId('team-card-2-size-line')).toBeNull();
+    expect(screen.queryByTestId('team-card-3-size-line')).toBeNull();
   });
 });
