@@ -33,86 +33,55 @@ function badgeHrefs() {
 }
 
 /**
- * Type B: what «Hent appen» renders per switch state and device. The rule
- * itself (storesFor) is Type A in lib/app/appLaunch.test.ts; here only that
- * the component follows it, with the right links and labels.
+ * Type C, one table: what «Hent appen» renders per switch state, device and
+ * variant. The rule itself (storesFor) is Type A in lib/app/appLaunch.test.ts;
+ * here only that the component follows it with the right links and labels.
  */
+type Row = [
+  string | undefined,
+  keyof typeof UA,
+  { variant?: 'card' | 'inline'; deviceOnly?: boolean },
+  string[][],
+];
 describe('GetTheApp', () => {
-  it('renders nothing while the switch is off', () => {
-    on(undefined, UA.iphone);
-    const { container } = render(<GetTheApp />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('shows both badges on a PC with on, as a titled card', () => {
-    on('on', UA.pc);
-    render(<GetTheApp />);
-    expect(
-      screen.getByRole('region', { name: t.title }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(t.body)).toBeInTheDocument();
-    expect(badgeHrefs()).toEqual([
-      [t.appStoreAria, APP_STORE_URL],
-      [t.googlePlayAria, GOOGLE_PLAY_URL],
-    ]);
-  });
-
-  it('keeps only the device’s own store after hydration', () => {
-    on('on', UA.iphone);
-    const { unmount } = render(<GetTheApp />);
-    expect(badgeHrefs()).toEqual([[t.appStoreAria, APP_STORE_URL]]);
-    unmount();
-
-    on('on', UA.android);
-    render(<GetTheApp />);
-    expect(badgeHrefs()).toEqual([[t.googlePlayAria, GOOGLE_PLAY_URL]]);
-  });
-
-  it('with ios shows the App Store only, and nothing on Android', () => {
-    on('ios', UA.pc);
-    const { unmount } = render(<GetTheApp />);
-    expect(badgeHrefs()).toEqual([[t.appStoreAria, APP_STORE_URL]]);
-    unmount();
-
-    on('ios', UA.android);
-    const { container } = render(<GetTheApp />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('renders every store that is out on the server, whatever the device', () => {
-    on('on', UA.iphone);
-    const html = renderToString(<GetTheApp />);
-    expect(html).toContain(APP_STORE_URL);
-    expect(html).toContain(GOOGLE_PLAY_URL);
-  });
-
-  it('deviceOnly: nothing on a PC or on the server, the card on an iPhone', () => {
-    on('ios', UA.pc);
-    const { container, unmount } = render(<GetTheApp deviceOnly />);
-    expect(container).toBeEmptyDOMElement();
-    unmount();
-    expect(renderToString(<GetTheApp deviceOnly />)).toBe('');
-
-    on('ios', UA.iphone);
-    render(<GetTheApp deviceOnly />);
-    expect(badgeHrefs()).toEqual([[t.appStoreAria, APP_STORE_URL]]);
-  });
-
-  it('inline: one line of text and the badges, no heading', () => {
-    on('on', UA.pc);
-    render(<GetTheApp variant="inline" />);
-    expect(screen.getByText(t.inline)).toBeInTheDocument();
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-    expect(badgeHrefs()).toHaveLength(2);
-  });
-
-  it('badge links open in the same tab with a 44 px tap target', () => {
-    on('on', UA.pc);
-    render(<GetTheApp />);
+  it.each<Row>([
+    [undefined, 'iphone', {}, []],
+    ['on', 'pc', {}, [[t.appStoreAria, APP_STORE_URL], [t.googlePlayAria, GOOGLE_PLAY_URL]]],
+    ['on', 'iphone', {}, [[t.appStoreAria, APP_STORE_URL]]],
+    ['on', 'android', {}, [[t.googlePlayAria, GOOGLE_PLAY_URL]]],
+    ['ios', 'pc', {}, [[t.appStoreAria, APP_STORE_URL]]],
+    ['ios', 'android', {}, []],
+    ['ios', 'pc', { deviceOnly: true }, []],
+    ['ios', 'iphone', { deviceOnly: true }, [[t.appStoreAria, APP_STORE_URL]]],
+    ['on', 'pc', { variant: 'inline' }, [[t.appStoreAria, APP_STORE_URL], [t.googlePlayAria, GOOGLE_PLAY_URL]]],
+  ])('%s on %s %j', (flag, ua, props, expected) => {
+    on(flag, UA[ua]);
+    const { container } = render(<GetTheApp {...props} />);
+    expect(badgeHrefs()).toEqual(expected);
+    if (expected.length === 0) {
+      expect(container).toBeEmptyDOMElement();
+      return;
+    }
+    // The card is a titled region; the inline line has no heading.
+    if (props.variant === 'inline') {
+      expect(screen.getByText(t.inline)).toBeInTheDocument();
+      expect(screen.queryByRole('heading')).toBeNull();
+    } else {
+      expect(screen.getByRole('region', { name: t.title })).toBeInTheDocument();
+    }
+    // Same tab, 44 px tap target.
     for (const link of screen.getAllByRole('link')) {
       expect(link).not.toHaveAttribute('target');
       expect(link.className).toContain('min-h-11');
     }
+  });
+
+  it('renders every store that is out on the server, and nothing there with deviceOnly', () => {
+    on('on', UA.iphone);
+    const html = renderToString(<GetTheApp />);
+    expect(html).toContain(APP_STORE_URL);
+    expect(html).toContain(GOOGLE_PLAY_URL);
+    expect(renderToString(<GetTheApp deviceOnly />)).toBe('');
   });
 });
 

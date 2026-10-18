@@ -6551,6 +6551,7 @@
   "getTheApp": {
     "title": "Hent appen",
     "body": "Appen er gratis, og du logger inn med samme e-post.",
+    "bodyVisitor": "Appen er gratis.",
     "inline": "Tørny finnes også som gratis app.",
     "appStoreAria": "Hent Tørny i App Store",
     "googlePlayAria": "Hent Tørny på Google Play"

@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'reac
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { GetTheApp } from '@/components/app/GetTheApp';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
 import { TEAM_NAME_MAX } from '@/lib/games/registration';
@@ -232,6 +233,8 @@ export function TeamRegistrationForm({
             {t('teamSuccessFailedFix')}
           </Banner>
         )}
+        {/* #2562: «Hent appen» under kvitteringen; ingenting før appen er ute. */}
+        <GetTheApp />
         <a
           href={`/signup/${shortId}/team`}
           className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white hover:bg-primary-hover dark:text-bg"

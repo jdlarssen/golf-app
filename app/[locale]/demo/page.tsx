@@ -52,7 +52,7 @@ export default function DemoPage() {
   return (
     <AppShell showVersion={false} flush>
       {launch === 'ios' && (
-        <GetTheApp deviceOnly className="mx-4 mt-4" />
+        <GetTheApp deviceOnly visitor className="mx-4 mt-4" />
       )}
       <DemoGame />
     </AppShell>
