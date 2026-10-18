@@ -19,13 +19,13 @@ scramble, cup eller liga.
 Grensene er 30 tegn for navnet, 80 for kort beskrivelse og 4000 for full beskrivelse
 (<https://support.google.com/googleplay/android-developer/answer/9859152>).
 
-| Felt | Verdi |
-|---|---|
-| App name | `Tørny – golfturneringer` (23 tegn, samme som i App Store) |
-| Kategori | Sports |
-| Kontakt-e-post | `personvern@tornygolf.no` |
-| Nettsted | `https://tornygolf.no` |
-| Personvern-URL | `https://tornygolf.no/legal/privacy` |
+| Felt | Hvor i Play Console | Verdi |
+|---|---|---|
+| App name | Main store listing | `Tørny – golfturneringer` (23 tegn, samme som i App Store) |
+| Kategori | Store settings | Sports |
+| Kontakt-e-post | Store settings | `personvern@tornygolf.no` |
+| Nettsted | Store settings | `https://tornygolf.no` |
+| Personvern-URL | Policy → App content → Privacy policy | `https://tornygolf.no/legal/privacy` |
 
 ### Kort beskrivelse (maks 80 tegn)
 
@@ -71,6 +71,12 @@ Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen p
 Hva som med vilje ikke står der, og hvorfor, står i `app-store-metadata.md` («Hva som
 med vilje IKKE står der»). Det gjelder Android også, og i tillegg varslene.
 
+### Versjonsnotat (Release notes) for produksjonsslippet
+
+```text
+Første versjon av Tørny på Google Play.
+```
+
 ## Data safety
 
 Definisjonene er Googles
@@ -95,17 +101,19 @@ Svarene øverst i skjemaet:
 |---|---|
 | Does your app collect or share any of the required user data types? | Yes |
 | Is all of the user data collected by your app encrypted in transit? | Yes. Appen snakker bare med `https://` (Supabase og `https://tornygolf.no`; beviset krever begge adressene i bundelen). |
-| Which of the following methods of account creation does your app support? | Konto lages med e-post og engangskode, i appen eller på nettsiden. |
+| Which of the following methods of account creation does your app support? | Kryss av for **Username and other authentication**. Brukernavnet er e-postadressen, og «other authentication» er engangskoden på e-post (`native/app/src/screens/Login.tsx`). Passordinnloggingen finnes bare for review-kontoene, og ingen kan lage en konto med passord. Valgene er lest fra tredjepartsveiledninger for skjemaet (Googles egen side lister dem ikke); orkestratoren sjekker dem i konsollen. |
 | Delete account URL | `https://tornygolf.no/legal/slett-konto` (#2561 PR A). I appen: «Profil» → «Personvern og konto» → «Slett konto». |
 
 Én rad per datatype som hakes av:
 
 | Datatype (Google) | Hva det er hos oss, og kilden | Delt? | Påkrevd eller valgfri | Formål |
 |---|---|---|---|---|
-| Personal info → Name | Navnet i profilen, som medspillerne ser på tavla (`native/app/src/screens/CompleteProfile.tsx`). | Nei | Påkrevd | App functionality, Account management |
+| Personal info → Name | Navnet og kallenavnet i profilen, som medspillerne ser på tavla (`CompleteProfile.tsx`; `EditProfile.tsx`, feltet `edit-profile-nickname`). Google: «How a user refers to themselves, such as their first or last name, or nickname.» | Nei | Påkrevd | App functionality, Account management |
 | Personal info → Email address | Adressen kontoen logger inn med (`native/app/src/screens/Login.tsx`). | Nei | Påkrevd | App functionality, Account management |
 | Personal info → User IDs | Konto-id-en radene i databasen henger på (Supabase Auth). | Nei | Påkrevd | App functionality, Account management |
-| Contacts | Vennelista, og e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner er ikke nødvendig for å spille) | App functionality |
+| Personal info → Other info | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Google: «Any other personal information such as date of birth, gender identity, veteran status, etc.» | Nei | Valgfri (kjønn kan stå tomt, `lib/users/profileInput.ts:128-139`, og spillerklassen står som voksen til spilleren velger noe annet) | App functionality |
+| Contacts | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner og invitasjoner er ikke nødvendig for å spille) | App functionality |
+| Messages → Other in-app messages | Grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake, som spilleren ser på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Google: «Any other types of messages. For example, instant messages or chat content.» | Nei | Valgfri (grunnen kan stå tom) | App functionality |
 | App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. | Nei | Påkrevd | App functionality |
 
 Dette hakes **ikke** av, og her er grunnen:
@@ -136,11 +144,11 @@ spør om.
 
 | Tema | Svar | Hvorfor |
 |---|---|---|
-| Kategori | Ikke spill, ikke sosialt nettverk, ikke nyheter | Tørny er et verktøy for golfrunder. Velg kategorien som passer det; ordlyden er ikke bekreftet. |
+| Kategori | **All Other App Types** | IARC skiller mellom spill, apper for sosialt eller kommunikasjon, og alle andre apper (Epic Games' gjennomgang av IARC-skjemaet, <https://dev.epicgames.com/documentation/fortnite/rating-screen-in-fortnite>). Tørny er et verktøy for golfrunder. Den korte grunnen når et kort sendes tilbake, gjør ikke appen til en app for kommunikasjon. |
 | Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
 | Pengespill med ekte penger | Nei | Appen har ingen innsats og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
-| Simulert pengespill | Nei | Skins, Wolf og Bingo Bango Bongo er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
-| Kan brukerne samhandle eller dele innhold? | Ja | Spillerne ser hverandres navn, slag og resultater i felles runder og kan legge til venner. Appen har ingen chat. Svar «Ja» bare hvis spørsmålet handler om å se hverandre; handler det om å skrive til hverandre, er svaret nei. |
+| Simulert pengespill | Nei | De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
+| Kan brukerne samhandle eller dele innhold med hverandre? | **Ja** | Spillerne ser hverandres navn, slag og resultater i felles runder, kan legge til venner, og en makker eller arrangøren kan sende et kort tilbake med en grunn i fritekst (`Approve.tsx`). Appen har ingen chat ut over det. |
 | Deler appen brukerens posisjon? | Nei | Appen leser ikke posisjon. |
 | Digitale kjøp | Nei | Appen har ingen kjøp. |
 | Ubegrenset tilgang til internett | Nei | Appen har ingen nettleser. Lenker åpnes i nettleseren, utenfor appen. |
@@ -180,13 +188,20 @@ dedicated account with a password. The password field is hidden behind a long pr
 Right after signing in, the app asks whether the AI may write about you
 ("Kan AI-en skrive om deg?"). Both answers take you into the app.
 
-The account plays in an active demo round called "Demo Round — Tørny". The app is in
-Norwegian and is available in Norway only.
+The account plays in an active demo round called "Demo Round (Google Play) — Tørny".
+The app is in Norwegian and is available in Norway only.
+
+This account is for Google Play review only. To see account deletion without deleting
+the account, open "Profil" -> "Personvern og konto" -> "Slett konto" and stop before
+the final button "Slett kontoen min for alltid" (Delete my account forever). Account
+deletion can also be requested on the web at https://tornygolf.no/legal/slett-konto.
 ```
 
 «Til enhver tid» betyr at kontoen må virke gjennom hele det lukkede sporet, ikke bare
-ved én innsending. Kjør `scripts/provision-review-account.mjs` før sporet sendes til
-vurdering, og sjekk at innloggingen virker etter hver vurdering
+ved én innsending. Derfor har Google sin egen review-konto, adskilt fra Apple-kontoen
+som Apple-revieweren får slette. Orkestratoren kjører
+`scripts/provision-review-account.mjs --env prod --store google` før sporet sendes til
+vurdering, og sjekker at innloggingen virker etter hver vurdering
 (`app-store-review-konto.md` §Reset).
 
 ## Land
