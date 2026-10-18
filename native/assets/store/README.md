@@ -17,14 +17,14 @@ Bildene lastes opp i rekkefølgen filnavnene har:
 
 | Nr. | Skjerm | Alt-tekst (Play, maks 140 tegn) |
 |---|---|---|
-| 01 | Hjem | Hjem-siden med runden som pågår, flere runder i gang og neste start |
-| 02 | Hullet | Hull 7 med slagene og poengene til hele flighten |
-| 03 | Tavla | Tavla mens turneringen pågår, med tolv spillere i tre flighter |
+| 01 | Hjem | Hjem-siden med runden som pågår, neste start og forrige runde |
+| 02 | Hullet | Hull 12 med slagene til flighten og tastaturet for neste spiller |
+| 03 | Tavla | Tavla mens turneringen pågår, med alle tolv spillerne |
 | 04 | Utslaget | Texas scramble: laget taster scoren og velger hvem sitt utslag de brukte |
 | 05 | Runden er ferdig | Runden er ferdig: poeng, birdier, plassering og dagens beste hull |
-| 06 | Godkjenning | Godkjenn kortet til en makker i flighten, eller send det tilbake |
-| 07 | Resultat | Sluttresultatet med vinneren øverst på tavla |
-| 08 | Lagtavla | Lagtavla etter en lagkonkurranse, med vinnerlaget øverst |
+| 06 | Godkjenning | Tre kort venter: godkjenn kortet til en makker, eller send det tilbake |
+| 07 | Resultat | Sluttresultatet med alle tolv spillerne og vinneren øverst |
+| 08 | Lagtavla | Lagtavla med seks lag og vinnerlaget øverst |
 | Feature-grafikk | Ordmerket og slagordet | Tørny. Fyr opp golfturneringen på et par minutter |
 
 ## Slik ble de laget
@@ -34,11 +34,17 @@ Bildene lastes opp i rekkefølgen filnavnene har:
   Android-emulatoren `torny_api36` (Pixel 7-profil, API 36) med skjermen satt til 1080 × 1920.
 - **Dataene:** en midlertidig probe byttet bare `native/app/src/supabase.ts` mot en lokal fikstur.
   Alt annet i appen var ekte: hjem-lista, spillhentingen, den lokale basen, poengutregningen og
-  tavlene. Spillerne er tolv oppdiktede personer med genererte id-er. Banen (Byneset North: hull,
-  par, indeks og slope for herrer) er lest fra staging. Tee-navnet «Gul» og slope og CR for damer er
-  satt i fiksturen.
+  tavlene. Spillerne er 18 oppdiktede personer med korte fornavn og genererte id-er, så navn i
+  smale felt («Lag 1 · Ari, Bo, Una») får plass. Banen (Byneset North: hull, par, indeks og slope
+  for herrer) er lest fra staging. Tee-navnet «Gul» og slope og CR for damer er satt i fiksturen.
   Ingenting ble skrevet til staging eller prod, og ingen e-postadresse vises. Proben og fiksturen
   er ikke committet.
+- **Tilstandene:** hver skjerm er en ekte apptilstand, sett av den spilleren som har den. Tor er
+  midt i runden (Hjem, hullet, tavla, resultatet og lagtavla). Eva er ferdig og har tre kort å
+  godkjenne (runden er ferdig, godkjenning). Ari spiller Texas scramble (utslaget). På tavla og
+  resultatet trykket proben appens egen «Vis alle 12 spillere». På Android har fiksturen ett
+  pågående spill mindre, så Hjem viser ikke «Flere runder i gang», og «Forrige runde» får plass
+  på den lavere 9:16-skjermen.
 - **Statuslinja:** klokka står på 15:41, i tråd med «God dag» på Hjem. iOS brukte
   `simctl status_bar`, og Android brukte demomodus uten varselikoner.
 - **Etterbehandling:** alle bildene er flatet til RGB uten alfakanal. 6,3"-settet er det samme
