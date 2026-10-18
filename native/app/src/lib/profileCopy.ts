@@ -443,8 +443,8 @@ export function isHandicapAgeStale(
 export function describeProfileSaveFailure(reason: ProfileSaveFailure): string {
   switch (reason) {
     // Profil-lagring legges ALDRI i sync-køen: regelen (recompute av frosne
-    // banehandicap) kjøres på serveren. Derfor ikke den delte offline-setningen
-    // fra `rosterCopy`, som lover «koble til, så går det gjennom».
+    // banehandicap) kjøres på serveren. Egen setning som sier hva som venter
+    // (lagringen), ikke den delte offline-linja fra `rosterCopy`.
     case 'offline':
       return 'Du er uten nett. Koble til, så kan du lagre profilen din.';
     // Env-varen bakes inn ved bundling. Mangler den, er det en feil i bygget,

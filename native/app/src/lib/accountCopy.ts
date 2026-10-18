@@ -133,10 +133,9 @@ export function deleteBlockWebLink(reason: AccountDeleteFailure): WebLinkTarget 
  */
 export function describeDeleteFailure(reason: AccountDeleteFailure): string {
   switch (reason) {
-    // Ikke den delte offline-setningen fra rosterCopy: den lover «koble til, så
-    // går det gjennom», som er sant for en score i sync-køen og feil her.
-    // Sletting legges aldri i kø — den skjer på serveren, eller ikke i det hele
-    // tatt.
+    // Ikke den delte offline-linja fra rosterCopy: sletting har sin egen
+    // setning. Sletting legges aldri i kø — den skjer på serveren, eller ikke i
+    // det hele tatt.
     case 'offline':
       return 'Du er uten nett. Koble til, så kan du slette kontoen herfra.';
     // Env-varen bakes inn ved bundling. Mangler den, er det en feil i bygget,
