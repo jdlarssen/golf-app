@@ -2821,7 +2821,20 @@
           "skin": "skin",
           "poeng": "point",
           "seksjon": "section"
-        }
+        },
+        "formatKicker": "{game} · {mode}",
+        "titleFinal": "The settlement",
+        "titleSoFar": "The settlement so far",
+        "stakeLine": "{kr} kr per {unit} · {count} players",
+        "receiptKicker": "Receipt",
+        "receiptTitle": "Who pays whom",
+        "totalHeading": "Totals",
+        "paymentSentence": "{from} pays {to} {amount}",
+        "copyHeading": "Settlement: {game} ({mode})",
+        "copyButton": "Copy to the group chat",
+        "copied": "Copied!",
+        "copyFailed": "Couldn't copy. Try again.",
+        "disclaimer": "Tørny doesn't hold the money. You settle up yourselves."
       },
       "unknownPlayer": "(unknown)",
       "teamLabel": "Team {number}",

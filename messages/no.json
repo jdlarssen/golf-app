@@ -2821,7 +2821,20 @@
           "skin": "skin",
           "poeng": "poeng",
           "seksjon": "seksjon"
-        }
+        },
+        "formatKicker": "{game} · {mode}",
+        "titleFinal": "Oppgjøret",
+        "titleSoFar": "Oppgjøret så langt",
+        "stakeLine": "{kr} kr per {unit} · {count} spillere",
+        "receiptKicker": "Kvittering",
+        "receiptTitle": "Hvem betaler hvem",
+        "totalHeading": "Sluttsum",
+        "paymentSentence": "{from} betaler {to} {amount}",
+        "copyHeading": "Oppgjør: {game} ({mode})",
+        "copyButton": "Kopier til gruppechatten",
+        "copied": "Kopiert!",
+        "copyFailed": "Klarte ikke å kopiere. Prøv igjen.",
+        "disclaimer": "Tørny holder ikke på pengene. Dere gjør opp selv."
       },
       "unknownPlayer": "(ukjent)",
       "teamLabel": "Lag {number}",
