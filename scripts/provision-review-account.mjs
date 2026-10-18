@@ -374,7 +374,7 @@ function assertStrongPassword(password, passwordVar) {
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
     throw new Error(
-      `Passordet er ${password.length} tegn. Runbooken ber om minst ${MIN_PASSWORD_LENGTH} — ` +
+      `${passwordVar} er ${password.length} tegn. Runbooken ber om minst ${MIN_PASSWORD_LENGTH} — ` +
         'denne kontoen er den ene som kan angripes utenfra.\n' +
         PASSWORD_GENERATOR_HINT,
     );
@@ -433,6 +433,13 @@ async function main() {
   if (otherEmail && otherEmail === email) {
     throw new Error(
       `${store.emailVar} og ${otherStore.emailVar} er samme adresse. Hver butikk skal ha sin egen review-konto.`,
+    );
+  }
+  if (!otherEmail) {
+    // Første oppsett av den ene butikken før den andre finnes, er lovlig, men da
+    // kan ikke vakta over sjekke noe. Si det, så det ikke ser ut som en sjekk.
+    console.warn(
+      `⚠ ${otherStore.emailVar} er ikke satt, så skriptet kan ikke sjekke at de to butikkene har ulik adresse.`,
     );
   }
 
