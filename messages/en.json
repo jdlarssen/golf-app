@@ -1483,7 +1483,7 @@
     "detailFaqHeading": "Questions that keep coming up",
     "detailCtaHeading": "Tørny does this maths for you",
     "detailCtaBody": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. Try a demo round without logging in.",
-    "detailCtaBodyLaunched": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. It's free.",
+    "detailCtaBodyLaunched": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. The app is free.",
     "detailCtaButton": "Try the demo",
     "detailCtaButtonLaunched": "Get the app",
     "cardShowRules": "Show rules",
@@ -6882,7 +6882,8 @@
       "bodyLaunched": "The app is free, and you log in with a code by email. It takes under a minute.",
       "primaryCta": "Try the demo",
       "primaryCtaLaunched": "Get the app",
-      "secondaryCta": "Or get started for real"
+      "secondaryCta": "Or get started for real",
+      "secondaryCtaLaunched": "Or get started here on the web"
     },
     "footer": {
       "formats": "Formats",

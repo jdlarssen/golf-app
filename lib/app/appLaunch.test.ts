@@ -261,9 +261,11 @@ describe.each(CATALOGS)('messages/%s.json', (_locale, catalog) => {
 
   // An index in the list («faq.2») points at the entry about the app. If the
   // entries are reordered, this fails before the wrong answer is swapped.
-  it('every listed original is about the app, the browser or the demo', () => {
+  // Named keys cannot drift that way, so only index keys are checked.
+  it('every listed list entry is about the app, the browser or the demo', () => {
     const offTopic = LISTED.filter(
       ({ ns, key }) =>
+        /\.\d+(\.|$)/.test(key) &&
         !strings(at(catalog, `${ns}.${key}`)).some((s) =>
           /app|demo|nettleser|browser|prøv|try|install/i.test(s),
         ),

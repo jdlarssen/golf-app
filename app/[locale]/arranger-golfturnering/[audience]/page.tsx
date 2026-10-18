@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { AppCtaButton } from '@/components/app/AppCtaButton';
 import { BackLink } from '@/components/ui/BackLink';
-import { LinkButton } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -181,14 +181,13 @@ export default async function ArrangeAudiencePage({
             {t(appLaunchKey('arrangeGuide', 'ctaBody', appLaunchFlag()))}
           </p>
           <div className="mt-4">
-            <LinkButton
+            <AppCtaButton
               href="/demo"
               full
               data-testid="arrange-guide-audience-demo-cta"
-              appCta
             >
               {t(appLaunchKey('arrangeGuide', 'ctaPrimary', appLaunchFlag()))}
-            </LinkButton>
+            </AppCtaButton>
           </div>
         </section>
       </div>

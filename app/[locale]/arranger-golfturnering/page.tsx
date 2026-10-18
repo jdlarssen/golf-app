@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { AppCtaButton } from '@/components/app/AppCtaButton';
 import { BackLink } from '@/components/ui/BackLink';
 import { LinkButton } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
@@ -258,14 +259,13 @@ export default async function ArrangerGolfturneringPage() {
             {t(appLaunchKey('arrangeGuide', 'ctaBody', launch))}
           </p>
           <div className="mt-4 flex flex-col gap-3">
-            <LinkButton
+            <AppCtaButton
               href="/demo"
               full
               data-testid="arrange-guide-demo-cta"
-              appCta
             >
               {t(appLaunchKey('arrangeGuide', 'ctaPrimary', launch))}
-            </LinkButton>
+            </AppCtaButton>
             <LinkButton href="/" full variant="secondary">
               {t('ctaSecondary')}
             </LinkButton>

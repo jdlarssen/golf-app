@@ -122,6 +122,9 @@ export const APP_LAUNCH_SWAPS = {
     'faq.1': 'launched',
     'endCta.body': 'on',
     'endCta.primaryCta': 'on',
+    // «Eller kom i gang på ordentlig» under «Hent appen» made the app sound
+    // like the pretend option.
+    'endCta.secondaryCta': 'on',
     'footer.demo': 'on',
   },
   formatGuide: {

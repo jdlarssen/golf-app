@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { AppCtaButton } from '@/components/app/AppCtaButton';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { Card } from '@/components/ui/Card';
-import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -340,16 +340,15 @@ export default async function HvorforTornyPage({
             {t(appLaunchKey('whyTorny', 'endCta.body', launch))}
           </p>
           <div className="mt-6 flex flex-col gap-3">
-            <LinkButton
+            <AppCtaButton
               href="/demo"
               full
               data-testid="why-torny-demo-cta"
-              appCta
             >
               {t(appLaunchKey('whyTorny', 'endCta.primaryCta', launch))}
-            </LinkButton>
+            </AppCtaButton>
             <TextLink href="/login" className="justify-center">
-              {t('endCta.secondaryCta')}
+              {t(appLaunchKey('whyTorny', 'endCta.secondaryCta', launch))}
             </TextLink>
           </div>
         </section>
