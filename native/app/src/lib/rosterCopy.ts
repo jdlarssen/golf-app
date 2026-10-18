@@ -103,7 +103,39 @@ export const PLAYER_WITHDRAW = {
   bodyActive:
     'Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.',
   confirmCta: 'Trekk meg fra spillet',
+  /** Webbens `game.withdraw.errors.withdraw_failed`. */
+  failed: 'Klarte ikke å trekke deg fra spillet. Prøv igjen, eller si fra til arrangøren.',
+  /** Webbens `game.withdraw.captainHasTeamBody`: serverens nei for en kaptein med et lag som har takket ja. */
+  captainHasTeam:
+    'Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en av dem på lagsiden først. Da kan du trekke deg.',
 } as const;
+
+/**
+ * Hvorfor en spillers eget trekk ikke gikk (#1954 A1), med webbens ord der
+ * webben har dem: kapteinens nei får `captainHasTeamBody`, alle andre avslag
+ * fra ruta webbens generelle feiltekst (webben viser bare de to). Det bare
+ * appen kan møte — ingen nett, ingen sesjon, manglende adresse i bygget —
+ * har ingen webbtekst og får appens egne setninger.
+ */
+export function describePlayerWithdrawFailure(reason: SelfWithdrawFailure): string {
+  switch (reason) {
+    case 'captain_has_team':
+      return PLAYER_WITHDRAW.captainHasTeam;
+    case 'offline':
+    case 'network':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    case 'not_registered':
+    case 'not_found':
+    case 'game_locked':
+    case 'withdrawn_by_other':
+    case 'withdraw_failed':
+      return PLAYER_WITHDRAW.failed;
+  }
+}
 
 /** Webbens `game.withdraw.heading` med spillets navn satt inn. */
 export function playerWithdrawConfirmTitle(gameName: string): string {

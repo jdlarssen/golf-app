@@ -3,8 +3,8 @@
 // Nettsiden har lenka for alle påmeldte: før start for alle utenom cup-kamper,
 // under runden når formatet kjenner frafall. Regelen bor i
 // `lib/playerWithdraw.ts`; ordene er webbens (`PLAYER_WITHDRAW`). Selve trekket
-// går gjennom samme rute og feiltekster som arrangørens «Trekk meg»
-// (`data/withdrawSelf.ts`, `describeSelfWithdrawFailure`).
+// går gjennom samme rute som arrangørens «Trekk meg» (`data/withdrawSelf.ts`),
+// og feiltekstene er webbens (`describePlayerWithdrawFailure`).
 //
 // Slettes påmeldingen (`kept: false`, før start), har spilleren ikke noe å gjøre
 // på siden etterpå: da går appen til Hjem, som nettsiden gjør. Beholdes raden
@@ -15,7 +15,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { withdrawSelf } from '../../data/withdrawSelf';
 import type { PlayerWithdrawKind } from '../../lib/playerWithdraw';
 import {
-  describeSelfWithdrawFailure,
+  describePlayerWithdrawFailure,
   PLAYER_WITHDRAW,
   playerWithdrawConfirmTitle,
 } from '../../lib/rosterCopy';
@@ -44,7 +44,7 @@ export function PlayerWithdraw({
     try {
       const result = await withdrawSelf(gameId);
       if (!result.ok) {
-        setNotice(describeSelfWithdrawFailure(result.reason));
+        setNotice(describePlayerWithdrawFailure(result.reason));
       } else if (!result.kept) {
         // Påmeldingen er slettet: ingen side å bli på. Svaret avgjør, ikke
         // `kind` fra da lenka ble tegnet: runden kan ha startet imens.
@@ -52,7 +52,7 @@ export function PlayerWithdraw({
         return;
       }
     } catch {
-      setNotice(describeSelfWithdrawFailure('withdraw_failed'));
+      setNotice(describePlayerWithdrawFailure('withdraw_failed'));
     }
     await onChanged();
     setBusy(false);
