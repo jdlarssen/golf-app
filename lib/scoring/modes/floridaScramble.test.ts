@@ -152,3 +152,33 @@ describe('florida.compute — gjenbruker scramble-motoren', () => {
     expect(result.teams[0].holes[0].teamGross).toBe(4);
   });
 });
+
+// #2569 — ujevne lag. 80 % av snittet à 4 er lagret som 20 % av summen. Laget
+// på 3 med 10/20/30 har snitt 20 og får 16 (ikke 60 × 20 % = 12).
+describe('floridaScramble.compute — ujevne lag (#2569)', () => {
+  it('lag på 4 → 20, lag på 3 → 16 ved 80 % av snittet', () => {
+    const result = compute(
+      makeCtx({
+        players: [
+          { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 10 },
+          { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 20 },
+          { userId: 'a3', teamNumber: 1, flightNumber: 1, courseHandicap: 30 },
+          { userId: 'a4', teamNumber: 1, flightNumber: 1, courseHandicap: 40 },
+          { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 10 },
+          { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 20 },
+          { userId: 'b3', teamNumber: 2, flightNumber: 2, courseHandicap: 30 },
+        ],
+        holes: par4Holes(18),
+        scores: [],
+        modeConfig: {
+          kind: 'florida_scramble',
+          team_size: 4,
+          teams_count: 2,
+          team_handicap_pct: 20,
+        },
+      }),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 1)!.teamHandicap).toBe(20);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.teamHandicap).toBe(16);
+  });
+});

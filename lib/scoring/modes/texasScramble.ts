@@ -3,7 +3,9 @@
 //
 // Lag-handicap: NGF-aggregat. teamHandicap = round(combinedCourseHandicap ×
 // team_handicap_pct / 100). Default fra validator: 25 % for 2-mannslag,
-// 10 % for 4-mannslag. Allokeres per hull via vanlig SI-allokering.
+// 10 % for 4-mannslag. Allokeres per hull via vanlig SI-allokering. Et lag med
+// én spiller mindre enn `team_size` (#2569) får samme prosent av snittet:
+// `scrambleTeamHandicap` i `../teamHandicap.ts`.
 //
 // Lag-score-lagring: en lexicographically utvalgt «kaptein» (minste userId
 // per lag) eier scores-radene. Andre lag-medlemmer kan taste i UI; tap fra
@@ -17,6 +19,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
+import { scrambleTeamHandicap } from '../teamHandicap';
 import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
@@ -67,11 +70,17 @@ export function compute(ctx: ScoringContext): TexasScrambleResult {
  * `handicapPct` kan være fraksjonell (Ambrose 4-mann = 12,5 %); team-handicapet
  * rundes til heltall med `Math.round` for per-hull SI-allokering — konsistent
  * med all annen netto-scoring i Tørny.
+ *
+ * `handicapPct` er prosent av summen for `mode_config.team_size`. Lagets
+ * faktiske størrelse er medlemmene i konteksten, også et trukket medlem som
+ * blir stående (#2067), så et lag på 3 i et 4-mannsspill får samme prosent av
+ * snittet som de fulle lagene (#2569).
  */
 export function computeScramble(
   ctx: ScoringContext,
   handicapPct: number,
 ): TexasScrambleResult {
+  const configuredTeamSize = ctx.game.mode_config.team_size;
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
@@ -110,7 +119,12 @@ export function computeScramble(
         (sum, m) => sum + m.courseHandicap,
         0,
       );
-      const teamHandicap = Math.round((combinedCourseHandicap * handicapPct) / 100);
+      const teamHandicap = scrambleTeamHandicap(
+        combinedCourseHandicap,
+        handicapPct,
+        configuredTeamSize,
+        members.length,
+      );
 
       // Kapteinen eier scores-raden, og siden Texas-laget spiller én ball
       // bruker vi kapteinens teeGender som lag-referanse for par-display.

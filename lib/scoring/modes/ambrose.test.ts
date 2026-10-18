@@ -137,3 +137,38 @@ describe('ambrose.compute — gjenbruker scramble-motoren', () => {
     expect(result.teams[0].holes[0].teamGross).toBe(4);
   });
 });
+
+// #2569 — ujevne lag. Default à 4 er 12,5 % av summen = 50 % av snittet. Laget
+// på 3 får samme 50 % av snittet, altså nøyaktig Ambrose-regelen for 3
+// (`ambroseDefaultPct(3)` = 16,67 % av summen): CH 10/20/30 = 60 → 10.
+describe('ambrose.compute — ujevne lag (#2569)', () => {
+  it('lag på 3 i et 4-mannsspill får Ambrose-regelen for 3 (÷ 6)', () => {
+    const result = compute(
+      makeCtx({
+        players: [
+          { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 10 },
+          { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 20 },
+          { userId: 'a3', teamNumber: 1, flightNumber: 1, courseHandicap: 30 },
+          { userId: 'a4', teamNumber: 1, flightNumber: 1, courseHandicap: 40 },
+          { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 10 },
+          { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 20 },
+          { userId: 'b3', teamNumber: 2, flightNumber: 2, courseHandicap: 30 },
+        ],
+        holes: par4Holes(18),
+        scores: [],
+        modeConfig: {
+          kind: 'ambrose',
+          team_size: 4,
+          teams_count: 2,
+          team_handicap_pct: ambroseDefaultPct(4),
+        },
+      }),
+    );
+    // Lag på 4: 100 × 12,5 % = 12,5 → 13 (som før). Lag på 3: 60 ÷ 6 = 10.
+    expect(result.teams.find((t) => t.teamNumber === 1)!.teamHandicap).toBe(13);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.teamHandicap).toBe(
+      Math.round((60 * ambroseDefaultPct(3)) / 100),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 2)!.teamHandicap).toBe(10);
+  });
+});
