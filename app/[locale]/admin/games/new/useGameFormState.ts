@@ -1838,16 +1838,15 @@ export function useGameFormState({
     (pid) => allPlayers.find((p) => p.id === pid)?.pending === true,
   ).length;
 
-  // #2570: only guests chosen → nobody can log in and enter scores. The rule
-  // (and when it is a warning rather than a stop) lives in guestOnlyRoster;
-  // the publish actions read the same rule from the stored guest flag.
+  // #2570: only guests chosen → nobody can log in and enter scores, so the
+  // round stops (guestOnlyRoster); the publish actions read the same rule
+  // from the stored guest flag.
   // Editing a scheduled round publishes nothing, so the rule does not apply.
   const guestOnly = publishes
     ? guestOnlyRoster({
         playerIds: selectedPlayerIds,
         guestIds: new Set(allPlayers.filter((p) => p.isGuest === true).map((p) => p.id)),
         inviteEmailCount: inviteEmails.length,
-        rosterOptional: playersStepOptional,
       })
     : 'none';
 

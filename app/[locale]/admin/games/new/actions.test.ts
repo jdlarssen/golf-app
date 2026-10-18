@@ -940,8 +940,20 @@ describe('bare gjester ved publisering (#2570)', () => {
     expect(insertedGame()).toBeUndefined();
   });
 
+  // The owner's choice C: open signup stops too.
+  it('åpen påmelding og bare gjester: også only_guests', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
+    signIn('org-1');
+    await guestsAre(ALL_EIGHT);
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(
+      createAndPublishGame(fullPublishFormData({ registration_mode: 'open' })),
+    ).resolves.toEqual({ error: 'only_guests' });
+    expect(insertedGame()).toBeUndefined();
+  });
+
   it.each<[string, Record<string, string>]>([
-    ['åpen påmelding (andre kan melde seg på)', { registration_mode: 'open' }],
     ['én spiller med konto blant gjestene', {}],
   ])('%s: publiseres', async (label, overrides) => {
     supabaseMock = buildSupabaseMock([

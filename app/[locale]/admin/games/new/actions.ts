@@ -19,7 +19,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
-import { isClubTournament, rosterOptionalAtPublish } from '@/lib/games/registration';
+import { isClubTournament } from '@/lib/games/registration';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -129,11 +129,6 @@ async function createGameInternal(
       playerIds: payload.players.map((p) => p.user_id),
       guestIds,
       inviteEmailCount: parseInviteEmailList(formData.getAll('invite_email')).length,
-      rosterOptional: rosterOptionalAtPublish({
-        registrationMode: payload.registration_mode,
-        registrationType: payload.registration_type,
-        clubScoped,
-      }),
     }) === 'block'
   ) {
     return { error: 'only_guests' };
