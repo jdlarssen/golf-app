@@ -781,6 +781,7 @@ export type Database = {
       games: {
         Row: {
           auto_start_blocked_notified_at: string | null
+          ceremony_step: number | null
           course_id: string | null
           created_at: string
           created_by: string | null
@@ -826,6 +827,7 @@ export type Database = {
         }
         Insert: {
           auto_start_blocked_notified_at?: string | null
+          ceremony_step?: number | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -871,6 +873,7 @@ export type Database = {
         }
         Update: {
           auto_start_blocked_notified_at?: string | null
+          ceremony_step?: number | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
