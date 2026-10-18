@@ -3,7 +3,8 @@
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { suggestTeamAssignment, setPlayerTeam } from './flightActions';
-import { teamBuckets, type TeamPlayer } from '@/lib/games/teamScope';
+import { teamBuckets, teamSizeStatus, type TeamPlayer } from '@/lib/games/teamScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
@@ -15,6 +16,9 @@ type Props = {
   gameId: string;
   players: TeamPlayerDisplay[];
   teamSize: number;
+  gameMode: GameMode;
+  /** Champagne's «N beste», from `mode_config.shamble_count` (#2569). */
+  shambleCount?: number;
 };
 
 /**
@@ -26,8 +30,14 @@ type Props = {
  *      par som allerede har meldt seg på sammen.
  *   2. Per-spiller lag-velger — lag 1..N+1 (N = maks nødvendig + ett tomt lag
  *      så man kan splitte 3+3 i stedet for 4+2).
+ *
+ * #2569: et lag med én mindre enn lagstørrelsen får en linje om hva det betyr
+ * (handicapet regnes for dem som spiller, eller shamble teller sine beste), og
+ * et lag utenfor regelen får linja som sier hva som må til før start. Regelen
+ * er `teamSizeStatus` (startvakta leser den samme), så linjene står også etter
+ * selv-trekk og endringer fra appen.
  */
-export function LagSeksjon({ gameId, players, teamSize }: Props) {
+export function LagSeksjon({ gameId, players, teamSize, gameMode, shambleCount }: Props) {
   const t = useTranslations('admin.game.teams');
   const [isPending, startTransition] = useTransition();
 
@@ -56,24 +66,51 @@ export function LagSeksjon({ gameId, players, teamSize }: Props) {
             <div className="space-y-2">
               {Array.from(byTeam.entries())
                 .sort(([a], [b]) => a - b)
-                .map(([teamNum, members]) => (
-                  <div
-                    key={teamNum}
-                    data-testid={`team-card-${teamNum}`}
-                    data-members={members.map((m) => m.user_id).join(',')}
-                    className="rounded-xl border border-border px-3 py-2.5"
-                  >
-                    <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                      {t('teamOptionN', { n: teamNum })}{' '}
-                      <span className="tabular-nums text-muted">
-                        ({members.length}/{teamSize})
-                      </span>
-                    </p>
-                    <p className="text-sm text-text">
-                      {members.map((m) => m.displayName).join(', ')}
-                    </p>
-                  </div>
-                ))}
+                .map(([teamNum, members]) => {
+                  const count = members.length;
+                  const status = teamSizeStatus(gameMode, teamSize, count, shambleCount);
+                  const sizeLine =
+                    status === 'short'
+                      ? gameMode === 'shamble'
+                        ? t('teamShortShamble', { count })
+                        : t('teamShortHandicap', { count })
+                      : status === 'outside'
+                        ? count < teamSize
+                          ? t('teamTooFew', { count })
+                          : t('teamTooMany', { count, size: teamSize })
+                        : null;
+                  return (
+                    <div
+                      key={teamNum}
+                      data-testid={`team-card-${teamNum}`}
+                      data-members={members.map((m) => m.user_id).join(',')}
+                      data-size-status={status}
+                      className={`rounded-xl border px-3 py-2.5 ${
+                        status === 'outside' ? 'border-warning/30 bg-warning/5' : 'border-border'
+                      }`}
+                    >
+                      <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                        {t('teamOptionN', { n: teamNum })}{' '}
+                        <span className="tabular-nums text-muted">
+                          ({count}/{teamSize})
+                        </span>
+                      </p>
+                      <p className="text-sm text-text">
+                        {members.map((m) => m.displayName).join(', ')}
+                      </p>
+                      {sizeLine && (
+                        <p
+                          data-testid={`team-card-${teamNum}-size-line`}
+                          className={`mt-1 text-xs ${
+                            status === 'outside' ? 'text-warning-text' : 'text-muted'
+                          }`}
+                        >
+                          {sizeLine}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
 

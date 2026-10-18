@@ -132,3 +132,142 @@ describe('removePlayerFromGame', () => {
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
+
+// #2569 — forfall før start i et lag-format. Etter fjerningen leses laget på
+// nytt, og statusen sier hva som skjedde: laget spiller kortere (lovlig, med
+// handicapet regnet for de som er igjen), eller laget har for få og må fylles
+// før runden kan starte.
+describe('removePlayerFromGame — laget etter forfallet (#2569)', () => {
+  const TEXAS_AT_4 = {
+    kind: 'texas_scramble',
+    team_size: 4,
+    teams_count: 3,
+    team_handicap_pct: 20,
+  };
+  const remaining = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ user_id: `left-${i}` }));
+
+  it('Texas à 4: laget går fra 4 til 3 → player_removed_team_short med lag og antall', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: { status: 'scheduled', tournament_id: null, game_mode: 'texas_scramble', mode_config: TEXAS_AT_4 },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 2 }], error: null },
+      { data: remaining(3), error: null },
+    ]);
+
+    const url = await runRemove();
+
+    expect(url).toBe(`/games/${GAME_ID}/spillere?status=player_removed_team_short&team=2&count=3`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('Texas à 4: laget går fra 3 til 2 → player_removed_team_uneven', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: { status: 'scheduled', tournament_id: null, game_mode: 'texas_scramble', mode_config: TEXAS_AT_4 },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 2 }], error: null },
+      { data: remaining(2), error: null },
+    ]);
+
+    expect(await runRemove()).toBe(
+      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=2`,
+    );
+  });
+
+  it('shamble à 4: laget på 3 teller sine beste → player_removed_team_short_shamble', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: {
+          status: 'scheduled',
+          tournament_id: null,
+          game_mode: 'shamble',
+          mode_config: {
+            kind: 'shamble',
+            team_size: 4,
+            teams_count: 2,
+            shamble_variant: 'shamble',
+            shamble_count: 2,
+            shamble_scoring: 'net',
+          },
+        },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 1 }], error: null },
+      { data: remaining(3), error: null },
+    ]);
+
+    expect(await runRemove()).toBe(
+      `/games/${GAME_ID}/spillere?status=player_removed_team_short_shamble&team=1&count=3`,
+    );
+  });
+
+  it('best ball: paret står igjen med én → player_removed_team_uneven', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: {
+          status: 'scheduled',
+          tournament_id: null,
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+        },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 2 }], error: null },
+      { data: remaining(1), error: null },
+    ]);
+
+    expect(await runRemove()).toBe(
+      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=1`,
+    );
+  });
+
+  it('laget blir tomt → vanlig player_removed', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: { status: 'scheduled', tournament_id: null, game_mode: 'texas_scramble', mode_config: TEXAS_AT_4 },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 3 }], error: null },
+      { data: [], error: null },
+    ]);
+
+    expect(await runRemove()).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
+  });
+
+  it('solo-format → vanlig player_removed, og laget leses ikke', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: {
+          status: 'scheduled',
+          tournament_id: null,
+          game_mode: 'stableford',
+          mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: null }], error: null },
+    ]);
+
+    expect(await runRemove()).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
+    expect(
+      serverMock.__fromCalls.filter((c) => c.table === 'game_players' && c.method === 'select'),
+    ).toHaveLength(1);
+  });
+
+  it('lesingen av laget feiler → vanlig player_removed (fjerningen står)', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: { status: 'scheduled', tournament_id: null, game_mode: 'texas_scramble', mode_config: TEXAS_AT_4 },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 2 }], error: null },
+      { data: null, error: { message: 'boom' } },
+    ]);
+
+    expect(await runRemove()).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
+  });
+});

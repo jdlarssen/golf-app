@@ -7,6 +7,13 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from '@/lib/games/status';
+import {
+  expectedTeamSize,
+  modeRequiresTeamNumber,
+  readShambleCount,
+  teamSizeStatus,
+} from '@/lib/games/teamScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Creator/admin roster actions for the `/games/[id]/spillere` cockpit (#429).
@@ -33,6 +40,15 @@ function detailPathFor(isAdmin: boolean, gameId: string): string {
  * row leaves the side short and blocks auto-start (#1814). The organizer swaps
  * players on the cup instead. RLS enforces the same rule (0178) — the guard here
  * gives a predictable message instead of a silent 0-row delete.
+ *
+ * #2569: in a team format the team is read again after the delete, and the
+ * status says what the withdrawal did (`teamSizeStatus`): the team now plays
+ * one short, with its handicap worked out for those left
+ * (`player_removed_team_short`, or `_shamble` where each counts their own),
+ * or it has too few and must be filled before the round can start
+ * (`player_removed_team_uneven`; the start guard says `uneven_teams`). The
+ * read is best effort: when it fails, the removal still reports
+ * `player_removed`.
  */
 export async function removePlayerFromGame(
   gameId: string,
@@ -50,9 +66,14 @@ export async function removePlayerFromGame(
 
   const { data: game } = await supabase
     .from('games')
-    .select('status, tournament_id')
+    .select('status, tournament_id, game_mode, mode_config')
     .eq('id', gameId)
-    .single<{ status: GameStatus; tournament_id: string | null }>();
+    .single<{
+      status: GameStatus;
+      tournament_id: string | null;
+      game_mode: GameMode;
+      mode_config: unknown;
+    }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game.tournament_id !== null && !ctx.isAdmin) {
     redirect({ href: `${detailPath}?error=cup_roster_locked`, locale });
@@ -64,17 +85,19 @@ export async function removePlayerFromGame(
 
   // A delete RLS refuses matches 0 rows with error == null (trap 2), so the
   // affected rows are asserted rather than trusting the missing error.
+  let removedTeam: number | null = null;
   let removed = true;
   try {
-    expectAffected(
+    const [row] = expectAffected(
       await supabase
         .from('game_players')
         .delete()
         .eq('game_id', gameId)
         .eq('user_id', playerUserId)
-        .select('user_id'),
+        .select('user_id, team_number'),
       'removePlayerFromGame',
     );
+    removedTeam = row?.team_number ?? null;
   } catch (err) {
     console.error('[removePlayerFromGame] delete failed', err);
     removed = false;
@@ -84,7 +107,48 @@ export async function removePlayerFromGame(
   }
 
   expireGameCache(gameId);
-  redirect({ href: `${detailPath}?status=player_removed`, locale });
+  const teamStatus = await teamStatusAfterRemoval(supabase, gameId, game, removedTeam);
+  redirect({ href: `${detailPath}?${teamStatus ?? 'status=player_removed'}`, locale });
+}
+
+/**
+ * #2569: the status query for a team left short by a removal, or `null` for
+ * the plain `player_removed` (no team format, no team, an emptied team, a
+ * full team, or a failed read).
+ */
+async function teamStatusAfterRemoval(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  gameId: string,
+  game: { game_mode: GameMode; mode_config: unknown },
+  team: number | null,
+): Promise<string | null> {
+  if (team === null || !game.game_mode) return null;
+  const mode = game.game_mode;
+  const teamSize = expectedTeamSize(game.mode_config as { team_size?: number } | null);
+  if (!modeRequiresTeamNumber(mode, teamSize)) return null;
+
+  const { data, error } = await supabase
+    .from('game_players')
+    .select('user_id')
+    .eq('game_id', gameId)
+    .eq('team_number', team)
+    .is('withdrawn_at', null);
+  if (error || !data) {
+    console.error('[removePlayerFromGame] team re-read failed', { gameId, team, error });
+    return null;
+  }
+  const count = data.length;
+  if (count === 0) return null;
+
+  const status = teamSizeStatus(mode, teamSize, count, readShambleCount(game.mode_config));
+  if (status === 'full') return null;
+  const code =
+    status === 'outside'
+      ? 'player_removed_team_uneven'
+      : mode === 'shamble'
+        ? 'player_removed_team_short_shamble'
+        : 'player_removed_team_short';
+  return `status=${code}&team=${team}&count=${count}`;
 }
 
 /**

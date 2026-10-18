@@ -68,6 +68,7 @@ import {
 import {
   modeRequiresTeamNumber,
   expectedTeamSize,
+  readShambleCount,
   teamBuckets,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -104,8 +105,10 @@ type SearchParams = Promise<{
   error?: string | string[];
   pending?: string | string[];
   // #969: format + active count for the rotation_player_count error banner.
+  // #2569: `count` is also how many a removal left on `team`.
   mode?: string | string[];
   count?: string | string[];
+  team?: string | string[];
 }>;
 
 type GameRow = {
@@ -240,7 +243,11 @@ export default async function GameDetailPage({
     statusCode &&
     statusCode !== 'admin_approved' &&
     tBanners.has(statusCode as Parameters<typeof tBanners>[0])
-      ? tBanners(statusCode as Parameters<typeof tBanners>[0])
+      ? tBanners(statusCode as never, {
+          // #2569: the team a removal left short, and how many are left.
+          team: Number(first(sp.team) ?? 0),
+          count: Number(first(sp.count) ?? 0),
+        } as never)
       : undefined;
   const errorCode = first(sp.error);
   const errorMode = first(sp.mode);
@@ -380,6 +387,7 @@ export default async function GameDetailPage({
 
       <StatusBanners
         statusBanner={statusBanner}
+        statusTone={statusCode === 'player_removed_team_uneven' ? 'warning' : 'success'}
         errorMessage={shownErrorMessage}
         errorCode={errorCode}
       />
@@ -437,17 +445,20 @@ function TitleBlock({
 
 function StatusBanners({
   statusBanner,
+  statusTone = 'success',
   errorMessage,
   errorCode,
 }: {
   statusBanner: string | undefined;
+  /** #2569: a removal that left a team with too few is a warning. */
+  statusTone?: 'success' | 'warning';
   errorMessage: string | undefined;
   errorCode: string | undefined;
 }) {
   if (!statusBanner && !errorMessage) return null;
   return (
     <div className="mt-4 space-y-2">
-      {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
+      {statusBanner && <Banner tone={statusTone}>{statusBanner}</Banner>}
       {errorMessage && (
         // #2321: a published game whose e-mail invitations did not all
         // go out is a warning under the green «publisert» banner.
@@ -902,6 +913,8 @@ async function buildSections({
       <LagSeksjon
         gameId={gameId}
         teamSize={teamSize}
+        gameMode={game.game_mode}
+        shambleCount={readShambleCount(game.mode_config)}
         players={activePlayers.map((p) => ({
           user_id: p.user_id,
           displayName: displayName(p),

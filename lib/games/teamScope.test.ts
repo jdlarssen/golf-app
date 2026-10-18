@@ -8,6 +8,10 @@ import {
   suggestTeamSplit,
   flightForTeam,
   teamBuckets,
+  teamSizeStatus,
+  unevenTeamNumbers,
+  activeTeamCounts,
+  readShambleCount,
   type TeamPlayer,
 } from './teamScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -330,5 +334,45 @@ describe('teamBuckets', () => {
     expect(unassigned.map((x) => x.user_id)).toEqual(['u4']);
     expect(assigned.get(1)?.map((x) => x.displayName)).toEqual(['Navn u1', 'Navn u2']);
     expect(unassigned[0].displayName).toBe('Navn u4');
+  });
+});
+
+// ─── #2569: lagstørrelse mot regelen ─────────────────────────────────────────
+
+describe('teamSizeStatus (#2569)', () => {
+  it.each([
+    ['texas_scramble', 4, 4, undefined, 'full'],
+    ['texas_scramble', 4, 3, undefined, 'short'],
+    ['texas_scramble', 4, 2, undefined, 'outside'],
+    ['texas_scramble', 4, 5, undefined, 'outside'],
+    ['texas_scramble', 2, 1, undefined, 'outside'],
+    ['florida_scramble', 3, 2, undefined, 'outside'],
+    ['shamble', 4, 3, 3, 'short'],
+    ['best_ball', 2, 1, undefined, 'outside'],
+  ] as const)('%s à %i med %i (count %s) → %s', (mode, size, count, shambleCount, expected) => {
+    expect(teamSizeStatus(mode, size, count, shambleCount)).toBe(expected);
+  });
+});
+
+describe('unevenTeamNumbers / activeTeamCounts (#2569)', () => {
+  it('teller bare aktive spillere, og gir lagene utenfor regelen stigende', () => {
+    const players = [
+      p('a', 1), p('b', 1), p('c', 1), p('d', 1),
+      p('e', 2), p('f', 2), withdrawn('g', 2), withdrawn('h', 2),
+      p('i', 3), p('j', 3), p('k', 3),
+      p('loose'),
+    ];
+    expect([...activeTeamCounts(players)]).toEqual([[1, 4], [2, 2], [3, 3]]);
+    expect(unevenTeamNumbers('texas_scramble', 4, players)).toEqual([2]);
+  });
+
+  it('formater uten lag gir tom liste', () => {
+    expect(unevenTeamNumbers('wolf', 1, [p('a', 1), p('b', 2)])).toEqual([]);
+  });
+
+  it('readShambleCount leser bare et heltall', () => {
+    expect(readShambleCount({ shamble_count: 3 })).toBe(3);
+    expect(readShambleCount({ shamble_count: '3' })).toBeUndefined();
+    expect(readShambleCount(null)).toBeUndefined();
   });
 });
