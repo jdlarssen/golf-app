@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { AppCtaButton } from '@/components/app/AppCtaButton';
 import { BackLink } from '@/components/ui/BackLink';
-import { LinkButton } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
@@ -214,9 +214,9 @@ export default async function SpillformDetailPage({ params }: { params: Params }
           {tFg(appLaunchKey('formatGuide', 'detailCtaBody', appLaunchFlag()))}
         </p>
         <div className="mt-4">
-          <LinkButton href="/demo" full data-testid="format-demo-cta" appCta>
+          <AppCtaButton href="/demo" full data-testid="format-demo-cta">
             {tFg(appLaunchKey('formatGuide', 'detailCtaButton', appLaunchFlag()))}
-          </LinkButton>
+          </AppCtaButton>
         </div>
       </div>
     </AppShell>

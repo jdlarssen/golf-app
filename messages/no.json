@@ -1483,7 +1483,7 @@
     "detailFaqHeading": "Spørsmål som går igjen",
     "detailCtaHeading": "Tørny regner dette ut for deg",
     "detailCtaBody": "Velg bane og tee, så fordeler appen slagene etter stroke index og fører stillingen mens dere spiller. Prøv en demo-runde uten å logge inn.",
-    "detailCtaBodyLaunched": "Velg bane og tee, så fordeler appen slagene etter stroke index og fører stillingen mens dere spiller. Den er gratis.",
+    "detailCtaBodyLaunched": "Velg bane og tee, så fordeler appen slagene etter stroke index og fører stillingen mens dere spiller. Appen er gratis.",
     "detailCtaButton": "Prøv demoen",
     "detailCtaButtonLaunched": "Hent appen",
     "cardShowRules": "Vis regler",
@@ -6883,7 +6883,8 @@
       "bodyLaunched": "Appen er gratis, og du logger inn med en kode på e-post. Det tar under et minutt.",
       "primaryCta": "Prøv demoen",
       "primaryCtaLaunched": "Hent appen",
-      "secondaryCta": "Eller kom i gang på ordentlig"
+      "secondaryCta": "Eller kom i gang på ordentlig",
+      "secondaryCtaLaunched": "Eller kom i gang her på nettet"
     },
     "footer": {
       "formats": "Spillformater",

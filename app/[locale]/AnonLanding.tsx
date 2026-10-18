@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { AppCtaButton } from '@/components/app/AppCtaButton';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
@@ -169,16 +170,15 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           />
 
           <div className="flex flex-col gap-2.5 pt-6">
-            <LinkButton
+            <AppCtaButton
               href="/demo"
               full
               variant="onStrongGold"
               data-testid="anon-demo-cta"
               className="h-[54px] text-base"
-              appCta
             >
               {t(appLaunchKey('landing', 'hero.primaryCta', launch))}
-            </LinkButton>
+            </AppCtaButton>
             <LinkButton
               href="/login"
               full
