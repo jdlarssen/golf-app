@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { SponsorCredit } from '@/components/SponsorCredit';
 import type { GamePrize } from '@/lib/games/prizes';
+import { sideLabel } from '@/lib/games/sideLabel';
 
 /**
  * #1051: viser premiebordet til spillerne før (og under) runden — på spill-hjem
@@ -42,10 +43,6 @@ export function PremiebordCard({
     .filter((p) => p.category === 'closest_to_pin')
     .sort((a, b) => a.position - b.position);
   const sideCount = longestDrive.length + closestToPin.length;
-
-  function sideLabel(base: string, position: number, total: number): string {
-    return total > 1 ? `${base} ${position}` : base;
-  }
 
   const body = (
     <div className="space-y-4" data-testid="premiebord-card">
