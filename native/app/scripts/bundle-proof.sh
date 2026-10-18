@@ -52,8 +52,10 @@ ALLOW_LOCALHOST=(
   '^localhost:9999'
   # @supabase/supabase-js har en bar «localhost» (standardmålene for
   # trace-propagering, `getDefaultPropagationTargets`, se loopback-reglene i
-  # `bundle_proof`). Uten port er det literalen med en nabo etter; med port
-  # (`localhost:<siffer>`) må treffet stå på en av radene over (#2561).
+  # `bundle_proof`). Uten port godtas den her, så literalen ikke gir FAIL den
+  # dagen den står alene i tabellen. Med port (`localhost:<siffer>`) må treffet
+  # stå på en av radene over, og med skjema foran (`https://localhost`) stopper
+  # en egen regel i `bundle_proof` den (#2561).
   '^localhost([^:]|:[^0-9]|$)'
 )
 
@@ -249,7 +251,8 @@ bundle_proof() {
   # port (`:<siffer>`) er det en adresse fra miljøet, og den skal ikke finnes.
   # Havner literalen rett etter en streng som slutter på `://`, blir det FAIL
   # uten lekkasje: les konteksten. Den feilen er den trygge. «localhost» uten
-  # port står på lista over kjente strenger øverst (ALLOW_LOCALHOST).
+  # port står på lista over kjente strenger øverst (ALLOW_LOCALHOST), og med
+  # skjema foran stopper regelen rett under den.
   loopback_literal() {
     local label=$1 bare=$2 addr=$3 n m
     n=$(count_regex "$bare")
@@ -267,6 +270,18 @@ bundle_proof() {
   }
   loopback_literal '127.0.0.1' '(^|[^0-9.])127\.0\.0\.1([^0-9]|$)' '://127\.0\.0\.1|(^|[^0-9.])127\.0\.0\.1:[0-9]'
   loopback_literal '[::1]' '\[::1\]' '://\[::1\]|\[::1\]:[0-9]'
+
+  # «localhost» med skjema og uten port (`https://localhost`, `ws://localhost`):
+  # den bare literalen står på ALLOW_LOCALHOST, men med skjema foran er det en
+  # adresse fra miljøet. Med port avgjør listene under (kjente: Metro sin
+  # `:8081/assets/` og auth-js sin `:9999`).
+  n=$(count_regex '://localhost([^:]|:[^0-9]|$)')
+  if [ "$n" = "0" ]; then
+    pass "localhost med skjema og uten port: 0 treff"
+  else
+    fail "localhost med skjema og uten port: $n treff — en adresse fra miljøet er bakt inn"
+    ("$GREP" -aoE -- '.{0,30}://localhost([^:]|:[^0-9]|$).{0,50}' "$STR" || true) | utf8_trim | sed 's/^/      /' | tee -a "$OUT"
+  fi
 
   # Forbudt som HEL adresse: fire oktetter, ikke-siffer på begge sider. Hermes
   # pakker strenger uten skilletegn, så en adresse kan ligge inntil tall fra en

@@ -65,10 +65,12 @@ function proof(strings) {
     env: { ...process.env, TORNY_APP_ENV_DIR: tmp, EXPO_PUBLIC_SUPABASE_ANON_KEY: '' },
   });
   const lines = result.stdout.split('\n').filter(Boolean);
+  const verdicts = lines.filter((l) => /^(PASS|FAIL) {2}/.test(l));
   return {
     status: result.status,
     stderr: result.stderr,
-    verdicts: lines.filter((l) => /^(PASS|FAIL) {2}/.test(l)),
+    verdicts,
+    fails: verdicts.filter((l) => l.startsWith('FAIL')).length,
   };
 }
 
@@ -83,7 +85,13 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     ['[::1] med port', 'FAIL', ['host[::1]:3111/x'], 'loopback [::1]'],
     ['bar localhost (supabase-js)', 'PASS', ['set-thingslocalhostx-relay-error'], '«localhost»'],
     ['localhost med ukjent port', 'FAIL', ['set-thingslocalhost:3000/x'], '«localhost»'],
+    ['https://localhost uten port', 'FAIL', ['xxhttps://localhost/auth/v1'], 'localhost med skjema'],
+    ['ws://localhost uten port', 'FAIL', ['ws://localhostfoo'], 'localhost med skjema'],
+    ['localhost med skjema og kjent port (Metro, auth-js)', 'PASS', ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'], 'localhost med skjema'],
     ['192.168-adresse, som før', 'FAIL', ['ip192.168.1.20/x'], '192\\.168'],
+    ['10.0-adresse, som før', 'FAIL', ['ip10.0.0.5/x'], '10\\.0'],
+    ['IPv6 med skjema, som før', 'FAIL', ['http://[fe80::1]/x'], '://\\[[0-9a-fA-F'],
+    ['.local:, som før', 'FAIL', ['mac.local:8081'], '\\.local:'],
   ])('%s gir %s', (_name, verdict, strings, label) => {
     const r = proof(strings);
     expect(r.status).toBe(0);
@@ -97,6 +105,43 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     const line = r.verdicts.find((l) => l.includes('loopback 127.0.0.1'));
     expect(line).toContain('getDefaultPropagationTargets');
   });
+});
+
+// Hver sak over sjekker bare linja for sin egen regel. Her sjekkes hele
+// beviset: legges en lekket adresse til bibliotek-literalene, må antallet FAIL
+// øke, uansett hvilken regel som fanger den. Adressen står både alene og limt
+// inn mellom to nabo-strenger, fordi Hermes pakker uten skilletegn.
+describe('hele beviset: en lekket adresse gir alltid en FAIL til', () => {
+  const LIBRARY = [
+    'create-next-hint127.0.0.1x-relay-error',
+    'WebSocket closed - code[::1]isForwardRef',
+    'heighttp://localhost:8081/assets/x',
+    'Lighttp://localhost:9999__get',
+  ];
+  const LEAKS = [
+    'https://localhost',
+    'ws://localhost',
+    'http://localhost',
+    'http://localhost:3111',
+    'http://127.0.0.1:3111',
+    'wss://127.0.0.1',
+    'http://[::1]:3111',
+    'http://192.168.1.10:3111',
+    'exp://192.168.1.10:8081',
+  ];
+  let baseline;
+  beforeAll(() => {
+    baseline = proof(LIBRARY).fails;
+  });
+
+  it.each(LEAKS.flatMap((leak) => [[leak, 'alene', leak], [leak, 'limt inn', `abc${leak}Def`]]))(
+    '%s (%s)',
+    (_leak, _shape, string) => {
+      const r = proof([...LIBRARY, string]);
+      expect(r.status).toBe(0);
+      expect(r.fails).toBeGreaterThan(baseline);
+    },
+  );
 });
 
 describe('begge butikkbevisene bruker de samme bundel-reglene', () => {
