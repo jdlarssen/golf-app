@@ -137,6 +137,9 @@ native/app/scripts/store-build-proof.sh ~/.torny-native/dist/TornyNative-1.1.0-2
 
 Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. Skriver
 `…bevis.txt` — **lim den inn i issue-kommentaren** (P3 i kontrakten), sammen med merket.
+Kjører du beviset på nytt på et arkiv som allerede er lastet opp, gi en egen bevis-fil som
+andre argument (`store-build-proof.sh <arkiv> <ny-fil>`). Uten den skrives
+`<arkiv>.bevis.txt` over, og det er beviset for bygget som ble lastet opp.
 Exit 0 = alt PASS. Exit 1 = minst én FAIL. Exit 2 = feil bruk eller et verktøy mangler.
 Exit 3 = skriptet stoppet før slutten, og bevis-fila er ufullstendig. Alt annet enn 0
 stopper opplastingen.
@@ -152,7 +155,7 @@ stopper opplastingen.
 | | **FORBY** verdier fra appens egne `.env`-filer (#2208): hver `EXPO_PUBLIC_*`-verdi i `native/app/.env*` (eller i mappa `TORNY_APP_ENV_DIR` peker på) må ha 0 treff i bundelen. Verdier beviset krever (prod-adressen, web-adressen, anon-nøkkelen fra miljøet) og verdier under 12 tegn hoppes over med en linje om det. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien. Uten `.env`-filer blir det én linje om det, ingen FAIL. |
 | | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`. |
-| Entitlements (`codesign -d --entitlements`) | INGEN `com.apple.developer.associated-domains`, INGEN `aps-environment`. |
+| Entitlements (`codesign -d --entitlements`) | **KREV** `aps-environment` = `development` eller `production`, fordi appen har varsler på iOS (#2561). Verdien skrives i bevis-fila. Arkivet kreves ikke å ha `production`: pluginen skriver `development` når `mode` ikke er satt, og beviset kjører på arkivet før eksporten. Om det opplastede bygget har `production`, vises først når en TestFlight-installasjon får et varsel. **FORBY** `com.apple.developer.associated-domains`. Reglene står i `entitlements-proof.sh` og testes uten arkiv (`entitlements-proof.test.js`). |
 | App-ikonet (#1975) | **Kilden:** `native/app/assets/icon.png` må ha samme sha256 som `native/assets/appstore-1024.png`, og aldri Expo-malens hash (den nevnes ved navn i FAIL-en). **Arkivet:** `Assets.car` må ha `App-Icon-1024x1024@1x.png`, og `.app`-en `AppIcon60x60@2x.png`. To regler fordi `Assets.car` er kompilert — kildens byte finnes ikke igjen der, så arkiv-regelen beviser bare at *et* ikon ble kompilert inn. **`--upload-only` leser dagens kilde**, ikke den arkivet ble bygget fra; i den vanlige kjeden (prebuild → archive → bevis) henger de sammen. |
 
 Lista over kjente bibliotek-strenger ble seedet fra `expo export` av begge varianter
@@ -287,8 +290,12 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
 «Varsler og tema»).
 
 - **Pluginen** `expo-notifications` står i `app.json` for begge varianter. Den setter
-  `aps-environment` selv: `development` i bygget, og Xcode bytter til `production` i
-  arkivet til App Store. Ingen egen entitlement i `app.json`.
+  `aps-environment` selv, til `development` når `mode` ikke er satt (`app.json` setter den
+  ikke). Ingen egen entitlement i `app.json`. Med automatisk signering er arkivet
+  utviklingssignert og har trolig `development`. Om eksporten til App Store signerer om til
+  `production`, er ikke vist: eksporten laster rett opp, så ingen `.ipa` ligger igjen å
+  lese. Det vises når en TestFlight-installasjon får et varsel fra serveren. Beviset krever
+  derfor bare `development` eller `production` (se «Bevis-steget»).
 - **Apple:** App-ID-en må ha «Push Notifications» slått på i Apple Developer
   (Identifiers). `no.tornygolf.app` har det fra skallet. `no.tornygolf.dev` må få det
   før varsler kan testes mot staging.

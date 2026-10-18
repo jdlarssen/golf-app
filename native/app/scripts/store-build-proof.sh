@@ -39,7 +39,10 @@
 #     `TORNY_APP_ENV_DIR` peker regelen på en annen mappe (test og manuelle
 #     kjøringer); standard er appmappa skriptet ligger i.
 #  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption.
-#  3. Entitlements (`codesign`): INGEN associated domains, INGEN push.
+#  3. Entitlements (`codesign`): `aps-environment` må være `development` eller
+#     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
+#     Arkivet kreves ikke å ha `production`. INGEN associated domains. Reglene
+#     og hvorfor står i `entitlements-proof.sh`.
 #  4. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
 #     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
 #     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
@@ -64,6 +67,11 @@ BUNDLE_PROOF_LIB="$(dirname "${BASH_SOURCE[0]}")/bundle-proof.sh"
 [ -f "$BUNDLE_PROOF_LIB" ] || { printf '✗ Mangler %s (bundel-reglene)\n' "$BUNDLE_PROOF_LIB" >&2; exit 2; }
 # shellcheck source=bundle-proof.sh
 . "$BUNDLE_PROOF_LIB"
+# Entitlements-reglene (#2561) står i egen fil, så de kan testes uten arkiv.
+ENTITLEMENTS_PROOF_LIB="$(dirname "${BASH_SOURCE[0]}")/entitlements-proof.sh"
+[ -f "$ENTITLEMENTS_PROOF_LIB" ] || { printf '✗ Mangler %s (entitlements-reglene)\n' "$ENTITLEMENTS_PROOF_LIB" >&2; exit 2; }
+# shellcheck source=entitlements-proof.sh
+. "$ENTITLEMENTS_PROOF_LIB"
 PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
 SHASUM=/usr/bin/shasum
@@ -123,12 +131,13 @@ FAIL=0
 STR=''
 U16=''
 CAR=''
+ENT=''
 # Fail closed if the script stops early (#1983). After a `set -u` death, bash
 # 3.2 hands the EXIT trap `$?` = 0 and exits with the trap's status, so a crash
 # halfway through the rules exited 0 and the build script would have uploaded.
 # Only the last lines of the script set PROOF_FINISHED.
 PROOF_FINISHED=0
-trap 'rm -f "$STR" "$U16" "$CAR" 2>/dev/null || true
+trap 'rm -f "$STR" "$U16" "$CAR" "$ENT" 2>/dev/null || true
 if [ "$PROOF_FINISHED" != 1 ]; then
   printf "FAIL  beviset stoppet før slutten — bevis-fila er ufullstendig, ingenting er bevist\n" | tee -a "$OUT" >&2
   exit 3
@@ -181,16 +190,9 @@ if ent=$("$CODESIGN" -d --entitlements - --xml "$APP" 2>/dev/null); then
   else
     printf '%s\n' "$ent" | sed 's/^/    /' | tee -a "$OUT"
   fi
-  if printf '%s' "$ent" | "$GREP" -q 'com.apple.developer.associated-domains'; then
-    fail "associated-domains er satt — appen skal IKKE claime lenker (kontrakt §Research)"
-  else
-    pass "ingen com.apple.developer.associated-domains"
-  fi
-  if printf '%s' "$ent" | "$GREP" -q 'aps-environment'; then
-    fail "aps-environment er satt — native v1 har ingen push (N7)"
-  else
-    pass "ingen aps-environment"
-  fi
+  ENT=$(mktemp -t torny-bevis-ent)
+  printf '%s\n' "$ent" > "$ENT"
+  entitlements_rules "$ENT"
 else
   fail "kunne ikke lese entitlements — er appen signert?"
 fi
