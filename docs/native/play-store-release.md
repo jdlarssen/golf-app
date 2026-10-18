@@ -133,9 +133,12 @@ merkene på PC. Demoknappene heter «Hent appen» og går rett til butikken på 
    `lib/app/storeLinks.ts`) i en nettleser. Viser den ikke Tørny, venter du.
 2. Eieren setter `NEXT_PUBLIC_APP_LAUNCH` til `on` i Vercel (Production), og prod deployes på
    nytt.
-3. Sjekk i prod, på Android og på PC: de samme stedene som for `ios`, og i tillegg
-   demoknappen på forsiden (går til Google Play på Android, til `/demo` på PC) og `/demo`
-   (begge merkene, ingen demorunde).
+3. Sjekk i prod, på Android og på PC: de samme stedene som for `ios` (også hjem-banneret,
+   «Hvorfor Tørny» og guiden), og i tillegg:
+   - demoknappen på forsiden og på «Hvorfor Tørny»: heter «Hent appen» og går til Google
+     Play på Android, til `/demo` på PC;
+   - `/demo`: begge merkene, ingen demorunde;
+   - «Hvorfor Tørny»: lenka under «Hent appen» heter «Eller kom i gang her på nettet».
 4. Tilbake: sett `ios` igjen (eller `off`) og deploy på nytt.
 
 ## Feilsøking

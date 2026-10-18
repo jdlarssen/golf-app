@@ -268,10 +268,18 @@ trykker «Release This Version»:
 2. Eieren setter `NEXT_PUBLIC_APP_LAUNCH` til `ios` i Vercel → Settings → Environment
    Variables, bare for Production (instruksen etter malen i `docs/collaboration.md`).
 3. Ny deploy av prod: Deployments → siste prod-deploy → Redeploy.
-4. Sjekk i prod, på iPhone og på PC: forsiden (tillitslinja, FAQ-en, og `<title>` og FAQ-en
-   i JSON-LD-en i kildekoden), innloggingen fra en invitasjon (hintet under e-postfeltet),
-   spillsiden før start og påmeldingskvitteringen (kortet), live-tavla (linja under tavla) og
-   `/demo` (App Store-kortet over demoen på iPhone). App Store-merket åpner oppføringen.
+4. Sjekk i prod, på iPhone og på PC:
+   - forsiden: tillitslinja, FAQ-en, og `<title>` og FAQ-en i JSON-LD-en i kildekoden;
+   - innloggingen fra en invitasjon: hintet under e-postfeltet;
+   - spillsiden før start og påmeldingskvitteringen: kortet;
+   - live-tavla: linja under tavla;
+   - `/demo`: App Store-kortet over demoen på iPhone;
+   - Hjem, innlogget på iPhone: banneret heter «Hent Tørny-appen»;
+   - «Hvorfor Tørny»: svaret om å installere noe nevner App Store;
+   - guiden (`/arranger-golfturnering`): avsnittet om påmelding sier ikke «Ingen app å laste
+     ned».
+
+   App Store-merket åpner oppføringen.
 5. Tilbake: sett `off` og deploy på nytt. Bryteren endrer bare tekst og lenker, ingen data.
 
 ## Rollback
