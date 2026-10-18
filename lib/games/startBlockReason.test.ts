@@ -273,3 +273,120 @@ describe('startBlockReason — edges', () => {
     ).toBeNull();
   });
 });
+
+// #2569: a team may have team_size or one fewer where the format has that
+// size (`allowedTeamSizes`). «Fjern spiller», self-withdrawal, «bytt lag» and
+// the app's direct writes all bypass the publish validator, and no DB rule
+// counts team sizes, so the guard is the real gate.
+describe('startBlockReason — uneven teams (#2569)', () => {
+  function teams(...counts: number[]): StartBlockRosterRow[] {
+    return counts.flatMap((count, t) =>
+      Array.from({ length: count }, (_, m) =>
+        row(`t${t + 1}-${m}`, { teamNumber: t + 1, flightNumber: t + 1 }),
+      ),
+    );
+  }
+  const TEXAS_AT_4 = { kind: 'texas_scramble', team_size: 4, teams_count: 3, team_handicap_pct: 20 };
+
+  it.each<[string, StartBlockInput, StartBlock | null]>([
+    [
+      'Texas à 4 with 4/4/3 can start',
+      input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster: teams(4, 4, 3) }),
+      null,
+    ],
+    [
+      'Texas à 4 with 4/4/2 gives uneven_teams',
+      input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster: teams(4, 4, 2) }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'Texas à 4 with 3/3/3 after withdrawals can start: every team gets the same percent of its average',
+      input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster: teams(3, 3, 3) }),
+      null,
+    ],
+    [
+      'Texas à 4 with a team of 5 gives uneven_teams',
+      input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster: teams(4, 5) }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'best ball 2/2/1 gives uneven_teams (a pair left with one player)',
+      input({
+        gameMode: 'best_ball',
+        modeConfig: { kind: 'best_ball', team_size: 2, teams_count: 3 },
+        roster: teams(2, 2, 1),
+      }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'patsome 2/1 gives uneven_teams',
+      input({
+        gameMode: 'patsome',
+        modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+        roster: teams(2, 1),
+      }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'par-stableford 2/1 gives uneven_teams',
+      input({
+        gameMode: 'stableford',
+        modeConfig: { kind: 'stableford', team_size: 2, points_table: 'standard' },
+        roster: teams(2, 1),
+      }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'Florida à 3 with 3/2 gives uneven_teams (no team of 2 in Florida)',
+      input({
+        gameMode: 'florida_scramble',
+        modeConfig: { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+        roster: teams(3, 2),
+      }),
+      { reason: 'uneven_teams' },
+    ],
+    [
+      'champagne «3 beste» à 4 with 4/3 can start: the team of 3 counts all three',
+      input({
+        gameMode: 'shamble',
+        modeConfig: {
+          kind: 'shamble',
+          team_size: 4,
+          teams_count: 2,
+          shamble_variant: 'champagne',
+          shamble_count: 3,
+          shamble_scoring: 'net',
+        },
+        roster: teams(4, 3),
+      }),
+      null,
+    ],
+  ])('%s', (_label, given, expected) => {
+    expect(startBlockReason(given)).toEqual(expected);
+  });
+
+  it('counts active players only: two withdrawn on a team of 4 leave it at 2', () => {
+    const roster = teams(4, 4, 4).map((r) =>
+      r.userId === 't3-0' || r.userId === 't3-1' ? { ...r, withdrawnAt: WITHDREW_EARLY } : r,
+    );
+    expect(
+      startBlockReason(input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster })),
+    ).toEqual({ reason: 'uneven_teams' });
+  });
+
+  it('unassigned_teams comes first, then uneven_teams, then unassigned_flights', () => {
+    const roster = [...teams(4, 2), row('loose')];
+    expect(
+      startBlockReason(input({ gameMode: 'texas_scramble', modeConfig: TEXAS_AT_4, roster })),
+    ).toEqual({ reason: 'unassigned_teams' });
+  });
+
+  it('Wolf uses team_number as a rotation slot, not a team: never uneven_teams', () => {
+    const roster = ['u1', 'u2', 'u3'].map((id, i) => row(id, { teamNumber: i + 1 }));
+    expect(
+      startBlockReason(
+        input({ gameMode: 'wolf', modeConfig: { kind: 'wolf', team_size: 1 }, roster }),
+      ),
+    ).toBeNull();
+  });
+});

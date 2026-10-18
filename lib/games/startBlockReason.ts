@@ -6,7 +6,12 @@ import {
 } from '@/lib/cup/cupWithdrawalOutcome';
 import { getRatingForGender, type TeeBoxRatings, type TeeGender } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
-import { expectedTeamSize, needsTeamAssignment } from './teamScope';
+import {
+  expectedTeamSize,
+  needsTeamAssignment,
+  readShambleCount,
+  unevenTeamNumbers,
+} from './teamScope';
 import { needsFlightAssignment } from './flightScope';
 import { startPlayerCountRange, type StartCountMode } from './startPlayerCount';
 import type { StartBlockReason } from './startBlockReasons';
@@ -139,6 +144,15 @@ export function startBlockReason(input: StartBlockInput): StartBlock | null {
   // ingen lag: `needsTeamAssignment` returnerer false for begge.
   if (needsTeamAssignment(gameMode, teamSize, rows)) {
     return { reason: 'unassigned_teams' };
+  }
+
+  // #2569: every active team must have a size the format allows — team_size,
+  // or one fewer where the format has it (4/4/3 à 4). «Fjern spiller»,
+  // self-withdrawal, «bytt lag» and the app's direct writes all bypass the
+  // publish validator, and no DB rule counts team sizes, so this is the gate.
+  // The pair formats too: a pair left with one player stops the start.
+  if (unevenTeamNumbers(gameMode, teamSize, rows, readShambleCount(input.modeConfig)).length > 0) {
+    return { reason: 'uneven_teams' };
   }
 
   // Store solo-formater (>4 aktive, ikke wolf) må ha alle spillere fordelt i

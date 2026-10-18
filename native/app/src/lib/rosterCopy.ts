@@ -348,6 +348,9 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
       return 'Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.';
     case 'unassigned_teams':
       return 'Noen spillere står uten lag. Fordel dem på lag før du starter runden.';
+    // #2569: et lag utenfor lagstørrelsene formatet tillater (4/4/2 à 4).
+    case 'uneven_teams':
+      return 'Et lag har for få eller for mange spillere. Flytt spillere mellom lagene før du starter runden.';
     case 'unassigned_flights':
       return 'Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.';
     case 'rotation_player_count': {

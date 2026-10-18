@@ -755,9 +755,10 @@ export default async function GameHomePage({
     // #2204: what the organiser has to fix. Players learn it after tee-off
     // (E1), the creator also before.
     const structuralBlock = startBlock ?? creatorStartBlock;
-    // The four reasons without a banner of their own get one shared banner,
-    // in the inbox card's words. Not for the creator: their notice below
-    // says it precisely, and «the organiser has to fix it» is about them.
+    // The reasons without a banner of their own get one shared banner, in the
+    // inbox card's words (#2569: uneven teams among them). Not for the
+    // creator: their notice below says it precisely, and «the organiser has
+    // to fix it» is about them.
     const tInbox = await getTranslations('inbox');
     const sharedBlockReason =
       startBlock &&
@@ -765,7 +766,8 @@ export default async function GameHomePage({
       (startBlock.reason === 'rotation_player_count' ||
         startBlock.reason === 'tee_missing_rating' ||
         startBlock.reason === 'tee_missing' ||
-        startBlock.reason === 'no_players')
+        startBlock.reason === 'no_players' ||
+        startBlock.reason === 'uneven_teams')
         ? tInbox(`blockReasons.${startBlock.reason}`)
         : null;
 
@@ -1095,7 +1097,7 @@ export default async function GameHomePage({
           </div>
         )}
 
-        {/* #2204: the four reasons without a banner of their own, after tee-off */}
+        {/* #2204: the reasons without a banner of their own, after tee-off */}
         {sharedBlockReason && (
           <div className="mx-4 mt-3">
             <Banner tone="warning" testId="start-blocked-banner">

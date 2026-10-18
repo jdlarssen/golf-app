@@ -237,6 +237,7 @@
       "tee_missing_rating": "the tee is missing a rating",
       "rotation_player_count": "wrong number signed up for the format",
       "unassigned_teams": "some players don't have a team",
+      "uneven_teams": "a team has too few or too many players",
       "unassigned_flights": "some players don't have a flight",
       "default": "open the game to see what's missing"
     },
@@ -3826,6 +3827,7 @@
         "decided_by_withdrawal": "The match is already decided without play — someone withdrew. It cannot be started.",
         "unassigned_flights": "Players have not yet been assigned to flights. Assign flights before starting the game.",
         "unassigned_teams": "Some players don't have a team yet. Assign them to teams before you start the round.",
+        "uneven_teams": "A team has too few or too many players. Move players between the teams before you start the round.",
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
         "bad_flight": "Invalid flight number. Choose a positive flight from the list.",

@@ -20,6 +20,8 @@ export type StructuralBlockReason =
   | 'no_players'
   | 'incomplete_sides'
   | 'unassigned_teams'
+  // #2569: a team has a size the format does not allow (4/4/2 à 4).
+  | 'uneven_teams'
   | 'unassigned_flights'
   // #969 / #2071: a fixed-count format has too few or too many players.
   | 'rotation_player_count'
@@ -42,6 +44,7 @@ const BLOCK_REASON_KIND: Record<StartBlockReason, 'structural' | 'silent'> = {
   no_players: 'structural',
   incomplete_sides: 'structural',
   unassigned_teams: 'structural',
+  uneven_teams: 'structural',
   unassigned_flights: 'structural',
   rotation_player_count: 'structural',
   pending_players: 'structural',

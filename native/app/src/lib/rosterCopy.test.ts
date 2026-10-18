@@ -110,6 +110,7 @@ const START_REASON_MAP = {
   // #2214: a match in a finished cup never starts.
   cup_finished: 'cup_finished',
   unassigned_teams: 'unassigned_teams',
+  uneven_teams: 'uneven_teams',
   unassigned_flights: 'unassigned_flights',
   rotation_player_count: 'interpolated',
   db_players: 'db_players',
