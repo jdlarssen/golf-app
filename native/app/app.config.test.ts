@@ -32,6 +32,7 @@ import {
   STORE_IOS_BUILD_NUMBER,
   STORE_PUBLIC_ENV_KEYS,
   STORE_SIGNING_PLUGIN,
+  STORE_VERSION,
   STORE_WEB_BASE_URL,
   parseVariant,
   resolveConfig,
@@ -117,10 +118,10 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     const cfg = resolveConfig(base, STORE_ENV);
     expect(cfg.name).toBe('Tørny');
     expect(cfg.slug).toBe('torny');
-    expect(cfg.version).toBe('1.2.0');
+    expect(cfg.version).toBe(STORE_VERSION);
     expect(cfg.ios?.bundleIdentifier).toBe(STORE_BUNDLE_ID);
-    // Build-nummeret leses fra konstanten, ikke som literal: tallet bumpes
-    // før hver opplasting, og en kopi her ville bare vært et sted til å
+    // Versjonen og build-nummeret leses fra konstantene, ikke som literaler:
+    // tallene bumpes før opplasting, og en kopi her ville bare vært et sted til å
     // glemme. Selve VERDIEN er låst av snapshotet over — endrer den seg,
     // vises den i snapshot-diffen (#1988).
     expect(cfg.ios?.buildNumber).toBe(STORE_IOS_BUILD_NUMBER);
