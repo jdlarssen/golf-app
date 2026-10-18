@@ -104,10 +104,11 @@ describe('TeamSizeSelector', () => {
       screen.getByRole('radio', { name: /par/i }).getAttribute('aria-checked'),
     ).toBe('true');
     expect(
-      screen.getByRole('radio', { name: /tremannslag/i, description: /trenger 6/i }),
+      // #2569: 3/2 and 4/3 are games, so the fewest are 5 and 7.
+      screen.getByRole('radio', { name: /tremannslag/i, description: /trenger 5/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('radio', { name: /4-mann/i, description: /trenger 8/i }),
+      screen.getByRole('radio', { name: /4-mann/i, description: /trenger 7/i }),
     ).toBeDisabled();
 
     // Beslutning 3: det valgte kortet er aldri grått, heller ikke når

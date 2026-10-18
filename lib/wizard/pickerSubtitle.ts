@@ -6,7 +6,8 @@
  *  - two sides in the matchplay family → «1 mot 1» / «2 mot 2»
  *  - two sides elsewhere (best ball with four) → «2 lag à 2», as the artboard
  *  - teams → «4 lag à 2»; a choice of team sizes is settled by the chosen size
- *    when it divides the count, else only the count is shown
+ *    when it fits the count, else only the count is shown; teams one short
+ *    (#2569) → «2 lag à 4 og ett à 3»
  *  - Wolf → «1 mot 3»; solo and pot formats → only the count
  * A target the format does not fit shows only the count. No target (klubb) →
  * the format's «Velg …» line from `stepFourInstruction` (#2436), or only the
@@ -19,11 +20,13 @@
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
-import { formatLineup } from '@/lib/wizard/formatLineup';
+import { formatLineup, scrambleTeamsLineup } from '@/lib/wizard/formatLineup';
 
 export type PickerLineup =
   | { kind: 'versus'; perSide: number }
   | { kind: 'teams'; teams: number; size: number }
+  /** #2569: «2 lag à 4 og ett à 3». */
+  | { kind: 'unevenTeams'; full: number; size: number; short: number }
   | { kind: 'wolf'; opponents: number };
 
 /** The «Velg …» line on step 4, before translation (#2436). */
@@ -88,10 +91,15 @@ export function pickerSubtitle({
         : { kind: 'lineup', players, lineup: { kind: 'teams', teams: 2, size: lineup.perSide } };
     case 'teams':
       return { kind: 'lineup', players, lineup: { kind: 'teams', teams: lineup.teams, size: lineup.size } };
-    case 'teamSizes':
-      return lineup.sizes.includes(teamSize)
-        ? { kind: 'lineup', players, lineup: { kind: 'teams', teams: target / teamSize, size: teamSize } }
-        : { kind: 'players', players };
+    case 'unevenTeams':
+      return { kind: 'lineup', players, lineup };
+    case 'teamSizes': {
+      if (!lineup.sizes.includes(teamSize)) return { kind: 'players', players };
+      const chosen = scrambleTeamsLineup(gameMode, target, teamSize);
+      if (chosen.kind === 'unevenTeams') return { kind: 'lineup', players, lineup: chosen };
+      const teams = chosen.kind === 'teams' ? chosen.teams : 2;
+      return { kind: 'lineup', players, lineup: { kind: 'teams', teams, size: teamSize } };
+    }
     case 'wolf':
       return { kind: 'lineup', players, lineup: { kind: 'wolf', opponents: lineup.opponents } };
     case 'pot':

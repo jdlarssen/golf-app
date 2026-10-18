@@ -781,7 +781,14 @@ function WizardBody({
         ? t('formatGrid.lineup.sides', { count: lineup.perSide })
         : lineup.kind === 'teams'
           ? t('formatGrid.lineup.teams', { teams: lineup.teams, size: lineup.size })
-          : t('formatGrid.lineup.wolf', { opponents: lineup.opponents });
+          : lineup.kind === 'unevenTeams'
+            ? t('formatGrid.lineup.unevenTeams', {
+                full: lineup.full,
+                size: lineup.size,
+                short: lineup.short,
+                shortSize: lineup.size - 1,
+              })
+            : t('formatGrid.lineup.wolf', { opponents: lineup.opponents });
     return t('step4.pickerSubtitleLineup', { format, players, lineup: lineupText });
   }
   // Step 4's picker has its own subtitle; the teams screen and step 5 use

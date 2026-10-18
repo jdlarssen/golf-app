@@ -1451,8 +1451,9 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     expect(result.errorCode).toBe('too_many_players_for_mode');
   });
 
-  it('publish med 11 spillere på 3-mannslag → team_balance', () => {
-    const players = Array.from({ length: 11 }, (_, i) => ({
+  it('publish med 10 spillere på 3-mannslag (3/3/3/1) → team_balance', () => {
+    // #2569: 11 à 3 er 3/3/3/2 og publiseres nå. 10 gir et lag på én.
+    const players = Array.from({ length: 10 }, (_, i) => ({
       userId: `p${i}`,
       team: Math.floor(i / 3) + 1,
     }));
@@ -3827,14 +3828,14 @@ describe('buildGameInsertPayload — shamble (issue #285)', () => {
     expect(result.mode_config).toMatchObject({ shamble_count: 2 });
   });
 
-  it('publish: ubalansert lag (3 av 4) → team_balance', () => {
+  it('publish: ubalansert lag (2 av 4) → team_balance', () => {
+    // #2569: et lag på 3 i shamble à 4 er lov nå; et lag på 2 er det ikke.
     const result = buildGameInsertPayload(
       shambleFd({
         teamSize: '4',
         players: [
           { userId: 'a', team: 1 },
           { userId: 'b', team: 1 },
-          { userId: 'c', team: 1 },
           { userId: 'd', team: 2 },
           { userId: 'e', team: 2 },
           { userId: 'f', team: 2 },
@@ -4874,5 +4875,98 @@ describe('buildGameInsertPayload — min_tee_shots (#2580)', () => {
     );
     expect(result.errorCode).toBeUndefined();
     expect(result.mode_config).not.toHaveProperty('min_tee_shots');
+  });
+});
+
+// #2569 — ujevne lag. Et lag kan ha `team_size` eller én spiller mindre der
+// formatet har den størrelsen (`allowedTeamSizes`), og minst ett lag er fullt.
+describe('buildGameInsertPayload — ujevne lag (#2569)', () => {
+  const SIZE_FIELD = {
+    texas_scramble: 'texas_team_size',
+    ambrose: 'ambrose_team_size',
+    florida_scramble: 'florida_team_size',
+    shamble: 'shamble_team_size',
+  } as const;
+  const PCT_FIELD = {
+    texas_scramble: ['texas_team_handicap_pct', '20'],
+    ambrose: ['ambrose_team_handicap_pct', '12.5'],
+    florida_scramble: ['florida_team_handicap_pct', '20'],
+  } as const;
+
+  function scrambleFd(
+    mode: keyof typeof SIZE_FIELD,
+    teamSize: number,
+    teamCounts: number[],
+    extras: Record<string, string> = {},
+  ): FormData {
+    const base: Record<string, string> = {
+      name: 'Ujevne lag',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: mode,
+      [SIZE_FIELD[mode]]: String(teamSize),
+    };
+    if (mode !== 'shamble') {
+      const [field, pct] = PCT_FIELD[mode];
+      base[field] = String(Number(pct) * (4 / teamSize));
+    }
+    let i = 0;
+    teamCounts.forEach((count, t) => {
+      for (let m = 0; m < count; m++, i++) {
+        base[`player_${i}_id`] = `t${t + 1}-${m}`;
+        base[`player_${i}_team`] = String(t + 1);
+      }
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('Texas à 4 med 4/4/3 publiseres, lagstørrelsen står på 4', () => {
+    const result = buildGameInsertPayload(scrambleFd('texas_scramble', 4, [4, 4, 3]), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(11);
+    expect(result.mode_config).toMatchObject({ team_size: 4, teams_count: 3 });
+  });
+
+  it.each([
+    ['ambrose', 4, [4, 4, 3]],
+    ['florida_scramble', 4, [4, 3]],
+    ['shamble', 4, [4, 3, 3, 3]],
+    ['texas_scramble', 3, [3, 2]],
+  ] as const)('%s à %i med %j publiseres', (mode, size, counts) => {
+    expect(buildGameInsertPayload(scrambleFd(mode, size, [...counts]), 'publish').errorCode).toBeUndefined();
+  });
+
+  it.each([
+    ['texas_scramble', 4, [4, 4, 2], 'et lag på 2 i et 4-mannsspill'],
+    ['texas_scramble', 2, [2, 2, 1], 'et lag på én er ingen scramble'],
+    ['florida_scramble', 3, [3, 3, 2], 'lag på 2 finnes ikke i Florida'],
+    ['texas_scramble', 4, [3, 3], 'ingen fulle lag: det er et spill à 3'],
+    ['texas_scramble', 4, [4, 5], 'lag større enn team_size'],
+  ] as const)('%s à %i med %j → team_balance (%s)', (mode, size, counts, _why) => {
+    expect(buildGameInsertPayload(scrambleFd(mode, size, [...counts]), 'publish').errorCode).toBe(
+      'team_balance',
+    );
+  });
+
+  it('Champagne «3 beste» à 3 med 3/3/2 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      scrambleFd('shamble', 3, [3, 3, 2], { shamble_variant: 'champagne', shamble_count: '3' }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('Champagne «3 beste» à 4 med 4/3: laget på 3 teller alle tre, publiseres', () => {
+    const result = buildGameInsertPayload(
+      scrambleFd('shamble', 4, [4, 3], { shamble_variant: 'champagne', shamble_count: '3' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+  });
+
+  it('utkast sjekker ikke lagbalansen, som før', () => {
+    expect(
+      buildGameInsertPayload(scrambleFd('texas_scramble', 4, [4, 2]), 'draft').errorCode,
+    ).toBeUndefined();
   });
 });

@@ -48,7 +48,8 @@ describe('ShambleSetup', () => {
     // og sier hvorfor. Hva den sier per antall, eier teamSizeFit (Type A).
     rerender(<ShambleSetup variant="shamble" {...props} teamSize={3} playerCount={6} />);
     expect(screen.getByRole('radio', { name: /3-mannslag/i })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /4-mannslag.*trenger 8/i })).toBeDisabled();
+    // #2569: 4/3 is a game, so à 4 needs 7.
+    expect(screen.getByRole('radio', { name: /4-mannslag.*trenger 7/i })).toBeDisabled();
   });
 
   // #2570: the percentage field sits under «Tellemåte», only with Netto.

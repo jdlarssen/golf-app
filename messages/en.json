@@ -657,6 +657,7 @@
       "lineup": {
         "sides": "{count} vs {count}",
         "teams": "{teams, plural, one {one team of {size}} other {# teams of {size}}}",
+        "unevenTeams": "{full, plural, one {one team} other {# teams}} of {size} and {short, plural, one {one} other {#}} of {shortSize}",
         "teamSizesTwo": "{first} or {second} per team",
         "teamSizesRange": "{min}–{max} per team",
         "wolf": "1 vs {opponents}",
@@ -1246,7 +1247,9 @@
         "minCountPlayers": "at least {count} players",
         "teamOdd2": "even number of players (teams of 2)",
         "teamOdd4": "number of players divisible by 4 (teams of 4)",
+        "teamOdd4Short": "number of players that splits into teams of 4 and 3 (teams of 4)",
         "teamOdd3": "number of players divisible by 3 (teams of 3)",
+        "teamOdd3Short": "number of players that splits into teams of 3 and 2 (teams of 3)",
         "teamAssign2": "team assignment (teams of 2)",
         "teamAssign4": "team assignment (teams of 4)",
         "teamAssign3": "team assignment (teams of 3)",

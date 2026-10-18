@@ -167,6 +167,79 @@ export function teamSizesForMode(mode: GameMode): readonly number[] {
 }
 
 /**
+ * The sizes one team may have in a game (#2569): the chosen size, and in the
+ * scramble family one fewer as well — an 11-player Texas à 4 is 4/4/3, and a
+ * late withdrawal leaves 4/4/4/3. Only sizes the format itself supports
+ * (`TEAM_FORMAT_TEAM_SIZES`): Texas and Ambrose à 2 stay pairs (a team of one
+ * is no scramble), Florida and shamble à 3 stay threes (no team of 2 there).
+ * In champagne a team must have at least `shambleCount` players, since it
+ * counts its best N on every hole. Every other format: the size alone (best
+ * ball, patsome and par-stableford play in pairs).
+ *
+ * How many teams may be short has no limit, as long as every team is in the
+ * set: 4/3/3/3 is as valid as 4/4/4/3. The validators (`gamePayload.ts`), the
+ * wizard (`validateTeamSizeFormat`), the start guard (`startBlockReason`), the
+ * count functions below and the Lag section all read it from here.
+ */
+export function allowedTeamSizes(
+  mode: GameMode,
+  teamSize: number,
+  shambleCount?: number,
+): ReadonlySet<number> {
+  const supported = teamSizesForMode(mode);
+  if (!supported.includes(teamSize)) return new Set([teamSize]);
+  const shorter = teamSize - 1;
+  const shortAllowed =
+    supported.includes(shorter) &&
+    (mode !== 'shamble' || shambleCount === undefined || shorter >= shambleCount);
+  return new Set(shortAllowed ? [teamSize, shorter] : [teamSize]);
+}
+
+/**
+ * How `n` players split into teams of `teamSize` (#2569): `ceil(n / teamSize)`
+ * teams, the full ones first and the rest one short, or `null` when that
+ * leaves a team outside `allowed` or no full team at all. 11 à 4 → [4, 4, 3],
+ * 10 à 4 → [4, 3, 3], 9 à 4 → null (3/3/3 is a game à 3), 5 à 4 → null.
+ * With only the size itself allowed, `n` must divide evenly, as before.
+ */
+export function splitIntoTeams(
+  n: number,
+  teamSize: number,
+  allowed: ReadonlySet<number>,
+): number[] | null {
+  if (!Number.isInteger(n) || n < 1) return null;
+  if (!Number.isInteger(teamSize) || teamSize < 1) return null;
+  const teams = Math.ceil(n / teamSize);
+  const short = teams * teamSize - n;
+  if (short > 0 && (!allowed.has(teamSize - 1) || short > teams - 1)) return null;
+  return [
+    ...Array<number>(teams - short).fill(teamSize),
+    ...Array<number>(short).fill(teamSize - 1),
+  ];
+}
+
+/**
+ * A roster's team sizes against the rule (#2569): is every team in `allowed`,
+ * and is at least one team full? Publishing and the wizard need both; the
+ * start guard only the first, so a game whose withdrawals left 3/3/3 à 4 can
+ * still start (each team gets the same percent of its average). Empty teams
+ * are the caller's to leave out.
+ */
+export function teamRosterBalance(
+  teamCounts: Iterable<number>,
+  teamSize: number,
+  allowed: ReadonlySet<number>,
+): { allAllowed: boolean; hasFullTeam: boolean } {
+  let allAllowed = true;
+  let hasFullTeam = false;
+  for (const count of teamCounts) {
+    if (!allowed.has(count)) allAllowed = false;
+    if (count === teamSize) hasFullTeam = true;
+  }
+  return { allAllowed, hasFullTeam };
+}
+
+/**
  * Stableford in the team size picker (#2453): solo, or 4BBB in pairs. One
  * player or one pair is already a game, so the minimum is one team. Kept out
  * of `TEAM_FORMAT_TEAM_SIZES` on purpose: that table also drives the grid,
@@ -192,21 +265,33 @@ export function selectableTeamSizes(mode: GameMode): SelectableTeamSizes {
 }
 
 /**
- * The selectable team sizes that split `n` players into whole teams: the
- * size goes into `n`, and gives between the format's minimum
+ * The selectable team sizes that split `n` players into teams: `n` splits at
+ * the size (`splitIntoTeams` with `allowedTeamSizes`, so the scramble family
+ * may have teams one short, #2569), into between the format's minimum
  * (`selectableTeamSizes`) and `maxTeamsForSize(size)` teams. Ascending. Empty
  * outside the scramble and Stableford families, for `n = 0`, and above the cap
  * (Stableford solo with more than 40: the picker stops at 40, so the UI never
- * gets there). The format cards read it for their line-up (#2260): «2 eller 4
- * per lag» for Texas with 8.
+ * gets there). The format cards read it for their line-up (#2260): «3 eller 4
+ * per lag» for Texas with 11.
  */
 export function teamSizesThatFit(mode: GameMode, n: number): number[] {
   const { sizes, minTeams } = selectableTeamSizes(mode);
   return sizes.filter((size) => {
-    if (n % size !== 0) return false;
-    const teams = n / size;
-    return teams >= minTeams && teams <= maxTeamsForSize(size);
+    const split = splitIntoTeams(n, size, allowedTeamSizes(mode, size));
+    return split !== null && split.length >= minTeams && split.length <= maxTeamsForSize(size);
   });
+}
+
+/**
+ * The fewest players a team size card takes (#2453, #2569): the format's
+ * minimum teams, all full except the last ones, which may be one short where
+ * the format allows it. Texas à 4 → 7 (4/3), à 3 → 5 (3/2), à 2 → 4, Florida
+ * à 3 → 6, 4BBB → 2.
+ */
+function fewestPlayersForSize(mode: GameMode, size: number): number {
+  const { minTeams } = selectableTeamSizes(mode);
+  const shortTeams = allowedTeamSizes(mode, size).has(size - 1) ? minTeams - 1 : 0;
+  return minTeams * size - shortTeams;
 }
 
 /** What one team size card says for the count (#2453). */
@@ -219,17 +304,17 @@ export type TeamSizeFit =
 
 /**
  * Whether one team size card can be picked at `count` players (#2453). It
- * fits when it is one of `teamSizesThatFit`. Otherwise it needs the format's
- * minimum teams × the size (Texas à 3 → 6, à 4 → 8, 4BBB → 2) when the count
- * is below that, and does not fit the count when it is at or above it. No
- * count, or no size that fits, makes every card fit, so the picker shows
- * everything as before.
+ * fits when it is one of `teamSizesThatFit`. Otherwise it needs the fewest
+ * players the size takes (`fewestPlayersForSize`: Texas à 3 → 5, à 4 → 7,
+ * 4BBB → 2) when the count is below that, and does not fit the count when it
+ * is at or above it. No count, or no size that fits, makes every card fit, so
+ * the picker shows everything as before.
  */
 export function teamSizeFit(mode: GameMode, size: number, count: number | null): TeamSizeFit {
   if (count === null) return { kind: 'fits' };
   const fitting = teamSizesThatFit(mode, count);
   if (fitting.length === 0 || fitting.includes(size)) return { kind: 'fits' };
-  const needed = selectableTeamSizes(mode).minTeams * size;
+  const needed = fewestPlayersForSize(mode, size);
   return count < needed ? { kind: 'needs', players: needed } : { kind: 'notWith', count };
 }
 
@@ -253,14 +338,15 @@ export function startTeamSize(mode: GameMode, count: number | null, preferred: n
 }
 
 /**
- * Kan `n` spillere fordeles på hele lag i dette formatet? Sant når minst én
- * støttet lagstørrelse går opp (`teamSizesThatFit`, så regelen bor ett sted).
+ * Kan `n` spillere fordeles på lag i dette formatet? Sant når minst én
+ * støttet lagstørrelse går opp (`teamSizesThatFit`, så regelen bor ett sted),
+ * også med lag på én spiller mindre der formatet har den størrelsen (#2569).
  * Kalles bare for scramble-familien. Stableford svarer også sant her for
  * 1–40 (#2453), men `fitsPlayerCount` har sin egen regel for Stableford.
  *
- * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 10 ✓ (5 lag à 2),
- * 39 ✓ (13 lag à 3), 40 ✓ (20 par / 10 lag à 4), 41 ✗ (går ikke opp),
- * 42 ✗ (over taket).
+ * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 5 ✓ (3/2), 10 ✓
+ * (5 lag à 2), 11 ✓ (4/4/3), 39 ✓ (13 lag à 3), 40 ✓ (20 par / 10 lag à 4),
+ * 41 ✗ (over taket i alle størrelser).
  */
 export function fitsTeamFormat(mode: GameMode, n: number): boolean {
   return teamSizesThatFit(mode, n).length > 0;
@@ -366,7 +452,9 @@ export function isRosterFull(cap: number | null, activeRosterCount: number): boo
 /**
  * How many teams «Trekk tilfeldig» deals `n` selected players into at the
  * chosen `teamSize`, or `null` when the draw must refuse (#2012): every team
- * full, no leftover, and no more teams than the cap allows at that size.
+ * in `allowed` (`splitIntoTeams`; the scramble family passes
+ * `allowedTeamSizes`, so 11 à 4 deals 4/4/3, #2569), and no more teams than
+ * the cap allows at that size. Without `allowed`, every team is full.
  *
  * `fitsTeamFormat` cannot answer this. It asks whether ANY supported size
  * fits, so 12 players pass through size 3 even when the organiser has
@@ -375,9 +463,13 @@ export function isRosterFull(cap: number | null, activeRosterCount: number): boo
  * odd count no pair draw can deal, and it demands two teams in the scramble
  * family, while best ball has always let a single pair be drawn.
  */
-export function randomDrawTeamCount(teamSize: number, n: number): number | null {
+export function randomDrawTeamCount(
+  teamSize: number,
+  n: number,
+  allowed: ReadonlySet<number> = new Set([teamSize]),
+): number | null {
   if (!Number.isInteger(teamSize) || teamSize < 2) return null;
-  if (!Number.isInteger(n) || n % teamSize !== 0) return null;
-  const teams = n / teamSize;
-  return teams >= 1 && teams <= maxTeamsForSize(teamSize) ? teams : null;
+  const split = splitIntoTeams(n, teamSize, allowed);
+  if (split === null) return null;
+  return split.length <= maxTeamsForSize(teamSize) ? split.length : null;
 }

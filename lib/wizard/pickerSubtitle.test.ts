@@ -34,9 +34,20 @@ describe('pickerSubtitle', () => {
       { kind: 'lineup', players: 8, lineup: { kind: 'teams', teams: 4, size: 2 } },
     ],
     [
-      'texas 8 with a team size that does not divide is only the count',
+      // #2569: 8 à 3 is 3/3/2 now, so it has a line-up of its own.
+      'texas 8 with teams of 3 is two teams of 3 and one of 2',
       { gameMode: 'texas_scramble', target: 8, teamSize: 3 },
-      { kind: 'players', players: 8 },
+      { kind: 'lineup', players: 8, lineup: { kind: 'unevenTeams', full: 2, size: 3, short: 1 } },
+    ],
+    [
+      'texas 11 with teams of 4 is two teams of 4 and one of 3 (#2569)',
+      { gameMode: 'texas_scramble', target: 11, teamSize: 4 },
+      { kind: 'lineup', players: 11, lineup: { kind: 'unevenTeams', full: 2, size: 4, short: 1 } },
+    ],
+    [
+      'texas 11 with a team size that does not split is only the count',
+      { gameMode: 'texas_scramble', target: 11, teamSize: 2 },
+      { kind: 'players', players: 11 },
     ],
     [
       'wolf 4 is 1 against 3',

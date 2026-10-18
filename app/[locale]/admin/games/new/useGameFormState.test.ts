@@ -400,13 +400,39 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
     }
   });
 
+  // #2569: the draw deals teams one short where the format has them, full
+  // teams first, and the wizard accepts what it dealt.
+  it.each([
+    ['texas_scramble', 4, 11, [4, 4, 3]],
+    ['texas_scramble', 4, 10, [4, 3, 3]],
+    ['texas_scramble', 3, 5, [3, 2]],
+    ['florida_scramble', 4, 7, [4, 3]],
+    ['shamble', 4, 13, [4, 3, 3, 3]],
+  ] as const)('%s à %i med %i spillere → lag på %j (#2569)', (mode, teamSize, count, sizes) => {
+    const result = setupDraw(mode, teamSize, count);
+    expect(result.current.canDrawRandomTeams).toBe(true);
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    expect(sizes.map((_, i) => result.current.playersByTeam[i + 1].length)).toEqual(sizes);
+    expect(Object.values(result.current.teamByPlayer)).toHaveLength(count);
+    expect(result.current.playersValidForMode).toBe(true);
+    expect(result.current.orderedPayload).toHaveLength(count);
+  });
+
+  it('Florida à 3 med 10 spillere → knappen er av (ingen lag på 2 i Florida)', () => {
+    const result = setupDraw('florida_scramble', 3, 10);
+    expect(result.current.canDrawRandomTeams).toBe(false);
+  });
+
   it('44 spillere à 4 er over taket → knappen er av', () => {
     const result = setupDraw('texas_scramble', 4, 44);
     expect(result.current.canDrawRandomTeams).toBe(false);
   });
 
-  it('10 spillere à 3 går ikke opp → knappen er av og ingen lag endres', () => {
-    const result = setupDraw('texas_scramble', 3, 10);
+  // #2569: 10 à 3 is 3/3/2/2 now. 9 à 4 would be 3/3/3, with no full team.
+  it('9 spillere à 4 går ikke opp → knappen er av og ingen lag endres', () => {
+    const result = setupDraw('texas_scramble', 4, 9);
     expect(result.current.canDrawRandomTeams).toBe(false);
 
     act(() => {
@@ -417,8 +443,9 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
     expect(result.current.flightByPlayer).toEqual({});
   });
 
-  it('15 trukket à 3, så byttet til à 4 → knappen er av, ingen kast og lagene står', () => {
-    const result = setupDraw('texas_scramble', 3, 15);
+  // #2569: 15 à 4 is 4/4/4/3 now; 9 à 4 still does not split.
+  it('9 trukket à 3, så byttet til à 4 → knappen er av, ingen kast og lagene står', () => {
+    const result = setupDraw('texas_scramble', 3, 9);
     act(() => {
       result.current.drawRandomTeams();
     });
@@ -1322,6 +1349,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas valid: 4 spillere, 2 fulle lag à 2, integer pct=50', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
         selectedPlayerIds: ['a', 'b', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
@@ -1340,6 +1368,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: odde antall spillere (3 valgt, teamSize=2)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a', 'b'], ['c']),
         selectedPlayerIds: ['a', 'b', 'c'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c']),
@@ -1353,6 +1382,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: under-lag (1 spiller < teamSize=2)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a']),
         selectedPlayerIds: ['a'],
         teamByPlayer: makeTeamByPlayer(['a']),
@@ -1366,6 +1396,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: ubalansert lag (lag 1 = 1 spiller av 2)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a'], ['c', 'd']),
         selectedPlayerIds: ['a', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a'], ['c', 'd']),
@@ -1379,6 +1410,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: uvalgt spiller (mangler teamByPlayer-inngang)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a', 'b'], []),
         selectedPlayerIds: ['a', 'b', 'x'],
         teamByPlayer: makeTeamByPlayer(['a', 'b']),
@@ -1392,6 +1424,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: fraksjonell pct=12.5 (krever heltall)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
         selectedPlayerIds: ['a', 'b', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
@@ -1405,6 +1438,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Texas ugyldig: pct utenfor grense (>100)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
         selectedPlayerIds: ['a', 'b', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
@@ -1420,6 +1454,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Ambrose valid: 4 spillere, 2 lag à 2, fraksjonell pct=12.5', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'ambrose',
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
         selectedPlayerIds: ['a', 'b', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
@@ -1438,6 +1473,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Ambrose ugyldig: pct=NaN', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'ambrose',
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
         selectedPlayerIds: ['a', 'b', 'c', 'd'],
         teamByPlayer: makeTeamByPlayer(['a', 'b'], ['c', 'd']),
@@ -1451,6 +1487,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Florida valid: 6 spillere, 2 lag à 3, pct=15', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'florida_scramble',
         playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
         selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
         teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
@@ -1470,6 +1507,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
     // Florida and Ambrose share requireIntegerPct=false — 12.5 must be VALID
     expect(
       validateTeamSizeFormat({
+        mode: 'florida_scramble',
         playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
         selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
         teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
@@ -1485,6 +1523,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Shamble valid: 6 spillere, 2 lag à 3, ingen pct-sjekk', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'shamble',
         playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
         selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f'],
         teamByPlayer: makeTeamByPlayer(['a', 'b', 'c'], ['d', 'e', 'f']),
@@ -1503,6 +1542,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Shamble valid: 8 spillere, 2 lag à 4', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'shamble',
         playersByTeam: makeTeams(['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']),
         selectedPlayerIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
         teamByPlayer: makeTeamByPlayer(['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']),
@@ -1516,6 +1556,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('Shamble ugyldig: berre 2 spillere valgt (< teamSize=3)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'shamble',
         playersByTeam: makeTeams(['a', 'b']),
         selectedPlayerIds: ['a', 'b'],
         teamByPlayer: makeTeamByPlayer(['a', 'b']),
@@ -1531,6 +1572,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
   it('hasAtLeastOneTeam=false når ingen lag er fullt fylt (tomme lag)', () => {
     expect(
       validateTeamSizeFormat({
+        mode: 'texas_scramble',
         playersByTeam: makeTeams([], [], [], []),
         selectedPlayerIds: [],
         teamByPlayer: {},
@@ -1539,6 +1581,70 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
         requireIntegerPct: true,
       }),
     ).toMatchObject({ hasAtLeastOneTeam: false, playersValid: false });
+  });
+});
+
+// #2569 — ujevne lag fra start: veiviseren og redigeringen godtar et lag med
+// én spiller mindre der formatet har den størrelsen, og krever minst ett
+// fullt lag. Regelen er `allowedTeamSizes`; samsvaret med serveren låses i
+// teamBalanceAgreement.test.ts.
+describe('validateTeamSizeFormat — ujevne lag (#2569)', () => {
+  function roster(...teams: number[]) {
+    const playersByTeam: Record<number, string[]> = {};
+    const teamByPlayer: Record<string, number> = {};
+    const selectedPlayerIds: string[] = [];
+    teams.forEach((count, t) => {
+      playersByTeam[t + 1] = [];
+      for (let m = 0; m < count; m++) {
+        const id = `t${t + 1}-${m}`;
+        playersByTeam[t + 1].push(id);
+        teamByPlayer[id] = t + 1;
+        selectedPlayerIds.push(id);
+      }
+    });
+    return { playersByTeam, teamByPlayer, selectedPlayerIds };
+  }
+
+  it('Texas à 4 med 4/4/3 er gyldig (11 spillere)', () => {
+    expect(
+      validateTeamSizeFormat({
+        mode: 'texas_scramble',
+        ...roster(4, 4, 3),
+        teamSize: 4,
+        handicapPct: 20,
+        requireIntegerPct: false,
+      }),
+    ).toEqual({ teamsBalanced: true, hasAtLeastOneTeam: true, handicapPctValid: true, playersValid: true });
+  });
+
+  it('Texas à 4 med 4/4/2 er ugyldig', () => {
+    expect(
+      validateTeamSizeFormat({
+        mode: 'texas_scramble',
+        ...roster(4, 4, 2),
+        teamSize: 4,
+        handicapPct: 20,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ teamsBalanced: false, playersValid: false });
+  });
+
+  it('Texas à 4 med 3/3 har ingen fulle lag', () => {
+    expect(
+      validateTeamSizeFormat({
+        mode: 'texas_scramble',
+        ...roster(3, 3),
+        teamSize: 4,
+        handicapPct: 20,
+        requireIntegerPct: false,
+      }),
+    ).toMatchObject({ teamsBalanced: true, hasAtLeastOneTeam: false, playersValid: false });
+  });
+
+  it('Champagne «3 beste» à 3 med 3/3/2 er ugyldig, à 4 med 4/3 gyldig', () => {
+    const base = { mode: 'shamble' as const, handicapPct: undefined, requireIntegerPct: false, shambleCount: 3 };
+    expect(validateTeamSizeFormat({ ...base, ...roster(3, 3, 2), teamSize: 3 }).playersValid).toBe(false);
+    expect(validateTeamSizeFormat({ ...base, ...roster(4, 3), teamSize: 4 }).playersValid).toBe(true);
   });
 });
 

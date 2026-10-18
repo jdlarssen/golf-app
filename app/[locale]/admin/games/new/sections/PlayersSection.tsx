@@ -48,6 +48,7 @@ export function PlayersSection({
     isAmbrose,
     isFlorida,
     teamSize,
+    teamCountSplits,
   } = state;
 
   const count = selectedPlayerIds.length;
@@ -71,7 +72,8 @@ export function PlayersSection({
       {(isBestBall || isParStableford) && count >= 2 && count % 2 !== 0 && (
         <span className="ml-1">{t('teamHintPair')}</span>
       )}
-      {(isTexas || isAmbrose || isFlorida) && count >= teamSize && count % teamSize !== 0 && (
+      {/* #2569: «går opp» counts teams one short where the format has them (4/4/3). */}
+      {(isTexas || isAmbrose || isFlorida) && count >= teamSize && !teamCountSplits && (
         <span className="ml-1">{t('teamHintSize', { size: teamSize })}</span>
       )}
     </>

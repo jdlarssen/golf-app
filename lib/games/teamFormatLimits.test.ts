@@ -5,6 +5,7 @@ import {
   MAX_TEAM_NUMBER,
   MIN_TEAMS,
   TEAM_FORMAT_PLAYER_CAP,
+  allowedTeamSizes,
   defaultFlightForTeam,
   fitAssignmentsToGrid,
   fitsTeamFormat,
@@ -14,6 +15,7 @@ import {
   randomDrawTeamCount,
   registrationSeatTeamSize,
   selectableTeamSizes,
+  splitIntoTeams,
   startTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
@@ -23,6 +25,7 @@ import {
   teamSizeFit,
   teamSizesForMode,
   teamSizesThatFit,
+  teamRosterBalance,
 } from './teamFormatLimits';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import no from '@/messages/no.json';
@@ -108,13 +111,86 @@ describe('teamSizesForMode', () => {
   });
 });
 
+// #2569: lag på team_size og team_size − 1 i samme spill. One home for which
+// sizes a team may have; the validators, the wizard, the start guard and the
+// count functions all read it (AGENTS.md trap 4).
+describe('allowedTeamSizes — lagstørrelsene et lag kan ha (#2569)', () => {
+  it.each([
+    ['texas_scramble', 4, undefined, [3, 4]],
+    ['texas_scramble', 3, undefined, [2, 3]],
+    ['texas_scramble', 2, undefined, [2]], // et lag på én er ingen scramble
+    ['ambrose', 4, undefined, [3, 4]],
+    ['ambrose', 3, undefined, [2, 3]],
+    ['ambrose', 2, undefined, [2]],
+    ['florida_scramble', 4, undefined, [3, 4]],
+    ['florida_scramble', 3, undefined, [3]], // lag på 2 finnes ikke i Florida
+    ['shamble', 4, 2, [3, 4]],
+    ['shamble', 4, 3, [3, 4]], // «3 beste» à 4: laget på 3 teller alle tre
+    ['shamble', 3, 2, [3]],
+    ['shamble', 3, 3, [3]], // «3 beste» à 3 gir ingen kortere lag
+    ['best_ball', 2, undefined, [2]],
+    ['patsome', 2, undefined, [2]],
+    ['stableford', 2, undefined, [2]], // par-stableford
+    ['stableford', 1, undefined, [1]],
+  ] as const)('%s à %i (count %s) → %j', (mode, size, count, expected) => {
+    expect([...allowedTeamSizes(mode, size, count)].sort((a, b) => a - b)).toEqual(expected);
+  });
+
+  it('en shamble_count over lagstørrelsen minus én tar bort det korte laget', () => {
+    // Ingen ekte kombinasjon i dag (count ≤ 3, à 4), men regelen er N ≤ minste lag.
+    expect([...allowedTeamSizes('shamble', 4, 4)]).toEqual([4]);
+  });
+
+  it('en lagstørrelse formatet ikke støtter, gir bare seg selv', () => {
+    expect([...allowedTeamSizes('florida_scramble', 2)]).toEqual([2]);
+  });
+});
+
+describe('splitIntoTeams — hvordan n spillere deles i lag (#2569)', () => {
+  const at4 = allowedTeamSizes('texas_scramble', 4);
+  it.each([
+    [12, [4, 4, 4]],
+    [11, [4, 4, 3]],
+    [10, [4, 3, 3]],
+    [9, null], // 3/3/3 har ikke ett fullt lag
+    [13, [4, 3, 3, 3]],
+    [7, [4, 3]],
+    [5, null], // 4/1
+    [4, [4]],
+    [3, null],
+    [0, null],
+  ] as const)('texas à 4, n=%i → %j', (n, expected) => {
+    expect(splitIntoTeams(n, 4, at4)).toEqual(expected);
+  });
+
+  it('uten kortere størrelse må alle lag være fulle', () => {
+    const at3 = allowedTeamSizes('florida_scramble', 3);
+    expect(splitIntoTeams(9, 3, at3)).toEqual([3, 3, 3]);
+    expect(splitIntoTeams(10, 3, at3)).toBeNull();
+  });
+});
+
+describe('teamRosterBalance — hele laglista mot regelen (#2569)', () => {
+  const at4 = allowedTeamSizes('texas_scramble', 4);
+  it.each([
+    [[4, 4, 3], true, true],
+    [[4, 3, 3, 3], true, true],
+    [[4, 4, 2], false, true],
+    [[3, 3], true, false], // ingen fulle lag
+    [[4, 4, 5], false, true],
+    [[], true, false],
+  ] as const)('%j → alle lovlige %s, minst ett fullt %s', (counts, allAllowed, hasFullTeam) => {
+    expect(teamRosterBalance(counts, 4, at4)).toEqual({ allAllowed, hasFullTeam });
+  });
+});
+
 describe('fitsTeamFormat — texas/ambrose (2, 3 eller 4 per lag)', () => {
   it.each([
     [0, false], // ingen spillere
     [2, false], // 1 lag à 2 — ett lag er ingen turnering
     [3, false], // 1 lag à 3
     [4, true], // 2 lag à 2
-    [5, false], // går ikke opp
+    [5, true], // lag på 3 og 2 (#2569)
     [6, true], // 2 lag à 3 / 3 lag à 2
     [8, true], // 2 lag à 4 / 4 lag à 2
     [9, true], // 3 lag à 3
@@ -122,10 +198,10 @@ describe('fitsTeamFormat — texas/ambrose (2, 3 eller 4 per lag)', () => {
     [12, true], // 4 lag à 3
     [15, true], // 5 lag à 3
     [16, true], // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true], // 4/4/3/3/3 (#2569)
     [39, true], // 13 lag à 3
     [40, true], // 20 par / 10 lag à 4
-    [41, false], // går ikke opp
+    [41, false], // 21 par, 14 lag à 3 eller 11 lag à 4: alt over taket
     [42, false], // over taket (21 par / 14 lag à 3)
   ])('n=%i → %s', (n, expected) => {
     expect(fitsTeamFormat('texas_scramble', n)).toBe(expected);
@@ -141,7 +217,7 @@ describe('fitsTeamFormat — florida/shamble (3 eller 4 per lag)', () => {
     [9, true], // 3 lag à 3
     [12, true], // 4 lag à 3 / 3 lag à 4
     [16, true], // 4 lag à 4
-    [17, false], // går ikke opp
+    [17, true], // 4/4/3/3/3 (#2569)
     [20, true], // 5 lag à 4
     [39, true], // 13 lag à 3
     [40, true], // 10 lag à 4
@@ -154,7 +230,11 @@ describe('fitsTeamFormat — florida/shamble (3 eller 4 per lag)', () => {
 
   it('2-mannslag finnes ikke i florida/shamble', () => {
     expect(fitsTeamFormat('florida_scramble', 4)).toBe(false);
-    expect(fitsTeamFormat('shamble', 10)).toBe(false);
+    // 5 er 3/2 i Texas (#2569), men et lag på 2 finnes ikke her. (10 var
+    // fem par før #2569; nå går det opp som 4/3/3.)
+    expect(fitsTeamFormat('texas_scramble', 5)).toBe(true);
+    expect(fitsTeamFormat('shamble', 5)).toBe(false);
+    expect(fitsTeamFormat('florida_scramble', 5)).toBe(false);
   });
 });
 
@@ -164,14 +244,18 @@ describe('teamSizesThatFit — lagstørrelsene som går opp (#2260)', () => {
   it.each([
     ['texas_scramble', 4, [2]],
     ['texas_scramble', 6, [2, 3]],
-    ['texas_scramble', 8, [2, 4]],
+    ['texas_scramble', 8, [2, 3, 4]], // 3/3/2 (#2569)
+    ['texas_scramble', 11, [3, 4]], // 3/3/3/2 eller 4/4/3 (#2569)
     ['texas_scramble', 12, [2, 3, 4]],
-    ['texas_scramble', 5, []],
+    ['texas_scramble', 5, [3]], // 3/2 (#2569)
+    ['texas_scramble', 3, []], // ett lag er ingen turnering
     ['texas_scramble', 42, []],
     ['ambrose', 9, [3]],
     ['florida_scramble', 6, [3]],
     ['florida_scramble', 12, [3, 4]],
+    ['florida_scramble', 11, [4]], // 4/4/3; à 3 ville gitt et lag på 2 (#2569)
     ['shamble', 4, []],
+    ['shamble', 10, [4]], // 4/3/3 (#2569)
     ['best_ball', 4, []],
     ['wolf', 4, []],
     // #2453: Stableford-familien er med — solo, eller 4BBB med minst ett par.
@@ -202,18 +286,21 @@ describe('startTeamSize: lagstørrelsen kompis-runden starter på (#2435)', () =
     ['ambrose', 6, 4, 3], // eiervalget
     ['texas_scramble', 8, 4, 4], // standarden går opp
     ['texas_scramble', 12, 4, 4], // standarden går opp
-    ['texas_scramble', 18, 4, 3], // nærmest standarden
-    ['texas_scramble', 30, 4, 3], // nærmest standarden
-    ['texas_scramble', 8, 3, 4], // lik avstand, den største
+    ['texas_scramble', 18, 4, 4], // 4/4/4/3/3 (#2569; var 3)
+    ['texas_scramble', 30, 4, 4], // 4 × 6 + 3 × 2 (#2569; var 3)
+    ['texas_scramble', 8, 3, 3], // 3/3/2 (#2569; var 4)
     ['texas_scramble', 6, 2, 2], // valgt størrelse går opp, står
     ['texas_scramble', 12, 2, 2], // 2, 3 og 4 går opp: valgt 2 står, ikke den største
     ['texas_scramble', 12, 3, 3], // 2, 3 og 4 går opp: valgt 3 står
-    ['ambrose', 8, 3, 4], // lik avstand til 2 og 4, den største
+    ['ambrose', 8, 3, 3], // 3/3/2 (#2569; var 4)
+    ['ambrose', 4, 3, 2], // bare par går opp, også fra 3
     ['florida_scramble', 8, 3, 4], // bare 4 går opp
     ['florida_scramble', 12, 3, 3], // standarden går opp
     ['shamble', 6, 4, 3], // bare 3 går opp
     ['shamble', 12, 4, 4], // standarden går opp
-    ['texas_scramble', 5, 4, 4], // ingenting går opp
+    ['texas_scramble', 5, 4, 3], // 3/2 er det eneste som går opp (#2569)
+    ['texas_scramble', 3, 4, 4], // ingenting går opp
+    ['florida_scramble', 5, 4, 4], // ingenting går opp
     ['texas_scramble', 42, 4, 4], // over taket
     ['best_ball', 4, 2, 2], // utenfor scramble-familien
     ['wolf', 4, 1, 1], // utenfor scramble-familien
@@ -264,32 +351,33 @@ describe('teamSizeFit: hva hvert lagstørrelse-kort sier (#2453)', () => {
 
   it.each([
     ['texas_scramble', 4, 2, fits],
-    ['texas_scramble', 4, 3, needs(6)],
-    ['texas_scramble', 4, 4, needs(8)],
+    ['texas_scramble', 4, 3, needs(5)], // 3/2 (#2569)
+    ['texas_scramble', 4, 4, needs(7)], // 4/3 (#2569)
     ['texas_scramble', 6, 2, fits],
     ['texas_scramble', 6, 3, fits],
-    ['texas_scramble', 6, 4, needs(8)],
+    ['texas_scramble', 6, 4, needs(7)],
     ['texas_scramble', 8, 2, fits],
-    ['texas_scramble', 8, 3, notWith(8)],
+    ['texas_scramble', 8, 3, fits], // 3/3/2 (#2569)
     ['texas_scramble', 8, 4, fits],
     ['texas_scramble', 10, 2, fits],
-    ['texas_scramble', 10, 3, notWith(10)],
-    ['texas_scramble', 10, 4, notWith(10)],
+    ['texas_scramble', 10, 3, fits], // 3/3/2/2 (#2569)
+    ['texas_scramble', 10, 4, fits], // 4/3/3 (#2569)
+    ['texas_scramble', 9, 4, notWith(9)], // 3/3/3 har ikke ett fullt lag à 4
     ['texas_scramble', 39, 2, notWith(39)],
     ['texas_scramble', 39, 3, fits],
-    ['texas_scramble', 39, 4, notWith(39)],
+    ['texas_scramble', 39, 4, fits], // 4 × 9 + 3 (#2569)
     ['texas_scramble', 40, 2, fits],
     ['texas_scramble', 40, 3, notWith(40)], // 40 går ikke opp i 3
     ['texas_scramble', 40, 4, fits],
     ['ambrose', 4, 2, fits],
-    ['ambrose', 4, 3, needs(6)],
-    ['ambrose', 4, 4, needs(8)],
+    ['ambrose', 4, 3, needs(5)],
+    ['ambrose', 4, 4, needs(7)],
     ['florida_scramble', 6, 3, fits],
-    ['florida_scramble', 6, 4, needs(8)],
+    ['florida_scramble', 6, 4, needs(7)],
     ['florida_scramble', 8, 3, notWith(8)],
     ['florida_scramble', 8, 4, fits],
     ['shamble', 6, 3, fits],
-    ['shamble', 6, 4, needs(8)],
+    ['shamble', 6, 4, needs(7)],
     ['shamble', 9, 3, fits],
     ['shamble', 9, 4, notWith(9)],
     ['shamble', 12, 3, fits],
@@ -306,17 +394,23 @@ describe('teamSizeFit: hva hvert lagstørrelse-kort sier (#2453)', () => {
     ['texas_scramble', null, 2, fits],
     ['texas_scramble', null, 3, fits],
     ['texas_scramble', null, 4, fits],
-    ['texas_scramble', 5, 2, fits],
+    ['texas_scramble', 3, 2, fits],
+    ['texas_scramble', 3, 3, fits],
+    ['texas_scramble', 3, 4, fits],
+    // 5 går opp som 3/2 nå (#2569): de to andre kortene sier hvorfor ikke.
+    ['texas_scramble', 5, 2, notWith(5)],
     ['texas_scramble', 5, 3, fits],
-    ['texas_scramble', 5, 4, fits],
+    ['texas_scramble', 5, 4, needs(7)],
   ] as const)('%s, n=%s, lag à %i → %j', (mode, n, size, expected) => {
     expect(teamSizeFit(mode, size, n)).toEqual(expected);
   });
 
   it('stemmer med en uavhengig opptelling for n fra 0 til 44', () => {
-    // Brute force: a size fits when some whole number of teams, at least the
-    // format's minimum and within the player cap, makes exactly n players.
-    // The minimums are written out here, not read from the module.
+    // Brute force: a size fits when some number of teams, at least the
+    // format's minimum and within the player cap, makes exactly n players
+    // with at least one full team and the rest one short — where the format
+    // has that shorter size at all (#2569). The minimums and the shorter
+    // sizes are written out here, not read from the module.
     const minTeams = {
       texas_scramble: 2,
       ambrose: 2,
@@ -325,22 +419,35 @@ describe('teamSizeFit: hva hvert lagstørrelse-kort sier (#2453)', () => {
       stableford: 1,
       modified_stableford: 1,
     } as const;
+    const shortSizeExists = (mode: keyof typeof minTeams, size: number) =>
+      (mode === 'texas_scramble' || mode === 'ambrose') && size >= 3
+        ? true
+        : (mode === 'florida_scramble' || mode === 'shamble') && size === 4;
     for (const [mode, min] of Object.entries(minTeams) as [keyof typeof minTeams, number][]) {
       const sizes = selectableTeamSizes(mode).sizes;
-      for (let n = 0; n <= 44; n++) {
-        const fits = (size: number) => {
-          for (let teams = min; teams * size <= TEAM_FORMAT_PLAYER_CAP; teams++) {
-            if (teams * size === n) return true;
+      const fitsCount = (size: number, n: number) => {
+        for (let teams = min; teams <= Math.floor(TEAM_FORMAT_PLAYER_CAP / size); teams++) {
+          for (let full = 1; full <= teams; full++) {
+            const short = teams - full;
+            if (short > 0 && !shortSizeExists(mode, size)) continue;
+            if (full * size + short * (size - 1) === n) return true;
           }
-          return false;
-        };
+        }
+        return false;
+      };
+      const fewestThatFit = (size: number) => {
+        for (let n = 1; n <= TEAM_FORMAT_PLAYER_CAP; n++) if (fitsCount(size, n)) return n;
+        return Infinity;
+      };
+      for (let n = 0; n <= 44; n++) {
+        const fits = (size: number) => fitsCount(size, n);
         const anyFits = sizes.some(fits);
         for (const size of sizes) {
           const expected =
             !anyFits || fits(size)
               ? { kind: 'fits' }
-              : n < min * size
-                ? { kind: 'needs', players: min * size }
+              : n < fewestThatFit(size)
+                ? { kind: 'needs', players: fewestThatFit(size) }
                 : { kind: 'notWith', count: n };
           expect(teamSizeFit(mode, size, n), `${mode} à ${size}, n=${n}`).toEqual(expected);
         }
@@ -449,6 +556,20 @@ describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)
     expect(randomDrawTeamCount(teamSize, n)).toBe(expected);
   });
 
+  // #2569: the scramble family may deal teams one short, so the draw follows
+  // the format's allowed sizes. Best ball and par-stableford stay pairs.
+  it.each([
+    ['texas_scramble', 4, 11, 3], // 4/4/3
+    ['texas_scramble', 4, 10, 3], // 4/3/3
+    ['texas_scramble', 4, 9, null], // 3/3/3 has no full team
+    ['texas_scramble', 3, 5, 2], // 3/2
+    ['florida_scramble', 3, 10, null], // a team of 2 does not exist here
+    ['shamble', 4, 10, 3], // 4/3/3
+    ['best_ball', 2, 9, null], // pairs only
+  ] as const)('%s à %i med %i spillere → %s lag', (mode, teamSize, n, expected) => {
+    expect(randomDrawTeamCount(teamSize, n, allowedTeamSizes(mode, teamSize))).toBe(expected);
+  });
+
   // AGENTS.md trap 4: the draw may never accept a scramble roster that the
   // format's own count rule rejects.
   it('godtar aldri en scramble-tropp som fitsTeamFormat avviser', () => {
@@ -456,7 +577,7 @@ describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)
     for (const mode of ['texas_scramble', 'ambrose', 'florida_scramble', 'shamble'] as const) {
       for (const size of teamSizesForMode(mode)) {
         for (let n = 1; n <= TEAM_FORMAT_PLAYER_CAP + 4; n++) {
-          const teams = randomDrawTeamCount(size, n);
+          const teams = randomDrawTeamCount(size, n, allowedTeamSizes(mode, size));
           if (teams !== null && teams >= MIN_TEAMS) {
             checked++;
             expect(fitsTeamFormat(mode, n), `${mode} à ${size}, n=${n}`).toBe(true);
