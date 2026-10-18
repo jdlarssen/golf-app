@@ -3,10 +3,15 @@
 // `messages/no.json` → `leaderboard.common.settlement`.
 //
 // Samme grunn og samme mønster som `sideTournamentCopy.ts`: kildefila er for
-// stor til å bundles for fem strenger, og paritetstesten
+// stor til å bundles for 20 strenger, og paritetstesten
 // (`settlementCopy.test.ts`) krever tegn-for-tegn likhet med webben.
-// Plassholderne (`{kr}`, `{unit}`, `{from}`, `{to}`) fylles med `fillCopy`
-// fra `sideTournamentCopy.ts`.
+// Plassholderne (`{kr}`, `{unit}`, `{from}`, `{to}`, `{count}`,
+// `{amount}`, `{game}`, `{mode}`) fylles med `fillCopy` fra
+// `sideTournamentCopy.ts`.
+//
+// Kortet i appen bruker `title`, `stake`, `owes`, `empty` og `units`.
+// Kvitteringsnøklene fra `formatKicker` og ned (#2296) er nettsidens og står
+// her bare som speil for paritetstesten, til kronene vises i appen.
 //
 // Ingen av strengene er skrevet for hånd.
 export const SETTLEMENT_TEXT = {
@@ -19,8 +24,7 @@ export const SETTLEMENT_TEXT = {
     poeng: 'poeng',
     seksjon: 'seksjon',
   },
-  // Nettsidens kvittering (#2296). Appen viser ikke kroner ved lansering, så
-  // kortet bruker ikke disse tekstene ennå. De står her for paritetstesten.
+  // Kvitteringen (#2296): bare speil til kronene vises i appen, se toppen.
   formatKicker: '{game} · {mode}',
   titleFinal: 'Oppgjøret',
   titleSoFar: 'Oppgjøret så langt',
