@@ -167,7 +167,12 @@ export async function renderBingoBangoBongo(opts: {
                   viste en ferdig duell aldri kroner (#2221). */}
               {settlement && (
                 <div className="px-3.5 pb-3.5">
-                  <SettlementTable settlement={settlement} playersById={playersById} />
+                  <SettlementTable settlement={settlement}
+                    playersById={playersById}
+                    gameName={game.name}
+                    mode="bingo_bango_bongo"
+                    isFinal
+                  />
                 </div>
               )}
               {footerSlot}

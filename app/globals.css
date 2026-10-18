@@ -243,6 +243,15 @@
   --invitation-avatar-2: #2d5a40;
   --invitation-avatar-3: #7daa8a;
 
+  /* Settlement receipt (#2296): the paper, its dashed rules and the arrow
+   * between two names, and the plus and minus totals — values from the
+   * artboard «Forslag: oppgjøret som kvittering». Their own tokens, not
+   * palette: only the receipt uses them. */
+  --receipt-paper: #fbf9f3;
+  --receipt-rule: #9a8f7c;
+  --receipt-plus: #1f6b3a;
+  --receipt-minus: #a33a2f;
+
   /* Destructive CTAer — slett-spill, slett-konto, trekk-tilbake-invitasjon.
    * Deeper than --danger so it reads as a "no going back"-button against
    * the linen page, not just a warning-pill. */
@@ -447,6 +456,14 @@
     --invitation-avatar-2: #5a8a66;
     --invitation-avatar-3: #94bf96;
 
+    /* Settlement receipt (#2296) — see :root. The artboard is light only:
+     * the paper is the card surface, the rule is --slot-dashed at night,
+     * and the totals take the night success and danger text. */
+    --receipt-paper: var(--surface);
+    --receipt-rule: #8a8170;
+    --receipt-plus: var(--success-text);
+    --receipt-minus: var(--danger);
+
     /* Destructive CTAer — lighter brick so it reads as "alarm" against the
      * dark forest bg, not as a black smudge. */
     --danger-deep: #c46868;
@@ -580,6 +597,10 @@
   --invitation-avatar-1: #2d5a40;
   --invitation-avatar-2: #5a8a66;
   --invitation-avatar-3: #94bf96;
+  --receipt-paper: var(--surface);
+  --receipt-rule: #8a8170;
+  --receipt-plus: var(--success-text);
+  --receipt-minus: var(--danger);
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
   --leaderboard-backdrop-opacity: 0.10;

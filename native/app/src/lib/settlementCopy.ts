@@ -19,4 +19,19 @@ export const SETTLEMENT_TEXT = {
     poeng: 'poeng',
     seksjon: 'seksjon',
   },
+  // Nettsidens kvittering (#2296). Appen viser ikke kroner ved lansering, så
+  // kortet bruker ikke disse tekstene ennå. De står her for paritetstesten.
+  formatKicker: '{game} · {mode}',
+  titleFinal: 'Oppgjøret',
+  titleSoFar: 'Oppgjøret så langt',
+  stakeLine: '{kr} kr per {unit} · {count} spillere',
+  receiptKicker: 'Kvittering',
+  receiptTitle: 'Hvem betaler hvem',
+  totalHeading: 'Sluttsum',
+  paymentSentence: '{from} betaler {to} {amount}',
+  copyHeading: 'Oppgjør: {game} ({mode})',
+  copyButton: 'Kopier til gruppechatten',
+  copied: 'Kopiert!',
+  copyFailed: 'Klarte ikke å kopiere. Prøv igjen.',
+  disclaimer: 'Tørny holder ikke på pengene. Dere gjør opp selv.',
 } as const;

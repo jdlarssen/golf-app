@@ -162,7 +162,13 @@ export function BingoBangoBongoView({
       {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
       {settlement && (
         <div className="px-3.5 pb-3.5">
-          <SettlementTable settlement={settlement} playersById={playersById} />
+          <SettlementTable
+            settlement={settlement}
+            playersById={playersById}
+            gameName={gameName}
+            mode="bingo_bango_bongo"
+            isFinal={gameStatus === 'finished'}
+          />
         </div>
       )}
 
