@@ -26,6 +26,10 @@ import { TvLiveStatus } from './TvLiveStatus';
 import { TvBoard, TvMessage } from './TvBoard';
 import { TvClock } from './TvClock';
 import { TvFeed } from './TvFeed';
+import { CeremonyStage } from './CeremonyStage';
+import { CeremonyPoller } from './CeremonyPoller';
+import { ceremonySupported } from '@/lib/games/ceremony';
+import { loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 
 type Params = Promise<{ token: string }>;
 
@@ -133,8 +137,44 @@ export default async function SpectateTvPage({ params }: { params: Params }) {
     </main>
   );
 
-  // A finished game shows the result's QR code; it reads no scores (#1542).
   if (game.status === 'finished') {
+    // #2298: a podium format can hold a prize-giving the organiser drives
+    // from the phone. The step is read fresh, and the poller asks for it on
+    // «Ferdig spilt» too, so «Start premieutdelingen» reaches the TV.
+    if (ceremonySupported(game.game_mode)) {
+      const { data: state, error } = await admin
+        .from('games')
+        .select('ceremony_step, ended_at')
+        .eq('id', found.id)
+        .single<{ ceremony_step: number | null; ended_at: string | null }>();
+      // Thrown on purpose: tv/error.tsx retries by itself.
+      if (error) throw error;
+      const poller = (
+        <CeremonyPoller token={token} step={state.ceremony_step} endedAt={state.ended_at} />
+      );
+      if (state.ceremony_step !== null) {
+        const data = await loadCeremonyData(gwp);
+        // The drawing has no clock or QR column: the podium takes the screen.
+        return (
+          <main className="relative h-dvh w-full cursor-none overflow-hidden bg-tv-bg text-tv-text">
+            <TvStage>
+              <CeremonyStage gameName={gameName} data={data} step={state.ceremony_step} />
+            </TvStage>
+            {poller}
+          </main>
+        );
+      }
+      return scene({
+        holesPlayed: null,
+        main: (
+          <>
+            <TvMessage>{t('finishedBody')}</TvMessage>
+            {poller}
+          </>
+        ),
+      });
+    }
+    // A finished game shows the result's QR code; it reads no scores (#1542).
     return scene({ holesPlayed: null, main: <TvMessage>{t('finishedBody')}</TvMessage> });
   }
   // Net hidden until the end (reveal): nothing to show, and nothing read.
