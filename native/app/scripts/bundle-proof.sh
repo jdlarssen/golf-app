@@ -50,6 +50,11 @@ ALLOW_HTTP=(
 ALLOW_LOCALHOST=(
   '^localhost:8081/assets/'
   '^localhost:9999'
+  # @supabase/supabase-js har en bar «localhost» (standardmålene for
+  # trace-propagering, `getDefaultPropagationTargets`, se loopback-reglene i
+  # `bundle_proof`). Uten port er det literalen med en nabo etter; med port
+  # (`localhost:<siffer>`) må treffet stå på en av radene over (#2561).
+  '^localhost([^:]|:[^0-9]|$)'
 )
 
 # Verktøy og hjelpefiler bundel-reglene trenger. Exit 2, som bevisene ellers.
@@ -69,8 +74,10 @@ bundle_proof_require() {
 bundle_proof() {
   local bundle=$1
   local n m ascii_lines u16_lines env_checked env_file env_name env_key env_val OCTET pattern
-  STR=$(mktemp -t torny-bevis)
-  U16=$(mktemp -t torny-bevis-u16)
+  # Mal med X-er: GNU mktemp (ubuntu-latest i CI, der testen kjører) godtar
+  # ikke `-t <navn>` uten dem.
+  STR=$(mktemp "${TMPDIR:-/tmp}/torny-bevis.XXXXXX")
+  U16=$(mktemp "${TMPDIR:-/tmp}/torny-bevis-u16.XXXXXX")
   "$STRINGS" "$bundle" > "$STR"
   say "størrelse: $(wc -c < "$bundle" | tr -d ' ') byte · sha256: $(shasum -a 256 "$bundle" | cut -c1-16)…"
 
@@ -233,12 +240,40 @@ bundle_proof() {
     say "      (ingen EXPO_PUBLIC_-verdier i ${ENV_DIR}/.env* å sjekke)"
   fi
 
+  # Loopback-literalene i @supabase/supabase-js: `getDefaultPropagationTargets`
+  # har «localhost», «127.0.0.1» og «[::1]» som bare strenger (standardmålene
+  # for trace-propagering). Én bar forekomst er forventet i alle bygg, men
+  # naboen i den pakkede tabellen varierer: i 1.1.0 (3) sto «draft-2020-12»
+  # foran og «15.2.0.0» rett etter («draft-2020-127.0.0.15.2.0.0», og regelen
+  # under bommet), i 1.2.0 (4) sto den alene (#2561). Med skjema (`://`) eller
+  # port (`:<siffer>`) er det en adresse fra miljøet, og den skal ikke finnes.
+  # Havner literalen rett etter en streng som slutter på `://`, blir det FAIL
+  # uten lekkasje: les konteksten. Den feilen er den trygge. «localhost» uten
+  # port står på lista over kjente strenger øverst (ALLOW_LOCALHOST).
+  loopback_literal() {
+    local label=$1 bare=$2 addr=$3 n m
+    n=$(count_regex "$bare")
+    m=$(count_regex "$addr")
+    if [ "$n" != "0" ] || [ "$m" != "0" ]; then
+      ("$GREP" -aoE -- ".{0,30}(${bare}|${addr}).{0,50}" "$STR" || true) | utf8_trim | sed 's/^/      /' | tee -a "$OUT"
+    fi
+    if [ "$m" != "0" ]; then
+      fail "loopback $label med skjema eller port: $m treff — en adresse fra miljøet er bakt inn"
+    elif [ "$n" -le 1 ]; then
+      pass "loopback $label: $n bart treff (supabase-js getDefaultPropagationTargets), ingen med skjema eller port"
+    else
+      fail "loopback $label: $n bare treff — forventet høyst 1 (supabase-js getDefaultPropagationTargets)"
+    fi
+  }
+  loopback_literal '127.0.0.1' '(^|[^0-9.])127\.0\.0\.1([^0-9]|$)' '://127\.0\.0\.1|(^|[^0-9.])127\.0\.0\.1:[0-9]'
+  loopback_literal '[::1]' '\[::1\]' '://\[::1\]|\[::1\]:[0-9]'
+
   # Forbudt som HEL adresse: fire oktetter, ikke-siffer på begge sider. Hermes
-  # pakker strenger, og «draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 som
-  # delstreng uten å være en IP — derfor kreves formen, ikke bare tegnene.
-  # IPv6-literaler (`://[::1]`) og `.local:` matches som ren tekst.
+  # pakker strenger uten skilletegn, så en adresse kan ligge inntil tall fra en
+  # nabo-streng; derfor kreves formen, ikke bare tegnene. IPv6-literaler med
+  # skjema (`://[…]`) og `.local:` matches som ren tekst.
   OCTET='[0-9]{1,3}'
-  for pattern in "(^|[^0-9.])127\.0\.0\.1([^0-9]|$)" "(^|[^0-9.])192\.168\.$OCTET\.$OCTET([^0-9]|$)" "(^|[^0-9.])10\.0\.$OCTET\.$OCTET([^0-9]|$)" '://\[[0-9a-fA-F:.]{2,}\]' '\.local:'; do
+  for pattern in "(^|[^0-9.])192\.168\.$OCTET\.$OCTET([^0-9]|$)" "(^|[^0-9.])10\.0\.$OCTET\.$OCTET([^0-9]|$)" '://\[[0-9a-fA-F:.]{2,}\]' '\.local:'; do
     n=$(count_regex "$pattern")
     if [ "$n" = "0" ]; then
       pass "LAN/loopback «${pattern}»: 0 treff"

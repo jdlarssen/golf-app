@@ -17,8 +17,12 @@
 #     Mac-ens adresse og alt som lukter LAN/dev. To Hermes-egenskaper former
 #     reglene:
 #       - Strengtabellen pakkes uten skilletegn, og strenger som overlapper
-#         deler lagring («Height» + «http://» → «Heighttp://»; «draft-2020-12» +
-#         «7.0.0.1…» ser ut som 127.0.0.1). Derfor grensetegn på IP-mønstrene.
+#         deler lagring («Height» + «http://» → «Heighttp://»). Derfor
+#         grensetegn på IP-mønstrene. Loopback-literalene i supabase-js
+#         («127.0.0.1», «[::1]») er forventet bare, én gang hver: i 1.1.0 (3)
+#         sto «127.0.0.1» inne i «draft-2020-127.0.0.15.2.0.0», i 1.2.0 (4)
+#         alene (#2561). Med skjema eller port er de forbudt. Den bare
+#         «localhost» derfra står på lista over kjente strenger.
 #       - En delstreng deler lagring med den lengre strengen den er en del av.
 #         `src/lib/stagingGate.ts` har staging-verten som literal (gaten for
 #         utvikler-raden), så ETT bart treff på staging-ref-en er forventet i
