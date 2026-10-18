@@ -334,11 +334,13 @@ export async function GET(
     }
   }
 
-  const { fonts, hasFraunces, hasInter } = await loadFonts({
-    frauncesItalic: true,
+  const { fonts, hasFraunces, hasInter, hasFrauncesDisplay } = await loadFonts({
+    headlineDisplay: true,
     inter600: true,
   });
   const serif = hasFraunces ? 'Fraunces' : 'serif';
+  // The headline's own optical size, as Chrome draws the artboard (#2319).
+  const headlineSerif = hasFrauncesDisplay ? 'FrauncesDisplay' : serif;
   const sans = hasInter ? 'Inter' : 'sans-serif';
 
   // Finished but no computable result (no scores yet) → minimal brand card.
@@ -452,7 +454,7 @@ export async function GET(
             style={{
               display: 'flex',
               marginTop: 20,
-              fontFamily: serif,
+              fontFamily: headlineSerif,
               fontSize: headlineChoice.fontSize,
               fontWeight: 500,
               lineHeight: 1.02,

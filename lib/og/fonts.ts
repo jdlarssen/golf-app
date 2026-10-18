@@ -18,8 +18,17 @@ export async function fetchGoogleFont(
   family: string,
   weight: number,
   italic = false,
+  /** Pins Fraunces' optical-size axis (9–144); omitted = the font's default cut. */
+  opsz?: number,
 ): Promise<ArrayBuffer | null> {
-  const axes = italic ? `ital,wght@1,${weight}` : `wght@${weight}`;
+  const axes =
+    opsz === undefined
+      ? italic
+        ? `ital,wght@1,${weight}`
+        : `wght@${weight}`
+      : italic
+        ? `ital,opsz,wght@1,${opsz},${weight}`
+        : `opsz,wght@${opsz},${weight}`;
   const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
     family,
   )}:${axes}&display=swap`;
@@ -37,23 +46,40 @@ export type LoadedFonts = {
   fonts: { name: string; data: ArrayBuffer; weight: 400 | 500 | 600; style: 'normal' | 'italic' }[];
   hasFraunces: boolean;
   hasInter: boolean;
+  /** The result card's headline cut, `FrauncesDisplay` (see `loadFonts`). */
+  hasFrauncesDisplay: boolean;
 };
 
 /**
+ * Optical size of the result card's upright headline. Chrome draws Fraunces at
+ * an optical size equal to the font size in CSS px, so the artboard's 58px
+ * headline is the opsz 58-60 cut, tighter than the default cut Satori gets.
+ * Google snaps 60 and up to the same instance; «Marte vant» measures 556px
+ * against the artboard's 559px (the default cut: 591px). The italic stays the
+ * default cut: the artboard's gold is Chrome's slanted upright (its font link
+ * has no italic axis), and a true italic at opsz 60 came out 5 % narrower.
+ */
+const HEADLINE_OPSZ = 60;
+
+/**
  * The four brand weights the share card and OG images use. The result card
- * (#2319) also asks for Fraunces 500 italic (the gold result in the headline)
- * and Inter 600 (kicker, tagline link); without options the result is what it
- * always was. A failed italic fetch just leaves the upright Fraunces to draw it.
+ * (#2319) also asks for `headlineDisplay` (Fraunces 500 upright at the
+ * headline's optical size plus the italic, under the family name
+ * `FrauncesDisplay`) and
+ * `inter600` (kicker, tagline link). Without options the result is what it
+ * always was. If the display cut fails to load, the headline falls back to the
+ * ordinary Fraunces.
  */
 export async function loadFonts(
-  opts: { frauncesItalic?: boolean; inter600?: boolean } = {},
+  opts: { headlineDisplay?: boolean; inter600?: boolean } = {},
 ): Promise<LoadedFonts> {
-  const [fr500, fr600, in400, in500, fr500i, in600] = await Promise.all([
+  const [fr500, fr600, in400, in500, disp, dispItalic, in600] = await Promise.all([
     fetchGoogleFont('Fraunces', 500),
     fetchGoogleFont('Fraunces', 600),
     fetchGoogleFont('Inter', 400),
     fetchGoogleFont('Inter', 500),
-    opts.frauncesItalic ? fetchGoogleFont('Fraunces', 500, true) : null,
+    opts.headlineDisplay ? fetchGoogleFont('Fraunces', 500, false, HEADLINE_OPSZ) : null,
+    opts.headlineDisplay ? fetchGoogleFont('Fraunces', 500, true) : null,
     opts.inter600 ? fetchGoogleFont('Inter', 600) : null,
   ]);
   const fonts: LoadedFonts['fonts'] = [];
@@ -61,11 +87,15 @@ export async function loadFonts(
   if (fr600) fonts.push({ name: 'Fraunces', data: fr600, weight: 600, style: 'normal' });
   if (in400) fonts.push({ name: 'Inter', data: in400, weight: 400, style: 'normal' });
   if (in500) fonts.push({ name: 'Inter', data: in500, weight: 500, style: 'normal' });
-  if (fr500i) fonts.push({ name: 'Fraunces', data: fr500i, weight: 500, style: 'italic' });
+  if (disp) fonts.push({ name: 'FrauncesDisplay', data: disp, weight: 500, style: 'normal' });
+  if (dispItalic) {
+    fonts.push({ name: 'FrauncesDisplay', data: dispItalic, weight: 500, style: 'italic' });
+  }
   if (in600) fonts.push({ name: 'Inter', data: in600, weight: 600, style: 'normal' });
   return {
     fonts,
     hasFraunces: Boolean(fr500 || fr600),
     hasInter: Boolean(in400 || in500),
+    hasFrauncesDisplay: Boolean(disp),
   };
 }
