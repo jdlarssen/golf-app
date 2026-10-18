@@ -1483,7 +1483,9 @@
     "detailFaqHeading": "Questions that keep coming up",
     "detailCtaHeading": "Tørny does this maths for you",
     "detailCtaBody": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. Try a demo round without logging in.",
+    "detailCtaBodyLaunched": "Pick a course and a tee, and the app spreads the strokes by stroke index and keeps the board while you play. It's free.",
     "detailCtaButton": "Try the demo",
+    "detailCtaButtonLaunched": "Get the app",
     "cardShowRules": "Show rules",
     "cardHideRules": "Hide rules",
     "cardReadMore": "Read more →",
@@ -3433,6 +3435,7 @@
     },
     "tryDemoDivider": "or",
     "tryDemo": "Try Tørny in 60 seconds",
+    "tryDemoLaunched": "Get the app",
     "errors": {
       "rate_limited": "You have requested a lot of codes in a short time. Wait fifteen minutes and try again.",
       "rate_limited_minute": "You can request a new code in a minute.",
@@ -3451,6 +3454,7 @@
       "selfRegHelper": "Enter your email. New here? We'll create an account for you.",
       "submitButton": "Send me a code",
       "inviteHint": "You'll get a code by email. No app to download, and it takes under a minute.",
+      "inviteHintLaunched": "You'll get a code by email, and it takes under a minute.",
       "emailPlaceholder": "name@example.com",
       "kicker": "Step 1 of 2"
     },
@@ -6540,7 +6544,16 @@
     "title": "Install Tørny as an app",
     "body": "Opens faster, and you can enter scores without a connection.",
     "install": "Install",
-    "closeAria": "Close"
+    "closeAria": "Close",
+    "appTitle": "Get the Tørny app",
+    "appBody": "It's free, and you log in with the same email."
+  },
+  "getTheApp": {
+    "title": "Get the app",
+    "body": "The app is free, and you log in with the same email.",
+    "inline": "Tørny is also a free app.",
+    "appStoreAria": "Get Tørny on the App Store",
+    "googlePlayAria": "Get Tørny on Google Play"
   },
   "installInstructions": {
     "titleSafari": "How to install Tørny",
@@ -6597,7 +6610,9 @@
   },
   "demo": {
     "pageTitle": "Try it out",
+    "pageTitleLaunched": "Get the app",
     "metaDescription": "Try Tørny without logging in. Enter strokes in a ready-made tournament and watch the leaderboard update.",
+    "metaDescriptionLaunched": "Tørny is free on the App Store and Google Play. Invite your group and follow the board while you play.",
     "gameName": "Demo round",
     "pill": "Demo · nothing is saved",
     "standing": {
@@ -6632,7 +6647,12 @@
     "ctaHeading": "Ready for a real round?",
     "ctaBody": "Set up your own tournament in a couple of minutes.",
     "ctaButton": "Continue",
-    "reset": "Play again"
+    "reset": "Play again",
+    "pointer": {
+      "title": "Try Tørny in the app",
+      "body": "The app is free. Set up a tournament and enter your scores while you play.",
+      "webLink": "Or get started in the browser"
+    }
   },
   "embed": {
     "followOnTorny": "Follow along on Tørny",
@@ -6643,6 +6663,7 @@
   },
   "landing": {
     "metaTitle": "Tørny — run a golf tournament free in your browser",
+    "metaTitleLaunched": "Tørny — run a golf tournament free, in the app or on the web",
     "metaDescription": "Free golf tournament app. Set up scramble, stableford or matchplay with friends or your company. Tørny handles the handicaps and keeps the board live.",
     "loginCta": "Log in",
     "hero": {
@@ -6651,8 +6672,10 @@
       "h1Post": " of minutes",
       "sub": "Invite your group, enter scores on your phone and watch the board update while you play.",
       "primaryCta": "Try Tørny in 60 seconds",
+      "primaryCtaLaunched": "Get the app",
       "secondaryCta": "Set up your own tournament",
       "trust": "Free · No app to download · 20+ formats",
+      "trustLaunched": "Free · App or browser · 20+ formats",
       "audienceNav": "Tournament types"
     },
     "how": {
@@ -6662,6 +6685,7 @@
       "step1LinkLabel": "Browse courses",
       "step2Title": "Invite the group",
       "step2Body": "Share one link. Everyone gets a one-time code by email, no app and no password.",
+      "step2BodyLaunched": "Share one link. Everyone logs in with a one-time code by email, so nobody needs a password.",
       "step2LinkLabel": "Log in and invite",
       "step3Title": "Play",
       "step3Body": "Everyone taps in their own strokes on their phone, and the board updates as you go."
@@ -6722,18 +6746,24 @@
         "a": "Tørny calculates net scores by WHS. Pick a course and tee, and we use the slope and course rating to give each player the right course handicap."
       }
     ],
+    "faq2Launched": {
+      "q": "Do we have to download an app?",
+      "a": "No, but you can. Sign-up and the leaderboard work in the browser, and the app is free on {stores, select, ios {the App Store} other {the App Store and Google Play}}."
+    },
     "endCta": {
       "headingPre": "Fire up your golf tournament in a ",
       "headingGold": "couple",
       "headingPost": " of minutes",
       "body": "You log in with a one-time code sent by email. If you are new here, we create an account for you.",
       "primaryCta": "Create a tournament",
-      "secondaryCta": "… or try the demo first"
+      "secondaryCta": "… or try the demo first",
+      "secondaryCtaLaunched": "… or get the app"
     },
     "footer": {
       "formats": "Formats",
       "courses": "Courses",
       "demo": "Demo",
+      "demoLaunched": "Get the app",
       "openGames": "Open tournaments",
       "login": "Log in",
       "privacy": "Privacy",
@@ -6839,18 +6869,25 @@
         "a": "If it is not in there already, you can add it yourself in a couple of minutes."
       }
     ],
+    "faq1Launched": {
+      "q": "Do the players have to install anything?",
+      "a": "No, nobody has to. Everyone can join straight from the browser. If you want the app, get it free on {stores, select, ios {the App Store} other {the App Store and Google Play}}."
+    },
     "endCta": {
       "headingPre": "Ready to fire up the ",
       "headingGold": "tournament",
       "headingPost": "?",
       "body": "Try the demo without logging in. It takes under a minute.",
+      "bodyLaunched": "The app is free, and you log in with a code by email. It takes under a minute.",
       "primaryCta": "Try the demo",
+      "primaryCtaLaunched": "Get the app",
       "secondaryCta": "Or get started for real"
     },
     "footer": {
       "formats": "Formats",
       "courses": "Courses",
       "demo": "Demo",
+      "demoLaunched": "Get the app",
       "login": "Log in",
       "privacy": "Privacy"
     }
@@ -7040,6 +7077,7 @@
         "body": "Finish the tournament once the last scorecard is approved. The leaderboard locks, everyone sees the whole field, and everyone gets the result by email without you sending anything.\n\nShare the link. A public results link is the easiest way to get people along next time, and it looks tidy pasted into a work channel or the group chat.\n\nWrite down two things while you still remember them: what took the longest, and what people talked about most afterwards. Fix the first for next time, repeat the second.\n\nThe next tournament takes a couple of minutes to set up, because the course, the group and the format are already there. That is the point where running these starts being fun."
       }
     ],
+    "sections2BodyLaunched": "There are two ways in. Either you invite people one by one because you know exactly who is playing, or you share an open sign-up link and let people add themselves. Company outings and club evenings almost always work better with an open link: drop it in a channel or an email, and the entry list fills up while you do something else.\n\nAsk for two things at sign-up: name and handicap. If someone has no official handicap, put in an estimate. An estimate beats nothing, because without a handicap the net leaderboard is meaningless and the newest players never stand a chance.\n\nSet a deadline a few days before the round, and say clearly what happens after it. Then you know how many flights you need, and the club knows how many tee times to hold. In Tørny every player gets a one-time code by email the first time they log in, so nobody has to remember a password to tap in their strokes. The app is free, but nobody has to have it. That matters when half the field is joining for the first time.",
     "formats": {
       "heading": "Which format suits your tournament?",
       "intro": "Six formats cover almost every tournament people set up themselves. Tap through for the rules, a worked example and how handicaps are applied in each one.",
@@ -7070,7 +7108,9 @@
     ],
     "ctaHeading": "Ready to set your tournament up?",
     "ctaBody": "Try the demo if you want to see how it looks first, or create your tournament straight away. Either takes under a minute.",
+    "ctaBodyLaunched": "Get the free app, or set your tournament up here on the web. Either takes under a minute.",
     "ctaPrimary": "Try the demo",
+    "ctaPrimaryLaunched": "Get the app",
     "ctaSecondary": "Create your tournament"
   },
   "kavalkade": {
