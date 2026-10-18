@@ -192,7 +192,9 @@ export function SettlementTable({
                         : 'text-muted'
                   }`}
                 >
-                  {signedAmount(p.netKr)}
+                  {/* Read with its currency («+100 kr»); the artboard shows «+100». */}
+                  <span aria-hidden="true">{signedAmount(p.netKr)}</span>
+                  <span className="sr-only">{`${p.netKr > 0 ? '+' : ''}${formatKr(p.netKr)}`}</span>
                 </dd>
               </div>
             ))}
