@@ -22,9 +22,16 @@
     "Aldri skriv til prod-databasen; all testing mot torny-staging (se docs/staging-testing.md).",
     "PR-body: «Closes #{{ISSUE}}», en kort Fordeler/ulemper-blokk, og `## Alternativer (produktvalg)` når det finnes et reelt produktvalg.",
     "Skjermer med artboard: eieren merger en PR så snart den dukker opp i Discord, og kortet kommer når PR-en settes ready (#2475). Opprett PR-en som draft, kjør portene og staging-verify, og lag den private bevissiden med side-om-side mot artboardene i lys og natt. Meld så «PR klar (draft) — #{{ISSUE}}: <url> + bevisside» til orkestratoren. Sett PR-en ready først når orkestratoren har gått gjennom bevissiden og sagt OK.",
-    "Ingen kan godkjenne tillatelser i en bakgrunnsøkt, så en kommando som venter på et menneske, står fast i timevis. Bruk aldri `pkill`/`kill`, og rør aldri `.env*` (heller ikke flytte eller gjenopprette lenker). Eksporterte staging-variabler går foran `.env.local`, og vakta på `NEXT_PUBLIC_SUPABASE_URL` bekrefter staging (docs/staging-testing.md: «Din vanlige .env.local (prod) røres ikke»). Slett heller aldri rader selv, heller ikke egne testdata på staging (DELETE krever godkjenning). List dem i PR-en under «Rydd etter tapptest», så rydder orkestratoren. Trengs noe av det, eller venter en kommando på godkjenning, meld orkestratoren straks."
+    "Ingen kan godkjenne tillatelser i en bakgrunnsøkt, så en kommando som venter på et menneske, står fast i timevis. Bruk aldri `pkill`/`kill`, og rør aldri `.env*` (heller ikke flytte eller gjenopprette lenker). Eksporterte staging-variabler går foran `.env.local`, og vakta på `NEXT_PUBLIC_SUPABASE_URL` bekrefter staging (docs/staging-testing.md: «Din vanlige .env.local (prod) røres ikke»). Slett heller aldri rader selv, heller ikke egne testdata på staging (DELETE krever godkjenning). List dem i PR-en under «Rydd etter tapptest», så rydder orkestratoren. Trengs noe av det, eller venter en kommando på godkjenning, meld orkestratoren straks.",
+    "Prøveordning til 01.11 (#2599): godkjenneren er alltid Opus. Kjør evaluatoren i /forge:auto (forge:evaluate) som subagent med `model: \"opus\"`, også når du selv er Sonnet. Hver evaluator-rapport ender med linja `MODELLVALG: for svak | passe | kunne vært billigere — <én setning om hvorfor>`. Ta den siste linja med i meldingen til orkestratoren når PR-en er klar.",
+    "Utredning, prøveordning til 01.11 (#2599): skriv `vanskelighetsgrad: tung` bare når saken rører poeng, innlogging, database eller RLS, offline-synk, tee-bokser eller baner, eller bygger ny arkitektur over mange filer. Ellers skriver du `lett`, så bygget starter på Sonnet."
   ],
   "routing": {
+    "default": {
+      "model": "sonnet",
+      "effort": "high",
+      "why": "prøveordning: billigste modell først (#2599)"
+    },
     "heavyLabels": [
       "area:scoring",
       "area:auth",
