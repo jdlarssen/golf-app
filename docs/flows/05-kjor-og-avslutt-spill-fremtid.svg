@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1050" viewBox="0 0 1180 1050" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1156" viewBox="0 0 1180 1156" font-family="-apple-system, Helvetica, Arial, sans-serif">
   <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
-  <rect width="1180" height="1050" fill="#F8F6F0"/>
+  <rect width="1180" height="1156" fill="#F8F6F0"/>
   <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">5 · Kjør og avslutt — slik blir det</text>
   <text x="121" y="88" font-size="15" fill="#6B7770">Samme flyt, men den kan aldri låse seg. Varsler går alltid i appen først — ingen unødvendig mail.</text>
   <g font-size="13">
@@ -53,18 +53,27 @@
   <text x="400" y="717" text-anchor="middle" font-size="11.5" fill="#9C8552">mail kun til off-app · ingen egen avslutningsmail til alle</text>
   <line x1="400" y1="726" x2="400" y2="750" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
-  <!-- 5 revansje (NY #1007) -->
-  <rect x="120" y="752" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
-  <rect x="610" y="760" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="774" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
-  <text x="156" y="788" font-size="19">🔁</text>
-  <text x="190" y="778" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?» — alle deltakere, ikke bare arrangøren</text>
-  <text x="190" y="798" font-size="12.5" fill="#6B5526">samme bane/format/sideturnering/spillerliste ferdig utfylt —</text>
-  <text x="190" y="816" font-size="12.5" fill="#6B5526">skjult for cup-matches og liga-runder</text>
+  <!-- 4b optional: the prize-giving on the big screen (NY #2298) -->
+  <rect x="120" y="752" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <rect x="610" y="760" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="774" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2298</text>
+  <text x="156" y="788" font-size="19">🏆</text>
+  <text x="190" y="778" font-size="15" font-weight="600" fill="#7A5E13">NY: Premieutdelingen på TV-en, styrt fra mobilen</text>
+  <text x="190" y="798" font-size="12.5" fill="#6B5526">valgfritt · sidepremiene → 3. plass → 2. plass → «Avslør vinneren»</text>
+  <text x="190" y="816" font-size="12.5" fill="#6B5526">slagspill, stableford og lagformatene · spillerne har resultatet alt</text>
   <line x1="400" y1="832" x2="400" y2="856" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
+  <!-- 5 revansje (NY #1007) -->
+  <rect x="120" y="858" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="610" y="866" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="880" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
+  <text x="156" y="894" font-size="19">🔁</text>
+  <text x="190" y="884" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?» — alle deltakere, ikke bare arrangøren</text>
+  <text x="190" y="904" font-size="12.5" fill="#6B5526">samme bane/format/sideturnering/spillerliste ferdig utfylt —</text>
+  <text x="190" y="922" font-size="12.5" fill="#6B5526">skjult for cup-matches og liga-runder</text>
+  <line x1="400" y1="938" x2="400" y2="962" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
   <!-- 6 back to flow 04 -->
-  <rect x="120" y="858" width="560" height="52" rx="16" fill="#1B4332"/>
-  <text x="400" y="890" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">→ Opprett spill (flyt 4), ferdig utfylt</text>
+  <rect x="120" y="964" width="560" height="52" rx="16" fill="#1B4332"/>
+  <text x="400" y="996" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">→ Opprett spill (flyt 4), ferdig utfylt</text>
 
   <!-- right rail -->
   <rect x="760" y="222" width="320" height="387" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
@@ -105,8 +114,8 @@
   <text x="782" y="908" font-size="13" fill="#6B5526">NY: påminnelse etter et døgn stille</text>
 
   <!-- player parallel -->
-  <text x="120" y="952" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
-  <text x="120" y="978" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
+  <text x="120" y="1058" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
+  <text x="120" y="1084" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
 
-  <text x="120" y="1025" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
+  <text x="120" y="1131" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
 </svg>
