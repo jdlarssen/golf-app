@@ -174,7 +174,7 @@ describe('removePlayerFromGame — laget etter forfallet (#2569)', () => {
     ]);
 
     expect(await runRemove()).toBe(
-      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=2`,
+      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=2&missing=1`,
     );
   });
 
@@ -221,7 +221,22 @@ describe('removePlayerFromGame — laget etter forfallet (#2569)', () => {
     ]);
 
     expect(await runRemove()).toBe(
-      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=1`,
+      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=1&missing=1`,
+    );
+  });
+
+  it('Texas à 4: laget går fra 2 til 1 → det mangler to (missing=2)', async () => {
+    serverMock = buildSupabaseMock([
+      {
+        data: { status: 'scheduled', tournament_id: null, game_mode: 'texas_scramble', mode_config: TEXAS_AT_4 },
+        error: null,
+      },
+      { data: [{ user_id: PLAYER_ID, team_number: 2 }], error: null },
+      { data: remaining(1), error: null },
+    ]);
+
+    expect(await runRemove()).toBe(
+      `/games/${GAME_ID}/spillere?status=player_removed_team_uneven&team=2&count=1&missing=2`,
     );
   });
 

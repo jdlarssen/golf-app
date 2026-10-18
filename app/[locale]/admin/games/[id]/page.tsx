@@ -109,6 +109,7 @@ type SearchParams = Promise<{
   mode?: string | string[];
   count?: string | string[];
   team?: string | string[];
+  missing?: string | string[];
 }>;
 
 type GameRow = {
@@ -247,6 +248,7 @@ export default async function GameDetailPage({
           // #2569: the team a removal left short, and how many are left.
           team: Number(first(sp.team) ?? 0),
           count: Number(first(sp.count) ?? 0),
+          missing: Number(first(sp.missing) ?? 1),
         } as never)
       : undefined;
   const errorCode = first(sp.error);
