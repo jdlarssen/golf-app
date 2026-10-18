@@ -2330,3 +2330,44 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Hentingen av slagene:** mens den første hentingen går og telefonen ikke har noe, står
   et hjul. Feiler den (uten nett), tegnes kortet fra telefonens slag med en linje over som
   sier det. Tavla har samme linje.
+
+## Paritetsrunden uten trykkverktøy (#1954, N8 v2)
+
+En bakgrunnsøkt har ingen måte å trykke i simulatoren på. Hele kjerneløkka ble likevel kjørt
+i appen mot staging den 18.10 (matrisen: kommentaren «Paritetsmatrisen N8 v2» på #1954).
+Oppskriften:
+
+- **Egen simulator med kopi av Debug-skallet.** `xcrun simctl create "Torny-<issue>"`, så
+  kopier `TrnyDev.app` fra en annen simulators container (bare lesing) og installer den.
+  Start med `-RCT_jsLocation localhost:<port>`, så JS-en kommer fra din egen Metro
+  (`CI=1 npx expo start --port <port>`). CI-modus overvåker ikke filer, så etter en
+  JS-endring må Metro stoppes og startes på nytt. `EXPO_PUBLIC_*` tas fra skallet når
+  arbeidskopien ikke har `native/app/.env.local`, og `EXPO_PUBLIC_WEB_BASE_URL` peker på
+  web-fasiten (`next build` + `next start`).
+- **Fjernkontroll i appen.** En midlertidig rot-komponent (aldri committet) pakker `App`
+  inn i en `View` og spør en driver på Mac-en (`127.0.0.1:<port>`) etter kommandoer. Den
+  går gjennom React-treet og kaller propsene direkte: `onPress`, `onLongPress`,
+  `onChangeText` og `onValueChange` på elementet med riktig `testID`. Les alltid treet fra
+  `FiberRoot.current`, ikke fra fiberen du fikk ved montering: den andre kopien
+  (alternate) henger ett render etter og gir utdaterte props og tekster. Et trykk på et
+  `disabled` element skal avvises, ellers tester du noe brukeren ikke kan gjøre.
+  `Alert.alert` fanges, så knappene kan trykkes fra driveren. Med `LogBox.ignoreAllLogs`
+  slipper du at Debug-varsler dekker skjermbildene.
+- **Nettbrudd.** En modul som importeres før `App` pakker inn `fetch`, slik at alle kall
+  feiler når bryteren er på. supabase-js tar `fetch` ved import, så rekkefølgen er viktig.
+  Lytteren i `expo-network` fyrer ikke da. Forgrunn lages med `simctl launch` av Safari og
+  så av appen.
+- **Innlogging.** Testbrukere legges til med `scripts/dev-login-users.mjs add` og logges inn
+  ved å trykke på navnet i lista. Koden mintes med service-role (`generateLink` →
+  `email_otp`). Kode-steget nås uten mail ved å sette `step` til `'code'` gjennom
+  `useState`-køen til `Login`. Det trengs fordi staging-kvoten for e-post ofte er brukt opp.
+- **Web-fasiten** innlogget uten mail: `generateLink` → `verifyOtp` → `@supabase/ssr` gir
+  cookien, og Playwright legger den i konteksten. Veiviseren kjøres med feltene i
+  «Veiviser-orakel uten tekst». En direkte SQL-skriving etter at siden er vist, krever
+  `POST /api/games/<id>/refresh` med Bearer, ellers viser webben cachen.
+- **Halen.** `POST /api/cron/finish-pipeline` på staging tar alle ferdige spill uten
+  markør, også andres. Kjør heller `runFinishPipelineForGame` for ditt eget spill to ganger
+  (`ran: true`, så `false`), og les varslene etterpå.
+- **SQLITE_BUSY i jest.** `src/test/sqliteMock.ts` avviser nå en skriving på den delte
+  forbindelsen mens en `withExclusiveTransactionAsync` er åpen, slik enheten gjør. En ny
+  skriving utenfor `withTxn` blir dermed rød i testen, ikke først på telefonen (#1954 A4).
