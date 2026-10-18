@@ -19,6 +19,22 @@ export type HeadlineSpec =
 /** More first names than this in a shared win makes the headline «Delt seier …». */
 const MAX_SHARED_NAMES = 4;
 
+/**
+ * First names for a headline. When two of them are the same («Ole» and «Ole»),
+ * those members keep their public name («Ole H.», «Ole B.») so the headline
+ * says who is who.
+ */
+function headlineNames(memberNames: readonly string[]): string[] {
+  const count = new Map<string, number>();
+  for (const m of memberNames) {
+    const key = firstName(m).toLocaleLowerCase();
+    count.set(key, (count.get(key) ?? 0) + 1);
+  }
+  return memberNames.map((m) =>
+    (count.get(firstName(m).toLocaleLowerCase()) ?? 0) > 1 ? m : firstName(m),
+  );
+}
+
 export function headlineSpec(model: ShareCardModel | null): HeadlineSpec {
   if (model === null) return { kind: 'finished' };
 
@@ -31,7 +47,7 @@ export function headlineSpec(model: ShareCardModel | null): HeadlineSpec {
         if (!winner) return { kind: 'finished' };
         return {
           kind: 'matchWon',
-          names: winner.memberNames.map(firstName),
+          names: headlineNames(winner.memberNames),
           margin: match.headline.margin,
         };
       }
@@ -46,8 +62,17 @@ export function headlineSpec(model: ShareCardModel | null): HeadlineSpec {
   if (model.winners.length === 0) return { kind: 'finished' };
 
   const result = model.winners[0].score;
-  const names = model.winners.flatMap((w) => w.memberNames.map(firstName));
+  const names = headlineNames(model.winners.flatMap((w) => w.memberNames));
   if (model.winners.length === 1) return { kind: 'won', names, result };
   if (names.length > MAX_SHARED_NAMES) return { kind: 'sharedMany', result };
   return { kind: 'shared', names, result };
+}
+
+/**
+ * A count worded by `format`, with a real minus sign (U+2212) when negative.
+ * The ICU number format gives a hyphen-minus in English, and the figure in the
+ * row uses the real sign, so the headline sets it itself.
+ */
+export function signedCount(value: number, format: (abs: number) => string): string {
+  return `${value < 0 ? '\u2212' : ''}${format(Math.abs(value))}`;
 }

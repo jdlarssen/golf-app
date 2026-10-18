@@ -22,9 +22,6 @@ export const HEADLINE_FONT_SIZE_SMALL = 80;
 /** The longest headline that still gets the full size, in lines. */
 const HEADLINE_MAX_LINES = 3;
 
-/** The longest kicker (game name · course) before it is cut with «…». */
-const KICKER_MAX_CHARS = 40;
-
 /** Characters that fit on one line, per text slot (conservative, measured). */
 export const CHARS_PER_LINE = {
   /** Row name, Fraunces 500 48px beside the medallion and the number. */
@@ -60,22 +57,33 @@ export function estimateLines(text: string, maxChars: number): number {
   return Math.max(1, lines + (current > 0 ? 1 : 0));
 }
 
+/** The date the app appends to an auto-generated name: «27. september» or «27 September». */
+const AUTO_NAME_DATE = /^\d{1,2}\.? \p{L}+$/u;
+
 /**
- * The kicker over the headline: the game's own name · the course. An auto
- * name («Byneset North 27. september») or a name equal to the course would
- * only repeat the course, so it gives the course alone. No course: the name.
- * Cut at 40 characters with «…» so a pathological title stays on two lines.
- * Upper-casing is the caller's, with the request locale.
+ * The kicker over the headline: the game's own name · the course. A name that
+ * is the course, or the auto-generated «{course} {date}» (also in English),
+ * would only repeat the course, so it gives the course alone. A name that just
+ * starts with the course («Bogstad Open» on «Bogstad») is the organiser's own
+ * and stays. No course: the name. Cut at one line (`CHARS_PER_LINE.kicker`,
+ * counted in code points) with «…». Upper-casing is the caller's, with the
+ * request locale.
  */
 export function cardKicker(gameName: string, courseName: string | null): string {
   const name = gameName.trim();
   const course = courseName?.trim() ?? '';
   let text: string;
   if (!course) text = name;
-  else if (!name || name === course || name.startsWith(`${course} `)) text = course;
-  else text = `${name} · ${course}`;
-  return text.length > KICKER_MAX_CHARS
-    ? `${text.slice(0, KICKER_MAX_CHARS - 1).trimEnd()}…`
+  else if (
+    !name ||
+    name === course ||
+    (name.startsWith(`${course} `) && AUTO_NAME_DATE.test(name.slice(course.length + 1)))
+  ) {
+    text = course;
+  } else text = `${name} · ${course}`;
+  const chars = Array.from(text);
+  return chars.length > CHARS_PER_LINE.kicker
+    ? `${chars.slice(0, CHARS_PER_LINE.kicker - 1).join('').trimEnd()}…`
     : text;
 }
 

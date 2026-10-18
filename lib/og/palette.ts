@@ -14,8 +14,6 @@ export const MUTED = '#6B6354';
 export const TAUPE = '#4A3F30';
 export const CHAMP_TINT = '#F6EDD6';
 export const CHAMP_PILL = '#F1E6C9';
-export const DISC = '#ECE7DB';
-export const WHITE = '#FFFFFF';
 export const HAIRLINE = 'rgba(201,169,97,0.40)';
 export const ROW_HAIRLINE = 'rgba(27,67,50,0.08)';
 

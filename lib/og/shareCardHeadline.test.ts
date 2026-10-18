@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ShareCardModel, ShareCardRow } from '@/lib/games/buildShareCardData';
 
-import { headlineSpec } from './shareCardHeadline';
+import { headlineSpec, signedCount } from './shareCardHeadline';
 
 function row(rank: number, members: string[], score: ShareCardRow['score']): ShareCardRow {
   return { rank, name: members.join(' / '), memberNames: members, score, isSharer: false };
@@ -88,6 +88,20 @@ describe('headlineSpec — placement', () => {
     });
   });
 
+  it('two winners with the same first name keep their public names', () => {
+    const spec = headlineSpec(
+      placement([row(1, ['Ole H.'], POINTS_38), row(1, ['Ole B.'], POINTS_38)]),
+    );
+    expect(spec).toMatchObject({ kind: 'shared', names: ['Ole H.', 'Ole B.'] });
+  });
+
+  it('only the colliding names are lengthened', () => {
+    const spec = headlineSpec(
+      placement([row(1, ['Ole H.', 'Kari N.'], POINTS_38), row(1, ['Ole B.'], POINTS_38)]),
+    );
+    expect(spec).toMatchObject({ names: ['Ole H.', 'Kari', 'Ole B.'] });
+  });
+
   it('five tied singles read «Delt seier»', () => {
     const rows = ['A', 'B', 'C', 'D', 'E'].map((n) => row(1, [n], POINTS_38));
     expect(headlineSpec(placement(rows))).toMatchObject({ kind: 'sharedMany' });
@@ -146,5 +160,23 @@ describe('headlineSpec — matchplay', () => {
     expect(headlineSpec(match({ kind: 'undecided' }, [false, false]))).toEqual({
       kind: 'finished',
     });
+  });
+});
+
+describe('signedCount', () => {
+  const points = (n: number) => `${n} points`;
+
+  it('sets a real minus sign on a negative count', () => {
+    expect(signedCount(-3, points)).toBe('\u22123 points');
+  });
+
+  it('leaves zero and positive counts alone', () => {
+    expect(signedCount(0, points)).toBe('0 points');
+    expect(signedCount(38, points)).toBe('38 points');
+  });
+
+  it('words the absolute value, so the plural follows the size', () => {
+    const word = (n: number) => `${n} ${n === 1 ? 'point' : 'points'}`;
+    expect(signedCount(-1, word)).toBe('\u22121 point');
   });
 });

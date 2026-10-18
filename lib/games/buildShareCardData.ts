@@ -32,7 +32,7 @@ export type ShareCardScore =
 
 export type ShareCardRow = {
   rank: number;
-  /** Display name, already resolved by the caller (formatRevealName applied). */
+  /** Display name, already resolved by the caller (the result card passes public names, «Marte L.»). */
   name: string;
   /**
    * The names `name` is joined from, one per member in the order the caller's
@@ -403,7 +403,7 @@ function buildPlacementModel(
 
   const podium = allRows.slice(0, 3);
   // A skins round where nobody took a skin has no winner, even though the
-  // whole field shares rank 1: plain rows, no «VINNER» on «0 skins».
+  // whole field shares rank 1: plain rows, no gold on «0 skins».
   const nobodyWon =
     band === 'skins' && podium[0]?.score.kind === 'skins' && podium[0].score.value === 0;
   // Every row sharing first place, also past the third: four tied on 38 are four
