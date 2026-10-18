@@ -164,7 +164,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
   // /games/[id]/submit).
   useMarkVisitRead('gameSubmit', gameId);
-  const { bundle, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
@@ -264,9 +264,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   }, [refreshQueue]);
 
   if (!bundle) {
-    return (
+    // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
+    // tavleskjermen. Uten dette sto «Henter scorekortet …» til skjermen ble
+    // åpnet på nytt.
+    return loading ? (
       <View style={ui.centered} testID="scorecard-loading">
         <Text style={ui.muted}>Henter scorekortet …</Text>
+      </View>
+    ) : (
+      <View style={ui.centered} testID="scorecard-error">
+        <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
       </View>
     );
   }
