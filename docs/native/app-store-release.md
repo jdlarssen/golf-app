@@ -232,7 +232,7 @@ beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
 1. Bygget dukker opp i App Store Connect → TestFlight etter 5–30 min behandling. Intern
    tester = eieren. Installer over skallet (åpne skallet med nett først, se
    forutsetningene).
-2. **Paritetsmatrisen (P4)** og **første ekte prod-avslutning (P5)** — kontrakten §4. Aldri
+2. **Paritetsmatrisen** og **første ekte prod-avslutning (P5)** — se «Paritet» under. Aldri
    demo-runden, aldri en syntetisk runde.
 3. **App Review-pakken (P6)** — kontrakten §5: revidert personvern-etikett (radene og
    grunnene står i `app-store-metadata.md`; fra #2561 med kontakter og varsel-tokenet),
@@ -247,6 +247,22 @@ beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
    «Release This Version» når det passer.
 5. **Etterkontroll (P7)** — kontrakten §6: installer fra App Store over TestFlight-bygget,
    OTP-innlogging, åpne et ferdig spill, en mail-lenke skal åpne Safari.
+
+## Paritet
+
+Matrisen bor i én kommentar på #1954, og den oppdateres på plass:
+[Paritetsmatrisen N8 v2](https://github.com/jdlarssen/golf-app/issues/1954#issuecomment-6254489176).
+Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
+
+- **iOS-kolonnen (18.10.2026)** gjelder JS-en fra `origin/main` ed58f7e1d pluss
+  rettingene A2 og A4 i samme PR. Den kjørte i dev-varianten mot `torny-staging`.
+  Butikkandidaten **1.2.0 (4)** har samme JS fram til ed58f7e1d. Rettingene kommer med i
+  neste kandidat.
+- **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
+  versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
+  appen, hører til der.
+- Står en rad som villet avvik (kronene, AI-samtykket, push på Android), skal butikkteksten
+  ikke love det nettsiden gjør.
 
 ## Nettsiden samme dag
 

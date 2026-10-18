@@ -141,6 +141,18 @@ merkene på PC. Demoknappene heter «Hent appen» og går rett til butikken på 
    - «Hvorfor Tørny»: lenka under «Hent appen» heter «Eller kom i gang her på nettet».
 4. Tilbake: sett `ios` igjen (eller `off`) og deploy på nytt.
 
+## Paritet
+
+Matrisen bor i én kommentar på #1954:
+[Paritetsmatrisen N8 v2](https://github.com/jdlarssen/golf-app/issues/1954#issuecomment-6254489176).
+Android-kolonnen (Del B, emulatoren `torny_api36` mot staging) prøver det som er
+plattformavhengig: tilbaketasten, kant-til-kant, tastaturet, dialogene, ekte flymodus,
+forgrunn og bakgrunn, utlogging med tom cache og slett konto. Tallene for stableford og
+greensome skal stemme med både nettsiden og iOS-kolonnen. Kolonnen gjelder samme JS som
+iOS-kolonnen (`origin/main` ed58f7e1d pluss A2 og A4). Butikk-AAB-en som prøves på eierens
+Android-telefon (Del C), står med versjon og build i matrisen. Ekte avslutning fra en
+Android-telefon tas i den lukkede testen i januar (eierens svar 18.10).
+
 ## Feilsøking
 
 - **«SDK-pakker mangler»:** kjør `sdkmanager`-kommandoen skriptet skriver ut. Nye versjoner
