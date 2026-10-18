@@ -1124,7 +1124,6 @@
         "gross": "brutto",
         "playersWarn": "{selected} av {expected}. Du kan legge til flere senere.",
         "playersGuestsOnly": "Bare gjester. Gjester kan ikke logge inn, så ingen kan føre slag. Bli med selv, eller legg til en spiller med konto.",
-        "playersGuestsOnlyWarn": "Bare gjester så langt. Gjester kan ikke logge inn, så noen med konto må melde seg på før dere kan føre slag. Bli med selv, eller del påmeldingslenka.",
         "pendingProfiles": "{count, plural, one {1 venter på profil} other {# venter på profil}}"
       },
       "advancedToggle": "Vis avanserte innstillinger",

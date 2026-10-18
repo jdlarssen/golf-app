@@ -29,7 +29,7 @@ import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPaylo
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
-import { isClubTournament, rosterOptionalAtPublish } from '@/lib/games/registration';
+import { isClubTournament } from '@/lib/games/registration';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -167,11 +167,6 @@ async function updateGameInternal(
       playerIds,
       guestIds: await findGuestIds(playerIds),
       inviteEmailCount: parseInviteEmailList(formData.getAll('invite_email')).length,
-      rosterOptional: rosterOptionalAtPublish({
-        registrationMode: payload.registration_mode,
-        registrationType: payload.registration_type,
-        clubScoped,
-      }),
     });
     if (verdict === 'block') {
       redirect({ href: editHref({ error: 'only_guests' }), locale });

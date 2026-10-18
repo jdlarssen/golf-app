@@ -2294,14 +2294,16 @@ describe('useGameFormState — bare gjester (#2570)', () => {
     expect(result.current.missingForPublishCodes).toEqual([]);
   });
 
-  it('åpen påmelding og bare gjester: varsel, kan publiseres', () => {
+  // The owner's choice C: open signup stops too.
+  it('åpen påmelding og bare gjester: også stoppet', () => {
     const { result } = readyStableford(ROSTER);
     act(() => {
       result.current.togglePlayer('g1');
       result.current.setRegistrationMode('open');
     });
-    expect(result.current.guestOnly).toBe('warn');
-    expect(result.current.canPublish).toBe(true);
+    expect(result.current.guestOnly).toBe('block');
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toEqual(['players']);
   });
 
   it('en e-postinvitasjon teller som en spiller med konto', () => {

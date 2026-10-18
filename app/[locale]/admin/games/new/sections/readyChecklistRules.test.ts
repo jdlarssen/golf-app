@@ -117,10 +117,10 @@ describe('readyChecklist — rows and targets', () => {
 });
 
 // #2570: a round with only guests. The gate (useGameFormState) pushes a
-// 'players' code when guestOnlyRoster says block; with open signup it says
-// warn and nothing is pushed.
+// 'players' code when guestOnlyRoster says block, whatever the signup mode
+// (the owner's choice C).
 describe('readyChecklist — only guests (#2570)', () => {
-  it('all guests, invite only: the gate\'s code makes the row red and flags it', () => {
+  it('all guests: the gate\'s code makes the row red and flags it', () => {
     const rows = readyChecklist({
       ...BASE,
       guestOnly: 'block',
@@ -134,22 +134,12 @@ describe('readyChecklist — only guests (#2570)', () => {
     });
   });
 
-  it('all guests, open signup: amber and flagged', () => {
-    const rows = readyChecklist({ ...BASE, guestOnly: 'warn' });
-    expect(row(rows, 'players')).toMatchObject({ status: 'warn', guestsOnly: true });
-  });
-
-  it('all guests, open signup, and too few for kompis: still the guest flag', () => {
-    const rows = readyChecklist({ ...BASE, guestOnly: 'warn', selectedCount: 2 });
-    expect(row(rows, 'players')).toMatchObject({ status: 'warn', guestsOnly: true });
-  });
-
   it('one registered player among the guests (none): no guest flag', () => {
     const rows = readyChecklist({ ...BASE, guestOnly: 'none' });
     expect(row(rows, 'players')).toMatchObject({ status: 'ok', guestsOnly: false });
   });
 
-  it('red from another players reason wins and keeps both messages', () => {
+  it('red from another players reason keeps both messages', () => {
     const rows = readyChecklist({
       ...BASE,
       guestOnly: 'block',
@@ -164,35 +154,13 @@ describe('readyChecklist — only guests (#2570)', () => {
   });
 
   it('only the players row carries the flag', () => {
-    const rows = readyChecklist({ ...BASE, guestOnly: 'warn' });
-    expect(rows.filter((r) => r.guestsOnly)).toHaveLength(1);
-  });
-});
-
-describe('readyChecklist — the amber Spillere row', () => {
-  it.each<[string, Partial<typeof BASE>, ReadyRow['status']]>([
-    ['kompis, 3 of 4', { selectedCount: 3 }, 'warn'],
-    ['kompis, 0 of 4', { selectedCount: 0 }, 'warn'],
-    ['kompis, 4 of 4', { selectedCount: 4 }, 'ok'],
-    ['kompis, 5 of 4', { selectedCount: 5 }, 'ok'],
-    ['kompis without a count', { selectedCount: 3, expectedPlayerCount: undefined }, 'ok'],
-    ['klubb, 3 of 4', { selectedCount: 3, intent: 'klubb' as never }, 'ok'],
-    ['no intent, 3 of 4', { selectedCount: 3, intent: undefined as never }, 'ok'],
-  ])('%s → %s', (_label, overrides, status) => {
-    expect(row(readyChecklist({ ...BASE, ...overrides }), 'players').status).toBe(status);
-  });
-
-  it('red wins over amber', () => {
     const rows = readyChecklist({
       ...BASE,
-      selectedCount: 0,
+      guestOnly: 'block',
       codes: ['players'],
-      messages: ['Velg minst én spiller'],
+      messages: ['en spiller med konto'],
     });
-    expect(row(rows, 'players')).toMatchObject({
-      status: 'block',
-      messages: ['Velg minst én spiller'],
-    });
+    expect(rows.filter((r) => r.guestsOnly)).toHaveLength(1);
   });
 });
 

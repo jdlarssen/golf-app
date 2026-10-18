@@ -26,8 +26,8 @@ export type ReadyRow = {
   messages: string[];
   target: ReadyRowTarget;
   /**
-   * #2570: the Spillere row is red or amber because every chosen player is a
-   * guest (`guestOnlyRoster`). The caller shows the guest sentence then.
+   * #2570: the Spillere row is red because every chosen player is a guest
+   * (`guestOnlyRoster`). The caller shows the guest sentence then.
    */
   guestsOnly: boolean;
 };
@@ -70,9 +70,9 @@ export function readyChecklist({
   lockGameMode: boolean;
   gameMode: GameMode;
   /**
-   * #2570: `guestOnlyRoster` for the chosen players. `block` arrives as a
-   * 'players' code from the gate too; `warn` (others can still sign up) only
-   * turns the row amber.
+   * #2570: `guestOnlyRoster` for the chosen players. A `block` also arrives
+   * as a 'players' code from the gate, which makes the row red; this only
+   * flags the row so the caller shows the guest sentence.
    */
   guestOnly: GuestOnlyVerdict;
 }): ReadyRow[] {
@@ -121,8 +121,7 @@ export function readyChecklist({
     ) {
       status = 'warn';
     }
-    if (key === 'players' && status === 'ok' && guestOnly === 'warn') status = 'warn';
-    const guestsOnly = key === 'players' && guestOnly !== 'none' && status !== 'ok';
+    const guestsOnly = key === 'players' && guestOnly === 'block' && status === 'block';
     return { key, status, messages: byRow[key], target: target[key], guestsOnly };
   });
 }
