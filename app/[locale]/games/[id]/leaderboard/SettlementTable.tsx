@@ -102,10 +102,10 @@ export function SettlementTable({
   return (
     <section
       aria-labelledby={headingId}
-      className="leading-[normal] text-text"
+      className="pt-2 leading-[normal] text-text"
       data-testid="settlement"
     >
-      <div className="flex h-11 items-center justify-center px-2 mt-2">
+      <div className="flex h-11 items-center justify-center px-2">
         <Kicker className="min-w-0 truncate">
           {t('formatKicker', { game: gameName, mode: modeName })}
         </Kicker>
@@ -144,7 +144,8 @@ export function SettlementTable({
                     data-testid={`settlement-payment-${i}`}
                   >
                     <span aria-hidden="true" className="min-w-0">
-                      {from} <span className="text-[var(--receipt-rule)]">→</span> {to}
+                      {/* Inter has no «→»: the artboard draws it in system-ui. */}
+                      {from} <span className="font-[system-ui] text-[var(--receipt-rule)]">→</span> {to}
                     </span>
                     <span aria-hidden="true" className="shrink-0 font-serif text-[18px] font-semibold">
                       {amount}
