@@ -4073,8 +4073,8 @@
         "teamOptionN": "Team {n}",
         "teamShortHandicap": "{count} players, handicap worked out for {count}",
         "teamShortShamble": "{count} players, counts its best scores on each hole",
-        "teamTooFew": "Only {count, plural, one {# player} other {# players}}. Move a player here before the round can start.",
-        "teamTooMany": "{count} players, but teams are {size}. Move a player out before the round can start."
+        "teamTooFew": "Only {count, plural, one {# player} other {# players}}. {missing, plural, one {Move a player here} other {Move # players here}} before the round can start.",
+        "teamTooMany": "{count} players, but teams are {size}. {extra, plural, one {Move a player out} other {Move # players out}} before the round can start."
       },
       "edit": {
         "kicker": "Edit game",

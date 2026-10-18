@@ -4073,8 +4073,8 @@
         "teamOptionN": "Lag {n}",
         "teamShortHandicap": "{count} spillere, handicapet regnes for {count}",
         "teamShortShamble": "{count} spillere, teller de beste scorene sine på hvert hull",
-        "teamTooFew": "Bare {count, plural, one {# spiller} other {# spillere}}. Flytt en spiller hit før runden kan starte.",
-        "teamTooMany": "{count} spillere, men lagene er på {size}. Flytt en spiller ut før runden kan starte."
+        "teamTooFew": "Bare {count, plural, one {# spiller} other {# spillere}}. {missing, plural, one {Flytt en spiller hit} other {Flytt # spillere hit}} før runden kan starte.",
+        "teamTooMany": "{count} spillere, men lagene er på {size}. {extra, plural, one {Flytt en spiller ut} other {Flytt # spillere ut}} før runden kan starte."
       },
       "edit": {
         "kicker": "Rediger spill",

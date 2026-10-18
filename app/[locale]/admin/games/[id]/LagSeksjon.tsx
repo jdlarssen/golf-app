@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { suggestTeamAssignment, setPlayerTeam } from './flightActions';
 import { teamBuckets, teamSizeStatus, type TeamPlayer } from '@/lib/games/teamScope';
+import { allowedTeamSizes } from '@/lib/games/teamFormatLimits';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -19,6 +20,12 @@ type Props = {
   gameMode: GameMode;
   /** Champagne's «N beste», from `mode_config.shamble_count` (#2569). */
   shambleCount?: number;
+  /**
+   * The round has not started (#2569): only then does a team's size line
+   * apply. Mid-round a withdrawal leaves a pair of one in best ball, and
+   * «… før runden kan starte» would be wrong.
+   */
+  beforeStart: boolean;
 };
 
 /**
@@ -35,9 +42,17 @@ type Props = {
  * (handicapet regnes for dem som spiller, eller shamble teller sine beste), og
  * et lag utenfor regelen får linja som sier hva som må til før start. Regelen
  * er `teamSizeStatus` (startvakta leser den samme), så linjene står også etter
- * selv-trekk og endringer fra appen.
+ * selv-trekk og endringer fra appen. Bare før start: midt i runden er det
+ * ingen start å vente på.
  */
-export function LagSeksjon({ gameId, players, teamSize, gameMode, shambleCount }: Props) {
+export function LagSeksjon({
+  gameId,
+  players,
+  teamSize,
+  gameMode,
+  shambleCount,
+  beforeStart,
+}: Props) {
   const t = useTranslations('admin.game.teams');
   const [isPending, startTransition] = useTransition();
 
@@ -50,6 +65,8 @@ export function LagSeksjon({ gameId, players, teamSize, gameMode, shambleCount }
   const teamOptions = Array.from({ length: maxTeam + 1 }, (_, i) => i + 1);
 
   const { assigned: byTeam, unassigned } = teamBuckets(activePlayers);
+  // The smallest size a team may have (#2569): how many a team of too few lacks.
+  const smallestAllowed = Math.min(...allowedTeamSizes(gameMode, teamSize, shambleCount));
 
   const suggestAction = suggestTeamAssignment.bind(null, gameId);
 
@@ -69,15 +86,16 @@ export function LagSeksjon({ gameId, players, teamSize, gameMode, shambleCount }
                 .map(([teamNum, members]) => {
                   const count = members.length;
                   const status = teamSizeStatus(gameMode, teamSize, count, shambleCount);
-                  const sizeLine =
-                    status === 'short'
+                  const sizeLine = !beforeStart
+                    ? null
+                    : status === 'short'
                       ? gameMode === 'shamble'
                         ? t('teamShortShamble', { count })
                         : t('teamShortHandicap', { count })
                       : status === 'outside'
                         ? count < teamSize
-                          ? t('teamTooFew', { count })
-                          : t('teamTooMany', { count, size: teamSize })
+                          ? t('teamTooFew', { count, missing: smallestAllowed - count })
+                          : t('teamTooMany', { count, size: teamSize, extra: count - teamSize })
                         : null;
                   return (
                     <div
@@ -86,7 +104,9 @@ export function LagSeksjon({ gameId, players, teamSize, gameMode, shambleCount }
                       data-members={members.map((m) => m.user_id).join(',')}
                       data-size-status={status}
                       className={`rounded-xl border px-3 py-2.5 ${
-                        status === 'outside' ? 'border-warning/30 bg-warning/5' : 'border-border'
+                        beforeStart && status === 'outside'
+                          ? 'border-warning/30 bg-warning/5'
+                          : 'border-border'
                       }`}
                     >
                       <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
