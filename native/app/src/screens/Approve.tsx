@@ -76,7 +76,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   const { userId } = useSession();
   // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
   useMarkVisitRead('gameApprove', gameId);
-  const { bundle, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067/#2228: hullene en trukket kaptein førte, står på den nye kapteinens
   // kort, slik webbens godkjenningsside viser dem.
@@ -131,9 +131,16 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   };
 
   if (!bundle) {
-    return (
+    // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
+    // tavleskjermen. Uten dette sto «Henter kortene …» til skjermen ble åpnet
+    // på nytt.
+    return loading ? (
       <View style={ui.centered} testID="approve-loading">
         <Text style={ui.muted}>{APPROVE_TEXT.loading}</Text>
+      </View>
+    ) : (
+      <View style={ui.centered} testID="approve-error">
+        <Text style={ui.error}>{APPROVE_TEXT.loadFailed}</Text>
       </View>
     );
   }

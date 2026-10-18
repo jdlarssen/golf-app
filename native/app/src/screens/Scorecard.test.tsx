@@ -231,6 +231,18 @@ describe('Scorecard', () => {
     mockState.teeShotQueue = [];
   });
 
+  it('sier fra når spillet ikke kunne hentes, i stedet for å stå på «Henter scorekortet …» (#1954 A2)', async () => {
+    // Ingen bundel i cachen og en henting som feiler (nettet falt): skjermen
+    // skal si det, som hull- og tavleskjermen gjør, ikke vente for alltid.
+    mockState.bundle = undefined;
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    refreshGameBundle.mockRejectedValueOnce(new Error('Network request failed'));
+
+    await render(scorecardElement(GAME_ID, jest.fn()));
+
+    await waitFor(() => expect(screen.getByTestId('scorecard-error')).toHaveTextContent('Fikk ikke tak i spillet.'));
+  });
+
   it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {

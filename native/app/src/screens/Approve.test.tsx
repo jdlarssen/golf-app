@@ -152,4 +152,23 @@ describe('Approve', () => {
       );
     });
   });
+
+  it('sier fra når spillet ikke kunne hentes, i stedet for å stå på «Henter …» (#1954 A2)', async () => {
+    // Ingen bundel i cachen og en henting som feiler (nettet falt): skjermen
+    // skal si det, som hull- og tavleskjermen gjør, ikke vente for alltid.
+    mockState.bundle = null;
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    refreshGameBundle.mockRejectedValueOnce(new Error('Network request failed'));
+
+    await render(
+      <Approve
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'Approve'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('approve-error')).toHaveTextContent('Fikk ikke tak i spillet.'));
+  });
 });
