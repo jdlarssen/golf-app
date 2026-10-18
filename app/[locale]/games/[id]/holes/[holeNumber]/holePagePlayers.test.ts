@@ -239,3 +239,35 @@ describe('buildPlayersForClient — the team line follows the tee-shot picker (#
     expect(teamLine(texas(false))).toBe('Lag 1 · Per, Marte, Jonas, Sigrid');
   });
 });
+
+// #2569 — ujevne lag. Laget på 3 i et 4-mannsspill får 80 % av snittet (16),
+// samme tall som tavla og scorekortet. Med det gamle uttrykket ble det 12, og
+// hull med SI 13–16 mistet slaget sitt.
+describe('buildPlayersForClient — lag på 3 i et 4-mannsspill (#2569)', () => {
+  const TEXAS_AT_FOUR = game('texas_scramble', {
+    kind: 'texas_scramble',
+    team_size: 4,
+    teams_count: 2,
+    team_handicap_pct: 20,
+  });
+  const me = player('b1', 2, 10);
+  const roster = [
+    player('a1', 1, 10),
+    player('a2', 1, 20),
+    player('a3', 1, 30),
+    player('a4', 1, 40),
+    me,
+    player('b2', 2, 20),
+    player('b3', 2, 30),
+  ];
+
+  it('laget på 3 (10/20/30) har slag til og med SI 16, ikke SI 17', () => {
+    expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 16 })[2]).toBe(1);
+    expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 17 })[2]).toBe(0);
+  });
+
+  it('laget på 4 (10/20/30/40 → 20) er uendret: slag på SI 17, to på SI 2', () => {
+    expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 17 })[1]).toBe(1);
+    expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 2 })[1]).toBe(2);
+  });
+});

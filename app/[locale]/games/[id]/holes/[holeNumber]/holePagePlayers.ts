@@ -4,6 +4,7 @@
 // lag-kollapsede modusene).
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
   alternateShotSideExtras,
@@ -68,7 +69,9 @@ export function buildRoundRobinPlayers(args: {
  *
  * Lag-handicap beregnes etter NGF-konvensjon:
  *   teamHCP = round(combinedCourseHandicap × team_handicap_pct / 100)
- * og fordeles per hull via vanlig SI-allokering (strokesForHole).
+ * og fordeles per hull via vanlig SI-allokering (strokesForHole). Et lag med
+ * færre enn `team_size` får samme prosent av snittet (`scrambleTeamHandicap`,
+ * #2569), som tavla.
  */
 export function buildPlayersForClient(args: {
   game: GameForHole;
@@ -206,7 +209,12 @@ export function buildPlayersForClient(args: {
         game.mode_config.kind === 'florida_scramble'
           ? game.mode_config.team_handicap_pct
           : 0;
-      return Math.round((combinedCH * handicapPct) / 100);
+      return scrambleTeamHandicap(
+        combinedCH,
+        handicapPct,
+        game.mode_config.team_size,
+        teamPlayers.length,
+      );
     }
   }
 

@@ -186,6 +186,35 @@ describe('resolveScorecardLayout', () => {
       expect(layout.primaryHandicap).toBe(9);
     });
 
+    it('texas lag på 3 i et 4-mannsspill (#2569): 80 % av snittet → 16, ikke 12', () => {
+      // Lagret 20 % av summen = 80 % av snittet à 4. Laget på 3 med 10/20/30:
+      // snitt 20 × 0,8 = 16 (60 × 20 × 4 ÷ (3 × 100)), samme tall som tavla.
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'texas_scramble',
+        mode_config: {
+          kind: 'texas_scramble',
+          team_size: 4,
+          teams_count: 2,
+          team_handicap_pct: 20,
+        },
+      };
+      const me = player('b1', 2, { course_handicap: 10 });
+      const roster = [
+        player('a1', 1, { course_handicap: 10 }),
+        player('a2', 1, { course_handicap: 20 }),
+        player('a3', 1, { course_handicap: 30 }),
+        player('a4', 1, { course_handicap: 40 }),
+        me,
+        player('b2', 2, { course_handicap: 20 }),
+        player('b3', 2, { course_handicap: 30 }),
+      ];
+      expect(resolveScorecardLayout(game, roster, me, false, fmt).primaryHandicap).toBe(16);
+      expect(
+        resolveScorecardLayout(game, roster, roster[0], false, fmt).primaryHandicap,
+      ).toBe(20);
+    });
+
     it('reveal-active → Layout A uansett modus', () => {
       const game: GameForHole = {
         ...baseGame,
