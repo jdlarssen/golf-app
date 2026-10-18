@@ -1124,7 +1124,7 @@
         "gross": "gross",
         "playersWarn": "{selected} of {expected}. You can add more later.",
         "playersGuestsOnly": "Only guests. Guests can't log in, so nobody can enter scores. Join yourself, or add a player with an account.",
-        "playersGuestsOnlyWarn": "Only guests so far. Guests can't log in, so someone with an account has to join before you can enter scores.",
+        "playersGuestsOnlyWarn": "Only guests so far. Guests can't log in, so someone with an account has to sign up before you can enter scores. Join yourself, or share the signup link.",
         "pendingProfiles": "{count, plural, one {1 awaiting profile} other {# awaiting profile}}"
       },
       "advancedToggle": "Show advanced settings",

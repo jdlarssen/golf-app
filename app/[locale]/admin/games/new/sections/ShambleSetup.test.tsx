@@ -81,6 +81,15 @@ describe('ShambleSetup', () => {
     fireEvent.change(field, { target: { value: '120' } });
     expect(onAllowanceChange).not.toHaveBeenCalled();
 
+    // An emptied field commits nothing (0 would play the round gross under
+    // Netto); leaving it empty puts the last value back.
+    onAllowanceChange.mockClear();
+    fireEvent.change(field, { target: { value: '' } });
+    expect(onAllowanceChange).not.toHaveBeenCalled();
+    expect(field).toHaveValue(null);
+    fireEvent.blur(field);
+    expect(field).toHaveValue(80);
+
     rerender(<ShambleSetup scoring="gross" {...props} />);
     expect(screen.queryByLabelText('Handicap-andel (%)')).not.toBeInTheDocument();
   });
