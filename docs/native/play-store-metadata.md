@@ -11,8 +11,10 @@ varsler.** Serveren sender bare til iPhone: `canUsePush` i
 `native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
 står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
 (eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
-pengeoppgjør, aldri rundereferatet (det står på nettsiden og i e-posten), aldri
-scramble, cup eller liga.
+pengeoppgjør, aldri rundereferatet (det står på nettsiden og i e-posten), aldri cup
+eller liga. Appen oppretter åtte formater, men spiller rundene arrangøren setter opp på
+nettsiden, også scramble og de andre lagformatene (regelen står i
+`app-store-metadata.md`).
 
 ## Oppføringen (Main store listing)
 
@@ -53,6 +55,7 @@ FORMATER DU KAN SPILLE
 - Matchplay
 - Best ball og Greensome
 - Wolf, Skins og Bingo Bango Bongo
+- Scramble og andre lagspill, når arrangøren har satt opp runden på tornygolf.no
 
 SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
