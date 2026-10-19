@@ -87,7 +87,10 @@ describe('getGameBySpectateToken', () => {
     expect(result).toEqual({ id: gameId });
   });
 
-  it('returns null on DB error (logs to console.error)', async () => {
+  it('throws on a DB error: a blink is not a 404 (#2298)', async () => {
+    // Null here meant notFound() on the live page, the TV and the embed: a
+    // momentary DB error looked like a revoked link. Thrown, the route's
+    // error boundary retries instead.
     const client = buildSupabaseMock([
       { data: null, error: { message: 'DB error' } },
     ]);
@@ -95,8 +98,7 @@ describe('getGameBySpectateToken', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-    const result = await getGameBySpectateToken(uuid);
-    expect(result).toBeNull();
+    await expect(getGameBySpectateToken(uuid)).rejects.toThrow('DB error');
     expect(consoleSpy).toHaveBeenCalledWith(
       '[getGameBySpectateToken] lookup failed',
       expect.anything(),
