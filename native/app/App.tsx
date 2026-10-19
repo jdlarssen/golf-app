@@ -40,6 +40,7 @@ import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
 import { FRAUNCES_FILES } from './src/fonts';
 import { RootNavigator } from './src/navigation';
+import { KeyboardInset } from './src/components/KeyboardInset';
 import { Login } from './src/screens/Login';
 import { applyStoredThemePreference } from './src/lib/themePreference';
 import { SessionProvider } from './src/session';
@@ -118,31 +119,36 @@ export default function App() {
   if (!session) {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <Login />
+        <KeyboardInset>
+          <Login />
+        </KeyboardInset>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <OwnerGate key={session.user.id} userId={session.user.id}>
-        <SessionProvider
-          value={{ userId: session.user.id, email: session.user.email ?? null }}
-        >
-          {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
-              tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
-              fantes i lys drakt. */}
-          <StatusBar style="auto" />
-          {/* #2216: steget for navn og handicap står foran stacken når
-              profilen ikke er fullført, samme regel som nettsidens `/`. */}
-          <ProfileGate userId={session.user.id}>
-            {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
-            <AiConsentGate userId={session.user.id}>
-              <RootNavigator />
-            </AiConsentGate>
-          </ProfileGate>
-        </SessionProvider>
-      </OwnerGate>
+      {/* #1954 Del B: Android 15+ no longer shrinks the window for the keyboard. */}
+      <KeyboardInset>
+        <OwnerGate key={session.user.id} userId={session.user.id}>
+          <SessionProvider
+            value={{ userId: session.user.id, email: session.user.email ?? null }}
+          >
+            {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
+                tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
+                fantes i lys drakt. */}
+            <StatusBar style="auto" />
+            {/* #2216: steget for navn og handicap står foran stacken når
+                profilen ikke er fullført, samme regel som nettsidens `/`. */}
+            <ProfileGate userId={session.user.id}>
+              {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
+              <AiConsentGate userId={session.user.id}>
+                <RootNavigator />
+              </AiConsentGate>
+            </ProfileGate>
+          </SessionProvider>
+        </OwnerGate>
+      </KeyboardInset>
     </SafeAreaProvider>
   );
 }
