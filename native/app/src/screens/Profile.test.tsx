@@ -24,6 +24,7 @@
 // #2256).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { fetchBagTagExtras } from '../data/bagTag';
 import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
@@ -147,6 +148,10 @@ describe('Profile', () => {
     expect(navigate).toHaveBeenCalledWith('Friends', { selfInitials: 'JL' });
     await fireEvent.press(screen.getByTestId('profile-notifications-theme'));
     expect(navigate).toHaveBeenCalledWith('NotificationsAndTheme');
+    expect(screen.getByTestId('profile-notifications-theme')).toHaveTextContent(
+      PROFILE_TEXT.menuNotificationsTheme,
+      { exact: false },
+    );
     // «Rediger» står ved tittelen i innholdet (designet), ikke i headeren.
     await fireEvent.press(screen.getByTestId('profile-edit-entry'));
     expect(navigate).toHaveBeenCalledWith('EditProfile');
@@ -246,5 +251,15 @@ describe('Profile', () => {
     // Ingen rad å vise navn fra, men noe MÅ stå der: da er e-posten det
     // ærligste vi har, og feillinja står under den.
     expect(screen.getByTestId('profile-name')).toHaveTextContent(mockEmail);
+  });
+
+  // #2560: Android har ikke push ved lansering, så raden lover ikke varsler.
+  it('kaller raden «Tema» på Android', async () => {
+    const platform = jest.replaceProperty(Platform, 'OS', 'android');
+    await renderScreen();
+    const row = screen.getByTestId('profile-notifications-theme');
+    expect(row).toHaveTextContent('Tema', { exact: false });
+    expect(row).not.toHaveTextContent(/varsl/i);
+    platform.restore();
   });
 });

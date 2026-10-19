@@ -94,6 +94,17 @@ export const LOGIN_TEXT = {
 } as const;
 
 /**
+ * Hintet under kodefeltet. Triks-setningen om iPhone (koden over tastaturet)
+ * hører til iOS; Android får bare første setning (#2560). Nettsiden og iOS har
+ * hele {@link LOGIN_TEXT.codeHint}.
+ */
+const CODE_HINT_ANDROID = 'Koden har åtte siffer.';
+
+export function codeHintFor(os: string): string {
+  return os === 'ios' ? LOGIN_TEXT.codeHint : CODE_HINT_ANDROID;
+}
+
+/**
  * Feilene innloggingen kan vise (#1977).
  *
  * Nøkkelnavnene er webbens (`messages/no.json` → `auth.errors`), så de to

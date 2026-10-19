@@ -221,6 +221,20 @@ export const PROFILE_TEXT = {
 } as const;
 
 /**
+ * Menyraden som åpner temasiden. Android har ikke push ved lansering (eierens
+ * valg: e-post holder først, #2560), så der lover ikke raden varsler; siden har
+ * bare temaet.
+ */
+export function notificationsThemeMenuLabel(os: string): string {
+  return os === 'ios' ? PROFILE_TEXT.menuNotificationsTheme : PROFILE_TEXT.themeHeading;
+}
+
+/** Tittelen på siden raden åpner: «Varsler» på iOS, «Tema» på Android (#2560). */
+export function notificationsThemeHeading(os: string): string {
+  return os === 'ios' ? PROFILE_TEXT.notificationsHeading : PROFILE_TEXT.themeHeading;
+}
+
+/**
  * Tekstene i «Fullfør profilen» (#2216), steget en ny spiller møter etter
  * koden. Ordlyden er designets (Profilstart-forslag, #2350). Nettsiden har ennå
  * de gamle tekstene, så bare `kicker`, `plusHandicapLabel`, `submitButton` og

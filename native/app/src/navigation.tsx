@@ -21,6 +21,7 @@ import {
 } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
@@ -32,7 +33,7 @@ import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
-import { PROFILE_TEXT } from './lib/profileCopy';
+import { PROFILE_TEXT, notificationsThemeHeading } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
@@ -323,7 +324,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading, {
+          options={kickerHeader(PROFILE_TEXT.heading, notificationsThemeHeading(Platform.OS), {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
         />

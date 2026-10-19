@@ -21,7 +21,16 @@
 // skjermleseren. Til det lagrede valget er lest, er ingen rad merket, så et
 // feil merke aldri blinker forbi.
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  AppState,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { DesignSwitch } from '../components/DesignSwitch';
 import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
@@ -31,7 +40,7 @@ import {
   turnOnPush,
   type PushState,
 } from '../data/pushDevice';
-import { PROFILE_TEXT } from '../lib/profileCopy';
+import { PROFILE_TEXT, notificationsThemeHeading } from '../lib/profileCopy';
 import {
   THEME_PREFERENCES,
   loadThemePreference,
@@ -98,6 +107,9 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
   }, []);
 
   const showPush = push !== null && push !== 'unsupported';
+  // Android heter siden «Tema» (#2560); da blir etiketten over valgene en dobbel.
+  const heading = notificationsThemeHeading(Platform.OS);
+  const showThemeLabel = heading !== PROFILE_TEXT.themeHeading;
 
   return (
     <ScrollView
@@ -106,11 +118,13 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
     >
       <PageTitle
         size="settings"
-        title={PROFILE_TEXT.notificationsHeading}
+        title={heading}
         subtitle={showPush ? PROFILE_TEXT.pushSubtitle : undefined}
       />
       {showPush ? <PushSection state={push} onChange={setPush} /> : null}
-      <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
+      {showThemeLabel ? (
+        <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
+      ) : null}
       <SettingList testID="theme-choices" style={styles.list}>
         {THEME_PREFERENCES.map((preference) => (
           <SettingRow

@@ -30,6 +30,7 @@ import {
   maskSentToEmail,
   resendWaitSeconds,
   type LoginErrorCode,
+  codeHintFor,
 } from './loginCopy';
 
 const webErrors: Record<string, string> = source.auth.errors;
@@ -227,3 +228,18 @@ describe('maskSentToEmail', () => {
   });
 });
 
+
+// #2560: «På iPhone kan du trykke på koden over tastaturet» er et iOS-triks.
+// Android får bare første setning; iOS og nettsiden beholder hele.
+describe('codeHintFor (#2560)', () => {
+  it('gir iOS hele hintet, tegn for tegn som nettsiden', () => {
+    expect(codeHintFor('ios')).toBe(LOGIN_TEXT.codeHint);
+    expect(LOGIN_TEXT.codeHint).toMatch(/På iPhone/);
+  });
+
+  it('gir Android bare første setning, uten iPhone', () => {
+    expect(codeHintFor('android')).toBe('Koden har åtte siffer.');
+    expect(codeHintFor('android')).not.toMatch(/iphone/i);
+    expect(LOGIN_TEXT.codeHint.startsWith(codeHintFor('android'))).toBe(true);
+  });
+});

@@ -7,7 +7,7 @@
 // under valgene. For varslene: ingen varsel-del uten støtte, bryteren slår på
 // og av, et nei fra iOS gir «Åpne Innstillinger», og en feil står under kortet.
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { readPushState, turnOffPush, turnOnPush } from '../data/pushDevice';
 import { loadThemePreference, saveThemePreference } from '../lib/themePreference';
 import { PROFILE_TEXT } from '../lib/profileCopy';
@@ -120,5 +120,31 @@ describe('NotificationsAndTheme', () => {
       fireEvent.press(screen.getByTestId('theme-light'));
     });
     expect(screen.getByTestId('theme-save-error')).toHaveTextContent(PROFILE_TEXT.themeSaveFailedNote);
+  });
+
+  // #2560: Android har ikke push ved lansering, så siden heter «Tema» der og
+  // sier ingenting om varsler. Etiketten «Tema» over valgene ville stått rett
+  // under en tittel med samme ord, så den utgår.
+  it('heter «Tema» på Android, uten varsel-del og uten dobbel etikett', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'android');
+    // `readPushState` svarer alltid «unsupported» på Android (`pushDevice.test.ts`).
+    readPushMock.mockResolvedValue('unsupported');
+    await renderScreen();
+    expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
+
+    expect(screen.getAllByText('Tema')).toHaveLength(1);
+    expect(screen.queryByText(PROFILE_TEXT.notificationsHeading)).toBeNull();
+    expect(screen.queryByText(PROFILE_TEXT.pushSubtitle)).toBeNull();
+    expect(screen.queryByTestId('push-section')).toBeNull();
+    os.restore();
+  });
+
+  it('heter «Varsler» på iOS, med «Tema» som etikett over valgene', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'ios');
+    await renderScreen();
+    expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
+    expect(screen.getByText(PROFILE_TEXT.notificationsHeading)).toBeTruthy();
+    expect(screen.getAllByText('Tema')).toHaveLength(1);
+    os.restore();
   });
 });
