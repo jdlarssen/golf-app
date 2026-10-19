@@ -23,7 +23,7 @@
 // ingenting venter, sier skjermen om alt er godkjent eller om en makker ikke
 // har levert ennå. Hvilken tavle som står, avgjør `approveScreenState`.
 import { useLayoutEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { buildScorecardGrid, type ScorecardGrid as Grid } from '../../../../lib/scorecard/scorecardGrid';
@@ -50,6 +50,7 @@ import {
   APPROVE_TEXT,
   approvedLine,
   deliveredLine,
+  notDeliveredHintFor,
   notifiedLine,
   pendingHeading,
   positionLabel,
@@ -437,7 +438,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
                       {row.name}
                     </Text>
                     <Text style={[styles.rowSub, { color: colors.muted }]}>
-                      {APPROVE_TEXT.notDeliveredHint}
+                      {notDeliveredHintFor(Platform.OS)}
                     </Text>
                   </View>
                   <DashedRing color={colors.scoreUnsetFg} />

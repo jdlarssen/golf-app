@@ -33,6 +33,16 @@ export const APPROVE_TEXT = {
   cancel: 'Avbryt',
 } as const;
 
+/**
+ * Linja under en spiller som ikke har levert. «Du får beskjed» er designets
+ * tekst og stemmer på iOS, der leveringen kommer som push. Android har ikke
+ * push ved lansering, og ingen e-post for dette, så kortet er først å se når
+ * appen åpnes igjen (#2560).
+ */
+export function notDeliveredHintFor(os: string): string {
+  return os === 'ios' ? APPROVE_TEXT.notDeliveredHint : 'Kortet står her når det er levert.';
+}
+
 /** «2 kort venter på deg». */
 export function pendingHeading(count: number): string {
   return `${count} kort venter på deg`;

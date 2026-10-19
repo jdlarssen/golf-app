@@ -10,6 +10,7 @@
 // som går rett gjennom, ikke et regnet resultat. Bare en render-test som ser
 // det på skjermen, fanger at skjermen igjen leser rå rader.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+import { Platform } from 'react-native';
 import { render, screen, waitFor, within } from '@testing-library/react-native';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
@@ -68,33 +69,34 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
   };
 }
 
+const texasGame: BundleGame = {
+  id: 'game-1',
+  name: 'Testrunden',
+  status: 'active',
+  gameMode: 'texas_scramble',
+  modeConfig: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+  courseId: 'course-1',
+  teeBoxId: 'tee-1',
+  requirePeerApproval: true,
+  scheduledTeeOffAt: null,
+  holeSegment: 'full',
+  sourceGameId: null,
+  createdBy: 'rival-a',
+  scoreVisibility: 'live',
+  tournamentId: null,
+  foursomesSide1TeeStarterUserId: null,
+  foursomesSide2TeeStarterUserId: null,
+  sideTournamentEnabled: false,
+  sideLdCount: 0,
+  sideCtpCount: 0,
+  sideDisabledCategories: [],
+};
+
 describe('Approve', () => {
   it('viser hullene en trukket kaptein førte på den nye kapteinens kort', async () => {
-    const game: BundleGame = {
-      id: 'game-1',
-      name: 'Testrunden',
-      status: 'active',
-      gameMode: 'texas_scramble',
-      modeConfig: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
-      courseId: 'course-1',
-      teeBoxId: 'tee-1',
-      requirePeerApproval: true,
-      scheduledTeeOffAt: null,
-      holeSegment: 'full',
-      sourceGameId: null,
-      createdBy: 'rival-a',
-      scoreVisibility: 'live',
-      tournamentId: null,
-      foursomesSide1TeeStarterUserId: null,
-      foursomesSide2TeeStarterUserId: null,
-      sideTournamentEnabled: false,
-      sideLdCount: 0,
-      sideCtpCount: 0,
-      sideDisabledCategories: [],
-    };
     const submitted = '2026-09-17T12:00:00.000Z';
     mockState.bundle = {
-      game,
+      game: texasGame,
       players: [
         // «kaptein» er lex-min på lag 1 og slettet kontoen etter hull 9.
         player({ userId: 'kaptein', teamNumber: 1, withdrawnAt: '2026-09-17T10:00:00.000Z' }),
@@ -170,5 +172,41 @@ describe('Approve', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('approve-error')).toHaveTextContent('Fikk ikke tak i spillet.'));
+  });
+
+  // #2560: «Du får beskjed når kortet kommer» stemmer ikke på Android, som ikke
+  // har push ved lansering. Raden under en makker som ikke har levert er den
+  // eneste som sier det.
+  it.each([
+    ['ios', 'Du får beskjed når kortet kommer.'],
+    ['android', 'Kortet står her når det er levert.'],
+  ] as const)('sier «%s» under en makker som ikke har levert', async (os, hint) => {
+    const platform = jest.replaceProperty(Platform, 'OS', os);
+    try {
+      mockState.bundle = {
+        game: texasGame,
+        players: [
+          player({ userId: 'ny-kaptein', name: 'Nora Ny', teamNumber: 1 }),
+          player({ userId: 'rival-a', teamNumber: 2 }),
+          player({ userId: 'rival-b', teamNumber: 2 }),
+        ],
+        courseName: 'Testbanen',
+        teeBoxName: 'Gul',
+        holes: [],
+        fetchedAt: '2026-09-17T08:00:00.000Z',
+      };
+      mockState.scores = [];
+      await render(
+        <Approve
+          {...({
+            route: { params: { gameId: 'game-1' } },
+            navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+          } as unknown as ScreenProps<'Approve'>)}
+        />,
+      );
+      expect(await screen.findByText(hint)).toBeTruthy();
+    } finally {
+      platform.restore();
+    }
   });
 });
