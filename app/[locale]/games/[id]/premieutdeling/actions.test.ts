@@ -7,7 +7,8 @@ import { buildSupabaseMock, makeLocaleRedirectMock, RedirectError } from '@/test
  *   2. users.select(is_admin, name).single       (loadRole)
  *   3. games.select(created_by).maybeSingle      (non-admins only)
  *   4. games.select(game_mode).maybeSingle       (format check)
- *   5. games.update({ ceremony_step }).eq.eq.select('id')
+ *   5. games.update({ ceremony_step: to }).eq(id).eq(status).eq|is(ceremony_step, from).select('id')
+ *   6. games.select(status, ceremony_step).maybeSingle   (only after 0 rows)
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -47,12 +48,18 @@ beforeEach(() => {
 });
 
 describe('setCeremonyStep', () => {
-  it.each([5, -1, 1.5, Number.NaN])('refuses step %s before any read or write', async (step) => {
+  it.each([
+    [0, 5],
+    [0, -1],
+    [0, 1.5],
+    [0, Number.NaN],
+    [7, 1],
+  ])('refuses from %s to %s before any read or write', async (from, to) => {
     supabaseMock = buildSupabaseMock([]);
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, step)).resolves.toEqual({ ok: false });
+    await expect(setCeremonyStep(GAME_ID, from, to)).resolves.toEqual({ ok: false });
     expect(supabaseMock.__fromCalls).toEqual([]);
   });
 
@@ -66,13 +73,15 @@ describe('setCeremonyStep', () => {
     signedIn('creator-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, 2)).resolves.toEqual({ ok: true });
+    await expect(setCeremonyStep(GAME_ID, 1, 2)).resolves.toEqual({ ok: true });
 
     expect(gameWrites().map((c) => c.args[0])).toEqual([{ ceremony_step: 2 }]);
     const filters = supabaseMock.__fromCalls
       .filter((c) => c.table === 'games' && c.method === 'eq')
       .map((c) => c.args);
     expect(filters).toContainEqual(['status', 'finished']);
+    // Compare-and-set: only from the step this phone saw.
+    expect(filters).toContainEqual(['ceremony_step', 1]);
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
@@ -81,17 +90,44 @@ describe('setCeremonyStep', () => {
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, null)).resolves.toEqual({ ok: true });
+    await expect(setCeremonyStep(GAME_ID, 4, null)).resolves.toEqual({ ok: true });
     expect(gameWrites().map((c) => c.args[0])).toEqual([{ ceremony_step: null }]);
   });
 
-  it('0 rows (the game is not finished) is a failure', async () => {
-    supabaseMock = buildSupabaseMock([ADMIN, STABLEFORD, { data: [], error: null }]);
+  it('starting from off matches a null step (is, not eq)', async () => {
+    supabaseMock = buildSupabaseMock([ADMIN, STABLEFORD, { data: [{ id: GAME_ID }], error: null }]);
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, 1)).resolves.toEqual({ ok: false });
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    await expect(setCeremonyStep(GAME_ID, null, 0)).resolves.toEqual({ ok: true });
+    const isCalls = supabaseMock.__fromCalls.filter((c) => c.table === 'games' && c.method === 'is');
+    expect(isCalls.map((c) => c.args)).toEqual([['ceremony_step', null]]);
+  });
+
+  it('the step moved elsewhere (a second phone, an old tab): 0 rows, and the current step comes back', async () => {
+    supabaseMock = buildSupabaseMock([
+      ADMIN,
+      STABLEFORD,
+      { data: [], error: null },
+      { data: { status: 'finished', ceremony_step: 3 }, error: null },
+    ]);
+    signedIn('admin-1');
+    const { setCeremonyStep } = await import('./actions');
+
+    await expect(setCeremonyStep(GAME_ID, 1, 2)).resolves.toEqual({ ok: false, current: 3 });
+  });
+
+  it('0 rows on a game that is not finished is a plain failure', async () => {
+    supabaseMock = buildSupabaseMock([
+      ADMIN,
+      STABLEFORD,
+      { data: [], error: null },
+      { data: { status: 'active', ceremony_step: null }, error: null },
+    ]);
+    signedIn('admin-1');
+    const { setCeremonyStep } = await import('./actions');
+
+    await expect(setCeremonyStep(GAME_ID, 0, 1)).resolves.toEqual({ ok: false });
   });
 
   it('a player who is not the organiser goes to / before any write', async () => {
@@ -99,7 +135,7 @@ describe('setCeremonyStep', () => {
     signedIn('player-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, 1)).rejects.toBeInstanceOf(RedirectError);
+    await expect(setCeremonyStep(GAME_ID, 0, 1)).rejects.toBeInstanceOf(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith('/');
     expect(gameWrites()).toEqual([]);
   });
@@ -109,7 +145,7 @@ describe('setCeremonyStep', () => {
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, 1)).resolves.toEqual({ ok: false });
+    await expect(setCeremonyStep(GAME_ID, 0, 1)).resolves.toEqual({ ok: false });
     expect(gameWrites()).toEqual([]);
   });
 
@@ -118,6 +154,6 @@ describe('setCeremonyStep', () => {
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
 
-    await expect(setCeremonyStep(GAME_ID, 1)).resolves.toEqual({ ok: false });
+    await expect(setCeremonyStep(GAME_ID, 0, 1)).resolves.toEqual({ ok: false });
   });
 });

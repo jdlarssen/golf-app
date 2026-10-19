@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { CeremonyRemote, type RemoteLabels, type RemoteStep } from './CeremonyRemote';
 
 // Type C (#2298): the organiser's remote at a step from the database.
 
-vi.mock('./actions', () => ({ setCeremonyStep: vi.fn(async () => ({ ok: true })) }));
+const setCeremonyStep = vi.fn(async (..._args: unknown[]): Promise<{ ok: boolean; current?: number | null }> => ({ ok: true }));
+vi.mock('./actions', () => ({ setCeremonyStep: (...args: unknown[]) => setCeremonyStep(...args) }));
 vi.mock('@/lib/games/spectate', () => ({ setLiveFollow: vi.fn() }));
 vi.mock('@/i18n/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -41,5 +42,19 @@ describe('CeremonyRemote', () => {
     expect(screen.getByText('Alle kortene er snudd.')).toBeInTheDocument();
     expect(screen.queryByTestId('ceremony-primary')).toBeNull();
     expect(screen.getByTestId('ceremony-close')).toBeInTheDocument();
+  });
+
+  it('sends the step it shows; when it moved elsewhere, it takes the current one instead of writing over it', async () => {
+    setCeremonyStep.mockResolvedValueOnce({ ok: false, current: 2 });
+    render(<CeremonyRemote gameId="g1" initialStep={1} steps={STEPS} labels={LABELS} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('ceremony-primary'));
+    });
+
+    expect(setCeremonyStep).toHaveBeenCalledWith('g1', 1, 2);
+    // Synced to the step another phone set: the end, no error line.
+    expect(screen.getByTestId('ceremony-status')).toHaveTextContent('Vises nå: 1. plass');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
