@@ -18,7 +18,7 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { ShareLinkField } from '@/components/ui/ShareLinkField';
 import { loadCeremonyData } from './ceremonyData';
-import { placeText, sidePrizeLabel, type PlaceWords } from './ceremonyText';
+import { afterColon, placeText, sidePrizeLabel, type PlaceWords } from './ceremonyText';
 import { BigScreenSwitch, CeremonyRemote, type RemoteStep } from './CeremonyRemote';
 
 type Params = Promise<{ id: string }>;
@@ -75,6 +75,8 @@ export default async function CeremonyPage({ params }: { params: Params }) {
     names: data.names,
     unknown: tc('unknownPlayer'),
   };
+  // The phone's lines read «Vises nå: delt 2. plass», lower case after the colon.
+  const inline: PlaceWords = { ...words, placeTitle: (place) => afterColon(words.placeTitle(place)) };
   const sideText = data.sidePrizes
     .map((p) => `${sidePrizeLabel(p, { ld: tp('ldLabel'), ctp: tp('ctpLabel') })}: ${data.names[p.winnerUserId] ?? words.unknown}`)
     .join(' · ');
@@ -83,14 +85,14 @@ export default async function CeremonyPage({ params }: { params: Params }) {
     if (s === 'side') {
       return {
         button: t('showSide'),
-        next: t('next', { text: `${t('sideTitle')} · ${sideText}` }),
-        now: t('nowShowing', { text: t('sideTitle') }),
+        next: t('next', { text: `${afterColon(t('sideTitle'))} · ${sideText}` }),
+        now: t('nowShowing', { text: afterColon(t('sideTitle')) }),
       };
     }
     return {
       button: s.rank === 1 ? t('revealWinner') : t('showPlace', { rank: s.rank }),
-      next: t('next', { text: placeText(s, words) }),
-      now: t('nowShowing', { text: words.placeTitle(s) }),
+      next: t('next', { text: placeText(s, inline) }),
+      now: t('nowShowing', { text: inline.placeTitle(s) }),
     };
   });
 

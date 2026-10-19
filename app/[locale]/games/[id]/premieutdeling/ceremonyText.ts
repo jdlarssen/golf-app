@@ -55,3 +55,11 @@ export function placeText(place: CeremonyPlace, w: PlaceWords): string {
 export function sidePrizeLabel(prize: CeremonySidePrize, labels: { ld: string; ctp: string }): string {
   return sideLabel(prize.category === 'longest_drive' ? labels.ld : labels.ctp, prize.position, prize.count);
 }
+
+/**
+ * A title as it reads after «Vises nå:» or «Neste:» — lower case, like
+ * «pallen med skjulte kort», whether it is «Sidepremiene» or «Delt 2. plass».
+ */
+export function afterColon(title: string): string {
+  return title.charAt(0).toLocaleLowerCase() + title.slice(1);
+}
