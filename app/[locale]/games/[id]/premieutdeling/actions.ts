@@ -3,7 +3,6 @@
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectOne } from '@/lib/supabase/affectedRows';
-import { expireGameCache } from '@/lib/games/expireGameCache';
 import { CEREMONY_MAX_STEP, ceremonySupported } from '@/lib/games/ceremony';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
@@ -52,6 +51,7 @@ export async function setCeremonyStep(
     return { ok: false };
   }
 
-  expireGameCache(gameId);
+  // No cache to expire: no cached read holds ceremony_step (the game cache's
+  // select leaves it out), and the TV and this page read it fresh.
   return { ok: true };
 }
