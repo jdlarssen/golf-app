@@ -42,6 +42,8 @@ import {
   hcpUpdatedLine,
   isHandicapAgeStale,
   memberSinceLine,
+  notificationsThemeHeading,
+  notificationsThemeMenuLabel,
   onboardingGameDate,
   onboardingGameLine,
   onboardingGameTitle,
@@ -417,3 +419,25 @@ describe('spillkortet', () => {
   });
 });
 
+
+// #2560: Android har ikke push ved lansering (e-post holder først), så raden
+// og siden skal ikke love varsler der. iOS er uendret.
+describe('Varsler og tema per plattform (#2560)', () => {
+  it('menyraden heter «Tema» på Android og «Varsler og tema» på iOS', () => {
+    expect(notificationsThemeMenuLabel('android')).toBe('Tema');
+    expect(notificationsThemeMenuLabel('ios')).toBe(PROFILE_TEXT.menuNotificationsTheme);
+    expect(PROFILE_TEXT.menuNotificationsTheme).toBe('Varsler og tema');
+  });
+
+  it('sidens tittel heter «Tema» på Android og «Varsler» på iOS', () => {
+    expect(notificationsThemeHeading('android')).toBe('Tema');
+    expect(notificationsThemeHeading('ios')).toBe(PROFILE_TEXT.notificationsHeading);
+    expect(PROFILE_TEXT.notificationsHeading).toBe('Varsler');
+  });
+
+  it('Android-tekstene nevner verken varsler, push eller iPhone', () => {
+    for (const text of [notificationsThemeMenuLabel('android'), notificationsThemeHeading('android')]) {
+      expect(text).not.toMatch(/varsl|push|iphone/i);
+    }
+  });
+});

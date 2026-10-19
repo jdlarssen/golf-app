@@ -37,6 +37,7 @@
 // hentes og skjermen er som før.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,6 +56,7 @@ import {
   OTP_LENGTH,
   REVEAL_PASSWORD_LOGIN_MS,
   classifyVerifyError,
+  codeHintFor,
   describeLoginError,
   formatCountdown,
   maskSentToEmail,
@@ -384,7 +386,7 @@ export function Login() {
 
           <View style={styles.codeBlock}>
             <CodeBoxes code={code} onChangeText={onCodeChange} />
-            <Text style={[styles.hint, { color: colors.muted }]}>{LOGIN_TEXT.codeHint}</Text>
+            <Text style={[styles.hint, { color: colors.muted }]}>{codeHintFor(Platform.OS)}</Text>
           </View>
 
           <View style={styles.verifyBlock}>
@@ -505,7 +507,7 @@ function CodeBoxes({
         caretHidden
         selectionColor="transparent"
         accessibilityLabel={LOGIN_TEXT.codeLabel}
-        accessibilityHint={LOGIN_TEXT.codeHint}
+        accessibilityHint={codeHintFor(Platform.OS)}
         testID="code-input"
       />
     </View>

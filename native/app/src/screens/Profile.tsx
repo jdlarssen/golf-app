@@ -32,7 +32,7 @@
 // «Logg ut» og utviklerflaten bor i «Personvern og konto»
 // (`AccountSettings.tsx`), sammen med personvernerklæringen og «Slett konto».
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
@@ -40,7 +40,7 @@ import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { bagTagModel } from '../lib/bagTag';
-import { PROFILE_TEXT } from '../lib/profileCopy';
+import { PROFILE_TEXT, notificationsThemeMenuLabel } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { centeredLineTop, FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
@@ -207,7 +207,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
             testID="profile-friends"
           />
           <SettingRow
-            label={PROFILE_TEXT.menuNotificationsTheme}
+            label={notificationsThemeMenuLabel(Platform.OS)}
             chevron
             onPress={() => navigation.navigate('NotificationsAndTheme')}
             testID="profile-notifications-theme"

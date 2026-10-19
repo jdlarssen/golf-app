@@ -25,6 +25,7 @@
 // `data/loginCode.test.ts`.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { DEV_LOGIN_TEXT } from '../devLogin';
 import { finishLogin, requestLoginCode } from '../data/loginCode';
 import { LOGIN_TEXT, OTP_LENGTH, describeLoginError } from '../lib/loginCopy';
@@ -195,5 +196,22 @@ describe('Login: ny konto gjennom nettsidens sperrer (#2216)', () => {
       type: 'email',
     });
   });
-});
 
+  // #2560: koden-over-tastaturet er et iOS-triks. På Android står bare første
+  // setning, både synlig og som skjermleserhint.
+  it.each([
+    ['android', 'Koden har åtte siffer.'],
+    ['ios', LOGIN_TEXT.codeHint],
+  ] as const)('sier «%s» på kode-steget', async (os, hint) => {
+    const platform = jest.replaceProperty(Platform, 'OS', os);
+    requestLoginCodeMock.mockResolvedValueOnce({ ok: true });
+    await render(<Login />);
+    await fireEvent.changeText(screen.getByTestId('email-input'), 'ny@example.test');
+    await fireEvent.press(screen.getByTestId('send-code-button'));
+
+    const codeInput = await screen.findByTestId('code-input');
+    expect(screen.getByText(hint)).toBeTruthy();
+    expect(codeInput.props.accessibilityHint).toBe(hint);
+    platform.restore();
+  });
+});
