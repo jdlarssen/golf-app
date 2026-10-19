@@ -1,15 +1,26 @@
 /**
  * Type A — the big screen's prize-giving poller (#2298). It asks the step
- * route every 2 s and refreshes the page only when the step changed or the
- * link is gone; it stays quiet offline and gives up 6 hours after the page
- * was opened.
+ * route and refreshes the page only when the page shows something else; a
+ * refresh that the router drops is followed by a reload, a slow one is not.
+ * Quiet offline and while hidden; after six quiet hours it asks once a
+ * minute, and every two seconds again after a change.
  */
 
+import { Suspense, use, useEffect, useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, act } from '@testing-library/react';
-import { CeremonyPoller, CEREMONY_POLL_MS, CEREMONY_POLL_GIVE_UP_MS } from './CeremonyPoller';
+import {
+  CeremonyPoller,
+  CEREMONY_POLL_MS,
+  CEREMONY_SLOW_AFTER_MS,
+  CEREMONY_SLOW_POLL_MS,
+  CEREMONY_REFRESH_CEILING_MS,
+} from './CeremonyPoller';
 
-const refresh = vi.fn();
+// What the router's refresh does; set per test. Called inside the poller's
+// transition, so a state update here is part of it, as Next's is.
+const refreshImpl: { current: () => void } = { current: () => {} };
+const refresh = vi.fn(() => refreshImpl.current());
 vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ refresh }),
 }));
@@ -34,13 +45,43 @@ function answer(status: number, step: number | null = null, finished = true) {
   fetchMock.mockResolvedValue(response(status, step, finished));
 }
 
+/** Suspends until the promise settles — a refresh whose render is slow. */
+function Wait({ p }: { p: Promise<void> }) {
+  use(p);
+  return null;
+}
+
+/**
+ * The TV page in miniature: the poller with the step the page shows. A
+ * refresh can land at once, land when `land` settles (the transition stays
+ * pending meanwhile), or never land (Next drops the commit).
+ */
+function Page({ initial, to, land }: { initial: number | null; to: number | null; land: 'now' | 'never' | Promise<void> }) {
+  const [step, setStep] = useState(initial);
+  const [gate, setGate] = useState<Promise<void> | null>(null);
+  useEffect(() => {
+    refreshImpl.current = () => {
+      if (land === 'never') return;
+      if (land !== 'now') setGate(land);
+      setStep(to);
+    };
+  }, [land, to]);
+  return (
+    <Suspense fallback={null}>
+      {gate && <Wait p={gate} />}
+      <CeremonyPoller token="tok-1" step={step} />
+    </Suspense>
+  );
+}
+
 const NOW = Date.parse('2026-10-18T20:00:00Z');
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   online = true;
-  refresh.mockReset();
+  refreshImpl.current = () => {};
+  refresh.mockClear();
   reloadPage.mockReset();
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
@@ -70,31 +111,49 @@ describe('CeremonyPoller', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('a new step: a refresh first, and no reload while it lands', async () => {
+  it('a new step: one refresh, and when it lands, no reload', async () => {
     answer(200, 3);
-    const { rerender } = render(<CeremonyPoller token="tok-1" step={2} />);
-    await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(refresh).toHaveBeenCalledTimes(1);
-
-    // The refreshed page arrives with the new step.
-    rerender(<CeremonyPoller token="tok-1" step={3} />);
+    render(<Page initial={2} to={3} land="now" />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
+
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(reloadPage).not.toHaveBeenCalled();
   });
 
-  it('a refresh that never lands: the page reloads, once (staging, #2298)', async () => {
-    // On the PPR route a router.refresh() now and then never commits; the
-    // screen stood still on the old step.
+  it('a refresh the router drops (staging, #2298): the page reloads, once', async () => {
+    // The transition ends with the old step still on screen.
     answer(200, 3);
-    render(<CeremonyPoller token="tok-1" step={2} />);
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    render(<Page initial={2} to={3} land="never" />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
+
     expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reloadPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('a slow refresh is waited for, not reloaded (no replayed reveal)', async () => {
+    answer(200, 3);
+    let release!: () => void;
+    const slow = new Promise<void>((r) => (release = r));
+    render(<Page initial={2} to={3} land={slow} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
     expect(reloadPage).not.toHaveBeenCalled();
 
-    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS));
-    expect(reloadPage).toHaveBeenCalledTimes(1);
+    // The slow render finishes, and the page shows the new step.
+    await act(async () => {
+      release();
+    });
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 2));
     expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reloadPage).not.toHaveBeenCalled();
+  });
+
+  it('a refresh that hangs past the ceiling: the page reloads', async () => {
+    answer(200, 3);
+    render(<Page initial={2} to={3} land={new Promise<void>(() => {})} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_REFRESH_CEILING_MS + CEREMONY_POLL_MS * 2));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
   it('closed (null) after a step counts as a change', async () => {
@@ -157,15 +216,30 @@ describe('CeremonyPoller', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('stops asking 6 hours after the page was opened (a TV left on overnight)', async () => {
+  it('after six quiet hours it asks once a minute, not every two seconds', async () => {
     answer(200, 1);
     render(<CeremonyPoller token="tok-1" step={1} />);
-    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_GIVE_UP_MS - CEREMONY_POLL_MS));
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_SLOW_AFTER_MS));
     const before = fetchMock.mock.calls.length;
-    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 10));
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_SLOW_POLL_MS * 3));
 
-    expect(before).toBeGreaterThan(0);
-    expect(fetchMock.mock.calls.length - before).toBeLessThanOrEqual(1);
+    const asked = fetchMock.mock.calls.length - before;
+    expect(asked).toBeGreaterThanOrEqual(2);
+    expect(asked).toBeLessThanOrEqual(4);
+  });
+
+  it('a change after the quiet hours brings it back to every two seconds', async () => {
+    answer(200, 1);
+    const { rerender } = render(<CeremonyPoller token="tok-1" step={1} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_SLOW_AFTER_MS + CEREMONY_SLOW_POLL_MS));
+
+    // The organiser starts again: the page now shows step 2.
+    answer(200, 2);
+    rerender(<CeremonyPoller token="tok-1" step={2} />);
+    const before = fetchMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 5));
+
+    expect(fetchMock.mock.calls.length - before).toBeGreaterThanOrEqual(5);
   });
 
   it('a hidden tab does not ask; it asks again when shown', async () => {
