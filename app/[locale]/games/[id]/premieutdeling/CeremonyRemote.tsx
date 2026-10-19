@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { setLiveFollow } from '@/lib/games/spectate';
+import { ceremonyView } from '@/lib/games/ceremony';
 import { setCeremonyStep } from './actions';
 
 export interface RemoteStep {
@@ -44,11 +45,7 @@ export function CeremonyRemote({
   steps: RemoteStep[];
   labels: RemoteLabels;
 }) {
-  // Clamped like the TV's view: RLS allows 0–4, and a stored step beyond this
-  // podium (or a negative one) must not throw, so the organiser can close it.
-  const [step, setStep] = useState<number | null>(
-    initialStep === null ? null : Math.min(Math.max(initialStep, 0), steps.length),
-  );
+  const [step, setStep] = useState<number | null>(initialStep);
   const [failed, setFailed] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -62,16 +59,18 @@ export function CeremonyRemote({
     });
   }
 
-  const done = step !== null && step >= steps.length;
-  const status =
-    step === null ? labels.notStarted : step === 0 ? labels.nowHidden : steps[step - 1]!.now;
-  const nextText = step !== null && !done ? steps[step]!.next : null;
+  // The same view as the TV's, so a stored step beyond this podium reads as
+  // the end and the organiser can still close it.
+  const view = step === null ? null : ceremonyView(steps, step);
+  const done = view?.done ?? false;
+  const status = view === null ? labels.notStarted : (view.current?.now ?? labels.nowHidden);
+  const nextText = view?.next?.next ?? null;
   const primary =
-    step === null
+    view === null
       ? { label: labels.start, target: 0 }
-      : done
-        ? null
-        : { label: steps[step]!.button, target: step + 1 };
+      : view.next
+        ? { label: view.next.button, target: view.step + 1 }
+        : null;
 
   return (
     <Card>
@@ -105,14 +104,14 @@ export function CeremonyRemote({
           </p>
         )}
 
-        {step !== null && (
+        {view !== null && (
           <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
-            {step > 0 && (
-              <Button type="button" variant="secondary" className="w-full" disabled={isPending} onClick={() => go(step - 1)}>
+            {view.step > 0 && (
+              <Button type="button" variant="secondary" className="w-full" disabled={isPending} onClick={() => go(view.step - 1)}>
                 {labels.back}
               </Button>
             )}
-            {step > 0 && (
+            {view.step > 0 && (
               <Button type="button" variant="secondary" className="w-full" disabled={isPending} onClick={() => go(0)}>
                 {labels.restart}
               </Button>
