@@ -56,6 +56,13 @@ const verifyOtpMock = supabase.auth.verifyOtp as jest.Mock;
 const requestLoginCodeMock = requestLoginCode as jest.Mock;
 const finishLoginMock = finishLogin as jest.Mock;
 
+// `Platform.OS` skal ikke lekke videre om en assert feiler midt i en test.
+let platform: { restore(): void } | null = null;
+afterEach(() => {
+  platform?.restore();
+  platform = null;
+});
+
 describe('Login — skjult passord-inngang', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -203,7 +210,7 @@ describe('Login: ny konto gjennom nettsidens sperrer (#2216)', () => {
     ['android', 'Koden har åtte siffer.'],
     ['ios', LOGIN_TEXT.codeHint],
   ] as const)('sier «%s» på kode-steget', async (os, hint) => {
-    const platform = jest.replaceProperty(Platform, 'OS', os);
+    platform = jest.replaceProperty(Platform, 'OS', os);
     requestLoginCodeMock.mockResolvedValueOnce({ ok: true });
     await render(<Login />);
     await fireEvent.changeText(screen.getByTestId('email-input'), 'ny@example.test');
@@ -212,6 +219,5 @@ describe('Login: ny konto gjennom nettsidens sperrer (#2216)', () => {
     const codeInput = await screen.findByTestId('code-input');
     expect(screen.getByText(hint)).toBeTruthy();
     expect(codeInput.props.accessibilityHint).toBe(hint);
-    platform.restore();
   });
 });

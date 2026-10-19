@@ -33,6 +33,13 @@ const loadMock = loadThemePreference as jest.Mock;
 const saveMock = saveThemePreference as jest.Mock;
 
 describe('NotificationsAndTheme', () => {
+  // `Platform.OS` skal ikke lekke videre om en assert feiler midt i en test.
+  let platform: { restore(): void } | null = null;
+  afterEach(() => {
+    platform?.restore();
+    platform = null;
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     loadMock.mockResolvedValue('system');
@@ -126,7 +133,7 @@ describe('NotificationsAndTheme', () => {
   // sier ingenting om varsler. Etiketten «Tema» over valgene ville stått rett
   // under en tittel med samme ord, så den utgår.
   it('heter «Tema» på Android, uten varsel-del og uten dobbel etikett', async () => {
-    const os = jest.replaceProperty(Platform, 'OS', 'android');
+    platform = jest.replaceProperty(Platform, 'OS', 'android');
     // `readPushState` svarer alltid «unsupported» på Android (`pushDevice.test.ts`).
     readPushMock.mockResolvedValue('unsupported');
     await renderScreen();
@@ -138,15 +145,13 @@ describe('NotificationsAndTheme', () => {
     expect(screen.queryByTestId('push-section')).toBeNull();
     // Etiketten ga 16 pt luft over lista; uten den må lista holde avstand selv.
     expect(StyleSheet.flatten(screen.getByTestId('theme-choices').props.style).marginTop).toBe(16);
-    os.restore();
   });
 
   it('heter «Varsler» på iOS, med «Tema» som etikett over valgene', async () => {
-    const os = jest.replaceProperty(Platform, 'OS', 'ios');
+    platform = jest.replaceProperty(Platform, 'OS', 'ios');
     await renderScreen();
     expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
     expect(screen.getByText(PROFILE_TEXT.notificationsHeading)).toBeTruthy();
     expect(screen.getAllByText('Tema')).toHaveLength(1);
-    os.restore();
   });
 });

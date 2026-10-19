@@ -69,6 +69,9 @@ async function renderScreen() {
   await screen.findByTestId('profile-hcp');
 }
 
+// `Platform.OS` skal ikke lekke videre om en assert feiler midt i en test.
+let platform: { restore(): void } | null = null;
+
 describe('Profile', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -96,6 +99,8 @@ describe('Profile', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    platform?.restore();
+    platform = null;
   });
 
   // #1979: `hcp_index` er `not null default 54.0` og `handicap_updated_at`
@@ -255,11 +260,10 @@ describe('Profile', () => {
 
   // #2560: Android har ikke push ved lansering, så raden lover ikke varsler.
   it('kaller raden «Tema» på Android', async () => {
-    const platform = jest.replaceProperty(Platform, 'OS', 'android');
+    platform = jest.replaceProperty(Platform, 'OS', 'android');
     await renderScreen();
     const row = screen.getByTestId('profile-notifications-theme');
     expect(row).toHaveTextContent('Tema', { exact: false });
     expect(row).not.toHaveTextContent(/varsl/i);
-    platform.restore();
   });
 });
