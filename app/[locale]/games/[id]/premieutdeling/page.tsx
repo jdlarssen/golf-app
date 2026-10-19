@@ -49,7 +49,7 @@ export default async function CeremonyPage({ params }: { params: Params }) {
 
   const admin = getAdminClient();
   // Fresh, not from the game cache: the token and the step change under it.
-  const [stateRes, courseRes, data, origin, t, tc, tp] = await Promise.all([
+  const [stateRes, courseRes, data, origin, t, tc, tp, tTv, tFinish] = await Promise.all([
     admin
       .from('games')
       .select('spectate_token, ceremony_step')
@@ -63,6 +63,8 @@ export default async function CeremonyPage({ params }: { params: Params }) {
     getTranslations('ceremony'),
     getTranslations('leaderboard.common'),
     getTranslations('prizes'),
+    getTranslations('spectate.tv'),
+    getTranslations('game.finish'),
   ]);
   if (stateRes.error) throw stateRes.error;
   const { spectate_token: token, ceremony_step: step } = stateRes.data;
@@ -90,7 +92,12 @@ export default async function CeremonyPage({ params }: { params: Params }) {
       };
     }
     return {
-      button: s.rank === 1 ? t('revealWinner') : t('showPlace', { rank: s.rank }),
+      button:
+        s.rank !== 1
+          ? t('showPlace', { rank: s.rank })
+          : s.lines.length > 1
+            ? t('revealWinners')
+            : t('revealWinner'),
       next: t('next', { text: placeText(s, inline) }),
       now: t('nowShowing', { text: inline.placeTitle(s) }),
     };
@@ -101,7 +108,7 @@ export default async function CeremonyPage({ params }: { params: Params }) {
 
   return (
     <AppShell>
-      <TopBar backHref={`/games/${id}`} kicker={gameName} />
+      <TopBar backHref={`/games/${id}`} backLabel={tFinish('backToGame')} kicker={gameName} />
       <PageHeader title={t('title')} subtitle={t('intro')} />
 
       <div className="space-y-4">
@@ -139,6 +146,7 @@ export default async function CeremonyPage({ params }: { params: Params }) {
           <CeremonyRemote
             gameId={id}
             initialStep={step}
+            tvReady={tvUrl !== null}
             steps={steps}
             labels={{
               start: t('start'),
@@ -146,7 +154,9 @@ export default async function CeremonyPage({ params }: { params: Params }) {
               restart: t('restart'),
               close: t('close'),
               nowHidden: t('nowHidden'),
-              notStarted: t('notStarted'),
+              // The TV's own status, so the two can never say different things.
+              notStarted: t('notStarted', { status: tTv('finished') }),
+              tvMissing: t('tvMissing'),
               allShown: t('allShown'),
               error: t('error'),
             }}
