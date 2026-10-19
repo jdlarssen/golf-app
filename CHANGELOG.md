@@ -16,6 +16,168 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.242.0 · mandag 19. oktober 2026
+
+<details>
+<summary><strong>Få med gjengen fra vennesiden</strong></summary>
+
+[#2267](https://github.com/jdlarssen/golf-app/issues/2267) — Vennesiden starter med lenken du deler med gjengen. Under hver venn ser du hvor mange runder dere har spilt sammen, og før du fjerner noen, spør siden om du er sikker.
+
+↳ /profile/venner · «Åpne vennene dine»
+</details>
+
+<details>
+<summary><strong>Storskjermen: tavla på TV-en i klubbhuset</strong></summary>
+
+[#2275](https://github.com/jdlarssen/golf-app/issues/2275) — Trykk «Vis på storskjerm» når live-følg er på, så får TV-en i baren tavla, siste nytt fra runden og en QR-kode folk kan skanne med mobilen.
+</details>
+
+<details>
+<summary><strong>Følg én spiller hull for hull på live-lenka</strong></summary>
+
+[#2286](https://github.com/jdlarssen/golf-app/issues/2286) — Trykk på et navn på live-lenka, så ser du plassen, totalen og de siste hullene til den du heier på. Telefonen husker valget til neste gang.
+</details>
+
+<details>
+<summary><strong>Feilsiden har fått golfdrakt</strong></summary>
+
+[#2287](https://github.com/jdlarssen/golf-app/issues/2287) — Peker en lenke på noe som er borte, ser du nå et hull der ballen har havnet utenfor banen, med knappene «Til Hjem» og «Finn turneringer». Går noe annet galt, ligger ballen ved et tre.
+</details>
+
+<details>
+<summary><strong>Plasser og søknader på påmeldingssiden</strong></summary>
+
+[#2288](https://github.com/jdlarssen/golf-app/issues/2288), [#2291](https://github.com/jdlarssen/golf-app/issues/2291) — Påmeldingssiden viser hvor mange som er med og hvor mange plasser som står ledige. Hver søknad har eget kort med handicap og tidspunkt, og du stenger påmeldingen rett fra siden.
+
+↳ /admin · «Åpne Klubbhuset»
+</details>
+
+<details>
+<summary><strong>Startlista: flightene side om side</strong></summary>
+
+[#2289](https://github.com/jdlarssen/golf-app/issues/2289) — Startlista viser flightene som kort med antall spillere og snitthandicap. Du flytter en spiller med to trykk: først spilleren, så flighten.
+
+↳ /admin · «Åpne Klubbhuset»
+</details>
+
+<details>
+<summary><strong>Oppgjøret som kvittering til gruppechatten</strong></summary>
+
+[#2296](https://github.com/jdlarssen/golf-app/issues/2296) — Spiller dere om kroner, står oppgjøret nå som en kvittering under tavla: hvem som betaler hvem, og sluttsummen. Når runden er ferdig, kopierer du alt til gruppechatten med ett trykk.
+</details>
+
+<details>
+<summary><strong>Runden oppsummert etter hull 18</strong></summary>
+
+[#2299](https://github.com/jdlarssen/golf-app/issues/2299) — Når du har ført alle hullene i appen, starter scorekortet med runden din: tallene, dagens beste hull og det som svidde, og hvem i flighten som fortsatt mangler et hull.
+</details>
+
+<details>
+<summary><strong>Resultatkortet i gruppechatten, nytt og stående</strong></summary>
+
+[#2319](https://github.com/jdlarssen/golf-app/issues/2319) — Kortet du deler etter en runde er nå et stående bilde på skoggrønn bakgrunn. Overskriften sier hvem som vant, og under står pallen med de tre beste. Alle som henter kortet ser det samme.
+</details>
+
+<details>
+<summary><strong>Du bestemmer om AI-en skriver om deg</strong></summary>
+
+[#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Tørny spør én gang om språkmodellen kan ha deg med i rundereferatene og Kavalkaden. Sier du nei, står ikke navnet ditt i nye tekster, og du kan ombestemme deg på profilen når som helst.
+
+↳ /profile · «Åpne profilen»
+</details>
+
+<details>
+<summary><strong>Slik sletter du kontoen din</strong></summary>
+
+[#2561](https://github.com/jdlarssen/golf-app/issues/2561) — En egen side forteller nå hvordan du sletter kontoen i appen og på nettet, hva som slettes og hva som blir igjen. Siden kan leses uten å logge inn.
+
+↳ /legal/slett-konto · «Les om slettingen»
+</details>
+
+<details>
+<summary><strong>«Hent appen» på nettsiden</strong></summary>
+
+[#2562](https://github.com/jdlarssen/golf-app/issues/2562) — Den dagen appen er i butikken, slår vi på «Hent appen» på påmeldingen, spillsiden før start, live-tavla og demoen. Samtidig forsvinner tekstene som sier at det ikke finnes noen app.
+</details>
+
+<details>
+<summary><strong>Lag på 3 og 4 i samme scramble-turnering</strong></summary>
+
+[#2569](https://github.com/jdlarssen/golf-app/issues/2569) — Går ikke lagene opp, eller melder noen forfall i siste liten, kan du spille scramble med lag på 3 og 4. Hvert lag får handicap etter hvor mange som faktisk spiller, med samme prosent av snittet som de andre lagene.
+
+↳ /opprett-spill · «Sett opp en turnering»
+</details>
+
+<details>
+<summary><strong>Del påmeldingslenka fra «Styr spillere»</strong></summary>
+
+[#2570](https://github.com/jdlarssen/golf-app/issues/2570) — Som arrangør kopierer du nå påmeldingslenka og skriver ut plakaten rett fra «Styr spillere», også uten admin-tilgang.
+</details>
+
+<details>
+<summary><strong>Handicap-andel i shamble og stopp for runder med bare gjester</strong></summary>
+
+[#2570](https://github.com/jdlarssen/golf-app/issues/2570) — I shamble og champagne scramble velger du nå hvor stor del av handicapet som teller. En runde med bare gjester stopper før publisering, for gjester kan ikke logge inn og føre slag: bli med selv, eller legg til en spiller med konto.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Godkjenning ett kort om gangen</strong></summary>
+
+[#2577](https://github.com/jdlarssen/golf-app/issues/2577) — Etter runden ser du kortene som venter på deg ett om gangen som det signerte scorekortet, og du kan sende et kort tilbake med en kort grunn, nå også på Android.
+</details>
+
+<details>
+<summary><strong>Avslutt runden i appen, steg for steg</strong></summary>
+
+[#2578](https://github.com/jdlarssen/golf-app/issues/2578) — Når du avslutter runden i appen, ser du med en gang hva som mangler, kårer vinnerne fra en liste og ser over alt på en egen side før noe låses.
+</details>
+
+<details>
+<summary><strong>Lagtavla i appen for scramble, shamble, lagstableford og best ball</strong></summary>
+
+[#2579](https://github.com/jdlarssen/golf-app/issues/2579) — Lagformatene har fått sin egen tavle i appen. Hvert lag har et kort med plass, navn og sum, og nederst står laget ditt med en knapp til neste hull. I scramble ser du hva laget slo på siste hull. Best ball viser bare de ni første hullene mens runden pågår, og hvem sin ball som talte. Når spillet er ferdig, står vinnerlaget i gull, med lagets handicap der formatet har det.
+</details>
+
+<details>
+<summary><strong>Den nye tavla i appen for slagspill og stableford</strong></summary>
+
+[#2579](https://github.com/jdlarssen/golf-app/issues/2579) — Resultater i appen viser tavla mens runden pågår: plass, hull, pil opp eller ned og de siste fem hullene, med din runde nederst og knapp til neste hull. Når spillet er ferdig, står vinneren i gull, og ved likt står det hva som avgjorde.
+</details>
+
+<details>
+<summary><strong>Tell utslag i scramble og shamble</strong></summary>
+
+[#2580](https://github.com/jdlarssen/golf-app/issues/2580) — Slå på «Hvem sitt utslag» når du setter opp en scramble eller shamble, så trykker laget på hvem sitt utslag de brukte, og ingen kan levere før alle har nok.
+
+↳ /opprett-spill · «Sett opp en turnering»
+</details>
+
+<details>
+<summary><strong>Hvem sitt utslag i appen</strong></summary>
+
+[#2580](https://github.com/jdlarssen/golf-app/issues/2580) — Trykk på hvem sitt utslag laget brukte rett på hullet i appen, også uten nett. Scorekortet sier fra om noen mangler før kortet kan leveres, og den ferdige lagtavla viser hvor mange ganger hver av dere fikk utslaget sitt brukt.
+</details>
+
+<details>
+<summary>13 rettinger</summary>
+
+- [#2286](https://github.com/jdlarssen/golf-app/issues/2286) — I en shotgun-runde viser tavla, Hjem-kortet og følg-siden nå neste hull og de siste hullene i den rekkefølgen flighten spiller dem.
+- [#2286](https://github.com/jdlarssen/golf-app/issues/2286) — Lista over spillere som har trukket seg, står nå på linje med tavla og har ikke lenger det store innrykket.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Sletter du kontoen før du har spilt, forsvinner nå også invitasjonene som er sendt til e-postadressen din.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Appen viser ikke kroner lenger. Pengeoppgjøret og feltet «Kroner per …» i «Opprett spill» finner du på nettsiden, og varselet om startkontingent på iPhone nevner ikke beløpet.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Personvernerklæringen sier nå at vi teller hvem som deler et kort fra Kavalkaden, og hvorfor, og slettesiden sier at tellingen slettes sammen med kontoen. Personvernerklæringen nevner også rundenavnet og grunnen som skrives når et scorekort sendes tilbake.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Personvernerklæringen sier nå hva Tørny lagrer når du slår på varsler eller lagrer et punkt ved greenen, hvilket rettslig grunnlag vi bruker, og at du kan klage til Datatilsynet.
+- [#2566](https://github.com/jdlarssen/golf-app/issues/2566) — Du kan ikke lenger sette lag-handicapet i scramble høyere enn lagets snitt.
+- [#2566](https://github.com/jdlarssen/golf-app/issues/2566) — Redigerer du et scramble-spill, står lag-handicapet nå i prosent av lagets snitt, det samme tallet du skrev da du laget spillet.
+- [#2567](https://github.com/jdlarssen/golf-app/issues/2567) — Du kan nå generere matchene i cupen selv om spillerne meldte seg på med lenka. I ligaen kan du starte en runde med medlemmer du aldri har spilt med.
+- [#2568](https://github.com/jdlarssen/golf-app/issues/2568) — Når du markerer en idé som bygd, velger du nå linja fra de siste lanseringene i stedet for å få et forslag fra idéteksten.
+- [#2568](https://github.com/jdlarssen/golf-app/issues/2568) — Når idéen din blir bygget, sier varselet nå hva som er nytt og tar deg rett dit, og e-postknappen sender deg ikke lenger tilbake til idéskjemaet.
+- [#2579](https://github.com/jdlarssen/golf-app/issues/2579) — Best ball-tavla og hull-for-hull-siden sier nå det samme når andre halvdel er skjult: «Vi sees ved hull 18» og hvilke hull som vises når arrangøren avslutter spillet.
+- [#2579](https://github.com/jdlarssen/golf-app/issues/2579) — Sideturneringen i appen viser lengste drive og nærmest pinnen med hele navnet til vinneren, også under matchplay-duellen.
+</details>
+
 ### 1.241.0 · mandag 12. oktober 2026
 
 <details>
