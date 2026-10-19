@@ -128,7 +128,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      {/* #1954 Del B: Android 15+ no longer shrinks the window for the keyboard. */}
+      {/* #1954 Del B: edge to edge, Android no longer shrinks the window for the keyboard. */}
       <KeyboardInset>
         <OwnerGate key={session.user.id} userId={session.user.id}>
           <SessionProvider

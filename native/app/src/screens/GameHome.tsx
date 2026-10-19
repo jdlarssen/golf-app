@@ -92,6 +92,7 @@ import { canShareLiveFollow, shareLiveFollow } from '../lib/shareLive';
 import { TICKET_TEXT, approveButton, fieldA11y, stubTotal } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
@@ -266,7 +267,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const withdrawKind = playerWithdrawKind(game, me?.player, game.createdBy === userId);
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={[ui.scroll, styles.scroll]} testID="game-home-screen">
+    <ScrollView
+      ref={scrollRef}
+      {...KEYBOARD_SCROLL_PROPS}
+      contentContainerStyle={[ui.scroll, styles.scroll]}
+      testID="game-home-screen"
+    >
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
       <SyncBanner gameId={gameId} />
 
