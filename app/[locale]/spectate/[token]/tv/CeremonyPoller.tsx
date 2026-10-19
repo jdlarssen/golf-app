@@ -3,6 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useOnline } from '@/hooks/useOnline';
+import { reloadPage } from './reloadPage';
 
 export const CEREMONY_POLL_MS = 2000;
 /**
@@ -11,6 +12,18 @@ export const CEREMONY_POLL_MS = 2000;
  * prize-giving in the evening after a morning round must still reach a TV.
  */
 export const CEREMONY_POLL_GIVE_UP_MS = 6 * 60 * 60 * 1000;
+/**
+ * How long a `router.refresh()` gets to land before the page reloads instead.
+ *
+ * On this route (PPR under cacheComponents, Next 16.2.6) a refresh now and
+ * then never reaches the screen. Measured on staging (#2298): 3 of 12
+ * refreshes, each with the RSC payload read in full and correct (the bytes
+ * of the target step, no stream error), and no error anywhere. The client
+ * router dropped the commit. A second refresh landed in 2 of 3 cases; a
+ * reload landed every time. Next's docs describe no such case, so the poller
+ * checks that the step arrived and reloads when it did not.
+ */
+export const CEREMONY_LAND_MS = 1500;
 
 function subscribeVisibility(callback: () => void): () => void {
   document.addEventListener('visibilitychange', callback);
@@ -39,6 +52,7 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
   // The step a refresh was already asked for, so a slow refresh is not
   // asked for again on every tick while the page catches up.
   const requested = useRef<number | null | undefined>(undefined);
+  const requestedAt = useRef(0);
 
   useEffect(() => {
     requested.current = undefined;
@@ -52,8 +66,10 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
 
     let cancelled = false;
     let inFlight = false;
+    let landCheck: ReturnType<typeof setTimeout> | undefined;
 
     async function tick() {
+      if (cancelled) return;
       if (Date.now() >= giveUpAt) {
         clearInterval(id);
         return;
@@ -69,9 +85,20 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
         }
         if (!res.ok) return;
         const body = (await res.json()) as { step: number | null };
-        if (cancelled || body.step === step || body.step === requested.current) return;
+        if (cancelled || body.step === step) return;
+        if (body.step === requested.current) {
+          // Asked for already; reload if it has not landed in time.
+          if (Date.now() - requestedAt.current >= CEREMONY_LAND_MS) {
+            cancelled = true;
+            clearInterval(id);
+            reloadPage();
+          }
+          return;
+        }
         requested.current = body.step;
+        requestedAt.current = Date.now();
         router.refresh();
+        landCheck = setTimeout(tick, CEREMONY_LAND_MS);
       } catch {
         // A blip; the next tick asks again.
       } finally {
@@ -84,6 +111,7 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
     return () => {
       cancelled = true;
       clearInterval(id);
+      clearTimeout(landCheck);
     };
   }, [online, visible, token, step, router]);
 

@@ -14,6 +14,11 @@ vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ refresh }),
 }));
 
+const reloadPage = vi.fn();
+vi.mock('./reloadPage', () => ({
+  reloadPage: () => reloadPage(),
+}));
+
 let online = true;
 vi.mock('@/hooks/useOnline', () => ({
   useOnline: () => online,
@@ -36,6 +41,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   online = true;
   refresh.mockReset();
+  reloadPage.mockReset();
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
 });
@@ -64,11 +70,30 @@ describe('CeremonyPoller', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('a new step: one refresh, not one per tick while the page catches up', async () => {
+  it('a new step: a refresh first, and no reload while it lands', async () => {
+    answer(200, 3);
+    const { rerender } = render(<CeremonyPoller token="tok-1" step={2} />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    // The refreshed page arrives with the new step.
+    rerender(<CeremonyPoller token="tok-1" step={3} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reloadPage).not.toHaveBeenCalled();
+  });
+
+  it('a refresh that never lands: the page reloads, once (staging, #2298)', async () => {
+    // On the PPR route a router.refresh() now and then never commits; the
+    // screen stood still on the old step.
     answer(200, 3);
     render(<CeremonyPoller token="tok-1" step={2} />);
-    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reloadPage).not.toHaveBeenCalled();
 
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS));
+    expect(reloadPage).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
