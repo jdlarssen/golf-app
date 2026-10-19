@@ -20,9 +20,11 @@
 // the system, the root already ends at the keyboard and the overlap is 0, so the
 // keyboard is never subtracted twice. The root is the first view under the
 // window, and in a full-screen window (the normal case on a phone) the window
-// and the screen share the same origin. Known limit: in split screen (the lower
-// pane) or a free-form window the origins differ, `covered` comes out 0 there,
-// and the keyboard can cover a field as it did before #1954 Del B.
+// and the screen share the same origin. Known limit: when the window starts
+// below the screen's top, the root's layout bottom is smaller than its real
+// bottom on screen. In the lower pane of split screen `covered` comes out 0; in
+// a free-form window it comes out too small. There the keyboard can still cover
+// a field, as it did before #1954 Del B.
 //
 // The band the padding opens below the content gets the app's own background;
 // otherwise the Activity window (grey or white from DayNight) shows through it
