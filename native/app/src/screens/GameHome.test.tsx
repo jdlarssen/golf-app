@@ -871,3 +871,38 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
   });
 });
 
+
+// #1954 Del B: et spill som mangler eller er skjult av RLS er ikke en nettfeil.
+// Nettsiden svarer 404 («Denne havnet utenfor banen»), og appen skal si at
+// spillet ikke finnes i stedet for å be om å sjekke nettet.
+describe('GameHome — spillet finnes ikke', () => {
+  function renderMissing() {
+    return render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'borte' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+  }
+
+  it('et spill du ikke kan se, sier at det ikke finnes', async () => {
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    const { GameNotFoundError } = require('../data/gameNotFound') as typeof import('../data/gameNotFound');
+    mockState.bundle = null;
+    refreshGameBundle.mockRejectedValueOnce(new GameNotFoundError('borte'));
+    await renderMissing();
+    await waitFor(() => expect(screen.getByTestId('game-not-found')).toBeTruthy());
+    expect(screen.queryByTestId('game-error')).toBeNull();
+  });
+
+  it('en nettfeil ber fortsatt om å sjekke nettet', async () => {
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    mockState.bundle = null;
+    refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await renderMissing();
+    await waitFor(() => expect(screen.getByTestId('game-error')).toBeTruthy());
+    expect(screen.queryByTestId('game-not-found')).toBeNull();
+  });
+});

@@ -17,6 +17,7 @@ import {
   refreshGameBundle,
   type GameBundle,
 } from '../data/gameBundle';
+import { GameNotFoundError } from '../data/gameNotFound';
 import { toRoster } from './roster';
 import { foldLocalScores } from './teamPlay';
 import { useOnResume } from './useOnResume';
@@ -29,6 +30,11 @@ export interface GameBundleState {
   bundle: GameBundle | null;
   /** Satt når SISTE refetch feilet. Cachen kan fortsatt stå i `bundle`. */
   errorText: string | null;
+  /**
+   * SISTE refetch fikk svar, men spillet finnes ikke for spilleren (slettet,
+   * eller skjult av RLS). Skiller «spillet er borte» fra en nettfeil (#1954 Del B).
+   */
+  notFound: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -49,14 +55,17 @@ export interface GameBundleState {
 export function useGameBundle(gameId: string): GameBundleState {
   const [bundle, setBundle] = useState<GameBundle | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
       setBundle(await refreshGameBundle(gameId));
       setErrorText(null);
+      setNotFound(false);
     } catch (err: unknown) {
       setErrorText(messageOf(err));
+      setNotFound(err instanceof GameNotFoundError);
     } finally {
       setLoading(false);
     }
@@ -85,7 +94,7 @@ export function useGameBundle(gameId: string): GameBundleState {
   );
   useOnResume(refresh);
 
-  return { bundle, errorText, loading, refresh };
+  return { bundle, errorText, notFound, loading, refresh };
 }
 
 /**
