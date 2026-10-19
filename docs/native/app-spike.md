@@ -2411,7 +2411,7 @@ annerledes:
   underkant minus tastaturets overkant (`endCoordinates.screenY`). Krymper et system likevel
   vinduet selv, blir overlappet 0, så tastaturet trekkes aldri fra to ganger. Regnestykket
   forutsetter et vindu i fullskjerm, der vinduet og skjermen har samme origo. I den nederste
-  ruta i delt skjerm blir overlappet 0, og i et frittflytende vindu blir det for lite. Der kan
+  ruta i en vanlig delt skjerm blir overlappet 0, og i et frittflytende vindu blir det for lite. Der kan
   tastaturet dekke feltet (kjent grense). Båndet under innholdet får appens bakgrunn. Skjermer med bunnluft for
   systemlinja (`insets.bottom`) dropper den mens tastaturet er oppe (`useKeyboardShown`). Ny skjerm med
   felt trenger ingen egen tastaturkode på Android. Arkene i en `Modal` har eget vindu og

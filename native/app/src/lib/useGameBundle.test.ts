@@ -96,3 +96,83 @@ it('en vanlig feil lar den lagrede kopien stå', async () => {
   expect(result.current.bundle).toBe(CACHED);
   expect(forgetGameBundle).not.toHaveBeenCalled();
 });
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+const FRESH = { game: { id: 'g1' }, players: [], fetchedAt: '2026-10-19T09:00:00.000Z' };
+
+it('en eldre henting som lander sist, overskriver ikke en nyere som lyktes', async () => {
+  loadGameBundle.mockResolvedValue(undefined);
+  const older = deferred<unknown>();
+  refreshGameBundle.mockReturnValueOnce(older.promise).mockResolvedValueOnce(FRESH);
+  const { result } = await renderHook(() => useGameBundle('g1'));
+
+  await act(async () => {
+    await result.current.refresh(); // nyere, lykkes
+  });
+  expect(result.current.bundle).toBe(FRESH);
+
+  await act(async () => {
+    older.reject(new GameNotFoundError('g1')); // eldre, lander sist
+    await Promise.resolve();
+  });
+  expect(result.current.bundle).toBe(FRESH);
+  expect(result.current.notFound).toBe(false);
+  expect(result.current.errorText).toBeNull();
+  expect(forgetGameBundle).not.toHaveBeenCalled();
+});
+
+it('avbryter selve hentingen når taket nås, og sier ingenting etter unmount', async () => {
+  jest.useFakeTimers();
+  loadGameBundle.mockResolvedValue(undefined);
+  refreshGameBundle.mockReturnValue(new Promise(() => undefined));
+  const { unmount } = await renderHook(() => useGameBundle('g1'));
+  const signal = (refreshGameBundle.mock.calls[0][1] as { signal: AbortSignal }).signal;
+  expect(signal.aborted).toBe(false);
+
+  await act(async () => {
+    jest.advanceTimersByTime(GAME_BUNDLE_TIMEOUT_MS);
+  });
+  expect(signal.aborted).toBe(true);
+
+  // En ny henting som henger, og så forsvinner skjermen før taket.
+  const { result: second, unmount: unmountSecond } = await renderHook(() => useGameBundle('g2'));
+  void second;
+  const errorsBefore = (console.error as jest.Mock).mock.calls.length;
+  await unmountSecond();
+  await act(async () => {
+    jest.advanceTimersByTime(GAME_BUNDLE_TIMEOUT_MS);
+  });
+  expect((console.error as jest.Mock).mock.calls.length).toBe(errorsBefore);
+  await unmount();
+});
+
+it('«Prøv igjen» uten lagret pakke viser at det hentes', async () => {
+  loadGameBundle.mockResolvedValue(undefined);
+  refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed'));
+  const { result } = await renderHook(() => useGameBundle('g1'));
+  await act(async () => undefined);
+  expect(result.current.loading).toBe(false);
+
+  const retry = deferred<unknown>();
+  refreshGameBundle.mockReturnValueOnce(retry.promise);
+  let pending!: Promise<void>;
+  await act(async () => {
+    pending = result.current.refresh();
+  });
+  expect(result.current.loading).toBe(true);
+  await act(async () => {
+    retry.resolve(FRESH);
+    await pending;
+  });
+  expect(result.current.loading).toBe(false);
+  expect(result.current.bundle).toBe(FRESH);
+});

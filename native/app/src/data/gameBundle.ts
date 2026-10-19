@@ -392,18 +392,20 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
  * service-role. Kaster ved feil, slik at kalleren kan velge: vise cachen videre
  * eller si fra.
  */
-export async function fetchGameBundle(gameId: string): Promise<GameBundle> {
+export async function fetchGameBundle(
+  gameId: string,
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<GameBundle> {
+  let gameQuery = supabase.from('games').select(GAME_SELECT).eq('id', gameId);
+  let playersQuery = supabase.from('game_players').select(PLAYER_SELECT).eq('game_id', gameId);
+  // #1954 Del B: tidstaket i `useGameBundle` avbryter selve forespørslene.
+  if (signal) {
+    gameQuery = gameQuery.abortSignal(signal);
+    playersQuery = playersQuery.abortSignal(signal);
+  }
   const [gameRes, playersRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select(GAME_SELECT)
-      .eq('id', gameId)
-      .maybeSingle<GameRow>(),
-    supabase
-      .from('game_players')
-      .select(PLAYER_SELECT)
-      .eq('game_id', gameId)
-      .returns<PlayerRow[]>(),
+    gameQuery.maybeSingle<GameRow>(),
+    playersQuery.returns<PlayerRow[]>(),
   ]);
 
   if (gameRes.error) throw new Error(gameRes.error.message);
@@ -474,16 +476,15 @@ export async function loadGameBundle(
  * `cache_entries`. En feilet refetch (offline, RLS, serverfeil) lar dermed den
  * forrige bundelen stå urørt — spilleren mister ikke banen sin fordi nettet falt.
  */
-/**
- * Glem den lagrede bundelen for et spill som ikke finnes for spilleren lenger
- * (#1954 Del B), så ingen skjerm tegner et spill som er borte fra cachen.
- */
-export async function forgetGameBundle(gameId: string): Promise<void> {
-  await withTxn((txn) => deleteCacheEntry(txn, gameBundleCacheKey(gameId)));
-}
-
-export async function refreshGameBundle(gameId: string): Promise<GameBundle> {
-  const bundle = await fetchGameBundle(gameId);
+export async function refreshGameBundle(
+  gameId: string,
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<GameBundle> {
+  const bundle = await fetchGameBundle(gameId, { signal });
+  // #1954 Del B: en henting som ble avbrutt (tidstaket), skriver ikke til
+  // cachen. Ellers kunne en sen suksess legge tilbake et spill som
+  // `forgetGameBundle` nettopp glemte.
+  if (signal?.aborted) throw new Error(`Hentingen av spillet ${gameId} ble avbrutt`);
   const payload: CachedBundlePayload = { v: BUNDLE_PAYLOAD_VERSION, bundle };
   // I transaksjonskøen, ikke på den delte forbindelsen: skjermene henter
   // bundelen mens slag-seeden skriver i en transaksjon, og to skrivere
@@ -496,4 +497,12 @@ export async function refreshGameBundle(gameId: string): Promise<GameBundle> {
     }),
   );
   return bundle;
+}
+
+/**
+ * Glem den lagrede bundelen for et spill som ikke finnes for spilleren lenger
+ * (#1954 Del B), så ingen skjerm tegner et spill som er borte fra cachen.
+ */
+export async function forgetGameBundle(gameId: string): Promise<void> {
+  await withTxn((txn) => deleteCacheEntry(txn, gameBundleCacheKey(gameId)));
 }

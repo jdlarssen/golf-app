@@ -99,16 +99,23 @@ it('på iOS lytter roten ikke på tastaturet og legger ingen luft under innholde
   expect(paddingBottom()).toBe(0);
 });
 
-it.each(['android', 'ios'] as const)(
-  'useKeyboardShown sier om tastaturet er oppe (%s), så bunnluften for systemlinja kan droppes',
-  async (os) => {
+// iOS løfter arket (KeyboardAvoidingView) på `keyboardWill…`, så luften må følge
+// de samme hendelsene, ellers hopper arket 34 pt etter animasjonen. Android har
+// bare `keyboardDid…`.
+it.each([
+  ['android', 'keyboardDidShow', 'keyboardDidHide'],
+  ['ios', 'keyboardWillShow', 'keyboardWillHide'],
+] as const)(
+  'useKeyboardShown sier om tastaturet er oppe (%s: %s/%s), så bunnluften for systemlinja kan droppes',
+  async (os, showEvent, hideEvent) => {
     jest.replaceProperty(Platform, 'OS', os);
     const { listeners } = captureKeyboardListeners();
     const { result } = await renderHook(() => useKeyboardShown());
+    expect(Object.keys(listeners).sort()).toEqual([hideEvent, showEvent].sort());
     expect(result.current).toBe(false);
-    await act(async () => listeners.keyboardDidShow({ endCoordinates: { height: 312, screenY: 578 } }));
+    await act(async () => listeners[showEvent]({ endCoordinates: { height: 312, screenY: 578 } }));
     expect(result.current).toBe(true);
-    await act(async () => listeners.keyboardDidHide({ endCoordinates: { height: 0, screenY: 914 } }));
+    await act(async () => listeners[hideEvent]({ endCoordinates: { height: 0, screenY: 914 } }));
     expect(result.current).toBe(false);
   },
 );

@@ -41,6 +41,16 @@ export interface GameBundleState {
 }
 
 /**
+ * Hvor lenge én henting av spillet får holde på (#1954 Del B). Ingen ledd under
+ * har en timeout: OkHttp på Android venter uten grense, postgrest prøver GET
+ * på nytt, og øktfornyelsen venter med backoff. I ekte flymodus sto spillsiden
+ * og lastet i over 18 s. Etter taket sier skjermen «Fikk ikke tak i spillet»,
+ * og fokus, forgrunn eller «Prøv igjen» henter på nytt. Samme grep som
+ * profilporten og AI-porten (`Promise.race` mot et tak).
+ */
+export const GAME_BUNDLE_TIMEOUT_MS = 12_000;
+
+/**
  * Spill-bundelen: cache med én gang, refetch i bakgrunnen og på nytt hver gang
  * skjermen får fokus, appen kommer i forgrunnen eller nettet er tilbake.
  *
@@ -53,16 +63,6 @@ export interface GameBundleState {
  * Et hullbytte gir ikke nytt fokus (`navigation.setParams`). Hullsiden kaller
  * derfor `refresh` selv når hullet byttes.
  */
-/**
- * Hvor lenge én henting av spillet får holde på (#1954 Del B). Ingen ledd under
- * har en timeout: OkHttp på Android venter uten grense, postgrest prøver GET
- * på nytt, og øktfornyelsen venter med backoff. I ekte flymodus sto spillsiden
- * og lastet i over 18 s. Etter taket sier skjermen «Fikk ikke tak i spillet»,
- * og fokus, forgrunn eller «Prøv igjen» henter på nytt. Samme grep som
- * profilporten og AI-porten (`Promise.race` mot et tak).
- */
-export const GAME_BUNDLE_TIMEOUT_MS = 12_000;
-
 export function useGameBundle(gameId: string): GameBundleState {
   const [bundle, setBundle] = useState<GameBundle | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -71,14 +71,51 @@ export function useGameBundle(gameId: string): GameBundleState {
   // Et spill som er borte, skal ikke komme tilbake fra cachen fordi den lokale
   // lesingen ble ferdig etter svaret fra serveren.
   const gone = useRef(false);
+  // Sekvensvakt (som `useChoices`): en eldre henting som lander sist, skal ikke
+  // overskrive en nyere som alt er brukt.
+  const seq = useRef(0);
+  const appliedSeq = useRef(0);
+  const alive = useRef(true);
+  const inFlight = useRef(new Set<{ timer: ReturnType<typeof setTimeout>; controller: AbortController }>());
+  const hasBundle = useRef(false);
+  useEffect(() => {
+    hasBundle.current = bundle !== null;
+  }, [bundle]);
+  useEffect(() => {
+    alive.current = true;
+    const pending = inFlight.current;
+    return () => {
+      alive.current = false;
+      for (const run of pending) {
+        clearTimeout(run.timer);
+        run.controller.abort();
+      }
+      pending.clear();
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const mySeq = ++seq.current;
+    // Et nytt forsøk uten noe å vise: spinneren står mens det hentes.
+    if (!hasBundle.current) setLoading(true);
+    const controller = new AbortController();
+    let resolveTimeout!: (v: 'timeout') => void;
     const timedOut = new Promise<'timeout'>((resolve) => {
-      timer = setTimeout(() => resolve('timeout'), GAME_BUNDLE_TIMEOUT_MS);
+      resolveTimeout = resolve;
     });
+    const run = {
+      controller,
+      timer: setTimeout(() => {
+        controller.abort();
+        resolveTimeout('timeout');
+      }, GAME_BUNDLE_TIMEOUT_MS),
+    };
+    inFlight.current.add(run);
+    const current = () => alive.current && mySeq > appliedSeq.current;
     try {
-      const result = await Promise.race([refreshGameBundle(gameId), timedOut]);
+      const result = await Promise.race([refreshGameBundle(gameId, { signal: controller.signal }), timedOut]);
+      if (!current()) return;
+      appliedSeq.current = mySeq;
       if (result === 'timeout') {
         console.error('[gameBundle] hentingen ga opp etter', GAME_BUNDLE_TIMEOUT_MS, 'ms');
         setErrorText(`Ga opp etter ${GAME_BUNDLE_TIMEOUT_MS} ms`);
@@ -90,6 +127,8 @@ export function useGameBundle(gameId: string): GameBundleState {
       setErrorText(null);
       setNotFound(false);
     } catch (err: unknown) {
+      if (!current()) return;
+      appliedSeq.current = mySeq;
       setErrorText(messageOf(err));
       if (err instanceof GameNotFoundError) {
         // #1954 Del B: borte er borte, også når en eldre kopi ligger lagret.
@@ -103,8 +142,9 @@ export function useGameBundle(gameId: string): GameBundleState {
         setNotFound(false);
       }
     } finally {
-      clearTimeout(timer);
-      setLoading(false);
+      clearTimeout(run.timer);
+      inFlight.current.delete(run);
+      if (alive.current && mySeq >= appliedSeq.current) setLoading(false);
     }
   }, [gameId]);
 

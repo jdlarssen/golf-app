@@ -52,6 +52,7 @@ const CHAIN_METHODS = [
   'returns',
   'single',
   'maybeSingle',
+  'abortSignal',
 ] as const;
 
 export function queryStub(result: StubResult): QueryStub {
