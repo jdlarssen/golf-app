@@ -28,10 +28,11 @@ import { TvClock } from './TvClock';
 import { TvFeed } from './TvFeed';
 import { CeremonyStage } from './CeremonyStage';
 import { CeremonyPoller } from './CeremonyPoller';
-import { ceremonySupported } from '@/lib/games/ceremony';
+import { CEREMONY_MAX_STEP, ceremonySupported } from '@/lib/games/ceremony';
 import { loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 
 type Params = Promise<{ token: string }>;
+type SearchParams = Promise<{ vist?: string | string[] }>;
 
 // No token lookup here, so the title says nothing about the game.
 export async function generateMetadata(): Promise<Metadata> {
@@ -46,7 +47,13 @@ export async function generateMetadata(): Promise<Metadata> {
  * `SpectatePage`, and the service-role client is only taken after it. A
  * finished game and a game hiding its net results read no scores.
  */
-export default async function SpectateTvPage({ params }: { params: Params }) {
+export default async function SpectateTvPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { token } = await params;
 
   const found = await getGameBySpectateToken(token);
@@ -156,7 +163,12 @@ export default async function SpectateTvPage({ params }: { params: Params }) {
         return (
           <main className="relative h-dvh w-full cursor-none overflow-hidden bg-tv-bg text-tv-text">
             <TvStage>
-              <CeremonyStage gameName={gameName} data={data} step={state.ceremony_step} />
+              <CeremonyStage
+                gameName={gameName}
+                data={data}
+                step={state.ceremony_step}
+                played={playedBeforeReload(await searchParams)}
+              />
             </TvStage>
             {poller}
           </main>
@@ -238,4 +250,14 @@ async function readCourseName(
   } catch {
     return null;
   }
+}
+
+/**
+ * `?vist=k` — set by the poller's reload: the steps the TV had already
+ * animated. Anything else is none (a plain open animates every turned card).
+ */
+function playedBeforeReload(sp: { vist?: string | string[] }): number {
+  const raw = Array.isArray(sp.vist) ? sp.vist[0] : sp.vist;
+  const n = raw === undefined ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= CEREMONY_MAX_STEP ? n : 0;
 }
