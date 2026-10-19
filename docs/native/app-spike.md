@@ -2404,8 +2404,22 @@ annerledes:
   ha en bryter som sender kallet videre til den ekte `Alert.alert`. Dialogene våre er
   `cancelable: false` med vilje (låst i `Friends.test.tsx`), så tilbaketasten lukker dem ikke.
   Arkene (scorearket, avslutt-bekreftelsen) lukkes av tilbaketasten.
-- **Tastaturet på Android 15+.** Når appen tegner kant til kant (håndhevet fra API 35),
-  krymper ikke `adjustResize` vinduet lenger. `KeyboardInset` i `App.tsx` gjør det i
-  stedet, ved roten for hele appen. Ny skjerm med felt trenger derfor ingen egen
-  tastaturkode på Android. Arkene i en `Modal` har eget vindu og bruker
-  `KeyboardAvoidingView` (`RejectSheet`).
+- **Tastaturet på Android.** Appen tegner kant til kant på alle Android-versjoner.
+  Prebuild-malen i Expo SDK 57 setter `edgeToEdgeEnabled=true`, og valget om å slå det av er
+  fjernet. Da krymper ikke `adjustResize` vinduet når tastaturet kommer opp. `KeyboardInset` i
+  `App.tsx` krymper roten i stedet, med akkurat det tastaturet dekker av den: rotens
+  underkant minus tastaturets overkant (`endCoordinates.screenY`). Krymper et system likevel
+  vinduet selv, blir overlappet 0, så tastaturet trekkes aldri fra to ganger. Ny skjerm med
+  felt trenger ingen egen tastaturkode på Android. Arkene i en `Modal` har eget vindu og
+  bruker `KeyboardAvoidingView` (`RejectSheet`).
+- **Tastaturet på iOS.** Vinduet krymper ikke på iOS heller. Der gjør RN den samme målingen
+  selv: med `automaticallyAdjustKeyboardInsets` regner rullefeltet ut hvor mye tastaturet
+  dekker, og ruller feltet fram. Hver skjerm med et tekstfelt sprer `KEYBOARD_SCROLL_PROPS`
+  (fra `KeyboardInset.tsx`) på rullefeltet sitt, og `KeyboardInset.test.tsx` krever det. Før
+  #1954 Del B hadde bare innloggingen og «Fullfør profilen» det, og e-postfeltet for
+  invitasjon lå under tastaturet i simulatoren.
+- **Det ekte iOS-tastaturet uten trykk.** En simulator startet med `simctl boot` har ikke
+  noe maskinvaretastatur koblet til. `focus()` på feltets vertsinstans (`stateNode`, eller
+  `canonical.publicInstance` i Fabric) henter derfor fram programvaretastaturet.
+  `measureInWindow` gir feltets plass, og den kan sammenlignes med
+  `keyboardDidShow.endCoordinates.screenY`.

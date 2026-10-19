@@ -259,6 +259,10 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
   den fant, A1–A4 (A2 og A4 rettet, A1 og A3 bygget etter eierens svar), er i #2609. De ble
   prøvd på nytt i simulatoren på den nye JS-en (A1, A3, og A4 med fem tavler) og kommer med
   i neste kandidat.
+- **Android-kolonnen (19.10.2026, Del B)** fant B1: tastaturet dekket feltet du skriver i.
+  Samme feil fantes på iOS, der e-postfeltet for invitasjon på startbilletten og
+  handicap-andelen i veiviseren lå under tastaturet i simulatoren. Begge plattformene er
+  rettet i Del B-PR-en, og rettingen kommer med i neste kandidat.
 - **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
   versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
   appen, hører til der.

@@ -155,10 +155,12 @@ de samme native-modulene som `main`). JS-en var fra `origin/main` aea0f30c5, alt
 med A1–A4, pluss rettingen B1 under. Tallene var like med nettsiden og iOS-kolonnen. Én feil
 var bare på Android, og den er rettet med en test som var rød først:
 
-- **B1 — tastaturet dekket feltet.** Android 15+ tegner appen kant til kant, og da krymper
-  ikke vinduet når tastaturet kommer opp. E-postfeltet for invitasjoner på startbilletten lå
-  under tastaturet. `KeyboardInset` i `App.tsx` krymper roten med tastaturets høyde, og det
-  gjelder alle skjermene. Arkene i en `Modal` hadde allerede `KeyboardAvoidingView`.
+- **B1 — tastaturet dekket feltet.** Appen tegner kant til kant på alle Android-versjoner
+  (Expo SDK 57), og da krymper ikke vinduet når tastaturet kommer opp. E-postfeltet for
+  invitasjoner på startbilletten lå under tastaturet. `KeyboardInset` i `App.tsx` krymper
+  roten med det tastaturet faktisk dekker, og det gjelder alle skjermene. Arkene i en
+  `Modal` hadde allerede `KeyboardAvoidingView`. Samme feil fantes på iOS (startbilletten og
+  veiviseren). Den er rettet i samme PR, med RNs egen måling på rullefeltet.
 
 Butikk-AAB-en som prøves på eierens
 Android-telefon (Del C), står med versjon og build i matrisen. Ekte avslutning fra en
