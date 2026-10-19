@@ -901,7 +901,10 @@ function HoleView({
           />
         ) : null}
 
-        {holeNumber === HOLE_COUNT || allHolesFilled ? (
+        {/* #1954 Del B: et låst hull har ingenting å levere. Nettsiden sender et
+            ferdig spill og et levert kort til spillsiden; her står forklaringen
+            over («Føringen er låst»), uten knappen. */}
+        {!locked && (holeNumber === HOLE_COUNT || allHolesFilled) ? (
           <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
             {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
                 hjem der (#1918). */}
