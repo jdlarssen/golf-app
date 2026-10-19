@@ -233,7 +233,9 @@ function ShownCard({
         </p>
       )}
       <TvFit className="flex min-h-0 w-full shrink flex-col items-center justify-center">{body}</TvFit>
-      <p className={`score-num shrink-0 tabular-nums ${size.scoreAlpha}`} style={{ fontSize: size.score }}>
+      {/* Inter, as drawn — `.score-num` would set Fraunces. Tabular so the
+          digits line up across the cards. */}
+      <p className={`shrink-0 tabular-nums ${size.scoreAlpha}`} style={{ fontSize: size.score }}>
         {value} {unit}
       </p>
     </div>
@@ -251,7 +253,8 @@ function HiddenCard({ slot, title, body, sr }: { slot: Slot; title: string; body
       <span
         aria-hidden
         className="flex shrink-0 items-center justify-center rounded-full border-2 border-tv-gold/70 font-serif font-semibold text-tv-lead-total"
-        style={{ width: size.medal, height: size.medal, fontSize: Math.round(size.medal * 0.476) }}
+        // The drawing's ring is 84 px inside its 2 px border (content-box): 88 px in all.
+        style={{ width: size.medal + 4, height: size.medal + 4, fontSize: Math.round(size.medal * 0.476) }}
       >
         ?
       </span>
