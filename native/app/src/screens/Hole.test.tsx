@@ -584,6 +584,33 @@ describe('Hole', () => {
     expect(screen.getByRole('switch', { name: 'Sollys' })).toBeChecked();
   });
 
+  // #1954 Del B: nettsiden sender et ferdig spill og et levert kort til
+  // spillsiden, så hullsiden der har ingen «Lever». Appen viser det låste hullet
+  // med forklaringen, men uten knappen å levere med.
+  it.each([
+    ['ferdig spill', { status: 'finished' }, null],
+    ['levert kort', { status: 'active' }, '2026-08-30T09:30:00.000Z'],
+  ] as const)('%s: hull 18 er låst og har ingen «Lever scorekort»', async (_case, game, submittedAt) => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: { ...mockSoloBundle.game, ...game },
+      players: mockSoloBundle.players.map((p) => (p.userId === 'me' ? { ...p, submittedAt } : p)),
+    };
+    await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-locked')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('hole-submit')).toBeNull();
+  });
+
+  it('et åpent hull 18 har «Lever scorekort»', async () => {
+    await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-submit')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('hole-locked')).toBeNull();
+  });
+
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
   // du valgte på hull 1, skal ikke stå valgt på hull 2.
   it('et nytt hull starter skinna på meg igjen', async () => {
