@@ -31,8 +31,9 @@ export interface RemoteLabels {
 /**
  * The organiser's remote for the prize-giving (#2298). One big button with
  * the next step, what the next tap shows so it can be read out, and the way
- * back. Every tap writes an absolute step, so a double tap is harmless; the
- * TV polls it. The strings come translated from the page.
+ * back. Every tap sends the step on screen and the one wanted, so a double
+ * tap is harmless and a second phone catches up instead of writing over the
+ * first; the TV polls it. The strings come translated from the page.
  */
 export function CeremonyRemote({
   gameId,
@@ -53,8 +54,10 @@ export function CeremonyRemote({
     setFailed(false);
     startTransition(async () => {
       // Offline, the action's request throws; it is the same «try again».
-      const res = await setCeremonyStep(gameId, target).catch(() => ({ ok: false as const }));
+      const res = await setCeremonyStep(gameId, step, target).catch(() => ({ ok: false as const }));
       if (res.ok) setStep(target);
+      // The step moved elsewhere (a second phone, an old tab): catch up.
+      else if ('current' in res && res.current !== undefined) setStep(res.current);
       else setFailed(true);
     });
   }
