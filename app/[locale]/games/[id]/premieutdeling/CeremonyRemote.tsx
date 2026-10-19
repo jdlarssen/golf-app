@@ -44,7 +44,11 @@ export function CeremonyRemote({
   steps: RemoteStep[];
   labels: RemoteLabels;
 }) {
-  const [step, setStep] = useState<number | null>(initialStep);
+  // Clamped like the TV's view: RLS allows 0–4, and a stored step beyond this
+  // podium (or a negative one) must not throw, so the organiser can close it.
+  const [step, setStep] = useState<number | null>(
+    initialStep === null ? null : Math.min(Math.max(initialStep, 0), steps.length),
+  );
   const [failed, setFailed] = useState(false);
   const [isPending, startTransition] = useTransition();
 
