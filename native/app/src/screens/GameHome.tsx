@@ -57,6 +57,7 @@ import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
 import { GAME_LOAD_FAILED_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
+import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
 import {
   calendarEvent,
   slotField,
@@ -177,6 +178,17 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     });
   }, [navigation, shareToken]);
 
+  // #1954 Del B: serveren svarte, men spillet finnes ikke for deg. Da er det
+  // ikke nettet som er problemet (nettsiden svarer 404 her), og en eldre lagret
+  // kopi skal ikke tegnes.
+  if (notFound) {
+    return (
+      <View style={ui.centered} testID="game-not-found">
+        <Text style={ui.body}>{GAME_NOT_FOUND_TEXT}</Text>
+      </View>
+    );
+  }
+
   if (!bundle) {
     if (loading) {
       return (
@@ -185,20 +197,21 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         </View>
       );
     }
-    // #1954 Del B: serveren svarte, men spillet finnes ikke for deg. Da er det
-    // ikke nettet som er problemet (nettsiden svarer 404 her).
-    if (notFound) {
-      return (
-        <View style={ui.centered} testID="game-not-found">
-          <Text style={ui.body}>{GAME_NOT_FOUND_TEXT}</Text>
-        </View>
-      );
-    }
+    // Hentingen feilet eller ga opp (GAME_BUNDLE_TIMEOUT_MS), og ingenting er
+    // lagret. Fokus og forgrunn henter på nytt; knappen lar spilleren gjøre det nå.
     return (
       <View style={ui.centered} testID="game-error">
         <Text style={ui.error}>
           {`${GAME_LOAD_FAILED_TEXT} Sjekk nettet og prøv igjen.`}
         </Text>
+        <Pressable
+          accessibilityRole="button"
+          style={ui.buttonSecondary}
+          onPress={() => void refresh()}
+          testID="game-retry"
+        >
+          <Text style={ui.buttonSecondaryText}>{ERROR_BOUNDARY_TEXT.retry}</Text>
+        </Pressable>
       </View>
     );
   }

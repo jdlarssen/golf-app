@@ -30,6 +30,7 @@ jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockState.bundle),
   refreshGameBundle: jest.fn(async () => mockState.bundle),
+  forgetGameBundle: jest.fn(async () => undefined),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
@@ -895,6 +896,28 @@ describe('GameHome — spillet finnes ikke', () => {
     await renderMissing();
     await waitFor(() => expect(screen.getByTestId('game-not-found')).toBeTruthy());
     expect(screen.queryByTestId('game-error')).toBeNull();
+  });
+
+  it('et spill som er borte, er borte også når en eldre kopi ligger lagret', async () => {
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    const { GameNotFoundError } = require('../data/gameNotFound') as typeof import('../data/gameNotFound');
+    mockState.bundle = homeBundle({ players: [] });
+    refreshGameBundle.mockRejectedValueOnce(new GameNotFoundError('borte'));
+    await renderMissing();
+    await waitFor(() => expect(screen.getByTestId('game-not-found')).toBeTruthy());
+    expect(screen.queryByTestId('game-stale')).toBeNull();
+    expect(screen.queryByTestId('game-ticket')).toBeNull();
+  });
+
+  it('«Prøv igjen» henter spillet på nytt etter en nettfeil', async () => {
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    mockState.bundle = null;
+    refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await renderMissing();
+    await waitFor(() => expect(screen.getByTestId('game-error')).toBeTruthy());
+    const before = refreshGameBundle.mock.calls.length;
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    expect(refreshGameBundle.mock.calls.length).toBe(before + 1);
   });
 
   it('en nettfeil ber fortsatt om å sjekke nettet', async () => {
