@@ -45,7 +45,7 @@ import {
 } from '../lib/profileCopy';
 import { FONTS, fraunces, frauncesFamily, useTheme, withAlpha } from '../theme';
 import { asLevel } from './EditProfile';
-import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useKeyboardShown } from '../components/KeyboardInset';
 
 export function CompleteProfile({
   userId,
@@ -58,6 +58,8 @@ export function CompleteProfile({
 }) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
+  // #1954 Del B: with the keyboard up it covers the system bar, so the bar's inset is not added twice.
+  const keyboardShown = useKeyboardShown();
   const [name, setName] = useState('');
   const [magnitude, setMagnitude] = useState('');
   const [isPlus, setIsPlus] = useState(false);
@@ -130,7 +132,7 @@ export function CompleteProfile({
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[
         styles.screen,
-        { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 20 },
+        { paddingTop: insets.top + 22, paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 },
       ]}
       keyboardShouldPersistTaps="handled"
       {...KEYBOARD_SCROLL_PROPS}

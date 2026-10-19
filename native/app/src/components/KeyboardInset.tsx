@@ -19,7 +19,14 @@
 // visible display frame in ReactRootView). Should a window still be resized by
 // the system, the root already ends at the keyboard and the overlap is 0, so the
 // keyboard is never subtracted twice. The root is the first view under the
-// window, so its layout and the screen share the same origin.
+// window, and in a full-screen window (the normal case on a phone) the window
+// and the screen share the same origin. Known limit: in split screen (the lower
+// pane) or a free-form window the origins differ, `covered` comes out 0 there,
+// and the keyboard can cover a field as it did before #1954 Del B.
+//
+// The band the padding opens below the content gets the app's own background;
+// otherwise the Activity window (grey or white from DayNight) shows through it
+// in dark mode and beside a one-handed keyboard.
 //
 // iOS gets the same measurement from RN itself: the window does not resize there
 // either, and with `automaticallyAdjustKeyboardInsets` the ScrollView measures how
@@ -30,6 +37,7 @@
 // prop, so the two never add up.
 import { useEffect, useState, type ReactNode } from 'react';
 import { Keyboard, Platform, View, type LayoutChangeEvent } from 'react-native';
+import { useTheme } from '../theme';
 
 /**
  * Spread on the ScrollView of every screen with a text field (iOS keeps the
@@ -37,7 +45,27 @@ import { Keyboard, Platform, View, type LayoutChangeEvent } from 'react-native';
  */
 export const KEYBOARD_SCROLL_PROPS = { automaticallyAdjustKeyboardInsets: true } as const;
 
+/**
+ * Whether the software keyboard is up, on both platforms. A screen that pads its
+ * scroll content by the bottom safe-area inset drops that inset while it is: the
+ * keyboard then covers the system bar, and the measured overlap (Android) or
+ * RN's content inset (iOS) already reaches past it.
+ */
+export function useKeyboardShown(): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setShown(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return shown;
+}
+
 export function KeyboardInset({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
   const [rootBottom, setRootBottom] = useState(0);
   const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
 
@@ -61,7 +89,11 @@ export function KeyboardInset({ children }: { children: ReactNode }) {
   const covered = keyboardTop === null ? 0 : Math.max(0, rootBottom - keyboardTop);
 
   return (
-    <View testID="keyboard-inset" onLayout={onLayout} style={{ flex: 1, paddingBottom: covered }}>
+    <View
+      testID="keyboard-inset"
+      onLayout={onLayout}
+      style={{ flex: 1, paddingBottom: covered, backgroundColor: colors.bg }}
+    >
       {children}
     </View>
   );
