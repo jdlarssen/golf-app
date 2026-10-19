@@ -209,7 +209,10 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   if (list === null || split === null) {
     return (
       <ScrollView
-        contentContainerStyle={[ui.scroll, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[
+          ui.scroll,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+        ]}
         testID="home-screen"
       >
         <Text style={ui.error} testID="home-error">
@@ -252,7 +255,13 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
   return (
     <ScrollView
-      contentContainerStyle={[ui.scroll, styles.scroll, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[
+        ui.scroll,
+        styles.scroll,
+        // Bunnluften er skjermens 20; systemlinja kommer i tillegg (#2560), så
+        // «Opprett spill» og siste kort ender over hjemindikatoren og navigasjonslinja.
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 },
+      ]}
       testID="home-screen"
     >
       <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />

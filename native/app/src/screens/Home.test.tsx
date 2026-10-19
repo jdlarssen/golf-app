@@ -7,6 +7,7 @@
 // er borte.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { CardBundle } from '../data/homeHero';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
 import type { HomeList } from '../data/homeList';
@@ -46,14 +47,16 @@ jest.mock('../session', () => ({
 }));
 // Hjem har ingen navigasjonslinje (#2385) og leser innfellingen selv. Uten
 // navigatorens SafeAreaProvider gir pakkens egen mock innfelling 0.
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
+jest.mock('react-native-safe-area-context', () => ({
+  ...require('react-native-safe-area-context/jest/mock').default,
+  useSafeAreaInsets: () => mockInsets,
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
+let mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const mockState: {
   online: boolean;
   list: HomeList;
@@ -386,5 +389,32 @@ describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
       expect(screen.queryByTestId('kavalkade-home-banner')).toBeNull();
       await rendered.unmount();
     }
+  });
+});
+
+// #2560: innholdet skal ende over hjemindikatoren (iOS) og navigasjonslinja
+// (Android), ikke inni dem. Bunnluften er de 20 pt skjermen alltid har, pluss
+// systemlinjas høyde.
+describe('bunnmargen', () => {
+  // `ui.scroll` setter `padding: 20` og ikke `paddingBottom`, så bunnen er det som gjelder til slutt.
+  const bottomPadding = (testID: string) => {
+    const style = StyleSheet.flatten(screen.getByTestId(testID).props.contentContainerStyle);
+    return style.paddingBottom ?? style.padding;
+  };
+
+  it('legger systemlinja til bunnluften på Hjem', async () => {
+    mockInsets = { top: 0, right: 0, bottom: 34, left: 0 };
+    await renderHome().view;
+    await screen.findByTestId('home-create-game');
+    expect(bottomPadding('home-screen')).toBe(54);
+  });
+
+  it('gjør det samme når spillene ikke lot seg hente', async () => {
+    mockInsets = { top: 0, right: 0, bottom: 24, left: 0 };
+    mockState.online = false;
+    mockState.cached = undefined;
+    await renderHome().view;
+    await screen.findByTestId('home-error');
+    expect(bottomPadding('home-screen')).toBe(44);
   });
 });
