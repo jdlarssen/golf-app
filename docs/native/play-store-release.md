@@ -148,9 +148,19 @@ Matrisen bor i én kommentar på #1954:
 Android-kolonnen (Del B, emulatoren `torny_api36` mot staging) prøver det som er
 plattformavhengig: tilbaketasten, kant-til-kant, tastaturet, dialogene, ekte flymodus,
 forgrunn og bakgrunn, utlogging med tom cache og slett konto. Tallene for stableford og
-greensome skal stemme med både nettsiden og iOS-kolonnen. Kolonnen kjøres på JS-en etter
-#2609, altså `origin/main` ed58f7e1d pluss A1–A4. iOS-kolonnen gikk stort sett før
-rettingene. Butikk-AAB-en som prøves på eierens
+greensome skal stemme med både nettsiden og iOS-kolonnen.
+
+Android-kolonnen ble kjørt 19.10.2026. Appen var dev-varianten (Debug-APK-en fra 14.10, som har
+de samme native-modulene som `main`). JS-en var fra `origin/main` aea0f30c5, altså etter #2609
+med A1–A4, pluss rettingen B1 under. Tallene var like med nettsiden og iOS-kolonnen. Én feil
+var bare på Android, og den er rettet med en test som var rød først:
+
+- **B1 — tastaturet dekket feltet.** Android 15+ tegner appen kant til kant, og da krymper
+  ikke vinduet når tastaturet kommer opp. E-postfeltet for invitasjoner på startbilletten lå
+  under tastaturet. `KeyboardInset` i `App.tsx` krymper roten med tastaturets høyde, og det
+  gjelder alle skjermene. Arkene i en `Modal` hadde allerede `KeyboardAvoidingView`.
+
+Butikk-AAB-en som prøves på eierens
 Android-telefon (Del C), står med versjon og build i matrisen. Ekte avslutning fra en
 Android-telefon tas i den lukkede testen i januar (eierens svar 18.10).
 
