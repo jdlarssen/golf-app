@@ -170,4 +170,26 @@ describe('SettlementTable', () => {
       style.remove();
     }
   });
+
+  it('gives the duel card the outlined copy button and every other board the filled one', () => {
+    // Owner's choice B (19.10): on the duel page «Del resultat» is the main
+    // button, so the copy button steps back to the outlined (secondary) pill.
+    const { rerender } = renderTable({ isFinal: true });
+    // Whole class names: the outlined pill has hover:bg-primary-soft.
+    const classes = () => screen.getByTestId('settlement-copy').className.split(/\s+/);
+    expect(classes()).toContain('bg-primary');
+
+    rerender(
+      <SettlementTable
+        settlement={SETTLEMENT}
+        playersById={PLAYERS}
+        gameName="Lørdagsrunden"
+        mode="skins"
+        isFinal
+        copyVariant="secondary"
+      />,
+    );
+    expect(classes()).not.toContain('bg-primary');
+    expect(classes()).toContain('border-border');
+  });
 });
