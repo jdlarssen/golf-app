@@ -233,9 +233,9 @@ function ShownCard({
         </p>
       )}
       <TvFit className="flex min-h-0 w-full shrink flex-col items-center justify-center">{body}</TvFit>
-      {/* Inter, as drawn — `.score-num` would set Fraunces. Tabular so the
-          digits line up across the cards. */}
-      <p className={`shrink-0 tabular-nums ${size.scoreAlpha}`} style={{ fontSize: size.score }}>
+      {/* Inter with proportional digits, as drawn: `.score-num` would set
+          Fraunces, and the numbers stand alone, so nothing needs aligning. */}
+      <p className={`shrink-0 ${size.scoreAlpha}`} style={{ fontSize: size.score }}>
         {value} {unit}
       </p>
     </div>
