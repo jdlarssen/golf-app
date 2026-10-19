@@ -144,14 +144,12 @@ export default async function SpectateTvPage({ params }: { params: Params }) {
     if (ceremonySupported(game.game_mode)) {
       const { data: state, error } = await admin
         .from('games')
-        .select('ceremony_step, ended_at')
+        .select('ceremony_step')
         .eq('id', found.id)
-        .single<{ ceremony_step: number | null; ended_at: string | null }>();
+        .single<{ ceremony_step: number | null }>();
       // Thrown on purpose: tv/error.tsx retries by itself.
       if (error) throw error;
-      const poller = (
-        <CeremonyPoller token={token} step={state.ceremony_step} endedAt={state.ended_at} />
-      );
+      const poller = <CeremonyPoller token={token} step={state.ceremony_step} />;
       if (state.ceremony_step !== null) {
         const data = await loadCeremonyData(gwp);
         // The drawing has no clock or QR column: the podium takes the screen.

@@ -5,7 +5,11 @@ import { useRouter } from '@/i18n/navigation';
 import { useOnline } from '@/hooks/useOnline';
 
 export const CEREMONY_POLL_MS = 2000;
-/** A TV left on overnight stops asking; a reload starts it again. */
+/**
+ * A TV left on overnight stops asking 6 hours after the page was opened; a
+ * reload starts it again. Counted from the load, not from the game's end: a
+ * prize-giving in the evening after a morning round must still reach a TV.
+ */
 export const CEREMONY_POLL_GIVE_UP_MS = 6 * 60 * 60 * 1000;
 
 function subscribeVisibility(callback: () => void): () => void {
@@ -23,22 +27,14 @@ const isVisibleOnServer = () => true;
  * on «Ferdig spilt» too, so «Start premieutdelingen» reaches it.
  *
  * Quiet without network and while the tab is hidden, and asks at once when
- * either comes back. Gives up 6 hours after the game ended so a forgotten TV
- * does not use up the hosting quota.
+ * either comes back. Gives up 6 hours after the page was opened so a
+ * forgotten TV does not use up the hosting quota.
  */
-export function CeremonyPoller({
-  token,
-  step,
-  endedAt,
-}: {
-  token: string;
-  step: number | null;
-  endedAt: string | null;
-}) {
+export function CeremonyPoller({ token, step }: { token: string; step: number | null }) {
   const router = useRouter();
   const online = useOnline();
   const visible = useSyncExternalStore(subscribeVisibility, isVisible, isVisibleOnServer);
-  // The mount time stands in for a missing end time; set once, in the effect.
+  // When the page was opened; set once, in the effect.
   const mountedAt = useRef<number | null>(null);
   // The step a refresh was already asked for, so a slow refresh is not
   // asked for again on every tick while the page catches up.
@@ -51,8 +47,7 @@ export function CeremonyPoller({
   useEffect(() => {
     if (!online || !visible) return;
     mountedAt.current ??= Date.now();
-    const ended = endedAt ? Date.parse(endedAt) : NaN;
-    const giveUpAt = (Number.isNaN(ended) ? mountedAt.current : ended) + CEREMONY_POLL_GIVE_UP_MS;
+    const giveUpAt = mountedAt.current + CEREMONY_POLL_GIVE_UP_MS;
     if (Date.now() >= giveUpAt) return;
 
     let cancelled = false;
@@ -90,7 +85,7 @@ export function CeremonyPoller({
       cancelled = true;
       clearInterval(id);
     };
-  }, [online, visible, endedAt, token, step, router]);
+  }, [online, visible, token, step, router]);
 
   return null;
 }
