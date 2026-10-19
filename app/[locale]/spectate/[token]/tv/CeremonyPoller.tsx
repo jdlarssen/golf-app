@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore, useTransition } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useOnline } from '@/hooks/useOnline';
-import { reloadPage } from './reloadPage';
+import { PLAYED_PARAM, reloadPage } from './reloadPage';
 
 export const CEREMONY_POLL_MS = 2000;
 /**
@@ -13,21 +13,25 @@ export const CEREMONY_POLL_MS = 2000;
 export const CEREMONY_SLOW_AFTER_MS = 6 * 60 * 60 * 1000;
 export const CEREMONY_SLOW_POLL_MS = 60_000;
 /**
- * The longest a `router.refresh()` may stay pending before the page reloads.
+ * How long a `router.refresh()` gets to put the new step on screen before
+ * the page reloads instead.
  *
  * On this route (PPR under cacheComponents, Next 16.2.6) a refresh now and
  * then never reaches the screen. Measured on staging (#2298): 3 of 12
  * refreshes, each with the RSC payload read in full and correct (the bytes
  * of the target step, no stream error) and no error anywhere: the client
- * router ended the work without committing it. A second refresh landed in 2
- * of 3 cases; a reload landed every time. Next's docs describe no such case.
+ * router dropped the commit. A second refresh landed in 2 of 3 cases; a
+ * reload landed every time. Next's docs describe no such case.
  *
- * So the refresh runs in a transition, and the poller reloads only when that
- * transition is over and the old step is still on screen: a dropped refresh.
- * A slow one is waited for (a reload would replay the reveal and the
- * confetti), up to this ceiling for one that hangs.
+ * Telling a slow refresh from a dropped one through `startTransition` does
+ * not work: in Next 16 `router.refresh()` queues the work in the router's
+ * own action queue and returns at once, so the caller's transition ends
+ * before the RSC answer arrives. Measured on staging: all 12 of 12 steps
+ * reloaded, and half did not land within 12 s. So a plain timer it is. A
+ * reload never replays a reveal: it carries the step already shown
+ * (`reloadPage`), and the server draws those cards still.
  */
-export const CEREMONY_REFRESH_CEILING_MS = 10_000;
+export const CEREMONY_LAND_MS = 1500;
 
 function subscribeVisibility(callback: () => void): () => void {
   document.addEventListener('visibilitychange', callback);
@@ -52,15 +56,15 @@ type Target = number | null | 'reopened' | 'gone';
  */
 export function CeremonyPoller({ token, step }: { token: string; step: number | null }) {
   const router = useRouter();
-  // Read through a ref: the refresh's own renders must not restart the loop.
+  // Read through a ref: a re-render must not restart the loop.
   const routerRef = useRef(router);
   useEffect(() => {
     routerRef.current = router;
   }, [router]);
   const online = useOnline();
   const visible = useSyncExternalStore(subscribeVisibility, isVisible, isVisibleOnServer);
-  const [refreshing, startRefresh] = useTransition();
-  // The refresh in flight: what it should bring, and when it was asked for.
+  // What a refresh was asked for, and when, so a slow refresh is not asked
+  // for again on every tick while the page catches up.
   const awaiting = useRef<{ target: Target; at: number } | null>(null);
   // When the page last changed; six quiet hours slow the pace down.
   const changedAt = useRef<number | null>(null);
@@ -70,25 +74,22 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
   // A new step on screen is a change, and lands whatever was awaited for it.
   useEffect(() => {
     changedAt.current = Date.now();
-    if (awaiting.current?.target === step) awaiting.current = null;
-  }, [step]);
-
-  // The refresh's transition is over. Still the old step: the router dropped
-  // it, and a reload is the one way that always lands.
-  useEffect(() => {
-    if (refreshing || awaiting.current === null) return;
-    if (awaiting.current.target === step) {
-      awaiting.current = null;
-      return;
-    }
     awaiting.current = null;
-    reloadPage();
-  }, [refreshing, step]);
+  }, [step]);
 
   useEffect(() => {
     if (!online || !visible) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let landCheck: ReturnType<typeof setTimeout> | undefined;
+
+    // The step never came: a reload lands every time, and it carries the
+    // step on screen so nothing already shown animates again.
+    const reload = () => {
+      cancelled = true;
+      clearTimeout(timer);
+      reloadPage(step);
+    };
 
     async function tick() {
       const res = await fetch(`/api/spectate/${token}/seremoni`, { cache: 'no-store' });
@@ -107,17 +108,24 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
       }
       if (cancelled || target === step) return;
       changedAt.current = Date.now();
+      // After a fallback reload the URL says which cards were already shown
+      // (`?vist=`). A step back below that mark (back, «Start på nytt»,
+      // «Lukk») reloads with the lower mark, so the next reveal animates.
+      const mark = Number(new URLSearchParams(window.location.search).get(PLAYED_PARAM) ?? NaN);
+      if (Number.isInteger(mark) && typeof target !== 'string' && (target ?? 0) < mark) {
+        cancelled = true;
+        reloadPage(target);
+        return;
+      }
       const pending = awaiting.current;
       if (pending?.target === target) {
-        // Asked for already and still working: wait, unless it hangs.
-        if (Date.now() - pending.at >= CEREMONY_REFRESH_CEILING_MS) {
-          cancelled = true;
-          reloadPage();
-        }
+        if (Date.now() - pending.at >= CEREMONY_LAND_MS) reload();
         return;
       }
       awaiting.current = { target, at: Date.now() };
-      startRefresh(() => routerRef.current.refresh());
+      routerRef.current.refresh();
+      // Landed, the new step restarts this effect and clears the check.
+      landCheck = setTimeout(reload, CEREMONY_LAND_MS);
     }
 
     async function loop() {
@@ -135,6 +143,7 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearTimeout(landCheck);
     };
   }, [online, visible, token, step]);
 

@@ -93,6 +93,18 @@ describe('CeremonyStage', () => {
     expect(cards()[2]).toHaveTextContent('Vilde Vinner');
     expect(cards()[2]).toHaveTextContent('38 poeng');
 
+    // After a fallback reload with ?vist=3 only the winner is new: the other
+    // cards and the side prizes are drawn still, the winner rises in with
+    // confetti. With ?vist=4 nothing animates and nothing bursts.
+    const risen = () => cards().map((c) => !!c.querySelector('.reveal-up'));
+    rerender(<CeremonyStage gameName="Lørdagsrunden" data={solo} step={4} played={3} />);
+    expect(risen()).toEqual([false, false, true]);
+    expect(screen.getByTestId('ceremony-side')).not.toHaveClass('reveal-up');
+    expect(document.querySelectorAll('.confetti-piece').length).toBeGreaterThan(0);
+    rerender(<CeremonyStage gameName="Lørdagsrunden" data={solo} step={4} played={4} />);
+    expect(risen()).toEqual([false, false, false]);
+    expect(document.querySelectorAll('.confetti-piece')).toHaveLength(0);
+
     // Teams: «Lag N» and every member; the hidden winning team shows neither.
     const texas = data([
       team(3, 1, 61, ['m1', 'm2', 'm3', 'm4']),

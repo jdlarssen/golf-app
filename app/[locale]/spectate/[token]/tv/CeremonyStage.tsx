@@ -50,10 +50,16 @@ export function CeremonyStage({
   gameName,
   data,
   step,
+  played = 0,
 }: {
   gameName: string;
   data: CeremonyData;
   step: number;
+  /**
+   * Steps already animated before a reload (`?vist=`): those cards are drawn
+   * still, so a reload never replays a reveal or the confetti.
+   */
+  played?: number;
 }) {
   const t = useTranslations('ceremony');
   const tc = useTranslations('leaderboard.common');
@@ -88,6 +94,8 @@ export function CeremonyStage({
           const slot = slotOf(place.rank);
           const isShown = shown.has(place);
           const isCurrent = view.current === place;
+          // The step that turns this card; only a step past `played` animates.
+          const animate = data.steps.indexOf(place) + 1 > played;
           return (
             <li
               key={`${place.rank}-${isShown ? 'shown' : 'hidden'}`}
@@ -107,7 +115,8 @@ export function CeremonyStage({
                   names={(line) => memberNames(line, data.names, unknown)}
                   score={(line) => ceremonyScore(line, units)}
                   srTitle={placeTitle(place)}
-                  confettiKey={slot === 1 && isCurrent ? step : null}
+                  animate={animate}
+                  confettiKey={slot === 1 && isCurrent && animate ? step : null}
                 />
               ) : (
                 <HiddenCard
@@ -133,7 +142,7 @@ export function CeremonyStage({
         // ring and lighter fill while it is the step shown last. The drawing
         // shows it at rest (2nd place current): plain 0.08 boxes.
         <ul
-          className="reveal-up flex justify-center gap-[18px]"
+          className={`${data.steps.indexOf('side') + 1 > played ? 'reveal-up ' : ''}flex justify-center gap-[18px]`}
           data-testid="ceremony-side"
           data-current={view.current === 'side' ? 'true' : undefined}
         >
@@ -179,6 +188,7 @@ function ShownCard({
   names,
   score,
   srTitle,
+  animate,
   confettiKey,
 }: {
   place: CeremonyPlace;
@@ -190,6 +200,8 @@ function ShownCard({
   names: (line: CeremonyPlace['lines'][number]) => string[];
   score: (line: CeremonyPlace['lines'][number]) => { value: string; unit: string };
   srTitle: string;
+  /** Rise in (reveal-up); false for a card already shown before a reload. */
+  animate: boolean;
   confettiKey: number | null;
 }) {
   const size = SLOTS[slot];
@@ -234,7 +246,7 @@ function ShownCard({
 
   return (
     <div
-      className={`reveal-up flex flex-col items-center justify-center rounded-[22px] p-[26px] text-center ${frame}`}
+      className={`${animate ? 'reveal-up ' : ''}flex flex-col items-center justify-center rounded-[22px] p-[26px] text-center ${frame}`}
       style={{ height: size.height, gap: size.gap }}
     >
       {confettiKey !== null && <CeremonyConfetti key={confettiKey} />}
