@@ -26,12 +26,12 @@ vi.mock('@/hooks/useOnline', () => ({
 
 const fetchMock = vi.fn();
 
-function answer(status: number, step: number | null = null) {
-  fetchMock.mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => ({ step }),
-  });
+function response(status: number, step: number | null = null, finished = true) {
+  return { ok: status >= 200 && status < 300, status, json: async () => ({ step, finished }) };
+}
+
+function answer(status: number, step: number | null = null, finished = true) {
+  fetchMock.mockResolvedValue(response(status, step, finished));
 }
 
 const NOW = Date.parse('2026-10-18T20:00:00Z');
@@ -105,12 +105,34 @@ describe('CeremonyPoller', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('404 (the live link was turned off): refresh, so the page can say so', async () => {
+  it('one 404 is a blink; two in a row (the live link was turned off) refresh the page', async () => {
     answer(404);
     render(<CeremonyPoller token="tok-1" step={null} />);
     await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(refresh).not.toHaveBeenCalled();
 
-    expect(refresh).toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('a 404 between good answers counts from zero again', async () => {
+    fetchMock
+      .mockResolvedValueOnce(response(404))
+      .mockResolvedValueOnce(response(200, null))
+      .mockResolvedValueOnce(response(404))
+      .mockResolvedValue(response(200, null));
+    render(<CeremonyPoller token="tok-1" step={null} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 4));
+
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('a reopened game (no longer finished): refresh, so the TV leaves «Ferdig spilt»', async () => {
+    answer(200, null, false);
+    render(<CeremonyPoller token="tok-1" step={null} />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('a server error or a network blip changes nothing', async () => {

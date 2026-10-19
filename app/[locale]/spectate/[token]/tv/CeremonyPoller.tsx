@@ -32,12 +32,16 @@ function subscribeVisibility(callback: () => void): () => void {
 const isVisible = () => document.visibilityState !== 'hidden';
 const isVisibleOnServer = () => true;
 
+/** What the page should show: a step (or null = off), or that it must leave. */
+type Target = number | null | 'reopened' | 'gone';
+
 /**
  * The big screen's ear for the prize-giving (#2298). The TV is anonymous, so
  * it cannot listen on realtime; it asks the step route every 2 s and calls
- * `router.refresh()` only when the step differs from the one on screen, or
- * when the link is gone (404). Mounted on a finished game in a podium format,
- * on «Ferdig spilt» too, so «Start premieutdelingen» reaches it.
+ * `router.refresh()` only when the step differs from the one on screen, when
+ * the game is no longer finished (reopened), or when the link is gone (two
+ * 404s in a row; one is a blink). Mounted on a finished game in a podium
+ * format, on «Ferdig spilt» too, so «Start premieutdelingen» reaches it.
  *
  * Quiet without network and while the tab is hidden, and asks at once when
  * either comes back. Gives up 6 hours after the page was opened so a
@@ -49,10 +53,12 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
   const visible = useSyncExternalStore(subscribeVisibility, isVisible, isVisibleOnServer);
   // When the page was opened; set once, in the effect.
   const mountedAt = useRef<number | null>(null);
-  // The step a refresh was already asked for, so a slow refresh is not
-  // asked for again on every tick while the page catches up.
-  const requested = useRef<number | null | undefined>(undefined);
+  // What a refresh was already asked for, so a slow refresh is not asked
+  // for again on every tick while the page catches up.
+  const requested = useRef<Target | undefined>(undefined);
   const requestedAt = useRef(0);
+  // 404s in a row: one is a blink, two mean the link is gone.
+  const misses = useRef(0);
 
   useEffect(() => {
     requested.current = undefined;
@@ -79,14 +85,20 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
       try {
         const res = await fetch(`/api/spectate/${token}/seremoni`, { cache: 'no-store' });
         if (cancelled) return;
+        let target: Target;
         if (res.status === 404) {
-          router.refresh();
-          return;
+          misses.current += 1;
+          if (misses.current < 2) return;
+          target = 'gone';
+        } else {
+          misses.current = 0;
+          if (!res.ok) return;
+          const body = (await res.json()) as { step: number | null; finished: boolean };
+          // A reopened game is no longer «Ferdig spilt»: the page must leave it.
+          target = body.finished ? body.step : 'reopened';
         }
-        if (!res.ok) return;
-        const body = (await res.json()) as { step: number | null };
-        if (cancelled || body.step === step) return;
-        if (body.step === requested.current) {
+        if (cancelled || target === step) return;
+        if (target === requested.current) {
           // Asked for already; reload if it has not landed in time.
           if (Date.now() - requestedAt.current >= CEREMONY_LAND_MS) {
             cancelled = true;
@@ -95,7 +107,7 @@ export function CeremonyPoller({ token, step }: { token: string; step: number | 
           }
           return;
         }
-        requested.current = body.step;
+        requested.current = target;
         requestedAt.current = Date.now();
         router.refresh();
         landCheck = setTimeout(tick, CEREMONY_LAND_MS);
