@@ -125,7 +125,7 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
       {showThemeLabel ? (
         <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
       ) : null}
-      <SettingList testID="theme-choices" style={styles.list}>
+      <SettingList testID="theme-choices" style={[styles.list, showThemeLabel ? null : styles.listNoLabel]}>
         {THEME_PREFERENCES.map((preference) => (
           <SettingRow
             key={preference}
@@ -233,6 +233,8 @@ const styles = StyleSheet.create({
   // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
   label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
   list: { marginTop: 0 },
+  // Uten etiketten (Android, #2560) ligger lista rett under tittelen.
+  listNoLabel: { marginTop: 16 },
   // Siden har ingen `gap`; linja trenger luft under lista.
   note: { marginTop: 8 },
   // Designet: skogkortet 14 pt under undertittelen, 16 pt runde hjørner,
