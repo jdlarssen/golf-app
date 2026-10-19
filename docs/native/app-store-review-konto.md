@@ -328,7 +328,7 @@ NOT IN THE APP
 - No location access.
 - No money: points and results only, no amounts, no payments. Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey and Nassau are ways of counting points. "Blind Wolf-potter" is the number of holes won as a blind wolf.
 - No purchases, ads or third-party tracking.
-- The app creates eight formats. It plays every round the organiser sets up on our website, including scramble and the other team formats. Patsome and cup rounds open on our website in Safari.
+- The app creates eight formats. It also plays rounds the organiser sets up on our website, including scramble and most team formats. Patsome and some cup rounds (split nine-hole days) open on our website in Safari.
 - The year summary (Kavalkaden) opens at Christmas for players with a finished round, so this account does not show it.
 
 Norway only. The account holds no real player data.

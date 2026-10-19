@@ -11,10 +11,10 @@ mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning
 venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgjør
 (appen viser dem ikke ved lansering), aldri rundereferatet (det står på nettsiden og
 i e-posten, ikke i appen), aldri cup eller liga. Appen **oppretter** åtte formater, men
-den **spiller** rundene arrangøren setter opp på nettsiden, også scramble og de andre
-lagformatene. Bare Patsome og cup-rundene åpnes ikke i appen
-(`native/app/src/lib/formatGate.ts`). Beskrivelsen sier derfor aldri at du kan *sette
-opp* scramble i appen.
+den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
+de fleste lagformatene. Appen åpner ikke patsome, cup-dager delt i to nihullsdeler og
+avledede cup-kamper (`native/app/src/lib/formatGate.ts`). Beskrivelsen sier derfor aldri
+at du kan *sette opp* scramble i appen.
 
 ## Personvern-etikett (App Privacy)
 
@@ -234,7 +234,7 @@ FORMATER DU KAN SPILLE
 - Matchplay
 - Best ball og Greensome
 - Wolf, Skins og Bingo Bango Bongo
-- Scramble og andre lagspill, når arrangøren har satt opp runden på tornygolf.no
+- Scramble og flere lagformater, når arrangøren har satt opp runden på tornygolf.no
 
 SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
@@ -253,18 +253,18 @@ Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen p
 ### Lim inn i App Store Connect
 
 Sti: **App Store Connect → Apps → Tørny → i venstre meny under «iOS App» velg
-versjonen som er «Prepare for Submission» → bla til feltet «Description»**. Felt som
-hører til versjonen, kan bare endres mens versjonen står i den statusen. Stien er
-skrevet etter Apples dokumentasjon, ikke sjekket i konsollen i denne økta;
-orkestratoren sjekker den før eieren limer.
+versjonen som er «Prepare for Submission» → bla til feltet «Description»**.
+Beskrivelsen og Notes kan bare endres før versjonen er sendt inn (eller etter en
+avvisning). Promoteksten kan endres når som helst. Stien er skrevet etter Apples
+dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
 
 1. Marker alt i «Description» og slett det.
 2. Lim inn hele kodeblokka over (fra «Tørny er turneringen i lomma.» til «…samme kontoen
    på tornygolf.no.»). Den nye linja er den siste i lista under «FORMATER DU KAN SPILLE»:
-   «Scramble og andre lagspill, når arrangøren har satt opp runden på tornygolf.no».
+   «Scramble og flere lagformater, når arrangøren har satt opp runden på tornygolf.no».
 3. Samme versjonsside lenger ned, **App Review Information → Notes**: marker alt, slett,
    og lim inn blokka under «Notes-mal til App Store Connect» i
-   [`app-store-review-konto.md`](app-store-review-konto.md) (3 215 byte, maks 4 000).
+   [`app-store-review-konto.md`](app-store-review-konto.md) (lengden står i den fila).
    Linja som er endret, er den nest siste under «NOT IN THE APP».
 4. Trykk «Save» øverst til høyre.
 
@@ -281,14 +281,16 @@ orkestratoren sjekker den før eieren limer.
   Oppgjøret finnes på nettsiden.
 - **Rundereferatet.** AI-referatet etter runden står på nettsiden og i e-posten, ikke i
   appen. Kavalkaden er i appen, så den står i beskrivelsen.
-- **Cup og liga.** Finnes på nettsiden, ikke i appen. Cup-rundene åpnes ikke i appen
+- **Cup og liga.** Finnes på nettsiden. Vanlige cup-kamper spilles i appen, men patsome,
+  cup-dager delt i to nihullsdeler og avledede cup-kamper åpnes ikke
   (`formatGate.ts`).
 - **Å sette opp scramble i appen.** Opprett-veiviseren har bare de åtte formatene over.
-  Scramble og de andre lagformatene settes opp på nettsiden, og så spiller du dem i appen:
-  appen fører ett lagkort og viser lagtavla (`formatGate.ts`, N4). Derfor står de som
-  «når arrangøren har satt opp runden på tornygolf.no», ikke som et format du velger.
-  Skal beskrivelsen holdes som før, stryk den siste linjen i lista (se
-  «Alternativer» i PR-en).
+  Scramble-familien settes opp på nettsiden, og så spiller du den i appen: appen fører
+  ett lagkort (`modeCollapsesToTeamCard`, N4) og viser lagtavla (`teamBoard.ts`, #2579).
+  Derfor står den som «når arrangøren har satt opp runden på tornygolf.no», ikke som et
+  format du velger. Linja sier «flere lagformater» og ikke «alle», fordi patsome er et
+  lagformat appen ikke åpner. Skal beskrivelsen holdes som før, stryk den siste linja i
+  lista i begge beskrivelsene (alternativ B i PR #2615).
 - **Invitasjoner som eget punkt.** Appen kan invitere: arrangøren inviterer en
   e-postadresse inn i runden fra runden selv (`OrganiserSection.tsx`, `inviteToGame`), og
   en venn kan inviteres fra vennelista (`inviteFriend`). Når runden settes opp, velger du
