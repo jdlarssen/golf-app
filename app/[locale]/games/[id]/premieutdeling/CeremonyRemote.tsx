@@ -26,6 +26,8 @@ export interface RemoteLabels {
   notStarted: string;
   allShown: string;
   error: string;
+  /** Under the big screen's switch: there is no TV link yet. */
+  tvMissing: string;
 }
 
 /**
@@ -38,11 +40,14 @@ export interface RemoteLabels {
 export function CeremonyRemote({
   gameId,
   initialStep,
+  tvReady,
   steps,
   labels,
 }: {
   gameId: string;
   initialStep: number | null;
+  /** False while live-follow is off: nothing would reach a TV, so no taps. */
+  tvReady: boolean;
   steps: RemoteStep[];
   labels: RemoteLabels;
 }) {
@@ -88,12 +93,18 @@ export function CeremonyRemote({
         )}
         {done && <p className="text-sm text-muted">{labels.allShown}</p>}
 
+        {primary && !tvReady && (
+          <p className="text-sm text-muted" data-testid="ceremony-tv-missing">
+            {labels.tvMissing}
+          </p>
+        )}
         {primary && (
           <Button
             type="button"
             size="large"
             className="w-full"
             pending={isPending}
+            disabled={!tvReady}
             onClick={() => go(primary.target)}
             data-testid="ceremony-primary"
           >

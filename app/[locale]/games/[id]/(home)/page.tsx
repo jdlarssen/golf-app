@@ -1554,6 +1554,11 @@ export default async function GameHomePage({
           </>
         )}
 
+        {/* #2298: the organiser runs the prize-giving on the big screen. */}
+        {isFinished && isCreator && ceremonySupported(game.game_mode) && (
+          <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
+        )}
+
         {/* #1007: «Revansje?» — dupliserer dette spillet inn i opprett-
             veiviseren, ferdig utfylt. Synlig for ALLE deltakere (ikke bare
             arrangøren) — den viktigste veksthendelsen appen har er at en
@@ -1561,11 +1566,6 @@ export default async function GameHomePage({
             liga-runder (`tournament_id`/`league_round_id`) — de eies av
             cupen/ligaen sin egen rematch-mekanikk, ikke en frittstående
             knapp her. Rent navigasjons-lenke; ingenting skrives til DB. */}
-        {/* #2298: the organiser runs the prize-giving on the big screen. */}
-        {isFinished && isCreator && ceremonySupported(game.game_mode) && (
-          <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
-        )}
-
         {isFinished && !game.tournament_id && !game.league_round_id && (
           <LinkButton
             href={`/opprett-spill?fra=${id}`}

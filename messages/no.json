@@ -7324,13 +7324,15 @@
     "showSide": "Vis sidepremiene",
     "showPlace": "Vis {rank}. plass",
     "revealWinner": "Avslør vinneren",
+    "revealWinners": "Avslør vinnerne",
+    "tvMissing": "Slå på storskjermen først.",
     "back": "Ett steg tilbake",
     "restart": "Start på nytt",
     "close": "Lukk premieutdelingen",
     "next": "Neste: {text}",
     "nowShowing": "Vises nå: {text}",
     "nowHidden": "Vises nå: pallen med skjulte kort",
-    "notStarted": "TV-en viser «Ferdig spilt» til du starter.",
+    "notStarted": "TV-en viser «{status}» til du starter.",
     "allShown": "Alle kortene er snudd.",
     "playersHaveResult": "Resultatet ligger allerede i appen til spillerne.",
     "error": "Fikk ikke kontakt. Prøv igjen.",
@@ -7339,6 +7341,8 @@
     "placeTitle": "{rank}. plass",
     "tv": {
       "hiddenWinner": "Vinneren",
+      "hiddenWinners": "Vinnerne",
+      "hiddenBodyMany": "Arrangøren avslører dem på mobilen",
       "hiddenBody": "Arrangøren avslører den på mobilen",
       "hiddenSr": "{place}, ikke vist ennå"
     }
