@@ -346,8 +346,10 @@ describe('gameBundle', () => {
       game_players: [queryStub({ data: [], error: null })],
     });
 
-    await expect(bundleModule().fetchGameBundle(GAME)).rejects.toThrow(
-      /Fant ikke spillet/,
-    );
+    const err = await bundleModule()
+      .fetchGameBundle(GAME)
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(require('./gameNotFound').GameNotFoundError);
+    expect(String(err)).toMatch(/Fant ikke spillet/);
   });
 });

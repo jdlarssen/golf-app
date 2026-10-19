@@ -56,7 +56,7 @@ import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
-import { GAME_LOAD_FAILED_TEXT } from '../lib/seedCopy';
+import { GAME_LOAD_FAILED_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import {
   calendarEvent,
   slotField,
@@ -107,7 +107,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { userId } = useSession();
   // #2201: det du åpner, er lest.
   useMarkVisitRead('gameHome', gameId);
-  const { bundle, errorText, loading, refresh } = useGameBundle(gameId);
+  const { bundle, errorText, notFound, loading, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
@@ -182,6 +182,15 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       return (
         <View style={ui.centered} testID="game-loading">
           <ActivityIndicator color={colors.primary} />
+        </View>
+      );
+    }
+    // #1954 Del B: serveren svarte, men spillet finnes ikke for deg. Da er det
+    // ikke nettet som er problemet (nettsiden svarer 404 her).
+    if (notFound) {
+      return (
+        <View style={ui.centered} testID="game-not-found">
+          <Text style={ui.body}>{GAME_NOT_FOUND_TEXT}</Text>
         </View>
       );
     }

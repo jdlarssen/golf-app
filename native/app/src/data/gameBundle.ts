@@ -12,6 +12,7 @@
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
+import { GameNotFoundError } from './gameNotFound';
 
 /**
  * Nyttelast-versjonen som ligger lagret sammen med bundelen.
@@ -407,7 +408,7 @@ export async function fetchGameBundle(gameId: string): Promise<GameBundle> {
 
   if (gameRes.error) throw new Error(gameRes.error.message);
   if (playersRes.error) throw new Error(playersRes.error.message);
-  if (!gameRes.data) throw new Error(`Fant ikke spillet ${gameId}`);
+  if (!gameRes.data) throw new GameNotFoundError(gameId);
 
   return toBundle(gameRes.data, playersRes.data ?? []);
 }
