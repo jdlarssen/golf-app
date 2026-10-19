@@ -280,7 +280,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 083 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 215 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
@@ -328,7 +328,7 @@ NOT IN THE APP
 - No location access.
 - No money: points and results only, no amounts, no payments. Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey and Nassau are ways of counting points. "Blind Wolf-potter" is the number of holes won as a blind wolf.
 - No purchases, ads or third-party tracking.
-- Eight formats. Other rounds open on our website in Safari.
+- The app creates eight formats. It plays every round the organiser sets up on our website, including scramble and the other team formats. Patsome and cup rounds open on our website in Safari.
 - The year summary (Kavalkaden) opens at Christmas for players with a finished round, so this account does not show it.
 
 Norway only. The account holds no real player data.
