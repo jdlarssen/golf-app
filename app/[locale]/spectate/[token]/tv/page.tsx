@@ -167,7 +167,9 @@ export default async function SpectateTvPage({
                 gameName={gameName}
                 data={data}
                 step={state.ceremony_step}
-                played={playedBeforeReload(await searchParams)}
+                // min(vist, step): the address is anyone's to change. It only
+                // stills animation; which cards show is the real step alone.
+                played={Math.min(playedBeforeReload(await searchParams), state.ceremony_step)}
               />
             </TvStage>
             {poller}

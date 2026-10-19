@@ -105,6 +105,14 @@ describe('CeremonyStage', () => {
     expect(risen()).toEqual([false, false, false]);
     expect(document.querySelectorAll('.confetti-piece')).toHaveLength(0);
 
+    // ?vist comes from the address and anyone can change it: it only stills
+    // animation, it never shows a card past the real step. ?vist=4 on step 1
+    // shows the side prizes alone, and no podium name.
+    rerender(<CeremonyStage gameName="Lørdagsrunden" data={solo} step={1} played={4} />);
+    expect(cards().map((c) => c.getAttribute('data-shown'))).toEqual(['false', 'false', 'false']);
+    for (const id of ['w', 's', 'b']) expect(stage()).not.toHaveTextContent(NAMES[id]!);
+    expect(screen.getByTestId('ceremony-side')).toBeInTheDocument();
+
     // Teams: «Lag N» and every member; the hidden winning team shows neither.
     const texas = data([
       team(3, 1, 61, ['m1', 'm2', 'm3', 'm4']),
