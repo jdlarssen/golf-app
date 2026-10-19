@@ -1,8 +1,10 @@
 // #2577: tekstene på godkjenningen (Type A). Ordlyden er designlerretets
 // (rad 68 «Godkjenningen i appen»).
 import {
+  APPROVE_TEXT,
   approvedLine,
   deliveredLine,
+  notDeliveredHintFor,
   notifiedLine,
   pendingHeading,
   positionLabel,
@@ -57,5 +59,20 @@ describe('arket', () => {
     ['gjest på lagkort', { name: 'Gjest', teamCard: true, guest: true }],
   ])('%s', (_, input) => {
     expect(rejectSheetText(input)).toMatchSnapshot();
+  });
+});
+
+// #2560: «Du får beskjed når kortet kommer» er ikke sant på Android. Der finnes
+// ingen push, ingen e-post for dette og ingen innboks, så kortet er først å se
+// når appen åpnes igjen.
+describe('notDeliveredHintFor (#2560)', () => {
+  it('gir iOS designets tekst', () => {
+    expect(notDeliveredHintFor('ios')).toBe(APPROVE_TEXT.notDeliveredHint);
+    expect(APPROVE_TEXT.notDeliveredHint).toBe('Du får beskjed når kortet kommer.');
+  });
+
+  it('gir Android en tekst som ikke lover noen beskjed', () => {
+    expect(notDeliveredHintFor('android')).toBe('Kortet står her når det er levert.');
+    expect(notDeliveredHintFor('android')).not.toMatch(/beskjed|varsl|push/i);
   });
 });

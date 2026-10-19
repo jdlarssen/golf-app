@@ -2,4 +2,4 @@
 type: fix
 issue: 2560
 ---
-Android-appen nevner ikke lenger varsler eller iPhone. Menyraden og siden heter «Tema», og kodehintet på innloggingen er bare «Koden har åtte siffer.»
+På Android heter raden og siden for temaet nå «Tema», og innloggingen gir ikke iPhone-tips.
