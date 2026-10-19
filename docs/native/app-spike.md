@@ -2380,3 +2380,32 @@ Oppskriften:
   A4). En ny skriving utenfor `withTxn` blir rød bare i en test der den overlapper med en
   åpen transaksjon. Mocken avviser ikke en slik skriving når ingen transaksjon står åpen,
   så testen for et nytt kallested må åpne en transaksjon selv (se `gameBundle.test.ts`).
+
+### Samme runde på Android-emulatoren (Del B, 19.10)
+
+Android-kolonnen ble kjørt med samme probe og driver i `torny_api36` (API 36). Det som er
+annerledes:
+
+- **JS fra din egen Metro.** Debug-APK-en spør `10.0.2.2:8081`. Skriv
+  `debug_http_host=localhost:<port>` i `shared_prefs/no.tornygolf.dev_preferences.xml`
+  (`adb push` til `/data/local/tmp`, så `run-as no.tornygolf.dev cp …`), og kjør
+  `adb reverse tcp:<port> tcp:<port>` for Metro og for driveren. `adb reverse` går over
+  adb og ikke over nettet, så Metro og driveren virker også i flymodus.
+- **Ekte flymodus.** Pek `EXPO_PUBLIC_WEB_BASE_URL` på `http://10.0.2.2:<port>`. Da når
+  appen nettsiden gjennom emulatorens nett, og
+  `adb shell cmd connectivity airplane-mode enable` kutter både nettsiden og Supabase. Bekreft
+  med `adb shell ping` («Network is unreachable»).
+- **Ekte trykk og tastatur.** `uiautomator dump` gir koordinatene. `input tap`,
+  `input text` og `input swipe x y x y 1900` (langtrykk) gir ekte berøring og ekte tastatur.
+  Bruk `keyevent` sparsomt. Et tastetrykk setter Android i tastaturnavigasjon, og da tegnes
+  en grå fokusramme rundt knappen som har fokus. Det er ikke en feil i appen, og rammen
+  forsvinner ved neste trykk på skjermen.
+- **Ekte dialoger.** Proben fanger `Alert.alert`. Vil du se den native dialogen, må proben
+  ha en bryter som sender kallet videre til den ekte `Alert.alert`. Dialogene våre er
+  `cancelable: false` med vilje (låst i `Friends.test.tsx`), så tilbaketasten lukker dem ikke.
+  Arkene (scorearket, avslutt-bekreftelsen) lukkes av tilbaketasten.
+- **Tastaturet på Android 15+.** Når appen tegner kant til kant (håndhevet fra API 35),
+  krymper ikke `adjustResize` vinduet lenger. `KeyboardInset` i `App.tsx` gjør det i
+  stedet, ved roten for hele appen. Ny skjerm med felt trenger derfor ingen egen
+  tastaturkode på Android. Arkene i en `Modal` har eget vindu og bruker
+  `KeyboardAvoidingView` (`RejectSheet`).
