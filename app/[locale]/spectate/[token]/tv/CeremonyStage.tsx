@@ -112,8 +112,14 @@ export function CeremonyStage({
               ) : (
                 <HiddenCard
                   slot={slot}
-                  title={slot === 1 ? t('tv.hiddenWinner') : t('placeTitle', { rank: place.rank })}
-                  body={t('tv.hiddenBody')}
+                  title={
+                    slot !== 1
+                      ? t('placeTitle', { rank: place.rank })
+                      : place.lines.length > 1
+                        ? t('tv.hiddenWinners')
+                        : t('tv.hiddenWinner')
+                  }
+                  body={slot === 1 && place.lines.length > 1 ? t('tv.hiddenBodyMany') : t('tv.hiddenBody')}
                   sr={t('tv.hiddenSr', { place: t('placeTitle', { rank: place.rank }) })}
                 />
               )}
@@ -123,12 +129,19 @@ export function CeremonyStage({
       </ol>
 
       {sideShown && data.sidePrizes.length > 0 && (
-        <ul className="flex justify-center gap-[18px]" data-testid="ceremony-side">
+        // Turned like a card: it rises in once, and carries the current card's
+        // ring and lighter fill while it is the step shown last. The drawing
+        // shows it at rest (2nd place current): plain 0.08 boxes.
+        <ul
+          className="reveal-up flex justify-center gap-[18px]"
+          data-testid="ceremony-side"
+          data-current={view.current === 'side' ? 'true' : undefined}
+        >
           {data.sidePrizes.map((p) => (
             <li
               key={`${p.category}-${p.position}`}
               className={`rounded-[14px] px-5 py-3 text-[18px] ${
-                view.current === 'side' ? 'bg-tv-text/12' : 'bg-tv-text/8'
+                view.current === 'side' ? 'bg-tv-text/12 ring-2 ring-tv-text/35' : 'bg-tv-text/8'
               }`}
             >
               <span className="text-[13px] font-semibold tracking-[0.2em] text-tv-text/75 uppercase">
