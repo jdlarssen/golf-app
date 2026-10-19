@@ -2410,9 +2410,9 @@ annerledes:
   `App.tsx` krymper roten i stedet, med akkurat det tastaturet dekker av den: rotens
   underkant minus tastaturets overkant (`endCoordinates.screenY`). Krymper et system likevel
   vinduet selv, blir overlappet 0, så tastaturet trekkes aldri fra to ganger. Regnestykket
-  forutsetter et vindu i fullskjerm, der vinduet og skjermen har samme origo. I delt skjerm
-  (nederste rute) og i et frittflytende vindu blir overlappet 0, og tastaturet kan dekke feltet
-  der (kjent grense). Båndet under innholdet får appens bakgrunn. Skjermer med bunnluft for
+  forutsetter et vindu i fullskjerm, der vinduet og skjermen har samme origo. I den nederste
+  ruta i delt skjerm blir overlappet 0, og i et frittflytende vindu blir det for lite. Der kan
+  tastaturet dekke feltet (kjent grense). Båndet under innholdet får appens bakgrunn. Skjermer med bunnluft for
   systemlinja (`insets.bottom`) dropper den mens tastaturet er oppe (`useKeyboardShown`). Ny skjerm med
   felt trenger ingen egen tastaturkode på Android. Arkene i en `Modal` har eget vindu og
   bruker `KeyboardAvoidingView` (`RejectSheet`).
