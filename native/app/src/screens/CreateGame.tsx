@@ -64,6 +64,7 @@ import {
   type ModeSetup,
   type TeeGenderUi,
 } from '../lib/wizardPayload';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -384,7 +385,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const everyoneOnRatedTee = players.every((p) => teeAvail[p.teeGender]);
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="create-screen">
+    <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="create-screen">
       <Text style={ui.sectionTitle} testID="create-progress">
         {`Steg ${stepIndex + 1} av ${STEPS.length} · ${STEP_TITLES[step]}`}
       </Text>

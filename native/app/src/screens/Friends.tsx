@@ -78,6 +78,7 @@ import {
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
 import { withSystemArrows } from '../components/SystemArrow';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
@@ -262,6 +263,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
   return (
     <>
       <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
         contentContainerStyle={[ui.scroll, styles.scroll]}
         keyboardShouldPersistTaps="handled"
         testID="friends-screen"

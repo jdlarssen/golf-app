@@ -45,6 +45,7 @@ import {
 } from '../lib/profileCopy';
 import { FONTS, fraunces, frauncesFamily, useTheme, withAlpha } from '../theme';
 import { asLevel } from './EditProfile';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 
 export function CompleteProfile({
   userId,
@@ -132,7 +133,7 @@ export function CompleteProfile({
         { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 20 },
       ]}
       keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets
+      {...KEYBOARD_SCROLL_PROPS}
       testID="complete-profile-screen"
     >
       <View style={styles.top}>

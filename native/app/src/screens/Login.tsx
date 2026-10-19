@@ -70,6 +70,7 @@ import {
   signInAsDevUser,
   type DevLoginUser,
 } from '../devLogin';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
 
@@ -234,7 +235,7 @@ export function Login() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[styles.screen, { paddingBottom: insets.bottom + 20 }]}
       keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets
+      {...KEYBOARD_SCROLL_PROPS}
       testID="login-screen"
     >
       {/* Lys tekst i statuslinja: båndet under den er skogen, i begge drakter. */}

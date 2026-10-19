@@ -52,6 +52,7 @@ import {
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import { useSession } from '../session';
 import { FONTS, TAP, useTheme } from '../theme';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
@@ -280,7 +281,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
       : null;
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="edit-profile-screen">
+    <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="edit-profile-screen">
       <Text style={ui.label}>{PROFILE_TEXT.nameLabel}</Text>
       <TextInput
         style={ui.input}
