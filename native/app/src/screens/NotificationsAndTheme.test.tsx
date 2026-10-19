@@ -7,7 +7,7 @@
 // under valgene. For varslene: ingen varsel-del uten støtte, bryteren slår på
 // og av, et nei fra iOS gir «Åpne Innstillinger», og en feil står under kortet.
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Linking, Platform } from 'react-native';
+import { Linking, Platform, StyleSheet } from 'react-native';
 import { readPushState, turnOffPush, turnOnPush } from '../data/pushDevice';
 import { loadThemePreference, saveThemePreference } from '../lib/themePreference';
 import { PROFILE_TEXT } from '../lib/profileCopy';
@@ -136,6 +136,8 @@ describe('NotificationsAndTheme', () => {
     expect(screen.queryByText(PROFILE_TEXT.notificationsHeading)).toBeNull();
     expect(screen.queryByText(PROFILE_TEXT.pushSubtitle)).toBeNull();
     expect(screen.queryByTestId('push-section')).toBeNull();
+    // Etiketten ga 16 pt luft over lista; uten den må lista holde avstand selv.
+    expect(StyleSheet.flatten(screen.getByTestId('theme-choices').props.style).marginTop).toBe(16);
     os.restore();
   });
 
