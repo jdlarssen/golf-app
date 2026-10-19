@@ -148,6 +148,7 @@ function renderHome() {
 }
 
 beforeEach(() => {
+  mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
   (fetchKavalkadeStatus as jest.Mock).mockResolvedValue(null);
   mockState.online = true;
   mockState.list = LIST;
