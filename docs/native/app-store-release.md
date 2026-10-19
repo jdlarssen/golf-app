@@ -262,7 +262,8 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 - **Android-kolonnen (19.10.2026, Del B)** fant B1: tastaturet dekket feltet du skriver i.
   Samme feil fantes på iOS, der e-postfeltet for invitasjon på startbilletten og
   handicap-andelen i veiviseren lå under tastaturet i simulatoren. Begge plattformene er
-  rettet i Del B-PR-en, og rettingen kommer med i neste kandidat.
+  rettet i #2614. Samme PR retter B2 (ingen «Lever scorekort» på et låst hull) og B3 (et spill
+  du ikke kan se, sier at det ikke finnes). Alt kommer med i neste kandidat.
 - **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
   versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
   appen, hører til der.
