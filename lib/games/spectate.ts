@@ -20,6 +20,10 @@ const UUID_RE =
  * Returns `{ id }` when found, or `null` when the token is invalid, not a
  * valid UUID shape, or points to a game where live-follow is disabled (token
  * revoked). Callers should `notFound()` on null.
+ *
+ * A DB error throws (#2298): returned as null it became a 404, so a blink
+ * looked like a revoked link on the live page, the TV and the embed. Thrown,
+ * the route's error boundary retries.
  */
 export async function getGameBySpectateToken(
   token: string,
@@ -36,7 +40,7 @@ export async function getGameBySpectateToken(
 
   if (error) {
     console.error('[getGameBySpectateToken] lookup failed', error);
-    return null;
+    throw new Error(`getGameBySpectateToken: ${error.message}`);
   }
   return data;
 }

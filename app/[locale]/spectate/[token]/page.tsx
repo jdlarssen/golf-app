@@ -39,7 +39,8 @@ export async function generateMetadata({
   };
 
   const { token } = await params;
-  const found = await getGameBySpectateToken(token);
+  // A DB blink throws; the title falls back and the page's own lookup decides.
+  const found = await getGameBySpectateToken(token).catch(() => null);
   if (!found) return fallback;
 
   const gwp = await getGameWithPlayers(found.id);
