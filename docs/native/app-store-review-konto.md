@@ -280,7 +280,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 215 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 238 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
