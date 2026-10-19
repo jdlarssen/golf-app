@@ -20,6 +20,7 @@ const revalidateTagMock = vi.fn();
 vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
+// No cached read holds ceremony_step, so the action expires no tag.
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
@@ -55,7 +56,7 @@ describe('setCeremonyStep', () => {
     expect(supabaseMock.__fromCalls).toEqual([]);
   });
 
-  it('the organiser sets an absolute step on a finished game, and the cache expires', async () => {
+  it('the organiser sets an absolute step on a finished game; no cache to expire', async () => {
     supabaseMock = buildSupabaseMock([
       PLAYER,
       { data: { created_by: 'creator-1' }, error: null },
@@ -72,7 +73,7 @@ describe('setCeremonyStep', () => {
       .filter((c) => c.table === 'games' && c.method === 'eq')
       .map((c) => c.args);
     expect(filters).toContainEqual(['status', 'finished']);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('null closes the prize-giving', async () => {
@@ -84,7 +85,7 @@ describe('setCeremonyStep', () => {
     expect(gameWrites().map((c) => c.args[0])).toEqual([{ ceremony_step: null }]);
   });
 
-  it('0 rows (the game is not finished) is a failure, and nothing expires', async () => {
+  it('0 rows (the game is not finished) is a failure', async () => {
     supabaseMock = buildSupabaseMock([ADMIN, STABLEFORD, { data: [], error: null }]);
     signedIn('admin-1');
     const { setCeremonyStep } = await import('./actions');
