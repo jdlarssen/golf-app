@@ -393,4 +393,20 @@ describe('gameBundle', () => {
     expect(await loadGameBundle(GAME)).toBeUndefined();
     expect(await db.getCacheEntry(connection, gameBundleCacheKey('annet-spill'))).toBeDefined();
   });
+
+  it('sender avbruddet videre til begge spørringene, og en avbrutt henting skriver ikke til cachen', async () => {
+    const { queryStub, routeFrom, stepArgs, currentDeviceUserId } = mocks();
+    currentDeviceUserId.mockResolvedValue(ME);
+    const gameStub = queryStub({ data: GAME_ROW, error: null });
+    const playersStub = queryStub({ data: [], error: null });
+    routeFrom({ games: [gameStub], game_players: [playersStub] });
+    const controller = new AbortController();
+    controller.abort();
+
+    const { refreshGameBundle, loadGameBundle } = bundleModule();
+    await expect(refreshGameBundle(GAME, { signal: controller.signal })).rejects.toThrow();
+    expect(stepArgs(gameStub, 'abortSignal')).toEqual([[controller.signal]]);
+    expect(stepArgs(playersStub, 'abortSignal')).toEqual([[controller.signal]]);
+    expect(await loadGameBundle(GAME)).toBeUndefined();
+  });
 });

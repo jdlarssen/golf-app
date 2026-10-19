@@ -50,9 +50,9 @@ describe('RejectSheet', () => {
     );
     const bottom = () => StyleSheet.flatten(screen.getByTestId('reject-sheet').props.style).paddingBottom;
     expect(bottom()).toBe(24 + 34);
-    await act(async () => listeners.keyboardDidShow());
+    await act(async () => listeners.keyboardWillShow());
     expect(bottom()).toBe(24);
-    await act(async () => listeners.keyboardDidHide());
+    await act(async () => listeners.keyboardWillHide());
     expect(bottom()).toBe(24 + 34);
     view.unmount();
     jest.restoreAllMocks();

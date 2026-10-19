@@ -22,8 +22,8 @@
 // window, and in a full-screen window (the normal case on a phone) the window
 // and the screen share the same origin. Known limit: when the window starts
 // below the screen's top, the root's layout bottom is smaller than its real
-// bottom on screen. In the lower pane of split screen `covered` comes out 0; in
-// a free-form window it comes out too small. There the keyboard can still cover
+// bottom on screen. In the lower pane of a usual split screen `covered` comes
+// out 0; in a free-form window it comes out too small. There the keyboard can still cover
 // a field, as it did before #1954 Del B.
 //
 // The band the padding opens below the content gets the app's own background;
@@ -56,8 +56,11 @@ export const KEYBOARD_SCROLL_PROPS = { automaticallyAdjustKeyboardInsets: true }
 export function useKeyboardShown(): boolean {
   const [shown, setShown] = useState(false);
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setShown(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setShown(false));
+    // iOS løfter arkene (KeyboardAvoidingView) på `keyboardWill…`; følger luften
+    // `Did…`, hopper arket etter animasjonen. Android har bare `Did…`.
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', () => setShown(true));
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setShown(false));
     return () => {
       show.remove();
       hide.remove();
