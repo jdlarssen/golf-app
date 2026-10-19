@@ -57,10 +57,10 @@ export const STORE_VERSION = '1.2.0';
  * `CFBundleVersion`. **Bump før hver opplasting** — App Store Connect avviser
  * et duplikat (versjon, build). Skallet brukte `1`; første kandidat var `2`.
  */
-export const STORE_IOS_BUILD_NUMBER = '4';
+export const STORE_IOS_BUILD_NUMBER = '5';
 
 /** Android-motstykket. **Bump før hver opplasting** — Play Console avviser en versionCode den har sett. */
-export const STORE_ANDROID_VERSION_CODE = 4;
+export const STORE_ANDROID_VERSION_CODE = 5;
 
 /**
  * Config-pluginen som signerer release-AAB-en med opplastingsnøkkelen (#2560).
