@@ -165,6 +165,7 @@ export async function renderSkins(opts: {
                     gameName={game.name}
                     mode="skins"
                     isFinal
+                    copyVariant="secondary"
                   />
                 </div>
               )}

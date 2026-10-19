@@ -50,6 +50,9 @@ describe('the duel card carries the money settlement (#2221)', () => {
           '<SettlementTable settlement={settlement} … /> through footerSlot, ahead ' +
           'of the incoming footerSlot, as the format views do for 3+ players.',
       ).toContain('<SettlementTable settlement={settlement}');
+      // Owner's choice B (#2296): on the duel page «Del resultat» is the main
+      // button, so the copy button is the outlined one there.
+      expect(duel).toContain('copyVariant="secondary"');
     },
   );
 });

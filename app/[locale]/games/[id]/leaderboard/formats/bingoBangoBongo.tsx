@@ -172,6 +172,7 @@ export async function renderBingoBangoBongo(opts: {
                     gameName={game.name}
                     mode="bingo_bango_bongo"
                     isFinal
+                    copyVariant="secondary"
                   />
                 </div>
               )}

@@ -29,6 +29,12 @@ interface SettlementTableProps {
   mode: SettlementMode;
   /** `games.status === 'finished'`: the final title and the copy button. */
   isFinal: boolean;
+  /**
+   * The copy button's look. Filled (`primary`) as the artboard draws it; the
+   * duel card passes `secondary` so «Del resultat» stays the main button on
+   * that page (owner's choice B, #2296).
+   */
+  copyVariant?: 'primary' | 'secondary';
 }
 
 // Inside an iframe (a club's /embed snippet has no allow="clipboard-write"),
@@ -56,6 +62,7 @@ export function SettlementTable({
   gameName,
   mode,
   isFinal,
+  copyVariant = 'primary',
 }: SettlementTableProps) {
   const t = useTranslations('leaderboard.common.settlement');
   const tCommon = useTranslations('leaderboard.common');
@@ -219,6 +226,7 @@ export function SettlementTable({
               shadow; the artboard's pill is 600, normal tracking, flat. */}
           <Button
             type="button"
+            variant={copyVariant}
             onClick={copy}
             className="h-[52px] w-full text-[15px] leading-[normal] font-semibold! tracking-normal! [box-shadow:none]!"
             data-testid="settlement-copy"

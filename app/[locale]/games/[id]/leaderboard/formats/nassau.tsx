@@ -185,6 +185,7 @@ export async function renderNassau(opts: {
                     gameName={game.name}
                     mode="nassau"
                     isFinal
+                    copyVariant="secondary"
                   />
                 </div>
               )}
