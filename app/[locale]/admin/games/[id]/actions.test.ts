@@ -1173,6 +1173,7 @@ describe('reopenGame', () => {
         ended_at: null,
         round_report: null,
         finish_pipeline_at: null,
+        // #2298: a game finished again starts without a prize-giving.
         ceremony_step: null,
       },
       // Derived fan-out — same patch, same reason (#1441 D3 + #1856).
@@ -1184,35 +1185,6 @@ describe('reopenGame', () => {
         ceremony_step: null,
       },
     ]);
-  });
-
-  it('#2298: a reopened game starts without a prize-giving, host and derived games alike', async () => {
-    // The big screen reads ceremony_step on a finished game. A game reopened
-    // and finished again must show «Ferdig spilt», not the old ceremony.
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
-      {
-        data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
-        error: null,
-      }, // games.select(id, name, status)
-      { data: [{ id: 'game-1' }], error: null }, // games.update(...) on the host → ok
-      { data: [{ id: 'derived-1' }], error: null }, // findDerivedGameIds
-      { data: [{ id: 'derived-1' }], error: null }, // the derived batch UPDATE
-      { data: [{ user_id: 'admin-1' }], error: null }, // roster (actor only)
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
-
-    const { reopenGame } = await import('./actions');
-
-    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
-
-    const updates = supabaseMock.__fromCalls
-      .filter((c) => c.table === 'games' && c.method === 'update')
-      .map((c) => c.args[0]);
-    expect(updates).toHaveLength(2);
-    for (const patch of updates) expect(patch).toMatchObject({ ceremony_step: null });
   });
 
   it('#2214: a match in a finished cup is not reopened, nothing is written', async () => {
