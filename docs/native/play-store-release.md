@@ -153,7 +153,7 @@ greensome skal stemme med både nettsiden og iOS-kolonnen.
 Android-kolonnen ble kjørt 19.10.2026. Appen var dev-varianten (Debug-APK-en fra 14.10, som har
 de samme native-modulene som `main`). JS-en var fra `origin/main` aea0f30c5, altså etter #2609
 med A1–A4, pluss rettingen B1 under. Tallene var like med nettsiden og iOS-kolonnen. Én feil
-var bare på Android, og den er rettet med en test som var rød først:
+ble funnet, og den er rettet med tester som var røde først:
 
 - **B1 — tastaturet dekket feltet.** Appen tegner kant til kant på alle Android-versjoner
   (Expo SDK 57), og da krymper ikke vinduet når tastaturet kommer opp. E-postfeltet for
