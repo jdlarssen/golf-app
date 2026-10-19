@@ -232,7 +232,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
   if (load.state === 'failed') {
     return (
-      <ScrollView contentContainerStyle={ui.scroll} testID="friends-screen">
+      <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="friends-screen">
         <Text style={ui.body} testID="friends-load-error">
           {load.reason === 'offline' ? FRIENDS_TEXT.offline : FRIENDS_TEXT.loadFailed}
         </Text>

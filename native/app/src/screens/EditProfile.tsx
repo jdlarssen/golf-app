@@ -235,7 +235,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
 
   if (loadFailed) {
     return (
-      <ScrollView contentContainerStyle={ui.scroll} testID="edit-profile-screen">
+      <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="edit-profile-screen">
         <Text style={ui.error} testID="edit-profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
