@@ -1,7 +1,8 @@
 /**
  * Type A — the big screen's prize-giving poller (#2298). It asks the step
  * route every 2 s and refreshes the page only when the step changed or the
- * link is gone; it stays quiet offline and gives up 6 hours after the end.
+ * link is gone; it stays quiet offline and gives up 6 hours after the page
+ * was opened.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -45,12 +46,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const ENDED_AT = new Date(NOW - 60_000).toISOString();
-
 describe('CeremonyPoller', () => {
   it('asks the step route for this token, without the HTTP cache', async () => {
     answer(200, 2);
-    render(<CeremonyPoller token="tok-1" step={2} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={2} />);
     await act(() => vi.advanceTimersByTimeAsync(0));
 
     expect(fetchMock).toHaveBeenCalledWith('/api/spectate/tok-1/seremoni', { cache: 'no-store' });
@@ -58,7 +57,7 @@ describe('CeremonyPoller', () => {
 
   it('the same step: no refresh, tick after tick', async () => {
     answer(200, 2);
-    render(<CeremonyPoller token="tok-1" step={2} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={2} />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
 
     expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(3);
@@ -67,7 +66,7 @@ describe('CeremonyPoller', () => {
 
   it('a new step: one refresh, not one per tick while the page catches up', async () => {
     answer(200, 3);
-    render(<CeremonyPoller token="tok-1" step={2} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={2} />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
 
     expect(refresh).toHaveBeenCalledTimes(1);
@@ -75,7 +74,7 @@ describe('CeremonyPoller', () => {
 
   it('closed (null) after a step counts as a change', async () => {
     answer(200, null);
-    render(<CeremonyPoller token="tok-1" step={4} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={4} />);
     await act(() => vi.advanceTimersByTimeAsync(0));
 
     expect(refresh).toHaveBeenCalledTimes(1);
@@ -83,7 +82,7 @@ describe('CeremonyPoller', () => {
 
   it('404 (the live link was turned off): refresh, so the page can say so', async () => {
     answer(404);
-    render(<CeremonyPoller token="tok-1" step={null} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={null} />);
     await act(() => vi.advanceTimersByTimeAsync(0));
 
     expect(refresh).toHaveBeenCalled();
@@ -92,7 +91,7 @@ describe('CeremonyPoller', () => {
   it('a server error or a network blip changes nothing', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     answer(500);
-    render(<CeremonyPoller token="tok-1" step={1} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={1} />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 2));
 
     expect(refresh).not.toHaveBeenCalled();
@@ -101,38 +100,31 @@ describe('CeremonyPoller', () => {
   it('offline: no request at all, and one at once when the network is back', async () => {
     online = false;
     answer(200, 1);
-    const { rerender } = render(<CeremonyPoller token="tok-1" step={1} endedAt={ENDED_AT} />);
+    const { rerender } = render(<CeremonyPoller token="tok-1" step={1} />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
     expect(fetchMock).not.toHaveBeenCalled();
 
     online = true;
-    rerender(<CeremonyPoller token="tok-1" step={1} endedAt={ENDED_AT} />);
+    rerender(<CeremonyPoller token="tok-1" step={1} />);
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('gives up 6 hours after the game ended', async () => {
+  it('stops asking 6 hours after the page was opened (a TV left on overnight)', async () => {
     answer(200, 1);
-    const longAgo = new Date(NOW - CEREMONY_POLL_GIVE_UP_MS - 1000).toISOString();
-    render(<CeremonyPoller token="tok-1" step={1} endedAt={longAgo} />);
-    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 5));
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('stops asking once the 6 hours run out while it stands on', async () => {
-    answer(200, 1);
-    const almost = new Date(NOW - CEREMONY_POLL_GIVE_UP_MS + CEREMONY_POLL_MS * 2).toISOString();
-    render(<CeremonyPoller token="tok-1" step={1} endedAt={almost} />);
+    render(<CeremonyPoller token="tok-1" step={1} />);
+    await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_GIVE_UP_MS - CEREMONY_POLL_MS));
+    const before = fetchMock.mock.calls.length;
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 10));
 
-    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(before).toBeGreaterThan(0);
+    expect(fetchMock.mock.calls.length - before).toBeLessThanOrEqual(1);
   });
 
   it('a hidden tab does not ask; it asks again when shown', async () => {
     answer(200, 1);
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
-    render(<CeremonyPoller token="tok-1" step={1} endedAt={ENDED_AT} />);
+    render(<CeremonyPoller token="tok-1" step={1} />);
     await act(() => vi.advanceTimersByTimeAsync(CEREMONY_POLL_MS * 3));
     expect(fetchMock).not.toHaveBeenCalled();
 
@@ -147,7 +139,7 @@ describe('CeremonyPoller', () => {
 
   it('renders nothing', () => {
     answer(200, 1);
-    const { container } = render(<CeremonyPoller token="tok-1" step={1} endedAt={ENDED_AT} />);
+    const { container } = render(<CeremonyPoller token="tok-1" step={1} />);
     expect(container.firstChild).toBeNull();
   });
 });
