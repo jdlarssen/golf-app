@@ -339,8 +339,9 @@ describe('gameBundle', () => {
     expect(await loadGameBundle(GAME)).toBeUndefined();
   });
 
-  it('kaster når spillet ikke er synlig for spilleren', async () => {
-    const { queryStub, routeFrom } = mocks();
+  it('kaster GameNotFoundError når spillet ikke er synlig og spilleren har en økt', async () => {
+    const { queryStub, routeFrom, currentDeviceUserId } = mocks();
+    currentDeviceUserId.mockResolvedValueOnce(ME);
     routeFrom({
       games: [queryStub({ data: null, error: null })],
       game_players: [queryStub({ data: [], error: null })],
@@ -351,5 +352,45 @@ describe('gameBundle', () => {
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(require('./gameNotFound').GameNotFoundError);
     expect(String(err)).toMatch(/Fant ikke spillet/);
+  });
+
+  // #1954 Del B: utløper tokenet og fornyelsen feiler, sender supabase-js
+  // anon-nøkkelen, og RLS svarer 0 rader uten feil. Uten økt er det en feil, ikke
+  // et spill som er borte, ellers får et ekte medlem høre at spillet ikke finnes.
+  it('uten økt er 0 rader en feil, ikke «finnes ikke»', async () => {
+    const { queryStub, routeFrom, currentDeviceUserId } = mocks();
+    currentDeviceUserId.mockResolvedValueOnce(null);
+    routeFrom({
+      games: [queryStub({ data: null, error: null })],
+      game_players: [queryStub({ data: [], error: null })],
+    });
+
+    const err = await bundleModule()
+      .fetchGameBundle(GAME)
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(require('./gameNotFound').GameNotFoundError);
+  });
+
+  it('glemmer den lagrede bundelen for et spill som er borte', async () => {
+    const { gameBundleCacheKey, loadGameBundle, forgetGameBundle, BUNDLE_PAYLOAD_VERSION } =
+      bundleModule();
+    const db = require('./db') as typeof import('./db');
+    const connection = await db.getDb();
+    await db.putCacheEntry(connection, {
+      key: gameBundleCacheKey(GAME),
+      payload: JSON.stringify({ v: BUNDLE_PAYLOAD_VERSION, bundle: { game: { id: GAME } } }),
+      fetchedAt: '2026-08-01T10:00:00.000Z',
+    });
+    await db.putCacheEntry(connection, {
+      key: gameBundleCacheKey('annet-spill'),
+      payload: JSON.stringify({ v: BUNDLE_PAYLOAD_VERSION, bundle: { game: { id: 'annet-spill' } } }),
+      fetchedAt: '2026-08-01T10:00:00.000Z',
+    });
+
+    await forgetGameBundle(GAME);
+
+    expect(await loadGameBundle(GAME)).toBeUndefined();
+    expect(await db.getCacheEntry(connection, gameBundleCacheKey('annet-spill'))).toBeDefined();
   });
 });

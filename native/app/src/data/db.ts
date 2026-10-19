@@ -629,6 +629,14 @@ export async function putCacheEntry(
   );
 }
 
+/** Glem én cachet nyttelast (et spill som er borte, #1954 Del B). */
+export async function deleteCacheEntry(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+): Promise<void> {
+  await db.runAsync('DELETE FROM cache_entries WHERE key = $key;', { $key: key });
+}
+
 export async function listConflictsForGame(
   db: SQLite.SQLiteDatabase,
   gameId: string,

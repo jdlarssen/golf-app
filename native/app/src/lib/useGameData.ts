@@ -8,12 +8,13 @@
 //
 // Slagene hentes inn igjen fra serveren av `useScoreCatchUp` (egen fil), og
 // «appen kom tilbake» bor i `useOnResume` (#2228).
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { getDb, listScoresForGame, type LocalScore } from '../data/db';
 import {
   loadGameBundle,
+  forgetGameBundle,
   refreshGameBundle,
   type GameBundle,
 } from '../data/gameBundle';
@@ -52,21 +53,57 @@ export interface GameBundleState {
  * Et hullbytte gir ikke nytt fokus (`navigation.setParams`). Hullsiden kaller
  * derfor `refresh` selv når hullet byttes.
  */
+/**
+ * Hvor lenge én henting av spillet får holde på (#1954 Del B). Ingen ledd under
+ * har en timeout: OkHttp på Android venter uten grense, postgrest prøver GET
+ * på nytt, og øktfornyelsen venter med backoff. I ekte flymodus sto spillsiden
+ * og lastet i over 18 s. Etter taket sier skjermen «Fikk ikke tak i spillet»,
+ * og fokus, forgrunn eller «Prøv igjen» henter på nytt. Samme grep som
+ * profilporten og AI-porten (`Promise.race` mot et tak).
+ */
+export const GAME_BUNDLE_TIMEOUT_MS = 12_000;
+
 export function useGameBundle(gameId: string): GameBundleState {
   const [bundle, setBundle] = useState<GameBundle | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Et spill som er borte, skal ikke komme tilbake fra cachen fordi den lokale
+  // lesingen ble ferdig etter svaret fra serveren.
+  const gone = useRef(false);
 
   const refresh = useCallback(async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), GAME_BUNDLE_TIMEOUT_MS);
+    });
     try {
-      setBundle(await refreshGameBundle(gameId));
+      const result = await Promise.race([refreshGameBundle(gameId), timedOut]);
+      if (result === 'timeout') {
+        console.error('[gameBundle] hentingen ga opp etter', GAME_BUNDLE_TIMEOUT_MS, 'ms');
+        setErrorText(`Ga opp etter ${GAME_BUNDLE_TIMEOUT_MS} ms`);
+        setNotFound(false);
+        return;
+      }
+      gone.current = false;
+      setBundle(result);
       setErrorText(null);
       setNotFound(false);
     } catch (err: unknown) {
       setErrorText(messageOf(err));
-      setNotFound(err instanceof GameNotFoundError);
+      if (err instanceof GameNotFoundError) {
+        // #1954 Del B: borte er borte, også når en eldre kopi ligger lagret.
+        gone.current = true;
+        setNotFound(true);
+        setBundle(null);
+        void forgetGameBundle(gameId).catch((forgetErr: unknown) => {
+          console.error('[gameBundle] kunne ikke glemme spillet', forgetErr);
+        });
+      } else {
+        setNotFound(false);
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, [gameId]);
@@ -75,8 +112,8 @@ export function useGameBundle(gameId: string): GameBundleState {
     let cancelled = false;
     void loadGameBundle(gameId)
       .then((cached) => {
-        if (cancelled || !cached) return;
-        setBundle(cached);
+        if (cancelled || !cached || gone.current) return;
+        setBundle((current) => current ?? cached);
         setLoading(false);
       })
       .catch(() => {

@@ -10,8 +10,8 @@
 // samlet, og normalisering er støy helt til noe faktisk spør om delene hver for
 // seg. Ingen scores her — de eier `scores`-tabellen og LWW-regelen.
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
-import { supabase } from '../supabase';
-import { getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
+import { currentDeviceUserId, supabase } from '../supabase';
+import { deleteCacheEntry, getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
 import { GameNotFoundError } from './gameNotFound';
 
 /**
@@ -408,7 +408,15 @@ export async function fetchGameBundle(gameId: string): Promise<GameBundle> {
 
   if (gameRes.error) throw new Error(gameRes.error.message);
   if (playersRes.error) throw new Error(playersRes.error.message);
-  if (!gameRes.data) throw new GameNotFoundError(gameId);
+  if (!gameRes.data) {
+    // #1954 Del B: 0 rader betyr «borte eller skjult av RLS» bare når spørringen
+    // gikk som spilleren. Utløper tokenet og fornyelsen feiler, går den med
+    // anon-nøkkelen, og RLS svarer 0 rader uten feil. Da er det en feil.
+    if (!(await currentDeviceUserId())) {
+      throw new Error(`Spillet ${gameId} ble hentet uten økt`);
+    }
+    throw new GameNotFoundError(gameId);
+  }
 
   return toBundle(gameRes.data, playersRes.data ?? []);
 }
@@ -466,6 +474,14 @@ export async function loadGameBundle(
  * `cache_entries`. En feilet refetch (offline, RLS, serverfeil) lar dermed den
  * forrige bundelen stå urørt — spilleren mister ikke banen sin fordi nettet falt.
  */
+/**
+ * Glem den lagrede bundelen for et spill som ikke finnes for spilleren lenger
+ * (#1954 Del B), så ingen skjerm tegner et spill som er borte fra cachen.
+ */
+export async function forgetGameBundle(gameId: string): Promise<void> {
+  await withTxn((txn) => deleteCacheEntry(txn, gameBundleCacheKey(gameId)));
+}
+
 export async function refreshGameBundle(gameId: string): Promise<GameBundle> {
   const bundle = await fetchGameBundle(gameId);
   const payload: CachedBundlePayload = { v: BUNDLE_PAYLOAD_VERSION, bundle };
