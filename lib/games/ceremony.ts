@@ -180,18 +180,24 @@ export function ceremonySteps(places: CeremonyPlace[], hasSidePrizes: boolean): 
   return hasSidePrizes ? ['side', ...descending] : descending;
 }
 
-export interface CeremonyView {
+export interface CeremonyView<T = CeremonyStep> {
   /** The step, clamped to 0…steps.length. */
   step: number;
-  shown: CeremonyStep[];
+  shown: T[];
   /** The step shown last — the highlighted card. */
-  current: CeremonyStep | null;
+  current: T | null;
   /** What the next tap shows, for the phone to read out. */
-  next: CeremonyStep | null;
+  next: T | null;
   done: boolean;
 }
 
-export function ceremonyView(steps: CeremonyStep[], step: number): CeremonyView {
+/**
+ * What a step shows, for the TV's podium and the phone's remote alike (any
+ * list of steps): the one place the stored step is clamped. RLS lets the
+ * column hold 0–4, so a step beyond this podium, or below 0, must read as the
+ * end or the start, never throw.
+ */
+export function ceremonyView<T>(steps: T[], step: number): CeremonyView<T> {
   const k = Math.min(Math.max(Math.trunc(step), 0), steps.length);
   return {
     step: k,
