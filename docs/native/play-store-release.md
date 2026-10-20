@@ -172,8 +172,9 @@ fra nettsiden ble rettet i samme PR (#2614), med tester som var røde først:
   spillet. Sjekk nettet og prøv igjen.». Spillsiden sier nå at spillet ikke finnes
   (eierens valg 19.10). Nettsiden svarer 404.
 
-Butikk-AAB-en som prøves på eierens
-Android-telefon (Del C), står med versjon og build i matrisen. Ekte avslutning fra en
+Rettingene B1–B3 er med i `main` 8d02c7334, som har versionCode 5 og er kilden til
+iPhone-kandidaten 1.2.0 (5). AAB-en med versionCode 5 er ikke bygget ennå. Butikk-AAB-en som
+prøves på eierens Android-telefon (Del C), står med versjon og build i matrisen. Ekte avslutning fra en
 Android-telefon tas i den lukkede testen i januar (eierens svar 18.10).
 
 ## Feilsøking
