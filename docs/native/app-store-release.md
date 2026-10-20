@@ -156,7 +156,7 @@ stopper opplastingen.
 | | **FORBY** verdier fra appens egne `.env`-filer (#2208): hver `EXPO_PUBLIC_*`-verdi i `native/app/.env*` (eller i mappa `TORNY_APP_ENV_DIR` peker på) må ha 0 treff i bundelen. Verdier beviset krever (prod-adressen, web-adressen, anon-nøkkelen fra miljøet) og verdier under 12 tegn hoppes over med en linje om det. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien. Uten `.env`-filer blir det én linje om det, ingen FAIL. |
 | | `http://`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). `localhost` har sin egen regel (raden over). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`. |
-| Entitlements (`codesign -d --entitlements`) | **KREV** `aps-environment` = `development` eller `production`, fordi appen har varsler på iOS (#2561). Verdien skrives i bevis-fila. Arkivet kreves ikke å ha `production`: pluginen skriver `development` når `mode` ikke er satt, og beviset kjører på arkivet før eksporten. Om det opplastede bygget har `production`, vises først når en TestFlight-installasjon får et varsel. **FORBY** `com.apple.developer.associated-domains`. Reglene står i `entitlements-proof.sh` og testes uten arkiv (`entitlements-proof.test.js`). |
+| Entitlements (`codesign -d --entitlements`) | **KREV** `aps-environment` = `development` eller `production`, fordi appen har varsler på iOS (#2561). Verdien skrives i bevis-fila. Arkivet kreves ikke å ha `production`: pluginen skriver `development` når `mode` ikke er satt, og beviset kjører på arkivet før eksporten. Om det opplastede bygget har `production`, vises i en lokal eksport (se «Varsler (push) fra appen»). **FORBY** `com.apple.developer.associated-domains`. Reglene står i `entitlements-proof.sh` og testes uten arkiv (`entitlements-proof.test.js`). |
 | App-ikonet (#1975) | **Kilden:** `native/app/assets/icon.png` må ha samme sha256 som `native/assets/appstore-1024.png`, og aldri Expo-malens hash (den nevnes ved navn i FAIL-en). **Arkivet:** `Assets.car` må ha `App-Icon-1024x1024@1x.png`, og `.app`-en `AppIcon60x60@2x.png`. To regler fordi `Assets.car` er kompilert — kildens byte finnes ikke igjen der, så arkiv-regelen beviser bare at *et* ikon ble kompilert inn. **`--upload-only` leser dagens kilde**, ikke den arkivet ble bygget fra; i den vanlige kjeden (prebuild → archive → bevis) henger de sammen. |
 
 Lista over kjente bibliotek-strenger ble seedet fra `expo export` av begge varianter
@@ -257,13 +257,16 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 - **iOS-kolonnen (18.10.2026)** kjørte i dev-varianten mot `torny-staging`, med JS-en fra
   `origin/main` ed58f7e1d. Det er samme JS som i butikkandidaten **1.2.0 (4)**. Avvikene
   den fant, A1–A4 (A2 og A4 rettet, A1 og A3 bygget etter eierens svar), er i #2609. De ble
-  prøvd på nytt i simulatoren på den nye JS-en (A1, A3, og A4 med fem tavler) og kommer med
-  i neste kandidat.
+  prøvd på nytt i simulatoren på den nye JS-en (A1, A3, og A4 med fem tavler) og er med i
+  **1.2.0 (5)**.
 - **Android-kolonnen (19.10.2026, Del B)** fant B1: tastaturet dekket feltet du skriver i.
   Samme feil fantes på iOS, der e-postfeltet for invitasjon på startbilletten og
   handicap-andelen i veiviseren lå under tastaturet i simulatoren. Begge plattformene er
   rettet i #2614. Samme PR retter B2 (ingen «Lever scorekort» på et låst hull) og B3 (et spill
-  du ikke kan se, sier at det ikke finnes). Alt kommer med i neste kandidat.
+  du ikke kan se, sier at det ikke finnes). Alt er med i **1.2.0 (5)**.
+- **Kandidaten 1.2.0 (5)** er bygget fra `main` 8d02c7334 (merket `native-ios/v1.2.0-5`) og
+  lastet opp 20.10.2026. Den har A1–A4 (#2609), B1–B3 og tidstaket (#2614) og Android-restene
+  (#2616). Beviset ga 26 PASS og 0 FAIL. Det er bygget som prøves i Del C.
 - **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
   versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
   appen, hører til der.
@@ -357,9 +360,12 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
 - **Pluginen** `expo-notifications` står i `app.json` for begge varianter. Den setter
   `aps-environment` selv, til `development` når `mode` ikke er satt (`app.json` setter den
   ikke). Ingen egen entitlement i `app.json`. Med automatisk signering er arkivet
-  utviklingssignert og har trolig `development`. Om eksporten til App Store signerer om til
-  `production`, er ikke vist: eksporten laster rett opp, så ingen `.ipa` ligger igjen å
-  lese. Det vises når en TestFlight-installasjon får et varsel fra serveren. Beviset krever
+  utviklingssignert og har `development`. Eksporten til App Store signerer om til
+  `production`. Det er vist for 1.2.0 (5) (20.10.2026) med en lokal eksport av samme arkiv:
+  en kopi av `ExportOptions.plist` med `destination` = `export` ga en `.ipa`, og
+  `codesign -d --entitlements` på `.app`-en i den viste `aps-environment` = `production`
+  (signert med Apple Distribution, profilen «iOS Team Store Provisioning Profile»). Den vanlige
+  eksporten laster rett opp og legger ingen `.ipa` igjen. Beviset kjører på arkivet og krever
   derfor bare `development` eller `production` (se «Bevis-steget»).
 - **Apple:** App-ID-en må ha «Push Notifications» slått på i Apple Developer
   (Identifiers). `no.tornygolf.app` har det fra skallet. `no.tornygolf.dev` må få det
