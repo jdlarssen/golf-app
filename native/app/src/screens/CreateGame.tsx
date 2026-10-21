@@ -31,6 +31,7 @@ import { SetupStep } from '../components/create/SetupStep';
 import {
   fetchCourses,
   fetchRosterCandidates,
+  newGameId,
   publishGame,
   type CourseOption,
   type RosterCandidate,
@@ -171,6 +172,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     { userId, teamNumber: null, teeGender: null },
   ]);
   const [busy, setBusy] = useState(false);
+  // #1954 D2: runde-id-en lages én gang per veiviser. Når publiseringen når
+  // tidstaket etter at serveren lagret, treffer neste trykk den samme raden i
+  // stedet for å lage runde nummer to (`publishGame`).
+  const [gameId] = useState(newGameId);
   /**
    * Feilen etter et publiseringsforsøk, og hvor veien videre går (#1891).
    *
@@ -343,8 +348,8 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     : null;
 
   const publish = useCallback(async () => {
-    // Dobbelttrykk-låsen står FØRST. `publishGame` er ikke idempotent, og to
-    // gjennomkjøringer ville gitt to runder med samme navn.
+    // Dobbelttrykk-låsen står FØRST: to gjennomkjøringer samtidig ville kjempet
+    // om den samme raden.
     if (busy || !draft) return;
     if (!isDeviceOnline()) {
       setFailure({ text: OFFLINE_NOTE, action: null });
@@ -353,7 +358,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     setBusy(true);
     setFailure(null);
     try {
-      const result = await publishGame(draft);
+      const result = await publishGame(draft, gameId);
       if (result.ok) {
         // `replace`, ikke `navigate`: en ferdig veiviser skal ikke ligge igjen
         // bak spillet i stacken — «tilbake» fra runden hører hjemme på Hjem.
@@ -373,7 +378,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
     setBusy(false);
-  }, [busy, draft, navigation]);
+  }, [busy, draft, gameId, navigation]);
 
   const stepIndex = STEPS.indexOf(step);
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);

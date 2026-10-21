@@ -42,6 +42,14 @@ function createGame(): CreateGame {
   return require('./createGame') as CreateGame;
 }
 
+/**
+ * `publishGame` med en fast runde-id. Veiviseren lager id-en selv (#1954 D2),
+ * så id-en tilbake er den som ble sendt, ikke en databasen valgte.
+ */
+function publish(d: GameDraft): ReturnType<CreateGame['publishGame']> {
+  return createGame().publishGame(d, GAME_ID);
+}
+
 const ME = 'user-me';
 const MATE = 'user-mate';
 const GAME_ID = 'game-new';
@@ -96,7 +104,7 @@ describe('publishGame', () => {
     it('kaller POST …/invite-roster én gang etter vellykket publisering', async () => {
       rigSuccess();
 
-      expect(await createGame().publishGame(draft())).toEqual({ ok: true, gameId: GAME_ID });
+      expect(await publish(draft())).toEqual({ ok: true, gameId: GAME_ID });
 
       expect(mockFetch).toHaveBeenCalledWith(
         INVITE_URL,
@@ -115,7 +123,7 @@ describe('publishGame', () => {
       const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       // Et «prøv igjen» her ville laget runde nummer to.
-      expect(await createGame().publishGame(draft())).toEqual({ ok: true, gameId: GAME_ID });
+      expect(await publish(draft())).toEqual({ ok: true, gameId: GAME_ID });
       expect(logged).toHaveBeenCalled();
     });
 
@@ -128,11 +136,9 @@ describe('publishGame', () => {
         const { BEST_EFFORT_WAIT_MS } = require('./bestEffortCall') as typeof import('./bestEffortCall');
 
         let result: unknown;
-        const pending = createGame()
-          .publishGame(draft())
-          .then((r) => {
-            result = r;
-          });
+        const pending = publish(draft()).then((r) => {
+          result = r;
+        });
 
         await jest.advanceTimersByTimeAsync(BEST_EFFORT_WAIT_MS);
         await pending;
@@ -150,7 +156,7 @@ describe('publishGame', () => {
         games: [queryStub(RLS_ERROR)],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'rls_denied',
       });
@@ -165,7 +171,7 @@ describe('publishGame', () => {
         game_players: [queryStub({ data: null, error: { message: 'nei' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'db_players',
       });
@@ -183,7 +189,7 @@ describe('publishGame', () => {
         game_players: [queryStub(PLAYER_ROWS)],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: true,
         gameId: GAME_ID,
       });
@@ -228,7 +234,7 @@ describe('publishGame', () => {
         game_players: [playerInsert],
       });
 
-      await createGame().publishGame(draft());
+      await publish(draft());
 
       const rows = stepArgs(playerInsert, 'insert')[0]![0] as Record<
         string,
@@ -248,7 +254,7 @@ describe('publishGame', () => {
         game_players: [playerInsert],
       });
 
-      await createGame().publishGame(draft());
+      await publish(draft());
 
       const rows = stepArgs(playerInsert, 'insert')[0]![0] as Record<
         string,
@@ -275,7 +281,7 @@ describe('publishGame', () => {
         game_players: [playerInsert],
       });
 
-      await createGame().publishGame(
+      await publish(
         draft({
           gameMode: 'best_ball',
           players: [
@@ -317,7 +323,7 @@ describe('publishGame', () => {
         game_players: [queryStub(PLAYER_ROWS)],
       });
 
-      await createGame().publishGame(
+      await publish(
         draft({ sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 2 }),
       );
 
@@ -336,7 +342,7 @@ describe('publishGame', () => {
       mocks().currentDeviceUserId.mockResolvedValue(null);
       routeFrom({});
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'not_authenticated',
       });
@@ -347,7 +353,7 @@ describe('publishGame', () => {
       routeFrom({});
 
       // Ingen spillere → `min_players_for_mode` fra den delte validatoren.
-      expect(await createGame().publishGame(draft({ players: [] }))).toEqual({
+      expect(await publish(draft({ players: [] }))).toEqual({
         ok: false,
         error: 'min_players_for_mode',
       });
@@ -358,7 +364,7 @@ describe('publishGame', () => {
       routeFrom({});
 
       expect(
-        await createGame().publishGame(
+        await publish(
           draft({ gameMode: 'patsome' as GameDraft['gameMode'] }),
         ),
       ).toEqual({ ok: false, error: 'unsupported_mode' });
@@ -368,7 +374,7 @@ describe('publishGame', () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ formats: [queryStub({ data: null, error: null })] });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'invalid_game_mode',
       });
@@ -382,7 +388,7 @@ describe('publishGame', () => {
         formats: [queryStub({ data: null, error: { message: 'timeout' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'db_format',
       });
@@ -394,7 +400,7 @@ describe('publishGame', () => {
       routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
 
       expect(
-        await createGame().publishGame(draft({ teeOffAt: inDays(-1) })),
+        await publish(draft({ teeOffAt: inDays(-1) })),
       ).toEqual({ ok: false, error: 'tee_off_in_past' });
     });
 
@@ -402,7 +408,7 @@ describe('publishGame', () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
 
-      expect(await createGame().publishGame(draft({ teeOffAt: null }))).toEqual({
+      expect(await publish(draft({ teeOffAt: null }))).toEqual({
         ok: false,
         error: 'tee_off_required',
       });
@@ -413,7 +419,7 @@ describe('publishGame', () => {
       routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
 
       expect(
-        await createGame().publishGame(
+        await publish(
           draft({
             sideTournamentEnabled: true,
             sideLdCount: 5 as GameDraft['sideLdCount'],
@@ -436,7 +442,7 @@ describe('publishGame', () => {
         game_players: [playersInsert],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: true,
         gameId: GAME_ID,
       });
@@ -460,7 +466,7 @@ describe('publishGame', () => {
         games: [queryStub(ZERO_ROWS)],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'no_rows',
       });
@@ -473,7 +479,7 @@ describe('publishGame', () => {
         games: [queryStub(RLS_ERROR)],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'rls_denied',
       });
@@ -486,7 +492,7 @@ describe('publishGame', () => {
         games: [queryStub({ data: null, error: { message: 'timeout' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'db_game',
       });
@@ -503,7 +509,7 @@ describe('publishGame', () => {
         game_players: [queryStub({ data: null, error: { message: 'nei' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'db_players',
       });
@@ -524,7 +530,7 @@ describe('publishGame', () => {
         game_players: [queryStub(RLS_ERROR)],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'rls_denied',
       });
@@ -544,7 +550,7 @@ describe('publishGame', () => {
         game_players: [queryStub({ data: null, error: { message: 'nei' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'orphan_game',
       });
@@ -558,10 +564,88 @@ describe('publishGame', () => {
         game_players: [queryStub({ data: null, error: { message: 'nei' } })],
       });
 
-      expect(await createGame().publishGame(draft())).toEqual({
+      expect(await publish(draft())).toEqual({
         ok: false,
         error: 'orphan_game',
       });
+    });
+  });
+
+  // #1954 D2: et kall kan nå tidstaket ETTER at serveren lagret. Da sier appen
+  // «sjekk nettet», arrangøren trykker igjen, og uten en fast id ble det runde
+  // nummer to. Id-en lages derfor én gang i veiviseren og sendes med hvert
+  // forsøk: et nytt forsøk treffer den samme raden.
+  describe('nytt forsøk etter tidsavbrudd (#1954 D2)', () => {
+    const OWN_ID = '6f1c2a4e-8b3d-4c5e-9f70-112233445566';
+    const TIMEOUT = { data: null, error: { message: 'TypeError: Network request failed (timeout)', code: '' } };
+    const DUPLICATE = (constraint: string) => ({
+      data: null,
+      error: { message: `duplicate key value violates unique constraint "${constraint}"`, code: '23505' },
+    });
+
+    it('sender id-en veiviseren laget, i stedet for å la databasen velge', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub({ data: [{ id: OWN_ID }], error: null });
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [gameInsert],
+        game_players: [queryStub(PLAYER_ROWS)],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
+      const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
+      expect(row.id).toBe(OWN_ID);
+    });
+
+    it('lager ikke runde nummer to når første forsøk faktisk lagret runden', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      // Forsøk 1: runden lagres, men svaret når aldri fram.
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(TIMEOUT)],
+      });
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'db_game' });
+
+      // Forsøk 2, samme id: raden finnes alt. Fortsett med spillerne.
+      const players = queryStub(PLAYER_ROWS);
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(DUPLICATE('games_pkey'))],
+        game_players: [players],
+      });
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
+      const rows = stepArgs(players, 'insert')[0]![0] as { game_id: string }[];
+      expect(rows.every((r) => r.game_id === OWN_ID)).toBe(true);
+    });
+
+    it('godtar at spillerne kom inn i et tidligere forsøk', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(DUPLICATE('games_pkey'))],
+        game_players: [queryStub(DUPLICATE('game_players_pkey'))],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
+    });
+
+    it('en 23505 på en annen regel enn primærnøkkelen er fortsatt en feil', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(DUPLICATE('games_short_id_key'))],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'db_game' });
+    });
+  });
+
+  describe('newGameId', () => {
+    it('lager en gyldig uuid v4, ny hver gang', () => {
+      const { newGameId } = createGame();
+      const a = newGameId();
+      expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      expect(newGameId()).not.toBe(a);
     });
   });
 });
