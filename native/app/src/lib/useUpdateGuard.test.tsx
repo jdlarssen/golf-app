@@ -3,24 +3,24 @@
 // kommer med riktig tekst og én knapp som ikke kan avbrytes, knappen åpner
 // riktig butikk (med https-reserve på Android), og dialogen kommer igjen ved
 // neste forgrunn. Sammenligningen selv er Type A i `updateGuard.test.ts`.
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { renderHook, waitFor } from '@testing-library/react-native';
-import { Alert, Linking, type AlertButton } from 'react-native';
+import { Alert, AppState, Linking, type AlertButton, type AlertOptions } from 'react-native';
 import { APP_STORE_URL, GOOGLE_PLAY_MARKET_URL, GOOGLE_PLAY_URL } from '@/lib/app/storeLinks';
 import { fetchMinVersionBody } from '../data/updateCheck';
 import { addForegroundListener } from '../data/syncTriggers';
+import { fireForeground } from '../test/syncTriggersMock';
 import { readAppBuild } from './appBuild';
 import { UPDATE_GUARD_TEXT } from './updateGuardCopy';
 import { useUpdateGuard } from './useUpdateGuard';
 
 jest.mock('../data/updateCheck', () => ({ fetchMinVersionBody: jest.fn() }));
-jest.mock('../data/syncTriggers', () => ({ addForegroundListener: jest.fn() }));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('./appBuild', () => ({ readAppBuild: jest.fn() }));
 
 const OLD = { ios: { minBuild: 9 }, android: { minVersionCode: 9 } };
 const FINE = { ios: { minBuild: 1 }, android: { minVersionCode: 1 } };
 
-let foreground: () => void;
-const stopListening = jest.fn();
 let alertSpy: jest.SpyInstance;
 let openUrl: jest.SpyInstance;
 
@@ -33,17 +33,21 @@ function pressedButton(): AlertButton {
   return buttons[0];
 }
 
+// Jests AppState-mock har `currentState` som funksjon; i appen er den en streng.
+const appState = AppState as unknown as { currentState: unknown };
+const originalAppState = appState.currentState;
+
 beforeEach(() => {
   jest.clearAllMocks();
-  (addForegroundListener as jest.Mock).mockImplementation((cb: () => void) => {
-    foreground = cb;
-    return stopListening;
-  });
+  appState.currentState = 'active';
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   openUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  jest.restoreAllMocks();
+  appState.currentState = originalAppState;
+});
 
 describe('useUpdateGuard', () => {
   it('viser en dialog som ikke kan avbrytes, med én knapp «Oppdater»', async () => {
@@ -58,7 +62,7 @@ describe('useUpdateGuard', () => {
     expect(body).toBe(UPDATE_GUARD_TEXT.body);
     expect(buttons).toHaveLength(1);
     expect((buttons as AlertButton[])[0].text).toBe('Oppdater');
-    expect(options).toEqual({ cancelable: false });
+    expect(options).toEqual({ cancelable: false, onDismiss: expect.any(Function) });
   });
 
   it('åpner App Store på iOS', async () => {
@@ -84,6 +88,19 @@ describe('useUpdateGuard', () => {
     await waitFor(() => expect(openUrl).toHaveBeenCalledTimes(2));
     expect(openUrl).toHaveBeenNthCalledWith(1, GOOGLE_PLAY_MARKET_URL);
     expect(openUrl).toHaveBeenNthCalledWith(2, GOOGLE_PLAY_URL);
+  });
+
+  it('viser dialogen igjen når ingen av butikklenkene åpnet seg', async () => {
+    build('android', 5);
+    (fetchMinVersionBody as jest.Mock).mockResolvedValue(OLD);
+    openUrl.mockRejectedValue(new Error('ingen handler'));
+    await renderHook(() => useUpdateGuard(true));
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+
+    pressedButton().onPress?.();
+
+    await waitFor(() => expect(openUrl).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(2));
   });
 
   it('viser ingenting når bygget er godt nok, når nettet feiler eller byggnummeret er ukjent', async () => {
@@ -118,14 +135,40 @@ describe('useUpdateGuard', () => {
     await renderHook(() => useUpdateGuard(true));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
 
-    foreground();
+    fireForeground();
     await Promise.resolve();
     expect(alertSpy).toHaveBeenCalledTimes(1);
 
     pressedButton().onPress?.();
-    foreground();
+    fireForeground();
     await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(2));
     expect(fetchMinVersionBody).toHaveBeenCalledTimes(1);
+  });
+
+  it('viser ikke varselet mens appen er i bakgrunnen, men når den kommer tilbake', async () => {
+    build('android', 5);
+    (fetchMinVersionBody as jest.Mock).mockResolvedValue(OLD);
+    appState.currentState = 'background';
+    await renderHook(() => useUpdateGuard(true));
+    await waitFor(() => expect(fetchMinVersionBody).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    appState.currentState = 'active';
+    fireForeground();
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+    expect(fetchMinVersionBody).toHaveBeenCalledTimes(1);
+  });
+
+  it('åpner varselet på nytt når Android lukker det uten trykk på knappen', async () => {
+    build('android', 5);
+    (fetchMinVersionBody as jest.Mock).mockResolvedValue(OLD);
+    await renderHook(() => useUpdateGuard(true));
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+
+    (alertSpy.mock.calls[0][3] as AlertOptions).onDismiss?.();
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(2));
   });
 
   it('slutter å lytte når komponenten går', async () => {
@@ -133,6 +176,8 @@ describe('useUpdateGuard', () => {
     (fetchMinVersionBody as jest.Mock).mockResolvedValue(FINE);
     const hook = await renderHook(() => useUpdateGuard(true));
     await hook.unmount();
-    expect(stopListening).toHaveBeenCalledTimes(1);
+    // Etter avmelding svarer ingen lytter på en forgrunnshendelse.
+    fireForeground();
+    expect(fetchMinVersionBody).toHaveBeenCalledTimes(1);
   });
 });
