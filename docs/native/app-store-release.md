@@ -216,7 +216,8 @@ Første kandidat er `1.1.0 (2)`; skallet brukte `1.0 (1)`.
 
 **Minsteversjonen** (`lib/app/minVersion.ts`, vist av `/api/app/min-version`, #2619) heves bare
 når en serverendring knekker eldre bygg, og aldri forbi et bygg som ikke ligger i butikken ennå:
-alle bygg under tallet får en oppdateringsdialog de ikke kan lukke.
+alle bygg under tallet får en oppdateringsdialog de ikke kan lukke. Butikklenkene dialogen åpner, og
+app-id-en (`6806675951`), står i `lib/app/storeLinks.ts` (ikke i `app-store-metadata.md`).
 
 ## Etter bygget: tilbake til dev
 

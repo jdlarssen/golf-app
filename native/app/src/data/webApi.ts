@@ -1,6 +1,6 @@
 // native/app/src/data/webApi.ts
 // Native #1891: appens vei til HTTP-rutene på web-deployen — de autentiserte,
-// og fra #2216 den ene som kalles før innloggingen ({@link callPublicWebRoute}).
+// og fra #2216 de som kalles før innloggingen ({@link callPublicWebRoute}).
 //
 // **Hvorfor rutene finnes.** Alt som krever Node — `notify()`, Resend-mail,
 // push, service-role — er utenfor rekkevidde for en telefon. Regelen bor der
@@ -125,8 +125,10 @@ export async function callWebRoute(
 }
 
 /**
- * Ett kall mot en rute som ikke krever innlogging (#2216): bare
- * `/api/auth/send-code`, der appen ber om innloggingskoden.
+ * Ett kall mot en rute som ikke krever innlogging, fordi den brukes før det
+ * finnes en sesjon eller svaret ikke er personlig (#2216, #2619). Hver rute her
+ * er offentlig på serveren; en rute som trenger tokenet, hører til i
+ * {@link callWebRoute}.
  *
  * Samme vakter for nett og adresse som {@link callWebRoute}, men ingen token:
  * det finnes ingen sesjon ennå, og ruta sjekker ingen. Svaret leses likt.

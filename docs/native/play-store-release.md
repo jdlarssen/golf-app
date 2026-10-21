@@ -106,6 +106,11 @@ slutten, så bevis-fila er ufullstendig.
 `android-proof.py` ved siden av skriptet leser manifest-utdataene fra `aapt2` og LOAD-
 justeringen i ELF-filene. Selve reglene står i skallskriptet.
 
+**Minsteversjonen** (`lib/app/minVersion.ts`, vist av `/api/app/min-version`, #2619) har et eget tall for Android:
+`minVersionCode`. Det heves bare når en serverendring knekker eldre bygg, og aldri forbi en `versionCode` som
+ikke er publisert i Play ennå. Alle bygg under tallet får en oppdateringsdialog de ikke kan lukke. En test
+(`native/app/src/lib/minVersionGuard.test.ts`) holder tallet under `STORE_ANDROID_VERSION_CODE`.
+
 ## Etter bygget: tilbake til dev
 
 `android/` er nå butikk-varianten, med pakken `no.tornygolf.app` og signeringspluginen. Før
