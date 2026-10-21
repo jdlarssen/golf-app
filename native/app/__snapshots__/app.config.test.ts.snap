@@ -46,6 +46,10 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
       "usesNonExemptEncryption": false,
     },
     "infoPlist": {
+      "CFBundleDevelopmentRegion": "nb",
+      "CFBundleLocalizations": [
+        "nb",
+      ],
       "NSPhotoLibraryAddUsageDescription": "Tørny lagrer bildet du deler i Bilder.",
     },
     "privacyManifests": {
@@ -139,6 +143,10 @@ exports[`resolveConfig — dev-varianten (ingen APP_VARIANT) snapshot 1`] = `
   "ios": {
     "bundleIdentifier": "no.tornygolf.dev",
     "infoPlist": {
+      "CFBundleDevelopmentRegion": "nb",
+      "CFBundleLocalizations": [
+        "nb",
+      ],
       "NSPhotoLibraryAddUsageDescription": "Tørny lagrer bildet du deler i Bilder.",
     },
     "privacyManifests": {

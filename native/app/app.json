@@ -10,6 +10,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "no.tornygolf.dev",
       "infoPlist": {
+        "CFBundleDevelopmentRegion": "nb",
+        "CFBundleLocalizations": ["nb"],
         "NSPhotoLibraryAddUsageDescription": "Tørny lagrer bildet du deler i Bilder."
       },
       "privacyManifests": {
