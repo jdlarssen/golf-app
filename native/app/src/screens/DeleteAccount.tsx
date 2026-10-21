@@ -32,6 +32,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { deleteAccount, fetchDeleteStatus, type AccountDeleteStatus } from '../data/account';
 import {
@@ -50,6 +51,7 @@ import { FONTS, useTheme } from '../theme';
 export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   const { userId, email } = useSession();
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [status, setStatus] = useState<AccountDeleteStatus | null>(null);
   const [ownName, setOwnName] = useState<string | null>(null);
@@ -132,7 +134,11 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   if (blockText) {
     const blockLink = status.ok && status.blocked ? deleteBlockWebLink(status.blocked) : null;
     return (
-      <ScrollView contentContainerStyle={ui.scroll} testID="delete-account-screen">
+      <ScrollView
+        // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+        testID="delete-account-screen"
+      >
         <Text style={ui.title}>{ACCOUNT_TEXT.heading}</Text>
         <View style={ui.banner}>
           <Text style={ui.body} testID="delete-account-banner">
@@ -163,7 +169,10 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   const shownName = ownName || email?.trim() || DISPLAY_NAME_FALLBACK;
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="delete-account-screen">
+    <ScrollView
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="delete-account-screen"
+    >
       <Text style={ui.title}>{ACCOUNT_TEXT.heading}</Text>
 
       <Text style={ui.sectionTitle}>{ACCOUNT_TEXT.deletedHeading}</Text>

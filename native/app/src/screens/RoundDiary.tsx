@@ -20,6 +20,7 @@
 // står webbens tomtekst.
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormCard } from '../components/history/FormCard';
 import { HistoryTitle } from '../components/history/HistoryTitle';
 import { KavalkadeHistoryRow } from '../components/kavalkade/KavalkadeDoors';
@@ -40,6 +41,7 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
   // #2201: historikken er webbens /profile/historikk; «Nye merker» er lest her.
   useMarkVisitRead('history');
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { load, retry } = useRoundHistory(userId);
   const rounds = load.state === 'ready' ? load.rounds : null;
   const points = useDiaryPoints(rounds, userId);
@@ -59,7 +61,8 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom, backgroundColor: colors.bg }]}
       testID="round-diary-screen"
     >
       <HistoryTitle

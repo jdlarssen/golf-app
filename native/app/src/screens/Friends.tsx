@@ -42,6 +42,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendStatus } from '../../../../lib/friends/friendStatus';
 import { nameInitials } from '../../../../lib/names/initials';
 import {
@@ -94,6 +95,7 @@ function toLoadState(result: Awaited<ReturnType<typeof fetchFriends>>): LoadStat
 
 export function Friends({ route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const selfInitials = route.params?.selfInitials ?? null;
   // #2201: venneforespørsler er lest når du har åpnet vennelista.
   useMarkVisitRead('friends');
@@ -232,7 +234,12 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
   if (load.state === 'failed') {
     return (
-      <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="friends-screen">
+      <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
+        // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+        testID="friends-screen"
+      >
         <Text style={ui.body} testID="friends-load-error">
           {load.reason === 'offline' ? FRIENDS_TEXT.offline : FRIENDS_TEXT.loadFailed}
         </Text>
@@ -264,7 +271,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
     <>
       <ScrollView
         {...KEYBOARD_SCROLL_PROPS}
-        contentContainerStyle={[ui.scroll, styles.scroll]}
+        contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 32 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         testID="friends-screen"
       >

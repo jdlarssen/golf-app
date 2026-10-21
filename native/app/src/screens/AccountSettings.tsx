@@ -19,6 +19,7 @@
 // tommel på vei mot raden over trenger for ikke å treffe sletting.
 import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DesignSwitch } from '../components/DesignSwitch';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
@@ -35,6 +36,7 @@ import { FONTS, useTheme } from '../theme';
 export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) {
   const { email } = useSession();
   const { ui } = useTheme();
+  const insets = useSafeAreaInsets();
   // Null til et trykk ikke fikk åpnet nettsiden; da står grunnen under raden
   // til neste trykk.
   const [privacyNote, setPrivacyNote] = useState<string | null>(null);
@@ -136,7 +138,11 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
   }, [askAboutUnsent]);
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="account-settings-screen">
+    <ScrollView
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="account-settings-screen"
+    >
       <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAccount}</Text>
       {/* Innlogging går via engangskode på e-post, så feltet er i praksis
           alltid satt — men sesjonstypen tillater null, og da er «Innlogget»

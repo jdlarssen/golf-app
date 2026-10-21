@@ -20,11 +20,13 @@
 //     navigerer ingen steder.
 //  4. **En vellykket lagring går tilbake med kvitteringen**, som er det rommet
 //     leser for å vise banneret og hente raden på nytt.
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { EditProfile, asGender, asLevel } from './EditProfile';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 // `mock`-prefiks kreves: bare navn som starter med «mock» slipper inn i en
 // heist jest.mock-fabrikk.
@@ -34,6 +36,7 @@ const mockEmail = 'spiller@example.com';
 jest.mock('../session', () => ({
   useSession: () => ({ userId: mockMe, email: mockEmail }),
 }));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 jest.mock('../data/profile', () => ({
   fetchOwnProfile: jest.fn(),
   saveProfile: jest.fn(),
@@ -77,6 +80,18 @@ describe('EditProfile', () => {
       gender: 'mens',
       level: 'normal',
     });
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      expect(bottomPadding('edit-profile-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('krever en endring, sender magnitude + plusshake, og sier fra når ruta avviser', async () => {

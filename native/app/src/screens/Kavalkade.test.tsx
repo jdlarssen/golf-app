@@ -3,17 +3,20 @@
 // forhåndsvisningen uten deling, den lagrede kavalkaden med «Del kortet» på
 // kortene som kan deles, tomtilstanden og feillinja med «Prøv igjen».
  
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { fetchKavalkade } from '../data/kavalkade';
 import type { ScreenProps } from '../navigation';
 import { makeKavalkadeFacts } from '../test/kavalkadeFixtures';
 import { Kavalkade } from './Kavalkade';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../data/kavalkade', () => ({
   fetchKavalkade: jest.fn(),
   logKavalkadeShare: jest.fn(async () => undefined),
 }));
 jest.mock('../lib/shareImage', () => ({ canShareImage: () => true, shareViewImage: jest.fn() }));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const fetchKavalkadeMock = fetchKavalkade as jest.Mock;
 
@@ -52,6 +55,23 @@ describe('Kavalkade', () => {
     expect(screen.getByTestId('kavalkade-heading')).toHaveTextContent('Golfåret 2026');
     expect(screen.getByTestId('kavalkade-card-year')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Del kortet' })).toBeNull();
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      fetchKavalkadeMock.mockResolvedValue({
+        ok: true,
+        view: { status: 'ready', facts: makeKavalkadeFacts(), narrative: 'Et år å huske.' },
+      });
+      await renderScreen();
+      await screen.findByTestId('kavalkade-heading');
+      expect(bottomPadding('kavalkade-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('shows the stored Kavalkade, with «Del kortet» on the cards that carry a fact', async () => {

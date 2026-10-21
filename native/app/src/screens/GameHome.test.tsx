@@ -20,10 +20,12 @@ import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { fireForeground } from '../test/syncTriggersMock';
 import { GameHome, RosterRow } from './GameHome';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
 // ingenting av det — mocken er der bare for at modulgrafen skal kunne lastes.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 // Skjerm-testen (#2067) under: bundel og slag fra enheten, ingen nett.
@@ -173,6 +175,31 @@ describe('RosterRow', () => {
 });
 
 describe('GameHome', () => {
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      mockState.bundle = homeBundle({
+        game: { id: 'game-1', modeConfig: { kind: 'stableford', team_size: 1 } },
+        players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+      });
+      mockState.scores = [];
+      await render(
+        <GameHome
+          {...({
+            route: { params: { gameId: 'game-1' } },
+            navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+          } as unknown as ScreenProps<'GameHome'>)}
+        />,
+      );
+      await screen.findByTestId('game-ticket');
+      expect(bottomPadding('game-home-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it('med eget kort levert og et makkerkort klart, går «Lever kortet du har ført» til scorekortet (#2200)', async () => {
     const game: BundleGame = {
       id: 'game-1',

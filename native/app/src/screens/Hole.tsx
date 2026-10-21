@@ -52,6 +52,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -405,6 +406,9 @@ function HoleView({
   // Skinna ligger fast over bunnen av siden (designet); lista ruller under den,
   // og slutter så høyt at siste rad kan rulles fram over skinna.
   const [railHeight, setRailHeight] = useState(0);
+  // #1954 D3: uten skinne (låst hull) står innholdet selv nederst, og da skal
+  // det ende over systemlinja. Med skinne gjør skinna det (`ScoreRail`).
+  const insets = useSafeAreaInsets();
   const sunlight = useSunlight();
   const { extras, refresh: refreshChoices } = choices;
   // Setet «Annet»-arket er åpent for, eller `null`.
@@ -738,7 +742,10 @@ function HoleView({
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID="hole-screen">
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: railHeight + 8 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: (usesRail && !locked ? railHeight : insets.bottom) + 8 },
+        ]}
         testID="hole-scroll"
       >
         {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}

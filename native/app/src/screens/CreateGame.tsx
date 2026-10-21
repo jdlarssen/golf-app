@@ -18,6 +18,7 @@
 // derfor rolig i stedet for å la det se ut som en databasefeil.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
 import { PlayersStep } from '../components/create/PlayersStep';
@@ -146,6 +147,7 @@ function defaultTeeOff(): Date {
 export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const { userId } = useSession();
   const { ui } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<Step>('format');
   const [gameMode, setGameMode] = useState<AppGameMode | null>(null);
@@ -388,7 +390,12 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const everyoneOnRatedTee = players.every((p) => teeAvail[p.teeGender]);
 
   return (
-    <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="create-screen">
+    <ScrollView
+      {...KEYBOARD_SCROLL_PROPS}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="create-screen"
+    >
       <Text style={ui.sectionTitle} testID="create-progress">
         {`Steg ${stepIndex + 1} av ${STEPS.length} · ${STEP_TITLES[step]}`}
       </Text>

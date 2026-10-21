@@ -38,6 +38,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
@@ -103,6 +104,7 @@ const HOLE_COUNT = 18;
 
 export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { userId } = useSession();
   // #2201: det du åpner, er lest.
@@ -281,7 +283,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     <ScrollView
       ref={scrollRef}
       {...KEYBOARD_SCROLL_PROPS}
-      contentContainerStyle={[ui.scroll, styles.scroll]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 20 + insets.bottom }]}
       testID="game-home-screen"
     >
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}

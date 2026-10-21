@@ -12,8 +12,10 @@ import { HISTORY_TEXT } from '../lib/historyCopy';
 import type { ScreenProps } from '../navigation';
 import { historyRound, localIso } from '../test/historyFixtures';
 import { RoundDiary } from './RoundDiary';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me' }) }));
@@ -48,6 +50,21 @@ afterEach(() => {
 });
 
 describe('RoundDiary', () => {
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      fetchRoundHistoryMock.mockResolvedValue([historyRound({ gameId: 'sp', date: localIso(8, 12) })]);
+      fetchRoundPointsMock.mockResolvedValue(38);
+      await renderScreen();
+      await screen.findByTestId('diary-row-sp');
+      expect(bottomPadding('round-diary-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it('opens on the diary: the season line, the form card, the months and the way to the statistics', async () => {
     fetchRoundHistoryMock.mockResolvedValue([
       historyRound({ gameId: 'sb', date: localIso(8, 19), gameMode: 'stableford' }),

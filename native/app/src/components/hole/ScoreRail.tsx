@@ -26,6 +26,7 @@
 //   flate. Ingen overskrift og ingen nederste rad.
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
@@ -140,6 +141,7 @@ export function ScoreRail({
   onPuttsToggle,
 }: ScoreRailProps) {
   const { colors, hole } = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Skjermleseren får høre hvor skinna gikk etter hvert trykk, som webbens
   // live-region. Ikke ved første visning: da leser den overskriften selv.
@@ -153,9 +155,16 @@ export function ScoreRail({
 
   // Sollys (`selectedFill`): hvite knapper med svart kant under en svart strek.
   const sunlight = hole.selectedFill;
+  // #1954 D3: skinna står i bunnen av skjermen (`railDock` i Hole). Luften fra
+  // designet (22 pt i Main, 24 i sollys) står over systemlinja, som bunnluften
+  // på de andre skjermene: med tre knapper på Android havnet putter-raden ellers
+  // bak navigasjonslinja, og på iPhone inni hjemindikatoren.
   const section = sunlight
-    ? [styles.sectionSun, { borderTopColor: colors.border, backgroundColor: colors.bg }]
-    : [styles.sheet, { backgroundColor: colors.surface }];
+    ? [
+        styles.sectionSun,
+        { borderTopColor: colors.border, backgroundColor: colors.bg, paddingBottom: SUN_BOTTOM + insets.bottom },
+      ]
+    : [styles.sheet, { backgroundColor: colors.surface, paddingBottom: SHEET_BOTTOM + insets.bottom }];
   // Arket har et lite håndtak øverst, som designet.
   const handle = sunlight ? null : (
     <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -496,26 +505,30 @@ function PuttsChips({
   );
 }
 
+/** Luften under arket i `Main` og under sollys-seksjonen i `Hull-sollys`, over systemlinja. */
+const SHEET_BOTTOM = 22;
+const SUN_BOTTOM = 24;
+
 const styles = StyleSheet.create({
   // `Main`: arket med runde øvre hjørner, skygge og 10/16/22 luft, 12 mellom.
+  // Bunnluften settes i komponenten (SHEET_BOTTOM + systemlinja).
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 10,
     paddingHorizontal: 16,
-    paddingBottom: 22,
     gap: 12,
     shadowColor: '#1A2E1F',
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
   },
-  // `Hull-sollys`: svart strek på 3 over knappene, 12/12/24 luft.
+  // `Hull-sollys`: svart strek på 3 over knappene, 12/12/24 luft (bunnen:
+  // SUN_BOTTOM + systemlinja, i komponenten).
   sectionSun: {
     borderTopWidth: 3,
     paddingTop: 12,
     paddingHorizontal: 12,
-    paddingBottom: 24,
     gap: 10,
   },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center' },

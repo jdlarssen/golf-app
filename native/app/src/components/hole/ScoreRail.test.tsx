@@ -8,8 +8,14 @@
 // `railStrokesLine` er en ren funksjon (Type A).
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import source from '../../../../../messages/no.json';
-import { themeFor } from '../../theme';
+import { SUNLIGHT_THEME, ThemeScope, themeFor } from '../../theme';
+import { setBottomInset } from '../../test/safeAreaMock';
 import { PUTTS_LABEL, ScoreRail, railStrokesLine, type ScoreRailProps } from './ScoreRail';
+
+jest.mock('react-native-safe-area-context', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock-fabrikken heises over importene
+  require('../../test/safeAreaMock').safeAreaMock(),
+);
 
 function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
   return {
@@ -119,5 +125,35 @@ describe('railStrokesLine', () => {
     [null, 4, null],
   ] as const)('%s slag på par %s gir %s', (extra, par, text) => {
     expect(railStrokesLine(extra, par)).toBe(text);
+  });
+});
+
+// #1954 D3: arket står i bunnen av hullsiden. Med tre knapper på Android ligger
+// navigasjonslinja over den nederste raden (putterne), og på iPhone
+// hjemindikatoren. Designets 22 pt luft (Main) og sollysets 24 pt står over
+// systemlinja, som bunnluften på de andre skjermene (`20 + insets.bottom`).
+describe('bunnluften over systemlinja', () => {
+  afterEach(() => setBottomInset(0));
+
+  it('arket: 22 pt over navigasjonslinja', async () => {
+    setBottomInset(48);
+    await render(<ScoreRail {...props()} />);
+    expect(screen.getByTestId('score-rail')).toHaveStyle({ paddingBottom: 22 + 48 });
+  });
+
+  it('sollys: 24 pt over navigasjonslinja', async () => {
+    setBottomInset(48);
+    await render(
+      <ThemeScope theme={SUNLIGHT_THEME}>
+        <ScoreRail {...props()} />
+      </ThemeScope>,
+    );
+    expect(screen.getByTestId('score-rail')).toHaveStyle({ paddingBottom: 24 + 48 });
+  });
+
+  it('når alle har score, står den krympede skinna like høyt', async () => {
+    setBottomInset(48);
+    await render(<ScoreRail {...props({ active: null })} />);
+    expect(screen.getByTestId('score-rail')).toHaveStyle({ paddingBottom: 22 + 48 });
   });
 });
