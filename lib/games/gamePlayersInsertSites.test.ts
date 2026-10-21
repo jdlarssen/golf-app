@@ -69,8 +69,9 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason: 'the compensation re-inserts removed rows verbatim; the swap-in uses teeGenderOf',
   },
   'native/app/src/data/createGame.ts': {
-    count: 1,
-    reason: "the app wizard's per-player teeGender (teeChoiceToDb)",
+    count: 2,
+    reason:
+      "the app wizard's per-player teeGender (teeChoiceToDb); a retried publish upserts the same rows (#1954 D2)",
   },
 };
 
