@@ -25,6 +25,7 @@ import {
   mockNetwork,
   requestInit,
   respondWith,
+  respondWithHtml,
   useWebRoute,
 } from '../test/webRouteHarness';
 
@@ -281,12 +282,7 @@ describe('konto-sletting', () => {
     });
 
     it('oversetter 500 til status_failed, også når kroppen er uleselig', async () => {
-      mockFetch.mockResolvedValue({
-        status: 500,
-        json: async () => {
-          throw new SyntaxError('Unexpected token <');
-        },
-      } as unknown as Response);
+      respondWithHtml(500);
 
       expect(await account().fetchDeleteStatus()).toEqual({
         ok: false,

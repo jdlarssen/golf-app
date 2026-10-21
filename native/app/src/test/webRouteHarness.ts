@@ -42,12 +42,26 @@ export function auth(): Mocks['supabase']['auth'] {
   return (require('./supabaseMock') as Mocks).supabase.auth;
 }
 
-/** Neste svar fra ruta. `json()` speiler ekte `Response` — den kan kaste. */
+/**
+ * Neste svar fra ruta, som en ekte `Response`: `timedFetch` leser kroppen inn
+ * før den gir svaret videre (#1954 D2), og `json()` kan kaste som på enheten.
+ */
 export function respondWith(status: number, body: unknown): void {
-  mockFetch.mockResolvedValue({
-    status,
-    json: async () => body,
-  } as unknown as Response);
+  const nullBody = status === 204 || status === 205 || status === 304;
+  mockFetch.mockImplementation(async () =>
+    new Response(nullBody ? null : JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+}
+
+/**
+ * Neste svar er HTML fra et lag foran appen (en proxy-feilside): statusen står,
+ * men `json()` kaster, som på enheten.
+ */
+export function respondWithHtml(status: number): void {
+  mockFetch.mockImplementation(async () => new Response('<html><body>Bad gateway</body></html>', { status }));
 }
 
 /** Argumentene ruta faktisk ble kalt med. */

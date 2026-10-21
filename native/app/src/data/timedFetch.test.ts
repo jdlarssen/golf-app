@@ -97,11 +97,57 @@ describe('timedFetch', () => {
   });
 
   it('et svar før taket slipper gjennom, og taket fyrer ikke etterpå', async () => {
-    const response = { status: 200 } as Response;
-    underlying.mockResolvedValue(response);
+    underlying.mockResolvedValue(new Response('{}', { status: 200 }));
 
-    await expect(timedFetch(URL)).resolves.toBe(response);
+    await expect(timedFetch(URL)).resolves.toMatchObject({ status: 200 });
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Gjennomgangen av #2622: appens fetch er expo/fetch, som løser når headerne
+  // er kommet. Kroppen leses etterpå (postgrest `res.text()`, auth-js
+  // `json()`), og dør nettet da, ventet lesingen uten grense. Taket gjelder
+  // derfor til kroppen er lest.
+  it('en kropp som aldri blir ferdig lest, avviser også ved taket', async () => {
+    underlying.mockResolvedValue({
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      arrayBuffer: () => new Promise(() => {}),
+    });
+    const outcome = timedFetch(URL).then(
+      () => 'resolved',
+      (err: unknown) => err,
+    );
+
+    await jest.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    const err = await outcome;
+    expect(err).toBeInstanceOf(TypeError);
+    expect((err as TypeError).message).toBe(TIMEOUT_MESSAGE);
+    const init = underlying.mock.calls[0]![1] as RequestInit;
+    expect(init.signal?.aborted).toBe(true);
+  });
+
+  it('svaret kommer tilbake med kroppen lest, status og headere urørt', async () => {
+    underlying.mockResolvedValue(
+      new Response(JSON.stringify([{ id: 1 }]), {
+        status: 201,
+        statusText: 'Created',
+        headers: { 'Content-Type': 'application/json', 'Content-Range': '0-0/1' },
+      }),
+    );
+    const response = await timedFetch(URL);
+    expect(response.status).toBe(201);
+    expect(response.statusText).toBe('Created');
+    expect(response.headers.get('content-range')).toBe('0-0/1');
+    expect(await response.json()).toEqual([{ id: 1 }]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it.each([204, 205, 304])('status %i uten kropp går gjennom', async (status) => {
+    underlying.mockResolvedValue(new Response(null, { status }));
+    const response = await timedFetch(URL);
+    expect(response.status).toBe(status);
+    expect(await response.text()).toBe('');
   });
 
   it('en nettfeil fra under kommer ut som den var', async () => {
@@ -119,6 +165,9 @@ describe('isNetworkFailureMessage', () => {
     [`TypeError: ${TIMEOUT_MESSAGE}`, true],
     ['Failed to fetch', true],
     ['Load failed', true],
+    // expo/fetch (`FetchError`), slik supabase-js og webApi ser den.
+    ['Error: fetch failed: java.net.UnknownHostException: Unable to resolve host "staging.example"', true],
+    ['fetch failed: The Internet connection appears to be offline.', true],
     ['new row violates row-level security policy', false],
     ['JWT expired', false],
     ['', false],
