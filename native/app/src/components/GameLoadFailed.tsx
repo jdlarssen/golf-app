@@ -15,19 +15,20 @@ import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
 import { GAME_LOAD_RETRY_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import { useTheme } from '../theme';
 
-export function GameLoadFailed({
-  onRetry,
-  notFound = false,
-  text = GAME_LOAD_RETRY_TEXT,
-}: {
-  onRetry: () => void;
-  /** Spillet er borte for spilleren (`useGameBundle().notFound`). */
-  notFound?: boolean;
-  /** Avslutningen sier «runden», ikke «spillet» (`END_GAME_TEXT.loadFailed`). */
-  text?: string;
-}) {
+type GameLoadFailedProps =
+  /** Spillet er borte: ingen «Prøv igjen», så ingen `onRetry`. */
+  | { notFound: true }
+  | {
+      /** Spillet er borte for spilleren (`useGameBundle().notFound`). */
+      notFound?: boolean;
+      onRetry: () => void;
+      /** Avslutningen sier «runden», ikke «spillet» (`END_GAME_TEXT.loadFailed`). */
+      text?: string;
+    };
+
+export function GameLoadFailed(props: GameLoadFailedProps) {
   const { ui } = useTheme();
-  if (notFound) {
+  if (props.notFound) {
     return (
       <Text style={ui.body} testID="game-not-found">
         {GAME_NOT_FOUND_TEXT}
@@ -37,9 +38,9 @@ export function GameLoadFailed({
   return (
     <>
       <Text style={ui.error} testID="game-error">
-        {text}
+        {props.text ?? GAME_LOAD_RETRY_TEXT}
       </Text>
-      <Pressable accessibilityRole="button" style={ui.buttonSecondary} onPress={onRetry} testID="game-retry">
+      <Pressable accessibilityRole="button" style={ui.buttonSecondary} onPress={props.onRetry} testID="game-retry">
         <Text style={ui.buttonSecondaryText}>{ERROR_BOUNDARY_TEXT.retry}</Text>
       </Pressable>
     </>

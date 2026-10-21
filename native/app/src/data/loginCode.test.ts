@@ -179,7 +179,9 @@ describe('afterLoginSettled', () => {
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    answer({ status: 200, json: async () => ({ ok: true }) });
+    // Et ekte svar: `timedFetch` leser kroppen før den gir svaret videre, så et
+    // rent objekt uten `text()` ville gått gjennom nettfeil-grenen.
+    answer(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     await waiting;
     expect(settled).toBe(true);
   });

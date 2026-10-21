@@ -15,7 +15,7 @@ describe('GameLoadFailed', () => {
   });
 
   it('spillet er borte: sier det, uten «Prøv igjen»', async () => {
-    await render(<GameLoadFailed notFound onRetry={jest.fn()} />);
+    await render(<GameLoadFailed notFound />);
     expect(screen.getByTestId('game-not-found')).toHaveTextContent(
       'Fant ikke spillet. Det kan ha blitt slettet, eller du er ikke med i det.',
     );
