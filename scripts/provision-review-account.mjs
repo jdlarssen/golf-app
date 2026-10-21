@@ -235,6 +235,15 @@ function sameJson(a, b) {
   return canonical(a) === canonical(b);
 }
 
+/**
+ * E-postadresse til utskrift: bare domenet. Repoet er offentlig, og utskriften
+ * fra en prod-kjøring kan havne i en PR-kommentar eller et issue.
+ */
+function maskEmail(address) {
+  const at = String(address ?? '').lastIndexOf('@');
+  return at < 0 ? '(ingen adresse)' : `***@${address.slice(at + 1)}`;
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const nowIso = () => new Date().toISOString();
 
@@ -538,12 +547,12 @@ async function main() {
   console.log(`Miljø:        ${target}  (${envFile})`);
   console.log(`Butikk:       ${storeName}  (demo-rundene «${store.demoGameName}» og «${store.scrambleGameName}»)`);
   console.log(`Skriver til:  ${env.NEXT_PUBLIC_SUPABASE_URL}`);
-  console.log(`Konto:        ${email}`);
+  console.log(`Konto:        ${maskEmail(email)}`);
 
   // Arrangøren løses FØR første skriv — mangler den, skal ingenting være
   // halvveis gjort når skriptet stopper.
   const organizer = await resolveOrganizer(db, store);
-  const organizerLabel = `${organizer.name ?? '(uten navn)'} <${organizer.email}>`;
+  const organizerLabel = `${organizer.name ?? '(uten navn)'} <${maskEmail(organizer.email)}>`;
   console.log(`Arrangør:     ${organizerLabel}  [${organizer.source}]`);
   if (target === 'prod') {
     console.log('⚠️  PRODUKSJON — dette skriver til den ekte databasen.');
@@ -625,6 +634,9 @@ async function main() {
   // Hver butikk får to runder (#2561): stableford og scramble. Hver runde har
   // eget navn, så en gjenkjøring finner akkurat sine egne rader.
   const summaries = [];
+  // Banen og teen til første runde. Scramble-runden bruker den samme, så en
+  // kjøring aldri gir to ulike baner (og aldri en tilfeldig bane uten 18 hull).
+  let shared = null;
   for (const round of demoRounds(store)) {
     const teamOf = (key) => (round.teams ? round.teams[key] : null);
     console.log(`── Runde: ${round.name} ──`);
@@ -722,8 +734,8 @@ async function main() {
       );
       // Velg første tee hvis bane har hull registrert — uten course_holes får
       // demo-runden ingen par å regne mot.
-      let picked = null;
-      for (const tee of tees) {
+      let picked = shared ? { id: shared.tee_box_id, course_id: shared.course_id } : null;
+      for (const tee of picked ? [] : tees) {
         const holes = ok(
           'les course_holes',
           await db
@@ -751,7 +763,10 @@ async function main() {
             mode_config: round.modeConfig,
             registration_mode: 'invite_only',
             registration_type: 'solo',
-            status: 'active',
+            // «draft» til alt er seedet: den siste `reset game-status` under setter
+            // runden til «active». Feiler kjøringen midtveis, blir en halvferdig
+            // runde aldri hovedkortet på hjem-skjermen.
+            status: 'draft',
             created_by: organizer.id,
           })
           .select('id, short_id, course_id, tee_box_id, created_by'),
@@ -760,6 +775,8 @@ async function main() {
       game = inserted[0];
       console.log(`3. Demo-spill opprettet (${game.id}).`);
     }
+
+    shared ??= { course_id: game.course_id, tee_box_id: game.tee_box_id };
 
     // ------------------------------------------------------- 4. medspillerne
     // Scorene ryddes her, før roster-radene: en rad som skal bort kan ha scores,
