@@ -86,7 +86,8 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return OFFLINE_NOTE;
     // #1954 D2: et nytt trykk fant runden fra forrige forsøk, alt startet.
     case 'already_started':
-      return 'Runden er alt opprettet, og den har startet. Du finner den under «Mine spill».';
+      // En startet runde står øverst på Hjem («Pågår nå»), ikke under «Mine spill».
+      return 'Runden er alt opprettet, og den har startet. Du finner den på forsiden under «Pågår nå».';
     case 'rls_denied':
       return 'Du har ikke lov til å opprette dette spillet.';
     case 'no_rows':

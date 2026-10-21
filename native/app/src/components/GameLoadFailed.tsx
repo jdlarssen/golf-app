@@ -15,8 +15,11 @@ import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
 import { GAME_LOAD_RETRY_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import { useTheme } from '../theme';
 
+// Unionen gjør `onRetry` valgfri for et spill som er borte (`notFound`), men
+// hindrer ikke at en skjerm sender den likevel: skjermene gir `notFound` fra
+// `useGameBundle` som en boolsk verdi. Er spillet borte, brukes den ikke.
 type GameLoadFailedProps =
-  /** Spillet er borte: ingen «Prøv igjen», så ingen `onRetry`. */
+  /** Spillet er borte: ingen «Prøv igjen», så `onRetry` trengs ikke. */
   | { notFound: true }
   | {
       /** Spillet er borte for spilleren (`useGameBundle().notFound`). */
