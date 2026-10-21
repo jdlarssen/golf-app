@@ -9,7 +9,7 @@ import { Alert, AppState, Linking, type AlertButton, type AlertOptions } from 'r
 import { APP_STORE_URL, GOOGLE_PLAY_MARKET_URL, GOOGLE_PLAY_URL } from '@/lib/app/storeLinks';
 import { fetchMinVersionBody } from '../data/updateCheck';
 import { addForegroundListener } from '../data/syncTriggers';
-import { fireForeground } from '../test/syncTriggersMock';
+import { fireForeground, foregroundListenerCount } from '../test/syncTriggersMock';
 import { readAppBuild } from './appBuild';
 import { UPDATE_GUARD_TEXT } from './updateGuardCopy';
 import { useUpdateGuard } from './useUpdateGuard';
@@ -88,6 +88,19 @@ describe('useUpdateGuard', () => {
     await waitFor(() => expect(openUrl).toHaveBeenCalledTimes(2));
     expect(openUrl).toHaveBeenNthCalledWith(1, GOOGLE_PLAY_MARKET_URL);
     expect(openUrl).toHaveBeenNthCalledWith(2, GOOGLE_PLAY_URL);
+  });
+
+  it('viser ikke dialogen igjen etter at butikken åpnet seg', async () => {
+    build('ios', 5);
+    (fetchMinVersionBody as jest.Mock).mockResolvedValue(OLD);
+    await renderHook(() => useUpdateGuard(true));
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+
+    pressedButton().onPress?.();
+
+    await waitFor(() => expect(openUrl).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(alertSpy).toHaveBeenCalledTimes(1);
   });
 
   it('viser dialogen igjen når ingen av butikklenkene åpnet seg', async () => {
@@ -175,9 +188,8 @@ describe('useUpdateGuard', () => {
     build('ios', 5);
     (fetchMinVersionBody as jest.Mock).mockResolvedValue(FINE);
     const hook = await renderHook(() => useUpdateGuard(true));
+    expect(foregroundListenerCount()).toBe(1);
     await hook.unmount();
-    // Etter avmelding svarer ingen lytter på en forgrunnshendelse.
-    fireForeground();
-    expect(fetchMinVersionBody).toHaveBeenCalledTimes(1);
+    expect(foregroundListenerCount()).toBe(0);
   });
 });
