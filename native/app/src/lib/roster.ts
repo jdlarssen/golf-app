@@ -243,9 +243,18 @@ export function deliverForButton(candidates: readonly BundlePlayer[]): string {
  * eller `null` når alle gikk. Ruta spør leveringsregelen selv over slagene på
  * serveren, og de kan være nyere enn telefonens: en makker har levert, eller
  * noen har ført et hull. Da skal ikke skjermen late som alt gikk.
+ *
+ * `alreadySubmitted` (#1954 D2): kortet mitt sto alt som levert, altså et nytt
+ * trykk etter at første forsøk nådde tidstaket. Serveren teller da 0
+ * makkerkort fordi ingenting ble levert NÅ, ikke fordi de mangler. Ingen
+ * beskjed; skjermen går videre og bundelen viser hva som står.
  */
-export function partialDeliveryNotice(delivered: number, asked: number): string | null {
-  if (delivered >= asked) return null;
+export function partialDeliveryNotice(
+  delivered: number,
+  asked: number,
+  { alreadySubmitted = false }: { alreadySubmitted?: boolean } = {},
+): string | null {
+  if (alreadySubmitted || delivered >= asked) return null;
   if (asked === 1) {
     return 'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.';
   }

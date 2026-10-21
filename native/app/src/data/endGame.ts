@@ -525,6 +525,13 @@ export async function finishRound(
   // og etterlatt cup-tavla halvferdig. Porten står FØRST fordi svaret er det
   // samme uansett status: «dette gjøres på nettsiden».
   if (game.row.tournament_id !== null) return failed('cup-game');
+  // #1954 D2: et tidligere trykk kan ha avsluttet runden selv om svaret nådde
+  // tidstaket. Da er runden avsluttet, slik spilleren ba om: samme suksess som
+  // når noen andre rakk flippen først ({@link flipToFinished}), uten nye skriv.
+  if (game.row.status === 'finished') {
+    await refreshWebCache(gameId);
+    return done(true);
+  }
   if (game.row.status !== 'active') return failed('not-active');
 
   const withdrawn = await markWithdrawals(

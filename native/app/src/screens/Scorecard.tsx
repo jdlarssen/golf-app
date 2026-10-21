@@ -501,7 +501,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
       // spilleren stående med en beskjed, og kortet hentes på nytt så det viser
       // hva som står igjen.
-      const notice = partialDeliveryNotice(result.alsoDelivered, flightMates.length);
+      const notice = partialDeliveryNotice(result.alsoDelivered, flightMates.length, {
+        alreadySubmitted: result.alreadySubmitted,
+      });
       if (notice) {
         setNoticeText(notice);
         void refresh();
