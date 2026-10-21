@@ -273,7 +273,8 @@ describe('Scorecard', () => {
   // trykk etter tidsavbrudd (mitt kort ikke levert før trykket, serveren svarer
   // alreadySubmitted og 0) kan ha levert makkeren i første forsøk, eller ikke.
   describe('lever med makker, nytt trykk etter tidsavbrudd', () => {
-    function rig(mateSubmittedAfter: boolean) {
+    type Mate = 'submitted' | 'open' | 'withdrawn';
+    function rig(mate: Mate) {
       const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
       const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
       const bundle = {
@@ -281,16 +282,17 @@ describe('Scorecard', () => {
         game: { ...mockRevealBundle.game, id: 'game-8', scoreVisibility: 'live' },
       };
       mockState.bundle = bundle;
-      // Det ferske svaret etter leveringen: makkeren levert eller ikke.
       refreshGameBundle.mockImplementation(async () => mockState.bundle);
+      // Det ferske svaret etter leveringen: makkeren levert, åpen eller trukket.
       const afterSubmit = {
         ...bundle,
         players: bundle.players.map((player) => ({
           ...player,
           submittedAt:
-            player.userId === 'me' || (player.userId === 'other' && mateSubmittedAfter)
+            player.userId === 'me' || (player.userId === 'other' && mate === 'submitted')
               ? '2026-09-01T12:32:00.000Z'
               : null,
+          withdrawnAt: player.userId === 'other' && mate === 'withdrawn' ? '2026-09-01T12:30:00.000Z' : null,
         })),
       };
       submitCard.mockImplementationOnce(async () => {
@@ -310,6 +312,13 @@ describe('Scorecard', () => {
           serverUpdatedAt: '2026-09-01T10:00:00.000Z',
         })),
       );
+      return refreshGameBundle;
+    }
+
+    async function pressDeliver(navigate: jest.Mock): Promise<void> {
+      await render(scorecardElement('game-8', navigate));
+      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      await fireEvent.press(screen.getByTestId('submit-flight'));
     }
 
     afterEach(() => {
@@ -318,23 +327,55 @@ describe('Scorecard', () => {
     });
 
     it('makkeren kom med i første forsøk: ingen beskjed, videre til spillsiden', async () => {
-      rig(true);
+      rig('submitted');
       const navigate = jest.fn();
-      await render(scorecardElement('game-8', navigate));
-      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
-      await fireEvent.press(screen.getByTestId('submit-flight'));
+      await pressDeliver(navigate);
       await waitFor(() => expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
       expect(screen.queryByTestId('submit-partial')).toBeNull();
     });
 
-    it('makkeren kom ikke med: beskjeden står', async () => {
-      rig(false);
+    it('makkeren kom ikke med: beskjeden står, uten «levert»-gjetningen', async () => {
+      const refreshGameBundle = rig('open');
+      const navigate = jest.fn();
+      await pressDeliver(navigate);
+      await waitFor(() => expect(screen.getByTestId('submit-partial')).toBeTruthy());
+      // Beslutningen leser spillet på nytt, med et tak (signal).
+      expect(refreshGameBundle).toHaveBeenCalledWith('game-8', { signal: expect.any(Object) });
+      expect(screen.getByTestId('submit-partial')).toHaveTextContent(
+        'Makkerkortet ble ikke levert. Noen kan ha ført et hull på det i mellomtiden.',
+      );
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('en makker som har trukket seg, telles ikke som ikke levert', async () => {
+      rig('withdrawn');
+      const navigate = jest.fn();
+      await pressDeliver(navigate);
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      expect(screen.queryByTestId('submit-partial')).toBeNull();
+    });
+
+    it('feiler hentingen, gjelder serverens tall og den forsiktige beskjeden', async () => {
+      const refreshGameBundle = rig('submitted');
       const navigate = jest.fn();
       await render(scorecardElement('game-8', navigate));
       await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      refreshGameBundle.mockRejectedValue(new TypeError('Network request failed (timeout)'));
       await fireEvent.press(screen.getByTestId('submit-flight'));
       await waitFor(() => expect(screen.getByTestId('submit-partial')).toBeTruthy());
-      expect(navigate).not.toHaveBeenCalled();
+      expect(screen.getByTestId('submit-partial')).toHaveTextContent(
+        'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.',
+      );
+    });
+
+    it('knappen står opptatt mens beslutningen tas', async () => {
+      const refreshGameBundle = rig('open');
+      const navigate = jest.fn();
+      await render(scorecardElement('game-8', navigate));
+      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      refreshGameBundle.mockReturnValue(new Promise(() => {}));
+      await fireEvent.press(screen.getByTestId('submit-flight'));
+      expect(screen.getByTestId('submit-flight')).toBeDisabled();
     });
   });
 
