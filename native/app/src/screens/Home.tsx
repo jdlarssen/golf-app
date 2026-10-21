@@ -86,6 +86,7 @@ import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { StatusBarBand } from '../components/StatusBarBand';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
@@ -208,20 +209,24 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
   if (list === null || split === null) {
     return (
-      <ScrollView
-        contentContainerStyle={[
-          ui.scroll,
-          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
-        ]}
-        testID="home-screen"
-      >
-        <Text style={ui.error} testID="home-error">
-          Fikk ikke tak i spillene dine. Sjekk nettet og prøv igjen.
-        </Text>
-        <Pressable style={ui.button} onPress={() => void refresh()} testID="home-retry">
-          <Text style={ui.buttonText}>{refreshing ? 'Prøver …' : 'Prøv igjen'}</Text>
-        </Pressable>
-      </ScrollView>
+      <>
+        <ScrollView
+          contentContainerStyle={[
+            ui.scroll,
+            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+          ]}
+          testID="home-screen"
+        >
+          <Text style={ui.error} testID="home-error">
+            Fikk ikke tak i spillene dine. Sjekk nettet og prøv igjen.
+          </Text>
+          <Pressable style={ui.button} onPress={() => void refresh()} testID="home-retry">
+            <Text style={ui.buttonText}>{refreshing ? 'Prøver …' : 'Prøv igjen'}</Text>
+          </Pressable>
+        </ScrollView>
+        {/* #1954 D3: fast stripe over statuslinja når innholdet ruller under den. */}
+        <StatusBarBand color={colors.bg} />
+      </>
     );
   }
 
@@ -254,125 +259,129 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        ui.scroll,
-        styles.scroll,
-        // Bunnluften er skjermens 20; systemlinja kommer i tillegg (#2560), så
-        // «Opprett spill» og siste kort ender over hjemindikatoren og navigasjonslinja.
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 },
-      ]}
-      testID="home-screen"
-    >
-      <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+    <>
+      <ScrollView
+        contentContainerStyle={[
+          ui.scroll,
+          styles.scroll,
+          // Bunnluften er skjermens 20; systemlinja kommer i tillegg (#2560), så
+          // «Opprett spill» og siste kort ender over hjemindikatoren og navigasjonslinja.
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 },
+        ]}
+        testID="home-screen"
+      >
+        <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
 
-      {/* #2265 PR 2: Kavalkaden i desember og januar, for spillere med en
-          ferdig runde i året. Serveren avgjør vinduet. */}
-      {kavalkade?.slot && kavalkade.hasRound ? (
-        <View style={styles.kavalkade}>
-          <KavalkadeHomeBanner
-            slot={kavalkade.slot}
-            year={kavalkade.year}
-            onOpen={() => navigation.navigate('Kavalkade')}
+        {/* #2265 PR 2: Kavalkaden i desember og januar, for spillere med en
+            ferdig runde i året. Serveren avgjør vinduet. */}
+        {kavalkade?.slot && kavalkade.hasRound ? (
+          <View style={styles.kavalkade}>
+            <KavalkadeHomeBanner
+              slot={kavalkade.slot}
+              year={kavalkade.year}
+              onOpen={() => navigation.navigate('Kavalkade')}
+            />
+          </View>
+        ) : null}
+
+        {empty ? (
+          // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
+          // webben skriver `text-primary dark:text-text`, og i lys drakt er de
+          // to samme farge.
+          <View style={styles.empty}>
+            <PinFlagHero
+              color={colors.text}
+              accent={colors.accent}
+              size={72}
+              testID="home-empty-flag"
+            />
+            <Text style={[ui.body, styles.emptyText]} testID="home-empty">
+              Ingen spill på deg ennå. Fyr opp et selv, eller vent til noen tar deg
+              med.
+            </Text>
+          </View>
+        ) : null}
+
+        {hero ? null : createGame}
+
+        {hero ? (
+          <HomeHeroCard
+            card={hero}
+            model={model}
+            onOpenGame={() => openGame(hero.gameId)}
+            onHole={(holeNumber) =>
+              navigation.navigate('Hole', {
+                gameId: hero.gameId,
+                holeNumber,
+                ...holeHeaderParams(hero, hero.courseName),
+              })
+            }
+            onSubmit={() => navigation.navigate('Scorecard', { gameId: hero.gameId })}
+            onApprove={() => navigation.navigate('Approve', { gameId: hero.gameId })}
           />
-        </View>
-      ) : null}
+        ) : null}
 
-      {empty ? (
-        // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
-        // webben skriver `text-primary dark:text-text`, og i lys drakt er de
-        // to samme farge.
-        <View style={styles.empty}>
-          <PinFlagHero
-            color={colors.text}
-            accent={colors.accent}
-            size={72}
-            testID="home-empty-flag"
-          />
-          <Text style={[ui.body, styles.emptyText]} testID="home-empty">
-            Ingen spill på deg ennå. Fyr opp et selv, eller vent til noen tar deg
-            med.
-          </Text>
-        </View>
-      ) : null}
-
-      {hero ? null : createGame}
-
-      {hero ? (
-        <HomeHeroCard
-          card={hero}
-          model={model}
-          onOpenGame={() => openGame(hero.gameId)}
-          onHole={(holeNumber) =>
-            navigation.navigate('Hole', {
-              gameId: hero.gameId,
-              holeNumber,
-              ...holeHeaderParams(hero, hero.courseName),
-            })
-          }
-          onSubmit={() => navigation.navigate('Scorecard', { gameId: hero.gameId })}
-          onApprove={() => navigation.navigate('Approve', { gameId: hero.gameId })}
+        <Section
+          title={HOME_TEXT.moreInProgress}
+          cards={rest}
+          onOpen={openGame}
+          testID="home-active"
         />
-      ) : null}
 
-      <Section
-        title={HOME_TEXT.moreInProgress}
-        cards={rest}
-        onOpen={openGame}
-        testID="home-active"
-      />
+        {ticket ? (
+          <View testID="home-next-start">
+            <SectionHead title={HOME_TEXT.nextStart} />
+            <NextStartTicket
+              card={ticket}
+              bundle={ticketBundle && ticketBundle.game.id === ticket.gameId ? ticketBundle : null}
+              userId={userId}
+              now={new Date()}
+              onPress={() => openGame(ticket.gameId)}
+            />
+          </View>
+        ) : null}
 
-      {ticket ? (
-        <View testID="home-next-start">
-          <SectionHead title={HOME_TEXT.nextStart} />
-          <NextStartTicket
-            card={ticket}
-            bundle={ticketBundle && ticketBundle.game.id === ticket.gameId ? ticketBundle : null}
-            userId={userId}
-            now={new Date()}
-            onPress={() => openGame(ticket.gameId)}
-          />
-        </View>
-      ) : null}
+        <Section
+          title={HOME_TEXT.myGames}
+          cards={scheduled.slice(1)}
+          onOpen={openGame}
+          testID="home-scheduled"
+        />
 
-      <Section
-        title={HOME_TEXT.myGames}
-        cards={scheduled.slice(1)}
-        onOpen={openGame}
-        testID="home-scheduled"
-      />
+        {lastRound ? (
+          <View testID="home-last-round">
+            <SectionHead title={HOME_TEXT.lastRound} />
+            <LastRoundCard
+              card={lastRound}
+              score={list.lastRound}
+              points={lastPoints}
+              onPress={() => openGame(lastRound.gameId)}
+            />
+            {/* #2265: alle rundene står i Rundedagboka (eierens svar 2 på
+                #2254), også når det bare er én: formkortet og statistikken
+                står der. */}
+            <Pressable
+              style={[ui.link, styles.allRounds]}
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('RoundDiary', { from: 'home' })}
+              testID="home-all-rounds"
+            >
+              <Text style={ui.linkText}>{withSystemArrows(HOME_TEXT.allRounds, '500')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-      {lastRound ? (
-        <View testID="home-last-round">
-          <SectionHead title={HOME_TEXT.lastRound} />
-          <LastRoundCard
-            card={lastRound}
-            score={list.lastRound}
-            points={lastPoints}
-            onPress={() => openGame(lastRound.gameId)}
-          />
-          {/* #2265: alle rundene står i Rundedagboka (eierens svar 2 på
-              #2254), også når det bare er én: formkortet og statistikken
-              står der. */}
-          <Pressable
-            style={[ui.link, styles.allRounds]}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('RoundDiary', { from: 'home' })}
-            testID="home-all-rounds"
-          >
-            <Text style={ui.linkText}>{withSystemArrows(HOME_TEXT.allRounds, '500')}</Text>
-          </Pressable>
-        </View>
-      ) : null}
+        {hero ? createGame : null}
 
-      {hero ? createGame : null}
-
-      {errorText ? (
-        <Text style={ui.muted} testID="home-stale">
-          Viser lagrede spill — fikk ikke kontakt med serveren.
-        </Text>
-      ) : null}
-    </ScrollView>
+        {errorText ? (
+          <Text style={ui.muted} testID="home-stale">
+            Viser lagrede spill — fikk ikke kontakt med serveren.
+          </Text>
+        ) : null}
+      </ScrollView>
+      {/* #1954 D3: fast stripe over statuslinja når innholdet ruller under den. */}
+      <StatusBarBand color={colors.bg} />
+    </>
   );
 }
 

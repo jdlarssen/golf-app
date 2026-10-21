@@ -46,6 +46,7 @@ import {
 import { FONTS, fraunces, frauncesFamily, useTheme, withAlpha } from '../theme';
 import { asLevel } from './EditProfile';
 import { KEYBOARD_SCROLL_PROPS, useKeyboardShown } from '../components/KeyboardInset';
+import { StatusBarBand } from '../components/StatusBarBand';
 
 export function CompleteProfile({
   userId,
@@ -127,155 +128,159 @@ export function CompleteProfile({
   const gameLine = game ? onboardingGameLine(game) : '';
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[
-        styles.screen,
-        { paddingTop: insets.top + 22, paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      {...KEYBOARD_SCROLL_PROPS}
-      testID="complete-profile-screen"
-    >
-      <View style={styles.top}>
-        <Text style={[ui.kicker, { color: colors.accentText }]}>{ONBOARDING_TEXT.kicker}</Text>
-        <Text style={[styles.heading, { color: colors.text }]} accessibilityRole="header">
-          {ONBOARDING_TEXT.heading}
-        </Text>
-      </View>
+    <>
+      <ScrollView
+        ref={scrollRef}
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={[
+          styles.screen,
+          { paddingTop: insets.top + 22, paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        {...KEYBOARD_SCROLL_PROPS}
+        testID="complete-profile-screen"
+      >
+        <View style={styles.top}>
+          <Text style={[ui.kicker, { color: colors.accentText }]}>{ONBOARDING_TEXT.kicker}</Text>
+          <Text style={[styles.heading, { color: colors.text }]} accessibilityRole="header">
+            {ONBOARDING_TEXT.heading}
+          </Text>
+        </View>
 
-      {game ? (
-        <View
-          style={[styles.gameCard, { backgroundColor: colors.surfaceStrong }]}
-          testID="complete-profile-game"
-        >
-          {date ? (
-            <View
-              style={[styles.dateBox, { backgroundColor: withAlpha(colors.onStrongWarm, 0.12) }]}
-            >
-              <Text style={[styles.dateDay, { color: colors.onStrongWarm }]}>{date.day}</Text>
-              <Text style={[styles.dateMonth, { color: colors.onStrongWarm }]}>{date.month}</Text>
-            </View>
-          ) : null}
-          <View style={styles.gameText}>
-            <Text style={[styles.gameTitle, { color: colors.onStrongWarm }]}>
-              {onboardingGameTitle(game.name)}
-            </Text>
-            {gameLine ? (
-              <Text style={[styles.gameLine, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
-                {gameLine}
-              </Text>
+        {game ? (
+          <View
+            style={[styles.gameCard, { backgroundColor: colors.surfaceStrong }]}
+            testID="complete-profile-game"
+          >
+            {date ? (
+              <View
+                style={[styles.dateBox, { backgroundColor: withAlpha(colors.onStrongWarm, 0.12) }]}
+              >
+                <Text style={[styles.dateDay, { color: colors.onStrongWarm }]}>{date.day}</Text>
+                <Text style={[styles.dateMonth, { color: colors.onStrongWarm }]}>{date.month}</Text>
+              </View>
             ) : null}
-          </View>
-        </View>
-      ) : null}
-
-      {failure ? (
-        <Text style={[ui.error, styles.error]} testID="complete-profile-error">
-          {describeProfileSaveFailure(failure)}
-        </Text>
-      ) : null}
-
-      <View style={styles.fields}>
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>{ONBOARDING_TEXT.nameLabel}</Text>
-          <TextInput
-            style={fieldStyle('name')}
-            value={name}
-            onChangeText={setName}
-            onFocus={() => setFocus('name')}
-            onBlur={() => setFocus(null)}
-            autoCapitalize="words"
-            autoComplete="name"
-            textContentType="name"
-            accessibilityLabel={ONBOARDING_TEXT.nameLabel}
-            accessibilityHint={ONBOARDING_TEXT.nameHint}
-            testID="complete-profile-name"
-          />
-          <Text style={[styles.hint, { color: colors.muted }]}>{ONBOARDING_TEXT.nameHint}</Text>
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>{ONBOARDING_TEXT.hcpLabel}</Text>
-          <View style={styles.hcpRow}>
-            {/* «+» er en knapp og ikke en bryter, som på nettsiden og i
-                «Rediger profil»: en bryter ville lest som en innstilling. */}
-            <Pressable
-              style={[
-                styles.plus,
-                isPlus
-                  ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                  : { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-              onPress={() => setIsPlus((value) => !value)}
-              accessibilityRole="button"
-              accessibilityLabel={ONBOARDING_TEXT.plusHandicapLabel}
-              accessibilityState={{ selected: isPlus }}
-              testID="complete-profile-hcp-plus"
-            >
-              <Text style={[styles.plusText, { color: isPlus ? colors.onPrimary : colors.muted }]}>
-                +
+            <View style={styles.gameText}>
+              <Text style={[styles.gameTitle, { color: colors.onStrongWarm }]}>
+                {onboardingGameTitle(game.name)}
               </Text>
-            </Pressable>
-            <TextInput
-              style={[fieldStyle('hcp'), styles.hcpField]}
-              value={magnitude}
-              onChangeText={setMagnitude}
-              onFocus={() => setFocus('hcp')}
-              onBlur={() => setFocus(null)}
-              keyboardType="decimal-pad"
-              accessibilityLabel={ONBOARDING_TEXT.hcpLabel}
-              accessibilityHint={ONBOARDING_TEXT.hcpHint}
-              testID="complete-profile-hcp"
-            />
+              {gameLine ? (
+                <Text style={[styles.gameLine, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
+                  {gameLine}
+                </Text>
+              ) : null}
+            </View>
           </View>
-          <Text style={[styles.hint, { color: colors.muted }]}>{ONBOARDING_TEXT.hcpHint}</Text>
-        </View>
-      </View>
+        ) : null}
 
-      <View style={styles.preview}>
-        <Text style={ui.kicker}>{ONBOARDING_TEXT.previewKicker}</Text>
-        <View
-          style={[styles.previewRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {shownName ? nameInitials(shownName) : ''}
+        {failure ? (
+          <Text style={[ui.error, styles.error]} testID="complete-profile-error">
+            {describeProfileSaveFailure(failure)}
+          </Text>
+        ) : null}
+
+        <View style={styles.fields}>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>{ONBOARDING_TEXT.nameLabel}</Text>
+            <TextInput
+              style={fieldStyle('name')}
+              value={name}
+              onChangeText={setName}
+              onFocus={() => setFocus('name')}
+              onBlur={() => setFocus(null)}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              accessibilityLabel={ONBOARDING_TEXT.nameLabel}
+              accessibilityHint={ONBOARDING_TEXT.nameHint}
+              testID="complete-profile-name"
+            />
+            <Text style={[styles.hint, { color: colors.muted }]}>{ONBOARDING_TEXT.nameHint}</Text>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>{ONBOARDING_TEXT.hcpLabel}</Text>
+            <View style={styles.hcpRow}>
+              {/* «+» er en knapp og ikke en bryter, som på nettsiden og i
+                  «Rediger profil»: en bryter ville lest som en innstilling. */}
+              <Pressable
+                style={[
+                  styles.plus,
+                  isPlus
+                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                    : { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+                onPress={() => setIsPlus((value) => !value)}
+                accessibilityRole="button"
+                accessibilityLabel={ONBOARDING_TEXT.plusHandicapLabel}
+                accessibilityState={{ selected: isPlus }}
+                testID="complete-profile-hcp-plus"
+              >
+                <Text style={[styles.plusText, { color: isPlus ? colors.onPrimary : colors.muted }]}>
+                  +
+                </Text>
+              </Pressable>
+              <TextInput
+                style={[fieldStyle('hcp'), styles.hcpField]}
+                value={magnitude}
+                onChangeText={setMagnitude}
+                onFocus={() => setFocus('hcp')}
+                onBlur={() => setFocus(null)}
+                keyboardType="decimal-pad"
+                accessibilityLabel={ONBOARDING_TEXT.hcpLabel}
+                accessibilityHint={ONBOARDING_TEXT.hcpHint}
+                testID="complete-profile-hcp"
+              />
+            </View>
+            <Text style={[styles.hint, { color: colors.muted }]}>{ONBOARDING_TEXT.hcpHint}</Text>
+          </View>
+        </View>
+
+        <View style={styles.preview}>
+          <Text style={ui.kicker}>{ONBOARDING_TEXT.previewKicker}</Text>
+          <View
+            style={[styles.previewRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
+              <Text style={[styles.avatarText, { color: colors.primary }]}>
+                {shownName ? nameInitials(shownName) : ''}
+              </Text>
+            </View>
+            <Text
+              style={[styles.previewName, { color: colors.text }]}
+              numberOfLines={1}
+              testID="complete-profile-preview-name"
+            >
+              {shownName || ONBOARDING_TEXT.previewNamePlaceholder}
+            </Text>
+            <Text
+              style={[styles.previewHcp, { color: colors.muted }]}
+              testID="complete-profile-preview-hcp"
+            >
+              {onboardingPreviewHcp(magnitude, isPlus)}
             </Text>
           </View>
-          <Text
-            style={[styles.previewName, { color: colors.text }]}
-            numberOfLines={1}
-            testID="complete-profile-preview-name"
-          >
-            {shownName || ONBOARDING_TEXT.previewNamePlaceholder}
-          </Text>
-          <Text
-            style={[styles.previewHcp, { color: colors.muted }]}
-            testID="complete-profile-preview-hcp"
-          >
-            {onboardingPreviewHcp(magnitude, isPlus)}
-          </Text>
         </View>
-      </View>
 
-      <View style={styles.bottom}>
-        <Pressable
-          style={[styles.submit, { backgroundColor: colors.primary }, pending && styles.submitOff]}
-          onPress={onSave}
-          disabled={pending}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: pending }}
-          testID="complete-profile-submit"
-        >
-          <Text style={[styles.submitText, { color: colors.onPrimary }]}>
-            {pending ? ONBOARDING_TEXT.submitPending : ONBOARDING_TEXT.submitButton}
-          </Text>
-        </Pressable>
-        <Text style={[styles.footnote, { color: colors.muted }]}>{ONBOARDING_TEXT.footnote}</Text>
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <Pressable
+            style={[styles.submit, { backgroundColor: colors.primary }, pending && styles.submitOff]}
+            onPress={onSave}
+            disabled={pending}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: pending }}
+            testID="complete-profile-submit"
+          >
+            <Text style={[styles.submitText, { color: colors.onPrimary }]}>
+              {pending ? ONBOARDING_TEXT.submitPending : ONBOARDING_TEXT.submitButton}
+            </Text>
+          </Pressable>
+          <Text style={[styles.footnote, { color: colors.muted }]}>{ONBOARDING_TEXT.footnote}</Text>
+        </View>
+      </ScrollView>
+      {/* #1954 D3: fast stripe over statuslinja når innholdet ruller under den. */}
+      <StatusBarBand color={colors.bg} />
+    </>
   );
 }
 
