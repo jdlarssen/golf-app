@@ -12,12 +12,14 @@
  * Én konto per butikk (#2561). Apple-revieweren skal kunne slette kontoen sin
  * (5.1.1(v)), mens Google krever at innloggingen virker til enhver tid, og de
  * to vurderingene kan gå samtidig. `--store` (default `apple`) velger kontoens
- * env-variabler og demo-runden: `apple` leser `REVIEW_ACCOUNT_EMAIL` og
- * `REVIEW_ACCOUNT_PASSWORD` og bruker «Demo Round — Tørny», `google` leser
- * `REVIEW_ACCOUNT_EMAIL_GOOGLE` og `REVIEW_ACCOUNT_PASSWORD_GOOGLE` og bruker
- * en egen runde. Egne variabler og egen runde er poenget: en kjøring for den
- * ene butikken roterer aldri passordet til den andre og feier aldri dens
- * rosterrader eller scores.
+ * env-variabler og demo-rundene: `apple` leser `REVIEW_ACCOUNT_EMAIL` og
+ * `REVIEW_ACCOUNT_PASSWORD` og bruker «Demo Round — Tørny» og «Demo Scramble —
+ * Tørny», `google` leser `REVIEW_ACCOUNT_EMAIL_GOOGLE` og
+ * `REVIEW_ACCOUNT_PASSWORD_GOOGLE` og bruker egne runder. Hver butikk får to
+ * runder: stableford og en Texas scramble med «Hvem sitt utslag» (#2561).
+ * Egne variabler og egne runder er poenget: en kjøring for den ene butikken
+ * roterer aldri passordet til den andre og feier aldri dens rosterrader,
+ * scores eller utslag.
  *
  * Kontoen og passordet ligger ALDRI i repoet: begge leses fra prosess-env, og
  * passordet skrives aldri til logg. Se docs/native/app-store-review-konto.md.
@@ -57,6 +59,7 @@ const STORES = {
     emailVar: 'REVIEW_ACCOUNT_EMAIL',
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD',
     demoGameName: 'Demo Round — Tørny',
+    scrambleGameName: 'Demo Scramble — Tørny',
     signIn: '/en/review-login, eller langtrykk på tittelen i appen',
   },
   google: {
@@ -64,11 +67,12 @@ const STORES = {
     emailVar: 'REVIEW_ACCOUNT_EMAIL_GOOGLE',
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD_GOOGLE',
     demoGameName: 'Demo Round (Google Play) — Tørny',
+    scrambleGameName: 'Demo Scramble (Google Play) — Tørny',
     signIn: 'langtrykk på tittelen i appen',
   },
 };
 
-/** Formatet demo-runden spilles i. Speiles av `DEMO_MODE_CONFIG`. */
+/** Formatet stableford-runden spilles i. Speiles av `DEMO_MODE_CONFIG`. */
 const DEMO_GAME_MODE = 'stableford';
 
 /**
@@ -111,6 +115,62 @@ const SCORE_OFFSETS = {
   Jonas: [1, 0, 2, 1, 0, 1],
   Nora: [0, -1, 1, 0, 1, 2],
 };
+
+/**
+ * Scramble-runden (#2561): Texas scramble, to lag à to spillere, med «Hvem sitt
+ * utslag» slått på (`min_tee_shots`). Bilde 4 (utslagsvelgeren) og bilde 8
+ * (lagtavla) i butikksettet viser en slik runde, og revieweren kan ikke lage
+ * den selv i appen. Formen er den samme som veiviseren skriver
+ * (`GameModeConfig`, `lib/scoring/modes/types.ts`); 25 % er 2-mannslagenes
+ * standard lag-handicap. CHECK `games_min_tee_shots_valid` krever
+ * `min_tee_shots × team_size ≤ 18`.
+ */
+const SCRAMBLE_GAME_MODE = 'texas_scramble';
+const SCRAMBLE_MODE_CONFIG = {
+  kind: SCRAMBLE_GAME_MODE,
+  team_size: 2,
+  teams_count: 2,
+  team_handicap_pct: 25,
+  min_tee_shots: 3,
+};
+/** Lag per spiller. Revieweren og Emma er lag 1, Jonas og Nora lag 2. */
+const SCRAMBLE_TEAMS = { review: 1, Emma: 1, Jonas: 2, Nora: 2 };
+/**
+ * Lag-score per hull som avvik fra par. Lag 1 (revieweren) har spilt hull 1–3,
+ * lag 2 hull 1–6, som i stableford-runden: revieweren fortsetter på hull 4.
+ */
+const SCRAMBLE_TEAM_OFFSETS = { 1: [-1, 0, -1], 2: [0, -1, 0, -1, 1, 0] };
+/** Hvem sitt utslag laget brukte per spilt hull. Hver spiller får minst ett. */
+const SCRAMBLE_TEE_SHOTS = {
+  1: ['review', 'Emma', 'review'],
+  2: ['Jonas', 'Nora', 'Jonas', 'Nora', 'Nora', 'Jonas'],
+};
+
+/** Rundene hver review-konto får: stableford (den opprinnelige) og scramble. */
+function demoRounds(store) {
+  return [
+    {
+      key: 'stableford',
+      name: store.demoGameName,
+      mode: DEMO_GAME_MODE,
+      modeConfig: DEMO_MODE_CONFIG,
+      guests: CO_PLAYERS,
+      teams: null,
+      scoreOffsets: SCORE_OFFSETS,
+      teeShots: null,
+    },
+    {
+      key: 'scramble',
+      name: store.scrambleGameName,
+      mode: SCRAMBLE_GAME_MODE,
+      modeConfig: SCRAMBLE_MODE_CONFIG,
+      guests: CO_PLAYERS,
+      teams: SCRAMBLE_TEAMS,
+      scoreOffsets: SCRAMBLE_TEAM_OFFSETS,
+      teeShots: SCRAMBLE_TEE_SHOTS,
+    },
+  ];
+}
 
 /** Minimal dotenv-leser — vi trenger bare URL + service-role-nøkkelen. */
 function loadEnv(file) {
@@ -160,6 +220,21 @@ function ok(label, { data, error }) {
     );
   }
   return data ?? [];
+}
+
+/**
+ * Lik JSON uavhengig av nøkkelrekkefølge. Postgres lagrer `jsonb` i sin egen
+ * nøkkelrekkefølge (kortere nøkler først), så `JSON.stringify` på det som leses
+ * tilbake, er aldri lik det vi skrev inn for en config med flere nøkler.
+ */
+function sameJson(a, b) {
+  const canonical = (value) =>
+    JSON.stringify(value, (_key, v) =>
+      v && typeof v === 'object' && !Array.isArray(v)
+        ? Object.fromEntries(Object.entries(v).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)))
+        : v,
+    );
+  return canonical(a) === canonical(b);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -415,7 +490,6 @@ async function main() {
   if (!store) {
     throw new Error(`--store må være apple eller google (fikk «${storeName ?? ''}»)`);
   }
-  const DEMO_GAME_NAME = store.demoGameName;
 
   const email = (process.env[store.emailVar] ?? '').trim().toLowerCase();
   const password = process.env[store.passwordVar] ?? '';
@@ -464,7 +538,7 @@ async function main() {
   }
 
   console.log(`Miljø:        ${target}  (${envFile})`);
-  console.log(`Butikk:       ${storeName}  (demo-runden «${DEMO_GAME_NAME}»)`);
+  console.log(`Butikk:       ${storeName}  (demo-rundene «${store.demoGameName}» og «${store.scrambleGameName}»)`);
   console.log(`Skriver til:  ${env.NEXT_PUBLIC_SUPABASE_URL}`);
   console.log(`Konto:        ${email}`);
 
@@ -549,346 +623,402 @@ async function main() {
       : '2b. Ikke noe AI-svar å slette.',
   );
 
-  // -------------------------------------------------------- 3. demo-spillet
-  // Oppslag på NAVN, ikke på creator: arrangøren kan ha blitt flyttet (og et
-  // spill fra før #1909 står fortsatt på review-kontoen). Nyeste vinner.
-  const existingGames = ok(
-    'les games',
-    await db
-      .from('games')
-      .select('id, short_id, course_id, tee_box_id, created_by, game_mode, mode_config')
-      .eq('name', DEMO_GAME_NAME)
-      .order('created_at', { ascending: false })
-      .limit(1),
-  );
-
-  let game = existingGames[0] ?? null;
-  if (game) {
-    // Eierskapsgard. Uten creator-filteret i oppslaget over er navnet det
-    // eneste som peker ut spillet, og «Demo Round — Tørny» er ikke reservert:
-    // en ekte bruker kan kalle runden sin det samme. Steg 4-5 under sletter
-    // alle scores og feier rosteret, så et feiltreff er uopprettelig. Vi
-    // godtar derfor bare et spill som ALT tilhører review-kontoen eller
-    // arrangøren — alt annet stopper med en melding som ber om opprydding for
-    // hånd, i stedet for å skrive blindt.
-    if (
-      game.created_by !== organizer.id &&
-      game.created_by !== reviewUserId
-    ) {
-      throw new Error(
-        `Fant et spill som heter «${DEMO_GAME_NAME}» (${game.id}), men det eies ` +
-          `verken av review-kontoen eller arrangøren. Skriptet rører det ikke — ` +
-          `det ville slettet scorene og rosteret til noen andre. Sjekk spillet i ` +
-          `databasen og rydd opp for hånd, eller gi demo-spillet et annet navn.`,
-      );
-    }
-    console.log(`3. Demo-spillet fantes (${game.id}).`);
-    if (game.created_by !== organizer.id) {
-      // PostgREST svarer error == null på en update som ikke traff noe
-      // (AGENTS.md trap 2) — radtellingen er det eneste ekte suksess-signalet.
-      const reparented = ok(
-        'flytt demo-spillet til arrangøren',
-        await db
-          .from('games')
-          .update({ created_by: organizer.id })
-          .eq('id', game.id)
-          .select('id'),
-      );
-      if (reparented.length !== 1) {
-        throw new Error(
-          `flytt demo-spillet til arrangøren: traff ${reparented.length} rader, forventet 1`,
-        );
-      }
-      game.created_by = organizer.id;
-      console.log(`   Arrangør flyttet til ${organizerLabel}.`);
-    }
-
-    // Formatoppsettet repareres på gjenkjøring (#1976). Runden i prod ble
-    // opprettet med `mode_config: {}` av en eldre versjon av dette skriptet,
-    // og reuse-grenen ville ellers latt den stå slik for alltid — «reset før
-    // hver innsending» må også rette det som var galt fra før.
-    const configIsCanonical =
-      game.game_mode === DEMO_GAME_MODE &&
-      JSON.stringify(game.mode_config ?? null) === JSON.stringify(DEMO_MODE_CONFIG);
-    if (!configIsCanonical) {
-      const repaired = ok(
-        'reparer demo-spillets formatoppsett',
-        await db
-          .from('games')
-          .update({ game_mode: DEMO_GAME_MODE, mode_config: DEMO_MODE_CONFIG })
-          .eq('id', game.id)
-          .select('id'),
-      );
-      if (repaired.length !== 1) {
-        throw new Error(
-          `reparer demo-spillets formatoppsett: traff ${repaired.length} rader, forventet 1`,
-        );
-      }
-      console.log(
-        `   Formatoppsett satt: ${DEMO_GAME_MODE} ${JSON.stringify(DEMO_MODE_CONFIG)} ` +
-          `(var ${game.game_mode} ${JSON.stringify(game.mode_config)}).`,
-      );
-      game.game_mode = DEMO_GAME_MODE;
-      game.mode_config = DEMO_MODE_CONFIG;
-    }
-  } else {
-    const tees = ok(
-      'les tee_boxes',
-      await db
-        .from('tee_boxes')
-        .select('id, course_id')
-        .not('par_total_mens', 'is', null)
-        .is('archived_at', null)
-        .limit(20),
-    );
-    // Velg første tee hvis bane har hull registrert — uten course_holes får
-    // demo-runden ingen par å regne mot.
-    let picked = null;
-    for (const tee of tees) {
-      const holes = ok(
-        'les course_holes',
-        await db
-          .from('course_holes')
-          .select('hole_number')
-          .eq('course_id', tee.course_id)
-          .limit(1),
-      );
-      if (holes.length > 0) {
-        picked = tee;
-        break;
-      }
-    }
-    if (!picked) throw new Error('Fant ingen tee_box med herre-rating og registrerte hull');
-
-    const inserted = ok(
-      'opprett demo-spill',
+  // ----------------------------------------------------------- 3–5. rundene
+  // Hver butikk får to runder (#2561): stableford og scramble. Hver runde har
+  // eget navn, så en gjenkjøring finner akkurat sine egne rader.
+  const summaries = [];
+  for (const round of demoRounds(store)) {
+    const teamOf = (key) => (round.teams ? round.teams[key] : null);
+    console.log(`── Runde: ${round.name} ──`);
+    // -------------------------------------------------------- 3. demo-spillet
+    // Oppslag på NAVN, ikke på creator: arrangøren kan ha blitt flyttet (og et
+    // spill fra før #1909 står fortsatt på review-kontoen). Nyeste vinner.
+    const existingGames = ok(
+      'les games',
       await db
         .from('games')
-        .insert({
-          name: DEMO_GAME_NAME,
-          course_id: picked.course_id,
-          tee_box_id: picked.id,
-          game_mode: DEMO_GAME_MODE,
-          mode_config: DEMO_MODE_CONFIG,
-          registration_mode: 'invite_only',
-          registration_type: 'solo',
-          status: 'active',
-          created_by: organizer.id,
-        })
-        .select('id, short_id, course_id, tee_box_id, created_by'),
+        .select('id, short_id, course_id, tee_box_id, created_by, game_mode, mode_config')
+        .eq('name', round.name)
+        .order('created_at', { ascending: false })
+        .limit(1),
     );
-    if (inserted.length !== 1) throw new Error('Insert av demo-spill traff 0 rader');
-    game = inserted[0];
-    console.log(`3. Demo-spill opprettet (${game.id}).`);
-  }
 
-  // ------------------------------------------------------- 4. medspillerne
-  // Scorene ryddes her, før roster-radene: en rad som skal bort kan ha scores,
-  // og hele settet seedes uansett på nytt i steg 5.
-  ok('slett scores', await db.from('scores').delete().eq('game_id', game.id));
+    let game = existingGames[0] ?? null;
+    if (game) {
+      // Eierskapsgard. Uten creator-filteret i oppslaget over er navnet det
+      // eneste som peker ut spillet, og «Demo Round — Tørny» er ikke reservert:
+      // en ekte bruker kan kalle runden sin det samme. Steg 4-5 under sletter
+      // alle scores og feier rosteret, så et feiltreff er uopprettelig. Vi
+      // godtar derfor bare et spill som ALT tilhører review-kontoen eller
+      // arrangøren — alt annet stopper med en melding som ber om opprydding for
+      // hånd, i stedet for å skrive blindt.
+      if (
+        game.created_by !== organizer.id &&
+        game.created_by !== reviewUserId
+      ) {
+        throw new Error(
+          `Fant et spill som heter «${round.name}» (${game.id}), men det eies ` +
+            `verken av review-kontoen eller arrangøren. Skriptet rører det ikke — ` +
+            `det ville slettet scorene og rosteret til noen andre. Sjekk spillet i ` +
+            `databasen og rydd opp for hånd, eller gi demo-spillet et annet navn.`,
+        );
+      }
+      console.log(`3. Demo-spillet fantes (${game.id}).`);
+      if (game.created_by !== organizer.id) {
+        // PostgREST svarer error == null på en update som ikke traff noe
+        // (AGENTS.md trap 2) — radtellingen er det eneste ekte suksess-signalet.
+        const reparented = ok(
+          'flytt demo-spillet til arrangøren',
+          await db
+            .from('games')
+            .update({ created_by: organizer.id })
+            .eq('id', game.id)
+            .select('id'),
+        );
+        if (reparented.length !== 1) {
+          throw new Error(
+            `flytt demo-spillet til arrangøren: traff ${reparented.length} rader, forventet 1`,
+          );
+        }
+        game.created_by = organizer.id;
+        console.log(`   Arrangør flyttet til ${organizerLabel}.`);
+      }
 
-  const roster = ok(
-    'les game_players',
-    await db.from('game_players').select('user_id').eq('game_id', game.id),
-  );
-  const rosterIds = roster.map((r) => r.user_id);
-  const rosterNames = new Map();
-  if (rosterIds.length > 0) {
-    const users = ok(
-      'les roster-profiler',
-      await db.from('users').select('id, name').in('id', rosterIds),
+      // Formatoppsettet repareres på gjenkjøring (#1976). Runden i prod ble
+      // opprettet med `mode_config: {}` av en eldre versjon av dette skriptet,
+      // og reuse-grenen ville ellers latt den stå slik for alltid — «reset før
+      // hver innsending» må også rette det som var galt fra før.
+      const configIsCanonical =
+        game.game_mode === round.mode &&
+        sameJson(game.mode_config ?? null, round.modeConfig);
+      if (!configIsCanonical) {
+        const repaired = ok(
+          'reparer demo-spillets formatoppsett',
+          await db
+            .from('games')
+            .update({ game_mode: round.mode, mode_config: round.modeConfig })
+            .eq('id', game.id)
+            .select('id'),
+        );
+        if (repaired.length !== 1) {
+          throw new Error(
+            `reparer demo-spillets formatoppsett: traff ${repaired.length} rader, forventet 1`,
+          );
+        }
+        console.log(
+          `   Formatoppsett satt: ${round.mode} ${JSON.stringify(round.modeConfig)} ` +
+            `(var ${game.game_mode} ${JSON.stringify(game.mode_config)}).`,
+        );
+        game.game_mode = round.mode;
+        game.mode_config = round.modeConfig;
+      }
+    } else {
+      const tees = ok(
+        'les tee_boxes',
+        await db
+          .from('tee_boxes')
+          .select('id, course_id')
+          .not('par_total_mens', 'is', null)
+          .is('archived_at', null)
+          .limit(20),
+      );
+      // Velg første tee hvis bane har hull registrert — uten course_holes får
+      // demo-runden ingen par å regne mot.
+      let picked = null;
+      for (const tee of tees) {
+        const holes = ok(
+          'les course_holes',
+          await db
+            .from('course_holes')
+            .select('hole_number')
+            .eq('course_id', tee.course_id)
+            .limit(1),
+        );
+        if (holes.length > 0) {
+          picked = tee;
+          break;
+        }
+      }
+      if (!picked) throw new Error('Fant ingen tee_box med herre-rating og registrerte hull');
+
+      const inserted = ok(
+        'opprett demo-spill',
+        await db
+          .from('games')
+          .insert({
+            name: round.name,
+            course_id: picked.course_id,
+            tee_box_id: picked.id,
+            game_mode: round.mode,
+            mode_config: round.modeConfig,
+            registration_mode: 'invite_only',
+            registration_type: 'solo',
+            status: 'active',
+            created_by: organizer.id,
+          })
+          .select('id, short_id, course_id, tee_box_id, created_by'),
+      );
+      if (inserted.length !== 1) throw new Error('Insert av demo-spill traff 0 rader');
+      game = inserted[0];
+      console.log(`3. Demo-spill opprettet (${game.id}).`);
+    }
+
+    // ------------------------------------------------------- 4. medspillerne
+    // Scorene ryddes her, før roster-radene: en rad som skal bort kan ha scores,
+    // og hele settet seedes uansett på nytt i steg 5.
+    ok('slett scores', await db.from('scores').delete().eq('game_id', game.id));
+    // Utslagene (`team_tee_shots`) hører til samme utgangstilstand som scorene.
+    ok('slett utslag', await db.from('team_tee_shots').delete().eq('game_id', game.id));
+
+    const roster = ok(
+      'les game_players',
+      await db.from('game_players').select('user_id').eq('game_id', game.id),
     );
-    for (const u of users) rosterNames.set(u.name, u.id);
-  }
+    const rosterIds = roster.map((r) => r.user_id);
+    const rosterNames = new Map();
+    if (rosterIds.length > 0) {
+      const users = ok(
+        'les roster-profiler',
+        await db.from('users').select('id, name').in('id', rosterIds),
+      );
+      for (const u of users) rosterNames.set(u.name, u.id);
+    }
 
-  // Rydd alt som ikke er review-kontoen eller en av de tre gjestene. Har en
-  // reviewer slettet seg, står den gamle raden igjen som «Slettet bruker» — og
-  // en kjøring fra før #1909 kan ha lagt arrangøren i rosteret. Begge ut.
-  const keepIds = [reviewUserId];
-  for (const profile of CO_PLAYERS) {
-    const known = rosterNames.get(profile.name);
-    if (known) keepIds.push(known);
-  }
-  const swept = ok(
-    'rydd roster',
-    await db
-      .from('game_players')
-      .delete()
-      .eq('game_id', game.id)
-      .not('user_id', 'in', `(${keepIds.join(',')})`)
-      .select('user_id'),
-  );
-  if (swept.length > 0) {
-    console.log(`   Fjernet ${swept.length} rad(er) som ikke hører hjemme i demo-rosteret.`);
-  }
-
-  const acceptedAt = nowIso();
-
-  // Review-kontoens egen rad. `accepted_at` MÅ settes — uten den står kontoen
-  // som «ikke bekreftet» og ser ikke ut som en ekte deltaker.
-  if (rosterIds.includes(reviewUserId)) {
-    ok(
-      'oppdater review-roster',
+    // Rydd alt som ikke er review-kontoen eller en av de tre gjestene. Har en
+    // reviewer slettet seg, står den gamle raden igjen som «Slettet bruker» — og
+    // en kjøring fra før #1909 kan ha lagt arrangøren i rosteret. Begge ut.
+    const keepIds = [reviewUserId];
+    for (const profile of round.guests) {
+      const known = rosterNames.get(profile.name);
+      if (known) keepIds.push(known);
+    }
+    const swept = ok(
+      'rydd roster',
       await db
         .from('game_players')
-        .update({
-          flight_number: 1,
-          course_handicap: REVIEW_COURSE_HANDICAP,
-          tee_gender: 'mens',
-          accepted_at: acceptedAt,
-        })
+        .delete()
         .eq('game_id', game.id)
-        .eq('user_id', reviewUserId)
+        .not('user_id', 'in', `(${keepIds.join(',')})`)
         .select('user_id'),
     );
-  } else {
-    ok(
-      'legg review-kontoen i roster',
-      await db
-        .from('game_players')
-        .insert({
-          game_id: game.id,
-          user_id: reviewUserId,
-          flight_number: 1,
-          course_handicap: REVIEW_COURSE_HANDICAP,
-          tee_gender: 'mens',
-          accepted_at: acceptedAt,
-        })
-        .select('user_id'),
-    );
-  }
+    if (swept.length > 0) {
+      console.log(`   Fjernet ${swept.length} rad(er) som ikke hører hjemme i demo-rosteret.`);
+    }
 
-  const coPlayerIds = {};
-  for (const profile of CO_PLAYERS) {
-    const existingId = rosterNames.get(profile.name);
-    if (existingId) {
-      coPlayerIds[profile.name] = existingId;
+    const acceptedAt = nowIso();
+
+    // Review-kontoens egen rad. `accepted_at` MÅ settes — uten den står kontoen
+    // som «ikke bekreftet» og ser ikke ut som en ekte deltaker.
+    if (rosterIds.includes(reviewUserId)) {
       ok(
-        `oppdater roster ${profile.name}`,
+        'oppdater review-roster',
         await db
           .from('game_players')
           .update({
             flight_number: 1,
-            course_handicap: profile.courseHandicap,
+            team_number: teamOf('review'),
+            course_handicap: REVIEW_COURSE_HANDICAP,
             tee_gender: 'mens',
             accepted_at: acceptedAt,
           })
           .eq('game_id', game.id)
-          .eq('user_id', existingId)
+          .eq('user_id', reviewUserId)
           .select('user_id'),
       );
-      continue;
+    } else {
+      ok(
+        'legg review-kontoen i roster',
+        await db
+          .from('game_players')
+          .insert({
+            game_id: game.id,
+            user_id: reviewUserId,
+            flight_number: 1,
+            team_number: teamOf('review'),
+            course_handicap: REVIEW_COURSE_HANDICAP,
+            tee_gender: 'mens',
+            accepted_at: acceptedAt,
+          })
+          .select('user_id'),
+      );
     }
-    const guestId = await createGuest(db, profile);
-    coPlayerIds[profile.name] = guestId;
-    const rows = ok(
-      `legg ${profile.name} i roster`,
+
+    const coPlayerIds = {};
+    for (const profile of round.guests) {
+      const existingId = rosterNames.get(profile.name);
+      if (existingId) {
+        coPlayerIds[profile.name] = existingId;
+        ok(
+          `oppdater roster ${profile.name}`,
+          await db
+            .from('game_players')
+            .update({
+              flight_number: 1,
+              team_number: teamOf(profile.name),
+              course_handicap: profile.courseHandicap,
+              tee_gender: 'mens',
+              accepted_at: acceptedAt,
+            })
+            .eq('game_id', game.id)
+            .eq('user_id', existingId)
+            .select('user_id'),
+        );
+        continue;
+      }
+      const guestId = await createGuest(db, profile);
+      coPlayerIds[profile.name] = guestId;
+      const rows = ok(
+        `legg ${profile.name} i roster`,
+        await db
+          .from('game_players')
+          .insert({
+            game_id: game.id,
+            user_id: guestId,
+            flight_number: 1,
+            team_number: teamOf(profile.name),
+            course_handicap: profile.courseHandicap,
+            tee_gender: 'mens',
+            accepted_at: acceptedAt,
+          })
+          .select('user_id'),
+      );
+      if (rows.length !== 1) throw new Error(`Roster-insert for ${profile.name} traff 0 rader`);
+    }
+    console.log(
+      `4. Roster: review-kontoen (deltaker) + ${round.guests.map((p) => p.name).join(', ')}.`,
+    );
+
+    // --------------------------------------------------- 5. scores + tilstand
+    // Scorene ble tømt i steg 4; her legges utgangstilstanden inn igjen, uansett
+    // hvor langt forrige reviewer rakk å spille.
+    const holes = ok(
+      'les course_holes',
+      await db
+        .from('course_holes')
+        .select('hole_number, par_mens')
+        .eq('course_id', game.course_id)
+        .order('hole_number'),
+    );
+    const parByHole = new Map(holes.map((h) => [h.hole_number, h.par_mens]));
+
+    const scoreRows = [];
+    const stampScores = nowIso();
+    const pushScores = (userId, offsets) => {
+      offsets.forEach((offset, idx) => {
+        const holeNumber = idx + 1;
+        const par = parByHole.get(holeNumber);
+        if (par == null) return;
+        scoreRows.push({
+          game_id: game.id,
+          user_id: userId,
+          hole_number: holeNumber,
+          strokes: par + offset,
+          // Alt er tastet av review-kontoen: gjestene har ingen innlogging, så
+          // en flightkamerat fører slagene deres — som i ekte bruk.
+          entered_by: reviewUserId,
+          client_updated_at: stampScores,
+        });
+      });
+    };
+    const teeShotRows = [];
+    const userIdOf = (key) => (key === 'review' ? reviewUserId : coPlayerIds[key]);
+    if (round.teams) {
+      // Lagformat (scramble): ÉN score per lag per hull, og raden eies av
+      // kapteinen, lexicographically minste userId på laget. Samme regel som
+      // `pickTeamCaptain` i lib/games/teamCaptain.ts, som scoringen leser radene
+      // etter. Skriptet er .mjs og kan ikke importere fila.
+      for (const [teamNumber, offsets] of Object.entries(round.scoreOffsets)) {
+        const memberIds = Object.keys(round.teams)
+          .filter((key) => round.teams[key] === Number(teamNumber))
+          .map(userIdOf);
+        pushScores(memberIds.reduce((min, id) => (id < min ? id : min)), offsets);
+        // «Hvem sitt utslag ble brukt?»: ett utslag per spilt hull, så velgeren
+        // har noe å vise og laget har noe å fylle opp mot minimum.
+        (round.teeShots?.[teamNumber] ?? []).forEach((key, idx) => {
+          teeShotRows.push({
+            game_id: game.id,
+            team_number: Number(teamNumber),
+            hole_number: idx + 1,
+            tee_shot_by: userIdOf(key),
+            entered_by: reviewUserId,
+            client_updated_at: stampScores,
+          });
+        });
+      }
+    } else {
+      pushScores(reviewUserId, round.scoreOffsets.review);
+      for (const profile of round.guests) {
+        pushScores(coPlayerIds[profile.name], round.scoreOffsets[profile.name]);
+      }
+    }
+    if (scoreRows.length > 0) {
+      ok('sett demo-scores', await db.from('scores').insert(scoreRows));
+    }
+    if (teeShotRows.length > 0) {
+      ok('sett demo-utslag', await db.from('team_tee_shots').insert(teeShotRows));
+    }
+
+    // Spillet tilbake til «pågår», og hver spiller tilbake til «ikke levert».
+    ok(
+      'reset game-status',
+      await db
+        .from('games')
+        .update({
+          status: 'active',
+          started_at: stampScores,
+          ended_at: null,
+          round_report: null,
+        })
+        .eq('id', game.id)
+        .select('id'),
+    );
+    ok(
+      'reset leveringer',
       await db
         .from('game_players')
-        .insert({
-          game_id: game.id,
-          user_id: guestId,
-          flight_number: 1,
-          course_handicap: profile.courseHandicap,
-          tee_gender: 'mens',
-          accepted_at: acceptedAt,
+        .update({
+          submitted_at: null,
+          approved_at: null,
+          approved_by_user_id: null,
+          result_summary: null,
+          score_differential: null,
+          deliver_reminder_sent_at: null,
+          withdrawn_at: null,
+          withdrawn_by_user_id: null,
         })
+        .eq('game_id', game.id)
         .select('user_id'),
     );
-    if (rows.length !== 1) throw new Error(`Roster-insert for ${profile.name} traff 0 rader`);
-  }
-  console.log(
-    `4. Roster: review-kontoen (deltaker) + ${CO_PLAYERS.map((p) => p.name).join(', ')}.`,
-  );
 
-  // --------------------------------------------------- 5. scores + tilstand
-  // Scorene ble tømt i steg 4; her legges utgangstilstanden inn igjen, uansett
-  // hvor langt forrige reviewer rakk å spille.
-  const holes = ok(
-    'les course_holes',
-    await db
-      .from('course_holes')
-      .select('hole_number, par_mens')
-      .eq('course_id', game.course_id)
-      .order('hole_number'),
-  );
-  const parByHole = new Map(holes.map((h) => [h.hole_number, h.par_mens]));
+    const finalRoster = ok(
+      'tell roster',
+      await db.from('game_players').select('user_id').eq('game_id', game.id),
+    );
+    const finalScores = ok(
+      'tell scores',
+      await db.from('scores').select('id').eq('game_id', game.id),
+    );
 
-  const scoreRows = [];
-  const stampScores = nowIso();
-  const pushScores = (userId, offsets) => {
-    offsets.forEach((offset, idx) => {
-      const holeNumber = idx + 1;
-      const par = parByHole.get(holeNumber);
-      if (par == null) return;
-      scoreRows.push({
-        game_id: game.id,
-        user_id: userId,
-        hole_number: holeNumber,
-        strokes: par + offset,
-        // Alt er tastet av review-kontoen: gjestene har ingen innlogging, så
-        // en flightkamerat fører slagene deres — som i ekte bruk.
-        entered_by: reviewUserId,
-        client_updated_at: stampScores,
-      });
+    console.log('5. Scores resatt, spillet står som pågående.\n');
+    summaries.push({
+      gameId: game.id,
+      shortId: game.short_id,
+      name: round.name,
+      players: finalRoster.length,
+      scores: finalScores.length,
+      teeShots: teeShotRows.length,
     });
-  };
-  pushScores(reviewUserId, SCORE_OFFSETS.review);
-  for (const profile of CO_PLAYERS) {
-    pushScores(coPlayerIds[profile.name], SCORE_OFFSETS[profile.name]);
-  }
-  if (scoreRows.length > 0) {
-    ok('sett demo-scores', await db.from('scores').insert(scoreRows));
   }
 
-  // Spillet tilbake til «pågår», og hver spiller tilbake til «ikke levert».
-  ok(
-    'reset game-status',
-    await db
-      .from('games')
-      .update({
-        status: 'active',
-        started_at: stampScores,
-        ended_at: null,
-        round_report: null,
-      })
-      .eq('id', game.id)
-      .select('id'),
-  );
-  ok(
-    'reset leveringer',
-    await db
-      .from('game_players')
-      .update({
-        submitted_at: null,
-        approved_at: null,
-        approved_by_user_id: null,
-        result_summary: null,
-        score_differential: null,
-        deliver_reminder_sent_at: null,
-        withdrawn_at: null,
-        withdrawn_by_user_id: null,
-      })
-      .eq('game_id', game.id)
-      .select('user_id'),
-  );
-
-  const finalRoster = ok(
-    'tell roster',
-    await db.from('game_players').select('user_id').eq('game_id', game.id),
-  );
-  const finalScores = ok(
-    'tell scores',
-    await db.from('scores').select('id').eq('game_id', game.id),
-  );
-
-  console.log('5. Scores resatt, spillet står som pågående.\n');
   console.log(created ? '✅ Provisjonert.' : '✅ Allerede provisjonert — resatt til frisk demo.');
-  console.log(`   Spill:    ${game.id} (${DEMO_GAME_NAME})`);
-  console.log(`   Kortnavn: ${game.short_id}`);
+  for (const r of summaries) {
+    console.log(`   Spill:    ${r.gameId} (${r.name})`);
+    console.log(`   Kortnavn: ${r.shortId}`);
+    console.log(
+      `   Spillere: ${r.players}, scores: ${r.scores}` + (r.teeShots > 0 ? `, utslag: ${r.teeShots}` : ''),
+    );
+  }
   console.log(`   Arrangør: ${organizerLabel}`);
-  console.log(`   Spillere: ${finalRoster.length}  (review-kontoen + ${CO_PLAYERS.length} gjester)`);
-  console.log(`   Scores:   ${finalScores.length}`);
   console.log(`   Innlogging: ${store.signIn} (passordet står ikke her og skal ikke logges)`);
 }
 

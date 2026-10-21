@@ -24,7 +24,7 @@ webbens egen).
 | Inngangen i appen | Innloggingsskjermen: hold overskriften («Tørny») inne i 1,5 s | Et passordfelt og knappen «Logg inn med passord» dukker opp under e-postfeltet. Ingen synlig lenke, ingen env-gate. |
 | Innloggingssida (web) | `/review-login` (`/en/review-login` for engelsk) | E-post + passord. Ulenket, `noindex`. Gjelder nettsida, ikke app-innsendingen. |
 | Env-porten (web) | `REVIEW_ACCOUNT_EMAIL` i Vercel | Er den ikke satt, svarer web-sida «finnes ikke». Appen har ingen slik port — se sikkerhetsmodellen. |
-| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-runden og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD` og «Demo Round — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE` og «Demo Round (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
+| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-rundene og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD`, «Demo Round — Tørny» og «Demo Scramble — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE`, «Demo Round (Google Play) — Tørny» og «Demo Scramble (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
 | Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-runden skal stå på når det ikke finnes nøyaktig én admin-konto. |
 
 ## Sikkerhetsmodellen
@@ -197,7 +197,7 @@ content → App access**, med teksten i `play-store-metadata.md`. Aldri bytt om 
 På telefonen (TestFlight-kandidaten): hold overskriften inne til passordfeltet
 dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
 **Forventet:** hjem-skjermen med «Demo Round — Tørny» (Google-kontoen: «Demo Round
-(Google Play) — Tørny»). Feil passord skal gi
+(Google Play) — Tørny» og «Demo Scramble (Google Play) — Tørny»). Feil passord skal gi
 «Feil e-post eller passord.» og ingenting annet.
 
 ## Reset før hver innsending — og etter hver review
@@ -259,6 +259,12 @@ Connect eller Play Console, fordi de husker det gamle.
 - **Runde:** «Demo Round — Tørny», stableford, status «pågår», fire spillere i
   samme flight. Arrangert av admin-kontoen din — revieweren er deltaker, ikke
   arrangør.
+- **Scramble-runde:** «Demo Scramble — Tørny» (Google: «Demo Scramble (Google
+  Play) — Tørny»), Texas scramble, status «pågår», to lag à to. Revieweren er på
+  lag 1 sammen med gjesten Emma, Jonas og Nora er lag 2. Lag 1 har spilt hull 1–3
+  og lag 2 hull 1–6, med ett utslag per spilt hull, så «Hvem sitt utslag ble
+  brukt?» og lagtavla har noe å vise (bilde 4 og 8 i butikksettet, #2561).
+  Arrangert av admin-kontoen din, som stableford-runden.
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
   plassholder-domene uten MX. De kan aldri motta mail.
 - **Scores:** medspillerne har spilt hull 1–6, kontoen selv hull 1–3. Revieweren
@@ -280,7 +286,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 238 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 495 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
@@ -313,6 +319,7 @@ WORDS YOU WILL NEED
 
 WHAT YOU WILL SEE
 An active round, "Demo Round — Tørny", with three co-players. Tap "Fortsett runden", continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort". Another account hosts the round.
+A second active round, "Demo Scramble — Tørny", shows team play: Texas scramble, two teams of two, and you are on team 1 with Emma. On each hole the app asks "Hvem sitt utslag ble brukt?" (whose tee shot was used), and "Resultater" shows the team board.
 
 ACCOUNT DELETION (5.1.1(v))
 "Profil" > "Personvern og konto" > "Slett konto" > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
