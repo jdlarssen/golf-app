@@ -150,7 +150,6 @@ const SCRAMBLE_TEE_SHOTS = {
 function demoRounds(store) {
   return [
     {
-      key: 'stableford',
       name: store.demoGameName,
       mode: DEMO_GAME_MODE,
       modeConfig: DEMO_MODE_CONFIG,
@@ -160,7 +159,6 @@ function demoRounds(store) {
       teeShots: null,
     },
     {
-      key: 'scramble',
       name: store.scrambleGameName,
       mode: SCRAMBLE_GAME_MODE,
       modeConfig: SCRAMBLE_MODE_CONFIG,
@@ -815,7 +813,7 @@ async function main() {
         await db
           .from('game_players')
           .update({
-            flight_number: 1,
+            flight_number: teamOf('review') ?? 1,
             team_number: teamOf('review'),
             course_handicap: REVIEW_COURSE_HANDICAP,
             tee_gender: 'mens',
@@ -833,7 +831,7 @@ async function main() {
           .insert({
             game_id: game.id,
             user_id: reviewUserId,
-            flight_number: 1,
+            flight_number: teamOf('review') ?? 1,
             team_number: teamOf('review'),
             course_handicap: REVIEW_COURSE_HANDICAP,
             tee_gender: 'mens',
@@ -853,7 +851,7 @@ async function main() {
           await db
             .from('game_players')
             .update({
-              flight_number: 1,
+              flight_number: teamOf(profile.name) ?? 1,
               team_number: teamOf(profile.name),
               course_handicap: profile.courseHandicap,
               tee_gender: 'mens',
@@ -874,7 +872,7 @@ async function main() {
           .insert({
             game_id: game.id,
             user_id: guestId,
-            flight_number: 1,
+            flight_number: teamOf(profile.name) ?? 1,
             team_number: teamOf(profile.name),
             course_handicap: profile.courseHandicap,
             tee_gender: 'mens',

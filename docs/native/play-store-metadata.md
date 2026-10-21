@@ -185,7 +185,7 @@ krever innlogging som kan brukes igjen og omgår engangskoden, som virker til en
 og hvor som helst, og at instruksjonene er på engelsk
 (<https://support.google.com/googleplay/android-developer/answer/15748846>). Inngangen
 er den samme som for Apple (langtrykket på tittelen), men Google har sin egen
-review-konto med egen adresse, eget passord og egen demo-runde
+review-konto med egen adresse, eget passord og egne demo-runder
 (`app-store-review-konto.md`).
 
 ```text

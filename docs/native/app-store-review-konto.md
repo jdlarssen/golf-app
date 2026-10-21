@@ -196,8 +196,10 @@ content → App access**, med teksten i `play-store-metadata.md`. Aldri bytt om 
 
 På telefonen (TestFlight-kandidaten): hold overskriften inne til passordfeltet
 dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
-**Forventet:** hjem-skjermen med «Demo Round — Tørny» (Google-kontoen: «Demo Round
-(Google Play) — Tørny» og «Demo Scramble (Google Play) — Tørny»). Feil passord skal gi
+**Forventet:** hjem-skjermen med to runder i gang. Scramble-runden er nyest og
+ligger øverst som det store kortet; stableford-runden står under «Flere runder i
+gang». Apple: «Demo Scramble — Tørny» og «Demo Round — Tørny». Google: «Demo
+Scramble (Google Play) — Tørny» og «Demo Round (Google Play) — Tørny». Feil passord skal gi
 «Feil e-post eller passord.» og ingenting annet.
 
 ## Reset før hver innsending — og etter hver review
@@ -286,7 +288,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 495 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 740 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
@@ -318,8 +320,9 @@ WORDS YOU WILL NEED
 "Personvern og konto" = Privacy and account
 
 WHAT YOU WILL SEE
-An active round, "Demo Round — Tørny", with three co-players. Tap "Fortsett runden", continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort". Another account hosts the round.
-A second active round, "Demo Scramble — Tørny", shows team play: Texas scramble, two teams of two, and you are on team 1 with Emma. On each hole the app asks "Hvem sitt utslag ble brukt?" (whose tee shot was used), and "Resultater" shows the team board.
+Two active rounds, both hosted by another account. The home screen shows the newest, "Demo Scramble — Tørny", as the big card. The other, "Demo Round — Tørny", is under "Flere runder i gang" (More rounds in progress).
+"Demo Round — Tørny" has three co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
+"Demo Scramble — Tørny" shows team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used), and "Resultater" shows the team board. A team card can only be submitted once every player has three tee shots, so use this round to look around, not to submit.
 
 ACCOUNT DELETION (5.1.1(v))
 "Profil" > "Personvern og konto" > "Slett konto" > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
