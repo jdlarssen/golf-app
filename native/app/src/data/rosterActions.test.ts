@@ -246,6 +246,20 @@ describe('rosterActions', () => {
   describe('addPlayerToGame', () => {
     const ADD_URL = `${BASE_URL}/api/games/${GAME}/players/${MATE}`;
 
+    // #1954 D2: lesingene bak knappen bindes av ett tidstak; postgrest skal
+    // ikke prøve dem tre ganger til.
+    it('lesingene bak knappen prøves ikke på nytt av biblioteket', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const game = queryStub(gameRow('scheduled'));
+      const roster = queryStub(rosterOf(3));
+      routeFrom({ games: [game], game_players: [roster] });
+      respondWith(200, { alreadyOnRoster: false });
+
+      await actions().addPlayerToGame(GAME, MATE_PLAYER);
+      expect(stepArgs(game, 'retry')).toEqual([[false]]);
+      expect(stepArgs(roster, 'retry')).toEqual([[false]]);
+    });
+
     it('legger til via POST …/players/<uid>, uten kropp og uten egen skriving (#2215)', async () => {
       const { queryStub, routeFrom, supabase } = mocks();
       // Bare de to lesingene portene trenger. En insert ville kastet i ruteren.

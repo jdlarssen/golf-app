@@ -354,6 +354,9 @@ async function refuseUnlessModeIsActive(
   const { data, error } = await supabase
     .from('formats')
     .select('slug')
+    // #1954 D2: bak en knapp; ett tidstak, ikke fire (postgrest prøver en GET
+    // med nettfeil på nytt etter 1 + 2 + 4 s).
+    .retry(false)
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle<{ slug: string }>();

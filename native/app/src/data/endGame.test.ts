@@ -192,6 +192,17 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual(['games']);
     });
 
+    // #1954 D2: postgrest prøver en GET med nettfeil tre ganger til (1 + 2 + 4
+    // s). Bak en knapp ville det gjort et tidsavbrudd til et minutt.
+    it('lesingene bak knappen prøves ikke på nytt av biblioteket', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gate = queryStub(gameRow({ status: 'scheduled' }));
+      routeFrom({ games: [gate] });
+
+      await endGame().finishRound(GAME);
+      expect(stepArgs(gate, 'retry')).toEqual([[false]]);
+    });
+
     it('avviser et spill som ikke er aktivt (samme sjekk som endGameCore)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ games: [queryStub(gameRow({ status: 'scheduled' }))] });
