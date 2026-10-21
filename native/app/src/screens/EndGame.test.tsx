@@ -465,22 +465,6 @@ describe('EndGame', () => {
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
   });
 
-  // #1954 D3 (kontrollrunden på #2624): cup- og ikke-aktiv-grenene er egne
-  // rullevisninger og skal ende over systemlinja som resten av skjermen.
-  it.each([
-    ['cup-runde', { tournamentId: 'cup-1' }],
-    ['ikke aktiv', { status: 'finished' }],
-  ] as const)('%s: luften under står over systemlinja', async (_case, overrides) => {
-    setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], overrides);
-    setBottomInset(48);
-    try {
-      await renderScreen();
-      expect(bottomPadding('end-game-screen')).toBe(20 + 48);
-    } finally {
-      setBottomInset(0);
-    }
-  });
-
   it('avslutter ikke cup-runder — de hører til nettsiden', async () => {
     setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], {
       tournamentId: 'cup-1',
@@ -779,5 +763,21 @@ describe('EndGame', () => {
     );
     expect(finishRound).not.toHaveBeenCalled();
     expect(landedOnBoard()).toBe(false);
+  });
+
+  // #1954 D3 (kontrollrunden på #2624): cup- og ikke-aktiv-grenene er egne
+  // rullevisninger og skal ende over systemlinja som resten av skjermen.
+  it.each([
+    ['cup-runde', { tournamentId: 'cup-1' }],
+    ['ikke aktiv', { status: 'finished' }],
+  ] as const)('%s: luften under står over systemlinja', async (_case, overrides) => {
+    setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], overrides);
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      expect(bottomPadding('end-game-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 });
