@@ -50,8 +50,8 @@
 #     og hvorfor står i `entitlements-proof.sh`.
 #  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
-#     importerer `statfs`/`fstatfs`/`NSFileSystem*`. Reglene står i
-#     `privacy-proof.sh`.
+#     importerer disk-API-er (`statfs`/`statvfs`/`getattrlist`-familien,
+#     `NSFileSystem*`, `NSURLVolume*Capacity`). Reglene står i `privacy-proof.sh`.
 #  5. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
 #     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
 #     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
@@ -102,7 +102,7 @@ export LC_ALL=C
 
 STORE_BUNDLE_ID='no.tornygolf.app'
 
-# Ikonet (#1975). Kilden ligger i repoet, ikke i arkivet — se punkt 4 øverst.
+# Ikonet (#1975). Kilden ligger i repoet, ikke i arkivet — se punkt 5 øverst.
 PROOF_APP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 ICON_SRC="$PROOF_APP_DIR/assets/icon.png"
 ICON_MASTER="$PROOF_APP_DIR/../assets/appstore-1024.png"
@@ -215,35 +215,60 @@ fi
 say ""
 
 # ── 4. Personvern ────────────────────────────────────────────────────────────
-# Binærene: hovedfila og rammeverkene. `nm -u` lister importerte symboler
-# (`_statfs`, `_fstatfs`); `NSFileSystem*`/`NSURLVolume*Capacity` er
-# nøkkel-strenger som ligger i binæren, så de leses med `strings`. Utdraget
-# skrives til fil før det grepes (SIGPIPE under pipefail, som over).
+# Binærene: hovedfila og hvert rammeverk, med navnet fra sin egen Info.plist
+# (`CFBundleExecutable`). `nm -u` lister importerte symboler, og `disk_api_hits`
+# (privacy-proof.sh) teller disk-API-ene. Fail-closed: en binær som mangler, en
+# `nm` som feiler eller en tom symbolliste gir FAIL, og da regnes disk-API-ene
+# som importert, så DiskSpace kreves. Utdraget skrives til fil før det leses
+# (SIGPIPE under pipefail, som over).
 say "## Personvern (#2561)"
 if [ ! -f "$PLIST" ]; then
   fail "Info.plist mangler i $APP"
 elif [ ! -f "$APP/PrivacyInfo.xcprivacy" ]; then
   fail "PrivacyInfo.xcprivacy mangler i $APP. Appen har ikke noe app-manifest"
 else
-  exe=$(plist_value CFBundleExecutable)
   DISK=$(mktemp -t torny-bevis-disk)
   disk_imports=no
-  binaries=("$APP/$exe")
+  scan_failed=no
+  scanned=0
+  binaries=()
+  exe=$(plist_value CFBundleExecutable)
+  if [ "$exe" = '<mangler>' ] || [ -z "$exe" ]; then
+    fail "CFBundleExecutable mangler i Info.plist, så hovedbinæren kan ikke skannes"
+    scan_failed=yes
+  else
+    binaries+=("$APP/$exe")
+  fi
   for fw in "$APP"/Frameworks/*.framework; do
-    if [ -d "$fw" ]; then binaries+=("$fw/$(basename "$fw" .framework)"); fi
+    [ -d "$fw" ] || continue
+    fw_exe=$("$PLUTIL" -extract CFBundleExecutable raw -o - "$fw/Info.plist" 2>/dev/null || true)
+    if [ -z "$fw_exe" ]; then
+      fail "$(basename "$fw") har ingen CFBundleExecutable, så binæren kan ikke skannes"
+      scan_failed=yes
+      continue
+    fi
+    binaries+=("$fw/$fw_exe")
   done
-  for bin in "${binaries[@]}"; do
-    [ -f "$bin" ] || continue
-    ("$NM" -u "$bin" 2>/dev/null || true) > "$DISK"
-    ("$STRINGS" -a "$bin" 2>/dev/null || true) >> "$DISK"
-    n=$(("$GREP" -cE -- '(^|[ _])(f?statfs|f?statvfs|f?getattrlist|getattrlistat)$|NSFileSystemFreeSize|NSFileSystemSize|NSURLVolume[A-Za-z]*Capacity' "$DISK") || true)
+  for bin in ${binaries[@]+"${binaries[@]}"}; do
+    if [ ! -f "$bin" ]; then
+      fail "binæren ${bin#"$APP"/} mangler, så den kan ikke skannes for disk-API-er"
+      scan_failed=yes
+      continue
+    fi
+    if ! "$NM" -u "$bin" > "$DISK" 2>/dev/null || [ ! -s "$DISK" ]; then
+      fail "kunne ikke lese symbolene i ${bin#"$APP"/} (nm -u feilet eller ga ingenting)"
+      scan_failed=yes
+      continue
+    fi
+    scanned=$((scanned + 1))
+    n=$(disk_api_hits "$DISK")
     if [ "${n:-0}" -ge 1 ]; then
-      say "disk-API i $(basename "$bin") ($n treff)"
+      say "disk-API i ${bin#"$APP"/} ($n treff)"
       disk_imports=yes
     fi
   done
-  [ -f "$APP/$exe" ] || fail "hovedbinæren $exe mangler i $APP"
-  privacy_rules "$PLIST" "$APP/PrivacyInfo.xcprivacy" "$disk_imports"
+  if [ "$scan_failed" = yes ]; then disk_imports=yes; fi
+  privacy_rules "$PLIST" "$APP/PrivacyInfo.xcprivacy" "$disk_imports" "$scanned"
 fi
 say ""
 

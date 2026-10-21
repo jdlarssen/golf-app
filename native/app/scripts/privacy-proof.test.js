@@ -3,7 +3,8 @@
 //
 // Arkivet 1.2.0 (5) manglet to ting: teksten for å skrive til Bilder (uten den
 // skjuler iOS lagre-handlingen i delearket, og appen krasjer ikke) og DiskSpace
-// i personvernmanifestet (Apple krever den ved opplasting, ITMS-91053). Fire ting må stå:
+// i personvernmanifestet (Apples required-reason-krav; ITMS-91053 kan komme som
+// e-post etter opplasting, og tidligere bygg kom gjennom uten). Fire ting må stå:
 //
 //  1. **Tillatelsesteksten må finnes** i Info.plist, og ikke være tom.
 //  2. **DiskSpace må stå i app-manifestet** med minst én grunnkode når binærene
@@ -65,11 +66,11 @@ say()  { printf '%s\\n' "$*"; }
 pass() { PASS=$((PASS + 1)); say "PASS  $*"; }
 fail() { FAIL=$((FAIL + 1)); say "FAIL  $*"; }
 . "$1"
-privacy_rules "$2" "$3" "$4"
+privacy_rules "$2" "$3" "$4" "$5"
 printf 'TOTAL %s %s\\n' "$PASS" "$FAIL"`;
 
 function rules(info, privacy, imports) {
-  const result = spawnSync('bash', ['-c', HARNESS, 'bash', LIB, info, privacy, imports], { encoding: 'utf8' });
+  const result = spawnSync('bash', ['-c', HARNESS, 'bash', LIB, info, privacy, imports, '9'], { encoding: 'utf8' });
   const lines = result.stdout.split('\n').filter(Boolean);
   const total = lines.find((l) => l.startsWith('TOTAL '));
   const [pass, fail] = total ? total.split(' ').slice(1).map(Number) : [NaN, NaN];
@@ -89,7 +90,7 @@ describe('privacy_rules', () => {
     expect(r.fail).toBe(0);
     expect(r.passes).toEqual([
       'PASS  NSPhotoLibraryAddUsageDescription står i Info.plist',
-      'PASS  PrivacyInfo oppgir NSPrivacyAccessedAPICategoryDiskSpace (E174.1)',
+      'PASS  PrivacyInfo oppgir NSPrivacyAccessedAPICategoryDiskSpace (E174.1); 9 binærer skannet',
     ]);
   });
 
@@ -115,6 +116,7 @@ describe('privacy_rules', () => {
     const r = rules(write('info-ok4.plist', INFO_WITH_TEXT), write('pm-none2.plist', manifest(FILE_TIMESTAMP)), 'no');
     expect(r.fail).toBe(0);
     expect(r.passes[1]).toContain('ikke påkrevd');
+    expect(r.passes[1]).toContain('9 skannet');
   });
 
   it('gir FAIL for DiskSpace uten grunnkode', () => {
@@ -150,6 +152,47 @@ describe('store-build-proof.sh bruker personvern-reglene', () => {
   });
 
   it('kaller privacy_rules med Info.plist, app-manifestet og disk-API-svaret', () => {
-    expect(text).toMatch(/^ {2}privacy_rules "\$PLIST" "\$APP\/PrivacyInfo\.xcprivacy" "\$disk_imports"$/m);
+    expect(text).toMatch(/^ {2}privacy_rules "\$PLIST" "\$APP\/PrivacyInfo\.xcprivacy" "\$disk_imports" "\$scanned"$/m);
+  });
+
+  it('teller disk-API-ene med disk_api_hits', () => {
+    expect(text).toMatch(/^ {4}n=\$\(disk_api_hits "\$DISK"\)$/m);
+  });
+});
+
+// `disk_api_hits` teller symboler i en `nm -u`-dump. Hele navnet må treffe.
+describe('disk_api_hits', () => {
+  const hits = (lines) => {
+    const file = write('nm.txt', lines.map((l) => `                 U ${l}`).join('\n') + '\n');
+    const result = spawnSync('bash', ['-c', '. "$1"; disk_api_hits "$2"', 'bash', LIB, file], { encoding: 'utf8' });
+    return Number(result.stdout.trim());
+  };
+
+  it.each([
+    '_statfs',
+    '_fstatfs',
+    '_statvfs',
+    '_fstatvfs',
+    '_getattrlist',
+    '_NSFileSystemFreeSize',
+    '_NSFileSystemSize',
+    '_NSURLVolumeAvailableCapacityForImportantUsageKey',
+    '_NSURLVolumeTotalCapacityKey',
+  ])('teller %s', (symbol) => {
+    expect(hits([symbol])).toBe(1);
+  });
+
+  it.each(['_statfs_foo', '_NSFileSystemNumber', '_mystatfs', '_NSURLVolumeNameKey', '_open', '_stat'])(
+    'teller ikke %s',
+    (symbol) => {
+      expect(hits([symbol])).toBe(0);
+    },
+  );
+
+  it('teller flere treff og en tom dump som 0', () => {
+    expect(hits(['_open', '_statfs', '_fstatfs', '_close'])).toBe(2);
+    const empty = write('nm-empty.txt', '');
+    const result = spawnSync('bash', ['-c', '. "$1"; disk_api_hits "$2"', 'bash', LIB, empty], { encoding: 'utf8' });
+    expect(result.stdout.trim()).toBe('0');
   });
 });

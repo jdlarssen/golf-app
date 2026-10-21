@@ -144,11 +144,17 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   });
 
   // #2561: arkivet 1.2.0 (5) manglet to ting. Uten teksten for å skrive til
-  // Bilder skjuler iOS lagre-handlingen i delearket (ingen krasj), og binærene
-  // importerer disk-API-er og krever DiskSpace i manifestet. Begge står i
-  // app.json, så begge variantene får dem. Expo slår manifest-oppføringen
-  // sammen med malens tre, så den skal stå alene her. 85F4.1 («vis diskplass
-  // til brukeren») er ikke sant for appen og skal ikke med.
+  // Bilder skjuler iOS lagre-handlingen i delearket (ingen krasj). Binærene
+  // importerer disk-API-er (SQLite i expo-sqlite kaller statfs/fstatfs ved
+  // åpning av databasen, ExpoFileSystem leser ledig plass), og Apples
+  // required-reason-krav vil ha DiskSpace i manifestet. E174.1 er nærmeste
+  // godkjente grunn, slik expo-file-system selv bruker. Begge står i app.json,
+  // så begge variantene får dem. Expo skriver bare DiskSpace; de tre andre
+  // oppføringene (FileTimestamp, UserDefaults, SystemBootTime) legges til av
+  // React Natives `pod install`-aggregering (`privacy_manifest_utils.rb`),
+  // styrt av `apple.privacyManifestAggregationEnabled` i Podfile.properties.json.
+  // Den må aldri settes til `false`. 85F4.1 («vis diskplass til brukeren») er
+  // ikke sant for appen og skal ikke med.
   it('har tillatelsesteksten for Bilder og DiskSpace i personvernmanifestet, i begge varianter', () => {
     for (const cfg of [resolveConfig(base, DEV_ENV), resolveConfig(base, STORE_ENV)]) {
       expect(cfg.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Tørny lagrer bildet du deler i Bilder.');
