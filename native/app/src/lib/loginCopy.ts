@@ -24,6 +24,7 @@
 // «ingen konto, og nye kontoer er skrudd av», og appen sier det rett ut i
 // stedet for å be om en admin spilleren ikke har.
 import type { SendLoginCodeError } from '../../../../lib/auth/loginCodeErrors';
+import { isNetworkFailureMessage } from '../data/timedFetch';
 import { OFFLINE_NOTE } from './rosterCopy';
 
 /**
@@ -124,8 +125,6 @@ export interface LoginErrorLike {
   code?: string | null;
 }
 
-const NETWORK_HINTS = ['network request failed', 'failed to fetch', 'load failed'];
-
 /**
  * GoTrue-feilen fra kode-steget (`verifyOtp`) → kode.
  *
@@ -136,7 +135,8 @@ export function classifyVerifyError(error: LoginErrorLike): LoginErrorCode {
   const msg = (error.message ?? '').toLowerCase();
   const code = error.code ?? '';
 
-  if (NETWORK_HINTS.some((hint) => msg.includes(hint))) return 'network';
+  // Også tidstaket (#1954 D2): et kall som henger, avvises som en nettfeil.
+  if (isNetworkFailureMessage(msg)) return 'network';
 
   // GoTrue svarer likt på en feiltastet og en utløpt kode («Token has
   // expired or is invalid», `otp_expired`). Webben lander derfor på
