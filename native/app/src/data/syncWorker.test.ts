@@ -378,6 +378,21 @@ describe('drainQueue', () => {
     });
   });
 
+  // #1954 D2: drainen stopper ved første NETTFEIL, så én drain er bundet til
+  // ett tidstak. En annen feil på ett element stopper ikke resten av køen.
+  it('en permanent feil på første slag stopper ikke det neste', async () => {
+    const { supabase } = mocks();
+    await typeStroke(4, 1);
+    await typeStroke(5, 2);
+    supabase.rpc
+      .mockResolvedValueOnce({ data: null, error: { message: 'new row violates check constraint "scores_strokes_check"' } })
+      .mockResolvedValueOnce(appliedRow({ hole_number: 2, strokes: 5 }));
+
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    expect(await drainQueue('test')).toEqual({ pushed: 1, rejected: 0, errored: 1, abandoned: 0 });
+    expect(supabase.rpc).toHaveBeenCalledTimes(2);
+  });
+
   it('et kall under en pågående drain gir én ny kjøring (#2211)', async () => {
     const { supabase } = mocks();
     await typeStroke(4, 1);
@@ -426,6 +441,31 @@ describe('drainQueue', () => {
       const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
       await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy, enteredBy: ME });
     }
+
+    // #1954 D2: stoppet ved første nettfeil gjelder begge køene.
+    it('en nettfeil på et slag: utslagskøen prøves ikke mot det samme nettet', async () => {
+      const { supabase } = mocks();
+      await typeStroke(4, 1);
+      await tapTeeShot();
+      supabase.rpc.mockResolvedValue({ data: null, error: { message: 'TypeError: Network request failed (timeout)' } });
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await drainQueue('test');
+      expect(supabase.rpc).toHaveBeenCalledTimes(1);
+      expect(supabase.rpc.mock.calls.map((call) => call[0])).not.toContain('set_team_tee_shot_if_newer');
+    });
+
+    it('en nettfeil på første utslag: det andre prøves ikke', async () => {
+      const { supabase } = mocks();
+      const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+      await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy: MATE, enteredBy: ME });
+      await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 8, teeShotBy: MATE, enteredBy: ME });
+      supabase.rpc.mockResolvedValue({ data: null, error: { message: 'Error: fetch failed: java.net.SocketTimeoutException' } });
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 0, rejected: 0, errored: 1, abandoned: 0 });
+      expect(supabase.rpc).toHaveBeenCalledTimes(1);
+    });
 
     it('lagret: sendes med set_team_tee_shot_if_newer og tas ut av køen', async () => {
       const { supabase } = mocks();
