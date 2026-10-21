@@ -4,14 +4,17 @@
 // Arkivet 1.2.0 (5) manglet to ting: teksten for å skrive til Bilder (uten den
 // skjuler iOS lagre-handlingen i delearket, og appen krasjer ikke) og DiskSpace
 // i personvernmanifestet (Apples required-reason-krav; ITMS-91053 kan komme som
-// e-post etter opplasting, og tidligere bygg kom gjennom uten). Fire ting må stå:
+// e-post etter opplasting, og tidligere bygg kom gjennom uten), og Info.plist stod på
+// engelsk som språk. Fem ting må stå:
 //
 //  1. **Tillatelsesteksten må finnes** i Info.plist, og ikke være tom.
 //  2. **DiskSpace må stå i app-manifestet** med minst én grunnkode når binærene
 //     importerer disk-API-er. Mangler den, er det FAIL.
 //  3. **Importerer binærene ingenting, er DiskSpace ikke påkrevd.** Regelen
 //     skal ikke kreve en erklæring appen ikke har bruk for.
-//  4. **Fail-closed:** en fil som ikke er en plist gir FAIL, aldri PASS.
+//  4. **Fail-closed:** en fil som ikke er en plist gir FAIL, aldri PASS (også for
+//     språkregelen, `locale_rules`).
+//  5. **Norsk språk:** `nb` som utviklingsregion og i lokaliseringene, ellers FAIL.
 //
 // Hver FAIL-test bryter bare én regel, og sjekker at meldingen handler om den.
 // Reglene sources og kjøres i bash som i beviset, med `say`/`pass`/`fail` slik
@@ -221,6 +224,22 @@ locale_rules "$2"`;
 
   it('gir PASS for nb som region og lokalisering', () => {
     expect(run(keys('nb', ['nb']))).toEqual(['PASS  CFBundleDevelopmentRegion = nb og CFBundleLocalizations har nb']);
+  });
+
+  it('er fail-closed når fila ikke er en plist: én FAIL, ingen PASS', () => {
+    const file = write('locale-junk.xml', 'dette er ikke en plist\n');
+    const harness = `set -euo pipefail
+export LC_ALL=C
+say()  { printf '%s\\n' "$*"; }
+pass() { say "PASS  $*"; }
+fail() { say "FAIL  $*"; }
+. "$1"
+locale_rules "$2"`;
+    const lines = spawnSync('bash', ['-c', harness, 'bash', LIB, file], { encoding: 'utf8' })
+      .stdout.split('\n')
+      .filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^FAIL {2}kunne ikke lese Info\.plist/);
   });
 
   it.each([

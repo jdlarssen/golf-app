@@ -43,7 +43,9 @@
 #     over. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien.
 #     `TORNY_APP_ENV_DIR` peker regelen på en annen mappe (test og manuelle
 #     kjøringer); standard er appmappa skriptet ligger i.
-#  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption.
+#  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption, og
+#     norsk språk (`CFBundleDevelopmentRegion` = `nb`, `nb` i
+#     `CFBundleLocalizations`; `locale_rules` i `privacy-proof.sh`, #2561).
 #  3. Entitlements (`codesign`): `aps-environment` må være `development` eller
 #     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
 #     Arkivet kreves ikke å ha `production`. INGEN associated domains. Reglene
