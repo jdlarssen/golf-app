@@ -670,6 +670,24 @@ describe('publishGame', () => {
       expect(options).toMatchObject({ onConflict: 'game_id,user_id' });
     });
 
+    // Kontrollrunden på #2622: runden fra første forsøk kan ha startet før neste
+    // trykk. Da treffer oppdateringen 0 rader, og «Spillet ble ikke lagret»
+    // ville kommet igjen og igjen. Egen kode; ikke suksess, for utkastet kan
+    // være endret.
+    it('et nytt forsøk når runden alt har startet, sier det', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [
+          queryStub(DUPLICATE('games_pkey')),
+          queryStub(ZERO_ROWS),
+          queryStub({ data: { status: 'active' }, error: null }),
+        ],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'already_started' });
+    });
+
     it('en 23505 på en annen regel enn primærnøkkelen er fortsatt en feil', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({

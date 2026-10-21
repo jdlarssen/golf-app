@@ -84,6 +84,9 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
     // #1954 D2: skrivingen eller format-sjekken kom aldri fram (også tidstaket).
     case 'offline':
       return OFFLINE_NOTE;
+    // #1954 D2: et nytt trykk fant runden fra forrige forsøk, alt startet.
+    case 'already_started':
+      return 'Runden er alt opprettet, og den har startet. Du finner den under «Mine spill».';
     case 'rls_denied':
       return 'Du har ikke lov til å opprette dette spillet.';
     case 'no_rows':

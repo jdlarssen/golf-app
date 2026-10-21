@@ -81,8 +81,6 @@ const STEP_TITLES: Record<Step, string> = {
   summary: 'Oppsummering',
 };
 
-const OFFLINE_NOTE = 'Du må være på nett for å opprette et spill.';
-
 /**
  * Én henting med de to tilstandene som betyr noe: har vi dataen, og feilet
  * forsøket? Alle tre lesningene kaster ved feil (husets regel), og en tom
@@ -351,8 +349,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     // Dobbelttrykk-låsen står FØRST: to gjennomkjøringer samtidig ville kjempet
     // om den samme raden.
     if (busy || !draft) return;
+    // #1954 D2 (kontrollrunden på #2622): én nett-setning for opprettelsen,
+    // den samme som et tidsavbrudd gir, og den samme som resten av appen.
     if (!isDeviceOnline()) {
-      setFailure({ text: OFFLINE_NOTE, action: null });
+      setFailure({ text: describeCreateGameFailure('offline'), action: null });
       return;
     }
     setBusy(true);
@@ -370,10 +370,8 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         action: createFailureBelongsOnWeb(result.error) ? 'web' : null,
       });
     } catch {
-      setFailure({
-        text: 'Fikk ikke opprettet spillet. Sjekk nettet og prøv igjen.',
-        action: null,
-      });
+      // `publishGame` svarer nettfeil med en kode; et kast her er noe annet.
+      setFailure({ text: describeCreateGameFailure('db_game'), action: null });
     }
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.

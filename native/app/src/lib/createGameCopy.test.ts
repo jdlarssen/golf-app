@@ -60,6 +60,7 @@ const FAILURE_MAP = {
   unsupported_mode: null,
   db_format: null,
   offline: null,
+  already_started: null,
   rls_denied: null,
   no_rows: null,
   orphan_game: null,
