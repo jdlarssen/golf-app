@@ -48,11 +48,11 @@
 #     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
 #     Arkivet kreves ikke å ha `production`. INGEN associated domains. Reglene
 #     og hvorfor står i `entitlements-proof.sh`.
-#  3b. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
+#  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
 #     importerer `statfs`/`fstatfs`/`NSFileSystem*`. Reglene står i
 #     `privacy-proof.sh`.
-#  4. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
+#  5. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
 #     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
 #     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
 #     Expo-malens hash). Arkiv-regelen beviser bare at et ikon i det hele tatt
@@ -236,7 +236,7 @@ else
     [ -f "$bin" ] || continue
     ("$NM" -u "$bin" 2>/dev/null || true) > "$DISK"
     ("$STRINGS" -a "$bin" 2>/dev/null || true) >> "$DISK"
-    n=$(("$GREP" -cE -- '(^|[ _])f?statfs$|NSFileSystemFreeSize|NSFileSystemSize|NSURLVolume[A-Za-z]*Capacity' "$DISK") || true)
+    n=$(("$GREP" -cE -- '(^|[ _])(f?statfs|f?statvfs|f?getattrlist|getattrlistat)$|NSFileSystemFreeSize|NSFileSystemSize|NSURLVolume[A-Za-z]*Capacity' "$DISK") || true)
     if [ "${n:-0}" -ge 1 ]; then
       say "disk-API i $(basename "$bin") ($n treff)"
       disk_imports=yes
