@@ -226,11 +226,27 @@ export function useLocalScores(
   const [loaded, setLoaded] = useState(false);
   // Pakket inn, så også en kastet verdi som er falsy blir kastet videre.
   const [firstReadFailure, setFirstReadFailure] = useState<{ error: unknown } | null>(null);
+  // Gjennomgangen av #2622: ny `gameId` i samme skjerm (varseltrykk, som
+  // `useGameBundle`). Forrige spills slag nullstilles i samme render, og en
+  // lesing av forrige spill som lander etterpå, kastes.
+  const [shownFor, setShownFor] = useState(gameId);
+  if (shownFor !== gameId) {
+    setShownFor(gameId);
+    setScores([]);
+    setLoaded(false);
+    setFirstReadFailure(null);
+  }
+  const idRef = useRef(gameId);
+  useLayoutEffect(() => {
+    idRef.current = gameId;
+  }, [gameId]);
 
   const reload = useCallback(async () => {
     try {
       const db = await getDb();
-      setScores(await listScoresForGame(db, gameId));
+      const rows = await listScoresForGame(db, gameId);
+      if (idRef.current !== gameId) return;
+      setScores(rows);
       setLoaded(true);
     } catch (err: unknown) {
       console.error('[useLocalScores] lesing feilet', err);
