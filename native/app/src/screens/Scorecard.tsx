@@ -165,7 +165,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
   // /games/[id]/submit).
   useMarkVisitRead('gameSubmit', gameId);
-  const { bundle, loading, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
@@ -274,7 +274,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </View>
     ) : (
       <View style={ui.centered} testID="scorecard-error">
-        <GameLoadFailed onRetry={() => void refresh()} />
+        <GameLoadFailed notFound={notFound} onRetry={() => void refresh()} />
       </View>
     );
   }

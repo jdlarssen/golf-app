@@ -110,7 +110,7 @@ describe('hentingen av slagene', () => {
     mockScreen.seed = async () => 0;
     mockRefresh.mockClear();
     await render(<HoleByHole {...props} />);
-    expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.');
+    expect(screen.getByTestId('game-retry')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('game-retry'));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });

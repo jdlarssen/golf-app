@@ -6,20 +6,34 @@
 // Etter tidstaket (`data/timedFetch.ts`) havner en henting på svak dekning
 // nettopp her, så alle sju deler denne blokka. Skjermen eier beholderen rundt
 // (`ui.centered`), blokka bare teksten og knappen.
+//
+// `notFound` (gjennomgangen av #2622): serveren svarte, men spillet finnes ikke
+// for spilleren (slettet, eller skjult av RLS, #1954 Del B). Da er det ikke
+// nettet, og «Prøv igjen» ville gitt samme svar. Setningen sier det, uten knapp.
 import { Pressable, Text } from 'react-native';
 import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
-import { GAME_LOAD_RETRY_TEXT } from '../lib/seedCopy';
+import { GAME_LOAD_RETRY_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import { useTheme } from '../theme';
 
 export function GameLoadFailed({
   onRetry,
+  notFound = false,
   text = GAME_LOAD_RETRY_TEXT,
 }: {
   onRetry: () => void;
+  /** Spillet er borte for spilleren (`useGameBundle().notFound`). */
+  notFound?: boolean;
   /** Avslutningen sier «runden», ikke «spillet» (`END_GAME_TEXT.loadFailed`). */
   text?: string;
 }) {
   const { ui } = useTheme();
+  if (notFound) {
+    return (
+      <Text style={ui.body} testID="game-not-found">
+        {GAME_NOT_FOUND_TEXT}
+      </Text>
+    );
+  }
   return (
     <>
       <Text style={ui.error} testID="game-error">

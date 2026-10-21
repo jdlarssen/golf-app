@@ -10,7 +10,7 @@
 // Derfor bare `fetch` byttes her, ikke `../supabase`: taket, supabase-js sin
 // oversetting av feilen og drainen kjører som på telefonen.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import { useFreshModules, useHangingNetwork } from '../test/harness';
 import { REQUEST_TIMEOUT_MS } from './timedFetch';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -26,21 +26,13 @@ type Worker = typeof import('./syncWorker');
 
 describe('drainQueue med et nett som henger (#1954 D2)', () => {
   useFreshModules();
-  const originalFetch = global.fetch;
-  const originalEnv = { ...process.env };
-  let underlying: jest.Mock;
+  const network = useHangingNetwork();
 
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date(FROZEN) });
-    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://staging.example';
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
-    underlying = jest.fn(() => new Promise(() => {}));
-    global.fetch = underlying as unknown as typeof fetch;
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
-    process.env = { ...originalEnv };
     jest.useRealTimers();
   });
 
@@ -51,7 +43,7 @@ describe('drainQueue med et nett som henger (#1954 D2)', () => {
 
   /** Serveren lagrer det som kommer, og svarer som `upsert_score_if_newer`. */
   function serverApplies(): void {
-    underlying.mockImplementation(async (_url: string, init: RequestInit) => {
+    network.fetch().mockImplementation(async (_url: string, init: RequestInit) => {
       const args = JSON.parse(String(init.body)) as Record<string, unknown>;
       const row = {
         game_id: args.p_game_id,
@@ -80,16 +72,14 @@ describe('drainQueue med et nett som henger (#1954 D2)', () => {
     void drainQueue('hull').then((r) => {
       first = r;
     });
-    for (let i = 0; i < 50 && underlying.mock.calls.length === 0; i++) {
-      await jest.advanceTimersByTimeAsync(0);
-    }
-    expect(underlying).toHaveBeenCalledTimes(1);
+    await network.untilSent();
+    expect(network.fetch()).toHaveBeenCalledTimes(1);
 
     // Én drain er bundet til ett tak, ikke til antall slag × tak: den stopper
     // ved første nettfeil og prøver ikke hull 2 mot det samme døde nettet.
     await jest.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
     expect(first).toEqual({ pushed: 0, rejected: 0, errored: 1, abandoned: 0 });
-    expect(underlying).toHaveBeenCalledTimes(1);
+    expect(network.fetch()).toHaveBeenCalledTimes(1);
 
     const { getDb, listQueue } = require('./db') as Db;
     const db = await getDb();

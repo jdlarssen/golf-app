@@ -144,7 +144,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   // til avslutt-siden; her i appen er det denne skjermen, så de er lest.
   useMarkVisitRead('gameFinish', gameId);
   const { userId } = useSession();
-  const { bundle, loading, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
 
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
@@ -340,7 +340,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
-          <GameLoadFailed text={END_GAME_TEXT.loadFailed} onRetry={() => void refresh()} />
+          <GameLoadFailed notFound={notFound} text={END_GAME_TEXT.loadFailed} onRetry={() => void refresh()} />
         )}
       </View>
     );

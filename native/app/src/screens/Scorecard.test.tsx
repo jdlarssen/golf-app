@@ -241,8 +241,8 @@ describe('Scorecard', () => {
     await render(scorecardElement(GAME_ID, jest.fn()));
 
     await waitFor(() => expect(screen.getByTestId('scorecard-error')).toBeTruthy());
-    // #1954 D2: samme setning som de andre spillskjermene, og en vei videre.
-    expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.');
+    // #1954 D2: en vei videre, som de andre spillskjermene (blokka er testet i GameLoadFailed.test).
+    expect(screen.getByTestId('game-retry')).toBeTruthy();
     const calls = refreshGameBundle.mock.calls.length;
     await fireEvent.press(screen.getByTestId('game-retry'));
     expect(refreshGameBundle.mock.calls.length).toBe(calls + 1);

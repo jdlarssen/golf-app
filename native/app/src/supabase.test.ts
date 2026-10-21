@@ -8,6 +8,7 @@
 // gang, og «Lever scorekort» sto på «Synker slag …».
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() */
 import { REQUEST_TIMEOUT_MS } from './data/timedFetch';
+import { useHangingNetwork } from './test/harness';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest'),
@@ -16,32 +17,16 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 type Client = typeof import('./supabase');
 
 describe('supabase-klienten med et nett som henger (#1954 D2)', () => {
-  const originalFetch = global.fetch;
-  const originalEnv = { ...process.env };
-  let underlying: jest.Mock;
+  const { untilSent } = useHangingNetwork();
 
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
-    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://staging.example';
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
-    underlying = jest.fn(() => new Promise(() => {}));
-    global.fetch = underlying as unknown as typeof fetch;
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
-    process.env = { ...originalEnv };
     jest.useRealTimers();
   });
-
-  /** Vent til kallet har nådd nettet, så taket faktisk er startet. */
-  async function untilSent(): Promise<void> {
-    for (let i = 0; i < 50 && underlying.mock.calls.length === 0; i++) {
-      await jest.advanceTimersByTimeAsync(0);
-    }
-    expect(underlying).toHaveBeenCalled();
-  }
 
   it('en RPC som henger, svarer med en nettfeil etter taket', async () => {
     const { supabase } = require('./supabase') as Client;

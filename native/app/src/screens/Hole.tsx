@@ -183,7 +183,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const { userId } = useSession();
   // #2201: påminnelsen om et hull uten slag er lest når du står på et hull.
   useMarkVisitRead('gameHole', gameId);
-  const { bundle, loading, refresh: refreshBundle } = useGameBundle(gameId);
+  const { bundle, loading, refresh: refreshBundle, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload, loaded: scoresLoaded } = useLocalScores(gameId, POLL_MS);
   // #2067: lagets rader fra før en kontosletting ligger på den trukne
   // kapteinen. Foldes inn her, før noe annet leser slagene, så kortet, stripen
@@ -276,7 +276,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
-          <GameLoadFailed onRetry={() => void refreshBundle()} />
+          <GameLoadFailed notFound={notFound} onRetry={() => void refreshBundle()} />
         )}
       </View>
     );
