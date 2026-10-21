@@ -10,12 +10,14 @@
 #
 # Reglene:
 #  - `NSPhotoLibraryAddUsageDescription` MÅ stå i Info.plist, med tekst.
-#    Delearket (`shareImage.ts`) viser «Lagre bilde», og uten teksten stopper
-#    iOS appen når bildet skrives til Bilder.
+#    Delearket (`shareImage.ts`) kan lagre bildet i Bilder. Uten teksten
+#    skjuler iOS lagre-handlingen (Save Image) i arket: observert i
+#    simulatoren på iOS 26.5, ingen krasj (#2561).
 #  - Importerer binærene disk-API-er, MÅ app-manifestet (`PrivacyInfo.xcprivacy`
 #    i .app-roten) oppgi `NSPrivacyAccessedAPICategoryDiskSpace` med minst én
 #    grunnkode. Apple leser alle manifestene i appen, men ingen av bibliotekenes
-#    manifester oppga DiskSpace i 1.2.0 (5). Importerer de ikke API-ene, er
+#    manifester oppga DiskSpace i 1.2.0 (5), og Apple krever erklæringen
+#    ved opplasting (ITMS-91053). Importerer de ikke API-ene, er
 #    DiskSpace ikke påkrevd.
 #
 # Plist-ene leses med python3 og `plistlib` (leser både XML og binær), ikke
@@ -62,7 +64,7 @@ privacy_rules() {
   elif [ "$photo" = ok ]; then
     pass "NSPhotoLibraryAddUsageDescription står i Info.plist"
   else
-    fail "NSPhotoLibraryAddUsageDescription mangler i Info.plist. «Lagre bilde» i delearket stopper appen uten den (#2561)"
+    fail "NSPhotoLibraryAddUsageDescription mangler i Info.plist. Uten den skjuler iOS lagre-handlingen i delearket (#2561)"
   fi
 
   if [ "$imports" != yes ] && [ "$imports" != no ]; then

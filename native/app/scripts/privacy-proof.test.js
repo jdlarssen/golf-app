@@ -1,9 +1,9 @@
 // native/app/scripts/privacy-proof.test.js
 // #2561: personvern-reglene i iOS-beviset (`privacy-proof.sh`).
 //
-// Apple stoppet 1.2.0 (5) på to ting som ikke fantes i arkivet: teksten for å
-// skrive til Bilder («Lagre bilde» i delearket) og DiskSpace i
-// personvernmanifestet. Fire ting må stå:
+// Arkivet 1.2.0 (5) manglet to ting: teksten for å skrive til Bilder (uten den
+// skjuler iOS lagre-handlingen i delearket, og appen krasjer ikke) og DiskSpace
+// i personvernmanifestet (Apple krever den ved opplasting, ITMS-91053). Fire ting må stå:
 //
 //  1. **Tillatelsesteksten må finnes** i Info.plist, og ikke være tom.
 //  2. **DiskSpace må stå i app-manifestet** med minst én grunnkode når binærene
@@ -17,7 +17,7 @@
 // `store-build-proof.sh` definerer dem. Plist-ene leses med python3
 // (`plistlib`), fordi CI kjører på ubuntu-latest uten plutil.
 import { spawnSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -136,5 +136,20 @@ describe('privacy_rules', () => {
   it('gir FAIL for en ukjent import-verdi i stedet for å gjette', () => {
     const r = rules(write('info-ok6.plist', INFO_WITH_TEXT), write('pm-ok6.plist', manifest(DISK_SPACE)), 'kanskje');
     expect(r.fails.join('\n')).toContain('ukjent verdi for disk-API-importer');
+  });
+});
+
+// Uten denne sjekken står alt grønt også når kallet slettes fra beviset: det får
+// bare to færre PASS (samme mønster som `bundle-proof.test.js`).
+describe('store-build-proof.sh bruker personvern-reglene', () => {
+  const text = readFileSync(join(__dirname, 'store-build-proof.sh'), 'utf8');
+
+  it('sourcer privacy-proof.sh', () => {
+    expect(text).toMatch(/^PRIVACY_PROOF_LIB=.*\/privacy-proof\.sh"$/m);
+    expect(text).toMatch(/^\. "\$PRIVACY_PROOF_LIB"$/m);
+  });
+
+  it('kaller privacy_rules med Info.plist, app-manifestet og disk-API-svaret', () => {
+    expect(text).toMatch(/^ {2}privacy_rules "\$PLIST" "\$APP\/PrivacyInfo\.xcprivacy" "\$disk_imports"$/m);
   });
 });
