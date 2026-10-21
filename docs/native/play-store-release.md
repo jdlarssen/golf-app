@@ -109,7 +109,8 @@ justeringen i ELF-filene. Selve reglene står i skallskriptet.
 **Minsteversjonen** (`lib/app/minVersion.ts`, vist av `/api/app/min-version`, #2619) har et eget tall for Android:
 `minVersionCode`. Det heves bare når en serverendring knekker eldre bygg, og aldri forbi en `versionCode` som
 ikke er publisert i Play ennå. Alle bygg under tallet får en oppdateringsdialog de ikke kan lukke. En test
-(`native/app/src/lib/minVersionGuard.test.ts`) holder tallet under `STORE_ANDROID_VERSION_CODE`.
+(`native/app/src/lib/minVersionGuard.test.ts`) holder tallet på eller under `STORE_ANDROID_VERSION_CODE`. Den
+fanger ikke en `versionCode` som ikke er publisert ennå, så det sjekkes for hånd før tallet heves.
 
 ## Etter bygget: tilbake til dev
 

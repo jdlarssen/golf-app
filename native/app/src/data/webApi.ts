@@ -1,6 +1,6 @@
 // native/app/src/data/webApi.ts
 // Native #1891: appens vei til HTTP-rutene på web-deployen — de autentiserte,
-// og fra #2216 de som kalles før innloggingen ({@link callPublicWebRoute}).
+// og de som er offentlige på serveren ({@link callPublicWebRoute}).
 //
 // **Hvorfor rutene finnes.** Alt som krever Node — `notify()`, Resend-mail,
 // push, service-role — er utenfor rekkevidde for en telefon. Regelen bor der
@@ -21,8 +21,9 @@
 //    ville tatt ned hele appen for en skjerm de fleste aldri åpner.
 // 3. **Tokenet.** Uten sesjon finnes det ingenting å autentisere med, og vi
 //    sender ikke et kall vi vet blir avvist. Gjelder ikke
-//    {@link callPublicWebRoute}: «send meg kode» skjer før det finnes en sesjon,
-//    og ruta har ingen token å sjekke. De to første vaktene gjelder likt.
+//    {@link callPublicWebRoute}: ruta er offentlig på serveren og svaret er ikke
+//    personlig, så det sendes ingen token, med eller uten sesjon. De to første
+//    vaktene gjelder likt.
 //
 // **Kroppen bærer verdier, aldri identitet.** #1906 ga profil-lagringen en
 // rute, og med den den første kroppen — feltene spilleren skrev inn. Regelen
@@ -125,14 +126,13 @@ export async function callWebRoute(
 }
 
 /**
- * Ett kall mot en rute som ikke krever innlogging, fordi den brukes før det
- * finnes en sesjon eller svaret ikke er personlig (#2216, #2619). Hver rute her
- * er offentlig på serveren; en rute som trenger tokenet, hører til i
- * {@link callWebRoute}.
+ * Ett kall mot en rute som er offentlig på serveren (#2216, #2619). Svaret er
+ * ikke personlig, så det sendes ingen token, også når appen har en sesjon. En
+ * rute som trenger tokenet, hører til i {@link callWebRoute}.
  *
- * Samme vakter for nett og adresse som {@link callWebRoute}, men ingen token:
- * det finnes ingen sesjon ennå, og ruta sjekker ingen. Svaret leses likt.
- * Vernet mot misbruk er serverens fartsgrenser, ikke noe appen sender.
+ * Samme vakter for nett og adresse som {@link callWebRoute}, men ruta sjekker
+ * ingen token. Svaret leses likt. Vernet mot misbruk er serverens fartsgrenser,
+ * ikke noe appen sender.
  */
 export async function callPublicWebRoute(
   path: string,
