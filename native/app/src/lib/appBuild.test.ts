@@ -10,8 +10,11 @@ jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: un
 const constants = Constants as unknown as { expoConfig: unknown };
 const platform = Platform as unknown as { OS: string };
 
+const originalOS = Platform.OS;
+
 afterEach(() => {
   constants.expoConfig = undefined;
+  platform.OS = originalOS;
 });
 
 describe('parseBuild', () => {
