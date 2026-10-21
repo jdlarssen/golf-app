@@ -257,6 +257,9 @@ export function partialDeliveryNotice(
     if (delivered === 0) {
       return `Ingen av de ${asked} makkerkortene ble levert. Noen kan ha ført hull på dem i mellomtiden.`;
     }
+    if (asked - delivered === 1) {
+      return `${delivered} av ${asked} makkerkort ble levert. Noen kan ha ført et hull på det siste kortet i mellomtiden.`;
+    }
     return `${delivered} av ${asked} makkerkort ble levert. Noen kan ha ført hull på de andre i mellomtiden.`;
   }
   if (asked === 1) {

@@ -252,6 +252,7 @@ describe('setningene for levering for flighten (#2200)', () => {
     ['den ene makkeren', 0, 1, 'Makkerkortet ble ikke levert. Noen kan ha ført et hull på det i mellomtiden.'],
     ['ingen av flere', 0, 2, 'Ingen av de 2 makkerkortene ble levert. Noen kan ha ført hull på dem i mellomtiden.'],
     ['noen av flere', 1, 3, '1 av 3 makkerkort ble levert. Noen kan ha ført hull på de andre i mellomtiden.'],
+    ['alle unntatt ett', 2, 3, '2 av 3 makkerkort ble levert. Noen kan ha ført et hull på det siste kortet i mellomtiden.'],
   ] as [string, number, number, string | null][])(
     'beskjeden etter fersk lesing: %s',
     (_label, delivered, asked, expected) => {
