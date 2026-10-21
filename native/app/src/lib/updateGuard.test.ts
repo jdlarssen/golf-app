@@ -8,6 +8,7 @@
 // «ingen dialog».
 import {
   CHECK_INTERVAL_MS,
+  FAILURE_PAUSE_MS,
   createUpdateCheck,
   isBelowMinimum,
   readMinBuild,
@@ -100,7 +101,7 @@ describe('createUpdateCheck', () => {
     expect(fetchBody).not.toHaveBeenCalled();
   });
 
-  it('sjekker høyst én gang per 10 minutter', async () => {
+  it('sjekker høyst én gang per 10 minutter etter et brukbart svar', async () => {
     const { check, fetchBody, advance } = rig({ bodies: [FINE_BODY, FINE_BODY] });
     await check();
     advance(CHECK_INTERVAL_MS - 1);
@@ -151,6 +152,20 @@ describe('createUpdateCheck', () => {
     expect(await check()).toBe(false);
   });
 
+  it('prøver igjen etter en kort pause når kallet ikke ga noe brukbart svar', async () => {
+    const { check, fetchBody, advance } = rig({ bodies: [null, OLD_BODY] });
+    expect(await check()).toBe(false);
+
+    advance(FAILURE_PAUSE_MS - 1);
+    expect(await check()).toBe(false);
+    expect(fetchBody).toHaveBeenCalledTimes(1);
+
+    advance(1);
+    expect(await check()).toBe(true);
+    expect(fetchBody).toHaveBeenCalledTimes(2);
+    expect(FAILURE_PAUSE_MS).toBeLessThan(CHECK_INTERVAL_MS);
+  });
+
   it('viser dialogen igjen ved neste forgrunn uten ny henting innen vinduet', async () => {
     const { check, fetchBody, advance } = rig({ bodies: [OLD_BODY, FINE_BODY] });
     expect(await check()).toBe(true);
@@ -164,7 +179,7 @@ describe('createUpdateCheck', () => {
     expect(await check()).toBe(true);
     advance(CHECK_INTERVAL_MS);
     expect(await check()).toBe(true);
-    advance(CHECK_INTERVAL_MS);
+    advance(FAILURE_PAUSE_MS);
     expect(await check()).toBe(false);
   });
 });
