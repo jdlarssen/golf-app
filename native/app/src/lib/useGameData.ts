@@ -8,7 +8,7 @@
 //
 // Slagene hentes inn igjen fra serveren av `useScoreCatchUp` (egen fil), og
 // «appen kom tilbake» bor i `useOnResume` (#2228).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { getDb, listScoresForGame, type LocalScore } from '../data/db';
@@ -84,7 +84,9 @@ export function useGameBundle(gameId: string): GameBundleState {
     setLoading(true);
   }
   const idRef = useRef(gameId);
-  useEffect(() => {
+  // Layout-effekt, ikke vanlig effekt: den kjører synkront etter commit, så en
+  // henting av det forrige spillet kan ikke lande mellom ny render og oppdatert id.
+  useLayoutEffect(() => {
     idRef.current = gameId;
     // Et forrige spill som var borte, skal ikke stenge cachen for det nye.
     gone.current = false;
