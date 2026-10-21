@@ -278,6 +278,40 @@ const failed = (error: CreateGameFailure): CreateGameResult => ({
 /** PostgRESTs kode for «insufficient_privilege» — RLS avviste raden. */
 const RLS_DENIED_CODE = '42501';
 
+/** Postgres' kode for «unique_violation». */
+const UNIQUE_VIOLATION_CODE = '23505';
+
+/**
+ * #1954 D2: raden finnes alt, under akkurat denne primærnøkkelen. Med en id
+ * veiviseren selv laget ({@link newGameId}) betyr det at et tidligere forsøk
+ * lagret den, men at svaret aldri kom fram. Andre unike regler (`short_id`)
+ * er fortsatt ekte feil.
+ */
+function isOwnEarlierWrite(
+  error: { message: string; code?: string } | null,
+  constraint: 'games_pkey' | 'game_players_pkey',
+): boolean {
+  return error?.code === UNIQUE_VIOLATION_CODE && error.message.includes(`"${constraint}"`);
+}
+
+/**
+ * En ny runde-id, laget på telefonen (#1954 D2).
+ *
+ * Veiviseren lager den én gang og sender den med hvert forsøk. Når innsettingen
+ * når tidstaket etter at serveren faktisk lagret, treffer neste forsøk den
+ * samme raden i stedet for å lage runde nummer to. uuid v4 fra
+ * `crypto.getRandomValues`, som `react-native-get-random-values` gir Hermes
+ * (`index.ts`). `crypto.randomUUID` finnes ikke der.
+ */
+export function newGameId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /**
  * Les svaret på en skriving og gi den ene sannheten tilbake: traff den rader?
  *
@@ -346,10 +380,19 @@ async function refuseUnlessModeIsActive(
  * En venn uten fullført profil stopper ikke publiseringen (#2441). Sperren står
  * ved start: `startScheduledGameCore`, bak ruta `POST /api/games/{id}/start`.
  *
- * Knappen låses av skjermen mens dette står på; funksjonen er ikke idempotent
- * og et dobbelttrykk ville laget to runder.
+ * Knappen låses av skjermen mens dette står på, så et dobbelttrykk lager ikke
+ * to runder. Et nytt forsøk etter en feil gjør det heller ikke (#1954 D2):
+ * `gameId` er den samme for hvert forsøk fra samme veiviser. Har et tidligere
+ * forsøk lagret runden (eller spillerne) uten at svaret kom fram, svarer
+ * databasen 23505 på primærnøkkelen, og publiseringen fortsetter derfra.
+ *
+ * @param gameId id-en runden skal få, fra {@link newGameId}. Veiviseren holder
+ *   den fast; utelatt lages en ny.
  */
-export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
+export async function publishGame(
+  draft: GameDraft,
+  gameId: string = newGameId(),
+): Promise<CreateGameResult> {
   const userId = await currentDeviceUserId();
   if (!userId) return failed('not_authenticated');
 
@@ -396,51 +439,52 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
     ctpCount: side.ctpCount,
   });
 
-  const insertedGame = readWriteResult<{ id: string }>(
-    await supabase
-      .from('games')
-      .insert({
-        name: payload.name,
-        course_id: payload.course_id,
-        tee_box_id: payload.tee_box_id,
-        hcp_allowance_pct: payload.hcp_allowance_pct,
-        require_peer_approval: payload.require_peer_approval,
-        score_visibility: payload.score_visibility,
-        game_mode: payload.game_mode,
-        mode_config: payload.mode_config,
-        registration_mode: payload.registration_mode,
-        registration_type: payload.registration_type,
-        let_friends_skip_gate: payload.let_friends_skip_gate,
-        entry_fee_kr: payload.entry_fee_kr,
-        payment_link: payload.payment_link,
-        prizes,
-        side_tournament_enabled: side.enabled,
-        side_ld_count: side.ldCount,
-        side_ctp_count: side.ctpCount,
-        side_disabled_categories: side.disabledCategories,
-        // Publisering setter 'scheduled', ikke 'active'. Runden startes for seg
-        // («Start runden nå»), og banehandicapene fryses først da — derfor
-        // `course_handicap: null` på spiller-radene under.
-        status: 'scheduled',
-        scheduled_tee_off_at: scheduledTeeOffAt,
-        created_by: userId,
-        started_at: null,
-        // Klubb- og cup-kobling er web-eid (Should i MoSCoW-porten). Satt
-        // eksplisitt så kolonnesettet er identisk med webbens insert.
-        group_id: null,
-        tournament_id: null,
-        tournament_match_label: null,
-      })
-      // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
-      .select('id'),
-    'publishGame(games)',
-  );
-  if (!insertedGame.ok) {
-    return failed(
-      insertedGame.error === 'db_error' ? 'db_game' : insertedGame.error,
-    );
+  const gameInsert = await supabase
+    .from('games')
+    .insert({
+      id: gameId,
+      name: payload.name,
+      course_id: payload.course_id,
+      tee_box_id: payload.tee_box_id,
+      hcp_allowance_pct: payload.hcp_allowance_pct,
+      require_peer_approval: payload.require_peer_approval,
+      score_visibility: payload.score_visibility,
+      game_mode: payload.game_mode,
+      mode_config: payload.mode_config,
+      registration_mode: payload.registration_mode,
+      registration_type: payload.registration_type,
+      let_friends_skip_gate: payload.let_friends_skip_gate,
+      entry_fee_kr: payload.entry_fee_kr,
+      payment_link: payload.payment_link,
+      prizes,
+      side_tournament_enabled: side.enabled,
+      side_ld_count: side.ldCount,
+      side_ctp_count: side.ctpCount,
+      side_disabled_categories: side.disabledCategories,
+      // Publisering setter 'scheduled', ikke 'active'. Runden startes for seg
+      // («Start runden nå»), og banehandicapene fryses først da — derfor
+      // `course_handicap: null` på spiller-radene under.
+      status: 'scheduled',
+      scheduled_tee_off_at: scheduledTeeOffAt,
+      created_by: userId,
+      started_at: null,
+      // Klubb- og cup-kobling er web-eid (Should i MoSCoW-porten). Satt
+      // eksplisitt så kolonnesettet er identisk med webbens insert.
+      group_id: null,
+      tournament_id: null,
+      tournament_match_label: null,
+    })
+    // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
+    .select('id');
+  // #1954 D2: et tidligere forsøk lagret runden. Fortsett med spillerne.
+  if (!isOwnEarlierWrite(gameInsert.error, 'games_pkey')) {
+    const insertedGame = readWriteResult<{ id: string }>(gameInsert, 'publishGame(games)');
+    if (!insertedGame.ok) {
+      return failed(
+        insertedGame.error === 'db_error' ? 'db_game' : insertedGame.error,
+      );
+    }
   }
-  const gameId = insertedGame.rows[0]!.id;
 
   const rowAcceptedAt = new Date().toISOString();
   // Tee-settet leses fra UTKASTET, ikke ut av skjemaet vi selv nettopp bygde:
@@ -467,10 +511,12 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
     accepted_at: acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
   }));
 
-  const insertedPlayers = readWriteResult(
-    await supabase.from('game_players').insert(playerRows).select('user_id'),
-    'publishGame(game_players)',
-  );
+  const playersInsert = await supabase.from('game_players').insert(playerRows).select('user_id');
+  // #1954 D2: én INSERT er alt eller ingenting, så en 23505 på primærnøkkelen
+  // betyr at hele lista kom inn i et tidligere forsøk.
+  const insertedPlayers = isOwnEarlierWrite(playersInsert.error, 'game_players_pkey')
+    ? ({ ok: true } as const)
+    : readWriteResult(playersInsert, 'publishGame(game_players)');
   if (!insertedPlayers.ok) {
     // #737: rull tilbake games-raden. Uten dette står det igjen en runde uten
     // spillere som ingen kan rydde. Arrangøren har DELETE-RLS på egne spill

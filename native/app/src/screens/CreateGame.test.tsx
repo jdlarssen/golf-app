@@ -127,6 +127,7 @@ jest.mock('../data/createGame', () => ({
   ]),
   fetchRosterCandidates: jest.fn(async () => mockCandidates),
   publishGame: jest.fn(),
+  newGameId: jest.fn(() => 'wizard-game-id'),
 }));
 
 const publishGameMock = publishGame as jest.MockedFunction<typeof publishGame>;
@@ -280,6 +281,9 @@ describe('CreateGame', () => {
     await fireEvent.press(screen.getByTestId('create-publish'));
 
     expect(publishGameMock).toHaveBeenCalledTimes(2);
+    // #1954 D2: samme runde-id begge gangene, så et forsøk som faktisk lagret
+    // runden ikke gir runde nummer to.
+    expect(publishGameMock.mock.calls.map((call) => call[1])).toEqual(['wizard-game-id', 'wizard-game-id']);
     expect(navigation.replace).toHaveBeenCalledWith('GameHome', {
       gameId: 'new-game-1',
     });
