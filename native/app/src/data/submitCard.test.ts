@@ -22,6 +22,7 @@ import {
   mockNetwork,
   requestInit,
   respondWith,
+  respondWithHtml,
   useWebRoute,
 } from '../test/webRouteHarness';
 
@@ -151,12 +152,7 @@ describe('levering', () => {
   it('holder på statusen selv når kroppen er uleselig', async () => {
     // En 409 fra et lag foran appen vår kan være HTML. Statusen er allerede
     // lest, så et uleselig svar skal ikke bli en ANNEN feil enn den sier.
-    mockFetch.mockResolvedValue({
-      status: 409,
-      json: async () => {
-        throw new SyntaxError('Unexpected token <');
-      },
-    } as unknown as Response);
+    respondWithHtml(409);
 
     expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
