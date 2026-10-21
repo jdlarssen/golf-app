@@ -143,6 +143,34 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(store.ios?.bundleIdentifier).toBe('no.tornygolf.app');
   });
 
+  // #2561: arkivet 1.2.0 (5) manglet to ting. Uten teksten for å skrive til
+  // Bilder skjuler iOS lagre-handlingen i delearket (ingen krasj). Binærene
+  // importerer disk-API-er (SQLite i expo-sqlite kaller statfs/fstatfs ved
+  // åpning av databasen, ExpoFileSystem leser ledig plass), og Apples
+  // required-reason-krav vil ha DiskSpace i manifestet. E174.1 er nærmeste
+  // godkjente grunn, slik expo-file-system selv bruker. Begge står i app.json,
+  // så begge variantene får dem. Expo skriver bare DiskSpace; de tre andre
+  // oppføringene (FileTimestamp, UserDefaults, SystemBootTime) legges til av
+  // React Natives `pod install`-aggregering (`privacy_manifest_utils.rb`),
+  // styrt av `apple.privacyManifestAggregationEnabled` i Podfile.properties.json.
+  // Den må aldri settes til `false`. 85F4.1 («vis diskplass til brukeren») er
+  // ikke sant for appen og skal ikke med.
+  it('har tillatelsesteksten for Bilder, norsk språk og DiskSpace i personvernmanifestet, i begge varianter', () => {
+    for (const cfg of [resolveConfig(base, DEV_ENV), resolveConfig(base, STORE_ENV)]) {
+      expect(cfg.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Tørny lagrer bildet du deler i Bilder.');
+      // Uten norsk utviklingsregion og lokalisering viser UIKit engelske
+      // systemtekster (Copy, Save Image, Print, Lim inn) i en norsk app.
+      expect(cfg.ios?.infoPlist?.CFBundleDevelopmentRegion).toBe('nb');
+      expect(cfg.ios?.infoPlist?.CFBundleLocalizations).toEqual(['nb']);
+      expect(cfg.ios?.privacyManifests?.NSPrivacyAccessedAPITypes).toEqual([
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+          NSPrivacyAccessedAPITypeReasons: ['E174.1'],
+        },
+      ]);
+    }
+  });
+
   it('setter ingen associated domains — lenker skal åpnes i Safari, der sesjonen finnes', () => {
     expect(resolveConfig(base, STORE_ENV).ios?.associatedDomains).toBeUndefined();
   });

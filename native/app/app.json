@@ -8,7 +8,20 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "no.tornygolf.dev"
+      "bundleIdentifier": "no.tornygolf.dev",
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "nb",
+        "CFBundleLocalizations": ["nb"],
+        "NSPhotoLibraryAddUsageDescription": "Tørny lagrer bildet du deler i Bilder."
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": ["E174.1"]
+          }
+        ]
+      }
     },
     "android": {
       "package": "no.tornygolf.dev",

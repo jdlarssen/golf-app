@@ -185,7 +185,7 @@ krever innlogging som kan brukes igjen og omgår engangskoden, som virker til en
 og hvor som helst, og at instruksjonene er på engelsk
 (<https://support.google.com/googleplay/android-developer/answer/15748846>). Inngangen
 er den samme som for Apple (langtrykket på tittelen), men Google har sin egen
-review-konto med egen adresse, eget passord og egen demo-runde
+review-konto med egen adresse, eget passord og egne demo-runder
 (`app-store-review-konto.md`).
 
 ```text
@@ -200,7 +200,7 @@ dedicated account with a password. The password field is hidden behind a long pr
 Right after signing in, the app asks whether the AI may write about you
 ("Kan AI-en skrive om deg?"). Both answers take you into the app.
 
-The account plays in an active demo round called "Demo Round (Google Play) — Tørny".
+The account plays in an active demo round called "Demo Round (Google Play) — Tørny", and in a team round, "Demo Scramble (Google Play) — Tørny" (Texas scramble, two teams of two). The team round is the big card on the home screen, and the other round is under "Flere runder i gang". In the team round the app asks "Hvem sitt utslag ble brukt?" (whose tee shot was used) on each hole. Its team card can be submitted only when every player has three tee shots, so use it to look around.
 The app is in Norwegian and is available in Norway only.
 
 This account is for Google Play review only. To see account deletion without deleting

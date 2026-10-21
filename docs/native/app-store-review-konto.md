@@ -9,7 +9,7 @@ skjult inngang i appen.
 **Fra #2561 finnes én konto per butikk.** Apple-revieweren skal kunne slette
 kontoen (5.1.1(v)), mens Google krever at innloggingen virker til enhver tid, og de
 to vurderingene kan gå samtidig. Apple-kontoen og Google-kontoen har hver sin
-adresse, sitt eget passord og sin egen demo-runde. Skriptet velger med
+adresse, sitt eget passord og sine egne demo-runder (stableford og scramble). Skriptet velger med
 `--store apple` (standard) eller `--store google`.
 
 Bygget i #1284 (del 1) for skallet. Fra N8 (#1954, P1b) er det native-appen som
@@ -24,8 +24,8 @@ webbens egen).
 | Inngangen i appen | Innloggingsskjermen: hold overskriften («Tørny») inne i 1,5 s | Et passordfelt og knappen «Logg inn med passord» dukker opp under e-postfeltet. Ingen synlig lenke, ingen env-gate. |
 | Innloggingssida (web) | `/review-login` (`/en/review-login` for engelsk) | E-post + passord. Ulenket, `noindex`. Gjelder nettsida, ikke app-innsendingen. |
 | Env-porten (web) | `REVIEW_ACCOUNT_EMAIL` i Vercel | Er den ikke satt, svarer web-sida «finnes ikke». Appen har ingen slik port — se sikkerhetsmodellen. |
-| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-runden og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD` og «Demo Round — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE` og «Demo Round (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
-| Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-runden skal stå på når det ikke finnes nøyaktig én admin-konto. |
+| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-rundene og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD`, «Demo Round — Tørny» og «Demo Scramble — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE`, «Demo Round (Google Play) — Tørny» og «Demo Scramble (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
+| Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-rundene skal stå på når det ikke finnes nøyaktig én admin-konto. |
 
 ## Sikkerhetsmodellen
 
@@ -148,7 +148,7 @@ Skriptet printer hvilken Supabase-URL det skriver til før første skriv — les
 den linja før du lar det gå videre. `--env prod` må stå der; uten flagget
 kjører det mot staging.
 
-Skriptet setter admin-kontoen din som arrangør av demo-runden og legger
+Skriptet setter admin-kontoen din som arrangør av demo-rundene og legger
 review-kontoen inn som deltaker. Har du bare én admin-konto, finner det henne
 selv. Har du flere (eller ingen), stopper det og ber deg si hvem det skal være:
 
@@ -173,11 +173,17 @@ node scripts/provision-review-account.mjs --env prod --store google
 som står i butikken, fortsatt virker. Bare `--rotate-password` setter et nytt fra
 nøkkelringen. Bytt det der først, og lim det nye inn i butikken etterpå (steg 4).
 
-**Forventet resultat:** en oppsummering som slutter med «✅ Provisjonert.» og
-linjene `Spill`, `Kortnavn`, `Arrangør`, `Spillere: 4`, `Scores: 21`. Linja
-`Butikk:` øverst viser hvilken butikk og demo-runde kjøringen gjelder. Feiler
-noe, stopper skriptet med «❌» og en forklaring — ingenting er halvveis skrevet
-ut over det som allerede står i loggen.
+**Forventet resultat:** en oppsummering som begynner med «✅ Provisjonert.» (en
+konto som finnes fra før, gir «✅ Allerede provisjonert — resatt til frisk demo.»)
+og så to blokker, én per runde, hver med `Spill` og `Kortnavn`:
+stableford-runden har `Spillere: 4, scores: 21`, og scramble-runden har
+`Spillere: 4, scores: 9, utslag: 9`. Til slutt kommer `Arrangør` og `Innlogging`.
+E-postadressene står maskert i utskriften (bare domenet). Linja `Butikk:`
+øverst viser hvilken butikk og hvilke demo-runder kjøringen gjelder. Feiler noe,
+stopper skriptet med «❌» og en forklaring. En ny runde lages som «draft» og
+settes til «pågår» først når alt er seedet, så en halvferdig runde aldri blir
+hovedkortet. Står en demo-runde som utkast etter en feil, kjør samme kommando på
+nytt. Ikke publiser den fra appen.
 
 ### 4. Legg inn i butikkene
 
@@ -196,8 +202,10 @@ content → App access**, med teksten i `play-store-metadata.md`. Aldri bytt om 
 
 På telefonen (TestFlight-kandidaten): hold overskriften inne til passordfeltet
 dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
-**Forventet:** hjem-skjermen med «Demo Round — Tørny» (Google-kontoen: «Demo Round
-(Google Play) — Tørny»). Feil passord skal gi
+**Forventet:** hjem-skjermen med to runder i gang. Scramble-runden er nyest og
+ligger øverst som det store kortet; stableford-runden står under «Flere runder i
+gang». Apple: «Demo Scramble — Tørny» og «Demo Round — Tørny». Google: «Demo
+Scramble (Google Play) — Tørny» og «Demo Round (Google Play) — Tørny». Feil passord skal gi
 «Feil e-post eller passord.» og ingenting annet.
 
 ## Reset før hver innsending — og etter hver review
@@ -205,8 +213,8 @@ dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
 **Revieweren kan slette review-kontoen.** Det er meningen: Apple krever
 (5.1.1(v)) at sletting går an rett i appen, og fra #1909 slipper alle gjennom så
 lenge de ikke arrangerer noe som pågår. Derfor er det admin-kontoen din som står
-som arrangør av demo-runden, ikke review-kontoen — den er bare deltaker. Prisen
-er at demo-runden ligger blant dine egne runder i appen. Det er en avtalt
+som arrangør av demo-rundene, ikke review-kontoen — den er bare deltaker. Prisen
+er at demo-rundene ligger blant dine egne runder i appen. Det er en avtalt
 kostnad, ikke en feil.
 
 Kjør samme kommando som i steg 3 på nytt, for den butikken det gjelder: Apple-kontoen
@@ -231,18 +239,19 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
 - **Slettet kontoen?** Adressen blir frigitt når kontoen anonymiseres, så
   kjøringen lager kontoen på nytt med samme adresse og passordet fra nøkkelringen,
   altså det som står i butikken.
-- **Står det en «Slettet bruker» igjen i runden?** Den raden fjernes. Etterpå er
-  rosteret nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
-- **Spilt, levert eller trukket seg?** Scorene slettes og legges inn på nytt,
-  runden settes tilbake til «pågår», og alle leveringer nullstilles.
-- **Runden står på feil person?** Den flyttes til arrangøren. Det gjelder også
-  gamle demo-runder som fortsatt står på review-kontoen.
+- **Står det en «Slettet bruker» igjen i en runde?** Den raden fjernes. Etterpå er
+  rosteret i hver runde nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
+- **Spilt, levert eller trukket seg?** Scorene og utslagene slettes og legges inn
+  på nytt, rundene settes tilbake til «pågår», og alle leveringer nullstilles.
+- **Rundene står på feil person?** De flyttes til arrangøren. Det gjelder også
+  gamle demo-runder som fortsatt står på review-kontoen. Står scramble-runden på
+  en annen bane enn stableford-runden, flyttes den til samme bane.
 - **Svart på spørsmålet om AI-tekster?** Svaret slettes, så neste reviewer får
   spørsmålet når hen logger inn. På en telefon der appen alt har sett et svar,
   kommer spørsmålet ikke igjen før appen er installert på nytt.
 
-Den slutter med «✅ Allerede provisjonert — resatt til frisk demo.» og en
-`Arrangør`-linje som viser hvem runden står på. Les den linja — det er den som
+Den begynner med «✅ Allerede provisjonert — resatt til frisk demo.» og slutter med en
+`Arrangør`-linje som viser hvem rundene står på. Les den linja — det er den som
 avgjør om revieweren får slette kontoen sin.
 
 Google-kontoen tilbakestilles med `--store google` og sine egne variabler (steg 3).
@@ -256,19 +265,29 @@ Connect eller Play Console, fordi de husker det gamle.
 - **Konto:** navn «Alex Reviewer» (fornavnet brukes i hilsenen på hjem-skjermen),
   handicap 18. `locale = 'en'` gjelder nettsida; appen er på norsk (se notatet —
   det oversetter de få knappene revieweren trenger).
-- **Runde:** «Demo Round — Tørny», stableford, status «pågår», fire spillere i
-  samme flight. Arrangert av admin-kontoen din — revieweren er deltaker, ikke
-  arrangør.
+- **Runder:** to, begge med status «pågår», på samme bane og tee, og begge
+  arrangert av admin-kontoen din — revieweren er deltaker, ikke arrangør.
+  Stableford-runden heter «Demo Round — Tørny» (Google: «Demo Round (Google Play)
+  — Tørny») og har fire spillere i samme flight.
+- **Scramble-runde:** «Demo Scramble — Tørny» (Google: «Demo Scramble (Google
+  Play) — Tørny»), Texas scramble, to lag à to. Revieweren er på lag 1 sammen
+  med gjesten Emma. Jonas og Nora er lag 2. Lag 1 har spilt hull 1–3 og lag 2
+  hull 1–6, med ett utslag per spilt hull, så «Hvem sitt utslag ble brukt?» og
+  lagtavla har noe å vise (bilde 4 og 8 i butikksettet, #2561). Lagets slag
+  står på lagkapteinen (laveste bruker-ID på laget). Lagkortet kan ikke leveres
+  før hver spiller har tre utslag.
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
-  plassholder-domene uten MX. De kan aldri motta mail.
-- **Scores:** medspillerne har spilt hull 1–6, kontoen selv hull 1–3. Revieweren
-  fortsetter på hull 4 og ser et levende leaderboard med en gang.
-- **Så langt går det:** taste slag, følge leaderboardet og **levere
-  scorekortet**. Å avslutte hele runden er arrangørens knapp, og den ser
-  revieweren ikke.
+  plassholder-domene uten MX. De kan aldri motta mail. Hver runde har sine egne
+  tre gjester.
+- **Scores (stableford):** medspillerne har spilt hull 1–6, kontoen selv hull
+  1–3. Revieweren fortsetter på hull 4 og ser et levende leaderboard med en
+  gang.
+- **Så langt går det (stableford):** taste slag, følge leaderboardet og
+  **levere scorekortet**. Å avslutte hele runden er arrangørens knapp, og den
+  ser revieweren ikke.
 - **Slett konto:** «Profil» (oppe til høyre på hjem) → «Personvern og konto» →
   «Slett konto» virker for denne kontoen. Brukes den, trekkes kontoen automatisk
-  ut av runden, runden blir stående hos arrangøren, og neste kjøring av skriptet
+  ut av rundene, rundene blir stående hos arrangøren, og neste kjøring av skriptet
   setter alt tilbake.
 
 ## Notes-mal til App Store Connect
@@ -280,7 +299,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 238 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 740 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
@@ -312,7 +331,9 @@ WORDS YOU WILL NEED
 "Personvern og konto" = Privacy and account
 
 WHAT YOU WILL SEE
-An active round, "Demo Round — Tørny", with three co-players. Tap "Fortsett runden", continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort". Another account hosts the round.
+Two active rounds, both hosted by another account. The home screen shows the newest, "Demo Scramble — Tørny", as the big card. The other, "Demo Round — Tørny", is under "Flere runder i gang" (More rounds in progress).
+"Demo Round — Tørny" has three co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
+"Demo Scramble — Tørny" shows team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used), and "Resultater" shows the team board. A team card can only be submitted once every player has three tee shots, so use this round to look around, not to submit.
 
 ACCOUNT DELETION (5.1.1(v))
 "Profil" > "Personvern og konto" > "Slett konto" > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
