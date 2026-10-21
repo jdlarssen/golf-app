@@ -353,7 +353,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   }
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="leaderboard-screen">
+    // #1954 D3: formatene uten egen tavle; luften under står over systemlinja.
+    <ScrollView contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]} testID="leaderboard-screen">
       <Text style={ui.title}>{bundle.game.name}</Text>
       <Text style={ui.muted} testID="leaderboard-subtitle">
         {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}

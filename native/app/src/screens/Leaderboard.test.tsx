@@ -9,6 +9,7 @@
 // og reveal-predikatet er ekte delt kode.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
@@ -115,9 +116,7 @@ beforeEach(() => {
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // #2579: tavla vet hvem som ser den («DU», stripa), og stripa står over sikker sone.
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me', email: null }) }));
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
@@ -313,6 +312,22 @@ describe('Leaderboard — Wolf-valgene (#2255 PR 3b)', () => {
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('leaderboard-spinner')).toBeTruthy());
     expect(screen.queryByTestId('leaderboard-missing-choices')).toBeNull();
+  });
+
+  // #1954 D3 (kontrollrunden på #2624): formatene uten egen tavle (matchplay,
+  // Wolf, Nassau, Skins, BBB) står i en vanlig rullevisning, og den skal ende
+  // over systemlinja.
+  it('rullevisningen for Wolf ender over systemlinja', async () => {
+    mockBundleOverride.current = wolfBundle();
+    mockFetchWolfChoices.mockResolvedValue([]);
+    setBottomInset(48);
+    try {
+      await renderLeaderboard();
+      await waitFor(() => expect(screen.getByTestId('leaderboard-screen')).toBeTruthy());
+      expect(bottomPadding('leaderboard-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('når hentingen feiler: den ærlige beskjeden', async () => {

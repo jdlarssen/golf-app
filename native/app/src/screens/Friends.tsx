@@ -79,7 +79,7 @@ import {
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
 import { withSystemArrows } from '../components/SystemArrow';
-import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
@@ -95,7 +95,7 @@ function toLoadState(result: Awaited<ReturnType<typeof fetchFriends>>): LoadStat
 
 export function Friends({ route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const selfInitials = route.params?.selfInitials ?? null;
   // #2201: venneforespørsler er lest når du har åpnet vennelista.
   useMarkVisitRead('friends');
@@ -236,8 +236,8 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
     return (
       <ScrollView
         {...KEYBOARD_SCROLL_PROPS}
-        // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
-        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+        // #1954 D3: luften under innholdet står over systemlinja, og ikke mens tastaturet er oppe (useBottomInsetUnlessKeyboard).
+        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
         testID="friends-screen"
       >
         <Text style={ui.body} testID="friends-load-error">
@@ -271,7 +271,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
     <>
       <ScrollView
         {...KEYBOARD_SCROLL_PROPS}
-        contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 32 + insets.bottom }]}
+        contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 32 + bottomInset }]}
         keyboardShouldPersistTaps="handled"
         testID="friends-screen"
       >

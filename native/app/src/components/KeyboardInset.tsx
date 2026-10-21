@@ -39,6 +39,7 @@
 // prop, so the two never add up.
 import { useEffect, useState, type ReactNode } from 'react';
 import { Keyboard, Platform, View, type LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 
 /**
@@ -67,6 +68,18 @@ export function useKeyboardShown(): boolean {
     };
   }, []);
   return shown;
+}
+
+/**
+ * #1954 D3: bunnluften en rullende skjerm med tekstfelt legger under innholdet
+ * for systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone), og
+ * 0 mens tastaturet er oppe. Da dekker tastaturet linja, og luften ville ellers
+ * kommet to ganger. Ett hjem for regelen; skjermene legger sin egen base til.
+ */
+export function useBottomInsetUnlessKeyboard(): number {
+  const insets = useSafeAreaInsets();
+  const keyboardShown = useKeyboardShown();
+  return keyboardShown ? 0 : insets.bottom;
 }
 
 export function KeyboardInset({ children }: { children: ReactNode }) {
