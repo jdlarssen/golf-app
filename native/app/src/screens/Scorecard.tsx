@@ -104,6 +104,7 @@ import {
 } from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import { getDb, listQueue, listTeeShotQueue } from '../data/db';
+import { refreshGameBundle } from '../data/gameBundle';
 import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
@@ -484,6 +485,15 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       : null;
   const teeShotBox = teeShotLock ? teeShotBoxFor(teeShotLock, mode) : null;
 
+  const freshPartialNotice = async (serverCount: number): Promise<string | null> => {
+    const fresh = await refreshGameBundle(gameId).catch(() => null);
+    if (!fresh) return partialDeliveryNotice(serverCount, flightMates.length);
+    const stillOpen = flightMates.filter(
+      (mate) => fresh.players.find((player) => player.userId === mate.userId)?.submittedAt == null,
+    ).length;
+    return partialDeliveryNotice(flightMates.length - stillOpen, flightMates.length);
+  };
+
   const doSubmit = async () => {
     setBusy(true);
     setErrorText(null);
@@ -501,12 +511,14 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
       // spilleren stående med en beskjed, og kortet hentes på nytt så det viser
       // hva som står igjen.
-      // #1954 D2: `alreadySubmitted` er et nytt forsøk etter tidsavbrudd bare
-      // når mitt kort IKKE sto som levert før trykket. Var det levert («Lever
-      // for <makker>»), betyr 0 makkerkort at de ikke kom med, og beskjeden står.
-      const notice = partialDeliveryNotice(result.alsoDelivered, flightMates.length, {
-        alreadySubmitted: result.alreadySubmitted && me.submitted_at == null,
-      });
+      // #1954 D2: et nytt trykk etter tidsavbrudd kan ha levert makkerne i
+      // første forsøk, og da teller serveren 0 nå. Beskjeden avgjøres derfor
+      // ut fra fersk tilstand: bare makkere som fortsatt står uten levert kort,
+      // er ikke levert. Fikk vi ikke hentet, gjelder serverens tall.
+      const notice =
+        result.alsoDelivered < flightMates.length
+          ? await freshPartialNotice(result.alsoDelivered)
+          : null;
       if (notice) {
         setNoticeText(notice);
         void refresh();

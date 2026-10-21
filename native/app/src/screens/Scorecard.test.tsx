@@ -269,6 +269,75 @@ describe('Scorecard', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  // Kontrollrunden på #2622: beskjeden avgjøres ut fra fersk tilstand. Et nytt
+  // trykk etter tidsavbrudd (mitt kort ikke levert før trykket, serveren svarer
+  // alreadySubmitted og 0) kan ha levert makkeren i første forsøk, eller ikke.
+  describe('lever med makker, nytt trykk etter tidsavbrudd', () => {
+    function rig(mateSubmittedAfter: boolean) {
+      const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+      const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+      const bundle = {
+        ...mockRevealBundle,
+        game: { ...mockRevealBundle.game, id: 'game-8', scoreVisibility: 'live' },
+      };
+      mockState.bundle = bundle;
+      // Det ferske svaret etter leveringen: makkeren levert eller ikke.
+      refreshGameBundle.mockImplementation(async () => mockState.bundle);
+      const afterSubmit = {
+        ...bundle,
+        players: bundle.players.map((player) => ({
+          ...player,
+          submittedAt:
+            player.userId === 'me' || (player.userId === 'other' && mateSubmittedAfter)
+              ? '2026-09-01T12:32:00.000Z'
+              : null,
+        })),
+      };
+      submitCard.mockImplementationOnce(async () => {
+        mockState.bundle = afterSubmit;
+        return { ok: true, alreadySubmitted: true, alsoDelivered: 0 };
+      });
+      mockState.scores = (['me', 'other'] as const).flatMap((userId) =>
+        Array.from({ length: 18 }, (_, i) => ({
+          id: `game-8:${userId}:${i + 1}`,
+          gameId: 'game-8',
+          userId,
+          holeNumber: i + 1,
+          strokes: 4,
+          putts: null,
+          enteredBy: 'me',
+          clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+          serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+        })),
+      );
+    }
+
+    afterEach(() => {
+      const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+      refreshGameBundle.mockImplementation(async () => mockState.bundle);
+    });
+
+    it('makkeren kom med i første forsøk: ingen beskjed, videre til spillsiden', async () => {
+      rig(true);
+      const navigate = jest.fn();
+      await render(scorecardElement('game-8', navigate));
+      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      await fireEvent.press(screen.getByTestId('submit-flight'));
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      expect(screen.queryByTestId('submit-partial')).toBeNull();
+    });
+
+    it('makkeren kom ikke med: beskjeden står', async () => {
+      rig(false);
+      const navigate = jest.fn();
+      await render(scorecardElement('game-8', navigate));
+      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      await fireEvent.press(screen.getByTestId('submit-flight'));
+      await waitFor(() => expect(screen.getByTestId('submit-partial')).toBeTruthy());
+      expect(navigate).not.toHaveBeenCalled();
+    });
+  });
+
   it('sier fra når spillet ikke kunne hentes, i stedet for å stå på «Henter scorekortet …» (#1954 A2)', async () => {
     // Ingen bundel i cachen og en henting som feiler (nettet falt): skjermen
     // skal si det, som hull- og tavleskjermen gjør, ikke vente for alltid.
