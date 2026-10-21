@@ -49,6 +49,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
@@ -151,6 +152,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
   const returnTo = route.params?.returnTo ?? null;
   const { userId, email } = useSession();
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [initial, setInitial] = useState<FormValues | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -235,7 +237,12 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
 
   if (loadFailed) {
     return (
-      <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="edit-profile-screen">
+      <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
+        // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+        testID="edit-profile-screen"
+      >
         <Text style={ui.error} testID="edit-profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
@@ -281,7 +288,11 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
       : null;
 
   return (
-    <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={ui.scroll} testID="edit-profile-screen">
+    <ScrollView
+      {...KEYBOARD_SCROLL_PROPS}
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="edit-profile-screen"
+    >
       <Text style={ui.label}>{PROFILE_TEXT.nameLabel}</Text>
       <TextInput
         style={ui.input}

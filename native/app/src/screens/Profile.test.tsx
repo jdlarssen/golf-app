@@ -30,6 +30,7 @@ import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 // `mock`-prefiks kreves: bare navn som starter med «mock» slipper inn i en
 // heist jest.mock-fabrikk.
@@ -42,6 +43,7 @@ jest.mock('../session', () => ({
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;
@@ -127,6 +129,18 @@ describe('Profile', () => {
     // skjemaet i stedet.
     expect(screen.queryByTestId('profile-hcp-age')).toBeNull();
     expect(screen.getByTestId('profile-set-handicap')).toBeTruthy();
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      expect(bottomPadding('profile-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('viser hvem du er og fører videre fra menyen', async () => {

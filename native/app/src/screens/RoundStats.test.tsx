@@ -9,8 +9,10 @@ import { HISTORY_TEXT } from '../lib/historyCopy';
 import type { ScreenProps } from '../navigation';
 import { historyRound, localIso } from '../test/historyFixtures';
 import { RoundStats } from './RoundStats';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me' }) }));
@@ -29,6 +31,20 @@ beforeEach(() => {
 });
 
 describe('RoundStats', () => {
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      fetchRoundHistoryMock.mockResolvedValue([historyRound({ gameId: 'a', date: localIso(8, 19) })]);
+      await renderScreen();
+      await screen.findByTestId('stats-my');
+      expect(bottomPadding('round-stats-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it('shows the sections in the web’s order, and switches the season year', async () => {
     fetchRoundHistoryMock.mockResolvedValue([
       historyRound({ gameId: 'a', date: localIso(8, 19), differential: 12.1, putts: Array(18).fill(2) }),

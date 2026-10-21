@@ -33,6 +33,7 @@
 // (`AccountSettings.tsx`), sammen med personvernerklæringen og «Slett konto».
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
@@ -48,6 +49,7 @@ import { centeredLineTop, FONTS, fraunces, interLine, TAP, useTheme } from '../t
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
   const { ui, colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -138,7 +140,8 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom, backgroundColor: colors.bg }]}
       testID="profile-screen"
     >
       {/* Designet: «Profil» i Fraunces 22 og «Rediger» som pille på samme rad,

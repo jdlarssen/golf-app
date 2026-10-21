@@ -24,12 +24,14 @@ import { fetchOwnProfile } from '../data/profile';
 import { describePendingOthers } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 import { CreateGame } from './CreateGame';
 
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
 // den må stå her selv om ingen spørring kjøres i denne testen.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 // #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
 const mockKroner = { on: false };
@@ -172,6 +174,19 @@ async function renderWizard() {
 }
 
 describe('CreateGame', () => {
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderWizard();
+      await screen.findByTestId('create-screen');
+      expect(bottomPadding('create-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it('bærer valgene gjennom alle fem stegene, står imot en feilet publisering, og bytter ut seg selv ved suksess', async () => {
     // Går gjennom alle fem veiviser-stegene i én flyt (bevisst — det er nettopp
     // det testen skal bevise). Tidsgrensen står i jest.config.js (#1872).

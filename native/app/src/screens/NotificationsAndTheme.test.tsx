@@ -6,6 +6,7 @@
 // merket, et trykk flytter merket og lagrer, og en lagring som feilet står
 // under valgene. For varslene: ingen varsel-del uten støtte, bryteren slår på
 // og av, et nei fra iOS gir «Åpne Innstillinger», og en feil står under kortet.
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Linking, Platform, StyleSheet } from 'react-native';
 import { readPushState, turnOffPush, turnOnPush } from '../data/pushDevice';
@@ -13,6 +14,7 @@ import { loadThemePreference, saveThemePreference } from '../lib/themePreference
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { NotificationsAndTheme } from './NotificationsAndTheme';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../lib/themePreference', () => ({
   ...jest.requireActual('../lib/themePreference'),
@@ -25,6 +27,7 @@ jest.mock('../data/pushDevice', () => ({
   turnOnPush: jest.fn(),
   turnOffPush: jest.fn(),
 }));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const readPushMock = readPushState as jest.Mock;
 const onMock = turnOnPush as jest.Mock;
@@ -54,6 +57,19 @@ describe('NotificationsAndTheme', () => {
       />,
     );
   }
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await screen.findByTestId('theme-system-check');
+      expect(bottomPadding('notifications-theme-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
 
   it('slår varsler på og av med bryteren, og sier fra når det ikke gikk', async () => {
     readPushMock.mockResolvedValue('off');

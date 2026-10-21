@@ -11,8 +11,10 @@ import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { PALETTES } from '../theme';
 import { HoleByHole, HoleByHoleBody } from './HoleByHole';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // Skjermen rundt kroppen: bundel og slag fra enheten, og hentingen av slagene.
 const mockScreen: {
   bundle: GameBundle | null;
@@ -132,6 +134,22 @@ describe('hentingen av slagene', () => {
     await render(<HoleByHole {...props} />);
     await waitFor(() => expect(screen.getByTestId('hole-by-hole-seed-failed')).toBeTruthy());
     expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      mockScreen.bundle = finished();
+      mockScreen.scores = scores;
+      mockScreen.seed = async () => 5;
+      await render(<HoleByHole {...props} />);
+      await screen.findByTestId('hole-by-hole-front9');
+      expect(bottomPadding('hole-by-hole-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('lykkes den: ingen linje', async () => {

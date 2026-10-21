@@ -24,8 +24,10 @@ import {
 import { FRIENDS_TEXT, friendStatusLine, invitedLine } from '../lib/friendsCopy';
 import type { ScreenProps } from '../navigation';
 import { Friends } from './Friends';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/friends', () => ({
@@ -76,6 +78,20 @@ describe('Friends', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
+      await renderScreen();
+      await screen.findByTestId('friends-hero');
+      expect(bottomPadding('friends-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('viser seksjonene, godtar, åpner arket, spør før den fjerner og deler lenka', async () => {

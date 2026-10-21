@@ -32,6 +32,7 @@ import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 import { AccountSettings } from './AccountSettings';
 
 const mockEmail = 'spiller@example.com';
@@ -51,6 +52,7 @@ jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiConsent: jest.fn() }));
 jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const openWebMock = openWeb as jest.Mock;
 const logOutMock = logOut as jest.Mock;
@@ -81,6 +83,19 @@ describe('AccountSettings', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await screen.findByTestId('account-settings-screen');
+      expect(bottomPadding('account-settings-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('#2561: the AI switch shows the answer and saves when flipped, rolling back on failure', async () => {

@@ -10,6 +10,7 @@
 // feillinja med «Prøv igjen».
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AchievementSection,
   CoursesSection,
@@ -33,6 +34,7 @@ export function RoundStats(_props: ScreenProps<'RoundStats'>) {
   // #2201: merkeveggen står her, så «Nye merker» er lest også her.
   useMarkVisitRead('history');
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { load, retry } = useRoundHistory(userId);
   const now = useMemo(() => new Date(), []);
   const stats = useMemo(
@@ -42,7 +44,8 @@ export function RoundStats(_props: ScreenProps<'RoundStats'>) {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom, backgroundColor: colors.bg }]}
       testID="round-stats-screen"
     >
       <HistoryTitle title={HISTORY_TEXT.statsTitle} />

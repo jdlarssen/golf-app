@@ -36,6 +36,7 @@ import { openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { queryStub, routeFrom } from '../test/supabaseMock';
 import { DeleteAccount } from './DeleteAccount';
+import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 // `mock`-prefiks kreves av jest-fabrikkene som heises over deklarasjonene.
 const mockMe = 'user-me';
@@ -43,6 +44,7 @@ const mockEmail = 'spiller@example.com';
 const MY_NAME = 'Jørgen Larssen';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 jest.mock('../session', () => ({
   useSession: () => ({ userId: mockMe, email: mockEmail }),
 }));
@@ -77,6 +79,19 @@ describe('DeleteAccount', () => {
     (fetchDeleteStatus as jest.Mock).mockResolvedValue({ ok: true, blocked: null });
     (deleteAccount as jest.Mock).mockResolvedValue({ ok: true, mode: 'anonymized' });
     (openWeb as jest.Mock).mockResolvedValue({ ok: true });
+  });
+
+  // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
+  // skjermen. Innholdet skal ende over den, med samme luft som før.
+  it('legger systemlinja til bunnluften', async () => {
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await screen.findByTestId('delete-account-submit');
+      expect(bottomPadding('delete-account-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it.each<DeleteBlockReason>(['admin_account', 'active_engagements', 'sole_club_owner'])(

@@ -31,6 +31,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DesignSwitch } from '../components/DesignSwitch';
 import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
@@ -59,6 +60,7 @@ const LABEL: Record<ThemePreference, string> = {
 // Skjermen tar ingen props fra navigasjonen ennå; typen står for å låse ruta.
 export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme'>) {
   const { ui, colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<ThemePreference | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
 
@@ -113,7 +115,8 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom, backgroundColor: colors.bg }]}
       testID="notifications-theme-screen"
     >
       <PageTitle

@@ -14,6 +14,7 @@
 // med spillerens egen sesjon (webben bruker service-role her, #1632).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
   revealState,
@@ -45,6 +46,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const scrollRef = useRef<ScrollView>(null);
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
@@ -94,7 +96,12 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   }
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={ui.scroll} testID="hole-by-hole-screen">
+    <ScrollView
+      ref={scrollRef}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="hole-by-hole-screen"
+    >
       {seed === 'failed' ? (
         <Text style={[ui.muted, { marginBottom: 8 }]} testID="hole-by-hole-seed-failed">
           {SEED_FAILED_TEXT}

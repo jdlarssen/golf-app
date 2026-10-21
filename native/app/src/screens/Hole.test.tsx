@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { useMemo, useState, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { AccessibilityInfo } from 'react-native';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
@@ -194,10 +195,8 @@ jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
   default: () => mockScheme.value,
 }));
 // Skinna står over hjem-indikatoren. Uten navigatorens SafeAreaProvider gir
-// pakkens egen mock innfelling 0.
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
+// den delte mocken innfelling 0, til testen setter en (#1954 D3).
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // Putt-bryteren (#2000) bor i AsyncStorage. Pakkens egen jest-mock er et lager
 // i minnet — hver test starter med bryteren av, som på en fersk telefon.
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -599,6 +598,25 @@ describe('Hole', () => {
     // Sollys styrer bare visningen, så bryteren virker på et låst hull.
     await fireEvent.press(screen.getByRole('switch', { name: 'Sollys' }));
     expect(screen.getByRole('switch', { name: 'Sollys' })).toBeChecked();
+  });
+
+  // #1954 D3: uten skinne er det innholdet selv som står nederst. Med tre
+  // knapper på Android skal det ende over navigasjonslinja, ikke bak den.
+  it('et låst hull: innholdet ender over systemlinja', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: { ...mockSoloBundle.game, status: 'finished' },
+    };
+    setBottomInset(48);
+    try {
+      await renderHole();
+      await waitFor(() => {
+        expect(screen.getByTestId('hole-locked')).toBeTruthy();
+      });
+      expect(bottomPadding('hole-scroll')).toBe(8 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   // #1954 Del B: nettsiden sender et ferdig spill og et levert kort til

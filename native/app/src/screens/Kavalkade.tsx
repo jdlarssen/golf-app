@@ -18,6 +18,7 @@
 // feillinje med «Prøv igjen», og neste forsøk leser raden serveren har skrevet.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildKavalkadeCardModel, isKavalkadeCardKind } from '../../../../lib/kavalkade/cardModel';
 import { buildKavalkadeDeck, isKavalkadeEmpty } from '../../../../lib/kavalkade/kavalkadeCards';
 import { KAVALKADE_YEAR } from '../../../../lib/kavalkade/release';
@@ -156,11 +157,13 @@ function HeadingText({ children }: { children: string }) {
 
 export function Kavalkade(_props: ScreenProps<'Kavalkade'>) {
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { load, retry } = useKavalkade();
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom, backgroundColor: colors.bg }]}
       testID="kavalkade-screen"
     >
       {load.state === 'loading' ? (
