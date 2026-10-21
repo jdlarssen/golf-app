@@ -10,8 +10,11 @@
 
 export type StorePlatform = 'ios' | 'android';
 
-/** Høyst én sjekk per så lenge. */
+/** Høyst én sjekk per så lenge, etter et svar vi kunne bruke. */
 export const CHECK_INTERVAL_MS = 10 * 60 * 1000;
+
+/** Etter et kall uten brukbart svar venter vi så lenge før neste forsøk. */
+export const FAILURE_PAUSE_MS = 60 * 1000;
 
 /** Svarer ikke ruta innen så lenge, regnes sjekken som mislykket. */
 export const FETCH_TIMEOUT_MS = 5000;
@@ -55,11 +58,14 @@ export type UpdateCheckDeps = {
  * henting, og en senere mislykket sjekk fjerner den ikke. Bare et nytt, gyldig
  * svar fra serveren kan slippe spilleren inn igjen.
  *
- * Et mislykket kall teller som en sjekk i vinduet (høyst én per 10 min).
+ * Etter et brukbart svar går det minst 10 minutter til neste henting. Et kall
+ * uten brukbart svar (nettfeil, timeout, uleselig kropp) gir bare en kort pause,
+ * så en spiller som var uten nett ved oppstart ikke venter 10 minutter på neste
+ * forsøk.
  */
 export function createUpdateCheck(deps: UpdateCheckDeps): () => Promise<boolean> {
   let tooOld = false;
-  let lastCheckAt: number | null = null;
+  let notBefore: number | null = null;
   let inFlight = false;
 
   return async function check(): Promise<boolean> {
@@ -67,21 +73,27 @@ export function createUpdateCheck(deps: UpdateCheckDeps): () => Promise<boolean>
     if (inFlight) return tooOld;
 
     const now = deps.now();
-    const elapsed = lastCheckAt === null ? Infinity : now - lastCheckAt;
-    // Negativ tid betyr at klokka gikk bakover; da stoler vi ikke på vinduet.
-    const due = elapsed < 0 || elapsed >= CHECK_INTERVAL_MS;
+    // Står grensen lenger fram enn det lengste vinduet, gikk klokka bakover; da
+    // stoler vi ikke på den.
+    const due =
+      notBefore === null || now >= notBefore || notBefore - now > CHECK_INTERVAL_MS;
     if (!due) return tooOld;
 
     inFlight = true;
-    lastCheckAt = now;
+    let minBuild: number | null = null;
     try {
       const body = await deps.fetchBody();
-      const minBuild = body === null ? null : readMinBuild(body, deps.platform);
-      if (minBuild !== null) tooOld = isBelowMinimum(deps.build, minBuild);
+      minBuild = body === null ? null : readMinBuild(body, deps.platform);
     } catch {
       // Nettfeil er ikke et svar: tilstanden står som den var.
     } finally {
       inFlight = false;
+    }
+    if (minBuild !== null) {
+      tooOld = isBelowMinimum(deps.build, minBuild);
+      notBefore = now + CHECK_INTERVAL_MS;
+    } else {
+      notBefore = now + FAILURE_PAUSE_MS;
     }
     return tooOld;
   };
