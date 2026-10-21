@@ -173,15 +173,17 @@ node scripts/provision-review-account.mjs --env prod --store google
 som står i butikken, fortsatt virker. Bare `--rotate-password` setter et nytt fra
 nøkkelringen. Bytt det der først, og lim det nye inn i butikken etterpå (steg 4).
 
-**Forventet resultat:** en oppsummering som slutter med «✅ Provisjonert.» og to
-blokker, én per runde, hver med `Spill` og `Kortnavn`:
+**Forventet resultat:** en oppsummering som begynner med «✅ Provisjonert.» (en
+konto som finnes fra før, gir «✅ Allerede provisjonert — resatt til frisk demo.»)
+og så to blokker, én per runde, hver med `Spill` og `Kortnavn`:
 stableford-runden har `Spillere: 4, scores: 21`, og scramble-runden har
 `Spillere: 4, scores: 9, utslag: 9`. Til slutt kommer `Arrangør` og `Innlogging`.
 E-postadressene står maskert i utskriften (bare domenet). Linja `Butikk:`
 øverst viser hvilken butikk og hvilke demo-runder kjøringen gjelder. Feiler noe,
 stopper skriptet med «❌» og en forklaring. En ny runde lages som «draft» og
 settes til «pågår» først når alt er seedet, så en halvferdig runde aldri blir
-hovedkortet.
+hovedkortet. Står en demo-runde som utkast etter en feil, kjør samme kommando på
+nytt. Ikke publiser den fra appen.
 
 ### 4. Legg inn i butikkene
 
@@ -237,18 +239,19 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
 - **Slettet kontoen?** Adressen blir frigitt når kontoen anonymiseres, så
   kjøringen lager kontoen på nytt med samme adresse og passordet fra nøkkelringen,
   altså det som står i butikken.
-- **Står det en «Slettet bruker» igjen i runden?** Den raden fjernes. Etterpå er
-  rosteret nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
-- **Spilt, levert eller trukket seg?** Scorene slettes og legges inn på nytt,
-  runden settes tilbake til «pågår», og alle leveringer nullstilles.
-- **Runden står på feil person?** Den flyttes til arrangøren. Det gjelder også
-  gamle demo-runder som fortsatt står på review-kontoen.
+- **Står det en «Slettet bruker» igjen i en runde?** Den raden fjernes. Etterpå er
+  rosteret i hver runde nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
+- **Spilt, levert eller trukket seg?** Scorene og utslagene slettes og legges inn
+  på nytt, rundene settes tilbake til «pågår», og alle leveringer nullstilles.
+- **Rundene står på feil person?** De flyttes til arrangøren. Det gjelder også
+  gamle demo-runder som fortsatt står på review-kontoen. Står scramble-runden på
+  en annen bane enn stableford-runden, flyttes den til samme bane.
 - **Svart på spørsmålet om AI-tekster?** Svaret slettes, så neste reviewer får
   spørsmålet når hen logger inn. På en telefon der appen alt har sett et svar,
   kommer spørsmålet ikke igjen før appen er installert på nytt.
 
-Den slutter med «✅ Allerede provisjonert — resatt til frisk demo.» og en
-`Arrangør`-linje som viser hvem runden står på. Les den linja — det er den som
+Den begynner med «✅ Allerede provisjonert — resatt til frisk demo.» og slutter med en
+`Arrangør`-linje som viser hvem rundene står på. Les den linja — det er den som
 avgjør om revieweren får slette kontoen sin.
 
 Google-kontoen tilbakestilles med `--store google` og sine egne variabler (steg 3).
@@ -284,7 +287,7 @@ Connect eller Play Console, fordi de husker det gamle.
   ser revieweren ikke.
 - **Slett konto:** «Profil» (oppe til høyre på hjem) → «Personvern og konto» →
   «Slett konto» virker for denne kontoen. Brukes den, trekkes kontoen automatisk
-  ut av runden, runden blir stående hos arrangøren, og neste kjøring av skriptet
+  ut av rundene, rundene blir stående hos arrangøren, og neste kjøring av skriptet
   setter alt tilbake.
 
 ## Notes-mal til App Store Connect

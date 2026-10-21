@@ -364,12 +364,12 @@ async function resolveOrganizer(db, store) {
     const rows = candidates.filter((u) => (u.email ?? '').toLowerCase() === override);
     if (rows.length === 0) {
       throw new Error(
-        `REVIEW_DEMO_ORGANIZER_EMAIL peker på «${override}», men ingen bruker i dette miljøet har den adressen.`,
+        `REVIEW_DEMO_ORGANIZER_EMAIL peker på «${maskEmail(override)}», men ingen bruker i dette miljøet har den adressen.`,
       );
     }
     if (rows.length > 1) {
       throw new Error(
-        `REVIEW_DEMO_ORGANIZER_EMAIL «${override}» treffer ${rows.length} brukere — adressen må være entydig.`,
+        `REVIEW_DEMO_ORGANIZER_EMAIL «${maskEmail(override)}» treffer ${rows.length} brukere — adressen må være entydig.`,
       );
     }
     return { ...rows[0], source: 'REVIEW_DEMO_ORGANIZER_EMAIL' };
@@ -776,6 +776,25 @@ async function main() {
       console.log(`3. Demo-spill opprettet (${game.id}).`);
     }
 
+    // Samme bane og tee i alle rundene, også når runden alt finnes på en annen
+    // (laget før banen ble delt). Slagene og utslagene sås på nytt under, mot
+    // banens par. Radtellingen er det eneste ekte suksess-signalet (trap 2).
+    if (shared && (game.course_id !== shared.course_id || game.tee_box_id !== shared.tee_box_id)) {
+      const moved = ok(
+        'flytt runden til den delte banen',
+        await db
+          .from('games')
+          .update({ course_id: shared.course_id, tee_box_id: shared.tee_box_id })
+          .eq('id', game.id)
+          .select('id'),
+      );
+      if (moved.length !== 1) {
+        throw new Error(`flytt runden til den delte banen: traff ${moved.length} rader, forventet 1`);
+      }
+      game.course_id = shared.course_id;
+      game.tee_box_id = shared.tee_box_id;
+      console.log('   Banen og teen flyttet til samme som første runde.');
+    }
     shared ??= { course_id: game.course_id, tee_box_id: game.tee_box_id };
 
     // ------------------------------------------------------- 4. medspillerne
@@ -983,6 +1002,11 @@ async function main() {
           started_at: stampScores,
           ended_at: null,
           round_report: null,
+          // Stale-game-cronen (app/api/cron/stale-game-reminder) plukker aktive
+          // runder som er eldre enn 24 t og aldri har fått påminnelsen. Stemplet
+          // her, og aldri nullet, så demo-rundene aldri gir arrangøren en
+          // påminnelse.
+          organizer_stale_reminder_sent_at: stampScores,
         })
         .eq('id', game.id)
         .select('id'),
