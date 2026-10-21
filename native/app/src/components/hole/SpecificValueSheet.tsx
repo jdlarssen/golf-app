@@ -13,6 +13,7 @@
 // tilgjengelig som standard, og på iOS gjør det alt inni til ÉTT element for
 // VoiceOver. Lå knappene inni bakgrunnen, hørte en skjermleser bare «Lukk».
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
 import { FONTS, fraunces, useTheme } from '../../theme';
 
@@ -37,6 +38,9 @@ export function SpecificValueSheet({
   strike,
 }: SpecificValueSheetProps) {
   const { colors, hole } = useTheme();
+  // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
+  // Arkets luft står over linja, som WinnerSheet og RejectSheet.
+  const insets = useSafeAreaInsets();
   if (!open) return null;
 
   const cell = [
@@ -69,7 +73,7 @@ export function SpecificValueSheet({
           accessibilityLabel="Lukk"
         />
         <View
-          style={[styles.sheet, { backgroundColor: colors.surface }]}
+          style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: SHEET_BOTTOM + insets.bottom }]}
           testID="specific-value-sheet"
         >
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -128,6 +132,9 @@ export function SpecificValueSheet({
   );
 }
 
+/** Luften under arket, over systemlinja (`paddingBottom` settes i komponenten). */
+const SHEET_BOTTOM = 36;
+
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -139,7 +146,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 18,
     paddingTop: 20,
     paddingHorizontal: 18,
-    paddingBottom: 36,
   },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 2.2, marginBottom: 14 },

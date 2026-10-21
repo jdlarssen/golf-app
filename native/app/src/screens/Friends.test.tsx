@@ -94,6 +94,20 @@ describe('Friends', () => {
     }
   });
 
+  // #1954 D3 (evaluator runde 1): venne-arket er en Modal i bunnen; «Lukk»
+  // skal stå over navigasjonslinja.
+  it('venne-arket ender over systemlinja', async () => {
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await fireEvent.press(await screen.findByTestId('friends-open-kari'));
+      expect(screen.getByTestId('friend-sheet')).toHaveStyle({ paddingBottom: 36 + 48 });
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it('viser seksjonene, godtar, åpner arket, spør før den fjerner og deler lenka', async () => {
     fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
     respondMock.mockResolvedValue({ ok: true, status: 'accepted' });
