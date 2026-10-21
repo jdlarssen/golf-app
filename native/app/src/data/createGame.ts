@@ -54,7 +54,9 @@ import { isAppSupportedMode } from '../lib/appFormats';
 import { asSharedFormData } from '../lib/wizardFormData';
 import { buildDraftPayload, type GameDraft } from '../lib/wizardPayload';
 import { currentDeviceUserId, supabase } from '../supabase';
+import type { Database } from '../../../../lib/database.types';
 import { bestEffortCall } from './bestEffortCall';
+import { isNetworkFailureMessage, unlessNetwork } from './timedFetch';
 
 // -----------------------------------------------------------------------------
 // Lesninger — kandidater, baner og teer
@@ -255,6 +257,8 @@ export type CreateGameFailure =
   | 'invalid_game_mode'
   /** Vi fikk ikke SJEKKET formatet. Ikke det samme som at det er ugyldig. */
   | 'db_format'
+  /** Skrivingen eller sjekken nådde ikke fram: nettet (#1954 D2). */
+  | 'offline'
   | 'tee_off_required'
   | 'tee_off_in_past'
   | 'bad_side_ld_count'
@@ -270,9 +274,14 @@ export type CreateGameResult =
   | { ok: true; gameId: string }
   | { ok: false; error: CreateGameFailure };
 
-const failed = (error: CreateGameFailure): CreateGameResult => ({
+/**
+ * `message` er den rå feilteksten fra skrivingen. Er det en nettfeil (også
+ * tidstaket, #1954 D2), blir «prøv igjen om litt»-kodene til nett-linja: det
+ * er nettet, ikke serveren.
+ */
+const failed = (error: CreateGameFailure, message?: string): CreateGameResult => ({
   ok: false,
-  error,
+  error: error === 'db_game' || error === 'db_players' ? unlessNetwork(error, message) : error,
 });
 
 /** PostgRESTs kode for «insufficient_privilege» — RLS avviste raden. */
@@ -289,7 +298,7 @@ const UNIQUE_VIOLATION_CODE = '23505';
  */
 function isOwnEarlierWrite(
   error: { message: string; code?: string } | null,
-  constraint: 'games_pkey' | 'game_players_pkey',
+  constraint: 'games_pkey',
 ): boolean {
   return error?.code === UNIQUE_VIOLATION_CODE && error.message.includes(`"${constraint}"`);
 }
@@ -322,11 +331,12 @@ export function newGameId(): string {
 function readWriteResult<T>(
   result: { data: T[] | null; error: { message: string; code?: string } | null },
   context: string,
-): { ok: true; rows: T[] } | { ok: false; error: 'rls_denied' | 'no_rows' | 'db_error' } {
+): { ok: true; rows: T[] } | { ok: false; error: 'rls_denied' | 'no_rows' | 'db_error'; message?: string } {
   if (result.error) {
     return {
       ok: false,
       error: result.error.code === RLS_DENIED_CODE ? 'rls_denied' : 'db_error',
+      message: result.error.message,
     };
   }
   try {
@@ -350,7 +360,7 @@ function readWriteResult<T>(
  */
 async function refuseUnlessModeIsActive(
   slug: string,
-): Promise<'invalid_game_mode' | 'db_format' | null> {
+): Promise<'invalid_game_mode' | 'db_format' | 'offline' | null> {
   const { data, error } = await supabase
     .from('formats')
     .select('slug')
@@ -361,8 +371,40 @@ async function refuseUnlessModeIsActive(
     .eq('is_active', true)
     .maybeSingle<{ slug: string }>();
 
-  if (error) return 'db_format';
+  // #1954 D2: en nettfeil er nettet, ikke «fikk ikke sjekket formatet».
+  if (error) return isNetworkFailureMessage(error.message) ? 'offline' : 'db_format';
   return data ? null : 'invalid_game_mode';
+}
+
+/** Spiller-raden publiseringen skriver, både første gang og ved et nytt forsøk. */
+type PlayerRow = Database['public']['Tables']['game_players']['Insert'] & { user_id: string };
+
+/**
+ * Spillerne i en runde et tidligere forsøk lagret (#1954 D2, gjennomgangen av
+ * #2622): de som er tatt ut av utkastet siden, slettes, og de i utkastet
+ * skrives inn eller over. Ingen er varslet ennå (`inviteRoster` kjører først
+ * etter et vellykket forsøk), så ingen bekreftelse går tapt.
+ */
+async function replacePlayers(
+  gameId: string,
+  playerRows: PlayerRow[],
+): Promise<ReturnType<typeof readWriteResult<{ user_id: string }>>> {
+  const keep = playerRows.map((row) => row.user_id).join(',');
+  const removed = await supabase
+    .from('game_players')
+    .delete()
+    .eq('game_id', gameId)
+    .not('user_id', 'in', `(${keep})`)
+    .select('user_id');
+  // 0 rader er riktig her (ingen ble tatt ut), så bare feilen leses.
+  if (removed.error) return { ok: false, error: 'db_error', message: removed.error.message };
+  return readWriteResult(
+    await supabase
+      .from('game_players')
+      .upsert(playerRows, { onConflict: 'game_id,user_id' })
+      .select('user_id'),
+    'publishGame(game_players, nytt forsøk)',
+  );
 }
 
 /**
@@ -442,51 +484,62 @@ export async function publishGame(
     ctpCount: side.ctpCount,
   });
 
+  const gameColumns = {
+    name: payload.name,
+    course_id: payload.course_id,
+    tee_box_id: payload.tee_box_id,
+    hcp_allowance_pct: payload.hcp_allowance_pct,
+    require_peer_approval: payload.require_peer_approval,
+    score_visibility: payload.score_visibility,
+    game_mode: payload.game_mode,
+    mode_config: payload.mode_config,
+    registration_mode: payload.registration_mode,
+    registration_type: payload.registration_type,
+    let_friends_skip_gate: payload.let_friends_skip_gate,
+    entry_fee_kr: payload.entry_fee_kr,
+    payment_link: payload.payment_link,
+    prizes,
+    side_tournament_enabled: side.enabled,
+    side_ld_count: side.ldCount,
+    side_ctp_count: side.ctpCount,
+    side_disabled_categories: side.disabledCategories,
+    // Publisering setter 'scheduled', ikke 'active'. Runden startes for seg
+    // («Start runden nå»), og banehandicapene fryses først da — derfor
+    // `course_handicap: null` på spiller-radene under.
+    status: 'scheduled' as const,
+    scheduled_tee_off_at: scheduledTeeOffAt,
+    created_by: userId,
+    started_at: null,
+    // Klubb- og cup-kobling er web-eid (Should i MoSCoW-porten). Satt
+    // eksplisitt så kolonnesettet er identisk med webbens insert.
+    group_id: null,
+    tournament_id: null,
+    tournament_match_label: null,
+  };
   const gameInsert = await supabase
     .from('games')
-    .insert({
-      id: gameId,
-      name: payload.name,
-      course_id: payload.course_id,
-      tee_box_id: payload.tee_box_id,
-      hcp_allowance_pct: payload.hcp_allowance_pct,
-      require_peer_approval: payload.require_peer_approval,
-      score_visibility: payload.score_visibility,
-      game_mode: payload.game_mode,
-      mode_config: payload.mode_config,
-      registration_mode: payload.registration_mode,
-      registration_type: payload.registration_type,
-      let_friends_skip_gate: payload.let_friends_skip_gate,
-      entry_fee_kr: payload.entry_fee_kr,
-      payment_link: payload.payment_link,
-      prizes,
-      side_tournament_enabled: side.enabled,
-      side_ld_count: side.ldCount,
-      side_ctp_count: side.ctpCount,
-      side_disabled_categories: side.disabledCategories,
-      // Publisering setter 'scheduled', ikke 'active'. Runden startes for seg
-      // («Start runden nå»), og banehandicapene fryses først da — derfor
-      // `course_handicap: null` på spiller-radene under.
-      status: 'scheduled',
-      scheduled_tee_off_at: scheduledTeeOffAt,
-      created_by: userId,
-      started_at: null,
-      // Klubb- og cup-kobling er web-eid (Should i MoSCoW-porten). Satt
-      // eksplisitt så kolonnesettet er identisk med webbens insert.
-      group_id: null,
-      tournament_id: null,
-      tournament_match_label: null,
-    })
+    .insert({ id: gameId, ...gameColumns })
     // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
     .select('id');
-  // #1954 D2: et tidligere forsøk lagret runden. Fortsett med spillerne.
-  if (!isOwnEarlierWrite(gameInsert.error, 'games_pkey')) {
-    const insertedGame = readWriteResult<{ id: string }>(gameInsert, 'publishGame(games)');
-    if (!insertedGame.ok) {
-      return failed(
-        insertedGame.error === 'db_error' ? 'db_game' : insertedGame.error,
-      );
-    }
+  // #1954 D2: 23505 på primærnøkkelen betyr at et tidligere forsøk fra samme
+  // veiviser lagret runden, men at svaret aldri kom fram. Arrangøren kan ha
+  // rettet utkastet før dette trykket, så runden og spillerne bringes à jour med
+  // utkastet slik det er NÅ (gjennomgangen av #2622). Bare egen, planlagt rad.
+  const retry = isOwnEarlierWrite(gameInsert.error, 'games_pkey');
+  const savedGame = retry
+    ? readWriteResult<{ id: string }>(
+        await supabase
+          .from('games')
+          .update(gameColumns)
+          .eq('id', gameId)
+          .eq('created_by', userId)
+          .eq('status', 'scheduled')
+          .select('id'),
+        'publishGame(games, nytt forsøk)',
+      )
+    : readWriteResult<{ id: string }>(gameInsert, 'publishGame(games)');
+  if (!savedGame.ok) {
+    return failed(savedGame.error === 'db_error' ? 'db_game' : savedGame.error, savedGame.message);
   }
 
   const rowAcceptedAt = new Date().toISOString();
@@ -514,13 +567,13 @@ export async function publishGame(
     accepted_at: acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
   }));
 
-  const playersInsert = await supabase.from('game_players').insert(playerRows).select('user_id');
-  // #1954 D2: én INSERT er alt eller ingenting, så en 23505 på primærnøkkelen
-  // betyr at hele lista kom inn i et tidligere forsøk.
-  const insertedPlayers = isOwnEarlierWrite(playersInsert.error, 'game_players_pkey')
-    ? ({ ok: true } as const)
-    : readWriteResult(playersInsert, 'publishGame(game_players)');
-  if (!insertedPlayers.ok) {
+  const savedPlayers = retry
+    ? await replacePlayers(gameId, playerRows)
+    : readWriteResult(
+        await supabase.from('game_players').insert(playerRows).select('user_id'),
+        'publishGame(game_players)',
+      );
+  if (!savedPlayers.ok) {
     // #737: rull tilbake games-raden. Uten dette står det igjen en runde uten
     // spillere som ingen kan rydde. Arrangøren har DELETE-RLS på egne spill
     // (0071), og `game_players` cascade-ryddes av FK-en (0001).
@@ -532,7 +585,8 @@ export async function publishGame(
     // etterlatt arrangøren med en tom runde hen ikke vet finnes.
     if (!compensated.ok) return failed('orphan_game');
     return failed(
-      insertedPlayers.error === 'db_error' ? 'db_players' : insertedPlayers.error,
+      savedPlayers.error === 'db_error' ? 'db_players' : savedPlayers.error,
+      savedPlayers.message,
     );
   }
 

@@ -17,6 +17,7 @@
 // feil kan snike seg ut som `undefined`.
 import type { CreateGameFailure } from '../data/createGame';
 import { PROFILE_TEXT } from './profileCopy';
+import { OFFLINE_NOTE } from './rosterCopy';
 
 export function describeCreateGameFailure(error: CreateGameFailure): string {
   switch (error) {
@@ -80,12 +81,16 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Dette formatet opprettes på nettsiden ennå.';
     case 'db_format':
       return 'Fikk ikke sjekket formatet. Sjekk nettet og prøv igjen.';
+    // #1954 D2: skrivingen eller format-sjekken kom aldri fram (også tidstaket).
+    case 'offline':
+      return OFFLINE_NOTE;
     case 'rls_denied':
       return 'Du har ikke lov til å opprette dette spillet.';
     case 'no_rows':
       return 'Spillet ble ikke lagret. Prøv igjen.';
-    // Den ene meldingen som ikke kan avsluttes med «prøv igjen»: games-raden
-    // kan stå igjen i databasen, og et nytt forsøk ville laget en runde til.
+    // Den ene meldingen som ikke bare sier «prøv igjen»: games-raden kan stå
+    // igjen i databasen. Et nytt forsøk fra samme veiviser lager ikke en runde
+    // til (samme runde-id, #1954 D2), men arrangøren skal vite at den finnes.
     case 'orphan_game':
       return 'Spillerne ble ikke lagret, og vi fikk ikke ryddet bort spillet. Se om det ligger under «Mine spill» — da kan du slette det og prøve på nytt.';
   }
