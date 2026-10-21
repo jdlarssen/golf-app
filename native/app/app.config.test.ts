@@ -155,7 +155,7 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   // styrt av `apple.privacyManifestAggregationEnabled` i Podfile.properties.json.
   // Den må aldri settes til `false`. 85F4.1 («vis diskplass til brukeren») er
   // ikke sant for appen og skal ikke med.
-  it('har tillatelsesteksten for Bilder og DiskSpace i personvernmanifestet, i begge varianter', () => {
+  it('har tillatelsesteksten for Bilder, norsk språk og DiskSpace i personvernmanifestet, i begge varianter', () => {
     for (const cfg of [resolveConfig(base, DEV_ENV), resolveConfig(base, STORE_ENV)]) {
       expect(cfg.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Tørny lagrer bildet du deler i Bilder.');
       // Uten norsk utviklingsregion og lokalisering viser UIKit engelske
