@@ -393,6 +393,23 @@ describe('Hole', () => {
     expect(subscribeGameScores).toHaveBeenCalledTimes(1);
   });
 
+  // #1954 D2: uten lagret kopi og uten svar (tidstaket) sto bare «Fikk ikke
+  // tak i spillet.», uten en vei videre. Nå har den «Prøv igjen», som Spill-hjem.
+  it('spillet kom ikke, og ingenting er lagret: «Prøv igjen» henter på nytt', async () => {
+    const { loadGameBundle, refreshGameBundle } = require('../data/gameBundle') as {
+      loadGameBundle: jest.Mock;
+      refreshGameBundle: jest.Mock;
+    };
+    loadGameBundle.mockResolvedValueOnce(undefined);
+    refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed (timeout)'));
+    await render(holeElement(1, { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }));
+    await waitFor(() =>
+      expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.'),
+    );
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
+  });
+
   // #2252: skinna. Første trykk på en knapp fører scoren for setet skinna står
   // på, og skinna går videre til neste som mangler. Tallene på knappene er
   // dekket av Type A (railPoints, scoreRail); her er det koblingen som testes.

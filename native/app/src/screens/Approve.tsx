@@ -34,6 +34,7 @@ import {
   type ScoringGender,
 } from '../../../../lib/scoring/modes/types';
 import { RejectSheet } from '../components/approve/RejectSheet';
+import { GameLoadFailed } from '../components/GameLoadFailed';
 import { DashedRing, HakeIcon } from '../components/icons/Icons';
 import { kickerHeader } from '../components/KickerHeader';
 import { ScorecardGrid } from '../components/scorecard/ScorecardGrid';
@@ -141,7 +142,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
       </View>
     ) : (
       <View style={ui.centered} testID="approve-error">
-        <Text style={ui.error}>{APPROVE_TEXT.loadFailed}</Text>
+        <GameLoadFailed onRetry={() => void refresh()} />
       </View>
     );
   }

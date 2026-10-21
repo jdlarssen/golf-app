@@ -3,14 +3,10 @@
 // skjermen viser, teksten bor her.
 import { formatNameList } from './display';
 
-import { GAME_LOAD_FAILED_TEXT } from './seedCopy';
-
 export const APPROVE_TEXT = {
   /** Skjermens navn for systemet (tilbake-menyen på neste skjerm). */
   screenTitle: 'Godkjenn',
   loading: 'Henter kortene …',
-  // #1954 A2: samme setning som hull- og tavleskjermen når spillet ikke kom.
-  loadFailed: GAME_LOAD_FAILED_TEXT,
   empty: 'Ingenting å godkjenne akkurat nå.',
   noScores: 'Ingen slag synlige på denne enheten.',
   intro: 'Sjekk slagene mot det du så på banen. Handicapen regner appen ut selv.',

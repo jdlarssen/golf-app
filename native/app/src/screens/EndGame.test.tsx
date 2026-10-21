@@ -443,6 +443,27 @@ describe('EndGame', () => {
     });
   });
 
+  // #1954 D2: uten lagret kopi og uten svar sto bare teksten, uten en vei videre.
+  it('runden kom ikke, og ingenting er lagret: «Prøv igjen» henter på nytt', async () => {
+    const { loadGameBundle } = require('../data/gameBundle') as { loadGameBundle: jest.Mock };
+    loadGameBundle.mockResolvedValueOnce(undefined);
+    (refreshGameBundle as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed (timeout)'));
+    await render(
+      <EndGame
+        {...({
+          route: { params: { gameId: GAME_ID } },
+          navigation: { replace, dispatch, setOptions, goBack: jest.fn() },
+        } as unknown as ScreenProps<'EndGame'>)}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i runden. Sjekk nettet og prøv igjen.'),
+    );
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
+  });
+
   it('avslutter ikke cup-runder — de hører til nettsiden', async () => {
     setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], {
       tournamentId: 'cup-1',

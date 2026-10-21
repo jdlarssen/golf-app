@@ -11,6 +11,9 @@
  */
 export const GAME_LOAD_FAILED_TEXT = 'Fikk ikke tak i spillet.';
 
+/** Samme setning med rådet foran «Prøv igjen»-knappen (`components/GameLoadFailed`). */
+export const GAME_LOAD_RETRY_TEXT = `${GAME_LOAD_FAILED_TEXT} Sjekk nettet og prøv igjen.`;
+
 /**
  * Når serveren svarte, men spillet ikke finnes for spilleren: slettet, eller
  * skjult av RLS fordi hen ikke er med (#1954 Del B). Nettsiden svarer 404 her,

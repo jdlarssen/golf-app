@@ -75,7 +75,8 @@ import {
   type TeamBoardModel,
 } from '../lib/teamBoard';
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
-import { CHOICES_MISSING_BOARD_TEXT, GAME_LOAD_FAILED_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { GameLoadFailed } from '../components/GameLoadFailed';
+import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { teeShotMinimum } from '../lib/teeShotTeams';
@@ -169,7 +170,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const { gameId } = route.params;
   // #2201: «resultatet er klart» er lest når du har sett tavla.
   useMarkVisitRead('gameLeaderboard', gameId);
-  const { bundle, loading } = useGameBundle(gameId);
+  const { bundle, loading, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
   // #2067/#2228: lagets rader følger laget. Uten foldingen mister sideturneringen
   // og den blinde bruttotabellen hullene en trukket kaptein førte.
@@ -248,7 +249,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="leaderboard-spinner" />
         ) : (
-          <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
+          <GameLoadFailed onRetry={() => void refresh()} />
         )}
       </View>
     );
