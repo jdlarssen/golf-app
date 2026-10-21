@@ -259,6 +259,11 @@ export type CreateGameFailure =
   | 'db_format'
   /** Skrivingen eller sjekken nådde ikke fram: nettet (#1954 D2). */
   | 'offline'
+  /**
+   * Et nytt forsøk fant runden fra et tidligere forsøk, men den står ikke
+   * lenger som planlagt (startet). Ikke suksess: utkastet kan være endret.
+   */
+  | 'already_started'
   | 'tee_off_required'
   | 'tee_off_in_past'
   | 'bad_side_ld_count'
@@ -374,6 +379,17 @@ async function refuseUnlessModeIsActive(
   // #1954 D2: en nettfeil er nettet, ikke «fikk ikke sjekket formatet».
   if (error) return isNetworkFailureMessage(error.message) ? 'offline' : 'db_format';
   return data ? null : 'invalid_game_mode';
+}
+
+/** Står egen runde med denne id-en, men ikke lenger som planlagt? Lesefeil = nei. */
+async function ownRoundHasMovedOn(gameId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('games')
+    .select('status')
+    .retry(false)
+    .eq('id', gameId)
+    .maybeSingle<{ status: string }>();
+  return !error && data != null && data.status !== 'scheduled';
 }
 
 /** Spiller-raden publiseringen skriver, både første gang og ved et nytt forsøk. */
@@ -539,6 +555,12 @@ export async function publishGame(
       )
     : readWriteResult<{ id: string }>(gameInsert, 'publishGame(games)');
   if (!savedGame.ok) {
+    // Kontrollrunden på #2622: 0 rader på et nytt forsøk kan bety at runden fra
+    // første forsøk alt har startet. Uten oppslaget ville «Spillet ble ikke
+    // lagret» kommet igjen ved hvert trykk.
+    if (retry && savedGame.error === 'no_rows' && (await ownRoundHasMovedOn(gameId))) {
+      return failed('already_started');
+    }
     return failed(savedGame.error === 'db_error' ? 'db_game' : savedGame.error, savedGame.message);
   }
 
