@@ -688,6 +688,31 @@ describe('publishGame', () => {
       expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'already_started' });
     });
 
+    it('oppslaget bak trykket prøves ikke på nytt av biblioteket', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const lookup = queryStub({ data: { status: 'active' }, error: null });
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(DUPLICATE('games_pkey')), queryStub(ZERO_ROWS), lookup],
+      });
+
+      await createGame().publishGame(draft(), OWN_ID);
+      expect(stepArgs(lookup, 'retry')).toEqual([[false]]);
+    });
+
+    it.each([
+      ['runden står fortsatt som planlagt', { data: { status: 'scheduled' }, error: null }],
+      ['oppslaget feiler', { data: null, error: { message: 'nektet', code: '42501' } }],
+    ] as const)('0 rader og %s: «ble ikke lagret», ikke «har startet»', async (_case, reply) => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(DUPLICATE('games_pkey')), queryStub(ZERO_ROWS), queryStub(reply)],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'no_rows' });
+    });
+
     it('en 23505 på en annen regel enn primærnøkkelen er fortsatt en feil', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
