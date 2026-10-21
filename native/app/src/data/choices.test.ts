@@ -371,6 +371,16 @@ describe('choices', () => {
       expect(supabase.from).toHaveBeenCalledTimes(1);
     });
 
+    // #1954 D2: oppslaget står bak trykket og skal bindes av ett tidstak.
+    it('status-oppslaget prøves ikke på nytt av biblioteket', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const lookup = queryStub({ data: { status: 'finished' }, error: null });
+      routeFrom({ games: [lookup] });
+
+      await choices().setBingoBangoBongoHole(bbbWrite(), 'active');
+      expect(stepArgs(lookup, 'retry')).toEqual([[false]]);
+    });
+
     it('skiller et borte spill fra en falt spørring — 0 rader er game_not_found', async () => {
       const { queryStub, routeFrom, supabase } = mocks();
       routeFrom({ games: [queryStub({ data: null, error: null })] });
