@@ -460,6 +460,8 @@ describe('EndGame', () => {
     await waitFor(() =>
       expect(screen.getByTestId('game-retry')).toBeTruthy(),
     );
+    // Avslutningen sier «runden», med sin egen setning.
+    expect(screen.getByTestId('game-error')).toHaveTextContent(END_GAME_TEXT.loadFailed);
     await fireEvent.press(screen.getByTestId('game-retry'));
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
   });

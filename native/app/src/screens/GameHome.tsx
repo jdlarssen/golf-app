@@ -183,7 +183,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   if (notFound) {
     return (
       <View style={ui.centered}>
-        <GameLoadFailed notFound onRetry={() => void refresh()} />
+        <GameLoadFailed notFound />
       </View>
     );
   }

@@ -455,6 +455,20 @@ describe('drainQueue', () => {
       expect(supabase.rpc.mock.calls.map((call) => call[0])).not.toContain('set_team_tee_shot_if_newer');
     });
 
+    // Tvillingen til slag-testen: en annen feil enn nett stopper ikke resten.
+    it('en permanent feil på første utslag stopper ikke det andre', async () => {
+      const { supabase } = mocks();
+      const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+      await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy: MATE, enteredBy: ME });
+      await writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 8, teeShotBy: MATE, enteredBy: ME });
+      supabase.rpc
+        .mockResolvedValueOnce({ data: null, error: { message: 'new row violates check constraint "team_tee_shots_check"' } })
+        .mockResolvedValueOnce(teeReply({ hole_number: 8 }));
+
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      expect(await drainQueue('test')).toEqual({ pushed: 1, rejected: 0, errored: 1, abandoned: 0 });
+    });
+
     it('en nettfeil på første utslag: det andre prøves ikke', async () => {
       const { supabase } = mocks();
       const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
