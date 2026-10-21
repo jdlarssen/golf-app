@@ -69,6 +69,7 @@ import { currentDeviceUserId, supabase } from '../supabase';
 import { callScorecardRoute } from './playerActions';
 import { refreshWebCache } from './refreshWebCache';
 import { isDeviceOnline } from './syncTriggers';
+import { unlessNetwork } from './timedFetch';
 import { callWebRoute, type WebApiCall } from './webApi';
 
 /**
@@ -135,7 +136,8 @@ const failed = (
   if (message !== undefined) console.error(`[rosterActions] ${reason}`, message);
   return {
     ok: false,
-    reason,
+    // #1954 D2: en nettfeil sier «sjekk nettet», ikke den generelle 'db'-teksten.
+    reason: unlessNetwork(reason, message),
     ...(message === undefined ? {} : { message }),
   };
 };
@@ -268,7 +270,9 @@ async function afterWrite(
 
 /**
  * Det som stoppet et rute-kall før ruta svarte, som roster-kode. `network` er
- * `db`: et kall som aldri kom fram er «prøv igjen», ikke en egen forklaring.
+ * `offline` (#1954 D2): et kall som aldri kom fram, også et som nådde
+ * tidstaket, er nettet og ikke serveren, og skjermen ber om å prøve igjen når
+ * nettet er tilbake.
  */
 function webApiFailure(
   call: Extract<WebApiCall, { ok: false }>,
@@ -281,7 +285,7 @@ function webApiFailure(
     case 'unauthorized':
       return failed('no-session');
     case 'network':
-      return failed('db');
+      return failed('offline');
   }
 }
 

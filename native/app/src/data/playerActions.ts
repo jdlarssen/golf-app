@@ -29,7 +29,7 @@ import { callWebRoute, type WebApiCall } from './webApi';
 
 /** Hvorfor en handling ikke gikk gjennom. Skjermene oversetter til norsk copy. */
 export type ActionFailure =
-  /** Uten nett stopper kallet før det sendes; ingenting går i sync-køen. */
+  /** Uten nett, eller kallet kom aldri fram (#1954 D2). Ingenting går i sync-køen. */
   | 'offline'
   /** Bygget mangler web-adressen — samme mangel som stopper lenke-knappene. */
   | 'no-web-base-url'
@@ -115,8 +115,11 @@ async function review(
         return { ok: false, reason: call.reason };
       case 'unauthorized':
         return { ok: false, reason: 'no-session' };
+      // #1954 D2: et kall som aldri kom fram, også et som nådde tidstaket, er
+      // nettet. Skjermen sier «Du er uten nett. Prøv igjen …», ikke at noe
+      // gikk galt mot serveren.
       case 'network':
-        return { ok: false, reason: 'db' };
+        return { ok: false, reason: 'offline' };
     }
   }
   if (call.status === 200) {

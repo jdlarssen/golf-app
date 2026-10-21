@@ -65,6 +65,18 @@ export function isNetworkFailureMessage(message: string | null | undefined): boo
   return NETWORK_HINTS.some((hint) => lower.includes(hint));
 }
 
+/**
+ * Koden en feilet handling skal ha når feilen egentlig er nettet (#1954 D2).
+ *
+ * Datalagene oversetter en feil fra PostgREST til sin egen generelle kode
+ * ('db'), og da sa skjermen «Noe gikk galt mot serveren» også når forespørselen
+ * aldri kom fram. Er den rå teksten en nettfeil, blir koden 'offline' i stedet,
+ * og skjermen viser den felles nett-linja (`OFFLINE_NOTE`).
+ */
+export function unlessNetwork<R extends string>(reason: R, message: string | undefined): R | 'offline' {
+  return isNetworkFailureMessage(message) ? 'offline' : reason;
+}
+
 /** En `AbortError` slik fetch gir den. `DOMException` finnes ikke i alle RN-versjoner. */
 function abortError(): Error {
   const err = new Error('Aborted');

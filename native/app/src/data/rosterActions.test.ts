@@ -337,7 +337,8 @@ describe('rosterActions', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser et kall som aldri kom fram som db', async () => {
+    // #1954 D2: nettet, ikke serveren.
+    it('leser et kall som aldri kom fram som nett', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow('scheduled'))],
@@ -348,7 +349,7 @@ describe('rosterActions', () => {
 
       expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: false,
-        reason: 'db',
+        reason: 'offline',
       });
     });
 
@@ -1096,13 +1097,14 @@ describe('rosterActions', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser et kall som aldri kom fram som db', async () => {
+    // #1954 D2: nettet, ikke serveren.
+    it('leser et kall som aldri kom fram som nett', async () => {
       mockFetch.mockRejectedValue(new Error('Network request failed'));
       jest.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: false,
-        reason: 'db',
+        reason: 'offline',
       });
     });
   });

@@ -149,6 +149,21 @@ describe('finishRound', () => {
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
+    // #1954 D2: en lesing som når tidstaket, er nettet. Før ga den 'db', og
+    // skjermen sa «Noe gikk galt mot serveren».
+    it('en nettfeil gir nett-linja, ikke den generelle serverfeilen', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub({ data: null, error: { message: 'TypeError: Network request failed (timeout)', code: '' } })],
+      });
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await endGame().finishRound(GAME)).toMatchObject({
+        ok: false,
+        reason: 'offline',
+      });
+    });
+
     it('svarer not-found når spillet ikke er synlig', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ games: [queryStub({ data: null, error: null })] });
