@@ -36,11 +36,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
     ],
     "package": "no.tornygolf.app",
     "predictiveBackGestureEnabled": false,
-    "versionCode": 5,
+    "versionCode": 6,
   },
   "icon": "./assets/icon.png",
   "ios": {
-    "buildNumber": "5",
+    "buildNumber": "6",
     "bundleIdentifier": "no.tornygolf.app",
     "config": {
       "usesNonExemptEncryption": false,
