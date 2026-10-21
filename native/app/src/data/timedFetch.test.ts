@@ -112,6 +112,7 @@ describe('timedFetch', () => {
       status: 200,
       statusText: 'OK',
       headers: new Headers({ 'Content-Type': 'application/json' }),
+      text: () => new Promise(() => {}),
       arrayBuffer: () => new Promise(() => {}),
     });
     const outcome = timedFetch(URL).then(
@@ -141,6 +142,32 @@ describe('timedFetch', () => {
     expect(response.headers.get('content-range')).toBe('0-0/1');
     expect(await response.json()).toEqual([{ id: 1 }]);
     expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Evaluator runde 2: i appen er `Response` RN sin whatwg-fetch-polyfill (ikke
+  // Nodes), og den leser en ArrayBuffer-kropp som Latin-1. Da ble «ø» til «Ã¸» i
+  // hvert svar. Testen bruker polyfillens egen `Response`, slik telefonen gjør.
+  it('æ, ø og å kommer gjennom med RN sin egen Response', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pakken har ingen typer; bare Response trengs
+    const { Response: RnResponse } = require('whatwg-fetch') as { Response: typeof Response };
+    const nodeResponse = global.Response;
+    global.Response = RnResponse;
+    try {
+      const json = JSON.stringify({ name: 'Kari Arrangør', course: 'Bærum Å' });
+      // expo/fetch sitt svar: både tekst og bytes (UTF-8) kan leses.
+      const bytes = new TextEncoder().encode(json);
+      underlying.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: new RnResponse('').headers,
+        text: async () => json,
+        arrayBuffer: async () => bytes.buffer,
+      });
+      const response = await timedFetch(URL);
+      expect(await response.json()).toEqual({ name: 'Kari Arrangør', course: 'Bærum Å' });
+    } finally {
+      global.Response = nodeResponse;
+    }
   });
 
   it.each([204, 205, 304])('status %i uten kropp går gjennom', async (status) => {

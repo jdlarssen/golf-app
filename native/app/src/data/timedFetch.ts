@@ -87,11 +87,18 @@ export function unlessNetwork<R extends string>(reason: R, message: string | und
 /** Statusene en `Response` ikke kan ha kropp med. */
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 
-/** Svaret med kroppen lest inn i minnet, så ingen lesing etterpå venter på nettet. */
+/**
+ * Svaret med kroppen lest inn i minnet, så ingen lesing etterpå venter på nettet.
+ *
+ * Som TEKST, ikke bytes: i appen er `Response` RN sin whatwg-fetch-polyfill, og
+ * den leser en ArrayBuffer-kropp som Latin-1 («ø» ble «Ã¸»). expo/fetch sin
+ * `text()` dekoder UTF-8, og en tekst-kropp leses uendret tilbake. Ingenting i
+ * appen leser binære svar gjennom supabase-js eller webApi.
+ */
 async function withBufferedBody(response: Response): Promise<Response> {
   const init = { status: response.status, statusText: response.statusText, headers: response.headers };
   if (NULL_BODY_STATUSES.has(response.status)) return new Response(null, init);
-  return new Response(await response.arrayBuffer(), init);
+  return new Response(await response.text(), init);
 }
 
 /** En `AbortError` slik fetch gir den. `DOMException` finnes ikke i alle RN-versjoner. */
