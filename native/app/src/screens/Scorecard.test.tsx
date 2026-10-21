@@ -48,6 +48,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ScreenProps } from '../navigation';
+import { GAME_BUNDLE_TIMEOUT_MS } from '../lib/useGameData';
 import { Scorecard } from './Scorecard';
 
 const GAME_ID = 'game-1';
@@ -337,10 +338,14 @@ describe('Scorecard', () => {
     it('makkeren kom ikke med: beskjeden står, uten «levert»-gjetningen', async () => {
       const refreshGameBundle = rig('open');
       const navigate = jest.fn();
-      await pressDeliver(navigate);
+      await render(scorecardElement('game-8', navigate));
+      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+      const fetchesBefore = refreshGameBundle.mock.calls.length;
+      await fireEvent.press(screen.getByTestId('submit-flight'));
       await waitFor(() => expect(screen.getByTestId('submit-partial')).toBeTruthy());
-      // Beslutningen leser spillet på nytt, med et tak (signal).
-      expect(refreshGameBundle).toHaveBeenCalledWith('game-8', { signal: expect.any(Object) });
+      // Beslutningen leser spillet på nytt, med et tak (signal); hookens eget
+      // kall ved åpning teller ikke.
+      expect(refreshGameBundle.mock.calls[fetchesBefore]).toEqual(['game-8', { signal: expect.any(Object) }]);
       expect(screen.getByTestId('submit-partial')).toHaveTextContent(
         'Makkerkortet ble ikke levert. Noen kan ha ført et hull på det i mellomtiden.',
       );
@@ -368,14 +373,36 @@ describe('Scorecard', () => {
       );
     });
 
-    it('knappen står opptatt mens beslutningen tas', async () => {
+    // Taket: en lesing som aldri blir ferdig (og heller ikke bryr seg om
+    // signalet) holder knappen opptatt i GAME_BUNDLE_TIMEOUT_MS, ikke lenger.
+    it('knappen står opptatt mens beslutningen tas, og gir opp etter taket', async () => {
       const refreshGameBundle = rig('open');
-      const navigate = jest.fn();
-      await render(scorecardElement('game-8', navigate));
-      await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
-      refreshGameBundle.mockReturnValue(new Promise(() => {}));
-      await fireEvent.press(screen.getByTestId('submit-flight'));
-      expect(screen.getByTestId('submit-flight')).toBeDisabled();
+      jest.useFakeTimers();
+      try {
+        const navigate = jest.fn();
+        await render(scorecardElement('game-8', navigate));
+        await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
+        const fetchesBefore = refreshGameBundle.mock.calls.length;
+        refreshGameBundle.mockReturnValue(new Promise(() => {}));
+        await fireEvent.press(screen.getByTestId('submit-flight'));
+        expect(screen.getByTestId('submit-flight')).toBeDisabled();
+        const signal = (refreshGameBundle.mock.calls[fetchesBefore]![1] as { signal: AbortSignal }).signal;
+        expect(signal.aborted).toBe(false);
+
+        await act(async () => {
+          jest.advanceTimersByTime(GAME_BUNDLE_TIMEOUT_MS);
+        });
+        expect(signal.aborted).toBe(true);
+        await waitFor(() =>
+          expect(screen.getByTestId('submit-partial')).toHaveTextContent(
+            'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.',
+          ),
+        );
+        expect(screen.getByTestId('submit-flight')).toBeEnabled();
+        expect(navigate).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

@@ -485,15 +485,24 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       : null;
   const teeShotBox = teeShotLock ? teeShotBoxFor(teeShotLock, mode) : null;
 
-  // Lesingen har samme tak som spillhentingen (GAME_BUNDLE_TIMEOUT_MS), og
-  // signalet stopper også postgrests nye forsøk. Feiler den, gjelder serverens
-  // tall og den forsiktige beskjeden.
+  // Lesingen har samme tak som spillhentingen (GAME_BUNDLE_TIMEOUT_MS). Den
+  // løper mot en timer, som i `useGameBundle`: signalet stopper fetch-en og
+  // postgrests nye forsøk, men ikke `getSession()` foran kallet, så det er
+  // timeren som binder beslutningen (og `setBusy(false)`) til taket. Feiler
+  // lesingen eller når taket, gjelder serverens tall og den forsiktige beskjeden.
   const freshPartialNotice = async (serverCount: number): Promise<string | null> => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), GAME_BUNDLE_TIMEOUT_MS);
-    const fresh = await refreshGameBundle(gameId, { signal: controller.signal })
-      .catch(() => null)
-      .finally(() => clearTimeout(timer));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<null>((resolve) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        resolve(null);
+      }, GAME_BUNDLE_TIMEOUT_MS);
+    });
+    const fresh = await Promise.race([
+      refreshGameBundle(gameId, { signal: controller.signal }).catch(() => null),
+      timedOut,
+    ]).finally(() => clearTimeout(timer));
     if (!fresh) return partialDeliveryNotice(serverCount, flightMates.length);
     // En makker som har trukket seg, er verken levert eller mangler.
     const stillThere = flightMates.filter(
