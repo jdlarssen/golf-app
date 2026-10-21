@@ -37,10 +37,11 @@ jest.mock('../lib/useChoices', () => ({
   }),
 }));
 jest.mock('../lib/useGameData', () => ({
-  useGameBundle: () => ({ bundle: mockScreen.bundle, loading: false }),
+  useGameBundle: () => ({ bundle: mockScreen.bundle, loading: false, refresh: mockRefresh }),
   useLocalScores: () => ({ scores: mockScreen.scores, reload: mockReload }),
 }));
 const mockReload = jest.fn();
+const mockRefresh = jest.fn(async () => undefined);
 const mockNavigation = { setOptions: jest.fn() };
 jest.mock('../data/seedScores', () => ({ seedGameScores: () => mockScreen.seed() }));
 
@@ -100,6 +101,19 @@ describe('hentingen av slagene', () => {
   const props = { route: { params: { gameId: 'g1' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
   const finished = () =>
     homeBundle({ game: { id: 'g1', status: 'finished', ...stableford }, players });
+
+  // #1954 D2: uten lagret kopi og uten svar (tidstaket) sto bare «Fikk ikke
+  // tak i spillet.», uten en vei videre. Nå har den «Prøv igjen», som Spill-hjem.
+  it('spillet kom ikke, og ingenting er lagret: «Prøv igjen» henter på nytt', async () => {
+    mockScreen.bundle = null;
+    mockScreen.scores = [];
+    mockScreen.seed = async () => 0;
+    mockRefresh.mockClear();
+    await render(<HoleByHole {...props} />);
+    expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.');
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
 
   it('mens den pågår og telefonen ikke har noe: et hjul, ikke et tomt kort', async () => {
     mockScreen.bundle = finished();

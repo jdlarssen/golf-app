@@ -152,7 +152,7 @@ import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
-import { GAME_LOAD_FAILED_TEXT } from '../lib/seedCopy';
+import { GameLoadFailed } from '../components/GameLoadFailed';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
@@ -274,7 +274,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </View>
     ) : (
       <View style={ui.centered} testID="scorecard-error">
-        <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
+        <GameLoadFailed onRetry={() => void refresh()} />
       </View>
     );
   }

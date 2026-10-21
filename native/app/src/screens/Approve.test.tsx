@@ -11,7 +11,7 @@
 // det på skjermen, fanger at skjermen igjen leser rå rader.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Platform } from 'react-native';
-import { render, screen, waitFor, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { Approve } from './Approve';
@@ -171,7 +171,12 @@ describe('Approve', () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByTestId('approve-error')).toHaveTextContent('Fikk ikke tak i spillet.'));
+    await waitFor(() => expect(screen.getByTestId('approve-error')).toBeTruthy());
+    // #1954 D2: samme setning som de andre spillskjermene, og en vei videre.
+    expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.');
+    const calls = refreshGameBundle.mock.calls.length;
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    expect(refreshGameBundle.mock.calls.length).toBe(calls + 1);
   });
 
   // #2560: «Du får beskjed når kortet kommer» stemmer ikke på Android, som ikke

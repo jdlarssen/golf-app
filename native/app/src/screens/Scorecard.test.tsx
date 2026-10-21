@@ -240,7 +240,12 @@ describe('Scorecard', () => {
 
     await render(scorecardElement(GAME_ID, jest.fn()));
 
-    await waitFor(() => expect(screen.getByTestId('scorecard-error')).toHaveTextContent('Fikk ikke tak i spillet.'));
+    await waitFor(() => expect(screen.getByTestId('scorecard-error')).toBeTruthy());
+    // #1954 D2: samme setning som de andre spillskjermene, og en vei videre.
+    expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.');
+    const calls = refreshGameBundle.mock.calls.length;
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    expect(refreshGameBundle.mock.calls.length).toBe(calls + 1);
   });
 
   it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {

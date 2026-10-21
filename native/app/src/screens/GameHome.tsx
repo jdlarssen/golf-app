@@ -56,8 +56,8 @@ import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
-import { GAME_LOAD_FAILED_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
-import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
+import { GameLoadFailed } from '../components/GameLoadFailed';
+import { GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import {
   calendarEvent,
   slotField,
@@ -200,18 +200,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     // Hentingen feilet eller ga opp (GAME_BUNDLE_TIMEOUT_MS), og ingenting er
     // lagret. Fokus og forgrunn henter på nytt; knappen lar spilleren gjøre det nå.
     return (
-      <View style={ui.centered} testID="game-error">
-        <Text style={ui.error}>
-          {`${GAME_LOAD_FAILED_TEXT} Sjekk nettet og prøv igjen.`}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          style={ui.buttonSecondary}
-          onPress={() => void refresh()}
-          testID="game-retry"
-        >
-          <Text style={ui.buttonSecondaryText}>{ERROR_BOUNDARY_TEXT.retry}</Text>
-        </Pressable>
+      <View style={ui.centered}>
+        <GameLoadFailed onRetry={() => void refresh()} />
       </View>
     );
   }

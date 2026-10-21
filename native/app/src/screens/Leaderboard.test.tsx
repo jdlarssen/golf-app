@@ -290,6 +290,23 @@ describe('Leaderboard — Wolf-valgene (#2255 PR 3b)', () => {
     mockFetchWolfChoices.mockReset();
   });
 
+  // #1954 D2: uten lagret kopi og uten svar (tidstaket) sto bare «Fikk ikke
+  // tak i spillet.», uten en vei videre. Nå har den «Prøv igjen», som Spill-hjem.
+  it('spillet kom ikke, og ingenting er lagret: «Prøv igjen» henter på nytt', async () => {
+    const { loadGameBundle, refreshGameBundle } = require('../data/gameBundle') as {
+      loadGameBundle: jest.Mock;
+      refreshGameBundle: jest.Mock;
+    };
+    loadGameBundle.mockResolvedValueOnce(undefined);
+    refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed (timeout)'));
+    await renderLeaderboard();
+    await waitFor(() =>
+      expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.'),
+    );
+    await fireEvent.press(screen.getByTestId('game-retry'));
+    await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
+  });
+
   it('mens første henting går: et hjul, ikke «Fikk ikke tak i valgene»', async () => {
     mockBundleOverride.current = wolfBundle();
     mockFetchWolfChoices.mockReturnValue(new Promise(() => undefined));

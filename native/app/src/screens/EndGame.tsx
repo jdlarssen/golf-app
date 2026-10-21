@@ -56,6 +56,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { WinnerSheet } from '../components/endGame/WinnerSheet';
+import { GameLoadFailed } from '../components/GameLoadFailed';
 import { ChevronIcon, HakeIcon, LaasIcon } from '../components/icons/Icons';
 import { kickerHeader } from '../components/KickerHeader';
 import { PageTitle } from '../components/PageTitle';
@@ -339,7 +340,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
-          <Text style={ui.error}>{END_GAME_TEXT.loadFailed}</Text>
+          <GameLoadFailed text={END_GAME_TEXT.loadFailed} onRetry={() => void refresh()} />
         )}
       </View>
     );

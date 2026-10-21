@@ -32,7 +32,8 @@ import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { buildHoleByHole, waitsForChoices } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
-import { CHOICES_MISSING_HOLES_TEXT, GAME_LOAD_FAILED_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { GameLoadFailed } from '../components/GameLoadFailed';
+import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
@@ -45,7 +46,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
-  const { bundle, loading } = useGameBundle(gameId);
+  const { bundle, loading, refresh } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
   // Wolf og Bingo Bango Bongo regner med valgene fra serveren (hvem som var
   // ulv og valgte hva, hvem som tok hvilken prestasjon), som tavla. Andre
@@ -86,7 +87,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="hole-by-hole-spinner" />
         ) : (
-          <Text style={ui.error}>{GAME_LOAD_FAILED_TEXT}</Text>
+          <GameLoadFailed onRetry={() => void refresh()} />
         )}
       </View>
     );
