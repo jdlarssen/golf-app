@@ -56,6 +56,7 @@ import { withdrawPlayer } from './rosterActions';
 import { refreshWebCache } from './refreshWebCache';
 import type { SideWinnerRow } from './sideWinners';
 import { isDeviceOnline } from './syncTriggers';
+import { unlessNetwork } from './timedFetch';
 
 /**
  * Én kåret slot, slik den skrives.
@@ -177,7 +178,8 @@ const failed = (
   if (message !== undefined) console.error(`[endGame] ${reason}`, message);
   return {
     ok: false,
-    reason,
+    // #1954 D2: en nettfeil sier «sjekk nettet», ikke den generelle 'db'-teksten.
+    reason: unlessNetwork(reason, message),
     ...(blockedUserIds === undefined ? {} : { blockedUserIds }),
     ...(message === undefined ? {} : { message }),
   };

@@ -177,11 +177,13 @@ describe('playerActions via scorekort-ruta (#2215)', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser et kall som aldri kom fram som db', async () => {
-      mockFetch.mockRejectedValue(new Error('Network request failed'));
+    // #1954 D2: et kall som aldri kom fram (også tidstaket) er nettet, ikke
+    // serveren. Skjermen sier «Du er uten nett. Prøv igjen …».
+    it('leser et kall som aldri kom fram som nett', async () => {
+      mockFetch.mockRejectedValue(new TypeError('Network request failed (timeout)'));
       jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(await act()).toEqual({ ok: false, reason: 'db' });
+      expect(await act()).toEqual({ ok: false, reason: 'offline' });
     });
   });
 });
