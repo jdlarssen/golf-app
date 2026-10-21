@@ -71,6 +71,24 @@ export function useGameBundle(gameId: string): GameBundleState {
   // Et spill som er borte, skal ikke komme tilbake fra cachen fordi den lokale
   // lesingen ble ferdig etter svaret fra serveren.
   const gone = useRef(false);
+  // #1954 D2: et varseltrykk kan gi samme skjerm en ny `gameId` (navigatoren
+  // har ingen `getId`). Da skal det forrige spillet ikke stå under den nye
+  // id-en mens det nye hentes: alt nullstilles i samme render, og en henting
+  // av det forrige spillet som lander etterpå, kastes (`idRef` under).
+  const [shownFor, setShownFor] = useState(gameId);
+  if (shownFor !== gameId) {
+    setShownFor(gameId);
+    setBundle(null);
+    setErrorText(null);
+    setNotFound(false);
+    setLoading(true);
+  }
+  const idRef = useRef(gameId);
+  useEffect(() => {
+    idRef.current = gameId;
+    // Et forrige spill som var borte, skal ikke stenge cachen for det nye.
+    gone.current = false;
+  }, [gameId]);
   // Sekvensvakt (som `useChoices`): en eldre henting som lander sist, skal ikke
   // overskrive en nyere som alt er brukt.
   const seq = useRef(0);
@@ -111,7 +129,7 @@ export function useGameBundle(gameId: string): GameBundleState {
       }, GAME_BUNDLE_TIMEOUT_MS),
     };
     inFlight.current.add(run);
-    const current = () => alive.current && mySeq > appliedSeq.current;
+    const current = () => alive.current && idRef.current === gameId && mySeq > appliedSeq.current;
     try {
       const result = await Promise.race([refreshGameBundle(gameId, { signal: controller.signal }), timedOut]);
       if (!current()) return;
@@ -144,7 +162,7 @@ export function useGameBundle(gameId: string): GameBundleState {
     } finally {
       clearTimeout(run.timer);
       inFlight.current.delete(run);
-      if (alive.current && mySeq >= appliedSeq.current) setLoading(false);
+      if (alive.current && idRef.current === gameId && mySeq >= appliedSeq.current) setLoading(false);
     }
   }, [gameId]);
 

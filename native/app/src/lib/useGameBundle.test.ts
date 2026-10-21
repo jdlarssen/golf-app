@@ -176,3 +176,57 @@ it('«Prøv igjen» uten lagret pakke viser at det hentes', async () => {
   expect(result.current.loading).toBe(false);
   expect(result.current.bundle).toBe(FRESH);
 });
+
+// #1954 D2 (søsken-funn): et varseltrykk navigerer til GameHome med en annen
+// gameId, og uten `getId` i navigatoren får den samme skjermen nye parametre.
+// Hooken skal da ikke vise det forrige spillet under det nye spillets id.
+describe('bytte av gameId i samme skjerm (varseltrykk)', () => {
+  const OTHER = { game: { id: 'g2' }, players: [], fetchedAt: '2026-10-19T08:00:00.000Z' };
+
+  it('viser ikke det forrige spillet mens det nye hentes', async () => {
+    loadGameBundle.mockResolvedValue(undefined);
+    refreshGameBundle.mockResolvedValueOnce(CACHED);
+    const { result, rerender } = await renderHook(({ id }: { id: string }) => useGameBundle(id), {
+      initialProps: { id: 'g1' },
+    });
+    expect(result.current.bundle).toBe(CACHED);
+
+    refreshGameBundle.mockReturnValueOnce(new Promise(() => undefined)); // g2 henger
+    await rerender({ id: 'g2' });
+    expect(result.current.bundle).toBeNull();
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('en henting av det forrige spillet som lander etter byttet, vises ikke', async () => {
+    loadGameBundle.mockResolvedValue(undefined);
+    let landG1!: (bundle: unknown) => void;
+    refreshGameBundle.mockReturnValueOnce(
+      new Promise((resolve) => {
+        landG1 = resolve;
+      }),
+    );
+    const { result, rerender } = await renderHook(({ id }: { id: string }) => useGameBundle(id), {
+      initialProps: { id: 'g1' },
+    });
+
+    let landG2!: (bundle: unknown) => void;
+    refreshGameBundle.mockReturnValueOnce(
+      new Promise((resolve) => {
+        landG2 = resolve;
+      }),
+    );
+    await rerender({ id: 'g2' });
+
+    await act(async () => {
+      landG1(CACHED);
+    });
+    expect(result.current.bundle).toBeNull();
+    // Hjulet står: det er g2 som hentes.
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      landG2(OTHER);
+    });
+    expect(result.current.bundle).toBe(OTHER);
+  });
+});
