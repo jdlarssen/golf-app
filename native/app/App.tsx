@@ -43,6 +43,7 @@ import { RootNavigator } from './src/navigation';
 import { KeyboardInset } from './src/components/KeyboardInset';
 import { Login } from './src/screens/Login';
 import { applyStoredThemePreference } from './src/lib/themePreference';
+import { useUpdateGuard } from './src/lib/useUpdateGuard';
 import { SessionProvider } from './src/session';
 import { loadSunlight } from './src/lib/sunlight';
 import { supabase } from './src/supabase';
@@ -102,6 +103,10 @@ export default function App() {
       SplashScreen.hideAsync();
     }
   }, [ready]);
+
+  // #2619: ber spilleren oppdatere når bygget er under minstenivået. Venter på
+  // splashen, og gjelder også før innlogging.
+  useUpdateGuard(ready);
 
   if (!ready) {
     // Bak splashen — synlig kun hvis hideAsync taper et kappløp med render.
