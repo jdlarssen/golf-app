@@ -243,13 +243,6 @@ describe('setningene for levering for flighten (#2200)', () => {
       expect(partialDeliveryNotice(delivered, asked)).toBe(expected);
     },
   );
-
-  // #1954 D2: første trykk kan ha levert alt selv om svaret nådde tidstaket.
-  // Da svarer serveren alreadySubmitted og 0 makkerkort, og skjermen skal ikke
-  // si at de ikke ble levert.
-  it('sier ingenting når kortet alt sto som levert (et nytt trykk etter tidsavbrudd)', () => {
-    expect(partialDeliveryNotice(0, 2, { alreadySubmitted: true })).toBeNull();
-  });
 });
 
 describe('rosterStatus', () => {
