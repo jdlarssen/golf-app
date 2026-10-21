@@ -175,6 +175,9 @@ async function loadGame(
   const { data, error } = await supabase
     .from('games')
     .select('status, tournament_id, game_mode, mode_config')
+    // #1954 D2: bak en knapp; ett tidstak, ikke fire (postgrest prøver en GET
+    // med nettfeil på nytt etter 1 + 2 + 4 s).
+    .retry(false)
     .eq('id', gameId)
     .maybeSingle<GameGateRow>();
   if (error) return { error: failed('db', error.message) };
@@ -242,6 +245,7 @@ async function resolveZeroRows(
   const { data, error } = await supabase
     .from('game_players')
     .select(columns)
+    .retry(false)
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .maybeSingle<Record<string, unknown>>();
@@ -311,6 +315,7 @@ async function loadGrouping(
   const { data, error } = await supabase
     .from('game_players')
     .select('user_id, team_number, flight_number, withdrawn_at')
+    .retry(false)
     .eq('game_id', gameId)
     .returns<GroupingRow[]>();
   if (error) return { error: failed('db', error.message) };

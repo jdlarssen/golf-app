@@ -222,6 +222,9 @@ async function loadFinishGate(
   const { data, error } = await supabase
     .from('games')
     .select('status, game_mode, require_peer_approval, tournament_id')
+    // #1954 D2: bak en knapp; ett tidstak, ikke fire (postgrest prøver en GET
+    // med nettfeil på nytt etter 1 + 2 + 4 s).
+    .retry(false)
     .eq('id', gameId)
     .maybeSingle<FinishGateRow>();
   if (error) return { error: failed('db', error.message) };
@@ -239,6 +242,7 @@ async function loadFinishPlayers(
   const { data, error } = await supabase
     .from('game_players')
     .select('user_id, submitted_at, approved_at, withdrawn_at')
+    .retry(false)
     .eq('game_id', gameId)
     .returns<FinishPlayerRow[]>();
   if (error) return { error: failed('db', error.message) };
@@ -480,6 +484,7 @@ async function flipToFinished(gameId: string): Promise<EndRoundResult> {
   const { data, error } = await supabase
     .from('games')
     .select('status')
+    .retry(false)
     .eq('id', gameId)
     .maybeSingle<{ status: string }>();
   if (error) return failed('db', error.message);

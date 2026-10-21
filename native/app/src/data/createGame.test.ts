@@ -370,6 +370,16 @@ describe('publishGame', () => {
       ).toEqual({ ok: false, error: 'unsupported_mode' });
     });
 
+    // #1954 D2: format-sjekken står bak «Publiser» og skal bindes av ett tak.
+    it('format-sjekken prøves ikke på nytt av biblioteket', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const check = queryStub({ data: null, error: null });
+      routeFrom({ formats: [check] });
+
+      await publish(draft());
+      expect(stepArgs(check, 'retry')).toEqual([[false]]);
+    });
+
     it('stopper et format admin har slått av', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ formats: [queryStub({ data: null, error: null })] });
