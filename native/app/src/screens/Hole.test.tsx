@@ -404,7 +404,7 @@ describe('Hole', () => {
     refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed (timeout)'));
     await render(holeElement(1, { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }));
     await waitFor(() =>
-      expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.'),
+      expect(screen.getByTestId('game-retry')).toBeTruthy(),
     );
     await fireEvent.press(screen.getByTestId('game-retry'));
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());

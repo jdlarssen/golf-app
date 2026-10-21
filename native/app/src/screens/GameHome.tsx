@@ -57,7 +57,6 @@ import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
 import { GameLoadFailed } from '../components/GameLoadFailed';
-import { GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import {
   calendarEvent,
   slotField,
@@ -183,8 +182,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // kopi skal ikke tegnes.
   if (notFound) {
     return (
-      <View style={ui.centered} testID="game-not-found">
-        <Text style={ui.body}>{GAME_NOT_FOUND_TEXT}</Text>
+      <View style={ui.centered}>
+        <GameLoadFailed notFound onRetry={() => void refresh()} />
       </View>
     );
   }

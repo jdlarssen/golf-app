@@ -170,7 +170,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const { gameId } = route.params;
   // #2201: «resultatet er klart» er lest når du har sett tavla.
   useMarkVisitRead('gameLeaderboard', gameId);
-  const { bundle, loading, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
   // #2067/#2228: lagets rader følger laget. Uten foldingen mister sideturneringen
   // og den blinde bruttotabellen hullene en trukket kaptein førte.
@@ -249,7 +249,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="leaderboard-spinner" />
         ) : (
-          <GameLoadFailed onRetry={() => void refresh()} />
+          <GameLoadFailed notFound={notFound} onRetry={() => void refresh()} />
         )}
       </View>
     );

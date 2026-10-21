@@ -78,7 +78,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   const { userId } = useSession();
   // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
   useMarkVisitRead('gameApprove', gameId);
-  const { bundle, loading, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067/#2228: hullene en trukket kaptein førte, står på den nye kapteinens
   // kort, slik webbens godkjenningsside viser dem.
@@ -142,7 +142,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
       </View>
     ) : (
       <View style={ui.centered} testID="approve-error">
-        <GameLoadFailed onRetry={() => void refresh()} />
+        <GameLoadFailed notFound={notFound} onRetry={() => void refresh()} />
       </View>
     );
   }

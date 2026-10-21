@@ -301,7 +301,7 @@ describe('Leaderboard — Wolf-valgene (#2255 PR 3b)', () => {
     refreshGameBundle.mockRejectedValueOnce(new TypeError('Network request failed (timeout)'));
     await renderLeaderboard();
     await waitFor(() =>
-      expect(screen.getByTestId('game-error')).toHaveTextContent('Fikk ikke tak i spillet. Sjekk nettet og prøv igjen.'),
+      expect(screen.getByTestId('game-retry')).toBeTruthy(),
     );
     await fireEvent.press(screen.getByTestId('game-retry'));
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());

@@ -32,3 +32,41 @@ export function useFreshModules(): void {
     __resetForTests();
   });
 }
+
+/**
+ * #1954 D2: den EKTE supabase-klienten (`src/supabase.ts`) mot et nett som
+ * henger. Setter staging-lignende `EXPO_PUBLIC_*` og bytter `global.fetch` med
+ * et kall som aldri svarer, og legger alt tilbake etter testen. Den falske
+ * klokka velger hver testfil selv.
+ *
+ * Kall den øverst i en `describe`. `fetch()` gir mocken for denne testen, så
+ * testen kan la nettet komme tilbake (`mockImplementation`) eller telle kall.
+ */
+export function useHangingNetwork(): { fetch: () => jest.Mock; untilSent: () => Promise<void> } {
+  const originalFetch = global.fetch;
+  const originalEnv = { ...process.env };
+  let underlying = jest.fn();
+
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://staging.example';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+    underlying = jest.fn(() => new Promise(() => {}));
+    global.fetch = underlying as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    process.env = { ...originalEnv };
+  });
+
+  return {
+    fetch: () => underlying,
+    /** Vent (på den falske klokka) til et kall har nådd nettet, så taket er startet. */
+    untilSent: async () => {
+      for (let i = 0; i < 50 && underlying.mock.calls.length === 0; i++) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+      expect(underlying).toHaveBeenCalled();
+    },
+  };
+}

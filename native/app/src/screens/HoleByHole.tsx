@@ -46,7 +46,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
-  const { bundle, loading, refresh } = useGameBundle(gameId);
+  const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
   // Wolf og Bingo Bango Bongo regner med valgene fra serveren (hvem som var
   // ulv og valgte hva, hvem som tok hvilken prestasjon), som tavla. Andre
@@ -87,7 +87,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="hole-by-hole-spinner" />
         ) : (
-          <GameLoadFailed onRetry={() => void refresh()} />
+          <GameLoadFailed notFound={notFound} onRetry={() => void refresh()} />
         )}
       </View>
     );
