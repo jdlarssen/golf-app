@@ -231,6 +231,44 @@ describe('Scorecard', () => {
     mockState.teeShotQueue = [];
   });
 
+  // Gjennomgangen av #2622: «Lever for <makker>» etter at mitt kort alt er
+  // levert. Serveren svarer `alreadySubmitted` (mitt kort sto som levert) og 0
+  // makkerkort. Det er IKKE et nytt forsøk etter tidsavbrudd, så #2200-beskjeden
+  // skal stå og kortet hentes på nytt.
+  it('lever for makker etter eget levert kort: beskjeden står når makkerkortet ikke kom med', async () => {
+    const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+    const { refreshGameBundle } = require('../data/gameBundle') as { refreshGameBundle: jest.Mock };
+    submitCard.mockResolvedValueOnce({ ok: true, alreadySubmitted: true, alsoDelivered: 0 });
+    mockState.bundle = {
+      ...mockRevealBundle,
+      game: { ...mockRevealBundle.game, id: 'game-7', scoreVisibility: 'live' },
+      players: mockRevealBundle.players.map((player) =>
+        player.userId === 'me' ? { ...player, submittedAt: '2026-09-01T12:32:00.000Z' } : player,
+      ),
+    };
+    mockState.scores = Array.from({ length: 18 }, (_, i) => ({
+      id: `game-7:other:${i + 1}`,
+      gameId: 'game-7',
+      userId: 'other',
+      holeNumber: i + 1,
+      strokes: 4,
+      putts: null,
+      enteredBy: 'me',
+      clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+      serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+    }));
+    const navigate = jest.fn();
+    await render(scorecardElement('game-7', navigate));
+    await waitFor(() => expect(screen.getByTestId('deliver-for-flight')).toBeEnabled());
+    const fetchesBefore = refreshGameBundle.mock.calls.length;
+
+    await fireEvent.press(screen.getByTestId('deliver-for-flight'));
+
+    await waitFor(() => expect(screen.getByTestId('submit-partial')).toBeTruthy());
+    expect(refreshGameBundle.mock.calls.length).toBeGreaterThan(fetchesBefore);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('sier fra når spillet ikke kunne hentes, i stedet for å stå på «Henter scorekortet …» (#1954 A2)', async () => {
     // Ingen bundel i cachen og en henting som feiler (nettet falt): skjermen
     // skal si det, som hull- og tavleskjermen gjør, ikke vente for alltid.
