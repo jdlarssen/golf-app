@@ -72,7 +72,7 @@ import {
   signInAsDevUser,
   type DevLoginUser,
 } from '../devLogin';
-import { KEYBOARD_SCROLL_PROPS, useKeyboardShown } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
 import { StatusBarBand } from '../components/StatusBarBand';
@@ -88,8 +88,9 @@ export function Login() {
   // Båndet går helt opp under statuslinja. Skjermen står utenfor navigatoren,
   // så innfellingen kommer fra providerne på app-rota (`App.tsx`).
   const insets = useSafeAreaInsets();
-  // #1954 Del B: with the keyboard up it covers the system bar, so the bar's inset is not added twice.
-  const keyboardShown = useKeyboardShown();
+  // #1954 Del B: with the keyboard up it covers the system bar, so the bar's inset is not added twice
+  // (one home: `useBottomInsetUnlessKeyboard`).
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -239,7 +240,7 @@ export function Login() {
     <>
       <ScrollView
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={[styles.screen, { paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 }]}
+        contentContainerStyle={[styles.screen, { paddingBottom: bottomInset + 20 }]}
         keyboardShouldPersistTaps="handled"
         {...KEYBOARD_SCROLL_PROPS}
         testID="login-screen"

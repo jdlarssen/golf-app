@@ -95,12 +95,10 @@ describe('EditProfile', () => {
     }
   });
 
-  // Kontrollrunden på #2624: med tastaturet oppe dekker tastaturet systemlinja,
-  // og luften for linja skal ikke legges til i tillegg (som RejectSheet).
   // Kontrollrunden på #2624: varianten når profilen ikke kunne hentes.
   it('profilen kom ikke: luften under står også over systemlinja', async () => {
     fetchOwnProfileMock.mockRejectedValueOnce(new Error('nett'));
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const quiet = jest.spyOn(console, 'error').mockImplementation(() => {});
     setBottomInset(48);
     try {
       await render(
@@ -115,9 +113,12 @@ describe('EditProfile', () => {
       expect(bottomPadding('edit-profile-screen')).toBe(20 + 48);
     } finally {
       setBottomInset(0);
+      quiet.mockRestore();
     }
   });
 
+  // Kontrollrunden på #2624: med tastaturet oppe dekker tastaturet systemlinja,
+  // og luften for linja skal ikke legges til i tillegg (som RejectSheet).
   it('dropper luften for systemlinja mens tastaturet er oppe', async () => {
     const listeners: Record<string, () => void> = {};
     const spy = jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: () => void) => {
