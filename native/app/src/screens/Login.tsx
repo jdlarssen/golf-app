@@ -75,6 +75,7 @@ import {
 import { KEYBOARD_SCROLL_PROPS, useKeyboardShown } from '../components/KeyboardInset';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
+import { StatusBarBand } from '../components/StatusBarBand';
 
 /** 44 pt trykkflate rundt «Feil adresse?» (linja er 20 høy). */
 const CHANGE_EMAIL_HIT_SLOP = { top: 12, bottom: 12, left: 6, right: 12 };
@@ -235,178 +236,182 @@ export function Login() {
   ) : null;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.screen, { paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 }]}
-      keyboardShouldPersistTaps="handled"
-      {...KEYBOARD_SCROLL_PROPS}
-      testID="login-screen"
-    >
-      {/* Lys tekst i statuslinja: båndet under den er skogen, i begge drakter. */}
-      <StatusBar style="light" />
-      <View
-        style={[
-          styles.band,
-          { backgroundColor: colors.surfaceStrong, paddingTop: insets.top + 22 },
-        ]}
+    <>
+      <ScrollView
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={[styles.screen, { paddingBottom: (keyboardShown ? 0 : insets.bottom) + 20 }]}
+        keyboardShouldPersistTaps="handled"
+        {...KEYBOARD_SCROLL_PROPS}
+        testID="login-screen"
       >
-        <Pressable
-          onLongPress={() => setPasswordMode(true)}
-          delayLongPress={REVEAL_PASSWORD_LOGIN_MS}
-          accessibilityRole="header"
-          testID="login-heading"
+        {/* Lys tekst i statuslinja: båndet under den er skogen, i begge drakter. */}
+        <StatusBar style="light" />
+        <View
+          style={[
+            styles.band,
+            { backgroundColor: colors.surfaceStrong, paddingTop: insets.top + 22 },
+          ]}
         >
-          <Text style={[styles.wordmark, { color: colors.onStrongWarm }]}>
-            {Constants.expoConfig?.name ?? APP_NAME_FALLBACK}
-          </Text>
-        </Pressable>
-        {step === 'email' ? (
-          <Text style={[styles.tagline, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
-            {LOGIN_TEXT.taglinePre}
-            <Text style={[styles.taglineGold, { color: colors.accent }]}>
-              {LOGIN_TEXT.taglineGold}
-            </Text>
-            {LOGIN_TEXT.taglinePost}
-          </Text>
-        ) : null}
-      </View>
-
-      {step === 'email' ? (
-        <>
-          <View
-            style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          <Pressable
+            onLongPress={() => setPasswordMode(true)}
+            delayLongPress={REVEAL_PASSWORD_LOGIN_MS}
+            accessibilityRole="header"
+            testID="login-heading"
           >
-            <Text style={[ui.kicker, styles.stepKicker]}>{LOGIN_TEXT.stepOneKicker}</Text>
-            <Text style={[styles.label, { color: colors.text }]}>{LOGIN_TEXT.emailLabel}</Text>
-            <TextInput
-              style={[styles.field, fieldColors]}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              value={email}
-              onChangeText={setEmail}
-              accessibilityLabel={LOGIN_TEXT.emailLabel}
-              testID="email-input"
-            />
-            <PillButton
-              label={busy === 'code' ? LOGIN_TEXT.sendPending : LOGIN_TEXT.sendButton}
-              onPress={() => void sendCode()}
-              disabled={busy != null}
-              style={styles.cardButton}
-              testID="send-code-button"
-            />
-            {passwordMode ? (
-              <>
-                <Text style={[styles.label, { color: colors.text }]}>
-                  {LOGIN_TEXT.passwordLabel}
-                </Text>
-                <TextInput
-                  style={[styles.field, fieldColors]}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                  testID="password-input"
-                />
-                <PillButton
-                  label={
-                    busy === 'password' ? LOGIN_TEXT.passwordPending : LOGIN_TEXT.passwordButton
-                  }
-                  onPress={() => void signInWithPassword()}
-                  disabled={busy != null}
-                  style={styles.cardButton}
-                  testID="password-login-button"
-                />
-              </>
-            ) : null}
-            {errorLine}
-          </View>
-          {devConfig && devUsers.length > 0 ? (
-            <View testID="dev-login-section" style={styles.devSection}>
-              <Text style={ui.sectionTitle}>{DEV_LOGIN_TEXT.sectionTitle}</Text>
-              {devUsers.map((user, index) => (
-                <Pressable
-                  key={user.email}
-                  style={[ui.buttonSecondary, styles.devRow]}
-                  onPress={() => void signInAsDev(user)}
-                  disabled={busy != null}
-                  accessibilityRole="button"
-                  accessibilityLabel={DEV_LOGIN_TEXT.signInLabel(user.label)}
-                  testID={`dev-login-user-${index}`}
-                >
-                  <Text style={ui.buttonSecondaryText}>{user.label}</Text>
-                  <View style={[ui.badge, styles.devBadge]}>
-                    <Text style={ui.badgeText}>{DEV_LOGIN_ROLE_LABEL[user.role]}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : (
-        <>
-          <View style={styles.codeTop}>
-            <Text style={ui.kicker}>{LOGIN_TEXT.stepTwoKicker}</Text>
-            <Text style={[styles.codeHeading, { color: colors.text }]}>
-              {LOGIN_TEXT.codeHeading}
+            <Text style={[styles.wordmark, { color: colors.onStrongWarm }]}>
+              {Constants.expoConfig?.name ?? APP_NAME_FALLBACK}
             </Text>
-            {/* «Feil adresse?» er en egen trykkflate og ikke en lenke inni
-                setningen: en nøstet `Text` er bare så høy som teksten, og den
-                er eneste vei tilbake til e-posten. `hitSlop` gir 44 pt, og
-                raden brekker før lenka når adressen er lang. Raden og blokka
-                rundt må forbli rene layout-View-er (ingen bakgrunn eller
-                testID): Fabric slår dem sammen, ellers klipper den trykkflaten
-                til radens høyde. */}
-            <View style={styles.sentToRow}>
-              <Text style={[styles.sentTo, { color: colors.muted }]}>
-                {LOGIN_TEXT.sentToPrefix}
-                <Text style={[styles.sentToEmail, { color: colors.text }]} testID="login-sent-to">
-                  {maskSentToEmail(normalizedEmail)}
-                </Text>
-                {LOGIN_TEXT.sentToSuffix}{' '}
+          </Pressable>
+          {step === 'email' ? (
+            <Text style={[styles.tagline, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
+              {LOGIN_TEXT.taglinePre}
+              <Text style={[styles.taglineGold, { color: colors.accent }]}>
+                {LOGIN_TEXT.taglineGold}
               </Text>
-              <Pressable
-                onPress={changeEmail}
+              {LOGIN_TEXT.taglinePost}
+            </Text>
+          ) : null}
+        </View>
+
+        {step === 'email' ? (
+          <>
+            <View
+              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <Text style={[ui.kicker, styles.stepKicker]}>{LOGIN_TEXT.stepOneKicker}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{LOGIN_TEXT.emailLabel}</Text>
+              <TextInput
+                style={[styles.field, fieldColors]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                value={email}
+                onChangeText={setEmail}
+                accessibilityLabel={LOGIN_TEXT.emailLabel}
+                testID="email-input"
+              />
+              <PillButton
+                label={busy === 'code' ? LOGIN_TEXT.sendPending : LOGIN_TEXT.sendButton}
+                onPress={() => void sendCode()}
                 disabled={busy != null}
-                hitSlop={CHANGE_EMAIL_HIT_SLOP}
-                accessibilityRole="link"
-                accessibilityState={{ disabled: busy != null }}
-                testID="login-change-email"
-              >
-                <Text style={[styles.sentTo, styles.changeEmail, { color: colors.primary }]}>
-                  {LOGIN_TEXT.changeEmail}
-                </Text>
-              </Pressable>
+                style={styles.cardButton}
+                testID="send-code-button"
+              />
+              {passwordMode ? (
+                <>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    {LOGIN_TEXT.passwordLabel}
+                  </Text>
+                  <TextInput
+                    style={[styles.field, fieldColors]}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    testID="password-input"
+                  />
+                  <PillButton
+                    label={
+                      busy === 'password' ? LOGIN_TEXT.passwordPending : LOGIN_TEXT.passwordButton
+                    }
+                    onPress={() => void signInWithPassword()}
+                    disabled={busy != null}
+                    style={styles.cardButton}
+                    testID="password-login-button"
+                  />
+                </>
+              ) : null}
+              {errorLine}
             </View>
-            {errorLine}
-          </View>
+            {devConfig && devUsers.length > 0 ? (
+              <View testID="dev-login-section" style={styles.devSection}>
+                <Text style={ui.sectionTitle}>{DEV_LOGIN_TEXT.sectionTitle}</Text>
+                {devUsers.map((user, index) => (
+                  <Pressable
+                    key={user.email}
+                    style={[ui.buttonSecondary, styles.devRow]}
+                    onPress={() => void signInAsDev(user)}
+                    disabled={busy != null}
+                    accessibilityRole="button"
+                    accessibilityLabel={DEV_LOGIN_TEXT.signInLabel(user.label)}
+                    testID={`dev-login-user-${index}`}
+                  >
+                    <Text style={ui.buttonSecondaryText}>{user.label}</Text>
+                    <View style={[ui.badge, styles.devBadge]}>
+                      <Text style={ui.badgeText}>{DEV_LOGIN_ROLE_LABEL[user.role]}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <View style={styles.codeTop}>
+              <Text style={ui.kicker}>{LOGIN_TEXT.stepTwoKicker}</Text>
+              <Text style={[styles.codeHeading, { color: colors.text }]}>
+                {LOGIN_TEXT.codeHeading}
+              </Text>
+              {/* «Feil adresse?» er en egen trykkflate og ikke en lenke inni
+                  setningen: en nøstet `Text` er bare så høy som teksten, og den
+                  er eneste vei tilbake til e-posten. `hitSlop` gir 44 pt, og
+                  raden brekker før lenka når adressen er lang. Raden og blokka
+                  rundt må forbli rene layout-View-er (ingen bakgrunn eller
+                  testID): Fabric slår dem sammen, ellers klipper den trykkflaten
+                  til radens høyde. */}
+              <View style={styles.sentToRow}>
+                <Text style={[styles.sentTo, { color: colors.muted }]}>
+                  {LOGIN_TEXT.sentToPrefix}
+                  <Text style={[styles.sentToEmail, { color: colors.text }]} testID="login-sent-to">
+                    {maskSentToEmail(normalizedEmail)}
+                  </Text>
+                  {LOGIN_TEXT.sentToSuffix}{' '}
+                </Text>
+                <Pressable
+                  onPress={changeEmail}
+                  disabled={busy != null}
+                  hitSlop={CHANGE_EMAIL_HIT_SLOP}
+                  accessibilityRole="link"
+                  accessibilityState={{ disabled: busy != null }}
+                  testID="login-change-email"
+                >
+                  <Text style={[styles.sentTo, styles.changeEmail, { color: colors.primary }]}>
+                    {LOGIN_TEXT.changeEmail}
+                  </Text>
+                </Pressable>
+              </View>
+              {errorLine}
+            </View>
 
-          <View style={styles.codeBlock}>
-            <CodeBoxes code={code} onChangeText={onCodeChange} />
-            <Text style={[styles.hint, { color: colors.muted }]}>{codeHintFor(Platform.OS)}</Text>
-          </View>
+            <View style={styles.codeBlock}>
+              <CodeBoxes code={code} onChangeText={onCodeChange} />
+              <Text style={[styles.hint, { color: colors.muted }]}>{codeHintFor(Platform.OS)}</Text>
+            </View>
 
-          <View style={styles.verifyBlock}>
-            <PillButton
-              label={busy === 'code' ? LOGIN_TEXT.verifyPending : LOGIN_TEXT.verifyButton}
-              onPress={() => void verifyCode(code)}
-              disabled={busy != null || code.length < OTP_LENGTH}
-              testID="verify-code-button"
+            <View style={styles.verifyBlock}>
+              <PillButton
+                label={busy === 'code' ? LOGIN_TEXT.verifyPending : LOGIN_TEXT.verifyButton}
+                onPress={() => void verifyCode(code)}
+                disabled={busy != null || code.length < OTP_LENGTH}
+                testID="verify-code-button"
+              />
+            </View>
+
+            <ResendCard
+              sentAt={sentAt}
+              busy={busy === 'resend'}
+              disabled={busy != null}
+              onResend={() => void resendCode()}
             />
-          </View>
-
-          <ResendCard
-            sentAt={sentAt}
-            busy={busy === 'resend'}
-            disabled={busy != null}
-            onResend={() => void resendCode()}
-          />
-        </>
-      )}
-    </ScrollView>
+          </>
+        )}
+      </ScrollView>
+      {/* #1954 D3: fast stripe over statuslinja, i båndets skogfarge, når innholdet ruller under den. */}
+      <StatusBarBand color={colors.surfaceStrong} />
+    </>
   );
 }
 

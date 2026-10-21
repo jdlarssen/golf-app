@@ -13,6 +13,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { FONTS, fraunces, useTheme } from '../theme';
+import { StatusBarBand } from '../components/StatusBarBand';
 
 export function AiConsentQuestion({
   pending,
@@ -45,32 +46,36 @@ export function AiConsentQuestion({
   );
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[
-        styles.screen,
-        { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 20 },
-      ]}
-      testID="ai-consent-screen"
-    >
-      <View style={styles.top}>
-        <Text style={[styles.heading, { color: colors.text }]} accessibilityRole="header">
-          {AI_CONSENT_TEXT.title}
-        </Text>
-        <Text style={[styles.body, { color: colors.text }]}>{AI_CONSENT_TEXT.body}</Text>
-        <Text style={[styles.body, { color: colors.muted }]}>{AI_CONSENT_TEXT.noMeans}</Text>
-      </View>
-
-      <View style={styles.bottom}>
-        {failed ? (
-          <Text style={[styles.error, { color: colors.danger }]} testID="ai-consent-error">
-            {AI_CONSENT_TEXT.saveFailed}
+    <>
+      <ScrollView
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={[
+          styles.screen,
+          { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 20 },
+        ]}
+        testID="ai-consent-screen"
+      >
+        <View style={styles.top}>
+          <Text style={[styles.heading, { color: colors.text }]} accessibilityRole="header">
+            {AI_CONSENT_TEXT.title}
           </Text>
-        ) : null}
-        {button(true, AI_CONSENT_TEXT.yes, 'ai-consent-yes')}
-        {button(false, AI_CONSENT_TEXT.no, 'ai-consent-no')}
-      </View>
-    </ScrollView>
+          <Text style={[styles.body, { color: colors.text }]}>{AI_CONSENT_TEXT.body}</Text>
+          <Text style={[styles.body, { color: colors.muted }]}>{AI_CONSENT_TEXT.noMeans}</Text>
+        </View>
+
+        <View style={styles.bottom}>
+          {failed ? (
+            <Text style={[styles.error, { color: colors.danger }]} testID="ai-consent-error">
+              {AI_CONSENT_TEXT.saveFailed}
+            </Text>
+          ) : null}
+          {button(true, AI_CONSENT_TEXT.yes, 'ai-consent-yes')}
+          {button(false, AI_CONSENT_TEXT.no, 'ai-consent-no')}
+        </View>
+      </ScrollView>
+      {/* #1954 D3: fast stripe over statuslinja når innholdet ruller under den. */}
+      <StatusBarBand color={colors.bg} />
+    </>
   );
 }
 

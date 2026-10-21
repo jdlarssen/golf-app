@@ -419,3 +419,16 @@ describe('bunnmargen', () => {
     expect(bottomPadding('home-screen')).toBe(44);
   });
 });
+
+// #1954 D3 (søsken-funn fra iOS-runden): Hjem har ingen header. Når lista
+// ruller, gled «God dag» og HCP-merket under klokka og batteriet uten bakteppe.
+// En fast stripe i bakgrunnsfargen, like høy som statuslinja, ligger over.
+describe('toppen', () => {
+  it('en fast stripe dekker statuslinja når Hjem ruller', async () => {
+    mockInsets = { top: 47, right: 0, bottom: 34, left: 0 };
+    await renderHome().view;
+    await screen.findByTestId('home-create-game');
+    const band = StyleSheet.flatten(screen.getByTestId('status-bar-band').props.style);
+    expect(band).toMatchObject({ position: 'absolute', top: 0, height: 47 });
+  });
+});
