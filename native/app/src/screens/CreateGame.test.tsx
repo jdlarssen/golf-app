@@ -109,6 +109,8 @@ const mockCandidates = [
   },
 ];
 
+// Navnet må starte med `mock`: jest.mock-fabrikkene heises over importene.
+let mockIdCount = 0;
 jest.mock('../data/createGame', () => ({
   fetchCourses: jest.fn(async () => [
     {
@@ -127,7 +129,8 @@ jest.mock('../data/createGame', () => ({
   ]),
   fetchRosterCandidates: jest.fn(async () => mockCandidates),
   publishGame: jest.fn(),
-  newGameId: jest.fn(() => 'wizard-game-id'),
+  // En ny id per kall: lagde skjermen id-en per trykk, ville forsøkene fått hver sin.
+  newGameId: jest.fn(() => `wizard-game-id-${++mockIdCount}`),
 }));
 
 const publishGameMock = publishGame as jest.MockedFunction<typeof publishGame>;
@@ -283,7 +286,9 @@ describe('CreateGame', () => {
     expect(publishGameMock).toHaveBeenCalledTimes(2);
     // #1954 D2: samme runde-id begge gangene, så et forsøk som faktisk lagret
     // runden ikke gir runde nummer to.
-    expect(publishGameMock.mock.calls.map((call) => call[1])).toEqual(['wizard-game-id', 'wizard-game-id']);
+    const [firstId, secondId] = publishGameMock.mock.calls.map((call) => call[1]);
+    expect(firstId).toMatch(/^wizard-game-id-\d+$/);
+    expect(secondId).toBe(firstId);
     expect(navigation.replace).toHaveBeenCalledWith('GameHome', {
       gameId: 'new-game-1',
     });

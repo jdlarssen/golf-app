@@ -609,44 +609,87 @@ describe('publishGame', () => {
 
     it('lager ikke runde nummer to når første forsøk faktisk lagret runden', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
-      // Forsøk 1: runden lagres, men svaret når aldri fram.
+      // Forsøk 1: runden lagres, men svaret når aldri fram. Nettet, ikke serveren.
       routeFrom({
         formats: [queryStub(ACTIVE_FORMAT)],
         games: [queryStub(TIMEOUT)],
       });
-      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'db_game' });
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'offline' });
 
-      // Forsøk 2, samme id: raden finnes alt. Fortsett med spillerne.
+      // Forsøk 2, samme id: raden finnes alt. Den bringes à jour, og spillerne
+      // skrives inn.
+      const update = queryStub({ data: [{ id: OWN_ID }], error: null });
       const players = queryStub(PLAYER_ROWS);
       routeFrom({
         formats: [queryStub(ACTIVE_FORMAT)],
-        games: [queryStub(DUPLICATE('games_pkey'))],
-        game_players: [players],
+        games: [queryStub(DUPLICATE('games_pkey')), update],
+        game_players: [queryStub({ data: [], error: null }), players],
       });
       expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
-      const rows = stepArgs(players, 'insert')[0]![0] as { game_id: string }[];
+      expect(stepArgs(update, 'update')).toHaveLength(1);
+      const rows = stepArgs(players, 'upsert')[0]![0] as { game_id: string }[];
       expect(rows.every((r) => r.game_id === OWN_ID)).toBe(true);
     });
 
-    it('godtar at spillerne kom inn i et tidligere forsøk', async () => {
-      const { queryStub, routeFrom } = mocks();
+    // Gjennomgangen av #2622: arrangøren kan rette utkastet før neste trykk.
+    // Runden og spillerne skal da bli det utkastet viser nå, ikke det første
+    // forsøket sendte.
+    it('et nytt forsøk etter at utkastet er endret, gir runden og spillerne fra det nye utkastet', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const NEW_MATE = 'user-new';
+      const edited = draft({
+        name: 'Fredagsrunden',
+        players: [
+          { userId: ME, teeGender: 'M', teamNumber: null },
+          { userId: NEW_MATE, teeGender: 'M', teamNumber: null },
+        ],
+      });
+      const update = queryStub({ data: [{ id: OWN_ID }], error: null });
+      const removeOld = queryStub({ data: [{ user_id: MATE }], error: null });
+      const upsert = queryStub({ data: [{ user_id: ME }, { user_id: NEW_MATE }], error: null });
       routeFrom({
         formats: [queryStub(ACTIVE_FORMAT)],
-        games: [queryStub(DUPLICATE('games_pkey'))],
-        game_players: [queryStub(DUPLICATE('game_players_pkey'))],
+        games: [queryStub(DUPLICATE('games_pkey')), update],
+        game_players: [removeOld, upsert],
       });
 
-      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
+      expect(await createGame().publishGame(edited, OWN_ID)).toEqual({ ok: true, gameId: OWN_ID });
+
+      // Runden: bare egen, planlagt rad, med det nye navnet.
+      expect((stepArgs(update, 'update')[0]![0] as Record<string, unknown>).name).toBe('Fredagsrunden');
+      expect(stepArgs(update, 'eq')).toEqual([
+        ['id', OWN_ID],
+        ['created_by', ME],
+        ['status', 'scheduled'],
+      ]);
+      // Spillerne: den som ble tatt ut, slettes; de i utkastet skrives inn.
+      expect(stepArgs(removeOld, 'delete')).toHaveLength(1);
+      expect(stepArgs(removeOld, 'not')).toEqual([['user_id', 'in', `(${ME},${NEW_MATE})`]]);
+      const [rows, options] = stepArgs(upsert, 'upsert')[0]! as [{ user_id: string }[], { onConflict: string }];
+      expect(rows.map((r) => r.user_id)).toEqual([ME, NEW_MATE]);
+      expect(options).toMatchObject({ onConflict: 'game_id,user_id' });
     });
 
     it('en 23505 på en annen regel enn primærnøkkelen er fortsatt en feil', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         formats: [queryStub(ACTIVE_FORMAT)],
-        games: [queryStub(DUPLICATE('games_short_id_key'))],
+        games: [queryStub(DUPLICATE('games_short_id_unique'))],
       });
 
       expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'db_game' });
+    });
+
+    // Gjennomgangen av #2622: et tidsavbrudd er nettet, og skjermen skal si det.
+    it('en nettfeil på spillerne gir nett-linja, ikke «Klarte ikke å lagre spillerne»', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub({ data: [{ id: OWN_ID }], error: null }), queryStub({ data: [{ id: OWN_ID }], error: null })],
+        game_players: [queryStub(TIMEOUT)],
+      });
+
+      expect(await createGame().publishGame(draft(), OWN_ID)).toEqual({ ok: false, error: 'offline' });
     });
   });
 

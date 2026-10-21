@@ -59,6 +59,7 @@ const FAILURE_MAP = {
   not_authenticated: null,
   unsupported_mode: null,
   db_format: null,
+  offline: null,
   rls_denied: null,
   no_rows: null,
   orphan_game: null,
