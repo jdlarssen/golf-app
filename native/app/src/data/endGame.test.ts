@@ -576,6 +576,20 @@ describe('finishRound', () => {
       });
     });
 
+    // #1954 D2: første trykk kan ha avsluttet runden selv om svaret nådde
+    // tidstaket. Et nytt trykk skal da si at runden er avsluttet, ikke «ikke i
+    // gang lenger», og ingenting skal skrives på nytt.
+    it('et nytt trykk etter at runden alt er avsluttet, er suksess uten nye skriv', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({ games: [queryStub(gameRow({ status: 'finished' }))] });
+
+      expect(await endGame().finishRound(GAME, { withdrawUserIds: [MATE] })).toEqual({
+        ok: true,
+        alreadyFinished: true,
+      });
+      expect(tablesTouched()).toEqual(['games']);
+    });
+
     it('leser 0 rader som avslag når spillet IKKE er avsluttet', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
@@ -649,7 +663,7 @@ describe('finishRound', () => {
 
     it('tømmer aldri når en gate stoppet avslutningen', async () => {
       const { queryStub, routeFrom } = mocks();
-      routeFrom({ games: [queryStub(gameRow({ status: 'finished' }))] });
+      routeFrom({ games: [queryStub(gameRow({ status: 'scheduled' }))] });
 
       expect(await endGame().finishRound(GAME)).toEqual({
         ok: false,
