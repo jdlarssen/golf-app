@@ -94,6 +94,19 @@ describe('Friends', () => {
     }
   });
 
+  // Kontrollrunden på #2624: varianten når vennelista ikke kunne hentes.
+  it('lista kom ikke: luften under står også over systemlinja', async () => {
+    fetchFriendsMock.mockResolvedValueOnce({ ok: false, reason: 'offline' });
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await screen.findByTestId('friends-load-error');
+      expect(bottomPadding('friends-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   // #1954 D3 (evaluator runde 1): venne-arket er en Modal i bunnen; «Lukk»
   // skal stå over navigasjonslinja.
   it('venne-arket ender over systemlinja', async () => {

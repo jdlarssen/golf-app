@@ -185,7 +185,8 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
 
   if (state.kind === 'empty') {
     return (
-      <ScrollView contentContainerStyle={ui.scroll} testID="approve-screen">
+      // #1954 D3: luften under står over systemlinja, som baren lenger ned.
+      <ScrollView contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]} testID="approve-screen">
         <Text style={ui.body} testID="approve-empty">
           {APPROVE_TEXT.empty}
         </Text>
@@ -207,7 +208,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
       <>
         <ScrollView
           style={{ backgroundColor: colors.bg }}
-          contentContainerStyle={styles.pendingScroll}
+          contentContainerStyle={[styles.pendingScroll, { paddingBottom: 32 + insets.bottom }]}
           testID="approve-screen"
         >
           <View style={styles.headingBlock}>

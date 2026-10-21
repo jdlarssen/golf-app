@@ -38,7 +38,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
@@ -93,7 +92,7 @@ import { canShareLiveFollow, shareLiveFollow } from '../lib/shareLive';
 import { TICKET_TEXT, approveButton, fieldA11y, stubTotal } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
-import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
@@ -104,7 +103,7 @@ const HOLE_COUNT = 18;
 
 export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { colors, ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const { gameId } = route.params;
   const { userId } = useSession();
   // #2201: det du åpner, er lest.
@@ -283,8 +282,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     <ScrollView
       ref={scrollRef}
       {...KEYBOARD_SCROLL_PROPS}
-      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
-      contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 20 + insets.bottom }]}
+      // #1954 D3: luften under innholdet står over systemlinja, og ikke mens tastaturet er oppe (useBottomInsetUnlessKeyboard).
+      contentContainerStyle={[ui.scroll, styles.scroll, { paddingBottom: 20 + bottomInset }]}
       testID="game-home-screen"
     >
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}

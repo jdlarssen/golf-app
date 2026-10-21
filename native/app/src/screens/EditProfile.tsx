@@ -49,11 +49,10 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
-import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { useSession } from '../session';
 import { FONTS, TAP, useTheme } from '../theme';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
@@ -152,7 +151,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
   const returnTo = route.params?.returnTo ?? null;
   const { userId, email } = useSession();
   const { colors, ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
 
   const [initial, setInitial] = useState<FormValues | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -239,8 +238,8 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
     return (
       <ScrollView
         {...KEYBOARD_SCROLL_PROPS}
-        // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
-        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+        // #1954 D3: luften under innholdet står over systemlinja, og ikke mens tastaturet er oppe (useBottomInsetUnlessKeyboard).
+        contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
         testID="edit-profile-screen"
       >
         <Text style={ui.error} testID="edit-profile-load-error">
@@ -290,7 +289,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
   return (
     <ScrollView
       {...KEYBOARD_SCROLL_PROPS}
-      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
       testID="edit-profile-screen"
     >
       <Text style={ui.label}>{PROFILE_TEXT.nameLabel}</Text>

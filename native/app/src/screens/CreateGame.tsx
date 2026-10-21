@@ -18,7 +18,6 @@
 // derfor rolig i stedet for å la det se ut som en databasefeil.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
 import { PlayersStep } from '../components/create/PlayersStep';
@@ -66,7 +65,7 @@ import {
   type ModeSetup,
   type TeeGenderUi,
 } from '../lib/wizardPayload';
-import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -147,7 +146,7 @@ function defaultTeeOff(): Date {
 export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const { userId } = useSession();
   const { ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
 
   const [step, setStep] = useState<Step>('format');
   const [gameMode, setGameMode] = useState<AppGameMode | null>(null);
@@ -392,8 +391,8 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   return (
     <ScrollView
       {...KEYBOARD_SCROLL_PROPS}
-      // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
-      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      // #1954 D3: luften under innholdet står over systemlinja, og ikke mens tastaturet er oppe (useBottomInsetUnlessKeyboard).
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
       testID="create-screen"
     >
       <Text style={ui.sectionTitle} testID="create-progress">

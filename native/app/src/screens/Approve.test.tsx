@@ -12,14 +12,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Platform } from 'react-native';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { Approve } from './Approve';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
@@ -93,7 +92,7 @@ const texasGame: BundleGame = {
 };
 
 describe('Approve', () => {
-  it('viser hullene en trukket kaptein førte på den nye kapteinens kort', async () => {
+  function rigPending(): void {
     const submitted = '2026-09-17T12:00:00.000Z';
     mockState.bundle = {
       game: texasGame,
@@ -137,6 +136,9 @@ describe('Approve', () => {
       };
     });
 
+  }
+
+  async function renderApprove(): Promise<void> {
     await render(
       <Approve
         {...({
@@ -145,6 +147,11 @@ describe('Approve', () => {
         } as unknown as ScreenProps<'Approve'>)}
       />,
     );
+  }
+
+  it('viser hullene en trukket kaptein førte på den nye kapteinens kort', async () => {
+    rigPending();
+    await renderApprove();
 
     await waitFor(() => {
       const card = screen.getByTestId('summary-ny-kaptein');
@@ -153,6 +160,35 @@ describe('Approve', () => {
         'Hull 3, par 4, 3 slag',
       );
     });
+  });
+
+  // #1954 D3 (kontrollrunden på #2624): begge rullevisningene ender over
+  // systemlinja, kortene som venter og tom-tilstanden.
+  it('kortene som venter: luften under står over systemlinja', async () => {
+    rigPending();
+    setBottomInset(48);
+    try {
+      await renderApprove();
+      await waitFor(() => expect(screen.getByTestId('summary-ny-kaptein')).toBeTruthy());
+      expect(bottomPadding('approve-screen')).toBe(32 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
+  it('ingenting å godkjenne: luften under står over systemlinja', async () => {
+    rigPending();
+    // En runde uten godkjenning: ingenting å godkjenne her.
+    const bundle = mockState.bundle as GameBundle;
+    mockState.bundle = { ...bundle, game: { ...bundle.game, requirePeerApproval: false } };
+    setBottomInset(48);
+    try {
+      await renderApprove();
+      await waitFor(() => expect(screen.getByTestId('approve-empty')).toBeTruthy());
+      expect(bottomPadding('approve-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('sier fra når spillet ikke kunne hentes, i stedet for å stå på «Henter …» (#1954 A2)', async () => {

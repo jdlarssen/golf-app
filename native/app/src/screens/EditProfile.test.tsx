@@ -21,7 +21,8 @@
 //  4. **En vellykket lagring går tilbake med kvitteringen**, som er det rommet
 //     leser for å vise banneret og hente raden på nytt.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
@@ -91,6 +92,47 @@ describe('EditProfile', () => {
       expect(bottomPadding('edit-profile-screen')).toBe(20 + 48);
     } finally {
       setBottomInset(0);
+    }
+  });
+
+  // Kontrollrunden på #2624: med tastaturet oppe dekker tastaturet systemlinja,
+  // og luften for linja skal ikke legges til i tillegg (som RejectSheet).
+  // Kontrollrunden på #2624: varianten når profilen ikke kunne hentes.
+  it('profilen kom ikke: luften under står også over systemlinja', async () => {
+    fetchOwnProfileMock.mockRejectedValueOnce(new Error('nett'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    setBottomInset(48);
+    try {
+      await render(
+        <EditProfile
+          {...({
+            navigation: { navigate: jest.fn(), goBack: jest.fn() },
+            route: { params: undefined },
+          } as unknown as ScreenProps<'EditProfile'>)}
+        />,
+      );
+      await screen.findByTestId('edit-profile-load-error');
+      expect(bottomPadding('edit-profile-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
+  it('dropper luften for systemlinja mens tastaturet er oppe', async () => {
+    const listeners: Record<string, () => void> = {};
+    const spy = jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: () => void) => {
+      listeners[event] = cb;
+      return { remove: () => undefined };
+    }) as unknown as typeof Keyboard.addListener);
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      expect(bottomPadding('edit-profile-screen')).toBe(20 + 48);
+      await act(async () => listeners.keyboardWillShow?.());
+      expect(bottomPadding('edit-profile-screen')).toBe(20);
+    } finally {
+      setBottomInset(0);
+      spy.mockRestore();
     }
   });
 

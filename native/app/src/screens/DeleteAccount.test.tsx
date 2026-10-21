@@ -94,6 +94,19 @@ describe('DeleteAccount', () => {
     }
   });
 
+  // Kontrollrunden på #2624: den blokkerte varianten har sin egen rullevisning.
+  it('blokkert konto: luften under står også over systemlinja', async () => {
+    (fetchDeleteStatus as jest.Mock).mockResolvedValue({ ok: true, blocked: 'admin_account' });
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      await screen.findByTestId('delete-account-banner');
+      expect(bottomPadding('delete-account-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
+  });
+
   it.each<DeleteBlockReason>(['admin_account', 'active_engagements', 'sole_club_owner'])(
     'viser banneret og ingen slette-knapp når kontoen er blokkert (%s)',
     async (blocked) => {
