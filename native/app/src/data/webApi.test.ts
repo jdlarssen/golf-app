@@ -34,6 +34,10 @@ import {
 } from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2619: bygget som kjører er rigget, så headerne kan låses.
+jest.mock('../lib/appBuild', () => ({
+  appVersionHeaders: () => ({ 'X-Torny-App-Version': '1.2.0', 'X-Torny-App-Build': '5' }),
+}));
 
 // Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
@@ -96,6 +100,20 @@ describe('callWebRoute', () => {
 
       expect(requestInit().body).toBe('{}');
       expect(headers()['Content-Type']).toBe('application/json');
+    });
+  });
+
+  describe('versjons-headerne (#2619)', () => {
+    it('følger både kall med og uten innlogging', async () => {
+      respondWith(200, {});
+      await webApi().callWebRoute(PATH, 'PUT', { name: 'Kari' });
+      expect(headers()['X-Torny-App-Version']).toBe('1.2.0');
+      expect(headers()['X-Torny-App-Build']).toBe('5');
+
+      mockFetch.mockClear();
+      await webApi().callPublicWebRoute('/api/app/min-version', 'GET');
+      expect(headers()['X-Torny-App-Version']).toBe('1.2.0');
+      expect(headers()['X-Torny-App-Build']).toBe('5');
     });
   });
 

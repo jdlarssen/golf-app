@@ -14,6 +14,12 @@ export const APP_STORE_URL = 'https://apps.apple.com/no/app/id6806675951';
 export const GOOGLE_PLAY_URL =
   'https://play.google.com/store/apps/details?id=no.tornygolf.app';
 
+/**
+ * Opens the Play Store app directly (the app's update guard, #2619). Falls back
+ * to `GOOGLE_PLAY_URL` on phones without Play.
+ */
+export const GOOGLE_PLAY_MARKET_URL = 'market://details?id=no.tornygolf.app';
+
 export type Store = 'appStore' | 'googlePlay';
 
 export const STORE_URLS: Record<Store, string> = {

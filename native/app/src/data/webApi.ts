@@ -39,6 +39,7 @@
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som `startGame.ts`
 // og `rosterActions.ts`). HTTP-status oversettes én gang, i kaller-modulen, slik
 // at skjermen aldri leser et statusnummer.
+import { appVersionHeaders } from '../lib/appBuild';
 import { webUrl } from '../lib/webLink';
 import { supabase } from '../supabase';
 import { isDeviceOnline } from './syncTriggers';
@@ -157,6 +158,7 @@ async function send(
       method,
       headers: {
         ...auth,
+        ...appVersionHeaders(),
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },

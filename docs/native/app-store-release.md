@@ -215,6 +215,10 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 
 Første kandidat er `1.1.0 (2)`; skallet brukte `1.0 (1)`.
 
+**Minsteversjonen** (`lib/app/minVersion.ts`, vist av `/api/app/min-version`, #2619) heves bare
+når en serverendring knekker eldre bygg, og aldri forbi et bygg som ikke ligger i butikken ennå:
+alle bygg under tallet får en oppdateringsdialog de ikke kan lukke.
+
 ## Etter bygget: tilbake til dev
 
 `native/app/ios/` er nå butikk-varianten (workspace/scheme `Trny`, bundle
