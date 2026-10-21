@@ -601,6 +601,8 @@ function FriendSheet({
   onRemove: (friend: FriendItem) => void;
 }) {
   const { ui, colors } = useTheme();
+  // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
+  const insets = useSafeAreaInsets();
   const values = friend ? friendSheetValues(friend, now) : null;
   return (
     <Modal visible={friend !== null} transparent animationType="slide" onRequestClose={onClose}>
@@ -614,7 +616,10 @@ function FriendSheet({
         />
         {friend && values ? (
           <View
-            style={[styles.sheet, { backgroundColor: colors.bg, borderColor: colors.border }]}
+            style={[
+              styles.sheet,
+              { backgroundColor: colors.bg, borderColor: colors.border, paddingBottom: 36 + insets.bottom },
+            ]}
             accessibilityViewIsModal
             testID="friend-sheet"
           >
@@ -948,8 +953,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     borderWidth: 1,
     borderBottomWidth: 0,
+    // Bunnen: 36 + systemlinja, i komponenten.
     padding: 20,
-    paddingBottom: 36,
     gap: 14,
   },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },

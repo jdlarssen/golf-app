@@ -5,7 +5,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
 import { themeFor } from '../../theme';
+import { setBottomInset } from '../../test/safeAreaMock';
 import { SpecificValueSheet } from './SpecificValueSheet';
+
+jest.mock('react-native-safe-area-context', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock-fabrikken heises over importene
+  require('../../test/safeAreaMock').safeAreaMock(),
+);
 
 describe('SpecificValueSheet', () => {
   it('setter et tall, fjerner med X, og viser «Stryk» bare i stableford', async () => {
@@ -69,4 +75,16 @@ describe('SpecificValueSheet', () => {
     );
     expect(screen.queryByTestId('specific-value-sheet')).toBeNull();
   });
+});
+
+// #1954 D3 (evaluator runde 1): arket er en Modal i bunnen, og med kant til
+// kant ligger navigasjonslinja over den. Luften under står over linja.
+it('arket ender over systemlinja', async () => {
+  setBottomInset(48);
+  try {
+    await render(<SpecificValueSheet open par={4} onPick={jest.fn()} onClear={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByTestId('specific-value-sheet')).toHaveStyle({ paddingBottom: 36 + 48 });
+  } finally {
+    setBottomInset(0);
+  }
 });
