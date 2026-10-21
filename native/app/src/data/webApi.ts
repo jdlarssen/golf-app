@@ -42,6 +42,7 @@
 import { webUrl } from '../lib/webLink';
 import { supabase } from '../supabase';
 import { isDeviceOnline } from './syncTriggers';
+import { timedFetch } from './timedFetch';
 
 /**
  * Det som kan stoppe et kall FØR ruta har sagt noe.
@@ -153,7 +154,9 @@ async function send(
   body: Record<string, unknown> | undefined,
 ): Promise<WebApiCall> {
   try {
-    const response = await fetch(url, {
+    // #1954 D2: tidstaket. Et kall som når det, havner i catch-en under som
+    // 'network', slik at knappen sier «sjekk nettet» i stedet for å stå og vente.
+    const response = await timedFetch(url, {
       method,
       headers: {
         ...auth,

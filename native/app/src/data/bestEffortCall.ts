@@ -10,9 +10,9 @@
 import { callWebRoute } from './webApi';
 
 /**
- * Hvor lenge skjermen venter på svaret. `callWebRoute` har ingen tidsgrense, så
- * uten denne ville en nettside som henger holdt knappen fast til telefonens
- * nett-timeout, lenge etter at skrivingen var lagret. Kallet får gå ferdig i
+ * Hvor lenge skjermen venter på svaret. `callWebRoute` gir opp først etter
+ * tidstaket (`REQUEST_TIMEOUT_MS`, 15 s, #1954 D2), og så lenge skal ikke
+ * knappen stå fast etter at skrivingen alt er lagret. Kallet får gå ferdig i
  * bakgrunnen; vi slutter bare å vente.
  */
 export const BEST_EFFORT_WAIT_MS = 5_000;

@@ -9,6 +9,7 @@ import { AppState } from 'react-native';
 // the web graph ends up in the bundle. It is what types the RPC arguments and
 // the row that comes back from `upsert_score_if_newer`.
 import type { Database } from '../../../lib/database.types';
+import { timedFetch } from './data/timedFetch';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -26,6 +27,9 @@ export const supabase = createClient<Database>(url, anonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
+  // #1954 D2: ett tak for hvert kall (PostgREST, RPC og auth). Uten det kunne
+  // en forespørsel på svak dekning henge for alltid. Se `data/timedFetch.ts`.
+  global: { fetch: timedFetch },
 });
 
 /**

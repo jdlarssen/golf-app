@@ -40,6 +40,7 @@ import {
   type TeeShotQueueItem,
 } from './db';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
+import { isNetworkFailureMessage } from './timedFetch';
 
 export interface DrainResult {
   pushed: number;
@@ -96,6 +97,10 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
     let rejected = 0;
     let errored = 0;
     let abandoned = 0;
+    // #1954 D2: satt ved første nettfeil. Da stopper drainen, så én drain er
+    // bundet til ett tidstak (`timedFetch`), ikke til antall slag × tak. Resten
+    // av køen venter på neste utløser (nett tilbake, forgrunn, neste tasting).
+    let networkDown = false;
 
     for (const item of queue) {
       // Karantene (#668): et permanent feilende element vi allerede har gitt
@@ -162,6 +167,10 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
             }),
           );
           errored++;
+        }
+        if (isNetworkFailureMessage(error.message)) {
+          networkDown = true;
+          break;
         }
         continue;
       }
@@ -244,7 +253,7 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       else if (outcome === 'server-wins') rejected++;
     }
 
-    const tee = await drainTeeShots(teeShotQueue, currentUserId);
+    const tee = networkDown ? EMPTY : await drainTeeShots(teeShotQueue, currentUserId);
     const result: DrainResult = {
       pushed: pushed + tee.pushed,
       rejected: rejected + tee.rejected,
@@ -393,6 +402,8 @@ async function drainTeeShots(
       );
       if (decision === 'abandon') counts.abandoned++;
       else counts.errored++;
+      // #1954 D2: samme stopp som slagene, ved første nettfeil.
+      if (isNetworkFailureMessage(error.message)) break;
       continue;
     }
 
