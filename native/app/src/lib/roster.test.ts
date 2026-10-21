@@ -243,6 +243,21 @@ describe('setningene for levering for flighten (#2200)', () => {
       expect(partialDeliveryNotice(delivered, asked)).toBe(expected);
     },
   );
+
+  // #1954 D2 (kontrollrunden på #2622): på den ferske veien har skjermen lest
+  // spillet på nytt og vet at kortet ikke er levert. «Noen kan ha levert det»
+  // stemmer ikke der.
+  it.each([
+    ['alle levert', 2, 2, null],
+    ['den ene makkeren', 0, 1, 'Makkerkortet ble ikke levert. Noen kan ha ført et hull på det i mellomtiden.'],
+    ['ingen av flere', 0, 2, 'Ingen av de 2 makkerkortene ble levert. Noen kan ha ført hull på dem i mellomtiden.'],
+    ['noen av flere', 1, 3, '1 av 3 makkerkort ble levert. Noen kan ha ført hull på de andre i mellomtiden.'],
+  ] as [string, number, number, string | null][])(
+    'beskjeden etter fersk lesing: %s',
+    (_label, delivered, asked, expected) => {
+      expect(partialDeliveryNotice(delivered, asked, { fresh: true })).toBe(expected);
+    },
+  );
 });
 
 describe('rosterStatus', () => {

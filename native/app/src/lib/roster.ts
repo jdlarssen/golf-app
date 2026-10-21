@@ -244,8 +244,21 @@ export function deliverForButton(candidates: readonly BundlePlayer[]): string {
  * serveren, og de kan være nyere enn telefonens: en makker har levert, eller
  * noen har ført et hull. Da skal ikke skjermen late som alt gikk.
  */
-export function partialDeliveryNotice(delivered: number, asked: number): string | null {
+export function partialDeliveryNotice(
+  delivered: number,
+  asked: number,
+  { fresh = false }: { fresh?: boolean } = {},
+): string | null {
   if (delivered >= asked) return null;
+  // #1954 D2: `fresh` = skjermen har lest spillet på nytt og vet at kortene
+  // ikke er levert. Da faller «Noen kan ha levert det» bort.
+  if (fresh) {
+    if (asked === 1) return 'Makkerkortet ble ikke levert. Noen kan ha ført et hull på det i mellomtiden.';
+    if (delivered === 0) {
+      return `Ingen av de ${asked} makkerkortene ble levert. Noen kan ha ført hull på dem i mellomtiden.`;
+    }
+    return `${delivered} av ${asked} makkerkort ble levert. Noen kan ha ført hull på de andre i mellomtiden.`;
+  }
   if (asked === 1) {
     return 'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.';
   }

@@ -146,7 +146,7 @@ import {
   myTeamCaptainId,
   teamHandicapFor,
 } from '../lib/teamPlay';
-import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { GAME_BUNDLE_TIMEOUT_MS, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import type { ScreenProps } from '../navigation';
@@ -485,13 +485,24 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       : null;
   const teeShotBox = teeShotLock ? teeShotBoxFor(teeShotLock, mode) : null;
 
+  // Lesingen har samme tak som spillhentingen (GAME_BUNDLE_TIMEOUT_MS), og
+  // signalet stopper også postgrests nye forsøk. Feiler den, gjelder serverens
+  // tall og den forsiktige beskjeden.
   const freshPartialNotice = async (serverCount: number): Promise<string | null> => {
-    const fresh = await refreshGameBundle(gameId).catch(() => null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), GAME_BUNDLE_TIMEOUT_MS);
+    const fresh = await refreshGameBundle(gameId, { signal: controller.signal })
+      .catch(() => null)
+      .finally(() => clearTimeout(timer));
     if (!fresh) return partialDeliveryNotice(serverCount, flightMates.length);
-    const stillOpen = flightMates.filter(
+    // En makker som har trukket seg, er verken levert eller mangler.
+    const stillThere = flightMates.filter(
+      (mate) => fresh.players.find((player) => player.userId === mate.userId)?.withdrawnAt == null,
+    );
+    const stillOpen = stillThere.filter(
       (mate) => fresh.players.find((player) => player.userId === mate.userId)?.submittedAt == null,
     ).length;
-    return partialDeliveryNotice(flightMates.length - stillOpen, flightMates.length);
+    return partialDeliveryNotice(stillThere.length - stillOpen, stillThere.length, { fresh: true });
   };
 
   const doSubmit = async () => {
@@ -506,7 +517,6 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       gameId,
       flightMates.map((player) => player.userId),
     );
-    setBusy(false);
     if (result.ok) {
       // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
       // spilleren stående med en beskjed, og kortet hentes på nytt så det viser
@@ -515,10 +525,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       // første forsøk, og da teller serveren 0 nå. Beskjeden avgjøres derfor
       // ut fra fersk tilstand: bare makkere som fortsatt står uten levert kort,
       // er ikke levert. Fikk vi ikke hentet, gjelder serverens tall.
+      // Knappen står opptatt til beslutningen er tatt.
       const notice =
         result.alsoDelivered < flightMates.length
           ? await freshPartialNotice(result.alsoDelivered)
           : null;
+      setBusy(false);
       if (notice) {
         setNoticeText(notice);
         void refresh();
@@ -527,6 +539,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       navigation.navigate('GameHome', { gameId });
       return;
     }
+    setBusy(false);
     setErrorText(describeSubmitFailure(result.reason));
   };
 
