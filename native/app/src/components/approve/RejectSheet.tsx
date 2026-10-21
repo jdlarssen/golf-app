@@ -24,9 +24,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APPROVE_TEXT, rejectSheetText } from '../../lib/approveCopy';
-import { useKeyboardShown } from '../KeyboardInset';
+import { useBottomInsetUnlessKeyboard } from '../KeyboardInset';
 import { FONTS, fraunces, interLine, sheetGrabber, sheetScrim, useTheme } from '../../theme';
 
 export type RejectSheetProps = {
@@ -56,9 +55,9 @@ export function RejectSheet({
   onCancel,
 }: RejectSheetProps) {
   const { colors, scheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  // #1954 Del B: med tastaturet oppe dekker det hjem-linja, så luften for den droppes.
-  const keyboardShown = useKeyboardShown();
+  // #1954 Del B: med tastaturet oppe dekker det hjem-linja, så luften for den
+  // droppes. Regelen har ett hjem (`useBottomInsetUnlessKeyboard`).
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const [reason, setReason] = useState(initialReason);
   const text = rejectSheetText({ name, teamCard, guest });
   const cancel = () => {
@@ -78,7 +77,7 @@ export function RejectSheet({
           <View
             style={[
               styles.sheet,
-              { backgroundColor: colors.surface, paddingBottom: 24 + (keyboardShown ? 0 : insets.bottom) },
+              { backgroundColor: colors.surface, paddingBottom: 24 + bottomInset },
             ]}
             accessibilityViewIsModal
             onAccessibilityEscape={cancel}

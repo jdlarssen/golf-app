@@ -334,6 +334,10 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     [gameId, refresh],
   );
 
+  // #1954 D3: cup- og ikke-aktiv-grenene under er egne rullevisninger; luften
+  // under dem står over systemlinja, som bunnbaren lenger ned.
+  const stateInsets = useSafeAreaInsets();
+
   if (!bundle || !game) {
     return (
       <View style={ui.centered} testID={loading ? 'end-game-loading' : 'end-game-error'}>
@@ -353,7 +357,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     return (
       <ScrollView
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 20 + stateInsets.bottom }]}
         testID="end-game-screen"
       >
         <TitleBlock title={END_GAME_TEXT.heading} />
@@ -375,7 +379,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     return (
       <ScrollView
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 20 + stateInsets.bottom }]}
         testID="end-game-screen"
       >
         <TitleBlock title={END_GAME_TEXT.heading} />

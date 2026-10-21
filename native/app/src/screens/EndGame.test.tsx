@@ -30,6 +30,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Alert } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { finishRound } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { refreshGameBundle } from '../data/gameBundle';
@@ -144,9 +145,7 @@ jest.mock('../data/withdrawSelf', () => ({
 }));
 jest.mock('../session', () => ({ useSession: () => ({ userId: mockMe }) }));
 jest.mock('../lib/useMarkVisitRead');
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
+jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // Lås-linja på bekreft-steget leser `isAdmin`. Uten mocken gikk kallet til
 // `supabaseMock`, som kaster på `users`.
 jest.mock('../data/profile', () => ({
@@ -464,6 +463,22 @@ describe('EndGame', () => {
     expect(screen.getByTestId('game-error')).toHaveTextContent(END_GAME_TEXT.loadFailed);
     await fireEvent.press(screen.getByTestId('game-retry'));
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
+  });
+
+  // #1954 D3 (kontrollrunden på #2624): cup- og ikke-aktiv-grenene er egne
+  // rullevisninger og skal ende over systemlinja som resten av skjermen.
+  it.each([
+    ['cup-runde', { tournamentId: 'cup-1' }],
+    ['ikke aktiv', { status: 'finished' }],
+  ] as const)('%s: luften under står over systemlinja', async (_case, overrides) => {
+    setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], overrides);
+    setBottomInset(48);
+    try {
+      await renderScreen();
+      expect(bottomPadding('end-game-screen')).toBe(20 + 48);
+    } finally {
+      setBottomInset(0);
+    }
   });
 
   it('avslutter ikke cup-runder — de hører til nettsiden', async () => {
