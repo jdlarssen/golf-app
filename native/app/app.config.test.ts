@@ -158,6 +158,10 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   it('har tillatelsesteksten for Bilder og DiskSpace i personvernmanifestet, i begge varianter', () => {
     for (const cfg of [resolveConfig(base, DEV_ENV), resolveConfig(base, STORE_ENV)]) {
       expect(cfg.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Tørny lagrer bildet du deler i Bilder.');
+      // Uten norsk utviklingsregion og lokalisering viser UIKit engelske
+      // systemtekster (Copy, Save Image, Print, Lim inn) i en norsk app.
+      expect(cfg.ios?.infoPlist?.CFBundleDevelopmentRegion).toBe('nb');
+      expect(cfg.ios?.infoPlist?.CFBundleLocalizations).toEqual(['nb']);
       expect(cfg.ios?.privacyManifests?.NSPrivacyAccessedAPITypes).toEqual([
         {
           NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',

@@ -7,7 +7,7 @@
 # `privacy_rules <Info.plist> <PrivacyInfo.xcprivacy> <yes|no> <antall>`: tredje
 # argument sier om binærene importerer disk-API-er, fjerde hvor mange binærer
 # som ble skannet. Kalleren leser symbolene med `nm -u` og teller treffene med
-# `disk_api_hits`.
+# `disk_api_hits`. `locale_rules <Info.plist>` sjekker språket appen oppgir.
 #
 # Reglene:
 #  - `NSPhotoLibraryAddUsageDescription` MÅ stå i Info.plist, med tekst.
@@ -26,6 +26,9 @@
 #    (1.1.0 (3) ble godkjent, 1.2.0 (5) ble lastet opp), så regelen er
 #    forebygging, ikke gjentakelse av et avslag. Importerer de ikke API-ene, er
 #    DiskSpace ikke påkrevd.
+#  - Appen oppgir norsk (`nb`) som utviklingsregion og lokalisering. Uten det
+#    står Info.plist på `en`, og UIKit viser engelske systemtekster (Copy, Save
+#    Image, Print, Lim inn) ved siden av appens norske tekster.
 #
 # Plist-ene leses med python3 og `plistlib` (leser både XML og binær), ikke
 # plutil: testen kjører i CI på ubuntu-latest, der plutil ikke finnes. En fil
@@ -41,7 +44,7 @@ disk_api_hits() {
 }
 
 # Skriver `<verdi>` på én linje, eller exit 1 med grunnen på stderr.
-# argv: fil, modus (`photo` | `disk`). Ingen enkle anførselstegn i koden.
+# argv: fil, modus (`photo` | `disk` | `locale`). Ingen enkle anførselstegn i koden.
 PRIVACY_PY='
 import plistlib, sys
 try:
@@ -56,6 +59,10 @@ if not isinstance(data, dict):
 if sys.argv[2] == "photo":
     text = data.get("NSPhotoLibraryAddUsageDescription")
     print("ok" if isinstance(text, str) and text.strip() else "missing")
+elif sys.argv[2] == "locale":
+    region = data.get("CFBundleDevelopmentRegion")
+    locs = data.get("CFBundleLocalizations")
+    print("ok" if region == "nb" and isinstance(locs, list) and "nb" in locs else "wrong " + ascii(region) + " " + ascii(locs))
 else:
     reasons = None
     for entry in data.get("NSPrivacyAccessedAPITypes", []):
@@ -104,4 +111,18 @@ privacy_rules() {
       ;;
     *) fail "kunne ikke lese DiskSpace i PrivacyInfo (${manifest}): ${disk}" ;;
   esac
+}
+
+# Språket appen oppgir (#2561). `CFBundleDevelopmentRegion` og
+# `CFBundleLocalizations` styrer hvilket språk UIKit bruker for systemtekster.
+locale_rules() {
+  local info=$1 locale why
+  if ! locale=$("$PRIVACY_PYTHON3" -c "$PRIVACY_PY" "$info" locale 2>&1); then
+    why=$(printf '%s' "$locale" | tail -1)
+    fail "kunne ikke lese Info.plist (${info}): ${why}"
+  elif [ "$locale" = ok ]; then
+    pass "CFBundleDevelopmentRegion = nb og CFBundleLocalizations har nb"
+  else
+    fail "språket er ikke norsk (${locale#wrong }). Uten nb står systemtekstene i delearket og tekstfeltene på engelsk (#2561)"
+  fi
 }

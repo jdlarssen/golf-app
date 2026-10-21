@@ -51,7 +51,8 @@
 #  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
 #     importerer disk-API-er (`statfs`/`statvfs`/`getattrlist`-familien,
-#     `NSFileSystem*`, `NSURLVolume*Capacity`). Reglene står i `privacy-proof.sh`.
+#     `NSFileSystem*`, `NSURLVolume*Capacity`). Norsk utviklingsregion og
+#     lokalisering i Info.plist (punkt 2). Reglene står i `privacy-proof.sh`.
 #  5. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
 #     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
 #     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
@@ -195,6 +196,7 @@ else
   if [ "$short_version" != '<mangler>' ] && [ -n "$short_version" ]; then pass "versjon satt ($short_version)"; else fail "CFBundleShortVersionString mangler"; fi
   if [ "$build" != '<mangler>' ] && [ -n "$build" ]; then pass "build satt ($build)"; else fail "CFBundleVersion mangler"; fi
   if [ "$non_exempt" = "false" ]; then pass "ITSAppUsesNonExemptEncryption = false"; else fail "ITSAppUsesNonExemptEncryption er «${non_exempt}», skal være false"; fi
+  locale_rules "$PLIST"
 fi
 say ""
 

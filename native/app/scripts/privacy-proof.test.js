@@ -155,8 +155,9 @@ describe('store-build-proof.sh bruker personvern-reglene', () => {
     expect(text).toMatch(/^ {2}privacy_rules "\$PLIST" "\$APP\/PrivacyInfo\.xcprivacy" "\$disk_imports" "\$scanned"$/m);
   });
 
-  it('teller disk-API-ene med disk_api_hits', () => {
+  it('teller disk-API-ene med disk_api_hits og kaller locale_rules', () => {
     expect(text).toMatch(/^ {4}n=\$\(disk_api_hits "\$DISK"\)$/m);
+    expect(text).toMatch(/^ {2}locale_rules "\$PLIST"$/m);
   });
 });
 
@@ -194,5 +195,42 @@ describe('disk_api_hits', () => {
     const empty = write('nm-empty.txt', '');
     const result = spawnSync('bash', ['-c', '. "$1"; disk_api_hits "$2"', 'bash', LIB, empty], { encoding: 'utf8' });
     expect(result.stdout.trim()).toBe('0');
+  });
+});
+
+// Språket appen oppgir: uten nb viser UIKit engelske systemtekster (#2561).
+describe('locale_rules', () => {
+  const run = (body) => {
+    const file = write('locale.plist', plist(body));
+    const harness = `set -euo pipefail
+export LC_ALL=C
+PASS=0
+FAIL=0
+say()  { printf '%s\\n' "$*"; }
+pass() { PASS=$((PASS + 1)); say "PASS  $*"; }
+fail() { FAIL=$((FAIL + 1)); say "FAIL  $*"; }
+. "$1"
+locale_rules "$2"`;
+    const result = spawnSync('bash', ['-c', harness, 'bash', LIB, file], { encoding: 'utf8' });
+    return result.stdout.split('\n').filter(Boolean);
+  };
+  const keys = (region, locs) =>
+    `<key>CFBundleDevelopmentRegion</key><string>${region}</string><key>CFBundleLocalizations</key><array>${locs
+      .map((l) => `<string>${l}</string>`)
+      .join('')}</array>`;
+
+  it('gir PASS for nb som region og lokalisering', () => {
+    expect(run(keys('nb', ['nb']))).toEqual(['PASS  CFBundleDevelopmentRegion = nb og CFBundleLocalizations har nb']);
+  });
+
+  it.each([
+    ['en som region', keys('en', ['nb'])],
+    ['ingen nb i lokaliseringene', keys('nb', ['en'])],
+    ['ingen lokaliseringer', '<key>CFBundleDevelopmentRegion</key><string>nb</string>'],
+    ['ingen nøkler', '<key>CFBundleIdentifier</key><string>x</string>'],
+  ])('gir FAIL for %s', (_label, body) => {
+    const lines = run(body);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^FAIL {2}språket er ikke norsk/);
   });
 });
