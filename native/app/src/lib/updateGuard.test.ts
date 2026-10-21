@@ -166,6 +166,22 @@ describe('createUpdateCheck', () => {
     expect(FAILURE_PAUSE_MS).toBeLessThan(CHECK_INTERVAL_MS);
   });
 
+  it('setter 10-minuttersvinduet når et svar kommer etter en feil', async () => {
+    const { check, fetchBody, advance } = rig({ bodies: [null, FINE_BODY, FINE_BODY] });
+    await check();
+    advance(FAILURE_PAUSE_MS);
+    await check();
+    expect(fetchBody).toHaveBeenCalledTimes(2);
+
+    advance(CHECK_INTERVAL_MS - 1);
+    await check();
+    expect(fetchBody).toHaveBeenCalledTimes(2);
+
+    advance(1);
+    await check();
+    expect(fetchBody).toHaveBeenCalledTimes(3);
+  });
+
   it('viser dialogen igjen ved neste forgrunn uten ny henting innen vinduet', async () => {
     const { check, fetchBody, advance } = rig({ bodies: [OLD_BODY, FINE_BODY] });
     expect(await check()).toBe(true);

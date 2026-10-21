@@ -35,6 +35,11 @@ export const addOnlineListener = jest.fn((listener: Listener) => {
 
 export const startSyncTriggers = jest.fn(() => () => undefined);
 
+/** Hvor mange forgrunns-lyttere som er registrert akkurat nå. */
+export function foregroundListenerCount(): number {
+  return foregroundListeners.size;
+}
+
 /** Appen kommer i forgrunnen: alle aktive forgrunns-lyttere fyres. */
 export function fireForeground(): void {
   for (const listener of [...foregroundListeners]) listener();
