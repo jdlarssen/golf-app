@@ -47,3 +47,31 @@ it('viser ikke forrige spills slag mens det nye leses, og en sen lesing av forri
   expect(result.current.scores).toEqual(G2_ROWS);
   expect(result.current.loaded).toBe(true);
 });
+
+it('en reload av forrige spill som lander etter byttet, vises ikke', async () => {
+  listScoresForGame.mockResolvedValueOnce(G1_ROWS);
+  const { result, rerender } = await renderHook(({ id }: { id: string }) => useLocalScores(id), {
+    initialProps: { id: 'g1' },
+  });
+
+  // En reload av g1 (pollen eller en skriving) står ute idet skjermen bytter.
+  let landG1!: (rows: unknown[]) => void;
+  listScoresForGame.mockReturnValueOnce(
+    new Promise((resolve) => {
+      landG1 = resolve;
+    }),
+  );
+  let reloading!: Promise<void>;
+  await act(async () => {
+    reloading = result.current.reload();
+  });
+  listScoresForGame.mockReturnValueOnce(new Promise(() => {})); // g2 leses fortsatt
+  await rerender({ id: 'g2' });
+
+  await act(async () => {
+    landG1(G1_ROWS);
+    await reloading;
+  });
+  expect(result.current.scores).toEqual([]);
+  expect(result.current.loaded).toBe(false);
+});

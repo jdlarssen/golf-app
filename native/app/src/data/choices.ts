@@ -328,6 +328,9 @@ async function refuseUnlessGameLives(
   const { data, error } = await supabase
     .from('games')
     .select('status')
+    // #1954 D2: bak trykket; ett tidstak, ikke fire (postgrest prøver en GET
+    // med nettfeil på nytt etter 1 + 2 + 4 s).
+    .retry(false)
     .eq('id', gameId)
     .maybeSingle<{ status: string }>();
 
