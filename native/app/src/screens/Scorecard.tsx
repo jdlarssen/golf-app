@@ -501,8 +501,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
       // spilleren stående med en beskjed, og kortet hentes på nytt så det viser
       // hva som står igjen.
+      // #1954 D2: `alreadySubmitted` er et nytt forsøk etter tidsavbrudd bare
+      // når mitt kort IKKE sto som levert før trykket. Var det levert («Lever
+      // for <makker>»), betyr 0 makkerkort at de ikke kom med, og beskjeden står.
       const notice = partialDeliveryNotice(result.alsoDelivered, flightMates.length, {
-        alreadySubmitted: result.alreadySubmitted,
+        alreadySubmitted: result.alreadySubmitted && me.submitted_at == null,
       });
       if (notice) {
         setNoticeText(notice);
