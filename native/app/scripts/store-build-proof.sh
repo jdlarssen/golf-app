@@ -48,6 +48,10 @@
 #     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
 #     Arkivet kreves ikke å ha `production`. INGEN associated domains. Reglene
 #     og hvorfor står i `entitlements-proof.sh`.
+#  3b. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
+#     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
+#     importerer `statfs`/`fstatfs`/`NSFileSystem*`. Reglene står i
+#     `privacy-proof.sh`.
 #  4. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
 #     byte finnes ikke igjen i arkivet, så den eksakte regelen må stå på kilden
 #     i repoet (sha256 mot merkevare-masteren, og et eksplisitt avslag på
@@ -77,10 +81,16 @@ ENTITLEMENTS_PROOF_LIB="$(dirname "${BASH_SOURCE[0]}")/entitlements-proof.sh"
 [ -f "$ENTITLEMENTS_PROOF_LIB" ] || { printf '✗ Mangler %s (entitlements-reglene)\n' "$ENTITLEMENTS_PROOF_LIB" >&2; exit 2; }
 # shellcheck source=entitlements-proof.sh
 . "$ENTITLEMENTS_PROOF_LIB"
+# Personvern-reglene (#2561): tillatelsestekst og DiskSpace.
+PRIVACY_PROOF_LIB="$(dirname "${BASH_SOURCE[0]}")/privacy-proof.sh"
+[ -f "$PRIVACY_PROOF_LIB" ] || { printf '✗ Mangler %s (personvern-reglene)\n' "$PRIVACY_PROOF_LIB" >&2; exit 2; }
+# shellcheck source=privacy-proof.sh
+. "$PRIVACY_PROOF_LIB"
 PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
 SHASUM=/usr/bin/shasum
 ASSETUTIL=/usr/bin/assetutil
+NM=/usr/bin/nm
 
 # The locale is pinned the same way (#1983). macOS /bin/bash 3.2 in any UTF-8
 # locale reads the first byte of `»` as part of a variable name, so an
@@ -111,7 +121,7 @@ usage() {
 [ $# -ge 1 ] || usage
 TARGET=$1
 bundle_proof_require
-for tool in "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL"; do
+for tool in "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$NM"; do
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
 
@@ -137,12 +147,13 @@ STR=''
 U16=''
 CAR=''
 ENT=''
+DISK=''
 # Fail closed if the script stops early (#1983). After a `set -u` death, bash
 # 3.2 hands the EXIT trap `$?` = 0 and exits with the trap's status, so a crash
 # halfway through the rules exited 0 and the build script would have uploaded.
 # Only the last lines of the script set PROOF_FINISHED.
 PROOF_FINISHED=0
-trap 'rm -f "$STR" "$U16" "$CAR" "$ENT" 2>/dev/null || true
+trap 'rm -f "$STR" "$U16" "$CAR" "$ENT" "$DISK" 2>/dev/null || true
 if [ "$PROOF_FINISHED" != 1 ]; then
   printf "FAIL  beviset stoppet før slutten — bevis-fila er ufullstendig, ingenting er bevist\n" | tee -a "$OUT" >&2
   exit 3
@@ -203,7 +214,40 @@ else
 fi
 say ""
 
-# ── 4. App-ikonet ────────────────────────────────────────────────────────────
+# ── 4. Personvern ────────────────────────────────────────────────────────────
+# Binærene: hovedfila og rammeverkene. `nm -u` lister importerte symboler
+# (`_statfs`, `_fstatfs`); `NSFileSystem*`/`NSURLVolume*Capacity` er
+# nøkkel-strenger som ligger i binæren, så de leses med `strings`. Utdraget
+# skrives til fil før det grepes (SIGPIPE under pipefail, som over).
+say "## Personvern (#2561)"
+if [ ! -f "$PLIST" ]; then
+  fail "Info.plist mangler i $APP"
+elif [ ! -f "$APP/PrivacyInfo.xcprivacy" ]; then
+  fail "PrivacyInfo.xcprivacy mangler i $APP. Appen har ikke noe app-manifest"
+else
+  exe=$(plist_value CFBundleExecutable)
+  DISK=$(mktemp -t torny-bevis-disk)
+  disk_imports=no
+  binaries=("$APP/$exe")
+  for fw in "$APP"/Frameworks/*.framework; do
+    if [ -d "$fw" ]; then binaries+=("$fw/$(basename "$fw" .framework)"); fi
+  done
+  for bin in "${binaries[@]}"; do
+    [ -f "$bin" ] || continue
+    ("$NM" -u "$bin" 2>/dev/null || true) > "$DISK"
+    ("$STRINGS" -a "$bin" 2>/dev/null || true) >> "$DISK"
+    n=$(("$GREP" -cE -- '(^|[ _])f?statfs$|NSFileSystemFreeSize|NSFileSystemSize|NSURLVolume[A-Za-z]*Capacity' "$DISK") || true)
+    if [ "${n:-0}" -ge 1 ]; then
+      say "disk-API i $(basename "$bin") ($n treff)"
+      disk_imports=yes
+    fi
+  done
+  [ -f "$APP/$exe" ] || fail "hovedbinæren $exe mangler i $APP"
+  privacy_rules "$PLIST" "$APP/PrivacyInfo.xcprivacy" "$disk_imports"
+fi
+say ""
+
+# ── 5. App-ikonet ────────────────────────────────────────────────────────────
 say "## App-ikon"
 if [ ! -f "$ICON_SRC" ]; then
   fail "$ICON_SRC mangler — app.json peker på ./assets/icon.png"

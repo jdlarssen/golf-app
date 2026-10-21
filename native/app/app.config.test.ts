@@ -143,6 +143,24 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(store.ios?.bundleIdentifier).toBe('no.tornygolf.app');
   });
 
+  // #2561: Apple stoppet 1.2.0 (5) på to ting som manglet. «Lagre bilde» i
+  // delearket skriver til Bilder og krever teksten; binærene importerer
+  // disk-API-er og krever DiskSpace i manifestet. Begge står i app.json, så
+  // begge variantene får dem. Expo slår manifest-oppføringen sammen med malens
+  // tre, så den skal stå alene her. 85F4.1 («vis diskplass til brukeren») er
+  // ikke sant for appen og skal ikke med.
+  it('har tillatelsesteksten for Bilder og DiskSpace i personvernmanifestet, i begge varianter', () => {
+    for (const cfg of [resolveConfig(base, DEV_ENV), resolveConfig(base, STORE_ENV)]) {
+      expect(cfg.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe('Tørny lagrer bildet du deler i Bilder.');
+      expect(cfg.ios?.privacyManifests?.NSPrivacyAccessedAPITypes).toEqual([
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+          NSPrivacyAccessedAPITypeReasons: ['E174.1'],
+        },
+      ]);
+    }
+  });
+
   it('setter ingen associated domains — lenker skal åpnes i Safari, der sesjonen finnes', () => {
     expect(resolveConfig(base, STORE_ENV).ios?.associatedDomains).toBeUndefined();
   });
