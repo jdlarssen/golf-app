@@ -31,7 +31,6 @@ import {
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
-import { formatVsPar } from '@/lib/scoring/scoreTone';
 import { teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
 import { PreRoundLeaderboardRealtime } from '../PreRoundLeaderboard';
 
@@ -82,11 +81,13 @@ function TeamCard({
   ranking?: 'net_to_par';
 }) {
   const tc = useTranslations('leaderboard.common');
+  const ts4 = useTranslations('leaderboard.state4');
   const accent = rankAccent(line.rank);
   const members = teamMembersLabel(line.players);
   const missing = line.missingHoles.length;
   const isLeader = line.rank === 1;
-  const headline = teamHeadline(ranking, line, formatVsPar);
+  const headline = teamHeadline(ranking, line);
+  const toPar = headline.unit === 'toPar';
   const delta = leader ? teamHeadlineGap(ranking, line, leader) : null;
 
   return (
@@ -127,9 +128,15 @@ function TeamCard({
             >
               {headline.text}
             </p>
+            {/* #2625: a to-par number says so, and its gap says what it is,
+                so two signed numbers are never read as the same thing. */}
+            {toPar && (
+              <p className="text-xs text-muted mt-1">{tc('vsParLabel')}</p>
+            )}
             {!isLeader && delta !== null && delta > 0 && (
               <p className="inline-num text-xs text-muted mt-1.5">
                 +{delta}
+                {toPar && ` ${ts4('behindLeader')}`}
               </p>
             )}
           </div>

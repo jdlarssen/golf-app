@@ -1,4 +1,5 @@
 import type { TeamLine } from '@/lib/leaderboard';
+import { formatVsPar as formatTableVsPar } from '@/lib/scoring/scoreTone';
 
 /**
  * «Mot par» over hullene som faktisk teller (#2217 D6):
@@ -110,4 +111,14 @@ export function bestBallLineVsPar(
   ranking: 'net_to_par' | undefined,
 ): number | null {
   return ranking === 'net_to_par' ? line.toPar : teamLineVsPar(line, coursePar);
+}
+
+/**
+ * #2625: a team's to-par label for the game's rule. A net-to-par game shows it
+ * with U+2212 on every surface, like the board, the podium and the share card
+ * (`formatVsPar`); other games keep the tables' hyphen-minus
+ * (`lib/scoring/scoreTone.ts`), as before.
+ */
+export function formatTeamVsPar(ranking: TeamRanking, n: number | null): string {
+  return ranking === 'net_to_par' ? formatVsPar(n) : formatTableVsPar(n);
 }

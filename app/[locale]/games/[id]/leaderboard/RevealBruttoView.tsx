@@ -118,9 +118,10 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
     if (teamHasScore) teamParPlayed += h.par;
   }
 
-  // #2625: a net-to-par game leads with the team's to par; the sum goes under.
-  const headline = teamHeadline(ranking, line, formatVsPar);
-  const teamDelta = headline.unit === 'toPar' ? String(line.total) : deltaText(line.total, teamParPlayed);
+  // #2625: a net-to-par game leads with the team's to par; «mot par · N brutto» goes under.
+  const headline = teamHeadline(ranking, line);
+  const toPar = headline.unit === 'toPar';
+  const teamDelta = deltaText(line.total, teamParPlayed);
 
   return (
     <li className="list-none">
@@ -160,14 +161,20 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
             <p className="score-num text-text leading-none text-3xl">
               {headline.text}
             </p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              {teamDelta && (
-                <span className="tabular-nums mr-1.5 normal-case">
-                  {teamDelta}
-                </span>
-              )}
-              {t('common.brutto')}
-            </p>
+            {toPar ? (
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+                {`${t('common.vsParLabel')} · ${t('common.grossBrutto', { count: line.total })}`}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                {teamDelta && (
+                  <span className="tabular-nums mr-1.5 normal-case">
+                    {teamDelta}
+                  </span>
+                )}
+                {t('common.brutto')}
+              </p>
+            )}
           </div>
         </div>
       </Card>
