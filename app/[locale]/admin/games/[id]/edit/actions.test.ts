@@ -510,6 +510,66 @@ describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#167
   });
 });
 
+describe('mode_config ranking on edit (#2625)', () => {
+  const updatedModeConfig = () =>
+    (
+      supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'update')?.args[0] as {
+        mode_config: Record<string, unknown>;
+      }
+    ).mode_config;
+
+  it('a draft that switches from stableford to texas is stamped as the new game it is', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: {
+          status: 'draft',
+          game_mode: 'stableford',
+          mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        },
+        error: null,
+      }, // games.select
+      { data: [], error: null }, // game_players.select (prior roster)
+      { data: { id: 'draft-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(
+      saveDraftAction(
+        'draft-1',
+        fd({ name: 'Byttet til Texas', side_tournament_enabled: 'false', game_mode: 'texas_scramble', texas_team_size: '2', texas_team_handicap_pct: '25' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updatedModeConfig()).toMatchObject({ kind: 'texas_scramble', ranking: 'net_to_par' });
+  });
+
+  it('a scheduled team strokeplay game without the flag never gets it on edit', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: {
+          status: 'scheduled',
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+        },
+        error: null,
+      }, // mode-lock-fetch
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // insert (all 8 new)
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', fullBestBallFormData())).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updatedModeConfig()).toMatchObject({ kind: 'best_ball' });
+    expect(updatedModeConfig()).not.toHaveProperty('ranking');
+  });
+});
+
 describe('backfill invite-notify (#182) — edit-flyten', () => {
   it('diff-add: notify fyres kun for nye spillere, ikke for eksisterende', async () => {
     // Eksisterende roster har u0, u1, u2, u3. Edit-en sender u0-u7 — så
