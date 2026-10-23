@@ -105,6 +105,9 @@ describe('BagTag', () => {
     expect(screen.queryByTestId('friend-qr-sheet')).toBeNull();
     await fireEvent.press(screen.getByTestId('bag-tag-qr'));
     expect(screen.getByTestId('friend-qr-sheet')).toBeTruthy();
+    // «Lukk» lukker arket igjen.
+    await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.friendQrClose }));
+    expect(screen.queryByTestId('friend-qr-sheet')).toBeNull();
 
     // Mens koden lastes: den tomme flaten, uten ring og uten knapp.
     await rerender(<BagTag model={fresh} friendQr="loading" onEditProfile={onEditProfile} />);
