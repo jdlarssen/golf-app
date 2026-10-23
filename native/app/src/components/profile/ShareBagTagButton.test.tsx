@@ -2,9 +2,10 @@
 //
 // Hva bildet og arket gjør, er `lib/shareImage.test.ts` sitt (Type A). Her
 // låses koblingene bare en render kan bekrefte: uten de native delene finnes
-// ingen knapp, knappen deler deleversjonen av kortet (med ordmerket, skjult for
-// skjermleseren), og en feil gir linja under knappen. Ingen layout-asserts.
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+// ingen knapp, knappen deler deleversjonen av kortet (med ordmerket og
+// initialringen, aldri QR-koden, #2627, skjult for skjermleseren), og en feil
+// gir linja under knappen. Ingen layout-asserts.
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import type { BagTagModel } from '../../lib/bagTag';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
 import { canShareImage, shareViewImage } from '../../lib/shareImage';
@@ -42,6 +43,10 @@ describe('ShareBagTagButton', () => {
     expect(screen.getByTestId('share-bag-tag-card', HIDDEN)).toBeTruthy();
     expect(screen.queryByTestId('share-bag-tag-card')).toBeNull();
     expect(screen.getByTestId('share-wordmark', HIDDEN)).toHaveTextContent(PROFILE_TEXT.shareWordmark);
+    // #2627: bildet har initialringen, aldri QR-koden.
+    const card = within(screen.getByTestId('share-bag-tag-card', HIDDEN));
+    expect(card.getByText(MODEL.initials, HIDDEN)).toBeTruthy();
+    expect(card.queryByRole('button', { name: PROFILE_TEXT.friendQrLabel, ...HIDDEN })).toBeNull();
 
     // Første trykk feiler: linja står. Andre lykkes: linja går bort.
     await act(async () => {

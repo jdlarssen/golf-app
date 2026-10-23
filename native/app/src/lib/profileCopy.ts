@@ -168,6 +168,15 @@ export const PROFILE_TEXT = {
   /** Ordmerket nederst på bildet som deles. */
   shareWordmark: 'Tørny',
 
+  // --- App-egent: QR-koden på bag-taggen (#2627) ---------------------------
+  // Koden står der initialringen sto, og et trykk viser den stort på et ark.
+  // Webben har ingen QR-kode, så det finnes ingen fasit å speile.
+  /** Skjermleserens navn på koden på taggen, som er én knapp. */
+  friendQrLabel: 'QR-kode for å bli venn med deg. Trykk for å vise den større.',
+  /** Linja på arket, under navnet ditt. */
+  friendQrSheetBody: 'La kompisen skanne koden med kameraet. Da kan dere bli venner med ett trykk.',
+  friendQrClose: 'Lukk',
+
   // --- App-egent: veien inn i skjemaet ------------------------------------
   // To nøkler for det som i dag er samme ord, av samme grunn som `deleteRow`
   // og `ACCOUNT_TEXT.heading` er to: den ene er raden som fører dit, den andre

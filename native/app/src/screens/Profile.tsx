@@ -34,14 +34,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BagTag } from '../components/profile/BagTag';
+import { BagTag, type FriendQr } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
+import { fetchFriendCode } from '../data/friends';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { bagTagModel } from '../lib/bagTag';
 import { PROFILE_TEXT, notificationsThemeMenuLabel } from '../lib/profileCopy';
+import { friendLinkPath, webUrl } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { centeredLineTop, FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
@@ -99,6 +101,28 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   }, [userId]);
 
   useEffect(loadExtras, [loadExtras]);
+
+  // #2627: venne-koden til QR-koden på taggen, hentet én gang når rommet
+  // åpnes. `undefined` mens den lastes; `null` når det ikke finnes noen
+  // (`fetchFriendCode` kaster aldri, så Profil viser ingen feil for den).
+  const [friendCode, setFriendCode] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchFriendCode().then((code) => {
+      if (!cancelled) setFriendCode(code);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // Adressen er den samme som «Del lenka» på vennesiden. Mangler bygget
+  // web-adressen, står ringen som før.
+  const friendQr = useMemo((): FriendQr => {
+    if (friendCode === undefined) return 'loading';
+    if (friendCode === null) return null;
+    const target = webUrl(friendLinkPath(friendCode));
+    return target.ok ? { url: target.url } : null;
+  }, [friendCode]);
 
   // Ny lagring → les raden og kurven på nytt, så kortet viser det som faktisk
   // står i basen og ikke det skjemaet trodde det sendte. Opprydningen kastes
@@ -178,6 +202,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         placeholderName={loadFailed ? failedName : ''}
         onEditProfile={openEditProfile}
         trend={extras === undefined ? 'loading' : extras.trend}
+        friendQr={friendQr}
       />
       {loadFailed ? (
         <Text style={[ui.error, styles.note]} testID="profile-load-error">
