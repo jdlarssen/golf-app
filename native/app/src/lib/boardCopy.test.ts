@@ -36,6 +36,7 @@ describe('paritet med messages/no.json', () => {
       unknownPlayer: source.leaderboard.common.unknownPlayer,
       teamLabel: source.leaderboard.common.teamLabel,
       poengLabel: source.leaderboard.common.poengLabel,
+      vsParLabel: source.leaderboard.common.vsParLabel,
     });
   });
 

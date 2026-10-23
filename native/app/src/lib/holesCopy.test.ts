@@ -238,6 +238,10 @@ describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
   it('«B» og « PAR» er hardkodet i webbens drilldown, ikke i meldingene', () => {
     expect([BEST_BALL_HOLES_TEXT.legendBest, BEST_BALL_HOLES_TEXT.vsParSuffix]).toEqual(['B', 'PAR']);
   });
+
+  it('«SLAG» bak summen er webbens slagLabel i store bokstaver (#2625)', () => {
+    expect(BEST_BALL_HOLES_TEXT.strokesSuffix).toBe(source.leaderboard.common.slagLabel.toUpperCase());
+  });
 });
 
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {

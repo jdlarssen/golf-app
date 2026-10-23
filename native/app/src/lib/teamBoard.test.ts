@@ -176,6 +176,36 @@ describe('teamBoardFor — live scramble', () => {
   });
 });
 
+describe('teamBoardFor — a scramble ranked on net to par (#2625)', () => {
+  // Issuets eksempel: laget ditt −5 etter 3 hull, Lag 2 −7 etter 6. Lag 3
+  // har spilt ett hull på par. Rekkefølgen og tallet er mot par.
+  const FLAGGED = { ...TEXAS, ranking: 'net_to_par' };
+  const bundle = homeBundle({ game: { gameMode: 'texas_scramble', modeConfig: FLAGGED }, players: teams });
+  const scores = [
+    ...teamScores([ME, 'marte'], [2, 2, 3]),
+    ...teamScores(['jonas', 'kari'], [3, 3, 3, 3, 3, 2]),
+    ...teamScores(['ola', 'per'], [4]),
+  ];
+  const model = teamBoardFor({ bundle, scores, userId: ME })!;
+
+  it('the band says «mot par»', () => {
+    expect(teamBoardBand(bundle).subtitle).toBe('Texas scramble · 3 lag à 2 · mot par');
+  });
+
+  it('ranks on to par and shows it, with «mot par» under the marked cards', () => {
+    expect(model.rows.map((r) => [r.teamNumber, r.place, r.total, r.under])).toEqual([
+      [2, '1', '\u22127', 'mot par'],
+      [1, '2', '\u22125', 'mot par'],
+      [3, '3', 'E', 'hull 1'],
+    ]);
+  });
+
+  it('reads the number aloud as to par, and the strip gives the gap across holes', () => {
+    expect(model.rows[1].a11y).toContain('5 under par');
+    expect(model.strip?.detail).toBe('2 slag bak Lag 2');
+  });
+});
+
 describe('teamBoardFor — best ball, first half', () => {
   // Lag 2 har spilt de ni første (27). Laget ditt har åtte: par på 1–7, og på
   // hull 8 talte Marte sin ball, én over. Slagene på 10–12 skal ikke synes.

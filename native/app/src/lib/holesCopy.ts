@@ -235,6 +235,11 @@ export const BEST_BALL_HOLES_TEXT = {
   noPlayers: '(uten spillere)',
   /** Bak mot par i heltefeltet («+3 PAR»). */
   vsParSuffix: 'PAR',
+  /**
+   * #2625: bak summen i heltefeltet når spillet rangeres mot par («17 SLAG»),
+   * webbens `common.slagLabel` i store bokstaver som «PAR».
+   */
+  strokesSuffix: 'SLAG',
 } as const;
 
 /** «Lag 2 · 1. plass» øverst, som webbens topp. */
