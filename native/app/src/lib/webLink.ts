@@ -40,6 +40,15 @@ export type OpenWebResult = { ok: true } | { ok: false; reason: WebLinkFailure }
  */
 export const PRIVACY_PATH = '/legal/privacy';
 
+/**
+ * «Legg til meg»-siden for en venne-kode (#369). Stien har ett hjem i appen:
+ * «Del lenka» på vennesiden og QR-koden på bag-taggen (#2627) bygger begge
+ * adressen herfra med {@link webUrl}.
+ */
+export function friendLinkPath(code: string): string {
+  return `/venner/legg-til/${code}`;
+}
+
 /** En knapp til en side på nettsiden: hva den heter, og hvor den går. */
 export interface WebLinkTarget {
   label: string;

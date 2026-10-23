@@ -138,6 +138,24 @@ export async function fetchFriends(): Promise<FriendsLoadResult> {
 }
 
 /**
+ * Din egen venne-kode, til QR-koden på bag-taggen (#2627), fra den lette
+ * `/api/friends/code` i stedet for hele vennesiden. `null` ved alt som ikke er
+ * en kode (ikke innlogget, serverfeil, uten nett, tom kode): kortet tegner da
+ * initialringen som før, og Profil viser ingen feil for den. Kaster aldri.
+ */
+export async function fetchFriendCode(): Promise<string | null> {
+  try {
+    const call = await callWebRoute('/api/friends/code', 'GET');
+    if (!call.ok || call.status !== 200) return null;
+    const code = call.body.friendCode;
+    return typeof code === 'string' && code ? code : null;
+  } catch (err) {
+    console.error('[friends] kodeoppslag feilet', err);
+    return null;
+  }
+}
+
+/**
  * Én handling mot sin rute. 401 er «ikke innlogget»; ellers leses `status`
  * fra kroppen, også på en 500, der ruta svarer `{ status: 'error' }`.
  */

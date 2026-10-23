@@ -89,6 +89,39 @@ describe('fetchFriends', () => {
   });
 });
 
+// #2627: bare koden, til QR-koden på bag-taggen. Kortet skal aldri feile på
+// grunn av den, så alt annet enn en kode blir `null`.
+describe('fetchFriendCode', () => {
+  useWebRoute();
+
+  it('henter koden med GET fra sin egen rute', async () => {
+    respondWith(200, { friendCode: 'abcd1234' });
+
+    expect(await friends().fetchFriendCode()).toBe('abcd1234');
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/friends/code`);
+    expect(requestInit().method).toBe('GET');
+  });
+
+  it.each([
+    ['401', () => respondWith(401, { error: 'unauthorized' })],
+    ['500', () => respondWith(500, { error: 'load_failed' })],
+    ['en tom kode', () => respondWith(200, { friendCode: '' })],
+    ['null', () => respondWith(200, { friendCode: null })],
+    ['noe annet enn tekst', () => respondWith(200, { friendCode: 12345678 })],
+    ['nettfeil', () => mockFetch.mockRejectedValue(new Error('fetch failed'))],
+  ] as const)('gir null ved %s', async (_, arrange) => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    arrange();
+    await expect(friends().fetchFriendCode()).resolves.toBeNull();
+  });
+
+  it('gir null uten nett, før noe sendes', async () => {
+    mockNetwork.online = false;
+    expect(await friends().fetchFriendCode()).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('vennehandlingene', () => {
   useWebRoute();
 
