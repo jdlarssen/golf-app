@@ -97,20 +97,23 @@ export type TeamBoardResult = TexasScrambleResult | StablefordTeamResult | BestB
  * - shamble: the holes the team has a counted score on, net
  * - team stableford: the hole rows where a player has strokes, points. A hole
  *   nobody has played also scores 0 points, so `teamPoints` cannot say it.
+ *
+ * #2625: a team strokeplay result ranked on net to par compares in `toPar`,
+ * which `comparableGap` compares across a different number of holes.
  */
 export function teamBoardMeasure(result: TeamBoardResult): {
-  unit: 'net' | 'points';
+  unit: 'net' | 'points' | 'toPar';
   holesPlayed: (teamNumber: number) => number;
 } {
   const find = <T extends { teamNumber: number }>(teams: readonly T[], n: number) =>
     teams.find((t) => t.teamNumber === n);
   switch (result.kind) {
     case 'texas_scramble':
-      return { unit: 'net', holesPlayed: (n) => teamPlayed(find(result.teams, n)) };
+      return { unit: strokeUnit(result), holesPlayed: (n) => teamPlayed(find(result.teams, n)) };
     case 'best_ball':
-      return { unit: 'net', holesPlayed: (n) => teamPlayed(find(result.teams, n)) };
+      return { unit: strokeUnit(result), holesPlayed: (n) => teamPlayed(find(result.teams, n)) };
     case 'shamble':
-      return { unit: 'net', holesPlayed: (n) => find(result.teams, n)?.holesCounted ?? 0 };
+      return { unit: strokeUnit(result), holesPlayed: (n) => find(result.teams, n)?.holesCounted ?? 0 };
     case 'stableford':
       return {
         unit: 'points',
@@ -118,6 +121,11 @@ export function teamBoardMeasure(result: TeamBoardResult): {
           find(result.teams, n)?.holes.filter((h) => h.players.some((p) => p.gross !== null)).length ?? 0,
       };
   }
+}
+
+/** #2625: the unit a team strokeplay result compares in, from the rule it ranked on. */
+function strokeUnit(result: { ranking: 'net_to_par' | 'net_total' }): 'net' | 'toPar' {
+  return result.ranking === 'net_to_par' ? 'toPar' : 'net';
 }
 
 function teamPlayed(team: { holes: readonly unknown[]; missingHoles: readonly number[] } | undefined): number {
@@ -133,7 +141,7 @@ export type TeamResultBoardRow = {
   teamHandicap: number | null;
   rank: number;
   tied: boolean;
-  /** `null` for a team without a played hole. */
+  /** In the board's unit (#2625: to par in a net-to-par game); `null` for a team without a played hole. */
   total: number | null;
   holesPlayed: number;
   decidedBy: TieDecider | null;
@@ -141,19 +149,31 @@ export type TeamResultBoardRow = {
   above: number | null;
 };
 
+/** The line's number in the board's unit: #2625 to par in a net-to-par game. */
 function teamLines(result: TeamBoardResult) {
+  const toPar = result.kind !== 'stableford' && result.ranking === 'net_to_par';
   switch (result.kind) {
     case 'texas_scramble':
       return result.teams.map((t) => ({
         ...t,
         memberIds: t.members.map((m) => m.userId),
-        total: t.totalNet,
+        total: toPar ? t.toPar : (t.totalNet as number | null),
         teamHandicap: t.teamHandicap as number | null,
       }));
     case 'best_ball':
-      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.total, teamHandicap: null }));
+      return result.teams.map((t) => ({
+        ...t,
+        memberIds: t.playerIds,
+        total: toPar ? t.toPar : (t.total as number | null),
+        teamHandicap: null,
+      }));
     case 'shamble':
-      return result.teams.map((t) => ({ ...t, memberIds: t.members, total: t.totalScore, teamHandicap: null }));
+      return result.teams.map((t) => ({
+        ...t,
+        memberIds: t.members,
+        total: toPar ? t.toPar : (t.totalScore as number | null),
+        teamHandicap: null,
+      }));
     case 'stableford':
       return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.totalPoints, teamHandicap: null }));
   }

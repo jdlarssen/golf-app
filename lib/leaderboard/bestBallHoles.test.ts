@@ -163,6 +163,37 @@ describe('bestBallDrilldown', () => {
   });
 });
 
+describe('bestBallDrilldown — ranking: net_to_par (#2625)', () => {
+  // Issuets eksempel: lag 1 netto 7 etter 3 hull (−5), lag 2 netto 17 etter
+  // 6 hull (−7). I et spill stemplet med mot par leder lag 2, og helten viser
+  // lagets mot par (det tavla rangerer på), ikke summen mot herrepar.
+  const holes = Array.from({ length: 18 }, (_, i) => hole(i + 1));
+  const players = [
+    player('ola', 1, 'Ola Nordmann'),
+    player('kari', 1, 'Kari Holm'),
+    player('per', 2, 'Per Berg'),
+    player('lise', 2, 'Lise Dahl'),
+  ];
+  const card = (userId: string, gross: number[]) => gross.map((g, i) => score(userId, i + 1, g));
+  const scores = [...card('ola', [2, 2, 3]), ...card('per', [3, 3, 3, 3, 3, 2])];
+  const flagged = computeLeaderboard({ mode: 'netto', players, holes, scores, ranking: 'net_to_par' });
+
+  it('lederen er lag 2, og mot par er lagets eget', () => {
+    const view = bestBallDrilldown({ lines: flagged, requestedTeam: null, coursePar: 72, ranking: 'net_to_par' })!;
+    expect([view.teamNumber, view.rank, view.isLeader, view.total, view.totalVsPar, view.ranking]).toEqual([
+      2, 1, true, 17, -7, 'net_to_par',
+    ]);
+    const lag1 = bestBallDrilldown({ lines: flagged, requestedTeam: 1, coursePar: 72, ranking: 'net_to_par' })!;
+    expect([lag1.rank, lag1.totalVsPar]).toEqual([2, -5]);
+  });
+
+  it('uten flagget er alt som før', () => {
+    const plain = computeLeaderboard({ mode: 'netto', players, holes, scores });
+    const view = bestBallDrilldown({ lines: plain, requestedTeam: null, coursePar: 72 })!;
+    expect([view.teamNumber, view.rank, view.ranking]).toEqual([1, 1, undefined]);
+  });
+});
+
 describe('bestBallRevealMeta', () => {
   it('navnene som på webben i et avsluttet spill, med kallenavn, skilt med «·»', () => {
     expect(

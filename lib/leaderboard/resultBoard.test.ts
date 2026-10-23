@@ -258,3 +258,55 @@ describe('teamResultBoard — the rows of a finished team board', () => {
     expect(resultStanding(board, (r) => r.teamNumber, 2)).toEqual({ rank: 2, tied: false, leaders: [1], gap: null });
   });
 });
+
+// #2625: a team strokeplay game stamped `ranking: 'net_to_par'` shows the
+// number it is ranked on, and its gap compares across a different number of
+// holes («thru»), like the solo board's net to par (#2253).
+describe('teamResultBoard — a net-to-par team game (#2625)', () => {
+  const teamName = (n: number) => `Lag ${n}`;
+  const card = (userId: string, gross: number[]) => gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+  function issueCtx(
+    game_mode: ScoringContext['game']['game_mode'],
+    mode_config: ScoringContext['game']['mode_config'],
+    scores: ScoringContext['scores'],
+  ): ScoringContext {
+    return {
+      game: { id: 'g', game_mode, mode_config: { ...mode_config, ranking: 'net_to_par' } as typeof mode_config },
+      players: ['p1', 'p2', 'p3', 'p4'].map((userId, i) => ({
+        userId,
+        teamNumber: i < 2 ? 1 : 2,
+        flightNumber: i < 2 ? 1 : 2,
+        courseHandicap: 0,
+      })),
+      holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1 })),
+      scores,
+    };
+  }
+  // The issue's example: Lag 1 −5 after 3 holes, Lag 2 −7 after 6.
+  const oneBall = [...card('p1', [2, 2, 3]), ...card('p3', [3, 3, 3, 3, 3, 2])];
+  it.each([
+    ['texas_scramble', issueCtx('texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 0 }, oneBall)],
+    ['best_ball', issueCtx('best_ball', { kind: 'best_ball', team_size: 2, teams_count: 2 }, oneBall)],
+    [
+      'shamble',
+      issueCtx(
+        'shamble',
+        { kind: 'shamble', team_size: 4, teams_count: 2, shamble_variant: 'shamble', shamble_count: 2, shamble_scoring: 'net' },
+        [
+          ...card('p1', [3, 3, 3]),
+          ...card('p2', [3, 3, 4]),
+          ...card('p3', [3, 3, 3, 3, 3, 3]),
+          ...card('p4', [4, 4, 4, 4, 4, 3]),
+        ],
+      ),
+    ],
+  ] as const)('%s: unit toPar, the total is the team’s to par, and the gap is there across holes', (_name, ctx) => {
+    const board = teamResultBoard(computeLeaderboard(ctx) as TeamBoardResult, teamName);
+    expect(board.unit).toBe('toPar');
+    expect(board.rows.map((r) => [r.teamNumber, r.rank, r.total, r.holesPlayed])).toEqual([
+      [2, 1, -7, 6],
+      [1, 2, -5, 3],
+    ]);
+    expect(resultStanding(board, (r) => r.teamNumber, 1)?.gap).toBe(2);
+  });
+});

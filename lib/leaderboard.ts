@@ -75,6 +75,12 @@ export type TeamLine = {
   holes: TeamHoleRow[];
   total: number;
   missingHoles: number[];
+  /**
+   * #2625: Σ (teamNet − the team row's par) over the holes the team has
+   * played; `null` when it has played none. Always computed; the board ranks
+   * on it when the game ranks on net to par (`ranking`).
+   */
+  toPar: number | null;
   rank: number;
   tiedWith: number[];
 };
@@ -89,14 +95,19 @@ export type TeamLine = {
  *
  * Ranking uses the actual played total. Teams with missing holes are still
  * ranked, but flagged via `missingHoles` so the UI can warn.
+ *
+ * #2625: with `ranking: 'net_to_par'` (the game's `mode_config`, asked via
+ * `ranksByNetToPar` — `bestBallBoardInput` hands it over) the teams rank on
+ * teamNet − par over the holes each has played instead, like the engine.
  */
 export function computeLeaderboard(opts: {
   mode: LeaderboardMode;
   players: LbPlayer[];
   holes: LbHole[];
   scores: LbScore[];
+  ranking?: 'net_to_par';
 }): TeamLine[] {
-  const { mode, players, holes, scores } = opts;
+  const { mode, players, holes, scores, ranking } = opts;
 
   // Index gross strokes by (userId, holeNumber).
   const grossKey = (userId: string, holeNumber: number) =>
@@ -181,6 +192,11 @@ export function computeLeaderboard(opts: {
         (sum, h) => sum + (h.teamNet ?? 0),
         0,
       );
+      const played = teamHoles.filter((h) => h.teamNet !== null);
+      const toPar =
+        played.length > 0
+          ? played.reduce((sum, h) => sum + (h.teamNet as number) - h.par, 0)
+          : null;
 
       return {
         teamNumber,
@@ -188,6 +204,7 @@ export function computeLeaderboard(opts: {
         holes: teamHoles,
         total,
         missingHoles,
+        toPar,
       };
     },
   );
@@ -197,9 +214,17 @@ export function computeLeaderboard(opts: {
   // cascade reads — filled by position they landed on 0–8 and every tie stayed
   // shared. A team with no scores is padded so its 0 never wins (#666 / #635).
   // Same rule as the engine (lib/scoring/modes/bestBall.ts), one home.
+  // #2625: a net-to-par game slots teamNet − par, so an unplayed hole is par.
   const teamsForRanking = lines.map((l) => ({
     id: l.teamNumber,
-    holes: rankingHolesByNumber(l.holes),
+    holes: rankingHolesByNumber(
+      ranking === 'net_to_par'
+        ? l.holes.map((h) => ({
+            holeNumber: h.holeNumber,
+            teamNet: h.teamNet === null ? null : h.teamNet - h.par,
+          }))
+        : l.holes,
+    ),
   }));
 
   const ranked: RankedTeam[] = rankTeams(teamsForRanking);

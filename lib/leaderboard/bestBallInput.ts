@@ -1,5 +1,6 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
 import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import type { GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
 /** The roster fields the best-ball surfaces read. Structural, so `gwp.players` fits. */
@@ -36,6 +37,9 @@ export type BestBallScoreInputRow = {
  * - `withdrawn`: har `users`-rad og er trukket (tavlas «Trukket»-seksjon)
  * - `scores`: slag fra trukne spillere er droppet
  * - `holes`: `par` er `par_mens`, pluss par per kjønn
+ * - `ranking`: spillets rangeringsregel (#2625), `'net_to_par'` for et nytt
+ *   spill (`ranksByNetToPar`). Sendes rett videre til `computeLeaderboard`, så
+ *   tavla, «Hull for hull», CSV-en og appen rangerer likt.
  *
  * `courseHandicap` følger motoren (`playerStrokeHandicap`, #2218). For best ball
  * er det det rå banehandicapet, som tavla alltid har brukt.
@@ -55,6 +59,7 @@ export function bestBallBoardInput(opts: {
   withdrawn: { user_id: string; display_name: string }[];
   holes: LbHole[];
   scores: LbScore[];
+  ranking: 'net_to_par' | undefined;
 } {
   const { gameMode, modeConfig, roster, holeRows, scoreRows, unknownPlayer } = opts;
 
@@ -96,5 +101,11 @@ export function bestBallBoardInput(opts: {
       strokes: s.strokes,
     }));
 
-  return { players, withdrawn, holes, scores };
+  return {
+    players,
+    withdrawn,
+    holes,
+    scores,
+    ranking: ranksByNetToPar(modeConfig) ? 'net_to_par' : undefined,
+  };
 }

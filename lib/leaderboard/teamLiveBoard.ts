@@ -21,8 +21,11 @@ import { teamResultBoard, type ResultBoard, type TeamBoardResult, type TeamResul
 /** A hole's colour on the team board; `unset` is a hole the team has not played. */
 export type TeamHoleTone = VsParTone | 'unset';
 
-/** The unit under the total and in the band's line: net, gross (shamble) or points. */
-export type TeamDisplayUnit = 'net' | 'gross' | 'points';
+/**
+ * The unit under the total and in the band's line: net, gross (shamble),
+ * points, or to par (#2625: a team strokeplay game ranked on net to par).
+ */
+export type TeamDisplayUnit = 'net' | 'gross' | 'points' | 'toPar';
 
 /**
  * The table a team stableford game's points are in. The result says
@@ -55,6 +58,7 @@ const MIN_HOLES_FOR_MOVEMENT = 2;
 
 export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
   if (result.kind === 'stableford') return 'points';
+  if (result.ranking === 'net_to_par') return 'toPar';
   if (result.kind === 'shamble') return result.scoring === 'gross' ? 'gross' : 'net';
   return 'net';
 }

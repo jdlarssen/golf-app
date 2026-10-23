@@ -2,7 +2,7 @@ import type { LbPlayer, TeamLine } from '@/lib/leaderboard';
 import { hasParDifference } from '@/lib/games/parDisplay';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { nameInitials } from '@/lib/names/initials';
-import { teamLineVsPar, vsParOverPlayed } from './vsPar';
+import { bestBallLineVsPar, vsParOverPlayed } from './vsPar';
 
 /**
  * «Hull for hull» for best ball (#2255 PR 3d): det webbens drilldown
@@ -71,7 +71,13 @@ export type BestBallDrilldown = {
   rank: number;
   isLeader: boolean;
   total: number;
+  /** #2625: the team's own to par in a net-to-par game, else `teamLineVsPar`. */
   totalVsPar: number | null;
+  /**
+   * #2625: the game's ranking rule. A net-to-par game's hero leads with
+   * `totalVsPar` (what the board ranks on), any other game with `total`.
+   */
+  ranking: 'net_to_par' | undefined;
   players: LbPlayer[];
   /** Ut (1–9) og inn (10–18), bare de nierne spillet har hull i. */
   nines: BestBallNine[];
@@ -154,13 +160,18 @@ function nine(
  * eller ikke finnes (en gammel lenke til et slettet lag lander likevel et
  * sted). `coursePar` er tavlas par (`par_mens`) over de samme hullene, så
  * mot par er det samme som på tavla (#2217). `null` uten lag.
+ *
+ * #2625: `ranking` er spillets regel (`bestBallBoardInput`). Linjene er regnet
+ * med samme regel, så plassen og lederen følger den alt; mot par blir lagets
+ * eget (`bestBallLineVsPar`).
  */
 export function bestBallDrilldown(opts: {
   lines: readonly TeamLine[];
   requestedTeam: number | null;
   coursePar: number;
+  ranking?: 'net_to_par';
 }): BestBallDrilldown | null {
-  const { lines, requestedTeam, coursePar } = opts;
+  const { lines, requestedTeam, coursePar, ranking } = opts;
   // Plassen, så lagnummeret: fast rekkefølge uansett hvordan linjene kom inn.
   const ordered = [...lines].sort((a, b) => a.rank - b.rank || a.teamNumber - b.teamNumber);
   if (ordered.length === 0) return null;
@@ -182,7 +193,8 @@ export function bestBallDrilldown(opts: {
     rank: selected.rank,
     isLeader: selected.rank === 1,
     total: selected.total,
-    totalVsPar: teamLineVsPar(selected, coursePar),
+    totalVsPar: bestBallLineVsPar(selected, coursePar, ranking),
+    ranking,
     players: selected.players,
     nines,
     holesWon: bestBallHoleWinners(ordered, selected).filter((w) => w === selected.teamNumber).length,
