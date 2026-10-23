@@ -92,7 +92,7 @@ export type HoleByHoleModel =
    * Alle lagene og tavlas par over hullene: skjermen velger laget (lederen
    * først, så «forrige» og «neste») med `bestBallDrilldown`.
    */
-  | { kind: 'best-ball'; lines: TeamLine[]; coursePar: number };
+  | { kind: 'best-ball'; lines: TeamLine[]; coursePar: number; ranking: 'net_to_par' | undefined };
 
 function isKnownMode(mode: string): mode is GameMode {
   return Object.hasOwn(MODE_LABELS, mode);
@@ -130,7 +130,7 @@ export function holeByHoleKind(
 function bestBallLines(
   bundle: GameBundle,
   scores: readonly LocalScore[],
-): { lines: TeamLine[]; coursePar: number } | null {
+): { lines: TeamLine[]; coursePar: number; ranking: 'net_to_par' | undefined } | null {
   const modeConfig = asModeConfig('best_ball', bundle.game.modeConfig);
   if (modeConfig === null) return null;
   const segment = bundle.game.holeSegment as HoleSegment;
@@ -148,10 +148,17 @@ function bestBallLines(
     scoreRows,
     unknownPlayer: HOLES_TEXT.unknownPlayer,
   });
-  const lines = computeTeamLines({ mode: 'netto', players: input.players, holes: input.holes, scores: input.scores });
+  // #2625: spillets rangeringsregel, så plassene er tavlas.
+  const lines = computeTeamLines({
+    mode: 'netto',
+    players: input.players,
+    holes: input.holes,
+    scores: input.scores,
+    ranking: input.ranking,
+  });
   // Tavlas par (#2217): `par_mens` over nøyaktig hullene som ble regnet.
   const coursePar = input.holes.reduce((sum, h) => sum + h.par, 0);
-  return { lines, coursePar };
+  return { lines, coursePar, ranking: input.ranking };
 }
 
 /**

@@ -24,6 +24,7 @@ import {
   boardShowsRank,
   isBoardLeader,
   sentenceName,
+  totalLabel,
   type BoardRowSrPart,
 } from '../../../../lib/leaderboard/boardRules';
 import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
@@ -105,7 +106,17 @@ export function teamBandVariant(game: Pick<BundleGame, 'gameMode' | 'status'>): 
 const teamName = (teamNumber: number) => formatMessage(BOARD_COMMON_TEXT.teamLabel, { number: teamNumber });
 
 function unitText(unit: TeamDisplayUnit): string {
-  return unit === 'points' ? BOARD_COMMON_TEXT.poengLabel : unit === 'gross' ? BOARD_TEAM_TEXT.gross : BOARD_TEAM_TEXT.net;
+  switch (unit) {
+    case 'points':
+      return BOARD_COMMON_TEXT.poengLabel;
+    case 'gross':
+      return BOARD_TEAM_TEXT.gross;
+    // #2625: et lagspill som rangeres mot par, viser lagets mot par.
+    case 'toPar':
+      return BOARD_COMMON_TEXT.vsParLabel;
+    case 'net':
+      return BOARD_TEAM_TEXT.net;
+  }
 }
 
 /** Lagformatenes resultat, eller `null` for alt annet motoren svarer. */
@@ -158,9 +169,9 @@ export type TeamBoardRow = {
   members: string;
   /** Avatarene hos lederen live, i navnelinjas rekkefølge. */
   initials: string[];
-  /** Summen: «39», «—» før laget har spilt. */
+  /** Summen: «39», mot par «−5» når spillet rangeres mot par (#2625), «—» før laget har spilt. */
   total: string;
-  /** Under summen: «netto», «netto · lag-hcp 7», «poeng», «hull 10» eller «8 av 9». */
+  /** Under summen: «netto», «mot par», «netto · lag-hcp 7», «poeng», «hull 10» eller «8 av 9». */
   under: string;
   /**
    * Prikkene: live de siste fem hullene hos lederen og ditt lag, i best ball
@@ -408,7 +419,8 @@ function liveBoard(
       you,
       members: memberNames,
       initials: team.initials,
-      total: row.total === null ? '—' : String(row.total),
+      // #2625: «−5», «E» eller «+3» når tavla rangerer mot par.
+      total: totalLabel(board.unit, row.total),
       under: firstHalf
         ? formatMessage(BOARD_TEAM_TEXT.ofHoles, { played: row.holesPlayed, total: halfHoles })
         : marked
@@ -595,7 +607,8 @@ function finishedBoard(
       you,
       members: memberNames,
       initials: team.initials,
-      total: row.total === null ? '—' : String(row.total),
+      // #2625: «−5», «E» eller «+3» når tavla rangerer mot par.
+      total: totalLabel(board.unit, row.total),
       under: [
         row.teamHandicap === null
           ? unitText(unit)

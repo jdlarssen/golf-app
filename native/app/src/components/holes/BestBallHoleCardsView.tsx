@@ -24,6 +24,7 @@ import {
   type BestBallTeamRef,
   type VsParTone,
 } from '../../../../../lib/leaderboard/bestBallHoles';
+import { teamHeadline } from '../../../../../lib/leaderboard/vsPar';
 import { formatVsPar } from '../../../../../lib/scoring/scoreTone';
 import { formatOtherGendersPar } from '../../../../../lib/games/parDisplay';
 import {
@@ -75,10 +76,13 @@ function VsParPill({
 export function BestBallHoleCardsView({
   lines,
   coursePar,
+  ranking,
   onTeamChange,
 }: {
   lines: readonly TeamLine[];
   coursePar: number;
+  /** #2625: spillets rangeringsregel; mot par først når den er `net_to_par`. */
+  ranking?: 'net_to_par';
   /** Et annet lag er valgt; skjermen ruller til toppen av det nye laget. */
   onTeamChange?: () => void;
 }) {
@@ -88,8 +92,11 @@ export function BestBallHoleCardsView({
     setTeam(teamNumber);
     onTeamChange?.();
   };
-  const view = bestBallDrilldown({ lines, requestedTeam: team, coursePar });
+  const view = bestBallDrilldown({ lines, requestedTeam: team, coursePar, ranking });
   if (view === null) return null;
+  // #2625: et spill som rangeres mot par, leder med mot par; summen står under.
+  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar }, formatVsPar);
+  const toParFirst = headline.unit === 'toPar';
   const front = view.nines.find((n) => n.key === 'front');
   const back = view.nines.find((n) => n.key === 'back');
   const meta = bestBallRevealMeta(view.players);
@@ -117,10 +124,12 @@ export function BestBallHoleCardsView({
         </View>
         <View style={styles.heroRight}>
           <Text style={[styles.heroTotal, ui.num, { color: colors.text }]} testID="hole-by-hole-team-total">
-            {view.total}
+            {headline.text}
           </Text>
           <Text style={[styles.heroVsPar, ui.num, { color: colors.muted }]} testID="hole-by-hole-team-vs-par">
-            {`${formatVsPar(view.totalVsPar)} ${BEST_BALL_HOLES_TEXT.vsParSuffix}`}
+            {toParFirst
+              ? `${view.total} ${BEST_BALL_HOLES_TEXT.strokesSuffix}`
+              : `${formatVsPar(view.totalVsPar)} ${BEST_BALL_HOLES_TEXT.vsParSuffix}`}
           </Text>
         </View>
       </View>
@@ -144,9 +153,9 @@ export function BestBallHoleCardsView({
           </Text>
         </View>
         <View style={styles.totalRight}>
-          <Text style={[styles.barTotal, ui.num, { color: colors.text }]}>{view.total}</Text>
+          <Text style={[styles.barTotal, ui.num, { color: colors.text }]}>{headline.text}</Text>
           <Text style={[styles.barVsPar, ui.num, { color: colors.muted }]} testID="hole-by-hole-total-vs-par">
-            {formatVsPar(view.totalVsPar)}
+            {toParFirst ? view.total : formatVsPar(view.totalVsPar)}
           </Text>
         </View>
       </View>

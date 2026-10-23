@@ -63,7 +63,8 @@ export const BOARD_TEXT = {
 
 /**
  * `leaderboard.common`: antall hull i radens opplesning, navnet som mangler,
- * lagets navn og «poeng» under en poengsum (som webbens podier).
+ * lagets navn, «poeng» under en poengsum (som webbens podier) og «mot par»
+ * under lagets mot par (#2625).
  */
 export const BOARD_COMMON_TEXT = {
   holesPlayedCount: '{count} hull spilt',
@@ -72,6 +73,7 @@ export const BOARD_COMMON_TEXT = {
   unknownPlayer: '(ukjent)',
   teamLabel: 'Lag {number}',
   poengLabel: 'poeng',
+  vsParLabel: 'mot par',
 } as const;
 
 /**

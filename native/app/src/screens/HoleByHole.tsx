@@ -213,7 +213,14 @@ export function HoleByHoleBody({
     );
   }
   if (model.kind === 'best-ball') {
-    return <BestBallHoleCardsView lines={model.lines} coursePar={model.coursePar} onTeamChange={onTeamChange} />;
+    return (
+      <BestBallHoleCardsView
+        lines={model.lines}
+        coursePar={model.coursePar}
+        ranking={model.ranking}
+        onTeamChange={onTeamChange}
+      />
+    );
   }
   return (
     <SoloScorecardView
