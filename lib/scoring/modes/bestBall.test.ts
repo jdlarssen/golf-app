@@ -582,3 +582,53 @@ describe('compute — ranking: net_to_par (#2625)', () => {
     expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
   });
 });
+
+describe('compute — net_to_par tie-break on a part-played round (#2625)', () => {
+  // Same shape as the scramble test: mixed pars, pairs in different places on
+  // the course. The first card is the best ball; the partner takes one more.
+  const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+  const holes = PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: i + 1 }));
+  const players: ScoringContext['players'] = [1, 2, 3, 4, 5].flatMap((team) => [
+    { userId: `t${team}a`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+    { userId: `t${team}b`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+  ]);
+  const card = (team: number, from: number, deltas: number[]): ScoringHoleScore[] =>
+    deltas.flatMap((d, i) => {
+      const gross = PARS[from + i - 1] + d;
+      return [
+        { userId: `t${team}a`, holeNumber: from + i, gross },
+        { userId: `t${team}b`, holeNumber: from + i, gross: gross + 1 },
+      ];
+    });
+  const scores = [
+    ...card(1, 1, [1, 0, 0, 0, 0]),
+    ...card(2, 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]),
+    ...card(3, 10, [1, 0, 0]),
+    ...card(4, 1, [1, -1]),
+    ...card(5, 1, [0, 0, 0]),
+  ];
+
+  it('ranks on to par, shares the place at E, and splits +1 on the back nine', () => {
+    const result = compute({
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 5, ranking: 'net_to_par' } as GameModeConfig,
+      },
+      players,
+      holes,
+      scores,
+    });
+    expect(
+      [...result.teams]
+        .sort((a, b) => a.rank - b.rank || a.teamNumber - b.teamNumber)
+        .map((t) => [t.teamNumber, t.toPar, t.rank, t.tiedWith, t.decidedBy]),
+    ).toEqual([
+      [2, -1, 1, [], null],
+      [4, 0, 2, [5], 'total'],
+      [5, 0, 2, [4], null],
+      [1, 1, 4, [], 'total'],
+      [3, 1, 5, [], 'back9'],
+    ]);
+  });
+});

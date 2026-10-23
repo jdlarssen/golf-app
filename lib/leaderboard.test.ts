@@ -141,3 +141,40 @@ describe('computeLeaderboard — ranking: net_to_par (#2625)', () => {
     ]);
   });
 });
+
+describe('computeLeaderboard — net_to_par tie-break on a part-played round (#2625)', () => {
+  // The engine's shape (bestBall.test.ts), through the board's aggregator.
+  const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+  const mixed: LbHole[] = PARS.map((par, i) => ({ holeNumber: i + 1, par, strokeIndex: i + 1 }));
+  const players = [1, 2, 3, 4, 5].flatMap((team) => [player(`t${team}a`, team), player(`t${team}b`, team)]);
+  const card = (team: number, from: number, deltas: number[]): LbScore[] =>
+    deltas.flatMap((d, i) => {
+      const strokes = PARS[from + i - 1] + d;
+      return [
+        { userId: `t${team}a`, holeNumber: from + i, strokes },
+        { userId: `t${team}b`, holeNumber: from + i, strokes: strokes + 1 },
+      ];
+    });
+  const scores = [
+    ...card(1, 1, [1, 0, 0, 0, 0]),
+    ...card(2, 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]),
+    ...card(3, 10, [1, 0, 0]),
+    ...card(4, 1, [1, -1]),
+    ...card(5, 1, [0, 0, 0]),
+  ];
+
+  it('ranks on to par, shares the place at E, and splits +1 on the back nine', () => {
+    const lines = computeLeaderboard({ mode: 'netto', players, holes: mixed, scores, ranking: 'net_to_par' });
+    expect(
+      [...lines]
+        .sort((a, b) => a.rank - b.rank || a.teamNumber - b.teamNumber)
+        .map((l) => [l.teamNumber, l.toPar, l.rank, l.tiedWith]),
+    ).toEqual([
+      [2, -1, 1, []],
+      [4, 0, 2, [5]],
+      [5, 0, 2, [4]],
+      [1, 1, 4, []],
+      [3, 1, 5, []],
+    ]);
+  });
+});
