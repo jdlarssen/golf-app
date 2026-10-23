@@ -91,3 +91,53 @@ describe('computeLeaderboard', () => {
     expect(t2.tiedWith).toEqual([]);
   });
 });
+
+// #2625: a best ball game stamped with `ranking: 'net_to_par'` ranks on the
+// team net against par over the holes each team has played — the same rule as
+// the engine (`lib/scoring/modes/bestBall.ts`). The board, «Hull for hull» and
+// the CSV read this aggregator, so it takes the rule from the caller.
+describe('computeLeaderboard — ranking: net_to_par (#2625)', () => {
+  const players = [player('a1', 1), player('a2', 1), player('b1', 2), player('b2', 2)];
+  /** The partner always takes one more, so the first card is the best ball. */
+  function pairCards(best: string, partner: string, gross: number[]): LbScore[] {
+    return gross.flatMap((g, i) => [
+      { userId: best, holeNumber: i + 1, strokes: g },
+      { userId: partner, holeNumber: i + 1, strokes: g + 1 },
+    ]);
+  }
+  // The issue's example: pair 1 net 7 after 3 holes (−5), pair 2 net 17
+  // after 6 holes (−7).
+  const scores = [...pairCards('a1', 'a2', [2, 2, 3]), ...pairCards('b1', 'b2', [3, 3, 3, 3, 3, 2])];
+  const byTeam = (lines: ReturnType<typeof computeLeaderboard>) =>
+    lines.map((l) => [l.teamNumber, l.rank, l.toPar, l.total]);
+
+  it.each(['netto', 'brutto'] as const)('%s: pair 2 (−7 after 6) ranks ahead of pair 1 (−5 after 3) with the flag', (mode) => {
+    const lines = computeLeaderboard({ mode, players, holes, scores, ranking: 'net_to_par' });
+    expect(byTeam(lines)).toEqual([
+      [1, 2, -5, 7],
+      [2, 1, -7, 17],
+    ]);
+  });
+
+  it.each(['netto', 'brutto'] as const)('%s: without the flag the same round keeps today’s order', (mode) => {
+    const lines = computeLeaderboard({ mode, players, holes, scores });
+    expect(byTeam(lines)).toEqual([
+      [1, 1, -5, 7],
+      [2, 2, -7, 17],
+    ]);
+  });
+
+  it('a pair without a single hole has toPar null and still ranks last with the flag (#635)', () => {
+    const lines = computeLeaderboard({
+      mode: 'netto',
+      players,
+      holes,
+      scores: pairCards('a1', 'a2', [6]),
+      ranking: 'net_to_par',
+    });
+    expect(byTeam(lines)).toEqual([
+      [1, 1, 2, 6],
+      [2, 2, null, 0],
+    ]);
+  });
+});

@@ -117,4 +117,11 @@ describe('bestBallBoardInput', () => {
 
     expect(input.players.map((p) => p.courseHandicap)).toEqual([14, 0]);
   });
+
+  it('hands over the game’s ranking rule (#2625): net_to_par when the game is stamped, else none', () => {
+    expect(
+      bestBallBoardInput({ ...base, modeConfig: { ...base.modeConfig, ranking: 'net_to_par' as const } }).ranking,
+    ).toBe('net_to_par');
+    expect(bestBallBoardInput(base).ranking).toBeUndefined();
+  });
 });

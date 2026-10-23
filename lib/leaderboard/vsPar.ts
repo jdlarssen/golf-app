@@ -65,3 +65,49 @@ export function formatVsPar(n: number | null): string {
   if (n === 0) return 'E';
   return n > 0 ? `+${n}` : `−${Math.abs(n)}`;
 }
+
+/** #2625: the rule a team result ranks on (`TexasScrambleResult.ranking` et al.). */
+export type TeamRanking = 'net_to_par' | 'net_total' | undefined;
+
+/**
+ * #2625: what a team row or podium leads with, from the game's rule. A game
+ * ranked on net to par leads with the team's to par (what it ranks on), any
+ * other game with the sum, as before — so the number and the order agree.
+ * `format` is the surface's own to-par label (the tables use the hyphen-minus
+ * one in `lib/scoring/scoreTone.ts`).
+ */
+export function teamHeadline(
+  ranking: TeamRanking,
+  line: { total: number; toPar: number | null },
+  format: (n: number | null) => string = formatVsPar,
+): { unit: 'toPar' | 'total'; value: number | null; text: string } {
+  return ranking === 'net_to_par'
+    ? { unit: 'toPar', value: line.toPar, text: format(line.toPar) }
+    : { unit: 'total', value: line.total, text: String(line.total) };
+}
+
+/**
+ * #2625: the row's distance to the leader in the headline's unit: to par in a
+ * net-to-par game (`null` when either has no hole), else the sum.
+ */
+export function teamHeadlineGap(
+  ranking: TeamRanking,
+  line: { total: number; toPar: number | null },
+  leader: { total: number; toPar: number | null },
+): number | null {
+  if (ranking !== 'net_to_par') return line.total - leader.total;
+  return line.toPar === null || leader.toPar === null ? null : line.toPar - leader.toPar;
+}
+
+/**
+ * #2625: a best ball line's «mot par» for the game's rule. A net-to-par game
+ * shows what it ranks on (`TeamLine.toPar`, against the team row's par); any
+ * other game keeps `teamLineVsPar` (against the men's par).
+ */
+export function bestBallLineVsPar(
+  line: Pick<TeamLine, 'total' | 'holes' | 'toPar'>,
+  coursePar: number,
+  ranking: 'net_to_par' | undefined,
+): number | null {
+  return ranking === 'net_to_par' ? line.toPar : teamLineVsPar(line, coursePar);
+}

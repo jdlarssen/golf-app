@@ -91,6 +91,26 @@ describe('teamLiveBoard — total, unit and tone per format', () => {
   });
 });
 
+describe('teamLiveBoard — a net-to-par game shows to par (#2625)', () => {
+  // Team 1: −1, E, +2 → +1 after three holes. Team 2: a bogey → +1 after one.
+  it.each(FORMATS.filter(([, , , unit]) => unit !== 'points'))('%s', (_name, context) => {
+    const flagged: ScoringContext = {
+      ...context,
+      game: {
+        ...context.game,
+        mode_config: { ...context.game.mode_config, ranking: 'net_to_par' } as GameModeConfig,
+      },
+    };
+    const result = computeLeaderboard(flagged) as TeamBoardResult;
+    const board = teamLiveBoard(result, null, teamName, STANDARD);
+    expect([teamDisplayUnit(result), board.unit]).toEqual(['toPar', 'toPar']);
+    expect(board.rows.map((r) => [r.teamNumber, r.total, r.holesPlayed])).toEqual([
+      [1, 1, 3],
+      [2, 1, 1],
+    ]);
+  });
+});
+
 describe('teamLiveBoard — the tone is net, and the better partner’s points in team stableford', () => {
   // One stroke on every hole: CH 18 for the player (best ball, stableford), or
   // team handicap 18 in texas (50 % of 18 + 18). Gross 4, 5, 6 on par 4 is net
