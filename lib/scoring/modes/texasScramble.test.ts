@@ -1009,3 +1009,47 @@ describe('texasScramble.compute — ranking: net_to_par (#2625)', () => {
     expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
   });
 });
+
+describe('texasScramble.compute — net_to_par tie-break on a part-played round (#2625)', () => {
+  // The tie-break tiers (back 9, back 6, back 3, hole 18) read par per hole
+  // with the flag, and an unplayed hole counts as par. Mixed pars (a real
+  // card) and teams in different places on the course, so the sum and the
+  // to-par rule disagree and every tier is exercised. Ambrose and Florida run
+  // the same core (`computeScramble`).
+  const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+  const holes: ScoringHole[] = PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: i + 1 }));
+  const players: ScoringPlayer[] = [1, 2, 3, 4, 5].flatMap((team) => [
+    { userId: `t${team}a`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+    { userId: `t${team}b`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+  ]);
+  /** Captain rows from `from`: par + delta per hole. */
+  const card = (team: number, from: number, deltas: number[]): ScoringHoleScore[] =>
+    deltas.map((d, i) => ({ userId: `t${team}a`, holeNumber: from + i, gross: PARS[from + i - 1] + d }));
+  const scores = [
+    ...card(1, 1, [1, 0, 0, 0, 0]), // +1 after holes 1–5
+    ...card(2, 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]), // −1 after holes 1–9
+    ...card(3, 10, [1, 0, 0]), // +1 after holes 10–12: worse on the back nine
+    ...card(4, 1, [1, -1]), // E after holes 1–2
+    ...card(5, 1, [0, 0, 0]), // E after holes 1–3: shares the place with team 4
+  ];
+  const FLAGGED = {
+    kind: 'texas_scramble',
+    team_size: 2,
+    teams_count: 5,
+    team_handicap_pct: 0,
+    ranking: 'net_to_par',
+  } as GameModeConfig;
+
+  it('ranks on to par, shares the place at E, and splits +1 on the back nine', () => {
+    const result = compute(makeCtx({ players, holes, scores, modeConfig: FLAGGED }));
+    expect(
+      result.teams.map((t) => [t.teamNumber, t.toPar, t.rank, t.tiedWith, t.decidedBy]),
+    ).toEqual([
+      [2, -1, 1, [], null],
+      [4, 0, 2, [5], 'total'],
+      [5, 0, 2, [4], null],
+      [1, 1, 4, [], 'total'],
+      [3, 1, 5, [], 'back9'],
+    ]);
+  });
+});

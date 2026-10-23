@@ -791,3 +791,57 @@ describe('shamble.compute — ranking: net_to_par (#2625)', () => {
     expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
   });
 });
+
+describe('shamble.compute — net_to_par tie-break on a part-played round (#2625)', () => {
+  // Same shape as the scramble test, best 2 of 3: a hole's par is 2 × par.
+  const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+  const holes: ScoringHole[] = PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: i + 1 }));
+  const players = [1, 2, 3, 4, 5].flatMap((team) => [
+    makePlayer(`t${team}a`, team),
+    makePlayer(`t${team}b`, team),
+    makePlayer(`t${team}c`, team),
+  ]);
+  /** Two balls at par, one of them `delta` off; the third ball never counts. */
+  const card = (team: number, from: number, deltas: number[]): ScoringHoleScore[] =>
+    deltas.flatMap((d, i) => {
+      const par = PARS[from + i - 1];
+      return holeScores(from + i, [
+        [`t${team}a`, par],
+        [`t${team}b`, par + d],
+        [`t${team}c`, 9],
+      ]);
+    });
+  const scores = [
+    ...card(1, 1, [1, 0, 0, 0, 0]),
+    ...card(2, 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]),
+    ...card(3, 10, [1, 0, 0]),
+    ...card(4, 1, [1, -1]),
+    ...card(5, 1, [0, 0, 0]),
+  ];
+
+  it('ranks on to par, shares the place at E, and splits +1 on the back nine', () => {
+    const result = compute(
+      makeCtx({
+        players,
+        holes,
+        scores,
+        modeConfigOverride: {
+          kind: 'shamble',
+          team_size: 3,
+          teams_count: 5,
+          shamble_variant: 'shamble',
+          shamble_count: 2,
+          shamble_scoring: 'gross',
+          ranking: 'net_to_par',
+        },
+      }),
+    );
+    expect(result.teams.map((t) => [t.teamNumber, t.toPar, t.rank, t.tiedWith, t.decidedBy])).toEqual([
+      [2, -1, 1, [], null],
+      [4, 0, 2, [5], 'total'],
+      [5, 0, 2, [4], null],
+      [1, 1, 4, [], 'total'],
+      [3, 1, 5, [], 'back9'],
+    ]);
+  });
+});
