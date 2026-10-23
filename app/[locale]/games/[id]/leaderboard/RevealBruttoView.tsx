@@ -8,8 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { firstName } from '@/lib/firstName';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import type { TeamLine } from '@/lib/leaderboard';
-import { formatVsPar } from '@/lib/scoring/scoreTone';
-import { teamHeadline } from '@/lib/leaderboard/vsPar';
+import { formatTeamVsPar, teamHeadline } from '@/lib/leaderboard/vsPar';
 
 type Props = {
   gameId: string;
@@ -87,9 +86,10 @@ export function RevealBruttoView({
 }
 
 /** E / +N / −N relative to par played. Empty when no holes have been played. */
-function deltaText(total: number, parPlayed: number): string {
+function deltaText(total: number, parPlayed: number, ranking?: 'net_to_par'): string {
   if (parPlayed === 0) return '';
-  return formatVsPar(total - parPlayed);
+  // #2625: U+2212 in a net-to-par game, the tables' hyphen otherwise.
+  return formatTeamVsPar(ranking, total - parPlayed);
 }
 
 function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_par' }) {
@@ -121,7 +121,7 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
   // #2625: a net-to-par game leads with the team's to par; «mot par · N brutto» goes under.
   const headline = teamHeadline(ranking, line);
   const toPar = headline.unit === 'toPar';
-  const teamDelta = deltaText(line.total, teamParPlayed);
+  const teamDelta = deltaText(line.total, teamParPlayed, ranking);
 
   return (
     <li className="list-none">
@@ -139,7 +139,7 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
                 const sum = perPlayerBrutto.get(p.userId);
                 const parPlayed = perPlayerParPlayed.get(p.userId) ?? 0;
                 const delta =
-                  sum != null ? deltaText(sum, parPlayed) : '';
+                  sum != null ? deltaText(sum, parPlayed, ranking) : '';
                 return (
                   <li
                     key={p.userId}
@@ -163,7 +163,10 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
             </p>
             {toPar ? (
               <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-                {`${t('common.vsParLabel')} · ${t('common.grossBrutto', { count: line.total })}`}
+                {/* Two lines, so the column stays as narrow as «−7 brutto» and
+                    the players' names keep their room. */}
+                <span className="block">{t('common.vsParLabel')}</span>
+                <span className="block">{t('common.grossBrutto', { count: line.total })}</span>
               </p>
             ) : (
               <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
