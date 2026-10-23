@@ -17,9 +17,13 @@
 //   9 kodeord den kan rette. Resten er margin for et kamera ute på banen.
 //   Modulen er 54 / 45 = 1,2 pt på taggen.
 // - **Feltet rører aldri funksjonsmønstrene** (finner, timing, justering,
-//   format): det kontrolleres for hver kode. En lang adresse (en preview-deploy)
-//   gir versjon 7 eller høyere, der et justeringsmønster står midt i koden. Da
-//   tegnes koden uten merke. Butikkbyggets adresse er tornygolf.no.
+//   format): det kontrolleres for hver kode, og merket droppes når 9 × 9-feltet
+//   ville truffet et av dem. For alle realistiske lange adresser (versjon 7–13,
+//   for eksempel en preview-deploy) er det justeringsmønsteret i midten, så de
+//   tegnes uten merke. Butikkbyggets adresse er tornygolf.no.
+// - **Merket har ett hjem:** `mark` sier hvor det tegnes (feltet minus én modul
+//   luft på hver side). `QrCode.tsx` tegner det der, og rundturtesten maler det
+//   samme stedet.
 import { create } from 'qrcode';
 
 /** Lyse moduler rundt koden, som standarden krever (4). */
@@ -36,6 +40,8 @@ export interface QrMatrix {
   dark: (x: number, y: number) => boolean;
   /** Merkefeltet: første modul (rad og kolonne) og antall per side, eller `null` uten merke. */
   logo: { start: number; span: number } | null;
+  /** Merket i feltet, med én modul luft rundt: første modul og størrelse i moduler. */
+  mark: { at: number; size: number } | null;
 }
 
 export function qrMatrix(text: string): QrMatrix {
@@ -47,7 +53,8 @@ export function qrMatrix(text: string): QrMatrix {
   const logo = fieldIsFree(start) ? { start, span: LOGO_SPAN } : null;
   const inLogo = (x: number, y: number) =>
     logo !== null && x >= start && y >= start && x < start + LOGO_SPAN && y < start + LOGO_SPAN;
-  return { size, dark: (x, y) => !inLogo(x, y) && modules.get(y, x) === 1, logo };
+  const mark = logo ? { at: logo.start + 1, size: logo.span - 2 } : null;
+  return { size, dark: (x, y) => !inLogo(x, y) && modules.get(y, x) === 1, logo, mark };
 
   function fieldIsFree(from: number): boolean {
     for (let y = from; y < from + LOGO_SPAN; y++) {
