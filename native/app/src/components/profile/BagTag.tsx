@@ -32,6 +32,14 @@
 // «Oppdatert …», med endringen i sesongen når kurven står, og ordmerket
 // «Tørny» nederst. Drakten velges av den som tegner den (`ShareBagTagButton`
 // pakker den i lys drakt).
+//
+// **QR-koden (#2627)** står der initialringen sto, i samme 54 × 54, så kortet
+// er like høyt med og uten kode. En kompis skanner den og kommer til «Bli venn
+// med …» på nettsiden. Koden er én knapp som åpner arket med koden i stort
+// format (`FriendQrSheet`). Mens koden lastes, står den tomme flaten; uten kode
+// står ringen som før. Deleversjonen har aldri kode (eierens beslutning i
+// issuet: et bilde på sosiale medier skal ikke gi hvem som helst en vei inn).
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
@@ -42,6 +50,11 @@ import {
   handicapSeasonChangeSpoken,
 } from '../../lib/profileCopy';
 import { centeredLineTop, FONTS, fraunces, frauncesNormalLine, useTheme } from '../../theme';
+import { FriendQrSheet } from './FriendQrSheet';
+import { QrCode } from './QrCode';
+
+/** Koden på taggen: adressen den bærer, `'loading'` mens den hentes, `null` uten. */
+export type FriendQr = { url: string } | null | 'loading';
 
 export interface BagTagProps {
   /** `null` mens profilraden lastes, eller når den ikke kunne leses. */
@@ -58,6 +71,11 @@ export interface BagTagProps {
    * ikke er noen (under to punkter, eller lesingen feilet).
    */
   trend?: HandicapTrend | null | 'loading';
+  /**
+   * QR-koden for å bli venner (#2627). Uten den står initialringen, som før.
+   * Deleversjonen ser bort fra den.
+   */
+  friendQr?: FriendQr;
   /** `share` = bildet som deles (se toppen av fila). */
   variant?: 'profile' | 'share';
 }
@@ -67,6 +85,7 @@ export function BagTag({
   placeholderName = '',
   onEditProfile,
   trend = null,
+  friendQr = null,
   variant = 'profile',
 }: BagTagProps) {
   const share = variant === 'share';
@@ -81,6 +100,8 @@ export function BagTag({
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const;
   // Kurven hører til et handicap som står; uten tall er det ingenting å tegne.
   const curve = model?.hcpText && trend && trend !== 'loading' ? trend : null;
+  // Bildet som deles har aldri kode, uansett hva som sendes med.
+  const qr = share ? null : friendQr;
 
   return (
     <View
@@ -114,9 +135,19 @@ export function BagTag({
             {model?.subline ?? ''}
           </Text>
         </View>
-        <View {...hidden} style={[styles.ring, { borderColor: `${colors.accent}B3` }]}>
-          <Text style={[styles.initials, warm]}>{model?.initials ?? ''}</Text>
-        </View>
+        {qr === null ? (
+          <View {...hidden} style={[styles.ring, { borderColor: `${colors.accent}B3` }]}>
+            <Text style={[styles.initials, warm]}>{model?.initials ?? ''}</Text>
+          </View>
+        ) : qr === 'loading' ? (
+          <View
+            {...hidden}
+            style={[styles.qrFlat, { backgroundColor: colors.onStrongWarm }]}
+            testID="bag-tag-qr-loading"
+          />
+        ) : (
+          <FriendQrButton url={qr.url} name={model?.name ?? placeholderName} />
+        )}
       </View>
 
       {model ? (
@@ -159,6 +190,34 @@ export function BagTag({
         </Text>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * Koden på taggen: krem flate med koden i skogen, skrå med kortet. Én knapp for
+ * skjermleseren; et trykk åpner arket med koden i stort format.
+ */
+function FriendQrButton({ url, name }: { url: string; name: string }) {
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={PROFILE_TEXT.friendQrLabel}
+        onPress={() => setOpen(true)}
+        hitSlop={QR_HIT_SLOP}
+        style={({ pressed }) => [
+          styles.qrFlat,
+          { backgroundColor: colors.onStrongWarm },
+          pressed ? styles.qrPressed : null,
+        ]}
+        testID="bag-tag-qr"
+      >
+        <QrCode value={url} size={RING} color={colors.surfaceStrong} />
+      </Pressable>
+      <FriendQrSheet visible={open} name={name} url={url} onClose={() => setOpen(false)} />
+    </>
   );
 }
 
@@ -265,8 +324,13 @@ function HandicapCurve({ points, testID }: { points: readonly number[]; testID?:
 }
 
 const SIDE_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
+/** Koden er 54 pt og alt over 44; litt ekstra rundt gjør den lett å treffe. */
+const QR_HIT_SLOP = 6;
 
-/** Ringen i designet: 52 pt innvendig pluss 1 pt kant på hver side. */
+/**
+ * Ringen i designet: 52 pt innvendig pluss 1 pt kant på hver side. QR-koden
+ * står i samme rute (#2627).
+ */
 const RING = 54;
 /**
  * Navnet og handicapet har designets linjebokser (#2385): navnet 28 pt på
@@ -353,4 +417,9 @@ const styles = StyleSheet.create({
     paddingTop: centeredLineTop(RING - 2, frauncesNormalLine(18)),
   },
   initials: { ...fraunces(500, 18) },
+  // Tegningen (`Profil-qr-lys/-natt`): krem flate med radius 10. Den stille
+  // sonen er 4 moduler (5,8 pt), så hjørnene klipper bare krem, aldri koden
+  // (rundturtesten i `lib/qrMatrix.test.ts` klipper likt).
+  qrFlat: { width: RING, height: RING, borderRadius: 10, overflow: 'hidden' },
+  qrPressed: { opacity: 0.6 },
 });

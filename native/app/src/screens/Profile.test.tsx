@@ -16,6 +16,8 @@
 //     konto» bor i «Personvern og konto» (`AccountSettings.test.tsx`, Profil
 //     v2), så ingen av dem finnes her.
 //  2. **Flisene forsvinner bare når sesongen ikke kunne leses (#2256).**
+//  3. **QR-koden (#2627)** bærer venne-adressen fra `fetchFriendCode` og
+//     åpner arket; uten kode står ringen, og ingen feillinje.
 //
 // Flere renders og ikke én: en rad som lastes, en sesong som ikke kunne leses
 // og et oppslag som feilet er tilstander skjermen ikke kan være i samtidig med
@@ -23,9 +25,10 @@
 // Kontrakten ba om «én Type C-render»; avviket er bokført i PR-ene (#1906,
 // #2256).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { fetchBagTagExtras } from '../data/bagTag';
+import { fetchFriendCode } from '../data/friends';
 import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
@@ -43,10 +46,12 @@ jest.mock('../session', () => ({
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
+jest.mock('../data/friends', () => ({ fetchFriendCode: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;
+const fetchFriendCodeMock = fetchFriendCode as jest.Mock;
 
 const MY_NAME = 'Jørgen Larssen';
 const MY_HCP = 12.4;
@@ -97,6 +102,8 @@ describe('Profile', () => {
       club: 'Losby GK',
       season: { rounds: 3, bestRound: 82, wins: 1 },
     });
+    // Uten kode står ringen som før; testen for koden setter sin egen.
+    fetchFriendCodeMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -270,6 +277,41 @@ describe('Profile', () => {
     // Ingen rad å vise navn fra, men noe MÅ stå der: da er e-posten det
     // ærligste vi har, og feillinja står under den.
     expect(screen.getByTestId('profile-name')).toHaveTextContent(mockEmail);
+  });
+
+  // #2627: koden på taggen bærer adressen «Del lenka» også deler, og et trykk
+  // viser den stort. Uten kode står ringen, og Profil sier ingenting om det.
+  it('viser QR-koden på taggen og åpner arket, og ringen uten kode', async () => {
+    process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://staging.example';
+    try {
+      fetchFriendCodeMock.mockResolvedValue('abcd1234');
+      await renderScreen();
+      await fireEvent.press(await screen.findByRole('button', { name: PROFILE_TEXT.friendQrLabel }));
+      expect(screen.getByTestId('friend-qr-sheet')).toBeTruthy();
+      expect(screen.getByTestId('friend-qr-sheet')).toHaveTextContent(MY_NAME, { exact: false });
+      await screen.unmount();
+
+      fetchFriendCodeMock.mockResolvedValue(null);
+      await renderScreen();
+      // Ringen på taggen (deleversjonen under menyen har sin egen).
+      await waitFor(() =>
+        expect(within(screen.getByTestId('bag-tag')).getByText('JL', { includeHiddenElements: true })).toBeTruthy(),
+      );
+      expect(screen.queryByTestId('bag-tag-qr')).toBeNull();
+      expect(screen.queryByTestId('profile-load-error')).toBeNull();
+      await screen.unmount();
+
+      // Et bygg uten web-adressen har ingen adresse å vise: ringen står.
+      delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+      fetchFriendCodeMock.mockResolvedValue('abcd1234');
+      await renderScreen();
+      await waitFor(() =>
+        expect(within(screen.getByTestId('bag-tag')).getByText('JL', { includeHiddenElements: true })).toBeTruthy(),
+      );
+      expect(screen.queryByTestId('bag-tag-qr')).toBeNull();
+    } finally {
+      delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+    }
   });
 
   // #2560: Android har ikke push ved lansering, så raden lover ikke varsler.

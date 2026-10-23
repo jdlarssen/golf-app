@@ -6,7 +6,9 @@
 // knapp til skjemaet mens et ferskt bare er tekst, uten klubb står
 // reserve-kickeren, og med to punkter står kurven og endringen i stedet for
 // «Oppdatert …» (tom linje mens kurven lastes). Ingen tall-asserts: endringens
-// tekst er `profileCopy.test.ts` sin.
+// tekst er `profileCopy.test.ts` sin. #2627: QR-kodens tre tilstander (kode,
+// lastes, ingen) og at deleversjonen aldri har den. At koden kan leses, er
+// `lib/qrMatrix.test.ts` sitt.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { BagTagModel } from '../../lib/bagTag';
 import {
@@ -15,6 +17,11 @@ import {
   handicapSeasonChangeSpoken,
 } from '../../lib/profileCopy';
 import { BagTag } from './BagTag';
+
+// QR-arket leser bunnluften over systemlinja; uten navigatorens provider gir
+// riggen den.
+/* eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock-fabrikken heises over importene */
+jest.mock('react-native-safe-area-context', () => require('../../test/safeAreaMock').safeAreaMock());
 
 // Kurven og endringslinja er pynt for skjermleseren (endringen leses i
 // handicapet), så de finnes bare med skjulte elementer tatt med.
@@ -84,5 +91,37 @@ describe('BagTag', () => {
       'accessibilityLabel',
       `${PROFILE_TEXT.handicapLabel} ${PROFILE_TEXT.hcpNotSetSpoken}`,
     );
+
+    // #2627: QR-koden står der ringen sto, som én knapp; navnet er fortsatt
+    // overskriften. Trykk åpner arket med koden i stort format.
+    const url = 'https://tornygolf.no/venner/legg-til/abcd1234';
+    await rerender(<BagTag model={fresh} friendQr={{ url }} onEditProfile={onEditProfile} />);
+    expect(screen.getByRole('button', { name: PROFILE_TEXT.friendQrLabel })).toBe(
+      screen.getByTestId('bag-tag-qr'),
+    );
+    expect(screen.queryByText(STALE.initials, HIDDEN)).toBeNull();
+    expect(screen.getByRole('header')).toHaveTextContent(STALE.name);
+    expect(screen.queryByTestId('friend-qr-sheet')).toBeNull();
+    await fireEvent.press(screen.getByTestId('bag-tag-qr'));
+    expect(screen.getByTestId('friend-qr-sheet')).toBeTruthy();
+
+    // Mens koden lastes: den tomme flaten, uten ring og uten knapp.
+    await rerender(<BagTag model={fresh} friendQr="loading" onEditProfile={onEditProfile} />);
+    expect(screen.getByTestId('bag-tag-qr-loading', HIDDEN)).toBeTruthy();
+    expect(screen.queryByTestId('bag-tag-qr')).toBeNull();
+    expect(screen.queryByText(STALE.initials, HIDDEN)).toBeNull();
+
+    // Uten kode: ringen med initialene, som før.
+    await rerender(<BagTag model={fresh} friendQr={null} onEditProfile={onEditProfile} />);
+    expect(screen.getByText(STALE.initials, HIDDEN)).toBeTruthy();
+    expect(screen.queryByTestId('bag-tag-qr')).toBeNull();
+    expect(screen.queryByTestId('bag-tag-qr-loading', HIDDEN)).toBeNull();
+
+    // Bildet som deles har aldri kode, heller ikke når den sendes med.
+    await rerender(
+      <BagTag variant="share" model={fresh} friendQr={{ url }} onEditProfile={onEditProfile} />,
+    );
+    expect(screen.getByText(STALE.initials, HIDDEN)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: PROFILE_TEXT.friendQrLabel, ...HIDDEN })).toBeNull();
   });
 });
