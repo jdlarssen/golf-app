@@ -6,8 +6,8 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
 /**
  * Type A (#2256): portene og transporten for appens venne-ruter.
  *
- * Én fil for alle seks rutene under `app/api/friends/`, fordi porten er den
- * samme (`lib/friends/friendRoute.ts` + `authenticatedUserId`) og seks kopier
+ * Én fil for alle sju rutene under `app/api/friends/`, fordi porten er den
+ * samme (`lib/friends/friendRoute.ts` + `authenticatedUserId`) og sju kopier
  * av det samme mock-oppsettet er det test-disiplinen forbyr. Adgangssjekken og
  * kjernen (`lib/friends/friendActionsCore.ts`) er ekte; RPC-ene svarer fra
  * klienten med kallerens token, og grenene i kjernen har sin egen suite.
@@ -73,6 +73,7 @@ vi.mock('@/lib/users/privateUserFields', () => ({
 
 import { NextRequest } from 'next/server';
 import { GET } from './route';
+import { GET as getCode } from './code/route';
 import { POST as postRequest } from './request/route';
 import { POST as postByEmail } from './by-email/route';
 import { POST as postRespond } from './respond/route';
@@ -225,6 +226,41 @@ describe('GET /api/friends', () => {
   it('skjuler delelenka når venne-koden ikke kan leses', async () => {
     privateFieldsMock.mockRejectedValue(new Error('nede'));
     expect((await (await GET(req('', { token: TOKEN }))).json()).friendCode).toBeNull();
+  });
+});
+
+// #2627: bare koden, til QR-koden på bag-taggen. Profil åpnes ofte, og
+// `GET /api/friends` regner ut hele vennesiden.
+describe('GET /api/friends/code', () => {
+  it.each([undefined, 'feil-token'])('svarer 401 uten gyldig token (%p) og leser ingenting', async (token) => {
+    const res = await getCode(req('/code', { token }));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'unauthorized' });
+    expect(privateFieldsMock).not.toHaveBeenCalled();
+  });
+
+  it('gir kallerens egen kode, og ikke noe annet', async () => {
+    privateFieldsMock.mockResolvedValue(new Map([[ME, { email: 'meg@example.com', friendCode: 'abcd1234' }]]));
+    const res = await getCode(req('/code', { token: TOKEN }));
+    expect(res.status).toBe(200);
+    expect(privateFieldsMock).toHaveBeenCalledWith([ME]);
+    expect(getFriendDataMock).not.toHaveBeenCalled();
+    expect(await res.json()).toEqual({ friendCode: 'abcd1234' });
+  });
+
+  it('gir null når raden mangler', async () => {
+    privateFieldsMock.mockResolvedValue(new Map());
+    const res = await getCode(req('/code', { token: TOKEN }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ friendCode: null });
+  });
+
+  it('svarer 500 med en fast kode når oppslaget kaster', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    privateFieldsMock.mockRejectedValue(new Error('nede'));
+    const res = await getCode(req('/code', { token: TOKEN }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'load_failed' });
   });
 });
 
