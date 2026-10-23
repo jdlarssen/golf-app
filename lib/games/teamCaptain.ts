@@ -22,6 +22,24 @@ export function pickTeamCaptain(userIds: readonly string[]): string {
   return captain;
 }
 
+/**
+ * #2625: spillerne med hvert lags kaptein (`pickTeamCaptain`) først, resten i
+ * sin rekkefølge. Best ball-tavlas regnestykke (`lib/leaderboard.ts`) tar
+ * lagets par fra første medlem. En scramble-flate som sender laget gjennom
+ * det (brutto-avsløringen), må derfor ha kapteinen først for å lese samme par
+ * som motoren (kapteinens tee).
+ */
+export function withCaptainFirst<T extends { userId: string; teamNumber: number }>(
+  players: readonly T[],
+): T[] {
+  const membersByTeam = new Map<number, string[]>();
+  for (const p of players) {
+    membersByTeam.set(p.teamNumber, [...(membersByTeam.get(p.teamNumber) ?? []), p.userId]);
+  }
+  const captains = new Set([...membersByTeam.values()].map((ids) => pickTeamCaptain(ids)));
+  return [...players].sort((a, b) => Number(captains.has(b.userId)) - Number(captains.has(a.userId)));
+}
+
 /** Minste form et lag-medlem må ha for at vi kan peke ut rad-eieren. */
 export type TeamMemberRow = {
   user_id: string;

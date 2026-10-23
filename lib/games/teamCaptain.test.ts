@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { computeLeaderboard } from '@/lib/leaderboard';
+import { compute as computeScramble } from '@/lib/scoring/modes/texasScramble';
 import {
   formerTeamRowOwnerIds,
   pickTeamCaptain,
   teamScoreOwnerId,
+  withCaptainFirst,
 } from './teamCaptain';
 
 describe('pickTeamCaptain', () => {
@@ -120,5 +123,50 @@ describe('formerTeamRowOwnerIds (#2067)', () => {
 
   it('gir tom liste for et tomt lag', () => {
     expect(formerTeamRowOwnerIds([])).toStrictEqual([]);
+  });
+});
+
+describe('withCaptainFirst (#2625)', () => {
+  it('puts each team\'s captain first and keeps the rest in their order', () => {
+    const players = [
+      { userId: 'z1', teamNumber: 1 },
+      { userId: 'm2', teamNumber: 2 },
+      { userId: 'a1', teamNumber: 1 },
+      { userId: 'b2', teamNumber: 2 },
+      { userId: 'q1', teamNumber: 1 },
+    ];
+    expect(withCaptainFirst(players).map((p) => p.userId)).toEqual(['a1', 'b2', 'z1', 'm2', 'q1']);
+  });
+
+  it('a scramble team with mixed tees reads the captain\'s par in the brutto reveal, like the engine', () => {
+    // Hole 1 is par 4 from the men's tee and par 5 from the ladies'. The
+    // captain (lex-min, «a1») plays from the ladies' tee and holds the team's
+    // score: 4 on hole 1 is −1 against her par. The roster lists the man first.
+    const holes = [{ holeNumber: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }];
+    const roster = [
+      { userId: 'z1', name: 'Z', nickname: null, teamNumber: 1, courseHandicap: 0, teeGender: 'mens' as const },
+      { userId: 'a1', name: 'A', nickname: null, teamNumber: 1, courseHandicap: 0, teeGender: 'ladies' as const },
+    ];
+    const scores = [{ userId: 'a1', holeNumber: 1, strokes: 4 }];
+    const engine = computeScramble({
+      game: {
+        id: 'g',
+        game_mode: 'texas_scramble',
+        mode_config: { kind: 'texas_scramble', team_size: 2, teams_count: 1, team_handicap_pct: 0, ranking: 'net_to_par' },
+      },
+      players: roster.map((p) => ({ userId: p.userId, teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: p.teeGender })),
+      holes: holes.map((h) => ({ number: h.holeNumber, par: h.par, parByGender: h.parByGender, strokeIndex: h.strokeIndex })),
+      scores: scores.map((s) => ({ userId: s.userId, holeNumber: s.holeNumber, gross: s.strokes })),
+    });
+    const reveal = computeLeaderboard({
+      mode: 'brutto',
+      players: withCaptainFirst(roster),
+      holes,
+      scores,
+      ranking: 'net_to_par',
+    });
+
+    expect(engine.teams[0].toPar).toBe(-1);
+    expect(reveal[0].toPar).toBe(engine.teams[0].toPar);
   });
 });
