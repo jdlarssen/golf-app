@@ -9,7 +9,7 @@ import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { computeLeaderboard, teamMembersLabel } from '@/lib/leaderboard';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
-import { teamLineVsPar } from '@/lib/leaderboard/vsPar';
+import { bestBallLineVsPar } from '@/lib/leaderboard/vsPar';
 import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { getResultReadClient } from '../leaderboardContext';
@@ -167,7 +167,7 @@ export async function GET(
 
   // WD (#386, #2217): same input as the board — a withdrawn player is out of
   // the member list and their strokes out of the team's best ball.
-  const { players, holes, scores } = bestBallBoardInput({
+  const { players, holes, scores, ranking } = bestBallBoardInput({
     gameMode: game.game_mode,
     modeConfig: game.mode_config,
     roster: gwp.players,
@@ -178,17 +178,20 @@ export async function GET(
 
   // Beregn både brutto og netto. Begge totaler er nyttige på klubbhus-veggen
   // — brutto for «hvor mange slag», netto for «hvem vant».
+  // #2625: the game's ranking rule, so the order is the board's.
   const nettoLines = computeLeaderboard({
     mode: 'netto',
     players,
     holes,
     scores,
+    ranking,
   });
   const bruttoLines = computeLeaderboard({
     mode: 'brutto',
     players,
     holes,
     scores,
+    ranking,
   });
 
   const bruttoByTeam = new Map(
@@ -229,7 +232,8 @@ export async function GET(
     const brutto = bruttoByTeam.get(line.teamNumber);
     const bruttoTotal = brutto?.total ?? '';
     // #2217: over the holes the team played, like the board; '—' without one.
-    const vsPar = teamLineVsPar(line, coursePar);
+    // #2625: a net-to-par game's own to par, the number it is ranked on.
+    const vsPar = bestBallLineVsPar(line, coursePar, ranking);
     const vsParLabel = formatVsPar(vsPar);
     const holesPlayed = teamHolesPlayed(line);
     const tiedSuffix = line.tiedWith.length > 0 ? ` ${t('tiedSuffix')}` : '';

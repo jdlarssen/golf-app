@@ -25,6 +25,7 @@ import {
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import { formatVsPar } from '@/lib/scoring/scoreTone';
 import {
   bestBallDrilldown,
@@ -87,6 +88,7 @@ export async function DrilldownBody({
     players,
     holes: scopedHoles,
     scores: scopedScores,
+    ranking,
   } = bestBallBoardInput({
     gameMode: gwp.game.game_mode,
     modeConfig: gwp.game.mode_config,
@@ -113,7 +115,8 @@ export async function DrilldownBody({
     ? scopedScores.filter((s) => firstHalf.has(s.holeNumber))
     : scopedScores;
 
-  const lines = computeLeaderboard({ mode, players, holes, scores });
+  // #2625: the game's ranking rule, so the leader and the places match the board.
+  const lines = computeLeaderboard({ mode, players, holes, scores, ranking });
   // Same par as the board (#2217): `par_mens` over exactly the holes sent to
   // computeLeaderboard — clipped to the first half in an active round.
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
@@ -121,7 +124,7 @@ export async function DrilldownBody({
   // Which team to render (default: the leader; an invalid `?team=` falls back
   // to the leader), its nines, holes won and neighbours — one model shared
   // with the app's «Hull for hull» (#2255 PR 3d).
-  const view = bestBallDrilldown({ lines, requestedTeam, coursePar });
+  const view = bestBallDrilldown({ lines, requestedTeam, coursePar, ranking });
 
   if (view === null) {
     // Nothing to drill into — bounce back to the parent leaderboard, which
@@ -187,6 +190,9 @@ function DrilldownView({
   // compact first-name + HCP label so the drilldown stays readable on
   // narrow tiles.
   const isFinished = !isActive;
+  // #2625: a net-to-par game leads with its to par, the sum goes second.
+  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar }, formatVsPar);
+  const toParFirst = headline.unit === 'toPar';
   const playerMeta = isFinished
     ? bestBallRevealMeta(view.players)
     : view.players
@@ -233,13 +239,15 @@ function DrilldownView({
               className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text"
               data-testid="drilldown-team-total"
             >
-              {view.total}
+              {headline.text}
             </span>
             <span
               className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
               data-testid="drilldown-team-vs-par"
             >
-              {formatVsPar(view.totalVsPar)} PAR
+              {toParFirst
+                ? `${view.total} ${tc('slagLabel')}`
+                : `${formatVsPar(view.totalVsPar)} PAR`}
             </span>
           </div>
         </div>
@@ -303,13 +311,13 @@ function DrilldownView({
             </div>
             <div className="flex items-baseline gap-3">
               <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                {view.total}
+                {headline.text}
               </span>
               <span
                 className="font-sans text-[14px] font-semibold tabular-nums text-muted"
                 data-testid="drilldown-total-vs-par"
               >
-                {formatVsPar(view.totalVsPar)}
+                {toParFirst ? view.total : formatVsPar(view.totalVsPar)}
               </span>
             </div>
           </div>

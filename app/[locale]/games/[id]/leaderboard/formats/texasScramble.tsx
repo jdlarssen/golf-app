@@ -14,6 +14,7 @@ import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
+import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -114,11 +115,14 @@ export async function renderTexasScramble(opts: {
         holeNumber: s.hole_number,
         strokes: s.strokes,
       }));
+    // #2625: a net-to-par game ranks the brutto preview on brutto to par too.
+    const ranking = ranksByNetToPar(game.mode_config) ? 'net_to_par' : undefined;
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
       players: bruttoPlayers,
       holes: bruttoHoles,
       scores: bruttoScores,
+      ranking,
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     const holesPlayedForReveal = new Set(rawScoresRows.map((s) => s.hole_number)).size;
@@ -129,6 +133,7 @@ export async function renderTexasScramble(opts: {
         teams={orderedBrutto}
         holesPlayed={holesPlayedForReveal}
         backHref={backHref}
+        ranking={ranking}
       />
     );
   }

@@ -5,6 +5,7 @@ import { Medallion } from '@/components/ui/Medallion';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
@@ -166,7 +167,7 @@ export function ShambleView({
               rank={team.rank}
               teamNumber={team.teamNumber}
               memberNames={memberNames}
-              totalScore={team.totalScore}
+              headline={teamHeadline(result.ranking, { total: team.totalScore, toPar: team.toPar })}
               holesCounted={showHoles ? team.holesCounted : null}
               tiedWith={team.tiedWith}
               staggerIndex={i}
@@ -203,7 +204,7 @@ function TeamRow({
   rank,
   teamNumber,
   memberNames,
-  totalScore,
+  headline,
   holesCounted,
   tiedWith,
   staggerIndex,
@@ -211,7 +212,8 @@ function TeamRow({
   rank: number;
   teamNumber: number;
   memberNames: string;
-  totalScore: number;
+  /** #2625: the sum, or the team's to par in a net-to-par game (`teamHeadline`). */
+  headline: ReturnType<typeof teamHeadline>;
   /** null når hull-tallet er likt for alle lag på et ferdig spill (#1892). */
   holesCounted: number | null;
   tiedWith: number[];
@@ -269,10 +271,10 @@ function TeamRow({
                 : 'text-[26px] text-text'
             }`}
           >
-            {totalScore}
+            {headline.text}
           </span>
           <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t('common.slagLabel')}
+            {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.slagLabel')}
           </span>
         </div>
       </Card>

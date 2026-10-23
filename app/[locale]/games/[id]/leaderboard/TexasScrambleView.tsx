@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { TexasScrambleResult } from '@/lib/scoring/modes/types';
 
@@ -116,7 +117,7 @@ export function TexasScrambleView({
               rank={team.rank}
               teamNumber={team.teamNumber}
               memberNames={memberNames}
-              totalNet={team.totalNet}
+              headline={teamHeadline(result.ranking, { total: team.totalNet, toPar: team.toPar })}
               totalGross={team.totalGross}
               missingHoles={team.missingHoles.length}
               staggerIndex={i}
@@ -134,7 +135,7 @@ function TeamRow({
   rank,
   teamNumber,
   memberNames,
-  totalNet,
+  headline,
   totalGross,
   missingHoles,
   staggerIndex,
@@ -142,7 +143,8 @@ function TeamRow({
   rank: number;
   teamNumber: number;
   memberNames: string;
-  totalNet: number;
+  /** #2625: the net sum, or the team's to par in a net-to-par game (`teamHeadline`). */
+  headline: ReturnType<typeof teamHeadline>;
   totalGross: number;
   missingHoles: number;
   staggerIndex: number;
@@ -193,10 +195,10 @@ function TeamRow({
 
         <div className="shrink-0 text-right">
           <span className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums">
-            {totalNet}
+            {headline.text}
           </span>
           <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t('common.slagLabel')}
+            {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.slagLabel')}
           </span>
         </div>
       </Card>

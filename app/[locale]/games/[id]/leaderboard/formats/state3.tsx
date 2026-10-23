@@ -31,6 +31,8 @@ import {
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
+import { formatVsPar } from '@/lib/scoring/scoreTone';
+import { teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
 import { PreRoundLeaderboardRealtime } from '../PreRoundLeaderboard';
 
 /**
@@ -71,17 +73,21 @@ function rankAccent(rank: number): {
 
 function TeamCard({
   line,
-  leaderTotal,
+  leader,
+  ranking,
 }: {
   line: TeamLine;
-  leaderTotal: number;
+  leader: TeamLine | undefined;
+  /** #2625: the game's ranking rule; a net-to-par game shows its to par. */
+  ranking?: 'net_to_par';
 }) {
   const tc = useTranslations('leaderboard.common');
   const accent = rankAccent(line.rank);
   const members = teamMembersLabel(line.players);
   const missing = line.missingHoles.length;
   const isLeader = line.rank === 1;
-  const delta = line.total - leaderTotal;
+  const headline = teamHeadline(ranking, line, formatVsPar);
+  const delta = leader ? teamHeadlineGap(ranking, line, leader) : null;
 
   return (
     <div className={`lb-row ${isLeader ? '' : ''}`}>
@@ -119,9 +125,9 @@ function TeamCard({
                 isLeader ? 'text-4xl' : 'text-3xl'
               }`}
             >
-              {line.total}
+              {headline.text}
             </p>
-            {!isLeader && delta > 0 && (
+            {!isLeader && delta !== null && delta > 0 && (
               <p className="inline-num text-xs text-muted mt-1.5">
                 +{delta}
               </p>
@@ -319,6 +325,8 @@ export async function renderState35(opts: {
   navContext?: LeaderboardNavContext;
   /** Public spectate/embed surface — see `ModeToggle` (#1373). */
   publicView?: boolean;
+  /** #2625: the game's ranking rule (`bestBallBoardInput`). */
+  ranking?: 'net_to_par';
 }) {
   const tc = await getTranslations('leaderboard.common');
   const ts35 = await getTranslations('leaderboard.state35');
@@ -332,6 +340,7 @@ export async function renderState35(opts: {
     holeSegment,
     navContext,
     publicView = false,
+    ranking,
   } = opts;
 
   const openHoleNumbers = firstHalfHoleNumbersForSegment(holeSegment);
@@ -356,9 +365,10 @@ export async function renderState35(opts: {
     players,
     holes: frontNineHoles,
     scores: frontNineScores,
+    ranking,
   });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
-  const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
+  const leader = orderedLines.find((l) => l.rank === 1);
 
   return (
     <AppShell>
@@ -402,7 +412,8 @@ export async function renderState35(opts: {
           <TeamCard
             key={line.teamNumber}
             line={line}
-            leaderTotal={leaderTotal}
+            leader={leader}
+            ranking={ranking}
           />
         ))}
       </div>
