@@ -1,10 +1,11 @@
 // #2627: arket med QR-koden i stort format (Type C, én render-test).
 //
 // At koden kan leses, er `lib/qrMatrix.test.ts` sitt. Her låses koblingene
-// bare en render kan bekrefte: navnet er arkets overskrift, koden og linja
-// står, og «Lukk», hinnen og Android-tilbake lukker arket. Ingen layout-asserts.
+// bare en render kan bekrefte: navnet er arkets overskrift, koden (med
+// Tørny-merket i midten) og linja står, og «Lukk», hinnen og Android-tilbake
+// lukker arket. Ingen layout-asserts.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikken heises over importene */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
 import { FriendQrSheet } from './FriendQrSheet';
 
@@ -24,6 +25,10 @@ describe('FriendQrSheet', () => {
     expect(screen.getByRole('header')).toHaveTextContent('Sigrid Aas');
     expect(screen.getByText(PROFILE_TEXT.friendQrSheetBody)).toBeTruthy();
     expect(screen.getByTestId('friend-qr-sheet-code')).toBeTruthy();
+    // Tørny-merket står midt i koden (pynt for skjermleseren).
+    expect(
+      within(screen.getByTestId('friend-qr-sheet-code')).getByTestId('qr-torny-mark', { includeHiddenElements: true }),
+    ).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.friendQrClose }));
     expect(onClose).toHaveBeenCalledTimes(1);

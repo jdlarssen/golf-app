@@ -9,7 +9,7 @@
 // tekst er `profileCopy.test.ts` sin. #2627: QR-kodens tre tilstander (kode,
 // lastes, ingen) og at deleversjonen aldri har den. At koden kan leses, er
 // `lib/qrMatrix.test.ts` sitt.
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import type { BagTagModel } from '../../lib/bagTag';
 import {
   PROFILE_TEXT,
@@ -100,6 +100,7 @@ describe('BagTag', () => {
       screen.getByTestId('bag-tag-qr'),
     );
     expect(screen.queryByText(STALE.initials, HIDDEN)).toBeNull();
+    expect(within(screen.getByTestId('bag-tag-qr')).getByTestId('qr-torny-mark', HIDDEN)).toBeTruthy();
     expect(screen.getByRole('header')).toHaveTextContent(STALE.name);
     expect(screen.queryByTestId('friend-qr-sheet')).toBeNull();
     await fireEvent.press(screen.getByTestId('bag-tag-qr'));
