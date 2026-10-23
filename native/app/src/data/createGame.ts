@@ -44,6 +44,7 @@ import {
   type GameValidationErrorCode,
 } from '../../../../lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '../../../../lib/games/sideTournamentPayload';
+import { stampNewGameModeConfig } from '../../../../lib/games/modeConfigEdit';
 import { isMatchplayFamily } from '../../../../lib/scoring/modes/types';
 import { teeChoiceToDb } from '../../../../lib/games/teeChoice';
 import {
@@ -508,7 +509,9 @@ export async function publishGame(
     require_peer_approval: payload.require_peer_approval,
     score_visibility: payload.score_visibility,
     game_mode: payload.game_mode,
-    mode_config: payload.mode_config,
+    // #2625: a new game is stamped with the rules it is created under (best
+    // ball ranks on net to par), like the web wizard. Only here, never on edit.
+    mode_config: stampNewGameModeConfig(payload.mode_config),
     registration_mode: payload.registration_mode,
     registration_type: payload.registration_type,
     let_friends_skip_gate: payload.let_friends_skip_gate,

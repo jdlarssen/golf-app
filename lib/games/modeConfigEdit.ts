@@ -1,4 +1,5 @@
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
+import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
 
 /**
  * `mode_config`-nøkler som IKKE eies av redigeringsskjemaet.
@@ -30,19 +31,39 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
 ] as const;
 
 /**
- * #2253: stamps the rules a NEW game is created with onto its `mode_config`.
- * Today that is one: a solo strokeplay game ranks on net to par
- * (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring engine).
- * Every other config is returned unchanged.
+ * #2253 / #2625: stamps the rules a NEW game is created with onto its
+ * `mode_config`. Today that is one: solo strokeplay and the team strokeplay
+ * formats (best ball, Texas/Ambrose/Florida scramble, shamble) rank on net to
+ * par (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
+ * engine). Every other config is returned unchanged.
  *
- * Called at every insert site that can create a solo strokeplay game — the
+ * Called at every insert site that can create one of those formats — the
  * list, and why the others are exempt, lives in `gamesInsertSites.test.ts`.
  * Only at creation: an edit carries the key via `PRESERVED_MODE_CONFIG_KEYS`
  * and never adds it, so a game played under the old rule keeps it.
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
-  if (config.kind !== 'solo_strokeplay') return config;
+  if (!supportsNetToParRanking(config)) return config;
   return { ...config, ranking: 'net_to_par' };
+}
+
+/**
+ * #2625: the `mode_config` an edit of a game saves. A draft that switches
+ * format is still a new game, so the new format is stamped like at creation;
+ * otherwise the keys the form does not own are carried over
+ * (`carryPreservedModeConfigKeys`), and an edit never adds the flag to a game
+ * created without it. Only a draft can switch format (the edit action's
+ * mode-lock).
+ */
+export function editedModeConfig(existing: unknown, next: GameModeConfig): GameModeConfig {
+  const previousKind =
+    existing !== null && typeof existing === 'object' && !Array.isArray(existing)
+      ? (existing as Record<string, unknown>).kind
+      : undefined;
+  if (previousKind !== undefined && previousKind !== next.kind) {
+    return stampNewGameModeConfig(next);
+  }
+  return carryPreservedModeConfigKeys(existing, next);
 }
 
 /**

@@ -3,12 +3,12 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * #2253: a new solo strokeplay game ranks on net to par. The rule lives in the
- * game's `mode_config` (`ranking: 'net_to_par'`), stamped at creation by
- * `stampNewGameModeConfig`. Every place in app/, lib/ and native/app/src that
- * puts a row in `games` is listed below: it either stamps, or it can never
- * create a solo strokeplay game (and the premise is checked). A new insert
- * site turns this red: stamp it, or list why it is exempt.
+ * #2253 / #2625: a new solo strokeplay or team strokeplay game ranks on net to
+ * par. The rule lives in the game's `mode_config` (`ranking: 'net_to_par'`),
+ * stamped at creation by `stampNewGameModeConfig`. Every place in app/, lib/
+ * and native/app/src that puts a row in `games` is listed below: it either
+ * stamps, or it is exempt by decision and says why. A new insert site turns
+ * this red: stamp it, or list why it is exempt.
  *
  * Same shape as the game_players guard (#2209, `gamePlayersInsertSites.test.ts`).
  */
@@ -21,7 +21,8 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
   'lib/cup/insertCupMatches.ts': {
     count: 1,
     stamps: false,
-    reason: 'cup matches are matchplay or best ball (CupBundleFormat), never solo strokeplay',
+    reason:
+      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original rule by decision (contract #2625)',
   },
   'lib/league/actions.ts': {
     count: 1,
@@ -30,8 +31,8 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
   },
   'native/app/src/data/createGame.ts': {
     count: 1,
-    stamps: false,
-    reason: 'the app wizard cannot create solo strokeplay (APP_SUPPORTED_MODES)',
+    stamps: true,
+    reason: 'the app wizard, which can create best ball (APP_SUPPORTED_MODES)',
   },
 };
 
@@ -71,7 +72,7 @@ function declaration(text: string, name: string): string {
   return text.slice(start, end);
 }
 
-describe('games insert sites stamp the net-to-par ranking (#2253)', () => {
+describe('games insert sites stamp the net-to-par ranking (#2253, #2625)', () => {
   const sources = read(DIRS.flatMap((dir) => sourceFiles(join(ROOT, dir), /\.(ts|tsx)$/)));
 
   it('every insert site is listed', () => {
@@ -91,19 +92,16 @@ describe('games insert sites stamp the net-to-par ranking (#2253)', () => {
     expect(missing).toEqual([]);
   });
 
-  it('the exempt sites still cannot create a solo strokeplay game', () => {
+  it('the cup is exempt by decision: it can create best ball and does not stamp it', () => {
+    // Cup best ball keeps the sum ranking (contract #2625). This is a choice,
+    // not a premise: the cup can create a format that has the flag.
     const cupFormats =
       declaration(sources['lib/cup/cupTemplates.ts'], 'CupSessionFormat') +
       declaration(sources['lib/cup/cupPairing.ts'], 'CupBundleFormat');
-    const appFormats = declaration(
-      sources['native/app/src/lib/appFormats.ts'],
-      'APP_SUPPORTED_MODES',
-    );
 
-    expect(cupFormats).toContain('singles_matchplay');
+    expect(cupFormats).toContain('best_ball');
     expect(cupFormats).not.toContain('solo_strokeplay');
-    expect(appFormats).toContain('stableford');
-    expect(appFormats).not.toContain('solo_strokeplay');
+    expect(sources['lib/cup/insertCupMatches.ts']).not.toContain('stampNewGameModeConfig(');
   });
 
   it('no database function inserts a game', () => {

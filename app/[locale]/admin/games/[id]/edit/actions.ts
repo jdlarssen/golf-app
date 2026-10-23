@@ -14,7 +14,7 @@ import {
   isTeeOffInPast,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
-import { carryPreservedModeConfigKeys } from '@/lib/games/modeConfigEdit';
+import { editedModeConfig } from '@/lib/games/modeConfigEdit';
 import {
   formOwnsFlight,
   parseLoadedRoster,
@@ -106,7 +106,7 @@ async function updateGameInternal(
   // spillet har forlatt 'draft' — game_mode sammenlignes under, etter
   // payloaden. mode_config leses med: den lagrede JSONB-en kan bære nøkler
   // skjemaet ikke eier (cup-generatorens `team_strokes_override`), og de skal
-  // overleve lagringen — se carryPreservedModeConfigKeys under (#1677).
+  // overleve lagringen — se editedModeConfig under (#1677, #2625).
   const { data: existing, error: existingError } = await supabase
     .from('games')
     .select('status, game_mode, mode_config, tournament_id, group_id')
@@ -316,12 +316,10 @@ async function updateGameInternal(
       // #1677: skjemaet bygger mode_config fra bunnen av, så en rå skriving
       // slettet nøkler ingen skjemafelt eier — arrangørens lag-slag på en
       // cup-greensome forsvant ved hver lagring. Helperen bærer akkurat de
-      // nøklene over (og bare når modusen er den samme).
+      // nøklene over (og bare når modusen er den samme). #2625: et utkast
+      // som bytter format, stemples som det nye spillet det er.
       game_mode: payload.game_mode,
-      mode_config: carryPreservedModeConfigKeys(
-        existing.mode_config,
-        payload.mode_config,
-      ),
+      mode_config: editedModeConfig(existing.mode_config, payload.mode_config),
       // #199: self-påmelding-akser. Følger samme optimistic-lock-mønster
       // som de andre feltene — kun skrivbar mens status fortsatt er
       // draft/scheduled (filteret nedenfor blokkerer writes etter start).
