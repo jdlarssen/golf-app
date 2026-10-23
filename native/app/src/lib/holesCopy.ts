@@ -240,6 +240,8 @@ export const BEST_BALL_HOLES_TEXT = {
    * webbens `common.slagLabel` i store bokstaver som «PAR».
    */
   strokesSuffix: 'SLAG',
+  /** #2625: foran summen når spillet rangeres mot par («MOT PAR · 34 SLAG»), webbens `common.vsParLabel`. */
+  toParPrefix: 'MOT PAR',
 } as const;
 
 /** «Lag 2 · 1. plass» øverst, som webbens topp. */
