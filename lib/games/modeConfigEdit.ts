@@ -18,10 +18,11 @@ import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
  * trekk-flyten, ikke av edit-skjemaet. Uten den i lista nullet en lagring av
  * kampen valget, og en avgjort kamp våknet stille til live igjen.
  *
- * `ranking` (#2253) is stamped when a game is created
- * (`stampNewGameModeConfig`) and has no form field. Carrying it keeps a
- * net-to-par game on its rule through an edit; an older game has no key to
- * carry, so an edit never moves it to the new rule.
+ * `ranking` (#2253) is stamped when a game is created, or when a draft
+ * switches format (`stampNewGameModeConfig`, `editedModeConfig`), and has no
+ * form field. Carrying it keeps a net-to-par game on its rule through an
+ * edit; an older game has no key to carry, so an edit that keeps the format
+ * never moves it to the new rule.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -39,8 +40,9 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
  *
  * Called at every insert site that can create one of those formats — the
  * list, and why the others are exempt, lives in `gamesInsertSites.test.ts`.
- * Only at creation: an edit carries the key via `PRESERVED_MODE_CONFIG_KEYS`
- * and never adds it, so a game played under the old rule keeps it.
+ * At creation, or when a draft switches format (`editedModeConfig`). An edit
+ * that keeps the format carries the key via `PRESERVED_MODE_CONFIG_KEYS` and
+ * never adds it, so a game played under the old rule keeps it.
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
   if (!supportsNetToParRanking(config)) return config;

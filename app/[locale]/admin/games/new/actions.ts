@@ -243,8 +243,9 @@ async function createGameInternal(
       // builderen defaultes til best_ball før fase 4-UI lander, så
       // dagens admin-flyt produserer samme rad som før migrering 0030.
       game_mode: payload.game_mode,
-      // #2253: a new game is stamped with the rules it is created under
-      // (solo strokeplay ranks on net to par). Only here, never on edit.
+      // #2253/#2625: a new game is stamped with the rules it is created under
+      // (solo and team strokeplay rank on net to par). At creation, or when a
+      // draft switches format (`editedModeConfig`); never on another edit.
       mode_config: stampNewGameModeConfig(payload.mode_config),
       registration_mode: payload.registration_mode,
       registration_type: payload.registration_type,

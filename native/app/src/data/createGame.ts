@@ -510,7 +510,8 @@ export async function publishGame(
     score_visibility: payload.score_visibility,
     game_mode: payload.game_mode,
     // #2625: a new game is stamped with the rules it is created under (best
-    // ball ranks on net to par), like the web wizard. Only here, never on edit.
+    // ball ranks on net to par), like the web wizard. At creation, or when a
+    // draft switches format on the web (`editedModeConfig`); never on another edit.
     mode_config: stampNewGameModeConfig(payload.mode_config),
     registration_mode: payload.registration_mode,
     registration_type: payload.registration_type,
