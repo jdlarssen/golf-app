@@ -7,7 +7,7 @@
 // stille sonen ligger i `viewBox` (negativ origo), så stien tegnes i hele
 // moduler og skaleres av SVG-en. Flaten bak (krem på taggen, hvit på arket) er
 // kallerens, og den er også den lyse kanten rundt merket: feltet står blankt,
-// og merket tegnes med én modul luft på hver side.
+// og merket tegnes der `matrix.mark` sier, med én modul luft på hver side.
 //
 // Pynt for skjermleseren: det er knappen eller arket rundt som sier hva koden
 // er.
@@ -17,9 +17,9 @@ import { QR_QUIET_ZONE, qrMatrix, qrPath } from '../../lib/qrMatrix';
 import { MARK_SIZE, TORNY_MARK as M } from '../../lib/tornyMark';
 
 export function QrCode({ value, size, color }: { value: string; size: number; color: string }) {
-  const { side, d, logo } = useMemo(() => {
+  const { side, d, mark } = useMemo(() => {
     const matrix = qrMatrix(value);
-    return { side: matrix.size + QR_QUIET_ZONE * 2, d: qrPath(matrix, 1), logo: matrix.logo };
+    return { side: matrix.size + QR_QUIET_ZONE * 2, d: qrPath(matrix, 1), mark: matrix.mark };
   }, [value]);
 
   return (
@@ -30,8 +30,8 @@ export function QrCode({ value, size, color }: { value: string; size: number; co
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Path d={d} fill={color} />
-      {logo ? <TornyMark at={logo.start + 1} size={logo.span - 2} /> : null}
+      <Path d={d} fill={color} testID="qr-code-modules" />
+      {mark ? <TornyMark at={mark.at} size={mark.size} /> : null}
     </Svg>
   );
 }

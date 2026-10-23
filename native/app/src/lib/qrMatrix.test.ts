@@ -66,12 +66,10 @@ function paint(matrix: QrMatrix, p: Paint) {
   return { data, side };
 }
 
-/** Merkets flate: feltet minus én modul luft på hver side. */
-function inMark({ logo }: QrMatrix, x: number, y: number): boolean {
-  if (!logo) return false;
-  const lo = logo.start + 1;
-  const hi = logo.start + logo.span - 1;
-  return x >= lo && y >= lo && x < hi && y < hi;
+/** Merkets flate, der `matrix.mark` sier (samme sted som `QrCode` tegner det). */
+function inMark({ mark }: QrMatrix, x: number, y: number): boolean {
+  if (!mark) return false;
+  return x >= mark.at && y >= mark.at && x < mark.at + mark.size && y < mark.at + mark.size;
 }
 
 function insideRounded(x: number, y: number, size: number, r: number): boolean {
@@ -95,6 +93,8 @@ describe('qrMatrix', () => {
   it('blanker et felt på 9 × 9 i midten for merket, uten å røre mønstrene', () => {
     const matrix = qrMatrix(URL);
     expect(matrix.logo).toEqual({ start: 14, span: 9 });
+    // Merket ligger på hele moduler i feltet, med én modul luft på hver side.
+    expect(matrix.mark).toEqual({ at: 15, size: 7 });
 
     // Ingen funksjonsmodul (finner, timing, justering, format) i feltet.
     const { modules } = create(URL, { errorCorrectionLevel: 'Q', version: 5 });
@@ -122,6 +122,7 @@ describe('qrMatrix', () => {
     const matrix = qrMatrix(long);
     expect(matrix.size).toBeGreaterThanOrEqual(45);
     expect(matrix.logo).toBeNull();
+    expect(matrix.mark).toBeNull();
     expect(decode(matrix, SHEET)).toBe(long);
   });
 });
