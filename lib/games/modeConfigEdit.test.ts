@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   carryPreservedModeConfigKeys,
+  editedModeConfig,
   stampNewGameModeConfig,
 } from './modeConfigEdit';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
@@ -110,7 +111,6 @@ describe('stampNewGameModeConfig (#2253)', () => {
 
   it.each<GameModeConfig>([
     { kind: 'stableford', team_size: 1, points_table: 'standard' },
-    { kind: 'best_ball', team_size: 2, teams_count: 2 },
     greensome({ team_strokes_override: { team1: 8, team2: 3 } }),
   ])('leaves every other format unchanged ($kind)', (config) => {
     expect(stampNewGameModeConfig(config)).toBe(config);
@@ -132,5 +132,52 @@ describe('stampNewGameModeConfig (#2253)', () => {
     } as GameModeConfig;
 
     expect(carryPreservedModeConfigKeys(flagged, stableford)).toEqual(stableford);
+  });
+});
+
+describe('stampNewGameModeConfig (#2625)', () => {
+  // The team strokeplay formats rank on net to par from #2625 — on new games
+  // only, so they are stamped at creation like solo strokeplay.
+  it.each<GameModeConfig>([
+    { kind: 'best_ball', team_size: 2, teams_count: 2 },
+    { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+    { kind: 'ambrose', team_size: 4, teams_count: 2, team_handicap_pct: 12.5 },
+    { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+    {
+      kind: 'shamble',
+      team_size: 4,
+      teams_count: 2,
+      shamble_variant: 'shamble',
+      shamble_count: 2,
+      shamble_scoring: 'net',
+    },
+  ])('stamps net-to-par ranking on a new $kind game', (config) => {
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, ranking: 'net_to_par' });
+  });
+});
+
+describe('editedModeConfig (#2625)', () => {
+  const texas = {
+    kind: 'texas_scramble',
+    team_size: 4,
+    teams_count: 2,
+    team_handicap_pct: 10,
+  } as GameModeConfig;
+  const stableford = { kind: 'stableford', team_size: 1, points_table: 'standard' } as GameModeConfig;
+
+  it('a draft that switches format is still a new game: the new format is stamped', () => {
+    expect(editedModeConfig(stableford, texas)).toEqual({ ...texas, ranking: 'net_to_par' });
+  });
+
+  it('the same format keeps the rule the game was created with', () => {
+    expect(editedModeConfig(texas, texas)).toEqual(texas);
+    expect(editedModeConfig({ ...texas, ranking: 'net_to_par' }, texas)).toEqual({
+      ...texas,
+      ranking: 'net_to_par',
+    });
+  });
+
+  it('a stored config that is not an object is passed through as before', () => {
+    expect(editedModeConfig(null, texas)).toBe(texas);
   });
 });
