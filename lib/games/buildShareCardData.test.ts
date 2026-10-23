@@ -10,6 +10,7 @@ import type {
   BestBallResult,
   BingoBangoBongoResult,
   FourballMatchplayResult,
+  ModeResult,
   NassauResult,
   NinesResult,
   RoundRobinResult,
@@ -1042,4 +1043,58 @@ describe('winners past the podium (#2319)', () => {
       expect(card.winners.every((w) => w.rank === 1)).toBe(true);
     },
   );
+});
+
+// #2625: a team strokeplay game ranked on net to par shows the team's own to
+// par (what it is ranked on), not the sum against the men's par per hole.
+describe('team strokeplay — ranked on net to par (#2625)', () => {
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
+  const card = (result: ModeResult) =>
+    buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+
+  it.each([
+    [
+      'best_ball',
+      {
+        kind: 'best_ball',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 17, missingHoles: [], toPar: -7, rank: 1, tiedWith: [] },
+          { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 7, missingHoles: [], toPar: -5, rank: 2, tiedWith: [] },
+        ],
+      },
+    ],
+    [
+      'texas_scramble',
+      {
+        kind: 'texas_scramble',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 2, members: [{ userId: 'u3', courseHandicap: 0, isCaptain: true }], combinedCourseHandicap: 0, teamHandicap: 0, holes: [], totalNet: 17, totalGross: 17, missingHoles: [], toPar: -7, rank: 1, tiedWith: [] },
+          { teamNumber: 1, members: [{ userId: 'u1', courseHandicap: 0, isCaptain: true }], combinedCourseHandicap: 0, teamHandicap: 0, holes: [], totalNet: 7, totalGross: 7, missingHoles: [], toPar: -5, rank: 2, tiedWith: [] },
+        ],
+      },
+    ],
+    [
+      'shamble',
+      {
+        kind: 'shamble',
+        ranking: 'net_to_par',
+        variant: 'shamble',
+        count: 2,
+        scoring: 'net',
+        teamSize: 4,
+        holes: [],
+        teams: [
+          { teamNumber: 2, members: ['u3', 'u4'], totalScore: 41, holesCounted: 6, toPar: -7, rank: 1, tiedWith: [] },
+          { teamNumber: 1, members: ['u1', 'u2'], totalScore: 19, holesCounted: 3, toPar: -5, rank: 2, tiedWith: [] },
+        ],
+      },
+    ],
+  ] as [string, ModeResult][])('%s', (_kind, result) => {
+    expect(card(result).podium.map((r) => r.score)).toEqual([
+      { kind: 'vsPar', label: '−7' },
+      { kind: 'vsPar', label: '−5' },
+    ]);
+  });
 });

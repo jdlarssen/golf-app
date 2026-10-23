@@ -69,6 +69,21 @@ export interface CeremonyLine {
 const teamKey = (teamNumber: number) => `team-${teamNumber}`;
 
 /**
+ * #2625: a team strokeplay game ranked on net to par shows the team's to par,
+ * the number it is ranked on; a team without a hole has none and is left out
+ * (as a solo player without a hole).
+ */
+function teamToParLines(
+  teams: readonly { teamNumber: number; rank: number; toPar: number | null; members: string[] }[],
+): CeremonyLine[] {
+  return teams.flatMap((t) =>
+    t.toPar === null
+      ? []
+      : [{ key: teamKey(t.teamNumber), rank: t.rank, total: t.toPar, unit: 'toPar' as const, members: t.members, teamNumber: t.teamNumber }],
+  );
+}
+
+/**
  * The engine's result as podium rows, with the same number the podium in the
  * app shows. Rows with nothing played are left out: a player with no hole,
  * and a shamble team with no counted hole (the engine has no total for it).
@@ -108,6 +123,9 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
         teamNumber: t.teamNumber,
       }));
     case 'texas_scramble':
+      if (result.ranking === 'net_to_par') {
+        return teamToParLines(result.teams.map((t) => ({ ...t, members: t.members.map((m) => m.userId) })));
+      }
       return result.teams.map((t) => ({
         key: teamKey(t.teamNumber),
         rank: t.rank,
@@ -117,6 +135,7 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
         teamNumber: t.teamNumber,
       }));
     case 'shamble':
+      if (result.ranking === 'net_to_par') return teamToParLines(result.teams);
       return result.teams
         .filter((t) => t.holesCounted > 0)
         .map((t) => ({
@@ -128,6 +147,9 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
           teamNumber: t.teamNumber,
         }));
     case 'best_ball':
+      if (result.ranking === 'net_to_par') {
+        return teamToParLines(result.teams.map((t) => ({ ...t, members: t.playerIds })));
+      }
       return result.teams.map((t) => ({
         key: teamKey(t.teamNumber),
         rank: t.rank,

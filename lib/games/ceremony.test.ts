@@ -307,3 +307,55 @@ describe('ceremonyView — what the screen shows at a step', () => {
     expect(view).toEqual({ step: 0, shown: [], current: null, next: null, done: true });
   });
 });
+
+// #2625: a team strokeplay game ranked on net to par shows the number it is
+// ranked on — the team's to par — and a team without a hole is left out.
+describe('ceremonyLines — team strokeplay ranked on net to par (#2625)', () => {
+  it.each([
+    [
+      'texas_scramble',
+      {
+        kind: 'texas_scramble',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 2, members: [{ userId: 'c' }, { userId: 'd' }], totalNet: 17, toPar: -7, rank: 1 },
+          { teamNumber: 1, members: [{ userId: 'a' }, { userId: 'b' }], totalNet: 7, toPar: -5, rank: 2 },
+          { teamNumber: 3, members: [{ userId: 'e' }, { userId: 'f' }], totalNet: 0, toPar: null, rank: 3 },
+        ],
+      },
+    ],
+    [
+      'best_ball',
+      {
+        kind: 'best_ball',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 1, playerIds: ['a', 'b'], total: 7, toPar: -5, rank: 2 },
+          { teamNumber: 2, playerIds: ['c', 'd'], total: 17, toPar: -7, rank: 1 },
+          { teamNumber: 3, playerIds: ['e', 'f'], total: 0, toPar: null, rank: 3 },
+        ],
+      },
+    ],
+    [
+      'shamble',
+      {
+        kind: 'shamble',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 2, members: ['c', 'd'], totalScore: 41, holesCounted: 6, toPar: -7, rank: 1 },
+          { teamNumber: 1, members: ['a', 'b'], totalScore: 19, holesCounted: 3, toPar: -5, rank: 2 },
+          { teamNumber: 3, members: ['e', 'f'], totalScore: 0, holesCounted: 0, toPar: null, rank: 3 },
+        ],
+      },
+    ],
+  ])('%s', (_kind, r) => {
+    const lines = ceremonyLines(result(r));
+    expect(lines.map((l) => [l.key, l.rank, l.total, l.unit])).toEqual(
+      expect.arrayContaining([
+        ['team-2', 1, -7, 'toPar'],
+        ['team-1', 2, -5, 'toPar'],
+      ]),
+    );
+    expect(lines).toHaveLength(2);
+  });
+});

@@ -238,8 +238,12 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         teamNumber: t.teamNumber,
         rank: t.rank,
-        // best_ball uses `total` (net total strokes)
-        score: vsParScore(t.total, teamUnplayedHoles(t.holes), t.holes.length),
+        // best_ball uses `total` (net total strokes). #2625: a game ranked on
+        // net to par shows the team's own to par, what it is ranked on.
+        score:
+          result.ranking === 'net_to_par'
+            ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
+            : vsParScore(t.total, teamUnplayedHoles(t.holes), t.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
@@ -249,7 +253,10 @@ export function buildShareCardData(opts: {
         userIds: t.members.map((m) => m.userId),
         teamNumber: t.teamNumber,
         rank: t.rank,
-        score: vsParScore(t.totalNet, teamUnplayedHoles(t.holes), t.holes.length),
+        score:
+          result.ranking === 'net_to_par'
+            ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
+            : vsParScore(t.totalNet, teamUnplayedHoles(t.holes), t.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
@@ -261,12 +268,15 @@ export function buildShareCardData(opts: {
         rank: t.rank,
         // shamble uses `totalScore` (net strokes sum) — the `count` lowest
         // balls per hole, so par counts `count` times (#2217).
-        score: vsParScore(
-          t.totalScore,
-          shambleUnplayedHoles(result.holes, t.teamNumber),
-          result.holes.length,
-          result.count,
-        ),
+        score:
+          result.ranking === 'net_to_par'
+            ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
+            : vsParScore(
+                t.totalScore,
+                shambleUnplayedHoles(result.holes, t.teamNumber),
+                result.holes.length,
+                result.count,
+              ),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }
