@@ -34,7 +34,7 @@
 // pakker den i lys drakt).
 //
 // **QR-koden (#2627)** står der initialringen sto, i samme 54 × 54, så kortet
-// er like høyt med og uten kode. En kompis skanner den og kommer til «Bli venn
+// er like høyt med og uten kode. Tørny-merket står i midten av den (`QrCode`). En kompis skanner den og kommer til «Bli venn
 // med …» på nettsiden. Koden er én knapp som åpner arket med koden i stort
 // format (`FriendQrSheet`). Mens koden lastes, står den tomme flaten; uten kode
 // står ringen som før. Deleversjonen har aldri kode (eierens beslutning i
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   initials: { ...fraunces(500, 18) },
   // Tegningen (`Profil-qr-lys/-natt`): krem flate med radius 10. Den stille
-  // sonen er 4 moduler (5,8 pt), så hjørnene klipper bare krem, aldri koden
+  // sonen er 4 moduler (4,8 pt), så hjørnene klipper bare krem, aldri koden
   // (rundturtesten i `lib/qrMatrix.test.ts` klipper likt).
   qrFlat: { width: RING, height: RING, borderRadius: 10, overflow: 'hidden' },
   qrPressed: { opacity: 0.6 },
