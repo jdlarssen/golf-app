@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { netScore, bestBallForHole, teamTotal, compute } from './bestBall';
-import type { ScoringContext, ScoringHoleScore } from './types';
+import type { GameModeConfig, ScoringContext, ScoringHoleScore } from './types';
 
 describe('netScore', () => {
   it('subtracts strokes from gross', () => {
@@ -483,5 +483,102 @@ describe('compute — flere enn fire par (#2148)', () => {
     const ranked = [...result.teams].sort((a, b) => a.rank - b.rank);
     expect(ranked.map((t) => t.teamNumber)).toEqual([6, 5, 4, 3, 2, 1]);
     expect(ranked.map((t) => t.total)).toEqual([72, 73, 74, 75, 76, 77]);
+  });
+});
+
+describe('compute — ranking: net_to_par (#2625)', () => {
+  // #2625: a new best ball game ranks on the team's net against par over the
+  // holes it has played, so a pair that is three holes behind on the course
+  // does not lead on its smaller sum. Without the flag: today's rule.
+  const PLAIN: GameModeConfig = { kind: 'best_ball', team_size: 2, teams_count: 2 };
+  const FLAGGED = { ...PLAIN, ranking: 'net_to_par' } as GameModeConfig;
+  const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1 }));
+  const players: ScoringContext['players'] = [
+    { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+    { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+    { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+  ];
+  /** The partner always takes one more, so the first card is the best ball. */
+  function pairCards(best: string, partner: string, gross: number[]): ScoringHoleScore[] {
+    return gross.flatMap((g, i) => [
+      { userId: best, holeNumber: i + 1, gross: g },
+      { userId: partner, holeNumber: i + 1, gross: g + 1 },
+    ]);
+  }
+  const ctx = (mode_config: GameModeConfig, scores: ScoringHoleScore[]): ScoringContext => ({
+    game: { id: 'g1', game_mode: 'best_ball', mode_config },
+    players,
+    holes,
+    scores,
+  });
+  // The issue's example in best ball: pair 1 net 7 after 3 holes (−5), pair 2
+  // net 17 after 6 holes (−7).
+  const issueScores = [...pairCards('a1', 'a2', [2, 2, 3]), ...pairCards('b1', 'b2', [3, 3, 3, 3, 3, 2])];
+  const byTeam = (r: ReturnType<typeof compute>) =>
+    [...r.teams].sort((a, b) => a.teamNumber - b.teamNumber).map((t) => [t.teamNumber, t.rank, t.toPar, t.total]);
+
+  it('the issue example: pair 2 (−7 after 6) ranks ahead of pair 1 (−5 after 3) with the flag', () => {
+    const result = compute(ctx(FLAGGED, issueScores));
+    expect(byTeam(result)).toEqual([
+      [1, 2, -5, 7],
+      [2, 1, -7, 17],
+    ]);
+    expect(result.ranking).toBe('net_to_par');
+  });
+
+  it('without the flag the same round keeps today’s order', () => {
+    const result = compute(ctx(PLAIN, issueScores));
+    expect(
+      [...result.teams]
+        .sort((a, b) => a.teamNumber - b.teamNumber)
+        .map(({ teamNumber, rank, tiedWith, decidedBy, total }) => ({ teamNumber, rank, tiedWith, decidedBy, total })),
+    ).toEqual([
+      { teamNumber: 1, rank: 1, tiedWith: [], decidedBy: null, total: 7 },
+      { teamNumber: 2, rank: 2, tiedWith: [], decidedBy: 'total', total: 17 },
+    ]);
+    expect(result.ranking).toBe('net_total');
+  });
+
+  it('toPar reads the team row par (the first member’s tee), null without a hole', () => {
+    // Hole 1 is par 5 from the ladies' tee. Pair 1 is led by a lady: best net
+    // 4 there is −1 against her par, not 0.
+    const mixedHoles = holes.map((h) =>
+      h.number === 1 ? { ...h, parByGender: { mens: 4, ladies: 5, juniors: 4 } } : h,
+    );
+    const result = compute({
+      ...ctx(PLAIN, pairCards('a1', 'a2', [4, 4])),
+      holes: mixedHoles,
+      players: players.map((p) => (p.userId === 'a1' ? { ...p, teeGender: 'ladies' as const } : p)),
+    });
+    expect(result.teams.find((t) => t.teamNumber === 1)!.toPar).toBe(-1);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.toPar).toBeNull();
+  });
+
+  it('a pair without a single hole still ranks last with the flag (#635)', () => {
+    const result = compute(ctx(FLAGGED, pairCards('a1', 'a2', [6, 6, 6])));
+    expect(byTeam(result)).toEqual([
+      [1, 1, 6, 18],
+      [2, 2, null, 0],
+    ]);
+  });
+
+  it('a finished round with the same par for everyone ranks the same with and without the flag', () => {
+    const grossFor = (seed: number, hole: number) => 3 + ((seed * 7 + hole * 5) % 4);
+    const field: ScoringContext['players'] = [1, 2, 3, 4].flatMap((team) => [
+      { userId: `t${team}a`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+      { userId: `t${team}b`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+    ]);
+    const seeds: Record<number, number> = { 1: 1, 2: 2, 3: 2, 4: 5 };
+    const scores = [1, 2, 3, 4].flatMap((team) =>
+      pairCards(`t${team}a`, `t${team}b`, Array.from({ length: 18 }, (_, i) => grossFor(seeds[team], i + 1))),
+    );
+    const shape = (mode_config: GameModeConfig) =>
+      compute({ ...ctx(mode_config, scores), players: field }).teams.map(
+        ({ teamNumber, rank, tiedWith, decidedBy }) => ({ teamNumber, rank, tiedWith, decidedBy }),
+      );
+    const withFlag = shape(FLAGGED);
+    expect(withFlag).toEqual(shape(PLAIN));
+    expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
   });
 });

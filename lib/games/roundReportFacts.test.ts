@@ -275,6 +275,7 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
 describe('best_ball — team placement, no checkpoints field', () => {
   const result: BestBallResult = {
     kind: 'best_ball',
+    ranking: 'net_total',
     teams: [
       {
         teamNumber: 1,
@@ -294,6 +295,7 @@ describe('best_ball — team placement, no checkpoints field', () => {
         ],
         total: 68,
         missingHoles: [],
+        toPar: null,
         rank: 1,
         tiedWith: [],
       },
@@ -303,6 +305,7 @@ describe('best_ball — team placement, no checkpoints field', () => {
         holes: [],
         total: 71,
         missingHoles: [],
+        toPar: null,
         rank: 2,
         tiedWith: [],
       },
@@ -695,6 +698,7 @@ describe('band coverage — remaining placement kinds produce a placement band',
         gameMode: 'texas_scramble',
         result: {
           kind: 'texas_scramble',
+          ranking: 'net_total',
           teams: [
             {
               teamNumber: 1,
@@ -705,6 +709,7 @@ describe('band coverage — remaining placement kinds produce a placement band',
               totalNet: 68,
               totalGross: 70,
               missingHoles: [],
+              toPar: null,
               rank: 1,
               tiedWith: [],
             },
@@ -802,13 +807,14 @@ describe('band coverage — remaining placement kinds produce a placement band',
         gameMode: 'shamble',
         result: {
           kind: 'shamble',
+          ranking: 'net_total',
           variant: 'shamble',
           count: 2,
           scoring: 'net',
           teamSize: 4,
           holes: [],
           teams: [
-            { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore: 68, holesCounted: 18, rank: 1, tiedWith: [] },
+            { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore: 68, holesCounted: 18, toPar: null, rank: 1, tiedWith: [] },
           ],
         },
       }),
@@ -836,13 +842,14 @@ describe('shamble — score label counts par per ball (#2217)', () => {
   it('4-man team, best 2, 148 → +4', () => {
     const result: ShambleResult = {
       kind: 'shamble',
+      ranking: 'net_total',
       variant: 'shamble',
       count: 2,
       scoring: 'net',
       teamSize: 4,
       holes: [],
       teams: [
-        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore: 148, holesCounted: 18, rank: 1, tiedWith: [] },
+        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore: 148, holesCounted: 18, toPar: null, rank: 1, tiedWith: [] },
       ],
     };
     const facts = buildRoundReportFacts({
@@ -971,9 +978,10 @@ describe('#2561 — a player without «ja» never reaches the facts', () => {
 
   const bestBall: BestBallResult = {
     kind: 'best_ball',
+    ranking: 'net_total',
     teams: [
-      { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 68, missingHoles: [], rank: 1, tiedWith: [] },
-      { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 71, missingHoles: [], rank: 2, tiedWith: [] },
+      { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 68, missingHoles: [], toPar: null, rank: 1, tiedWith: [] },
+      { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 71, missingHoles: [], toPar: null, rank: 2, tiedWith: [] },
     ],
   };
   const teamNames = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Carl'], ['u4', 'Dana']);

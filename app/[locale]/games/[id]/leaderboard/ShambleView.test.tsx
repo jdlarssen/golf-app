@@ -25,6 +25,7 @@ function makeTeam(
   return {
     totalScore: 36,
     holesCounted: 9,
+    toPar: null,
     rank: 1,
     tiedWith: [],
     ...overrides,
@@ -44,6 +45,7 @@ function makeHole(overrides: Partial<ShambleHoleRow>): ShambleHoleRow {
 function makeResult(): ShambleResult {
   return {
     kind: 'shamble',
+    ranking: 'net_total',
     variant: 'shamble',
     count: 2,
     scoring: 'net',

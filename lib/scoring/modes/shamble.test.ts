@@ -673,3 +673,121 @@ describe('shamble.compute — ujevne lag (#2569)', () => {
     expect(teamCell(result, 1, 2).pending).toBe(false);
   });
 });
+
+describe('shamble.compute — ranking: net_to_par (#2625)', () => {
+  // #2625: a new shamble game ranks on the team score against par over the
+  // holes each team has played. A shamble hole counts `count` balls, so the
+  // par it is measured against is `count × par` — the same rule the board's
+  // hole tones use. Without the flag: today's rule.
+  const config = (count: 1 | 2 | 3, flagged: boolean) => ({
+    kind: 'shamble',
+    team_size: 3,
+    teams_count: 2,
+    shamble_variant: count === 2 ? 'shamble' : 'champagne',
+    shamble_count: count,
+    shamble_scoring: 'gross',
+    ...(flagged ? { ranking: 'net_to_par' } : {}),
+  });
+  const players = [
+    makePlayer('a1', 1),
+    makePlayer('a2', 1),
+    makePlayer('a3', 1),
+    makePlayer('b1', 2),
+    makePlayer('b2', 2),
+    makePlayer('b3', 2),
+  ];
+  /** One team's holes from 1: best-two sum per hole, the third ball never counts. */
+  function teamCard(ids: [string, string, string], bestTwo: number[]): ScoringHoleScore[] {
+    return bestTwo.flatMap((sum, i) => {
+      const low = Math.floor(sum / 2);
+      return holeScores(i + 1, [
+        [ids[0], low],
+        [ids[1], sum - low],
+        [ids[2], 9],
+      ]);
+    });
+  }
+  // The issue's example in shamble (best 2, par 4 → 8 per hole): team 1
+  // 19 after 3 holes (−5), team 2 41 after 6 holes (−7).
+  const issueScores = [
+    ...teamCard(['a1', 'a2', 'a3'], [6, 6, 7]),
+    ...teamCard(['b1', 'b2', 'b3'], [7, 7, 7, 7, 7, 6]),
+  ];
+  const ctx = (count: 1 | 2 | 3, flagged: boolean, scores: ScoringHoleScore[]) =>
+    makeCtx({ players, holes: par4Holes(18), scores, modeConfigOverride: config(count, flagged) });
+
+  it('the issue example: team 2 (−7 after 6) ranks ahead of team 1 (−5 after 3) with the flag', () => {
+    const result = compute(ctx(2, true, issueScores));
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar, t.totalScore])).toEqual([
+      [2, 1, -7, 41],
+      [1, 2, -5, 19],
+    ]);
+    expect(result.ranking).toBe('net_to_par');
+  });
+
+  it('without the flag the same round keeps today’s order', () => {
+    const result = compute(ctx(2, false, issueScores));
+    expect(
+      result.teams.map(({ teamNumber, rank, tiedWith, decidedBy, totalScore, holesCounted }) => ({
+        teamNumber,
+        rank,
+        tiedWith,
+        decidedBy,
+        totalScore,
+        holesCounted,
+      })),
+    ).toEqual([
+      { teamNumber: 1, rank: 1, tiedWith: [], decidedBy: null, totalScore: 19, holesCounted: 3 },
+      { teamNumber: 2, rank: 2, tiedWith: [], decidedBy: 'total', totalScore: 41, holesCounted: 6 },
+    ]);
+    expect(result.ranking).toBe('net_total');
+  });
+
+  it.each([
+    [1, -1],
+    [2, -1],
+    [3, 2],
+  ] as const)('count %i: toPar is Σ (team score − count × par) = %i, null without a hole', (count, expected) => {
+    // Two par-4 holes, balls 3/4/5 and 4/4/6. Best 1: 3 + 4 = 7 against
+    // 2 × 4. Best 2: 7 + 8 = 15 against 2 × 8. Best 3: 12 + 14 = 26 against
+    // 2 × 12.
+    const scores = [
+      ...holeScores(1, [['a1', 3], ['a2', 4], ['a3', 5]]),
+      ...holeScores(2, [['a1', 4], ['a2', 4], ['a3', 6]]),
+    ];
+    const result = compute(ctx(count, false, scores));
+    expect(teamLine(result, 1).toPar).toBe(expected);
+    expect(teamLine(result, 2).toPar).toBeNull();
+  });
+
+  it('a team without a single hole still ranks last with the flag (#635)', () => {
+    const result = compute(ctx(2, true, teamCard(['a1', 'a2', 'a3'], [10, 10, 10])));
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar])).toEqual([
+      [1, 1, 6],
+      [2, 2, null],
+    ]);
+  });
+
+  it('a finished round ranks the same with and without the flag', () => {
+    const sumFor = (seed: number, hole: number) => 6 + ((seed * 7 + hole * 5) % 4);
+    const field = [1, 2, 3, 4].flatMap((team) => [
+      makePlayer(`t${team}a`, team),
+      makePlayer(`t${team}b`, team),
+      makePlayer(`t${team}c`, team),
+    ]);
+    const seeds: Record<number, number> = { 1: 1, 2: 2, 3: 2, 4: 5 };
+    const scores = [1, 2, 3, 4].flatMap((team) =>
+      teamCard(
+        [`t${team}a`, `t${team}b`, `t${team}c`],
+        Array.from({ length: 18 }, (_, i) => sumFor(seeds[team], i + 1)),
+      ),
+    );
+    const shape = (flagged: boolean) =>
+      compute(
+        makeCtx({ players: field, holes: par4Holes(18), scores, modeConfigOverride: config(2, flagged) }),
+      ).teams.map(({ teamNumber, rank, tiedWith, decidedBy }) => ({ teamNumber, rank, tiedWith, decidedBy }));
+    const withFlag = shape(true);
+    expect(withFlag).toEqual(shape(false));
+    expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
+  });
+});

@@ -39,13 +39,14 @@ function makeTeamLine(
     totalNet,
     totalGross: totalNet + 3,
     missingHoles,
+    toPar: null,
     rank,
     tiedWith,
   };
 }
 
 function makeResult(teams: TexasScrambleTeamLine[]): TexasScrambleResult {
-  return { kind: 'texas_scramble', teams };
+  return { kind: 'texas_scramble', ranking: 'net_total', teams };
 }
 
 function makePlayers(

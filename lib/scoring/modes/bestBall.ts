@@ -68,7 +68,7 @@ export function teamTotal(holes: HoleTeamScore[]): { total: number; missingHoles
 // -----------------------------------------------------------------------------
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, rankingHolesByNumber } from '../tiebreaker';
+import { rankTeams, rankingHolesByNumber, ranksByNetToPar } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -88,6 +88,7 @@ import type {
  * håndhevet i validation-laget — se fase 3).
  */
 export function compute(ctx: ScoringContext): BestBallResult {
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossKey = (userId: string, holeNumber: number) => `${userId}#${holeNumber}`;
   const grossByKey = new Map<string, number | null>();
@@ -154,6 +155,11 @@ export function compute(ctx: ScoringContext): BestBallResult {
     });
 
     const { total, missingHoles } = teamTotal(holes);
+    // #2625: against the team row's par (the first member's tee), the same
+    // par the board's hole tones read.
+    const played = holes.filter((h) => h.teamNet !== null);
+    const toPar =
+      played.length > 0 ? played.reduce((sum, h) => sum + (h.teamNet as number) - h.par, 0) : null;
 
     return {
       teamNumber,
@@ -161,15 +167,27 @@ export function compute(ctx: ScoringContext): BestBallResult {
       holes,
       total,
       missingHoles,
+      toPar,
     };
   });
 
   // Ranking-arrays indeksert på HULLNUMMER, ikke posisjon (#1441 D11): et
   // back9-spills hull 10–18 må ligge på plass 9–17, der tie-break-cascaden
   // leser. Regelen (scope, 0 for hull utenfor, #635-padding) har ett hjem i
-  // `rankingHolesByNumber` (#2217).
+  // `rankingHolesByNumber` (#2217). #2625: a net-to-par game slots
+  // teamNet − par instead, so an unplayed hole counts as par.
   const ranked = rankTeams(
-    baseLines.map((l) => ({ id: l.teamNumber, holes: rankingHolesByNumber(l.holes) })),
+    baseLines.map((l) => ({
+      id: l.teamNumber,
+      holes: rankingHolesByNumber(
+        netToParRanking
+          ? l.holes.map((h) => ({
+              holeNumber: h.holeNumber,
+              teamNet: h.teamNet === null ? null : h.teamNet - h.par,
+            }))
+          : l.holes,
+      ),
+    })),
   );
   const rankById = new Map(ranked.map((r) => [r.id, r]));
 
@@ -183,5 +201,5 @@ export function compute(ctx: ScoringContext): BestBallResult {
     };
   });
 
-  return { kind: 'best_ball', teams };
+  return { kind: 'best_ball', ranking: netToParRanking ? 'net_to_par' : 'net_total', teams };
 }

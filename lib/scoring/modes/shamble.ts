@@ -19,9 +19,13 @@
 // fra `rankTeams` på per-hull teamScore-arrays (0-padding for pending/missing
 // hull — samme strategi som texasScramble / bestBall; UI flagger ufullstendige
 // sammenligninger via holesCounted).
+//
+// #2625: games with `mode_config.ranking === 'net_to_par'` rank on the team
+// score against `count × par` over the holes each team has played instead.
+// Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
+import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
@@ -160,6 +164,7 @@ export function compute(ctx: ScoringContext): ShambleResult {
         ? cfg.shamble_count
         : 2;
   const count = Math.max(1, Math.min(rawCount, teamSize)) as 1 | 2 | 3;
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
 
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
@@ -182,7 +187,7 @@ export function compute(ctx: ScoringContext): ShambleResult {
   const cellsByTeam = new Map<number, ShambleHoleTeamCell[]>();
   const totalsByTeam = new Map<
     number,
-    { totalScore: number; holesCounted: number }
+    { totalScore: number; holesCounted: number; toPar: number | null }
   >();
 
   for (const teamNumber of teamNumbers) {
@@ -192,14 +197,22 @@ export function compute(ctx: ScoringContext): ShambleResult {
     );
     let totalScore = 0;
     let holesCounted = 0;
-    for (const c of cells) {
+    // #2625: a hole counts `count` balls, so its par is `count × par` — the
+    // same rule as the board's hole tones (`teamLiveBoard.ts`).
+    let toPar = 0;
+    cells.forEach((c, idx) => {
       if (!c.pending && c.teamScore !== null) {
         totalScore += c.teamScore;
         holesCounted += 1;
+        toPar += c.teamScore - count * holesSorted[idx].par;
       }
-    }
+    });
     cellsByTeam.set(teamNumber, cells);
-    totalsByTeam.set(teamNumber, { totalScore, holesCounted });
+    totalsByTeam.set(teamNumber, {
+      totalScore,
+      holesCounted,
+      toPar: holesCounted > 0 ? toPar : null,
+    });
   }
 
   // Hull-major rader for visning — én cell per lag, sortert teamNumber ASC.
@@ -216,9 +229,23 @@ export function compute(ctx: ScoringContext): ShambleResult {
   // hull padder pending/missing med 0 (samme behandling som texasScramble).
   // Et lag uten ETT eneste registrert hull paddes med UNPLAYED_PADDING — ellers
   // ville sum 0 tolkes som laveste (beste) og laget kåret som vinner (#635).
+  // #2625: a net-to-par game slots teamScore − count × par by hole number
+  // (`rankingHolesByNumber`): an unplayed hole counts as par, and a team
+  // without a single hole gets UNPLAYED_PADDING.
   const ranked = rankTeams(
     teamNumbers.map((tn) => {
       const cells = cellsByTeam.get(tn) ?? [];
+      if (netToParRanking) {
+        return {
+          id: tn,
+          holes: rankingHolesByNumber(
+            cells.map((c, idx) => ({
+              holeNumber: holesSorted[idx].number,
+              teamNet: c.teamScore === null ? null : c.teamScore - count * holesSorted[idx].par,
+            })),
+          ),
+        };
+      }
       const teamPlayedAny = cells.some((c) => c?.teamScore != null);
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
@@ -233,13 +260,14 @@ export function compute(ctx: ScoringContext): ShambleResult {
     const members = (teamPlayers.get(tn) ?? [])
       .map((m) => m.userId)
       .sort((a, b) => a.localeCompare(b));
-    const totals = totalsByTeam.get(tn) ?? { totalScore: 0, holesCounted: 0 };
+    const totals = totalsByTeam.get(tn) ?? { totalScore: 0, holesCounted: 0, toPar: null };
     const r = rankById.get(tn);
     return {
       teamNumber: tn,
       members,
       totalScore: totals.totalScore,
       holesCounted: totals.holesCounted,
+      toPar: totals.toPar,
       rank: r?.rank ?? 0,
       tiedWith: r?.tiedWith ?? [],
       decidedBy: r?.decidedBy ?? null,
@@ -254,6 +282,7 @@ export function compute(ctx: ScoringContext): ShambleResult {
 
   return {
     kind: 'shamble',
+    ranking: netToParRanking ? 'net_to_par' : 'net_total',
     variant,
     count,
     scoring,

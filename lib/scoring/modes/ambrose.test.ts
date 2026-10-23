@@ -172,3 +172,37 @@ describe('ambrose.compute — ujevne lag (#2569)', () => {
     expect(result.teams.find((t) => t.teamNumber === 2)!.teamHandicap).toBe(10);
   });
 });
+
+describe('ambrose.compute — ranking: net_to_par (#2625)', () => {
+  it('inherits the net-to-par ranking from the shared scramble core', () => {
+    // The issue's example: team 1 net 7 after 3 holes (−5), team 2 net 17
+    // after 6 holes (−7). With the flag team 2 leads; without it team 1 does.
+    const players: ScoringPlayer[] = [1, 2].flatMap((team) =>
+      Array.from({ length: 2 }, (_, i) => ({
+        userId: `t${team}${i}`,
+        teamNumber: team,
+        flightNumber: team,
+        courseHandicap: 0,
+      })),
+    );
+    const card = (userId: string, gross: number[]): ScoringHoleScore[] =>
+      gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+    const scores = [...card('t10', [2, 2, 3]), ...card('t20', [3, 3, 3, 3, 3, 2])];
+    const base = { kind: 'ambrose', team_size: 2, teams_count: 2, team_handicap_pct: 0 } as GameModeConfig;
+    const order = (modeConfig: GameModeConfig) =>
+      compute(makeCtx({ players, holes: par4Holes(18), scores, modeConfig })).teams.map((t) => [
+        t.teamNumber,
+        t.rank,
+        t.toPar,
+      ]);
+
+    expect(order({ ...base, ranking: 'net_to_par' } as GameModeConfig)).toEqual([
+      [2, 1, -7],
+      [1, 2, -5],
+    ]);
+    expect(order(base)).toEqual([
+      [1, 1, -5],
+      [2, 2, -7],
+    ]);
+  });
+});

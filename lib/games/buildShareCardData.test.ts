@@ -177,9 +177,10 @@ describe('solo_strokeplay — neutral card (sharerId null)', () => {
 describe('best_ball — sharer is team member', () => {
   const result: BestBallResult = {
     kind: 'best_ball',
+    ranking: 'net_total',
     teams: [
-      { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 68, missingHoles: [], rank: 1, tiedWith: [] },
-      { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 71, missingHoles: [], rank: 2, tiedWith: [] },
+      { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], total: 68, missingHoles: [], toPar: null, rank: 1, tiedWith: [] },
+      { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], total: 71, missingHoles: [], toPar: null, rank: 2, tiedWith: [] },
     ],
   };
 
@@ -530,6 +531,7 @@ describe('wolf — score labels', () => {
 describe('texas_scramble — team score labels', () => {
   const result: TexasScrambleResult = {
     kind: 'texas_scramble',
+    ranking: 'net_total',
     teams: [
       {
         teamNumber: 1,
@@ -543,6 +545,7 @@ describe('texas_scramble — team score labels', () => {
         totalNet: 68,
         totalGross: 70,
         missingHoles: [],
+        toPar: null,
         rank: 1,
         tiedWith: [],
       },
@@ -727,13 +730,14 @@ describe('vs par over played holes (#2217)', () => {
   function shamble(variant: 'shamble' | 'champagne', count: 2 | 3, totalScore: number): ShambleResult {
     return {
       kind: 'shamble',
+      ranking: 'net_total',
       variant,
       count,
       scoring: 'net',
       teamSize: 4,
       holes: [],
       teams: [
-        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore, holesCounted: 18, rank: 1, tiedWith: [] },
+        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore, holesCounted: 18, toPar: null, rank: 1, tiedWith: [] },
       ],
     };
   }
@@ -751,6 +755,7 @@ describe('vs par over played holes (#2217)', () => {
   it('manglende hull: best ball with 17–18 unplayed, 66 → +2', () => {
     const result: BestBallResult = {
       kind: 'best_ball',
+      ranking: 'net_total',
       teams: [
         {
           teamNumber: 1,
@@ -758,6 +763,7 @@ describe('vs par over played holes (#2217)', () => {
           holes: holeNumbers.map((n) => ({ holeNumber: n, par: 4, strokeIndex: n, teamNet: netFor(n), contributorIds: [], players: [] })),
           total: 66,
           missingHoles: [17, 18],
+          toPar: null,
           rank: 1,
           tiedWith: [],
         },
@@ -770,6 +776,7 @@ describe('vs par over played holes (#2217)', () => {
   it('manglende hull: texas_scramble with 17–18 unplayed, 66 → +2', () => {
     const result: TexasScrambleResult = {
       kind: 'texas_scramble',
+      ranking: 'net_total',
       teams: [
         {
           teamNumber: 1,
@@ -783,6 +790,7 @@ describe('vs par over played holes (#2217)', () => {
           totalNet: 66,
           totalGross: 66,
           missingHoles: [17, 18],
+          toPar: null,
           rank: 1,
           tiedWith: [],
         },
@@ -820,6 +828,7 @@ describe('vs par over played holes (#2217)', () => {
   it('a competitor with hole rows but no played hole → —', () => {
     const result: BestBallResult = {
       kind: 'best_ball',
+      ranking: 'net_total',
       teams: [
         {
           teamNumber: 1,
@@ -827,6 +836,7 @@ describe('vs par over played holes (#2217)', () => {
           holes: holeNumbers.map((n) => ({ holeNumber: n, par: 4, strokeIndex: n, teamNet: null, contributorIds: [], players: [] })),
           total: 0,
           missingHoles: holeNumbers,
+          toPar: null,
           rank: 1,
           tiedWith: [],
         },
@@ -897,6 +907,7 @@ describe('memberNames on placement rows (#2319)', () => {
     const ids = ['u1', 'u2', 'u3', 'u4'].slice(0, teamSize);
     return {
       kind: 'best_ball',
+      ranking: 'net_total',
       teams: [
         { teamNumber: 1, playerIds: ids, holes: [], total: 70, rank: 1, tiedWith: [] },
       ],

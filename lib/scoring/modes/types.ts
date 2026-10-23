@@ -461,7 +461,18 @@ export function formatCapturesPutts(mode: GameMode): boolean {
  *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
 export type GameModeConfig =
-  | { kind: 'best_ball'; team_size: 2; teams_count: number }
+  | {
+      kind: 'best_ball';
+      team_size: 2;
+      teams_count: number;
+      /**
+       * #2625: `'net_to_par'` ranks the teams on strokes against par over the
+       * holes each team has played. Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the sum of played holes (`rankTeams`).
+       */
+      ranking?: 'net_to_par';
+    }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
   | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified' }
@@ -490,6 +501,13 @@ export type GameModeConfig =
        * Never read by the scoring.
        */
       min_tee_shots?: 3 | 4 | 5 | 6;
+      /**
+       * #2625: `'net_to_par'` ranks the teams on strokes against par over the
+       * holes each team has played. Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the sum of played holes (`rankTeams`).
+       */
+      ranking?: 'net_to_par';
     }
   | {
       /**
@@ -515,6 +533,13 @@ export type GameModeConfig =
        * Never read by the scoring.
        */
       min_tee_shots?: 3 | 4 | 5 | 6;
+      /**
+       * #2625: `'net_to_par'` ranks the teams on strokes against par over the
+       * holes each team has played. Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the sum of played holes (`rankTeams`).
+       */
+      ranking?: 'net_to_par';
     }
   | {
       /**
@@ -540,6 +565,13 @@ export type GameModeConfig =
        * Never read by the scoring.
        */
       min_tee_shots?: 3 | 4 | 5 | 6;
+      /**
+       * #2625: `'net_to_par'` ranks the teams on strokes against par over the
+       * holes each team has played. Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the sum of played holes (`rankTeams`).
+       */
+      ranking?: 'net_to_par';
     }
   | {
       kind: 'fourball_matchplay';
@@ -787,6 +819,13 @@ export type GameModeConfig =
        * Never read by the scoring.
        */
       min_tee_shots?: 3 | 4 | 5 | 6;
+      /**
+       * #2625: `'net_to_par'` ranks the teams on strokes against par over the
+       * holes each team has played. Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the sum of played holes (`rankTeams`).
+       */
+      ranking?: 'net_to_par';
     }
   | {
       kind: 'patsome';
@@ -916,6 +955,13 @@ export interface BestBallTeamLine {
   holes: BestBallHoleRow[];
   total: number;
   missingHoles: number[];
+  /**
+   * #2625: Σ (the team's hole score − the team's par) over the holes the team
+   * has played; `null` when it has played none. Always computed. It is what
+   * the game ranks on when `ranking === 'net_to_par'`; other games rank on
+   * the sum and only carry it along.
+   */
+  toPar: number | null;
   rank: number;
   tiedWith: number[];
   /**
@@ -928,6 +974,12 @@ export interface BestBallTeamLine {
 
 export interface BestBallResult {
   kind: 'best_ball';
+  /**
+   * #2625: the rule the teams are ranked on — `'net_to_par'` for a game with
+   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
+   * read it from the result and show to par exactly when it says so.
+   */
+  ranking: 'net_to_par' | 'net_total';
   teams: BestBallTeamLine[];
 }
 
@@ -1365,6 +1417,13 @@ export interface TexasScrambleTeamLine {
   totalNet: number;
   totalGross: number;
   missingHoles: number[];
+  /**
+   * #2625: Σ (the team's hole score − the team's par) over the holes the team
+   * has played; `null` when it has played none. Always computed. It is what
+   * the game ranks on when `ranking === 'net_to_par'`; other games rank on
+   * the sum and only carry it along.
+   */
+  toPar: number | null;
   rank: number;
   tiedWith: number[];
   /**
@@ -1377,6 +1436,12 @@ export interface TexasScrambleTeamLine {
 
 export interface TexasScrambleResult {
   kind: 'texas_scramble';
+  /**
+   * #2625: the rule the teams are ranked on — `'net_to_par'` for a game with
+   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
+   * read it from the result and show to par exactly when it says so.
+   */
+  ranking: 'net_to_par' | 'net_total';
   /** Per-lag-rader — sortert rank stigende (lavest totalNet = rank 1). */
   teams: TexasScrambleTeamLine[];
 }
@@ -2100,6 +2165,13 @@ export interface ShambleTeamLine {
   totalScore: number;
   /** Antall hull med ikke-pending teamScore. */
   holesCounted: number;
+  /**
+   * #2625: Σ (the team score − `count` × the hole's par) over the holes the team
+   * has played; `null` when it has played none. Always computed. It is what
+   * the game ranks on when `ranking === 'net_to_par'`; other games rank on
+   * the sum and only carry it along.
+   */
+  toPar: number | null;
   rank: number;
   /** teamNumbers med eksakt samme rank etter 5-tier cascade. */
   tiedWith: number[];
@@ -2113,6 +2185,12 @@ export interface ShambleTeamLine {
 
 export interface ShambleResult {
   kind: 'shamble';
+  /**
+   * #2625: the rule the teams are ranked on — `'net_to_par'` for a game with
+   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
+   * read it from the result and show to par exactly when it says so.
+   */
+  ranking: 'net_to_par' | 'net_total';
   /** Hvilken variant som ble spilt. */
   variant: 'shamble' | 'champagne';
   /** Antall laveste effective-scorer som teller per hull (1/2/3). */

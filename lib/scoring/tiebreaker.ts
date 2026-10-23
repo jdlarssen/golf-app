@@ -1,3 +1,5 @@
+import type { GameModeConfig } from './modes/types';
+
 export interface TeamForRanking {
   id: number;
   holes: number[];  // length 18 expected
@@ -124,4 +126,37 @@ export function rankingHolesByNumber(
     if (!teamNetByHoleNumber.has(holeNumber)) return 0;
     return teamNetByHoleNumber.get(holeNumber) ?? (playedAny ? 0 : UNPLAYED_PADDING);
   });
+}
+
+/**
+ * #2253 / #2625: the formats that can rank on net to par — solo strokeplay and
+ * the team strokeplay formats. New games of these kinds are stamped with
+ * `ranking: 'net_to_par'` (`stampNewGameModeConfig`).
+ */
+const NET_TO_PAR_KINDS = [
+  'solo_strokeplay',
+  'best_ball',
+  'texas_scramble',
+  'ambrose',
+  'florida_scramble',
+  'shamble',
+] as const satisfies readonly GameModeConfig['kind'][];
+
+export type NetToParModeConfig = Extract<
+  GameModeConfig,
+  { kind: (typeof NET_TO_PAR_KINDS)[number] }
+>;
+
+/** True for a format that can carry the net-to-par flag. */
+export function supportsNetToParRanking(modeConfig: GameModeConfig): modeConfig is NetToParModeConfig {
+  return (NET_TO_PAR_KINDS as readonly string[]).includes(modeConfig.kind);
+}
+
+/**
+ * #2253 / #2625: true when the game ranks on net to par (`mode_config.ranking`).
+ * The one home for the question — the engine, the boards and the result
+ * surfaces all ask it here, so they cannot disagree on a game's rule.
+ */
+export function ranksByNetToPar(modeConfig: GameModeConfig): boolean {
+  return supportsNetToParRanking(modeConfig) && modeConfig.ranking === 'net_to_par';
 }
