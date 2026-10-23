@@ -9,6 +9,7 @@ import { firstName } from '@/lib/firstName';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import type { TeamLine } from '@/lib/leaderboard';
 import { formatVsPar } from '@/lib/scoring/scoreTone';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 
 type Props = {
   gameId: string;
@@ -21,6 +22,11 @@ type Props = {
   /** Back-link href — typically points back to the originating hole. */
   backHref: string;
   footerSlot?: ReactNode;
+  /**
+   * #2625: a net-to-par team game (Texas family) leads each row with the
+   * team's brutto to par, the number `teams` is ranked on.
+   */
+  ranking?: 'net_to_par';
 };
 
 /**
@@ -36,6 +42,7 @@ export function RevealBruttoView({
   holesPlayed,
   backHref,
   footerSlot,
+  ranking,
 }: Props) {
   const t = useTranslations('leaderboard');
   return (
@@ -67,7 +74,7 @@ export function RevealBruttoView({
           </li>
         )}
         {teams.map((line) => (
-          <RevealTeamRow key={line.teamNumber} line={line} />
+          <RevealTeamRow key={line.teamNumber} line={line} ranking={ranking} />
         ))}
       </ul>
 
@@ -85,7 +92,7 @@ function deltaText(total: number, parPlayed: number): string {
   return formatVsPar(total - parPlayed);
 }
 
-function RevealTeamRow({ line }: { line: TeamLine }) {
+function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_par' }) {
   const t = useTranslations('leaderboard');
   // Per-player brutto sum + par-played across played holes.
   const perPlayerBrutto = new Map<string, number>();
@@ -111,7 +118,9 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
     if (teamHasScore) teamParPlayed += h.par;
   }
 
-  const teamDelta = deltaText(line.total, teamParPlayed);
+  // #2625: a net-to-par game leads with the team's to par; the sum goes under.
+  const headline = teamHeadline(ranking, line, formatVsPar);
+  const teamDelta = headline.unit === 'toPar' ? String(line.total) : deltaText(line.total, teamParPlayed);
 
   return (
     <li className="list-none">
@@ -149,7 +158,7 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
           </div>
           <div className="text-right shrink-0">
             <p className="score-num text-text leading-none text-3xl">
-              {line.total}
+              {headline.text}
             </p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
               {teamDelta && (

@@ -475,6 +475,7 @@ export async function renderLeaderboardContent({
     withdrawn: bestBallWithdrawn,
     holes,
     scores,
+    ranking,
   } = bestBallBoardInput({
     gameMode: game.game_mode,
     modeConfig: game.mode_config,
@@ -552,6 +553,7 @@ export async function renderLeaderboardContent({
       holeSegment: game.hole_segment,
       navContext,
       publicView,
+      ranking,
     });
   }
 
@@ -564,7 +566,9 @@ export async function renderLeaderboardContent({
     return <RevealHiddenView gameName={game.name} backHref={backHref} />;
   }
 
-  const lines = computeLeaderboard({ mode, players, holes, scores });
+  // #2625: the game's ranking rule (net to par for a new game), one source for
+  // the board, «Hull for hull», the CSV and the app (`bestBallBoardInput`).
+  const lines = computeLeaderboard({ mode, players, holes, scores, ranking });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
   const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;
@@ -587,6 +591,7 @@ export async function renderLeaderboardContent({
         teams={orderedLines}
         mode={mode}
         coursePar={coursePar}
+        ranking={ranking}
         holesPlayed={holesPlayed}
         backHref={backHref}
         navContext={navContext}
@@ -653,6 +658,7 @@ export async function renderLeaderboardContent({
               teams={orderedLines}
               mode={mode}
               coursePar={coursePar}
+              ranking={ranking}
               holesPlayed={holesPlayed}
               backHref={backHref}
               navContext={navContext}

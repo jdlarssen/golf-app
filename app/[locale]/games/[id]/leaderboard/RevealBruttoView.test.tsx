@@ -71,6 +71,7 @@ function makeTeam(opts: {
     missingHoles: [...Array.from({ length: 9 - playedHoles.size })].map(
       (_, i) => i + playedHoles.size + 1,
     ),
+    toPar: null,
     rank: opts.rank,
     tiedWith: [],
   };

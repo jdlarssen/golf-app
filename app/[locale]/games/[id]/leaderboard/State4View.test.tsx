@@ -34,6 +34,7 @@ function makeTeam(opts: {
     })),
     total: opts.total,
     missingHoles,
+    toPar: null,
     rank: opts.rank,
     tiedWith: opts.tiedWith ?? [],
   };

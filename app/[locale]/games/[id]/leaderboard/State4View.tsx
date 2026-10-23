@@ -15,7 +15,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import { showHolesColumn, teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
-import { teamLineVsPar } from '@/lib/leaderboard/vsPar';
+import { bestBallLineVsPar, teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
 import {
   drilldownHref,
   modeToggleHref,
@@ -37,6 +37,12 @@ type Props = {
   mode: LeaderboardMode;
   /** Sum of par across all played holes (typically 72). Used for "Mot par". */
   coursePar: number;
+  /**
+   * #2625: the game's ranking rule (`bestBallBoardInput`). A net-to-par game
+   * leads with the team's to par (what `teams` is ranked on) and the gap is in
+   * to par; any other game leads with the sum, as before.
+   */
+  ranking?: 'net_to_par';
   /** Game-wide holes played — drives the «Etter X hull» subtitle (#638). */
   holesPlayed: number;
   /** Where the back-arrow should point. Defaults to home ("/"). */
@@ -87,6 +93,7 @@ export function State4View({
   teams,
   mode,
   coursePar,
+  ranking,
   holesPlayed,
   backHref = '/',
   navContext,
@@ -187,6 +194,7 @@ export function State4View({
           publicView={publicView}
           line={leader}
           coursePar={coursePar}
+          ranking={ranking}
           showHoles={showHoles}
           t={tc}
           ts={ts}
@@ -202,8 +210,9 @@ export function State4View({
             navContext={navContext}
             publicView={publicView}
             line={line}
-            leaderTotal={leader.total}
+            leader={leader}
             coursePar={coursePar}
+            ranking={ranking}
             showHoles={showHoles}
             staggerIndex={i}
             t={tc}
@@ -378,6 +387,7 @@ function LeaderCard({
   publicView,
   line,
   coursePar,
+  ranking,
   showHoles,
   t,
   ts,
@@ -388,13 +398,16 @@ function LeaderCard({
   publicView: boolean;
   line: TeamLine;
   coursePar: number;
+  ranking?: 'net_to_par';
   /** Lagene har spilt ulikt antall hull (#1982) — regnet ut én gang i State4View. */
   showHoles: boolean;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
   // #2217: over the holes the team played — a team missing 17–18 is not −6.
-  const vsPar = teamLineVsPar(line, coursePar);
+  // #2625: a net-to-par game's own to par, the number it ranks on.
+  const vsPar = bestBallLineVsPar(line, coursePar, ranking);
+  const toParFirst = teamHeadline(ranking, line).unit === 'toPar';
   const playersLine = line.players
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
@@ -477,7 +490,8 @@ function LeaderCard({
           className="mt-[18px] flex items-end justify-between pt-3.5"
           style={{ borderTop: '1px solid rgba(201,169,97,0.4)' }}
         >
-          <div className="text-left">
+          {/* #2625: a net-to-par game leads with «Mot par» on the left. */}
+          <div className={toParFirst ? 'order-2 text-right' : 'text-left'}>
             <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {ts('totalLabel', { mode: modeLabel })}
             </span>
@@ -488,7 +502,7 @@ function LeaderCard({
               {line.total}
             </span>
           </div>
-          <div className="text-right">
+          <div className={toParFirst ? 'order-1 text-left' : 'text-right'}>
             <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {ts('vsParLabel')}
             </span>
@@ -521,8 +535,9 @@ function TeamRow({
   navContext,
   publicView,
   line,
-  leaderTotal,
+  leader,
   coursePar,
+  ranking,
   showHoles,
   staggerIndex,
   t,
@@ -533,16 +548,20 @@ function TeamRow({
   navContext?: LeaderboardNavContext;
   publicView: boolean;
   line: TeamLine;
-  leaderTotal: number;
+  leader: TeamLine;
   coursePar: number;
+  ranking?: 'net_to_par';
   /** Lagene har spilt ulikt antall hull (#1982) — regnet ut én gang i State4View. */
   showHoles: boolean;
   staggerIndex: number;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
-  const gap = line.total - leaderTotal;
-  const vsPar = teamLineVsPar(line, coursePar);
+  // #2625: the row leads with what the game ranks on, and the gap is in it.
+  const vsPar = bestBallLineVsPar(line, coursePar, ranking);
+  const headline = teamHeadline(ranking, { total: line.total, toPar: vsPar }, formatVsPar);
+  const toParFirst = headline.unit === 'toPar';
+  const gap = teamHeadlineGap(ranking, line, leader);
   // Player rendering uses formatRevealName so the leaderboard reveal also
   // surfaces nicknames in their dramatic "First «Nick» Last" form — both
   // for live-mode finished games and reveal-mode finished games.
@@ -589,7 +608,7 @@ function TeamRow({
           <span className="font-serif font-medium text-text">
             {firstNames || t('noPlayers')}
           </span>
-          {gap > 0 && (
+          {gap !== null && gap > 0 && (
             <span className="text-muted">
               {' · '}
               <span className="tabular-nums">+{gap}</span> {ts('behindLeader')}
@@ -616,15 +635,17 @@ function TeamRow({
       <div className="shrink-0 text-right">
         <span
           className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text"
-          data-testid="bb-team-total"
+          data-testid={toParFirst ? 'bb-team-vs-par' : 'bb-team-total'}
         >
-          {line.total}
+          {headline.text}
         </span>
         <span
           className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
-          data-testid="bb-team-vs-par"
+          data-testid={toParFirst ? 'bb-team-total' : 'bb-team-vs-par'}
         >
-          {formatVsPar(vsPar)} {ts('parLabel')}
+          {toParFirst
+            ? `${line.total} ${t('slagLabel')}`
+            : `${formatVsPar(vsPar)} ${ts('parLabel')}`}
         </span>
       </div>
     </>
