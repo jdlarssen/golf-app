@@ -93,7 +93,7 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
 // Re-eksporter eksisterende helpers for bakoverkompatibilitet og enklere bruk.
 export { calculateCourseHandicap, applyAllowance } from './courseHandicap';
 export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
-export { rankTeams } from './tiebreaker';
+export { rankTeams, ranksByNetToPar } from './tiebreaker';
 export { holesForSegment } from './holeSegment';
 export type { HoleSegment } from './holeSegment';
 export { computeStablefordPoints } from './modes/stableford';
@@ -102,7 +102,6 @@ export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, isMatch
 export { ambroseDefaultPct } from './modes/ambrose';
 export { defaultFloridaHandicapPct } from './modes/floridaScramble';
 export { computeMatchResult } from './modes/singlesMatchplay';
-export { ranksByNetToPar } from './modes/soloStrokeplay';
 export type {
   GameMode,
   GameModeConfig,

@@ -16,11 +16,15 @@
 // `rankTeams` på per-hull team_net-arrays. Samme padding-strategi som
 // bestBall (0-padding for missing hull i ranking-arrayet; UI viser
 // missingHoles separat slik at sammenligninger kan flagges som partial).
+//
+// #2625: games with `mode_config.ranking === 'net_to_par'` rank on team net
+// against the team's par (the captain's tee) over the holes each team has
+// played instead. Games without the flag keep the rule above, byte for byte.
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
 import { scrambleTeamHandicap } from '../teamHandicap';
-import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
+import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -81,6 +85,7 @@ export function computeScramble(
   handicapPct: number,
 ): TexasScrambleResult {
   const configuredTeamSize = ctx.game.mode_config.team_size;
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
@@ -150,12 +155,14 @@ export function computeScramble(
       const missingHoles: number[] = [];
       let totalNet = 0;
       let totalGross = 0;
+      let toPar = 0;
       for (const h of holes) {
         if (h.teamNet === null || h.teamGross === null) {
           missingHoles.push(h.holeNumber);
         } else {
           totalNet += h.teamNet;
           totalGross += h.teamGross;
+          toPar += h.teamNet - h.par;
         }
       }
 
@@ -168,6 +175,7 @@ export function computeScramble(
         totalNet,
         totalGross,
         missingHoles,
+        toPar: missingHoles.length < holes.length ? toPar : null,
       };
     },
   );
@@ -176,8 +184,22 @@ export function computeScramble(
   // hull padder manglende hull med 0 (samme behandling som bestBall; UI bruker
   // missingHoles for å flagge partial). Et lag uten ETT eneste registrert hull
   // paddes med UNPLAYED_PADDING — ellers ville sum 0 kåre det som vinner (#635).
+  // #2625: a net-to-par game ranks on teamNet − par, slotted by hole number
+  // (`rankingHolesByNumber`): an unplayed hole counts 0 (par), and a team
+  // without a single hole gets UNPLAYED_PADDING and ranks last.
   const ranked = rankTeams(
     baseLines.map((l) => {
+      if (netToParRanking) {
+        return {
+          id: l.teamNumber,
+          holes: rankingHolesByNumber(
+            l.holes.map((h) => ({
+              holeNumber: h.holeNumber,
+              teamNet: h.teamNet === null ? null : h.teamNet - h.par,
+            })),
+          ),
+        };
+      }
       const teamPlayedAny = l.holes.some((h) => h?.teamNet != null);
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
@@ -201,5 +223,5 @@ export function computeScramble(
     };
   });
 
-  return { kind: 'texas_scramble', teams };
+  return { kind: 'texas_scramble', ranking: netToParRanking ? 'net_to_par' : 'net_total', teams };
 }

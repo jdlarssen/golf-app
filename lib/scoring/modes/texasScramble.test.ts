@@ -886,3 +886,126 @@ describe('texasScramble.compute — ujevne lag (#2569)', () => {
     expect(result.teams.find((t) => t.teamNumber === 1)!.teamHandicap).toBe(8);
   });
 });
+
+describe('texasScramble.compute — ranking: net_to_par (#2625)', () => {
+  // #2625: new team strokeplay games carry `ranking: 'net_to_par'` in
+  // mode_config. During the round a team that has played fewer holes is no
+  // longer ranked ahead on its smaller sum: teams rank on strokes against par
+  // over the holes each has played. Games without the flag keep today's rule.
+  const PLAIN: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 2,
+    teams_count: 2,
+    team_handicap_pct: 0,
+  };
+  const FLAGGED = { ...PLAIN, ranking: 'net_to_par' } as GameModeConfig;
+
+  const players: ScoringPlayer[] = [
+    { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+    { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+    { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+  ];
+
+  /** Captain rows: gross per hole number, in order from hole 1. */
+  function captainCard(userId: string, gross: number[]): ScoringHoleScore[] {
+    return gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+  }
+
+  // The issue's example (21.10, staging): Lag 1 net 7 after 3 holes (−5),
+  // Lag 2 net 17 after 6 holes (−7). Par 4 everywhere.
+  const issueExample = {
+    players,
+    holes: par4Holes(18),
+    scores: [...captainCard('a1', [2, 2, 3]), ...captainCard('b1', [3, 3, 3, 3, 3, 2])],
+  };
+
+  it('the issue example: Lag 2 (−7 after 6) ranks ahead of Lag 1 (−5 after 3) with the flag', () => {
+    const result = compute(makeCtx({ ...issueExample, modeConfig: FLAGGED }));
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar, t.totalNet])).toEqual([
+      [2, 1, -7, 17],
+      [1, 2, -5, 7],
+    ]);
+    expect(result.ranking).toBe('net_to_par');
+  });
+
+  it('without the flag the same round keeps today’s order (Lag 1 on the lower sum)', () => {
+    const result = compute(makeCtx({ ...issueExample, modeConfig: PLAIN }));
+    expect(
+      result.teams.map(({ teamNumber, rank, tiedWith, decidedBy, totalNet, totalGross }) => ({
+        teamNumber,
+        rank,
+        tiedWith,
+        decidedBy,
+        totalNet,
+        totalGross,
+      })),
+    ).toEqual([
+      { teamNumber: 1, rank: 1, tiedWith: [], decidedBy: null, totalNet: 7, totalGross: 7 },
+      { teamNumber: 2, rank: 2, tiedWith: [], decidedBy: 'total', totalNet: 17, totalGross: 17 },
+    ]);
+    expect(result.ranking).toBe('net_total');
+  });
+
+  it('toPar is Σ (teamNet − par) over played holes, null without a hole, also without the flag', () => {
+    // Team handicap 4 (CH 8 + 8 = 16 × 25 %) → one stroke on SI 1–4. Holes 1,
+    // 2 and 5 played, 3 and 4 skipped: net 4, 3, 5 against par 4 → 0, −1, +1.
+    const result = compute(
+      makeCtx({
+        players: players.map((p) => ({ ...p, courseHandicap: 8 })),
+        holes: par4Holes(18),
+        scores: [
+          { userId: 'a1', holeNumber: 1, gross: 5 },
+          { userId: 'a1', holeNumber: 2, gross: 4 },
+          { userId: 'a1', holeNumber: 5, gross: 5 },
+        ],
+        modeConfig: { ...PLAIN, team_handicap_pct: 25 },
+      }),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 1)!.toPar).toBe(0);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.toPar).toBeNull();
+  });
+
+  it('a team without a single hole still ranks last with the flag (#635)', () => {
+    const result = compute(
+      makeCtx({
+        players,
+        holes: par4Holes(18),
+        scores: captainCard('a1', [6, 6, 6]),
+        modeConfig: FLAGGED,
+      }),
+    );
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar])).toEqual([
+      [1, 1, 6],
+      [2, 2, null],
+    ]);
+  });
+
+  it('a finished round with the same par for everyone ranks the same with and without the flag', () => {
+    // Every team plays all 18 holes on par 4: Σ (net − par) is the sum minus
+    // 72, and every tie-break tier shifts by the same constant. Teams 2 and 3
+    // have the same card, so the property covers a shared rank too.
+    const grossFor = (seed: number, hole: number) => 3 + ((seed * 7 + hole * 5) % 4);
+    const fieldPlayers: ScoringPlayer[] = [1, 2, 3, 4].flatMap((team) => [
+      { userId: `t${team}a`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+      { userId: `t${team}b`, teamNumber: team, flightNumber: team, courseHandicap: 0 },
+    ]);
+    const seeds: Record<number, number> = { 1: 1, 2: 2, 3: 2, 4: 5 };
+    const opts = {
+      players: fieldPlayers,
+      holes: par4Holes(18),
+      scores: [1, 2, 3, 4].flatMap((team) =>
+        captainCard(
+          `t${team}a`,
+          Array.from({ length: 18 }, (_, i) => grossFor(seeds[team], i + 1)),
+        ),
+      ),
+    };
+    const shape = (r: ReturnType<typeof compute>) =>
+      r.teams.map(({ teamNumber, rank, tiedWith, decidedBy }) => ({ teamNumber, rank, tiedWith, decidedBy }));
+
+    const withFlag = shape(compute(makeCtx({ ...opts, modeConfig: FLAGGED })));
+    expect(withFlag).toEqual(shape(compute(makeCtx({ ...opts, modeConfig: PLAIN }))));
+    expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
+  });
+});

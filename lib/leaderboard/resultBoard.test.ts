@@ -208,12 +208,14 @@ describe('teamResultBoard — the rows of a finished team board', () => {
       })),
       total,
       missingHoles: [],
+      toPar: null,
       rank,
       tiedWith: [],
       decidedBy: rank === 1 ? null : ('total' as const),
     });
     const result: BestBallResult = {
       kind: 'best_ball',
+      ranking: 'net_total',
       teams: [line(1, 74, 3), line(2, 70, 1), line(3, 72, 2), line(4, 74, 3)],
     };
     const board = teamResultBoard(result, teamName);

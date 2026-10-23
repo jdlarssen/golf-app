@@ -15,10 +15,9 @@
 // instead. Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankingHolesByNumber, rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
+import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
-  GameModeConfig,
   ScoringContext,
   ScoringHole,
   ScoringPlayer,
@@ -31,15 +30,6 @@ import type {
 // ranking-arrayet. Solo strokeplay padder ALLE uspilte hull, så en spiller
 // som har spilt 18 hull rangerer foran en som har spilt færre ved ellers lik
 // total — og en spiller uten skår havner sist. Se tiebreaker.ts for detaljer.
-
-/**
- * #2253: true when the game ranks on net-to-par (`mode_config.ranking`). The
- * one home for the question — the engine, the live board and the result
- * surfaces all ask it here, so they cannot disagree on a game's rule.
- */
-export function ranksByNetToPar(modeConfig: GameModeConfig): boolean {
-  return modeConfig.kind === 'solo_strokeplay' && modeConfig.ranking === 'net_to_par';
-}
 
 interface PlayerHoleStrokes {
   userId: string;

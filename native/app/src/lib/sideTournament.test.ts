@@ -30,7 +30,7 @@ const TEAM_STABLEFORD: ModeResult = {
   variant: 'team',
   teams: [],
 };
-const BEST_BALL: ModeResult = { kind: 'best_ball', teams: [] };
+const BEST_BALL: ModeResult = { kind: 'best_ball', ranking: 'net_total', teams: [] };
 
 function player(overrides: Partial<BundlePlayer> = {}): BundlePlayer {
   return {
@@ -282,7 +282,7 @@ describe('withdrawn players', () => {
         ...scoresFor('user-c', { 3: 4 }),
       ],
       sideWinnerRows: [],
-      result: { kind: 'texas_scramble', teams: [] },
+      result: { kind: 'texas_scramble', ranking: 'net_total', teams: [] },
     });
 
     expect(awardsFor(data, 1, 'hole_win').map((a) => a.holeNumber)).toContain(3);

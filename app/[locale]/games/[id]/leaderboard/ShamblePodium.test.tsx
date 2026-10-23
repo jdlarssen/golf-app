@@ -11,7 +11,7 @@ function makeTeamLine(
   totalScore: number,
   tiedWith: number[] = [],
 ): ShambleTeamLine {
-  return { teamNumber, members, totalScore, holesCounted: 18, rank, tiedWith };
+  return { teamNumber, members, totalScore, holesCounted: 18, toPar: null, rank, tiedWith };
 }
 
 function makeResult(teams: ShambleTeamLine[]): ShambleResult {
@@ -19,6 +19,7 @@ function makeResult(teams: ShambleTeamLine[]): ShambleResult {
   // har egen render-test.
   return {
     kind: 'shamble',
+    ranking: 'net_total',
     variant: 'shamble',
     count: 2,
     scoring: 'net',

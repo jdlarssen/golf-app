@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { rankTeams, rankingHolesByNumber, UNPLAYED_PADDING } from './tiebreaker';
+import { rankTeams, rankingHolesByNumber, ranksByNetToPar, UNPLAYED_PADDING } from './tiebreaker';
+import type { GameModeConfig } from './modes/types';
 
 describe('rankTeams', () => {
   it('orders by total ascending', () => {
@@ -234,5 +235,39 @@ describe('rankingHolesByNumber', () => {
       [1, 1],
       [2, 2],
     ]);
+  });
+});
+
+describe('ranksByNetToPar (#2253, #2625)', () => {
+  // The one question every surface asks: does this game rank on net to par?
+  // Solo strokeplay (#2253) and the team strokeplay formats (#2625) answer yes
+  // when the flag was stamped at creation; every other game answers no.
+  const flaggable: GameModeConfig[] = [
+    { kind: 'solo_strokeplay', team_size: 1 },
+    { kind: 'best_ball', team_size: 2, teams_count: 2 },
+    { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+    { kind: 'ambrose', team_size: 4, teams_count: 2, team_handicap_pct: 12.5 },
+    { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+    {
+      kind: 'shamble',
+      team_size: 4,
+      teams_count: 2,
+      shamble_variant: 'shamble',
+      shamble_count: 2,
+      shamble_scoring: 'net',
+    },
+  ];
+
+  it.each(flaggable.map((c) => [c.kind, c] as const))('%s: true with the flag, false without', (_kind, config) => {
+    expect(ranksByNetToPar({ ...config, ranking: 'net_to_par' } as GameModeConfig)).toBe(true);
+    expect(ranksByNetToPar(config)).toBe(false);
+  });
+
+  it.each([
+    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+    { kind: 'nassau', team_size: 1 },
+  ])('$kind: false even with a stray flag', (config) => {
+    expect(ranksByNetToPar({ ...config, ranking: 'net_to_par' } as unknown as GameModeConfig)).toBe(false);
   });
 });
