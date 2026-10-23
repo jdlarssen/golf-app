@@ -95,7 +95,7 @@ export function BestBallHoleCardsView({
   const view = bestBallDrilldown({ lines, requestedTeam: team, coursePar, ranking });
   if (view === null) return null;
   // #2625: et spill som rangeres mot par, leder med mot par; summen står under.
-  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar }, formatVsPar);
+  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar });
   const toParFirst = headline.unit === 'toPar';
   const front = view.nines.find((n) => n.key === 'front');
   const back = view.nines.find((n) => n.key === 'back');
@@ -123,12 +123,19 @@ export function BestBallHoleCardsView({
           </Text>
         </View>
         <View style={styles.heroRight}>
-          <Text style={[styles.heroTotal, ui.num, { color: colors.text }]} testID="hole-by-hole-team-total">
+          {/* Test-id-ene følger tallet: «-total» er alltid summen, «-vs-par» alltid mot par. */}
+          <Text
+            style={[styles.heroTotal, ui.num, { color: colors.text }]}
+            testID={toParFirst ? 'hole-by-hole-team-vs-par' : 'hole-by-hole-team-total'}
+          >
             {headline.text}
           </Text>
-          <Text style={[styles.heroVsPar, ui.num, { color: colors.muted }]} testID="hole-by-hole-team-vs-par">
+          <Text
+            style={[styles.heroVsPar, ui.num, { color: colors.muted }]}
+            testID={toParFirst ? 'hole-by-hole-team-total' : 'hole-by-hole-team-vs-par'}
+          >
             {toParFirst
-              ? `${view.total} ${BEST_BALL_HOLES_TEXT.strokesSuffix}`
+              ? `${BEST_BALL_HOLES_TEXT.toParPrefix} · ${view.total} ${BEST_BALL_HOLES_TEXT.strokesSuffix}`
               : `${formatVsPar(view.totalVsPar)} ${BEST_BALL_HOLES_TEXT.vsParSuffix}`}
           </Text>
         </View>
@@ -153,8 +160,16 @@ export function BestBallHoleCardsView({
           </Text>
         </View>
         <View style={styles.totalRight}>
-          <Text style={[styles.barTotal, ui.num, { color: colors.text }]}>{headline.text}</Text>
-          <Text style={[styles.barVsPar, ui.num, { color: colors.muted }]} testID="hole-by-hole-total-vs-par">
+          <Text
+            style={[styles.barTotal, ui.num, { color: colors.text }]}
+            testID={toParFirst ? 'hole-by-hole-total-vs-par' : undefined}
+          >
+            {headline.text}
+          </Text>
+          <Text
+            style={[styles.barVsPar, ui.num, { color: colors.muted }]}
+            testID={toParFirst ? undefined : 'hole-by-hole-total-vs-par'}
+          >
             {toParFirst ? view.total : formatVsPar(view.totalVsPar)}
           </Text>
         </View>

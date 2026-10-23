@@ -239,8 +239,9 @@ describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
     expect([BEST_BALL_HOLES_TEXT.legendBest, BEST_BALL_HOLES_TEXT.vsParSuffix]).toEqual(['B', 'PAR']);
   });
 
-  it('«SLAG» bak summen er webbens slagLabel i store bokstaver (#2625)', () => {
+  it('«MOT PAR · 34 SLAG» er webbens vsParLabel og slagLabel i store bokstaver (#2625)', () => {
     expect(BEST_BALL_HOLES_TEXT.strokesSuffix).toBe(source.leaderboard.common.slagLabel.toUpperCase());
+    expect(BEST_BALL_HOLES_TEXT.toParPrefix).toBe(source.leaderboard.common.vsParLabel.toUpperCase());
   });
 });
 
