@@ -31,6 +31,7 @@ import { fetchBagTagExtras } from '../data/bagTag';
 import { fetchFriendCode } from '../data/friends';
 import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
+import { qrMatrix, qrPath } from '../lib/qrMatrix';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
@@ -289,6 +290,12 @@ describe('Profile', () => {
       await fireEvent.press(await screen.findByRole('button', { name: PROFILE_TEXT.friendQrLabel }));
       expect(screen.getByTestId('friend-qr-sheet')).toBeTruthy();
       expect(screen.getByTestId('friend-qr-sheet')).toHaveTextContent(MY_NAME, { exact: false });
+      // Koden på taggen og på arket tegner nøyaktig venne-adressen, med koden
+      // fra `fetchFriendCode` og byggets web-adresse.
+      const drawn = qrPath(qrMatrix('https://staging.example/venner/legg-til/abcd1234'), 1);
+      expect(
+        screen.getAllByTestId('qr-code-modules', { includeHiddenElements: true }).map((node) => node.props.d),
+      ).toEqual([drawn, drawn]);
       await screen.unmount();
 
       fetchFriendCodeMock.mockResolvedValue(null);
