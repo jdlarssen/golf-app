@@ -15,7 +15,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import { showHolesColumn, teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
-import { bestBallLineVsPar, teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
+import { bestBallLineVsPar, formatTeamVsPar, teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
 import {
   drilldownHref,
   modeToggleHref,
@@ -425,6 +425,34 @@ function LeaderCard({
         context: navContext,
       });
   const modeLabel = mode === 'netto' ? t('netto') : t('brutto');
+  const totalCell = (align: string) => (
+    <div className={align}>
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+        {ts('totalLabel', { mode: modeLabel })}
+      </span>
+      <span
+        className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text"
+        data-testid="bb-team-total"
+      >
+        {line.total}
+      </span>
+    </div>
+  );
+  const vsParCell = (align: string) => (
+    <div className={align}>
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+        {ts('vsParLabel')}
+      </span>
+      <span
+        data-testid="bb-team-vs-par"
+        className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
+          vsPar !== null && vsPar < 0 ? 'text-score-under-fg' : 'text-text'
+        }`}
+      >
+        {formatTeamVsPar(ranking, vsPar)}
+      </span>
+    </div>
+  );
 
   return (
     // Two-layer structure: outer wrapper owns the entry animation (reveal-up),
@@ -490,31 +518,19 @@ function LeaderCard({
           className="mt-[18px] flex items-end justify-between pt-3.5"
           style={{ borderTop: '1px solid rgba(201,169,97,0.4)' }}
         >
-          {/* #2625: a net-to-par game leads with «Mot par» on the left. */}
-          <div className={toParFirst ? 'order-2 text-right' : 'text-left'}>
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
-              {ts('totalLabel', { mode: modeLabel })}
-            </span>
-            <span
-              className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text"
-              data-testid="bb-team-total"
-            >
-              {line.total}
-            </span>
-          </div>
-          <div className={toParFirst ? 'order-1 text-left' : 'text-right'}>
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
-              {ts('vsParLabel')}
-            </span>
-            <span
-              data-testid="bb-team-vs-par"
-              className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
-                vsPar !== null && vsPar < 0 ? 'text-score-under-fg' : 'text-text'
-              }`}
-            >
-              {formatVsPar(vsPar)}
-            </span>
-          </div>
+          {/* #2625: a net-to-par game leads with «Mot par» on the left, first in
+              the DOM too, so a screen reader reads it first. */}
+          {toParFirst ? (
+            <>
+              {vsParCell('text-left')}
+              {totalCell('text-right')}
+            </>
+          ) : (
+            <>
+              {totalCell('text-left')}
+              {vsParCell('text-right')}
+            </>
+          )}
         </div>
 
         {href && (
@@ -559,7 +575,7 @@ function TeamRow({
 }) {
   // #2625: the row leads with what the game ranks on, and the gap is in it.
   const vsPar = bestBallLineVsPar(line, coursePar, ranking);
-  const headline = teamHeadline(ranking, { total: line.total, toPar: vsPar }, formatVsPar);
+  const headline = teamHeadline(ranking, { total: line.total, toPar: vsPar });
   const toParFirst = headline.unit === 'toPar';
   const gap = teamHeadlineGap(ranking, line, leader);
   // Player rendering uses formatRevealName so the leaderboard reveal also
@@ -644,7 +660,7 @@ function TeamRow({
           data-testid={toParFirst ? 'bb-team-total' : 'bb-team-vs-par'}
         >
           {toParFirst
-            ? `${line.total} ${t('slagLabel')}`
+            ? `${t('vsParLabel')} · ${line.total} ${t('slagLabel')}`
             : `${formatVsPar(vsPar)} ${ts('parLabel')}`}
         </span>
       </div>

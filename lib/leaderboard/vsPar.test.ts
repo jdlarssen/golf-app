@@ -3,6 +3,7 @@ import type { TeamLine } from '@/lib/leaderboard';
 import { formatVsPar as formatTableVsPar } from '@/lib/scoring/scoreTone';
 import {
   bestBallLineVsPar,
+  formatTeamVsPar,
   formatVsPar,
   teamHeadline,
   teamHeadlineGap,
@@ -145,5 +146,21 @@ describe('bestBallLineVsPar (#2625)', () => {
   it('otherwise teamLineVsPar, as before', () => {
     expect(bestBallLineVsPar(line, 8, undefined)).toBe(teamLineVsPar(line, 8));
     expect(bestBallLineVsPar(line, 8, undefined)).toBe(0);
+  });
+});
+
+describe('formatTeamVsPar (#2625)', () => {
+  // A net-to-par game shows its to par with U+2212 on every surface, like the
+  // board, the podium and the share card; other games keep the tables'
+  // hyphen-minus, as before.
+  it.each([
+    ['net_to_par', -5, '\u22125'],
+    ['net_to_par', 0, 'E'],
+    ['net_to_par', 3, '+3'],
+    ['net_to_par', null, '—'],
+    ['net_total', -5, '-5'],
+    [undefined, -5, '-5'],
+  ] as const)('%s, %s → %s', (ranking, n, label) => {
+    expect(formatTeamVsPar(ranking, n)).toBe(label);
   });
 });

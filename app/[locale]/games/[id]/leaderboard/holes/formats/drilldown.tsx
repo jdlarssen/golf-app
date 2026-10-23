@@ -191,7 +191,7 @@ function DrilldownView({
   // narrow tiles.
   const isFinished = !isActive;
   // #2625: a net-to-par game leads with its to par, the sum goes second.
-  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar }, formatVsPar);
+  const headline = teamHeadline(view.ranking, { total: view.total, toPar: view.totalVsPar });
   const toParFirst = headline.unit === 'toPar';
   const playerMeta = isFinished
     ? bestBallRevealMeta(view.players)
@@ -235,18 +235,20 @@ function DrilldownView({
             </p>
           </div>
           <div className="shrink-0 text-right">
+            {/* The test ids follow the number: «-total» is always the sum and
+                «-vs-par» always to par, whichever leads (#2625). */}
             <span
               className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text"
-              data-testid="drilldown-team-total"
+              data-testid={toParFirst ? 'drilldown-team-vs-par' : 'drilldown-team-total'}
             >
               {headline.text}
             </span>
             <span
               className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
-              data-testid="drilldown-team-vs-par"
+              data-testid={toParFirst ? 'drilldown-team-total' : 'drilldown-team-vs-par'}
             >
               {toParFirst
-                ? `${view.total} ${tc('slagLabel')}`
+                ? `${tc('vsParLabel')} · ${view.total} ${tc('slagLabel')}`
                 : `${formatVsPar(view.totalVsPar)} PAR`}
             </span>
           </div>
@@ -310,12 +312,15 @@ function DrilldownView({
               </span>
             </div>
             <div className="flex items-baseline gap-3">
-              <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
+              <span
+                className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums"
+                data-testid={toParFirst ? 'drilldown-total-vs-par' : undefined}
+              >
                 {headline.text}
               </span>
               <span
                 className="font-sans text-[14px] font-semibold tabular-nums text-muted"
-                data-testid="drilldown-total-vs-par"
+                data-testid={toParFirst ? undefined : 'drilldown-total-vs-par'}
               >
                 {toParFirst ? view.total : formatVsPar(view.totalVsPar)}
               </span>
