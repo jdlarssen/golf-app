@@ -35,8 +35,9 @@
     },
     "trial": {
       "from": "2026-10-18",
-      "until": "2026-11-01",
+      "until": "2026-11-29",
       "probeEvery": 10,
+      "effortProbeEvery": 5,
       "moveToOpus": { "attempts": 5, "escalations": 2 },
       "moveBack": { "probes": 3 },
       "fixWindowDays": 14
