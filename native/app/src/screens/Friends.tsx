@@ -76,7 +76,7 @@ import {
   roundsSubline,
   type StatusLine,
 } from '../lib/friendsCopy';
-import { describeWebLinkFailure, webUrl } from '../lib/webLink';
+import { describeWebLinkFailure, friendLinkPath, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
 import { withSystemArrows } from '../components/SystemArrow';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
@@ -212,7 +212,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
   const onShare = useCallback(async (code: string) => {
     setShareNote(null);
-    const target = webUrl(`/venner/legg-til/${code}`);
+    const target = webUrl(friendLinkPath(code));
     if (!target.ok) {
       setShareNote(describeWebLinkFailure(target.reason));
       return;
