@@ -15,6 +15,7 @@ import { RoundReportCard } from '../RoundReportCard';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
+import { withCaptainFirst } from '@/lib/games/teamCaptain';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -117,9 +118,11 @@ export async function renderTexasScramble(opts: {
       }));
     // #2625: a net-to-par game ranks the brutto preview on brutto to par too.
     const ranking = ranksByNetToPar(game.mode_config) ? 'net_to_par' : undefined;
+    // The aggregator takes a team's par from its first member; the engine uses
+    // the captain's, so the captain goes first (#2625, mixed tees).
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
-      players: bruttoPlayers,
+      players: withCaptainFirst(bruttoPlayers),
       holes: bruttoHoles,
       scores: bruttoScores,
       ranking,
