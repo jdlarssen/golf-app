@@ -48,8 +48,6 @@ export interface ScoreCardProps {
 
 function scoreNumberFontSize(shape: ScoreShapeKind, displayedNumber: number): number {
   const twoDigit = displayedNumber >= 10;
-  if (shape === 'quadruple-square') return twoDigit ? 14 : 18;
-  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 18 : 22;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 22 : 28;
   return twoDigit ? 26 : 36;
 }

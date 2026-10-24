@@ -3,7 +3,7 @@
 import type { CSSProperties, JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
-import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
+import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 
 /** One player in the demo flight, with the numbers worked out by the caller. */
@@ -78,11 +78,9 @@ const pointsStyle: CSSProperties = {
   color: 'var(--text-muted)',
 };
 
-// Nested shapes eat into the 30 px box; two digits need more room still.
-function digitSize(shape: ScoreShapeKind, n: number): number {
-  const nested = shape === 'triple-circle' || shape === 'triple-square' || shape === 'quadruple-square';
-  if (n >= 10) return nested ? 10 : 13;
-  return nested ? 13 : 16;
+// Two digits need more room in the 30 px box.
+function digitSize(n: number): number {
+  return n >= 10 ? 13 : 16;
 }
 
 function Score({ score, par }: { score: number; par: number }): JSX.Element {
@@ -93,7 +91,7 @@ function Score({ score, par }: { score: number; par: number }): JSX.Element {
         data-testid="score-number"
         style={{
           fontFamily: 'var(--font-serif)',
-          fontSize: digitSize(shape, score),
+          fontSize: digitSize(score),
           fontWeight: 600,
           color: 'var(--text)',
         }}
