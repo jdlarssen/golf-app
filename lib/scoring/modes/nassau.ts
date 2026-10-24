@@ -39,8 +39,8 @@ import type {
   ScoringPlayer,
 } from './types';
 
-// UNPLAYED_PADDING (delt konstant i tiebreaker, som soloStrokeplay) padder
-// uspilte hull i tie-break-cascaden — se JSDoc der for full begrunnelse.
+// UNPLAYED_PADDING (the shared constant in tiebreaker.ts, as in soloStrokeplay)
+// pads unplayed holes in the tie-break cascade; its JSDoc gives the reasons.
 
 interface PlayerSectionStrokes {
   userId: string;
@@ -200,13 +200,19 @@ function computeSection(
  * Til forskjell fra ranking-arrayet eksponeres `effective`/`gross` som `null`
  * på uspilte hull (ikke 999-padding). `bestUserIds` = lavest effective blant de
  * som faktisk spilte hullet — tom hvis ingen, lengde > 1 ved delt. Ren funksjon
- * av samme `grossByKey` som rankingen, så de kan aldri divergere.
+ * av samme `grossByKey` som rankingen.
+ *
+ * #2625: in a game ranked on net to par the hole is won on effective strokes
+ * against each player's own par, the measure the sections rank on, so a
+ * player on a tee with a higher par is not drawn level on the hole cards and
+ * the duel strip while she leads the section.
  */
 function computeHoleRows(
   holesSorted: ScoringHole[],
   players: ScoringPlayer[],
   grossByKey: Map<string, number | null>,
   scoringMode: 'gross' | 'net',
+  netToParRanking: boolean,
 ): NassauHoleRow[] {
   return holesSorted.map((hole) => {
     const perPlayer = players.map((p) => {
@@ -218,14 +224,17 @@ function computeHoleRows(
       return { userId: p.userId, gross, effective };
     });
 
+    const parOf = new Map(players.map((p) => [p.userId, parFor(hole, p.teeGender)]));
+    const measure = (c: { userId: string; effective: number }) =>
+      netToParRanking ? c.effective - (parOf.get(c.userId) ?? hole.par) : c.effective;
     const played = perPlayer.filter(
       (c): c is { userId: string; gross: number; effective: number } =>
         c.effective !== null,
     );
     let bestUserIds: string[] = [];
     if (played.length > 0) {
-      const min = Math.min(...played.map((c) => c.effective));
-      bestUserIds = played.filter((c) => c.effective === min).map((c) => c.userId);
+      const min = Math.min(...played.map(measure));
+      bestUserIds = played.filter((c) => measure(c) === min).map((c) => c.userId);
     }
 
     return {
@@ -370,6 +379,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     ctx.players,
     grossByKey,
     scoringMode,
+    netToParRanking,
   );
 
   return {

@@ -107,12 +107,17 @@ function padTo18(perHoleNet: number[]): number[] {
  * Til forskjell fra ranking-arrayet eksponeres `net`/`gross` som `null` på
  * uspilte hull (ikke 999-padding). `bestUserIds` = lavest netto blant de som
  * faktisk spilte hullet — tom hvis ingen, lengde > 1 ved delt. Ren funksjon av
- * samme `grossByKey` som rankingen, så de kan aldri divergere.
+ * samme `grossByKey` som rankingen.
+ *
+ * #2625: in a game ranked on net to par the hole is won on net against each
+ * player's own par, the measure the game ranks on, so the hole cards agree
+ * with the board on mixed tees.
  */
 function computeHoleRows(
   holesSorted: ScoringHole[],
   players: ScoringPlayer[],
   grossByKey: Map<string, number | null>,
+  netToParRanking: boolean,
 ): SoloStrokeplayHoleRow[] {
   return holesSorted.map((hole) => {
     const perPlayer = players.map((p) => {
@@ -128,10 +133,11 @@ function computeHoleRows(
     const played = perPlayer.filter(
       (c): c is { userId: string; gross: number; net: number; par: number } => c.net !== null,
     );
+    const measure = (c: { net: number; par: number }) => (netToParRanking ? c.net - c.par : c.net);
     let bestUserIds: string[] = [];
     if (played.length > 0) {
-      const min = Math.min(...played.map((c) => c.net));
-      bestUserIds = played.filter((c) => c.net === min).map((c) => c.userId);
+      const min = Math.min(...played.map(measure));
+      bestUserIds = played.filter((c) => measure(c) === min).map((c) => c.userId);
     }
 
     return {
@@ -198,7 +204,7 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
     };
   });
 
-  const holes = computeHoleRows(holesSorted, ctx.players, grossByKey);
+  const holes = computeHoleRows(holesSorted, ctx.players, grossByKey, netToParRanking);
 
   return {
     kind: 'solo_strokeplay',

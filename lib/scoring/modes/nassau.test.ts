@@ -928,7 +928,7 @@ describe('nassau.compute — ranking: net_to_par (#2625)', () => {
     ]);
   });
 
-  it('a finished round gives the same sections and units with and without the flag', () => {
+  it('a finished round gives the same sections and units with and without the flag when everyone plays tees with the same par', () => {
     // P1 and P3 tie the front nine (push). P1 and P2 tie the back nine on
     // total and P2 is better on the last six: still a push, since a section
     // is decided on its total and the 18-hole tie-break steps only reach the
@@ -989,7 +989,13 @@ describe('nassau.compute — ranking: net_to_par (#2625)', () => {
       ['M', 0],
     ]);
 
+    // The hole rows agree with the sections: with the flag L wins holes 1–3
+    // against her own par (4 on her par 5), and the rest are shared.
+    expect(flagged.holes.slice(0, 4).map((h) => h.bestUserIds)).toEqual([['L'], ['L'], ['L'], ['M', 'L']]);
+
     const plain = compute(makeCtx({ ...opts, modeConfigOverride: PLAIN }));
+    // Without the flag a hole is won on the lowest effective strokes, as before.
+    expect(plain.holes[0].bestUserIds).toEqual(['M', 'L']);
     expect(plain.sections.front9.winnerUserIds).toHaveLength(2);
     expect(plain.sections.total18.winnerUserIds).toHaveLength(2);
     expect(plain.players.map((p) => p.units)).toEqual([0, 0]);
