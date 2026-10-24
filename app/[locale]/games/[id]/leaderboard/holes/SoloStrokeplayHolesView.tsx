@@ -9,11 +9,11 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
 import {
   type SoloScorecard,
   soloStrokeplayScorecard,
+  standingTotalText,
   type SoloScorecardHole,
   type SoloScorecardNine,
   type SoloScorecardStanding,
@@ -194,7 +194,7 @@ function TotalsHeader({
                       isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
-                    {ranking === 'net_to_par' ? formatVsPar(line.toPar) : line.total}
+                    {standingTotalText({ ranking }, line, String)}
                   </span>
                 </span>
               </li>

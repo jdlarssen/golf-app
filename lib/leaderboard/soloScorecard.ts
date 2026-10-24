@@ -3,6 +3,7 @@ import type {
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
 import { byStanding, inStandingOrder } from './standingOrder';
+import { formatVsPar } from './vsPar';
 
 /**
  * #2255: «Hull for hull» for solo stableford (også modifisert) og solo
@@ -99,6 +100,20 @@ interface HoleInput {
 /** Negative poeng (modifisert stableford) med ekte minustegn, U+2212. */
 export function formatSignedPoints(points: number): string {
   return points < 0 ? `−${Math.abs(points)}` : String(points);
+}
+
+/**
+ * #2625: tallet stillingen viser for en rad — mot par («+3», «E», «−2») når
+ * spillet er rangert mot par, ellers summen i visningens egen form (`plain`:
+ * poeng med U+2212, eller netto slag). Ett hjem for valget, så webben og
+ * appen viser samme tall som rekkefølgen.
+ */
+export function standingTotalText(
+  card: Pick<SoloScorecard, 'ranking'>,
+  line: Pick<SoloScorecardStanding, 'total' | 'toPar'>,
+  plain: (total: number) => string,
+): string {
+  return card.ranking === 'net_to_par' ? formatVsPar(line.toPar) : plain(line.total);
 }
 
 /** #734: eget par når alle i feltet går fra samme tee, ellers herre-par. */
