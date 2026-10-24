@@ -28,6 +28,12 @@ import type {
  * høyest-best) governs the final sort + countback. For slagspill er begge lavest-
  * best (uendret) bortsett fra `points`-modellen.
  *
+ * A round whose window is still open (`windowOpen`, #2638 artboard 7a)
+ * charges nothing to a player who has not played it yet: they still have time,
+ * so the cell stays null («—») with no penalty, no penalty candidate for
+ * Beste-N and no must_play_all miss. Once the window closes, the rules below
+ * apply to the miss.
+ *
  * - total:   sum over all rounds-with-results; missed → penalty (poeng-liga: 0)
  *            or unranked under must_play_all.
  * - average: mean over played rounds; no penalty.
@@ -127,10 +133,12 @@ export function computeLeagueStandings(
         value = played.reduce((a, b) => a + b, 0) / played.length;
       }
     } else if (config.standingsModel === 'best_n') {
-      // Candidate per counting round: the played score, else the round's penalty.
-      const candidates = counting.map((rm) => {
+      // Candidate per counting round: the played score, else the round's
+      // penalty; an open round the player has not played yet gives none.
+      const candidates = counting.flatMap((rm) => {
         const s = rm.byUser.get(userId);
-        return s ? metricOf(s) : penaltyForRound(config, rm.byUser, metricOf);
+        if (s) return [metricOf(s)];
+        return rm.round.windowOpen ? [] : [penaltyForRound(config, rm.byUser, metricOf)];
       });
       // Per-player guard (#703): a player who appeared in zero counting rounds
       // has no standing yet — mirror the total/average/points branches instead
@@ -171,6 +179,8 @@ export function computeLeagueStandings(
           sum += metricOf(s);
           continue;
         }
+        // Still time to play an open round: no penalty and no miss yet.
+        if (rm.round.windowOpen) continue;
         missingAny = true;
         if (config.missedRoundPolicy === 'penalty') {
           const pen = penaltyForRound(config, rm.byUser, metricOf);
