@@ -1098,3 +1098,56 @@ describe('team strokeplay — ranked on net to par (#2625)', () => {
     ]);
   });
 });
+
+// #2625 part 2: a points game ranked on net to par shows the points against
+// par pace (what it is ranked on), not the sum of points.
+describe('points games — ranked on net to par (#2625)', () => {
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
+  const card = (result: ModeResult) =>
+    buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+
+  it.each([
+    [
+      'solo stableford',
+      {
+        kind: 'stableford',
+        variant: 'solo',
+        ranking: 'net_to_par',
+        players: [
+          { userId: 'u1', totalPoints: 11, holesPlayed: 3, toPar: 5, rank: 1, tiedWith: [] },
+          { userId: 'u2', totalPoints: 13, holesPlayed: 6, toPar: 1, rank: 2, tiedWith: [] },
+        ],
+        holes: [],
+      },
+    ],
+    [
+      'team stableford',
+      {
+        kind: 'stableford',
+        variant: 'team',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
+          { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
+        ],
+      },
+    ],
+    [
+      'patsome',
+      {
+        kind: 'patsome',
+        scoring: 'net',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 1, playerIds: ['u1', 'u2'], captainUserId: 'u1', holes: [], segments: {}, totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
+          { teamNumber: 2, playerIds: ['u3', 'u4'], captainUserId: 'u3', holes: [], segments: {}, totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
+        ],
+      },
+    ],
+  ] as unknown as [string, ModeResult][])('%s', (_kind, result) => {
+    expect(card(result).podium.map((r) => r.score)).toEqual([
+      { kind: 'vsPar', label: '+5' },
+      { kind: 'vsPar', label: '+1' },
+    ]);
+  });
+});

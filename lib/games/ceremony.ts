@@ -51,7 +51,10 @@ export function ceremonySupported(mode: GameMode): boolean {
   }
 }
 
-/** «poeng», «mot par» or «slag» — the unit the podium shows the number in. */
+/**
+ * «poeng», «mot par» or «slag» — the unit the podium shows the number in.
+ * #2625: points against par pace are shown like to par («+3 mot par»).
+ */
 export type CeremonyUnit = 'points' | 'toPar' | 'net';
 
 /** One row on the podium: a player, or a team with its members. */
@@ -69,9 +72,10 @@ export interface CeremonyLine {
 const teamKey = (teamNumber: number) => `team-${teamNumber}`;
 
 /**
- * #2625: a team strokeplay game ranked on net to par shows the team's to par,
- * the number it is ranked on; a team without a hole has none and is left out
- * (as a solo player without a hole).
+ * #2625: a team game ranked on net to par shows the team's to par (points
+ * against par pace in team stableford and patsome), the number it is ranked
+ * on; a team without a hole has none and is left out (as a solo player
+ * without a hole).
  */
 function teamToParLines(
   teams: readonly { teamNumber: number; rank: number; toPar: number | null; members: string[] }[],
@@ -102,6 +106,16 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
       });
     }
     case 'stableford':
+      if (result.ranking === 'net_to_par') {
+        if (result.variant === 'team') {
+          return teamToParLines(result.teams.map((t) => ({ ...t, members: t.playerIds })));
+        }
+        return result.players.flatMap((p) =>
+          p.holesPlayed === 0 || p.toPar === null
+            ? []
+            : [{ key: p.userId, rank: p.rank, total: p.toPar, unit: 'toPar' as const, members: [p.userId], teamNumber: null }],
+        );
+      }
       if (result.variant === 'solo') {
         return result.players
           .filter((p) => p.holesPlayed > 0)
@@ -159,6 +173,9 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
         teamNumber: t.teamNumber,
       }));
     case 'patsome':
+      if (result.ranking === 'net_to_par') {
+        return teamToParLines(result.teams.map((t) => ({ ...t, members: t.playerIds })));
+      }
       return result.teams.map((t) => ({
         key: teamKey(t.teamNumber),
         rank: t.rank,
