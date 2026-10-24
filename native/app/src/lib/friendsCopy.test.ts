@@ -24,6 +24,7 @@ import {
   friendStatusLine,
   friendSubline,
   friendsFailureLine,
+  friendsTopBar,
   friendsSectionTitle,
   friendsSubtitle,
   incomingSubline,
@@ -104,6 +105,17 @@ describe('FRIEND_LINK_TEXT', () => {
   it('setter navnet inn akkurat der webben har plassholderen, og reserven uten navn', () => {
     expect(friendLinkConnectCard('{name}')).toBe(leggTil.connectCard);
     expect(friendLinkConnectCard('')).toBe(leggTil.connectCard.replace('{name}', web.someoneFallback));
+  });
+});
+
+// #2627, review-runde 1: toppen på Venner sier bare «PROFIL» når pila går dit.
+describe('friendsTopBar', () => {
+  it('nevner Profil i toppen og på pila når Profil åpnet siden', () => {
+    expect(friendsTopBar(undefined)).toEqual({ kicker: 'Profil', backLabel: 'Tilbake til profil' });
+  });
+
+  it('har bare pila, med standardetiketten, når «Bli venn med …» åpnet siden', () => {
+    expect(friendsTopBar('friendLink')).toEqual({ kicker: '', backLabel: undefined });
   });
 });
 
