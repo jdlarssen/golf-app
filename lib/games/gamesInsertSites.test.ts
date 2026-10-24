@@ -3,9 +3,10 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * #2253 / #2625: a new solo strokeplay or team strokeplay game ranks on net to
- * par. The rule lives in the game's `mode_config` (`ranking: 'net_to_par'`),
- * stamped at creation by `stampNewGameModeConfig`. Every place in app/, lib/
+ * #2253 / #2625: a new solo strokeplay, team strokeplay, points (stableford,
+ * patsome) or Nassau game ranks on net to par. The rule lives in the game's
+ * `mode_config` (`ranking: 'net_to_par'`), stamped at creation by
+ * `stampNewGameModeConfig`. Every place in app/, lib/
  * and native/app/src that puts a row in `games` is listed below: it either
  * stamps, or it is exempt by decision and says why. A new insert site turns
  * this red: stamp it, or list why it is exempt.
@@ -32,7 +33,7 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
   'native/app/src/data/createGame.ts': {
     count: 1,
     stamps: true,
-    reason: 'the app wizard, which can create best ball (APP_SUPPORTED_MODES)',
+    reason: 'the app wizard, which can create best ball and stableford (APP_SUPPORTED_MODES)',
   },
 };
 
@@ -101,6 +102,7 @@ describe('games insert sites stamp the net-to-par ranking (#2253, #2625)', () =>
 
     expect(cupFormats).toContain('best_ball');
     expect(cupFormats).not.toContain('solo_strokeplay');
+    expect(cupFormats).not.toMatch(/stableford|patsome|nassau/);
     expect(sources['lib/cup/insertCupMatches.ts']).not.toContain('stampNewGameModeConfig(');
   });
 

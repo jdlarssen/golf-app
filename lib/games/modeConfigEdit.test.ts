@@ -110,7 +110,7 @@ describe('stampNewGameModeConfig (#2253)', () => {
   });
 
   it.each<GameModeConfig>([
-    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'skins', team_size: 1, skins_scoring: 'net' },
     greensome({ team_strokes_override: { team1: 8, team2: 3 } }),
   ])('leaves every other format unchanged ($kind)', (config) => {
     expect(stampNewGameModeConfig(config)).toBe(config);
@@ -156,6 +156,21 @@ describe('stampNewGameModeConfig (#2625)', () => {
   });
 });
 
+describe('stampNewGameModeConfig (#2625, part 2)', () => {
+  // The points formats and Nassau rank on net to par from #2625 part 2 — on
+  // new games only, so they are stamped at creation too.
+  it.each<GameModeConfig>([
+    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'stableford', team_size: 2, points_table: 'standard' },
+    { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
+    { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
+    { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    { kind: 'nassau', team_size: 1, nassau_scoring: 'gross' },
+  ])('stamps net-to-par ranking on a new $kind game (team size $team_size)', (config) => {
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, ranking: 'net_to_par' });
+  });
+});
+
 describe('editedModeConfig (#2625)', () => {
   const texas = {
     kind: 'texas_scramble',
@@ -175,6 +190,16 @@ describe('editedModeConfig (#2625)', () => {
       ...texas,
       ranking: 'net_to_par',
     });
+  });
+
+  it('a draft that switches to a points format is stamped too', () => {
+    const nassau = { kind: 'nassau', team_size: 1, nassau_scoring: 'net' } as GameModeConfig;
+    expect(editedModeConfig(texas, stableford)).toEqual({ ...stableford, ranking: 'net_to_par' });
+    expect(editedModeConfig(texas, nassau)).toEqual({ ...nassau, ranking: 'net_to_par' });
+  });
+
+  it('a stableford game created without the flag keeps its rule through an edit', () => {
+    expect(editedModeConfig(stableford, stableford)).toEqual(stableford);
   });
 
   it('a stored config that is not an object is passed through as before', () => {
