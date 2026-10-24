@@ -230,8 +230,8 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
       versionCode: STORE_ANDROID_VERSION_CODE,
       // #2627: App Links for venne-lenka, med stiene her (Android har ingen
       // AASA). `autoVerify` krever Play-signeringsnøkkelen i
-      // `app/.well-known/assetlinks.json`; til den står der, åpnes lenka i
-      // nettleseren på Android.
+      // `app/.well-known/assetlinks.json`. Til den står der, åpner Android 12+
+      // lenka i nettleseren, og Android 7–11 spør om app eller nettleser.
       intentFilters: [
         {
           action: 'VIEW',

@@ -7,7 +7,8 @@
 //    domenet, og AASA-fila slipper bare denne stien gjennom. Verten må likevel
 //    være web-adressen bygget peker på: en annen vert skal aldri leses som vår.
 //  - **Appens eget skjema**, `<bundle-id>://venner/legg-til/<kode>` (prebuild
-//    legger bundle-id-en som skjema). React Native leverer bare skjemaer appen
+//    legger bundle-id-en som skjema på iOS; Android har ikke noe eget skjema i
+//    dag, så der er det bare venne-lenka). React Native leverer bare skjemaer appen
 //    har registrert, så skjemaet sjekkes ikke. Dev-bygget claimer ikke domenet,
 //    og det er slik skjermen bevises der (`xcrun simctl openurl`). Lenka gir
 //    ikke mer enn en delt venne-lenke gjør: skjermen spør fortsatt før dere
