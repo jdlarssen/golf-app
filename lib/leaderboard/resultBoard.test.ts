@@ -259,6 +259,38 @@ describe('teamResultBoard — the rows of a finished team board', () => {
   });
 });
 
+// #2625 part 2: a team stableford game stamped `ranking: 'net_to_par'` shows
+// points against par pace, and its gap compares across a different number of
+// holes.
+describe('teamResultBoard — a net-to-par team stableford game (#2625)', () => {
+  it('unit pointsToPar, the total is the team’s points against par pace, and the gap is there across holes', () => {
+    const card = (userId: string, gross: number[]) => gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+    // Team 1 +5 after 3 holes (11 points), team 2 +1 after 6 (13). Par 4.
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g',
+        game_mode: 'stableford',
+        mode_config: { kind: 'stableford', team_size: 2, points_table: 'standard', ranking: 'net_to_par' },
+      },
+      players: ['p1', 'p2', 'p3', 'p4'].map((userId, i) => ({
+        userId,
+        teamNumber: i < 2 ? 1 : 2,
+        flightNumber: i < 2 ? 1 : 2,
+        courseHandicap: 0,
+      })),
+      holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1 })),
+      scores: [...card('p1', [2, 2, 3]), ...card('p3', [3, 4, 4, 4, 4, 4])],
+    };
+    const board = teamResultBoard(computeLeaderboard(ctx) as TeamBoardResult, (n) => `Lag ${n}`);
+    expect(board.unit).toBe('pointsToPar');
+    expect(board.rows.map((r) => [r.teamNumber, r.rank, r.total, r.holesPlayed])).toEqual([
+      [1, 1, 5, 3],
+      [2, 2, 1, 6],
+    ]);
+    expect(resultStanding(board, (r) => r.teamNumber, 2)?.gap).toBe(4);
+  });
+});
+
 // #2625: a team strokeplay game stamped `ranking: 'net_to_par'` shows the
 // number it is ranked on, and its gap compares across a different number of
 // holes («thru»), like the solo board's net to par (#2253).

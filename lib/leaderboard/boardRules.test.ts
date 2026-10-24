@@ -7,6 +7,7 @@ import {
   isBoardLeader,
   placeKind,
   sentenceName,
+  totalLabel,
   visibleBoardRows,
 } from './boardRules';
 
@@ -124,6 +125,9 @@ describe('boardRowSrParts — the order of a row read aloud', () => {
     ['toPar', 0, { kind: 'even' }],
     ['toPar', 2, { kind: 'over', value: 2 }],
     ['toPar', -3, { kind: 'under', value: 3 }],
+    ['pointsToPar', 0, { kind: 'even' }],
+    ['pointsToPar', 3, { kind: 'pointsOver', value: 3 }],
+    ['pointsToPar', -2, { kind: 'pointsUnder', value: 2 }],
     ['points', null, { kind: 'none' }],
   ] as const)('%s %s → %o', (unit, total, expected) => {
     const total0 = boardRowSrParts({ row: { ...r, total }, unit, showRank: true, isYou: false })[1];
@@ -136,5 +140,19 @@ describe('boardRowSrParts — the order of a row read aloud', () => {
     [0, { key: 'movement', direction: 'same', count: 0 }],
   ] as const)('movement %s → %o', (movement, expected) => {
     expect(boardRowSrParts({ row: { ...r, movement }, unit: 'points', showRank: true, isYou: false })[2]).toEqual(expected);
+  });
+});
+
+describe('totalLabel — the board’s number (#2625)', () => {
+  it.each([
+    ['points', 15, '15'],
+    ['net', 74, '74'],
+    ['toPar', -2, '−2'],
+    ['pointsToPar', 3, '+3'],
+    ['pointsToPar', 0, 'E'],
+    ['pointsToPar', -2, '−2'],
+    ['pointsToPar', null, '—'],
+  ] as const)('%s %s → %s', (unit, total, expected) => {
+    expect(totalLabel(unit, total)).toBe(expected);
   });
 });

@@ -31,8 +31,25 @@ import type { StartType } from '@/lib/games/startType';
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '@/lib/games/visibility';
 
-/** What the number column counts: stableford points, net to par, or net strokes. */
-export type LiveBoardUnit = 'points' | 'toPar' | 'net';
+/**
+ * What the number column counts: stableford points, net to par, net strokes,
+ * or (#2625) stableford points against par pace — «+3» is three points ahead
+ * of par, higher is better.
+ */
+export type LiveBoardUnit = 'points' | 'toPar' | 'net' | 'pointsToPar';
+
+/**
+ * #2625: a unit shown against par («+3», «E», «−2») and comparable across a
+ * different number of played holes: net to par and points against par pace.
+ */
+export function isToParUnit(unit: LiveBoardUnit): unit is 'toPar' | 'pointsToPar' {
+  return unit === 'toPar' || unit === 'pointsToPar';
+}
+
+/** #2625: a unit counted in stableford points («2 poeng bak»), with or without par pace. */
+export function isPointsUnit(unit: LiveBoardUnit): unit is 'points' | 'pointsToPar' {
+  return unit === 'points' || unit === 'pointsToPar';
+}
 
 export type LiveBoardRow = {
   userId: string;
@@ -43,8 +60,8 @@ export type LiveBoardRow = {
   /** Another row shares this rank. */
   tied: boolean;
   /**
-   * points: totalPoints · toPar: netToPar · net: totalNetStrokes. `null` until
-   * the player has played a hole.
+   * points: totalPoints · toPar: netToPar · net: totalNetStrokes ·
+   * pointsToPar: toPar (#2625). `null` until the player has played a hole.
    */
   total: number | null;
   holesPlayed: number;
@@ -100,7 +117,8 @@ type SoloResult = StablefordSoloResult | SoloStrokeplayResult;
  * home for the live board and the finished board (#2579).
  */
 export function boardUnit(result: SoloResult): LiveBoardUnit {
-  return result.kind === 'stableford' ? 'points' : result.ranking === 'net_to_par' ? 'toPar' : 'net';
+  if (result.kind === 'stableford') return result.ranking === 'net_to_par' ? 'pointsToPar' : 'points';
+  return result.ranking === 'net_to_par' ? 'toPar' : 'net';
 }
 
 const RECENT_HOLES = 5;
@@ -199,7 +217,7 @@ export function computeLiveBoard(opts: {
 
   const lines: { userId: string; rank: number; holesPlayed: number; total: number | null }[] =
     result.kind === 'stableford'
-      ? result.players.map((p) => ({ ...p, total: p.totalPoints }))
+      ? result.players.map((p) => ({ ...p, total: unit === 'pointsToPar' ? p.toPar : p.totalPoints }))
       : result.players.map((p) => ({
           ...p,
           total: unit === 'toPar' ? p.netToPar : p.totalNetStrokes,
@@ -327,8 +345,8 @@ export function gapToLead(unit: LiveBoardUnit, me: GapRow, leaders: readonly Gap
 /**
  * The distance between two rows' numbers, or `null` when they cannot be
  * compared: a row without a total, or — in points and net strokes — a
- * different number of holes played. Net to par compares across holes
- * («thru»). The one rule behind the gap to the lead and the follow page's
+ * different number of holes played. Net to par and points against par pace
+ * (#2625) compare across holes («thru»). The one rule behind the gap to the lead and the follow page's
  * lead over number two (#2286).
  */
 export function comparableGap(
@@ -337,7 +355,7 @@ export function comparableGap(
   b: Pick<LiveBoardRow, 'total' | 'holesPlayed'>,
 ): number | null {
   if (a.total === null || b.total === null) return null;
-  if (unit !== 'toPar' && a.holesPlayed !== b.holesPlayed) return null;
+  if (!isToParUnit(unit) && a.holesPlayed !== b.holesPlayed) return null;
   return Math.abs(a.total - b.total);
 }
 
