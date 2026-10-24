@@ -46,9 +46,9 @@ vi.mock('@/lib/league/getLigaSnapshot', () => ({
   getLigaSnapshot: () => getLigaSnapshot(),
 }));
 
-const autoConfirm = vi.fn(async () => {});
+const autoConfirm = vi.fn(async (_opts: { leagueId: string; userId: string }) => {});
 vi.mock('@/lib/league/confirmLeagueParticipation', () => ({
-  maybeAutoConfirmLeagueParticipation: (opts: unknown) => autoConfirm(opts),
+  maybeAutoConfirmLeagueParticipation: (opts: { leagueId: string; userId: string }) => autoConfirm(opts),
 }));
 
 // next/server sin after() finnes ikke utenfor Next-runtime: kjør callbacken straks.
