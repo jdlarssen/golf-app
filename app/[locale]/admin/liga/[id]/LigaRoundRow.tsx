@@ -3,7 +3,18 @@
 import { useActionState, useId } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { updateLeagueRound, overrideRoundWindow, type LeagueActionError } from '@/lib/league/actions';
+import {
+  updateLeagueRound,
+  overrideRoundWindow,
+  updateRoundSimSettings,
+  type LeagueActionError,
+} from '@/lib/league/actions';
+import { SimSettingsFields } from '@/components/league/SimSettingsFields';
+import {
+  SIM_SETTINGS,
+  formSimSettings,
+  simSettingGroups,
+} from '@/lib/league/simSettings';
 import { formatShortOsloDayMonthLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import { formatOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import type { AppLocale } from '@/i18n/routing';
@@ -15,6 +26,8 @@ type Props = {
   leagueId: string;
   courseScope: string;
   courses: CourseOption[];
+  /** #2638: a simulator league adjusts the round's settings here. */
+  isSimulator: boolean;
 };
 
 const INITIAL: LeagueActionError = { error: '' };
@@ -35,8 +48,9 @@ function formatWindowDate(iso: string, locale: AppLocale): string {
   return `${dayMonth}, ${time}`;
 }
 
-export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
+export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulator }: Props) {
   const t = useTranslations('liga.roundRow');
+  const tSim = useTranslations('liga.simSettings');
   // Labels point at their fields (htmlFor) so each field has a name.
   const fieldId = useId();
   const locale = useLocale() as AppLocale;
@@ -51,6 +65,15 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
       overrideRoundWindow(formData) as Promise<LeagueActionError>,
     INITIAL,
   );
+  const [settingsState, settingsAction] = useActionState(
+    async (_prev: LeagueActionError, formData: FormData) => updateRoundSimSettings(formData),
+    INITIAL,
+  );
+  const settingsErrorKey = `settingsErrors.${settingsState.error}` as Parameters<typeof t>[0];
+  const settingsLocale = locale === 'en' ? 'en' : 'no';
+  const overriddenNames = round.overriddenKeys
+    .map((key) => (settingsLocale === 'en' ? SIM_SETTINGS[key].trackmanLabel : SIM_SETTINGS[key].label))
+    .join(', ');
 
   const selectedCourse = courses.find((c) => c.id === round.courseId);
   const tees = selectedCourse?.tee_boxes ?? [];
@@ -70,6 +93,11 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
               <span className="ml-1.5 text-accent-text">{t('windowExtended')}</span>
             )}
           </p>
+          {isSimulator && round.overriddenKeys.length > 0 && (
+            <p className="font-sans text-[12px] text-accent-text mt-0.5" data-testid="liga-round-overridden">
+              {t('overriddenLine', { settings: overriddenNames })}
+            </p>
+          )}
           <p className="font-sans text-[11px] tabular-nums text-muted mt-0.5">
             {t('flightCount', { count: round.flightCount })}
           </p>
@@ -148,7 +176,13 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
 
       {/* Override window form */}
       <details className="group">
-        <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-6px_0_-20px] group-open:[--tap-extend:-6px_0]">
+        <summary
+          className={`tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none ${
+            isSimulator && !round.settingsLocked
+              ? '[--tap-extend:-6px_0]'
+              : '[--tap-extend:-6px_0_-20px] group-open:[--tap-extend:-6px_0]'
+          }`}
+        >
           {t('extendWindowLabel')}
         </summary>
         <form action={overrideAction} className="mt-3 space-y-2">
@@ -179,6 +213,98 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           </SubmitButton>
         </form>
       </details>
+
+      {/* #2638: the round's settings (artboards 8b/8c). A started round is
+          fixed, so nobody plays under other settings than the others. */}
+      {isSimulator && round.settingsLocked && (
+        <LockedSimSettings round={round} locale={settingsLocale} lockedLabel={t('lockedStarted')} teeLabel={tSim('tee')} />
+      )}
+      {isSimulator && !round.settingsLocked && (
+        <details className="group" data-testid="liga-round-adjust">
+          <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-6px_0_-20px] group-open:[--tap-extend:-6px_0]">
+            {t('adjustSettings')}
+          </summary>
+          <form action={settingsAction} className="mt-3 space-y-3">
+            <input type="hidden" name="round_id" value={round.id} />
+            <input type="hidden" name="league_id" value={leagueId} />
+            <SimSettingsFields
+              initial={formSimSettings(round.simSettings)}
+              idPrefix={`${fieldId}-sim`}
+              locale={locale}
+              gimmeLockedNote={tSim('gimmeLocked')}
+            />
+            {settingsState.error !== '' && (
+              <p role="alert" className="font-sans text-[12px] text-danger">
+                {t.has(settingsErrorKey) ? t(settingsErrorKey) : t('settingsErrors.update_failed')}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
+                {t('saveButton')}
+              </SubmitButton>
+              <SubmitButton
+                variant="quiet"
+                name="reset"
+                value="true"
+                className="text-sm px-4 py-2 min-h-[44px]"
+                pendingLabel={t('savePending')}
+                data-testid="liga-round-reset"
+              >
+                {t('resetToDefault')}
+              </SubmitButton>
+            </div>
+          </form>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** «Låst: runden er startet» with the values that apply, read-only (artboard 8b). */
+function LockedSimSettings({
+  round,
+  locale,
+  lockedLabel,
+  teeLabel,
+}: {
+  round: LeagueRoundView;
+  locale: 'no' | 'en';
+  lockedLabel: string;
+  teeLabel: string;
+}) {
+  const groups = simSettingGroups(round.simSettings, round.overriddenKeys, locale);
+  return (
+    <div className="rounded-lg bg-surface-2 px-3 py-2.5" data-testid="liga-round-settings-locked">
+      <p className="flex items-center gap-1.5 font-sans text-[11px] leading-[16.5px] font-medium text-muted">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+          <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" />
+          <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+        </svg>
+        <span>{lockedLabel}</span>
+      </p>
+      {groups.map((group, gi) => (
+        <div key={group.key} className={gi === 0 ? 'mt-2' : 'mt-3'}>
+          <p className="font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
+            {group.label}
+          </p>
+          <dl className="mt-1.5 space-y-1 font-sans text-[12px] leading-[18px]">
+            {group.rows.map((row) => (
+              <div key={row.key} className="flex justify-between gap-2">
+                <dt className="text-muted">{row.label}</dt>
+                <dd className={`min-w-0 text-right ${row.overridden ? 'text-accent-text' : 'text-text'}`}>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+      {round.teeName && (
+        <dl className="mt-2.5 border-t border-border pt-2.5 font-sans text-[12px] leading-[18px]">
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">{teeLabel}</dt>
+            <dd className="min-w-0 text-right text-text">{round.teeName}</dd>
+          </div>
+        </dl>
+      )}
     </div>
   );
 }

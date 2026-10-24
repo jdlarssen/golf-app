@@ -4848,6 +4848,13 @@
       "roundCount": "{count, plural, one {# runde} other {# runder}}",
       "createLeagueButton": "Opprett liga"
     },
+    "simSettings": {
+      "heading": "Rundeinnstillinger · {round}",
+      "formHeading": "Rundeinnstillinger",
+      "overridden": "Endret denne runden",
+      "tee": "Tee",
+      "gimmeLocked": "Låst av putting-valget"
+    },
     "create": {
       "kicker": "Klubbhuset",
       "brassRibbon": "Ny liga",
@@ -5001,6 +5008,16 @@
         "both": "Netto og brutto"
       },
       "lockedAfterStart": "Låst etter start",
+      "simSettingsHeading": "Rundeinnstillinger",
+      "simSettingsHelp": "Endringen gjelder runder som ikke er startet.",
+      "simSettingsSave": "Lagre",
+      "simSettingsSaving": "Lagrer …",
+      "simSettingsErrors": {
+        "sim_settings": "Velg innstillingene fra listene.",
+        "not_simulator": "Ligaen er ikke en simulatorliga.",
+        "not_found": "Fant ikke ligaen.",
+        "update_failed": "Klarte ikke å lagre. Prøv igjen."
+      },
       "infoRounds": "Runder",
       "infoParticipants": "Deltakere",
       "standingsLink": "Se sesong-tabellen →",
@@ -5084,7 +5101,18 @@
       "saveButton": "Lagre",
       "extendWindowLabel": "Utvid vindu",
       "newDeadlineLabel": "Ny frist (stenger)",
-      "saveDeadlineButton": "Lagre ny frist"
+      "saveDeadlineButton": "Lagre ny frist",
+      "adjustSettings": "Juster for denne runden",
+      "resetToDefault": "Tilbake til standard",
+      "overriddenLine": "Endret denne runden: {settings}",
+      "lockedStarted": "Låst: runden er startet",
+      "settingsErrors": {
+        "round_settings_locked": "Låst: runden er startet.",
+        "sim_settings": "Velg innstillingene fra listene.",
+        "not_simulator": "Ligaen er ikke en simulatorliga.",
+        "not_found": "Fant ikke runden.",
+        "update_failed": "Klarte ikke å lagre. Prøv igjen."
+      }
     },
     "statusActions": {
       "startError": "Klarte ikke å starte ligaen.",

@@ -13,6 +13,7 @@ import {
   formatShortOsloDateWithYearLocale,
 } from '@/lib/i18n/format';
 import { RoundStartClient, type RoundCoPlayer } from './RoundStartClient';
+import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import type { AppLocale } from '@/i18n/routing';
 
 
@@ -145,6 +146,13 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
 
       {/* Ready to start */}
       {ws === 'open' && round.courseId && round.teeBoxId && !selfLock && (
+        <>
+        {/* #2638: the round's settings above the start (artboard 7b). */}
+        {league.is_simulator && (
+          <div className="mb-4">
+            <RoundSimSettingsCard round={round} locale={locale} />
+          </div>
+        )}
         <Card>
           <p className="text-sm text-muted mb-5">
             {league.is_simulator ? t('simulatorRule') : t('markerRule')}
@@ -155,6 +163,7 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
             isSimulator={league.is_simulator}
           />
         </Card>
+        </>
       )}
     </AppShell>
   );

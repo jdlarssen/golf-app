@@ -345,3 +345,15 @@ export function simSettingGroups(
     return rows.length > 0 ? [{ key: group.key, label: group.label, rows }] : [];
   });
 }
+
+/**
+ * What a settings form starts from: the stored values, with Trackman's
+ * defaults for anything missing, and the gimme coupling made to hold (a
+ * locking putting shows «Not applicable»; any other putting a distance).
+ */
+export function formSimSettings(json: unknown): Record<SimSettingKey, string> {
+  const values: Record<SimSettingKey, string> = { ...SIM_SETTING_DEFAULTS, ...normalizeSimSettings(json) };
+  if (gimmeLocked(values.putting)) values.gimme = GIMME_NONE;
+  else if (values.gimme === GIMME_NONE) values.gimme = SIM_SETTINGS.gimme.options[1].code;
+  return values;
+}

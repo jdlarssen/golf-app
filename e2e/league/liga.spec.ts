@@ -8,6 +8,10 @@ import {
   signInViaOtp,
   cleanupE2eNotifications,
 } from '../_helpers/games';
+import { SIM_SETTING_DEFAULTS } from '@/lib/league/simSettings';
+
+/** #2638: a simulator league's default round settings (Trackman's defaults, wind Breezy). */
+const SIM_DEFAULT = { ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' };
 
 /**
  * Liga golden-path E2E (#453, Fase 1).
@@ -503,5 +507,161 @@ test.describe('Liga — real flight generator via UI (#736)', () => {
     await expect(
       page.getByTestId('liga-standings-row').first(),
     ).toBeVisible();
+  });
+});
+
+/**
+ * #2638: a simulator league lets a player take the round alone. Same drive as
+ * #736 above, but nobody is ticked: the real startLeagueRoundFlight starts a
+ * flight of one, freezes the round's settings into league_rounds, and once
+ * the card is delivered and the flight finished, the one-player flight counts
+ * on the table (a regular league would leave the row empty).
+ */
+test.describe('Liga — simulator: a flight of one counts (#2638)', () => {
+  test.skip(!envReady, skipReason);
+  test.slow();
+
+  let leagueId: string | null = null;
+  let flightGameId: string | null = null;
+
+  test.afterAll(async () => {
+    const admin = adminClient();
+    if (flightGameId) await admin.from('games').delete().eq('id', flightGameId);
+    if (leagueId) await admin.from('leagues').delete().eq('id', leagueId);
+    await cleanupE2eNotifications();
+  });
+
+  test('a player starts a simulator round alone, and the delivered card counts @gate', async ({ page }) => {
+    const admin = adminClient();
+
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    const { data: playerUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', PLAYER_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    expect(adminUser, 'admin user seeded').toBeTruthy();
+    expect(playerUser, 'player user seeded').toBeTruthy();
+
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .not('slope_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    expect(tee, 'a tee with a mens rating').toBeTruthy();
+
+    const now = Date.now();
+    const day = 86_400_000;
+    const { data: league, error: lErr } = await admin
+      .from('leagues')
+      .insert({
+        name: `TEST-Liga-simulator-${now}`,
+        season_start: new Date(now - day).toISOString().slice(0, 10),
+        season_end: new Date(now + 30 * day).toISOString().slice(0, 10),
+        format: 'stroke',
+        scoring: 'net',
+        standings_model: 'total',
+        course_scope: 'single_course_single_tee',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        status: 'active',
+        created_by: adminUser!.id,
+        is_simulator: true,
+        sim_settings: SIM_DEFAULT,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(lErr).toBeNull();
+    leagueId = league!.id;
+
+    const { data: round, error: rErr } = await admin
+      .from('league_rounds')
+      .insert({
+        league_id: leagueId,
+        sequence: 1,
+        label: 'Runde 1',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        opens_at: new Date(now - day).toISOString(),
+        closes_at: new Date(now + 14 * day).toISOString(),
+        original_closes_at: new Date(now + 14 * day).toISOString(),
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(rErr).toBeNull();
+    const roundId = round!.id;
+
+    const stampIso = new Date().toISOString();
+    await admin.from('league_players').insert([
+      { league_id: leagueId, user_id: adminUser!.id, accepted_at: stampIso },
+      { league_id: leagueId, user_id: playerUser!.id, accepted_at: stampIso },
+    ]);
+
+    // ── Start alone: nobody ticked, the submit is enabled ───────────────────
+    await page.goto(`/login?next=/liga/${leagueId}/runde/${roundId}/spill`);
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/liga/${leagueId}/runde/${roundId}/spill`);
+    const submit = page.getByTestId('liga-round-start-submit');
+    await expect(submit).toBeEnabled({ timeout: 30_000 });
+    await submit.click();
+    await expect(page).toHaveURL(/\/games\/[0-9a-f-]{36}/, { timeout: 25_000 });
+
+    const { data: flights } = await admin
+      .from('games')
+      .select('id')
+      .eq('league_round_id', roundId);
+    expect(flights?.length, 'one flight').toBe(1);
+    flightGameId = (flights![0] as { id: string }).id;
+
+    const { data: gps } = await admin
+      .from('game_players')
+      .select('user_id')
+      .eq('game_id', flightGameId);
+    expect((gps ?? []).map((g) => g.user_id), 'a flight of one').toEqual([adminUser!.id]);
+
+    const { data: frozen } = await admin
+      .from('league_rounds')
+      .select('sim_settings')
+      .eq('id', roundId)
+      .single<{ sim_settings: unknown }>();
+    expect(frozen!.sim_settings, 'the first start froze the settings').toEqual(SIM_DEFAULT);
+
+    // ── Deliver and finish via service role, then the table counts it ──────
+    const { data: courseHoles } = await admin
+      .from('course_holes')
+      .select('hole_number')
+      .eq('course_id', tee!.course_id)
+      .order('hole_number');
+    const holeNumbers = (courseHoles ?? []).map((h) => h.hole_number as number);
+    expect(holeNumbers.length, 'course has holes').toBeGreaterThan(0);
+
+    await admin
+      .from('game_players')
+      .update({ accepted_at: stampIso, submitted_at: stampIso, approved_at: stampIso })
+      .eq('game_id', flightGameId);
+    const { error: sErr } = await admin.from('scores').insert(
+      holeNumbers.map((hole) => ({
+        game_id: flightGameId!,
+        user_id: adminUser!.id,
+        hole_number: hole,
+        strokes: 4,
+        entered_by: adminUser!.id,
+        client_updated_at: stampIso,
+      })),
+    );
+    expect(sErr).toBeNull();
+    await admin.from('games').update({ status: 'finished' }).eq('id', flightGameId);
+
+    await page.goto(`/liga/${leagueId}`);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
+    await expect(page.getByTestId('liga-standings')).toBeVisible();
+    await expect(page.getByTestId('liga-played-by-delivered')).toBeVisible();
+    await expect(page.getByTestId('liga-played-by-missing')).toBeVisible();
   });
 });
