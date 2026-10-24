@@ -837,3 +837,165 @@ describe('nassau.compute — per-hull holes-eksponering (#496)', () => {
     expect(result.holes[0].bestUserIds).toEqual(['u1']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2625 part 2: new Nassau games carry `ranking: 'net_to_par'` in mode_config.
+// Each section ranks on strokes against par over the holes each player has
+// played in it, instead of padding the unplayed holes. Units, push and sweep
+// follow the new order as before. Games without the flag keep today's rule.
+// ---------------------------------------------------------------------------
+
+describe('nassau.compute — ranking: net_to_par (#2625)', () => {
+  const PLAIN = { kind: 'nassau', team_size: 1, nassau_scoring: 'net' };
+  const FLAGGED = { ...PLAIN, ranking: 'net_to_par' };
+  /** Gross per hole number, in order from hole `from`. */
+  const card = (userId: string, gross: number[], from = 1): ScoringHoleScore[] =>
+    gross.map((g, i) => ({ userId, holeNumber: from + i, gross: g }));
+
+  // The issue's shape on the front nine: A −3 after 3 holes, B −2 after all
+  // nine. Par 4 everywhere.
+  const frontExample = {
+    players: [soloPlayer('A'), soloPlayer('B')],
+    holes: par4Holes(18),
+    scores: [...card('A', [3, 3, 3]), ...card('B', [3, 3, 4, 4, 4, 4, 4, 4, 4])],
+  };
+
+  it('the issue shape: A (−3 after 3) leads the front nine ahead of B (−2 after 9) with the flag', () => {
+    const result = compute(makeCtx({ ...frontExample, modeConfigOverride: FLAGGED }));
+    const front = result.sections.front9;
+    expect(front.players.map((p) => [p.userId, p.rank, p.toPar])).toEqual([
+      ['A', 1, -3],
+      ['B', 2, -2],
+    ]);
+    expect(front.winnerUserIds).toEqual(['A']);
+    expect(result.players.map((p) => [p.userId, p.rank, p.units])).toEqual([
+      ['A', 1, 1],
+      ['B', 2, 0],
+    ]);
+    expect(result.ranking).toBe('net_to_par');
+  });
+
+  it('without the flag the same round keeps today’s order (B, who finished the nine)', () => {
+    const result = compute(makeCtx({ ...frontExample, modeConfigOverride: PLAIN }));
+    expect(result.sections.front9.players.map((p) => [p.userId, p.rank, p.tiedWith])).toEqual([
+      ['B', 1, []],
+      ['A', 2, []],
+    ]);
+    expect(result.sections.front9.winnerUserIds).toEqual(['B']);
+    expect(result.players.map((p) => [p.userId, p.rank, p.units])).toEqual([
+      ['B', 1, 1],
+      ['A', 2, 0],
+    ]);
+    expect(result.ranking).toBe('net_total');
+  });
+
+  it('toPar per section is Σ (effective − own par) over played holes, null without a hole, also without the flag', () => {
+    // Hole 1 is a par 5 from the ladies' tee: L's 5 there is par (0). Hole 10
+    // is a par 4 for everyone: 5 is +1. M has not started.
+    const holes = par4Holes(18).map((h) =>
+      h.number === 1 ? { ...h, parByGender: { mens: 4, ladies: 5, juniors: 4 } } : h,
+    );
+    const result = compute(
+      makeCtx({
+        players: [{ ...soloPlayer('L'), teeGender: 'ladies' }, soloPlayer('M')],
+        holes,
+        scores: [
+          { userId: 'L', holeNumber: 1, gross: 5 },
+          { userId: 'L', holeNumber: 10, gross: 5 },
+        ],
+        modeConfigOverride: PLAIN,
+      }),
+    );
+    const toPar = (section: 'front9' | 'back9' | 'total18', userId: string) =>
+      result.sections[section].players.find((p) => p.userId === userId)!.toPar;
+    expect([toPar('front9', 'L'), toPar('back9', 'L'), toPar('total18', 'L')]).toEqual([0, 1, 1]);
+    expect([toPar('front9', 'M'), toPar('back9', 'M'), toPar('total18', 'M')]).toEqual([null, null, null]);
+  });
+
+  it('a player without a hole in a section still ranks last in it with the flag (#635)', () => {
+    // A has played hole 10 at +4; B has played the front nine only.
+    const result = compute(
+      makeCtx({
+        players: [soloPlayer('B'), soloPlayer('A')],
+        holes: par4Holes(18),
+        scores: [...card('A', [8], 10), ...card('B', [4, 4, 4])],
+        modeConfigOverride: FLAGGED,
+      }),
+    );
+    expect(result.sections.back9.players.map((p) => [p.userId, p.rank, p.toPar])).toEqual([
+      ['A', 1, 4],
+      ['B', 2, null],
+    ]);
+  });
+
+  it('a finished round gives the same sections and units with and without the flag', () => {
+    // P1 and P3 tie the front nine (push). P1 and P2 tie the back nine on
+    // total and P2 is better on the last six: still a push, since a section
+    // is decided on its total and the 18-hole tie-break steps only reach the
+    // back nine in the total. P1 takes the total alone.
+    const opts = {
+      players: [soloPlayer('P1'), soloPlayer('P2'), soloPlayer('P3')],
+      holes: par4Holes(18),
+      scores: [
+        ...card('P1', [4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 4, 4, 4, 4, 4, 4]),
+        ...card('P2', [5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 3, 3, 3, 4, 4, 4]),
+        ...card('P3', [4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5]),
+      ],
+    };
+    const shape = (r: ReturnType<typeof compute>) => ({
+      sections: (['front9', 'back9', 'total18'] as const).map((name) => ({
+        name,
+        winners: [...r.sections[name].winnerUserIds].sort(),
+        players: r.sections[name].players.map(({ userId, rank, tiedWith }) => ({ userId, rank, tiedWith })),
+      })),
+      players: r.players.map(({ userId, units, unitBreakdown, rank, tiedWith }) => ({
+        userId,
+        units,
+        unitBreakdown,
+        rank,
+        tiedWith,
+      })),
+    });
+
+    const withFlag = shape(compute(makeCtx({ ...opts, modeConfigOverride: FLAGGED })));
+    expect(withFlag).toEqual(shape(compute(makeCtx({ ...opts, modeConfigOverride: PLAIN }))));
+    expect(withFlag.sections.map((s) => s.winners)).toEqual([['P1', 'P3'], ['P1', 'P2'], ['P1']]);
+    expect(withFlag.players.map((p) => [p.userId, p.units])).toEqual([
+      ['P1', 1],
+      ['P2', 0],
+      ['P3', 0],
+    ]);
+  });
+
+  it('ranks the 18 on to par in a part-played round on mixed pars: a shared place at E, +1 split on the back nine', () => {
+    const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+    const holes: ScoringHole[] = PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: i + 1 }));
+    const deltaCard = (userId: string, from: number, deltas: number[]): ScoringHoleScore[] =>
+      deltas.map((d, i) => ({ userId, holeNumber: from + i, gross: PARS[from + i - 1] + d }));
+    const result = compute(
+      makeCtx({
+        players: ['p1', 'p2', 'p3', 'p4', 'p5'].map((id) => soloPlayer(id)),
+        holes,
+        scores: [
+          ...deltaCard('p1', 1, [1, 0, 0, 0, 0]),
+          ...deltaCard('p2', 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]),
+          ...deltaCard('p3', 10, [1, 0, 0]),
+          ...deltaCard('p4', 1, [1, -1]),
+          ...deltaCard('p5', 1, [0, 0, 0]),
+        ],
+        modeConfigOverride: FLAGGED,
+      }),
+    );
+    expect(
+      [...result.sections.total18.players]
+        .sort((a, b) => a.rank - b.rank || a.userId.localeCompare(b.userId))
+        .map((p) => [p.userId, p.toPar, p.rank, p.tiedWith]),
+    ).toEqual([
+      ['p2', -1, 1, []],
+      ['p4', 0, 2, ['p5']],
+      ['p5', 0, 2, ['p4']],
+      ['p1', 1, 4, []],
+      ['p3', 1, 5, []],
+    ]);
+  });
+});

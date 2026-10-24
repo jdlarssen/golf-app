@@ -95,7 +95,7 @@ export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
  * 999 slag dominerer alle realistiske sammenligninger.
  *
  * `soloStrokeplay`/`nassau` padder ALLE uspilte hull (færre spilte hull
- * rangerer dårligere). Lag-strokeplay-formatene (best ball, texas/ambrose/
+ * rangerer dårligere) — med mindre spillet rangerer mot par (#2253, #2625). Lag-strokeplay-formatene (best ball, texas/ambrose/
  * florida, shamble) padder kun lag som har spilt NULL hull, slik at delvis
  * spilte lag beholder sin eksisterende rangering.
  */
@@ -129,8 +129,26 @@ export function rankingHolesByNumber(
 }
 
 /**
- * #2253 / #2625: the formats that can rank on net to par — solo strokeplay and
- * the team strokeplay formats. New games of these kinds are stamped with
+ * #2625: the ranking array for a points game (stableford, patsome) ranked on
+ * net to par. `toPar` is points against par pace on a hole (higher is better,
+ * `null` = unplayed). `rankTeams` ranks lowest first, so it is negated and then
+ * slotted like a strokes game (`rankingHolesByNumber`): an unplayed hole counts
+ * 0, par pace, and a side without a single hole gets UNPLAYED_PADDING and ranks
+ * last (#635).
+ */
+export function pointsToParRankingHoles(
+  holes: ReadonlyArray<{ holeNumber: number; toPar: number | null }>,
+): number[] {
+  return rankingHolesByNumber(
+    // `0 −` rather than a unary minus, so par pace is 0 and never −0.
+    holes.map((h) => ({ holeNumber: h.holeNumber, teamNet: h.toPar === null ? null : 0 - h.toPar })),
+  );
+}
+
+/**
+ * #2253 / #2625: the formats that can rank on net to par — solo strokeplay,
+ * the team strokeplay formats, the points formats (on points against par pace)
+ * and Nassau (each section). New games of these kinds are stamped with
  * `ranking: 'net_to_par'` (`stampNewGameModeConfig`).
  */
 const NET_TO_PAR_KINDS = [
@@ -140,6 +158,10 @@ const NET_TO_PAR_KINDS = [
   'ambrose',
   'florida_scramble',
   'shamble',
+  'stableford',
+  'modified_stableford',
+  'patsome',
+  'nassau',
 ] as const satisfies readonly GameModeConfig['kind'][];
 
 export type NetToParModeConfig = Extract<

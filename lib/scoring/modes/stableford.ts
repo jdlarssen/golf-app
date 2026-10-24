@@ -3,9 +3,14 @@
 // Standard-tabellen er den vanligste internasjonalt og brukes som default
 // for solo-stableford. Modifikatorer (modified, stableford-quota etc) kan
 // legges på som egne `points_table`-varianter senere.
+//
+// #2625: games with `mode_config.ranking === 'net_to_par'` rank on points
+// against par pace over the holes each player or team has played (Σ points −
+// the points a net par gives) instead. Games without the flag keep the rule
+// below, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { pointsToParRankingHoles, rankTeams, ranksByNetToPar } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -72,8 +77,21 @@ interface PlayerHolePoints {
   userId: string;
   /** Poeng per hull, indeksert på `holeNumber - 1` (lengde = holes.length). */
   perHole: number[];
+  /** #2625: points − the points a net par gives, per hole; `null` for an unplayed hole. */
+  toParByHole: { holeNumber: number; toPar: number | null }[];
+  /** #2625: Σ toParByHole over played holes; `null` when none is played. */
+  toPar: number | null;
   totalPoints: number;
   holesPlayed: number;
+}
+
+/**
+ * #2625: what a net par is worth in the active table — 2 in standard
+ * stableford, 0 in modified. Read from the table itself, so a new table can
+ * never disagree with its own par pace.
+ */
+function parPoints(pointsFn: StablefordPointsFn, par: number): number {
+  return pointsFn({ par, netStrokes: par });
 }
 
 function computePlayerHolePoints(
@@ -83,27 +101,55 @@ function computePlayerHolePoints(
   pointsFn: StablefordPointsFn,
 ): PlayerHolePoints {
   const perHole: number[] = [];
+  const toParByHole: PlayerHolePoints['toParByHole'] = [];
   let totalPoints = 0;
+  let toPar = 0;
   let holesPlayed = 0;
 
   for (const hole of holesSorted) {
     const gross = grossByKey.get(`${player.userId}#${hole.number}`) ?? null;
     if (gross === null) {
       perHole.push(0);
+      toParByHole.push({ holeNumber: hole.number, toPar: null });
       continue;
     }
     const extra = strokesForHole(player.courseHandicap, hole.strokeIndex);
     const net = gross - extra;
-    const points = pointsFn({
-      par: parFor(hole, player.teeGender),
-      netStrokes: net,
-    });
+    const par = parFor(hole, player.teeGender);
+    const points = pointsFn({ par, netStrokes: net });
+    const holeToPar = points - parPoints(pointsFn, par);
     perHole.push(points);
+    toParByHole.push({ holeNumber: hole.number, toPar: holeToPar });
     totalPoints += points;
+    toPar += holeToPar;
     holesPlayed += 1;
   }
 
-  return { userId: player.userId, perHole, totalPoints, holesPlayed };
+  return {
+    userId: player.userId,
+    perHole,
+    toParByHole,
+    toPar: holesPlayed > 0 ? toPar : null,
+    totalPoints,
+    holesPlayed,
+  };
+}
+
+/**
+ * #2625: a team's points against par pace per hole. A hole is played once a
+ * partner has played it; its par pace is what a net par is worth on the
+ * team's par. `null` for a hole no partner has played.
+ */
+function teamToParByHole(
+  holes: StablefordTeamHoleRow[],
+  pointsFn: StablefordPointsFn,
+): { holeNumber: number; toPar: number | null }[] {
+  return holes.map((h) => ({
+    holeNumber: h.holeNumber,
+    toPar: h.players.some((pc) => pc.gross !== null)
+      ? h.teamPoints - parPoints(pointsFn, h.par)
+      : null,
+  }));
 }
 
 /**
@@ -225,9 +271,16 @@ function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): Stablef
   );
 
   // index-basert id slik at vi kan mappe tilbake til userId etterpå
+  // #2625: a net-to-par game ranks on points against par pace, slotted by hole
+  // number (`pointsToParRankingHoles`): an unplayed hole counts as par pace,
+  // and a player without a single hole ranks last. Without the flag: today's
+  // rule.
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const teamsForRanking = playerPoints.map((p, i) => ({
     id: i,
-    holes: padTo18(p.perHole).map((pts) => -pts),
+    holes: netToParRanking
+      ? pointsToParRankingHoles(p.toParByHole)
+      : padTo18(p.perHole).map((pts) => -pts),
   }));
 
   const ranked = rankTeams(teamsForRanking);
@@ -241,6 +294,7 @@ function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): Stablef
       userId: source.userId,
       totalPoints: source.totalPoints,
       holesPlayed: source.holesPlayed,
+      toPar: source.toPar,
       rank: r.rank,
       tiedWith: tiedWithUserIds,
       decidedBy: r.decidedBy,
@@ -249,7 +303,13 @@ function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): Stablef
 
   const holes = computeSoloHoleRows(holesSorted, ctx.players, grossByKey, pointsFn);
 
-  return { kind: 'stableford', variant: 'solo', players, holes };
+  return {
+    kind: 'stableford',
+    variant: 'solo',
+    ranking: netToParRanking ? 'net_to_par' : 'net_total',
+    players,
+    holes,
+  };
 }
 
 /**
@@ -350,20 +410,28 @@ function computeTeam(
 
     const totalPoints = holes.reduce((sum, h) => sum + h.teamPoints, 0);
 
+    const played = teamToParByHole(holes, pointsFn).filter((h) => h.toPar !== null);
+
     return {
       teamNumber,
       playerIds: members.map((m) => m.userId),
       holes,
       totalPoints,
+      toPar: played.length > 0 ? played.reduce((sum, h) => sum + h.toPar!, 0) : null,
     };
   });
 
   // Bygg 18-lange poeng-arrays for ranking. Negér slik at rankTeams sin
   // "lavest vinner"-cascade fungerer som "høyest vinner" på lag-poeng.
+  // #2625: a net-to-par game ranks on points against par pace, slotted by hole
+  // number; a team without a single hole ranks last.
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const ranked = rankTeams(
     baseLines.map((l) => ({
       id: l.teamNumber,
-      holes: padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
+      holes: netToParRanking
+        ? pointsToParRankingHoles(teamToParByHole(l.holes, pointsFn))
+        : padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
     })),
   );
 
@@ -380,5 +448,10 @@ function computeTeam(
     };
   });
 
-  return { kind: 'stableford', variant: 'team', teams };
+  return {
+    kind: 'stableford',
+    variant: 'team',
+    ranking: netToParRanking ? 'net_to_par' : 'net_total',
+    teams,
+  };
 }
