@@ -29,8 +29,6 @@ export interface FlightRowProps {
 // Nested shapes eat into the 36px md box; two digits need more headroom.
 function numberFontSize(shape: ScoreShapeKind, n: number): number {
   const twoDigit = n >= 10;
-  if (shape === 'quadruple-square') return twoDigit ? 9 : 11;
-  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 11 : 13;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 13 : 16;
   return twoDigit ? 16 : 20;
 }

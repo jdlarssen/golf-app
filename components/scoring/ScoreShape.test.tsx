@@ -29,14 +29,6 @@ describe('ScoreShape', () => {
     expect(svg?.querySelectorAll('circle').length).toBe(2);
   });
 
-  it('renders three SVG rings for triple-circle (albatross)', () => {
-    const { container } = render(
-      <ScoreShape shape="triple-circle" tone="under">2</ScoreShape>,
-    );
-    const svg = container.querySelector('svg');
-    expect(svg?.querySelectorAll('circle').length).toBe(3);
-  });
-
   it('renders one SVG rect for square (bogey)', () => {
     const { container } = render(
       <ScoreShape shape="square" tone="over1">5</ScoreShape>,
@@ -51,22 +43,6 @@ describe('ScoreShape', () => {
     );
     const svg = container.querySelector('svg');
     expect(svg?.querySelectorAll('rect').length).toBe(2);
-  });
-
-  it('renders three SVG rects for triple-square (triple bogey)', () => {
-    const { container } = render(
-      <ScoreShape shape="triple-square" tone="over2">7</ScoreShape>,
-    );
-    const svg = container.querySelector('svg');
-    expect(svg?.querySelectorAll('rect').length).toBe(3);
-  });
-
-  it('renders four SVG rects for quadruple-square (quad bogey+)', () => {
-    const { container } = render(
-      <ScoreShape shape="quadruple-square" tone="over2">8</ScoreShape>,
-    );
-    const svg = container.querySelector('svg');
-    expect(svg?.querySelectorAll('rect').length).toBe(4);
   });
 
   it('respects size prop (sm vs lg differ in pixel width)', () => {
@@ -123,11 +99,8 @@ describe('ScoreShape size="follow" (#2286) — the artboard\'s CSS borders', () 
     ['none', 'par', 0, false, null],
     ['circle', 'under', 1, true, 'border-score-under-ring'],
     ['double-circle', 'under', 2, true, 'border-score-under-ring'],
-    ['triple-circle', 'under', 3, true, 'border-score-under-ring'],
     ['square', 'over1', 1, false, 'border-score-over1-ring'],
     ['double-square', 'over2', 2, false, 'border-score-over2-fg'],
-    ['triple-square', 'over2', 3, false, 'border-score-over2-fg'],
-    ['quadruple-square', 'over2', 4, false, 'border-score-over2-fg'],
   ] as const)('%s: %s borders', (shape, tone, borders, round, colour) => {
     const { container } = render(
       <ScoreShape shape={shape} tone={tone} size="follow">4</ScoreShape>,
@@ -142,9 +115,8 @@ describe('ScoreShape size="follow" (#2286) — the artboard\'s CSS borders', () 
       expect(el.classList.contains('rounded-full')).toBe(round);
       if (colour) expect(el).toHaveClass(colour);
     }
-    // Each border after the first sits 3 px further in.
-    const insets = ['inset-[1.5px]', 'inset-[4.5px]', 'inset-[7.5px]'].slice(0, Math.max(0, borders - 1));
-    insets.forEach((inset, i) => expect(bordered[i + 1]).toHaveClass('absolute', inset));
+    // A double shape's second border sits 3 px in.
+    if (borders === 2) expect(bordered[1]).toHaveClass('absolute', 'inset-[1.5px]');
     expect(screen.getByText('4')).toBeInTheDocument();
   });
 });

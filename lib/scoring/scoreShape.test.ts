@@ -23,12 +23,6 @@ describe('scoreShape', () => {
     expect(scoreShape(1, 3)).toBe('double-circle');
   });
 
-  it('returns triple-circle for albatross or better (3+ under)', () => {
-    expect(scoreShape(2, 5)).toBe('triple-circle'); // albatross on par 5
-    expect(scoreShape(1, 4)).toBe('triple-circle'); // albatross on par 4
-    expect(scoreShape(1, 5)).toBe('triple-circle'); // condor on par 5
-  });
-
   it('returns square for bogey (1 over)', () => {
     expect(scoreShape(5, 4)).toBe('square');
     expect(scoreShape(4, 3)).toBe('square');
@@ -39,15 +33,25 @@ describe('scoreShape', () => {
     expect(scoreShape(5, 3)).toBe('double-square');
   });
 
-  it('returns triple-square for triple bogey (3 over)', () => {
-    expect(scoreShape(7, 4)).toBe('triple-square');
-    expect(scoreShape(6, 3)).toBe('triple-square');
-    expect(scoreShape(8, 5)).toBe('triple-square');
-  });
+  // #2635 (owner, 24.10: «Maks to»): an eagle or better keeps two circles and
+  // a double bogey or worse keeps two squares, so no score draws more than two.
+  const CAPPED = [
+    [-4, 'double-circle'],
+    [-3, 'double-circle'],
+    [-2, 'double-circle'],
+    [-1, 'circle'],
+    [0, 'none'],
+    [1, 'square'],
+    [2, 'double-square'],
+    [3, 'double-square'],
+    [4, 'double-square'],
+    [7, 'double-square'],
+  ] as const;
 
-  it('returns quadruple-square for quad bogey or worse (4+ over)', () => {
-    expect(scoreShape(8, 4)).toBe('quadruple-square');
-    expect(scoreShape(10, 4)).toBe('quadruple-square');
-    expect(scoreShape(15, 4)).toBe('quadruple-square');
+  describe.each([3, 4, 5])('at most two shapes on par %i (#2635)', (par) => {
+    // A score is at least one stroke, so −4 drops out on a par 4 and −3 on a par 3.
+    it.each(CAPPED.filter(([diff]) => par + diff >= 1))('%i against par gives %s', (diff, shape) => {
+      expect(scoreShape(par + diff, par)).toBe(shape);
+    });
   });
 });

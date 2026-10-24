@@ -53,11 +53,8 @@ const BORDERS: Record<ShapeKind, number> = {
   none: 0,
   circle: 1,
   'double-circle': 2,
-  'triple-circle': 3,
   square: 1,
   'double-square': 2,
-  'triple-square': 3,
-  'quadruple-square': 4,
 };
 
 /** `follow`'s border colour: the artboard's birdie ring and bogey square. */
@@ -69,8 +66,8 @@ const FOLLOW_BORDER: Record<ScoreTone, string> = {
   over2: 'border-score-over2-fg',
 };
 
-/** Each border after the first sits 3 px further in, measured from the outer edge. */
-const FOLLOW_INSETS = ['inset-[1.5px]', 'inset-[4.5px]', 'inset-[7.5px]'];
+/** A double shape's second border sits 3 px in from the outer edge. */
+const FOLLOW_INNER_INSET = 'inset-[1.5px]';
 
 function FollowShape({ shape, tone, children }: { shape: ShapeKind; tone: ScoreTone; children: ReactNode }) {
   const borders = BORDERS[shape];
@@ -86,9 +83,7 @@ function FollowShape({ shape, tone, children }: { shape: ShapeKind; tone: ScoreT
     <span
       className={`relative box-border flex h-[34px] w-[34px] items-center justify-center leading-[normal] ${edge}`}
     >
-      {FOLLOW_INSETS.slice(0, borders - 1).map((inset) => (
-        <span key={inset} aria-hidden className={`absolute ${inset} box-border ${edge}`} />
-      ))}
+      {borders === 2 && <span aria-hidden className={`absolute ${FOLLOW_INNER_INSET} box-border ${edge}`} />}
       {children}
     </span>
   );
@@ -164,21 +159,10 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
     fontVariantNumeric: 'tabular-nums',
   };
 
-  // Concentric circle radii — level 0 is outermost, gap shrinks each ring.
-  const circleLevels =
-    shape === 'circle' ? 1 : shape === 'double-circle' ? 2 : shape === 'triple-circle' ? 3 : 0;
-
-  // Nested square offsets — level 0 is outermost, gap grows each step in.
-  const squareLevels =
-    shape === 'square'
-      ? 1
-      : shape === 'double-square'
-        ? 2
-        : shape === 'triple-square'
-          ? 3
-          : shape === 'quadruple-square'
-            ? 4
-            : 0;
+  // Concentric circles and nested squares — level 0 is outermost, each
+  // further level one gap in.
+  const circleLevels = shape.endsWith('circle') ? BORDERS[shape] : 0;
+  const squareLevels = shape.endsWith('square') ? BORDERS[shape] : 0;
 
   return (
     <span style={wrapStyle}>
