@@ -63,8 +63,9 @@ describe('formene', () => {
     expect(stubTotal(72, 'net')).toBe('72\u00A0netto');
     expect(stubTotal(3, 'toPar')).toBe('+3');
     expect(stubTotal(0, 'toPar')).toBe('E');
-    // #2625: poeng mot par-tempo, kort som mot par.
-    expect(stubTotal(3, 'pointsToPar')).toBe('+3');
+    // #2625: poeng mot par-tempo sier enheten; en naken «+3» leses som tre over par.
+    expect(stubTotal(3, 'pointsToPar')).toBe('+3\u00A0mot par');
+    expect(stubTotal(-2, 'pointsToPar')).toBe('\u22122\u00A0mot par');
   });
 
   it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
