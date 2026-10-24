@@ -22,9 +22,9 @@ function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
     active: { seatId: 'p1', name: 'Marte', extraStrokes: 1, score: null, putts: null },
     par: 4,
     options: [
-      { strokes: 3, term: 'birdie', points: 4, netto: 2 },
-      { strokes: 4, term: 'par', points: 3, netto: 3 },
-      { strokes: 8, term: 'over', points: 0, netto: 7 },
+      { strokes: 3, term: 'birdie', points: 4 },
+      { strokes: 4, term: 'par', points: 3 },
+      { strokes: 8, term: 'over', points: 0 },
     ],
     display: 'points',
     puttsTracking: false,
@@ -51,7 +51,8 @@ describe('ScoreRail', () => {
     const { rerender } = await render(<ScoreRail {...props({ onPick, onPuttsToggle })} />);
 
     expect(screen.getByTestId('score-rail-heading').props.children).toBe('Marte');
-    expect(screen.getByTestId('score-rail-strokes')).toBeTruthy();
+    expect(screen.getByTestId('score-rail-strokes').props.children).toBe('Får 1 slag');
+    expect(screen.getByLabelText('får 1 slag på hullet')).toBeTruthy();
     expect(screen.getByTestId('score-rail-skip')).toBeTruthy();
     expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
     expect(screen.getByTestId('rail-option-8-detail').props.children).toBe('+4 · 0 p');
@@ -116,15 +117,30 @@ it('«Putter» er webbens ord tegn for tegn', () => {
   expect(PUTTS_LABEL).toBe(source.holes.putts.fieldLabel);
 });
 
+// #2635, eierens valg C: kort tekst, ingen «netto par», og plusshandicap
+// viser at slag gis bort.
 describe('railStrokesLine', () => {
   it.each([
-    [1, 4, 'Får 1 slag her · netto par = 5'],
-    [2, 3, 'Får 2 slag her · netto par = 5'],
-    [0, 4, null],
-    [-1, 4, null],
-    [null, 4, null],
-  ] as const)('%s slag på par %s gir %s', (extra, par, text) => {
-    expect(railStrokesLine(extra, par)).toBe(text);
+    [1, { text: 'Får 1 slag', label: 'får 1 slag på hullet' }],
+    [2, { text: 'Får 2 slag', label: 'får 2 slag på hullet' }],
+    [-1, { text: 'Mister 1 slag', label: 'gir bort 1 slag på hullet' }],
+    [-2, { text: 'Mister 2 slag', label: 'gir bort 2 slag på hullet' }],
+    [0, null],
+    [null, null],
+  ] as const)('%s slag gir %o', (extra, line) => {
+    expect(railStrokesLine(extra)).toEqual(line);
+  });
+
+  it('er webbens tekst tegn for tegn', () => {
+    const rail = source.holes.scoreRail;
+    expect(railStrokesLine(2)).toEqual({
+      text: rail.strokesGet.replace('{n}', '2'),
+      label: rail.strokesGetAriaLabel.replace('{n}', '2'),
+    });
+    expect(railStrokesLine(-1)).toEqual({
+      text: rail.strokesGive.replace('{n}', '1'),
+      label: rail.strokesGiveAriaLabel.replace('{n}', '1'),
+    });
   });
 });
 

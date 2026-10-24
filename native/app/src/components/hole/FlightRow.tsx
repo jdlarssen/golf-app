@@ -29,6 +29,7 @@ import { scoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { DashedRing } from '../icons/Icons';
+import { railStrokesLine } from './ScoreRail';
 
 /** Designets form: 40 pt med strek på 2, firkanten med hjørner på 6. */
 const SHAPE_SIZE = 40;
@@ -77,19 +78,18 @@ const NO_SCORE = '–';
 
 /**
  * Slagene raden får på hullet, som i designet: «Får 1 slag», eller «Scratch»
- * når den ikke får noen. Ingenting når motoren ikke kan svare, eller når
- * raden gir slag tilbake (plusshandicap), som merket før #2385.
+ * når den ikke får noen. Gir raden slag tilbake (plusshandicap), står
+ * «Mister 1 slag» (#2635), med samme ord som skinna. Ingenting når motoren
+ * ikke kan svare.
  */
 export function strokesLine(extraStrokes: number | null): string | null {
-  if (extraStrokes == null || extraStrokes < 0) return null;
-  return extraStrokes === 0 ? 'Scratch' : `Får ${extraStrokes} slag`;
+  if (extraStrokes === 0) return 'Scratch';
+  return railStrokesLine(extraStrokes)?.text ?? null;
 }
 
 /** Tall i nøstede former trenger mindre plass; to sifre enda mindre. */
 function numberFontSize(shape: ScoreShape, n: number): number {
   const twoDigit = n >= 10;
-  if (shape === 'quadruple-square') return twoDigit ? 9 : 11;
-  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 11 : 13;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 13 : 16;
   return twoDigit ? 16 : 20;
 }
@@ -100,16 +100,10 @@ function ringCount(shape: ScoreShape): { rings: number; round: boolean } {
       return { rings: 1, round: true };
     case 'double-circle':
       return { rings: 2, round: true };
-    case 'triple-circle':
-      return { rings: 3, round: true };
     case 'square':
       return { rings: 1, round: false };
     case 'double-square':
       return { rings: 2, round: false };
-    case 'triple-square':
-      return { rings: 3, round: false };
-    case 'quadruple-square':
-      return { rings: 4, round: false };
     default:
       return { rings: 0, round: false };
   }

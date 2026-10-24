@@ -659,12 +659,12 @@ function HoleView({
     clearScoreFor: clearSeatScore,
   });
 
-  // Det knappene viser før trykket: poeng i stableford-familien, netto ellers,
-  // bare navnet i en blind runde. Kan motoren ikke svare på slagene setet får,
-  // gjetter vi ikke: da vises bare navnet.
+  // Det knappene viser før trykket: navnet på resultatet, og poengene etter i
+  // stableford-familien. Aldri netto (#2635). Ingen poeng i en blind runde,
+  // og heller ikke når motoren ikke kan svare på slagene setet får.
   const railSeat = rail.activeSeatId == null ? undefined : seatOf(rail.activeSeatId);
   const railDisplay: RailDisplay =
-    hideNetto || railSeat?.extraStrokes == null ? 'plain' : isStableford ? 'points' : 'netto';
+    isStableford && !hideNetto && railSeat?.extraStrokes != null ? 'points' : 'plain';
   const railOptions: RailOption[] = railSeat
     ? railStrokes(par).map((strokes) => ({
         strokes,
@@ -675,7 +675,6 @@ function HoleView({
           gameMode: mode,
           isStableford,
         }),
-        netto: strokes - (railSeat.extraStrokes ?? 0),
       }))
     : [];
   const railSkipSeat = rail.skipToSeatId == null ? undefined : seatOf(rail.skipToSeatId);

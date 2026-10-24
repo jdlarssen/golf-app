@@ -8,7 +8,6 @@ const options: RailOption[] = [3, 4, 5, 6, 7].map((strokes) => ({
   strokes,
   term: 'par',
   points: null,
-  netto: strokes - 1,
 }));
 
 const handlers = {
@@ -27,7 +26,7 @@ describe('ScoreRail', () => {
         active={{ playerId: 'u1', name: 'Marte', extraStrokes: 1, score: 5, putts: null }}
         par={4}
         options={options}
-        display="netto"
+        display="plain"
         puttsTracking={false}
         skipTo="Tore"
         {...handlers}
@@ -46,6 +45,10 @@ describe('ScoreRail', () => {
       'false',
     ]);
     expect(within(rail).getByTestId('score-rail-skip')).toBeInTheDocument();
+    // #2635: the strokes stand on their own line, with the full meaning for
+    // the screen reader; the heading is the name alone.
+    expect(within(rail).getByTestId('score-rail-heading').textContent).toBe('Marte');
+    expect(within(rail).getByTestId('score-rail-strokes').textContent).toBe('Får 1 slagfår 1 slag på hullet');
     const live = within(rail).getByTestId('score-rail-announcement');
     expect(live.getAttribute('aria-live')).toBe('polite');
     expect(live.textContent).toContain('Marte');
@@ -56,7 +59,7 @@ describe('ScoreRail', () => {
         active={null}
         par={4}
         options={options}
-        display="netto"
+        display="plain"
         puttsTracking={false}
         skipTo={null}
         {...handlers}

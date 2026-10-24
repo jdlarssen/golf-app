@@ -6,17 +6,16 @@ import type { StrokeTerm } from '@/lib/scorecard/scoreRail';
 import { PuttsChips } from './PuttsChips';
 
 /**
- * What each rail button shows after the term: stableford points, net
- * strokes, or nothing (a reveal game keeps net and points hidden, #1447).
+ * What each rail button shows after the term: stableford points, or nothing.
+ * Never net strokes (#2635); a reveal game keeps the points hidden (#1447).
  */
-export type RailDisplay = 'points' | 'netto' | 'plain';
+export type RailDisplay = 'points' | 'plain';
 
 /** One number on the rail, with its result computed by the caller. */
 export interface RailOption {
   strokes: number;
   term: StrokeTerm;
   points: number | null;
-  netto: number;
 }
 
 /** The seat the rail is entering. */
@@ -72,6 +71,15 @@ const headingStyle: CSSProperties = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+};
+
+/** «Får 1 slag» / «Mister 1 slag» to the right of the name (#2635). */
+const strokesStyle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 12,
+  color: 'var(--text-muted)',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 };
 
 const linkButtonStyle: CSSProperties = {
@@ -213,9 +221,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     if (display === 'points' && option.points != null) {
       return t('scoreRail.detailPoints', { term, points: option.points });
     }
-    if (display === 'netto') {
-      return t('scoreRail.detailNetto', { term, netto: option.netto });
-    }
     return term;
   }
 
@@ -223,9 +228,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     const base = { strokes: option.strokes, name, term: termText(option) };
     if (display === 'points' && option.points != null) {
       return t('scoreRail.buttonAriaLabelPoints', { ...base, points: option.points });
-    }
-    if (display === 'netto') {
-      return t('scoreRail.buttonAriaLabelNetto', { ...base, netto: option.netto });
     }
     return t('scoreRail.buttonAriaLabel', base);
   }
@@ -241,13 +243,27 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
         <>
           <div style={headerStyle}>
             <h2 id={headingId} data-testid="score-rail-heading" style={headingStyle}>
-              {active.extraStrokes > 0
-                ? t('scoreRail.headingWithStrokes', {
-                    name: active.name,
-                    n: active.extraStrokes,
-                  })
-                : active.name}
+              {active.name}
             </h2>
+            {/* The owner's choice C (#2635): a short line, no net par. A plus
+                handicap gives strokes away; the screen reader hears it whole. */}
+            {active.extraStrokes !== 0 && (
+              <span data-testid="score-rail-strokes" style={strokesStyle}>
+                <span aria-hidden="true">
+                  {t(active.extraStrokes > 0 ? 'scoreRail.strokesGet' : 'scoreRail.strokesGive', {
+                    n: Math.abs(active.extraStrokes),
+                  })}
+                </span>
+                <span className="sr-only">
+                  {t(
+                    active.extraStrokes > 0
+                      ? 'scoreRail.strokesGetAriaLabel'
+                      : 'scoreRail.strokesGiveAriaLabel',
+                    { n: Math.abs(active.extraStrokes) },
+                  )}
+                </span>
+              </span>
+            )}
             {skipTo != null && (
               <button
                 type="button"
@@ -271,7 +287,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
                   data-testid="rail-option"
                   data-strokes={option.strokes}
                   data-points={display === 'points' ? (option.points ?? undefined) : undefined}
-                  data-netto={display === 'netto' ? option.netto : undefined}
                   aria-pressed={selected}
                   aria-label={ariaText(option, active.name)}
                   onClick={() => onPick(option.strokes)}

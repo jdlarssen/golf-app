@@ -48,8 +48,6 @@ export interface ScoreCardProps {
 
 function scoreNumberFontSize(shape: ScoreShapeKind, displayedNumber: number): number {
   const twoDigit = displayedNumber >= 10;
-  if (shape === 'quadruple-square') return twoDigit ? 14 : 18;
-  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 18 : 22;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 22 : 28;
   return twoDigit ? 26 : 36;
 }
@@ -190,8 +188,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   };
 
   // Scale font-size based on shape complexity + digit count so the number
-  // never clips the innermost ring/box. Nested shapes (triple/quad) eat into
-  // the inner area; two-digit numbers need extra headroom on top of that.
+  // never clips the innermost ring/box. A double shape eats into the inner
+  // area; two-digit numbers need extra headroom on top of that.
   const numberFontSize = scoreNumberFontSize(shape, displayedNumber);
 
   const numberStyle: CSSProperties = {

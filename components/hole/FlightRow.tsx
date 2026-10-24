@@ -29,8 +29,6 @@ export interface FlightRowProps {
 // Nested shapes eat into the 36px md box; two digits need more headroom.
 function numberFontSize(shape: ScoreShapeKind, n: number): number {
   const twoDigit = n >= 10;
-  if (shape === 'quadruple-square') return twoDigit ? 9 : 11;
-  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 11 : 13;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 13 : 16;
   return twoDigit ? 16 : 20;
 }
@@ -171,10 +169,13 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
       >
         <span style={nameStyle}>{name}</span>
         {/* #1447: the stroke badge is the handicap allocation, not standing —
-            it stays on in a reveal game too. */}
-        {extraStrokes > 0 && (
+            it stays on in a reveal game too. #2635: a plus handicap shows the
+            strokes it gives away. */}
+        {extraStrokes !== 0 && (
           <span data-testid="flight-row-strokes" style={badgeStyle}>
-            {t('scoreCard.strokesBadge', { n: extraStrokes })}
+            {extraStrokes > 0
+              ? t('scoreCard.strokesBadge', { n: extraStrokes })
+              : t('scoreCard.strokesGiveBadge', { n: -extraStrokes })}
           </span>
         )}
         {submitted && (

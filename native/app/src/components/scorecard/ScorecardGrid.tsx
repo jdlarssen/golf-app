@@ -97,10 +97,9 @@ const HALF_TITLES: Record<ScorecardHalf['key'], { title: string; a11y: string }>
   in: { title: 'Inn', a11y: 'Inn, hull 10 til 18' },
 };
 
-/** Formens ytre mål: 22 pt, og 7 pt til per ekstra ring, men aldri over 29. */
+/** Formens ytre mål: 22 pt, og 7 pt mer med to ringer (maks to, #2635). */
 function shapeSize(strokes: number, par: number): number {
-  const rings = scoreShapeRings(strokes, par);
-  return rings <= 1 ? SHAPE : Math.min(SHAPE + RING_GROWTH, SHAPE + RING_GROWTH * (rings - 1));
+  return scoreShapeRings(strokes, par) <= 1 ? SHAPE : SHAPE + RING_GROWTH;
 }
 
 function holeLabel(

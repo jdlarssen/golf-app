@@ -90,7 +90,9 @@ describe('strokesLine', () => {
     [1, 'Får 1 slag'],
     [2, 'Får 2 slag'],
     [0, 'Scratch'],
-    [-1, null],
+    // #2635: plusshandicap viser at slaget gis bort, som skinna.
+    [-1, 'Mister 1 slag'],
+    [-2, 'Mister 2 slag'],
     [null, null],
   ] as const)('%s slag gir %s', (extra, text) => {
     expect(strokesLine(extra)).toBe(text);

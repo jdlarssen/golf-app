@@ -445,10 +445,12 @@ describe('Hole', () => {
     expect(doneRow).toHaveStyle({ opacity: 0.6 });
     expect(screen.getByTestId('flight-row-done-submitted')).toBeTruthy();
 
-    // Skinna starter på meg. Slagene jeg får på hullet står i overskriften, og
-    // netto på knappene regnes med dem (solo slagspill viser netto).
+    // Skinna starter på meg. Slagene jeg får på hullet står i overskriften,
+    // men knappene sier bare navnet mot hullets par (#2635), også i netto
+    // slagspill.
     expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
-    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
+    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
+    expect(screen.getByLabelText('Sett 4 slag for Meg Selv: Par')).toBeTruthy();
 
     // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
     // og skinna står fast på meg, så neste trykk på tallet treffer riktig.
@@ -522,7 +524,7 @@ describe('Hole', () => {
     // Tildelingen er motorens tall: høysiden får 10 slag, altså ett på SI 1.
     // Laget som er på tur, har den øverst i skinna (#2385); lavsiden får
     // ingen, og raden sier «Scratch».
-    expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent(/^Får 1 slag her/);
+    expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent('Får 1 slag');
     expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe(`${strokesLine(0)} · venter`);
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).

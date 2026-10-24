@@ -1,10 +1,11 @@
 // #2252: scoreskinna nederst på hullsiden i appen, motstykket til webbens
 // `components/hole/ScoreRail.tsx` (#2251).
 //
-// Fem tall (par −1 til par +3) og «Annet», og hver knapp viser resultatet før
-// trykket: poeng i stableford-familien, netto ellers, bare navnet i en blind
-// runde. Komponenten tegner bare. Hvem som er aktiv og hva et trykk skriver,
-// bestemmer `useScoreRail` og hullsiden.
+// Fem tall (par −1 til par +3) og «Annet», og hver knapp viser navnet på
+// resultatet mot hullets par, aldri netto (#2635). Stableford-familien har
+// poengene etter navnet, unntatt i en blind runde. Komponenten tegner bare.
+// Hvem som er aktiv og hva et trykk skriver, bestemmer `useScoreRail` og
+// hullsiden.
 //
 // Teksten er webbens (`holes.scoreRail.*` i messages/no.json). Appen har ikke
 // i18n ennå, så den står her.
@@ -14,7 +15,7 @@
 //
 // #2385 la skinna på designlerretet, identisk:
 // - **Vanlig** (`Main`): et hvitt ark nederst med runde øvre hjørner, skygge og
-//   et lite håndtak. Øverst navnet og «Får 1 slag her · netto par = 5». Knappene
+//   et lite håndtak. Øverst navnet og «Får 1 slag» (#2635). Knappene
 //   er 72 pt med tonens flate og farge og uten kant (birdie grønn, par nøytral,
 //   bogey amber, dobbel og verre murstein), og før noen score står er par
 //   foreslått med skogkant. «Annet» har «8+ eller stryk» under. Nederst putte-
@@ -35,15 +36,14 @@ import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
 import { withSystemArrows } from '../SystemArrow';
 
-/** Hva knappene viser etter navnet på resultatet. */
-export type RailDisplay = 'points' | 'netto' | 'plain';
+/** Hva knappene viser etter navnet på resultatet: poengene, eller ingenting. */
+export type RailDisplay = 'points' | 'plain';
 
 /** Ett tall på skinna, med resultatet regnet ut av kalleren. */
 export type RailOption = {
   strokes: number;
   term: StrokeTerm;
   points: number | null;
-  netto: number;
 };
 
 /** Setet skinna taster for. */
@@ -116,10 +116,20 @@ function shortTermText(option: RailOption, par: number): string {
   return SHORT_LABELS[option.term] ?? optionTermText(option, par);
 }
 
-/** Linja til høyre for navnet: slagene setet får og hva par blir netto. */
-export function railStrokesLine(extraStrokes: number | null, par: number): string | null {
-  if (extraStrokes == null || extraStrokes <= 0) return null;
-  return `Får ${extraStrokes} slag her · netto par = ${par + extraStrokes}`;
+/**
+ * Linja til høyre for navnet (#2635, eierens valg C): «Får 1 slag», eller
+ * «Mister 1 slag» når setet gir slag tilbake (plusshandicap). Ingenting uten
+ * slag på hullet, eller når motoren ikke kan svare. Skjermleseren får hele
+ * meningen.
+ */
+export function railStrokesLine(
+  extraStrokes: number | null,
+): { text: string; label: string } | null {
+  if (extraStrokes == null || extraStrokes === 0) return null;
+  const n = Math.abs(extraStrokes);
+  return extraStrokes > 0
+    ? { text: `Får ${n} slag`, label: `får ${n} slag på hullet` }
+    : { text: `Mister ${n} slag`, label: `gir bort ${n} slag på hullet` };
 }
 
 export function ScoreRail({
@@ -185,14 +195,12 @@ export function ScoreRail({
     const term = shortTermText(option, par);
     if (sunlight) return term;
     if (display === 'points' && option.points != null) return `${term} · ${option.points} p`;
-    if (display === 'netto') return `${term} · netto ${option.netto}`;
     return term;
   };
 
   const labelText = (option: RailOption): string => {
     const base = `Sett ${option.strokes} slag for ${active.name}: ${optionTermText(option, par)}`;
     if (display === 'points' && option.points != null) return `${base}, ${option.points} poeng`;
-    if (display === 'netto') return `${base}, netto ${option.netto}`;
     return base;
   };
 
@@ -200,7 +208,7 @@ export function ScoreRail({
     styles.step,
     { borderWidth: hole.borderW, borderColor: colors.border, backgroundColor: colors.surface },
   ];
-  const strokesLine = railStrokesLine(active.extraStrokes, par);
+  const strokesLine = railStrokesLine(active.extraStrokes);
 
   return (
     <View style={section} testID="score-rail">
@@ -216,8 +224,12 @@ export function ScoreRail({
             {active.name}
           </Text>
           {strokesLine ? (
-            <Text style={[styles.headingNote, { color: colors.muted }]} testID="score-rail-strokes">
-              {strokesLine}
+            <Text
+              style={[styles.headingNote, { color: colors.muted }]}
+              accessibilityLabel={strokesLine.label}
+              testID="score-rail-strokes"
+            >
+              {strokesLine.text}
             </Text>
           ) : null}
         </View>
