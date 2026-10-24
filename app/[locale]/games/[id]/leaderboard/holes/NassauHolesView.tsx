@@ -7,6 +7,7 @@ import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { headlineUnit, teamHeadline } from '@/lib/leaderboard/vsPar';
+import { nassauHoleCardRows } from '@/lib/leaderboard/nassauHoleCard';
 import type {
   NassauResult,
   NassauHoleRow,
@@ -282,6 +283,7 @@ function SectionBlock({
           <HoleCard
             key={hole.holeNumber}
             hole={hole}
+            ranking={ranking}
             playersById={playersById}
             t={t}
           />
@@ -360,26 +362,29 @@ function SummaryStrip({
  * hull-vinner (lavest netto) uthevet i champagne med ★; ble hullet delt får
  * ingen utheving (samme nøytrale signal som duell-strippens «delt»). Uspilte
  * spillere viser «–» og sorteres sist. Hull der ingen har spilt viser «Venter».
+ *
+ * #2625: in a game ranked on net to par the winner is the lowest effective −
+ * own par, and the rows are ordered on that measure (`nassauHoleCardRows`), so
+ * the ★ row stands first. The row still shows the strokes, and the chip the
+ * hole's (men's) par.
  */
 function HoleCard({
   hole,
+  ranking,
   playersById,
   t,
 }: {
   hole: NassauHoleRow;
+  ranking: NassauResult['ranking'];
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const tc = useTranslations('leaderboard.common');
   const scored = hole.bestUserIds.length > 0;
-  // Champagne kun ved en utvetydig hull-vinner. Delt lavest netto = nøytralt.
+  // Champagne kun ved en utvetydig hull-vinner. Delt beste = nøytralt.
   const uniqueWinnerId =
     hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
-  const rows = [...hole.perPlayer].sort(
-    (a, b) =>
-      (a.effective ?? Number.POSITIVE_INFINITY) -
-      (b.effective ?? Number.POSITIVE_INFINITY),
-  );
+  const rows = nassauHoleCardRows(hole.perPlayer, ranking);
 
   return (
     <li
