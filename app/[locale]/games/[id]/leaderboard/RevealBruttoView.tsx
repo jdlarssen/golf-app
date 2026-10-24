@@ -22,8 +22,8 @@ type Props = {
   backHref: string;
   footerSlot?: ReactNode;
   /**
-   * #2625: a net-to-par team game (Texas family) leads each row with the
-   * team's brutto to par, the number `teams` is ranked on.
+   * #2625: a net-to-par game (the Texas family, stableford, solo strokeplay)
+   * leads each row with its brutto to par, the number `teams` is ranked on.
    */
   ranking?: 'net_to_par';
 };
