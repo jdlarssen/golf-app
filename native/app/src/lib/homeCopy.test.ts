@@ -163,6 +163,10 @@ describe('startbodens egne tekster', () => {
     expect(standingDetail(s(1, 21, 7, null, 12), 'points')).toBe(
       'blant 12 spillere · 21 poeng etter 7 hull',
     );
+    // #2625: poeng mot par-tempo sier «mot par», og avstanden er i poeng.
+    expect(standingDetail(s(2, 1, 6, 4, 12), 'pointsToPar')).toBe(
+      '+1 mot par etter 6 hull · 4 poeng bak ledelsen',
+    );
     // Avstand 0 (lik sum, men rangert bak) vises ikke, som på tavla.
     expect(standingDetail(s(2, 20, 7, 0, 5), 'points')).toBe('av 5 spillere · 20 poeng etter 7 hull');
   });

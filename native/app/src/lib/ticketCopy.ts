@@ -103,7 +103,7 @@ export function approveButton(count: number): string {
 /**
  * Tallet til høyre for fremdriften i stubben (#2255, eierens svar a): tavlas
  * total, i helten på Hjems enhet, kort. Poeng blir «15 p», netto slag «72
- * netto», og mot par «+3» (den delte `formatVsPar`).
+ * netto», og mot par «+3» (den delte `formatVsPar`), også poeng mot par-tempo (#2625).
  */
 export function stubTotal(total: number, unit: LiveBoardUnit): string {
   if (unit === 'points') return `${total}\u00A0p`;

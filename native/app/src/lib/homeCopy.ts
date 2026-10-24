@@ -11,7 +11,7 @@
 // morgen, Sigrid» etter klokka, og «om 7 dager» med liten forbokstav.
 import type { TeeOffProximity } from '../../../../lib/format/teeOffProximity';
 import type { FinishedResultBadge } from '../../../../lib/games/finishedResultBadge';
-import type { LiveBoardUnit, ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
+import { isPointsUnit, type LiveBoardUnit, type ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
 
 export const HOME_TEXT = {
@@ -86,6 +86,8 @@ function totalAfter(total: number, unit: LiveBoardUnit, holes: number): string {
   const after = `etter ${holes} hull`;
   if (unit === 'points') return `${total} poeng ${after}`;
   if (unit === 'net') return `${total} slag netto ${after}`;
+  // #2625: points against par pace say so; a bare «+3» would read as points.
+  if (unit === 'pointsToPar') return `${formatVsPar(total)} mot par ${after}`;
   return `${formatVsPar(total)} ${after}`;
 }
 
@@ -105,7 +107,7 @@ export function standingDetail(
     standing.total !== null ? totalAfter(standing.total, unit, standing.holesPlayed) : null;
   if (standing.gap !== null && standing.gap > 0) {
     const behind =
-      unit === 'points' ? `${standing.gap} poeng bak ledelsen` : `${standing.gap} slag bak ledelsen`;
+      isPointsUnit(unit) ? `${standing.gap} poeng bak ledelsen` : `${standing.gap} slag bak ledelsen`;
     return [total, behind].filter(Boolean).join(' · ');
   }
   const field =

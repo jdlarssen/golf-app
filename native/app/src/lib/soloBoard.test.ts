@@ -104,6 +104,35 @@ describe('soloBoardFor — live', () => {
   });
 });
 
+describe('soloBoardFor — stableford ranked on points against par pace (#2625)', () => {
+  // Marte +3 etter 3 hull (9 poeng), du +1 etter 7 (én birdie, 15 poeng),
+  // Jonas −7 etter 7. Summen ville satt deg øverst; mot par leder Marte.
+  const FLAGGED = { kind: 'stableford', team_size: 1, points_table: 'standard', ranking: 'net_to_par' };
+  const scores = [
+    ...holeScores('g-live', 'marte', 3, 3),
+    ...holeScores('g-live', ME, 6, 4),
+    ...holeScores('g-live', ME, 7, 3, 7),
+    ...holeScores('g-live', 'jonas', 7, 5),
+  ];
+  const bundle = homeBundle({ game: { modeConfig: FLAGGED }, players });
+  const model = soloBoardFor({ bundle, scores, userId: ME })!;
+
+  it('heads the column «Mot par» and shows the number with a sign', () => {
+    expect(model.totalHeading).toBe('Mot par');
+    expect(model.rows.map((r) => [r.userId, r.place, r.total])).toEqual([
+      ['marte', '1', '+3'],
+      [ME, '2', '+1'],
+      ['jonas', '3', '\u22127'],
+    ]);
+  });
+
+  it('reads the number aloud in points, and the strip gives the gap in points across holes', () => {
+    expect(model.rows[0].a11y).toContain('3 poeng over par');
+    expect(model.rows[2].a11y).toContain('7 poeng under par');
+    expect(model.strip?.text).toBe('2. plass · 2 poeng bak Marte');
+  });
+});
+
 describe('soloBoardFor — names, as the web board writes them', () => {
   // The web board and the side tournament card write a row as
   // formatRevealName(name, nickname), with «(ukjent spiller)» for a missing

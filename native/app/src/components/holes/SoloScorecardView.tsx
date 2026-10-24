@@ -14,6 +14,8 @@ import type {
   SoloScorecardNine,
 } from '../../../../../lib/leaderboard/soloScorecard';
 import { formatSignedPoints } from '../../../../../lib/leaderboard/soloScorecard';
+import { formatVsPar } from '../../../../../lib/leaderboard/vsPar';
+import { BOARD_COMMON_TEXT } from '../../lib/boardCopy';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
 import { FONTS, fraunces, useTheme } from '../../theme';
@@ -48,7 +50,11 @@ export function SoloScorecardView({
       <HolesTitle subtitle={subtitle} />
 
       <View style={ui.card} testID="hole-by-hole-standings">
-        <Text style={[holesStyles.kicker, { color: colors.muted }]}>{HOLES_TEXT.standings}</Text>
+        <Text style={[holesStyles.kicker, { color: colors.muted }]}>
+          {card.ranking === 'net_to_par'
+            ? `${HOLES_TEXT.standings} · ${BOARD_COMMON_TEXT.vsParLabel}`
+            : HOLES_TEXT.standings}
+        </Text>
         {card.standings.map((line) => (
           <View key={line.userId} style={styles.standing} testID={`hole-by-hole-standing-${line.userId}`}>
             <View style={styles.standingName}>
@@ -73,7 +79,12 @@ export function SoloScorecardView({
                   { color: line.isLeader ? colors.accentText : colors.text },
                 ]}
               >
-                {metric === 'points' ? formatSignedPoints(line.total) : String(line.total)}
+                {/* #2625: a game ranked on net to par leads with the number it ranks on. */}
+                {card.ranking === 'net_to_par'
+                  ? formatVsPar(line.toPar)
+                  : metric === 'points'
+                    ? formatSignedPoints(line.total)
+                    : String(line.total)}
               </Text>
             </View>
           </View>
