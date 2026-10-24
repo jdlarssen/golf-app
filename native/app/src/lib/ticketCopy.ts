@@ -8,6 +8,7 @@
 
 import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
+import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const TICKET_TEXT = {
   // Feltene på billetten. Stilen setter dem i versaler.
@@ -109,6 +110,6 @@ export function stubTotal(total: number, unit: LiveBoardUnit): string {
   if (unit === 'points') return `${total}\u00A0p`;
   if (unit === 'net') return `${total}\u00A0netto`;
   // #2625: points against par pace say so, like Home; a bare «+3» reads as three over par.
-  if (unit === 'pointsToPar') return `${formatVsPar(total)}\u00A0mot par`;
+  if (unit === 'pointsToPar') return `${formatVsPar(total)}\u00A0${BOARD_COMMON_TEXT.vsParLabel}`;
   return formatVsPar(total);
 }

@@ -13,6 +13,7 @@ import type { TeeOffProximity } from '../../../../lib/format/teeOffProximity';
 import type { FinishedResultBadge } from '../../../../lib/games/finishedResultBadge';
 import { isPointsUnit, type LiveBoardUnit, type ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
+import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const HOME_TEXT = {
   /** Webbens `home.sectionInProgress`; kickeren settes i versaler av stilen. */
@@ -87,7 +88,7 @@ function totalAfter(total: number, unit: LiveBoardUnit, holes: number): string {
   if (unit === 'points') return `${total} poeng ${after}`;
   if (unit === 'net') return `${total} slag netto ${after}`;
   // #2625: points against par pace say so; a bare «+3» would read as points.
-  if (unit === 'pointsToPar') return `${formatVsPar(total)} mot par ${after}`;
+  if (unit === 'pointsToPar') return `${formatVsPar(total)} ${BOARD_COMMON_TEXT.vsParLabel} ${after}`;
   return `${formatVsPar(total)} ${after}`;
 }
 
