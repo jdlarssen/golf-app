@@ -18,7 +18,7 @@ import { computeLeaderboard } from '@/lib/leaderboard';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
-import { formatVsPar } from '@/lib/leaderboard/vsPar';
+import { formatVsPar, headlineUnit } from '@/lib/leaderboard/vsPar';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -225,7 +225,7 @@ export async function renderSoloStrokeplay(opts: {
       );
       // #2253: a game ranked on net to par shows that number («−1», «E»);
       // the bar still reads the plain number, lowest wins either way.
-      const toPar = result.ranking === 'net_to_par';
+      const toPar = headlineUnit(result.ranking) === 'toPar';
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
         return {

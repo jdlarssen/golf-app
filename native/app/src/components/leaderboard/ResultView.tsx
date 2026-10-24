@@ -12,6 +12,7 @@ import { showHolesColumn, teamHolesPlayed } from '../../../../../lib/leaderboard
 import { headlineUnit, teamHeadline } from '../../../../../lib/leaderboard/vsPar';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
+import { BOARD_TEXT } from '../../lib/boardCopy';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
 import type { SoloBoardModel } from '../../lib/soloBoard';
@@ -61,9 +62,9 @@ const TEAM: LeaderColumn = { key: 'team', label: 'Lag', flex: 3 };
  * sluttresultatet tas den bare med når radene er uenige — regelen bor i
  * `lib/leaderboard/holesColumn.ts` og deles med nettsidens podier (#1892).
  */
-const HOLES: LeaderColumn = { key: 'holes', label: 'Hull', numeric: true };
+const HOLES: LeaderColumn = { key: 'holes', label: BOARD_TEXT.colHoles, numeric: true };
 /** #2625: a team strokeplay game ranked on net to par shows the team's to par. */
-const VS_PAR: LeaderColumn = { key: 'vsPar', label: 'Mot par', numeric: true };
+const VS_PAR: LeaderColumn = { key: 'vsPar', label: BOARD_TEXT.colVsPar, numeric: true };
 
 export function ResultView({
   result,
@@ -112,7 +113,7 @@ export function ResultView({
             RANK,
             PLAYER,
             { key: 'gross', label: 'Brutto', numeric: true },
-            { key: 'net', label: 'Netto', numeric: true },
+            { key: 'net', label: BOARD_TEXT.colNet, numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.players.map((player) => ({
@@ -146,7 +147,7 @@ export function ResultView({
               RANK,
               PLAYER,
               // #2625: et spill som rangeres mot par, viser poeng mot par-tempo.
-              headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
+              headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
               ...(showHoles ? [HOLES] : []),
             ]}
             rows={result.players.map((player) => ({
@@ -169,7 +170,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
           ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
@@ -197,7 +198,7 @@ export function ResultView({
             // Lag-handicapet kommer FRA motoren (`teamHandicap`) — appen har
             // ingen egen kopi av 60/40- eller prosent-formlene.
             { key: 'hcp', label: 'Lag-hcp', numeric: true },
-            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: BOARD_TEXT.colNet, numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
@@ -228,7 +229,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: BOARD_TEXT.colNet, numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
@@ -286,7 +287,7 @@ export function ResultView({
             columns={[
               RANK,
               PLAYER,
-              { key: 'points', label: 'Poeng', numeric: true },
+              { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
               ...(showHoles ? [HOLES] : []),
             ]}
             rows={result.players.map((player) => ({
@@ -336,7 +337,7 @@ export function ResultView({
             columns={[
               RANK,
               PLAYER,
-              { key: 'total', label: 'Poeng', numeric: true },
+              { key: 'total', label: BOARD_TEXT.colPoints, numeric: true },
               { key: 'aces', label: 'Ess', numeric: true },
             ]}
             rows={result.players.map((player) => ({
