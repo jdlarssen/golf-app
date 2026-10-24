@@ -304,7 +304,13 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
     // #727: assert the update touched a row; also surfaces real DB errors the
     // bare `if (error)` previously returned without logging (bug-prevention #2).
     try {
-      const result = await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id');
+      // #2638: bound to the form's league, so a round of another league is 0 rows.
+      const result = await supabase
+        .from('league_rounds')
+        .update(patch)
+        .eq('id', roundId)
+        .eq('league_id', leagueId)
+        .select('id');
       // #2638: the database guard (0215) gives the same code as the check above.
       if (result.error?.message?.includes(ROUND_LOCKED_MESSAGE)) return { error: 'round_settings_locked' };
       expectAffected(result, 'updateLeagueRound');
@@ -328,9 +334,11 @@ const ROUND_LOCKED_MESSAGE = 'locked once a player has started the round';
  * would show a tee the flights did not play. Regular leagues are left as they
  * are, so an organiser there can still correct a wrong tee (the orchestrator's
  * choice). Refuses only an actual change; reads with the admin client because
- * the organiser cannot see other players' flights under games RLS. The
- * database guard (guard_league_rounds_sim_settings_lock, 0215) is the last
- * line and gives the same code.
+ * the organiser cannot see other players' flights under games RLS, and binds
+ * the round to the form's league so it tells nothing about another league's
+ * round (no row → update_failed). The database guard
+ * (guard_league_rounds_sim_settings_lock, 0215) is the last line and gives
+ * the same code.
  */
 async function courseTeeLockRefusal(
   roundId: string,
@@ -340,10 +348,15 @@ async function courseTeeLockRefusal(
   const admin = getAdminClient();
   const [leagueRes, roundRes, flightsRes] = await Promise.all([
     admin.from('leagues').select('is_simulator').eq('id', leagueId).maybeSingle(),
-    admin.from('league_rounds').select('course_id, tee_box_id').eq('id', roundId).maybeSingle(),
+    admin
+      .from('league_rounds')
+      .select('course_id, tee_box_id')
+      .eq('id', roundId)
+      .eq('league_id', leagueId)
+      .maybeSingle(),
     admin.from('games').select('id', { count: 'exact', head: true }).eq('league_round_id', roundId),
   ]);
-  if (leagueRes.error || roundRes.error || flightsRes.error || flightsRes.count === null) {
+  if (leagueRes.error || roundRes.error || flightsRes.error || flightsRes.count === null || !roundRes.data) {
     console.error('[league] updateLeagueRound lock check failed', {
       roundId,
       leagueError: leagueRes.error,
@@ -352,7 +365,7 @@ async function courseTeeLockRefusal(
     });
     return 'update_failed';
   }
-  if (!leagueRes.data?.is_simulator || !roundRes.data || flightsRes.count === 0) return null;
+  if (!leagueRes.data?.is_simulator || flightsRes.count === 0) return null;
   const changes =
     (patch.course_id !== undefined && patch.course_id !== roundRes.data.course_id) ||
     (patch.tee_box_id !== undefined && patch.tee_box_id !== roundRes.data.tee_box_id);
@@ -383,7 +396,11 @@ export async function updateLeagueSimSettings(formData: FormData): Promise<Leagu
     .select('is_simulator')
     .eq('id', leagueId)
     .maybeSingle();
-  if (readErr || !league) return { error: 'not_found' };
+  if (readErr) {
+    console.error('[league] updateLeagueSimSettings read failed', { leagueId, error: readErr });
+    return { error: 'update_failed' };
+  }
+  if (!league) return { error: 'not_found' };
   if (!league.is_simulator) return { error: 'not_simulator' };
 
   const parsed = parseSimSettings(formData);
@@ -411,9 +428,11 @@ export async function updateLeagueSimSettings(formData: FormData): Promise<Leagu
  * only the values that differ from the league default; `reset=true` («Tilbake
  * til standard») stores null. A round a player has started is locked
  * (`round_settings_locked`), so nobody in a round plays under other settings
- * than the others. The check here reads every flight with the admin client;
- * the database guard (guard_league_rounds_sim_settings_lock, 0212) is the last
- * line and gives the same code.
+ * than the others. The check here reads every flight with the admin client,
+ * after it has bound the round to the form's league (another league's round is
+ * not_found, and its flights are never counted); the database guard
+ * (guard_league_rounds_sim_settings_lock, 0212) is the last line and gives the
+ * same code.
  */
 export async function updateRoundSimSettings(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
@@ -423,12 +442,24 @@ export async function updateRoundSimSettings(formData: FormData): Promise<League
   const { groupId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   const admin = getAdminClient();
-  const [leagueRes, flightsRes] = await Promise.all([
+  const [leagueRes, roundRes] = await Promise.all([
     admin.from('leagues').select('is_simulator, sim_settings').eq('id', leagueId).maybeSingle(),
-    admin.from('games').select('id', { count: 'exact', head: true }).eq('league_round_id', roundId),
+    admin.from('league_rounds').select('id').eq('id', roundId).eq('league_id', leagueId).maybeSingle(),
   ]);
-  if (leagueRes.error || !leagueRes.data) return { error: 'not_found' };
+  if (leagueRes.error || roundRes.error) {
+    console.error('[league] updateRoundSimSettings read failed', {
+      roundId,
+      leagueError: leagueRes.error,
+      roundError: roundRes.error,
+    });
+    return { error: 'update_failed' };
+  }
+  if (!leagueRes.data || !roundRes.data) return { error: 'not_found' };
   if (!leagueRes.data.is_simulator) return { error: 'not_simulator' };
+  const flightsRes = await admin
+    .from('games')
+    .select('id', { count: 'exact', head: true })
+    .eq('league_round_id', roundId);
   if (flightsRes.error || flightsRes.count === null) {
     console.error('[league] updateRoundSimSettings lock check failed', { roundId, error: flightsRes.error });
     return { error: 'update_failed' };
@@ -552,7 +583,12 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
   // #727: assert the override touched a row (bug-prevention #2).
   try {
     expectAffected(
-      await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id'),
+      await supabase
+        .from('league_rounds')
+        .update(patch)
+        .eq('id', roundId)
+        .eq('league_id', leagueId)
+        .select('id'),
       'overrideRoundWindow',
     );
   } catch (err) {

@@ -1,6 +1,6 @@
 -- supabase/tests/league_simulator_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Simulator leagues (#2638 Del 1, migrations 0212–0215).
+-- Simulator leagues (#2638 Del 1, migrations 0212–0216).
 --
 -- CHECK on the settings columns:
 --   1  leagues.sim_settings that is not a JSON object               → 23514
@@ -46,22 +46,29 @@
 --  34  the club admin changes the tee of a started simulator round       → 42501
 --  35  …the same in a regular league still changes                       → 1 row
 --  36  …and a simulator round nobody has started still changes           → 1 row
+-- A round stays in its league (0216):
+--  37  the organiser moves a started simulator round to their regular
+--      league (step 1 of «move, change the tee, move back»)              → 42501
+--  38  the club admin changes the course of a started simulator round   → 42501
+--
+-- Every 42501 case checks the code and the exact message (throws_ok).
 --
 -- Red without 0212: every case (the columns do not exist). With 0212 minus the
 -- guards: 5–8, 14 and 15. Without 0213: 19–23. Without 0214: every case (the
 -- column does not exist); with the 0212 guard body: 26, 27 and 29. With the
--- 0213 function body: 25 and 31; with the 0212 leagues guard: 33; with the 0214
--- round guard: 34.
+-- 0213 function body: 25 and 31; with the 0212 leagues guard: 33 (and 5–7,
+-- whose message changed in 0215); with the 0214 round guard: 34 and 38; with
+-- the 0215 round guard: 37.
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
--- Depends on 0212, 0213, 0214 and 0215. Run via: supabase test db (see supabase/tests/README.md)
+-- Depends on 0212 to 0216. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(39);
 
 \ir fixtures/rls_helpers.psql
 
@@ -211,36 +218,36 @@ rollback to savepoint case_4;
 -- 5
 savepoint case_5;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.leagues set is_simulator = false where id = torny_rls.ls_active() $$,
-  '%locked once the league has started%',
+  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
   'case 5: the organiser CANNOT change is_simulator on an active league');
 rollback to savepoint case_5;
 
 -- 6
 savepoint case_6;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.leagues set scoring = 'gross' where id = torny_rls.ls_active() $$,
-  '%locked once the league has started%',
+  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
   'case 6: the organiser CANNOT change scoring on an active league');
 rollback to savepoint case_6;
 
 -- 7
 savepoint case_7;
 select torny_rls.as_user(torny_rls.admin_id());
-select throws_like(
+select throws_ok(
   $$ update public.leagues set scoring = 'gross' where id = torny_rls.ls_standalone() $$,
-  '%locked once the league has started%',
+  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
   'case 7: a global admin is not exempt: scoring stays locked on their active league');
 rollback to savepoint case_7;
 
 -- 8
 savepoint case_8;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.leagues set status = 'draft' where id = torny_rls.ls_active() $$,
-  '%cannot go back to draft%',
+  '42501', 'a league that has started cannot go back to draft',
   'case 8: an active league CANNOT go back to draft (that would reopen the lock)');
 rollback to savepoint case_8;
 
@@ -303,19 +310,19 @@ rollback to savepoint case_13;
 -- 14
 savepoint case_14;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.league_rounds set sim_settings = '{"green_stimp": "12"}'::jsonb
       where id = torny_rls.ls_r_started() $$,
-  '%locked once a player has started the round%',
+  '42501', 'league_rounds.sim_settings is locked once a player has started the round',
   'case 14: the organiser CANNOT change the settings of a round another player started');
 rollback to savepoint case_14;
 
 -- 15
 savepoint case_15;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.league_rounds set sim_settings = '{"wind": "STORMY"}'::jsonb where id = torny_rls.ls_r_done() $$,
-  '%locked once a player has started the round%',
+  '42501', 'league_rounds.sim_settings is locked once a player has started the round',
   'case 15: the organiser CANNOT change the settings of a round with a delivered flight');
 rollback to savepoint case_15;
 
@@ -412,22 +419,22 @@ rollback to savepoint case_25;
 -- 26
 savepoint case_26;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "13"}'::jsonb
       where id = torny_rls.ls_r_open() $$,
-  '%set by the server only%',
+  '42501', 'league_rounds.sim_frozen_default is set by the server only',
   'case 26: the organiser CANNOT write sim_frozen_default');
 rollback to savepoint case_26;
 
 -- 27
 savepoint case_27;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ insert into public.league_rounds
        (id, league_id, sequence, label, opens_at, closes_at, original_closes_at, sim_frozen_default)
      values (torny_rls.ls_r_new(), torny_rls.ls_active(), 4, 'Runde 4', now(), now() + interval '13 days',
              now() + interval '13 days', '{"green_stimp": "13"}'::jsonb) $$,
-  '%set by the server only%',
+  '42501', 'league_rounds.sim_frozen_default is set by the server only',
   'case 27: the organiser CANNOT insert a round with a frozen default');
 rollback to savepoint case_27;
 
@@ -450,10 +457,10 @@ select is(
                         where id = torny_rls.ls_active() $$),
   1,
   'case 29: the organiser CAN move the default after round 1 started');
-select throws_like(
+select throws_ok(
   $$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "11", "wind": "CALM"}'::jsonb
       where id = torny_rls.ls_r_started() $$,
-  '%set by the server only%',
+  '42501', 'league_rounds.sim_frozen_default is set by the server only',
   'case 29: …and CANNOT re-freeze the started round with the new default');
 rollback to savepoint case_29;
 
@@ -490,18 +497,18 @@ rollback to savepoint case_32;
 -- 33
 savepoint case_33;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.leagues set format = 'stableford' where id = torny_rls.ls_active() $$,
-  '%locked once the league has started%',
+  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
   'case 33: the organiser CANNOT change the format of an active league');
 rollback to savepoint case_33;
 
 -- 34
 savepoint case_34;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select throws_like(
+select throws_ok(
   $$ update public.league_rounds set tee_box_id = null where id = torny_rls.ls_r_started() $$,
-  '%locked once a player has started the round%',
+  '42501', 'league_rounds.course_id and tee_box_id of a simulator league are locked once a player has started the round',
   'case 34: the organiser CANNOT change the tee of a started round in a simulator league');
 rollback to savepoint case_34;
 
@@ -522,6 +529,28 @@ select is(
   1,
   'case 36: a simulator round nobody has started still changes its tee');
 rollback to savepoint case_36;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- A round stays in its league (0216)
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 37
+savepoint case_37;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_ok(
+  $$ update public.league_rounds set league_id = torny_rls.ls_regular() where id = torny_rls.ls_r_started() $$,
+  '42501', 'league_rounds.league_id is set by the server only',
+  'case 37: the organiser CANNOT move a started simulator round to their regular league');
+rollback to savepoint case_37;
+
+-- 38
+savepoint case_38;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_ok(
+  $$ update public.league_rounds set course_id = null where id = torny_rls.ls_r_started() $$,
+  '42501', 'league_rounds.course_id and tee_box_id of a simulator league are locked once a player has started the round',
+  'case 38: the organiser CANNOT change the course of a started round in a simulator league');
+rollback to savepoint case_38;
 
 -- 18 (last: an assert outside every savepoint, like the other guard suites)
 select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')
