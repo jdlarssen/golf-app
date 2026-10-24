@@ -39,7 +39,7 @@ import {
   parseVariant,
   resolveConfig,
 } from './app.config';
-import { FRIEND_LINK_PREFIX } from '../../lib/friends/friendLinkPath';
+import { FRIEND_LINK_PATH_PREFIXES } from '../../lib/friends/friendLinkPath';
 import { STAGING_SUPABASE_HOST } from './src/lib/stagingGate';
 
 // JSON-importen typer `orientation` som `string`; Expo vil ha unionen. Castet
@@ -197,7 +197,7 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   });
 
   it('har de samme venne-stiene som nettsiden og AASA-fila', () => {
-    expect(STORE_FRIEND_LINK_PATH_PREFIXES).toEqual(['', '/en'].map((p) => `${p}${FRIEND_LINK_PREFIX}`));
+    expect(STORE_FRIEND_LINK_PATH_PREFIXES).toEqual(FRIEND_LINK_PATH_PREFIXES);
   });
 
   it('lar dev-bygget være uten lenker: det har ingen associated domains og ingen intent-filtre', () => {
