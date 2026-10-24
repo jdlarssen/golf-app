@@ -246,6 +246,10 @@ function NineBlock({
 /**
  * Netto-subtotal for nien per spiller, leder i champagne. «Løpende netto» ved
  * Ut/Inn-bruddet — det klassiske scorekortets sjekkpunkt.
+ *
+ * #2625: in a game ranked on net to par the leader is the best to par over the
+ * nine's played holes (`isLeader`, from `soloScorecard.ts`); the chip still
+ * shows the net sum.
  */
 function SubtotalStrip({
   subtotals,
@@ -287,6 +291,11 @@ function SubtotalStrip({
  * netto først). En entydig hull-vinner (lavest netto) uthevet i champagne med
  * ★; delt lavest = nøytralt (som duell-strippens «delt»). Uspilte sorteres sist
  * og viser «–». Hull der ingen har spilt viser «Venter».
+ *
+ * #2625: in a game ranked on net to par the winner is the lowest net − own par
+ * and the rows are ordered on it (`soloScorecard.ts`, the engine's `toPar`),
+ * so the ★ row stands first. The row still shows net, and the chip the
+ * hole's par.
  */
 function HoleCard({
   hole,

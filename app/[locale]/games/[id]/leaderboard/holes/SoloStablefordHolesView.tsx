@@ -247,6 +247,10 @@ function NineBlock({
 /**
  * Poeng-subtotal for nien per spiller, leder (HØYEST poeng) i champagne.
  * «Løpende poeng» ved Ut/Inn-bruddet.
+ *
+ * #2625: in a game ranked on net to par the leader is the best points against
+ * par pace over the nine's played holes (`isLeader`, from `soloScorecard.ts`);
+ * the chip still shows the points.
  */
 function SubtotalStrip({
   subtotals,
