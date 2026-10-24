@@ -967,6 +967,34 @@ describe('nassau.compute — ranking: net_to_par (#2625)', () => {
     ]);
   });
 
+  it('a finished round on mixed tees ranks each player against their own par (WHS), so a section can go the other way', () => {
+    // Holes 1–3 are par 5 from the ladies' tee. M (men's tee) and L (ladies'
+    // tee) both score 4 on every hole: the same 36 / 36 / 72 strokes, a push
+    // on every section by the sum. Against her own par L is −3, so with the
+    // flag she takes the front nine and the 18, and the units move with it.
+    const holes = par4Holes(18).map((h) =>
+      h.number <= 3 ? { ...h, parByGender: { mens: 4, ladies: 5, juniors: 4 } } : h,
+    );
+    const opts = {
+      players: [soloPlayer('M'), { ...soloPlayer('L'), teeGender: 'ladies' as const }],
+      holes,
+      scores: [...card('M', Array(18).fill(4)), ...card('L', Array(18).fill(4))],
+    };
+    const flagged = compute(makeCtx({ ...opts, modeConfigOverride: FLAGGED }));
+    expect(flagged.sections.front9.winnerUserIds).toEqual(['L']);
+    expect([...flagged.sections.back9.winnerUserIds].sort()).toEqual(['L', 'M']);
+    expect(flagged.sections.total18.winnerUserIds).toEqual(['L']);
+    expect(flagged.players.map((p) => [p.userId, p.units])).toEqual([
+      ['L', 2],
+      ['M', 0],
+    ]);
+
+    const plain = compute(makeCtx({ ...opts, modeConfigOverride: PLAIN }));
+    expect(plain.sections.front9.winnerUserIds).toHaveLength(2);
+    expect(plain.sections.total18.winnerUserIds).toHaveLength(2);
+    expect(plain.players.map((p) => p.units)).toEqual([0, 0]);
+  });
+
   it('ranks the 18 on to par in a part-played round on mixed pars: a shared place at E, +1 split on the back nine', () => {
     const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
     const holes: ScoringHole[] = PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: i + 1 }));
