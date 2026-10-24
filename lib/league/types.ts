@@ -92,9 +92,10 @@ export type LeagueRoundInput = {
   sequence: number;
   scores: LeagueRoundPlayerScore[];
   /**
-   * #2638 (artboard 7a): the round's play window is still open. A player who
-   * has not played it yet is not charged for it: the cell shows «—», with no
-   * penalty, until the window closes.
+   * #2638 (artboard 7a): the round's play window is still open, in an active
+   * simulator league (getLigaSnapshot decides). A player who has not played
+   * it yet is not charged for it: the cell shows «—», with no penalty, until
+   * the window closes.
    */
   windowOpen: boolean;
 };

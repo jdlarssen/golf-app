@@ -447,14 +447,18 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     }
   }
 
-  // #2638 (artboard 7a): while a round's window is open, a player who has not
-  // played it yet is not charged for it (computeLeagueStandings).
+  // #2638 (artboard 7a): in an active simulator league, a player who has not
+  // played a round whose window is still open is not charged for it
+  // (computeLeagueStandings). Only there: in a regular stroke-play league with
+  // a total, the one who has not played would rank first (the orchestrator's
+  // choice), and a finished league never waits for anyone.
   const now = Date.now();
+  const waitsForPlayers = league.is_simulator && league.status === 'active';
   const roundInputs: LeagueRoundInput[] = rounds.map((r) => ({
     roundId: r.id,
     sequence: r.sequence,
     scores: roundScores.get(r.id) ?? [],
-    windowOpen: now < new Date(r.closes_at).getTime(),
+    windowOpen: waitsForPlayers && now < new Date(r.closes_at).getTime(),
   }));
 
   const config: LeagueStandingsConfig = {
