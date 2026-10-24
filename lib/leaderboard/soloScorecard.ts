@@ -3,7 +3,7 @@ import type {
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
 import { byStanding, inStandingOrder } from './standingOrder';
-import { formatVsPar } from './vsPar';
+import { formatVsPar, headlineUnit } from './vsPar';
 
 /**
  * #2255: «Hull for hull» for solo stableford (også modifisert) og solo
@@ -45,6 +45,12 @@ export interface SoloScorecardCell {
   value: number | null;
   /** Den ene hullvinneren. Delt beste er ingen vinner. */
   isBest: boolean;
+  /**
+   * #2625: against the player's own par — points against par pace (stableford)
+   * or net − par (strokeplay); `null` when the hole is not played. A game
+   * ranked on net to par orders the rows and picks the nine's leader on it.
+   */
+  toPar: number | null;
 }
 
 export interface SoloScorecardHole {
@@ -62,6 +68,7 @@ export interface SoloScorecardSubtotal {
   userId: string;
   /** Sum over spilte hull i nien; `null` når spilleren ikke har spilt noen. */
   sum: number | null;
+  /** #2625: in a game ranked on net to par, the best to par over the nine leads. */
   isLeader: boolean;
 }
 
@@ -103,10 +110,10 @@ export function formatSignedPoints(points: number): string {
 }
 
 /**
- * #2625: tallet stillingen viser for en rad — mot par («+3», «E», «−2») når
- * spillet er rangert mot par, ellers summen i visningens egen form (`plain`:
- * poeng med U+2212, eller netto slag). Ett hjem for valget, så webben og
- * appen viser samme tall som rekkefølgen.
+ * #2625: the number a standing row shows — to par («+3», «E», «−2») or the sum
+ * in the view's own form (`plain`: points with U+2212, or net strokes), as
+ * `standingUnit` chooses, so the web and the app show the number the order
+ * is ranked on.
  */
 export function standingTotalText(
   card: Pick<SoloScorecard, 'ranking'>,
@@ -117,12 +124,12 @@ export function standingTotalText(
 }
 
 /**
- * #2625: hva stillingen leder med — mot par når spillet er rangert mot par,
- * ellers summen. Tallet (`standingTotalText`) og overskriften («Stillingen ·
- * mot par») leser det herfra.
+ * #2625: what the standing leads with — to par in a game ranked on net to par,
+ * else the sum. The rule is `headlineUnit`'s; the number
+ * (`standingTotalText`) and the heading («Stillingen · mot par») read it here.
  */
 export function standingUnit(card: Pick<SoloScorecard, 'ranking'>): 'toPar' | 'total' {
-  return card.ranking === 'net_to_par' ? 'toPar' : 'total';
+  return headlineUnit(card.ranking);
 }
 
 /** #734: eget par når alle i feltet går fra samme tee, ellers herre-par. */
@@ -151,29 +158,43 @@ function buildHole(
   };
 }
 
+/**
+ * #2625: the nine's leader is picked on what the game ranks on — the sum, or
+ * in a game ranked on net to par the to par over the played holes, so a player
+ * with fewer holes in the nine is not passed over on the smaller sum. The row
+ * still shows the sum.
+ */
 function nine(
   holes: SoloScorecardHole[],
   rankedIds: readonly string[],
   better: 'high' | 'low',
+  ranking: SoloScorecard['ranking'],
 ): SoloScorecardNine {
   const sums = rankedIds.map((userId) => {
     let sum = 0;
+    let toPar = 0;
     let played = 0;
     for (const hole of holes) {
       const cell = hole.rows.find((r) => r.userId === userId);
       if (cell && cell.value != null) {
         sum += cell.value;
+        toPar += cell.toPar ?? 0;
         played += 1;
       }
     }
-    return { userId, sum: played > 0 ? sum : null };
+    const measure = ranking === 'net_to_par' ? toPar : sum;
+    return { userId, sum: played > 0 ? sum : null, measure: played > 0 ? measure : null };
   });
-  const playedSums = sums.map((s) => s.sum).filter((s): s is number => s != null);
-  const leaderSum =
-    playedSums.length === 0 ? null : better === 'high' ? Math.max(...playedSums) : Math.min(...playedSums);
+  const measures = sums.map((s) => s.measure).filter((m): m is number => m != null);
+  const leader =
+    measures.length === 0 ? null : better === 'high' ? Math.max(...measures) : Math.min(...measures);
   return {
     holes,
-    subtotals: sums.map((s) => ({ ...s, isLeader: s.sum != null && s.sum === leaderSum })),
+    subtotals: sums.map(({ userId, sum, measure }) => ({
+      userId,
+      sum,
+      isLeader: measure != null && measure === leader,
+    })),
   };
 }
 
@@ -181,10 +202,11 @@ function split(
   holes: SoloScorecardHole[],
   rankedIds: readonly string[],
   better: 'high' | 'low',
+  ranking: SoloScorecard['ranking'],
 ): Pick<SoloScorecard, 'front' | 'back'> {
   return {
-    front: nine(holes.filter((h) => h.holeNumber <= 9), rankedIds, better),
-    back: nine(holes.filter((h) => h.holeNumber >= 10), rankedIds, better),
+    front: nine(holes.filter((h) => h.holeNumber <= 9), rankedIds, better, ranking),
+    back: nine(holes.filter((h) => h.holeNumber >= 10), rankedIds, better, ranking),
   };
 }
 
@@ -210,6 +232,7 @@ export function soloStablefordScorecard(
       par: c.par,
       value: c.gross == null ? null : c.points,
       isBest: false,
+      toPar: c.gross == null ? null : c.toPar,
     }));
     return buildHole(hole, cells, teeGenderOf);
   });
@@ -224,7 +247,7 @@ export function soloStablefordScorecard(
       holesPlayed: line.holesPlayed,
       totalGross: null,
     })),
-    ...split(holes, rankedIds, 'high'),
+    ...split(holes, rankedIds, 'high', result.ranking),
   };
 }
 
@@ -236,18 +259,20 @@ export function soloStrokeplayScorecard(
   const players = inStandingOrder(result.players);
   const rankedIds = players.map((p) => p.userId);
   const tie = byStanding(rankedIds);
+  // #2625: a game ranked on net to par orders the rows on net − own par, the
+  // measure the hole winner is picked on, so the ★ row stands first.
+  const measure = (c: { net: number | null; par: number }) =>
+    c.net == null ? Number.POSITIVE_INFINITY : result.ranking === 'net_to_par' ? c.net - c.par : c.net;
   const holes = result.holes.map((hole) => {
     // Lavest netto først; uspilte (netto null) sist; likt etter stillingen.
-    const sorted = [...hole.perPlayer].sort(
-      (a, b) =>
-        (a.net ?? Number.POSITIVE_INFINITY) - (b.net ?? Number.POSITIVE_INFINITY) || tie(a, b),
-    );
+    const sorted = [...hole.perPlayer].sort((a, b) => measure(a) - measure(b) || tie(a, b));
     const cells = sorted.map((c) => ({
       userId: c.userId,
       gross: c.gross,
       par: c.par,
       value: c.net,
       isBest: false,
+      toPar: c.net == null ? null : c.net - c.par,
     }));
     return buildHole(hole, cells, teeGenderOf);
   });
@@ -262,6 +287,6 @@ export function soloStrokeplayScorecard(
       holesPlayed: line.holesPlayed,
       totalGross: line.totalGrossStrokes,
     })),
-    ...split(holes, rankedIds, 'low'),
+    ...split(holes, rankedIds, 'low', result.ranking),
   };
 }

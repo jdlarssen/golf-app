@@ -18,7 +18,7 @@ const PAR_BY_GENDER = { mens: 4, ladies: 5, juniors: 4 };
 
 function stablefordHole(
   holeNumber: number,
-  cells: { userId: string; gross: number | null; points: number; par?: number }[],
+  cells: { userId: string; gross: number | null; points: number; par?: number; toPar?: number | null }[],
   bestUserIds: string[],
 ) {
   return {
@@ -26,7 +26,8 @@ function stablefordHole(
     par: 4,
     strokeIndex: holeNumber,
     parByGender: PAR_BY_GENDER,
-    perPlayer: cells.map((c) => ({ par: 4, ...c })),
+    // Standard table: a net par is worth 2 points.
+    perPlayer: cells.map((c) => ({ par: 4, toPar: c.gross == null ? null : c.points - 2, ...c })),
     bestUserIds,
   };
 }
@@ -367,10 +368,121 @@ describe('soloStrokeplayScorecard', () => {
   });
 });
 
+describe('mot egen par i et spill rangert mot par (#2625)', () => {
+  it('slagspill på blandede tee-er: ★-spilleren står først på hullkortet', () => {
+    // Hull 1 er par 3 fra herretee og par 5 fra dametee. M går på netto 3
+    // (par), L på netto 4 (én under sin par 5). Motoren gir L hullet; på netto
+    // slag sto M likevel først.
+    const mixed: SoloStrokeplayResult = {
+      kind: 'solo_strokeplay',
+      ranking: 'net_to_par',
+      players: [
+        { userId: 'L', totalNetStrokes: 4, totalGrossStrokes: 4, holesPlayed: 1, netToPar: -1, rank: 1, tiedWith: [] },
+        { userId: 'M', totalNetStrokes: 3, totalGrossStrokes: 3, holesPlayed: 1, netToPar: 0, rank: 2, tiedWith: [] },
+      ],
+      holes: [
+        {
+          holeNumber: 1,
+          par: 3,
+          strokeIndex: 1,
+          parByGender: { mens: 3, ladies: 5, juniors: 3 },
+          perPlayer: [
+            { userId: 'M', gross: 3, net: 3, par: 3 },
+            { userId: 'L', gross: 4, net: 4, par: 5 },
+          ],
+          bestUserIds: ['L'],
+        },
+      ],
+    };
+    const teeOf = (id: string) => (id === 'L' ? 'ladies' : 'mens');
+    const row0 = soloStrokeplayScorecard(mixed, teeOf).front.holes[0]!.rows[0]!;
+    expect([row0.userId, row0.isBest, row0.toPar]).toEqual(['L', true, -1]);
+    // Uten flagget står radene på netto slag, som før.
+    const plain = soloStrokeplayScorecard({ ...mixed, ranking: 'net_total' }, teeOf);
+    expect(plain.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['M', 'L']);
+  });
+
+  it('slagspill: lederen for Ut er best mot par, også med færre spilte hull', () => {
+    // A har spilt ett hull på netto 5 (par 4: +1), B to på netto 4 (E).
+    // Summen gir A (5 mot 8); mot par gir B. Radene viser fortsatt summen.
+    const result: SoloStrokeplayResult = {
+      kind: 'solo_strokeplay',
+      ranking: 'net_to_par',
+      players: [
+        { userId: 'B', totalNetStrokes: 8, totalGrossStrokes: 8, holesPlayed: 2, netToPar: 0, rank: 1, tiedWith: [] },
+        { userId: 'A', totalNetStrokes: 5, totalGrossStrokes: 5, holesPlayed: 1, netToPar: 1, rank: 2, tiedWith: [] },
+      ],
+      holes: [1, 2].map((n) => ({
+        holeNumber: n,
+        par: 4,
+        strokeIndex: n,
+        perPlayer: [
+          { userId: 'A', gross: n === 1 ? 5 : null, net: n === 1 ? 5 : null, par: 4 },
+          { userId: 'B', gross: 4, net: 4, par: 4 },
+        ],
+        bestUserIds: ['B'],
+      })),
+    };
+    expect(soloStrokeplayScorecard(result, () => 'mens').front.subtotals).toEqual([
+      { userId: 'B', sum: 8, isLeader: true },
+      { userId: 'A', sum: 5, isLeader: false },
+    ]);
+    const plain = soloStrokeplayScorecard({ ...result, ranking: 'net_total' }, () => 'mens');
+    expect(plain.front.subtotals.map((s) => [s.userId, s.isLeader])).toEqual([
+      ['B', false],
+      ['A', true],
+    ]);
+  });
+
+  it('stableford: lederen for Ut er best mot par-tempo, også med færre spilte hull', () => {
+    // A: ett hull, 3 poeng (+1). B: to hull, 2 + 2 poeng (E). Summen gir B
+    // (4 mot 3); mot par gir A.
+    const result: StablefordSoloResult = {
+      kind: 'stableford',
+      variant: 'solo',
+      ranking: 'net_to_par',
+      players: [
+        { userId: 'A', totalPoints: 3, rank: 1, holesPlayed: 1, toPar: 1, tiedWith: [] },
+        { userId: 'B', totalPoints: 4, rank: 2, holesPlayed: 2, toPar: 0, tiedWith: [] },
+      ],
+      holes: [
+        stablefordHole(
+          1,
+          [
+            { userId: 'A', gross: 3, points: 3 },
+            { userId: 'B', gross: 4, points: 2 },
+          ],
+          ['A'],
+        ),
+        stablefordHole(
+          2,
+          [
+            { userId: 'A', gross: null, points: 0 },
+            { userId: 'B', gross: 4, points: 2 },
+          ],
+          ['B'],
+        ),
+      ],
+    };
+    expect(soloStablefordScorecard(result, () => 'mens').front.subtotals).toEqual([
+      { userId: 'A', sum: 3, isLeader: true },
+      { userId: 'B', sum: 4, isLeader: false },
+    ]);
+    const plain = soloStablefordScorecard({ ...result, ranking: 'net_total' }, () => 'mens');
+    expect(plain.front.subtotals.map((s) => [s.userId, s.isLeader])).toEqual([
+      ['A', false],
+      ['B', true],
+    ]);
+  });
+});
+
 describe('standingUnit (#2625)', () => {
-  it('mot par når spillet er rangert mot par, ellers summen; tallet følger samme valg', () => {
-    expect(standingUnit({ ranking: 'net_to_par' })).toBe('toPar');
-    expect(standingUnit({ ranking: 'net_total' })).toBe('total');
+  it.each([
+    ['net_to_par', 'toPar', '\u22122'],
+    ['net_total', 'total', '11'],
+  ] as const)('%s: stillingen leder med %s, og standingTotalText viser %s', (ranking, unit, text) => {
+    expect(standingUnit({ ranking })).toBe(unit);
+    expect(standingTotalText({ ranking }, { total: 11, toPar: -2 }, String)).toBe(text);
   });
 });
 
