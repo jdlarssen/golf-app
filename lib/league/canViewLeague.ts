@@ -20,7 +20,9 @@ export type LeagueViewAccess = {
  *
  * `supabase` reads as the caller (the web's cookie client or the app's
  * caller-scoped client): the caller's own `group_members` row and their own
- * `users.is_admin`. A failed read gives no access, never a silent pass.
+ * `users.is_admin`. A failed read throws: never a silent pass, and never a
+ * «not found» either, so the web shows its error page and the app route
+ * answers 500 `load_failed` instead of 404.
  */
 export async function canViewLeague(
   supabase: SupabaseClient<Database>,
@@ -45,7 +47,7 @@ export async function canViewLeague(
       membershipError: membership.error,
       profileError: profile.error,
     });
-    return { allowed: false, isClubMember: false };
+    throw new Error('canViewLeague: the access read failed');
   }
   const isClubMember = membership.data !== null;
   return { allowed: isClubMember || profile.data?.is_admin === true, isClubMember };

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
+import { createAdminClientMock, type QueryOp, type QueryResponse } from '@/lib/supabase/testing/adminClientMock';
 import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 import type { LeagueSnapshot } from '@/lib/league/getLigaSnapshot';
 
@@ -8,18 +8,29 @@ import type { LeagueSnapshot } from '@/lib/league/getLigaSnapshot';
  * Type A (#2638): rutas port for appens ligaside. Snapshotet (`getLigaSnapshot`)
  * har sin egen suite og formen (`buildAppLeagueView`) sin; her står porten:
  * uten token ingenting, en klubbliga er 404 for en utenforstående (samme regel
- * som nettsiden, `canViewLeague`, ekte her), og en deltaker får visningen.
+ * som nettsiden, `canViewLeague`, ekte her) og snapshotet leses aldri for dem,
+ * en deltaker får visningen og blir bekreftet som på nettsiden (#463), og en
+ * lesefeil er 500, ikke 404.
  */
 
 const LEAGUE_ID = '44444444-4444-4444-8444-444444444444';
 const ME = '11111111-1111-4111-8111-111111111111';
 const OUTSIDER = '99999999-9999-4999-8999-999999999999';
 
+/** Portens to lesinger med admin-klienten: ligaens klubb og kallerens egen deltakerrad. */
+let leagueRow: { group_id: string | null } | null = null;
+let leagueError: { message: string } | null = null;
+let myRow: { accepted_at: string | null } | null = null;
+
+function respond(op: QueryOp): QueryResponse {
+  if (op.table === 'leagues') return { data: leagueRow, error: leagueError };
+  if (op.table === 'league_players') return { data: myRow };
+  throw new Error(`ruta leser ikke ${op.table} med admin-klienten`);
+}
+
 const fake = createAdminClientMock({
   tokens: { 'token-meg': ME, 'token-fremmed': OUTSIDER },
-  respond: () => {
-    throw new Error('ruta leser ikke selv med admin-klienten');
-  },
+  respond,
 });
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
 
@@ -34,6 +45,17 @@ const getLigaSnapshot = vi.fn(async () => snapshot);
 vi.mock('@/lib/league/getLigaSnapshot', () => ({
   getLigaSnapshot: () => getLigaSnapshot(),
 }));
+
+const autoConfirm = vi.fn(async () => {});
+vi.mock('@/lib/league/confirmLeagueParticipation', () => ({
+  maybeAutoConfirmLeagueParticipation: (opts: unknown) => autoConfirm(opts),
+}));
+
+// next/server sin after() finnes ikke utenfor Next-runtime: kjør callbacken straks.
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>();
+  return { ...actual, after: (fn: () => unknown) => void fn() };
+});
 
 import { NextRequest } from 'next/server';
 import { GET } from './route';
@@ -94,8 +116,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => {});
   snapshot = clubSnapshot('club-1');
+  leagueRow = { group_id: 'club-1' };
+  leagueError = null;
+  myRow = null;
   callerReads({ group_members: [{ data: null }], users: [{ data: { is_admin: false } }] });
 });
+
+/** Kalleren er deltaker i ligaen, bekreftet eller ikke. */
+function asParticipant(acceptedAt: string | null = '2026-11-01T00:00:00Z') {
+  myRow = { accepted_at: acceptedAt };
+}
 
 describe('GET /api/liga/[id]', () => {
   it('401 without a token, and the league is never read', async () => {
@@ -106,11 +136,16 @@ describe('GET /api/liga/[id]', () => {
     });
   });
 
-  it('a club league is 404 for someone outside the club, as if it did not exist', async () => {
-    expect(await call('token-fremmed')).toEqual({ status: 404, body: { error: 'not_found' } });
+  it('a club league is 404 for someone outside the club, and the snapshot is never read', async () => {
+    expect({ ...(await call('token-fremmed')), read: getLigaSnapshot.mock.calls.length }).toEqual({
+      status: 404,
+      body: { error: 'not_found' },
+      read: 0,
+    });
   });
 
   it('a participant gets the league view', async () => {
+    asParticipant();
     const res = await call('token-meg');
     expect({ status: res.status, league: res.body.league.name, me: res.body.me }).toEqual({
       status: 200,
@@ -119,13 +154,28 @@ describe('GET /api/liga/[id]', () => {
     });
   });
 
+  it.each([
+    ['an unconfirmed participant is confirmed, as on the web (#463)', null, [[{ leagueId: LEAGUE_ID, userId: ME }]]],
+    ['a confirmed participant is left alone', '2026-11-01T00:00:00Z', []],
+  ])('%s', async (_label, acceptedAt, confirms) => {
+    asParticipant(acceptedAt);
+    expect({ status: (await call('token-meg')).status, confirms: autoConfirm.mock.calls }).toEqual({
+      status: 200,
+      confirms,
+    });
+  });
+
   it('a standalone league is open to every signed-in user', async () => {
     snapshot = clubSnapshot(null);
-    expect((await call('token-fremmed')).status).toBe(200);
+    leagueRow = { group_id: null };
+    expect({ status: (await call('token-fremmed')).status, confirms: autoConfirm.mock.calls }).toEqual({
+      status: 200,
+      confirms: [],
+    });
   });
 
   it('404 for a league that does not exist, or an id that is no uuid', async () => {
-    snapshot = null;
+    leagueRow = null;
     expect([await call('token-meg'), await call('token-meg', 'liga-1')]).toEqual([
       { status: 404, body: { error: 'not_found' } },
       { status: 404, body: { error: 'not_found' } },
@@ -133,7 +183,18 @@ describe('GET /api/liga/[id]', () => {
   });
 
   it('a failed load is 500 load_failed', async () => {
+    asParticipant();
     getLigaSnapshot.mockRejectedValueOnce(new Error('column "x" does not exist'));
     expect(await call('token-meg')).toEqual({ status: 500, body: { error: 'load_failed' } });
+  });
+
+  it('a failed gate read is 500 load_failed, not 404', async () => {
+    leagueError = { message: 'boom' };
+    expect(await call('token-meg')).toEqual({ status: 500, body: { error: 'load_failed' } });
+  });
+
+  it('a failed access read in canViewLeague is 500 load_failed, not 404', async () => {
+    callerReads({ group_members: [{ data: null, error: { message: 'boom' } }], users: [{ data: { is_admin: false } }] });
+    expect(await call('token-fremmed')).toEqual({ status: 500, body: { error: 'load_failed' } });
   });
 });
