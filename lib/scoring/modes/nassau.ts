@@ -18,9 +18,16 @@
 // back-3/hole-18-indeksering fortsatt fungerer (cascaden bryter på første
 // posisjon der spillerne differerer, så det er trygt — padding-verdiene er
 // like for begge så de bryter ingenting).
+//
+// #2625: games with `mode_config.ranking === 'net_to_par'` rank each section
+// on strokes against each player's own par over the holes played in it: an
+// unplayed hole counts 0 (par), and a player without a hole in the section
+// gets the padding and ranks last. Units, push and sweep follow the new order
+// as before. Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { rankTeams, ranksByNetToPar } from '../tiebreaker';
+import { parFor } from './parResolver';
 import type {
   NassauHoleRow,
   NassauResult,
@@ -42,6 +49,10 @@ interface PlayerSectionStrokes {
   userId: string;
   /** Effective-strokes per hull i seksjonen, UNPLAYED_PADDING for unplayed. */
   perHoleEffectiveForRanking: number[];
+  /** #2625: effective − own par per hole in the section; `null` for unplayed. */
+  perHoleToPar: (number | null)[];
+  /** #2625: Σ perHoleToPar over played holes; `null` when none is played. */
+  toPar: number | null;
   /** Sum av effective-strokes for spilte hull. */
   totalEffectiveStrokes: number;
   /** Sum av gross-strokes for spilte hull. */
@@ -66,14 +77,17 @@ function computeSectionStrokes(
   scoringMode: 'gross' | 'net',
 ): PlayerSectionStrokes {
   const perHoleEffectiveForRanking: number[] = [];
+  const perHoleToPar: (number | null)[] = [];
   let totalEffectiveStrokes = 0;
   let totalGrossStrokes = 0;
+  let toPar = 0;
   let holesPlayed = 0;
 
   for (const hole of sectionHoles) {
     const gross = grossByKey.get(`${player.userId}#${hole.number}`) ?? null;
     if (gross === null) {
       perHoleEffectiveForRanking.push(UNPLAYED_PADDING);
+      perHoleToPar.push(null);
       continue;
     }
     const effective = effectiveFor(
@@ -82,15 +96,20 @@ function computeSectionStrokes(
       player.courseHandicap,
       hole.strokeIndex,
     );
+    const holeToPar = effective - parFor(hole, player.teeGender);
     perHoleEffectiveForRanking.push(effective);
+    perHoleToPar.push(holeToPar);
     totalEffectiveStrokes += effective;
     totalGrossStrokes += gross;
+    toPar += holeToPar;
     holesPlayed += 1;
   }
 
   return {
     userId: player.userId,
     perHoleEffectiveForRanking,
+    perHoleToPar,
+    toPar: holesPlayed > 0 ? toPar : null,
     totalEffectiveStrokes,
     totalGrossStrokes,
     holesPlayed,
@@ -108,12 +127,27 @@ function padTo18(perHole: number[]): number[] {
   return [...perHole, ...Array(18 - perHole.length).fill(UNPLAYED_PADDING)];
 }
 
+/**
+ * #2625: the ranking array of a net-to-par section. It keeps the section's own
+ * slots (hole i of the section in slot i, then the shared padding), not hole
+ * numbers: a section is decided on its total, and slotting the back nine by
+ * hole number would let the 18-hole back-6/back-3 steps split a back-nine tie
+ * that is a push today, and move the units of a finished round. An unplayed
+ * hole counts 0 (par); a player without a hole in the section gets the padding.
+ */
+function toParRankingHoles(p: PlayerSectionStrokes): number[] {
+  return padTo18(
+    p.perHoleToPar.map((t) => t ?? (p.holesPlayed > 0 ? 0 : UNPLAYED_PADDING)),
+  );
+}
+
 function computeSection(
   name: 'front9' | 'back9' | 'total18',
   sectionHoles: ScoringHole[],
   players: ScoringPlayer[],
   grossByKey: Map<string, number | null>,
   scoringMode: 'gross' | 'net',
+  netToParRanking: boolean,
 ): NassauSection {
   const holeNumbers = sectionHoles.map((h) => h.number);
   const expectedHoleCount = sectionHoles.length;
@@ -124,7 +158,7 @@ function computeSection(
 
   const teamsForRanking = playerStrokes.map((p, i) => ({
     id: i,
-    holes: padTo18(p.perHoleEffectiveForRanking),
+    holes: netToParRanking ? toParRankingHoles(p) : padTo18(p.perHoleEffectiveForRanking),
   }));
 
   const ranked = rankTeams(teamsForRanking);
@@ -137,6 +171,7 @@ function computeSection(
       totalEffectiveStrokes: source.totalEffectiveStrokes,
       totalGrossStrokes: source.totalGrossStrokes,
       holesPlayed: source.holesPlayed,
+      toPar: source.toPar,
       rank: r.rank,
       tiedWith: tiedWithUserIds,
     };
@@ -239,6 +274,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     (h) => h.number >= 10 && h.number <= 18,
   );
   const total18Holes = holesSorted;
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
 
   const front9 = computeSection(
     'front9',
@@ -246,6 +282,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     ctx.players,
     grossByKey,
     scoringMode,
+    netToParRanking,
   );
   const back9 = computeSection(
     'back9',
@@ -253,6 +290,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     ctx.players,
     grossByKey,
     scoringMode,
+    netToParRanking,
   );
   const total18 = computeSection(
     'total18',
@@ -260,6 +298,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     ctx.players,
     grossByKey,
     scoringMode,
+    netToParRanking,
   );
 
   // Aggregate units. En spiller får 1 unit per seksjon hvor de står alene
@@ -339,6 +378,7 @@ export function compute(ctx: ScoringContext): NassauResult {
   return {
     kind: 'nassau',
     scoring: scoringMode,
+    ranking: netToParRanking ? 'net_to_par' : 'net_total',
     sections: { front9, back9, total18 },
     players: playersAggregated,
     holes,

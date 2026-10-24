@@ -49,7 +49,7 @@ describe('computeLeaderboard — mode-router', () => {
     expect(result.kind).toBe('stableford');
     if (result.kind === 'stableford' && result.variant === 'solo') {
       expect(result.players).toEqual([
-        { userId: 'u1', totalPoints: 2, rank: 1, holesPlayed: 1, tiedWith: [], decidedBy: null },
+        { userId: 'u1', totalPoints: 2, rank: 1, holesPlayed: 1, toPar: 0, tiedWith: [], decidedBy: null },
       ]);
     } else {
       throw new Error('expected stableford solo result');

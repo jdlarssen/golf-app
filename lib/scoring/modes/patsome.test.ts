@@ -807,3 +807,137 @@ describe('patsome.compute — trukket kaptein (#2067)', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2625 part 2: new patsome games carry `ranking: 'net_to_par'` in mode_config.
+// They rank on points against par pace over the holes each team has played:
+// Σ (team points − 2), since a net par is worth 2 stableford points. Games
+// without the flag keep today's rule.
+// ---------------------------------------------------------------------------
+
+describe('patsome.compute — ranking: net_to_par (#2625)', () => {
+  const PLAIN = { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' };
+  const FLAGGED = { ...PLAIN, ranking: 'net_to_par' };
+  const pairs = (teams: number[]) => teams.flatMap((t) => [makePlayer(`t${t}a`, t), makePlayer(`t${t}b`, t)]);
+  /** Gross per hole number, in order from hole `from`. */
+  const card = (userId: string, gross: number[], from = 1): ScoringHoleScore[] =>
+    gross.map((g, i) => makeScore(userId, from + i, g));
+
+  // The issue's shape for points, on the 4BBB holes: team 1 +5 after 3 holes
+  // (11 points), team 2 +1 after 6 (13). The partner never counts.
+  const pairExample = {
+    players: pairs([1, 2]),
+    holes: makeHoles18(),
+    scores: [
+      ...card('t1a', [2, 2, 3]),
+      ...card('t1b', [3, 3, 4]),
+      ...card('t2a', [3, 4, 4, 4, 4, 4]),
+      ...card('t2b', [4, 5, 5, 5, 5, 5]),
+    ],
+  };
+
+  it('the issue shape: team 1 (+5 after 3) ranks ahead of team 2 (+1 after 6) with the flag', () => {
+    const result = compute(makeCtx({ ...pairExample, modeConfigOverride: FLAGGED }));
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar, t.totalPoints])).toEqual([
+      [1, 1, 5, 11],
+      [2, 2, 1, 13],
+    ]);
+    expect(result.ranking).toBe('net_to_par');
+  });
+
+  it('without the flag the same round keeps today’s order (team 2 on the higher sum)', () => {
+    const result = compute(makeCtx({ ...pairExample, modeConfigOverride: PLAIN }));
+    expect(result.teams.map(({ teamNumber, rank, tiedWith, totalPoints }) => ({ teamNumber, rank, tiedWith, totalPoints }))).toEqual([
+      { teamNumber: 2, rank: 1, tiedWith: [], totalPoints: 13 },
+      { teamNumber: 1, rank: 2, tiedWith: [], totalPoints: 11 },
+    ]);
+    expect(result.ranking).toBe('net_total');
+  });
+
+  it('toPar counts a 4BBB hole one partner played and a team-ball hole; null without a hole', () => {
+    // Hole 1 (4BBB): only the partner plays, a bogey (1 → −1). Hole 7
+    // (greensome): the captain's birdie (3 → +1). Hole 13 (foursomes): a
+    // double bogey (0 → −2). CH 0, so the team ball gets no strokes.
+    const result = compute(
+      makeCtx({
+        players: pairs([1, 2]),
+        holes: makeHoles18(),
+        scores: [makeScore('t1b', 1, 5), makeScore('t1a', 7, 3), makeScore('t1a', 13, 6)],
+        modeConfigOverride: PLAIN,
+      }),
+    );
+    expect(result.teams.find((t) => t.teamNumber === 1)!.toPar).toBe(-2);
+    expect(result.teams.find((t) => t.teamNumber === 2)!.toPar).toBeNull();
+  });
+
+  it('a team without a single hole still ranks last with the flag (#635)', () => {
+    const result = compute(
+      makeCtx({
+        players: pairs([1, 2]),
+        holes: makeHoles18(),
+        scores: card('t2a', [7, 7, 7]),
+        modeConfigOverride: FLAGGED,
+      }),
+    );
+    expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar])).toEqual([
+      [2, 1, -6],
+      [1, 2, null],
+    ]);
+  });
+
+  it('a finished round ranks the same with and without the flag', () => {
+    const grossFor = (seed: number, hole: number) => 3 + ((seed * 7 + hole * 5) % 4);
+    const seeds: Record<number, number> = { 1: 1, 2: 2, 3: 2, 4: 5 };
+    const opts = {
+      players: pairs([1, 2, 3, 4]),
+      holes: makeHoles18(),
+      scores: [1, 2, 3, 4].flatMap((t) => [
+        ...card(`t${t}a`, Array.from({ length: 18 }, (_, i) => grossFor(seeds[t], i + 1))),
+        ...card(`t${t}b`, Array.from({ length: 6 }, (_, i) => grossFor(seeds[t], i + 1) + 1)),
+      ]),
+    };
+    const shape = (r: ReturnType<typeof compute>) =>
+      r.teams.map(({ teamNumber, rank, tiedWith }) => ({ teamNumber, rank, tiedWith }));
+
+    const withFlag = shape(compute(makeCtx({ ...opts, modeConfigOverride: FLAGGED })));
+    expect(withFlag).toEqual(shape(compute(makeCtx({ ...opts, modeConfigOverride: PLAIN }))));
+    expect(withFlag.find((t) => t.teamNumber === 2)!.tiedWith).toEqual([3]);
+  });
+
+  it('ranks on to par in a part-played round on mixed pars: a shared place at E, −1 split on the back nine', () => {
+    // Mixed pars, teams in different places on the course. The captain's
+    // card (t<n>a) is the best ball on 4BBB holes and the team ball after.
+    const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+    const holes = PARS.map((par, i) => makeHole(i + 1, par, i + 1));
+    const pairCard = (team: number, from: number, deltas: number[]): ScoringHoleScore[] =>
+      deltas.flatMap((d, i) => {
+        const gross = PARS[from + i - 1] + d;
+        return [makeScore(`t${team}a`, from + i, gross), makeScore(`t${team}b`, from + i, gross + 1)];
+      });
+    const result = compute(
+      makeCtx({
+        players: pairs([1, 2, 3, 4, 5]),
+        holes,
+        scores: [
+          ...pairCard(1, 1, [1, 0, 0, 0, 0]),
+          ...pairCard(2, 1, [0, 0, 0, 0, 0, 0, 0, 0, -1]),
+          ...pairCard(3, 10, [1, 0, 0]),
+          ...pairCard(4, 1, [1, -1]),
+          ...pairCard(5, 1, [0, 0, 0]),
+        ],
+        modeConfigOverride: { ...FLAGGED, teams_count: 5 },
+      }),
+    );
+    expect(
+      [...result.teams]
+        .sort((a, b) => a.rank - b.rank || a.teamNumber - b.teamNumber)
+        .map((t) => [t.teamNumber, t.toPar, t.rank, t.tiedWith]),
+    ).toEqual([
+      [2, 1, 1, []],
+      [4, 0, 2, [5]],
+      [5, 0, 2, [4]],
+      [1, -1, 4, []],
+      [3, -1, 5, []],
+    ]);
+  });
+});
