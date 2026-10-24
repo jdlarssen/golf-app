@@ -8,6 +8,7 @@
 // mens appen er åpen leses, og koden tas bare én gang.
 import { Linking } from 'react-native';
 import {
+  friendLinkStep,
   listenForFriendLinks,
   offerFriendLink,
   pendingFriendCode,
@@ -114,5 +115,34 @@ describe('listenForFriendLinks', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(pendingFriendCode()).toBeNull();
+  });
+});
+
+// Navigatorens avgjørelse (#2627, review-runde 1): når en ventende kode åpner
+// «Bli venn med …», og når den bare brukes opp.
+describe('friendLinkStep', () => {
+  const home = { name: 'Home' };
+  const sameCode = { name: 'FriendLink', params: { code: 'abcd1234' } };
+  const otherCode = { name: 'FriendLink', params: { code: 'zzzz9999' } };
+
+  it('venter så lenge navigatoren ikke er klar, så koden ikke går tapt', () => {
+    expect(friendLinkStep(false, undefined, 'abcd1234')).toBe('wait');
+    expect(friendLinkStep(false, home, 'abcd1234')).toBe('wait');
+  });
+
+  it('venter når ingen kode venter', () => {
+    expect(friendLinkStep(true, home, null)).toBe('wait');
+  });
+
+  it('hopper over når samme kode alt står øverst (oppstarts-lenke + hendelse)', () => {
+    expect(friendLinkStep(true, sameCode, 'abcd1234')).toBe('skip');
+  });
+
+  it.each([
+    ['en annen skjerm', home],
+    ['skjermen med en annen kode', otherCode],
+    ['ingen skjerm ennå', undefined],
+  ])('åpner skjermen over %s', (_label, current) => {
+    expect(friendLinkStep(true, current, 'abcd1234')).toBe('push');
   });
 });
