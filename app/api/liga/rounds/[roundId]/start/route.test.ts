@@ -7,6 +7,7 @@ import {
 } from '@/lib/supabase/testing/adminClientMock';
 import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import { frozenDefaultFor } from '@/lib/league/simSettings';
 
 /**
  * Type A (#2638): rutas port og transport for «Spill runden» i appen.
@@ -68,7 +69,6 @@ function callerQueue(isSimulator: boolean): QueryResult[] {
         opens_at: '2000-01-01T00:00:00Z',
         closes_at: '2099-01-01T00:00:00Z',
         original_closes_at: '2099-01-01T00:00:00Z',
-        sim_settings: null,
       },
     },
     {
@@ -129,10 +129,13 @@ describe('POST /api/liga/rounds/[roundId]/start', () => {
     expect(await call(request({ token: 'falsk' }))).toEqual({ status: 401, body: { error: 'unauthorized' } });
   });
 
-  it('a simulator league: the player starts the round alone → 200 { gameId }', async () => {
-    expect(await call(request({ token: TOKEN, body: JSON.stringify({ coPlayerIds: [] }) }))).toEqual({
+  it('a simulator league: the player starts the round alone → 200 { gameId }, and the default is frozen', async () => {
+    const res = await call(request({ token: TOKEN, body: JSON.stringify({ coPlayerIds: [] }) }));
+    const freeze = fake.ops.find((o) => o.table === 'league_rounds' && o.kind === 'update');
+    expect({ ...res, frozen: freeze?.payload }).toEqual({
       status: 200,
       body: { gameId: GAME_ID },
+      frozen: { sim_frozen_default: frozenDefaultFor({ green_stimp: '10' }) },
     });
   });
 
