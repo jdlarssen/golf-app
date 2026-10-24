@@ -14,7 +14,7 @@
 //
 // #2385 la skinna på designlerretet, identisk:
 // - **Vanlig** (`Main`): et hvitt ark nederst med runde øvre hjørner, skygge og
-//   et lite håndtak. Øverst navnet og «Får 1 slag her · netto par = 5». Knappene
+//   et lite håndtak. Øverst navnet og «Får 1 slag» (#2635). Knappene
 //   er 72 pt med tonens flate og farge og uten kant (birdie grønn, par nøytral,
 //   bogey amber, dobbel og verre murstein), og før noen score står er par
 //   foreslått med skogkant. «Annet» har «8+ eller stryk» under. Nederst putte-
@@ -115,10 +115,20 @@ function shortTermText(option: RailOption, par: number): string {
   return SHORT_LABELS[option.term] ?? optionTermText(option, par);
 }
 
-/** Linja til høyre for navnet: slagene setet får og hva par blir netto. */
-export function railStrokesLine(extraStrokes: number | null, par: number): string | null {
-  if (extraStrokes == null || extraStrokes <= 0) return null;
-  return `Får ${extraStrokes} slag her · netto par = ${par + extraStrokes}`;
+/**
+ * Linja til høyre for navnet (#2635, eierens valg C): «Får 1 slag», eller
+ * «Mister 1 slag» når setet gir slag tilbake (plusshandicap). Ingenting uten
+ * slag på hullet, eller når motoren ikke kan svare. Skjermleseren får hele
+ * meningen.
+ */
+export function railStrokesLine(
+  extraStrokes: number | null,
+): { text: string; label: string } | null {
+  if (extraStrokes == null || extraStrokes === 0) return null;
+  const n = Math.abs(extraStrokes);
+  return extraStrokes > 0
+    ? { text: `Får ${n} slag`, label: `får ${n} slag på hullet` }
+    : { text: `Mister ${n} slag`, label: `gir bort ${n} slag på hullet` };
 }
 
 export function ScoreRail({
@@ -197,7 +207,7 @@ export function ScoreRail({
     styles.step,
     { borderWidth: hole.borderW, borderColor: colors.border, backgroundColor: colors.surface },
   ];
-  const strokesLine = railStrokesLine(active.extraStrokes, par);
+  const strokesLine = railStrokesLine(active.extraStrokes);
 
   return (
     <View style={section} testID="score-rail">
@@ -213,8 +223,12 @@ export function ScoreRail({
             {active.name}
           </Text>
           {strokesLine ? (
-            <Text style={[styles.headingNote, { color: colors.muted }]} testID="score-rail-strokes">
-              {strokesLine}
+            <Text
+              style={[styles.headingNote, { color: colors.muted }]}
+              accessibilityLabel={strokesLine.label}
+              testID="score-rail-strokes"
+            >
+              {strokesLine.text}
             </Text>
           ) : null}
         </View>

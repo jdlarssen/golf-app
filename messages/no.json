@@ -2636,6 +2636,10 @@
     },
     "scoreRail": {
       "headingWithStrokes": "{name} · får {n} slag",
+      "strokesGet": "Får {n} slag",
+      "strokesGive": "Mister {n} slag",
+      "strokesGetAriaLabel": "får {n} slag på hullet",
+      "strokesGiveAriaLabel": "gir bort {n} slag på hullet",
       "detailPoints": "{term} · {points} p",
       "buttonAriaLabel": "Sett {strokes} slag for {name}: {term}",
       "buttonAriaLabelPoints": "Sett {strokes} slag for {name}: {term}, {points} poeng",
