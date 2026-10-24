@@ -792,4 +792,20 @@ describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
     const without = compute(makeCtx(opts));
     expect(without.players.map((p) => p.rank)).toEqual([1, 1]);
   });
+
+  it('#2625: the hole winner is the best against own par, the measure the game ranks on', () => {
+    // Hole 1 is par 5 from the ladies' tee. L (ladies) and M (men's) both
+    // score 4: L is one under her par, M on his. Without the flag the hole is
+    // shared on the net strokes, as before.
+    const holes = par4Holes(18).map((h) =>
+      h.number === 1 ? { ...h, parByGender: { mens: 4, ladies: 5, juniors: 4 } } : h,
+    );
+    const opts = {
+      players: [player('M'), player('L', { teeGender: 'ladies' })],
+      holes,
+      scores: [...card('M', { 1: 4, 2: 4 }), ...card('L', { 1: 4, 2: 4 })],
+    };
+    expect(compute(flagged(opts)).holes.slice(0, 2).map((h) => h.bestUserIds)).toEqual([['L'], ['M', 'L']]);
+    expect(compute(makeCtx(opts)).holes[0].bestUserIds).toEqual(['M', 'L']);
+  });
 });
