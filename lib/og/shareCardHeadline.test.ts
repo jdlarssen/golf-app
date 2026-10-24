@@ -203,6 +203,9 @@ describe('resultWords — the result as the headline words it (#2625)', () => {
     [{ kind: 'pointsVsPar', label: '+3' }, { text: '+3 mot par', at: true }],
     [{ kind: 'pointsVsPar', label: 'E' }, { text: 'par', at: true }],
     [{ kind: 'pointsVsPar', label: '\u22122' }, { text: '\u22122 mot par', at: true }],
+    // No hole played: the dash stands alone, as in the round report's facts.
+    [{ kind: 'pointsVsPar', label: '\u2014' }, { text: '\u2014', at: true }],
+    [{ kind: 'vsPar', label: '\u2014' }, { text: '\u2014', at: true }],
     [{ kind: 'vsPar', label: '\u22124' }, { text: '\u22124', at: true }],
     [{ kind: 'vsPar', label: 'E' }, { text: 'par', at: true }],
     [{ kind: 'points', value: 38 }, { text: '38 poeng', at: false }],
