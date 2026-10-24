@@ -1,13 +1,13 @@
 -- supabase/tests/league_simulator_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Simulator leagues (#2638 Del 1, migration 0212).
+-- Simulator leagues (#2638 Del 1, migrations 0212–0215).
 --
 -- CHECK on the settings columns:
 --   1  leagues.sim_settings that is not a JSON object               → 23514
 --   2  leagues.sim_settings longer than 2 000 characters             → 23514
 --   3  league_rounds.sim_settings that is not a JSON object          → 23514
 -- Lock on leagues (guard_leagues_locked_fields):
---   4  the club admin changes is_simulator and scoring in draft      → 1 row
+--   4  the club admin changes is_simulator, scoring and format in draft → 1 row
 --   5  the club admin changes is_simulator on an active league       → 42501
 --   6  the club admin changes scoring on an active league            → 42501
 --   7  a global admin changes scoring on an active league they run   → 42501
@@ -31,27 +31,37 @@
 --  22  a round override: Auto - Tour Pro with a gimme distance           → 23514
 --  23  Manual with gimme Not applicable                                  → 23514
 --  24  the full Trackman default is accepted                             → 1 row
---  25  a round override with putting alone (gimme from the default)      → 1 row
+--  25  a round override with putting alone (0215: the pair travels together) → 23514
 -- The frozen default (0214):
 --  26  the organiser writes sim_frozen_default on a round                → 42501
 --  27  the organiser inserts a round with sim_frozen_default             → 42501
 --  28  the server (the start core) writes sim_frozen_default             → 1 row
---  29  a default change after the start leaves the started round as it was
+--  29  the default changes after round 1 started (1 row), and the organiser
+--      then cannot re-freeze the started round                          → 42501
 --  30  sim_frozen_default with an unknown code                           → 23514
+-- The orchestrator's review (0215):
+--  31  a round override with gimme alone                                 → 23514
+--  32  a round override with a valid pair (Manual, 2,4 m)                → 1 row
+--  33  the club admin changes format on an active league                 → 42501
+--  34  the club admin changes the tee of a started simulator round       → 42501
+--  35  …the same in a regular league still changes                       → 1 row
+--  36  …and a simulator round nobody has started still changes           → 1 row
 --
 -- Red without 0212: every case (the columns do not exist). With 0212 minus the
 -- guards: 5–8, 14 and 15. Without 0213: 19–23. Without 0214: every case (the
--- column does not exist); with the 0212 guard body: 26 and 27.
+-- column does not exist); with the 0212 guard body: 26, 27 and 29. With the
+-- 0213 function body: 25 and 31; with the 0212 leagues guard: 33; with the 0214
+-- round guard: 34.
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
--- Depends on 0212, 0213 and 0214. Run via: supabase test db (see supabase/tests/README.md)
+-- Depends on 0212, 0213, 0214 and 0215. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(37);
 
 \ir fixtures/rls_helpers.psql
 
@@ -69,6 +79,9 @@ create or replace function torny_rls.ls_r_done()     returns uuid language sql i
 create or replace function torny_rls.ls_g_started()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000141'::uuid $$;
 create or replace function torny_rls.ls_g_done()     returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000142'::uuid $$;
 create or replace function torny_rls.ls_r_new()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000134'::uuid $$;
+create or replace function torny_rls.ls_regular()    returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000124'::uuid $$;
+create or replace function torny_rls.ls_r_regular()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000135'::uuid $$;
+create or replace function torny_rls.ls_g_regular()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000143'::uuid $$;
 
 -- ls_rows(sql): runs one statement as the current role and returns the number
 -- of rows it touched, so an allowed update is checked, not just survived.
@@ -116,7 +129,9 @@ insert into public.leagues
    torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.ls_club_admin(), torny_rls.ls_club(), true,
    '{"green_stimp": "10", "wind": "CALM"}'::jsonb),
   (torny_rls.ls_standalone(), 'LS Standalone', current_date, current_date + 90, 'total',  'single_course_single_tee',
-   torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.admin_id(),     null,                true, null);
+   torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.admin_id(),     null,                true, null),
+  (torny_rls.ls_regular(),    'LS Regular',    current_date, current_date + 90, 'total',  'single_course_single_tee',
+   torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.ls_club_admin(), torny_rls.ls_club(), false, null);
 
 insert into public.league_players (league_id, user_id, accepted_at) values
   (torny_rls.ls_active(), torny_rls.ls_club_admin(), now()),
@@ -129,6 +144,8 @@ insert into public.league_rounds
   (torny_rls.ls_r_open(),    torny_rls.ls_active(), 2, 'Runde 2', torny_rls.course_id(), torny_rls.tee_box_id(),
    now() - interval '1 day', now() + interval '13 days', now() + interval '13 days'),
   (torny_rls.ls_r_done(),    torny_rls.ls_active(), 3, 'Runde 3', torny_rls.course_id(), torny_rls.tee_box_id(),
+   now() - interval '1 day', now() + interval '13 days', now() + interval '13 days'),
+  (torny_rls.ls_r_regular(), torny_rls.ls_regular(), 1, 'Runde 1', torny_rls.course_id(), torny_rls.tee_box_id(),
    now() - interval '1 day', now() + interval '13 days', now() + interval '13 days');
 
 -- The started round was frozen at its first start: the default was stimp 10.
@@ -141,10 +158,13 @@ insert into public.games (id, name, course_id, tee_box_id, status, game_mode, cr
   (torny_rls.ls_g_started(), 'LS Flight', torny_rls.course_id(), torny_rls.tee_box_id(), 'active',
    'stableford', torny_rls.ls_player(), now(), torny_rls.ls_r_started()),
   (torny_rls.ls_g_done(),    'LS Flight', torny_rls.course_id(), torny_rls.tee_box_id(), 'finished',
-   'stableford', torny_rls.ls_player(), now(), torny_rls.ls_r_done());
+   'stableford', torny_rls.ls_player(), now(), torny_rls.ls_r_done()),
+  (torny_rls.ls_g_regular(), 'LS Flight', torny_rls.course_id(), torny_rls.tee_box_id(), 'active',
+   'solo_strokeplay', torny_rls.ls_player(), now(), torny_rls.ls_r_regular());
 insert into public.game_players (game_id, user_id) values
   (torny_rls.ls_g_started(), torny_rls.ls_player()),
-  (torny_rls.ls_g_done(),    torny_rls.ls_player());
+  (torny_rls.ls_g_done(),    torny_rls.ls_player()),
+  (torny_rls.ls_g_regular(), torny_rls.ls_player());
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- CHECK on the settings columns
@@ -182,10 +202,10 @@ rollback to savepoint case_3;
 savepoint case_4;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select is(
-  torny_rls.ls_rows($$ update public.leagues set is_simulator = true, scoring = 'gross'
+  torny_rls.ls_rows($$ update public.leagues set is_simulator = true, scoring = 'gross', format = 'stableford'
                         where id = torny_rls.ls_draft() $$),
   1,
-  'case 4: the organiser CAN change is_simulator and scoring while the league is a draft');
+  'case 4: the organiser CAN change is_simulator, scoring and format while the league is a draft');
 rollback to savepoint case_4;
 
 -- 5
@@ -378,11 +398,11 @@ rollback to savepoint case_24;
 
 -- 25
 savepoint case_25;
-select is(
-  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"putting": "AUTO_FIXED"}'::jsonb
-                        where id = torny_rls.ls_r_open() $$),
-  1,
-  'case 25: a round override with putting alone is accepted (its gimme comes from the default)');
+select throws_ok(
+  $$ update public.league_rounds set sim_settings = '{"putting": "AUTO_FIXED"}'::jsonb
+      where id = torny_rls.ls_r_open() $$,
+  '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_settings_options_check"',
+  'case 25: a round override with putting alone is refused (putting and gimme travel as a pair, 0215)');
 rollback to savepoint case_25;
 
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -421,17 +441,20 @@ select is(
   'case 28: a caller with no JWT (the start core) CAN write sim_frozen_default');
 rollback to savepoint case_28;
 
--- 29 ─ the organiser moves the default to stimp 11 after round 1 started.
+-- 29 ─ the organiser moves the default to stimp 11 after round 1 started, then
+-- tries to freeze round 1 again with it. Only the server writes the freeze.
 savepoint case_29;
 select torny_rls.as_user(torny_rls.ls_club_admin());
-select torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"green_stimp": "11", "wind": "CALM"}'::jsonb
-                             where id = torny_rls.ls_active() $$);
-select torny_rls.as_service();
 select is(
-  (select array[sim_frozen_default::text, coalesce(sim_settings::text, 'none')]
-     from public.league_rounds where id = torny_rls.ls_r_started()),
-  array['{"wind": "CALM", "green_stimp": "10"}', 'none'],
-  'case 29: a default change after the start leaves the started round as it was');
+  torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"green_stimp": "11", "wind": "CALM"}'::jsonb
+                        where id = torny_rls.ls_active() $$),
+  1,
+  'case 29: the organiser CAN move the default after round 1 started');
+select throws_like(
+  $$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "11", "wind": "CALM"}'::jsonb
+      where id = torny_rls.ls_r_started() $$,
+  '%set by the server only%',
+  'case 29: …and CANNOT re-freeze the started round with the new default');
 rollback to savepoint case_29;
 
 -- 30
@@ -441,6 +464,64 @@ select throws_ok(
   '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_frozen_default_check"',
   'case 30: sim_frozen_default holds Trackman codes only');
 rollback to savepoint case_30;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- The orchestrator's review (0215): the pair, the format, a started round's tee
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 31
+savepoint case_31;
+select throws_ok(
+  $$ update public.league_rounds set sim_settings = '{"gimme": "FT8"}'::jsonb where id = torny_rls.ls_r_open() $$,
+  '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_settings_options_check"',
+  'case 31: a round override with gimme alone is refused');
+rollback to savepoint case_31;
+
+-- 32
+savepoint case_32;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select is(
+  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"putting": "MANUAL", "gimme": "FT8"}'::jsonb
+                        where id = torny_rls.ls_r_open() $$),
+  1,
+  'case 32: the organiser CAN override a round with a valid putting and gimme pair');
+rollback to savepoint case_32;
+
+-- 33
+savepoint case_33;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_like(
+  $$ update public.leagues set format = 'stableford' where id = torny_rls.ls_active() $$,
+  '%locked once the league has started%',
+  'case 33: the organiser CANNOT change the format of an active league');
+rollback to savepoint case_33;
+
+-- 34
+savepoint case_34;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_like(
+  $$ update public.league_rounds set tee_box_id = null where id = torny_rls.ls_r_started() $$,
+  '%locked once a player has started the round%',
+  'case 34: the organiser CANNOT change the tee of a started round in a simulator league');
+rollback to savepoint case_34;
+
+-- 35
+savepoint case_35;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select is(
+  torny_rls.ls_rows($$ update public.league_rounds set tee_box_id = null where id = torny_rls.ls_r_regular() $$),
+  1,
+  'case 35: a regular league can still correct the tee of a started round');
+rollback to savepoint case_35;
+
+-- 36
+savepoint case_36;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select is(
+  torny_rls.ls_rows($$ update public.league_rounds set tee_box_id = null where id = torny_rls.ls_r_open() $$),
+  1,
+  'case 36: a simulator round nobody has started still changes its tee');
+rollback to savepoint case_36;
 
 -- 18 (last: an assert outside every savepoint, like the other guard suites)
 select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')

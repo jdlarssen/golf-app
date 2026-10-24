@@ -9,11 +9,16 @@
  * default Golf Portal fills in. The setting names are Norwegian; the option
  * texts stay in Trackman's words so players find them again on the simulator.
  * Some options are not confirmed yet (see the addendum); the owner checks them
- * on the simulator, and a change is one edit here plus one migration.
+ * on the simulator. A change is one edit here plus one migration that FIRST
+ * rewrites the stored values the new list refuses (`leagues.sim_settings`,
+ * `league_rounds.sim_settings` and `league_rounds.sim_frozen_default`) to the
+ * nearest valid code and THEN replaces `sim_settings_valid`: a replaced
+ * function does not re-check the rows already stored (0215 shows the pattern).
  *
  * This file is the one home of the list (AGENTS.md trap 4). Its mirror is the
- * SQL function `sim_settings_valid` (0213), which the DB CHECK on both
- * `sim_settings` columns calls; `simSettings.test.ts` locks the two together.
+ * SQL function `sim_settings_valid` (0213, replaced in 0215), which the DB
+ * CHECK on all three columns calls; `simSettings.test.ts` locks the two
+ * together against the newest definition of the function.
  *
  * Two layers, both `jsonb` (0212):
  *  - `leagues.sim_settings`: the league's DEFAULT;
@@ -161,7 +166,7 @@ export const SIM_SETTING_DEFAULTS = Object.fromEntries(
 /**
  * Putting modes that make Trackman lock the gimme distance to «Not
  * applicable». With every other mode a distance must be chosen. The same list
- * is in `sim_settings_valid` (0213).
+ * is in `sim_settings_valid` (0213, 0215).
  */
 export const GIMME_LOCKING_PUTTING: readonly string[] = ['AUTO_TOUR_PRO', 'AUTO_BY_HCP', 'AUTO_FIXED'];
 const GIMME_NONE = 'NOT_APPLICABLE';
@@ -206,20 +211,20 @@ export function optionLabel(key: SimSettingKey, code: string): string {
 }
 
 /**
- * The rule the DB CHECK also applies (`sim_settings_valid`, 0213): every key
- * known and every code one of its options; when putting and gimme are both
- * present, a locking putting goes with «Not applicable» and any other putting
- * with a distance. A round override that holds putting alone is fine: its
- * gimme comes from the default.
+ * The rule the DB CHECK also applies (`sim_settings_valid`, 0215): every key
+ * one of the eight (own keys only, so `toString` is not a setting) and every
+ * code one of its options; putting and gimme both or neither, and then a
+ * locking putting goes with «Not applicable» and any other putting with a
+ * distance. A round override therefore always carries the pair
+ * (`roundOverrideFrom`).
  */
 export function validSimSettings(settings: SimSettings): boolean {
   for (const [key, code] of Object.entries(settings)) {
-    if (!(key in SIM_SETTINGS) || !isOption(key as SimSettingKey, code)) return false;
+    if (!Object.hasOwn(SIM_SETTINGS, key) || !isOption(key as SimSettingKey, code)) return false;
   }
-  if (settings.putting !== undefined && settings.gimme !== undefined) {
-    return gimmeLocked(settings.putting) === (settings.gimme === GIMME_NONE);
-  }
-  return true;
+  if ((settings.putting === undefined) !== (settings.gimme === undefined)) return false;
+  if (settings.putting === undefined) return true;
+  return gimmeLocked(settings.putting) === (settings.gimme === GIMME_NONE);
 }
 
 export type ParseSimSettingsResult =

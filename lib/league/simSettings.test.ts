@@ -73,7 +73,7 @@ describe('the list follows Trackman (contract addendum 24.10)', () => {
   });
 });
 
-describe('the gimme coupling (one rule: here and in 0213)', () => {
+describe('the gimme coupling (one rule: here and in sim_settings_valid)', () => {
   it.each(['AUTO_TOUR_PRO', 'AUTO_BY_HCP', 'AUTO_FIXED'])('%s locks gimme to Not applicable', (putting) => {
     expect(gimmeLocked(putting)).toBe(true);
     expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'NOT_APPLICABLE' })).toBe(true);
@@ -86,9 +86,27 @@ describe('the gimme coupling (one rule: here and in 0213)', () => {
     expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'NOT_APPLICABLE' })).toBe(false);
   });
 
-  it('a round override with putting alone (gimme inherited) is valid on its own', () => {
-    expect(validSimSettings({ putting: 'AUTO_FIXED' })).toBe(true);
+  // O-1 (the evaluator) and the orchestrator's review: putting and gimme
+  // travel as a pair, so a hand-made override cannot split them.
+  it.each([
+    ['putting alone', false, { putting: 'AUTO_FIXED' }],
+    ['gimme alone', false, { gimme: 'FT8' }],
+    ['Manual with a distance', true, { putting: 'MANUAL', gimme: 'FT8' }],
+    ['Tour Pro with Not applicable', true, { putting: 'AUTO_TOUR_PRO', gimme: 'NOT_APPLICABLE' }],
+    ['neither (another key only)', true, { wind: 'WINDY' }],
+    ['an empty override', true, {}],
+  ])('a round override with %s → valid: %s', (_label, valid, override) => {
+    expect(validSimSettings(override)).toBe(valid);
   });
+});
+
+describe('validSimSettings reads own keys only (the orchestrator\'s review)', () => {
+  it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__'])(
+    'an inherited name (%s) is not a setting, and it does not throw',
+    (key) => {
+      expect(validSimSettings(JSON.parse(`{"${key}": "CALM"}`))).toBe(false);
+    },
+  );
 });
 
 describe('parseSimSettings (the form)', () => {
@@ -255,20 +273,41 @@ describe('simSettingGroups (the card)', () => {
 });
 
 describe('one home for the rules (AGENTS.md trap 4)', () => {
-  const sql = () =>
-    fs.readFileSync(path.resolve(__dirname, '../../supabase/migrations/0213_league_sim_settings_options.sql'), 'utf-8');
+  // The newest migration that (re)defines sim_settings_valid is the rule the
+  // CHECK runs today; a later migration that replaces it is read instead.
+  const MIGRATIONS = path.resolve(__dirname, '../../supabase/migrations');
+  const newest = () =>
+    fs
+      .readdirSync(MIGRATIONS)
+      .filter((f) => f.endsWith('.sql'))
+      .sort()
+      .filter((f) => /create or replace function public\.sim_settings_valid\(/.test(fs.readFileSync(path.join(MIGRATIONS, f), 'utf-8')))
+      .at(-1)!;
+  const sql = () => {
+    const text = fs.readFileSync(path.join(MIGRATIONS, newest()), 'utf-8');
+    const start = text.indexOf('create or replace function public.sim_settings_valid(');
+    return text.slice(start, text.indexOf('$$;', start));
+  };
 
-  it('the SQL option list in 0213 is the TS list, pair for pair', () => {
+  it('reads the newest definition of sim_settings_valid', () => {
+    expect(newest()).toBe('0215_league_sim_rules_review.sql');
+  });
+
+  it('the SQL option list is the TS list, pair for pair', () => {
     const pairs = [...sql().matchAll(/\('([a-z_]+)',\s*'([A-Z0-9_]+)'\)/g)].map((m) => `${m[1]}=${m[2]}`);
     const ts = SIM_SETTING_KEYS.flatMap((key) => SIM_SETTINGS[key].options.map((o) => `${key}=${o.code}`));
     expect(pairs.sort()).toEqual([...ts].sort());
   });
 
-  it('the putting values that lock gimme are the same in 0213', () => {
+  it('the putting values that lock gimme are the same in SQL', () => {
     const m = sql().match(/putting_locks_gimme[\s\S]*?array\[([^\]]+)\]/);
-    expect(m, 'the locking list in 0213').toBeTruthy();
+    expect(m, 'the locking list in sim_settings_valid').toBeTruthy();
     const inSql = [...m![1].matchAll(/'([A-Z_]+)'/g)].map((x) => x[1]).sort();
     expect(inSql).toEqual([...GIMME_LOCKING_PUTTING].sort());
+  });
+
+  it('the SQL also keeps putting and gimme as a pair', () => {
+    expect(sql()).toMatch(/putting_and_gimme_pair[^\n]*\n\s*and \(s \? 'putting'\) = \(s \? 'gimme'\)/);
   });
 
   it('the largest object the validator accepts fits 0212’s length CHECK', () => {
