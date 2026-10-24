@@ -545,6 +545,33 @@ describe('mode_config ranking on edit (#2625)', () => {
     expect(updatedModeConfig()).toMatchObject({ kind: 'texas_scramble', ranking: 'net_to_par' });
   });
 
+  it.each([
+    { kind: 'stableford', fields: { game_mode: 'stableford', stableford_team_size: '1' } },
+    { kind: 'nassau', fields: { game_mode: 'nassau', nassau_scoring: 'net' } },
+  ])('a draft that switches from texas to $kind is stamped too (#2625 part 2)', async ({ kind, fields }) => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: {
+          status: 'draft',
+          game_mode: 'texas_scramble',
+          mode_config: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+        },
+        error: null,
+      }, // games.select
+      { data: [], error: null }, // game_players.select (prior roster)
+      { data: { id: 'draft-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(
+      saveDraftAction('draft-1', fd({ name: 'Byttet format', side_tournament_enabled: 'false', ...fields })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updatedModeConfig()).toMatchObject({ kind, ranking: 'net_to_par' });
+  });
+
   it('a scheduled team strokeplay game without the flag never gets it on edit', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // loadRole

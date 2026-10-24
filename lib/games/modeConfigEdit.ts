@@ -33,8 +33,9 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
 
 /**
  * #2253 / #2625: stamps the rules a NEW game is created with onto its
- * `mode_config`. Today that is one: solo strokeplay and the team strokeplay
- * formats (best ball, Texas/Ambrose/Florida scramble, shamble) rank on net to
+ * `mode_config`. Today that is one: solo strokeplay, the team strokeplay
+ * formats (best ball, Texas/Ambrose/Florida scramble, shamble), the points
+ * formats (stableford, modified stableford, patsome) and Nassau rank on net to
  * par (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
  * engine). Every other config is returned unchanged.
  *
