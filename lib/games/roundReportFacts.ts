@@ -24,7 +24,7 @@
 import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { runningMatchStatus } from '@/lib/scoring/modes/matchplayRunningStatus';
-import { buildShareCardData, type ShareCardBand, type ShareCardRow } from './buildShareCardData';
+import { buildShareCardData, type ShareCardBand, type ShareCardRow, type ShareCardScore } from './buildShareCardData';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -266,7 +266,7 @@ export function factsShowAnyPlayer(
 // Score-label formatting (from the already-structured ShareCardScore)
 // ---------------------------------------------------------------------------
 
-function formatScoreLabel(score: { kind: 'points'; value: number } | { kind: 'skins'; value: number } | { kind: 'vsPar'; label: string }): string {
+function formatScoreLabel(score: ShareCardScore): string {
   switch (score.kind) {
     case 'points':
       return `${score.value} poeng`;
@@ -274,6 +274,9 @@ function formatScoreLabel(score: { kind: 'points'; value: number } | { kind: 'sk
       return `${score.value} skins`;
     case 'vsPar':
       return score.label;
+    // #2625: points against par pace, where «+» is the good side.
+    case 'pointsVsPar':
+      return `${score.label} mot par (poeng)`;
   }
 }
 

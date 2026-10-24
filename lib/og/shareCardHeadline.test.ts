@@ -188,6 +188,7 @@ describe('scoreFigure', () => {
     [{ kind: 'skins', value: 6 }, '6'],
     [{ kind: 'vsPar', label: '\u22124' }, '\u22124'],
     [{ kind: 'vsPar', label: 'E' }, 'E'],
+    [{ kind: 'pointsVsPar', label: '+3' }, '+3'],
   ] as const)('%j → %s', (score, expected) => {
     expect(scoreFigure(score)).toBe(expected);
   });

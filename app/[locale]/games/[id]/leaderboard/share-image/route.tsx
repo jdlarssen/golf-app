@@ -52,7 +52,7 @@ type ShareT = Awaited<ReturnType<typeof getTranslations>>;
 const ON_STRONG_MUTED = 'rgba(236,229,210,0.8)';
 const ON_STRONG_META = 'rgba(236,229,210,0.85)';
 
-/** The result as the headline words it: «38 poeng», «6 skins», «−4», «par». */
+/** The result as the headline words it: «38 poeng», «6 skins», «−4», «par», #2625 «+3 mot par». */
 function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
   switch (score.kind) {
     case 'points':
@@ -61,6 +61,9 @@ function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boole
       return { text: t('skins', { n: score.value }), at: false };
     case 'vsPar':
       return { text: score.label === 'E' ? t('par') : score.label, at: true };
+    case 'pointsVsPar':
+      // «+» is the good side in points, so a bare «+3» would read as three over.
+      return { text: score.label === 'E' ? t('par') : t('pointsVsPar', { label: score.label }), at: true };
   }
 }
 

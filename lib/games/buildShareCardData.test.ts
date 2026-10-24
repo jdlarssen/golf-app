@@ -1102,7 +1102,8 @@ describe('team strokeplay — ranked on net to par (#2625)', () => {
 });
 
 // #2625 part 2: a points game ranked on net to par shows the points against
-// par pace (what it is ranked on), not the sum of points.
+// par pace (what it is ranked on), not the sum of points. Its own kind, so the
+// card words it «+3 mot par»: a bare «+3» reads as three over par.
 describe('points games — ranked on net to par (#2625)', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
   const card = (result: ModeResult) =>
@@ -1148,8 +1149,8 @@ describe('points games — ranked on net to par (#2625)', () => {
     ],
   ] as unknown as [string, ModeResult][])('%s', (_kind, result) => {
     expect(card(result).podium.map((r) => r.score)).toEqual([
-      { kind: 'vsPar', label: '+5' },
-      { kind: 'vsPar', label: '+1' },
+      { kind: 'pointsVsPar', label: '+5' },
+      { kind: 'pointsVsPar', label: '+1' },
     ]);
   });
 });

@@ -2805,6 +2805,7 @@
       "points": "{n, plural, one {# poeng} other {# poeng}}",
       "skins": "{n, plural, one {# skin} other {# skins}}",
       "par": "par",
+      "pointsVsPar": "{label} mot par",
       "holes": "{n} hull",
       "players": "{n, plural, one {# spiller} other {# spillere}}",
       "playerFallback": "Spiller",

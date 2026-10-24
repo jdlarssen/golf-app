@@ -24,11 +24,14 @@ export type ShareCardBand = 'placement' | 'skins' | 'matchplay';
  * A competitor's score, structured so the route can localize it. `vsPar` is
  * locale-neutral golf notation (U+2212 minus / "E" / "+n") and carries its own
  * display label; `points`/`skins` carry the raw count for `t('points'|'skins')`.
+ * #2625: `pointsVsPar` is points against par pace in the same notation, where
+ * «+» is the good side, so it is worded with its unit («+3 mot par»).
  */
 export type ShareCardScore =
   | { kind: 'points'; value: number }
   | { kind: 'skins'; value: number }
-  | { kind: 'vsPar'; label: string };
+  | { kind: 'vsPar'; label: string }
+  | { kind: 'pointsVsPar'; label: string };
 
 export type ShareCardRow = {
   rank: number;
@@ -200,7 +203,7 @@ export function buildShareCardData(opts: {
         const rows: IndividualCompetitor[] = result.players.map((p) => ({
           userIds: [p.userId],
           rank: p.rank,
-          score: toPar ? { kind: 'vsPar', label: vsParLabel(p.toPar) } : { kind: 'points', value: p.totalPoints },
+          score: toPar ? { kind: 'pointsVsPar', label: vsParLabel(p.toPar) } : { kind: 'points', value: p.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       } else {
@@ -209,7 +212,7 @@ export function buildShareCardData(opts: {
           userIds: t.playerIds,
           teamNumber: t.teamNumber,
           rank: t.rank,
-          score: toPar ? { kind: 'vsPar', label: vsParLabel(t.toPar) } : { kind: 'points', value: t.totalPoints },
+          score: toPar ? { kind: 'pointsVsPar', label: vsParLabel(t.toPar) } : { kind: 'points', value: t.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       }
@@ -293,7 +296,7 @@ export function buildShareCardData(opts: {
         // game ranked on net to par.
         score:
           result.ranking === 'net_to_par'
-            ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
+            ? { kind: 'pointsVsPar', label: vsParLabel(t.toPar) }
             : { kind: 'points', value: t.totalPoints },
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
