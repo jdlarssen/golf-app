@@ -5,6 +5,7 @@ import {
   FIRST_GIMME_DISTANCE,
   SIM_SETTINGS,
   SIM_SETTING_GROUPS,
+  SIM_SETTING_KEYS,
   gimmeLocked,
   lockGimme,
   simSettingField,
@@ -12,6 +13,16 @@ import {
 } from '@/lib/league/simSettings';
 
 const GIMME_NONE = 'NOT_APPLICABLE';
+
+/**
+ * A React `key` for <SimSettingsFields>: the codes in SIM_SETTING_KEYS order.
+ * The fields hold their own state from `initial`, so a parent that renders
+ * new stored values (after a save, «Tilbake til standard» or a changed
+ * default) keys on them and the fields start over from what is stored.
+ */
+export function simSettingsFieldsKey(values: Record<SimSettingKey, string>): string {
+  return SIM_SETTING_KEYS.map((key) => values[key]).join('|');
+}
 
 /**
  * The eight Trackman selects of a simulator league (#2638, artboards 8a–8c),

@@ -1,10 +1,10 @@
 'use client';
 
-import { useActionState } from 'react';
+import { startTransition, useActionState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
-import { SubmitButton } from '@/components/ui/SubmitButton';
-import { SimSettingsFields } from '@/components/league/SimSettingsFields';
+import { Button } from '@/components/ui/Button';
+import { SimSettingsFields, simSettingsFieldsKey } from '@/components/league/SimSettingsFields';
 import { updateLeagueSimSettings, type LeagueActionError } from '@/lib/league/actions';
 import type { SimSettingKey } from '@/lib/league/simSettings';
 
@@ -26,7 +26,7 @@ export function LigaSimDefaults({
   const t = useTranslations('liga.manage');
   const tSim = useTranslations('liga.simSettings');
   const locale = useLocale();
-  const [state, action] = useActionState(
+  const [state, action, isPending] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => updateLeagueSimSettings(formData),
     INITIAL,
   );
@@ -38,9 +38,25 @@ export function LigaSimDefaults({
         {t('simSettingsHeading')}
       </h2>
       <Card>
-        <form action={action} className="space-y-3">
+        <form
+          action={action}
+          // React 19 resets a form after an `action` submit, and the controlled
+          // selects then show the server-rendered values again; a second «Lagre»
+          // would post those. preventDefault + a manual dispatch skips the reset
+          // (same figure as CreateLigaForm, #1475); pending comes from
+          // useActionState because useFormStatus does not see a manual dispatch.
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            startTransition(() => action(formData));
+          }}
+          className="space-y-3"
+        >
           <input type="hidden" name="league_id" value={leagueId} />
+          {/* Keyed on the stored values: after a save the page renders the new
+              default, and the fields start over from it. */}
           <SimSettingsFields
+            key={simSettingsFieldsKey(initial)}
             initial={initial}
             idPrefix={`liga-defaults-${leagueId}`}
             locale={locale}
@@ -52,13 +68,15 @@ export function LigaSimDefaults({
               {t.has(errorKey) ? t(errorKey) : t('simSettingsErrors.update_failed')}
             </p>
           )}
-          <SubmitButton
+          <Button
+            type="submit"
             variant="secondary"
             className="text-sm px-4 py-2 min-h-[44px]"
+            pending={isPending}
             pendingLabel={t('simSettingsSaving')}
           >
             {t('simSettingsSave')}
-          </SubmitButton>
+          </Button>
         </form>
       </Card>
     </section>

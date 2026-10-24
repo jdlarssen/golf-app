@@ -119,10 +119,14 @@ export function CreateLigaForm({
       : bestN;
 
   // #2638: «Simulator» på forhåndsvelger stableford, beste N og hver 14. dag.
-  // Alt kan endres etterpå; av igjen rører ingenting.
+  // Alt kan endres etterpå. Av igjen beholder tallet som vises i «beste N»,
+  // så feltet ikke står tomt.
   function toggleSimulator(on: boolean) {
     setIsSimulator(on);
-    if (!on) return;
+    if (!on) {
+      setBestN(bestNValue);
+      return;
+    }
     setFormat(SIMULATOR_DEFAULTS.format);
     setStandingsModel(SIMULATOR_DEFAULTS.standingsModel);
     setFrequency(SIMULATOR_DEFAULTS.frequency);

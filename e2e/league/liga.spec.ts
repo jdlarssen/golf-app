@@ -668,3 +668,122 @@ test.describe('Liga — simulator: a flight of one counts (#2638)', () => {
     await expect(page.getByTestId('liga-played-by-missing')).toBeVisible();
   });
 });
+
+/**
+ * #2638 (the orchestrator's review, finding 1 and 2): the two settings forms
+ * keep what the organiser saved. React 19 resets a form after an `action`
+ * submit, and the selects held their own state from mount; together a second
+ * «Lagre» posted the old values. Drives the real admin page: the default is
+ * saved twice without a reload, then a round is adjusted, reset and saved.
+ */
+test.describe('Liga — simulator: the settings forms keep what was saved (#2638)', () => {
+  test.skip(!envReady, skipReason);
+  test.slow();
+
+  let leagueId: string | null = null;
+
+  test.afterAll(async () => {
+    if (leagueId) await adminClient().from('leagues').delete().eq('id', leagueId);
+  });
+
+  test('save the default twice, then reset a round and save it @gate', async ({ page }) => {
+    const admin = adminClient();
+    const { data: adminUser } = await admin
+      .from('users')
+      .select('id')
+      .ilike('email', ADMIN_EMAIL!)
+      .maybeSingle<{ id: string }>();
+    expect(adminUser, 'admin user seeded').toBeTruthy();
+    const { data: tee } = await admin
+      .from('tee_boxes')
+      .select('id, course_id')
+      .not('par_total_mens', 'is', null)
+      .limit(1)
+      .maybeSingle<{ id: string; course_id: string }>();
+    expect(tee, 'a tee').toBeTruthy();
+
+    const now = Date.now();
+    const day = 86_400_000;
+    const { data: league, error: lErr } = await admin
+      .from('leagues')
+      .insert({
+        name: `TEST-Liga-simskjema-${now}`,
+        season_start: new Date(now - day).toISOString().slice(0, 10),
+        season_end: new Date(now + 30 * day).toISOString().slice(0, 10),
+        format: 'stableford',
+        scoring: 'net',
+        standings_model: 'total',
+        course_scope: 'single_course_single_tee',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        status: 'active',
+        created_by: adminUser!.id,
+        is_simulator: true,
+        sim_settings: SIM_DEFAULT,
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(lErr).toBeNull();
+    leagueId = league!.id;
+    const { data: round, error: rErr } = await admin
+      .from('league_rounds')
+      .insert({
+        league_id: leagueId,
+        sequence: 1,
+        label: 'Runde 1',
+        course_id: tee!.course_id,
+        tee_box_id: tee!.id,
+        opens_at: new Date(now + day).toISOString(),
+        closes_at: new Date(now + 14 * day).toISOString(),
+        original_closes_at: new Date(now + 14 * day).toISOString(),
+      })
+      .select('id')
+      .single<{ id: string }>();
+    expect(rErr).toBeNull();
+    const roundId = round!.id;
+    await admin
+      .from('league_players')
+      .insert({ league_id: leagueId, user_id: adminUser!.id, accepted_at: new Date().toISOString() });
+
+    const leagueSettings = async () =>
+      (await admin.from('leagues').select('sim_settings').eq('id', leagueId!).single()).data
+        ?.sim_settings as Record<string, string> | null;
+    const roundOverride = async () =>
+      (await admin.from('league_rounds').select('sim_settings').eq('id', roundId).single()).data
+        ?.sim_settings ?? null;
+
+    await page.goto(`/login?next=/admin/liga/${leagueId}`);
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto(`/admin/liga/${leagueId}`);
+
+    // ── The default, saved twice without a reload ────────────────────────────
+    const defaults = page.getByTestId('liga-sim-defaults');
+    const stimp = defaults.getByTestId('sim-select-green_stimp');
+    await expect(stimp).toHaveValue(SIM_DEFAULT.green_stimp, { timeout: 30_000 });
+    await stimp.selectOption('11');
+    await defaults.getByRole('button').click();
+    await expect.poll(async () => (await leagueSettings())?.green_stimp, { timeout: 20_000 }).toBe('11');
+    await expect(stimp, 'the select keeps the saved value').toHaveValue('11');
+
+    await defaults.getByTestId('sim-select-wind').selectOption('CALM');
+    await defaults.getByRole('button').click();
+    await expect.poll(async () => (await leagueSettings())?.wind, { timeout: 20_000 }).toBe('CALM');
+    expect((await leagueSettings())?.green_stimp, 'the second save kept the first change').toBe('11');
+
+    // ── The round: adjust, back to the default, adjust again ────────────────
+    const adjust = page.getByTestId('liga-round-adjust').first();
+    await adjust.locator('summary').click();
+    await expect(adjust.getByTestId('sim-select-green_stimp'), 'the round follows the new default').toHaveValue('11');
+    await adjust.getByTestId('sim-select-green_stimp').selectOption('13');
+    await adjust.getByTestId('liga-round-settings-save').click();
+    await expect.poll(roundOverride, { timeout: 20_000 }).toEqual({ green_stimp: '13' });
+
+    await adjust.getByTestId('liga-round-reset').click();
+    await expect.poll(roundOverride, { timeout: 20_000 }).toBeNull();
+    await expect(adjust.getByTestId('sim-select-green_stimp'), 'the reset shows the default again').toHaveValue('11');
+
+    await adjust.getByTestId('sim-select-wind').selectOption('WINDY');
+    await adjust.getByTestId('liga-round-settings-save').click();
+    await expect.poll(roundOverride, { timeout: 20_000 }).toEqual({ wind: 'WINDY' });
+  });
+});

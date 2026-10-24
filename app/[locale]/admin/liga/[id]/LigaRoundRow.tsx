@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState, useId } from 'react';
+import { startTransition, useActionState, useId } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   updateLeagueRound,
@@ -9,7 +10,7 @@ import {
   updateRoundSimSettings,
   type LeagueActionError,
 } from '@/lib/league/actions';
-import { SimSettingsFields } from '@/components/league/SimSettingsFields';
+import { SimSettingsFields, simSettingsFieldsKey } from '@/components/league/SimSettingsFields';
 import {
   SIM_SETTINGS,
   formSimSettings,
@@ -65,7 +66,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
       overrideRoundWindow(formData) as Promise<LeagueActionError>,
     INITIAL,
   );
-  const [settingsState, settingsAction] = useActionState(
+  const [settingsState, settingsAction, settingsPending] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => updateRoundSimSettings(formData),
     INITIAL,
   );
@@ -74,6 +75,8 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
   const overriddenNames = round.overriddenKeys
     .map((key) => (settingsLocale === 'en' ? SIM_SETTINGS[key].trackmanLabel : SIM_SETTINGS[key].label))
     .join(', ');
+
+  const settingsInitial = formSimSettings(round.simSettings);
 
   const selectedCourse = courses.find((c) => c.id === round.courseId);
   const tees = selectedCourse?.tee_boxes ?? [];
@@ -224,11 +227,26 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
           <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-6px_0_-20px] group-open:[--tap-extend:-6px_0]">
             {t('adjustSettings')}
           </summary>
-          <form action={settingsAction} className="mt-3 space-y-3">
+          <form
+            action={settingsAction}
+            // React 19 resets a form after an `action` submit and the controlled
+            // selects fall back to the server-rendered values (see
+            // LigaSimDefaults). The submitter goes into the FormData, so
+            // «Tilbake til standard» still posts reset=true.
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+              startTransition(() => settingsAction(formData));
+            }}
+            className="mt-3 space-y-3"
+          >
             <input type="hidden" name="round_id" value={round.id} />
             <input type="hidden" name="league_id" value={leagueId} />
+            {/* Keyed on the values that apply: after a save, a reset or a
+                changed default the fields start over from them. */}
             <SimSettingsFields
-              initial={formSimSettings(round.simSettings)}
+              key={simSettingsFieldsKey(settingsInitial)}
+              initial={settingsInitial}
               idPrefix={`${fieldId}-sim`}
               locale={locale}
               gimmeLockedNote={tSim('gimmeLocked')}
@@ -239,19 +257,28 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
+              <Button
+                type="submit"
+                variant="secondary"
+                className="text-sm px-4 py-2 min-h-[44px]"
+                pending={settingsPending}
+                pendingLabel={t('savePending')}
+                data-testid="liga-round-settings-save"
+              >
                 {t('saveButton')}
-              </SubmitButton>
-              <SubmitButton
+              </Button>
+              <Button
+                type="submit"
                 variant="quiet"
                 name="reset"
                 value="true"
                 className="text-sm px-4 py-2 min-h-[44px]"
+                pending={settingsPending}
                 pendingLabel={t('savePending')}
                 data-testid="liga-round-reset"
               >
                 {t('resetToDefault')}
-              </SubmitButton>
+              </Button>
             </div>
           </form>
         </details>
