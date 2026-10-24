@@ -62,6 +62,28 @@ export function offerFriendLink(url: string | null | undefined): boolean {
   return true;
 }
 
+/** Det navigatoren skal gjøre med koden som venter (#2627). */
+export type FriendLinkStep = 'wait' | 'skip' | 'push';
+
+/**
+ * Navigatorens avgjørelse, ren så den kan testes:
+ *  - `wait`: navigatoren er ikke klar, eller ingen kode venter. Koden blir
+ *    stående, og `onReady` eller neste kode prøver igjen.
+ *  - `skip`: «Bli venn med …» står alt øverst med samme kode (lenka kom både
+ *    som oppstarts-lenke og som hendelse). Koden brukes opp uten ny skjerm.
+ *  - `push`: åpne skjermen med koden.
+ */
+export function friendLinkStep(
+  isReady: boolean,
+  currentRoute: { name: string; params?: object } | undefined,
+  code: string | null,
+): FriendLinkStep {
+  if (!isReady || !code) return 'wait';
+  const shownCode = (currentRoute?.params as { code?: unknown } | undefined)?.code;
+  if (currentRoute?.name === 'FriendLink' && shownCode === code) return 'skip';
+  return 'push';
+}
+
 /**
  * Lytt etter venne-lenker: lenka som startet appen, og de som kommer mens den
  * er åpen. Gir tilbake avslutningen. En feil i oppslaget velter aldri appen.

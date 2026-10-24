@@ -26,7 +26,12 @@ import { Platform } from 'react-native';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
-import { subscribePendingFriendCode, takePendingFriendCode } from './data/pendingFriendLink';
+import {
+  friendLinkStep,
+  pendingFriendCode,
+  subscribePendingFriendCode,
+  takePendingFriendCode,
+} from './data/pendingFriendLink';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
@@ -193,19 +198,16 @@ function openPushTarget(target: PushTarget) {
 }
 
 /**
- * «Bli venn med …» for venne-koden som venter (#2627), når navigatoren er
- * klar. Står skjermen alt øverst med samme kode (lenka kom både som
- * oppstarts-lenke og som hendelse), åpnes den ikke en gang til.
+ * «Bli venn med …» for venne-koden som venter (#2627). Avgjørelsen er
+ * `friendLinkStep`: vent til navigatoren er klar, og åpne ikke skjermen en gang
+ * til når den alt står øverst med samme kode.
  */
 function openPendingFriendLink() {
-  if (!navigationRef.isReady()) return;
+  const ready = navigationRef.isReady();
+  const step = friendLinkStep(ready, ready ? navigationRef.getCurrentRoute() : undefined, pendingFriendCode());
+  if (step === 'wait') return;
   const code = takePendingFriendCode();
-  if (!code) return;
-  const current = navigationRef.getCurrentRoute();
-  if (current?.name === 'FriendLink' && (current.params as { code?: string } | undefined)?.code === code) {
-    return;
-  }
-  navigationRef.dispatch(StackActions.push('FriendLink', { code }));
+  if (step === 'push' && code) navigationRef.dispatch(StackActions.push('FriendLink', { code }));
 }
 
 export function RootNavigator() {
