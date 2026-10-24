@@ -278,10 +278,11 @@ describe('stableford solo — score labels', () => {
   const result: StablefordResult = {
     kind: 'stableford',
     variant: 'solo',
+    ranking: 'net_total',
     holes: [],
     players: [
-      { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18, tiedWith: [] },
-      { userId: 'u2', totalPoints: 34, rank: 2, holesPlayed: 18, tiedWith: [] },
+      { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18, toPar: null, tiedWith: [] },
+      { userId: 'u2', totalPoints: 34, rank: 2, holesPlayed: 18, toPar: null, tiedWith: [] },
     ],
   };
 
@@ -591,6 +592,7 @@ describe('nassau — score labels', () => {
   const result: NassauResult = {
     kind: 'nassau',
     scoring: 'net',
+    ranking: 'net_total',
     sections: {
       front9: { name: 'front9', holeNumbers: [], players: [], winnerUserIds: [], isPending: false },
       back9: { name: 'back9', holeNumbers: [], players: [], winnerUserIds: [], isPending: false },

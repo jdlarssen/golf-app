@@ -39,6 +39,7 @@ function makeSectionLine(
     totalEffectiveStrokes: totalEffective,
     totalGrossStrokes: totalGross,
     holesPlayed: 9,
+    toPar: null,
     rank,
     tiedWith: [],
   };
@@ -69,6 +70,7 @@ function makeSweepResult(): NassauResult {
   return {
     kind: 'nassau',
     scoring: 'net',
+    ranking: 'net_total',
     sections: {
       front9: makeSection(
         'front9',

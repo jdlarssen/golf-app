@@ -231,7 +231,7 @@ describe('likt på et hull: den som ligger best an i stillingen står først', (
       soloStablefordScorecard(
         {
           ...STABLEFORD,
-          players: order.map((userId) => ({ userId, totalPoints: 5, rank: 1, holesPlayed: 1, tiedWith: [] })),
+          players: order.map((userId) => ({ userId, totalPoints: 5, rank: 1, holesPlayed: 1, toPar: null, tiedWith: [] })),
           holes: [],
         },
         () => 'mens',

@@ -22,13 +22,14 @@ function makeTeamLine(args: {
     playerIds: args.playerIds,
     holes: [],
     totalPoints: args.totalPoints,
+    toPar: null,
     rank: args.rank,
     tiedWith: args.tiedWith ?? [],
   };
 }
 
 function makeResult(teams: StablefordTeamLine[]): StablefordTeamResult {
-  return { kind: 'stableford', variant: 'team', teams };
+  return { kind: 'stableford', variant: 'team', ranking: 'net_total', teams };
 }
 
 function makePlayers(

@@ -27,12 +27,13 @@ const players = ['a', 'b', 'c', 'd', 'e'].map((id) => ({
 }));
 
 function sf(userId: string, totalPoints: number, rank: number, extra: Partial<StablefordPlayerLine> = {}): StablefordPlayerLine {
-  return { userId, totalPoints, rank, holesPlayed: 18, tiedWith: [], decidedBy: null, ...extra };
+  return { userId, totalPoints, rank, holesPlayed: 18, toPar: null, tiedWith: [], decidedBy: null, ...extra };
 }
 
 const stableford: StablefordSoloResult = {
   kind: 'stableford',
   variant: 'solo',
+  ranking: 'net_total',
   holes: [],
   // The engine's order, already ranked; d and e share fourth.
   players: [
