@@ -56,9 +56,9 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason:
       "the guest's M/D/J pick, clamped to the game's tee by addGuestToGame (#2437)",
   },
-  'lib/league/actions.ts': {
+  'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
-    reason: 'league round, teeGenderOf (out of scope for #2209, see the PR)',
+    reason: 'league round, teeGenderOf (out of scope for #2209, see the PR; moved from lib/league/actions.ts in #2638)',
   },
   'lib/cup/insertCupMatches.ts': {
     count: 1,

@@ -25,10 +25,11 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     reason:
       'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original rule by decision (contract #2625)',
   },
-  'lib/league/actions.ts': {
+  'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
     stamps: false,
-    reason: 'league rounds keep the original rule; the league is frozen (contract #2253)',
+    reason:
+      'league rounds keep the original rule; the league is frozen (contract #2253). Moved from lib/league/actions.ts in #2638',
   },
   'native/app/src/data/createGame.ts': {
     count: 1,

@@ -10,14 +10,12 @@ import {
   requireAdminOrClubAdmin,
   requireAdminOrClubAdminOfLeague,
 } from '@/lib/admin/auth';
-import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { isTeeOffInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
-import { teeGenderOf } from '@/lib/games/teeGender';
 import { generateRounds } from './generateRounds';
 import { ligaBasePath } from './ligaPaths';
-import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
-import { roundPlayerLocks } from './roundLocks';
+import { isPointsBasedFormat } from './flightFormat';
+import { startLeagueRoundFlightCore } from './startLeagueRoundFlightCore';
 import type { TablesUpdate } from '@/lib/database.types';
 import type {
   CourseScope,
@@ -30,9 +28,6 @@ import type {
 
 const NAME_RE = /^.{1,80}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const GAME_NAME_MAX = 120;
-
-// teeGenderOf imported from @/lib/games/teeGender (#809).
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 
@@ -47,13 +42,6 @@ async function rollbackDraftLeague(supabase: ServerClient, leagueId: string): Pr
   const { data, error } = await supabase.from('leagues').delete().eq('id', leagueId).select('id');
   if (error || (data ?? []).length === 0) {
     console.error('[league] createLeagueDraft rollback failed', { leagueId, error });
-  }
-}
-
-async function rollbackFlightGame(supabase: ServerClient, gameId: string): Promise<void> {
-  const { data, error } = await supabase.from('games').delete().eq('id', gameId).select('id');
-  if (error || (data ?? []).length === 0) {
-    console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error });
   }
 }
 
@@ -715,57 +703,12 @@ export async function handleDeleteLeague(formData: FormData): Promise<void> {
 // ── participant: start a flight for a round ──────────────────────────────────
 
 /**
- * #2214: one counted flight per player per round. Nobody in the new flight may
- * already have delivered the round or be playing it in another flight
- * (roundPlayerLocks). Returns the refusal code, or null when everyone is free.
- *
- * The read runs on the admin client: under the games SELECT policy the starter
- * cannot see a co-player's flight, so a request-client read comes back empty
- * and lets everyone through. The caller has checked that the user is signed in
- * and that everyone in flightIds is a member; the read is bounded to one round
- * and these few players, so it needs no paging. A failed read refuses, never a
- * silent pass.
- */
-async function roundLockRefusal(
-  roundId: string,
-  starterId: string,
-  flightIds: string[],
-): Promise<string | null> {
-  const { data: roundFlights, error } = await getAdminClient()
-    .from('games')
-    .select('id, status, game_players!inner(user_id, withdrawn_at)')
-    .eq('league_round_id', roundId)
-    .in('status', ['scheduled', 'active', 'finished'])
-    .in('game_players.user_id', flightIds);
-  if (error || !roundFlights) {
-    console.error('[league] startLeagueRoundFlight round check failed', { roundId, error });
-    return 'round_check_failed';
-  }
-  const locks = roundPlayerLocks(
-    roundFlights.map((g) => ({
-      status: g.status,
-      players: (g.game_players as Array<{ user_id: string; withdrawn_at: string | null }>).map(
-        (p) => ({ userId: p.user_id, withdrawnAt: p.withdrawn_at }),
-      ),
-    })),
-  );
-  if (locks.delivered.has(starterId)) return 'already_played';
-  if (locks.inProgress.has(starterId)) return 'flight_in_progress';
-  if (flightIds.some((id) => locks.delivered.has(id) || locks.inProgress.has(id))) {
-    return 'co_player_locked';
-  }
-  return null;
-}
-
-/**
- * A participant starts a flight for a round. Server-enforces the marker rule
- * (≥2 distinct members) and the play window. Creates a flight game in the
- * league's format (slagspill / stableford / modifisert, via
- * `leagueFlightGameConfig`; course/tee resolved from the round, falling back to
- * the league), freezes
- * handicaps + flips to 'active' via startScheduledGame, and flags the flight if
- * it was created past the round's original window (only possible after an admin
- * override). Redirects to the new game on success; returns `{ error }` otherwise.
+ * A participant starts a flight for a round. The rules (window, membership,
+ * the marker rule, one counted flight per player, the #2638 settings freeze)
+ * live in `startLeagueRoundFlightCore`, which the app route
+ * (`POST /api/liga/rounds/[roundId]/start`) runs too. This wrapper only adds
+ * the web's session and redirects: to the new game on success; a refusal
+ * comes back as `{ error }`.
  */
 export async function startLeagueRoundFlight(
   roundId: string,
@@ -777,141 +720,8 @@ export async function startLeagueRoundFlight(
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: round, error: rErr } = await supabase
-    .from('league_rounds')
-    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at')
-    .eq('id', roundId)
-    .maybeSingle();
-  if (rErr || !round) return { error: 'round_not_found' };
+  const result = await startLeagueRoundFlightCore(supabase, user.id, roundId, coPlayerUserIds);
+  if (!result.ok) return { error: result.error };
 
-  const { data: league, error: lErr } = await supabase
-    .from('leagues')
-    .select('id, name, course_id, tee_box_id, status, format')
-    .eq('id', round.league_id)
-    .maybeSingle();
-  if (lErr || !league) return { error: 'league_not_found' };
-  if (league.status !== 'active') return { error: 'league_not_active' };
-
-  // Flight-spillformatet følger ligaen (slagspill / stableford / modifisert).
-  // En stableford-flight rendrer det vanlige stableford-scorekortet uendret.
-  const { gameMode, modeConfig } = leagueFlightGameConfig(league.format as LeagueFormat);
-
-  // Window gate (server-enforced).
-  const now = Date.now();
-  if (now < new Date(round.opens_at).getTime() || now > new Date(round.closes_at).getTime()) {
-    return { error: 'outside_window' };
-  }
-
-  // Resolve course/tee from round → league.
-  const courseId = round.course_id ?? league.course_id;
-  const teeBoxId = round.tee_box_id ?? league.tee_box_id;
-  if (!courseId || !teeBoxId) return { error: 'round_not_ready' };
-
-  // Membership + marker rule: caller + distinct co-players, all members, ≥2.
-  const flightIds = Array.from(new Set([user.id, ...coPlayerUserIds.filter((id) => id !== user.id)]));
-  if (flightIds.length < 2) return { error: 'need_marker' };
-
-  const { data: members, error: mErr } = await supabase
-    .from('league_players')
-    .select('user_id')
-    .eq('league_id', league.id);
-  if (mErr) return { error: 'members_failed' };
-  const memberSet = new Set((members ?? []).map((m) => m.user_id));
-  if (!flightIds.every((id) => memberSet.has(id))) return { error: 'not_member' };
-
-  // #2214: one counted flight per player per round (roundLockRefusal).
-  const lockRefusal = await roundLockRefusal(roundId, user.id, flightIds);
-  if (lockRefusal) return { error: lockRefusal };
-
-  // tee_gender per player from profile.
-  const { data: roster } = await supabase.from('users').select('id, gender').in('id', flightIds);
-  const genderById = new Map<string, string | null>(
-    (roster ?? []).map((u) => [u.id, (u.gender as string | null) ?? null]),
-  );
-
-  const deliveredOutsideWindow = now > new Date(round.original_closes_at).getTime();
-  const name = `${league.name} – Runde`.slice(0, GAME_NAME_MAX);
-
-  // #2207: league_round_id is server-owned. The league table counts finished
-  // games per round with the service role, so the database lets only the
-  // service role and admins set the link (guard_games_league_round_id). Every
-  // rule above (window, membership, marker, one counted flight) ran here on
-  // the server; the insert itself goes through the admin client. created_by
-  // stays the player, so the game_players insert, the compensation and
-  // startScheduledGame below still run on their own client under the creator
-  // policies.
-  const { data: game, error: gErr } = await getAdminClient()
-    .from('games')
-    .insert({
-      name,
-      course_id: courseId,
-      tee_box_id: teeBoxId,
-      status: 'scheduled',
-      game_mode: gameMode,
-      mode_config: modeConfig,
-      created_by: user.id,
-      league_round_id: roundId,
-      delivered_outside_window: deliveredOutsideWindow,
-    })
-    .select('id')
-    .single();
-  if (gErr || !game) {
-    console.error('[league] startLeagueRoundFlight game insert failed', { roundId, error: gErr });
-    return { error: 'insert_failed' };
-  }
-  const gameId = (game as { id: string }).id;
-
-  const flightNow = new Date().toISOString();
-  // #2567: this insert goes through the player's own client on purpose, so RLS
-  // and the triggers check every row. The trigger's league branch (0208) lets
-  // the league's own members into a flight. Do not switch it to the admin client.
-  const { error: gpErr } = await supabase.from('game_players').insert(
-    flightIds.map((uid) => ({
-      game_id: gameId,
-      user_id: uid,
-      // Liga er solo → team_number null. team_number 1 uten flight_number brøt
-      // CHECK-constrainten game_players_team_flight_consistency (#647). Og
-      // game_players har INGEN status-kolonne — den lå her før og fikk hele
-      // flight-inserten avvist, så ingen kunne spille en eneste runde.
-      team_number: null,
-      tee_gender: teeGenderOf(genderById.get(uid) ?? null),
-      // #463: den som starter flighten bekreftes nå; medspillere i flighten
-      // er «Ikke bekreftet» til de selv bekrefter / blir aktive.
-      accepted_at: acceptedAtForActor(user.id, uid, flightNow),
-    })),
-  );
-  if (gpErr) {
-    console.error('[league] startLeagueRoundFlight game_players insert failed', {
-      roundId,
-      gameId,
-      error: gpErr,
-    });
-    await rollbackFlightGame(supabase, gameId);
-    return { error: 'insert_failed' };
-  }
-
-  // Freeze handicaps + flip to active. On failure, roll back the half-made flight.
-  // ORDER MATTERS: game_players were inserted above, before this call. That is
-  // what lets startScheduledGame (on the user client) read co-players'
-  // users.hcp_index — the "users select own or shared games" RLS policy only
-  // grants that once the caller shares a game with them. Keep insert-before-start.
-  const started = await startScheduledGame(supabase, gameId);
-  if (!started.ok) {
-    // #2223: check the compensation. The game_players delete only logs an error
-    // (the games delete cascades them anyway).
-    const { error: playersRollbackErr } = await supabase
-      .from('game_players')
-      .delete()
-      .eq('game_id', gameId);
-    if (playersRollbackErr) {
-      console.error('[league] startLeagueRoundFlight players rollback failed', {
-        gameId,
-        error: playersRollbackErr,
-      });
-    }
-    await rollbackFlightGame(supabase, gameId);
-    return { error: `start_${started.reason}` };
-  }
-
-  redirect(`/games/${gameId}`);
+  redirect(`/games/${result.gameId}`);
 }
