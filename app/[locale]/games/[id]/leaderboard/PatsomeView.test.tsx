@@ -71,13 +71,14 @@ function makeTeamLine(args: {
       foursomes: makeSegmentSubtotal('foursomes', fsp),
     },
     totalPoints: args.totalPoints,
+    toPar: null,
     rank: args.rank,
     tiedWith: args.tiedWith ?? [],
   };
 }
 
 function makeResult(teams: PatsomeTeamLine[]): PatsomeResult {
-  return { kind: 'patsome', scoring: 'net', teams };
+  return { kind: 'patsome', scoring: 'net', ranking: 'net_total', teams };
 }
 
 function makePlayers(
@@ -271,5 +272,19 @@ describe('PatsomeView', () => {
     expect(rows[1].querySelector('svg')).not.toBeNull();
     expect(rows[2].querySelector('svg')).not.toBeNull();
     expect(rows[3].querySelector('svg')).toBeNull();
+  });
+
+  it('#2625: a net-to-par game leads with points against par pace under «mot par»', () => {
+    const props = defaultProps();
+    const result: PatsomeResult = {
+      ...props.result,
+      ranking: 'net_to_par',
+      teams: props.result.teams.map((t, i) => ({ ...t, toPar: i === 0 ? 3 : -2 })),
+    };
+    render(<PatsomeView {...props} result={result} />);
+    expect(screen.queryByTestId('patsome-total-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('patsome-vs-par-1').textContent).toBe('+3');
+    expect(screen.getByTestId('patsome-vs-par-2').textContent).toBe('−2');
+    expect(screen.getAllByText('mot par')).toHaveLength(2);
   });
 });

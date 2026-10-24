@@ -8,6 +8,7 @@ import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { teamHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
 import type {
   PatsomeResult,
   PatsomeTeamLine,
@@ -172,6 +173,7 @@ export function PatsomeView({
         {result.teams.map((team, i) => (
           <TeamRow
             key={team.teamNumber}
+            ranking={result.ranking}
             team={team}
             playersById={playersById}
             staggerIndex={i}
@@ -205,15 +207,19 @@ export function PatsomeView({
 }
 
 function TeamRow({
+  ranking,
   team,
   playersById,
   staggerIndex,
 }: {
+  /** #2625: the result's ranking rule; points against par pace lead in a net-to-par game. */
+  ranking: TeamRanking;
   team: PatsomeTeamLine;
   playersById: Map<string, PatsomePlayerInfo>;
   staggerIndex: number;
 }) {
   const t = useTranslations('leaderboard');
+  const headline = teamHeadline(ranking, { total: team.totalPoints, toPar: team.toPar });
   const isPodium = team.rank >= 1 && team.rank <= 3;
   const cardClass =
     team.rank === 1
@@ -281,13 +287,13 @@ function TeamRow({
           {/* Total-poeng */}
           <div className="shrink-0 text-right">
             <span
-              data-testid={`patsome-total-${team.teamNumber}`}
+              data-testid={`${headline.unit === 'toPar' ? 'patsome-vs-par' : 'patsome-total'}-${team.teamNumber}`}
               className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums"
             >
-              {team.totalPoints}
+              {headline.text}
             </span>
             <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              {t('patsome.totalLabel')}
+              {headline.unit === 'toPar' ? t('common.vsParLabel') : t('patsome.totalLabel')}
             </span>
           </div>
         </div>

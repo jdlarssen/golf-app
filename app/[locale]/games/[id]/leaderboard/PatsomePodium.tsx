@@ -8,6 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { teamHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
 import type { PatsomeResult, PatsomeTeamLine } from '@/lib/scoring/modes/types';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
@@ -127,6 +128,7 @@ export function PatsomePodium({
             {second && (
               <PodiumStep
                 slot={2}
+                ranking={result.ranking}
                 team={second}
                 playersById={playersById}
                 staggerIndex={1}
@@ -139,6 +141,7 @@ export function PatsomePodium({
           <div className="col-start-2">
             <PodiumStep
               slot={1}
+              ranking={result.ranking}
               team={first}
               playersById={playersById}
               staggerIndex={0}
@@ -151,6 +154,7 @@ export function PatsomePodium({
             {third && (
               <PodiumStep
                 slot={3}
+                ranking={result.ranking}
                 team={third}
                 playersById={playersById}
                 staggerIndex={2}
@@ -190,10 +194,10 @@ export function PatsomePodium({
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
-                      {team.totalPoints}
+                      {teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar }).text}
                     </span>
                     <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      {t('common.poengLabel')}
+                      {t(result.ranking === 'net_to_par' ? 'common.vsParLabel' : 'common.poengLabel')}
                     </span>
                   </div>
                 </Card>
@@ -227,6 +231,7 @@ function teamPartnerLabel(
 
 function PodiumStep({
   slot,
+  ranking,
   team,
   playersById,
   staggerIndex,
@@ -234,6 +239,8 @@ function PodiumStep({
 }: {
   /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
   slot: PodiumSlot;
+  /** #2625: the result's ranking rule; points against par pace lead in a net-to-par game. */
+  ranking: TeamRanking;
   team: PatsomeTeamLine;
   playersById: Map<string, PatsomePlayerInfo>;
   staggerIndex: number;
@@ -291,10 +298,10 @@ function PodiumStep({
                 : 'text-[22px] text-text'
           }`}
         >
-          {team.totalPoints}
+          {teamHeadline(ranking, { total: team.totalPoints, toPar: team.toPar }).text}
         </span>
         <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {t('common.poengLabel')}
+          {t(ranking === 'net_to_par' ? 'common.vsParLabel' : 'common.poengLabel')}
         </span>
       </div>
     </div>

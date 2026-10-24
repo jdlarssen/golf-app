@@ -6,6 +6,7 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import type {
   NassauResult,
   NassauHoleRow,
@@ -110,6 +111,7 @@ export function NassauHolesView({
           heading={t('nassau.front9Heading')}
           subheading={t('nassau.front9Sub')}
           section={result.sections.front9}
+          ranking={result.ranking}
           holes={frontHoles}
           playersById={playersById}
           t={t}
@@ -119,12 +121,14 @@ export function NassauHolesView({
           heading={t('nassau.back9Heading')}
           subheading={t('nassau.back9Sub')}
           section={result.sections.back9}
+          ranking={result.ranking}
           holes={backHoles}
           playersById={playersById}
           t={t}
         />
         <TotalBlock
           section={result.sections.total18}
+          ranking={result.ranking}
           playersById={playersById}
           t={t}
         />
@@ -224,6 +228,7 @@ function SectionBlock({
   heading,
   subheading,
   section,
+  ranking,
   holes,
   playersById,
   t,
@@ -232,6 +237,7 @@ function SectionBlock({
   heading: string;
   subheading: string;
   section: NassauSection;
+  ranking: NassauResult['ranking'];
   holes: NassauHoleRow[];
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
@@ -269,7 +275,7 @@ function SectionBlock({
         )}
       </header>
 
-      <SummaryStrip section={section} playersById={playersById} />
+      <SummaryStrip section={section} ranking={ranking} playersById={playersById} />
 
       <ul className="flex flex-col gap-2 list-none">
         {holes.map((hole) => (
@@ -292,17 +298,23 @@ function SectionBlock({
  */
 function SummaryStrip({
   section,
+  ranking,
   playersById,
 }: {
   section: NassauSection;
+  /** #2625: a section ranked on strokes to par shows it, and the leader is the best to par. */
+  ranking: NassauResult['ranking'];
   playersById: Map<string, NassauPlayerInfo>;
 }) {
   const tc = useTranslations('leaderboard.common');
-  // Laveste effective-sum blant spillere som faktisk har spilt hull. Brukes til
-  // live-leder-highlight når seksjonen ikke er avgjort ennå.
+  const headlineOf = (p: NassauSection['players'][number]) =>
+    teamHeadline(ranking, { total: p.totalEffectiveStrokes, toPar: p.toPar });
+  // Laveste tall (sum, eller #2625 mot par) blant spillere som faktisk har
+  // spilt hull. Brukes til live-leder-highlight når seksjonen ikke er avgjort ennå.
   const playedTotals = section.players
     .filter((p) => p.holesPlayed > 0)
-    .map((p) => p.totalEffectiveStrokes);
+    .map((p) => headlineOf(p).value)
+    .filter((v): v is number => v !== null);
   const leaderTotal = playedTotals.length > 0 ? Math.min(...playedTotals) : null;
 
   return (
@@ -315,8 +327,8 @@ function SummaryStrip({
         const name = info
           ? formatRevealName(info.name, info.nickname)
           : tc('unknownPlayer');
-        const isLeader =
-          line.holesPlayed > 0 && line.totalEffectiveStrokes === leaderTotal;
+        const headline = headlineOf(line);
+        const isLeader = line.holesPlayed > 0 && headline.value === leaderTotal;
         return (
           <li
             key={line.userId}
@@ -328,11 +340,16 @@ function SummaryStrip({
           >
             <span className="max-w-[7rem] truncate font-sans">{name}</span>
             <span className="score-num tabular-nums">
-              {line.holesPlayed > 0 ? line.totalEffectiveStrokes : '–'}
+              {line.holesPlayed > 0 ? headline.text : '–'}
             </span>
           </li>
         );
       })}
+      {ranking === 'net_to_par' && (
+        <li className="self-center text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">
+          {tc('vsParLabel')}
+        </li>
+      )}
     </ul>
   );
 }
@@ -433,10 +450,12 @@ function HoleCard({
  */
 function TotalBlock({
   section,
+  ranking,
   playersById,
   t,
 }: {
   section: NassauSection;
+  ranking: NassauResult['ranking'];
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
@@ -463,7 +482,7 @@ function TotalBlock({
           </span>
         )}
       </header>
-      <SummaryStrip section={section} playersById={playersById} />
+      <SummaryStrip section={section} ranking={ranking} playersById={playersById} />
     </section>
   );
 }

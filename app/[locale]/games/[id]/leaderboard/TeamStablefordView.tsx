@@ -6,6 +6,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import type { StablefordTeamResult } from '@/lib/scoring/modes/types';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
 
@@ -97,7 +98,7 @@ export function TeamStablefordView({
             rank={team.rank}
             playerIds={team.playerIds}
             playersById={playersById}
-            totalPoints={team.totalPoints}
+            headline={teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar })}
             tiedWith={team.tiedWith}
             staggerIndex={i}
           />
@@ -137,7 +138,7 @@ function TeamRow({
   rank,
   playerIds,
   playersById,
-  totalPoints,
+  headline,
   tiedWith,
   staggerIndex,
 }: {
@@ -145,7 +146,8 @@ function TeamRow({
   rank: number;
   playerIds: string[];
   playersById: Map<string, SoloStablefordPlayerInfo>;
-  totalPoints: number;
+  /** #2625: the points, or the team's points against par pace in a net-to-par game (`teamHeadline`). */
+  headline: ReturnType<typeof teamHeadline>;
   tiedWith: number[];
   staggerIndex: number;
 }) {
@@ -199,10 +201,10 @@ function TeamRow({
 
         <div className="shrink-0 text-right">
           <span className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums">
-            {totalPoints}
+            {headline.text}
           </span>
           <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t('common.poengLabel')}
+            {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.poengLabel')}
           </span>
         </div>
       </Card>
