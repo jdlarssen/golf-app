@@ -32,9 +32,11 @@
 # bare denne fila.
 ENTITLEMENTS_PYTHON3=${PYTHON3:-/usr/bin/python3}
 
-# Den ene verdien associated domains skal ha (#2627). `ENTITLEMENTS_APPLINKS`
-# overstyrer bare for manuelle kjøringer; beviset bruker standarden.
-ENTITLEMENTS_APPLINKS=${ENTITLEMENTS_APPLINKS:-applinks:tornygolf.no}
+# Den ene verdien associated domains skal ha (#2627): `applinks:` og
+# `STORE_LINK_DOMAIN` i `app.config.ts`. En konstant, som Android-regelens: et
+# miljø kan ikke endre hva beviset krever. `entitlements-proof.test.js` holder
+# den lik app.config.
+ENTITLEMENTS_APPLINKS=applinks:tornygolf.no
 
 # Skriver `aps <missing|ok|other> <verdi>` og `ad <absent|list|other> <verdier>`,
 # eller exit 1 med grunnen på stderr. `list` er en liste av strenger (skrevet
