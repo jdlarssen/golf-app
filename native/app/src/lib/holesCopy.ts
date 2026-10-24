@@ -18,6 +18,7 @@ import {
 } from '../../../../lib/leaderboard/ninesHoles';
 import type { RoundRobinSegmentHolesKey } from '../../../../lib/leaderboard/roundRobinHoles';
 import type { AceyDeuceyScoringKey } from '../../../../lib/leaderboard/aceyDeuceyHoles';
+import { signedStrokes } from '../../../../lib/scorecard/scoreRail';
 
 export const HOLES_TEXT = {
   /** Overskriften, og flisa på spillets side når runden er avsluttet. */
@@ -267,13 +268,13 @@ export function bestBallTeamNav(direction: 'prev' | 'next', rank: number, teamNu
 /**
  * Det skjermleseren sier om én spiller på ett hull, i stedet for tallene:
  * «KH, brutto 5, +1 slag, netto 4», med «Brukt netto for laget: » foran når
- * nettoen er lagets ball.
+ * nettoen er lagets ball. Plusshandicap sier «−1 slag» (#2635).
  */
 export function bestBallPlayerAria(
   cell: { initial: string; grossText: string; extraStrokes: number; netText: string },
   used: boolean,
 ): string {
-  const text = `${cell.initial}, brutto ${cell.grossText}, +${cell.extraStrokes} slag, netto ${cell.netText}`;
+  const text = `${cell.initial}, brutto ${cell.grossText}, ${signedStrokes(cell.extraStrokes)} slag, netto ${cell.netText}`;
   return used ? `Brukt netto for laget: ${text}` : text;
 }
 

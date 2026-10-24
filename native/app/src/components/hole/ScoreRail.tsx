@@ -28,7 +28,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
+import { strokesOnHole, type StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
@@ -125,11 +125,12 @@ function shortTermText(option: RailOption, par: number): string {
 export function railStrokesLine(
   extraStrokes: number | null,
 ): { text: string; label: string } | null {
-  if (extraStrokes == null || extraStrokes === 0) return null;
-  const n = Math.abs(extraStrokes);
-  return extraStrokes > 0
-    ? { text: `Får ${n} slag`, label: `får ${n} slag på hullet` }
-    : { text: `Mister ${n} slag`, label: `gir bort ${n} slag på hullet` };
+  const strokes = strokesOnHole(extraStrokes);
+  if (!strokes) return null;
+  const { n } = strokes;
+  return strokes.give
+    ? { text: `Mister ${n} slag`, label: `gir bort ${n} slag på hullet` }
+    : { text: `Får ${n} slag`, label: `får ${n} slag på hullet` };
 }
 
 export function ScoreRail({

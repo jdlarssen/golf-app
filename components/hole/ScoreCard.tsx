@@ -6,6 +6,7 @@ import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { firstEntryStrokes, nextStrokes } from '@/lib/scorecard/strokeEntry';
+import { strokesOnHole } from '@/lib/scorecard/scoreRail';
 
 export interface ScoreCardProps {
   playerId: string;
@@ -21,11 +22,11 @@ export interface ScoreCardProps {
    */
   submitted?: boolean;
   /**
-   * When true, hides all netto/handicap information on the card: both the
-   * `+N SLAG` badge and the «Netto X» helper-text under the name. Used by
+   * When true, hides the «Netto X» helper-text under the name. Used by
    * reveal-modus games (status `active`, `score_visibility = 'reveal'`) so
-   * handicap-slag count stays secret until admin presses avslutt.
-   * Default false — non-reveal games render both as normal.
+   * the net figures stay secret until admin presses avslutt. The strokes
+   * badge stays: it is the handicap allocation, not standing (#1447).
+   * Default false — non-reveal games render the helper text as normal.
    */
   hideNetto?: boolean;
   /**
@@ -67,6 +68,7 @@ function scoreNumberColor(tone: ScoreTone): string {
 
 export function ScoreCard(props: ScoreCardProps): JSX.Element {
   const t = useTranslations('holes.scoreCard');
+  const tRail = useTranslations('holes.scoreRail');
   const {
     playerId,
     name,
@@ -83,6 +85,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     onClear,
   } = props;
 
+  const strokes = strokesOnHole(extraStrokes);
   const confirmed = score != null;
 
   const tone: ScoreTone = scoreTone(score, par);
@@ -294,8 +297,11 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
               også på blind cup-dag (hideNetto), slik at flighten ser hvor
               arrangørens tastede lag-slag faller. Netto-TALLENE er fortsatt
               gatet på hideNetto. */}
-          {extraStrokes > 0 && (
-            <span style={badgeStyle}>{t('strokesBadge', { n: extraStrokes })}</span>
+          {/* #2635: the rail's words, «Mister 1 slag» for a plus handicap too. */}
+          {strokes && (
+            <span data-testid="score-card-strokes" style={badgeStyle}>
+              {tRail(strokes.give ? 'strokesGive' : 'strokesGet', { n: strokes.n })}
+            </span>
           )}
           {submitted && (
             <span data-testid="score-card-submitted" style={badgeStyle}>

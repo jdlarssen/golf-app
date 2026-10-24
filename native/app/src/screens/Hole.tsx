@@ -69,6 +69,7 @@ import { stablefordPointsForCard } from '../../../../lib/scorecard/railPoints';
 import {
   formatUsesScoreRail,
   railStrokes,
+  signedStrokes,
   strikeStrokes,
   strokeTerm,
 } from '../../../../lib/scorecard/scoreRail';
@@ -1127,7 +1128,7 @@ function PlayerCard({
         {extra != null && extra !== 0 ? (
           <View style={ui.badge}>
             <Text style={[ui.badgeText, ui.num]} testID={`player-${entry.user_id}-extra`}>
-              {extra > 0 ? `+${extra}` : String(extra)}
+              {signedStrokes(extra)}
             </Text>
           </View>
         ) : null}

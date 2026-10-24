@@ -10,6 +10,7 @@ import {
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
+import { signedStrokes } from '@/lib/scorecard/scoreRail';
 import { computeLeaderboard, type LeaderboardMode } from '@/lib/leaderboard';
 import {
   drilldownHref,
@@ -470,8 +471,8 @@ function HoleRow({
               className="flex items-center gap-2 font-serif tabular-nums"
               aria-label={
                 isBestNet
-                  ? t('playerScoreAriaUsed', { initial, gross: grossText, extra: pc.extraStrokes, net: nettoText })
-                  : t('playerScoreAria', { initial, gross: grossText, extra: pc.extraStrokes, net: nettoText })
+                  ? t('playerScoreAriaUsed', { initial, gross: grossText, extra: signedStrokes(pc.extraStrokes), net: nettoText })
+                  : t('playerScoreAria', { initial, gross: grossText, extra: signedStrokes(pc.extraStrokes), net: nettoText })
               }
             >
               <span

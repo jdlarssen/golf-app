@@ -2,7 +2,7 @@
 
 import { useId, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import type { StrokeTerm } from '@/lib/scorecard/scoreRail';
+import { strokesOnHole, type StrokeTerm } from '@/lib/scorecard/scoreRail';
 import { PuttsChips } from './PuttsChips';
 
 /**
@@ -212,6 +212,8 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     onPutts,
   } = props;
 
+  const strokes = strokesOnHole(active?.extraStrokes ?? null);
+
   function termText(option: RailOption): string {
     return t(`scoreRail.term.${option.term}`, { n: option.strokes - par });
   }
@@ -247,20 +249,15 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
             </h2>
             {/* The owner's choice C (#2635): a short line, no net par. A plus
                 handicap gives strokes away; the screen reader hears it whole. */}
-            {active.extraStrokes !== 0 && (
+            {strokes && (
               <span data-testid="score-rail-strokes" style={strokesStyle}>
                 <span aria-hidden="true">
-                  {t(active.extraStrokes > 0 ? 'scoreRail.strokesGet' : 'scoreRail.strokesGive', {
-                    n: Math.abs(active.extraStrokes),
-                  })}
+                  {t(strokes.give ? 'scoreRail.strokesGive' : 'scoreRail.strokesGet', { n: strokes.n })}
                 </span>
                 <span className="sr-only">
-                  {t(
-                    active.extraStrokes > 0
-                      ? 'scoreRail.strokesGetAriaLabel'
-                      : 'scoreRail.strokesGiveAriaLabel',
-                    { n: Math.abs(active.extraStrokes) },
-                  )}
+                  {t(strokes.give ? 'scoreRail.strokesGiveAriaLabel' : 'scoreRail.strokesGetAriaLabel', {
+                    n: strokes.n,
+                  })}
                 </span>
               </span>
             )}

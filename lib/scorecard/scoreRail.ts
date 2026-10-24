@@ -122,3 +122,22 @@ export function nextRailSeat({
   }
   return null;
 }
+
+/**
+ * #2635: slagene setet får på hullet, som hullsiden sier dem: «Får 1 slag»,
+ * eller «Mister 1 slag» når setet gir slag tilbake (plusshandicap). Én regel
+ * for skinna, flightraden og kortet, på nettet og i appen. `null` uten slag,
+ * eller når motoren ikke kan svare.
+ */
+export function strokesOnHole(extraStrokes: number | null): { give: boolean; n: number } | null {
+  if (extraStrokes == null || extraStrokes === 0) return null;
+  return { give: extraStrokes < 0, n: Math.abs(extraStrokes) };
+}
+
+/**
+ * Slagene som et tall med fortegn: «+1», «+0», eller «−1» med ekte minus
+ * (U+2212), så en plusshandicap aldri leses «+-1 slag» (#2635).
+ */
+export function signedStrokes(extraStrokes: number): string {
+  return extraStrokes < 0 ? `−${Math.abs(extraStrokes)}` : `+${extraStrokes}`;
+}
