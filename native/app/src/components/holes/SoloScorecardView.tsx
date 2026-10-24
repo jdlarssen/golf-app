@@ -13,7 +13,7 @@ import type {
   SoloScorecardHole,
   SoloScorecardNine,
 } from '../../../../../lib/leaderboard/soloScorecard';
-import { formatSignedPoints, standingTotalText } from '../../../../../lib/leaderboard/soloScorecard';
+import { formatSignedPoints, standingTotalText, standingUnit } from '../../../../../lib/leaderboard/soloScorecard';
 import { BOARD_COMMON_TEXT } from '../../lib/boardCopy';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
@@ -50,7 +50,7 @@ export function SoloScorecardView({
 
       <View style={ui.card} testID="hole-by-hole-standings">
         <Text style={[holesStyles.kicker, { color: colors.muted }]}>
-          {card.ranking === 'net_to_par'
+          {standingUnit(card) === 'toPar'
             ? `${HOLES_TEXT.standings} · ${BOARD_COMMON_TEXT.vsParLabel}`
             : HOLES_TEXT.standings}
         </Text>

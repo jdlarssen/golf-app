@@ -14,6 +14,7 @@ import {
   type SoloScorecard,
   soloStrokeplayScorecard,
   standingTotalText,
+  standingUnit,
   type SoloScorecardHole,
   type SoloScorecardNine,
   type SoloScorecardStanding,
@@ -154,7 +155,7 @@ function TotalsHeader({
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {ranking === 'net_to_par'
+          {standingUnit({ ranking }) === 'toPar'
             ? `${t('common.stillingen')} · ${t('common.vsParLabel')}`
             : t('common.stillingen')}
         </p>

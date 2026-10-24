@@ -6,7 +6,7 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { teamHeadline } from '@/lib/leaderboard/vsPar';
+import { headlineUnit, teamHeadline } from '@/lib/leaderboard/vsPar';
 import type {
   NassauResult,
   NassauHoleRow,
@@ -294,7 +294,8 @@ function SectionBlock({
 /**
  * Sammendrags-stripe: netto-sum per spiller for seksjonen, sortert lavest
  * først, bolk-leder(e) i champagne. Reflekterer eksisterende seksjons-ranking
- * (`section.players`) så stripen og hull-kortene aldri divergerer.
+ * (`section.players`). #2625: in a game ranked on net to par it shows to par
+ * and leads on it, the measure the sections and the hole winners use too.
  */
 function SummaryStrip({
   section,
@@ -345,7 +346,7 @@ function SummaryStrip({
           </li>
         );
       })}
-      {ranking === 'net_to_par' && (
+      {headlineUnit(ranking) === 'toPar' && (
         <li className="self-center text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">
           {tc('vsParLabel')}
         </li>
