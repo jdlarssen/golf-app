@@ -8,6 +8,7 @@ import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
+import { SIMULATOR_DEFAULTS, defaultBestN } from '@/lib/league/simulatorDefaults';
 import { shortMonthLocale } from '@/lib/i18n/format';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { osloParts } from '@/lib/format/teeOff';
@@ -44,6 +45,7 @@ type StandingsModel = 'total' | 'average' | 'best_n' | 'points';
 type MissedRoundPolicy = 'penalty' | 'must_play_all';
 type PenaltyKind = 'worst_plus_one' | 'fixed';
 type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
+type Scoring = 'net' | 'gross';
 
 function preferredName(p: PlayerOption, unknownLabel: string): string {
   return p.nickname?.trim() || p.name?.trim() || unknownLabel;
@@ -85,13 +87,18 @@ export function CreateLigaForm({
   const [seasonStart, setSeasonStart] = useState(defaultSeasonStart);
   const [seasonEnd, setSeasonEnd] = useState(defaultSeasonEnd);
   const [frequency, setFrequency] = useState<Frequency>('monthly');
+  // #2638: simulatorliga og netto/brutto.
+  const [isSimulator, setIsSimulator] = useState(false);
+  const [scoring, setScoring] = useState<Scoring>('net');
+  const [bestN, setBestN] = useState('');
+  const [bestNTouched, setBestNTouched] = useState(false);
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const availableTees = selectedCourse?.tee_boxes ?? [];
   const friendCount = players.filter((p) => p.id !== meId).length;
 
-  // Stableford-formater rangeres på poeng (høyest best), netto-only — det styrer
-  // tabell-låsen, sesong-modell-teksten og om straffescore-type vises.
+  // Stableford-formater rangeres på poeng (høyest best) — det styrer
+  // sesong-modell-teksten og om straffescore-type vises.
   const pointsBased = format !== 'stroke';
 
   // Live preview of the rounds the chosen dates + frequency will generate.
@@ -101,14 +108,32 @@ export function CreateLigaForm({
     return generateRounds(seasonStart, seasonEnd, frequency);
   }, [seasonStart, seasonEnd, frequency]);
 
+  // #2638: i en simulatorliga følger «beste N» antall runder (alle minus to)
+  // til arrangøren skriver et eget tall.
+  const bestNValue =
+    isSimulator && !bestNTouched && roundPreview && roundPreview.length > 0
+      ? String(defaultBestN(roundPreview.length))
+      : bestN;
+
+  // #2638: «Simulator» på forhåndsvelger stableford, beste N og hver 14. dag.
+  // Alt kan endres etterpå; av igjen rører ingenting.
+  function toggleSimulator(on: boolean) {
+    setIsSimulator(on);
+    if (!on) return;
+    setFormat(SIMULATOR_DEFAULTS.format);
+    setStandingsModel(SIMULATOR_DEFAULTS.standingsModel);
+    setFrequency(SIMULATOR_DEFAULTS.frequency);
+    setBestNTouched(false);
+  }
+
   const errorMessage = state.error
     ? state.error in {
         name: 1, dates: 1, standings_model: 1, format: 1, course_scope: 1,
         course: 1, penalty: 1, best_n: 1, players: 1,
         insert_failed: 1, rounds_failed: 1, players_failed: 1, missing: 1,
-        season_over: 1,
+        season_over: 1, sim_settings: 1,
       }
-      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over'}`)
+      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over' | 'sim_settings'}`)
       : t('errors.unexpected', { code: state.error })
     : null;
 
@@ -156,6 +181,8 @@ export function CreateLigaForm({
       {/* Hidden fixed fields */}
       <input type="hidden" name="format" value={format} />
       <input type="hidden" name="group_id" value={groupId ?? ''} />
+      <input type="hidden" name="is_simulator" value={isSimulator ? 'true' : 'false'} />
+      <input type="hidden" name="scoring" value={scoring} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
       {isClubLeague && clubName && (
@@ -222,6 +249,31 @@ export function CreateLigaForm({
               />
             </div>
           </div>
+
+          {/* #2638: simulatorliga */}
+          <label
+            data-testid="liga-create-simulator"
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors min-h-[44px] ${
+              isSimulator
+                ? 'border-primary/50 bg-primary-soft'
+                : 'border-border bg-surface hover:border-primary/30'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={isSimulator}
+              onChange={(e) => toggleSimulator(e.target.checked)}
+              className="mt-0.5 accent-primary"
+            />
+            <span>
+              <span className="block font-sans text-[14px] font-medium text-text">
+                {t('simulatorLabel')}
+              </span>
+              <span className="block font-sans text-[12px] text-muted mt-0.5">
+                {t('simulatorDesc')}
+              </span>
+            </span>
+          </label>
         </div>
       </Card>
 
@@ -275,6 +327,46 @@ export function CreateLigaForm({
               </span>
             </label>
           ))}
+        </fieldset>
+
+        {/* #2638: netto (standard) eller brutto. Låses når ligaen startes. */}
+        <fieldset className="mt-4 space-y-2">
+          <legend className="font-sans text-[12px] font-medium text-text mb-1.5">
+            {t('scoringLegend')}
+          </legend>
+          {(
+            [
+              { value: 'net' as Scoring, label: t('scoringNetLabel'), desc: t('scoringNetDesc') },
+              { value: 'gross' as Scoring, label: t('scoringGrossLabel'), desc: t('scoringGrossDesc') },
+            ] as const
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                scoring === opt.value
+                  ? 'border-primary/50 bg-primary-soft'
+                  : 'border-border bg-surface hover:border-primary/30'
+              }`}
+            >
+              <input
+                type="radio"
+                name="_scoring_radio"
+                value={opt.value}
+                checked={scoring === opt.value}
+                onChange={() => setScoring(opt.value)}
+                className="mt-0.5 accent-primary"
+              />
+              <span>
+                <span className="block font-sans text-[14px] font-medium text-text">
+                  {opt.label}
+                </span>
+                <span className="block font-sans text-[12px] text-muted mt-0.5">
+                  {opt.desc}
+                </span>
+              </span>
+            </label>
+          ))}
+          <p className="font-sans text-[12px] text-muted">{t('scoringLockHint')}</p>
         </fieldset>
       </Card>
 
@@ -498,6 +590,11 @@ export function CreateLigaForm({
               max={99}
               required
               placeholder="5"
+              value={bestNValue}
+              onChange={(e) => {
+                setBestN(e.target.value);
+                setBestNTouched(true);
+              }}
               className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>

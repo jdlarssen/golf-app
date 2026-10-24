@@ -17,9 +17,11 @@ import { ligaBasePath } from './ligaPaths';
 import { isPointsBasedFormat } from './flightFormat';
 import { startLeagueRoundFlightCore } from './startLeagueRoundFlightCore';
 import type { TablesUpdate } from '@/lib/database.types';
+import { parseSimSettings, roundOverrideFrom, type SimSettings } from './simSettings';
 import type {
   CourseScope,
   LeagueFormat,
+  LeagueScoring,
   MissedRoundPolicy,
   PenaltyKind,
   RoundFrequency,
@@ -64,7 +66,8 @@ export type LeagueActionError = { error: string };
  *  name, season_start, season_end (YYYY-MM-DD), standings_model,
  *  missed_round_policy, penalty_kind, penalty_fixed_over_par, course_scope,
  *  course_id, tee_box_id, frequency, player_ids (JSON array of user ids),
- *  group_id (optional club UUID).
+ *  group_id (optional club UUID), scoring ('net' | 'gross', #2638),
+ *  is_simulator ('true'), sim_<key> (the league's default round settings).
  */
 export async function createLeagueDraft(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
@@ -83,10 +86,13 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   const seasonStart = str(formData, 'season_start');
   const seasonEnd = str(formData, 'season_end');
   const format = (str(formData, 'format') || 'stroke') as LeagueFormat;
-  // Ligaer rangeres alltid netto (WHS, som resten av appen) — #1144 fjernet
-  // netto/brutto/begge-valget fra wizarden. Hardkodet her, ikke lest fra
-  // formData, så en håndlaget POST heller ikke kan sette brutto.
-  const scoring = 'net';
+  // #2638: arrangøren velger netto (standard) eller brutto. «Begge» tilbys
+  // ikke (#1144 ryddet det bort), så hvitelisten er de to; alt annet, også
+  // 'both' i en håndlaget POST, blir netto. Låses når ligaen startes (0212).
+  const scoringRaw = str(formData, 'scoring');
+  const scoring: LeagueScoring = scoringRaw === 'gross' ? 'gross' : 'net';
+  // #2638: simulatorliga. Innstillingene er ligaens standard for rundene.
+  const isSimulator = str(formData, 'is_simulator') === 'true';
   const standingsModel = (str(formData, 'standings_model') || 'total') as StandingsModel;
   const missedPolicy = (str(formData, 'missed_round_policy') || 'penalty') as MissedRoundPolicy;
   // Poeng-ligaer bruker ikke straffescore-type (uteblitt = 0 poeng), så lås den
@@ -143,6 +149,13 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     if (!Number.isInteger(bestNCount) || bestNCount < 1) return { error: 'best_n' };
   }
 
+  let simSettings: SimSettings | null = null;
+  if (isSimulator) {
+    const parsedSettings = parseSimSettings(formData);
+    if (!parsedSettings.ok) return { error: 'sim_settings' };
+    simSettings = parsedSettings.settings;
+  }
+
   let playerIds: string[] = [];
   try {
     const parsed = JSON.parse(str(formData, 'player_ids') || '[]');
@@ -183,6 +196,8 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       tee_box_id: teeBoxId,
       created_by: userId,
       group_id: groupId,
+      is_simulator: isSimulator,
+      sim_settings: simSettings,
     })
     .select('id')
     .single();
@@ -295,6 +310,110 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
   }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
+  return { error: '' };
+}
+
+// ── simulator round settings (#2638) ───────────────────────────────────────────
+
+const ROUND_LOCKED_MESSAGE = 'locked once a player has started the round';
+
+/** The league's two doors, so both management pages show the change. */
+function revalidateLeague(leagueId: string, groupId: string | null): void {
+  revalidatePath(`/admin/liga/${leagueId}`);
+  if (groupId) revalidatePath(`/klubber/${groupId}/liga/${leagueId}`);
+  revalidatePath(`/liga/${leagueId}`);
+}
+
+/**
+ * The organiser changes the league's DEFAULT round settings (#2638). Allowed
+ * at any time: the change reaches only rounds nobody has started, because a
+ * started round was frozen at its first start (startLeagueRoundFlightCore).
+ * Same access as updateLeagueRound; RLS on `leagues` is the real gate.
+ */
+export async function updateLeagueSimSettings(formData: FormData): Promise<LeagueActionError> {
+  const supabase = await getServerClient();
+  const leagueId = str(formData, 'league_id');
+  if (!leagueId) return { error: 'missing' };
+  const { groupId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+
+  const { data: league, error: readErr } = await getAdminClient()
+    .from('leagues')
+    .select('is_simulator')
+    .eq('id', leagueId)
+    .maybeSingle();
+  if (readErr || !league) return { error: 'not_found' };
+  if (!league.is_simulator) return { error: 'not_simulator' };
+
+  const parsed = parseSimSettings(formData);
+  if (!parsed.ok) return { error: 'sim_settings' };
+
+  try {
+    expectAffected(
+      await supabase
+        .from('leagues')
+        .update({ sim_settings: parsed.settings })
+        .eq('id', leagueId)
+        .select('id'),
+      'updateLeagueSimSettings',
+    );
+  } catch (err) {
+    console.error('[league] updateLeagueSimSettings failed', { leagueId, err });
+    return { error: 'update_failed' };
+  }
+  revalidateLeague(leagueId, groupId);
+  return { error: '' };
+}
+
+/**
+ * The organiser adjusts ONE round (#2638): «Juster for denne runden» stores
+ * only the values that differ from the league default; `reset=true` («Tilbake
+ * til standard») stores null. A round a player has started is locked
+ * (`round_settings_locked`), so nobody in a round plays under other settings
+ * than the others. The check here reads every flight with the admin client;
+ * the database guard (guard_league_rounds_sim_settings_lock, 0212) is the last
+ * line and gives the same code.
+ */
+export async function updateRoundSimSettings(formData: FormData): Promise<LeagueActionError> {
+  const supabase = await getServerClient();
+  const leagueId = str(formData, 'league_id');
+  const roundId = str(formData, 'round_id');
+  if (!leagueId || !roundId) return { error: 'missing' };
+  const { groupId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+
+  const admin = getAdminClient();
+  const [leagueRes, flightsRes] = await Promise.all([
+    admin.from('leagues').select('is_simulator, sim_settings').eq('id', leagueId).maybeSingle(),
+    admin.from('games').select('id', { count: 'exact', head: true }).eq('league_round_id', roundId),
+  ]);
+  if (leagueRes.error || !leagueRes.data) return { error: 'not_found' };
+  if (!leagueRes.data.is_simulator) return { error: 'not_simulator' };
+  if (flightsRes.error || flightsRes.count === null) {
+    console.error('[league] updateRoundSimSettings lock check failed', { roundId, error: flightsRes.error });
+    return { error: 'update_failed' };
+  }
+  if (flightsRes.count > 0) return { error: 'round_settings_locked' };
+
+  let override: SimSettings | null = null;
+  if (str(formData, 'reset') !== 'true') {
+    const parsed = parseSimSettings(formData);
+    if (!parsed.ok) return { error: 'sim_settings' };
+    override = roundOverrideFrom(parsed.settings, leagueRes.data.sim_settings);
+  }
+
+  try {
+    const result = await supabase
+      .from('league_rounds')
+      .update({ sim_settings: override })
+      .eq('id', roundId)
+      .eq('league_id', leagueId)
+      .select('id');
+    if (result.error?.message?.includes(ROUND_LOCKED_MESSAGE)) return { error: 'round_settings_locked' };
+    expectAffected(result, 'updateRoundSimSettings');
+  } catch (err) {
+    console.error('[league] updateRoundSimSettings failed', { roundId, err });
+    return { error: 'update_failed' };
+  }
+  revalidateLeague(leagueId, groupId);
   return { error: '' };
 }
 

@@ -41,6 +41,7 @@ export function buildAppLeagueView(snapshot: LeagueSnapshot, userId: string): Ap
       opensAt: r.opensAt,
       closesAt: r.closesAt,
       ready: r.courseId !== null && r.teeBoxId !== null,
+      teeName: r.teeName,
       delivered: r.deliveredUserIds,
       inProgress: r.inProgressUserIds,
       simSettings: r.simSettings,

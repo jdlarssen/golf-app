@@ -82,6 +82,49 @@ function removeLink({
   );
 }
 
+/**
+ * #2638: simulator and net/gross on the info card. Both are fixed once the
+ * league has started (guard_leagues_locked_fields, 0212), and the card says so.
+ */
+function LockedInfoRows({
+  isSimulator,
+  scoring,
+  locked,
+  t,
+}: {
+  isSimulator: boolean;
+  scoring: string;
+  locked: boolean;
+  t: Awaited<ReturnType<typeof getTranslations<'liga'>>>;
+}) {
+  const scoringKey = scoring === 'gross' ? 'gross' : scoring === 'both' ? 'both' : 'net';
+  const lockNote = locked ? (
+    <span className="mt-px block text-[11px] leading-4 font-normal text-muted">
+      {t('manage.lockedAfterStart')}
+    </span>
+  ) : null;
+  return (
+    <>
+      {isSimulator && (
+        <div className="flex justify-between gap-2" data-testid="liga-info-simulator">
+          <dt className="text-muted">{t('manage.infoSimulator')}</dt>
+          <dd className="text-right text-text font-medium">
+            {t('manage.simulatorYes')}
+            {lockNote}
+          </dd>
+        </div>
+      )}
+      <div className="flex justify-between gap-2" data-testid="liga-info-scoring">
+        <dt className="text-muted">{t('manage.infoScoring')}</dt>
+        <dd className="text-right text-text font-medium">
+          {t(`manage.scoringLabel.${scoringKey}`)}
+          {lockNote}
+        </dd>
+      </div>
+    </>
+  );
+}
+
 /** Success receipt for a `?status=` the league page knows (#2244). */
 function receiptBanner(
   statusCode: string | undefined,
@@ -217,6 +260,12 @@ export async function LigaManagement({
               </dd>
             </div>
           )}
+          <LockedInfoRows
+            isSimulator={league.is_simulator}
+            scoring={league.scoring}
+            locked={status !== 'draft'}
+            t={t}
+          />
           <div className="flex justify-between gap-2">
             <dt className="text-muted">{t('manage.infoCourseScope')}</dt>
             <dd className="text-text font-medium">

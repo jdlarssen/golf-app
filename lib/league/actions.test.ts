@@ -314,26 +314,28 @@ describe('createLeagueDraft — rollback on insert failure (#675)', () => {
 });
 
 /**
- * #1144: liga is always ranked net (WHS) — the netto/brutto/begge choice is gone
- * from the wizard, and the action hardcodes `scoring: 'net'` rather than reading
- * the field. Locks the server side of that: a hand-rolled POST claiming
- * `scoring=gross` must still land a net league (trap 3 — RLS/TS guards don't see
- * a raw PostgREST insert, so the action is the layer that has to hold).
+ * #2638 (replaces the #1144 «always net» lock): the organiser picks net (the
+ * default) or gross. The action whitelists the two; anything else, the old
+ * 'both' included, lands a net league (trap 3 — RLS/TS guards don't see a raw
+ * PostgREST insert, so the action is the layer that has to hold).
  */
-describe('createLeagueDraft — scoring is always net (#1144)', () => {
-  it('inserts scoring: net even when the form posts gross', async () => {
+describe('createLeagueDraft — scoring is net or gross (#2638)', () => {
+  function baseForm(scoring: string | null): FormData {
     const fd = new FormData();
-    fd.set('name', 'Brutto-forsøk');
+    fd.set('name', 'Brutto-liga');
     fd.set('season_start', '2099-01-01');
     fd.set('season_end', '2099-12-31');
-    fd.set('format', 'stroke'); // the only format that ever offered a choice
-    fd.set('scoring', 'gross'); // hostile: the field the wizard no longer posts
+    fd.set('format', 'stroke');
+    if (scoring !== null) fd.set('scoring', scoring);
     fd.set('standings_model', 'total');
     fd.set('missed_round_policy', 'penalty');
     fd.set('penalty_kind', 'worst_plus_one');
     fd.set('course_scope', 'multi_course');
     fd.set('frequency', 'monthly');
+    return fd;
+  }
 
+  async function insertedFor(fd: FormData) {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // requireAdmin (loadRole)
       { data: { id: 'L9' }, error: null }, // leagues.insert().select('id').single
@@ -341,15 +343,36 @@ describe('createLeagueDraft — scoring is always net (#1144)', () => {
     ]);
     setUser('admin-1');
     const { createLeagueDraft } = await import('./actions');
-
     // Success path ends in redirect() → the mock throws instead of returning.
     await expect(createLeagueDraft(fd)).rejects.toBeInstanceOf(RedirectError);
+    const insert = supabaseMock.__fromCalls.find((c) => c.table === 'leagues' && c.method === 'insert');
+    return insert!.args[0] as Record<string, unknown>;
+  }
 
-    const insert = supabaseMock.__fromCalls.find(
-      (c) => c.table === 'leagues' && c.method === 'insert',
-    );
-    expect(insert, 'leagues.insert issued').toBeDefined();
-    expect(insert!.args[0]).toMatchObject({ scoring: 'net' });
+  it.each([
+    ['gross', 'gross'],
+    ['net', 'net'],
+    ['both', 'net'],
+    ['tull', 'net'],
+    [null, 'net'],
+  ])('scoring=%s → %s', async (posted, stored) => {
+    expect((await insertedFor(baseForm(posted))).scoring).toBe(stored);
+  });
+
+  it('a simulator league stores the switch and the default settings', async () => {
+    const fd = baseForm('net');
+    fd.set('is_simulator', 'true');
+    fd.set('sim_greenSpeed', 'Stimp 10');
+    expect(await insertedFor(fd)).toMatchObject({
+      is_simulator: true,
+      sim_settings: { greenSpeed: 'Stimp 10' },
+    });
+  });
+
+  it('a regular league stores no settings, even when the post carries some', async () => {
+    const fd = baseForm('net');
+    fd.set('sim_greenSpeed', 'Stimp 10');
+    expect(await insertedFor(fd)).toMatchObject({ is_simulator: false, sim_settings: null });
   });
 });
 
@@ -774,5 +797,120 @@ describe('deleteLeague — club receipt and 0-row guard (#2329)', () => {
     const { deleteLeague } = await import('./actions');
     expect(await deleteLeague(deleteForm())).toEqual({ error: 'delete_failed' });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * #2638: the organiser's round settings. The default can change at any time;
+ * a round override keeps only what differs, «Tilbake til standard» stores
+ * null, and a started round is locked here and in the database.
+ */
+describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
+  const DEFAULT = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
+
+  function roundForm(values: Record<string, string>): FormData {
+    const fd = new FormData();
+    fd.set('league_id', 'L1');
+    fd.set('round_id', 'R1');
+    for (const [k, v] of Object.entries(values)) fd.set(k, v);
+    return fd;
+  }
+
+  /** Admin reads: the gate's group_id, the league, the round's game count. */
+  function adminReads(gameCount: number, isSimulator = true) {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: null } },
+      { data: { is_simulator: isSimulator, sim_settings: DEFAULT } },
+      { count: gameCount },
+    ]);
+  }
+
+  const roundUpdates = () =>
+    supabaseMock.__fromCalls
+      .filter((c) => c.table === 'league_rounds' && c.method === 'update')
+      .map((c) => c.args[0]);
+
+  it('keeps only the values that differ from the default', async () => {
+    adminReads(0);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: [{ id: 'R1' }] },
+    ]);
+    setUser('admin-1');
+    const { updateRoundSimSettings } = await import('./actions');
+    const result = await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12', sim_wind: 'Rolig' }));
+    expect({ result, updates: roundUpdates() }).toEqual({
+      result: { error: '' },
+      updates: [{ sim_settings: { greenSpeed: 'Stimp 12' } }],
+    });
+  });
+
+  it('«Tilbake til standard» stores null', async () => {
+    adminReads(0);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: [{ id: 'R1' }] },
+    ]);
+    setUser('admin-1');
+    const { updateRoundSimSettings } = await import('./actions');
+    await updateRoundSimSettings(roundForm({ reset: 'true', sim_greenSpeed: 'Stimp 12' }));
+    expect(roundUpdates()).toEqual([{ sim_settings: null }]);
+  });
+
+  it('a round a player has started is locked, and nothing is written', async () => {
+    adminReads(1);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { updateRoundSimSettings } = await import('./actions');
+    const result = await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12' }));
+    expect({ result, updates: roundUpdates() }).toEqual({
+      result: { error: 'round_settings_locked' },
+      updates: [],
+    });
+  });
+
+  it('the database guard’s refusal gives the same code (a start that came first)', async () => {
+    adminReads(0);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      {
+        data: null,
+        error: { code: '42501', message: 'league_rounds.sim_settings is locked once a player has started the round' },
+      },
+    ]);
+    setUser('admin-1');
+    const { updateRoundSimSettings } = await import('./actions');
+    expect(await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12' }))).toEqual({
+      error: 'round_settings_locked',
+    });
+  });
+
+  it('the default of an active league can change; a regular league has none', async () => {
+    const leagueForm = () => {
+      const fd = new FormData();
+      fd.set('league_id', 'L1');
+      fd.set('sim_greenSpeed', 'Stimp 11');
+      return fd;
+    };
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { is_simulator: true } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: [{ id: 'L1' }] },
+    ]);
+    setUser('admin-1');
+    const { updateLeagueSimSettings } = await import('./actions');
+    const ok = await updateLeagueSimSettings(leagueForm());
+    const written = supabaseMock.__fromCalls.find((c) => c.table === 'leagues' && c.method === 'update')?.args[0];
+
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { is_simulator: false } }]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const regular = await updateLeagueSimSettings(leagueForm());
+
+    expect({ ok, written, regular }).toEqual({
+      ok: { error: '' },
+      written: { sim_settings: { greenSpeed: 'Stimp 11' } },
+      regular: { error: 'not_simulator' },
+    });
   });
 });

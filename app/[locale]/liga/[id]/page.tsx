@@ -19,6 +19,8 @@ import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
+import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
+import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import type { LeagueFormat } from '@/lib/league/types';
 import {
@@ -145,6 +147,19 @@ export default async function LigaPublicPage({
     isParticipant,
     hasPlayed: me?.hasPlayed ?? false,
   });
+  // #2638: «Har spilt / I gang / Mangler» on an open round, for every league.
+  const playedByLabels = {
+    delivered: t('playedBy.delivered'),
+    inProgress: t('playedBy.inProgress'),
+    missing: t('playedBy.missing'),
+    you: t('playedBy.you'),
+    unknownPlayer: t('playedBy.unknownPlayer'),
+  };
+  const participantNames = participants.map((p) => ({
+    userId: p.userId,
+    name: p.nickname?.trim() || p.name?.trim() || null,
+  }));
+
   const sp = await searchParams;
   const joinError = first(sp.error);
   const joinErrorMessage = joinError
@@ -315,6 +330,17 @@ export default async function LigaPublicPage({
                         ) : null}
                       </div>
                     </div>
+                    {ws === 'open' && (
+                      <RoundPlayedByList
+                        groups={roundPlayedBy(
+                          participantNames,
+                          round.deliveredUserIds,
+                          round.inProgressUserIds,
+                          currentUserId,
+                        )}
+                        labels={playedByLabels}
+                      />
+                    )}
                   </Card>
                 </li>
               );

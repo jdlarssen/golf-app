@@ -147,9 +147,13 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
       {ws === 'open' && round.courseId && round.teeBoxId && !selfLock && (
         <Card>
           <p className="text-sm text-muted mb-5">
-            {t('markerRule')}
+            {league.is_simulator ? t('simulatorRule') : t('markerRule')}
           </p>
-          <RoundStartClient roundId={roundId} coPlayers={coPlayers} />
+          <RoundStartClient
+            roundId={roundId}
+            coPlayers={coPlayers}
+            isSimulator={league.is_simulator}
+          />
         </Card>
       )}
     </AppShell>
