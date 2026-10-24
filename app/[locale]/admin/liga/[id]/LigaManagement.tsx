@@ -268,18 +268,18 @@ export async function LigaManagement({
               </dd>
             </div>
           )}
-          <LockedInfoRows
-            isSimulator={league.is_simulator}
-            scoring={league.scoring}
-            locked={status !== 'draft'}
-            t={t}
-          />
           <div className="flex justify-between gap-2">
             <dt className="text-muted">{t('manage.infoCourseScope')}</dt>
             <dd className="text-text font-medium">
               {t(`manage.scopeLabel.${league.course_scope}` as `manage.scopeLabel.${'single_course_single_tee' | 'single_course' | 'multi_course'}`) ?? league.course_scope}
             </dd>
           </div>
+          <LockedInfoRows
+            isSimulator={league.is_simulator}
+            scoring={league.scoring}
+            locked={status !== 'draft'}
+            t={t}
+          />
           <div className="flex justify-between gap-2">
             <dt className="text-muted">{t('manage.infoRounds')}</dt>
             <dd className="tabular-nums text-text font-medium">{rounds.length}</dd>

@@ -319,13 +319,6 @@ select is(
   'case 17: a caller with no JWT (the start core''s freeze) CAN write a started round');
 rollback to savepoint case_17;
 
--- 18
-select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')
-      and not has_function_privilege('authenticated', 'public.guard_leagues_locked_fields()', 'EXECUTE')
-      and not has_function_privilege('anon', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE')
-      and not has_function_privilege('authenticated', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE'),
-  'case 18: the two guards are not client-executable');
-
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Trackman's option set and the gimme coupling (0213)
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -448,6 +441,13 @@ select throws_ok(
   '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_frozen_default_check"',
   'case 30: sim_frozen_default holds Trackman codes only');
 rollback to savepoint case_30;
+
+-- 18 (last: an assert outside every savepoint, like the other guard suites)
+select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')
+      and not has_function_privilege('authenticated', 'public.guard_leagues_locked_fields()', 'EXECUTE')
+      and not has_function_privilege('anon', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE')
+      and not has_function_privilege('authenticated', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE'),
+  'case 18: the two guards are not client-executable');
 
 select * from finish();
 rollback;
