@@ -728,6 +728,10 @@ describe('vs par over played holes (#2217)', () => {
   const holeNumbers = Array.from({ length: 18 }, (_, i) => i + 1);
   // 14 × 4 + 2 × 5 = 66 over holes 1–16; 17–18 unplayed. Par 64 over 1–16.
   const netFor = (n: number): number | null => (n <= 14 ? 4 : n <= 16 ? 5 : null);
+  const toParFor = (n: number): number | null => {
+    const net = netFor(n);
+    return net === null ? null : net - 4;
+  };
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
 
   function shamble(variant: 'shamble' | 'champagne', count: 2 | 3, totalScore: number): ShambleResult {
@@ -813,8 +817,8 @@ describe('vs par over played holes (#2217)', () => {
         strokeIndex: n,
         // u1 has a cell with net null on 17; on 18 u1 has no cell at all.
         perPlayer: [
-          { userId: 'u2', gross: 4, net: 4, par: 4 },
-          ...(n === 18 ? [] : [{ userId: 'u1', gross: netFor(n), net: netFor(n), par: 4 }]),
+          { userId: 'u2', gross: 4, net: 4, par: 4, toPar: 0 },
+          ...(n === 18 ? [] : [{ userId: 'u1', gross: netFor(n), net: netFor(n), par: 4, toPar: toParFor(n) }]),
         ],
         bestUserIds: [],
       })),

@@ -259,12 +259,14 @@ export function soloStrokeplayScorecard(
   const players = inStandingOrder(result.players);
   const rankedIds = players.map((p) => p.userId);
   const tie = byStanding(rankedIds);
-  // #2625: a game ranked on net to par orders the rows on net − own par, the
-  // measure the hole winner is picked on, so the ★ row stands first.
-  const measure = (c: { net: number | null; par: number }) =>
-    c.net == null ? Number.POSITIVE_INFINITY : result.ranking === 'net_to_par' ? c.net - c.par : c.net;
+  // #2625: a game ranked on net to par orders the rows on the engine's `toPar`
+  // (net − own par), the measure the hole winner is picked on, so the ★ row
+  // stands first.
+  const measure = (c: { net: number | null; toPar: number | null }) =>
+    (result.ranking === 'net_to_par' ? c.toPar : c.net) ?? Number.POSITIVE_INFINITY;
   const holes = result.holes.map((hole) => {
-    // Lavest netto først; uspilte (netto null) sist; likt etter stillingen.
+    // Best first (lowest net, or lowest to par in a game ranked on net to
+    // par); unplayed last; equal rows in standing order.
     const sorted = [...hole.perPlayer].sort((a, b) => measure(a) - measure(b) || tie(a, b));
     const cells = sorted.map((c) => ({
       userId: c.userId,
@@ -272,7 +274,7 @@ export function soloStrokeplayScorecard(
       par: c.par,
       value: c.net,
       isBest: false,
-      toPar: c.net == null ? null : c.net - c.par,
+      toPar: c.toPar,
     }));
     return buildHole(hole, cells, teeGenderOf);
   });

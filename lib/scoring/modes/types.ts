@@ -1366,6 +1366,12 @@ export interface SoloStrokeplayHolePlayerCell {
   net: number | null;
   /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #734. */
   par: number;
+  /**
+   * #2625: net − the player's own par; `null` when the hole is not played. The
+   * one home for the measure a game ranked on net to par wins the hole on
+   * (`bestUserIds`) and orders a hole card by.
+   */
+  toPar: number | null;
 }
 
 /**
@@ -1375,7 +1381,7 @@ export interface SoloStrokeplayHolePlayerCell {
  * hullet (tom hvis ingen; lengde > 1 ved delt).
  *
  * #2625: in a game ranked on net to par (`SoloStrokeplayResult.ranking`) the
- * lowest is net − the player's own par (`perPlayer[].par`), the measure the
+ * lowest is the cell's `toPar` (net − the player's own par), the measure the
  * game ranks on, so mixed tees do not share a hole the ranking gives to one.
  */
 export interface SoloStrokeplayHoleRow {
@@ -1966,10 +1972,12 @@ export interface NassauHolePlayerCell {
   gross: number | null;
   effective: number | null;
   /**
-   * #2625: the player's own par on the hole (`parFor(hole, teeGender)`). A
-   * game ranked on net to par wins the hole on `effective − par`.
+   * #2625: effective − the player's own par (`parFor(hole, teeGender)`);
+   * `null` when the hole is not played. The one home for the measure a game
+   * ranked on net to par wins the hole on (`bestUserIds`) and orders a hole
+   * card by.
    */
-  par: number;
+  toPar: number | null;
 }
 
 /**
@@ -1980,7 +1988,7 @@ export interface NassauHolePlayerCell {
  * som spilte hullet (tom hvis ingen spilte; lengde > 1 ved delt).
  *
  * #2625: in a game ranked on net to par (`NassauResult.ranking`) the lowest is
- * effective − the player's own par (`perPlayer[].par`), the measure the
+ * the cell's `toPar` (effective − the player's own par), the measure the
  * sections rank on.
  */
 export interface NassauHoleRow {

@@ -221,13 +221,14 @@ function computeHoleRows(
         gross === null
           ? null
           : effectiveFor(scoringMode, gross, p.courseHandicap, hole.strokeIndex);
-      return { userId: p.userId, gross, effective, par: parFor(hole, p.teeGender) };
+      const toPar = effective === null ? null : effective - parFor(hole, p.teeGender);
+      return { userId: p.userId, gross, effective, toPar };
     });
 
-    const measure = (c: { effective: number; par: number }) =>
-      netToParRanking ? c.effective - c.par : c.effective;
+    const measure = (c: { effective: number; toPar: number }) =>
+      netToParRanking ? c.toPar : c.effective;
     const played = perPlayer.filter(
-      (c): c is { userId: string; gross: number; effective: number; par: number } =>
+      (c): c is { userId: string; gross: number; effective: number; toPar: number } =>
         c.effective !== null,
     );
     let bestUserIds: string[] = [];
