@@ -13,8 +13,7 @@ import type {
   SoloScorecardHole,
   SoloScorecardNine,
 } from '../../../../../lib/leaderboard/soloScorecard';
-import { formatSignedPoints } from '../../../../../lib/leaderboard/soloScorecard';
-import { formatVsPar } from '../../../../../lib/leaderboard/vsPar';
+import { formatSignedPoints, standingTotalText } from '../../../../../lib/leaderboard/soloScorecard';
 import { BOARD_COMMON_TEXT } from '../../lib/boardCopy';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
@@ -80,11 +79,7 @@ export function SoloScorecardView({
                 ]}
               >
                 {/* #2625: a game ranked on net to par leads with the number it ranks on. */}
-                {card.ranking === 'net_to_par'
-                  ? formatVsPar(line.toPar)
-                  : metric === 'points'
-                    ? formatSignedPoints(line.total)
-                    : String(line.total)}
+                {standingTotalText(card, line, metric === 'points' ? formatSignedPoints : String)}
               </Text>
             </View>
           </View>
