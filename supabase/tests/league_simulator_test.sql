@@ -32,19 +32,26 @@
 --  23  Manual with gimme Not applicable                                  → 23514
 --  24  the full Trackman default is accepted                             → 1 row
 --  25  a round override with putting alone (gimme from the default)      → 1 row
+-- The frozen default (0214):
+--  26  the organiser writes sim_frozen_default on a round                → 42501
+--  27  the organiser inserts a round with sim_frozen_default             → 42501
+--  28  the server (the start core) writes sim_frozen_default             → 1 row
+--  29  a default change after the start leaves the started round as it was
+--  30  sim_frozen_default with an unknown code                           → 23514
 --
 -- Red without 0212: every case (the columns do not exist). With 0212 minus the
--- guards: 5–8, 14 and 15. Without 0213: 19–23.
+-- guards: 5–8, 14 and 15. Without 0213: 19–23. Without 0214: every case (the
+-- column does not exist); with the 0212 guard body: 26 and 27.
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
--- Depends on 0212 and 0213. Run via: supabase test db (see supabase/tests/README.md)
+-- Depends on 0212, 0213 and 0214. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(30);
 
 \ir fixtures/rls_helpers.psql
 
@@ -61,6 +68,7 @@ create or replace function torny_rls.ls_r_open()     returns uuid language sql i
 create or replace function torny_rls.ls_r_done()     returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000133'::uuid $$;
 create or replace function torny_rls.ls_g_started()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000141'::uuid $$;
 create or replace function torny_rls.ls_g_done()     returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000142'::uuid $$;
+create or replace function torny_rls.ls_r_new()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-263800000134'::uuid $$;
 
 -- ls_rows(sql): runs one statement as the current role and returns the number
 -- of rows it touched, so an allowed update is checked, not just survived.
@@ -122,6 +130,10 @@ insert into public.league_rounds
    now() - interval '1 day', now() + interval '13 days', now() + interval '13 days'),
   (torny_rls.ls_r_done(),    torny_rls.ls_active(), 3, 'Runde 3', torny_rls.course_id(), torny_rls.tee_box_id(),
    now() - interval '1 day', now() + interval '13 days', now() + interval '13 days');
+
+-- The started round was frozen at its first start: the default was stimp 10.
+update public.league_rounds set sim_frozen_default = '{"green_stimp": "10", "wind": "CALM"}'::jsonb
+ where id = torny_rls.ls_r_started();
 
 -- Flights another player (not the organiser) started: one in play, one
 -- delivered. The organiser is in neither, so games RLS hides both from them.
@@ -379,6 +391,63 @@ select is(
   1,
   'case 25: a round override with putting alone is accepted (its gimme comes from the default)');
 rollback to savepoint case_25;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- The frozen default (0214): the server writes it, a later default leaves it
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 26
+savepoint case_26;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_like(
+  $$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "13"}'::jsonb
+      where id = torny_rls.ls_r_open() $$,
+  '%set by the server only%',
+  'case 26: the organiser CANNOT write sim_frozen_default');
+rollback to savepoint case_26;
+
+-- 27
+savepoint case_27;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_like(
+  $$ insert into public.league_rounds
+       (id, league_id, sequence, label, opens_at, closes_at, original_closes_at, sim_frozen_default)
+     values (torny_rls.ls_r_new(), torny_rls.ls_active(), 4, 'Runde 4', now(), now() + interval '13 days',
+             now() + interval '13 days', '{"green_stimp": "13"}'::jsonb) $$,
+  '%set by the server only%',
+  'case 27: the organiser CANNOT insert a round with a frozen default');
+rollback to savepoint case_27;
+
+-- 28
+savepoint case_28;
+select torny_rls.as_service();
+select is(
+  torny_rls.ls_rows($$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "9"}'::jsonb
+                        where id = torny_rls.ls_r_open() $$),
+  1,
+  'case 28: a caller with no JWT (the start core) CAN write sim_frozen_default');
+rollback to savepoint case_28;
+
+-- 29 ─ the organiser moves the default to stimp 11 after round 1 started.
+savepoint case_29;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"green_stimp": "11", "wind": "CALM"}'::jsonb
+                             where id = torny_rls.ls_active() $$);
+select torny_rls.as_service();
+select is(
+  (select array[sim_frozen_default::text, coalesce(sim_settings::text, 'none')]
+     from public.league_rounds where id = torny_rls.ls_r_started()),
+  array['{"wind": "CALM", "green_stimp": "10"}', 'none'],
+  'case 29: a default change after the start leaves the started round as it was');
+rollback to savepoint case_29;
+
+-- 30
+savepoint case_30;
+select throws_ok(
+  $$ update public.league_rounds set sim_frozen_default = '{"green_stimp": "99"}'::jsonb where id = torny_rls.ls_r_open() $$,
+  '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_frozen_default_check"',
+  'case 30: sim_frozen_default holds Trackman codes only');
+rollback to savepoint case_30;
 
 select * from finish();
 rollback;

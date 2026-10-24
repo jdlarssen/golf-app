@@ -687,7 +687,9 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
             closes_at: '2026-11-15T22:59:00Z',
             original_closes_at: '2026-11-15T22:59:00Z',
             window_overridden_at: null,
-            sim_settings: { green_stimp: '12', wind: 'CALM' },
+            // Started with the default at stimp 9 (frozen); overridden to 12.
+            sim_settings: { green_stimp: '12' },
+            sim_frozen_default: { green_stimp: '9', wind: 'CALM' },
           },
           {
             id: 'r2',
@@ -700,6 +702,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
             original_closes_at: '2026-11-29T22:59:00Z',
             window_overridden_at: null,
             sim_settings: null,
+            sim_frozen_default: null,
           },
         ],
       },

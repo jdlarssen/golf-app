@@ -14,7 +14,8 @@ import {
   normalizeSimSettings,
   validSimSettings,
   effectiveSimSettings,
-  frozenRoundSettings,
+  roundSimSettings,
+  frozenDefaultFor,
   roundOverrideFrom,
   simSettingGroups,
   simSettingField,
@@ -131,60 +132,90 @@ describe('normalizeSimSettings (reading a stored value)', () => {
   });
 });
 
-describe('effectiveSimSettings', () => {
-  const league = { ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' };
+describe('effectiveSimSettings (merge an override over a base)', () => {
+  const base = { ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' };
 
-  it('no override: the league default, nothing marked', () => {
-    expect(effectiveSimSettings(league, null)).toEqual({ values: league, overriddenKeys: [] });
+  it('no override: the base, nothing marked', () => {
+    expect(effectiveSimSettings(base, null)).toEqual({ values: base, overriddenKeys: [] });
   });
 
-  it('partial override: the round wins for its key, the rest comes from the default', () => {
-    expect(effectiveSimSettings(league, { green_stimp: '11' })).toEqual({
-      values: { ...league, green_stimp: '11' },
+  it('partial override: the round wins for its key, the rest comes from the base', () => {
+    expect(effectiveSimSettings(base, { green_stimp: '11' })).toEqual({
+      values: { ...base, green_stimp: '11' },
       overriddenKeys: ['green_stimp'],
     });
   });
 
-  it('a round value equal to the default is not marked (the frozen copy)', () => {
-    expect(effectiveSimSettings(league, { ...league })).toEqual({ values: league, overriddenKeys: [] });
-  });
-
   it('full override: every differing key is marked, in Trackman’s order', () => {
-    const round = { ...league, green_stimp: '12', pins: 'HARD', wind: 'GUSTY' };
-    expect(effectiveSimSettings(league, round).overriddenKeys).toEqual(['pins', 'wind', 'green_stimp']);
+    const round = { ...base, green_stimp: '12', pins: 'HARD', wind: 'GUSTY' };
+    expect(effectiveSimSettings(base, round).overriddenKeys).toEqual(['pins', 'wind', 'green_stimp']);
   });
 
-  it('a frozen round shows only what was frozen', () => {
-    const frozen = { pins: 'MEDIUM', wind: 'CALM' };
-    expect(effectiveSimSettings(league, frozen, true)).toEqual({
-      values: frozen,
-      overriddenKeys: ['wind'],
-    });
-  });
-
-  it('no default and no override: empty', () => {
+  it('no base and no override: empty', () => {
     expect(effectiveSimSettings(null, null)).toEqual({ values: {}, overriddenKeys: [] });
   });
 });
 
-describe('frozenRoundSettings (what the start core writes at the first start)', () => {
-  const league = { ...SIM_SETTING_DEFAULTS };
+describe('roundSimSettings: one rule for what a round shows and what it marks', () => {
+  const d9 = { ...SIM_SETTING_DEFAULTS, green_stimp: '9' };
+  const d10 = { ...SIM_SETTING_DEFAULTS, green_stimp: '10' };
 
-  it('a round with no override gets the full effective values', () => {
-    expect(frozenRoundSettings(league, null)).toEqual(league);
+  it.each([
+    {
+      name: 'not started, no override: today’s default, nothing marked',
+      input: { leagueDefault: d10, override: null, frozenDefault: null, started: false },
+      stimp: '10',
+      marked: [],
+    },
+    {
+      name: 'not started, the organiser overrides the stimp: marked',
+      input: { leagueDefault: d10, override: { green_stimp: '11' }, frozenDefault: null, started: false },
+      stimp: '11',
+      marked: ['green_stimp'],
+    },
+    {
+      name: 'staging 24.10: played with stimp 9, default changed to 10, no override → shows 9, no mark',
+      input: { leagueDefault: d10, override: null, frozenDefault: d9, started: true },
+      stimp: '9',
+      marked: [],
+    },
+    {
+      name: 'started with an override over the frozen default: the override shows and is marked',
+      input: { leagueDefault: d10, override: { green_stimp: '11' }, frozenDefault: d9, started: true },
+      stimp: '11',
+      marked: ['green_stimp'],
+    },
+    {
+      name: 'an override equal to the frozen default is not marked',
+      input: { leagueDefault: d10, override: { green_stimp: '9' }, frozenDefault: d9, started: true },
+      stimp: '9',
+      marked: [],
+    },
+    {
+      name: 'started with no settings at all (frozen {}): a default added later does not leak in',
+      input: { leagueDefault: d10, override: null, frozenDefault: {}, started: true },
+      stimp: undefined,
+      marked: [],
+    },
+    {
+      name: 'started before anything was frozen (no frozen default): today’s default',
+      input: { leagueDefault: d10, override: null, frozenDefault: null, started: true },
+      stimp: '10',
+      marked: [],
+    },
+  ])('$name', ({ input, stimp, marked }) => {
+    const result = roundSimSettings(input);
+    expect({ stimp: result.values.green_stimp, marked: result.overriddenKeys }).toEqual({ stimp, marked });
+  });
+});
+
+describe('frozenDefaultFor (what the start core freezes at the first start)', () => {
+  it('the league default, normalised', () => {
+    expect(frozenDefaultFor({ ...SIM_SETTING_DEFAULTS, hacked: 'x' })).toEqual(SIM_SETTING_DEFAULTS);
   });
 
-  it('a partial override is completed from the default', () => {
-    expect(frozenRoundSettings(league, { green_stimp: '11' })).toEqual({ ...league, green_stimp: '11' });
-  });
-
-  it('a round that already holds exactly the effective values needs no write', () => {
-    expect(frozenRoundSettings(league, { ...league })).toBeNull();
-  });
-
-  it('a league with no settings still freezes the round, as an empty object', () => {
-    expect(frozenRoundSettings(null, null)).toEqual({});
-    expect(frozenRoundSettings(null, {})).toBeNull();
+  it('a league with no settings freezes an empty object, so the round counts as frozen', () => {
+    expect(frozenDefaultFor(null)).toEqual({});
   });
 });
 

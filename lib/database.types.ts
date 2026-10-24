@@ -1389,6 +1389,7 @@ export type Database = {
           opens_at: string
           original_closes_at: string
           sequence: number
+          sim_frozen_default: Json | null
           sim_settings: Json | null
           tee_box_id: string | null
           window_overridden_at: string | null
@@ -1404,6 +1405,7 @@ export type Database = {
           opens_at: string
           original_closes_at: string
           sequence: number
+          sim_frozen_default?: Json | null
           sim_settings?: Json | null
           tee_box_id?: string | null
           window_overridden_at?: string | null
@@ -1419,6 +1421,7 @@ export type Database = {
           opens_at?: string
           original_closes_at?: string
           sequence?: number
+          sim_frozen_default?: Json | null
           sim_settings?: Json | null
           tee_box_id?: string | null
           window_overridden_at?: string | null

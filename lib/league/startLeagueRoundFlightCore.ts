@@ -10,7 +10,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { leagueFlightGameConfig } from './flightFormat';
 import { roundPlayerLocks } from './roundLocks';
 import { meetsFlightMinimum } from './flightRules';
-import { frozenRoundSettings } from './simSettings';
+import { frozenDefaultFor } from './simSettings';
 import type { LeagueFormat } from './types';
 
 const GAME_NAME_MAX = 120;
@@ -99,12 +99,13 @@ async function roundLockRefusal(
 }
 
 /**
- * #2638: the first start of a round in a simulator league writes the round's
- * effective settings into it, so a later change of the league default never
- * moves a round that is in play or done (the database then locks it, 0212).
+ * #2638: the first start of a round in a simulator league freezes the league
+ * default into `league_rounds.sim_frozen_default` (0214), so a later change of
+ * the default never moves a round that is in play or done; the round shows its
+ * override over that (`roundSimSettings`). The organiser's override itself is
+ * locked by the database from the first game on (0212).
  * Only while no game exists for the round: after that the round is already
- * frozen, and the admin client would otherwise get past the lock. Two
- * simultaneous first starts write the same value.
+ * frozen. Two simultaneous first starts write the same value.
  *
  * `wrote` tells the caller to undo the freeze (`unfreezeRoundSettings`) if the
  * start fails further on. A failed read or write gives `ok: false`; the start
@@ -113,7 +114,6 @@ async function roundLockRefusal(
 async function freezeRoundSettings(
   roundId: string,
   leagueSettings: unknown,
-  roundSettings: unknown,
 ): Promise<{ ok: false } | { ok: true; wrote: boolean }> {
   const admin = getAdminClient();
   const { count, error } = await admin
@@ -126,11 +126,13 @@ async function freezeRoundSettings(
   }
   if (count > 0) return { ok: true, wrote: false };
 
-  const frozen = frozenRoundSettings(leagueSettings, roundSettings);
-  if (frozen === null) return { ok: true, wrote: false };
   try {
     expectAffected(
-      await admin.from('league_rounds').update({ sim_settings: frozen }).eq('id', roundId).select('id'),
+      await admin
+        .from('league_rounds')
+        .update({ sim_frozen_default: frozenDefaultFor(leagueSettings) })
+        .eq('id', roundId)
+        .select('id'),
       'freezeRoundSettings',
     );
     return { ok: true, wrote: true };
@@ -141,11 +143,11 @@ async function freezeRoundSettings(
 }
 
 /**
- * Compensation for a freeze whose start then failed (trap 5): the round goes
- * back to what the organiser had set, so it is not stuck with a copy of an old
- * default. Only while the round still has no game; a player who started it in
- * the meantime owns the frozen values. Best effort: a failure is logged and
- * the player's refusal stands.
+ * Compensation for a freeze whose start then failed (trap 5): the round's
+ * frozen default goes back to what it was, so a round nobody has started is
+ * not stuck with a copy of an old default. Only while the round still has no
+ * game; a player who started it in the meantime owns the frozen default. Best
+ * effort: a failure is logged and the player's refusal stands.
  */
 async function unfreezeRoundSettings(roundId: string, previous: Json | null): Promise<void> {
   const admin = getAdminClient();
@@ -161,7 +163,7 @@ async function unfreezeRoundSettings(roundId: string, previous: Json | null): Pr
     expectAffected(
       await admin
         .from('league_rounds')
-        .update({ sim_settings: previous })
+        .update({ sim_frozen_default: previous })
         .eq('id', roundId)
         .select('id'),
       'unfreezeRoundSettings',
@@ -195,7 +197,7 @@ export async function startLeagueRoundFlightCore(
 
   const { data: round, error: rErr } = await supabase
     .from('league_rounds')
-    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at, sim_settings')
+    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at, sim_frozen_default')
     .eq('id', roundId)
     .maybeSingle();
   if (rErr || !round) return refuse('round_not_found');
@@ -244,12 +246,12 @@ export async function startLeagueRoundFlightCore(
   // insert, while no game exists for the round yet. A later failure undoes it.
   let froze = false;
   if (league.is_simulator) {
-    const freeze = await freezeRoundSettings(roundId, league.sim_settings, round.sim_settings);
+    const freeze = await freezeRoundSettings(roundId, league.sim_settings);
     if (!freeze.ok) return refuse('settings_freeze_failed');
     froze = freeze.wrote;
   }
   const fail = async (error: LeagueStartRefusal): Promise<LeagueStartResult> => {
-    if (froze) await unfreezeRoundSettings(roundId, round.sim_settings);
+    if (froze) await unfreezeRoundSettings(roundId, round.sim_frozen_default);
     return refuse(error);
   };
 

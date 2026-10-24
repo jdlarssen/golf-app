@@ -7,10 +7,11 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
  * The league start core (#2638). The web action's behaviour is locked by
  * actions.test.ts (unchanged); here: the simulator rules on top.
  *  - a simulator league starts a flight of one; a regular one refuses it;
- *  - the first start freezes the round's settings BEFORE the game insert;
+ *  - the first start freezes the league default (sim_frozen_default, 0214)
+ *    BEFORE the game insert;
  *  - a failed freeze refuses with settings_freeze_failed and inserts nothing;
  *  - a round that already has a game is not frozen again;
- *  - a start that fails after the freeze puts the round's settings back.
+ *  - a start that fails after the freeze puts the round's frozen default back.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -30,7 +31,7 @@ const ROUND = {
   opens_at: '2000-01-01T00:00:00Z',
   closes_at: '2099-01-01T00:00:00Z',
   original_closes_at: '2099-01-01T00:00:00Z',
-  sim_settings: { green_stimp: '12' },
+  sim_frozen_default: null,
 };
 const LEAGUE_DEFAULT = { green_stimp: '10', wind: 'CALM' };
 
@@ -97,7 +98,7 @@ describe('startLeagueRoundFlightCore — the marker rule follows the league (#26
 });
 
 describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
-  it('writes the effective values into the round before the game insert', async () => {
+  it('freezes the league default into the round before the game insert', async () => {
     adminMock = buildSupabaseMock([
       { data: [] },
       { count: 0 },
@@ -113,7 +114,7 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
       written: freeze?.args[0],
     }).toEqual({
       order: ['league_rounds.update', 'games.insert'],
-      written: { sim_settings: { green_stimp: '12', wind: 'CALM' } },
+      written: { sim_frozen_default: { green_stimp: '10', wind: 'CALM' } },
     });
   });
 
@@ -147,7 +148,7 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
     });
   });
 
-  it('a start that fails after the freeze puts the organiser’s settings back', async () => {
+  it('a start that fails after the freeze puts the round’s frozen default back', async () => {
     startScheduledGame.mockResolvedValue({ ok: false, reason: 'tee_missing_rating' });
     adminMock = buildSupabaseMock([
       { data: [] },
@@ -170,10 +171,7 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
       .map((c) => c.args[0]);
     expect({ result, writes }).toEqual({
       result: { ok: false, error: 'start_tee_missing_rating' },
-      writes: [
-        { sim_settings: { green_stimp: '12', wind: 'CALM' } },
-        { sim_settings: { green_stimp: '12' } },
-      ],
+      writes: [{ sim_frozen_default: { green_stimp: '10', wind: 'CALM' } }, { sim_frozen_default: null }],
     });
   });
 });
