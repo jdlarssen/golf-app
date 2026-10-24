@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatedUserId } from '@/lib/api/appAuth';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { isUuid } from '@/lib/url/isUuid';
+import { readFlightIds } from '@/lib/api/readFlightIds';
 import {
   submitScorecardCore,
   type SubmitScorecardResult,
@@ -45,7 +45,7 @@ import {
 // alltid har kalt ruta.
 //
 // WIRE (frosset — appen speiler den):
-//   POST [{ alsoFor: string[] }]   valgfri, 0–20 uuid-er
+//   POST [{ alsoFor: string[] }]   valgfri, 0–4 uuid-er (MAX_FLIGHT_SIZE, readFlightIds)
 //        200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
 //        400 { error: 'bad_request' }    kroppen er ikke JSON, eller `alsoFor` er feilformet
 //        401 { error: 'unauthorized' }   403 { error: 'forbidden' }
@@ -91,31 +91,6 @@ const FAILURE: Record<
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** En flight er aldri større enn dette; et lengre `alsoFor` er feilformet. */
-const MAX_ALSO_FOR = 20;
-
-/**
- * `alsoFor` fra kroppen: `[]` uten kropp eller uten feltet, `null` når kroppen
- * er feilformet. En uleselig kropp er en KLIENT-feil (400), ikke «vi feilet»
- * (500) — samme vakt som invite- og profil-ruta.
- */
-async function readAlsoFor(request: NextRequest): Promise<string[] | null> {
-  let parsed: unknown;
-  try {
-    const text = await request.text();
-    if (text.trim() === '') return [];
-    parsed = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-  const alsoFor = (parsed as { alsoFor?: unknown }).alsoFor;
-  if (alsoFor === undefined) return [];
-  if (!Array.isArray(alsoFor) || alsoFor.length > MAX_ALSO_FOR) return null;
-  if (!alsoFor.every((id) => typeof id === 'string' && isUuid(id))) return null;
-  return alsoFor;
-}
-
 export async function POST(request: NextRequest, ctx: RouteContext) {
   try {
     const { id: gameId } = await ctx.params;
@@ -125,7 +100,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const alsoFor = await readAlsoFor(request);
+    const alsoFor = await readFlightIds(request, 'alsoFor');
     if (!alsoFor) {
       return NextResponse.json({ error: 'bad_request' }, { status: 400 });
     }

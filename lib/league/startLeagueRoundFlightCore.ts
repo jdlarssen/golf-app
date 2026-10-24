@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Json } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
@@ -23,7 +23,9 @@ const GAME_NAME_MAX = 120;
  */
 export type LeagueStartRefusal =
   | 'round_not_found'
+  | 'round_read_failed'
   | 'league_not_found'
+  | 'league_read_failed'
   | 'league_not_active'
   | 'outside_window'
   | 'round_not_ready'
@@ -107,14 +109,15 @@ async function roundLockRefusal(
  * Only while no game exists for the round: after that the round is already
  * frozen. Two simultaneous first starts write the same value.
  *
- * `wrote` tells the caller to undo the freeze (`unfreezeRoundSettings`) if the
- * start fails further on. A failed read or write gives `ok: false`; the start
- * then stops before anything is inserted.
+ * A freeze whose start then fails is left in place, on purpose: no undo runs.
+ * It does no harm, because nothing reads the frozen default while the round
+ * has no game (roundSimSettings ignores it until the round is started), and
+ * the next first start writes it again. An undo, on the other hand, could race
+ * a player who started the round in the meantime and wipe that round's freeze.
+ * A failed read or write gives false; the start then stops before anything is
+ * inserted.
  */
-async function freezeRoundSettings(
-  roundId: string,
-  leagueSettings: unknown,
-): Promise<{ ok: false } | { ok: true; wrote: boolean }> {
+async function freezeRoundSettings(roundId: string, leagueSettings: unknown): Promise<boolean> {
   const admin = getAdminClient();
   const { count, error } = await admin
     .from('games')
@@ -122,9 +125,9 @@ async function freezeRoundSettings(
     .eq('league_round_id', roundId);
   if (error || count === null) {
     console.error('[league] startLeagueRoundFlight freeze check failed', { roundId, error });
-    return { ok: false };
+    return false;
   }
-  if (count > 0) return { ok: true, wrote: false };
+  if (count > 0) return true;
 
   try {
     expectAffected(
@@ -135,41 +138,10 @@ async function freezeRoundSettings(
         .select('id'),
       'freezeRoundSettings',
     );
-    return { ok: true, wrote: true };
+    return true;
   } catch (err) {
     console.error('[league] startLeagueRoundFlight settings freeze failed', { roundId, err });
-    return { ok: false };
-  }
-}
-
-/**
- * Compensation for a freeze whose start then failed (trap 5): the round's
- * frozen default goes back to what it was, so a round nobody has started is
- * not stuck with a copy of an old default. Only while the round still has no
- * game; a player who started it in the meantime owns the frozen default. Best
- * effort: a failure is logged and the player's refusal stands.
- */
-async function unfreezeRoundSettings(roundId: string, previous: Json | null): Promise<void> {
-  const admin = getAdminClient();
-  const { count, error } = await admin
-    .from('games')
-    .select('id', { count: 'exact', head: true })
-    .eq('league_round_id', roundId);
-  if (error || count !== 0) {
-    if (error) console.error('[league] startLeagueRoundFlight unfreeze check failed', { roundId, error });
-    return;
-  }
-  try {
-    expectAffected(
-      await admin
-        .from('league_rounds')
-        .update({ sim_frozen_default: previous })
-        .eq('id', roundId)
-        .select('id'),
-      'unfreezeRoundSettings',
-    );
-  } catch (err) {
-    console.error('[league] startLeagueRoundFlight unfreeze failed', { roundId, err });
+    return false;
   }
 }
 
@@ -197,17 +169,26 @@ export async function startLeagueRoundFlightCore(
 
   const { data: round, error: rErr } = await supabase
     .from('league_rounds')
-    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at, sim_frozen_default')
+    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at')
     .eq('id', roundId)
     .maybeSingle();
-  if (rErr || !round) return refuse('round_not_found');
+  // A failed read is not «no such round»: the app answers 500, not 404.
+  if (rErr) {
+    console.error('[league] startLeagueRoundFlight round read failed', { roundId, error: rErr });
+    return refuse('round_read_failed');
+  }
+  if (!round) return refuse('round_not_found');
 
   const { data: league, error: lErr } = await supabase
     .from('leagues')
     .select('id, name, course_id, tee_box_id, status, format, is_simulator, sim_settings')
     .eq('id', round.league_id)
     .maybeSingle();
-  if (lErr || !league) return refuse('league_not_found');
+  if (lErr) {
+    console.error('[league] startLeagueRoundFlight league read failed', { roundId, error: lErr });
+    return refuse('league_read_failed');
+  }
+  if (!league) return refuse('league_not_found');
   if (league.status !== 'active') return refuse('league_not_active');
 
   // Flight-spillformatet følger ligaen (slagspill / stableford / modifisert).
@@ -243,17 +224,11 @@ export async function startLeagueRoundFlightCore(
   if (lockRefusal) return refuse(lockRefusal);
 
   // #2638: every gate has passed; freeze the round's settings before the
-  // insert, while no game exists for the round yet. A later failure undoes it.
-  let froze = false;
-  if (league.is_simulator) {
-    const freeze = await freezeRoundSettings(roundId, league.sim_settings);
-    if (!freeze.ok) return refuse('settings_freeze_failed');
-    froze = freeze.wrote;
+  // insert, while no game exists for the round yet (freezeRoundSettings says
+  // why a later failure leaves the freeze in place).
+  if (league.is_simulator && !(await freezeRoundSettings(roundId, league.sim_settings))) {
+    return refuse('settings_freeze_failed');
   }
-  const fail = async (error: LeagueStartRefusal): Promise<LeagueStartResult> => {
-    if (froze) await unfreezeRoundSettings(roundId, round.sim_frozen_default);
-    return refuse(error);
-  };
 
   // tee_gender per player from profile.
   const { data: roster } = await supabase.from('users').select('id, gender').in('id', flightIds);
@@ -289,7 +264,7 @@ export async function startLeagueRoundFlightCore(
     .single();
   if (gErr || !game) {
     console.error('[league] startLeagueRoundFlight game insert failed', { roundId, error: gErr });
-    return fail('insert_failed');
+    return refuse('insert_failed');
   }
   const gameId = (game as { id: string }).id;
 
@@ -319,7 +294,7 @@ export async function startLeagueRoundFlightCore(
       error: gpErr,
     });
     await rollbackFlightGame(supabase, gameId);
-    return fail('insert_failed');
+    return refuse('insert_failed');
   }
 
   // Freeze handicaps + flip to active. On failure, roll back the half-made flight.
@@ -342,7 +317,7 @@ export async function startLeagueRoundFlightCore(
       });
     }
     await rollbackFlightGame(supabase, gameId);
-    return fail(`start_${started.reason}`);
+    return refuse(`start_${started.reason}`);
   }
 
   return { ok: true, gameId };

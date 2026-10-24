@@ -5227,6 +5227,9 @@
           "flight_in_progress": "Du er allerede med i en flight i denne runden. Spill den ferdig eller trekk deg fra den først.",
           "co_player_locked": "En av medspillerne har allerede levert denne runden eller spiller den nå. Last inn siden på nytt og velg igjen.",
           "round_check_failed": "Klarte ikke å sjekke hvem som allerede har spilt runden. Prøv igjen om litt.",
+          "round_read_failed": "Klarte ikke å hente runden. Prøv igjen om litt.",
+          "league_read_failed": "Klarte ikke å hente ligaen. Prøv igjen om litt.",
+          "settings_freeze_failed": "Klarte ikke å låse rundeinnstillingene. Prøv igjen om litt.",
           "fallback": "Noe gikk galt, prøv igjen."
         }
       }
