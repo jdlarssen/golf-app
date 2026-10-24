@@ -91,6 +91,28 @@ describe('teamLiveBoard — total, unit and tone per format', () => {
   });
 });
 
+describe('teamLiveBoard — a net-to-par team stableford game shows points against par pace (#2625)', () => {
+  it('team stableford', () => {
+    // Team 1: 3, 2, 0 points → +1, E, −2 = −1 after three holes. Team 2: a
+    // bogey, 1 point → −1 after one.
+    const [, context] = FORMATS.find(([name]) => name === 'team stableford')!;
+    const flagged: ScoringContext = {
+      ...context,
+      game: {
+        ...context.game,
+        mode_config: { ...context.game.mode_config, ranking: 'net_to_par' } as GameModeConfig,
+      },
+    };
+    const result = computeLeaderboard(flagged) as TeamBoardResult;
+    const board = teamLiveBoard(result, null, teamName, STANDARD);
+    expect([teamDisplayUnit(result), board.unit]).toEqual(['pointsToPar', 'pointsToPar']);
+    expect(board.rows.map((r) => [r.teamNumber, r.total, r.holesPlayed])).toEqual([
+      [1, -1, 3],
+      [2, -1, 1],
+    ]);
+  });
+});
+
 describe('teamLiveBoard — a net-to-par game shows to par (#2625)', () => {
   // Team 1: −1, E, +2 → +1 after three holes. Team 2: a bogey → +1 after one.
   it.each(FORMATS.filter(([, , , unit]) => unit !== 'points'))('%s', (_name, context) => {

@@ -64,7 +64,7 @@ export function soloResultBoard(
   const unit = boardUnit(result);
   const lines =
     result.kind === 'stableford'
-      ? result.players.map((p) => ({ ...p, total: p.totalPoints }))
+      ? result.players.map((p) => ({ ...p, total: unit === 'pointsToPar' ? p.toPar : p.totalPoints }))
       : result.players.map((p) => ({ ...p, total: unit === 'toPar' ? p.netToPar : p.totalNetStrokes }));
   const userById = new Map(players.map((p) => [p.user_id, p.users]));
   const counts = rankCounts(lines);
@@ -99,10 +99,11 @@ export type TeamBoardResult = TexasScrambleResult | StablefordTeamResult | BestB
  *   nobody has played also scores 0 points, so `teamPoints` cannot say it.
  *
  * #2625: a team strokeplay result ranked on net to par compares in `toPar`,
- * which `comparableGap` compares across a different number of holes.
+ * and a team stableford result ranked on it in `pointsToPar`; `comparableGap`
+ * compares both across a different number of holes.
  */
 export function teamBoardMeasure(result: TeamBoardResult): {
-  unit: 'net' | 'points' | 'toPar';
+  unit: 'net' | 'points' | 'toPar' | 'pointsToPar';
   holesPlayed: (teamNumber: number) => number;
 } {
   const find = <T extends { teamNumber: number }>(teams: readonly T[], n: number) =>
@@ -116,7 +117,7 @@ export function teamBoardMeasure(result: TeamBoardResult): {
       return { unit: strokeUnit(result), holesPlayed: (n) => find(result.teams, n)?.holesCounted ?? 0 };
     case 'stableford':
       return {
-        unit: 'points',
+        unit: result.ranking === 'net_to_par' ? 'pointsToPar' : 'points',
         holesPlayed: (n) =>
           find(result.teams, n)?.holes.filter((h) => h.players.some((p) => p.gross !== null)).length ?? 0,
       };
@@ -149,9 +150,9 @@ export type TeamResultBoardRow = {
   above: number | null;
 };
 
-/** The line's number in the board's unit: #2625 to par in a net-to-par game. */
+/** The line's number in the board's unit: #2625 to par (or points against par pace) in a net-to-par game. */
 function teamLines(result: TeamBoardResult) {
-  const toPar = result.kind !== 'stableford' && result.ranking === 'net_to_par';
+  const toPar = result.ranking === 'net_to_par';
   switch (result.kind) {
     case 'texas_scramble':
       return result.teams.map((t) => ({
@@ -175,7 +176,12 @@ function teamLines(result: TeamBoardResult) {
         teamHandicap: null,
       }));
     case 'stableford':
-      return result.teams.map((t) => ({ ...t, memberIds: t.playerIds, total: t.totalPoints, teamHandicap: null }));
+      return result.teams.map((t) => ({
+        ...t,
+        memberIds: t.playerIds,
+        total: toPar ? t.toPar : (t.totalPoints as number | null),
+        teamHandicap: null,
+      }));
   }
 }
 

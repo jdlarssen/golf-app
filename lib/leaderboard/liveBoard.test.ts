@@ -267,6 +267,31 @@ describe('computeLiveBoard — units and order', () => {
     expect([net.unit, net.rows[0].total]).toEqual(['net', 13]);
   });
 
+  it('stableford with the flag shows points against par pace and ranks on it (#2625)', () => {
+    // The issue's shape for points: A +5 after 3 holes (11 points), B +1
+    // after 6 (13). Par 4 everywhere.
+    const players = [player('A'), player('B')];
+    const scores = [...card('A', { 1: 2, 2: 2, 3: 3 }), ...card('B', { 1: 3, 2: 4, 3: 4, 4: 4, 5: 4, 6: 4 })];
+    const pace = board({
+      game: game({ mode_config: { ...STABLEFORD, ranking: 'net_to_par' } as GameModeConfig }),
+      players,
+      scores,
+    });
+    expect(pace.unit).toBe('pointsToPar');
+    expect(pace.rows.map((r) => [r.userId, r.rank, r.total])).toEqual([
+      ['A', 1, 5],
+      ['B', 2, 1],
+    ]);
+    expect(viewerStanding(pace, 'B')?.gap).toBe(4);
+
+    const points = board({ players, scores });
+    expect(points.unit).toBe('points');
+    expect(points.rows.map((r) => [r.userId, r.total])).toEqual([
+      ['B', 13],
+      ['A', 11],
+    ]);
+  });
+
   it('a player without holes has no total and no movement (a scheduled game)', () => {
     const b = board({
       game: game({ status: 'scheduled' }),
@@ -284,7 +309,8 @@ describe('computeLiveBoard — units and order', () => {
 // #2579: the unit has one home, read by the live board and the finished board.
 describe('boardUnit — what the number column counts', () => {
   it.each<[StablefordSoloResult | SoloStrokeplayResult, LiveBoardUnit]>([
-    [{ kind: 'stableford', variant: 'solo', players: [], holes: [] }, 'points'],
+    [{ kind: 'stableford', variant: 'solo', ranking: 'net_total', players: [], holes: [] }, 'points'],
+    [{ kind: 'stableford', variant: 'solo', ranking: 'net_to_par', players: [], holes: [] }, 'pointsToPar'],
     [{ kind: 'solo_strokeplay', ranking: 'net_to_par', players: [], holes: [] }, 'toPar'],
     [{ kind: 'solo_strokeplay', ranking: 'net_total', players: [], holes: [] }, 'net'],
   ])('%o → %s', (result, unit) => {
@@ -409,6 +435,7 @@ describe('comparableGap (#2286) — the one rule for comparing two rows', () => 
     ['net strokes on the same holes', 'net', row(72, 18), row(74, 18), 2],
     ['net strokes on different holes', 'net', row(40, 10), row(36, 9), null],
     ['net to par across holes («thru»)', 'toPar', row(-1, 9), row(1, 14), 2],
+    ['points against par pace across holes (#2625)', 'pointsToPar', row(3, 9), row(1, 14), 2],
     ['a row without a total', 'points', row(null, 0), row(25, 11), null],
   ] as const)('%s', (_label, unit, a, b, expected) => {
     expect(comparableGap(unit, a, b)).toBe(expected);

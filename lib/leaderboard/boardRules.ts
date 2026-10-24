@@ -8,7 +8,7 @@
 // goes through the same rule as a player row (keyed on its userId).
 
 import { firstName, sharesFirstName } from '@/lib/firstName';
-import type { LiveBoardRow, LiveBoardUnit } from '@/lib/leaderboard/liveBoard';
+import { isToParUnit, type LiveBoardRow, type LiveBoardUnit } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
 
@@ -59,10 +59,10 @@ export function placeKind(row: BoardPlaceRow, showRank: boolean): 'none' | 'tied
   return !showRank ? 'none' : row.tied ? 'tied' : 'plain';
 }
 
-/** The board's number: points, net strokes, or net to par («−2», «E»). */
+/** The board's number: points, net strokes, or against par («−2», «E», #2625 «+3» in points). */
 export function totalLabel(unit: LiveBoardUnit, total: number | null): string {
   if (total === null) return '—';
-  return unit === 'toPar' ? formatVsPar(total) : String(total);
+  return isToParUnit(unit) ? formatVsPar(total) : String(total);
 }
 
 export function toneKey(tone: ScoreTone): 'under' | 'par' | 'over1' | 'over2' {
@@ -94,14 +94,23 @@ export type BoardTotalSr =
   | { kind: 'net'; value: number }
   | { kind: 'even' }
   | { kind: 'over'; value: number }
-  | { kind: 'under'; value: number };
+  | { kind: 'under'; value: number }
+  | { kind: 'pointsOver'; value: number }
+  | { kind: 'pointsUnder'; value: number };
 
-/** «18 poeng», «74 slag netto», «På par», «2 over par», or no total yet. */
+/**
+ * «18 poeng», «74 slag netto», «På par», «2 over par», or no total yet.
+ * #2625: points against par pace say the points («3 poeng over par»), since
+ * over par is the good side there.
+ */
 export function boardTotalSr(unit: LiveBoardUnit, total: number | null): BoardTotalSr {
   if (total === null) return { kind: 'none' };
   if (unit === 'points') return { kind: 'points', value: total };
   if (unit === 'net') return { kind: 'net', value: total };
   if (total === 0) return { kind: 'even' };
+  if (unit === 'pointsToPar') {
+    return total > 0 ? { kind: 'pointsOver', value: total } : { kind: 'pointsUnder', value: -total };
+  }
   return total > 0 ? { kind: 'over', value: total } : { kind: 'under', value: -total };
 }
 
