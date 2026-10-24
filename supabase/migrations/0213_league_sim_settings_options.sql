@@ -6,8 +6,9 @@
 -- (object, at most 2 000 characters); this adds the option set itself.
 --
 -- sim_settings_valid(s) is the SQL mirror of the list in
--- lib/league/simSettings.ts (one home there; simSettings.test.ts parses this
--- file and fails if the two drift apart):
+-- lib/league/simSettings.ts (one home there; simSettings.test.ts parses the
+-- newest migration that defines this function, 0215 since the review, and
+-- fails if the two drift apart):
 --   - every key is one of the eight settings and every value one of its
 --     option codes (strings only);
 --   - the gimme coupling: when both putting and gimme are in the object, a

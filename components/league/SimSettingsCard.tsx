@@ -4,7 +4,8 @@ import type { SimSettingGroup } from '@/lib/league/simSettings';
 /**
  * The round's settings in a simulator league (#2638, artboards 7a/7b, revision
  * 2): Trackman's two groups «Game» and «Course», label left and value right,
- * «Endret denne runden» under a value that differs from the league default,
+ * «Endret denne runden» under a value the organiser overrode for this round
+ * (against the frozen default once the round has started, roundSimSettings),
  * and the tee from the course selection under a divider. The groups come from
  * `simSettingGroups` over the round's effective settings (the snapshot), so the
  * card never merges default and override itself and writes no setting text.
