@@ -8,7 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { teamHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
+import { pointsHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
 import type {
   StablefordTeamLine,
   StablefordTeamResult,
@@ -224,10 +224,10 @@ export function TeamStablefordPodium({
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
-                      {teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar }).text}
+                      {pointsHeadline(result.ranking, team).text}
                     </span>
                     <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      {t(result.ranking === 'net_to_par' ? 'common.vsParLabel' : 'common.poengLabel')}
+                      {t(`common.${pointsHeadline(result.ranking, team).labelKey}`)}
                     </span>
                   </div>
                 </Card>
@@ -294,7 +294,7 @@ function PodiumStep({
   // presentasjon (farge, medaljong, tall-styling) følger lagets faktiske rank.
   const place = podiumPlace(team.rank);
   const tierClass = TIER_ACCENT[PLACE_TIER[place]];
-  const headline = teamHeadline(ranking, { total: team.totalPoints, toPar: team.toPar });
+  const headline = pointsHeadline(ranking, team);
   const heightClass = SLOT_HEIGHTS_TALL[slot];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
   const medallionSize = place === 1 ? 48 : 36;
@@ -342,7 +342,7 @@ function PodiumStep({
           {headline.text}
         </span>
         <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.poengLabel')}
+          {t(`common.${headline.labelKey}`)}
         </span>
       </div>
     </div>

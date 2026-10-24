@@ -20,7 +20,7 @@ import { computeLeaderboard } from '@/lib/leaderboard';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
-import { formatVsPar } from '@/lib/leaderboard/vsPar';
+import { pointsHeadline } from '@/lib/leaderboard/vsPar';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -308,16 +308,17 @@ export async function renderStableford(opts: {
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
       );
       // #2625: a game ranked on points against par pace shows that number
-      // («+3», «E»); highest wins either way.
-      const toPar = result.ranking === 'net_to_par';
+      // («+3», «E»), with the bar reading it (a player without a hole as 0);
+      // highest wins either way, and the winner comes from the rank.
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
+        const headline = pointsHeadline(result.ranking, pl);
         return {
           userId: pl.userId,
           name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
-          score: toPar ? (pl.toPar ?? 0) : pl.totalPoints,
-          ...(toPar ? { scoreLabel: formatVsPar(pl.toPar) } : {}),
+          score: headline.value ?? 0,
+          ...(headline.unit === 'toPar' ? { scoreLabel: headline.text } : {}),
           subLabel: th2h('subLabelHolesPlayed', { count: pl.holesPlayed }),
         };
       };
@@ -337,7 +338,7 @@ export async function renderStableford(opts: {
           gameId={gameId}
           gameName={game.name}
           formatLabel={tModes(stablefordMode)}
-          unitLabel={toPar ? tc('vsParLabel') : tc('poengLabel')}
+          unitLabel={tc(pointsHeadline(result.ranking, a).labelKey)}
           sideA={sideFor(a)}
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}
