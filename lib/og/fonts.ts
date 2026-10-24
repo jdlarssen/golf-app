@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { fixComponentMatrices } from './componentMatrices';
+
 /**
  * Google-font loading for Satori-rendered images — lifted from the
  * share-image route (#942) for reuse by #1022's opengraph-image. The app
@@ -13,6 +15,8 @@ import 'server-only';
  * a browser UA now gets woff2, which Satori cannot read — the ttf match then
  * found nothing and every image fell back to Satori's default sans (#1985).
  * Node's own UA gets one ttf. Graceful: a null means Satori uses its default.
+ * The ttf comes back with its component matrices fixed for Satori, once per
+ * fetched buffer (`fixComponentMatrices`, #2625: Fraunces' «+»).
  */
 export async function fetchGoogleFont(
   family: string,
@@ -36,7 +40,8 @@ export async function fetchGoogleFont(
     const css = await fetch(cssUrl).then((r) => (r.ok ? r.text() : ''));
     const m = css.match(/url\((https:\/\/[^)]+\.ttf)\)/);
     if (!m) return null;
-    return await fetch(m[1]).then((r) => (r.ok ? r.arrayBuffer() : null));
+    const ttf = await fetch(m[1]).then((r) => (r.ok ? r.arrayBuffer() : null));
+    return ttf && fixComponentMatrices(ttf);
   } catch {
     return null;
   }
