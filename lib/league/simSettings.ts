@@ -176,6 +176,21 @@ export function gimmeLocked(putting: string | undefined): boolean {
   return putting !== undefined && GIMME_LOCKING_PUTTING.includes(putting);
 }
 
+/**
+ * The one home of the gimme coupling's effect on a set of values: under a
+ * putting that locks it, gimme is «Not applicable», as Trackman shows it. The
+ * form parser, the form's starting values, the form itself and the round
+ * display all go through here; `roundOverrideFrom` keeps putting and gimme as
+ * a pair so a stored override cannot split them.
+ */
+export function lockGimme<T extends SimSettings>(values: T): T {
+  if (!gimmeLocked(values.putting) || values.gimme === undefined || values.gimme === GIMME_NONE) return values;
+  return { ...values, gimme: GIMME_NONE };
+}
+
+/** The first distance: what a putting that needs one starts from. */
+export const FIRST_GIMME_DISTANCE = 'FT4';
+
 /** The form field that carries a key's code. */
 export function simSettingField(key: SimSettingKey): string {
   return `sim_${key}`;
@@ -222,10 +237,11 @@ export function parseSimSettings(formData: FormData): ParseSimSettingsResult {
     const raw = formData.get(simSettingField(key));
     if (typeof raw === 'string' && raw !== '') out[key] = raw;
   }
-  if (gimmeLocked(out.putting)) out.gimme = GIMME_NONE;
-  const complete = SIM_SETTING_KEYS.every((key) => out[key] !== undefined);
-  if (!complete || !validSimSettings(out)) return { ok: false, error: 'sim_settings_invalid' };
-  return { ok: true, settings: out as Record<SimSettingKey, string> };
+  // The disabled gimme select posts nothing; the coupling fills it in.
+  const coupled = gimmeLocked(out.putting) ? lockGimme({ ...out, gimme: out.gimme ?? GIMME_NONE }) : out;
+  const complete = SIM_SETTING_KEYS.every((key) => coupled[key] !== undefined);
+  if (!complete || !validSimSettings(coupled)) return { ok: false, error: 'sim_settings_invalid' };
+  return { ok: true, settings: coupled as Record<SimSettingKey, string> };
 }
 
 /**
@@ -288,7 +304,16 @@ export function roundSimSettings(input: {
 }): EffectiveSimSettings {
   const frozen =
     input.started && input.frozenDefault !== null && input.frozenDefault !== undefined;
-  return effectiveSimSettings(frozen ? input.frozenDefault : input.leagueDefault, input.override);
+  const base = frozen ? input.frozenDefault : input.leagueDefault;
+  const merged = effectiveSimSettings(base, input.override);
+  // Safety net: the form stores putting and gimme as a pair
+  // (roundOverrideFrom), but a hand-written override could hold gimme alone.
+  const values = lockGimme(merged.values);
+  const baseGimme = normalizeSimSettings(base).gimme;
+  const overriddenKeys = merged.overriddenKeys.filter(
+    (key) => key !== 'gimme' || values.gimme !== (baseGimme ?? GIMME_NONE),
+  );
+  return { values, overriddenKeys };
 }
 
 /**
@@ -303,7 +328,8 @@ export function frozenDefaultFor(leagueSettings: unknown): SimSettings {
 
 /**
  * The override to store from the admin's per-round form: only the values that
- * differ from the league default. `null` = the round follows the default.
+ * differ from the league default, with putting and gimme kept as a pair.
+ * `null` = the round follows the default.
  */
 export function roundOverrideFrom(
   formValues: SimSettings,
@@ -314,6 +340,13 @@ export function roundOverrideFrom(
   const override: SimSettings = {};
   for (const key of SIM_SETTING_KEYS) {
     if (values[key] !== undefined && values[key] !== league[key]) override[key] = values[key];
+  }
+  // The gimme coupling binds putting and gimme together: when either
+  // differs, both are stored, so a later change of the default can never pair
+  // one round's gimme with another putting.
+  if (override.putting !== undefined || override.gimme !== undefined) {
+    if (values.putting !== undefined) override.putting = values.putting;
+    if (values.gimme !== undefined) override.gimme = values.gimme;
   }
   return Object.keys(override).length > 0 ? override : null;
 }
@@ -355,8 +388,7 @@ export function simSettingGroups(
  * locking putting shows «Not applicable»; any other putting a distance).
  */
 export function formSimSettings(json: unknown): Record<SimSettingKey, string> {
-  const values: Record<SimSettingKey, string> = { ...SIM_SETTING_DEFAULTS, ...normalizeSimSettings(json) };
-  if (gimmeLocked(values.putting)) values.gimme = GIMME_NONE;
-  else if (values.gimme === GIMME_NONE) values.gimme = SIM_SETTINGS.gimme.options[1].code;
+  const values = lockGimme({ ...SIM_SETTING_DEFAULTS, ...normalizeSimSettings(json) });
+  if (!gimmeLocked(values.putting) && values.gimme === GIMME_NONE) values.gimme = FIRST_GIMME_DISTANCE;
   return values;
 }

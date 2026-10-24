@@ -20,6 +20,7 @@ import {
   simSettingGroups,
   simSettingField,
   formSimSettings,
+  lockGimme,
 } from './simSettings';
 
 /** A form with every setting filled in: the defaults, then `over`. */
@@ -301,5 +302,41 @@ describe('formSimSettings (what a form starts from)', () => {
 
   it('nothing stored gives the defaults', () => {
     expect(formSimSettings(null)).toEqual(SIM_SETTING_DEFAULTS);
+  });
+});
+
+describe('the gimme coupling holds for a round’s values (evaluator 24.10)', () => {
+  const manual = { ...SIM_SETTING_DEFAULTS, putting: 'MANUAL', gimme: 'FT4' };
+  const tourPro = { ...SIM_SETTING_DEFAULTS, putting: 'AUTO_TOUR_PRO', gimme: 'NOT_APPLICABLE' };
+
+  it('the round form stores putting and gimme as a pair when either differs', () => {
+    expect(roundOverrideFrom({ ...manual, gimme: 'FT8' }, manual)).toEqual({ putting: 'MANUAL', gimme: 'FT8' });
+    expect(roundOverrideFrom({ ...manual, putting: 'MANUAL_AIMED' }, manual)).toEqual({
+      putting: 'MANUAL_AIMED',
+      gimme: 'FT4',
+    });
+  });
+
+  it('so a later default with a locking putting does not pair Auto - Tour Pro with a distance', () => {
+    const override = roundOverrideFrom({ ...manual, gimme: 'FT8' }, manual);
+    const shown = roundSimSettings({ leagueDefault: tourPro, override, frozenDefault: null, started: false });
+    expect({ putting: shown.values.putting, gimme: shown.values.gimme }).toEqual({ putting: 'MANUAL', gimme: 'FT8' });
+    expect(validSimSettings(shown.values)).toBe(true);
+  });
+
+  it('a stored gimme-only override under a locking putting shows Not applicable, unmarked (safety net)', () => {
+    const shown = roundSimSettings({ leagueDefault: tourPro, override: { gimme: 'FT8' }, frozenDefault: null, started: false });
+    expect({ gimme: shown.values.gimme, marked: shown.overriddenKeys }).toEqual({ gimme: 'NOT_APPLICABLE', marked: [] });
+  });
+});
+
+describe('lockGimme (the coupling’s one home)', () => {
+  it.each([
+    [{ putting: 'AUTO_TOUR_PRO', gimme: 'FT8' }, { putting: 'AUTO_TOUR_PRO', gimme: 'NOT_APPLICABLE' }],
+    [{ putting: 'AUTO_FIXED', gimme: 'NOT_APPLICABLE' }, { putting: 'AUTO_FIXED', gimme: 'NOT_APPLICABLE' }],
+    [{ putting: 'MANUAL', gimme: 'FT8' }, { putting: 'MANUAL', gimme: 'FT8' }],
+    [{ gimme: 'FT8' }, { gimme: 'FT8' }],
+  ])('%o → %o', (input, expected) => {
+    expect(lockGimme(input)).toEqual(expected);
   });
 });

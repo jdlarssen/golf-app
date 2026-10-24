@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import {
+  FIRST_GIMME_DISTANCE,
   SIM_SETTINGS,
   SIM_SETTING_GROUPS,
   gimmeLocked,
+  lockGimme,
   simSettingField,
   type SimSettingKey,
 } from '@/lib/league/simSettings';
@@ -39,11 +41,8 @@ export function SimSettingsFields({
 
   function change(key: SimSettingKey, code: string) {
     setValues((prev) => {
-      const next = { ...prev, [key]: code };
-      if (key === 'putting') {
-        if (gimmeLocked(code)) next.gimme = GIMME_NONE;
-        else if (next.gimme === GIMME_NONE) next.gimme = SIM_SETTINGS.gimme.options[1].code;
-      }
+      const next = lockGimme({ ...prev, [key]: code });
+      if (key === 'putting' && !gimmeLocked(code) && next.gimme === GIMME_NONE) next.gimme = FIRST_GIMME_DISTANCE;
       return next;
     });
   }
