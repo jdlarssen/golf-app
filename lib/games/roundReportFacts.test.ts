@@ -241,6 +241,21 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
     expect(facts.decidedByTiebreak).toBeUndefined();
   });
 
+  it('#2625: a game ranked on points against par pace says so in the score label', () => {
+    // A bare «+3» reads as three over par; in stableford over par is the good side.
+    const paceResult: StablefordResult = {
+      ...result,
+      ranking: 'net_to_par',
+      holes: [tieHole(1, 4, 2)],
+      players: [
+        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, toPar: 2, tiedWith: [] },
+        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, toPar: 0, tiedWith: [] },
+      ],
+    };
+    const facts = buildRoundReportFacts({ result: paceResult, nameByUserId, gameMode: 'stableford', ...BASE });
+    expect(facts.standings.map((s) => s.scoreLabel)).toEqual(['+2 mot par (poeng)', 'E mot par (poeng)']);
+  });
+
   // #2561: the tie is Karl's result too. Without his «ja» the facts may not
   // say that the winner was level with someone.
   it('#2561: omits decidedByTiebreak when the tied runner-up has not said yes', () => {

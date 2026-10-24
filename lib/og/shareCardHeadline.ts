@@ -84,6 +84,7 @@ export function scoreFigure(score: ShareCardScore): string {
     case 'skins':
       return signedCount(score.value, String);
     case 'vsPar':
+    case 'pointsVsPar':
       return score.label; // −2 / E / +3
   }
 }

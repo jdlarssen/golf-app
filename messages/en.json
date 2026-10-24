@@ -2807,6 +2807,7 @@
       "points": "{n, plural, one {# point} other {# points}}",
       "skins": "{n, plural, one {# skin} other {# skins}}",
       "par": "par",
+      "pointsVsPar": "{label} to par",
       "holes": "{n} holes",
       "players": "{n, plural, one {# player} other {# players}}",
       "playerFallback": "Player",
