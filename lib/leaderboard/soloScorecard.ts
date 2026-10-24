@@ -24,6 +24,12 @@ export interface SoloScorecardStanding {
   isLeader: boolean;
   /** Poeng (stableford) eller netto slag (slagspill). */
   total: number;
+  /**
+   * #2625: mot par — poeng mot par-tempo (stableford) eller netto mot par
+   * (slagspill); `null` uten spilte hull. Stillingen leder med det når
+   * `SoloScorecard.ranking` er `'net_to_par'`.
+   */
+  toPar: number | null;
   holesPlayed: number;
   /** Brutto slag, bare for slagspill; `null` i stableford. */
   totalGross: number | null;
@@ -65,6 +71,11 @@ export interface SoloScorecardNine {
 }
 
 export interface SoloScorecard {
+  /**
+   * #2625: regelen stillingen er rangert etter, fra resultatet. Ved
+   * `'net_to_par'` viser stillingen `toPar`, så tallet og rekkefølgen stemmer.
+   */
+  ranking: 'net_to_par' | 'net_total';
   standings: SoloScorecardStanding[];
   /** Hull 1–9. */
   front: SoloScorecardNine;
@@ -179,11 +190,13 @@ export function soloStablefordScorecard(
     return buildHole(hole, cells, teeGenderOf);
   });
   return {
+    ranking: result.ranking,
     standings: players.map((line) => ({
       userId: line.userId,
       rank: line.rank,
       isLeader: line.rank === 1 && line.tiedWith.length === 0,
       total: line.totalPoints,
+      toPar: line.toPar,
       holesPlayed: line.holesPlayed,
       totalGross: null,
     })),
@@ -215,11 +228,13 @@ export function soloStrokeplayScorecard(
     return buildHole(hole, cells, teeGenderOf);
   });
   return {
+    ranking: result.ranking,
     standings: players.map((line) => ({
       userId: line.userId,
       rank: line.rank,
       isLeader: line.rank === 1 && line.tiedWith.length === 0,
       total: line.totalNetStrokes,
+      toPar: line.netToPar,
       holesPlayed: line.holesPlayed,
       totalGross: line.totalGrossStrokes,
     })),

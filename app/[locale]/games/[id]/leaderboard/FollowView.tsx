@@ -14,11 +14,12 @@ import {
   type FollowNext,
   type FollowViewData,
 } from '@/lib/leaderboard/followPlayer';
-import type {
-  LiveBoard as LiveBoardData,
-  LiveBoardRecentHole,
-  LiveBoardRow,
-  LiveBoardUnit,
+import {
+  isPointsUnit,
+  type LiveBoard as LiveBoardData,
+  type LiveBoardRecentHole,
+  type LiveBoardRow,
+  type LiveBoardUnit,
 } from '@/lib/leaderboard/liveBoard';
 import { strokeTerm } from '@/lib/scorecard/scoreRail';
 import { scoreShape } from '@/lib/scoring/scoreShape';
@@ -97,7 +98,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
       : standing.rank === 1 && standing.tied
         ? tf('tiedLead')
         : lead !== null
-          ? unit === 'points'
+          ? isPointsUnit(unit)
             ? tf('leadPoints', { gap: lead })
             : tf('leadStrokes', { gap: lead })
           : behindLeaderText(t, standing, unit, board.rows, displayName);
@@ -169,6 +170,15 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
               >
                 {followTotalLabel(tf, unit, row.total)}
               </span>
+              {/* #2625: points against par pace say so; a bare «+3» would read as points. */}
+              {unit === 'pointsToPar' && row.total !== null && (
+                <span
+                  data-testid="follow-total-unit"
+                  className="text-[11px] font-semibold uppercase tracking-[0.16em] text-on-strong/85"
+                >
+                  {tc('vsParLabel')}
+                </span>
+              )}
             </div>
             {line && <p className="mt-0.5 text-[12px] leading-[normal] text-on-strong/85">{line}</p>}
           </div>
@@ -343,7 +353,7 @@ function RecentHole({
   const tterm = useTranslations('holes.scoreRail.term');
   const term = strokeTerm(hole.gross, hole.par);
   const termText = term === 'over' ? tterm('over', { n: hole.gross - hole.par }) : tterm(term);
-  const inPoints = unit === 'points';
+  const inPoints = isPointsUnit(unit);
   const under = inPoints
     ? tf('holePoints', { points: hole.points ?? 0 })
     : tf('holeNet', { net: hole.net ?? 0 });

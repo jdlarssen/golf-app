@@ -9,8 +9,10 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
 import {
+  type SoloScorecard,
   soloStrokeplayScorecard,
   type SoloScorecardHole,
   type SoloScorecardNine,
@@ -107,7 +109,7 @@ export function SoloStrokeplayHolesView({
         </p>
       </div>
 
-      <TotalsHeader standings={card.standings} playersById={playersById} />
+      <TotalsHeader standings={card.standings} ranking={card.ranking} playersById={playersById} />
 
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
         <NineBlock
@@ -139,9 +141,12 @@ export function SoloStrokeplayHolesView({
  */
 function TotalsHeader({
   standings,
+  ranking,
   playersById,
 }: {
   standings: SoloScorecardStanding[];
+  /** #2625: a game ranked on net to par leads with the number it ranks on. */
+  ranking: SoloScorecard['ranking'];
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
@@ -149,7 +154,9 @@ function TotalsHeader({
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {t('common.stillingen')}
+          {ranking === 'net_to_par'
+            ? `${t('common.stillingen')} · ${t('common.vsParLabel')}`
+            : t('common.stillingen')}
         </p>
         <ul
           data-testid="solo-strokeplay-holes-totals"
@@ -187,7 +194,7 @@ function TotalsHeader({
                       isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
-                    {line.total}
+                    {ranking === 'net_to_par' ? formatVsPar(line.toPar) : line.total}
                   </span>
                 </span>
               </li>

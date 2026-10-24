@@ -32,10 +32,11 @@ function stablefordHole(
 const STABLEFORD: StablefordSoloResult = {
   kind: 'stableford',
   variant: 'solo',
+  ranking: 'net_total',
   players: [
-    { userId: 'ola', totalPoints: 7, rank: 1, holesPlayed: 3, tiedWith: [] },
-    { userId: 'kari', totalPoints: 4, rank: 2, holesPlayed: 2, tiedWith: [] },
-    { userId: 'per', totalPoints: 0, rank: 3, holesPlayed: 0, tiedWith: [] },
+    { userId: 'ola', totalPoints: 7, rank: 1, holesPlayed: 3, toPar: 1, tiedWith: [] },
+    { userId: 'kari', totalPoints: 4, rank: 2, holesPlayed: 2, toPar: 0, tiedWith: [] },
+    { userId: 'per', totalPoints: 0, rank: 3, holesPlayed: 0, toPar: null, tiedWith: [] },
   ],
   holes: [
     stablefordHole(
@@ -91,6 +92,16 @@ describe('soloStablefordScorecard', () => {
       teeOf,
     );
     expect(tied.standings[0]!.isLeader).toBe(false);
+  });
+
+  it('#2625: stillingen bærer regelen og poeng mot par-tempo fra resultatet', () => {
+    expect(card.ranking).toBe('net_total');
+    expect(card.standings.map((s) => [s.userId, s.toPar])).toEqual([
+      ['ola', 1],
+      ['kari', 0],
+      ['per', null],
+    ]);
+    expect(soloStablefordScorecard({ ...STABLEFORD, ranking: 'net_to_par' }, teeOf).ranking).toBe('net_to_par');
   });
 
   it('deler hullene i Ut (1–9) og Inn (10–18)', () => {
@@ -318,6 +329,17 @@ describe('soloStrokeplayScorecard', () => {
       ['kari', 8, 10, true],
       ['ola', 9, 9, false],
     ]);
+  });
+
+  it('#2625: stillingen bærer regelen og netto mot par fra resultatet', () => {
+    expect(card.ranking).toBe('net_total');
+    expect(card.standings.map((s) => [s.userId, s.toPar])).toEqual([
+      ['kari', 0],
+      ['ola', 1],
+    ]);
+    expect(soloStrokeplayScorecard({ ...STROKEPLAY, ranking: 'net_to_par' }, () => 'mens').ranking).toBe(
+      'net_to_par',
+    );
   });
 
   it('radene: lavest netto først, uspilte sist; verdien er netto', () => {

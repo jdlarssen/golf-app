@@ -19,6 +19,7 @@ import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
+import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -300,13 +301,17 @@ export async function renderStableford(opts: {
       const [a, b] = [...result.players].sort(
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
       );
+      // #2625: a game ranked on points against par pace shows that number
+      // («+3», «E»); highest wins either way.
+      const toPar = result.ranking === 'net_to_par';
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
           name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
-          score: pl.totalPoints,
+          score: toPar ? (pl.toPar ?? 0) : pl.totalPoints,
+          ...(toPar ? { scoreLabel: formatVsPar(pl.toPar) } : {}),
           subLabel: th2h('subLabelHolesPlayed', { count: pl.holesPlayed }),
         };
       };
@@ -326,7 +331,7 @@ export async function renderStableford(opts: {
           gameId={gameId}
           gameName={game.name}
           formatLabel={tModes(stablefordMode)}
-          unitLabel={tc('poengLabel')}
+          unitLabel={toPar ? tc('vsParLabel') : tc('poengLabel')}
           sideA={sideFor(a)}
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}

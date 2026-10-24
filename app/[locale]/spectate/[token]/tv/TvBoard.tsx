@@ -9,6 +9,7 @@ import { boardShowsRank, isBoardLeader, totalLabel } from '@/lib/leaderboard/boa
 import {
   boardDisplayName,
   boardRowSr,
+  columnHeading,
   placeLabel,
 } from '@/app/[locale]/games/[id]/leaderboard/boardText';
 
@@ -61,7 +62,7 @@ export function TvBoard({ board }: { board: LiveBoard }) {
           <span>{t('colPlayer')}</span>
           <span>{t('legendRecent')}</span>
           <span className="text-right">{t('colHoles')}</span>
-          <span className="text-right">{unit === 'points' ? t('colPoints') : t('colNet')}</span>
+          <span className="text-right">{columnHeading(t, unit)}</span>
         </div>
         <ol data-testid="tv-board">
           {tvPageRows(rows, page).map((row) => (
