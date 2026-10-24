@@ -992,6 +992,12 @@ describe('nassau.compute — ranking: net_to_par (#2625)', () => {
     // The hole rows agree with the sections: with the flag L wins holes 1–3
     // against her own par (4 on her par 5), and the rest are shared.
     expect(flagged.holes.slice(0, 4).map((h) => h.bestUserIds)).toEqual([['L'], ['L'], ['L'], ['M', 'L']]);
+    // Each cell carries the player's own par, so a hole card can order its
+    // rows on the same measure.
+    expect(flagged.holes[0].perPlayer.map((c) => [c.userId, c.par])).toEqual([
+      ['M', 4],
+      ['L', 5],
+    ]);
 
     const plain = compute(makeCtx({ ...opts, modeConfigOverride: PLAIN }));
     // Without the flag a hole is won on the lowest effective strokes, as before.

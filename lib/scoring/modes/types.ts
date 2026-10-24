@@ -1045,6 +1045,11 @@ export interface StablefordSoloHolePlayerCell {
   points: number;
   /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #734. */
   par: number;
+  /**
+   * #2625: the hole's points against par pace (points − what a net par gives
+   * in the table: 2, or 0 in modified); `null` when the hole is not played.
+   */
+  toPar: number | null;
 }
 
 /**
@@ -1368,6 +1373,10 @@ export interface SoloStrokeplayHolePlayerCell {
  * «Hull for hull»-flaten (SoloStrokeplayHolesView) og head-to-head-momentum-
  * strippen. `bestUserIds` = spillerne med lavest netto blant de som spilte
  * hullet (tom hvis ingen; lengde > 1 ved delt).
+ *
+ * #2625: in a game ranked on net to par (`SoloStrokeplayResult.ranking`) the
+ * lowest is net − the player's own par (`perPlayer[].par`), the measure the
+ * game ranks on, so mixed tees do not share a hole the ranking gives to one.
  */
 export interface SoloStrokeplayHoleRow {
   holeNumber: number;
@@ -1956,6 +1965,11 @@ export interface NassauHolePlayerCell {
   userId: string;
   gross: number | null;
   effective: number | null;
+  /**
+   * #2625: the player's own par on the hole (`parFor(hole, teeGender)`). A
+   * game ranked on net to par wins the hole on `effective − par`.
+   */
+  par: number;
 }
 
 /**
@@ -1964,6 +1978,10 @@ export interface NassauHolePlayerCell {
  * `section` er hull-tilhørigheten (front 9 / back 9); total18 er unionen, ikke
  * en egen hull-seksjon. `bestUserIds` = spillerne med lavest effective blant de
  * som spilte hullet (tom hvis ingen spilte; lengde > 1 ved delt).
+ *
+ * #2625: in a game ranked on net to par (`NassauResult.ranking`) the lowest is
+ * effective − the player's own par (`perPlayer[].par`), the measure the
+ * sections rank on.
  */
 export interface NassauHoleRow {
   holeNumber: number;

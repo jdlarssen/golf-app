@@ -68,8 +68,8 @@ function hole(
     strokeIndex: holeNumber,
     section,
     perPlayer: [
-      { userId: 'u1', gross: u1, effective: u1 },
-      { userId: 'u2', gross: u2, effective: u2 },
+      { userId: 'u1', gross: u1, effective: u1, par: 4 },
+      { userId: 'u2', gross: u2, effective: u2, par: 4 },
     ],
     bestUserIds,
   };

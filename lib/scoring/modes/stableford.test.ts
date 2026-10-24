@@ -975,6 +975,16 @@ const deltaCard = (userId: string, from: number, deltas: number[]): ScoringHoleS
   deltas.map((d, i) => ({ userId, holeNumber: from + i, gross: PARS[from + i - 1] + d }));
 
 describe('stableford solo — ranking: net_to_par (#2625)', () => {
+  it('each hole cell carries its points against par pace, null when not played', () => {
+    const result = asSolo(compute(ctxWith(flagged(PLAIN_SOLO), pointsExample)));
+    const cellsOf = (userId: string) =>
+      result.holes.slice(0, 4).map((h) => h.perPlayer.find((c) => c.userId === userId)!.toPar);
+    // A: eagle, eagle, birdie on par 4s (4, 4, 3 points), then not played.
+    expect(cellsOf('A')).toEqual([2, 2, 1, null]);
+    // B: birdie, then pars.
+    expect(cellsOf('B')).toEqual([1, 0, 0, 0]);
+  });
+
   it('the issue shape: A (+5 after 3) ranks ahead of B (+1 after 6) with the flag', () => {
     const result = asSolo(compute(ctxWith(flagged(PLAIN_SOLO), pointsExample)));
     expect(result.players.map((p) => [p.userId, p.rank, p.toPar, p.totalPoints])).toEqual([
@@ -1258,6 +1268,12 @@ describe('modified stableford — ranking: net_to_par (#2625)', () => {
       ['B', 2, null, 0],
     ]);
     expect(withFlag.ranking).toBe('net_to_par');
+    // A net par is worth 0 here, so a cell's to par is its points.
+    expect(withFlag.holes.slice(0, 3).map((h) => h.perPlayer.find((c) => c.userId === 'A')!.toPar)).toEqual([
+      -1,
+      -3,
+      null,
+    ]);
 
     const plain = asSolo(computeModified(ctxWith(PLAIN_MOD_SOLO, opts)));
     expect(plain.players.map((p) => [p.userId, p.rank])).toEqual([

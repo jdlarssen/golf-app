@@ -169,8 +169,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       par: 4,
       strokeIndex: holeNumber,
       perPlayer: [
-        { userId: 'u1', gross: 4, points: u1Points, par: 4 },
-        { userId: 'u2', gross: 4, points: u2Points, par: 4 },
+        { userId: 'u1', gross: 4, points: u1Points, par: 4, toPar: u1Points - 2 },
+        { userId: 'u2', gross: 4, points: u2Points, par: 4, toPar: u2Points - 2 },
       ],
       bestUserIds: best,
     };
