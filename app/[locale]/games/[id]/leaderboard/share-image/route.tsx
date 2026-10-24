@@ -9,7 +9,6 @@ import {
   buildShareCardData,
   type ShareCardModel,
   type ShareCardRow,
-  type ShareCardScore,
 } from '@/lib/games/buildShareCardData';
 import { formatPublicName } from '@/lib/names/formatPublicName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
@@ -29,7 +28,7 @@ import {
 import {
   headlineSpec,
   scoreFigure,
-  signedCount,
+  resultWords,
   type HeadlineSpec,
 } from '@/lib/og/shareCardHeadline';
 import { OgWordmark } from '@/lib/og/wordmark';
@@ -52,20 +51,6 @@ type ShareT = Awaited<ReturnType<typeof getTranslations>>;
 const ON_STRONG_MUTED = 'rgba(236,229,210,0.8)';
 const ON_STRONG_META = 'rgba(236,229,210,0.85)';
 
-/** The result as the headline words it: «38 poeng», «6 skins», «−4», «par», #2625 «+3 mot par». */
-function resultText(score: ShareCardScore, t: ShareT): { text: string; at: boolean } {
-  switch (score.kind) {
-    case 'points':
-      return { text: signedCount(score.value, (n) => t('points', { n })), at: false };
-    case 'skins':
-      return { text: t('skins', { n: score.value }), at: false };
-    case 'vsPar':
-      return { text: score.label === 'E' ? t('par') : score.label, at: true };
-    case 'pointsVsPar':
-      // «+» is the good side in points, so a bare «+3» would read as three over.
-      return { text: score.label === 'E' ? t('par') : t('pointsVsPar', { label: score.label }), at: true };
-  }
-}
 
 /**
  * The headline as rich text. `gold` wraps the result; the same call with a
@@ -90,7 +75,7 @@ function headlineNode(
     case 'won':
     case 'shared':
     case 'sharedMany': {
-      const { text, at } = resultText(spec.result, t);
+      const { text, at } = resultWords(spec.result, (key, values) => t(key, values));
       const names = spec.kind === 'sharedMany' ? '' : list.format(spec.names);
       const base = spec.kind === 'won' ? 'headlineWon' : spec.kind === 'shared' ? 'headlineShared' : 'headlineSharedMany';
       return t.rich(at ? `${base}At` : base, { names, result: text, gold });
