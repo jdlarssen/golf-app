@@ -18,6 +18,7 @@ import {
   roundOverrideFrom,
   simSettingGroups,
   simSettingField,
+  formSimSettings,
 } from './simSettings';
 
 /** A form with every setting filled in: the defaults, then `over`. */
@@ -248,5 +249,26 @@ describe('one home for the rules (AGENTS.md trap 4)', () => {
     // jsonb::text prints `{"k": "v", ...}`: JSON.stringify plus a space per colon and comma.
     const n = SIM_SETTING_KEYS.length;
     expect(JSON.stringify(longest).length + n + (n - 1)).toBeLessThanOrEqual(MAX_SIM_SETTINGS_JSON);
+  });
+});
+
+describe('formSimSettings (what a form starts from)', () => {
+  it('missing keys come from Trackman’s defaults', () => {
+    expect(formSimSettings({ wind: 'BREEZY' })).toEqual({ ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' });
+  });
+
+  it('keeps the gimme coupling: Manual with no distance gets the first distance', () => {
+    expect(formSimSettings({ putting: 'MANUAL' })).toMatchObject({ putting: 'MANUAL', gimme: 'FT4' });
+  });
+
+  it('a locking putting shows Not applicable whatever was stored', () => {
+    expect(formSimSettings({ putting: 'AUTO_FIXED', gimme: 'FT8' })).toMatchObject({
+      putting: 'AUTO_FIXED',
+      gimme: 'NOT_APPLICABLE',
+    });
+  });
+
+  it('nothing stored gives the defaults', () => {
+    expect(formSimSettings(null)).toEqual(SIM_SETTING_DEFAULTS);
   });
 });

@@ -24,6 +24,8 @@ import { LigaEmbedControl } from './LigaEmbedControl';
 import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
 import { LigaStatusActions } from './LigaStatusActions';
+import { LigaSimDefaults } from './LigaSimDefaults';
+import { formSimSettings } from '@/lib/league/simSettings';
 
 /**
  * Shared league-management surface, rendered by two routes (#485):
@@ -80,6 +82,12 @@ function removeLink({
       {t('removePlayer.removeButton')}
     </LinkButton>
   );
+}
+
+/** #2638: the simulator league's default round settings (artboard 8a); nothing otherwise. */
+function SimDefaultsSection({ league }: { league: { id: string; is_simulator: boolean; sim_settings: unknown } }) {
+  if (!league.is_simulator) return null;
+  return <LigaSimDefaults leagueId={league.id} initial={formSimSettings(league.sim_settings)} />;
 }
 
 /**
@@ -304,6 +312,9 @@ export async function LigaManagement({
         </section>
       )}
 
+      {/* #2638: rundeinnstillingene i en simulatorliga (artboard 8a) */}
+      <SimDefaultsSection league={league} />
+
       {/* Runder */}
       <section className="mb-5">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
@@ -324,6 +335,7 @@ export async function LigaManagement({
                   leagueId={leagueId}
                   courseScope={league.course_scope}
                   courses={courses}
+                  isSimulator={league.is_simulator}
                 />
               </li>
             ))}

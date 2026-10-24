@@ -20,6 +20,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
+import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import type { LeagueFormat } from '@/lib/league/types';
@@ -155,6 +156,9 @@ export default async function LigaPublicPage({
     you: t('playedBy.you'),
     unknownPlayer: t('playedBy.unknownPlayer'),
   };
+  // #2638: the round whose window is open now (the earliest, if several).
+  const openRound = rounds.find((r) => windowStatus(r.opensAt, r.closesAt) === 'open') ?? null;
+
   const participantNames = participants.map((p) => ({
     userId: p.userId,
     name: p.nickname?.trim() || p.name?.trim() || null,
@@ -223,6 +227,13 @@ export default async function LigaPublicPage({
               </SubmitButton>
             </form>
           </Card>
+        </section>
+      )}
+
+      {/* #2638: the open round's settings in a simulator league (artboard 7a) */}
+      {league.is_simulator && openRound && (
+        <section className="mb-8">
+          <RoundSimSettingsCard round={openRound} locale={locale} />
         </section>
       )}
 

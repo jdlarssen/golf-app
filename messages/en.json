@@ -4852,6 +4852,13 @@
       "roundCount": "{count, plural, one {# round} other {# rounds}}",
       "createLeagueButton": "Create league"
     },
+    "simSettings": {
+      "heading": "Round settings · {round}",
+      "formHeading": "Round settings",
+      "overridden": "Changed this round",
+      "tee": "Tee",
+      "gimmeLocked": "Locked by the putting choice"
+    },
     "create": {
       "kicker": "Clubhouse",
       "brassRibbon": "New league",
@@ -5005,6 +5012,16 @@
         "both": "Net and gross"
       },
       "lockedAfterStart": "Locked after the start",
+      "simSettingsHeading": "Round settings",
+      "simSettingsHelp": "The change applies to rounds nobody has started.",
+      "simSettingsSave": "Save",
+      "simSettingsSaving": "Saving …",
+      "simSettingsErrors": {
+        "sim_settings": "Pick the settings from the lists.",
+        "not_simulator": "The league is not a simulator league.",
+        "not_found": "League not found.",
+        "update_failed": "Could not save. Try again."
+      },
       "infoRounds": "Rounds",
       "infoParticipants": "Participants",
       "standingsLink": "View season standings →",
@@ -5088,7 +5105,18 @@
       "saveButton": "Save",
       "extendWindowLabel": "Extend play window",
       "newDeadlineLabel": "New deadline (closes)",
-      "saveDeadlineButton": "Save new deadline"
+      "saveDeadlineButton": "Save new deadline",
+      "adjustSettings": "Adjust for this round",
+      "resetToDefault": "Back to the default",
+      "overriddenLine": "Changed this round: {settings}",
+      "lockedStarted": "Locked: the round has started",
+      "settingsErrors": {
+        "round_settings_locked": "Locked: the round has started.",
+        "sim_settings": "Pick the settings from the lists.",
+        "not_simulator": "The league is not a simulator league.",
+        "not_found": "Round not found.",
+        "update_failed": "Could not save. Try again."
+      }
     },
     "statusActions": {
       "startError": "Could not start the league.",

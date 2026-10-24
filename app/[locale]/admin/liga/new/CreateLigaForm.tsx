@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
 import { SIMULATOR_DEFAULTS, defaultBestN } from '@/lib/league/simulatorDefaults';
+import { SIM_SETTING_DEFAULTS } from '@/lib/league/simSettings';
+import { SimSettingsFields } from '@/components/league/SimSettingsFields';
 import { shortMonthLocale } from '@/lib/i18n/format';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { osloParts } from '@/lib/format/teeOff';
@@ -64,6 +66,7 @@ export function CreateLigaForm({
 }: Props) {
   const isClubLeague = Boolean(groupId);
   const t = useTranslations('liga.create');
+  const tSim = useTranslations('liga.simSettings');
   const locale = useLocale() as AppLocale;
 
   const [state, formAction, isPending] = useActionState(
@@ -274,6 +277,20 @@ export function CreateLigaForm({
               </span>
             </span>
           </label>
+
+          {/* #2638: the league's default round settings, Trackman's choices.
+              Mounted only for a simulator league: only then are they posted. */}
+          {isSimulator && (
+            <div data-testid="liga-create-sim-settings">
+              <p className="font-sans text-[12px] font-medium text-text mb-2">{tSim('formHeading')}</p>
+              <SimSettingsFields
+                initial={SIM_SETTING_DEFAULTS}
+                idPrefix="liga-create-sim"
+                locale={locale}
+                gimmeLockedNote={tSim('gimmeLocked')}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
