@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { connectByFriendCode } from '@/lib/friends/friendActionsCore';
+import { friendLinkPath } from '@/lib/friends/friendLinkPath';
 
 /**
  * connectFriend — «legg til meg»-lenkens server-action. Den innloggede som
@@ -24,12 +25,12 @@ export async function connectFriend(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect({ href: `/login?next=/venner/legg-til/${code}`, locale });
+    redirect({ href: `/login?next=${friendLinkPath(code)}`, locale });
   }
 
   const status = await connectByFriendCode(supabase, user.id, code);
   if (status === 'error') {
-    redirect({ href: `/venner/legg-til/${code}?error=1`, locale });
+    redirect({ href: `${friendLinkPath(code)}?error=1`, locale });
   }
 
   redirect({
