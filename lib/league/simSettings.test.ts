@@ -3,117 +3,144 @@ import fs from 'fs';
 import path from 'path';
 import {
   SIM_SETTING_KEYS,
-  MAX_SIM_SETTING_VALUE,
-  MAX_SIM_SETTING_OTHER,
+  SIM_SETTINGS,
+  SIM_SETTING_GROUPS,
+  SIM_SETTING_DEFAULTS,
+  GIMME_LOCKING_PUTTING,
   MAX_SIM_SETTINGS_JSON,
-  maxLengthFor,
+  gimmeLocked,
+  optionLabel,
   parseSimSettings,
   normalizeSimSettings,
+  validSimSettings,
   effectiveSimSettings,
   frozenRoundSettings,
   roundOverrideFrom,
-  simSettingEntries,
+  simSettingGroups,
+  simSettingField,
 } from './simSettings';
 
-function form(values: Record<string, string>): FormData {
+/** A form with every setting filled in: the defaults, then `over`. */
+function form(over: Record<string, string | null> = {}): FormData {
   const fd = new FormData();
-  for (const [k, v] of Object.entries(values)) fd.set(k, v);
+  for (const key of SIM_SETTING_KEYS) {
+    const value = key in over ? over[key] : SIM_SETTING_DEFAULTS[key];
+    if (value !== null && value !== undefined) fd.set(simSettingField(key), value);
+  }
   return fd;
 }
 
-/**
- * Length of `jsonb::text` for a flat object of strings: Postgres prints
- * `{"k": "v", "k2": "v2"}`, one space after each colon and comma, which
- * JSON.stringify leaves out.
- */
-function pgJsonbTextLength(obj: Record<string, string>): number {
-  const entries = Object.keys(obj).length;
-  return JSON.stringify(obj).length + entries + Math.max(0, entries - 1);
-}
-
-describe('parseSimSettings', () => {
-  it('reads the sim_<key> fields, trims them and leaves empty ones out', () => {
-    const result = parseSimSettings(
-      form({ sim_greenSpeed: '  Stimp 10 ', sim_wind: '', sim_other: 'Fairway: normal' }),
-    );
-    expect(result).toEqual({ ok: true, settings: { greenSpeed: 'Stimp 10', other: 'Fairway: normal' } });
+describe('the list follows Trackman (contract addendum 24.10)', () => {
+  it('eight settings in Trackman’s order: Game, then Course', () => {
+    expect(SIM_SETTING_GROUPS.map((g) => [g.label, g.keys])).toEqual([
+      ['Game', ['pins', 'putting', 'gimme', 'mulligans']],
+      ['Course', ['wind', 'fairway_firmness', 'green_firmness', 'green_stimp']],
+    ]);
+    expect(SIM_SETTING_KEYS).toEqual(SIM_SETTING_GROUPS.flatMap((g) => g.keys));
   });
 
-  it('gives an empty object when no field is filled in', () => {
-    expect(parseSimSettings(form({}))).toEqual({ ok: true, settings: {} });
-  });
-
-  it('accepts a value at the limit and refuses one character more', () => {
-    const atLimit = 'x'.repeat(MAX_SIM_SETTING_VALUE);
-    expect(parseSimSettings(form({ sim_wind: atLimit }))).toEqual({
-      ok: true,
-      settings: { wind: atLimit },
-    });
-    expect(parseSimSettings(form({ sim_wind: `${atLimit}x` }))).toEqual({
-      ok: false,
-      error: 'sim_settings_too_long',
+  it('the defaults are Golf Portal’s', () => {
+    expect(SIM_SETTING_DEFAULTS).toEqual({
+      pins: 'MEDIUM',
+      putting: 'AUTO_TOUR_PRO',
+      gimme: 'NOT_APPLICABLE',
+      mulligans: 'NO',
+      wind: 'CALM',
+      fairway_firmness: 'MEDIUM',
+      green_firmness: 'MEDIUM',
+      green_stimp: '9',
     });
   });
 
-  it('gives «Annet» the longer limit', () => {
-    const atLimit = 'x'.repeat(MAX_SIM_SETTING_OTHER);
-    expect(parseSimSettings(form({ sim_other: atLimit }))).toEqual({
-      ok: true,
-      settings: { other: atLimit },
-    });
-    expect(parseSimSettings(form({ sim_other: `${atLimit}x` }))).toEqual({
-      ok: false,
-      error: 'sim_settings_too_long',
-    });
+  it('every default is one of its options, and the defaults pass the coupling rule', () => {
+    for (const key of SIM_SETTING_KEYS) {
+      expect(SIM_SETTINGS[key].options.map((o) => o.code)).toContain(SIM_SETTING_DEFAULTS[key]);
+    }
+    expect(validSimSettings(SIM_SETTING_DEFAULTS)).toBe(true);
   });
 
-  it('strips control characters', () => {
-    expect(parseSimSettings(form({ sim_putting: 'Gimme\u0000 innenfor\u0007 2 fot' }))).toEqual({
-      ok: true,
-      settings: { putting: 'Gimme innenfor 2 fot' },
-    });
-  });
-
-  it('ignores fields that are not setting keys', () => {
-    expect(parseSimSettings(form({ sim_hacked: 'x', greenSpeed: 'Stimp 1' }))).toEqual({
-      ok: true,
-      settings: {},
-    });
+  it('shows Trackman’s own words', () => {
+    expect([
+      optionLabel('putting', 'AUTO_TOUR_PRO'),
+      optionLabel('gimme', 'FT4'),
+      optionLabel('wind', 'STRONG_BREEZE'),
+      optionLabel('green_stimp', '10'),
+      optionLabel('green_stimp', '13'),
+    ]).toEqual(['Auto - Tour Pro', '1,2 m (4 ft)', 'Strong Breeze', '10 (3 m)', '13 (4,0 m)']);
   });
 });
 
-describe('normalizeSimSettings', () => {
-  it.each([null, undefined, 'Stimp 10', 7, ['Stimp 10'], true])(
-    'gives {} for a value that is not an object (%s)',
-    (input) => {
-      expect(normalizeSimSettings(input)).toEqual({});
-    },
-  );
-
-  it('drops unknown keys, non-string values and empty strings', () => {
-    expect(
-      normalizeSimSettings({ greenSpeed: 'Stimp 10', wind: '', mulligans: 2, hacked: 'x', pins: '  ' }),
-    ).toEqual({ greenSpeed: 'Stimp 10' });
+describe('the gimme coupling (one rule: here and in 0213)', () => {
+  it.each(['AUTO_TOUR_PRO', 'AUTO_BY_HCP', 'AUTO_FIXED'])('%s locks gimme to Not applicable', (putting) => {
+    expect(gimmeLocked(putting)).toBe(true);
+    expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'NOT_APPLICABLE' })).toBe(true);
+    expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'FT4' })).toBe(false);
   });
 
-  it('clips an over-long value to its limit (a hand-written row cannot stretch the page)', () => {
-    const out = normalizeSimSettings({ wind: 'x'.repeat(500), other: 'y'.repeat(500) });
-    expect(out.wind).toHaveLength(MAX_SIM_SETTING_VALUE);
-    expect(out.other).toHaveLength(MAX_SIM_SETTING_OTHER);
+  it.each(['AUTO_TWO_PUTT', 'MANUAL', 'MANUAL_AIMED', 'MANUAL_INPUT'])('%s needs a distance', (putting) => {
+    expect(gimmeLocked(putting)).toBe(false);
+    expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'FT8' })).toBe(true);
+    expect(validSimSettings({ ...SIM_SETTING_DEFAULTS, putting, gimme: 'NOT_APPLICABLE' })).toBe(false);
+  });
+
+  it('a round override with putting alone (gimme inherited) is valid on its own', () => {
+    expect(validSimSettings({ putting: 'AUTO_FIXED' })).toBe(true);
+  });
+});
+
+describe('parseSimSettings (the form)', () => {
+  it('reads all eight settings', () => {
+    expect(parseSimSettings(form())).toEqual({ ok: true, settings: SIM_SETTING_DEFAULTS });
+  });
+
+  it('a locking putting sets gimme to Not applicable (the disabled select posts nothing)', () => {
+    expect(parseSimSettings(form({ putting: 'AUTO_BY_HCP', gimme: null }))).toEqual({
+      ok: true,
+      settings: { ...SIM_SETTING_DEFAULTS, putting: 'AUTO_BY_HCP', gimme: 'NOT_APPLICABLE' },
+    });
+  });
+
+  it('Manual with a distance', () => {
+    expect(parseSimSettings(form({ putting: 'MANUAL', gimme: 'FT12' }))).toEqual({
+      ok: true,
+      settings: { ...SIM_SETTING_DEFAULTS, putting: 'MANUAL', gimme: 'FT12' },
+    });
+  });
+
+  it.each([
+    ['an unknown option', { wind: 'HURRICANE' }],
+    ['a missing setting', { pins: null }],
+    ['Manual without a distance', { putting: 'MANUAL', gimme: 'NOT_APPLICABLE' }],
+    ['Manual with no gimme posted', { putting: 'MANUAL', gimme: null }],
+    ['free text', { green_stimp: 'Stimp 10' }],
+  ])('refuses %s', (_name, over) => {
+    expect(parseSimSettings(form(over))).toEqual({ ok: false, error: 'sim_settings_invalid' });
+  });
+});
+
+describe('normalizeSimSettings (reading a stored value)', () => {
+  it.each([null, undefined, 'CALM', 7, ['CALM'], true])('gives {} for a value that is not an object (%s)', (input) => {
+    expect(normalizeSimSettings(input)).toEqual({});
+  });
+
+  it('drops unknown keys, unknown codes and non-strings', () => {
+    expect(
+      normalizeSimSettings({ wind: 'BREEZY', pins: 'IMPOSSIBLE', hacked: 'x', green_stimp: 10, tees: 'Gul' }),
+    ).toEqual({ wind: 'BREEZY' });
   });
 });
 
 describe('effectiveSimSettings', () => {
-  const league = { greenSpeed: 'Stimp 10', wind: 'Rolig', tees: 'Gul' };
+  const league = { ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' };
 
   it('no override: the league default, nothing marked', () => {
     expect(effectiveSimSettings(league, null)).toEqual({ values: league, overriddenKeys: [] });
   });
 
-  it('partial override: the round value wins for its key, the rest comes from the default', () => {
-    expect(effectiveSimSettings(league, { greenSpeed: 'Stimp 12' })).toEqual({
-      values: { greenSpeed: 'Stimp 12', wind: 'Rolig', tees: 'Gul' },
-      overriddenKeys: ['greenSpeed'],
+  it('partial override: the round wins for its key, the rest comes from the default', () => {
+    expect(effectiveSimSettings(league, { green_stimp: '11' })).toEqual({
+      values: { ...league, green_stimp: '11' },
+      overriddenKeys: ['green_stimp'],
     });
   });
 
@@ -121,23 +148,17 @@ describe('effectiveSimSettings', () => {
     expect(effectiveSimSettings(league, { ...league })).toEqual({ values: league, overriddenKeys: [] });
   });
 
-  it('full override: every differing key is marked, in the fixed key order', () => {
-    const round = { tees: 'Rød', greenSpeed: 'Stimp 12', wind: 'Sterk' };
-    expect(effectiveSimSettings(league, round)).toEqual({
-      values: round,
-      overriddenKeys: ['greenSpeed', 'wind', 'tees'],
-    });
+  it('full override: every differing key is marked, in Trackman’s order', () => {
+    const round = { ...league, green_stimp: '12', pins: 'HARD', wind: 'GUSTY' };
+    expect(effectiveSimSettings(league, round).overriddenKeys).toEqual(['pins', 'wind', 'green_stimp']);
   });
 
-  it('a round key the default does not have counts as overridden', () => {
-    expect(effectiveSimSettings(league, { mulligans: 'En per ni' })).toEqual({
-      values: { ...league, mulligans: 'En per ni' },
-      overriddenKeys: ['mulligans'],
+  it('a frozen round shows only what was frozen', () => {
+    const frozen = { pins: 'MEDIUM', wind: 'CALM' };
+    expect(effectiveSimSettings(league, frozen, true)).toEqual({
+      values: frozen,
+      overriddenKeys: ['wind'],
     });
-  });
-
-  it('an empty string in the round is not an override: the default stays', () => {
-    expect(effectiveSimSettings(league, { wind: '' })).toEqual({ values: league, overriddenKeys: [] });
   });
 
   it('no default and no override: empty', () => {
@@ -146,21 +167,18 @@ describe('effectiveSimSettings', () => {
 });
 
 describe('frozenRoundSettings (what the start core writes at the first start)', () => {
-  const league = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
+  const league = { ...SIM_SETTING_DEFAULTS };
 
   it('a round with no override gets the full effective values', () => {
     expect(frozenRoundSettings(league, null)).toEqual(league);
   });
 
   it('a partial override is completed from the default', () => {
-    expect(frozenRoundSettings(league, { greenSpeed: 'Stimp 12' })).toEqual({
-      greenSpeed: 'Stimp 12',
-      wind: 'Rolig',
-    });
+    expect(frozenRoundSettings(league, { green_stimp: '11' })).toEqual({ ...league, green_stimp: '11' });
   });
 
-  it('a round that already holds every effective value needs no write', () => {
-    expect(frozenRoundSettings(league, { greenSpeed: 'Stimp 12', wind: 'Rolig' })).toBeNull();
+  it('a round that already holds exactly the effective values needs no write', () => {
+    expect(frozenRoundSettings(league, { ...league })).toBeNull();
   });
 
   it('a league with no settings still freezes the round, as an empty object', () => {
@@ -169,56 +187,66 @@ describe('frozenRoundSettings (what the start core writes at the first start)', 
   });
 });
 
-describe('effectiveSimSettings on a frozen round', () => {
-  it('shows only what was frozen: a key the default gained later does not leak in', () => {
-    const laterDefault = { greenSpeed: 'Stimp 11', wind: 'Rolig', mulligans: 'Ingen' };
-    const frozen = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
-    expect(effectiveSimSettings(laterDefault, frozen, true)).toEqual({
-      values: frozen,
-      overriddenKeys: ['greenSpeed'],
-    });
-  });
-});
-
 describe('roundOverrideFrom (the admin form keeps only what differs)', () => {
-  const league = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
+  const league = { ...SIM_SETTING_DEFAULTS };
 
   it('keeps the values that differ from the default', () => {
-    expect(roundOverrideFrom({ greenSpeed: 'Stimp 12', wind: 'Rolig' }, league)).toEqual({
-      greenSpeed: 'Stimp 12',
-    });
+    expect(roundOverrideFrom({ ...league, green_stimp: '11' }, league)).toEqual({ green_stimp: '11' });
   });
 
   it('gives null when nothing differs (the round follows the default)', () => {
     expect(roundOverrideFrom({ ...league }, league)).toBeNull();
-    expect(roundOverrideFrom({}, league)).toBeNull();
   });
 });
 
-describe('simSettingEntries', () => {
-  it('lists the set values in the fixed key order with their labels', () => {
-    expect(simSettingEntries({ other: 'Fairway: normal', greenSpeed: 'Stimp 10' })).toEqual([
-      { key: 'greenSpeed', label: 'Greenhastighet', value: 'Stimp 10' },
-      { key: 'other', label: 'Annet', value: 'Fairway: normal' },
+describe('simSettingGroups (the card)', () => {
+  it('the two groups with names, Trackman’s words and the override mark; empty groups left out', () => {
+    expect(
+      simSettingGroups({ wind: 'BREEZY', green_stimp: '11', mulligans: 'NO' }, ['green_stimp'], 'no'),
+    ).toEqual([
+      { key: 'game', label: 'Game', rows: [{ key: 'mulligans', label: 'Mulligans', value: 'No', overridden: false }] },
+      {
+        key: 'course',
+        label: 'Course',
+        rows: [
+          { key: 'wind', label: 'Vind', value: 'Breezy', overridden: false },
+          { key: 'green_stimp', label: 'Greenhastighet', value: '11 (3,4 m)', overridden: true },
+        ],
+      },
     ]);
+  });
+
+  it('English names on the English site', () => {
+    expect(simSettingGroups({ green_stimp: '9' }, [], 'en')[0].rows[0].label).toBe('Green stimp');
   });
 });
 
 describe('one home for the rules (AGENTS.md trap 4)', () => {
-  it('the DB CHECK bound in 0212 is MAX_SIM_SETTINGS_JSON', () => {
-    const sql = fs.readFileSync(
-      path.resolve(__dirname, '../../supabase/migrations/0212_league_simulator.sql'),
-      'utf-8',
-    );
-    const bounds = [...sql.matchAll(/length\(sim_settings::text\)\s*<=\s*(\d+)/g)].map((m) => Number(m[1]));
-    expect(bounds).toEqual([MAX_SIM_SETTINGS_JSON, MAX_SIM_SETTINGS_JSON]);
+  const sql = () =>
+    fs.readFileSync(path.resolve(__dirname, '../../supabase/migrations/0213_league_sim_settings_options.sql'), 'utf-8');
+
+  it('the SQL option list in 0213 is the TS list, pair for pair', () => {
+    const pairs = [...sql().matchAll(/\('([a-z_]+)',\s*'([A-Z0-9_]+)'\)/g)].map((m) => `${m[1]}=${m[2]}`);
+    const ts = SIM_SETTING_KEYS.flatMap((key) => SIM_SETTINGS[key].options.map((o) => `${key}=${o.code}`));
+    expect(pairs.sort()).toEqual([...ts].sort());
   });
 
-  it('the largest object the validator accepts fits the CHECK, even all quotes', () => {
-    const worst: Record<string, string> = {};
-    for (const key of SIM_SETTING_KEYS) worst[key] = '"'.repeat(maxLengthFor(key));
-    const parsed = parseSimSettings(form(Object.fromEntries(SIM_SETTING_KEYS.map((k) => [`sim_${k}`, worst[k]]))));
-    expect(parsed.ok).toBe(true);
-    expect(pgJsonbTextLength(worst)).toBeLessThanOrEqual(MAX_SIM_SETTINGS_JSON);
+  it('the putting values that lock gimme are the same in 0213', () => {
+    const m = sql().match(/putting_locks_gimme[\s\S]*?array\[([^\]]+)\]/);
+    expect(m, 'the locking list in 0213').toBeTruthy();
+    const inSql = [...m![1].matchAll(/'([A-Z_]+)'/g)].map((x) => x[1]).sort();
+    expect(inSql).toEqual([...GIMME_LOCKING_PUTTING].sort());
+  });
+
+  it('the largest object the validator accepts fits 0212’s length CHECK', () => {
+    const longest = Object.fromEntries(
+      SIM_SETTING_KEYS.map((key) => [
+        key,
+        SIM_SETTINGS[key].options.reduce((a, o) => (o.code.length > a.length ? o.code : a), ''),
+      ]),
+    );
+    // jsonb::text prints `{"k": "v", ...}`: JSON.stringify plus a space per colon and comma.
+    const n = SIM_SETTING_KEYS.length;
+    expect(JSON.stringify(longest).length + n + (n - 1)).toBeLessThanOrEqual(MAX_SIM_SETTINGS_JSON);
   });
 });

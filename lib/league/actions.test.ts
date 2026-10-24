@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock, makeRedirectMock, RedirectError } from '@/tests/serverActionMocks';
+import { SIM_SETTING_DEFAULTS, SIM_SETTING_KEYS, simSettingField } from './simSettings';
 
 /**
  * Regression test for #647 Bug 1 + Bug 2: startLeagueRoundFlight could never
@@ -362,16 +363,17 @@ describe('createLeagueDraft — scoring is net or gross (#2638)', () => {
   it('a simulator league stores the switch and the default settings', async () => {
     const fd = baseForm('net');
     fd.set('is_simulator', 'true');
-    fd.set('sim_greenSpeed', 'Stimp 10');
+    for (const key of SIM_SETTING_KEYS) fd.set(simSettingField(key), SIM_SETTING_DEFAULTS[key]);
+    fd.set(simSettingField('wind'), 'BREEZY');
     expect(await insertedFor(fd)).toMatchObject({
       is_simulator: true,
-      sim_settings: { greenSpeed: 'Stimp 10' },
+      sim_settings: { ...SIM_SETTING_DEFAULTS, wind: 'BREEZY' },
     });
   });
 
   it('a regular league stores no settings, even when the post carries some', async () => {
     const fd = baseForm('net');
-    fd.set('sim_greenSpeed', 'Stimp 10');
+    fd.set(simSettingField('green_stimp'), '10');
     expect(await insertedFor(fd)).toMatchObject({ is_simulator: false, sim_settings: null });
   });
 });
@@ -806,12 +808,14 @@ describe('deleteLeague — club receipt and 0-row guard (#2329)', () => {
  * null, and a started round is locked here and in the database.
  */
 describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
-  const DEFAULT = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
+  const DEFAULT = { ...SIM_SETTING_DEFAULTS };
 
+  /** The per-round form: every select filled in with the default, then `values`. */
   function roundForm(values: Record<string, string>): FormData {
     const fd = new FormData();
     fd.set('league_id', 'L1');
     fd.set('round_id', 'R1');
+    for (const key of SIM_SETTING_KEYS) fd.set(simSettingField(key), DEFAULT[key]);
     for (const [k, v] of Object.entries(values)) fd.set(k, v);
     return fd;
   }
@@ -838,10 +842,10 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     ]);
     setUser('admin-1');
     const { updateRoundSimSettings } = await import('./actions');
-    const result = await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12', sim_wind: 'Rolig' }));
+    const result = await updateRoundSimSettings(roundForm({ sim_green_stimp: '12', sim_wind: 'CALM' }));
     expect({ result, updates: roundUpdates() }).toEqual({
       result: { error: '' },
-      updates: [{ sim_settings: { greenSpeed: 'Stimp 12' } }],
+      updates: [{ sim_settings: { green_stimp: '12' } }],
     });
   });
 
@@ -853,7 +857,7 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     ]);
     setUser('admin-1');
     const { updateRoundSimSettings } = await import('./actions');
-    await updateRoundSimSettings(roundForm({ reset: 'true', sim_greenSpeed: 'Stimp 12' }));
+    await updateRoundSimSettings(roundForm({ reset: 'true', sim_green_stimp: '12' }));
     expect(roundUpdates()).toEqual([{ sim_settings: null }]);
   });
 
@@ -862,7 +866,7 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
     setUser('admin-1');
     const { updateRoundSimSettings } = await import('./actions');
-    const result = await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12' }));
+    const result = await updateRoundSimSettings(roundForm({ sim_green_stimp: '12' }));
     expect({ result, updates: roundUpdates() }).toEqual({
       result: { error: 'round_settings_locked' },
       updates: [],
@@ -880,7 +884,7 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     ]);
     setUser('admin-1');
     const { updateRoundSimSettings } = await import('./actions');
-    expect(await updateRoundSimSettings(roundForm({ sim_greenSpeed: 'Stimp 12' }))).toEqual({
+    expect(await updateRoundSimSettings(roundForm({ sim_green_stimp: '12' }))).toEqual({
       error: 'round_settings_locked',
     });
   });
@@ -889,7 +893,8 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     const leagueForm = () => {
       const fd = new FormData();
       fd.set('league_id', 'L1');
-      fd.set('sim_greenSpeed', 'Stimp 11');
+      for (const key of SIM_SETTING_KEYS) fd.set(simSettingField(key), SIM_SETTING_DEFAULTS[key]);
+      fd.set(simSettingField('green_stimp'), '11');
       return fd;
     };
     adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { is_simulator: true } }]);
@@ -909,7 +914,7 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
 
     expect({ ok, written, regular }).toEqual({
       ok: { error: '' },
-      written: { sim_settings: { greenSpeed: 'Stimp 11' } },
+      written: { sim_settings: { ...SIM_SETTING_DEFAULTS, green_stimp: '11' } },
       regular: { error: 'not_simulator' },
     });
   });

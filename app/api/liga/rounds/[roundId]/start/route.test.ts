@@ -78,7 +78,7 @@ function callerQueue(isSimulator: boolean): QueryResult[] {
         status: 'active',
         format: 'stableford',
         is_simulator: isSimulator,
-        sim_settings: { greenSpeed: 'Stimp 10' },
+        sim_settings: { green_stimp: '10' },
       },
     },
     { data: [{ user_id: ME }, { user_id: 'other' }] },

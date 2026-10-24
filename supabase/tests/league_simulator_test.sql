@@ -24,19 +24,27 @@
 --  16  other columns of a started round still change (label)          → 1 row
 --  17  the server (the start core's freeze) writes a started round    → 1 row
 --  18  the guards are not client-executable
+-- Trackman's option set (sim_settings_valid, 0213):
+--  19  an unknown option code                                         → 23514
+--  20  an unknown key (the old free-text «tees»)                        → 23514
+--  21  a value that is not a string                                     → 23514
+--  22  a round override: Auto - Tour Pro with a gimme distance           → 23514
+--  23  Manual with gimme Not applicable                                  → 23514
+--  24  the full Trackman default is accepted                             → 1 row
+--  25  a round override with putting alone (gimme from the default)      → 1 row
 --
 -- Red without 0212: every case (the columns do not exist). With 0212 minus the
--- guards: 5–8, 14 and 15.
+-- guards: 5–8, 14 and 15. Without 0213: 19–23.
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
--- Depends on 0212. Run via: supabase test db (see supabase/tests/README.md)
+-- Depends on 0212 and 0213. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(25);
 
 \ir fixtures/rls_helpers.psql
 
@@ -98,7 +106,7 @@ insert into public.leagues
    torny_rls.course_id(), torny_rls.tee_box_id(), 'draft',  torny_rls.ls_club_admin(), torny_rls.ls_club(), false, null),
   (torny_rls.ls_active(),     'LS Active',     current_date, current_date + 90, 'total',  'single_course_single_tee',
    torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.ls_club_admin(), torny_rls.ls_club(), true,
-   '{"greenSpeed": "Stimp 10", "wind": "Rolig"}'::jsonb),
+   '{"green_stimp": "10", "wind": "CALM"}'::jsonb),
   (torny_rls.ls_standalone(), 'LS Standalone', current_date, current_date + 90, 'total',  'single_course_single_tee',
    torny_rls.course_id(), torny_rls.tee_box_id(), 'active', torny_rls.admin_id(),     null,                true, null);
 
@@ -133,7 +141,7 @@ insert into public.game_players (game_id, user_id) values
 -- 1
 savepoint case_1;
 select throws_ok(
-  $$ update public.leagues set sim_settings = '"Stimp 10"'::jsonb where id = torny_rls.ls_draft() $$,
+  $$ update public.leagues set sim_settings = '"CALM"'::jsonb where id = torny_rls.ls_draft() $$,
   '23514', null,
   'case 1: leagues.sim_settings must be a JSON object');
 rollback to savepoint case_1;
@@ -142,14 +150,14 @@ rollback to savepoint case_1;
 savepoint case_2;
 select throws_ok(
   $$ update public.leagues set sim_settings = jsonb_build_object('other', repeat('x', 2001)) where id = torny_rls.ls_draft() $$,
-  '23514', null,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_sim_settings_check"',
   'case 2: leagues.sim_settings over 2 000 characters is refused');
 rollback to savepoint case_2;
 
 -- 3
 savepoint case_3;
 select throws_ok(
-  $$ update public.league_rounds set sim_settings = '["Stimp 12"]'::jsonb where id = torny_rls.ls_r_open() $$,
+  $$ update public.league_rounds set sim_settings = '["11"]'::jsonb where id = torny_rls.ls_r_open() $$,
   '23514', null,
   'case 3: league_rounds.sim_settings must be a JSON object');
 rollback to savepoint case_3;
@@ -221,7 +229,7 @@ rollback to savepoint case_9;
 savepoint case_10;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select is(
-  torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"greenSpeed": "Stimp 11"}'::jsonb
+  torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"green_stimp": "11"}'::jsonb
                         where id = torny_rls.ls_active() $$),
   1,
   'case 10: the organiser CAN change the default settings of an active league');
@@ -231,7 +239,7 @@ rollback to savepoint case_10;
 savepoint case_11;
 select torny_rls.as_user(torny_rls.ls_member());
 select is(
-  torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"greenSpeed": "Stimp 6"}'::jsonb
+  torny_rls.ls_rows($$ update public.leagues set sim_settings = '{"green_stimp": "6"}'::jsonb
                         where id = torny_rls.ls_active() $$),
   0,
   'case 11: a club member who is not admin CANNOT change the default settings (RLS)');
@@ -245,7 +253,7 @@ rollback to savepoint case_11;
 savepoint case_12;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select is(
-  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"greenSpeed": "Stimp 12"}'::jsonb
+  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"green_stimp": "12"}'::jsonb
                         where id = torny_rls.ls_r_open() $$),
   1,
   'case 12: the organiser CAN override a round nobody has started');
@@ -264,7 +272,7 @@ rollback to savepoint case_13;
 savepoint case_14;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_like(
-  $$ update public.league_rounds set sim_settings = '{"greenSpeed": "Stimp 12"}'::jsonb
+  $$ update public.league_rounds set sim_settings = '{"green_stimp": "12"}'::jsonb
       where id = torny_rls.ls_r_started() $$,
   '%locked once a player has started the round%',
   'case 14: the organiser CANNOT change the settings of a round another player started');
@@ -274,7 +282,7 @@ rollback to savepoint case_14;
 savepoint case_15;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_like(
-  $$ update public.league_rounds set sim_settings = '{"wind": "Sterk"}'::jsonb where id = torny_rls.ls_r_done() $$,
+  $$ update public.league_rounds set sim_settings = '{"wind": "STORMY"}'::jsonb where id = torny_rls.ls_r_done() $$,
   '%locked once a player has started the round%',
   'case 15: the organiser CANNOT change the settings of a round with a delivered flight');
 rollback to savepoint case_15;
@@ -293,7 +301,7 @@ rollback to savepoint case_16;
 savepoint case_17;
 select torny_rls.as_service();
 select is(
-  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"greenSpeed": "Stimp 10", "wind": "Rolig"}'::jsonb
+  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"green_stimp": "10", "wind": "CALM"}'::jsonb
                         where id = torny_rls.ls_r_started() $$),
   1,
   'case 17: a caller with no JWT (the start core''s freeze) CAN write a started round');
@@ -305,6 +313,72 @@ select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields
       and not has_function_privilege('anon', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE')
       and not has_function_privilege('authenticated', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE'),
   'case 18: the two guards are not client-executable');
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- Trackman's option set and the gimme coupling (0213)
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 19
+savepoint case_19;
+select throws_ok(
+  $$ update public.leagues set sim_settings = '{"wind": "HURRICANE"}'::jsonb where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_sim_settings_options_check"',
+  'case 19: an unknown option code is refused');
+rollback to savepoint case_19;
+
+-- 20
+savepoint case_20;
+select throws_ok(
+  $$ update public.leagues set sim_settings = '{"tees": "Gul"}'::jsonb where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_sim_settings_options_check"',
+  'case 20: an unknown key is refused');
+rollback to savepoint case_20;
+
+-- 21
+savepoint case_21;
+select throws_ok(
+  $$ update public.leagues set sim_settings = '{"green_stimp": 10}'::jsonb where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_sim_settings_options_check"',
+  'case 21: a value that is not a string is refused');
+rollback to savepoint case_21;
+
+-- 22
+savepoint case_22;
+select throws_ok(
+  $$ update public.league_rounds set sim_settings = '{"putting": "AUTO_TOUR_PRO", "gimme": "FT4"}'::jsonb
+      where id = torny_rls.ls_r_open() $$,
+  '23514', 'new row for relation "league_rounds" violates check constraint "league_rounds_sim_settings_options_check"',
+  'case 22: Auto - Tour Pro locks gimme, so a distance is refused');
+rollback to savepoint case_22;
+
+-- 23
+savepoint case_23;
+select throws_ok(
+  $$ update public.leagues set sim_settings = '{"putting": "MANUAL", "gimme": "NOT_APPLICABLE"}'::jsonb
+      where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_sim_settings_options_check"',
+  'case 23: Manual putting needs a gimme distance');
+rollback to savepoint case_23;
+
+-- 24
+savepoint case_24;
+select is(
+  torny_rls.ls_rows($$ update public.leagues set sim_settings =
+      '{"pins": "MEDIUM", "putting": "AUTO_TOUR_PRO", "gimme": "NOT_APPLICABLE", "mulligans": "NO",
+        "wind": "CALM", "fairway_firmness": "MEDIUM", "green_firmness": "MEDIUM", "green_stimp": "9"}'::jsonb
+      where id = torny_rls.ls_draft() $$),
+  1,
+  'case 24: the full Trackman default is accepted');
+rollback to savepoint case_24;
+
+-- 25
+savepoint case_25;
+select is(
+  torny_rls.ls_rows($$ update public.league_rounds set sim_settings = '{"putting": "AUTO_FIXED"}'::jsonb
+                        where id = torny_rls.ls_r_open() $$),
+  1,
+  'case 25: a round override with putting alone is accepted (its gimme comes from the default)');
+rollback to savepoint case_25;
 
 select * from finish();
 rollback;

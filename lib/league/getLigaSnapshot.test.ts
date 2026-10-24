@@ -672,7 +672,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
           group_id: null,
           spectate_token: null,
           is_simulator: isSimulator,
-          sim_settings: { greenSpeed: 'Stimp 10', wind: 'Rolig' },
+          sim_settings: { green_stimp: '10', wind: 'CALM' },
         },
       },
       {
@@ -687,7 +687,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
             closes_at: '2026-11-15T22:59:00Z',
             original_closes_at: '2026-11-15T22:59:00Z',
             window_overridden_at: null,
-            sim_settings: { greenSpeed: 'Stimp 12', wind: 'Rolig' },
+            sim_settings: { green_stimp: '12', wind: 'CALM' },
           },
           {
             id: 'r2',
@@ -768,12 +768,12 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
     };
     expect({ r1: pick('r1'), r2: pick('r2') }).toEqual({
       r1: {
-        simSettings: { greenSpeed: 'Stimp 12', wind: 'Rolig' },
-        overriddenKeys: ['greenSpeed'],
+        simSettings: { green_stimp: '12', wind: 'CALM' },
+        overriddenKeys: ['green_stimp'],
         settingsLocked: true,
       },
       r2: {
-        simSettings: { greenSpeed: 'Stimp 10', wind: 'Rolig' },
+        simSettings: { green_stimp: '10', wind: 'CALM' },
         overriddenKeys: [],
         settingsLocked: false,
       },

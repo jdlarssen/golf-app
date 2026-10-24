@@ -30,9 +30,9 @@ const ROUND = {
   opens_at: '2000-01-01T00:00:00Z',
   closes_at: '2099-01-01T00:00:00Z',
   original_closes_at: '2099-01-01T00:00:00Z',
-  sim_settings: { greenSpeed: 'Stimp 12' },
+  sim_settings: { green_stimp: '12' },
 };
-const LEAGUE_DEFAULT = { greenSpeed: 'Stimp 10', wind: 'Rolig' };
+const LEAGUE_DEFAULT = { green_stimp: '10', wind: 'CALM' };
 
 function league(isSimulator: boolean) {
   return {
@@ -113,7 +113,7 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
       written: freeze?.args[0],
     }).toEqual({
       order: ['league_rounds.update', 'games.insert'],
-      written: { sim_settings: { greenSpeed: 'Stimp 12', wind: 'Rolig' } },
+      written: { sim_settings: { green_stimp: '12', wind: 'CALM' } },
     });
   });
 
@@ -171,8 +171,8 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
     expect({ result, writes }).toEqual({
       result: { ok: false, error: 'start_tee_missing_rating' },
       writes: [
-        { sim_settings: { greenSpeed: 'Stimp 12', wind: 'Rolig' } },
-        { sim_settings: { greenSpeed: 'Stimp 12' } },
+        { sim_settings: { green_stimp: '12', wind: 'CALM' } },
+        { sim_settings: { green_stimp: '12' } },
       ],
     });
   });
