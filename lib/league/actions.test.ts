@@ -456,6 +456,47 @@ describe('updateLeagueRound — course and tee of a started simulator round (#26
     },
   );
 
+  it('a started simulator round refuses a new course too', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: null } },
+      { data: { is_simulator: true } },
+      { data: { course_id: 'c1', tee_box_id: 'tb1' } },
+      { count: 1 },
+    ]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('course_id', 'c2');
+    const { updateLeagueRound } = await import('./actions');
+    expect({ result: await updateLeagueRound(fd), updates: roundUpdates() }).toEqual({
+      result: { error: 'round_settings_locked' },
+      updates: [],
+    });
+  });
+
+  it('a round that is not in the form’s league is update_failed, and nothing is written', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: null } },
+      { data: { is_simulator: true } },
+      { data: null },
+      { count: 1 },
+    ]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { updateLeagueRound } = await import('./actions');
+    const result = await updateLeagueRound(teeForm('tb2'));
+    const boundToLeague = adminMock.__fromCalls.some(
+      (c) => c.table === 'league_rounds' && c.method === 'eq' && c.args[0] === 'league_id' && c.args[1] === 'l1',
+    );
+    expect({ result, boundToLeague, updates: roundUpdates() }).toEqual({
+      result: { error: 'update_failed' },
+      boundToLeague: true,
+      updates: [],
+    });
+  });
+
   it('the database guard’s refusal gives the same code (a start that came first)', async () => {
     adminMock = buildSupabaseMock([
       { data: { group_id: null } },
@@ -884,14 +925,28 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
     return fd;
   }
 
-  /** Admin reads: the gate's group_id, the league, the round's game count. */
-  function adminReads(gameCount: number, isSimulator = true) {
+  /** Admin reads: the gate's group_id, the league, the round in that league, the round's game count. */
+  function adminReads(gameCount: number, isSimulator = true, round: { id: string } | null = { id: 'R1' }) {
     adminMock = buildSupabaseMock([
       { data: { group_id: null } },
       { data: { is_simulator: isSimulator, sim_settings: DEFAULT } },
+      { data: round },
       { count: gameCount },
     ]);
   }
+
+  it('a round of another league is not_found: its flights are never counted, nothing is written', async () => {
+    adminReads(1, true, null);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { updateRoundSimSettings } = await import('./actions');
+    const result = await updateRoundSimSettings(roundForm({ sim_green_stimp: '12' }));
+    expect({
+      result,
+      counted: adminMock.__fromCalls.some((c) => c.table === 'games'),
+      updates: roundUpdates(),
+    }).toEqual({ result: { error: 'not_found' }, counted: false, updates: [] });
+  });
 
   const roundUpdates = () =>
     supabaseMock.__fromCalls
