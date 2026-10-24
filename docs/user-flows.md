@@ -99,8 +99,12 @@ admin, ingen identitet (≠ klubb). Du legger til venner på `/profile/venner` p
 med (forslag), e-post (ukjent adresse → tilbud om å invitere på samme e-post), eller en delbar lenke
 (`/venner/legg-til/[friend_code]`) som kobler den som åpner den direkte. I appen er det en fjerde vei
 (#2627): QR-koden på bag-taggen i Profil bærer samme lenke. En kompis skanner den med kameraet, lander på
-«Bli venn med …» på nettet og blir venn med ett trykk (innlogging først om nødvendig). Bildet som deles fra
-bag-taggen har ingen QR-kode. Vennskap er gjensidig (forespørsel
+«Bli venn med …» og blir venn med ett trykk (innlogging først om nødvendig). Har kompisen appen, åpner både
+QR-koden og den delte lenka appen på skjermen «Bli venn med …» (`FriendLink`, via
+`GET`/`POST /api/friends/link/[code]`); uten innlogging kommer skjermen rett etter innloggingen. AASA-fila
+slipper bare `/venner/legg-til/*` gjennom, så alle andre lenker åpnes fortsatt i Safari. På Android åpnes
+lenka i nettleseren til Play-signeringsnøkkelen står i `assetlinks.json`. Uten appen lander lenka på
+nettsiden som før. Bildet som deles fra bag-taggen har ingen QR-kode. Vennskap er gjensidig (forespørsel
 → mottaker godtar i Innboks); `friend_request`/`friend_accepted`-varsler dyplenker til vennelista. Venner
 blir søkbare i lag-påmelding (`getTeamCandidates` = venner ∪ co-players, #408), og venners
 `open`/`manual_approval`-spill (aldri `invite_only`) står i «Finn turneringer» med venne-linja («Jonas og
@@ -206,7 +210,7 @@ flowchart LR
 |---|---|---|
 | Rediger profil | `app/[locale]/profile/page.tsx` + `actions.ts` | navn, nickname, `hcp_index`, gender, level. `handicap_updated_at` stemples ved lagring. |
 | Inviter venn | inline på `/profile` (`app/[locale]/invite/actions.ts`) | `sendFriendInvite` — kvote + rate-limit, `invitations` (game_id null) + Resend. |
-| Venner | `/profile/venner` + `actions.ts` (#369, #2267) | Legg til (forslag/e-post/lenke), godta/avslå, fjern via bekreftelsessiden `/profile/venner/fjern/[userId]`. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendsView` for siden og `GET /api/friends` (runder sammen og sist spilt fra `friendStats`, handicap bare etter en ferdig runde sammen). Delt lenke landes på `/venner/legg-til/[code]`; QR-koden på appens bag-tag bærer samme lenke, med koden fra `GET /api/friends/code` (#2627). |
+| Venner | `/profile/venner` + `actions.ts` (#369, #2267) | Legg til (forslag/e-post/lenke), godta/avslå, fjern via bekreftelsessiden `/profile/venner/fjern/[userId]`. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendsView` for siden og `GET /api/friends` (runder sammen og sist spilt fra `friendStats`, handicap bare etter en ferdig runde sammen). Delt lenke landes på `/venner/legg-til/[code]`; QR-koden på appens bag-tag bærer samme lenke, med koden fra `GET /api/friends/code` (#2627). Med appen installert åpner lenka «Bli venn med …» i appen (`/api/friends/link/[code]`, samme oppslag og kobling som siden: `friendLinkView` + `connectByFriendCode`). |
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
 | Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |
