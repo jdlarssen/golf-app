@@ -1,10 +1,8 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { displayNameForOthers } from '@/lib/users/displayName';
+import type { FriendLinkRelation } from './friendStatus';
 import { getFriendIds } from './getFriendIds';
-
-/** Hvem lenka tilhører, sett fra den som åpner den. */
-export type FriendLinkRelation = 'self' | 'already_friends' | 'connectable';
 
 export type FriendLinkView = {
   /** Eierens visningsnavn: navn (med kallenavn), ellers maskert adresse (#2271). */
