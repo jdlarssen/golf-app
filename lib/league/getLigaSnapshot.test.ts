@@ -637,3 +637,146 @@ describe('getLigaSnapshot — flights over 1 000 games (#2214)', () => {
     }).toEqual({ flightCount: 1001, delivered: ['U1'], ranged: true });
   });
 });
+
+describe('getLigaSnapshot — simulator league (#2638)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  // One hole, par 4, CH 0. A took round 1 alone (5 strokes → +1); round 2 has
+  // no flight. B is a participant who has not played.
+  function queue(isSimulator: boolean) {
+    return [
+      {
+        data: {
+          id: 'l1',
+          name: 'Vinterliga',
+          season_start: '2026-11-02',
+          season_end: '2027-02-07',
+          format: 'stroke',
+          scoring: 'net',
+          standings_model: 'total',
+          missed_round_policy: 'penalty',
+          penalty_kind: 'worst_plus_one',
+          penalty_fixed_over_par: null,
+          best_n_count: null,
+          course_scope: 'single_course_single_tee',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          status: 'active',
+          created_by: 'admin',
+          created_at: '2026-11-01T00:00:00Z',
+          started_at: '2026-11-01T00:00:00Z',
+          finished_at: null,
+          group_id: null,
+          spectate_token: null,
+          is_simulator: isSimulator,
+          sim_settings: { greenSpeed: 'Stimp 10', wind: 'Rolig' },
+        },
+      },
+      {
+        data: [
+          {
+            id: 'r1',
+            sequence: 1,
+            label: 'Runde 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            opens_at: '2026-11-02T00:00:00Z',
+            closes_at: '2026-11-15T22:59:00Z',
+            original_closes_at: '2026-11-15T22:59:00Z',
+            window_overridden_at: null,
+            sim_settings: { greenSpeed: 'Stimp 12', wind: 'Rolig' },
+          },
+          {
+            id: 'r2',
+            sequence: 2,
+            label: 'Runde 2',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            opens_at: '2026-11-16T00:00:00Z',
+            closes_at: '2026-11-29T22:59:00Z',
+            original_closes_at: '2026-11-29T22:59:00Z',
+            window_overridden_at: null,
+            sim_settings: null,
+          },
+        ],
+      },
+      {
+        data: [
+          { user_id: 'A', accepted_at: '2026-11-01T00:00:00Z', users: { name: 'A', nickname: null } },
+          { user_id: 'B', accepted_at: '2026-11-01T00:00:00Z', users: { name: 'B', nickname: null } },
+        ],
+      },
+      {
+        data: [
+          {
+            id: 'g1',
+            status: 'finished',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            league_round_id: 'r1',
+            delivered_outside_window: false,
+            ended_at: '2026-11-05T20:00:00Z',
+          },
+        ],
+      },
+      {
+        data: [
+          {
+            game_id: 'g1',
+            user_id: 'A',
+            course_handicap: 0,
+            tee_gender: 'mens',
+            submitted_at: '2026-11-05T19:55:00Z',
+            withdrawn_at: null,
+          },
+        ],
+      },
+      { data: [{ game_id: 'g1', user_id: 'A', hole_number: 1, strokes: 5 }] },
+      { data: [{ course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }] },
+      { data: [{ id: 'tb1', par_total_mens: 4, par_total_ladies: 4, par_total_juniors: 4 }] },
+    ];
+  }
+
+  it('a flight of one counts in a simulator league, and not in a regular one', async () => {
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const counted = async (isSimulator: boolean) => {
+      supabaseMock = buildSupabaseMock(queue(isSimulator));
+      const snap = await getLigaSnapshot('l1');
+      const row = snap!.standings.net!.rows.find((r) => r.userId === 'A')!;
+      return row.perRound.find((c) => c.roundId === 'r1')!.value;
+    };
+    expect({ simulator: await counted(true), regular: await counted(false) }).toEqual({
+      simulator: 1,
+      regular: null,
+    });
+  });
+
+  it('each round carries its effective settings, what is overridden, and whether it is locked', async () => {
+    supabaseMock = buildSupabaseMock(queue(true));
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+    const pick = (id: string) => {
+      const r = snap!.rounds.find((round) => round.id === id)!;
+      return {
+        simSettings: r.simSettings,
+        overriddenKeys: r.overriddenKeys,
+        settingsLocked: r.settingsLocked,
+      };
+    };
+    expect({ r1: pick('r1'), r2: pick('r2') }).toEqual({
+      r1: {
+        simSettings: { greenSpeed: 'Stimp 12', wind: 'Rolig' },
+        overriddenKeys: ['greenSpeed'],
+        settingsLocked: true,
+      },
+      r2: {
+        simSettings: { greenSpeed: 'Stimp 10', wind: 'Rolig' },
+        overriddenKeys: [],
+        settingsLocked: false,
+      },
+    });
+  });
+});

@@ -6,6 +6,13 @@ import { computeLeagueStandings } from './computeLeagueStandings';
 import { computeFlightRoundValues } from './roundScoring';
 import { isPointsBasedFormat } from './flightFormat';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
+import { meetsFlightMinimum } from './flightRules';
+import {
+  effectiveSimSettings,
+  normalizeSimSettings,
+  type SimSettingKey,
+  type SimSettings,
+} from './simSettings';
 import type {
   LeagueFormat,
   LeagueRoundInput,
@@ -26,7 +33,8 @@ import { selectAllRows, selectAllRowsResult } from '@/lib/supabase/selectAllRows
  *
  * Counting guardrails (contract #453):
  *  - only `finished` flights count;
- *  - a flight needs ≥2 non-withdrawn submitted players (the marker rule);
+ *  - a flight needs ≥2 non-withdrawn submitted players (the marker rule), or
+ *    one in a simulator league (`meetsFlightMinimum`, #2638);
  *  - a player only counts with a complete card (holesPlayed === course holes);
  *  - withdrawn players are excluded.
  */
@@ -67,6 +75,20 @@ export type LeagueRoundView = {
    * withdraw (roundPlayerLocks).
    */
   inProgressUserIds: string[];
+  /** #2638: the round's own override, normalised (only the keys that differ). */
+  simOverride: SimSettings;
+  /**
+   * #2638: the settings that apply to the round — `effectiveSimSettings` of
+   * the league default and the override, the one merge every view reads.
+   */
+  simSettings: SimSettings;
+  /** #2638: keys whose round value differs from the league default. */
+  overriddenKeys: SimSettingKey[];
+  /**
+   * #2638: a player has started the round (any game exists for it), so its
+   * settings are fixed. The database guard uses the same test.
+   */
+  settingsLocked: boolean;
 };
 
 export type LeagueRow = {
@@ -94,6 +116,10 @@ export type LeagueRow = {
   group_id: string | null;
   /** #1024: embed-token. null = embed av. */
   spectate_token: string | null;
+  /** #2638: simulator league — a flight counts with one delivered player. */
+  is_simulator: boolean;
+  /** #2638: the league's default round settings, raw (read via normalizeSimSettings). */
+  sim_settings: unknown;
 };
 
 export type LeagueSnapshot = {
@@ -112,7 +138,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const { data: leagueRow, error: lErr } = await supabase
     .from('leagues')
     .select(
-      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id, spectate_token',
+      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id, spectate_token, is_simulator, sim_settings',
     )
     .eq('id', leagueId)
     .maybeSingle();
@@ -126,7 +152,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     supabase
       .from('league_rounds')
       .select(
-        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at',
+        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings',
       )
       .eq('league_id', leagueId)
       .order('sequence', { ascending: true }),
@@ -148,6 +174,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     closes_at: string;
     original_closes_at: string;
     window_overridden_at: string | null;
+    sim_settings: unknown;
   }>;
   const roundIds = rounds.map((r) => r.id);
 
@@ -371,8 +398,9 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
 
     const allPlayers = playersByGame.get(game.id) ?? [];
     const eligible = allPlayers.filter((p) => p.withdrawn_at === null && p.submitted_at !== null);
-    // Marker rule: a counted flight needs ≥2 players who actually delivered.
-    if (eligible.length < 2) continue;
+    // Marker rule: a counted flight needs ≥2 players who actually delivered,
+    // one in a simulator league (#2638, the same bound as the start gate).
+    if (!meetsFlightMinimum(eligible.length, league.is_simulator)) continue;
 
     const gScores = scoresByGame.get(game.id) ?? [];
     // Tee-totalpar per spiller (kjønns-oppslått). Kun slagspill leser dette;
@@ -445,6 +473,14 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
 
   const roundViews: LeagueRoundView[] = rounds.map((r) => {
     const locks = roundPlayerLocks(flightsByRound.get(r.id) ?? []);
+    // A started round (any game) whose settings were frozen at the first
+    // start shows only its own values (#2638).
+    const settingsLocked = (flightCountByRound.get(r.id) ?? 0) > 0;
+    const effective = effectiveSimSettings(
+      league.sim_settings,
+      r.sim_settings,
+      settingsLocked && r.sim_settings !== null,
+    );
     return {
       id: r.id,
       sequence: r.sequence,
@@ -459,6 +495,10 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       flightCount: flightCountByRound.get(r.id) ?? 0,
       deliveredUserIds: Array.from(locks.delivered),
       inProgressUserIds: Array.from(locks.inProgress),
+      simOverride: normalizeSimSettings(r.sim_settings),
+      simSettings: effective.values,
+      overriddenKeys: effective.overriddenKeys,
+      settingsLocked,
     };
   });
 

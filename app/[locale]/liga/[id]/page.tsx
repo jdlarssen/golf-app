@@ -13,6 +13,7 @@ import { Banner } from '@/components/ui/Banner';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { leagueSelfServiceState } from '@/lib/league/selfService';
+import { canViewLeague } from '@/lib/league/canViewLeague';
 import { joinClubLeague } from '@/lib/league/actions';
 import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -111,33 +112,15 @@ export default async function LigaPublicPage({
   // #480: en klubb-scopet liga er kun synlig for klubbens medlemmer, deltakerne
   // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
   // gaten — ikke RLS — er det som skjuler klubb-ligaer på den lenke-delbare
-  // siden for utenforstående.
-  let isClubMember = false;
-  if (league.group_id) {
-    const isPart =
-      currentUserId !== null &&
-      participants.some((p) => p.userId === currentUserId);
-    let allowed = isPart;
-    if (!allowed && currentUserId) {
-      const supabase = await getServerClient();
-      const [{ data: membership }, { data: profile }] = await Promise.all([
-        supabase
-          .from('group_members')
-          .select('user_id')
-          .eq('group_id', league.group_id)
-          .eq('user_id', currentUserId)
-          .maybeSingle(),
-        supabase
-          .from('users')
-          .select('is_admin')
-          .eq('id', currentUserId)
-          .maybeSingle(),
-      ]);
-      isClubMember = membership !== null;
-      allowed = isClubMember || profile?.is_admin === true;
-    }
-    if (!allowed) notFound();
-  }
+  // siden for utenforstående. Regelen bor i canViewLeague (#2638), som appens
+  // GET /api/liga/[id] også bruker.
+  const { allowed, isClubMember } = await canViewLeague(await getServerClient(), {
+    groupId: league.group_id,
+    userId: currentUserId,
+    isParticipant:
+      currentUserId !== null && participants.some((p) => p.userId === currentUserId),
+  });
+  if (!allowed) notFound();
 
   const me =
     currentUserId !== null

@@ -59,12 +59,53 @@ describe('computeFlightRoundValues — stroke', () => {
 });
 
 describe('computeFlightRoundValues — stableford', () => {
-  it('maps to stableford points; gross mirrors net (netto-only)', () => {
+  it('maps to stableford points; with no handicap strokes gross equals net', () => {
     const rows = computeFlightRoundValues(input('stableford'));
     // A: 3× par = 3×2 = 6. B: 3× bogey = 3×1 = 3.
     expect(byUser(rows, 'A')).toMatchObject({ net: 6, gross: 6 });
     expect(byUser(rows, 'B')).toMatchObject({ net: 3, gross: 3 });
   });
+
+  it('#2638: gross stableford is the points without handicap strokes', () => {
+    // H has course handicap 3: one stroke on each of the three holes. Three
+    // bogeys are three net pars (3×2 = 6) but three gross bogeys (3×1 = 3).
+    const rows = computeFlightRoundValues(
+      input('stableford', {
+        players: [{ ...player('H'), courseHandicap: 3 }],
+        scores: card('H', [5, 5, 4]),
+        parByUser: new Map([['H', TEE_PAR]]),
+      }),
+    );
+    expect(byUser(rows, 'H')).toMatchObject({ net: 6, gross: 3 });
+  });
+
+  it('#2638: modified stableford gross also drops the strokes', () => {
+    const rows = computeFlightRoundValues(
+      input('modified_stableford', {
+        players: [{ ...player('H'), courseHandicap: 3 }],
+        scores: card('H', [5, 5, 4]),
+        parByUser: new Map([['H', TEE_PAR]]),
+      }),
+    );
+    // Net: three net pars = 0. Gross: three bogeys = −3.
+    expect(byUser(rows, 'H')).toMatchObject({ net: 0, gross: -3 });
+  });
+});
+
+describe('computeFlightRoundValues — a flight of one (#2638, simulator league)', () => {
+  it.each(['stroke', 'stableford', 'modified_stableford'] as LeagueFormat[])(
+    '%s: scores the one player who took the round alone',
+    (format) => {
+      const rows = computeFlightRoundValues(
+        input(format, {
+          players: [player('A')],
+          scores: card('A', [4, 4, 3]),
+          parByUser: new Map([['A', TEE_PAR]]),
+        }),
+      );
+      expect(rows.map((r) => r.userId)).toEqual(['A']);
+    },
+  );
 });
 
 describe('computeFlightRoundValues — modified_stableford', () => {
