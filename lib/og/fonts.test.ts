@@ -1,7 +1,18 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { fixComponentMatrices } from './componentMatrices';
 import { loadFonts } from './fonts';
+
+// #2625: a stand-in fix that copies and remembers what it handed back.
+const { fixedBuffers } = vi.hoisted(() => ({ fixedBuffers: new WeakSet<ArrayBuffer>() }));
+vi.mock('./componentMatrices', () => ({
+  fixComponentMatrices: vi.fn((font: ArrayBuffer) => {
+    const fixed = font.slice(0);
+    fixedBuffers.add(fixed);
+    return fixed;
+  }),
+}));
 
 /**
  * A fetch that answers Google's css2 endpoint with one ttf url per request (the
@@ -58,5 +69,14 @@ describe('loadFonts', () => {
     stubFetch();
     const { fonts } = await loadFonts({ inter600: true });
     expect(named(fonts, 'Inter')).toContain('600normal');
+  });
+
+  it('hands Satori every font with its component matrices fixed, once per fetched buffer (#2625)', async () => {
+    stubFetch();
+    vi.mocked(fixComponentMatrices).mockClear();
+    const { fonts } = await loadFonts({ headlineDisplay: true, inter600: true });
+    expect(fonts).toHaveLength(7);
+    expect(fonts.every((f) => fixedBuffers.has(f.data))).toBe(true);
+    expect(fixComponentMatrices).toHaveBeenCalledTimes(7);
   });
 });
