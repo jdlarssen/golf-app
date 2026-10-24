@@ -10,7 +10,13 @@ import {
   updateRoundSimSettings,
   type LeagueActionError,
 } from '@/lib/league/actions';
-import { SimSettingsFields, simSettingsFieldsKey } from '@/components/league/SimSettingsFields';
+import {
+  SIM_SETTINGS_SAVE_INITIAL,
+  SimSettingsFields,
+  countSave,
+  simSettingsFieldsKey,
+  type SimSettingsSaveState,
+} from '@/components/league/SimSettingsFields';
 import {
   SIM_SETTINGS,
   formSimSettings,
@@ -62,8 +68,8 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
     INITIAL,
   );
   const [settingsState, settingsAction, settingsPending] = useActionState(
-    async (_prev: LeagueActionError, formData: FormData) => updateRoundSimSettings(formData),
-    INITIAL,
+    async (prev: SimSettingsSaveState, formData: FormData) => countSave(prev, await updateRoundSimSettings(formData)),
+    SIM_SETTINGS_SAVE_INITIAL,
   );
   const settingsErrorKey = `settingsErrors.${settingsState.error}` as Parameters<typeof t>[0];
   const settingsLocale = locale === 'en' ? 'en' : 'no';
@@ -190,15 +196,18 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
           >
             <input type="hidden" name="round_id" value={round.id} />
             <input type="hidden" name="league_id" value={leagueId} />
-            {/* Keyed on the values that apply: after a save, a reset or a
-                changed default the fields start over from them. */}
-            <SimSettingsFields
-              key={simSettingsFieldsKey(settingsInitial)}
-              initial={settingsInitial}
-              idPrefix={`${fieldId}-sim`}
-              locale={locale}
-              gimmeLockedNote={tSim('gimmeLocked')}
-            />
+            {/* Keyed on the values that apply and the save count: after a save,
+                a reset or a changed default the fields start over from them.
+                Disabled while saving, so a choice made meanwhile is not lost. */}
+            <fieldset disabled={settingsPending} className="min-w-0">
+              <SimSettingsFields
+                key={simSettingsFieldsKey(settingsInitial, settingsState.saves)}
+                initial={settingsInitial}
+                idPrefix={`${fieldId}-sim`}
+                locale={locale}
+                gimmeLockedNote={tSim('gimmeLocked')}
+              />
+            </fieldset>
             {settingsState.error !== '' && (
               <p role="alert" className="font-sans text-[12px] text-danger">
                 {t.has(settingsErrorKey) ? t(settingsErrorKey) : t('settingsErrors.update_failed')}
@@ -215,18 +224,21 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
               >
                 {t('saveButton')}
               </Button>
-              <Button
-                type="submit"
-                variant="quiet"
-                name="reset"
-                value="true"
-                className="text-sm px-4 py-2 min-h-[44px]"
-                pending={settingsPending}
-                pendingLabel={t('savePending')}
-                data-testid="liga-round-reset"
-              >
-                {t('resetToDefault')}
-              </Button>
+              {/* Only a round with an override has a default to go back to (8b). */}
+              {round.overriddenKeys.length > 0 && (
+                <Button
+                  type="submit"
+                  variant="quiet"
+                  name="reset"
+                  value="true"
+                  className="text-sm px-4 py-2 min-h-[44px]"
+                  pending={settingsPending}
+                  pendingLabel={t('savePending')}
+                  data-testid="liga-round-reset"
+                >
+                  {t('resetToDefault')}
+                </Button>
+              )}
             </div>
           </form>
         </details>
@@ -249,6 +261,7 @@ function CourseTeeForm({
       updateLeagueRound(formData) as Promise<LeagueActionError>,
     INITIAL,
   );
+  const updateErrorKey = `settingsErrors.${updateState.error}` as Parameters<typeof t>[0];
   const selectedCourse = courses.find((c) => c.id === round.courseId);
   const tees = selectedCourse?.tee_boxes ?? [];
 
@@ -301,9 +314,7 @@ function CourseTeeForm({
 
       {updateState.error !== '' && (
         <p role="alert" className="font-sans text-[12px] text-danger">
-          {updateState.error === 'round_settings_locked'
-            ? t('settingsErrors.round_settings_locked')
-            : updateState.error}
+          {t.has(updateErrorKey) ? t(updateErrorKey) : t('settingsErrors.update_failed')}
         </p>
       )}
       <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>

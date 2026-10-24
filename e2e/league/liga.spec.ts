@@ -757,33 +757,42 @@ test.describe('Liga — simulator: the settings forms keep what was saved (#2638
     await page.goto(`/admin/liga/${leagueId}`);
 
     // ── The default, saved twice without a reload ────────────────────────────
+    // Each save is waited out (the button is enabled again) before the next
+    // choice: the fields are disabled while saving (the orchestrator's check).
     const defaults = page.getByTestId('liga-sim-defaults');
+    const defaultsSave = defaults.getByRole('button');
     const stimp = defaults.getByTestId('sim-select-green_stimp');
     await expect(stimp).toHaveValue(SIM_DEFAULT.green_stimp, { timeout: 30_000 });
     await stimp.selectOption('11');
-    await defaults.getByRole('button').click();
+    await defaultsSave.click();
     await expect.poll(async () => (await leagueSettings())?.green_stimp, { timeout: 20_000 }).toBe('11');
+    await expect(defaultsSave).toBeEnabled({ timeout: 20_000 });
     await expect(stimp, 'the select keeps the saved value').toHaveValue('11');
 
     await defaults.getByTestId('sim-select-wind').selectOption('CALM');
-    await defaults.getByRole('button').click();
+    await defaultsSave.click();
     await expect.poll(async () => (await leagueSettings())?.wind, { timeout: 20_000 }).toBe('CALM');
     expect((await leagueSettings())?.green_stimp, 'the second save kept the first change').toBe('11');
+    await expect(defaultsSave).toBeEnabled({ timeout: 20_000 });
 
     // ── The round: adjust, back to the default, adjust again ────────────────
     const adjust = page.getByTestId('liga-round-adjust').first();
+    const roundSave = adjust.getByTestId('liga-round-settings-save');
     await adjust.locator('summary').click();
     await expect(adjust.getByTestId('sim-select-green_stimp'), 'the round follows the new default').toHaveValue('11');
+    await expect(adjust.getByTestId('liga-round-reset'), 'no override, no «Tilbake til standard»').toHaveCount(0);
     await adjust.getByTestId('sim-select-green_stimp').selectOption('13');
-    await adjust.getByTestId('liga-round-settings-save').click();
+    await roundSave.click();
     await expect.poll(roundOverride, { timeout: 20_000 }).toEqual({ green_stimp: '13' });
+    await expect(roundSave).toBeEnabled({ timeout: 20_000 });
 
     await adjust.getByTestId('liga-round-reset').click();
     await expect.poll(roundOverride, { timeout: 20_000 }).toBeNull();
+    await expect(roundSave).toBeEnabled({ timeout: 20_000 });
     await expect(adjust.getByTestId('sim-select-green_stimp'), 'the reset shows the default again').toHaveValue('11');
 
     await adjust.getByTestId('sim-select-wind').selectOption('WINDY');
-    await adjust.getByTestId('liga-round-settings-save').click();
+    await roundSave.click();
     await expect.poll(roundOverride, { timeout: 20_000 }).toEqual({ wind: 'WINDY' });
   });
 });

@@ -4,11 +4,15 @@ import { startTransition, useActionState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { SimSettingsFields, simSettingsFieldsKey } from '@/components/league/SimSettingsFields';
-import { updateLeagueSimSettings, type LeagueActionError } from '@/lib/league/actions';
+import {
+  SIM_SETTINGS_SAVE_INITIAL,
+  SimSettingsFields,
+  countSave,
+  simSettingsFieldsKey,
+  type SimSettingsSaveState,
+} from '@/components/league/SimSettingsFields';
+import { updateLeagueSimSettings } from '@/lib/league/actions';
 import type { SimSettingKey } from '@/lib/league/simSettings';
-
-const INITIAL: LeagueActionError = { error: '' };
 
 /**
  * #2638 (artboard 8a): the simulator league's default round settings. The
@@ -27,8 +31,8 @@ export function LigaSimDefaults({
   const tSim = useTranslations('liga.simSettings');
   const locale = useLocale();
   const [state, action, isPending] = useActionState(
-    async (_prev: LeagueActionError, formData: FormData) => updateLeagueSimSettings(formData),
-    INITIAL,
+    async (prev: SimSettingsSaveState, formData: FormData) => countSave(prev, await updateLeagueSimSettings(formData)),
+    SIM_SETTINGS_SAVE_INITIAL,
   );
   const errorKey = `simSettingsErrors.${state.error}` as Parameters<typeof t>[0];
 
@@ -53,15 +57,18 @@ export function LigaSimDefaults({
           className="space-y-3"
         >
           <input type="hidden" name="league_id" value={leagueId} />
-          {/* Keyed on the stored values: after a save the page renders the new
-              default, and the fields start over from it. */}
-          <SimSettingsFields
-            key={simSettingsFieldsKey(initial)}
-            initial={initial}
-            idPrefix={`liga-defaults-${leagueId}`}
-            locale={locale}
-            gimmeLockedNote={tSim('gimmeLocked')}
-          />
+          {/* Keyed on the stored values and the save count: after a save the
+              page renders the new default, and the fields start over from it.
+              Disabled while saving, so a choice made meanwhile is not lost. */}
+          <fieldset disabled={isPending} className="min-w-0">
+            <SimSettingsFields
+              key={simSettingsFieldsKey(initial, state.saves)}
+              initial={initial}
+              idPrefix={`liga-defaults-${leagueId}`}
+              locale={locale}
+              gimmeLockedNote={tSim('gimmeLocked')}
+            />
+          </fieldset>
           <p className="font-sans text-[12px] leading-[18px] text-muted">{t('simSettingsHelp')}</p>
           {state.error !== '' && (
             <p role="alert" className="font-sans text-[12px] text-danger">
