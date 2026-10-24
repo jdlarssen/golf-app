@@ -6,7 +6,7 @@ import {
   type QueryResponse,
 } from '@/lib/supabase/testing/adminClientMock';
 import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import { MAX_CO_PLAYERS } from '@/lib/league/flightRules';
 import { frozenDefaultFor } from '@/lib/league/simSettings';
 
 /**
@@ -151,13 +151,13 @@ describe('POST /api/liga/rounds/[roundId]/start', () => {
     });
   });
 
-  it('400 for a body that is not JSON, a list that is not uuids, or more ids than a flight', async () => {
+  it('400 for a body that is not JSON, a list that is not uuids, or more co-players than a flight holds', async () => {
     const bad = await call(request({ token: TOKEN, body: 'nei' }));
     const notUuid = await call(request({ token: TOKEN, body: JSON.stringify({ coPlayerIds: ['x'] }) }));
     const tooMany = await call(
       request({
         token: TOKEN,
-        body: JSON.stringify({ coPlayerIds: Array.from({ length: MAX_FLIGHT_SIZE + 1 }, () => CO_PLAYER) }),
+        body: JSON.stringify({ coPlayerIds: Array.from({ length: MAX_CO_PLAYERS + 1 }, () => CO_PLAYER) }),
       }),
     );
     expect([bad, notUuid, tooMany]).toEqual([

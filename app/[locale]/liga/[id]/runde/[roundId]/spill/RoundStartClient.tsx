@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
-import { minFlightPlayers } from '@/lib/league/flightRules';
+import { MAX_CO_PLAYERS, MAX_FLIGHT_PLAYERS, minFlightPlayers } from '@/lib/league/flightRules';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 
 /**
@@ -34,6 +34,9 @@ export function RoundStartClient({
   // The marker rule's one home (flightRules): co-players needed besides you.
   const minCoPlayers = minFlightPlayers(isSimulator) - 1;
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // A flight holds MAX_FLIGHT_PLAYERS (flightRules): with MAX_CO_PLAYERS
+  // ticked, the free rows left are disabled; the server refuses more anyway.
+  const full = selected.size >= MAX_CO_PLAYERS;
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -83,15 +86,18 @@ export function RoundStartClient({
             {coPlayers.map((p) => {
               const locked = p.lock !== null;
               const checked = !locked && selected.has(p.userId);
+              const blocked = !locked && !checked && full;
+              const disabled = locked || blocked;
               return (
                 <li key={p.userId}>
                   <label
                     data-testid={`liga-round-start-player-${p.userId}`}
                     data-locked={p.lock ?? undefined}
-                    aria-disabled={locked ? 'true' : undefined}
+                    data-full={blocked ? 'true' : undefined}
+                    aria-disabled={disabled ? 'true' : undefined}
                     className={[
                       'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors min-h-[44px]',
-                      locked
+                      disabled
                         ? 'cursor-not-allowed border-border bg-surface opacity-60'
                         : checked
                           ? 'cursor-pointer border-primary bg-primary-soft'
@@ -102,9 +108,9 @@ export function RoundStartClient({
                       type="checkbox"
                       className="sr-only"
                       checked={checked}
-                      disabled={locked}
+                      disabled={disabled}
                       onChange={() => {
-                        if (!locked) togglePlayer(p.userId);
+                        if (!disabled) togglePlayer(p.userId);
                       }}
                     />
                     {/* Visual checkbox */}
@@ -142,13 +148,16 @@ export function RoundStartClient({
               );
             })}
           </ul>
+          <p className="font-sans text-[12px] leading-[18px] text-muted" data-testid="liga-round-start-flight-max">
+            {t('flightMax', { max: MAX_FLIGHT_PLAYERS })}
+          </p>
         </fieldset>
       )}
 
       {error && (
         <Banner tone="error">
           {t.has(`errorMap.${error}` as Parameters<typeof t>[0])
-            ? t(`errorMap.${error}` as Parameters<typeof t>[0])
+            ? t(`errorMap.${error}` as Parameters<typeof t>[0], { max: MAX_FLIGHT_PLAYERS })
             : t('errorMap.fallback')}
         </Banner>
       )}
