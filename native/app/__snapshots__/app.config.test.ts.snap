@@ -34,12 +34,37 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
       "me.everything.badger.permission.BADGE_COUNT_READ",
       "me.everything.badger.permission.BADGE_COUNT_WRITE",
     ],
+    "intentFilters": [
+      {
+        "action": "VIEW",
+        "autoVerify": true,
+        "category": [
+          "BROWSABLE",
+          "DEFAULT",
+        ],
+        "data": [
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/venner/legg-til/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/en/venner/legg-til/",
+            "scheme": "https",
+          },
+        ],
+      },
+    ],
     "package": "no.tornygolf.app",
     "predictiveBackGestureEnabled": false,
     "versionCode": 7,
   },
   "icon": "./assets/icon.png",
   "ios": {
+    "associatedDomains": [
+      "applinks:tornygolf.no",
+    ],
     "buildNumber": "7",
     "bundleIdentifier": "no.tornygolf.app",
     "config": {

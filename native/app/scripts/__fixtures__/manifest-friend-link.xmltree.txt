@@ -1,0 +1,19 @@
+# Fikstur for android-proof.test.js (#2627). Syntetisk, i samme aapt2-form som TWA-fiksturen: intent-filteret
+# `android.intentFilters` i app.config.ts gir butikkbygget (autoVerify, https, tornygolf.no og de to venne-stiene).
+# Erstattes med en ekte `aapt2 dump xmltree` ved neste Android-butikkbygg.
+              E: intent-filter (line=139)
+                A: http://schemas.android.com/apk/res/android:autoVerify(0x010104ee)=true (Raw: "true")
+                  E: action (line=140)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.action.VIEW" (Raw: "android.intent.action.VIEW")
+                  E: data (line=141)
+                    A: http://schemas.android.com/apk/res/android:scheme(0x01010027)="https" (Raw: "https")
+                    A: http://schemas.android.com/apk/res/android:host(0x01010028)="tornygolf.no" (Raw: "tornygolf.no")
+                    A: http://schemas.android.com/apk/res/android:pathPrefix(0x0101002b)="/venner/legg-til/" (Raw: "/venner/legg-til/")
+                  E: data (line=142)
+                    A: http://schemas.android.com/apk/res/android:scheme(0x01010027)="https" (Raw: "https")
+                    A: http://schemas.android.com/apk/res/android:host(0x01010028)="tornygolf.no" (Raw: "tornygolf.no")
+                    A: http://schemas.android.com/apk/res/android:pathPrefix(0x0101002b)="/en/venner/legg-til/" (Raw: "/en/venner/legg-til/")
+                  E: category (line=143)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.category.BROWSABLE" (Raw: "android.intent.category.BROWSABLE")
+                  E: category (line=144)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.category.DEFAULT" (Raw: "android.intent.category.DEFAULT")

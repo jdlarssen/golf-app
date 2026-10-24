@@ -8,12 +8,15 @@
 //     Begge gir PASS, og verdien står i linja. Arkivet kreves ikke å ha
 //     `production` (se `entitlements-proof.sh`). Mangler den, eller har den en
 //     annen verdi, er det FAIL.
-//  2. **Associated domains er forbudt.** Fiksturen har en gyldig
-//     `aps-environment`, så den ene FAIL-en kan bare komme fra denne regelen,
-//     og testen sjekker at meldingen handler om associated domains. Ellers ville
-//     testen stått grønn med regelen slettet.
+//  2. **Associated domains må være nøyaktig `applinks:tornygolf.no`** (#2627):
+//     venne-lenka åpner appen, og AASA-fila på nettet slipper bare den
+//     gjennom. Et ekstra domene og en manglende verdi gir begge FAIL. Fiksturene
+//     har en gyldig `aps-environment`, så den ene FAIL-en kan bare komme fra
+//     denne regelen, og testen sjekker at meldingen handler om associated
+//     domains. Ellers ville testen stått grønn med regelen slettet.
 //  3. **En tom fil er en app uten entitlements** (`codesign` skriver da
-//     ingenting), og den gir FAIL på `aps-environment`, ikke en lesefeil.
+//     ingenting), og den gir FAIL på `aps-environment` og på associated
+//     domains, ikke en lesefeil.
 //  4. **Fail-closed ved en fil som ikke er en plist:** én FAIL og ingen PASS.
 //
 // Hver FAIL-fikstur bryter bare én regel. Reglene sources og kjøres i bash som
@@ -26,6 +29,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 
 const LIB = join(__dirname, 'entitlements-proof.sh');
+const AD_OK =
+  'PASS  com.apple.developer.associated-domains = applinks:tornygolf.no (AASA-fila slipper bare venne-lenka gjennom)';
 const fixture = (name) => join(__dirname, '__fixtures__', `entitlements-${name}.plist`);
 
 let tmp;
@@ -68,7 +73,7 @@ describe('entitlements_rules', () => {
     expect(r.status).toBe(0);
     expect(r.fail).toBe(0);
     expect(r.passes).toContain(`PASS  aps-environment = ${value}`);
-    expect(r.passes).toContain('PASS  ingen com.apple.developer.associated-domains');
+    expect(r.passes).toContain(AD_OK);
   });
 
   it('gir FAIL når aps-environment mangler', () => {
@@ -76,7 +81,7 @@ describe('entitlements_rules', () => {
     expect(r.status).toBe(0);
     expect(r.fail).toBe(1);
     expect(r.fails[0]).toMatch(/^FAIL {2}aps-environment mangler/);
-    expect(r.passes).toContain('PASS  ingen com.apple.developer.associated-domains');
+    expect(r.passes).toContain(AD_OK);
   });
 
   it('gir FAIL for en annen verdi, og skriver verdien', () => {
@@ -84,26 +89,31 @@ describe('entitlements_rules', () => {
     expect(r.status).toBe(0);
     expect(r.fail).toBe(1);
     expect(r.fails[0]).toMatch(/^FAIL {2}aps-environment = 'staging'/);
-    expect(r.passes).toContain('PASS  ingen com.apple.developer.associated-domains');
+    expect(r.passes).toContain(AD_OK);
   });
 
-  it('gir FAIL når associated domains er satt, og meldingen gjelder associated domains', () => {
-    const r = rules(fixture('associated-domains'));
+  it.each([
+    ['et domene til', 'ad-other-domain', /= applinks:tornygolf\.no applinks:www\.tornygolf\.no\. Bare applinks:tornygolf\.no er lov/],
+    ['ingen verdi', 'ad-missing', /mangler\. Butikkappen skal ha applinks:tornygolf\.no/],
+  ])('gir FAIL for associated domains med %s, og meldingen gjelder associated domains', (_label, name, why) => {
+    const r = rules(fixture(name));
     expect(r.status).toBe(0);
     expect(r.passes).toContain('PASS  aps-environment = production');
     expect(r.fail).toBe(1);
-    expect(r.fails[0]).toContain('com.apple.developer.associated-domains');
+    expect(r.fails[0]).toMatch(/^FAIL {2}com\.apple\.developer\.associated-domains /);
+    expect(r.fails[0]).toMatch(why);
     expect(r.fails[0]).not.toContain('aps-environment');
   });
 
-  it('gir FAIL på aps-environment for en tom fil (appen har ingen entitlements)', () => {
+  it('gir FAIL på aps-environment og associated domains for en tom fil (appen har ingen entitlements)', () => {
     const file = join(tmp, 'empty.plist');
     writeFileSync(file, '');
     const r = rules(file);
     expect(r.status).toBe(0);
-    expect(r.fail).toBe(1);
+    expect(r.pass).toBe(0);
+    expect(r.fail).toBe(2);
     expect(r.fails[0]).toMatch(/^FAIL {2}aps-environment mangler/);
-    expect(r.passes).toContain('PASS  ingen com.apple.developer.associated-domains');
+    expect(r.fails[1]).toMatch(/^FAIL {2}com\.apple\.developer\.associated-domains mangler/);
   });
 
   it('er fail-closed når fila ikke er en plist: én FAIL, ingen PASS', () => {

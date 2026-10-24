@@ -29,6 +29,7 @@ import { join } from 'path';
 const SCRIPT = join(__dirname, 'android-proof.py');
 const STORE = readFileSync(join(__dirname, '__fixtures__', 'manifest-store.xmltree.txt'), 'utf8');
 const TWA_AUTOVERIFY = readFileSync(join(__dirname, '__fixtures__', 'manifest-twa-autoverify.xmltree.txt'), 'utf8');
+const FRIEND_LINK = readFileSync(join(__dirname, '__fixtures__', 'manifest-friend-link.xmltree.txt'), 'utf8');
 
 // Ekte linje fra debug-AAB-en av dev-varianten (samme aapt2-dump, 2026-10-13).
 const DEBUGGABLE_LINE =
@@ -40,10 +41,10 @@ function run(args, input) {
   return { status: result.status, stdout: result.stdout.trim(), stderr: result.stderr };
 }
 
-/** Fakta-linjene som et objekt; nøkler som gjentas (permission, autoverify-host) blir lister. */
+/** Fakta-linjene som et objekt; nøkler som gjentas (permission, autoverify-*) blir lister. */
 function facts(xmltree) {
   const { status, stdout } = run(['manifest'], xmltree);
-  const out = { status, permission: [], 'autoverify-host': [] };
+  const out = { status, permission: [], 'autoverify-host': [], 'autoverify-path': [] };
   for (const line of stdout.split('\n').filter(Boolean)) {
     const [key, ...rest] = line.split('=');
     const value = rest.join('=');
@@ -58,9 +59,9 @@ function withApplicationAttr(line) {
   return STORE.replace(APP_LINE, `${APP_LINE}\n${line}`);
 }
 
-/** Butikk-manifestet med TWA-ens autoVerify-filter inne i MainActivity. */
-function withAutoVerify(transform = (s) => s) {
-  const filter = TWA_AUTOVERIFY.split('\n').filter((l) => !l.startsWith('#')).join('\n');
+/** Butikk-manifestet med et autoVerify-filter (TWA-ens som standard) inne i MainActivity. */
+function withAutoVerify(transform = (s) => s, fixture = TWA_AUTOVERIFY) {
+  const filter = fixture.split('\n').filter((l) => !l.startsWith('#')).join('\n');
   return `${STORE.trimEnd()}\n${transform(filter)}\n`;
 }
 
@@ -121,9 +122,38 @@ describe('android-proof.py manifest', () => {
     expect(f['autoverify-host']).toEqual(['@string/hostName']);
   });
 
+  // #2627: venne-lenka. Beviset trenger stiene, ikke bare verten.
+  it('gir vert og sti for venne-lenkas filter, én linje per par', () => {
+    const f = facts(withAutoVerify(undefined, FRIEND_LINK));
+    expect(f.status).toBe(0);
+    expect(f['autoverify-host']).toEqual(['tornygolf.no']);
+    expect(f['autoverify-path']).toEqual([
+      'tornygolf.no pathPrefix:/venner/legg-til/',
+      'tornygolf.no pathPrefix:/en/venner/legg-til/',
+    ]);
+  });
+
+  it('gir «*» som sti når filteret claimer hele verten', () => {
+    expect(facts(withAutoVerify())['autoverify-path']).toEqual(['@string/hostName *']);
+  });
+
+  it.each([
+    ['path', '/venner/legg-til/abc'],
+    ['pathPattern', '/.*'],
+    ['pathAdvancedPattern', '/[a-z]+'],
+    ['pathSuffix', '/x'],
+  ])('gir også %s videre, så regelen ser den', (attr, value) => {
+    const line = `                    A: http://schemas.android.com/apk/res/android:${attr}(0x01010000)="${value}" (Raw: "${value}")`;
+    const f = facts(
+      withAutoVerify((s) => s.replace(/(android:host\(0x01010028\)="tornygolf.no" \(Raw: "tornygolf.no"\))/, `$1\n${line}`), FRIEND_LINK),
+    );
+    expect(f['autoverify-path']).toContain(`tornygolf.no ${attr}:${value}`);
+  });
+
   it('gir ingen verter når autoVerify er false', () => {
     const f = facts(withAutoVerify((s) => s.replace(/=true \(Raw: "true"\)/, '=false (Raw: "false")')));
     expect(f['autoverify-host']).toEqual([]);
+    expect(f['autoverify-path']).toEqual([]);
   });
 
   it('stopper med exit 1 når manifestet mangler pakkenavn (uventet format)', () => {

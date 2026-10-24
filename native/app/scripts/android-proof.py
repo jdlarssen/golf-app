@@ -12,6 +12,13 @@
 #         permission=<navn>        én linje per uses-permission(-sdk-23)
 #         autoverify-host=<vert>   én linje per vert i et intent-filter med
 #                                  android:autoVerify som ikke er tydelig false
+#         autoverify-path=<vert> <sti>
+#                                  én linje per vert og sti-attributt i samme
+#                                  filter (#2627), som `pathPrefix:/venner/
+#                                  legg-til/`. `*` når filteret ikke har noen
+#                                  sti: da claimer det hele verten. Android slår
+#                                  sammen alle `<data>` i et filter, så hver
+#                                  vert gjelder hver sti.
 #       Fail-closed: en boolsk verdi aapt2 skriver typet (`(type 0x12)0xffffffff`)
 #       tolkes, og en verdi leseren ikke kjenner, regnes aldri som usann. Mangler
 #       manifestet eller pakkenavnet, er formatet ukjent: exit 1, ingen fakta.
@@ -42,6 +49,8 @@ ATTR = re.compile(r'^A: (?:[^=]*?:)?([A-Za-z0-9_]+)(?:\(0x[0-9a-f]+\))?=(.*)$')
 RAW = re.compile(r'\(Raw: "(.*)"\)\s*$')
 TYPED = re.compile(r'^\(type 0x[0-9a-f]+\)', re.IGNORECASE)
 TRUE_VALUES = {'true', '0xffffffff', '-1', '1'}
+# Sti-attributtene på `<data>` (#2627). Et filter uten noen av dem gjelder hele verten.
+PATH_ATTRS = ('path', 'pathPrefix', 'pathPattern', 'pathAdvancedPattern', 'pathSuffix')
 FALSE_VALUES = {'false', '0x0', '0x00000000', '0'}
 
 
@@ -135,9 +144,24 @@ def manifest_facts(text):
     for element in walk(manifest):
         auto_verify = element['attrs'].get('autoVerify')
         if element['name'] == 'intent-filter' and auto_verify is not None and bool_state(auto_verify) != 'false':
+            hosts = []
+            paths = []
             for data in walk(element):
-                if data['name'] == 'data' and 'host' in data['attrs']:
-                    print(f"autoverify-host={data['attrs']['host']}")
+                if data['name'] != 'data':
+                    continue
+                if 'host' in data['attrs']:
+                    hosts.append(data['attrs']['host'])
+                for attr in PATH_ATTRS:
+                    if attr in data['attrs']:
+                        paths.append(f"{attr}:{data['attrs'][attr]}")
+            # Hver `<data>` gjentar gjerne verten; én linje per vert og sti holder.
+            hosts = list(dict.fromkeys(hosts))
+            paths = list(dict.fromkeys(paths))
+            for host in hosts:
+                print(f"autoverify-host={host}")
+            for host in hosts:
+                for path in paths or ['*']:
+                    print(f"autoverify-path={host} {path}")
     return 0
 
 
