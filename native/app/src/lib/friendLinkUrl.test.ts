@@ -4,6 +4,7 @@
 // Lenka kommer fra kameraet (QR-koden på bag-taggen), fra «Del lenken din» i
 // en melding, eller fra appens eget skjema i dev-bygget. Alt som ikke er en
 // venne-lenke til vår web-adresse, skal gi `null`, så appen åpner som vanlig.
+import { STORE_FRIEND_LINK_PATH_PREFIXES } from '../../app.config';
 import { friendCodeFromUrl } from './friendLinkUrl';
 
 const BASE = 'https://tornygolf.no';
@@ -39,6 +40,12 @@ describe('friendCodeFromUrl', () => {
     ['ikke en adresse', 'venner/legg-til/abcd1234'],
   ])('gir null for %s', (_label, url) => {
     expect(friendCodeFromUrl(url, BASE)).toBeNull();
+  });
+
+  // Stiene butikkbygget claimer (app.config.ts, i takt med AASA-fila og
+  // Android-beviset) må alle bli en kode her, ellers åpner lenka appen på Hjem.
+  it.each(STORE_FRIEND_LINK_PATH_PREFIXES)('leser koden fra hver sti butikkbygget claimer: %s', (prefix) => {
+    expect(friendCodeFromUrl(`https://tornygolf.no${prefix}abcd1234`, BASE)).toBe('abcd1234');
   });
 
   it('godtar web-adressen bygget peker på, også med port (dev mot staging)', () => {

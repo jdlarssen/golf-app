@@ -102,8 +102,8 @@ med (forslag), e-post (ukjent adresse → tilbud om å invitere på samme e-post
 «Bli venn med …» og blir venn med ett trykk (innlogging først om nødvendig). Har kompisen appen, åpner både
 QR-koden og den delte lenka appen på skjermen «Bli venn med …» (`FriendLink`, via
 `GET`/`POST /api/friends/link/[code]`); uten innlogging kommer skjermen rett etter innloggingen. AASA-fila
-slipper bare `/venner/legg-til/*` gjennom, så alle andre lenker åpnes fortsatt i Safari. På Android åpnes
-lenka i nettleseren til Play-signeringsnøkkelen står i `assetlinks.json`. Uten appen lander lenka på
+slipper bare `/venner/legg-til/*` gjennom, så alle andre lenker åpnes fortsatt i Safari. På Android 12 og
+nyere åpnes lenka i nettleseren til Play-signeringsnøkkelen står i `assetlinks.json` (eldre Android spør). Uten appen lander lenka på
 nettsiden som før. Bildet som deles fra bag-taggen har ingen QR-kode. Vennskap er gjensidig (forespørsel
 → mottaker godtar i Innboks); `friend_request`/`friend_accepted`-varsler dyplenker til vennelista. Venner
 blir søkbare i lag-påmelding (`getTeamCandidates` = venner ∪ co-players, #408), og venners

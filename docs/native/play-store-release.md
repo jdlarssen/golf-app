@@ -137,7 +137,8 @@ signert med. I dag står bare opplastingsnøkkelen der. Play signerer appen om m
 nøkkel (Play App Signing), og den finnes først når appen er opprettet i Play Console:
 **Test and release → App integrity → App signing key certificate → SHA-256**. Legg avtrykket
 til i lista i ruta (ikke bytt ut opplastingsnøkkelen: beviset leser linja etter
-`// Upload key`). Til det er gjort, åpnes venne-lenka i nettleseren på Android, som før.
+`// Upload key`). Til det er gjort, åpner Android 12 og nyere venne-lenka i nettleseren, som før.
+Android 7–11 spør i stedet om lenka skal åpnes i appen eller i nettleseren.
 
 ## Nettsiden samme dag
 
