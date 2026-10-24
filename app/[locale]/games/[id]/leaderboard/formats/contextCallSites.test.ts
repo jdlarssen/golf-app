@@ -123,3 +123,29 @@ describe('leaderboard format modules build scoring context through the shared bu
     ).toEqual([]);
   });
 });
+
+describe('the old aggregator and the reveal board get the game’s ranking rule (#2625)', () => {
+  /** The text of each call or element, from its opening to the first closing `})` / `/>`. */
+  function calls(source: string, open: RegExp, close: string): string[] {
+    return matchIndexes(source, open).map(({ index }) => source.slice(index, source.indexOf(close, index)));
+  }
+
+  it('every computeLeaderboard({…}) call and every <RevealBruttoView> passes `ranking`', () => {
+    // A net-to-par game ranks on to par in the reveal preview and the first
+    // half too; a call without the rule ranks it on the sum (the bug in #2625).
+    const violations: string[] = [];
+    let seen = 0;
+    for (const { name, source } of SOURCES) {
+      for (const call of calls(source, /computeLeaderboard\(\{/, '})')) {
+        seen += 1;
+        if (!/\branking\b/.test(call)) violations.push(`${name}: computeLeaderboard without ranking`);
+      }
+      for (const element of calls(source, /<RevealBruttoView\b/, '/>')) {
+        seen += 1;
+        if (!/\branking=/.test(element)) violations.push(`${name}: RevealBruttoView without ranking`);
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(violations).toEqual([]);
+  });
+});
