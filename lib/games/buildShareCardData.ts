@@ -193,11 +193,14 @@ export function buildShareCardData(opts: {
     // Stableford → 'placement' band, points
     // -----------------------------------------------------------------------
     case 'stableford': {
+      // #2625: a game ranked on net to par shows the engine's points against
+      // par pace («+3», «E», «−2»), what it is ranked on.
+      const toPar = result.ranking === 'net_to_par';
       if (result.variant === 'solo') {
         const rows: IndividualCompetitor[] = result.players.map((p) => ({
           userIds: [p.userId],
           rank: p.rank,
-          score: { kind: 'points', value: p.totalPoints },
+          score: toPar ? { kind: 'vsPar', label: vsParLabel(p.toPar) } : { kind: 'points', value: p.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       } else {
@@ -206,7 +209,7 @@ export function buildShareCardData(opts: {
           userIds: t.playerIds,
           teamNumber: t.teamNumber,
           rank: t.rank,
-          score: { kind: 'points', value: t.totalPoints },
+          score: toPar ? { kind: 'vsPar', label: vsParLabel(t.toPar) } : { kind: 'points', value: t.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       }
@@ -286,8 +289,12 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         teamNumber: t.teamNumber,
         rank: t.rank,
-        // patsome uses stableford points
-        score: { kind: 'points', value: t.totalPoints },
+        // patsome uses stableford points; #2625: points against par pace in a
+        // game ranked on net to par.
+        score:
+          result.ranking === 'net_to_par'
+            ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
+            : { kind: 'points', value: t.totalPoints },
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }

@@ -359,3 +359,66 @@ describe('ceremonyLines — team strokeplay ranked on net to par (#2625)', () =>
     expect(lines).toHaveLength(2);
   });
 });
+
+// #2625 part 2: a points game ranked on net to par shows the number it is
+// ranked on — points against par pace, shown like to par («+3 mot par») —
+// and a player or team without a hole is left out.
+describe('ceremonyLines — points games ranked on net to par (#2625)', () => {
+  it('solo stableford', () => {
+    const lines = ceremonyLines(
+      result({
+        kind: 'stableford',
+        variant: 'solo',
+        ranking: 'net_to_par',
+        players: [
+          { userId: 'a', totalPoints: 11, holesPlayed: 3, toPar: 5, rank: 1, tiedWith: [] },
+          { userId: 'b', totalPoints: 13, holesPlayed: 6, toPar: 1, rank: 2, tiedWith: [] },
+          { userId: 'c', totalPoints: 0, holesPlayed: 0, toPar: null, rank: 3, tiedWith: [] },
+        ],
+        holes: [],
+      }),
+    );
+    expect(lines.map((l) => [l.key, l.rank, l.total, l.unit])).toEqual([
+      ['a', 1, 5, 'toPar'],
+      ['b', 2, 1, 'toPar'],
+    ]);
+  });
+
+  it.each([
+    [
+      'team stableford',
+      {
+        kind: 'stableford',
+        variant: 'team',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 1, playerIds: ['a', 'b'], holes: [], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
+          { teamNumber: 2, playerIds: ['c', 'd'], holes: [], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
+          { teamNumber: 3, playerIds: ['e', 'f'], holes: [], totalPoints: 0, toPar: null, rank: 3, tiedWith: [] },
+        ],
+      },
+    ],
+    [
+      'patsome',
+      {
+        kind: 'patsome',
+        scoring: 'net',
+        ranking: 'net_to_par',
+        teams: [
+          { teamNumber: 2, playerIds: ['c', 'd'], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
+          { teamNumber: 1, playerIds: ['a', 'b'], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
+          { teamNumber: 3, playerIds: ['e', 'f'], totalPoints: 0, toPar: null, rank: 3, tiedWith: [] },
+        ],
+      },
+    ],
+  ])('%s', (_kind, r) => {
+    const lines = ceremonyLines(result(r));
+    expect(lines.map((l) => [l.key, l.rank, l.total, l.unit])).toEqual(
+      expect.arrayContaining([
+        ['team-1', 1, 5, 'toPar'],
+        ['team-2', 2, 1, 'toPar'],
+      ]),
+    );
+    expect(lines).toHaveLength(2);
+  });
+});
