@@ -3,8 +3,11 @@
 // react-navigation native-stack, ikke expo-router: expo-router krever bytte av
 // entry-point og filbasert app/-skanning oppå det uvanlige watchFolders-
 // oppsettet appen deler `lib/` gjennom. Seks skjermer trenger ikke den magien.
-// Deep links (N7) dekkes av react-navigations egen linking-config når den tid
-// kommer.
+// Dype lenker går ikke gjennom react-navigations linking-config. Den eneste
+// lenka som åpner en skjerm, er venne-lenka (#2627): `App.tsx` lytter,
+// `data/pendingFriendLink.ts` holder koden, og navigatoren åpner
+// «Bli venn med …» (`openPendingFriendLink`). Varsler åpner skjermer via
+// `listenForPushTaps`.
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
