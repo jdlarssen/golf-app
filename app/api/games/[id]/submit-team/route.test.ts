@@ -5,7 +5,6 @@ import {
   type QueryOp,
   type QueryResponse,
 } from '@/lib/supabase/testing/adminClientMock';
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 
 /**
  * Type A (#1918, #2200): rutas port og transport.
@@ -426,7 +425,7 @@ describe('POST — makkerne i samme levering (#2200)', () => {
     ['ikke JSON', 'lever alt'],
     ['alsoFor er ikke en liste', { alsoFor: OLA }],
     ['en id er ikke en uuid', { alsoFor: ['ola'] }],
-    ['flere id-er enn en flight', { alsoFor: Array.from({ length: MAX_FLIGHT_SIZE + 1 }, () => OLA) }],
+    ['mer enn 20 id-er', { alsoFor: Array.from({ length: 21 }, () => OLA) }],
   ])('feilformet kropp (%s): 400, ingenting leses eller skrives', async (_, body) => {
     const res = await POST(asPlayer(body), ctx());
 
