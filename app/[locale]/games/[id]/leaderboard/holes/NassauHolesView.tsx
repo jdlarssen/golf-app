@@ -381,7 +381,7 @@ function HoleCard({
 }) {
   const tc = useTranslations('leaderboard.common');
   const scored = hole.bestUserIds.length > 0;
-  // Champagne kun ved en utvetydig hull-vinner. Delt beste = nøytralt.
+  // Champagne only for a sole hole winner; a shared best stays neutral.
   const uniqueWinnerId =
     hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
   const rows = nassauHoleCardRows(hole.perPlayer, ranking);
