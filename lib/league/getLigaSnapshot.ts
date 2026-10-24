@@ -75,6 +75,11 @@ export type LeagueRoundView = {
    * withdraw (roundPlayerLocks).
    */
   inProgressUserIds: string[];
+  /**
+   * #2638: the round's tee box name. The settings card shows the tee from the
+   * course selection, not as a setting of its own (orchestrator's choice 24.10).
+   */
+  teeName: string | null;
   /** #2638: the round's own override, normalised (only the keys that differ). */
   simOverride: SimSettings;
   /**
@@ -152,7 +157,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     supabase
       .from('league_rounds')
       .select(
-        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings',
+        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings, tee_boxes!league_rounds_tee_box_id_fkey(name)',
       )
       .eq('league_id', leagueId)
       .order('sequence', { ascending: true }),
@@ -175,6 +180,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     original_closes_at: string;
     window_overridden_at: string | null;
     sim_settings: unknown;
+    tee_boxes?: { name: string | null } | null;
   }>;
   const roundIds = rounds.map((r) => r.id);
 
@@ -495,6 +501,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       flightCount: flightCountByRound.get(r.id) ?? 0,
       deliveredUserIds: Array.from(locks.delivered),
       inProgressUserIds: Array.from(locks.inProgress),
+      teeName: r.tee_boxes?.name ?? null,
       simOverride: normalizeSimSettings(r.sim_settings),
       simSettings: effective.values,
       overriddenKeys: effective.overriddenKeys,

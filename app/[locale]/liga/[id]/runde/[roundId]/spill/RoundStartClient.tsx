@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
+import { minFlightPlayers } from '@/lib/league/flightRules';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 
 /**
@@ -21,12 +22,17 @@ function playerDisplayName(p: LeagueParticipant, unknownLabel: string): string {
 export function RoundStartClient({
   roundId,
   coPlayers,
+  isSimulator,
 }: {
   roundId: string;
   /** All other league participants (not the current user). */
   coPlayers: RoundCoPlayer[];
+  /** #2638: a simulator league lets the player start alone. */
+  isSimulator: boolean;
 }) {
   const t = useTranslations('liga.player.runde');
+  // The marker rule's one home (flightRules): co-players needed besides you.
+  const minCoPlayers = minFlightPlayers(isSimulator) - 1;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -45,7 +51,7 @@ export function RoundStartClient({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (selected.size === 0) {
+    if (selected.size < minCoPlayers) {
       setError('need_marker');
       return;
     }
@@ -63,9 +69,11 @@ export function RoundStartClient({
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Co-player picker */}
       {coPlayers.length === 0 ? (
-        <Banner tone="warning">
-          {t('noCoPlayers')}
-        </Banner>
+        minCoPlayers > 0 && (
+          <Banner tone="warning">
+            {t('noCoPlayers')}
+          </Banner>
+        )
       ) : (
         <fieldset className="space-y-2">
           <legend className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2 block">
@@ -150,7 +158,7 @@ export function RoundStartClient({
         variant="primary"
         className="w-full"
         data-testid="liga-round-start-submit"
-        disabled={selected.size === 0 || isPending || coPlayers.length === 0}
+        disabled={selected.size < minCoPlayers || isPending}
         pending={isPending}
         pendingLabel={t('startPending')}
       >

@@ -33,6 +33,8 @@ export type AppLeagueRound = {
   closesAt: string;
   /** Course and tee are set, so the round can be started. */
   ready: boolean;
+  /** The round's tee, from the course selection (shown on the settings card). */
+  teeName: string | null;
   /** Players who have delivered the round. */
   delivered: string[];
   /** Players who are playing the round now. */

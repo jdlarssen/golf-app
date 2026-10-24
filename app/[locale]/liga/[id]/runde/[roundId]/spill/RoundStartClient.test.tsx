@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 // #2214: the server gate (co_player_locked) is unit-tested in
@@ -26,6 +26,7 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
       <RoundStartClient
         roundId="r1"
         coPlayers={[player('FREE', null), player('DONE', 'delivered'), player('BUSY', 'in_progress')]}
+        isSimulator={false}
       />,
     );
     const row = (id: string) => screen.getByTestId(`liga-round-start-player-${id}`);
@@ -52,5 +53,11 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
       done: ['true', 'delivered', false],
       busy: ['true', 'in_progress', false],
     });
+
+    // #2638: in a simulator league the same picker is optional — nobody
+    // ticked, and the submit is enabled (minFlightPlayers(true) = 1).
+    cleanup();
+    render(<RoundStartClient roundId="r1" coPlayers={[player('FREE', null)]} isSimulator />);
+    expect((screen.getByTestId('liga-round-start-submit') as HTMLButtonElement).disabled).toBe(false);
   });
 });
