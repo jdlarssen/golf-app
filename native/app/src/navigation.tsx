@@ -40,7 +40,7 @@ import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
-import { FRIEND_LINK_TEXT, FRIENDS_TEXT } from './lib/friendsCopy';
+import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT, notificationsThemeHeading } from './lib/profileCopy';
@@ -125,8 +125,8 @@ export type RootStackParamList = {
   /**
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
-   * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så pila heter
-   * bare «Tilbake», ikke «Tilbake til profil».
+   * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så toppen har
+   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`).
    */
   Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
   /**
@@ -366,11 +366,11 @@ export function RootNavigator() {
         <Stack.Screen
           name="Friends"
           component={Friends}
-          options={({ route }) =>
-            kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
-              backLabel: route.params?.from === 'friendLink' ? undefined : PROFILE_TEXT.backToProfile,
-            })
-          }
+          options={({ route }) => {
+            // #2627: fra «Bli venn med …» nevner ikke toppen Profil.
+            const top = friendsTopBar(route.params?.from);
+            return kickerHeader(top.kicker, FRIENDS_TEXT.heading, { backLabel: top.backLabel });
+          }}
         />
         {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
             og eierens navn stort i innholdet. */}

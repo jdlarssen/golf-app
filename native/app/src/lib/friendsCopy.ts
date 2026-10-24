@@ -25,7 +25,7 @@ import {
 } from '../../../../lib/format/date';
 import type { FriendStats } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
-import { formatHcpNb } from './profileCopy';
+import { PROFILE_TEXT, formatHcpNb } from './profileCopy';
 
 /** Tekstene vennesiden viser. Flat, som `PROFILE_TEXT`. */
 export const FRIENDS_TEXT = {
@@ -111,6 +111,17 @@ export const FRIEND_LINK_TEXT = {
 /** «Bli venn med {name}? Da ser dere …» — webbens `friends.leggTil.connectCard`. */
 export function friendLinkConnectCard(name: string): string {
   return `Bli venn med ${name || FRIENDS_TEXT.someoneFallback}? Da ser dere hverandres spill og kan velge hverandre når dere fyller lag.`;
+}
+
+/**
+ * Toppen på Venner (#2256, #2627): ordet i midten og pila sin etikett. Fra
+ * Profil står «PROFIL» og «Tilbake til profil», som i designet. Åpnet fra
+ * «Bli venn med …» går pila til skjermen under (Hjem), så toppen nevner ikke
+ * Profil: bare pila, med standardetiketten «Tilbake» (som Profil selv).
+ */
+export function friendsTopBar(from: 'friendLink' | undefined): { kicker: string; backLabel?: string } {
+  if (from === 'friendLink') return { kicker: '', backLabel: undefined };
+  return { kicker: PROFILE_TEXT.heading, backLabel: PROFILE_TEXT.backToProfile };
 }
 
 // Webbens `friends.status.*`, med samme koder som `?status=`. `not_found` og
