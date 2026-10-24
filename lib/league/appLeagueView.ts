@@ -39,9 +39,13 @@ export type AppLeagueRound = {
   delivered: string[];
   /** Players who are playing the round now. */
   inProgress: string[];
-  /** The settings that apply to the round (`effectiveSimSettings`). */
+  /**
+   * The settings that apply to the round (`roundSimSettings`): the
+   * organiser's override over the frozen default once the round has started,
+   * else over today's league default.
+   */
   simSettings: SimSettings;
-  /** Keys that differ from the league default («Endret denne runden»). */
+  /** The keys the organiser overrode for this round («Endret denne runden»). */
   overriddenKeys: SimSettingKey[];
   /** A player has started the round, so its settings are fixed. */
   settingsLocked: boolean;

@@ -13,14 +13,18 @@
 --   - the gimme coupling: when both putting and gimme are in the object, a
 --     putting that makes Trackman lock the gimme (Auto - Tour Pro, Auto - By
 --     HCP, Auto - Fixed) goes with NOT_APPLICABLE, and every other putting
---     with a distance. A round override that holds putting alone passes: its
---     gimme comes from the league default (the app validates the merged
---     values).
+--     with a distance. A round override that holds putting alone passed here;
+--     0215 replaced the function so putting and gimme travel as a pair (both
+--     or neither), and such an override is refused.
 -- null passes, as before.
 --
 -- Some options are not confirmed yet (the contract addendum lists them). The
--- owner checks them on the simulator; a change is one edit in simSettings.ts
--- and one migration that replaces this function.
+-- owner checks them on the simulator. A change is one edit in simSettings.ts
+-- and one migration that FIRST rewrites the stored values the new list
+-- refuses (leagues.sim_settings, league_rounds.sim_settings and
+-- league_rounds.sim_frozen_default) to the nearest valid code, THEN replaces
+-- this function, in the same migration: a replaced function does not re-check
+-- the rows already stored. 0215 shows the pattern.
 --
 -- IMMUTABLE and with an empty search_path: it only reads its argument. It
 -- stays executable by everyone, because a CHECK runs it as the writing role.
