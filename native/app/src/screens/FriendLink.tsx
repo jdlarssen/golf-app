@@ -19,6 +19,7 @@ import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../componen
 import { PageTitle } from '../components/PageTitle';
 import { HakeIcon } from '../components/icons/Icons';
 import { connectFriendLink, fetchFriendLink, type FriendLinkLoadResult } from '../data/friends';
+import type { WebApiFailure } from '../data/webApi';
 import {
   FRIEND_LINK_TEXT,
   FRIENDS_TEXT,
@@ -32,7 +33,7 @@ import { FONTS, interLine, useTheme, withAlpha } from '../theme';
 /** Det skjermen viser. `connected` er etter trykket på «Bli venner». */
 type Shown =
   | { state: 'loading' }
-  | { state: 'failed'; reason: Exclude<FriendLinkLoadResult, { ok: true }>['reason'] }
+  | { state: 'failed'; reason: WebApiFailure | 'load_failed' }
   | { state: 'unknown' }
   | { state: 'ready'; name: string; relation: FriendLinkRelation | 'connected' };
 
