@@ -545,7 +545,7 @@ describe('mode_config ranking on edit (#2625)', () => {
     expect(updatedModeConfig()).toMatchObject({ kind: 'texas_scramble', ranking: 'net_to_par' });
   });
 
-  it.each([
+  it.each<{ kind: string; fields: Record<string, string> }>([
     { kind: 'stableford', fields: { game_mode: 'stableford', stableford_team_size: '1' } },
     { kind: 'nassau', fields: { game_mode: 'nassau', nassau_scoring: 'net' } },
   ])('a draft that switches from texas to $kind is stamped too (#2625 part 2)', async ({ kind, fields }) => {

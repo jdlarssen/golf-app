@@ -179,6 +179,7 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
   const result: StablefordResult = {
     kind: 'stableford',
     variant: 'solo',
+    ranking: 'net_total',
     holes: [
       tieHole(1, 2, 2),
       tieHole(2, 2, 2),
@@ -189,8 +190,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       tieHole(7, 2, 4),
     ],
     players: [
-      { userId: 'u2', totalPoints: 14, rank: 1, holesPlayed: 7, tiedWith: [] },
-      { userId: 'u1', totalPoints: 14, rank: 2, holesPlayed: 7, tiedWith: [] },
+      { userId: 'u2', totalPoints: 14, rank: 1, holesPlayed: 7, toPar: null, tiedWith: [] },
+      { userId: 'u1', totalPoints: 14, rank: 2, holesPlayed: 7, toPar: null, tiedWith: [] },
     ],
   };
   const nameByUserId = names(['u1', 'Karl'], ['u2', 'Jørgen']);
@@ -227,8 +228,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       ...result,
       holes: [tieHole(1, 4, 2)],
       players: [
-        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, tiedWith: [] },
-        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, tiedWith: [] },
+        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, toPar: null, tiedWith: [] },
+        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, toPar: null, tiedWith: [] },
       ],
     };
     const facts = buildRoundReportFacts({
@@ -684,10 +685,11 @@ describe('band coverage — remaining placement kinds produce a placement band',
         result: {
           kind: 'stableford',
           variant: 'solo',
+          ranking: 'net_total',
           holes: [],
           players: [
-            { userId: 'u1', totalPoints: 30, rank: 1, holesPlayed: 18, tiedWith: [] },
-            { userId: 'u2', totalPoints: 25, rank: 2, holesPlayed: 18, tiedWith: [] },
+            { userId: 'u1', totalPoints: 30, rank: 1, holesPlayed: 18, toPar: null, tiedWith: [] },
+            { userId: 'u2', totalPoints: 25, rank: 2, holesPlayed: 18, toPar: null, tiedWith: [] },
           ],
         },
       }),
@@ -739,6 +741,7 @@ describe('band coverage — remaining placement kinds produce a placement band',
         result: {
           kind: 'nassau',
           scoring: 'net',
+          ranking: 'net_total',
           sections: {
             front9: { name: 'front9', holeNumbers: [], players: [], winnerUserIds: [], isPending: false },
             back9: { name: 'back9', holeNumbers: [], players: [], winnerUserIds: [], isPending: false },

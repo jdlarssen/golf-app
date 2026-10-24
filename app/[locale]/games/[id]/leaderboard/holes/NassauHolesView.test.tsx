@@ -23,6 +23,7 @@ function sectionLine(
     totalEffectiveStrokes,
     totalGrossStrokes: totalEffectiveStrokes,
     holesPlayed: 9,
+    toPar: null,
     rank,
     tiedWith: [],
   };
@@ -78,6 +79,7 @@ function makeResult(): NassauResult {
   return {
     kind: 'nassau',
     scoring: 'net',
+    ranking: 'net_total',
     sections: {
       front9: section(
         'front9',

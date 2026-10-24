@@ -22,12 +22,14 @@ const GAME = 'game-1';
 const SOLO_STABLEFORD: ModeResult = {
   kind: 'stableford',
   variant: 'solo',
+  ranking: 'net_total',
   players: [],
   holes: [],
 };
 const TEAM_STABLEFORD: ModeResult = {
   kind: 'stableford',
   variant: 'team',
+  ranking: 'net_total',
   teams: [],
 };
 const BEST_BALL: ModeResult = { kind: 'best_ball', ranking: 'net_total', teams: [] };

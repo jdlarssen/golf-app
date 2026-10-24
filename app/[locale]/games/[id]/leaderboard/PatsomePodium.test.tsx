@@ -24,13 +24,14 @@ function makeTeamLine(
       foursomes: { segment: 'foursomes', points: 0, holesPlayed: 6 },
     },
     totalPoints,
+    toPar: null,
     rank,
     tiedWith,
   };
 }
 
 function makeResult(teams: PatsomeTeamLine[]): PatsomeResult {
-  return { kind: 'patsome', scoring: 'net', teams };
+  return { kind: 'patsome', scoring: 'net', ranking: 'net_total', teams };
 }
 
 function makePlayers(
