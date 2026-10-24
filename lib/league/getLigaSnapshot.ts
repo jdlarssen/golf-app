@@ -447,10 +447,14 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     }
   }
 
+  // #2638 (artboard 7a): while a round's window is open, a player who has not
+  // played it yet is not charged for it (computeLeagueStandings).
+  const now = Date.now();
   const roundInputs: LeagueRoundInput[] = rounds.map((r) => ({
     roundId: r.id,
     sequence: r.sequence,
     scores: roundScores.get(r.id) ?? [],
+    windowOpen: now < new Date(r.closes_at).getTime(),
   }));
 
   const config: LeagueStandingsConfig = {

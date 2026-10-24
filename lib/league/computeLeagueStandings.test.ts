@@ -26,10 +26,17 @@ const score = (
   finishedAt: opts.finishedAt ?? null,
 });
 
-const round = (roundId: string, sequence: number, scores: LeagueRoundInput['scores']): LeagueRoundInput => ({
+// windowOpen defaults to false: a closed round, where a missed round is penalised.
+const round = (
+  roundId: string,
+  sequence: number,
+  scores: LeagueRoundInput['scores'],
+  windowOpen = false,
+): LeagueRoundInput => ({
   roundId,
   sequence,
   scores,
+  windowOpen,
 });
 
 const rowOf = (res: ReturnType<typeof computeLeagueStandings>, userId: string) =>
@@ -489,4 +496,44 @@ describe('computeLeagueStandings — stableford (points-based, higher best)', ()
     expect(rowOf(res, 'B').value).toBe(50);
     expect(res.rows[0].userId).toBe('A'); // A won the last round (30 > 20)
   });
+});
+
+/**
+ * The orchestrator's review (artboard 7a), every league: while a round's
+ * window is open, a player who has not played it yet still has time. Their
+ * cell shows «—» and nothing is charged for it; once the window has closed,
+ * today's rule for a missed round applies. Round 1 is closed and played by
+ * both; round 2 has only A's result.
+ */
+describe('computeLeagueStandings — a round whose window is still open', () => {
+  const strokeRounds = (open: boolean) => [
+    round('r1', 1, [score('A', 2), score('B', 3)]),
+    round('r2', 2, [score('A', 4)], open),
+  ];
+  const pointRounds = (open: boolean) => [
+    round('r1', 1, [score('A', 36), score('B', 30)]),
+    round('r2', 2, [score('A', 34)], open),
+  ];
+
+  it.each([
+    ['stroke play, total, open', cfg(), strokeRounds(true), { value: null, penalised: false }, 3, true],
+    ['stroke play, total, closed', cfg(), strokeRounds(false), { value: 5, penalised: true }, 8, true],
+    ['Stableford, total, open', cfg({ pointsBased: true }), pointRounds(true), { value: null, penalised: false }, 30, true],
+    ['Stableford, total, closed', cfg({ pointsBased: true }), pointRounds(false), { value: 0, penalised: true }, 30, true],
+    ['stroke play, best 2, open', cfg({ standingsModel: 'best_n', bestNCount: 2 }), strokeRounds(true), { value: null, penalised: false }, 3, true],
+    ['stroke play, best 2, closed', cfg({ standingsModel: 'best_n', bestNCount: 2 }), strokeRounds(false), { value: null, penalised: false }, 8, true],
+    ['must play all, open', cfg({ missedRoundPolicy: 'must_play_all' }), strokeRounds(true), { value: null, penalised: false }, 3, true],
+    ['must play all, closed', cfg({ missedRoundPolicy: 'must_play_all' }), strokeRounds(false), { value: null, penalised: false }, 3, false],
+  ] as Array<[string, LeagueStandingsConfig, LeagueRoundInput[], { value: number | null; penalised: boolean }, number, boolean]>)(
+    '%s: the player who has not played round 2',
+    (_label, config, rounds, cell, value, ranked) => {
+      const b = rowOf(computeLeagueStandings(config, rounds, ['A', 'B']), 'B');
+      const r2 = b.perRound.find((c) => c.roundId === 'r2')!;
+      expect({ cell: { value: r2.value, penalised: r2.penalised }, value: b.value, ranked: b.ranked }).toEqual({
+        cell,
+        value,
+        ranked,
+      });
+    },
+  );
 });
