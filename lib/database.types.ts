@@ -2527,6 +2527,7 @@ export type Database = {
           was_applied: boolean
         }[]
       }
+      sim_settings_valid: { Args: { s: Json }; Returns: boolean }
       slugify_course_name: { Args: { input: string }; Returns: string }
       team_tee_shot_shortfall: {
         Args: {
