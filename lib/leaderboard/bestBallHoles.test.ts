@@ -194,6 +194,32 @@ describe('bestBallDrilldown — ranking: net_to_par (#2625)', () => {
   });
 });
 
+describe('bestBallHoleWinners — mot egen par (#2625)', () => {
+  // Hull 1 er par 4 for herrer og par 5 for damer. Lag 1 (herre) og lag 2
+  // (dame) går begge på netto 4: lag 2 er ett under sin par, lag 1 på par.
+  const holes = [hole(1, 4, { parByGender: { mens: 4, ladies: 5, juniors: 4 } })];
+  const players = [
+    player('ola', 1, 'Ola Nordmann', { teeGender: 'mens' }),
+    player('kari', 2, 'Kari Holm', { teeGender: 'ladies' }),
+  ];
+  const scores = [score('ola', 1, 4), score('kari', 1, 4)];
+
+  it('i et spill rangert mot par vinner laget som var best mot sin egen par, som tavla', () => {
+    const flagged = computeLeaderboard({ mode: 'netto', players, holes, scores, ranking: 'net_to_par' });
+    const ordered = [...flagged].sort((a, b) => a.rank - b.rank);
+    expect(ordered.map((l) => l.teamNumber)).toEqual([2, 1]);
+    expect(bestBallHoleWinners(ordered, ordered[0]!, 'net_to_par')).toEqual([2]);
+    const view = bestBallDrilldown({ lines: flagged, requestedTeam: 2, coursePar: 4, ranking: 'net_to_par' })!;
+    expect([view.rank, view.holesWon]).toEqual([1, 1]);
+  });
+
+  it('uten flagget er hullet delt, som før', () => {
+    const plain = computeLeaderboard({ mode: 'netto', players, holes, scores });
+    expect(bestBallHoleWinners(plain, plain[0]!)).toEqual([null]);
+    expect(bestBallDrilldown({ lines: plain, requestedTeam: 2, coursePar: 4 })!.holesWon).toBe(0);
+  });
+});
+
 describe('bestBallRevealMeta', () => {
   it('navnene som på webben i et avsluttet spill, med kallenavn, skilt med «·»', () => {
     expect(

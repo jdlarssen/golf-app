@@ -90,16 +90,23 @@ export type BestBallDrilldown = {
 /**
  * Laget som vant hvert av `selected` sine hull alene, eller `null` ved delt
  * beste netto og uten score.
+ *
+ * #2625: in a game ranked on net to par a hole goes to the team best against
+ * its own par (`teamNet − par`, the team row's par), the measure the board
+ * ranks on (`lib/scoring/modes/bestBall.ts`). Teams on tees with a different
+ * par then no longer share a hole the ranking gives to one of them.
  */
 export function bestBallHoleWinners(
   orderedLines: readonly TeamLine[],
   selected: TeamLine,
+  ranking?: 'net_to_par',
 ): Array<number | null> {
   return selected.holes.map((h) => {
     const eligible = orderedLines
       .map((l) => {
         const row = l.holes.find((r) => r.holeNumber === h.holeNumber);
-        return row?.teamNet == null ? null : { teamNumber: l.teamNumber, net: row.teamNet };
+        if (row?.teamNet == null) return null;
+        return { teamNumber: l.teamNumber, net: ranking === 'net_to_par' ? row.teamNet - row.par : row.teamNet };
       })
       .filter((x): x is { teamNumber: number; net: number } => x !== null);
     if (eligible.length === 0) return null;
@@ -197,7 +204,7 @@ export function bestBallDrilldown(opts: {
     ranking,
     players: selected.players,
     nines,
-    holesWon: bestBallHoleWinners(ordered, selected).filter((w) => w === selected.teamNumber).length,
+    holesWon: bestBallHoleWinners(ordered, selected, ranking).filter((w) => w === selected.teamNumber).length,
     prev: ref(ordered[idx - 1]),
     next: ref(ordered[idx + 1]),
     teamCount: ordered.length,
