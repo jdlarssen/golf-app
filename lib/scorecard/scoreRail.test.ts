@@ -5,7 +5,9 @@ import {
   formatUsesScoreRail,
   nextRailSeat,
   railStrokes,
+  signedStrokes,
   strikeStrokes,
+  strokesOnHole,
   strokeTerm,
 } from './scoreRail';
 
@@ -111,5 +113,34 @@ describe('nextRailSeat', () => {
   it('normalizes a start index outside the flight', () => {
     expect(nextRailSeat({ seats: [empty, scored, scored], startIndex: 3 })).toBe(0);
     expect(nextRailSeat({ seats: [scored, empty, scored], startIndex: -1 })).toBe(1);
+  });
+});
+
+// #2635: «Får 1 slag» / «Mister 1 slag» on the hole page, one rule for the
+// rail, the flight row and the card, on the web and in the app.
+describe('strokesOnHole', () => {
+  it.each([
+    [1, { give: false, n: 1 }],
+    [2, { give: false, n: 2 }],
+    [-1, { give: true, n: 1 }],
+    [-2, { give: true, n: 2 }],
+    [0, null],
+    [null, null],
+  ] as const)('%s strokes → %o', (extra, result) => {
+    expect(strokesOnHole(extra)).toEqual(result);
+  });
+});
+
+// #2635: a plus handicap read «+-1 slag» in hole by hole; the sign now sits in
+// the figure, with a real minus (U+2212).
+describe('signedStrokes', () => {
+  it.each([
+    [1, '+1'],
+    [2, '+2'],
+    [0, '+0'],
+    [-1, '\u22121'],
+    [-3, '\u22123'],
+  ] as const)('%s → %s', (extra, text) => {
+    expect(signedStrokes(extra)).toBe(text);
   });
 });

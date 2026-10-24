@@ -220,9 +220,15 @@ describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
 
   it('det skjermleseren sier om en spiller og om stjerna ved par', () => {
     const cell = { initial: 'KH', grossText: '5', extraStrokes: 1, netText: '4' };
-    const values = { initial: 'KH', gross: '5', extra: 1, net: '4' };
+    const values = { initial: 'KH', gross: '5', extra: '+1', net: '4' };
     expect(bestBallPlayerAria(cell, false)).toBe(fill(holes.playerScoreAria, values));
     expect(bestBallPlayerAria(cell, true)).toBe(fill(holes.playerScoreAriaUsed, values));
+    // #2635: a plus handicap reads «−1 slag», never «+-1 slag».
+    const plus = { initial: 'KH', grossText: '4', extraStrokes: -1, netText: '5' };
+    expect(bestBallPlayerAria(plus, false)).toBe('KH, brutto 4, \u22121 slag, netto 5');
+    expect(bestBallPlayerAria(plus, false)).toBe(
+      fill(holes.playerScoreAria, { initial: 'KH', gross: '4', extra: '\u22121', net: '5' }),
+    );
     // Appen sender ingen etiketter til `formatOtherGendersPar`: reserven er
     // webbens `parGender*` ord for ord.
     const par = { mens: 4, ladies: 5, juniors: 4 };

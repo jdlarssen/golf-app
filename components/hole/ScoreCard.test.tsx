@@ -37,24 +37,27 @@ describe('ScoreCard — rendering', () => {
     expect(screen.getByText('A')).toBeInTheDocument();
   });
 
-  it('renders +N SLAG badge when extraStrokes > 0', () => {
-    setup({ extraStrokes: 2 });
-    expect(screen.getByText('+2 SLAG')).toBeInTheDocument();
+  // #2635: the rail's words — «Får 2 slag», and «Mister 1 slag» for a plus handicap.
+  it('renders the strokes badge in the rail\'s words, also for a plus handicap', () => {
+    const { rerender } = setup({ extraStrokes: 2 });
+    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Får 2 slag');
+    rerender(<ScoreCard {...baseProps} extraStrokes={-1} />);
+    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Mister 1 slag');
   });
 
-  it('omits +N SLAG badge when extraStrokes is 0', () => {
+  it('omits the strokes badge when extraStrokes is 0', () => {
     setup({ extraStrokes: 0 });
-    expect(screen.queryByText(/SLAG/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('score-card-strokes')).not.toBeInTheDocument();
   });
 
-  it('renders +N SLAG badge also when hideNetto is true (#1447: static handicap info, not standing)', () => {
+  it('renders the strokes badge also when hideNetto is true (#1447: static handicap info, not standing)', () => {
     setup({ extraStrokes: 2, hideNetto: true });
-    expect(screen.getByText('+2 SLAG')).toBeInTheDocument();
+    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Får 2 slag');
   });
 
-  it('renders +N SLAG badge when hideNetto is false and extraStrokes > 0', () => {
+  it('renders the strokes badge when hideNetto is false and extraStrokes > 0', () => {
     setup({ extraStrokes: 2, hideNetto: false });
-    expect(screen.getByText('+2 SLAG')).toBeInTheDocument();
+    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Får 2 slag');
   });
 
   it('renders ? when initial is null', () => {

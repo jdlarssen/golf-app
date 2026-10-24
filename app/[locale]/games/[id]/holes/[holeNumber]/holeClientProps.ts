@@ -193,7 +193,8 @@ export interface HoleClientProps {
   /**
    * Reveal-modus flag forwarded from the server: true only when
    * `score_visibility='reveal'` AND status is still pre-finished. Forwarded
-   * to each ScoreCard so the +N SLAG badge stays hidden until admin avslutter.
+   * to each ScoreCard so the net figures stay hidden until admin avslutter;
+   * the strokes badge stays (#1447).
    */
   hideNetto?: boolean;
   /**

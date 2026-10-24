@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { strokesOnHole } from '@/lib/scorecard/scoreRail';
 
 export interface FlightRowProps {
   playerId: string;
@@ -110,6 +111,7 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
     onSelect,
   } = props;
 
+  const strokes = strokesOnHole(extraStrokes);
   const shape = scoreShape(score, par);
   const initialChars = initial && initial.length > 0 ? initial : '?';
 
@@ -169,13 +171,11 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
       >
         <span style={nameStyle}>{name}</span>
         {/* #1447: the stroke badge is the handicap allocation, not standing —
-            it stays on in a reveal game too. #2635: a plus handicap shows the
-            strokes it gives away, in the rail's words (uppercase by CSS). */}
-        {extraStrokes !== 0 && (
+            it stays on in a reveal game too. #2635: the rail's words, «Får 1
+            slag» or «Mister 1 slag» for a plus handicap (uppercase by CSS). */}
+        {strokes && (
           <span data-testid="flight-row-strokes" style={badgeStyle}>
-            {extraStrokes > 0
-              ? t('scoreCard.strokesBadge', { n: extraStrokes })
-              : t('scoreRail.strokesGive', { n: -extraStrokes })}
+            {t(strokes.give ? 'scoreRail.strokesGive' : 'scoreRail.strokesGet', { n: strokes.n })}
           </span>
         )}
         {submitted && (
