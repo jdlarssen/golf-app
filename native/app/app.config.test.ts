@@ -29,7 +29,9 @@ import {
   PROD_SUPABASE_HOST,
   STORE_ANDROID_VERSION_CODE,
   STORE_BUNDLE_ID,
+  STORE_FRIEND_LINK_PATH_PREFIXES,
   STORE_IOS_BUILD_NUMBER,
+  STORE_LINK_DOMAIN,
   STORE_PUBLIC_ENV_KEYS,
   STORE_SIGNING_PLUGIN,
   STORE_VERSION,
@@ -37,6 +39,7 @@ import {
   parseVariant,
   resolveConfig,
 } from './app.config';
+import { FRIEND_LINK_PREFIX } from '../../lib/friends/friendLinkPath';
 import { STAGING_SUPABASE_HOST } from './src/lib/stagingGate';
 
 // JSON-importen typer `orientation` som `string`; Expo vil ha unionen. Castet
@@ -171,8 +174,36 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     }
   });
 
-  it('setter ingen associated domains — lenker skal åpnes i Safari, der sesjonen finnes', () => {
-    expect(resolveConfig(base, STORE_ENV).ios?.associatedDomains).toBeUndefined();
+  // #2627: bare venne-lenka åpner appen. iOS claimer domenet (AASA-fila
+  // snevrer inn stiene), Android har stiene i intent-filteret.
+  it('claimer tornygolf.no for venne-lenka, og bare det', () => {
+    const config = resolveConfig(base, STORE_ENV);
+    expect(config.ios?.associatedDomains).toEqual(['applinks:tornygolf.no']);
+    expect(config.android?.intentFilters).toEqual([
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [
+          { scheme: 'https', host: 'tornygolf.no', pathPrefix: '/venner/legg-til/' },
+          { scheme: 'https', host: 'tornygolf.no', pathPrefix: '/en/venner/legg-til/' },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ]);
+  });
+
+  it('har lenke-domenet som verten i web-adressen QR-koden bygges fra', () => {
+    expect(STORE_WEB_BASE_URL).toBe(`https://${STORE_LINK_DOMAIN}`);
+  });
+
+  it('har de samme venne-stiene som nettsiden og AASA-fila', () => {
+    expect(STORE_FRIEND_LINK_PATH_PREFIXES).toEqual(['', '/en'].map((p) => `${p}${FRIEND_LINK_PREFIX}`));
+  });
+
+  it('lar dev-bygget være uten lenker: det har ingen associated domains og ingen intent-filtre', () => {
+    const config = resolveConfig(base, DEV_ENV);
+    expect(config.ios?.associatedDomains).toBeUndefined();
+    expect(config.android?.intentFilters).toBeUndefined();
   });
 
   // #2560: signeringspluginen er det eneste tillegget i butikk-varianten.

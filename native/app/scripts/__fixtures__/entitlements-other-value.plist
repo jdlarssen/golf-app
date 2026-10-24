@@ -6,6 +6,10 @@
 	<string>TEAMID1234.no.tornygolf.app</string>
 	<key>aps-environment</key>
 	<string>staging</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:tornygolf.no</string>
+	</array>
 	<key>com.apple.developer.team-identifier</key>
 	<string>TEAMID1234</string>
 	<key>get-task-allow</key>
