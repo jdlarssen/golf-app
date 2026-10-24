@@ -9,7 +9,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { leagueFlightGameConfig } from './flightFormat';
 import { roundPlayerLocks } from './roundLocks';
-import { meetsFlightMinimum } from './flightRules';
+import { flightSizeRefusal } from './flightRules';
 import { frozenDefaultFor } from './simSettings';
 import type { LeagueFormat } from './types';
 
@@ -30,6 +30,7 @@ export type LeagueStartRefusal =
   | 'outside_window'
   | 'round_not_ready'
   | 'need_marker'
+  | 'flight_too_large'
   | 'members_failed'
   | 'not_member'
   | 'already_played'
@@ -207,9 +208,11 @@ export async function startLeagueRoundFlightCore(
   if (!courseId || !teeBoxId) return refuse('round_not_ready');
 
   // Membership + marker rule: caller + distinct co-players, all members; two,
-  // or one in a simulator league (flightRules, #2638).
+  // or one in a simulator league, and never more than a flight holds
+  // (flightRules, #2638).
   const flightIds = Array.from(new Set([userId, ...coPlayerUserIds.filter((id) => id !== userId)]));
-  if (!meetsFlightMinimum(flightIds.length, league.is_simulator)) return refuse('need_marker');
+  const sizeRefusal = flightSizeRefusal(flightIds.length, league.is_simulator);
+  if (sizeRefusal) return refuse(sizeRefusal);
 
   const { data: members, error: mErr } = await supabase
     .from('league_players')

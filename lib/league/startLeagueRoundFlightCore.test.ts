@@ -192,3 +192,25 @@ describe('startLeagueRoundFlightCore — a failed read is not «not found» (the
     expect({ result, adminCalls: calls() }).toEqual({ result: { ok: false, error }, adminCalls: [] });
   });
 });
+
+describe('startLeagueRoundFlightCore — a flight holds at most MAX_FLIGHT_PLAYERS (the orchestrator\'s review)', () => {
+  it('refuses five players with flight_too_large, before membership is read or anything is written', async () => {
+    adminMock = buildSupabaseMock([]);
+    const user = userClient(userQueue(true, ['u1', 'u2', 'u3', 'u4', 'u5']));
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    const result = await startLeagueRoundFlightCore(user, 'u1', 'r1', ['u2', 'u3', 'u4', 'u5']);
+    // __fromCalls logs every link of a chain; the tables read are what count.
+    expect({ result, tablesRead: [...new Set(user.__fromCalls.map((c) => c.table))], adminCalls: calls() }).toEqual({
+      result: { ok: false, error: 'flight_too_large' },
+      tablesRead: ['league_rounds', 'leagues'],
+      adminCalls: [],
+    });
+  });
+
+  it('four players start (the bound itself)', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { count: 0 }, { data: [{ id: 'r1' }] }, { data: { id: 'g4' } }]);
+    const user = userClient(userQueue(true, ['u1', 'u2', 'u3', 'u4']));
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    expect(await startLeagueRoundFlightCore(user, 'u1', 'r1', ['u2', 'u3', 'u4'])).toEqual({ ok: true, gameId: 'g4' });
+  });
+});

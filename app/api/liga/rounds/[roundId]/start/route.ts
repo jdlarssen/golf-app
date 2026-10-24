@@ -5,7 +5,7 @@ import {
   type LeagueStartRefusal,
 } from '@/lib/league/startLeagueRoundFlightCore';
 import { readFlightIds } from '@/lib/api/readFlightIds';
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import { MAX_CO_PLAYERS } from '@/lib/league/flightRules';
 import { isUuid } from '@/lib/url/isUuid';
 
 // «Spill runden» i appen (#2638): spilleren starter en flight i en ligarunde.
@@ -25,7 +25,7 @@ import { isUuid } from '@/lib/url/isUuid';
 // deltakerlista (`not_member`). Tom eller uten felt = alene.
 //
 // WIRE (appen speiler den):
-//   POST { coPlayerIds?: string[] }   0–4 uuid-er (MAX_FLIGHT_SIZE, readFlightIds)
+//   POST { coPlayerIds?: string[] }   0–3 uuid-er (MAX_CO_PLAYERS, readFlightIds)
 //     200 { gameId }
 //     400 { error: 'bad_request' }    kroppen er ikke JSON, eller lista er feilformet
 //     401 { error: 'unauthorized' }
@@ -56,6 +56,7 @@ const REFUSAL_STATUS: Record<LeagueStartRefusal, 404 | 409 | 500> = {
   outside_window: 409,
   round_not_ready: 409,
   need_marker: 409,
+  flight_too_large: 409,
   not_member: 409,
   already_played: 409,
   flight_in_progress: 409,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     if (!isUuid(roundId)) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const coPlayerIds = await readFlightIds(request, 'coPlayerIds', MAX_FLIGHT_SIZE);
+    const coPlayerIds = await readFlightIds(request, 'coPlayerIds', MAX_CO_PLAYERS);
     if (coPlayerIds === null) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
     const caller = callerScopedClient(request);

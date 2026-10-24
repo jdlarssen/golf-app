@@ -59,5 +59,18 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
     cleanup();
     render(<RoundStartClient roundId="r1" coPlayers={[player('FREE', null)]} isSimulator />);
     expect((screen.getByTestId('liga-round-start-submit') as HTMLButtonElement).disabled).toBe(false);
+
+    // The orchestrator's review: a flight holds MAX_FLIGHT_PLAYERS, so with
+    // MAX_CO_PLAYERS ticked the free rows left are disabled and cannot be ticked.
+    cleanup();
+    render(
+      <RoundStartClient roundId="r1" coPlayers={['P1', 'P2', 'P3', 'P4'].map((id) => player(id, null))} isSimulator />,
+    );
+    for (const id of ['P1', 'P2', 'P3', 'P4']) fireEvent.click(row(id));
+    expect({
+      ticked: ['P1', 'P2', 'P3', 'P4'].filter((id) => box(id).checked),
+      fourth: [row('P4').getAttribute('aria-disabled'), row('P4').getAttribute('data-full'), box('P4').disabled],
+      help: screen.queryByTestId('liga-round-start-flight-max') !== null,
+    }).toEqual({ ticked: ['P1', 'P2', 'P3'], fourth: ['true', 'true', true], help: true });
   });
 });
