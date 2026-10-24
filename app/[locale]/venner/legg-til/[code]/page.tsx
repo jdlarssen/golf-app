@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { friendLinkPath } from '@/lib/friends/friendLinkPath';
 import { friendLinkView } from '@/lib/friends/friendLinkView';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -45,7 +46,7 @@ export default async function LeggTilPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect({ href: `/login?next=/venner/legg-til/${code}`, locale });
+    redirect({ href: `/login?next=${friendLinkPath(code)}`, locale });
   }
 
   // #2627: the same lookup as the app's `GET /api/friends/link/[code]`. The

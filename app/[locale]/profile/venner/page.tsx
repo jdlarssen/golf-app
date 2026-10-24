@@ -26,6 +26,7 @@ import {
   removeFriend,
 } from './actions';
 import { GetTheGangCard } from './VennerClient';
+import { friendLinkPath } from '@/lib/friends/friendLinkPath';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -218,7 +219,7 @@ export default async function VennerPage({
           // the field again and a sent request folds it away.
           key={statusCode ?? ''}
           ownInitials={nameInitials(own.data?.name)}
-          sharePath={friendCode ? `/venner/legg-til/${friendCode}` : null}
+          sharePath={friendCode ? friendLinkPath(friendCode) : null}
           emailOpenAtStart={statusCode === 'email_required'}
           addByEmailAction={addFriendByEmail}
           text={{
