@@ -25,6 +25,7 @@ import {
   behindLeaderText,
   boardDisplayName,
   boardRowSr,
+  columnHeading,
   pillText,
   placeLabel,
 } from './boardText';
@@ -174,9 +175,7 @@ export function LiveBoard({
               <span className="text-center">{t('colPlace')}</span>
               <span>{t('colPlayer')}</span>
               <span className="text-center">{t('colHoles')}</span>
-              <span className="text-center">
-                {unit === 'points' ? t('colPoints') : t('colNet')}
-              </span>
+              <span className="text-center">{columnHeading(t, unit)}</span>
             </div>
             <ol data-testid={testId} className="flex flex-col gap-1.5">
               {visible.map((item) =>

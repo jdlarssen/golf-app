@@ -8,6 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import type {
   StablefordPlayerLine,
   StablefordSoloResult,
@@ -112,6 +113,9 @@ export function SoloStablefordPodium({
   // Podium-slottene fylles i sortert rekkefølge (rank 1 først) — men
   // presentasjonen per trinn følger spillerens FAKTISKE rank, så delt
   // plassering vises som delt og ikke som sølv/bronse (#1372).
+  // #2625: a game ranked on points against par pace leads with it («+3»),
+  // so the number and the order agree; other games show the points.
+  const unitLabel = t(result.ranking === 'net_to_par' ? 'common.vsParLabel' : 'common.poengLabel');
   const first = result.players[0];
   const second = result.players[1] ?? null;
   const third = result.players[2] ?? null;
@@ -168,7 +172,8 @@ export function SoloStablefordPodium({
                   player={second}
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
-                  poengLabel={t('common.poengLabel')}
+                  ranking={result.ranking}
+                  unitLabel={unitLabel}
                   hullChip={hullChipFor(second)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(second)}
@@ -185,7 +190,8 @@ export function SoloStablefordPodium({
               player={first}
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
-              poengLabel={t('common.poengLabel')}
+              ranking={result.ranking}
+              unitLabel={unitLabel}
               hullChip={hullChipFor(first)}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
               tiedBadge={tiedBadge(first)}
@@ -202,7 +208,8 @@ export function SoloStablefordPodium({
                   player={third}
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
-                  poengLabel={t('common.poengLabel')}
+                  ranking={result.ranking}
+                  unitLabel={unitLabel}
                   hullChip={hullChipFor(third)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(third)}
@@ -250,10 +257,10 @@ export function SoloStablefordPodium({
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
-                        {player.totalPoints}
+                        {teamHeadline(result.ranking, { total: player.totalPoints, toPar: player.toPar }).text}
                       </span>
                       <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {t('common.poengLabel')}
+                        {unitLabel}
                       </span>
                     </div>
                   </Card>
@@ -276,7 +283,8 @@ function PodiumStep({
   player,
   playerInfo,
   staggerIndex,
-  poengLabel,
+  ranking,
+  unitLabel,
   hullChip,
   unknownPlayerLabel,
   tiedBadge,
@@ -286,7 +294,10 @@ function PodiumStep({
   player: StablefordPlayerLine;
   playerInfo: SoloStablefordPlayerInfo | undefined;
   staggerIndex: number;
-  poengLabel: string;
+  /** #2625: the result's ranking rule; points against par pace lead in a net-to-par game. */
+  ranking: StablefordSoloResult['ranking'];
+  /** «poeng», or «mot par» in a net-to-par game. */
+  unitLabel: string;
   /** «X hull»-chip, eller null når hull-tallet er likt for alle (#1892). */
   hullChip: string | null;
   unknownPlayerLabel: string;
@@ -342,10 +353,10 @@ function PodiumStep({
                 : 'text-[22px] text-text'
           }`}
         >
-          {player.totalPoints}
+          {teamHeadline(ranking, { total: player.totalPoints, toPar: player.toPar }).text}
         </span>
         <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {poengLabel}
+          {unitLabel}
         </span>
       </div>
 
