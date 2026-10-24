@@ -35,6 +35,13 @@ export const INVITE_STATUSES = [
 ] as const;
 export type InviteStatus = (typeof INVITE_STATUSES)[number];
 
+/**
+ * Forholdet `GET /api/friends/link/[code]` svarer med (#2627): hvem
+ * venne-lenka tilhører, sett fra den som åpner den.
+ */
+export const FRIEND_LINK_RELATIONS = ['self', 'already_friends', 'connectable'] as const;
+export type FriendLinkRelation = (typeof FRIEND_LINK_RELATIONS)[number];
+
 /** En kode vi ikke kjenner, blir «error», aldri en rå streng videre. */
 export function asFriendStatus(value: unknown): FriendStatus {
   return typeof value === 'string' && (FRIEND_STATUSES as readonly string[]).includes(value)

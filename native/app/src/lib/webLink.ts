@@ -23,6 +23,7 @@
 // (ærlig-feil-guardrailen fra `supabase.ts`) — aldri en knapp som gjør
 // ingenting.
 import { Linking } from 'react-native';
+import { friendLinkPath } from '../../../../lib/friends/friendLinkPath';
 
 /** Hva som kan stoppe en lenke-knapp. Begge ender i en synlig setning. */
 export type WebLinkFailure = 'no-web-base-url' | 'open-failed';
@@ -41,13 +42,12 @@ export type OpenWebResult = { ok: true } | { ok: false; reason: WebLinkFailure }
 export const PRIVACY_PATH = '/legal/privacy';
 
 /**
- * «Legg til meg»-siden for en venne-kode (#369). Stien har ett hjem i appen:
+ * «Legg til meg»-siden for en venne-kode (#369). Stien har ett hjem,
+ * `lib/friends/friendLinkPath.ts`, som nettsidens AASA-fil også leser.
  * «Del lenka» på vennesiden og QR-koden på bag-taggen (#2627) bygger begge
- * adressen herfra med {@link webUrl}.
+ * adressen med den og {@link webUrl}.
  */
-export function friendLinkPath(code: string): string {
-  return `/venner/legg-til/${code}`;
-}
+export { friendLinkPath };
 
 /** En knapp til en side på nettsiden: hva den heter, og hvor den går. */
 export interface WebLinkTarget {
@@ -86,9 +86,10 @@ export function webUrl(path: string): WebUrlResult {
 /**
  * Åpne en side på webben i enhetens nettleser.
  *
- * `Linking` er del av react-native — ingen ny modul, og ingen universal links
- * (`associatedDomains` er ikke satt opp i `app.json` og trengs ikke: vi VIL at
- * lenka åpnes i nettleseren, der sesjonen deres finnes).
+ * `Linking` er del av react-native — ingen ny modul. Vi VIL at lenka åpnes i
+ * nettleseren, der sesjonen deres finnes. Butikkbygget claimer tornygolf.no
+ * (#2627), men AASA-fila slipper bare venne-lenka gjennom til appen, så
+ * sidene knappene her åpner, går fortsatt til nettleseren.
  *
  * `canOpenURL` spørres bevisst ikke først. Den krever `LSApplicationQueriesSchemes`
  * for egne skjemaer og gir bare en ekstra måte å svare «nei» på for http(s),

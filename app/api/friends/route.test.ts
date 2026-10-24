@@ -6,7 +6,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
 /**
  * Type A (#2256): portene og transporten for appens venne-ruter.
  *
- * Én fil for alle sju rutene under `app/api/friends/`, fordi porten er den
+ * Én fil for alle rutene under `app/api/friends/`, fordi porten er den
  * samme (`lib/friends/friendRoute.ts` + `authenticatedUserId`) og sju kopier
  * av det samme mock-oppsettet er det test-disiplinen forbyr. Adgangssjekken og
  * kjernen (`lib/friends/friendActionsCore.ts`) er ekte; RPC-ene svarer fra
@@ -21,12 +21,21 @@ const ME = 'meg-selv';
 const KARI = 'kari';
 const TOKEN = 'token-meg';
 
+/** #2627: eieren av venne-koden og vennskapene, satt per test for `/link/[code]`. */
+let linkOwner: Record<string, unknown> | null = null;
+let linkError: { message: string } | null = null;
+let friendRows: Record<string, unknown>[] = [];
+
 const fake = createAdminClientMock({
   tokens: { [TOKEN]: ME },
   respond: (op: QueryOp) => {
+    if (op.table === 'users' && op.filters.some((f) => f.column === 'friend_code')) {
+      return { data: linkOwner, error: linkError };
+    }
     if (op.table === 'users') {
       return { data: { name: 'Jørgen', nickname: null, email: 'jorgen@example.com' } };
     }
+    if (op.table === 'friendships' && op.filters.some((f) => f.op === 'or')) return { data: friendRows };
     if (op.table === 'friendships') return { data: { requester_id: KARI } };
     throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
   },
@@ -79,6 +88,7 @@ import { POST as postByEmail } from './by-email/route';
 import { POST as postRespond } from './respond/route';
 import { POST as postRemove } from './remove/route';
 import { POST as postInvite } from './invite/route';
+import { GET as getLink, POST as postLink } from './link/[code]/route';
 
 function req(path: string, { token, body }: { token?: string; body?: unknown } = {}) {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
@@ -98,6 +108,9 @@ beforeEach(() => {
   fake.reset();
   callerBuiltFrom.length = 0;
   caller = buildSupabaseMock([]);
+  linkOwner = null;
+  linkError = null;
+  friendRows = [];
   getFriendDataMock.mockResolvedValue({
     friends: [KARI_USER],
     incoming: [{ id: 'req-inn', user: NAMELESS }],
@@ -328,5 +341,113 @@ describe('POST /api/friends/invite', () => {
   it('gir invitasjonens status, med samme vern som webben', async () => {
     const res = await postInvite(req('/invite', { token: TOKEN, body: { email: 'kast@mailinator.com' } }));
     expect(await res.json()).toEqual({ status: 'disposable_email' });
+  });
+});
+
+// #2627: «Bli venn med …» i appen. Samme oppslag og kobling som nettsidens
+// `/venner/legg-til/[code]`; koden kommer fra stien, kalleren fra tokenet.
+describe('/api/friends/link/[code]', () => {
+  const CODE = 'abcd1234';
+  const ctx = (code = CODE) => ({ params: Promise.resolve({ code }) });
+  const linkOps = () => fake.ops.filter((op) => op.filters.some((f) => f.column === 'friend_code'));
+
+  describe('GET', () => {
+    it.each([undefined, 'feil-token'])('svarer 401 uten gyldig token (%p) og slår ikke opp koden', async (token) => {
+      const res = await getLink(req(`/link/${CODE}`, { token }), ctx());
+      expect(res.status).toBe(401);
+      expect(await res.json()).toEqual({ error: 'unauthorized' });
+      expect(linkOps()).toEqual([]);
+    });
+
+    it('svarer 404 for en ukjent kode', async () => {
+      const res = await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx());
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: 'not_found' });
+    });
+
+    it('slår opp koden fra stien, uten slettede kontoer, og gir bare navnet og forholdet', async () => {
+      linkOwner = KARI_USER;
+      const res = await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx());
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(JSON.parse(text)).toEqual({ relation: 'connectable', name: 'Kari Nordmann «Kaka»' });
+      expect(text).not.toContain('kari@example.com');
+      expect(text).not.toContain(KARI);
+      expect(linkOps()[0].filters).toEqual(
+        expect.arrayContaining([
+          { op: 'eq', column: 'friend_code', value: CODE },
+          { op: 'is', column: 'deleted_at', value: null },
+        ]),
+      );
+    });
+
+    it('maskerer adressen til en eier uten navn (#2271)', async () => {
+      linkOwner = NAMELESS;
+      const body = await (await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx())).json();
+      expect(body.name).not.toContain('nils.hansen@example.com');
+      expect(body.name).not.toBe('');
+    });
+
+    it('sier «already_friends» når dere alt er venner', async () => {
+      linkOwner = KARI_USER;
+      friendRows = [{ id: 'f1', requester_id: KARI, addressee_id: ME, status: 'accepted' }];
+      const body = await (await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx())).json();
+      expect(body).toEqual({ relation: 'already_friends', name: 'Kari Nordmann «Kaka»' });
+    });
+
+    it('sier «self» for din egen kode, uten å lese vennskapene', async () => {
+      linkOwner = { id: ME, name: 'Jørgen', nickname: null, email: 'jorgen@example.com' };
+      const body = await (await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx())).json();
+      expect(body).toEqual({ relation: 'self', name: 'Jørgen' });
+      expect(fake.ops.some((op) => op.table === 'friendships')).toBe(false);
+    });
+
+    it('svarer 500 med en fast kode når oppslaget feiler, aldri 404', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      linkError = { message: 'nede' };
+      const res = await getLink(req(`/link/${CODE}`, { token: TOKEN }), ctx());
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'load_failed' });
+    });
+  });
+
+  describe('POST', () => {
+    it('svarer 401 uten token og rører ikke basen', async () => {
+      const res = await postLink(req(`/link/${CODE}`, { body: {} }), ctx());
+      expect(res.status).toBe(401);
+      expect(caller.rpc).not.toHaveBeenCalled();
+      expect(callerBuiltFrom).toHaveLength(0);
+    });
+
+    it('kobler med koden fra stien og kallerens token, og varsler eieren', async () => {
+      caller = buildSupabaseMock([], { connect_via_friend_code: { owner_id: KARI, status: 'connected' } });
+      const res = await postLink(req(`/link/${CODE}`, { token: TOKEN, body: { code: 'annen0000', userId: KARI } }), ctx());
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'accepted' });
+      expect(caller.rpc).toHaveBeenCalledWith('connect_via_friend_code', { p_code: CODE });
+      expect(callerBuiltFrom).toEqual([`Bearer ${TOKEN}`]);
+      expect(notifyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: KARI,
+          kind: 'friend_accepted',
+          payload: expect.objectContaining({ actor_id: ME, via: 'link' }),
+        }),
+      );
+    });
+
+    it('gir «already_friends» videre uten varsel', async () => {
+      caller = buildSupabaseMock([], { connect_via_friend_code: { owner_id: KARI, status: 'already_friends' } });
+      const res = await postLink(req(`/link/${CODE}`, { token: TOKEN, body: {} }), ctx());
+      expect(await res.json()).toEqual({ status: 'already_friends' });
+      expect(notifyMock).not.toHaveBeenCalled();
+    });
+
+    it('svarer 500 med en fast kode når noe kaster', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      caller = { rpc: () => { throw new Error('forbindelsen røk'); } } as never;
+      const res = await postLink(req(`/link/${CODE}`, { token: TOKEN, body: {} }), ctx());
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ status: 'error' });
+    });
   });
 });

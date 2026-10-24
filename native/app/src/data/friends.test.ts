@@ -122,6 +122,55 @@ describe('fetchFriendCode', () => {
   });
 });
 
+// #2627: «Bli venn med …» etter en venne-lenke. Koden står i stien, og
+// svaret oversettes her, så skjermen aldri leser et statusnummer.
+describe('venne-lenka', () => {
+  useWebRoute();
+
+  it('henter eieren og forholdet med GET, med koden i stien', async () => {
+    respondWith(200, { relation: 'connectable', name: 'Kari Nordmann' });
+
+    expect(await friends().fetchFriendLink('abcd1234')).toEqual({
+      ok: true,
+      relation: 'connectable',
+      name: 'Kari Nordmann',
+    });
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/friends/link/abcd1234`);
+    expect(requestInit().method).toBe('GET');
+  });
+
+  it.each([
+    [404, { error: 'not_found' }, 'not_found'],
+    [401, { error: 'unauthorized' }, 'unauthorized'],
+    [500, { error: 'load_failed' }, 'load_failed'],
+    [200, { relation: 'noe_nytt', name: 'Kari' }, 'load_failed'],
+  ] as const)('oversetter %s til «%s»', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await friends().fetchFriendLink('abcd1234')).toEqual({ ok: false, reason });
+  });
+
+  it('stopper uten nett, før noe sendes', async () => {
+    mockNetwork.online = false;
+    expect(await friends().fetchFriendLink('abcd1234')).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('kobler med POST og koden i stien, uten noe om hvem som handler i kroppen', async () => {
+    respondWith(200, { status: 'accepted' });
+
+    expect(await friends().connectFriendLink('abcd1234')).toEqual({ ok: true, status: 'accepted' });
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/friends/link/abcd1234`);
+    expect(requestInit().method).toBe('POST');
+    expect(JSON.parse(String(requestInit().body))).toEqual({});
+  });
+
+  it('koder koden i stien, så den aldri blir en annen sti', async () => {
+    respondWith(404, { error: 'not_found' });
+    await friends().fetchFriendLink('a/b?c');
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/friends/link/a%2Fb%3Fc`);
+  });
+});
+
 describe('vennehandlingene', () => {
   useWebRoute();
 

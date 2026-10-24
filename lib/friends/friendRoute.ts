@@ -5,8 +5,9 @@ import type { Database } from '@/lib/database.types';
 import { authenticatedUserId, callerScopedClient } from '@/lib/api/appAuth';
 
 /**
- * Porten for appens venne-ruter (#2256), felles for alle fem POST-rutene under
- * `app/api/friends/`, så ingen av dem kan gjøre det litt annerledes.
+ * Porten for appens venne-ruter (#2256), felles for alle POST-rutene under
+ * `app/api/friends/` (også venne-lenka, #2627), så ingen av dem kan gjøre det
+ * litt annerledes.
  *
  * - Bruker-id-en kommer KUN fra det validerte tokenet (`authenticatedUserId`).
  *   Kroppen bærer bare feltverdier; en `userId` i den leses aldri.

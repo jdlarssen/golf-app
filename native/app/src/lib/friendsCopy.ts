@@ -25,7 +25,7 @@ import {
 } from '../../../../lib/format/date';
 import type { FriendStats } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
-import { formatHcpNb } from './profileCopy';
+import { PROFILE_TEXT, formatHcpNb } from './profileCopy';
 
 /** Tekstene vennesiden viser. Flat, som `PROFILE_TEXT`. */
 export const FRIENDS_TEXT = {
@@ -81,6 +81,48 @@ export const FRIENDS_TEXT = {
   offline: 'Du må være på nett for å se vennene dine. Koble til og prøv igjen.',
   retry: 'Prøv igjen',
 } as const;
+
+/**
+ * «Bli venn med …» (#2627): skjermen QR-koden på bag-taggen og venne-lenka
+ * åpner i appen. Det webbens `/venner/legg-til/[code]` også sier, er
+ * `messages/no.json → friends.leggTil` tegn for tegn (testen leser fila).
+ * App-egent: «Ukjent kode» (webben viser en 404), feilen ved lasting (webben
+ * kan ikke være uten nett) og linja i innloggingsbåndet før innloggingen.
+ */
+export const FRIEND_LINK_TEXT = {
+  // --- Webbens ordlyd (messages/no.json → friends.leggTil) ----------------
+  kicker: 'Legg til venn',
+  errorBanner: 'Noe gikk galt. Prøv igjen.',
+  selfCard: 'Dette er din egen lenke. Del den med noen du vil bli venn med.',
+  alreadyFriendsCard: 'Dere er allerede venner.',
+  toFriendsLink: 'Til vennene dine',
+  connectButton: 'Bli venner',
+  connectPending: 'Blir venner …',
+
+  // --- App-egent ----------------------------------------------------------
+  unknownTitle: 'Ukjent kode',
+  unknownBody: 'Koden stemmer ikke, eller kontoen er slettet.',
+  loadFailed: 'Fikk ikke sjekket koden. Prøv igjen.',
+  /** Linja i innloggingsbåndet når en venne-lenke venter. Navnet vises ikke før innloggingen. */
+  loginTitle: 'Logg inn for å bli venner',
+  loginBody: 'Etterpå ser du hvem som vil bli venn med deg.',
+} as const;
+
+/** «Bli venn med {name}? Da ser dere …» — webbens `friends.leggTil.connectCard`. */
+export function friendLinkConnectCard(name: string): string {
+  return `Bli venn med ${name || FRIENDS_TEXT.someoneFallback}? Da ser dere hverandres spill og kan velge hverandre når dere fyller lag.`;
+}
+
+/**
+ * Toppen på Venner (#2256, #2627): ordet i midten og pila sin etikett. Fra
+ * Profil står «PROFIL» og «Tilbake til profil», som i designet. Åpnet fra
+ * «Bli venn med …» går pila til skjermen under (Hjem), så toppen nevner ikke
+ * Profil: bare pila, med standardetiketten «Tilbake» (som Profil selv).
+ */
+export function friendsTopBar(from: 'friendLink' | undefined): { kicker: string; backLabel?: string } {
+  if (from === 'friendLink') return { kicker: '', backLabel: undefined };
+  return { kicker: PROFILE_TEXT.heading, backLabel: PROFILE_TEXT.backToProfile };
+}
 
 // Webbens `friends.status.*`, med samme koder som `?status=`. `not_found` og
 // `already_decided` har ingen linje på webben heller: lista som hentes på nytt

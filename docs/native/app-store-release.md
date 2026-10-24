@@ -20,7 +20,7 @@ Android-bygget (signert AAB, bevis og spike-funn): `play-store-release.md`.
 | Supabase | staging, fra `native/app/.env.local` | prod, fra repo-rotas `.env.local` — kun via skriptet |
 | Web | `http://localhost:<port>` under staging-verify | `https://tornygolf.no`, nøyaktig |
 | `ITSAppUsesNonExemptEncryption` | — | `false` (som skallet) |
-| Associated domains | — | ingen, med vilje: lenker åpnes i Safari, der sesjonen finnes |
+| Associated domains | — | `applinks:tornygolf.no`, men AASA-fila slipper bare venne-lenka gjennom (#2627). Alle andre lenker åpnes i Safari, der sesjonen finnes |
 | På telefonen | står ved siden av butikk-appen | erstatter skallet (samme id) |
 
 `native/app/app.config.ts` legger varianten over `app.json`; `app.json` er dev-fasiten og
@@ -156,7 +156,7 @@ stopper opplastingen.
 | | **FORBY** verdier fra appens egne `.env`-filer (#2208): hver `EXPO_PUBLIC_*`-verdi i `native/app/.env*` (eller i mappa `TORNY_APP_ENV_DIR` peker på) må ha 0 treff i bundelen. Verdier beviset krever (prod-adressen, web-adressen, anon-nøkkelen fra miljøet) og verdier under 12 tegn hoppes over med en linje om det. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien. Uten `.env`-filer blir det én linje om det, ingen FAIL. |
 | | `http://`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). `localhost` har sin egen regel (raden over). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`, og norsk språk: `CFBundleDevelopmentRegion = nb` og `nb` i `CFBundleLocalizations` (#2561). |
-| Entitlements (`codesign -d --entitlements`) | **KREV** `aps-environment` = `development` eller `production`, fordi appen har varsler på iOS (#2561). Verdien skrives i bevis-fila. Arkivet kreves ikke å ha `production`: pluginen skriver `development` når `mode` ikke er satt, og beviset kjører på arkivet før eksporten. Om det opplastede bygget har `production`, vises i en lokal eksport (se «Varsler (push) fra appen»). **FORBY** `com.apple.developer.associated-domains`. Reglene står i `entitlements-proof.sh` og testes uten arkiv (`entitlements-proof.test.js`). |
+| Entitlements (`codesign -d --entitlements`) | **KREV** `aps-environment` = `development` eller `production`, fordi appen har varsler på iOS (#2561). Verdien skrives i bevis-fila. Arkivet kreves ikke å ha `production`: pluginen skriver `development` når `mode` ikke er satt, og beviset kjører på arkivet før eksporten. Om det opplastede bygget har `production`, vises i en lokal eksport (se «Varsler (push) fra appen»). **KREV** `com.apple.developer.associated-domains` = nøyaktig `applinks:tornygolf.no` (venne-lenka, #2627, se «Venne-lenka åpner appen»). Et annet domene, flere verdier eller ingen verdi gir FAIL. Reglene står i `entitlements-proof.sh` og testes uten arkiv (`entitlements-proof.test.js`). |
 | Personvern (`Info.plist`, `PrivacyInfo.xcprivacy`) | **KREV** `NSPhotoLibraryAddUsageDescription` i Info.plist (uten teksten skjuler iOS lagre-handlingen i delearket; observert i simulatoren, ingen krasj), og `NSPrivacyAccessedAPICategoryDiskSpace` med grunnkode i app-manifestet når binærene importerer disk-API-er: `statfs`/`fstatfs`, `statvfs`, `getattrlist`-familien, `NSFileSystemFreeSize`/`NSFileSystemSize` og `NSURLVolume*Capacity*` (#2561). Kallerne i dag er SQLite i `expo-sqlite` (`statfs`/`fstatfs` når databasen åpnes) og ExpoFileSystem (ledig plass). Apples required-reason-krav gjelder ([Describing use of required reason API](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api)), og ITMS-91053 kan komme som e-post etter opplasting; 1.1.0 (3) og 1.2.0 (5) kom gjennom uten, så regelen er forebygging. Alle binærene skannes (hovedfila og hvert rammeverk, navnet fra rammeverkets egen Info.plist); FAIL gir en binær som mangler, et rammeverk uten `CFBundleExecutable`, en `nm -u` som feiler og en tom `nm -u`-utskrift, og en skannefeil gjør DiskSpace påkrevd. Hvor mange binærer som ble skannet, står i PASS-linja. Begge nøklene settes i `app.json` (`ios.infoPlist`, `ios.privacyManifests`). Grunnkoden er `E174.1`, nærmeste godkjente grunn. Upstream `expo-file-system` oppgir både `E174.1` og `85F4.1`; appen tar bare `E174.1` fordi den ikke viser diskplass til brukeren. Expo skriver bare DiskSpace; FileTimestamp, UserDefaults og SystemBootTime kommer fra React Natives `pod install`-aggregering, styrt av `apple.privacyManifestAggregationEnabled` i Podfile.properties.json, som aldri må settes til `false`. Samme rad krever `CFBundleDevelopmentRegion` = `nb` og `nb` i `CFBundleLocalizations` (`app.json`): uten det står Info.plist på `en`, og delearket og tekstfeltene viser engelske systemtekster. Reglene står i `privacy-proof.sh` og testes uten arkiv (`privacy-proof.test.js`). |
 | App-ikonet (#1975) | **Kilden:** `native/app/assets/icon.png` må ha samme sha256 som `native/assets/appstore-1024.png`, og aldri Expo-malens hash (den nevnes ved navn i FAIL-en). **Arkivet:** `Assets.car` må ha `App-Icon-1024x1024@1x.png`, og `.app`-en `AppIcon60x60@2x.png`. To regler fordi `Assets.car` er kompilert — kildens byte finnes ikke igjen der, så arkiv-regelen beviser bare at *et* ikon ble kompilert inn. **`--upload-only` leser dagens kilde**, ikke den arkivet ble bygget fra; i den vanlige kjeden (prebuild → archive → bevis) henger de sammen. |
 
@@ -393,6 +393,27 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
 - **Et eldre bygg** uten modulen viser ingen varsel-del (`canUsePush` i
   `native/app/src/data/pushDevice.ts`). Android har ingen varsler (serveren sender ikke
   dit).
+
+## Venne-lenka åpner appen
+
+Fra #2627 åpner QR-koden på bag-taggen og «Del lenken din» (`https://tornygolf.no/venner/legg-til/<kode>`)
+appen på «Bli venn med …» når appen er installert. Alle andre lenker til tornygolf.no åpnes
+fortsatt i Safari, fordi appen ikke kan bære en nett-sesjon fra en lenke.
+
+- **Butikkvarianten** claimer domenet: `ios.associatedDomains: ['applinks:tornygolf.no']` i
+  `app.config.ts`. Dev-varianten har ingen associated domains. Der bevises skjermen med appens
+  eget skjema: `xcrun simctl openurl booted "no.tornygolf.dev://venner/legg-til/<kode>"`.
+- **AASA-fila** på nettet (`app/.well-known/apple-app-site-association/route.ts`) bestemmer
+  stiene: bare `/venner/legg-til/*` og `/en/venner/legg-til/*`. Den er det som holder alle andre
+  lenker i Safari. Apple henter fila via sitt eget mellomlager, så en endring kan ta et døgn
+  før den gjelder på telefonene.
+- **Apple:** App-ID-en `no.tornygolf.app` må ha «Associated Domains» slått på i Apple Developer
+  (Certificates, Identifiers & Profiles → Identifiers → `no.tornygolf.app`). Skallet hadde
+  `applinks:tornygolf.no`, så den står trolig på fra før. Automatisk signering slår den på selv
+  ved arkivering når den mangler. Feiler arkiveringen med en melding om associated domains eller
+  provisioning-profilen, er det denne avkrysningen.
+- **Beviset** krever nøyaktig `applinks:tornygolf.no` i arkivets entitlements (se tabellen
+  over). Den ekte skanningen med kameraet prøves på en TestFlight-installasjon.
 
 ## Hva som ikke byttes
 

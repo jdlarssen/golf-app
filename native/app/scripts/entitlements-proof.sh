@@ -15,8 +15,13 @@
 #    automatisk signering er utviklingssignert. Hva eksporten til App Store
 #    setter, viser ikke arkivet. Det bevises av et varsel til en
 #    TestFlight-installasjon.
-#  - `com.apple.developer.associated-domains` skal IKKE finnes: lenker skal
-#    åpnes i Safari, der sesjonen finnes (`app.config.ts`, kontrakt §Research).
+#  - `com.apple.developer.associated-domains` MÅ finnes, og være nøyaktig
+#    `applinks:tornygolf.no` (#2627). Venne-lenka og QR-koden på bag-taggen
+#    åpner appen. Hvilke stier som slipper gjennom, bestemmer AASA-fila på
+#    nettet (`app/.well-known/apple-app-site-association/route.ts`, bare
+#    `/venner/legg-til/*`): alle andre lenker åpnes fortsatt i Safari, der
+#    sesjonen finnes. Et annet domene, et jokertegn eller flere verdier er
+#    FAIL, og det er en manglende verdi også: da åpner ikke lenka appen.
 #
 # Plist-en leses med python3 og `plistlib`, ikke plutil eller PlistBuddy: testen
 # kjører i CI på ubuntu-latest, der de ikke finnes. En tom fil er en app uten
@@ -27,8 +32,16 @@
 # bare denne fila.
 ENTITLEMENTS_PYTHON3=${PYTHON3:-/usr/bin/python3}
 
-# Skriver `aps <missing|ok|other> <verdi>` og `ad <present|absent>`, eller exit 1
-# med grunnen på stderr. Ingen enkle anførselstegn i koden (den står i '…').
+# Den ene verdien associated domains skal ha (#2627): `applinks:` og
+# `STORE_LINK_DOMAIN` i `app.config.ts`. En konstant, som Android-regelens: et
+# miljø kan ikke endre hva beviset krever. `entitlements-proof.test.js` holder
+# den lik app.config.
+ENTITLEMENTS_APPLINKS=applinks:tornygolf.no
+
+# Skriver `aps <missing|ok|other> <verdi>` og `ad <absent|list|other> <verdier>`,
+# eller exit 1 med grunnen på stderr. `list` er en liste av strenger (skrevet
+# med mellomrom mellom), `other` alt annet. Ingen enkle anførselstegn i koden
+# (den står i '…').
 ENTITLEMENTS_PY='
 import plistlib, sys
 try:
@@ -48,11 +61,17 @@ elif aps in ("development", "production"):
     print("aps ok " + aps)
 else:
     print("aps other " + ascii(aps))
-print("ad " + ("present" if "com.apple.developer.associated-domains" in ent else "absent"))
+ad = ent.get("com.apple.developer.associated-domains")
+if ad is None:
+    print("ad absent -")
+elif isinstance(ad, list) and all(isinstance(d, str) for d in ad):
+    print("ad list " + " ".join(ad))
+else:
+    print("ad other " + ascii(ad))
 '
 
 entitlements_rules() {
-  local file=$1 facts why aps state value ad
+  local file=$1 facts why aps state value ad ad_state ad_value
   if ! facts=$("$ENTITLEMENTS_PYTHON3" -c "$ENTITLEMENTS_PY" "$file" 2>&1); then
     why=$(printf '%s' "$facts" | tail -1)
     fail "kunne ikke lese entitlements (${file}): ${why}"
@@ -73,9 +92,18 @@ entitlements_rules() {
     *) fail "kunne ikke lese aps-environment (${file}): ${facts}" ;;
   esac
 
-  case "$ad" in
-    absent) pass "ingen com.apple.developer.associated-domains" ;;
-    present) fail "com.apple.developer.associated-domains er satt. Appen skal IKKE claime lenker (kontrakt §Research)" ;;
+  ad_state=${ad%% *}
+  ad_value=${ad#* }
+  case "$ad_state" in
+    list)
+      if [ "$ad_value" = "$ENTITLEMENTS_APPLINKS" ]; then
+        pass "com.apple.developer.associated-domains = ${ad_value} (AASA-fila slipper bare venne-lenka gjennom)"
+      else
+        fail "com.apple.developer.associated-domains = ${ad_value:-<tom liste>}. Bare ${ENTITLEMENTS_APPLINKS} er lov (#2627)"
+      fi
+      ;;
+    absent) fail "com.apple.developer.associated-domains mangler. Butikkappen skal ha ${ENTITLEMENTS_APPLINKS}, ellers åpner ikke venne-lenka appen (#2627)" ;;
+    other) fail "com.apple.developer.associated-domains = ${ad_value}. Bare ${ENTITLEMENTS_APPLINKS} er lov (#2627)" ;;
     *) fail "kunne ikke lese com.apple.developer.associated-domains (${file}): ${facts}" ;;
   esac
 }

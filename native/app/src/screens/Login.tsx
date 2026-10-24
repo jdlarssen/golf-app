@@ -2,9 +2,10 @@
 // satte inn en navigasjons-stack bak login-porten. Samme to steg (be om kode →
 // skriv koden).
 //
-// Ingen `next`-redirect og ingen dyplenker: appen har ingen URL å komme fra,
-// og `onAuthStateChange` i `App.tsx` bytter til stacken av seg selv når
-// `verifyOtp` har satt sesjonen.
+// Ingen `next`-redirect: `onAuthStateChange` i `App.tsx` bytter til stacken av
+// seg selv når `verifyOtp` har satt sesjonen. Den eneste lenka som kan vente
+// på innloggingen, er venne-lenka (#2627): koden står i
+// `data/pendingFriendLink.ts`, og navigatoren åpner «Bli venn med …» etterpå.
 //
 // #2216: **kode-veien går gjennom nettsiden.** «Send meg kode» kaller
 // `/api/auth/send-code` (`data/loginCode.ts`) med nettsidens sperrer:
@@ -26,6 +27,11 @@
 // for direkte kall mot `/auth/v1/token`: Supabases rate-limit pluss et 28-tegns
 // tilfeldig passord, og bare review-kontoen har et passord i det hele tatt.
 // Passord-veien kan aldri lage en konto.
+//
+// #2627: åpnet en venne-lenke appen før noen var logget inn, står en linje i
+// båndet om at du kommer til «Bli venn med …» etterpå (designets plass for
+// invitasjonslinja). Navnet vises ikke: koden skal ikke fortelle hvem den
+// tilhører til noen som ikke er logget inn.
 //
 // Ordmerket er app-navnet fra den oppløste configen (`expo-constants`), ikke
 // en streng her: «Tørny Dev» i dev-bygget, «Tørny» når butikk-varianten (P2)
@@ -73,6 +79,9 @@ import {
   type DevLoginUser,
 } from '../devLogin';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
+import { DashedRing } from '../components/icons/Icons';
+import { usePendingFriendCode } from '../data/pendingFriendLink';
+import { FRIEND_LINK_TEXT } from '../lib/friendsCopy';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
 import { StatusBarBand } from '../components/StatusBarBand';
@@ -105,6 +114,7 @@ export function Login() {
   // Løses én gang per montering: env er bakt inn i bundelen og endrer seg ikke.
   const [devConfig] = useState(() => resolveDevLoginConfig(readDevLoginEnv()));
   const [devUsers, setDevUsers] = useState<DevLoginUser[]>([]);
+  const friendLinkWaiting = usePendingFriendCode() !== null;
   // Koden sendes av seg selv når det siste sifferet kommer. Refen hindrer at
   // samme kode sendes to ganger før svaret er tilbake.
   const submittedRef = useRef(false);
@@ -271,6 +281,30 @@ export function Login() {
               </Text>
               {LOGIN_TEXT.taglinePost}
             </Text>
+          ) : null}
+          {friendLinkWaiting ? (
+            <View
+              style={[styles.friendLink, { backgroundColor: withAlpha(colors.onStrongWarm, 0.1) }]}
+              testID="login-friend-link"
+            >
+              {/* Pynt: et ledig sete, som «+»-ringen på Venner. */}
+              <View
+                style={styles.friendLinkRing}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <DashedRing color={withAlpha(colors.onStrongWarm, 0.7)} kind="score" />
+                <Text style={[styles.friendLinkPlus, { color: colors.onStrongWarm }]}>+</Text>
+              </View>
+              <View style={styles.friendLinkText}>
+                <Text style={[styles.friendLinkTitle, { color: colors.onStrongWarm }]}>
+                  {FRIEND_LINK_TEXT.loginTitle}
+                </Text>
+                <Text style={[styles.friendLinkBody, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
+                  {FRIEND_LINK_TEXT.loginBody}
+                </Text>
+              </View>
+            </View>
           ) : null}
         </View>
 
@@ -603,6 +637,14 @@ const styles = StyleSheet.create({
   },
   wordmark: { ...fraunces(600, 22) },
   tagline: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans },
+  // #2627: venne-lenka som venter, på designets plass for invitasjonslinja:
+  // kort på 14 i radius og 12 innvendig, sirkel på 40, tekst 14 med 1,4.
+  friendLink: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 12 },
+  friendLinkRing: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  friendLinkPlus: { position: 'absolute', fontSize: 18, fontFamily: FONTS.sans },
+  friendLinkText: { flexShrink: 1 },
+  friendLinkTitle: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sansSemiBold },
+  friendLinkBody: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sans },
   taglineGold: { fontFamily: FONTS.sansSemiBold },
   card: {
     marginTop: 20,

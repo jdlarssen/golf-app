@@ -41,6 +41,23 @@ export const PROD_SUPABASE_HOST = 'glofubopddkjhymcbaph.supabase.co';
 /** Web-deployen butikkbygget snakker med. Sammenlignes nøyaktig, ingen skråstrek. */
 export const STORE_WEB_BASE_URL = 'https://tornygolf.no';
 
+/**
+ * Domenet venne-lenka (#2627) åpner butikkappen fra: verten i
+ * {@link STORE_WEB_BASE_URL}, som QR-koden på bag-taggen bygger adressen fra.
+ */
+export const STORE_LINK_DOMAIN = 'tornygolf.no';
+
+/**
+ * Stiene på {@link STORE_LINK_DOMAIN} som åpner appen (#2627): «legg til
+ * meg»-siden, på norsk og under `/en`. Bare de. Appen kan ikke bære en
+ * nett-sesjon fra en lenke, så innlogging, invitasjoner, påmelding og alt
+ * annet skal fortsatt åpnes i nettleseren. Samme lister står i AASA-fila
+ * (`app/.well-known/apple-app-site-association/route.ts`, som snevrer inn
+ * iOS-claimet) og bygges der fra `lib/friends/friendLinkPath.ts`; testen
+ * holder dem i takt (fila her er selvstendig, se toppen).
+ */
+export const STORE_FRIEND_LINK_PATH_PREFIXES = ['/venner/legg-til/', '/en/venner/legg-til/'] as const;
+
 /** Bundle-id (iOS) og pakkenavn (Android) — arvet fra skallene (#1279/#1283). */
 export const STORE_BUNDLE_ID = 'no.tornygolf.app';
 
@@ -203,13 +220,30 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
       // Skallet hadde ITSAppUsesNonExemptEncryption=false i Info.plist: appen
       // bruker bare OS-ets HTTPS, og eksportkontroll-dialogen stilles aldri.
       config: { ...base.ios?.config, usesNonExemptEncryption: false },
-      // Ingen `associatedDomains` med vilje (kontrakt §Research): appen kan
-      // ikke bære en sesjon fra en lenke, så lenker skal åpnes i Safari.
+      // #2627: domenet claimes, men AASA-fila slipper bare venne-lenka
+      // gjennom. Alle andre lenker åpnes fortsatt i Safari, der sesjonen er.
+      associatedDomains: [`applinks:${STORE_LINK_DOMAIN}`],
     },
     android: {
       ...base.android,
       package: STORE_BUNDLE_ID,
       versionCode: STORE_ANDROID_VERSION_CODE,
+      // #2627: App Links for venne-lenka, med stiene her (Android har ingen
+      // AASA). `autoVerify` krever Play-signeringsnøkkelen i
+      // `app/.well-known/assetlinks.json`. Til den står der, åpner Android 12+
+      // lenka i nettleseren, og Android 7–11 spør om app eller nettleser.
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: STORE_FRIEND_LINK_PATH_PREFIXES.map((pathPrefix) => ({
+            scheme: 'https',
+            host: STORE_LINK_DOMAIN,
+            pathPrefix,
+          })),
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     plugins: [...(base.plugins ?? []), STORE_SIGNING_PLUGIN],
   };

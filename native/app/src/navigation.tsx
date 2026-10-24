@@ -3,8 +3,11 @@
 // react-navigation native-stack, ikke expo-router: expo-router krever bytte av
 // entry-point og filbasert app/-skanning oppå det uvanlige watchFolders-
 // oppsettet appen deler `lib/` gjennom. Seks skjermer trenger ikke den magien.
-// Deep links (N7) dekkes av react-navigations egen linking-config når den tid
-// kommer.
+// Dype lenker går ikke gjennom react-navigations linking-config. Den eneste
+// lenka som åpner en skjerm, er venne-lenka (#2627): `App.tsx` lytter,
+// `data/pendingFriendLink.ts` holder koden, og navigatoren åpner
+// «Bli venn med …» (`openPendingFriendLink`). Varsler åpner skjermer via
+// `listenForPushTaps`.
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
@@ -12,6 +15,7 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  StackActions,
   createNavigationContainerRef,
   type Theme as NavigationTheme,
 } from '@react-navigation/native';
@@ -25,12 +29,18 @@ import { Platform } from 'react-native';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
+import {
+  friendLinkStep,
+  pendingFriendCode,
+  subscribePendingFriendCode,
+  takePendingFriendCode,
+} from './data/pendingFriendLink';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
-import { FRIENDS_TEXT } from './lib/friendsCopy';
+import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT, notificationsThemeHeading } from './lib/profileCopy';
@@ -42,6 +52,7 @@ import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
 import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
+import { FriendLink } from './screens/FriendLink';
 import { Friends } from './screens/Friends';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
@@ -114,8 +125,15 @@ export type RootStackParamList = {
   /**
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
+   * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så toppen har
+   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`).
    */
-  Friends: { selfInitials?: string } | undefined;
+  Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
+  /**
+   * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
+   * appen. `code` er venne-koden fra lenka (`lib/friendLinkUrl.ts`).
+   */
+  FriendLink: { code: string };
   /**
    * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
    * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
@@ -184,6 +202,19 @@ function openPushTarget(target: PushTarget) {
   } else navigationRef.navigate('Home');
 }
 
+/**
+ * «Bli venn med …» for venne-koden som venter (#2627). Avgjørelsen er
+ * `friendLinkStep`: vent til navigatoren er klar, og åpne ikke skjermen en gang
+ * til når den alt står øverst med samme kode.
+ */
+function openPendingFriendLink() {
+  const ready = navigationRef.isReady();
+  const step = friendLinkStep(ready, ready ? navigationRef.getCurrentRoute() : undefined, pendingFriendCode());
+  if (step === 'wait') return;
+  const code = takePendingFriendCode();
+  if (step === 'push' && code) navigationRef.dispatch(StackActions.push('FriendLink', { code }));
+}
+
 export function RootNavigator() {
   const theme = useTheme();
   const { colors } = theme;
@@ -202,10 +233,14 @@ export function RootNavigator() {
   useEffect(() => {
     void settlePushOwner();
   }, []);
+  // #2627: en venne-lenke som kommer mens appen er åpen. En som kom før
+  // innloggingen (eller før navigatoren var klar), tas i `onReady`.
+  useEffect(() => subscribePendingFriendCode(openPendingFriendLink), []);
   const onReady = useCallback(() => {
     const target = pendingPush.current;
     pendingPush.current = null;
     if (target) openPushTarget(target);
+    openPendingFriendLink();
   }, []);
   // #2228: hver skjerm har sin egen feilgrense (`screenLayout`), så headerens
   // tilbakeknapp virker når en skjerm kaster. Varianten følger skjermen. Den
@@ -331,9 +366,18 @@ export function RootNavigator() {
         <Stack.Screen
           name="Friends"
           component={Friends}
-          options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
-            backLabel: PROFILE_TEXT.backToProfile,
-          })}
+          options={({ route }) => {
+            // #2627: fra «Bli venn med …» nevner ikke toppen Profil.
+            const top = friendsTopBar(route.params?.from);
+            return kickerHeader(top.kicker, FRIENDS_TEXT.heading, { backLabel: top.backLabel });
+          }}
+        />
+        {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
+            og eierens navn stort i innholdet. */}
+        <Stack.Screen
+          name="FriendLink"
+          component={FriendLink}
+          options={kickerHeader(FRIEND_LINK_TEXT.kicker, FRIEND_LINK_TEXT.kicker)}
         />
         {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
             «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}

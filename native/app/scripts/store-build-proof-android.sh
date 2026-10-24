@@ -15,11 +15,12 @@
 #     Android SDK-ens build-tools leser det når skriptet har pakket manifestet og
 #     `resources.pb` om til en proto-APK. Ingen bundletool. KREV pakke
 #     `no.tornygolf.app`, en versionCode og targetSdk ≥ 36. FORBY
-#     `android:debuggable="true"` og et `autoVerify`-intent-filter for
-#     tornygolf.no (motstykket til iOS-regelen om associated domains: appen
-#     claimer ikke lenker). En vert som er en ressursreferanse (`@string/…`)
-#     kan ikke leses her, og regnes som tornygolf.no. Fail-closed: en
-#     debuggable-verdi leseren ikke kjenner, er FAIL.
+#     `android:debuggable="true"`. App Links (#2627): autoVerify for
+#     tornygolf.no BARE for venne-stiene, og begge må finnes (motstykket til
+#     iOS-regelen om associated domains; regelen står i `applinks-proof.sh`).
+#     En vert som er en ressursreferanse (`@string/…`) kan ikke leses her, og
+#     regnes som tornygolf.no. Fail-closed: en debuggable-verdi leseren ikke
+#     kjenner, er FAIL.
 #  3. Tillatelsene: hele `uses-permission`-lista skrives ut som informasjon.
 #     Regelen: ingen tillatelse fra `expo.android.blockedPermissions` i
 #     `native/app/app.json` står i manifestet. Lista har ett hjem, app.json, og
@@ -54,6 +55,11 @@ BUNDLE_PROOF_LIB="$SCRIPT_DIR/bundle-proof.sh"
 [ -f "$BUNDLE_PROOF_LIB" ] || { printf '✗ Mangler %s (bundel-reglene)\n' "$BUNDLE_PROOF_LIB" >&2; exit 2; }
 # shellcheck source=bundle-proof.sh
 . "$BUNDLE_PROOF_LIB"
+# App Links-regelen (#2627) står i egen fil, så den testes uten en AAB.
+APPLINKS_PROOF_LIB="$SCRIPT_DIR/applinks-proof.sh"
+[ -f "$APPLINKS_PROOF_LIB" ] || { printf '✗ Mangler %s (App Links-regelen)\n' "$APPLINKS_PROOF_LIB" >&2; exit 2; }
+# shellcheck source=applinks-proof.sh
+. "$APPLINKS_PROOF_LIB"
 UNZIP=/usr/bin/unzip
 ZIP=/usr/bin/zip
 SHASUM=/usr/bin/shasum
@@ -192,25 +198,7 @@ case "$debuggable" in
   true) fail "android:debuggable=\"true\": et debug-bygg skal aldri til Play" ;;
   *) fail "android:debuggable kunne ikke leses («${debuggable:-<mangler>}»), og regnes som debuggable" ;;
 esac
-claimed=0
-while read -r host; do
-  [ -n "$host" ] || continue
-  # Vertsnavn skiller ikke store og små bokstaver.
-  host=$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')
-  case "$host" in
-    tornygolf.no|*.tornygolf.no)
-      claimed=$((claimed + 1)); say "      autoVerify-vert: $host" ;;
-    @*)
-      claimed=$((claimed + 1)); say "      autoVerify-vert: $host (ressursreferanse som ikke kan leses her, regnes som tornygolf.no)" ;;
-    *)
-      say "      autoVerify-vert: $host (ikke tornygolf.no)" ;;
-  esac
-done < <(facts autoverify-host)
-if [ "$claimed" = "0" ]; then
-  pass "ingen autoVerify-intent-filter for tornygolf.no, appen claimer ikke lenker"
-else
-  fail "$claimed autoVerify-vert(er) for tornygolf.no. Appen skal ikke claime lenker (motstykket til iOS-regelen om associated domains)"
-fi
+android_applinks_rules "$FACTS"
 say ""
 
 # ── 3. Tillatelsene ──────────────────────────────────────────────────────────

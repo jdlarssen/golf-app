@@ -48,8 +48,9 @@
 #     `CFBundleLocalizations`; `locale_rules` i `privacy-proof.sh`, #2561).
 #  3. Entitlements (`codesign`): `aps-environment` må være `development` eller
 #     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
-#     Arkivet kreves ikke å ha `production`. INGEN associated domains. Reglene
-#     og hvorfor står i `entitlements-proof.sh`.
+#     Arkivet kreves ikke å ha `production`. Associated domains er nøyaktig
+#     `applinks:tornygolf.no` (venne-lenka, #2627). Reglene og hvorfor står i
+#     `entitlements-proof.sh`.
 #  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
 #     importerer disk-API-er (`statfs`/`statvfs`/`getattrlist`-familien,

@@ -2,9 +2,8 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { getFriendIds } from '@/lib/friends/getFriendIds';
-import { displayNameForOthers } from '@/lib/users/displayName';
+import { friendLinkPath } from '@/lib/friends/friendLinkPath';
+import { friendLinkView } from '@/lib/friends/friendLinkView';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -16,19 +15,6 @@ import { connectFriend } from './actions';
 
 type Params = Promise<{ code: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-type Owner = {
-  id: string;
-  name: string | null;
-  nickname: string | null;
-  email: string;
-};
-
-function ownerName(o: Owner): string {
-  // #2271: everyone with the link sees this, so a nameless owner shows as the
-  // masked address.
-  return displayNameForOthers(o) ?? '';
-}
 
 /**
  * /venner/legg-til/[code] — «legg til meg»-lenkens landingsside (#369).
@@ -60,28 +46,21 @@ export default async function LeggTilPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect({ href: `/login?next=/venner/legg-til/${code}`, locale });
+    redirect({ href: `/login?next=${friendLinkPath(code)}`, locale });
   }
 
-  const admin = getAdminClient();
-  const { data: owner } = await admin
-    .from('users')
-    .select('id, name, nickname, email')
-    .eq('friend_code', code)
-    // #1012: anonymiserte kontoer kan ikke legges til som venn.
-    .is('deleted_at', null)
-    .maybeSingle<Owner>();
+  // #2627: the same lookup as the app's `GET /api/friends/link/[code]`. The
+  // name is masked on the server (#2271): everyone with the link sees it.
+  const view = await friendLinkView(user.id, code);
+  if (!view) notFound();
 
-  if (!owner) notFound();
-
-  const isSelf = owner.id === user.id;
-  const friendIds = isSelf ? [] : await getFriendIds(user.id);
-  const alreadyFriends = friendIds.includes(owner.id);
+  const isSelf = view.relation === 'self';
+  const alreadyFriends = view.relation === 'already_friends';
 
   return (
     <AppShell>
       <TopBar backHref="/profile/venner" backLabel={t('backLabel')} kicker={t('kicker')} />
-      <PageHeader title={ownerName(owner)} />
+      <PageHeader title={view.name} />
 
       {hasError && (
         <div className="mb-4">
@@ -109,7 +88,7 @@ export default async function LeggTilPage({
         ) : (
           <>
             <p className="mb-4 font-sans text-[15px] text-text">
-              {tf('leggTil.connectCard', { name: ownerName(owner) })}
+              {tf('leggTil.connectCard', { name: view.name })}
             </p>
             <form action={connectFriend}>
               <input type="hidden" name="code" value={code} />

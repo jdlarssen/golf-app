@@ -36,6 +36,7 @@ vi.mock('@/lib/invitations/quota', () => ({
 
 import {
   addByEmail,
+  connectByFriendCode,
   inviteByEmail,
   inviteEmailProblem,
   remove,
@@ -168,6 +169,55 @@ describe('respond', () => {
     const client = buildSupabaseMock([], {}, { rpcErrors: { respond_friend_request: { message: 'nede' } } });
     expect(await respond(client as never, ME, 'req-1', true)).toBe('error');
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
+
+// #2627: the friend link's connect, shared by the web landing page and the
+// app's `POST /api/friends/link/[code]`.
+describe('connectByFriendCode', () => {
+  it('«connected» blir «accepted» og varsler eieren med via=link', async () => {
+    const client = buildSupabaseMock([], {
+      connect_via_friend_code: { owner_id: OTHER, status: 'connected' },
+    });
+    expect(await connectByFriendCode(client as never, ME, 'abcd1234')).toBe('accepted');
+    expect(client.rpc).toHaveBeenCalledWith('connect_via_friend_code', { p_code: 'abcd1234' });
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: OTHER,
+      kind: 'friend_accepted',
+      payload: { actor_id: ME, actor_name: 'Jørgen', via: 'link' },
+    });
+  });
+
+  it.each(['already_friends', 'self'] as const)('«%s» gis videre, uten varsel', async (status) => {
+    const client = buildSupabaseMock([], {
+      connect_via_friend_code: { owner_id: OTHER, status },
+    });
+    expect(await connectByFriendCode(client as never, ME, 'abcd1234')).toBe(status);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('gir «error» når RPC-en kaster (også en ukjent kode), uten varsel', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const client = buildSupabaseMock([], {}, {
+      rpcErrors: { connect_via_friend_code: { message: 'code_not_found' } },
+    });
+    expect(await connectByFriendCode(client as never, ME, 'ukjent00')).toBe('error');
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('gir «error» for en tom kode uten å spørre basen', async () => {
+    const client = buildSupabaseMock([], {});
+    expect(await connectByFriendCode(client as never, ME, '')).toBe('error');
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it('lar en varselfeil aldri velte koblingen', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock.mockRejectedValueOnce(new Error('nede'));
+    const client = buildSupabaseMock([], {
+      connect_via_friend_code: { owner_id: OTHER, status: 'connected' },
+    });
+    expect(await connectByFriendCode(client as never, ME, 'abcd1234')).toBe('accepted');
   });
 });
 
