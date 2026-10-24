@@ -22,13 +22,14 @@ function makeTeamLine(args: {
     playerIds: args.playerIds,
     holes: [],
     totalPoints: args.totalPoints,
+    toPar: null,
     rank: args.rank,
     tiedWith: args.tiedWith ?? [],
   };
 }
 
 function makeResult(teams: StablefordTeamLine[]): StablefordTeamResult {
-  return { kind: 'stableford', variant: 'team', teams };
+  return { kind: 'stableford', variant: 'team', ranking: 'net_total', teams };
 }
 
 function makePlayers(
@@ -251,5 +252,21 @@ describe('TeamStablefordView', () => {
     // formatRevealName legger kallenavn i guillemeter.
     expect(list.textContent).toContain('Tigeren');
     expect(list.textContent).toContain('Bjørn');
+  });
+
+  it('#2625: a net-to-par game leads with points against par pace under «mot par»', () => {
+    const props = defaultProps();
+    const result: StablefordTeamResult = {
+      ...props.result,
+      ranking: 'net_to_par',
+      teams: props.result.teams.map((t, i) => ({ ...t, toPar: [5, 0, -1, -3][i] })),
+    };
+    render(<TeamStablefordView {...props} result={result} />);
+    const rows = within(screen.getByTestId('stableford-team-leaderboard')).getAllByRole('listitem');
+    ['+5', 'E', '−1', '−3'].forEach((text, i) => {
+      expect(within(rows[i]).getByText(text)).toBeInTheDocument();
+      expect(within(rows[i]).getByText('mot par')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('poeng')).not.toBeInTheDocument();
   });
 });

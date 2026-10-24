@@ -24,6 +24,7 @@ function makeLine(
     totalEffectiveStrokes: totalEffective,
     totalGrossStrokes: totalGross,
     holesPlayed,
+    toPar: null,
     rank,
     tiedWith,
   };
@@ -55,6 +56,7 @@ function makeResult(): NassauResult {
   return {
     kind: 'nassau',
     scoring: 'net',
+    ranking: 'net_total',
     sections: {
       front9: makeSection(
         'front9',
@@ -247,5 +249,28 @@ describe('NassauView', () => {
     // Ingen ren vinner-highlight i push-tilstand.
     expect(rows[0].dataset.winner).toBeUndefined();
     expect(rows[1].dataset.winner).toBeUndefined();
+  });
+
+  it('#2625: a net-to-par game shows each section row against par under «mot par»', () => {
+    const props = defaultProps();
+    const toPar = (section: NassauSection, offset: number): NassauSection => ({
+      ...section,
+      players: section.players.map((p, i) => ({ ...p, toPar: i === 0 ? offset : i })),
+    });
+    const result: NassauResult = {
+      ...props.result,
+      ranking: 'net_to_par',
+      sections: {
+        front9: toPar(props.result.sections.front9, -2),
+        back9: toPar(props.result.sections.back9, 0),
+        total18: toPar(props.result.sections.total18, -1),
+      },
+    };
+    render(<NassauView {...props} result={result} />);
+    const front = screen.getByTestId('nassau-section-front9');
+    expect(within(front).getByText('−2')).toBeInTheDocument();
+    expect(within(front).getAllByText('mot par')).toHaveLength(3);
+    expect(within(screen.getByTestId('nassau-section-back9')).getByText('E')).toBeInTheDocument();
+    expect(within(front).queryByText('slag')).not.toBeInTheDocument();
   });
 });

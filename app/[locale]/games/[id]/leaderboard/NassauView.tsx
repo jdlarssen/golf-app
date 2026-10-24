@@ -6,6 +6,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { teamHeadline } from '@/lib/leaderboard/vsPar';
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
 import type {
@@ -164,6 +165,7 @@ export function NassauView({
           heading={t('nassau.front9Heading')}
           subheading={t('nassau.front9Sub')}
           section={result.sections.front9}
+          ranking={result.ranking}
           playersById={playersById}
           t={t}
         />
@@ -172,6 +174,7 @@ export function NassauView({
           heading={t('nassau.back9Heading')}
           subheading={t('nassau.back9Sub')}
           section={result.sections.back9}
+          ranking={result.ranking}
           playersById={playersById}
           t={t}
         />
@@ -180,6 +183,7 @@ export function NassauView({
           heading={t('nassau.total18Heading')}
           subheading={t('nassau.total18Sub')}
           section={result.sections.total18}
+          ranking={result.ranking}
           playersById={playersById}
           t={t}
           // Reactions live once per player, on the aggregate (Totalt 18) section
@@ -217,6 +221,7 @@ function SectionBlock({
   heading,
   subheading,
   section,
+  ranking,
   playersById,
   t,
   showReactions = false,
@@ -225,6 +230,8 @@ function SectionBlock({
   heading: string;
   subheading: string;
   section: NassauSection;
+  /** #2625: a section ranked on strokes to par shows it («−2», «E»). */
+  ranking: NassauResult['ranking'];
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
   showReactions?: boolean;
@@ -285,6 +292,7 @@ function SectionBlock({
               <SectionPlayerRow
                 key={line.userId}
                 line={line}
+                ranking={ranking}
                 displayName={displayName}
                 isWinnerHighlight={isWinnerHighlight}
                 staggerIndex={i}
@@ -301,6 +309,7 @@ function SectionBlock({
 
 function SectionPlayerRow({
   line,
+  ranking,
   displayName,
   isWinnerHighlight,
   staggerIndex,
@@ -308,6 +317,7 @@ function SectionPlayerRow({
   showReactions = false,
 }: {
   line: NassauSectionLine;
+  ranking: NassauResult['ranking'];
   displayName: string;
   isWinnerHighlight: boolean;
   staggerIndex: number;
@@ -316,6 +326,7 @@ function SectionPlayerRow({
 }) {
   const isTied = line.tiedWith.length > 0;
   const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;
+  const headline = teamHeadline(ranking, { total: line.totalEffectiveStrokes, toPar: line.toPar });
   // Champagne-tinted Card kun for ren vinner; push/T1 viser nøytral rad
   // siden ingen unit deles ut og UI-en skal speile det (samme prinsipp
   // som Wolf-tied: stake bæres uten poeng-utdeling).
@@ -356,10 +367,10 @@ function SectionPlayerRow({
 
         <div className="shrink-0 text-right">
           <span className="score-num block text-[24px] leading-none tracking-[-0.02em] text-text tabular-nums">
-            {line.totalEffectiveStrokes}
+            {headline.text}
           </span>
           <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            {t('nassau.totalEffectiveStrokesLabel')}
+            {headline.unit === 'toPar' ? t('common.vsParLabel') : t('nassau.totalEffectiveStrokesLabel')}
           </span>
         </div>
       </Card>
