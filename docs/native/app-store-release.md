@@ -20,7 +20,7 @@ Android-bygget (signert AAB, bevis og spike-funn): `play-store-release.md`.
 | Supabase | staging, fra `native/app/.env.local` | prod, fra repo-rotas `.env.local` — kun via skriptet |
 | Web | `http://localhost:<port>` under staging-verify | `https://tornygolf.no`, nøyaktig |
 | `ITSAppUsesNonExemptEncryption` | — | `false` (som skallet) |
-| Associated domains | — | ingen, med vilje: lenker åpnes i Safari, der sesjonen finnes |
+| Associated domains | — | `applinks:tornygolf.no`, men AASA-fila slipper bare venne-lenka gjennom (#2627). Alle andre lenker åpnes i Safari, der sesjonen finnes |
 | På telefonen | står ved siden av butikk-appen | erstatter skallet (samme id) |
 
 `native/app/app.config.ts` legger varianten over `app.json`; `app.json` er dev-fasiten og

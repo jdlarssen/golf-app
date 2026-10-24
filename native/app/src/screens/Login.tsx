@@ -2,9 +2,10 @@
 // satte inn en navigasjons-stack bak login-porten. Samme to steg (be om kode →
 // skriv koden).
 //
-// Ingen `next`-redirect og ingen dyplenker: appen har ingen URL å komme fra,
-// og `onAuthStateChange` i `App.tsx` bytter til stacken av seg selv når
-// `verifyOtp` har satt sesjonen.
+// Ingen `next`-redirect: `onAuthStateChange` i `App.tsx` bytter til stacken av
+// seg selv når `verifyOtp` har satt sesjonen. Den eneste lenka som kan vente
+// på innloggingen, er venne-lenka (#2627): koden står i
+// `data/pendingFriendLink.ts`, og navigatoren åpner «Bli venn med …» etterpå.
 //
 // #2216: **kode-veien går gjennom nettsiden.** «Send meg kode» kaller
 // `/api/auth/send-code` (`data/loginCode.ts`) med nettsidens sperrer:
