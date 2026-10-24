@@ -24,9 +24,10 @@
 // Plist-en leses med python3 (`plistlib`), fordi CI kjører på ubuntu-latest
 // uten plutil.
 import { spawnSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { STORE_LINK_DOMAIN } from '../app.config';
 
 const LIB = join(__dirname, 'entitlements-proof.sh');
 const AD_OK =
@@ -114,6 +115,17 @@ describe('entitlements_rules', () => {
     expect(r.fail).toBe(2);
     expect(r.fails[0]).toMatch(/^FAIL {2}aps-environment mangler/);
     expect(r.fails[1]).toMatch(/^FAIL {2}com\.apple\.developer\.associated-domains mangler/);
+  });
+
+  it('krever domenet fra app.config.ts, og et miljø kan ikke endre det', () => {
+    const src = readFileSync(LIB, 'utf8');
+    expect(/^ENTITLEMENTS_APPLINKS=(\S+)$/m.exec(src)?.[1]).toBe(`applinks:${STORE_LINK_DOMAIN}`);
+    const result = spawnSync('bash', ['-c', HARNESS, 'bash', LIB, fixture('production')], {
+      encoding: 'utf8',
+      env: { ...process.env, ENTITLEMENTS_APPLINKS: 'applinks:example.com' },
+    });
+    expect(result.stdout).toContain(AD_OK);
+    expect(result.stdout).toContain('TOTAL 2 0');
   });
 
   it('er fail-closed når fila ikke er en plist: én FAIL, ingen PASS', () => {
