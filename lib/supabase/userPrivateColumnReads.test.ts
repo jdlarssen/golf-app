@@ -125,14 +125,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(a) egen rad, sammenlignes med invitasjonens adresse',
   },
-  'app/[locale]/venner/legg-til/[code]/actions.ts': {
-    receivers: ['admin'],
-    reason: '(c) serverside utsending: egen rad som avsender av venneforespørselen',
-  },
-  'app/[locale]/venner/legg-til/[code]/page.tsx': {
-    receivers: ['admin'],
-    reason: 'oppslag på vennekoden eieren selv delte; (D6) maskeres på serveren som navne-fallback (#2271)',
-  },
   'app/api/profile/route.ts': {
     receivers: ['getAdminClient()'],
     reason: '(a) egen rad, id-en kommer fra tokenet',
@@ -153,7 +145,13 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/friends/friendActionsCore.ts': {
     receivers: ['getAdminClient()'],
     reason:
-      '(c) serverside utsending: avsenderens navn i venne-varselet, maskert (D6); kjernen bak webbens handlinger og /api/friends (#2256)',
+      '(c) serverside utsending: avsenderens navn i venne-varselet, maskert (D6); kjernen bak webbens handlinger og /api/friends (#2256), også venne-lenka (#2627)',
+  },
+  // #2627: flyttet fra `app/[locale]/venner/legg-til/[code]/page.tsx`.
+  'lib/friends/friendLinkView.ts': {
+    receivers: ['admin'],
+    reason:
+      'oppslag på vennekoden eieren selv delte; (D6) maskeres på serveren som navne-fallback (#2271); nettsidens landingsside og /api/friends/link (#2627)',
   },
   'lib/friends/getFriendData.ts': {
     receivers: ['admin'],
