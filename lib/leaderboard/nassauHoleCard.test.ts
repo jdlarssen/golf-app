@@ -7,9 +7,9 @@ describe('nassauHoleCardRows (#2625)', () => {
   // 3 (par), L scores 4 (one under her par), U has not played. The engine
   // gives L the hole in a game ranked on net to par.
   const cells: NassauHolePlayerCell[] = [
-    { userId: 'U', gross: null, effective: null, par: 3 },
-    { userId: 'M', gross: 3, effective: 3, par: 3 },
-    { userId: 'L', gross: 4, effective: 4, par: 5 },
+    { userId: 'U', gross: null, effective: null, toPar: null },
+    { userId: 'M', gross: 3, effective: 3, toPar: 0 },
+    { userId: 'L', gross: 4, effective: 4, toPar: -1 },
   ];
 
   it('in a game ranked on net to par the ★ player stands first, unplayed last', () => {

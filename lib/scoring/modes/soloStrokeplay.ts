@@ -127,13 +127,15 @@ function computeHoleRows(
           ? null
           : gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
       // #734: per-spiller par for riktig birdie/bogey-farge i UI.
-      return { userId: p.userId, gross, net, par: parFor(hole, p.teeGender) };
+      const par = parFor(hole, p.teeGender);
+      return { userId: p.userId, gross, net, par, toPar: net === null ? null : net - par };
     });
 
     const played = perPlayer.filter(
-      (c): c is { userId: string; gross: number; net: number; par: number } => c.net !== null,
+      (c): c is { userId: string; gross: number; net: number; par: number; toPar: number } =>
+        c.net !== null,
     );
-    const measure = (c: { net: number; par: number }) => (netToParRanking ? c.net - c.par : c.net);
+    const measure = (c: { net: number; toPar: number }) => (netToParRanking ? c.toPar : c.net);
     let bestUserIds: string[] = [];
     if (played.length > 0) {
       const min = Math.min(...played.map(measure));

@@ -805,7 +805,15 @@ describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
       holes,
       scores: [...card('M', { 1: 4, 2: 4 }), ...card('L', { 1: 4, 2: 4 })],
     };
-    expect(compute(flagged(opts)).holes.slice(0, 2).map((h) => h.bestUserIds)).toEqual([['L'], ['M', 'L']]);
+    const flaggedHoles = compute(flagged(opts)).holes;
+    expect(flaggedHoles.slice(0, 2).map((h) => h.bestUserIds)).toEqual([['L'], ['M', 'L']]);
+    // The measure lives on the cell, where a hole card orders its rows from:
+    // net − own par, and null on a hole not played.
+    expect(flaggedHoles[0].perPlayer.map((c) => [c.userId, c.toPar])).toEqual([
+      ['M', 0],
+      ['L', -1],
+    ]);
+    expect(flaggedHoles[2].perPlayer.map((c) => c.toPar)).toEqual([null, null]);
     expect(compute(makeCtx(opts)).holes[0].bestUserIds).toEqual(['M', 'L']);
   });
 });

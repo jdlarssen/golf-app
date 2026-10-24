@@ -65,8 +65,8 @@ describe('solo_strokeplay — placement band + checkpoints', () => {
         par: 4,
         strokeIndex: 1,
         perPlayer: [
-          { userId: 'u1', gross: 4, net: 4, par: 4 },
-          { userId: 'u2', gross: 5, net: 5, par: 4 },
+          { userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 },
+          { userId: 'u2', gross: 5, net: 5, par: 4, toPar: 1 },
         ],
         bestUserIds: ['u1'],
       },
@@ -75,10 +75,10 @@ describe('solo_strokeplay — placement band + checkpoints', () => {
         par: 4,
         strokeIndex: 2,
         perPlayer: [
-          { userId: 'u1', gross: 4, net: 4, par: 4 },
+          { userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 },
           // #2217: Bob has played every hole (holesPlayed 18), so hole 2 has
           // a score — a null here would count it unplayed in his vs par.
-          { userId: 'u2', gross: 5, net: 5, par: 4 },
+          { userId: 'u2', gross: 5, net: 5, par: 4, toPar: 1 },
         ],
         bestUserIds: ['u1'],
       },
@@ -979,9 +979,9 @@ describe('#2561 — a player without «ja» never reaches the facts', () => {
       par: 4,
       strokeIndex: holeNumber,
       perPlayer: [
-        { userId: 'u1', gross: alice, net: alice, par: 4 },
-        { userId: 'u2', gross: bob, net: bob, par: 4 },
-        { userId: 'u3', gross: carl, net: carl, par: 4 },
+        { userId: 'u1', gross: alice, net: alice, par: 4, toPar: alice - 4 },
+        { userId: 'u2', gross: bob, net: bob, par: 4, toPar: bob - 4 },
+        { userId: 'u3', gross: carl, net: carl, par: 4, toPar: carl - 4 },
       ],
       bestUserIds: [],
     };

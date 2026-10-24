@@ -95,8 +95,8 @@ function makeHoleRows(count: number) {
     par: 4,
     strokeIndex: i + 1,
     perPlayer: [
-      { userId: 'u1', gross: 4, net: 4, par: 4 },
-      { userId: 'u2', gross: 5, net: 5, par: 4 },
+      { userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 },
+      { userId: 'u2', gross: 5, net: 5, par: 4, toPar: 1 },
     ],
     bestUserIds: ['u1'],
   }));
@@ -174,7 +174,7 @@ describe('generateAndPersistRoundReport', () => {
         holeNumber: h + 1,
         par: 4,
         strokeIndex: h + 1,
-        perPlayer: ids.map((userId, i) => ({ userId, gross: 4 + i, net: 4 + i, par: 4 })),
+        perPlayer: ids.map((userId, i) => ({ userId, gross: 4 + i, net: 4 + i, par: 4, toPar: i })),
         bestUserIds: ['u1'],
       })),
       players: ids.map((userId, i) => ({
