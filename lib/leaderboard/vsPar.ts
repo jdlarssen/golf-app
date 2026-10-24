@@ -88,6 +88,20 @@ export function teamHeadline(
 }
 
 /**
+ * #2625 part 2: what a points row, podium or duel leads with — points against
+ * par pace in a game ranked on net to par, else the points — and the
+ * `leaderboard.common` label under it. One home for the choice the stableford
+ * and patsome surfaces make, so the number and its label cannot disagree.
+ */
+export function pointsHeadline(
+  ranking: TeamRanking,
+  line: { totalPoints: number; toPar: number | null },
+): ReturnType<typeof teamHeadline> & { labelKey: 'vsParLabel' | 'poengLabel' } {
+  const headline = teamHeadline(ranking, { total: line.totalPoints, toPar: line.toPar });
+  return { ...headline, labelKey: headline.unit === 'toPar' ? 'vsParLabel' : 'poengLabel' };
+}
+
+/**
  * #2625: the row's distance to the leader in the headline's unit: to par in a
  * net-to-par game (`null` when either has no hole), else the sum.
  */

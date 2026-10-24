@@ -44,7 +44,7 @@ describe('PatsomePodium', () => {
   // Type C: nøyaktig ÉN render-test — delt-førsteplass-casen (#1573).
   it('delt førsteplass: begge medvinner-lag får champagne, medaljong «1» og «Delt 1. plass»-merke', () => {
     window.sessionStorage.clear();
-    render(
+    const { rerender } = render(
       <PatsomePodium
         gameId="g1"
         gameName="Sommerturnering"
@@ -83,5 +83,35 @@ describe('PatsomePodium', () => {
     expect(slot3.dataset.rank).toBe('3');
     expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
     expect(slot3.textContent).not.toContain('Delt');
+    expect(within(slot3).getByText('poeng')).toBeInTheDocument();
+
+    // #2625: i et spill som rangeres mot par, leder trinnet med poeng mot par-tempo og «mot par» under.
+    rerender(
+      <PatsomePodium
+        gameId="g1"
+        gameName="Sommerturnering"
+        result={{
+          ...makeResult([]),
+          ranking: 'net_to_par',
+          teams: [
+            { ...makeTeamLine(1, ['u1', 'u2'], 1, 42, [2]), toPar: 6 },
+            { ...makeTeamLine(2, ['u3', 'u4'], 1, 42, [1]), toPar: 6 },
+            { ...makeTeamLine(3, ['u5', 'u6'], 3, 28), toPar: -2 },
+          ],
+        }}
+        playersById={makePlayers([
+          ['u1', 'Alice Andersen', null],
+          ['u2', 'Bjørn Berg', 'Bjørnen'],
+          ['u3', 'Camilla Carlsen', null],
+          ['u4', 'David Dahl', null],
+          ['u5', 'Erik Eriksen', null],
+          ['u6', 'Frida Frost', null],
+        ])}
+        backHref="/games/g1"
+      />,
+    );
+    const flaggedThird = screen.getByTestId('podium-rank-3');
+    expect(within(flaggedThird).getByText('\u22122')).toBeInTheDocument();
+    expect(within(flaggedThird).getByText('mot par')).toBeInTheDocument();
   });
 });

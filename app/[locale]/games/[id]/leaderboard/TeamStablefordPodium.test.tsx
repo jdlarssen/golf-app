@@ -90,12 +90,26 @@ function defaultProps(
 
 describe('TeamStablefordPodium', () => {
   it('rendrer 3-trinns podium når vi har 3+ lag', () => {
-    render(<TeamStablefordPodium {...defaultProps()} />);
+    const { rerender } = render(<TeamStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-team-podium');
     expect(podium).toBeInTheDocument();
     expect(within(podium).getByTestId('podium-rank-1')).toBeInTheDocument();
     expect(within(podium).getByTestId('podium-rank-2')).toBeInTheDocument();
     expect(within(podium).getByTestId('podium-rank-3')).toBeInTheDocument();
+    expect(within(screen.getByTestId('podium-rank-1')).getByText('poeng')).toBeInTheDocument();
+
+    // #2625: et spill som rangeres mot par, viser lagets poeng mot par-tempo med «mot par» under.
+    const props = defaultProps();
+    rerender(
+      <TeamStablefordPodium
+        {...props}
+        result={{ ...props.result, ranking: 'net_to_par', teams: props.result.teams.map((t, i) => ({ ...t, toPar: 3 - i })) }}
+      />,
+    );
+    const step1 = screen.getByTestId('podium-rank-1');
+    expect(within(step1).getByText('+3')).toBeInTheDocument();
+    expect(within(step1).getByText('mot par')).toBeInTheDocument();
+    expect(within(step1).queryByText('poeng')).not.toBeInTheDocument();
   });
 
   it('1.-plassen viser Lag N + begge partnernes fornavn', () => {

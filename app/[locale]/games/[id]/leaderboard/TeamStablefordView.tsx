@@ -6,7 +6,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { teamHeadline } from '@/lib/leaderboard/vsPar';
+import { pointsHeadline } from '@/lib/leaderboard/vsPar';
 import type { StablefordTeamResult } from '@/lib/scoring/modes/types';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
 
@@ -98,7 +98,7 @@ export function TeamStablefordView({
             rank={team.rank}
             playerIds={team.playerIds}
             playersById={playersById}
-            headline={teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar })}
+            headline={pointsHeadline(result.ranking, team)}
             tiedWith={team.tiedWith}
             staggerIndex={i}
           />
@@ -146,8 +146,8 @@ function TeamRow({
   rank: number;
   playerIds: string[];
   playersById: Map<string, SoloStablefordPlayerInfo>;
-  /** #2625: the points, or the team's points against par pace in a net-to-par game (`teamHeadline`). */
-  headline: ReturnType<typeof teamHeadline>;
+  /** #2625: the points, or the team's points against par pace in a net-to-par game (`pointsHeadline`). */
+  headline: ReturnType<typeof pointsHeadline>;
   tiedWith: number[];
   staggerIndex: number;
 }) {
@@ -204,7 +204,7 @@ function TeamRow({
             {headline.text}
           </span>
           <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.poengLabel')}
+            {t(`common.${headline.labelKey}`)}
           </span>
         </div>
       </Card>

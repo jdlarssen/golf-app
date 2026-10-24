@@ -65,13 +65,27 @@ function defaultProps(
 
 describe('SoloStablefordPodium', () => {
   it('rendrer 3-trinns podium med 1., 2. og 3. plass når vi har 3+ spillere', () => {
-    render(<SoloStablefordPodium {...defaultProps()} />);
+    const { rerender } = render(<SoloStablefordPodium {...defaultProps()} />);
     const podium = screen.getByTestId('stableford-podium');
     expect(podium).toBeInTheDocument();
 
     expect(within(podium).getByTestId('podium-rank-1')).toBeInTheDocument();
     expect(within(podium).getByTestId('podium-rank-2')).toBeInTheDocument();
     expect(within(podium).getByTestId('podium-rank-3')).toBeInTheDocument();
+    expect(within(podium.querySelector('[data-testid=podium-rank-1]') as HTMLElement).getByText('poeng')).toBeInTheDocument();
+
+    // #2625: et spill som rangeres mot par, viser poeng mot par-tempo med «mot par» under.
+    const props = defaultProps();
+    rerender(
+      <SoloStablefordPodium
+        {...props}
+        result={{ ...props.result, ranking: 'net_to_par', players: props.result.players.map((p, i) => ({ ...p, toPar: 3 - i })) }}
+      />,
+    );
+    const step1 = screen.getByTestId('podium-rank-1');
+    expect(within(step1).getByText('+3')).toBeInTheDocument();
+    expect(within(step1).getByText('mot par')).toBeInTheDocument();
+    expect(within(step1).queryByText('poeng')).not.toBeInTheDocument();
   });
 
   it('viser vinneren med navn på 1.-plassen', () => {

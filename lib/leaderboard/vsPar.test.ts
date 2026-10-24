@@ -9,6 +9,7 @@ import {
   teamHeadlineGap,
   teamLineVsPar,
   vsParOverPlayed,
+  pointsHeadline,
 } from './vsPar';
 
 // Type A (#2217 D6): «mot par» = total − balls × (par for the holes the
@@ -123,6 +124,18 @@ describe('teamHeadline / teamHeadlineGap (#2625)', () => {
     [undefined, lag2, lag1, 10],
   ] as const)('%s: gap to the leader', (ranking, line, leader, expected) => {
     expect(teamHeadlineGap(ranking, line, leader)).toBe(expected);
+  });
+});
+
+describe('pointsHeadline (#2625 part 2)', () => {
+  // A points row, podium or duel leads with what the game ranks on, and says
+  // which: «mot par» under points against par pace, «poeng» under the sum.
+  it.each([
+    ['net_to_par', { totalPoints: 11, toPar: 3 }, { unit: 'toPar', value: 3, text: '+3', labelKey: 'vsParLabel' }],
+    ['net_to_par', { totalPoints: 0, toPar: null }, { unit: 'toPar', value: null, text: '—', labelKey: 'vsParLabel' }],
+    ['net_total', { totalPoints: 11, toPar: 3 }, { unit: 'total', value: 11, text: '11', labelKey: 'poengLabel' }],
+  ] as const)('%s: %o → %o', (ranking, line, expected) => {
+    expect(pointsHeadline(ranking, line)).toEqual(expected);
   });
 });
 
