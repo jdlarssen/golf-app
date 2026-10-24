@@ -15,13 +15,28 @@ import {
 const GIMME_NONE = 'NOT_APPLICABLE';
 
 /**
- * A React `key` for <SimSettingsFields>: the codes in SIM_SETTING_KEYS order.
- * The fields hold their own state from `initial`, so a parent that renders
- * new stored values (after a save, «Tilbake til standard» or a changed
- * default) keys on them and the fields start over from what is stored.
+ * The action state of a form around these fields: the last error, and how
+ * many saves have succeeded. The count goes into the fields' key, so they
+ * start over after every save, also one that left the stored values as they
+ * were.
  */
-export function simSettingsFieldsKey(values: Record<SimSettingKey, string>): string {
-  return SIM_SETTING_KEYS.map((key) => values[key]).join('|');
+export type SimSettingsSaveState = { error: string; saves: number };
+export const SIM_SETTINGS_SAVE_INITIAL: SimSettingsSaveState = { error: '', saves: 0 };
+
+/** The next save state after an action returned `result`. */
+export function countSave(prev: SimSettingsSaveState, result: { error: string }): SimSettingsSaveState {
+  return { error: result.error, saves: result.error === '' ? prev.saves + 1 : prev.saves };
+}
+
+/**
+ * A React `key` for <SimSettingsFields>: the codes in SIM_SETTING_KEYS order
+ * and the save count. The fields hold their own state from `initial`, so a
+ * parent that renders new stored values (after a save, «Tilbake til
+ * standard» or a changed default) keys on them and the fields start over
+ * from what is stored.
+ */
+export function simSettingsFieldsKey(values: Record<SimSettingKey, string>, saves: number): string {
+  return `${SIM_SETTING_KEYS.map((key) => values[key]).join('|')}#${saves}`;
 }
 
 /**
