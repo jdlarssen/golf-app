@@ -5,8 +5,9 @@
 //
 // Formatet bestemmer både scoring-motoren og verdiens betydning:
 //  - slagspill → mot-par (totalStrokes − tee-par), lavest best;
-//  - (modifisert) stableford → stableford-poeng, høyest best (kun netto, så
-//    brutto-aksen speiler netto).
+//  - (modifisert) stableford → stableford-poeng, høyest best. Brutto-aksen er
+//    poengene uten handicapslag: samme kort regnet en gang til med
+//    courseHandicap 0 (#2638, en bruttoliga). `lib/scoring/` røres ikke.
 // Bare komplette kort teller (holesPlayed === antall hull) — et pickup-hull gjør
 // kortet ufullstendig, akkurat som i slagspill-stien fra før.
 
@@ -52,18 +53,23 @@ export function computeFlightRoundValues(input: FlightScoringInput): LeagueRound
   const out: LeagueRoundPlayerScore[] = [];
 
   if (format === 'stableford' || format === 'modified_stableford') {
-    const result =
-      format === 'stableford' ? computeStableford(ctx) : computeModifiedStableford(ctx);
+    const score = format === 'stableford' ? computeStableford : computeModifiedStableford;
+    const result = score(ctx);
+    // #2638: brutto stableford = poeng uten handicapslag. Samme kort, samme
+    // motor, alle spillere med courseHandicap 0.
+    const grossResult = score({
+      ...ctx,
+      players: players.map((p) => ({ ...p, courseHandicap: 0 })),
+    });
     // Liga er alltid solo (team_size 1) → solo-varianten. Defensivt mot team.
-    if (result.variant !== 'solo') return out;
+    if (result.variant !== 'solo' || grossResult.variant !== 'solo') return out;
+    const grossByUser = new Map(grossResult.players.map((l) => [l.userId, l.totalPoints]));
     for (const line of result.players) {
       if (line.holesPlayed !== holeCount) continue;
-      // Stableford er netto-only; brutto-aksen speiler netto så `metric='gross'`
-      // aldri kollapser til 0 (den rangeres uansett ikke for poeng-ligaer).
       out.push({
         userId: line.userId,
         net: line.totalPoints,
-        gross: line.totalPoints,
+        gross: grossByUser.get(line.userId) ?? line.totalPoints,
         deliveredOutsideWindow,
         finishedAt,
       });

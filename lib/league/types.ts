@@ -11,7 +11,10 @@
  */
 export type LeagueFormat = 'stroke' | 'stableford' | 'modified_stableford';
 
-/** Visning av sesong-tabellen. Fase 1 bruker 'net'. */
+/**
+ * Hvilken tabell ligaen rangerer på. Arrangøren velger 'net' (standard) eller
+ * 'gross' (#2638); 'both' finnes i DB-en, men tilbys ikke (#1144).
+ */
 export type LeagueScoring = 'net' | 'gross' | 'both';
 
 /** Hvordan sesongen rangeres. Fase 1 bruker 'total' + 'average'. */
@@ -64,15 +67,15 @@ export type LeagueStandingsConfig = {
  * Én spillers tellende per-runde-verdi, på netto- og brutto-aksen. Tallets
  * betydning og retning følger liga-formatet (se `LeagueFormat`):
  *  - slagspill: mot-par (totalStrokes − par), lavest best;
- *  - stableford: stableford-poeng, høyest best (kun netto; brutto speiler netto
- *    siden poeng-ligaer rangeres netto-only).
+ *  - stableford: stableford-poeng, høyest best; brutto = poeng uten
+ *    handicapslag (#2638).
  * Retningen styres av `LeagueStandingsConfig.pointsBased`, ikke av feltnavnet.
  */
 export type LeagueRoundPlayerScore = {
   userId: string;
   /** Per-runde-verdi på netto-aksen (mot-par for slagspill, poeng for stableford). */
   net: number;
-  /** Per-runde-verdi på brutto-aksen. Speiler `net` for stableford (netto-only). */
+  /** Per-runde-verdi på brutto-aksen. Stableford: poeng uten handicapslag (#2638). */
   gross: number;
   /** Flagget når flighten ble levert utenfor opprinnelig vindu (admin-override). */
   deliveredOutsideWindow: boolean;
