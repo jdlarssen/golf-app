@@ -274,9 +274,10 @@ function formatScoreLabel(score: ShareCardScore): string {
       return `${score.value} skins`;
     case 'vsPar':
       return score.label;
-    // #2625: points against par pace, where «+» is the good side.
+    // #2625: points against par pace, where «+» is the good side. A player
+    // without a hole has no number («—») and gets no unit after it.
     case 'pointsVsPar':
-      return `${score.label} mot par (poeng)`;
+      return score.label === '—' ? score.label : `${score.label} mot par (poeng)`;
   }
 }
 
