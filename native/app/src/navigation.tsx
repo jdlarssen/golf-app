@@ -122,8 +122,10 @@ export type RootStackParamList = {
   /**
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
+   * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så pila heter
+   * bare «Tilbake», ikke «Tilbake til profil».
    */
-  Friends: { selfInitials?: string } | undefined;
+  Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
   /**
    * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
    * appen. `code` er venne-koden fra lenka (`lib/friendLinkUrl.ts`).
@@ -361,9 +363,11 @@ export function RootNavigator() {
         <Stack.Screen
           name="Friends"
           component={Friends}
-          options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
-            backLabel: PROFILE_TEXT.backToProfile,
-          })}
+          options={({ route }) =>
+            kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
+              backLabel: route.params?.from === 'friendLink' ? undefined : PROFILE_TEXT.backToProfile,
+            })
+          }
         />
         {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
             og eierens navn stort i innholdet. */}
