@@ -2623,7 +2623,6 @@
       "nettoLabel": "Net {netto}",
       "nettoWithPoints": "Net {netto} · {points} pts",
       "strokesBadge": "+{n} STROKES",
-      "strokesGiveBadge": "Gives {n, plural, one {# stroke} other {# strokes}}",
       "increaseAriaLabel": "+1 for {name}",
       "decreaseAriaLabel": "-1 for {name}",
       "moreAriaLabel": "Pick specific score for {name}",
