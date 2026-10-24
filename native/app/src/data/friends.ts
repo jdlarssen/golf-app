@@ -15,8 +15,10 @@
 // Status → kode oversettes her, ikke på skjermen (samme arbeidsdeling som
 // `data/profile.ts`). Skjermen leser aldri et statusnummer.
 import {
+  FRIEND_LINK_RELATIONS,
   asFriendStatus,
   asInviteStatus,
+  type FriendLinkRelation,
   type FriendStatus,
   type InviteStatus,
 } from '../../../../lib/friends/friendStatus';
@@ -153,6 +155,41 @@ export async function fetchFriendCode(): Promise<string | null> {
     console.error('[friends] kodeoppslag feilet', err);
     return null;
   }
+}
+
+export type FriendLinkLoadResult =
+  | { ok: true; relation: FriendLinkRelation; name: string }
+  | { ok: false; reason: WebApiFailure | 'not_found' | 'load_failed' };
+
+/** Ruta for en venne-kode. Koden står i stien, kodet, så den aldri blir en annen sti. */
+function friendLinkRoute(code: string): string {
+  return `/api/friends/link/${encodeURIComponent(code)}`;
+}
+
+/**
+ * Hvem venne-lenka tilhører, sett fra deg (#2627): navnet (maskert på
+ * serveren) og forholdet. `not_found` er en ukjent kode eller en slettet konto.
+ */
+export async function fetchFriendLink(code: string): Promise<FriendLinkLoadResult> {
+  const call = await callWebRoute(friendLinkRoute(code), 'GET');
+  if (!call.ok) return call;
+  if (call.status === 401) return { ok: false, reason: 'unauthorized' };
+  if (call.status === 404) return { ok: false, reason: 'not_found' };
+  if (call.status !== 200) return { ok: false, reason: 'load_failed' };
+  const { relation, name } = call.body;
+  if (!(FRIEND_LINK_RELATIONS as readonly unknown[]).includes(relation)) {
+    return { ok: false, reason: 'load_failed' };
+  }
+  return {
+    ok: true,
+    relation: relation as FriendLinkRelation,
+    name: typeof name === 'string' ? name : '',
+  };
+}
+
+/** Bli venner via venne-lenka (#2627): `accepted` når dere ble venner nå. */
+export function connectFriendLink(code: string): Promise<FriendActionResult<FriendStatus>> {
+  return act(friendLinkRoute(code), {}, asFriendStatus);
 }
 
 /**

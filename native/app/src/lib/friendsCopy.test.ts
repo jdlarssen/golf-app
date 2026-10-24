@@ -16,7 +16,9 @@ import {
 import type { WebApiFailure } from '../data/webApi';
 import { isFinishedSentence } from '../test/copy';
 import {
+  FRIEND_LINK_TEXT,
   FRIENDS_TEXT,
+  friendLinkConnectCard,
   friendRowA11yLabel,
   friendSheetValues,
   friendStatusLine,
@@ -75,6 +77,33 @@ describe('FRIENDS_TEXT', () => {
 
   it.each(Object.entries(MIRRORED))('«%s» er webbens «%s» tegn for tegn', (appKey, webKey) => {
     expect(FRIENDS_TEXT[appKey as keyof typeof FRIENDS_TEXT]).toBe(web[webKey as keyof typeof web]);
+  });
+});
+
+// #2627: «Bli venn med …» i appen speiler webbens `friends.leggTil`.
+describe('FRIEND_LINK_TEXT', () => {
+  const leggTil = web.leggTil;
+  const MIRRORED_LINK: Partial<Record<keyof typeof FRIEND_LINK_TEXT, keyof typeof leggTil>> = {
+    kicker: 'kicker',
+    errorBanner: 'errorBanner',
+    selfCard: 'selfCard',
+    alreadyFriendsCard: 'alreadyFriendsCard',
+    toFriendsLink: 'toFriendsLink',
+    connectButton: 'connectButton',
+    connectPending: 'connectPending',
+  };
+
+  it.each(Object.entries(FRIEND_LINK_TEXT))('«%s» er en ferdig tekst', (_key, text) => {
+    expect(isFinishedSentence(text)).toBe(true);
+  });
+
+  it.each(Object.entries(MIRRORED_LINK))('«%s» er webbens «leggTil.%s» tegn for tegn', (appKey, webKey) => {
+    expect(FRIEND_LINK_TEXT[appKey as keyof typeof FRIEND_LINK_TEXT]).toBe(leggTil[webKey as keyof typeof leggTil]);
+  });
+
+  it('setter navnet inn akkurat der webben har plassholderen, og reserven uten navn', () => {
+    expect(friendLinkConnectCard('{name}')).toBe(leggTil.connectCard);
+    expect(friendLinkConnectCard('')).toBe(leggTil.connectCard.replace('{name}', web.someoneFallback));
   });
 });
 

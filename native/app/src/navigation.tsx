@@ -12,6 +12,7 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  StackActions,
   createNavigationContainerRef,
   type Theme as NavigationTheme,
 } from '@react-navigation/native';
@@ -25,12 +26,13 @@ import { Platform } from 'react-native';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
+import { subscribePendingFriendCode, takePendingFriendCode } from './data/pendingFriendLink';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
-import { FRIENDS_TEXT } from './lib/friendsCopy';
+import { FRIEND_LINK_TEXT, FRIENDS_TEXT } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT, notificationsThemeHeading } from './lib/profileCopy';
@@ -42,6 +44,7 @@ import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
 import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
+import { FriendLink } from './screens/FriendLink';
 import { Friends } from './screens/Friends';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
@@ -117,6 +120,11 @@ export type RootStackParamList = {
    */
   Friends: { selfInitials?: string } | undefined;
   /**
+   * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
+   * appen. `code` er venne-koden fra lenka (`lib/friendLinkUrl.ts`).
+   */
+  FriendLink: { code: string };
+  /**
    * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
    * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
    */
@@ -184,6 +192,22 @@ function openPushTarget(target: PushTarget) {
   } else navigationRef.navigate('Home');
 }
 
+/**
+ * «Bli venn med …» for venne-koden som venter (#2627), når navigatoren er
+ * klar. Står skjermen alt øverst med samme kode (lenka kom både som
+ * oppstarts-lenke og som hendelse), åpnes den ikke en gang til.
+ */
+function openPendingFriendLink() {
+  if (!navigationRef.isReady()) return;
+  const code = takePendingFriendCode();
+  if (!code) return;
+  const current = navigationRef.getCurrentRoute();
+  if (current?.name === 'FriendLink' && (current.params as { code?: string } | undefined)?.code === code) {
+    return;
+  }
+  navigationRef.dispatch(StackActions.push('FriendLink', { code }));
+}
+
 export function RootNavigator() {
   const theme = useTheme();
   const { colors } = theme;
@@ -202,10 +226,14 @@ export function RootNavigator() {
   useEffect(() => {
     void settlePushOwner();
   }, []);
+  // #2627: en venne-lenke som kommer mens appen er åpen. En som kom før
+  // innloggingen (eller før navigatoren var klar), tas i `onReady`.
+  useEffect(() => subscribePendingFriendCode(openPendingFriendLink), []);
   const onReady = useCallback(() => {
     const target = pendingPush.current;
     pendingPush.current = null;
     if (target) openPushTarget(target);
+    openPendingFriendLink();
   }, []);
   // #2228: hver skjerm har sin egen feilgrense (`screenLayout`), så headerens
   // tilbakeknapp virker når en skjerm kaster. Varianten følger skjermen. Den
@@ -334,6 +362,13 @@ export function RootNavigator() {
           options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
+        />
+        {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
+            og eierens navn stort i innholdet. */}
+        <Stack.Screen
+          name="FriendLink"
+          component={FriendLink}
+          options={kickerHeader(FRIEND_LINK_TEXT.kicker, FRIEND_LINK_TEXT.kicker)}
         />
         {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
             «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}
