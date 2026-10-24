@@ -14,17 +14,18 @@
 //    ikke mer enn en delt venne-lenke gjør: skjermen spør fortsatt før dere
 //    blir venner.
 //
-// Stien har ett hjem (`lib/friends/friendLinkPath.ts`); `/en` er nettsidens
-// eneste andre locale (`i18n/routing.ts`), som AASA-fila også slipper gjennom.
+// Stien og locale-prefiksene har ett hjem (`lib/friends/friendLinkPath.ts`,
+// testet mot nettsidens routing), som AASA-fila også bygger på.
 // Koden blir små bokstaver, som RPC-en gjør. Bare bokstaver og tall: alt annet
 // er ikke en venne-lenke, og appen åpner som vanlig.
-import { FRIEND_LINK_PREFIX } from '../../../../lib/friends/friendLinkPath';
+import { FRIEND_LINK_LOCALE_PREFIXES, FRIEND_LINK_PREFIX } from '../../../../lib/friends/friendLinkPath';
 import { webBaseUrl } from './webLink';
 
 const ANY_URL = /^([a-z][a-z0-9+.-]*):\/\/(.*)$/i;
 const AUTHORITY_AND_PATH = /^([^/?#]*)([^?#]*)/;
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const FRIEND_PATH = new RegExp(
-  `^(?:/en)?${FRIEND_LINK_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([0-9A-Za-z]{1,64})/?$`,
+  `^(?:${FRIEND_LINK_LOCALE_PREFIXES.map(escape).join('|')})${escape(FRIEND_LINK_PREFIX)}([0-9A-Za-z]{1,64})/?$`,
 );
 
 /** Vert og port i en http(s)-adresse, med små bokstaver, eller `null`. */

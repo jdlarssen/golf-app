@@ -13,3 +13,21 @@ export const FRIEND_LINK_PREFIX = '/venner/legg-til/';
 export function friendLinkPath(code: string): string {
   return `${FRIEND_LINK_PREFIX}${code}`;
 }
+
+/**
+ * Locale-prefiksene lenka finnes under: `''` for norsk (standardspråket, uten
+ * prefiks) og `/en`, slik `i18n/routing.ts` setter dem (`localePrefix:
+ * 'as-needed'`). Står her og ikke hentet fra routingen, fordi fila skal være
+ * uten importer; `friendLinkPath.test.ts` sjekker at lista dekker
+ * `routing.locales`.
+ */
+export const FRIEND_LINK_LOCALE_PREFIXES = ['', '/en'] as const;
+
+/**
+ * Stiene lenka kan stå på, ett per locale: «/venner/legg-til/» og
+ * «/en/venner/legg-til/». AASA-fila, butikkbyggets intent-filter (testet mot
+ * denne) og appens parser bruker lista.
+ */
+export const FRIEND_LINK_PATH_PREFIXES: readonly string[] = FRIEND_LINK_LOCALE_PREFIXES.map(
+  (prefix) => `${prefix}${FRIEND_LINK_PREFIX}`,
+);

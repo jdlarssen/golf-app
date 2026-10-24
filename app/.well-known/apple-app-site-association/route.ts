@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { routing } from '@/i18n/routing';
-import { FRIEND_LINK_PREFIX } from '@/lib/friends/friendLinkPath';
+import { FRIEND_LINK_PATH_PREFIXES } from '@/lib/friends/friendLinkPath';
 
 // iOS Universal Links — Apple App Site Association (#1277, part of #1276).
 //
@@ -17,7 +16,8 @@ import { FRIEND_LINK_PREFIX } from '@/lib/friends/friendLinkPath';
 // spectate) must keep opening Safari, where the session lives. The store
 // variant claims `applinks:tornygolf.no` (native/app/app.config.ts); this
 // file is what limits that claim to `/venner/legg-til/*`, in every locale
-// prefix the site serves. The old Capacitor shell claimed the domain with
+// prefix the site serves (FRIEND_LINK_PATH_PREFIXES, checked against the
+// locale routing in lib/friends/friendLinkPath.test.ts). The old Capacitor shell claimed the domain with
 // `/*`; a shell still installed now opens only the friend link.
 const AASA = {
   applinks: {
@@ -25,19 +25,11 @@ const AASA = {
     details: [
       {
         appIDs: ['8C8WCW67J9.no.tornygolf.app'],
-        components: friendLinkComponents(),
+        components: FRIEND_LINK_PATH_PREFIXES.map((prefix) => ({ '/': `${prefix}*` })),
       },
     ],
   },
 };
-
-/** `/venner/legg-til/*` for the default locale, `/<locale>/venner/legg-til/*` for the rest. */
-function friendLinkComponents(): { '/': string }[] {
-  const prefixes = routing.locales.map((locale) =>
-    locale === routing.defaultLocale ? '' : `/${locale}`,
-  );
-  return prefixes.map((prefix) => ({ '/': `${prefix}${FRIEND_LINK_PREFIX}*` }));
-}
 
 // Next auto-handles HEAD for a GET route handler.
 export function GET() {
