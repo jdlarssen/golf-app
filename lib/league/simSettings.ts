@@ -18,12 +18,13 @@
  * Two layers, both `jsonb` (0212):
  *  - `leagues.sim_settings`: the league's DEFAULT;
  *  - `league_rounds.sim_settings`: one round's OVERRIDE, only the keys that
- *    differ. The start core freezes the effective values into it at the first
- *    start (`frozenRoundSettings`), and the database locks it from then on.
+ *    differ. The database locks it once a player has started the round.
+ *  - `league_rounds.sim_frozen_default` (0214): the league default as it stood
+ *    at the round's first start, written by the start core only.
  *
- * `effectiveSimSettings` is the one home of the merge rule: the web pages, the
- * app view and the app read it, and nobody merges default and override on
- * their own.
+ * `roundSimSettings` is the one home of the rule for what a round shows and
+ * marks: the web pages, the app view and the app read it, and nobody merges
+ * default and override on their own.
  *
  * Imports nothing on purpose: the native app imports this file by relative path.
  */
@@ -250,52 +251,54 @@ export type EffectiveSimSettings = {
 };
 
 /**
- * The one merge rule: per key, the round's code where it has one, else the
- * league's.
- *
- * `frozen`: the round has been started and its settings were frozen at that
- * start. Then the round's own values are the whole truth, and a key the
- * league default gained later does not leak in: a closed round shows what
- * actually applied.
+ * Merge a round's override over a base: per key, the override's code where it
+ * has one, else the base's. A key is marked overridden when the override's
+ * code differs from the base's.
  */
-export function effectiveSimSettings(
-  leagueSettings: unknown,
-  roundSettings: unknown,
-  frozen = false,
-): EffectiveSimSettings {
-  const league = normalizeSimSettings(leagueSettings);
-  const round = normalizeSimSettings(roundSettings);
+export function effectiveSimSettings(base: unknown, override: unknown): EffectiveSimSettings {
+  const from = normalizeSimSettings(base);
+  const round = normalizeSimSettings(override);
   const values: SimSettings = {};
   const overriddenKeys: SimSettingKey[] = [];
   for (const key of SIM_SETTING_KEYS) {
-    const value = frozen ? round[key] : (round[key] ?? league[key]);
+    const value = round[key] ?? from[key];
     if (value !== undefined) values[key] = value;
-    if (round[key] !== undefined && round[key] !== league[key]) overriddenKeys.push(key);
+    if (round[key] !== undefined && round[key] !== from[key]) overriddenKeys.push(key);
   }
   return { values, overriddenKeys };
 }
 
 /**
- * What the start core writes into a round at its first start (no game exists
- * for it yet): the full effective values, `{}` when there are none, so the
- * round is frozen either way. `null` when the round already holds exactly
- * those values and the write can be skipped. After the freeze the database
- * locks the round (0212), so a later change of the league default never moves
- * a round that is in play or done.
+ * The one rule for what a round shows and what it marks «Endret denne
+ * runden» (#2638): the organiser's override over a base. The base is the
+ * league default frozen at the round's first start (`frozenDefault`, 0214),
+ * or today's league default while the round has not started (or started
+ * before anything was frozen). So a default the organiser changes later moves
+ * only rounds nobody has started, a played round shows what applied, and the
+ * mark means only what the organiser changed for that round.
+ *
+ * The web pages, the app view and the app read this (via the snapshot); nobody
+ * merges default and override on their own.
  */
-export function frozenRoundSettings(
-  leagueSettings: unknown,
-  roundSettings: unknown,
-): SimSettings | null {
-  const { values } = effectiveSimSettings(leagueSettings, roundSettings);
-  if (roundSettings === null || typeof roundSettings !== 'object' || Array.isArray(roundSettings)) {
-    return values;
-  }
-  const round = normalizeSimSettings(roundSettings);
-  const same =
-    Object.keys(round).length === Object.keys(values).length &&
-    SIM_SETTING_KEYS.every((key) => round[key] === values[key]);
-  return same ? null : values;
+export function roundSimSettings(input: {
+  leagueDefault: unknown;
+  override: unknown;
+  frozenDefault: unknown;
+  started: boolean;
+}): EffectiveSimSettings {
+  const frozen =
+    input.started && input.frozenDefault !== null && input.frozenDefault !== undefined;
+  return effectiveSimSettings(frozen ? input.frozenDefault : input.leagueDefault, input.override);
+}
+
+/**
+ * What the start core freezes into `league_rounds.sim_frozen_default` at a
+ * round's first start: the league default as it stands, `{}` when there is
+ * none, so the round counts as frozen either way. The database lets only the
+ * server write it (0214).
+ */
+export function frozenDefaultFor(leagueSettings: unknown): SimSettings {
+  return normalizeSimSettings(leagueSettings);
 }
 
 /**

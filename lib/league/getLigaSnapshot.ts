@@ -8,8 +8,8 @@ import { isPointsBasedFormat } from './flightFormat';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
 import { meetsFlightMinimum } from './flightRules';
 import {
-  effectiveSimSettings,
   normalizeSimSettings,
+  roundSimSettings,
   type SimSettingKey,
   type SimSettings,
 } from './simSettings';
@@ -83,11 +83,12 @@ export type LeagueRoundView = {
   /** #2638: the round's own override, normalised (only the keys that differ). */
   simOverride: SimSettings;
   /**
-   * #2638: the settings that apply to the round — `effectiveSimSettings` of
-   * the league default and the override, the one merge every view reads.
+   * #2638: the settings that apply to the round — `roundSimSettings`: the
+   * override over the default frozen at the first start (or today's default
+   * before it), the one rule every view reads.
    */
   simSettings: SimSettings;
-  /** #2638: keys whose round value differs from the league default. */
+  /** #2638: the keys the organiser overrode for this round («Endret denne runden»). */
   overriddenKeys: SimSettingKey[];
   /**
    * #2638: a player has started the round (any game exists for it), so its
@@ -157,7 +158,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     supabase
       .from('league_rounds')
       .select(
-        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings, tee_boxes!league_rounds_tee_box_id_fkey(name)',
+        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings, sim_frozen_default, tee_boxes!league_rounds_tee_box_id_fkey(name)',
       )
       .eq('league_id', leagueId)
       .order('sequence', { ascending: true }),
@@ -180,6 +181,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     original_closes_at: string;
     window_overridden_at: string | null;
     sim_settings: unknown;
+    sim_frozen_default?: unknown;
     tee_boxes?: { name: string | null } | null;
   }>;
   const roundIds = rounds.map((r) => r.id);
@@ -479,14 +481,15 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
 
   const roundViews: LeagueRoundView[] = rounds.map((r) => {
     const locks = roundPlayerLocks(flightsByRound.get(r.id) ?? []);
-    // A started round (any game) whose settings were frozen at the first
-    // start shows only its own values (#2638).
+    // #2638: a started round (any game) shows its override over the default
+    // frozen at its first start; a later default change does not move it.
     const settingsLocked = (flightCountByRound.get(r.id) ?? 0) > 0;
-    const effective = effectiveSimSettings(
-      league.sim_settings,
-      r.sim_settings,
-      settingsLocked && r.sim_settings !== null,
-    );
+    const effective = roundSimSettings({
+      leagueDefault: league.sim_settings,
+      override: r.sim_settings,
+      frozenDefault: r.sim_frozen_default ?? null,
+      started: settingsLocked,
+    });
     return {
       id: r.id,
       sequence: r.sequence,

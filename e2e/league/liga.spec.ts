@@ -513,7 +513,7 @@ test.describe('Liga — real flight generator via UI (#736)', () => {
 /**
  * #2638: a simulator league lets a player take the round alone. Same drive as
  * #736 above, but nobody is ticked: the real startLeagueRoundFlight starts a
- * flight of one, freezes the round's settings into league_rounds, and once
+ * flight of one, freezes the league default into the round (0214), and once
  * the card is delivered and the flight finished, the one-player flight counts
  * on the table (a regular league would leave the row empty).
  */
@@ -627,10 +627,13 @@ test.describe('Liga — simulator: a flight of one counts (#2638)', () => {
 
     const { data: frozen } = await admin
       .from('league_rounds')
-      .select('sim_settings')
+      .select('sim_settings, sim_frozen_default')
       .eq('id', roundId)
-      .single<{ sim_settings: unknown }>();
-    expect(frozen!.sim_settings, 'the first start froze the settings').toEqual(SIM_DEFAULT);
+      .single<{ sim_settings: unknown; sim_frozen_default: unknown }>();
+    expect(frozen, 'the first start froze the default and left the override alone').toEqual({
+      sim_settings: null,
+      sim_frozen_default: SIM_DEFAULT,
+    });
 
     // ── Deliver and finish via service role, then the table counts it ──────
     const { data: courseHoles } = await admin
