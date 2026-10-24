@@ -1389,6 +1389,7 @@ export type Database = {
           opens_at: string
           original_closes_at: string
           sequence: number
+          sim_settings: Json | null
           tee_box_id: string | null
           window_overridden_at: string | null
           window_overridden_by: string | null
@@ -1403,6 +1404,7 @@ export type Database = {
           opens_at: string
           original_closes_at: string
           sequence: number
+          sim_settings?: Json | null
           tee_box_id?: string | null
           window_overridden_at?: string | null
           window_overridden_by?: string | null
@@ -1417,6 +1419,7 @@ export type Database = {
           opens_at?: string
           original_closes_at?: string
           sequence?: number
+          sim_settings?: Json | null
           tee_box_id?: string | null
           window_overridden_at?: string | null
           window_overridden_by?: string | null
@@ -1463,6 +1466,7 @@ export type Database = {
           format: string
           group_id: string | null
           id: string
+          is_simulator: boolean
           missed_round_policy: string
           name: string
           penalty_fixed_over_par: number | null
@@ -1470,6 +1474,7 @@ export type Database = {
           scoring: string
           season_end: string
           season_start: string
+          sim_settings: Json | null
           spectate_token: string | null
           standings_model: string
           started_at: string | null
@@ -1486,6 +1491,7 @@ export type Database = {
           format?: string
           group_id?: string | null
           id?: string
+          is_simulator?: boolean
           missed_round_policy?: string
           name: string
           penalty_fixed_over_par?: number | null
@@ -1493,6 +1499,7 @@ export type Database = {
           scoring?: string
           season_end: string
           season_start: string
+          sim_settings?: Json | null
           spectate_token?: string | null
           standings_model: string
           started_at?: string | null
@@ -1509,6 +1516,7 @@ export type Database = {
           format?: string
           group_id?: string | null
           id?: string
+          is_simulator?: boolean
           missed_round_policy?: string
           name?: string
           penalty_fixed_over_par?: number | null
@@ -1516,6 +1524,7 @@ export type Database = {
           scoring?: string
           season_end?: string
           season_start?: string
+          sim_settings?: Json | null
           spectate_token?: string | null
           standings_model?: string
           started_at?: string | null
