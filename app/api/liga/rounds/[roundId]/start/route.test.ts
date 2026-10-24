@@ -167,8 +167,11 @@ describe('POST /api/liga/rounds/[roundId]/start', () => {
     ]);
   });
 
-  it('500 start_failed when the round cannot be read: a read error is not «not found»', async () => {
-    caller = buildSupabaseMock([{ error: { message: 'boom' } }]);
+  it.each([
+    ['the round', [{ error: { message: 'boom' } }]],
+    ['the league', [callerQueue(true)[0], { error: { message: 'boom' } }]],
+  ] as Array<[string, QueryResult[]]>)('500 start_failed when %s cannot be read: a read error is not «not found»', async (_label, queue) => {
+    caller = buildSupabaseMock(queue);
     expect(await call(request({ token: TOKEN }))).toEqual({ status: 500, body: { error: 'start_failed' } });
   });
 

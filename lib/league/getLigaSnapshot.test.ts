@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
 
 /**
@@ -645,8 +645,10 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
   });
 
   // One hole, par 4, CH 0. A took round 1 alone (5 strokes → +1); round 2 has
-  // no flight. B is a participant who has not played.
-  function queue(isSimulator: boolean) {
+  // no flight. B is a participant who has not played. `withC` puts C in A's
+  // flight (4 strokes → E), so round 1 counts in a regular league too.
+  function queue(isSimulator: boolean, opts: { status?: string; withC?: boolean } = {}) {
+    const flight = opts.withC ? ['A', 'C'] : ['A'];
     return [
       {
         data: {
@@ -664,7 +666,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
           course_scope: 'single_course_single_tee',
           course_id: 'c1',
           tee_box_id: 'tb1',
-          status: 'active',
+          status: opts.status ?? 'active',
           created_by: 'admin',
           created_at: '2026-11-01T00:00:00Z',
           started_at: '2026-11-01T00:00:00Z',
@@ -710,6 +712,9 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
         data: [
           { user_id: 'A', accepted_at: '2026-11-01T00:00:00Z', users: { name: 'A', nickname: null } },
           { user_id: 'B', accepted_at: '2026-11-01T00:00:00Z', users: { name: 'B', nickname: null } },
+          ...(opts.withC
+            ? [{ user_id: 'C', accepted_at: '2026-11-01T00:00:00Z', users: { name: 'C', nickname: null } }]
+            : []),
         ],
       },
       {
@@ -726,18 +731,18 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
         ],
       },
       {
-        data: [
-          {
-            game_id: 'g1',
-            user_id: 'A',
-            course_handicap: 0,
-            tee_gender: 'mens',
-            submitted_at: '2026-11-05T19:55:00Z',
-            withdrawn_at: null,
-          },
-        ],
+        data: flight.map((user_id) => ({
+          game_id: 'g1',
+          user_id,
+          course_handicap: 0,
+          tee_gender: 'mens',
+          submitted_at: '2026-11-05T19:55:00Z',
+          withdrawn_at: null,
+        })),
       },
-      { data: [{ game_id: 'g1', user_id: 'A', hole_number: 1, strokes: 5 }] },
+      {
+        data: flight.map((user_id) => ({ game_id: 'g1', user_id, hole_number: 1, strokes: user_id === 'A' ? 5 : 4 })),
+      },
       { data: [{ course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }] },
       { data: [{ id: 'tb1', par_total_mens: 4, par_total_ladies: 4, par_total_juniors: 4 }] },
     ];
@@ -755,6 +760,36 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
       simulator: 1,
       regular: null,
     });
+  });
+
+  // The orchestrator's check: «—» without a penalty while the window is open
+  // holds only in an active simulator league. A regular league keeps today's
+  // rule (in stroke play with a total it would rank the one who has not
+  // played first), and a finished league never waits for anyone. B has not
+  // played round 1 (closes 15.11); A's +1 is the worst, so a penalty is +2.
+  describe('a round whose window is still open', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      ['an active simulator league, window open', true, 'active', '2026-11-10T12:00:00Z', false, { value: null, penalised: false }],
+      ['an active simulator league, window closed', true, 'active', '2026-11-20T12:00:00Z', false, { value: 2, penalised: true }],
+      ['a finished simulator league, window still open by date', true, 'finished', '2026-11-10T12:00:00Z', false, { value: 2, penalised: true }],
+      ['an active regular league, window open', false, 'active', '2026-11-10T12:00:00Z', true, { value: 2, penalised: true }],
+    ] as Array<[string, boolean, string, string, boolean, { value: number | null; penalised: boolean }]>)(
+      '%s: the player who has not played round 1',
+      async (_label, isSimulator, status, now, withC, cell) => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(now));
+        supabaseMock = buildSupabaseMock(queue(isSimulator, { status, withC }));
+        const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+        const snap = await getLigaSnapshot('l1');
+        const b = snap!.standings.net!.rows.find((r) => r.userId === 'B')!;
+        const r1 = b.perRound.find((c) => c.roundId === 'r1')!;
+        expect({ value: r1.value, penalised: r1.penalised }).toEqual(cell);
+      },
+    );
   });
 
   it('each round carries its effective settings, what is overridden, and whether it is locked', async () => {

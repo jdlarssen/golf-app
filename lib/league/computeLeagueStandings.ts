@@ -28,7 +28,8 @@ import type {
  * høyest-best) governs the final sort + countback. For slagspill er begge lavest-
  * best (uendret) bortsett fra `points`-modellen.
  *
- * A round whose window is still open (`windowOpen`, #2638 artboard 7a)
+ * A round whose window is still open (`windowOpen`, #2638 artboard 7a; the
+ * caller sets it only in an active simulator league, see getLigaSnapshot)
  * charges nothing to a player who has not played it yet: they still have time,
  * so the cell stays null («—») with no penalty, no penalty candidate for
  * Beste-N and no must_play_all miss. Once the window closes, the rules below

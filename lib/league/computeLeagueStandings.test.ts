@@ -499,11 +499,11 @@ describe('computeLeagueStandings — stableford (points-based, higher best)', ()
 });
 
 /**
- * The orchestrator's review (artboard 7a), every league: while a round's
- * window is open, a player who has not played it yet still has time. Their
- * cell shows «—» and nothing is charged for it; once the window has closed,
- * today's rule for a missed round applies. Round 1 is closed and played by
- * both; round 2 has only A's result.
+ * The orchestrator's review (artboard 7a): while a round's window is open
+ * (the caller marks it so in an active simulator league), a player who has
+ * not played it yet still has time. Their cell shows «—» and nothing is
+ * charged for it; once the window has closed, today's rule for a missed round
+ * applies. Round 1 is closed and played by both; round 2 has only A's result.
  */
 describe('computeLeagueStandings — a round whose window is still open', () => {
   const strokeRounds = (open: boolean) => [
