@@ -26,7 +26,7 @@
 // as before. Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, ranksByNetToPar } from '../tiebreaker';
+import { rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   NassauHoleRow,
@@ -39,11 +39,8 @@ import type {
   ScoringPlayer,
 } from './types';
 
-/**
- * Padding-konstant for unplayed-hull i tie-break-cascaden. Samme verdi som
- * soloStrokeplay — se JSDoc der for full begrunnelse.
- */
-const UNPLAYED_PADDING = 999;
+// UNPLAYED_PADDING (delt konstant i tiebreaker, som soloStrokeplay) padder
+// uspilte hull i tie-break-cascaden — se JSDoc der for full begrunnelse.
 
 interface PlayerSectionStrokes {
   userId: string;
