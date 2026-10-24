@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 import { fixComponentMatrices } from './componentMatrices';
@@ -133,11 +135,28 @@ describe('fixComponentMatrices (#2625)', () => {
     ['no head', () => buildFont({ omit: ['head'] }).font],
     ['an unknown indexToLocFormat', () => buildFont({ locFormat: 2 }).font],
     ['a loca that points past the end', () => buildFont({ lastGlyphEnd: 4000 }).font],
-    ['cut inside the last glyph', () => buildFont().font.slice(0, -8)],
+    ['a loca that ends inside the two-by-two', () => buildFont({ lastGlyphEnd: SIMPLE.length + AT.matrix + 4 }).font],
+    ['a loca that goes backwards', () => buildFont({ lastGlyphEnd: 10 }).font],
   ])('hands back a font it cannot read as it came: %s', (_label, make) => {
     const font = make();
     const copy = new Uint8Array(font).slice();
     expect(fixComponentMatrices(font)).toBe(font);
     expect(new Uint8Array(font)).toEqual(copy);
+  });
+});
+
+describe('the renderer the fix is written for (#2625)', () => {
+  // Canary: `fixComponentMatrices` exists because the opentype.js bundled in
+  // next/og places a composite's component with its 2×2 matrix transposed. If
+  // a Next upgrade brings a renderer that reads the matrix as TrueType means
+  // it, the fix would turn Fraunces' «+» the wrong way again, and nothing
+  // else would turn red.
+  it('still applies the component matrix transposed', () => {
+    const require = createRequire(import.meta.url);
+    const bundle = readFileSync(require.resolve('next/dist/compiled/@vercel/og/index.node.js'), 'utf8');
+    expect(
+      bundle.includes('transform.xScale * pt.x + transform.scale01 * pt.y'),
+      'next/og no longer transposes composite matrices: check fixComponentMatrices (lib/og/componentMatrices.ts) again against a Fraunces «+», or remove it',
+    ).toBe(true);
   });
 });
