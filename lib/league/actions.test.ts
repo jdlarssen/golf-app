@@ -416,6 +416,70 @@ describe('updateLeagueRound — 0-row update is a failure (#727)', () => {
 });
 
 /**
+ * #2638 (the orchestrator's review, finding 11): a started round of a
+ * simulator league keeps its course and tee, here and in the database (0215).
+ * A regular league, or a round nobody has started, still changes.
+ */
+describe('updateLeagueRound — course and tee of a started simulator round (#2638)', () => {
+  function teeForm(teeBoxId: string): FormData {
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('tee_box_id', teeBoxId);
+    return fd;
+  }
+  const roundUpdates = () =>
+    supabaseMock.__fromCalls.filter((c) => c.table === 'league_rounds' && c.method === 'update').map((c) => c.args[0]);
+
+  it.each([
+    ['a started simulator round refuses a new tee', true, 1, 'tb2', 'round_settings_locked', []],
+    ['a started simulator round takes its own tee again', true, 1, 'tb1', '', [{ tee_box_id: 'tb1' }]],
+    ['a simulator round nobody has started changes', true, 0, 'tb2', '', [{ tee_box_id: 'tb2' }]],
+    ['a started round in a regular league still changes', false, 1, 'tb2', '', [{ tee_box_id: 'tb2' }]],
+  ] as Array<[string, boolean, number, string, string, unknown[]]>)(
+    '%s',
+    async (_label, isSimulator, gameCount, teeBoxId, error, updates) => {
+      adminMock = buildSupabaseMock([
+        { data: { group_id: null } },
+        { data: { is_simulator: isSimulator } },
+        { data: { course_id: 'c1', tee_box_id: 'tb1' } },
+        { count: gameCount },
+      ]);
+      supabaseMock = buildSupabaseMock([
+        { data: { is_admin: true }, error: null },
+        { data: [{ id: 'r1' }] },
+      ]);
+      setUser('admin-1');
+      const { updateLeagueRound } = await import('./actions');
+      const result = await updateLeagueRound(teeForm(teeBoxId));
+      expect({ result, updates: roundUpdates() }).toEqual({ result: { error }, updates });
+    },
+  );
+
+  it('the database guard’s refusal gives the same code (a start that came first)', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: null } },
+      { data: { is_simulator: true } },
+      { data: { course_id: 'c1', tee_box_id: 'tb1' } },
+      { count: 0 },
+    ]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      {
+        data: null,
+        error: {
+          message:
+            'league_rounds.course_id and tee_box_id of a simulator league are locked once a player has started the round',
+        },
+      },
+    ]);
+    setUser('admin-1');
+    const { updateLeagueRound } = await import('./actions');
+    expect(await updateLeagueRound(teeForm('tb2'))).toEqual({ error: 'round_settings_locked' });
+  });
+});
+
+/**
  * #737 chaos-injection: the league-draft and league-flight rollbacks (#675/#647)
  * each lacked a test for one branch. These cover the remaining mid-sequence
  * failures so every multi-step league creation path proves it leaves no orphan.

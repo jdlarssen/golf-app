@@ -295,14 +295,19 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
   const closesAt = str(formData, 'closes_at');
   if (closesAt) patch.closes_at = parseOsloDateTimeLocal(closesAt);
 
+  if (patch.course_id !== undefined || patch.tee_box_id !== undefined) {
+    const refusal = await courseTeeLockRefusal(roundId, leagueId, patch);
+    if (refusal) return { error: refusal };
+  }
+
   if (Object.keys(patch).length > 0) {
     // #727: assert the update touched a row; also surfaces real DB errors the
     // bare `if (error)` previously returned without logging (bug-prevention #2).
     try {
-      expectAffected(
-        await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id'),
-        'updateLeagueRound',
-      );
+      const result = await supabase.from('league_rounds').update(patch).eq('id', roundId).select('id');
+      // #2638: the database guard (0215) gives the same code as the check above.
+      if (result.error?.message?.includes(ROUND_LOCKED_MESSAGE)) return { error: 'round_settings_locked' };
+      expectAffected(result, 'updateLeagueRound');
     } catch (err) {
       console.error('[league] updateLeagueRound failed', { roundId, err });
       return { error: 'update_failed' };
@@ -316,6 +321,43 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
 // ── simulator round settings (#2638) ───────────────────────────────────────────
 
 const ROUND_LOCKED_MESSAGE = 'locked once a player has started the round';
+
+/**
+ * #2638: in a simulator league a started round keeps its course and tee. The
+ * settings card shows the round's tee, so a change after the first start
+ * would show a tee the flights did not play. Regular leagues are left as they
+ * are, so an organiser there can still correct a wrong tee (the orchestrator's
+ * choice). Refuses only an actual change; reads with the admin client because
+ * the organiser cannot see other players' flights under games RLS. The
+ * database guard (guard_league_rounds_sim_settings_lock, 0215) is the last
+ * line and gives the same code.
+ */
+async function courseTeeLockRefusal(
+  roundId: string,
+  leagueId: string,
+  patch: TablesUpdate<'league_rounds'>,
+): Promise<'round_settings_locked' | 'update_failed' | null> {
+  const admin = getAdminClient();
+  const [leagueRes, roundRes, flightsRes] = await Promise.all([
+    admin.from('leagues').select('is_simulator').eq('id', leagueId).maybeSingle(),
+    admin.from('league_rounds').select('course_id, tee_box_id').eq('id', roundId).maybeSingle(),
+    admin.from('games').select('id', { count: 'exact', head: true }).eq('league_round_id', roundId),
+  ]);
+  if (leagueRes.error || roundRes.error || flightsRes.error || flightsRes.count === null) {
+    console.error('[league] updateLeagueRound lock check failed', {
+      roundId,
+      leagueError: leagueRes.error,
+      roundError: roundRes.error,
+      flightsError: flightsRes.error,
+    });
+    return 'update_failed';
+  }
+  if (!leagueRes.data?.is_simulator || !roundRes.data || flightsRes.count === 0) return null;
+  const changes =
+    (patch.course_id !== undefined && patch.course_id !== roundRes.data.course_id) ||
+    (patch.tee_box_id !== undefined && patch.tee_box_id !== roundRes.data.tee_box_id);
+  return changes ? 'round_settings_locked' : null;
+}
 
 /** The league's two doors, so both management pages show the change. */
 function revalidateLeague(leagueId: string, groupId: string | null): void {
