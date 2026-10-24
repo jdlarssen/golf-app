@@ -6,17 +6,16 @@ import type { StrokeTerm } from '@/lib/scorecard/scoreRail';
 import { PuttsChips } from './PuttsChips';
 
 /**
- * What each rail button shows after the term: stableford points, net
- * strokes, or nothing (a reveal game keeps net and points hidden, #1447).
+ * What each rail button shows after the term: stableford points, or nothing.
+ * Never net strokes (#2635); a reveal game keeps the points hidden (#1447).
  */
-export type RailDisplay = 'points' | 'netto' | 'plain';
+export type RailDisplay = 'points' | 'plain';
 
 /** One number on the rail, with its result computed by the caller. */
 export interface RailOption {
   strokes: number;
   term: StrokeTerm;
   points: number | null;
-  netto: number;
 }
 
 /** The seat the rail is entering. */
@@ -213,9 +212,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     if (display === 'points' && option.points != null) {
       return t('scoreRail.detailPoints', { term, points: option.points });
     }
-    if (display === 'netto') {
-      return t('scoreRail.detailNetto', { term, netto: option.netto });
-    }
     return term;
   }
 
@@ -223,9 +219,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     const base = { strokes: option.strokes, name, term: termText(option) };
     if (display === 'points' && option.points != null) {
       return t('scoreRail.buttonAriaLabelPoints', { ...base, points: option.points });
-    }
-    if (display === 'netto') {
-      return t('scoreRail.buttonAriaLabelNetto', { ...base, netto: option.netto });
     }
     return t('scoreRail.buttonAriaLabel', base);
   }
@@ -271,7 +264,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
                   data-testid="rail-option"
                   data-strokes={option.strokes}
                   data-points={display === 'points' ? (option.points ?? undefined) : undefined}
-                  data-netto={display === 'netto' ? option.netto : undefined}
                   aria-pressed={selected}
                   aria-label={ariaText(option, active.name)}
                   onClick={() => onPick(option.strokes)}

@@ -941,13 +941,14 @@ describe('HoleClient — score rail (#2251)', () => {
     expect(activeRowId()).toBe('u2');
   });
 
-  it('a plus handicap gets no «får slag», and the buttons show net strokes plus one', () => {
+  it('a plus handicap gets no «får slag», and the buttons say only the term against par (#2635)', () => {
     const players = makePlayers();
     players[0] = { ...players[0], extraStrokes: -1 };
     cardsFrom({ rows: empty() });
     render(<HoleClient {...baseProps({ players })} />);
     expect(screen.getByTestId('score-rail-heading').textContent).toBe('Player 1');
-    expect(railButton(4).getAttribute('aria-label')).toContain('netto 5');
+    expect(railButton(4).getAttribute('aria-label')).toBe('Sett 4 slag for Player 1: Par');
+    expect(railButton(4).textContent).toBe('4Par');
   });
 
   it.each([

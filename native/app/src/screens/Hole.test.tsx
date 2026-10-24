@@ -445,10 +445,12 @@ describe('Hole', () => {
     expect(doneRow).toHaveStyle({ opacity: 0.6 });
     expect(screen.getByTestId('flight-row-done-submitted')).toBeTruthy();
 
-    // Skinna starter på meg. Slagene jeg får på hullet står i overskriften, og
-    // netto på knappene regnes med dem (solo slagspill viser netto).
+    // Skinna starter på meg. Slagene jeg får på hullet står i overskriften,
+    // men knappene sier bare navnet mot hullets par (#2635), også i netto
+    // slagspill.
     expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
-    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
+    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
+    expect(screen.getByLabelText('Sett 4 slag for Meg Selv: Par')).toBeTruthy();
 
     // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
     // og skinna står fast på meg, så neste trykk på tallet treffer riktig.
