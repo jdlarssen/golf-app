@@ -32,5 +32,11 @@ describe('FlightRow', () => {
     expect(row.getAttribute('aria-pressed')).toBe('false');
     expect((row as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId('flight-row-submitted')).toBeInTheDocument();
+
+    // #2635: a plus handicap shows the stroke it gives away; scratch shows none.
+    rerender(<FlightRow {...base} extraStrokes={-1} onSelect={onSelect} />);
+    expect(screen.getByTestId('flight-row-strokes').textContent).toBe('Mister 1 slag');
+    rerender(<FlightRow {...base} extraStrokes={0} onSelect={onSelect} />);
+    expect(screen.queryByTestId('flight-row-strokes')).toBeNull();
   });
 });
