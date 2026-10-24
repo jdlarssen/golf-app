@@ -82,9 +82,18 @@ export function teamHeadline(
   line: { total: number; toPar: number | null },
   format: (n: number | null) => string = formatVsPar,
 ): { unit: 'toPar' | 'total'; value: number | null; text: string } {
-  return ranking === 'net_to_par'
+  return headlineUnit(ranking) === 'toPar'
     ? { unit: 'toPar', value: line.toPar, text: format(line.toPar) }
     : { unit: 'total', value: line.total, text: String(line.total) };
+}
+
+/**
+ * #2625: the unit a game's rows lead with — to par in a game ranked on net to
+ * par, else the sum. The one home for the choice, read by `teamHeadline` for
+ * the number and by a column heading, kicker or chip for its label.
+ */
+export function headlineUnit(ranking: TeamRanking): 'toPar' | 'total' {
+  return ranking === 'net_to_par' ? 'toPar' : 'total';
 }
 
 /**

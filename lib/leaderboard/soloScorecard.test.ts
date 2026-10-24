@@ -8,6 +8,7 @@ import {
   soloStablefordScorecard,
   soloStrokeplayScorecard,
   standingTotalText,
+  standingUnit,
 } from './soloScorecard';
 
 // #2255: «Hull for hull» for solo stableford og solo slagspill. Regnestykket
@@ -363,6 +364,13 @@ describe('soloStrokeplayScorecard', () => {
 
   it('uten parByGender er chippen hullets par', () => {
     expect(card.front.holes[0]!.chipPar).toBe(4);
+  });
+});
+
+describe('standingUnit (#2625)', () => {
+  it('mot par når spillet er rangert mot par, ellers summen; tallet følger samme valg', () => {
+    expect(standingUnit({ ranking: 'net_to_par' })).toBe('toPar');
+    expect(standingUnit({ ranking: 'net_total' })).toBe('total');
   });
 });
 

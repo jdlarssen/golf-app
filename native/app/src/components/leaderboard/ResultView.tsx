@@ -9,7 +9,7 @@
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
 import { showHolesColumn, teamHolesPlayed } from '../../../../../lib/leaderboard/holesColumn';
-import { teamHeadline } from '../../../../../lib/leaderboard/vsPar';
+import { headlineUnit, teamHeadline } from '../../../../../lib/leaderboard/vsPar';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
@@ -146,7 +146,7 @@ export function ResultView({
               RANK,
               PLAYER,
               // #2625: et spill som rangeres mot par, viser poeng mot par-tempo.
-              result.ranking === 'net_to_par' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
+              headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
               ...(showHoles ? [HOLES] : []),
             ]}
             rows={result.players.map((player) => ({
@@ -169,7 +169,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            result.ranking === 'net_to_par' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
           ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
@@ -197,7 +197,7 @@ export function ResultView({
             // Lag-handicapet kommer FRA motoren (`teamHandicap`) — appen har
             // ingen egen kopi av 60/40- eller prosent-formlene.
             { key: 'hcp', label: 'Lag-hcp', numeric: true },
-            result.ranking === 'net_to_par' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
@@ -228,7 +228,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            result.ranking === 'net_to_par' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'net', label: 'Netto', numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
@@ -257,7 +257,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            result.ranking === 'net_to_par' ? VS_PAR : { key: 'total', label: 'Sum', numeric: true },
+            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'total', label: 'Sum', numeric: true },
             ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({

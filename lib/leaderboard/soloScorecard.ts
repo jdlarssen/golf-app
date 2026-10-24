@@ -113,7 +113,16 @@ export function standingTotalText(
   line: Pick<SoloScorecardStanding, 'total' | 'toPar'>,
   plain: (total: number) => string,
 ): string {
-  return card.ranking === 'net_to_par' ? formatVsPar(line.toPar) : plain(line.total);
+  return standingUnit(card) === 'toPar' ? formatVsPar(line.toPar) : plain(line.total);
+}
+
+/**
+ * #2625: hva stillingen leder med — mot par når spillet er rangert mot par,
+ * ellers summen. Tallet (`standingTotalText`) og overskriften («Stillingen ·
+ * mot par») leser det herfra.
+ */
+export function standingUnit(card: Pick<SoloScorecard, 'ranking'>): 'toPar' | 'total' {
+  return card.ranking === 'net_to_par' ? 'toPar' : 'total';
 }
 
 /** #734: eget par når alle i feltet går fra samme tee, ellers herre-par. */

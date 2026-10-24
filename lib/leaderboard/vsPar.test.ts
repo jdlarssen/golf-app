@@ -10,6 +10,7 @@ import {
   teamLineVsPar,
   vsParOverPlayed,
   pointsHeadline,
+  headlineUnit,
 } from './vsPar';
 
 // Type A (#2217 D6): «mot par» = total − balls × (par for the holes the
@@ -124,6 +125,19 @@ describe('teamHeadline / teamHeadlineGap (#2625)', () => {
     [undefined, lag2, lag1, 10],
   ] as const)('%s: gap to the leader', (ranking, line, leader, expected) => {
     expect(teamHeadlineGap(ranking, line, leader)).toBe(expected);
+  });
+});
+
+describe('headlineUnit (#2625)', () => {
+  // The one home for «does this game lead with to par?»: the number
+  // (teamHeadline) and every label beside it (column, kicker, chip) read it.
+  it.each([
+    ['net_to_par', 'toPar'],
+    ['net_total', 'total'],
+    [undefined, 'total'],
+  ] as const)('%s → %s', (ranking, unit) => {
+    expect(headlineUnit(ranking)).toBe(unit);
+    expect(teamHeadline(ranking, { total: 1, toPar: 2 }).unit).toBe(unit);
   });
 });
 
