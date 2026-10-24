@@ -250,10 +250,17 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       players: [
         { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, toPar: 2, tiedWith: [] },
         { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, toPar: 0, tiedWith: [] },
+        { userId: 'u3', totalPoints: 0, rank: 3, holesPlayed: 0, toPar: null, tiedWith: [] },
       ],
     };
-    const facts = buildRoundReportFacts({ result: paceResult, nameByUserId, gameMode: 'stableford', ...BASE });
-    expect(facts.standings.map((s) => s.scoreLabel)).toEqual(['+2 mot par (poeng)', 'E mot par (poeng)']);
+    const facts = buildRoundReportFacts({
+      result: paceResult,
+      nameByUserId: names(['u1', 'Karl'], ['u2', 'Jørgen'], ['u3', 'Ola']),
+      gameMode: 'stableford',
+      ...BASE,
+    });
+    // A player without a hole has no number, and no unit after the dash.
+    expect(facts.standings.map((s) => s.scoreLabel)).toEqual(['+2 mot par (poeng)', 'E mot par (poeng)', '—']);
   });
 
   // #2561: the tie is Karl's result too. Without his «ja» the facts may not
