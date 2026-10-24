@@ -19,6 +19,7 @@ import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../componen
 import { PageTitle } from '../components/PageTitle';
 import { HakeIcon } from '../components/icons/Icons';
 import { connectFriendLink, fetchFriendLink, type FriendLinkLoadResult } from '../data/friends';
+import { fetchOwnProfile } from '../data/profile';
 import type { WebApiFailure } from '../data/webApi';
 import {
   FRIEND_LINK_TEXT,
@@ -27,7 +28,9 @@ import {
   friendStatusLine,
   friendsFailureLine,
 } from '../lib/friendsCopy';
+import { bagTagModel } from '../lib/bagTag';
 import type { ScreenProps } from '../navigation';
+import { useSession } from '../session';
 import { FONTS, interLine, useTheme, withAlpha } from '../theme';
 
 /** Det skjermen viser. `connected` er etter trykket på «Bli venner». */
@@ -53,7 +56,12 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
   const { colors, ui } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
   const { code } = route.params;
+  const { userId, email } = useSession();
   const [view, setView] = useState<Shown>({ state: 'loading' });
+  // Dine initialer til heltekortet på Venner, som Profil sender med. Etter
+  // bag-taggens regel (`bagTagModel`). Best effort: uten dem står bare
+  // «+»-ringen der.
+  const [selfInitials, setSelfInitials] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [line, setLine] = useState<string | null>(null);
 
@@ -69,6 +77,18 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
       cancelled = true;
     };
   }, [code, attempt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchOwnProfile(userId)
+      .then((profile) => {
+        if (!cancelled) setSelfInitials(bagTagModel(profile, null, new Date(), email).initials);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, email]);
 
   const onConnect = useCallback(async () => {
     if (busy || view.state !== 'ready') return;
@@ -87,7 +107,11 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
   }, [busy, code, view]);
 
   // Vennesiden erstatter denne, så «tilbake» derfra ikke lander her igjen.
-  const toFriends = useCallback(() => navigation.replace('Friends'), [navigation]);
+  // `from` gjør at pila der heter «Tilbake», ikke «Tilbake til profil».
+  const toFriends = useCallback(
+    () => navigation.replace('Friends', { selfInitials, from: 'friendLink' }),
+    [navigation, selfInitials],
+  );
 
   if (view.state === 'loading') {
     return (
