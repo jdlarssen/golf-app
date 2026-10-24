@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { ShareCardModel, ShareCardRow } from '@/lib/games/buildShareCardData';
 
-import { headlineSpec, scoreFigure, signedCount } from './shareCardHeadline';
+import { createTranslator } from 'next-intl';
+import messages from '@/messages/no.json';
+
+import { headlineSpec, resultWords, scoreFigure, signedCount, type ShareResultT } from './shareCardHeadline';
 
 function row(rank: number, members: string[], score: ShareCardRow['score']): ShareCardRow {
   return { rank, name: members.join(' / '), memberNames: members, score, isSharer: false };
@@ -191,5 +194,21 @@ describe('scoreFigure', () => {
     [{ kind: 'pointsVsPar', label: '+3' }, '+3'],
   ] as const)('%j → %s', (score, expected) => {
     expect(scoreFigure(score)).toBe(expected);
+  });
+});
+
+describe('resultWords — the result as the headline words it (#2625)', () => {
+  const t = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.shareCard' }) as unknown as ShareResultT;
+  it.each([
+    [{ kind: 'pointsVsPar', label: '+3' }, { text: '+3 mot par', at: true }],
+    [{ kind: 'pointsVsPar', label: 'E' }, { text: 'par', at: true }],
+    [{ kind: 'pointsVsPar', label: '\u22122' }, { text: '\u22122 mot par', at: true }],
+    [{ kind: 'vsPar', label: '\u22124' }, { text: '\u22124', at: true }],
+    [{ kind: 'vsPar', label: 'E' }, { text: 'par', at: true }],
+    [{ kind: 'points', value: 38 }, { text: '38 poeng', at: false }],
+    [{ kind: 'points', value: -3 }, { text: '\u22123 poeng', at: false }],
+    [{ kind: 'skins', value: 6 }, { text: '6 skins', at: false }],
+  ] as const)('%j → %j', (score, expected) => {
+    expect(resultWords(score, t)).toEqual(expected);
   });
 });
