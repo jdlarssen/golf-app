@@ -5,6 +5,7 @@ import {
   type LeagueStartRefusal,
 } from '@/lib/league/startLeagueRoundFlightCore';
 import { readFlightIds } from '@/lib/api/readFlightIds';
+import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 import { isUuid } from '@/lib/url/isUuid';
 
 // «Spill runden» i appen (#2638): spilleren starter en flight i en ligarunde.
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     if (!isUuid(roundId)) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const coPlayerIds = await readFlightIds(request, 'coPlayerIds');
+    const coPlayerIds = await readFlightIds(request, 'coPlayerIds', MAX_FLIGHT_SIZE);
     if (coPlayerIds === null) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
     const caller = callerScopedClient(request);

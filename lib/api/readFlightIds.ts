@@ -1,4 +1,3 @@
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 import { isUuid } from '@/lib/url/isUuid';
 
 /**
@@ -8,11 +7,12 @@ import { isUuid } from '@/lib/url/isUuid';
  * league start (`coPlayerIds`, #2638).
  *
  * `[]` without a body or without the field. `null` when the body is not JSON,
- * the field is not a list of uuids, or the list is longer than a flight
- * (`MAX_FLIGHT_SIZE`): a malformed body is a client error (400), never «we
- * failed» (500).
+ * the field is not a list of uuids, or the list is longer than `max`: a
+ * malformed body is a client error (400), never «we failed» (500). Each route
+ * keeps its own cap: submit-team's wire is frozen at 20 for the app builds in
+ * the stores, and the league start uses `MAX_FLIGHT_SIZE`.
  */
-export async function readFlightIds(request: Request, field: string): Promise<string[] | null> {
+export async function readFlightIds(request: Request, field: string, max: number): Promise<string[] | null> {
   let parsed: unknown;
   try {
     const text = await request.text();
@@ -24,7 +24,7 @@ export async function readFlightIds(request: Request, field: string): Promise<st
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const ids = (parsed as Record<string, unknown>)[field];
   if (ids === undefined) return [];
-  if (!Array.isArray(ids) || ids.length > MAX_FLIGHT_SIZE) return null;
+  if (!Array.isArray(ids) || ids.length > max) return null;
   if (!ids.every((id) => typeof id === 'string' && isUuid(id))) return null;
   return ids;
 }

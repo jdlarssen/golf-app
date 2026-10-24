@@ -45,7 +45,7 @@ import {
 // alltid har kalt ruta.
 //
 // WIRE (frosset — appen speiler den):
-//   POST [{ alsoFor: string[] }]   valgfri, 0–4 uuid-er (MAX_FLIGHT_SIZE, readFlightIds)
+//   POST [{ alsoFor: string[] }]   valgfri, 0–20 uuid-er
 //        200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
 //        400 { error: 'bad_request' }    kroppen er ikke JSON, eller `alsoFor` er feilformet
 //        401 { error: 'unauthorized' }   403 { error: 'forbidden' }
@@ -91,6 +91,9 @@ const FAILURE: Record<
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+/** En flight er aldri større enn dette; et lengre `alsoFor` er feilformet. */
+const MAX_ALSO_FOR = 20;
+
 export async function POST(request: NextRequest, ctx: RouteContext) {
   try {
     const { id: gameId } = await ctx.params;
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const alsoFor = await readFlightIds(request, 'alsoFor');
+    const alsoFor = await readFlightIds(request, 'alsoFor', MAX_ALSO_FOR);
     if (!alsoFor) {
       return NextResponse.json({ error: 'bad_request' }, { status: 400 });
     }
