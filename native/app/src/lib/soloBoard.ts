@@ -23,7 +23,12 @@ import {
   type BoardPlaceRow,
   type BoardRowSrPart,
 } from '../../../../lib/leaderboard/boardRules';
-import { viewerStanding, type LiveBoardRow, type LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
+import {
+  isPointsUnit,
+  viewerStanding,
+  type LiveBoardRow,
+  type LiveBoardUnit,
+} from '../../../../lib/leaderboard/liveBoard';
 import {
   resultStanding,
   soloResultBoard,
@@ -189,6 +194,10 @@ export function srPartText(part: BoardRowSrPart, note: string | null): string | 
           return formatMessage(BOARD_TEXT.srOverPar, { count: total.value });
         case 'under':
           return formatMessage(BOARD_TEXT.srUnderPar, { count: total.value });
+        case 'pointsOver':
+          return formatMessage(BOARD_TEXT.srPointsOverPar, { count: total.value });
+        case 'pointsUnder':
+          return formatMessage(BOARD_TEXT.srPointsUnderPar, { count: total.value });
       }
       break;
     }
@@ -289,10 +298,10 @@ function liveBoard(
         ? null
         : standing.leaderUserIds.length > 1 || !leaderRow
           ? formatMessage(
-              board.unit === 'points' ? BOARD_TEXT.behindPointsLead : BOARD_TEXT.behindStrokesLead,
+              isPointsUnit(board.unit) ? BOARD_TEXT.behindPointsLead : BOARD_TEXT.behindStrokesLead,
               { gap: standing.gap },
             )
-          : formatMessage(board.unit === 'points' ? BOARD_TEXT.behindPoints : BOARD_TEXT.behindStrokes, {
+          : formatMessage(isPointsUnit(board.unit) ? BOARD_TEXT.behindPoints : BOARD_TEXT.behindStrokes, {
               gap: standing.gap,
               name: sentenceName(leaderRow, board.rows, rowName, keyOf),
             });
@@ -421,6 +430,12 @@ function finishedBoard(
   };
 }
 
+/**
+ * The number column's heading, as on the web (`columnHeading`): «Poeng», or
+ * «Netto» over net strokes and net to par. #2625: points against par pace
+ * say «Mot par».
+ */
 function totalHeading(unit: LiveBoardUnit): string {
+  if (unit === 'pointsToPar') return BOARD_TEXT.colVsPar;
   return unit === 'points' ? BOARD_TEXT.colPoints : BOARD_TEXT.colNet;
 }

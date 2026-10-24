@@ -206,6 +206,41 @@ describe('teamBoardFor — a scramble ranked on net to par (#2625)', () => {
   });
 });
 
+describe('teamBoardFor — team stableford ranked on points against par pace (#2625)', () => {
+  // Laget ditt +5 etter 3 hull (4, 4, 3 poeng = 11), Lag 2 +1 etter 6 (13
+  // poeng), Lag 3 har spilt ett hull på par. Makkeren tar ett slag mer og
+  // teller aldri.
+  const FLAGGED = { kind: 'stableford', team_size: 2, points_table: 'standard', ranking: 'net_to_par' };
+  const bundle = homeBundle({ game: { gameMode: 'stableford', modeConfig: FLAGGED }, players: teams });
+  const scores = [
+    ...teamScores([ME], [2, 2, 3]),
+    ...teamScores(['marte'], [3, 3, 4]),
+    ...teamScores(['jonas'], [3, 4, 4, 4, 4, 4]),
+    ...teamScores(['kari'], [4, 5, 5, 5, 5, 5]),
+    ...teamScores(['ola', 'per'], [4]),
+  ];
+  const model = teamBoardFor({ bundle, scores, userId: ME })!;
+
+  it('the band says «mot par»', () => {
+    expect(teamBoardBand(bundle).subtitle).toBe('Stableford · 3 lag à 2 · mot par');
+  });
+
+  it('ranks on points against par pace and shows it with «+»', () => {
+    expect(model.rows.map((r) => [r.teamNumber, r.place, r.total])).toEqual([
+      [1, '1', '+5'],
+      [2, '2', '+1'],
+      [3, '3', 'E'],
+    ]);
+    expect(model.rows[0].under).toBe('mot par');
+  });
+
+  it('reads the number aloud in points, and the strip gives the gap in points across holes', () => {
+    expect(model.rows[0].a11y).toContain('5 poeng over par');
+    const second = teamBoardFor({ bundle, scores, userId: 'jonas' })!;
+    expect(second.strip?.detail).toBe('4 poeng bak Lag 1');
+  });
+});
+
 describe('teamBoardFor — best ball, first half', () => {
   // Lag 2 har spilt de ni første (27). Laget ditt har åtte: par på 1–7, og på
   // hull 8 talte Marte sin ball, én over. Slagene på 10–12 skal ikke synes.

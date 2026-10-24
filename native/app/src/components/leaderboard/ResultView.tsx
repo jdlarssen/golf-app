@@ -145,7 +145,8 @@ export function ResultView({
             columns={[
               RANK,
               PLAYER,
-              { key: 'points', label: 'Poeng', numeric: true },
+              // #2625: et spill som rangeres mot par, viser poeng mot par-tempo.
+              result.ranking === 'net_to_par' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
               ...(showHoles ? [HOLES] : []),
             ]}
             rows={result.players.map((player) => ({
@@ -154,7 +155,7 @@ export function ResultView({
               cells: [
                 player.rank,
                 nameOf(player.userId),
-                player.totalPoints,
+                teamHeadline(result.ranking, { total: player.totalPoints, toPar: player.toPar }).text,
                 ...(showHoles ? [player.holesPlayed] : []),
               ],
             }))}
@@ -165,14 +166,18 @@ export function ResultView({
       return (
         <LeaderTable
           testID="leaderboard-table"
-          columns={[RANK, TEAM, { key: 'points', label: 'Poeng', numeric: true }]}
+          columns={[
+            RANK,
+            TEAM,
+            result.ranking === 'net_to_par' ? VS_PAR : { key: 'points', label: 'Poeng', numeric: true },
+          ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
             highlight: team.rank === 1,
             cells: [
               team.rank,
               teamLabel(team.teamNumber, team.playerIds, nameOf),
-              team.totalPoints,
+              teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar }).text,
             ],
           }))}
         />
