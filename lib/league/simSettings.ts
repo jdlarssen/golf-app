@@ -267,7 +267,11 @@ export function normalizeSimSettings(json: unknown): SimSettings {
 export type EffectiveSimSettings = {
   /** What applies to the round: the override's code per key, else the default's. */
   values: SimSettings;
-  /** Keys whose round value differs from the league default, in Trackman's order. */
+  /**
+   * The organiser's override keys whose code differs from the base (the
+   * frozen default once the round has started, else today's league default),
+   * in Trackman's order.
+   */
   overriddenKeys: SimSettingKey[];
 };
 

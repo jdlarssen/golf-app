@@ -4843,7 +4843,7 @@
       "createButton": "+ New league",
       "brassRibbon": "Leagues",
       "pageTitle": "Leagues",
-      "pageSubtitle": "Individual season series with net stroke play.",
+      "pageSubtitle": "Individual season series over several rounds.",
       "deletedBanner": "League deleted.",
       "deletedBannerNamed": "The league «{name}» has been deleted.",
       "emptyState": "No leagues yet.",

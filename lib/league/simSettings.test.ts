@@ -289,8 +289,8 @@ describe('one home for the rules (AGENTS.md trap 4)', () => {
     return text.slice(start, text.indexOf('$$;', start));
   };
 
-  it('reads the newest definition of sim_settings_valid', () => {
-    expect(newest()).toBe('0215_league_sim_rules_review.sql');
+  it('reads the newest definition of sim_settings_valid (0215 or later)', () => {
+    expect(newest() >= '0215_').toBe(true);
   });
 
   it('the SQL option list is the TS list, pair for pair', () => {

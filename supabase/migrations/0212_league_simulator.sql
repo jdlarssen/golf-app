@@ -6,15 +6,17 @@
 --
 --   1. leagues.is_simulator — one switch for everything simulator-specific. A
 --      simulator flight counts with one delivered player (lib/league/flightRules).
---   2. leagues.sim_settings — the league's DEFAULT round settings. Fixed label
---      keys with free-text values (lib/league/simSettings.ts is the key list and
---      the validator; this CHECK is the outer bound). Not locked: the organiser
---      may change the default during the season.
+--   2. leagues.sim_settings — the league's DEFAULT round settings: one Trackman
+--      option code per setting (lib/league/simSettings.ts is the list and the
+--      validator; this CHECK is the outer bound, 0213 added the option set and
+--      0215 the putting/gimme pair). Not locked: the organiser may change the
+--      default during the season.
 --   3. league_rounds.sim_settings — one round's OVERRIDE: only the keys that
---      differ from the default. null = the round follows the default. The start
---      core writes the effective values here when the first flight starts (the
---      freeze), so a later change of the default never moves a round that is in
---      play or done.
+--      differ from the default. null = the round follows the default. A round
+--      is frozen at its first start, so a later change of the default never
+--      moves a round that is in play or done. (This migration froze into this
+--      column; 0214 moved the frozen default into sim_frozen_default and left
+--      this column the organiser's override.)
 --   4. guard_leagues_locked_fields: once a league has left 'draft', scoring and
 --      is_simulator cannot change, and the league cannot go back to 'draft' (that
 --      would reopen the lock). Global admins are NOT exempt: the organiser of a
@@ -28,9 +30,9 @@
 --      would let every change through (#440 hostile-PATCH trap). The service role
 --      passes, so the start core's freeze (admin client) works.
 --
--- Both CHECKs bound the serialised JSON at 2 000 characters. The app's own
--- limits are far lower (60 per value, 300 for «Annet»); simSettings.test.ts
--- asserts that the largest object the validator can produce fits the CHECK.
+-- Both CHECKs bound the serialised JSON at 2 000 characters. The Trackman codes
+-- are far shorter; simSettings.test.ts asserts that the largest object the
+-- validator accepts fits the CHECK.
 --
 -- Direction (what does OLD code do with this applied?): nothing changes. Old
 -- code never reads or writes the new columns, the defaults keep every existing

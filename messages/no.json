@@ -4843,7 +4843,7 @@
       "createButton": "+ Ny liga",
       "brassRibbon": "Ligaer",
       "pageTitle": "Ligaer",
-      "pageSubtitle": "Individuelle sesong-serier med netto slagspill.",
+      "pageSubtitle": "Individuelle sesong-serier over flere runder.",
       "deletedBanner": "Ligaen er slettet.",
       "deletedBannerNamed": "Ligaen «{name}» er slettet.",
       "emptyState": "Ingen ligaer ennå.",
