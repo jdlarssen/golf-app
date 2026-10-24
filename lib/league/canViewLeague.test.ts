@@ -67,13 +67,13 @@ describe('canViewLeague', () => {
     ).resolves.toEqual({ allowed: false, isClubMember: false });
   });
 
-  it('a failed read refuses instead of letting the caller through', async () => {
+  it('a failed read throws: neither a pass nor a «not found» (the orchestrator\'s review)', async () => {
     const supabase = client({
       group_members: [{ data: null, error: { message: 'boom' } }],
       users: [{ data: { is_admin: true } }],
     });
     await expect(
       canViewLeague(supabase, { groupId: 'g1', userId: 'admin', isParticipant: false }),
-    ).resolves.toEqual({ allowed: false, isClubMember: false });
+    ).rejects.toThrow('canViewLeague: the access read failed');
   });
 });
