@@ -26,6 +26,10 @@ const mkRound = (id: string, sequence: number): LeagueRoundView => ({
   flightCount: 1,
   deliveredUserIds: [],
   inProgressUserIds: [],
+  simOverride: {},
+  simSettings: {},
+  overriddenKeys: [],
+  settingsLocked: true,
 });
 const rounds: LeagueRoundView[] = [mkRound('r1', 1), mkRound('r2', 2)];
 
