@@ -12,7 +12,7 @@ import type {
   TexasScrambleResult,
   TexasScrambleTeamLine,
 } from '@/lib/scoring/modes/types';
-import { teamHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
+import { headlineUnit, teamHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import {
   PLACE_TIER,
@@ -238,7 +238,7 @@ export function TexasScramblePodium({
                         {teamHeadline(result.ranking, { total: team.totalNet, toPar: team.toPar }).text}
                       </span>
                       <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {t(result.ranking === 'net_to_par' ? 'common.vsParLabel' : 'common.slagLabel')}
+                        {t(headlineUnit(result.ranking) === 'toPar' ? 'common.vsParLabel' : 'common.slagLabel')}
                       </span>
                     </div>
                   </Card>

@@ -8,7 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
-import { formatVsPar } from '@/lib/leaderboard/vsPar';
+import { formatVsPar, headlineUnit } from '@/lib/leaderboard/vsPar';
 import type {
   SoloStrokeplayPlayerLine,
   SoloStrokeplayResult,
@@ -129,7 +129,7 @@ export function SoloStrokeplayPodium({
   const rest = result.players.slice(3);
   // #2253: the number the order is built on — net to par on a game ranked
   // on it, else net strokes.
-  const toPar = result.ranking === 'net_to_par';
+  const toPar = headlineUnit(result.ranking) === 'toPar';
   const scoreText = (player: SoloStrokeplayPlayerLine): string =>
     toPar ? formatVsPar(player.netToPar) : String(player.totalNetStrokes);
   const scoreUnit = toPar ? t('common.vsParLabel') : t('common.slagLabel');
