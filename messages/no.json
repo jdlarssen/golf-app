@@ -2623,6 +2623,7 @@
       "nettoLabel": "Netto {netto}",
       "nettoWithPoints": "Netto {netto} · {points} poeng",
       "strokesBadge": "+{n} SLAG",
+      "strokesGiveBadge": "Mister {n} slag",
       "increaseAriaLabel": "+1 for {name}",
       "decreaseAriaLabel": "-1 for {name}",
       "moreAriaLabel": "Velg spesifikk score for {name}",

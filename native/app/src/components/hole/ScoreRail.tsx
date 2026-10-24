@@ -3,8 +3,9 @@
 //
 // Fem tall (par −1 til par +3) og «Annet», og hver knapp viser navnet på
 // resultatet mot hullets par, aldri netto (#2635). Stableford-familien har
-// poengene etter navnet, unntatt i en blind runde. Komponenten tegner bare. Hvem som er aktiv og hva et trykk skriver,
-// bestemmer `useScoreRail` og hullsiden.
+// poengene etter navnet, unntatt i en blind runde. Komponenten tegner bare.
+// Hvem som er aktiv og hva et trykk skriver, bestemmer `useScoreRail` og
+// hullsiden.
 //
 // Teksten er webbens (`holes.scoreRail.*` i messages/no.json). Appen har ikke
 // i18n ennå, så den står her.

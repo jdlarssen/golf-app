@@ -188,8 +188,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   };
 
   // Scale font-size based on shape complexity + digit count so the number
-  // never clips the innermost ring/box. Nested shapes (triple/quad) eat into
-  // the inner area; two-digit numbers need extra headroom on top of that.
+  // never clips the innermost ring/box. A double shape eats into the inner
+  // area; two-digit numbers need extra headroom on top of that.
   const numberFontSize = scoreNumberFontSize(shape, displayedNumber);
 
   const numberStyle: CSSProperties = {
