@@ -11,7 +11,10 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
  *    BEFORE the game insert;
  *  - a failed freeze refuses with settings_freeze_failed and inserts nothing;
  *  - a round that already has a game is not frozen again;
- *  - a start that fails after the freeze puts the round's frozen default back.
+ *  - a start that fails after the freeze leaves it in place: an undo could
+ *    race a player who started the round meanwhile (the orchestrator's review);
+ *  - a failed read of the round or the league is its own refusal, not
+ *    «not found» (the app answers 500, not 404).
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -31,7 +34,6 @@ const ROUND = {
   opens_at: '2000-01-01T00:00:00Z',
   closes_at: '2099-01-01T00:00:00Z',
   original_closes_at: '2099-01-01T00:00:00Z',
-  sim_frozen_default: null,
 };
 const LEAGUE_DEFAULT = { green_stimp: '10', wind: 'CALM' };
 
@@ -148,15 +150,16 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
     });
   });
 
-  it('a start that fails after the freeze puts the round’s frozen default back', async () => {
+  it('a start that fails after the freeze leaves the freeze in place', async () => {
     startScheduledGame.mockResolvedValue({ ok: false, reason: 'tee_missing_rating' });
     adminMock = buildSupabaseMock([
       { data: [] },
       { count: 0 },
       { data: [{ id: 'r1' }] }, // freeze
       { data: { id: 'g1' } }, // game insert
-      { count: 0 }, // the flight was rolled back: still no game
-      { data: [{ id: 'r1' }] }, // unfreeze
+      // What an undo would read and write: queued so one would show up below.
+      { count: 0 },
+      { data: [{ id: 'r1' }] },
     ]);
     const user = userClient([
       ...userQueue(true),
@@ -171,7 +174,21 @@ describe('startLeagueRoundFlightCore — the settings freeze (#2638)', () => {
       .map((c) => c.args[0]);
     expect({ result, writes }).toEqual({
       result: { ok: false, error: 'start_tee_missing_rating' },
-      writes: [{ sim_frozen_default: { green_stimp: '10', wind: 'CALM' } }, { sim_frozen_default: null }],
+      writes: [{ sim_frozen_default: { green_stimp: '10', wind: 'CALM' } }],
     });
+  });
+});
+
+describe('startLeagueRoundFlightCore — a failed read is not «not found» (the orchestrator\'s review)', () => {
+  it.each([
+    ['the round read fails', 'round_read_failed', [{ error: { message: 'boom' } }]],
+    ['the round does not exist', 'round_not_found', [{ data: null }]],
+    ['the league read fails', 'league_read_failed', [{ data: ROUND }, { error: { message: 'boom' } }]],
+    ['the league does not exist', 'league_not_found', [{ data: ROUND }, { data: null }]],
+  ] as Array<[string, string, QueryResult[]]>)('%s → %s', async (_label, error, queue) => {
+    adminMock = buildSupabaseMock([]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    const result = await startLeagueRoundFlightCore(userClient(queue), 'u1', 'r1', []);
+    expect({ result, adminCalls: calls() }).toEqual({ result: { ok: false, error }, adminCalls: [] });
   });
 });

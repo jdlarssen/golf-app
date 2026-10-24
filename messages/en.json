@@ -5223,6 +5223,9 @@
           "flight_in_progress": "You're already in a flight for this round. Finish it or withdraw from it first.",
           "co_player_locked": "One of your playing partners has already delivered this round or is playing it now. Reload the page and choose again.",
           "round_check_failed": "Could not check who has already played the round. Try again in a moment.",
+          "round_read_failed": "Could not load the round. Try again in a moment.",
+          "league_read_failed": "Could not load the league. Try again in a moment.",
+          "settings_freeze_failed": "Could not lock the round settings. Try again in a moment.",
           "fallback": "Something went wrong, please try again."
         }
       }

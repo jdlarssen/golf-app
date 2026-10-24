@@ -4,6 +4,7 @@ import {
   startLeagueRoundFlightCore,
   type LeagueStartRefusal,
 } from '@/lib/league/startLeagueRoundFlightCore';
+import { readFlightIds } from '@/lib/api/readFlightIds';
 import { isUuid } from '@/lib/url/isUuid';
 
 // «Spill runden» i appen (#2638): spilleren starter en flight i en ligarunde.
@@ -23,13 +24,13 @@ import { isUuid } from '@/lib/url/isUuid';
 // deltakerlista (`not_member`). Tom eller uten felt = alene.
 //
 // WIRE (appen speiler den):
-//   POST { coPlayerIds?: string[] }   0–20 uuid-er
+//   POST { coPlayerIds?: string[] }   0–4 uuid-er (MAX_FLIGHT_SIZE, readFlightIds)
 //     200 { gameId }
 //     400 { error: 'bad_request' }    kroppen er ikke JSON, eller lista er feilformet
 //     401 { error: 'unauthorized' }
 //     404 { error: 'not_found' }      runden eller ligaen finnes ikke
 //     409 { error: <LeagueStartRefusal> }
-//     500 { error: 'start_failed' }
+//     500 { error: 'start_failed' }   også når runden eller ligaen ikke kunne leses
 //
 // Feil-bodyene er faste koder, aldri `err.message`. Etter start trengs ikke
 // noe etterarbeid: flighten er ny og har ingen cache ennå, og ligasidene
@@ -41,16 +42,15 @@ export const maxDuration = 60;
 
 const LOG_PREFIX = 'api/liga/rounds/[roundId]/start';
 
-/** En flight er aldri større enn dette; en lengre liste er feilformet. */
-const MAX_CO_PLAYERS = 20;
-
 /**
  * Kjernens avvisninger, oversatt til HTTP. Ett kart og ingen `default`: en ny
  * kode i kjernen feller tsc her i stedet for å bli en stille 500.
  */
 const REFUSAL_STATUS: Record<LeagueStartRefusal, 404 | 409 | 500> = {
   round_not_found: 404,
+  round_read_failed: 500,
   league_not_found: 404,
+  league_read_failed: 500,
   league_not_active: 409,
   outside_window: 409,
   round_not_ready: 409,
@@ -80,24 +80,6 @@ const REFUSAL_STATUS: Record<LeagueStartRefusal, 404 | 409 | 500> = {
   start_db_game: 500,
 };
 
-/** `coPlayerIds` fra kroppen: `[]` uten kropp eller felt, `null` når den er feilformet. */
-async function readCoPlayerIds(request: NextRequest): Promise<string[] | null> {
-  let parsed: unknown;
-  try {
-    const text = await request.text();
-    if (text.trim() === '') return [];
-    parsed = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-  const ids = (parsed as { coPlayerIds?: unknown }).coPlayerIds;
-  if (ids === undefined) return [];
-  if (!Array.isArray(ids) || ids.length > MAX_CO_PLAYERS) return null;
-  if (!ids.every((id) => typeof id === 'string' && isUuid(id))) return null;
-  return ids;
-}
-
 type RouteContext = { params: Promise<{ roundId: string }> };
 
 export async function POST(request: NextRequest, ctx: RouteContext) {
@@ -108,7 +90,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     if (!isUuid(roundId)) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const coPlayerIds = await readCoPlayerIds(request);
+    const coPlayerIds = await readFlightIds(request, 'coPlayerIds');
     if (coPlayerIds === null) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
     const caller = callerScopedClient(request);

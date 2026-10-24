@@ -6,6 +6,7 @@ import {
   type QueryResponse,
 } from '@/lib/supabase/testing/adminClientMock';
 import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
+import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 
 /**
  * Type A (#2638): rutas port og transport for «Spill runden» i appen.
@@ -22,6 +23,7 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 const ROUND_ID = '22222222-2222-4222-8222-222222222222';
 const ME = '11111111-1111-4111-8111-111111111111';
 const GAME_ID = '33333333-3333-4333-8333-333333333333';
+const CO_PLAYER = '44444444-4444-4444-8444-444444444444';
 const TOKEN = 'token-meg';
 
 let freezeRows: unknown[] = [{ id: ROUND_ID }];
@@ -146,13 +148,25 @@ describe('POST /api/liga/rounds/[roundId]/start', () => {
     });
   });
 
-  it('400 for a body that is not JSON, or a list that is not uuids', async () => {
+  it('400 for a body that is not JSON, a list that is not uuids, or more ids than a flight', async () => {
     const bad = await call(request({ token: TOKEN, body: 'nei' }));
     const notUuid = await call(request({ token: TOKEN, body: JSON.stringify({ coPlayerIds: ['x'] }) }));
-    expect([bad, notUuid]).toEqual([
+    const tooMany = await call(
+      request({
+        token: TOKEN,
+        body: JSON.stringify({ coPlayerIds: Array.from({ length: MAX_FLIGHT_SIZE + 1 }, () => CO_PLAYER) }),
+      }),
+    );
+    expect([bad, notUuid, tooMany]).toEqual([
+      { status: 400, body: { error: 'bad_request' } },
       { status: 400, body: { error: 'bad_request' } },
       { status: 400, body: { error: 'bad_request' } },
     ]);
+  });
+
+  it('500 start_failed when the round cannot be read: a read error is not «not found»', async () => {
+    caller = buildSupabaseMock([{ error: { message: 'boom' } }]);
+    expect(await call(request({ token: TOKEN }))).toEqual({ status: 500, body: { error: 'start_failed' } });
   });
 
   it('404 not_found for a round that does not exist, or a path that is no uuid', async () => {
