@@ -2637,10 +2637,8 @@
     "scoreRail": {
       "headingWithStrokes": "{name} · får {n} slag",
       "detailPoints": "{term} · {points} p",
-      "detailNetto": "{term} · netto {netto}",
       "buttonAriaLabel": "Sett {strokes} slag for {name}: {term}",
       "buttonAriaLabelPoints": "Sett {strokes} slag for {name}: {term}, {points} poeng",
-      "buttonAriaLabelNetto": "Sett {strokes} slag for {name}: {term}, netto {netto}",
       "other": "Annet",
       "otherAriaLabel": "Velg en annen score for {name}",
       "skip": "Neste: {name} →",

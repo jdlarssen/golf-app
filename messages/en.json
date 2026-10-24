@@ -2637,10 +2637,8 @@
     "scoreRail": {
       "headingWithStrokes": "{name} · gets {n, plural, one {# stroke} other {# strokes}}",
       "detailPoints": "{term} · {points} pt",
-      "detailNetto": "{term} · net {netto}",
       "buttonAriaLabel": "Set {strokes} for {name}: {term}",
       "buttonAriaLabelPoints": "Set {strokes} for {name}: {term}, {points, plural, one {# point} other {# points}}",
-      "buttonAriaLabelNetto": "Set {strokes} for {name}: {term}, net {netto}",
       "other": "Other",
       "otherAriaLabel": "Pick another score for {name}",
       "skip": "Next: {name} →",

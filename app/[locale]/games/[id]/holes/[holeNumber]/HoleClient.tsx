@@ -427,13 +427,10 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     clearScoreFor,
   });
   const railCard = cards.find((c) => c.userId === rail.activeSeatId);
-  // What each button gives before the tap: points in the stableford family,
-  // net strokes elsewhere, only the term in a reveal game (#1447).
-  const railDisplay: RailDisplay = hideNetto
-    ? 'plain'
-    : isStableford
-      ? 'points'
-      : 'netto';
+  // What each button gives before the tap: the term against the hole's par,
+  // never net (#2635), with the points after it in the stableford family
+  // except in a reveal game (#1447).
+  const railDisplay: RailDisplay = isStableford && !hideNetto ? 'points' : 'plain';
   const railOptions: RailOption[] = railCard
     ? railStrokes(par).map((strokes) => ({
         strokes,
@@ -444,7 +441,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           gameMode,
           isStableford,
         }),
-        netto: strokes - railCard.extraStrokes,
       }))
     : [];
   const railSkipCard = cards.find((c) => c.userId === rail.skipToSeatId);

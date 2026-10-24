@@ -1,9 +1,9 @@
 // #2252: scoreskinna nederst på hullsiden i appen, motstykket til webbens
 // `components/hole/ScoreRail.tsx` (#2251).
 //
-// Fem tall (par −1 til par +3) og «Annet», og hver knapp viser resultatet før
-// trykket: poeng i stableford-familien, netto ellers, bare navnet i en blind
-// runde. Komponenten tegner bare. Hvem som er aktiv og hva et trykk skriver,
+// Fem tall (par −1 til par +3) og «Annet», og hver knapp viser navnet på
+// resultatet mot hullets par, aldri netto (#2635). Stableford-familien har
+// poengene etter navnet, unntatt i en blind runde. Komponenten tegner bare. Hvem som er aktiv og hva et trykk skriver,
 // bestemmer `useScoreRail` og hullsiden.
 //
 // Teksten er webbens (`holes.scoreRail.*` i messages/no.json). Appen har ikke
@@ -35,15 +35,14 @@ import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
 import { withSystemArrows } from '../SystemArrow';
 
-/** Hva knappene viser etter navnet på resultatet. */
-export type RailDisplay = 'points' | 'netto' | 'plain';
+/** Hva knappene viser etter navnet på resultatet: poengene, eller ingenting. */
+export type RailDisplay = 'points' | 'plain';
 
 /** Ett tall på skinna, med resultatet regnet ut av kalleren. */
 export type RailOption = {
   strokes: number;
   term: StrokeTerm;
   points: number | null;
-  netto: number;
 };
 
 /** Setet skinna taster for. */
@@ -185,14 +184,12 @@ export function ScoreRail({
     const term = shortTermText(option, par);
     if (sunlight) return term;
     if (display === 'points' && option.points != null) return `${term} · ${option.points} p`;
-    if (display === 'netto') return `${term} · netto ${option.netto}`;
     return term;
   };
 
   const labelText = (option: RailOption): string => {
     const base = `Sett ${option.strokes} slag for ${active.name}: ${optionTermText(option, par)}`;
     if (display === 'points' && option.points != null) return `${base}, ${option.points} poeng`;
-    if (display === 'netto') return `${base}, netto ${option.netto}`;
     return base;
   };
 

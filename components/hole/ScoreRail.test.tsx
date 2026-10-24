@@ -8,7 +8,6 @@ const options: RailOption[] = [3, 4, 5, 6, 7].map((strokes) => ({
   strokes,
   term: 'par',
   points: null,
-  netto: strokes - 1,
 }));
 
 const handlers = {
@@ -27,7 +26,7 @@ describe('ScoreRail', () => {
         active={{ playerId: 'u1', name: 'Marte', extraStrokes: 1, score: 5, putts: null }}
         par={4}
         options={options}
-        display="netto"
+        display="plain"
         puttsTracking={false}
         skipTo="Tore"
         {...handlers}
@@ -56,7 +55,7 @@ describe('ScoreRail', () => {
         active={null}
         par={4}
         options={options}
-        display="netto"
+        display="plain"
         puttsTracking={false}
         skipTo={null}
         {...handlers}

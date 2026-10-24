@@ -22,9 +22,9 @@ function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
     active: { seatId: 'p1', name: 'Marte', extraStrokes: 1, score: null, putts: null },
     par: 4,
     options: [
-      { strokes: 3, term: 'birdie', points: 4, netto: 2 },
-      { strokes: 4, term: 'par', points: 3, netto: 3 },
-      { strokes: 8, term: 'over', points: 0, netto: 7 },
+      { strokes: 3, term: 'birdie', points: 4 },
+      { strokes: 4, term: 'par', points: 3 },
+      { strokes: 8, term: 'over', points: 0 },
     ],
     display: 'points',
     puttsTracking: false,
