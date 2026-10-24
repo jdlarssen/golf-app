@@ -47,11 +47,18 @@ async function getDisplayName(userId: string): Promise<string | null> {
   return displayNameForOthers(data);
 }
 
-/** Best-effort venne-varsel. Aldri blokker bruker-flyten. */
+/**
+ * Best-effort venne-varsel. Aldri blokker bruker-flyten.
+ *
+ * `via` (#2263) sier hvordan vennskapet ble til: `accept` når den andre godtok
+ * en forespørsel, `link` når noen åpnet venne-lenka (innboksen sier da «la deg
+ * til som venn»).
+ */
 async function notifyFriend(
   targetId: string,
   kind: 'friend_request' | 'friend_accepted',
   actorId: string,
+  via: 'accept' | 'link' = 'accept',
 ): Promise<void> {
   try {
     const actorName = await getDisplayName(actorId);
@@ -60,11 +67,9 @@ async function notifyFriend(
       kind,
       // actor_name may be null — buildNotificationText renders the catalog fallback
       // at render time in the correct locale (§4 payload-fallback contract).
-      // #2263: both accept paths here are «they accepted your request»; the
-      // friend-link path (venner/legg-til) sends via='link'.
       payload:
         kind === 'friend_accepted'
-          ? { actor_id: actorId, actor_name: actorName, via: 'accept' }
+          ? { actor_id: actorId, actor_name: actorName, via }
           : { actor_id: actorId, actor_name: actorName },
     });
   } catch (err) {
@@ -166,6 +171,31 @@ export async function respond(
     await notifyFriend(row.requester_id, 'friend_accepted', userId);
   }
   return status;
+}
+
+/**
+ * Bli venn via «legg til meg»-lenka (#369): den som åpner lenka, kobles som
+ * venn med eieren med en gang (eieren inviterte ved å dele, åpneren godtar ved
+ * å trykke). `connect_via_friend_code` (0077) er idempotent og svarer `self`,
+ * `already_friends` eller `connected`; `connected` blir `accepted` her, og
+ * bare da varsles eieren. En ukjent kode får RPC-en til å kaste, og det blir
+ * `error`, som enhver annen feil.
+ */
+export async function connectByFriendCode(
+  client: Client,
+  userId: string,
+  code: string,
+): Promise<FriendStatus> {
+  if (!code) return 'error';
+  const { data, error } = await client.rpc('connect_via_friend_code', { p_code: code });
+  if (error) {
+    console.error('[venner] connect_via_friend_code failed', error);
+    return 'error';
+  }
+  const result = (data ?? {}) as { owner_id?: string; status?: string };
+  if (result.status !== 'connected') return asStatus(result.status);
+  if (result.owner_id) await notifyFriend(result.owner_id, 'friend_accepted', userId, 'link');
+  return 'accepted';
 }
 
 /**
