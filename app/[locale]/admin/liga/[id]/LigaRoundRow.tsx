@@ -56,11 +56,6 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
   const fieldId = useId();
   const locale = useLocale() as AppLocale;
 
-  const [updateState, updateAction] = useActionState(
-    async (_prev: LeagueActionError, formData: FormData) =>
-      updateLeagueRound(formData) as Promise<LeagueActionError>,
-    INITIAL,
-  );
   const [overrideState, overrideAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       overrideRoundWindow(formData) as Promise<LeagueActionError>,
@@ -77,9 +72,6 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
     .join(', ');
 
   const settingsInitial = formSimSettings(round.simSettings);
-
-  const selectedCourse = courses.find((c) => c.id === round.courseId);
-  const tees = selectedCourse?.tee_boxes ?? [];
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
@@ -122,59 +114,15 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
         <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-20px_0_-6px]">
           {t('changeCourseLabel')}
         </summary>
-        <form action={updateAction} className="mt-3 space-y-2">
-          <input type="hidden" name="round_id" value={round.id} />
-          <input type="hidden" name="league_id" value={leagueId} />
-
-          {courseScope === 'multi_course' && (
-            <div>
-              <label htmlFor={`${fieldId}-course-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
-                {t('courseLabel')}
-              </label>
-              <select
-                id={`${fieldId}-course-id`}
-                name="course_id"
-                defaultValue={round.courseId ?? ''}
-                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
-              >
-                <option value="">{t('courseNotSelected')}</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {(courseScope === 'multi_course' || courseScope === 'single_course') && (
-            <div>
-              <label htmlFor={`${fieldId}-tee-box-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
-                {t('teeLabel')}
-              </label>
-              <select
-                id={`${fieldId}-tee-box-id`}
-                name="tee_box_id"
-                defaultValue={round.teeBoxId ?? ''}
-                className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
-              >
-                <option value="">{t('teeNotSelected')}</option>
-                {tees.map((t_) => (
-                  <option key={t_.id} value={t_.id}>
-                    {t_.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {updateState.error !== '' && (
-            <p role="alert" className="font-sans text-[12px] text-danger">{updateState.error}</p>
-          )}
-          <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
-            {t('saveButton')}
-          </SubmitButton>
-        </form>
+        {/* #2638: a started simulator round keeps its course and tee (the
+            settings card shows them); regular leagues can still correct a tee. */}
+        {isSimulator && round.settingsLocked ? (
+          <p className="mt-2 font-sans text-[12px] text-muted" data-testid="liga-round-course-locked">
+            {t('settingsErrors.round_settings_locked')}
+          </p>
+        ) : (
+          <CourseTeeForm round={round} leagueId={leagueId} courseScope={courseScope} courses={courses} />
+        )}
       </details>
 
       {/* Override window form */}
@@ -284,6 +232,84 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
         </details>
       )}
     </div>
+  );
+}
+
+/** «Bytt bane/tee»: the round's course (multi-course leagues) and tee. */
+function CourseTeeForm({
+  round,
+  leagueId,
+  courseScope,
+  courses,
+}: Pick<Props, 'round' | 'leagueId' | 'courseScope' | 'courses'>) {
+  const t = useTranslations('liga.roundRow');
+  const fieldId = useId();
+  const [updateState, updateAction] = useActionState(
+    async (_prev: LeagueActionError, formData: FormData) =>
+      updateLeagueRound(formData) as Promise<LeagueActionError>,
+    INITIAL,
+  );
+  const selectedCourse = courses.find((c) => c.id === round.courseId);
+  const tees = selectedCourse?.tee_boxes ?? [];
+
+  return (
+    <form action={updateAction} className="mt-3 space-y-2">
+      <input type="hidden" name="round_id" value={round.id} />
+      <input type="hidden" name="league_id" value={leagueId} />
+
+      {courseScope === 'multi_course' && (
+        <div>
+          <label htmlFor={`${fieldId}-course-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
+            {t('courseLabel')}
+          </label>
+          <select
+            id={`${fieldId}-course-id`}
+            name="course_id"
+            defaultValue={round.courseId ?? ''}
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+          >
+            <option value="">{t('courseNotSelected')}</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {(courseScope === 'multi_course' || courseScope === 'single_course') && (
+        <div>
+          <label htmlFor={`${fieldId}-tee-box-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
+            {t('teeLabel')}
+          </label>
+          <select
+            id={`${fieldId}-tee-box-id`}
+            name="tee_box_id"
+            defaultValue={round.teeBoxId ?? ''}
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+          >
+            <option value="">{t('teeNotSelected')}</option>
+            {tees.map((t_) => (
+              <option key={t_.id} value={t_.id}>
+                {t_.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {updateState.error !== '' && (
+        <p role="alert" className="font-sans text-[12px] text-danger">
+          {updateState.error === 'round_settings_locked'
+            ? t('settingsErrors.round_settings_locked')
+            : updateState.error}
+        </p>
+      )}
+      <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
+        {t('saveButton')}
+      </SubmitButton>
+    </form>
   );
 }
 
