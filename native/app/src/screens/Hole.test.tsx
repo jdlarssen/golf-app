@@ -524,7 +524,7 @@ describe('Hole', () => {
     // Tildelingen er motorens tall: høysiden får 10 slag, altså ett på SI 1.
     // Laget som er på tur, har den øverst i skinna (#2385); lavsiden får
     // ingen, og raden sier «Scratch».
-    expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent(/^Får 1 slag her/);
+    expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent('Får 1 slag');
     expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe(`${strokesLine(0)} · venter`);
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).

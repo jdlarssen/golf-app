@@ -45,6 +45,10 @@ describe('ScoreRail', () => {
       'false',
     ]);
     expect(within(rail).getByTestId('score-rail-skip')).toBeInTheDocument();
+    // #2635: the strokes stand on their own line, with the full meaning for
+    // the screen reader; the heading is the name alone.
+    expect(within(rail).getByTestId('score-rail-heading').textContent).toBe('Marte');
+    expect(within(rail).getByTestId('score-rail-strokes').textContent).toBe('Får 1 slagfår 1 slag på hullet');
     const live = within(rail).getByTestId('score-rail-announcement');
     expect(live.getAttribute('aria-live')).toBe('polite');
     expect(live.textContent).toContain('Marte');

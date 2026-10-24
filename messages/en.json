@@ -2636,6 +2636,10 @@
     },
     "scoreRail": {
       "headingWithStrokes": "{name} · gets {n, plural, one {# stroke} other {# strokes}}",
+      "strokesGet": "Gets {n, plural, one {# stroke} other {# strokes}}",
+      "strokesGive": "Gives {n, plural, one {# stroke} other {# strokes}}",
+      "strokesGetAriaLabel": "gets {n, plural, one {# stroke} other {# strokes}} on the hole",
+      "strokesGiveAriaLabel": "gives away {n, plural, one {# stroke} other {# strokes}} on the hole",
       "detailPoints": "{term} · {points} pt",
       "buttonAriaLabel": "Set {strokes} for {name}: {term}",
       "buttonAriaLabelPoints": "Set {strokes} for {name}: {term}, {points, plural, one {# point} other {# points}}",

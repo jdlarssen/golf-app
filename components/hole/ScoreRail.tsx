@@ -73,6 +73,15 @@ const headingStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+/** «Får 1 slag» / «Mister 1 slag» to the right of the name (#2635). */
+const strokesStyle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 12,
+  color: 'var(--text-muted)',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+};
+
 const linkButtonStyle: CSSProperties = {
   minHeight: 44,
   minWidth: 44,
@@ -234,13 +243,27 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
         <>
           <div style={headerStyle}>
             <h2 id={headingId} data-testid="score-rail-heading" style={headingStyle}>
-              {active.extraStrokes > 0
-                ? t('scoreRail.headingWithStrokes', {
-                    name: active.name,
-                    n: active.extraStrokes,
-                  })
-                : active.name}
+              {active.name}
             </h2>
+            {/* The owner's choice C (#2635): a short line, no net par. A plus
+                handicap gives strokes away; the screen reader hears it whole. */}
+            {active.extraStrokes !== 0 && (
+              <span data-testid="score-rail-strokes" style={strokesStyle}>
+                <span aria-hidden="true">
+                  {t(active.extraStrokes > 0 ? 'scoreRail.strokesGet' : 'scoreRail.strokesGive', {
+                    n: Math.abs(active.extraStrokes),
+                  })}
+                </span>
+                <span className="sr-only">
+                  {t(
+                    active.extraStrokes > 0
+                      ? 'scoreRail.strokesGetAriaLabel'
+                      : 'scoreRail.strokesGiveAriaLabel',
+                    { n: Math.abs(active.extraStrokes) },
+                  )}
+                </span>
+              </span>
+            )}
             {skipTo != null && (
               <button
                 type="button"
