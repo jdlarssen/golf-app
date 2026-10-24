@@ -86,8 +86,9 @@ export type ShareResultT = (
 /**
  * The result as the headline words it: «38 poeng», «6 skins», «−4», «par»,
  * and (#2625) «+3 mot par» for points against par pace, where «+» is the good
- * side, so a bare «+3» would read as three over par. `at` picks the «vant på»
- * wording over «vant med».
+ * side, so a bare «+3» would read as three over par. A player without a hole
+ * has no number: «—» stands alone, as in the round report's facts. `at` picks
+ * the «vant på» wording over «vant med».
  */
 export function resultWords(score: ShareCardScore, t: ShareResultT): { text: string; at: boolean } {
   switch (score.kind) {
@@ -98,6 +99,7 @@ export function resultWords(score: ShareCardScore, t: ShareResultT): { text: str
     case 'vsPar':
       return { text: score.label === 'E' ? t('par') : score.label, at: true };
     case 'pointsVsPar':
+      if (score.label === '—') return { text: score.label, at: true };
       return { text: score.label === 'E' ? t('par') : t('pointsVsPar', { label: score.label }), at: true };
   }
 }

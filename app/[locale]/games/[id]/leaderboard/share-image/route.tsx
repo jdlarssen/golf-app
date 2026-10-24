@@ -51,7 +51,6 @@ type ShareT = Awaited<ReturnType<typeof getTranslations>>;
 const ON_STRONG_MUTED = 'rgba(236,229,210,0.8)';
 const ON_STRONG_META = 'rgba(236,229,210,0.85)';
 
-
 /**
  * The headline as rich text. `gold` wraps the result; the same call with a
  * pass-through `gold` gives the plain text the layout is measured on.
