@@ -237,7 +237,9 @@ function computeSoloHoleRows(
       const playerPar = parFor(hole, p.teeGender);
       const points = pointsFn({ par: playerPar, netStrokes });
       // #734: per-spiller par for riktig birdie/bogey-farge i UI.
-      return { userId: p.userId, gross, points, par: playerPar };
+      // #2625: the hole's points against par pace, the measure the flag ranks on.
+      const toPar = gross === null ? null : points - parPoints(pointsFn, playerPar);
+      return { userId: p.userId, gross, points, par: playerPar, toPar };
     });
 
     const played = perPlayer.filter((c) => c.gross !== null);
