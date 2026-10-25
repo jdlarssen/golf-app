@@ -4849,7 +4849,7 @@
       "createLeagueButton": "Opprett liga"
     },
     "simSettings": {
-      "heading": "Rundeinnstillinger · {round}",
+      "summary": "Rundeinnstillinger · Trackman",
       "formHeading": "Rundeinnstillinger",
       "overridden": "Endret denne runden",
       "tee": "Tee",

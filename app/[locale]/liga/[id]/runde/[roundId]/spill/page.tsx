@@ -150,7 +150,7 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
         {/* #2638: the round's settings above the start (artboard 7b). */}
         {league.is_simulator && (
           <div className="mb-4">
-            <RoundSimSettingsCard round={round} locale={locale} />
+            <RoundSimSettingsCard round={round} locale={locale} defaultOpen />
           </div>
         )}
         <Card>

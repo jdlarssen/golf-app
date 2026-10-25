@@ -4849,7 +4849,7 @@
       "createLeagueButton": "Create league"
     },
     "simSettings": {
-      "heading": "Round settings · {round}",
+      "summary": "Round settings · Trackman",
       "formHeading": "Round settings",
       "overridden": "Changed this round",
       "tee": "Tee",
