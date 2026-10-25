@@ -1381,11 +1381,13 @@ export type Database = {
       league_rounds: {
         Row: {
           closes_at: string
+          closing_reminder_sent_at: string | null
           course_id: string | null
           created_at: string
           id: string
           label: string
           league_id: string
+          opening_notice_sent_at: string | null
           opens_at: string
           original_closes_at: string
           sequence: number
@@ -1397,11 +1399,13 @@ export type Database = {
         }
         Insert: {
           closes_at: string
+          closing_reminder_sent_at?: string | null
           course_id?: string | null
           created_at?: string
           id?: string
           label: string
           league_id: string
+          opening_notice_sent_at?: string | null
           opens_at: string
           original_closes_at: string
           sequence: number
@@ -1413,11 +1417,13 @@ export type Database = {
         }
         Update: {
           closes_at?: string
+          closing_reminder_sent_at?: string | null
           course_id?: string | null
           created_at?: string
           id?: string
           label?: string
           league_id?: string
+          opening_notice_sent_at?: string | null
           opens_at?: string
           original_closes_at?: string
           sequence?: number
