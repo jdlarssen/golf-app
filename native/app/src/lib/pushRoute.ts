@@ -6,7 +6,8 @@
 // spill åpner spillets side (`GameHome`). Resten åpner Hjem, også
 // arrangørsidene under `/admin/…`, som appen ikke har. Unntaket er
 // `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
-// hullet (`Hole`).
+// hullet (`Hole`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
+// peker på `/liga/{id}` og åpner ligaen (`League`).
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -25,6 +26,7 @@ import { readMarkerFrom } from '../../../../lib/notifications/readMarker';
 export type PushTarget =
   | { name: 'GameHome'; params: { gameId: string } }
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
+  | { name: 'League'; params: { leagueId: string } }
   | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
@@ -35,6 +37,7 @@ export type PushRequestLike = {
 
 const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
 const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
+const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
@@ -67,6 +70,9 @@ export function pushTarget(url: string | null): PushTarget {
       return { name: 'GameHome', params: { gameId } };
     }
   }
+  const league = url ? LEAGUE_PATH.exec(url) : null;
+  const leagueId = league ? decodedOrNull(league[1]) : null;
+  if (leagueId) return { name: 'League', params: { leagueId } };
   return { name: 'Home' };
 }
 

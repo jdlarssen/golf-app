@@ -1,4 +1,4 @@
-// #2256 PR 4: et trykk på et spillvarsel åpner spillet, alt annet åpner Hjem.
+// #2256 PR 4: et trykk på et spillvarsel åpner spillet, et ligavarsel ligaen (#2638), alt annet åpner Hjem.
 import { pushNotificationId, pushTarget, pushUrl } from './pushRoute';
 
 const GAME = '0f8e6c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b';
@@ -54,6 +54,32 @@ describe('pushTarget', () => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });
     },
   );
+});
+
+// #2638: begge ligavarslene (runden er åpen, fristen nærmer seg) peker på
+// ligasiden, og trykket åpner ligaen i appen.
+describe('ligavarslene', () => {
+  const LEAGUE = '7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5';
+
+  it.each([
+    [`/liga/${LEAGUE}`],
+    [`/no/liga/${LEAGUE}`],
+    [`/liga/${LEAGUE}?varsel=${NOTE}`],
+    [`/liga/${LEAGUE}/runde/r1/spill`],
+  ])('%s åpner ligaen', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'League', params: { leagueId: LEAGUE } });
+  });
+
+  it.each([['/liga/'], [`/admin/liga/${LEAGUE}`], [`/klubber/k1/liga/${LEAGUE}`], ['/liga/%E0%A4%A']])(
+    '%s åpner Hjem',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'Home' });
+    },
+  );
+
+  it('markøren leses også fra en ligalenke', () => {
+    expect(pushNotificationId(`/liga/${LEAGUE}?varsel=${NOTE}`)).toBe(NOTE);
+  });
 });
 
 // #2201 PR 2: serveren legger `?varsel=<id>` på lenka, så trykket kan merke
