@@ -75,3 +75,50 @@ export function scrambleTeamsLineup(mode: GameMode, count: number, size: number)
     ? { kind: 'sides', perSide: size }
     : { kind: 'teams', teams: split.length, size };
 }
+
+/** The keys under `wizard.formatGrid.lineup` the line-up text reads. */
+export type LineupTextKey =
+  | 'sides'
+  | 'teams'
+  | 'unevenTeams'
+  | 'teamSizesTwo'
+  | 'teamSizesRange'
+  | 'wolf'
+  | 'players';
+
+/** A translator scoped to `wizard.formatGrid.lineup`. */
+export type LineupTranslator = (key: LineupTextKey, values: Record<string, number>) => string;
+
+/**
+ * The line-up as text: «2 mot 2», «3 lag à 2», «2 eller 4 per lag». The
+ * wizard reads it through `useLineupText`; the format helper on /spillformater
+ * (#2328) calls it on the server, so the two always say the same.
+ */
+export function formatLineupText(t: LineupTranslator, lineup: FormatLineup): string {
+  switch (lineup.kind) {
+    case 'sides':
+      return t('sides', { count: lineup.perSide });
+    case 'teams':
+      return t('teams', { teams: lineup.teams, size: lineup.size });
+    case 'unevenTeams':
+      return t('unevenTeams', {
+        full: lineup.full,
+        size: lineup.size,
+        short: lineup.short,
+        shortSize: lineup.size - 1,
+      });
+    case 'teamSizes':
+      if (lineup.sizes.length === 2) {
+        return t('teamSizesTwo', { first: lineup.sizes[0], second: lineup.sizes[1] });
+      }
+      return t('teamSizesRange', {
+        min: Math.min(...lineup.sizes),
+        max: Math.max(...lineup.sizes),
+      });
+    case 'wolf':
+      return t('wolf', { opponents: lineup.opponents });
+    case 'pot':
+    case 'solo':
+      return t('players', { count: lineup.players });
+  }
+}
