@@ -9,9 +9,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { LeagueResult } from '../data/league';
 import type { ScreenProps } from '../navigation';
 import { leagueRound, leagueView } from '../test/leagueFixtures';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import { League } from './League';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/league', () => ({
   fetchLeague: jest.fn(async () => mockResults.shift() ?? mockLast),
 }));
@@ -69,6 +71,11 @@ describe('tegning 2: øvre del', () => {
     );
     expect(screen.getByTestId('sim-setting-overridden')).toBeTruthy();
     expect(screen.getByTestId('sim-setting-tee')).toHaveTextContent('TeeGul');
+  });
+
+  it('#2638: åpner du ligaen, er varslene om rundene i den lest', async () => {
+    await renderLeague();
+    expect(useMarkVisitRead).toHaveBeenCalledWith('league', 'liga-vinter');
   });
 
   it('en vanlig liga har ikke innstillingskortet', async () => {

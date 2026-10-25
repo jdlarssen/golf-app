@@ -23,6 +23,7 @@ import { StandingsTable } from '../components/league/StandingsTable';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchLeague, type LeagueLoadFailure } from '../data/league';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import {
   LEAGUE_TEXT,
   formatLine,
@@ -40,6 +41,8 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { leagueId } = route.params;
+  // #2638: varslene om at en runde er åpen eller stenger snart, lenker hit.
+  useMarkVisitRead('league', leagueId);
   const [view, setView] = useState<AppLeagueView | null>(null);
   const [failure, setFailure] = useState<LeagueLoadFailure | null>(null);
   const [loading, setLoading] = useState(false);
