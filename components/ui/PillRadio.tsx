@@ -13,6 +13,7 @@ export function PillRadio({
   checked,
   onChange,
   disabled = false,
+  sizeClassName = 'px-3.5',
   children,
 }: {
   /** Left out when a hidden mirror carries the value instead. */
@@ -21,11 +22,16 @@ export function PillRadio({
   checked: boolean;
   onChange: () => void;
   disabled?: boolean;
+  /**
+   * The pill's horizontal padding and width. The format helper's count pills
+   * (#2328) are 52 px wide at least, with 12 px padding.
+   */
+  sizeClassName?: string;
   children: ReactNode;
 }) {
   return (
     <label
-      className={`inline-flex h-11 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full px-3.5 font-sans text-sm font-semibold tabular-nums transition-colors duration-150 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${
+      className={`inline-flex h-11 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full ${sizeClassName} font-sans text-sm font-semibold tabular-nums transition-colors duration-150 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${
         checked
           ? 'bg-primary text-white dark:text-bg'
           : 'border border-border bg-surface text-text hover:bg-primary-soft'

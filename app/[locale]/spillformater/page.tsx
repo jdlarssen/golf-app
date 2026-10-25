@@ -4,9 +4,10 @@ import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { FormatGuideList } from '@/components/FormatGuideList';
+import { FormatHelper } from '@/components/FormatHelper';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
+import { DEFAULT_ANSWERS, buildFormatHelperViews } from '@/lib/formats/formatHelperViews';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { klubbhusBackHref } from '@/lib/url/klubbhusOrigin';
@@ -43,38 +44,85 @@ export async function generateMetadata({
 // Siden er offentlig og ferdigbygd (PPR). Bare tilbake-pila venter på
 // searchParams, bak sin egen Suspense: fra Klubbhuset (?kilde=klubbhuset)
 // går den dit, ellers til forsiden (#2487).
+//
+// #2328: øverst står formatvelgeren fra artboardet «Forslag: hvilket format
+// passer dere?» (kicker, tittel og tre spørsmål), og lista følger under
+// «Alle spillformer». Forslagene bygges her på serveren, så HTML-en viser
+// forvalget uten JavaScript, og nettleseren trenger verken veiviserens eller
+// oppslagsverkets meldinger (#2227).
 export default async function SpillformaterPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const t = await getTranslations('formatGuide');
-  const entries = await getFormatGuideEntries();
+  const [t, tHelper, tModes, tLineup, entries] = await Promise.all([
+    getTranslations('formatGuide'),
+    getTranslations('formatGuide.helper'),
+    getTranslations('modes'),
+    getTranslations('wizard.formatGrid.lineup'),
+    getFormatGuideEntries(),
+  ]);
+  const views = buildFormatHelperViews({
+    helper: (key, values) => tHelper(key as Parameters<typeof tHelper>[0], values),
+    modes: (key) => tModes(key as Parameters<typeof tModes>[0]),
+    lineup: (key, values) => tLineup(key, values),
+  });
 
   return (
     <AppShell>
-      <header className="mb-2 flex items-center justify-between gap-4">
+      <div className="mb-2 flex items-center">
         <Suspense fallback={<BackLink href="/">{t('listBackLabel')}</BackLink>}>
           <ListBackLink searchParams={searchParams} />
         </Suspense>
+      </div>
+
+      <header>
         <Kicker tone="accent">{t('listKicker')}</Kicker>
-        <span className="w-12" aria-hidden />
+        <h1 className="mt-1.5 font-serif text-[30px] font-medium leading-[1.1] text-text">
+          {tHelper('title')}
+        </h1>
+        <p className="mt-1.5 font-sans text-sm text-muted">{tHelper('lead')}</p>
       </header>
 
-      <PageHeader
-        title={t('listPageTitle')}
-        subtitle={t('listPageSubtitle')}
-      />
-
-      <FormatGuideList
-        entries={entries}
-        showSections
-        cardLabels={{
-          showRules: t('cardShowRules'),
-          hideRules: t('cardHideRules'),
-          readMore: t('cardReadMore'),
+      <FormatHelper
+        views={views}
+        initialAnswers={DEFAULT_ANSWERS}
+        allFormatsHref="#alle-spillformer"
+        labels={{
+          countLegend: tHelper('countLegend'),
+          levelLegend: tHelper('levelLegend'),
+          levelEven: tHelper('levelEven'),
+          levelUneven: tHelper('levelUneven'),
+          goalLegend: tHelper('goalLegend'),
+          goalCompete: tHelper('goalCompete'),
+          goalTeam: tHelper('goalTeam'),
+          goalStakes: tHelper('goalStakes'),
+          resultKicker: tHelper('resultKicker'),
+          create: tHelper('create'),
+          rules: tHelper('rules'),
+          seeAll: tHelper('seeAll', { count: entries.length }),
+          versus: tLineup('versus'),
         }}
       />
+
+      <section aria-labelledby="alle-spillformer" className="mt-10">
+        <h2
+          id="alle-spillformer"
+          className="scroll-mt-6 font-serif text-2xl font-medium leading-tight text-text"
+        >
+          {tHelper('allHeading')}
+        </h2>
+        <p className="mb-6 mt-1.5 text-sm text-muted">{t('listPageSubtitle')}</p>
+        <FormatGuideList
+          entries={entries}
+          showSections
+          cardLabels={{
+            showRules: t('cardShowRules'),
+            hideRules: t('cardHideRules'),
+            readMore: t('cardReadMore'),
+          }}
+        />
+      </section>
     </AppShell>
   );
 }
