@@ -207,11 +207,14 @@ export function EditOverview({
     block: startBlock && sectionForBlock(startBlock.reason) === section ? startBlock : null,
   }));
 
-  // The cron sweep starts the round at tee-off (`scheduledStartBodyAutoStart`).
-  // The artboard keeps the line when a row says what stops the start; that row
-  // is where the organiser sees it.
+  // The cron sweep starts the round at tee-off, unless something stops it. The
+  // line only promises what happens, so a start block hides it, as on the
+  // Sekretariat's start card (`scheduledStartBodyAutoStart`; orchestrator's
+  // decision 25.10, the artboard draws both).
   const autoStart =
-    iso && !state.teeOffInPast ? t('autoStart', formatTeeOffParts(new Date(iso), locale)) : null;
+    iso && !state.teeOffInPast && !startBlock
+      ? t('autoStart', formatTeeOffParts(new Date(iso), locale))
+      : null;
 
   return (
     // -mt-6: the artboard puts the title 32 px under the top bar's kicker;
