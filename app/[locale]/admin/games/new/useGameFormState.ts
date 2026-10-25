@@ -494,6 +494,31 @@ export function useGameFormState({
     setNameTouched(true);
   }, []);
 
+  // #2328: a format seeded without a team size (the ?format= deep link from
+  // /spillformater) starts on the size that fits the count, as a format picked
+  // on step 2 does (handleModeChange, #2435): Texas with 4 is two pairs, not
+  // one team of four. Revansje, drafts and the edit routes always send
+  // `team_size`, so it stands for them. The handicap percents below start from
+  // the same size.
+  const initialMode: GameMode = initialValues?.game_mode ?? 'best_ball';
+  const initialTeamSize: TeamSize =
+    initialValues?.team_size ??
+    (initialValues?.game_mode
+      ? // `as TeamSize`: the default or one of selectableTeamSizes (1–4, #2453).
+        (startTeamSize(
+          initialMode,
+          playerTarget({
+            gameMode: initialMode,
+            intent: initialIntent,
+            expectedPlayerCount:
+              initialExpectedPlayerCount === undefined
+                ? PLAYER_COUNT_DEFAULT
+                : (initialExpectedPlayerCount ?? undefined),
+          }),
+          defaultTeamSizeForMode(initialMode),
+        ) as TeamSize)
+      : defaultTeamSizeForMode(initialMode));
+
   /**
    * Maskin-inngangen: auto-navn-forslaget fra bane + tee-off. Setter verdien
    * UTEN å markere navnet som rørt, så forslaget fortsetter å følge bane og
@@ -560,8 +585,14 @@ export function useGameFormState({
   // snapshot from the DB. If the parent ever needs to push live updates,
   // reset via key prop instead.
   const initialAssignments = deriveAssignmentsFromInitial(initialValues);
+  // #2328: a wizard that mounts on kompis with no roster seeded (the ?format=
+  // deep link, ?intent=kompis) seeds the organiser, the same rule as setIntent
+  // (#1066). A restored draft or revansje always sends `players`, so they are
+  // left alone, and `players: []` counts as a choice.
+  const seedOrganiser =
+    initialIntent === 'kompis' && initialValues?.players === undefined && !!currentUserId;
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(
-    initialAssignments.selectedPlayerIds,
+    seedOrganiser ? [currentUserId] : initialAssignments.selectedPlayerIds,
   );
   // Team assignment is keyed by player id so it survives changes to the player
   // selection order. A missing entry means "not assigned to any team yet".
@@ -592,10 +623,7 @@ export function useGameFormState({
     initialValues?.texas_team_handicap_pct !== undefined &&
       initialValues.texas_team_handicap_pct !== ''
       ? Number(initialValues.texas_team_handicap_pct)
-      : defaultTexasHandicapPct(
-          initialValues?.team_size ??
-            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
-        ),
+      : defaultTexasHandicapPct(initialTeamSize),
   );
   // Ambrose (#284): lag-handicap-prosent. Standard Ambrose-formel:
   // combinedCH ÷ (2 × lagstørrelse) → 25 % for 2-mannslag, 12,5 % for
@@ -606,10 +634,7 @@ export function useGameFormState({
     initialValues?.ambrose_team_handicap_pct !== undefined &&
       initialValues.ambrose_team_handicap_pct !== ''
       ? Number(initialValues.ambrose_team_handicap_pct)
-      : ambroseDefaultPct(
-          initialValues?.team_size ??
-            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
-        ),
+      : ambroseDefaultPct(initialTeamSize),
   );
   // Florida Scramble (#283): lag-handicap-prosent. NGF-fasttabell:
   // 15 % for 3-mannslag, 10 % for 4-mannslag. Heltall (i motsetning til
@@ -619,10 +644,7 @@ export function useGameFormState({
     initialValues?.florida_team_handicap_pct !== undefined &&
       initialValues.florida_team_handicap_pct !== ''
       ? Number(initialValues.florida_team_handicap_pct)
-      : defaultFloridaHandicapPct(
-          initialValues?.team_size ??
-            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
-        ),
+      : defaultFloridaHandicapPct(initialTeamSize),
   );
   // Fourball matchplay (#217): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens fourball_allowance_pct via initialValues; ellers
@@ -816,11 +838,8 @@ export function useGameFormState({
   // `'best_ball'` for å speile pre-multi-mode-flyten; auto-fix av
   // lagstørrelse skjer i `handleModeChange` slik at ulovlige kombinasjoner
   // ikke kan oppstå.
-  const initialMode: GameMode = initialValues?.game_mode ?? 'best_ball';
   const [gameMode, setGameMode] = useState<GameMode>(initialMode);
-  const [teamSize, setTeamSize] = useState<TeamSize>(
-    initialValues?.team_size ?? defaultTeamSizeForMode(initialMode),
-  );
+  const [teamSize, setTeamSize] = useState<TeamSize>(initialTeamSize);
   // Lås når et publisert spill redigeres — backend mode-lock-guard har
   // siste ord, men UI-en speiler det for å unngå utilsiktet validation-error.
   const lockGameMode = initialValues?.lock_game_mode ?? false;
