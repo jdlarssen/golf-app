@@ -6,9 +6,9 @@
 // den fulle flighten, at et avslag vises med nettsidens ord, og at spillet
 // erstatter skjermen etter start.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { LeagueResult, LeagueStartResult } from '../data/league';
-import { startLeagueRound } from '../data/league';
+import { fetchLeague, startLeagueRound } from '../data/league';
 import type { ScreenProps } from '../navigation';
 import { leagueRound, leagueView, participant, PEOPLE } from '../test/leagueFixtures';
 import { LeagueRoundStart, knownRefusal } from './LeagueRoundStart';
@@ -174,13 +174,43 @@ describe('tegning 5b: avslag', () => {
 
 describe('knownRefusal', () => {
   const now = new Date();
-  it('vinduet først, så levert, i gang og banen', () => {
+  it('i kjernens rekkefølge: vinduet, banen, så levert og i gang', () => {
     expect([
-      knownRefusal(leagueRound(1, 3, { delivered: ['me'] }), 'me', now),
+      knownRefusal(leagueRound(1, 3, { delivered: ['me'], ready: false }), 'me', now),
       knownRefusal(leagueRound(1, -1, { delivered: ['me'], ready: false }), 'me', now),
+      knownRefusal(leagueRound(1, -1, { delivered: ['me'], inProgress: ['me'] }), 'me', now),
       knownRefusal(leagueRound(1, -1, { inProgress: ['me'] }), 'me', now),
-      knownRefusal(leagueRound(1, -1, { ready: false }), 'me', now),
       knownRefusal(leagueRound(1, -1), 'me', now),
-    ]).toEqual(['outside_window', 'already_played', 'flight_in_progress', 'round_not_ready', null]);
+    ]).toEqual(['outside_window', 'round_not_ready', 'already_played', 'flight_in_progress', null]);
+  });
+});
+
+describe('dra ned og skjermleseren', () => {
+  it('dra ned henter runden på nytt og tar bort et avslag', async () => {
+    mockStart = { ok: false, reason: 'co_player_locked' };
+    await renderStart();
+    await fireEvent.press(screen.getByTestId('round-start-player-sindre'));
+    await fireEvent.press(screen.getByTestId('round-start-submit'));
+    expect(screen.getByTestId('round-start-refusal')).toBeTruthy();
+
+    // Sindre har levert i mellomtiden: etter dra-ned er han låst og avslaget borte.
+    const view = leagueView();
+    view.rounds[2] = { ...view.rounds[2], delivered: [...view.rounds[2].delivered, 'sindre'] };
+    mockView = { ok: true, view };
+    const calls = (fetchLeague as jest.Mock).mock.calls.length;
+    await act(async () => {
+      screen.getByTestId('round-start-scroll').props.refreshControl.props.onRefresh();
+    });
+    expect((fetchLeague as jest.Mock).mock.calls.length).toBe(calls + 1);
+    expect(screen.queryByTestId('round-start-refusal')).toBeNull();
+    expect(screen.getByTestId('round-start-lock-sindre')).toHaveTextContent('Har levert');
+  });
+
+  it('medspillerraden leser navn, HCP og om spilleren er låst', async () => {
+    await renderStart();
+    expect([
+      screen.getByTestId('round-start-player-sindre').props.accessibilityLabel,
+      screen.getByTestId('round-start-player-martin').props.accessibilityLabel,
+    ]).toEqual(['Sindre, HCP 21,0', 'Martin, HCP 9,4, Har levert']);
   });
 });

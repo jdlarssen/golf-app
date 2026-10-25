@@ -126,7 +126,10 @@ function Action({ action }: { action: RoundAction }) {
         <View testID="league-play-offline">
           <View
             style={[styles.cta, styles.ctaOff, { backgroundColor: colors.primary }]}
+            accessible
             accessibilityRole="button"
+            accessibilityLabel={LEAGUE_TEXT.playRound}
+            accessibilityHint={LEAGUE_TEXT.needNetToStart}
             accessibilityState={{ disabled: true }}
           >
             <Text style={[styles.ctaText, { color: colors.onPrimary }]}>{LEAGUE_TEXT.playRound}</Text>

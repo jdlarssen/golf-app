@@ -469,6 +469,10 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     expect(screen.getByTestId('home-league-line-liga-vinter')).toHaveTextContent('Runde 3 · stenger tor. 23.59');
     expect(screen.getByTestId('home-league-played-liga-vinter')).toHaveTextContent('Ikke spilt');
     expect(screen.getByTestId('home-league-played-liga-onsdag')).toHaveTextContent('Har spilt');
+    // Skjermleseren får pillen med i radens etikett.
+    expect(screen.getByTestId('home-league-liga-vinter').props.accessibilityLabel).toBe(
+      'Vinterliga på Trackman. Runde 3 · stenger tor. 23.59. Ikke spilt',
+    );
 
     const order = testIdsInOrder();
     const sequence = ['home-next-start', 'home-leagues', 'home-scheduled', 'home-last-round'].map((id) =>
