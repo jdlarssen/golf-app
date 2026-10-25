@@ -187,9 +187,9 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 
 ## Generert snapshot — RLS / CHECK / triggere / SECURITY DEFINER
 
-**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-10-18.** Staging matcher prod på alt under.
+**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-10-25.** Staging matcher prod på alt under.
 
-**Totaler:** 44 tabeller · 114 CHECK-constraints · 28 triggere · 64 SECURITY DEFINER-funksjoner.
+**Totaler:** 44 tabeller · 120 CHECK-constraints · 31 triggere · 66 SECURITY DEFINER-funksjoner.
 
 ### RLS og policy-antall per tabell (alle 44 har RLS på)
 
@@ -244,13 +244,13 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 når tabellen (bevisst lockdown for admin-/agent-tabeller). ⚠️ RLS AV = RLS ikke
 aktivert (skal aldri skje på public-tabeller — undersøkes umiddelbart).
 
-### CHECK-constraints per tabell (114 totalt)
+### CHECK-constraints per tabell (120 totalt)
 
-apns_tokens 1 · bingo_bango_bongo_holes 1 · course_holes 5 · cup_lineup_sessions 2 · cup_lineup_slots 2 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 14 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · kavalkade_shares 2 · kavalkades 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · team_tee_shots 2 · tee_boxes 12 · tournament_participants 2 · tournament_plans 1 · tournament_side_awards 6 · tournaments 15 · users 2 · wolf_hole_choices 3
+apns_tokens 1 · bingo_bango_bongo_holes 1 · course_holes 5 · cup_lineup_sessions 2 · cup_lineup_slots 2 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 15 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · kavalkade_shares 2 · kavalkades 2 · league_rounds 4 · leagues 15 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · team_tee_shots 2 · tee_boxes 12 · tournament_participants 2 · tournament_plans 1 · tournament_side_awards 6 · tournaments 15 · users 2 · wolf_hole_choices 3
 
 Fulle definisjoner: kjør den kanoniske spørringen (docs/loops/dok-avstemmeren.md).
 
-### Triggere (28, ingen interne)
+### Triggere (31, ingen interne)
 
 - `ai_consents`: ai_consents_set_answered_at
 - `bingo_bango_bongo_holes`: bingo_bango_bongo_holes_set_updated_at
@@ -265,13 +265,15 @@ Fulle definisjoner: kjør den kanoniske spørringen (docs/loops/dok-avstemmeren.
 - `group_members`: guard_group_members_last_owner_delete
 - `invitations`: guard_invitations_self_update
 - `league_players`: guard_league_players_self_update
+- `league_rounds`: guard_league_rounds_frozen_default_insert, guard_league_rounds_sim_settings_lock
+- `leagues`: guard_leagues_locked_fields
 - `patsome_tee_starters`: patsome_tee_starters_set_updated_at
 - `scores`: guard_scores_finished_putts_only, guard_scores_self_update
 - `users`: guard_users_admin_delete, guard_users_self_update, users_record_handicap_history
 - `wolf_hole_choices`: wolf_hole_choices_set_updated_at
 
-### SECURITY DEFINER-funksjoner (64)
+### SECURITY DEFINER-funksjoner (66)
 
-accept_club_invitations · add_club_member_by_email · admin_create_club · admin_key_metrics · anonymize_user · befriend_inviter · can_manage_tournament · can_react_in_game · can_score_for · claim_apns_token · claim_open_registration_seat · claim_push_subscription · connect_via_friend_code · consume_admin_rate_limit · create_course_with_layout · decide_join_request · edit_product_update · email_is_in_auth_users · email_is_invited · email_is_registered · game_side_winners_active_winner_guard · green_pins_gate · guard_game_players_insert · guard_game_players_invite_eligibility · guard_game_players_score_differential · guard_game_players_self_update · guard_game_players_tee_shots · guard_games_competition_links · guard_games_finish_pipeline_at · guard_games_league_round_id · guard_group_join_requests_self_update · guard_group_members_last_owner_delete · guard_invitations_self_update · guard_league_players_self_update · guard_scores_finished_putts_only · guard_scores_self_update · guard_users_admin_delete · guard_users_self_update · handle_new_auth_user · incomplete_profile_ids · incomplete_profiles_for_ids · is_admin · is_game_creator_or_admin · is_group_admin · is_group_member · is_in_game · is_invite_eligible · is_participant_of_finished_tournament · is_sole_club_owner · join_club_league · league_group_id · leave_club_league · record_handicap_history · remove_friend · respond_friend_request · rls_auto_enable · roster_candidates · same_flight_or_solo · send_friend_request · send_friend_request_by_email · set_club_member_role · set_team_tee_shot_if_newer · team_tee_shot_shortfall · transfer_team_captaincy
+accept_club_invitations · add_club_member_by_email · admin_create_club · admin_key_metrics · anonymize_user · befriend_inviter · can_manage_tournament · can_react_in_game · can_score_for · claim_apns_token · claim_open_registration_seat · claim_push_subscription · connect_via_friend_code · consume_admin_rate_limit · create_course_with_layout · decide_join_request · edit_product_update · email_is_in_auth_users · email_is_invited · email_is_registered · game_side_winners_active_winner_guard · green_pins_gate · guard_game_players_insert · guard_game_players_invite_eligibility · guard_game_players_score_differential · guard_game_players_self_update · guard_game_players_tee_shots · guard_games_competition_links · guard_games_finish_pipeline_at · guard_games_league_round_id · guard_group_join_requests_self_update · guard_group_members_last_owner_delete · guard_invitations_self_update · guard_league_players_self_update · guard_league_rounds_sim_settings_lock · guard_leagues_locked_fields · guard_scores_finished_putts_only · guard_scores_self_update · guard_users_admin_delete · guard_users_self_update · handle_new_auth_user · incomplete_profile_ids · incomplete_profiles_for_ids · is_admin · is_game_creator_or_admin · is_group_admin · is_group_member · is_in_game · is_invite_eligible · is_participant_of_finished_tournament · is_sole_club_owner · join_club_league · league_group_id · leave_club_league · record_handicap_history · remove_friend · respond_friend_request · rls_auto_enable · roster_candidates · same_flight_or_solo · send_friend_request · send_friend_request_by_email · set_club_member_role · set_team_tee_shot_if_newer · team_tee_shot_shortfall · transfer_team_captaincy
 
 <!-- GENERERT-SEKSJON-SLUTT -->
