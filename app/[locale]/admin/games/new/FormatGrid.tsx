@@ -8,7 +8,7 @@ import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
 import { splitFormatsForCount } from '@/lib/wizard/formatRecommendation';
 import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 import { Kicker } from '@/components/ui/Kicker';
-import { FormatLineup, useLineupText } from './FormatLineup';
+import { FormatLineup, useLineupText } from '@/components/FormatLineup';
 
 type Props = {
   formats: FormatForIntent[];
