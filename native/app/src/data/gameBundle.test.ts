@@ -48,6 +48,8 @@ const GAME_ROW = {
   hcp_allowance_pct: 85,
   // #2255: Del-knappen på billetten; satt når arrangøren har slått på live-følging.
   spectate_token: 'tok-123',
+  // #2632: historien fra pressetribunen; null til runden er avsluttet og skrevet.
+  round_report: 'Første avsnitt.\nAndre avsnitt.',
   courses: {
     name: 'Losby',
     // Med vilje i feil rekkefølge: bundelen skal sortere hullene.
@@ -104,16 +106,40 @@ const PLAYER_ROWS = [
   },
 ];
 
-function riggFetch(): void {
+function riggFetch(gameOverrides: Record<string, unknown> = {}): void {
   const { queryStub, routeFrom } = mocks();
   routeFrom({
-    games: [queryStub({ data: GAME_ROW, error: null })],
+    games: [queryStub({ data: { ...GAME_ROW, ...gameOverrides }, error: null })],
     game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
   });
 }
 
 describe('gameBundle', () => {
   useFreshModules();
+
+  // #2632: ingen historie (null, tom eller bare mellomrom) leses som «ingen historie».
+  it.each([[null], [''], ['  \n ']])('round_report %j blir roundReport null', async (raw) => {
+    riggFetch({ round_report: raw });
+    const { refreshGameBundle } = bundleModule();
+
+    const fetched = await refreshGameBundle(GAME);
+
+    expect(fetched.game.roundReport).toBeNull();
+  });
+
+  it('#2632: round_report er med i select-lista', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const gamesQuery = queryStub({ data: GAME_ROW, error: null });
+    routeFrom({
+      games: [gamesQuery],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+    });
+    const { refreshGameBundle } = bundleModule();
+
+    await refreshGameBundle(GAME);
+
+    expect(String(stepArgs(gamesQuery, 'select')[0]![0])).toContain('round_report');
+  });
 
   it('henter, lagrer og leser tilbake den samme bundelen', async () => {
     riggFetch();
@@ -144,6 +170,7 @@ describe('gameBundle', () => {
       sideDisabledCategories: [],
       hcpAllowancePct: 85,
       spectateToken: 'tok-123',
+      roundReport: 'Første avsnitt.\nAndre avsnitt.',
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
