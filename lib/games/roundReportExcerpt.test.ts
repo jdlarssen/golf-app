@@ -19,6 +19,31 @@ describe('sentences', () => {
   it('does not split inside a number or a word', () => {
     expect(sentences('Ada tok 36.5 poeng.')).toEqual(['Ada tok 36.5 poeng.']);
   });
+
+  // Ordinals, dates and abbreviations end in a period but are followed by a
+  // lower-case word, so a sentence only ends before a capital or an opening quote.
+  it('keeps ordinals, dates and abbreviations inside the sentence', () => {
+    expect(sentences('Ada satte ballen på 18. green og vant. Bo tapte.')).toEqual([
+      'Ada satte ballen på 18. green og vant.',
+      'Bo tapte.',
+    ]);
+    expect(sentences('Det var ca. tre meter igjen. Så kom regnet.')).toEqual([
+      'Det var ca. tre meter igjen.',
+      'Så kom regnet.',
+    ]);
+    expect(sentences('Det skjedde 25. oktober. Ingen glemmer det.')).toEqual([
+      'Det skjedde 25. oktober.',
+      'Ingen glemmer det.',
+    ]);
+  });
+
+  it('starts a new sentence before an opening quote or a Norwegian capital', () => {
+    expect(sentences('Ada lo. «Aldri igjen», sa hun. Ørjan svarte.')).toEqual([
+      'Ada lo.',
+      '«Aldri igjen», sa hun.',
+      'Ørjan svarte.',
+    ]);
+  });
 });
 
 describe('reportQuote', () => {
@@ -42,7 +67,7 @@ describe('reportQuote', () => {
   });
 
   it('keeps a word that ends exactly at the cut', () => {
-    const s = `${'a'.repeat(9)} ${'b'.repeat(9)}. rest`;
+    const s = `${'a'.repeat(9)} ${'b'.repeat(9)}. Rest`;
     // max 20 → first sentence is 20 chars, fits as is
     expect(reportQuote(s, 20)).toBe(`${'a'.repeat(9)} ${'b'.repeat(9)}.`);
     // max 19 → the final word no longer fits whole
@@ -66,9 +91,9 @@ describe('reportStart', () => {
   });
 
   it('stops before the sentence that no longer fits', () => {
-    const a = 'a'.repeat(80) + '.';
-    const b = 'b'.repeat(70) + '.';
-    const c = 'c'.repeat(30) + '.';
+    const a = 'A' + 'a'.repeat(79) + '.';
+    const b = 'B' + 'b'.repeat(69) + '.';
+    const c = 'C' + 'c'.repeat(29) + '.';
     // a + b = 152 + space fits within 160; adding c would not
     expect(reportStart(`${a} ${b} ${c}`)).toBe(`${a} ${b}`);
   });

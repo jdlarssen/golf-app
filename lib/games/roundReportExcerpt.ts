@@ -5,11 +5,16 @@
 
 const DEFAULT_MAX = 160;
 
-/** Whitespace folded to single spaces, then split after `.`, `!` or `?`. */
+/**
+ * Whitespace folded to single spaces, then split after `.`, `!` or `?` when the
+ * next sentence starts with a capital or an opening quote. A period before a
+ * lower-case word is an ordinal, a date or an abbreviation ("18. green",
+ * "25. oktober", "ca. tre meter"), not a sentence end.
+ */
 export function sentences(report: string | null | undefined): string[] {
   const text = (report ?? '').replace(/\s+/g, ' ').trim();
   if (!text) return [];
-  return text.split(/(?<=[.!?])\s+/);
+  return text.split(/(?<=[.!?])\s+(?=[A-ZÆØÅ«"“])/);
 }
 
 // Cuts at the last space that leaves room for the ellipsis, so a word is never
