@@ -77,7 +77,9 @@ export default async function SpillformaterPage({
       </div>
 
       <header>
-        <Kicker tone="accent">{t('listKicker')}</Kicker>
+        <Kicker tone="accent" className="leading-[normal]">
+          {t('listKicker')}
+        </Kicker>
         {/* `text-wrap: wrap` over the global `pretty`, inline because that
             rule is unlayered and beats a utility: the artboard breaks
             «Hvilket format passer / dere?». */}
