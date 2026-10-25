@@ -8,7 +8,7 @@ import { formatLineup } from '@/lib/wizard/formatLineup';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { FormSection } from '@/components/ui/FormSection';
 import { choiceCardClass, ChoiceCardText, type ChoiceCardHeight } from '@/components/ui/ChoiceCard';
-import { useLineupText } from './FormatLineup';
+import { useLineupText } from '@/components/FormatLineup';
 
 /**
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi

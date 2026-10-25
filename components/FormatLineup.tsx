@@ -92,6 +92,12 @@ export function rowFigure(lineup: Lineup): LineupFigure {
       }
       return row([...rowDots(PAIR_X.slice(0, 2), SIDE_A), ...rowDots(PAIR_X.slice(2), SIDE_B)]);
     case 'teams':
+      // One team of three or four is the format helper's figure for a count
+      // range (#2328): the team at its size, evenly spaced. One pair stays
+      // the pair from the format cards.
+      if (lineup.teams === 1 && lineup.size > 2) {
+        return row(rowDots(ROW_X.slice(0, Math.min(lineup.size, 4)), TEAM));
+      }
       return row(rowDots(lineup.teams === 1 ? PAIR_X.slice(0, 2) : PAIR_X, TEAM));
     case 'unevenTeams':
     case 'teamSizes':

@@ -38,6 +38,7 @@ describe('FormatLineup', () => {
     { kind: 'sides', perSide: 2 },
     { kind: 'sides', perSide: 4 },
     { kind: 'teams', teams: 1, size: 2 },
+    { kind: 'teams', teams: 1, size: 4 },
     { kind: 'teams', teams: 3, size: 2 },
     { kind: 'teamSizes', sizes: [2, 4] },
   ];
@@ -56,6 +57,14 @@ describe('FormatLineup', () => {
   it.each(LINEUPS)('ingen prikker overlapper: %j', (lineup) => {
     expect(overlaps(rowFigure(lineup))).toBe(false);
     expect(overlaps(cardFigure(lineup))).toBe(false);
+  });
+
+  // #2328: the format helper's Texas for 5–12 has no count, so it draws one
+  // team at the default size, as the artboard does.
+  it.each([3, 4])('ett lag à %i: like mange skogsgrønne prikker', (size) => {
+    const figure = rowFigure({ kind: 'teams', teams: 1, size });
+    expect(figure.dots).toHaveLength(size);
+    for (const dot of figure.dots) expect(dot.color).toBe('var(--primary)');
   });
 
   it.each([2, 3, 4])('Wolf med %i motspillere: ingen prikk til venstre for 31.5', (opponents) => {
