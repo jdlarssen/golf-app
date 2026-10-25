@@ -126,8 +126,10 @@ const styles = StyleSheet.create({
     minHeight: TAP,
     paddingHorizontal: 16,
   },
-  summaryText: { ...interLine(13, 18), fontFamily: FONTS.sansMedium },
-  chevron: { marginLeft: 'auto' },
+  // Teksten gir etter (to linjer) før merket og pila: pila skal alltid stå
+  // inne i kortet, også med «Endret denne runden» på en smal skjerm.
+  summaryText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sansMedium, flexShrink: 1 },
+  chevron: { marginLeft: 'auto', flexShrink: 0 },
   // Fanenavnet over gruppa: små sperrede versaler, som tegningenes `.who-k`.
   group: {
     ...interLine(10, 12),
@@ -155,6 +157,7 @@ const styles = StyleSheet.create({
   value: { ...interLine(15, 20), textAlign: 'right', flexShrink: 1 },
   // `.tag`: 20 høy, 8 inn, 1 pt gull kant, 11 pt halvfet.
   tag: {
+    flexShrink: 0,
     height: 20,
     paddingHorizontal: 8,
     borderRadius: 999,
