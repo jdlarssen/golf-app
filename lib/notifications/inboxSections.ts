@@ -408,6 +408,18 @@ export type SettledInputs = {
   now?: number;
 };
 
+/** #2638: the id of the newest `league_round_closing` per round, read or not. */
+function newestClosingReminderByRound(rows: InboxRow[]): Map<string, string> {
+  const newest = new Map<string, InboxRow>();
+  for (const row of rows) {
+    if (row.kind !== 'league_round_closing') continue;
+    const { round_id } = row.payload as NotificationPayload<'league_round_closing'>;
+    const seen = newest.get(round_id);
+    if (!seen || Date.parse(row.created_at) > Date.parse(seen.created_at)) newest.set(round_id, row);
+  }
+  return new Map([...newest].map(([roundId, row]) => [roundId, row.id]));
+}
+
 /**
  * Unread action rows whose matter is already settled — a flightmate approved
  * the card, the request was answered or ran out or its round has started, the
@@ -418,6 +430,7 @@ export type SettledInputs = {
  */
 export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): string[] {
   const settled: string[] = [];
+  const newestClosing = newestClosingReminderByRound(rows);
   for (const row of rows) {
     if (row.read_at != null) continue;
     switch (row.kind) {
@@ -476,10 +489,14 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
         break;
       }
       // #2638: both ask the player to play the round; a closed round cannot be played.
+      // An extended deadline sends a new reminder, and the older one names a
+      // deadline that no longer holds.
       case 'league_round_open':
       case 'league_round_closing': {
         const p = row.payload as NotificationPayload<'league_round_open'>;
-        if (inputs.now != null && Date.parse(p.closes_at) <= inputs.now) settled.push(row.id);
+        const closed = inputs.now != null && Date.parse(p.closes_at) <= inputs.now;
+        const superseded = row.kind === 'league_round_closing' && newestClosing.get(p.round_id) !== row.id;
+        if (closed || superseded) settled.push(row.id);
         break;
       }
       default:
