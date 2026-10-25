@@ -134,7 +134,7 @@ export function FormatHelper({
             </p>
             <p className="font-sans text-[13px] leading-[normal] text-muted">{view.meta}</p>
           </div>
-          <FormatLineupFigure lineup={view.lineup} variant="card" versusLabel={labels.versus} />
+          <FormatLineupFigure lineup={view.lineup} variant="helper" versusLabel={labels.versus} />
         </div>
         {view.note && (
           <p data-testid="format-helper-note" className="font-sans text-[13px] leading-[1.45] text-muted">

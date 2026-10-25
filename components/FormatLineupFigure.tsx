@@ -26,6 +26,8 @@ export type LineupFigure = {
   dots: Dot[];
   label?: Label;
   pill?: { width: number };
+  /** Drawn inside a group with this transform (the helper's scaled row figure). */
+  transform?: string;
 };
 
 const ROW_W = 44;
@@ -146,16 +148,55 @@ export function cardFigure(lineup: Lineup): LineupFigure {
   return { ...small, width: (ROW_W * CARD_H) / ROW_H, height: CARD_H };
 }
 
+const HELPER_W = 64;
+const HELPER_H = 30;
+const HELPER_CY = 15;
+const HELPER_R = 7;
+/** The artboard «Forslag: hvilket format passer dere?» draws four dots here. */
+const HELPER_X = [8, 24, 40, 56];
+/** The artboard's dot pitch (16) over the row figure's (11). */
+const HELPER_SCALE = 16 / 11;
+
+/**
+ * The 64 × 30 figure on the format helper's result card (#2328). A row of
+ * equal dots (one team of three or four, players on their own) is the
+ * artboard's figure; every other figure is the row figure scaled to the
+ * artboard's dot pitch, its first dot and middle line on the artboard's.
+ */
+export function helperFigure(lineup: Lineup): LineupFigure {
+  const box = { width: HELPER_W, height: HELPER_H, viewBox: `0 0 ${HELPER_W} ${HELPER_H}` };
+  const equalRow =
+    lineup.kind === 'solo'
+      ? { count: lineup.players, color: SOLO }
+      : lineup.kind === 'teams' && lineup.teams === 1 && lineup.size > 2
+        ? { count: lineup.size, color: TEAM }
+        : null;
+  if (equalRow) {
+    const xs = HELPER_X.slice(0, Math.min(equalRow.count, HELPER_X.length));
+    return { ...box, dots: xs.map((cx) => ({ cx, cy: HELPER_CY, r: HELPER_R, color: equalRow.color })) };
+  }
+  return {
+    ...rowFigure(lineup),
+    ...box,
+    transform: `translate(${HELPER_X[0]} ${HELPER_CY}) scale(${HELPER_SCALE}) translate(${-ROW_X[0]} ${-ROW_CY})`,
+  };
+}
+
 export function FormatLineupFigure({
   lineup,
   variant,
   versusLabel,
 }: {
   lineup: Lineup;
-  variant: 'card' | 'row';
+  variant: 'card' | 'row' | 'helper';
   versusLabel: string;
 }) {
-  const figure = variant === 'card' ? cardFigure(lineup) : rowFigure(lineup);
+  const figure =
+    variant === 'card'
+      ? cardFigure(lineup)
+      : variant === 'helper'
+        ? helperFigure(lineup)
+        : rowFigure(lineup);
   return (
     <svg
       aria-hidden="true"
@@ -165,34 +206,36 @@ export function FormatLineupFigure({
       className="shrink-0"
       data-testid="format-lineup"
     >
-      {figure.dots.map((d, i) => (
-        <circle key={i} cx={d.cx} cy={d.cy} r={d.r} style={{ fill: d.color }} />
-      ))}
-      {figure.label && (
-        <text
-          x={figure.label.x}
-          y={figure.label.y}
-          textAnchor={figure.label.anchor}
-          fontSize={figure.label.size}
-          fontWeight={600}
-          className="font-sans"
-          style={{ fill: 'var(--text-muted)' }}
-        >
-          {versusLabel}
-        </text>
-      )}
-      {figure.pill && (
-        <rect
-          x={1}
-          y={1}
-          width={figure.pill.width}
-          height={22}
-          rx={11}
-          fill="none"
-          strokeWidth={1.5}
-          style={{ stroke: 'var(--accent)' }}
-        />
-      )}
+      <g transform={figure.transform}>
+        {figure.dots.map((d, i) => (
+          <circle key={i} cx={d.cx} cy={d.cy} r={d.r} style={{ fill: d.color }} />
+        ))}
+        {figure.label && (
+          <text
+            x={figure.label.x}
+            y={figure.label.y}
+            textAnchor={figure.label.anchor}
+            fontSize={figure.label.size}
+            fontWeight={600}
+            className="font-sans"
+            style={{ fill: 'var(--text-muted)' }}
+          >
+            {versusLabel}
+          </text>
+        )}
+        {figure.pill && (
+          <rect
+            x={1}
+            y={1}
+            width={figure.pill.width}
+            height={22}
+            rx={11}
+            fill="none"
+            strokeWidth={1.5}
+            style={{ stroke: 'var(--accent)' }}
+          />
+        )}
+      </g>
     </svg>
   );
 }
