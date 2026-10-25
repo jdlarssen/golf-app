@@ -124,7 +124,7 @@ export function FormatHelper({
         data-testid="format-helper-result"
         className="-mx-1 mt-5 flex flex-col gap-2.5 rounded-[18px] border-2 border-primary bg-surface p-4"
       >
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+        <p className="font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-primary">
           {labels.resultKicker}
         </p>
         <div className="flex items-start justify-between gap-2.5">
@@ -154,7 +154,8 @@ export function FormatHelper({
             href={view.rulesHref}
             aria-label={view.rulesAriaLabel}
             data-testid="format-helper-rules"
-            className="flex h-12 shrink-0 items-center rounded-full border border-border px-3.5 font-sans text-sm font-semibold leading-[normal] text-primary no-underline"
+            // 50 px: the artboard's link is 48 px content-box plus its border.
+            className="flex h-[50px] shrink-0 items-center rounded-full border border-border px-3.5 font-sans text-sm font-semibold leading-[normal] text-primary no-underline"
           >
             {labels.rules}
           </SmartLink>
