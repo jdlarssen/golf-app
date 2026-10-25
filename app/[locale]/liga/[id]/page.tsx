@@ -79,6 +79,15 @@ const WINDOW_CHIP_STYLES: Record<
   },
 };
 
+/**
+ * #2638: the league round's two messages (open, closing) link here, so
+ * opening the league reads them.
+ */
+function readLeagueNoticesOnVisit(viewerId: string | null, leagueId: string) {
+  if (!viewerId) return;
+  after(() => markReadOnVisit({ userId: viewerId, surface: 'league', entityId: leagueId }));
+}
+
 export default async function LigaPublicPage({
   params,
   searchParams,
@@ -113,12 +122,8 @@ export default async function LigaPublicPage({
     currentUserId = user?.id ?? null;
   }
 
-  // #2638: the round's two messages link here, so opening the league reads
-  // them. Before the visibility gate, like every caller (`markReadOnVisit`).
-  if (currentUserId) {
-    const viewerId = currentUserId;
-    after(() => markReadOnVisit({ userId: viewerId, surface: 'league', entityId: id }));
-  }
+  // Before the visibility gate, like every caller of `markReadOnVisit`.
+  readLeagueNoticesOnVisit(currentUserId, id);
 
   // #480: en klubb-scopet liga er kun synlig for klubbens medlemmer, deltakerne
   // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
