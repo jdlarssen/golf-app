@@ -16,14 +16,23 @@ import type { LeagueSnapshot } from '@/lib/league/getLigaSnapshot';
 const LEAGUE_ID = '44444444-4444-4444-8444-444444444444';
 const ME = '11111111-1111-4111-8111-111111111111';
 const OUTSIDER = '99999999-9999-4999-8999-999999999999';
+const OTHER = '22222222-2222-4222-8222-222222222222';
 
 /** Portens to lesinger med admin-klienten: ligaens klubb og kallerens egen deltakerrad. */
 let leagueRow: { group_id: string | null } | null = null;
 let leagueError: { message: string } | null = null;
 let myRow: { accepted_at: string | null } | null = null;
 
+/** Deltakernes fulle navn og HCP: bare for en kaller som selv er deltaker. */
+let detailRows: Array<{ user_id: string; users: { name: string | null; hcp_index: number | null } | null }> = [];
+let detailError: { message: string } | null = null;
+
+/** Lesingen av navn og HCP, skilt fra portens deltakerrad på kolonnene. */
+const isDetailsRead = (op: QueryOp) => op.table === 'league_players' && (op.columns ?? '').includes('hcp_index');
+
 function respond(op: QueryOp): QueryResponse {
   if (op.table === 'leagues') return { data: leagueRow, error: leagueError };
+  if (isDetailsRead(op)) return { data: detailRows, error: detailError };
   if (op.table === 'league_players') return { data: myRow };
   throw new Error(`ruta leser ikke ${op.table} med admin-klienten`);
 }
@@ -88,7 +97,10 @@ function clubSnapshot(groupId: string | null): LeagueSnapshot {
       sim_settings: null,
     },
     rounds: [],
-    participants: [{ userId: ME, name: 'Meg', nickname: null, acceptedAt: null, hasPlayed: false }],
+    participants: [
+      { userId: ME, name: 'Meg', nickname: null, acceptedAt: null, hasPlayed: false },
+      { userId: OTHER, name: 'Martin Lie', nickname: 'Martin', acceptedAt: null, hasPlayed: true },
+    ],
     standings: { net: { rows: [] }, gross: null },
   };
 }
@@ -119,6 +131,12 @@ beforeEach(() => {
   leagueRow = { group_id: 'club-1' };
   leagueError = null;
   myRow = null;
+  detailRows = [
+    { user_id: ME, users: { name: 'Meg Selv', hcp_index: 12.6 } },
+    { user_id: OTHER, users: { name: 'Martin Lie', hcp_index: 9.4 } },
+  ];
+  detailError = null;
+  fake.reset();
   callerReads({ group_members: [{ data: null }], users: [{ data: { is_admin: false } }] });
 });
 
@@ -180,6 +198,58 @@ describe('GET /api/liga/[id]', () => {
       { status: 404, body: { error: 'not_found' } },
       { status: 404, body: { error: 'not_found' } },
     ]);
+  });
+
+  it('a participant also gets the full name and HCP of the league participants', async () => {
+    asParticipant();
+    const res = await call('token-meg');
+    const read = fake.ops.find(isDetailsRead);
+    expect({
+      status: res.status,
+      participants: res.body.participants,
+      columns: read?.columns,
+      filters: read?.filters,
+    }).toEqual({
+      status: 200,
+      participants: [
+        { userId: ME, name: 'Meg', fullName: 'Meg Selv', hcpIndex: 12.6 },
+        { userId: OTHER, name: 'Martin', fullName: 'Martin Lie', hcpIndex: 9.4 },
+      ],
+      columns: 'user_id, users!league_players_user_id_fkey(name, hcp_index)',
+      filters: [{ op: 'eq', column: 'league_id', value: LEAGUE_ID }],
+    });
+  });
+
+  it('a club member who is not a participant sees the league, but never the full names or HCP', async () => {
+    callerReads({ group_members: [{ data: { user_id: OUTSIDER } }], users: [{ data: { is_admin: false } }] });
+    const res = await call('token-fremmed');
+    expect({
+      status: res.status,
+      participants: res.body.participants,
+      detailsRead: fake.ops.some(isDetailsRead),
+    }).toEqual({
+      status: 200,
+      participants: [
+        { userId: ME, name: 'Meg', fullName: null, hcpIndex: null },
+        { userId: OTHER, name: 'Martin', fullName: null, hcpIndex: null },
+      ],
+      detailsRead: false,
+    });
+  });
+
+  it('someone outside a club league gets 404, and the full names and HCP are never read', async () => {
+    const res = await call('token-fremmed');
+    expect({ ...res, detailsRead: fake.ops.some(isDetailsRead) }).toEqual({
+      status: 404,
+      body: { error: 'not_found' },
+      detailsRead: false,
+    });
+  });
+
+  it('a failed read of the full names and HCP is 500 load_failed', async () => {
+    asParticipant();
+    detailError = { message: 'boom' };
+    expect(await call('token-meg')).toEqual({ status: 500, body: { error: 'load_failed' } });
   });
 
   it('a failed load is 500 load_failed', async () => {

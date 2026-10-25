@@ -118,9 +118,9 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
         },
       ],
       participants: [
-        { userId: 'A', name: 'Anne' },
-        { userId: 'B', name: 'Bjørn' },
-        { userId: 'C', name: null },
+        { userId: 'A', name: 'Anne', fullName: null, hcpIndex: null },
+        { userId: 'B', name: 'Bjørn', fullName: null, hcpIndex: null },
+        { userId: 'C', name: null, fullName: null, hcpIndex: null },
       ],
       standings: [
         {
@@ -138,6 +138,18 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
 
   it('a gross league sends the gross table', () => {
     expect(buildAppLeagueView(snapshot('gross'), 'A').standings[0].value).toBe(30);
+  });
+
+  it('the full name and HCP come only from the details a participant gets', () => {
+    const details = new Map([
+      ['A', { fullName: 'Anne Admin', hcpIndex: 9.4 }],
+      ['B', { fullName: 'Bjørn', hcpIndex: null }],
+    ]);
+    expect(buildAppLeagueView(snapshot('net'), 'B', details).participants).toEqual([
+      { userId: 'A', name: 'Anne', fullName: 'Anne Admin', hcpIndex: 9.4 },
+      { userId: 'B', name: 'Bjørn', fullName: 'Bjørn', hcpIndex: null },
+      { userId: 'C', name: null, fullName: null, hcpIndex: null },
+    ]);
   });
 
   it('a viewer who is not in the league is marked so', () => {
