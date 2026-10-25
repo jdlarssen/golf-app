@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { FormatLineup, cardFigure, rowFigure, type LineupFigure } from './FormatLineup';
+import { FormatLineup } from './FormatLineup';
+import { cardFigure, rowFigure, type LineupFigure } from './FormatLineupFigure';
 import type { FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 
 // #2260: the dot figures on the format cards. One render test (Type C), plus
