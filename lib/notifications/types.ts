@@ -127,9 +127,13 @@ const scorecardReopenedSchema = z.object({
   actor_name: z.string().min(1).nullable().optional(),
 });
 
+// report_start (#2632): the start of the AI round report, for the push text
+// only. Optional — most rounds have no report. Capped under the push body
+// limit; the writer (`reportStart`) keeps it at 160.
 const gameFinishedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
+  report_start: z.string().min(1).max(200).optional(),
 });
 
 // game_reopened: en arrangør flippet et ferdig spill tilbake til aktivt

@@ -951,7 +951,7 @@ describe('endGameCore — post-flip tail', () => {
 
     expect(notifyPlayersGameFinishedMock).toHaveBeenCalledWith(
       [PLAYER_A, PLAYER_B, withdrawn],
-      { id: GAME_ID, name: 'Vinter-cup' },
+      { id: GAME_ID, name: 'Vinter-cup', reportStart: null },
       'endGame',
     );
   });

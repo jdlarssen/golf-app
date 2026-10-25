@@ -44,7 +44,7 @@ export function partitionByAppPresence<T extends { user_id: string }>(
  */
 export async function notifyPlayersGameFinished(
   players: Array<{ user_id: string }>,
-  game: { id: string; name: string },
+  game: { id: string; name: string; reportStart?: string | null },
   logPrefix: string,
 ): Promise<Map<string, boolean>> {
   const results = await Promise.allSettled(
@@ -55,6 +55,9 @@ export async function notifyPlayersGameFinished(
         payload: {
           game_id: game.id,
           game_name: game.name,
+          // #2632: only present when a round report exists, so the payload is
+          // unchanged for rounds without one.
+          ...(typeof game.reportStart === 'string' && { report_start: game.reportStart }),
         },
       }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
     ),

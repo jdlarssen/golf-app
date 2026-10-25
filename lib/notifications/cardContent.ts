@@ -118,7 +118,14 @@ export function buildNotificationText(
       const p = payload as NotificationPayload<'game_finished'>;
       return {
         title: t('kinds.gameFinished.title'),
-        detail: t('kinds.gameFinished.detail', { gameName: p.game_name }),
+        // #2632: the start of the round report, when there is one. Push-only in
+        // practice — the web inbox does not render `detail` for this kind.
+        detail: p.report_start
+          ? t('kinds.gameFinished.detailWithReport', {
+              gameName: p.game_name,
+              reportStart: p.report_start,
+            })
+          : t('kinds.gameFinished.detail', { gameName: p.game_name }),
       };
     }
     case 'game_reopened': {

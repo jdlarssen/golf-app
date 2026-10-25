@@ -12,6 +12,20 @@ describe('parseNotificationPayload', () => {
     expect(result.payload.game_name).toBe('Hauger Open');
   });
 
+  it('#2632: game_finished tar report_start, men ikke over 200 tegn', () => {
+    const base = {
+      game_id: '11111111-1111-1111-1111-111111111111',
+      game_name: 'Hauger Open',
+    };
+    expect(parseNotificationPayload('game_finished', base).payload).toEqual(base);
+    expect(
+      parseNotificationPayload('game_finished', { ...base, report_start: 'x'.repeat(200) }).payload,
+    ).toHaveProperty('report_start');
+    expect(() =>
+      parseNotificationPayload('game_finished', { ...base, report_start: 'x'.repeat(201) }),
+    ).toThrow();
+  });
+
   it('aviser invite-payload uten game_id', () => {
     expect(() =>
       parseNotificationPayload('invite', { game_name: 'X', invited_by_name: 'Y' }),

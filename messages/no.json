@@ -105,7 +105,8 @@
       },
       "gameFinished": {
         "title": "Resultatet er klart",
-        "detail": "{gameName}"
+        "detail": "{gameName}",
+        "detailWithReport": "{gameName} · {reportStart}"
       },
       "gameReopened": {
         "title": "Runden er åpnet igjen",

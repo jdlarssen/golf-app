@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { reportStart } from './roundReportExcerpt';
 
 /**
  * Unit tests for `runFinishPipeline` — the server-owned finish tail (#1856).
@@ -425,8 +426,31 @@ describe('runFinishPipeline — the tail', () => {
 
     expect(notifyPlayersGameFinishedMock).toHaveBeenCalledWith(
       roster,
-      { id: GAME_ID, name: 'Vinter-cup' },
+      { id: GAME_ID, name: 'Vinter-cup', reportStart: null },
       'finishPipeline',
+    );
+  });
+
+  it('#2632: hands the start of the round report to the game_finished notice', async () => {
+    generateAndPersistRoundReportMock.mockResolvedValue({
+      status: 'ok',
+      report: 'Ada tok den på 18. Bo svarte ikke.',
+    });
+    const client = buildSupabaseMock([]);
+
+    await runFinishPipeline(client as never, input());
+
+    expect(notifyPlayersGameFinishedMock).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        id: GAME_ID,
+        name: 'Vinter-cup',
+        reportStart: reportStart('Ada tok den på 18. Bo svarte ikke.'),
+      },
+      'finishPipeline',
+    );
+    expect(reportStart('Ada tok den på 18. Bo svarte ikke.')).toBe(
+      'Ada tok den på 18. Bo svarte ikke.',
     );
   });
 
@@ -501,7 +525,7 @@ describe('runFinishPipelineForGame', () => {
     );
     expect(notifyPlayersGameFinishedMock).toHaveBeenCalledWith(
       [{ user_id: 'user-a' }, { user_id: 'user-b' }],
-      { id: GAME_ID, name: 'Vinter-cup' },
+      { id: GAME_ID, name: 'Vinter-cup', reportStart: null },
       'finishPipeline',
     );
   });

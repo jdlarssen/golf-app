@@ -48,6 +48,30 @@ describe('buildNotificationText', () => {
     });
   });
 
+  // #2632: the start of the round report rides in the payload and shows in the
+  // push text; without it the text is what it always was. Web and app agree.
+  it('#2632: game_finished with report_start uses the detailWithReport key', () => {
+    const payload = {
+      game_id: 'g',
+      game_name: 'Sommercup',
+      report_start: 'Ada tok den på 18.',
+    } as NotificationPayload;
+    const expected = {
+      title: 'kinds.gameFinished.title',
+      detail:
+        'kinds.gameFinished.detailWithReport|{"gameName":"Sommercup","reportStart":"Ada tok den på 18."}',
+    };
+    expect(buildNotificationText('game_finished', payload, t)).toEqual(expected);
+    expect(buildNotificationText('game_finished', payload, t, { surface: 'app' })).toEqual(expected);
+  });
+
+  it('#2632: game_finished without report_start keeps the plain detail', () => {
+    const payload = { game_id: 'g', game_name: 'Sommercup' } as NotificationPayload;
+    expect(buildNotificationText('game_finished', payload, t).detail).toBe(
+      'kinds.gameFinished.detail|{"gameName":"Sommercup"}',
+    );
+  });
+
   // Every kind but the entry-fee reminder reads the same for the app. The
   // fixture has one payload per kind, so a new kind is covered by itself.
   it.each(
