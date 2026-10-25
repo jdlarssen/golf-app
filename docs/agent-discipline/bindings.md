@@ -40,6 +40,11 @@ target.
   until it has `staging-verified` or `needs-manual-qa` (#1303). The escape hatch is
   `needs-manual-qa` plus a PR comment with the reason — also when the owner asks for a
   merge without a staging test («eier ba om merge uten staging-test»).
+- Long-running processes (Metro, `next dev`/`next start`, `expo start`) start only through
+  the Bash tool's `run_in_background: true` and stop with TaskStop. bash-guard denies `&`,
+  `nohup`, `setsid` and `disown`: a detached process outlives the session, nobody but the
+  owner may kill it, and twice on 2026-10-25 the owner had to. Short parallel jobs that
+  end with `wait` pass.
 - `expectAffected`/`expectOne` (`lib/supabase/affectedRows.ts`) partially enforce I3 for
   mutations.
 
