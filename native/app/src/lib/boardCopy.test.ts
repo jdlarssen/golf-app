@@ -8,6 +8,8 @@ import {
   BOARD_COMMON_TEXT,
   BOARD_TEAM_TEXT,
   BOARD_TEXT,
+  ROUND_REPORT_APP_TEXT,
+  ROUND_REPORT_TEXT,
   SIDE_PANEL_TEXT,
   STATE35_TEXT,
   WITHDRAWN_BOARD_TEXT,
@@ -49,6 +51,10 @@ describe('paritet med messages/no.json', () => {
     });
   });
 
+  it('overskriften over historien er leaderboard.roundReport.heading (#2632)', () => {
+    expect(ROUND_REPORT_TEXT).toStrictEqual({ heading: source.leaderboard.roundReport.heading });
+  });
+
   it('sideturneringens etiketter er panelets', () => {
     const rows: Record<string, string> = source.leaderboard.sideTournament.panel.rows;
     expect(SIDE_PANEL_TEXT).toStrictEqual({
@@ -60,6 +66,7 @@ describe('paritet med messages/no.json', () => {
   it.each([
     ['BOARD_APP_TEXT', BOARD_APP_TEXT],
     ['BOARD_TEAM_TEXT', BOARD_TEAM_TEXT],
+    ['ROUND_REPORT_APP_TEXT', ROUND_REPORT_APP_TEXT],
   ])('appens egne tekster (%s) er ingen av verdiene i leaderboard.board', (_name, block) => {
     const web = new Set(sourceLeaves.values());
     expect(Object.values(block).filter((value) => web.has(value))).toEqual([]);

@@ -166,3 +166,21 @@ export const BOARD_TEAM_TEXT = {
   srGross: '{total} slag brutto',
   srYourTeam: 'Dette er laget ditt',
 } as const;
+
+/**
+ * `leaderboard.roundReport` (#2632): overskriften over historien fra
+ * pressetribunen, tegn for tegn som på nettet. Paritetslåst i `boardCopy.test.ts`.
+ */
+export const ROUND_REPORT_TEXT = {
+  heading: 'Fra pressetribunen',
+} as const;
+
+/**
+ * Appens egne ord rundt historien (#2632): lenka under sitatet i båndet og
+ * linja nederst i kortet. Webben har ingen av dem, så testen holder dem ulike
+ * alle verdier i kilden.
+ */
+export const ROUND_REPORT_APP_TEXT = {
+  quoteLink: 'Les hele historien fra pressetribunen',
+  aiNote: 'Skrevet av AI ut fra slagene dere førte.',
+} as const;
