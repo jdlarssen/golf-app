@@ -75,6 +75,9 @@ const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> 
   // merkene står). Appen deler den i to skjermer; begge er historikken.
   'RoundDiary.tsx': { surface: 'history', entity: null },
   'RoundStats.tsx': { surface: 'history', entity: null },
+  // #2638: ligasiden, webbens /liga/[id]: varslene om at en runde er åpen
+  // eller stenger snart.
+  'League.tsx': { surface: 'league', entity: 'leagueId' },
 };
 
 describe('skjermene som merker', () => {
