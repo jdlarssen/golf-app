@@ -96,7 +96,7 @@ describe('EditOverview (#2322)', () => {
     expect(screen.queryByTestId('start-scheduled-game')).toBeNull();
   });
 
-  it('players without a flight: the amber line and the Startlista link on Spillere, and no autostart', () => {
+  it('players without a flight: the amber line and the Startlista link on Spillere', () => {
     renderOverview({
       ...NAV,
       startBlock: { reason: 'unassigned_flights', message: null, unassignedCount: 2 },
@@ -108,7 +108,8 @@ describe('EditOverview (#2322)', () => {
       'href',
       expect.stringContaining('/admin/games/game-1/startlista'),
     );
-    expect(screen.queryByTestId('edit-overview-autostart')).toBeNull();
+    // As the artboard draws it: the autostart line stays, the row says why.
+    expect(screen.getByTestId('edit-overview-autostart')).toBeInTheDocument();
     expect(screen.getByTestId('start-scheduled-game')).toHaveTextContent('Start runden nå →');
   });
 

@@ -201,7 +201,9 @@ export default async function CreatorEditGamePage({
         />
         {view !== 'overview' && <PageHeader title={title} />}
         {(errorMessage || saved) && (
-          <div className="mb-4 space-y-2">
+          // The overview pulls its title 24 px up under the top bar
+          // (EditOverview), so the banner keeps 16 px to it with mb-10.
+          <div className={`${view === 'overview' ? 'mb-10' : 'mb-4'} space-y-2`}>
             {errorMessage && (
               <Banner tone="error" testId="edit-error-banner">
                 {errorMessage}

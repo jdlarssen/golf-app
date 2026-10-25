@@ -85,10 +85,11 @@ const STATUS_FOR_SECTION: Partial<Record<EditSection, ReadyRowKey>> = {
   spillere: 'players',
 };
 
-const MARK: Record<'ok' | 'block', { glyph: string; className: string }> = {
-  ok: { glyph: '✓', className: 'bg-primary text-xs text-white dark:text-bg' },
-  block: { glyph: '!', className: 'bg-danger text-[13px] font-semibold text-white dark:text-bg' },
-};
+// Only a row that stops the save gets a mark. The artboard draws the rows in
+// order with none, so a ✓ on every good row would push their text off its
+// column; the status word is still read on every checked row.
+const BLOCK_MARK_CLASS =
+  'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-danger text-[13px] leading-[normal] font-semibold text-white dark:text-bg';
 
 function capitalize(value: string, locale: AppLocale): string {
   return value.charAt(0).toLocaleUpperCase(locale) + value.slice(1);
@@ -206,15 +207,16 @@ export function EditOverview({
     block: startBlock && sectionForBlock(startBlock.reason) === section ? startBlock : null,
   }));
 
-  // The cron sweep starts the round at tee-off, unless something stops it: the
-  // Sekretariat's start card says the same (`scheduledStartBodyAutoStart`).
+  // The cron sweep starts the round at tee-off (`scheduledStartBodyAutoStart`).
+  // The artboard keeps the line when a row says what stops the start; that row
+  // is where the organiser sees it.
   const autoStart =
-    iso && !state.teeOffInPast && !startBlock
-      ? t('autoStart', formatTeeOffParts(new Date(iso), locale))
-      : null;
+    iso && !state.teeOffInPast ? t('autoStart', formatTeeOffParts(new Date(iso), locale)) : null;
 
   return (
-    <div data-testid="edit-overview" className="leading-[normal]">
+    // -mt-6: the artboard puts the title 32 px under the top bar's kicker;
+    // TopBar's own bottom space would leave it 24 px lower.
+    <div data-testid="edit-overview" className="-mt-6 leading-[normal]">
       <div className="pt-1">
         <h1 className="font-serif text-[28px] font-medium text-text">{editNav.title}</h1>
         <div className="mt-1 flex items-center gap-2">
@@ -254,13 +256,13 @@ export function EditOverview({
             startAction={editNav.start.action}
             label={`${editNav.start.label} →`}
             confirmText={editNav.start.confirmText}
-            className="flex min-h-11 w-full items-center text-left font-sans text-sm leading-[normal] font-semibold text-primary"
+            className="flex min-h-11 w-full items-center text-left font-sans text-sm leading-[normal] font-semibold text-primary underline"
           />
         )}
         <SmartLink
           href={editNav.deleteHref}
           data-testid="edit-overview-delete"
-          className="flex min-h-11 items-center font-sans text-sm leading-[normal] font-semibold text-danger"
+          className="flex min-h-11 items-center font-sans text-sm leading-[normal] font-semibold text-danger underline"
         >
           {t('delete')}
         </SmartLink>
@@ -289,12 +291,9 @@ function OverviewRow({
       data-status={row.status ?? undefined}
       className={`relative flex min-h-[60px] items-center gap-3 px-3.5 py-3 ${last ? '' : 'border-b border-row-divider-warm'}`}
     >
-      {row.status !== null && (
-        <span
-          aria-hidden="true"
-          className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full leading-[normal] ${MARK[row.status === 'block' ? 'block' : 'ok'].className}`}
-        >
-          {MARK[row.status === 'block' ? 'block' : 'ok'].glyph}
+      {row.status === 'block' && (
+        <span aria-hidden="true" className={BLOCK_MARK_CLASS}>
+          !
         </span>
       )}
       <div className="min-w-0 flex-1">
@@ -316,7 +315,7 @@ function OverviewRow({
             <SmartLink
               href={startlistHref}
               data-testid="edit-overview-startlist-link"
-              className="relative z-10 inline-flex min-h-11 items-center font-sans text-xs leading-[normal] font-semibold text-primary underline underline-offset-2"
+              className="tap-extend relative z-10 font-sans text-xs leading-[normal] font-semibold text-primary underline underline-offset-2 [--tap-extend:-15px_-4px]"
             >
               {t('startlistLink')}
             </SmartLink>
@@ -330,12 +329,13 @@ function OverviewRow({
         )}
       </div>
       {/* The whole row is the target, as on the artboard: the link's ::after
-          covers the row, and the Startlista link above sits on top of it. */}
+          covers the row (at least 60 px), and the Startlista link above sits
+          on top of it. */}
       <SmartLink
         href={`${baseHref}?del=${row.section}`}
         aria-label={t('editLabel', { title: row.title.toLocaleLowerCase() })}
         data-testid={`edit-row-${row.section}-link`}
-        className="flex min-h-11 shrink-0 items-center font-sans text-[13px] leading-[normal] font-semibold text-primary after:absolute after:inset-0"
+        className="shrink-0 font-sans text-[13px] leading-[normal] font-semibold text-primary after:absolute after:inset-0"
       >
         {t('edit')}
       </SmartLink>
