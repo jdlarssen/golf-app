@@ -1205,6 +1205,92 @@ describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-
   });
 });
 
+// ─── #2328 — the ?format= deep link from /spillformater ────────────────────────
+
+describe('useGameFormState — seeded format from the format helper (#2328)', () => {
+  it('kompis at mount with no players seeds the organiser, as setIntent does (#1066)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'kompis',
+        initialValues: { game_mode: 'texas_scramble' },
+        initialExpectedPlayerCount: 4,
+      }),
+    );
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']);
+  });
+
+  it('players: [] is a choice, not an absence, and is not seeded', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'kompis',
+        initialValues: { game_mode: 'texas_scramble', players: [] },
+      }),
+    );
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+
+  it('klubb at mount does not seed the organiser', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'klubb',
+      }),
+    );
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+
+  it('Texas with 4 starts on two pairs, not one team of four, with the pair percent', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'kompis',
+        initialValues: { game_mode: 'texas_scramble' },
+        initialExpectedPlayerCount: 4,
+      }),
+    );
+    expect(result.current.teamSize).toBe(2);
+    expect(result.current.texasHandicapPct).toBe(25);
+  });
+
+  it('Texas without a count keeps its default size', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'kompis',
+        initialValues: { game_mode: 'texas_scramble' },
+        initialExpectedPlayerCount: null,
+      }),
+    );
+    expect(result.current.teamSize).toBe(4);
+  });
+
+  it('a seeded team_size (revansje, draft, edit) stands', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        currentUserId: 'p-mann',
+        initialIntent: 'kompis',
+        initialValues: { game_mode: 'texas_scramble', team_size: 4, players: [] },
+        initialExpectedPlayerCount: 4,
+      }),
+    );
+    expect(result.current.teamSize).toBe(4);
+  });
+});
+
 // ─── AC3 — clampGenderToTee ──────────────────────────────────────────────────
 // Helperen ble løftet til `lib/games/clampGenderToTee.ts` (#1859) fordi appens
 // veiviser trenger den også. Casene bor nå i `lib/games/clampGenderToTee.test.ts`.

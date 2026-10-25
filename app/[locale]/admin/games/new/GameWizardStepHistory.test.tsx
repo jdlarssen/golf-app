@@ -277,6 +277,26 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
+  // #2328: `?format=` from the format helper on /spillformater seeds the
+  // format and nothing else, so it lands on step 2 and no further.
+  it('format-seed lander på ?step=2', () => {
+    searchString = 'format=texas_scramble&step=2';
+    renderWizard({ initialValues: { game_mode: 'texas_scramble' }, initialIntent: 'kompis' });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('format-seed på ?step=4 sendes til steg 1 og lar ?format= stå', () => {
+    searchString = 'format=texas_scramble&step=4';
+    renderWizard({ initialValues: { game_mode: 'texas_scramble' }, initialIntent: 'kompis' });
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble', {
+      scroll: false,
+    });
+    expect(push).not.toHaveBeenCalled();
+  });
 });
 
 describe('GameWizard — #1385 gjenopptatt utkast', () => {

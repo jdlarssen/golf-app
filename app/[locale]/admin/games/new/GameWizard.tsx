@@ -259,7 +259,7 @@ function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
  * den dagen et alltid-tilstedeværende valgfritt felt legges inn her, ville en
  * ren nøkkel-telling slått av hele fiksen uten at noe feilet.
  *
- * Tre klasser, ikke en per-felt-matrise:
+ * Fire klasser, ikke en per-felt-matrise:
  *
  *   ingenting seedet → **1**. Blank start; enhver `?step=2..5` er foreldet.
  *   kun `course_id`  → **2**. `?bane=`-dyplenka (#1023) fra de offentlige
@@ -270,6 +270,9 @@ function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
  *                      tidspunkt). Det var #1653: `?bane=…&step=5` landet
  *                      arrangøren i «Klar?» med default-format og tom
  *                      spillerliste — plagen #1383 skulle fjerne.
+ *   kun `game_mode`  → **2**. `?format=`-dyplenka (#2328) fra formatvelgeren
+ *                      på /spillformater. Steg 2 viser formatet valgt; steg
+ *                      3+ forutsetter bane og spillere ingen har valgt.
  *   alt annet        → **Infinity**. Cup-lenka (`tournament_id`/`game_mode`/
  *                      `lock_game_mode`) og revansje (`?fra=`: roster + format
  *                      + baneoppsett) er bevisst sendt inn med forvalg og skal
@@ -291,6 +294,7 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
 
   if (seededKeys.length === 0) return 1;
   if (seededKeys.length === 1 && seededKeys[0] === 'course_id') return 2;
+  if (seededKeys.length === 1 && seededKeys[0] === 'game_mode') return 2;
   return Infinity;
 }
 

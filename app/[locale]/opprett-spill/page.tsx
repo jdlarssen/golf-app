@@ -17,6 +17,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
+import { parseFormatDeepLink, type FormatDeepLink } from '@/lib/wizard/formatDeepLink';
 import {
   getFormatsForIntent,
 } from '@/lib/formats/getFormatsForIntent';
@@ -52,6 +53,11 @@ type SearchParams = Promise<{
   // med banens id. Serverside-validert i loadBaneCourseId; ugyldig/ukjent id
   // ignoreres stille. `?fra=` vinner når begge er satt (revansje er rikere).
   bane?: string | string[];
+  // #2328: «Lag en runde med dette» on /spillformater dyplenker hit med
+  // formatet, og antallet når svaret var 2, 3 eller 4. Validert i
+  // loadFormatDeepLink; ugyldige verdier ignoreres stille.
+  format?: string | string[];
+  antall?: string | string[];
 }>;
 
 type RevansjeContext = {
@@ -195,6 +201,26 @@ async function loadBaneCourseId(
   return data.id;
 }
 
+/**
+ * #2328 — `?format=…&antall=…` from the format helper on /spillformater.
+ * Opens step 2 of the Kompis wizard with the format chosen and, when it fits,
+ * the count set (`parseFormatDeepLink`). Ignored when another prefill source
+ * (`?fra=`, `?bane=`, `?klubb=`) or another `?intent=` than kompis is set:
+ * those are explicit choices, and the format link is only a suggestion.
+ */
+async function loadFormatDeepLink(sp: Awaited<SearchParams>): Promise<FormatDeepLink | null> {
+  const format = first(sp.format);
+  if (!format) return null;
+  if (first(sp.fra) || first(sp.bane) || first(sp.klubb)) return null;
+  const intent = first(sp.intent);
+  if (intent !== undefined && intent !== 'kompis') return null;
+  const kompisFormats = await getFormatsForIntent('kompis');
+  return parseFormatDeepLink(
+    { format, antall: first(sp.antall) },
+    kompisFormats.map((f) => f.slug),
+  );
+}
+
 export default async function OpprettSpillPage({
   searchParams,
 }: {
@@ -243,11 +269,14 @@ export default async function OpprettSpillPage({
   // the same string. Revansje keeps an empty date on purpose (#1007).
   const teeOffDefault = defaultTeeOffAt(new Date());
 
+  const formatLink = await loadFormatDeepLink(sp);
+
   // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
   // vinner; ellers en ?klubb=-dyplenke gir klubb-intent; revansje-derivert
   // intent er svakest presedens (den er et forslag, ikke et eksplisitt valg)
   // men vinner over "ingen signal i det hele tatt".
   const initialIntent: Intent | undefined =
+    (formatLink ? 'kompis' : undefined) ??
     parseIntent(first(sp.intent)) ??
     (first(sp.klubb) ? 'klubb' : undefined) ??
     revansje?.initialIntent;
@@ -278,12 +307,22 @@ export default async function OpprettSpillPage({
           initialValues={
             revansje?.initialValues ?? {
               ...(baneCourseId ? { course_id: baneCourseId } : {}),
+              ...(formatLink ? { game_mode: formatLink.gameMode } : {}),
               scheduled_tee_off_at: teeOffDefault,
             }
           }
-          // #1007/#1023: remount når prefill-kilden endres (useGameFormState
-          // leser initialValues kun ved mount — key-remount-fella).
-          wizardKey={fraId ?? baneCourseId ?? 'blank'}
+          // #2328: null = the format without a count; left out = default 4.
+          initialExpectedPlayerCount={formatLink ? formatLink.expectedPlayerCount : undefined}
+          // #1007/#1023/#2328: remount når prefill-kilden endres
+          // (useGameFormState leser initialValues kun ved mount —
+          // key-remount-fella).
+          wizardKey={
+            fraId ??
+            baneCourseId ??
+            (formatLink
+              ? `format:${formatLink.gameMode}:${formatLink.expectedPlayerCount ?? ''}`
+              : 'blank')
+          }
           userId={currentUserId}
           isAdmin={isAdmin}
           notice={notice}
@@ -351,9 +390,13 @@ async function GameFormBody({
   userId,
   isAdmin,
   notice,
+  initialExpectedPlayerCount,
 }: {
   defaultGroupId: string | undefined;
   initialIntent: Intent | undefined;
+  // #2328: the format deep link's count (`null` = without a count). Left out
+  // → the wizard's default 4.
+  initialExpectedPlayerCount: number | null | undefined;
   // #1007/#1023/#2438: the revansje prefill, or the tee-off default (plus
   // course_id for `?bane=`). This page always sends a value.
   initialValues: InitialValues;
@@ -392,6 +435,7 @@ async function GameFormBody({
       // revansje-derivert klubb-tilknytning gir klubb-intent så ClubPicker
       // (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
       initialIntent={initialIntent}
+      initialExpectedPlayerCount={initialExpectedPlayerCount}
       friendPlayerIds={friendPlayerIds}
       clubMemberIdsByClub={clubMemberIdsByClub}
       currentUserId={userId}
