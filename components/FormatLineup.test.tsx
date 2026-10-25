@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { FormatLineup } from './FormatLineup';
-import { cardFigure, rowFigure, type LineupFigure } from './FormatLineupFigure';
+import { FormatLineupFigure, cardFigure, helperFigure, rowFigure, type LineupFigure } from './FormatLineupFigure';
 import type { FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 
 // #2260: the dot figures on the format cards. One render test (Type C), plus
@@ -58,6 +58,36 @@ describe('FormatLineup', () => {
   it.each(LINEUPS)('ingen prikker overlapper: %j', (lineup) => {
     expect(overlaps(rowFigure(lineup))).toBe(false);
     expect(overlaps(cardFigure(lineup))).toBe(false);
+    expect(overlaps(helperFigure(lineup))).toBe(false);
+  });
+
+  // #2328: the format helper's result card draws the artboard's 64 × 30
+  // figure; the wizard's card and row figures keep their sizes.
+  it('formatvelgeren, ett lag à 4: artboardets fire prikker i 64 × 30', () => {
+    const figure = helperFigure({ kind: 'teams', teams: 1, size: 4 });
+    expect([figure.width, figure.height, figure.viewBox]).toEqual([64, 30, '0 0 64 30']);
+    expect(figure.dots.map((d) => [d.cx, d.cy, d.r])).toEqual([
+      [8, 15, 7],
+      [24, 15, 7],
+      [40, 15, 7],
+      [56, 15, 7],
+    ]);
+    expect(figure.transform).toBeUndefined();
+  });
+
+  it.each(LINEUPS)('formatvelgeren: hver figur står i 64 × 30: %j', (lineup) => {
+    const figure = helperFigure(lineup);
+    expect([figure.width, figure.height]).toEqual([64, 30]);
+  });
+
+  it('formatvelgeren, 2 mot 2: radfiguren skalert, rendret i 64 × 30', () => {
+    const { getByTestId } = render(
+      <FormatLineupFigure lineup={{ kind: 'sides', perSide: 2 }} variant="helper" versusLabel="mot" />,
+    );
+    const svg = getByTestId('format-lineup');
+    expect([svg.getAttribute('width'), svg.getAttribute('height')]).toEqual(['64', '30']);
+    expect(svg.querySelector('g')).toHaveAttribute('transform');
+    expect(svg.querySelectorAll('circle')).toHaveLength(4);
   });
 
   // #2328: the format helper's Texas for 5–12 has no count, so it draws one
