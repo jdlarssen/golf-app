@@ -149,8 +149,9 @@ async function freezeRoundSettings(roundId: string, leagueSettings: unknown): Pr
 /**
  * A participant starts a flight for a round (#2638: moved here from the web
  * action so the app route runs the same code). Server-enforces the play
- * window, membership, the marker rule (`meetsFlightMinimum`: two players, one
- * in a simulator league) and one counted flight per player. Creates a flight
+ * window, membership, the flight size (`flightSizeRefusal`: at least two
+ * players, one in a simulator league, and at most MAX_FLIGHT_PLAYERS) and one
+ * counted flight per player. Creates a flight
  * game in the league's format (`leagueFlightGameConfig`; course/tee from the
  * round, falling back to the league), freezes handicaps and flips it to
  * active via startScheduledGame, and flags the flight if it was created past
