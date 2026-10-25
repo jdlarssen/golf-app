@@ -17,6 +17,7 @@ import {
   simSettingsFieldsKey,
   type SimSettingsSaveState,
 } from '@/components/league/SimSettingsFields';
+import { SettingsDisclosure } from '@/components/league/SettingsDisclosure';
 import {
   SIM_SETTINGS,
   formSimSettings,
@@ -177,7 +178,14 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
       {/* #2638: the round's settings (artboards 8b/8c). A started round is
           fixed, so nobody plays under other settings than the others. */}
       {isSimulator && round.settingsLocked && (
-        <LockedSimSettings round={round} locale={settingsLocale} lockedLabel={t('lockedStarted')} teeLabel={tSim('tee')} />
+        <LockedSimSettings
+          round={round}
+          locale={settingsLocale}
+          lockedLabel={t('lockedStarted')}
+          teeLabel={tSim('tee')}
+          summary={tSim('summary')}
+          changedLabel={tSim('overridden')}
+        />
       )}
       {isSimulator && !round.settingsLocked && (
         <details className="group" data-testid="liga-round-adjust">
@@ -333,45 +341,56 @@ function LockedSimSettings({
   locale,
   lockedLabel,
   teeLabel,
+  summary,
+  changedLabel,
 }: {
   round: LeagueRoundView;
   locale: 'no' | 'en';
   lockedLabel: string;
   teeLabel: string;
+  summary: string;
+  changedLabel: string;
 }) {
   const groups = simSettingGroups(round.simSettings, round.overriddenKeys, locale);
   return (
-    <div className="rounded-lg bg-surface-2 px-3 py-2.5" data-testid="liga-round-settings-locked">
-      <p className="flex items-center gap-1.5 font-sans text-[11px] leading-[16.5px] font-medium text-muted">
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
-          <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" />
-          <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
-        </svg>
-        <span>{lockedLabel}</span>
-      </p>
-      {groups.map((group, gi) => (
-        <div key={group.key} className={gi === 0 ? 'mt-2' : 'mt-3'}>
-          <p className="font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
-            {group.label}
-          </p>
-          <dl className="mt-1.5 space-y-1 font-sans text-[12px] leading-[18px]">
-            {group.rows.map((row) => (
-              <div key={row.key} className="flex justify-between gap-2">
-                <dt className="text-muted">{row.label}</dt>
-                <dd className={`min-w-0 text-right ${row.overridden ? 'text-accent-text' : 'text-text'}`}>{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      ))}
-      {round.teeName && (
-        <dl className="mt-2.5 border-t border-border pt-2.5 font-sans text-[12px] leading-[18px]">
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted">{teeLabel}</dt>
-            <dd className="min-w-0 text-right text-text">{round.teeName}</dd>
+    <div className="rounded-lg bg-surface-2 px-3 py-1" data-testid="liga-round-settings-locked">
+      {/* Folded to one line (the owner 25.10); the line says when the round has overrides. */}
+      <SettingsDisclosure
+        summary={summary}
+        changedLabel={round.overriddenKeys.length > 0 ? changedLabel : null}
+        testId="liga-round-settings-disclosure"
+      >
+        <p className="flex items-center gap-1.5 font-sans text-[11px] leading-[16.5px] font-medium text-muted">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+            <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" />
+            <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+          </svg>
+          <span>{lockedLabel}</span>
+        </p>
+        {groups.map((group, gi) => (
+          <div key={group.key} className={gi === 0 ? 'mt-2' : 'mt-3'}>
+            <p className="font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
+              {group.label}
+            </p>
+            <dl className="mt-1.5 space-y-1 font-sans text-[12px] leading-[18px]">
+              {group.rows.map((row) => (
+                <div key={row.key} className="flex justify-between gap-2">
+                  <dt className="text-muted">{row.label}</dt>
+                  <dd className={`min-w-0 text-right ${row.overridden ? 'text-accent-text' : 'text-text'}`}>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        </dl>
-      )}
+        ))}
+        {round.teeName && (
+          <dl className="mt-2.5 border-t border-border pt-2.5 font-sans text-[12px] leading-[18px]">
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted">{teeLabel}</dt>
+              <dd className="min-w-0 text-right text-text">{round.teeName}</dd>
+            </div>
+          </dl>
+        )}
+      </SettingsDisclosure>
     </div>
   );
 }

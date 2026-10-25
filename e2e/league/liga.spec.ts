@@ -760,8 +760,10 @@ test.describe('Liga — simulator: the settings forms keep what was saved (#2638
     // Each save is waited out (the button is enabled again) before the next
     // choice: the fields are disabled while saving (the orchestrator's check).
     const defaults = page.getByTestId('liga-sim-defaults');
-    const defaultsSave = defaults.getByRole('button');
+    const defaultsSave = defaults.getByTestId('liga-sim-defaults-save');
     const stimp = defaults.getByTestId('sim-select-green_stimp');
+    // The settings are folded to one line (the owner 25.10); open them first.
+    await defaults.getByTestId('liga-sim-defaults-disclosure-summary').click({ timeout: 30_000 });
     await expect(stimp).toHaveValue(SIM_DEFAULT.green_stimp, { timeout: 30_000 });
     await stimp.selectOption('11');
     await defaultsSave.click();

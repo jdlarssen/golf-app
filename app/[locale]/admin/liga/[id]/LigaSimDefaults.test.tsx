@@ -16,7 +16,9 @@ import { LigaSimDefaults } from './LigaSimDefaults';
 describe('LigaSimDefaults — the fields wait out a save', () => {
   it('disables the selects while the save runs', async () => {
     render(<LigaSimDefaults leagueId="l1" initial={{ ...SIM_SETTING_DEFAULTS }} />);
-    const selects = () => screen.getAllByRole('combobox');
+    // Folded to one line by default (the owner 25.10); the fields are still in the form.
+    expect(screen.getByTestId('liga-sim-defaults-disclosure')).not.toHaveAttribute('open');
+    const selects = () => screen.getAllByRole('combobox', { hidden: true });
     const before = selects().filter((s) => s.matches(':disabled')).length;
     fireEvent.submit(selects()[0].closest('form')!);
     await waitFor(() => expect(screen.getByTestId('sim-select-wind')).toBeDisabled());
