@@ -178,7 +178,7 @@ export const ROUND_REPORT_TEXT = {
 /**
  * Appens egne ord rundt historien (#2632): lenka under sitatet i båndet og
  * linja nederst i kortet. Webben har ingen av dem, så testen holder dem ulike
- * alle verdier i kilden.
+ * alle verdiene i `leaderboard.board`.
  */
 export const ROUND_REPORT_APP_TEXT = {
   quoteLink: 'Les hele historien fra pressetribunen',

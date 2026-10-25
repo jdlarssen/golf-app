@@ -289,7 +289,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const onReportLayout = useCallback((event: LayoutChangeEvent) => {
     setReportTop(event.nativeEvent.layout.y);
   }, []);
-  // Leses bare ved trykk (som `Scorecard.tsx`).
+  // Redusert bevegelse leses som i `Scorecard.tsx`; bare trykket bruker den.
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     let alive = true;

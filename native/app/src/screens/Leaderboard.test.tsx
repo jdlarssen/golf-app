@@ -274,9 +274,13 @@ describe('Leaderboard — historien fra pressetribunen (#2632)', () => {
     mockNavigate.mockClear();
     mockSubscribeGameStatus.mockClear();
   });
+  const realScrollTo = (require('react-native').ScrollView as { prototype: { scrollTo?: unknown } })
+    .prototype.scrollTo;
   afterEach(() => {
     mockBundleOverride.current = null;
     jest.restoreAllMocks();
+    (require('react-native').ScrollView as { prototype: { scrollTo?: unknown } }).prototype.scrollTo =
+      realScrollTo;
   });
 
   it('solo: sitatet øverst, og hele historien etter tavla', async () => {
@@ -299,6 +303,27 @@ describe('Leaderboard — historien fra pressetribunen (#2632)', () => {
     expect(order.map((n) => n.props.testID)).toEqual([
       'round-report-quote',
       'board-row-mate-place',
+      'round-report',
+    ]);
+  });
+
+  it('solo med sideturnering: kortet står etter sideturneringen', async () => {
+    mockBundleOverride.current = finished({
+      sideTournamentEnabled: true,
+      sideLdCount: 1,
+      sideCtpCount: 1,
+      sideDisabledCategories: [],
+    });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('side-tournament-section')).toBeTruthy());
+    const order = screen.getAllByTestId(
+      /^(round-report-quote|board-row-mate-place|side-tournament-section|round-report)$/,
+    );
+    expect(order.map((n) => n.props.testID)).toEqual([
+      'round-report-quote',
+      'board-row-mate-place',
+      'side-tournament-section',
       'round-report',
     ]);
   });
@@ -343,7 +368,7 @@ describe('Leaderboard — historien fra pressetribunen (#2632)', () => {
     expect(screen.queryByTestId('board-strip-action')).toBeNull();
   });
 
-  it('ferdig spill uten historie: verken sitat eller kort, og ingen ny kanal før den kommer', async () => {
+  it('ferdig spill uten historie: verken sitat eller kort', async () => {
     mockBundleOverride.current = finished({ roundReport: null });
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('board-row-mate-place')).toBeTruthy());
