@@ -27,6 +27,7 @@ import {
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
+import { isEditSection } from '@/lib/games/editSections';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isClubTournament } from '@/lib/games/registration';
@@ -95,9 +96,16 @@ async function updateGameInternal(
   // gjenopptar utkast i veiviseren (#2269, eierens svar 05.10). Planlagte spill
   // (GameForm) har ingen steg; et cup-koblet utkast på GameForm overser den.
   const editStep = mode !== 'update_scheduled' ? '5' : null;
+  // #2322: a scheduled game is edited one part at a time. A refused save keeps
+  // that part open, and a saved one lands on the overview. The list is fixed
+  // (`isEditSection`), so the value never steers the redirect anywhere else.
+  const rawSection = formData.get('edit_section');
+  const editSection =
+    mode === 'update_scheduled' && isEditSection(rawSection) ? rawSection : null;
   function editHref(params: Record<string, string>): string {
     const qs = new URLSearchParams(params);
     if (editStep) qs.set('step', editStep);
+    if (editSection) qs.set('del', editSection);
     return `${editBase}?${qs.toString()}`;
   }
 
@@ -489,6 +497,9 @@ async function updateGameInternal(
         : `/games/${gameId}/spillere?error=invites_failed`,
       locale,
     });
+  }
+  if (editSection) {
+    redirect({ href: `${editBase}?status=updated`, locale });
   }
   redirect({ href: `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`, locale });
 }
