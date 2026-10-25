@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildSupabaseMock, makeRedirectMock, RedirectError } from '@/tests/serverActionMocks';
+import { buildSupabaseMock, makeRedirectMock, RedirectError, type QueryResult } from '@/tests/serverActionMocks';
 import { SIM_SETTING_DEFAULTS, SIM_SETTING_KEYS, simSettingField } from './simSettings';
 
 /**
@@ -1036,5 +1036,81 @@ describe('updateRoundSimSettings / updateLeagueSimSettings (#2638)', () => {
       written: { sim_settings: { ...SIM_SETTING_DEFAULTS, green_stimp: '11' } },
       regular: { error: 'not_simulator' },
     });
+  });
+});
+
+/**
+ * #2638 (the orchestrator's check of 8e8858cad): the fixes from round 2 stay
+ * fixed. The round is bound to the form's league in every write, and a read
+ * error in the settings actions is update_failed with nothing written, never
+ * «not found».
+ */
+describe('league round actions — bound to the league, read errors are update_failed (#2638)', () => {
+  const boundToLeague = (mock: ReturnType<typeof buildSupabaseMock>) =>
+    mock.__fromCalls.some(
+      (c) => c.table === 'league_rounds' && c.method === 'eq' && c.args[0] === 'league_id' && c.args[1] === 'l1',
+    );
+  const writes = () =>
+    supabaseMock.__fromCalls.filter((c) => (c.table === 'league_rounds' || c.table === 'leagues') && c.method === 'update');
+
+  it('updateLeagueRound updates the round bound to the form’s league', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }, { data: [{ id: 'r1' }] }]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('label', 'Runde 1');
+    const { updateLeagueRound } = await import('./actions');
+    expect({ result: await updateLeagueRound(fd), bound: boundToLeague(supabaseMock) }).toEqual({
+      result: { error: '' },
+      bound: true,
+    });
+  });
+
+  it('overrideRoundWindow updates the round bound to the form’s league', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }, { data: [{ id: 'r1' }] }]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('closes_at', '2026-12-01T20:00');
+    const { overrideRoundWindow } = await import('./actions');
+    expect({ result: await overrideRoundWindow(fd), bound: boundToLeague(supabaseMock) }).toEqual({
+      result: { error: '' },
+      bound: true,
+    });
+  });
+
+  function settingsForm(roundId?: string): FormData {
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    if (roundId) fd.set('round_id', roundId);
+    for (const key of SIM_SETTING_KEYS) fd.set(simSettingField(key), SIM_SETTING_DEFAULTS[key]);
+    return fd;
+  }
+  const boom = { error: { message: 'boom' } };
+
+  it.each([
+    ['updateLeagueSimSettings: the league read fails', 'league', [{ data: { group_id: null } }, boom]],
+    [
+      'updateRoundSimSettings: the league read fails',
+      'round',
+      [{ data: { group_id: null } }, boom, { data: { id: 'r1' } }],
+    ],
+    [
+      'updateRoundSimSettings: the round read fails',
+      'round',
+      [{ data: { group_id: null } }, { data: { is_simulator: true, sim_settings: SIM_SETTING_DEFAULTS } }, boom],
+    ],
+  ] as Array<[string, 'league' | 'round', QueryResult[]]>)('%s → update_failed, nothing written', async (_label, which, admin) => {
+    adminMock = buildSupabaseMock(admin);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+    setUser('admin-1');
+    const { updateLeagueSimSettings, updateRoundSimSettings } = await import('./actions');
+    const result =
+      which === 'league' ? await updateLeagueSimSettings(settingsForm()) : await updateRoundSimSettings(settingsForm('r1'));
+    expect({ result, writes: writes().length }).toEqual({ result: { error: 'update_failed' }, writes: 0 });
   });
 });

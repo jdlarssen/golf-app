@@ -538,7 +538,10 @@ rollback to savepoint case_36;
 savepoint case_37;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_ok(
-  $$ update public.league_rounds set league_id = torny_rls.ls_regular() where id = torny_rls.ls_r_started() $$,
+  -- sequence 9 is free in the regular league, so only the guard can refuse
+  -- the move (not UNIQUE (league_id, sequence)).
+  $$ update public.league_rounds set league_id = torny_rls.ls_regular(), sequence = 9
+      where id = torny_rls.ls_r_started() $$,
   '42501', 'league_rounds.league_id is set by the server only',
   'case 37: the organiser CANNOT move a started simulator round to their regular league');
 rollback to savepoint case_37;

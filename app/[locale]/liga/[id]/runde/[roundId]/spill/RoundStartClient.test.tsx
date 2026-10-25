@@ -66,11 +66,18 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
     render(
       <RoundStartClient roundId="r1" coPlayers={['P1', 'P2', 'P3', 'P4'].map((id) => player(id, null))} isSimulator />,
     );
+    const ticked = () => ['P1', 'P2', 'P3', 'P4'].filter((id) => box(id).checked);
     for (const id of ['P1', 'P2', 'P3', 'P4']) fireEvent.click(row(id));
-    expect({
-      ticked: ['P1', 'P2', 'P3', 'P4'].filter((id) => box(id).checked),
+    const full = {
+      ticked: ticked(),
       fourth: [row('P4').getAttribute('aria-disabled'), row('P4').getAttribute('data-full'), box('P4').disabled],
-      help: screen.queryByTestId('liga-round-start-flight-max') !== null,
-    }).toEqual({ ticked: ['P1', 'P2', 'P3'], fourth: ['true', 'true', true], help: true });
+    };
+    // A ticked row can still be removed, and then the free one can be ticked.
+    fireEvent.click(row('P1'));
+    fireEvent.click(row('P4'));
+    expect({ full, afterSwap: ticked() }).toEqual({
+      full: { ticked: ['P1', 'P2', 'P3'], fourth: ['true', 'true', true] },
+      afterSwap: ['P2', 'P3', 'P4'],
+    });
   });
 });
