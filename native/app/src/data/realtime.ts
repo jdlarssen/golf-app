@@ -450,8 +450,9 @@ export function subscribeGameTeeShots(
  * start som kom mens den lå nede, spilles aldri av.
  *
  * Samme topic og filter som webbens `GameStartListener`. Ingen ny kanal på
- * hull-, scorekort- eller resultatskjermen: der leses statusen ved fokus,
- * forgrunn og hullbytte (`useGameBundle`).
+ * hull- eller scorekortskjermen: der leses statusen ved fokus, forgrunn og
+ * hullbytte (`useGameBundle`). Resultatskjermen åpner den bare mens en ferdig
+ * runde venter på historien fra pressetribunen (#2632, `useRoundReportArrival`).
  */
 export function subscribeGameStatus(
   gameId: string,

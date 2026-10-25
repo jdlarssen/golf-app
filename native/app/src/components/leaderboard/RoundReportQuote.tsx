@@ -11,19 +11,10 @@
 // egen tavle (ingen skogflate, mørk tekst på den lyse bakgrunnen).
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ROUND_REPORT_APP_TEXT } from '../../lib/boardCopy';
-import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
 
 export type RoundReportQuoteVariant = 'solo' | 'team' | 'plain';
-
-/** `#rrggbb` som `rgba(...)`, til hårstreken i blekkets farge. */
-function withAlpha(hex: string, alpha: number): string {
-  const value = hex.replace('#', '');
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 /** Tavleflaten går 8 pt opp i båndet i tegningen; lagtavla gjør ikke det. */
 const SOLO_OVERLAP = 8;
