@@ -100,6 +100,8 @@ describe('bundle_proof: loopback-literalene fra @supabase/supabase-js', () => {
     ['[::1] URL-kodet', 'FAIL', ['http%3A%2F%2F%5B::1%5D%3A3000'], 'loopback [::1]'],
     ['bar localhost (supabase-js)', 'PASS', ['set-thingslocalhostx-relay-error'], 'loopback localhost'],
     ['localhost med kjente porter (Metro, auth-js)', 'PASS', ['heighttp://localhost:8081/assets/x', 'Lighttp://localhost:9999__get'], 'loopback localhost'],
+    ['Metro-formen med en annen nabo-streng (getDevServer-fallbacken)', 'PASS', ['Lighttp://localhost:8081/api/profile-account'], 'loopback localhost'],
+    ['Metro-porten uten skråstrek etter', 'FAIL', ['Lighttp://localhost:8081x'], 'loopback localhost'],
     ['localhost med ukjent port', 'FAIL', ['set-thingslocalhost:3000/x'], 'loopback localhost'],
     ['https://localhost uten port', 'FAIL', ['xxhttps://localhost/auth/v1'], 'loopback localhost'],
     ['localhost som underdomene', 'FAIL', ['https://torny.localhost/x'], 'loopback localhost'],
@@ -170,6 +172,8 @@ describe('hele beviset', () => {
     'set-thingslocalhostx-relay-error',
     'heighttp://localhost:8081/assets/x',
     'Lighttp://localhost:9999__get',
+    'xhttp://localhost:8081/api/profile-account',
+    'http://www.w3.org/2000/svg acquisition timed out',
   ];
   const LEAKS = [
     'https://localhost',
@@ -192,6 +196,7 @@ describe('hele beviset', () => {
     'https://LOCALHOST/x',
     'http://192.168.1.10:3111',
     'exp://192.168.1.10:8081',
+    'http://www.w3.org.evil.example/x',
   ];
   // Modellen der literalen ligger inne i den lekkede strengen: bare de kjente
   // localhost-formene står for seg selv.

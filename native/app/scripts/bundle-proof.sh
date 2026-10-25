@@ -37,7 +37,7 @@ STAGING_REF='snwmueecmfqqdurxedxv'
 # matche fra og med `http://`.
 ALLOW_HTTP=(
   '^http://json-schema\.org/draft-0[47]/schema#'   # zod (JSON Schema-$schema)
-  '^http://localhost:8081/assets/'                   # Metro sin asset-URL (expo-asset/google-fonts), brukes ikke i Release
+  '^http://localhost:8081/'                          # react-native getDevServer FALLBACK; hva som følger er nabo-strengen i tabellen
   '^http://localhost:9999([^0-9]|$)'                 # @supabase/auth-js: standardverdi for GoTrue-URL
   # @supabase/phoenix (longpoll) har en bar «http://»-literal. Den har ingen
   # vert selv, så det som følger i den pakkede tabellen er NABO-strengen.
@@ -45,11 +45,12 @@ ALLOW_HTTP=(
   # skråstrek (eller ingenting), eller en annen URL-literal rett etter.
   '^http://[A-Za-z0-9_-]{0,64}([^A-Za-z0-9._:/-]|$)'
   '^http://https?://'
+  '^http://www\.w3\.org/2000/svg'                    # XML-navnerommet i qrcode sin SVG-renderer (ingen nettverkskall)
 )
 # Kjente `localhost`-former fra bibliotekene, målt fra «localhost» og bare med
 # `http://` rett foran. Brukes av localhost-regelen i `bundle_proof` (#2561).
 ALLOW_LOCALHOST=(
-  '^localhost:8081/assets/'      # Metro sin asset-URL
+  '^localhost:8081/'             # react-native getDevServer FALLBACK («http://localhost:8081/»)
   '^localhost:9999([^0-9]|$)'    # @supabase/auth-js: standardverdi for GoTrue-URL
 )
 
@@ -303,7 +304,7 @@ bundle_proof() {
   # (Hermes lar en kort streng dele lagring med en lengre, så den bare
   # literalen kan ligge inne i en kjent form, eller i en lekket adresse). Hvert
   # treff er ett av tre:
-  #  - kjent: en form på ALLOW_LOCALHOST (Metro sin `:8081/assets/`, auth-js sin
+  #  - kjent: en form på ALLOW_LOCALHOST (Metros `:8081/`, auth-js sin
   #    `:9999`) med `http://` rett foran;
   #  - adresse: `.`, `@`, `/` eller `:` rett foran (skjema, underdomene,
   #    bruker@), URL-koding foran (`%2F`, `%40`, `%3A`), eller port etter
@@ -342,7 +343,7 @@ bundle_proof() {
     if [ "$addr" != "0" ]; then
       fail "loopback localhost som adresse (skjema, underdomene, bruker@, URL-koding eller port): $addr treff — en adresse fra miljøet er bakt inn"
     elif [ "$bare" -le "$max" ]; then
-      pass "loopback localhost: $bare bart treff, høyst $max (supabase-js getDefaultPropagationTargets), $known kjente (Metro :8081/assets/, auth-js :9999), ingen som adresse"
+      pass "loopback localhost: $bare bart treff, høyst $max (supabase-js getDefaultPropagationTargets), $known kjente (Metro :8081/, auth-js :9999), ingen som adresse"
     else
       fail "loopback localhost: $bare bare treff — forventet høyst $max (supabase-js getDefaultPropagationTargets$(loopback_note "$max"))"
     fi
