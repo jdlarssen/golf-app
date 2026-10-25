@@ -130,8 +130,11 @@ jest.mock('../data/choices', () => ({
   fetchWolfChoices: (...args: unknown[]) => mockFetchWolfChoices(...args),
   fetchBingoBangoBongoHoles: jest.fn(async () => []),
 }));
+// #2632: historien som kommer mens tavla står åpen; testen styrer kanalen.
+const mockSubscribeGameStatus = jest.fn((..._args: unknown[]) => () => undefined);
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
+  subscribeGameStatus: (...args: unknown[]) => mockSubscribeGameStatus(...args),
 }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
@@ -255,6 +258,145 @@ describe('Leaderboard — ferdig tavle (#2579)', () => {
     await waitFor(() => expect(screen.getByTestId('board-strip-action')).toBeTruthy());
     await fireEvent.press(screen.getByTestId('board-strip-action'));
     expect(mockNavigate).toHaveBeenCalledWith('Scorecard', { gameId: GAME_ID });
+  });
+});
+
+// #2632: historien fra pressetribunen. Sitatet i båndets forlengelse øverst, hele
+// historien nederst, og begge kommer av seg selv mens tavla står åpen.
+describe('Leaderboard — historien fra pressetribunen (#2632)', () => {
+  const REPORT = 'Tre par på rad la grunnlaget. Så kom regnet.\nBak henne ble det jevnt.';
+  const finished = (overrides: Record<string, unknown> = {}) => ({
+    ...mockBundle,
+    game: { ...bundleGame, status: 'finished', roundReport: REPORT, ...overrides },
+  });
+
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    mockSubscribeGameStatus.mockClear();
+  });
+  afterEach(() => {
+    mockBundleOverride.current = null;
+    jest.restoreAllMocks();
+  });
+
+  it('solo: sitatet øverst, og hele historien etter tavla', async () => {
+    mockBundleOverride.current = finished();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+
+    expect(screen.getByTestId('round-report-quote-text')).toHaveTextContent(
+      '«Tre par på rad la grunnlaget.»',
+    );
+    expect(screen.getByTestId('round-report-quote-link')).toBeTruthy();
+    const card = screen.getByTestId('round-report');
+    expect(card).toHaveTextContent('Fra pressetribunen', { exact: false });
+    // Teksten ordrett: første setning står i kortet òg, og begge avsnitt er med.
+    expect(card).toHaveTextContent('Tre par på rad la grunnlaget. Så kom regnet.', { exact: false });
+    expect(card).toHaveTextContent('Bak henne ble det jevnt.', { exact: false });
+    expect(card).toHaveTextContent('Skrevet av AI ut fra slagene dere førte.', { exact: false });
+    // Sitatet først, kortet sist (etter tavla).
+    const order = screen.getAllByTestId(/^(round-report-quote|board-row-mate-place|round-report)$/);
+    expect(order.map((n) => n.props.testID)).toEqual([
+      'round-report-quote',
+      'board-row-mate-place',
+      'round-report',
+    ]);
+  });
+
+  it('lenka under sitatet ruller til kortet', async () => {
+    const ScrollView = require('react-native').ScrollView as { prototype: { scrollTo?: unknown } };
+    const scrollTo = jest.fn();
+    ScrollView.prototype.scrollTo = scrollTo;
+    mockBundleOverride.current = finished();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    await act(async () => {
+      fireEvent(screen.getByTestId('round-report'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 640, width: 366, height: 300 } },
+      });
+    });
+
+    await fireEvent.press(screen.getByTestId('round-report-quote-link'));
+
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ y: 628 }));
+  });
+
+  it('lagtavla: sitatet og kortet vises', async () => {
+    mockBundleOverride.current = finished({
+      gameMode: 'best_ball',
+      modeConfig: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+    });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    expect(screen.getByTestId('round-report-quote')).toBeTruthy();
+  });
+
+  it('formater uten egen tavle (skins): sitatet under «Sluttresultat», kortet nederst', async () => {
+    mockBundleOverride.current = finished({
+      gameMode: 'skins',
+      modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+    });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    expect(screen.getByTestId('leaderboard-subtitle')).toHaveTextContent('Sluttresultat');
+    expect(screen.getByTestId('round-report-quote')).toBeTruthy();
+    expect(screen.queryByTestId('board-strip-action')).toBeNull();
+  });
+
+  it('ferdig spill uten historie: verken sitat eller kort, og ingen ny kanal før den kommer', async () => {
+    mockBundleOverride.current = finished({ roundReport: null });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-row-mate-place')).toBeTruthy());
+    expect(screen.queryByTestId('round-report-quote')).toBeNull();
+    expect(screen.queryByTestId('round-report')).toBeNull();
+  });
+
+  it('aktivt spill med historie i raden: verken sitat eller kort', async () => {
+    mockBundleOverride.current = finished({ status: 'active' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-row-mate-place')).toBeTruthy());
+    expect(screen.queryByTestId('round-report-quote')).toBeNull();
+    expect(screen.queryByTestId('round-report')).toBeNull();
+    expect(mockSubscribeGameStatus).not.toHaveBeenCalled();
+  });
+
+  it('historien kommer mens tavla står åpen: sitat og kort uten trykk, og kanalen lukkes', async () => {
+    const stop = jest.fn();
+    mockSubscribeGameStatus.mockReturnValue(stop);
+    mockBundleOverride.current = finished({ roundReport: null });
+    await renderLeaderboard();
+    await waitFor(() => expect(mockSubscribeGameStatus).toHaveBeenCalledTimes(1));
+    expect(mockSubscribeGameStatus.mock.calls[0]![0]).toBe(GAME_ID);
+    expect(screen.queryByTestId('round-report')).toBeNull();
+
+    // Sveipet er ferdig: raden har fått historien.
+    mockBundleOverride.current = finished();
+    await act(async () => {
+      (mockSubscribeGameStatus.mock.calls[0]![1] as { onUpdate: () => void }).onUpdate();
+    });
+
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    expect(screen.getByTestId('round-report-quote')).toBeTruthy();
+    await waitFor(() => expect(stop).toHaveBeenCalled());
+  });
+
+  it('kanalen som kommer tilbake etter et brudd henter på nytt', async () => {
+    mockSubscribeGameStatus.mockReturnValue(() => undefined);
+    mockBundleOverride.current = finished({ roundReport: null });
+    await renderLeaderboard();
+    await waitFor(() => expect(mockSubscribeGameStatus).toHaveBeenCalledTimes(1));
+    mockBundleOverride.current = finished();
+    await act(async () => {
+      (mockSubscribeGameStatus.mock.calls[0]![1] as { onResubscribed: () => void }).onResubscribed();
+    });
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+  });
+
+  it('ferdig spill som alt har historien: ingen kanal', async () => {
+    mockBundleOverride.current = finished();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
+    expect(mockSubscribeGameStatus).not.toHaveBeenCalled();
   });
 });
 

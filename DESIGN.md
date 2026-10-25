@@ -184,6 +184,10 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
   eieren valgte fra designlerretet 29.09.2026. Mot `surface-strong` holder gullet 4,9:1 i
   lys og 6,3:1 i klubbhus-natt, så det er lesbar tekst der. Unntaket gjelder bare den
   kickeren; på lyse flater er gull tekst fortsatt `accent-text`.
+- **Gull lenke i tavlas bånd i appen** (#2632) er et unntak fra «gull er en medalje», som
+  startbillettens kicker: «Les hele historien fra pressetribunen» under sitatet står i
+  `accent` mot `surface-strong` (4,9:1 i lys, 6,3:1 i klubbhus-natt). Unntaket gjelder
+  bare den lenka; på lyse flater (formater uten egen tavle) står den i `primary`.
 - **Duellfarger i formatkortenes prikkfigur** (#2260): petrol og terrakotta står også i
   figuren for et format der nøyaktig to sider møtes («2 mot 2», «1 mot 1»), som på
   artboardet «Forslag: formatkortene» eieren valgte. Lag ellers er skoggrønne (`primary`),

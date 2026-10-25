@@ -25,10 +25,27 @@ describe('pushTarget', () => {
   it.each([
     [`/games/${GAME}`],
     [`/games/${GAME}/approve`],
-    [`/games/${GAME}/leaderboard`],
     [`/no/games/${GAME}`],
   ])('%s åpner spillets side', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
+  });
+
+  // #2632: «Resultatet er klart» peker på tavla, med eller uten språk, markør, skråstrek eller anker.
+  it.each([
+    [`/games/${GAME}/leaderboard`],
+    [`/no/games/${GAME}/leaderboard`],
+    [`/games/${GAME}/leaderboard?varsel=${NOTE}`],
+    [`/games/${GAME}/leaderboard/`],
+    [`/games/${GAME}/leaderboard#historien`],
+  ])('%s åpner tavla', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'Leaderboard', params: { gameId: GAME } });
+  });
+
+  it('en sti som bare ligner på /leaderboard åpner spillets side', () => {
+    expect(pushTarget(`/games/${GAME}/leaderboards`)).toEqual({
+      name: 'GameHome',
+      params: { gameId: GAME },
+    });
   });
 
   // #2268: påminnelsen om et hull uten slag peker på hullet.

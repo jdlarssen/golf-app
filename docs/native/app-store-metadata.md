@@ -9,8 +9,7 @@ fra, så neste innsending ikke må finne dem opp på nytt.
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
 mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning som
 venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgjør
-(appen viser dem ikke ved lansering), aldri rundereferatet (det står på nettsiden og
-i e-posten, ikke i appen), aldri cup eller liga. Appen **oppretter** åtte formater, men
+(appen viser dem ikke ved lansering), aldri cup eller liga. Appen **oppretter** åtte formater, men
 den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
 de fleste lagformatene. Appen åpner ikke patsome, cup-dager delt i to nihullsdeler og
 avledede cup-kamper (`native/app/src/lib/formatGate.ts`). Beskrivelsen sier derfor aldri
@@ -279,8 +278,10 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
 - **Kroner og pengeoppgjør.** Skins og Wolf spilles ofte om penger, men appen viser ikke
   kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`, #2561).
   Oppgjøret finnes på nettsiden.
-- **Rundereferatet.** AI-referatet etter runden står på nettsiden og i e-posten, ikke i
-  appen. Kavalkaden er i appen, så den står i beskrivelsen.
+- **Rundereferatet.** Fra #2632 viser appen AI-historien «Fra pressetribunen» på den
+  ferdige tavla (sitat øverst, hele historien nederst), og varselet «Resultatet er klart»
+  viser starten av den. Butikkbeskrivelsen nevner den ikke. Kavalkaden er i appen, så den
+  står i beskrivelsen.
 - **Cup og liga.** Finnes på nettsiden. Vanlige cup-kamper spilles i appen, men patsome,
   cup-dager delt i to nihullsdeler og avledede cup-kamper åpnes ikke
   (`formatGate.ts`).

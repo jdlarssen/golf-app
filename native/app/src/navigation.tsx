@@ -212,6 +212,10 @@ function openPushTarget(target: PushTarget) {
     // #2268: the game's page under the hole, so «back» lands on the game.
     navigationRef.navigate('GameHome', { gameId: target.params.gameId });
     navigationRef.navigate('Hole', target.params);
+  } else if (target.name === 'Leaderboard') {
+    // #2632: spillets side under tavla, så «tilbake» lander på spillet.
+    navigationRef.navigate('GameHome', { gameId: target.params.gameId });
+    navigationRef.navigate('Leaderboard', target.params);
   } else if (target.name === 'League') navigationRef.navigate('League', target.params);
   else navigationRef.navigate('Home');
 }
