@@ -77,6 +77,46 @@ describe('notifyPlayersGameFinished', () => {
     });
   });
 
+  it('#2632: tar med starten av historien i payloaden når den finnes', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
+
+    await notifyPlayersGameFinished(
+      [{ user_id: 'a' }],
+      { id: 'game-1', name: 'Vinter-cup', reportStart: 'Ada tok den på 18.' },
+      'endGame',
+    );
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'game_finished',
+      payload: {
+        game_id: 'game-1',
+        game_name: 'Vinter-cup',
+        report_start: 'Ada tok den på 18.',
+      },
+    });
+  });
+
+  it('#2632: reportStart null gir samme payload som før (ingen report_start-nøkkel)', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
+
+    await notifyPlayersGameFinished(
+      [{ user_id: 'a' }],
+      { id: 'game-1', name: 'Vinter-cup', reportStart: null },
+      'endGame',
+    );
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'game_finished',
+      payload: { game_id: 'game-1', game_name: 'Vinter-cup' },
+    });
+    expect(Object.keys((notifyMock.mock.calls[0][0] as { payload: object }).payload)).toEqual([
+      'game_id',
+      'game_name',
+    ]);
+  });
+
   it('utelater spiller fra mappen ved notify-rejection (mail-gating fail-closed)', async () => {
     // Hvis notify rejecter for én spiller, defaultes sendMail til false ved
     // .get() (returnerer undefined, som filtrerer ut i caller-en). Speiler

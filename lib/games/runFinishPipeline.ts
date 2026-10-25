@@ -6,6 +6,7 @@ import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
 import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
+import { reportStart } from '@/lib/games/roundReportExcerpt';
 import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
@@ -251,7 +252,7 @@ export async function runFinishPipeline(
     // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
     const sendMailByUserId = await notifyPlayersGameFinished(
       players,
-      { id: game.id, name: game.name },
+      { id: game.id, name: game.name, reportStart: reportStart(roundReport) },
       logContext,
     );
 

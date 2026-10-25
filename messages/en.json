@@ -105,7 +105,8 @@
       },
       "gameFinished": {
         "title": "Results are in",
-        "detail": "{gameName}"
+        "detail": "{gameName}",
+        "detailWithReport": "{gameName} · {reportStart}"
       },
       "gameReopened": {
         "title": "The round is open again",
