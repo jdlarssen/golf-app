@@ -754,6 +754,22 @@ describe('findSettledActionIds', () => {
     expect(findSettledActionIds([open, closing], base)).toEqual([]);
   });
 
+  it('#2638: an extended deadline settles the older reminder for the same round, not the newest', () => {
+    const payload = (closesAt: string, round = ROUND) => ({
+      league_id: LEAGUE, league_name: 'Liga', round_id: round, round_label: 'Runde 2', closes_at: closesAt,
+    });
+    const old = row('league_round_closing', payload('2026-10-02T10:00:00.000Z'), { at: '2026-10-01T06:00:00Z' });
+    const renewed = row('league_round_closing', payload('2026-10-02T20:00:00.000Z'), { at: '2026-10-01T07:00:00Z' });
+    const otherRound = row('league_round_closing', payload('2026-10-02T10:00:00.000Z', 'annen-runde'), {
+      at: '2026-10-01T05:00:00Z',
+    });
+    const opened = row('league_round_open', payload('2026-10-02T10:00:00.000Z'), { at: '2026-10-01T04:00:00Z' });
+    expect(findSettledActionIds([renewed, old, otherRound, opened], { ...base, now: NOW })).toEqual([old.id]);
+    // The newer reminder counts even when it is already read.
+    const readRenewed = { ...renewed, read_at: '2026-10-01T07:30:00Z' };
+    expect(findSettledActionIds([readRenewed, old], { ...base, now: NOW })).toEqual([old.id]);
+  });
+
   it('read rows are never touched', () => {
     expect(findSettledActionIds([signup('A', { request_id: REQ }, { read: true })], base)).toEqual([]);
   });
