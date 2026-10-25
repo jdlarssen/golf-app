@@ -17,15 +17,29 @@
 // stripa nederst ligger fast utenfor rullingen.
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { reportQuote } from '../../../../lib/games/roundReportExcerpt';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { settlementForResult } from '../../../../lib/scoring/settlement';
 import {
   ResultView,
   UNKNOWN_FORMAT_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
+import { RoundReportCard } from '../components/leaderboard/RoundReportCard';
+import {
+  RoundReportQuote,
+  type RoundReportQuoteVariant,
+} from '../components/leaderboard/RoundReportQuote';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { WithdrawnPlayers } from '../components/leaderboard/WithdrawnPlayers';
 import { BoardStrip } from '../components/leaderboard/SoloBoard';
@@ -78,6 +92,7 @@ import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useRoundReportArrival } from '../lib/useRoundReportArrival';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { teeShotMinimum } from '../lib/teeShotTeams';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
@@ -89,6 +104,18 @@ import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 /** Samme takt som hull-siden — en drain eller en merge skjer utenfor React. */
 const POLL_MS = 1500;
+
+/** Luften over kortet når lenka under sitatet har rullet hit. */
+const REPORT_SCROLL_GAP = 12;
+
+/** Historien slik skjermen gir den til kroppen (#2632). */
+type ReportView = {
+  report: string;
+  quote: string;
+  variant: RoundReportQuoteVariant;
+  onReadMore: () => void;
+  onLayout: (event: LayoutChangeEvent) => void;
+};
 
 /** Stripas høyde før den er målt: 44 pt knapp, 12 pt luft og kanten. */
 const STRIP_ESTIMATE = 70;
@@ -242,6 +269,53 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   }, [navigation, bundle, boardFormat, teamBand, pillText, pillLive]);
   const [stripHeight, setStripHeight] = useState(STRIP_ESTIMATE);
 
+  // #2632: historien fra pressetribunen, når runden er ferdig og den finnes.
+  const finishedGame = bundle?.game.status === 'finished';
+  const report = finishedGame ? (bundle?.game.roundReport ?? null) : null;
+  // Sveipet skriver den omtrent et minutt etter en avslutning i appen. Står
+  // spilleren på tavla da, hentes spillet på nytt når raden endres.
+  useRoundReportArrival({
+    gameId,
+    waiting: focused && finishedGame && report === null,
+    refresh,
+  });
+  const scrollRef = useRef<ScrollView>(null);
+  // Kortets y regnes fra rulleflaten: kroppens egen y pluss kortets i kroppen.
+  const bodyY = useRef(0);
+  const reportY = useRef(0);
+  const onBodyLayout = useCallback((event: LayoutChangeEvent) => {
+    bodyY.current = event.nativeEvent.layout.y;
+  }, []);
+  const onReportLayout = useCallback((event: LayoutChangeEvent) => {
+    reportY.current = event.nativeEvent.layout.y;
+  }, []);
+  // Leses bare ved trykk, så en ref holder (som `Scorecard.tsx`).
+  const reduceMotion = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (alive) reduceMotion.current = value;
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (value) => {
+      reduceMotion.current = value;
+    });
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  const readMore = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, bodyY.current + reportY.current - REPORT_SCROLL_GAP),
+      animated: !reduceMotion.current,
+    });
+  }, []);
+  const quote = report ? reportQuote(report) : null;
+  const reportFor = (variant: RoundReportQuoteVariant): ReportView | null =>
+    report && quote ? { report, quote, variant, onReadMore: readMore, onLayout: onReportLayout } : null;
+
   if (!bundle || choicesPending) {
     return (
       <View style={ui.centered} testID="leaderboard-loading">
@@ -273,6 +347,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
         {focused ? <StatusBar style="light" /> : null}
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[
             styles.boardScroll,
             // Stripa står i full bredde mot bunnen; ingenting skal havne bak den.
@@ -285,13 +360,14 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               {SEED_FAILED_TEXT}
             </Text>
           ) : null}
-          <View style={teamBoard ? null : styles.plainBody}>
+          <View style={teamBoard ? null : styles.plainBody} onLayout={onBodyLayout}>
             <LeaderboardBody
               bundle={bundle}
               scores={scores}
               extras={extras}
               sideWinners={sideWinners}
               teamBoard={teamBoard}
+              roundReport={reportFor('team')}
             />
           </View>
         </ScrollView>
@@ -315,6 +391,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
         {focused ? <StatusBar style="light" /> : null}
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[
             styles.boardScroll,
             // Sideturneringen og «Vis alle» skal ikke havne bak stripa.
@@ -329,13 +406,14 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               {SEED_FAILED_TEXT}
             </Text>
           ) : null}
-          <View style={soloBoard ? null : styles.plainBody}>
+          <View style={soloBoard ? null : styles.plainBody} onLayout={onBodyLayout}>
             <LeaderboardBody
               bundle={bundle}
               scores={scores}
               extras={extras}
               sideWinners={sideWinners}
               soloBoard={soloBoard}
+              roundReport={reportFor('solo')}
             />
           </View>
         </ScrollView>
@@ -354,7 +432,11 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
 
   return (
     // #1954 D3: formatene uten egen tavle; luften under står over systemlinja.
-    <ScrollView contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]} testID="leaderboard-screen">
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      testID="leaderboard-screen"
+    >
       <Text style={ui.title}>{bundle.game.name}</Text>
       <Text style={ui.muted} testID="leaderboard-subtitle">
         {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
@@ -370,6 +452,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         scores={scores}
         extras={extras}
         sideWinners={sideWinners}
+        roundReport={reportFor('plain')}
       />
     </ScrollView>
   );
@@ -387,6 +470,7 @@ export function LeaderboardBody({
   sideWinners = NO_SIDE_WINNERS,
   soloBoard = null,
   teamBoard = null,
+  roundReport = null,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
@@ -402,6 +486,12 @@ export function LeaderboardBody({
   soloBoard?: SoloBoardModel | null;
   /** Lagtavla (#2579 PR 2) fra skjermen, med best balls låskort i seg. */
   teamBoard?: TeamBoardModel | null;
+  /**
+   * Historien fra pressetribunen (#2632), når runden er ferdig og den finnes.
+   * Sitatet står øverst og kortet nederst, men bare i den tegnede tabellen:
+   * stengt format, blind runde, motorproblem og «ingen slag ført» viser dem ikke.
+   */
+  roundReport?: ReportView | null;
 }) {
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
@@ -536,8 +626,16 @@ export function LeaderboardBody({
     );
   }
 
+  const cardMargin = teamBoard ? 16 : soloBoard ? 12 : 0;
   return (
     <>
+      {roundReport ? (
+        <RoundReportQuote
+          quote={roundReport.quote}
+          variant={roundReport.variant}
+          onReadMore={roundReport.onReadMore}
+        />
+      ) : null}
       <ResultView
         result={outcome.result}
         status={game.status}
@@ -561,6 +659,13 @@ export function LeaderboardBody({
       ) : (
         sideSection
       )}
+      {roundReport ? (
+        <RoundReportCard
+          report={roundReport.report}
+          onLayout={roundReport.onLayout}
+          horizontalMargin={cardMargin}
+        />
+      ) : null}
     </>
   );
 }

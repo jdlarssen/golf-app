@@ -67,8 +67,11 @@ describe('listenForPushTaps', () => {
       shouldSetBadge: false,
     });
 
-    responseListener?.(tap(`/games/${GAME}/leaderboard`));
+    responseListener?.(tap(`/games/${GAME}/approve`));
     expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
+    // #2632: «Resultatet er klart» åpner tavla, ikke spillets side.
+    responseListener?.(tap(`/games/${GAME}/leaderboard`));
+    expect(open).toHaveBeenLastCalledWith({ name: 'Leaderboard', params: { gameId: GAME } });
     responseListener?.(tap('/admin/games/x'));
     expect(open).toHaveBeenLastCalledWith({ name: 'Home' });
 

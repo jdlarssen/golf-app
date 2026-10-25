@@ -11,7 +11,7 @@ varsler.** Serveren sender bare til iPhone: `canUsePush` i
 `native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
 står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
 (eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
-pengeoppgjør, aldri rundereferatet (det står på nettsiden og i e-posten), aldri cup
+pengeoppgjør, aldri cup
 eller liga. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
 opp på nettsiden, blant dem scramble og de fleste lagformatene (regelen står i
 `app-store-metadata.md`).

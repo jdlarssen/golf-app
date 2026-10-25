@@ -6,7 +6,8 @@
 // spill åpner spillets side (`GameHome`). Resten åpner Hjem, også
 // arrangørsidene under `/admin/…`, som appen ikke har. Unntaket er
 // `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
-// hullet (`Hole`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
+// hullet (`Hole`), og `/games/{id}/leaderboard` (#2632, «Resultatet er klart»):
+// den åpner tavla (`Leaderboard`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
 // peker på `/liga/{id}` og åpner ligaen (`League`).
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
@@ -26,6 +27,7 @@ import { readMarkerFrom } from '../../../../lib/notifications/readMarker';
 export type PushTarget =
   | { name: 'GameHome'; params: { gameId: string } }
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
+  | { name: 'Leaderboard'; params: { gameId: string } }
   | { name: 'League'; params: { leagueId: string } }
   | { name: 'Home' };
 
@@ -37,6 +39,7 @@ export type PushRequestLike = {
 
 const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
 const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
+const LEADERBOARD_SUFFIX = /^\/leaderboard(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
@@ -66,6 +69,10 @@ export function pushTarget(url: string | null): PushTarget {
       const holeNumber = hole ? Number(hole[1]) : NaN;
       if (holeNumber >= 1 && holeNumber <= 18) {
         return { name: 'Hole', params: { gameId, holeNumber } };
+      }
+      // #2632: «Resultatet er klart» peker på tavla, der historien står.
+      if (LEADERBOARD_SUFFIX.test(url!.slice(match[0].length))) {
+        return { name: 'Leaderboard', params: { gameId } };
       }
       return { name: 'GameHome', params: { gameId } };
     }
