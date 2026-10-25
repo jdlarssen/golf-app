@@ -194,7 +194,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]} testID="round-start-screen">
-      <ScrollView contentContainerStyle={styles.scrollBody}>
+      <ScrollView contentContainerStyle={styles.scrollBody} testID="round-start-scroll">
         {title}
         {view.league.isSimulator ? (
           <View testID="round-start-settings">
