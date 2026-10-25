@@ -142,13 +142,14 @@ export default async function ArrangeAudiencePage({
           <PresetCard audience={audience as ArrangeAudience} />
 
           {/* Chips to the guide's sections: plain anchors, like the hub's
-              «Hopp til» menu. */}
+              «Hopp til» menu. 46 px: the artboard's 44 px chip is content-box
+              with a 1 px border, so it renders 46. */}
           <nav aria-label={t('tocHeading')} className="mt-[18px] mb-4 flex flex-wrap gap-2">
             {content.sections.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold text-primary"
+                className="inline-flex min-h-[46px] items-center rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold text-primary"
               >
                 {section.chip}
               </a>
