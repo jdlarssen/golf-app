@@ -105,6 +105,8 @@ import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 /** Samme takt som hull-siden — en drain eller en merge skjer utenfor React. */
 const POLL_MS = 1500;
 
+const noop = () => undefined;
+
 /** Luften over kortet når lenka under sitatet har rullet hit. */
 const REPORT_SCROLL_GAP = 12;
 
@@ -113,8 +115,6 @@ type ReportView = {
   report: string;
   quote: string;
   variant: RoundReportQuoteVariant;
-  onReadMore: () => void;
-  onLayout: (event: LayoutChangeEvent) => void;
 };
 
 /** Stripas høyde før den er målt: 44 pt knapp, 12 pt luft og kanten. */
@@ -281,26 +281,24 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   });
   const scrollRef = useRef<ScrollView>(null);
   // Kortets y regnes fra rulleflaten: kroppens egen y pluss kortets i kroppen.
-  const bodyY = useRef(0);
-  const reportY = useRef(0);
+  const [bodyTop, setBodyTop] = useState(0);
+  const [reportTop, setReportTop] = useState(0);
   const onBodyLayout = useCallback((event: LayoutChangeEvent) => {
-    bodyY.current = event.nativeEvent.layout.y;
+    setBodyTop(event.nativeEvent.layout.y);
   }, []);
   const onReportLayout = useCallback((event: LayoutChangeEvent) => {
-    reportY.current = event.nativeEvent.layout.y;
+    setReportTop(event.nativeEvent.layout.y);
   }, []);
-  // Leses bare ved trykk, så en ref holder (som `Scorecard.tsx`).
-  const reduceMotion = useRef(false);
+  // Leses bare ved trykk (som `Scorecard.tsx`).
+  const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled()
       .then((value) => {
-        if (alive) reduceMotion.current = value;
+        if (alive) setReduceMotion(value);
       })
       .catch(() => undefined);
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (value) => {
-      reduceMotion.current = value;
-    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => {
       alive = false;
       sub.remove();
@@ -308,13 +306,13 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   }, []);
   const readMore = useCallback(() => {
     scrollRef.current?.scrollTo({
-      y: Math.max(0, bodyY.current + reportY.current - REPORT_SCROLL_GAP),
-      animated: !reduceMotion.current,
+      y: Math.max(0, bodyTop + reportTop - REPORT_SCROLL_GAP),
+      animated: !reduceMotion,
     });
-  }, []);
+  }, [bodyTop, reportTop, reduceMotion]);
   const quote = report ? reportQuote(report) : null;
   const reportFor = (variant: RoundReportQuoteVariant): ReportView | null =>
-    report && quote ? { report, quote, variant, onReadMore: readMore, onLayout: onReportLayout } : null;
+    report && quote ? { report, quote, variant } : null;
 
   if (!bundle || choicesPending) {
     return (
@@ -368,6 +366,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               sideWinners={sideWinners}
               teamBoard={teamBoard}
               roundReport={reportFor('team')}
+              onReadMore={readMore}
+              onReportLayout={onReportLayout}
             />
           </View>
         </ScrollView>
@@ -414,6 +414,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               sideWinners={sideWinners}
               soloBoard={soloBoard}
               roundReport={reportFor('solo')}
+              onReadMore={readMore}
+              onReportLayout={onReportLayout}
             />
           </View>
         </ScrollView>
@@ -453,6 +455,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         extras={extras}
         sideWinners={sideWinners}
         roundReport={reportFor('plain')}
+        onReadMore={readMore}
+        onReportLayout={onReportLayout}
       />
     </ScrollView>
   );
@@ -471,6 +475,8 @@ export function LeaderboardBody({
   soloBoard = null,
   teamBoard = null,
   roundReport = null,
+  onReadMore,
+  onReportLayout,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
@@ -492,6 +498,10 @@ export function LeaderboardBody({
    * stengt format, blind runde, motorproblem og «ingen slag ført» viser dem ikke.
    */
   roundReport?: ReportView | null;
+  /** Lenka under sitatet: ruller til kortet. */
+  onReadMore?: () => void;
+  /** Kortets plass i kroppen, så skjermen vet hvor det er. */
+  onReportLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
@@ -633,7 +643,7 @@ export function LeaderboardBody({
         <RoundReportQuote
           quote={roundReport.quote}
           variant={roundReport.variant}
-          onReadMore={roundReport.onReadMore}
+          onReadMore={onReadMore ?? noop}
         />
       ) : null}
       <ResultView
@@ -662,7 +672,7 @@ export function LeaderboardBody({
       {roundReport ? (
         <RoundReportCard
           report={roundReport.report}
-          onLayout={roundReport.onLayout}
+          onLayout={onReportLayout}
           horizontalMargin={cardMargin}
         />
       ) : null}
