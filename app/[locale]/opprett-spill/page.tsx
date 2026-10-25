@@ -233,6 +233,32 @@ async function loadWizardDeepLink(sp: Awaited<SearchParams>): Promise<WizardDeep
   );
 }
 
+/**
+ * What a suggestion link seeds in the wizard. `?format=` seeds the format and
+ * its count (`null` = without a count). `?oppsett=` seeds the format and the
+ * team size, and always opens without a count («Vis alle»), so the count
+ * can't filter its format away and step 2 recommends nothing else than the
+ * guide does (#2331). `key` remounts the wizard when the link changes.
+ */
+function deepLinkSeed(deepLink: WizardDeepLink): {
+  values: Pick<InitialValues, 'game_mode' | 'team_size'>;
+  expectedPlayerCount: number | null;
+  key: string;
+} {
+  if (deepLink.kind === 'preset') {
+    return {
+      values: { game_mode: deepLink.gameMode, team_size: deepLink.teamSize },
+      expectedPlayerCount: null,
+      key: `oppsett-${deepLink.audience}`,
+    };
+  }
+  return {
+    values: { game_mode: deepLink.gameMode },
+    expectedPlayerCount: deepLink.expectedPlayerCount,
+    key: `format:${deepLink.gameMode}:${deepLink.expectedPlayerCount ?? ''}`,
+  };
+}
+
 export default async function OpprettSpillPage({
   searchParams,
 }: {
@@ -282,6 +308,7 @@ export default async function OpprettSpillPage({
   const teeOffDefault = defaultTeeOffAt(new Date());
 
   const deepLink = await loadWizardDeepLink(sp);
+  const seed = deepLink ? deepLinkSeed(deepLink) : null;
 
   // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
   // vinner; ellers en ?klubb=-dyplenke gir klubb-intent; revansje-derivert
@@ -320,33 +347,20 @@ export default async function OpprettSpillPage({
           initialValues={
             revansje?.initialValues ?? {
               ...(baneCourseId ? { course_id: baneCourseId } : {}),
-              ...(deepLink ? { game_mode: deepLink.gameMode } : {}),
-              ...(deepLink?.kind === 'preset' ? { team_size: deepLink.teamSize } : {}),
+              ...seed?.values,
               scheduled_tee_off_at: teeOffDefault,
             }
           }
-          // #2328: null = the format without a count; left out = default 4.
-          // #2331: the setup always opens without a count («Vis alle»), so the
-          // count can't filter its format away and step 2 recommends nothing
-          // else than the guide does.
-          initialExpectedPlayerCount={
-            deepLink?.kind === 'format'
-              ? deepLink.expectedPlayerCount
-              : deepLink?.kind === 'preset'
-                ? null
-                : undefined
-          }
+          // #2328/#2331: null = the format without a count; left out = default 4.
+          initialExpectedPlayerCount={seed ? seed.expectedPlayerCount : undefined}
           // #1007/#1023/#2328/#2331: remount når prefill-kilden endres
           // (useGameFormState leser initialValues kun ved mount —
           // key-remount-fella).
           wizardKey={
             fraId ??
             baneCourseId ??
-            (deepLink?.kind === 'preset'
-              ? `oppsett-${deepLink.audience}`
-              : deepLink?.kind === 'format'
-                ? `format:${deepLink.gameMode}:${deepLink.expectedPlayerCount ?? ''}`
-                : 'blank')
+            seed?.key ??
+            'blank'
           }
           userId={currentUserId}
           isAdmin={isAdmin}

@@ -13,11 +13,15 @@ import {
 } from '@/lib/seo/arrangeAudiences';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
+import { PresetCard } from './PresetCard';
 
 type Params = Promise<{ audience: string; locale: string }>;
 
-/** One guide section: an anchor id, a search-friendly heading and its prose. */
-type GuideSection = { id: string; heading: string; body: string };
+/**
+ * One guide section: an anchor id, the short label on its chip under the
+ * setup card (#2331), a search-friendly heading and its prose.
+ */
+type GuideSection = { id: string; chip: string; heading: string; body: string };
 /** One FAQ pair. Same shape as `landing.faq` (AnonLanding), deliberately. */
 type FaqEntry = { q: string; a: string };
 /** One audience entry under `arrangeGuide.audiences.<slug>`. */
@@ -132,6 +136,24 @@ export default async function ArrangeAudiencePage({
             title={content.pageTitle}
             subtitle={content.pageSubtitle}
           />
+
+          {/* #2331: the recommended setup comes right after the H1, so the H1
+              still opens the page on a phone. */}
+          <PresetCard audience={audience as ArrangeAudience} />
+
+          {/* Chips to the guide's sections: plain anchors, like the hub's
+              «Hopp til» menu. */}
+          <nav aria-label={t('tocHeading')} className="mt-[18px] mb-4 flex flex-wrap gap-2">
+            {content.sections.map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold text-primary"
+              >
+                {section.chip}
+              </a>
+            ))}
+          </nav>
 
           <div className="whitespace-pre-line font-sans text-[15px] leading-relaxed text-muted">
             {content.intro}
