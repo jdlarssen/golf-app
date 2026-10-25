@@ -12,6 +12,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 | `finish-pipeline-sweep` | 0170 | a finished non-cup, non-derived game has `finish_pipeline_at is null` | `app/api/cron/finish-pipeline/route.ts` |
 | `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game started in the last 2 days has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
 | `stale-game-reminder-sweep` (hourly, :17) | 0205 | an active game that is not a cup match or derived, has a `created_by`, started over 24 h ago and has `organizer_stale_reminder_sent_at is null` | `app/api/cron/stale-game-reminder/route.ts` |
+| `league-round-reminder-sweep` (hourly, :41) | 0217 (stamps), 0218 | an open round (`opens_at <= now() < closes_at`) of an `active` league has `opening_notice_sent_at is null`, or `closing_reminder_sent_at is null` with under 48 h left | `app/api/cron/league-round-reminder/route.ts` |
 
 `/api/cron/product-update-digest` is not pg_cron: it is the one Vercel Cron in `vercel.json` (daily, GET). Both transports send the same `Authorization: Bearer <CRON_SECRET>`.
 
@@ -57,6 +58,18 @@ select gp.game_id, gp.user_id, gp.deliver_reminder_sent_at,
 from public.game_players gp join public.games g on g.id = gp.game_id
 where g.status = 'active' and gp.deliver_reminder_sent_at is not null
 order by gp.deliver_reminder_sent_at desc limit 20;
+```
+
+```sql
+-- 3d. League round messages (#2638): when each round told its players it was
+--     open, and reminded them before the deadline. The opening message comes
+--     within the hour after opens_at, the reminder 47 to 48 hours before closes_at.
+select l.name, r.sequence, r.opens_at, r.opening_notice_sent_at,
+       r.closes_at, r.closing_reminder_sent_at,
+       r.closes_at - r.closing_reminder_sent_at as reminder_lead
+from public.league_rounds r join public.leagues l on l.id = r.league_id
+where l.status = 'active'
+order by r.closes_at desc limit 20;
 ```
 
 A start within ~2 minutes of tee-off and a tail within ~1 minute of `ended_at` mean the chain works, whatever signals 1 and 2 look like. A reminder lands between 15 and 20 minutes after a card's last hole (in the one-ball formats the last hole sits on the captain's rows).

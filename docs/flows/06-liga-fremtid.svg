@@ -27,6 +27,7 @@
   <circle cx="156" cy="367" r="16" fill="#B8973F"/><text x="156" y="372" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
   <text x="190" y="372" font-size="16" fill="#213029">Start ligaen → «Aktiv» (krever ≥1 runde + ≥2 spillere)</text>
   <line x1="400" y1="396" x2="400" y2="420" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="412" y="412" font-size="11.5" fill="#6B7770">varsel når runden åpner + 48 t før fristen (#2638)</text>
 
   <!-- 4 player plays round (green) -->
   <rect x="120" y="422" width="560" height="82" rx="14" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.5"/>
