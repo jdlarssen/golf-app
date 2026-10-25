@@ -6742,7 +6742,8 @@
     "unsupportedInstructions": "Try opening tornygolf.no in Chrome, Edge, or Safari on your phone.",
     "closeAria": "Close",
     "iosStep1Pre": "Tap the share icon",
-    "iosStep1Post": "at the bottom of the screen."
+    "iosStep1Post": "at the bottom of the screen.",
+    "iosStep1PostIpad": "in the top right of Safari."
   },
   "publicCourses": {
     "index": {

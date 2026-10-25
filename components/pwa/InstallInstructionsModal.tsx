@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
+import { isIpad } from '@/lib/pwa/detect';
 
 type Variant = 'ios-safari' | 'ios-other' | 'unsupported';
 
@@ -82,6 +83,9 @@ export function InstallInstructionsModal({
 type TFn = ReturnType<typeof useTranslations<'installInstructions'>>;
 
 function IosSafariSteps({ t }: { t: TFn }) {
+  // Only rendered once the modal is open, i.e. after a click: the user agent
+  // is always readable here, so no hydration guard.
+  const step1Post = isIpad() ? t('iosStep1PostIpad') : t('iosStep1Post');
   return (
     <ol className="space-y-4 text-sm text-text">
       <li className="flex gap-3">
@@ -89,7 +93,7 @@ function IosSafariSteps({ t }: { t: TFn }) {
         <span className="leading-relaxed">
           {t('iosStep1Pre')}{' '}
           <SafariShareGlyph className="inline-block align-text-bottom mx-0.5" />{' '}
-          {t('iosStep1Post')}
+          {step1Post}
         </span>
       </li>
       <li className="flex gap-3">

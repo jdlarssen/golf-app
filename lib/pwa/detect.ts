@@ -23,7 +23,14 @@ export function isStandalone(): boolean {
 
 export function isIos(): boolean {
   if (typeof window === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window);
+  if ('MSStream' in window) return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || isIpadWithMacUa();
+}
+
+/** Any iPad: one that says so, or one that reports a Mac (#2352). */
+export function isIpad(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /iPad/.test(navigator.userAgent) || isIpadWithMacUa();
 }
 
 export function isIosSafari(): boolean {
@@ -44,8 +51,8 @@ export function isAndroid(): boolean {
 
 /**
  * iPadOS 13+ Safari asks for desktop sites and reports a Mac user agent; a Mac
- * with a touch screen is an iPad. Only `storePlatform` uses this: `isIos()`
- * still misses that iPad (#2352).
+ * with a touch screen is an iPad. `isIos()` and `isIpad()` count it, so every
+ * iOS branch treats it like an iPhone (#2352).
  */
 function isIpadWithMacUa(): boolean {
   return /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
@@ -61,7 +68,7 @@ export type DevicePlatform = 'ios' | 'android' | 'other';
  */
 export function storePlatform(): DevicePlatform {
   if (typeof window === 'undefined') return 'other';
-  if (isIos() || isIpadWithMacUa()) return 'ios';
+  if (isIos()) return 'ios';
   if (isAndroid()) return 'android';
   return 'other';
 }

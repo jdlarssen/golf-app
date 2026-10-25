@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { resetLaunchAndDevice, setDevice } from '@/lib/app/__tests__/_helpers';
 
 /**
  * The Capacitor branch of the push state machine (#1282).
@@ -82,6 +83,37 @@ describe('getPushState in the shell', () => {
     installCapacitor(null);
     const { getPushState } = await loadPush();
     // jsdom has no serviceWorker/PushManager, so the untouched web path answers.
+    expect(await getPushState()).toBe('unsupported');
+  });
+});
+
+describe('getPushState on an iPad that reports a Mac (#2352)', () => {
+  afterEach(resetLaunchAndDevice);
+
+  it('asks to install first in a plain Safari tab, with or without push support', async () => {
+    installCapacitor(null);
+    setDevice('mac', 5);
+    const { getPushState } = await loadPush();
+    expect(await getPushState()).toBe('ios-install');
+
+    vi.stubGlobal('PushManager', class {});
+    vi.stubGlobal('Notification', { permission: 'default' });
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {},
+    });
+    try {
+      expect(await getPushState()).toBe('ios-install');
+    } finally {
+      delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('stays unsupported on a real Mac without push support', async () => {
+    installCapacitor(null);
+    setDevice('mac', 0);
+    const { getPushState } = await loadPush();
     expect(await getPushState()).toBe('unsupported');
   });
 });
