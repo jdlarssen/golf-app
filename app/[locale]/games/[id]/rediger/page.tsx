@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { GameForm } from '@/app/[locale]/admin/games/new/GameForm';
+import { GameForm, type GameFormView } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
 import { getOrganiserWizardMountData } from '@/lib/wizard/getWizardMountData';
 import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
@@ -20,6 +20,9 @@ import {
   publishFromDraftAction,
   updateScheduledAction,
 } from '@/app/[locale]/admin/games/[id]/edit/actions';
+import { startScheduledGameAction } from '@/app/[locale]/admin/games/[id]/actions';
+import { buildEditNav } from '@/app/[locale]/admin/games/[id]/edit/editNav';
+import { isEditSection } from '@/lib/games/editSections';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { withRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -54,6 +57,9 @@ import {
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
+  /** #2322: the part of a scheduled game that is open (`EDIT_SECTIONS`). */
+  del?: string | string[];
+  status?: string | string[];
 }>;
 
 export default async function CreatorEditGamePage({
@@ -171,13 +177,52 @@ export default async function CreatorEditGamePage({
     );
   }
 
+  const title = localizeGameName(game.name, game.courses?.name ?? null, locale);
+
+  // #2322: a scheduled game opens on the overview of its six parts, and
+  // `?del=` opens one of them. The overview draws its own title, so the page
+  // header is only there for an open part.
+  if (game.status === 'scheduled') {
+    const del = first(sp.del);
+    const view: GameFormView = isEditSection(del) ? del : 'overview';
+    const tOverview = await getTranslations('wizard.form.overview');
+    const tBanners = await getTranslations('admin.game.banners');
+    const saved = first(sp.status) === 'updated';
+    const body = (
+      <Suspense fallback={<GameFormSkeleton />}>
+        <EditGameFormBody gameId={id} game={game} view={view} title={title} />
+      </Suspense>
+    );
+    return (
+      <AppShell>
+        <TopBar
+          backHref={view === 'overview' ? `/games/${id}` : `/games/${id}/rediger`}
+          kicker={tOverview('kicker')}
+        />
+        {view !== 'overview' && <PageHeader title={title} />}
+        {(errorMessage || saved) && (
+          <div className="mb-4 space-y-2">
+            {errorMessage && (
+              <Banner tone="error" testId="edit-error-banner">
+                {errorMessage}
+              </Banner>
+            )}
+            {saved && (
+              <Banner tone="success" testId="edit-saved-banner">
+                {tBanners('updated')}
+              </Banner>
+            )}
+          </div>
+        )}
+        {view === 'overview' ? body : <Card>{body}</Card>}
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <TopBar backHref={`/games/${id}`} kicker={t('kicker')} />
-      <PageHeader
-        title={localizeGameName(game.name, game.courses?.name ?? null, locale)}
-        subtitle={t('subtitle')}
-      />
+      <PageHeader title={title} subtitle={t('subtitle')} />
 
       <div className="space-y-2">
         {errorMessage && (
@@ -185,15 +230,13 @@ export default async function CreatorEditGamePage({
             {errorMessage}
           </Banner>
         )}
-        <Banner tone="info">
-          {game.status === 'draft' ? t('draftBanner') : t('scheduledBanner')}
-        </Banner>
+        <Banner tone="info">{t('draftBanner')}</Banner>
       </div>
 
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <EditGameFormBody gameId={id} game={game} />
+            <EditGameFormBody gameId={id} game={game} view="full" title={title} />
           </Suspense>
         </Card>
       </div>
@@ -204,9 +247,13 @@ export default async function CreatorEditGamePage({
 async function EditGameFormBody({
   gameId,
   game,
+  view,
+  title,
 }: {
   gameId: string;
   game: EditGameRow;
+  view: GameFormView;
+  title: string;
 }) {
   const supabase = await getServerClient();
   const [{ courses, players }, playersResult] = await Promise.all([
@@ -215,7 +262,7 @@ async function EditGameFormBody({
     getNewGameFormData(false),
     supabase
       .from('game_players')
-      .select('user_id, team_number, flight_number, tee_gender')
+      .select('user_id, team_number, flight_number, tee_gender, withdrawn_at')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
   ]);
@@ -250,6 +297,18 @@ async function EditGameFormBody({
     );
   }
 
+  // #2322 (eierens svar 25.10): the organiser gets «Start runden nå» and the
+  // Startlista here too, as admin does.
+  const editNav = await buildEditNav({
+    gameId,
+    playerRows,
+    title,
+    baseHref: `/games/${gameId}/rediger`,
+    deleteHref: `/games/${gameId}/slett`,
+    startlistHref: `/admin/games/${gameId}/startlista`,
+    startAction: startScheduledGameAction.bind(null, gameId, 'game'),
+  });
+
   return (
     <GameForm
       courses={courses}
@@ -260,6 +319,8 @@ async function EditGameFormBody({
         gameId,
         updateAction: updateScheduledAction,
       }}
+      view={view}
+      editNav={editNav}
     />
   );
 }

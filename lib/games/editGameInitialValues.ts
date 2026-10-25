@@ -106,6 +106,8 @@ export type EditGamePlayerRow = {
   team_number: number | null;
   flight_number: number | null;
   tee_gender: 'mens' | 'ladies' | 'juniors';
+  /** #2322: read by «Rediger spill» to count active players without a flight. */
+  withdrawn_at?: string | null;
 };
 
 /**

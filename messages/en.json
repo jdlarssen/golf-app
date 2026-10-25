@@ -1173,6 +1173,30 @@
       }
     },
     "form": {
+      "overview": {
+        "kicker": "Edit game",
+        "autoStart": "Starts by itself {date} {time}",
+        "listHeading": "Parts of the game",
+        "rows": {
+          "nameAndTime": "Name and time",
+          "course": "Course",
+          "format": "Format",
+          "players": "Players and flights",
+          "registration": "Sign-up",
+          "settings": "Prizes and settings"
+        },
+        "edit": "Edit",
+        "editLabel": "Edit {title}",
+        "courseValue": "{course} · Tee: {tee}",
+        "flights": "{count, plural, one {# flight} other {# flights}}",
+        "prizes": "{count, plural, one {# prize} other {# prizes}}",
+        "unassignedFlights": "{count} without a flight",
+        "startlistLink": "Set the flights on the start list →",
+        "notSet": "Not set",
+        "footnote": "Each part opens on its own and saves right away. Players see the changes the next time they open the app.",
+        "delete": "Delete the game …",
+        "cancel": "Cancel"
+      },
       "formatHeading": "3. Format",
       "modeLockedNote": "Cannot be changed after the game has started.",
       "lockedTeamSize": "{size} players per team",
@@ -2441,8 +2465,7 @@
     "edit": {
       "kicker": "Edit game",
       "subtitle": "Change course, players, teams or settings",
-      "draftBanner": "The game is still a draft — only you can see it. Fill in the missing details and publish when you're ready.",
-      "scheduledBanner": "The game is scheduled. Players will see changes the next time they open the app."
+      "draftBanner": "The game is still a draft — only you can see it. Fill in the missing details and publish when you're ready."
     },
     "players": {
       "kicker": "Players",
@@ -4138,7 +4161,6 @@
         "kicker": "Edit game",
         "subtitle": "Change course, players, teams or settings",
         "bannerDraft": "The game is still a draft — only you can see it. Fill in the missing details and publish when you are ready.",
-        "bannerScheduled": "The game is in the scheduled phase. Players will see changes the next time they open the app.",
         "playerShortageBanner": "You need an even number of registered players (at least 2) for best ball. Invite more from the <link>Players</link> page."
       },
       "delete": {

@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   GameForm,
   type CourseOption,
+  type GameFormView,
   type PlayerOption,
 } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
@@ -29,6 +30,9 @@ import {
   publishFromDraftAction,
   updateScheduledAction,
 } from './actions';
+import { startScheduledGameAction } from '../actions';
+import { buildEditNav } from './editNav';
+import { isEditSection } from '@/lib/games/editSections';
 import {
   buildEditFormInitialValues,
   buildEditInitialValues,
@@ -44,6 +48,9 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
   pending?: string | string[];
+  /** #2322: the part of a scheduled game that is open (`EDIT_SECTIONS`). */
+  del?: string | string[];
+  status?: string | string[];
 }>;
 
 
@@ -202,6 +209,53 @@ export default async function EditGamePage({
     );
   }
 
+  const title = localizeGameName(game.name, game.courses?.name ?? null, locale);
+
+  // #2322: a scheduled game opens on the overview of its six parts, and
+  // `?del=` opens one of them, as on the organiser's /games/[id]/rediger. The
+  // overview draws its own title, so the ribbon and h1 are only there for an
+  // open part.
+  if (game.status === 'scheduled') {
+    const del = first(sp.del);
+    const view: GameFormView = isEditSection(del) ? del : 'overview';
+    const tOverview = await getTranslations('wizard.form.overview');
+    const tBanners = await getTranslations('admin.game.banners');
+    const saved = first(sp.status) === 'updated';
+    const body = (
+      <Suspense fallback={<GameFormSkeleton />}>
+        <EditGameFormBody gameId={id} game={game} view={view} title={title} />
+      </Suspense>
+    );
+    return (
+      <AdminShell>
+        <TopBar
+          backHref={view === 'overview' ? `/admin/games/${id}` : `/admin/games/${id}/edit`}
+          kicker={tOverview('kicker')}
+        />
+        {view !== 'overview' && (
+          <h1 className="mb-4 px-1 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+            {title}
+          </h1>
+        )}
+        {(errorMessage || saved) && (
+          <div className="mb-4 space-y-2">
+            {errorMessage && (
+              <Banner tone="error" testId="edit-error-banner">
+                {errorMessage}
+              </Banner>
+            )}
+            {saved && (
+              <Banner tone="success" testId="edit-saved-banner">
+                {tBanners('updated')}
+              </Banner>
+            )}
+          </div>
+        )}
+        {view === 'overview' ? body : <Card>{body}</Card>}
+      </AdminShell>
+    );
+  }
+
   return (
     <AdminShell>
       <TopBar
@@ -213,7 +267,7 @@ export default async function EditGamePage({
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {localizeGameName(game.name, game.courses?.name ?? null, locale)}
+          {title}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
           {t('subtitle')}
@@ -226,9 +280,7 @@ export default async function EditGamePage({
             {errorMessage}
           </Banner>
         )}
-        <Banner tone="info">
-          {game.status === 'draft' ? t('bannerDraft') : t('bannerScheduled')}
-        </Banner>
+        <Banner tone="info">{t('bannerDraft')}</Banner>
         <Suspense fallback={null}>
           <PlayerShortageBanner gameMode={game.game_mode} />
         </Suspense>
@@ -237,7 +289,7 @@ export default async function EditGamePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <EditGameFormBody gameId={id} game={game} />
+            <EditGameFormBody gameId={id} game={game} view="full" title={title} />
           </Suspense>
         </Card>
       </div>
@@ -340,16 +392,20 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
 async function EditGameFormBody({
   gameId,
   game,
+  view,
+  title,
 }: {
   gameId: string;
   game: EditGameRow;
+  view: GameFormView;
+  title: string;
 }) {
   const { supabase } = await getEditContext();
 
   const [playersResult, { courses, playerOptions }] = await Promise.all([
     supabase
       .from('game_players')
-      .select('user_id, team_number, flight_number, tee_gender')
+      .select('user_id, team_number, flight_number, tee_gender, withdrawn_at')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
     getOptions(),
@@ -378,6 +434,16 @@ async function EditGameFormBody({
     );
   }
 
+  const editNav = await buildEditNav({
+    gameId,
+    playerRows,
+    title,
+    baseHref: `/admin/games/${gameId}/edit`,
+    deleteHref: `/admin/games/${gameId}/slett`,
+    startlistHref: `/admin/games/${gameId}/startlista`,
+    startAction: startScheduledGameAction.bind(null, gameId),
+  });
+
   return (
     <GameForm
       courses={courses}
@@ -388,6 +454,8 @@ async function EditGameFormBody({
         gameId,
         updateAction: updateScheduledAction,
       }}
+      view={view}
+      editNav={editNav}
     />
   );
 }

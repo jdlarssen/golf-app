@@ -35,7 +35,7 @@ export type FlightPlayer = {
 };
 
 /** Returnerer bare aktive (ikke-trukkede) spillere. */
-function activePlayers<T extends Pick<FlightPlayer, 'withdrawn_at'>>(
+export function activePlayers<T extends Pick<FlightPlayer, 'withdrawn_at'>>(
   players: readonly T[],
 ): T[] {
   return players.filter((p) => p.withdrawn_at == null);

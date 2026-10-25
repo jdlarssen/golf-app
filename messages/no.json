@@ -1173,6 +1173,30 @@
       }
     },
     "form": {
+      "overview": {
+        "kicker": "Rediger spillet",
+        "autoStart": "Starter av seg selv {date} {time}",
+        "listHeading": "Delene av spillet",
+        "rows": {
+          "nameAndTime": "Navn og tid",
+          "course": "Bane",
+          "format": "Format",
+          "players": "Spillere og flighter",
+          "registration": "Påmelding",
+          "settings": "Premier og innstillinger"
+        },
+        "edit": "Endre",
+        "editLabel": "Endre {title}",
+        "courseValue": "{course} · Tee: {tee}",
+        "flights": "{count, plural, one {# flight} other {# flighter}}",
+        "prizes": "{count, plural, one {# premie} other {# premier}}",
+        "unassignedFlights": "{count} uten flight",
+        "startlistLink": "Sett flightene på Startlista →",
+        "notSet": "Ikke satt",
+        "footnote": "Hver del åpnes for seg og lagres med én gang. Spillerne ser endringene neste gang de åpner appen.",
+        "delete": "Slett spillet …",
+        "cancel": "Avbryt"
+      },
       "formatHeading": "3. Format",
       "modeLockedNote": "Kan ikke endres etter spill-start.",
       "lockedTeamSize": "{size} spillere per lag",
@@ -2441,8 +2465,7 @@
     "edit": {
       "kicker": "Rediger spill",
       "subtitle": "Endre bane, spillere, lag eller innstillinger",
-      "draftBanner": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",
-      "scheduledBanner": "Spillet er planlagt. Spillerne ser endringene neste gang de åpner appen."
+      "draftBanner": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare."
     },
     "players": {
       "kicker": "Spillere",
@@ -4138,7 +4161,6 @@
         "kicker": "Rediger spill",
         "subtitle": "Endre bane, spillere, lag eller innstillinger",
         "bannerDraft": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",
-        "bannerScheduled": "Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.",
         "playerShortageBanner": "Du trenger et partall registrerte spillere (minst 2) for best ball. Inviter flere fra <link>Spillere</link>-siden."
       },
       "delete": {
