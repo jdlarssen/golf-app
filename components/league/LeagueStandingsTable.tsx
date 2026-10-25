@@ -1,6 +1,12 @@
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatNumber } from '@/lib/i18n/format';
+import {
+  formatRoundCell,
+  formatSeasonValue,
+  roundCellValue,
+  type FormatDecimal,
+} from '@/lib/league/standingsFormat';
 import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -9,45 +15,10 @@ function playerName(p: LeagueParticipant, unknownLabel: string): string {
   return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
-/** Format a net-to-par number: "E", "+3", "−5". Uses minus sign (−), not hyphen. */
-function formatNetToPar(n: number | null, locale: AppLocale, decimals = 0): string {
-  if (n === null) return '';
-  if (n === 0) return 'E';
-  const abs = Math.abs(n);
-  const str =
-    decimals > 0
-      ? formatNumber(abs, locale, {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        })
-      : String(abs);
-  return n > 0 ? `+${str}` : `−${str}`;
-}
-
-/** Format points: plain number, 1 decimal only when fractional (tie-split). */
-function formatPoints(value: number, locale: AppLocale): string {
-  return Number.isInteger(value)
-    ? String(value)
-    : formatNumber(value, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-}
-
-/**
- * Format the season value column per model. Poeng-baserte formater (stableford)
- * og 'points'-modellen viser rene poeng; slagspill-modellene viser mot-par.
- */
-function formatValue(
-  value: number,
-  model: string,
-  pointsBased: boolean,
-  locale: AppLocale,
-): string {
-  if (model === 'points' || pointsBased) {
-    return formatPoints(value, locale);
-  }
-  if (model === 'average') {
-    return formatNetToPar(value, locale, 1);
-  }
-  return formatNetToPar(Math.round(value), locale);
+/** The locale's decimal for the shared formatters (`lib/league/standingsFormat`). */
+function localeDecimal(locale: AppLocale): FormatDecimal {
+  return (value, decimals) =>
+    formatNumber(value, locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function RoundCell({
@@ -63,8 +34,7 @@ function RoundCell({
   t: ReturnType<typeof useTranslations<'liga.standings'>>;
   locale: AppLocale;
 }) {
-  const isPoints = model === 'points';
-  const raw = cell ? (isPoints ? cell.points : cell.value) : null;
+  const raw = roundCellValue(cell, model);
   if (!cell || raw === null) {
     return (
       <td className="px-2 py-2 text-center font-serif tabular-nums text-xs text-muted/40">
@@ -74,7 +44,7 @@ function RoundCell({
   }
 
   // Stableford-runde-verdier (og plasserings-poeng) er rene poeng, ikke mot-par.
-  const label = isPoints || pointsBased ? formatPoints(raw, locale) : formatNetToPar(raw, locale);
+  const label = formatRoundCell(raw, model, pointsBased, localeDecimal(locale));
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
@@ -251,7 +221,7 @@ export function LeagueStandingsTable({
                   className="px-2 py-2.5 text-right font-serif tabular-nums text-sm font-semibold"
                   style={isFirst ? { color: 'var(--accent-text)' } : undefined}
                 >
-                  {formatValue(row.value, standingsModel, pointsBased, locale)}
+                  {formatSeasonValue(row.value, standingsModel, pointsBased, localeDecimal(locale))}
                 </td>
               </tr>
             );
