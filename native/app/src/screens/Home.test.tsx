@@ -42,6 +42,10 @@ jest.mock('../data/profile', () => ({
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
+// #2638: «Ligaene dine» spør `GET /api/liga`; uten ligaer står ingen seksjon.
+jest.mock('../data/league', () => ({
+  fetchMyLeagues: jest.fn(async () => mockState.leagues),
+}));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
 }));
@@ -63,11 +67,13 @@ const mockState: {
   cached: HomeList | undefined;
   bundles: Record<string, CardBundle>;
   profile: OwnProfile;
+  leagues: Awaited<ReturnType<typeof import('../data/league').fetchMyLeagues>>;
 } = {
   online: true,
   list: { version: 2, cards: [], lastRound: null, fetchedAt: '' },
   cached: undefined,
   bundles: {},
+  leagues: { ok: true, leagues: [] },
   profile: {
     name: 'Sigrid Berg',
     nickname: null,
@@ -154,6 +160,7 @@ beforeEach(() => {
   mockState.list = LIST;
   mockState.cached = undefined;
   mockState.bundles = { new: HERO_BUNDLE };
+  mockState.leagues = { ok: true, leagues: [] };
 });
 
 it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
@@ -430,5 +437,71 @@ describe('toppen', () => {
     await screen.findByTestId('home-create-game');
     const band = StyleSheet.flatten(screen.getByTestId('status-bar-band').props.style);
     expect(band).toMatchObject({ position: 'absolute', top: 0, height: 47 });
+  });
+});
+
+describe('«Ligaene dine» (#2638, tegning 1)', () => {
+  const closesAt = new Date(2026, 11, 10, 23, 59).toISOString();
+  const VINTER = {
+    id: 'liga-vinter',
+    name: 'Vinterliga på Trackman',
+    status: 'active' as const,
+    openRound: { id: 'r3', label: 'Runde 3', closesAt },
+    delivered: false,
+    inProgress: false,
+  };
+  const ONSDAG = {
+    id: 'liga-onsdag',
+    name: 'Onsdagsligaen',
+    status: 'active' as const,
+    openRound: { id: 'r5', label: 'Runde 5', closesAt },
+    delivered: true,
+    inProgress: false,
+  };
+
+  it('står rett etter «Neste start», med runden, fristen og om du har spilt (1b)', async () => {
+    mockState.leagues = { ok: true, leagues: [VINTER, ONSDAG] };
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-leagues')).toBeTruthy();
+    expect(screen.getByText('Ligaene dine')).toBeTruthy();
+    expect(screen.getByTestId('home-league-line-liga-vinter')).toHaveTextContent('Runde 3 · stenger tor. 23.59');
+    expect(screen.getByTestId('home-league-played-liga-vinter')).toHaveTextContent('Ikke spilt');
+    expect(screen.getByTestId('home-league-played-liga-onsdag')).toHaveTextContent('Har spilt');
+
+    const order = testIdsInOrder();
+    const sequence = ['home-next-start', 'home-leagues', 'home-scheduled', 'home-last-round'].map((id) =>
+      order.indexOf(id),
+    );
+    expect(sequence.every((index) => index >= 0)).toBe(true);
+    expect(sequence).toEqual([...sequence].sort((a, b) => a - b));
+
+    await fireEvent.press(screen.getByTestId('home-league-liga-vinter'));
+    expect(navigate).toHaveBeenCalledWith('League', { leagueId: 'liga-vinter' });
+  });
+
+  it('en liga uten åpen runde har ingen pille (orkestratorens avgjørelse)', async () => {
+    mockState.leagues = { ok: true, leagues: [{ ...VINTER, openRound: null }] };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-league-line-liga-vinter')).toHaveTextContent('Ingen åpen runde nå');
+    expect(screen.queryByTestId('home-league-played-liga-vinter')).toBeNull();
+  });
+
+  it.each([
+    ['du ikke er med i noen liga (1c)', { ok: true as const, leagues: [] }],
+    ['kallet feiler', { ok: false as const, reason: 'load_failed' as const }],
+    ['nettet er borte', { ok: false as const, reason: 'offline' as const }],
+  ])('ingen seksjon og ingen feilboks når %s', async (_label, result) => {
+    mockState.leagues = result;
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+    expect(screen.queryByTestId('home-leagues')).toBeNull();
+    expect(screen.queryByText('Ligaene dine')).toBeNull();
+    expect(screen.queryByTestId('home-error')).toBeNull();
   });
 });

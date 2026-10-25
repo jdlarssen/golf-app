@@ -152,6 +152,24 @@ export const InfoIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * Haken på ligaskjermene (#2638, tegningene 1–4): «Har spilt»-pillen, raden i
+ * «hvem har spilt» og «Du har levert». Strek 2,6 som tegningene.
+ */
+export const LigaHakeIcon = ({ strokeWidth = 2.6, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M5 12.5l4.5 4.5L19 7.5" />
+  </LineIcon>
+);
+
+/** I-en i avslagsboksen på «Start runden» (#2638, tegning 5b), strek 2. */
+export const LigaInfoIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Circle cx="12" cy="12" r="9.5" />
+    <Path d="M12 11v5.5M12 7.6h.01" />
+  </LineIcon>
+);
+
 /** Varsel: trekant med utropstegn (#2228, lagringsbanneret på hullsiden). */
 export const VarselIcon = (props: IconProps) => (
   <LineIcon {...props}>

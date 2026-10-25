@@ -39,6 +39,7 @@ import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
+import { LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
@@ -59,6 +60,8 @@ import { Hole } from './screens/Hole';
 import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
+import { League } from './screens/League';
+import { LeagueRoundStart } from './screens/LeagueRoundStart';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { RoundDiary } from './screens/RoundDiary';
@@ -143,6 +146,16 @@ export type RootStackParamList = {
   RoundStats: undefined;
   /** Kavalkaden (#2265 PR 2): golfåret ditt som kortstokk, fra webben. */
   Kavalkade: undefined;
+  /**
+   * Ligasiden (#2638 Del 2): tabellen, rundene og innstillingene, fra
+   * `GET /api/liga/[id]`. Åpnes fra «Ligaene dine» på Hjem.
+   */
+  League: { leagueId: string };
+  /**
+   * «Start runden» i en ligarunde (#2638 Del 2). Etter start erstattes den av
+   * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
+   */
+  LeagueRoundStart: { leagueId: string; roundId: string };
   SyncLab: undefined;
 };
 
@@ -400,6 +413,18 @@ export function RootNavigator() {
           name="Kavalkade"
           component={Kavalkade}
           options={kickerHeader(KAVALKADE_TEXT.kicker, KAVALKADE_TEXT.kicker)}
+        />
+        {/* Ligaen (#2638 Del 2, tegningene 2–6): «LIGA» og «START RUNDE» i
+            toppen, som nettsiden. */}
+        <Stack.Screen
+          name="League"
+          component={League}
+          options={kickerHeader(LEAGUE_TEXT.kicker, LEAGUE_TEXT.kicker)}
+        />
+        <Stack.Screen
+          name="LeagueRoundStart"
+          component={LeagueRoundStart}
+          options={kickerHeader(LEAGUE_TEXT.startKicker, LEAGUE_TEXT.startKicker)}
         />
         <Stack.Screen
           name="SyncLab"
