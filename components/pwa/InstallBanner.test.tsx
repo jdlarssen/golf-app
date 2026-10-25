@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { InstallBanner } from './InstallBanner';
 import noMessages from '@/messages/no.json';
 import {
@@ -44,5 +44,50 @@ describe('InstallBanner', () => {
       expect(await screen.findByText(banner.title)).toBeInTheDocument();
       expect(screen.queryByTestId('get-app-banner')).toBeNull();
     }
+  });
+});
+
+/**
+ * Type B, #2352: «Installer» on an iPad that reports a Mac. Safari on iPadOS 13+
+ * sends a Mac user agent, so only the touch points tell it from a real Mac.
+ */
+describe('InstallBanner «Installer» on iPad (#2352)', () => {
+  const instructions = noMessages.installInstructions;
+
+  it('shows the Safari steps with the iPad share-button text', async () => {
+    setLaunch(undefined);
+    setDevice('mac', 5);
+    render(<InstallBanner visible onVerdict={() => {}} />);
+
+    fireEvent.click(await screen.findByText(noMessages.installBanner.install));
+
+    expect(screen.getByText(instructions.iosStep2)).toBeInTheDocument();
+    expect(screen.getByText(/øverst til høyre i Safari/)).toBeInTheDocument();
+    expect(screen.queryByText(instructions.unsupportedDescription)).toBeNull();
+  });
+
+  it('keeps the bottom-of-screen text on iPhone', async () => {
+    setLaunch(undefined);
+    setDevice('iphone');
+    render(<InstallBanner visible onVerdict={() => {}} />);
+
+    fireEvent.click(await screen.findByText(noMessages.installBanner.install));
+
+    expect(screen.getByText(instructions.iosStep2)).toBeInTheDocument();
+    expect(screen.getByText(/nederst på skjermen/)).toBeInTheDocument();
+    expect(screen.queryByText(/øverst til høyre i Safari/)).toBeNull();
+  });
+
+  it('still says unsupported on a real Mac', async () => {
+    setLaunch(undefined);
+    setDevice('mac', 0);
+    render(<InstallBanner visible onVerdict={() => {}} />);
+
+    fireEvent.click(await screen.findByText(noMessages.installBanner.install));
+
+    expect(
+      screen.getByText(instructions.unsupportedDescription),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(instructions.iosStep2)).toBeNull();
   });
 });

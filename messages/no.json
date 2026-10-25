@@ -6742,7 +6742,8 @@
     "unsupportedInstructions": "Prøv å åpne tornygolf.no i Chrome, Edge eller Safari på telefonen.",
     "closeAria": "Lukk",
     "iosStep1Pre": "Trykk på del-ikonet",
-    "iosStep1Post": "nederst på skjermen."
+    "iosStep1Post": "nederst på skjermen.",
+    "iosStep1PostIpad": "øverst til høyre i Safari."
   },
   "publicCourses": {
     "index": {
