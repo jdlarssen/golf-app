@@ -2099,3 +2099,45 @@ describe('GameForm — one part of «Rediger spill» (#2322)', () => {
     );
   });
 });
+
+describe('GameForm — a passed tee-off in another part (#2322)', () => {
+  it('«Bane» says why the save is grey and links to «Navn og tid»', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        initialValues={{
+          name: 'Lørdagsrunden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2020-01-01T09:00',
+          game_mode: 'stableford',
+          team_size: 1,
+          lock_game_mode: true,
+          players: [{ user_id: 'u0', team_number: null, flight_number: 1 }],
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+        view="bane"
+        editNav={{
+          baseHref: '/games/game-1/rediger',
+          deleteHref: '/games/game-1/slett',
+          startlistHref: '/admin/games/game-1/startlista',
+          startBlock: null,
+          flightCount: 1,
+          title: 'Lørdagsrunden',
+          statusLabel: 'Planlagt',
+        }}
+      />,
+    );
+    const save = screen.getByRole('button', { name: /lagre endringer/i });
+    expect(save).toBeDisabled();
+    expect(save.getAttribute('aria-describedby')).toContain('tee-off-past-hint');
+    const hint = document.getElementById('tee-off-past-hint') as HTMLElement;
+    expect(hint).toBeVisible();
+    expect(hint).toHaveTextContent(/fortiden/);
+    expect(within(hint).getByRole('link', { name: 'Endre navn og tid' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/games/game-1/rediger?del=navn-og-tid'),
+    );
+  });
+});
