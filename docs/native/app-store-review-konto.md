@@ -321,6 +321,9 @@ The app asks "Kan AI-en skrive om deg?" (Can the AI write about you?). Tørny wr
 - "Nei takk" (No thanks): the name is left out of new texts. Numbers without names can still be used, as our privacy policy says.
 Both answers open the app. Change it under "Profil" > "Personvern og konto" > "AI-tekster om meg".
 
+WHERE THE AI TEXT SHOWS
+After a finished round the app shows the round report, "Fra pressetribunen" (From the press box), on the results screen ("Resultater"): its first sentence as a quote at the top, and the whole text in a card at the bottom. The card ends with the line "Skrevet av AI ut fra slagene dere førte." (Written by AI from the strokes you entered), so the text is always marked as AI-written. The report is only written when at least one player in the round has answered "Ja, det er greit", and it only names players who did. A round without such a player shows no report. The "Resultatet er klart" (The results are in) notification shows the start of the same text. The demo rounds below are not finished, so they show no report.
+
 WORDS YOU WILL NEED
 "Profil" = Profile (top right on home)
 "Fortsett runden" = Continue the round
