@@ -71,6 +71,15 @@ export type AppLeagueStandingRow = {
   perRound: AppLeagueStandingCell[];
 };
 
+/**
+ * What a participant also sees of the others (#2638, the start screen's
+ * co-player list): the name for the initials and the HCP. The route reads it
+ * only for a caller who is a participant, after the access gate.
+ */
+export type AppLeagueParticipantDetails = { fullName: string | null; hcpIndex: number | null };
+
+export type AppLeagueParticipant = { userId: string; name: string | null } & AppLeagueParticipantDetails;
+
 export type AppLeagueView = {
   league: {
     id: string;
@@ -87,8 +96,13 @@ export type AppLeagueView = {
     seasonEnd: string;
   };
   rounds: AppLeagueRound[];
-  /** `name` is the nickname, else the name, else null. */
-  participants: Array<{ userId: string; name: string | null }>;
+  /**
+   * `name` is the nickname, else the name, else null. `fullName` (the
+   * avatar's initials) and `hcpIndex` (the co-player list on «Start runden»)
+   * are sent only to a participant of the league, else null
+   * (`AppLeagueParticipantDetails`).
+   */
+  participants: AppLeagueParticipant[];
   /** The table on the league's own axis (net, or gross in a gross league). */
   standings: AppLeagueStandingRow[];
   me: { userId: string; isParticipant: boolean };

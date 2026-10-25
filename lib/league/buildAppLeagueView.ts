@@ -1,5 +1,5 @@
 import type { LeagueSnapshot } from './getLigaSnapshot';
-import type { AppLeagueView } from './appLeagueView';
+import type { AppLeagueParticipantDetails, AppLeagueView } from './appLeagueView';
 import { normalizeSimSettings } from './simSettings';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 
@@ -11,8 +11,15 @@ const STATUSES: readonly LeagueStatus[] = ['draft', 'active', 'finished'];
  * The app's league page from the same snapshot the web page renders (#2638),
  * so the table and the settings have one home (`getLigaSnapshot`). Pure: the
  * route has already loaded the snapshot and passed the viewer gate.
+ *
+ * `details` is the full name and HCP per participant, which the route reads
+ * only for a caller who is a participant; without it both stay null.
  */
-export function buildAppLeagueView(snapshot: LeagueSnapshot, userId: string): AppLeagueView {
+export function buildAppLeagueView(
+  snapshot: LeagueSnapshot,
+  userId: string,
+  details: ReadonlyMap<string, AppLeagueParticipantDetails> | null = null,
+): AppLeagueView {
   const { league, rounds, participants, standings } = snapshot;
   const scoring = SCORINGS.find((s) => s === league.scoring) ?? 'net';
   // The league's own axis: gross in a gross league, net otherwise ('both' is
@@ -51,6 +58,8 @@ export function buildAppLeagueView(snapshot: LeagueSnapshot, userId: string): Ap
     participants: participants.map((p) => ({
       userId: p.userId,
       name: p.nickname?.trim() || p.name?.trim() || null,
+      fullName: details?.get(p.userId)?.fullName ?? null,
+      hcpIndex: details?.get(p.userId)?.hcpIndex ?? null,
     })),
     standings: (table?.rows ?? []).map((row) => ({
       userId: row.userId,
