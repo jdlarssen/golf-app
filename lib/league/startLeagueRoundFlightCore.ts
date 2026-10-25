@@ -4,7 +4,6 @@ import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
-import type { StartScheduledGameFailure } from '@/lib/games/startScheduledGameCore';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { leagueFlightGameConfig } from './flightFormat';
@@ -12,34 +11,13 @@ import { roundPlayerLocks } from './roundLocks';
 import { flightSizeRefusal } from './flightRules';
 import { frozenDefaultFor } from './simSettings';
 import type { LeagueFormat } from './types';
+import type { LeagueStartRefusal } from './leagueStartRefusal';
 
 const GAME_NAME_MAX = 120;
 
-/**
- * Why a player could not start a flight. One union for the web action, the
- * app route (`POST /api/liga/rounds/[roundId]/start`) and the app's copy; the
- * route maps every member to an HTTP status in a `Record` without a default,
- * so a new code fails tsc there.
- */
-export type LeagueStartRefusal =
-  | 'round_not_found'
-  | 'round_read_failed'
-  | 'league_not_found'
-  | 'league_read_failed'
-  | 'league_not_active'
-  | 'outside_window'
-  | 'round_not_ready'
-  | 'need_marker'
-  | 'flight_too_large'
-  | 'members_failed'
-  | 'not_member'
-  | 'already_played'
-  | 'flight_in_progress'
-  | 'co_player_locked'
-  | 'round_check_failed'
-  | 'settings_freeze_failed'
-  | 'insert_failed'
-  | `start_${StartScheduledGameFailure['reason']}`;
+// The refusal union lives in a pure file so the native app can import it by
+// relative path without this server-only module (`leagueStartRefusal.ts`).
+export type { LeagueStartRefusal } from './leagueStartRefusal';
 
 export type LeagueStartResult =
   | { ok: true; gameId: string }

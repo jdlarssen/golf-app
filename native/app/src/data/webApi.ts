@@ -36,6 +36,10 @@
 // Ett unntak (#2200): `submit-team` sender makkernes id-er i `alsoFor`. De er
 // et ønske som bare kan snevre inn — serveren spør leveringsregelen selv og
 // leverer snittet, så en id utenfor flighten gjør ingenting.
+// Samme unntak (#2638): ligastarten (`data/league.ts`) sender medspillerne
+// spilleren valgte i `coPlayerIds`. Serveren sjekker hver id mot ligaens
+// deltakerliste og avviser hele starten (`not_member`, `co_player_locked`), og
+// den som starter kommer fortsatt bare fra tokenet.
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som `startGame.ts`
 // og `rosterActions.ts`). HTTP-status oversettes én gang, i kaller-modulen, slik
