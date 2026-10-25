@@ -8,6 +8,8 @@ import type { NotificationKind, NotificationPayload } from './types';
 export const TEST_GAME_ID = '11111111-1111-1111-1111-111111111111';
 export const TEST_TOURNAMENT_ID = '22222222-2222-2222-2222-222222222222';
 export const TEST_GROUP_ID = '33333333-3333-3333-3333-333333333333';
+export const TEST_LEAGUE_ID = '55555555-5555-5555-5555-555555555555';
+const TEST_ROUND_ID = '66666666-6666-6666-6666-666666666666';
 const OTHER_ID = '44444444-4444-4444-4444-444444444444';
 const SHORT_ID = 'abcd1234';
 
@@ -43,6 +45,20 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
   missing_score_reminder: { game_id: TEST_GAME_ID, game_name: 'X', holes: [10, 11] },
   all_scorecards_delivered: { game_id: TEST_GAME_ID, game_name: 'X' },
   game_stale_reminder: { game_id: TEST_GAME_ID, game_name: 'X' },
+  league_round_open: {
+    league_id: TEST_LEAGUE_ID,
+    league_name: 'Liga',
+    round_id: TEST_ROUND_ID,
+    round_label: 'Runde 3',
+    closes_at: '2026-11-06T22:59:00.000Z',
+  },
+  league_round_closing: {
+    league_id: TEST_LEAGUE_ID,
+    league_name: 'Liga',
+    round_id: TEST_ROUND_ID,
+    round_label: 'Runde 3',
+    closes_at: '2026-11-06T22:59:00.000Z',
+  },
   cup_finished: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_started: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_signup: {

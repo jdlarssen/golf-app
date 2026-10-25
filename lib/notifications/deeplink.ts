@@ -66,6 +66,12 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'all_scorecards_delivered'>;
       return `/games/${p.game_id}/avslutt`;
     }
+    case 'league_round_open':
+    case 'league_round_closing': {
+      // #2638: the league page, where «Start runden» is (the app opens League).
+      const p = n.payload as NotificationPayload<'league_round_open'>;
+      return `/liga/${p.league_id}`;
+    }
     case 'game_finished': {
       const p = n.payload as NotificationPayload<'game_finished'>;
       return `/games/${p.game_id}/leaderboard`;

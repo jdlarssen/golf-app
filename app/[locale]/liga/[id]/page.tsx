@@ -17,6 +17,7 @@ import { canViewLeague } from '@/lib/league/canViewLeague';
 import { joinClubLeague } from '@/lib/league/actions';
 import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
@@ -110,6 +111,13 @@ export default async function LigaPublicPage({
       data: { user },
     } = await supabase.auth.getUser();
     currentUserId = user?.id ?? null;
+  }
+
+  // #2638: the round's two messages link here, so opening the league reads
+  // them. Before the visibility gate, like every caller (`markReadOnVisit`).
+  if (currentUserId) {
+    const viewerId = currentUserId;
+    after(() => markReadOnVisit({ userId: viewerId, surface: 'league', entityId: id }));
   }
 
   // #480: en klubb-scopet liga er kun synlig for klubbens medlemmer, deltakerne

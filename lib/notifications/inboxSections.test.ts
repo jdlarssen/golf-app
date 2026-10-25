@@ -31,6 +31,8 @@ const REQ = '33333333-3333-3333-3333-333333333333';
 const MARTE = '44444444-4444-4444-4444-444444444444';
 const JONAS = '55555555-5555-5555-5555-555555555555';
 const VIEWER = '66666666-6666-6666-6666-666666666666';
+const LEAGUE = '77777777-7777-7777-7777-777777777777';
+const ROUND = '88888888-8888-8888-8888-888888888888';
 
 let seq = 0;
 function row(
@@ -102,6 +104,8 @@ describe('inboxActionKey', () => {
     ['payment_reminder', 'seePayment'],
     ['all_scorecards_delivered', 'finishGame'],
     ['game_stale_reminder', 'finishGame'],
+    ['league_round_open', 'playRound'],
+    ['league_round_closing', 'playRound'],
     ['scorecard_submitted', null],
     ['scorecard_approved', null],
     ['game_finished', null],
@@ -550,6 +554,53 @@ describe('buildInboxEntryView', () => {
     });
   });
 
+  describe('#2638: the league round’s two rows', () => {
+    const at = new Date(NOW - 120_000).toISOString();
+    // 22:59 UTC on 6 November is 23:59 in Oslo (winter time, UTC+1).
+    const round = (
+      kind: 'league_round_open' | 'league_round_closing',
+      closesAt = '2026-11-06T22:59:00.000Z',
+      opts: Parameters<typeof row>[2] = {},
+    ) =>
+      row(
+        kind,
+        { league_id: LEAGUE, league_name: 'Vinterligaen', round_id: ROUND, round_label: 'Runde 3', closes_at: closesAt },
+        { at, ...opts },
+      );
+
+    it('«er åpen» waits under KREVER HANDLING with the deadline and «Spill runden»', () => {
+      const v = view([round('league_round_open')], 'action');
+      expect(v.title).toBe('Runde 3 i Vinterligaen er åpen');
+      expect(v.subtitle).toBe('Spill den når det passer deg. Fristen er fredag 6. nov. kl. 23:59. · for 2 min siden');
+      expect(v.actionKey).toBe('playRound');
+      expect(v.destination).toBe(`/liga/${LEAGUE}`);
+      expect(tFor('no', 'inbox')(`buttons.${v.actionKey}`)).toBe('Spill runden');
+    });
+
+    it('the reminder names the deadline in the title and says why below it', () => {
+      const v = view([round('league_round_closing')], 'action');
+      expect(v.title).toBe('Runde 3 i Vinterligaen stenger fredag 6. nov. kl. 23:59');
+      expect(v.subtitle).toBe('Du har ikke spilt den ennå. · for 2 min siden');
+      expect(v.actionKey).toBe('playRound');
+      expect(v.destination).toBe(`/liga/${LEAGUE}`);
+    });
+
+    it('summer time: 21:59 UTC is still 23:59 on the Oslo clock', () => {
+      const v = view([round('league_round_closing', '2027-06-04T21:59:00.000Z')], 'action');
+      expect(v.title).toBe('Runde 3 i Vinterligaen stenger fredag 4. juni kl. 23:59');
+    });
+
+    it('en: the rows and the button read in English', () => {
+      expect(view([round('league_round_closing')], 'action', ctx('en')).title).toBe(
+        'Runde 3 in Vinterligaen closes Friday, Nov 6 at 23:59',
+      );
+      expect(view([round('league_round_open')], 'action', ctx('en')).subtitle).toBe(
+        'Play it when it suits you. The deadline is Friday, Nov 6 at 23:59. · 2 min ago',
+      );
+      expect(tFor('en', 'inbox')('buttons.playRound')).toBe('Play the round');
+    });
+  });
+
   it('detail kinds keep the detail before the time; a rejection reason is free text', () => {
     const v = view(
       [row('registration_rejected', { game_id: GAME, game_name: 'X', reason: 'Fullt' }, { read: true })],
@@ -691,6 +742,16 @@ describe('findSettledActionIds', () => {
       findSettledActionIds([allIn, stale, other], { ...base, finishedGameIds: new Set([GAME]) }),
     ).toEqual([allIn.id, stale.id]);
     expect(findSettledActionIds([allIn, stale], base)).toEqual([]);
+  });
+
+  it('#2638: a league round row is settled once its deadline has passed, not before', () => {
+    const closes = '2026-10-01T21:59:00.000Z';
+    const payload = { league_id: LEAGUE, league_name: 'Liga', round_id: ROUND, round_label: 'Runde 1', closes_at: closes };
+    const open = row('league_round_open', payload);
+    const closing = row('league_round_closing', payload);
+    expect(findSettledActionIds([open, closing], { ...base, now: Date.parse(closes) })).toEqual([open.id, closing.id]);
+    expect(findSettledActionIds([open, closing], { ...base, now: Date.parse(closes) - 1 })).toEqual([]);
+    expect(findSettledActionIds([open, closing], base)).toEqual([]);
   });
 
   it('read rows are never touched', () => {

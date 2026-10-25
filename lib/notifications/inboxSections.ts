@@ -52,7 +52,8 @@ export type ActionKey =
   | 'confirm'
   | 'seeMissing'
   | 'seePayment'
-  | 'finishGame';
+  | 'finishGame'
+  | 'playRound';
 
 export const GROUPABLE_KINDS = [
   'peer_approval_request',
@@ -123,6 +124,9 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'all_scorecards_delivered':
     case 'game_stale_reminder':
       return 'finishGame';
+    case 'league_round_open':
+    case 'league_round_closing':
+      return 'playRound';
     case 'scorecard_submitted':
     case 'scorecard_approved':
     case 'game_finished':
@@ -400,12 +404,15 @@ export type SettledInputs = {
   lockedGameIds?: ReadonlySet<string>;
   /** #2203: games whose status is `finished`. The organiser's finish rows are done there. */
   finishedGameIds?: ReadonlySet<string>;
+  /** #2638: the request's clock. A league round whose deadline has passed has nothing left to play. */
+  now?: number;
 };
 
 /**
  * Unread action rows whose matter is already settled — a flightmate approved
  * the card, the request was answered or ran out or its round has started, the
- * fee is paid, the game the organiser was told to finish is finished. Not every
+ * fee is paid, the game the organiser was told to finish is finished, the
+ * league round has closed. Not every
  * target page marks its notification read, so the inbox checks on load and
  * treats these as read (#2263).
  */
@@ -466,6 +473,13 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
       case 'game_stale_reminder': {
         const p = row.payload as NotificationPayload<'all_scorecards_delivered'>;
         if (inputs.finishedGameIds?.has(p.game_id)) settled.push(row.id);
+        break;
+      }
+      // #2638: both ask the player to play the round; a closed round cannot be played.
+      case 'league_round_open':
+      case 'league_round_closing': {
+        const p = row.payload as NotificationPayload<'league_round_open'>;
+        if (inputs.now != null && Date.parse(p.closes_at) <= inputs.now) settled.push(row.id);
         break;
       }
       default:
@@ -530,6 +544,10 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   // all_scorecards_delivered stays out: its title has no game name, and the
   // default subtitle gives it.
   'game_stale_reminder',
+  // #2638: the title names the round and the league; the detail gives the
+  // deadline (open) or says you have not played it (closing).
+  'league_round_open',
+  'league_round_closing',
 ]);
 
 /** Kinds whose detail carries a person's own words. */

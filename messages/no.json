@@ -162,6 +162,14 @@
         "title": "{gameName} står stille",
         "detail": "Det har ikke kommet nye slag på et døgn. Avslutt spillet når du er klar."
       },
+      "leagueRoundOpen": {
+        "title": "{roundLabel} i {leagueName} er åpen",
+        "detail": "Spill den når det passer deg. Fristen er {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}."
+      },
+      "leagueRoundClosing": {
+        "title": "{roundLabel} i {leagueName} stenger {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}",
+        "detail": "Du har ikke spilt den ennå."
+      },
       "paymentReminder": {
         "title": "Betal startkontingenten",
         "detail": "Du mangler {amount} i {gameName}",
@@ -266,7 +274,8 @@
       "confirm": "Bekreft",
       "seeMissing": "Se hva som mangler",
       "seePayment": "Se betaling",
-      "finishGame": "Avslutt spillet"
+      "finishGame": "Avslutt spillet",
+      "playRound": "Spill runden"
     },
     "board": {
       "approvalTitle": "{count} scorekort venter på deg",

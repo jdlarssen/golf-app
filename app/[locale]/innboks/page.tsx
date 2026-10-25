@@ -155,6 +155,12 @@ export default async function InboxPage() {
     ),
   ]);
 
+  // One "now" per request, sent to the client so server and browser write the
+  // same relative times. A server component runs once per request — the same
+  // exception as the game home page.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+
   const settledIds = findSettledActionIds(visible, {
     viewerId: userId,
     requestStatus: new Map(requests.map((r) => [r.id, r.status as string])),
@@ -164,13 +170,9 @@ export default async function InboxPage() {
       games.filter((g) => g.status === 'active' || g.status === 'finished').map((g) => g.id),
     ),
     finishedGameIds: new Set(games.filter((g) => g.status === 'finished').map((g) => g.id)),
+    now,
   });
 
-  // One "now" per request, sent to the client so server and browser write the
-  // same relative times. A server component runs once per request — the same
-  // exception as the game home page.
-  // eslint-disable-next-line react-hooks/purity
-  const now = Date.now();
   let rows = visible;
   if (settledIds.length > 0) {
     const settled = new Set(settledIds);
