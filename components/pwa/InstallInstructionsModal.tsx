@@ -44,6 +44,8 @@ export function InstallInstructionsModal({
       ref={containerRef}
       tabIndex={-1}
       role="dialog"
+      data-testid="install-modal"
+      data-variant={variant}
       aria-modal="true"
       aria-labelledby="install-modal-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 py-6"

@@ -58,7 +58,10 @@ export function PushToggle() {
     return (
       <>
         {heading}
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div
+          data-testid="push-ios-install"
+          className="rounded-xl border border-border bg-surface p-4"
+        >
           <p className="font-serif text-base font-medium text-text">{t('iosInstallTitle')}</p>
           <p className="mt-1 text-xs text-text leading-relaxed">{t('iosInstallBody')}</p>
         </div>
