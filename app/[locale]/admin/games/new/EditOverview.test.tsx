@@ -96,7 +96,7 @@ describe('EditOverview (#2322)', () => {
     expect(screen.queryByTestId('start-scheduled-game')).toBeNull();
   });
 
-  it('players without a flight: the amber line and the Startlista link on Spillere', () => {
+  it('players without a flight: the amber line and the Startlista link on Spillere, and no autostart', () => {
     renderOverview({
       ...NAV,
       startBlock: { reason: 'unassigned_flights', message: null, unassignedCount: 2 },
@@ -108,8 +108,9 @@ describe('EditOverview (#2322)', () => {
       'href',
       expect.stringContaining('/admin/games/game-1/startlista'),
     );
-    // As the artboard draws it: the autostart line stays, the row says why.
-    expect(screen.getByTestId('edit-overview-autostart')).toBeInTheDocument();
+    // Orchestrator's decision 25.10: the line never says the round starts by
+    // itself while something stops the start (as the Sekretariat's start card).
+    expect(screen.queryByTestId('edit-overview-autostart')).toBeNull();
     expect(screen.getByTestId('start-scheduled-game')).toHaveTextContent('Start runden nå →');
   });
 
