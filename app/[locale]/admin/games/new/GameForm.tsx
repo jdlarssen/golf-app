@@ -376,7 +376,7 @@ function TeeOffPastHint({ baseHref }: { baseHref: string }) {
       {tBasics('teeOffPastError')}{' '}
       <SmartLink
         href={`${baseHref}?del=navn-og-tid`}
-        className="tap-extend font-semibold underline [--tap-extend:-14px_-4px]"
+        className="tap-extend font-semibold underline [--tap-extend:-15px_-4px]"
       >
         {t('editLabel', { title: t('rows.nameAndTime').toLocaleLowerCase() })}
       </SmartLink>
