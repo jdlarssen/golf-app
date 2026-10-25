@@ -356,4 +356,30 @@ describe('parseNotificationPayload', () => {
       ).toBeUndefined();
     });
   });
+
+  // #2638: the deadline rides as an instant; the card formats it at render.
+  describe('league_round_open / league_round_closing', () => {
+    const base = {
+      league_id: '00000000-0000-4000-a000-000000000001',
+      league_name: 'Vinterligaen',
+      round_id: '00000000-0000-4000-a000-000000000002',
+      round_label: 'Runde 3',
+    };
+
+    it.each(['2026-11-06T22:59:00+00:00', '2026-11-06T22:59:00.123Z'])(
+      'aksepterer frist som PostgREST og toISOString skriver den: %s',
+      (closesAt) => {
+        expect(parseNotificationPayload('league_round_closing', { ...base, closes_at: closesAt }).payload.closes_at).toBe(
+          closesAt,
+        );
+      },
+    );
+
+    it('avviser en frist som ikke er et tidspunkt, og en payload uten liga', () => {
+      expect(() => parseNotificationPayload('league_round_open', { ...base, closes_at: 'torsdag' })).toThrow();
+      expect(() =>
+        parseNotificationPayload('league_round_open', { ...base, league_id: undefined, closes_at: '2026-11-06T22:59:00Z' }),
+      ).toThrow();
+    });
+  });
 });

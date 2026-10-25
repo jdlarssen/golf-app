@@ -162,6 +162,14 @@
         "title": "{gameName} has stood still",
         "detail": "No new scores have come in for a day. Finish the game when you are ready."
       },
+      "leagueRoundOpen": {
+        "title": "{roundLabel} in {leagueName} is open",
+        "detail": "Play it when it suits you. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}."
+      },
+      "leagueRoundClosing": {
+        "title": "{roundLabel} in {leagueName} closes {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}",
+        "detail": "You have not played it yet."
+      },
       "paymentReminder": {
         "title": "Pay the entry fee",
         "detail": "You owe {amount} for {gameName}",
@@ -266,7 +274,8 @@
       "confirm": "Confirm",
       "seeMissing": "See what's missing",
       "seePayment": "See payment",
-      "finishGame": "Finish the game"
+      "finishGame": "Finish the game",
+      "playRound": "Play the round"
     },
     "board": {
       "approvalTitle": "{count, plural, one {# scorecard is waiting for you} other {# scorecards are waiting for you}}",

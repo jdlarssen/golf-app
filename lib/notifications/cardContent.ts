@@ -241,6 +241,29 @@ export function buildNotificationText(
         detail: t('kinds.gameStaleReminder.detail'),
       };
     }
+    // #2638: the deadline is formatted by the catalog (ICU date/time), in the
+    // recipient's locale and Oslo time: both translators carry the zone.
+    case 'league_round_open': {
+      const p = payload as NotificationPayload<'league_round_open'>;
+      return {
+        title: t('kinds.leagueRoundOpen.title', {
+          roundLabel: p.round_label,
+          leagueName: p.league_name,
+        }),
+        detail: t('kinds.leagueRoundOpen.detail', { closesAt: Date.parse(p.closes_at) }),
+      };
+    }
+    case 'league_round_closing': {
+      const p = payload as NotificationPayload<'league_round_closing'>;
+      return {
+        title: t('kinds.leagueRoundClosing.title', {
+          roundLabel: p.round_label,
+          leagueName: p.league_name,
+          closesAt: Date.parse(p.closes_at),
+        }),
+        detail: t('kinds.leagueRoundClosing.detail'),
+      };
+    }
     case 'cup_finished': {
       const p = payload as NotificationPayload<'cup_finished'>;
       return {

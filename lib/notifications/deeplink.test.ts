@@ -33,6 +33,19 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}/avslutt`);
   });
 
+  it('#2638: both league round messages land on the league page', () => {
+    const LEAGUE = '55555555-5555-5555-5555-555555555555';
+    const payload = {
+      league_id: LEAGUE,
+      league_name: 'Vinterligaen',
+      round_id: GAME,
+      round_label: 'Runde 3',
+      closes_at: '2026-11-06T22:59:00.000Z',
+    };
+    expect(notificationDestination(n('league_round_open', payload))).toBe(`/liga/${LEAGUE}`);
+    expect(notificationDestination(n('league_round_closing', payload))).toBe(`/liga/${LEAGUE}`);
+  });
+
   it('maps game-anchored kinds to their game route', () => {
     expect(
       notificationDestination(

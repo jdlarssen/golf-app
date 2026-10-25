@@ -27,6 +27,8 @@ export type NotificationKind =
   | 'missing_score_reminder'
   | 'all_scorecards_delivered'
   | 'game_stale_reminder'
+  | 'league_round_open'
+  | 'league_round_closing'
   | 'cup_finished'
   | 'cup_started'
   | 'cup_signup'
@@ -264,6 +266,22 @@ const gameStaleReminderSchema = z.object({
   game_name: z.string().min(1),
 });
 
+// league_round_open / league_round_closing (#2638 Del 3): en ligarunde er
+// åpnet, eller stenger om under 48 timer og mottakeren har verken levert eller
+// er i gang. Til hver deltaker i en aktiv liga, én gang per runde (kravene på
+// `league_rounds.opening_notice_sent_at` og `closing_reminder_sent_at`, sendt av
+// timessveipen `league-round-reminder`). Deeplinker til /liga/[league_id].
+// `closes_at` er rundens frist som ISO-tid; kortet formaterer den ved render, i
+// mottakerens språk og Oslo-tid, så payloaden holder seg locale-agnostisk (#583).
+// `round_label` er rundens navn fra databasen («Runde 3»), som game_name.
+const leagueRoundNoticeSchema = z.object({
+  league_id: uuid,
+  league_name: z.string().min(1),
+  round_id: uuid,
+  round_label: z.string().min(1),
+  closes_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
+});
+
 // cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
 // cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
 // (samme prinsipp som game_finished). Slank payload speiler game_finished:
@@ -451,6 +469,8 @@ const schemas = {
   missing_score_reminder: missingScoreReminderSchema,
   all_scorecards_delivered: allScorecardsDeliveredSchema,
   game_stale_reminder: gameStaleReminderSchema,
+  league_round_open: leagueRoundNoticeSchema,
+  league_round_closing: leagueRoundNoticeSchema,
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
   cup_signup: cupSignupSchema,

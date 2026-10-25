@@ -35,6 +35,10 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   // #2203: the round has stood still for a day. ⏰, not ⏳ (auto_start_blocked)
   // or ⏱️ (registration_expired).
   game_stale_reminder: '⏰',
+  // #2638: a league round. 📅 when it opens; ⌛ when it closes in under two
+  // days, not ⏳ (auto_start_blocked) or ⏰ (game_stale_reminder).
+  league_round_open: '📅',
+  league_round_closing: '⌛',
   cup_finished: '🏁',
   cup_started: '🏌️',
   cup_signup: '📝',
