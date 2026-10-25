@@ -10,7 +10,7 @@
  * (#909), og den døde inline-kopien her er fjernet (#1660).
  */
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
@@ -39,7 +39,19 @@ type Props = {
    * Disclosure-panel som allerede bærer tittelen. Default false.
    */
   hideHeading?: boolean;
+  /**
+   * #2322: «Rediger spill» opens one part at a time. `'nameAndTime'` shows the
+   * name, tee-off and shotgun start; `'course'` the course and tee. The other
+   * part's fields stay mounted in a `hidden` box, so a save still posts them
+   * (unmounting them would reset them, the #2258 class). Default `'all'`.
+   */
+  visibleFields?: 'all' | 'nameAndTime' | 'course';
 };
+
+/** Shows its fields, or keeps them mounted and posted but out of sight. */
+function FieldGroup({ visible, children }: { visible: boolean; children: ReactNode }) {
+  return visible ? <>{children}</> : <div hidden>{children}</div>;
+}
 
 /** Current browser-local wall-clock as a `datetime-local` `min` ('YYYY-MM-DDTHH:mm'). */
 function getLocalDatetimeMin(): string {
@@ -70,6 +82,7 @@ export function BasicsSection({
   courses,
   showName = true,
   hideHeading = false,
+  visibleFields = 'all',
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
   const locale = useLocale();
@@ -106,8 +119,12 @@ export function BasicsSection({
   const teeOffText = formatTeeOffFieldValue(scheduledTeeOffAt, locale);
   const teeOffBorder = teeOffError ? 'border-danger' : 'border-field-border';
 
+  const showNameAndTime = visibleFields !== 'course';
+  const showCourse = visibleFields !== 'nameAndTime';
+
   const fields = (
     <>
+      <FieldGroup visible={showNameAndTime}>
       {showName && (
         <Input
           id="name"
@@ -121,7 +138,9 @@ export function BasicsSection({
           required
         />
       )}
+      </FieldGroup>
 
+      <FieldGroup visible={showCourse}>
       <CardSelect
         id="course_id"
         name="course_id"
@@ -168,7 +187,9 @@ export function BasicsSection({
           ))}
         </CardSelect>
       </div>
+      </FieldGroup>
 
+      <FieldGroup visible={showNameAndTime}>
       {/* `datetime-local` emits 'YYYY-MM-DDTHH:mm' in browser local time (no
           offset). Server interprets in Europe/Oslo before persisting as
           timestamptz. See actions.ts.
@@ -240,6 +261,7 @@ export function BasicsSection({
           </span>
         </span>
       </label>
+      </FieldGroup>
     </>
   );
 

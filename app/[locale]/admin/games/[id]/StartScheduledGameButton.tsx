@@ -8,7 +8,15 @@ type Props = {
   // `admin.game.buttons` itself there.
   label: string;
   confirmText: string;
+  /**
+   * #2322: replaces the button's look. «Rediger spill» draws it as a text
+   * link under the overview, as its artboard does.
+   */
+  className?: string;
 };
+
+const BUTTON_CLASS =
+  'w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg font-medium rounded-xl px-4 py-3 transition-colors';
 
 /**
  * "Start runden nå" button for scheduled games. Confirms with the organiser
@@ -16,7 +24,7 @@ type Props = {
  * the roster is frozen, course handicaps are locked, and players can
  * begin entering strokes.
  */
-export function StartScheduledGameButton({ startAction, label, confirmText }: Props) {
+export function StartScheduledGameButton({ startAction, label, confirmText, className }: Props) {
   return (
     <form
       action={startAction}
@@ -31,7 +39,7 @@ export function StartScheduledGameButton({ startAction, label, confirmText }: Pr
       <button
         type="submit"
         data-testid="start-scheduled-game"
-        className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg font-medium rounded-xl px-4 py-3 transition-colors"
+        className={className ?? BUTTON_CLASS}
       >
         {label}
       </button>

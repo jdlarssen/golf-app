@@ -2045,3 +2045,57 @@ describe('GameForm — bare gjester (#2570)', () => {
     expect(screen.getByRole('button', { name: /^publiser/i })).toBeDisabled();
   });
 });
+
+describe('GameForm — one part of «Rediger spill» (#2322)', () => {
+  it('view="bane" shows the course alone and still posts every other field', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        initialValues={{
+          name: 'Lørdagsrunden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          game_mode: 'stableford',
+          team_size: 1,
+          lock_game_mode: true,
+          players: [{ user_id: 'u0', team_number: null, flight_number: 1 }],
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+        view="bane"
+        editNav={{
+          baseHref: '/games/game-1/rediger',
+          deleteHref: '/games/game-1/slett',
+          startlistHref: '/admin/games/game-1/startlista',
+          startBlock: null,
+          flightCount: 1,
+          title: 'Lørdagsrunden',
+          statusLabel: 'Planlagt',
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Bane' })).toBeInTheDocument();
+    expect(container.querySelector('#course_id')).toBeVisible();
+    expect(container.querySelector('#tee_box_id')).toBeVisible();
+    expect(container.querySelector('#name')).not.toBeVisible();
+    expect(container.querySelector('#scheduled_tee_off_at')).not.toBeVisible();
+    // The other panels are mounted but hidden, never Disclosures.
+    expect(container.querySelector('details')).toBeNull();
+
+    const form = container.querySelector('form') as HTMLFormElement;
+    const data = new FormData(form);
+    expect(data.get('name')).toBe('Lørdagsrunden');
+    expect(data.get('game_mode')).toBe('stableford');
+    expect(data.get('player_0_id')).toBe('u0');
+    expect(data.get('scheduled_tee_off_at')).toBe(FUTURE_TEE_OFF);
+    expect(data.get('edit_section')).toBe('bane');
+
+    expect(screen.getByRole('button', { name: /lagre endringer/i })).toBeInTheDocument();
+    expect(screen.getByTestId('edit-section-cancel')).toHaveAttribute(
+      'href',
+      expect.stringContaining('/games/game-1/rediger'),
+    );
+  });
+});

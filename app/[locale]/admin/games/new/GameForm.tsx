@@ -1,8 +1,8 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
 import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
@@ -38,6 +38,8 @@ import { NinesSetup } from './sections/NinesSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
 import { TeeShotSection } from './sections/TeeShotSection';
 import type { StartType } from '@/lib/games/startType';
+import type { EditSection } from '@/lib/games/editSections';
+import { EditOverview, type EditNav } from './EditOverview';
 
 export type CourseOption = {
   id: string;
@@ -334,12 +336,67 @@ export type GameFormMode =
       updateAction: (gameId: string, formData: FormData) => Promise<void>;
     };
 
+/**
+ * #2322: what the form shows. `'full'` is every panel as a Disclosure (drafts,
+ * tests); `'overview'` is «Rediger spill»'s list of parts, with no form; a part
+ * shows that part alone, with every other field still mounted and posted.
+ */
+export type GameFormView = 'full' | 'overview' | EditSection;
+
 type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
   mode: GameFormMode;
   initialValues?: InitialValues;
+  view?: GameFormView;
+  /** The overview's links and start texts. Required for every view but `'full'`. */
+  editNav?: EditNav;
 };
+
+/**
+ * One panel of the form. `'full'` keeps today's Disclosure. With one part
+ * open, its panels become a section with a heading and every other panel a
+ * `hidden` box: still mounted, so FormData carries its fields exactly as a
+ * closed `<details>` does (Disclosure.tsx). Unmounting them would reset the
+ * fields on save (#2258).
+ */
+function Panel({
+  view,
+  parts,
+  title,
+  heading,
+  summary,
+  defaultOpen,
+  children,
+}: {
+  view: GameFormView;
+  /** The parts this panel belongs to. */
+  parts: readonly EditSection[];
+  title: string;
+  /** The heading when the panel is the open part. */
+  heading: string;
+  summary?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  if (view === 'full' || view === 'overview') {
+    return (
+      <Disclosure title={title} summary={summary} defaultOpen={defaultOpen}>
+        {children}
+      </Disclosure>
+    );
+  }
+  if (!parts.includes(view)) return <div hidden>{children}</div>;
+  return (
+    <section aria-labelledby={headingId} className="space-y-4">
+      <h2 id={headingId} className="font-serif text-xl font-medium tracking-[-0.01em] text-text">
+        {heading}
+      </h2>
+      {children}
+    </section>
+  );
+}
 
 /**
  * GameForm — stacked presentation av alle seksjoner for opprett- og edit-
@@ -350,7 +407,14 @@ type Props = {
  * per steg istedenfor i én stacked layout. Edit-flyten bruker GameForm
  * uendret.
  */
-export function GameForm({ courses, players, mode, initialValues }: Props) {
+export function GameForm({
+  courses,
+  players,
+  mode,
+  initialValues,
+  view = 'full',
+  editNav,
+}: Props) {
   const t = useTranslations('wizard.form');
   const tAllowance = useTranslations('allowance');
   const tModes = useTranslations('modes');
@@ -470,6 +534,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           : 'modeOpenTitle',
   );
   const settingsSummary = t(state.sideEnabled ? 'panelSideOn' : 'panelSideOff');
+
+  if (view === 'overview' && editNav) {
+    return (
+      <EditOverview
+        state={state}
+        editNav={editNav}
+        playersSummary={playersSummary}
+        formatSummary={formatSummary}
+        registrationSummary={registrationSummary}
+        settingsSummary={settingsSummary}
+      />
+    );
+  }
+  // One part open (#2322): the save and «Avbryt» below are the part's own.
+  const section = view === 'full' || view === 'overview' ? null : view;
 
   return (
     <form className="space-y-6" data-testid="game-form">
@@ -690,19 +769,34 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           — samme path som wizarden. Holder Grunnoppsett-panelet lett
           (bane/tee/tid/navn) så det kan stå åpent som default uten å dra med
           seg sideturnering-katalogen. Form-felt-navn er uendret. */}
-      <Disclosure title={t('panelTitleBasics')} defaultOpen>
+      <Panel
+        view={view}
+        parts={['navn-og-tid', 'bane']}
+        title={t('panelTitleBasics')}
+        heading={section === 'bane' ? t('overview.rows.course') : t('overview.rows.nameAndTime')}
+        defaultOpen
+      >
         <BasicsSection
           state={state}
           courses={courses}
           showName
           hideHeading
+          visibleFields={
+            section === 'bane' ? 'course' : section === 'navn-og-tid' ? 'nameAndTime' : 'all'
+          }
         />
-      </Disclosure>
+      </Panel>
 
       {/* Section 2: Players */}
-      <Disclosure title={t('panelTitlePlayers')} summary={playersSummary}>
+      <Panel
+        view={view}
+        parts={['spillere']}
+        title={t('panelTitlePlayers')}
+        heading={t('overview.rows.players')}
+        summary={playersSummary}
+      >
         <PlayersSection state={state} players={state.allPlayers} />
-      </Disclosure>
+      </Panel>
 
       {/* Section 2.5: Modus + lagstørrelse — fyrer mellom spiller-listen og
           lag-tilordnings-grid-en så admin må eksplisitt velge hvordan
@@ -721,7 +815,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           skjulte input-ene øverst), så å droppe dem her endrer ikke form-data.
           Allowance- + setup-feltene under rendres uendret (disabled-tilstanden
           deres bestemmer hva som sendes — som før). */}
-      <Disclosure title={t('panelTitleFormat')} summary={formatSummary}>
+      <Panel
+        view={view}
+        parts={['format']}
+        title={t('panelTitleFormat')}
+        heading={t('overview.rows.format')}
+        summary={formatSummary}
+      >
         <div className="space-y-4">
         {lockGameMode ? (
           <LockedFormatSummary
@@ -977,19 +1077,22 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         )}
         </div>
-      </Disclosure>
+      </Panel>
 
       {/* Section 3b: Påmelding (#199) — to akser: hvem kan melde seg på, og
           hva man melder på. Defaultes til invite_only + solo så dagens flyt
           er uendret når admin ikke aktivt velger noe annet. */}
-      <Disclosure
+      <Panel
+        view={view}
+        parts={['pamelding']}
         title={t('panelTitleRegistration')}
+        heading={t('overview.rows.registration')}
         summary={registrationSummary}
       >
         {/* #2433: like ReadyStep, a club tournament has no mode choice —
             membership is the invitation (#643). */}
         <RegistrationSection state={state} hideHeading hideModeChoice={state.isClubScoped} />
-      </Disclosure>
+      </Panel>
 
       {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee.
           #909: kun vist når seksjonen faktisk har innhold for gjeldende modus
@@ -997,7 +1100,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           panelet stått tomt. Numererte interne headings («4. Lag» osv.)
           beholdes urørt. */}
       {teamsAssignmentHasContent(state) && (
-        <Disclosure title={t('panelTitleTeams')}>
+        <Panel
+          view={view}
+          parts={['spillere']}
+          title={t('panelTitleTeams')}
+          heading={t('panelTitleTeams')}
+        >
           {/* #2321 (orchestrator's decision 02.10): drawn as Nyttspill-4-lag,
               so no «4.»/«5.» numbering and the count in the first kicker row;
               the parts are spaced by their kickers only. */}
@@ -1007,15 +1115,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             hideNumbering
             showSelectedCount
           />
-        </Disclosure>
+        </Panel>
       )}
 
       {/* Section 6: Settings. #909: includeVisibility løfter synlighet- +
           sideturnering-fieldsetene hit (ut av Grunnoppsett) i tillegg til
           peer-approval, slik at alle innstillinger samles i ett panel. */}
-      <Disclosure title={t('panelTitleSettings')} summary={settingsSummary}>
+      <Panel
+        view={view}
+        parts={['innstillinger']}
+        title={t('panelTitleSettings')}
+        heading={t('overview.rows.settings')}
+        summary={settingsSummary}
+      >
         <AdvancedSettingsSection state={state} includeVisibility hideHeading />
-      </Disclosure>
+      </Panel>
 
       {/* Section 6: Submit */}
       <section className="space-y-3 pt-2">
@@ -1036,6 +1150,23 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               {t('saveChangesButton')}
             </Button>
             {missingHint}
+            {section && (
+              <>
+                {/* The save lands back on the overview, and a refused one
+                    reopens this part (updateGameInternal). */}
+                <input type="hidden" name="edit_section" value={section} />
+                {editNav && (
+                  <LinkButton
+                    href={editNav.baseHref}
+                    variant="secondary"
+                    full
+                    data-testid="edit-section-cancel"
+                  >
+                    {t('overview.cancel')}
+                  </LinkButton>
+                )}
+              </>
+            )}
           </>
         )}
 
