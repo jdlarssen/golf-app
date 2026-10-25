@@ -28,6 +28,14 @@ function withAlpha(hex: string, alpha: number): string {
 /** Tavleflaten går 8 pt opp i båndet i tegningen; lagtavla gjør ikke det. */
 const SOLO_OVERLAP = 8;
 
+/**
+ * Tegningen har 14 pt fra formatlinja til hårstreken. Båndet (headeren) har
+ * selv 12 pt luft under linja på solo-tavla og 16 på lagtavla, så sitatet
+ * legger bare til resten. Skjermer uten bånd har ingenting å regne fra.
+ */
+const GAP_TO_RULE = 14;
+const BAND_BOTTOM_PADDING = { solo: 12, team: 16, plain: 0 } as const;
+
 export function RoundReportQuote({
   quote,
   variant,
@@ -49,10 +57,10 @@ export function RoundReportQuote({
   return (
     <View
       style={[
-        styles.wrap,
         banded
           ? { backgroundColor: colors.surfaceStrong, paddingBottom: 24 }
           : { paddingBottom: 8 },
+        { paddingTop: Math.max(0, GAP_TO_RULE - BAND_BOTTOM_PADDING[variant]) },
         // Skjermer uten tavle har sin egen sidemarg (`ui.scroll`).
         { paddingHorizontal: banded ? 20 : 0 },
         variant === 'solo' ? { marginBottom: -SOLO_OVERLAP } : null,
@@ -79,7 +87,6 @@ export function RoundReportQuote({
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingTop: 14 },
   figure: { borderTopWidth: 1, paddingTop: 12, gap: 6 },
   // 18/500 med linjehøyde 1,35, som tegningen.
   quote: { ...fraunces(500, 18, 24.3, { multiline: true }) },
