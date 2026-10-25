@@ -20,11 +20,14 @@ export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; o
       ? LEAGUE_TEXT.homeNotStarted
       : LEAGUE_TEXT.homeNoOpenRound;
   const state = league.delivered ? 'delivered' : league.inProgress ? 'inProgress' : 'notPlayed';
+  const stateText =
+    state === 'delivered' ? LEAGUE_TEXT.delivered : state === 'inProgress' ? LEAGUE_TEXT.inProgress : LEAGUE_TEXT.notPlayed;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[league.name, line].join('. ')}
+      // Pillen er en del av raden for skjermleseren også: navn, runde og om du har spilt.
+      accessibilityLabel={[league.name, line, open ? stateText : null].filter(Boolean).join('. ')}
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID={`home-league-${league.id}`}
     >

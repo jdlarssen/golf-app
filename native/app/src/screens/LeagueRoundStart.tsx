@@ -16,7 +16,7 @@
 // spillet går til ligaen.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueParticipant, AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { MAX_CO_PLAYERS, minFlightPlayers } from '../../../../lib/league/flightRules';
@@ -47,8 +47,9 @@ type Lock = 'delivered' | 'in_progress' | null;
 
 /**
  * Det som alt er kjent fra ligasiden: grunnen til at runden ikke kan startes,
- * i kjernens egne koder, eller `null`. Serveren avgjør fortsatt når knappen
- * trykkes; dette bestemmer bare hva skjermen viser først.
+ * i kjernens egne koder og i kjernens rekkefølge (vinduet, banen, så levert og
+ * i gang), eller `null`. Serveren avgjør fortsatt når knappen trykkes; dette
+ * bestemmer bare hva skjermen viser først.
  */
 export function knownRefusal(
   round: AppLeagueRound,
@@ -56,9 +57,9 @@ export function knownRefusal(
   now: Date,
 ): Extract<LeagueStartRefusal, 'outside_window' | 'already_played' | 'flight_in_progress' | 'round_not_ready'> | null {
   if (roundWindow(round, now) !== 'open') return 'outside_window';
+  if (!round.ready) return 'round_not_ready';
   if (round.delivered.includes(meId)) return 'already_played';
   if (round.inProgress.includes(meId)) return 'flight_in_progress';
-  if (!round.ready) return 'round_not_ready';
   return null;
 }
 
@@ -73,6 +74,8 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [pending, setPending] = useState(false);
   const [refusal, setRefusal] = useState<LeagueStartFailure | null>(null);
+  // Bare dra-ned viser hjulet; en henting ved fokus går stille.
+  const [pulling, setPulling] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,6 +88,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
       setFailure(result.reason);
     }
     setLoading(false);
+    setPulling(false);
   }, [leagueId]);
 
   useFocusEffect(
@@ -92,6 +96,14 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
       void load();
     }, [load]),
   );
+
+  // Dra ned henter runden på nytt (#2638): et avslag som `co_player_locked`
+  // ber spilleren laste på nytt, og da skal de låste medspillerne vises.
+  const onPull = useCallback(() => {
+    setPulling(true);
+    setRefusal(null);
+    void load();
+  }, [load]);
 
   if (view === null && failure === null) return <LeagueLoading />;
   if (view === null || failure === 'not_found') {
@@ -178,6 +190,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
     return (
       <ScrollView
         contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg, paddingBottom: insets.bottom + 20 }]}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={colors.primary} />}
         testID="round-start-screen"
       >
         {title}
@@ -194,7 +207,11 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]} testID="round-start-screen">
-      <ScrollView contentContainerStyle={styles.scrollBody} testID="round-start-scroll">
+      <ScrollView
+        contentContainerStyle={styles.scrollBody}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={colors.primary} />}
+        testID="round-start-scroll"
+      >
         {title}
         {view.league.isSimulator ? (
           <View testID="round-start-settings">
@@ -267,13 +284,16 @@ function PlayerRow({
   const disabled = lock !== null || blocked;
   const name = participantLabel(participant, all);
   const hcp = participant.hcpIndex !== null ? `HCP ${formatHcpNb(participant.hcpIndex)}` : null;
+  const lockText =
+    lock === 'delivered' ? ROUND_START_TEXT.lockDelivered : lock === 'in_progress' ? ROUND_START_TEXT.lockInProgress : null;
   return (
     <Pressable
       onPress={onToggle}
       disabled={disabled}
       accessibilityRole="checkbox"
       accessibilityState={{ checked, disabled }}
-      accessibilityLabel={name}
+      // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
+      accessibilityLabel={[name, hcp, lockText].filter(Boolean).join(', ')}
       style={[styles.row, first ? null : { borderTopWidth: 1, borderTopColor: colors.divider }]}
       testID={`round-start-player-${participant.userId}`}
     >
@@ -295,7 +315,7 @@ function PlayerRow({
       </View>
       {lock ? (
         <Text style={[styles.lock, { color: colors.muted }]} testID={`round-start-lock-${participant.userId}`}>
-          {lock === 'delivered' ? ROUND_START_TEXT.lockDelivered : ROUND_START_TEXT.lockInProgress}
+          {lockText}
         </Text>
       ) : (
         <View

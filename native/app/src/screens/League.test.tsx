@@ -182,6 +182,16 @@ describe('tegning 6: feil og uten nett', () => {
     expect(screen.queryByTestId('league-retry')).toBeNull();
   });
 
+  it('hentet liga som så er borte for deg (404): «Fant ikke ligaen», ikke den lagrede', async () => {
+    answer({ ok: true, view: leagueView() }, { ok: false, reason: 'not_found' });
+    await renderLeague();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('league-not-found')).toBeTruthy();
+    expect(screen.queryByTestId('league-stale')).toBeNull();
+  });
+
   it('hentet liga, men nettet er borte: merknaden, og «Spill runden» er dempet', async () => {
     answer({ ok: true, view: leagueView() }, { ok: false, reason: 'offline' });
     const { navigate } = await renderLeague();
@@ -194,6 +204,9 @@ describe('tegning 6: feil og uten nett', () => {
     );
     expect(screen.queryByTestId('league-play-round')).toBeNull();
     expect(screen.getByTestId('league-play-offline')).toHaveTextContent(/Du trenger nett for å starte runden\./);
+    // Den dempede knappen er en knapp for skjermleseren også, og sier at den er av.
+    const dimmed = screen.getByRole('button', { name: 'Spill runden' });
+    expect(dimmed.props.accessibilityState).toEqual({ disabled: true });
     expect(navigate).not.toHaveBeenCalled();
   });
 });
