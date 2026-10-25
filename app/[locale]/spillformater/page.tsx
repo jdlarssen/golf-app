@@ -78,10 +78,12 @@ export default async function SpillformaterPage({
 
       <header>
         <Kicker tone="accent">{t('listKicker')}</Kicker>
-        <h1 className="mt-1.5 font-serif text-[30px] font-medium leading-[1.1] text-text">
+        {/* `text-wrap: wrap` over the global `pretty`: the artboard breaks
+            «Hvilket format passer / dere?». */}
+        <h1 className="mt-1.5 font-serif text-[30px] font-medium leading-[1.1] text-text [text-wrap:wrap]">
           {tHelper('title')}
         </h1>
-        <p className="mt-1.5 font-sans text-sm text-muted">{tHelper('lead')}</p>
+        <p className="mt-1.5 font-sans text-sm leading-[normal] text-muted">{tHelper('lead')}</p>
       </header>
 
       <FormatHelper
