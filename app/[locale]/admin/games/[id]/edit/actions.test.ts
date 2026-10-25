@@ -426,6 +426,74 @@ describe('updateScheduledAction — mode-lock', () => {
   });
 });
 
+/**
+ * #2322: a save from one part of «Rediger spill» (`edit_section`) lands back on
+ * the overview, and a refused save keeps the part open. A missing or unknown
+ * value gives the redirects from before.
+ */
+describe('updateScheduledAction — edit_section (#2322)', () => {
+  function savedQueue(isAdmin: boolean) {
+    return [
+      { data: { is_admin: isAdmin }, error: null }, // loadRole
+      ...(isAdmin ? [] : [{ data: { created_by: 'creator-1' }, error: null }]), // gate
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // existing
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // insert
+    ];
+  }
+
+  it('admin: edit_section=bane lands on the overview with status=updated', async () => {
+    supabaseMock = buildSupabaseMock(savedQueue(true));
+    signIn('admin-1');
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData({ edit_section: 'bane' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?status=updated');
+  });
+
+  it('organiser: edit_section=bane lands on /games/[id]/rediger with status=updated', async () => {
+    supabaseMock = buildSupabaseMock(savedQueue(false));
+    signIn('creator-1');
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData({ edit_section: 'bane' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/rediger?status=updated');
+  });
+
+  it('a past tee-off keeps the part open (del=…) and writes nothing', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+    ]);
+    signIn('admin-1');
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction(
+        'game-1',
+        fullBestBallFormData({ scheduled_tee_off_at: '2020-01-01T09:00', edit_section: 'bane' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=tee_off_in_past&del=bane');
+    const writes = supabaseMock.__fromCalls.filter((c) =>
+      ['update', 'insert', 'delete'].includes(c.method),
+    );
+    expect(writes).toHaveLength(0);
+  });
+
+  it.each([['../x'], ['BANE'], ['']])('an unknown edit_section %j gives the redirects from before', async (value) => {
+    supabaseMock = buildSupabaseMock(savedQueue(true));
+    signIn('admin-1');
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData({ edit_section: value })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+  });
+});
+
 describe('updateScheduledAction — start_type (#2258)', () => {
   // The edit form posts the «Shotgun-start» mirror; the update writes it, and
   // a form without it (an older tab) writes the first-tee default.
