@@ -163,7 +163,7 @@ export function FormatHelper({
 
       <a
         href={allFormatsHref}
-        className="-mx-1 mt-3 flex min-h-11 items-center justify-center font-sans text-sm font-semibold text-primary"
+        className="-mx-1 mt-3 flex min-h-11 items-center justify-center font-sans text-sm font-semibold text-primary underline"
       >
         {labels.seeAll}
       </a>
@@ -174,7 +174,7 @@ export function FormatHelper({
 function Question({ legend, children }: { legend: string; children: ReactNode }) {
   return (
     <fieldset className="m-0 border-0 p-0">
-      <legend className="p-0 pb-2 font-sans text-sm font-semibold text-text">{legend}</legend>
+      <legend className="p-0 pb-2 font-sans text-sm font-semibold leading-[normal] text-text">{legend}</legend>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </fieldset>
   );
