@@ -299,6 +299,70 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
   });
 });
 
+describe('GameWizard — #2331 oppsett-forvalget fra guidene', () => {
+  // «Bruk dette oppsettet» on the guides seeds the format and the team size
+  // (plus the tee-off suggestion every new game gets). Like `?format=` it
+  // lands on step 2 and no further: steps 3+ need a course and players no one
+  // has chosen.
+  const PRESET: Partial<WizardProps> = {
+    initialValues: {
+      game_mode: 'texas_scramble',
+      team_size: 4,
+      scheduled_tee_off_at: '2026-10-31T09:00',
+    },
+    initialIntent: 'kompis',
+    initialExpectedPlayerCount: null,
+    formatsByIntent: {
+      ...FORMATS_BY_INTENT,
+      kompis: [...FORMATS_BY_INTENT.kompis, formatRow('texas_scramble', 30)],
+    },
+  };
+
+  it('lander på ?step=2', () => {
+    searchString = 'oppsett=firmagolf&step=2';
+    renderWizard(PRESET);
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('?step=5 sendes til steg 1 og lar ?oppsett= stå', () => {
+    searchString = 'oppsett=firmagolf&step=5';
+    renderWizard(PRESET);
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?oppsett=firmagolf', {
+      scroll: false,
+    });
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('«Neste» fra steg 2 til 3 kaster ikke arrangøren tilbake', () => {
+    searchString = 'oppsett=firmagolf&step=2';
+    const { rerender } = renderWizard(PRESET);
+
+    fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
+
+    expect(push).toHaveBeenCalledWith('/admin/games/new?oppsett=firmagolf&step=3', {
+      scroll: false,
+    });
+    // The router has committed ?step=3; the shell re-renders with it.
+    rerender(wizardElement(PRESET));
+
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('et forvalg med bare game_mode gir også tak 2', () => {
+    searchString = 'step=2';
+    renderWizard({ ...PRESET, initialValues: { game_mode: 'texas_scramble' } });
+    expect(replace).not.toHaveBeenCalled();
+
+    searchString = 'step=3';
+    renderWizard({ ...PRESET, initialValues: { game_mode: 'texas_scramble' } });
+    expect(replace).toHaveBeenCalledWith('/admin/games/new', { scroll: false });
+  });
+});
+
 describe('GameWizard — #1385 gjenopptatt utkast', () => {
   it('åpner på steg 5 med radens verdier, ikke et gammelt lokalt utkast', async () => {
     // Utkastet ble lagret i veiviseren, arrangøren klikker «Rediger utkast»

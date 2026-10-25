@@ -175,6 +175,21 @@ describe('wizardStatePersistence — mount-kontekst', () => {
     expect(new Set([plain, cupLink, clubLink]).size).toBe(3);
   });
 
+  // #2331: «Bruk dette oppsettet» on the guides mounts with the Kompis intent
+  // and the setup's format. An old draft from a blank visit must not be laid
+  // over it, so the two contexts differ.
+  it('skiller guidenes oppsett-forvalg fra et vanlig besøk', () => {
+    const plain = wizardDraftContext({});
+    const preset = wizardDraftContext({
+      initialIntent: 'kompis',
+      initialValues: { game_mode: 'texas_scramble' },
+    });
+
+    expect(preset).not.toBe(plain);
+    saveWizardDraft(KEY, makeDraft(), plain, NOW);
+    expect(loadWizardDraft(KEY, preset, NOW)).toBeNull();
+  });
+
   it('gir samme kontekst for to like mounts', () => {
     expect(wizardDraftContext({ initialIntent: 'klubb', defaultGroupId: 'k1' })).toBe(
       wizardDraftContext({ initialIntent: 'klubb', defaultGroupId: 'k1' }),
