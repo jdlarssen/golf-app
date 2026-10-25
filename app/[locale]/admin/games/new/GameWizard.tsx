@@ -270,9 +270,13 @@ function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
  *                      tidspunkt). Det var #1653: `?bane=…&step=5` landet
  *                      arrangøren i «Klar?» med default-format og tom
  *                      spillerliste — plagen #1383 skulle fjerne.
- *   kun `game_mode`  → **2**. `?format=`-dyplenka (#2328) fra formatvelgeren
- *                      på /spillformater. Steg 2 viser formatet valgt; steg
- *                      3+ forutsetter bane og spillere ingen har valgt.
+ *   kun `game_mode` og/eller `team_size`
+ *                    → **2**. Forslags-dyplenkene: `?format=` (#2328) fra
+ *                      formatvelgeren på /spillformater (bare `game_mode`) og
+ *                      `?oppsett=` (#2331) fra «Bruk dette oppsettet» på
+ *                      guidene (`game_mode` + `team_size`). Steg 2 viser
+ *                      formatet valgt; steg 3+ forutsetter bane og spillere
+ *                      ingen har valgt.
  *   alt annet        → **Infinity**. Cup-lenka (`tournament_id`/`game_mode`/
  *                      `lock_game_mode`) og revansje (`?fra=`: roster + format
  *                      + baneoppsett) er bevisst sendt inn med forvalg og skal
@@ -294,7 +298,7 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
 
   if (seededKeys.length === 0) return 1;
   if (seededKeys.length === 1 && seededKeys[0] === 'course_id') return 2;
-  if (seededKeys.length === 1 && seededKeys[0] === 'game_mode') return 2;
+  if (seededKeys.every((key) => key === 'game_mode' || key === 'team_size')) return 2;
   return Infinity;
 }
 
