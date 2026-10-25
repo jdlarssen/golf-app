@@ -30,6 +30,11 @@
 // et hull tastet i flymodus flytter ringen også uten nett, og henter dem så fra
 // serveren når lista har svart.
 //
+// #2638 Del 2: «Ligaene dine» står rett etter «Neste start» (tegning 1a/1b),
+// fra `GET /api/liga`. Seksjonen er best-effort: en tom liste eller et kall som
+// feiler gir ingen seksjon og ingen feilboks, så Hjem aldri blir verre av
+// ligaen.
+//
 // Hjem v2 (#2385): «Forrige runde» leser det samme for runden som ble avsluttet
 // sist, så raden kan vise poengene dine («34 poeng», designet) i formatene der
 // tavla viser poeng. Samme hentinger som spillets side og tavla gjør (bundelen,
@@ -49,7 +54,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firstName } from '../../../../lib/firstName';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
+import type { AppLeagueSummary } from '../../../../lib/league/appLeagueView';
 import { KavalkadeHomeBanner } from '../components/kavalkade/KavalkadeDoors';
+import { LeagueHomeRow } from '../components/league/LeagueHomeRow';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
@@ -70,12 +77,14 @@ import {
   type HomeCard,
   type HomeList,
 } from '../data/homeList';
+import { fetchMyLeagues } from '../data/league';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
 import { PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
+import { LEAGUE_TEXT } from '../lib/leagueCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
 import { useOnResume } from '../lib/useOnResume';
@@ -98,6 +107,8 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<OwnProfile | null>(null);
+  // «Ligaene dine» (#2638): tom = ingen seksjon, også når kallet feilet.
+  const [leagues, setLeagues] = useState<AppLeagueSummary[]>([]);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
   const [lastData, setLastData] = useState<CardBundle | null>(null);
@@ -118,6 +129,11 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
     setDeviceTick((n) => n + 1);
     // Hilsenen og HCP-pillen. Best-effort: uten profil står bare datoen.
     void fetchOwnProfile(userId).then(setProfile, () => undefined);
+    // Ligaene: best-effort, og en feil skjuler seksjonen.
+    void fetchMyLeagues().then(
+      (result) => setLeagues(result.ok ? result.leagues : []),
+      () => setLeagues([]),
+    );
     try {
       const fresh = await refreshHomeCards(userId);
       setList(fresh);
@@ -338,6 +354,19 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
               now={new Date()}
               onPress={() => openGame(ticket.gameId)}
             />
+          </View>
+        ) : null}
+
+        {leagues.length > 0 ? (
+          <View testID="home-leagues">
+            <SectionHead title={LEAGUE_TEXT.homeSection} />
+            {leagues.map((league) => (
+              <LeagueHomeRow
+                key={league.id}
+                league={league}
+                onPress={() => navigation.navigate('League', { leagueId: league.id })}
+              />
+            ))}
           </View>
         ) : null}
 

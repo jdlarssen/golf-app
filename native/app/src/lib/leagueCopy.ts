@@ -10,9 +10,14 @@
 // **Datoer i enhetens lokaltid, ingen `Intl`** (samme grunn som
 // `homeDates.ts`: Hermes mangler ICU-tidssonene). Klokkeslettet skrives
 // «23.59» som på tegningene.
+import { firstName, sharesFirstName } from '../../../../lib/firstName';
 import { formatShortDateNb } from '../../../../lib/format/date';
 import { MAX_FLIGHT_PLAYERS } from '../../../../lib/league/flightRules';
-import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
+import type {
+  AppLeagueParticipant,
+  AppLeagueRound,
+  AppLeagueView,
+} from '../../../../lib/league/appLeagueView';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '../../../../lib/league/types';
 import type { LeagueLoadFailure, LeagueStartFailure } from '../data/league';
 import { OFFLINE_NOTE } from './rosterCopy';
@@ -34,6 +39,8 @@ export const LEAGUE_TEXT = {
   missing: 'Mangler',
   /** Spilleren selv i «hvem har spilt» (`liga.player.playedBy.you`, med stor forbokstav først i lista). */
   you: 'Deg',
+  /** `liga.player.playedBy.unknownPlayer`. */
+  unknownPlayer: 'Ukjent spiller',
   /** `liga.player.seasonTableHeading`. */
   seasonTable: 'Sesong-tabell',
   /** `liga.player.roundsHeading`. */
@@ -42,6 +49,9 @@ export const LEAGUE_TEXT = {
   youDelivered: 'Du har levert',
   /** `liga.player.runde.missingSetup`. */
   missingSetup: 'Runden mangler bane eller tee — admin fullfører oppsettet snart.',
+  /** `liga.standings.colRank` og `colPlayer`. */
+  colRank: '#',
+  colPlayer: 'Spiller',
   /** `liga.standings.emptyState`. */
   standingsEmpty: 'Ingen resultater ennå — første runde teller når flights er levert.',
   /** `liga.player.noRoundsYet`. */
@@ -235,6 +245,33 @@ export function nextRoundOpens(opensAt: string): string {
 /** Seksjonsoverskriften over kortet: «Innstillinger · Runde 3». */
 export function settingsHeading(roundLabel: string): string {
   return `Innstillinger · ${roundLabel}`;
+}
+
+/**
+ * En deltaker slik ligaskjermene skriver dem: fornavnet («Martin», tegningene),
+ * eller hele navnet når en annen i ligaen har samme fornavn.
+ */
+export function participantLabel(
+  participant: Pick<AppLeagueParticipant, 'name'> | undefined,
+  all: readonly Pick<AppLeagueParticipant, 'name'>[],
+): string {
+  const name = participant?.name ?? null;
+  if (!name) return LEAGUE_TEXT.unknownPlayer;
+  const others = all.filter((p) => p !== participant).map((p) => p.name);
+  return sharesFirstName(name, others) ? name : (firstName(name) ?? name);
+}
+
+/** Navnene i én rad av «hvem har spilt»: «Deg» først, så de andre. */
+export function playedByNames(
+  userIds: readonly string[],
+  meId: string,
+  participants: readonly AppLeagueParticipant[],
+): string {
+  const byId = new Map(participants.map((p) => [p.userId, p]));
+  const names = userIds
+    .filter((id) => id !== meId)
+    .map((id) => participantLabel(byId.get(id), participants));
+  return (userIds.includes(meId) ? [LEAGUE_TEXT.you, ...names] : names).join(', ');
 }
 
 /** Feilen på ligasiden, når det ikke finnes noen liga å vise (tegning 6). */

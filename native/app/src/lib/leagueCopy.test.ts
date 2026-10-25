@@ -27,6 +27,8 @@ import {
   nextRoundOf,
   nextRoundOpens,
   openRoundOf,
+  participantLabel,
+  playedByNames,
   roundClosesTitle,
   roundDates,
   roundWindow,
@@ -53,24 +55,30 @@ describe('paritet med nettsiden (messages/no.json)', () => {
       inProgress: LEAGUE_TEXT.inProgress,
       missing: LEAGUE_TEXT.missing,
       you: LEAGUE_TEXT.you.toLowerCase(),
+      unknownPlayer: LEAGUE_TEXT.unknownPlayer,
       chips: WINDOW_CHIP,
       kicker: LEAGUE_TEXT.kicker,
       seasonTable: LEAGUE_TEXT.seasonTable,
       rounds: LEAGUE_TEXT.rounds,
       noRounds: LEAGUE_TEXT.noRounds,
       empty: LEAGUE_TEXT.standingsEmpty,
+      colRank: LEAGUE_TEXT.colRank,
+      colPlayer: LEAGUE_TEXT.colPlayer,
       missingSetup: LEAGUE_TEXT.missingSetup,
     }).toEqual({
       delivered: player.playedBy.delivered,
       inProgress: player.playedBy.inProgress,
       missing: player.playedBy.missing,
       you: player.playedBy.you,
+      unknownPlayer: player.playedBy.unknownPlayer,
       chips: player.windowChip,
       kicker: player.kicker,
       seasonTable: player.seasonTableHeading,
       rounds: player.roundsHeading,
       noRounds: player.noRoundsYet,
       empty: source.liga.standings.emptyState,
+      colRank: source.liga.standings.colRank,
+      colPlayer: source.liga.standings.colPlayer,
       missingSetup: runde.missingSetup,
     });
   });
@@ -248,5 +256,32 @@ describe('datoene (enhetens lokaltid)', () => {
       next: nextRoundOf([r4, r3, r1], now)?.id,
       noneOpen: openRoundOf([r1, r4], now),
     }).toEqual({ windows: ['closed', 'open', 'upcoming'], open: 'r3', next: 'r4', noneOpen: null });
+  });
+});
+
+describe('navnene (tegningene: fornavn)', () => {
+  const people = [
+    { userId: 'me', name: 'Jørgen Larssen', fullName: null, hcpIndex: null },
+    { userId: 'm', name: 'Martin', fullName: null, hcpIndex: null },
+    { userId: 'k1', name: 'Kristian Hansen', fullName: null, hcpIndex: null },
+    { userId: 'k2', name: 'Kristian Berg', fullName: null, hcpIndex: null },
+    { userId: 'x', name: null, fullName: null, hcpIndex: null },
+  ];
+
+  it('fornavnet, hele navnet når to har samme fornavn, og «Ukjent spiller» uten navn', () => {
+    expect(people.map((p) => participantLabel(p, people))).toEqual([
+      'Jørgen',
+      'Martin',
+      'Kristian Hansen',
+      'Kristian Berg',
+      'Ukjent spiller',
+    ]);
+  });
+
+  it('«hvem har spilt»: «Deg» først, så de andre i rekkefølge', () => {
+    expect([playedByNames(['m', 'me', 'x'], 'me', people), playedByNames(['m'], 'me', people)]).toEqual([
+      'Deg, Martin, Ukjent spiller',
+      'Martin',
+    ]);
   });
 });
