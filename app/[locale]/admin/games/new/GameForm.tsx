@@ -26,6 +26,7 @@ import {
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { Disclosure } from '@/components/ui/Disclosure';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { LockedFormatSummary } from './LockedFormatSummary';
 import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
@@ -353,6 +354,36 @@ type Props = {
   editNav?: EditNav;
 };
 
+/** Which of BasicsSection's fields the open part shows. */
+function basicsFieldsFor(section: EditSection | null): 'all' | 'nameAndTime' | 'course' {
+  if (section === 'bane') return 'course';
+  if (section === 'navn-og-tid') return 'nameAndTime';
+  return 'all';
+}
+
+const TEE_OFF_PAST_HINT_ID = 'tee-off-past-hint';
+
+/**
+ * A passed tee-off greys the save (`canPublish`) but is not in «Mangler: …»;
+ * its only sentence sits at the tee-off field. In every part but «Navn og
+ * tid» that field is hidden, so the save says it and links there (#2322).
+ */
+function TeeOffPastHint({ baseHref }: { baseHref: string }) {
+  const t = useTranslations('wizard.form.overview');
+  const tBasics = useTranslations('wizard.sections.basics');
+  return (
+    <p id={TEE_OFF_PAST_HINT_ID} className="text-center text-xs text-danger">
+      {tBasics('teeOffPastError')}{' '}
+      <SmartLink
+        href={`${baseHref}?del=navn-og-tid`}
+        className="tap-extend font-semibold underline [--tap-extend:-14px_-4px]"
+      >
+        {t('editLabel', { title: t('rows.nameAndTime').toLocaleLowerCase() })}
+      </SmartLink>
+    </p>
+  );
+}
+
 /**
  * One panel of the form. `'full'` keeps today's Disclosure. With one part
  * open, its panels become a section with a heading and every other panel a
@@ -549,6 +580,12 @@ export function GameForm({
   }
   // One part open (#2322): the save and «Avbryt» below are the part's own.
   const section = view === 'full' || view === 'overview' ? null : view;
+  const showTeeOffPastHint =
+    section !== null && section !== 'navn-og-tid' && state.teeOffInPast && editNav !== undefined;
+  const saveDescribedBy =
+    [missingHint ? 'publish-missing' : null, showTeeOffPastHint ? TEE_OFF_PAST_HINT_ID : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   return (
     <form className="space-y-6" data-testid="game-form">
@@ -781,9 +818,7 @@ export function GameForm({
           courses={courses}
           showName
           hideHeading
-          visibleFields={
-            section === 'bane' ? 'course' : section === 'navn-og-tid' ? 'nameAndTime' : 'all'
-          }
+          visibleFields={basicsFieldsFor(section)}
         />
       </Panel>
 
@@ -1145,11 +1180,12 @@ export function GameForm({
               data-testid="save-changes"
               className="w-full"
               disabled={!canPublish}
-              aria-describedby={missingHint ? 'publish-missing' : undefined}
+              aria-describedby={saveDescribedBy}
             >
               {t('saveChangesButton')}
             </Button>
             {missingHint}
+            {showTeeOffPastHint && editNav && <TeeOffPastHint baseHref={editNav.baseHref} />}
             {section && (
               <>
                 {/* The save lands back on the overview, and a refused one
