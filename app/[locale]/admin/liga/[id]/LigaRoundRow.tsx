@@ -72,6 +72,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
     SIM_SETTINGS_SAVE_INITIAL,
   );
   const settingsErrorKey = `settingsErrors.${settingsState.error}` as Parameters<typeof t>[0];
+  const overrideErrorKey = `settingsErrors.${overrideState.error}` as Parameters<typeof t>[0];
   const settingsLocale = locale === 'en' ? 'en' : 'no';
   const overriddenNames = round.overriddenKeys
     .map((key) => (settingsLocale === 'en' ? SIM_SETTINGS[key].trackmanLabel : SIM_SETTINGS[key].label))
@@ -163,7 +164,9 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
           </div>
 
           {overrideState.error && overrideState.error !== '' && (
-            <p role="alert" className="font-sans text-[12px] text-danger">{overrideState.error}</p>
+            <p role="alert" className="font-sans text-[12px] text-danger">
+              {t.has(overrideErrorKey) ? t(overrideErrorKey) : t('settingsErrors.update_failed')}
+            </p>
           )}
           <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
             {t('saveDeadlineButton')}

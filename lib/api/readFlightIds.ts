@@ -10,7 +10,7 @@ import { isUuid } from '@/lib/url/isUuid';
  * the field is not a list of uuids, or the list is longer than `max`: a
  * malformed body is a client error (400), never «we failed» (500). Each route
  * keeps its own cap: submit-team's wire is frozen at 20 for the app builds in
- * the stores, and the league start uses `MAX_FLIGHT_SIZE`.
+ * the stores, and the league start uses `MAX_CO_PLAYERS` (lib/league/flightRules).
  */
 export async function readFlightIds(request: Request, field: string, max: number): Promise<string[] | null> {
   let parsed: unknown;
