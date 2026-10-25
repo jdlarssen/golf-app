@@ -241,5 +241,16 @@
     "expect": "none",
     "setup": "closing-comment-exists",
     "payload": { "tool_input": { "command": "gh issue comment --help" } }
-  }
+  },
+  {"name": "bakgrunn: Metro med & → deny", "expect": "deny", "payload": {"tool_input": {"command": "cd native/app && npx expo start --port 8090 &"}}, "expect_reason_contains": ["run_in_background"]},
+  {"name": "bakgrunn: subshell ( … ) & → deny", "expect": "deny", "payload": {"tool_input": {"command": "(cd native/app && npx expo start --port 8090) &"}}},
+  {"name": "bakgrunn: nohup → deny", "expect": "deny", "payload": {"tool_input": {"command": "nohup npm run dev > /tmp/dev.log 2>&1"}}},
+  {"name": "bakgrunn: & midt i kjede → deny", "expect": "deny", "payload": {"tool_input": {"command": "npm run dev & sleep 5; curl -s localhost:3000"}}},
+  {"name": "bakgrunn: disown → deny", "expect": "deny", "payload": {"tool_input": {"command": "npm run dev & disown"}}},
+  {"name": "bakgrunn: setsid → deny", "expect": "deny", "payload": {"tool_input": {"command": "setsid next start -p 3726"}}},
+  {"name": "ikke bakgrunn: && og 2>&1 → none", "expect": "none", "payload": {"tool_input": {"command": "npm run build 2>&1 && npm test &> /dev/null"}}, "assert_no_log_rule": "detached-process"},
+  {"name": "ikke bakgrunn: & bare i quotet tekst → none", "expect": "none", "payload": {"tool_input": {"command": "git commit -m \"docs: Tom & Jerry\""}}, "assert_no_log_rule": "detached-process"},
+  {"name": "ikke bakgrunn: korte jobber med wait → none", "expect": "none", "payload": {"tool_input": {"command": "node a.mjs & node b.mjs & wait"}}, "assert_no_log_rule": "detached-process"},
+  {"name": "ikke bakgrunn: & i heredoc-tekst → none", "expect": "none", "assert_no_log_rule": "detached-process", "payload": {"tool_input": {"command": "cat > /tmp/msg.txt <<'EOF'\nfix: Tom & Jerry\nEOF\ngit commit -F /tmp/msg.txt"}}},
+  {"name": "bakgrunn: & etter heredoc → deny", "expect": "deny", "payload": {"tool_input": {"command": "cat > /tmp/x <<EOF\nhei\nEOF\nnpx next dev -p 3328 &"}}}
 ]

@@ -9,6 +9,7 @@
 #   • DENY   prod-connstring / curl/psql mot prod-Supabase / skrivende supabase-
 #            CLI mot prod (#1074) — engangs-luke: touch .claude/approve-prod
 #   • DENY   --no-verify         omgår commit-msg/pre-commit/pre-push (forbudt)
+#   • DENY   &, nohup, setsid, disown — løsrevne prosesser TaskStop ikke når
 #   • DENY   gh pr merge --squash «Squash brukes ikke» → bruk --rebase
 #   • DENY   gh pr merge på bruker-synlig PR uten staging-verified/needs-manual-qa (#1303)
 #   • ASK    git push --force     krever eksplisitt godkjenning (lease er OK)
@@ -103,6 +104,32 @@ case "$cmd_stripped" in
   *--no-verify*)
     emit_deny "no-verify" "CLAUDE.md forbyr --no-verify: det omgår commit-msg/pre-commit/pre-push-gatene (versjonering, Refs #N, Dexie-vakt, typecheck/lint/test). Fiks årsaken i stedet. Ekte nødssituasjon? La eier kjøre den manuelt." ;;
 esac
+
+# ── DENY: prosesser som løsrives fra økta (&, nohup, setsid, disown) ──────────
+# En server startet med `&` eller i et subshell overlever økta og kan ikke
+# stoppes med TaskStop; byggere får ikke drepe prosesser, så eieren måtte kjøre
+# kill for hånd (Metro på 8090 og next-server på 3328, 25.10). Harnessets egen
+# bakgrunn (Bash run_in_background: true) setter ingen & i kommandoen og slipper
+# gjennom. `&&`, `>&`, `&>` og `|&` er ikke bakgrunn; `… & … & wait` er korte
+# parallelle jobber som venter på seg selv og er lov.
+# Heredoc-kropper ut først (samme awk som merge-sjekken under): «Tom & Jerry» i
+# en commit-melding skrevet med <<EOF er tekst, ikke bakgrunn.
+detach_scan="$(printf '%s\n' "$cmd" | awk '
+  skip { t=$0; sub(/^[ \t]+/, "", t); if (t == word) skip=0; next }
+  match($0, /<<-?[ \t]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*/) {
+    w=substr($0, RSTART, RLENGTH); sub(/^<<-?[ \t]*["'"'"']?/, "", w)
+    word=w; skip=1; print substr($0, 1, RSTART-1); next
+  }
+  { print }' | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g" \
+  | sed -E 's/&&/ /g; s/[0-9]*>&[0-9-]*/ /g; s/&>/ /g; s/\|&/ /g')"
+detached=""
+case "$detach_scan" in
+  *"&"*) printf '%s' "$detach_scan" | grep -Eq '(^|[[:space:];&|])wait([[:space:];]|$)' || detached=1 ;;
+esac
+printf '%s' "$detach_scan" | grep -Eq '(^|[[:space:];&|(])(nohup|setsid|disown)([[:space:];)]|$)' && detached=1
+if [ -n "$detached" ]; then
+  emit_deny "detached-process" "Prosesser som løsrives fra økta (&, nohup, setsid, disown, ( … ) &) er sperret: de kan ikke stoppes med TaskStop, og da må eieren drepe dem for hånd. Start servere (Metro, next dev/start, expo) med Bash-verktøyets run_in_background: true — uten & i kommandoen — og stopp dem med TaskStop når du er ferdig. Korte parallelle jobber er lov hvis kommandoen avsluttes med wait."
+fi
 
 # ── DENY: e-postadresser i noe som publiseres til GitHub (#1929) ──────────────
 # Repoet er offentlig, og en adresse som først er postet kan ikke tas tilbake:
