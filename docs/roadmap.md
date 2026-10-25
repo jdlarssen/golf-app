@@ -16,7 +16,7 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 |---|---|---|---|
 | 2026-09 | Orkestratoren styrer arbeidet | 0.3.0 er inne, planleggingsløken er i harnesset, og første uke har gått med kapasitetsregelen | Selvkjørende loops |
 | 2026-10 | Løkkene går av seg selv, og null kjente spillerbugs | løkke-issuene er lukket, arkivkjøringen 1. oktober er verifisert, bugene i backloggen er borte, Kavalkade-kontrakten er skrevet (#1040), og livstegnet står i Sekretariatets nøkkeltall | Selvkjørende loops (31.10) |
-| 2026-11 | Native: paritet, og vennegjengen tester | paritetssjekken er lukket (#1954), og TestFlight og lukket Play-test er i gang med minst 12 testere (#2561) | Native app |
+| 2026-11 | Vinterligaen i bruk, og gjengen er testerne | vennegjengen spiller runde 1 og 2 av vinterligaen fra appen, er de minst 12 testerne i den lukkede Play-testen og TestFlight, og det de to rundene viser at mangler er rettet (først #1378) | Native app |
 | 2026-12 | Kavalkaden delt i romjula, og testernes funn rettet | Kavalkaden er delt av minst tre spillere som ikke er Jørgen, og funnene fra testerne er rettet eller avvist | Runde 3 — sesongslutt (31.12) |
 | 2027-01 | Native: butikkinnsending | begge butikkene har fått appen | Native app |
 | 2027-02 | Native: gjennomgang og rettinger | appen er godkjent i App Store og Google Play | Native app |
@@ -25,7 +25,7 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 
 **Endret 2026-10-25 (strategisamtale):** Kavalkaden (november) ble bygget i oktober (#1040, K1–K5 lukket), og skal ligge skjult til 24. desember. Native-paritet er derfor flyttet fra desember til november. Desember holder delingen av Kavalkaden og blir buffer før testerne i januar. Oktober fikk i tillegg #2352 (iPad, siste kjente spillerbug) og #2632 (AI-historien i appen, en del av pariteten).
 
-**Endret igjen 2026-10-25 (strategisamtale nr. 2):** eieren arrangerte, spilte og avsluttet en ekte runde fra appen 24.10, så paritet er i praksis nådd før november. Testerne flyttes derfor fra januar til november. Googles krav om 12 testere i 14 dager blir da oppfylt i november og ikke i januar. Innsendingen flyttes til januar, og februar blir tid til gjennomgang og rettinger før butikkene i mars.
+**Endret igjen 2026-10-25 (strategisamtale nr. 2):** eieren arrangerte, spilte og avsluttet en ekte runde fra appen 24.10, så paritet er i praksis nådd før november. Testerne flyttes derfor fra januar til november. Samme kveld ble novembermålet vinterligaen i bruk: gjengen spiller ligaen fra appen og er samtidig testerne. Paritetssjekken (#1954) ble lukket 25.10. Googles krav om 12 testere i 14 dager blir da oppfylt i november og ikke i januar. Innsendingen flyttes til januar, og februar blir tid til gjennomgang og rettinger før butikkene i mars.
 
 ## Slik brukes dette
 
