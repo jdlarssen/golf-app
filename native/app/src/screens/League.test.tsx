@@ -148,6 +148,58 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
     expect(screen.queryByText('R4')).toBeNull();
   });
 
+  describe('#1378: den åpne runden og de som ikke er rangert', () => {
+    const row = (userId: string, rank: number | null, ranked: boolean, roundsPlayed: number, value: number) => ({
+      userId,
+      rank,
+      value,
+      ranked,
+      roundsPlayed,
+      perRound: roundsPlayed > 0 ? [{ roundId: 'r1', value, points: null, penalised: false }] : [],
+    });
+    const withGroups = () =>
+      leagueView({
+        standings: [
+          row('martin', 1, true, 2, 74),
+          row('me', 2, true, 2, 69),
+          // Har spilt, men stått over en stengt runde i en «må spille alle»-liga.
+          row('kristian', null, false, 1, 31),
+          // Har ikke spilt en runde.
+          row('sindre', null, false, 0, 0),
+        ],
+      });
+
+    it('bare den åpne runden er tonet og har prikk; din egen rad har ingen tone', async () => {
+      answer({ ok: true, view: withGroups() });
+      await renderLeague();
+      expect(screen.getByTestId('league-standings-open-col')).toHaveTextContent('R3');
+      expect(screen.getByTestId('league-standings-open-col')).toHaveStyle({ backgroundColor: '#E8EFE8' });
+      expect(screen.getByTestId('league-standings-open-cell-martin')).toHaveStyle({ backgroundColor: '#E8EFE8' });
+      expect(screen.getByTestId('league-standings-open-cell-me')).toHaveStyle({ backgroundColor: 'transparent' });
+    });
+
+    it('ingen åpen runde: ingen tone', async () => {
+      answer({ ok: true, view: leagueView({ rounds: [leagueRound(1, -30), leagueRound(2, 3)] }) });
+      await renderLeague();
+      expect(screen.queryByTestId('league-standings-open-col')).toBeNull();
+    });
+
+    it('de som ikke er rangert står under to overskrifter, uten plass, uten forklaring', async () => {
+      answer({ ok: true, view: withGroups() });
+      await renderLeague();
+      expect(screen.getByTestId('league-standings-group-notRanked')).toHaveTextContent(/^Ikke rangert$/);
+      expect(screen.getByTestId('league-standings-group-notRankedYet')).toHaveTextContent(/^Ikke rangert ennå$/);
+      expect(screen.getByTestId('league-standings-row-sindre')).toHaveTextContent(/^Sindre0/);
+      expect(screen.queryByText(/har ikke spilt en runde/i)).toBeNull();
+    });
+
+    it('alle rangert: ingen gruppeoverskrift', async () => {
+      await renderLeague();
+      expect(screen.queryByTestId('league-standings-group-notRanked')).toBeNull();
+      expect(screen.queryByTestId('league-standings-group-notRankedYet')).toBeNull();
+    });
+  });
+
   it('fra fire åpnede runder ruller rundekolonnene', async () => {
     answer({
       ok: true,

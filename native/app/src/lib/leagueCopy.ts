@@ -52,6 +52,9 @@ export const LEAGUE_TEXT = {
   /** `liga.standings.colRank` og `colPlayer`. */
   colRank: '#',
   colPlayer: 'Spiller',
+  /** `liga.standings.groupNotRanked` og `groupNotRankedYet`. */
+  groupNotRanked: 'Ikke rangert',
+  groupNotRankedYet: 'Ikke rangert ennå',
   /** `liga.standings.emptyState`. */
   standingsEmpty: 'Ingen resultater ennå — første runde teller når flights er levert.',
   /** `liga.player.noRoundsYet`. */

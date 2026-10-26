@@ -9,19 +9,24 @@
 // har åpnet («–» for ikke spilt). Lederen har gull plass og gull tall, og din
 // egen rad er grønn. Fra fire runder er det ikke plass i bredden: da ruller
 // rundekolonnene til siden, som tabellen på nettsiden.
+//
+// #1378: den åpne runden er tonet og har en prikk. De som ikke er rangert,
+// står under egne overskrifter med tom plass-celle, uten demping og uten
+// forklaringstekst.
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
   formatRoundCell,
   formatSeasonValue,
   roundCellValue,
+  splitStandings,
+  tableRounds,
   type FormatDecimal,
 } from '../../../../../lib/league/standingsFormat';
 import {
   LEAGUE_TEXT,
   isPointsBased,
   participantLabel,
-  roundWindow,
   tableCaption,
   valueHeader,
 } from '../../lib/leagueCopy';
@@ -43,16 +48,28 @@ const NAME_W_SCROLL = 110;
 export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }) {
   const { colors } = useTheme();
   const { league, participants, standings, me } = view;
-  const rounds = [...view.rounds]
-    .sort((a, b) => a.sequence - b.sequence)
-    .filter((r) => roundWindow(r, now) !== 'upcoming');
+  const { shown: rounds, openRoundId } = tableRounds(view.rounds, now.getTime());
   const pointsBased = isPointsBased(league.format);
   const byId = new Map(participants.map((p) => [p.userId, p]));
-  const ordered = [...standings.filter((r) => r.ranked), ...standings.filter((r) => !r.ranked)];
+  const { ranked, notRanked, notRankedYet } = splitStandings(standings);
+  type Entry =
+    | { kind: 'group'; key: string; label: string }
+    | { kind: 'row'; row: (typeof standings)[number] };
+  const entries: Entry[] = [
+    ...ranked.map((row): Entry => ({ kind: 'row', row })),
+    ...(notRanked.length > 0
+      ? [{ kind: 'group', key: 'notRanked', label: LEAGUE_TEXT.groupNotRanked } as Entry]
+      : []),
+    ...notRanked.map((row): Entry => ({ kind: 'row', row })),
+    ...(notRankedYet.length > 0
+      ? [{ kind: 'group', key: 'notRankedYet', label: LEAGUE_TEXT.groupNotRankedYet } as Entry]
+      : []),
+    ...notRankedYet.map((row): Entry => ({ kind: 'row', row })),
+  ];
   const scroll = rounds.length > FIT_ROUNDS;
 
   const card = { backgroundColor: colors.surface, borderColor: colors.border };
-  if (ordered.length === 0) {
+  if (standings.length === 0) {
     return (
       <View style={[styles.card, card]} testID="league-standings">
         <Text style={[styles.empty, { color: colors.muted }]} testID="league-standings-empty">
@@ -64,56 +81,79 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
 
   const nameStyle = scroll ? { width: NAME_W_SCROLL } : styles.nameFlex;
   const head = (
-    <View style={[styles.row, styles.headRow]}>
+    <View style={[styles.row, styles.headRow, styles.stretch]}>
       <Text style={[styles.head, styles.rank, { color: colors.muted }]}>{LEAGUE_TEXT.colRank}</Text>
       <Text style={[styles.head, nameStyle, { color: colors.muted }]}>{LEAGUE_TEXT.colPlayer}</Text>
       <Text style={[styles.head, styles.sumCol, styles.right, { color: colors.muted }]}>
         {valueHeader(league.standingsModel, league.bestN)}
       </Text>
-      {rounds.map((r) => (
-        <Text key={r.id} style={[styles.head, styles.roundCol, styles.right, { color: colors.muted }]}>
-          R{r.sequence}
-        </Text>
-      ))}
+      {rounds.map((r) => {
+        const open = r.id === openRoundId;
+        return (
+          <View
+            key={r.id}
+            style={[styles.roundCol, styles.roundHead, open ? { backgroundColor: colors.primarySoft } : null]}
+            testID={open ? 'league-standings-open-col' : undefined}
+          >
+            {open ? <View style={[styles.dot, { backgroundColor: colors.live }]} /> : null}
+            <Text style={[styles.head, { color: colors.muted }]}>R{r.sequence}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 
-  const rows = ordered.map((row, index) => {
+  const rows = entries.map((entry, index) => {
+    if (entry.kind === 'group') {
+      return (
+        <View key={`group-${entry.key}`} style={styles.group} testID={`league-standings-group-${entry.key}`}>
+          <Text style={[styles.head, { color: colors.muted }]}>{entry.label}</Text>
+        </View>
+      );
+    }
+    const { row } = entry;
     const you = row.userId === me.userId;
     const lead = row.rank === 1;
-    const last = index === ordered.length - 1;
-    // Raden over din egen har ingen strek: den grønne rammen er streken.
-    const nextIsYou = ordered[index + 1]?.userId === me.userId;
+    const next = entries[index + 1];
+    // Ingen strek over en overskrift (den tegner sin egen avstand), under siste rad,
+    // eller over din egen rad: den grønne rammen er streken.
+    const lineBelow = next?.kind === 'row' && next.row.userId !== me.userId;
     return (
       <View
         key={row.userId}
         style={[
           styles.row,
           styles.bodyRow,
+          styles.stretch,
           you
             ? [styles.youRow, { backgroundColor: colors.youFill, borderColor: colors.youBorder }]
-            : !last && !nextIsYou
+            : lineBelow
               ? { borderBottomWidth: 1, borderBottomColor: colors.divider }
               : null,
         ]}
         testID={you ? 'league-standings-you' : `league-standings-row-${row.userId}`}
       >
-        <View style={styles.rank}>
+        <View style={[styles.rank, styles.centered]}>
           {lead ? (
             <View style={[styles.gold, { backgroundColor: colors.accent }]}>
               <Text style={[styles.goldText, { color: colors.onAccent }]}>1</Text>
             </View>
           ) : (
             <Text style={[styles.rankText, { color: colors.text }]}>
-              {row.ranked && row.rank !== null ? row.rank : '–'}
+              {row.ranked && row.rank !== null ? row.rank : ''}
             </Text>
           )}
         </View>
-        <Text style={[styles.name, nameStyle, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[styles.name, styles.centered, nameStyle, { color: colors.text }]} numberOfLines={1}>
           {participantLabel(byId.get(row.userId), participants)}
         </Text>
         <Text
-          style={[styles.sum, styles.sumCol, { color: lead ? colors.accentText : colors.text }]}
+          style={[
+            styles.sum,
+            styles.sumCol,
+            styles.centered,
+            { color: lead ? colors.accentText : row.ranked ? colors.text : colors.muted },
+          ]}
           testID={`league-standings-value-${row.userId}`}
         >
           {formatSeasonValue(row.value, league.standingsModel, pointsBased, comma)}
@@ -123,13 +163,18 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
             row.perRound.find((c) => c.roundId === r.id),
             league.standingsModel,
           );
+          // Din egen rad har den grønne rammen som markør, så den har ingen tone.
+          const tone = r.id === openRoundId && !you ? colors.primarySoft : 'transparent';
           return (
-            <Text
+            <View
               key={r.id}
-              style={[styles.cell, styles.roundCol, { color: raw === null ? colors.scoreUnsetFg : colors.text }]}
+              style={[styles.roundCol, styles.roundCell, { backgroundColor: tone }]}
+              testID={r.id === openRoundId ? `league-standings-open-cell-${row.userId}` : undefined}
             >
-              {raw === null ? '–' : formatRoundCell(raw, league.standingsModel, pointsBased, comma)}
-            </Text>
+              <Text style={[styles.cell, { color: raw === null ? colors.scoreUnsetFg : colors.text }]}>
+                {raw === null ? '–' : formatRoundCell(raw, league.standingsModel, pointsBased, comma)}
+              </Text>
+            </View>
           );
         })}
       </View>
@@ -177,6 +222,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   right: { textAlign: 'right' },
+  // `align-items: stretch` i tegningen: den tonede kolonnen fyller hele radhøyden.
+  stretch: { alignItems: 'stretch' },
+  centered: { alignSelf: 'center' },
   rank: { width: RANK_W, alignItems: 'center' },
   rankText: { ...fraunces(600, 18, 22), textAlign: 'center' },
   gold: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -186,5 +234,19 @@ const styles = StyleSheet.create({
   sumCol: { width: SUM_W },
   sum: { ...fraunces(600, 18, 22), textAlign: 'right', fontVariant: ['tabular-nums'] },
   roundCol: { width: ROUND_W },
+  // `.rhead`: 4 inn fra høyre, prikk 5 foran «R3», 8 i de to øvre hjørnene.
+  roundHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 3,
+    paddingRight: 4,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  dot: { width: 5, height: 5, borderRadius: 2.5 },
+  roundCell: { justifyContent: 'center', alignItems: 'flex-end', paddingRight: 4 },
   cell: { ...interLine(13, 18), fontFamily: FONTS.sans, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  // Gruppeoverskriften: 14 over, 6 under, 16 inn.
+  group: { paddingTop: 14, paddingBottom: 6, paddingHorizontal: 16 },
 });
