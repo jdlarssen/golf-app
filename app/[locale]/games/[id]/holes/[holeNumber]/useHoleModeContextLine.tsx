@@ -20,6 +20,12 @@ export function useHoleModeContextLine(args: {
   myUserId: string;
   isWolf: boolean;
   wolfBadgeText: string | null;
+  /** #2314: merket «CATCH-UP» foran badgen. */
+  wolfCatchUp?: boolean;
+  /** #2314: avstanden på et catch-up-hull, for de andre i flighten. */
+  wolfCatchUpLine?: string | null;
+  /** #2314: gangen for de andre i flighten, til valget er lagret. */
+  wolfFlowLine?: string | null;
   isSkins: boolean;
   skinsAtStake: number | undefined;
   skinsCarriedIn: number | undefined;
@@ -32,6 +38,9 @@ export function useHoleModeContextLine(args: {
     myUserId,
     isWolf,
     wolfBadgeText,
+    wolfCatchUp = false,
+    wolfCatchUpLine = null,
+    wolfFlowLine = null,
     isSkins,
     skinsAtStake,
     skinsCarriedIn,
@@ -44,7 +53,27 @@ export function useHoleModeContextLine(args: {
   if (isWolf && wolfBadgeText) {
     return (
       <HoleContextLine testId="wolf-badge" accent>
+        {wolfCatchUp && (
+          <span data-testid="wolf-catch-up" style={{ letterSpacing: '0.12em' }}>
+            {`${t('wolf.catchUpTag')} · `}
+          </span>
+        )}
         {wolfBadgeText}
+        {[wolfCatchUpLine, wolfFlowLine].map((line) =>
+          line ? (
+            <span
+              key={line}
+              style={{
+                display: 'block',
+                marginTop: 1,
+                fontWeight: 400,
+                color: 'var(--text-muted)',
+              }}
+            >
+              {line}
+            </span>
+          ) : null,
+        )}
       </HoleContextLine>
     );
   }

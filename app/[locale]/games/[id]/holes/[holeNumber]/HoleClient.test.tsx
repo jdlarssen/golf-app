@@ -1075,3 +1075,71 @@ describe('HoleClient — «Hvem sitt utslag» (#2580)', () => {
     expect(screen.queryByTestId('tee-shot-picker')).toBeNull();
   });
 });
+
+// #2314 — the hole page takes the wolf from the engine's hole row, and the
+// flow and the catch-up line reach the wolf's dialog and the rest of the flight.
+describe('HoleClient — wolf on the hole (#2314)', () => {
+  const wolfPlayers = [1, 2, 3, 4].map((n) => ({
+    userId: `u${n}`,
+    teamNumber: n,
+    name: `Player ${n}`,
+  }));
+  const pointsBefore = { u1: 9, u2: 6, u3: 4, u4: 6 };
+
+  function wolfProps(overrides: Partial<HoleClientProps> = {}) {
+    return baseProps({
+      gameMode: 'wolf',
+      currentHole: 17,
+      wolfPlayers,
+      wolfChoices: [],
+      wolfPointsByUser: pointsBefore,
+      wolfStake: 1,
+      wolfRule: 'catch_up',
+      ...overrides,
+    });
+  }
+
+  it("the engine's wolf gets the dialog with the steps, the tag and the gap", () => {
+    render(
+      <HoleClient {...wolfProps({ myUserId: 'u3', wolfTurn: { userId: 'u3', catchUp: true } })} />,
+    );
+    expect(screen.getByTestId('wolf-choice-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('wolf-flow-steps').querySelectorAll('li')).toHaveLength(4);
+    expect(screen.getAllByTestId('wolf-catch-up').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('wolf-catch-up-line').textContent).toBe(
+      'Du ligger 5 poeng bak lederen, så du er ulv på dette hullet.',
+    );
+  });
+
+  it('the others see who is wolf, the flow and the gap in the context line', () => {
+    render(
+      <HoleClient {...wolfProps({ myUserId: 'u1', wolfTurn: { userId: 'u3', catchUp: true } })} />,
+    );
+    expect(screen.queryByTestId('wolf-choice-modal')).not.toBeInTheDocument();
+    const line = screen.getByTestId('wolf-badge').textContent ?? '';
+    expect(line).toContain('Wolf: Player 3 — venter på valg');
+    expect(line).toContain('Player 3 ligger 5 poeng bak lederen og er ulv på dette hullet.');
+    expect(line).toContain('Player 3 slår sist og sier ja eller nei rett etter hvert utslag.');
+  });
+
+  it('a running reveal game shows the tag alone, with no gap', () => {
+    render(
+      <HoleClient
+        {...wolfProps({
+          myUserId: 'u3',
+          hideNetto: true,
+          wolfStake: undefined,
+          wolfTurn: { userId: 'u3', catchUp: true },
+        })}
+      />,
+    );
+    expect(screen.getAllByTestId('wolf-catch-up').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('wolf-catch-up-line')).not.toBeInTheDocument();
+  });
+
+  it('without the engine, the rule picks the wolf as a fallback', () => {
+    // 9 · 6 · 4 · 6 before hole 17: u3 is 5 behind (≥ 4) and is the wolf.
+    render(<HoleClient {...wolfProps({ myUserId: 'u3', wolfTurn: undefined })} />);
+    expect(screen.getByTestId('wolf-choice-modal')).toBeInTheDocument();
+  });
+});

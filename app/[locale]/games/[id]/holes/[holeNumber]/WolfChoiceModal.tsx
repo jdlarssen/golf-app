@@ -26,6 +26,13 @@ export interface WolfChoiceModalProps {
   payout: WolfPayout | null;
   /** Innsatsen på hullet. Over 1 etter delte hull, og da sier valget fra. */
   stake: number;
+  /**
+   * #2314: catch-up-regelen ga hullet til den som ligger sist. Merket står
+   * også i et reveal-spill som pågår, men da uten `catchUpGap`.
+   */
+  catchUp?: boolean;
+  /** Avstanden til lederen før hullet. Null i et reveal-spill som pågår. */
+  catchUpGap?: number | null;
   onClose: () => void;
   /**
    * Trigges etter at server-action har lagret valget. Lar parent mutere lokal
@@ -114,6 +121,42 @@ const buttonAccentStyle: CSSProperties = {
   background: 'var(--primary-soft)',
 };
 
+const tagStyle: CSSProperties = {
+  alignSelf: 'center',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.12em',
+  color: 'var(--primary)',
+  border: '1px solid var(--primary)',
+  borderRadius: 999,
+  padding: '3px 9px',
+};
+
+const kickerStyle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.2em',
+  textTransform: 'uppercase',
+  color: 'var(--text-muted)',
+  margin: '4px 0 0',
+};
+
+const stepsStyle: CSSProperties = {
+  margin: 0,
+  padding: '12px 12px 12px 34px',
+  background: 'var(--primary-soft)',
+  borderRadius: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  fontFamily: 'var(--font-sans)',
+  fontSize: 14,
+  lineHeight: 1.4,
+  color: 'var(--text)',
+};
+
 const subtitleStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 12,
@@ -162,6 +205,8 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
     otherPlayers,
     payout,
     stake,
+    catchUp = false,
+    catchUpGap = null,
     onClose,
     onChoiceSaved,
   } = props;
@@ -241,12 +286,30 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
       {/* tabIndex={-1}: fokus må kunne parkeres på kortet mens alle knappene
           er disabled under et server-kall (aldri i tab-rekkefølgen). */}
       <div ref={containerRef} tabIndex={-1} style={cardStyle}>
+        {catchUp && (
+          <span data-testid="wolf-catch-up" style={tagStyle}>
+            {t('catchUpTag')}
+          </span>
+        )}
         <h2 id="wolf-modal-title" style={headerStyle}>
           {t('modalTitle')}
         </h2>
-        <p style={subHeaderStyle}>
-          {t('modalSubtitle')}
-        </p>
+        {catchUp && catchUpGap != null && (
+          <p data-testid="wolf-catch-up-line" style={subHeaderStyle}>
+            {t('catchUpLineSelf', { gap: catchUpGap })}
+          </p>
+        )}
+        {/* #2314: gangen i hullet. «Velg partner» alene sa ikke at ulven
+            slår sist og svarer etter hvert utslag, eller at blind meldes
+            først. */}
+        <p style={kickerStyle}>{t('flowKicker')}</p>
+        <ol data-testid="wolf-flow-steps" style={stepsStyle}>
+          <li>{t('flowStep1')}</li>
+          <li>{t('flowStep2')}</li>
+          <li>{t('flowStep3')}</li>
+          <li>{t('flowStep4')}</li>
+        </ol>
+        <p style={subHeaderStyle}>{t('flowHint')}</p>
         {payout && stake > 1 && (
           <p data-testid="wolf-stake-line" style={subHeaderStyle}>
             {t('stakeLine', { stake })}
