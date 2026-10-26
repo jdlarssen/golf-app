@@ -82,9 +82,9 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
   const nameStyle = scroll ? { width: NAME_W_SCROLL } : styles.nameFlex;
   const head = (
     <View style={[styles.row, styles.headRow, styles.stretch]}>
-      <Text style={[styles.head, styles.rank, { color: colors.muted }]}>{LEAGUE_TEXT.colRank}</Text>
-      <Text style={[styles.head, nameStyle, { color: colors.muted }]}>{LEAGUE_TEXT.colPlayer}</Text>
-      <Text style={[styles.head, styles.sumCol, styles.right, { color: colors.muted }]}>
+      <Text style={[styles.head, styles.rank, styles.centered, { color: colors.muted }]}>{LEAGUE_TEXT.colRank}</Text>
+      <Text style={[styles.head, styles.centered, nameStyle, { color: colors.muted }]}>{LEAGUE_TEXT.colPlayer}</Text>
+      <Text style={[styles.head, styles.sumCol, styles.right, styles.centered, { color: colors.muted }]}>
         {valueHeader(league.standingsModel, league.bestN)}
       </Text>
       {rounds.map((r) => {
