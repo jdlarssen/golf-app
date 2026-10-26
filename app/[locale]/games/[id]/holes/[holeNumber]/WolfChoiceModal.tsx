@@ -303,7 +303,12 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
             slår sist og svarer etter hvert utslag, eller at blind meldes
             først. */}
         <p style={kickerStyle}>{t('flowKicker')}</p>
-        <ol data-testid="wolf-flow-steps" style={stepsStyle}>
+        {/* Preflight fjerner listestilen; nummereringen er en del av gangen. */}
+        <ol
+          data-testid="wolf-flow-steps"
+          className="list-decimal marker:font-semibold marker:text-primary"
+          style={stepsStyle}
+        >
           <li>{t('flowStep1')}</li>
           <li>{t('flowStep2')}</li>
           <li>{t('flowStep3')}</li>
