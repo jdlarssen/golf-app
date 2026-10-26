@@ -459,7 +459,9 @@ describe('gangen, catch-up-linja og stillingen (#2314)', () => {
   it('partnerknappene viser stillingen når noen har poeng', () => {
     const options = stateFor({ standings: STANDINGS }).partnerOptions;
     expect(options.map((o) => o.standing)).toEqual(['1. · 14 p', '3. · 2 p', '4. · 0 p']);
-    expect(options[0]?.accessibilityLabel).toBe('Partner: Ada Aas, 1. plass, 14 poeng');
+    expect(options[0]?.accessibilityLabel).toBe(
+      'Partner: Ada Aas, 1. plass, 14 poeng. Vinner-siden får 2 hver',
+    );
   });
 
   it('ingen stilling før noen har fått poeng, og aldri i en blind runde', () => {
@@ -467,7 +469,11 @@ describe('gangen, catch-up-linja og stillingen (#2314)', () => {
     expect(stateFor({ standings: zero }).partnerOptions.every((o) => o.standing === null)).toBe(true);
     const hidden = stateFor({ standings: STANDINGS, hideNumbers: true }).partnerOptions;
     expect(hidden.every((o) => o.standing === null)).toBe(true);
+    // Ingen gevinst og ingen stilling i en blind runde: bare navnet.
     expect(hidden[0]?.accessibilityLabel).toBe('Partner: Ada Aas');
+    expect(stateFor({}).partnerOptions[0]?.accessibilityLabel).toBe(
+      'Partner: Ada Aas. Vinner-siden får 2 hver',
+    );
   });
 
   it('wolfStandings leser plass og poeng fra motoren', () => {
