@@ -659,6 +659,47 @@ describe('createAndPublishGame', () => {
   });
 });
 
+describe('wolf rotation rule on publish (#2314)', () => {
+  it('a new wolf game is stamped with the catch-up rule', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // gate
+        { data: { id: 'new-game-wolf' }, error: null }, // games.insert.select.single
+        { data: null, error: null }, // game_players.insert
+      ],
+    );
+    signIn('admin-1');
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fd({
+          name: 'Torsdags-wolf',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          side_tournament_enabled: 'false',
+          game_mode: 'wolf',
+          wolf_scoring: 'net',
+          player_0_id: 'u1',
+          player_1_id: 'u2',
+          player_2_id: 'u3',
+          player_3_id: 'u4',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    const insertRow = insertCall!.args[0] as { game_mode: string; mode_config: unknown };
+    expect(insertRow.game_mode).toBe('wolf');
+    expect(insertRow.mode_config).toMatchObject({ kind: 'wolf', wolf_rotation: 'catch_up' });
+  });
+});
+
 describe('invite-notify ved publisering (#182 → #2445)', () => {
   it('publish: kaller notifyRosterInvites én gang med spillet og kalleren', async () => {
     supabaseMock = buildSupabaseMock(

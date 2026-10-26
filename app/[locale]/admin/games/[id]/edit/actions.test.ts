@@ -665,6 +665,58 @@ describe('mode_config ranking on edit (#2625)', () => {
   });
 });
 
+describe('mode_config wolf rotation on edit (#2314)', () => {
+  const updatedModeConfig = () =>
+    (
+      supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'update')?.args[0] as {
+        mode_config: Record<string, unknown>;
+      }
+    ).mode_config;
+
+  const wolfDraftFields = {
+    name: 'Torsdags-wolf',
+    side_tournament_enabled: 'false',
+    game_mode: 'wolf',
+    wolf_scoring: 'net',
+  };
+
+  function wolfDraftMock(modeConfig: Record<string, unknown>) {
+    return buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { status: 'draft', game_mode: 'wolf', mode_config: modeConfig }, error: null }, // games.select
+      { data: [], error: null }, // game_players.select (prior roster)
+      { data: { id: 'draft-1' }, error: null }, // games.update
+    ]);
+  }
+
+  it('an edit of a wolf game without the flag never adds it', async () => {
+    supabaseMock = wolfDraftMock({ kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' });
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('draft-1', fd(wolfDraftFields))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updatedModeConfig()).toMatchObject({ kind: 'wolf' });
+    expect(updatedModeConfig()).not.toHaveProperty('wolf_rotation');
+  });
+
+  it('an edit of a wolf game with the flag keeps it', async () => {
+    supabaseMock = wolfDraftMock({
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 4,
+      wolf_scoring: 'net',
+      wolf_rotation: 'catch_up',
+    });
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('draft-1', fd(wolfDraftFields))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updatedModeConfig()).toMatchObject({ kind: 'wolf', wolf_rotation: 'catch_up' });
+  });
+});
+
 describe('backfill invite-notify (#182) — edit-flyten', () => {
   it('diff-add: notify fyres kun for nye spillere, ikke for eksisterende', async () => {
     // Eksisterende roster har u0, u1, u2, u3. Edit-en sender u0-u7 — så
