@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { getLeagueBySpectateToken } from '@/lib/league/spectate';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
+import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
 import type { LeagueFormat } from '@/lib/league/types';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { Card } from '@/components/ui/Card';
@@ -48,6 +49,8 @@ export default async function EmbedLigaPage({
 
   const { league, rounds, participants, standings } = snapshot;
   const live = league.status === 'active';
+  // #1378: the table only gets columns for rounds that have opened.
+  const table = tableRoundsNow(rounds);
 
   const t = await getTranslations('embed');
 
@@ -60,11 +63,12 @@ export default async function EmbedLigaPage({
       <Card className="p-3 sm:p-4">
         <LeagueStandingsPanel
           standings={standings}
-          rounds={rounds}
+          rounds={table.shown}
           participants={participants}
           standingsModel={league.standings_model}
           bestNCount={league.best_n_count}
           pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
+          openRoundId={table.openRoundId}
         />
       </Card>
       <EmbedFooter

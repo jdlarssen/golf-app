@@ -5313,6 +5313,8 @@
       "colBestNFallback": "Beste N",
       "colPoints": "Poeng",
       "emptyState": "Ingen resultater ennå — første runde teller når flights er levert.",
+      "groupNotRanked": "Ikke rangert",
+      "groupNotRankedYet": "Ikke rangert ennå",
       "unknownPlayer": "Ukjent spiller",
       "penalisedTitle": "Straffescore (ikke spilt)",
       "flaggedTitle": "Levert etter opprinnelig vindu",

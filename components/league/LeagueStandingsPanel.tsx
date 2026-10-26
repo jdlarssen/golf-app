@@ -20,6 +20,7 @@ export function LeagueStandingsPanel({
   standingsModel,
   bestNCount,
   pointsBased = false,
+  openRoundId = null,
 }: {
   standings: LeagueStandingsByScoring;
   rounds: LeagueRoundView[];
@@ -28,6 +29,8 @@ export function LeagueStandingsPanel({
   bestNCount: number | null;
   /** #452 Fase 4: stableford-formater viser rå poeng (ikke mot-par) i cellene. */
   pointsBased?: boolean;
+  /** #1378: the open round, picked on the server with `tableRounds`. */
+  openRoundId?: string | null;
 }) {
   const t = useTranslations('liga.standings');
   const both = standings.net !== null && standings.gross !== null;
@@ -64,6 +67,7 @@ export function LeagueStandingsPanel({
         standingsModel={standingsModel}
         bestNCount={bestNCount}
         pointsBased={pointsBased}
+        openRoundId={openRoundId}
       />
     </div>
   );

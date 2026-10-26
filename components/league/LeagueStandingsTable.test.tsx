@@ -119,3 +119,107 @@ describe('LeagueStandingsTable — stableford (pointsBased) under the total mode
     expect(within(bobRow).queryByText('E')).toBeNull();
   });
 });
+
+// #1378: the value comes before the rounds, the open round is toned, and the
+// rows without a rank stand in their own groups with no explanation text.
+describe('LeagueStandingsTable — column order, open round and groups (#1378)', () => {
+  const cell = (roundId: string, value: number | null) => ({
+    roundId,
+    value,
+    points: value,
+    penalised: false,
+    deliveredOutsideWindow: false,
+  });
+  const mixedRows: LeagueStandings['rows'] = [
+    { userId: 'A', value: 5, roundsPlayed: 2, ranked: true, rank: 1, perRound: [cell('r1', 2), cell('r2', 3)] },
+    { userId: 'B', value: 3, roundsPlayed: 2, ranked: true, rank: 2, perRound: [cell('r1', 1), cell('r2', 2)] },
+    // Has played, but skipped a closed round under «must play all».
+    { userId: 'C', value: 4, roundsPlayed: 1, ranked: false, rank: null, perRound: [cell('r1', 4), cell('r2', null)] },
+    // Has not played a round yet.
+    { userId: 'D', value: 0, roundsPlayed: 0, ranked: false, rank: null, perRound: [] },
+  ];
+  const people: LeagueParticipant[] = [
+    ...participants,
+    { userId: 'C', name: 'Cathrine', nickname: null, acceptedAt: '2026-06-01', hasPlayed: false },
+    { userId: 'D', name: 'Dag', nickname: null, acceptedAt: '2026-06-01', hasPlayed: false },
+  ];
+  const renderTable = (props: Partial<React.ComponentProps<typeof LeagueStandingsTable>> = {}) =>
+    render(
+      <LeagueStandingsTable
+        rows={mixedRows}
+        rounds={rounds}
+        participants={people}
+        standingsModel="points"
+        bestNCount={null}
+        openRoundId="r2"
+        {...props}
+      />,
+    );
+
+  it('puts the season value right after the player, before the round columns', () => {
+    renderTable();
+    const thead = screen.getByTestId('liga-standings').querySelector('thead') as HTMLElement;
+    const heads = within(thead).getAllByRole('columnheader');
+    expect(heads.map((h) => h.textContent)).toEqual(['#', 'Spiller', 'Poeng', 'R1', 'R2']);
+    const aliceCells = within(screen.getAllByTestId('liga-standings-row')[0]).getAllByRole('cell');
+    expect(aliceCells.map((c) => c.textContent)).toEqual(['1', 'Alice', '5', '2', '3']);
+  });
+
+  it('tones only the open round: header with a dot, and its cells', () => {
+    renderTable();
+    const openHead = screen.getByTestId('liga-standings-open-col');
+    expect(openHead).toHaveTextContent('R2');
+    expect(openHead.className).toContain('bg-primary-soft');
+    expect(openHead.querySelector('.bg-live-dot')).not.toBeNull();
+    const aliceRow = screen.getAllByTestId('liga-standings-row')[0];
+    expect(aliceRow.querySelectorAll('[data-open-cell]')).toHaveLength(1);
+    expect(aliceRow.querySelector('[data-open-cell]')).toHaveTextContent('3');
+  });
+
+  it('no open round: no tone and no dot', () => {
+    renderTable({ openRoundId: null });
+    expect(screen.queryByTestId('liga-standings-open-col')).toBeNull();
+    expect(document.querySelector('[data-open-cell]')).toBeNull();
+    expect(document.querySelector('.bg-live-dot')).toBeNull();
+  });
+
+  it('puts the unranked rows in two groups with an empty rank cell and no dimming', () => {
+    renderTable();
+    const notRanked = screen.getByTestId('liga-standings-group-notRanked');
+    const notRankedYet = screen.getByTestId('liga-standings-group-notRankedYet');
+    expect(notRanked).toHaveTextContent('Ikke rangert');
+    expect(notRanked).not.toHaveTextContent('ennå');
+    expect(notRankedYet).toHaveTextContent('Ikke rangert ennå');
+
+    const rowsInOrder = screen.getAllByTestId('liga-standings-row');
+    expect(rowsInOrder.map((r) => within(r).getByText(/Alice|Bob|Cathrine|Dag/).textContent)).toEqual([
+      'Alice', 'Bob', 'Cathrine', 'Dag',
+    ]);
+    // Group heading sits between the ranked rows and the group's rows.
+    const order = [...document.querySelectorAll('[data-testid^="liga-standings-group-"], [data-testid="liga-standings-row"]')]
+      .map((el) => el.getAttribute('data-testid'));
+    expect(order).toEqual([
+      'liga-standings-row', 'liga-standings-row',
+      'liga-standings-group-notRanked', 'liga-standings-row',
+      'liga-standings-group-notRankedYet', 'liga-standings-row',
+    ]);
+
+    const cathrine = rowsInOrder[2];
+    expect(within(cathrine).getAllByRole('cell')[0]).toBeEmptyDOMElement();
+    expect(within(cathrine).queryByText('–')).toBeNull();
+    expect(cathrine.className).not.toContain('opacity');
+    // An empty round cell shows only the dash.
+    expect(within(cathrine).getByText('—')).toBeInTheDocument();
+  });
+
+  it('shows no group heading when everyone is ranked', () => {
+    renderTable({ rows: mixedRows.slice(0, 2) });
+    expect(document.querySelector('[data-testid^="liga-standings-group-"]')).toBeNull();
+  });
+
+  it('shows no explanation text for the dashes', () => {
+    renderTable();
+    expect(screen.queryByText(/har ikke spilt/i)).toBeNull();
+    expect(document.querySelector('[title]')).toBeNull();
+  });
+});

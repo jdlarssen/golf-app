@@ -5313,6 +5313,8 @@
       "colBestNFallback": "Best N",
       "colPoints": "Points",
       "emptyState": "No results yet — the first round counts once flights have been submitted.",
+      "groupNotRanked": "Not ranked",
+      "groupNotRankedYet": "Not ranked yet",
       "unknownPlayer": "Unknown player",
       "penalisedTitle": "Penalty score (not played)",
       "flaggedTitle": "Submitted after the original play window",
