@@ -314,6 +314,35 @@ describe('publishGame', () => {
       ]);
     });
 
+    // #2314: et nytt wolf-spill går etter catch-up-regelen på de siste hullene.
+    it('stempler catch-up-regelen på et nytt wolf-spill', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub(GAME_ROW);
+      routeFrom({
+        formats: [queryStub({ data: { slug: 'wolf' }, error: null })],
+        games: [gameInsert],
+        game_players: [queryStub({ data: [{ user_id: 'a' }], error: null })],
+      });
+
+      await publish(
+        draft({
+          gameMode: 'wolf',
+          players: [
+            { userId: 'a', teeGender: 'M', teamNumber: null },
+            { userId: 'b', teeGender: 'M', teamNumber: null },
+            { userId: 'c', teeGender: 'M', teamNumber: null },
+            { userId: 'd', teeGender: 'M', teamNumber: null },
+          ],
+        }),
+      );
+
+      const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
+      expect(row).toMatchObject({
+        game_mode: 'wolf',
+        mode_config: { kind: 'wolf', wolf_rotation: 'catch_up' },
+      });
+    });
+
     it('skriver sideturneringens slots når bryteren står på', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const gameInsert = queryStub(GAME_ROW);

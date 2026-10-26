@@ -206,3 +206,33 @@ describe('editedModeConfig (#2625)', () => {
     expect(editedModeConfig(null, texas)).toBe(texas);
   });
 });
+
+describe('stampNewGameModeConfig (#2314)', () => {
+  // A new wolf game goes by the catch-up rule for the last holes; a game
+  // created before #2314 keeps the rule it was played under.
+  const wolf = { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' } as GameModeConfig;
+  const flaggedWolf = { ...wolf, wolf_rotation: 'catch_up' } as GameModeConfig;
+
+  it('stamps the catch-up rule on a new wolf game', () => {
+    expect(stampNewGameModeConfig(wolf)).toEqual(flaggedWolf);
+  });
+
+  it('an edit of a wolf game without the flag does not add it', () => {
+    expect(editedModeConfig(wolf, wolf)).toEqual(wolf);
+    expect(editedModeConfig(wolf, wolf)).not.toHaveProperty('wolf_rotation');
+  });
+
+  it('an edit of a wolf game with the flag keeps it', () => {
+    expect(editedModeConfig(flaggedWolf, wolf)).toEqual(flaggedWolf);
+  });
+
+  it('a draft that switches to wolf is stamped as the new game it is', () => {
+    const stableford = { kind: 'stableford', team_size: 1, points_table: 'standard' } as GameModeConfig;
+    expect(editedModeConfig(stableford, wolf)).toEqual(flaggedWolf);
+  });
+
+  it('a draft that switches away from wolf drops the flag', () => {
+    const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
+    expect(carryPreservedModeConfigKeys(flaggedWolf, skins)).toEqual(skins);
+  });
+});

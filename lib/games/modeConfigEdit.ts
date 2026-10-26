@@ -23,21 +23,30 @@ import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
  * form field. Carrying it keeps a net-to-par game on its rule through an
  * edit; an older game has no key to carry, so an edit that keeps the format
  * never moves it to the new rule.
+ *
+ * `wolf_rotation` (#2314) follows the same pattern: stamped on a new wolf
+ * game, carried through an edit, and never added to a game created before.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
   'team_strokes_override_auto',
   'withdrawal_play_on',
   'ranking',
+  'wolf_rotation',
 ] as const;
 
 /**
- * #2253 / #2625: stamps the rules a NEW game is created with onto its
- * `mode_config`. Today that is one: solo strokeplay, the team strokeplay
- * formats (best ball, Texas/Ambrose/Florida scramble, shamble), the points
- * formats (stableford, modified stableford, patsome) and Nassau rank on net to
- * par (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
- * engine). Every other config is returned unchanged.
+ * #2253 / #2625 / #2314: stamps the rules a NEW game is created with onto its
+ * `mode_config`. Today there are two:
+ *  - solo strokeplay, the team strokeplay formats (best ball,
+ *    Texas/Ambrose/Florida scramble, shamble), the points formats
+ *    (stableford, modified stableford, patsome) and Nassau rank on net to par
+ *    (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
+ *    engine);
+ *  - wolf gives the last holes to the player in last place only with a gap of
+ *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
+ *    `lib/scoring/modes/wolfTurn.ts`).
+ * Every other config is returned unchanged.
  *
  * Called at every insert site that can create one of those formats — the
  * list, and why the others are exempt, lives in `gamesInsertSites.test.ts`.
@@ -46,6 +55,7 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
  * never adds it, so a game played under the old rule keeps it.
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
+  if (config.kind === 'wolf') return { ...config, wolf_rotation: 'catch_up' };
   if (!supportsNetToParRanking(config)) return config;
   return { ...config, ranking: 'net_to_par' };
 }
