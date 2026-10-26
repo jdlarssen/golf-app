@@ -225,13 +225,15 @@ export function LeagueStandingsTable({
       <table
         data-testid="liga-standings"
         className="w-full border-collapse text-sm"
-        style={{ minWidth: '320px' }}
+        // Room for the name next to the fixed columns, so many rounds scroll sideways
+        // instead of squeezing the name (rank 28 + name ~110 + total 52 + 34 per round).
+        style={{ minWidth: `${190 + 34 * rounds.length}px` }}
       >
         <thead>
           <tr className="border-b border-border">
             <th className={`w-7 py-2 pr-1 text-left ${headClass}`}>{t('colRank')}</th>
             <th className={`py-2 pr-2 text-left ${headClass}`}>{t('colPlayer')}</th>
-            <th className={`w-[52px] py-2 pr-1.5 text-right ${headClass}`}>{valueHeader}</th>
+            <th className={`w-[52px] whitespace-nowrap py-2 pr-1.5 text-right ${headClass}`}>{valueHeader}</th>
             {rounds.map((r) => {
               const open = r.id === openRoundId;
               return (
