@@ -171,7 +171,10 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     expect(openHead).toHaveTextContent('R2');
     expect(openHead.querySelector('.bg-live-dot')).not.toBeNull();
     expect(document.querySelectorAll('.bg-live-dot')).toHaveLength(1);
-    expect(screen.getByTestId('liga-standings').innerHTML).not.toContain('bg-primary-soft');
+    // No background utility on the header or on any cell, tone or otherwise.
+    const table = screen.getByTestId('liga-standings');
+    expect(openHead.className).not.toMatch(/(^|\s)bg-/);
+    table.querySelectorAll('th, td').forEach((el) => expect(el.className).not.toMatch(/(^|\s)bg-/));
   });
 
   it('no open round: no dot', () => {
@@ -185,6 +188,9 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     const rowsEls = screen.getAllByTestId('liga-standings-row');
     // Alice → Bob: a line. Bob ends the ranked block, Cathrine and Dag end theirs.
     expect(rowsEls.map((r) => r.className.includes('border-b'))).toEqual([true, false, false, false]);
+    // The line is the `border` token (as in the artboard), not the warmer row-divider token.
+    expect(rowsEls[0].className).toContain('border-border');
+    expect(rowsEls[0].className).not.toContain('row-divider-warm');
     expect(screen.getByTestId('liga-standings-group-notRanked').className).not.toContain('border-b');
     expect(screen.getByTestId('liga-standings-group-notRankedYet').className).not.toContain('border-b');
   });
