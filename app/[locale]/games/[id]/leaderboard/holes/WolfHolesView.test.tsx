@@ -14,6 +14,7 @@ function makeHole(overrides: Partial<WolfHoleRow>): WolfHoleRow {
     par: 4,
     strokeIndex: 1,
     wolfUserId: 'u1',
+    catchUp: false,
     choice: null,
     partnerUserId: null,
     stake: 1,
