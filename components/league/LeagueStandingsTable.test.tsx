@@ -208,6 +208,11 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     expect(within(cathrine).getAllByRole('cell')[0]).toBeEmptyDOMElement();
     expect(within(cathrine).queryByText('–')).toBeNull();
     expect(cathrine.className).not.toContain('opacity');
+    // The last row of each block ends without a line: the heading or the card edge closes it.
+    expect(rowsInOrder[0].className).toContain('border-b');
+    expect(rowsInOrder[1].className).not.toContain('border-b'); // last ranked row, a heading follows
+    expect(rowsInOrder[2].className).not.toContain('border-b'); // alone in its group
+    expect(rowsInOrder[3].className).not.toContain('border-b'); // last row of the table
     // An empty round cell shows only the dash.
     expect(within(cathrine).getByText('—')).toBeInTheDocument();
   });
