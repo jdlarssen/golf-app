@@ -24,6 +24,7 @@ import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
 import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
+import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
 import type { LeagueFormat } from '@/lib/league/types';
 import {
   formatShortDateWithYearLocale,
@@ -171,6 +172,8 @@ export default async function LigaPublicPage({
   };
   // #2638: the round whose window is open now (the earliest, if several).
   const openRound = rounds.find((r) => windowStatus(r.opensAt, r.closesAt) === 'open') ?? null;
+  // #1378: the table only gets columns for rounds that have opened.
+  const table = tableRoundsNow(rounds);
 
   const participantNames = participants.map((p) => ({
     userId: p.userId,
@@ -265,11 +268,12 @@ export default async function LigaPublicPage({
         <Card className="p-3 sm:p-4">
           <LeagueStandingsPanel
             standings={standings}
-            rounds={rounds}
+            rounds={table.shown}
             participants={participants}
             standingsModel={league.standings_model}
             bestNCount={league.best_n_count}
             pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
+            openRoundId={table.openRoundId}
           />
         </Card>
       </section>
