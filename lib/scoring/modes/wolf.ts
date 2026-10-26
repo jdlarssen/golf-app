@@ -18,15 +18,22 @@
 // og kontekstlinja) leser regelen fra `lib/wolf/wolfPayout.ts`; enighetstesten
 // i `wolf.test.ts` holder den og `buildHoleRow` like (#2313).
 //
-// Rotasjon (rotation: 'random_with_trailing'). La R = floor(18/n)*n:
-//   - Hull 1..R: Wolf = player.find(p => p.teamNumber === ((hole-1) % n) + 1).
-//     `team_number` er random permutasjon satt av wizard, lagret i DB.
-//   - Hull R+1..18: Wolf = spilleren med lavest totalPoints etter forrige hull.
-//     Tiebreak: team_number ASC (deterministisk). n=3 → R=18, ingen trailing.
+// Rotasjon: hvem som er ulv på hullet, bor i `wolfTurn.ts` (#2314), og
+// motoren, hull-sidene og rosteret leser den derfra. To regler, valgt av
+// `mode_config.wolf_rotation`:
+//   - Uten flagget (rotation: 'random_with_trailing', spill fra før #2314):
+//     rundgang på `team_number` til hull R = floor(18/n)*n, og hull R+1..18
+//     går til den som ligger sist etter forrige hull, uansett avstand.
+//   - `wolf_rotation: 'catch_up'` (rotation: 'catch_up', nye spill): fra hull
+//     16 (tre eller fem spillere) eller 17 (fire) er den som ligger sist ulv
+//     bare når den ligger minst n poeng bak lederen. Ellers går rundgangen
+//     videre. `catchUp` på hull-raden sier at regelen ga hullet til den.
+// Stillingen er poengene før hullet, slik loopen under har summert dem.
+// Tiebreak for sisteplassen: team_number ASC.
 //
 // Når `wolf_hole_choices`-tabellen har en eksplisitt `wolf_user_id` for et
-// hull, leses den direkte (kanonisk kilde). Rotasjons-regelen brukes som
-// fallback når et hull ikke ennå har lagret choice.
+// hull, leses den direkte (kanonisk kilde). Regelen brukes når et hull ikke
+// ennå har lagret choice.
 //
 // Net vs gross:
 //   - 'gross': effectiveScore = gross direkte (HCP ignoreres).
@@ -40,6 +47,7 @@
 // Full 5-tier cascade kan legges til senere ved behov.
 
 import { strokesForHole } from '../strokeAllocation';
+import { wolfForHole, wolfRotationRule } from './wolfTurn';
 import type {
   ScoringContext,
   ScoringPlayer,
@@ -74,48 +82,6 @@ function makeWorkingState(): PlayerWorkingState {
 }
 
 /**
- * Bestemmer Wolf-spilleren for et hull.
- *
- *  - Hvis `wolfChoices`-entry har eksplisitt `wolfUserId`, returner den.
- *  - Ellers hull 1..R: lineær rotasjon på `team_number` (R = floor(18/n)*n).
- *  - Hull R+1..18: lavest totalPoints i `working`, tiebreak team_number ASC.
- *
- * Returnerer null hvis vi ikke kan finne en gyldig wolf (defensive — bør
- * ikke skje når validatoren har gjort jobben sin med n distinct team_numbers).
- */
-function determineWolf(
-  holeNumber: number,
-  players: ScoringPlayer[],
-  working: Map<string, PlayerWorkingState>,
-  explicitWolfFromChoice: string | undefined,
-): ScoringPlayer | null {
-  if (explicitWolfFromChoice) {
-    const explicit = players.find((p) => p.userId === explicitWolfFromChoice);
-    if (explicit) return explicit;
-  }
-
-  // #465: generalisert til n ∈ {3,4,5}. R = største multiplum av n ≤ 18 er
-  // siste rotasjons-hull; resten (R+1..18) er trailing. n=3 → R=18 (ingen
-  // trailing); n=4 → R=16 (trailing 17-18, = dagens); n=5 → R=15.
-  const n = players.length;
-  const R = Math.floor(18 / n) * n;
-  if (holeNumber >= 1 && holeNumber <= R) {
-    const slot = ((holeNumber - 1) % n) + 1;
-    return players.find((p) => p.teamNumber === slot) ?? null;
-  }
-
-  // Hull R+1..18: trailing-wolf. Sorter på (totalPoints ASC, team_number ASC).
-  // Vi sorterer en kopi for å unngå å mutere caller-array.
-  const sorted = [...players].sort((a, b) => {
-    const ta = working.get(a.userId)?.totalPoints ?? 0;
-    const tb = working.get(b.userId)?.totalPoints ?? 0;
-    if (ta !== tb) return ta - tb;
-    return (a.teamNumber ?? 0) - (b.teamNumber ?? 0);
-  });
-  return sorted[0] ?? null;
-}
-
-/**
  * Beregner effektiv score for én spiller på ett hull. Returner null hvis
  * gross er null (hullet ikke spilt for denne spilleren).
  */
@@ -142,6 +108,7 @@ function buildHoleRow(
   grossByKey: Map<string, number | null>,
   choice: WolfHoleChoice | undefined,
   wolfPlayer: ScoringPlayer,
+  catchUp: boolean,
   stake: number,
   scoring: 'gross' | 'net',
   working: Map<string, PlayerWorkingState>,
@@ -176,6 +143,7 @@ function buildHoleRow(
         par: hole.par,
         strokeIndex: hole.strokeIndex,
         wolfUserId: wolfPlayer.userId,
+        catchUp,
         choice: null,
         partnerUserId: null,
         stake,
@@ -217,6 +185,7 @@ function buildHoleRow(
         par: hole.par,
         strokeIndex: hole.strokeIndex,
         wolfUserId: wolfPlayer.userId,
+        catchUp,
         choice: choice.choice,
         partnerUserId: choice.partnerUserId,
         stake,
@@ -312,6 +281,7 @@ function buildHoleRow(
       par: hole.par,
       strokeIndex: hole.strokeIndex,
       wolfUserId: wolfPlayer.userId,
+      catchUp,
       choice: choice.choice,
       partnerUserId: choice.partnerUserId,
       stake,
@@ -409,18 +379,30 @@ export function compute(ctx: ScoringContext): WolfResult {
   }
 
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
+  const rule = wolfRotationRule(ctx.game.mode_config);
+  const turnPlayers = ctx.players.map((p) => ({
+    userId: p.userId,
+    teamNumber: p.teamNumber ?? 0,
+  }));
 
   let stake = 1;
   const holeRows: WolfHoleRow[] = [];
 
   for (const hole of holesSorted) {
     const choice = choicesByHole.get(hole.number);
-    const wolfPlayer = determineWolf(
-      hole.number,
-      ctx.players,
-      working,
-      choice?.wolfUserId,
-    );
+    // Stillingen før hullet: totalene loopen har summert så langt.
+    const pointsBefore = new Map<string, number>();
+    for (const [userId, state] of working) pointsBefore.set(userId, state.totalPoints);
+    const turn = wolfForHole({
+      holeNumber: hole.number,
+      players: turnPlayers,
+      pointsBefore,
+      explicitWolf: choice?.wolfUserId,
+      rule,
+    });
+    const wolfPlayer = turn
+      ? (ctx.players.find((p) => p.userId === turn.userId) ?? null)
+      : null;
 
     if (!wolfPlayer) {
       // Defensiv: ingen gyldig wolf — bygg pending-rad og bevar stake.
@@ -429,6 +411,7 @@ export function compute(ctx: ScoringContext): WolfResult {
         par: hole.par,
         strokeIndex: hole.strokeIndex,
         wolfUserId: '',
+        catchUp: false,
         choice: null,
         partnerUserId: null,
         stake,
@@ -451,6 +434,7 @@ export function compute(ctx: ScoringContext): WolfResult {
       grossByKey,
       choice,
       wolfPlayer,
+      turn?.catchUp ?? false,
       stake,
       scoring,
       working,
@@ -464,7 +448,7 @@ export function compute(ctx: ScoringContext): WolfResult {
   return {
     kind: 'wolf',
     scoring,
-    rotation: 'random_with_trailing',
+    rotation: rule === 'catch_up' ? 'catch_up' : 'random_with_trailing',
     holes: holeRows,
     players: playerLines,
   };

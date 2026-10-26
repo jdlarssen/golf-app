@@ -47,12 +47,15 @@ function makeCtx(opts: {
   scores?: ScoringHoleScore[];
   wolfChoices?: WolfHoleChoice[];
   scoring?: 'gross' | 'net';
+  /** #2314: nye spill stemples med catch-up-regelen. */
+  wolfRotation?: 'catch_up';
 }): ScoringContext {
   const mode_config: GameModeConfig = {
     kind: 'wolf',
     team_size: 1,
     teams_count: 4,
     wolf_scoring: opts.scoring ?? 'gross',
+    ...(opts.wolfRotation ? { wolf_rotation: opts.wolfRotation } : {}),
   };
   return {
     game: {
@@ -1096,5 +1099,110 @@ describe('wolf — gevinsten er enig med wolfPayout (#2313)', () => {
     );
     expect(wolfStakeForHole(result.holes, 2)).toBe(2);
     expect(result.holes[1].pointsByPlayer).toEqual({ p2: wolfPayout(5, 2).blind });
+  });
+});
+
+describe('wolf — catch-up-regelen for nye spill (#2314)', () => {
+  // Tre spillere, terskel 3. p1 og p2 vinner hvert sitt hull alene (+3), så
+  // p3 ligger 3 bak før hull 16.
+  const threeAhead = {
+    players: playersN(3),
+    scoring: 'gross' as const,
+    scores: [
+      ...holeScores(1, { p1: 3, p2: 4, p3: 4 }),
+      ...holeScores(2, { p1: 4, p2: 3, p3: 4 }),
+    ],
+    wolfChoices: [
+      { holeNumber: 1, wolfUserId: 'p1', choice: 'lone' as const, partnerUserId: null },
+      { holeNumber: 2, wolfUserId: 'p2', choice: 'lone' as const, partnerUserId: null },
+    ],
+  };
+
+  it('et spill uten flagget beholder regelen og merker ingen hull', () => {
+    const result = compute(makeCtx(threeAhead));
+    expect(result.rotation).toBe('random_with_trailing');
+    expect(result.holes.slice(15).map((h) => h.wolfUserId)).toEqual(['p1', 'p2', 'p3']);
+    expect(result.holes.every((h) => h.catchUp === false)).toBe(true);
+  });
+
+  it('med flagget: p3 ligger 3 bak og er ulv på hull 16 med catch-up', () => {
+    const result = compute(makeCtx({ ...threeAhead, wolfRotation: 'catch_up' }));
+    expect(result.rotation).toBe('catch_up');
+    expect(result.holes[15]).toMatchObject({ wolfUserId: 'p3', catchUp: true });
+    // Ingen poeng på 16: stillingen står, så p3 er ulv på 17 og 18 også.
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p3', catchUp: true });
+    expect(result.holes[17]).toMatchObject({ wolfUserId: 'p3', catchUp: true });
+    expect(result.holes.slice(0, 15).every((h) => h.catchUp === false)).toBe(true);
+  });
+
+  it('med flagget: når p3 tar igjen på hull 16, går rundgangen videre', () => {
+    const result = compute(
+      makeCtx({
+        ...threeAhead,
+        wolfRotation: 'catch_up',
+        scores: [...threeAhead.scores, ...holeScores(16, { p1: 4, p2: 4, p3: 3 })],
+        wolfChoices: [
+          ...threeAhead.wolfChoices,
+          { holeNumber: 16, wolfUserId: 'p3', choice: 'lone', partnerUserId: null },
+        ],
+      }),
+    );
+    expect(result.holes[15]).toMatchObject({ wolfUserId: 'p3', catchUp: true });
+    expect(result.holes[15].pointsByPlayer).toEqual({ p3: 3 });
+    // 3 · 3 · 3 før hull 17: ingen avstand, rundgangen gir plass 2 og 3.
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p2', catchUp: false });
+    expect(result.holes[17]).toMatchObject({ wolfUserId: 'p3', catchUp: false });
+  });
+
+  it('med flagget: avstand 2 gir ingen catch-up', () => {
+    const result = compute(
+      makeCtx({
+        players: playersN(3),
+        scoring: 'gross',
+        wolfRotation: 'catch_up',
+        scores: holeScores(1, { p1: 3, p2: 3, p3: 4 }),
+        // p1 og p2 vinner sammen: 2 hver, stillingen blir 2 · 2 · 0.
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' }],
+      }),
+    );
+    expect(result.holes[15]).toMatchObject({ wolfUserId: 'p1', catchUp: false });
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p2', catchUp: false });
+    expect(result.holes[17]).toMatchObject({ wolfUserId: 'p3', catchUp: false });
+  });
+
+  it('fire spillere med flagget: avstand under 4 gir rundgang på 17–18', () => {
+    const result = compute(
+      makeCtx({
+        wolfRotation: 'catch_up',
+        scores: [...holeScores(1, { p1: 3, p2: 4, p3: 4, p4: 4 })],
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' }],
+      }),
+    );
+    // 2 · 2 · 0 · 0: avstand 2 < 4.
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p1', catchUp: false });
+    expect(result.holes[17]).toMatchObject({ wolfUserId: 'p2', catchUp: false });
+  });
+
+  it('fire spillere med flagget: avstand 4 gir catch-up på 17', () => {
+    const result = compute(
+      makeCtx({
+        wolfRotation: 'catch_up',
+        scores: [...holeScores(1, { p1: 3, p2: 4, p3: 4, p4: 4 })],
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice: 'lone', partnerUserId: null }],
+      }),
+    );
+    // 4 · 0 · 0 · 0: p2 er sist (lavest team_number) og 4 bak.
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p2', catchUp: true });
+  });
+
+  it('et gammelt spill med fire spillere gir den som ligger sist, uansett avstand', () => {
+    const result = compute(
+      makeCtx({
+        scores: [...holeScores(1, { p1: 3, p2: 4, p3: 4, p4: 4 })],
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' }],
+      }),
+    );
+    // 2 · 2 · 0 · 0: p3 er sist, bare 2 bak.
+    expect(result.holes[16]).toMatchObject({ wolfUserId: 'p3', catchUp: false });
   });
 });

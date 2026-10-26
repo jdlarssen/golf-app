@@ -714,6 +714,15 @@ export type GameModeConfig =
       wolf_scoring: 'gross' | 'net';
       /** #937: valgfri kr-verdi per enhet for pengeoppgjør. Udefinert/0 = av. */
       kr_per_unit?: number;
+      /**
+       * #2314: `'catch_up'` gives the last holes (16–18 with three or five
+       * players, 17–18 with four) to the player in last place only when they
+       * trail the leader by at least n points; otherwise the rotation goes on
+       * (`wolfForHole` in `wolfTurn.ts`). Stamped on NEW games at creation
+       * (`stampNewGameModeConfig`), never added to an existing game. Absent =
+       * the original rule: the last holes go to whoever is last, at any gap.
+       */
+      wolf_rotation?: 'catch_up';
     }
   | {
       kind: 'nassau';
@@ -1777,6 +1786,9 @@ export interface FoursomesMatchplayResult {
 //   - Hull 1..R: wolf = player med team_number === ((holeNumber - 1) % n) + 1
 //   - Hull R+1..18: wolf = lavest totalPoints etter forrige hull
 //                 (tiebreak: team_number ASC, deterministisk). n=3 → ingen.
+//   - #2314: nye spill (`wolf_rotation: 'catch_up'`) gir de siste hullene til
+//     den som ligger sist bare med minst n poeng avstand. Regelen bor i
+//     `wolfTurn.ts`.
 //
 // Per hull velger Wolf via `wolf_hole_choices`:
 //   - 'partner': Wolf + valgt partner mot resten
@@ -1840,8 +1852,13 @@ export interface WolfHoleRow {
   holeNumber: number;
   par: number;
   strokeIndex: number;
-  /** Spilleren som er Wolf på dette hullet (rotation eller trailing). */
+  /** Spilleren som er Wolf på dette hullet (rotation, trailing eller catch-up). */
   wolfUserId: string;
+  /**
+   * #2314: catch-up-regelen ga hullet til den som ligger sist. Alltid false i
+   * spill uten `wolf_rotation: 'catch_up'`.
+   */
+  catchUp: boolean;
   /** null = ikke valgt ennå (outcome='pending'). */
   choice: WolfChoice | null;
   /** Required når choice='partner', null ellers. */
@@ -1884,11 +1901,12 @@ export interface WolfResult {
   kind: 'wolf';
   scoring: 'gross' | 'net';
   /**
-   * Hardkodet 'random_with_trailing' i v1 — random første 16 (lagret som
-   * game_players.team_number), trailing-wolf siste 2. Feltet eksisterer
-   * så fremtidige rotasjons-varianter kan legges til uten breaking type.
+   * 'random_with_trailing': rundgang på `game_players.team_number`, og de
+   * siste hullene går til den som ligger sist (spill fra før #2314).
+   * 'catch_up' (#2314): spillet har `mode_config.wolf_rotation = 'catch_up'`,
+   * og de siste hullene går til den som ligger sist bare med n poeng avstand.
    */
-  rotation: 'random_with_trailing';
+  rotation: 'random_with_trailing' | 'catch_up';
   holes: WolfHoleRow[];
   players: WolfPlayerLine[];
 }
@@ -2572,7 +2590,7 @@ export interface PatsomeResult {
  * kun team-variant i v1 (3-mannslag utsatt).
  *
  * For wolf narrower man på `kind` og leser `holes`/`players` direkte —
- * kun én variant i v1 (random_with_trailing).
+ * `rotation` sier bare hvilken regel som valgte ulven (#2314).
  *
  * For bingo_bango_bongo narrower man på `kind` og leser `holes`/`players`
  * direkte. Ingen variant-discriminator — individuelt format, ingen lag.

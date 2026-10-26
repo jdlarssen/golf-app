@@ -10,6 +10,7 @@ function hole(overrides: Partial<WolfHoleRow> & { holeNumber: number }): WolfHol
     par: 4,
     strokeIndex: overrides.holeNumber,
     wolfUserId: 'ola',
+    catchUp: false,
     choice: 'partner',
     partnerUserId: 'kari',
     stake: 1,
