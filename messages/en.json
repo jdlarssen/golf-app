@@ -1849,16 +1849,18 @@
         "example": "Hole 2, par 5: A hits to 230 m on the fairway, B hits to 200 m in a bunker. The opposing team says \"B's\" (the one in the bunker). A (B's partner) plays out of the bunker, B plays the third onto the green, A putts to 1 m and B holes it. Team score: 5. The opposing team, on their own ordinary foursomes rotation, finishes on 4 and wins the hole."
       },
       "wolf": {
-        "summary": "Three to five players take turns being the \"wolf\". On each hole the wolf decides whether to play with a partner or go alone against the others.",
+        "summary": "Three to five players take turns being the wolf. On each hole the wolf plays with a partner or alone against the rest.",
         "points": [
-          "If the wolf chooses to go alone and wins the hole, that scores the most. But there is also the most to lose.",
-          "You take turns being the wolf through the round.",
-          "Most points at the end wins."
+          "If the wolf wants to go blind, it has to be called before anyone has hit.",
+          "The others tee off in a fixed order that moves one place each hole. The wolf always hits last and says yes or no to each player right after their tee shot. A no can't be taken back.",
+          "If the wolf says no to everyone, it plays alone as the Lone Wolf. That scores the most, but there is also the most to lose.",
+          "On the last holes (16–18 with three or five players, 17–18 with four), the player in last place becomes the wolf if they trail the leader by at least as many points as there are players. Otherwise the rotation carries on.",
+          "You take turns being the wolf, and most points at the end wins."
         ],
         "sections": [
           {
             "heading": "The rules of Wolf",
-            "body": "Wolf is played with three to five players, and the role of the wolf rotates. The order is set before you start: on hole 1 the first player is the wolf, on hole 2 the next, and so on around the group. The wolf tees off last and therefore watches everyone else hit. After each drive the wolf has to decide immediately: take that player as a partner, or move on to the next? Say no to all of them and the wolf stands alone against the rest for that hole. The hole is played out, the sides are compared on their best score, and the points are handed out. Then the wolf rotates and you start again. With four players it rotates evenly over the first 16 holes, and the last two go to whoever is trailing."
+            "body": "Wolf is played with three to five players, and the role of the wolf rotates. The order is set before you start: on hole 1 the first player is the wolf, on hole 2 the next, and so on around the group. The wolf tees off last and therefore watches everyone else hit. After each drive the wolf has to decide immediately: take that player as a partner, or move on to the next? Say no to all of them and the wolf stands alone against the rest for that hole. The hole is played out, the sides are compared on their best score, and the points are handed out. Then the wolf rotates and you start again. From hole 16 (hole 17 with four players), the player in last place becomes the wolf if they trail by at least as many points as there are players. Otherwise the rotation carries on."
           },
           {
             "heading": "Alone or with a partner",
@@ -1873,11 +1875,11 @@
             "body": "The base stake is one point per hole. If the wolf wins with a partner, both get two points and the other two pay. If the wolf goes alone and takes the hole, it collects as many points as there are players in the group. Lose alone, and each opponent gets one point. A blind wolf pays more than an ordinary lone wolf, in both directions. If the hole is halved no points are handed out, but the stake on the next hole goes up by one, and a run of halved holes makes the closing holes expensive. Most points after 18 holes wins."
           }
         ],
-        "example": "Hole 4: Petter is the wolf. After everyone has hit, he sees that Lars drove best. Petter points to Lars as his partner. Petter and Lars (2v2) post the best net of 4, the opponents post a best net of 5. The wolf side wins → Petter and Lars get 2 points each, the other two pay. Hole 7: Per goes lone wolf. Per wins the hole with net 3 against the others' 4 → Per takes 4 points, the other three pay 1 each.",
+        "example": "Hole 4: Petter is the wolf and hits last. Lars tees off first and splits the fairway, and Petter says yes straight away. Petter and Lars post the best net of 4, the other two a best net of 5. The wolf side wins, and Petter and Lars get 2 points each. Hole 7: Per is the wolf and says no after all three tee shots, so he plays alone as the Lone Wolf. He wins the hole with net 3 against the others' 4 and gets 4 points.",
         "faq": [
           {
             "q": "How many players do you need for Wolf?",
-            "a": "Three to five. Four is the classic, because the wolf then rotates evenly over the first 16 holes and the last two go to the player who is trailing."
+            "a": "Three to five. Four is the classic, because the wolf then rotates evenly over the first 16 holes, and on the last two the trailing player becomes the wolf only if they are at least four points behind the leader."
           },
           {
             "q": "When does the wolf have to pick a partner?",
@@ -1986,6 +1988,7 @@
       "bingo_bango_bongo": {
         "summary": "Three points are up for grabs on each hole — one for reaching the green first, one for being closest to the hole once everyone is on the green, and one for holing out first.",
         "points": [
+          "The player furthest from the hole always plays first. That's why the shortest hitter can still win the bingo.",
           "You do not need the most shots to win — order and precision are what count.",
           "You play for yourself, and all three points on a hole can go to one and the same player.",
           "Most points after 18 holes wins."

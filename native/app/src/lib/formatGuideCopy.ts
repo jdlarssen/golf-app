@@ -145,11 +145,13 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
   },
   wolf: {
     summary:
-      'Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.',
+      'Tre til fem spillere bytter på å være ulv. På hvert hull spiller ulven med en partner eller alene mot resten.',
     points: [
-      'Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.',
-      'Dere bytter på å være ulv gjennom runden.',
-      'Flest poeng til slutt vinner.',
+      'Vil ulven gå blind, må det meldes før noen har slått.',
+      'De andre slår i fast rekkefølge, som flytter seg ett hakk for hvert hull. Ulven slår alltid sist og sier ja eller nei til hver spiller rett etter utslaget. Et nei kan ikke tas tilbake.',
+      'Sier ulven nei til alle, spiller den alene som Lone Wolf. Det gir mest poeng, men også mest å tape.',
+      'På de siste hullene (16–18 med tre eller fem spillere, 17–18 med fire) blir den som ligger sist, ulv hvis den ligger minst like mange poeng bak lederen som dere er spillere. Ellers går rundgangen videre.',
+      'Dere bytter på å være ulv, og flest poeng til slutt vinner.',
     ],
   },
   nassau: {
@@ -174,6 +176,7 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
     summary:
       'Tre poeng er på spill på hvert hull — én for å nå green først, én for å ligge nærmest hullet når alle er på green, og én for å gå i hull først.',
     points: [
+      'Den som ligger lengst fra hullet, slår alltid først. Derfor kan den som slår kortest, godt ta bingo.',
       'Du trenger ikke de fleste slagene for å vinne — rekkefølge og presisjon teller.',
       'Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.',
       'Flest poeng etter 18 hull vinner.',

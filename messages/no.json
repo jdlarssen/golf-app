@@ -1849,16 +1849,18 @@
         "example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ballen ut av bunkeren, B slår tredjeslaget inn på green, A putter til 1 m, og B putter inn. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
       },
       "wolf": {
-        "summary": "Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.",
+        "summary": "Tre til fem spillere bytter på å være ulv. På hvert hull spiller ulven med en partner eller alene mot resten.",
         "points": [
-          "Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.",
-          "Dere bytter på å være ulv gjennom runden.",
-          "Flest poeng til slutt vinner."
+          "Vil ulven gå blind, må det meldes før noen har slått.",
+          "De andre slår i fast rekkefølge, som flytter seg ett hakk for hvert hull. Ulven slår alltid sist og sier ja eller nei til hver spiller rett etter utslaget. Et nei kan ikke tas tilbake.",
+          "Sier ulven nei til alle, spiller den alene som Lone Wolf. Det gir mest poeng, men også mest å tape.",
+          "På de siste hullene (16–18 med tre eller fem spillere, 17–18 med fire) blir den som ligger sist, ulv hvis den ligger minst like mange poeng bak lederen som dere er spillere. Ellers går rundgangen videre.",
+          "Dere bytter på å være ulv, og flest poeng til slutt vinner."
         ],
         "sections": [
           {
             "heading": "Reglene i wolf",
-            "body": "Wolf spilles med tre til fem spillere, og rollen som ulv går på rundgang. Rekkefølgen settes før start: på hull 1 er den første spilleren ulv, på hull 2 den neste, og så videre rundt gjengen. Ulven slår sist på tee og ser dermed alle de andre slå. Etter hvert utslag må ulven bestemme seg med en gang: vil den ha den spilleren som partner, eller går den videre til neste? Sier ulven nei til alle, står den alene mot resten av hullet. Hullet spilles ferdig, sidene sammenlignes på beste score, og poengene deles ut. Så roterer ulven, og dere starter på nytt. Er dere fire, roterer det jevnt over de 16 første hullene, og de to siste går til den som ligger sist."
+            "body": "Wolf spilles med tre til fem spillere, og rollen som ulv går på rundgang. Rekkefølgen settes før start: på hull 1 er den første spilleren ulv, på hull 2 den neste, og så videre rundt gjengen. Ulven slår sist på tee og ser dermed alle de andre slå. Etter hvert utslag må ulven bestemme seg med en gang: vil den ha den spilleren som partner, eller går den videre til neste? Sier ulven nei til alle, står den alene mot resten av hullet. Hullet spilles ferdig, sidene sammenlignes på beste score, og poengene deles ut. Så roterer ulven, og dere starter på nytt. Fra hull 16 (hull 17 med fire spillere) blir den som ligger sist, ulv hvis den ligger minst like mange poeng bak som dere er spillere. Ellers går rundgangen videre."
           },
           {
             "heading": "Alene eller med partner",
@@ -1873,11 +1875,11 @@
             "body": "Grunninnsatsen er ett poeng per hull. Vinner ulven sammen med partneren sin, får begge to poeng, og de to andre betaler. Går ulven alene og tar hullet, henter den like mange poeng som det er spillere i gruppa. Taper den alene, får hver motstander ett poeng. Blind wolf betaler mer enn vanlig lone wolf, begge veier. Blir hullet delt, deles ingen poeng ut, men innsatsen på neste hull øker med ett, og en rekke delte hull gjør de siste hullene dyre. Flest poeng etter 18 hull vinner."
           }
         ],
-        "example": "Hull 4: Petter er ulv. Etter at alle har slått ser han at Lars slo best. Petter peker på Lars som partner. Petter og Lars (2v2) slår best netto 4, motstanderne slår best netto 5. Wolf-side vinner → Petter og Lars får 2 poeng hver, de to andre betaler. Hull 7: Per går lone wolf. Per vinner hullet med netto 3 mot de andres 4 → Per tar 4 poeng, de tre andre betaler 1 hver.",
+        "example": "Hull 4: Petter er ulv og slår sist. Lars slår først og legger ballen midt i fairway, og Petter sier ja med en gang. Petter og Lars har best netto 4, de to andre best netto 5. Ulvesiden vinner, og Petter og Lars får 2 poeng hver. Hull 7: Per er ulv og sier nei etter alle tre utslagene, så han spiller alene som Lone Wolf. Han vinner hullet med netto 3 mot de andres 4 og får 4 poeng.",
         "faq": [
           {
             "q": "Hvor mange spillere trengs for å spille wolf?",
-            "a": "Tre til fem. Fire er klassikeren, for da roterer ulven jevnt over de 16 første hullene, og de to siste går til spilleren som ligger sist."
+            "a": "Tre til fem. Fire er klassikeren, for da roterer ulven jevnt over de 16 første hullene, og på de to siste blir den som ligger sist, ulv bare hvis den ligger minst fire poeng bak lederen."
           },
           {
             "q": "Når må ulven velge partner?",
@@ -1986,6 +1988,7 @@
       "bingo_bango_bongo": {
         "summary": "Tre poeng er på spill på hvert hull — én for å nå green først, én for å ligge nærmest hullet når alle er på green, og én for å gå i hull først.",
         "points": [
+          "Den som ligger lengst fra hullet, slår alltid først. Derfor kan den som slår kortest, godt ta bingo.",
           "Du trenger ikke de fleste slagene for å vinne — rekkefølge og presisjon teller.",
           "Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.",
           "Flest poeng etter 18 hull vinner."
