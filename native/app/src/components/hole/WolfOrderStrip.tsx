@@ -56,6 +56,10 @@ export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
                 },
               ]}
               numberOfLines={1}
+              // Fire kolonner på 390 pt gir ~70 pt til navnet: «Avgjøres» og
+              // lange fornavn krymper litt i stedet for å kuttes.
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
             >
               {column.label}
             </Text>
@@ -79,7 +83,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 56,
     borderRadius: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 8,
     justifyContent: 'center',
     gap: 2,
