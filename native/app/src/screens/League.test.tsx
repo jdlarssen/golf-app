@@ -192,10 +192,12 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
         }),
       });
       await renderLeague();
-      const line = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).borderBottomWidth;
-      expect(line('league-standings-row-martin')).toBe(1);
-      expect(line('league-standings-row-kristian')).toBeUndefined(); // «me» følger: den grønne rammen er streken
-      expect(line('league-standings-row-sindre')).toBeUndefined(); // siste rad
+      const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style);
+      expect(style('league-standings-row-martin').borderBottomWidth).toBe(1);
+      // Artboardets farge (`border`), ikke den svakere `divider`.
+      expect(style('league-standings-row-martin').borderBottomColor).toBe('#E5E0D3');
+      expect(style('league-standings-row-kristian').borderBottomWidth).toBeUndefined(); // «me» følger: den grønne rammen er streken
+      expect(style('league-standings-row-sindre').borderBottomWidth).toBeUndefined(); // siste rad
     });
 
     it('ingen åpen runde: ingen prikk', async () => {
