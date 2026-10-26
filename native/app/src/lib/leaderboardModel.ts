@@ -16,12 +16,14 @@ import { revealState, shouldHideNetto } from '../../../../lib/games/visibility';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import type { GameStatus } from '../../../../lib/games/status';
 import { runningStatusLabel } from '../../../../lib/scoring/modes/matchplayRunningStatus';
+import { catchUpStartHole } from '../../../../lib/scoring/modes/wolfTurn';
 import type {
   GameMode,
   MatchplayHoleResult,
   MatchplayMatchResult,
   WolfChoice,
   WolfHoleOutcome,
+  WolfResult,
 } from '../../../../lib/scoring/modes/types';
 import {
   wolfChoiceKey,
@@ -366,6 +368,24 @@ export function wolfHolePointsLine(
   const earned = Object.entries(pointsByPlayer).filter(([, points]) => points > 0);
   if (earned.length === 0) return null;
   return earned.map(([userId, points]) => `${nameOf(userId)} +${points}`).join(' · ');
+}
+
+/**
+ * Regelen for de siste hullene under stillingen (#2314), bare i spill med
+ * catch-up-regelen. Tallene kommer fra `catchUpStartHole` og antallet
+ * spillere, aldri egne tall her. `null` i spill fra før #2314.
+ */
+export function wolfCatchUpRuleLine(
+  result: Pick<WolfResult, 'rotation' | 'players'>,
+): { lead: string; rest: string } | null {
+  if (result.rotation !== 'catch_up') return null;
+  const n = result.players.length;
+  const start = catchUpStartHole(n, 'catch_up');
+  if (start > 18) return null;
+  return {
+    lead: start === 18 ? 'Hull 18:' : `Hull ${start}–18:`,
+    rest: `Ligger den som er sist, minst ${n} poeng bak lederen, blir den ulv. Ellers går rundgangen videre.`,
+  };
 }
 
 // ---------------------------------------------------------------------------

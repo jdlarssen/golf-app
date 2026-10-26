@@ -15,7 +15,9 @@ import {
   wolfHoleState,
   wolfPointsByUser,
   wolfRotationPlayers,
+  wolfOrderStrip,
   wolfStake,
+  wolfStandings,
   wolfTurnFromEngine,
 } from './wolfHole';
 
@@ -391,5 +393,149 @@ describe('ulven fra motoren (#2314)', () => {
       wolfUserId: 'p2',
       catchUp: false,
     });
+  });
+});
+
+describe('gangen, catch-up-linja og stillingen (#2314)', () => {
+  const CATCH_UP_17 = { userId: 'p2', catchUp: true };
+  const BEHIND = new Map([['p1', 9], ['p2', 4], ['p3', 6], ['p4', 6]]);
+
+  it('flowLine står for de andre på et ubesvart hull i et aktivt spill', () => {
+    expect(stateFor({ myUserId: 'p2' }).flowLine).toBe(
+      'Per Persen slår sist og sier ja eller nei rett etter hvert utslag. Blind Wolf meldes før noen slår.',
+    );
+  });
+
+  it.each([
+    ['for ulven selv', { myUserId: 'p1' }],
+    ['når valget er lagret', {
+      myUserId: 'p2',
+      choices: [{ holeNumber: 1, wolfUserId: 'p1', choice: 'lone' as const, partnerUserId: null }],
+    }],
+    ['når spillet ikke er aktivt', { myUserId: 'p2', gameStatus: 'finished' }],
+    ['når valgene ikke kunne hentes', { myUserId: 'p2', choices: undefined }],
+  ])('flowLine er null %s', (_label, overrides) => {
+    expect(stateFor(overrides).flowLine).toBeNull();
+  });
+
+  it('catch-up-linja sier avstanden før hullet, til ulven og til de andre', () => {
+    const base = { holeNumber: 17, engineTurn: CATCH_UP_17, pointsByUser: BEHIND };
+    expect(stateFor({ ...base, myUserId: 'p2' }).catchUpLine).toBe(
+      'Du ligger 5 poeng bak lederen, så du er ulv på dette hullet.',
+    );
+    expect(stateFor({ ...base, myUserId: 'p3' }).catchUpLine).toBe(
+      'Ada Aas ligger 5 poeng bak lederen og er ulv på dette hullet.',
+    );
+  });
+
+  it('i en blind runde som pågår står merket, men ikke linja med poeng', () => {
+    const state = stateFor({
+      holeNumber: 17,
+      myUserId: 'p2',
+      engineTurn: CATCH_UP_17,
+      pointsByUser: BEHIND,
+      hideNumbers: true,
+    });
+    expect(state.catchUp).toBe(true);
+    expect(state.catchUpLine).toBeNull();
+  });
+
+  it('uten catch-up er det verken merke eller linje', () => {
+    const state = stateFor({ holeNumber: 17, engineTurn: { userId: 'p1', catchUp: false } });
+    expect(state.catchUp).toBe(false);
+    expect(state.catchUpLine).toBeNull();
+  });
+
+  const STANDINGS = new Map([
+    ['p1', { rank: 2, points: 6 }],
+    ['p2', { rank: 1, points: 14 }],
+    ['p3', { rank: 3, points: 2 }],
+    ['p4', { rank: 4, points: 0 }],
+  ]);
+
+  it('partnerknappene viser stillingen når noen har poeng', () => {
+    const options = stateFor({ standings: STANDINGS }).partnerOptions;
+    expect(options.map((o) => o.standing)).toEqual(['1. · 14 p', '3. · 2 p', '4. · 0 p']);
+    expect(options[0]?.accessibilityLabel).toBe('Partner: Ada Aas, 1. plass, 14 poeng');
+  });
+
+  it('ingen stilling før noen har fått poeng, og aldri i en blind runde', () => {
+    const zero = new Map([...STANDINGS].map(([id, s]) => [id, { ...s, points: 0 }]));
+    expect(stateFor({ standings: zero }).partnerOptions.every((o) => o.standing === null)).toBe(true);
+    const hidden = stateFor({ standings: STANDINGS, hideNumbers: true }).partnerOptions;
+    expect(hidden.every((o) => o.standing === null)).toBe(true);
+    expect(hidden[0]?.accessibilityLabel).toBe('Partner: Ada Aas');
+  });
+
+  it('wolfStandings leser plass og poeng fra motoren', () => {
+    const result = {
+      kind: 'wolf',
+      players: [{ userId: 'p2', rank: 1, totalPoints: 14 }],
+    } as unknown as ModeResult;
+    expect([...wolfStandings(result).entries()]).toEqual([['p2', { rank: 1, points: 14 }]]);
+    expect(wolfStandings(null).size).toBe(0);
+  });
+});
+
+describe('wolfOrderStrip — Wolf-rekkefølgen (#2314)', () => {
+  function stripFor(overrides: Partial<Parameters<typeof wolfOrderStrip>[0]> = {}) {
+    return wolfOrderStrip({
+      holeNumber: 7,
+      myUserId: 'p3',
+      gameStatus: 'active',
+      players: FOUR,
+      choices: [],
+      pointsBefore: NO_POINTS,
+      rule: 'catch_up',
+      currentWolfUserId: 'p3',
+      ...overrides,
+    });
+  }
+
+  it('dette hullet og de tre neste, med «Deg» og fornavn', () => {
+    expect(stripFor()).toEqual({
+      columns: [
+        { hole: 7, label: 'Deg', isMine: true, accessibilityLabel: 'Hull 7: Deg' },
+        { hole: 8, label: 'Ola', isMine: false, accessibilityLabel: 'Hull 8: Ola' },
+        { hole: 9, label: 'Per', isMine: false, accessibilityLabel: 'Hull 9: Per' },
+        { hole: 10, label: 'Ada', isMine: false, accessibilityLabel: 'Hull 10: Ada' },
+      ],
+      ruleLine: null,
+    });
+  });
+
+  it('catch-up-hull som ikke er avgjort: «Avgjøres», og regel-linja for nye spill', () => {
+    const strip = stripFor({ holeNumber: 15, currentWolfUserId: 'p3' });
+    expect(strip?.columns.map((c) => c.label)).toEqual(['Deg', 'Ola', 'Avgjøres', 'Avgjøres']);
+    expect(strip?.columns[2]?.accessibilityLabel).toBe('Hull 17: avgjøres etter hull 16');
+    expect(strip?.ruleLine).toBe(
+      'Fra hull 17: ligger den som er sist, minst 4 poeng bak lederen, blir den ulv. Ellers går rundgangen videre.',
+    );
+  });
+
+  it('gamle spill får dagens linje', () => {
+    expect(stripFor({ holeNumber: 15, rule: 'trailing' })?.ruleLine).toBe(
+      'Fra hull 17 blir den som ligger sist etter forrige hull, Wolf.',
+    );
+  });
+
+  it('hullet du står på har ulven fra hull-tilstanden, og stripa slutter ved 18', () => {
+    const strip = stripFor({ holeNumber: 17, currentWolfUserId: 'p2' });
+    expect(strip?.columns).toEqual([
+      { hole: 17, label: 'Ada', isMine: false, accessibilityLabel: 'Hull 17: Ada' },
+      {
+        hole: 18,
+        label: 'Avgjøres',
+        isMine: false,
+        accessibilityLabel: 'Hull 18: avgjøres etter hull 17',
+      },
+    ]);
+  });
+
+  it.each([
+    ['et spill som ikke er aktivt', { gameStatus: 'scheduled' }],
+    ['færre enn tre i rotasjonen', { players: FOUR.slice(0, 2) }],
+  ])('ingen stripe i %s', (_label, overrides) => {
+    expect(stripFor(overrides)).toBeNull();
   });
 });
