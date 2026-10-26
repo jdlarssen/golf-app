@@ -10,9 +10,9 @@
 // egen rad er grønn. Fra fire runder er det ikke plass i bredden: da ruller
 // rundekolonnene til siden, som tabellen på nettsiden.
 //
-// #1378: den åpne runden er tonet og har en prikk. De som ikke er rangert,
-// står under egne overskrifter med tom plass-celle, uten demping og uten
-// forklaringstekst.
+// #1378: den åpne runden er markert bare med en prikk foran rundens navn, uten
+// farge i kolonnen. De som ikke er rangert, står under egne overskrifter med
+// tom plass-celle, uten demping og uten forklaringstekst.
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
@@ -92,7 +92,7 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
         return (
           <View
             key={r.id}
-            style={[styles.roundCol, styles.roundHead, open ? { backgroundColor: colors.primarySoft } : null]}
+            style={[styles.roundCol, styles.roundHead]}
             testID={open ? 'league-standings-open-col' : undefined}
           >
             {open ? <View style={[styles.dot, { backgroundColor: colors.live }]} /> : null}
@@ -128,7 +128,7 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
           you
             ? [styles.youRow, { backgroundColor: colors.youFill, borderColor: colors.youBorder }]
             : lineBelow
-              ? { borderBottomWidth: 1, borderBottomColor: colors.divider }
+              ? { borderBottomWidth: 1, borderBottomColor: colors.border }
               : null,
         ]}
         testID={you ? 'league-standings-you' : `league-standings-row-${row.userId}`}
@@ -163,14 +163,8 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
             row.perRound.find((c) => c.roundId === r.id),
             league.standingsModel,
           );
-          // Din egen rad har den grønne rammen som markør, så den har ingen tone.
-          const tone = r.id === openRoundId && !you ? colors.primarySoft : 'transparent';
           return (
-            <View
-              key={r.id}
-              style={[styles.roundCol, styles.roundCell, { backgroundColor: tone }]}
-              testID={r.id === openRoundId ? `league-standings-open-cell-${row.userId}` : undefined}
-            >
+            <View key={r.id} style={[styles.roundCol, styles.roundCell]}>
               <Text style={[styles.cell, { color: raw === null ? colors.scoreUnsetFg : colors.text }]}>
                 {raw === null ? '–' : formatRoundCell(raw, league.standingsModel, pointsBased, comma)}
               </Text>
@@ -222,7 +216,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   right: { textAlign: 'right' },
-  // `align-items: stretch` i tegningen: den tonede kolonnen fyller hele radhøyden.
+  // `align-items: stretch` i tegningen: rundekolonnene fyller hele radhøyden.
   stretch: { alignItems: 'stretch' },
   centered: { alignSelf: 'center' },
   rank: { width: RANK_W, alignItems: 'center' },
@@ -234,16 +228,8 @@ const styles = StyleSheet.create({
   sumCol: { width: SUM_W },
   sum: { ...fraunces(600, 18, 22), textAlign: 'right', fontVariant: ['tabular-nums'] },
   roundCol: { width: ROUND_W },
-  // `.rhead`: 4 inn fra høyre, prikk 5 foran «R3», 8 i de to øvre hjørnene.
-  roundHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 3,
-    paddingRight: 4,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
+  // `.rhead`: 4 inn fra høyre, prikk 5 foran «R3».
+  roundHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, paddingRight: 4 },
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   roundCell: { justifyContent: 'center', alignItems: 'flex-end', paddingRight: 4 },
   cell: { ...interLine(13, 18), fontFamily: FONTS.sans, textAlign: 'right', fontVariant: ['tabular-nums'] },

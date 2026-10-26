@@ -120,7 +120,7 @@ describe('LeagueStandingsTable — stableford (pointsBased) under the total mode
   });
 });
 
-// #1378: the value comes before the rounds, the open round is toned, and the
+// #1378: the value comes before the rounds, the open round is marked by a dot only, and the
 // rows without a rank stand in their own groups with no explanation text.
 describe('LeagueStandingsTable — column order, open round and groups (#1378)', () => {
   const cell = (roundId: string, value: number | null) => ({
@@ -165,22 +165,28 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     expect(aliceCells.map((c) => c.textContent)).toEqual(['1', 'Alice', '5', '2', '3']);
   });
 
-  it('tones only the open round: header with a dot, and its cells', () => {
+  it('marks the open round with a dot in the header only, no background in the column', () => {
     renderTable();
     const openHead = screen.getByTestId('liga-standings-open-col');
     expect(openHead).toHaveTextContent('R2');
-    expect(openHead.className).toContain('bg-primary-soft');
     expect(openHead.querySelector('.bg-live-dot')).not.toBeNull();
-    const aliceRow = screen.getAllByTestId('liga-standings-row')[0];
-    expect(aliceRow.querySelectorAll('[data-open-cell]')).toHaveLength(1);
-    expect(aliceRow.querySelector('[data-open-cell]')).toHaveTextContent('3');
+    expect(document.querySelectorAll('.bg-live-dot')).toHaveLength(1);
+    expect(screen.getByTestId('liga-standings').innerHTML).not.toContain('bg-primary-soft');
   });
 
-  it('no open round: no tone and no dot', () => {
+  it('no open round: no dot', () => {
     renderTable({ openRoundId: null });
     expect(screen.queryByTestId('liga-standings-open-col')).toBeNull();
-    expect(document.querySelector('[data-open-cell]')).toBeNull();
     expect(document.querySelector('.bg-live-dot')).toBeNull();
+  });
+
+  it('draws a line between ordinary rows, none under the last row of a block or at a group heading', () => {
+    renderTable();
+    const rowsEls = screen.getAllByTestId('liga-standings-row');
+    // Alice → Bob: a line. Bob ends the ranked block, Cathrine and Dag end theirs.
+    expect(rowsEls.map((r) => r.className.includes('border-b'))).toEqual([true, false, false, false]);
+    expect(screen.getByTestId('liga-standings-group-notRanked').className).not.toContain('border-b');
+    expect(screen.getByTestId('liga-standings-group-notRankedYet').className).not.toContain('border-b');
   });
 
   it('puts the unranked rows in two groups with an empty rank cell and no dimming', () => {

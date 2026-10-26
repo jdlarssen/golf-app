@@ -5,6 +5,7 @@
 // sier, at innstillingskortet er foldet og bare står i en simulatorliga, og
 // tilstandene fra tegning 6 uten nett.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { LeagueResult } from '../data/league';
 import type { ScreenProps } from '../navigation';
@@ -169,16 +170,35 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
         ],
       });
 
-    it('bare den åpne runden er tonet og har prikk; din egen rad har ingen tone', async () => {
+    it('den åpne runden er markert bare med prikken, uten farge i kolonnen', async () => {
       answer({ ok: true, view: withGroups() });
       await renderLeague();
-      expect(screen.getByTestId('league-standings-open-col')).toHaveTextContent('R3');
-      expect(screen.getByTestId('league-standings-open-col')).toHaveStyle({ backgroundColor: '#E8EFE8' });
-      expect(screen.getByTestId('league-standings-open-cell-martin')).toHaveStyle({ backgroundColor: '#E8EFE8' });
-      expect(screen.getByTestId('league-standings-open-cell-me')).toHaveStyle({ backgroundColor: 'transparent' });
+      const openCol = screen.getByTestId('league-standings-open-col');
+      expect(openCol).toHaveTextContent('R3');
+      expect(StyleSheet.flatten(openCol.props.style).backgroundColor).toBeUndefined();
+      expect(screen.queryByTestId(/league-standings-open-cell/)).toBeNull();
     });
 
-    it('ingen åpen runde: ingen tone', async () => {
+    it('skillelinje mellom vanlige rader, ingen under siste rad eller over din egen rad', async () => {
+      answer({
+        ok: true,
+        view: leagueView({
+          standings: [
+            row('martin', 1, true, 2, 74),
+            row('kristian', 2, true, 2, 70),
+            row('me', 3, true, 2, 69),
+            row('sindre', null, false, 0, 0),
+          ],
+        }),
+      });
+      await renderLeague();
+      const line = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).borderBottomWidth;
+      expect(line('league-standings-row-martin')).toBe(1);
+      expect(line('league-standings-row-kristian')).toBeUndefined(); // «me» følger: den grønne rammen er streken
+      expect(line('league-standings-row-sindre')).toBeUndefined(); // siste rad
+    });
+
+    it('ingen åpen runde: ingen prikk', async () => {
       answer({ ok: true, view: leagueView({ rounds: [leagueRound(1, -30), leagueRound(2, 3)] }) });
       await renderLeague();
       expect(screen.queryByTestId('league-standings-open-col')).toBeNull();
