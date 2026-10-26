@@ -102,6 +102,7 @@ import { SaveErrorBanner } from '../components/hole/SaveErrorBanner';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
 import { TeeShotPicker } from '../components/hole/TeeShotPicker';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
+import { WolfOrderStrip } from '../components/hole/WolfOrderStrip';
 import { PokalHankerIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore, LocalTeeShot } from '../data/db';
@@ -134,7 +135,13 @@ import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { useGivenUpTeeShotCount } from '../lib/useGivenUpTeeShotCount';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { setSunlight, useSunlight } from '../lib/sunlight';
-import { wolfHoleState, wolfStake, wolfTurnFromEngine } from '../lib/wolfHole';
+import {
+  wolfHoleState,
+  wolfOrderStrip,
+  wolfStake,
+  wolfStandings,
+  wolfTurnFromEngine,
+} from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
@@ -487,6 +494,12 @@ function HoleView({
   // `missing-choices`, og da faller regelen tilbake på poengene vi har.
   const wolfOutcome = isWolf ? computeGameLeaderboard(bundle, scores, extras) : null;
   const wolfResult = wolfOutcome?.ok ? wolfOutcome.result : null;
+  const wolfRule = wolfRotationRule(bundle.game.modeConfig);
+  // Stillingen før hullet: det er den regelen og catch-up-linja ser.
+  const wolfPointsBefore = wolfPointsBeforeHole(
+    wolfResult?.kind === 'wolf' ? wolfResult.holes : undefined,
+    holeNumber,
+  );
   const wolf = isWolf
     ? wolfHoleState({
         holeNumber,
@@ -494,17 +507,27 @@ function HoleView({
         gameStatus: bundle.game.status,
         players: bundle.players,
         choices: extras.wolfChoices,
-        // Stillingen før hullet: det er den regelen ser.
-        pointsByUser: wolfPointsBeforeHole(
-          wolfResult?.kind === 'wolf' ? wolfResult.holes : undefined,
-          holeNumber,
-        ),
+        pointsByUser: wolfPointsBefore,
         engineTurn: wolfTurnFromEngine(wolfResult, holeNumber),
-        rule: wolfRotationRule(bundle.game.modeConfig),
+        rule: wolfRule,
+        standings: wolfStandings(wolfResult),
         // #2313/#2314: valget ganger gevinsten med innsatsen, men i en blind
         // runde som pågår røper innsatsen et delt hull, så der står ingen tall.
         hideNumbers: hideNetto,
         stake: hideNetto ? 1 : wolfStake(wolfResult, holeNumber),
+      })
+    : null;
+  // #2314: «Wolf-rekkefølgen» under hullhodet, for alle i en aktiv wolf-runde.
+  const wolfOrder = wolf
+    ? wolfOrderStrip({
+        holeNumber,
+        myUserId: userId,
+        gameStatus: bundle.game.status,
+        players: bundle.players,
+        choices: extras.wolfChoices,
+        pointsBefore: wolfPointsBefore,
+        rule: wolfRule,
+        currentWolfUserId: wolf.wolfUserId,
       })
     : null;
 
@@ -785,6 +808,9 @@ function HoleView({
           <SaveErrorBanner key={saveFailed} text={LOCAL_SAVE_FAILED[saveFailed]} />
         ) : null}
         <View style={styles.pad}>
+
+        {/* #2314: hvem er ulv på dette hullet og de tre neste. */}
+        {wolfOrder ? <WolfOrderStrip strip={wolfOrder} /> : null}
 
         {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
             det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}

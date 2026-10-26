@@ -14,12 +14,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { WolfResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import {
+  wolfCatchUpRuleLine,
   wolfChoiceLabel,
   wolfHoleHasStory,
   wolfHolePointsLine,
   wolfOutcomeLabel,
 } from '../../lib/leaderboardModel';
-import { useTheme } from '../../theme';
+import { FONTS, useTheme } from '../../theme';
 import { SettlementCard } from './SettlementCard';
 import { LeaderTable } from './Table';
 
@@ -35,6 +36,9 @@ export function WolfView({
 }) {
   const { colors, ui } = useTheme();
   const blindWolves = result.players.filter((player) => player.blindWolfWins > 0);
+  // #2314: regelen for de siste hullene står der spillerne ser hvor langt bak
+  // de ligger. Bare i spill med catch-up-regelen.
+  const catchUpRule = wolfCatchUpRuleLine(result);
 
   return (
     <View testID="wolf-view">
@@ -57,6 +61,14 @@ export function WolfView({
           ],
         }))}
       />
+      {catchUpRule ? (
+        <Text
+          style={[styles.rule, { color: colors.text, borderLeftColor: colors.accent }]}
+          testID="wolf-catch-up-rule"
+        >
+          <Text style={styles.ruleLead}>{catchUpRule.lead}</Text> {catchUpRule.rest}
+        </Text>
+      ) : null}
       <Text style={ui.muted}>Wolf = hull der spilleren selv var Wolf.</Text>
 
       {blindWolves.length > 0 ? (
@@ -143,6 +155,16 @@ export function WolfView({
 }
 
 const styles = StyleSheet.create({
+  rule: {
+    borderLeftWidth: 3,
+    paddingLeft: 10,
+    paddingVertical: 2,
+    marginVertical: 8,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: FONTS.sans,
+  },
+  ruleLead: { fontFamily: FONTS.sansSemiBold },
   holeHead: {
     flexDirection: 'row',
     alignItems: 'center',

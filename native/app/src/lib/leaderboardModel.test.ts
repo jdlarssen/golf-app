@@ -5,6 +5,7 @@
 //     en tom skjerm i et vanlig spill;
 //  2. at match-etikettene sier det motoren mener. Fasiten kommer derfor FRA
 //     motoren i den siste testen, ikke fra tall skrevet for hånd her.
+import type { WolfResult } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { LocalScore } from '../data/db';
 import {
@@ -17,6 +18,7 @@ import {
   nameLookup,
   nassauSectionLine,
   teamLabel,
+  wolfCatchUpRuleLine,
   wolfChoiceLabel,
   wolfHoleHasStory,
   wolfHolePointsLine,
@@ -349,5 +351,25 @@ describe('wolf-etikettene', () => {
     expect(wolfHoleHasStory({ choice: 'partner', outcome: 'pending' })).toBe(true);
     // Ingen valg og ikke avgjort: bare et hull som venter.
     expect(wolfHoleHasStory({ choice: null, outcome: 'pending' })).toBe(false);
+  });
+});
+
+describe('wolfCatchUpRuleLine (#2314)', () => {
+  const players = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ userId: `p${i}` })) as unknown as WolfResult['players'];
+
+  it.each([
+    [3, 'Hull 16–18:', 3],
+    [4, 'Hull 17–18:', 4],
+    [5, 'Hull 16–18:', 5],
+  ])('n=%i gir «%s» og terskel %i', (n, lead, threshold) => {
+    expect(wolfCatchUpRuleLine({ rotation: 'catch_up', players: players(n) })).toEqual({
+      lead,
+      rest: `Ligger den som er sist, minst ${threshold} poeng bak lederen, blir den ulv. Ellers går rundgangen videre.`,
+    });
+  });
+
+  it('spill fra før #2314 har ingen linje', () => {
+    expect(wolfCatchUpRuleLine({ rotation: 'random_with_trailing', players: players(4) })).toBeNull();
   });
 });

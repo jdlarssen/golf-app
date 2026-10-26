@@ -32,10 +32,14 @@ import type {
   ModeResult,
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
-import type {
-  WolfRotationRule,
-  WolfTurn,
+import {
+  catchUpStartHole,
+  wolfCatchUpGap,
+  wolfUpcoming,
+  type WolfRotationRule,
+  type WolfTurn,
 } from '../../../../lib/scoring/modes/wolfTurn';
+import { firstName } from '../../../../lib/firstName';
 import {
   resolveHoleWolf,
   type WolfRotationPlayer,
@@ -55,7 +59,31 @@ export const WOLF_CHOICES_UNAVAILABLE =
 export interface WolfPartnerOption {
   userId: string;
   name: string;
+  /**
+   * Stillingen på knappen («1. · 14 p», #2314). `null` før noen har fått
+   * poeng, og alltid i en blind runde som pågår.
+   */
+  standing: string | null;
+  /** Hele knappen for VoiceOver («Partner: Marte, 1. plass, 14 poeng»). */
+  accessibilityLabel: string;
 }
+
+/**
+ * Gangen i hullet, de fire stegene ulven ser over valgene (#2314). Appen
+ * fører ikke rekkefølgen på tee: ja og nei sies muntlig.
+ */
+export const WOLF_FLOW_STEPS: readonly string[] = [
+  'Blind Wolf? Si det nå, før noen slår.',
+  'De andre slår ut i fast rekkefølge, som flytter seg ett hakk for hvert hull. Du slår sist.',
+  'Si ja eller nei rett etter hvert utslag. Et ja gir deg partner.',
+  'Nei til alle? Da er du Lone Wolf.',
+];
+
+/** Linja under stegene. */
+export const WOLF_FLOW_HINT = 'Trykk på valget når dere har bestemt dere.';
+
+/** Stillingen i en wolf-runde: plass og poeng per spiller. */
+export type WolfStandings = ReadonlyMap<string, { rank: number; points: number }>;
 
 /** Undertekstene i valget, ferdig regnet så kortet ikke har tall-logikk. */
 export interface WolfChoiceTexts {
@@ -63,7 +91,7 @@ export interface WolfChoiceTexts {
   partnerSubtitle: string | null;
   loneSubtitle: string;
   blindSubtitle: string;
-  /** Linja under «Velg før utslag» når innsatsen er over 1, ellers `null`. */
+  /** Linja under stegene når innsatsen er over 1, ellers `null`. */
   stakeLine: string | null;
 }
 
@@ -72,6 +100,17 @@ export interface WolfHoleState {
   wolfUserId: string | null;
   /** Catch-up-regelen ga hullet til den som ligger sist (#2314). */
   catchUp: boolean;
+  /**
+   * Linja under merket på et catch-up-hull («Du ligger 5 poeng bak lederen,
+   * så du er ulv på dette hullet.»). `null` uten catch-up, og i en blind runde
+   * som pågår, der merket står alene.
+   */
+  catchUpLine: string | null;
+  /**
+   * Gangen for de andre i flighten, til valget er lagret: «{navn} slår sist og
+   * sier ja eller nei …». `null` for ulven selv, og når det ikke gjelder.
+   */
+  flowLine: string | null;
   /** Er det meg? Porten for om valg-knappene i det hele tatt finnes. */
   iAmWolf: boolean;
   /** Valget som står lagret for hullet, eller `null`. */
@@ -170,6 +209,8 @@ export function wolfHoleState(args: {
   engineTurn?: WolfTurn | null;
   /** Spillets regel, til reserven når motoren mangler. */
   rule?: WolfRotationRule;
+  /** Stillingen nå (`wolfStandings`), til partnerknappene. */
+  standings?: WolfStandings;
 }): WolfHoleState {
   const {
     holeNumber,
@@ -181,12 +222,15 @@ export function wolfHoleState(args: {
     hideNumbers,
     engineTurn = null,
     rule = 'trailing',
+    standings,
   } = args;
 
   if (choices === undefined) {
     return {
       wolfUserId: null,
       catchUp: false,
+      catchUpLine: null,
+      flowLine: null,
       iAmWolf: false,
       choice: null,
       badgeText: null,
@@ -223,10 +267,29 @@ export function wolfHoleState(args: {
   const iAmWolf = wolfUserId !== null && wolfUserId === myUserId;
   const stake = hideNumbers ? 1 : args.stake;
   const payout = hideNumbers ? null : wolfPayout(rotation.length, stake);
+  const catchUp = turn?.catchUp ?? false;
+  const wolfName = nameOf(wolfUserId);
+  // Stillingen vises først når noen har fått poeng, og aldri i en blind runde.
+  const showStandings =
+    !hideNumbers &&
+    standings !== undefined &&
+    [...standings.values()].some((entry) => entry.points > 0);
 
   return {
     wolfUserId,
-    catchUp: turn?.catchUp ?? false,
+    catchUp,
+    catchUpLine:
+      catchUp && !hideNumbers && wolfName !== null
+        ? catchUpLineFor({
+            iAmWolf,
+            wolfName,
+            gap: wolfCatchUpGap(rotation, pointsByUser),
+          })
+        : null,
+    flowLine:
+      !iAmWolf && choice === null && gameStatus === 'active' && wolfName !== null
+        ? `${wolfName} slår sist og sier ja eller nei rett etter hvert utslag. Blind Wolf meldes før noen slår.`
+        : null,
     iAmWolf,
     choice,
     badgeText: badgeTextFor({ choice, iAmWolf, nameOf, wolfUserId, payout }),
@@ -237,10 +300,18 @@ export function wolfHoleState(args: {
     partnerOptions: iAmWolf
       ? rotation
           .filter((entry) => entry.userId !== myUserId)
-          .map((entry) => ({
-            userId: entry.userId,
-            name: nameOf(entry.userId) ?? 'Ukjent spiller',
-          }))
+          .map((entry) => {
+            const name = nameOf(entry.userId) ?? 'Ukjent spiller';
+            const place = showStandings ? standings?.get(entry.userId) : undefined;
+            return {
+              userId: entry.userId,
+              name,
+              standing: place ? `${place.rank}. · ${place.points} p` : null,
+              accessibilityLabel: place
+                ? `Partner: ${name}, ${place.rank}. plass, ${place.points} poeng`
+                : `Partner: ${name}`,
+            };
+          })
       : [],
     // Webbens modal åpner seg kun når spillet er aktivt og hullet står uten
     // valg, og det finnes ingen annen vei inn i den. Samme flate her — ikke en
@@ -249,6 +320,111 @@ export function wolfHoleState(args: {
     stake,
     payout,
     choiceTexts: choiceTextsFor(payout, stake),
+  };
+}
+
+/** Linja under catch-up-merket. `gap` er avstanden før hullet. */
+function catchUpLineFor(args: { iAmWolf: boolean; wolfName: string; gap: number }): string {
+  const { iAmWolf, wolfName, gap } = args;
+  return iAmWolf
+    ? `Du ligger ${gap} poeng bak lederen, så du er ulv på dette hullet.`
+    : `${wolfName} ligger ${gap} poeng bak lederen og er ulv på dette hullet.`;
+}
+
+/**
+ * Stillingen fra motoren: plass og poeng per spiller. Tomt kart uten et
+ * wolf-resultat.
+ */
+export function wolfStandings(result: ModeResult | null): WolfStandings {
+  const standings = new Map<string, { rank: number; points: number }>();
+  if (result === null || result.kind !== 'wolf') return standings;
+  for (const line of result.players) {
+    standings.set(line.userId, { rank: line.rank, points: line.totalPoints });
+  }
+  return standings;
+}
+
+/** Én kolonne i «Wolf-rekkefølgen». */
+export interface WolfOrderColumn {
+  hole: number;
+  /** «Deg», fornavnet, eller «Avgjøres». */
+  label: string;
+  isMine: boolean;
+  /** Hele teksten for VoiceOver («Hull 17: avgjøres etter hull 16»). */
+  accessibilityLabel: string;
+}
+
+export interface WolfOrderStripState {
+  columns: WolfOrderColumn[];
+  /** Regelen for de siste hullene, når stripa når dit. Ellers `null`. */
+  ruleLine: string | null;
+}
+
+/**
+ * «Wolf-rekkefølgen» under hullhodet (#2314): dette hullet og de tre neste,
+ * til og med 18. Bare i en aktiv runde med minst tre i rotasjonen.
+ *
+ * Hullet du står på har ulven fra hull-tilstanden (`currentWolfUserId`), så
+ * stripa og kortet aldri er uenige. Resten er `wolfUpcoming`.
+ */
+export function wolfOrderStrip(args: {
+  holeNumber: number;
+  myUserId: string;
+  gameStatus: string;
+  players: readonly BundlePlayer[];
+  choices: readonly WolfHoleChoice[] | undefined;
+  pointsBefore: Map<string, number>;
+  rule: WolfRotationRule;
+  currentWolfUserId: string | null;
+}): WolfOrderStripState | null {
+  const { holeNumber, myUserId, gameStatus, players, choices, pointsBefore, rule } = args;
+  const rotation = wolfRotationPlayers(players);
+  if (gameStatus !== 'active' || rotation.length < 3) return null;
+
+  const labelOf = (userId: string | null): string => {
+    if (userId === null) return 'Ukjent';
+    if (userId === myUserId) return 'Deg';
+    const player = players.find((entry) => entry.userId === userId);
+    return player ? (firstName(displayName(player)) ?? displayName(player)) : 'Ukjent';
+  };
+
+  const upcoming = wolfUpcoming({
+    fromHole: holeNumber,
+    count: 4,
+    players: rotation,
+    pointsBefore,
+    choices: choices ?? [],
+    rule,
+  });
+  const columns = upcoming.map((entry): WolfOrderColumn => {
+    if ('settlesAfterHole' in entry) {
+      return {
+        hole: entry.hole,
+        label: 'Avgjøres',
+        isMine: false,
+        accessibilityLabel: `Hull ${entry.hole}: avgjøres etter hull ${entry.settlesAfterHole}`,
+      };
+    }
+    const userId = entry.hole === holeNumber ? args.currentWolfUserId : entry.wolfUserId;
+    const label = labelOf(userId);
+    return {
+      hole: entry.hole,
+      label,
+      isMine: userId !== null && userId === myUserId,
+      accessibilityLabel: `Hull ${entry.hole}: ${label}`,
+    };
+  });
+
+  const n = rotation.length;
+  const start = catchUpStartHole(n, rule);
+  const reachesEnd = columns.some((column) => column.hole >= start);
+  return {
+    columns,
+    ruleLine: reachesEnd
+      ? rule === 'catch_up'
+        ? `Fra hull ${start}: ligger den som er sist, minst ${n} poeng bak lederen, blir den ulv. Ellers går rundgangen videre.`
+        : `Fra hull ${start} blir den som ligger sist etter forrige hull, Wolf.`
+      : null,
   };
 }
 
