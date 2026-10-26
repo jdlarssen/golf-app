@@ -148,8 +148,9 @@ export function LeagueStandingsTable({
       : t('unknownPlayer');
     const isFirst = row.rank === 1;
     const isUnranked = !row.ranked;
-    // The last ranked row sits right above a group heading, which draws the line.
-    const noLine = isLast && !isUnranked && groups.length > 0;
+    // The last row of a block has no line under it: the last ranked row sits right
+    // above a group heading (which draws its own), and the last row of the table ends
+    // the card.
 
     return (
       <tr
@@ -157,7 +158,7 @@ export function LeagueStandingsTable({
         data-testid="liga-standings-row"
         className={[
           'transition-colors',
-          noLine ? '' : 'border-b border-row-divider-warm',
+          isLast ? '' : 'border-b border-row-divider-warm',
           isFirst ? 'rounded-lg' : '',
         ].join(' ')}
         style={
@@ -267,7 +268,7 @@ export function LeagueStandingsTable({
                   {g.label}
                 </th>
               </tr>
-              {g.rows.map((row) => renderRow(row, { isLast: false }))}
+              {g.rows.map((row, i) => renderRow(row, { isLast: i === g.rows.length - 1 }))}
             </Fragment>
           ))}
         </tbody>
