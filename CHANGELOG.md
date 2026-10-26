@@ -16,6 +16,109 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.243.0 · mandag 26. oktober 2026
+
+<details>
+<summary><strong>Premieutdelingen på storskjermen</strong></summary>
+
+[#2298](https://github.com/jdlarssen/golf-app/issues/2298) — Avslutt spillet og vis pallen på TV-en i klubbhuset. Du snur kortene fra mobilen: sidepremiene, 3. plass, 2. plass og til slutt vinneren.
+</details>
+
+<details>
+<summary><strong>Rediger spillet del for del</strong></summary>
+
+[#2322](https://github.com/jdlarssen/golf-app/issues/2322) — Når du redigerer et planlagt spill, får du først en oversikt over hele oppsettet. «Endre» åpner bare den delen du vil rette på, og når du har lagret, er du tilbake på oversikten.
+</details>
+
+<details>
+<summary><strong>Tre spørsmål som finner formatet</strong></summary>
+
+[#2328](https://github.com/jdlarssen/golf-app/issues/2328) — Svar på tre spørsmål øverst på Spillformater, så får dere et forslag til format og kan lage runden rett derfra.
+
+↳ /spillformater · «Finn formatet»
+</details>
+
+<details>
+<summary><strong>Guidene anbefaler et oppsett</strong></summary>
+
+[#2331](https://github.com/jdlarssen/golf-app/issues/2331) — Guidene for firmagolf, vennegjeng og klubbkveld begynner nå med oppsettet vi anbefaler. Trykk «Bruk dette oppsettet», så står formatet ferdig valgt når du lager spillet.
+
+↳ /arranger-golfturnering/firmagolf · «Se oppsettet»
+</details>
+
+<details>
+<summary><strong>Appen ber deg oppdatere når versjonen er for gammel</strong></summary>
+
+[#2619](https://github.com/jdlarssen/golf-app/issues/2619) — Er appen din for gammel til å virke mot tjenesten, får du nå beskjed om å oppdatere i butikken, i stedet for at ting slutter å virke uten forklaring.
+</details>
+
+<details>
+<summary><strong>Bli venn rett i appen</strong></summary>
+
+[#2627](https://github.com/jdlarssen/golf-app/issues/2627) — Fra neste versjon åpner QR-koden på bag-taggen og lenken din Tørny-appen på «Bli venn med …». Er kompisen ikke logget inn, kommer skjermen rett etter innloggingen.
+</details>
+
+<details>
+<summary><strong>QR-kode på bag-taggen</strong></summary>
+
+[#2627](https://github.com/jdlarssen/golf-app/issues/2627) — Vis bag-taggen i appen til en kompis. Kompisen skanner QR-koden med kameraet, og med ett trykk er dere venner. Trykk på koden for å vise den større.
+</details>
+
+<details>
+<summary><strong>Historien fra pressetribunen i appen</strong></summary>
+
+[#2632](https://github.com/jdlarssen/golf-app/issues/2632) — Har runden fått en historie fra pressetribunen, viser tavla i appen nå første setning øverst og hele historien nederst. «Resultatet er klart»-varselet tar deg rett dit.
+</details>
+
+<details>
+<summary><strong>Starten av historien i varselet</strong></summary>
+
+[#2632](https://github.com/jdlarssen/golf-app/issues/2632) — Har runden fått en historie fra pressetribunen, viser «Resultatet er klart»-varselet nå starten på den.
+</details>
+
+<details>
+<summary><strong>Mindre støy når du fører score</strong></summary>
+
+[#2635](https://github.com/jdlarssen/golf-app/issues/2635) — Tasteknappene sier bare birdie, par eller bogey mot hullets par, og netto står ikke lenger der. Scorekortet tegner maks to sirkler eller firkanter. Over knappene ser du med ett blikk om du får eller mister slag på hullet.
+</details>
+
+<details>
+<summary><strong>Ligaen i appen</strong></summary>
+
+[#2638](https://github.com/jdlarssen/golf-app/issues/2638) — Fra neste versjon av appen står ligaene dine på Hjem. Der ser du tabellen, rundeinnstillingene og hvem som har spilt, og du starter runden rett fra ligaen, også alene i en simulatorliga.
+</details>
+
+<details>
+<summary><strong>Ligaen sier fra når runden åpner og før fristen</strong></summary>
+
+[#2638](https://github.com/jdlarssen/golf-app/issues/2638) — Er du med i en liga, får du beskjed når en ny runde åpner. Har du ikke spilt den to døgn før fristen, minner Tørny deg på det.
+
+↳ /innboks · «Se varslene»
+</details>
+
+<details>
+<summary><strong>Liga på simulator</strong></summary>
+
+[#2638](https://github.com/jdlarssen/golf-app/issues/2638) — Spill ligaen på simulator: hver tar runden når det passer, også alene, og alle spiller med de samme Trackman-innstillingene. Velg netto eller brutto når du setter opp ligaen.
+</details>
+
+<details>
+<summary>12 rettinger</summary>
+
+- [#1954](https://github.com/jdlarssen/golf-app/issues/1954) — Hullsiden og resten av appen slutter nå over navigasjonslinja på Android og hjemindikatoren på iPhone, så de nederste knappene ikke havner bak systemknappene.
+- [#1954](https://github.com/jdlarssen/golf-app/issues/1954) — På Hjem og innloggingen ruller innholdet ikke lenger opp under klokka og batteriet.
+- [#1954](https://github.com/jdlarssen/golf-app/issues/1954) — På svak dekning står ikke appen lenger og venter: etter 15 sekunder sier den fra, så du kan prøve igjen. Slagene dine sendes når nettet er tilbake.
+- [#2352](https://github.com/jdlarssen/golf-app/issues/2352) — På iPad viser Tørny nå hvordan du legger appen på hjem-skjermen og slår på varsler, slik som på iPhone.
+- [#2560](https://github.com/jdlarssen/golf-app/issues/2560) — På Android lover Godkjenn ikke lenger beskjed om et kort som ikke er levert. Der står det at kortet vises her når det er levert.
+- [#2560](https://github.com/jdlarssen/golf-app/issues/2560) — På Android heter raden og siden for temaet nå «Tema», og innloggingen gir ikke iPhone-tips.
+- [#2560](https://github.com/jdlarssen/golf-app/issues/2560) — Hjem i appen ender nå over hjemindikatoren på iPhone og navigasjonslinja på Android. «Opprett spill» og siste kort havner ikke lenger bak dem.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Delearket på iPhone kan nå lagre bildet i Bilder, for eksempel bag-taggen din.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Systemtekstene i appen på iPhone, som delearket og «Lim inn», står nå på norsk i stedet for engelsk.
+- [#2625](https://github.com/jdlarssen/golf-app/issues/2625) — Plusstegnet på delekortet vises nå riktig. Før så «+3» ut som et minus med en løs strek under tallet.
+- [#2625](https://github.com/jdlarssen/golf-app/issues/2625) — I nye runder med best ball, Texas, Ambrose, Florida og shamble rangerer lagtavla nå lagene etter slag mot par på hullene de har spilt. Et lag som har spilt færre hull, havner ikke lenger øverst når det ligger bak.
+- [#2625](https://github.com/jdlarssen/golf-app/issues/2625) — I nye runder med stableford, modifisert stableford, patsome og Nassau rangerer tavla nå spillerne og lagene etter hvordan de ligger an mot par på hullene de har spilt. Har du spilt færre hull enn de andre, havner du ikke lenger bak bare derfor.
+</details>
+
 ### 1.242.0 · mandag 19. oktober 2026
 
 <details>
