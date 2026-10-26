@@ -367,6 +367,15 @@ describe('rosterMarks', () => {
     },
   );
 
+  // #2314: et nytt spill med tre spillere har catch-up fra hull 16, så den
+  // faste delen av rundgangen slutter på 15.
+  it('stopper den faste delen før catch-up-hullene i et nytt spill', () => {
+    const players = rotation(3);
+    expect(rosterMarks(players[2], 'wolf', players, 'catch_up')).toEqual([
+      'Wolf på hull 3, 6, 9, 12 og 15',
+    ]);
+  });
+
   it('merker ikke rotasjonen i round robin — rekkefølgen der er rent kosmetisk', () => {
     const players = rotation(4);
     expect(rosterMarks(players[1], 'round_robin', players)).toEqual([]);

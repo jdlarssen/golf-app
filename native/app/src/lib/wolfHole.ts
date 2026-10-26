@@ -7,16 +7,20 @@
 //
 // Tre ting er verdt å vite:
 //
+//  0. **Ulven er motorens (#2314).** Hvem som er ulv, bor i
+//     `lib/scoring/modes/wolfTurn.ts`, og hull-skjermen leser motorens rad
+//     (`wolfTurnFromEngine`), akkurat som nettsiden. Regelen kalles direkte
+//     bare som reserve når motoren ikke kunne kjøre.
 //  1. **Rotasjons-sloten er `team_number`.** Det er ikke et lag i wolf — det er
 //     rekkefølgen. Webben plukker spillerne som `allPlayers` med `team_number`
 //     satt, UTEN å sortere, og uten å filtrere bort trukne spillere. Vi gjør
-//     nøyaktig det samme: `determineWolfForHole` slår opp på slot-verdien og
+//     nøyaktig det samme: regelen (`wolfForHole`) slår opp på slot-verdien og
 //     sorterer selv i trailing-grenen, så rekkefølgen inn spiller ingen rolle —
 //     men ANTALLET gjør det (n styrer både rotasjonslengden og lone/blind-
 //     potten), og der ville et WD-filter gitt appen en annen wolf enn webben.
-//  2. **Poengene er motorens.** Trailing-wolf (hull R+1..18) er «den som ligger
-//     sist», og det tallet kommer fra `computeLeaderboard` via
-//     `wolfPointsByUser` — aldri en egen formel her.
+//  2. **Poengene er motorens.** Stillingen regelen ser, er poengene før
+//     hullet fra `computeLeaderboard` (`wolfPointsBeforeHole`) — aldri en
+//     egen formel her.
 //  3. **`undefined` valg er ikke «ingen valg».** Har hentingen ikke lyktes, sier
 //     kortet fra i stedet for å tegne en badge som ser autoritativ ut. Samme
 //     skille som `ScoringExtras` holder på leaderboard-siden.
@@ -28,8 +32,12 @@ import type {
   ModeResult,
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
+import type {
+  WolfRotationRule,
+  WolfTurn,
+} from '../../../../lib/scoring/modes/wolfTurn';
 import {
-  determineWolfForHole,
+  resolveHoleWolf,
   type WolfRotationPlayer,
 } from '../../../../lib/wolf/wolfRotation';
 import {
@@ -62,6 +70,8 @@ export interface WolfChoiceTexts {
 export interface WolfHoleState {
   /** Spilleren som er Wolf på hullet, eller `null` når vi ikke kan svare. */
   wolfUserId: string | null;
+  /** Catch-up-regelen ga hullet til den som ligger sist (#2314). */
+  catchUp: boolean;
   /** Er det meg? Porten for om valg-knappene i det hele tatt finnes. */
   iAmWolf: boolean;
   /** Valget som står lagret for hullet, eller `null`. */
@@ -82,7 +92,7 @@ export interface WolfHoleState {
 }
 
 /**
- * Rotasjonsspillerne slik `determineWolfForHole` vil ha dem.
+ * Rotasjonsspillerne slik regelen (`wolfForHole`) vil ha dem.
  *
  * Speiler `computeWolfContext` (`holes/[holeNumber]/holePageScoring.ts`): alle
  * spillere med `team_number` satt, i bundelens egen rekkefølge.
@@ -99,11 +109,10 @@ export function wolfRotationPlayers(
 }
 
 /**
- * Motorens wolf-totaler som oppslag, til trailing-wolf-regelen.
+ * Motorens wolf-totaler som oppslag (stillingen nå, over alle spilte hull).
  *
- * Alt annet enn et wolf-resultat gir et tomt kart — og da faller
- * `determineWolfForHole` tilbake på slot-rekkefølgen, akkurat som webben gjør
- * når `pointsByUser` er `undefined`.
+ * Alt annet enn et wolf-resultat gir et tomt kart. Regelen leser ikke denne:
+ * den ser stillingen FØR hullet (`wolfPointsBeforeHole`, #2314).
  */
 export function wolfPointsByUser(result: ModeResult | null): Map<string, number> {
   const points = new Map<string, number>();
@@ -112,6 +121,20 @@ export function wolfPointsByUser(result: ModeResult | null): Map<string, number>
     points.set(player.userId, player.totalPoints);
   }
   return points;
+}
+
+/**
+ * Ulven på hullet slik motoren valgte den (#2314), eller `null` når motoren
+ * ikke kjørte eller hullet mangler i radene.
+ */
+export function wolfTurnFromEngine(
+  result: ModeResult | null,
+  holeNumber: number,
+): WolfTurn | null {
+  if (result === null || result.kind !== 'wolf') return null;
+  const row = result.holes.find((entry) => entry.holeNumber === holeNumber);
+  if (!row || !row.wolfUserId) return null;
+  return { userId: row.wolfUserId, catchUp: row.catchUp };
 }
 
 /**
@@ -143,6 +166,10 @@ export function wolfHoleState(args: {
   stake: number;
   /** En blind runde som pågår: ingen poengtall og ingen innsats. */
   hideNumbers: boolean;
+  /** Motorens ulv på hullet (`wolfTurnFromEngine`). `null` = motoren mangler. */
+  engineTurn?: WolfTurn | null;
+  /** Spillets regel, til reserven når motoren mangler. */
+  rule?: WolfRotationRule;
 }): WolfHoleState {
   const {
     holeNumber,
@@ -152,11 +179,14 @@ export function wolfHoleState(args: {
     choices,
     pointsByUser,
     hideNumbers,
+    engineTurn = null,
+    rule = 'trailing',
   } = args;
 
   if (choices === undefined) {
     return {
       wolfUserId: null,
+      catchUp: false,
       iAmWolf: false,
       choice: null,
       badgeText: null,
@@ -178,20 +208,25 @@ export function wolfHoleState(args: {
   };
 
   const choice = choices.find((row) => row.holeNumber === holeNumber) ?? null;
-  // En lagret rad har forrang over rotasjonen: den kan være en admin-override
-  // eller en trailing-wolf som ble låst før vi rakk å regne på nytt.
-  const wolfUserId = determineWolfForHole(
+  // En lagret rad har forrang: den kan være en admin-override eller en ulv
+  // som ble låst før vi rakk å regne på nytt. Ellers er ulven motorens, og
+  // regelen kalles selv bare når motoren mangler.
+  const turn = resolveHoleWolf({
     holeNumber,
-    rotation,
+    players: rotation,
     pointsByUser,
-    choice?.wolfUserId,
-  );
+    storedWolfUserId: choice?.wolfUserId,
+    engineTurn,
+    rule,
+  });
+  const wolfUserId = turn?.userId ?? null;
   const iAmWolf = wolfUserId !== null && wolfUserId === myUserId;
   const stake = hideNumbers ? 1 : args.stake;
   const payout = hideNumbers ? null : wolfPayout(rotation.length, stake);
 
   return {
     wolfUserId,
+    catchUp: turn?.catchUp ?? false,
     iAmWolf,
     choice,
     badgeText: badgeTextFor({ choice, iAmWolf, nameOf, wolfUserId, payout }),

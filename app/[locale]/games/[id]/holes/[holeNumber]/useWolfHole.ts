@@ -21,7 +21,8 @@ import {
 } from '@/lib/wolf/reconcileWolfChoices';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
-import { determineWolfForHole } from '@/lib/wolf/wolfRotation';
+import { resolveHoleWolf } from '@/lib/wolf/wolfRotation';
+import type { WolfRotationRule, WolfTurn } from '@/lib/scoring/modes/wolfTurn';
 import { wolfPayout, type WolfPayout } from '@/lib/wolf/wolfPayout';
 
 /**
@@ -71,6 +72,10 @@ export function useWolfHole(args: {
   wolfPointsByUser: Record<string, number> | undefined;
   /** Innsatsen på hullet fra serveren. Mangler i et reveal-spill som pågår. */
   wolfStake: number | undefined;
+  /** #2314: motorens ulv på hullet. Mangler når motoren ikke kunne kjøre. */
+  wolfTurn?: WolfTurn;
+  /** #2314: spillets regel, til reserven når motoren mangler. */
+  wolfRule?: WolfRotationRule;
   hideNetto: boolean;
 }): WolfHoleState {
   const {
@@ -83,6 +88,8 @@ export function useWolfHole(args: {
     wolfChoicesInitial,
     wolfPointsByUser,
     wolfStake,
+    wolfTurn,
+    wolfRule = 'trailing',
     hideNetto,
   } = args;
   const t = useTranslations('holes');
@@ -172,19 +179,23 @@ export function useWolfHole(args: {
 
   const [modalDismissed, setModalDismissed] = useState(false);
 
-  // Hvem er Wolf på dette hullet? Wolf-tabellen kan ha en eksplisitt rad
-  // (f.eks. admin-override), ellers regner vi rotasjon eller trailing-wolf.
+  // Hvem er Wolf på dette hullet? En lagret rad vinner (f.eks. admin-
+  // override, eller et valg som kom via realtime), ellers motorens ulv fra
+  // serveren (#2314). Regelen regnes her bare når motoren ikke kunne kjøre.
   const currentHoleWolfChoice = wolfChoices.find(
     (c) => c.holeNumber === currentHole,
   );
-  const wolfUserIdForHole = isWolf
-    ? determineWolfForHole(
-        currentHole,
-        wolfPlayers ?? [],
-        pointsByUserMap,
-        currentHoleWolfChoice?.wolfUserId,
-      )
+  const holeTurn = isWolf
+    ? resolveHoleWolf({
+        holeNumber: currentHole,
+        players: wolfPlayers ?? [],
+        pointsByUser: pointsByUserMap,
+        storedWolfUserId: currentHoleWolfChoice?.wolfUserId,
+        engineTurn: wolfTurn,
+        rule: wolfRule,
+      })
     : null;
+  const wolfUserIdForHole = holeTurn?.userId ?? null;
   const iAmWolfForHole = isWolf && wolfUserIdForHole === myUserId;
 
   // Trigger modal automatisk når dette er min tur og ingen valg finnes ennå.

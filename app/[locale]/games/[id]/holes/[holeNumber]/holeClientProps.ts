@@ -17,6 +17,7 @@ import type {
   WolfHoleChoice,
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
+import type { WolfRotationRule, WolfTurn } from '@/lib/scoring/modes/wolfTurn';
 import type { TeeShotPickerTeam } from './TeeShotPicker';
 
 export type ClientPlayer = {
@@ -211,10 +212,18 @@ export interface HoleClientProps {
   wolfChoices?: WolfHoleChoice[];
   /**
    * Wolf-mode-spesifikt: akkumulerte poeng per userId før gjeldende hull,
-   * server-computert via `computeLeaderboard()`. Brukes til trailing-wolf-
-   * regelen (hull 17-18). Empty record = alle spillere på 0.
+   * server-computert via `computeLeaderboard()`. Reserve for regelen når
+   * motoren ikke kjørte, og avstanden i catch-up-linja. Empty record = alle
+   * spillere på 0.
    */
   wolfPointsByUser?: Record<string, number>;
+  /**
+   * #2314: ulven på hullet slik motoren valgte den, og om catch-up-regelen ga
+   * hullet til den som ligger sist. Mangler når motoren ikke kunne kjøre.
+   */
+  wolfTurn?: WolfTurn;
+  /** #2314: spillets wolf-regel, til reserven når motoren mangler. */
+  wolfRule?: WolfRotationRule;
   /**
    * Wolf-mode-spesifikt: innsatsen på dette hullet (1 som grunn, 2 etter ett
    * delt hull, 3 etter to), server-computert via `computeLeaderboard()`.

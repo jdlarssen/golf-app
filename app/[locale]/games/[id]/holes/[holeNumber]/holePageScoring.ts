@@ -9,6 +9,12 @@ import { parFor } from '@/lib/scoring/modes/parResolver';
 import { computeLeaderboard } from '@/lib/scoring';
 import * as skins from '@/lib/scoring/modes/skins';
 import { wolfStakeForHole } from '@/lib/wolf/wolfPayout';
+import {
+  wolfPointsBeforeHole,
+  wolfRotationRule,
+  type WolfRotationRule,
+  type WolfTurn,
+} from '@/lib/scoring/modes/wolfTurn';
 import type {
   ScoringContext,
   ScoringHole,
@@ -120,6 +126,7 @@ export type WolfContext = {
   players:
     | Array<{ userId: string; teamNumber: number; name: string }>
     | undefined;
+  /** Poengene før hullet (stillingen regelen ser), fra motoren. */
   pointsByUser: Record<string, number> | undefined;
   /**
    * Innsatsen på hullet slik motoren regnet den (2 etter ett delt hull, 3
@@ -127,11 +134,19 @@ export type WolfContext = {
    * spillet ikke er Wolf eller motoren ikke kunne kjøre.
    */
   stake: number | undefined;
+  /**
+   * #2314: ulven på hullet slik motoren valgte den, og om catch-up-regelen ga
+   * hullet til den som ligger sist. Undefined når motoren ikke kunne kjøre.
+   */
+  turn: WolfTurn | undefined;
+  /** Spillets regel (`mode_config.wolf_rotation`), til reserven på klienten. */
+  rule: WolfRotationRule;
 };
 
 /**
- * Wolf-mode-spesifikt: regn ut pointsByUser server-side via scoring-modulen.
- * Klient-laget bruker dette til trailing-wolf-regelen (hull 17-18). Vi
+ * Wolf-mode-spesifikt: regn ut ulven på hullet og stillingen før det
+ * server-side via scoring-modulen (#2314). Klient-laget bruker motorens ulv,
+ * og poengene bare som reserve og til catch-up-linja. Vi
  * kjører `computeLeaderboard()` med full ScoringContext slik at vi får
  * konsistent answer med leaderboard-rendringen. wolfPlayers er server-
  * valgt subset av game_players med team_number 1-4 og navn. Fra samme
@@ -165,8 +180,11 @@ export function computeWolfContext(args: {
       players: undefined,
       pointsByUser: undefined,
       stake: undefined,
+      turn: undefined,
+      rule: 'trailing',
     };
   }
+  const rule = wolfRotationRule(game.mode_config);
 
   const choices = wolfChoicesData as WolfHoleChoice[];
 
@@ -187,7 +205,7 @@ export function computeWolfContext(args: {
     wolfAllScoresRes.error ||
     game.mode_config.kind !== 'wolf'
   ) {
-    return { choices, players, pointsByUser: undefined, stake: undefined };
+    return { choices, players, pointsByUser: undefined, stake: undefined, turn: undefined, rule };
   }
   const ctx: ScoringContext = {
     game: {
@@ -202,17 +220,16 @@ export function computeWolfContext(args: {
   };
   const result = computeLeaderboard(ctx);
   if (result.kind !== 'wolf') {
-    return { choices, players, pointsByUser: undefined, stake: undefined };
+    return { choices, players, pointsByUser: undefined, stake: undefined, turn: undefined, rule };
   }
-  const map: Record<string, number> = {};
-  for (const p of result.players) {
-    map[p.userId] = p.totalPoints;
-  }
+  const row = result.holes.find((h) => h.holeNumber === holeNumber);
   return {
     choices,
     players,
-    pointsByUser: map,
+    pointsByUser: Object.fromEntries(wolfPointsBeforeHole(result.holes, holeNumber)),
     stake: wolfStakeForHole(result.holes, holeNumber),
+    turn: row?.wolfUserId ? { userId: row.wolfUserId, catchUp: row.catchUp } : undefined,
+    rule,
   };
 }
 

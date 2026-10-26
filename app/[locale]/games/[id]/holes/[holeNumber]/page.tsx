@@ -377,6 +377,8 @@ export default async function HolePage({ params }: { params: Params }) {
         wolfChoices={wolf.choices}
         wolfPointsByUser={wolf.pointsByUser}
         wolfStake={hideNetto ? undefined : wolf.stake}
+        wolfTurn={wolf.turn}
+        wolfRule={wolf.rule}
         skinsAtStake={skinsStake.atStake}
         skinsCarriedIn={skinsStake.carriedIn}
         bingoBangoBongoHoles={isBBB ? data.bbbHolesData : undefined}

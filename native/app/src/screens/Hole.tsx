@@ -83,6 +83,10 @@ import {
   isStablefordFamily,
   modeCollapsesToTeamCard,
 } from '../../../../lib/scoring/modes/types';
+import {
+  wolfPointsBeforeHole,
+  wolfRotationRule,
+} from '../../../../lib/scoring/modes/wolfTurn';
 import { kickerHeader } from '../components/KickerHeader';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { FlightRow } from '../components/hole/FlightRow';
@@ -130,7 +134,7 @@ import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { useGivenUpTeeShotCount } from '../lib/useGivenUpTeeShotCount';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { setSunlight, useSunlight } from '../lib/sunlight';
-import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
+import { wolfHoleState, wolfStake, wolfTurnFromEngine } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
@@ -478,11 +482,11 @@ function HoleView({
 
   const isWolf = mode === 'wolf';
   const isBingoBangoBongo = mode === 'bingo_bango_bongo';
-  // Trailing-wolf (hull R+1..18) er «den som ligger sist», og det tallet er
-  // motorens. Uten valgene svarer adapteren `missing-choices`, og da faller
-  // rotasjonen tilbake på slot-rekkefølgen — samme som webben gjør når
-  // `pointsByUser` er `undefined`.
+  // #2314: ulven på hullet er motorens (`wolfTurnFromEngine`), så appen,
+  // nettsiden og tavla viser samme ulv. Uten valgene svarer adapteren
+  // `missing-choices`, og da faller regelen tilbake på poengene vi har.
   const wolfOutcome = isWolf ? computeGameLeaderboard(bundle, scores, extras) : null;
+  const wolfResult = wolfOutcome?.ok ? wolfOutcome.result : null;
   const wolf = isWolf
     ? wolfHoleState({
         holeNumber,
@@ -490,15 +494,17 @@ function HoleView({
         gameStatus: bundle.game.status,
         players: bundle.players,
         choices: extras.wolfChoices,
-        pointsByUser: wolfPointsByUser(
-          wolfOutcome?.ok ? wolfOutcome.result : null,
+        // Stillingen før hullet: det er den regelen ser.
+        pointsByUser: wolfPointsBeforeHole(
+          wolfResult?.kind === 'wolf' ? wolfResult.holes : undefined,
+          holeNumber,
         ),
+        engineTurn: wolfTurnFromEngine(wolfResult, holeNumber),
+        rule: wolfRotationRule(bundle.game.modeConfig),
         // #2313/#2314: valget ganger gevinsten med innsatsen, men i en blind
         // runde som pågår røper innsatsen et delt hull, så der står ingen tall.
         hideNumbers: hideNetto,
-        stake: hideNetto
-          ? 1
-          : wolfStake(wolfOutcome?.ok ? wolfOutcome.result : null, holeNumber),
+        stake: hideNetto ? 1 : wolfStake(wolfResult, holeNumber),
       })
     : null;
 

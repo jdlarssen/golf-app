@@ -27,6 +27,7 @@ import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
 import type { StampPlayer } from '../../../../lib/scorecard/scorecardStamp';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { WolfRotationRule } from '../../../../lib/scoring/modes/wolfTurn';
 import { wolfLinearHolesForSlot } from '../../../../lib/wolf/wolfLinearHolesForSlot';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
@@ -303,8 +304,9 @@ export function shouldConfirmParticipation(
  * motsatt av sant: wolf er alltid én gruppe.
  *
  *  - **Wolf:** plassen sier hvilke hull du er Wolf på, så det er det den sier.
- *    Bare den faste delen av rotasjonen — trailing-hullene avgjøres av
- *    stillingen og annonseres av `WolfChoiceCard` når runden er der.
+ *    Bare den faste delen av rotasjonen — de siste hullene kan avgjøres av
+ *    stillingen og annonseres av `WolfChoiceCard` når runden er der. Hvor den
+ *    faste delen slutter, avhenger av spillets regel (`wolfRule`, #2314).
  *  - **Round robin:** ingen merkelapp. Rekkefølgen er rent kosmetisk for
  *    poengene, og nettsiden viser heller ingenting. Paritet, ikke utelatelse.
  *  - **Matchplay (#1880):** `team_number` er en side i duellen, så det står
@@ -323,9 +325,13 @@ export function rosterMarks(
   player: BundlePlayer,
   gameMode: GameMode,
   players: readonly BundlePlayer[],
+  wolfRule: WolfRotationRule = 'trailing',
 ): string[] {
   const status = rosterStatus(player, players);
-  return [...rosterPlacementMarks(player, gameMode, players), ...(status ? [status] : [])];
+  return [
+    ...rosterPlacementMarks(player, gameMode, players, wolfRule),
+    ...(status ? [status] : []),
+  ];
 }
 
 /**
@@ -336,6 +342,8 @@ export function rosterPlacementMarks(
   player: BundlePlayer,
   gameMode: GameMode,
   players: readonly BundlePlayer[],
+  /** Spillets wolf-regel (`wolfRotationRule(game.modeConfig)`, #2314). */
+  wolfRule: WolfRotationRule = 'trailing',
 ): string[] {
   const marks: string[] = [];
 
@@ -353,6 +361,7 @@ export function rosterPlacementMarks(
     const holes = wolfLinearHolesForSlot(
       player.teamNumber,
       wolfRotationPlayers(players).length,
+      wolfRule,
     );
     if (holes.length > 0) {
       marks.push(`Wolf på hull ${formatNameList(holes.map(String))}`);
