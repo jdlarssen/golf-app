@@ -303,13 +303,17 @@ export function wolfHoleState(args: {
           .map((entry) => {
             const name = nameOf(entry.userId) ?? 'Ukjent spiller';
             const place = showStandings ? standings?.get(entry.userId) : undefined;
+            // Etiketten erstatter knappens innhold for VoiceOver, så gevinsten
+            // må med. Den er `null` i en blind runde, og da lekker ingen tall.
+            const subtitle = choiceTextsFor(payout, stake).partnerSubtitle;
+            const label = place
+              ? `Partner: ${name}, ${place.rank}. plass, ${place.points} poeng`
+              : `Partner: ${name}`;
             return {
               userId: entry.userId,
               name,
               standing: place ? `${place.rank}. · ${place.points} p` : null,
-              accessibilityLabel: place
-                ? `Partner: ${name}, ${place.rank}. plass, ${place.points} poeng`
-                : `Partner: ${name}`,
+              accessibilityLabel: subtitle ? `${label}. ${subtitle}` : label,
             };
           })
       : [],

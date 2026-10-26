@@ -1,6 +1,7 @@
 // #2314 — Type C: stripa tegner kolonnene `wolfOrderStrip` regnet ut, og
 // regel-linja bare når den finnes. Regnestykket selv står i wolfHole.test.ts.
 import { render, screen } from '@testing-library/react-native';
+import { SUNLIGHT_THEME, ThemeScope } from '../../theme';
 import { WolfOrderStrip } from './WolfOrderStrip';
 
 describe('WolfOrderStrip', () => {
@@ -49,5 +50,28 @@ describe('WolfOrderStrip', () => {
       />,
     );
     expect(screen.queryByTestId('wolf-order-rule')).toBeNull();
+  });
+
+  // #2252: i sollys er flaten hvit og kantene svarte, så eget hull fylles.
+  it('fyller eget hull i sollys', async () => {
+    await render(
+      <ThemeScope theme={SUNLIGHT_THEME}>
+        <WolfOrderStrip
+          strip={{
+            columns: [
+              { hole: 7, label: 'Deg', isMine: true, accessibilityLabel: 'Hull 7: Deg' },
+              { hole: 8, label: 'Ola', isMine: false, accessibilityLabel: 'Hull 8: Ola' },
+            ],
+            ruleLine: null,
+          }}
+        />
+      </ThemeScope>,
+    );
+    expect(screen.getByTestId('wolf-order-7')).toHaveStyle({
+      backgroundColor: SUNLIGHT_THEME.colors.primary,
+    });
+    expect(screen.getByTestId('wolf-order-8')).toHaveStyle({
+      backgroundColor: SUNLIGHT_THEME.colors.bg,
+    });
   });
 });

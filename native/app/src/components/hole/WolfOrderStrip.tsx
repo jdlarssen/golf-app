@@ -18,7 +18,11 @@ export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
         Wolf-rekkefølgen
       </Text>
       <View style={styles.row} accessibilityRole="list">
-        {strip.columns.map((column) => (
+        {strip.columns.map((column) => {
+          // I sollys er flaten hvit og kantene svarte, så eget hull er en fylt
+          // flate der, som valget i Bingo Bango Bongo (#2252).
+          const filled = column.isMine && hole.selectedFill;
+          return (
           <View
             key={column.hole}
             accessible
@@ -26,22 +30,38 @@ export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
             style={[
               styles.cell,
               {
-                backgroundColor: column.isMine ? colors.primarySoft : colors.bg,
+                backgroundColor: filled
+                  ? colors.primary
+                  : column.isMine
+                    ? colors.primarySoft
+                    : colors.bg,
                 borderColor: column.isMine ? colors.primary : colors.border,
                 borderWidth: hole.borderW,
               },
             ]}
             testID={`wolf-order-${column.hole}`}
           >
-            <Text style={[styles.hole, { color: colors.muted }]}>{`Hull ${column.hole}`}</Text>
+            <Text style={[styles.hole, { color: filled ? colors.onPrimary : colors.muted }]}>
+              {`Hull ${column.hole}`}
+            </Text>
             <Text
-              style={[styles.name, { color: column.isMine ? colors.primary : colors.text }]}
+              style={[
+                styles.name,
+                {
+                  color: filled
+                    ? colors.onPrimary
+                    : column.isMine
+                      ? colors.primary
+                      : colors.text,
+                },
+              ]}
               numberOfLines={1}
             >
               {column.label}
             </Text>
           </View>
-        ))}
+          );
+        })}
       </View>
       {strip.ruleLine ? (
         <Text style={[ui.muted, styles.rule]} testID="wolf-order-rule">
