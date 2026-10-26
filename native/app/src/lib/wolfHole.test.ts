@@ -8,10 +8,13 @@
 // Rotasjonen selv er dekket i `lib/wolf/wolfRotation.test.ts` (webbens suite).
 // Det som testes her er DET APPEN LEGGER OPPÅ: hvilke spillere som utgjør
 // rotasjonen, hva badgen sier, og når valg-knappene i det hele tatt finnes.
+import source from '../../../../messages/no.json';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer } from '../data/gameBundle';
 import {
   WOLF_CHOICES_UNAVAILABLE,
+  WOLF_FLOW_HINT,
+  WOLF_FLOW_STEPS,
   wolfHoleState,
   wolfPointsByUser,
   wolfRotationPlayers,
@@ -537,5 +540,28 @@ describe('wolfOrderStrip — Wolf-rekkefølgen (#2314)', () => {
     ['færre enn tre i rotasjonen', { players: FOUR.slice(0, 2) }],
   ])('ingen stripe i %s', (_label, overrides) => {
     expect(stripFor(overrides)).toBeNull();
+  });
+});
+
+// #2314: stegene og linjene i appen er nettsidens, ord for ord.
+describe('gangen er lik på nettet og i appen', () => {
+  const web = source.holes.wolf;
+  it('de fire stegene og hinten', () => {
+    expect(WOLF_FLOW_STEPS).toEqual([web.flowStep1, web.flowStep2, web.flowStep3, web.flowStep4]);
+    expect(WOLF_FLOW_HINT).toBe(web.flowHint);
+  });
+  it('gang-linja og catch-up-linjene', () => {
+    expect(stateFor({ myUserId: 'p2' }).flowLine).toBe(web.flowLine.replace('{name}', 'Per Persen'));
+    const base = {
+      holeNumber: 17,
+      engineTurn: { userId: 'p2', catchUp: true },
+      pointsByUser: new Map([['p1', 9], ['p2', 4], ['p3', 6], ['p4', 6]]),
+    };
+    expect(stateFor({ ...base, myUserId: 'p2' }).catchUpLine).toBe(
+      web.catchUpLineSelf.replace('{gap}', '5'),
+    );
+    expect(stateFor({ ...base, myUserId: 'p3' }).catchUpLine).toBe(
+      web.catchUpLineOther.replace('{name}', 'Ada Aas').replace('{gap}', '5'),
+    );
   });
 });
