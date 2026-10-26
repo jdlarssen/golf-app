@@ -56,4 +56,15 @@ describe('wolfLinearHolesForSlot', () => {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
     ]);
   });
+
+  // #2314: nye spill har catch-up fra hull 16 med tre spillere, så den faste
+  // delen slutter på 15 der. Fire og fem spillere er som før.
+  it.each([
+    ['n=3 slot 1 — catch-up fra 16', 1, 3, [1, 4, 7, 10, 13]],
+    ['n=3 slot 3 — hull 18 er ikke fast lenger', 3, 3, [3, 6, 9, 12, 15]],
+    ['n=4 slot 4 — som før', 4, 4, [4, 8, 12, 16]],
+    ['n=5 slot 5 — som før', 5, 5, [5, 10, 15]],
+  ])('catch_up: %s', (_name, slot, n, expected) => {
+    expect(wolfLinearHolesForSlot(slot, n, 'catch_up')).toEqual(expected);
+  });
 });

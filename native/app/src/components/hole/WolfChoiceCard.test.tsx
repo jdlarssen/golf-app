@@ -24,6 +24,7 @@ const setWolfChoiceMock = setWolfChoice as jest.MockedFunction<typeof setWolfCho
 
 const IM_WOLF: WolfHoleState = {
   wolfUserId: 'p1',
+  catchUp: false,
   iAmWolf: true,
   choice: null,
   badgeText: 'Du er Wolf på dette hullet',

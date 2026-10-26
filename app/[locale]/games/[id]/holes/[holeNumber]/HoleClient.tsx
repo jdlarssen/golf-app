@@ -183,6 +183,8 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     wolfChoices: wolfChoicesInitial,
     wolfPointsByUser,
     wolfStake,
+    wolfTurn,
+    wolfRule,
     skinsAtStake,
     skinsCarriedIn,
     bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
@@ -301,6 +303,8 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     wolfChoicesInitial,
     wolfPointsByUser,
     wolfStake,
+    wolfTurn,
+    wolfRule,
     hideNetto,
   });
   const bingoBangoBongo = useBingoBangoBongoHoles({

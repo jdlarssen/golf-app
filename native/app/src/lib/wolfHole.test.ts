@@ -16,6 +16,7 @@ import {
   wolfPointsByUser,
   wolfRotationPlayers,
   wolfStake,
+  wolfTurnFromEngine,
 } from './wolfHole';
 
 function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
@@ -333,5 +334,62 @@ describe('wolfHoleState — badge og valg-knapper', () => {
     expect(unknown.wolfUserId).toBeNull();
     expect(unknown.iAmWolf).toBe(false);
     expect(unknown.showChoiceUi).toBe(false);
+  });
+});
+
+// #2314: ulven på hullet kommer fra motorens rad, så appen, nettsiden og
+// tavla alltid viser samme ulv. Rotasjonen er bare reserve når motoren mangler.
+describe('ulven fra motoren (#2314)', () => {
+  const engineResult = {
+    kind: 'wolf',
+    scoring: 'net',
+    rotation: 'catch_up',
+    holes: [
+      { holeNumber: 17, wolfUserId: 'p3', catchUp: true, pointsByPlayer: {} },
+      { holeNumber: 18, wolfUserId: 'p4', catchUp: false, pointsByPlayer: {} },
+    ],
+    players: [],
+  } as unknown as ModeResult;
+
+  it('wolfTurnFromEngine leser ulven og catch-up fra hullets rad', () => {
+    expect(wolfTurnFromEngine(engineResult, 17)).toEqual({ userId: 'p3', catchUp: true });
+    expect(wolfTurnFromEngine(engineResult, 18)).toEqual({ userId: 'p4', catchUp: false });
+    expect(wolfTurnFromEngine(engineResult, 5)).toBeNull();
+    expect(wolfTurnFromEngine(null, 17)).toBeNull();
+  });
+
+  it('motorens ulv vinner over rotasjonen', () => {
+    const state = stateFor({
+      holeNumber: 17,
+      myUserId: 'p3',
+      engineTurn: { userId: 'p3', catchUp: true },
+    });
+    expect(state.wolfUserId).toBe('p3');
+    expect(state.iAmWolf).toBe(true);
+    expect(state.catchUp).toBe(true);
+  });
+
+  it('en lagret rad vinner, og beholder catch-up når det er samme spiller', () => {
+    const choice = { holeNumber: 17, wolfUserId: 'p3', choice: 'lone' as const, partnerUserId: null };
+    expect(
+      stateFor({ holeNumber: 17, choices: [choice], engineTurn: { userId: 'p3', catchUp: true } }),
+    ).toMatchObject({ wolfUserId: 'p3', catchUp: true });
+    expect(
+      stateFor({ holeNumber: 17, choices: [choice], engineTurn: { userId: 'p2', catchUp: true } }),
+    ).toMatchObject({ wolfUserId: 'p3', catchUp: false });
+  });
+
+  it('uten motoren faller den tilbake på regelen', () => {
+    const points = new Map([['p1', 8], ['p2', 4], ['p3', 4], ['p4', 4]]);
+    expect(
+      stateFor({ holeNumber: 17, pointsByUser: points, engineTurn: null, rule: 'catch_up' }),
+    ).toMatchObject({ wolfUserId: 'p2', catchUp: true });
+    expect(
+      stateFor({ holeNumber: 17, pointsByUser: new Map([['p1', 3]]), engineTurn: null, rule: 'catch_up' }),
+    ).toMatchObject({ wolfUserId: 'p1', catchUp: false });
+    expect(stateFor({ holeNumber: 17, pointsByUser: points, engineTurn: null })).toMatchObject({
+      wolfUserId: 'p2',
+      catchUp: false,
+    });
   });
 });

@@ -77,12 +77,14 @@ function contextFor(opts: {
   isWolf?: boolean;
   scores: ScoringHoleScore[];
   scoresError?: Error;
+  holeNumber?: number;
+  game?: GameForHole;
 }) {
   return computeWolfContext({
     isWolf: opts.isWolf ?? true,
     gameId: 'g-wolf',
-    holeNumber: 2,
-    game: WOLF_GAME,
+    holeNumber: opts.holeNumber ?? 2,
+    game: opts.game ?? WOLF_GAME,
     allPlayers: playerRows(fourPlayers()),
     unknownPlayer: 'Ukjent spiller',
     wolfChoicesData: [HOLE_1_LONE],
@@ -112,5 +114,43 @@ describe('computeWolfContext — innsatsen på hullet (#2313)', () => {
     ],
   ])('%s', (_name, opts, expected) => {
     expect(contextFor(opts).stake).toBe(expected);
+  });
+});
+
+// #2314: hvem som er ulv på hullet, kommer fra motorens rad i samme kjøring,
+// så nettsiden aldri låser en annen ulv enn den tavla regner med.
+describe('computeWolfContext — ulven på hullet (#2314)', () => {
+  const CATCH_UP_GAME = {
+    ...WOLF_GAME,
+    mode_config: { ...WOLF_GAME.mode_config, wolf_rotation: 'catch_up' },
+  } as unknown as GameForHole;
+
+  it('gir motorens ulv og catch-up på hull 17 i et nytt spill', () => {
+    // p1 vinner hull 1 alene (+4): p2 ligger 4 bak og er sist (lavest slot).
+    const ctx = contextFor({ scores: WON_HOLE_1, holeNumber: 17, game: CATCH_UP_GAME });
+    expect(ctx.turn).toEqual({ userId: 'p2', catchUp: true });
+    expect(ctx.rule).toBe('catch_up');
+  });
+
+  it('et gammelt spill gir den som ligger sist, uten catch-up-merket', () => {
+    const ctx = contextFor({ scores: WON_HOLE_1, holeNumber: 17 });
+    expect(ctx.turn).toEqual({ userId: 'p2', catchUp: false });
+    expect(ctx.rule).toBe('trailing');
+  });
+
+  it('poengene er stillingen før hullet, ikke etter', () => {
+    expect(contextFor({ scores: WON_HOLE_1, holeNumber: 1 }).pointsByUser).toEqual({});
+    expect(contextFor({ scores: WON_HOLE_1, holeNumber: 2 }).pointsByUser).toEqual({ p1: 4 });
+  });
+
+  it('uten motoren finnes ingen ulv fra motoren, men regelen er med', () => {
+    const ctx = contextFor({
+      scores: WON_HOLE_1,
+      scoresError: new Error('read failed'),
+      holeNumber: 17,
+      game: CATCH_UP_GAME,
+    });
+    expect(ctx.turn).toBeUndefined();
+    expect(ctx.rule).toBe('catch_up');
   });
 });

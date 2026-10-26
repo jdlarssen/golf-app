@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   determineWolfForHole,
+  resolveHoleWolf,
   type WolfRotationPlayer,
 } from '@/lib/wolf/wolfRotation';
 
@@ -160,5 +161,61 @@ describe('determineWolfForHole — 5 spillere (#465)', () => {
       ['u5', 7],
     ]);
     expect(determineWolfForHole(16, PLAYERS5, points)).toBe('u2');
+  });
+});
+
+describe('determineWolfForHole — catch-up-regelen (#2314)', () => {
+  it('sist med minst n poeng avstand blir ulv på hull 17', () => {
+    const points = new Map([['u1', 8], ['u2', 4], ['u3', 4], ['u4', 4]]);
+    expect(determineWolfForHole(17, PLAYERS, points, undefined, 'catch_up')).toBe('u2');
+  });
+
+  it('under n poeng avstand går rundgangen videre', () => {
+    const points = new Map([['u1', 7], ['u2', 4], ['u3', 4], ['u4', 4]]);
+    expect(determineWolfForHole(17, PLAYERS, points, undefined, 'catch_up')).toBe('u1');
+    expect(determineWolfForHole(18, PLAYERS, points, undefined, 'catch_up')).toBe('u2');
+  });
+
+  it('uten regel er det dagens trailing-regel', () => {
+    const points = new Map([['u1', 7], ['u2', 4], ['u3', 4], ['u4', 4]]);
+    expect(determineWolfForHole(17, PLAYERS, points)).toBe('u2');
+  });
+});
+
+describe('resolveHoleWolf — hvem hull-sidene viser (#2314)', () => {
+  const base = {
+    holeNumber: 17,
+    players: PLAYERS,
+    pointsByUser: new Map([['u1', 8], ['u2', 4], ['u3', 4], ['u4', 4]]),
+    storedWolfUserId: undefined,
+    rule: 'catch_up' as const,
+  };
+
+  it('motorens ulv brukes når den finnes', () => {
+    expect(resolveHoleWolf({ ...base, engineTurn: { userId: 'u4', catchUp: false } })).toEqual({
+      userId: 'u4',
+      catchUp: false,
+    });
+  });
+
+  it('en lagret rad vinner over motoren, og beholder merket når det er samme spiller', () => {
+    const engineTurn = { userId: 'u2', catchUp: true };
+    expect(resolveHoleWolf({ ...base, engineTurn, storedWolfUserId: 'u3' })).toEqual({
+      userId: 'u3',
+      catchUp: false,
+    });
+    expect(resolveHoleWolf({ ...base, engineTurn, storedWolfUserId: 'u2' })).toEqual(engineTurn);
+    expect(resolveHoleWolf({ ...base, engineTurn, storedWolfUserId: 'ukjent' })).toEqual(engineTurn);
+  });
+
+  it('uten motoren regner reserven selv, med spillets regel', () => {
+    expect(resolveHoleWolf({ ...base, engineTurn: undefined })).toEqual({ userId: 'u2', catchUp: true });
+    expect(
+      resolveHoleWolf({ ...base, engineTurn: null, pointsByUser: new Map([['u1', 3]]) }),
+    ).toEqual({ userId: 'u1', catchUp: false });
+    expect(resolveHoleWolf({ ...base, engineTurn: null, storedWolfUserId: 'u3' })).toEqual({
+      userId: 'u3',
+      catchUp: false,
+    });
   });
 });

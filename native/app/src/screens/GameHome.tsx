@@ -42,6 +42,10 @@ import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
+import {
+  wolfRotationRule,
+  type WolfRotationRule,
+} from '../../../../lib/scoring/modes/wolfTurn';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
@@ -356,6 +360,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
                 isMe={player.userId === userId}
                 gameMode={mode}
                 players={bundle.players}
+                wolfRule={wolfRotationRule(game.modeConfig)}
               />
             ))}
           </View>
@@ -443,15 +448,18 @@ export function RosterRow({
   isMe,
   gameMode,
   players,
+  wolfRule = 'trailing',
 }: {
   player: BundlePlayer;
   isMe: boolean;
   gameMode: GameMode;
   /** Hele rosteret — `rosterMarks` teller selv n-en wolf-rotasjonen går over. */
   players: readonly BundlePlayer[];
+  /** Spillets wolf-regel: hvor den faste rundgangen slutter (#2314). */
+  wolfRule?: WolfRotationRule;
 }) {
   const { colors, ui } = useTheme();
-  const marks = rosterPlacementMarks(player, gameMode, players);
+  const marks = rosterPlacementMarks(player, gameMode, players, wolfRule);
   const kind = rosterStatusKind(player);
   const status = rosterStatus(player, players);
   const checked = kind === 'submitted' || kind === 'approved';
