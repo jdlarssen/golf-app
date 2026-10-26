@@ -23,12 +23,12 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   som starter med `☀️ Morgenbrief`); rapporter kun endringer etter dens
   tidsstempel. Første brief noensinne: siste 24 timer.
 - **Titler er ikke nok (eierbeslutning 2026-07-28, #1408):** hver sak i gruppene
-  «Trenger deg nå», «Bygges nå» og «Skjedde i natt» følges av
+  «Trenger deg nå» og «Bygges nå» følges av
   en innrykket `↳`-detaljlinje på 1–3 setninger produktspråk: hva saken betyr i
   appen, og for handlingslinjer hva som skjer ved tapp. Hent teksten fra
   funksjonell-setninger (kontrakt-json, closing-kommentarer, CHANGELOG) der de
   finnes; skriv den ellers selv i samme tone («Du kan nå …»). Aldri filnavn,
-  branch-navn eller CI-sjargong i ↳-linja. «Loop-helse» er unntatt (telemetri).
+  branch-navn eller CI-sjargong i ↳-linja. «Skjedde i går» og «⚠️ Noe er galt» har ingen ↳-linjer (se «Kort format»).
 - **Auto-mergede PR-er er ikke gjøremål (#1406).** PR-kortet
   (`docs/loops/discord-pr-kort.md`) merger selv grønne PR-er uten produktvalg. En
   «Godkjenn PR #M»-linje under «Trenger deg nå» gjelder derfor KUN PR-er som
@@ -37,12 +37,12 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   i `docs/loops/discord-pr-kort.md` steg 2, ikke gjentatt her: #1623 kom av at tre
   hjem beskrev markøren ulikt), aldri-liste-fil, eller bruker-synlig uten
   `staging-verified`. En PR som allerede
-  er auto-merget rapporteres under «Skjedde i natt» (verifisert merge), aldri som
+  er auto-merget rapporteres under «Skjedde i går» (verifisert merge), aldri som
   et åpent gjøremål.
 - **Branch protection dekker merge-porten (#1477, fra 2026-08-07).** Main nekter
   server-side enhver merge uten grønn `verify` + `e2e` + `scan` på head-SHA-en
   (docs-only-PR-er dekkes av no-op-tvillingene i `ci-docs-noop.yml`). En PR som
-  ER merget har derfor beviselig hatt grønne porter — «Skjedde i natt»-
+  ER merget har derfor beviselig hatt grønne porter — «Skjedde i går»-
   verifiseringen av en merge trenger bare bekrefte selve mergen, ikke re-lese
   check-rollupen. For ÅPNE PR-er gjelder `gh pr checks`-plikten fortsatt: et
   tomt/foreldet rollup betyr at checks aldri kjørte (#1469, intermitterende)
@@ -59,6 +59,9 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 ```
 ☀️ Morgenbrief <dato>
 
+**⚠️ Noe er galt:** (vises bare når noe faktisk er galt)
+- <én linje per feil: hva som er galt og hva eieren skal gjøre, i produktspråk — f.eks. «Prod-vakta har ikke kjørt på 3 døgn — si fra til orkestratoren»>
+
 **Trenger deg nå:**
 - Godkjenn PR #M — <issue-tittel>; kun knapp-kort-PR-er (produktvalg / aldri-liste / mangler staging-bevis), gates grønne[, e2e grønn / needs-manual-qa: <flyt>] → <lenke>
   ↳ <1–3 setninger produktspråk: hva endringen gjør i appen, og hva som skjer når du godkjenner>
@@ -72,16 +75,16 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   ↳ <1–2 setninger: hva du/spillerne kan gjøre i appen når den er bygget>
 - 📝 #N — utredes (kontraktutkast underveis) → <lenke>
 
-**Skjedde i natt/i går:**
-- <merget PR / lukket issue / CI-vakt-fiks — kun verifiserte fakta, med lenke>
-  ↳ <1–2 setninger: hva som er annerledes i appen nå — «Du kan nå …» / «Når X skjer, …»; ingen synlig endring → si det ærlig («ingen synlig endring — <hva som ble ryddet, i produktspråk>»)>
-- 🔧 #N — <funksjonell> (bygget av orkestratoren; PR-en er merget)
-
-**Loop-helse:**
-- Orkestratoren: <antall issues i Fase «Bygges» på tavla> i bygg, <antall> utredes, <antall PR-er fra claude/*-grener som venter på deg> venter på deg · Dok-avstemmeren: <heartbeat-status hvis due> · CI-vakta: <antall CI-vakt-issues åpne; liveness sees på routines-siden>
+**Skjedde i går:**
+- <høyst tre linjer, bare det eieren eller spillerne merker i appen: «Du kan nå …» / «Når X skjer, …», med lenke. Én linje hver, ingen ↳>
+- + <N> interne endringer (ingen synlig forskjell) → <lenke til lukkede issues siste døgn>
 ```
 
-Ingenting å melde i en gruppe → utelat gruppa. Alle fem tomme → tom-natt-linja.
+Ingenting å melde i en gruppe → utelat gruppa. Alle grupper tomme → tom-natt-linja.
+
+**Kort format (eierbeslutning 2026-10-26):** «Skjedde i går» og den gamle «Loop-helse» ble for mye tekst. Eieren skal bare se det han må vite:
+- **Skjedde i går:** høyst tre linjer med synlige endringer, uten ↳-linjer. Resten samles i én telle-linje. Interne endringer (CI, hooks, dok, refaktor) nevnes aldri én for én.
+- **Loop-helse finnes ikke lenger som fast gruppe.** Alt som står under «Heartbeat-vakta» sjekkes som før, men vises bare når noe er galt: da i gruppa «⚠️ Noe er galt», øverst i briefen, én linje per feil med hva eieren skal gjøre. Er alt i orden, står det ingenting. Tallene for orkestratoren (i bygg, utredes, venter) står allerede i «Bygges nå» og «Trenger deg nå».
 
 ## Bygges nå — orkestratoren (fra 2026-09-15)
 
@@ -147,7 +150,7 @@ fortsatt er åpent.
   savn dem aldri, og opprett aldri infra-issue for dem.
 - **Orkestratoren poster ikke heartbeat** (den kjører på eierens Mac, ikke som
   routine). Helsen leses av tavla: et kort i Fase «Bygges» med Startdato eldre
-  enn 2 døgn og ingen åpen PR fra `claude/<N>-*` → linje i Loop-helse («#N har
+  enn 2 døgn og ingen åpen PR fra `claude/<N>-*` → linje i «⚠️ Noe er galt» («#N har
   stått i bygg i X døgn uten PR — spør orkestratoren»). Ingen kort i Bygges er
   ikke en feil.
 - **Mangler én kjøring:** varsellinje øverst i briefen («⚠️ Dok-avstemmeren la
@@ -157,13 +160,11 @@ fortsatt er åpent.
   issue med samme tittel.
 - CI-vakta poster ikke heartbeat i v1 (24/døgn er støy) — dens helse måles
   indirekte: åpne `CI-vakt:`-issues eldre enn 24 t uten aktivitet flagges.
-- **Prod-vakta (Actions-cron, ikke routine):** Loop-helse-linja skal oppgi
-  siste kjøring og utfall (`gh run list --workflow prod-vakt.yml --limit 1`).
+- **Prod-vakta (Actions-cron, ikke routine):** Sjekk siste kjøring og utfall (`gh run list --workflow prod-vakt.yml --limit 1`); vis det bare når det er galt.
   Siste kjøring eldre enn 48 timer → varsellinje øverst («⚠️ Prod-vakta har
   ikke kjørt på X timer — sjekk Actions»). Stillhet fra en cron er aldri bevis
   på at den lever («grønn kan bety kjørte aldri»-klassen).
-- **Tavle-arkivet (Actions-cron, ikke routine, #1996):** Loop-helse-linja skal
-  oppgi siste kjøring og utfall (`gh run list --workflow tavle-arkiv.yml --limit 1`).
+- **Tavle-arkivet (Actions-cron, ikke routine, #1996):** Sjekk siste kjøring og utfall (`gh run list --workflow tavle-arkiv.yml --limit 1`); vis det bare når det er galt.
   Cron-en går 1.–3. i måneden, så siste kjøring eldre enn 40 døgn → varsellinje
   øverst («⚠️ Tavle-arkivet har ikke kjørt på X døgn — sjekk Actions»). Rød
   siste kjøring → egen linje; varsel-issuet «CI-vakt: tavle-arkiv-workflowen
@@ -174,7 +175,7 @@ fortsatt er åpent.
 GitHub varsler aldri eieren om aktivitet under hans egen identitet — Discord
 ER derfor eierens varslings- og svarkanal. Speilingen skjer ETTER at
 kommentaren på #1110 er postet (den er alltid primærartefakten), og feil i
-Discord-postingen noteres i neste briefs Loop-helse — aldri la det stoppe
+Discord-postingen noteres i neste briefs «⚠️ Noe er galt» — aldri la det stoppe
 briefen.
 
 **Med bot-identitet (`DISCORD_BOT_TOKEN` + `DISCORD_CHANNEL_ID` i miljøet):**
@@ -209,7 +210,7 @@ som før (vanlige webhooks kan ikke sende komponenter).
 **Mangler begge variablene, ELLER feiler Discord-postingen** (token utløpt/rotert,
 API nede): dette er IKKE en stille skip — Discord er eierens kontroll-kanal, og en
 manglende speiling betyr at han mister knappene uten å vite hvorfor. Rapporter det
-som en linje i **Loop-helse**: «⚠️ Discord-speiling feilet: \<grunn\> — sjekk
+som en linje i **«⚠️ Noe er galt»**: «⚠️ Discord-speiling feilet: \<grunn\> — sjekk
 `DISCORD_BOT_TOKEN`/`DISCORD_CHANNEL_ID`». Brief-kommentaren på #1110 er uansett
 postet (primærartefakten), så eieren kan lese den der.
 
@@ -234,5 +235,5 @@ og rekkefølgen er alltid kopi → merge → slett:
    failure-steget filer varsel-issue. Issue-bodyene røres aldri.
 
 Briefen melder derfor ikke lenger «due» for arkivering; den rapporterer
-heartbeat på workflowen under Loop-helse (se over), og venter ikke på eier-merge
+heartbeat på workflowen under «⚠️ Noe er galt» (se over), og venter ikke på eier-merge
 av arkiv-PR-en. Briefen lenker til arkivfilene når den viser til eldre hendelser.
