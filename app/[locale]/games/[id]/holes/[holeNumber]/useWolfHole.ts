@@ -22,7 +22,11 @@ import {
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
 import { resolveHoleWolf } from '@/lib/wolf/wolfRotation';
-import type { WolfRotationRule, WolfTurn } from '@/lib/scoring/modes/wolfTurn';
+import {
+  wolfCatchUpGap,
+  type WolfRotationRule,
+  type WolfTurn,
+} from '@/lib/scoring/modes/wolfTurn';
 import { wolfPayout, type WolfPayout } from '@/lib/wolf/wolfPayout';
 
 /**
@@ -50,6 +54,10 @@ export type WolfModalProps = {
   payout: WolfPayout | null;
   /** Innsatsen på hullet (1 = vanlig). Alltid 1 i et reveal-spill som pågår. */
   stake: number;
+  /** #2314: catch-up-regelen ga hullet til meg. */
+  catchUp: boolean;
+  /** Avstanden til lederen før hullet. Null i et reveal-spill som pågår. */
+  catchUpGap: number | null;
   onClose: () => void;
   onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => void;
 };
@@ -57,6 +65,15 @@ export type WolfModalProps = {
 export type WolfHoleState = {
   /** Tekst til modus-kontekstlinja over score-kortene. Null = ingen badge. */
   badgeText: string | null;
+  /** #2314: catch-up-regelen ga hullet til den som ligger sist. */
+  catchUp: boolean;
+  /**
+   * Linja under badgen på et catch-up-hull for de andre i flighten. Null for
+   * ulven selv (den står i vinduet), uten catch-up, og i et reveal-spill.
+   */
+  catchUpLine: string | null;
+  /** Gangen for de andre i flighten til valget er lagret. Null ellers. */
+  flowLine: string | null;
   /** Null når jeg ikke er Wolf på hullet — da rendres modalen ikke i det hele tatt. */
   modal: WolfModalProps | null;
 };
@@ -251,6 +268,24 @@ export function useWolfHole(args: {
     return null;
   }
 
+  // #2314: catch-up og gangen. Avstanden er stillingen før hullet; i et
+  // reveal-spill som pågår står merket uten tall.
+  const catchUp = holeTurn?.catchUp ?? false;
+  const catchUpGap =
+    catchUp && !hideNetto ? wolfCatchUpGap(wolfPlayers ?? [], pointsByUserMap) : null;
+  const catchUpLine =
+    catchUpGap !== null && !iAmWolfForHole && wolfBadgePlayerName
+      ? t('wolf.catchUpLineOther', { name: wolfBadgePlayerName, gap: catchUpGap })
+      : null;
+  const flowLine =
+    isWolf &&
+    !iAmWolfForHole &&
+    !currentHoleWolfChoice &&
+    gameStatus === 'active' &&
+    wolfBadgePlayerName
+      ? t('wolf.flowLine', { name: wolfBadgePlayerName })
+      : null;
+
   // Modal-prop: hvilke andre spillere (n-1) skal vises som partner-alternativer?
   const otherWolfPlayers = (wolfPlayers ?? [])
     .filter((p) => p.userId !== myUserId)
@@ -264,6 +299,8 @@ export function useWolfHole(args: {
           otherPlayers: otherWolfPlayers,
           payout,
           stake,
+          catchUp,
+          catchUpGap,
           onClose: () => setModalDismissed(true),
           onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => {
             // The modal calls this after the save committed: show it at once,
@@ -282,5 +319,5 @@ export function useWolfHole(args: {
         }
       : null;
 
-  return { badgeText: resolveBadgeText(), modal };
+  return { badgeText: resolveBadgeText(), catchUp, catchUpLine, flowLine, modal };
 }

@@ -321,6 +321,9 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     myUserId,
     isWolf,
     wolfBadgeText: wolf.badgeText,
+    wolfCatchUp: wolf.catchUp,
+    wolfCatchUpLine: wolf.catchUpLine,
+    wolfFlowLine: wolf.flowLine,
     isSkins,
     skinsAtStake,
     skinsCarriedIn,
@@ -715,6 +718,8 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           otherPlayers={wolf.modal.otherPlayers}
           payout={wolf.modal.payout}
           stake={wolf.modal.stake}
+          catchUp={wolf.modal.catchUp}
+          catchUpGap={wolf.modal.catchUpGap}
           onClose={wolf.modal.onClose}
           onChoiceSaved={wolf.modal.onChoiceSaved}
         />
