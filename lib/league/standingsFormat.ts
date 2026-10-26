@@ -65,3 +65,35 @@ export function formatRoundCell(
     ? formatPoints(raw, formatDecimal)
     : formatNetToPar(raw, formatDecimal);
 }
+
+/**
+ * Which rounds get a column in the table, and which of them is open now
+ * (#1378). A round that has not opened yet has nothing to show, so it gets no
+ * column; open and closed rounds do. The open round is the first in sequence
+ * whose window holds `nowMs`. The caller passes the clock, so the server
+ * decides «now» once and the client never recomputes it.
+ */
+export function tableRounds<T extends { id: string; sequence: number; opensAt: string; closesAt: string }>(
+  rounds: readonly T[],
+  nowMs: number,
+): { shown: T[]; openRoundId: string | null } {
+  const sorted = [...rounds].sort((a, b) => a.sequence - b.sequence);
+  const shown = sorted.filter((r) => nowMs >= new Date(r.opensAt).getTime());
+  const open = shown.find((r) => nowMs <= new Date(r.closesAt).getTime());
+  return { shown, openRoundId: open?.id ?? null };
+}
+
+/**
+ * The table's three groups, in stable order (#1378): the ranked rows, then
+ * those who skipped a closed round under «must play all» (they have played, so
+ * `roundsPlayed > 0`), then those who have not played a round yet.
+ */
+export function splitStandings<R extends { ranked: boolean; roundsPlayed: number }>(
+  rows: readonly R[],
+): { ranked: R[]; notRanked: R[]; notRankedYet: R[] } {
+  return {
+    ranked: rows.filter((r) => r.ranked),
+    notRanked: rows.filter((r) => !r.ranked && r.roundsPlayed > 0),
+    notRankedYet: rows.filter((r) => !r.ranked && r.roundsPlayed === 0),
+  };
+}
