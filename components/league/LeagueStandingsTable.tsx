@@ -29,22 +29,18 @@ function RoundCell({
   pointsBased,
   t,
   locale,
-  open,
 }: {
   cell: LeagueStandingCell | undefined;
   model: string;
   pointsBased: boolean;
   t: ReturnType<typeof useTranslations<'liga.standings'>>;
   locale: AppLocale;
-  open: boolean;
 }) {
   const raw = roundCellValue(cell, model);
-  const tone = open ? ' bg-primary-soft' : '';
   if (!cell || raw === null) {
     return (
       <td
-        data-open-cell={open || undefined}
-        className={`px-0 py-2 text-center font-serif tabular-nums text-xs text-score-unset-fg${tone}`}
+        className="px-0 py-2 text-center font-serif tabular-nums text-xs text-score-unset-fg"
       >
         —
       </td>
@@ -58,11 +54,9 @@ function RoundCell({
 
   return (
     <td
-      data-open-cell={open || undefined}
       className={[
         'px-0 py-2 text-center font-serif tabular-nums text-xs',
         isPenalty ? 'italic text-muted/60' : 'text-text',
-        open ? 'bg-primary-soft' : '',
       ].join(' ')}
       title={
         isFlagged
@@ -102,7 +96,7 @@ export function LeagueStandingsTable({
   bestNCount?: number | null;
   /** #452 Fase 4: stableford-formater viser rå poeng (høyest best) i cellene. */
   pointsBased?: boolean;
-  /** #1378: the round whose window is open now; its column is toned. */
+  /** #1378: the round whose window is open now; its header carries the dot. */
   openRoundId?: string | null;
 }) {
   const t = useTranslations('liga.standings');
@@ -149,8 +143,8 @@ export function LeagueStandingsTable({
     const isFirst = row.rank === 1;
     const isUnranked = !row.ranked;
     // The last row of a block has no line under it: the last ranked row sits right
-    // above a group heading (which draws its own), and the last row of the table ends
-    // the card.
+    // above a group heading (which has none), and the last row of the table ends the
+    // card.
 
     return (
       <tr
@@ -158,7 +152,7 @@ export function LeagueStandingsTable({
         data-testid="liga-standings-row"
         className={[
           'transition-colors',
-          isLast ? '' : 'border-b border-row-divider-warm',
+          isLast ? '' : 'border-b border-border',
           isFirst ? 'rounded-lg' : '',
         ].join(' ')}
         style={
@@ -213,7 +207,6 @@ export function LeagueStandingsTable({
               pointsBased={pointsBased}
               t={t}
               locale={locale}
-              open={r.id === openRoundId}
             />
           );
         })}
@@ -241,10 +234,7 @@ export function LeagueStandingsTable({
                 <th key={r.id} className={`w-[34px] p-0 text-center ${headClass}`}>
                   <div
                     data-testid={open ? 'liga-standings-open-col' : undefined}
-                    className={[
-                      'flex items-center justify-center gap-1 py-2',
-                      open ? 'rounded-t-lg bg-primary-soft' : '',
-                    ].join(' ')}
+                    className="flex items-center justify-center gap-1 py-2"
                   >
                     {open && (
                       <span
@@ -263,7 +253,7 @@ export function LeagueStandingsTable({
           {ranked.map((row, i) => renderRow(row, { isLast: i === ranked.length - 1 }))}
           {groups.map((g) => (
             <Fragment key={g.key}>
-              <tr data-testid={`liga-standings-group-${g.key}`} className="border-b border-row-divider-warm">
+              <tr data-testid={`liga-standings-group-${g.key}`}>
                 <th colSpan={columnCount} scope="colgroup" className={`pb-2 pt-4 text-left ${headClass}`}>
                   {g.label}
                 </th>
