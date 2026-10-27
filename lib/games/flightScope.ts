@@ -259,11 +259,16 @@ export function organizerApprovalRow(
   viewer: { userId: string; isAdmin: boolean },
   cardUserId: string,
 ): OrganizerApprovalRow {
-  if (viewer.isAdmin) return 'can_approve';
   const card = players.find((p) => p.user_id === cardUserId);
-  // #2661: the player who started a simulator flight is not its organiser in
-  // this sense; the marker approves (0220 refuses anyone else's write).
-  if (card?.marker_user_id != null) return 'card_awaits_marker';
+  // #2661: in a simulator flight the marker approves (0220 refuses anyone
+  // else's write). The player who started the flight is not its organiser in
+  // this sense; a global admin may answer in the marker's stead, but never on
+  // a card they own or delivered (`mayApproveAsMarker`).
+  if (card?.marker_user_id != null) {
+    const ownOrDelivered = cardUserId === viewer.userId || card.submitted_by_user_id === viewer.userId;
+    return viewer.isAdmin && !ownOrDelivered ? 'can_approve' : 'card_awaits_marker';
+  }
+  if (viewer.isAdmin) return 'can_approve';
   if (cardUserId !== viewer.userId) return 'can_approve';
   const submittedBy = card?.submitted_by_user_id ?? null;
   return peersForApproval(players, gameMode, cardUserId, submittedBy).length > 0

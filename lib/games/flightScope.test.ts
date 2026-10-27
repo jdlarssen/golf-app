@@ -592,7 +592,15 @@ describe('organizerApprovalRow (#2213)', () => {
       organizerApprovalRow(players, stableford, organizer, 'ola'),
       organizerApprovalRow(players, stableford, organizer, 'kari'),
       organizerApprovalRow(players, stableford, admin, 'ola'),
-    ]).toEqual(['card_awaits_marker', 'card_awaits_marker', 'can_approve']);
+      // mayApproveAsMarker: never the owner, never the one who delivered, admin included.
+      organizerApprovalRow(players, stableford, admin, 'kari'),
+      organizerApprovalRow(
+        [players[0], { ...players[1], submitted_by_user_id: 'kari' }],
+        stableford,
+        admin,
+        'ola',
+      ),
+    ]).toEqual(['card_awaits_marker', 'card_awaits_marker', 'can_approve', 'card_awaits_marker', 'card_awaits_marker']);
   });
 
   it('#2200: eget kort levert av eneste medspiller: ingen kan godkjenne', () => {

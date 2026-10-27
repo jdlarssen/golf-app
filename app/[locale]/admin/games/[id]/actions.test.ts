@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import {
   buildSupabaseMock,
@@ -119,6 +119,14 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 // #2661: an ordinary game, not a simulator-league flight (lib/league/__mocks__).
 vi.mock('@/lib/league/leagueFlight');
+const markerReviewAccessMock = vi.fn();
+vi.mock('@/lib/league/markerReviewAccess', () => ({
+  markerReviewAccess: (...args: unknown[]) => markerReviewAccessMock(...args),
+}));
+const finishSimulatorFlightMock = vi.fn(async (..._args: unknown[]) => 'finished');
+vi.mock('@/lib/league/finishSimulatorFlight', () => ({
+  finishSimulatorFlightIfApproved: (...args: unknown[]) => finishSimulatorFlightMock(...args),
+}));
 
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
@@ -394,6 +402,77 @@ describe('adminUndoWithdraw', () => {
 // ─── adminApproveScorecard (admin + creator override, #429) ─────────────────
 
 describe('adminApproveScorecard', () => {
+  describe('#2661: a simulator-league card', () => {
+    beforeEach(async () => {
+      const { readSimulatorLeagueFlight } = await import('@/lib/league/leagueFlight');
+      vi.mocked(readSimulatorLeagueFlight).mockResolvedValue({
+        gameId: 'game-1',
+        roundId: 'r1',
+        roundLabel: 'Runde 1',
+        leagueId: 'l1',
+        leagueName: 'Vinterliga',
+        isSimulator: true,
+        leagueCreatorId: 'org',
+      });
+    });
+    afterEach(async () => {
+      const { readSimulatorLeagueFlight } = await import('@/lib/league/leagueFlight');
+      vi.mocked(readSimulatorLeagueFlight).mockResolvedValue(null);
+    });
+
+    it('the player who started the flight cannot approve, nothing is written', async () => {
+      supabaseMock = buildSupabaseMock([
+        { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
+        { data: { created_by: 'creator-1' }, error: null }, // games.created_by
+      ]);
+      (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: { user: { id: 'creator-1' } },
+      });
+      const { adminApproveScorecard } = await import('./actions');
+      await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+      expect({
+        redirect: lastRedirect(),
+        wrote: supabaseMock.__fromCalls.some((c) => c.method === 'update'),
+      }).toEqual({ redirect: '/games/game-1/spillere?error=db_players', wrote: false });
+    });
+
+    it('an admin the marker rule refuses (own card) cannot approve', async () => {
+      markerReviewAccessMock.mockResolvedValue({ ok: false, reason: 'forbidden' });
+      supabaseMock = buildSupabaseMock([{ data: { is_admin: true, name: 'Jørgen' }, error: null }]);
+      (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: { user: { id: 'admin-1' } },
+      });
+      const { adminApproveScorecard } = await import('./actions');
+      await expect(adminApproveScorecard('game-1', 'admin-1')).rejects.toBeInstanceOf(RedirectError);
+      expect(lastRedirect()).toBe('/admin/games/game-1?error=db_players');
+      expect(markerReviewAccessMock).toHaveBeenCalledWith('admin-1', 'game-1', 'admin-1');
+    });
+
+    it('an admin in the marker’s stead approves, and the flight finishes on its own', async () => {
+      markerReviewAccessMock.mockResolvedValue({ ok: true, role: 'organizer' });
+      supabaseMock = buildSupabaseMock([
+        { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (loadRole)
+        { data: { status: 'active' }, error: null }, // games.select(status)
+        { data: [{ user_id: 'user-a' }], error: null }, // game_players.update → 1 row
+        { data: { name: 'Vinterliga – Runde' }, error: null }, // games.select(name)
+      ]);
+      (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: { user: { id: 'admin-1' } },
+      });
+      const { adminApproveScorecard } = await import('./actions');
+      await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+      expect({
+        redirect: lastRedirect(),
+        finish: finishSimulatorFlightMock.mock.calls,
+        organiser: notifyOrganizerIfAllDeliveredMock.mock.calls,
+      }).toEqual({
+        redirect: '/admin/games/game-1?status=admin_approved#leverte-scorekort',
+        finish: [['game-1', 'admin-1']],
+        organiser: [],
+      });
+    });
+  });
+
   it('admin: approves a pending scorecard, lands in Sekretariatet', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (loadRole)

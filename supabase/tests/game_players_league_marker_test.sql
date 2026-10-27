@@ -16,7 +16,8 @@
 --   8. a flightmate approves in a REGULAR league flight               → ok
 --   9. …and that card is approved
 --  10. a global admin approves in the simulator flight                → ok
---  11. the service role approves in the simulator flight              → ok
+--  11. a global admin approves their OWN card there                    → 42501
+--  12. the service role approves in the simulator flight              → ok
 --
 -- Every probe and its check are separate statements (#1910).
 -- Depends on 0220. Run via: supabase test db (see supabase/tests/README.md)
@@ -26,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(12);
 
 \ir fixtures/rls_helpers.psql
 
@@ -90,6 +91,7 @@ insert into public.games
 insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at) values
   (torny_rls.lm_sim_flight(), torny_rls.active_id(),     null, null, now()),
   (torny_rls.lm_sim_flight(), torny_rls.flightmate_id(), null, null, now()),
+  (torny_rls.lm_sim_flight(), torny_rls.admin_id(),      null, null, now()),
   (torny_rls.lm_reg_flight(), torny_rls.active_id(),     null, null, now()),
   (torny_rls.lm_reg_flight(), torny_rls.flightmate_id(), null, null, now());
 
@@ -181,6 +183,13 @@ select lives_ok(
   $$ update public.game_players set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
       where game_id = torny_rls.lm_sim_flight() and user_id = torny_rls.active_id() $$,
   'a global admin CAN approve in a simulator-league flight'
+);
+
+select throws_ok(
+  $$ update public.game_players set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+      where game_id = torny_rls.lm_sim_flight() and user_id = torny_rls.admin_id() $$,
+  '42501', null,
+  'a global admin CANNOT approve their own card in a simulator-league flight'
 );
 
 select torny_rls.as_service();

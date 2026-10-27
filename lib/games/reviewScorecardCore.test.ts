@@ -212,6 +212,12 @@ describe('approveScorecardCore', () => {
     expect(write.filters).toContainEqual({ op: 'eq', column: 'marker_user_id', value: REVIEWER });
   });
 
+  it('#2661: a finish that failed still tells the organiser, so the round can be finished', async () => {
+    finishSimulatorFlightMock.mockResolvedValueOnce('failed' as never);
+    await approve();
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([[GAME_ID, REVIEWER, 'approveScorecard']]);
+  });
+
   it('#2661: a simulator flight the approval finished does not ask the organiser to finish it', async () => {
     finishSimulatorFlightMock.mockResolvedValueOnce('finished' as never);
     await expect(approve()).resolves.toEqual({ ok: true, alreadyDone: false });

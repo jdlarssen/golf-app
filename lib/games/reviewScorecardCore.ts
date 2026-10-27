@@ -202,9 +202,11 @@ export async function approveScorecardCore(opts: {
 
   // #2203: the last approval can make the round ready to finish. Best-effort,
   // never throws; when the organiser approved it themselves, nothing is sent.
-  // Not in a simulator flight: it finishes itself, and «Avslutt spillet» would
-  // ask the player for a tap that is not needed.
-  if (simulatorFinish === 'not_simulator') {
+  // Not in a simulator flight that finished or still waits: it finishes
+  // itself, and «Avslutt spillet» would ask for a tap that is not needed. A
+  // finish that failed (or a league read that failed) sends it as before, so
+  // the player can still finish the round.
+  if (simulatorFinish === 'not_simulator' || simulatorFinish === 'failed') {
     await notifyOrganizerIfAllDelivered(gameId, approverUserId, 'approveScorecard');
   }
 
