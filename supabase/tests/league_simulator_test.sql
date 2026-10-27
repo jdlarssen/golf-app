@@ -25,7 +25,7 @@
 --  15  the same after the flight was delivered (finished)             → 42501
 --  16  other columns of a started round still change (label)          → 1 row
 --  17  the server (the start core's freeze) writes a started round    → 1 row
---  18  the guards are not client-executable
+--  18  the guards are not client-executable (0219's games guard too)
 -- Trackman's option set (sim_settings_valid, 0213):
 --  19  an unknown option code                                         → 23514
 --  20  an unknown key (the old free-text «tees»)                        → 23514
@@ -62,6 +62,13 @@
 --  45  leagues.hcp_max_strokes 0                                       → 23514
 --  46  leagues.hcp_max_strokes 55                                      → 23514
 --  47  games.hcp_max_strokes 55 (the flight's copy has the same bound) → 23514
+-- The flight's copy is server-owned (guard_games_league_hcp, 0219):
+--  48  the player raises hcp_allowance_pct on the flight they started   → 42501
+--  49  the player changes hcp_max_strokes on the flight they started   → 42501
+--  50  a global admin changes hcp_allowance_pct on a league flight     → 42501
+--  51  …while a game outside a league still changes its percentage    → 1 row
+--  52  the server (no JWT) writes hcp_max_strokes on a flight          → 1 row
+--  53  a player creates a game with hcp_max_strokes set                → 42501
 --
 -- Every 42501 case checks the code and the exact message (throws_ok).
 --
@@ -72,7 +79,7 @@
 -- whose message changed in 0215); with the 0214 round guard: 34 and 38; with
 -- the 0215 round guard: 37. Without 0219: every case (the columns do not
 -- exist); with the 0215 leagues guard: 39–42 (and 5–7 and 33, whose message
--- changed in 0219).
+-- changed in 0219); without guard_games_league_hcp: 48–50 and 53 (and 18).
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
 -- Depends on 0212 to 0216 and 0219. Run via: supabase test db (see supabase/tests/README.md)
@@ -82,7 +89,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(54);
 
 \ir fixtures/rls_helpers.psql
 
@@ -655,12 +662,73 @@ select throws_ok(
   'case 47: the flight game''s stroke cap has the same bound');
 rollback to savepoint case_47;
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- The flight's copy is server-owned (guard_games_league_hcp, 0219)
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 48 ─ the «games creator update» policy lets the player reach their own flight.
+savepoint case_48;
+select torny_rls.as_user(torny_rls.ls_player());
+select throws_ok(
+  $$ update public.games set hcp_allowance_pct = 75 where id = torny_rls.ls_g_started() $$,
+  '42501', 'games.hcp_max_strokes, and hcp_allowance_pct on a league flight, are set by the server',
+  'case 48: the player CANNOT change the handicap share of the flight they started');
+rollback to savepoint case_48;
+
+-- 49
+savepoint case_49;
+select torny_rls.as_user(torny_rls.ls_player());
+select throws_ok(
+  $$ update public.games set hcp_max_strokes = 32 where id = torny_rls.ls_g_started() $$,
+  '42501', 'games.hcp_max_strokes, and hcp_allowance_pct on a league flight, are set by the server',
+  'case 49: the player CANNOT change the stroke cap of the flight they started');
+rollback to savepoint case_49;
+
+-- 50
+savepoint case_50;
+select torny_rls.as_user(torny_rls.admin_id());
+select throws_ok(
+  $$ update public.games set hcp_allowance_pct = 75 where id = torny_rls.ls_g_regular() $$,
+  '42501', 'games.hcp_max_strokes, and hcp_allowance_pct on a league flight, are set by the server',
+  'case 50: a global admin is not exempt: a league flight keeps its share');
+rollback to savepoint case_50;
+
+-- 51
+savepoint case_51;
+select torny_rls.as_user(torny_rls.admin_id());
+select is(
+  torny_rls.ls_rows($$ update public.games set hcp_allowance_pct = 90 where id = torny_rls.game_id() $$),
+  1,
+  'case 51: a game outside a league still changes its handicap share');
+rollback to savepoint case_51;
+
+-- 52
+savepoint case_52;
+select torny_rls.as_service();
+select is(
+  torny_rls.ls_rows($$ update public.games set hcp_max_strokes = 32 where id = torny_rls.ls_g_started() $$),
+  1,
+  'case 52: a caller with no JWT (the flight start) CAN write the stroke cap');
+rollback to savepoint case_52;
+
+-- 53
+savepoint case_53;
+select torny_rls.as_user(torny_rls.ls_player());
+select throws_ok(
+  $$ insert into public.games (name, course_id, tee_box_id, status, game_mode, created_by, hcp_max_strokes)
+     values ('LS Own', torny_rls.course_id(), torny_rls.tee_box_id(), 'draft', 'stableford', torny_rls.ls_player(), 32) $$,
+  '42501', 'games.hcp_max_strokes, and hcp_allowance_pct on a league flight, are set by the server',
+  'case 53: a player CANNOT create a game with a stroke cap');
+rollback to savepoint case_53;
+
 -- 18 (last: an assert outside every savepoint, like the other guard suites)
 select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')
       and not has_function_privilege('authenticated', 'public.guard_leagues_locked_fields()', 'EXECUTE')
       and not has_function_privilege('anon', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE')
-      and not has_function_privilege('authenticated', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE'),
-  'case 18: the two guards are not client-executable');
+      and not has_function_privilege('authenticated', 'public.guard_league_rounds_sim_settings_lock()', 'EXECUTE')
+      and not has_function_privilege('anon', 'public.guard_games_league_hcp()', 'EXECUTE')
+      and not has_function_privilege('authenticated', 'public.guard_games_league_hcp()', 'EXECUTE'),
+  'case 18: the guards are not client-executable');
 
 select * from finish();
 rollback;
