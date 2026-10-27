@@ -15,7 +15,11 @@
 //    `computePrimaryCtaState`.
 //
 // Ren fil: ingen React, ingen nett, ingen `Intl` (Hermes mangler dataene).
-import { usesGameHcpAllowance, effectiveHcpAllowancePct } from '../../../../lib/games/hcpAllowance';
+import {
+  usesGameHcpAllowance,
+  effectiveHcpAllowancePct,
+  effectiveHcpMaxStrokes,
+} from '../../../../lib/games/hcpAllowance';
 import { finishedResultBadge } from '../../../../lib/games/finishedResultBadge';
 import { computePrimaryCtaState, type PrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -33,7 +37,7 @@ import { formatClock, formatNameList } from './display';
 import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
 import { nextUnfilledHole } from './primaryCtaState';
 import { scorecardHandicapPart } from './scorecardHeader';
-import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, teePart } from './ticketCopy';
+import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, maxStrokesPart, teePart } from './ticketCopy';
 
 const SEPARATOR = ' · ';
 
@@ -102,19 +106,22 @@ export function slotField(slot: TicketSlot): { label: string; value: string } {
 /**
  * Linja i hodet: «Gul tee · Stableford · 85 % handicap». Prosenten står bare
  * for formatene som bruker den generelle andelen (`usesGameHcpAllowance`); de
- * andre har sin egen i `mode_config`, og da ville tallet her lyve. Det som
- * mangler, hoppes over.
+ * andre har sin egen i `mode_config`, og da ville tallet her lyve. En
+ * ligaflight med tak får det etter prosenten: «75 % handicap · maks 32 slag»
+ * (#2660). Det som mangler, hoppes over.
  */
 export function ticketHeaderLine(
   bundle: Pick<GameBundle, 'game' | 'teeBoxName'>,
 ): string {
   const { gameMode, hcpAllowancePct } = bundle.game;
+  const maxStrokes = effectiveHcpMaxStrokes(gameMode, bundle.game.hcpMaxStrokes ?? null);
   return [
     bundle.teeBoxName ? teePart(bundle.teeBoxName) : null,
     isKnownMode(gameMode) ? MODE_LABELS[gameMode] : null,
     hcpAllowancePct != null && usesGameHcpAllowance(gameMode)
       ? allowancePart(hcpAllowancePct)
       : null,
+    maxStrokes != null ? maxStrokesPart(maxStrokes) : null,
   ]
     .filter((part): part is string => part != null)
     .join(SEPARATOR);
@@ -193,7 +200,7 @@ function preStartCourseHandicap(opts: {
 }): number | null {
   const rating = ratingFor(opts.bundle.teeRatings, opts.me);
   if (!rating || opts.profileHcpIndex == null) return null;
-  const { gameMode, hcpAllowancePct } = opts.bundle.game;
+  const { gameMode, hcpAllowancePct, hcpMaxStrokes } = opts.bundle.game;
   return displayCourseHandicap({
     hcpIndex: Number(opts.profileHcpIndex),
     slope: rating.slope,
@@ -201,6 +208,8 @@ function preStartCourseHandicap(opts: {
     par: rating.par,
     // #2210: samme andel frysingen ved start bruker.
     allowancePct: effectiveHcpAllowancePct(gameMode, hcpAllowancePct ?? 100),
+    // #2660: og samme tak på slag.
+    maxStrokes: effectiveHcpMaxStrokes(gameMode, hcpMaxStrokes ?? null),
   });
 }
 

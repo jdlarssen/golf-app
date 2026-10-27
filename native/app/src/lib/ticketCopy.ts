@@ -77,6 +77,11 @@ export function allowancePart(pct: number): string {
   return `${pct}\u00A0% handicap`;
 }
 
+/** #2660: ligaens tak på slag etter prosenten: «maks 32 slag». */
+export function maxStrokesPart(maxStrokes: number): string {
+  return `maks ${maxStrokes} slag`;
+}
+
 /** Verdien i FLIGHT-feltet: «2 av 3». */
 export function flightOf(flight: number, flights: number): string {
   return `${flight} av ${flights}`;

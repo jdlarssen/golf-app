@@ -139,6 +139,15 @@ describe('ticketHeaderLine', () => {
     expect(ticketHeaderLine(bundle)).toBe(expected);
   });
 
+  it.each([
+    ['ligaflight med tak (#2660)', 'stableford', 32, 'Gul tee · Stableford · 75\u00A0% handicap · maks 32 slag'],
+    ['uten tak står bare prosenten', 'stableford', null, 'Gul tee · Stableford · 75\u00A0% handicap'],
+    ['et format med egen andel viser heller ikke taket', 'fourball_matchplay', 32, 'Gul tee · Fourball'],
+  ])('%s', (_case, gameMode, cap, expected) => {
+    const bundle = bundleWith({ gameMode, hcpAllowancePct: 75, hcpMaxStrokes: cap }, [homePlayer({ userId: 'me' })]);
+    expect(ticketHeaderLine(bundle)).toBe(expected);
+  });
+
   it('uten tee og ukjent format står det som finnes', () => {
     const bundle = { ...bundleWith({ gameMode: 'ukjent' }, []), teeBoxName: null };
     expect(ticketHeaderLine(bundle)).toBe('');
@@ -180,6 +189,16 @@ describe('ticketStrokes — DINE SLAG', () => {
     expect(
       ticketStrokes({ bundle, me: bundle.players[0], profileHcpIndex: 12.4, teamMode: false, teamHandicap: null }),
     ).toBe('11');
+  });
+
+  it('før start i en ligaflight med tak: taket kommer etter prosenten, som ved frysingen (#2660)', () => {
+    // 54 × 125/113 + (71,5 − 72) = 59,23 → 59; 75 % = 44,25 → 44; taket gir 32.
+    const bundle = bundleWith({ ...stableford, status: 'scheduled', hcpAllowancePct: 75, hcpMaxStrokes: 32 }, [
+      homePlayer({ userId: 'me', courseHandicap: null }),
+    ]);
+    expect(
+      ticketStrokes({ bundle, me: bundle.players[0], profileHcpIndex: 54, teamMode: false, teamHandicap: null }),
+    ).toBe('32');
   });
 
   it('lagkort i scramble før start: «—», ikke 0 — lagshandicapen finnes først når handicapene er frosset', () => {
