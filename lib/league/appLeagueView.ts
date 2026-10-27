@@ -44,7 +44,7 @@ export type AppLeagueRound = {
    * «Venter på godkjenning fra …» for the player, «Venter på deg som markør»
    * for the marker.
    */
-  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string }>;
+  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string; submittedBy: string | null }>;
   /**
    * The settings that apply to the round (`roundSimSettings`): the
    * organiser's override over the frozen default once the round has started,

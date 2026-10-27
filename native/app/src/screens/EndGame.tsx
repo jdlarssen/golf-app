@@ -118,7 +118,7 @@ import {
   type FinishPlan,
   type FinishSlot,
 } from '../lib/endGamePlan';
-import { ownCardApproval, submittedLabel, toRoster } from '../lib/roster';
+import { canApproveOnBehalf, ownCardApproval, submittedLabel, toRoster } from '../lib/roster';
 import {
   describeSelfWithdrawFailure,
   WITHDRAW_SELF,
@@ -650,26 +650,16 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                         medspiller» ville vært en blindvei. Da står veien ut i
                         stedet, som på nettsidens avslutt-side. */}
                     {own ? (
-                      ownCardApproval(
+                      <OwnCardLine
+                        state={ownCardApproval(toRoster(bundle.players), game.gameMode as GameMode, userId)}
+                        color={colors.muted}
+                      />
+                    ) : !canApproveOnBehalf(
                         toRoster(bundle.players),
                         game.gameMode as GameMode,
                         userId,
-                      ) === 'own_card_no_peer' ? (
-                        <Text
-                          style={[styles.sub13, { color: colors.muted }]}
-                          testID="end-game-own-card-no-peer"
-                        >
-                          {END_GAME_TEXT.ownCardNoPeer}
-                        </Text>
-                      ) : (
-                        <Text
-                          style={[styles.sub13, { color: colors.muted }]}
-                          testID="end-game-own-card-needs-peer"
-                        >
-                          {END_GAME_TEXT.ownCardNeedsPeer}
-                        </Text>
-                      )
-                    ) : (
+                        player.userId,
+                      ) ? null : (
                       <Pressable
                         style={[
                           styles.outlinePill,
@@ -1360,6 +1350,30 @@ function CheckRow({
 const NAME_15 = interLine(15, 19);
 const SUB_12 = interLine(12, 15);
 const SLOT_WINNER = fraunces(600, 19);
+
+/**
+ * Linja på arrangørens egen rad i ventelista: hvorfor det ikke står en knapp
+ * (#1891, #2200), eller at markøren godkjenner kortet (#2661).
+ */
+function OwnCardLine({
+  state,
+  color,
+}: {
+  state: ReturnType<typeof ownCardApproval>;
+  color: string;
+}) {
+  const [testID, text] =
+    state === 'own_card_no_peer'
+      ? ['end-game-own-card-no-peer', END_GAME_TEXT.ownCardNoPeer]
+      : state === 'card_awaits_marker'
+        ? ['end-game-own-card-awaits-marker', END_GAME_TEXT.ownCardAwaitsMarker]
+        : ['end-game-own-card-needs-peer', END_GAME_TEXT.ownCardNeedsPeer];
+  return (
+    <Text style={[styles.sub13, { color }]} testID={testID}>
+      {text}
+    </Text>
+  );
+}
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

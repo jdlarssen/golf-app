@@ -30,7 +30,7 @@ it.each([
   ['screenTitle', MARKER_TEXT.screenTitle, page.kicker],
   ['intro', MARKER_TEXT.intro, page.intro],
   ['organizerNoMarker', MARKER_TEXT.organizerNoMarker, page.organizerNoteNoMarker],
-  ['approved', MARKER_TEXT.approved, page.banners.approved],
+  ['approved', MARKER_TEXT.approved, page.state.approved],
   ['rejected', MARKER_TEXT.rejected, page.banners.rejected],
   ['notDelivered', MARKER_TEXT.notDelivered, page.state.not_delivered],
   ['withdrawn', MARKER_TEXT.withdrawn, page.state.withdrawn],

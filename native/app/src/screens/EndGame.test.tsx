@@ -655,6 +655,24 @@ describe('EndGame', () => {
     expect(screen.queryByTestId('end-game-own-card-needs-peer')).toBeNull();
   });
 
+  it('#2661: i en simulatorliga venter kortene på markøren, uten knapp på vegne av gruppa', async () => {
+    // Markøren står utenfor flighten og godkjenner gjennom serveren; den som
+    // startet flighten kan ikke godkjenne (porten sier 403), så knappen ville
+    // bare feilet. Webbens avslutt-side sier det samme (`ownCardAwaitsMarker`).
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z', markerUserId: 'user-marker' }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z', markerUserId: 'user-marker' }),
+      ],
+      { requirePeerApproval: true },
+    );
+    await renderScreen();
+
+    expect(screen.getByTestId('end-game-own-card-awaits-marker')).toBeTruthy();
+    expect(screen.queryByTestId('end-game-own-card-needs-peer')).toBeNull();
+    expect(screen.queryByTestId(`end-game-approve-${MATE}`)).toBeNull();
+  });
+
   it('tilbyr ikke frafall i et format som ikke har frafall', async () => {
     // `singles_matchplay` er utenfor `supportsWithdrawal`. Uten denne gaten
     // lovet knappen en handling kjernen svarer `game_locked` på.

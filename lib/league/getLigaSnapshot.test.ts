@@ -781,7 +781,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
     const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
     const snap = await getLigaSnapshot('l1');
     expect(snap!.rounds.map((r) => [r.id, r.awaitingMarker])).toEqual([
-      ['r1', [{ gameId: 'g1', userId: 'A', markerUserId: 'B' }]],
+      ['r1', [{ gameId: 'g1', userId: 'A', markerUserId: 'B', submittedBy: null }]],
       ['r2', []],
     ]);
   });
