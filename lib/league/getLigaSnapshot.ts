@@ -90,7 +90,7 @@ export type LeagueRoundView = {
    * for their marker (simulator league). Drives «Venter på godkjenning fra …»
    * for the player and «Venter på deg som markør» for the marker.
    */
-  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string }>;
+  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string; submittedBy: string | null }>;
   /**
    * #2638: the settings that apply to the round — `roundSimSettings`: the
    * override over the default frozen at the first start (or today's default
@@ -253,7 +253,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
             supabase
               .from('game_players')
               .select(
-                'game_id, user_id, course_handicap, tee_gender, submitted_at, approved_at, marker_user_id, withdrawn_at',
+                'game_id, user_id, course_handicap, tee_gender, submitted_at, submitted_by_user_id, approved_at, marker_user_id, withdrawn_at',
               )
               .in('game_id', gameIds)
               .order('game_id')
@@ -300,6 +300,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     course_handicap: number | null;
     tee_gender: TeeGender;
     submitted_at: string | null;
+    submitted_by_user_id?: string | null;
     approved_at: string | null;
     marker_user_id: string | null;
     withdrawn_at: string | null;
@@ -391,7 +392,12 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       for (const gp of playersByGame.get(game.id) ?? []) {
         if (gp.withdrawn_at || !gp.submitted_at || gp.approved_at || !gp.marker_user_id) continue;
         const waiting = awaitingByRound.get(game.league_round_id) ?? [];
-        waiting.push({ gameId: game.id, userId: gp.user_id, markerUserId: gp.marker_user_id });
+        waiting.push({
+          gameId: game.id,
+          userId: gp.user_id,
+          markerUserId: gp.marker_user_id,
+          submittedBy: gp.submitted_by_user_id ?? null,
+        });
         awaitingByRound.set(game.league_round_id, waiting);
       }
     }

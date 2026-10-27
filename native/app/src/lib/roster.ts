@@ -124,19 +124,41 @@ export function pendingApprovals(
  * Ingen kan godkjenne kortet når eneste mulige makker leverte det (den som
  * leverte, godkjenner ikke) eller de andre er trukket. Da er veien ut å åpne
  * kortet igjen og avslutte likevel.
+ *
+ * #2661: i en simulatorliga venter kortet på markøren spilleren valgte
+ * (`card_awaits_marker`), og runden avsluttes av seg selv når det er godkjent.
  */
 export function ownCardApproval(
   roster: readonly RosterEntry[],
   gameMode: GameMode,
   organiserUserId: string,
-): 'own_card_needs_peer' | 'own_card_no_peer' {
+): 'own_card_needs_peer' | 'own_card_no_peer' | 'card_awaits_marker' {
   const row = organizerApprovalRow(
     [...roster],
     gameMode,
     { userId: organiserUserId, isAdmin: false },
     organiserUserId,
   );
-  return row === 'own_card_no_peer' ? 'own_card_no_peer' : 'own_card_needs_peer';
+  if (row === 'card_awaits_marker' || row === 'own_card_no_peer') return row;
+  return 'own_card_needs_peer';
+}
+
+/**
+ * Kan arrangøren godkjenne `cardUserId`s kort på vegne av gruppa? Den samme
+ * delte regelen (`organizerApprovalRow`). #2661: et kort som venter på en
+ * markør i en simulatorliga, godkjennes av markøren, ikke av den som startet
+ * flighten; porten svarer 403, så knappen ville bare feilet.
+ */
+export function canApproveOnBehalf(
+  roster: readonly RosterEntry[],
+  gameMode: GameMode,
+  organiserUserId: string,
+  cardUserId: string,
+): boolean {
+  return (
+    organizerApprovalRow([...roster], gameMode, { userId: organiserUserId, isAdmin: false }, cardUserId) ===
+    'can_approve'
+  );
 }
 
 /**

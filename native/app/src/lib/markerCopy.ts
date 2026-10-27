@@ -17,7 +17,8 @@ export const MARKER_TEXT = {
   retry: 'Prøv igjen',
   intro: 'Se over slagene. Godkjenner du kortet, teller runden i tabellen. Stemmer noe ikke, sender du det tilbake med en kort grunn.',
   organizerNoMarker: 'Du godkjenner som arrangør.',
-  approved: 'Kortet er godkjent, og runden teller i tabellen.',
+  /** Under kortet når det er godkjent (`liga.marker.state.approved`). */
+  approved: 'Kortet er godkjent.',
   rejected: 'Kortet er sendt tilbake. Spilleren får beskjed med grunnen.',
   notDelivered: 'Kortet er ikke levert. Spilleren retter det og sender det inn igjen.',
   withdrawn: 'Spilleren har trukket seg fra runden.',

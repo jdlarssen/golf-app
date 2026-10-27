@@ -183,6 +183,10 @@ jest.mock('../data/gameBundle', () => ({
 jest.mock('../data/submitCard', () => ({
   submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false, alsoDelivered: 0 })),
 }));
+// #2661: markørvalgene i en simulatorliga; utenfor den svarer ruta `required: false`.
+jest.mock('../data/marker', () => ({
+  fetchMarkerOptions: jest.fn(async () => ({ ok: true, options: { required: false } })),
+}));
 jest.mock('../data/seedScores', () => ({
   seedGameScores: jest.fn(async () => 0),
   seedGameTeeShots: jest.fn(async () => 0),
@@ -221,6 +225,75 @@ function scorecardElement(gameId: string, navigate: jest.Mock) {
     />
   );
 }
+
+describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
+  const SIM_GAME = 'game-sim';
+  const simBundle = {
+    ...mockRevealBundle,
+    game: {
+      ...mockRevealBundle.game,
+      id: SIM_GAME,
+      createdBy: 'me',
+      scoreVisibility: 'live',
+      requirePeerApproval: true,
+    },
+    players: [mockRevealBundle.players[0]],
+  };
+  const fullCard = Array.from({ length: 18 }, (_, i) => ({
+    id: `${SIM_GAME}:me:${i + 1}`,
+    gameId: SIM_GAME,
+    userId: 'me',
+    holeNumber: i + 1,
+    strokes: 4,
+    putts: null,
+    enteredBy: 'me',
+    clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+    serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+  }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockState.bundle = simBundle;
+    mockState.queue = Promise.resolve([]);
+    mockState.scores = fullCard;
+    mockState.teeShots = [];
+    mockState.teeShotQueue = [];
+    const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
+    fetchMarkerOptions.mockResolvedValue({
+      ok: true,
+      options: { required: true, options: [{ userId: 'per', name: 'Per Putter' }] },
+    });
+  });
+
+  it('«Lever» er sperret til en markør er valgt, og valget går med leveringen', async () => {
+    const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+    await render(scorecardElement(SIM_GAME, jest.fn()));
+    await waitFor(() => expect(screen.getByTestId('marker-picker')).toBeTruthy());
+    expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+
+    await fireEvent.press(screen.getByTestId('marker-option-per'));
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+    await fireEvent.press(screen.getByTestId('submit-scorecard'));
+
+    await waitFor(() => expect(submitCard).toHaveBeenCalledWith(SIM_GAME, [], 'per'));
+  });
+
+  it('svarer serveren «velg en markør», hentes valgene på nytt', async () => {
+    const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+    const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
+    submitCard.mockResolvedValueOnce({ ok: false, reason: 'marker_required' });
+    await render(scorecardElement(SIM_GAME, jest.fn()));
+    await waitFor(() => expect(screen.getByTestId('marker-picker')).toBeTruthy());
+    const before = fetchMarkerOptions.mock.calls.length;
+
+    await fireEvent.press(screen.getByTestId('marker-option-per'));
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+    await fireEvent.press(screen.getByTestId('submit-scorecard'));
+
+    await waitFor(() => expect(screen.getByTestId('submit-error')).toBeTruthy());
+    await waitFor(() => expect(fetchMarkerOptions.mock.calls.length).toBeGreaterThan(before));
+  });
+});
 
 describe('Scorecard', () => {
   beforeEach(() => {

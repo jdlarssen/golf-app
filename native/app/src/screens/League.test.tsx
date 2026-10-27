@@ -306,8 +306,8 @@ describe('#2661: markøren i en simulatorliga', () => {
                 ...r,
                 inProgress: ['me', other.userId],
                 awaitingMarker: [
-                  { gameId: 'g-me', userId: 'me', markerUserId: other.userId },
-                  { gameId: 'g-other', userId: other.userId, markerUserId: 'me' },
+                  { gameId: 'g-me', userId: 'me', markerUserId: other.userId, submittedBy: 'me' },
+                  { gameId: 'g-other', userId: other.userId, markerUserId: 'me', submittedBy: other.userId },
                 ],
               }
             : r,
@@ -327,7 +327,7 @@ describe('#2661: markøren i en simulatorliga', () => {
     expect(screen.queryByTestId('league-organizer-marker-queue')).toBeNull();
   });
 
-  it('arrangøren ser de andres ventende kort, men ikke sitt eget', async () => {
+  it('arrangøren ser de andres ventende kort, men ikke sitt eget eller et hen leverte', async () => {
     const view = leagueView({ me: { isOrganizer: true } });
     const [a, b] = view.participants.filter((p) => p.userId !== 'me');
     answer({
@@ -339,8 +339,10 @@ describe('#2661: markøren i en simulatorliga', () => {
             ? {
                 ...r,
                 awaitingMarker: [
-                  { gameId: 'g-me', userId: 'me', markerUserId: a.userId },
-                  { gameId: 'g-a', userId: a.userId, markerUserId: b.userId },
+                  { gameId: 'g-me', userId: 'me', markerUserId: a.userId, submittedBy: 'me' },
+                  { gameId: 'g-a', userId: a.userId, markerUserId: b.userId, submittedBy: a.userId },
+                  // Arrangøren leverte b sitt kort i samme flight: bare markøren svarer.
+                  { gameId: 'g-a', userId: b.userId, markerUserId: a.userId, submittedBy: 'me' },
                 ],
               }
             : r,
@@ -350,5 +352,6 @@ describe('#2661: markøren i en simulatorliga', () => {
     await renderLeague();
     expect(screen.getByTestId(`marker-queue-g-a-${a.userId}`)).toBeTruthy();
     expect(screen.queryByTestId('marker-queue-g-me-me')).toBeNull();
+    expect(screen.queryByTestId(`marker-queue-g-a-${b.userId}`)).toBeNull();
   });
 });

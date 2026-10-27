@@ -204,6 +204,11 @@ export const END_GAME_TEXT = {
    * det, eller de andre er trukket. Samme vei ut som nettsidens
    * `game.players.ownCard.noPeer`, med appens knapp.
    */
+  /**
+   * #2661: eget kort i en simulatorliga venter på markøren. Webbens
+   * `game.finish.ownCardAwaitsMarker`.
+   */
+  ownCardAwaitsMarker: 'Markøren din godkjenner kortet. Da avsluttes runden av seg selv og teller i ligaen.',
   ownCardNoPeer:
     'Ingen medspiller kan godkjenne kortet ditt nå. Gå tilbake til spillet og åpne kortet ditt med «Åpne for redigering» under «Arrangør». Da kan du avslutte spillet selv om kortet ikke er levert. Slagene dine teller.',
   /** Både knappe-etiketten og tittelen i bekreftelsen — det er samme handling. */
