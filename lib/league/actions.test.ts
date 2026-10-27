@@ -315,6 +315,73 @@ describe('createLeagueDraft — rollback on insert failure (#675)', () => {
 });
 
 /**
+ * #2662: a league without a club gets its shareable join code when it is
+ * created, so the organiser can share the link before the start. A club league
+ * gets none: its members join through join_club_league. A taken code (23505 on
+ * the partial unique index) draws once more.
+ */
+describe('createLeagueDraft — join code (#2662)', () => {
+  function form(groupId: string | null): FormData {
+    const fd = new FormData();
+    fd.set('name', 'Vinterliga');
+    fd.set('season_start', '2099-01-01');
+    fd.set('season_end', '2099-12-31');
+    fd.set('standings_model', 'total');
+    fd.set('course_scope', 'multi_course');
+    fd.set('frequency', 'monthly');
+    if (groupId) fd.set('group_id', groupId);
+    return fd;
+  }
+
+  function leagueInserts() {
+    return supabaseMock.__fromCalls
+      .filter((c) => c.table === 'leagues' && c.method === 'insert')
+      .map((c) => c.args[0] as Record<string, unknown>);
+  }
+
+  it('a league without a club gets an 8-character code', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin (loadRole)
+      { data: { id: 'L1' }, error: null }, // leagues.insert
+      { error: null }, // league_rounds.insert
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+    await expect(createLeagueDraft(form(null))).rejects.toBeInstanceOf(RedirectError);
+    const [insert] = leagueInserts();
+    expect(insert.join_code).toMatch(/^[0-9a-z]{8}$/);
+  });
+
+  it('a club league gets no code', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdminOrClubAdmin (loadRole)
+      { data: { id: 'L2' }, error: null }, // leagues.insert
+      { error: null }, // league_rounds.insert
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+    await expect(createLeagueDraft(form('club-1'))).rejects.toBeInstanceOf(RedirectError);
+    const [insert] = leagueInserts();
+    expect(insert.join_code).toBeNull();
+  });
+
+  it('a taken code draws once more and the league is created', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin (loadRole)
+      { data: null, error: { code: '23505', message: 'duplicate key value' } }, // first insert
+      { data: { id: 'L3' }, error: null }, // second insert
+      { error: null }, // league_rounds.insert
+    ]);
+    setUser('admin-1');
+    const { createLeagueDraft } = await import('./actions');
+    await expect(createLeagueDraft(form(null))).rejects.toBeInstanceOf(RedirectError);
+    const inserts = leagueInserts();
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0].join_code).not.toBe(inserts[1].join_code);
+  });
+});
+
+/**
  * #2638 (replaces the #1144 «always net» lock): the organiser picks net (the
  * default) or gross. The action whitelists the two; anything else, the old
  * 'both' included, lands a net league (trap 3 — RLS/TS guards don't see a raw

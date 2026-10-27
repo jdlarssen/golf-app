@@ -673,6 +673,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
           finished_at: null,
           group_id: null,
           spectate_token: null,
+          join_code: null,
           is_simulator: isSimulator,
           sim_settings: { green_stimp: '10', wind: 'CALM' },
         },

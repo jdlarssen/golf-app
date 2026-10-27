@@ -16,6 +16,7 @@ import { generateRounds } from './generateRounds';
 import { ligaBasePath } from './ligaPaths';
 import { isPointsBasedFormat } from './flightFormat';
 import { startLeagueRoundFlightCore } from './startLeagueRoundFlightCore';
+import { writeWithFreshJoinCode } from './joinCode';
 import type { TablesUpdate } from '@/lib/database.types';
 import { parseSimSettings, roundOverrideFrom, type SimSettings } from './simSettings';
 import type {
@@ -178,29 +179,37 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     return { error: 'season_over' };
   }
 
-  const { data: league, error: insErr } = await supabase
-    .from('leagues')
-    .insert({
-      name,
-      season_start: seasonStart,
-      season_end: seasonEnd,
-      format,
-      scoring,
-      standings_model: standingsModel,
-      missed_round_policy: missedPolicy,
-      penalty_kind: penaltyKind,
-      penalty_fixed_over_par: penaltyFixed,
-      best_n_count: bestNCount,
-      course_scope: courseScope,
-      course_id: courseId,
-      tee_box_id: teeBoxId,
-      created_by: userId,
-      group_id: groupId,
-      is_simulator: isSimulator,
-      sim_settings: simSettings,
-    })
-    .select('id')
-    .single();
+  // #2662: a league without a club gets its shareable link at once, so the
+  // organiser can share it before the start. A club league gets none: its
+  // members join through join_club_league. A taken code draws once more.
+  const insertLeague = (joinCode: string | null) =>
+    supabase
+      .from('leagues')
+      .insert({
+        name,
+        season_start: seasonStart,
+        season_end: seasonEnd,
+        format,
+        scoring,
+        standings_model: standingsModel,
+        missed_round_policy: missedPolicy,
+        penalty_kind: penaltyKind,
+        penalty_fixed_over_par: penaltyFixed,
+        best_n_count: bestNCount,
+        course_scope: courseScope,
+        course_id: courseId,
+        tee_box_id: teeBoxId,
+        created_by: userId,
+        group_id: groupId,
+        is_simulator: isSimulator,
+        sim_settings: simSettings,
+        join_code: joinCode,
+      })
+      .select('id')
+      .single();
+  const { data: league, error: insErr } = groupId
+    ? await insertLeague(null)
+    : await writeWithFreshJoinCode(insertLeague);
   if (insErr || !league) {
     console.error('[league] createLeagueDraft insert failed', { error: insErr });
     return { error: 'insert_failed' };

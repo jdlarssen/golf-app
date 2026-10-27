@@ -26,6 +26,7 @@ function snapshot(scoring: string): LeagueSnapshot {
       finished_at: null,
       group_id: null,
       spectate_token: null,
+      join_code: null,
       is_simulator: true,
       sim_settings: { green_stimp: '10', hacked: 'x' },
     },
