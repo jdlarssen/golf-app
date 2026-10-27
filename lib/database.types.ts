@@ -1491,6 +1491,7 @@ export type Database = {
           hcp_max_strokes: number | null
           id: string
           is_simulator: boolean
+          join_code: string | null
           missed_round_policy: string
           name: string
           penalty_fixed_over_par: number | null
@@ -1518,6 +1519,7 @@ export type Database = {
           hcp_max_strokes?: number | null
           id?: string
           is_simulator?: boolean
+          join_code?: string | null
           missed_round_policy?: string
           name: string
           penalty_fixed_over_par?: number | null
@@ -1545,6 +1547,7 @@ export type Database = {
           hcp_max_strokes?: number | null
           id?: string
           is_simulator?: boolean
+          join_code?: string | null
           missed_round_policy?: string
           name?: string
           penalty_fixed_over_par?: number | null
