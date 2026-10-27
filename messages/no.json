@@ -4938,6 +4938,7 @@
       "unknownPlayer": "Ukjent spiller",
       "banners": {
         "approved": "Kortet er godkjent, og runden teller i tabellen.",
+        "approved_waiting": "Kortet er godkjent. Runden teller når resten av flighten er godkjent.",
         "rejected": "Kortet er sendt tilbake. Spilleren får beskjed med grunnen."
       },
       "errors": {

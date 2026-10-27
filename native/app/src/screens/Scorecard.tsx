@@ -282,6 +282,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       : '';
   const [markerChoice, setMarkerChoice] = useState<MarkerOptionsResponse | null>(null);
   const [marker, setMarker] = useState<string | null>(null);
+  // Telles opp når serveren svarer «velg markør» (428), så valgene hentes på
+  // nytt i stedet for at velgeren aldri kommer.
+  const [markerReload, setMarkerReload] = useState(0);
   useEffect(() => {
     if (!askMarker) return;
     let cancelled = false;
@@ -292,7 +295,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     return () => {
       cancelled = true;
     };
-  }, [gameId, askMarker, markerMateKey]);
+  }, [gameId, askMarker, markerMateKey, markerReload]);
 
   if (!bundle) {
     // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
@@ -585,6 +588,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       return;
     }
     setBusy(false);
+    if (result.reason === 'marker_required') setMarkerReload((n) => n + 1);
     setErrorText(describeSubmitFailure(result.reason));
   };
 
