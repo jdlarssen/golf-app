@@ -17,7 +17,8 @@
 --   9. …and that card is approved
 --  10. a global admin approves in the simulator flight                → ok
 --  11. a global admin approves their OWN card there                    → 42501
---  12. the service role approves in the simulator flight              → ok
+--  12. a global admin approves a card they DELIVERED there            → 42501
+--  13. the service role approves in the simulator flight              → ok
 --
 -- Every probe and its check are separate statements (#1910).
 -- Depends on 0220. Run via: supabase test db (see supabase/tests/README.md)
@@ -27,7 +28,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(13);
 
 \ir fixtures/rls_helpers.psql
 
@@ -190,6 +191,18 @@ select throws_ok(
       where game_id = torny_rls.lm_sim_flight() and user_id = torny_rls.admin_id() $$,
   '42501', null,
   'a global admin CANNOT approve their own card in a simulator-league flight'
+);
+
+select torny_rls.as_service();
+update public.game_players set submitted_by_user_id = torny_rls.admin_id()
+ where game_id = torny_rls.lm_sim_flight() and user_id = torny_rls.flightmate_id();
+select torny_rls.as_user(torny_rls.admin_id());
+
+select throws_ok(
+  $$ update public.game_players set approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+      where game_id = torny_rls.lm_sim_flight() and user_id = torny_rls.flightmate_id() $$,
+  '42501', null,
+  'a global admin CANNOT approve a card they delivered in a simulator-league flight'
 );
 
 select torny_rls.as_service();
