@@ -2307,7 +2307,16 @@
       "errors": {
         "db": "Could not save your submission. Please try again.",
         "not_active": "The game is not active — you can't submit right now.",
-        "tee_shots_short": "Someone on the team is short of tee shots. Check the holes and try again."
+        "tee_shots_short": "Someone on the team is short of tee shots. Check the holes and try again.",
+        "marker_required": "Pick a marker before you submit.",
+        "marker_is_self": "You can't be the marker on your own card. Pick someone else in the league.",
+        "marker_not_member": "The marker has to be in the league. Pick someone else."
+      },
+      "marker": {
+        "legend": "Marker",
+        "hint": "Pick who in the league approves the card. Your marker gets a notice, and the round counts once the card is approved.",
+        "none": "Nobody else in the league can approve the card yet. Ask the organiser to add more players.",
+        "unknownPlayer": "Unknown player"
       },
       "unknownCourse": "(unknown course)",
       "teePrefix": "Tee: ",
@@ -4919,6 +4928,30 @@
     }
   },
   "liga": {
+    "marker": {
+      "kicker": "Marker",
+      "heading": "{name}'s card",
+      "subtitle": "{roundLabel} in {leagueName}",
+      "intro": "Check the strokes. When you approve the card, the round counts in the table. If something is off, send it back with a short reason.",
+      "organizerNote": "You approve as the organiser, in place of the marker ({markerName}).",
+      "organizerNoteNoMarker": "You approve as the organiser.",
+      "unknownPlayer": "Unknown player",
+      "banners": {
+        "approved": "The card is approved, and the round counts in the table.",
+        "rejected": "The card is sent back. The player gets a notice with the reason."
+      },
+      "errors": {
+        "forbidden": "You can't approve this card.",
+        "not_pending": "The card no longer waits for approval.",
+        "db": "Couldn't save your answer. Try again."
+      },
+      "state": {
+        "approved": "The card is approved.",
+        "not_delivered": "The card isn't submitted. The player fixes it and submits it again.",
+        "withdrawn": "The player has withdrawn from the round.",
+        "closed": "The round is finished."
+      }
+    },
     "ledger": {
       "kicker": "Clubhouse",
       "createButton": "+ New league",
@@ -5238,6 +5271,13 @@
       }
     },
     "player": {
+      "awaitingMarker": "Waiting for approval from {name}",
+      "markerQueue": {
+        "heading": "Waiting for you as marker",
+        "organizerHeading": "Waiting for the marker",
+        "waitsFor": "waiting for {name}",
+        "review": "Review"
+      },
       "kicker": "League",
       "seasonTableHeading": "Season standings",
       "seasonFinishedBanner": "The season is over. Here's how the table finished.",

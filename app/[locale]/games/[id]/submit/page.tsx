@@ -55,6 +55,7 @@ import {
   type TeeShotT,
 } from '@/components/games/teeShotCopy';
 import { TeeShotShortBox, type TeeShotShortBoxPlayer } from '@/components/games/TeeShotShortBox';
+import { loadMarkerChoice, type MarkerOption } from '@/lib/league/setFlightMarkerCore';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -187,6 +188,15 @@ export default async function SubmitPage({
     redirect({ href: `/games/${id}`, locale });
   }
 
+  // #2661: a simulator league asks who in the league approves the cards. A
+  // failed read throws to the error boundary rather than delivering without.
+  const markerChoice = await loadMarkerChoice(
+    id,
+    userId,
+    deliveringCardIds(userId, me.submitted_at, flightCards),
+  );
+  const markerOptions = markerChoice?.options;
+
   // #2580 «Hvem sitt utslag»: the box over the button when someone on a team
   // this delivery covers (mine, or a flightmate's) lacks tee shots.
   const teeShotBox = await teeShotBoxFor({
@@ -267,6 +277,7 @@ export default async function SubmitPage({
             submitAction={submitAction}
             teeShotBox={teeShotBox}
             holeSegment={game.hole_segment}
+            markerOptions={markerOptions}
           />
         ) : (
         <Suspense fallback={<ReviewBodySkeleton />}>
@@ -285,6 +296,7 @@ export default async function SubmitPage({
             submitAction={submitAction}
             flightCards={flightCards}
             teeShotBox={teeShotBox}
+            markerOptions={markerOptions}
           />
         </Suspense>
         )}
@@ -306,6 +318,7 @@ async function ReviewBody({
   submitAction,
   flightCards,
   teeShotBox,
+  markerOptions,
 }: {
   gameId: string;
   courseId: string;
@@ -325,6 +338,8 @@ async function ReviewBody({
   flightCards: readonly FlightDeliveryCard[];
   /** #2580: someone on a team in this delivery lacks tee shots. */
   teeShotBox: TeeShotBoxData | null;
+  /** #2661: the marker picker in a simulator league, else undefined. */
+  markerOptions: readonly MarkerOption[] | undefined;
 }) {
   const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
@@ -456,6 +471,39 @@ async function ReviewBody({
     .map((r) => ({ holeNumber: r.hole_number, par: r.par, strokes: r.strokes as number }));
   const showPuttsPrompt = puttedCount >= 1 && missingPuttHoles.length > 0;
 
+
+  // #2661: with the marker picker the form lays the two buttons side by side
+  // under the picker itself.
+  const editLink = (
+    <SmartLink
+      href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
+      className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
+    >
+      {t('editButton')}
+    </SmartLink>
+  );
+  const form = (
+    <SubmitForm
+      submitAction={submitAction}
+      missingHoles={missingHoles}
+      // #1370/#1466: the sync block covers every game this delivery
+      // freezes — this round, and the front9 sibling when it exists.
+      blockingGameIds={[
+        gameId,
+        ...(front9Sibling ? [front9Sibling.gameId] : []),
+      ]}
+      alsoFor={flightCards.map((c) => c.userId)}
+      label={
+        flightCards.length > 0
+          ? t('flight.submitButton', { count: flightCards.length + 1 })
+          : undefined
+      }
+      teeShotBlocked={teeShotBox != null}
+      markerOptions={markerOptions}
+      leading={markerOptions ? editLink : undefined}
+    />
+  );
+
   return (
     <>
       <Card className="p-0 overflow-hidden">
@@ -560,32 +608,16 @@ async function ReviewBody({
       {teeShotBox && <TeeShotBoxOnPage box={teeShotBox} gameId={gameId} holeSegment={holeSegment} />}
 
       {/* #1793: gap-6 (24px) gir feiltrykk-margin mellom Rediger og Lever —
-          de to knappene har motsatt konsekvens. */}
-      <div className="grid grid-cols-2 gap-6">
-        <SmartLink
-          href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
-          className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
-        >
-          {t('editButton')}
-        </SmartLink>
-        <SubmitForm
-          submitAction={submitAction}
-          missingHoles={missingHoles}
-          // #1370/#1466: the sync block covers every game this delivery
-          // freezes — this round, and the front9 sibling when it exists.
-          blockingGameIds={[
-            gameId,
-            ...(front9Sibling ? [front9Sibling.gameId] : []),
-          ]}
-          alsoFor={flightCards.map((c) => c.userId)}
-          label={
-            flightCards.length > 0
-              ? t('flight.submitButton', { count: flightCards.length + 1 })
-              : undefined
-          }
-          teeShotBlocked={teeShotBox != null}
-        />
-      </div>
+          de to knappene har motsatt konsekvens. #2661: med markørvelgeren
+          legger skjemaet selv de to knappene side om side under velgeren. */}
+      {markerOptions ? (
+        form
+      ) : (
+        <div className="grid grid-cols-2 gap-6">
+          {editLink}
+          {form}
+        </div>
+      )}
     </>
   );
 }
@@ -630,6 +662,7 @@ async function FlightOnlyBody({
   submitAction,
   teeShotBox,
   holeSegment,
+  markerOptions,
 }: {
   gameId: string;
   cards: readonly FlightDeliveryCard[];
@@ -637,6 +670,8 @@ async function FlightOnlyBody({
   /** #2580: someone on a team in this delivery lacks tee shots. */
   teeShotBox: TeeShotBoxData | null;
   holeSegment: HoleSegment;
+  /** #2661: the marker picker in a simulator league, else undefined. */
+  markerOptions: readonly MarkerOption[] | undefined;
 }) {
   const t = await getTranslations('game.submit.flight');
   const joinNames = await nameJoiner();
@@ -654,6 +689,7 @@ async function FlightOnlyBody({
         alsoFor={cards.map((c) => c.userId)}
         label={t('submitOthersButton', { names: joinNames(cards) })}
         teeShotBlocked={teeShotBox != null}
+        markerOptions={markerOptions}
       />
     </>
   );
