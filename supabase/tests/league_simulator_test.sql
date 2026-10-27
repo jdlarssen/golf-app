@@ -1,13 +1,15 @@
 -- supabase/tests/league_simulator_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Simulator leagues (#2638 Del 1, migrations 0212–0216).
+-- Simulator leagues (#2638 Del 1, migrations 0212–0216) and the league's
+-- handicap share and stroke cap (#2660, migration 0219).
 --
 -- CHECK on the settings columns:
 --   1  leagues.sim_settings that is not a JSON object               → 23514
 --   2  leagues.sim_settings longer than 2 000 characters             → 23514
 --   3  league_rounds.sim_settings that is not a JSON object          → 23514
 -- Lock on leagues (guard_leagues_locked_fields):
---   4  the club admin changes is_simulator, scoring and format in draft → 1 row
+--   4  the club admin changes is_simulator, scoring, format and the
+--      handicap share and cap in draft                              → 1 row
 --   5  the club admin changes is_simulator on an active league       → 42501
 --   6  the club admin changes scoring on an active league            → 42501
 --   7  a global admin changes scoring on an active league they run   → 42501
@@ -50,6 +52,16 @@
 --  37  the organiser moves a started simulator round to their regular
 --      league (step 1 of «move, change the tee, move back»)              → 42501
 --  38  the club admin changes the course of a started simulator round   → 42501
+-- The handicap share and the stroke cap (0219):
+--  39  the club admin changes hcp_allowance_pct on an active league    → 42501
+--  40  a global admin changes hcp_allowance_pct on their active league → 42501
+--  41  the club admin changes hcp_max_strokes on an active league      → 42501
+--  42  a global admin changes hcp_max_strokes on their active league   → 42501
+--  43  leagues.hcp_allowance_pct 0                                     → 23514
+--  44  leagues.hcp_allowance_pct 101                                   → 23514
+--  45  leagues.hcp_max_strokes 0                                       → 23514
+--  46  leagues.hcp_max_strokes 55                                      → 23514
+--  47  games.hcp_max_strokes 55 (the flight's copy has the same bound) → 23514
 --
 -- Every 42501 case checks the code and the exact message (throws_ok).
 --
@@ -58,17 +70,19 @@
 -- column does not exist); with the 0212 guard body: 26, 27 and 29. With the
 -- 0213 function body: 25 and 31; with the 0212 leagues guard: 33 (and 5–7,
 -- whose message changed in 0215); with the 0214 round guard: 34 and 38; with
--- the 0215 round guard: 37.
+-- the 0215 round guard: 37. Without 0219: every case (the columns do not
+-- exist); with the 0215 leagues guard: 39–42 (and 5–7 and 33, whose message
+-- changed in 0219).
 -- Each case that writes runs in its own savepoint and is rolled back.
 -- Every probe and its check are separate statements (#1910).
--- Depends on 0212 to 0216. Run via: supabase test db (see supabase/tests/README.md)
+-- Depends on 0212 to 0216 and 0219. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(39);
+select plan(48);
 
 \ir fixtures/rls_helpers.psql
 
@@ -209,10 +223,11 @@ rollback to savepoint case_3;
 savepoint case_4;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select is(
-  torny_rls.ls_rows($$ update public.leagues set is_simulator = true, scoring = 'gross', format = 'stableford'
+  torny_rls.ls_rows($$ update public.leagues set is_simulator = true, scoring = 'gross', format = 'stableford',
+                               hcp_allowance_pct = 75, hcp_max_strokes = 32
                         where id = torny_rls.ls_draft() $$),
   1,
-  'case 4: the organiser CAN change is_simulator, scoring and format while the league is a draft');
+  'case 4: the organiser CAN change is_simulator, scoring, format and the handicap share and cap while the league is a draft');
 rollback to savepoint case_4;
 
 -- 5
@@ -220,7 +235,7 @@ savepoint case_5;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_ok(
   $$ update public.leagues set is_simulator = false where id = torny_rls.ls_active() $$,
-  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
   'case 5: the organiser CANNOT change is_simulator on an active league');
 rollback to savepoint case_5;
 
@@ -229,7 +244,7 @@ savepoint case_6;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_ok(
   $$ update public.leagues set scoring = 'gross' where id = torny_rls.ls_active() $$,
-  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
   'case 6: the organiser CANNOT change scoring on an active league');
 rollback to savepoint case_6;
 
@@ -238,7 +253,7 @@ savepoint case_7;
 select torny_rls.as_user(torny_rls.admin_id());
 select throws_ok(
   $$ update public.leagues set scoring = 'gross' where id = torny_rls.ls_standalone() $$,
-  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
   'case 7: a global admin is not exempt: scoring stays locked on their active league');
 rollback to savepoint case_7;
 
@@ -499,7 +514,7 @@ savepoint case_33;
 select torny_rls.as_user(torny_rls.ls_club_admin());
 select throws_ok(
   $$ update public.leagues set format = 'stableford' where id = torny_rls.ls_active() $$,
-  '42501', 'leagues.scoring, format and is_simulator are locked once the league has started',
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
   'case 33: the organiser CANNOT change the format of an active league');
 rollback to savepoint case_33;
 
@@ -554,6 +569,91 @@ select throws_ok(
   '42501', 'league_rounds.course_id and tee_box_id of a simulator league are locked once a player has started the round',
   'case 38: the organiser CANNOT change the course of a started round in a simulator league');
 rollback to savepoint case_38;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- The handicap share and the stroke cap (0219)
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 39
+savepoint case_39;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_ok(
+  $$ update public.leagues set hcp_allowance_pct = 75 where id = torny_rls.ls_active() $$,
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
+  'case 39: the organiser CANNOT change the handicap share of an active league');
+rollback to savepoint case_39;
+
+-- 40
+savepoint case_40;
+select torny_rls.as_user(torny_rls.admin_id());
+select throws_ok(
+  $$ update public.leagues set hcp_allowance_pct = 75 where id = torny_rls.ls_standalone() $$,
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
+  'case 40: a global admin is not exempt: the handicap share stays locked on their active league');
+rollback to savepoint case_40;
+
+-- 41
+savepoint case_41;
+select torny_rls.as_user(torny_rls.ls_club_admin());
+select throws_ok(
+  $$ update public.leagues set hcp_max_strokes = 32 where id = torny_rls.ls_active() $$,
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
+  'case 41: the organiser CANNOT change the stroke cap of an active league');
+rollback to savepoint case_41;
+
+-- 42
+savepoint case_42;
+select torny_rls.as_user(torny_rls.admin_id());
+select throws_ok(
+  $$ update public.leagues set hcp_max_strokes = 32 where id = torny_rls.ls_standalone() $$,
+  '42501', 'leagues.scoring, format, is_simulator, hcp_allowance_pct and hcp_max_strokes are locked once the league has started',
+  'case 42: a global admin is not exempt: the stroke cap stays locked on their active league');
+rollback to savepoint case_42;
+
+-- 43
+savepoint case_43;
+select torny_rls.as_service();
+select throws_ok(
+  $$ update public.leagues set hcp_allowance_pct = 0 where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_hcp_allowance_pct_check"',
+  'case 43: a handicap share of 0 is refused (gross is scoring = gross)');
+rollback to savepoint case_43;
+
+-- 44
+savepoint case_44;
+select torny_rls.as_service();
+select throws_ok(
+  $$ update public.leagues set hcp_allowance_pct = 101 where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_hcp_allowance_pct_check"',
+  'case 44: a handicap share over 100 is refused');
+rollback to savepoint case_44;
+
+-- 45
+savepoint case_45;
+select torny_rls.as_service();
+select throws_ok(
+  $$ update public.leagues set hcp_max_strokes = 0 where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_hcp_max_strokes_check"',
+  'case 45: a stroke cap of 0 is refused (no cap is null)');
+rollback to savepoint case_45;
+
+-- 46
+savepoint case_46;
+select torny_rls.as_service();
+select throws_ok(
+  $$ update public.leagues set hcp_max_strokes = 55 where id = torny_rls.ls_draft() $$,
+  '23514', 'new row for relation "leagues" violates check constraint "leagues_hcp_max_strokes_check"',
+  'case 46: a stroke cap over 54 is refused');
+rollback to savepoint case_46;
+
+-- 47
+savepoint case_47;
+select torny_rls.as_service();
+select throws_ok(
+  $$ update public.games set hcp_max_strokes = 55 where id = torny_rls.ls_g_regular() $$,
+  '23514', 'new row for relation "games" violates check constraint "games_hcp_max_strokes_check"',
+  'case 47: the flight game''s stroke cap has the same bound');
+rollback to savepoint case_47;
 
 -- 18 (last: an assert outside every savepoint, like the other guard suites)
 select ok(not has_function_privilege('anon', 'public.guard_leagues_locked_fields()', 'EXECUTE')
