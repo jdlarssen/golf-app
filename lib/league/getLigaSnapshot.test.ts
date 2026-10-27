@@ -649,7 +649,14 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
   // flight (4 strokes → E), so round 1 counts in a regular league too.
   function queue(
     isSimulator: boolean,
-    opts: { status?: string; withC?: boolean; gameStatus?: string; approved?: boolean; marker?: string } = {},
+    opts: {
+      status?: string;
+      withC?: boolean;
+      gameStatus?: string;
+      approved?: boolean;
+      marker?: string;
+      deliverer?: string;
+    } = {},
   ) {
     const flight = opts.withC ? ['A', 'C'] : ['A'];
     return [
@@ -743,6 +750,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
           // #2661: the marker approved the card (a simulator card counts then).
           approved_at: opts.approved === false ? null : '2026-11-05T19:58:00Z',
           marker_user_id: opts.marker ?? null,
+          submitted_by_user_id: opts.deliverer ?? null,
           withdrawn_at: null,
         })),
       },
@@ -777,13 +785,20 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
   });
 
   it('#2661: a delivered card in an active flight waits for its marker', async () => {
-    supabaseMock = buildSupabaseMock(queue(true, { gameStatus: 'active', approved: false, marker: 'B' }));
+    supabaseMock = buildSupabaseMock(
+      queue(true, { gameStatus: 'active', approved: false, marker: 'B', deliverer: 'A' }),
+    );
     const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
     const snap = await getLigaSnapshot('l1');
     expect(snap!.rounds.map((r) => [r.id, r.awaitingMarker])).toEqual([
-      ['r1', [{ gameId: 'g1', userId: 'A', markerUserId: 'B', submittedBy: null }]],
+      ['r1', [{ gameId: 'g1', userId: 'A', markerUserId: 'B', submittedBy: 'A' }]],
       ['r2', []],
     ]);
+    // Who delivered feeds the organiser queue (markerQueues); the read must ask for it.
+    const playersSelect = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'select',
+    )?.args[0];
+    expect(playersSelect).toContain('submitted_by_user_id');
   });
 
   // The orchestrator's check: «—» without a penalty while the window is open

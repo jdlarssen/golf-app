@@ -67,8 +67,12 @@ function unapprovedApprovalState(
   return {
     anyCanApprove: rows.some((r) => r.row === 'can_approve'),
     ownCardRow: rows.find((r) => r.userId === viewer.userId)?.row,
+    // #2661: also when every card waits for its marker in a simulator league:
+    // nobody in the flight approves there, so «a flightmate must approve»
+    // would point the player at someone who cannot.
     allOwnCardNoPeer:
-      rows.length > 0 && rows.every((r) => r.row === 'own_card_no_peer'),
+      rows.length > 0 &&
+      rows.every((r) => r.row === 'own_card_no_peer' || r.row === 'card_awaits_marker'),
   };
 }
 

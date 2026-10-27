@@ -90,10 +90,17 @@ describe('approveAsMarker', () => {
 
   it('the organiser approves in the marker’s stead; a flight still waiting gets its own receipt', async () => {
     markerReviewAccess.mockResolvedValue(review({ role: 'organizer' }));
-    admin = buildSupabaseMock([{ data: { status: 'active' } }]);
+    admin = buildSupabaseMock([{ data: { status: 'active' } }, { data: [{ user_id: 'kari' }] }]);
     await expect(approveAsMarker('l1', 'g1', 'anders')).rejects.toBeInstanceOf(RedirectError);
     expect(approveScorecardCore.mock.calls[0][0]).toMatchObject({ approverRole: 'organizer', markerUserId: undefined });
     expect(lastRedirect()).toBe(`${PAGE}?status=approved_waiting`);
+  });
+
+  it('a flight whose finish failed, with nothing left to approve, promises nothing', async () => {
+    markerReviewAccess.mockResolvedValue(review());
+    admin = buildSupabaseMock([{ data: { status: 'active' } }, { data: [] }]);
+    await expect(approveAsMarker('l1', 'g1', 'anders')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${PAGE}?status=approved_only`);
   });
 
   it('a failed write says so', async () => {
@@ -105,6 +112,17 @@ describe('approveAsMarker', () => {
 });
 
 describe('rejectAsMarker', () => {
+  it('a refused gate writes nothing', async () => {
+    markerReviewAccess.mockResolvedValue({ ok: false, reason: 'forbidden' });
+    const form = new FormData();
+    form.set('player_user_id', 'anders');
+    await expect(rejectAsMarker('l1', 'g1', form)).rejects.toBeInstanceOf(RedirectError);
+    expect({ redirect: lastRedirect(), wrote: rejectScorecardCore.mock.calls.length }).toEqual({
+      redirect: `${PAGE}?error=forbidden`,
+      wrote: 0,
+    });
+  });
+
   it('sends the card back with the reason', async () => {
     markerReviewAccess.mockResolvedValue(review());
     const form = new FormData();

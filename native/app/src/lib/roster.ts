@@ -451,3 +451,24 @@ export function rosterStatus(
       return null;
   }
 }
+
+/**
+ * #2661: kan noen i flighten godkjenne noen av de ventende kortene? Nei når
+ * hvert kort venter på markøren sin (simulatorliga) eller ingen medspiller
+ * kan godkjenne det. Da skjules «En medspiller må godkjenne kortet»: den ville
+ * pekt på noen som ikke kan. Den samme regelen som webbens avslutt-side.
+ */
+export function noFlightmateApproves(
+  roster: readonly RosterEntry[],
+  gameMode: GameMode,
+  organiserUserId: string,
+  cardUserIds: readonly string[],
+): boolean {
+  return (
+    cardUserIds.length > 0 &&
+    cardUserIds.every((cardUserId) => {
+      const row = organizerApprovalRow([...roster], gameMode, { userId: organiserUserId, isAdmin: false }, cardUserId);
+      return row === 'card_awaits_marker' || row === 'own_card_no_peer';
+    })
+  );
+}
