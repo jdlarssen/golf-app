@@ -39,6 +39,8 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   // days, not ⏳ (auto_start_blocked) or ⏰ (game_stale_reminder).
   league_round_open: '📅',
   league_round_closing: '⌛',
+  // #2661: a card waits for you as its marker, like peer_approval_request.
+  league_marker_request: '✋',
   cup_finished: '🏁',
   cup_started: '🏌️',
   cup_signup: '📝',

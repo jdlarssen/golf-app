@@ -72,6 +72,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'league_round_open'>;
       return `/liga/${p.league_id}`;
     }
+    case 'league_marker_request': {
+      // #2661: the marker's own page for the card (the app opens MarkerApprove).
+      const p = n.payload as NotificationPayload<'league_marker_request'>;
+      return `/liga/${p.league_id}/godkjenn/${p.game_id}/${p.player_id}`;
+    }
     case 'game_finished': {
       const p = n.payload as NotificationPayload<'game_finished'>;
       return `/games/${p.game_id}/leaderboard`;

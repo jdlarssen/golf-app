@@ -572,6 +572,7 @@ export type Database = {
           deliver_reminder_sent_at: string | null
           flight_number: number | null
           game_id: string
+          marker_user_id: string | null
           paid_at: string | null
           rejection_reason: string | null
           result_summary: Json | null
@@ -593,6 +594,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id: string
+          marker_user_id?: string | null
           paid_at?: string | null
           rejection_reason?: string | null
           result_summary?: Json | null
@@ -614,6 +616,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id?: string
+          marker_user_id?: string | null
           paid_at?: string | null
           rejection_reason?: string | null
           result_summary?: Json | null
@@ -640,6 +643,13 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_marker_user_id_fkey"
+            columns: ["marker_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -794,6 +804,7 @@ export type Database = {
           game_mode: string
           group_id: string | null
           hcp_allowance_pct: number
+          hcp_max_strokes: number | null
           hole_segment: string
           id: string
           league_round_id: string | null
@@ -840,6 +851,7 @@ export type Database = {
           game_mode: string
           group_id?: string | null
           hcp_allowance_pct?: number
+          hcp_max_strokes?: number | null
           hole_segment?: string
           id?: string
           league_round_id?: string | null
@@ -886,6 +898,7 @@ export type Database = {
           game_mode?: string
           group_id?: string | null
           hcp_allowance_pct?: number
+          hcp_max_strokes?: number | null
           hole_segment?: string
           id?: string
           league_round_id?: string | null
@@ -1474,6 +1487,8 @@ export type Database = {
           finished_at: string | null
           format: string
           group_id: string | null
+          hcp_allowance_pct: number
+          hcp_max_strokes: number | null
           id: string
           is_simulator: boolean
           missed_round_policy: string
@@ -1499,6 +1514,8 @@ export type Database = {
           finished_at?: string | null
           format?: string
           group_id?: string | null
+          hcp_allowance_pct?: number
+          hcp_max_strokes?: number | null
           id?: string
           is_simulator?: boolean
           missed_round_policy?: string
@@ -1524,6 +1541,8 @@ export type Database = {
           finished_at?: string | null
           format?: string
           group_id?: string | null
+          hcp_allowance_pct?: number
+          hcp_max_strokes?: number | null
           id?: string
           is_simulator?: boolean
           missed_round_policy?: string

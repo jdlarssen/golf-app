@@ -7,7 +7,9 @@
 -- 'missing_score_reminder' (0203). The organiser's «Alle har levert» and the
 -- stale-round reminder write 'all_scorecards_delivered' and
 -- 'game_stale_reminder' (0204). The league round's two messages write
--- 'league_round_open' and 'league_round_closing' (0217, #2638). Before their
+-- 'league_round_open' and 'league_round_closing' (0217, #2638). The marker's
+-- request in a simulator league writes 'league_marker_request' (0220, #2661).
+-- Before their
 -- migration the CHECK refused them, and `notify` only logged the failure: no
 -- inbox row, no push, no mail.
 --
@@ -19,8 +21,9 @@
 --     5. kind = 'game_stale_reminder'      → lives
 --     6. kind = 'league_round_open'        → lives
 --     7. kind = 'league_round_closing'     → lives
+--     8. kind = 'league_marker_request'    → lives
 --   FORBIDDEN:
---     8. kind = 'not_a_kind'               → 23514 (check_violation)
+--     9. kind = 'not_a_kind'               → 23514 (check_violation)
 --
 -- Inserts run as the service role, the only role that writes notifications
 -- (there is no insert policy). The insert and the check are separate
@@ -31,7 +34,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(9);
 
 \ir fixtures/rls_helpers.psql
 
@@ -89,6 +92,15 @@ select lives_ok(
                                 'round_id', torny_rls.game_id(), 'round_label', 'Runde 3',
                                 'closes_at', '2026-11-06T22:59:00Z')) $$,
   'a league_round_closing notification can be inserted'
+);
+
+select lives_ok(
+  $$ insert into public.notifications (user_id, kind, payload)
+     values (torny_rls.active_id(), 'league_marker_request',
+             jsonb_build_object('league_id', torny_rls.game_id(), 'league_name', 'Vinterligaen',
+                                'game_id', torny_rls.game_id(), 'player_id', torny_rls.flightmate_id(),
+                                'player_name', 'Anders')) $$,
+  'a league_marker_request notification can be inserted'
 );
 
 select throws_ok(

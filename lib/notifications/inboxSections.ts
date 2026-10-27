@@ -96,6 +96,7 @@ const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', '
 export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionKey | null {
   switch (row.kind) {
     case 'peer_approval_request':
+    case 'league_marker_request':
       return 'review';
     case 'registration_request': {
       const p = row.payload as NotificationPayload<'registration_request'>;
