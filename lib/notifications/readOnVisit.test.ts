@@ -29,6 +29,7 @@ const SURFACE_ROUTE: Record<VisitSurface, RegExp> = {
   friends: /^\/profile\/venner$/,
   history: /^\/profile\/historikk$/,
   league: /^\/liga\/[^/]+$/,
+  leagueMarker: /^\/liga\/[^/]+\/godkjenn\/[^/]+\/[^/]+$/,
 };
 
 const surfaces = Object.keys(READ_ON_VISIT) as VisitSurface[];
@@ -104,6 +105,7 @@ const CALLERS: Record<
   friends: { file: 'app/[locale]/profile/venner/page.tsx', entity: null },
   history: { file: 'app/[locale]/profile/historikk/page.tsx', entity: null },
   league: { file: 'app/[locale]/liga/[id]/page.tsx', entity: 'leagueId' },
+  leagueMarker: { file: 'app/[locale]/liga/[id]/godkjenn/[gameId]/[userId]/page.tsx', entity: 'gameId' },
 };
 
 function sourceFiles(dir: string): string[] {

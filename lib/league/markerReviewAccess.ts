@@ -3,6 +3,9 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { parForPlayer } from '@/lib/games/parDisplay';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
+import { isHoleInSegment } from '@/lib/games/holeScope';
+import type { ScorecardHole } from '@/lib/games/scorecardReviewData';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { mayApproveAsMarker } from './leagueMarker';
 
@@ -31,7 +34,13 @@ export type MarkerReview =
       /** `marker`: the named marker. `organizer`: the league's organiser or a global admin. */
       role: 'marker' | 'organizer';
       flight: LeagueFlight;
-      game: { name: string; status: string; gameMode: GameMode; courseId: string };
+      game: {
+        name: string;
+        status: string;
+        gameMode: GameMode;
+        courseId: string;
+        holeSegment: HoleSegment;
+      };
       card: {
         userId: string;
         name: string | null;
@@ -75,9 +84,15 @@ export async function markerReviewAccess(
   const [gameRes, cardRes, profileRes] = await Promise.all([
     admin
       .from('games')
-      .select('name, status, game_mode, course_id')
+      .select('name, status, game_mode, course_id, hole_segment')
       .eq('id', gameId)
-      .maybeSingle<{ name: string; status: string; game_mode: GameMode; course_id: string }>(),
+      .maybeSingle<{
+        name: string;
+        status: string;
+        game_mode: GameMode;
+        course_id: string;
+        hole_segment: HoleSegment;
+      }>(),
     admin
       .from('game_players')
       .select(
@@ -131,7 +146,13 @@ export async function markerReviewAccess(
     ok: true,
     role,
     flight,
-    game: { name: game.name, status: game.status, gameMode: game.game_mode, courseId: game.course_id },
+    game: {
+      name: game.name,
+      status: game.status,
+      gameMode: game.game_mode,
+      courseId: game.course_id,
+      holeSegment: game.hole_segment,
+    },
     card: {
       userId: card.user_id,
       name: displayName(card.users),
@@ -146,7 +167,40 @@ export async function markerReviewAccess(
   };
 }
 
-/** One hole on the marker's card: the owner's par, the index and the strokes. */
+/**
+ * The holes and the owner's strokes for the card the gate let through, in the
+ * shape the web's `ScorecardTable` reads. A league flight is solo, so the
+ * owner's own score rows are the card. Read with the service role, after
+ * `markerReviewAccess`. A failed read throws.
+ */
+export async function loadMarkerCard(
+  review: Extract<MarkerReview, { ok: true }>,
+): Promise<{ holes: ScorecardHole[]; strokes: Map<number, number | null> }> {
+  const admin = getAdminClient();
+  const [holesRes, scoresRes] = await Promise.all([
+    admin
+      .from('course_holes')
+      .select(COURSE_HOLES_SELECT)
+      .eq('course_id', review.game.courseId)
+      .order('hole_number', { ascending: true })
+      .returns<ScorecardHole[]>(),
+    admin
+      .from('scores')
+      .select('hole_number, strokes')
+      .eq('game_id', review.flight.gameId)
+      .eq('user_id', review.card.userId)
+      .returns<{ hole_number: number; strokes: number | null }[]>(),
+  ]);
+  if (holesRes.error) throw new Error(`loadMarkerCard: ${holesRes.error.message}`);
+  if (scoresRes.error) throw new Error(`loadMarkerCard: ${scoresRes.error.message}`);
+  const holes = (holesRes.data ?? []).filter((h) => isHoleInSegment(h.hole_number, review.game.holeSegment));
+  return {
+    holes,
+    strokes: new Map((scoresRes.data ?? []).map((row) => [row.hole_number, row.strokes])),
+  };
+}
+
+/** One hole on the marker's card as the app reads it: the owner's par. */
 export type MarkerCardHole = {
   number: number;
   par: number;
@@ -154,47 +208,15 @@ export type MarkerCardHole = {
   strokes: number | null;
 };
 
-/**
- * The holes and the owner's strokes for the card the gate let through. A
- * league flight is solo, so the owner's own score rows are the card. Read
- * with the service role, after `markerReviewAccess`. A failed read throws.
- */
-export async function loadMarkerCardHoles(
-  review: Extract<MarkerReview, { ok: true }>,
-): Promise<MarkerCardHole[]> {
-  const admin = getAdminClient();
-  const [holesRes, scoresRes] = await Promise.all([
-    admin
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', review.game.courseId)
-      .order('hole_number', { ascending: true }),
-    admin
-      .from('scores')
-      .select('hole_number, strokes')
-      .eq('game_id', review.flight.gameId)
-      .eq('user_id', review.card.userId),
-  ]);
-  if (holesRes.error) throw new Error(`loadMarkerCardHoles: ${holesRes.error.message}`);
-  if (scoresRes.error) throw new Error(`loadMarkerCardHoles: ${scoresRes.error.message}`);
-  const strokesByHole = new Map(
-    ((scoresRes.data ?? []) as { hole_number: number; strokes: number | null }[]).map((s) => [
-      s.hole_number,
-      s.strokes,
-    ]),
-  );
-  return (
-    (holesRes.data ?? []) as {
-      hole_number: number;
-      par_mens: number;
-      par_ladies: number;
-      par_juniors: number;
-      stroke_index: number;
-    }[]
-  ).map((h) => ({
+/** `loadMarkerCard` flattened for the app: the par for the owner's tee. */
+export function markerCardHoles(
+  card: { holes: ScorecardHole[]; strokes: ReadonlyMap<number, number | null> },
+  teeGender: ScoringGender,
+): MarkerCardHole[] {
+  return card.holes.map((h) => ({
     number: h.hole_number,
-    par: parForPlayer({ mens: h.par_mens, ladies: h.par_ladies, juniors: h.par_juniors }, review.card.teeGender),
+    par: parForPlayer({ mens: h.par_mens, ladies: h.par_ladies, juniors: h.par_juniors }, teeGender),
     strokeIndex: h.stroke_index,
-    strokes: strokesByHole.get(h.hole_number) ?? null,
+    strokes: card.strokes.get(h.hole_number) ?? null,
   }));
 }

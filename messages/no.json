@@ -2307,7 +2307,16 @@
       "errors": {
         "db": "Klarte ikke å lagre leveringen. Prøv igjen.",
         "not_active": "Spillet er ikke aktivt — du kan ikke levere nå.",
-        "tee_shots_short": "Noen på laget mangler utslag. Se over hullene og prøv igjen."
+        "tee_shots_short": "Noen på laget mangler utslag. Se over hullene og prøv igjen.",
+        "marker_required": "Velg en markør før du leverer.",
+        "marker_is_self": "Du kan ikke være markør på ditt eget kort. Velg en annen i ligaen.",
+        "marker_not_member": "Markøren må være med i ligaen. Velg en annen."
+      },
+      "marker": {
+        "legend": "Markør",
+        "hint": "Velg hvem i ligaen som skal godkjenne kortet. Markøren får beskjed, og runden teller når kortet er godkjent.",
+        "none": "Ingen andre i ligaen kan godkjenne kortet ennå. Be arrangøren legge til flere spillere.",
+        "unknownPlayer": "Ukjent spiller"
       },
       "unknownCourse": "(ukjent bane)",
       "teePrefix": "Tee: ",
@@ -4919,6 +4928,30 @@
     }
   },
   "liga": {
+    "marker": {
+      "kicker": "Markør",
+      "heading": "Kortet til {name}",
+      "subtitle": "{roundLabel} i {leagueName}",
+      "intro": "Se over slagene. Godkjenner du kortet, teller runden i tabellen. Stemmer noe ikke, sender du det tilbake med en kort grunn.",
+      "organizerNote": "Du godkjenner som arrangør, i stedet for markøren ({markerName}).",
+      "organizerNoteNoMarker": "Du godkjenner som arrangør.",
+      "unknownPlayer": "Ukjent spiller",
+      "banners": {
+        "approved": "Kortet er godkjent, og runden teller i tabellen.",
+        "rejected": "Kortet er sendt tilbake. Spilleren får beskjed med grunnen."
+      },
+      "errors": {
+        "forbidden": "Du kan ikke godkjenne dette kortet.",
+        "not_pending": "Kortet venter ikke på godkjenning lenger.",
+        "db": "Klarte ikke å lagre svaret. Prøv igjen."
+      },
+      "state": {
+        "approved": "Kortet er godkjent.",
+        "not_delivered": "Kortet er ikke levert. Spilleren retter det og sender det inn igjen.",
+        "withdrawn": "Spilleren har trukket seg fra runden.",
+        "closed": "Runden er avsluttet."
+      }
+    },
     "ledger": {
       "kicker": "Klubbhuset",
       "createButton": "+ Ny liga",
@@ -5238,6 +5271,13 @@
       }
     },
     "player": {
+      "awaitingMarker": "Venter på godkjenning fra {name}",
+      "markerQueue": {
+        "heading": "Venter på deg som markør",
+        "organizerHeading": "Venter på markøren",
+        "waitsFor": "venter på {name}",
+        "review": "Se over"
+      },
       "kicker": "Liga",
       "seasonTableHeading": "Sesong-tabell",
       "seasonFinishedBanner": "Sesongen er ferdig. Slik endte tabellen.",

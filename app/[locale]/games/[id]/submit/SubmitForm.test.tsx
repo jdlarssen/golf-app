@@ -24,6 +24,7 @@ import { SubmitForm } from './SubmitForm';
  * svart, også i serverens HTML). Selve
  * scope-reglene er Type A i `lib/sync/queueScope.test.ts` og re-asserteres
  * ikke her; testen kjører dem gjennom komponenten i stedet for å telle på nytt.
+ * #2661: og av en markør som ikke er valgt i en simulatorliga.
  *
  * `@/i18n/navigation` og `next-intl` er globalt mocket i `vitest.setup.ts`
  * (ekte no.json), så verken router-stub eller provider gjentas her.
@@ -119,5 +120,23 @@ describe('SubmitForm', () => {
     fireEvent.click(locked);
     expect(screen.getByTestId('box')).toHaveFocus();
     expect(props.submitAction).not.toHaveBeenCalled();
+
+    // #2661: a simulator league locks «Lever» until a marker is picked, and the
+    // pick is the form's `marker` field.
+    rerender(
+      <SubmitForm
+        {...props}
+        markerOptions={[
+          { userId: 'u2', name: 'Kari' },
+          { userId: 'u3', name: null },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+    expect(screen.getByTestId('marker-option-u3')).toHaveTextContent('Ukjent spiller');
+    fireEvent.click(screen.getByText('Kari'));
+    expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
+    const picked = new FormData(screen.getByTestId('submit-scorecard').closest('form')!);
+    expect(picked.get('marker')).toBe('u2');
   });
 });
