@@ -171,6 +171,10 @@
         "title": "{roundLabel} in {leagueName} closes {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}",
         "detail": "You have not played it yet."
       },
+      "leagueMarkerRequest": {
+        "title": "{playerName} picked you as their marker",
+        "detail": "Check the round in {leagueName} and approve it."
+      },
       "paymentReminder": {
         "title": "Pay the entry fee",
         "detail": "You owe {amount} for {gameName}",
