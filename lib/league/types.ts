@@ -41,10 +41,11 @@ export const LEAGUE_HCP_DEFAULTS: { simulator: LeagueHcp; regular: LeagueHcp; gr
   gross: { allowancePct: 100, maxStrokes: null },
 };
 
-/** A whole number within [min, max] from a form field, or null. */
+/** A whole number within [min, max] from a form field (digits only), or null. */
 export function wholeNumberInRange(raw: string, min: number, max: number): number | null {
+  if (!/^\d+$/.test(raw.trim())) return null;
   const n = Number(raw);
-  return raw.trim() !== '' && Number.isInteger(n) && n >= min && n <= max ? n : null;
+  return n >= min && n <= max ? n : null;
 }
 
 /** Hvordan sesongen rangeres. Fase 1 bruker 'total' + 'average'. */
