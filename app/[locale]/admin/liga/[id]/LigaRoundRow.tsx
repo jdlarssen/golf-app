@@ -267,7 +267,7 @@ function CourseTeeForm({
 }: Pick<Props, 'round' | 'leagueId' | 'courseScope' | 'courses'>) {
   const t = useTranslations('liga.roundRow');
   const fieldId = useId();
-  const [updateState, updateAction] = useActionState(
+  const [updateState, updateAction, updatePending] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       updateLeagueRound(formData) as Promise<LeagueActionError>,
     INITIAL,
@@ -287,7 +287,19 @@ function CourseTeeForm({
   }
 
   return (
-    <form action={updateAction} className="mt-3 space-y-2">
+    <form
+      action={updateAction}
+      // React 19 resets a form after an `action` submit, and a controlled
+      // <select> then falls back to its first option while the state still
+      // holds the pick. Submitting by hand keeps the fields as chosen (same
+      // fix as the settings form below).
+      onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+        startTransition(() => updateAction(formData));
+      }}
+      className="mt-3 space-y-2"
+    >
       <input type="hidden" name="round_id" value={round.id} />
       <input type="hidden" name="league_id" value={leagueId} />
 
@@ -323,6 +335,9 @@ function CourseTeeForm({
             name="tee_box_id"
             value={teeBoxId}
             onChange={(e) => setTeeBoxId(e.target.value)}
+            // The server never writes an empty tee, so after a course change
+            // the old course's tee would stay on the round. Pick one first.
+            required={courseId !== (round.courseId ?? '') && tees.length > 0}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
           >
             <option value="">{t('teeNotSelected')}</option>
@@ -340,9 +355,15 @@ function CourseTeeForm({
           {t.has(updateErrorKey) ? t(updateErrorKey) : t('settingsErrors.update_failed')}
         </p>
       )}
-      <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
+      <Button
+        type="submit"
+        variant="secondary"
+        className="text-sm px-4 py-2 min-h-[44px]"
+        pending={updatePending}
+        pendingLabel={t('savePending')}
+      >
         {t('saveButton')}
-      </SubmitButton>
+      </Button>
     </form>
   );
 }

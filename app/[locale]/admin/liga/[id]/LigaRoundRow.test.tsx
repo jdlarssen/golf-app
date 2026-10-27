@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
+const updateLeagueRound = vi.hoisted(() => vi.fn(async (_fd: FormData) => ({ error: '' })));
 vi.mock('@/lib/league/actions', () => ({
-  updateLeagueRound: vi.fn(),
+  updateLeagueRound,
   overrideRoundWindow: vi.fn(),
   updateRoundSimSettings: vi.fn(),
 }));
@@ -77,5 +78,26 @@ describe('LigaRoundRow — tee list follows the picked course (#2664)', () => {
     const { course, teeSelect } = renderRow('c1', 't1');
     fireEvent.change(course, { target: { value: 'c3' } });
     expect(teeSelect.value).toBe('t5');
+  });
+
+  it('keeps the picked course and tee after saving (React 19 resets the form after an action)', async () => {
+    const { course, teeSelect } = renderRow('c1', 't1');
+    fireEvent.change(course, { target: { value: 'c2' } });
+    fireEvent.change(teeSelect, { target: { value: 't4' } });
+    fireEvent.submit(course.closest('form')!);
+    await waitFor(() => expect(updateLeagueRound).toHaveBeenCalled());
+    const posted = updateLeagueRound.mock.calls[0][0];
+    expect({ course: posted.get('course_id'), tee: posted.get('tee_box_id') }).toEqual({ course: 'c2', tee: 't4' });
+    await waitFor(() => expect(screen.getAllByRole('button', { hidden: true }).some((b) => (b as HTMLButtonElement).disabled)).toBe(false));
+    expect({ course: course.value, tee: teeSelect.value }).toEqual({ course: 'c2', tee: 't4' });
+  });
+
+  it('requires a tee once the course is changed, so the old tee cannot stay behind', () => {
+    const { course, teeSelect } = renderRow('c1', 't1');
+    expect(teeSelect.required).toBe(false);
+    fireEvent.change(course, { target: { value: 'c2' } });
+    expect(teeSelect.required).toBe(true);
+    fireEvent.change(course, { target: { value: 'c1' } });
+    expect(teeSelect.required).toBe(false);
   });
 });
