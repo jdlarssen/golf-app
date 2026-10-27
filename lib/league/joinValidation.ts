@@ -76,3 +76,24 @@ export function closedRoundSequences(
     .map((r) => r.sequence)
     .sort((a, b) => a - b);
 }
+
+export type LateJoinNotice =
+  | { kind: 'none' }
+  | { kind: 'from_next_round'; played: number[] }
+  | { kind: 'all_played'; played: number[] };
+
+/**
+ * What the link page tells someone who joins after rounds have closed. Some
+ * closed: «Runde … er spilt. Du er med fra neste runde.» Every round closed
+ * (an active league waiting to be finished, or for the organiser to add one):
+ * there is no next round to promise, so the page says so instead.
+ */
+export function lateJoinNotice(
+  rounds: ReadonlyArray<{ sequence: number; closesAt: string }>,
+  nowMs: number,
+): LateJoinNotice {
+  const played = closedRoundSequences(rounds, nowMs);
+  if (played.length === 0) return { kind: 'none' };
+  if (played.length === rounds.length) return { kind: 'all_played', played };
+  return { kind: 'from_next_round', played };
+}

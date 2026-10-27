@@ -25,6 +25,9 @@ describe('LigaJoinLinkControl', () => {
     fireEvent.click(screen.getByTestId('liga-join-link-rotate'));
     await waitFor(() => expect(link()?.value).toBe('https://tornygolf.no/liga/bli-med/new23456'));
     expect(setLeagueJoinLink).toHaveBeenLastCalledWith('l1', 'rotate');
+    // The new code renders before the transition ends; a click on the still
+    // disabled switch would be swallowed (flaked 1 in 6 under load).
+    await waitFor(() => expect(screen.getByTestId('liga-join-link-switch')).not.toBeDisabled());
 
     setLeagueJoinLink.mockResolvedValueOnce({ joinCode: null });
     fireEvent.click(screen.getByTestId('liga-join-link-switch'));
