@@ -85,7 +85,8 @@ const WINDOW_CHIP_STYLES: Record<
 /**
  * #2661: the cards that wait for a marker (simulator league). The marker sees
  * the ones that wait for them; the league's organiser sees every other one,
- * since they may approve in the marker's stead.
+ * since they may approve in the marker's stead, except their own card, which
+ * only its marker answers (`mayApproveAsMarker`).
  */
 function markerQueues(opts: {
   leagueId: string;
@@ -108,7 +109,7 @@ function markerQueues(opts: {
     markerRows: awaiting.filter((a) => a.markerUserId === opts.viewerId).map((a) => row(a)),
     organizerRows: opts.isOrganizer
       ? awaiting
-          .filter((a) => a.markerUserId !== opts.viewerId)
+          .filter((a) => a.markerUserId !== opts.viewerId && a.userId !== opts.viewerId)
           .map((a) => row(a, opts.waitsFor(opts.nameOf(a.markerUserId))))
       : [],
   };

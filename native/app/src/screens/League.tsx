@@ -88,12 +88,15 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
   const next = nextRoundOf(view.rounds, now);
   const settingsRound = open ?? next;
   // #2661: kortene som venter på en markør (simulatorliga). Markøren ser sine,
-  // arrangøren de andre, fordi hen kan godkjenne i markørens sted.
+  // arrangøren de andre, fordi hen kan godkjenne i markørens sted, men ikke
+  // sitt eget kort: det svarer bare markøren på (`mayApproveAsMarker`).
   const nameOf = (userId: string) =>
     view.participants.find((p) => p.userId === userId)?.name ?? MARKER_TEXT.unknownPlayer;
   const awaiting = view.rounds.flatMap((r) => r.awaitingMarker.map((a) => ({ ...a, roundLabel: r.label })));
   const markerRows = awaiting.filter((a) => a.markerUserId === me.userId);
-  const organizerRows = me.isOrganizer ? awaiting.filter((a) => a.markerUserId !== me.userId) : [];
+  const organizerRows = me.isOrganizer
+    ? awaiting.filter((a) => a.markerUserId !== me.userId && a.userId !== me.userId)
+    : [];
   const openMarker = (a: (typeof awaiting)[number]) =>
     navigation.navigate('MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
 

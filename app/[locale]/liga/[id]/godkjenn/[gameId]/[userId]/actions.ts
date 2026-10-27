@@ -52,7 +52,15 @@ export async function approveAsMarker(leagueId: string, gameId: string, playerUs
   });
   if (!result.ok) redirect({ href: `${here}?error=db`, locale });
   revalidatePath(`/liga/${leagueId}`);
-  redirect({ href: `${here}?status=approved`, locale });
+  // The round counts once the whole flight is approved and finished; a card
+  // left in the flight gets its own receipt, so the banner never overclaims.
+  const { data: game } = await getAdminClient()
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .maybeSingle<{ status: string }>();
+  const status = game?.status === 'finished' ? 'approved' : 'approved_waiting';
+  redirect({ href: `${here}?status=${status}`, locale });
 }
 
 export async function rejectAsMarker(leagueId: string, gameId: string, formData: FormData) {
