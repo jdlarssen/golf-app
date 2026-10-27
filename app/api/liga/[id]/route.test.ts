@@ -93,6 +93,7 @@ function clubSnapshot(groupId: string | null): LeagueSnapshot {
       finished_at: null,
       group_id: groupId,
       spectate_token: null,
+      join_code: null,
       is_simulator: true,
       sim_settings: null,
       hcp_allowance_pct: 75,
