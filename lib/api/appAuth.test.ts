@@ -118,6 +118,13 @@ const fake = createAdminClientMock({
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => fake.client,
 }));
+// #2661: not a simulator-league flight unless a test says so (lib/league/__mocks__).
+vi.mock('@/lib/league/leagueFlight');
+const markerReviewAccessMock = vi.fn();
+vi.mock('@/lib/league/markerReviewAccess', () => ({
+  markerReviewAccess: (...args: unknown[]) => markerReviewAccessMock(...args),
+}));
+const { readSimulatorLeagueFlight } = await import('@/lib/league/leagueFlight');
 
 const {
   authenticatedUser,
@@ -315,6 +322,61 @@ describe('scorecardReviewAccess (#2215)', () => {
       ).rejects.toThrow('connection reset');
     },
   );
+});
+
+describe('scorecardReviewAccess in a simulator league (#2661)', () => {
+  beforeEach(() => {
+    markerReviewAccessMock.mockReset();
+    vi.mocked(readSimulatorLeagueFlight).mockResolvedValue({
+      gameId: GAME,
+      roundId: 'r1',
+      roundLabel: 'Runde 1',
+      leagueId: 'l1',
+      leagueName: 'Vinterliga',
+      isSimulator: true,
+      leagueCreatorId: CREATOR,
+    });
+  });
+
+  it('the named marker answers as a peer, and the write must name them', async () => {
+    markerReviewAccessMock.mockResolvedValue({ ok: true, role: 'marker' });
+    expect(await scorecardReviewAccess(STRANGER, GAME, OWNER, 'approve')).toEqual({
+      ok: true,
+      role: 'peer',
+      gameMode: 'stableford',
+      gameName: 'Sommercup',
+      markerUserId: STRANGER,
+    });
+    expect(markerReviewAccessMock).toHaveBeenCalledWith(STRANGER, GAME, OWNER);
+  });
+
+  it('the league organiser or an admin answers as the organiser', async () => {
+    markerReviewAccessMock.mockResolvedValue({ ok: true, role: 'organizer' });
+    expect(await scorecardReviewAccess(CREATOR, GAME, OWNER, 'reject')).toEqual({
+      ok: true,
+      role: 'organizer',
+      gameMode: 'stableford',
+      gameName: 'Sommercup',
+    });
+  });
+
+  it('a flightmate the marker rule refuses gets no, though the flight rule would say peer', async () => {
+    markerReviewAccessMock.mockResolvedValue({ ok: false, reason: 'forbidden' });
+    expect(await scorecardReviewAccess(MATE, GAME, OWNER, 'approve')).toEqual({
+      ok: false,
+      reason: 'forbidden',
+    });
+  });
+
+  it('reopening still follows the organiser rule', async () => {
+    expect(await scorecardReviewAccess(CREATOR, GAME, FAR, 'reopen')).toEqual({
+      ok: true,
+      role: 'organizer',
+      gameMode: 'stableford',
+      gameName: 'Sommercup',
+    });
+    expect(markerReviewAccessMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('gameRefreshAccess (#2215)', () => {

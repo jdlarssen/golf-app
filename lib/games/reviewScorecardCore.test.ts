@@ -43,6 +43,13 @@ vi.mock('@/lib/notifications/notify', () => ({
 vi.mock('@/lib/notifications/organizerNotices');
 const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
+// #2661: the simulator flight's own finish has its own suite; here only what
+// the core does with its answer. Default: not a simulator-league flight.
+const finishSimulatorFlightMock = vi.fn(async (..._args: unknown[]) => 'not_simulator' as const);
+vi.mock('@/lib/league/finishSimulatorFlight', () => ({
+  finishSimulatorFlightIfApproved: (...args: unknown[]) => finishSimulatorFlightMock(...args),
+}));
+
 const GAME_ID = 'spill-1';
 const PLAYER = 'spilleren';
 const REVIEWER = 'attestanten';
@@ -189,6 +196,29 @@ describe('approveScorecardCore', () => {
     ]);
     // Godkjenning kaskaderer aldri — admin-klienten rører ingenting.
     expect(admin.ops).toEqual([]);
+  });
+
+  it('#2661: the named marker approves only a card that names them, in the same write', async () => {
+    await approveScorecardCore({
+      client: client(),
+      gameId: GAME_ID,
+      approverUserId: REVIEWER,
+      playerUserId: PLAYER,
+      approverRole: 'peer',
+      delivererMayApprove: false,
+      markerUserId: REVIEWER,
+    });
+    const [write] = updates(caller);
+    expect(write.filters).toContainEqual({ op: 'eq', column: 'marker_user_id', value: REVIEWER });
+  });
+
+  it('#2661: a simulator flight the approval finished does not ask the organiser to finish it', async () => {
+    finishSimulatorFlightMock.mockResolvedValueOnce('finished' as never);
+    await expect(approve()).resolves.toEqual({ ok: true, alreadyDone: false });
+    expect({
+      finish: finishSimulatorFlightMock.mock.calls,
+      organiser: notifyOrganizerIfAllDeliveredMock.mock.calls,
+    }).toEqual({ finish: [[GAME_ID, REVIEWER]], organiser: [] });
   });
 
   it('arrangør og admin er unntatt leverandør-regelen, som i vakta (0191)', async () => {

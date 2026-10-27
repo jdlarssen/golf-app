@@ -2409,6 +2409,7 @@
       "unapprovedNote": "En medspiller må godkjenne hvert scorekort før du kan avslutte. Be dem åpne spillet og godkjenne, så kan du avslutte her.",
       "approveOverrideNote": "Får du ikke tak i dem, kan du som arrangør godkjenne på vegne av gruppa under «Styr spillere».",
       "approveOverrideCta": "Godkjenn på vegne av gruppa",
+      "ownCardAwaitsMarker": "Markøren din godkjenner kortet. Da avsluttes runden av seg selv og teller i ligaen.",
       "ownCardNoPeer": "Ingen medspiller kan godkjenne kortet ditt. Gå til «Styr spillere», åpne kortet ditt med «Åpne for redigering» og kom tilbake hit. Da kan du avslutte spillet selv om kortet ikke er levert. Slagene dine teller.",
       "ownCardCta": "Styr spillere",
       "backToGame": "Tilbake til spillet",

@@ -647,7 +647,10 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
   // One hole, par 4, CH 0. A took round 1 alone (5 strokes → +1); round 2 has
   // no flight. B is a participant who has not played. `withC` puts C in A's
   // flight (4 strokes → E), so round 1 counts in a regular league too.
-  function queue(isSimulator: boolean, opts: { status?: string; withC?: boolean } = {}) {
+  function queue(
+    isSimulator: boolean,
+    opts: { status?: string; withC?: boolean; gameStatus?: string; approved?: boolean; marker?: string } = {},
+  ) {
     const flight = opts.withC ? ['A', 'C'] : ['A'];
     return [
       {
@@ -721,7 +724,7 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
         data: [
           {
             id: 'g1',
-            status: 'finished',
+            status: opts.gameStatus ?? 'finished',
             course_id: 'c1',
             tee_box_id: 'tb1',
             league_round_id: 'r1',
@@ -737,6 +740,9 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
           course_handicap: 0,
           tee_gender: 'mens',
           submitted_at: '2026-11-05T19:55:00Z',
+          // #2661: the marker approved the card (a simulator card counts then).
+          approved_at: opts.approved === false ? null : '2026-11-05T19:58:00Z',
+          marker_user_id: opts.marker ?? null,
           withdrawn_at: null,
         })),
       },
@@ -760,6 +766,24 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
       simulator: 1,
       regular: null,
     });
+  });
+
+  it('#2661: a simulator card counts only once approved, also if the flight finished', async () => {
+    supabaseMock = buildSupabaseMock(queue(true, { approved: false }));
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+    const row = snap!.standings.net!.rows.find((r) => r.userId === 'A')!;
+    expect(row.perRound.find((c) => c.roundId === 'r1')!.value).toBeNull();
+  });
+
+  it('#2661: a delivered card in an active flight waits for its marker', async () => {
+    supabaseMock = buildSupabaseMock(queue(true, { gameStatus: 'active', approved: false, marker: 'B' }));
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+    expect(snap!.rounds.map((r) => [r.id, r.awaitingMarker])).toEqual([
+      ['r1', [{ gameId: 'g1', userId: 'A', markerUserId: 'B' }]],
+      ['r2', []],
+    ]);
   });
 
   // The orchestrator's check: «—» without a penalty while the window is open

@@ -32,6 +32,13 @@ export type FlightPlayer = {
   user_id: string;
   flight_number: number | null;
   withdrawn_at: string | null;
+  /**
+   * #2661: the marker the player named for this card in a simulator league
+   * (`game_players.marker_user_id`). Optional: only the approval surfaces
+   * read it, and a card that names one has no attestant in the flight
+   * (`canApproveScorecardFor`).
+   */
+  marker_user_id?: string | null;
 };
 
 /** Returnerer bare aktive (ikke-trukkede) spillere. */
@@ -170,6 +177,9 @@ export function peersForApproval(
  * 2026-09-27; speiler vakta i 0191). `null` betyr ukjent leverandør, og da
  * gjelder regelen som før.
  *
+ * #2661: et kort som navngir en markør (simulatorliga), har ingen attestant i
+ * flighten. Markøren godkjenner gjennom serveren, ikke etter denne regelen.
+ *
  * Dette er det ene hjemmet for attestant-regelen: `peersForApproval`
  * (varsling + authz) og `pendingApprovalsFor` (alle tellere og lister) er
  * derivert herfra, så flatene ikke kan divergere (AGENTS.md trap 4).
@@ -188,6 +198,10 @@ export function canApproveScorecardFor(
   const owner = players.find((p) => p.user_id === ownerUserId);
   if (!approver || !owner) return false;
   if (approver.withdrawn_at != null || owner.withdrawn_at != null) return false;
+  // #2661: in a simulator league the named marker approves the card, through
+  // the server (`mayApproveAsMarker`), never a flightmate. Migration 0220
+  // holds the same line for a direct request.
+  if (owner.marker_user_id != null) return false;
   return isFlightMate(players, gameMode, approverUserId, ownerUserId);
 }
 
@@ -215,8 +229,16 @@ export function isFlightMate(
   return first.flight_number != null && first.flight_number === second.flight_number;
 }
 
-/** Hva arrangørens godkjenningsflate viser på én kort-rad (#2213). */
-export type OrganizerApprovalRow = 'can_approve' | 'own_card_needs_peer' | 'own_card_no_peer';
+/**
+ * Hva arrangørens godkjenningsflate viser på én kort-rad (#2213).
+ * `card_awaits_marker` (#2661): kortet navngir en markør i en simulatorliga,
+ * og markøren godkjenner det, ikke arrangøren i flighten.
+ */
+export type OrganizerApprovalRow =
+  | 'can_approve'
+  | 'own_card_needs_peer'
+  | 'own_card_no_peer'
+  | 'card_awaits_marker';
 
 /**
  * Om arrangøren kan godkjenne `cardUserId`s kort på vegne av gruppa (#2213).
@@ -237,9 +259,13 @@ export function organizerApprovalRow(
   viewer: { userId: string; isAdmin: boolean },
   cardUserId: string,
 ): OrganizerApprovalRow {
-  if (viewer.isAdmin || cardUserId !== viewer.userId) return 'can_approve';
-  const submittedBy =
-    players.find((p) => p.user_id === cardUserId)?.submitted_by_user_id ?? null;
+  if (viewer.isAdmin) return 'can_approve';
+  const card = players.find((p) => p.user_id === cardUserId);
+  // #2661: the player who started a simulator flight is not its organiser in
+  // this sense; the marker approves (0220 refuses anyone else's write).
+  if (card?.marker_user_id != null) return 'card_awaits_marker';
+  if (cardUserId !== viewer.userId) return 'can_approve';
+  const submittedBy = card?.submitted_by_user_id ?? null;
   return peersForApproval(players, gameMode, cardUserId, submittedBy).length > 0
     ? 'own_card_needs_peer'
     : 'own_card_no_peer';

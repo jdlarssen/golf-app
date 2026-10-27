@@ -118,6 +118,12 @@ export async function submitScorecardCore(
      * `flightDeliveryCandidates` allows are delivered; the rest are ignored.
      */
     alsoFor?: readonly string[];
+    /**
+     * #2661: false in a simulator-league flight. The marker approves there
+     * (`submitScorecardWithMarker` tells them), so no flightmate is asked.
+     * Default true: every other game asks its attestants as before.
+     */
+    peerNotices?: boolean;
   } = {},
 ): Promise<SubmitScorecardResult> {
   // Refuse to submit if the game isn't active. Draft games shouldn't have
@@ -392,7 +398,8 @@ export async function submitScorecardCore(
   // per levering, og notify leser mottakerens locale selv), og på webben er
   // `supabase` spillerens RLS-klient, der en arrangør som ikke spiller og aldri
   // har delt spill med spilleren, er usynlig.
-  const peersQuery = game.require_peer_approval
+  const askPeers = game.require_peer_approval && opts.peerNotices !== false;
+  const peersQuery = askPeers
     ? supabase
         .from('game_players')
         .select('user_id, flight_number, withdrawn_at')
@@ -417,7 +424,7 @@ export async function submitScorecardCore(
   // delivered it. The deliverer never counts as a peer on a flightmate's card
   // (owner's decision 2026-09-27: someone else approves it).
   const gameName = game.name;
-  const requirePeerApproval = game.require_peer_approval;
+  const requirePeerApproval = askPeers;
   const notifyDeliveredCard = async (cardUserId: string, cardName: string | null) => {
     // Peer-varsler hvis peer-godkjenning er på.
     // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive
