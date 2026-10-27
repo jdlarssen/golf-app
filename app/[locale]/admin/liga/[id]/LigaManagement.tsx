@@ -91,17 +91,22 @@ function SimDefaultsSection({ league }: { league: { id: string; is_simulator: bo
 }
 
 /**
- * #2638: simulator and net/gross on the info card. Both are fixed once the
- * league has started (guard_leagues_locked_fields, 0212), and the card says so.
+ * #2638: simulator and net/gross on the info card, and (#2660) the handicap
+ * share and stroke cap of a net league. All are fixed once the league has
+ * started (guard_leagues_locked_fields, 0212 and 0219), and the card says so.
  */
 function LockedInfoRows({
   isSimulator,
   scoring,
+  hcpAllowancePct,
+  hcpMaxStrokes,
   locked,
   t,
 }: {
   isSimulator: boolean;
   scoring: string;
+  hcpAllowancePct: number;
+  hcpMaxStrokes: number | null;
   locked: boolean;
   t: Awaited<ReturnType<typeof getTranslations<'liga'>>>;
 }) {
@@ -129,6 +134,17 @@ function LockedInfoRows({
           {lockNote}
         </dd>
       </div>
+      {scoring !== 'gross' && (
+        <div className="flex justify-between gap-2" data-testid="liga-info-hcp">
+          <dt className="text-muted">{t('manage.infoHcp')}</dt>
+          <dd className="text-right tabular-nums text-text font-medium">
+            {hcpMaxStrokes === null
+              ? t('manage.hcpValue', { pct: hcpAllowancePct })
+              : t('manage.hcpValueCapped', { pct: hcpAllowancePct, max: hcpMaxStrokes })}
+            {lockNote}
+          </dd>
+        </div>
+      )}
     </>
   );
 }
@@ -277,6 +293,8 @@ export async function LigaManagement({
           <LockedInfoRows
             isSimulator={league.is_simulator}
             scoring={league.scoring}
+            hcpAllowancePct={league.hcp_allowance_pct}
+            hcpMaxStrokes={league.hcp_max_strokes}
             locked={status !== 'draft'}
             t={t}
           />

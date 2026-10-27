@@ -376,6 +376,52 @@ describe('createLeagueDraft — scoring is net or gross (#2638)', () => {
     fd.set(simSettingField('green_stimp'), '10');
     expect(await insertedFor(fd)).toMatchObject({ is_simulator: false, sim_settings: null });
   });
+
+  // #2660: the handicap share and the stroke cap. A field left out of the post
+  // gets the league type's default; a cap field sent empty means no cap.
+  describe('handicap share and stroke cap (#2660)', () => {
+    function simulatorForm(): FormData {
+      const fd = baseForm('net');
+      fd.set('is_simulator', 'true');
+      for (const key of SIM_SETTING_KEYS) fd.set(simSettingField(key), SIM_SETTING_DEFAULTS[key]);
+      return fd;
+    }
+    function withHcp(fd: FormData, pct: string | null, cap: string | null): FormData {
+      if (pct !== null) fd.set('hcp_allowance_pct', pct);
+      if (cap !== null) fd.set('hcp_max_strokes', cap);
+      return fd;
+    }
+    const stored = (row: Record<string, unknown>) => [row.hcp_allowance_pct, row.hcp_max_strokes];
+
+    it.each<[string, () => FormData, string | null, string | null, [number, number | null]]>([
+      ['a regular league without the fields → 95 %, no cap', () => baseForm('net'), null, null, [95, null]],
+      ['a simulator league without the fields → 75 %, at most 32', simulatorForm, null, null, [75, 32]],
+      ['the organiser’s own share and cap', () => baseForm('net'), '90', '28', [90, 28]],
+      ['an empty cap field means no cap', simulatorForm, '75', '', [75, null]],
+      ['an empty share field falls back to the default', () => baseForm('net'), '', '', [95, null]],
+      ['the bounds are allowed', () => baseForm('net'), '1', '54', [1, 54]],
+      ['a gross league stores 100 % and no cap, whatever is posted', () => baseForm('gross'), '75', '32', [100, null]],
+    ])('%s', async (_label, form, pct, cap, expected) => {
+      expect(stored(await insertedFor(withHcp(form(), pct, cap)))).toEqual(expected);
+    });
+
+    it.each<[string | null, string | null, string]>([
+      ['0', null, 'hcp_allowance_pct'],
+      ['101', null, 'hcp_allowance_pct'],
+      ['7.5', null, 'hcp_allowance_pct'],
+      ['abc', null, 'hcp_allowance_pct'],
+      ['95', '0', 'hcp_max_strokes'],
+      ['95', '55', 'hcp_max_strokes'],
+      ['95', '20.5', 'hcp_max_strokes'],
+      ['95', 'x', 'hcp_max_strokes'],
+    ])('share %s, cap %s → refused with %s, before any insert', async (pct, cap, error) => {
+      supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
+      setUser('admin-1');
+      const { createLeagueDraft } = await import('./actions');
+      expect(await createLeagueDraft(withHcp(baseForm('net'), pct, cap))).toEqual({ error });
+      expect(supabaseMock.__fromCalls.some((c) => c.method === 'insert')).toBe(false);
+    });
+  });
 });
 
 /**

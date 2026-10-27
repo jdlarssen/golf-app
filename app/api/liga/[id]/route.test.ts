@@ -95,6 +95,8 @@ function clubSnapshot(groupId: string | null): LeagueSnapshot {
       spectate_token: null,
       is_simulator: true,
       sim_settings: null,
+      hcp_allowance_pct: 75,
+      hcp_max_strokes: 32,
     },
     rounds: [],
     participants: [
@@ -170,6 +172,15 @@ describe('GET /api/liga/[id]', () => {
       league: 'Klubbens vinterliga',
       me: { userId: ME, isParticipant: true },
     });
+  });
+
+  it('the view carries the handicap share and the stroke cap (#2660)', async () => {
+    asParticipant();
+    const res = await call('token-meg');
+    expect({
+      hcpAllowancePct: res.body.league.hcpAllowancePct,
+      hcpMaxStrokes: res.body.league.hcpMaxStrokes,
+    }).toEqual({ hcpAllowancePct: 75, hcpMaxStrokes: 32 });
   });
 
   it.each([

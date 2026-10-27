@@ -25,7 +25,8 @@ import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
-import type { LeagueFormat } from '@/lib/league/types';
+import type { LeagueFormat, LeagueScoring, StandingsModel } from '@/lib/league/types';
+import { leagueFormatLine } from '@/lib/league/leagueFormatLine';
 import {
   formatShortDateWithYearLocale,
   formatShortOsloDateWithYearLocale,
@@ -97,9 +98,11 @@ export default async function LigaPublicPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const [t, tStatus, locale] = await Promise.all([
+  const [t, tStatus, tFormatLine, tManage, locale] = await Promise.all([
     getTranslations('liga.player'),
     getTranslations('gameStatus'),
+    getTranslations('liga.player.formatLine'),
+    getTranslations('liga.manage'),
     getLocale() as Promise<AppLocale>,
   ]);
 
@@ -217,6 +220,24 @@ export default async function LigaPublicPage({
         </div>
         <p className="mt-1 text-sm text-muted">
           {fmtWindow(league.season_start, locale)} – {fmtWindow(league.season_end, locale)}
+        </p>
+        {/* #2660: the format line, with the handicap share and cap (the app's
+            line under the name, tegning 2 in #2638). */}
+        <p className="mt-0.5 text-sm text-muted" data-testid="liga-format-line">
+          {leagueFormatLine(
+            tFormatLine as unknown as Parameters<typeof leagueFormatLine>[0],
+            tManage(`formatLabel.${league.format as LeagueFormat}`),
+            {
+              // DB CHECKs (0087, 0212) hold these to the unions.
+              format: league.format as LeagueFormat,
+              scoring: league.scoring as LeagueScoring,
+              standingsModel: league.standings_model as StandingsModel,
+              bestN: league.best_n_count,
+              hcpAllowancePct: league.hcp_allowance_pct,
+              hcpMaxStrokes: league.hcp_max_strokes,
+            },
+            rounds.length,
+          )}
         </p>
       </header>
 

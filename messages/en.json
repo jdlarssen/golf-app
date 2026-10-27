@@ -4959,7 +4959,9 @@
         "missing": "Some required fields are missing.",
         "season_over": "The season has already ended. Pick dates in the future.",
         "unexpected": "Unexpected error: {code}",
-        "sim_settings": "The round settings are invalid. Pick from the lists."
+        "sim_settings": "The round settings are invalid. Pick from the lists.",
+        "hcp_allowance_pct": "The handicap percentage must be a whole number from 1 to 100.",
+        "hcp_max_strokes": "Max strokes must be a whole number from 1 to 54, or empty."
       },
       "sectionProgress": "Part {current} of {total}",
       "grundinfoHeading": "Basic info",
@@ -4983,6 +4985,10 @@
       "scoringGrossLabel": "Gross",
       "scoringGrossDesc": "Without handicap strokes.",
       "scoringLockHint": "The choice is locked when the league starts.",
+      "hcpAllowanceLabel": "Handicap (%)",
+      "hcpMaxStrokesLabel": "Max strokes",
+      "hcpMaxStrokesPlaceholder": "No cap",
+      "hcpHint": "The percentage is taken of the course handicap. Max strokes applies after the percentage; leave it empty for no cap. WHS recommends 95% for stroke play and stableford.",
       "courseScopeHeading": "Course scope",
       "courseScopeLegend": "Course scope",
       "scopeFixedBothLabel": "Fixed course and tee",
@@ -5088,6 +5094,9 @@
         "both": "Net and gross"
       },
       "lockedAfterStart": "Locked after the start",
+      "infoHcp": "Handicap",
+      "hcpValue": "{pct}%",
+      "hcpValueCapped": "{pct}%, max {max} strokes",
       "simSettingsHeading": "Round settings",
       "simSettingsHelp": "The change applies to rounds nobody has started.",
       "simSettingsSave": "Save",
@@ -5227,6 +5236,21 @@
       "kicker": "League",
       "seasonTableHeading": "Season standings",
       "seasonFinishedBanner": "The season is over. Here's how the table finished.",
+      "formatLine": {
+        "scoring": {
+          "net": "net",
+          "gross": "gross"
+        },
+        "allowance": "{pct}%",
+        "maxStrokes": "max {max} strokes",
+        "model": {
+          "best_n": "best {n} of {count}",
+          "best_nFallback": "best rounds count",
+          "total": "sum of all rounds",
+          "average": "average per round",
+          "points": "points per placing"
+        }
+      },
       "roundsHeading": "Rounds",
       "noRoundsYet": "No rounds set up yet.",
       "roundLabel": "Round {sequence}",

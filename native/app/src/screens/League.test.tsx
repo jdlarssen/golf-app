@@ -57,7 +57,7 @@ describe('tegning 2: øvre del', () => {
     expect(screen.getByTestId('league-name')).toHaveTextContent('Vinterliga på Trackman');
     expect(screen.getByTestId('league-status')).toHaveTextContent('Pågår');
     expect(screen.getByText('Sesong 2. nov – 4. feb')).toBeTruthy();
-    expect(screen.getByTestId('league-format')).toHaveTextContent('Stableford netto · beste 5 av 4');
+    expect(screen.getByTestId('league-format')).toHaveTextContent('Stableford netto 75\u00A0% · maks 32 slag · beste 5 av 4');
   });
 
   it('innstillingene er foldet til én linje med merket, og åpnes med et trykk', async () => {

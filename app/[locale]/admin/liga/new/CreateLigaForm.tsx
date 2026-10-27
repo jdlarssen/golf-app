@@ -9,6 +9,14 @@ import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
 import { SIMULATOR_DEFAULTS, defaultBestN } from '@/lib/league/simulatorDefaults';
+import {
+  LEAGUE_HCP_ALLOWANCE_MAX,
+  LEAGUE_HCP_ALLOWANCE_MIN,
+  LEAGUE_HCP_DEFAULTS,
+  LEAGUE_HCP_MAX_STROKES_MAX,
+  LEAGUE_HCP_MAX_STROKES_MIN,
+  wholeNumberInRange,
+} from '@/lib/league/types';
 import { SIM_SETTING_DEFAULTS } from '@/lib/league/simSettings';
 import { SimSettingsFields } from '@/components/league/SimSettingsFields';
 import { shortMonthLocale } from '@/lib/i18n/format';
@@ -95,6 +103,12 @@ export function CreateLigaForm({
   const [scoring, setScoring] = useState<Scoring>('net');
   const [bestN, setBestN] = useState('');
   const [bestNTouched, setBestNTouched] = useState(false);
+  // #2660: the handicap share and the stroke cap. Until the organiser types
+  // in one of them, both follow the league type's defaults; after that, both
+  // keep what is in the fields.
+  const [hcpPct, setHcpPct] = useState('');
+  const [hcpCap, setHcpCap] = useState('');
+  const [hcpTouched, setHcpTouched] = useState(false);
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const availableTees = selectedCourse?.tee_boxes ?? [];
@@ -118,6 +132,30 @@ export function CreateLigaForm({
       ? String(defaultBestN(roundPreview.length))
       : bestN;
 
+  const hcpDefaults = isSimulator ? LEAGUE_HCP_DEFAULTS.simulator : LEAGUE_HCP_DEFAULTS.regular;
+  const hcpPctValue = hcpTouched ? hcpPct : String(hcpDefaults.allowancePct);
+  const hcpCapValue = hcpTouched
+    ? hcpCap
+    : hcpDefaults.maxStrokes === null
+      ? ''
+      : String(hcpDefaults.maxStrokes);
+  const hcpPctInvalid =
+    hcpPctValue !== '' &&
+    wholeNumberInRange(hcpPctValue, LEAGUE_HCP_ALLOWANCE_MIN, LEAGUE_HCP_ALLOWANCE_MAX) === null;
+  const hcpCapInvalid =
+    hcpCapValue !== '' &&
+    wholeNumberInRange(hcpCapValue, LEAGUE_HCP_MAX_STROKES_MIN, LEAGUE_HCP_MAX_STROKES_MAX) === null;
+
+  function editHcp(field: 'pct' | 'cap', value: string) {
+    if (!hcpTouched) {
+      setHcpPct(hcpPctValue);
+      setHcpCap(hcpCapValue);
+      setHcpTouched(true);
+    }
+    if (field === 'pct') setHcpPct(value);
+    else setHcpCap(value);
+  }
+
   // #2638: «Simulator» på forhåndsvelger stableford, beste N og hver 14. dag.
   // Alt kan endres etterpå. Av igjen beholder tallet som vises i «beste N»,
   // så feltet ikke står tomt.
@@ -138,9 +176,9 @@ export function CreateLigaForm({
         name: 1, dates: 1, standings_model: 1, format: 1, course_scope: 1,
         course: 1, penalty: 1, best_n: 1, players: 1,
         insert_failed: 1, rounds_failed: 1, players_failed: 1, missing: 1,
-        season_over: 1, sim_settings: 1,
+        season_over: 1, sim_settings: 1, hcp_allowance_pct: 1, hcp_max_strokes: 1,
       }
-      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over' | 'sim_settings'}`)
+      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing' | 'season_over' | 'sim_settings' | 'hcp_allowance_pct' | 'hcp_max_strokes'}`)
       : t('errors.unexpected', { code: state.error })
     : null;
 
@@ -190,6 +228,10 @@ export function CreateLigaForm({
       <input type="hidden" name="group_id" value={groupId ?? ''} />
       <input type="hidden" name="is_simulator" value={isSimulator ? 'true' : 'false'} />
       <input type="hidden" name="scoring" value={scoring} />
+      {/* #2660: always mounted, so the values reach FormData while the fields
+          are hidden (a gross league posts 100 and no cap). */}
+      <input type="hidden" name="hcp_allowance_pct" value={scoring === 'gross' ? '100' : hcpPctValue} />
+      <input type="hidden" name="hcp_max_strokes" value={scoring === 'gross' ? '' : hcpCapValue} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
       {isClubLeague && clubName && (
@@ -387,6 +429,71 @@ export function CreateLigaForm({
               </span>
             </label>
           ))}
+
+          {/* #2660: the handicap share and the stroke cap, for a net league only. */}
+          {scoring === 'net' && (
+            <div data-testid="liga-create-hcp" className="pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label
+                    htmlFor="liga-hcp-pct"
+                    className="block font-sans text-[12px] font-medium text-text mb-1.5"
+                  >
+                    {t('hcpAllowanceLabel')}
+                  </label>
+                  <input
+                    id="liga-hcp-pct"
+                    type="number"
+                    inputMode="numeric"
+                    min={LEAGUE_HCP_ALLOWANCE_MIN}
+                    max={LEAGUE_HCP_ALLOWANCE_MAX}
+                    step={1}
+                    required
+                    value={hcpPctValue}
+                    onChange={(e) => editHcp('pct', e.target.value)}
+                    aria-invalid={hcpPctInvalid || undefined}
+                    aria-describedby="liga-hcp-hint"
+                    className="w-full min-w-0 rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label
+                    htmlFor="liga-hcp-cap"
+                    className="block font-sans text-[12px] font-medium text-text mb-1.5"
+                  >
+                    {t('hcpMaxStrokesLabel')}
+                  </label>
+                  <input
+                    id="liga-hcp-cap"
+                    type="number"
+                    inputMode="numeric"
+                    min={LEAGUE_HCP_MAX_STROKES_MIN}
+                    max={LEAGUE_HCP_MAX_STROKES_MAX}
+                    step={1}
+                    placeholder={t('hcpMaxStrokesPlaceholder')}
+                    value={hcpCapValue}
+                    onChange={(e) => editHcp('cap', e.target.value)}
+                    aria-invalid={hcpCapInvalid || undefined}
+                    aria-describedby="liga-hcp-hint"
+                    className="w-full min-w-0 rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text placeholder:text-muted focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                  />
+                </div>
+              </div>
+              {hcpPctInvalid && (
+                <p role="alert" data-testid="liga-create-hcp-pct-error" className="mt-1.5 font-sans text-[12px] text-danger">
+                  {t('errors.hcp_allowance_pct')}
+                </p>
+              )}
+              {hcpCapInvalid && (
+                <p role="alert" data-testid="liga-create-hcp-cap-error" className="mt-1.5 font-sans text-[12px] text-danger">
+                  {t('errors.hcp_max_strokes')}
+                </p>
+              )}
+              <p id="liga-hcp-hint" className="mt-1.5 font-sans text-[12px] text-muted">
+                {t('hcpHint')}
+              </p>
+            </div>
+          )}
           <p className="font-sans text-[12px] text-muted">{t('scoringLockHint')}</p>
         </fieldset>
       </Card>
