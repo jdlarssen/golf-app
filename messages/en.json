@@ -5411,6 +5411,57 @@
       "hint": "Paste the table into your club's website or info screen. Anyone with the link can see it — no login needed.",
       "copySnippet": "Copy code for your website",
       "copied": "Copied!"
+    },
+    "join": {
+      "kicker": "Join a league",
+      "metaTitle": "Join the league",
+      "ogDescription": "You're invited to a league in Tørny. See the rounds and join.",
+      "placeSimulator": "Simulator",
+      "placeAnyCourse": "Any course each round",
+      "roundsLine": "{count, plural, one {# round} other {# rounds}} · {from} – {to}",
+      "noRounds": "The rounds aren't set up yet.",
+      "playersLine": "{count, plural, =0 {Nobody has joined yet} one {# has joined} other {# have joined}}",
+      "invite": "Tap Join, and you're on the list straight away.",
+      "signInHint": "You log in or create an account with your email and come back here afterwards.",
+      "joinButton": "Join",
+      "afterStart": "{count, plural, one {Round {rounds} has been played.} other {Rounds {rounds} have been played.}} You're in from the next round.",
+      "alreadyJoined": "You're in the league.",
+      "goToLeague": "Go to the league",
+      "closed": "The league has finished, so you can't join any more.",
+      "seeTable": "See the table",
+      "profileIncomplete": "Your profile has no handicap. Fill it in, and you can join.",
+      "completeProfileButton": "Complete your profile",
+      "joinedBanner": "You're in the league.",
+      "errors": {
+        "not_found": "Couldn't find the league. The link may be switched off.",
+        "closed": "The league has finished.",
+        "profile_incomplete": "Add your handicap to your profile first.",
+        "read_failed": "Couldn't check the sign-up. Please try again.",
+        "save_failed": "Couldn't save. Please try again.",
+        "unexpected": "Unexpected error: {code}"
+      }
+    },
+    "intro": {
+      "heading": "How the league works in Tørny",
+      "step1": "When the round opens, you start it from the league page and enter your strokes hole by hole.",
+      "step2Simulator": "When you're done, you submit your card and pick someone in the league as your marker. The round counts once your marker has approved it.",
+      "step2": "When the round is over, you submit your card, and a playing partner approves it.",
+      "step3": "The table is on the league page and updates after every approved round."
+    },
+    "shareLink": {
+      "heading": "Share the league",
+      "label": "Link to join the league",
+      "on": "The link is on",
+      "off": "The link is off",
+      "hint": "Anyone with the link can create an account and join. Players can pass it on.",
+      "ariaLabel": "Link to join the league",
+      "copyButton": "Copy link",
+      "copiedButton": "✓ Copied",
+      "copyError": "Couldn't copy automatically. Select the link and copy it yourself.",
+      "rotateButton": "Make a new link",
+      "rotateHint": "The old link stops working.",
+      "saveError": "Couldn't save. Please try again.",
+      "participantHint": "Send the link to others who want to play."
     }
   },
   "cup": {

@@ -21,6 +21,7 @@ import { formatShortDateLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { LigaRoundRow } from './LigaRoundRow';
 import { LigaEmbedControl } from './LigaEmbedControl';
+import { LigaJoinLinkControl } from './LigaJoinLinkControl';
 import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
 import { LigaStatusActions } from './LigaStatusActions';
@@ -146,6 +147,28 @@ function LockedInfoRows({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * #2662: the shareable link, for a league without a club until it is finished.
+ * A club league's members join through the club; a finished league is closed.
+ */
+function JoinLinkSection({
+  league,
+  t,
+}: {
+  league: { id: string; group_id: string | null; status: string; join_code: string | null };
+  t: Awaited<ReturnType<typeof getTranslations<'liga'>>>;
+}) {
+  if (league.group_id || league.status === 'finished') return null;
+  return (
+    <section className="mb-5">
+      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        {t('shareLink.heading')}
+      </h2>
+      <LigaJoinLinkControl leagueId={league.id} joinCode={league.join_code} />
+    </section>
   );
 }
 
@@ -410,6 +433,8 @@ export async function LigaManagement({
           )}
         </Card>
       </section>
+
+      <JoinLinkSection league={league} t={t} />
 
       {/* Embed på klubbsiden (#1024) */}
       <section className="mb-5">

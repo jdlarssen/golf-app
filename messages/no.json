@@ -5411,6 +5411,57 @@
       "hint": "Lim tavla inn på klubbens nettside eller infoskjerm. Alle med lenken kan se den uten å logge inn.",
       "copySnippet": "Kopier koden til nettsiden",
       "copied": "Kopiert!"
+    },
+    "join": {
+      "kicker": "Bli med i liga",
+      "metaTitle": "Bli med i ligaen",
+      "ogDescription": "Du er invitert til en liga i Tørny. Se rundene og bli med.",
+      "placeSimulator": "Simulator",
+      "placeAnyCourse": "Valgfri bane per runde",
+      "roundsLine": "{count, plural, one {# runde} other {# runder}} · {from} – {to}",
+      "noRounds": "Rundene er ikke satt opp ennå.",
+      "playersLine": "{count, plural, =0 {Ingen påmeldt ennå} other {# påmeldt}}",
+      "invite": "Trykk «Bli med», så står du på lista med en gang.",
+      "signInHint": "Du logger inn eller lager konto med e-posten din og kommer tilbake hit etterpå.",
+      "joinButton": "Bli med",
+      "afterStart": "{count, plural, one {Runde {rounds} er spilt.} other {Runde {rounds} er spilt.}} Du er med fra neste runde.",
+      "alreadyJoined": "Du er med i ligaen.",
+      "goToLeague": "Gå til ligaen",
+      "closed": "Ligaen er avsluttet, så du kan ikke bli med lenger.",
+      "seeTable": "Se tabellen",
+      "profileIncomplete": "Du mangler handicap på profilen. Fyll det inn, så kan du bli med.",
+      "completeProfileButton": "Fyll ut profilen",
+      "joinedBanner": "Du er med i ligaen.",
+      "errors": {
+        "not_found": "Fant ikke ligaen. Lenken kan være slått av.",
+        "closed": "Ligaen er avsluttet.",
+        "profile_incomplete": "Fyll ut handicap på profilen først.",
+        "read_failed": "Fikk ikke sjekket påmeldingen. Prøv igjen.",
+        "save_failed": "Klarte ikke å lagre. Prøv igjen.",
+        "unexpected": "Uventet feil: {code}"
+      }
+    },
+    "intro": {
+      "heading": "Slik funker ligaen i Tørny",
+      "step1": "Når runden åpner, starter du den fra ligasiden og fører slagene hull for hull.",
+      "step2Simulator": "Når du er ferdig, sender du inn kortet og velger en i ligaen som markør. Runden teller når markøren har godkjent.",
+      "step2": "Når runden er ferdig, sender du inn kortet, og en medspiller godkjenner det.",
+      "step3": "Tabellen ligger på ligasiden og oppdateres etter hver godkjente runde."
+    },
+    "shareLink": {
+      "heading": "Del ligaen",
+      "label": "Lenke for å bli med i ligaen",
+      "on": "Lenken er på",
+      "off": "Lenken er av",
+      "hint": "Alle med lenken kan lage konto og bli med. Deltakerne kan dele den videre.",
+      "ariaLabel": "Lenke for å bli med i ligaen",
+      "copyButton": "Kopier lenke",
+      "copiedButton": "✓ Kopiert",
+      "copyError": "Klarte ikke å kopiere automatisk. Marker lenken og kopier manuelt.",
+      "rotateButton": "Lag ny lenke",
+      "rotateHint": "Den gamle lenken slutter å virke.",
+      "saveError": "Klarte ikke å lagre. Prøv igjen.",
+      "participantHint": "Send lenken til andre som vil være med."
     }
   },
   "cup": {

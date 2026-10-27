@@ -170,6 +170,8 @@ Lag-flyt (`/signup/[shortId]/team`): kaptein navngir lag + fyller medspiller-slo
 
 **Med appen ute (#2562, `NEXT_PUBLIC_APP_LAUNCH`):** «Hent appen» (`GetTheApp`) står under kvitteringen: forespørselen ved manuell godkjenning, lagpåmeldingen, «Du er påmeldt» og de to bannerne for ventende forespørsel. Åpen påmelding går rett til spill-hjem, der kortet står rett under startbilletten.
 
+**Liga uten klubb (#2662):** `/liga/bli-med/[code]` (auth-valgfri) viser ligaen, antall påmeldte og introkortet «Slik funker ligaen i Tørny». «Bli med» går via innlogging/konto og `/complete-profile` tilbake hit, og så rett inn i ligaen (`league_players`, bekreftet) og videre til `/liga/[id]` med «Hent appen». Arrangøren slår lenken av og på eller lager en ny på ligasiden i Klubbhuset, og deltakerne deler den videre fra ligasiden. Den som kommer inn etter start, kan spille en runde som fortsatt er åpen; stengte runder teller som uteblitt.
+
 ### P3 — Spille en runde
 
 ```mermaid

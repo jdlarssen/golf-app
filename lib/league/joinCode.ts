@@ -22,6 +22,15 @@ export function isJoinCode(code: string): boolean {
   return JOIN_CODE_RE.test(code);
 }
 
+/**
+ * The absolute link people share. Built like the club and cup links
+ * (`NEXT_PUBLIC_APP_URL`, else prod), unprefixed: the visitor's own locale
+ * takes over when they open it.
+ */
+export function leagueJoinUrl(code: string): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/liga/bli-med/${code}`;
+}
+
 type FillRandom = (buf: Uint8Array) => Uint8Array;
 
 const fillRandom: FillRandom = (buf) => crypto.getRandomValues(buf);
