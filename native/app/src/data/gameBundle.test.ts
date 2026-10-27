@@ -210,6 +210,8 @@ describe('gameBundle', () => {
         approvedAt: '2026-08-30T16:00:00.000Z',
         // #2262: stempelet skiller markøren fra arrangøren på denne.
         approvedByUserId: 'user-anders',
+        // #2661: no marker outside a simulator league.
+        markerUserId: null,
         rejectionReason: null,
         withdrawnAt: null,
         // #2358: trukket-banneret viser angre-knappen bare for eget trekk.

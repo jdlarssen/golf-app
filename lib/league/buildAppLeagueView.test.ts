@@ -138,7 +138,7 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
           perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false }],
         },
       ],
-      me: { userId: 'B', isParticipant: true },
+      me: { userId: 'B', isParticipant: true, isOrganizer: false },
     });
   });
 
@@ -159,6 +159,12 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
   });
 
   it('a viewer who is not in the league is marked so', () => {
-    expect(buildAppLeagueView(snapshot('net'), 'Z').me).toEqual({ userId: 'Z', isParticipant: false });
+    expect(buildAppLeagueView(snapshot('net'), 'Z').me).toEqual({
+      userId: 'Z',
+      isParticipant: false,
+      isOrganizer: false,
+    });
+    // #2661: the league's creator may approve in a marker's stead.
+    expect(buildAppLeagueView(snapshot('net'), 'admin').me.isOrganizer).toBe(true);
   });
 });

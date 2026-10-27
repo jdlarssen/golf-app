@@ -13,7 +13,7 @@
 // noe hentet står feilen med «Prøv igjen».
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
@@ -24,6 +24,7 @@ import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStat
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchLeague, type LeagueLoadFailure } from '../data/league';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
+import { MARKER_TEXT, awaitingMarkerLine, waitsForLine } from '../lib/markerCopy';
 import {
   LEAGUE_TEXT,
   formatLine,
@@ -86,6 +87,15 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
   const open = openRoundOf(view.rounds, now);
   const next = nextRoundOf(view.rounds, now);
   const settingsRound = open ?? next;
+  // #2661: kortene som venter på en markør (simulatorliga). Markøren ser sine,
+  // arrangøren de andre, fordi hen kan godkjenne i markørens sted.
+  const nameOf = (userId: string) =>
+    view.participants.find((p) => p.userId === userId)?.name ?? MARKER_TEXT.unknownPlayer;
+  const awaiting = view.rounds.flatMap((r) => r.awaitingMarker.map((a) => ({ ...a, roundLabel: r.label })));
+  const markerRows = awaiting.filter((a) => a.markerUserId === me.userId);
+  const organizerRows = me.isOrganizer ? awaiting.filter((a) => a.markerUserId !== me.userId) : [];
+  const openMarker = (a: (typeof awaiting)[number]) =>
+    navigation.navigate('MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
 
   return (
     <ScrollView
@@ -111,6 +121,23 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
           {LEAGUE_TEXT.stale}
         </Text>
       ) : null}
+
+      <MarkerQueue
+        title={MARKER_TEXT.queueHeading}
+        rows={markerRows.map((a) => ({ ...a, name: nameOf(a.userId), sub: a.roundLabel }))}
+        onOpen={openMarker}
+        testID="league-marker-queue"
+      />
+      <MarkerQueue
+        title={MARKER_TEXT.organizerQueueHeading}
+        rows={organizerRows.map((a) => ({
+          ...a,
+          name: nameOf(a.userId),
+          sub: `${a.roundLabel} · ${waitsForLine(nameOf(a.markerUserId))}`,
+        }))}
+        onOpen={openMarker}
+        testID="league-organizer-marker-queue"
+      />
 
       {league.isSimulator && settingsRound ? (
         <View testID="league-settings">
@@ -145,6 +172,12 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
     onPlay: () => void,
   ): RoundAction {
     if (!me.isParticipant) return { kind: 'none' };
+    // #2661: levert, og markøren har ikke svart ennå.
+    const myWait = round.awaitingMarker.find((a) => a.userId === me.userId);
+    if (myWait) {
+      const marker = v.participants.find((p) => p.userId === myWait.markerUserId)?.name;
+      return { kind: 'note', text: awaitingMarkerLine(marker ?? MARKER_TEXT.unknownPlayer) };
+    }
     if (round.delivered.includes(me.userId)) {
       return { kind: 'delivered', nextOpens: nextRound ? nextRoundOpens(nextRound.opensAt) : null };
     }
@@ -152,6 +185,51 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
     if (!round.ready) return { kind: 'note', text: LEAGUE_TEXT.missingSetup };
     return offline ? { kind: 'play-offline' } : { kind: 'play', onPress: onPlay };
   }
+}
+
+/**
+ * #2661: kortene som venter på et svar, øverst på ligasiden, som nettets
+ * `MarkerQueueCard`: én rad per kort, et trykk åpner markørens skjerm.
+ */
+function MarkerQueue<T extends { gameId: string; userId: string; name: string; sub: string }>({
+  title,
+  rows,
+  onOpen,
+  testID,
+}: {
+  title: string;
+  rows: T[];
+  onOpen: (row: T) => void;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  if (rows.length === 0) return null;
+  return (
+    <View testID={testID}>
+      <SectionHead title={title} />
+      <View style={[styles.queueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {rows.map((row, i) => (
+          <Pressable
+            key={`${row.gameId}:${row.userId}`}
+            onPress={() => onOpen(row)}
+            accessibilityRole="button"
+            testID={`marker-queue-${row.gameId}-${row.userId}`}
+            style={[styles.queueRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+          >
+            <View style={styles.queueText}>
+              <Text style={[styles.queueName, { color: colors.text }]} numberOfLines={1}>
+                {row.name}
+              </Text>
+              <Text style={[styles.queueSub, { color: colors.muted }]} numberOfLines={1}>
+                {row.sub}
+              </Text>
+            </View>
+            <Text style={[styles.queueLink, { color: colors.primary }]}>{MARKER_TEXT.review}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 /** Tegningenes `.sechead`: små sperrede versaler, 22 over og 8 under. */
@@ -173,6 +251,12 @@ const styles = StyleSheet.create({
   season: { ...interLine(12, 16), fontFamily: FONTS.sans },
   format: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 6 + interLine(13, 16).marginTop },
   stale: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 6, paddingHorizontal: 20 },
+  queueCard: { marginHorizontal: 16, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  queueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 10 },
+  queueText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  queueName: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
+  queueSub: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 },
+  queueLink: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   sectionHead: {
     ...interLine(10, 12),
     fontFamily: FONTS.sansSemiBold,

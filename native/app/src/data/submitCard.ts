@@ -17,10 +17,13 @@
 // `submit-team`, fordi installerte bygg kaller den. Kjernen avgjør selv om
 // kortet er et lagkort eller et solo-kort. Denne fila er den andre halvdelen av
 // kontrakten; endres den ene, endres den andre i samme PR:
-//   POST /api/games/{id}/submit-team   [{ alsoFor: string[] }]  (0–20 uuid-er)
+//   POST /api/games/{id}/submit-team   [{ alsoFor: string[], markerUserId?: string }]
 //     200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
 //     400 bad_request · 401 unauthorized · 403 forbidden · 404 not_found
 //     409 not_active · 412 tee_shots_short · 422 withdrawn · 500 submit_failed
+//     428 marker_required (#2661: en simulatorliga trenger en markør fra ligaen;
+//         ruta skiller mellom manglende, seg selv og utenfor ligaen i kroppen,
+//         appen viser én melding)
 //
 // **Makkerne i samme kall (#2200).** Den som fører for flighten, leverer
 // makkernes kort med det samme trykket: id-ene står i `alsoFor`. Lista er et
@@ -56,6 +59,8 @@ export type SubmitCardFailure =
   | 'withdrawn'
   // #2580: «Hvem sitt utslag» is on and someone on the team is short.
   | 'tee_shots_short'
+  // #2661: a simulator league needs a marker from the league.
+  | 'marker_required'
   | 'submit_failed';
 
 /**
@@ -95,6 +100,7 @@ function failureForStatus(status: number): SubmitCardFailure {
   if (status === 409) return 'not_active';
   if (status === 412) return 'tee_shots_short';
   if (status === 422) return 'withdrawn';
+  if (status === 428) return 'marker_required';
   return 'submit_failed';
 }
 
@@ -116,11 +122,17 @@ function failureForStatus(status: number): SubmitCardFailure {
 export async function submitCard(
   gameId: string,
   alsoFor: readonly string[] = [],
+  /** #2661: the marker picked in a simulator league; omitted elsewhere. */
+  markerUserId?: string,
 ): Promise<SubmitCardResult> {
+  const body = {
+    ...(alsoFor.length > 0 ? { alsoFor: [...alsoFor] } : {}),
+    ...(markerUserId ? { markerUserId } : {}),
+  };
   const call = await callWebRoute(
     submitCardPath(gameId),
     'POST',
-    alsoFor.length > 0 ? { alsoFor: [...alsoFor] } : undefined,
+    Object.keys(body).length > 0 ? body : undefined,
   );
   if (!call.ok) return call;
 

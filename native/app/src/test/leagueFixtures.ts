@@ -27,6 +27,7 @@ export function leagueRound(
     teeName: 'Gul',
     delivered: [],
     inProgress: [],
+    awaitingMarker: [],
     simSettings: {
       pins: 'MEDIUM',
       putting: 'AUTO_TOUR_PRO',
@@ -112,6 +113,6 @@ export function leagueView(overrides: {
         ],
       },
     ],
-    me: { userId: 'me', isParticipant: true, ...overrides.me },
+    me: { userId: 'me', isParticipant: true, isOrganizer: false, ...overrides.me },
   };
 }
