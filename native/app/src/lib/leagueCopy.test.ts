@@ -220,6 +220,8 @@ describe('formatlinja og tabellens forklaring (tegning 2 og 3)', () => {
     ['Slagspill brutto · sum av alle runder', { ...league, format: 'stroke', scoring: 'gross', standingsModel: 'total' }, 'Slag mot par uten handicapslag'],
     ['Stableford netto 100\u00A0% · snitt per runde', { ...league, standingsModel: 'average' }, 'Poeng med handicapslag'],
     ['Stableford netto 100\u00A0% · poeng per plassering', { ...league, standingsModel: 'points' }, 'Poeng for plassering i hver runde'],
+    // En server fra før #2660 sender ikke andelen: da står linja som før.
+    ['Stableford netto · beste 5 av 7', { ...league, hcpAllowancePct: undefined, hcpMaxStrokes: undefined }, 'Poeng med handicapslag'],
   ] as const)('%s', (line, l, caption) => {
     expect(formatLine({ league: l as never, rounds })).toBe(line);
     expect(tableCaption(l)).toBe(caption);

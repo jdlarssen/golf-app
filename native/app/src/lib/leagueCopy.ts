@@ -154,9 +154,11 @@ function modelPhrase(model: StandingsModel, bestN: number | null, roundCount: nu
 export function formatLine(view: Pick<AppLeagueView, 'league' | 'rounds'>): string {
   const { format, scoring, standingsModel, bestN, hcpAllowancePct, hcpMaxStrokes } = view.league;
   const gross = scoring === 'gross';
-  const head = gross
-    ? `${FORMAT[format]} ${SCORING[scoring]}`
-    : `${FORMAT[format]} ${SCORING[scoring]} ${hcpAllowancePct}\u00A0%`;
+  // En server fra før #2660 sender ikke andelen; da står linja som før.
+  const head =
+    gross || hcpAllowancePct == null
+      ? `${FORMAT[format]} ${SCORING[scoring]}`
+      : `${FORMAT[format]} ${SCORING[scoring]} ${hcpAllowancePct}\u00A0%`;
   const cap = !gross && hcpMaxStrokes != null ? `maks ${hcpMaxStrokes} slag` : null;
   return [head, cap, modelPhrase(standingsModel, bestN, view.rounds.length)]
     .filter((part): part is string => part != null)

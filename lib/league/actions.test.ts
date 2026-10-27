@@ -414,6 +414,8 @@ describe('createLeagueDraft — scoring is net or gross (#2638)', () => {
       ['95', '55', 'hcp_max_strokes'],
       ['95', '20.5', 'hcp_max_strokes'],
       ['95', 'x', 'hcp_max_strokes'],
+      ['1e1', null, 'hcp_allowance_pct'],
+      ['95', '3e1', 'hcp_max_strokes'],
     ])('share %s, cap %s → refused with %s, before any insert', async (pct, cap, error) => {
       supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
       setUser('admin-1');
