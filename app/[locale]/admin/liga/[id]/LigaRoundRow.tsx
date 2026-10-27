@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useId } from 'react';
+import { startTransition, useActionState, useId, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -273,8 +273,18 @@ function CourseTeeForm({
     INITIAL,
   );
   const updateErrorKey = `settingsErrors.${updateState.error}` as Parameters<typeof t>[0];
-  const selectedCourse = courses.find((c) => c.id === round.courseId);
+  // #2664: the tee list follows the course picked here, not the saved one, so
+  // it fills in before the round is saved. A new course clears the tee (it
+  // belonged to the old course); a course with a single tee preselects it.
+  const [courseId, setCourseId] = useState(round.courseId ?? '');
+  const [teeBoxId, setTeeBoxId] = useState(round.teeBoxId ?? '');
+  const selectedCourse = courses.find((c) => c.id === courseId);
   const tees = selectedCourse?.tee_boxes ?? [];
+  function changeCourse(nextCourseId: string) {
+    const nextTees = courses.find((c) => c.id === nextCourseId)?.tee_boxes ?? [];
+    setCourseId(nextCourseId);
+    setTeeBoxId(nextTees.length === 1 ? nextTees[0].id : '');
+  }
 
   return (
     <form action={updateAction} className="mt-3 space-y-2">
@@ -289,7 +299,8 @@ function CourseTeeForm({
           <select
             id={`${fieldId}-course-id`}
             name="course_id"
-            defaultValue={round.courseId ?? ''}
+            value={courseId}
+            onChange={(e) => changeCourse(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
           >
             <option value="">{t('courseNotSelected')}</option>
@@ -310,7 +321,8 @@ function CourseTeeForm({
           <select
             id={`${fieldId}-tee-box-id`}
             name="tee_box_id"
-            defaultValue={round.teeBoxId ?? ''}
+            value={teeBoxId}
+            onChange={(e) => setTeeBoxId(e.target.value)}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
           >
             <option value="">{t('teeNotSelected')}</option>
