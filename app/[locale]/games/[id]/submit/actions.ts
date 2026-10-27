@@ -4,13 +4,13 @@ import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import {
-  submitScorecardCore,
-  type SubmitScorecardResult,
-} from '@/lib/games/submitScorecardCore';
+  submitScorecardWithMarker,
+  type SubmitWithMarkerResult,
+} from '@/lib/league/setFlightMarkerCore';
 
 /** Kjernens grunner, oversatt til den redirecten webben alltid har brukt. */
 function failureHref(
-  reason: Extract<SubmitScorecardResult, { ok: false }>['reason'],
+  reason: Extract<SubmitWithMarkerResult, { ok: false }>['reason'],
   gameId: string,
 ): string {
   // Ingen `default`: en ny grunn i kjernen skal felle tsc her, ikke ende opp
@@ -29,6 +29,11 @@ function failureHref(
       return `/games/${gameId}/submit?error=tee_shots_short`;
     case 'db':
       return `/games/${gameId}/submit?error=db`;
+    // #2661: the simulator league's marker, each with its own message.
+    case 'marker_required':
+    case 'marker_is_self':
+    case 'marker_not_member':
+      return `/games/${gameId}/submit?error=${reason}`;
   }
 }
 
@@ -44,6 +49,10 @@ function failureHref(
  * #2200: skjemaets skjulte `alsoFor`-felt er makkerne jeg har ført kortet for.
  * De sendes rett videre; kjernen leverer bare dem regelen tillater.
  *
+ * #2661: i en simulatorliga velger spilleren markør i skjemaet (`marker`).
+ * `submitScorecardWithMarker` sjekker og skriver markøren og leverer så med
+ * `submitScorecardCore`; utenfor simulatorligaen er det kjernen uendret.
+ *
  * `redirect()` kaster, så kjerne-kallet er med vilje ikke pakket i try/catch.
  */
 export async function submitScorecard(gameId: string, formData?: FormData) {
@@ -55,7 +64,12 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
   if (!user) redirect({ href: '/login', locale });
 
   const alsoFor = (formData?.getAll('alsoFor') ?? []).map(String).filter(Boolean);
-  const result = await submitScorecardCore(supabase, gameId, user.id, { alsoFor });
+  // #2661: the marker the player picked in a simulator league; ignored elsewhere.
+  const markerUserId = String(formData?.get('marker') ?? '') || null;
+  const result = await submitScorecardWithMarker(supabase, gameId, user.id, {
+    alsoFor,
+    markerUserId,
+  });
 
   if (!result.ok) {
     redirect({ href: failureHref(result.reason, gameId), locale });

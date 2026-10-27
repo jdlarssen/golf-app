@@ -53,6 +53,8 @@ type MateRow = {
   approved_at: string | null;
   withdrawn_at: string | null;
   submitted_by_user_id: string | null;
+  /** #2661: a card that names a marker has no attestant in the flight. */
+  marker_user_id: string | null;
 };
 
 /**
@@ -182,7 +184,7 @@ export async function getActiveGameCardData(
         (await supabase
           .from('game_players')
           .select(
-            'game_id, user_id, team_number, flight_number, submitted_at, approved_at, withdrawn_at, submitted_by_user_id',
+            'game_id, user_id, team_number, flight_number, submitted_at, approved_at, withdrawn_at, submitted_by_user_id, marker_user_id',
           )
           .in('game_id', rosterIds)) as { data: MateRow[] | null })()
     : Promise.resolve({ data: [] });

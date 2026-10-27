@@ -197,6 +197,11 @@ export type PlayerForHole = {
    * delivered before 0191 and whenever `submitted_at` is null.
    */
   submitted_by_user_id: string | null;
+  /**
+   * #2661: the marker the player named in a simulator league (0220). A card
+   * that names one has no attestant in the flight (`canApproveScorecardFor`).
+   */
+  marker_user_id: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
   /** WD / «trekk spiller» (#386): non-null = player has been withdrawn. */
@@ -243,7 +248,7 @@ export const GAME_SELECT =
   'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, start_type, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 export const PLAYERS_SELECT =
-  'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, marker_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 async function fetchGameWithPlayers(
   id: string,

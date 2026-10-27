@@ -17,6 +17,8 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
  *    «not found» (the app answers 500, not 404);
  *  - the flight game carries the league's handicap share and stroke cap
  *    (#2660), so the freeze at start applies them.
+ *  - #2661: a simulator flight needs its marker's approval
+ *    (require_peer_approval), a regular one does not.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -131,6 +133,27 @@ describe('startLeagueRoundFlightCore — the league handicap share and cap (#266
       cap: (insert?.args[0] as { hcp_max_strokes?: number | null }).hcp_max_strokes,
       readsBoth: /hcp_allowance_pct.*hcp_max_strokes/.test(String(leagueSelect?.args[0])),
     }).toEqual({ result: { ok: true, gameId: 'g1' }, share: pct, cap, readsBoth: true });
+  });
+});
+
+describe('startLeagueRoundFlightCore — the marker approves a simulator card (#2661)', () => {
+  const inserted = () =>
+    adminMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert')?.args[0] as
+      | { require_peer_approval?: boolean }
+      | undefined;
+
+  it('a simulator flight is created with peer approval on', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { count: 1 }, { data: { id: 'g1' } }]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    await startLeagueRoundFlightCore(userClient(userQueue(true)), 'u1', 'r1', []);
+    expect(inserted()?.require_peer_approval).toBe(true);
+  });
+
+  it('a regular league flight keeps peer approval off', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g3' } }]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    await startLeagueRoundFlightCore(userClient(userQueue(false)), 'u1', 'r1', ['u2']);
+    expect(inserted()?.require_peer_approval).toBe(false);
   });
 });
 

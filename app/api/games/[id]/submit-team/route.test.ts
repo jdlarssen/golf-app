@@ -156,6 +156,8 @@ const fake = createAdminClientMock({
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => fake.client,
 }));
+// #2661: an ordinary game, not a simulator-league flight (lib/league/__mocks__).
+vi.mock('@/lib/league/leagueFlight');
 // revalidateTag/revalidatePath kaster utenfor Next-runtime.
 vi.mock('next/cache', () => ({
   revalidateTag: vi.fn(),

@@ -350,6 +350,15 @@ describe('canApproveScorecardFor', () => {
     expect(canApproveScorecardFor(players, 'stableford', 'per', 'ola', 'kari')).toBe(true);
   });
 
+  it('#2661: a card that names a marker has no attestant in the flight', () => {
+    const players: FlightPlayer[] = [{ ...p('ola', 1), marker_user_id: 'mia' }, p('kari', 1)];
+    expect(canApproveScorecardFor(players, 'stableford', 'kari', 'ola')).toBe(false);
+    // The marker is not in the flight, so the in-flight rule never names them.
+    expect(canApproveScorecardFor(players, 'stableford', 'mia', 'ola')).toBe(false);
+    // The flightmate's own card, without a marker, keeps the rule.
+    expect(canApproveScorecardFor(players, 'stableford', 'ola', 'kari')).toBe(true);
+  });
+
   it('#2200: uten kjent leverandør gjelder regelen som før', () => {
     const players = [p('ola', 1), p('kari', 1)];
     expect(canApproveScorecardFor(players, 'stableford', 'kari', 'ola', null)).toBe(true);
@@ -572,6 +581,18 @@ describe('organizerApprovalRow (#2213)', () => {
   ])('%s', (_, players, viewer, card, expected) => {
     const rows = players.map((row) => ({ ...row, submitted_by_user_id: null }));
     expect(organizerApprovalRow(rows, stableford, viewer, card)).toBe(expected);
+  });
+
+  it('#2661: a card that names a marker waits for the marker, own or not; admin still can', () => {
+    const players = [
+      { ...p('kari'), submitted_by_user_id: null, marker_user_id: 'mia' },
+      { ...p('ola'), submitted_by_user_id: null, marker_user_id: 'mia' },
+    ];
+    expect([
+      organizerApprovalRow(players, stableford, organizer, 'ola'),
+      organizerApprovalRow(players, stableford, organizer, 'kari'),
+      organizerApprovalRow(players, stableford, admin, 'ola'),
+    ]).toEqual(['card_awaits_marker', 'card_awaits_marker', 'can_approve']);
   });
 
   it('#2200: eget kort levert av eneste medspiller: ingen kan godkjenne', () => {

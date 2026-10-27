@@ -140,6 +140,8 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
           // #2200: vaktas unntak (admin eller arrangør). Service-role hopper
           // over vakta, så kjernen håndhever regelen i skrivingen.
           delivererMayApprove: access.role === 'organizer',
+          // #2661: the named marker in a simulator league, required in the write.
+          markerUserId: access.markerUserId,
         });
         break;
       case 'reject':
