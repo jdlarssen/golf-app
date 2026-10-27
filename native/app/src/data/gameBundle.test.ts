@@ -46,6 +46,8 @@ const GAME_ROW = {
   side_disabled_categories: [],
   // #2255: «85 % handicap» i billetthodet.
   hcp_allowance_pct: 85,
+  // #2660: a league flight's cap on the strokes; null = no cap.
+  hcp_max_strokes: 32,
   // #2255: Del-knappen på billetten; satt når arrangøren har slått på live-følging.
   spectate_token: 'tok-123',
   // #2632: historien fra pressetribunen; null til runden er avsluttet og skrevet.
@@ -169,6 +171,7 @@ describe('gameBundle', () => {
       sideCtpCount: 1,
       sideDisabledCategories: [],
       hcpAllowancePct: 85,
+      hcpMaxStrokes: 32,
       spectateToken: 'tok-123',
       roundReport: 'Første avsnitt.\nAndre avsnitt.',
     });

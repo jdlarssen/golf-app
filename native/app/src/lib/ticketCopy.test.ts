@@ -9,6 +9,7 @@ import { isFinishedSentence } from '../test/copy';
 import {
   TICKET_TEXT,
   allowancePart,
+  maxStrokesPart,
   approveButton,
   fieldA11y,
   flightOf,
@@ -53,6 +54,8 @@ describe('formene', () => {
     expect(flightOf(2, 3)).toBe('2 av 3');
     // Hardt mellomrom: «85» og «%» skal aldri brytes fra hverandre.
     expect(allowancePart(85)).toBe('85\u00A0% handicap');
+    // #2660: a league's cap on the strokes, after the percentage.
+    expect(maxStrokesPart(32)).toBe('maks 32 slag');
     expect(fieldA11y('Dine slag', '15')).toBe('Dine slag: 15');
     expect(rosterA11y(true, 'Du og Marte')).toBe('Flighten din: Du og Marte');
     expect(rosterA11y(false, 'Du og Marte')).toBe('Med i runden: Du og Marte');
