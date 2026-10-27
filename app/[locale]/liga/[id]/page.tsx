@@ -23,6 +23,7 @@ import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
 import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import { MarkerQueueCard, type MarkerQueueRow } from '@/components/league/MarkerQueueCard';
+import { markerQueues, type QueuedCard } from '@/lib/league/markerQueues';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
@@ -81,47 +82,6 @@ const WINDOW_CHIP_STYLES: Record<
     color: 'var(--score-over2-fg)',
   },
 };
-
-/**
- * #2661: the cards that wait for a marker (simulator league). The marker sees
- * the ones that wait for them; the league's organiser sees every other one,
- * since they may approve in the marker's stead, except a card they own or
- * delivered, which only its marker answers (`mayApproveAsMarker`).
- */
-function markerQueues(opts: {
-  leagueId: string;
-  rounds: Array<{
-    label: string;
-    awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string; submittedBy: string | null }>;
-  }>;
-  viewerId: string | null;
-  isOrganizer: boolean;
-  nameOf: (userId: string) => string;
-  waitsFor: (name: string) => string;
-}): { markerRows: MarkerQueueRow[]; organizerRows: MarkerQueueRow[] } {
-  const awaiting = opts.rounds.flatMap((r) => r.awaitingMarker.map((a) => ({ ...a, roundLabel: r.label })));
-  const row = (a: (typeof awaiting)[number], waitsFor?: string): MarkerQueueRow => ({
-    key: `${a.gameId}:${a.userId}`,
-    href: `/liga/${opts.leagueId}/godkjenn/${a.gameId}/${a.userId}`,
-    playerName: opts.nameOf(a.userId),
-    roundLabel: a.roundLabel,
-    waitsFor,
-  });
-  if (opts.viewerId === null) return { markerRows: [], organizerRows: [] };
-  return {
-    markerRows: awaiting.filter((a) => a.markerUserId === opts.viewerId).map((a) => row(a)),
-    organizerRows: opts.isOrganizer
-      ? awaiting
-          .filter(
-            (a) =>
-              a.markerUserId !== opts.viewerId &&
-              a.userId !== opts.viewerId &&
-              a.submittedBy !== opts.viewerId,
-          )
-          .map((a) => row(a, opts.waitsFor(opts.nameOf(a.markerUserId))))
-      : [],
-  };
-}
 
 /**
  * #2638: the league round's two messages (open, closing) link here, so
@@ -227,14 +187,19 @@ export default async function LigaPublicPage({
 
   const nameOf = (userId: string) =>
     participantNames.find((p) => p.userId === userId)?.name ?? t('playedBy.unknownPlayer');
-  const { markerRows, organizerRows } = markerQueues({
-    leagueId: id,
-    rounds,
-    viewerId: currentUserId,
-    isOrganizer: league.created_by === currentUserId,
-    nameOf,
-    waitsFor: (name) => t('markerQueue.waitsFor', { name }),
+  // #2661: the cards that wait for an answer (markerQueues is the rule).
+  const queues = markerQueues(rounds, currentUserId, league.created_by === currentUserId);
+  const queueRow = (card: QueuedCard, waitsFor?: string): MarkerQueueRow => ({
+    key: `${card.gameId}:${card.userId}`,
+    href: `/liga/${id}/godkjenn/${card.gameId}/${card.userId}`,
+    playerName: nameOf(card.userId),
+    roundLabel: card.roundLabel,
+    waitsFor,
   });
+  const markerRows = queues.forMarker.map((card) => queueRow(card));
+  const organizerRows = queues.forOrganizer.map((card) =>
+    queueRow(card, t('markerQueue.waitsFor', { name: nameOf(card.markerUserId) })),
+  );
 
   const sp = await searchParams;
   const joinError = first(sp.error);

@@ -4939,6 +4939,7 @@
       "banners": {
         "approved": "The card is approved, and the round counts in the table.",
         "approved_waiting": "The card is approved. The round counts once the rest of the flight is approved.",
+        "approved_only": "The card is approved.",
         "rejected": "The card is sent back. The player gets a notice with the reason."
       },
       "errors": {

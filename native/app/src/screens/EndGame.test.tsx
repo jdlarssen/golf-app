@@ -671,6 +671,8 @@ describe('EndGame', () => {
     expect(screen.getByTestId('end-game-own-card-awaits-marker')).toBeTruthy();
     expect(screen.queryByTestId('end-game-own-card-needs-peer')).toBeNull();
     expect(screen.queryByTestId(`end-game-approve-${MATE}`)).toBeNull();
+    // Ingen i flighten godkjenner her, så «En medspiller må godkjenne» står ikke.
+    expect(screen.queryByTestId('end-game-unapproved-note')).toBeNull();
   });
 
   it('tilbyr ikke frafall i et format som ikke har frafall', async () => {

@@ -52,14 +52,26 @@ export async function approveAsMarker(leagueId: string, gameId: string, playerUs
   });
   if (!result.ok) redirect({ href: `${here}?error=db`, locale });
   revalidatePath(`/liga/${leagueId}`);
-  // The round counts once the whole flight is approved and finished; a card
-  // left in the flight gets its own receipt, so the banner never overclaims.
-  const { data: game } = await getAdminClient()
-    .from('games')
-    .select('status')
-    .eq('id', gameId)
-    .maybeSingle<{ status: string }>();
-  const status = game?.status === 'finished' ? 'approved' : 'approved_waiting';
+  // The round counts once the whole flight is approved and finished. A card
+  // still open in the flight gets its own receipt, and a flight whose finish
+  // failed (nothing left to approve, not finished) promises nothing, so the
+  // banner never overclaims.
+  const admin = getAdminClient();
+  const [{ data: game }, { data: open }] = await Promise.all([
+    admin.from('games').select('status').eq('id', gameId).maybeSingle<{ status: string }>(),
+    admin
+      .from('game_players')
+      .select('user_id')
+      .eq('game_id', gameId)
+      .is('withdrawn_at', null)
+      .or('submitted_at.is.null,approved_at.is.null'),
+  ]);
+  const status =
+    game?.status === 'finished'
+      ? 'approved'
+      : (open ?? []).length > 0
+        ? 'approved_waiting'
+        : 'approved_only';
   redirect({ href: `${here}?status=${status}`, locale });
 }
 
