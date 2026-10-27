@@ -57,8 +57,13 @@ const PUBLIC_PATH_PATTERN =
 // same reasoning again — the page exists to be read by strangers and crawlers
 // without logging in, and a logged-in visitor who follows the front page's
 // footer link must keep the bottom nav on the way back.
+// `liga/bli-med/<code>` joined in #2662 (the shareable league link): a stranger
+// who opens the link sees the league and the intro before logging in, while a
+// logged-in visitor keeps the header and the bottom nav. Exactly one segment
+// after `bli-med`, so `/liga/bli-med` alone (which `/liga/[id]` would take)
+// stays behind the login.
 const AUTH_OPTIONAL_PATH_PATTERN =
-  /^\/$|^\/(finn-turneringer|spillformater|arranger-golfturnering|hvorfor-torny)(\/|$)/;
+  /^\/$|^\/(finn-turneringer|spillformater|arranger-golfturnering|hvorfor-torny)(\/|$)|^\/liga\/bli-med\/[^/]+$/;
 
 // #1286: gyldige spillformat-detalj-slugs = MODE_LABELS-nøklene. SAMME kilde
 // som detaljsiden (`app/[locale]/spillformater/[slug]/page.tsx:17`), så guarden

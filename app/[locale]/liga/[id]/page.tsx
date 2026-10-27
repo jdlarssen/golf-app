@@ -24,6 +24,10 @@ import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
 import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
 import { MarkerQueueCard, type MarkerQueueRow } from '@/components/league/MarkerQueueCard';
 import { markerQueues, type QueuedCard } from '@/lib/league/markerQueues';
+import { LeagueIntroSteps } from '@/components/league/LeagueIntroSteps';
+import { ShareLinkField } from '@/components/ui/ShareLinkField';
+import { GetTheApp } from '@/components/app/GetTheApp';
+import { leagueJoinUrl } from '@/lib/league/joinCode';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
@@ -37,7 +41,7 @@ import type { AppLocale } from '@/i18n/routing';
 
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{ error?: string | string[]; status?: string | string[] }>;
 
 /** Determine window status relative to now. */
 function windowStatus(
@@ -84,6 +88,86 @@ const WINDOW_CHIP_STYLES: Record<
 };
 
 /**
+ * #2662: «Del ligaen» for a participant while the link is on and the season is
+ * not over. Only a league without a club has a code (setLeagueJoinLink refuses
+ * the rest), so a club league never shows it.
+ */
+function participantShareUrl(
+  league: { join_code: string | null; status: string },
+  isParticipant: boolean,
+): string | null {
+  if (!isParticipant || !league.join_code || league.status === 'finished') return null;
+  return leagueJoinUrl(league.join_code);
+}
+
+/**
+ * #2662: the receipt after joining through the shareable link (with «Hent
+ * appen»), and the intro until the first delivered round.
+ */
+function NewcomerBlocks({
+  status,
+  me,
+  isSimulator,
+  joinedLabel,
+}: {
+  /** `?status=` on the page; `joined` is where the join action lands. */
+  status: string | undefined;
+  /** The viewer's participant row, if they are in the league. */
+  me: { hasPlayed: boolean } | undefined;
+  isSimulator: boolean;
+  joinedLabel: string;
+}) {
+  const joined = status === 'joined' && me !== undefined;
+  const showIntro = me !== undefined && !me.hasPlayed;
+  return (
+    <>
+      {joined && (
+        <div className="mb-6 space-y-3">
+          <Banner tone="success" testId="liga-joined-banner">
+            {joinedLabel}
+          </Banner>
+          <GetTheApp />
+        </div>
+      )}
+      {showIntro && (
+        <section className="mb-8">
+          <LeagueIntroSteps isSimulator={isSimulator} />
+        </section>
+      )}
+    </>
+  );
+}
+
+/** #2662: participants pass the league on. */
+function ShareLeagueSection({
+  url,
+  t,
+}: {
+  url: string | null;
+  t: Awaited<ReturnType<typeof getTranslations<'liga'>>>;
+}) {
+  if (!url) return null;
+  return (
+    <section className="mb-6" data-testid="liga-share">
+      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        {t('shareLink.heading')}
+      </h2>
+      <Card className="p-4 sm:p-5">
+        <p className="mb-3 text-sm text-muted">{t('shareLink.participantHint')}</p>
+        <ShareLinkField
+          url={url}
+          ariaLabel={t('shareLink.ariaLabel')}
+          copyLabel={t('shareLink.copyButton')}
+          copiedLabel={t('shareLink.copiedButton')}
+          errorText={t('shareLink.copyError')}
+          testId="liga-share-link"
+        />
+      </Card>
+    </section>
+  );
+}
+
+/**
  * #2638: the league round's two messages (open, closing) link here, so
  * opening the league reads them.
  */
@@ -100,11 +184,12 @@ export default async function LigaPublicPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const [t, tStatus, tFormatLine, tManage, locale] = await Promise.all([
+  const [t, tStatus, tFormatLine, tManage, tLiga, locale] = await Promise.all([
     getTranslations('liga.player'),
     getTranslations('gameStatus'),
     getTranslations('liga.player.formatLine'),
     getTranslations('liga.manage'),
+    getTranslations('liga'),
     getLocale() as Promise<AppLocale>,
   ]);
 
@@ -258,6 +343,13 @@ export default async function LigaPublicPage({
           )}
         </p>
       </header>
+
+      <NewcomerBlocks
+        status={first(sp.status)}
+        me={me}
+        isSimulator={league.is_simulator}
+        joinedLabel={tLiga('join.joinedBanner')}
+      />
 
       {/* #452 Fase 3: medlems-self-service */}
       {joinErrorMessage && (
@@ -438,6 +530,8 @@ export default async function LigaPublicPage({
           </ul>
         )}
       </section>
+
+      <ShareLeagueSection url={participantShareUrl(league, isParticipant)} t={tLiga} />
 
       {/* #452 Fase 3: meld deg av (kun før spilt runde) */}
       {canLeave && (
