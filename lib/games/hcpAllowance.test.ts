@@ -3,6 +3,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import { ALL_CUP_MATCH_FORMATS, cupMatchAllowance } from '@/lib/cup/cupMatchAllowance';
 import {
   effectiveHcpAllowancePct,
+  effectiveHcpMaxStrokes,
   hcpAllowanceInPlay,
   showsGeneralAllowanceField,
   usesGameHcpAllowance,
@@ -65,6 +66,22 @@ describe('effectiveHcpAllowancePct (#2210)', () => {
     ['not_a_mode', 85, 100],
   ])('%s with stored %i → %i', (mode, stored, expected) => {
     expect(effectiveHcpAllowancePct(mode, stored)).toBe(expected);
+  });
+});
+
+// #2660: the stroke cap travels with the general percentage. A format with its
+// own percentage freezes the full course handicap, so a cap there would cut
+// the number its own percentage is taken from.
+describe('effectiveHcpMaxStrokes (#2660)', () => {
+  it.each<[string, number | null, number | null]>([
+    ['stableford', 32, 32],
+    ['modified_stableford', 32, 32],
+    ['solo_strokeplay', 32, 32],
+    ['stableford', null, null],
+    ['fourball_matchplay', 32, null],
+    ['not_a_mode', 32, null],
+  ])('%s with stored %s → %s', (mode, stored, expected) => {
+    expect(effectiveHcpMaxStrokes(mode, stored)).toBe(expected);
   });
 });
 

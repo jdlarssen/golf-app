@@ -69,6 +69,20 @@ export function effectiveHcpAllowancePct(
 }
 
 /**
+ * #2660: the stroke cap to actually apply. It belongs to the general
+ * percentage: a format with its own percentage in `mode_config` freezes the
+ * full course handicap, and a cap there would cut the number its own
+ * percentage is taken from. Only league flights set the column today, and all
+ * three league formats use the general percentage.
+ */
+export function effectiveHcpMaxStrokes(
+  mode: string,
+  storedMaxStrokes: number | null,
+): number | null {
+  return usesGameHcpAllowance(mode) ? storedMaxStrokes : null;
+}
+
+/**
  * #2570: whether the general «Handicap-andel» card (Netto/Brutto + percent)
  * shows for the format. Shamble is the exception: its setup on step 2 already
  * has a drawn Netto/Brutto choice («Tellemåte»), so its percentage field sits

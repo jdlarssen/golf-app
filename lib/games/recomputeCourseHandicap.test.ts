@@ -48,6 +48,7 @@ function activeRow(overrides: Partial<RecomputeGameRow> = {}): RecomputeGameRow 
     teeGender: 'mens',
     teeRatings: TEE,
     allowancePct: 100,
+    maxStrokes: null,
     ...overrides,
   };
 }
@@ -69,6 +70,13 @@ describe('planHandicapRecompute (#1176)', () => {
     expect(
       planHandicapRecompute([activeRow({ allowancePct: 75 })], 20),
     ).toEqual([{ gameId: 'g-active', courseHandicap: 15 }]);
+  });
+
+  it('#2660: caps the strokes after the percentage, as the freeze does', () => {
+    // hcpIndex 54 → raw 54; 75 % = 40.5 → 41; the cap makes it 32.
+    expect(
+      planHandicapRecompute([activeRow({ allowancePct: 75, maxStrokes: 32 })], 54),
+    ).toEqual([{ gameId: 'g-active', courseHandicap: 32 }]);
   });
 
   it.each([
@@ -606,5 +614,52 @@ describe('recomputeCourseHandicapForUser — handicapprosenten følger formatet 
       (c) => c.table === 'game_players' && c.method === 'update',
     );
     expect(write?.args[0]).toEqual({ course_handicap: 12 });
+  });
+});
+
+// ─── #2660: a league flight recomputes with its cap ──────────────────────
+
+describe('recomputeCourseHandicapForUser — ligaens tak på slag (#2660)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('stableford med 75 % og maks 32 regnes om til 32', async () => {
+    // TEE is trivial: CH == round(hcpIndex). New index 54 → 75 % = 41 → 32.
+    const client = buildSupabaseMock([
+      {
+        data: [{ game_id: 'g-1', tee_gender: 'mens', course_handicap: 18, team_number: null }],
+        error: null,
+      },
+      {
+        data: [
+          {
+            id: 'g-1',
+            status: 'active',
+            hcp_allowance_pct: 75,
+            hcp_max_strokes: 32,
+            tee_boxes: TEE,
+            game_mode: 'stableford',
+            mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+          },
+        ],
+        error: null,
+      },
+      { data: [{ game_id: 'g-1' }], error: null },
+    ]);
+    mockAdminClient.mockReturnValue(client as never);
+
+    expect(await recomputeCourseHandicapForUser('sander', 54)).toEqual({
+      updated: 1,
+      overridesUpdated: 0,
+    });
+    const write = client.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'update',
+    );
+    expect(write?.args[0]).toEqual({ course_handicap: 32 });
+    const gamesSelect = client.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'select',
+    );
+    expect(String(gamesSelect?.args[0])).toContain('hcp_max_strokes');
   });
 });

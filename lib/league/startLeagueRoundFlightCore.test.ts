@@ -14,7 +14,9 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
  *  - a start that fails after the freeze leaves it in place: an undo could
  *    race a player who started the round meanwhile (the orchestrator's review);
  *  - a failed read of the round or the league is its own refusal, not
- *    «not found» (the app answers 500, not 404).
+ *    «not found» (the app answers 500, not 404);
+ *  - the flight game carries the league's handicap share and stroke cap
+ *    (#2660), so the freeze at start applies them.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -37,8 +39,9 @@ const ROUND = {
 };
 const LEAGUE_DEFAULT = { green_stimp: '10', wind: 'CALM' };
 
-function league(isSimulator: boolean) {
+function league(isSimulator: boolean, hcp = { hcp_allowance_pct: 100, hcp_max_strokes: null as number | null }) {
   return {
+    ...hcp,
     id: 'l1',
     name: 'Vinterliga',
     course_id: 'c1',
@@ -51,10 +54,14 @@ function league(isSimulator: boolean) {
 }
 
 /** The player's client, in call order up to the game_players insert. */
-function userQueue(isSimulator: boolean, members = ['u1', 'u2']): QueryResult[] {
+function userQueue(
+  isSimulator: boolean,
+  members = ['u1', 'u2'],
+  hcp?: Parameters<typeof league>[1],
+): QueryResult[] {
   return [
     { data: ROUND },
-    { data: league(isSimulator) },
+    { data: league(isSimulator, hcp) },
     { data: members.map((user_id) => ({ user_id })) },
     { data: [{ id: 'u1', gender: 'mens' }] },
     { error: null }, // game_players insert
@@ -96,6 +103,34 @@ describe('startLeagueRoundFlightCore — the marker rule follows the league (#26
       result: { ok: false, error: 'need_marker' },
       adminCalls: [],
     });
+  });
+});
+
+describe('startLeagueRoundFlightCore — the league handicap share and cap (#2660)', () => {
+  it.each<[string, boolean, number, number | null]>([
+    ['a simulator league with 75 % and at most 32 strokes', true, 75, 32],
+    ['a regular league with 95 % and no cap', false, 95, null],
+    ['a league from before #2660 (100 %, no cap)', false, 100, null],
+  ])('%s: the flight game carries both', async (_label, isSimulator, pct, cap) => {
+    adminMock = buildSupabaseMock(
+      isSimulator
+        ? [{ data: [] }, { count: 0 }, { data: [{ id: 'r1' }] }, { data: { id: 'g1' } }]
+        : [{ data: [] }, { data: { id: 'g1' } }],
+    );
+    const user = userClient(
+      userQueue(isSimulator, ['u1', 'u2'], { hcp_allowance_pct: pct, hcp_max_strokes: cap }),
+    );
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    const result = await startLeagueRoundFlightCore(user, 'u1', 'r1', isSimulator ? [] : ['u2']);
+
+    const insert = adminMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+    const leagueSelect = user.__fromCalls.find((c) => c.table === 'leagues' && c.method === 'select');
+    expect({
+      result,
+      share: (insert?.args[0] as { hcp_allowance_pct?: number }).hcp_allowance_pct,
+      cap: (insert?.args[0] as { hcp_max_strokes?: number | null }).hcp_max_strokes,
+      readsBoth: /hcp_allowance_pct.*hcp_max_strokes/.test(String(leagueSelect?.args[0])),
+    }).toEqual({ result: { ok: true, gameId: 'g1' }, share: pct, cap, readsBoth: true });
   });
 });
 

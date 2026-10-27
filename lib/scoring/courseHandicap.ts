@@ -10,8 +10,20 @@ export function calculateCourseHandicap(input: CourseHandicapInput): number {
   return Math.round(raw);
 }
 
-export function applyAllowance(courseHandicap: number, percent: number): number {
-  return Math.round(courseHandicap * (percent / 100));
+/**
+ * The course handicap a player plays on: the percentage first, then the cap.
+ *
+ * #2660: a league can cap the strokes after the percentage (75 % of a 54
+ * course handicap is 40.5, and a cap of 32 makes it 32). `null` = no cap. A
+ * plus handicap (negative) and 0 are never moved by the cap.
+ */
+export function applyAllowance(
+  courseHandicap: number,
+  percent: number,
+  maxStrokes: number | null = null,
+): number {
+  const allowed = Math.round(courseHandicap * (percent / 100));
+  return maxStrokes === null ? allowed : Math.min(allowed, maxStrokes);
 }
 
 export interface DisplayCourseHandicapInput {
@@ -20,6 +32,8 @@ export interface DisplayCourseHandicapInput {
   courseRating: number | null;
   par: number | null;
   allowancePct: number;
+  /** #2660: `games.hcp_max_strokes`; null or absent = no cap. */
+  maxStrokes?: number | null;
 }
 
 /**
@@ -49,5 +63,5 @@ export function displayCourseHandicap(
     courseRating: input.courseRating,
     par: input.par,
   });
-  return applyAllowance(raw, input.allowancePct);
+  return applyAllowance(raw, input.allowancePct, input.maxStrokes ?? null);
 }
