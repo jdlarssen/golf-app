@@ -326,4 +326,29 @@ describe('#2661: markøren i en simulatorliga', () => {
     // Arrangøren ser ingen egen liste når hen ikke er arrangør.
     expect(screen.queryByTestId('league-organizer-marker-queue')).toBeNull();
   });
+
+  it('arrangøren ser de andres ventende kort, men ikke sitt eget', async () => {
+    const view = leagueView({ me: { isOrganizer: true } });
+    const [a, b] = view.participants.filter((p) => p.userId !== 'me');
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        rounds: view.rounds.map((r) =>
+          r.id === 'r3'
+            ? {
+                ...r,
+                awaitingMarker: [
+                  { gameId: 'g-me', userId: 'me', markerUserId: a.userId },
+                  { gameId: 'g-a', userId: a.userId, markerUserId: b.userId },
+                ],
+              }
+            : r,
+        ),
+      },
+    });
+    await renderLeague();
+    expect(screen.getByTestId(`marker-queue-g-a-${a.userId}`)).toBeTruthy();
+    expect(screen.queryByTestId('marker-queue-g-me-me')).toBeNull();
+  });
 });

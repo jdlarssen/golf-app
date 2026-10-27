@@ -78,6 +78,8 @@ const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> 
   // #2638: ligasiden, webbens /liga/[id]: varslene om at en runde er åpen
   // eller stenger snart.
   'League.tsx': { surface: 'league', entity: 'leagueId' },
+  // #2661: markørens kort, webbens /liga/[id]/godkjenn/…: markørens varsel.
+  'MarkerApprove.tsx': { surface: 'leagueMarker', entity: 'gameId' },
 };
 
 describe('skjermene som merker', () => {

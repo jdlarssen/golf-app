@@ -17,7 +17,7 @@ import { approveAsMarker, rejectAsMarker } from './actions';
 type Params = Promise<{ id: string; gameId: string; userId: string }>;
 type SearchParams = Promise<{ status?: string | string[]; error?: string | string[] }>;
 
-const STATUS_KEYS = ['approved', 'rejected'] as const;
+const STATUS_KEYS = ['approved', 'approved_waiting', 'rejected'] as const;
 const ERROR_KEYS = ['forbidden', 'not_pending', 'db'] as const;
 
 /**
