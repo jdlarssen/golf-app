@@ -4,6 +4,7 @@ import path from 'path';
 import {
   JOIN_CODE_RE,
   isJoinCode,
+  leagueJoinUrl,
   newJoinCode,
   writeWithFreshJoinCode,
 } from './joinCode';
@@ -43,6 +44,20 @@ describe('isJoinCode', () => {
     ['', false],
   ])('%j → %s', (code, ok) => {
     expect(isJoinCode(code)).toBe(ok);
+  });
+});
+
+describe('leagueJoinUrl', () => {
+  it('builds the absolute link on the app URL', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://staging.example');
+    expect(leagueJoinUrl('abcd2345')).toBe('https://staging.example/liga/bli-med/abcd2345');
+    vi.unstubAllEnvs();
+  });
+
+  it('falls back to tornygolf.no', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', undefined);
+    expect(leagueJoinUrl('abcd2345')).toBe('https://tornygolf.no/liga/bli-med/abcd2345');
+    vi.unstubAllEnvs();
   });
 });
 

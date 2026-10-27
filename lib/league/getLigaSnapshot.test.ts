@@ -241,6 +241,7 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
       withdrawn_at: string | null;
     }>,
     gameStatus: string = 'finished',
+    leaguePlayers: Array<{ user_id: string; accepted_at: string | null; users: null }> = [],
   ) {
     return buildSupabaseMock([
       // 1. leagues.maybeSingle
@@ -266,6 +267,7 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
           started_at: '2026-06-01T00:00:00Z',
           finished_at: null,
           group_id: null,
+          join_code: 'abcd2345',
         },
       },
       // 2. Promise.all → league_rounds, league_players
@@ -284,7 +286,7 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
           },
         ],
       },
-      { data: [] }, // league_players
+      { data: leaguePlayers }, // league_players
       // 3. games
       {
         data: [
@@ -336,6 +338,26 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
     const snap = await getLigaSnapshot('l1');
     expect(snap).not.toBeNull();
     expect(snap!.rounds[0].deliveredUserIds).not.toContain('U3');
+  });
+
+  it('#2662: hasPlayed follows a delivered card (the intro card shows until then), join_code is carried', async () => {
+    supabaseMock = buildQueue(
+      [
+        { game_id: 'g1', user_id: 'U1', course_handicap: 18, tee_gender: 'mens', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
+      ],
+      'finished',
+      [
+        { user_id: 'U1', accepted_at: '2026-06-01T00:00:00Z', users: null },
+        // Joined through the link, has not played yet.
+        { user_id: 'U9', accepted_at: '2026-06-20T00:00:00Z', users: null },
+      ],
+    );
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+    expect({
+      joinCode: snap!.league.join_code,
+      played: snap!.participants.map((p) => [p.userId, p.hasPlayed]),
+    }).toEqual({ joinCode: 'abcd2345', played: [['U1', true], ['U9', false]] });
   });
 
   it('#2214: lists a player in an active flight under inProgressUserIds, not a withdrawn one', async () => {
