@@ -118,7 +118,13 @@ import {
   type FinishPlan,
   type FinishSlot,
 } from '../lib/endGamePlan';
-import { canApproveOnBehalf, ownCardApproval, submittedLabel, toRoster } from '../lib/roster';
+import {
+  canApproveOnBehalf,
+  noFlightmateApproves,
+  ownCardApproval,
+  submittedLabel,
+  toRoster,
+} from '../lib/roster';
 import {
   describeSelfWithdrawFailure,
   WITHDRAW_SELF,
@@ -694,9 +700,15 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                 );
               })}
             </View>
-            {ownUnapproved && plan.unapproved.length === 1 ? null : (
+            {(ownUnapproved && plan.unapproved.length === 1) ||
+            noFlightmateApproves(
+              toRoster(bundle.players),
+              game.gameMode as GameMode,
+              userId,
+              plan.unapproved.map((player) => player.userId),
+            ) ? null : (
               <View style={styles.noteBox}>
-                <Text style={[styles.note13, { color: colors.muted }]}>
+                <Text style={[styles.note13, { color: colors.muted }]} testID="end-game-unapproved-note">
                   {END_GAME_TEXT.unapprovedNote}
                 </Text>
               </View>
