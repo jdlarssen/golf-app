@@ -29,6 +29,7 @@ export type NotificationKind =
   | 'game_stale_reminder'
   | 'league_round_open'
   | 'league_round_closing'
+  | 'league_marker_request'
   | 'cup_finished'
   | 'cup_started'
   | 'cup_signup'
@@ -286,6 +287,20 @@ const leagueRoundNoticeSchema = z.object({
   closes_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
 });
 
+// league_marker_request (#2661): en spiller i en simulatorliga leverte kortet
+// og valgte mottakeren som markør. Til markøren, én gang per levert kort (også
+// når kortet leveres på nytt etter en avvisning). Deeplinker til markørens
+// godkjenningsside /liga/[league_id]/godkjenn/[game_id]/[player_id].
+// `player_id` er kortets eier; `player_name` er nullable som de andre
+// navnefeltene, så kortet fyller reserven i mottakerens språk (#1364).
+const leagueMarkerRequestSchema = z.object({
+  league_id: uuid,
+  league_name: z.string().min(1),
+  game_id: uuid,
+  player_id: uuid,
+  player_name: z.string().min(1).nullable(),
+});
+
 // cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
 // cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
 // (samme prinsipp som game_finished). Slank payload speiler game_finished:
@@ -475,6 +490,7 @@ const schemas = {
   game_stale_reminder: gameStaleReminderSchema,
   league_round_open: leagueRoundNoticeSchema,
   league_round_closing: leagueRoundNoticeSchema,
+  league_marker_request: leagueMarkerRequestSchema,
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
   cup_signup: cupSignupSchema,

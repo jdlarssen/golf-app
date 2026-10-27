@@ -59,6 +59,13 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
     round_label: 'Runde 3',
     closes_at: '2026-11-06T22:59:00.000Z',
   },
+  league_marker_request: {
+    league_id: TEST_LEAGUE_ID,
+    league_name: 'Liga',
+    game_id: TEST_GAME_ID,
+    player_id: TEST_GAME_ID,
+    player_name: 'Per',
+  },
   cup_finished: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_started: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_signup: {

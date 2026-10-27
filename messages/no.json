@@ -171,6 +171,10 @@
         "title": "{roundLabel} i {leagueName} stenger {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}",
         "detail": "Du har ikke spilt den ennå."
       },
+      "leagueMarkerRequest": {
+        "title": "{playerName} har valgt deg som markør",
+        "detail": "Se over runden i {leagueName} og godkjenn den."
+      },
       "paymentReminder": {
         "title": "Betal startkontingenten",
         "detail": "Du mangler {amount} i {gameName}",

@@ -271,6 +271,15 @@ export function buildNotificationText(
         detail: t('kinds.leagueRoundClosing.detail'),
       };
     }
+    case 'league_marker_request': {
+      const p = payload as NotificationPayload<'league_marker_request'>;
+      return {
+        title: t('kinds.leagueMarkerRequest.title', {
+          playerName: p.player_name ?? t('somePlayerFallback'),
+        }),
+        detail: t('kinds.leagueMarkerRequest.detail', { leagueName: p.league_name }),
+      };
+    }
     case 'cup_finished': {
       const p = payload as NotificationPayload<'cup_finished'>;
       return {
