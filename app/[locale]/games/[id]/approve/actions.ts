@@ -4,6 +4,8 @@ import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { canApproveScorecardFor } from '@/lib/games/flightScope';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
+import { markerReviewAccess } from '@/lib/league/markerReviewAccess';
 import {
   approveScorecardCore,
   rejectScorecardCore,
@@ -49,6 +51,22 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     .eq('id', user.id)
     .single<{ is_admin: boolean }>();
   const isAdmin = !!profile?.is_admin;
+
+  // #2661: in a simulator league the marker answers on the marker page. Here
+  // only a global admin may answer, in the marker's stead and never on a card
+  // they own or delivered (`mayApproveAsMarker` behind `markerReviewAccess`,
+  // the same rule as the marker page and the app route). The write goes
+  // through this page's RLS client, which 0220 lets through for an admin only.
+  if (await readSimulatorLeagueFlight(gameId)) {
+    const review = isAdmin ? await markerReviewAccess(user.id, gameId, playerUserId) : null;
+    return {
+      supabase,
+      user,
+      locale,
+      gameMode,
+      authz: { ok: review?.ok === true, isAdmin } satisfies AuthorizationResult,
+    };
+  }
 
   if (isAdmin) {
     return {

@@ -7,6 +7,9 @@ import {
   submitScorecardCore,
   type SubmitScorecardResult,
 } from '@/lib/games/submitScorecardCore';
+import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { markerCandidates, markerRefusal, type MarkerRefusal } from './leagueMarker';
 
@@ -37,9 +40,12 @@ type MarkerWrite =
 
 /**
  * Checks the named marker against the league and writes it on the cards this
- * delivery covers: the deliverer's own card and the flightmates' in `alsoFor`.
- * The check is `markerRefusal`, against the league's members read here, so a
- * hand-made request gets the same answer as the form.
+ * delivery covers: the deliverer's own card and the flightmates' in `alsoFor`
+ * that the deliverer may deliver, narrowed with the core's own rule
+ * (`loadFlightDeliveryCards`). A caller who is not an active player in the
+ * game marks nothing; the core then refuses the delivery itself. The check is
+ * `markerRefusal`, against the league's members read here, so a hand-made
+ * request gets the same answer as the form.
  *
  * Only cards that are not delivered yet are marked (`submitted_at is null`),
  * so the marker on a delivered card never moves under its marker's feet. The
@@ -56,7 +62,23 @@ export async function setFlightMarkerCore(opts: {
 }): Promise<MarkerWrite> {
   const { flight, delivererId, markerUserId } = opts;
   const admin = getAdminClient();
-  const cardOwnerIds = Array.from(new Set([delivererId, ...opts.alsoFor]));
+
+  const { data: me, error: meError } = await admin
+    .from('game_players')
+    .select('user_id')
+    .eq('game_id', flight.gameId)
+    .eq('user_id', delivererId)
+    .is('withdrawn_at', null)
+    .maybeSingle();
+  if (meError) {
+    console.error(`[${LOG_PREFIX}] player read failed`, { gameId: flight.gameId, meError });
+    return { ok: false, reason: 'db' };
+  }
+  if (!me) return { ok: true, markedIds: [] };
+
+  const mates = await deliverableMates(flight.gameId, delivererId, opts.alsoFor);
+  if (mates === null) return { ok: false, reason: 'db' };
+  const cardOwnerIds = [delivererId, ...mates];
 
   const { data: members, error: membersError } = await admin
     .from('league_players')
@@ -87,6 +109,33 @@ export async function setFlightMarkerCore(opts: {
     return { ok: false, reason: 'db' };
   }
   return { ok: true, markedIds: (marked ?? []).map((r) => r.user_id) };
+}
+
+/**
+ * The flightmates in `alsoFor` the deliverer may deliver, the same narrowing
+ * as the core (`loadFlightDeliveryCards`). `null` on a failed read.
+ */
+async function deliverableMates(
+  gameId: string,
+  delivererId: string,
+  alsoFor: readonly string[],
+): Promise<string[] | null> {
+  const asked = new Set(alsoFor);
+  asked.delete(delivererId);
+  if (asked.size === 0) return [];
+  try {
+    const { data: game, error } = await getAdminClient()
+      .from('games')
+      .select('game_mode, hole_segment, source_game_id')
+      .eq('id', gameId)
+      .maybeSingle<{ game_mode: GameMode; hole_segment: HoleSegment; source_game_id: string | null }>();
+    if (error || !game) throw error ?? new Error('game not found');
+    const cards = await loadFlightDeliveryCards(gameId, delivererId, game);
+    return cards.map((c) => c.userId).filter((id) => asked.has(id));
+  } catch (err) {
+    console.error(`[${LOG_PREFIX}] flight candidates read failed`, { gameId, err });
+    return null;
+  }
 }
 
 /**
