@@ -43,6 +43,7 @@ function playerRows(players: ScoringPlayer[]): PlayerForHole[] {
       course_handicap: courseHandicap,
       submitted_at: null,
       submitted_by_user_id: null,
+      marker_user_id: null,
       approved_at: null,
       rejection_reason: null,
       withdrawn_at: null,

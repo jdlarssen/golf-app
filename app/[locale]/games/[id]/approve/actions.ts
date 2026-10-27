@@ -65,7 +65,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
   // #2200: den som leverte kortet for eieren, kan ikke godkjenne det.
   const { data: allPlayers } = await supabase
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id')
+    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id, marker_user_id')
     .eq('game_id', gameId)
     .returns<
       {
@@ -73,6 +73,8 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
         flight_number: number | null;
         withdrawn_at: string | null;
         submitted_by_user_id: string | null;
+        // #2661: a card that names a marker has no attestant in the flight.
+        marker_user_id: string | null;
       }[]
     >();
 

@@ -14,7 +14,9 @@ import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
  *  - a start that fails after the freeze leaves it in place: an undo could
  *    race a player who started the round meanwhile (the orchestrator's review);
  *  - a failed read of the round or the league is its own refusal, not
- *    «not found» (the app answers 500, not 404).
+ *    «not found» (the app answers 500, not 404);
+ *  - #2661: a simulator flight needs its marker's approval
+ *    (require_peer_approval), a regular one does not.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -96,6 +98,27 @@ describe('startLeagueRoundFlightCore — the marker rule follows the league (#26
       result: { ok: false, error: 'need_marker' },
       adminCalls: [],
     });
+  });
+});
+
+describe('startLeagueRoundFlightCore — the marker approves a simulator card (#2661)', () => {
+  const inserted = () =>
+    adminMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert')?.args[0] as
+      | { require_peer_approval?: boolean }
+      | undefined;
+
+  it('a simulator flight is created with peer approval on', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { count: 1 }, { data: { id: 'g1' } }]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    await startLeagueRoundFlightCore(userClient(userQueue(true)), 'u1', 'r1', []);
+    expect(inserted()?.require_peer_approval).toBe(true);
+  });
+
+  it('a regular league flight keeps peer approval off', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g3' } }]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    await startLeagueRoundFlightCore(userClient(userQueue(false)), 'u1', 'r1', ['u2']);
+    expect(inserted()?.require_peer_approval).toBe(false);
   });
 });
 

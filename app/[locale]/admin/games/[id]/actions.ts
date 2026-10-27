@@ -24,6 +24,7 @@ import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNoti
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { notifyPlayersGameReopened } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
 
 /**
  * Self-gate + load action context for the game-detail actions. Wraps the
@@ -161,8 +162,16 @@ export async function adminApproveScorecard(
   playerUserId: string,
 ) {
   const locale = await getLocale();
-  const { supabase, user, name, actorName, detailPath } =
+  const { supabase, user, name, actorName, isAdmin, detailPath } =
     await loadAdminOrCreatorContext(gameId);
+
+  // #2661: in a simulator league the marker approves (or the league's
+  // organiser, through the marker page); the player who started the flight is
+  // not its organiser here. The page shows no button (`card_awaits_marker`);
+  // this stops a hand-made post, and 0220 refuses the write anyway.
+  if (!isAdmin && (await readSimulatorLeagueFlight(gameId))) {
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   const { data: game } = await supabase
     .from('games')

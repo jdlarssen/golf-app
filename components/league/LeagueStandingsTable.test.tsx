@@ -26,6 +26,7 @@ const mkRound = (id: string, sequence: number): LeagueRoundView => ({
   flightCount: 1,
   deliveredUserIds: [],
   inProgressUserIds: [],
+  awaitingMarker: [],
   teeName: null,
   simOverride: {},
   simSettings: {},

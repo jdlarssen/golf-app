@@ -145,7 +145,7 @@ export default async function CreatorAvsluttPage({
   const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
-      'user_id, flight_number, submitted_at, submitted_by_user_id, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, flight_number, submitted_at, submitted_by_user_id, marker_user_id, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -155,6 +155,8 @@ export default async function CreatorAvsluttPage({
         submitted_at: string | null;
         // #2200: who delivered — the one who did may not approve the card.
         submitted_by_user_id: string | null;
+        // #2661: the marker approves a simulator-league card, not the flight.
+        marker_user_id: string | null;
         approved_at: string | null;
         withdrawn_at: string | null;
         users: { name: string | null; nickname: string | null } | null;
@@ -255,6 +257,11 @@ export default async function CreatorAvsluttPage({
           {ownCardRow === 'own_card_no_peer' && (
             <p data-testid="own-card-no-peer" className="mt-2 text-text">
               {t('ownCardNoPeer')}
+            </p>
+          )}
+          {ownCardRow === 'card_awaits_marker' && (
+            <p data-testid="own-card-awaits-marker" className="mt-2 text-text">
+              {t('ownCardAwaitsMarker')}
             </p>
           )}
         </div>

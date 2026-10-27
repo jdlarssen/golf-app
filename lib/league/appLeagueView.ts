@@ -40,6 +40,12 @@ export type AppLeagueRound = {
   /** Players who are playing the round now. */
   inProgress: string[];
   /**
+   * #2661: delivered cards that wait for their marker (simulator league):
+   * «Venter på godkjenning fra …» for the player, «Venter på deg som markør»
+   * for the marker.
+   */
+  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string }>;
+  /**
    * The settings that apply to the round (`roundSimSettings`): the
    * organiser's override over the frozen default once the round has started,
    * else over today's league default.

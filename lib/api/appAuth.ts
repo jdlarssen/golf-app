@@ -8,6 +8,8 @@ import {
   type FlightPlayer,
 } from '@/lib/games/flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
+import { markerReviewAccess } from '@/lib/league/markerReviewAccess';
 
 // Adgangssjekken for app→server-rutene (#1891). Første kunde var
 // `app/api/account/delete/route.ts` (#1876); den bor her nå, og #1917–#1919
@@ -168,6 +170,12 @@ export type ScorecardReviewAccess =
       role: 'peer' | 'organizer';
       gameMode: GameMode;
       gameName: string;
+      /**
+       * #2661: set when the caller is the named marker on a simulator-league
+       * card. The route passes it to `approveScorecardCore`, which then also
+       * requires it in the write.
+       */
+      markerUserId?: string;
     }
   | { ok: false; reason: 'game_not_found' | 'not_active' | 'forbidden' };
 
@@ -197,6 +205,12 @@ export type ScorecardReviewAccess =
  *    flighten (webben lar henne heller ikke) og aldri godkjenne sin egen rad
  *    (0106) — begge faller til `forbidden`.
  *
+ * #2661: i en simulatorligaflight gjelder markørregelen i stedet for punkt 3–5
+ * når kortet godkjennes eller avvises (`markerReviewAccess`): den navngitte
+ * markøren (`peer`, med `markerUserId`), ligaens arrangør eller en global admin
+ * (`organizer`). Flightkameraten og spilleren som startet flighten får nei.
+ * «Åpne igjen» følger regelen over, som før.
+ *
  * En feilet lesing kaster (ruta svarer 500), i stedet for å bli «ingen tilgang»
  * eller «finnes ikke»: databasen som ikke svarer er ikke et nei.
  */
@@ -217,11 +231,12 @@ export async function scorecardReviewAccess(
   if (!game) return { ok: false, reason: 'game_not_found' };
   if (game.status !== 'active') return { ok: false, reason: 'not_active' };
 
-  const granted = (role: 'peer' | 'organizer'): ScorecardReviewAccess => ({
+  const granted = (role: 'peer' | 'organizer', markerUserId?: string): ScorecardReviewAccess => ({
     ok: true,
     role,
     gameMode: game.game_mode,
     gameName: game.name,
+    ...(markerUserId ? { markerUserId } : {}),
   });
   const forbidden: ScorecardReviewAccess = { ok: false, reason: 'forbidden' };
 
@@ -231,9 +246,17 @@ export async function scorecardReviewAccess(
       : forbidden;
   }
 
+  // #2661: a simulator-league card is answered by its marker (or the league's
+  // organiser / a global admin), never by the flight.
+  if (await readSimulatorLeagueFlight(gameId)) {
+    const review = await markerReviewAccess(userId, gameId, playerUserId);
+    if (!review.ok) return forbidden;
+    return review.role === 'marker' ? granted('peer', userId) : granted('organizer');
+  }
+
   const { data: roster, error: rosterError } = await admin
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id')
+    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id, marker_user_id')
     .eq('game_id', gameId)
     .returns<(FlightPlayer & { submitted_by_user_id: string | null })[]>();
   if (rosterError) throw new Error(`scorecardReviewAccess: ${rosterError.message}`);

@@ -38,6 +38,8 @@ vi.mock('next/cache', () => ({
 // it is the boundary, so its reads never touch the admin client's FIFO queue.
 // The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
 vi.mock('@/lib/notifications/organizerNotices');
+// #2661: an ordinary game, not a simulator-league flight (lib/league/__mocks__).
+vi.mock('@/lib/league/leagueFlight');
 const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 // notify() svarer «utenfor appen» som standard (shouldAlsoSendMail: true). En

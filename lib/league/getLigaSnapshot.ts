@@ -35,6 +35,9 @@ import { selectAllRows, selectAllRowsResult } from '@/lib/supabase/selectAllRows
  *  - only `finished` flights count;
  *  - a flight needs ≥2 non-withdrawn submitted players (the marker rule), or
  *    one in a simulator league (`meetsFlightMinimum`, #2638);
+ *  - in a simulator league a card counts only once its marker approved it
+ *    (#2661). The flight cannot finish before that anyway (finishGate under
+ *    require_peer_approval); this is the second guard;
  *  - a player only counts with a complete card (holesPlayed === course holes);
  *  - withdrawn players are excluded.
  */
@@ -82,6 +85,12 @@ export type LeagueRoundView = {
   teeName: string | null;
   /** #2638: the round's own override, normalised (only the keys that differ). */
   simOverride: SimSettings;
+  /**
+   * #2661: cards in an active flight of this round that are delivered and wait
+   * for their marker (simulator league). Drives «Venter på godkjenning fra …»
+   * for the player and «Venter på deg som markør» for the marker.
+   */
+  awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string }>;
   /**
    * #2638: the settings that apply to the round — `roundSimSettings`: the
    * override over the default frozen at the first start (or today's default
@@ -239,7 +248,9 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
           (from, to) =>
             supabase
               .from('game_players')
-              .select('game_id, user_id, course_handicap, tee_gender, submitted_at, withdrawn_at')
+              .select(
+                'game_id, user_id, course_handicap, tee_gender, submitted_at, approved_at, marker_user_id, withdrawn_at',
+              )
               .in('game_id', gameIds)
               .order('game_id')
               .order('user_id')
@@ -285,6 +296,8 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     course_handicap: number | null;
     tee_gender: TeeGender;
     submitted_at: string | null;
+    approved_at: string | null;
+    marker_user_id: string | null;
     withdrawn_at: string | null;
   };
   type ScoreRow = { game_id: string; user_id: string; hole_number: number; strokes: number | null };
@@ -366,8 +379,18 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   // #740/#2214: per-round locks (delivered / in progress), the same rule the
   // server gate in startLeagueRoundFlight applies (roundPlayerLocks).
   const flightsByRound = new Map<string, RoundFlight[]>();
+  // #2661: delivered cards in active flights that wait for their marker.
+  const awaitingByRound = new Map<string, LeagueRoundView['awaitingMarker']>();
   for (const game of games) {
     if (!game.league_round_id) continue;
+    if (game.status === 'active') {
+      for (const gp of playersByGame.get(game.id) ?? []) {
+        if (gp.withdrawn_at || !gp.submitted_at || gp.approved_at || !gp.marker_user_id) continue;
+        const waiting = awaitingByRound.get(game.league_round_id) ?? [];
+        waiting.push({ gameId: game.id, userId: gp.user_id, markerUserId: gp.marker_user_id });
+        awaitingByRound.set(game.league_round_id, waiting);
+      }
+    }
     const arr = flightsByRound.get(game.league_round_id) ?? [];
     arr.push({
       status: game.status,
@@ -405,7 +428,13 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     const teePar = teeParByGender.get(game.tee_box_id);
 
     const allPlayers = playersByGame.get(game.id) ?? [];
-    const eligible = allPlayers.filter((p) => p.withdrawn_at === null && p.submitted_at !== null);
+    // #2661: in a simulator league the marker's approval is part of «delivered».
+    const eligible = allPlayers.filter(
+      (p) =>
+        p.withdrawn_at === null &&
+        p.submitted_at !== null &&
+        (!league.is_simulator || p.approved_at !== null),
+    );
     // Marker rule: a counted flight needs ≥2 players who actually delivered,
     // one in a simulator league (#2638, the same bound as the start gate).
     if (!meetsFlightMinimum(eligible.length, league.is_simulator)) continue;
@@ -512,6 +541,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       flightCount: flightCountByRound.get(r.id) ?? 0,
       deliveredUserIds: Array.from(locks.delivered),
       inProgressUserIds: Array.from(locks.inProgress),
+      awaitingMarker: awaitingByRound.get(r.id) ?? [],
       teeName: r.tee_boxes?.name ?? null,
       simOverride: normalizeSimSettings(r.sim_settings),
       simSettings: effective.values,

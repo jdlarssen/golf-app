@@ -117,6 +117,8 @@ let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminSupabaseMock,
 }));
+// #2661: an ordinary game, not a simulator-league flight (lib/league/__mocks__).
+vi.mock('@/lib/league/leagueFlight');
 
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];

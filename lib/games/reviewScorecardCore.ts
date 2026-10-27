@@ -7,6 +7,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { notify } from '@/lib/notifications/notify';
 import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
+import { finishSimulatorFlightIfApproved } from '@/lib/league/finishSimulatorFlight';
 import { NO_REJECTION_REASON } from './rejectionReason';
 import { sharedCardUserIds, type SharedCardRosterRow } from './scoreOwner';
 import {
@@ -99,6 +100,13 @@ export async function approveScorecardCore(opts: {
    * en admin, fordi rollen bare styrer ordlyden i varselet.
    */
   delivererMayApprove: boolean;
+  /**
+   * #2661: the named marker approving a simulator-league card. The write
+   * then also requires `marker_user_id` to be them, so the gate
+   * (`mayApproveAsMarker`) and the write stand in the same query, as #2200
+   * did for the deliverer. Omitted for every other approval.
+   */
+  markerUserId?: string;
 }): Promise<ReviewScorecardResult> {
   const { client, gameId, approverUserId, playerUserId, approverRole } = opts;
 
@@ -117,6 +125,9 @@ export async function approveScorecardCore(opts: {
     approve = approve.or(
       `submitted_by_user_id.is.null,submitted_by_user_id.neq.${approverUserId}`,
     );
+  }
+  if (opts.markerUserId) {
+    approve = approve.eq('marker_user_id', opts.markerUserId);
   }
   const { data: updated, error } = await approve.select('user_id');
 
@@ -185,9 +196,17 @@ export async function approveScorecardCore(opts: {
     console.error('[approveScorecard] scorecard_approved notify failed', err);
   }
 
+  // #2661: in a simulator league the last approval finishes the flight on its
+  // own (the owner's answer 2026-10-27), so the round counts. Never throws.
+  const simulatorFinish = await finishSimulatorFlightIfApproved(gameId, approverUserId);
+
   // #2203: the last approval can make the round ready to finish. Best-effort,
   // never throws; when the organiser approved it themselves, nothing is sent.
-  await notifyOrganizerIfAllDelivered(gameId, approverUserId, 'approveScorecard');
+  // Not in a simulator flight: it finishes itself, and «Avslutt spillet» would
+  // ask the player for a tap that is not needed.
+  if (simulatorFinish === 'not_simulator') {
+    await notifyOrganizerIfAllDelivered(gameId, approverUserId, 'approveScorecard');
+  }
 
   expireReviewedGame(gameId);
   return { ok: true, alreadyDone: false };

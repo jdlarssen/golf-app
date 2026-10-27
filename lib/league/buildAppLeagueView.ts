@@ -51,6 +51,7 @@ export function buildAppLeagueView(
       teeName: r.teeName,
       delivered: r.deliveredUserIds,
       inProgress: r.inProgressUserIds,
+      awaitingMarker: r.awaitingMarker,
       simSettings: r.simSettings,
       overriddenKeys: r.overriddenKeys,
       settingsLocked: r.settingsLocked,

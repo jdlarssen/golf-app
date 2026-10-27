@@ -9,6 +9,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { leagueFlightGameConfig } from './flightFormat';
 import { roundPlayerLocks } from './roundLocks';
 import { flightSizeRefusal } from './flightRules';
+import { markerRequired } from './leagueMarker';
 import { frozenDefaultFor } from './simSettings';
 import type { LeagueFormat } from './types';
 import type { LeagueStartRefusal } from './leagueStartRefusal';
@@ -241,6 +242,9 @@ export async function startLeagueRoundFlightCore(
       created_by: userId,
       league_round_id: roundId,
       delivered_outside_window: deliveredOutsideWindow,
+      // #2661: a simulator card counts once its marker has approved it, so the
+      // flight waits for the approval before it can finish (finishGate).
+      require_peer_approval: markerRequired(league.is_simulator),
     })
     .select('id')
     .single();
