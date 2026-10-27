@@ -126,6 +126,10 @@ export type LeagueRow = {
   is_simulator: boolean;
   /** #2638: the league's default round settings, raw (read via normalizeSimSettings). */
   sim_settings: unknown;
+  /** #2660: the share of the course handicap the flights play on (100 before #2660). */
+  hcp_allowance_pct: number;
+  /** #2660: the cap on the strokes after the share; null = no cap. */
+  hcp_max_strokes: number | null;
 };
 
 export type LeagueSnapshot = {
@@ -144,7 +148,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const { data: leagueRow, error: lErr } = await supabase
     .from('leagues')
     .select(
-      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id, spectate_token, is_simulator, sim_settings',
+      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id, spectate_token, is_simulator, sim_settings, hcp_allowance_pct, hcp_max_strokes',
     )
     .eq('id', leagueId)
     .maybeSingle();

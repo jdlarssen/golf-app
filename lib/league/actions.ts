@@ -18,20 +18,57 @@ import { isPointsBasedFormat } from './flightFormat';
 import { startLeagueRoundFlightCore } from './startLeagueRoundFlightCore';
 import type { TablesUpdate } from '@/lib/database.types';
 import { parseSimSettings, roundOverrideFrom, type SimSettings } from './simSettings';
-import type {
-  CourseScope,
-  LeagueFormat,
-  LeagueScoring,
-  MissedRoundPolicy,
-  PenaltyKind,
-  RoundFrequency,
-  StandingsModel,
+import {
+  LEAGUE_HCP_ALLOWANCE_MAX,
+  LEAGUE_HCP_ALLOWANCE_MIN,
+  LEAGUE_HCP_DEFAULTS,
+  LEAGUE_HCP_MAX_STROKES_MAX,
+  LEAGUE_HCP_MAX_STROKES_MIN,
+  wholeNumberInRange,
+  type CourseScope,
+  type LeagueFormat,
+  type LeagueHcp,
+  type LeagueScoring,
+  type MissedRoundPolicy,
+  type PenaltyKind,
+  type RoundFrequency,
+  type StandingsModel,
 } from './types';
 
 const NAME_RE = /^.{1,80}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
+
+/**
+ * #2660: the handicap share and the stroke cap from the create form. A gross
+ * league plays on raw strokes, so it stores 100 and no cap whatever is posted.
+ * A field left out of the post gets the league type's default, and so does an
+ * empty share; an empty cap field is the organiser's «no cap». Anything else
+ * outside the bounds is refused (the CHECKs in 0219 are the backstop).
+ */
+function parseLeagueHcp(
+  formData: FormData,
+  scoring: LeagueScoring,
+  isSimulator: boolean,
+): LeagueHcp | { error: 'hcp_allowance_pct' | 'hcp_max_strokes' } {
+  if (scoring === 'gross') return LEAGUE_HCP_DEFAULTS.gross;
+  const defaults = isSimulator ? LEAGUE_HCP_DEFAULTS.simulator : LEAGUE_HCP_DEFAULTS.regular;
+
+  const pctRaw = str(formData, 'hcp_allowance_pct');
+  const allowancePct =
+    pctRaw === ''
+      ? defaults.allowancePct
+      : wholeNumberInRange(pctRaw, LEAGUE_HCP_ALLOWANCE_MIN, LEAGUE_HCP_ALLOWANCE_MAX);
+  if (allowancePct === null) return { error: 'hcp_allowance_pct' };
+
+  if (!formData.has('hcp_max_strokes')) return { allowancePct, maxStrokes: defaults.maxStrokes };
+  const capRaw = str(formData, 'hcp_max_strokes');
+  if (capRaw === '') return { allowancePct, maxStrokes: null };
+  const maxStrokes = wholeNumberInRange(capRaw, LEAGUE_HCP_MAX_STROKES_MIN, LEAGUE_HCP_MAX_STROKES_MAX);
+  if (maxStrokes === null) return { error: 'hcp_max_strokes' };
+  return { allowancePct, maxStrokes };
+}
 
 type ServerClient = Awaited<ReturnType<typeof getServerClient>>;
 
@@ -67,7 +104,8 @@ export type LeagueActionError = { error: string };
  *  missed_round_policy, penalty_kind, penalty_fixed_over_par, course_scope,
  *  course_id, tee_box_id, frequency, player_ids (JSON array of user ids),
  *  group_id (optional club UUID), scoring ('net' | 'gross', #2638),
- *  is_simulator ('true'), sim_<key> (the league's default round settings).
+ *  is_simulator ('true'), sim_<key> (the league's default round settings),
+ *  hcp_allowance_pct and hcp_max_strokes (#2660, see parseLeagueHcp).
  */
 export async function createLeagueDraft(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
@@ -149,6 +187,9 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     if (!Number.isInteger(bestNCount) || bestNCount < 1) return { error: 'best_n' };
   }
 
+  const hcp = parseLeagueHcp(formData, scoring, isSimulator);
+  if ('error' in hcp) return hcp;
+
   let simSettings: SimSettings | null = null;
   if (isSimulator) {
     const parsedSettings = parseSimSettings(formData);
@@ -198,6 +239,8 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       group_id: groupId,
       is_simulator: isSimulator,
       sim_settings: simSettings,
+      hcp_allowance_pct: hcp.allowancePct,
+      hcp_max_strokes: hcp.maxStrokes,
     })
     .select('id')
     .single();

@@ -82,6 +82,8 @@ export function leagueView(overrides: {
       simSettings: {},
       seasonStart: '2026-11-02',
       seasonEnd: '2027-02-04',
+      hcpAllowancePct: 75,
+      hcpMaxStrokes: 32,
       ...overrides.league,
     },
     rounds,

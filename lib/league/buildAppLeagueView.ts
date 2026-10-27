@@ -40,6 +40,8 @@ export function buildAppLeagueView(
       simSettings: normalizeSimSettings(league.sim_settings),
       seasonStart: league.season_start,
       seasonEnd: league.season_end,
+      hcpAllowancePct: league.hcp_allowance_pct,
+      hcpMaxStrokes: league.hcp_max_strokes,
     },
     rounds: rounds.map((r) => ({
       id: r.id,

@@ -4959,7 +4959,9 @@
         "missing": "Noen påkrevde felt mangler.",
         "season_over": "Sesongen er allerede over. Velg datoer fram i tid.",
         "unexpected": "Uventet feil: {code}",
-        "sim_settings": "Rundeinnstillingene er ugyldige. Velg fra listene."
+        "sim_settings": "Rundeinnstillingene er ugyldige. Velg fra listene.",
+        "hcp_allowance_pct": "Handicapprosenten må være et helt tall fra 1 til 100.",
+        "hcp_max_strokes": "Maks slag må være et helt tall fra 1 til 54 eller stå tomt."
       },
       "sectionProgress": "Del {current} av {total}",
       "grundinfoHeading": "Grunninfo",
@@ -4983,6 +4985,10 @@
       "scoringGrossLabel": "Brutto",
       "scoringGrossDesc": "Uten handicapslag.",
       "scoringLockHint": "Valget låses når ligaen startes.",
+      "hcpAllowanceLabel": "Handicap (%)",
+      "hcpMaxStrokesLabel": "Maks slag",
+      "hcpMaxStrokesPlaceholder": "Ingen tak",
+      "hcpHint": "Prosenten regnes av banehandicapet. Maks slag gjelder etter prosenten, og står feltet tomt, er det ikke noe tak. WHS anbefaler 95 % for slagspill og stableford.",
       "courseScopeHeading": "Bane-omfang",
       "courseScopeLegend": "Bane-omfang",
       "scopeFixedBothLabel": "Fast bane og tee",
@@ -5088,6 +5094,9 @@
         "both": "Netto og brutto"
       },
       "lockedAfterStart": "Låst etter start",
+      "infoHcp": "Handicap",
+      "hcpValue": "{pct} %",
+      "hcpValueCapped": "{pct} %, maks {max} slag",
       "simSettingsHeading": "Rundeinnstillinger",
       "simSettingsHelp": "Endringen gjelder runder som ikke er startet.",
       "simSettingsSave": "Lagre",
@@ -5227,6 +5236,21 @@
       "kicker": "Liga",
       "seasonTableHeading": "Sesong-tabell",
       "seasonFinishedBanner": "Sesongen er ferdig. Slik endte tabellen.",
+      "formatLine": {
+        "scoring": {
+          "net": "netto",
+          "gross": "brutto"
+        },
+        "allowance": "{pct} %",
+        "maxStrokes": "maks {max} slag",
+        "model": {
+          "best_n": "beste {n} av {count}",
+          "best_nFallback": "beste runder teller",
+          "total": "sum av alle runder",
+          "average": "snitt per runde",
+          "points": "poeng per plassering"
+        }
+      },
       "roundsHeading": "Runder",
       "noRoundsYet": "Ingen runder er satt opp ennå.",
       "roundLabel": "Runde {sequence}",

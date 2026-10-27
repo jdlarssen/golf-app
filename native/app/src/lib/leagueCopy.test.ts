@@ -200,24 +200,53 @@ describe('describeLeagueLoadFailure (tegning 6)', () => {
 });
 
 describe('formatlinja og tabellens forklaring (tegning 2 og 3)', () => {
+  // #2660: handicapandelen står etter «netto», også ved 100 %, og taket etter den.
   const league = {
     format: 'stableford',
     scoring: 'net',
     standingsModel: 'best_n',
     bestN: 5,
+    hcpAllowancePct: 100,
+    hcpMaxStrokes: null,
   } as const;
   const rounds = Array.from({ length: 7 }, () => ({}) as AppLeagueRound);
 
   it.each([
-    ['Stableford netto · beste 5 av 7', league, 'Poeng med handicapslag'],
+    ['Stableford netto 100\u00A0% · beste 5 av 7', league, 'Poeng med handicapslag'],
+    ['Stableford netto 75\u00A0% · maks 32 slag · beste 5 av 7', { ...league, hcpAllowancePct: 75, hcpMaxStrokes: 32 }, 'Poeng med handicapslag'],
+    ['Stableford netto 95\u00A0% · beste 5 av 7', { ...league, hcpAllowancePct: 95 }, 'Poeng med handicapslag'],
     ['Stableford brutto · beste 5 av 7', { ...league, scoring: 'gross' }, 'Poeng uten handicapslag'],
-    ['Slagspill netto · beste 5 av 7', { ...league, format: 'stroke' }, 'Slag mot par'],
+    ['Slagspill netto 100\u00A0% · beste 5 av 7', { ...league, format: 'stroke' }, 'Slag mot par'],
     ['Slagspill brutto · sum av alle runder', { ...league, format: 'stroke', scoring: 'gross', standingsModel: 'total' }, 'Slag mot par uten handicapslag'],
-    ['Stableford netto · snitt per runde', { ...league, standingsModel: 'average' }, 'Poeng med handicapslag'],
-    ['Stableford netto · poeng per plassering', { ...league, standingsModel: 'points' }, 'Poeng for plassering i hver runde'],
+    ['Stableford netto 100\u00A0% · snitt per runde', { ...league, standingsModel: 'average' }, 'Poeng med handicapslag'],
+    ['Stableford netto 100\u00A0% · poeng per plassering', { ...league, standingsModel: 'points' }, 'Poeng for plassering i hver runde'],
   ] as const)('%s', (line, l, caption) => {
     expect(formatLine({ league: l as never, rounds })).toBe(line);
     expect(tableCaption(l)).toBe(caption);
+  });
+
+  it('#2660: ordene er nettsidens formatlinje (liga.player.formatLine)', () => {
+    const web = player.formatLine;
+    const fill = (text: string, values: Record<string, number>) =>
+      Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, String(value)), text);
+    const line = (l: object) => formatLine({ league: { ...league, ...l } as never, rounds });
+    const bestN = fill(web.model.best_n, { n: 5, count: 7 });
+    const full = `Stableford ${web.scoring.net} ${fill(web.allowance, { pct: 100 })}`;
+    expect({
+      capped: line({ hcpAllowancePct: 75, hcpMaxStrokes: 32 }),
+      gross: line({ scoring: 'gross' }),
+      total: line({ standingsModel: 'total' }),
+      average: line({ standingsModel: 'average' }),
+      points: line({ standingsModel: 'points' }),
+      fallback: line({ bestN: null }),
+    }).toEqual({
+      capped: `Stableford ${web.scoring.net} ${fill(web.allowance, { pct: 75 })} · ${fill(web.maxStrokes, { max: 32 })} · ${bestN}`,
+      gross: `Stableford ${web.scoring.gross} · ${bestN}`,
+      total: `${full} · ${web.model.total}`,
+      average: `${full} · ${web.model.average}`,
+      points: `${full} · ${web.model.points}`,
+      fallback: `${full} · ${web.model.best_nFallback}`,
+    });
   });
 });
 

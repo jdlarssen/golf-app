@@ -28,6 +28,8 @@ function snapshot(scoring: string): LeagueSnapshot {
       spectate_token: null,
       is_simulator: true,
       sim_settings: { green_stimp: '10', hacked: 'x' },
+      hcp_allowance_pct: 75,
+      hcp_max_strokes: 32,
     },
     rounds: [
       {
@@ -100,6 +102,8 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
         simSettings: { green_stimp: '10' },
         seasonStart: '2026-11-02',
         seasonEnd: '2027-02-07',
+        hcpAllowancePct: 75,
+        hcpMaxStrokes: 32,
       },
       rounds: [
         {

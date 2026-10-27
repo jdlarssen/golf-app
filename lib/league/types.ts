@@ -17,6 +17,36 @@ export type LeagueFormat = 'stroke' | 'stableford' | 'modified_stableford';
  */
 export type LeagueScoring = 'net' | 'gross' | 'both';
 
+/**
+ * #2660: the share of the course handicap a league plays on, and the cap on
+ * the strokes after it. The one home for the bounds and the defaults in TS;
+ * the database mirrors the bounds in CHECKs (0219), and
+ * `leagueHcpDbCheck.test.ts` keeps the two in step.
+ *
+ * Defaults: a simulator league plays 75 % with at most 32 strokes (how
+ * simulator cups count it, the owner's answer 27.10); a regular league plays
+ * 95 % without a cap, as WHS recommends for stableford and stroke play. A
+ * gross league stores 100 and no cap. Leagues from before #2660 have 100.
+ */
+export const LEAGUE_HCP_ALLOWANCE_MIN = 1;
+export const LEAGUE_HCP_ALLOWANCE_MAX = 100;
+export const LEAGUE_HCP_MAX_STROKES_MIN = 1;
+export const LEAGUE_HCP_MAX_STROKES_MAX = 54;
+
+export type LeagueHcp = { allowancePct: number; maxStrokes: number | null };
+
+export const LEAGUE_HCP_DEFAULTS: { simulator: LeagueHcp; regular: LeagueHcp; gross: LeagueHcp } = {
+  simulator: { allowancePct: 75, maxStrokes: 32 },
+  regular: { allowancePct: 95, maxStrokes: null },
+  gross: { allowancePct: 100, maxStrokes: null },
+};
+
+/** A whole number within [min, max] from a form field, or null. */
+export function wholeNumberInRange(raw: string, min: number, max: number): number | null {
+  const n = Number(raw);
+  return raw.trim() !== '' && Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+
 /** Hvordan sesongen rangeres. Fase 1 bruker 'total' + 'average'. */
 export type StandingsModel = 'total' | 'average' | 'best_n' | 'points';
 

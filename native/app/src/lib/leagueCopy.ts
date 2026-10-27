@@ -145,10 +145,22 @@ function modelPhrase(model: StandingsModel, bestN: number | null, roundCount: nu
   }
 }
 
-/** Formatlinja under navnet: «Stableford netto · beste 5 av 7». */
+/**
+ * Formatlinja under navnet: «Stableford netto 75 % · maks 32 slag · beste 5 av
+ * 7». Handicapandelen står etter «netto», også ved 100 %, og taket etter den
+ * (#2660). En bruttoliga spiller uten handicapslag og viser ingen av dem.
+ * Samme ord som nettsidens linje (`liga.player.formatLine`).
+ */
 export function formatLine(view: Pick<AppLeagueView, 'league' | 'rounds'>): string {
-  const { format, scoring, standingsModel, bestN } = view.league;
-  return `${FORMAT[format]} ${SCORING[scoring]} · ${modelPhrase(standingsModel, bestN, view.rounds.length)}`;
+  const { format, scoring, standingsModel, bestN, hcpAllowancePct, hcpMaxStrokes } = view.league;
+  const gross = scoring === 'gross';
+  const head = gross
+    ? `${FORMAT[format]} ${SCORING[scoring]}`
+    : `${FORMAT[format]} ${SCORING[scoring]} ${hcpAllowancePct}\u00A0%`;
+  const cap = !gross && hcpMaxStrokes != null ? `maks ${hcpMaxStrokes} slag` : null;
+  return [head, cap, modelPhrase(standingsModel, bestN, view.rounds.length)]
+    .filter((part): part is string => part != null)
+    .join(' · ');
 }
 
 export function isPointsBased(format: LeagueFormat): boolean {

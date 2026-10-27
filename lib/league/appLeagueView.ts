@@ -94,6 +94,13 @@ export type AppLeagueView = {
     simSettings: SimSettings;
     seasonStart: string;
     seasonEnd: string;
+    /**
+     * #2660: the share of the course handicap the flights play on (100 before
+     * #2660, and in a gross league) and the cap on the strokes after it
+     * (null = no cap). For the format line; the freeze reads the flight game.
+     */
+    hcpAllowancePct: number;
+    hcpMaxStrokes: number | null;
   };
   rounds: AppLeagueRound[];
   /**
