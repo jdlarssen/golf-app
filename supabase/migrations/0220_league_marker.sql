@@ -35,7 +35,8 @@
 --      flightmate (can_score_for, 0106) or the player who started the flight
 --      (the game creator) cannot approve a card by a direct PATCH either. A
 --      global admin may answer in the marker's stead, but never on their own
---      card. The rule in TypeScript is mayApproveAsMarker
+--      card or one they delivered (submitted_by_user_id, filled by 0191's
+--      trigger, which fires before this one). The rule in TypeScript is mayApproveAsMarker
 --      (lib/league/leagueMarker.ts). Clearing an approval (reject, reopen) is
 --      never checked.
 --    Its own trigger, not part of guard_game_players_self_update, so a
@@ -93,7 +94,7 @@ as $$
     if tg_op = 'UPDATE'
        and new.approved_at is not null
        and new.approved_at is distinct from old.approved_at
-       and (not v_admin or new.user_id = v_uid) then
+       and (not v_admin or new.user_id = v_uid or new.submitted_by_user_id = v_uid) then
       select l.is_simulator into v_simulator
         from public.games g
         join public.league_rounds r on r.id = g.league_round_id
@@ -111,7 +112,7 @@ as $$
   $$;
 
 comment on function public.guard_game_players_league_marker() is
-  '#2661: BEFORE INSERT/UPDATE on game_players. Only the service role and a global admin set or change marker_user_id, and only they set approved_at on a card in a simulator-league flight (the marker approves through the server); an admin never on their own card.';
+  '#2661: BEFORE INSERT/UPDATE on game_players. Only the service role and a global admin set or change marker_user_id, and only they set approved_at on a card in a simulator-league flight (the marker approves through the server); an admin never on a card they own or delivered.';
 
 revoke execute on function public.guard_game_players_league_marker() from public, anon, authenticated;
 
