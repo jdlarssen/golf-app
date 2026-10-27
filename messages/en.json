@@ -5425,6 +5425,7 @@
       "signInHint": "You log in or create an account with your email and come back here afterwards.",
       "joinButton": "Join",
       "afterStart": "{count, plural, one {Round {rounds} has been played.} other {Rounds {rounds} have been played.}} You're in from the next round.",
+      "allPlayed": "Every round set up so far has been played.",
       "alreadyJoined": "You're in the league.",
       "goToLeague": "Go to the league",
       "closed": "The league has finished, so you can't join any more.",

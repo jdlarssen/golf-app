@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   closedRoundSequences,
   evaluateLeagueJoin,
+  lateJoinNotice,
   type LeagueJoinFacts,
 } from './joinValidation';
 
@@ -80,5 +81,27 @@ describe('closedRoundSequences', () => {
     // overrideRoundWindow moves closes_at; only closes_at decides.
     const rounds = [round(1, '2026-11-09T00:00:00Z', '2026-11-25T22:59:00Z')];
     expect(closedRoundSequences(rounds, now)).toEqual([]);
+  });
+});
+
+describe('lateJoinNotice', () => {
+  const now = Date.parse('2026-11-20T12:00:00Z');
+  const closed = (sequence: number) => ({ sequence, closesAt: '2026-11-15T22:59:00Z' });
+  const open = (sequence: number) => ({ sequence, closesAt: '2026-11-22T22:59:00Z' });
+
+  it('nothing closed (a draft league, or round 1 still open) → no line', () => {
+    expect(lateJoinNotice([open(1), open(2)], now)).toEqual({ kind: 'none' });
+  });
+
+  it('no rounds yet → no line', () => {
+    expect(lateJoinNotice([], now)).toEqual({ kind: 'none' });
+  });
+
+  it('some closed → «Runde … er spilt. Du er med fra neste runde.»', () => {
+    expect(lateJoinNotice([closed(1), open(2)], now)).toEqual({ kind: 'from_next_round', played: [1] });
+  });
+
+  it('every round closed → no «neste runde» to promise', () => {
+    expect(lateJoinNotice([closed(1), closed(2)], now)).toEqual({ kind: 'all_played', played: [1, 2] });
   });
 });
