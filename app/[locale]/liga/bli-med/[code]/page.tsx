@@ -9,11 +9,10 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
-import { SmartLink } from '@/components/ui/SmartLink';
 import { LeagueIntroSteps } from '@/components/league/LeagueIntroSteps';
 import { formatListLocale, formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import { getLeagueJoinContext, type LeagueJoinRound } from '@/lib/league/getLeagueJoinContext';
-import { closedRoundSequences, evaluateLeagueJoin } from '@/lib/league/joinValidation';
+import { evaluateLeagueJoin, lateJoinNotice } from '@/lib/league/joinValidation';
 import { isJoinCode } from '@/lib/league/joinCode';
 import type { AppLocale } from '@/i18n/routing';
 import { LeagueJoinActions } from './LeagueJoinActions';
@@ -45,9 +44,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-/** The rounds whose window has closed, read against the clock at render. */
-function playedRounds(rounds: LeagueJoinRound[]): number[] {
-  return closedRoundSequences(rounds, Date.now());
+/** The late-join line, read against the clock at render. */
+function lateJoinNow(rounds: LeagueJoinRound[]) {
+  return lateJoinNotice(rounds, Date.now());
 }
 
 /**
@@ -104,16 +103,19 @@ export default async function LigaBliMedPage({ params }: { params: Params }) {
 
   // Owner, 27.10: only rounds whose window has closed are «spilt». A round
   // that is open now can still be played by someone who joins today.
-  const played = playedRounds(ctx.rounds);
+  const notice = lateJoinNow(ctx.rounds);
   const comingIn =
     decision === 'can_join' || decision === 'sign_in' || decision === 'profile_incomplete';
-  const afterStartLine =
-    comingIn && played.length > 0
+  const afterStartLine = !comingIn
+    ? null
+    : notice.kind === 'from_next_round'
       ? t('join.afterStart', {
-          count: played.length,
-          rounds: formatListLocale(played.map(String), locale),
+          count: notice.played.length,
+          rounds: formatListLocale(notice.played.map(String), locale),
         })
-      : null;
+      : notice.kind === 'all_played'
+        ? t('join.allPlayed')
+        : null;
 
   return (
     <AppShell>
@@ -179,12 +181,9 @@ export default async function LigaBliMedPage({ params }: { params: Params }) {
           {decision === 'profile_incomplete' && (
             <>
               <p className="font-sans text-[15px] text-text">{t('join.profileIncomplete')}</p>
-              <SmartLink
-                href={`/complete-profile?next=${encodeURIComponent(selfHref)}`}
-                className="block rounded-full bg-primary px-4 py-3 text-center font-sans text-[15px] font-semibold text-white min-h-[44px] flex items-center justify-center dark:text-bg"
-              >
+              <LinkButton href={`/complete-profile?next=${encodeURIComponent(selfHref)}`} full>
                 {t('join.completeProfileButton')}
-              </SmartLink>
+              </LinkButton>
             </>
           )}
         </div>

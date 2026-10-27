@@ -5425,6 +5425,7 @@
       "signInHint": "Du logger inn eller lager konto med e-posten din og kommer tilbake hit etterpå.",
       "joinButton": "Bli med",
       "afterStart": "{count, plural, one {Runde {rounds} er spilt.} other {Runde {rounds} er spilt.}} Du er med fra neste runde.",
+      "allPlayed": "Alle rundene som er satt opp, er spilt.",
       "alreadyJoined": "Du er med i ligaen.",
       "goToLeague": "Gå til ligaen",
       "closed": "Ligaen er avsluttet, så du kan ikke bli med lenger.",
