@@ -51,6 +51,7 @@ const VARIANT_BY_ROUTE = {
   Kavalkade: 'default',
   League: 'default',
   LeagueRoundStart: 'default',
+  MarkerApprove: 'default',
   SyncLab: 'default',
 } as const satisfies Record<keyof RootStackParamList, ErrorBoundaryVariant>;
 

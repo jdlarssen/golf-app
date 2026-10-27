@@ -50,6 +50,8 @@ export function toRoster(players: readonly BundlePlayer[]): RosterEntry[] {
     withdrawn_at: player.withdrawnAt,
     submitted_at: player.submittedAt,
     submitted_by_user_id: player.submittedByUserId,
+    // #2661: a card that names a marker has no attestant in the flight.
+    marker_user_id: player.markerUserId ?? null,
     approved_at: player.approvedAt,
     player,
   }));

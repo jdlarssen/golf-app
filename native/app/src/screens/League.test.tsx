@@ -111,7 +111,7 @@ describe('når «Spill runden» ikke vises', () => {
 
   it.each([
     ['du er i gang', (v: ReturnType<typeof leagueView>) => ({ ...v, rounds: v.rounds.map((r) => (r.id === 'r3' ? { ...r, inProgress: ['me'] } : r)) })],
-    ['du ikke er deltaker', (v: ReturnType<typeof leagueView>) => ({ ...v, me: { userId: 'me', isParticipant: false } })],
+    ['du ikke er deltaker', (v: ReturnType<typeof leagueView>) => ({ ...v, me: { userId: 'me', isParticipant: false, isOrganizer: false } })],
     ['ligaen ikke er startet', (v: ReturnType<typeof leagueView>) => ({ ...v, league: { ...v.league, status: 'draft' as const } })],
   ])('%s', async (_label, change) => {
     answer({ ok: true, view: change(leagueView()) });
@@ -289,5 +289,41 @@ describe('tegning 6: feil og uten nett', () => {
     const dimmed = screen.getByRole('button', { name: 'Spill runden' });
     expect(dimmed.props.accessibilityState).toEqual({ disabled: true });
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('#2661: markøren i en simulatorliga', () => {
+  it('spilleren ser hvem kortet venter på, og markøren får kortet øverst', async () => {
+    const view = leagueView();
+    const other = view.participants.find((p) => p.userId !== 'me')!;
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        rounds: view.rounds.map((r) =>
+          r.id === 'r3'
+            ? {
+                ...r,
+                inProgress: ['me', other.userId],
+                awaitingMarker: [
+                  { gameId: 'g-me', userId: 'me', markerUserId: other.userId },
+                  { gameId: 'g-other', userId: other.userId, markerUserId: 'me' },
+                ],
+              }
+            : r,
+        ),
+      },
+    });
+    const { navigate } = await renderLeague();
+    expect(screen.getByText(`Venter på godkjenning fra ${other.name}`)).toBeTruthy();
+    expect(screen.getByTestId('league-marker-queue')).toHaveTextContent(/Venter på deg som markør/i);
+    await fireEvent.press(screen.getByTestId(`marker-queue-g-other-${other.userId}`));
+    expect(navigate).toHaveBeenCalledWith('MarkerApprove', {
+      leagueId: 'liga-vinter',
+      gameId: 'g-other',
+      userId: other.userId,
+    });
+    // Arrangøren ser ingen egen liste når hen ikke er arrangør.
+    expect(screen.queryByTestId('league-organizer-marker-queue')).toBeNull();
   });
 });

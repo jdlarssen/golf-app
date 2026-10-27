@@ -75,6 +75,10 @@ export function buildAppLeagueView(
         penalised: c.penalised,
       })),
     })),
-    me: { userId, isParticipant: participants.some((p) => p.userId === userId) },
+    me: {
+      userId,
+      isParticipant: participants.some((p) => p.userId === userId),
+      isOrganizer: league.created_by === userId,
+    },
   };
 }

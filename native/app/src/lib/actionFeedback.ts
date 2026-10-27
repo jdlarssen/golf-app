@@ -140,6 +140,9 @@ export function describeSubmitFailure(reason: SubmitCardFailure): string {
     // #2580: older builds fall back to «Fikk ikke levert kortet», which is fine.
     case 'tee_shots_short':
       return 'Noen på laget mangler utslag. Se over hullene og prøv igjen.';
+    // #2661: webbens `game.submit.errors.marker_required`.
+    case 'marker_required':
+      return 'Velg en markør før du leverer.';
     case 'network':
     // #2200: appen bygde kroppen (`alsoFor`), så spilleren kan ikke rette noe.
     case 'bad_request':

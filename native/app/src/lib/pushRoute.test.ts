@@ -97,6 +97,21 @@ describe('ligavarslene', () => {
   it('markøren leses også fra en ligalenke', () => {
     expect(pushNotificationId(`/liga/${LEAGUE}?varsel=${NOTE}`)).toBe(NOTE);
   });
+
+  // #2661: «Anders har valgt deg som markør» åpner markørens kort.
+  it.each([
+    [`/liga/${LEAGUE}/godkjenn/g1/u1`],
+    [`/no/liga/${LEAGUE}/godkjenn/g1/u1?varsel=${NOTE}`],
+  ])('%s åpner markørens kort', (url) => {
+    expect(pushTarget(url)).toEqual({
+      name: 'MarkerApprove',
+      params: { leagueId: LEAGUE, gameId: 'g1', userId: 'u1' },
+    });
+  });
+
+  it('en halv markørlenke åpner ligaen', () => {
+    expect(pushTarget(`/liga/${LEAGUE}/godkjenn/g1`)).toEqual({ name: 'League', params: { leagueId: LEAGUE } });
+  });
 });
 
 // #2201 PR 2: serveren legger `?varsel=<id>` på lenka, så trykket kan merke
