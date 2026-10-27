@@ -17,7 +17,7 @@ import {
 } from './greensomeOverridePlan';
 import { assignRotationSlots, rotationSlotRange } from './assignRotationSlots';
 import type { StartCountMode } from './startPlayerCount';
-import { effectiveHcpAllowancePct } from './hcpAllowance';
+import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from './hcpAllowance';
 import {
   startBlockReason,
   type StartBlock,
@@ -98,6 +98,8 @@ type StartGameRow = {
   name: string;
   status: GameStatus;
   hcp_allowance_pct: number;
+  /** #2660: cap on the strokes after the percentage; null = no cap (league flights set it). */
+  hcp_max_strokes: number | null;
   tee_box_id: string | null;
   game_mode: string;
   // #1814: cup-kamper avgjøres av konvoluttregelen når noen har trukket
@@ -160,7 +162,7 @@ export async function readStartInputs(
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), tournament:tournaments(status)',
+      'id, name, status, hcp_allowance_pct, hcp_max_strokes, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), tournament:tournaments(status)',
     )
     .eq('id', gameId)
     .maybeSingle<StartGameRow>();
@@ -393,9 +395,11 @@ export async function startScheduledGameCore(
     });
     // #2210: formats with their own percentage in mode_config freeze the full
     // course handicap, also when the row was stored with a stale value.
+    // #2660: a league flight's cap on the strokes comes after the percentage.
     const allowed = applyAllowance(
       raw,
       effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct),
+      effectiveHcpMaxStrokes(game.game_mode, game.hcp_max_strokes ?? null),
     );
     try {
       expectOne(

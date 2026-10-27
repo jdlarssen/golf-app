@@ -89,7 +89,7 @@ import { LiveFollowControl } from './LiveFollowControl';
 import { CeremonyEntry } from './CeremonyEntry';
 import { ceremonySupported } from '@/lib/games/ceremony';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
-import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
+import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from '@/lib/games/hcpAllowance';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 
@@ -551,9 +551,9 @@ export default async function GameHomePage({
         .single<{ hcp_index: number | string }>(),
       supabase
         .from('games')
-        .select('hcp_allowance_pct')
+        .select('hcp_allowance_pct, hcp_max_strokes')
         .eq('id', id)
-        .single<{ hcp_allowance_pct: number }>(),
+        .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>(),
     ]);
     if (meHcpRes.data && allowanceRes.data) {
       displayedCourseHandicap = displayCourseHandicap({
@@ -566,6 +566,8 @@ export default async function GameHomePage({
           game.game_mode,
           allowanceRes.data.hcp_allowance_pct,
         ),
+        // #2660: and the same cap on the strokes.
+        maxStrokes: effectiveHcpMaxStrokes(game.game_mode, allowanceRes.data.hcp_max_strokes),
       });
     }
   }

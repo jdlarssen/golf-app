@@ -11,7 +11,7 @@ import {
 } from './greensomeOverridePlan';
 import { getRatingForGender, type TeeBoxRatings, type TeeGender } from './teeRating';
 import type { GameStatus } from './status';
-import { effectiveHcpAllowancePct } from './hcpAllowance';
+import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from './hcpAllowance';
 import type { Json } from '@/lib/database.types';
 
 /**
@@ -30,6 +30,8 @@ export interface RecomputeGameRow {
   teeRatings: TeeBoxRatings | null;
   /** `games.hcp_allowance_pct` — the format's stroke allowance. */
   allowancePct: number;
+  /** #2660: `games.hcp_max_strokes` — a league flight's cap; null = no cap. */
+  maxStrokes: number | null;
 }
 
 /** A single course-handicap write the recompute wants to apply. */
@@ -83,7 +85,7 @@ export function planHandicapRecompute(
     });
     updates.push({
       gameId: row.gameId,
-      courseHandicap: applyAllowance(raw, row.allowancePct),
+      courseHandicap: applyAllowance(raw, row.allowancePct, row.maxStrokes),
     });
   }
   return updates;
@@ -255,7 +257,7 @@ export async function recomputeCourseHandicapForUser(
   const { data: games, error: gamesError } = await admin
     .from('games')
     .select(
-      'id, status, hcp_allowance_pct, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, status, hcp_allowance_pct, hcp_max_strokes, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .in('id', gameIds)
     .returns<
@@ -263,6 +265,7 @@ export async function recomputeCourseHandicapForUser(
         id: string;
         status: GameStatus;
         hcp_allowance_pct: number;
+        hcp_max_strokes: number | null;
         game_mode: string;
         mode_config: unknown;
         tee_boxes: TeeBoxRatings | null;
@@ -290,6 +293,8 @@ export async function recomputeCourseHandicapForUser(
       allowancePct: game
         ? effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct)
         : 100,
+      // #2660: and the same cap.
+      maxStrokes: game ? effectiveHcpMaxStrokes(game.game_mode, game.hcp_max_strokes ?? null) : null,
     };
   });
 

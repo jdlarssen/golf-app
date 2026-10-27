@@ -41,6 +41,27 @@ describe('applyAllowance', () => {
   });
 });
 
+// #2660: a league can cap the strokes. The cap comes after the percentage
+// (the owner: hcp 36 gives 27 strokes at 75 %, hcp 54 gives 32, not 40.5).
+describe('applyAllowance with a stroke cap', () => {
+  it.each([
+    ['20 × 75 % under the cap', 20, 75, 32, 15],
+    ['36 × 75 % = 27, under the cap', 36, 75, 32, 27],
+    ['43 × 75 % = 32.25 → 32, right at the cap', 43, 75, 32, 32],
+    ['54 × 75 % = 40.5 → 41, capped to 32', 54, 75, 32, 32],
+    ['the cap applies after the percentage, also at 100 %', 40, 100, 32, 32],
+    ['the smallest cap', 10, 100, 1, 1],
+    ['0 strokes stays 0', 0, 75, 32, 0],
+    ['a plus handicap is not touched by the cap', -3, 75, 32, -2],
+  ])('%s', (_label, ch, pct, cap, expected) => {
+    expect(applyAllowance(ch, pct, cap)).toBe(expected);
+  });
+
+  it('null means no cap', () => {
+    expect(applyAllowance(54, 75, null)).toBe(41);
+  });
+});
+
 describe('displayCourseHandicap', () => {
   // The pre-start game-home info card needs a CH to show before the game is
   // auto-started (which freezes game_players.course_handicap). This helper
@@ -76,6 +97,13 @@ describe('displayCourseHandicap', () => {
         allowancePct: 100,
       }),
     ).toBe(31);
+  });
+
+  it('#2660: applies the stroke cap the same way the freeze does', () => {
+    const input = { hcpIndex: 54, slope: 113, courseRating: 72, par: 72, allowancePct: 75 };
+    expect(displayCourseHandicap({ ...input, maxStrokes: 32 })).toBe(applyAllowance(54, 75, 32));
+    expect(displayCourseHandicap({ ...input, maxStrokes: 32 })).toBe(32);
+    expect(displayCourseHandicap(input)).toBe(41);
   });
 
   it('returns null when the tee rating is missing', () => {

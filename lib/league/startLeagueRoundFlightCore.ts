@@ -161,7 +161,7 @@ export async function startLeagueRoundFlightCore(
 
   const { data: league, error: lErr } = await supabase
     .from('leagues')
-    .select('id, name, course_id, tee_box_id, status, format, is_simulator, sim_settings')
+    .select('id, name, course_id, tee_box_id, status, format, is_simulator, sim_settings, hcp_allowance_pct, hcp_max_strokes')
     .eq('id', round.league_id)
     .maybeSingle();
   if (lErr) {
@@ -241,6 +241,10 @@ export async function startLeagueRoundFlightCore(
       created_by: userId,
       league_round_id: roundId,
       delivered_outside_window: deliveredOutsideWindow,
+      // #2660: the league's handicap share and stroke cap, frozen onto the
+      // flight; startScheduledGame below applies them to every player.
+      hcp_allowance_pct: league.hcp_allowance_pct,
+      hcp_max_strokes: league.hcp_max_strokes,
     })
     .select('id')
     .single();

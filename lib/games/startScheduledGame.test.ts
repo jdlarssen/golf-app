@@ -1715,6 +1715,54 @@ describe('startScheduledGame — handicapprosenten følger formatet (#2210)', ()
   });
 });
 
+// ─── #2660: a league flight freezes with the league's share and cap ──────────
+
+describe('startScheduledGame — ligaens andel og tak på slag (#2660)', () => {
+  const frozenHandicaps = (supabase: unknown) =>
+    (
+      supabase as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls
+      .filter(
+        (c) =>
+          c.table === 'game_players' &&
+          c.method === 'update' &&
+          'course_handicap' in (c.args[0] as Record<string, unknown>),
+      )
+      .map((c) => (c.args[0] as { course_handicap: number }).course_handicap);
+
+  it.each<[string, number | null, number[]]>([
+    // REAL_TEE, mens: HI 10 → raw CH 14 → 75 % = 10.5 → 11. HI 54 → raw CH
+    // 67 → 75 % = 50.25 → 50, and the cap of 32 makes it 32.
+    ['75 % og maks 32 slag', 32, [11, 32]],
+    ['75 % uten tak', null, [11, 50]],
+  ])('stableford med %s', async (_label, maxStrokes, expected) => {
+    const roster = [
+      soloPlayer('u1', null),
+      { ...soloPlayer('u2', null), users: { hcp_index: 54 } },
+    ];
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          ...makeGameRow2('stableford'),
+          hcp_allowance_pct: 75,
+          hcp_max_strokes: maxStrokes,
+          tee_boxes: REAL_TEE,
+        },
+        error: null,
+      },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(result).toEqual({ ok: true, started: false });
+    expect(frozenHandicaps(supabase)).toEqual(expected);
+  });
+});
+
 // ─── #2204: readStartBlock reads the reason without starting ─────────────────
 
 /**
