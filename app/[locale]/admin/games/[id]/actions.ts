@@ -25,6 +25,8 @@ import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows
 import { notifyPlayersGameReopened } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
+import { markerReviewAccess } from '@/lib/league/markerReviewAccess';
+import { finishSimulatorFlightIfApproved } from '@/lib/league/finishSimulatorFlight';
 
 /**
  * Self-gate + load action context for the game-detail actions. Wraps the
@@ -167,10 +169,15 @@ export async function adminApproveScorecard(
 
   // #2661: in a simulator league the marker approves (or the league's
   // organiser, through the marker page); the player who started the flight is
-  // not its organiser here. The page shows no button (`card_awaits_marker`);
-  // this stops a hand-made post, and 0220 refuses the write anyway.
-  if (!isAdmin && (await readSimulatorLeagueFlight(gameId))) {
-    redirect({ href: `${detailPath}?error=db_players`, locale });
+  // not its organiser here. A global admin may answer in the marker's stead,
+  // but never on a card they own or delivered (`mayApproveAsMarker`, the same
+  // rule as the marker page and the app route). The pages show no button
+  // (`card_awaits_marker`); this stops a hand-made post, and 0220 refuses
+  // the write anyway.
+  const simulator = await readSimulatorLeagueFlight(gameId);
+  if (simulator) {
+    const review = isAdmin ? await markerReviewAccess(user.id, gameId, playerUserId) : null;
+    if (!review?.ok) redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   const { data: game } = await supabase
@@ -285,9 +292,18 @@ export async function adminApproveScorecard(
     );
   }
 
+  // #2661: in a simulator league the last approval finishes the flight on its
+  // own, as on the marker page. A finish that failed leaves «Alle har levert»
+  // to the player as before, so they can finish it themselves.
+  const simulatorFinish = simulator
+    ? await finishSimulatorFlightIfApproved(gameId, user.id)
+    : 'not_simulator';
+
   // #2203: the last approval can make the round ready to finish. Best-effort,
   // never throws; when the organiser approved it themselves, nothing is sent.
-  await notifyOrganizerIfAllDelivered(gameId, user.id, 'adminApproveScorecard');
+  if (simulatorFinish === 'not_simulator' || simulatorFinish === 'failed') {
+    await notifyOrganizerIfAllDelivered(gameId, user.id, 'adminApproveScorecard');
+  }
 
   expireGameCache(gameId);
   // #1067: the `#leverte-scorekort` hash is a best-effort UX nicety — Next.js

@@ -33,9 +33,11 @@
 --      league's organiser or a global admin, all through the server. A
 --      signed-in non-admin who sets approved_at there is refused, so a
 --      flightmate (can_score_for, 0106) or the player who started the flight
---      (the game creator) cannot approve a card by a direct PATCH either. The
---      rule in TypeScript is mayApproveAsMarker (lib/league/leagueMarker.ts).
---      Clearing an approval (reject, reopen) is never checked.
+--      (the game creator) cannot approve a card by a direct PATCH either. A
+--      global admin may answer in the marker's stead, but never on their own
+--      card. The rule in TypeScript is mayApproveAsMarker
+--      (lib/league/leagueMarker.ts). Clearing an approval (reject, reopen) is
+--      never checked.
 --    Its own trigger, not part of guard_game_players_self_update, so a
 --    rollback is one drop.
 --
@@ -62,29 +64,36 @@ create or replace function public.guard_game_players_league_marker()
   set search_path = ''
 as $$
   declare
+    v_uid uuid := auth.uid();
+    v_admin boolean;
     v_simulator boolean;
   begin
-    if auth.uid() is null or public.is_admin() then
+    if v_uid is null then
       return new;
     end if;
+    v_admin := public.is_admin();
 
-    if tg_op = 'INSERT' then
-      if new.marker_user_id is not null then
+    if not v_admin then
+      if tg_op = 'INSERT' then
+        if new.marker_user_id is not null then
+          raise exception
+            'marker_user_id is set by the server when the card is delivered (game_players.marker_user_id)'
+            using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+        end if;
+        return new;
+      end if;
+
+      if new.marker_user_id is distinct from old.marker_user_id then
         raise exception
           'marker_user_id is set by the server when the card is delivered (game_players.marker_user_id)'
           using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
       end if;
-      return new;
     end if;
 
-    if new.marker_user_id is distinct from old.marker_user_id then
-      raise exception
-        'marker_user_id is set by the server when the card is delivered (game_players.marker_user_id)'
-        using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
-    end if;
-
-    if new.approved_at is not null
-       and new.approved_at is distinct from old.approved_at then
+    if tg_op = 'UPDATE'
+       and new.approved_at is not null
+       and new.approved_at is distinct from old.approved_at
+       and (not v_admin or new.user_id = v_uid) then
       select l.is_simulator into v_simulator
         from public.games g
         join public.league_rounds r on r.id = g.league_round_id
@@ -102,7 +111,7 @@ as $$
   $$;
 
 comment on function public.guard_game_players_league_marker() is
-  '#2661: BEFORE INSERT/UPDATE on game_players. Only the service role and a global admin set or change marker_user_id, and only they set approved_at on a card in a simulator-league flight (the marker approves through the server).';
+  '#2661: BEFORE INSERT/UPDATE on game_players. Only the service role and a global admin set or change marker_user_id, and only they set approved_at on a card in a simulator-league flight (the marker approves through the server); an admin never on their own card.';
 
 revoke execute on function public.guard_game_players_league_marker() from public, anon, authenticated;
 
