@@ -106,6 +106,9 @@ import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import { getDb, listQueue, listTeeShotQueue } from '../data/db';
 import { refreshGameBundle } from '../data/gameBundle';
 import { submitCard } from '../data/submitCard';
+import { fetchMarkerOptions } from '../data/marker';
+import { MarkerPicker } from '../components/MarkerPicker';
+import type { MarkerOptionsResponse } from '../../../../lib/league/appLeagueView';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
@@ -264,6 +267,32 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     }, QUEUE_POLL_MS);
     return () => clearInterval(interval);
   }, [refreshQueue]);
+
+  // #2661: i en simulatorliga velger spilleren en markør fra ligaen før
+  // leveringen. Bare et spill med godkjenning spør serveren; den svarer
+  // `required: false` utenfor simulatorligaen. Makkerkortene i leveringen
+  // sendes med, for de kan ikke være markør. Feiler lesingen, står ingen
+  // velger, og serveren svarer 428 om en markør trengs.
+  const askMarker = bundle?.game.requirePeerApproval === true && bundle.game.status === 'active';
+  const markerMateKey =
+    bundle && askMarker
+      ? flightDeliveryFor(bundle, localScores, userId)
+          .map((player) => player.userId)
+          .join(',')
+      : '';
+  const [markerChoice, setMarkerChoice] = useState<MarkerOptionsResponse | null>(null);
+  const [marker, setMarker] = useState<string | null>(null);
+  useEffect(() => {
+    if (!askMarker) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchMarkerOptions(gameId, markerMateKey ? markerMateKey.split(',') : []);
+      if (!cancelled && result.ok) setMarkerChoice(result.options);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, askMarker, markerMateKey]);
 
   if (!bundle) {
     // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
@@ -484,6 +513,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         })
       : null;
   const teeShotBox = teeShotLock ? teeShotBoxFor(teeShotLock, mode) : null;
+  // #2661: «Lever» er sperret til en markør er valgt i en simulatorliga.
+  const markerOptions = markerChoice?.required ? markerChoice.options : undefined;
+  const markerBlocked = markerOptions !== undefined && marker === null;
+  const markerPicker = markerOptions ? (
+    <MarkerPicker options={markerOptions} value={marker} onChange={setMarker} />
+  ) : null;
 
   // Lesingen har samme tak som spillhentingen (GAME_BUNDLE_TIMEOUT_MS). Den
   // løper mot en timer, som i `useGameBundle`: signalet stopper fetch-en og
@@ -525,6 +560,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     const result = await submitCard(
       gameId,
       flightMates.map((player) => player.userId),
+      markerOptions ? (marker ?? undefined) : undefined,
     );
     if (result.ok) {
       // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
@@ -572,7 +608,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     queueCounts && queueCounts.strokes === 0 ? TEE_SHOTS_APP_TEXT.syncingTeeShots : 'Synker slag …';
 
   const onSubmitPress = () => {
-    if (queueBlocked || busy || teeShotLock) return;
+    if (queueBlocked || busy || teeShotLock || markerBlocked) return;
     if (missing === 0) {
       void doSubmit();
       return;
@@ -592,7 +628,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   };
 
   const onDeliverForPress = () => {
-    if (queueBlocked || busy || teeShotLock) return;
+    if (queueBlocked || busy || teeShotLock || markerBlocked) return;
     void doSubmit();
   };
 
@@ -699,6 +735,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             </Pressable>
             {flightBlock}
             {queueGuard}
+            {markerPicker}
             {teeShotBox ? (
               <TeeShotLockedSubmit
                 label={submitLabel}
@@ -708,10 +745,10 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
               />
             ) : (
             <Pressable
-              style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
+              style={[ui.button, (queueBlocked || busy || markerBlocked) && styles.buttonDisabled]}
               onLayout={onSubmitLayout}
               onPress={onSubmitPress}
-              disabled={queueBlocked || busy}
+              disabled={queueBlocked || busy || markerBlocked}
               testID={submitTestID}
             >
               <Text style={ui.buttonText}>
@@ -736,6 +773,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 {teeShotsReady ? <TeeShotBoxSlot box={teeShotBox} boxRef={teeShotBoxRef} /> : null}
                 {flightBlock}
                 {queueGuard}
+                {markerPicker}
                 {teeShotBox ? (
                   <TeeShotLockedSubmit
                     label={deliverForButton(flightMates)}
@@ -744,9 +782,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                   />
                 ) : (
                 <Pressable
-                  style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
+                  style={[ui.button, (queueBlocked || busy || markerBlocked) && styles.buttonDisabled]}
                   onPress={onDeliverForPress}
-                  disabled={queueBlocked || busy}
+                  disabled={queueBlocked || busy || markerBlocked}
                   testID="deliver-for-flight"
                 >
                   <Text style={ui.buttonText}>

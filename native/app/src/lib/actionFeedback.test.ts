@@ -65,6 +65,7 @@ const SUBMIT_REASON_MAP = {
   not_active: true,
   withdrawn: true,
   tee_shots_short: true,
+  marker_required: true,
   submit_failed: true,
 } as const satisfies Record<SubmitCardFailure, true>;
 

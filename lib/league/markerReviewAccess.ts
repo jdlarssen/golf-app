@@ -8,6 +8,7 @@ import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { ScorecardHole } from '@/lib/games/scorecardReviewData';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { mayApproveAsMarker } from './leagueMarker';
+import type { MarkerCardHole, MarkerCardState } from './appLeagueView';
 
 // The marker's door to a card in a simulator-league flight (#2661).
 //
@@ -26,7 +27,7 @@ import { mayApproveAsMarker } from './leagueMarker';
 // A failed read throws (the page's error boundary, the route's 500), never
 // «not found» or «no access»: a database that does not answer is not a no.
 
-export type MarkerCardState = 'pending' | 'approved' | 'not_delivered' | 'withdrawn' | 'closed';
+export type { MarkerCardHole, MarkerCardState } from './appLeagueView';
 
 export type MarkerReview =
   | {
@@ -199,14 +200,6 @@ export async function loadMarkerCard(
     strokes: new Map((scoresRes.data ?? []).map((row) => [row.hole_number, row.strokes])),
   };
 }
-
-/** One hole on the marker's card as the app reads it: the owner's par. */
-export type MarkerCardHole = {
-  number: number;
-  par: number;
-  strokeIndex: number;
-  strokes: number | null;
-};
 
 /** `loadMarkerCard` flattened for the app: the par for the owner's tee. */
 export function markerCardHoles(

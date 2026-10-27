@@ -61,6 +61,7 @@ import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
 import { League } from './screens/League';
+import { MarkerApprove } from './screens/MarkerApprove';
 import { LeagueRoundStart } from './screens/LeagueRoundStart';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
@@ -72,6 +73,7 @@ import { useSession } from './session';
 import { SyncLab } from './SyncLab';
 import { kickerHeader } from './components/KickerHeader';
 import { FONTS, useTheme, type Theme } from './theme';
+import { MARKER_TEXT } from './lib/markerCopy';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -156,6 +158,12 @@ export type RootStackParamList = {
    * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
    */
   LeagueRoundStart: { leagueId: string; roundId: string };
+  /**
+   * #2661: markørens skjerm for ett kort i en simulatorliga, fra
+   * `GET /api/liga/[id]/godkjenn/[gameId]/[userId]`. Åpnes fra ligasiden og
+   * fra varselet `league_marker_request`.
+   */
+  MarkerApprove: { leagueId: string; gameId: string; userId: string };
   SyncLab: undefined;
 };
 
@@ -217,7 +225,11 @@ function openPushTarget(target: PushTarget) {
     navigationRef.navigate('GameHome', { gameId: target.params.gameId });
     navigationRef.navigate('Leaderboard', target.params);
   } else if (target.name === 'League') navigationRef.navigate('League', target.params);
-  else navigationRef.navigate('Home');
+  else if (target.name === 'MarkerApprove') {
+    // #2661: ligasiden under markørens skjerm, så «tilbake» lander på ligaen.
+    navigationRef.navigate('League', { leagueId: target.params.leagueId });
+    navigationRef.navigate('MarkerApprove', target.params);
+  } else navigationRef.navigate('Home');
 }
 
 /**
@@ -425,6 +437,12 @@ export function RootNavigator() {
           name="League"
           component={League}
           options={kickerHeader(LEAGUE_TEXT.kicker, LEAGUE_TEXT.kicker)}
+        />
+        {/* #2661: markørens kort. Skjermen setter liganavnet i toppen selv. */}
+        <Stack.Screen
+          name="MarkerApprove"
+          component={MarkerApprove}
+          options={kickerHeader(LEAGUE_TEXT.kicker, MARKER_TEXT.screenTitle)}
         />
         <Stack.Screen
           name="LeagueRoundStart"

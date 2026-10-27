@@ -118,5 +118,43 @@ export type AppLeagueView = {
   participants: AppLeagueParticipant[];
   /** The table on the league's own axis (net, or gross in a gross league). */
   standings: AppLeagueStandingRow[];
-  me: { userId: string; isParticipant: boolean };
+  /** `isOrganizer` (#2661): the league's creator, who may approve in a marker's stead. */
+  me: { userId: string; isParticipant: boolean; isOrganizer: boolean };
 };
+
+/**
+ * #2661: where a card in a simulator-league flight stands for its marker:
+ * waiting for an answer, approved, opened again (sent back, not delivered),
+ * the player withdrew, or the flight is finished.
+ */
+export type MarkerCardState = 'pending' | 'approved' | 'not_delivered' | 'withdrawn' | 'closed';
+
+/** #2661: one hole on the marker's card, with the par for the owner's tee. */
+export type MarkerCardHole = {
+  number: number;
+  par: number;
+  strokeIndex: number;
+  strokes: number | null;
+};
+
+/**
+ * #2661: the marker's card as the app reads it, `GET
+ * /api/liga/[id]/godkjenn/[gameId]/[userId]`. `role` is `marker` for the
+ * named marker, `organizer` for the league's organiser or a global admin.
+ */
+export type MarkerCardResponse = {
+  leagueId: string;
+  leagueName: string;
+  roundLabel: string;
+  gameId: string;
+  player: { userId: string; name: string | null };
+  role: 'marker' | 'organizer';
+  markerName: string | null;
+  state: MarkerCardState;
+  holes: MarkerCardHole[];
+};
+
+/** #2661: the marker picker before a delivery, `GET /api/games/[id]/marker-options`. */
+export type MarkerOptionsResponse =
+  | { required: false }
+  | { required: true; options: Array<{ userId: string; name: string | null }> };

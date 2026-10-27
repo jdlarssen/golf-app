@@ -18,6 +18,10 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "the viewer's in-progress games, own and captain user_ids only",
   },
+  'lib/league/markerReviewAccess.ts': {
+    count: 1,
+    reason: "#2661: one game, one card owner's rows (≤ 18) for the marker's page",
+  },
   'app/[locale]/admin/games/[id]/slett/page.tsx': {
     count: 1,
     reason: 'head: true count, no rows',

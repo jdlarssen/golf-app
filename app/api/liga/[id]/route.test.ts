@@ -170,7 +170,8 @@ describe('GET /api/liga/[id]', () => {
     expect({ status: res.status, league: res.body.league.name, me: res.body.me }).toEqual({
       status: 200,
       league: 'Klubbens vinterliga',
-      me: { userId: ME, isParticipant: true },
+      // #2661: the fixture's league was created by ME.
+      me: { userId: ME, isParticipant: true, isOrganizer: true },
     });
   });
 

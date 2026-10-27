@@ -54,8 +54,11 @@ import { GameNotFoundError } from './gameNotFound';
  * v10 (#2660): la til `hcpMaxStrokes`, ligaflightens tak på slag. En
  * v9-oppføring mangler det: billetten ville stått uten «maks 32 slag», og DINE
  * SLAG før start ville vist slagene uten taket.
+ * v11 (#2661): la til `markerUserId`, markøren spilleren valgte i en
+ * simulatorliga. En v9-oppføring mangler den: en flightkamerat ville fått
+ * «Godkjenn» på et kort bare markøren kan godkjenne.
  */
-export const BUNDLE_PAYLOAD_VERSION = 10;
+export const BUNDLE_PAYLOAD_VERSION = 11;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -169,6 +172,12 @@ export interface BundlePlayer {
    * uten den (Hjem, testene), står som før.
    */
   approvedByUserId?: string | null;
+  /**
+   * #2661: markøren spilleren valgte i en simulatorliga (0220), eller null.
+   * Et kort med markør har ingen attestant i flighten
+   * (`canApproveScorecardFor`); markøren godkjenner gjennom serveren.
+   */
+  markerUserId?: string | null;
   rejectionReason: string | null;
   withdrawnAt: string | null;
   /**
@@ -299,6 +308,7 @@ interface PlayerRow {
   submitted_by_user_id: string | null;
   approved_at: string | null;
   approved_by_user_id: string | null;
+  marker_user_id?: string | null;
   rejection_reason: string | null;
   withdrawn_at: string | null;
   withdrawn_by_user_id?: string | null;
@@ -311,7 +321,7 @@ interface PlayerRow {
 // submitted_by_user_id), så et bart `users(...)` er tvetydig og feiler. Samme
 // hint som webben bruker.
 const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, marker_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
@@ -387,6 +397,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       submittedByUserId: row.submitted_by_user_id ?? null,
       approvedAt: row.approved_at,
       approvedByUserId: row.approved_by_user_id ?? null,
+      markerUserId: row.marker_user_id ?? null,
       rejectionReason: row.rejection_reason,
       withdrawnAt: row.withdrawn_at,
       withdrawnByUserId: row.withdrawn_by_user_id ?? null,

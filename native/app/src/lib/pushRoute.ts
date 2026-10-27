@@ -8,7 +8,9 @@
 // `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
 // hullet (`Hole`), og `/games/{id}/leaderboard` (#2632, «Resultatet er klart»):
 // den åpner tavla (`Leaderboard`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
-// peker på `/liga/{id}` og åpner ligaen (`League`).
+// peker på `/liga/{id}` og åpner ligaen (`League`). Markørens varsel (#2661)
+// peker på `/liga/{id}/godkjenn/{gameId}/{userId}` og åpner markørens skjerm
+// (`MarkerApprove`) med ligaen under.
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -29,6 +31,7 @@ export type PushTarget =
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
   | { name: 'Leaderboard'; params: { gameId: string } }
   | { name: 'League'; params: { leagueId: string } }
+  | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
@@ -41,6 +44,7 @@ const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
 const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
 const LEADERBOARD_SUFFIX = /^\/leaderboard(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
+const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
@@ -79,7 +83,14 @@ export function pushTarget(url: string | null): PushTarget {
   }
   const league = url ? LEAGUE_PATH.exec(url) : null;
   const leagueId = league ? decodedOrNull(league[1]) : null;
-  if (leagueId) return { name: 'League', params: { leagueId } };
+  if (leagueId) {
+    // #2661: markørens kort i ligaen.
+    const marker = MARKER_SUFFIX.exec(url!.slice(league![0].length));
+    const gameId = marker ? decodedOrNull(marker[1]) : null;
+    const userId = marker ? decodedOrNull(marker[2]) : null;
+    if (gameId && userId) return { name: 'MarkerApprove', params: { leagueId, gameId, userId } };
+    return { name: 'League', params: { leagueId } };
+  }
   return { name: 'Home' };
 }
 
