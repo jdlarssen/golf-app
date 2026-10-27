@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRouter } from '@/i18n/navigation';
@@ -34,6 +34,19 @@ type Props = {
    * delivering. The server refuses the delivery anyway (`tee_shots_short`).
    */
   teeShotBlocked?: boolean;
+  /**
+   * #2661: a simulator league asks who in the league approves the card. The
+   * candidates come from `loadMarkerChoice` (the league's members except the
+   * cards' owners and the deliverer); «Lever» stays locked until one is
+   * picked, and the server checks the pick again (`markerRefusal`). Omitted
+   * outside a simulator league.
+   */
+  markerOptions?: readonly { userId: string; name: string | null }[];
+  /**
+   * #2661: the «Rediger» link, laid out beside the button under the marker
+   * picker (the picker needs the full width, inside the form).
+   */
+  leading?: ReactNode;
 };
 
 /**
@@ -68,9 +81,13 @@ export function SubmitForm({
   alsoFor = [],
   label,
   teeShotBlocked = false,
+  markerOptions,
+  leading,
 }: Props) {
   const t = useTranslations('game.submit');
   const router = useRouter();
+  const [marker, setMarker] = useState<string | null>(null);
+  const needsMarker = markerOptions !== undefined && marker === null;
 
   // Dexie query deps must be value-stable; the prop is a fresh array on every
   // render, so key the query on its contents instead.
@@ -124,7 +141,7 @@ export function SubmitForm({
       onSubmit={(event) => {
         // Never submit while strokes are still syncing — they'd be frozen out
         // — or before the queue has been read at all (#2219).
-        if (blocked) {
+        if (blocked || needsMarker) {
           event.preventDefault();
           return;
         }
@@ -144,6 +161,11 @@ export function SubmitForm({
       {alsoFor.map((userId) => (
         <input key={userId} type="hidden" name="alsoFor" value={userId} />
       ))}
+      {markerOptions !== undefined && (
+        <MarkerPicker options={markerOptions} value={marker} onChange={setMarker} />
+      )}
+      <div className={leading ? 'grid grid-cols-2 gap-6' : undefined}>
+      {leading}
       {teeShotBlocked ? (
         <button
           type="button"
@@ -160,11 +182,74 @@ export function SubmitForm({
           data-testid="submit-scorecard"
           className="w-full"
           pendingLabel={t('submitPending')}
-          disabled={blocked}
+          disabled={blocked || needsMarker}
         >
           {syncing ? t('syncingPending') : (label ?? t('submitButton'))}
         </SubmitButton>
       )}
+      </div>
     </form>
+  );
+}
+
+/**
+ * #2661: one marker from the league, as radio rows in the round start's
+ * picker style (`RoundStartClient`). The radios are the form's `marker`
+ * field; they stay mounted with the form (#1011).
+ */
+function MarkerPicker({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { userId: string; name: string | null }[];
+  value: string | null;
+  onChange: (userId: string) => void;
+}) {
+  const t = useTranslations('game.submit.marker');
+  return (
+    <fieldset className="mb-5 space-y-2" data-testid="marker-picker">
+      <legend className="mb-1 block font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        {t('legend')}
+      </legend>
+      <p className="mb-3 text-sm text-muted">{options.length > 0 ? t('hint') : t('none')}</p>
+      <ul className="space-y-2">
+        {options.map((o) => {
+          const checked = value === o.userId;
+          return (
+            <li key={o.userId}>
+              <label
+                data-testid={`marker-option-${o.userId}`}
+                className={[
+                  'flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                  checked
+                    ? 'border-primary bg-primary-soft'
+                    : 'border-border bg-surface hover:bg-primary-soft/50',
+                ].join(' ')}
+              >
+                <input
+                  type="radio"
+                  name="marker"
+                  value={o.userId}
+                  className="sr-only"
+                  checked={checked}
+                  onChange={() => onChange(o.userId)}
+                />
+                <span
+                  aria-hidden
+                  className={[
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
+                    checked ? 'border-primary' : 'border-border bg-bg',
+                  ].join(' ')}
+                >
+                  {checked && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                </span>
+                <span className="font-sans text-sm text-text">{o.name ?? t('unknownPlayer')}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </fieldset>
   );
 }

@@ -22,6 +22,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { RoundPlayedByList } from '@/components/league/RoundPlayedByList';
 import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
+import { MarkerQueueCard, type MarkerQueueRow } from '@/components/league/MarkerQueueCard';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
@@ -79,6 +80,38 @@ const WINDOW_CHIP_STYLES: Record<
     color: 'var(--score-over2-fg)',
   },
 };
+
+/**
+ * #2661: the cards that wait for a marker (simulator league). The marker sees
+ * the ones that wait for them; the league's organiser sees every other one,
+ * since they may approve in the marker's stead.
+ */
+function markerQueues(opts: {
+  leagueId: string;
+  rounds: Array<{ label: string; awaitingMarker: Array<{ gameId: string; userId: string; markerUserId: string }> }>;
+  viewerId: string | null;
+  isOrganizer: boolean;
+  nameOf: (userId: string) => string;
+  waitsFor: (name: string) => string;
+}): { markerRows: MarkerQueueRow[]; organizerRows: MarkerQueueRow[] } {
+  const awaiting = opts.rounds.flatMap((r) => r.awaitingMarker.map((a) => ({ ...a, roundLabel: r.label })));
+  const row = (a: (typeof awaiting)[number], waitsFor?: string): MarkerQueueRow => ({
+    key: `${a.gameId}:${a.userId}`,
+    href: `/liga/${opts.leagueId}/godkjenn/${a.gameId}/${a.userId}`,
+    playerName: opts.nameOf(a.userId),
+    roundLabel: a.roundLabel,
+    waitsFor,
+  });
+  if (opts.viewerId === null) return { markerRows: [], organizerRows: [] };
+  return {
+    markerRows: awaiting.filter((a) => a.markerUserId === opts.viewerId).map((a) => row(a)),
+    organizerRows: opts.isOrganizer
+      ? awaiting
+          .filter((a) => a.markerUserId !== opts.viewerId)
+          .map((a) => row(a, opts.waitsFor(opts.nameOf(a.markerUserId))))
+      : [],
+  };
+}
 
 /**
  * #2638: the league round's two messages (open, closing) link here, so
@@ -180,6 +213,17 @@ export default async function LigaPublicPage({
     name: p.nickname?.trim() || p.name?.trim() || null,
   }));
 
+  const nameOf = (userId: string) =>
+    participantNames.find((p) => p.userId === userId)?.name ?? t('playedBy.unknownPlayer');
+  const { markerRows, organizerRows } = markerQueues({
+    leagueId: id,
+    rounds,
+    viewerId: currentUserId,
+    isOrganizer: league.created_by === currentUserId,
+    nameOf,
+    waitsFor: (name) => t('markerQueue.waitsFor', { name }),
+  });
+
   const sp = await searchParams;
   const joinError = first(sp.error);
   const joinErrorMessage = joinError
@@ -246,6 +290,20 @@ export default async function LigaPublicPage({
         </section>
       )}
 
+      {/* #2661: cards that wait for the viewer's answer as marker, or as organiser */}
+      <MarkerQueueCard
+        heading={t('markerQueue.heading')}
+        reviewLabel={t('markerQueue.review')}
+        rows={markerRows}
+        testId="liga-marker-queue"
+      />
+      <MarkerQueueCard
+        heading={t('markerQueue.organizerHeading')}
+        reviewLabel={t('markerQueue.review')}
+        rows={organizerRows}
+        testId="liga-organizer-marker-queue"
+      />
+
       {/* #2638: the open round's settings in a simulator league (artboard 7a) */}
       {league.is_simulator && openRound && (
         <section className="mb-8">
@@ -299,6 +357,8 @@ export default async function LigaPublicPage({
                 isParticipant &&
                 currentUserId != null &&
                 round.deliveredUserIds.includes(currentUserId);
+              // #2661: delivered, and the marker has not answered yet.
+              const myWait = round.awaitingMarker.find((a) => a.userId === currentUserId);
 
               return (
                 <li key={round.id} data-testid="liga-round">
@@ -332,7 +392,14 @@ export default async function LigaPublicPage({
 
                       {/* Action area */}
                       <div className="shrink-0 self-center">
-                        {alreadyDelivered ? (
+                        {myWait ? (
+                          <span
+                            className="block max-w-[140px] text-right text-xs text-muted"
+                            data-testid="liga-round-awaiting-marker"
+                          >
+                            {t('awaitingMarker', { name: nameOf(myWait.markerUserId) })}
+                          </span>
+                        ) : alreadyDelivered ? (
                           <span className="text-xs text-muted">
                             {/* aria-label on a plain span is ignored; the
                                 fuller text goes in as sr-only text. */}
