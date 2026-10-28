@@ -11,8 +11,9 @@ varsler.** Serveren sender bare til iPhone: `canUsePush` i
 `native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
 står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
 (eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
-pengeoppgjør, aldri cup
-eller liga. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
+pengeoppgjør, aldri cup. Ligaen står i beskrivelsen fra bygg 9: appen viser ligaen
+du er med i og starter runden (avsnittet «LIGA»), og arrangøren setter den opp på
+nettsiden. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
 opp på nettsiden, blant dem scramble og de fleste lagformatene (regelen står i
 `app-store-metadata.md`).
 
@@ -59,6 +60,9 @@ FORMATER DU KAN SPILLE
 
 SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
+
+LIGA
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden med ett trykk. I en simulatorliga godkjenner du kortet til en medspiller som markør.
 
 FØR OG UNDER RUNDEN
 Legg runden inn i kalenderen med ett trykk. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
