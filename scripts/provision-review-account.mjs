@@ -16,7 +16,8 @@
  * `REVIEW_ACCOUNT_PASSWORD` og bruker «Demo Round — Tørny» og «Demo Scramble —
  * Tørny», `google` leser `REVIEW_ACCOUNT_EMAIL_GOOGLE` og
  * `REVIEW_ACCOUNT_PASSWORD_GOOGLE` og bruker egne runder. Hver butikk får to
- * runder: stableford og en Texas scramble med «Hvem sitt utslag» (#2561).
+ * runder: stableford og en Texas scramble med «Hvem sitt utslag» (#2561), og en
+ * liga («Demo League …») med en åpen runde der kontoen er medlem (#2561).
  * Egne variabler og egne runder er poenget: en kjøring for den ene butikken
  * roterer aldri passordet til den andre og feier aldri dens rosterrader,
  * scores eller utslag.
@@ -60,6 +61,7 @@ const STORES = {
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD',
     demoGameName: 'Demo Round — Tørny',
     scrambleGameName: 'Demo Scramble — Tørny',
+    leagueName: 'Demo League — Tørny',
     signIn: '/en/review-login, eller langtrykk på tittelen i appen',
   },
   google: {
@@ -68,6 +70,7 @@ const STORES = {
     passwordVar: 'REVIEW_ACCOUNT_PASSWORD_GOOGLE',
     demoGameName: 'Demo Round (Google Play) — Tørny',
     scrambleGameName: 'Demo Scramble (Google Play) — Tørny',
+    leagueName: 'Demo League (Google Play) — Tørny',
     signIn: 'langtrykk på tittelen i appen',
   },
 };
@@ -169,6 +172,25 @@ function demoRounds(store) {
     },
   ];
 }
+
+/**
+ * Ligaen (#2561): en vanlig slagspill-liga (ikke simulator) der review-kontoen og
+ * de tre gjestene er med, så revieweren ser sesongtabellen, den åpne runden og
+ * «Start round» i appen. Butikkteksten lover ligaen, og revieweren kan ikke
+ * lage en selv: ligaer settes opp på nettsiden av en admin. En vanlig liga
+ * trenger to spillere i flighten, derfor er Emma, Jonas og Nora med.
+ *
+ * Runde 1 er åpen i hele vurderingen (fra i går til om 90 dager), runde 2 ligger
+ * etter, så rundelisten har mer enn ett kort. Vinduet regnes ut på nytt ved hver
+ * kjøring, så en «frisk demo før hver innsending» aldri har en utløpt runde.
+ * Tabellen er tom til noen har levert en runde, og appen har en egen tomtilstand
+ * for det; skriptet seeder ingen ferdige flights.
+ */
+const DAY_MS = 86_400_000;
+const LEAGUE_ROUNDS = [
+  { sequence: 1, label: 'Round 1', opensInDays: -1, closesInDays: 90 },
+  { sequence: 2, label: 'Round 2', opensInDays: 90, closesInDays: 120 },
+];
 
 /** Minimal dotenv-leser — vi trenger bare URL + service-role-nøkkelen. */
 function loadEnv(file) {
@@ -545,7 +567,7 @@ async function main() {
   }
 
   console.log(`Miljø:        ${target}  (${envFile})`);
-  console.log(`Butikk:       ${storeName}  (demo-rundene «${store.demoGameName}» og «${store.scrambleGameName}»)`);
+  console.log(`Butikk:       ${storeName}  (demo-rundene «${store.demoGameName}» og «${store.scrambleGameName}», ligaen «${store.leagueName}»)`);
   console.log(`Skriver til:  ${env.NEXT_PUBLIC_SUPABASE_URL}`);
   console.log(`Konto:        ${maskEmail(email)}`);
 
@@ -637,6 +659,8 @@ async function main() {
   // Banen og teen til første runde. Scramble-runden bruker den samme, så en
   // kjøring aldri gir to ulike baner (og aldri en tilfeldig bane uten 18 hull).
   let shared = null;
+  // Gjestene fra første runde er også ligaens medlemmer (steg 6).
+  let leagueGuestIds = null;
   for (const round of demoRounds(store)) {
     const teamOf = (key) => (round.teams ? round.teams[key] : null);
     console.log(`── Runde: ${round.name} ──`);
@@ -918,6 +942,7 @@ async function main() {
       );
       if (rows.length !== 1) throw new Error(`Roster-insert for ${profile.name} traff 0 rader`);
     }
+    leagueGuestIds ??= Object.values(coPlayerIds);
     console.log(
       `4. Roster: review-kontoen (deltaker) + ${round.guests.map((p) => p.name).join(', ')}.`,
     );
@@ -1049,7 +1074,163 @@ async function main() {
     });
   }
 
+  // ------------------------------------------------------------- 6. ligaen
+  console.log(`── Liga: ${store.leagueName} ──`);
+  const leagueNow = Date.now();
+  const isoAt = (days) => new Date(leagueNow + days * DAY_MS).toISOString();
+  const leagueFields = {
+    name: store.leagueName,
+    season_start: isoAt(-7).slice(0, 10),
+    season_end: isoAt(180).slice(0, 10),
+    format: 'stroke',
+    scoring: 'net',
+    standings_model: 'total',
+    missed_round_policy: 'penalty',
+    penalty_kind: 'worst_plus_one',
+    // Banen og teen er den samme som i demo-rundene (`shared`), og ligaen låser
+    // begge, så runde 2 arver dem.
+    course_scope: 'single_course_single_tee',
+    course_id: shared.course_id,
+    tee_box_id: shared.tee_box_id,
+    is_simulator: false,
+    status: 'active',
+    started_at: isoAt(-7),
+    finished_at: null,
+    created_by: organizer.id,
+  };
+
+  // Oppslag på NAVN som for rundene, med samme eierskapsgard: stegene under
+  // sletter flightene i ligaen og feier medlemslista.
+  const existingLeagues = ok(
+    'les leagues',
+    await db
+      .from('leagues')
+      .select('id, created_by')
+      .eq('name', store.leagueName)
+      .order('created_at', { ascending: false })
+      .limit(1),
+  );
+  let league = existingLeagues[0] ?? null;
+  if (league) {
+    if (league.created_by !== organizer.id && league.created_by !== reviewUserId) {
+      throw new Error(
+        `Fant en liga som heter «${store.leagueName}» (${league.id}), men den eies ` +
+          `verken av review-kontoen eller arrangøren. Skriptet rører den ikke — ` +
+          `det ville slettet flightene og medlemmene til noen andre. Sjekk ligaen i ` +
+          `databasen og rydd opp for hånd, eller gi demo-ligaen et annet navn.`,
+      );
+    }
+    const updated = ok(
+      'oppdater demo-ligaen',
+      await db.from('leagues').update(leagueFields).eq('id', league.id).select('id'),
+    );
+    if (updated.length !== 1) {
+      throw new Error(`oppdater demo-ligaen: traff ${updated.length} rader, forventet 1`);
+    }
+    console.log(`6. Demo-ligaen fantes (${league.id}) — satt tilbake til aktiv.`);
+  } else {
+    const insertedLeague = ok(
+      'opprett demo-liga',
+      await db.from('leagues').insert(leagueFields).select('id, created_by'),
+    );
+    if (insertedLeague.length !== 1) throw new Error('Insert av demo-liga traff 0 rader');
+    league = insertedLeague[0];
+    console.log(`6. Demo-liga opprettet (${league.id}).`);
+  }
+
+  // Flightene en tidligere reviewer startet, ryddes bort før vinduene settes
+  // om: rundene skal stå uten spill (en simulatorrunde låser innstillingene
+  // fra første spill, og en levert flight ville fylt tabellen med review-data).
+  const leagueRoundRows = ok(
+    'les league_rounds',
+    await db.from('league_rounds').select('id, sequence').eq('league_id', league.id),
+  );
+  if (leagueRoundRows.length > 0) {
+    const flights = ok(
+      'slett liga-flighter',
+      await db
+        .from('games')
+        .delete()
+        .in('league_round_id', leagueRoundRows.map((r) => r.id))
+        .select('id'),
+    );
+    if (flights.length > 0) console.log(`   Fjernet ${flights.length} flight(er) fra ligaen.`);
+  }
+
+  for (const def of LEAGUE_ROUNDS) {
+    const fields = {
+      label: def.label,
+      opens_at: isoAt(def.opensInDays),
+      closes_at: isoAt(def.closesInDays),
+      original_closes_at: isoAt(def.closesInDays),
+      course_id: null,
+      tee_box_id: null,
+      window_overridden_by: null,
+      window_overridden_at: null,
+      sim_settings: null,
+      sim_frozen_default: null,
+      // Stemplet, så rundevarslene (cron) aldri pusher til review-kontoen.
+      opening_notice_sent_at: isoAt(0),
+      closing_reminder_sent_at: isoAt(0),
+    };
+    const existingRound = leagueRoundRows.find((r) => r.sequence === def.sequence);
+    const rows = existingRound
+      ? ok(
+          `oppdater ${def.label}`,
+          await db.from('league_rounds').update(fields).eq('id', existingRound.id).select('id'),
+        )
+      : ok(
+          `opprett ${def.label}`,
+          await db
+            .from('league_rounds')
+            .insert({ ...fields, league_id: league.id, sequence: def.sequence })
+            .select('id'),
+        );
+    if (rows.length !== 1) {
+      throw new Error(`${def.label}: traff ${rows.length} rader, forventet 1`);
+    }
+  }
+
+  // Medlemmene: review-kontoen og de tre gjestene. Alt annet ut (en reviewer
+  // som slettet seg, eller en deltaker fra en tidligere versjon av demoen).
+  const memberIds = [reviewUserId, ...leagueGuestIds];
+  const sweptMembers = ok(
+    'rydd liga-medlemmer',
+    await db
+      .from('league_players')
+      .delete()
+      .eq('league_id', league.id)
+      .not('user_id', 'in', `(${memberIds.join(',')})`)
+      .select('user_id'),
+  );
+  if (sweptMembers.length > 0) {
+    console.log(`   Fjernet ${sweptMembers.length} medlem(mer) som ikke hører hjemme i demoen.`);
+  }
+  const members = ok(
+    'sett liga-medlemmer',
+    await db
+      .from('league_players')
+      .upsert(
+        memberIds.map((userId) => ({
+          league_id: league.id,
+          user_id: userId,
+          // Bekreftet, som en deltaker som har sagt ja: ingen ventende invitasjon.
+          accepted_at: nowIso(),
+        })),
+        { onConflict: 'league_id,user_id' },
+      )
+      .select('user_id'),
+  );
+  if (members.length !== memberIds.length) {
+    throw new Error(`sett liga-medlemmer: traff ${members.length} rader, forventet ${memberIds.length}`);
+  }
+  console.log(
+    `   Ligaen har ${LEAGUE_ROUNDS.length} runder (runde 1 åpen) og ${members.length} medlemmer.\n`,
+  );
+  const leagueSummary = { id: league.id, name: store.leagueName, members: members.length };
+
   console.log(created ? '✅ Provisjonert.' : '✅ Allerede provisjonert — resatt til frisk demo.');
+  console.log(`   Liga:     ${leagueSummary.id} (${leagueSummary.name}), medlemmer: ${leagueSummary.members}`);
   for (const r of summaries) {
     console.log(`   Spill:    ${r.gameId} (${r.name})`);
     console.log(`   Kortnavn: ${r.shortId}`);

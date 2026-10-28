@@ -9,7 +9,7 @@ skjult inngang i appen.
 **Fra #2561 finnes én konto per butikk.** Apple-revieweren skal kunne slette
 kontoen (5.1.1(v)), mens Google krever at innloggingen virker til enhver tid, og de
 to vurderingene kan gå samtidig. Apple-kontoen og Google-kontoen har hver sin
-adresse, sitt eget passord og sine egne demo-runder (stableford og scramble). Skriptet velger med
+adresse, sitt eget passord og sine egne demo-runder (stableford og scramble) og sin egen liga. Skriptet velger med
 `--store apple` (standard) eller `--store google`.
 
 Bygget i #1284 (del 1) for skallet. Fra N8 (#1954, P1b) er det native-appen som
@@ -24,7 +24,7 @@ webbens egen).
 | Inngangen i appen | Innloggingsskjermen: hold overskriften («Tørny») inne i 1,5 s | Et passordfelt og knappen «Logg inn med passord» dukker opp under e-postfeltet. Ingen synlig lenke, ingen env-gate. |
 | Innloggingssida (web) | `/review-login` (`/en/review-login` for engelsk) | E-post + passord. Ulenket, `noindex`. Gjelder nettsida, ikke app-innsendingen. |
 | Env-porten (web) | `REVIEW_ACCOUNT_EMAIL` i Vercel | Er den ikke satt, svarer web-sida «finnes ikke». Appen har ingen slik port — se sikkerhetsmodellen. |
-| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-rundene og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD`, «Demo Round — Tørny» og «Demo Scramble — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE`, «Demo Round (Google Play) — Tørny» og «Demo Scramble (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
+| Provisjonering | `scripts/provision-review-account.mjs [--store apple\|google]` | Lager kontoen, demo-rundene, demo-ligaen og medspillerne for én butikk. Apple: `REVIEW_ACCOUNT_EMAIL`/`REVIEW_ACCOUNT_PASSWORD`, «Demo Round — Tørny» og «Demo Scramble — Tørny» og ligaen «Demo League — Tørny». Google: `REVIEW_ACCOUNT_EMAIL_GOOGLE`/`REVIEW_ACCOUNT_PASSWORD_GOOGLE`, «Demo Round (Google Play) — Tørny», «Demo Scramble (Google Play) — Tørny» og ligaen «Demo League (Google Play) — Tørny». Samme adresse for begge stopper skriptet. |
 | Arrangør-porten | `REVIEW_DEMO_ORGANIZER_EMAIL` (valgfri, kun når skriptet kjører) | Peker ut hvem demo-rundene skal stå på når det ikke finnes nøyaktig én admin-konto. |
 
 ## Sikkerhetsmodellen
@@ -175,7 +175,7 @@ nøkkelringen. Bytt det der først, og lim det nye inn i butikken etterpå (steg
 
 **Forventet resultat:** en oppsummering som begynner med «✅ Provisjonert.» (en
 konto som finnes fra før, gir «✅ Allerede provisjonert — resatt til frisk demo.»)
-og så to blokker, én per runde, hver med `Spill` og `Kortnavn`:
+og så en `Liga`-linje og to blokker, én per runde, hver med `Spill` og `Kortnavn`:
 stableford-runden har `Spillere: 4, scores: 21`, og scramble-runden har
 `Spillere: 4, scores: 9, utslag: 9`. Til slutt kommer `Arrangør` og `Innlogging`.
 E-postadressene står maskert i utskriften (bare domenet). Linja `Butikk:`
@@ -205,7 +205,9 @@ dukker opp, skriv review-adressen og passordet, trykk «Logg inn med passord».
 **Forventet:** hjem-skjermen med to runder i gang. Scramble-runden er nyest og
 ligger øverst som det store kortet; stableford-runden står under «Flere runder i
 gang». Apple: «Demo Scramble — Tørny» og «Demo Round — Tørny». Google: «Demo
-Scramble (Google Play) — Tørny» og «Demo Round (Google Play) — Tørny». Feil passord skal gi
+Scramble (Google Play) — Tørny» og «Demo Round (Google Play) — Tørny». Under dem, på hjem-skjermen,
+står «Ligaene dine» med «Demo League — Tørny» (Google: «Demo League (Google Play) — Tørny»);
+åpne den, og runde 1 er åpen med «Spill runden». Feil passord skal gi
 «Feil e-post eller passord.» og ingenting annet.
 
 ## Reset før hver innsending — og etter hver review
@@ -243,6 +245,10 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
   rosteret i hver runde nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
 - **Spilt, levert eller trukket seg?** Scorene og utslagene slettes og legges inn
   på nytt, rundene settes tilbake til «pågår», og alle leveringer nullstilles.
+- **Spilt en liga-runde?** Flightene i ligaen slettes, rundevinduene settes om
+  (runde 1 åpen i 90 dager, runde 2 etter) og medlemmene er igjen review-kontoen,
+  Emma, Jonas og Nora. Skriptet stempler rundevarslene som sendt, så cronen ikke
+  pusher til review-kontoen.
 - **Rundene står på feil person?** De flyttes til arrangøren. Det gjelder også
   gamle demo-runder som fortsatt står på review-kontoen. Står scramble-runden på
   en annen bane enn stableford-runden, flyttes den til samme bane.
@@ -276,6 +282,13 @@ Connect eller Play Console, fordi de husker det gamle.
   lagtavla har noe å vise (bilde 4 og 8 i butikksettet, #2561). Lagets slag
   står på lagkapteinen (laveste bruker-ID på laget). Lagkortet kan ikke leveres
   før hver spiller har tre utslag.
+- **Liga:** «Demo League — Tørny» (Google: «Demo League (Google Play) — Tørny»), en
+  vanlig slagspill-liga som er aktiv, arrangert av admin-kontoen. Review-kontoen,
+  Emma, Jonas og Nora er medlemmer. Runde 1 er åpen (fra i går til om 90 dager) og
+  runde 2 ligger etter, på samme bane og tee som rundene. Tabellen er tom til noen
+  har levert en runde. En vanlig liga trenger en medspiller (markør), så revieweren
+  starter runden sammen med for eksempel Emma: «Ligaene dine» → ligaen → «Spill
+  runden» → «Start runden». Skriptet seeder ingen ferdige flights (#2561).
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
   plassholder-domene uten MX. De kan aldri motta mail. Hver runde har sine egne
   tre gjester.
@@ -299,7 +312,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 740 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 789 byte, målt med
 `wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
 målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
 
@@ -316,44 +329,41 @@ HOW TO SIGN IN
 3. Paste the user name and password from the fields above and tap "Logg inn med passord".
 
 AI QUESTION AFTER SIGN-IN
-The app asks "Kan AI-en skrive om deg?" (Can the AI write about you?). Tørny writes a short report after each round and a year summary at Christmas, using Claude from Anthropic.
+The app asks "Kan AI-en skrive om deg?" (Can the AI write about you?). Tørny writes a report after each round and a year summary at Christmas, using Claude from Anthropic.
 - "Ja, det er greit" (Yes): the player's name can appear, and Anthropic receives names, results, game and course names and dates.
-- "Nei takk" (No thanks): the name is left out of new texts. Numbers without names can still be used, as our privacy policy says.
+- "Nei takk" (No thanks): the name is left out of new texts; numbers without names may still be used.
 Both answers open the app. Change it under "Profil" > "Personvern og konto" > "AI-tekster om meg".
 
 WHERE THE AI TEXT SHOWS
-After a finished round the app shows the round report, "Fra pressetribunen" (From the press box), on the results screen ("Resultater"): its first sentence as a quote at the top, and the whole text in a card at the bottom. The card ends with the line "Skrevet av AI ut fra slagene dere førte." (Written by AI from the strokes you entered), so the text is always marked as AI-written. The report is only written when at least one player in the round has answered "Ja, det er greit", and it only names players who did. A round without such a player shows no report. The "Resultatet er klart" (The results are in) notification shows the start of the same text. The demo rounds below are not finished, so they show no report.
+After a finished round, "Resultater" shows the round report "Fra pressetribunen" (From the press box), marked "Skrevet av AI ut fra slagene dere førte." (Written by AI from the strokes you entered). It is only written when a player in the round has answered "Ja, det er greit", and it only names players who did. The demo rounds are not finished, so they show no report.
 
 WORDS YOU WILL NEED
 "Profil" = Profile (top right on home)
 "Fortsett runden" = Continue the round
 "Lever scorekort" = Submit scorecard
 "Resultater" = Results
-"Slett konto" = Delete account
-"Varsler og tema" = Notifications and theme
-"Personvern og konto" = Privacy and account
 
 WHAT YOU WILL SEE
-Two active rounds, both hosted by another account. The home screen shows the newest, "Demo Scramble — Tørny", as the big card. The other, "Demo Round — Tørny", is under "Flere runder i gang" (More rounds in progress).
+Two active rounds and one league, set up by another account. Home shows the newest round, "Demo Scramble — Tørny", as the big card, and the other, "Demo Round — Tørny", under "Flere runder i gang" (More rounds in progress).
 "Demo Round — Tørny" has three co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
-"Demo Scramble — Tørny" shows team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used), and "Resultater" shows the team board. A team card can only be submitted once every player has three tee shots, so use this round to look around, not to submit.
+"Demo Scramble — Tørny" is team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used). A team card can only be submitted once every player has three tee shots, so use this round to look around.
+"Demo League — Tørny" is under "Ligaene dine" (Your leagues) on home. Standings stay empty until a round is delivered. To play the open round: "Spill runden", pick a co-player such as Emma (a regular league needs one), then "Start runden".
 
 ACCOUNT DELETION (5.1.1(v))
-"Profil" > "Personvern og konto" > "Slett konto" > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
-If you created a round yourself that is still planned or in progress, deletion is blocked so its players keep an organiser. Open that round, tap "Start runden nå" (Start the round now) if it has not started, then "Avslutt runden" (End the round). Tick every player under "Mangler kort", for example with "Avslutt uten kortet", and confirm. Please do not use the "Åpne Klubbhuset" button on the deletion screen: it opens our website, which needs an email code.
+"Profil" > "Personvern og konto" > "Slett konto" (Delete account) > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
+If you created a round yourself that is still open, deletion is blocked so its players keep an organiser. Open it, tap "Avslutt runden" (End the round), tick every player under "Mangler kort" and confirm. Please do not use "Åpne Klubbhuset" on the deletion screen: it opens our website, which needs an email code.
 
 OFFLINE
 Enter scores in Airplane Mode. They stay on the phone and sync when it is back online.
 
 NOTIFICATIONS
-The app never asks on its own. The system prompt appears only when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema". Notifications are about the player's own rounds.
+The app never asks on its own. The system prompt appears only when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema". They concern the player's own rounds and leagues.
 
 NOT IN THE APP
 - No location access.
-- No money: points and results only, no amounts, no payments. Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey and Nassau are ways of counting points. "Blind Wolf-potter" is the number of holes won as a blind wolf.
+- No money: points and results only, no amounts or payments. Skins, Wolf, Nassau and similar are ways of counting points.
 - No purchases, ads or third-party tracking.
-- The app creates eight formats. It also plays rounds the organiser sets up on our website, including scramble and most team formats. Patsome and some cup rounds (split nine-hole days) open on our website in Safari.
-- The year summary (Kavalkaden) opens at Christmas for players with a finished round, so this account does not show it.
+- The app creates eight formats and plays rounds set up on our website, including scramble and most team formats. Patsome and some cup rounds open on our website in Safari.
 
 Norway only. The account holds no real player data.
 ```
