@@ -55,7 +55,7 @@ import { GameNotFoundError } from './gameNotFound';
  * v9-oppføring mangler det: billetten ville stått uten «maks 32 slag», og DINE
  * SLAG før start ville vist slagene uten taket.
  * v11 (#2661): la til `markerUserId`, markøren spilleren valgte i en
- * simulatorliga. En v9-oppføring mangler den: en flightkamerat ville fått
+ * simulatorliga. En v10-oppføring mangler den: en flightkamerat ville fått
  * «Godkjenn» på et kort bare markøren kan godkjenne.
  */
 export const BUNDLE_PAYLOAD_VERSION = 11;
