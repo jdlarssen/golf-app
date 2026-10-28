@@ -58,14 +58,14 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
     ],
     "package": "no.tornygolf.app",
     "predictiveBackGestureEnabled": false,
-    "versionCode": 8,
+    "versionCode": 9,
   },
   "icon": "./assets/icon.png",
   "ios": {
     "associatedDomains": [
       "applinks:tornygolf.no",
     ],
-    "buildNumber": "8",
+    "buildNumber": "9",
     "bundleIdentifier": "no.tornygolf.app",
     "config": {
       "usesNonExemptEncryption": false,
