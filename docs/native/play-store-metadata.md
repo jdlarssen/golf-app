@@ -62,7 +62,7 @@ SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
 
 LIGA
-Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden med ett trykk. I en simulatorliga godkjenner du kortet til en medspiller som markør.
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 FØR OG UNDER RUNDEN
 Legg runden inn i kalenderen med ett trykk. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
