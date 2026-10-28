@@ -205,6 +205,7 @@ Right after signing in, the app asks whether the AI may write about you
 ("Kan AI-en skrive om deg?"). Both answers take you into the app.
 
 The account plays in an active demo round called "Demo Round (Google Play) — Tørny", and in a team round, "Demo Scramble (Google Play) — Tørny" (Texas scramble, two teams of two). The team round is the big card on the home screen, and the other round is under "Flere runder i gang". In the team round the app asks "Hvem sitt utslag ble brukt?" (whose tee shot was used) on each hole. Its team card can be submitted only when every player has three tee shots, so use it to look around.
+The account is also a member of a league, "Demo League (Google Play) — Tørny", under "Ligaene dine" (Your leagues) on the home screen. Its standings stay empty until a round is delivered. To play the open round, tap "Spill runden", pick a co-player such as Emma (a regular league needs one) and tap "Start runden".
 The app is in Norwegian and is available in Norway only.
 
 This account is for Google Play review only. To see account deletion without deleting
