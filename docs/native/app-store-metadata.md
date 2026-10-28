@@ -241,7 +241,7 @@ SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
 
 LIGA
-Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden med ett trykk. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en medspiller som markør.
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 FØR OG UNDER RUNDEN
 Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
@@ -316,6 +316,7 @@ etter 1.1.0 (3), som ble bygget 2026-09-06 (taggen `native-ios/v1.1.0-3`).
 ```text
 Nytt i denne versjonen:
 - Varsler på iPhone når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du slår dem på under Profil, Varsler og tema.
+- Ligaen: følg sesongtabellen og den åpne runden, og start runden rett fra appen.
 - Venner: legg til venner og se hvor mange runder dere har spilt sammen.
 - Arrangøren kan invitere nye spillere på e-post rett fra runden.
 - Legg runden inn i kalenderen med ett trykk, og del lenka så andre kan følge tavla live.
@@ -326,7 +327,7 @@ Nytt i denne versjonen:
 Kildene: varslene (`pushDevice.ts`, 2026-09-30), vennene (`friends.ts`, 2026-09-29),
 invitasjonen (`inviteToGame.ts`, 2026-09-20), kalenderen og live-lenka
 (`addToCalendar.ts`, `shareLive.ts`, 2026-09-29 og 2026-09-30), Kavalkaden
-(`kavalkade.ts`, 2026-10-01) og AI-spørsmålet (`AiConsentGate.tsx`, 2026-10-16).
+(`kavalkade.ts`, 2026-10-01), ligaen (`League.tsx`, 2026-10-28) og AI-spørsmålet (`AiConsentGate.tsx`, 2026-10-16).
 
 ## Skjermbilder
 
