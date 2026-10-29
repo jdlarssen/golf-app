@@ -185,7 +185,7 @@ export function PlayersListClient({
                 aria-hidden="true"
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-sans text-[13px] font-semibold ${
                   u.is_guest
-                    ? 'bg-chip-unassigned-disc text-muted'
+                    ? 'bg-chip-unassigned-disc text-muted dark:text-text'
                     : 'bg-primary-soft text-primary'
                 }`}
               >
