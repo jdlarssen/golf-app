@@ -7,7 +7,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { formatListLocale } from '@/lib/i18n/format';
 import { invitationWhen } from '@/lib/games/invitationCard';
 import { firstNamesLine } from '@/lib/games/signupInbox';
-import { CANCEL_MESSAGE_MAX } from '@/lib/games/gameCancellation';
+import { CANCEL_MESSAGE_MAX } from '@/lib/games/cancelMessage';
 import { deleteGame } from './actions';
 
 const ERROR_CODES = ['delete_failed', 'message_too_long'] as const;

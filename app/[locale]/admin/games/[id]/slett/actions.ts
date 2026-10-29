@@ -9,7 +9,8 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import { SPONSOR_LOGO_BUCKET } from '@/lib/storage/sponsorLogoUrl';
 import type { GameStatus } from '@/lib/games/status';
-import { canCancelWithNotice, normalizeCancelMessage } from '@/lib/games/gameCancellation';
+import { canCancelWithNotice } from '@/lib/games/gameCancellation';
+import { normalizeCancelMessage } from '@/lib/games/cancelMessage';
 import {
   loadCancellationRecipients,
   type CancellationRecipient,
