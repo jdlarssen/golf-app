@@ -3,9 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePayload';
 import {
   canSplitSingleIndices,
@@ -15,10 +13,12 @@ import {
 } from '@/lib/courses/nineHoles';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { formatListLocale } from '@/lib/i18n/format';
+import type { TeeBoxData, TeeRows } from '@/lib/courses/teeChips';
 import type { SimilarCourseTarget } from '@/lib/courses/similarCoursesPanel';
 import type { AppLocale } from '@/i18n/routing';
 import { MAX_TEE_BOXES } from './constants';
 import { HoleGridEditor } from './HoleGridEditor';
+import { TeeTableEditor } from './TeeTableEditor';
 import { SimilarCoursesPanel } from './SimilarCoursesPanel';
 
 export { MAX_TEE_BOXES };
@@ -34,17 +34,7 @@ export type HoleData = {
   stroke_index: string;
 };
 
-export type TeeBoxData = {
-  id?: string;
-  name: string;
-  length_meters: string;
-  slope_mens: string;
-  course_rating_mens: string;
-  slope_ladies: string;
-  course_rating_ladies: string;
-  slope_juniors: string;
-  course_rating_juniors: string;
-};
+export type { TeeBoxData };
 
 export type CourseFormInitialData = {
   name: string;
@@ -94,18 +84,7 @@ const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
   stroke_index: '',
 }));
 
-const DEFAULT_TEE: TeeBoxData = {
-  name: '',
-  length_meters: '',
-  slope_mens: '',
-  course_rating_mens: '',
-  slope_ladies: '',
-  course_rating_ladies: '',
-  slope_juniors: '',
-  course_rating_juniors: '',
-};
-
-// Sum av hull-par per kjønn. Brukes både i UI (read-only par-total per tee) og
+// Sum av hull-par per kjønn. Brukes både i UI (par-totalen på banekortet) og
 // er kilde-til-sannhet på server-siden — par_total_<gender> regnes ut fra
 // hullene istedenfor å tastes per kjønn. Default-gender er `mens` for
 // bakoverkompatibel oppførsel.
@@ -140,15 +119,6 @@ export function hasHoleChanges(
       curr.stroke_index !== init.stroke_index
     );
   });
-}
-
-// Sjekker om en tee har lagrede tall for et gitt kjønn — brukes for å
-// avgjøre om dame/junior-blokken skal stå åpen ved mount på edit-flyten.
-function hasGenderData(
-  tee: TeeBoxData,
-  gender: 'ladies' | 'juniors',
-): boolean {
-  return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
 
 const SAVE_BAR_TONE = {
@@ -204,20 +174,19 @@ export function CourseForm({
   const holeCountLocked = usedInGamesCount > 0;
   // «Fordelt …» stays under the card until an index changes.
   const [splitDone, setSplitDone] = useState(false);
-  const initialTees =
-    initialData?.teeBoxes && initialData.teeBoxes.length > 0
-      ? initialData.teeBoxes
-      : [DEFAULT_TEE];
-  const [teeBoxes, setTeeBoxes] = useState<TeeBoxData[]>(initialTees);
-
-  // Parallel-array til teeBoxes som styrer om dame/junior-rating-blokken
-  // står åpen. Initialiseres åpen hvis tee har lagrede tall for det kjønnet
-  // (edit-flyten), ellers kollapset.
-  const [expandedLadies, setExpandedLadies] = useState<boolean[]>(
-    initialTees.map((tee) => hasGenderData(tee, 'ladies')),
+  // The tees as the slope table's rows (#2486); `removed` keeps saved rows a
+  // chip took off, so tapping it on again brings back the same tee.
+  const [tees, setTees] = useState<TeeRows>({
+    rows: initialData?.teeBoxes ?? [],
+    removed: [],
+  });
+  // The juniors' column and the length card open on the edit page when a tee
+  // already has numbers there, so a saved value is never sent as empty.
+  const [juniorsOpen, setJuniorsOpen] = useState(() =>
+    tees.rows.some((tee) => tee.slope_juniors !== '' || tee.course_rating_juniors !== ''),
   );
-  const [expandedJuniors, setExpandedJuniors] = useState<boolean[]>(
-    initialTees.map((tee) => hasGenderData(tee, 'juniors')),
+  const [lengthOpen, setLengthOpen] = useState(() =>
+    tees.rows.some((tee) => tee.length_meters !== ''),
   );
 
   // Per-kjønn-par-overstyring: kollapset som standard. Åpen ved mount på
@@ -235,11 +204,6 @@ export function CourseForm({
 
   const parTotalMens = useMemo(() => sumHolePars(holes, 'mens'), [holes]);
   const parNineMens = useMemo(() => sumHolePars(holes.slice(0, 9), 'mens'), [holes]);
-  const parTotalLadies = useMemo(() => sumHolePars(holes, 'ladies'), [holes]);
-  const parTotalJuniors = useMemo(
-    () => sumHolePars(holes, 'juniors'),
-    [holes],
-  );
 
   // "Lagre bane" stays disabled until the indices and tee ratings would pass
   // the server (#2279) — a server bounce reloads an empty form, so 18 typed
@@ -252,17 +216,18 @@ export function CourseForm({
   );
   const teeProblems = useMemo(
     () =>
-      teeBoxes.map((tee) =>
+      tees.rows.map((tee) =>
         teeRatingProblem([
           { slope: tee.slope_mens, cr: tee.course_rating_mens },
           { slope: tee.slope_ladies, cr: tee.course_rating_ladies },
           { slope: tee.slope_juniors, cr: tee.course_rating_juniors },
         ]),
       ),
-    [teeBoxes],
+    [tees.rows],
   );
   const firstTeeProblem = teeProblems.findIndex((p) => p !== null);
-  const blocked = siGaps.missing.length > 0 || firstTeeProblem !== -1;
+  const noTees = tees.rows.length === 0;
+  const blocked = siGaps.missing.length > 0 || firstTeeProblem !== -1 || noTees;
 
   function updateHole(index: number, patch: Partial<HoleData>) {
     setHoles((prev) => {
@@ -306,85 +271,14 @@ export function CourseForm({
     setSplitDone(true);
   }
 
-  function updateTee(index: number, patch: Partial<TeeBoxData>) {
-    setTeeBoxes((prev) =>
-      prev.map((tee, i) => (i === index ? { ...tee, ...patch } : tee)),
-    );
-  }
-
-  function addTee() {
-    if (teeBoxes.length >= MAX_TEE_BOXES) return;
-    setTeeBoxes((prev) => [...prev, { ...DEFAULT_TEE }]);
-    setExpandedLadies((prev) => [...prev, false]);
-    setExpandedJuniors((prev) => [...prev, false]);
-  }
-
-  function duplicateTee(index: number) {
-    if (teeBoxes.length >= MAX_TEE_BOXES) return;
-    const source = teeBoxes[index];
-    // Kopier alle numre, tøm navn + drop id (ny rad i DB). Beholder også
-    // dame/junior-data uavhengig av om blokken er åpen — admin har valgt
-    // hva som ligger der, dupliser bør bevare det selv om blokken er
-    // kollapset visuelt.
-    const copy: TeeBoxData = {
-      ...source,
-      id: undefined,
-      name: '',
-    };
-    setTeeBoxes((prev) => {
-      const next = [...prev];
-      next.splice(index + 1, 0, copy);
-      return next;
-    });
-    setExpandedLadies((prev) => {
-      const next = [...prev];
-      next.splice(index + 1, 0, hasGenderData(copy, 'ladies'));
-      return next;
-    });
-    setExpandedJuniors((prev) => {
-      const next = [...prev];
-      next.splice(index + 1, 0, hasGenderData(copy, 'juniors'));
-      return next;
-    });
-  }
-
-  function removeTee(index: number) {
-    if (teeBoxes.length <= 1) return;
-    setTeeBoxes((prev) => prev.filter((_, i) => i !== index));
-    setExpandedLadies((prev) => prev.filter((_, i) => i !== index));
-    setExpandedJuniors((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function expandGender(index: number, gender: 'ladies' | 'juniors') {
-    const setter = gender === 'ladies' ? setExpandedLadies : setExpandedJuniors;
-    setter((prev) => prev.map((v, i) => (i === index ? true : v)));
-  }
-
-  // Nullstiller slope+CR for ett kjønn på én tee. Endrer ikke expand-state
-  // — damer/junior-blokker forblir åpne etter Tøm så admin kan fylle på
-  // nytt manuelt. Tom slope + tom CR for et kjønn er gyldig submit-state
-  // (= ingen rating for det kjønnet), så ingen partial-rating-feil.
-  function clearGender(
-    index: number,
-    gender: 'mens' | 'ladies' | 'juniors',
-  ) {
-    updateTee(index, {
-      [`slope_${gender}`]: '',
-      [`course_rating_${gender}`]: '',
-    } as Partial<TeeBoxData>);
-  }
-
-  function copyMensToAllGenders(index: number) {
-    const source = teeBoxes[index];
-    if (!source) return;
-    updateTee(index, {
-      slope_ladies: source.slope_mens,
-      course_rating_ladies: source.course_rating_mens,
-      slope_juniors: source.slope_mens,
-      course_rating_juniors: source.course_rating_mens,
-    });
-    setExpandedLadies((prev) => prev.map((v, i) => (i === index ? true : v)));
-    setExpandedJuniors((prev) => prev.map((v, i) => (i === index ? true : v)));
+  // «Fjern junior-kolonnen» empties the juniors' numbers on every tee, the
+  // remembered ones too, so a tee tapped back on never brings back numbers the
+  // closed column would not send.
+  function setJuniors(open: boolean) {
+    setJuniorsOpen(open);
+    if (open) return;
+    const clear = (tee: TeeBoxData) => ({ ...tee, slope_juniors: '', course_rating_juniors: '' });
+    setTees((prev) => ({ rows: prev.rows.map(clear), removed: prev.removed.map(clear) }));
   }
 
   // Fjern per-kjønn-par-overstyring: tilbakestill alle 18 hull til par_mens
@@ -592,211 +486,15 @@ export function CourseForm({
           />
         ))}
 
-      <section className="-mx-1 mt-6">
-        <h2 className="text-sm font-medium text-text mb-3">
-          {t('teeBoxesHeading', { count: teeBoxes.length, max: MAX_TEE_BOXES })}
-        </h2>
-        {nine && (
-          <p className="-mt-1.5 mb-3 text-xs leading-[1.45] text-muted">{t('teeNineHint')}</p>
-        )}
-        <div className="space-y-4">
-          {teeBoxes.map((tee, index) => (
-            <div
-              key={index}
-              className="border border-border rounded-xl bg-surface p-4 space-y-4"
-            >
-              {tee.id && (
-                <input type="hidden" name={`tee_${index}_id`} value={tee.id} />
-              )}
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-text">
-                  {t('teeBoxLabel', { number: index + 1 })}
-                </span>
-                {/* Both text buttons draw 16px and hit 44px (#2240); sideways
-                    each takes half of the 12px gap, «Fjern» also takes the
-                    card padding on its right. */}
-                <div className="flex items-center gap-3">
-                  {teeBoxes.length < MAX_TEE_BOXES && (
-                    <button
-                      type="button"
-                      onClick={() => duplicateTee(index)}
-                      aria-label={t('duplicateTeeAria', { number: index + 1 })}
-                      className="tap-extend text-xs font-medium text-muted hover:text-text transition-colors [--tap-extend:-14px_-6px]"
-                    >
-                      {t('duplicateButton')}
-                    </button>
-                  )}
-                  {teeBoxes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTee(index)}
-                      aria-label={t('removeTeeAria', { number: index + 1 })}
-                      className="tap-extend text-xs font-medium text-danger hover:opacity-80 transition-opacity [--tap-extend:-14px_-14px_-14px_-6px]"
-                    >
-                      {t('removeTeeButton')}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <Input
-                id={`tee_${index}_name`}
-                name={`tee_${index}_name`}
-                type="text"
-                label={t('teeNameLabel')}
-                placeholder={t('teeNamePlaceholder')}
-                value={tee.name}
-                onChange={(e) => updateTee(index, { name: e.target.value })}
-                required
-              />
-
-              <Input
-                id={`tee_${index}_length_meters`}
-                name={`tee_${index}_length_meters`}
-                type="number"
-                inputMode="numeric"
-                min={1000}
-                max={12000}
-                step={1}
-                label={t('teeLengthLabel')}
-                hint={t('teeLengthHint')}
-                warning={getTeeLengthWarning(tee)}
-                placeholder="6124"
-                value={tee.length_meters}
-                onChange={(e) =>
-                  updateTee(index, { length_meters: e.target.value })
-                }
-              />
-
-              <div className="space-y-3">
-                <p className="text-xs text-muted">{t('genderRatingHint')}</p>
-
-                <GenderRatingBlock
-                  teeIndex={index}
-                  gender="mens"
-                  label={t('genderMens')}
-                  clearLabel={t('clearGenderButton')}
-                  parTotalLabel={t('parTotalLabel')}
-                  parTotalSuffix={t('parTotalSuffix')}
-                  slopeLabel={t('slopeLabel')}
-                  crLabel={t('crLabel')}
-                  slopeHint={t('typicalHintMensSlope')}
-                  crHint={t('typicalHintMensCr')}
-                  slope={tee.slope_mens}
-                  cr={tee.course_rating_mens}
-                  parTotal={parTotalMens}
-                  showParTotal={
-                    tee.slope_mens !== '' && tee.course_rating_mens !== ''
-                  }
-                  showClear={
-                    tee.slope_mens !== '' || tee.course_rating_mens !== ''
-                  }
-                  onClear={() => clearGender(index, 'mens')}
-                  onChange={(patch) => updateTee(index, patch)}
-                />
-
-                {tee.slope_mens !== '' &&
-                  tee.course_rating_mens !== '' &&
-                  (tee.slope_ladies === '' ||
-                    tee.course_rating_ladies === '' ||
-                    tee.slope_juniors === '' ||
-                    tee.course_rating_juniors === '') && (
-                    <button
-                      type="button"
-                      onClick={() => copyMensToAllGenders(index)}
-                      className="tap-extend block w-full text-center text-[11px] font-medium text-muted hover:text-text transition-colors py-1.5 [--tap-extend:-8px_0]"
-                    >
-                      {t('copyToAllGendersButton')}
-                    </button>
-                  )}
-
-                {expandedLadies[index] ? (
-                  <GenderRatingBlock
-                    teeIndex={index}
-                    gender="ladies"
-                    label={t('genderLadies')}
-                    clearLabel={t('clearGenderButton')}
-                    parTotalLabel={t('parTotalLabel')}
-                    parTotalSuffix={t('parTotalSuffix')}
-                    slopeLabel={t('slopeLabel')}
-                    crLabel={t('crLabel')}
-                    slopeHint={t('typicalHintLadiesSlope')}
-                    crHint={t('typicalHintLadiesCr')}
-                    slope={tee.slope_ladies}
-                    cr={tee.course_rating_ladies}
-                    parTotal={parTotalLadies}
-                    showParTotal={
-                      tee.slope_ladies !== '' &&
-                      tee.course_rating_ladies !== ''
-                    }
-                    showClear={
-                      tee.slope_ladies !== '' ||
-                      tee.course_rating_ladies !== ''
-                    }
-                    onClear={() => clearGender(index, 'ladies')}
-                    onChange={(patch) => updateTee(index, patch)}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => expandGender(index, 'ladies')}
-                    className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
-                  >
-                    {t('addLadiesRatingButton')}
-                  </button>
-                )}
-
-                {expandedJuniors[index] ? (
-                  <GenderRatingBlock
-                    teeIndex={index}
-                    gender="juniors"
-                    label={t('genderJuniors')}
-                    clearLabel={t('clearGenderButton')}
-                    parTotalLabel={t('parTotalLabel')}
-                    parTotalSuffix={t('parTotalSuffix')}
-                    slopeLabel={t('slopeLabel')}
-                    crLabel={t('crLabel')}
-                    slopeHint={t('typicalHintJuniorsSlope')}
-                    crHint={t('typicalHintJuniorsCr')}
-                    slope={tee.slope_juniors}
-                    cr={tee.course_rating_juniors}
-                    parTotal={parTotalJuniors}
-                    showParTotal={
-                      tee.slope_juniors !== '' &&
-                      tee.course_rating_juniors !== ''
-                    }
-                    showClear={
-                      tee.slope_juniors !== '' ||
-                      tee.course_rating_juniors !== ''
-                    }
-                    onClear={() => clearGender(index, 'juniors')}
-                    onChange={(patch) => updateTee(index, patch)}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => expandGender(index, 'juniors')}
-                    className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
-                  >
-                    {t('addJuniorsRatingButton')}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        {teeBoxes.length < MAX_TEE_BOXES && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={addTee}
-            className="mt-3 w-full text-sm"
-          >
-            {t('addTeeBoxButton')}
-          </Button>
-        )}
-      </section>
+      <TeeTableEditor
+        tees={tees}
+        nine={nine}
+        onTees={setTees}
+        juniorsOpen={juniorsOpen}
+        onJuniorsOpen={setJuniors}
+        lengthOpen={lengthOpen}
+        onLengthOpen={() => setLengthOpen(true)}
+      />
 
       {/* Always in view, just above the bottom nav (59.5 px at 390: 58.5 px
           link plus its 1 px top border; the nav pads the safe area itself).
@@ -825,7 +523,8 @@ export function CourseForm({
           <SaveStatus
             siGaps={siGaps}
             nine={nine}
-            teeIndex={firstTeeProblem}
+            noTees={noTees}
+            teeName={tees.rows[firstTeeProblem]?.name ?? ''}
             teeProblem={teeProblems[firstTeeProblem] ?? null}
           />
         )}
@@ -838,18 +537,21 @@ export function CourseForm({
 
 // What still blocks "Lagre bane" (#2279): one line for the indices (a typed
 // value outside 1–18 first, then duplicates, then the count still missing), one
-// for the first tee box with a rating problem. Wired to the button through
-// aria-describedby; no aria-live, since it changes on every keystroke.
+// for the tees: none picked, or the first with a rating problem, by name
+// (#2486). Wired to the button through aria-describedby; no aria-live, since it
+// changes on every keystroke.
 function SaveStatus({
   siGaps,
   nine,
-  teeIndex,
+  noTees,
+  teeName,
   teeProblem,
 }: {
   siGaps: { missing: number[]; duplicates: number[]; invalid: number[] };
   /** 9-hole mode: positions 10–18 are round 2 of holes 1–9 (#2484). */
   nine: boolean;
-  teeIndex: number;
+  noTees: boolean;
+  teeName: string;
   teeProblem: 'partial' | 'missing' | null;
 }) {
   const t = useTranslations('courseForm.form');
@@ -870,11 +572,12 @@ function SaveStatus({
               : t('siMissingCount', { count: missing.length })}
         </p>
       )}
+      {noTees && <p>{t('teeNoneSelected')}</p>}
       {teeProblem !== null && (
         <p>
           {teeProblem === 'partial'
-            ? t('teeRatingPartial', { number: teeIndex + 1 })
-            : t('teeRatingMissing', { number: teeIndex + 1 })}
+            ? t('teeRatingPartial', { name: teeName })
+            : t('teeRatingMissing', { name: teeName })}
         </p>
       )}
     </div>
@@ -904,100 +607,5 @@ function GenderParToggle({
     >
       {shown ? removeLabel : addLabel}
     </button>
-  );
-}
-
-function GenderRatingBlock({
-  teeIndex,
-  gender,
-  label,
-  clearLabel,
-  parTotalLabel,
-  parTotalSuffix,
-  slopeLabel,
-  crLabel,
-  slopeHint,
-  crHint,
-  slope,
-  cr,
-  parTotal,
-  showParTotal,
-  showClear,
-  onClear,
-  onChange,
-}: {
-  teeIndex: number;
-  gender: 'mens' | 'ladies' | 'juniors';
-  label: string;
-  clearLabel: string;
-  parTotalLabel: string;
-  parTotalSuffix: string;
-  slopeLabel: string;
-  crLabel: string;
-  slopeHint: string;
-  crHint: string;
-  slope: string;
-  cr: string;
-  parTotal: number;
-  showParTotal: boolean;
-  showClear: boolean;
-  onClear: () => void;
-  onChange: (patch: Partial<TeeBoxData>) => void;
-}) {
-  return (
-    <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
-      {/* Legend first, floated — see GenderParBlock (#2240). */}
-      <legend className="float-left px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {label}
-      </legend>
-      {showClear && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="tap-extend float-right text-[11px] font-medium text-muted hover:text-danger transition-colors [--tap-extend:-16px_0_-12px]"
-        >
-          {clearLabel}
-        </button>
-      )}
-      <div className="clear-both grid grid-cols-2 gap-2">
-        <Input
-          id={`tee_${teeIndex}_slope_${gender}`}
-          name={`tee_${teeIndex}_slope_${gender}`}
-          type="number"
-          inputMode="numeric"
-          min={55}
-          max={165}
-          step={1}
-          label={slopeLabel}
-          hint={slopeHint}
-          value={slope}
-          onChange={(e) =>
-            onChange({ [`slope_${gender}`]: e.target.value } as Partial<TeeBoxData>)
-          }
-        />
-        <Input
-          id={`tee_${teeIndex}_cr_${gender}`}
-          name={`tee_${teeIndex}_cr_${gender}`}
-          type="number"
-          inputMode="decimal"
-          min={50}
-          max={90}
-          step={0.1}
-          label={crLabel}
-          hint={crHint}
-          value={cr}
-          onChange={(e) =>
-            onChange({ [`course_rating_${gender}`]: e.target.value } as Partial<TeeBoxData>)
-          }
-        />
-      </div>
-      <p className="font-sans text-[11.5px] tabular-nums text-muted">
-        {parTotalLabel}{' '}
-        <span className="text-text font-medium">
-          {showParTotal ? parTotal : '—'}
-        </span>{' '}
-        <span className="text-muted">{parTotalSuffix}</span>
-      </p>
-    </fieldset>
   );
 }

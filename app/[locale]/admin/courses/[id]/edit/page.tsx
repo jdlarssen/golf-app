@@ -11,6 +11,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
+import { isTeeColor } from '@/lib/courses/teeColors';
 import { updateCourse } from './actions';
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
@@ -256,7 +257,7 @@ async function EditCourseFormBody({
     supabase
       .from('tee_boxes')
       .select(
-        'id, name, length_meters, slope_mens, course_rating_mens, slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors',
+        'id, name, color, length_meters, slope_mens, course_rating_mens, slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors',
       )
       .eq('course_id', courseId)
       .is('archived_at', null)
@@ -302,6 +303,7 @@ async function EditCourseFormBody({
   const initialTees = (teesResult.data ?? []).map((t) => ({
     id: t.id,
     name: t.name,
+    color: isTeeColor(t.color) ? t.color : null,
     length_meters: t.length_meters == null ? '' : String(t.length_meters),
     slope_mens: t.slope_mens == null ? '' : String(t.slope_mens),
     course_rating_mens:

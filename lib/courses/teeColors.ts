@@ -24,3 +24,16 @@ export const TEE_DOT_CLASS: Record<TeeColor, string> = {
   blue: 'bg-tee-blue',
   orange: 'bg-tee-orange',
 };
+
+/**
+ * A colour tee's name (#2486). The course is Norwegian, so the stored name is
+ * the Norwegian word whatever the browser's language; only the chip's label
+ * is translated.
+ */
+export const TEE_COLOR_NAMES: Record<TeeColor, string> = {
+  white: 'Hvit',
+  yellow: 'Gul',
+  red: 'Rød',
+  blue: 'Blå',
+  orange: 'Oransje',
+};

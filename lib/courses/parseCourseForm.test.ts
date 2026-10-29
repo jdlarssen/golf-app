@@ -24,6 +24,25 @@ function parseError(fd: FormData): string | null {
   }
 }
 
+/** The parsed tees, or the failure code thrown. */
+function parseTees(fd: FormData) {
+  return parseCourseHolesAndTees(fd, 6, (code: string): never => {
+    throw new Error(code);
+  }).teeBoxes;
+}
+
+describe('parseCourseHolesAndTees — the tee colour (#2486)', () => {
+  it.each<[string, string | null, string | null]>([
+    ['a palette key', 'yellow', 'yellow'],
+    ['outside the palette', 'purple', null],
+    ['no field', null, null],
+  ])('%s', (_label, raw, expected) => {
+    const fd = buildFormData();
+    if (raw !== null) fd.set('tee_0_color', raw);
+    expect(parseTees(fd)[0].color).toBe(expected);
+  });
+});
+
 describe('parseCourseHolesAndTees — server rule is unchanged (#2279)', () => {
   it('accepts a full valid form', () => {
     expect(parseError(buildFormData())).toBeNull();
