@@ -167,6 +167,9 @@
         "title": "{roundLabel} in {leagueName} is open",
         "detail": "Play it when it suits you. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}."
       },
+      "leagueRoundOpenSim": {
+        "detail": "{courseName}, {teeName} tee. Tap to see what to set in Trackman. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}."
+      },
       "leagueRoundClosing": {
         "title": "{roundLabel} in {leagueName} closes {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}",
         "detail": "You have not played it yet."
@@ -2316,6 +2319,11 @@
         "legend": "Marker",
         "hint": "Pick who in the league approves the card. Your marker gets a notice, and the round counts once the card is approved.",
         "none": "Nobody else in the league can approve the card yet. Ask the organiser to add more players.",
+        "searchLabel": "Search for a marker",
+        "searchPlaceholder": "Search for a player",
+        "noMatch": "No players with that name.",
+        "showAll": "Show all {count}",
+        "showFewer": "Show fewer",
         "unknownPlayer": "Unknown player"
       },
       "unknownCourse": "(unknown course)",
@@ -4973,7 +4981,13 @@
       "formHeading": "Round settings",
       "overridden": "Changed this round",
       "tee": "Tee",
-      "gimmeLocked": "Locked by the putting choice"
+      "gimmeLocked": "Locked by the putting choice",
+      "checklist": {
+        "title": "Set this in Trackman before the first shot",
+        "lead": "Pick the course and tee first, then set the rest.",
+        "course": "Course",
+        "tee": "Tee"
+      }
     },
     "create": {
       "kicker": "Clubhouse",
@@ -5352,10 +5366,16 @@
         "backToLeague": "Back to league",
         "missingSetup": "The round is missing a course or tee — the admin will complete the setup soon.",
         "markerRule": "Choose who you're playing with. You need at least one playing partner (marker rule).",
-        "simulatorRule": "You can play alone. Enter the score from the Trackman screen when you are done.",
+        "simulatorRule": "Choose who is in the simulator with you. You pick your marker when you hand in the round.",
         "noCoPlayers": "No other participants in the league. You need at least one playing partner (marker rule).",
         "flightMax": "At most {max} players in a flight.",
         "coPlayersLegend": "Choose your playing partners",
+        "searchLabel": "Search for a playing partner",
+        "searchPlaceholder": "Search for a player",
+        "noMatch": "No players with that name.",
+        "showAll": "Show all {count}",
+        "showFewer": "Show fewer",
+        "confirmSetup": "I have set the course, tee and settings in Trackman.",
         "startButton": "Start round",
         "startPending": "Starting round …",
         "unknownPlayer": "Unknown player",

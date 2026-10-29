@@ -252,11 +252,24 @@ export function buildNotificationText(
     // recipient's locale and Oslo time: both translators carry the zone.
     case 'league_round_open': {
       const p = payload as NotificationPayload<'league_round_open'>;
+      const title = t('kinds.leagueRoundOpen.title', {
+        roundLabel: p.round_label,
+        leagueName: p.league_name,
+      });
+      // #2666: a simulator league names the course and tee (the payload carries
+      // them only there); without either, the plain text stands.
+      if (p.is_simulator && p.course_name && p.tee_name) {
+        return {
+          title,
+          detail: t('kinds.leagueRoundOpenSim.detail', {
+            courseName: p.course_name,
+            teeName: p.tee_name,
+            closesAt: Date.parse(p.closes_at),
+          }),
+        };
+      }
       return {
-        title: t('kinds.leagueRoundOpen.title', {
-          roundLabel: p.round_label,
-          leagueName: p.league_name,
-        }),
+        title,
         detail: t('kinds.leagueRoundOpen.detail', { closesAt: Date.parse(p.closes_at) }),
       };
     }

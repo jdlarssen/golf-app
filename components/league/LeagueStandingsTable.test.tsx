@@ -28,6 +28,7 @@ const mkRound = (id: string, sequence: number): LeagueRoundView => ({
   inProgressUserIds: [],
   awaitingMarker: [],
   teeName: null,
+  courseName: null,
   simOverride: {},
   simSettings: {},
   overriddenKeys: [],

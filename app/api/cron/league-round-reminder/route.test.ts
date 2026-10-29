@@ -60,7 +60,9 @@ function round(id: string) {
     closes_at: '2026-11-06T22:59:00+00:00',
     opening_notice_sent_at: null,
     closing_reminder_sent_at: null,
-    leagues: { name: 'Vinterligaen', status: 'active' },
+    leagues: { name: 'Vinterligaen', status: 'active', is_simulator: false },
+    courses: { name: 'St Andrews' },
+    tee_boxes: { name: 'Gul' },
   };
 }
 
@@ -115,7 +117,7 @@ describe('POST /api/cron/league-round-reminder — the candidates', () => {
     expect(extra).toEqual([]);
     expect(read!.table).toBe('league_rounds');
     expect(read!.columns).toBe(
-      'id, league_id, label, opens_at, closes_at, opening_notice_sent_at, closing_reminder_sent_at, leagues!inner(name, status)',
+      'id, league_id, label, opens_at, closes_at, opening_notice_sent_at, closing_reminder_sent_at, leagues!inner(name, status, is_simulator), courses!league_rounds_course_id_fkey(name), tee_boxes!league_rounds_tee_box_id_fkey(name)',
     );
     // The same predicates as `dueNotices` and 0218's EXISTS gate. Change one, change all three.
     expect(read!.filters).toEqual([

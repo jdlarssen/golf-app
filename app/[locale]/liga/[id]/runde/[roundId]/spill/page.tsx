@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
@@ -13,7 +14,8 @@ import {
   formatShortOsloDateWithYearLocale,
 } from '@/lib/i18n/format';
 import { RoundStartClient, type RoundCoPlayer } from './RoundStartClient';
-import { RoundSimSettingsCard } from '@/components/league/RoundSimSettingsCard';
+import { RoundSetupChecklist } from '@/components/league/RoundSetupChecklist';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import type { AppLocale } from '@/i18n/routing';
 
 
@@ -71,6 +73,10 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
   if (!isParticipant) redirect({ href: `/liga/${leagueId}`, locale });
 
   const ws = windowStatus(round.opensAt, round.closesAt);
+
+  // #2666: the opening and closing notices of a simulator league open this
+  // page (deeplink.ts), so a visit here clears them like the league page does.
+  after(() => markReadOnVisit({ userId: currentUserId!, surface: 'leagueRoundStart', entityId: leagueId }));
 
   // #2214: one counted flight per player per round. A player who delivered the
   // round or is playing it now is locked (roundPlayerLocks via the snapshot).
@@ -147,10 +153,10 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
       {/* Ready to start */}
       {ws === 'open' && round.courseId && round.teeBoxId && !selfLock && (
         <>
-        {/* #2638: the round's settings above the start (artboard 7b). */}
+        {/* #2666: what to set in Trackman, above the start (artboards 9a/9b). */}
         {league.is_simulator && (
           <div className="mb-4">
-            <RoundSimSettingsCard round={round} locale={locale} defaultOpen />
+            <RoundSetupChecklist round={round} locale={locale} />
           </div>
         )}
         <Card>

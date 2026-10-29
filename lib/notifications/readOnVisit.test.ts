@@ -29,6 +29,7 @@ const SURFACE_ROUTE: Record<VisitSurface, RegExp> = {
   friends: /^\/profile\/venner$/,
   history: /^\/profile\/historikk$/,
   league: /^\/liga\/[^/]+$/,
+  leagueRoundStart: /^\/liga\/[^/]+\/runde\/[^/]+\/spill$/,
   leagueMarker: /^\/liga\/[^/]+\/godkjenn\/[^/]+\/[^/]+$/,
 };
 
@@ -57,6 +58,20 @@ describe('READ_ON_VISIT', () => {
         (s) => READ_ON_VISIT[s].kinds.includes(kind) && SURFACE_ROUTE[s].test(destination),
       );
       expect(clearing, `${kind} → ${destination}`).not.toEqual([]);
+    },
+  );
+
+  // #2666: a simulator league's messages link to the round start page, and the
+  // surface there clears them by the same league_id.
+  it.each(['league_round_open', 'league_round_closing'] as const)(
+    '%s of a simulator league is cleared by the round start page',
+    (kind) => {
+      const payload = { ...testPayloads[kind], is_simulator: true };
+      const destination = notificationDestination({ kind, payload })!;
+      const clearing = surfaces.filter(
+        (s) => READ_ON_VISIT[s].kinds.includes(kind) && SURFACE_ROUTE[s].test(destination),
+      );
+      expect(clearing).toEqual(['leagueRoundStart']);
     },
   );
 
@@ -105,6 +120,7 @@ const CALLERS: Record<
   friends: { file: 'app/[locale]/profile/venner/page.tsx', entity: null },
   history: { file: 'app/[locale]/profile/historikk/page.tsx', entity: null },
   league: { file: 'app/[locale]/liga/[id]/page.tsx', entity: 'leagueId' },
+  leagueRoundStart: { file: 'app/[locale]/liga/[id]/runde/[roundId]/spill/page.tsx', entity: 'leagueId' },
   leagueMarker: { file: 'app/[locale]/liga/[id]/godkjenn/[gameId]/[userId]/page.tsx', entity: 'gameId' },
 };
 

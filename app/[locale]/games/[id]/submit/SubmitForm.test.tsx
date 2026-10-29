@@ -139,4 +139,38 @@ describe('SubmitForm', () => {
     const picked = new FormData(screen.getByTestId('submit-scorecard').closest('form')!);
     expect(picked.get('marker')).toBe('u2');
   });
+
+  // #2666: the marker list is the whole league. Six rows, a search over
+  // everyone, and the pick stays in the form even when the search hides it.
+  it('markørvalget i en lang liga: seks rader, søk, og valget følger skjemaet selv om søket skjuler det', () => {
+    setQueue([]);
+    const options = Array.from({ length: 9 }, (_, i) => ({ userId: `u${i}`, name: `Spiller ${i}` }));
+    render(
+      <SubmitForm submitAction={vi.fn()} missingHoles={0} blockingGameIds={['g1']} markerOptions={options} />,
+    );
+    const rows = () => screen.queryAllByTestId(/^marker-option-/).map((el) => el.getAttribute('data-testid'));
+    expect(rows()).toHaveLength(6);
+
+    fireEvent.click(screen.getByTestId('marker-show-all'));
+    expect(rows()).toHaveLength(9);
+    fireEvent.click(screen.getByText('Spiller 8'));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'spiller 1' } });
+    expect(rows()).toEqual(['marker-option-u1']);
+    expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
+    const form = screen.getByTestId('submit-scorecard').closest('form')!;
+    expect(new FormData(form).get('marker')).toBe('u8');
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'ingen' } });
+    expect(rows()).toEqual([]);
+    expect(screen.getByTestId('marker-no-match')).toBeInTheDocument();
+  });
+
+  it('en kort liga har verken søk eller «Vis alle»', () => {
+    setQueue([]);
+    const options = Array.from({ length: 6 }, (_, i) => ({ userId: `u${i}`, name: `Spiller ${i}` }));
+    render(
+      <SubmitForm submitAction={vi.fn()} missingHoles={0} blockingGameIds={['g1']} markerOptions={options} />,
+    );
+    expect([screen.queryByRole('searchbox'), screen.queryByTestId('marker-show-all')]).toEqual([null, null]);
+  });
 });

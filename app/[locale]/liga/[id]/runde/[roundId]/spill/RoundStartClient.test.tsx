@@ -55,9 +55,11 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
     });
 
     // #2638: in a simulator league the same picker is optional — nobody
-    // ticked, and the submit is enabled (minFlightPlayers(true) = 1).
+    // ticked, and the submit is enabled once the setup is confirmed
+    // (minFlightPlayers(true) = 1; the confirmation is #2666).
     cleanup();
     render(<RoundStartClient roundId="r1" coPlayers={[player('FREE', null)]} isSimulator />);
+    fireEvent.click(screen.getByTestId('liga-round-start-confirm'));
     expect((screen.getByTestId('liga-round-start-submit') as HTMLButtonElement).disabled).toBe(false);
 
     // The orchestrator's review: a flight holds MAX_FLIGHT_PLAYERS, so with
@@ -79,5 +81,76 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
       full: { ticked: ['P1', 'P2', 'P3'], fourth: ['true', 'true', true] },
       afterSwap: ['P2', 'P3', 'P4'],
     });
+  });
+});
+
+// #2666 (artboards 9a/9b): the start is locked until the player confirms the
+// Trackman setup; a regular league has no such box.
+describe('RoundStartClient — Trackman confirmation (#2666)', () => {
+  const submit = () => screen.getByTestId('liga-round-start-submit') as HTMLButtonElement;
+  const confirmBox = () => screen.getByTestId('liga-round-start-confirm').querySelector('input') as HTMLInputElement;
+
+  it('a simulator league locks «Start runden» until the box is ticked, and again when it is cleared', () => {
+    render(<RoundStartClient roundId="r1" coPlayers={[player('FREE', null)]} isSimulator />);
+    const steps = [submit().disabled];
+    fireEvent.click(screen.getByTestId('liga-round-start-confirm'));
+    steps.push(submit().disabled, confirmBox().checked);
+    fireEvent.click(screen.getByTestId('liga-round-start-confirm'));
+    steps.push(submit().disabled, confirmBox().checked);
+    expect(steps).toEqual([true, false, true, true, false]);
+  });
+
+  it('the box does not stand in for the marker rule: a regular league has no box and still needs a co-player', () => {
+    render(<RoundStartClient roundId="r1" coPlayers={[player('FREE', null)]} isSimulator={false} />);
+    expect(screen.queryByTestId('liga-round-start-confirm')).toBeNull();
+    expect(submit().disabled).toBe(true);
+    fireEvent.click(screen.getByTestId('liga-round-start-player-FREE'));
+    expect(submit().disabled).toBe(false);
+  });
+});
+
+describe('RoundStartClient — a long co-player list (#2666)', () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => player(`P${i}`, null));
+  const shown = () =>
+    screen.queryAllByTestId(/^liga-round-start-player-/).map((el) => el.getAttribute('data-testid')!.replace('liga-round-start-player-', ''));
+
+  it('lists six rows with the ones who delivered last, and «Vis alle» opens the rest', () => {
+    render(
+      <RoundStartClient
+        roundId="r1"
+        coPlayers={[player('DONE', 'delivered'), ...many(8)]}
+        isSimulator
+      />,
+    );
+    expect(shown()).toEqual(['P0', 'P1', 'P2', 'P3', 'P4', 'P5']);
+    fireEvent.click(screen.getByTestId('liga-round-start-show-all'));
+    expect(shown()).toEqual(['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'DONE']);
+  });
+
+  it('a search lists every match, finds a locked player, and says so when nobody matches', () => {
+    render(
+      <RoundStartClient
+        roundId="r1"
+        coPlayers={[{ ...player('DONE', 'delivered'), name: 'Sondre' }, ...many(8)]}
+        isSimulator
+      />,
+    );
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'sond' } });
+    expect(shown()).toEqual(['DONE']);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'finnes ikke' } });
+    expect([shown(), screen.getByTestId('liga-round-start-no-match') !== null]).toEqual([[], true]);
+  });
+
+  it('a short list has no search field and no «Vis alle»', () => {
+    render(<RoundStartClient roundId="r1" coPlayers={many(6)} isSimulator />);
+    expect([screen.queryByRole('searchbox'), screen.queryByTestId('liga-round-start-show-all')]).toEqual([null, null]);
+  });
+
+  it('a ticked player stays on screen when the list is cut', () => {
+    render(<RoundStartClient roundId="r1" coPlayers={many(9)} isSimulator />);
+    fireEvent.click(screen.getByTestId('liga-round-start-show-all'));
+    fireEvent.click(screen.getByTestId('liga-round-start-player-P8'));
+    fireEvent.click(screen.getByTestId('liga-round-start-show-all'));
+    expect(shown()).toEqual(['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P8']);
   });
 });

@@ -8,6 +8,8 @@ import { localDb } from '@/lib/sync/db';
 import { isBlockingItem } from '@/lib/sync/queueScope';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { SearchField } from '@/components/ui/SearchField';
+import { PICKER_VISIBLE_ROWS, pickerRows } from '@/lib/league/pickerRows';
 import { TEE_SHOT_SHORT_BOX_ID } from '@/components/games/TeeShotShortBox';
 
 type Props = {
@@ -194,8 +196,11 @@ export function SubmitForm({
 
 /**
  * #2661: one marker from the league, as radio rows in the round start's
- * picker style (`RoundStartClient`). The radios are the form's `marker`
- * field; they stay mounted with the form (#1011).
+ * picker style (`RoundStartClient`). The chosen marker is the form's `marker`
+ * field, in a hidden input that stays mounted with the form (#1011): the radios
+ * come and go with the search and «Vis alle», and carry no name of their own.
+ * #2666: the list is the whole league, so it shows six rows, a search over
+ * everyone and «Vis alle» (`pickerRows`, shared with the round start).
  */
 function MarkerPicker({
   options,
@@ -207,14 +212,32 @@ function MarkerPicker({
   onChange: (userId: string) => void;
 }) {
   const t = useTranslations('game.submit.marker');
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const picker = pickerRows(options, {
+    query,
+    showAll,
+    nameOf: (o) => o.name ?? t('unknownPlayer'),
+    keepIds: new Set(value ? [value] : []),
+  });
   return (
     <fieldset className="mb-5 space-y-2" data-testid="marker-picker">
       <legend className="mb-1 block font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
         {t('legend')}
       </legend>
       <p className="mb-3 text-sm text-muted">{options.length > 0 ? t('hint') : t('none')}</p>
+      <input type="hidden" name="marker" value={value ?? ''} />
+      {options.length > PICKER_VISIBLE_ROWS && (
+        <SearchField
+          id="marker-search"
+          label={t('searchLabel')}
+          placeholder={t('searchPlaceholder')}
+          value={query}
+          onChange={setQuery}
+        />
+      )}
       <ul className="space-y-2">
-        {options.map((o) => {
+        {picker.rows.map((o) => {
           const checked = value === o.userId;
           return (
             <li key={o.userId}>
@@ -229,7 +252,6 @@ function MarkerPicker({
               >
                 <input
                   type="radio"
-                  name="marker"
                   value={o.userId}
                   className="sr-only"
                   checked={checked}
@@ -250,6 +272,22 @@ function MarkerPicker({
           );
         })}
       </ul>
+      {picker.searching && picker.total === 0 && (
+        <p className="font-sans text-sm text-muted" data-testid="marker-no-match">
+          {t('noMatch')}
+        </p>
+      )}
+      {picker.canExpand && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          data-testid="marker-show-all"
+          className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary"
+        >
+          {showAll ? t('showFewer') : t('showAll', { count: picker.total })}
+        </button>
+      )}
     </fieldset>
   );
 }

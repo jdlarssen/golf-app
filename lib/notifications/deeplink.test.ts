@@ -46,6 +46,21 @@ describe('notificationDestination', () => {
     expect(notificationDestination(n('league_round_closing', payload))).toBe(`/liga/${LEAGUE}`);
   });
 
+  it('#2666: in a simulator league both messages open the round start page; an older row keeps the league page', () => {
+    const LEAGUE = '55555555-5555-5555-5555-555555555555';
+    const payload = {
+      league_id: LEAGUE,
+      league_name: 'Vinterligaen',
+      round_id: GAME,
+      round_label: 'Runde 5',
+      closes_at: '2026-11-06T22:59:00.000Z',
+    };
+    const sim = { ...payload, is_simulator: true, course_name: 'St Andrews', tee_name: 'Gul' };
+    expect(notificationDestination(n('league_round_open', sim))).toBe(`/liga/${LEAGUE}/runde/${GAME}/spill`);
+    expect(notificationDestination(n('league_round_closing', sim))).toBe(`/liga/${LEAGUE}/runde/${GAME}/spill`);
+    expect(notificationDestination(n('league_round_open', { ...payload, is_simulator: false }))).toBe(`/liga/${LEAGUE}`);
+  });
+
   it('maps game-anchored kinds to their game route', () => {
     expect(
       notificationDestination(
