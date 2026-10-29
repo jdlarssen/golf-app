@@ -82,3 +82,44 @@ describe('archiveStaleNotifications in slices', () => {
   });
 });
 
+
+// #2481: a deleted game's old notices leave every inbox, read, in one write.
+describe('archiveNotificationsForGame', () => {
+  it('archives and reads every row naming the game, and refreshes each owner’s inbox once', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: [{ user_id: 'u1' }, { user_id: 'u2' }, { user_id: 'u1' }], error: null },
+    ]);
+    const { archiveNotificationsForGame } = await import('./archive');
+
+    expect(await archiveNotificationsForGame('game-1')).toBe(3);
+    const calls = supabaseMock.__fromCalls;
+    const update = calls.find((c) => c.method === 'update')!.args[0] as Record<string, string>;
+    expect(Object.keys(update).sort()).toEqual(['archived_at', 'read_at']);
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'eq', args: ['payload->>game_id', 'game-1'] }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['archived_at', null] }));
+    expect(revalidateTagMock.mock.calls).toEqual([
+      ['notifications-u1', 'max'],
+      ['notifications-u2', 'max'],
+    ]);
+  });
+
+  it('no notices about the game is fine: 0, nothing to refresh', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { archiveNotificationsForGame } = await import('./archive');
+
+    expect(await archiveNotificationsForGame('game-1')).toBe(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('a refused write is logged and never thrown', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: null, error: { message: 'boom' } }]);
+    const { archiveNotificationsForGame } = await import('./archive');
+
+    expect(await archiveNotificationsForGame('game-1')).toBeNull();
+    expect(consoleErr).toHaveBeenCalled();
+    consoleErr.mockRestore();
+  });
+});
