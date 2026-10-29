@@ -16,6 +16,7 @@ import {
   type InboxTextContext,
 } from '@/lib/notifications/inboxSections';
 import type { NotificationPayload } from '@/lib/notifications/types';
+import { isKnownKind } from '@/lib/notifications/readOnVisit';
 import type { NotificationTranslator } from '@/lib/notifications/cardContent';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { InboxRow } from '@/components/notifications/InboxRow';
@@ -83,7 +84,11 @@ export function InboxClient({
   const [markAllPending, startMarkAll] = useTransition();
   const [clearReadPending, startClearRead] = useTransition();
   const [decidePending, startDecide] = useTransition();
-  const [items, setItems] = useState<InboxRowData[]>(initialNotifications);
+  // #2480: a row of a kind this code does not know is left out here, so the
+  // empty state and «Marker alt lest» see what the board shows.
+  const [items, setItems] = useState<InboxRowData[]>(() =>
+    initialNotifications.filter((n) => isKnownKind(n.kind)),
+  );
   const [filter, setFilter] = useState<InboxFilter>('all');
   const [status, setStatus] = useState<Status>(null);
 

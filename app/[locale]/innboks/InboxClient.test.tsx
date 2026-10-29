@@ -162,6 +162,20 @@ describe('InboxClient', () => {
     expect(screen.queryByText(/Avlyst runde/)).not.toBeInTheDocument();
   });
 
+  it('#2480: with only an unknown row the inbox is empty, with no «Marker alt lest»', () => {
+    const unknown = {
+      id: 'x',
+      kind: 'game_cancelled',
+      payload: { game_id: GAME, game_name: 'Avlyst runde' },
+      read_at: null,
+      created_at: '2026-05-24T14:25:00Z',
+    } as unknown as InboxRow;
+    renderInbox([unknown]);
+
+    expect(screen.getByText(/Ingen.*varsler/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('inbox-mark-all')).not.toBeInTheDocument();
+  });
+
   it('tom innboks: tittelen står, uten pille og brikker', () => {
     renderInbox([]);
     expect(screen.getByRole('heading', { level: 1, name: 'Innboks' })).toBeInTheDocument();

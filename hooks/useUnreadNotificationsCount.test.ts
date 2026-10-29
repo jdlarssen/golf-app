@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NOTIFICATION_KINDS } from '@/lib/notifications/types';
+import { QUIET_KINDS } from '@/lib/notifications/readOnVisit';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 // Mock-state må eksistere FØR komponenten importerer browser-klienten.
@@ -133,7 +135,9 @@ describe('useUnreadNotificationsCount', () => {
     // this code does not know, since the inbox does not show it.
     const [column, kinds] = lastIn as [string, string[]];
     expect(column).toBe('kind');
-    expect([kinds.includes('game_moved'), kinds.includes('product_update')]).toEqual([true, false]);
+    expect([...kinds].sort()).toEqual(
+      NOTIFICATION_KINDS.filter((k) => !QUIET_KINDS.includes(k)).sort(),
+    );
   });
 
   // #2093: an event is a signal to count again, never a +1/-1. Realtime can
