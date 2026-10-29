@@ -116,7 +116,9 @@ export async function CancelRoundConfirm({
             maxLength={CANCEL_MESSAGE_MAX}
             rows={3}
             placeholder={t('messagePlaceholder')}
-            className="min-h-[76px] rounded-xl border border-field-border bg-surface px-3 py-2.5 text-[15px] leading-[1.4] text-text placeholder:text-muted"
+            // 98 px: the artboard's 76 px is the content box, inside 10 px
+            // padding and the 1 px outline. No drag handle, as drawn.
+            className="min-h-[98px] resize-none rounded-xl border border-field-border bg-surface px-3 py-2.5 text-[15px] leading-[1.4] text-text placeholder:text-muted"
           />
         </div>
       </div>

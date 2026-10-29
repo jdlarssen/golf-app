@@ -38,12 +38,18 @@ import { HistoryBackLink } from './HistoryBackLink';
  * page (Klubbhuset, Profil) is a root, not a step. An `aria-hidden` box the
  * size of `BackLink` keeps its place, so the kicker and the content below sit
  * exactly where they do on pages with an arrow.
+ *
+ * `kickerOneLine` keeps a long kicker on one line, as the artboards draw
+ * «LØRDAGSRUNDEN · PLANLAGT» (#2481), and cuts it with «…» before it reaches
+ * the back arrow. Off by default: centred at `left-1/2`, the kicker otherwise
+ * wraps once it is wider than half the bar.
  */
 export function TopBar({
   backHref,
   backLabel = 'Tilbake',
   kicker,
   kickerIsPageTitle = false,
+  kickerOneLine = false,
   back = 'link',
   action,
 }: {
@@ -51,6 +57,7 @@ export function TopBar({
   backLabel?: string;
   kicker?: string;
   kickerIsPageTitle?: boolean;
+  kickerOneLine?: boolean;
   back?: 'link' | 'history';
   action?: ReactNode;
 }) {
@@ -65,7 +72,11 @@ export function TopBar({
         <BackLink href={backHref}>{backLabel}</BackLink>
       )}
       {kicker && (
-        <Kicker className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <Kicker
+          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted ${
+            kickerOneLine ? 'max-w-[calc(100%-7rem)] truncate' : ''
+          }`}
+        >
           {kicker}
         </Kicker>
       )}
