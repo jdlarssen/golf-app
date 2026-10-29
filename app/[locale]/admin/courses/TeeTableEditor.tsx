@@ -197,6 +197,7 @@ export function TeeTableEditor({
             <button
               key={color}
               type="button"
+              data-testid={`tee-chip-${color}`}
               aria-pressed={pressed}
               disabled={!pressed && full}
               onClick={() => onTees(toggleColorTee(tees, color))}
@@ -211,6 +212,7 @@ export function TeeTableEditor({
           <button
             key={`custom-${tee.name}`}
             type="button"
+            data-testid="tee-chip-custom"
             aria-pressed
             onClick={() => onTees(removeCustomTee(tees, tee.name))}
             className={CHIP_PRESSED}
@@ -220,6 +222,7 @@ export function TeeTableEditor({
         ))}
         <button
           type="button"
+          data-testid="tee-chip-other"
           aria-expanded={otherOpen}
           disabled={full}
           onClick={() => setOtherOpen((open) => !open)}
@@ -236,6 +239,7 @@ export function TeeTableEditor({
               <span className="sr-only">{t('teeCustomNameLabel')}</span>
               <input
                 type="text"
+                data-testid="tee-custom-name"
                 autoFocus
                 autoComplete="off"
                 value={otherName}
@@ -247,7 +251,7 @@ export function TeeTableEditor({
                 className="h-11 w-full rounded-xl border border-field-border bg-surface px-3.5 text-[14px] text-text placeholder:text-muted/70"
               />
             </label>
-            <button type="button" onClick={addOther} className={CHIP_IDLE}>
+            <button type="button" data-testid="tee-custom-add" onClick={addOther} className={CHIP_IDLE}>
               {t('teeCustomNameAdd')}
             </button>
           </div>
@@ -274,7 +278,9 @@ export function TeeTableEditor({
                 the spacing at the edges taken back by the negative margin;
                 10 px down as padding on the body cells, since Chrome counts
                 vertical spacing twice between thead and tbody. */}
-            <table className="-mx-2 w-[calc(100%+16px)] table-fixed border-separate border-spacing-x-2 border-spacing-y-0">
+            <table
+              data-testid="tee-table"
+              className="-mx-2 w-[calc(100%+16px)] table-fixed border-separate border-spacing-x-2 border-spacing-y-0">
               <caption className="sr-only">{t('teeTableCaption')}</caption>
               <colgroup>
                 <col className="w-[var(--tee-name-w)]" />
@@ -349,6 +355,7 @@ export function TeeTableEditor({
           <div className="mt-3 space-y-3">
             <button
               type="button"
+              data-testid="tee-juniors-toggle"
               onClick={() => onJuniorsOpen(!juniorsOpen)}
               className={DASHED_TOGGLE}
             >
@@ -395,7 +402,12 @@ export function TeeTableEditor({
                 </div>
               </div>
             ) : (
-              <button type="button" onClick={onLengthOpen} className={DASHED_TOGGLE}>
+              <button
+                type="button"
+                data-testid="tee-length-toggle"
+                onClick={onLengthOpen}
+                className={DASHED_TOGGLE}
+              >
                 {t('addLengthCard')}
               </button>
             )}
