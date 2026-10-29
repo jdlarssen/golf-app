@@ -8,7 +8,9 @@ export type FormatChangeType =
   | 'primary'
   // #2337: no longer written; kept so older log rows still render.
   | 'cup_eligible'
-  | 'active';
+  | 'active'
+  // #2347: a move within a step-2 group; before/after carry `position` (1-based).
+  | 'sort_order';
 
 export type FormatAuditEntry = {
   id: string;

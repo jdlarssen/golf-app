@@ -8,6 +8,8 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { recordFormatMappingChange } from '@/lib/formats/audit';
 import { expireFormatMappingCache } from '@/lib/formats/expireFormatMappingCache';
 import type { MappingIntent } from '@/lib/formats/getAllFormatsWithMappings';
+import { compareStep2, moveWithinSection, step2SortOrder } from '@/lib/formats/step2Order';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 
 const REDIRECT_BASE = '/admin/formats';
 
@@ -17,6 +19,29 @@ function isMappingIntent(raw: string): raw is MappingIntent {
 
 function parseNext(raw: string | null): boolean {
   return raw === 'on';
+}
+
+/**
+ * Runs one write and reports whether it reached the row(s) (#704): an error and
+ * a 0-row result both count as a failure, and so does a row count other than
+ * `expected` when it is given. The caller redirects on `false`, outside this
+ * try/catch, so Next's redirect signal is never swallowed.
+ */
+async function wrote(
+  context: string,
+  write: () => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
+  expected?: number,
+): Promise<boolean> {
+  try {
+    const rows = expectAffected(await write(), context);
+    if (expected !== undefined && rows.length !== expected) {
+      throw new Error(`${context}: wrote ${rows.length} rows, expected ${expected}`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`[${context}] write failed`, { error });
+    return false;
+  }
 }
 
 /**
@@ -62,15 +87,15 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
       redirect({ href: `${REDIRECT_BASE}?error=demote_first`, locale });
     }
 
-    const { error } = await adminClient
-      .from('format_intent_mapping')
-      .update({ is_visible: next })
-      .eq('format_slug', slug)
-      .eq('intent', intent);
-    if (error) {
-      console.error('[toggleVisibility] update failed', { slug, intent, error });
-      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-    }
+    const ok = await wrote('toggleVisibility update', () =>
+      adminClient
+        .from('format_intent_mapping')
+        .update({ is_visible: next })
+        .eq('format_slug', slug)
+        .eq('intent', intent)
+        .select('format_slug'),
+    );
+    if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
 
     await recordFormatMappingChange({
       actorId: admin.userId,
@@ -83,19 +108,19 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
     });
   } else {
     // Ingen mapping-rad finnes: insert med next-verdi
-    const { error } = await adminClient
-      .from('format_intent_mapping')
-      .insert({
-        format_slug: slug,
-        intent,
-        is_visible: next,
-        is_primary: false,
-        sort_order: 100,
-      });
-    if (error) {
-      console.error('[toggleVisibility] insert failed', { slug, intent, error });
-      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-    }
+    const ok = await wrote('toggleVisibility insert', () =>
+      adminClient
+        .from('format_intent_mapping')
+        .insert({
+          format_slug: slug,
+          intent,
+          is_visible: next,
+          is_primary: false,
+          sort_order: 100,
+        })
+        .select('format_slug'),
+    );
+    if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
 
     await recordFormatMappingChange({
       actorId: admin.userId,
@@ -165,15 +190,15 @@ export async function togglePrimary(formData: FormData): Promise<void> {
       updates.is_visible = true;
     }
 
-    const { error } = await adminClient
-      .from('format_intent_mapping')
-      .update(updates)
-      .eq('format_slug', slug)
-      .eq('intent', intent);
-    if (error) {
-      console.error('[togglePrimary] update failed', { slug, intent, error });
-      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-    }
+    const ok = await wrote('togglePrimary update', () =>
+      adminClient
+        .from('format_intent_mapping')
+        .update(updates)
+        .eq('format_slug', slug)
+        .eq('intent', intent)
+        .select('format_slug'),
+    );
+    if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
 
     await recordFormatMappingChange({
       actorId: admin.userId,
@@ -186,19 +211,19 @@ export async function togglePrimary(formData: FormData): Promise<void> {
     });
   } else {
     // Ingen rad: insert med is_primary=next (og is_visible=true hvis next='on')
-    const { error } = await adminClient
-      .from('format_intent_mapping')
-      .insert({
-        format_slug: slug,
-        intent,
-        is_visible: next ? true : false,
-        is_primary: next,
-        sort_order: 100,
-      });
-    if (error) {
-      console.error('[togglePrimary] insert failed', { slug, intent, error });
-      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-    }
+    const ok = await wrote('togglePrimary insert', () =>
+      adminClient
+        .from('format_intent_mapping')
+        .insert({
+          format_slug: slug,
+          intent,
+          is_visible: next ? true : false,
+          is_primary: next,
+          sort_order: 100,
+        })
+        .select('format_slug'),
+    );
+    if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
 
     await recordFormatMappingChange({
       actorId: admin.userId,
@@ -241,14 +266,14 @@ export async function toggleActive(formData: FormData): Promise<void> {
     redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
   }
 
-  const { error } = await adminClient
-    .from('formats')
-    .update({ is_active: next })
-    .eq('slug', slug);
-  if (error) {
-    console.error('[toggleActive] update failed', { slug, error });
-    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-  }
+  const ok = await wrote('toggleActive update', () =>
+    adminClient
+      .from('formats')
+      .update({ is_active: next })
+      .eq('slug', slug)
+      .select('slug'),
+  );
+  if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
 
   await recordFormatMappingChange({
     actorId: admin.userId,
@@ -258,6 +283,85 @@ export async function toggleActive(formData: FormData): Promise<void> {
     changeType: 'active',
     before: { is_active: existing.is_active },
     after: { is_active: next },
+  });
+
+  expireFormatMappingCache();
+  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
+}
+
+/**
+ * Moves a format one place up or down within its step-2 group («Vanligst» or
+ * «Flere muligheter») for one intent (#2347). Reads and writes with the
+ * owner's session, so RLS (`format_intent_mapping_admin_update` /
+ * `_admin_insert`, both `is_admin()`) is the authz.
+ *
+ * The whole group is renumbered (i+1)*10 in one upsert, so equal `sort_order`
+ * values are gone after the first move. The app never deletes mapping rows, so
+ * the upsert always takes its conflict branch and only touches `sort_order`.
+ */
+export async function moveFormat(formData: FormData): Promise<void> {
+  const locale = await getLocale();
+  const slug = String(formData.get('format_slug') ?? '');
+  const intentRaw = String(formData.get('intent') ?? '');
+  const direction = String(formData.get('direction') ?? '');
+
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
+  if (!isMappingIntent(intentRaw)) redirect({ href: `${REDIRECT_BASE}?error=bad_intent`, locale });
+  if (direction !== 'up' && direction !== 'down') {
+    redirect({ href: `${REDIRECT_BASE}?error=bad_direction`, locale });
+  }
+  const intent = intentRaw;
+  const dir = direction as 'up' | 'down';
+
+  const supabase = await getServerClient();
+  const admin = await requireAdmin(supabase);
+
+  const { data: rows, error: readError } = await supabase
+    .from('format_intent_mapping')
+    .select('format_slug, is_primary, sort_order, formats!inner(is_active)')
+    .eq('intent', intent)
+    .eq('is_visible', true)
+    .eq('formats.is_active', true);
+  if (readError || !rows) {
+    console.error('[moveFormat] read failed', { slug, intent, error: readError });
+    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
+  }
+
+  const own = rows.find((r) => r.format_slug === slug);
+  if (!own) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
+  const group = rows
+    .filter((r) => r.is_primary === own.is_primary)
+    .map((r) => ({ slug: r.format_slug, is_primary: r.is_primary, sort_order: r.sort_order }))
+    .sort(compareStep2)
+    .map((r) => r.slug);
+
+  const moved = moveWithinSection(group, slug, dir);
+  if (!moved) redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
+
+  const payload = moved.slugs.map((s, i) => ({
+    format_slug: s,
+    intent,
+    sort_order: step2SortOrder(i),
+  }));
+  const ok = await wrote(
+    'moveFormat upsert',
+    () =>
+      supabase
+        .from('format_intent_mapping')
+        .upsert(payload, { onConflict: 'format_slug,intent' })
+        .select('format_slug'),
+    payload.length,
+  );
+  if (!ok) redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
+
+  await recordFormatMappingChange({
+    actorId: admin.userId,
+    actorName: admin.name ?? 'Ukjent admin',
+    formatSlug: slug,
+    intent,
+    changeType: 'sort_order',
+    before: { position: moved.from + 1 },
+    after: { position: moved.to + 1 },
   });
 
   expireFormatMappingCache();
