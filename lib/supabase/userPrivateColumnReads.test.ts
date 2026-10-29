@@ -190,6 +190,11 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending',
   },
+  'lib/notifications/notifyGameMoved.ts': {
+    receivers: ['admin'],
+    reason:
+      '(c) serverside utsending (#2480): navnet i varselet og navnelista på «Flytt runden», maskert adresse når navnet mangler (displayNameForOthers)',
+  },
   'lib/notifications/notifyInvitedToGame.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending: den som inviterer, som avsender',
