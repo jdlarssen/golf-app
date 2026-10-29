@@ -19,8 +19,8 @@ type CountAnswer =
   | { count: number; error: null }
   | { count: null; error: { message: string } };
 let queuedCounts: Promise<CountAnswer>[] = [];
-/** The `.not(...)` filter of the last count query (#2201). */
-let lastNot: unknown[] | null = null;
+/** The `.in(...)` filter of the last count query (#2201, #2480). */
+let lastIn: unknown[] | null = null;
 
 // Spies vi inspiserer på tvers av tester.
 const setAuthSpy = vi.fn();
@@ -73,10 +73,10 @@ vi.mock('@/lib/supabase/client', () => ({
             const answer =
               queuedCounts.shift() ??
               Promise.resolve({ count: mockInitialCount, error: null });
-            // Awaitable as is, or after `.not(...)` (#2201).
+            // Awaitable as is, or after `.in(...)` (#2201, #2480).
             return {
-              not: (...args: unknown[]) => {
-                lastNot = args;
+              in: (...args: unknown[]) => {
+                lastIn = args;
                 return answer;
               },
               then: (
@@ -101,7 +101,7 @@ beforeEach(() => {
   channelStatus = null;
   countFetches = 0;
   queuedCounts = [];
-  lastNot = null;
+  lastIn = null;
   setAuthSpy.mockClear();
   removeChannelSpy.mockClear();
 });
@@ -129,8 +129,11 @@ describe('useUnreadNotificationsCount', () => {
       expect(result.current.loading).toBe(false);
     });
     expect(result.current.count).toBe(3);
-    // #2201: news about Tørny never lights the dot.
-    expect(lastNot).toEqual(['kind', 'in', '(product_update)']);
+    // #2201: news about Tørny never lights the dot. #2480: nor does a kind
+    // this code does not know, since the inbox does not show it.
+    const [column, kinds] = lastIn as [string, string[]];
+    expect(column).toBe('kind');
+    expect([kinds.includes('game_moved'), kinds.includes('product_update')]).toEqual([true, false]);
   });
 
   // #2093: an event is a signal to count again, never a +1/-1. Realtime can

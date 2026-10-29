@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_KINDS, type NotificationKind } from './types';
 import { testPayloads } from './testPayloads';
-import { INBOX_ONLY_KINDS, READ_ON_VISIT, type VisitSurface } from './readOnVisit';
+import { INBOX_ONLY_KINDS, KNOWN_KINDS, READ_ON_VISIT, isKnownKind, type VisitSurface } from './readOnVisit';
 
 /**
  * #2201: what you have seen is read. Every kind is cleared either by the page
@@ -48,6 +48,14 @@ describe('READ_ON_VISIT', () => {
     const missing = NOTIFICATION_KINDS.filter((k) => !covered.has(k));
     expect(missing).toEqual([]);
     expect([...covered].sort()).toEqual([...NOTIFICATION_KINDS].sort());
+  });
+
+  // #2480: the pure list of kinds this code knows (no zod), for the inbox and
+  // the unread dot to skip a kind from a newer build.
+  it('#2480: KNOWN_KINDS is exactly the TypeScript kinds, and nothing else is known', () => {
+    expect([...KNOWN_KINDS].sort()).toEqual([...NOTIFICATION_KINDS].sort());
+    expect(isKnownKind('game_moved')).toBe(true);
+    expect(isKnownKind('game_cancelled_in_a_newer_build')).toBe(false);
   });
 
   it.each(NOTIFICATION_KINDS.filter((k) => destinationOf(k) !== null))(

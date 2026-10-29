@@ -144,6 +144,24 @@ function renderInbox(rows: InboxRow[]) {
 }
 
 describe('InboxClient', () => {
+  // #2480: a row of a kind this code does not know yet (a newer kind written by
+  // a newer build, or a sister branch on staging) is skipped. Before, its
+  // missing text threw and the whole inbox fell to the error screen.
+  it('#2480: a row of an unknown kind is skipped, and the rest of the inbox renders', () => {
+    const unknown = {
+      id: 'x',
+      kind: 'game_cancelled',
+      payload: { game_id: GAME, game_name: 'Avlyst runde' },
+      read_at: null,
+      created_at: '2026-05-24T14:25:00Z',
+    } as unknown as InboxRow;
+    renderInbox([unknown, makeInvite('a')]);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Innboks' })).toBeInTheDocument();
+    expect(screen.getByText('Per inviterte deg')).toBeInTheDocument();
+    expect(screen.queryByText(/Avlyst runde/)).not.toBeInTheDocument();
+  });
+
   it('tom innboks: tittelen står, uten pille og brikker', () => {
     renderInbox([]);
     expect(screen.getByRole('heading', { level: 1, name: 'Innboks' })).toBeInTheDocument();
