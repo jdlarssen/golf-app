@@ -4729,14 +4729,15 @@
     },
     "formats": {
       "kicker": "Format mapping",
-      "title": "Format mapping",
-      "subtitle": "Control which game formats appear in wizard step 2 per occasion.",
+      "title": "Game formats",
+      "subtitle": "This is step 2 as the person setting up a round sees it.",
       "errors": {
         "missing_slug": "Format slug is missing from the request.",
         "bad_intent": "Invalid occasion type.",
         "not_found": "Format not found.",
         "last_primary": "Cannot remove the last primary for this occasion. Activate another format as primary first.",
         "demote_first": "Demote the star first — a primary format must be visible. Uncheck the primary star before hiding the row.",
+        "bad_direction": "A format can only move up or down.",
         "db_error": "Failed to save the change. Please try again in a moment."
       },
       "status": {
@@ -4750,12 +4751,17 @@
         "solo": "Solo"
       },
       "showInactive": "Show inactive",
-      "visibleLabel": "Visible",
-      "primaryLabel": "Primary",
       "visibleAria": "{format} visible for {intent}",
       "primaryAria": "{format} primary for {intent}",
-      "matrixEmpty": "No formats to show.",
-      "togglesHint": "Toggles update immediately. Visible changes take effect the next time the wizard is loaded.",
+      "hiddenHeading": "Hidden for {intent}",
+      "inactiveHeading": "Inactive",
+      "moveUp": "Move {format} up",
+      "moveDown": "Move {format} down",
+      "movedAnnouncement": "{format} is now no. {n} of {total}",
+      "showAll": "Show all {n}",
+      "showFewer": "Show fewer",
+      "footer": "Changes take effect at once.",
+      "auditLink": "Change log",
       "rowStatus": {
         "aktiv": "Active",
         "inaktiv": "Inactive",
@@ -4765,7 +4771,7 @@
       "auditLog": {
         "emptyState": "No changes logged yet.",
         "heading": "Change log (last {n})",
-        "summaryLabel": "View change log ({n} entries)",
+        "summaryLabel": "View the change log ({n, plural, one {# change} other {# changes}})",
         "changeLabels": {
           "visibilityOn": "visible on",
           "visibilityOff": "visible off",
@@ -4774,7 +4780,8 @@
           "cupEligibleOn": "cup-eligible on",
           "cupEligibleOff": "cup-eligible off",
           "activated": "activated",
-          "deactivated": "deactivated"
+          "deactivated": "deactivated",
+          "moved": "moved from position {from} to {to}"
         }
       }
     },
