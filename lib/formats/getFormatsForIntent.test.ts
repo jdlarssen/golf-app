@@ -23,6 +23,7 @@ vi.mock('next/cache', () => ({
 }));
 
 import { getFormatsForIntent } from './getFormatsForIntent';
+import { compareStep2 } from './step2Order';
 
 beforeEach(() => {
   fromMock.mockReset();
@@ -78,6 +79,33 @@ describe('getFormatsForIntent', () => {
     expect(result[2].slug).toBe('singles_matchplay');
     expect(result[2].is_primary).toBe(false);
     expect(fromMock).toHaveBeenCalledWith('format_intent_mapping');
+  });
+
+  it('asks the DB for the order compareStep2 gives, ties on sort_order included (#2347)', async () => {
+    const chain = buildIntentChain({ data: [], error: null });
+    fromMock.mockImplementation(() => chain);
+    await getFormatsForIntent('kompis');
+
+    // The DB sorts; Format-styring sorts with compareStep2. Same keys, same
+    // directions, same order of keys.
+    expect(chain.order.mock.calls).toEqual([
+      ['is_primary', { ascending: false }],
+      ['sort_order', { ascending: true }],
+      ['format_slug', { ascending: true }],
+    ]);
+    const tied = [
+      { slug: 'florida_scramble', is_primary: true, sort_order: 100 },
+      { slug: 'texas_scramble', is_primary: false, sort_order: 30 },
+      { slug: 'ambrose', is_primary: true, sort_order: 100 },
+      { slug: 'wolf', is_primary: true, sort_order: 3 },
+    ];
+    // What those three ORDER BY keys give for the rows above.
+    expect([...tied].sort(compareStep2).map((r) => r.slug)).toEqual([
+      'wolf',
+      'ambrose',
+      'florida_scramble',
+      'texas_scramble',
+    ]);
   });
 
   it('returner tom array når ingen mapping finnes for intent', async () => {
