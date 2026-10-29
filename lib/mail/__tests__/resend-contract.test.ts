@@ -186,6 +186,20 @@ const senders = [
     },
   },
   {
+    name: 'sendGameCancelledNotification',
+    invoke: async () => {
+      const { sendGameCancelledNotification } = await import('../gameCancelledNotification');
+      return sendGameCancelledNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Marte',
+        gameName: 'Lørdagsrunden',
+        teeOffAt: '2026-10-03T07:00:00.000Z',
+        courseName: 'Byneset North',
+        organizerName: 'Jørgen',
+      });
+    },
+  },
+  {
     name: 'sendOrganizerGameNotice',
     invoke: async () => {
       const { sendOrganizerGameNotice } = await import('../organizerGameNotice');
