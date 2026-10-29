@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { getBrowserClient } from '@/lib/supabase/client';
-import { QUIET_KINDS } from '@/lib/notifications/readOnVisit';
+import { KNOWN_KINDS, QUIET_KINDS } from '@/lib/notifications/readOnVisit';
 import {
   onPostgresChange,
   subscribeRealtimeChannel,
 } from '@/lib/sync/realtimeChannel';
+
+/**
+ * The kinds that light the dot: every kind this code knows but the quiet ones
+ * (#2201). #2480: a kind from a newer build is not shown in the inbox, so it
+ * does not light the dot either.
+ */
+const DOT_KINDS = [...KNOWN_KINDS].filter((kind) => !QUIET_KINDS.includes(kind));
 
 type NotificationRowShape = { read_at: string | null };
 
@@ -83,7 +90,7 @@ export function useUnreadNotificationsCount(userId: string | null): {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .is('read_at', null)
-        .not('kind', 'in', `(${QUIET_KINDS.join(',')})`)
+        .in('kind', DOT_KINDS)
         .then(({ count: next, error }: { count: number | null; error: unknown }) => {
           if (!mounted || mySeq <= appliedSeq) return;
           if (error) {

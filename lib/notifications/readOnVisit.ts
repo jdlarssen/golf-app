@@ -108,3 +108,20 @@ export const INBOX_ONLY_KINDS: readonly NotificationKind[] = [
  * `useUnreadNotificationsCount`.
  */
 export const QUIET_KINDS: readonly NotificationKind[] = ['product_update'];
+
+/**
+ * Every kind this code knows (#2480): the kinds of every surface plus the
+ * inbox-only ones, which `readOnVisit.test.ts` holds equal to the TypeScript
+ * union. A row of any other kind comes from a newer build (a new kind is
+ * written before every open tab, app build or sister branch knows it), so the
+ * inbox and the unread dot skip it instead of failing on it. Pure, like the
+ * rest of this module, so the bottom nav and the app can use it without zod.
+ */
+export const KNOWN_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKind>([
+  ...Object.values(READ_ON_VISIT).flatMap((rule) => rule.kinds),
+  ...INBOX_ONLY_KINDS,
+]);
+
+export function isKnownKind(kind: string): kind is NotificationKind {
+  return KNOWN_KINDS.has(kind as NotificationKind);
+}

@@ -13,6 +13,7 @@ import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { buildNotificationText, type NotificationTranslator } from './cardContent';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_EMOJI } from './emoji';
+import { isKnownKind } from './readOnVisit';
 import type { NotificationKind, NotificationPayload } from './types';
 
 /**
@@ -337,12 +338,16 @@ function toEntries(rows: InboxRow[], mode: 'action' | 'rest'): InboxEntry[] {
  * The board. `action` = unread rows with an action key; the rest split on the
  * Oslo calendar day of `created_at`. `friends` keeps friend requests and new
  * friendships in every section; `action` shows only KREVER HANDLING.
+ *
+ * #2480: a row of a kind this code does not know is left off (`isKnownKind`):
+ * it has no text here, and one such row took the whole inbox down. Every
+ * section and the «Krever handling» count go through here.
  */
 export function buildInboxSections(
   rows: InboxRow[],
   opts: { filter: InboxFilter; now: number },
 ): InboxSections {
-  const sorted = newestFirst(rows);
+  const sorted = newestFirst(rows.filter((r) => isKnownKind(r.kind)));
   const visible =
     opts.filter === 'friends' ? sorted.filter((r) => FRIEND_KINDS.has(r.kind)) : sorted;
   const actionRows = visible.filter(

@@ -601,6 +601,17 @@ describe('buildInboxEntryView', () => {
     });
   });
 
+  // #2480: a kind this code does not know (written by a newer build) is left
+  // off the board and out of the «Krever handling» count, never thrown on.
+  it('#2480: skips a row of an unknown kind on the board and in the action count', () => {
+    const unknown = { ...row('invite', { game_id: GAME, game_name: 'X', invited_by_name: 'Per' }), id: 'u1', kind: 'game_cancelled' } as unknown as InboxRow;
+    const known = row('invite', { game_id: GAME, game_name: 'Y', invited_by_name: 'Per' });
+    const s = buildInboxSections([unknown, known], { filter: 'all', now: NOW });
+    const ids = [...s.action, ...s.today, ...s.earlier].flatMap((e) => (e.type === 'single' ? e.rows : e.rows).map((r) => r.id));
+    expect(ids).toEqual([known.id]);
+    expect(countActionRows([unknown, known])).toBe(1);
+  });
+
   // #2480: the row names the game in the title and the new tee-off below it,
   // in Oslo time, like the league deadline. It is news, not a task.
   it('#2480: a moved round shows the new time under the title, in Oslo time', () => {
