@@ -449,7 +449,34 @@ export function buildNotificationText(
               }),
       };
     }
+    case 'game_cancelled': {
+      const p = payload as NotificationPayload<'game_cancelled'>;
+      const organizer = p.organizer_name ?? t('organizerFallback');
+      return {
+        title: t('kinds.gameCancelled.title', { gameName: p.game_name }),
+        // The organiser's own words, verbatim, when they wrote any.
+        detail: p.message
+          ? t('kinds.gameCancelled.detailMessage', { organizer, message: p.message })
+          : gameCancelledLine(p, organizer, t),
+      };
+    }
   }
+}
+
+/**
+ * #2481: «Jørgen har avlyst runden lørdag 3. okt. kl. 09:00» — who cancelled
+ * and when the round was. The catalog formats the date in Oslo time (both
+ * translators carry the zone). The inbox row shows it above the greeting.
+ */
+export function gameCancelledLine(
+  p: NotificationPayload<'game_cancelled'>,
+  organizer: string,
+  t: NotificationTranslator,
+): string {
+  const teeOff = p.tee_off_at ? Date.parse(p.tee_off_at) : Number.NaN;
+  return Number.isNaN(teeOff)
+    ? t('kinds.gameCancelled.detailNoDate', { organizer })
+    : t('kinds.gameCancelled.detail', { organizer, teeOff });
 }
 
 // Maps the payload's snake_case moment kind to its camelCase `inbox` catalog key.

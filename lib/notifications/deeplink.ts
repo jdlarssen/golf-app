@@ -187,5 +187,9 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'payment_reminder'>;
       return `/games/${p.game_id}`;
     }
+    case 'game_cancelled':
+      // #2481: the game is deleted, so there is no page to open. The card
+      // carries the whole message; the push falls back to `/` (`sendPush`).
+      return null;
   }
 }

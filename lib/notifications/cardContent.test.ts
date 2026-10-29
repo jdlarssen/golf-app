@@ -353,3 +353,47 @@ describe('buildNotificationText — a moved round (#2480)', () => {
     expect([text.title.length <= TITLE_MAX, text.detail.length <= BODY_MAX]).toEqual([true, true]);
   });
 });
+
+// #2481: the cancellation notice in both languages, through the real catalog.
+// The push text: the greeting when there is one, else who cancelled and when.
+describe('buildNotificationText — game_cancelled (#2481)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const base = {
+    game_name: 'Lørdagsrunden',
+    tee_off_at: '2026-10-03T07:00:00.000Z',
+    organizer_name: 'Jørgen',
+  };
+
+  it('with a greeting: the organiser’s own words', () => {
+    const payload = { ...base, message: 'Banen er stengt.' } as NotificationPayload;
+    expect(buildNotificationText('game_cancelled', payload, real('no'))).toEqual({
+      title: 'Lørdagsrunden er avlyst',
+      detail: 'Jørgen: «Banen er stengt.»',
+    });
+    expect(buildNotificationText('game_cancelled', payload, real('en'))).toEqual({
+      title: 'Lørdagsrunden has been cancelled',
+      detail: 'Jørgen: “Banen er stengt.”',
+    });
+  });
+
+  it('without a greeting: who cancelled and the round’s day and time in Oslo', () => {
+    expect(buildNotificationText('game_cancelled', base as NotificationPayload, real('no')).detail).toBe(
+      'Jørgen har avlyst runden lørdag 3. okt. kl. 09:00',
+    );
+    expect(buildNotificationText('game_cancelled', base as NotificationPayload, real('en')).detail).toBe(
+      'Jørgen cancelled the round on Saturday, Oct 3 at 09:00',
+    );
+  });
+
+  it('without a date or a name', () => {
+    const payload = { game_name: 'Lørdagsrunden', tee_off_at: null } as NotificationPayload;
+    expect(buildNotificationText('game_cancelled', payload, real('no')).detail).toBe('Arrangøren har avlyst runden');
+    expect(buildNotificationText('game_cancelled', payload, real('en')).detail).toBe('The organizer cancelled the round');
+  });
+});

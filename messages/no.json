@@ -183,6 +183,12 @@
         "detail": "Du mangler {amount} i {gameName}",
         "detailApp": "Du mangler å betale startkontingenten i {gameName}"
       },
+      "gameCancelled": {
+        "title": "{gameName} er avlyst",
+        "detail": "{organizer} har avlyst runden {teeOff, date, ::EEEEdMMM} kl. {teeOff, time, ::HHmm}",
+        "detailNoDate": "{organizer} har avlyst runden",
+        "detailMessage": "{organizer}: «{message}»"
+      },
       "cupFinished": {
         "title": "Cupen er ferdigspilt",
         "detail": "{tournamentName}"

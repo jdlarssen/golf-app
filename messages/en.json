@@ -183,6 +183,12 @@
         "detail": "You owe {amount} for {gameName}",
         "detailApp": "You still owe the entry fee for {gameName}"
       },
+      "gameCancelled": {
+        "title": "{gameName} has been cancelled",
+        "detail": "{organizer} cancelled the round on {teeOff, date, ::EEEEdMMM} at {teeOff, time, ::HHmm}",
+        "detailNoDate": "{organizer} cancelled the round",
+        "detailMessage": "{organizer}: “{message}”"
+      },
       "cupFinished": {
         "title": "The cup has finished",
         "detail": "{tournamentName}"
