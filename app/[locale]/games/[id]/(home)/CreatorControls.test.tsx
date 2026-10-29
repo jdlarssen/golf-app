@@ -21,11 +21,16 @@ describe('CreatorControls', () => {
   ] as const)(
     'status=%s → start button shown: %s, edit link %s, move link %s',
     (status, shown, editHref, moveHref) => {
-      render(<CreatorControls gameId="g1" status={status} />);
+      render(<CreatorControls gameId="g1" status={status} hasTeeOff />);
 
       expect(screen.queryByTestId('start-scheduled-game') !== null).toBe(shown);
       expect(screen.queryByTestId('creator-edit-link')?.getAttribute('href') ?? null).toBe(editHref);
       expect(screen.queryByTestId('creator-move-link')?.getAttribute('href') ?? null).toBe(moveHref);
     },
   );
+
+  it('#2480: a scheduled game without a tee-off has nothing to move, so no move link', () => {
+    render(<CreatorControls gameId="g1" status="scheduled" hasTeeOff={false} />);
+    expect(screen.queryByTestId('creator-move-link')).toBeNull();
+  });
 });

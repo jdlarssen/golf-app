@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { moveGameChoices, movedTeeOffIso } from './moveGameChoices';
+import { isTeeOffMove, moveGameChoices, movedTeeOffIso } from './moveGameChoices';
 
 // #2480: the quick choices on «Flytt runden». Type A: the round's own day,
 // the day after and the same weekday a week later; its own clock time and an
@@ -43,5 +43,17 @@ describe('movedTeeOffIso', () => {
     expect(movedTeeOffIso('24.10.2026', '09:00')).toBeNull();
     expect(movedTeeOffIso('2026-02-30', '09:00')).toBeNull();
     expect(movedTeeOffIso('2026-10-24', '25:00')).toBeNull();
+  });
+});
+
+describe('isTeeOffMove', () => {
+  // One rule for «the round moved» on the page, in «Rediger» and on the server
+  // (trap 4): a stored tee-off and a different new one.
+  it('is a move only when both times exist and differ as instants', () => {
+    expect(isTeeOffMove('2026-10-03T07:00:00.000Z', '2026-10-04T07:00:00.000Z')).toBe(true);
+    expect(isTeeOffMove('2026-10-03T07:00:00+00:00', '2026-10-03T07:00:00.000Z')).toBe(false);
+    expect(isTeeOffMove(null, '2026-10-04T07:00:00.000Z')).toBe(false);
+    expect(isTeeOffMove('2026-10-03T07:00:00.000Z', null)).toBe(false);
+    expect(isTeeOffMove('', 'not a time')).toBe(false);
   });
 });

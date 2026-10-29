@@ -6,7 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
-import { movedTeeOffIso } from '@/lib/games/moveGameChoices';
+import { isTeeOffMove, movedTeeOffIso } from '@/lib/games/moveGameChoices';
 import { expectOne, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
 
@@ -19,7 +19,8 @@ import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
  * `scheduled_tee_off_at` changes, and only while the game is still scheduled:
  * a round that started while the page was open matches no row, writes
  * nothing and lands on «kan ikke redigeres» (trap 2: 0 rows is a refusal, not
- * a success). The same time as before writes nothing and tells nobody.
+ * a success). The same time as before, or a round with no tee-off to move,
+ * writes nothing and tells nobody (`isTeeOffMove`).
  */
 export async function moveGameAction(gameId: string, formData: FormData) {
   const locale = await getLocale();
@@ -45,7 +46,9 @@ export async function moveGameAction(gameId: string, formData: FormData) {
   if (!current || current.status !== 'scheduled') {
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
-  if (current.scheduled_tee_off_at && Date.parse(current.scheduled_tee_off_at) === Date.parse(teeOffAt)) {
+  // The same time, or a round without a tee-off (nothing to move; it gets
+  // its first one in «Rediger»): no write, nobody told.
+  if (!isTeeOffMove(current.scheduled_tee_off_at, teeOffAt)) {
     redirect({ href: detailBase, locale });
   }
 

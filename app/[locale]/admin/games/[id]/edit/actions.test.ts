@@ -824,11 +824,13 @@ describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () 
   // The stored tee-off is the form's FUTURE_TEE_OFF read in Oslo, so a save
   // without a new time keeps the same instant; a day later is a move.
   async function save(opts: {
-    storedTeeOff: string;
+    storedTeeOff: string | null;
     form?: Record<string, string>;
     priorRoster?: number[];
     inserted?: string[];
     storedCourse?: string;
+    /** The roster insert fails and the compensation runs. */
+    insertFails?: boolean;
   }) {
     const { parseOsloDateTimeLocal } = await import('@/lib/games/gamePayload');
     const stored = opts.storedTeeOff === 'same' ? parseOsloDateTimeLocal(FUTURE_TEE_OFF) : opts.storedTeeOff;
@@ -847,6 +849,13 @@ describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () 
       { data: (opts.priorRoster ?? [0, 1, 2, 3, 4, 5, 6, 7]).map((i) => storedBestBallRow(i)), error: null },
       { data: { id: 'game-1' }, error: null }, // games.update
       ...(opts.inserted ? [{ data: opts.inserted.map((user_id) => ({ user_id })), error: null }] : []),
+      ...(opts.insertFails
+        ? [
+            { data: null, error: { message: 'insert boom' } },
+            { data: null, error: null }, // compensation delete
+            { data: null, error: null }, // compensation re-insert
+          ]
+        : []),
     ]);
     signIn('admin-1');
     const { updateScheduledAction } = await import('./actions');
@@ -880,6 +889,17 @@ describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () 
   it('says the course changed when the save changes it too', async () => {
     await save({ storedTeeOff: dayBefore(), form: { notify_moved: '1' }, storedCourse: 'course-0' });
     expect((notifyGameMovedMock.mock.calls[0]?.[0] as { courseChanged: boolean }).courseChanged).toBe(true);
+  });
+
+  it('a scheduled game given its first tee-off tells nobody: there was no old time', async () => {
+    await save({ storedTeeOff: null, form: { notify_moved: '1' } });
+    expect(notifyGameMovedMock).not.toHaveBeenCalled();
+  });
+
+  it('the group is told even when the roster write fails: the new time is already stored', async () => {
+    await save({ storedTeeOff: dayBefore(), form: { notify_moved: '1' }, priorRoster: [0, 1], insertFails: true });
+    expect(lastRedirect()).toContain('error=db_players');
+    expect(notifyGameMovedMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([

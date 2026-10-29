@@ -22,9 +22,12 @@ import { arrangedRoundHref } from '@/lib/games/arrangedGames';
 export function CreatorControls({
   gameId,
   status,
+  hasTeeOff,
 }: {
   gameId: string;
   status: GameStatus;
+  /** #2480: a round without a stored tee-off has nothing to move. */
+  hasTeeOff: boolean;
 }) {
   const t = useTranslations('game.home');
   const tButtons = useTranslations('admin.game.buttons');
@@ -59,9 +62,10 @@ export function CreatorControls({
             confirmText={tButtons('startRoundConfirm')}
           />
         )}
-        {status === 'scheduled' && (
+        {status === 'scheduled' && hasTeeOff && (
           // #2480: a new day or time, and the group told. A draft has nobody
-          // to tell yet, so it moves in «Rediger».
+          // to tell yet, so it moves in «Rediger»; a cup match made without a
+          // tee-off gets its first one there too.
           <SmartLink href={`/games/${gameId}/flytt`} data-testid="creator-move-link" className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">

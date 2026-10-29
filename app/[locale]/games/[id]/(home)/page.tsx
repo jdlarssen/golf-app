@@ -1130,7 +1130,7 @@ export default async function GameHomePage({
         {/* #428: rediger/slett for oppretter, også i venterommet (scheduled). */}
         {isCreator && (
           <div className="mx-4 mt-4">
-            <CreatorControls gameId={id} status={game.status} />
+            <CreatorControls gameId={id} status={game.status} hasTeeOff={game.scheduled_tee_off_at != null} />
           </div>
         )}
 
@@ -1646,7 +1646,7 @@ export default async function GameHomePage({
 
         {/* #428: rediger/slett for oppretter — vises kun ved draft/scheduled
             (CreatorControls self-gater på status). */}
-        {isCreator && <CreatorControls gameId={id} status={game.status} />}
+        {isCreator && <CreatorControls gameId={id} status={game.status} hasTeeOff={game.scheduled_tee_off_at != null} />}
 
         {/* Cup-stilling — for spill som tilhører en cup (#347). Self-gated:
             renderer null for ikke-cup-spill. */}
