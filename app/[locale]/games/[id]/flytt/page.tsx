@@ -100,7 +100,7 @@ export default async function MoveGamePage({
           backHref={ctx.isAdmin ? `/admin/games/${id}` : `/games/${id}`}
           kicker={t('kicker', { name: title, status: tStatus('scheduled') })}
         />
-        <h1 className="-mt-0.5 font-serif text-[26px] font-medium leading-[1.15] text-text">
+        <h1 className="-mt-2.5 font-serif text-[26px] font-medium leading-[1.15] text-text">
           {t('heading')}
         </h1>
         {errorMessage && (
