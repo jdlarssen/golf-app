@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
+import type { RegisterFilter } from '@/lib/admin/playerRegister';
 import { PlayersList } from './_components/PlayersList';
 import { PendingInvitations } from './_components/PendingInvitations';
 import { InviteForm } from './_components/InviteForm';
@@ -18,6 +19,7 @@ type SearchParams = Promise<{
   name?: string | string[];
   error?: string | string[];
   q?: string | string[];
+  vis?: string | string[];
 }>;
 
 const getCounts = cache(async () => {
@@ -74,6 +76,9 @@ export default async function SpillerePage({
     ? t(`success.${status}` as Parameters<typeof t>[0], { email, name })
     : undefined;
   const searchQuery = first(params.q) ?? '';
+  const vis = first(params.vis);
+  const filter: RegisterFilter =
+    vis === 'spilt-i-aar' || vis === 'gjester' ? vis : 'alle';
 
   return (
     <AdminShell>
@@ -81,11 +86,11 @@ export default async function SpillerePage({
 
       <BrassRibbon kicker={t('brassRibbon')} />
 
-      <div className="px-1">
-        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+      <div className="flex items-baseline justify-between gap-3 px-1">
+        <h1 className="font-serif text-[28px] font-medium leading-snug tracking-[-0.015em]">
           {t('heading')}
         </h1>
-        <Suspense fallback={<Skeleton className="h-3 w-64" />}>
+        <Suspense fallback={<Skeleton className="h-3 w-28" />}>
           <CountsLine />
         </Suspense>
       </div>
@@ -101,10 +106,9 @@ export default async function SpillerePage({
         </div>
       )}
 
-      <section className="mt-5">
-        <MiniRibbon>{t('sectionRegistered')}</MiniRibbon>
+      <section className="mt-4">
         <Suspense fallback={<ListSkeleton rows={4} />}>
-          <PlayersList searchQuery={searchQuery} />
+          <PlayersList searchQuery={searchQuery} filter={filter} />
         </Suspense>
       </section>
 
@@ -126,7 +130,7 @@ async function CountsLine() {
   const t = await getTranslations('admin.players');
   const { userCount, pendingCount } = await getCounts();
   return (
-    <p className="font-sans text-[11.5px] tabular-nums text-muted">
+    <p className="shrink-0 font-sans text-[13px] tabular-nums text-muted">
       {t('countRegistered', { count: userCount })}
       {pendingCount > 0 && ` ${t('countPending', { count: pendingCount })}`}
     </p>

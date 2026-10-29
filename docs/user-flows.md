@@ -267,7 +267,7 @@ Publiserer en arrangør som ikke er admin uten å stå på lista selv, lander he
 | Område | Ruter | Notat |
 |---|---|---|
 | Baner | `/admin/courses` (+ `/new`, `/[id]/edit`) | Hull/par/SI/tee-bokser. Tee soft-arkiveres hvis i bruk. **Sletting er inline (ingen confirm-side)** — avvik. |
-| Spillere | `/admin/spillere` (+ `/[id]`, `/[id]/slett`) | Inviter (`sendInvitation` + Resend), resend, **trekk tilbake** (`/invitations/[id]/trekk-tilbake`), rediger, slett (**dedikert side**). |
+| Spillere | `/admin/spillere` (+ `/[id]`, `/[id]/slett`) | Registeret viser runder og siste runde i hver rad, de som spilte sist øverst, og filtrene «Alle», «Spilt i år» og «Gjester» (`?vis=`, `lib/admin/playerRegister.ts`, #2346). Ventende invitasjoner viser hvor langt mottakeren har kommet (Sendt → Ba om kode → Inne). Inviter (`sendInvitation` + Resend, «+ Inviter en spiller» fast nederst), resend, **trekk tilbake** (`/invitations/[id]/trekk-tilbake`), rediger, slett (**dedikert side**). |
 | Cup | `/admin/cup` (+ `/[id]`, `/generer`, `/slett`, `/trekk/[userId]`) | Fler-match-turnering; matcher legges til via wizard cup-link. **Trekk underveis** (#1814, **dedikert side**): flagger spillerens ikke-startede kamper, som halveres (≥ 30 min før tee-off) eller går som walkover til motstanderlaget. Samme side angrer trekket. Spilleren selv går via `/cup/[id]/trekk`. |
 | Formater | `/admin/formats` | Styr format-katalogen som driver wizard-grid-en. |
 | Lanseringer | `/admin/lanseringer` | Produkt-oppdaterings-digest. |

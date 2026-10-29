@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendInvitation } from '../actions';
+import { InviteDock } from './InviteDock';
 
 export async function InviteForm() {
   const t = await getTranslations('admin.players');
@@ -10,7 +11,7 @@ export async function InviteForm() {
   // Open the form automatically when there are no pending invitations — the
   // empty-state copy says «Inviter en spiller nedenfor» and the form should
   // be visible without an extra tap. When the list has entries the form stays
-  // collapsed so the UI focus stays on the pending rows.
+  // hidden behind the pinned button (InviteDock) so the focus stays on the rows.
   const supabase = await getServerClient();
   const { count } = await supabase
     .from('invitations')
@@ -19,13 +20,7 @@ export async function InviteForm() {
   const pendingCount = count ?? 0;
 
   return (
-    <details className="group" open={pendingCount === 0 || undefined}>
-      <summary
-        data-testid="invite-toggle"
-        className="tap-extend cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline [--tap-extend:-13px_0]"
-      >
-        {t('inviteToggle')}
-      </summary>
+    <InviteDock initiallyOpen={pendingCount === 0} buttonLabel={t('inviteToggle')}>
       <div
         className="mt-3 rounded-xl border border-border bg-surface p-4"
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
@@ -63,6 +58,6 @@ export async function InviteForm() {
           </SubmitButton>
         </form>
       </div>
-    </details>
+    </InviteDock>
   );
 }

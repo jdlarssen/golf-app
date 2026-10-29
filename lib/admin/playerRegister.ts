@@ -136,7 +136,7 @@ export function registerMatchesSearch(
   );
 }
 
-export function filterRegister(rows: RegisterRow[], filter: RegisterFilter): RegisterRow[] {
+export function filterRegister<T extends RegisterRow>(rows: T[], filter: RegisterFilter): T[] {
   if (filter === 'spilt-i-aar') return rows.filter((r) => r.playedThisYear);
   if (filter === 'gjester') return rows.filter((r) => r.is_guest);
   return rows;
