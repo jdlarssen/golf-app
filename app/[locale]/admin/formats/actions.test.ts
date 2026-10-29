@@ -31,6 +31,11 @@ vi.mock('@/lib/formats/expireFormatMappingCache', () => ({
   expireFormatMappingCache: () => expireMock(),
 }));
 
+// Success refreshes in place instead of redirecting, so the open tab and the
+// focused arrow survive the server's answer.
+const refreshMock = vi.fn();
+vi.mock('next/cache', () => ({ refresh: () => refreshMock() }));
+
 const redirectMock = makeLocaleRedirectMock();
 vi.mock('@/i18n/navigation', () => ({
   redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
@@ -83,7 +88,8 @@ describe('moveFormat', () => {
 
     expect(
       await run({ format_slug: 'best_ball', intent: 'kompis', direction: 'down' }),
-    ).toBe('/admin/formats?status=updated');
+    ).toBeUndefined();
+    expect(refreshMock).toHaveBeenCalledTimes(1);
 
     expect(upsertCall()?.args).toEqual([
       [
@@ -113,10 +119,11 @@ describe('moveFormat', () => {
 
     expect(
       await run({ format_slug: 'best_ball', intent: 'kompis', direction: 'up' }),
-    ).toBe('/admin/formats?status=noop');
+    ).toBeUndefined();
     expect(upsertCall()).toBeUndefined();
     expect(recordMock).not.toHaveBeenCalled();
     expect(expireMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('is a noop for the only format in its group', async () => {
@@ -124,7 +131,7 @@ describe('moveFormat', () => {
 
     expect(
       await run({ format_slug: 'texas_scramble', intent: 'kompis', direction: 'down' }),
-    ).toBe('/admin/formats?status=noop');
+    ).toBeUndefined();
     expect(upsertCall()).toBeUndefined();
   });
 
@@ -139,6 +146,7 @@ describe('moveFormat', () => {
     ).toBe('/admin/formats?error=db_error');
     expect(recordMock).not.toHaveBeenCalled();
     expect(expireMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('reports db_error when the upsert reaches fewer rows than the group has', async () => {

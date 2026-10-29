@@ -328,6 +328,7 @@ export function FormatsManager({ initialFormats }: Props) {
               {sections.primary.map((f, i) => (
                 <li
                   key={f.slug}
+                  data-format-slug={f.slug}
                   className="flex items-center gap-2 rounded-[14px] border-2 border-primary bg-surface py-1.5 pl-1 pr-1.5"
                 >
                   {arrows(f.slug, i, sections.primary.length)}
@@ -359,6 +360,7 @@ export function FormatsManager({ initialFormats }: Props) {
               {secondaryShown.map((f, i) => (
                 <li
                   key={f.slug}
+                  data-format-slug={f.slug}
                   className={`flex items-center gap-2 py-1 pl-1 pr-1.5 ${
                     i < secondaryShown.length - 1 ? 'border-b border-row-divider-warm' : ''
                   }`}
@@ -400,6 +402,7 @@ export function FormatsManager({ initialFormats }: Props) {
               {sections.hidden.map((f) => (
                 <li
                   key={f.slug}
+                  data-format-slug={f.slug}
                   className="flex items-center gap-2 rounded-[14px] border border-dashed border-otp-divider py-1 pl-3 pr-1.5"
                 >
                   <span className="min-w-0 flex-1 py-3 font-sans text-sm leading-[normal] text-muted">
@@ -420,6 +423,7 @@ export function FormatsManager({ initialFormats }: Props) {
               {sections.inactive.map((f, i) => (
                 <li
                   key={f.slug}
+                  data-format-slug={f.slug}
                   className={`flex min-h-[52px] items-center gap-2 px-3 ${
                     i < sections.inactive.length - 1 ? 'border-b border-border' : ''
                   }`}
