@@ -100,4 +100,11 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
     entry_fee_kr: 200,
     payment_link: null,
   },
+  game_cancelled: {
+    game_name: 'X',
+    tee_off_at: '2026-10-03T07:00:00.000Z',
+    course_name: 'Bane',
+    organizer_name: 'Per',
+    message: 'Banen er stengt.',
+  },
 };

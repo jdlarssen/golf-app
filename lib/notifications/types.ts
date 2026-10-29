@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { IDEA_BUILT_LINK_MAX, IDEA_BUILT_SUMMARY_MAX, isIdeaBuiltLink } from './ideaBuiltInput';
+import { CANCEL_MESSAGE_MAX } from '@/lib/games/gameCancellation';
 
 /**
  * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
@@ -43,7 +44,8 @@ export type NotificationKind =
   | 'auto_start_blocked'
   | 'achievement_unlocked'
   | 'idea_built'
-  | 'payment_reminder';
+  | 'payment_reminder'
+  | 'game_cancelled';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -475,6 +477,24 @@ const paymentReminderSchema = z.object({
   payment_link: z.string().min(1).nullable().optional(),
 });
 
+// game_cancelled (#2481): the organiser cancelled a scheduled round from its
+// delete page («Avlys og si fra»). Fired after the game is deleted, to every
+// player on the list except the one who cancels (`cancellationRecipients`).
+// No game_id: the game is gone when the row is read, so nothing may try to
+// look it up, and the row carries everything the card says. Language-neutral
+// (#583): the date is formatted, and a missing organiser name filled, at
+// render time. `message` is the organiser's own words, rendered verbatim.
+const gameCancelledSchema = z.object({
+  game_name: z.string().min(1),
+  tee_off_at: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)))
+    .nullable(),
+  course_name: z.string().min(1).nullable().optional(),
+  organizer_name: z.string().min(1).nullable().optional(),
+  message: z.string().min(1).max(CANCEL_MESSAGE_MAX).optional(),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -512,6 +532,7 @@ const schemas = {
   achievement_unlocked: achievementUnlockedSchema,
   idea_built: ideaBuiltSchema,
   payment_reminder: paymentReminderSchema,
+  game_cancelled: gameCancelledSchema,
 } as const;
 
 /**

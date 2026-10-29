@@ -232,5 +232,9 @@ describe('notificationDestination', () => {
         n('registration_expired', { game_id: GAME, game_name: 'X' }),
       ),
     ).toBeNull();
+    // game_cancelled (#2481): the game is deleted before the notice is read.
+    expect(
+      notificationDestination(n('game_cancelled', { game_name: 'X', tee_off_at: null })),
+    ).toBeNull();
   });
 });

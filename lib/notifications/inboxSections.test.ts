@@ -123,6 +123,7 @@ describe('inboxActionKey', () => {
     ['game_started', null],
     ['achievement_unlocked', null],
     ['idea_built', null],
+    ['game_cancelled', null],
   ] as const)('%s → %s', (kind, expected) => {
     expect(inboxActionKey({ kind, payload: {} as NotificationPayload })).toBe(expected);
   });
@@ -609,6 +610,42 @@ describe('buildInboxEntryView', () => {
     expect(v.subtitle).toMatch(/^Fullt · /);
     expect(v.subtitleIsFreeText).toBe(true);
     expect(v.destination).toBeNull();
+  });
+
+  // #2481: the round is gone, so nothing to open. Who cancelled and when the
+  // round was, then the greeting in full (it is the reason, never clipped).
+  describe('game_cancelled', () => {
+    const cancelled = (extra: Record<string, unknown> = {}) =>
+      row('game_cancelled', {
+        game_name: 'Lørdagsrunden',
+        tee_off_at: '2026-10-03T07:00:00Z',
+        organizer_name: 'Jørgen Larssen',
+        ...extra,
+      });
+
+    it('names the organiser by first name, the round’s Oslo time, and quotes the greeting', () => {
+      const v = view([cancelled({ message: 'Banen er stengt på grunn av frost.' })], 'today');
+      expect(v.title).toBe('Lørdagsrunden er avlyst');
+      expect(v.subtitle).toMatch(/^Jørgen har avlyst runden lørdag 3\. okt\. kl\. 09:00 · /);
+      expect(v.body).toBe('«Banen er stengt på grunn av frost.»');
+      expect(v.subtitleIsFreeText).toBe(false);
+      expect(v.destination).toBeNull();
+      expect(v.actionKey).toBeNull();
+      expect(v.avatar).toEqual({ kind: 'emoji', emoji: '🚩' });
+    });
+
+    it('without a greeting, a date or a name it still says what happened', () => {
+      const v = view([cancelled({ tee_off_at: null, organizer_name: null })], 'today');
+      expect(v.subtitle).toMatch(/^Arrangøren har avlyst runden · /);
+      expect(v.body).toBeNull();
+    });
+
+    it('in English', () => {
+      const v = view([cancelled({ message: 'The course is closed.' })], 'today', ctx('en'));
+      expect(v.title).toBe('Lørdagsrunden has been cancelled');
+      expect(v.subtitle).toMatch(/^Jørgen cancelled the round on Saturday, Oct 3 at 09:00 · /);
+      expect(v.body).toBe('“The course is closed.”');
+    });
   });
 
   it('product_update keeps its body and its call to action, no arrow target', () => {

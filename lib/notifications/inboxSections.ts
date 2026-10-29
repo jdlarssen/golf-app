@@ -10,7 +10,7 @@ import {
 import { osloParts } from '@/lib/format/teeOff';
 import { nameInitials } from '@/lib/names/initials';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import { buildNotificationText, type NotificationTranslator } from './cardContent';
+import { buildNotificationText, gameCancelledLine, type NotificationTranslator } from './cardContent';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_EMOJI } from './emoji';
 import type { NotificationKind, NotificationPayload } from './types';
@@ -145,6 +145,7 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'game_started':
     case 'achievement_unlocked':
     case 'idea_built':
+    case 'game_cancelled':
       return null;
     default: {
       const unhandled: never = row.kind;
@@ -858,6 +859,20 @@ export function buildInboxEntryView(
         avatar: singleAvatar(row),
         destination,
       };
+    case 'game_cancelled': {
+      // #2481: who cancelled and when the round was, then the organiser's
+      // greeting in full: it is the reason, so it is not clipped.
+      const p = row.payload as NotificationPayload<'game_cancelled'>;
+      const organizer = inboxPerson(p.organizer_name)?.short ?? t('organizerFallback');
+      return {
+        ...base,
+        title: catalogText(row, t).title,
+        subtitle: [gameCancelledLine(p, organizer, t), time].join(SEP),
+        body: p.message ? t('board.quoted', { message: p.message }) : null,
+        avatar: singleAvatar(row),
+        destination,
+      };
+    }
     default:
       return {
         ...base,

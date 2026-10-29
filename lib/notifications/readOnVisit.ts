@@ -97,6 +97,8 @@ export const INBOX_ONLY_KINDS: readonly NotificationKind[] = [
   'registration_expired',
   'idea_built',
   'product_update',
+  // #2481: the game is deleted before the notice is written.
+  'game_cancelled',
 ];
 
 /**

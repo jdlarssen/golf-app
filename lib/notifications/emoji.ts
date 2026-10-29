@@ -57,4 +57,6 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   achievement_unlocked: '🏅',
   idea_built: '💡',
   payment_reminder: '💸',
+  // #2481: the round is off. Not 🚫 (registration_rejected, «du kom ikke med»).
+  game_cancelled: '🚩',
 };
