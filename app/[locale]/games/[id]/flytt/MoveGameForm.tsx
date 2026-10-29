@@ -159,6 +159,7 @@ export function MoveGameForm({
         {canNotify && (
           <FormSection legend={t('noticeLegend')} variant="list">
             <SwitchRow
+              compact
               checked={notify}
               onChange={(e) => setNotify(e.target.checked)}
               title={t('notifyTitle')}

@@ -73,6 +73,8 @@ export function Switch({
  *
  * 44 × 26 px track: --border off, --primary on; a 20 px --surface knob 3 px
  * from the edge.
+ *
+ * `compact`: the row is at least 60 px, as «Flytt runden» draws it (#2480).
  */
 export function SwitchRow({
   title,
@@ -82,6 +84,7 @@ export function SwitchRow({
   disabled,
   name,
   value,
+  compact = false,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -91,11 +94,12 @@ export function SwitchRow({
   /** Left out when a hidden mirror carries the value instead. */
   name?: string;
   value?: string;
+  compact?: boolean;
 }) {
   const titleId = useId();
   const descriptionId = useId();
   return (
-    <label className="flex min-h-[68px] cursor-pointer items-center gap-3 px-3.5 py-2.5 has-[:disabled]:cursor-not-allowed">
+    <label className={`flex ${compact ? 'min-h-[60px]' : 'min-h-[68px]'} cursor-pointer items-center gap-3 px-3.5 py-2.5 has-[:disabled]:cursor-not-allowed`}>
       <span className="min-w-0 flex-1">
         <span id={titleId} className="block font-sans text-[15px] font-semibold leading-[normal] text-text">
           {title}
