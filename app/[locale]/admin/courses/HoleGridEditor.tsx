@@ -66,25 +66,39 @@ function systemArrows(text: string) {
 
 const ROW_LABEL = 'py-0 pr-0 pl-1 text-left text-[9px] font-semibold text-muted';
 
+// 9-hole mode (#2484): the artboard's 52 px label column, so «Indeks 1.
+// runde» breaks onto two lines instead of squeezing the cells.
+const LABEL_COLUMN = { eighteen: 'w-[34px]', nine: 'w-[52px]' } as const;
+
 /**
  * «Fyll ut banekortet» (issue 2278): the 18 holes as the club's scorecard, out and
  * in nines in one card. A tap on a par cycles 3 → 4 → 5 → 3; the index row is
  * small number fields that show what is missing or doubled. The values and
  * the save rule stay in CourseForm; this only draws them.
+ *
+ * A 9-hole course played twice (`mode="nine"`, #2484) shows holes 1–9 once with
+ * two index rows: round 1 is holes 1–9's index, round 2 the index of 10–18
+ * (CourseForm keeps their par equal to 1–9). Only holes 1–9 are posted, with
+ * round 2 as `hole_n_si2`.
  */
 export function HoleGridEditor({
   holes,
+  mode = 'eighteen',
   showLadies,
   showJuniors,
   parTotal,
+  parNine = 0,
   onPar,
   onSi,
   gaps,
 }: {
   holes: HoleData[];
+  mode?: 'eighteen' | 'nine';
   showLadies: boolean;
   showJuniors: boolean;
   parTotal: number;
+  /** The men's par of holes 1–9, for the 9-hole card's «Par 36 · 72». */
+  parNine?: number;
   onPar: (index: number, gender: Gender, par: 3 | 4 | 5) => void;
   onSi: (index: number, value: string) => void;
   gaps: { missing: number[]; duplicates: number[]; invalid: number[] };
@@ -134,16 +148,72 @@ export function HoleGridEditor({
               tone: 'warning' as const,
             };
 
-  function half(nine: IndexedHole[]) {
+  function indexRow(
+    label: string,
+    cells: IndexedHole[],
+    round: 1 | 2,
+  ) {
+    return (
+      <tr className="h-[34px]">
+        <th scope="row" className={ROW_LABEL}>
+          {label}
+        </th>
+        {cells.map((h) => {
+          const state = strokeIndexCellState(h.stroke_index, gaps.duplicates);
+          // Round 2 holds holes 10–18; the card names them by the hole played.
+          const number = round === 2 ? h.hole_number - 9 : h.hole_number;
+          return (
+            <td key={h.hole_number} className="p-0">
+              <label className="relative flex h-[34px] items-center justify-center">
+                <span className="sr-only">
+                  {round === 2
+                    ? t('indexCellLabelRound2', { number })
+                    : t('indexCellLabel', { number })}
+                </span>
+                <span
+                  aria-hidden
+                  className={`${INDEX_FRAME} ${INDEX_STATE[state].frame}`}
+                />
+                <input
+                  name={round === 2 ? `hole_${number}_si2` : `hole_${number}_si`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  autoComplete="off"
+                  placeholder="?"
+                  required
+                  value={h.stroke_index}
+                  aria-invalid={state === 'duplicate' || state === 'invalid' || undefined}
+                  // Spaces never reach the field: the rule trims them, and
+                  // `pattern` would not, so the two read alike.
+                  onChange={(e) => onSi(h.index, e.target.value.replace(/\s/g, ''))}
+                  onFocus={() => setLastTapped(null)}
+                  className={`peer ${INDEX_FIELD} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
+                />
+                <span aria-hidden className={`${INDEX_VALUE} ${INDEX_STATE[state].text}`}>
+                  {h.stroke_index === '' ? '?' : h.stroke_index}
+                </span>
+              </label>
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
+
+  function half(nine: IndexedHole[], secondRound?: IndexedHole[]) {
     if (nine.length === 0) return null;
     const from = nine[0].hole_number;
     const to = nine[nine.length - 1].hole_number;
     return (
       <table className="w-full table-fixed border-collapse text-[12px]">
-        <caption className="sr-only">{t('gridCaption', { from, to })}</caption>
+        <caption className="sr-only">
+          {secondRound ? t('gridCaptionNine') : t('gridCaption', { from, to })}
+        </caption>
         <thead>
           <tr className="text-[10px] text-muted">
-            <th scope="col" className={`w-[34px] ${ROW_LABEL}`}>
+            <th scope="col" className={`${LABEL_COLUMN[mode]} ${ROW_LABEL}`}>
               {t('gridHole')}
             </th>
             {nine.map((h) => (
@@ -198,45 +268,14 @@ export function HoleGridEditor({
               })}
             </tr>
           ))}
-          <tr className="h-[34px]">
-            <th scope="row" className={ROW_LABEL}>
-              {t('gridIndex')}
-            </th>
-            {nine.map((h) => {
-              const state = strokeIndexCellState(h.stroke_index, gaps.duplicates);
-              return (
-                <td key={h.hole_number} className="p-0">
-                  <label className="relative flex h-[34px] items-center justify-center">
-                    <span className="sr-only">{t('indexCellLabel', { number: h.hole_number })}</span>
-                    <span
-                      aria-hidden
-                      className={`${INDEX_FRAME} ${INDEX_STATE[state].frame}`}
-                    />
-                    <input
-                      name={`hole_${h.hole_number}_si`}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={2}
-                      autoComplete="off"
-                      placeholder="?"
-                      required
-                      value={h.stroke_index}
-                      aria-invalid={state === 'duplicate' || state === 'invalid' || undefined}
-                      // Spaces never reach the field: the rule trims them, and
-                      // `pattern` would not, so the two read alike.
-                      onChange={(e) => onSi(h.index, e.target.value.replace(/\s/g, ''))}
-                      onFocus={() => setLastTapped(null)}
-                      className={`peer ${INDEX_FIELD} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
-                    />
-                    <span aria-hidden className={`${INDEX_VALUE} ${INDEX_STATE[state].text}`}>
-                      {h.stroke_index === '' ? '?' : h.stroke_index}
-                    </span>
-                  </label>
-                </td>
-              );
-            })}
-          </tr>
+          {secondRound ? (
+            <>
+              {indexRow(t('gridIndexRound1'), nine, 1)}
+              {indexRow(t('gridIndexRound2'), secondRound, 2)}
+            </>
+          ) : (
+            indexRow(t('gridIndex'), nine, 1)
+          )}
         </tbody>
       </table>
     );
@@ -246,11 +285,21 @@ export function HoleGridEditor({
     <div className="flex flex-col gap-1.5 rounded-[14px] border border-border bg-surface px-2 py-2.5 leading-[normal]">
       <div className="flex justify-between px-1 text-[12px] text-muted">
         <span>{systemArrows(t('parTapHint'))}</span>
-        <span className="font-semibold text-text">{t('parTotalShort', { total: parTotal })}</span>
+        <span className="font-semibold text-text">
+          {mode === 'nine'
+            ? t('parTotalNine', { nine: parNine, total: parTotal })
+            : t('parTotalShort', { total: parTotal })}
+        </span>
       </div>
-      {half(out)}
-      <div className="mx-1 h-px bg-row-divider-warm" />
-      {half(back)}
+      {mode === 'nine' ? (
+        half(out, back)
+      ) : (
+        <>
+          {half(out)}
+          <div className="mx-1 h-px bg-row-divider-warm" />
+          {half(back)}
+        </>
+      )}
       {status && (
         <p
           className={`px-1 text-[12px] ${

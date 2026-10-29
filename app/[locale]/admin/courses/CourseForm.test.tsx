@@ -1249,3 +1249,192 @@ describe('CourseForm — «Finnes banen alt?» (#2485)', () => {
     expect(screen.queryByText('Finnes banen alt?')).not.toBeInTheDocument();
   });
 });
+
+describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
+  const NINE_R1 = [7, 3, 17, 1, 11, 5, 15, 9, 13];
+  const NINE_R2 = [8, 4, 18, 2, 12, 6, 16, 10, 14];
+
+  function formData(container: HTMLElement) {
+    return new FormData(container.querySelector('form')!);
+  }
+
+  function chooseNine() {
+    fireEvent.click(screen.getByRole('radio', { name: '9 hull, spilles to ganger' }));
+  }
+
+  function fillNine(container: HTMLElement, r1 = NINE_R1, r2 = NINE_R2) {
+    r1.forEach((si, i) => setField(container, `hole_${i + 1}_si`, String(si)));
+    r2.forEach((si, i) => setField(container, `hole_${i + 1}_si2`, String(si)));
+  }
+
+  const saveButton = () => screen.getByRole('button', { name: 'Lagre' });
+
+  it('spør «Hvor mange hull?» med 18 hull valgt på ny bane', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    const group = screen.getByRole('radiogroup', { name: 'Hvor mange hull?' });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios).toHaveLength(2);
+    expect(screen.getByRole('radio', { name: '18 hull' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '9 hull, spilles to ganger' })).not.toBeChecked();
+    expect(formData(container).get('hole_count')).toBe('18');
+    expect(container.querySelector('input[name="hole_1_si2"]')).toBeNull();
+    expect(container.querySelector('input[name="hole_18_si"]')).not.toBeNull();
+  });
+
+  it('viser hull 1–9 i én tabell med to indeksrader ved 9 hull', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    chooseNine();
+
+    expect(container.querySelectorAll('table')).toHaveLength(1);
+    expect(screen.getByRole('table', { name: 'Hull 1–9' })).toBeTruthy();
+    expect(screen.getByRole('rowheader', { name: 'Indeks 1. runde' })).toBeTruthy();
+    expect(screen.getByRole('rowheader', { name: 'Indeks 2. runde' })).toBeTruthy();
+    expect(screen.getByText('Par 36 · 72 for 18 hull')).toBeTruthy();
+    expect(screen.getByLabelText(/^Indeks for hull 3, 2\. runde/)).toBeTruthy();
+
+    const fd = formData(container);
+    expect(fd.get('hole_count')).toBe('9');
+    for (let n = 1; n <= 9; n++) {
+      expect(fd.has(`hole_${n}_si`)).toBe(true);
+      expect(fd.has(`hole_${n}_si2`)).toBe(true);
+      expect(fd.get(`hole_${n}_par_mens`)).toBe('4');
+      expect(fd.has(`hole_${n}_par_ladies`)).toBe(true);
+    }
+    expect(fd.has('hole_10_si')).toBe(false);
+    expect(fd.has('hole_10_par_mens')).toBe(false);
+    expect(fd.has('hole_10_par_ladies')).toBe(false);
+  });
+
+  it('holder «Lagre» grå til hvert tall 1–18 står én gang i de to radene', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    chooseNine();
+    fillMensRating(container);
+
+    fillNine(container, NINE_R1, NINE_R2.map((v, i) => (i === 0 ? 7 : v)));
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText('Indeks 7 er brukt mer enn én gang')).toBeTruthy();
+    // The duplicate is marked in both rows.
+    expect(screen.getByLabelText(/^Indeks for hull 1(?!,)/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Indeks for hull 1, 2\. runde/)).toHaveAttribute('aria-invalid', 'true');
+
+    setField(container, 'hole_1_si2', '8');
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('teller par for 18 hull: et par-trykk på hull 3 gir «Par 37 · 74»', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    chooseNine();
+
+    fireEvent.click(parCell(3, 4));
+    expect(screen.getByText('Par 37 · 74 for 18 hull')).toBeTruthy();
+  });
+
+  it('viser «Fordel» bare når rad 1 har 1–9 og rad 2 er tom, og fyller oddetall og partall', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    chooseNine();
+    fillMensRating(container);
+    const split = () => screen.queryByRole('button', { name: 'Fordel: oddetall 1. runde, partall 2. runde' });
+
+    expect(split()).toBeNull();
+    const single = [7, 3, 9, 1, 5, 2, 8, 4, 6];
+    single.forEach((si, i) => setField(container, `hole_${i + 1}_si`, String(si)));
+    expect(split()).not.toBeNull();
+    expect(saveButton()).toBeDisabled();
+
+    fireEvent.click(split()!);
+
+    const fd = formData(container);
+    single.forEach((k, i) => {
+      expect(fd.get(`hole_${i + 1}_si`)).toBe(String(2 * k - 1));
+      expect(fd.get(`hole_${i + 1}_si2`)).toBe(String(2 * k));
+    });
+    expect(screen.getByText('Fordelt. Rett tallene hvis scorekortet sier noe annet.')).toBeTruthy();
+    expect(split()).toBeNull();
+    expect(saveButton()).toBeEnabled();
+
+    // The fields stay editable, and the line goes once one changes.
+    setField(container, 'hole_1_si2', '13');
+    expect(screen.queryByText('Fordelt. Rett tallene hvis scorekortet sier noe annet.')).toBeNull();
+  });
+
+  it('beholder par og indekser ved bytte fra 18 til 9 hull på en ubrukt bane', () => {
+    const holes = makeHoles([4, 4, 5, 3, 4, 4, 3, 5, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3]);
+    const { container } = render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{ name: 'Bane', holes, teeBoxes: [] }}
+      />,
+    );
+    chooseNine();
+
+    const fd = formData(container);
+    expect(fd.get('hole_3_par_mens')).toBe('5');
+    expect(fd.get('hole_3_si')).toBe('3');
+    expect(fd.get('hole_3_si2')).toBe('12');
+    expect(screen.getByText('Par 36 · 72 for 18 hull')).toBeTruthy();
+
+    // And back: holes 10–18 are their own again, with the par of 1–9.
+    fireEvent.click(screen.getByRole('radio', { name: '18 hull' }));
+    const back = formData(container);
+    expect(back.get('hole_count')).toBe('18');
+    expect(back.get('hole_12_par_mens')).toBe('5');
+    expect(back.get('hole_12_si')).toBe('12');
+  });
+
+  it('åpner en lagret 9-hullsbane i 9-hullsmodus med rad 2 fra hull 10–18', () => {
+    const pars = [4, 4, 5, 3, 4, 4, 3, 5, 4];
+    const holes: HoleData[] = [...NINE_R1, ...NINE_R2].map((si, i) => ({
+      hole_number: i + 1,
+      par_mens: String(pars[i % 9]),
+      par_ladies: String(pars[i % 9]),
+      par_juniors: String(pars[i % 9]),
+      stroke_index: String(si),
+    }));
+    const { container } = render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{ name: 'Ni hull', nineHoles: true, holes, teeBoxes: [] }}
+      />,
+    );
+
+    expect(screen.getByRole('radio', { name: '9 hull, spilles to ganger' })).toBeChecked();
+    const fd = formData(container);
+    expect(fd.get('hole_count')).toBe('9');
+    expect(fd.get('hole_3_si')).toBe('17');
+    expect(fd.get('hole_3_si2')).toBe('18');
+    expect(screen.getByText('Slope, CR og lengde gjelder 18 hull, altså to runder. Står det bare 9-hullstall på scorekortet, ganger du CR og lengden med to. Slope er den samme.')).toBeTruthy();
+  });
+
+  it('låser antall hull når banen er brukt i en runde', () => {
+    const { container } = render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        usedInGamesCount={2}
+        initialData={{ name: 'Ni hull', nineHoles: true, holes: makeHoles(Array(18).fill(4)), teeBoxes: [] }}
+      />,
+    );
+
+    expect(screen.getByRole('radio', { name: '18 hull' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: '9 hull, spilles to ganger' })).toBeDisabled();
+    expect(screen.getByText('Antall hull er låst fordi banen er brukt i en runde.')).toBeTruthy();
+    // The hidden field still sends the choice, so a save keeps the course a 9-hole one.
+    expect(formData(container).get('hole_count')).toBe('9');
+  });
+
+  it('lar antall hull stå åpent på en ubrukt bane', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        usedInGamesCount={0}
+        initialData={{ name: 'Bane', holes: makeHoles(Array(18).fill(4)), teeBoxes: [] }}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: '9 hull, spilles to ganger' })).toBeEnabled();
+    expect(screen.queryByText('Antall hull er låst fordi banen er brukt i en runde.')).toBeNull();
+  });
+});

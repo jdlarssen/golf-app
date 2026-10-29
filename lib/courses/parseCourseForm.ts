@@ -54,6 +54,28 @@ export type ParsedCourseForm = {
   teeBoxes: ParsedTeeBox[];
 };
 
+/** `hole_count`: missing means 18, so older payloads read as before (#2484). */
+function readNineHoles(formData: FormData, fail: (code: string) => never): boolean {
+  const holeCount = String(formData.get('hole_count') ?? '18');
+  if (holeCount !== '9' && holeCount !== '18') {
+    fail('bad_hole_count');
+  }
+  return holeCount === '9';
+}
+
+/** The second round's indices of a 9-hole course, checked like the first row's. */
+function readSecondRound(formData: FormData, fail: (code: string) => never): number[] {
+  const secondRound: number[] = [];
+  for (let i = 1; i <= 9; i++) {
+    const si = Number(formData.get(`hole_${i}_si2`));
+    if (!isValidStrokeIndex(si)) {
+      fail('bad_si');
+    }
+    secondRound.push(si);
+  }
+  return secondRound;
+}
+
 export function parseCourseHolesAndTees(
   formData: FormData,
   maxTeeBoxes: number,
@@ -64,12 +86,7 @@ export function parseCourseHolesAndTees(
     fail('name_required');
   }
 
-  // Missing means 18, so older payloads and callers read as before.
-  const holeCount = String(formData.get('hole_count') ?? '18');
-  if (holeCount !== '9' && holeCount !== '18') {
-    fail('bad_hole_count');
-  }
-  const nineHoles = holeCount === '9';
+  const nineHoles = readNineHoles(formData, fail);
 
   // Parse the typed holes: 1–18, or 1–9 for a 9-hole course.
   const typed: ParsedHole[] = [];
@@ -106,19 +123,9 @@ export function parseCourseHolesAndTees(
     });
   }
 
-  // The second round's indices, read and checked like the first row's.
-  let holes = typed;
-  if (nineHoles) {
-    const secondRound: number[] = [];
-    for (let i = 1; i <= 9; i++) {
-      const si = Number(formData.get(`hole_${i}_si2`));
-      if (!isValidStrokeIndex(si)) {
-        fail('bad_si');
-      }
-      secondRound.push(si);
-    }
-    holes = expandNineHoles(typed, secondRound);
-  }
+  const holes = nineHoles
+    ? expandNineHoles(typed, readSecondRound(formData, fail))
+    : typed;
 
   // SIs must be a permutation of 1..18 — the schema enforces uniqueness per
   // course but we'd rather show a friendly error than surface a DB constraint.

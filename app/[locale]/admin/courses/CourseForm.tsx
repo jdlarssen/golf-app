@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePayload';
+import {
+  canSplitSingleIndices,
+  expandNineHoles,
+  foldToNine,
+  splitSingleIndices,
+} from '@/lib/courses/nineHoles';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { formatListLocale } from '@/lib/i18n/format';
 import type { SimilarCourseTarget } from '@/lib/courses/similarCoursesPanel';
 import type { AppLocale } from '@/i18n/routing';
@@ -41,6 +48,8 @@ export type TeeBoxData = {
 
 export type CourseFormInitialData = {
   name: string;
+  /** A 9-hole course played twice (#2484); `holes` still holds all 18. */
+  nineHoles?: boolean;
   holes: HoleData[];
   teeBoxes: TeeBoxData[];
 };
@@ -57,6 +66,10 @@ type Props = {
   // mid-runde-scoring. Default 0 så create-flyten og andre kall uten denne
   // prop-en aldri trigger advarselen. Se issue #237.
   affectedGamesCount?: number;
+  // Rounds of any status on the course (#2484). Above 0 the hole count is
+  // locked: switching would rewrite par 10–18 under a played round, and
+  // update_course_with_layout refuses it anyway.
+  usedInGamesCount?: number;
   // Optional extra footer (e.g. a delete button on the edit page).
   footer?: React.ReactNode;
   // Where createCourse should bounce validation errors / land on success.
@@ -145,6 +158,15 @@ const SAVE_BAR_TONE = {
 
 // Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
 // avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
+// In 9-hole mode holes 10–18 are 1–9 again with the second round's index
+// (#2484): folding and expanding copies the par of 1–9 onto 10–18 and keeps
+// every index where it is. A course without 18 holes is left as it is.
+function mirrorNine(holes: HoleData[]): HoleData[] {
+  if (holes.length !== 18) return holes;
+  const { holes: nine, secondRound } = foldToNine(holes);
+  return expandNineHoles(nine, secondRound);
+}
+
 function hasGenderParOverride(
   holes: HoleData[],
   gender: 'ladies' | 'juniors',
@@ -158,6 +180,7 @@ export function CourseForm({
   submitLabel,
   initialData,
   affectedGamesCount = 0,
+  usedInGamesCount = 0,
   footer,
   redirectBase,
   successRedirect,
@@ -174,6 +197,13 @@ export function CourseForm({
   const [holes, setHoles] = useState<HoleData[]>(
     initialData?.holes ?? DEFAULT_HOLES,
   );
+  const [holeCount, setHoleCount] = useState<'18' | '9'>(
+    initialData?.nineHoles ? '9' : '18',
+  );
+  const nine = holeCount === '9';
+  const holeCountLocked = usedInGamesCount > 0;
+  // «Fordelt …» stays under the card until an index changes.
+  const [splitDone, setSplitDone] = useState(false);
   const initialTees =
     initialData?.teeBoxes && initialData.teeBoxes.length > 0
       ? initialData.teeBoxes
@@ -204,6 +234,7 @@ export function CourseForm({
   );
 
   const parTotalMens = useMemo(() => sumHolePars(holes, 'mens'), [holes]);
+  const parNineMens = useMemo(() => sumHolePars(holes.slice(0, 9), 'mens'), [holes]);
   const parTotalLadies = useMemo(() => sumHolePars(holes, 'ladies'), [holes]);
   const parTotalJuniors = useMemo(
     () => sumHolePars(holes, 'juniors'),
@@ -213,7 +244,8 @@ export function CourseForm({
   // "Lagre bane" stays disabled until the indices and tee ratings would pass
   // the server (#2279) — a server bounce reloads an empty form, so 18 typed
   // indices would be lost. A duplicate always leaves a number missing, so
-  // `missing` alone gates the indices.
+  // `missing` alone gates the indices. In 9-hole mode holes 10–18 hold the
+  // second round, so the 18 values are the server's expanded ones (#2484).
   const siGaps = useMemo(
     () => findStrokeIndexGaps(holes.map((h) => h.stroke_index)),
     [holes],
@@ -233,9 +265,45 @@ export function CourseForm({
   const blocked = siGaps.missing.length > 0 || firstTeeProblem !== -1;
 
   function updateHole(index: number, patch: Partial<HoleData>) {
-    setHoles((prev) =>
-      prev.map((h, i) => (i === index ? { ...h, ...patch } : h)),
+    setHoles((prev) => {
+      const next = prev.map((h, i) => (i === index ? { ...h, ...patch } : h));
+      return nine ? mirrorNine(next) : next;
+    });
+  }
+
+  function updateSi(index: number, value: string) {
+    setSplitDone(false);
+    updateHole(index, { stroke_index: value });
+  }
+
+  // 18 → 9 keeps holes 1–9 and their par, and makes the index of 10–18 the
+  // second round; 9 → 18 leaves the 18 holes as they stand, now each its own.
+  function changeHoleCount(next: '18' | '9') {
+    setHoleCount(next);
+    setSplitDone(false);
+    if (next === '9') setHoles(mirrorNine);
+  }
+
+  const canSplit =
+    nine &&
+    canSplitSingleIndices(
+      holes.slice(0, 9).map((h) => h.stroke_index),
+      holes.slice(9).map((h) => h.stroke_index),
     );
+
+  // «Fordel»: one index per hole on the scorecard → odd for round 1, even for
+  // round 2. The fields stay editable; saving is the confirmation (owner 29.10).
+  function splitIndices() {
+    const { round1, round2 } = splitSingleIndices(
+      holes.slice(0, 9).map((h) => Number(h.stroke_index.trim())),
+    );
+    setHoles((prev) =>
+      prev.map((h, i) => ({
+        ...h,
+        stroke_index: String(i < 9 ? round1[i] : round2[i - 9]),
+      })),
+    );
+    setSplitDone(true);
   }
 
   function updateTee(index: number, patch: Partial<TeeBoxData>) {
@@ -339,8 +407,8 @@ export function CourseForm({
   // direkte.
   function updateMensPar(index: number, par: 3 | 4 | 5) {
     const next = String(par);
-    setHoles((prev) =>
-      prev.map((h, i) => {
+    setHoles((prev) => {
+      const updated = prev.map((h, i) => {
         if (i !== index) return h;
         return {
           ...h,
@@ -348,8 +416,9 @@ export function CourseForm({
           par_ladies: expandedLadiesPar ? h.par_ladies : next,
           par_juniors: expandedJuniorsPar ? h.par_juniors : next,
         };
-      }),
-    );
+      });
+      return nine ? mirrorNine(updated) : updated;
+    });
   }
 
   function buildConfirmMessage(count: number): string {
@@ -403,21 +472,82 @@ export function CourseForm({
         />
       )}
 
-      <div ref={courseCardRef} className="-mx-2 mt-3.5">
+      {/* «Hvor mange hull?» (#2484). The radios carry no field name the
+          server reads: a locked (disabled) radio is left out of FormData, so
+          the hidden input always sends the choice. */}
+      <input type="hidden" name="hole_count" value={holeCount} />
+      <p
+        aria-hidden
+        className="mt-[18px] mb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+      >
+        {t('holeCountLegend')}
+      </p>
+      <div className="-mx-1">
+        <ChoiceCardGrid columns={2} label={t('holeCountLegend')}>
+          {(['18', '9'] as const).map((value) => (
+            <RadioChoiceCard
+              key={value}
+              name="hole_count_choice"
+              value={value}
+              checked={holeCount === value}
+              onChange={() => changeHoleCount(value)}
+              disabled={holeCountLocked}
+              height={52}
+              layout="centered"
+              titleSize={15}
+              // The artboard sets these two in Inter, not Fraunces.
+              title={
+                <span className="font-sans">
+                  {value === '18' ? t('holeCount18') : t('holeCount9')}
+                </span>
+              }
+            />
+          ))}
+        </ChoiceCardGrid>
+        {holeCountLocked && (
+          <p className="mt-2 px-1 text-xs leading-[normal] text-muted">
+            {t('holeCountLocked')}
+          </p>
+        )}
+      </div>
+
+      <div ref={courseCardRef} className="-mx-2 mt-3">
         <HoleGridEditor
           holes={holes}
+          mode={nine ? 'nine' : 'eighteen'}
           showLadies={expandedLadiesPar}
           showJuniors={expandedJuniorsPar}
           parTotal={parTotalMens}
+          parNine={parNineMens}
           gaps={siGaps}
           onPar={(index, gender, par) =>
             gender === 'mens'
               ? updateMensPar(index, par)
               : updateHole(index, { [`par_${gender}`]: String(par) })
           }
-          onSi={(index, value) => updateHole(index, { stroke_index: value })}
+          onSi={updateSi}
         />
       </div>
+
+      {nine && (
+        <div className="mt-2.5 space-y-2">
+          <p className="text-xs leading-[1.45] text-muted">{t('nineHint')}</p>
+          {canSplit && (
+            <button
+              type="button"
+              onClick={splitIndices}
+              className="block min-h-11 w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
+            >
+              {t('splitButton')}
+            </button>
+          )}
+          {splitDone && (
+            <p role="status" className="text-xs font-semibold leading-[normal] text-text">
+              {t('splitDone')}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* A deviating par for ladies or juniors adds its own row to the card. */}
       <section className="mt-6 space-y-3">
@@ -443,7 +573,7 @@ export function CourseForm({
           slik at INSERT setter alle tre kolonner. Når raden vises, bærer
           HoleGridEditor samme name og tar over. */}
       {!expandedLadiesPar &&
-        holes.map((h) => (
+        (nine ? holes.slice(0, 9) : holes).map((h) => (
           <input
             key={`mirror-ladies-${h.hole_number}`}
             type="hidden"
@@ -452,7 +582,7 @@ export function CourseForm({
           />
         ))}
       {!expandedJuniorsPar &&
-        holes.map((h) => (
+        (nine ? holes.slice(0, 9) : holes).map((h) => (
           <input
             key={`mirror-juniors-${h.hole_number}`}
             type="hidden"
@@ -465,6 +595,9 @@ export function CourseForm({
         <h2 className="text-sm font-medium text-text mb-3">
           {t('teeBoxesHeading', { count: teeBoxes.length, max: MAX_TEE_BOXES })}
         </h2>
+        {nine && (
+          <p className="-mt-1.5 mb-3 text-xs leading-[1.45] text-muted">{t('teeNineHint')}</p>
+        )}
         <div className="space-y-4">
           {teeBoxes.map((tee, index) => (
             <div
@@ -690,6 +823,7 @@ export function CourseForm({
         {blocked && (
           <SaveStatus
             siGaps={siGaps}
+            nine={nine}
             teeIndex={firstTeeProblem}
             teeProblem={teeProblems[firstTeeProblem] ?? null}
           />
@@ -707,16 +841,22 @@ export function CourseForm({
 // aria-describedby; no aria-live, since it changes on every keystroke.
 function SaveStatus({
   siGaps,
+  nine,
   teeIndex,
   teeProblem,
 }: {
   siGaps: { missing: number[]; duplicates: number[]; invalid: number[] };
+  /** 9-hole mode: positions 10–18 are round 2 of holes 1–9 (#2484). */
+  nine: boolean;
   teeIndex: number;
   teeProblem: 'partial' | 'missing' | null;
 }) {
   const t = useTranslations('courseForm.form');
   const locale = useLocale() as AppLocale;
-  const { missing, duplicates, invalid } = siGaps;
+  const { missing, duplicates } = siGaps;
+  const invalid = nine
+    ? [...new Set(siGaps.invalid.map((n) => (n > 9 ? n - 9 : n)))].sort((a, b) => a - b)
+    : siGaps.invalid;
   const list = (numbers: number[]) => formatListLocale(numbers.map(String), locale);
   return (
     <div id="course-save-status" className="space-y-1 text-center text-xs leading-[normal] text-muted">
