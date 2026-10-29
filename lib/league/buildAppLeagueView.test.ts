@@ -117,6 +117,7 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
           closesAt: '2026-11-15T22:59:00Z',
           ready: true,
           teeName: 'Gul',
+          courseName: 'St Andrews',
           delivered: ['A'],
           inProgress: ['B'],
           awaitingMarker: [{ gameId: 'g9', userId: 'C', markerUserId: 'A', submittedBy: 'C' }],
