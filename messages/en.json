@@ -2523,6 +2523,8 @@
       "messageLabel": "Message (optional)",
       "messagePlaceholder": "The course is closed because of frost. We will try again next Saturday.",
       "permanentNote": "The round is deleted and cannot be brought back.",
+      "moveQuestion": "Would you rather play another day?",
+      "moveLink": "Move the round",
       "submit": "Cancel and tell them",
       "submitPending": "Cancelling …",
       "keep": "Keep the round",

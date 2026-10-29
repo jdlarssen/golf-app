@@ -25,7 +25,8 @@ type ErrorCode = (typeof ERROR_CODES)[number];
  * one form posting to `deleteGame`, which reads the recipients again itself.
  * Still a page of its own, never a popup (destructive-flow rule).
  *
- * «Flytt runden» on the artboard waits for #2480.
+ * «Flytt runden» goes to #2480's move page, which needs a tee-off to move, so
+ * a round without one has no link.
  */
 export async function CancelRoundConfirm({
   header,
@@ -51,6 +52,9 @@ export async function CancelRoundConfirm({
   trayClassName?: string;
 }) {
   const t = await getTranslations('game.cancel');
+  // The move page (#2480) moves a scheduled round with a tee-off; it is shared
+  // by the organiser and admin.
+  const moveHref = teeOffAt ? `/games/${gameId}/flytt` : null;
   const locale = (await getLocale()) as AppLocale;
 
   const when = invitationWhen(teeOffAt, locale);
@@ -123,7 +127,22 @@ export async function CancelRoundConfirm({
         </div>
       </div>
 
-      <p className="mt-3 text-[13px] leading-[1.45] text-muted">{t('permanentNote')}</p>
+      <p className="mt-3 text-[13px] leading-[1.45] text-muted">
+        {t('permanentNote')}
+        {moveHref && (
+          <>
+            {' '}
+            {t('moveQuestion')}{' '}
+            <SmartLink
+              href={moveHref}
+              data-testid="cancel-round-move"
+              className="inline-flex min-h-11 items-center font-semibold text-primary underline"
+            >
+              {t('moveLink')}
+            </SmartLink>
+          </>
+        )}
+      </p>
 
       {/* The tray follows the foot of the screen: `-mx-5` reaches the screen
           edges past the shell's 20 px, and the negative bottom margin cancels

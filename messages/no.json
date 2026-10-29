@@ -2523,6 +2523,8 @@
       "messageLabel": "Hilsen (valgfri)",
       "messagePlaceholder": "Banen er stengt på grunn av frost. Vi prøver igjen neste lørdag.",
       "permanentNote": "Runden slettes, og den kan ikke hentes tilbake.",
+      "moveQuestion": "Vil du heller spille en annen dag?",
+      "moveLink": "Flytt runden",
       "submit": "Avlys og si fra",
       "submitPending": "Avlyser …",
       "keep": "Behold runden",
