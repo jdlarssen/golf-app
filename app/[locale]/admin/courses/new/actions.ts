@@ -84,8 +84,14 @@ export async function createCourse(formData: FormData) {
   // Before redirect() (which throws NEXT_REDIRECT and would skip this).
   revalidateTag('public-courses', 'max');
 
+  // #2485: `bane` carries the new course's id, so /opprett-bane's «Tilbake til
+  // spillet» opens the wizard with it chosen. The admin list ignores it.
   redirect({
-    href: appendQuery(successRedirect, 'name', encodeURIComponent(name)),
+    href: appendQuery(
+      appendQuery(successRedirect, 'name', encodeURIComponent(name)),
+      'bane',
+      encodeURIComponent(courseId),
+    ),
     locale,
   });
 }

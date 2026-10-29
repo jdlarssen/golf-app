@@ -3712,6 +3712,14 @@
       "subtitle": "Hull, par, stroke-indeks og tee-bokser",
       "submitLabel": "Lagre bane"
     },
+    "similar": {
+      "heading": "Finnes banen alt?",
+      "meta": "{holeCount} hull · par {par} · {teeCount, plural, =0 {ingen tee-er} =1 {én tee} =2 {to tee-er} =3 {tre tee-er} =4 {fire tee-er} =5 {fem tee-er} =6 {seks tee-er} =7 {sju tee-er} =8 {åtte tee-er} =9 {ni tee-er} =10 {ti tee-er} =11 {elleve tee-er} =12 {tolv tee-er} other {# tee-er}} · {roundCount, plural, =0 {ikke brukt ennå} =1 {brukt i én runde} other {brukt i # runder}}",
+      "useThis": "Bruk denne",
+      "useThisAria": "Bruk denne: {name}",
+      "addAnyway": "Nei, legg til «{name}» som ny bane",
+      "addAnywayShort": "Nei, legg til «{name}…» som ny bane"
+    },
     "form": {
       "nameLabel": "Navn på banen",
       "namePlaceholder": "f.eks. Stiklestad Golfbane",

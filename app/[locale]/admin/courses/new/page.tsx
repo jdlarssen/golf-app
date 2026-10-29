@@ -68,6 +68,8 @@ export default async function NewCoursePage({
           action={createCourse}
           submitLabel={t('adminDoor.submitLabel')}
           tone="admin"
+          // #2485: «Bruk denne» opens the course's edit page here.
+          similarCourses={{ kind: 'edit' }}
         />
       </div>
     </AdminShell>

@@ -3712,6 +3712,14 @@
       "subtitle": "Holes, par, stroke index and tee boxes",
       "submitLabel": "Save course"
     },
+    "similar": {
+      "heading": "Is the course already here?",
+      "meta": "{holeCount} holes · par {par} · {teeCount, plural, =0 {no tees} =1 {one tee} =2 {two tees} =3 {three tees} =4 {four tees} =5 {five tees} =6 {six tees} =7 {seven tees} =8 {eight tees} =9 {nine tees} =10 {ten tees} =11 {eleven tees} =12 {twelve tees} other {# tees}} · {roundCount, plural, =0 {not played yet} =1 {played in one round} other {played in # rounds}}",
+      "useThis": "Use this one",
+      "useThisAria": "Use this one: {name}",
+      "addAnyway": "No, add “{name}” as a new course",
+      "addAnywayShort": "No, add “{name}…” as a new course"
+    },
     "form": {
       "nameLabel": "Course name",
       "namePlaceholder": "e.g. Stiklestad Golf Club",

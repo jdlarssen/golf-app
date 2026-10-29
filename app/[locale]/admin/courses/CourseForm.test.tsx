@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import {
   CourseForm,
   hasHoleChanges,
@@ -7,6 +7,13 @@ import {
   type HoleData,
 } from './CourseForm';
 import { REAL_SI } from '@/lib/courses/__fixtures__/courseForm';
+import type { SimilarCourse } from '@/lib/courses/similarCourses';
+
+// #2485: the similar-courses panel asks a server action; here it answers from a stub.
+const findSimilarCourses = vi.fn<(query: string) => Promise<SimilarCourse[]>>();
+vi.mock('@/lib/courses/similarCourses', () => ({
+  findSimilarCourses: (query: string) => findSimilarCourses(query),
+}));
 
 function makeHoles(pars: number[]): HoleData[] {
   return pars.map((par, i) => ({
@@ -1179,5 +1186,66 @@ describe('CourseForm: banekortet (#2278)', () => {
     const status = container.querySelector('#course-save-status')!;
 
     expect(save.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('CourseForm — «Finnes banen alt?» (#2485)', () => {
+  const NORTH: SimilarCourse = {
+    id: 'north',
+    name: 'Byneset North',
+    holeCount: 18,
+    par: 72,
+    teeCount: 3,
+    roundCount: 41,
+  };
+
+  function typeName(container: HTMLElement, value: string) {
+    fireEvent.change(container.querySelector<HTMLInputElement>('input[name="name"]')!, {
+      target: { value },
+    });
+  }
+
+  it('lists similar courses under the name while you type, and the name still posts', async () => {
+    findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
+    const { container } = render(
+      <CourseForm action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
+    );
+    typeName(container, 'Byneset n');
+
+    const link = await screen.findByRole('link', { name: 'Bruk denne: Byneset North' });
+    expect(link).toHaveAttribute('href', '/opprett-spill?bane=north');
+    expect(findSimilarCourses).toHaveBeenCalledWith('Byneset n');
+
+    // The list stands between the name field and the course card.
+    const nameInput = container.querySelector('input[name="name"]')!;
+    const firstPar = parCell(1, 4);
+    expect(nameInput.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.compareDocumentPosition(firstPar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const form = container.querySelector('form')!;
+    expect(new FormData(form).get('name')).toBe('Byneset n');
+  });
+
+  it('«Nei, legg til …» hides the list and moves on to the first par cell', async () => {
+    findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
+    const { container } = render(
+      <CourseForm action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
+    );
+    typeName(container, 'Byneset n');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Nei, legg til «Byneset n» som ny bane' }),
+    );
+
+    expect(screen.queryByRole('link', { name: /Bruk denne/ })).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(parCell(1, 4));
+  });
+
+  it('the edit page (no similarCourses) never searches', async () => {
+    findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    typeName(container, 'Byneset n');
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await waitFor(() => expect(findSimilarCourses).not.toHaveBeenCalled());
+    expect(screen.queryByText('Finnes banen alt?')).not.toBeInTheDocument();
   });
 });

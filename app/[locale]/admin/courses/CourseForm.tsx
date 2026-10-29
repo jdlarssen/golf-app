@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -8,9 +8,11 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePayload';
 import { formatListLocale } from '@/lib/i18n/format';
+import type { SimilarCourseTarget } from '@/lib/courses/similarCoursesPanel';
 import type { AppLocale } from '@/i18n/routing';
 import { MAX_TEE_BOXES } from './constants';
 import { HoleGridEditor } from './HoleGridEditor';
+import { SimilarCoursesPanel } from './SimilarCoursesPanel';
 
 export { MAX_TEE_BOXES };
 
@@ -66,6 +68,9 @@ type Props = {
   // The page colour under the sticky save bar: `admin` on the AdminShell
   // doors, `app` (default) on /opprett-bane.
   tone?: 'app' | 'admin';
+  // #2485: «Finnes banen alt?» under the name, and where its «Bruk denne»
+  // goes. Left out on the edit page, which then shows no list.
+  similarCourses?: SimilarCourseTarget;
 };
 
 const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
@@ -157,8 +162,14 @@ export function CourseForm({
   redirectBase,
   successRedirect,
   tone = 'app',
+  similarCourses,
 }: Props) {
   const t = useTranslations('courseForm.form');
+
+  // Controlled so the similar-courses panel can read it; `name="name"` keeps
+  // the FormData the server action reads unchanged.
+  const [name, setName] = useState(initialData?.name ?? '');
+  const courseCardRef = useRef<HTMLDivElement>(null);
 
   const [holes, setHoles] = useState<HoleData[]>(
     initialData?.holes ?? DEFAULT_HOLES,
@@ -375,12 +386,24 @@ export function CourseForm({
           inputClassName="h-[52px]!"
           label={t('nameLabel')}
           placeholder={t('namePlaceholder')}
-          defaultValue={initialData?.name ?? ''}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
         />
       </div>
 
-      <div className="-mx-2 mt-3.5">
+      {similarCourses && (
+        <SimilarCoursesPanel
+          query={name}
+          target={similarCourses}
+          // «Nei, legg til … som ny bane»: on to the course card, its first par cell.
+          onAddAnyway={() =>
+            courseCardRef.current?.querySelector<HTMLButtonElement>('tbody button')?.focus()
+          }
+        />
+      )}
+
+      <div ref={courseCardRef} className="-mx-2 mt-3.5">
         <HoleGridEditor
           holes={holes}
           showLadies={expandedLadiesPar}

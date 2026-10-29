@@ -129,8 +129,9 @@ describe('createCourse — #366 gate + RLS-write', () => {
     // client-supplied param, which is a stronger guarantee than the old insert.
     expect(params).not.toHaveProperty('created_by');
     // Default success redirect (admin path) when no override supplied.
+    // #2485: the new course's id rides along as `bane`.
     expect(lastRedirect()).toBe(
-      '/admin/courses?status=created&name=Testbanen',
+      '/admin/courses?status=created&name=Testbanen&bane=course-1',
     );
     // #1045: a new (possibly eligible) course busts the /baner cache tag so it
     // shows up immediately, not after the 24t revalidate.
@@ -148,7 +149,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
     });
     await expect(createCourse(fd)).rejects.toThrow(RedirectError);
     expect(lastRedirect()).toBe(
-      '/opprett-bane?status=created&name=Testbanen',
+      '/opprett-bane?status=created&name=Testbanen&bane=course-1',
     );
   });
 
