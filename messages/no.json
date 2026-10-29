@@ -6724,6 +6724,20 @@
       "openButtonText": "Åpne spillet: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link>."
     },
+    "gameCancelled": {
+      "subject": "{gameName} er avlyst",
+      "heading": "Runden er avlyst",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "{organizer} har avlyst <strong>{gameName}</strong>.",
+      "bodyText": "{organizer} har avlyst {gameName}.",
+      "scheduled": "Runden var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm} på {courseName}.",
+      "scheduledNoCourse": "Runden var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm}.",
+      "messageLead": "Hilsen fra {organizer}:",
+      "messageText": "Hilsen fra {organizer}: «{message}»",
+      "organizerFallback": "Arrangøren",
+      "footer": "Du får denne meldingen fordi du var med i spillet."
+    },
     "cupStarted": {
       "subject": "Cup-en har startet — {tournamentName}",
       "salutationNamed": "Hei {name}!",

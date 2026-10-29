@@ -6724,6 +6724,20 @@
       "openButtonText": "Open the game: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link>."
     },
+    "gameCancelled": {
+      "subject": "{gameName} has been cancelled",
+      "heading": "The round is cancelled",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "{organizer} has cancelled <strong>{gameName}</strong>.",
+      "bodyText": "{organizer} has cancelled {gameName}.",
+      "scheduled": "It was set for {teeOff, date, ::EEEEdMMMM} at {teeOff, time, ::HHmm} at {courseName}.",
+      "scheduledNoCourse": "It was set for {teeOff, date, ::EEEEdMMMM} at {teeOff, time, ::HHmm}.",
+      "messageLead": "A note from {organizer}:",
+      "messageText": "A note from {organizer}: “{message}”",
+      "organizerFallback": "The organiser",
+      "footer": "You are getting this because you were in the game."
+    },
     "cupStarted": {
       "subject": "The cup has started — {tournamentName}",
       "salutationNamed": "Hi {name}!",
