@@ -178,6 +178,8 @@ describe('tegning 5b: avslag', () => {
     expect(screen.queryByTestId('round-start-players')).toBeNull();
     expect(screen.queryByTestId('round-setup-checklist')).toBeNull();
     expect(screen.queryByTestId('round-start-confirm')).toBeNull();
+    // Uten avkrysning er knappen som før: serveren avgjør når den trykkes.
+    expect(isDisabled('round-start-submit')).toBe(false);
   });
 
   it('vinduet er stengt', async () => {
