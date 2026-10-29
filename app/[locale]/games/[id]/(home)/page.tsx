@@ -111,8 +111,9 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
 // #2202: the organiser's «Start runden nå» and finish land here with
 // ?status=started / ?status=finished. The receipt is the Sekretariat's own
 // sentence in admin.game.banners: one string, one home, as with the error
-// banner below.
-const SHARED_STATUS_BANNER_CODES = new Set(['started', 'finished']);
+// banner below. #2480: «Flytt runden» lands here with ?status=moved or
+// ?status=moved_told (the group was told).
+const SHARED_STATUS_BANNER_CODES = new Set(['started', 'finished', 'moved', 'moved_told']);
 
 // #1361: every ?error code a creator-facing redirect lands on /games/[id]
 // with (the endGame family, delete, edit, and /avslutt's not_active bounce),
@@ -196,7 +197,7 @@ export default async function GameHomePage({
     : STATUS_BANNER_KEYS[statusCode]
       ? t(statusBannerKey as Parameters<typeof t>[0])
       : tGameBanners(statusBannerKey as Parameters<typeof tGameBanners>[0]);
-  // Rendered in the default return and in the organiser view.
+  // Rendered in the default return, the scheduled view and the organiser view.
   const statusBannerNode = statusBanner ? (
     <div className="mb-4" data-testid={`game-status-${statusBannerKey}`}>
       <Banner tone="success">{statusBanner}</Banner>
@@ -787,6 +788,8 @@ export default async function GameHomePage({
         </header>
 
         {shownErrorBanner}
+        {/* #2480: «Flytt runden» lands on the scheduled view with its receipt. */}
+        {statusBannerNode}
 
         {/* #2219: catches the start for every scheduled game, with or without
             a tee-off. The countdown below only mounts with one. */}

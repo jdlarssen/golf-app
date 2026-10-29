@@ -2258,6 +2258,7 @@
       "organiserViewHint": "Du arrangerer dette spillet, men står ikke på spillerlista.",
       "managePlayersLink": "Styr spillere",
       "editGameLink": "Rediger spill",
+      "moveGameLink": "Flytt runden",
       "deleteGameLink": "Slett spill",
       "ctaStartRound": "Start runden →",
       "ctaContinueRound": "Fortsett runden →",
@@ -2464,6 +2465,29 @@
       "guests": "{count, plural, one {# av dem er gjest. Den som fører kortet, leverer det.} other {# av dem er gjester. Den som fører kortene, leverer dem.}}",
       "splitDay": "{count} av dem leverer hele runden på Bak 9 og blir purret der.",
       "sent": "Purret. De får et varsel nå."
+    },
+    "move": {
+      "kicker": "{name} · {status}",
+      "heading": "Flytt runden",
+      "dayLegend": "Ny dag",
+      "timeLegend": "Tid",
+      "otherDay": "Annen dag",
+      "otherTime": "Annen tid",
+      "otherDayInput": "Velg dag",
+      "otherTimeInput": "Velg tid",
+      "noticeLegend": "Beskjed til gjengen",
+      "notifyTitle": "Si fra til gjengen",
+      "notifyNames": "{names} får et varsel",
+      "moreNames": "{count} til",
+      "preview": "{gameName} er flyttet til <b>{teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}</b>. Samme bane og tee.",
+      "submitNotify": "Flytt og si fra",
+      "submit": "Flytt runden",
+      "pending": "Flytter …",
+      "inPast": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
+      "errors": {
+        "invalid": "Velg en dag og en tid.",
+        "in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av."
+      }
     },
     "delete": {
       "kicker": "Slett spill",
@@ -4081,7 +4105,9 @@
         "signups_closed": "✓ Påmeldingen er stengt. Nye søknader avvises.",
         "signups_reopened": "✓ Påmeldingen er gjenåpnet.",
         "guest_added": "Gjesten er lagt til i spillet.",
-        "hole_reminded": "✓ Påminnelsen er sendt."
+        "hole_reminded": "✓ Påminnelsen er sendt.",
+        "moved": "✓ Runden er flyttet.",
+        "moved_told": "✓ Runden er flyttet, og gjengen har fått beskjed."
       },
       "sections": {
         "overview": "Oversikt",
@@ -4125,6 +4151,7 @@
         "scheduledStartBlockedLead": "Runden starter ikke før dette er ordnet:",
         "unassignedFlightsLinked": "Spillerne er ikke fordelt i flighter ennå. Del dem inn på <link>Startlista</link>.",
         "scheduledEditButton": "Rediger spillet",
+        "scheduledMoveButton": "Flytt runden",
         "allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
         "allReadyAndApproved": " og godkjent",
         "endingGame": "Avslutter …",
