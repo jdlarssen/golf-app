@@ -21,6 +21,7 @@ export type VisitSurface =
   | 'friends'
   | 'history'
   | 'league'
+  | 'leagueRoundStart'
   | 'leagueMarker';
 
 /** The payload field that ties a notification to the page's entity. */
@@ -81,6 +82,8 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
   history: { kinds: ['achievement_unlocked'], key: null },
   // #2638: the league page, where the round is played from.
   league: { kinds: ['league_round_open', 'league_round_closing'], key: 'league_id' },
+  // #2666: a simulator league's round start, where the same two messages link.
+  leagueRoundStart: { kinds: ['league_round_open', 'league_round_closing'], key: 'league_id' },
   // #2661: the marker's page for a card in a simulator-league flight.
   leagueMarker: { kinds: ['league_marker_request'], key: 'game_id' },
 };

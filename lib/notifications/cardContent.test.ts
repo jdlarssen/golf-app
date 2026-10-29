@@ -1,8 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { createTranslator } from 'next-intl';
+import noMessages from '@/messages/no.json';
+import enMessages from '@/messages/en.json';
 import { buildNotificationText } from './cardContent';
 import { formatKr } from '@/lib/format/formatKr';
 import { testPayloads } from './testPayloads';
 import type { NotificationKind, NotificationPayload } from './types';
+import type { NotificationTranslator } from './cardContent';
+import { BODY_MAX, TITLE_MAX } from './push/clampText';
 
 // A fake translator: returns "key" or "key|json(values)" so assertions can check
 // which catalog key + interpolation values each kind resolves to, without loading
@@ -245,5 +250,56 @@ describe('buildNotificationText', () => {
         gameName: 'Lørdagscup',
       })}`,
     );
+  });
+});
+
+// #2666: a simulator league's opening message names the course and tee; the
+// text is read through the real catalog, in both languages.
+describe('buildNotificationText — the opening message of a simulator league (#2666)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const base = {
+    league_id: '00000000-0000-4000-a000-000000000001',
+    league_name: 'Vinterligaen',
+    round_id: '00000000-0000-4000-a000-000000000002',
+    round_label: 'Runde 5',
+    closes_at: '2027-01-10T22:59:00.000Z',
+  };
+  const sim = { ...base, is_simulator: true, course_name: 'St Andrews', tee_name: 'Gul' };
+
+  it('names the course and tee, then the deadline', () => {
+    expect(buildNotificationText('league_round_open', sim as NotificationPayload, real('no'))).toEqual({
+      title: 'Runde 5 i Vinterligaen er åpen',
+      detail:
+        'St Andrews, tee Gul. Trykk for å se hva du skal stille inn i Trackman. Fristen er søndag 10. jan. kl. 23:59.',
+    });
+    expect(buildNotificationText('league_round_open', sim as NotificationPayload, real('en')).detail).toBe(
+      'St Andrews, Gul tee. Tap to see what to set in Trackman. The deadline is Sunday, Jan 10 at 23:59.',
+    );
+  });
+
+  it('keeps the plain text for a regular league, an older row, and a simulator row without a tee', () => {
+    const plain = 'Spill den når det passer deg. Fristen er søndag 10. jan. kl. 23:59.';
+    for (const payload of [base, { ...base, is_simulator: false }, { ...sim, tee_name: undefined }]) {
+      expect(buildNotificationText('league_round_open', payload as NotificationPayload, real('no')).detail).toBe(plain);
+    }
+  });
+
+  it('the closing reminder keeps its text in a simulator league', () => {
+    expect(buildNotificationText('league_round_closing', sim as NotificationPayload, real('no'))).toEqual({
+      title: 'Runde 5 i Vinterligaen stenger søndag 10. jan. kl. 23:59',
+      detail: 'Du har ikke spilt den ennå.',
+    });
+  });
+
+  it('title and detail fit the push caps with an ordinary long course name', () => {
+    const long = { ...sim, course_name: 'Oslo Golfklubb – Bogstad, den lange banen', league_name: 'Vinterligaen 2026–2027' };
+    const text = buildNotificationText('league_round_open', long as NotificationPayload, real('no'));
+    expect([text.title.length <= TITLE_MAX, text.detail.length <= BODY_MAX]).toEqual([true, true]);
   });
 });

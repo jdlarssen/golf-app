@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   const { data: candidates, error: candidatesError } = await admin
     .from('league_rounds')
     .select(
-      'id, league_id, label, opens_at, closes_at, opening_notice_sent_at, closing_reminder_sent_at, leagues!inner(name, status)',
+      'id, league_id, label, opens_at, closes_at, opening_notice_sent_at, closing_reminder_sent_at, leagues!inner(name, status, is_simulator), courses!league_rounds_course_id_fkey(name), tee_boxes!league_rounds_tee_box_id_fkey(name)',
     )
     .eq('leagues.status', 'active')
     .lte('opens_at', nowIso)

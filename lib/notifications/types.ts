@@ -275,16 +275,23 @@ const gameStaleReminderSchema = z.object({
 // åpnet, eller stenger om under 48 timer og mottakeren har verken levert eller
 // er i gang. Til hver deltaker i en aktiv liga, én gang per runde (kravene på
 // `league_rounds.opening_notice_sent_at` og `closing_reminder_sent_at`, sendt av
-// timessveipen `league-round-reminder`). Deeplinker til /liga/[league_id].
+// timessveipen `league-round-reminder`). Deeplinker til /liga/[league_id], og i
+// en simulatorliga (#2666) til rundens startside der Trackman-sjekklista står.
 // `closes_at` er rundens frist som ISO-tid; kortet formaterer den ved render, i
 // mottakerens språk og Oslo-tid, så payloaden holder seg locale-agnostisk (#583).
 // `round_label` er rundens navn fra databasen («Runde 3»), som game_name.
+// #2666: `is_simulator`, `course_name` og `tee_name` er valgfrie, så rader
+// sendt før feltene fantes fortsatt parser og gir den gamle teksten og lenken.
+// Sveipen setter dem bare for en simulatorliga.
 const leagueRoundNoticeSchema = z.object({
   league_id: uuid,
   league_name: z.string().min(1),
   round_id: uuid,
   round_label: z.string().min(1),
   closes_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
+  is_simulator: z.boolean().optional(),
+  course_name: z.string().min(1).optional(),
+  tee_name: z.string().min(1).optional(),
 });
 
 // league_marker_request (#2661): en spiller i en simulatorliga leverte kortet

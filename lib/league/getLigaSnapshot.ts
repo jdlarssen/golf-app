@@ -83,6 +83,8 @@ export type LeagueRoundView = {
    * course selection, not as a setting of its own (orchestrator's choice 24.10).
    */
   teeName: string | null;
+  /** #2666: the round's course name, shown with the tee in the setup checklist. */
+  courseName: string | null;
   /** #2638: the round's own override, normalised (only the keys that differ). */
   simOverride: SimSettings;
   /**
@@ -173,7 +175,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     supabase
       .from('league_rounds')
       .select(
-        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings, sim_frozen_default, tee_boxes!league_rounds_tee_box_id_fkey(name)',
+        'id, sequence, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at, window_overridden_at, sim_settings, sim_frozen_default, tee_boxes!league_rounds_tee_box_id_fkey(name), courses!league_rounds_course_id_fkey(name)',
       )
       .eq('league_id', leagueId)
       .order('sequence', { ascending: true }),
@@ -198,6 +200,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     sim_settings: unknown;
     sim_frozen_default?: unknown;
     tee_boxes?: { name: string | null } | null;
+    courses?: { name: string | null } | null;
   }>;
   const roundIds = rounds.map((r) => r.id);
 
@@ -555,6 +558,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       inProgressUserIds: Array.from(locks.inProgress),
       awaitingMarker: awaitingByRound.get(r.id) ?? [],
       teeName: r.tee_boxes?.name ?? null,
+      courseName: r.courses?.name ?? null,
       simOverride: normalizeSimSettings(r.sim_settings),
       simSettings: effective.values,
       overriddenKeys: effective.overriddenKeys,

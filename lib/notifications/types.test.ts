@@ -389,6 +389,20 @@ describe('parseNotificationPayload', () => {
       },
     );
 
+    it('#2666: gamle rader uten simulatorfeltene parser fortsatt, og de nye feltene kommer med', () => {
+      const closes_at = '2026-11-06T22:59:00Z';
+      expect(parseNotificationPayload('league_round_open', { ...base, closes_at }).payload.is_simulator).toBeUndefined();
+      const sim = parseNotificationPayload('league_round_open', {
+        ...base,
+        closes_at,
+        is_simulator: true,
+        course_name: 'St Andrews',
+        tee_name: 'Gul',
+      }).payload;
+      expect([sim.is_simulator, sim.course_name, sim.tee_name]).toEqual([true, 'St Andrews', 'Gul']);
+      expect(() => parseNotificationPayload('league_round_open', { ...base, closes_at, course_name: '' })).toThrow();
+    });
+
     it('avviser en frist som ikke er et tidspunkt, og en payload uten liga', () => {
       expect(() => parseNotificationPayload('league_round_open', { ...base, closes_at: 'torsdag' })).toThrow();
       expect(() =>

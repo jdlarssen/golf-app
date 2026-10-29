@@ -49,6 +49,7 @@ function snapshot(scoring: string): LeagueSnapshot {
         inProgressUserIds: ['B'],
         awaitingMarker: [{ gameId: 'g9', userId: 'C', markerUserId: 'A', submittedBy: 'C' }],
         teeName: 'Gul',
+        courseName: 'St Andrews',
         simOverride: { green_stimp: '12' },
         simSettings: { green_stimp: '12' },
         overriddenKeys: ['green_stimp'],

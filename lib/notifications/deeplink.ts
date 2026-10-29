@@ -69,8 +69,13 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     case 'league_round_open':
     case 'league_round_closing': {
       // #2638: the league page, where «Start runden» is (the app opens League).
+      // #2666: in a simulator league the round's own start page, where the
+      // Trackman checklist is. Both messages go there: the reminder reaches
+      // the same player. An older row without the flag keeps the league page.
       const p = n.payload as NotificationPayload<'league_round_open'>;
-      return `/liga/${p.league_id}`;
+      return p.is_simulator
+        ? `/liga/${p.league_id}/runde/${p.round_id}/spill`
+        : `/liga/${p.league_id}`;
     }
     case 'league_marker_request': {
       // #2661: the marker's own page for the card (the app opens MarkerApprove).

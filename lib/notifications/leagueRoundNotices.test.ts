@@ -66,7 +66,9 @@ function round(over: Partial<LeagueRoundSweepRound> = {}): LeagueRoundSweepRound
     closes_at: new Date(NOW + 10 * 24 * HOUR).toISOString(),
     opening_notice_sent_at: null,
     closing_reminder_sent_at: null,
-    leagues: { name: 'Vinterligaen' },
+    leagues: { name: 'Vinterligaen', is_simulator: false },
+    courses: { name: 'St Andrews' },
+    tee_boxes: { name: 'Gul' },
     ...over,
   };
 }
@@ -121,6 +123,34 @@ describe('runLeagueRoundNotices', () => {
         },
       })),
     );
+  });
+
+  it('#2666: a simulator league names the course and tee in the payload; a regular league does not', async () => {
+    await run(round({ leagues: { name: 'Vinterligaen', is_simulator: true } }));
+    expect(notifyMock.mock.calls[0]![0].payload).toEqual({
+      league_id: LEAGUE_ID,
+      league_name: 'Vinterligaen',
+      round_id: ROUND_ID,
+      round_label: 'Runde 3',
+      closes_at: round().closes_at,
+      is_simulator: true,
+      course_name: 'St Andrews',
+      tee_name: 'Gul',
+    });
+
+    notifyMock.mockClear();
+    fake.reset();
+    await run(round());
+    expect(Object.keys(notifyMock.mock.calls[0]![0].payload).sort()).toEqual(
+      ['closes_at', 'league_id', 'league_name', 'round_id', 'round_label'],
+    );
+  });
+
+  it('#2666: a simulator round without a course name still flags the league, with no course or tee fields', async () => {
+    await run(round({ leagues: { name: 'Vinterligaen', is_simulator: true }, courses: null, tee_boxes: { name: null } }));
+    const payload = notifyMock.mock.calls[0]![0].payload as Record<string, unknown>;
+    expect(payload.is_simulator).toBe(true);
+    expect('course_name' in payload || 'tee_name' in payload).toBe(false);
   });
 
   it('under 48 hours left: the reminder, claimed against the deadline it names', async () => {

@@ -4,8 +4,10 @@ import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { SearchField } from '@/components/ui/SearchField';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
 import { MAX_CO_PLAYERS, MAX_FLIGHT_PLAYERS, minFlightPlayers } from '@/lib/league/flightRules';
+import { PICKER_VISIBLE_ROWS, pickerRows } from '@/lib/league/pickerRows';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 
 /**
@@ -27,7 +29,11 @@ export function RoundStartClient({
   roundId: string;
   /** All other league participants (not the current user). */
   coPlayers: RoundCoPlayer[];
-  /** #2638: a simulator league lets the player start alone. */
+  /**
+   * #2638: a simulator league lets the player start without a flightmate (the
+   * marker is named when the card is delivered, #2661). #2666: it also asks
+   * the player to confirm the Trackman setup before the start.
+   */
   isSimulator: boolean;
 }) {
   const t = useTranslations('liga.player.runde');
@@ -39,6 +45,21 @@ export function RoundStartClient({
   const full = selected.size >= MAX_CO_PLAYERS;
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // #2666: only the client state; the aim is to stop a start by accident, not
+  // to prove anything to the server.
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const needsConfirm = isSimulator && !setupConfirmed;
+
+  // Free rows first, the ones who delivered or are playing last (#2666).
+  const ordered = [...coPlayers].sort((a, b) => Number(a.lock !== null) - Number(b.lock !== null));
+  const picker = pickerRows(ordered, {
+    query,
+    showAll,
+    nameOf: (p) => playerDisplayName(p, t('unknownPlayer')),
+    keepIds: selected,
+  });
 
   function togglePlayer(userId: string) {
     setSelected((prev) => {
@@ -54,6 +75,7 @@ export function RoundStartClient({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (needsConfirm) return;
     if (selected.size < minCoPlayers) {
       setError('need_marker');
       return;
@@ -82,8 +104,17 @@ export function RoundStartClient({
           <legend className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2 block">
             {t('coPlayersLegend')}
           </legend>
+          {coPlayers.length > PICKER_VISIBLE_ROWS && (
+            <SearchField
+              id="liga-round-start-search"
+              label={t('searchLabel')}
+              placeholder={t('searchPlaceholder')}
+              value={query}
+              onChange={setQuery}
+            />
+          )}
           <ul className="space-y-2">
-            {coPlayers.map((p) => {
+            {picker.rows.map((p) => {
               const locked = p.lock !== null;
               const checked = !locked && selected.has(p.userId);
               const blocked = !locked && !checked && full;
@@ -148,10 +179,66 @@ export function RoundStartClient({
               );
             })}
           </ul>
+          {picker.searching && picker.total === 0 && (
+            <p className="font-sans text-sm text-muted" data-testid="liga-round-start-no-match">
+              {t('noMatch')}
+            </p>
+          )}
+          {picker.canExpand && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              aria-expanded={showAll}
+              data-testid="liga-round-start-show-all"
+              className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary"
+            >
+              {showAll ? t('showFewer') : t('showAll', { count: picker.total })}
+            </button>
+          )}
           <p className="font-sans text-[12px] leading-[18px] text-muted" data-testid="liga-round-start-flight-max">
             {t('flightMax', { max: MAX_FLIGHT_PLAYERS })}
           </p>
         </fieldset>
+      )}
+
+      {/* #2666 (artboards 9a/9b): the player confirms the Trackman setup. */}
+      {isSimulator && (
+        <label
+          data-testid="liga-round-start-confirm"
+          className={[
+            'flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors',
+            setupConfirmed ? 'border-primary bg-primary-soft' : 'border-border bg-surface hover:bg-primary-soft/50',
+          ].join(' ')}
+        >
+          <input
+            type="checkbox"
+            className="sr-only"
+            checked={setupConfirmed}
+            onChange={() => setSetupConfirmed((v) => !v)}
+          />
+          <span
+            className={[
+              'mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+              setupConfirmed ? 'border-primary bg-primary' : 'border-border bg-bg',
+            ].join(' ')}
+            aria-hidden
+          >
+            {setupConfirmed && (
+              <svg
+                viewBox="0 0 10 8"
+                className="h-2.5 w-2.5 text-white dark:text-bg"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M1 4l3 3 5-6" />
+              </svg>
+            )}
+          </span>
+          <span className="font-sans text-sm leading-[21px] text-text">{t('confirmSetup')}</span>
+        </label>
       )}
 
       {error && (
@@ -167,7 +254,7 @@ export function RoundStartClient({
         variant="primary"
         className="w-full"
         data-testid="liga-round-start-submit"
-        disabled={selected.size < minCoPlayers || isPending}
+        disabled={selected.size < minCoPlayers || needsConfirm || isPending}
         pending={isPending}
         pendingLabel={t('startPending')}
       >

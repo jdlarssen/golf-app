@@ -30,7 +30,10 @@ export type LeagueRoundSweepRound = {
   closes_at: string;
   opening_notice_sent_at: string | null;
   closing_reminder_sent_at: string | null;
-  leagues: { name: string } | null;
+  leagues: { name: string; is_simulator: boolean } | null;
+  /** #2666: read for the opening message of a simulator league. */
+  courses: { name: string | null } | null;
+  tee_boxes: { name: string | null } | null;
 };
 
 const LOG_PREFIX = 'leagueRoundReminder';
@@ -93,6 +96,15 @@ export async function runLeagueRoundNotices(
     round_id: round.id,
     round_label: round.label,
     closes_at: round.closes_at,
+    // #2666: a simulator league's messages name the course and tee and link to
+    // the start page; a regular league's payload is unchanged.
+    ...(round.leagues?.is_simulator
+      ? {
+          is_simulator: true,
+          ...(round.courses?.name ? { course_name: round.courses.name } : {}),
+          ...(round.tee_boxes?.name ? { tee_name: round.tee_boxes.name } : {}),
+        }
+      : {}),
   };
 
   for (const kind of due) {

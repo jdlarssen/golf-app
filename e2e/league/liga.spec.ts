@@ -603,12 +603,16 @@ test.describe('Liga — simulator: a flight of one counts (#2638)', () => {
       { league_id: leagueId, user_id: playerUser!.id, accepted_at: stampIso },
     ]);
 
-    // ── Start alone: nobody ticked, the submit is enabled ───────────────────
+    // ── Start without a flightmate: the submit waits for the Trackman
+    // confirmation (#2666), and nobody has to be ticked ───────────────────────
     await page.goto(`/login?next=/liga/${leagueId}/runde/${roundId}/spill`);
     await signInViaOtp(page, ADMIN_EMAIL!);
     await page.goto(`/liga/${leagueId}/runde/${roundId}/spill`);
     const submit = page.getByTestId('liga-round-start-submit');
-    await expect(submit).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByTestId('round-setup-checklist')).toBeVisible({ timeout: 30_000 });
+    await expect(submit).toBeDisabled();
+    await page.getByTestId('liga-round-start-confirm').click();
+    await expect(submit).toBeEnabled();
     await submit.click();
     await expect(page).toHaveURL(/\/games\/[0-9a-f-]{36}/, { timeout: 25_000 });
 
