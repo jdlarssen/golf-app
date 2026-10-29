@@ -601,6 +601,32 @@ describe('buildInboxEntryView', () => {
     });
   });
 
+  // #2480: the row names the game in the title and the new tee-off below it,
+  // in Oslo time, like the league deadline. It is news, not a task.
+  it('#2480: a moved round shows the new time under the title, in Oslo time', () => {
+    const at = new Date(NOW - 120_000).toISOString();
+    const v = view(
+      [
+        row(
+          'game_moved',
+          {
+            game_id: GAME,
+            game_name: 'Lørdagsrunden',
+            tee_off_at: '2026-11-08T08:00:00.000Z',
+            course_changed: false,
+            moved_by_name: 'Kari Arrangør',
+          },
+          { at },
+        ),
+      ],
+      'today',
+    );
+    expect(v.title).toBe('Lørdagsrunden er flyttet');
+    expect(v.subtitle).toBe('Ny tid: søndag 8. nov. kl. 09:00. Samme bane og tee. · for 2 min siden');
+    expect(v.actionKey).toBeNull();
+    expect(v.destination).toBe(`/games/${GAME}`);
+  });
+
   it('detail kinds keep the detail before the time; a rejection reason is free text', () => {
     const v = view(
       [row('registration_rejected', { game_id: GAME, game_name: 'X', reason: 'Fullt' }, { read: true })],
