@@ -82,7 +82,8 @@ describe('ligavarslene', () => {
     [`/liga/${LEAGUE}`],
     [`/no/liga/${LEAGUE}`],
     [`/liga/${LEAGUE}?varsel=${NOTE}`],
-    [`/liga/${LEAGUE}/runde/r1/spill`],
+    [`/liga/${LEAGUE}/runde/r1`],
+    [`/liga/${LEAGUE}/runde/r1/spillere`],
   ])('%s åpner ligaen', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'League', params: { leagueId: LEAGUE } });
   });
@@ -107,6 +108,30 @@ describe('ligavarslene', () => {
       name: 'MarkerApprove',
       params: { leagueId: LEAGUE, gameId: 'g1', userId: 'u1' },
     });
+  });
+
+  // #2675: åpningsvarselet og fristvarselet peker på startsiden for runden.
+  it.each([
+    [`/liga/${LEAGUE}/runde/r1/spill`],
+    [`/no/liga/${LEAGUE}/runde/r1/spill?varsel=${NOTE}`],
+    [`/liga/${LEAGUE}/runde/r1/spill#start`],
+    [`/liga/${LEAGUE}/runde/r1/spill/`],
+  ])('%s åpner startsiden for runden', (url) => {
+    expect(pushTarget(url)).toEqual({
+      name: 'LeagueRoundStart',
+      params: { leagueId: LEAGUE, roundId: 'r1' },
+    });
+  });
+
+  it('en ødelagt %-sekvens i runde-id-en åpner ligaen, ikke Hjem', () => {
+    expect(pushTarget(`/liga/${LEAGUE}/runde/%E0%A4%A/spill`)).toEqual({
+      name: 'League',
+      params: { leagueId: LEAGUE },
+    });
+  });
+
+  it('en ødelagt %-sekvens i liga-id-en åpner Hjem', () => {
+    expect(pushTarget('/liga/%E0%A4%A/runde/r1/spill')).toEqual({ name: 'Home' });
   });
 
   it('en halv markørlenke åpner ligaen', () => {

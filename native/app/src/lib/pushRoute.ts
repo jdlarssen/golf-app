@@ -8,7 +8,10 @@
 // `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
 // hullet (`Hole`), og `/games/{id}/leaderboard` (#2632, «Resultatet er klart»):
 // den åpner tavla (`Leaderboard`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
-// peker på `/liga/{id}` og åpner ligaen (`League`). Markørens varsel (#2661)
+// peker på `/liga/{id}` og åpner ligaen (`League`). Åpningsvarselet og
+// fristvarselet i en simulatorliga (#2675) peker på `/liga/{id}/runde/{rid}/spill`
+// og åpner startsiden for runden (`LeagueRoundStart`) med ligaen under.
+// Markørens varsel (#2661)
 // peker på `/liga/{id}/godkjenn/{gameId}/{userId}` og åpner markørens skjerm
 // (`MarkerApprove`) med ligaen under.
 //
@@ -31,6 +34,7 @@ export type PushTarget =
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
   | { name: 'Leaderboard'; params: { gameId: string } }
   | { name: 'League'; params: { leagueId: string } }
+  | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'Home' };
 
@@ -44,6 +48,7 @@ const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
 const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
 const LEADERBOARD_SUFFIX = /^\/leaderboard(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
+const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
@@ -89,6 +94,10 @@ export function pushTarget(url: string | null): PushTarget {
     const gameId = marker ? decodedOrNull(marker[1]) : null;
     const userId = marker ? decodedOrNull(marker[2]) : null;
     if (gameId && userId) return { name: 'MarkerApprove', params: { leagueId, gameId, userId } };
+    // #2675: startsiden for runden.
+    const start = ROUND_START_SUFFIX.exec(url!.slice(league![0].length));
+    const roundId = start ? decodedOrNull(start[1]) : null;
+    if (roundId) return { name: 'LeagueRoundStart', params: { leagueId, roundId } };
     return { name: 'League', params: { leagueId } };
   }
   return { name: 'Home' };

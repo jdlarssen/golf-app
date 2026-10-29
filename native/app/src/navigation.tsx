@@ -225,7 +225,11 @@ function openPushTarget(target: PushTarget) {
     navigationRef.navigate('GameHome', { gameId: target.params.gameId });
     navigationRef.navigate('Leaderboard', target.params);
   } else if (target.name === 'League') navigationRef.navigate('League', target.params);
-  else if (target.name === 'MarkerApprove') {
+  else if (target.name === 'LeagueRoundStart') {
+    // #2675: ligasiden under startsiden, så «tilbake» lander på ligaen.
+    navigationRef.navigate('League', { leagueId: target.params.leagueId });
+    navigationRef.navigate('LeagueRoundStart', target.params);
+  } else if (target.name === 'MarkerApprove') {
     // #2661: ligasiden under markørens skjerm, så «tilbake» lander på ligaen.
     navigationRef.navigate('League', { leagueId: target.params.leagueId });
     navigationRef.navigate('MarkerApprove', target.params);
