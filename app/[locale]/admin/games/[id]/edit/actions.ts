@@ -31,6 +31,7 @@ import { isEditSection } from '@/lib/games/editSections';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
+import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { isClubTournament } from '@/lib/games/registration';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
@@ -446,6 +447,29 @@ async function updateGameInternal(
     }
   }
 
+  // #2480: a scheduled round with a new tee-off tells the group when the
+  // organiser left «Si fra til gjengen» on. Only a real change counts (the
+  // stored instant, not the field, `isTeeOffMove`), and players added in this
+  // save get their invite instead: they never had an old time. A draft
+  // (save_draft) and a publish tell nobody they moved. It runs before the
+  // roster check for the same reason as the publish notices above:
+  // games.update has already stored the new time even when the roster write
+  // failed, and a retry would see no change. Best-effort: never stops the save.
+  if (
+    mode === 'update_scheduled' &&
+    isTeeOffMove(existing.scheduled_tee_off_at, scheduledTeeOffAt) &&
+    formData.get('notify_moved') === '1'
+  ) {
+    await notifyGameMoved({
+      gameId,
+      actorUserId: userId,
+      teeOffAt: scheduledTeeOffAt!,
+      courseChanged:
+        existing.course_id !== payload.course_id || existing.tee_box_id !== payload.tee_box_id,
+      excludeUserIds: plan.inserts.map((r) => r.user_id),
+    });
+  }
+
   if (!rosterWrite.ok) {
     redirect({ href: editHref({ error: 'db_players' }), locale });
   }
@@ -474,27 +498,6 @@ async function updateGameInternal(
     );
   }
 
-  // #2480: a scheduled round with a new tee-off tells the group when the
-  // organiser left «Si fra til gjengen» on. Only a real change counts (the
-  // stored instant, not the field), and players added in this save got their
-  // invite above instead: they never had an old time. A draft (save_draft)
-  // and a publish tell nobody they moved. Best-effort: never stops the save.
-  if (
-    mode === 'update_scheduled' &&
-    scheduledTeeOffAt &&
-    existing.scheduled_tee_off_at &&
-    Date.parse(existing.scheduled_tee_off_at) !== Date.parse(scheduledTeeOffAt) &&
-    formData.get('notify_moved') === '1'
-  ) {
-    await notifyGameMoved({
-      gameId,
-      actorUserId: userId,
-      teeOffAt: scheduledTeeOffAt,
-      courseChanged:
-        existing.course_id !== payload.course_id || existing.tee_box_id !== payload.tee_box_id,
-      excludeUserIds: plan.inserts.map((r) => r.user_id),
-    });
-  }
 
   // #2321: a resumed draft's «Inviter på e-post» addresses go out on publish,
   // through the same core as the game page's form, gated by

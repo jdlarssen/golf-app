@@ -82,7 +82,9 @@ export async function loadGameMovedRecipients(params: {
  * One `game_moved` to each player who should hear that the round moved, and a
  * mail to those who are away. Older unread `game_moved` rows for the same game
  * and player are marked read first, so the inbox never shows the old time on
- * top. Returns who was told (the varsel went through), for the confirmation.
+ * top. Returns the players whose `notify` call did not throw, for the
+ * confirmation. `notify` swallows a failed insert itself, so the list means
+ * «sent to», not «delivered».
  *
  * Best-effort: logs every failure with `[notifyGameMoved]` and never throws,
  * so the move that called it always stands.

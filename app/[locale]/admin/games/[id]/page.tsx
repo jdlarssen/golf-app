@@ -1260,14 +1260,17 @@ async function buildSections({
           >
             {tCta('scheduledEditButton')}
           </SmartLink>
-          {/* #2480: the organiser's page, also for an admin (one door). */}
-          <SmartLink
-            href={`/games/${gameId}/flytt`}
-            data-testid="admin-move-link"
-            className="mt-2 block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
-          >
-            {tCta('scheduledMoveButton')}
-          </SmartLink>
+          {/* #2480: the organiser's page, also for an admin (one door). A
+              round without a tee-off has nothing to move. */}
+          {game.scheduled_tee_off_at && (
+            <SmartLink
+              href={`/games/${gameId}/flytt`}
+              data-testid="admin-move-link"
+              className="mt-2 block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            >
+              {tCta('scheduledMoveButton')}
+            </SmartLink>
+          )}
         </div>
       </SectionCard>
     </>

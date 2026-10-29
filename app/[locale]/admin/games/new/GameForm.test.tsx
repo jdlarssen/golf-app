@@ -2178,4 +2178,28 @@ describe('GameForm — «Si fra til gjengen» when the tee-off moves (#2480)', (
     fireEvent.click(toggle);
     expect(mirror()).toBe('0');
   });
+
+  it('a scheduled game given its first tee-off asks nothing: there was no old time to tell about', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={[makePlayer('u-first', 'Første Spiller')]}
+        initialValues={{
+          name: 'Cupkamp',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '',
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [{ user_id: 'u-first', team_number: null, flight_number: null }],
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+        view="navn-og-tid"
+      />,
+    );
+    fireEvent.change(container.querySelector('#scheduled_tee_off_at')!, { target: { value: FUTURE_TEE_OFF } });
+
+    expect(screen.queryByTestId('notify-moved')).toBeNull();
+    expect((container.querySelector('input[type="hidden"][name="notify_moved"]') as HTMLInputElement).value).toBe('0');
+  });
 });

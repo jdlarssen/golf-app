@@ -27,6 +27,8 @@ import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { LIST_CARD_CLASS } from '@/components/ui/FormSection';
+import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { SwitchRow } from '@/components/ui/Switch';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LockedFormatSummary } from './LockedFormatSummary';
@@ -368,6 +370,16 @@ function basicsFieldsFor(section: EditSection | null): 'all' | 'nameAndTime' | '
 
 const TEE_OFF_PAST_HINT_ID = 'tee-off-past-hint';
 
+/** The tee-off field's Oslo wall-clock as an instant, or `null` when empty or half-typed. */
+function osloFieldIso(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return parseOsloDateTimeLocal(value);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * A passed tee-off greys the save (`canPublish`) but is not in «Mangler: …»;
  * its only sentence sits at the tee-off field. In every part but «Navn og
@@ -482,8 +494,10 @@ export function GameForm({
   const [notifyMoved, setNotifyMoved] = useState(true);
   const teeOffMoved =
     mode.kind === 'edit-scheduled' &&
-    state.scheduledTeeOffAt !== '' &&
-    state.scheduledTeeOffAt !== (initialValues?.scheduled_tee_off_at ?? '');
+    isTeeOffMove(
+      osloFieldIso(initialValues?.scheduled_tee_off_at),
+      osloFieldIso(state.scheduledTeeOffAt),
+    );
   const {
     name,
     gameMode,

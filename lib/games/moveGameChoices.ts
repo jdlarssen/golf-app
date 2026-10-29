@@ -55,3 +55,17 @@ export function movedTeeOffIso(day: string, time: string): string | null {
     return null;
   }
 }
+
+/**
+ * Whether a save moves the round: there was a stored tee-off and the new one
+ * is a different instant. The one rule for «the round moved» (#2480, trap 4):
+ * the move page, «Rediger»'s switch and both actions ask it, so the page never
+ * offers a notice the server would not send. A first tee-off on a scheduled
+ * game (a cup match is made without one) is not a move: nobody had an old time.
+ */
+export function isTeeOffMove(storedIso: string | null, nextIso: string | null): boolean {
+  if (!storedIso || !nextIso) return false;
+  const stored = Date.parse(storedIso);
+  const next = Date.parse(nextIso);
+  return !Number.isNaN(stored) && !Number.isNaN(next) && stored !== next;
+}

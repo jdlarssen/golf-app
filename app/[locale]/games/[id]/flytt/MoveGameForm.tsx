@@ -165,7 +165,7 @@ export function MoveGameForm({
               title={t('notifyTitle')}
               description={namesLine}
             />
-            {notify && chosenIso && (
+            {notify && changed && chosenIso && (
               <p data-testid="move-preview" className="bg-surface-2 px-3.5 py-3 font-sans text-sm leading-[1.45] text-text">
                 {t.rich('preview', {
                   gameName,

@@ -123,6 +123,15 @@ describe('moveGameAction', () => {
     expect(notifyGameMovedMock).not.toHaveBeenCalled();
   });
 
+  it('a scheduled game without a tee-off has nothing to move: no write, nobody told', async () => {
+    const url = await move({ day: later, time: '10:00', notify: '1' }, [
+      { data: { status: 'scheduled', scheduled_tee_off_at: null }, error: null },
+    ]);
+    expect(url).toBe(`/games/${GAME}`);
+    expect(updates()).toHaveLength(0);
+    expect(notifyGameMovedMock).not.toHaveBeenCalled();
+  });
+
   it('refuses a time in the past and a day that is not one, before reading anything', async () => {
     const yesterday = moveGameChoices(new Date(Date.now() - 86_400_000).toISOString()).currentDay;
     expect(await move({ day: yesterday, time: '10:00', notify: '1' }, [])).toBe(
