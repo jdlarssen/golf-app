@@ -24,6 +24,21 @@ describe('shouldOfferLastRound', () => {
   it('ignores an empty prefill param', () => {
     expect(shouldOfferLastRound({ intent: '', bane: [] })).toBe(true);
   });
+
+  // Owner's answer 29.10 (B): «Med kompiser» in the Klubbhus room opens
+  // ?intent=kompis, the main door to a friends' round, so the card stays.
+  it('keeps the card when only «Kompis-runde» is chosen', () => {
+    expect(shouldOfferLastRound({ intent: 'kompis' })).toBe(true);
+    expect(shouldOfferLastRound({ intent: 'kompis', step: '1' })).toBe(true);
+  });
+
+  it.each(['klubb', 'cup', 'solo'])('hides it for ?intent=%s', (intent) => {
+    expect(shouldOfferLastRound({ intent })).toBe(false);
+  });
+
+  it('hides it when ?intent=kompis comes with another prefill', () => {
+    expect(shouldOfferLastRound({ intent: 'kompis', format: 'stableford' })).toBe(false);
+  });
 });
 
 describe('lastRoundHrefs', () => {

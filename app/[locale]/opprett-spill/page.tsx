@@ -482,9 +482,9 @@ export default async function OpprettSpillPage({
     (first(sp.klubb) ? 'klubb' : undefined) ??
     prefill?.initialIntent;
 
-  // #2446: «Som sist» on a blank start. The read starts here and the card
-  // awaits it inside the wizard's Suspense boundary, so it runs alongside the
-  // mount data and the card arrives with the wizard, not after it.
+  // #2446: «Som sist» on a blank start or `?intent=kompis`. The read starts
+  // here and the card awaits it inside the wizard's Suspense boundary, so it
+  // runs alongside the mount data and the card arrives with the wizard.
   const stepOneLead = shouldOfferLastRound(sp) ? (
     <LastRoundCard
       offer={loadLastRound(currentUserId, supabase)}
