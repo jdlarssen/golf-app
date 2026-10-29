@@ -381,7 +381,7 @@ export function FormatsManager({ initialFormats }: Props) {
                 aria-expanded={expanded}
                 aria-controls={headingId('secondary-list')}
                 onClick={() => setExpandedTab(expanded ? null : activeTab)}
-                className="flex min-h-[44px] w-full items-center justify-center font-sans text-[13px] font-semibold text-primary"
+                className="flex min-h-[44px] w-full items-center justify-center font-sans text-[13px] font-semibold text-primary underline"
               >
                 {expanded
                   ? t('showFewer')

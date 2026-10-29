@@ -67,7 +67,7 @@ export default async function AdminFormatsPage({
 
       <div className="mx-auto mt-6 flex max-w-2xl items-center justify-between gap-3 border-t border-border px-1 pt-1 font-sans text-xs text-muted">
         <span>{t('footer')}</span>
-        <a href="#endringslogg" className="flex min-h-[44px] items-center font-semibold text-primary">
+        <a href="#endringslogg" className="flex min-h-[44px] items-center font-semibold text-primary underline">
           {t('auditLink')}
           <span aria-hidden="true">&nbsp;→</span>
         </a>
