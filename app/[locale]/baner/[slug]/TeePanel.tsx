@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { buttonClasses } from '@/components/ui/Button';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import type { TeeColor } from '@/lib/courses/teeColors';
+import { TEE_DOT_CLASS, type TeeColor } from '@/lib/courses/teeColors';
 
 /** One complete rating set on a tee, with every string ready from the server. */
 export type TeeRatingView = {
@@ -24,15 +24,6 @@ export type TeeView = {
   ratings: TeeRatingView[];
 };
 
-// Static map, so a new key in TEE_COLORS fails tsc until it has a dot.
-const TEE_DOT: Record<TeeColor, string> = {
-  white: 'bg-tee-white',
-  yellow: 'bg-tee-yellow',
-  red: 'bg-tee-red',
-  blue: 'bg-tee-blue',
-  orange: 'bg-tee-orange',
-};
-
 const RATING_COLUMNS = ['grid-cols-1', 'grid-cols-2', 'grid-cols-3'] as const;
 
 // The chip's own additions to the `compact` pill: the dot's gap, one line.
@@ -44,7 +35,7 @@ function TeeDot({ color, selected }: { color: TeeColor | null; selected: boolean
     <span
       aria-hidden="true"
       data-tee-dot
-      className={`size-3 shrink-0 rounded-full ${TEE_DOT[color]} ${
+      className={`size-3 shrink-0 rounded-full ${TEE_DOT_CLASS[color]} ${
         selected ? 'shadow-[inset_0_0_0_1px_rgb(0_0_0/0.2)]' : ''
       }`}
     />

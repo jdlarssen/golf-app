@@ -14,21 +14,26 @@ export type GenderRating = {
   course_rating: number | null;
 };
 
-// Ranges mirror the DB CHECK constraints (0132) so we surface a friendly error
-// instead of tripping a Postgres constraint. These are sanity bounds against
-// typos, not WHS-conformance gates: the WHS slope ceiling is 155, but some
-// courses publish older, un-capped ratings just above (Miklagard: 157), and
-// course rating has no WHS upper cap at all (ladies from long tees exceed 80).
-const SLOPE_MIN = 55;
-const SLOPE_MAX = 165;
-const CR_MIN = 50;
-const CR_MAX = 90;
+/**
+ * A tee's bounds, with one home here: the parser below and the course form's
+ * fields (#2486) read them, and teeRatingDbCheck.test.ts locks them to the DB
+ * CHECKs (slope and course rating in 0132, length in 0010), so we surface a
+ * friendly error instead of tripping a Postgres constraint. These are sanity
+ * bounds against typos, not WHS-conformance gates: the WHS slope ceiling is
+ * 155, but some courses publish older, un-capped ratings just above
+ * (Miklagard: 157), and course rating has no WHS upper cap at all (ladies from
+ * long tees exceed 80).
+ */
+export const TEE_BOUNDS = {
+  slope: { min: 55, max: 165 },
+  cr: { min: 50, max: 90 },
+  length: { min: 1000, max: 12000 },
+} as const;
+
 const PAR_MIN = 3;
 const PAR_MAX = 6;
 const SI_MIN = 1;
 const SI_MAX = 18;
-const LENGTH_MIN = 1000;
-const LENGTH_MAX = 12000;
 
 /**
  * Parse + clamp a per-gender rating from raw form strings. Empty or
@@ -44,11 +49,16 @@ export function parseGenderRating(slopeStr: string, crStr: string): GenderRating
 
   return {
     slope:
-      slope !== null && Number.isInteger(slope) && slope >= SLOPE_MIN && slope <= SLOPE_MAX
+      slope !== null &&
+      Number.isInteger(slope) &&
+      slope >= TEE_BOUNDS.slope.min &&
+      slope <= TEE_BOUNDS.slope.max
         ? slope
         : null,
     course_rating:
-      cr !== null && Number.isFinite(cr) && cr >= CR_MIN && cr <= CR_MAX ? cr : null,
+      cr !== null && Number.isFinite(cr) && cr >= TEE_BOUNDS.cr.min && cr <= TEE_BOUNDS.cr.max
+        ? cr
+        : null,
   };
 }
 
@@ -74,7 +84,9 @@ export function parseLengthMeters(raw: string): number | null {
   const s = raw.trim();
   if (s === '') return null;
   const n = Number(s);
-  return Number.isInteger(n) && n >= LENGTH_MIN && n <= LENGTH_MAX ? n : null;
+  return Number.isInteger(n) && n >= TEE_BOUNDS.length.min && n <= TEE_BOUNDS.length.max
+    ? n
+    : null;
 }
 
 /** Par per hole must be an integer in 3–6. */

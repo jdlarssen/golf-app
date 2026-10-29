@@ -6,8 +6,9 @@
  *   - slope         55–165
  *   - course_rating 50–90
  *
- * The same bounds live in lib/courses/coursePayload.ts as SLOPE_MIN/MAX +
- * CR_MIN/MAX. These are sanity bounds against typos, not WHS-conformance gates
+ * The same bounds live in lib/courses/coursePayload.ts as TEE_BOUNDS, which the
+ * validator and the course form's fields (#2486) read. These are sanity bounds
+ * against typos, not WHS-conformance gates
  * (the WHS slope ceiling is 155, but some courses publish older ratings just
  * above, e.g. Miklagard 157; course rating has no WHS upper cap at all).
  *
@@ -19,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-import { parseGenderRating } from './coursePayload';
+import { parseGenderRating, parseLengthMeters, TEE_BOUNDS } from './coursePayload';
 
 const MIGRATION_FILE = path.resolve(
   __dirname,
@@ -64,10 +65,10 @@ describe('tee_boxes course_rating DB CHECK ↔ validator agreement (trap #4)', (
     expect(extractCheckBounds('tee_boxes_course_rating_juniors_check')).toEqual(mens);
   });
 
-  it('DB CHECK bounds are 50 and 90 (typo sanity range, not a WHS cap)', () => {
+  it('DB CHECK bounds are TEE_BOUNDS.cr, 50 and 90 (typo sanity range, not a WHS cap)', () => {
     const bounds = extractCheckBounds('tee_boxes_course_rating_mens_check');
-    expect(bounds.min).toBe(50);
-    expect(bounds.max).toBe(90);
+    expect(bounds).toEqual(TEE_BOUNDS.cr);
+    expect(bounds).toEqual({ min: 50, max: 90 });
   });
 });
 
@@ -94,9 +95,29 @@ describe('tee_boxes slope DB CHECK ↔ validator agreement (trap #4)', () => {
     expect(extractCheckBounds('tee_boxes_slope_juniors_check')).toEqual(mens);
   });
 
-  it('DB CHECK bounds are 55 and 165 (WHS 55–155 plus headroom for un-capped ratings)', () => {
+  it('DB CHECK bounds are TEE_BOUNDS.slope, 55 and 165 (WHS 55–155 plus headroom for un-capped ratings)', () => {
     const bounds = extractCheckBounds('tee_boxes_slope_mens_check');
-    expect(bounds.min).toBe(55);
-    expect(bounds.max).toBe(165);
+    expect(bounds).toEqual(TEE_BOUNDS.slope);
+    expect(bounds).toEqual({ min: 55, max: 165 });
+  });
+});
+
+// The length CHECK has lived in 0010 since the column was added.
+describe('tee_boxes length DB CHECK ↔ validator agreement (trap #4)', () => {
+  it('TEE_BOUNDS.length is the 0010 CHECK, and the validator keeps to it', () => {
+    const content = fs.readFileSync(
+      path.resolve(__dirname, '../../supabase/migrations/0010_scheduled_status_and_tee_off.sql'),
+      'utf-8',
+    );
+    const m = content.match(/length_meters int check \(length_meters between (\d+) and (\d+)\)/);
+    if (!m) throw new Error('Could not parse the length_meters CHECK in 0010');
+    expect({ min: Number(m[1]), max: Number(m[2]) }).toEqual(TEE_BOUNDS.length);
+    const { min, max } = TEE_BOUNDS.length;
+    expect([min - 1, min, max, max + 1].map((n) => parseLengthMeters(String(n)))).toEqual([
+      null,
+      min,
+      max,
+      null,
+    ]);
   });
 });

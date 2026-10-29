@@ -11,3 +11,16 @@ export type TeeColor = (typeof TEE_COLORS)[number];
 export function isTeeColor(value: unknown): value is TeeColor {
   return typeof value === 'string' && (TEE_COLORS as readonly string[]).includes(value);
 }
+
+/**
+ * The dot's colour class for each key, shared by the course page (TeePanel) and
+ * the course form. A static map, so a new key in TEE_COLORS fails tsc until it
+ * has a dot.
+ */
+export const TEE_DOT_CLASS: Record<TeeColor, string> = {
+  white: 'bg-tee-white',
+  yellow: 'bg-tee-yellow',
+  red: 'bg-tee-red',
+  blue: 'bg-tee-blue',
+  orange: 'bg-tee-orange',
+};
