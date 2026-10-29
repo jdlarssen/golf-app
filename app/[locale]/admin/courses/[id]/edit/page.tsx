@@ -98,7 +98,7 @@ export default async function EditCoursePage({
     .from('courses')
     .select(
       `
-      id, name, created_at, updated_at,
+      id, name, nine_holes, created_at, updated_at,
       created_by_user:users!courses_created_by_fkey(name, nickname),
       updated_by_user:users!courses_updated_by_fkey(name, nickname)
     `,
@@ -157,7 +157,12 @@ export default async function EditCoursePage({
             </Card>
           }
         >
-          <EditCourseFormBody courseId={id} courseName={course.name} submitLabel={tEdit('submitLabel')} />
+          <EditCourseFormBody
+            courseId={id}
+            courseName={course.name}
+            nineHoles={course.nine_holes}
+            submitLabel={tEdit('submitLabel')}
+          />
         </Suspense>
       </div>
 
@@ -233,14 +238,16 @@ async function getArchivedTees(
 async function EditCourseFormBody({
   courseId,
   courseName,
+  nineHoles,
   submitLabel,
 }: {
   courseId: string;
   courseName: string;
+  nineHoles: boolean;
   submitLabel: string;
 }) {
   const { supabase } = await getEditCourseContext();
-  const [holesResult, teesResult, affectedGamesResult] = await Promise.all([
+  const [holesResult, teesResult, affectedGamesResult, usedGamesResult] = await Promise.all([
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -262,6 +269,12 @@ async function EditCourseFormBody({
       .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId)
       .in('status', ['active', 'scheduled']),
+    // #2484: every round on the course, finished ones too. Above 0 the form
+    // locks the hole count (update_course_with_layout refuses the switch).
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId),
   ]);
 
   if (holesResult.error) throw holesResult.error;
@@ -271,6 +284,9 @@ async function EditCourseFormBody({
   const affectedGamesCount = affectedGamesResult.error
     ? 0
     : (affectedGamesResult.count ?? 0);
+  // A failed count leaves the choice open; the RPC still refuses a switch on a
+  // used course, and the page shows that as hole_count_locked.
+  const usedInGamesCount = usedGamesResult.error ? 0 : (usedGamesResult.count ?? 0);
 
   // Numeric fields are stringified so the form's controlled inputs preserve
   // in-progress decimal entry (see CourseForm.tsx for context). Per-kjønn-
@@ -319,9 +335,11 @@ async function EditCourseFormBody({
       action={updateAction}
       submitLabel={submitLabel}
       affectedGamesCount={affectedGamesCount}
+      usedInGamesCount={usedInGamesCount}
       tone="admin"
       initialData={{
         name: courseName,
+        nineHoles,
         holes: initialHoles,
         teeBoxes: initialTees,
       }}
