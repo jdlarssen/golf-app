@@ -414,10 +414,15 @@ export function GameWizard(props: Props) {
       return;
     }
     didResetStep.current = true;
-    // Øvrige params (?intent=, ?klubb=, ?bane=, ?fra=) er seedene RSC-re-
-    // renderen leser — kun `step` (og #2321s `skjerm`) skal bort.
+    // Øvrige params (?intent=, ?klubb=, ?fra=) er seedene RSC-re-renderen
+    // leser — kun `step` (og #2321s `skjerm`) skal bort. #2485: `?bane=`
+    // går òg. Seeden har alt valgt banen der ruta leser den, og denne
+    // monteringen blir aldri `draftSettled`, så useCourseFromUrl fjerner den
+    // ikke. Ble den stående, la neste gjenopprettede utkast den over banen
+    // arrangøren valgte selv. I samme replace, så ingen to skrivere kappes.
     params.delete('step');
     params.delete(TEAMS_SCREEN_PARAM);
+    params.delete(COURSE_PARAM);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // ⚠️ `searchParamsString` skal IKKE inn i dep-arrayet, selv om effekten

@@ -248,17 +248,24 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
   // seedet felt av #1383-reset-en helt, så en delt `?bane=…&step=5`-lenke
   // landet arrangøren i «Klar?» med et default-format ingen hadde valgt —
   // nøyaktig plagen #1383 skulle fjerne.
+  // #2485: `?bane=` leaves the address with `step`. The seed has already
+  // chosen the course, and a `bane` left behind would later go over the
+  // organiser's own choice when a draft is restored (useCourseFromUrl never
+  // runs on a reset mount).
   it.each(['step=5', 'step=4', 'step=3'])(
-    'resetter %s til steg 1 og lar ?bane= stå',
+    'resetter %s til steg 1; banen er seedet, og ?bane= går ut av adressen',
     (step) => {
       searchString = `bane=course-1&${step}`;
       renderWizard(SEEDED_BY_ROUTE);
 
       expect(replace).toHaveBeenCalledTimes(1);
-      expect(replace).toHaveBeenCalledWith('/admin/games/new?bane=course-1', {
+      expect(replace).toHaveBeenCalledWith('/admin/games/new', {
         scroll: false,
       });
       expect(push).not.toHaveBeenCalled();
+      expect(
+        document.querySelector<HTMLInputElement>('input[type=hidden][name=course_id]')!.value,
+      ).toBe('course-1');
     },
   );
 
@@ -330,7 +337,8 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     });
 
     expect(replace).toHaveBeenCalledTimes(1);
-    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble&bane=course-1', {
+    // `bane` goes with `step` (the seed has the course already).
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble', {
       scroll: false,
     });
   });
@@ -861,6 +869,21 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     await waitFor(() => expect(searchString).not.toContain('bane='));
     await waitFor(() => expect(courseInput().value).toBe('course-2'));
     expect(gameModeInput().value).toBe('stableford');
+  });
+
+  // Round-2 evaluator: a stale `?bane=X&step=5` with no draft resets to step 1.
+  // If `bane` stayed, the next draft restore would put X over the course the
+  // organiser chose afterwards.
+  it('en foreldet ?bane=…&step=5 uten utkast legger ikke banen over et senere valg', async () => {
+    searchString = 'bane=course-2&step=5';
+    const { unmount } = render(element());
+    expect(searchString).toBe('');
+    unmount();
+    // The organiser chose course-1 on step 3 (the draft), then reloads.
+    await seedDraft();
+    render(element());
+    await waitFor(() => expect(courseInput().value).toBe('course-1'));
+    expect(teeInput().value).toBe('tee-1');
   });
 
   it('uten utkast (cup-lenka skriver ingen) velger den banen på den monterte veiviseren', async () => {
