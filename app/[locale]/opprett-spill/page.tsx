@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { isUuid } from '@/lib/url/isUuid';
 import { Suspense, type ReactNode } from 'react';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -99,12 +100,15 @@ type RevansjeContext = {
  * spillet finnes, brukeren er en av deltakerne, status er 'finished', og
  * spillet er hverken en cup-match (`tournament_id`) eller en liga-runde
  * (`league_round_id`). Ingenting bygges før authz-sjekken (ingen data-lekkasje
- * for en gjettet id).
+ * for en gjettet id). En id uten UUID-form (`?fra=abc`, `?sist=abc`) er også
+ * en ugyldig kilde: oppslaget ville kastet Postgres `22P02` og veltet hele
+ * opprett-døra til feilsiden (#2446, samme vakt som #2244).
  */
 async function loadRevansjeContext(
   fraId: string,
   currentUserId: string,
 ): Promise<RevansjeContext | null> {
+  if (!isUuid(fraId)) return null;
   const gwp = await getGameWithPlayers(fraId);
   if (!gwp) return null;
 
