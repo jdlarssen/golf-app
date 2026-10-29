@@ -259,7 +259,8 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
       renderWizard(SEEDED_BY_ROUTE);
 
       expect(replace).toHaveBeenCalledTimes(1);
-      expect(replace).toHaveBeenCalledWith('/admin/games/new', {
+      // `banevalg=1` keeps «a link chose the course» for «Som sist» (#2446).
+      expect(replace).toHaveBeenCalledWith('/admin/games/new?banevalg=1', {
         scroll: false,
       });
       expect(push).not.toHaveBeenCalled();
@@ -337,8 +338,9 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     });
 
     expect(replace).toHaveBeenCalledTimes(1);
-    // `bane` goes with `step` (the seed has the course already).
-    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble', {
+    // `bane` goes with `step` (the seed has the course already); `banevalg`
+    // stays as the trace for «Som sist».
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble&banevalg=1', {
       scroll: false,
     });
   });
@@ -811,7 +813,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     await waitFor(() => expect(courseInput().value).toBe('course-2'));
     expect(teeInput().value).toBe('');
     expect(gameModeInput().value).toBe('stableford');
-    await waitFor(() => expect(searchString).toBe('step=3'));
+    await waitFor(() => expect(searchString).toBe('step=3&banevalg=1'));
   });
 
   it('virker på en veiviser som alt er montert, også med samme bane to ganger', async () => {
@@ -823,7 +825,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     searchString = 'step=3&bane=course-2';
     rerender(element());
     await waitFor(() => expect(courseInput().value).toBe('course-2'));
-    await waitFor(() => expect(searchString).toBe('step=3'));
+    await waitFor(() => expect(searchString).toBe('step=3&banevalg=1'));
     rerender(element());
 
     // The organiser changes the course by hand, then comes back with course-2 again.
@@ -847,7 +849,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     await seedDraft();
     searchString = 'step=3&bane=gone';
     render(element());
-    await waitFor(() => expect(searchString).toBe('step=3'));
+    await waitFor(() => expect(searchString).toBe('step=3&banevalg=1'));
     expect(courseInput().value).toBe('course-1');
   });
 
@@ -866,7 +868,8 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     rerender(hidden('visible'));
     // (The body's step guard sends the empty mount back to step 1, so only
     // `bane` is asserted on the address.)
-    await waitFor(() => expect(searchString).not.toContain('bane='));
+    await waitFor(() => expect(searchString).not.toMatch(/(^|&)bane=/));
+    expect(searchString).toContain('banevalg=1');
     await waitFor(() => expect(courseInput().value).toBe('course-2'));
     expect(gameModeInput().value).toBe('stableford');
   });
@@ -877,7 +880,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
   it('en foreldet ?bane=…&step=5 uten utkast legger ikke banen over et senere valg', async () => {
     searchString = 'bane=course-2&step=5';
     const { unmount } = render(element());
-    expect(searchString).toBe('');
+    expect(searchString).toBe('banevalg=1');
     unmount();
     // The organiser chose course-1 on step 3 (the draft), then reloads.
     await seedDraft();

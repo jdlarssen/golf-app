@@ -2,10 +2,8 @@
 
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { COURSE_CHOSEN_PARAM, COURSE_PARAM } from '@/lib/wizard/courseParams';
 import type { CourseOption } from './GameForm';
-
-/** The search parameter /opprett-bane sends the chosen course back with. */
-export const COURSE_PARAM = 'bane';
 
 /**
  * #2485: `?bane=<id>` chooses the course in a game form, then leaves the
@@ -21,18 +19,22 @@ export const COURSE_PARAM = 'bane';
  * remounts the wizard with its own course, and the URL's course goes over it.
  * Removing the parameter afterwards means a reload or Back starts from the
  * draft (what the organiser changed since), and the next trip back is a URL
- * change again, even with the same course.
+ * change again, even with the same course. `markChosen` leaves `banevalg=1`
+ * in its place, so «Som sist» (#2446) still sees that a link chose the course;
+ * the wizard sets it, the edit form has no step 1 and does not.
  */
 export function useCourseFromUrl({
   ready,
   courseId,
   setCourseId,
   courses,
+  markChosen = false,
 }: {
   ready: boolean;
   courseId: string;
   setCourseId: (next: string) => void;
   courses: readonly CourseOption[];
+  markChosen?: boolean;
 }) {
   const searchParams = useSearchParams();
   const urlCourseId = searchParams.get(COURSE_PARAM);
@@ -49,6 +51,7 @@ export function useCourseFromUrl({
     // Router's own effect, so the call waits one task.
     const params = new URLSearchParams(searchString);
     params.delete(COURSE_PARAM);
+    if (markChosen) params.set(COURSE_CHOSEN_PARAM, '1');
     const qs = params.toString();
     const timer = setTimeout(() => {
       window.history.replaceState(

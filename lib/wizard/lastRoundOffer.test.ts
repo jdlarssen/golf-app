@@ -13,7 +13,9 @@ describe('shouldOfferLastRound', () => {
     expect(shouldOfferLastRound({ step: '1' })).toBe(true);
   });
 
-  it.each(['fra', 'sist', 'bane', 'klubb', 'intent', 'format', 'oppsett'])(
+  // #2485: `banevalg` is what the wizard leaves behind when it has used and
+  // removed `bane`, so a course link keeps step 1 as it was after a reload.
+  it.each(['fra', 'sist', 'bane', 'banevalg', 'klubb', 'intent', 'format', 'oppsett'])(
     'hides it when ?%s= prefills the wizard',
     (key) => {
       expect(shouldOfferLastRound({ [key]: 'x' })).toBe(false);
