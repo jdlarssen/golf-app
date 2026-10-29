@@ -75,7 +75,7 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
           <li
             key={course.id}
             data-testid="similar-course-row"
-            className="flex min-h-16 items-center gap-3 border-b border-divider px-3.5 py-2.5 last:border-b-0"
+            className="flex min-h-16 items-center gap-3 border-b border-row-divider-warm px-3.5 py-2.5 last:border-b-0"
           >
             <span className="min-w-0 flex-grow">
               <span className="block text-[15px] font-semibold leading-[normal]">{course.name}</span>
