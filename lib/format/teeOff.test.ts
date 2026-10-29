@@ -11,6 +11,7 @@ import {
   expectedFirstScoreTime,
   osloParts,
   formatTeeOffFieldValue,
+  formatTeeOffLongDate,
 } from './teeOff';
 
 // 2026-05-12T12:24:00Z === 2026-05-12 14:24 in Oslo (CEST, summer DST, +02:00)
@@ -149,5 +150,27 @@ describe('formatTeeOffFieldValue', () => {
   it('returns null for a date that does not exist', () => {
     expect(formatTeeOffFieldValue('2026-02-30T10:00', 'no')).toBeNull();
     expect(formatTeeOffFieldValue('2026-10-03T25:00', 'no')).toBeNull();
+  });
+});
+
+// #2446: «Ny tid: lørdag 31. okt kl. 09:00» on the «Som sist» card.
+describe('formatTeeOffLongDate', () => {
+  it('writes the whole weekday in Norwegian', () => {
+    expect(formatTeeOffLongDate('2026-10-31T09:00', 'no')).toBe('lørdag 31. okt kl. 09:00');
+    expect(formatTeeOffLongDate('2026-05-11T14:05', 'no')).toBe('mandag 11. mai kl. 14:05');
+  });
+
+  it('writes the whole weekday in English', () => {
+    expect(formatTeeOffLongDate('2026-10-31T09:00', 'en')).toBe('Saturday 31 Oct at 09:00');
+  });
+
+  it('reads the wall clock as written, across a year', () => {
+    expect(formatTeeOffLongDate('2027-01-02T09:00', 'no')).toBe('lørdag 2. jan kl. 09:00');
+  });
+
+  it('returns null for an empty, malformed or impossible value', () => {
+    expect(formatTeeOffLongDate('', 'no')).toBeNull();
+    expect(formatTeeOffLongDate('2026-10-31', 'no')).toBeNull();
+    expect(formatTeeOffLongDate('2026-02-30T09:00', 'no')).toBeNull();
   });
 });

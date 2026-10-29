@@ -1512,7 +1512,17 @@
       "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Be admin invitere flere fra",
       "shortageBannerLink": "forsiden",
       "shortageBannerSuffix": ".",
-      "revansjeBanner": "Forhåndsutfylt fra {name} — alt kan endres."
+      "revansjeBanner": "Forhåndsutfylt fra {name} — alt kan endres.",
+      "lastRound": {
+        "kicker": "Som sist",
+        "restartKicker": "Eller start på nytt",
+        "ariaLabel": "Forrige runde: {name}",
+        "summary": "{course} · {tee} tee · {format}",
+        "newTime": "Ny tid: {date}",
+        "others": "{count} andre",
+        "use": "Bruk samme oppsett",
+        "edit": "Endre"
+      }
     }
   },
   "formatGuide": {

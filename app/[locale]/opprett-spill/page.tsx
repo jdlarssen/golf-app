@@ -30,6 +30,14 @@ import {
   type RevansjeGameRow,
   type RevansjePlayerRow,
 } from '@/lib/games/buildRevansjeInitialValues';
+import { onlyStandaloneGames } from '@/lib/games/arrangedGames';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
+import {
+  carriedGameName,
+  shouldOfferLastRound,
+  type LastRoundPerson,
+} from '@/lib/wizard/lastRoundOffer';
+import { LastRoundCard, type LastRoundOffer } from './LastRoundCard';
 
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
@@ -50,6 +58,12 @@ type SearchParams = Promise<{
   // param som peker på en ugyldig kilde (ikke deltaker, ikke finished,
   // cup/liga) ignoreres stille og gir en helt vanlig tom veiviser.
   fra?: string | string[];
+  // #2446: «Som sist» on step 1 links here with the newest such round:
+  // `?sist=<id>&step=5` for «Bruk samme oppsett», `?sist=<id>` for «Endre».
+  // The same gate as `?fra=` (loadRevansjeContext); on top of the revansje
+  // prefill it brings the tee-off default and the name the round was given.
+  // `?fra=` wins when both are set.
+  sist?: string | string[];
   // #1023: «Arranger en runde på …» på de offentlige banesidene dyplenker hit
   // med banens id. Serverside-validert i loadBaneCourseId; ugyldig/ukjent id
   // ignoreres stille. `?fra=` vinner når begge er satt (revansje er rikere).
@@ -69,6 +83,14 @@ type RevansjeContext = {
   initialValues: InitialValues;
   initialIntent: Intent;
   sourceName: string;
+  // #2446: what «Som sist» reads besides the prefill, from the same read: the
+  // card's line and the course the name rule compares against.
+  source: {
+    courseId: string;
+    teeName: string;
+    formatKey: string;
+    players: LastRoundPerson[];
+  };
 };
 
 /**
@@ -176,7 +198,112 @@ async function loadRevansjeContext(
     }
   }
 
-  return { initialValues, initialIntent, sourceName: game.name };
+  return {
+    initialValues,
+    initialIntent,
+    sourceName: game.name,
+    source: {
+      courseId: game.course_id,
+      teeName: game.tee_box.name,
+      formatKey: formatDisplayLabelKey(game.game_mode, game.mode_config),
+      players: gwp.players
+        .filter((p) => p.withdrawn_at === null)
+        .map((p) => ({ name: p.users?.name ?? null, nickname: p.users?.nickname ?? null })),
+    },
+  };
+}
+
+/**
+ * #2446 — the course's name, for the «Som sist» card and the name rule.
+ * Courses are world-readable, so the user's client reads it. Best-effort
+ * (#1445): `null` when the lookup fails.
+ */
+async function loadCourseName(
+  courseId: string,
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('name')
+    .eq('id', courseId)
+    .maybeSingle<{ name: string }>();
+  if (error) console.error('[loadCourseName] course lookup failed', error);
+  return data?.name ?? null;
+}
+
+/**
+ * #2446 — `?sist=<id>` from the «Som sist» card: the revansje prefill behind
+ * the same gate, plus the tee-off default and the round's own name unless the
+ * wizard wrote it (`carriedGameName`). `null` for an id that fails the gate,
+ * and the wizard opens blank, as for `?fra=`.
+ */
+async function loadSomSistContext(
+  sistId: string,
+  currentUserId: string,
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  teeOffDefault: string,
+): Promise<RevansjeContext | null> {
+  const context = await loadRevansjeContext(sistId, currentUserId);
+  if (!context) return null;
+  console.log('[opprett-spill] som-sist-prefill', sistId);
+  const name = carriedGameName(
+    context.sourceName,
+    await loadCourseName(context.source.courseId, supabase),
+  );
+  return {
+    ...context,
+    initialValues: {
+      ...context.initialValues,
+      scheduled_tee_off_at: teeOffDefault,
+      ...(name ? { name } : {}),
+    },
+  };
+}
+
+/**
+ * #2446 — the newest finished round you played that is neither a cup match
+ * nor a league round, for the «Som sist» card. The query is only a pre-filter
+ * through your own client (RLS); `loadRevansjeContext` decides, as it does for
+ * «Revansje?». Should the newest fail it, there is no card: we do not try an
+ * older round. Best-effort (#1445): any failure is logged and gives no card,
+ * never a broken door, and the promise never rejects (the card awaits it).
+ */
+async function loadLastRound(
+  currentUserId: string,
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+): Promise<LastRoundOffer | null> {
+  try {
+    const { data, error } = await onlyStandaloneGames(
+      supabase
+        .from('games')
+        .select('id, game_players!inner(user_id)')
+        .eq('game_players.user_id', currentUserId)
+        .eq('status', 'finished'),
+    )
+      // NULLS LAST: Postgres puts NULL first in DESC (#2269).
+      .order('ended_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    if (error || !data) {
+      if (error) console.error('[loadLastRound] games lookup failed', error);
+      return null;
+    }
+    const context = await loadRevansjeContext(data.id, currentUserId);
+    if (!context) return null;
+    const courseName = await loadCourseName(context.source.courseId, supabase);
+    if (!courseName) return null;
+    return {
+      gameId: data.id,
+      name: context.sourceName,
+      courseName,
+      teeName: context.source.teeName,
+      formatKey: context.source.formatKey,
+      players: context.source.players,
+    };
+  } catch (error) {
+    console.error('[loadLastRound] failed', error);
+    return null;
+  }
 }
 
 /**
@@ -259,6 +386,28 @@ function deepLinkSeed(deepLink: WizardDeepLink): {
   };
 }
 
+/**
+ * #1007/#1023/#2328/#2331/#2446: remount når prefill-kilden endres
+ * (useGameFormState leser initialValues kun ved mount — key-remount-fella).
+ * «Som sist» får sitt eget prefiks, så revansje og «Som sist» for samme spill
+ * gir to monteringer.
+ */
+function wizardKeyFor({
+  fraId,
+  sistId,
+  baneCourseId,
+  seedKey,
+}: {
+  fraId: string | undefined;
+  sistId: string | undefined;
+  baneCourseId: string | null;
+  seedKey: string | undefined;
+}): string {
+  if (fraId) return fraId;
+  if (sistId) return `sist:${sistId}`;
+  return baneCourseId ?? seedKey ?? 'blank';
+}
+
 export default async function OpprettSpillPage({
   searchParams,
 }: {
@@ -278,6 +427,14 @@ export default async function OpprettSpillPage({
   const sp = await searchParams;
   const t = await getTranslations({ locale, namespace: 'wizard' });
 
+  // #2438: a new game gets the same tee-off suggestion as the admin route
+  // (#1171): the first upcoming Saturday 09:00 Oslo. Computed once on the
+  // server, after the request-time reads above (cookies, searchParams), so
+  // cacheComponents never prerenders a frozen date and SSR and client read
+  // the same string. Revansje keeps an empty date on purpose (#1007); «Som
+  // sist» takes this one (#2446).
+  const teeOffDefault = defaultTeeOffAt(new Date());
+
   // #1007: «Revansje?» — kilde-spillets id fra game-home. Ugyldig/uautorisert
   // param (ikke deltaker, ikke finished, cup/liga) gir `null` og faller
   // stille tilbake til en helt vanlig tom veiviser (ingen feilmelding — det
@@ -290,22 +447,22 @@ export default async function OpprettSpillPage({
     console.log('[opprett-spill] revansje-prefill', fraId);
   }
 
+  // #2446: «Som sist». `?fra=` wins when both are set.
+  const sistId = fraId ? undefined : first(sp.sist);
+  const sist = sistId
+    ? await loadSomSistContext(sistId, currentUserId, supabase, teeOffDefault)
+    : null;
+  const prefill = revansje ?? sist;
+
   // #1023: `?bane=` from the public course pages prefills course_id only
   // (tee box and players use the wizard's own defaults; tee-off gets the
-  // #2438 default below). Revansje wins when both params resolve; an invalid
-  // bane id falls back silently to a blank wizard.
+  // #2438 default above). Revansje and «Som sist» win when both params
+  // resolve; an invalid bane id falls back silently to a blank wizard.
   const baneParam = first(sp.bane);
   const baneCourseId =
-    !revansje && baneParam
+    !prefill && baneParam
       ? await loadBaneCourseId(baneParam, supabase)
       : null;
-
-  // #2438: a new game gets the same tee-off suggestion as the admin route
-  // (#1171): the first upcoming Saturday 09:00 Oslo. Computed once on the
-  // server, after the request-time reads above (cookies, searchParams), so
-  // cacheComponents never prerenders a frozen date and SSR and client read
-  // the same string. Revansje keeps an empty date on purpose (#1007).
-  const teeOffDefault = defaultTeeOffAt(new Date());
 
   const deepLink = await loadWizardDeepLink(sp);
   const seed = deepLink ? deepLinkSeed(deepLink) : null;
@@ -319,16 +476,26 @@ export default async function OpprettSpillPage({
     (deepLink ? PRESET_INTENT : undefined) ??
     parseIntent(first(sp.intent)) ??
     (first(sp.klubb) ? 'klubb' : undefined) ??
-    revansje?.initialIntent;
+    prefill?.initialIntent;
+
+  // #2446: «Som sist» on a blank start. The read starts here and the card
+  // awaits it inside the wizard's Suspense boundary, so it runs alongside the
+  // mount data and the card arrives with the wizard, not after it.
+  const stepOneLead = shouldOfferLastRound(sp) ? (
+    <LastRoundCard
+      offer={loadLastRound(currentUserId, supabase)}
+      teeOffDefault={teeOffDefault}
+    />
+  ) : undefined;
 
   // Bannerne står mellom stripen og tittelen; hvert banner bærer sin egen
   // toppmarg, så et banner som ikke vises, ikke etterlater et hull.
   const notice = (
     <>
-      {revansje && (
+      {prefill && (
         <div className="mt-4">
           <Banner tone="info" testId="revansje-banner">
-            {t('createDoor.revansjeBanner', { name: revansje.sourceName })}
+            {t('createDoor.revansjeBanner', { name: prefill.sourceName })}
           </Banner>
         </div>
       )}
@@ -345,7 +512,7 @@ export default async function OpprettSpillPage({
           defaultGroupId={first(sp.klubb)}
           initialIntent={initialIntent}
           initialValues={
-            revansje?.initialValues ?? {
+            prefill?.initialValues ?? {
               ...(baneCourseId ? { course_id: baneCourseId } : {}),
               ...seed?.values,
               scheduled_tee_off_at: teeOffDefault,
@@ -353,18 +520,16 @@ export default async function OpprettSpillPage({
           }
           // #2328/#2331: null = the format without a count; left out = default 4.
           initialExpectedPlayerCount={seed ? seed.expectedPlayerCount : undefined}
-          // #1007/#1023/#2328/#2331: remount når prefill-kilden endres
-          // (useGameFormState leser initialValues kun ved mount —
-          // key-remount-fella).
-          wizardKey={
-            fraId ??
-            baneCourseId ??
-            seed?.key ??
-            'blank'
-          }
+          wizardKey={wizardKeyFor({
+            fraId,
+            sistId,
+            baneCourseId,
+            seedKey: seed?.key,
+          })}
           userId={currentUserId}
           isAdmin={isAdmin}
           notice={notice}
+          stepOneLead={stepOneLead}
         />
       </Suspense>
     </AppShell>
@@ -429,6 +594,7 @@ async function GameFormBody({
   userId,
   isAdmin,
   notice,
+  stepOneLead,
   initialExpectedPlayerCount,
 }: {
   defaultGroupId: string | undefined;
@@ -445,6 +611,8 @@ async function GameFormBody({
   userId: string;
   isAdmin: boolean;
   notice: ReactNode;
+  // #2446: the «Som sist» card, on a blank start only.
+  stepOneLead: ReactNode;
 }) {
   const {
     courses,
@@ -483,6 +651,7 @@ async function GameFormBody({
       formatGuide={formatGuide}
       backHref="/"
       notice={notice}
+      stepOneLead={stepOneLead}
     />
   );
 }

@@ -153,3 +153,28 @@ export function formatTeeOffFieldValue(value: string, locale: string): string | 
     ? `${weekday} ${day} ${monthName} ${year}, ${time}`
     : `${weekday} ${day}. ${monthName} ${year}, ${time}`;
 }
+
+const LONG_DAY_NAMES = {
+  no: ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'],
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+} as const;
+
+/**
+ * The «Som sist» card's new time (#2446): «lørdag 31. okt kl. 09:00» /
+ * «Saturday 31 Oct at 09:00». Whole weekday, the app's short month. Reads a
+ * `datetime-local` value as numbers, like `formatTeeOffFieldValue`, so it
+ * needs no zone. Null for an empty, malformed or impossible value.
+ */
+export function formatTeeOffLongDate(value: string, locale: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!m) return null;
+  const [year, month, day, hour, minute] = m.slice(1).map(Number);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59) return null;
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (utc.getUTCDate() !== day) return null;
+  const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  if (locale === 'en') {
+    return `${LONG_DAY_NAMES.en[utc.getUTCDay()]} ${day} ${FIELD_NAMES.en.months[month - 1]} at ${time}`;
+  }
+  return `${LONG_DAY_NAMES.no[utc.getUTCDay()]} ${day}. ${MONTH_NAMES[month - 1]} kl. ${time}`;
+}
