@@ -304,6 +304,26 @@ export function reconcileWizardDraft(
   return { ...draft, values };
 }
 
+/**
+ * #2485: a restored draft takes the course `?bane=` chose, the way
+ * `setCourseId` would: that course, and its tee only when it has just one.
+ * The wizard's shell restores the draft by remounting the body, which also
+ * happens when a kept (Activity) wizard is shown again and finds its first
+ * draft; by then `useCourseFromUrl` may already have removed `bane` from the
+ * address, so the course has to ride in on the draft itself.
+ */
+export function withUrlCourse(
+  draft: WizardDraft,
+  courseId: string | null,
+  courses: readonly CourseOption[],
+): WizardDraft {
+  if (!courseId || draft.values.course_id === courseId) return draft;
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return draft;
+  const onlyTee = course.tee_boxes.length === 1 ? course.tee_boxes[0].id : '';
+  return { ...draft, values: { ...draft.values, course_id: courseId, tee_box_id: onlyTee } };
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // sessionStorage-tilgangen. Alt er try/catch-et: Safari i privat modus og
 // kvote-fulle lagre kaster, og et veiviser-utkast er aldri verdt en krasj.

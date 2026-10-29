@@ -129,9 +129,10 @@ import {
   wizardDraftContext,
   wizardDraftFromState,
   wizardDraftStorageKey,
+  withUrlCourse,
   type WizardDraft,
 } from './wizardStatePersistence';
-import { useCourseFromUrl } from './useCourseFromUrl';
+import { COURSE_PARAM, useCourseFromUrl } from './useCourseFromUrl';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -386,7 +387,14 @@ export function GameWizard(props: Props) {
       // (sessionStorage) som ikke kan leses under render. React-linteren
       // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
       /* eslint-disable react-hooks/set-state-in-effect */
-      setDraft(reconcileWizardDraft(found, { courses, players }));
+      // #2485: the URL's course goes over the draft's (see withUrlCourse).
+      setDraft(
+        withUrlCourse(
+          reconcileWizardDraft(found, { courses, players }),
+          new URLSearchParams(searchParamsString).get(COURSE_PARAM),
+          courses,
+        ),
+      );
       setDraftSettled(true);
       /* eslint-enable react-hooks/set-state-in-effect */
       return;
