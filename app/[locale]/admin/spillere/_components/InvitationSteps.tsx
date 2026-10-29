@@ -22,7 +22,7 @@ export function InvitationSteps({
     { text: insideLabel, done: false, current: false },
   ];
   return (
-    <ol aria-label={label} className="mt-1.5 flex items-center font-sans text-[12px] text-muted">
+    <ol aria-label={label} className="mt-1.5 flex items-center font-sans text-[11px] text-muted">
       {steps.map((step, i) => (
         <li
           key={i}

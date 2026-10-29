@@ -105,10 +105,10 @@ export function PlayersListClient({
   return (
     <>
       <div className="relative mb-2">
-        <span className="pointer-events-none absolute left-[13px] top-1/2 flex -translate-y-1/2 text-muted">
+        <span className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-muted">
           <svg
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -116,7 +116,7 @@ export function PlayersListClient({
             aria-hidden="true"
           >
             <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
+            <path d="M20 20l-4-4" />
           </svg>
         </span>
         <label htmlFor="players-search" className="sr-only">
@@ -129,11 +129,11 @@ export function PlayersListClient({
           onChange={(e) => setParam('q', e.target.value)}
           placeholder={searchPlaceholder}
           autoComplete="off"
-          className="h-[44px] w-full rounded-xl border border-field-border bg-surface pl-[40px] pr-3 font-sans text-base text-text placeholder:text-muted focus:ring-2 focus:ring-primary/40"
+          className="h-[46px] w-full rounded-xl border border-border bg-surface pl-9 pr-3 font-sans text-base text-text placeholder:text-muted focus:ring-2 focus:ring-primary/40"
         />
       </div>
 
-      <div role="group" aria-label={filterGroupLabel} className="mb-3 flex flex-wrap gap-2">
+      <div role="group" aria-label={filterGroupLabel} className="mb-3 flex flex-wrap gap-1.5">
         {FILTERS.map((key) => {
           const selected = filter === key;
           return (
@@ -143,10 +143,10 @@ export function PlayersListClient({
               aria-pressed={selected}
               data-testid={`players-filter-${key}`}
               onClick={() => setFilter(key)}
-              className={`h-[44px] rounded-full border px-4 font-sans text-[13px] font-semibold tabular-nums transition ${
+              className={`h-[44px] rounded-full px-3 font-sans text-[13px] font-semibold tabular-nums transition ${
                 selected
-                  ? 'border-primary bg-primary text-white dark:text-bg'
-                  : 'border-border bg-surface text-text hover:bg-row-hover'
+                  ? 'bg-primary text-white dark:text-bg'
+                  : 'border border-border bg-surface text-text hover:bg-row-hover'
               }`}
             >
               {filterLabels[key]}
@@ -192,7 +192,7 @@ export function PlayersListClient({
                 {nameInitials(u.name ?? u.email)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-sans text-[15px] font-semibold text-text">
+                <p className="truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
                   {u.name ?? u.email}
                   {u.is_admin && (
                     <span className="ml-1 font-sans text-[10px] font-semibold uppercase tracking-[0.1em] text-accent-text">
@@ -201,7 +201,7 @@ export function PlayersListClient({
                   )}
                   {u.is_guest && <GuestBadge className="ml-1.5 align-middle" />}
                 </p>
-                <p className="font-sans text-[12px] tabular-nums text-muted">{u.metaLabel}</p>
+                <p className="font-sans text-[12px] leading-[normal] tabular-nums text-muted">{u.metaLabel}</p>
               </div>
               {u.lastPlayedLabel && (
                 <span className="shrink-0 font-sans text-[12px] text-muted">
@@ -220,7 +220,7 @@ export function PlayersListClient({
             focusNextPageRow.current = true;
             setExpanded(true);
           }}
-          className="mx-auto mt-2 flex h-[44px] items-center justify-center px-4 font-sans text-[13px] font-semibold tabular-nums text-primary"
+          className="flex h-[44px] w-full items-center justify-center px-4 font-sans text-[13px] font-semibold tabular-nums text-primary underline"
         >
           {showAllLabel}
         </button>
