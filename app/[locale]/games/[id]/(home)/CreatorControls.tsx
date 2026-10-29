@@ -9,7 +9,7 @@ import { arrangedRoundHref } from '@/lib/games/arrangedGames';
 
 /**
  * Arrangør-kontroll for spillets oppretter: Styr spillere, Start runden nå,
- * rediger + slett. Rediger og slett kun draft/scheduled — når runden har
+ * flytt runden (#2480, bare scheduled), rediger + slett. Rediger og slett kun draft/scheduled — når runden har
  * startet er handicaps frosset og scores finnes, så spillet er effektivt låst
  * (sletting av active/finished er admin-only, eier-beslutning #428). Returnerer
  * null for finished, så den kan rendres ubetinget (gated på isCreator av
@@ -58,6 +58,20 @@ export function CreatorControls({
             label={tButtons('startRoundNow')}
             confirmText={tButtons('startRoundConfirm')}
           />
+        )}
+        {status === 'scheduled' && (
+          // #2480: a new day or time, and the group told. A draft has nobody
+          // to tell yet, so it moves in «Rediger».
+          <SmartLink href={`/games/${gameId}/flytt`} data-testid="creator-move-link" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
+                {t('moveGameLink')}
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
         )}
         {preStart && (
           // #2269: a draft resumes the wizard; `?step=5` lands on «Klar?»

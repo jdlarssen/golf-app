@@ -2258,6 +2258,7 @@
       "organiserViewHint": "You're organising this game but you're not on the player list.",
       "managePlayersLink": "Manage players",
       "editGameLink": "Edit game",
+      "moveGameLink": "Move the round",
       "deleteGameLink": "Delete game",
       "ctaStartRound": "Start round →",
       "ctaContinueRound": "Continue round →",
@@ -2464,6 +2465,29 @@
       "guests": "{count, plural, one {# of them is a guest. Whoever keeps the card submits it.} other {# of them are guests. Whoever keeps the cards submits them.}}",
       "splitDay": "{count, plural, one {# of them hands in the whole round on Back 9 and is reminded there.} other {# of them hand in the whole round on Back 9 and are reminded there.}}",
       "sent": "Reminder sent. They'll get a notification now."
+    },
+    "move": {
+      "kicker": "{name} · {status}",
+      "heading": "Move the round",
+      "dayLegend": "New day",
+      "timeLegend": "Time",
+      "otherDay": "Another day",
+      "otherTime": "Another time",
+      "otherDayInput": "Pick a day",
+      "otherTimeInput": "Pick a time",
+      "noticeLegend": "Message to the group",
+      "notifyTitle": "Tell the group",
+      "notifyNames": "{names} get a notification",
+      "moreNames": "{count} more",
+      "preview": "{gameName} has moved to <b>{teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}</b>. Same course and tees.",
+      "submitNotify": "Move and tell them",
+      "submit": "Move the round",
+      "pending": "Moving …",
+      "inPast": "The tee-off time can't be in the past. Pick a time from now on.",
+      "errors": {
+        "invalid": "Pick a day and a time.",
+        "in_past": "The tee-off time can't be in the past. Pick a time from now on."
+      }
     },
     "delete": {
       "kicker": "Delete game",
@@ -4081,7 +4105,9 @@
         "signups_closed": "✓ Signups closed. New requests will be declined.",
         "signups_reopened": "✓ Signups reopened.",
         "guest_added": "The guest has been added to the game.",
-        "hole_reminded": "✓ Reminder sent."
+        "hole_reminded": "✓ Reminder sent.",
+        "moved": "✓ The round has moved.",
+        "moved_told": "✓ The round has moved, and the group has been told."
       },
       "sections": {
         "overview": "Overview",
@@ -4125,6 +4151,7 @@
         "scheduledStartBlockedLead": "The round won't start until this is sorted:",
         "unassignedFlightsLinked": "Players have not been assigned to flights yet. Assign them on the <link>start list</link>.",
         "scheduledEditButton": "Edit game",
+        "scheduledMoveButton": "Move the round",
         "allReadyBody": "All players have submitted{andApproved} their scorecards. The game can be ended — the leaderboard will be open to all participants.",
         "allReadyAndApproved": " and approved",
         "endingGame": "Ending…",
