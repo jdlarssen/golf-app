@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { TEE_COLORS, isTeeColor } from './teeColors';
+import { TEE_COLORS, TEE_DOT_CLASS, isTeeColor } from './teeColors';
 
 const MIGRATION_FILE = path.resolve(
   __dirname,
@@ -45,5 +45,11 @@ describe('isTeeColor', () => {
   ];
   it.each(cases)('%j → %s', (value, expected) => {
     expect(isTeeColor(value)).toBe(expected);
+  });
+});
+
+describe('the maps keyed by colour', () => {
+  it('TEE_DOT_CLASS has exactly one entry per TEE_COLORS key', () => {
+    expect(Object.keys(TEE_DOT_CLASS).sort()).toEqual([...TEE_COLORS].sort());
   });
 });
