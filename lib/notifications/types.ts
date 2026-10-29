@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { IDEA_BUILT_LINK_MAX, IDEA_BUILT_SUMMARY_MAX, isIdeaBuiltLink } from './ideaBuiltInput';
-import { CANCEL_MESSAGE_MAX } from '@/lib/games/gameCancellation';
+import { CANCEL_MESSAGE_MAX } from '@/lib/games/cancelMessage';
 
 /**
  * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
