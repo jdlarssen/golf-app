@@ -401,7 +401,7 @@ export default async function GameDetailPage({
 
       <CreatedAtLine createdAt={game.created_at} />
 
-      <DangerZone gameId={id} />
+      <DangerZone gameId={id} status={game.status} />
     </AdminShell>
   );
 }
@@ -489,7 +489,7 @@ function CreatedAtLine({ createdAt }: { createdAt: string }) {
 }
 
 /** Danger zone — permanent delete. */
-async function DangerZone({ gameId }: { gameId: string }) {
+async function DangerZone({ gameId, status }: { gameId: string; status: GameStatus }) {
   const tDetail = await getTranslations('admin.game.detail');
   return (
     <section className="mt-6">
@@ -509,7 +509,8 @@ async function DangerZone({ gameId }: { gameId: string }) {
             className="tap-extend font-sans text-[13px] font-medium [--tap-extend:-12px_-8px]"
             style={{ color: 'var(--danger-deep)' }}
           >
-            {tDetail('deleteGame')}
+            {/* #2481: a scheduled round is cancelled, with a notice to the players. */}
+            {status === 'scheduled' ? tDetail('cancelRound') : tDetail('deleteGame')}
           </SmartLink>
         </div>
       </div>
@@ -1564,7 +1565,7 @@ async function PultBody({
       {s.lagSeksjon}
       {s.flighterSeksjon}
       <CreatedAtLine createdAt={game.created_at} />
-      <DangerZone gameId={game.id} />
+      <DangerZone gameId={game.id} status={game.status} />
     </>
   );
 
