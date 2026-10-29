@@ -295,6 +295,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          nine_holes: boolean
           slug: string
           updated_at: string
           updated_by: string | null
@@ -304,6 +305,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
+          nine_holes?: boolean
           slug?: string
           updated_at?: string
           updated_by?: string | null
@@ -313,6 +315,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
+          nine_holes?: boolean
           slug?: string
           updated_at?: string
           updated_by?: string | null
@@ -2442,7 +2445,12 @@ export type Database = {
       }
       course_match_key: { Args: { input: string }; Returns: string }
       create_course_with_layout: {
-        Args: { p_holes: Json; p_name: string; p_tees: Json }
+        Args: {
+          p_holes: Json
+          p_name: string
+          p_nine_holes?: boolean
+          p_tees: Json
+        }
         Returns: string
       }
       decide_join_request: {
@@ -2594,6 +2602,7 @@ export type Database = {
           p_course_id: string
           p_holes: Json
           p_name: string
+          p_nine_holes?: boolean
           p_tee_archive: Json
           p_tee_hard_delete: Json
           p_tee_inserts: Json

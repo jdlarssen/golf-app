@@ -100,8 +100,8 @@ select ok(has_function_privilege('service_role', 'public.consume_admin_rate_limi
   '#1121: consume_admin_rate_limit STILL executable by service_role (all three limiters)');
 
 -- ── Part 2c: authenticated-only RPCs/helpers — anon revoked, authenticated kept ─
-select ok(not has_function_privilege('anon', 'public.create_course_with_layout(text,jsonb,jsonb)', 'EXECUTE')
-      and has_function_privilege('authenticated', 'public.create_course_with_layout(text,jsonb,jsonb)', 'EXECUTE'),
+select ok(not has_function_privilege('anon', 'public.create_course_with_layout(text,jsonb,jsonb,boolean)', 'EXECUTE')
+      and has_function_privilege('authenticated', 'public.create_course_with_layout(text,jsonb,jsonb,boolean)', 'EXECUTE'),
   '#1121: create_course_with_layout anon-revoked, authenticated kept');
 select ok(not has_function_privilege('anon', 'public.email_is_registered(text)', 'EXECUTE')
       and has_function_privilege('authenticated', 'public.email_is_registered(text)', 'EXECUTE'),

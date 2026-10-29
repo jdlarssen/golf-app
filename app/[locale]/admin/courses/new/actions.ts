@@ -52,7 +52,7 @@ export async function createCourse(formData: FormData) {
   const fail = (code: string): never =>
     redirect({ href: appendQuery(errorBase, 'error', code), locale });
 
-  const { name, holes, teeBoxes } = parseCourseHolesAndTees(
+  const { name, nineHoles, holes, teeBoxes } = parseCourseHolesAndTees(
     formData,
     MAX_TEE_BOXES,
     fail,
@@ -72,7 +72,8 @@ export async function createCourse(formData: FormData) {
   // (`db_course`) — de tre gamle kodene mappet uansett til samme melding.
   const { data: courseId, error: rpcError } = await supabase.rpc(
     'create_course_with_layout',
-    { p_name: name, p_holes: holes, p_tees: teeBoxes },
+    // #2484: a 9-hole course is flagged; `holes` already holds all 18.
+    { p_name: name, p_holes: holes, p_tees: teeBoxes, p_nine_holes: nineHoles },
   );
   if (rpcError || !courseId) {
     console.error('[createCourse] create_course_with_layout failed', rpcError);

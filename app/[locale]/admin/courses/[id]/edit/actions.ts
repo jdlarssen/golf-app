@@ -19,7 +19,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const fail = (code: string): never =>
     redirect({ href: `${editPath}?error=${code}`, locale });
 
-  const { name, holes, teeBoxes } = parseCourseHolesAndTees(
+  const { name, nineHoles, holes, teeBoxes } = parseCourseHolesAndTees(
     formData,
     MAX_TEE_BOXES,
     fail,
@@ -86,8 +86,14 @@ export async function updateCourse(courseId: string, formData: FormData) {
     p_tee_inserts: teeBoxes.filter((t) => !t.id),
     p_tee_hard_delete: toHardDelete,
     p_tee_archive: toArchive,
+    p_nine_holes: nineHoles,
   });
   if (rpcError) {
+    // #2484: the RPC refuses to change the hole count once the course is used
+    // in a round (any status), so par 10–18 of a played course never shift.
+    if (rpcError.message?.includes('nine_holes_locked')) {
+      redirect({ href: `${editPath}?error=hole_count_locked`, locale });
+    }
     console.error('[updateCourse] update_course_with_layout failed', rpcError);
     redirect({ href: `${editPath}?error=db_course`, locale });
   }
