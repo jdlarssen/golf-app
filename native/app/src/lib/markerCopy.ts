@@ -9,6 +9,11 @@ export const MARKER_TEXT = {
   hint: 'Velg hvem i ligaen som skal godkjenne kortet. Markøren får beskjed, og runden teller når kortet er godkjent.',
   none: 'Ingen andre i ligaen kan godkjenne kortet ennå. Be arrangøren legge til flere spillere.',
   unknownPlayer: 'Ukjent spiller',
+  /** Søket i velgeren (#2675, `game.submit.marker`). */
+  searchLabel: 'Søk etter markør',
+  searchPlaceholder: 'Søk etter spiller',
+  noMatch: 'Ingen spillere med det navnet.',
+  showFewer: 'Vis færre',
   /** Markørens skjerm (`liga.marker`). */
   screenTitle: 'Markør',
   loading: 'Henter kortet …',
