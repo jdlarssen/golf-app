@@ -100,7 +100,9 @@ export default async function CreatorDeleteGamePage({
       return (
         <AppShell showVersion={false}>
           <CancelRoundConfirm
-            header={<TopBar backHref={`/games/${id}`} kicker={`${gameName} · ${tStatus('scheduled')}`} />}
+            header={
+              <TopBar backHref={`/games/${id}`} kicker={`${gameName} · ${tStatus('scheduled')}`} kickerOneLine />
+            }
             gameId={game.id}
             teeOffAt={game.scheduled_tee_off_at}
             courseName={game.courses?.name ?? null}
