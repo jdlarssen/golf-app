@@ -6647,6 +6647,19 @@
       "buttonText": "Åpne hull {hole}: {url}",
       "footer": "Du får denne meldingen fordi arrangøren sendte deg en påminnelse. Logg inn på <link>tornygolf.no</link> for å føre slag."
     },
+    "gameMoved": {
+      "subject": "{gameName} er flyttet",
+      "heading": "Runden er flyttet",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "<strong>{gameName}</strong> har fått ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Samme bane og tee.",
+      "bodyText": "{gameName} har fått ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Samme bane og tee.",
+      "bodyCourseChanged": "<strong>{gameName}</strong> har fått ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret.",
+      "bodyTextCourseChanged": "{gameName} har fått ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret.",
+      "button": "Se runden",
+      "buttonText": "Se runden: {url}",
+      "footer": "Du får denne meldingen fordi du er med i spillet. Logg inn på <link>tornygolf.no</link> for å se det."
+    },
     "organizerGameNotice": {
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
