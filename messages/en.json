@@ -2477,6 +2477,7 @@
       "otherTimeInput": "Pick a time",
       "noticeLegend": "Message to the group",
       "notifyTitle": "Tell the group",
+      "notifyRoster": "Everyone on the list gets a notification with the new time.",
       "notifyNames": "{names} get a notification",
       "moreNames": "{count} more",
       "preview": "{gameName} has moved to <b>{teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}</b>. Same course and tees.",

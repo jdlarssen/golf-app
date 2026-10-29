@@ -26,6 +26,8 @@ import {
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { Disclosure } from '@/components/ui/Disclosure';
+import { LIST_CARD_CLASS } from '@/components/ui/FormSection';
+import { SwitchRow } from '@/components/ui/Switch';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LockedFormatSummary } from './LockedFormatSummary';
 import { useTranslations } from 'next-intl';
@@ -450,6 +452,7 @@ export function GameForm({
   editNav,
 }: Props) {
   const t = useTranslations('wizard.form');
+  const tMove = useTranslations('game.move');
   const tAllowance = useTranslations('allowance');
   const tModes = useTranslations('modes');
   const tReg = useTranslations('wizard.sections.registration');
@@ -472,6 +475,15 @@ export function GameForm({
   const [rosterLoadedIds] = useState(() =>
     rosterLoadedIdsValue(initialValues?.players),
   );
+  // #2480: a scheduled round whose tee-off is changed asks whether to tell
+  // the group, on from the start. The answer travels in the always-mounted
+  // `notify_moved` mirror below (#1011); the save tells only when the stored
+  // tee-off really changed (updateGameInternal).
+  const [notifyMoved, setNotifyMoved] = useState(true);
+  const teeOffMoved =
+    mode.kind === 'edit-scheduled' &&
+    state.scheduledTeeOffAt !== '' &&
+    state.scheduledTeeOffAt !== (initialValues?.scheduled_tee_off_at ?? '');
   const {
     name,
     gameMode,
@@ -810,6 +822,9 @@ export function GameForm({
       {mode.kind !== 'create' && (
         <input type="hidden" name="roster_loaded_ids" value={rosterLoadedIds} />
       )}
+      {mode.kind === 'edit-scheduled' && (
+        <input type="hidden" name="notify_moved" value={teeOffMoved && notifyMoved ? '1' : '0'} />
+      )}
 
       {/* Section 1: Basics. #909: synlighet + sideturnering bor i
           «Innstillinger»-panelet via AdvancedSettingsSection includeVisibility
@@ -830,6 +845,16 @@ export function GameForm({
           hideHeading
           visibleFields={basicsFieldsFor(section)}
         />
+        {teeOffMoved && (
+          <div data-focus-inset data-testid="notify-moved" className={`mt-4 ${LIST_CARD_CLASS}`}>
+            <SwitchRow
+              checked={notifyMoved}
+              onChange={(e) => setNotifyMoved(e.target.checked)}
+              title={tMove('notifyTitle')}
+              description={tMove('notifyRoster')}
+            />
+          </div>
+        )}
       </Panel>
 
       {/* Section 2: Players */}

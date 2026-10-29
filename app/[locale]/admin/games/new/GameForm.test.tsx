@@ -2141,3 +2141,41 @@ describe('GameForm — a passed tee-off in another part (#2322)', () => {
     );
   });
 });
+
+describe('GameForm — «Si fra til gjengen» when the tee-off moves (#2480)', () => {
+  // A scheduled round asks only when its tee-off field differs from the
+  // stored one; the answer travels in the always-mounted notify_moved mirror.
+  it('shows the switch, on, once the tee-off changes, and the mirror follows it', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={[makePlayer('u-first', 'Første Spiller')]}
+        initialValues={{
+          name: 'Lørdagsrunden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [{ user_id: 'u-first', team_number: null, flight_number: null }],
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+        view="navn-og-tid"
+      />,
+    );
+    const mirror = () =>
+      (container.querySelector('input[type="hidden"][name="notify_moved"]') as HTMLInputElement).value;
+
+    expect([screen.queryByTestId('notify-moved'), mirror()]).toEqual([null, '0']);
+
+    const moved = FUTURE_TEE_OFF.replace(/T(\d\d)/, (_m, h: string) => `T${String((Number(h) + 1) % 24).padStart(2, '0')}`);
+    fireEvent.change(container.querySelector('#scheduled_tee_off_at')!, { target: { value: moved } });
+
+    const toggle = within(screen.getByTestId('notify-moved')).getByRole('switch', { name: 'Si fra til gjengen' });
+    expect([(toggle as HTMLInputElement).checked, mirror()]).toEqual([true, '1']);
+    expect(screen.getByText('Alle på lista får et varsel med den nye tiden.')).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(mirror()).toBe('0');
+  });
+});

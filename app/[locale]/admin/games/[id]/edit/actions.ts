@@ -30,6 +30,7 @@ import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { isEditSection } from '@/lib/games/editSections';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
+import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
 import { isClubTournament } from '@/lib/games/registration';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
@@ -115,9 +116,13 @@ async function updateGameInternal(
   // payloaden. mode_config leses med: den lagrede JSONB-en kan bære nøkler
   // skjemaet ikke eier (cup-generatorens `team_strokes_override`), og de skal
   // overleve lagringen — se editedModeConfig under (#1677, #2625).
+  // #2480: the stored tee-off, course and tee too, so a save that moves a
+  // scheduled round can tell the group (and say whether the course changed).
   const { data: existing, error: existingError } = await supabase
     .from('games')
-    .select('status, game_mode, mode_config, tournament_id, group_id')
+    .select(
+      'status, game_mode, mode_config, tournament_id, group_id, scheduled_tee_off_at, course_id, tee_box_id',
+    )
     .eq('id', gameId)
     .maybeSingle();
   // Error ≠ absence (#1445): a transient query failure throws to the route's
@@ -467,6 +472,28 @@ async function updateGameInternal(
         }),
       ),
     );
+  }
+
+  // #2480: a scheduled round with a new tee-off tells the group when the
+  // organiser left «Si fra til gjengen» on. Only a real change counts (the
+  // stored instant, not the field), and players added in this save got their
+  // invite above instead: they never had an old time. A draft (save_draft)
+  // and a publish tell nobody they moved. Best-effort: never stops the save.
+  if (
+    mode === 'update_scheduled' &&
+    scheduledTeeOffAt &&
+    existing.scheduled_tee_off_at &&
+    Date.parse(existing.scheduled_tee_off_at) !== Date.parse(scheduledTeeOffAt) &&
+    formData.get('notify_moved') === '1'
+  ) {
+    await notifyGameMoved({
+      gameId,
+      actorUserId: userId,
+      teeOffAt: scheduledTeeOffAt,
+      courseChanged:
+        existing.course_id !== payload.course_id || existing.tee_box_id !== payload.tee_box_id,
+      excludeUserIds: plan.inserts.map((r) => r.user_id),
+    });
   }
 
   // #2321: a resumed draft's «Inviter på e-post» addresses go out on publish,

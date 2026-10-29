@@ -2477,6 +2477,7 @@
       "otherTimeInput": "Velg tid",
       "noticeLegend": "Beskjed til gjengen",
       "notifyTitle": "Si fra til gjengen",
+      "notifyRoster": "Alle på lista får et varsel med den nye tiden.",
       "notifyNames": "{names} får et varsel",
       "moreNames": "{count} til",
       "preview": "{gameName} er flyttet til <b>{teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}</b>. Samme bane og tee.",

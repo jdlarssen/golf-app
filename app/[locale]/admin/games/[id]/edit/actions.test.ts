@@ -76,6 +76,15 @@ vi.mock('@/lib/games/notifyRosterInvites', () => ({
   notifyRosterInvites: (...args: unknown[]) => notifyRosterInvitesMock(...args),
 }));
 
+// #2480: a scheduled round with a new tee-off tells the group. Who is told
+// lives in notifyGameMoved (its own suite); here only when the save calls it.
+const notifyGameMovedMock = vi.fn<(...args: unknown[]) => Promise<{ notified: unknown[] }>>(
+  async () => ({ notified: [] }),
+);
+vi.mock('@/lib/notifications/notifyGameMoved', () => ({
+  notifyGameMoved: (...args: unknown[]) => notifyGameMovedMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -808,6 +817,78 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () => {
+  // The stored tee-off is the form's FUTURE_TEE_OFF read in Oslo, so a save
+  // without a new time keeps the same instant; a day later is a move.
+  async function save(opts: {
+    storedTeeOff: string;
+    form?: Record<string, string>;
+    priorRoster?: number[];
+    inserted?: string[];
+    storedCourse?: string;
+  }) {
+    const { parseOsloDateTimeLocal } = await import('@/lib/games/gamePayload');
+    const stored = opts.storedTeeOff === 'same' ? parseOsloDateTimeLocal(FUTURE_TEE_OFF) : opts.storedTeeOff;
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: {
+          status: 'scheduled',
+          game_mode: 'best_ball',
+          scheduled_tee_off_at: stored,
+          course_id: opts.storedCourse ?? 'course-1',
+          tee_box_id: 'tee-1',
+        },
+        error: null,
+      },
+      { data: (opts.priorRoster ?? [0, 1, 2, 3, 4, 5, 6, 7]).map((i) => storedBestBallRow(i)), error: null },
+      { data: { id: 'game-1' }, error: null }, // games.update
+      ...(opts.inserted ? [{ data: opts.inserted.map((user_id) => ({ user_id })), error: null }] : []),
+    ]);
+    signIn('admin-1');
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData(opts.form)),
+    ).rejects.toBeInstanceOf(RedirectError);
+    return stored;
+  }
+  // A day before the form's tee-off: the save moves the round.
+  const dayBefore = () => new Date(Date.now() + 6 * 86_400_000).toISOString();
+
+  it('a new tee-off with the switch on tells the group, without the players added in the same save', async () => {
+    await save({
+      storedTeeOff: dayBefore(),
+      form: { notify_moved: '1' },
+      priorRoster: [0, 1, 2, 3, 4, 5],
+      inserted: ['u6', 'u7'],
+    });
+
+    const { parseOsloDateTimeLocal } = await import('@/lib/games/gamePayload');
+    expect(notifyGameMovedMock).toHaveBeenCalledWith({
+      gameId: 'game-1',
+      actorUserId: 'admin-1',
+      teeOffAt: parseOsloDateTimeLocal(FUTURE_TEE_OFF),
+      courseChanged: false,
+      excludeUserIds: ['u6', 'u7'],
+    });
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('says the course changed when the save changes it too', async () => {
+    await save({ storedTeeOff: dayBefore(), form: { notify_moved: '1' }, storedCourse: 'course-0' });
+    expect((notifyGameMovedMock.mock.calls[0]?.[0] as { courseChanged: boolean }).courseChanged).toBe(true);
+  });
+
+  it.each([
+    ['the same tee-off', 'same', { notify_moved: '1' }],
+    ['the switch off', 'moved', { notify_moved: '0' }],
+    ['an older tab without the field', 'moved', {}],
+  ] as const)('%s tells nobody', async (_label, stored, form) => {
+    await save({ storedTeeOff: stored === 'same' ? 'same' : dayBefore(), form });
+    expect(notifyGameMovedMock).not.toHaveBeenCalled();
   });
 });
 
