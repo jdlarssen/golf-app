@@ -131,6 +131,7 @@ import {
   wizardDraftStorageKey,
   type WizardDraft,
 } from './wizardStatePersistence';
+import { useCourseFromUrl } from './useCourseFromUrl';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -283,6 +284,9 @@ function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
  *                      guidene (`game_mode` + `team_size`). Steg 2 viser
  *                      formatet valgt; steg 3+ forutsetter bane og spillere
  *                      ingen har valgt.
+ *   `course_id` + `game_mode`/`team_size`
+ *                    → **3**. Forslags-lenka med `?bane=` lagt på, når du
+ *                      kommer tilbake fra /opprett-bane (#2485).
  *   alt annet        → **Infinity**. Cup-lenka (`tournament_id`/`game_mode`/
  *                      `lock_game_mode`) og revansje (`?fra=`: roster + format
  *                      + baneoppsett) er bevisst sendt inn med forvalg og skal
@@ -305,6 +309,15 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
   if (seededKeys.length === 0) return 1;
   if (seededKeys.length === 1 && seededKeys[0] === 'course_id') return 2;
   if (seededKeys.every((key) => key === 'game_mode' || key === 'team_size')) return 2;
+  // #2485: back from /opprett-bane on a suggestion link, `?bane=` comes with
+  // `?format=`/`?oppsett=`. Course and format are chosen, so step 3 (the tee)
+  // is the next real decision; step 4+ still needs players nobody chose.
+  if (
+    seededKeys.includes('course_id') &&
+    seededKeys.every((key) => key === 'course_id' || key === 'game_mode' || key === 'team_size')
+  ) {
+    return 3;
+  }
   return Infinity;
 }
 
@@ -538,6 +551,15 @@ function WizardBody({
       : initialExpectedPlayerCount,
     // #2321: «Inviter på e-post»-adressene overlever reload som resten.
     initialInviteEmails: draft?.inviteEmails,
+  });
+
+  // #2485: `?bane=` (back from /opprett-bane, or a course page) chooses the
+  // course once the draft is read, so it goes over the draft's course.
+  useCourseFromUrl({
+    ready: draftSettled,
+    courseId: state.courseId,
+    setCourseId: state.setCourseId,
+    courses,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt

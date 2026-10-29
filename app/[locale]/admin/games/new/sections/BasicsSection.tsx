@@ -11,7 +11,10 @@
  */
 
 import { useEffect, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import { usePathname } from '@/i18n/navigation';
+import { courseCreateHref } from '@/lib/courses/similarCoursesPanel';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
@@ -86,6 +89,9 @@ export function BasicsSection({
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
   const locale = useLocale();
+  // #2485: «Opprett ny bane» comes back to step 3 of this very wizard.
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const {
     name,
     setName,
@@ -161,7 +167,7 @@ export function BasicsSection({
       <p className="-mt-2 flex min-h-11 items-center gap-1 font-sans text-[13px] leading-[normal] text-muted">
         {t('courseNotFoundHint')}
         <SmartLink
-          href="/opprett-bane"
+          href={courseCreateHref(pathname, searchParams.toString())}
           className="inline-flex min-h-11 items-center font-semibold text-primary underline"
         >
           {t('courseCreateLink')}

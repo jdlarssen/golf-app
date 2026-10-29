@@ -45,7 +45,6 @@ export type WizardDeepLinkParams = {
   format: string | undefined;
   antall: string | undefined;
   fra: string | undefined;
-  bane: string | undefined;
   klubb: string | undefined;
   intent: string | undefined;
 };
@@ -53,8 +52,11 @@ export type WizardDeepLinkParams = {
 /**
  * Both links are suggestions, so an explicit choice beats them:
  *
- *  1. `?fra=`, `?bane=` or `?klubb=` set → `null`. Those prefill sources are
- *     the organiser's own choice, and the suggestion is ignored.
+ *  1. `?fra=` or `?klubb=` set → `null`. Those prefill sources are the
+ *     organiser's own choice, and the suggestion is ignored. `?bane=` is not
+ *     one of them (#2485): it only picks the course, and it comes back with
+ *     the suggestion link when you return from /opprett-bane, where turning
+ *     the format off would drop the saved draft.
  *  2. `?oppsett=` names a guide's audience, no `?intent=` is set and the
  *     setup's format is in the Kompis catalog → the setup (format and team
  *     size). The guides never link with `?intent=`, so one there means the
@@ -64,10 +66,10 @@ export type WizardDeepLinkParams = {
  *  4. Otherwise → `null`, a plain wizard.
  */
 export function resolveWizardDeepLink(
-  { oppsett, format, antall, fra, bane, klubb, intent }: WizardDeepLinkParams,
+  { oppsett, format, antall, fra, klubb, intent }: WizardDeepLinkParams,
   kompisSlugs: readonly string[],
 ): WizardDeepLink | null {
-  if (fra || bane || klubb) return null;
+  if (fra || klubb) return null;
   const audience = parseArrangePreset(oppsett);
   if (audience && intent === undefined) {
     const preset = ARRANGE_PRESETS[audience];

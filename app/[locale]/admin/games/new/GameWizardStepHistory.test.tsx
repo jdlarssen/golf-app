@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
@@ -307,6 +307,32 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
 
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  // #2485: back from /opprett-bane on a format link, `?bane=` comes with
+  // `?format=`. Course and format are chosen, so step 3 is fine; step 4 is not.
+  it('bane + format-seed lander på ?step=3', () => {
+    searchString = 'format=texas_scramble&step=3&bane=course-1';
+    renderWizard({
+      initialValues: { game_mode: 'texas_scramble', course_id: 'course-1' },
+      initialIntent: 'kompis',
+    });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('bane + format-seed på ?step=4 sendes til steg 1', () => {
+    searchString = 'format=texas_scramble&step=4&bane=course-1';
+    renderWizard({
+      initialValues: { game_mode: 'texas_scramble', course_id: 'course-1' },
+      initialIntent: 'kompis',
+    });
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble&bane=course-1', {
+      scroll: false,
+    });
   });
 
   it('format-seed på ?step=4 sendes til steg 1 og lar ?format= stå', () => {
@@ -705,5 +731,127 @@ describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
 
     expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+// #2485: `?bane=` (back from /opprett-bane) chooses the course and then leaves
+// the address. Next 16 keeps a visited route mounted, so the way back often
+// reuses the wizard that was there: the course must land on a mounted wizard
+// too, not only on a fresh mount. `rerender` with a new search string is that
+// kept instance.
+describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', () => {
+  const TWO_TEES: CourseOption = {
+    id: 'course-2',
+    name: 'Byneset Golfklubb',
+    tee_boxes: [
+      { id: 'tee-2a', name: 'Gul', has_mens: true, has_ladies: false, has_juniors: false },
+      { id: 'tee-2b', name: 'Rød', has_mens: true, has_ladies: false, has_juniors: false },
+    ],
+  };
+  const COURSES_TWO = [...COURSES, TWO_TEES];
+
+  async function seedDraft() {
+    const { saveWizardDraft, wizardDraftContext, wizardDraftStorageKey } = await import(
+      './wizardStatePersistence'
+    );
+    saveWizardDraft(
+      wizardDraftStorageKey('/admin/games/new'),
+      {
+        intent: 'kompis',
+        expectedPlayerCount: 4,
+        nameTouched: false,
+        values: {
+          game_mode: 'stableford',
+          team_size: 1,
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+        },
+      },
+      wizardDraftContext({}),
+    );
+  }
+
+  const courseInput = () =>
+    document.querySelector<HTMLInputElement>('input[type=hidden][name=course_id]')!;
+  const teeInput = () =>
+    document.querySelector<HTMLInputElement>('input[type=hidden][name=tee_box_id]')!;
+  const gameModeInput = () =>
+    document.querySelector<HTMLInputElement>('input[type=hidden][name=game_mode]')!;
+
+  let replaceState: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    // The hook strips `bane` with Next's patched history.replaceState; here it
+    // writes back to the mocked search string, as the router would.
+    replaceState = vi
+      .spyOn(window.history, 'replaceState')
+      .mockImplementation((_data, _unused, url) => {
+        searchString = new URL(String(url), 'http://localhost').search.replace(/^\?/, '');
+      });
+  });
+  afterEach(() => {
+    replaceState.mockRestore();
+  });
+
+  const element = () => wizardElement({ courses: COURSES_TWO });
+
+  it('går over utkastets bane ved montering, og formatet står', async () => {
+    await seedDraft();
+    searchString = 'step=3&bane=course-2';
+    render(element());
+
+    await waitFor(() => expect(courseInput().value).toBe('course-2'));
+    expect(teeInput().value).toBe('');
+    expect(gameModeInput().value).toBe('stableford');
+    await waitFor(() => expect(searchString).toBe('step=3'));
+  });
+
+  it('virker på en veiviser som alt er montert, også med samme bane to ganger', async () => {
+    await seedDraft();
+    searchString = 'step=3';
+    const { rerender } = render(element());
+    await waitFor(() => expect(courseInput().value).toBe('course-1'));
+
+    searchString = 'step=3&bane=course-2';
+    rerender(element());
+    await waitFor(() => expect(courseInput().value).toBe('course-2'));
+    await waitFor(() => expect(searchString).toBe('step=3'));
+    rerender(element());
+
+    // The organiser changes the course by hand, then comes back with course-2 again.
+    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    expect(courseInput().value).toBe('course-1');
+    searchString = 'step=3&bane=course-2';
+    rerender(element());
+    await waitFor(() => expect(courseInput().value).toBe('course-2'));
+  });
+
+  it('en reload uten ?bane= beholder utkastets bane', async () => {
+    await seedDraft();
+    searchString = 'step=3';
+    render(element());
+    await waitFor(() => expect(courseInput().value).toBe('course-1'));
+    expect(teeInput().value).toBe('tee-1');
+    expect(replaceState).not.toHaveBeenCalled();
+  });
+
+  it('en ukjent bane velger ingenting, men forsvinner fra adressen', async () => {
+    await seedDraft();
+    searchString = 'step=3&bane=gone';
+    render(element());
+    await waitFor(() => expect(searchString).toBe('step=3'));
+    expect(courseInput().value).toBe('course-1');
+  });
+
+  it('uten utkast (cup-lenka skriver ingen) velger den banen på den monterte veiviseren', async () => {
+    searchString = 'step=5';
+    const props = {
+      courses: COURSES_TWO,
+      initialValues: { tournament_id: 't1', game_mode: 'stableford' as const, lock_game_mode: true },
+    };
+    const { rerender } = render(wizardElement(props));
+    searchString = 'step=3&bane=course-2';
+    rerender(wizardElement(props));
+    await waitFor(() => expect(courseInput().value).toBe('course-2'));
   });
 });

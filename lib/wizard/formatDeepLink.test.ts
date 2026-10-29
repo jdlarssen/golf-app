@@ -63,7 +63,6 @@ const NONE: WizardDeepLinkParams = {
   format: undefined,
   antall: undefined,
   fra: undefined,
-  bane: undefined,
   klubb: undefined,
   intent: undefined,
 };
@@ -107,7 +106,6 @@ describe('resolveWizardDeepLink', () => {
 
   it.each([
     ['fra', { fra: 'game-id' }],
-    ['bane', { bane: 'course-id' }],
     ['klubb', { klubb: 'club-id' }],
   ])('?%s= beats both suggestion links', (_, prefill) => {
     expect(
