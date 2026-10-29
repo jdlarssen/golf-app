@@ -12,6 +12,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { CourseForm } from '@/app/[locale]/admin/courses/CourseForm';
 import { createCourse } from '@/app/[locale]/admin/courses/new/actions';
 import { getServerClient } from '@/lib/supabase/server';
+import { withCourseParam } from '@/lib/courses/similarCoursesPanel';
 
 // #366: åpen bane-opprettelse for ALLE innloggede brukere. Speiler
 // /opprett-spill-mønsteret (#198) — gjenbruker CourseForm + createCourse, men
@@ -23,6 +24,10 @@ import { getServerClient } from '@/lib/supabase/server';
 // banen?»-lenken i spill-velgeren (?next= tar deg tilbake dit). Fra
 // Klubbhuset kommer ?kilde=klubbhuset: tilbake og kvitteringen går da dit
 // (#2487). ?next= vinner alltid.
+//
+// #2485: «Finnes banen alt?» under navnet. «Bruk denne» går tilbake til
+// veiviseren (?next=) med banen valgt, eller åpner veiviseren med den. En bane
+// du lagrer herfra, velges også når du går tilbake til spillet (?bane=).
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -30,6 +35,7 @@ type SearchParams = Promise<{
   name?: string | string[];
   next?: string | string[];
   kilde?: string | string[];
+  bane?: string | string[];
 }>;
 
 export default async function OpprettBanePage({
@@ -79,9 +85,13 @@ export default async function OpprettBanePage({
   // Suksess-visning: bekreftelse + veier videre. Ingen skjema (rent kort).
   if (status === 'created') {
     const createdName = first(sp.name);
+    // #2485: back in the wizard the new course is chosen. The wizard checks
+    // the id itself (loadBaneCourseId), so a hand-edited one picks nothing.
+    const createdId = first(sp.bane);
+    const backToGame = next && createdId ? withCourseParam(next, createdId) : next;
     return (
       <AppShell>
-        <TopBar backHref={backHref} kicker={t('door.kicker')} />
+        <TopBar backHref={backToGame ?? backHref} kicker={t('door.kicker')} />
         <div className="mt-5">
           <Card>
             <div className="space-y-5 text-center">
@@ -94,8 +104,8 @@ export default async function OpprettBanePage({
                   : t('door.successBodyAnon')}
               </p>
               <div className="space-y-3 pt-1">
-                {next ? (
-                  <LinkButton href={next} full>
+                {backToGame ? (
+                  <LinkButton href={backToGame} full>
                     {t('door.backToGame')}
                   </LinkButton>
                 ) : fromKlubbhus ? (
@@ -156,6 +166,7 @@ export default async function OpprettBanePage({
           submitLabel={t('door.submitLabel')}
           redirectBase={redirectBase}
           successRedirect={successRedirect}
+          similarCourses={{ kind: 'wizard', next }}
         />
       </div>
     </AppShell>
