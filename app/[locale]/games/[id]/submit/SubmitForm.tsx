@@ -198,7 +198,9 @@ export function SubmitForm({
  * #2661: one marker from the league, as radio rows in the round start's
  * picker style (`RoundStartClient`). The chosen marker is the form's `marker`
  * field, in a hidden input that stays mounted with the form (#1011): the radios
- * come and go with the search and «Vis alle», and carry no name of their own.
+ * come and go with the search and «Vis alle». They share a name of their own
+ * (`marker-choice`, which the server does not read) so they stay one group for
+ * arrow keys and screen readers.
  * #2666: the list is the whole league, so it shows six rows, a search over
  * everyone and «Vis alle» (`pickerRows`, shared with the round start).
  */
@@ -252,6 +254,7 @@ function MarkerPicker({
               >
                 <input
                   type="radio"
+                  name="marker-choice"
                   value={o.userId}
                   className="sr-only"
                   checked={checked}
