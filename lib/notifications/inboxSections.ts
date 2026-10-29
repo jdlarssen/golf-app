@@ -859,20 +859,8 @@ export function buildInboxEntryView(
         avatar: singleAvatar(row),
         destination,
       };
-    case 'game_cancelled': {
-      // #2481: who cancelled and when the round was, then the organiser's
-      // greeting in full: it is the reason, so it is not clipped.
-      const p = row.payload as NotificationPayload<'game_cancelled'>;
-      const organizer = inboxPerson(p.organizer_name)?.short ?? t('organizerFallback');
-      return {
-        ...base,
-        title: catalogText(row, t).title,
-        subtitle: [gameCancelledLine(p, organizer, t), time].join(SEP),
-        body: p.message ? t('board.quoted', { message: p.message }) : null,
-        avatar: singleAvatar(row),
-        destination,
-      };
-    }
+    case 'game_cancelled':
+      return { ...base, ...cancelledText(row, time, t), avatar: singleAvatar(row), destination };
     default:
       return {
         ...base,
@@ -881,6 +869,24 @@ export function buildInboxEntryView(
         destination,
       };
   }
+}
+
+/**
+ * #2481: who cancelled and when the round was, then the organiser's greeting
+ * in full as the row's body: it is the reason, so it is not clipped.
+ */
+function cancelledText(
+  row: InboxRow,
+  time: string,
+  t: NotificationTranslator,
+): Pick<InboxEntryView, 'title' | 'subtitle' | 'body'> {
+  const p = row.payload as NotificationPayload<'game_cancelled'>;
+  const organizer = inboxPerson(p.organizer_name)?.short ?? t('organizerFallback');
+  return {
+    title: catalogText(row, t).title,
+    subtitle: [gameCancelledLine(p, organizer, t), time].join(SEP),
+    body: p.message ? t('board.quoted', { message: p.message }) : null,
+  };
 }
 
 /**

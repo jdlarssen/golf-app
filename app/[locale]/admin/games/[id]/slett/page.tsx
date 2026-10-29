@@ -69,36 +69,8 @@ export default async function DeleteGamePage({
   if (!game) notFound();
 
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale);
-  const withNotice = canCancelWithNotice(game);
-
-  // #2481: «Avlys runden?» when someone is there to tell — the same content as
-  // the organiser's page, in the Sekretariat frame. With only the one who
-  // cancels on the list, the plain page below.
-  if (withNotice) {
-    const recipients = await loadCancellationRecipients(id, ctx.userId);
-    if (recipients.length > 0) {
-      const tStatus = await getTranslations('gameStatus');
-      return (
-        <AdminShell showVersion={false}>
-          <CancelRoundConfirm
-            header={
-              <>
-                <TopBar backHref={`/admin/games/${id}`} kicker={tNav('klubbhus')} />
-                <BrassRibbon kicker={`${gameName} · ${tStatus('scheduled')}`} />
-              </>
-            }
-            gameId={game.id}
-            teeOffAt={game.scheduled_tee_off_at}
-            courseName={game.courses?.name ?? null}
-            recipientNames={recipients.map((r) => r.name)}
-            errorCode={errorCode}
-            keepHref={`/admin/games/${id}`}
-            trayClassName="bg-admin-bg"
-          />
-        </AdminShell>
-      );
-    }
-  }
+  const cancelView = await adminCancelView(game, gameName, ctx.userId, errorCode, tNav('klubbhus'));
+  if (cancelView) return cancelView;
 
   // Count child rows so the confirmation copy is accurate.
   const [gpRes, scoresRes, invRes] = await Promise.all([
@@ -136,7 +108,7 @@ export default async function DeleteGamePage({
   // above, or has no one to tell; only a cup match keeps «si fra selv».
   const warning =
     game.status === 'scheduled'
-      ? withNotice
+      ? canCancelWithNotice(game)
         ? null
         : t('warnings.scheduled')
       : game.status === 'active'
@@ -222,6 +194,44 @@ export default async function DeleteGamePage({
           {t('cancel')}
         </SmartLink>
       </div>
+    </AdminShell>
+  );
+}
+
+/**
+ * #2481: «Avlys runden?» when someone is there to tell — the same content as
+ * the organiser's page, in the Sekretariat frame. `null` for a game that
+ * deletes without a notice, or with only the one who cancels on the list:
+ * the plain page then.
+ */
+async function adminCancelView(
+  game: GameRow,
+  gameName: string,
+  actorId: string,
+  errorCode: string | undefined,
+  topKicker: string,
+) {
+  if (!canCancelWithNotice(game)) return null;
+  const recipients = await loadCancellationRecipients(game.id, actorId);
+  if (recipients.length === 0) return null;
+  const tStatus = await getTranslations('gameStatus');
+  return (
+    <AdminShell showVersion={false}>
+      <CancelRoundConfirm
+        header={
+          <>
+            <TopBar backHref={`/admin/games/${game.id}`} kicker={topKicker} />
+            <BrassRibbon kicker={`${gameName} · ${tStatus('scheduled')}`} />
+          </>
+        }
+        gameId={game.id}
+        teeOffAt={game.scheduled_tee_off_at}
+        courseName={game.courses?.name ?? null}
+        recipientNames={recipients.map((r) => r.name)}
+        errorCode={errorCode}
+        keepHref={`/admin/games/${game.id}`}
+        trayClassName="bg-admin-bg"
+      />
     </AdminShell>
   );
 }
