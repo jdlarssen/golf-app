@@ -2440,6 +2440,7 @@ export type Database = {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
         Returns: boolean
       }
+      course_match_key: { Args: { input: string }; Returns: string }
       create_course_with_layout: {
         Args: { p_holes: Json; p_name: string; p_tees: Json }
         Returns: string
@@ -2559,6 +2560,18 @@ export type Database = {
         }[]
       }
       sim_settings_valid: { Args: { s: Json }; Returns: boolean }
+      similar_courses: {
+        Args: { p_query: string }
+        Returns: {
+          hole_count: number
+          id: string
+          name: string
+          par: number
+          round_count: number
+          slug: string
+          tee_count: number
+        }[]
+      }
       slugify_course_name: { Args: { input: string }; Returns: string }
       team_tee_shot_shortfall: {
         Args: {
