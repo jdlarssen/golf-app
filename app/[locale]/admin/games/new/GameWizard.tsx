@@ -129,6 +129,7 @@ import {
   wizardDraftContext,
   wizardDraftFromState,
   wizardDraftStorageKey,
+  withUrlCourse,
   type WizardDraft,
 } from './wizardStatePersistence';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
@@ -140,6 +141,12 @@ type Props = {
   players: PlayerOption[];
   mode: GameFormMode;
   initialValues?: InitialValues;
+  /**
+   * #2485: the course `?bane=` chose, checked on the server. It goes over a
+   * restored draft's course (`withUrlCourse`), so «Bruk denne» on
+   * /opprett-bane and a course saved there land chosen in step 3.
+   */
+  urlCourseId?: string;
   // F2 (#272): cup-link og direkte URL kan pre-velge intent. Driver
   // step-1-IntentSelector og påfølgende step-2-render-grening (FormatGrid vs
   // CupSetup).
@@ -277,6 +284,9 @@ function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
  *                      guidene (`game_mode` + `team_size`). Steg 2 viser
  *                      formatet valgt; steg 3+ forutsetter bane og spillere
  *                      ingen har valgt.
+ *   `course_id` + `game_mode`/`team_size`
+ *                    → **3**. Forslags-lenka med `?bane=` lagt på, når du
+ *                      kommer tilbake fra /opprett-bane (#2485).
  *   alt annet        → **Infinity**. Cup-lenka (`tournament_id`/`game_mode`/
  *                      `lock_game_mode`) og revansje (`?fra=`: roster + format
  *                      + baneoppsett) er bevisst sendt inn med forvalg og skal
@@ -299,6 +309,15 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
   if (seededKeys.length === 0) return 1;
   if (seededKeys.length === 1 && seededKeys[0] === 'course_id') return 2;
   if (seededKeys.every((key) => key === 'game_mode' || key === 'team_size')) return 2;
+  // #2485: back from /opprett-bane on a suggestion link, `?bane=` comes with
+  // `?format=`/`?oppsett=`. Course and format are chosen, so step 3 (the tee)
+  // is the next real decision; step 4+ still needs players nobody chose.
+  if (
+    seededKeys.includes('course_id') &&
+    seededKeys.every((key) => key === 'course_id' || key === 'game_mode' || key === 'team_size')
+  ) {
+    return 3;
+  }
   return Infinity;
 }
 
@@ -431,6 +450,7 @@ function WizardBody({
   players,
   mode,
   initialValues,
+  urlCourseId,
   initialIntent,
   formatsByIntent,
   clubs = NO_CLUB_OPTIONS,
@@ -482,7 +502,12 @@ function WizardBody({
   // tee-off-default, cup-/revansje-prefyll). Utkastet er arrangørens egne
   // valg, så det vinner — men bare når mount-konteksten er den samme (se
   // wizardDraftContext), så et låst cup-format aldri kan overskrives.
-  const seedValues = draft ? { ...initialValues, ...draft.values } : initialValues;
+  // #2485: `?bane=` goes over both (see `withUrlCourse`).
+  const seedValues = withUrlCourse(
+    draft ? { ...initialValues, ...draft.values } : initialValues,
+    urlCourseId,
+    courses,
+  );
   // #2210: the SERVER roster (never a restored local draft's selection),
   // captured at mount like the selection itself (see rosterEdit.ts).
   const [rosterLoadedIds] = useState(() =>

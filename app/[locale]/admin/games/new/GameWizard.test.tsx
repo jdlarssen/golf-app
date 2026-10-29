@@ -118,6 +118,7 @@ function renderWizard({
   createDraftAction = NO_OP,
   createAndPublishAction = NO_OP,
   initialValues,
+  urlCourseId,
   clubs,
   clubMemberIdsByClub,
   isAdmin,
@@ -128,6 +129,7 @@ function renderWizard({
   createDraftAction?: (fd: FormData) => Promise<CreateGameResult>;
   createAndPublishAction?: (fd: FormData) => Promise<CreateGameResult>;
   initialValues?: Parameters<typeof GameWizard>[0]['initialValues'];
+  urlCourseId?: string;
   clubs?: ClubOption[];
   clubMemberIdsByClub?: Record<string, string[]>;
   isAdmin?: boolean;
@@ -142,6 +144,7 @@ function renderWizard({
         createAndPublishAction,
       }}
       initialValues={initialValues}
+      urlCourseId={urlCourseId}
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={friendPlayerIds}
       clubs={clubs}
@@ -1034,6 +1037,51 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     expect(document.querySelector('input[name="player_0_id"]')).toHaveValue('u0');
     // #2321: a selected card stays in the grid, checked.
     expect(screen.getByRole('checkbox', { name: /spiller 1/i })).toBeChecked();
+  });
+
+  // #2485: back from /opprett-bane («Bruk denne», or a course saved there) the
+  // URL's course goes over the draft's. The format and the players stand; the
+  // draft's tee belonged to the old course, so it goes.
+  it('?bane= går over utkastets bane, formatet og spillerne står, tee-en går', () => {
+    seedDraft();
+    const courses: CourseOption[] = [
+      ...COURSES,
+      {
+        id: 'course-2',
+        name: 'Byneset Golfklubb',
+        tee_boxes: [
+          { id: 'tee-2', name: 'Rød', has_mens: true, has_ladies: false, has_juniors: false },
+        ],
+      },
+    ];
+    renderWizard({ courses, players: EIGHT_PLAYERS.slice(0, 2), urlCourseId: 'course-2' });
+
+    clickNext();
+    expectStep(2);
+    expect(
+      screen.getByRole('radio', { name: STABLEFORD_CARD }).getAttribute('aria-checked'),
+    ).toBe('true');
+
+    clickNext();
+    expectStep(3);
+    expect(screen.getByLabelText(/^bane$/i)).toHaveValue('course-2');
+    expect(screen.getByLabelText(/^tee$/i)).toHaveValue('');
+
+    // Step 3 waits for a tee; then the players from the draft are there.
+    fireEvent.change(screen.getByLabelText(/^tee$/i), { target: { value: 'tee-2' } });
+    clickNext();
+    expectStep(4);
+    expect(document.querySelector('input[name="player_0_id"]')).toHaveValue('u0');
+  });
+
+  it('?bane= med samme bane som utkastet beholder tee-en', () => {
+    seedDraft();
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2), urlCourseId: 'course-1' });
+    clickNext();
+    clickNext();
+    expectStep(3);
+    expect(screen.getByLabelText(/^bane$/i)).toHaveValue('course-1');
+    expect(screen.getByLabelText(/^tee$/i)).toHaveValue('tee-1');
   });
 
   // #2570: shamble's percentage sits under «Tellemåte» on step 2. Step 5

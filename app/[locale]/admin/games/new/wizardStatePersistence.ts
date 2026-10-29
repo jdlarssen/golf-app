@@ -304,6 +304,29 @@ export function reconcileWizardDraft(
   return { ...draft, values };
 }
 
+/**
+ * #2485: the course the URL chose (`?bane=`) goes over what the wizard seeds
+ * with, a restored draft included. That is how «Bruk denne» on /opprett-bane,
+ * and a course you just saved there, land in step 3. The draft's tee stays
+ * only when it belongs to that course; the rest (format, players, tee-off)
+ * stands.
+ */
+export function withUrlCourse(
+  values: InitialValues | undefined,
+  courseId: string | undefined,
+  courses: readonly CourseOption[],
+): InitialValues | undefined {
+  if (!courseId || values?.course_id === courseId) return values;
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return values;
+  const teeBoxId = values?.tee_box_id;
+  return {
+    ...values,
+    course_id: courseId,
+    tee_box_id: teeBoxId && course.tee_boxes.some((t) => t.id === teeBoxId) ? teeBoxId : '',
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // sessionStorage-tilgangen. Alt er try/catch-et: Safari i privat modus og
 // kvote-fulle lagre kaster, og et veiviser-utkast er aldri verdt en krasj.

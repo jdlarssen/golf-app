@@ -9,6 +9,7 @@ import { createGameDraft, createAndPublishGame } from './actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { defaultTeeOffAt } from '@/lib/games/defaultTeeOff';
 import { getServerClient } from '@/lib/supabase/server';
+import { loadBaneCourseId } from '@/lib/courses/loadBaneCourseId';
 import { getRoleContext } from '@/lib/admin/auth';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -23,6 +24,9 @@ type SearchParams = Promise<{
   intent?: string | string[];
   // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
   klubb?: string | string[];
+  // #2485: tilbake fra /opprett-bane med banen valgt («Bruk denne», eller en
+  // bane du nettopp lagret). Validert i loadBaneCourseId.
+  bane?: string | string[];
 }>;
 
 /**
@@ -86,6 +90,10 @@ export default async function NewGamePage({
     ? 'cup'
     : parseIntent(first(sp.intent)) ?? (first(sp.klubb) ? 'klubb' : undefined);
 
+  // #2485: «Opprett ny bane» on step 3 comes back here with `?bane=`.
+  const baneParam = first(sp.bane);
+  const urlCourseId = baneParam ? await loadBaneCourseId(baneParam, supabase) : null;
+
   // #2260: veiviseren står som egen skjerm rett på lin-bakgrunnen (AppShell,
   // ikke AdminShell) og eier toppen selv. Bannerne går inn som `notice` og
   // står mellom stripen og tittelen; hvert bærer sin egen toppmarg.
@@ -122,6 +130,7 @@ export default async function NewGamePage({
           cupContext={cupContext}
           initialIntent={initialIntent}
           defaultGroupId={first(sp.klubb)}
+          urlCourseId={urlCourseId ?? undefined}
           notice={notice}
         />
       </Suspense>
@@ -269,11 +278,13 @@ async function GameFormBody({
   cupContext,
   initialIntent,
   defaultGroupId,
+  urlCourseId,
   notice,
 }: {
   cupContext: CupContext | null;
   initialIntent: Intent | undefined;
   defaultGroupId: string | undefined;
+  urlCourseId: string | undefined;
   notice: ReactNode;
 }) {
   // #1385: oppsettet veiviseren mountes med er delt med gjenoppta-utkast-
@@ -309,7 +320,9 @@ async function GameFormBody({
       initialValues={{
         scheduled_tee_off_at: defaultTeeOffAt(new Date()),
         ...(cupContext ? buildCupInitialValues(cupContext) : {}),
+        ...(urlCourseId ? { course_id: urlCourseId } : {}),
       }}
+      urlCourseId={urlCourseId}
       initialIntent={initialIntent}
       formatsByIntent={formatsByIntent}
       clubs={clubs}

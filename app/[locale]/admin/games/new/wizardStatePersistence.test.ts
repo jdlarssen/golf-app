@@ -7,6 +7,7 @@ import {
   saveWizardDraft,
   wizardDraftContext,
   wizardDraftStorageKey,
+  withUrlCourse,
   type WizardDraft,
 } from './wizardStatePersistence';
 import type { CourseOption, PlayerOption } from './GameForm';
@@ -268,5 +269,46 @@ describe('wizardStatePersistence — gjenoppretting er best-effort', () => {
       { user_id: 'gjest-1', team_number: null, flight_number: null },
     ]);
     expect(out.values.extra_players).toEqual([guest]);
+  });
+});
+
+describe('withUrlCourse (#2485)', () => {
+  const TWO: CourseOption[] = [
+    ...COURSES,
+    {
+      id: 'course-2',
+      name: 'Byneset Golfklubb',
+      tee_boxes: [{ id: 'tee-2', name: 'Rød', has_mens: true, has_ladies: false, has_juniors: false }],
+    },
+  ];
+
+  it('without a URL course the values are left as they are', () => {
+    const values = { course_id: 'course-1', tee_box_id: 'tee-1' };
+    expect(withUrlCourse(values, undefined, TWO)).toBe(values);
+    expect(withUrlCourse(undefined, undefined, TWO)).toBeUndefined();
+  });
+
+  it('puts the URL course over another course and drops its tee', () => {
+    expect(
+      withUrlCourse({ course_id: 'course-1', tee_box_id: 'tee-1', game_mode: 'stableford' }, 'course-2', TWO),
+    ).toEqual({ course_id: 'course-2', tee_box_id: '', game_mode: 'stableford' });
+  });
+
+  it('keeps a tee that belongs to the URL course', () => {
+    const values = { course_id: 'course-1', tee_box_id: 'tee-1' };
+    expect(withUrlCourse(values, 'course-1', TWO)).toBe(values);
+    expect(withUrlCourse({ tee_box_id: 'tee-2' }, 'course-2', TWO)).toEqual({
+      course_id: 'course-2',
+      tee_box_id: 'tee-2',
+    });
+  });
+
+  it('seeds the course when nothing was seeded', () => {
+    expect(withUrlCourse(undefined, 'course-2', TWO)).toEqual({ course_id: 'course-2', tee_box_id: '' });
+  });
+
+  it('ignores a course the wizard does not list', () => {
+    const values = { course_id: 'course-1', tee_box_id: 'tee-1' };
+    expect(withUrlCourse(values, 'gone', TWO)).toBe(values);
   });
 });

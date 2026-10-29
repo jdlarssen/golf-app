@@ -287,6 +287,32 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     expect(push).not.toHaveBeenCalled();
   });
 
+  // #2485: back from /opprett-bane on a format link, `?bane=` comes with
+  // `?format=`. Course and format are chosen, so step 3 is fine; step 4 is not.
+  it('bane + format-seed lander på ?step=3', () => {
+    searchString = 'format=texas_scramble&step=3&bane=course-1';
+    renderWizard({
+      initialValues: { game_mode: 'texas_scramble', course_id: 'course-1' },
+      initialIntent: 'kompis',
+    });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('bane + format-seed på ?step=4 sendes til steg 1', () => {
+    searchString = 'format=texas_scramble&step=4&bane=course-1';
+    renderWizard({
+      initialValues: { game_mode: 'texas_scramble', course_id: 'course-1' },
+      initialIntent: 'kompis',
+    });
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?format=texas_scramble&bane=course-1', {
+      scroll: false,
+    });
+  });
+
   it('format-seed på ?step=4 sendes til steg 1 og lar ?format= stå', () => {
     searchString = 'format=texas_scramble&step=4';
     renderWizard({ initialValues: { game_mode: 'texas_scramble' }, initialIntent: 'kompis' });

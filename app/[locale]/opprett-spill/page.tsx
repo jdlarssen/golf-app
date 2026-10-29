@@ -14,6 +14,7 @@ import {
 } from '@/app/[locale]/admin/games/new/actions';
 import { getCreateGamePlayerRoster } from '@/lib/games/getCreateGamePlayerRoster';
 import { getServerClient } from '@/lib/supabase/server';
+import { loadBaneCourseId } from '@/lib/courses/loadBaneCourseId';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
@@ -61,7 +62,7 @@ type SearchParams = Promise<{
   antall?: string | string[];
   // #2331: «Bruk dette oppsettet» on the guides (/arranger-golfturnering/…)
   // dyplenker hit med målgruppen. Validert i loadWizardDeepLink; beats
-  // ?format=, steps aside for ?fra=/?bane=/?klubb=/?intent=.
+  // ?format=, steps aside for ?fra=/?klubb=/?intent=.
   oppsett?: string | string[];
 }>;
 
@@ -180,33 +181,6 @@ async function loadRevansjeContext(
 }
 
 /**
- * #1023 — validates the `?bane=` deep-link from the public course pages.
- * Returns the course id when the course exists (RLS: courses are
- * world-readable, so any authed user resolves it), otherwise `null` and the
- * wizard opens empty. A malformed value (not a UUID) makes PostgREST error;
- * that is swallowed into the same silent-ignore path.
- */
-async function loadBaneCourseId(
-  baneId: string,
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('courses')
-    .select('id')
-    .eq('id', baneId)
-    .maybeSingle<{ id: string }>();
-  // Best-effort by design (#1445): samme avveining som revansje-prefillen over
-  // — bane-prefill er valgfri, veiviseren åpner tom hvis oppslaget glapp.
-  if (error || !data) {
-    if (error) {
-      console.error('[loadBaneCourseId] course lookup failed', error);
-    }
-    return null;
-  }
-  return data.id;
-}
-
-/**
  * #2328/#2331 — the suggestion links: `?format=…&antall=…` from the format
  * helper on /spillformater, and `?oppsett=<audience>` from the guides' «Bruk
  * dette oppsettet». Both open step 2 of the Kompis wizard with the format
@@ -225,7 +199,6 @@ async function loadWizardDeepLink(sp: Awaited<SearchParams>): Promise<WizardDeep
       format,
       antall: first(sp.antall),
       fra: first(sp.fra),
-      bane: first(sp.bane),
       klubb: first(sp.klubb),
       intent: first(sp.intent),
     },
@@ -294,11 +267,12 @@ export default async function OpprettSpillPage({
   // (tee box and players use the wizard's own defaults; tee-off gets the
   // #2438 default below). Revansje wins when both params resolve; an invalid
   // bane id falls back silently to a blank wizard.
+  // #2485: the same id also goes over a restored draft's course
+  // (`urlCourseId`), revansje included: it is how you come back from
+  // /opprett-bane with the course chosen.
   const baneParam = first(sp.bane);
-  const baneCourseId =
-    !revansje && baneParam
-      ? await loadBaneCourseId(baneParam, supabase)
-      : null;
+  const urlCourseId = baneParam ? await loadBaneCourseId(baneParam, supabase) : null;
+  const baneCourseId = revansje ? null : urlCourseId;
 
   // #2438: a new game gets the same tee-off suggestion as the admin route
   // (#1171): the first upcoming Saturday 09:00 Oslo. Computed once on the
@@ -362,6 +336,7 @@ export default async function OpprettSpillPage({
             seed?.key ??
             'blank'
           }
+          urlCourseId={urlCourseId ?? undefined}
           userId={currentUserId}
           isAdmin={isAdmin}
           notice={notice}
@@ -426,6 +401,7 @@ async function GameFormBody({
   initialIntent,
   initialValues,
   wizardKey,
+  urlCourseId,
   userId,
   isAdmin,
   notice,
@@ -442,6 +418,8 @@ async function GameFormBody({
   // #1007: remounts GameWizard when the `?fra=` source changes — useGameFormState
   // only reads initialValues once at mount (key-remount-fella, kjent memory-trap).
   wizardKey: string;
+  // #2485: `?bane=` checked, for GameWizard's `urlCourseId`.
+  urlCourseId: string | undefined;
   userId: string;
   isAdmin: boolean;
   notice: ReactNode;
@@ -467,6 +445,7 @@ async function GameFormBody({
         createAndPublishAction: createAndPublishGame,
       }}
       initialValues={initialValues}
+      urlCourseId={urlCourseId}
       formatsByIntent={formatsByIntent}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
