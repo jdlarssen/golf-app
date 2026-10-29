@@ -246,7 +246,7 @@ function MarkerPicker({
               <label
                 data-testid={`marker-option-${o.userId}`}
                 className={[
-                  'flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                  'flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3',
                   checked
                     ? 'border-primary bg-primary-soft'
                     : 'border-border bg-surface hover:bg-primary-soft/50',
@@ -263,7 +263,7 @@ function MarkerPicker({
                 <span
                   aria-hidden
                   className={[
-                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
                     checked ? 'border-primary' : 'border-border bg-bg',
                   ].join(' ')}
                 >
