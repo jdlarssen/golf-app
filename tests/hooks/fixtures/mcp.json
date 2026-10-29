@@ -55,6 +55,21 @@
     "payload": { "tool_name": "mcp__supabase__apply_migration", "tool_input": { "project_id": "snwmueecmfqqdurxedxv", "name": "add_sponsor", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
   },
   {
+    "name": "claude.ai-koblingen (allow-listet i settings.json): apply_migration mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__claude_ai_Supabase__apply_migration", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "add_sponsor", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "claude.ai-koblingen (allow-listet i settings.json): execute_sql DDL mot prod → deny",
+    "expect": "deny",
+    "payload": { "tool_name": "mcp__claude_ai_Supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "claude.ai-koblingen: apply_migration mot staging → none",
+    "expect": "none",
+    "payload": { "tool_name": "mcp__claude_ai_Supabase__apply_migration", "tool_input": { "project_id": "snwmueecmfqqdurxedxv", "name": "add_sponsor", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
     "name": "deploy_edge_function mot prod → deny",
     "expect": "deny",
     "payload": { "tool_name": "mcp__supabase__deploy_edge_function", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "fn", "files": [] } }
