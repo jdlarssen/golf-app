@@ -43,6 +43,8 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     // #1363: gjenåpnet spill = resultatlista er borte og runden er aktiv
     // igjen; spill-hjem er der den nye statusen faktisk vises.
     case 'game_reopened':
+    // #2480: spill-hjem viser den nye tee-tiden.
+    case 'game_moved':
     case 'registration_approved': {
       const p = n.payload as NotificationPayload<'invite'>;
       return `/games/${p.game_id}`;

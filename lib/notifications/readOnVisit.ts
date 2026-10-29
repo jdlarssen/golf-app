@@ -59,6 +59,8 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
       'payment_reminder',
       'auto_start_blocked',
       'scorecard_submitted',
+      // #2480: the game page shows the new tee-off.
+      'game_moved',
     ],
     key: 'game_id',
   },

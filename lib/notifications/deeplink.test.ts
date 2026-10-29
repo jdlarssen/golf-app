@@ -88,6 +88,20 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}/leaderboard`);
   });
 
+  it('#2480: a moved round opens the game page, where the new tee-off shows', () => {
+    expect(
+      notificationDestination(
+        n('game_moved', {
+          game_id: GAME,
+          game_name: 'X',
+          tee_off_at: '2026-10-04T07:00:00.000Z',
+          course_changed: false,
+          moved_by_name: null,
+        }),
+      ),
+    ).toBe(`/games/${GAME}`);
+  });
+
   it('#1363: both reopen kinds land on game home, not the leaderboard or /submit', () => {
     // Spill-hjem er der hullene rettes og den nye statusen vises. game_reopened
     // må IKKE arve game_finished sin /leaderboard-rute — resultatlista er

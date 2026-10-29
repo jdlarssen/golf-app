@@ -303,3 +303,53 @@ describe('buildNotificationText — the opening message of a simulator league (#
     expect([text.title.length <= TITLE_MAX, text.detail.length <= BODY_MAX]).toEqual([true, true]);
   });
 });
+
+// #2480: a moved round names the new tee-off in the recipient's language and
+// Oslo time, on both sides of the clock change, through the real catalog.
+describe('buildNotificationText — a moved round (#2480)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const moved = {
+    game_id: '00000000-0000-4000-a000-000000000001',
+    game_name: 'Lørdagsrunden',
+    tee_off_at: '2026-10-04T07:00:00.000Z',
+    course_changed: false,
+    moved_by_name: 'Jørgen',
+  };
+
+  it('names the game and the new time, and says the course and tees stay', () => {
+    expect(buildNotificationText('game_moved', moved as NotificationPayload, real('no'))).toEqual({
+      title: 'Lørdagsrunden er flyttet',
+      detail: 'Ny tid: søndag 4. okt. kl. 09:00. Samme bane og tee.',
+    });
+    expect(buildNotificationText('game_moved', moved as NotificationPayload, real('en'))).toEqual({
+      title: 'Lørdagsrunden has moved',
+      detail: 'New time: Sunday, Oct 4 at 09:00. Same course and tees.',
+    });
+  });
+
+  it('reads the time in Oslo after the clock change too', () => {
+    const winter = { ...moved, tee_off_at: '2026-11-08T08:00:00.000Z' };
+    expect(buildNotificationText('game_moved', winter as NotificationPayload, real('no')).detail).toBe(
+      'Ny tid: søndag 8. nov. kl. 09:00. Samme bane og tee.',
+    );
+  });
+
+  it('drops «Samme bane og tee» when the course or tee changed as well', () => {
+    const changed = { ...moved, course_changed: true };
+    expect(buildNotificationText('game_moved', changed as NotificationPayload, real('no')).detail).toBe(
+      'Ny tid: søndag 4. okt. kl. 09:00. Bane eller tee er også endret.',
+    );
+  });
+
+  it('title and detail fit the push caps with the longest game name on staging (51 characters)', () => {
+    const long = { ...moved, game_name: 'TEST-Mode-singles_matchplay-1786714894544-matchplay', course_changed: true };
+    const text = buildNotificationText('game_moved', long as NotificationPayload, real('no'));
+    expect([text.title.length <= TITLE_MAX, text.detail.length <= BODY_MAX]).toEqual([true, true]);
+  });
+});

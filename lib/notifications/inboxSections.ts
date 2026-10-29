@@ -143,6 +143,7 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'club_role_changed':
     case 'friend_accepted':
     case 'game_started':
+    case 'game_moved':
     case 'achievement_unlocked':
     case 'idea_built':
       return null;
@@ -209,6 +210,7 @@ const PERSON_FIELD: Partial<Record<NotificationKind, string>> = {
   team_member_withdrew: 'withdrawn_player_name',
   cup_signup: 'participant_name',
   player_added: 'added_by_name',
+  game_moved: 'moved_by_name',
 };
 
 /** The raw name of the person a row is about, or `null`. */
