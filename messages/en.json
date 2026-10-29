@@ -1512,7 +1512,17 @@
       "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Ask an admin to invite more from the",
       "shortageBannerLink": "home page",
       "shortageBannerSuffix": ".",
-      "revansjeBanner": "Prefilled from {name} — you can change anything."
+      "revansjeBanner": "Prefilled from {name} — you can change anything.",
+      "lastRound": {
+        "kicker": "Same as last time",
+        "restartKicker": "Or start from scratch",
+        "ariaLabel": "Last round: {name}",
+        "summary": "{course} · {tee} tee · {format}",
+        "newTime": "New time: {date}",
+        "others": "{count} others",
+        "use": "Use the same setup",
+        "edit": "Edit"
+      }
     }
   },
   "formatGuide": {

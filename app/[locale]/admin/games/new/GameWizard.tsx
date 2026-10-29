@@ -217,6 +217,12 @@ type Props = {
    * margin, so one that is not shown leaves no gap.
    */
   notice?: ReactNode;
+  /**
+   * #2446: what stands above the arrangement tiles on step 1 and nowhere else
+   * (/opprett-spill's «Som sist» card, with its two kickers). Without it the
+   * tiles sit 16 px under the title, as before.
+   */
+  stepOneLead?: ReactNode;
 };
 
 const TOTAL_STEPS = 5;
@@ -445,6 +451,7 @@ function WizardBody({
   backHref,
   entryLabel,
   notice,
+  stepOneLead,
   draft,
   draftSettled,
   storageKey,
@@ -1055,7 +1062,8 @@ function WizardBody({
         {top}
 
         {step === 1 && (
-          <div className="pt-4">
+          <div className={stepOneLead ? undefined : 'pt-4'}>
+            {stepOneLead}
             <IntentSelector
               value={state.intent}
               onChange={handleIntentSelect}
@@ -1105,7 +1113,8 @@ function WizardBody({
       )}
 
       {step === 1 && (
-        <div className="pt-4">
+        <div className={stepOneLead ? undefined : 'pt-4'}>
+          {stepOneLead}
           <IntentSelector
             value={state.intent}
             onChange={handleIntentSelect}

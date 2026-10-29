@@ -121,6 +121,7 @@ function renderWizard({
   clubs,
   clubMemberIdsByClub,
   isAdmin,
+  stepOneLead,
 }: {
   courses?: CourseOption[];
   players?: PlayerOption[];
@@ -131,6 +132,7 @@ function renderWizard({
   clubs?: ClubOption[];
   clubMemberIdsByClub?: Record<string, string[]>;
   isAdmin?: boolean;
+  stepOneLead?: Parameters<typeof GameWizard>[0]['stepOneLead'];
 } = {}) {
   return render(
     <GameWizard
@@ -148,6 +150,7 @@ function renderWizard({
       clubMemberIdsByClub={clubMemberIdsByClub}
       isAdmin={isAdmin}
       backHref="/"
+      stepOneLead={stepOneLead}
     />,
   );
 }
@@ -971,6 +974,40 @@ describe('GameWizard — Cup-intent flow', () => {
       document.querySelector('input[id^="cup_format_"]'),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /opprett cup/i })).toBeInTheDocument();
+  });
+});
+
+// #2446: the route's «Som sist» card stands above the tiles on step 1 only,
+// in both branches: going back to step 1 after «Cup» renders the cup branch.
+describe('GameWizard — #2446 stepOneLead', () => {
+  const LEAD = <section data-testid="step-one-lead">Som sist</section>;
+
+  function expectLeadBeforeTiles() {
+    const lead = screen.getByTestId('step-one-lead');
+    const firstTile = screen.getByRole('button', { name: /kompis-runde/i });
+    expect(
+      lead.compareDocumentPosition(firstTile) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }
+
+  it('renders above the tiles on step 1 and is gone on step 2', () => {
+    renderWizard({ stepOneLead: LEAD });
+    expectLeadBeforeTiles();
+
+    pickKompisIntent();
+    expectStep(2);
+    expect(screen.queryByTestId('step-one-lead')).not.toBeInTheDocument();
+  });
+
+  it('stands on step 1 of the cup branch too', () => {
+    renderWizard({ stepOneLead: LEAD });
+    fireEvent.click(screen.getByRole('button', { name: /^cup$/i }));
+    expect(screen.queryByTestId('step-one-lead')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    // The cup branch counts two steps.
+    expect(screen.getByText('Steg 1 av 2')).toBeInTheDocument();
+    expectLeadBeforeTiles();
   });
 });
 

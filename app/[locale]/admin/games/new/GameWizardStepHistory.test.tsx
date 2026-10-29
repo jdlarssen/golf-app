@@ -277,6 +277,28 @@ describe('GameWizard — #1653 ett-felts bane-seed hever taket til steg 2', () =
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
+  // #2446: «Bruk samme oppsett» on the «Som sist» card links to
+  // `?sist=<id>&step=5`. The prefill is the revansje one (course, tee, format,
+  // players) plus the new tee-off, which the ceiling ignores. Infinity, so
+  // «Klar?» stays.
+  it('«Som sist»-seed beholder ?step=5', () => {
+    searchString = 'sist=g1&step=5';
+    renderWizard({
+      initialIntent: 'kompis',
+      initialValues: {
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        game_mode: 'stableford',
+        lock_game_mode: false,
+        players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+      },
+    });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByText('Steg 5 av 5')).toBeInTheDocument();
+  });
+
   // #2328: `?format=` from the format helper on /spillformater seeds the
   // format and nothing else, so it lands on step 2 and no further.
   it('format-seed lander på ?step=2', () => {
