@@ -76,7 +76,7 @@ type SearchParams = Promise<{
   antall?: string | string[];
   // #2331: «Bruk dette oppsettet» on the guides (/arranger-golfturnering/…)
   // dyplenker hit med målgruppen. Validert i loadWizardDeepLink; beats
-  // ?format=, steps aside for ?fra=/?bane=/?klubb=/?intent=.
+  // ?format=, steps aside for ?fra=/?klubb=/?intent=.
   oppsett?: string | string[];
 }>;
 
@@ -356,7 +356,6 @@ async function loadWizardDeepLink(sp: Awaited<SearchParams>): Promise<WizardDeep
       format,
       antall: first(sp.antall),
       fra: first(sp.fra),
-      bane: first(sp.bane),
       klubb: first(sp.klubb),
       intent: first(sp.intent),
     },
@@ -391,25 +390,25 @@ function deepLinkSeed(deepLink: WizardDeepLink): {
 }
 
 /**
- * #1007/#1023/#2328/#2331/#2446: remount når prefill-kilden endres
+ * #1007/#2328/#2331/#2446: remount når prefill-kilden endres
  * (useGameFormState leser initialValues kun ved mount — key-remount-fella).
  * «Som sist» får sitt eget prefiks, så revansje og «Som sist» for samme spill
- * gir to monteringer.
+ * gir to monteringer. #2485: `?bane=` er ikke med lenger. Veiviseren velger
+ * banen selv fra URL-en (useCourseFromUrl) og fjerner parameteren etterpå, så
+ * en nøkkel på den ville montert veiviseren på nytt ved neste steg.
  */
 function wizardKeyFor({
   fraId,
   sistId,
-  baneCourseId,
   seedKey,
 }: {
   fraId: string | undefined;
   sistId: string | undefined;
-  baneCourseId: string | null;
   seedKey: string | undefined;
 }): string {
   if (fraId) return fraId;
   if (sistId) return `sist:${sistId}`;
-  return baneCourseId ?? seedKey ?? 'blank';
+  return seedKey ?? 'blank';
 }
 
 export default async function OpprettSpillPage({
@@ -527,7 +526,6 @@ export default async function OpprettSpillPage({
           wizardKey={wizardKeyFor({
             fraId,
             sistId,
-            baneCourseId,
             seedKey: seed?.key,
           })}
           userId={currentUserId}

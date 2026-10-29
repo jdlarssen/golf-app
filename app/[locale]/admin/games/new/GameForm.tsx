@@ -41,6 +41,7 @@ import { TeeShotSection } from './sections/TeeShotSection';
 import type { StartType } from '@/lib/games/startType';
 import type { EditSection } from '@/lib/games/editSections';
 import { EditOverview, type EditNav } from './EditOverview';
+import { useCourseFromUrl } from './useCourseFromUrl';
 
 export type CourseOption = {
   id: string;
@@ -457,6 +458,13 @@ export function GameForm({
     players,
     courses,
     publishes: mode.kind !== 'edit-scheduled',
+  });
+  // #2485: back from «Opprett ny bane» with the course chosen.
+  useCourseFromUrl({
+    ready: true,
+    courseId: state.courseId,
+    setCourseId: state.setCourseId,
+    courses,
   });
   // #2210: captured at mount, like the selection itself (see rosterEdit.ts).
   const [rosterLoadedIds] = useState(() =>
