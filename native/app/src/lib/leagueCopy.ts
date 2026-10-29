@@ -79,7 +79,7 @@ export const SIM_SETTINGS_TEXT = {
 /** Startskjermen (`liga.player.runde.*`). */
 export const ROUND_START_TEXT = {
   coPlayersLegend: 'Velg medspillere',
-  simulatorRule: 'Du kan spille alene. Tast scoren fra Trackman-skjermen når du er ferdig.',
+  simulatorRule: 'Velg de som står i simulatoren sammen med deg. Markør velger du når du leverer runden.',
   markerRule: 'Velg hvem du spiller med. Du trenger minst én medspiller (markørregelen).',
   noCoPlayers: 'Ingen andre deltakere i ligaen. Du trenger minst én medspiller (markørregelen).',
   startButton: 'Start runden',

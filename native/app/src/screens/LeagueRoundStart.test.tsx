@@ -56,7 +56,7 @@ describe('tegning 5: simulatorliga', () => {
     expect(screen.getByTestId('sim-settings-values')).toBeTruthy();
     expect(screen.getByTestId('sim-setting-wind')).toHaveTextContent('VindCalm');
     expect(screen.getByTestId('round-start-rule')).toHaveTextContent(
-      'Du kan spille alene. Tast scoren fra Trackman-skjermen når du er ferdig.',
+      'Velg de som står i simulatoren sammen med deg. Markør velger du når du leverer runden.',
     );
     expect(isDisabled('round-start-submit')).toBe(false);
 
