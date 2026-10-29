@@ -1,5 +1,6 @@
 'use server';
 
+import { refresh } from 'next/cache';
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -12,6 +13,11 @@ import { compareStep2, moveWithinSection, step2SortOrder } from '@/lib/formats/s
 import { expectAffected } from '@/lib/supabase/affectedRows';
 
 const REDIRECT_BASE = '/admin/formats';
+
+// Success and no-op end in `refresh()` / a plain return, never a redirect: a
+// redirect changes the page's search params, which remounts FormatsManager and
+// drops the open tab, «Vis alle» and the focused arrow (#2347). Errors still
+// redirect with `?error=`, so the page shows the banner.
 
 function isMappingIntent(raw: string): raw is MappingIntent {
   return raw === 'kompis' || raw === 'klubb' || raw === 'solo';
@@ -80,7 +86,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
   if (existing) {
     // Idempotens
     if (existing.is_visible === next) {
-      redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
+      return;
     }
     // Validering: primary-rad kan ikke avhukes
     if (next === false && existing.is_primary) {
@@ -134,7 +140,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
   }
 
   expireFormatMappingCache();
-  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
+  refresh();
 }
 
 /**
@@ -179,7 +185,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
 
   if (existing) {
     if (existing.is_primary === next) {
-      redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
+      return;
     }
     // Hvis next='on' og raden ikke er synlig: sett is_visible=true samtidig
     // (CHECK `primary_implies_visible` ville ellers rollback-et).
@@ -237,7 +243,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
   }
 
   expireFormatMappingCache();
-  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
+  refresh();
 }
 
 /**
@@ -262,9 +268,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
     .maybeSingle<{ is_active: boolean }>();
 
   if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
-  if (existing.is_active === next) {
-    redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
-  }
+  if (existing.is_active === next) return;
 
   const ok = await wrote('toggleActive update', () =>
     adminClient
@@ -286,7 +290,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
   });
 
   expireFormatMappingCache();
-  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
+  refresh();
 }
 
 /**
@@ -336,7 +340,7 @@ export async function moveFormat(formData: FormData): Promise<void> {
     .map((r) => r.slug);
 
   const moved = moveWithinSection(group, slug, dir);
-  if (!moved) redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
+  if (!moved) return;
 
   const payload = moved.slugs.map((s, i) => ({
     format_slug: s,
@@ -365,5 +369,5 @@ export async function moveFormat(formData: FormData): Promise<void> {
   });
 
   expireFormatMappingCache();
-  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
+  refresh();
 }
