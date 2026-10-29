@@ -119,9 +119,8 @@ export default async function SpillerePage({
         </Suspense>
       </section>
 
-      <section className="mt-5">
-        <InviteForm />
-      </section>
+      {/* No wrapper: the pinned button sticks inside its parent, so the parent must be the whole page. */}
+      <InviteForm />
     </AdminShell>
   );
 }

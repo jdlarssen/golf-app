@@ -33,7 +33,7 @@ export function InviteDock({
 
   return (
     <>
-      <div id="invite-form" ref={formRef} hidden={!open}>
+      <div id="invite-form" ref={formRef} hidden={!open} className="mt-2">
         {children}
       </div>
       {!open && (
