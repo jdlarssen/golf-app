@@ -121,9 +121,16 @@
   <text x="782" y="889" font-size="13" fill="#6B5526">NY: «Alle har levert. Avslutt spillet.»</text>
   <text x="782" y="908" font-size="13" fill="#6B5526">NY: påminnelse etter et døgn stille</text>
 
+  <!-- before the start: cancel the round, the group is told (NY #2481) -->
+  <rect x="760" y="945" width="320" height="88" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <rect x="1006" y="953" width="60" height="20" rx="10" fill="#C9A961"/><text x="1036" y="967" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2481</text>
+  <text x="782" y="969" font-size="14.5" font-weight="600" fill="#7A5E13">NY: «Avlys runden» før start</text>
+  <text x="782" y="991" font-size="12.5" fill="#6B5526">fra «Planlagt» · alle på lista får beskjed,</text>
+  <text x="782" y="1011" font-size="12.5" fill="#6B5526">med din hilsen · gamle varsler ryddes bort</text>
+
   <!-- player parallel -->
   <text x="120" y="1058" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
-  <text x="120" y="1084" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt», varsel om runden flyttes · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
+  <text x="120" y="1084" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt», varsel om runden flyttes eller avlyses · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
 
   <text x="120" y="1131" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
 </svg>
