@@ -535,6 +535,7 @@ export function CourseForm({
           {canSplit && (
             <button
               type="button"
+              data-testid="nine-split"
               onClick={splitIndices}
               className="block min-h-11 w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
             >
@@ -542,7 +543,7 @@ export function CourseForm({
             </button>
           )}
           {splitDone && (
-            <p role="status" className="text-xs font-semibold leading-[normal] text-text">
+            <p role="status" data-testid="nine-split-done" className="text-xs font-semibold leading-[normal] text-text">
               {t('splitDone')}
             </p>
           )}
