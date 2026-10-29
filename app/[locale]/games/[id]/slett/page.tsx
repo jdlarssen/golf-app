@@ -14,7 +14,10 @@ import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import { getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { deleteGame } from '@/app/[locale]/admin/games/[id]/slett/actions';
+import { CancelRoundConfirm } from '@/app/[locale]/admin/games/[id]/slett/CancelRoundConfirm';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { canCancelWithNotice } from '@/lib/games/gameCancellation';
+import { loadCancellationRecipients } from '@/lib/games/gameCancellation.server';
 
 /**
  * Creator-facing «Slett spill»-flate (#428) — the non-admin mirror of the admin
@@ -26,6 +29,9 @@ import { localizeGameName } from '@/lib/games/autoGameName';
  *
  * Dedicated confirmation route per the destructive-action discipline — never an
  * inline toggle or <details>-popout.
+ *
+ * #2481: a scheduled round with players to tell is «Avlys runden?» instead
+ * (`CancelRoundConfirm`), and the same action tells them.
  */
 
 type Params = Promise<{ id: string }>;
@@ -42,6 +48,8 @@ type GameRow = {
   status: GameStatus;
   scheduled_tee_off_at: string | null;
   created_at: string;
+  tournament_id: string | null;
+  league_round_id: string | null;
   courses: { name: string } | null;
 };
 
@@ -57,17 +65,16 @@ export default async function CreatorDeleteGamePage({
   const t = await getTranslations('game.delete');
   const locale = await getLocale();
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
   const supabase = await getServerClient();
-  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
-  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
-  await requireAdminOrCreator(supabase, id);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter). #2481: userId
+  // leaves the one who cancels off the recipients.
+  const ctx = await requireAdminOrCreator(supabase, id);
 
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, scheduled_tee_off_at, created_at, courses(name)',
+      'id, name, status, scheduled_tee_off_at, created_at, tournament_id, league_round_id, courses(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -80,6 +87,33 @@ export default async function CreatorDeleteGamePage({
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     redirect({ href: `/games/${id}`, locale });
   }
+
+  const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
+  const withNotice = canCancelWithNotice(game);
+
+  // #2481: «Avlys runden?» when someone is there to tell. With only the
+  // organiser on the list, the plain page below (no warning: no one to tell).
+  if (withNotice) {
+    const recipients = await loadCancellationRecipients(id, ctx.userId);
+    if (recipients.length > 0) {
+      const tStatus = await getTranslations('gameStatus');
+      return (
+        <AppShell showVersion={false}>
+          <CancelRoundConfirm
+            header={<TopBar backHref={`/games/${id}`} kicker={`${gameName} · ${tStatus('scheduled')}`} />}
+            gameId={game.id}
+            teeOffAt={game.scheduled_tee_off_at}
+            courseName={game.courses?.name ?? null}
+            recipientNames={recipients.map((r) => r.name)}
+            errorCode={errorCode}
+            keepHref={`/games/${id}`}
+          />
+        </AppShell>
+      );
+    }
+  }
+
+  const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
   // Count child rows so the confirmation copy is accurate. A creator-who-plays
   // can read game_players (is_in_game); scores/invitations may read fewer rows
@@ -102,10 +136,11 @@ export default async function CreatorDeleteGamePage({
   const dateLine =
     shortLocale(game.scheduled_tee_off_at, locale) ?? shortLocale(game.created_at, locale);
 
-  // Only scheduled games carry a warning here (players are already invited).
-  // Drafts are private to the creator, so no one needs telling.
+  // A scheduled cup match keeps the warning: it is deleted without a notice
+  // (#2481 covers the organiser's own rounds). Drafts are private to the
+  // creator, so no one needs telling.
   const warning =
-    game.status === 'scheduled'
+    game.status === 'scheduled' && !withNotice
       ? t('scheduledWarning')
       : null;
 
@@ -115,7 +150,7 @@ export default async function CreatorDeleteGamePage({
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('heading', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
+          {t('heading', { name: gameName })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, dateLine].filter(Boolean).join(' · ')}
@@ -142,7 +177,7 @@ export default async function CreatorDeleteGamePage({
           {t('permanentLabel')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>{t('gameEntry', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}</li>
+          <li>{t('gameEntry', { name: gameName })}</li>
           {playerCount > 0 && (
             <li>{t('playerCount', { count: playerCount })}</li>
           )}

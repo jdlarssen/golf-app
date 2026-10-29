@@ -1223,7 +1223,7 @@
         "startlistLink": "Sett flightene på Startlista →",
         "notSet": "Ikke satt",
         "footnote": "Hver del åpnes for seg og lagres med én gang. Spillerne ser endringene neste gang de åpner appen.",
-        "delete": "Slett spillet …",
+        "delete": "Avlys runden …",
         "cancel": "Avbryt"
       },
       "formatHeading": "3. Format",
@@ -2266,6 +2266,7 @@
       "editGameLink": "Rediger spill",
       "moveGameLink": "Flytt runden",
       "deleteGameLink": "Slett spill",
+      "cancelRoundLink": "Avlys runden",
       "ctaStartRound": "Start runden →",
       "ctaContinueRound": "Fortsett runden →",
       "ctaReviewAndSubmit": "Gjennomgå og lever →",
@@ -2510,6 +2511,24 @@
       "cancelButton": "Avbryt",
       "errors": {
         "delete_failed": "Slettingen feilet. Prøv igjen om litt."
+      }
+    },
+    "cancel": {
+      "heading": "Avlys runden?",
+      "sectionLabel": "Beskjed til gjengen",
+      "notifiedVia": "Får beskjed i innboksen og på e-post",
+      "playerCount": "{count, plural, one {# spiller} other {# spillere}}",
+      "more": "{count} til",
+      "unnamedPlayer": "En spiller",
+      "messageLabel": "Hilsen (valgfri)",
+      "messagePlaceholder": "Banen er stengt på grunn av frost. Vi prøver igjen neste lørdag.",
+      "permanentNote": "Runden slettes, og den kan ikke hentes tilbake.",
+      "submit": "Avlys og si fra",
+      "submitPending": "Avlyser …",
+      "keep": "Behold runden",
+      "errors": {
+        "delete_failed": "Avlysningen feilet. Prøv igjen om litt.",
+        "message_too_long": "Hilsenen er for lang. Den kan ha opptil {max} tegn."
       }
     },
     "withdraw": {
@@ -3880,7 +3899,8 @@
       "statusMessages": {
         "created": "✓ Spillet «{name}» ble lagret som utkast.",
         "started": "✓ Spillet «{name}» er startet.",
-        "deleted": "✓ Spillet «{name}» er slettet."
+        "deleted": "✓ Spillet «{name}» er slettet.",
+        "cancelled": "✓ «{name}» er avlyst. {count, plural, one {# spiller har} other {# spillere har}} fått beskjed."
       }
     },
     "dashboard": {
@@ -4059,6 +4079,7 @@
         "createdAtFooter": "Opprettet {date} · {n}. sak i {year}.",
         "dangerZoneLabel": "Faresone",
         "deleteGame": "Slett spillet helt",
+        "cancelRound": "Avlys runden",
         "unknownPlayer": "(ukjent spiller)",
         "teamEmpty": "(tom)",
         "notStarted": "Ikke startet",
@@ -6292,6 +6313,7 @@
     "handicapChipAria": "Handicap {hcp}. Trykk for å oppdatere.",
     "profileUpdatedBanner": "✓ Profilen din er oppdatert.",
     "gameDeletedBanner": "✓ «{name}» er slettet.",
+    "gameCancelledBanner": "✓ «{name}» er avlyst. {count, plural, one {# spiller har} other {# spillere har}} fått beskjed.",
     "emptyKicker": "KLAR FOR FØRSTE RUNDE",
     "emptyWelcome": "Velkommen, {name}.",
     "emptyBodyWithDiscovery": "Ingen turneringer ennå. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.",
@@ -6738,8 +6760,8 @@
       "salutationGeneric": "Hei!",
       "body": "{organizer} har avlyst <strong>{gameName}</strong>.",
       "bodyText": "{organizer} har avlyst {gameName}.",
-      "scheduled": "Runden var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm} på {courseName}.",
-      "scheduledNoCourse": "Runden var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm}.",
+      "scheduled": "Den var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm} på {courseName}.",
+      "scheduledNoCourse": "Den var satt opp {teeOff, date, ::EEEEdMMMM} kl. {teeOff, time, ::HHmm}.",
       "messageLead": "Hilsen fra {organizer}:",
       "messageText": "Hilsen fra {organizer}: «{message}»",
       "organizerFallback": "Arrangøren",

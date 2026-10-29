@@ -13,7 +13,10 @@ import type { GameStatus } from '@/lib/games/status';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
+import { canCancelWithNotice } from '@/lib/games/gameCancellation';
+import { loadCancellationRecipients } from '@/lib/games/gameCancellation.server';
 import { deleteGame } from './actions';
+import { CancelRoundConfirm } from './CancelRoundConfirm';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -26,6 +29,8 @@ type GameRow = {
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
+  tournament_id: string | null;
+  league_round_id: string | null;
   courses: { name: string } | null;
 };
 
@@ -51,15 +56,49 @@ export default async function DeleteGamePage({
 
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
-  await requireAdmin(supabase);
+  const ctx = await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, scheduled_tee_off_at, started_at, ended_at, created_at, courses(name)')
+    .select(
+      'id, name, status, scheduled_tee_off_at, started_at, ended_at, created_at, tournament_id, league_round_id, courses(name)',
+    )
     .eq('id', id)
     .maybeSingle<GameRow>();
 
   if (!game) notFound();
+
+  const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale);
+  const withNotice = canCancelWithNotice(game);
+
+  // #2481: «Avlys runden?» when someone is there to tell — the same content as
+  // the organiser's page, in the Sekretariat frame. With only the one who
+  // cancels on the list, the plain page below.
+  if (withNotice) {
+    const recipients = await loadCancellationRecipients(id, ctx.userId);
+    if (recipients.length > 0) {
+      const tStatus = await getTranslations('gameStatus');
+      return (
+        <AdminShell showVersion={false}>
+          <CancelRoundConfirm
+            header={
+              <>
+                <TopBar backHref={`/admin/games/${id}`} kicker={tNav('klubbhus')} />
+                <BrassRibbon kicker={`${gameName} · ${tStatus('scheduled')}`} />
+              </>
+            }
+            gameId={game.id}
+            teeOffAt={game.scheduled_tee_off_at}
+            courseName={game.courses?.name ?? null}
+            recipientNames={recipients.map((r) => r.name)}
+            errorCode={errorCode}
+            keepHref={`/admin/games/${id}`}
+            trayClassName="bg-admin-bg"
+          />
+        </AdminShell>
+      );
+    }
+  }
 
   // Count child rows so the confirmation copy is accurate.
   const [gpRes, scoresRes, invRes] = await Promise.all([
@@ -93,9 +132,13 @@ export default async function DeleteGamePage({
     shortDate(game.scheduled_tee_off_at) ??
     shortDate(game.created_at);
 
+  // #2481: a scheduled round outside a cup or league cancels with a notice
+  // above, or has no one to tell; only a cup match keeps «si fra selv».
   const warning =
     game.status === 'scheduled'
-      ? t('warnings.scheduled')
+      ? withNotice
+        ? null
+        : t('warnings.scheduled')
       : game.status === 'active'
       ? t('warnings.active')
       : game.status === 'finished'
@@ -116,7 +159,7 @@ export default async function DeleteGamePage({
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('heading', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
+          {t('heading', { name: gameName })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, dateLine].filter(Boolean).join(' · ')}
@@ -145,7 +188,7 @@ export default async function DeleteGamePage({
           {t('permanentLabel')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>{'«'}{localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}{'»'}</li>
+          <li>{'«'}{gameName}{'»'}</li>
           {playerCount > 0 && (
             <li>{t('players', { count: playerCount })}</li>
           )}

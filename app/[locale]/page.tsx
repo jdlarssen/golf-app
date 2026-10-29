@@ -65,6 +65,10 @@ type SearchParams = Promise<{
   // #428: set by the creator delete-flow (`/?deleted=<spillnavn>`) so we can
   // confirm the deletion here — there's no «Mine spill»-hub to land on yet.
   deleted?: string | string[];
+  // #2481: «Avlys og si fra» lands here with the round's name and how many
+  // players were told (`/?cancelled=<spillnavn>&told=<n>`).
+  cancelled?: string | string[];
+  told?: string | string[];
 }>;
 
 // Request-scoped Supabase client + verified user id. The user id is forwarded
@@ -120,6 +124,7 @@ export default async function Home({
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
   const deletedGameName = first(params.deleted);
+  const cancelledGameName = first(params.cancelled);
 
   const t = await getTranslations('home');
 
@@ -149,6 +154,17 @@ export default async function Home({
       {deletedGameName && (
         <div className="mb-4">
           <Banner tone="success">{t('gameDeletedBanner', { name: deletedGameName })}</Banner>
+        </div>
+      )}
+
+      {cancelledGameName && (
+        <div className="mb-4">
+          <Banner tone="success">
+            {t('gameCancelledBanner', {
+              name: cancelledGameName,
+              count: Number(first(params.told)) || 0,
+            })}
+          </Banner>
         </div>
       )}
 
