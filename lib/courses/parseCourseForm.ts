@@ -22,6 +22,7 @@ import {
   allStrokeIndicesUnique,
 } from './coursePayload';
 import { expandNineHoles } from './nineHoles';
+import { isTeeColor, type TeeColor } from './teeColors';
 
 export type ParsedHole = {
   hole_number: number;
@@ -34,6 +35,7 @@ export type ParsedHole = {
 export type ParsedTeeBox = {
   id: string | null;
   name: string;
+  color: TeeColor | null;
   length_meters: number | null;
   slope_mens: number | null;
   course_rating_mens: number | null;
@@ -74,6 +76,13 @@ function readSecondRound(formData: FormData, fail: (code: string) => never): num
     secondRound.push(si);
   }
   return secondRound;
+}
+
+// The colour (#2486) is a palette key or nothing. Anything else becomes null
+// rather than an error, as with the length: no form sends it, and
+// tee_boxes_color_check would stop it anyway.
+function readTeeColor(raw: FormDataEntryValue | null): TeeColor | null {
+  return isTeeColor(raw) ? raw : null;
 }
 
 export function parseCourseHolesAndTees(
@@ -186,6 +195,7 @@ export function parseCourseHolesAndTees(
     teeBoxes.push({
       id: teeId,
       name: teeName,
+      color: readTeeColor(formData.get(`tee_${i}_color`)),
       length_meters: lengthMeters,
       slope_mens: mensRating.slope,
       course_rating_mens: mensRating.course_rating,
