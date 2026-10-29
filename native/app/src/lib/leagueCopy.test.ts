@@ -17,6 +17,7 @@ import { isFinishedSentence } from '../test/copy';
 import {
   LEAGUE_TEXT,
   ROUND_START_TEXT,
+  CHECKLIST_TEXT,
   SIM_SETTINGS_TEXT,
   START_REFUSAL_TEXT,
   WINDOW_CHIP,
@@ -34,6 +35,7 @@ import {
   roundWindow,
   roundWindowSub,
   seasonLine,
+  showAllLine,
   tableCaption,
   valueHeader,
 } from './leagueCopy';
@@ -93,6 +95,11 @@ describe('paritet med nettsiden (messages/no.json)', () => {
       simulatorRule: runde.simulatorRule,
       markerRule: runde.markerRule,
       noCoPlayers: runde.noCoPlayers,
+      searchLabel: runde.searchLabel,
+      searchPlaceholder: runde.searchPlaceholder,
+      noMatch: runde.noMatch,
+      showFewer: runde.showFewer,
+      confirmSetup: runde.confirmSetup,
       startButton: runde.startButton,
       startPending: runde.startPending,
       lockDelivered: runde.lockDelivered,
@@ -104,9 +111,22 @@ describe('paritet med nettsiden (messages/no.json)', () => {
   it('innstillingskortet', () => {
     expect(SIM_SETTINGS_TEXT).toEqual({
       summary: source.liga.simSettings.summary,
-      overridden: source.liga.simSettings.overridden,
       tee: source.liga.simSettings.tee,
     });
+  });
+
+  it('sjekklista før start (#2675)', () => {
+    expect(CHECKLIST_TEXT).toEqual(source.liga.simSettings.checklist);
+  });
+
+  it('«Vis alle {count}» er nettsidens, fylt inn', () => {
+    expect(showAllLine(9)).toBe(runde.showAll.replace('{count}', '9'));
+    // Markørvelgeren bruker samme linje.
+    expect(showAllLine(9)).toBe(source.game.submit.marker.showAll.replace('{count}', '9'));
+  });
+
+  it('«Endret denne runden» finnes ikke i appen: spilleren har ingen «standard» (#2675)', () => {
+    expect(Object.keys(SIM_SETTINGS_TEXT)).not.toContain('overridden');
   });
 
   it('tabellens kolonne for sesongverdien', () => {

@@ -60,17 +60,19 @@ describe('tegning 2: øvre del', () => {
     expect(screen.getByTestId('league-format')).toHaveTextContent('Stableford netto 75\u00A0% · maks 32 slag · beste 5 av 4');
   });
 
-  it('innstillingene er foldet til én linje med merket, og åpnes med et trykk', async () => {
+  // #2675: spilleren har ingen «standard», så en runde med overstyrt verdi
+  // (fixturen overstyrer greenhastigheten) viser verdien uten merke.
+  it('innstillingene er foldet til én linje uten merke, og åpnes med et trykk', async () => {
     await renderLeague();
     expect(screen.getByText('Innstillinger · Runde 3')).toBeTruthy();
-    expect(screen.getByTestId('sim-settings-changed')).toHaveTextContent('Endret denne runden');
+    expect(screen.queryByText('Endret denne runden')).toBeNull();
     expect(screen.queryByTestId('sim-settings-values')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('sim-settings-summary'));
-    expect(screen.getByTestId('sim-setting-green_stimp')).toHaveTextContent(
-      'GreenhastighetEndret denne runden12 (3,7 m)',
-    );
-    expect(screen.getByTestId('sim-setting-overridden')).toBeTruthy();
+    expect(screen.getByTestId('sim-setting-green_stimp')).toHaveTextContent('Greenhastighet12 (3,7 m)');
+    expect(screen.queryByText('Endret denne runden')).toBeNull();
+    expect(screen.queryByTestId('sim-settings-changed')).toBeNull();
+    expect(screen.queryByTestId('sim-setting-overridden')).toBeNull();
     expect(screen.getByTestId('sim-setting-tee')).toHaveTextContent('TeeGul');
   });
 

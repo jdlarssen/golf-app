@@ -72,7 +72,14 @@ export const LEAGUE_TEXT = {
 /** Innstillingskortet (`liga.simSettings.*`). */
 export const SIM_SETTINGS_TEXT = {
   summary: 'Rundeinnstillinger · Trackman',
-  overridden: 'Endret denne runden',
+  tee: 'Tee',
+} as const;
+
+/** Sjekklista før start i en simulatorliga (`liga.simSettings.checklist`, #2675). */
+export const CHECKLIST_TEXT = {
+  title: 'Sett dette i Trackman før første slag',
+  lead: 'Velg bane og tee først, og still inn resten.',
+  course: 'Bane',
   tee: 'Tee',
 } as const;
 
@@ -82,11 +89,21 @@ export const ROUND_START_TEXT = {
   simulatorRule: 'Velg de som står i simulatoren sammen med deg. Markør velger du når du leverer runden.',
   markerRule: 'Velg hvem du spiller med. Du trenger minst én medspiller (markørregelen).',
   noCoPlayers: 'Ingen andre deltakere i ligaen. Du trenger minst én medspiller (markørregelen).',
+  searchLabel: 'Søk etter medspiller',
+  searchPlaceholder: 'Søk etter spiller',
+  noMatch: 'Ingen spillere med det navnet.',
+  showFewer: 'Vis færre',
+  confirmSetup: 'Jeg har satt bane, tee og innstillingene i Trackman.',
   startButton: 'Start runden',
   startPending: 'Starter runden …',
   lockDelivered: 'Har levert',
   lockInProgress: 'Spiller nå',
 } as const;
+
+/** «Vis alle 9» (`liga.player.runde.showAll`, `game.submit.marker.showAll`). */
+export function showAllLine(count: number): string {
+  return `Vis alle ${count}`;
+}
 
 /** `liga.player.windowChip.*`: rundas vindu sett fra nå. */
 export const WINDOW_CHIP = { open: 'Åpen', upcoming: 'Kommer', closed: 'Lukket' } as const;
