@@ -188,3 +188,17 @@ describe('getNewGameFormData — klubber (#442)', () => {
     expect(clubs).toEqual([]);
   });
 });
+
+describe('getNewGameFormData — 9-hullsbaner (#2484)', () => {
+  it('bærer nine_holes over som nineHoles på banevalget', async () => {
+    coursesData = [
+      { id: 'c1', name: 'Ni hull', nine_holes: true, tee_boxes: [] },
+      { id: 'c2', name: 'Atten hull', nine_holes: false, tee_boxes: [] },
+    ];
+    const { courses } = await getNewGameFormData(false);
+    expect(courses.map((c) => [c.id, c.nineHoles])).toEqual([
+      ['c1', true],
+      ['c2', false],
+    ]);
+  });
+});

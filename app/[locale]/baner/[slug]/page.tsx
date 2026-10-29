@@ -121,8 +121,16 @@ export default async function PublicCoursePage({
         id: tee.id,
         name: tee.name,
         color: isTeeColor(tee.color) ? tee.color : null,
-        status:
-          tee.length_meters === null
+        // #2484: a 9-hole course says so; par is still the 18-hole one.
+        status: course.nineHoles
+          ? tee.length_meters === null
+            ? t('statusNine', { par })
+            : t('statusNineWithLength', {
+                par,
+                meters: formatNumber(tee.length_meters, locale),
+                tee: tee.name,
+              })
+          : tee.length_meters === null
             ? t('status', { holes: holeCount, par })
             : t('statusWithLength', {
                 holes: holeCount,
@@ -193,7 +201,11 @@ export default async function PublicCoursePage({
             in: t('in'),
             captionOut: t('captionOut'),
             captionIn: t('captionIn'),
+            indexRound1: t('indexRound1'),
+            indexRound2: t('indexRound2'),
+            sum: t('sum'),
           }}
+          nineHoles={course.nineHoles}
         />
       </div>
 
@@ -213,8 +225,9 @@ export default async function PublicCoursePage({
                 {t(key)}
               </p>
               <p className="mt-0.5 text-[14px]">
-                {t.rich('factLine', {
-                  hole: hole.hole_number,
+                {/* On a 9-hole course, holes 10–18 are 1–9 in round 2 (#2484). */}
+                {t.rich(course.nineHoles && hole.hole_number > 9 ? 'factLineRoundTwo' : 'factLine', {
+                  hole: course.nineHoles && hole.hole_number > 9 ? hole.hole_number - 9 : hole.hole_number,
                   par: hole.par_mens ?? '',
                   index: hole.stroke_index,
                   num: (chunks) => <span className="font-serif font-semibold">{chunks}</span>,

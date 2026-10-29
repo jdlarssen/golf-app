@@ -46,6 +46,8 @@ import { useCourseFromUrl } from './useCourseFromUrl';
 export type CourseOption = {
   id: string;
   name: string;
+  /** A 9-hole course played twice (#2484). Missing reads as an 18-hole course. */
+  nineHoles?: boolean;
   tee_boxes: {
     id: string;
     name: string;
