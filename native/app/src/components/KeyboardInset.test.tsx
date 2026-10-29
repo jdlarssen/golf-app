@@ -177,6 +177,8 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/create/PlayersStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.
   'components/approve/RejectSheet.tsx': 'modal',
+  // #2675: søkefeltet over medspillerlista og over markørvalget.
+  'components/PickerSearch.tsx': { host: 'screens/LeagueRoundStart.tsx', scrollTestID: 'round-start-scroll' },
 };
 
 describe('rullefeltet på skjermer med tekstfelt', () => {
@@ -222,6 +224,14 @@ describe('rullefeltet på skjermer med tekstfelt', () => {
       expect(spreads(target[0])).toBe(true);
     },
   );
+});
+
+// Markørvalget (`MarkerPicker`) har søkefeltet fra `PickerSearch` og står i
+// scorekortets rullefelt (#2675).
+it('scorekortet, der markørvalget har søkefelt, sprer KEYBOARD_SCROLL_PROPS på rullefeltet', () => {
+  const target = scrollViewOpeners(read('screens/Scorecard.tsx')).filter((o) => o.includes('testID="scorecard-screen"'));
+  expect(target).toHaveLength(1);
+  expect(spreads(target[0])).toBe(true);
 });
 
 describe('Android-halvdelen: roten er pakket inn', () => {

@@ -37,6 +37,11 @@ async function renderStart(roundId = 'r3') {
   return { replace };
 }
 
+/** #2675: i en simulatorliga venter «Start runden» på avkrysningen. */
+async function confirmSetup() {
+  await fireEvent.press(screen.getByTestId('round-start-confirm'));
+}
+
 function isDisabled(testID: string): boolean {
   return screen.getByTestId(testID).props.accessibilityState?.disabled === true;
 }
@@ -48,16 +53,20 @@ beforeEach(() => {
 });
 
 describe('tegning 5: simulatorliga', () => {
-  it('innstillingene står åpne, og du kan starte alene', async () => {
+  it('sjekklista står øverst, og du kan starte alene etter avkrysningen', async () => {
     const { replace } = await renderStart();
 
     expect(screen.getByText('Runde 3')).toBeTruthy();
     expect(screen.getByText('Vinterliga på Trackman')).toBeTruthy();
-    expect(screen.getByTestId('sim-settings-values')).toBeTruthy();
-    expect(screen.getByTestId('sim-setting-wind')).toHaveTextContent('VindCalm');
+    expect(screen.getByTestId('round-setup-checklist')).toBeTruthy();
+    expect(screen.queryByTestId('sim-settings-card')).toBeNull();
+    expect(screen.getByTestId('round-setup-setting-wind')).toHaveTextContent('VindCalm');
     expect(screen.getByTestId('round-start-rule')).toHaveTextContent(
       'Velg de som står i simulatoren sammen med deg. Markør velger du når du leverer runden.',
     );
+    expect(isDisabled('round-start-submit')).toBe(true);
+
+    await confirmSetup();
     expect(isDisabled('round-start-submit')).toBe(false);
 
     await fireEvent.press(screen.getByTestId('round-start-submit'));
@@ -75,6 +84,7 @@ describe('tegning 5: simulatorliga', () => {
 
     await fireEvent.press(screen.getByTestId('round-start-player-martin'));
     await fireEvent.press(screen.getByTestId('round-start-player-sindre'));
+    await confirmSetup();
     await fireEvent.press(screen.getByTestId('round-start-submit'));
     expect(startLeagueRound).toHaveBeenCalledWith('r3', ['sindre']);
   });
@@ -95,6 +105,7 @@ describe('tegning 5: simulatorliga', () => {
 
     for (const id of ['a', 'b', 'c']) await fireEvent.press(screen.getByTestId(`round-start-player-${id}`));
     expect(isDisabled('round-start-player-d')).toBe(true);
+    await confirmSetup();
     await fireEvent.press(screen.getByTestId('round-start-submit'));
     expect(startLeagueRound).toHaveBeenCalledWith('r3', ['a', 'b', 'c']);
   });
@@ -132,6 +143,7 @@ describe('tegning 5b: avslag', () => {
     mockStart = { ok: false, reason: 'already_played' };
     const { replace } = await renderStart();
 
+    await confirmSetup();
     await fireEvent.press(screen.getByTestId('round-start-submit'));
     expect(screen.getByTestId('round-start-refusal')).toHaveTextContent('Du har allerede spilt denne runden.');
     expect(replace).not.toHaveBeenCalled();
@@ -141,6 +153,7 @@ describe('tegning 5b: avslag', () => {
   it('uten nett sier boksen det', async () => {
     mockStart = { ok: false, reason: 'offline' };
     await renderStart();
+    await confirmSetup();
     await fireEvent.press(screen.getByTestId('round-start-submit'));
     expect(screen.getByTestId('round-start-refusal')).toHaveTextContent(
       'Du er uten nett. Prøv igjen når nettet er tilbake.',
@@ -163,7 +176,8 @@ describe('tegning 5b: avslag', () => {
 
     expect(screen.getByTestId('round-start-refusal')).toHaveTextContent(text);
     expect(screen.queryByTestId('round-start-players')).toBeNull();
-    expect(screen.queryByTestId('sim-settings-card')).toBeNull();
+    expect(screen.queryByTestId('round-setup-checklist')).toBeNull();
+    expect(screen.queryByTestId('round-start-confirm')).toBeNull();
   });
 
   it('vinduet er stengt', async () => {
@@ -190,6 +204,7 @@ describe('dra ned og skjermleseren', () => {
     mockStart = { ok: false, reason: 'co_player_locked' };
     await renderStart();
     await fireEvent.press(screen.getByTestId('round-start-player-sindre'));
+    await confirmSetup();
     await fireEvent.press(screen.getByTestId('round-start-submit'));
     expect(screen.getByTestId('round-start-refusal')).toBeTruthy();
 
@@ -212,5 +227,156 @@ describe('dra ned og skjermleseren', () => {
       screen.getByTestId('round-start-player-sindre').props.accessibilityLabel,
       screen.getByTestId('round-start-player-martin').props.accessibilityLabel,
     ]).toEqual(['Sindre, HCP 21,0', 'Martin, HCP 9,4, Har levert']);
+  });
+});
+
+// #2675 (kriterium 1 og 3): sjekklista og avkrysningen før start.
+describe('sjekklista og avkrysningen', () => {
+  const ORDER = [
+    'round-setup-course',
+    'round-setup-tee',
+    'round-setup-setting-pins',
+    'round-setup-setting-putting',
+    'round-setup-setting-gimme',
+    'round-setup-setting-mulligans',
+    'round-setup-setting-wind',
+    'round-setup-setting-fairway_firmness',
+    'round-setup-setting-green_firmness',
+    'round-setup-setting-green_stimp',
+  ];
+
+  it('bane, tee og de åtte innstillingene står i Trackmans rekkefølge, uten merke', async () => {
+    await renderStart();
+    const root = screen.getByTestId('round-setup-checklist');
+    expect(screen.getByText('Sett dette i Trackman før første slag')).toBeTruthy();
+    expect(screen.getByText('Velg bane og tee først, og still inn resten.')).toBeTruthy();
+    expect(screen.getByTestId('round-setup-course')).toHaveTextContent('BaneSt Andrews');
+    expect(screen.getByTestId('round-setup-tee')).toHaveTextContent('TeeGul');
+    // Alle ti radene finnes, og kortet har ingen fold.
+    for (const id of ORDER) expect(screen.getByTestId(id)).toBeTruthy();
+    expect(screen.queryByTestId('sim-settings-summary')).toBeNull();
+    expect(screen.queryByText('Endret denne runden')).toBeNull();
+    expect(root).toBeTruthy();
+  });
+
+  it.each([
+    ['uten overstyringer', [] as Array<'green_stimp' | 'wind' | 'pins'>],
+    ['med tre overstyringer', ['green_stimp', 'wind', 'pins'] as Array<'green_stimp' | 'wind' | 'pins'>],
+  ])('lista er den samme for en runde %s', async (_label, overriddenKeys) => {
+    const view = leagueView();
+    view.rounds[2] = { ...view.rounds[2], overriddenKeys };
+    mockView = { ok: true, view };
+    await renderStart();
+
+    expect(screen.getByTestId('round-setup-setting-pins')).toHaveTextContent('FlaggplasseringMedium');
+    expect(screen.getByTestId('round-setup-setting-wind')).toHaveTextContent('VindCalm');
+    expect(screen.getByTestId('round-setup-setting-green_stimp')).toHaveTextContent('Greenhastighet12 (3,7 m)');
+    expect(screen.queryByText('Endret denne runden')).toBeNull();
+  });
+
+  it('mangler banen, faller raden bort', async () => {
+    const view = leagueView();
+    view.rounds[2] = { ...view.rounds[2], courseName: null };
+    mockView = { ok: true, view };
+    await renderStart();
+    expect(screen.queryByTestId('round-setup-course')).toBeNull();
+    expect(screen.getByTestId('round-setup-tee')).toBeTruthy();
+  });
+
+  it('«Start runden» er sperret til boksen er krysset av, og sperres igjen når haken fjernes', async () => {
+    await renderStart();
+    const box = () => screen.getByTestId('round-start-confirm');
+    expect(box().props.accessibilityRole).toBe('checkbox');
+    expect(box().props.accessibilityState).toEqual({ checked: false });
+    expect(screen.getByText('Jeg har satt bane, tee og innstillingene i Trackman.')).toBeTruthy();
+    expect(isDisabled('round-start-submit')).toBe(true);
+
+    await fireEvent.press(box());
+    expect(box().props.accessibilityState).toEqual({ checked: true });
+    expect(isDisabled('round-start-submit')).toBe(false);
+
+    await fireEvent.press(box());
+    expect(isDisabled('round-start-submit')).toBe(true);
+    await fireEvent.press(screen.getByTestId('round-start-submit'));
+    expect(startLeagueRound).not.toHaveBeenCalled();
+  });
+
+  it('avkrysningen nullstilles ikke ved dra-ned', async () => {
+    await renderStart();
+    await confirmSetup();
+    await act(async () => {
+      screen.getByTestId('round-start-scroll').props.refreshControl.props.onRefresh();
+    });
+    expect(screen.getByTestId('round-start-confirm').props.accessibilityState).toEqual({ checked: true });
+  });
+
+  it('markørregelen gjelder i tillegg i en vanlig liga, som ikke har avkrysning eller sjekkliste', async () => {
+    mockView = { ok: true, view: leagueView({ league: { isSimulator: false } }) };
+    await renderStart();
+    expect(screen.queryByTestId('round-start-confirm')).toBeNull();
+    expect(screen.queryByTestId('round-setup-checklist')).toBeNull();
+    expect(isDisabled('round-start-submit')).toBe(true);
+    await fireEvent.press(screen.getByTestId('round-start-player-sindre'));
+    expect(isDisabled('round-start-submit')).toBe(false);
+  });
+});
+
+// #2675 (kriterium 4): lang medspillerliste.
+describe('medspillerlista med søk og «Vis alle»', () => {
+  // Åtte medspillere: Anne, Bård og Cato har levert/spiller (låst), resten er ledige.
+  const NAMES = ['anne', 'bård', 'cato', 'dag', 'eli', 'finn', 'gro', 'hans'];
+  function eightPlayers() {
+    const view = leagueView({ participants: [PEOPLE[0], ...NAMES.map((n) => participant(n.toLowerCase(), n))] });
+    view.rounds[2] = { ...view.rounds[2], delivered: ['anne', 'bård'], inProgress: ['cato'] };
+    mockView = { ok: true, view };
+  }
+  // Radene i den rekkefølgen de står på skjermen.
+  const shown = () =>
+    screen.queryAllByTestId(/^round-start-player-/).map((node) => String(node.props.testID).replace('round-start-player-', ''));
+
+  it('ledige først og låste sist; seks rader, søkefelt og «Vis alle 8»', async () => {
+    eightPlayers();
+    await renderStart();
+    expect(shown()).toEqual(['dag', 'eli', 'finn', 'gro', 'hans', 'anne']);
+    expect(screen.getByTestId('round-start-search')).toBeTruthy();
+    expect(screen.getByTestId('round-start-show-all')).toHaveTextContent('Vis alle 8');
+
+    await fireEvent.press(screen.getByTestId('round-start-show-all'));
+    expect(shown()).toEqual(['dag', 'eli', 'finn', 'gro', 'hans', 'anne', 'bård', 'cato']);
+    expect(screen.getByTestId('round-start-show-all')).toHaveTextContent('Vis færre');
+  });
+
+  it('søket filtrerer på navnet, og null treff gir «Ingen spillere med det navnet.»', async () => {
+    eightPlayers();
+    await renderStart();
+    await fireEvent.changeText(screen.getByTestId('round-start-search'), 'fin');
+    expect(shown()).toEqual(['finn']);
+    expect(screen.queryByTestId('round-start-show-all')).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('round-start-search'), 'xyz');
+    expect(shown()).toEqual([]);
+    expect(screen.getByTestId('round-start-no-match')).toHaveTextContent('Ingen spillere med det navnet.');
+  });
+
+  it('en valgt spiller nedenfor kuttet blir stående', async () => {
+    eightPlayers();
+    // Gro er rad fire og vises. Velg en som havner under kuttet: ingen ledige er
+    // under kuttet her, så flytt grensa ved å gjøre alle ledige.
+    const view = leagueView({ participants: [PEOPLE[0], ...NAMES.map((n) => participant(n.toLowerCase(), n))] });
+    view.rounds[2] = { ...view.rounds[2], delivered: [], inProgress: [] };
+    mockView = { ok: true, view };
+    await renderStart();
+    expect(shown()).toEqual(['anne', 'bård', 'cato', 'dag', 'eli', 'finn']);
+
+    await fireEvent.changeText(screen.getByTestId('round-start-search'), 'hans');
+    await fireEvent.press(screen.getByTestId('round-start-player-hans'));
+    await fireEvent.changeText(screen.getByTestId('round-start-search'), '');
+    expect(shown()).toEqual(['anne', 'bård', 'cato', 'dag', 'eli', 'finn', 'hans']);
+  });
+
+  it('seks medspillere eller færre: ingen søkefelt og ingen «Vis alle»', async () => {
+    await renderStart();
+    expect(screen.queryByTestId('round-start-search')).toBeNull();
+    expect(screen.queryByTestId('round-start-show-all')).toBeNull();
   });
 });
