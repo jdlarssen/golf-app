@@ -19,8 +19,14 @@ export async function InviteForm() {
     .is('accepted_at', null);
   const pendingCount = count ?? 0;
 
+  // key: the first invitation flips `initiallyOpen`; remounting closes the form
+  // again, as the old <details open> did.
   return (
-    <InviteDock initiallyOpen={pendingCount === 0} buttonLabel={t('inviteToggle')}>
+    <InviteDock
+      key={String(pendingCount === 0)}
+      initiallyOpen={pendingCount === 0}
+      buttonLabel={t('inviteToggle')}
+    >
       <div
         className="mt-3 rounded-xl border border-border bg-surface p-4"
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
