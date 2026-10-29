@@ -8,6 +8,7 @@ import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { isInviteExpired } from '@/lib/auth/inviteExpiry';
 import type { AppLocale } from '@/i18n/routing';
 import { resendInvitation } from '../actions';
+import { InvitationSteps } from './InvitationSteps';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type PendingInvitation = {
@@ -80,7 +81,7 @@ export async function PendingInvitations() {
 
   return (
     <div
-      className="overflow-hidden rounded-xl border border-border bg-surface"
+      className="overflow-hidden rounded-2xl border border-border bg-surface"
       style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
     >
       {items.map((inv, i) => (
@@ -91,11 +92,18 @@ export async function PendingInvitations() {
           // Judged against server time inside the helper (same reason timeAgo
           // reads the clock there) — no client clock skew decides the badge.
           expiredLabel={isInviteExpired(inv.expires_at) ? t('expiredBadge') : null}
-          sentDate={t('sentDate', { date: formatShortOsloDayMonthLocale(inv.created_at, locale) })}
-          openedAtLabel={
-            inv.opened_at ? t('openedAt', { relative: timeAgo(inv.opened_at) }) : null
+          sentDate={t('sentShort', { date: formatShortOsloDayMonthLocale(inv.created_at, locale) })}
+          steps={
+            inv.opened_at
+              ? {
+                  label: t('stepsLabel'),
+                  sent: t('stepSent'),
+                  requested: t('stepRequested', { relative: timeAgo(inv.opened_at) }),
+                  inside: t('stepInside'),
+                }
+              : null
           }
-          notOpenedLabel={t('notOpened')}
+          notRequestedLabel={t('notRequested')}
           resendButton={t('resendButton')}
           resendingBusy={t('resendingBusy')}
           withdrawButton={t('withdrawButton')}
@@ -132,8 +140,8 @@ function PendingRow({
   index,
   expiredLabel,
   sentDate,
-  openedAtLabel,
-  notOpenedLabel,
+  steps,
+  notRequestedLabel,
   resendButton,
   resendingBusy,
   withdrawButton,
@@ -142,41 +150,37 @@ function PendingRow({
   index: number;
   expiredLabel: string | null;
   sentDate: string;
-  openedAtLabel: string | null;
-  notOpenedLabel: string;
+  steps: { label: string; sent: string; requested: string; inside: string } | null;
+  notRequestedLabel: string;
   resendButton: string;
   resendingBusy: string;
   withdrawButton: string;
 }) {
   return (
     <div
-      className="reveal-up flex flex-wrap items-center justify-between gap-2 px-3.5 py-3"
+      className="px-3.5 py-3"
       style={{
-        animationDelay: `${60 + index * 50}ms`,
         borderTop: index === 0 ? 'none' : '1px solid var(--row-divider-warm)',
       }}
     >
-      <div className="min-w-0 flex-1">
+      <div className="flex items-baseline justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
-          <p className="truncate font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-            {inv.email}
-          </p>
+          <p className="truncate font-sans text-[14px] font-semibold text-text">{inv.email}</p>
           {expiredLabel && <ExpiredBadge label={expiredLabel} />}
         </div>
-        <p className="mt-0.5 font-sans text-[11.5px] tabular-nums text-muted">
-          {sentDate}
-        </p>
-        <p className="mt-0.5 font-sans text-[11px] text-muted">
-          {openedAtLabel ? (
-            <span style={{ color: 'var(--success-text)' }}>
-              {openedAtLabel}
-            </span>
-          ) : (
-            <span>{notOpenedLabel}</span>
-          )}
-        </p>
+        <p className="shrink-0 font-sans text-[12px] tabular-nums text-muted">{sentDate}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+      {steps ? (
+        <InvitationSteps
+          label={steps.label}
+          sentLabel={steps.sent}
+          requestedLabel={steps.requested}
+          insideLabel={steps.inside}
+        />
+      ) : (
+        <p className="mt-1 font-sans text-[12px] text-warning-text">{notRequestedLabel}</p>
+      )}
+      <div className="mt-2 flex items-center gap-1.5">
         <form action={resendInvitation}>
           <input type="hidden" name="id" value={inv.id} />
           <SubmitButton
