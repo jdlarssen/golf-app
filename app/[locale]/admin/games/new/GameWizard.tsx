@@ -132,7 +132,8 @@ import {
   withUrlCourse,
   type WizardDraft,
 } from './wizardStatePersistence';
-import { COURSE_PARAM, useCourseFromUrl } from './useCourseFromUrl';
+import { useCourseFromUrl } from './useCourseFromUrl';
+import { COURSE_CHOSEN_PARAM, COURSE_PARAM } from '@/lib/wizard/courseParams';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -420,9 +421,13 @@ export function GameWizard(props: Props) {
     // monteringen blir aldri `draftSettled`, så useCourseFromUrl fjerner den
     // ikke. Ble den stående, la neste gjenopprettede utkast den over banen
     // arrangøren valgte selv. I samme replace, så ingen to skrivere kappes.
+    // `banevalg=1` blir stående, så «Som sist» (#2446) holder seg unna steg 1.
     params.delete('step');
     params.delete(TEAMS_SCREEN_PARAM);
-    params.delete(COURSE_PARAM);
+    if (params.has(COURSE_PARAM)) {
+      params.delete(COURSE_PARAM);
+      params.set(COURSE_CHOSEN_PARAM, '1');
+    }
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // ⚠️ `searchParamsString` skal IKKE inn i dep-arrayet, selv om effekten
@@ -573,6 +578,7 @@ function WizardBody({
     courseId: state.courseId,
     setCourseId: state.setCourseId,
     courses,
+    markChosen: true,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt

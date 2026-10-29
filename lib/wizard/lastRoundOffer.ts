@@ -3,6 +3,7 @@ import { intlLocaleTag } from '@/lib/i18n/format';
 import { isAutoGameName } from '@/lib/games/autoGameName';
 import { nameInitials } from '@/lib/names/initials';
 import { first } from '@/lib/url/searchParams';
+import { COURSE_CHOSEN_PARAM, COURSE_PARAM } from '@/lib/wizard/courseParams';
 
 /**
  * «Som sist» on step 1 of /opprett-spill (#2446): the newest round you played
@@ -10,8 +11,19 @@ import { first } from '@/lib/url/searchParams';
  * is `loadLastRound` in the page and the card is `LastRoundCard`.
  */
 
-/** Every param that opens the wizard with something chosen already. */
-const PREFILL_PARAMS = ['fra', 'sist', 'bane', 'klubb', 'format', 'oppsett'] as const;
+/**
+ * Every param that opens the wizard with something chosen already.
+ * `banevalg` is the trace `bane` leaves once the wizard has used it (#2485).
+ */
+const PREFILL_PARAMS = [
+  'fra',
+  'sist',
+  COURSE_PARAM,
+  COURSE_CHOSEN_PARAM,
+  'klubb',
+  'format',
+  'oppsett',
+] as const;
 
 /**
  * The card stands on a blank start, and on `?intent=kompis`: «Med kompiser»
