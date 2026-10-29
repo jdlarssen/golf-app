@@ -431,4 +431,27 @@ describe('parseNotificationPayload', () => {
       ).toThrow();
     });
   });
+
+  describe('game_cancelled (#2481)', () => {
+    const base = { game_name: 'Lørdagsrunden', tee_off_at: '2026-10-03T07:00:00+00:00' };
+
+    it('godtar en avlysning med og uten hilsen, dato, bane og arrangør', () => {
+      expect(parseNotificationPayload('game_cancelled', base).payload).toEqual(base);
+      const full = {
+        ...base,
+        course_name: 'Byneset North',
+        organizer_name: 'Jørgen',
+        message: 'x'.repeat(300),
+      };
+      expect(parseNotificationPayload('game_cancelled', full).payload).toEqual(full);
+      expect(parseNotificationPayload('game_cancelled', { ...base, tee_off_at: null }).payload.tee_off_at).toBeNull();
+    });
+
+    it('avviser en hilsen over 300 tegn, en tom hilsen og en dato som ikke er et tidspunkt', () => {
+      expect(() => parseNotificationPayload('game_cancelled', { ...base, message: 'x'.repeat(301) })).toThrow();
+      expect(() => parseNotificationPayload('game_cancelled', { ...base, message: '' })).toThrow();
+      expect(() => parseNotificationPayload('game_cancelled', { ...base, tee_off_at: 'lørdag' })).toThrow();
+      expect(() => parseNotificationPayload('game_cancelled', { tee_off_at: null })).toThrow();
+    });
+  });
 });

@@ -150,7 +150,7 @@ describe('InboxClient', () => {
   it('#2480: a row of an unknown kind is skipped, and the rest of the inbox renders', () => {
     const unknown = {
       id: 'x',
-      kind: 'game_cancelled',
+      kind: 'game_from_a_newer_build',
       payload: { game_id: GAME, game_name: 'Avlyst runde' },
       read_at: null,
       created_at: '2026-05-24T14:25:00Z',
@@ -165,7 +165,7 @@ describe('InboxClient', () => {
   it('#2480: with only an unknown row the inbox is empty, with no «Marker alt lest»', () => {
     const unknown = {
       id: 'x',
-      kind: 'game_cancelled',
+      kind: 'game_from_a_newer_build',
       payload: { game_id: GAME, game_name: 'Avlyst runde' },
       read_at: null,
       created_at: '2026-05-24T14:25:00Z',

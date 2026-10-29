@@ -10,7 +10,7 @@
 -- 'league_round_open' and 'league_round_closing' (0217, #2638). The marker's
 -- request in a simulator league writes 'league_marker_request' (0220, #2661).
 -- A round moved to a new day or time writes 'game_moved' (0226, #2480).
--- Before their
+-- «Avlys og si fra» writes 'game_cancelled' (0227, #2481). Before their
 -- migration the CHECK refused them, and `notify` only logged the failure: no
 -- inbox row, no push, no mail.
 --
@@ -24,8 +24,9 @@
 --     7. kind = 'league_round_closing'     → lives
 --     8. kind = 'league_marker_request'    → lives
 --     9. kind = 'game_moved'               → lives
+--    10. kind = 'game_cancelled'           → lives
 --   FORBIDDEN:
---    10. kind = 'not_a_kind'               → 23514 (check_violation)
+--    11. kind = 'not_a_kind'               → 23514 (check_violation)
 --
 -- Inserts run as the service role, the only role that writes notifications
 -- (there is no insert policy). The insert and the check are separate
@@ -36,7 +37,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(11);
 
 \ir fixtures/rls_helpers.psql
 
@@ -112,6 +113,14 @@ select lives_ok(
                                 'tee_off_at', '2026-10-04T07:00:00.000Z',
                                 'course_changed', false, 'moved_by_name', 'Jørgen')) $$,
   'a game_moved notification can be inserted'
+);
+
+select lives_ok(
+  $$ insert into public.notifications (user_id, kind, payload)
+     values (torny_rls.active_id(), 'game_cancelled',
+             jsonb_build_object('game_name', 'Testrunden', 'tee_off_at', '2026-10-03T07:00:00Z',
+                                'organizer_name', 'Jørgen', 'message', 'Banen er stengt.')) $$,
+  'a game_cancelled notification can be inserted'
 );
 
 select throws_ok(
