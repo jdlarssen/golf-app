@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import { Activity, type ComponentProps } from 'react';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
@@ -841,6 +841,26 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     render(element());
     await waitFor(() => expect(searchString).toBe('step=3'));
     expect(courseInput().value).toBe('course-1');
+  });
+
+  // Found on staging: the wizard mounted with no draft, then stayed mounted
+  // but hidden while the organiser was on /opprett-bane. On reveal the effects
+  // run again, the shell finds the draft for the first time and remounts the
+  // body from it. The URL's course must survive that remount.
+  it('en skjult veiviser som finner utkastet først ved avsløring, får likevel banen', async () => {
+    searchString = 'step=1';
+    const hidden = (mode: 'visible' | 'hidden') => <Activity mode={mode}>{element()}</Activity>;
+    const { rerender } = render(hidden('visible'));
+    rerender(hidden('hidden'));
+    await seedDraft();
+    searchString = 'step=3&bane=course-2';
+    rerender(hidden('hidden'));
+    rerender(hidden('visible'));
+    // (The body's step guard sends the empty mount back to step 1, so only
+    // `bane` is asserted on the address.)
+    await waitFor(() => expect(searchString).not.toContain('bane='));
+    await waitFor(() => expect(courseInput().value).toBe('course-2'));
+    expect(gameModeInput().value).toBe('stableford');
   });
 
   it('uten utkast (cup-lenka skriver ingen) velger den banen på den monterte veiviseren', async () => {

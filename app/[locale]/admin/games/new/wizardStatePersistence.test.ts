@@ -7,6 +7,7 @@ import {
   saveWizardDraft,
   wizardDraftContext,
   wizardDraftStorageKey,
+  withUrlCourse,
   type WizardDraft,
 } from './wizardStatePersistence';
 import type { CourseOption, PlayerOption } from './GameForm';
@@ -268,5 +269,46 @@ describe('wizardStatePersistence — gjenoppretting er best-effort', () => {
       { user_id: 'gjest-1', team_number: null, flight_number: null },
     ]);
     expect(out.values.extra_players).toEqual([guest]);
+  });
+});
+
+describe('withUrlCourse (#2485)', () => {
+  const TWO: CourseOption[] = [
+    ...COURSES,
+    {
+      id: 'course-2',
+      name: 'Byneset Golfklubb',
+      tee_boxes: [
+        { id: 'tee-2a', name: 'Gul', has_mens: true, has_ladies: false, has_juniors: false },
+        { id: 'tee-2b', name: 'Rød', has_mens: true, has_ladies: false, has_juniors: false },
+      ],
+    },
+    {
+      id: 'course-3',
+      name: 'Byneset North',
+      tee_boxes: [{ id: 'tee-3', name: 'Hvit', has_mens: true, has_ladies: false, has_juniors: false }],
+    },
+  ];
+  const draft = makeDraft();
+
+  it('leaves the draft alone without a URL course, or with its own course', () => {
+    expect(withUrlCourse(draft, null, TWO)).toBe(draft);
+    expect(withUrlCourse(draft, draft.values.course_id ?? '', TWO)).toBe(draft);
+  });
+
+  it('puts the URL course over the draft and empties the tee, the rest stands', () => {
+    const out = withUrlCourse(draft, 'course-2', TWO);
+    expect(out.values.course_id).toBe('course-2');
+    expect(out.values.tee_box_id).toBe('');
+    expect(out.values.game_mode).toBe(draft.values.game_mode);
+    expect(out.values.players).toEqual(draft.values.players);
+  });
+
+  it('takes the only tee of a one-tee course, as choosing it by hand does', () => {
+    expect(withUrlCourse(draft, 'course-3', TWO).values.tee_box_id).toBe('tee-3');
+  });
+
+  it('ignores a course the wizard does not list', () => {
+    expect(withUrlCourse(draft, 'gone', TWO)).toBe(draft);
   });
 });
