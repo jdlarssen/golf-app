@@ -1223,7 +1223,7 @@
         "startlistLink": "Set the flights on the start list →",
         "notSet": "Not set",
         "footnote": "Each part opens on its own and saves right away. Players see the changes the next time they open the app.",
-        "delete": "Delete the game …",
+        "delete": "Cancel the round …",
         "cancel": "Cancel"
       },
       "formatHeading": "3. Format",
@@ -2266,6 +2266,7 @@
       "editGameLink": "Edit game",
       "moveGameLink": "Move the round",
       "deleteGameLink": "Delete game",
+      "cancelRoundLink": "Cancel the round",
       "ctaStartRound": "Start round →",
       "ctaContinueRound": "Continue round →",
       "ctaReviewAndSubmit": "Review and submit →",
@@ -2510,6 +2511,24 @@
       "cancelButton": "Cancel",
       "errors": {
         "delete_failed": "Delete failed. Please try again in a moment."
+      }
+    },
+    "cancel": {
+      "heading": "Cancel the round?",
+      "sectionLabel": "Message to the group",
+      "notifiedVia": "They hear it in their inbox and by email",
+      "playerCount": "{count, plural, one {# player} other {# players}}",
+      "more": "{count} more",
+      "unnamedPlayer": "A player",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "The course is closed because of frost. We will try again next Saturday.",
+      "permanentNote": "The round is deleted and cannot be brought back.",
+      "submit": "Cancel and tell them",
+      "submitPending": "Cancelling …",
+      "keep": "Keep the round",
+      "errors": {
+        "delete_failed": "Cancelling failed. Please try again in a moment.",
+        "message_too_long": "The message is too long. It can be up to {max} characters."
       }
     },
     "withdraw": {
@@ -3880,7 +3899,8 @@
       "statusMessages": {
         "created": "✓ Game «{name}» was saved as a draft.",
         "started": "✓ Game «{name}» has been started.",
-        "deleted": "✓ Game «{name}» has been deleted."
+        "deleted": "✓ Game «{name}» has been deleted.",
+        "cancelled": "✓ «{name}» has been cancelled. {count, plural, one {# player has} other {# players have}} been told."
       }
     },
     "dashboard": {
@@ -4059,6 +4079,7 @@
         "createdAtFooter": "Created {date} · case {n} in {year}.",
         "dangerZoneLabel": "Danger zone",
         "deleteGame": "Delete game entirely",
+        "cancelRound": "Cancel the round",
         "unknownPlayer": "(unknown player)",
         "teamEmpty": "(empty)",
         "notStarted": "Not started",
@@ -6285,6 +6306,7 @@
     "handicapChipAria": "Handicap {hcp}. Tap to update.",
     "profileUpdatedBanner": "✓ Your profile has been updated.",
     "gameDeletedBanner": "✓ \"{name}\" has been deleted.",
+    "gameCancelledBanner": "✓ \"{name}\" has been cancelled. {count, plural, one {# player has} other {# players have}} been told.",
     "emptyKicker": "READY FOR YOUR FIRST ROUND",
     "emptyWelcome": "Welcome, {name}.",
     "emptyBodyWithDiscovery": "No tournaments yet. Set up a round in the Clubhouse, or join an open tournament below.",

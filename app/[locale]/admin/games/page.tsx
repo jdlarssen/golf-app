@@ -43,6 +43,8 @@ const GAMES_LEDGER_GRID = '1fr 111px 14px';
 type SearchParams = Promise<{
   status?: string | string[];
   name?: string | string[];
+  /** #2481: how many players a cancelled round told (`status=cancelled`). */
+  count?: string | string[];
   error?: string | string[];
 }>;
 
@@ -113,13 +115,16 @@ export default async function GamesPage({
   // (created/started). The same `status` param is also used as a filter when
   // it carries a game-status value (finished). Branch on the known message
   // keys to keep both behaviours from colliding.
-  const STATUS_MESSAGE_KEYS = ['created', 'started', 'deleted'] as const;
+  const STATUS_MESSAGE_KEYS = ['created', 'started', 'deleted', 'cancelled'] as const;
   type StatusMessageKey = (typeof STATUS_MESSAGE_KEYS)[number];
   const isBannerStatus = statusFilter
     ? STATUS_MESSAGE_KEYS.includes(statusFilter as StatusMessageKey)
     : false;
   const statusMessage = isBannerStatus
-    ? t(`statusMessages.${statusFilter as StatusMessageKey}`, { name })
+    ? t(`statusMessages.${statusFilter as StatusMessageKey}`, {
+        name,
+        count: Number(first(params.count)) || 0,
+      })
     : undefined;
   // `draft` and `active` are not banner keys, so the two uses never collide.
   const view: GamesView =

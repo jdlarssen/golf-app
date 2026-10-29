@@ -103,8 +103,10 @@ export function CreatorControls({
         {preStart && (
           <SmartLink href={`/games/${gameId}/slett`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
+              {/* #2481 (the owner, 29.10): a scheduled round is cancelled,
+                  a draft is deleted. */}
               <span className="text-base font-medium text-danger">
-                {t('deleteGameLink')}
+                {status === 'scheduled' ? t('cancelRoundLink') : t('deleteGameLink')}
               </span>
               <span aria-hidden className="text-muted">
                 →

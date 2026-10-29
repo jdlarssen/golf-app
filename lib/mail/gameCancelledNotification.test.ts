@@ -56,7 +56,7 @@ describe('sendGameCancelledNotification', () => {
 
       Hei Marte!
 
-      Jørgen har avlyst Lørdagsrunden. Runden var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
+      Jørgen har avlyst Lørdagsrunden. Den var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
 
       Hilsen fra Jørgen: «Banen er stengt på grunn av frost.
       Vi prøver igjen neste lørdag.»
@@ -71,7 +71,7 @@ describe('sendGameCancelledNotification', () => {
                     Hei Marte!
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Runden var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
+                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Den var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
                     Hilsen fra Jørgen:
@@ -117,7 +117,7 @@ describe('sendGameCancelledNotification', () => {
                     Hei Marte!
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Runden var satt opp lørdag 3. oktober kl. 09:00.
+                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Den var satt opp lørdag 3. oktober kl. 09:00.
                   </p>"
     `);
   });
@@ -134,7 +134,7 @@ describe('sendGameCancelledNotification', () => {
                     Hei Marte!
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Jørgen har avlyst <strong>&lt;b&gt;X&lt;/b&gt;</strong>. Runden var satt opp lørdag 3. oktober kl. 09:00 på Bane &amp; Co.
+                    Jørgen har avlyst <strong>&lt;b&gt;X&lt;/b&gt;</strong>. Den var satt opp lørdag 3. oktober kl. 09:00 på Bane &amp; Co.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
                     Hilsen fra Jørgen:
@@ -194,7 +194,7 @@ describe('sendGameCancelledNotification', () => {
                     Hei Marte!
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Runden var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
+                    Jørgen har avlyst <strong>Lørdagsrunden</strong>. Den var satt opp lørdag 3. oktober kl. 09:00 på Byneset North.
                   </p>
                   
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
