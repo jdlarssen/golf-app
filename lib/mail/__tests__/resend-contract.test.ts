@@ -11,7 +11,7 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Dekker alle 17 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// Dekker alle 18 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
 // fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
 // kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
@@ -182,6 +182,20 @@ const senders = [
         playerFirstName: 'Per',
         gameName: 'Sommercup 2026',
         gameId: '11111111-1111-1111-1111-111111111111',
+      });
+    },
+  },
+  {
+    name: 'sendGameCancelledNotification',
+    invoke: async () => {
+      const { sendGameCancelledNotification } = await import('../gameCancelledNotification');
+      return sendGameCancelledNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Marte',
+        gameName: 'Lørdagsrunden',
+        teeOffAt: '2026-10-03T07:00:00.000Z',
+        courseName: 'Byneset North',
+        organizerName: 'Jørgen',
       });
     },
   },
