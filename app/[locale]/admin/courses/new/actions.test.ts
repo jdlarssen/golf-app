@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { buildNineHoleFormData } from '@/lib/courses/__fixtures__/courseForm';
 import {
   buildSupabaseMock,
   makeRedirectMock,
@@ -136,6 +137,34 @@ describe('createCourse — #366 gate + RLS-write', () => {
     // #1045: a new (possibly eligible) course busts the /baner cache tag so it
     // shows up immediately, not after the 24t revalidate.
     expect(revalidateTagMock).toHaveBeenCalledWith('public-courses', 'max');
+  });
+
+  it('sends p_nine_holes=false and 18 holes for an ordinary course (#2484)', async () => {
+    supabaseMock = happyMock();
+    setAuth({ id: regularUserId });
+    const { createCourse } = await import('./actions');
+
+    await expect(createCourse(validCourseFormData())).rejects.toThrow(RedirectError);
+
+    const params = rpcCall('create_course_with_layout')!.params as { p_nine_holes: boolean };
+    expect(params.p_nine_holes).toBe(false);
+  });
+
+  it('flags a 9-hole course and sends it expanded to 18 holes (#2484)', async () => {
+    supabaseMock = happyMock();
+    setAuth({ id: regularUserId });
+    const { createCourse } = await import('./actions');
+
+    await expect(createCourse(buildNineHoleFormData())).rejects.toThrow(RedirectError);
+
+    const params = rpcCall('create_course_with_layout')!.params as {
+      p_nine_holes: boolean;
+      p_holes: { hole_number: number; par_mens: number; stroke_index: number }[];
+    };
+    expect(params.p_nine_holes).toBe(true);
+    expect(params.p_holes).toHaveLength(18);
+    expect(params.p_holes[9]).toMatchObject({ hole_number: 10, par_mens: 4, stroke_index: 8 });
+    expect(lastRedirect()).toMatch(/^\/admin\/courses\?status=created/);
   });
 
   it('honors success_redirect + redirect_base for the non-admin /opprett-bane route', async () => {

@@ -3,6 +3,10 @@
  * #611 from the near-identical parsing loops in `createCourse` and
  * `updateCourse`. Builds on the pure primitives in `coursePayload.ts`.
  *
+ * A 9-hole course played twice (#2484, `hole_count=9`) sends holes 1–9 with
+ * two index rows (`hole_n_si`, `hole_n_si2`); they are expanded to 18 holes by
+ * `expandNineHoles` before the same 18-hole checks run.
+ *
  * Validation errors are reported via the `fail` callback, which must redirect
  * (i.e. never return) — each action redirects to its own base with `?error=`.
  * Every tee box carries an `id` (null for a fresh row); `createCourse` strips it
@@ -17,6 +21,7 @@ import {
   isValidStrokeIndex,
   allStrokeIndicesUnique,
 } from './coursePayload';
+import { expandNineHoles } from './nineHoles';
 
 export type ParsedHole = {
   hole_number: number;
@@ -43,6 +48,8 @@ export type ParsedTeeBox = {
 
 export type ParsedCourseForm = {
   name: string;
+  /** A 9-hole course played twice; `holes` still holds all 18. */
+  nineHoles: boolean;
   holes: ParsedHole[];
   teeBoxes: ParsedTeeBox[];
 };
@@ -57,9 +64,16 @@ export function parseCourseHolesAndTees(
     fail('name_required');
   }
 
-  // Parse 18 holes.
-  const holes: ParsedHole[] = [];
-  for (let i = 1; i <= 18; i++) {
+  // Missing means 18, so older payloads and callers read as before.
+  const holeCount = String(formData.get('hole_count') ?? '18');
+  if (holeCount !== '9' && holeCount !== '18') {
+    fail('bad_hole_count');
+  }
+  const nineHoles = holeCount === '9';
+
+  // Parse the typed holes: 1–18, or 1–9 for a 9-hole course.
+  const typed: ParsedHole[] = [];
+  for (let i = 1; i <= (nineHoles ? 9 : 18); i++) {
     const parMensRaw = formData.get(`hole_${i}_par_mens`);
     // Backward-compat: hvis ny `_mens`-feltet mangler (ingen formdata med
     // det nye navnet), fall tilbake til det gamle `hole_${i}_par`-navnet.
@@ -83,13 +97,27 @@ export function parseCourseHolesAndTees(
     if (!isValidStrokeIndex(si)) {
       fail('bad_si');
     }
-    holes.push({
+    typed.push({
       hole_number: i,
       par_mens: parMens,
       par_ladies: parLadies,
       par_juniors: parJuniors,
       stroke_index: si,
     });
+  }
+
+  // The second round's indices, read and checked like the first row's.
+  let holes = typed;
+  if (nineHoles) {
+    const secondRound: number[] = [];
+    for (let i = 1; i <= 9; i++) {
+      const si = Number(formData.get(`hole_${i}_si2`));
+      if (!isValidStrokeIndex(si)) {
+        fail('bad_si');
+      }
+      secondRound.push(si);
+    }
+    holes = expandNineHoles(typed, secondRound);
   }
 
   // SIs must be a permutation of 1..18 — the schema enforces uniqueness per
@@ -167,5 +195,5 @@ export function parseCourseHolesAndTees(
     fail('tee_required');
   }
 
-  return { name, holes, teeBoxes };
+  return { name, nineHoles, holes, teeBoxes };
 }

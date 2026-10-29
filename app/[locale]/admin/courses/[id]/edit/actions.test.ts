@@ -1,3 +1,4 @@
+import { buildNineHoleFormData } from '@/lib/courses/__fixtures__/courseForm';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
@@ -388,6 +389,45 @@ describe('restoreTee', () => {
     expect(lastRedirect()).toBe(
       `/admin/courses/${courseId}/edit?error=db_course`,
     );
+  });
+
+  it('#2484: sends p_nine_holes with the 9-hole course expanded to 18 holes', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate
+      { data: [], error: null }, // existing tees
+    ]);
+    setupAdminAuth();
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, buildNineHoleFormData())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    const params = supabaseMock.__rpcCalls.find((c) => c.name === 'update_course_with_layout')!
+      .params as { p_nine_holes: boolean; p_holes: unknown[] };
+    expect(params.p_nine_holes).toBe(true);
+    expect(params.p_holes).toHaveLength(18);
+    expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
+  });
+
+  it('#2484: a refused hole-count change on a used course redirects with error=hole_count_locked', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate
+      { data: [], error: null }, // existing tees
+    ]);
+    setupAdminAuth();
+    supabaseMock.rpc = vi.fn(async (name: string, params?: unknown) => {
+      supabaseMock.__rpcCalls.push({ name, params });
+      return { data: null, error: { code: 'P0001', message: 'nine_holes_locked' } };
+    }) as unknown as typeof supabaseMock.rpc;
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, buildNineHoleFormData())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe(`/admin/courses/${courseId}/edit?error=hole_count_locked`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('redirects with error=db_tees when archived_at update fails', async () => {

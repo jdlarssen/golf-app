@@ -30,3 +30,29 @@ export function buildCourseFormData(
   });
   return fd;
 }
+
+/** Round 1 and round 2 of a 9-hole course played twice (#2484). */
+export const NINE_ROUND1 = ['7', '3', '17', '1', '11', '5', '15', '9', '13'];
+export const NINE_ROUND2 = ['8', '4', '18', '2', '12', '6', '16', '10', '14'];
+export const NINE_PARS = ['4', '4', '5', '3', '4', '4', '3', '5', '4'];
+
+/** What CourseForm submits in 9-hole mode: holes 1–9, both index rows. */
+export function buildNineHoleFormData(
+  round1: string[] = NINE_ROUND1,
+  round2: string[] = NINE_ROUND2,
+): FormData {
+  const fd = new FormData();
+  fd.set('name', 'Ni hull');
+  fd.set('hole_count', '9');
+  for (let i = 1; i <= 9; i++) {
+    fd.set(`hole_${i}_par_mens`, NINE_PARS[i - 1]);
+    fd.set(`hole_${i}_par_ladies`, i === 3 ? '6' : NINE_PARS[i - 1]);
+    fd.set(`hole_${i}_par_juniors`, NINE_PARS[i - 1]);
+    fd.set(`hole_${i}_si`, round1[i - 1]);
+    fd.set(`hole_${i}_si2`, round2[i - 1]);
+  }
+  fd.set('tee_0_name', 'Gul');
+  fd.set('tee_0_slope_mens', '120');
+  fd.set('tee_0_cr_mens', '70.1');
+  return fd;
+}
