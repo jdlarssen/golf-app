@@ -35,6 +35,11 @@ function buildChangeLabel(t: FormatsT, entry: FormatAuditEntry): string {
       const key = next ? 'auditLog.changeLabels.activated' : 'auditLog.changeLabels.deactivated';
       return `${entry.format_slug} → ${t(key as Parameters<typeof t>[0])}`;
     }
+    case 'sort_order': {
+      const from = Number(entry.before.position);
+      const to = Number(after.position);
+      return `${entry.format_slug}${intentSuffix} → ${t('auditLog.changeLabels.moved', { from, to })}`;
+    }
     default:
       return `${entry.format_slug} → endret`;
   }

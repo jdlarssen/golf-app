@@ -65,7 +65,15 @@ export default async function AdminFormatsPage({
         <ManagerBody />
       </Suspense>
 
-      <div className="mt-8">
+      <div className="mx-auto mt-6 flex max-w-2xl items-center justify-between gap-3 border-t border-border px-1 pt-1 font-sans text-xs text-muted">
+        <span>{t('footer')}</span>
+        <a href="#endringslogg" className="flex min-h-[44px] items-center font-semibold text-primary">
+          {t('auditLink')}
+          <span aria-hidden="true">&nbsp;→</span>
+        </a>
+      </div>
+
+      <div id="endringslogg" className="mx-auto mt-8 max-w-2xl scroll-mt-4">
         <Suspense fallback={<AuditSkeleton />}>
           <AuditBody />
         </Suspense>

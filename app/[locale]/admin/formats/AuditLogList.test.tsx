@@ -24,24 +24,37 @@ const ENTRIES: FormatAuditEntry[] = [
     after: { is_cup_eligible: true },
     created_at: '2026-05-27T12:01:00Z',
   },
+  {
+    id: 'audit-3',
+    actor_name: 'Jørgen',
+    format_slug: 'stableford',
+    intent: 'kompis',
+    change_type: 'sort_order',
+    before: { position: 1 },
+    after: { position: 2 },
+    created_at: '2026-05-27T11:00:00Z',
+  },
 ];
 
 describe('AuditLogList', () => {
-  it('rendrer 2 entries med korrekt change-label per type', () => {
+  it('rendrer entries med korrekt change-label per type', () => {
     render(<AuditLogList entries={ENTRIES} />);
 
     // «Endringslogg» vises i både h2 og mobile-accordion-summary — bruk
     // role/heading for å disambiguere.
     expect(
-      screen.getByRole('heading', { name: /Endringslogg \(siste 2\)/i }),
+      screen.getByRole('heading', { name: /Endringslogg \(siste 3\)/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/best_ball\/klubb → primær på/i)).toBeInTheDocument();
     expect(
       screen.getByText(/fourball_matchplay → cup-kvalifisert på/i),
     ).toBeInTheDocument();
 
-    // Begge entries refererer Jørgen — antall .font-semibold spans = 2.
-    expect(screen.getAllByText('Jørgen').length).toBe(2);
+    // #2347: a move names the format and both places.
+    expect(screen.getByText(/stableford\/kompis → flyttet fra plass 1 til 2/)).toBeInTheDocument();
+
+    // Alle entries refererer Jørgen — én .font-semibold span per rad.
+    expect(screen.getAllByText('Jørgen').length).toBe(3);
   });
 
   it('viser empty-state når ingen entries', () => {
