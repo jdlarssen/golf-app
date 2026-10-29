@@ -11,16 +11,19 @@ import { first } from '@/lib/url/searchParams';
  */
 
 /** Every param that opens the wizard with something chosen already. */
-const PREFILL_PARAMS = ['fra', 'sist', 'bane', 'klubb', 'intent', 'format', 'oppsett'] as const;
+const PREFILL_PARAMS = ['fra', 'sist', 'bane', 'klubb', 'format', 'oppsett'] as const;
 
 /**
- * The card stands on a blank start only. A link that chose something (a
- * rematch, a course, a club, an arrangement, a format or a guide's setup) gets
- * step 1 as it was.
+ * The card stands on a blank start, and on `?intent=kompis`: «Med kompiser»
+ * in the Klubbhus room opens that, the main door to a friends' round (owner's
+ * answer 29.10). A link that chose anything else (a rematch, a course, a club,
+ * another arrangement, a format or a guide's setup) gets step 1 as it was.
  */
 export function shouldOfferLastRound(
   sp: Partial<Record<string, string | string[] | undefined>>,
 ): boolean {
+  const intent = first(sp.intent);
+  if (intent && intent !== 'kompis') return false;
   return PREFILL_PARAMS.every((key) => !first(sp[key]));
 }
 
