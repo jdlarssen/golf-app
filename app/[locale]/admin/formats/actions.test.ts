@@ -123,6 +123,9 @@ describe('moveFormat', () => {
     expect(
       await run({ format_slug: 'best_ball', intent: 'kompis', direction: 'down', had_error: '1' }),
     ).toBe('/admin/formats');
+    // The move saved and was logged before the page left ?error behind.
+    expect(upsertCall()).toBeDefined();
+    expect(recordMock).toHaveBeenCalledTimes(1);
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
