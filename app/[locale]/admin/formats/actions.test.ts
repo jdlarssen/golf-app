@@ -114,6 +114,18 @@ describe('moveFormat', () => {
     expect(adminMock.from).not.toHaveBeenCalled();
   });
 
+  it('leaves an error banner behind: a success with had_error goes to the bare URL', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: KOMPIS_ROWS, error: null },
+      { data: [{}, {}, {}, {}], error: null },
+    ]);
+
+    expect(
+      await run({ format_slug: 'best_ball', intent: 'kompis', direction: 'down', had_error: '1' }),
+    ).toBe('/admin/formats');
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
   it('is a noop at the edge of the group: no write, no log', async () => {
     supabaseMock = buildSupabaseMock([{ data: KOMPIS_ROWS, error: null }]);
 
