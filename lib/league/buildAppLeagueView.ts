@@ -51,6 +51,7 @@ export function buildAppLeagueView(
       closesAt: r.closesAt,
       ready: r.courseId !== null && r.teeBoxId !== null,
       teeName: r.teeName,
+      courseName: r.courseName,
       delivered: r.deliveredUserIds,
       inProgress: r.inProgressUserIds,
       awaitingMarker: r.awaitingMarker,

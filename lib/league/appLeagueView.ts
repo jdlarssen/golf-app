@@ -35,6 +35,8 @@ export type AppLeagueRound = {
   ready: boolean;
   /** The round's tee, from the course selection (shown on the settings card). */
   teeName: string | null;
+  /** The round's course, for the checklist before the start (#2675). */
+  courseName: string | null;
   /** Players who have delivered the round. */
   delivered: string[];
   /** Players who are playing the round now. */
