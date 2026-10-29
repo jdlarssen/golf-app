@@ -222,6 +222,11 @@
         "title": "{addedByName} la deg til i {gameName}",
         "detail": "Åpne spillet for å bekrefte at du er med."
       },
+      "gameMoved": {
+        "title": "{gameName} er flyttet",
+        "detail": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Samme bane og tee.",
+        "detailCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret."
+      },
       "gameStarted": {
         "title": "Runden er i gang",
         "detail": "{gameName}"

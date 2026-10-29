@@ -222,6 +222,11 @@
         "title": "{addedByName} added you to {gameName}",
         "detail": "Open the game to confirm you're joining."
       },
+      "gameMoved": {
+        "title": "{gameName} has moved",
+        "detail": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. Same course and tees.",
+        "detailCourseChanged": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. The course or tees changed too."
+      },
       "gameStarted": {
         "title": "The round has started",
         "detail": "{gameName}"

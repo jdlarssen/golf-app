@@ -53,6 +53,8 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   friend_accepted: '🫂',
   player_added: '🏌️',
   game_started: '⛳',
+  // #2480: the round has a new day or time.
+  game_moved: '🕘',
   auto_start_blocked: '⏳',
   achievement_unlocked: '🏅',
   idea_built: '💡',

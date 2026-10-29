@@ -179,6 +179,27 @@ describe('parseNotificationPayload', () => {
     });
   });
 
+  describe('game_moved (#2480)', () => {
+    const validUuid = '11111111-1111-1111-1111-111111111111';
+    const valid = {
+      game_id: validUuid,
+      game_name: 'Lørdagsrunden',
+      tee_off_at: '2026-10-04T07:00:00.000Z',
+      course_changed: false,
+      moved_by_name: null,
+    };
+
+    it('aksepterer gyldig payload, også uten navn på den som flyttet', () => {
+      expect(parseNotificationPayload('game_moved', valid).payload).toEqual(valid);
+    });
+
+    it('avviser en tee-tid som ikke er en dato, og payload uten course_changed', () => {
+      expect(() => parseNotificationPayload('game_moved', { ...valid, tee_off_at: 'søndag' })).toThrow();
+      const { course_changed: _omit, ...withoutFlag } = valid;
+      expect(() => parseNotificationPayload('game_moved', withoutFlag)).toThrow();
+    });
+  });
+
   describe('player_added (#463)', () => {
     const validUuid = '11111111-1111-1111-1111-111111111111';
 

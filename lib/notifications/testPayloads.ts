@@ -87,6 +87,13 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
   friend_accepted: { actor_id: OTHER_ID, actor_name: 'Per', via: 'accept' },
   player_added: { game_id: TEST_GAME_ID, game_name: 'X', added_by_name: 'Per' },
   game_started: { game_id: TEST_GAME_ID, game_name: 'X' },
+  game_moved: {
+    game_id: TEST_GAME_ID,
+    game_name: 'X',
+    tee_off_at: '2026-10-04T07:00:00.000Z',
+    course_changed: false,
+    moved_by_name: 'Per',
+  },
   auto_start_blocked: { game_id: TEST_GAME_ID, game_name: 'X', reason: 'pending_players' },
   achievement_unlocked: {
     game_id: TEST_GAME_ID,

@@ -385,6 +385,18 @@ export function buildNotificationText(
         detail: t('kinds.gameStarted.detail', { gameName: p.game_name }),
       };
     }
+    // #2480: the new tee-off is formatted by the catalog (ICU date/time), in
+    // the recipient's locale and Oslo time, as the league deadline is.
+    case 'game_moved': {
+      const p = payload as NotificationPayload<'game_moved'>;
+      const teeOffAt = Date.parse(p.tee_off_at);
+      return {
+        title: t('kinds.gameMoved.title', { gameName: p.game_name }),
+        detail: p.course_changed
+          ? t('kinds.gameMoved.detailCourseChanged', { teeOffAt })
+          : t('kinds.gameMoved.detail', { teeOffAt }),
+      };
+    }
     case 'auto_start_blocked': {
       const p = payload as NotificationPayload<'auto_start_blocked'>;
       return {

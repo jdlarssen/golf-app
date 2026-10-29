@@ -40,6 +40,7 @@ export type NotificationKind =
   | 'friend_accepted'
   | 'player_added'
   | 'game_started'
+  | 'game_moved'
   | 'auto_start_blocked'
   | 'achievement_unlocked'
   | 'idea_built'
@@ -417,6 +418,23 @@ const gameStartedSchema = z.object({
   game_name: z.string().min(1),
 });
 
+// game_moved (#2480): arrangøren (eller en admin) flyttet en planlagt runde til
+// ny dag eller tid. Til hver aktive spiller på lista (ikke gjester, ikke den
+// som flyttet), fra «Flytt runden» og fra «Rediger». Ett varsel per flytting;
+// eldre uleste for samme spill merkes lest når et nytt skrives
+// (`notifyGameMoved`). `tee_off_at` er ISO, og kortet formaterer den i
+// mottakerens språk og Oslo-tid (#583: ingen prosa fra avsenderens språk).
+// `course_changed` sier om bane eller tee også ble endret (bare fra
+// «Rediger»); uten den står «Samme bane og tee». `moved_by_name` er nullable
+// som de andre navnefeltene. Deeplinker til /games/[game_id].
+const gameMovedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
+  course_changed: z.boolean(),
+  moved_by_name: z.string().min(1).nullable(),
+});
+
 // auto_start_blocked: cron-sweepen fikk ikke startet spillet på tee-tid
 // (#502). Fyres maks én gang per spill til oppretteren, med årsaken fra
 // startScheduledGame (incomplete_sides, pending_players, …). `reason` er
@@ -508,6 +526,7 @@ const schemas = {
   friend_accepted: friendAcceptedSchema,
   player_added: playerAddedSchema,
   game_started: gameStartedSchema,
+  game_moved: gameMovedSchema,
   auto_start_blocked: autoStartBlockedSchema,
   achievement_unlocked: achievementUnlockedSchema,
   idea_built: ideaBuiltSchema,
