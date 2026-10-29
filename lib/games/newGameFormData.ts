@@ -10,6 +10,7 @@ import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/
 type CourseRow = {
   id: string;
   name: string;
+  nine_holes: boolean;
   tee_boxes: {
     id: string;
     name: string;
@@ -128,7 +129,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     supabase
       .from('courses')
       .select(
-        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors, archived_at)',
+        'id, name, nine_holes, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors, archived_at)',
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
@@ -150,6 +151,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
   const courses: CourseOption[] = (coursesResult.data ?? []).map((c) => ({
     id: c.id,
     name: c.name,
+    nineHoles: c.nine_holes,
     tee_boxes: (c.tee_boxes ?? [])
       .filter((t) => t.archived_at === null)
       .map((t) => ({

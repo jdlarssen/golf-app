@@ -74,7 +74,9 @@ export default async function PublicCoursesPage() {
                       {course.name}
                     </span>
                     <span className="mt-0.5 block font-sans text-sm text-muted tabular-nums">
-                      {t('holesLabel', { count: course.holeCount })}
+                      {course.nineHoles
+                        ? t('holesLabelNine')
+                        : t('holesLabel', { count: course.holeCount })}
                       {' · '}
                       {t('teesLabel', { count: course.teeCount })}
                     </span>

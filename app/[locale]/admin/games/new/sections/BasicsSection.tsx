@@ -158,7 +158,7 @@ export function BasicsSection({
         <option value="">{t('coursePlaceholder')}</option>
         {courses.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name}
+            {c.nineHoles ? t('courseOptionNine', { name: c.name }) : c.name}
           </option>
         ))}
       </CardSelect>

@@ -71,6 +71,7 @@ type RawCourseRow = {
   name: string;
   slug: string;
   created_by: string | null;
+  nine_holes: boolean;
   course_holes: { hole_number: number }[];
   tee_boxes: (PublicTeeRow & {
     id: string;
@@ -104,6 +105,8 @@ export type PublicCourseSummary = {
   name: string;
   slug: string;
   holeCount: number;
+  /** A 9-hole course played twice (#2484); `holeCount` is still 18. */
+  nineHoles: boolean;
   teeCount: number;
 };
 
@@ -123,7 +126,7 @@ export async function listPublicCourses(): Promise<PublicCourseSummary[]> {
   const { data, error } = await withTransientRetry((signal) =>
     anon
       .from('courses')
-      .select('id, name, slug, created_by, course_holes(hole_number), tee_boxes(*)')
+      .select('id, name, slug, created_by, nine_holes, course_holes(hole_number), tee_boxes(*)')
       .order('name', { ascending: true })
       .abortSignal(signal)
       .returns<RawCourseRow[]>(),
@@ -145,6 +148,7 @@ export async function listPublicCourses(): Promise<PublicCourseSummary[]> {
       name: c.name,
       slug: c.slug,
       holeCount: c.course_holes.length,
+      nineHoles: c.nine_holes,
       teeCount: c.tee_boxes.filter((t) => t.archived_at === null).length,
     }));
 }
@@ -178,6 +182,8 @@ export type PublicCourseDetail = {
   id: string;
   name: string;
   slug: string;
+  /** A 9-hole course played twice (#2484): `holes` holds 18, 10–18 = 1–9 again. */
+  nineHoles: boolean;
   holes: PublicCourseHole[];
   tees: PublicCourseTee[];
 };
@@ -200,7 +206,7 @@ export async function getPublicCourseBySlug(
     anon
       .from('courses')
       .select(
-        `id, name, slug, created_by,
+        `id, name, slug, created_by, nine_holes,
          course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index),
          tee_boxes(${TEE_COLUMNS})`,
       )
@@ -227,6 +233,7 @@ export async function getPublicCourseBySlug(
     id: data.id,
     name: data.name,
     slug: data.slug,
+    nineHoles: data.nine_holes,
     holes: [...data.course_holes].sort((a, b) => a.hole_number - b.hole_number),
     tees: data.tee_boxes
       .filter((t) => t.archived_at === null)

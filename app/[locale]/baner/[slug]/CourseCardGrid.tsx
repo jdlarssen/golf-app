@@ -11,6 +11,10 @@ export type CourseCardGridLabels = {
   in: string;
   captionOut: string;
   captionIn: string;
+  /** A 9-hole course (#2484): its two index rows and the sum column. */
+  indexRound1?: string;
+  indexRound2?: string;
+  sum?: string;
 };
 
 const ROW_LABEL = 'pl-1 text-left text-[10px] tracking-[0.1em] uppercase';
@@ -21,6 +25,9 @@ const ROW_LABEL = 'pl-1 text-left text-[10px] tracking-[0.1em] uppercase';
  * card in the golfer's bag. A gender whose par differs on any hole gets its
  * own par row. A course without holes 10–18 shows the out card alone.
  *
+ * A 9-hole course played twice (`nineHoles`, #2484) shows one card for holes
+ * 1–9 with two index rows: round 1 from holes 1–9, round 2 from 10–18.
+ *
  * Server component, labels as props (the Type C test needs no i18n mock).
  * The `<colgroup>` carries the column widths: an `sr-only` caption is
  * absolutely positioned, and Chromium and WebKit then ignore the first row's
@@ -29,16 +36,25 @@ const ROW_LABEL = 'pl-1 text-left text-[10px] tracking-[0.1em] uppercase';
 export function CourseCardGrid({
   holes,
   labels,
+  nineHoles = false,
 }: {
   holes: PublicCourseHole[];
   labels: CourseCardGridLabels;
+  nineHoles?: boolean;
 }) {
   const { out, in: back } = splitNines(holes);
   const extraRows = genderParRows(holes);
-  const halves = [
-    { holes: out, sumLabel: labels.out, caption: labels.captionOut },
-    { holes: back, sumLabel: labels.in, caption: labels.captionIn },
-  ].filter((half) => half.holes.length > 0);
+  const halves: {
+    holes: PublicCourseHole[];
+    sumLabel: string;
+    caption: string;
+    secondRound?: PublicCourseHole[];
+  }[] = nineHoles
+    ? [{ holes: out, sumLabel: labels.sum ?? labels.out, caption: labels.captionOut, secondRound: back }]
+    : [
+        { holes: out, sumLabel: labels.out, caption: labels.captionOut },
+        { holes: back, sumLabel: labels.in, caption: labels.captionIn },
+      ].filter((half) => half.holes.length > 0);
 
   return (
     <div className="flex flex-col gap-2.5 overflow-x-auto">
@@ -87,23 +103,14 @@ export function CourseCardGrid({
                 }
               />
             ))}
-            <tr className="h-[26px] border-t border-row-divider-warm text-muted">
-              <th scope="row" className={`${ROW_LABEL} font-semibold`}>
-                {labels.index}
-              </th>
-              {half.holes.map((h) => (
-                <td key={h.hole_number} className="text-center">
-                  {h.stroke_index === 1 ? (
-                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-surface-strong font-semibold text-white dark:bg-primary dark:text-bg">
-                      1
-                    </span>
-                  ) : (
-                    h.stroke_index
-                  )}
-                </td>
-              ))}
-              <td className="bg-surface-2" />
-            </tr>
+            {half.secondRound ? (
+              <>
+                <IndexRow label={labels.indexRound1 ?? labels.index} holes={half.holes} />
+                <IndexRow label={labels.indexRound2 ?? labels.index} holes={half.secondRound} />
+              </>
+            ) : (
+              <IndexRow label={labels.index} holes={half.holes} />
+            )}
           </tbody>
         </table>
       ))}
@@ -133,6 +140,28 @@ function ParRow({
       <td className="bg-surface-2 text-center">
         {coursePar(holes.map((h) => ({ par_mens: par(h) })))}
       </td>
+    </tr>
+  );
+}
+
+function IndexRow({ label, holes }: { label: string; holes: PublicCourseHole[] }) {
+  return (
+    <tr className="h-[26px] border-t border-row-divider-warm text-muted">
+      <th scope="row" className={`${ROW_LABEL} font-semibold`}>
+        {label}
+      </th>
+      {holes.map((h) => (
+        <td key={h.hole_number} className="text-center">
+          {h.stroke_index === 1 ? (
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-surface-strong font-semibold text-white dark:bg-primary dark:text-bg">
+              1
+            </span>
+          ) : (
+            h.stroke_index
+          )}
+        </td>
+      ))}
+      <td className="bg-surface-2" />
     </tr>
   );
 }
