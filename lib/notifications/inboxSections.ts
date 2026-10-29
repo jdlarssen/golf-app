@@ -568,6 +568,8 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   // deadline (open) or says you have not played it (closing).
   'league_round_open',
   'league_round_closing',
+  // #2480: the title names the game; the detail gives the new tee-off.
+  'game_moved',
 ]);
 
 /** Kinds whose detail carries a person's own words. */
