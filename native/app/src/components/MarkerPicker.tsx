@@ -7,9 +7,18 @@
 //
 // Radene er webbens velger (`SubmitForm`): navn i en rad på minst 44 pt med en
 // rund markering, og den valgte raden fylt med `primarySoft`.
+//
+// #2675: med mer enn seks valg vises seks rader, et søkefelt og «Vis alle»
+// (`pickerRows`, samme regel som medspillerlista på «Start runden» og som
+// nettet). Rekkefølgen er serverens (navn); den valgte blir stående selv når
+// lista er kuttet.
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
+import { showAllLine } from '../lib/leagueCopy';
 import { MARKER_TEXT } from '../lib/markerCopy';
 import { useTheme } from '../theme';
+import { PickerMore, PickerNoMatch, PickerSearchField } from './PickerSearch';
 
 export function MarkerPicker({
   options,
@@ -21,11 +30,28 @@ export function MarkerPicker({
   onChange: (userId: string) => void;
 }) {
   const { colors, ui } = useTheme();
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const picker = pickerRows(options, {
+    query,
+    showAll,
+    nameOf: (o) => o.name ?? MARKER_TEXT.unknownPlayer,
+    keepIds: value === null ? undefined : new Set([value]),
+  });
   return (
     <View style={styles.wrap} testID="marker-picker" accessibilityRole="radiogroup">
       <Text style={ui.kicker}>{MARKER_TEXT.legend}</Text>
       <Text style={[ui.muted, styles.hint]}>{options.length > 0 ? MARKER_TEXT.hint : MARKER_TEXT.none}</Text>
-      {options.map((o) => {
+      {options.length > PICKER_VISIBLE_ROWS ? (
+        <PickerSearchField
+          value={query}
+          onChange={setQuery}
+          label={MARKER_TEXT.searchLabel}
+          placeholder={MARKER_TEXT.searchPlaceholder}
+          testID="marker-search"
+        />
+      ) : null}
+      {picker.rows.map((o) => {
         const checked = value === o.userId;
         return (
           <Pressable
@@ -51,6 +77,17 @@ export function MarkerPicker({
           </Pressable>
         );
       })}
+      {picker.searching && picker.total === 0 ? (
+        <PickerNoMatch text={MARKER_TEXT.noMatch} testID="marker-no-match" />
+      ) : null}
+      {picker.canExpand ? (
+        <PickerMore
+          label={showAll ? MARKER_TEXT.showFewer : showAllLine(picker.total)}
+          expanded={showAll}
+          onPress={() => setShowAll((v) => !v)}
+          testID="marker-show-all"
+        />
+      ) : null}
     </View>
   );
 }

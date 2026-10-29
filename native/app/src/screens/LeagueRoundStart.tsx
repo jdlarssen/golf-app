@@ -1,9 +1,16 @@
 // #2638 Del 2: «Start runden» i en ligarunde (tegning 5 og 5b).
 //
-// Rundas innstillinger står åpne øverst i en simulatorliga, så spilleren kan
-// stille inn Trackman før første slag. Under dem velger spilleren medspillere
-// blant deltakerne. Den som har levert eller spiller runden nå, er låst, som
-// på nettsiden. Knappen er aktiv når valget holder for markørregelen
+// I en simulatorliga står sjekklista øverst (#2675): bane, tee og alle åtte
+// Trackman-innstillingene, så spilleren kan stille inn simulatoren før første
+// slag. Under den velger spilleren medspillere blant deltakerne. Den som har
+// levert eller spiller runden nå, er låst og står nederst, som på nettsiden.
+// Med mer enn seks medspillere vises seks rader, et søkefelt og «Vis alle»
+// (`pickerRows`, det samme som nettet og markørvalget).
+//
+// Over knappen står en avkrysning, «Jeg har satt bane, tee og innstillingene i
+// Trackman.», og «Start runden» er sperret til den er krysset av. Avkrysningen
+// ligger bare i skjermen: den lagres ikke og serveren sjekker den ikke, som på
+// nettet. Knappen er ellers aktiv når valget holder for markørregelen
 // (`minFlightPlayers`, `lib/league/flightRules.ts`): i en simulatorliga kan du
 // starte alene, i en vanlig liga trengs minst én medspiller.
 //
@@ -21,10 +28,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueParticipant, AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { MAX_CO_PLAYERS, minFlightPlayers } from '../../../../lib/league/flightRules';
 import type { LeagueStartRefusal } from '../../../../lib/league/leagueStartRefusal';
+import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { nameInitials } from '../../../../lib/names/initials';
 import { LeagueLoadFailed, LeagueLoading, LeagueNotice } from '../components/league/LeagueStates';
-import { SimSettingsCard } from '../components/league/SimSettingsCard';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
+import { RoundSetupChecklist } from '../components/league/RoundSetupChecklist';
 import { LigaHakeIcon } from '../components/icons/Icons';
+import { PickerMore, PickerNoMatch, PickerSearchField } from '../components/PickerSearch';
 import {
   fetchLeague,
   startLeagueRound,
@@ -37,11 +47,11 @@ import {
   describeLeagueStartRefusal,
   participantLabel,
   roundWindow,
-  settingsHeading,
+  showAllLine,
 } from '../lib/leagueCopy';
 import { formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { FONTS, TAP, fraunces, interLine, useTheme } from '../theme';
 
 type Lock = 'delivered' | 'in_progress' | null;
 
@@ -72,6 +82,10 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  // #2675: bare skjermtilstand, nullstilles ikke ved dra-ned.
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const [pending, setPending] = useState(false);
   const [refusal, setRefusal] = useState<LeagueStartFailure | null>(null);
   // Bare dra-ned viser hjulet; en henting ved fokus går stille.
@@ -125,6 +139,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   const coPlayers = view.participants
     .filter((p) => p.userId !== meId)
     .map((p) => ({
+      userId: p.userId,
       participant: p,
       lock: (round.delivered.includes(p.userId)
         ? 'delivered'
@@ -134,7 +149,20 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
     }));
   const chosen = coPlayers.filter((c) => c.lock === null && selected.has(c.participant.userId));
   const full = chosen.length >= MAX_CO_PLAYERS;
-  const canStart = !pending && chosen.length >= minCoPlayers;
+  const needsConfirm = view.league.isSimulator && !setupConfirmed;
+  // Avkrysningen sperrer bare den vanlige startsiden. Et kjent avslag (tegning
+  // 5b) har ingen avkrysning, og serveren avgjør fortsatt når knappen trykkes.
+  const startable = !pending && chosen.length >= minCoPlayers;
+  const canStart = startable && !needsConfirm;
+  // Ledige først, så de som har levert eller spiller nå (som nettet, #2666).
+  // `sort` er stabil, så rekkefølgen innen hver gruppe er deltakerlistas.
+  const ordered = [...coPlayers].sort((a, b) => Number(a.lock !== null) - Number(b.lock !== null));
+  const picker = pickerRows(ordered, {
+    query,
+    showAll,
+    nameOf: (c) => participantLabel(c.participant, view.participants),
+    keepIds: selected,
+  });
 
   const toggle = (userId: string) => {
     setRefusal(null);
@@ -161,13 +189,13 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
     setPending(false);
   };
 
-  const button = (
+  const button = (enabled: boolean) => (
     <Pressable
       onPress={() => void start()}
-      disabled={!canStart}
+      disabled={!enabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !canStart, busy: pending }}
-      style={[styles.cta, { backgroundColor: colors.primary }, canStart ? null : styles.ctaOff]}
+      accessibilityState={{ disabled: !enabled, busy: pending }}
+      style={[styles.cta, { backgroundColor: colors.primary }, enabled ? null : styles.ctaOff]}
       testID="round-start-submit"
     >
       <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
@@ -189,6 +217,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   if (known) {
     return (
       <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
         contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg, paddingBottom: insets.bottom + 20 }]}
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={colors.primary} />}
         testID="round-start-screen"
@@ -199,7 +228,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
             text={describeLeagueStartRefusal(refusal ?? known)}
             testID="round-start-refusal"
           />
-          {button}
+          {button(startable)}
         </View>
       </ScrollView>
     );
@@ -208,15 +237,15 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]} testID="round-start-screen">
       <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
         contentContainerStyle={styles.scrollBody}
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={colors.primary} />}
         testID="round-start-scroll"
       >
         {title}
         {view.league.isSimulator ? (
-          <View testID="round-start-settings">
-            <SectionHead title={settingsHeading(round.label)} />
-            <SimSettingsCard round={round} defaultOpen />
+          <View style={styles.checklist} testID="round-start-settings">
+            <RoundSetupChecklist round={round} />
           </View>
         ) : null}
         <SectionHead title={ROUND_START_TEXT.coPlayersLegend} />
@@ -230,23 +259,53 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
             </View>
           ) : null
         ) : (
-          <View
-            style={[styles.pick, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            testID="round-start-players"
-          >
-            {coPlayers.map(({ participant, lock }, index) => (
-              <PlayerRow
-                key={participant.userId}
-                participant={participant}
-                all={view.participants}
-                lock={lock}
-                checked={lock === null && selected.has(participant.userId)}
-                blocked={lock === null && !selected.has(participant.userId) && full}
-                first={index === 0}
-                onToggle={() => toggle(participant.userId)}
-              />
-            ))}
-          </View>
+          <>
+            {coPlayers.length > PICKER_VISIBLE_ROWS ? (
+              <View style={styles.search}>
+                <PickerSearchField
+                  value={query}
+                  onChange={setQuery}
+                  label={ROUND_START_TEXT.searchLabel}
+                  placeholder={ROUND_START_TEXT.searchPlaceholder}
+                  testID="round-start-search"
+                />
+              </View>
+            ) : null}
+            {picker.rows.length > 0 ? (
+              <View
+                style={[styles.pick, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                testID="round-start-players"
+              >
+                {picker.rows.map(({ participant, lock }, index) => (
+                  <PlayerRow
+                    key={participant.userId}
+                    participant={participant}
+                    all={view.participants}
+                    lock={lock}
+                    checked={lock === null && selected.has(participant.userId)}
+                    blocked={lock === null && !selected.has(participant.userId) && full}
+                    first={index === 0}
+                    onToggle={() => toggle(participant.userId)}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {picker.searching && picker.total === 0 ? (
+              <View style={styles.pickNote}>
+                <PickerNoMatch text={ROUND_START_TEXT.noMatch} testID="round-start-no-match" />
+              </View>
+            ) : null}
+            {picker.canExpand ? (
+              <View style={styles.pickNote}>
+                <PickerMore
+                  label={showAll ? ROUND_START_TEXT.showFewer : showAllLine(picker.total)}
+                  expanded={showAll}
+                  onPress={() => setShowAll((value) => !value)}
+                  testID="round-start-show-all"
+                />
+              </View>
+            ) : null}
+          </>
         )}
       </ScrollView>
       <View
@@ -256,7 +315,10 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
         ]}
       >
         {refusal ? <LeagueNotice text={describeLeagueStartRefusal(refusal)} testID="round-start-refusal" /> : null}
-        {button}
+        {view.league.isSimulator ? (
+          <ConfirmRow checked={setupConfirmed} onToggle={() => setSetupConfirmed((value) => !value)} />
+        ) : null}
+        {button(canStart)}
       </View>
     </View>
   );
@@ -334,6 +396,42 @@ function PlayerRow({
   );
 }
 
+/**
+ * #2675: «Jeg har satt bane, tee og innstillingene i Trackman.» Samme form som
+ * medspillerradene (tegning 9a/9b): en kant, en rute som fylles med haken, og
+ * `primarySoft` bak når den er krysset av. Minst 44 pt høy.
+ */
+function ConfirmRow({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      style={[
+        styles.confirm,
+        {
+          borderColor: checked ? colors.primary : colors.border,
+          backgroundColor: checked ? colors.primarySoft : colors.surface,
+        },
+      ]}
+      testID="round-start-confirm"
+    >
+      <View
+        style={[
+          styles.box,
+          checked
+            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+            : { backgroundColor: colors.bg, borderColor: colors.border },
+        ]}
+      >
+        {checked ? <LigaHakeIcon color={colors.onPrimary} size={14} /> : null}
+      </View>
+      <Text style={[styles.confirmText, { color: colors.text }]}>{ROUND_START_TEXT.confirmSetup}</Text>
+    </Pressable>
+  );
+}
+
 /** Tegningenes `.sechead`: små sperrede versaler, 22 over og 8 under. */
 function SectionHead({ title }: { title: string }) {
   const { colors } = useTheme();
@@ -366,6 +464,25 @@ const styles = StyleSheet.create({
   // Tegning 5b: boksen og knappen 16 fra kanten, 14 under tittelen.
   inline: { marginHorizontal: 16, marginTop: 14 },
   pick: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  // Sjekklista er et eget kort rett under tittelen, 16 fra kanten (kortet har marginen selv).
+  checklist: { marginTop: 14 },
+  // Søkefeltet står mellom regelteksten og lista, 16 fra kanten; «Vis alle» under.
+  search: { marginHorizontal: 16, marginBottom: 8 },
+  pickNote: { marginHorizontal: 20, marginTop: 4 },
+  // `.pl-row.confirm`: minst 44 høy, 14 og 16 inn, rute på 20 med 12 til teksten.
+  confirm: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    minHeight: TAP,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  box: { width: 20, height: 20, marginTop: 1, borderRadius: 4, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  confirmText: { ...interLine(14, 21, { multiline: true }), fontFamily: FONTS.sans, flex: 1 },
   // `.prow`: minst 52 høy, 8 og 14 inn, 12 mellom.
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 14, minHeight: 52 },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },

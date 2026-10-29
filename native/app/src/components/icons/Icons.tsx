@@ -246,6 +246,14 @@ export const SolIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** Forstørrelsesglasset i søkefeltet over en lang spillerliste (#2675, tegning 9a). */
+export const SokIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Circle cx="11" cy="11" r="7" />
+    <Path d="M20 20l-3.5-3.5" />
+  </LineIcon>
+);
+
 /** Peker ned (vis mer) som standard; `up` for «lukk». */
 export const ChevronIcon = ({ up = false, ...props }: IconProps & { up?: boolean }) => (
   <LineIcon {...props}>

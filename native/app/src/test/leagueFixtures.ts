@@ -25,6 +25,7 @@ export function leagueRound(
     closesAt: new Date(opens.getTime() + days * DAY).toISOString(),
     ready: true,
     teeName: 'Gul',
+    courseName: 'St Andrews',
     delivered: [],
     inProgress: [],
     awaitingMarker: [],

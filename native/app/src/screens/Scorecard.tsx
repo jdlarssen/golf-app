@@ -107,6 +107,7 @@ import { getDb, listQueue, listTeeShotQueue } from '../data/db';
 import { refreshGameBundle } from '../data/gameBundle';
 import { submitCard } from '../data/submitCard';
 import { fetchMarkerOptions } from '../data/marker';
+import { KEYBOARD_SCROLL_PROPS } from '../components/KeyboardInset';
 import { MarkerPicker } from '../components/MarkerPicker';
 import type { MarkerOptionsResponse } from '../../../../lib/league/appLeagueView';
 import { drainQueue } from '../data/syncWorker';
@@ -668,6 +669,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   return (
     <View style={[styles.fill, { backgroundColor: colors.bg }]}>
       <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
         ref={scrollRef}
         style={styles.fill}
         // Luft nederst: like høy som linja mens oppsummeringen står (rulla er da
