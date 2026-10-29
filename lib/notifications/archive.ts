@@ -139,3 +139,49 @@ export async function archiveStaleNotifications(
   revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
+
+/**
+ * Arkiver alle varsler som peker på et spill som nettopp ble slettet (#2481).
+ *
+ * Ellers blir invitasjonen («Bli med»), «lagt til i spillet» og de andre
+ * liggende i innboksen til alle spillerne og lenker til en side som ikke
+ * finnes, rett ved siden av «er avlyst». Gjelder hver sletting, ikke bare
+ * avlysning: problemet er det samme.
+ *
+ * Én skriving for alle mottakere, med `archived_at` og `read_at` i samme par
+ * som ett-varsel-grenen i `archiveNotifications`, så bunn-nav-prikken slukker.
+ * `read_at` overskrives også for allerede leste rader; det er usynlig, siden
+ * raden skjules fra lista uansett.
+ *
+ * Admin-klienten (service-role): radene tilhører andre brukere, og ingen
+ * policy lar en arrangør oppdatere dem. Kalles bare fra `deleteGame` etter
+ * `requireAdminOrCreator` og en vellykket sletting. Nye `game_cancelled`-
+ * varsler har ingen `game_id` og treffes ikke.
+ *
+ * Best-effort: kaster aldri. 0 rader er gyldig (ingen hadde varsler om
+ * spillet). Returnerer antallet arkiverte rader, eller `null` ved feil.
+ */
+export async function archiveNotificationsForGame(gameId: string): Promise<number | null> {
+  try {
+    const nowIso = new Date().toISOString();
+    const { data, error } = await getAdminClient()
+      .from('notifications')
+      .update({ archived_at: nowIso, read_at: nowIso })
+      .eq('payload->>game_id', gameId)
+      .is('archived_at', null)
+      .select('user_id');
+    if (error) {
+      console.error('[notifications] archive for deleted game failed', { gameId, error });
+      return null;
+    }
+    const rows = (data ?? []) as { user_id: string }[];
+    for (const userId of new Set(rows.map((r) => r.user_id))) {
+      revalidateTag(`notifications-${userId}`, 'max');
+    }
+    console.info('[notifications] archived notices for deleted game', { gameId, count: rows.length });
+    return rows.length;
+  } catch (err) {
+    console.error('[notifications] archive for deleted game failed', { gameId, err });
+    return null;
+  }
+}
