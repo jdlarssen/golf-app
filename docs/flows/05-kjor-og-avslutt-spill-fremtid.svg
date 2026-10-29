@@ -12,6 +12,15 @@
   <text x="400" y="166" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">Spillet er «Planlagt» (fra flyt 4)</text>
   <line x1="400" y1="196" x2="400" y2="220" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
+  <!-- branch: cancel a scheduled round with a notice (NY #2481) -->
+  <line x1="680" y1="168" x2="756" y2="160" stroke="#5E6B63" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <rect x="760" y="108" width="320" height="104" rx="16" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="782" y="120" width="60" height="20" rx="10" fill="#C9A961"/><text x="812" y="134" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2481</text>
+  <text x="852" y="135" font-size="14.5" font-weight="700" fill="#7A5E13">«Avlys runden»</text>
+  <text x="782" y="160" font-size="13" fill="#6B5526">NY: spillerne får beskjed i innboksen,</text>
+  <text x="782" y="179" font-size="13" fill="#6B5526">  som push og på e-post, med din hilsen</text>
+  <text x="782" y="198" font-size="13" fill="#6B5526">  gamle varsler om runden ryddes bort</text>
+
   <!-- 1 start -->
   <rect x="120" y="222" width="560" height="58" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
   <circle cx="156" cy="251" r="16" fill="#B8973F"/><text x="156" y="256" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
