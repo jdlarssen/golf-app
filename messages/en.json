@@ -6647,6 +6647,19 @@
       "buttonText": "Open hole {hole}: {url}",
       "footer": "You're receiving this because the organiser sent you a reminder. Log in at <link>tornygolf.no</link> to enter the score."
     },
+    "gameMoved": {
+      "subject": "{gameName} has moved",
+      "heading": "The round has moved",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "<strong>{gameName}</strong> has a new time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. Same course and tees.",
+      "bodyText": "{gameName} has a new time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. Same course and tees.",
+      "bodyCourseChanged": "<strong>{gameName}</strong> has a new time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. The course or tees changed too.",
+      "bodyTextCourseChanged": "{gameName} has a new time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. The course or tees changed too.",
+      "button": "See the round",
+      "buttonText": "See the round: {url}",
+      "footer": "You are getting this because you are in the game. Log in at <link>tornygolf.no</link> to see it."
+    },
     "organizerGameNotice": {
       "salutationNamed": "Hi {name}!",
       "salutationGeneric": "Hi!",
