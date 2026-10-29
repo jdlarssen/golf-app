@@ -32,6 +32,23 @@ export function isAutoGameNameDate(suffix: string): boolean {
   return en !== null && ENGLISH_MONTHS.includes(en[1]);
 }
 
+/**
+ * Did the wizard write this name? Empty, the course alone, or the course plus
+ * the date `suggestGameName` appends. Anything else is the organiser's own
+ * («Bogstad Open» on «Bogstad» too). Without a course name only an empty name
+ * counts. The share card's kicker (#2506) and «Som sist» (#2446) read it.
+ */
+export function isAutoGameName(name: string, courseName: string | null): boolean {
+  const trimmed = name.trim();
+  if (!trimmed) return true;
+  const course = courseName?.trim() ?? '';
+  if (!course) return false;
+  return (
+    trimmed === course ||
+    (trimmed.startsWith(`${course} `) && isAutoGameNameDate(trimmed.slice(course.length + 1)))
+  );
+}
+
 export interface SuggestGameNameInput {
   /** Bane-navn fra valgt course. `null` eller `''` returnerer tom streng. */
   courseName: string | null;

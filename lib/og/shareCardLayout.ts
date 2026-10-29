@@ -1,5 +1,5 @@
 import type { ShareCardModel } from '@/lib/games/buildShareCardData';
-import { isAutoGameNameDate } from '@/lib/games/autoGameName';
+import { isAutoGameName } from '@/lib/games/autoGameName';
 
 /**
  * Every measure of the result card (`leaderboard/share-image`, #942) in one
@@ -72,13 +72,8 @@ export function cardKicker(gameName: string, courseName: string | null): string 
   const course = courseName?.trim() ?? '';
   let text: string;
   if (!course) text = name;
-  else if (
-    !name ||
-    name === course ||
-    (name.startsWith(`${course} `) && isAutoGameNameDate(name.slice(course.length + 1)))
-  ) {
-    text = course;
-  } else text = `${name} · ${course}`;
+  else if (isAutoGameName(name, course)) text = course;
+  else text = `${name} · ${course}`;
   const chars = Array.from(text);
   return chars.length > CHARS_PER_LINE.kicker
     ? `${chars.slice(0, CHARS_PER_LINE.kicker - 1).join('').trimEnd()}…`

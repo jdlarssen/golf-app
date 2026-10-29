@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { suggestGameName, localizeGameName, isAutoGameNameDate } from './autoGameName';
+import {
+  suggestGameName,
+  localizeGameName,
+  isAutoGameNameDate,
+  isAutoGameName,
+} from './autoGameName';
 
 describe('suggestGameName', () => {
   it('returnerer tom streng når courseName er null', () => {
@@ -200,4 +205,29 @@ describe('isAutoGameNameDate', () => {
       expect(isAutoGameNameDate(suffix)).toBe(false);
     },
   );
+});
+
+// #2446: «Som sist» carries the organiser's own name to the new round, but not
+// the date the wizard wrote: that name gets a new date. Same test as the share
+// card's kicker (#2506).
+describe('isAutoGameName', () => {
+  it.each([
+    ['Byneset North 3. oktober', 'Byneset North'],
+    ['Byneset North 3 October', 'Byneset North'],
+    ['Byneset North', 'Byneset North'],
+    ['', 'Byneset North'],
+    ['  ', null],
+  ])('«%s» on «%s» is the wizard\'s own name', (name, course) => {
+    expect(isAutoGameName(name, course)).toBe(true);
+  });
+
+  it.each([
+    ['Lørdagsrunden', 'Byneset North'],
+    ['Byneset North Open', 'Byneset North'],
+    ['Byneset North 9 hull', 'Byneset North'],
+    ['Bynes 3. oktober', 'Byneset North'],
+    ['Byneset North 3. oktober', null],
+  ])('«%s» on «%s» is the organiser\'s own name', (name, course) => {
+    expect(isAutoGameName(name, course)).toBe(false);
+  });
 });
