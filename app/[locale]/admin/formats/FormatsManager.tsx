@@ -149,9 +149,11 @@ export function FormatsManager({ initialFormats }: Props) {
   const expanded = expandedTab === activeTab;
   const [announcement, setAnnouncement] = useState('');
 
-  // Reordering moves the row's DOM node, which drops focus. Put it back on the
-  // arrow that was pressed, or on the row's other arrow once the pressed one is
-  // disabled at the edge. Held until the server's answer has rendered too.
+  // Reordering moves the row's DOM node, and an arrow disabled at the edge
+  // drops focus too; both leave it on <body>. Put it back on the arrow that was
+  // pressed, or on the row's other arrow once the pressed one is disabled.
+  // Held until the server's answer has rendered, but never taken back from
+  // somewhere the user moved it.
   const listRef = useRef<HTMLDivElement>(null);
   const focusRequest = useRef<{ slug: string; direction: Direction } | null>(null);
   useLayoutEffect(() => {
@@ -166,7 +168,8 @@ export function FormatsManager({ initialFormats }: Props) {
       pressed && !pressed.disabled
         ? pressed
         : arrow(request.direction === 'up' ? 'down' : 'up');
-    if (target && document.activeElement !== target) target.focus();
+    const lost = !document.activeElement || document.activeElement === document.body;
+    if (target && lost) target.focus();
     if (!isPending) focusRequest.current = null;
   });
 
@@ -180,6 +183,8 @@ export function FormatsManager({ initialFormats }: Props) {
     if (action.type !== 'active') fd.set('intent', action.intent);
     if (action.type === 'sort_order') fd.set('direction', action.direction);
     else fd.set('next', action.value ? 'on' : 'off');
+    // The page shows an error banner: the next change that works clears it.
+    if (new URLSearchParams(window.location.search).has('error')) fd.set('had_error', '1');
     startTransition(async () => {
       addOptimistic(action);
       await serverFn(fd);
@@ -202,7 +207,15 @@ export function FormatsManager({ initialFormats }: Props) {
     submit({ type: 'sort_order', slug, intent: activeTab, direction }, moveFormat);
   }
 
-  const sections = step2Sections(optimisticFormats, activeTab);
+  // Hidden and inactive have no step-2 order; list them by the name shown.
+  const byName = (a: FormatWithMappings, b: FormatWithMappings) =>
+    name(a.slug).localeCompare(name(b.slug), 'nb');
+  const step2 = step2Sections(optimisticFormats, activeTab);
+  const sections = {
+    ...step2,
+    hidden: [...step2.hidden].sort(byName),
+    inactive: [...step2.inactive].sort(byName),
+  };
   const secondaryShown = expanded
     ? sections.secondary
     : sections.secondary.slice(0, SECONDARY_FOLD);
