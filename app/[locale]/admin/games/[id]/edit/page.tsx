@@ -57,6 +57,7 @@ type SearchParams = Promise<{
 type CourseRow = {
   id: string;
   name: string;
+  nine_holes: boolean;
   tee_boxes: {
     id: string;
     name: string;
@@ -305,7 +306,7 @@ const getOptions = cache(async () => {
     supabase
       .from('courses')
       .select(
-        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, nine_holes, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
@@ -331,6 +332,7 @@ const getOptions = cache(async () => {
   const courses: CourseOption[] = (coursesResult.data ?? []).map((c) => ({
     id: c.id,
     name: c.name,
+    nineHoles: c.nine_holes,
     tee_boxes: (c.tee_boxes ?? [])
       .map((t) => ({
         id: t.id,
