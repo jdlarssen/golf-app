@@ -12,6 +12,14 @@
   <text x="400" y="166" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">Spillet er «Planlagt» (fra flyt 4)</text>
   <line x1="400" y1="196" x2="400" y2="220" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
+  <!-- 0b before the start: move the round, the group is told (NY #2480) -->
+  <line x1="680" y1="168" x2="758" y2="168" stroke="#C9A961" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <rect x="760" y="126" width="320" height="86" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <rect x="1006" y="134" width="60" height="20" rx="10" fill="#C9A961"/><text x="1036" y="148" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2480</text>
+  <text x="782" y="150" font-size="14.5" font-weight="600" fill="#7A5E13">NY: «Flytt runden»</text>
+  <text x="782" y="172" font-size="12.5" fill="#6B5526">ny dag og tid · «Si fra til gjengen» står på</text>
+  <text x="782" y="192" font-size="12.5" fill="#6B5526">alle på lista får varsel (også fra «Rediger»)</text>
+
   <!-- 1 start -->
   <rect x="120" y="222" width="560" height="58" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
   <circle cx="156" cy="251" r="16" fill="#B8973F"/><text x="156" y="256" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
@@ -115,7 +123,7 @@
 
   <!-- player parallel -->
   <text x="120" y="1058" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
-  <text x="120" y="1084" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
+  <text x="120" y="1084" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt», varsel om runden flyttes · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
 
   <text x="120" y="1131" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
 </svg>
