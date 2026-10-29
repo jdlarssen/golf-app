@@ -154,3 +154,26 @@ describe('RoundStartClient — a long co-player list (#2666)', () => {
     expect(shown()).toEqual(['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P8']);
   });
 });
+
+// #2666: on the owner's phone in night mode the rows showed their daytime
+// background with night text: a colour transition on a row whose --surface
+// token flips with the theme runs from the light value, and a transition that
+// is held (a sheet still opening) leaves the row light. The search field has
+// no transition and was right. Rows and the confirm box paint at once.
+describe('RoundStartClient — no colour transition on the rows (#2666)', () => {
+  it('the rows and the confirm box carry no transition class', () => {
+    render(
+      <RoundStartClient roundId="r1" coPlayers={[player('FREE', null), player('DONE', 'delivered')]} isSimulator />,
+    );
+    const nodes = [
+      screen.getByTestId('liga-round-start-player-FREE'),
+      screen.getByTestId('liga-round-start-player-DONE'),
+      screen.getByTestId('liga-round-start-confirm'),
+    ];
+    for (const node of nodes) {
+      expect(node.className).not.toMatch(/transition/);
+      expect(node.querySelector('span[aria-hidden]')!.className).not.toMatch(/transition/);
+    }
+  });
+});
+

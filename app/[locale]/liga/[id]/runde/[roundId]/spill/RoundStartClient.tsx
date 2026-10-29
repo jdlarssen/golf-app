@@ -127,7 +127,7 @@ export function RoundStartClient({
                     data-full={blocked ? 'true' : undefined}
                     aria-disabled={disabled ? 'true' : undefined}
                     className={[
-                      'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors min-h-[44px]',
+                      'flex items-center gap-3 rounded-xl border px-4 py-3 min-h-[44px]',
                       disabled
                         ? 'cursor-not-allowed border-border bg-surface opacity-60'
                         : checked
@@ -147,7 +147,7 @@ export function RoundStartClient({
                     {/* Visual checkbox */}
                     <span
                       className={[
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
                         checked ? 'border-primary bg-primary' : 'border-border bg-bg',
                       ].join(' ')}
                       aria-hidden
@@ -206,7 +206,7 @@ export function RoundStartClient({
         <label
           data-testid="liga-round-start-confirm"
           className={[
-            'flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors',
+            'flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5',
             setupConfirmed ? 'border-primary bg-primary-soft' : 'border-border bg-surface hover:bg-primary-soft/50',
           ].join(' ')}
         >
@@ -218,7 +218,7 @@ export function RoundStartClient({
           />
           <span
             className={[
-              'mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+              'mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded border',
               setupConfirmed ? 'border-primary bg-primary' : 'border-border bg-bg',
             ].join(' ')}
             aria-hidden

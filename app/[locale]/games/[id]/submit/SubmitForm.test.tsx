@@ -173,4 +173,20 @@ describe('SubmitForm', () => {
     );
     expect([screen.queryByRole('searchbox'), screen.queryByTestId('marker-show-all')]).toEqual([null, null]);
   });
+
+  // #2666: the marker rows paint at once in night mode (see RoundStartClient.test).
+  it('markørradene har ingen fargeovergang', () => {
+    setQueue([]);
+    render(
+      <SubmitForm
+        submitAction={vi.fn()}
+        missingHoles={0}
+        blockingGameIds={['g1']}
+        markerOptions={[{ userId: 'u1', name: 'Kari' }]}
+      />,
+    );
+    const row = screen.getByTestId('marker-option-u1');
+    expect(row.className).not.toMatch(/transition/);
+    expect(row.querySelector('span[aria-hidden]')!.className).not.toMatch(/transition/);
+  });
 });
