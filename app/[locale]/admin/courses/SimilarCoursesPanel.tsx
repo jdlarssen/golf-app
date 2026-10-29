@@ -59,7 +59,11 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
   const addAnyway = addAnywayName(query);
 
   return (
-    <section aria-labelledby="similar-courses-heading" className="mt-[18px]">
+    <section
+      aria-labelledby="similar-courses-heading"
+      data-testid="similar-courses"
+      className="mt-[18px]"
+    >
       <h2
         id="similar-courses-heading"
         className="pb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-warning-text"
@@ -70,6 +74,7 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
         {courses.map((course) => (
           <li
             key={course.id}
+            data-testid="similar-course-row"
             className="flex min-h-16 items-center gap-3 border-b border-divider px-3.5 py-2.5 last:border-b-0"
           >
             <span className="min-w-0 flex-grow">
@@ -85,6 +90,7 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
             </span>
             <SmartLink
               href={similarCourseHref(target, course.id)}
+              data-testid="similar-course-use"
               aria-label={t('useThisAria', { name: course.name })}
               className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full border border-primary bg-surface px-3.5 text-[13px] font-semibold text-primary"
             >
@@ -96,6 +102,7 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
       <div className="pt-3">
         <button
           type="button"
+          data-testid="similar-courses-add-anyway"
           onClick={() => {
             setDismissed(clipQuery(query));
             onAddAnyway?.();
