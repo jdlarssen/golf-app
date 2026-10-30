@@ -683,6 +683,8 @@
       "rules": "Reglene",
       "rulesAriaLabel": "Reglene for {name}",
       "chosen": "Valgt",
+      "change": "Bytt",
+      "changeAriaLabel": "Bytt spillform. Valgt: {name}",
       "lineup": {
         "sides": "{count} mot {count}",
         "teams": "{teams, plural, one {ett lag à {size}} other {# lag à {size}}}",

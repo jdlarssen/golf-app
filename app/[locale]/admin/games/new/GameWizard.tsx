@@ -1133,7 +1133,8 @@ function WizardBody({
   }
 
   // #2260: «Neste» står alene. På steg 2 kommer den først når et format er
-  // valgt — før det står ingenting under lista. Steg 5 har publiser-knappene
+  // valgt (#2454: da er lista én linje, og oppsettet og «Neste» står rett
+  // under den) — før det står ingenting under lista. Steg 5 har publiser-knappene
   // i ReadyStep.
   // #2321: velgeren på steg 4 har knappen i brettet; lag-skjermen har footeren.
   const showNext =

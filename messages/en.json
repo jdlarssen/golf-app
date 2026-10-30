@@ -683,6 +683,8 @@
       "rules": "Rules",
       "rulesAriaLabel": "Rules for {name}",
       "chosen": "Selected",
+      "change": "Change",
+      "changeAriaLabel": "Change format. Chosen: {name}",
       "lineup": {
         "sides": "{count} vs {count}",
         "teams": "{teams, plural, one {one team of {size}} other {# teams of {size}}}",
