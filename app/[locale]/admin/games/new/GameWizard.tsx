@@ -2147,7 +2147,7 @@ function WizardTop({
         <p
           data-testid="wizard-draft-saved"
           role="status"
-          className="mt-2 inline-flex h-7 items-center rounded-full bg-primary-soft px-3 font-sans text-xs font-semibold text-primary"
+          className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-full bg-primary-soft px-2.5 font-sans text-xs font-semibold text-primary"
         >
           {t('savedAsDraft')}
         </p>

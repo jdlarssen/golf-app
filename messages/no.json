@@ -7771,6 +7771,7 @@
   "resumeDraft": {
     "kicker": "Fortsett der du slapp",
     "untitled": "Nytt spill",
+    "touchedAt": "{relative} kl. {time}",
     "playersOfTotal": "{count} av {total} spillere",
     "playersCount": "{count, plural, one {# spiller} other {# spillere}}",
     "stepLine": "Steg {step} av {total} · {title}",

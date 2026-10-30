@@ -101,6 +101,19 @@ describe('ResumeDraftCard', () => {
     expect(screen.getByText('Steg 2 av 5 · Hva skal dere spille?')).toBeInTheDocument();
   });
 
+  it('sier «i går kl. 21:40» for et utkast fra i går, og «for N min siden» samme dag', async () => {
+    seed({}, { savedAt: Date.now() - 24 * 60 * 60 * 1000 });
+    const { unmount } = render(<ResumeDraftCard userId={USER} />);
+    const card = await screen.findByTestId('resume-draft-card');
+    expect(card.textContent).toMatch(/i går kl\. \d{2}:\d{2}/);
+    unmount();
+
+    window.localStorage.clear();
+    seed({}, { savedAt: Date.now() - 5 * 60 * 1000 });
+    render(<ResumeDraftCard userId={USER} />);
+    expect((await screen.findByTestId('resume-draft-card')).textContent).toMatch(/siden/);
+  });
+
   it('viser ikke kortet for et utkast som bare har arrangementstypen (steg 1)', async () => {
     seed({ step: 1, formatLabel: null, courseName: null });
     render(<ResumeDraftCard userId={USER} />);
