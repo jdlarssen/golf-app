@@ -115,6 +115,7 @@ import { holeTopLine } from '../lib/holeHeader';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
+import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
 import { teeShotMinimum, teeShotTeams } from '../lib/teeShotTeams';
 import { computeGameLeaderboard, playerExtraForHole } from '../lib/scoringContext';
@@ -819,8 +820,8 @@ function HoleView({
             {bundle.game.status !== 'active'
               ? 'Spillet er ikke aktivt. Føringen er låst.'
               : collapsed
-                ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
-                : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
+                ? `Lagkortet er levert. Føringen er låst. ${reopenHint(isGameOrganiser(bundle.game, userId))}`
+                : `Kortet ditt er levert. Føringen er låst. ${reopenHint(isGameOrganiser(bundle.game, userId))}`}
           </Text>
         ) : null}
 
@@ -997,7 +998,9 @@ function HoleView({
             onUndo={rail.undo}
             onSkip={rail.skip}
             onPutts={rail.pickPutts}
-            nextLabel={holeNumber < HOLE_COUNT ? 'Neste hull' : 'Lever scorekort'}
+            nextLabel={
+              holeNumber < HOLE_COUNT ? 'Neste hull' : collapsed ? 'Lever lagets kort' : 'Lever scorekort'
+            }
             onNext={() => (holeNumber < HOLE_COUNT ? goToHole(holeNumber + 1) : onSubmit())}
           />
         </View>

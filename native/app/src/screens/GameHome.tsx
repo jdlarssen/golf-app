@@ -52,6 +52,7 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
+import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer } from '../data/gameBundle';
@@ -282,7 +283,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // #1954 A1: «Trekk deg fra spillet» med webbens regler (lib/playerWithdraw.ts).
   // Arrangør = `created_by`, men ikke i en ligaflight (#2688): der har ingen
   // arrangørseksjon, og den som startet flighten trekker seg som alle andre.
-  const isOrganiser = game.createdBy === userId && game.leagueRoundId === null;
+  const isOrganiser = isGameOrganiser(game, userId);
   const withdrawKind = playerWithdrawKind(game, me?.player, isOrganiser);
 
   return (

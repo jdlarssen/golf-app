@@ -125,6 +125,7 @@ import {
   toRoster,
   toStampPlayers,
 } from '../lib/roster';
+import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
 import { buildRoundDoneModel, roundDoneBarVisible, submitInView } from '../lib/roundDone';
 import {
@@ -645,7 +646,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       : stamp != null
         ? null
         : bundle.game.status === 'active'
-          ? `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
+          ? `Kortet er levert. Dette er lesevisning. ${reopenHint(isGameOrganiser(bundle.game, userId))}`
           : 'Kortet er levert. Dette er lesevisning.';
 
   const queueGuard =
