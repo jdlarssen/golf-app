@@ -1237,8 +1237,8 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
         { data: { id: 'game-1' }, error: null }, // games.update
         { data: [{ user_id: 'u1' }], error: null }, // update u1 (ok)
         { data: null, error: { message: 'insert boom' } }, // insert u2..u7 FAILS
-        { data: null, error: null }, // compensation delete (ok)
-        { data: null, error: null }, // compensation re-insert (ok)
+        { data: null, error: null }, // compensation: delete the added rows (ok)
+        { data: null, error: null }, // compensation: upsert the prior rows (ok)
       ],
     );
     signIn('admin-1');
@@ -1252,20 +1252,26 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
       (c) => c.table === 'game_players' && c.method === 'delete',
     );
     expect(deletes).toHaveLength(1);
-    // The compensation deletes exactly the rows this save tried to write…
+    // The compensation deletes only the rows this save added…
     const deleteIn = supabaseMock.__fromCalls.find(
       (c) => c.method === 'in' && c.table === 'game_players',
     );
     expect(deleteIn?.args).toEqual([
       'user_id',
-      ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
+      ['u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
     ]);
-    // …and puts back the snapshot of the one that existed (every column).
+    // …and writes the snapshot of the one that existed back in place (every
+    // column). #2607: never a delete + re-insert of an existing row, which
+    // would fire the trigger in 0229 and take a captain's guests along.
+    const upserts = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'game_players' && c.method === 'upsert',
+    );
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]!.args).toEqual([[priorRows[1]], { onConflict: 'game_id,user_id' }]);
     const inserts = supabaseMock.__fromCalls.filter(
       (c) => c.table === 'game_players' && c.method === 'insert',
     );
-    expect(inserts).toHaveLength(2);
-    expect(inserts[1]!.args[0]).toEqual([priorRows[1]]);
+    expect(inserts).toHaveLength(1); // the failed save's own insert, nothing more
     expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
     // Notify never fires — the failure path redirects before it.
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
@@ -1281,8 +1287,8 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
         { data: { id: 'game-1' }, error: null }, // games.update
         { data: [{ user_id: 'u1' }], error: null }, // update u1 (ok)
         { data: null, error: { message: 'insert boom' } }, // insert FAILS
-        { data: null, error: null }, // compensation delete (ok)
-        { data: null, error: { message: 'rollback boom' } }, // re-insert FAILS too
+        { data: null, error: null }, // compensation: delete the added rows (ok)
+        { data: null, error: { message: 'rollback boom' } }, // upsert FAILS too
       ],
     );
     signIn('admin-1');

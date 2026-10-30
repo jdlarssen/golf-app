@@ -542,10 +542,13 @@ type RequestClient = Awaited<ReturnType<typeof getServerClient>>;
  *
  * Compensation (trap 5, replaces the #907 rollback): games.update has already
  * committed, so on any failure the rows this call tried to write are put back
- * to their snapshot. Via service-role: delete those rows in the game, then
- * re-insert their prior rows verbatim (game_players has a composite PK and no
- * generated columns). A double failure is logged — the organiser sees
- * db_players and can try again.
+ * to their snapshot. Via service-role: the rows this save added are deleted,
+ * and the rows that existed are written back verbatim with an upsert
+ * (game_players has a composite PK and no generated columns). #2607: an
+ * existing row is never deleted and re-inserted — deleting a captain's seat
+ * fires the trigger in 0229, which takes the captain's guests along, and the
+ * re-insert would bring back only the captain. A double failure is logged —
+ * the organiser sees db_players and can try again.
  */
 async function writeRosterPlan(
   supabase: RequestClient,
@@ -626,18 +629,22 @@ async function writeRosterPlan(
     return { ok: true };
   } catch (err) {
     console.error('[updateGameInternal] roster write failed', err);
-    const ids = [...attempted];
+    const priorIds = new Set(priorRows.map((r) => r.user_id));
+    const addedIds = [...attempted].filter((id) => !priorIds.has(id));
     const restoreRows = priorRows.filter((r) => attempted.has(r.user_id));
     const admin = getAdminClient();
-    let { error: rollbackError } = await admin
-      .from('game_players')
-      .delete()
-      .eq('game_id', gameId)
-      .in('user_id', ids);
+    let rollbackError: { message: string } | null = null;
+    if (addedIds.length > 0) {
+      ({ error: rollbackError } = await admin
+        .from('game_players')
+        .delete()
+        .eq('game_id', gameId)
+        .in('user_id', addedIds));
+    }
     if (!rollbackError && restoreRows.length > 0) {
       ({ error: rollbackError } = await admin
         .from('game_players')
-        .insert(restoreRows));
+        .upsert(restoreRows, { onConflict: 'game_id,user_id' }));
     }
     if (rollbackError) {
       console.error('[updateGameInternal] roster rollback failed', rollbackError);
