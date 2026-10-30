@@ -694,6 +694,21 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       textTransform: 'uppercase',
       color: c.muted,
     },
+    /**
+     * Kickeren som seksjonsoverskrift over et kort (Hjem og spillets side,
+     * #2700): 22 pt over (14 + lista sitt mellomrom på 8) og 4 pt innrykk, så
+     * teksten står litt inn fra kortkanten, som i designet.
+     */
+    sectionHead: {
+      fontSize: 10,
+      ...NO_FONT_PADDING,
+      fontFamily: FONTS.sansSemiBold,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      color: c.muted,
+      marginTop: 14,
+      marginHorizontal: 4,
+    },
     body: { ...NO_FONT_PADDING, fontSize: 16, fontFamily: FONTS.sans, color: c.text },
     muted: { ...NO_FONT_PADDING, fontSize: 14, fontFamily: FONTS.sans, color: c.muted },
     value: { ...fraunces(600, 22), color: c.text },
