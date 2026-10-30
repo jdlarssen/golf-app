@@ -53,7 +53,7 @@
 
   <!-- NEW shortcut (#2446): «Som sist» on step 1 jumps to step 5 with the
        last round filled in (?sist=<id>&step=5). -->
-  <path d="M930,225 H985 V527 H936" fill="none" stroke="#8A6D27" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <path d="M930,225 H985 V560 H936" fill="none" stroke="#8A6D27" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a)"/>
   <g>
     <rect x="998" y="318" width="186" height="104" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
     <text x="1012" y="342" font-size="13" font-weight="700" fill="#7A5E13">NY: «Som sist»</text>
@@ -91,22 +91,21 @@
   </g>
   <line x1="610" y1="426" x2="610" y2="438" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
-  <!-- step 4 -->
-  <g>
-    <rect x="290" y="440" width="640" height="42" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
-    <circle cx="328" cy="461" r="15" fill="#B8973F"/><text x="328" y="466" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">4</text>
-    <text x="360" y="466" font-size="15" fill="#213029">Spillere (forhåndsfylt fra antallet)</text>
-  </g>
-  <line x1="610" y1="482" x2="610" y2="494" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <!-- step 4 (changed, #2447): the sign-up choice comes before the list -->
+  <rect x="290" y="440" width="640" height="84" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <circle cx="328" cy="471" r="16" fill="#B8973F"/><text x="328" y="476" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">4</text>
+  <text x="362" y="467" font-size="15.5" font-weight="600" fill="#213029">Hvordan får dere spillere? — så lista (forhåndsfylt fra antallet)</text>
+  <text x="362" y="489" font-size="12.5" fill="#6B5526">✓ Påmeldingsvalg i klartekst (#367) øverst, uten kode-kruskel (#372)</text>
+  <text x="362" y="509" font-size="12" fill="#8A7333">standard «kun invitasjon» (privat) beholdt · med påmelding rett til «Klar?» (#2447)</text>
+  <line x1="610" y1="524" x2="610" y2="536" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
   <!-- step 5 ready (changed) -->
-  <rect x="290" y="496" width="640" height="110" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
-  <circle cx="328" cy="527" r="16" fill="#B8973F"/><text x="328" y="532" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">5</text>
-  <text x="362" y="523" font-size="15.5" font-weight="600" fill="#213029">Klar? — oppsummering + valg</text>
-  <text x="362" y="545" font-size="12.5" fill="#6B5526">✓ Peer-godkjenning nå AV som standard (#371) — ingen låse-risiko</text>
-  <text x="362" y="565" font-size="12.5" fill="#6B5526">✓ Påmeldingsvalg i klartekst (#367), uten kode-kruskel (#372)</text>
-  <text x="362" y="585" font-size="12" fill="#8A7333">standard «kun invitasjon» (privat) beholdt · alt kan overstyres her</text>
-  <line x1="610" y1="606" x2="610" y2="622" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="290" y="538" width="640" height="76" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <circle cx="328" cy="569" r="16" fill="#B8973F"/><text x="328" y="574" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">5</text>
+  <text x="362" y="565" font-size="15.5" font-weight="600" fill="#213029">Klar? — oppsummering + valg</text>
+  <text x="362" y="585" font-size="12.5" fill="#6B5526">✓ Peer-godkjenning nå AV som standard (#371) — ingen låse-risiko</text>
+  <text x="362" y="603" font-size="12" fill="#8A7333">Spillere-raden viser valget fra steg 4 · «Endre» går dit</text>
+  <line x1="610" y1="614" x2="610" y2="622" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- fork -->
   <rect x="320" y="624" width="270" height="50" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
