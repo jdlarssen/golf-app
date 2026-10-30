@@ -107,17 +107,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminClientOverride ?? supabaseMock,
 }));
 
-// #2607: a player removed in the save takes their guests along. Which guests
-// and how they are withdrawn is tested in lib/games/broughtGuests.test.ts;
-// here only that the save asks for the removed players, and what a failure
-// answers.
-const withdrawGuestsOfHostsMock = vi.fn<
-  (...args: unknown[]) => Promise<{ ok: true } | { ok: false }>
->(async () => ({ ok: true }));
-vi.mock('@/lib/games/broughtGuests', () => ({
-  withdrawGuestsOfHosts: (...args: unknown[]) => withdrawGuestsOfHostsMock(...args),
-}));
-
 // #2321: the wizard's e-mail invitations. The sender has its own tests; here
 // only who calls it, with what, and where the organiser lands.
 const sendPublishInvitesMock = vi.fn<(...args: unknown[]) => Promise<{ failed: number }>>(
@@ -1393,64 +1382,6 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
         ['update', 'insert', 'delete'].includes(c.method),
       ),
     ).toEqual([]);
-  });
-
-  describe('#2607: de fjernede spillernes gjester går også', () => {
-    function removeTeamFour(): FormData {
-      const form = fullBestBallFormData();
-      for (const i of [6, 7]) {
-        form.delete(`player_${i}_id`);
-        form.delete(`player_${i}_team`);
-        form.delete(`player_${i}_flight`);
-      }
-      form.set('roster_loaded_ids', BEST_BALL_IDS.join(','));
-      return form;
-    }
-    function savedQueue() {
-      return [
-        { data: { is_admin: true }, error: null }, // loadRole
-        {
-          data: { status: 'scheduled', game_mode: 'best_ball', tournament_id: null },
-          error: null,
-        }, // existing
-        { data: BEST_BALL_IDS.map((_, i) => storedBestBallRow(i)), error: null }, // prior roster
-        { data: { id: 'game-1' }, error: null }, // games.update
-        { data: [{ user_id: 'u6' }, { user_id: 'u7' }], error: null }, // roster delete
-      ];
-    }
-
-    it('lagringen ber om gjestene til akkurat dem som ble fjernet', async () => {
-      supabaseMock = buildSupabaseMock(savedQueue());
-      signIn('admin-1');
-
-      const { updateScheduledAction } = await import('./actions');
-      await expect(updateScheduledAction('game-1', removeTeamFour())).rejects.toBeInstanceOf(
-        RedirectError,
-      );
-
-      expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
-      expect(withdrawGuestsOfHostsMock).toHaveBeenCalledWith(
-        supabaseMock,
-        'game-1',
-        ['u6', 'u7'],
-        'admin-1',
-      );
-    });
-
-    it('gjestetrekket feiler → db_players, og cachen tømmes', async () => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      withdrawGuestsOfHostsMock.mockResolvedValueOnce({ ok: false });
-      supabaseMock = buildSupabaseMock(savedQueue());
-      signIn('admin-1');
-
-      const { updateScheduledAction } = await import('./actions');
-      await expect(updateScheduledAction('game-1', removeTeamFour())).rejects.toBeInstanceOf(
-        RedirectError,
-      );
-
-      expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
-      expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
-    });
   });
 
   it('arrangør (ikke admin) som bare flytter tee-off på en planlagt cupsingles lagrer uten å røre rosteret', async () => {

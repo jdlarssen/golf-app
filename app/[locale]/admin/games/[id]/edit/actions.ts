@@ -34,7 +34,6 @@ import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
 import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { isClubTournament } from '@/lib/games/registration';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
-import { withdrawGuestsOfHosts } from '@/lib/games/broughtGuests';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
@@ -472,17 +471,6 @@ async function updateGameInternal(
   }
 
   if (!rosterWrite.ok) {
-    redirect({ href: editHref({ error: 'db_players' }), locale });
-  }
-
-  // #2607: a player removed in this save takes the guests they brought along,
-  // as «Fjern» on «Styr spillere» does (owner's rule on #2570). Service role:
-  // the guests' requests are not the organiser's to write under RLS, and the
-  // gate is requireAdminOrCreator above. The roster write has committed, so a
-  // failure clears the cache and answers db_players; a retry finds the guests
-  // again.
-  if (!(await withdrawGuestsOfHosts(getAdminClient(), gameId, plan.deletes, userId)).ok) {
-    expireGameCache(gameId);
     redirect({ href: editHref({ error: 'db_players' }), locale });
   }
 

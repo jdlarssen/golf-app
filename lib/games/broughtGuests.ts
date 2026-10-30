@@ -1,29 +1,20 @@
 import 'server-only';
 import type { getAdminClient } from '@/lib/supabase/admin';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { displayNameForOthers } from '@/lib/users/displayName';
 
-// Gjestene en spiller har meldt på (#2607): ett hjem for koblingen mellom en
-// gjest og spilleren som tok den med (AGENTS trap 4).
+// Gjestene en spiller har meldt på (#2607), lest for skjermene som sier fra før
+// noen går: «Trekk meg» (`captainWithdrawalState`) og linja på «Styr spillere».
+// Regelens ene hjem er SQL: supabase/migrations/0229_guests_follow_their_host.sql.
 //
 // Eierens regel (18.10, #2570): en spiller kan bare melde på gjester når
 // spilleren selv er påmeldt. Trekker spilleren seg, eller arrangøren fjerner
-// spilleren, går gjestene også. Gjesten har ingen konto og kan ikke trekke seg
-// selv, så ingen andre enn verten står bak plassen.
+// spilleren, går gjestene også. Triggeren i 0229 gjør det i samme transaksjon
+// som slettingen av vertens plass, så ingen kaller skriver det selv.
 //
 // I dag kommer gjester inn gjennom lagpåmeldingen: kapteinen velger dem fra
 // nettverket, og koblingen er gjestens `team_request_id` → kapteinens
 // påmelding. Kapteinsbyttet (0194) flytter pekeren, så gjestene følger den nye
 // kapteinen (eierens svar 3). En gjest kan ikke selv bli kaptein (0228).
-//
-// Kapteinens trekk (`lib/games/withdrawSelf.ts`), arrangørens fjerning
-// (`games/[id]/spillere/actions.ts` og lagringen i «Rediger»,
-// `admin/games/[id]/edit/actions.ts`), «Trekk meg»-siden og linja på «Styr
-// spillere» leser og trekker gjestene herfra. Ingen av dem leser koblingen
-// selv.
-//
-// Gjester får aldri varsel: de har ingen innboks (jf.
-// `lib/games/gameCancellation.ts`).
 
 type Admin = ReturnType<typeof getAdminClient>;
 
@@ -54,8 +45,6 @@ export type BroughtGuest = {
   /** `displayNameForOthers`; `null` uten navn og adresse. */
   name: string | null;
   status: 'pending' | 'approved';
-  /** Gjesten har en rad på spillerlista (en ventende påmelding har ingen). */
-  onRoster: boolean;
 };
 
 export type BroughtGuestsRead = { ok: true; guests: BroughtGuest[] } | { ok: false };
@@ -72,8 +61,7 @@ type GuestChildRow = {
 
 /**
  * Gjestene under kapteinsradene, gruppert på kapteinens bruker-id. `null` ved
- * en lesefeil: en feilet spørring skal aldri leses som «ingen gjester» (#1445),
- * ellers ville et trekk latt gjestene stå igjen uten vert.
+ * en lesefeil: en feilet spørring skal aldri leses som «ingen gjester» (#1445).
  */
 async function readGuestsUnder(
   admin: Admin,
@@ -100,26 +88,9 @@ async function readGuestsUnder(
     console.error(`[${context}] guest lookup failed`, { gameId, error: childrenError });
     return null;
   }
-  const guests = (children ?? []).filter(isGuestRequest);
-  if (guests.length === 0) return byHost;
-
-  const { data: roster, error: rosterError } = await admin
-    .from('game_players')
-    .select('user_id')
-    .eq('game_id', gameId)
-    .in(
-      'user_id',
-      guests.map((g) => g.user_id),
-    )
-    .returns<{ user_id: string }[]>();
-  if (rosterError) {
-    console.error(`[${context}] guest roster lookup failed`, { gameId, error: rosterError });
-    return null;
-  }
-  const onRoster = new Set((roster ?? []).map((r) => r.user_id));
 
   const hostOf = new Map(captains.map((c) => [c.id, c.user_id]));
-  for (const g of guests) {
+  for (const g of (children ?? []).filter(isGuestRequest)) {
     const host = hostOf.get(g.team_request_id);
     if (!host) continue;
     const list = byHost.get(host) ?? [];
@@ -130,20 +101,13 @@ async function readGuestsUnder(
         ? displayNameForOthers({ name: g.users.name, nickname: g.users.nickname, email: g.users.email })
         : null,
       status: g.status,
-      onRoster: onRoster.has(g.user_id),
     });
     byHost.set(host, list);
   }
   return byHost;
 }
 
-/**
- * Gjestene `hostUserId` har meldt på i spillet.
- *
- * Kapteinsraden leses uten statusfilter: et nytt forsøk etter et trekk som
- * stoppet halvveis finner kapteinens påmelding alt merket som trukket, og
- * gjestene skal fortsatt finnes.
- */
+/** Gjestene `hostUserId` har meldt på i spillet. */
 export async function readBroughtGuests(
   admin: Admin,
   gameId: string,
@@ -186,90 +150,4 @@ export async function readBroughtGuestsInGame(
   const byHost = await readGuestsUnder(admin, gameId, captains ?? [], 'readBroughtGuestsInGame');
   if (!byHost) return { ok: false };
   return { ok: true, byHost };
-}
-
-/**
- * Trekk gjestene sammen med verten: plassene på spillerlista slettes, og
- * påmeldingene merkes `withdrawn`.
- *
- * Plassene slettes uten `accepted_at`-filteret: arrangøren kan ha satt
- * `accepted_at` på en gjest, og et filter ville latt den stå (#2607 hull 2).
- * Rekkefølgen gjør et nytt forsøk trygt: feiler markeringen, er plassene alt
- * borte, og neste lesing finner gjestene igjen (påmeldingene er ikke merket)
- * uten plass å slette. Begge skrivingene sjekker radtallet (felle 2).
- */
-export async function withdrawBroughtGuests(
-  admin: Admin,
-  gameId: string,
-  guests: BroughtGuest[],
-  actorId: string,
-): Promise<{ ok: true } | { ok: false }> {
-  if (guests.length === 0) return { ok: true };
-
-  const seated = guests.filter((g) => g.onRoster);
-  try {
-    if (seated.length > 0) {
-      const deleted = expectAffected(
-        await admin
-          .from('game_players')
-          .delete()
-          .eq('game_id', gameId)
-          .in(
-            'user_id',
-            seated.map((g) => g.userId),
-          )
-          .select('user_id'),
-        'withdrawBroughtGuests/roster',
-      );
-      if (deleted.length !== seated.length) {
-        throw new Error(
-          `withdrawBroughtGuests/roster: deleted ${deleted.length} of ${seated.length}`,
-        );
-      }
-    }
-
-    const marked = expectAffected(
-      await admin
-        .from('game_registration_requests')
-        .update({
-          status: 'withdrawn',
-          decided_at: new Date().toISOString(),
-          decided_by_user_id: actorId,
-        })
-        .eq('game_id', gameId)
-        .in(
-          'id',
-          guests.map((g) => g.requestId),
-        )
-        .in('status', ['pending', 'approved'])
-        .select('id'),
-      'withdrawBroughtGuests/requests',
-    );
-    if (marked.length !== guests.length) {
-      throw new Error(
-        `withdrawBroughtGuests/requests: marked ${marked.length} of ${guests.length}`,
-      );
-    }
-  } catch (err) {
-    console.error('[withdrawBroughtGuests] failed', { gameId, error: err });
-    return { ok: false };
-  }
-  return { ok: true };
-}
-
-/**
- * Trekk gjestene til spillerne arrangøren fjernet i én lagring (`hostIds`),
- * med én lesing for hele spillet. Lesefeil eller skrivefeil gir `{ ok: false }`.
- */
-export async function withdrawGuestsOfHosts(
-  admin: Admin,
-  gameId: string,
-  hostIds: readonly string[],
-  actorId: string,
-): Promise<{ ok: true } | { ok: false }> {
-  if (hostIds.length === 0) return { ok: true };
-  const read = await readBroughtGuestsInGame(admin, gameId);
-  if (!read.ok) return { ok: false };
-  const guests = hostIds.flatMap((host) => read.byHost.get(host) ?? []);
-  return withdrawBroughtGuests(admin, gameId, guests, actorId);
 }

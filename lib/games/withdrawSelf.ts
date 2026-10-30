@@ -7,7 +7,6 @@ import { supportsWithdrawal } from '@/lib/scoring';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { readCaptainTeam, type TeamChild } from '@/lib/games/teamCaptaincy';
-import { readBroughtGuests, withdrawBroughtGuests } from '@/lib/games/broughtGuests';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // Selv-frafalls-kjernen (#199 chunk 11, #386 chunk 3 → #1917): ett hjem for
@@ -374,9 +373,10 @@ export async function withdrawSelf(
  *       1. kapteinens påmelding merkes `withdrawn` (ikke slettet);
  *       2. ubesvarte laginvitasjoner merkes `withdrawn`, og plassene
  *          lagkameratene ikke har bekreftet fjernes fra spillerlista, så ingen
- *          blir stående på et lag uten kaptein. Gjestene kapteinen meldte på,
- *          går også, med plass og påmelding (#2607, `withdrawBroughtGuests`);
- *       3. kapteinens egen plass slettes.
+ *          blir stående på et lag uten kaptein;
+ *       3. kapteinens egen plass slettes. Gjestene kapteinen meldte på går i
+ *          samme transaksjon, med plass og påmelding (#2607: triggeren i
+ *          0229 på slettingen av plassen).
  *     Feiler steg 1, er ingenting skrevet. Et nytt forsøk etter en feil i steg
  *     2 eller 3 hopper over steg 1 (raden er alt trukket) og fullfører resten,
  *     og cachen tømmes ved feilen, så spillerlista ikke viser en gammel tilstand.
@@ -398,10 +398,6 @@ async function withdrawCaptainPreStart(
   if (team.accepted.length > 0) {
     return { ok: false, error: 'captain_has_team' };
   }
-  // #2607: gjestene leses før noe skrives. En lesefeil er ikke «ingen gjester»
-  // (#1445): da ville de blitt stående uten vert.
-  const brought = await readBroughtGuests(admin, game.id, userId);
-  if (!brought.ok) return { ok: false, error: 'db_error' };
 
   const decidedAt = new Date().toISOString();
 
@@ -477,12 +473,6 @@ async function withdrawCaptainPreStart(
       });
       return failAfterWrites();
     }
-  }
-
-  // 2b. Gjestene går med kapteinen (#2607). Plassene slettes uten
-  // `accepted_at`-filteret, så en gjest arrangøren bekreftet ikke blir stående.
-  if (!(await withdrawBroughtGuests(admin, game.id, brought.guests, userId)).ok) {
-    return failAfterWrites();
   }
 
   // 3. Kapteinens egen plass.
