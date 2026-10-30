@@ -4,15 +4,31 @@ import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { AppLocale } from '@/i18n/routing';
-import { Card } from '@/components/ui/Card';
 import { buttonClasses } from '@/components/ui/Button';
-import { formatRelativeDayLocale } from '@/lib/i18n/format';
+import { formatHHMMOslo, formatRelativeDayLocale } from '@/lib/i18n/format';
 import {
   listWizardDrafts,
   type ListedWizardDraft,
 } from '@/app/[locale]/admin/games/new/wizardStatePersistence';
 
 const TOTAL_STEPS = 5;
+const OSLO_DAY = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' });
+
+/**
+ * «for 12 min siden» on the same Oslo day, «i går kl. 21:40» before that (the
+ * artboard's line). Oslo-pinned like `formatRelativeDayLocale`, so the server and
+ * the browser agree on the day.
+ */
+function touchedLabel(
+  savedAt: number,
+  locale: AppLocale,
+  atTime: (v: { relative: string; time: string }) => string,
+): string {
+  const iso = new Date(savedAt).toISOString();
+  const relative = formatRelativeDayLocale(iso, locale);
+  if (OSLO_DAY.format(savedAt) === OSLO_DAY.format(Date.now())) return relative;
+  return atTime({ relative, time: formatHHMMOslo(iso) });
+}
 
 /** The route of the confirmation page; the draft's key rides in `?utkast=`. */
 export const DELETE_DRAFT_PATH = '/opprett-spill/slett-utkast';
@@ -59,26 +75,30 @@ export function ResumeDraftCard({ userId }: { userId: string }) {
         </h2>
         <div className="h-px flex-1 bg-accent/30" />
       </div>
-      <Card className="p-4 sm:p-4" data-testid="resume-draft-card">
+      {/* Not `Card`: its 24 px padding would win over the artboard's 14 px. */}
+      <div
+        data-testid="resume-draft-card"
+        className="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_8px_rgba(26,46,31,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
+      >
         <div className="flex items-baseline justify-between gap-3">
           <p className="min-w-0 truncate font-serif text-xl font-semibold leading-tight text-text">
             {summary.title ?? t('untitled')}
           </p>
           <p className="shrink-0 font-sans text-xs text-muted">
-            {formatRelativeDayLocale(new Date(draft.savedAt).toISOString(), locale)}
+            {touchedLabel(draft.savedAt, locale, (v) => t('touchedAt', v))}
           </p>
         </div>
-        {meta && <p className="mt-1 font-sans text-[13px] text-muted tabular-nums">{meta}</p>}
-        <div aria-hidden="true" className="mt-3 h-1.5 rounded-full bg-hole-completed-bg">
+        {meta && <p className="font-sans text-[13px] text-muted tabular-nums">{meta}</p>}
+        <div aria-hidden="true" className="h-1.5 rounded-full bg-hole-completed-bg">
           <div
             className="h-full rounded-full bg-primary"
             style={{ width: `${(summary.step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
-        <p className="mt-2 font-sans text-xs text-muted">
+        <p className="font-sans text-xs text-muted">
           {t('stepLine', { step: summary.step, total: TOTAL_STEPS, title: stepTitle })}
         </p>
-        <div className="mt-4 flex gap-2.5">
+        <div className="flex gap-2">
           <Link
             href={href}
             data-testid="resume-draft-continue"
@@ -89,12 +109,12 @@ export function ResumeDraftCard({ userId }: { userId: string }) {
           <Link
             href={`${DELETE_DRAFT_PATH}?utkast=${encodeURIComponent(draft.key)}`}
             data-testid="resume-draft-delete"
-            className={`${buttonClasses('secondary', 'medium')} flex-1`}
+            className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-border bg-surface px-4 font-sans text-sm font-semibold text-text transition-colors hover:bg-primary-soft"
           >
             {t('delete')}
           </Link>
         </div>
-      </Card>
+      </div>
     </section>
   );
 }
