@@ -14,7 +14,12 @@
 // ikke flytter seg når tallene kommer. De er da skjult for skjermleseren.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ProfileSeason } from '../../../../../lib/stats/profileSeason';
-import { PROFILE_TEXT, seasonTileSpoken } from '../../lib/profileCopy';
+import {
+  PROFILE_TEXT,
+  seasonTileRoundsLabel,
+  seasonTileSpoken,
+  seasonTileWinsLabel,
+} from '../../lib/profileCopy';
 import { FONTS, fraunces, useTheme } from '../../theme';
 
 export interface SeasonTilesProps {
@@ -29,7 +34,7 @@ export function SeasonTiles({ year, season }: SeasonTilesProps) {
   return (
     <View style={styles.row} testID="season-tiles">
       <Tile
-        label={PROFILE_TEXT.tileRounds}
+        label={seasonTileRoundsLabel(season?.rounds ?? null)}
         value={season ? String(season.rounds) : null}
         spoken={
           season ? seasonTileSpoken(PROFILE_TEXT.tileRoundsSpoken, year, String(season.rounds)) : null
@@ -51,7 +56,7 @@ export function SeasonTiles({ year, season }: SeasonTilesProps) {
         testID="season-tile-best"
       />
       <Tile
-        label={PROFILE_TEXT.tileWins}
+        label={seasonTileWinsLabel(season?.wins ?? null)}
         value={season ? String(season.wins) : null}
         spoken={season ? seasonTileSpoken(PROFILE_TEXT.tileWinsSpoken, year, String(season.wins)) : null}
         gold={season != null && season.wins > 0}
