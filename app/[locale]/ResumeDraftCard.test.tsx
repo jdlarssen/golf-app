@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { ResumeDraftCard } from './ResumeDraftCard';
@@ -108,10 +108,17 @@ describe('ResumeDraftCard', () => {
     expect(card.textContent).toMatch(/i går kl\. \d{2}:\d{2}/);
     unmount();
 
+    // Noon Oslo, so «5 minutes ago» is never «yesterday» (the test would flake
+    // between 00:00 and 00:05).
     window.localStorage.clear();
-    seed({}, { savedAt: Date.now() - 5 * 60 * 1000 });
-    render(<ResumeDraftCard userId={USER} />);
-    expect((await screen.findByTestId('resume-draft-card')).textContent).toMatch(/siden/);
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-30T11:00:00Z') });
+    try {
+      seed({}, { savedAt: Date.now() - 5 * 60 * 1000 });
+      render(<ResumeDraftCard userId={USER} />);
+      expect((await screen.findByTestId('resume-draft-card')).textContent).toMatch(/siden/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each([1, 2])('viser ikke kortet for et utkast som bare har arrangementstypen (steg %i, uten format)', async (step) => {

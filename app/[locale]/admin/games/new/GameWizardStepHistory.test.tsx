@@ -953,4 +953,16 @@ describe('GameWizard — #2459 «Fortsett» gjenoppretter, og sletter ikke, med 
     expect(window.localStorage.getItem(key)).not.toBeNull();
     expect(replace).not.toHaveBeenCalledWith(expect.not.stringContaining('step=4'), expect.anything());
   });
+
+  it('lenka veiviseren selv lagrer bærer kontekst-parameterne og steget', async () => {
+    const { listWizardDrafts } = await import('./wizardStatePersistence');
+    searchString = 'intent=kompis';
+    renderWizard({ initialIntent: 'kompis' });
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
+    fireEvent(window, new Event('pagehide'));
+
+    const stored = listWizardDrafts('user-1');
+    expect(stored).toHaveLength(1);
+    expect(stored[0].resume.href).toBe('/admin/games/new?intent=kompis&step=2');
+  });
 });
