@@ -49,7 +49,9 @@ import {
   type SideGroupId,
 } from '../../lib/sideTournamentCopy';
 import { BOARD_APP_TEXT, SIDE_PANEL_TEXT } from '../../lib/boardCopy';
+import { medalForRank } from '../../lib/roundDiary';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
+import { RankMedal } from '../RankMedal';
 import { CalmNote } from './Table';
 
 /**
@@ -366,7 +368,6 @@ function TeamRow({
   const memberNames = soloMember
     ? ''
     : (team?.members.map((member) => member.firstName).join(' · ') ?? '');
-  const medal = MEDALS[standing.rank] ?? '·';
 
   return (
     <View
@@ -385,7 +386,7 @@ function TeamRow({
       >
         <View style={styles.summaryMain}>
           <View style={styles.titleRow}>
-            <Text style={[styles.medal, { color: colors.muted }]}>{medal}</Text>
+            <RankMedal rank={standing.rank} medal={medalForRank(standing.rank)} />
             <Text
               style={[styles.teamTitle, { color: colors.text }]}
               numberOfLines={1}
@@ -503,8 +504,6 @@ function TeamAwards({
 }
 
 // --- interne hjelpere ---
-
-const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 /**
  * Tett rangering på totalpoeng, synkende. Uavgjort DELER plass: to lag på topp
@@ -1144,7 +1143,6 @@ const styles = StyleSheet.create({
   },
   summaryMain: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  medal: { fontSize: 18 },
   teamTitle: {
     ...fraunces(600, 16),
     flexShrink: 1,

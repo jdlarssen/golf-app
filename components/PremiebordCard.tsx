@@ -2,13 +2,14 @@
 
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { RankMark } from '@/components/ui/RankMark';
 import { SponsorCredit } from '@/components/SponsorCredit';
 import type { GamePrize } from '@/lib/games/prizes';
 import { sideLabel } from '@/lib/games/sideLabel';
 
 /**
  * #1051: viser premiebordet til spillerne før (og under) runden — på spill-hjem
- * og i påmeldingsflyten. Gruppert: plasseringer (🥇/🥈/🥉) først, deretter
+ * og i påmeldingsflyten. Gruppert: plasseringer (tegnet medalje på 1–3, #2700) først, deretter
  * sideturneringer (LD/CTP). Sponsor vises diskret per linje via SponsorCredit
  * (logo når slottet har en, ellers «Sponset av {navn}» — #1052). Returnerer
  * null når det ikke finnes premier (feature av).
@@ -19,8 +20,6 @@ import { sideLabel } from '@/lib/games/sideLabel';
  * Premie-beskrivelser og sponsornavn er brukerdata — vises verbatim (Reacts
  * escaping holder; ingen mail, ingen dangerouslySetInnerHTML).
  */
-
-const MEDALS = ['🥇', '🥈', '🥉'] as const;
 
 export function PremiebordCard({
   prizes,
@@ -60,9 +59,7 @@ export function PremiebordCard({
         <ul className="space-y-2">
           {placements.map((p) => (
             <li key={`placement-${p.position}`} className="flex gap-2.5">
-              <span aria-hidden className="shrink-0 text-base leading-6">
-                {MEDALS[p.position - 1] ?? '•'}
-              </span>
+              <RankMark position={p.position} />
               <PrizeLine
                 label={t('placementLabel', { position: p.position })}
                 prize={p}

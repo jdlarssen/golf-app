@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import { Medallion } from '@/components/ui/Medallion';
 import type {
   SideCategoryAward,
   SideTournamentResult,
@@ -253,14 +254,8 @@ export function SideTournamentView({
         const memberNames = soloMember
           ? ''
           : (team?.members.map((m) => m.firstName).join(' · ') ?? '');
-        const medal =
-          standing.rank === 1
-            ? '🥇'
-            : standing.rank === 2
-              ? '🥈'
-              : standing.rank === 3
-                ? '🥉'
-                : '';
+        const place =
+          standing.rank >= 1 && standing.rank <= 3 ? (standing.rank as 1 | 2 | 3) : null;
 
         return (
           <details
@@ -270,7 +265,13 @@ export function SideTournamentView({
             <summary className="flex min-h-[44px] cursor-pointer items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
               <div className="min-w-0 flex-1">
                 <div className="font-serif text-base text-text">
-                  <span className="mr-2 text-lg">{medal || '·'}</span>
+                  {place ? (
+                    <span className="mr-2 inline-block align-[-5px]">
+                      <Medallion place={place} size={22} />
+                    </span>
+                  ) : (
+                    <span className="mr-2 text-lg">·</span>
+                  )}
                   {title}
                 </div>
                 {memberNames && (

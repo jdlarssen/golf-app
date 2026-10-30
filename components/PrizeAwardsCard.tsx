@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { RankMark } from '@/components/ui/RankMark';
 import { SponsorCredit } from '@/components/SponsorCredit';
 import type { PrizeAward } from '@/lib/games/prizeAwards';
 import { sideLabel } from '@/lib/games/sideLabel';
@@ -9,12 +10,10 @@ import { sideLabel } from '@/lib/games/sideLabel';
 /**
  * #1051: «Premieutdeling»-seksjonen under podiet på et avsluttet spill. Tar
  * ferdig-koblede premier (linkPrizesToWinners kjøres server-side), grupperer
- * plasseringer (🥇/🥈/🥉) og sideturneringer, og lister vinner(e) per premie.
+ * plasseringer (tegnet medalje på 1–3, #2700) og sideturneringer, og lister vinner(e) per premie.
  * Delt plass lister alle navn. Slott uten vinner er allerede filtrert bort av
  * koblingen. Returnerer null når ingen premier har vinner.
  */
-
-const MEDALS = ['🥇', '🥈', '🥉'] as const;
 
 export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
   const t = useTranslations('prizes');
@@ -43,9 +42,7 @@ export function PrizeAwardsCard({ awards }: { awards: PrizeAward[] }) {
           <ul className="space-y-3">
             {placements.map((a) => (
               <li key={`placement-${a.prize.position}`} className="flex gap-2.5">
-                <span aria-hidden className="shrink-0 text-base leading-6">
-                  {MEDALS[a.prize.position - 1] ?? '•'}
-                </span>
+                <RankMark position={a.prize.position} />
                 <AwardLine
                   award={a}
                   label={t('placementLabel', { position: a.prize.position })}
