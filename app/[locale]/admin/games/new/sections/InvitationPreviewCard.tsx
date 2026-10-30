@@ -36,6 +36,11 @@ export function fitNamePx(textWidth: number, available: number): number {
  * 26 px to 18 px to stay on one centred line, and only below that wraps to a
  * second centred line. Line breaks cannot be typed or pasted; Enter closes the
  * keyboard. The field is the game's `name`, as before.
+ *
+ * Without `onNameChange` the card is read-only (#2458, the receipt after
+ * «Publiser»): the name is text with the same size and fit, without the
+ * dashed line (owner answer 2, 30.10: nothing there to tap), and without the
+ * hint under the card.
  */
 export function InvitationPreviewCard({
   name,
@@ -46,7 +51,8 @@ export function InvitationPreviewCard({
   formatName,
 }: {
   name: string;
-  onNameChange: (next: string) => void;
+  /** Left out → read-only: the name is text, not a field. */
+  onNameChange?: (next: string) => void;
   /** From `invitationWhen`: Oslo time. `null` → no date line. */
   when: { weekday: string; date: string; time: string } | null;
   courseName: string | null;
@@ -55,6 +61,7 @@ export function InvitationPreviewCard({
 }) {
   const t = useTranslations('wizard.ready');
   const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [namePx, setNamePx] = useState(NAME_MAX_PX);
 
@@ -67,17 +74,19 @@ export function InvitationPreviewCard({
   // Fit the name: measure it at 26 px in a hidden twin, compare with the
   // field's width, then grow the field to its content (one line, or two when
   // even 18 px is too wide). Runs again when the webfont arrives and when the
-  // field changes width.
+  // field changes width. Read-only text wraps by itself.
   useLayoutEffect(() => {
-    const field = fieldRef.current;
+    const field = fieldRef.current ?? textRef.current;
     const measure = measureRef.current;
     if (!field || !measure) return;
     function fit() {
       if (!field || !measure) return;
       const next = fitNamePx(measure.offsetWidth, field.clientWidth);
       setNamePx(next);
-      field.style.height = 'auto';
-      field.style.height = `${Math.max(44, field.scrollHeight)}px`;
+      if (field instanceof HTMLTextAreaElement) {
+        field.style.height = 'auto';
+        field.style.height = `${Math.max(44, field.scrollHeight)}px`;
+      }
     }
     fit();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
@@ -112,31 +121,44 @@ export function InvitationPreviewCard({
               >
                 {name || t('gameNamePlaceholder')}
               </span>
-              <label className="block w-full">
-              <span className="sr-only">{t('gameNameLabel')}</span>
-              {/* The size is an inline style: on iOS globals.css lifts fields
-                  to at least 16 px, and only an inline (or important) size
-                  beats it. The vertical padding keeps one line centred in
-                  the artboard's 44 px. */}
-              <textarea
-                ref={fieldRef}
-                id="name"
-                name="name"
-                required
-                rows={1}
-                enterKeyHint="done"
-                value={name}
-                onChange={(e) => onNameChange(e.target.value.replace(/[\r\n]+/g, ' '))}
-                onKeyDown={handleKeyDown}
-                placeholder={t('gameNamePlaceholder')}
-                aria-describedby={GAME_NAME_HINT_ID}
-                style={{
-                  fontSize: `${namePx}px`,
-                  paddingBlock: `${(44 - namePx * 1.2) / 2}px`,
-                }}
-                className="block min-h-11 w-full resize-none overflow-hidden border-0 border-b-[1.5px] border-dashed border-slot-dashed bg-transparent px-0 text-center font-serif leading-[1.2] font-medium text-text placeholder:text-muted"
-              />
-              </label>
+              {onNameChange ? (
+                <label className="block w-full">
+                <span className="sr-only">{t('gameNameLabel')}</span>
+                {/* The size is an inline style: on iOS globals.css lifts fields
+                    to at least 16 px, and only an inline (or important) size
+                    beats it. The vertical padding keeps one line centred in
+                    the artboard's 44 px. */}
+                <textarea
+                  ref={fieldRef}
+                  id="name"
+                  name="name"
+                  required
+                  rows={1}
+                  enterKeyHint="done"
+                  value={name}
+                  onChange={(e) => onNameChange(e.target.value.replace(/[\r\n]+/g, ' '))}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t('gameNamePlaceholder')}
+                  aria-describedby={GAME_NAME_HINT_ID}
+                  style={{
+                    fontSize: `${namePx}px`,
+                    paddingBlock: `${(44 - namePx * 1.2) / 2}px`,
+                  }}
+                  className="block min-h-11 w-full resize-none overflow-hidden border-0 border-b-[1.5px] border-dashed border-slot-dashed bg-transparent px-0 text-center font-serif leading-[1.2] font-medium text-text placeholder:text-muted"
+                />
+                </label>
+              ) : (
+                <p
+                  ref={textRef}
+                  style={{
+                    fontSize: `${namePx}px`,
+                    paddingBlock: `${(44 - namePx * 1.2) / 2}px`,
+                  }}
+                  className="min-h-11 w-full text-center font-serif leading-[1.2] font-medium break-words text-text"
+                >
+                  {name}
+                </p>
+              )}
             </div>
             {when && (
               <p className="font-sans text-[13px] leading-[normal] text-text tabular-nums first-letter:uppercase">
@@ -147,12 +169,14 @@ export function InvitationPreviewCard({
           </div>
         </div>
       </div>
-      <p
-        id={GAME_NAME_HINT_ID}
-        className="mt-2.5 text-center font-sans text-xs leading-[normal] text-muted"
-      >
-        {t('nameHint')}
-      </p>
+      {onNameChange && (
+        <p
+          id={GAME_NAME_HINT_ID}
+          className="mt-2.5 text-center font-sans text-xs leading-[normal] text-muted"
+        >
+          {t('nameHint')}
+        </p>
+      )}
     </>
   );
 }
