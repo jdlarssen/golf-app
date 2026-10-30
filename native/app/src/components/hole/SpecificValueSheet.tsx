@@ -15,7 +15,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
-import { FONTS, fraunces, useTheme } from '../../theme';
+import { FONTS, fraunces, sheetGrabber, sheetScrim, useTheme } from '../../theme';
 
 export type SpecificValueSheetProps = {
   open: boolean;
@@ -37,7 +37,7 @@ export function SpecificValueSheet({
   onClose,
   strike,
 }: SpecificValueSheetProps) {
-  const { colors, hole } = useTheme();
+  const { colors, hole, scheme, ui } = useTheme();
   // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
   // Arkets luft står over linja, som WinnerSheet og RejectSheet.
   const insets = useSafeAreaInsets();
@@ -52,7 +52,7 @@ export function SpecificValueSheet({
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose}>
       <View
-        style={styles.backdrop}
+        style={[styles.backdrop, { backgroundColor: sheetScrim(colors, scheme) }]}
         testID="specific-value-modal"
         // VoiceOver holdes inne i arket, og «tilbake»-bevegelsen (to fingre i
         // Z) lukker det, uansett om fokus står på «Lukk» eller en knapp.
@@ -76,8 +76,8 @@ export function SpecificValueSheet({
           style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: SHEET_BOTTOM + insets.bottom }]}
           testID="specific-value-sheet"
         >
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.kicker, { color: colors.muted }]} accessibilityRole="header">
+          <View style={[styles.handle, { backgroundColor: sheetGrabber(scheme) }]} />
+          <Text style={[ui.kicker, styles.kicker]} accessibilityRole="header">
             SPESIFIKK SCORE
           </Text>
           <View style={styles.grid}>
@@ -136,10 +136,11 @@ export function SpecificValueSheet({
 const SHEET_BOTTOM = 36;
 
 const styles = StyleSheet.create({
+  // Hinnen og grep-streken er appens felles arkverdier (#2700), så «Annet»
+  // mørkner bak arket som de andre arkene, også i klubbhus-natt.
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15,22,18,0.4)',
   },
   sheet: {
     borderTopLeftRadius: 18,
@@ -148,7 +149,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 2.2, marginBottom: 14 },
+  // Designets kicker (10 pt, 0,2em) som resten av appen; bare luften under er egen.
+  kicker: { marginBottom: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Fire i bredden.
   cell: {

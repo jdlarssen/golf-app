@@ -645,6 +645,14 @@ export function sheetGrabber(scheme: Scheme): string {
   return scheme === 'dark' ? '#3D4F43' : '#C9C1AE';
 }
 
+/**
+ * Skyggefargen over et ark som ligger i bunnen (#2700): skog i lys drakt, og
+ * svart i klubbhus-natt, som {@link cardShadow}.
+ */
+export function sheetShadowColor(scheme: Scheme): string {
+  return scheme === 'dark' ? '#000000' : '#1A2E1F';
+}
+
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
 const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
   StyleSheet.create({
