@@ -25,12 +25,15 @@
 ### Designverktøy
 
 Fem designverktøy ble innført i #2240 (kilder og lisenser i `.claude/skills/README.md`).
-Merkevaren over og `DESIGN.md` vinner over alle fem.
+Det sjette, `unslop`, kom til 2026-10-30. Det er installert på eierens Mac
+(`~/.claude/skills/unslop`) og ikke i repoet, så økter i skyen har det ikke.
+Merkevaren over og `DESIGN.md` vinner over alle seks.
 
 | Verktøy | Bruk når | Tørny-regel |
 |---|---|---|
 | `web-design-guidelines` (Vercel) | Du reviderer UI-kode for tilgjengelighet og UX, eller før en UI-PR | Norsk skikk vinner over engelske regler: setningsstil, «», ingen Title Case |
 | `playwright-cli` (Microsoft) | Du må se eller drive en side i ekte nettleser: skjermbilde, 390 px, mørk modus, interaktive staging-punkter | Kun localhost/staging, aldri prod; `localhost`, aldri `127.0.0.1` |
 | `design-taste-frontend` (Taste Skill) | Du endrer en offentlig markedsflate (forsiden for utloggede, `hvorfor-torny`, `arranger-golfturnering`, `spillformater`, delingsbilder) | Aldri app-skjermer; rådet mot Inter gjelder ikke; utseende-endringer er produktvalg |
+| `unslop` ([heydamir/unslop](https://github.com/heydamir/unslop), CC BY 4.0) | Eieren vil at en skjerm skal se mindre KI-laget ut, eller du reviderer en skjerm for typiske KI-tegn (glød, gradienter, emoji i etiketter, ujevn luft) | Alltid polermodus: rett bare det revisjonen finner, og hent retningen fra merkevaren og `DESIGN.md`. Aldri ny palett, ny skrift eller nytt layout, og ingen genererte bilder uten eierens ja. Utseende-endringer er produktvalg |
 | Image-to-Code (regel, ingen skill) | Eieren sender et skjermbilde, en skisse eller et bilde av en app og vil ha noe «sånn» | Strukturen hentes fra bildet, stilen fra `DESIGN.md`. Finn det Tørny alt har før du bygger nytt, og legg utseende-endringer fram som produktvalg. Sammenlign resultatet med bildet med `playwright-cli` på 390 px |
 | `DESIGN.md` («Awesome Design») | Alltid ved UI-arbeid: tokenene, komponentene og gjør/ikke gjør | Hjemmet for verdiene er `app/globals.css` |
