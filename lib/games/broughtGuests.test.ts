@@ -4,6 +4,7 @@ import {
   readBroughtGuests,
   readBroughtGuestsInGame,
   withdrawBroughtGuests,
+  withdrawGuestsOfHosts,
   type BroughtGuest,
 } from './broughtGuests';
 
@@ -210,5 +211,52 @@ describe('withdrawBroughtGuests', () => {
     const admin = buildSupabaseMock(queue as never);
 
     expect(await withdrawBroughtGuests(admin as never, GAME, [seated, waiting], HOST)).toEqual({ ok: false });
+  });
+});
+
+describe('withdrawGuestsOfHosts', () => {
+  it('no hosts → no read, nothing written', async () => {
+    const admin = buildSupabaseMock([]);
+
+    expect(await withdrawGuestsOfHosts(admin as never, GAME, [], HOST)).toEqual({ ok: true });
+    expect(admin.__fromCalls).toHaveLength(0);
+  });
+
+  it('withdraws the guests of the removed hosts only, from one read of the game', async () => {
+    const admin = buildSupabaseMock([
+      {
+        data: [
+          { id: HOST_REQ, user_id: HOST },
+          { id: OTHER_HOST_REQ, user_id: OTHER_HOST },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { id: 'req-a', user_id: GUEST_A, status: 'approved', team_request_id: HOST_REQ, users: guestUser('Gunn') },
+          { id: 'req-b', user_id: GUEST_B, status: 'approved', team_request_id: OTHER_HOST_REQ, users: guestUser('Geir') },
+        ],
+        error: null,
+      },
+      { data: [{ user_id: GUEST_A }, { user_id: GUEST_B }], error: null },
+      { data: [{ user_id: GUEST_A }], error: null }, // DELETE Gunn's place
+      { data: [{ id: 'req-a' }], error: null }, // Gunn's request → withdrawn
+    ]);
+
+    expect(await withdrawGuestsOfHosts(admin as never, GAME, [HOST, MATE], OTHER_HOST)).toEqual({ ok: true });
+    expect(admin.__fromCalls).toContainEqual({ table: 'game_players', method: 'in', args: ['user_id', [GUEST_A]] });
+    expect(admin.__fromCalls).toContainEqual({
+      table: 'game_registration_requests',
+      method: 'in',
+      args: ['id', ['req-a']],
+    });
+  });
+
+  it('a failed read → { ok: false }, nothing written', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const admin = buildSupabaseMock([{ data: null, error: { message: 'boom' } }]);
+
+    expect(await withdrawGuestsOfHosts(admin as never, GAME, [HOST], HOST)).toEqual({ ok: false });
+    expect(admin.__fromCalls.some((c) => c.method === 'delete' || c.method === 'update')).toBe(false);
   });
 });
