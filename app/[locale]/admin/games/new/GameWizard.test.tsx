@@ -7,7 +7,9 @@ import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import type { ClubOption } from '@/lib/games/newGameFormData';
+import { ResumeDraftCard } from '@/app/[locale]/ResumeDraftCard';
 import {
+  listWizardDrafts,
   saveWizardDraft,
   wizardDraftContext,
   wizardDraftStorageKey,
@@ -1952,5 +1954,34 @@ describe('GameWizard — #2459 autolagring', () => {
     renderWizard({ currentUserId: 'user-b', players: EIGHT_PLAYERS.slice(0, 2) });
 
     expectStep(1);
+  });
+});
+
+// #2459 kriterium 7, fra ende til ende: å trykke på en arrangementstype sender
+// veiviseren rett til steg 2, så utkastet lagres på steg 2 uten format. Det skal
+// ikke bli et «Fortsett der du slapp»-kort på Hjem før et format er valgt.
+describe('GameWizard → Hjem-kortet — #2459 steg 1 alene gir ikke kort', () => {
+  it('bare arrangementstype: ingen kort. Med format: kort.', async () => {
+    const { unmount } = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    fireEvent(window, new Event('pagehide'));
+
+    const only = listWizardDrafts(USER_ID);
+    expect(only).toHaveLength(1);
+    expect(only[0].resume.summary).toMatchObject({ step: 2, formatLabel: null });
+    unmount();
+
+    const { unmount: unmountCard } = render(<ResumeDraftCard userId={USER_ID} />);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByTestId('resume-draft-card')).toBeNull();
+    unmountCard();
+
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    // The router stub keeps no step in the address, so the new mount opens on step 1.
+    pickKompisIntent();
+    pickStablefordFormat();
+    fireEvent(window, new Event('pagehide'));
+    render(<ResumeDraftCard userId={USER_ID} />);
+    expect(await screen.findByTestId('resume-draft-card')).toBeInTheDocument();
   });
 });
