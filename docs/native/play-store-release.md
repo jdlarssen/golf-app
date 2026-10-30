@@ -133,11 +133,13 @@ mangler i stedet for å laste den ned.
 Fra #2627 har butikkvarianten et intent-filter med `autoVerify` for venne-lenka
 (`https://tornygolf.no/venner/legg-til/<kode>`, også under `/en`). Android åpner appen fra
 lenka bare når `app/.well-known/assetlinks.json/route.ts` har SHA-256 for nøkkelen appen er
-signert med. I dag står bare opplastingsnøkkelen der. Play signerer appen om med sin egen
-nøkkel (Play App Signing), og den finnes først når appen er opprettet i Play Console:
-**Test and release → App integrity → App signing key certificate → SHA-256**. Legg avtrykket
-til i lista i ruta (ikke bytt ut opplastingsnøkkelen: beviset leser linja etter
-`// Upload key`). Til det er gjort, åpner Android 12 og nyere venne-lenka i nettleseren, som før.
+signert med. Play signerer appen om med sin egen nøkkel (Play App Signing). Begge avtrykkene
+står i ruta fra 30.10 (#2561): opplastingsnøkkelen under `// Upload key` (beviset leser linja
+etter den og krever nøyaktig ett avtrykk, så bytt den ikke ut) og Play-nøkkelen under
+`// Play app signing key`. Avtrykket står i Play Console under **Test and release → App
+integrity → App signing key certificate → SHA-256**. Etter deploy kontrolleres lenka live
+(`android-twa.md` §assetlinks.json); til den er verifisert, åpner Android 12 og nyere venne-lenka
+i nettleseren, som før.
 Android 7–11 spør i stedet om lenka skal åpnes i appen eller i nettleseren.
 
 ## Nettsiden samme dag
