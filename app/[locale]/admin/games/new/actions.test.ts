@@ -403,6 +403,48 @@ describe('cup link (#2207)', () => {
 });
 
 describe('createAndPublishGame', () => {
+  // #2458: the receipt is for a plain publish. A cup match and a publish whose
+  // e-mail invitations failed keep the redirects they had.
+  it('a published cup match still goes to the cup, not the receipt', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null },
+        { data: { id: 'org-game-cup' }, error: null },
+        { data: null, error: null },
+      ],
+      { can_manage_tournament: true },
+    );
+    signIn('org-1', 'organiser@example.test');
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(
+      createAndPublishGame(
+        fullPublishFormData({ tournament_id: 'my-cup', tournament_match_label: 'Kamp 1' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const insert = supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+    expect(insert!.args[0]).toMatchObject({ tournament_id: 'my-cup', status: 'scheduled' });
+    expect(lastRedirect()).toBe('/admin/cup/my-cup?status=match_added');
+  });
+
+  it('an organiser whose e-mail invitations failed lands on «Styr spillere» with the banner', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Ola' }, error: null }, // gate
+      { data: { id: 'game-inv' }, error: null }, // games.insert.select.single
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('org-1', 'organiser@example.test');
+    sendPublishInvitesMock.mockResolvedValueOnce({ failed: 1 });
+
+    const { createAndPublishGame } = await import('./actions');
+    const publishData = fullPublishFormData();
+    publishData.append('invite_email', 'a@example.com');
+    await expect(createAndPublishGame(publishData)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-inv/spillere?error=invites_failed');
+  });
+
   it('validation (admin): returns { error: course_required } when course is missing on publish', async () => {
     supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }]);
     signIn('admin-1');
