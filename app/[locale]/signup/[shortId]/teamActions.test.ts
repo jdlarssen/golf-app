@@ -795,6 +795,34 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
     expect(adminMock.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
   });
 
+  // #2607 (owner's rule on #2570): a guest is only on the list because a
+  // player who signed up brought them. A refused captain is not signed up, so
+  // nobody from the team is written, the guest the captain picked included.
+  // Locks behaviour that already holds: the seat claim runs before the slots.
+  it('kapteinens plass avvises → ingen lagkamerat legges inn, heller ikke en gjest', async () => {
+    const GUEST_ID = '99999999-9999-4999-8999-999999999999';
+    const input = refusedTexasFours('game_full');
+    getTeamCandidateEmailsMock.mockResolvedValue(
+      new Map([[GUEST_ID, 'gjest-gunn@guest.tornygolf.no']]),
+    );
+    lookupUserByEmailMock.mockResolvedValue({ id: GUEST_ID, name: 'Gunn Gjest', email: 'gjest-gunn@guest.tornygolf.no' });
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      ...input,
+      slots: [{ mode: 'lookup', userId: GUEST_ID }, ...input.slots.slice(1)],
+    });
+
+    expect(result).toEqual({ ok: false, error: 'game_full' });
+    // Only the captain's own row was inserted, and it was rolled back.
+    expect(
+      adminMock.__fromCalls.filter((c) => c.table === 'game_registration_requests' && c.method === 'insert'),
+    ).toHaveLength(1);
+    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
+    expect(adminMock.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
+    expect(findCall('invitations', 'insert')).toBeUndefined();
+  });
+
   it('kravet får taket, lagstørrelsen og et nytt lag — tallene fra TypeScript', async () => {
     const input = refusedTexasFours('game_full');
 
@@ -1834,6 +1862,8 @@ describe('#2358: transferCaptaincy', () => {
 
   it.each([
     ['not_approved', 'not_approved'],
+    // #2607: a guest can never take the captaincy (0228).
+    ['new_captain_is_guest', 'captain_is_guest'],
     ['game_locked', 'game_locked'],
     ['not_allowed', 'not_found'],
     ['not_a_teammate', 'not_found'],

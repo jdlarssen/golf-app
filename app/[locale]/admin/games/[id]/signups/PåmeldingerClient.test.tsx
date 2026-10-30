@@ -22,6 +22,7 @@ function makeRequest(overrides: Partial<RequestRow> = {}): RequestRow {
     displayName: 'Anna Hansen',
     userName: 'Anna Hansen',
     hcpIndex: null,
+    isGuest: false,
     teamName: null,
     isTeamCaptain: false,
     teamRequestId: null,
@@ -178,6 +179,15 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
       teamName: 'Bjørka',
       teamRequestId: 'req-cap',
     });
+    // #2607: an approved guest on the team never gets the button.
+    const guest = makeRequest({
+      id: 'req-gjest',
+      status: 'approved',
+      displayName: 'Gunn Gjest',
+      teamName: 'Bjørka',
+      teamRequestId: 'req-cap',
+      isGuest: true,
+    });
     const view = (requests: RequestRow[]) => (
       <PåmeldingerClient
         gameId={GAME_ID}
@@ -190,7 +200,7 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
         renderedAt={RENDERED_AT}
       />
     );
-    const { rerender } = render(view([captain, mate]));
+    const { rerender } = render(view([captain, mate, guest]));
 
     expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
     fireEvent.click(screen.getByTestId('make-captain'));
@@ -203,7 +213,7 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
 
     // Serveren svarer med en ny rendering (omdirigering med ?status eller
     // ?error). Da skal knappen være klar igjen, ikke stå fast på «Lagrer …».
-    rerender(view([{ ...captain }, { ...mate }]));
+    rerender(view([{ ...captain }, { ...mate }, { ...guest }]));
     expect(screen.queryByTestId('make-captain-confirm')).toBeNull();
     expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
   });
