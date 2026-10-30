@@ -355,8 +355,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 
       {showRoster ? (
         <>
-          <Text style={ui.sectionTitle}>{TICKET_TEXT.roster}</Text>
-          <View style={ui.card} testID="roster">
+          <Text accessibilityRole="header" style={ui.sectionHead}>
+            {TICKET_TEXT.roster}
+          </Text>
+          <View style={[ui.card, styles.card]} testID="roster">
             {bundle.players.map((player) => (
               <RosterRow
                 key={player.userId}
@@ -515,6 +517,9 @@ const styles = StyleSheet.create({
    * felles toppen (#2403) er designets rad (8 + 44 pt).
    */
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
+  // #2700: designets kortradius (16) under billetten. `ui.card` har fortsatt 12
+  // på skjermene som ikke er gått gjennom ennå.
+  card: { borderRadius: 16 },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -533,5 +538,6 @@ const styles = StyleSheet.create({
   rosterMarks: { flexShrink: 1, textAlign: 'right' },
   rosterStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
-  meName: { fontFamily: FONTS.sansBold },
+  // Halvfet som resten av appen; fet er sollysets (#2700).
+  meName: { fontFamily: FONTS.sansSemiBold },
 });

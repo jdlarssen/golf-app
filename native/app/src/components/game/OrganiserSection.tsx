@@ -345,7 +345,9 @@ export function OrganiserSection({
 
   return (
     <View testID="organiser-section">
-      <Text style={ui.sectionTitle}>Arrangør</Text>
+      <Text accessibilityRole="header" style={[ui.sectionHead, styles.heading]}>
+        Arrangør
+      </Text>
 
       {/* Tekst, ikke ikon: «Juster» er en domenehandling, og de får aldri
           ikon alene (#1879-føringen). Står over lista, så lista vokser
@@ -363,13 +365,20 @@ export function OrganiserSection({
         </Pressable>
       ) : null}
 
-      <View style={ui.card}>
-        {bundle.players.map((player) => {
+      <View style={[ui.card, styles.list]}>
+        {bundle.players.map((player, index) => {
           const isMe = player.userId === userId;
+          const canRemove = scheduled && !isCupGame;
+          const canPull = canWithdraw && !isMe && player.withdrawnAt == null;
+          const canUndo = canWithdraw && !isMe && player.withdrawnAt != null;
+          const canReopen = active && player.submittedAt != null;
           return (
             <View
               key={player.userId}
-              style={styles.playerBlock}
+              style={[
+                styles.playerBlock,
+                index > 0 && { borderTopWidth: 1, borderTopColor: colors.divider },
+              ]}
               testID={`organiser-row-${player.userId}`}
             >
               <View style={styles.headerRow}>
@@ -413,88 +422,98 @@ export function OrganiserSection({
                 />
               ) : null}
 
-              {scheduled && !isCupGame ? (
-                // Ingen vakt mot å fjerne seg selv — hverken webbens action
-                // eller RLS har en, og to flater med hver sin regel er verre
-                // enn regelen selv. Cupkamper har ingen knapp: RLS (0178)
-                // nekter slettingen, og spilleren byttes på cupsiden (#1937).
-                <Pressable
-                  style={[ui.buttonSecondary, styles.rowButton]}
-                  disabled={busy}
-                  testID={`organiser-remove-${player.userId}`}
-                  onPress={() =>
-                    confirmThen(
-                      'Fjern spilleren?',
-                      `Du tar ${displayName(player)} ut av runden.`,
-                      'Fjern',
-                      () => void run(() => removePlayerFromGame(game.id, player.userId)),
-                    )
-                  }
-                >
-                  <Text style={ui.buttonSecondaryText}>Fjern</Text>
-                </Pressable>
-              ) : null}
+              {canRemove || canPull || canUndo || canReopen ? (
+                <View style={styles.actions}>
+                  {canRemove ? (
+                    // Ingen vakt mot å fjerne seg selv — hverken webbens action
+                    // eller RLS har en, og to flater med hver sin regel er verre
+                    // enn regelen selv. Cupkamper har ingen knapp: RLS (0178)
+                    // nekter slettingen, og spilleren byttes på cupsiden (#1937).
+                    <Pressable
+                      style={[ui.buttonSecondary, styles.rowAction]}
+                      hitSlop={ROW_ACTION_SLOP}
+                      disabled={busy}
+                      testID={`organiser-remove-${player.userId}`}
+                      onPress={() =>
+                        confirmThen(
+                          'Fjern spilleren?',
+                          `Du tar ${displayName(player)} ut av runden.`,
+                          'Fjern',
+                          () => void run(() => removePlayerFromGame(game.id, player.userId)),
+                        )
+                      }
+                    >
+                      <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Fjern</Text>
+                    </Pressable>
+                  ) : null}
 
-              {canWithdraw && !isMe && player.withdrawnAt == null ? (
-                <Pressable
-                  style={[ui.buttonSecondary, styles.rowButton]}
-                  disabled={busy}
-                  testID={`organiser-withdraw-${player.userId}`}
-                  onPress={() =>
-                    confirmThen(
-                      'Trekk spilleren?',
-                      `${displayName(player)} teller ikke med i resultatene. Slagene blir liggende.`,
-                      'Trekk',
-                      () => void run(() => withdrawPlayer(game.id, player.userId)),
-                    )
-                  }
-                >
-                  <Text style={ui.buttonSecondaryText}>Trekk</Text>
-                </Pressable>
-              ) : null}
+                  {canPull ? (
+                    <Pressable
+                      style={[ui.buttonSecondary, styles.rowAction]}
+                      hitSlop={ROW_ACTION_SLOP}
+                      disabled={busy}
+                      testID={`organiser-withdraw-${player.userId}`}
+                      onPress={() =>
+                        confirmThen(
+                          'Trekk spilleren?',
+                          `${displayName(player)} teller ikke med i resultatene. Slagene blir liggende.`,
+                          'Trekk',
+                          () => void run(() => withdrawPlayer(game.id, player.userId)),
+                        )
+                      }
+                    >
+                      <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Trekk</Text>
+                    </Pressable>
+                  ) : null}
 
-              {canWithdraw && !isMe && player.withdrawnAt != null ? (
-                <Pressable
-                  style={[ui.buttonSecondary, styles.rowButton]}
-                  disabled={busy}
-                  testID={`organiser-undo-withdraw-${player.userId}`}
-                  onPress={() =>
-                    confirmThen(
-                      'Angre frafallet?',
-                      `${displayName(player)} teller med i resultatene igjen.`,
-                      'Angre',
-                      () => void run(() => undoWithdrawPlayer(game.id, player.userId)),
-                    )
-                  }
-                >
-                  <Text style={ui.buttonSecondaryText}>Angre trekk</Text>
-                </Pressable>
-              ) : null}
+                  {canUndo ? (
+                    <Pressable
+                      style={[ui.buttonSecondary, styles.rowAction]}
+                      hitSlop={ROW_ACTION_SLOP}
+                      disabled={busy}
+                      testID={`organiser-undo-withdraw-${player.userId}`}
+                      onPress={() =>
+                        confirmThen(
+                          'Angre frafallet?',
+                          `${displayName(player)} teller med i resultatene igjen.`,
+                          'Angre',
+                          () => void run(() => undoWithdrawPlayer(game.id, player.userId)),
+                        )
+                      }
+                    >
+                      <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Angre trekk</Text>
+                    </Pressable>
+                  ) : null}
 
-              {/* #2220: alle leverte kort i en aktiv runde, også mitt eget og
-                  trukne spilleres, som på nettsiden. Porten er scorekort-rutas
-                  (#2215), som også varsler spilleren. I lagformatene med felles
-                  kort åpnes hele laget. */}
-              {active && player.submittedAt != null ? (
-                <Pressable
-                  style={[ui.buttonSecondary, styles.rowButton]}
-                  disabled={busy}
-                  testID={`organiser-reopen-${player.userId}`}
-                  onPress={() =>
-                    confirmThen(
-                      REOPEN_SCORECARD.confirmTitle,
-                      reopenConfirmBody(displayName(player)),
-                      REOPEN_SCORECARD.confirmCta,
-                      () =>
-                        void run(
-                          () => reopenScorecard(game.id, player.userId),
-                          REOPEN_SCORECARD.done,
-                        ),
-                    )
-                  }
-                >
-                  <Text style={ui.buttonSecondaryText}>{REOPEN_SCORECARD.label}</Text>
-                </Pressable>
+                  {/* #2220: alle leverte kort i en aktiv runde, også mitt eget og
+                      trukne spilleres, som på nettsiden. Porten er scorekort-rutas
+                      (#2215), som også varsler spilleren. I lagformatene med felles
+                      kort åpnes hele laget. */}
+                  {canReopen ? (
+                    <Pressable
+                      style={[ui.buttonSecondary, styles.rowAction]}
+                      hitSlop={ROW_ACTION_SLOP}
+                      disabled={busy}
+                      testID={`organiser-reopen-${player.userId}`}
+                      onPress={() =>
+                        confirmThen(
+                          REOPEN_SCORECARD.confirmTitle,
+                          reopenConfirmBody(displayName(player)),
+                          REOPEN_SCORECARD.confirmCta,
+                          () =>
+                            void run(
+                              () => reopenScorecard(game.id, player.userId),
+                              REOPEN_SCORECARD.done,
+                            ),
+                        )
+                      }
+                    >
+                      <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>
+                        {REOPEN_SCORECARD.label}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               ) : null}
             </View>
           );
@@ -709,8 +728,19 @@ function ChipRow({
   );
 }
 
+/** Trykkflaten til de små radknappene: 36 + 4 + 4 = 44 (DESIGN.md: minst 44). */
+const ROW_ACTION_SLOP = { top: 4, bottom: 4 };
+
 const styles = StyleSheet.create({
-  playerBlock: { gap: 6, paddingVertical: 4 },
+  // #2700: én rad per spiller, skilt med en varm hårlinje (designets
+  // `--row-divider-warm`), i stedet for løse knapper mellom navnene.
+  list: { borderRadius: 16, gap: 0, paddingVertical: 4 },
+  playerBlock: { gap: 8, paddingVertical: 12 },
+  heading: { marginBottom: 8 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Mindre piller i raden: 36 synlig, og 44 å treffe med `ROW_ACTION_SLOP`.
+  rowAction: { minHeight: 36, marginTop: 0, paddingHorizontal: 14 },
+  rowActionText: { fontSize: 14 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
