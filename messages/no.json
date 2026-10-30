@@ -2695,6 +2695,25 @@
       },
       "pendingPlayerName": "Invitert spiller",
       "statePendingProfile": "Venter på profil"
+    },
+    "publishReceipt": {
+      "title": "{name} er klar",
+      "checkLabel": "Publisert",
+      "invited": "{names} har fått invitasjonen.",
+      "moreNames": "{count, plural, one {én til} other {# til}}",
+      "playersCount": "{count, plural, one {# spiller} other {# spillere}}",
+      "emailCount": "{count, plural, one {én} other {#}} på e-post",
+      "emailOnly": "{count, plural, one {Én} other {#}} har fått invitasjonen på e-post.",
+      "noneWithLink": "Ingen er invitert ennå. Del lenka, så kan gjengen melde seg på.",
+      "none": "Ingen er invitert ennå. Gå til spillet for å legge til spillere.",
+      "share": "Del i gruppechatten",
+      "copy": "Kopier lenke",
+      "copied": "Kopiert!",
+      "copyFailed": "Fikk ikke kopiert lenka. Prøv igjen.",
+      "calendar": "Legg i kalenderen",
+      "goToGame": "Gå til spillet",
+      "shareText": "Bli med på {name}, {weekday} {date} kl. {time}",
+      "shareTextNoTime": "Bli med på {name}"
     }
   },
   "scorecard": {

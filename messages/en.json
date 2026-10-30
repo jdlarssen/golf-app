@@ -2695,6 +2695,25 @@
       },
       "pendingPlayerName": "Invited player",
       "statePendingProfile": "Awaiting profile"
+    },
+    "publishReceipt": {
+      "title": "{name} is ready",
+      "checkLabel": "Published",
+      "invited": "{names} got the invitation.",
+      "moreNames": "{count} more",
+      "playersCount": "{count, plural, one {# player} other {# players}}",
+      "emailCount": "{count, plural, one {one} other {#}} by email",
+      "emailOnly": "{count, plural, one {One person} other {# people}} got the invitation by email.",
+      "noneWithLink": "Nobody is invited yet. Share the link so the group can sign up.",
+      "none": "Nobody is invited yet. Go to the game to add players.",
+      "share": "Share in the group chat",
+      "copy": "Copy link",
+      "copied": "Copied!",
+      "copyFailed": "Couldn't copy the link. Try again.",
+      "calendar": "Add to calendar",
+      "goToGame": "Go to the game",
+      "shareText": "Join {name}, {weekday} {date} at {time}",
+      "shareTextNoTime": "Join {name}"
     }
   },
   "scorecard": {
