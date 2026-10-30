@@ -1350,6 +1350,7 @@
     },
     "stepCounter": "Step {step} of {total}",
     "back": "Back",
+    "savedAsDraft": "✓ Saved as draft",
     "stepSubText": {
       "step4BestBall": "Select an even number of players, then assign teams and flights",
       "step4Matchplay": "Select 2 players and put one on each side",
@@ -7770,6 +7771,33 @@
       "shared": "Shared lead",
       "caption": "separated the top two",
       "whereLabel": "Where"
+    }
+  },
+  "resumeDraft": {
+    "kicker": "Pick up where you left off",
+    "untitled": "New game",
+    "playersOfTotal": "{count} of {total} players",
+    "playersCount": "{count, plural, one {# player} other {# players}}",
+    "stepLine": "Step {step} of {total} · {title}",
+    "stepTitle": {
+      "1": "What kind of event?",
+      "2": "What will you play?",
+      "3": "Where and when?",
+      "4": "Who is playing?",
+      "5": "Ready?"
+    },
+    "continue": "Continue",
+    "delete": "Delete draft",
+    "deletePage": {
+      "kicker": "Delete draft",
+      "heading": "Delete the draft?",
+      "permanentLabel": "Permanently deleted",
+      "onThisDevice": "The draft only lives on this device.",
+      "cannotUndo": "This action cannot be undone.",
+      "deleteButton": "Delete draft",
+      "cancelButton": "Cancel",
+      "missing": "The draft no longer exists.",
+      "backHome": "Back to Home"
     }
   },
   "ceremony": {

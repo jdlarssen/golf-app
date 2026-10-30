@@ -1350,6 +1350,7 @@
     },
     "stepCounter": "Steg {step} av {total}",
     "back": "Tilbake",
+    "savedAsDraft": "✓ Lagret som utkast",
     "stepSubText": {
       "step4BestBall": "Velg et partall spillere, så fordeler du lag og flights",
       "step4Matchplay": "Velg 2 spillere og sett én på hver side",
@@ -7771,6 +7772,33 @@
       "shared": "Delt ledelse",
       "caption": "skilte de to beste",
       "whereLabel": "Hvor"
+    }
+  },
+  "resumeDraft": {
+    "kicker": "Fortsett der du slapp",
+    "untitled": "Nytt spill",
+    "playersOfTotal": "{count} av {total} spillere",
+    "playersCount": "{count, plural, one {# spiller} other {# spillere}}",
+    "stepLine": "Steg {step} av {total} · {title}",
+    "stepTitle": {
+      "1": "Hva slags arrangement?",
+      "2": "Hva skal dere spille?",
+      "3": "Hvor og når?",
+      "4": "Hvem skal spille?",
+      "5": "Klar?"
+    },
+    "continue": "Fortsett",
+    "delete": "Slett utkastet",
+    "deletePage": {
+      "kicker": "Slett utkast",
+      "heading": "Slette utkastet?",
+      "permanentLabel": "Slettes permanent",
+      "onThisDevice": "Utkastet ligger bare på denne enheten.",
+      "cannotUndo": "Handlingen kan ikke angres.",
+      "deleteButton": "Slett utkastet",
+      "cancelButton": "Avbryt",
+      "missing": "Utkastet finnes ikke lenger.",
+      "backHome": "Til Hjem"
     }
   },
   "ceremony": {

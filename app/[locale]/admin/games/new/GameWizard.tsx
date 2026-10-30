@@ -131,6 +131,7 @@ import {
   wizardDraftFromState,
   wizardDraftStorageKey,
   withUrlCourse,
+  type WizardDraftResume,
   type WizardDraft,
 } from './wizardStatePersistence';
 import { useCourseFromUrl } from './useCourseFromUrl';
@@ -348,7 +349,11 @@ export function GameWizard(props: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
-  const storageKey = wizardDraftStorageKey(pathname);
+  // #2459: utkastet er per bruker. Uten bruker-id (ingen innlogget bruker
+  // kjent) leses og skrives ingenting.
+  const storageKey = props.currentUserId
+    ? wizardDraftStorageKey(props.currentUserId, pathname)
+    : null;
   const draftContext = wizardDraftContext({
     initialIntent: props.initialIntent,
     initialValues: props.initialValues,
@@ -383,7 +388,7 @@ export function GameWizard(props: Props) {
   const [draftSettled, setDraftSettled] = useState(resumingServerDraft);
   useEffect(() => {
     if (resumingServerDraft) return;
-    const found = loadWizardDraft(storageKey, draftContext);
+    const found = storageKey ? loadWizardDraft(storageKey, draftContext) : null;
     if (found) {
       // setState i en effekt er poenget her: vi henter EKSTERN tilstand
       // (sessionStorage) som ikke kan leses under render. React-linteren
@@ -460,7 +465,8 @@ type BodyProps = Props & {
   draft: WizardDraft | null;
   /** #2321: utkastet er hentet (eller finnes ikke) — se `GameWizard`. */
   draftSettled: boolean;
-  storageKey: string;
+  /** `null` = ingen bruker-id, så ingenting lagres (#2459). */
+  storageKey: string | null;
   draftContext: string;
 };
 
@@ -867,7 +873,36 @@ function WizardBody({
   // på serialisert innhold så rene re-rendere ikke skriver.
   // ────────────────────────────────────────────────────────────────────
   const draftSnapshot = wizardDraftFromState({ state, nameTouched: state.nameTouched });
-  const draftJson = JSON.stringify(draftSnapshot);
+  // #2459: kortet på Hjem og «Fortsett» trenger lenken og en oppsummering. De
+  // er en del av det som dedupes, så et stegbytte alene gir en skriving.
+  // `?bane=` går ut av lenken: banen står i utkastet, og `withUrlCourse` skal
+  // ikke overstyre den ved «Fortsett».
+  const resumeUrl = (() => {
+    const [path, query = ''] = urlForStep(step, showTeamsScreen).split('?');
+    const params = new URLSearchParams(query);
+    params.delete(COURSE_PARAM);
+    const qs = params.toString();
+    return qs ? `${path}?${qs}` : path;
+  })();
+  const resume: WizardDraftResume = {
+    href: resumeUrl,
+    summary: {
+      step,
+      formatLabel: state.formatChosen
+        ? tModes(state.gameMode as Parameters<typeof tModes>[0])
+        : null,
+      courseName: state.selectedCourse?.name ?? null,
+      selectedCount: state.selectedPlayerIds.length,
+      expectedCount: state.expectedPlayerCount ?? null,
+      title: state.nameTouched && state.name.trim() !== '' ? state.name.trim() : null,
+    },
+  };
+  const draftJson = JSON.stringify({ draft: draftSnapshot, resume });
+  // #2459: bare et nytt oppsett lagres lokalt. Et serverutkast (edit-draft) og
+  // de øvrige redigeringsflatene har raden i databasen som fasit.
+  const persists = storageKey !== null && mode.kind === 'create';
+  // #2459: «✓ Lagret som utkast» står bare når siste skriving faktisk gikk.
+  const [savedOk, setSavedOk] = useState(false);
   // Initialisert til snapshot-en ved mount: å bare ÅPNE veiviseren skal ikke
   // legge igjen et utkast — først når arrangøren faktisk endrer noe.
   const lastWrittenRef = useRef<string | null>(draftJson);
@@ -878,6 +913,7 @@ function WizardBody({
   const submittedRef = useRef(false);
 
   useEffect(() => {
+    if (!persists) return;
     if (isNewCupFlow) {
       // Cup-grenen har sin egen form (CupSetup) med egen state, og deler
       // ingenting med veiviser-skjemaet. Vi hverken skriver et utkast her
@@ -893,7 +929,7 @@ function WizardBody({
     submittedRef.current = false;
     const id = setTimeout(() => {
       lastWrittenRef.current = draftJson;
-      saveWizardDraft(storageKey, draftSnapshot, draftContext);
+      setSavedOk(saveWizardDraft(storageKey, draftSnapshot, draftContext, Date.now(), resume));
     }, DRAFT_WRITE_DEBOUNCE_MS);
     writeTimerRef.current = id;
     return () => clearTimeout(id);
@@ -901,7 +937,7 @@ function WizardBody({
     // closuren er aldri stale. Vi depender på strengen for å slippe å
     // sammenligne objekt-identitet som endres hver render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftJson, storageKey, draftContext, isNewCupFlow]);
+  }, [draftJson, storageKey, draftContext, isNewCupFlow, persists]);
 
   /**
    * #1999: skriv utkastet NÅ i stedet for å vente ut debouncen.
@@ -921,10 +957,10 @@ function WizardBody({
       clearTimeout(writeTimerRef.current);
       writeTimerRef.current = null;
     }
-    if (isNewCupFlow || submittedRef.current) return;
+    if (!persists || isNewCupFlow || submittedRef.current) return;
     if (draftJson === lastWrittenRef.current) return;
     lastWrittenRef.current = draftJson;
-    saveWizardDraft(storageKey, draftSnapshot, draftContext);
+    setSavedOk(saveWizardDraft(storageKey, draftSnapshot, draftContext, Date.now(), resume));
   }
 
   // #1999: `pagehide` og `visibilitychange` er de to som faktisk kommer når
@@ -943,7 +979,7 @@ function WizardBody({
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftJson, storageKey, draftContext, isNewCupFlow]);
+  }, [draftJson, storageKey, draftContext, isNewCupFlow, persists]);
 
   /**
    * Publiser/Lagre utkast → utkastet i sessionStorage skal bort. Suksess
@@ -960,8 +996,9 @@ function WizardBody({
     // #1999: sperr flushen. En `pagehide` rett etter publisering (redirecten
     // ER en pagehide) ville ellers skrevet utkastet tilbake på vei ut.
     submittedRef.current = true;
-    clearWizardDraft(storageKey);
+    if (storageKey) clearWizardDraft(storageKey);
     lastWrittenRef.current = null;
+    setSavedOk(false);
   }
 
   // Neste-knappen gates per steg. Mangel-tekst under knappen henter første
@@ -1093,6 +1130,7 @@ function WizardBody({
       onBack={goPrev}
       notice={notice}
       titleRef={stepTitleRef}
+      saved={savedOk && persists && !isNewCupFlow}
     />
   );
 
@@ -2056,6 +2094,7 @@ function WizardTop({
   onBack,
   notice,
   titleRef,
+  saved,
 }: {
   step: Step;
   totalSteps: number;
@@ -2068,6 +2107,8 @@ function WizardTop({
   notice?: ReactNode;
   /** #1837: fokusmål ved auto-videre — se `handleIntentSelect`. */
   titleRef: RefObject<HTMLHeadingElement | null>;
+  /** #2459: «✓ Lagret som utkast» under tittelen. */
+  saved: boolean;
 }) {
   const t = useTranslations('wizard');
   return (
@@ -2101,6 +2142,15 @@ function WizardTop({
       >
         {title}
       </h1>
+      {saved && (
+        <p
+          data-testid="wizard-draft-saved"
+          role="status"
+          className="mt-2 inline-flex h-7 items-center rounded-full bg-primary-soft px-3 font-sans text-xs font-semibold text-primary"
+        >
+          {t('savedAsDraft')}
+        </p>
+      )}
     </>
   );
 }

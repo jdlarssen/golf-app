@@ -344,3 +344,66 @@ describe('drainBeforeDeletion', () => {
     }
   });
 });
+
+// #2459: the new-game wizard's local drafts hold other people's ids and e-mail
+// addresses, so every hygiene exit wipes them. They are not sync queue: no
+// pending count and no owner stamp may keep them.
+describe('wizard drafts (#2459)', () => {
+  it('logout wipes the drafts even when strokes are still queued', async () => {
+    const clearDrafts = vi.fn();
+    const clear = vi.fn(async () => {});
+    const out = await prepareLogout({
+      drain: vi.fn(async () => {}),
+      pendingCount: vi.fn(async () => 3),
+      clear,
+      clearStoredOwner: vi.fn(),
+      clearDrafts,
+    });
+    expect(out).toBe('kept');
+    expect(clear).not.toHaveBeenCalled();
+    expect(clearDrafts).toHaveBeenCalledTimes(1);
+  });
+
+  it('logout wipes the drafts even when the owner stamp names someone else', async () => {
+    const clearDrafts = vi.fn();
+    await prepareLogout({
+      drain: vi.fn(async () => {}),
+      pendingCount: vi.fn(async () => 0),
+      clear: vi.fn(async () => {}),
+      clearStoredOwner: vi.fn(),
+      ownerMatches: () => false,
+      clearDrafts,
+    });
+    expect(clearDrafts).toHaveBeenCalledTimes(1);
+  });
+
+  it('an owner switch wipes the drafts, also when the Dexie wipe throws', async () => {
+    const clearDrafts = vi.fn();
+    const deps = ownerDeps({
+      clear: vi.fn(async () => {
+        throw new Error('boom');
+      }),
+      clearDrafts,
+    });
+    await expect(ensureLocalDataOwner(deps)).rejects.toBeInstanceOf(OwnerWipeFailedError);
+    expect(clearDrafts).toHaveBeenCalledTimes(1);
+  });
+
+  it('the first owner and the same owner keep the drafts', async () => {
+    for (const stored of [null, 'user-b']) {
+      const clearDrafts = vi.fn();
+      await ensureLocalDataOwner(ownerDeps({ getStoredOwnerId: () => stored, clearDrafts }));
+      expect(clearDrafts).not.toHaveBeenCalled();
+    }
+  });
+
+  it('account deletion wipes the drafts', async () => {
+    const clearDrafts = vi.fn();
+    await finishAccountDeletion({
+      clear: vi.fn(async () => {}),
+      clearStoredOwner: vi.fn(),
+      clearDrafts,
+    });
+    expect(clearDrafts).toHaveBeenCalledTimes(1);
+  });
+});

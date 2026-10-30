@@ -1,5 +1,6 @@
 import { localDb } from './db';
 import { setOwnerWipeBlocked } from './ownerWipeBlock';
+import { clearAllWizardDrafts } from '@/lib/wizard/draftKeys';
 
 /**
  * #1404 — local-data hygiene on shared devices (the #819 class: one user's
@@ -86,6 +87,8 @@ export async function ensureLocalDataOwner(deps: {
   getStoredOwnerId: () => string | null;
   setStoredOwnerId: (userId: string) => void;
   clear: () => Promise<void>;
+  /** #2459: wipes the new-game wizard's local drafts; not held back by `clear`. */
+  clearDrafts?: () => void;
 }): Promise<OwnerChange | 'no_session'> {
   const userId = await deps.getSessionUserId();
   // Anonymous surface: neither stamp nor wipe — an expired session must not
@@ -94,6 +97,7 @@ export async function ensureLocalDataOwner(deps: {
 
   const change = detectOwnerChange(deps.getStoredOwnerId(), userId);
   if (change === 'switched') {
+    deps.clearDrafts?.();
     // Clear BEFORE stamping: if the wipe throws, the stamp still names the
     // previous owner and the next boot retries the wipe.
     try {
@@ -113,12 +117,19 @@ export async function prepareLogout(deps: {
   clearStoredOwner: () => void;
   cleanupPush?: () => Promise<unknown>;
   /**
+   * #2459: wipes the new-game wizard's local drafts. They are not sync queue,
+   * so unlike `clear` this runs unconditionally: not behind the pending count
+   * and not behind the owner check.
+   */
+  clearDrafts?: () => void;
+  /**
    * #1959: false when the stored owner stamp names someone other than the
    * session logging out — the owner-switch wipe failed and the rows on board
    * are the previous user's. Omitted → treated as a match.
    */
   ownerMatches?: () => boolean;
 }): Promise<'cleared' | 'kept'> {
+  deps.clearDrafts?.();
   // #1790: drop the device's push registration for the account logging out —
   // server row, browser subscription and the remembered native token — while
   // the session is still valid. Runs in parallel with the drain, best-effort:
@@ -160,6 +171,8 @@ export async function prepareLogout(deps: {
 export async function finishAccountDeletion(deps: {
   clear: () => Promise<void>;
   clearStoredOwner: () => void;
+  /** #2459: wipes the new-game wizard's local drafts (the account is gone). */
+  clearDrafts?: () => void;
   /**
    * #1959: false when the stamp names someone other than the deleted account
    * — the rows on board are that user's, and their account still exists.
@@ -167,6 +180,7 @@ export async function finishAccountDeletion(deps: {
    */
   ownerMatches?: () => boolean;
 }): Promise<'cleared' | 'clear_failed' | 'kept'> {
+  deps.clearDrafts?.();
   // Same rule as logout: never clear another user's rows, never drop their
   // stamp — the switch guard retries the wipe at their next login.
   if (deps.ownerMatches && !deps.ownerMatches()) return 'kept';
@@ -274,6 +288,7 @@ async function runOwnerGuardBrowser(): Promise<OwnerChange | 'no_session'> {
       }
     },
     clear: clearAllLocalData,
+    clearDrafts: clearAllWizardDrafts,
   });
 }
 
@@ -304,6 +319,7 @@ export async function prepareLogoutBrowser(
       clear: clearAllLocalData,
       clearStoredOwner: clearStoredOwnerBrowser,
       cleanupPush,
+      clearDrafts: clearAllWizardDrafts,
     });
   })();
   const timeout = new Promise<'kept'>((resolve) => {
@@ -357,5 +373,6 @@ export async function finishAccountDeletionBrowser(): Promise<
     clear: clearAllLocalData,
     clearStoredOwner: clearStoredOwnerBrowser,
     ownerMatches: () => matches,
+    clearDrafts: clearAllWizardDrafts,
   });
 }

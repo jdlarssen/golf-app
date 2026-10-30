@@ -1,12 +1,12 @@
 /**
- * wizardStatePersistence — veiviser-utkast i sessionStorage (#1380).
+ * wizardStatePersistence — veiviser-utkast i localStorage (#1380, #2459).
  *
  * Problemet: all veiviser-state er ren `useState` i `useGameFormState`. En
  * reload, en tilbake-gest ut av veiviseren, eller mobil-OS-et som kaster
  * PWA-en ut av minnet mens arrangøren svitsjer til meldingsappen, tok med seg
  * hele utfyllingen.
  *
- * Løsningen: et DEFINERT subset av state speiles til `sessionStorage` og
+ * Løsningen: et DEFINERT subset av state speiles til `localStorage` og
  * seedes tilbake ved neste mount. Subsettet er formet som `InitialValues` —
  * den formen `useGameFormState` allerede seeder ALL sin state fra i
  * useState-initializere. Det gir gjenoppretting uten å eksponere 40 settere,
@@ -14,30 +14,38 @@
  * at et feltnavn som drifter i InitialValues blir en tsc-feil her.
  *
  * Bevisste valg:
- * - `sessionStorage`, ikke localStorage: overlever reload + eviction i samme
- *   fane, men blør ikke mellom økter eller enheter. Utkast på tvers av økter
- *   har sin egen flyt («Lagre utkast» → ekte draft-rad i databasen).
+ * - `localStorage` og 7 døgn (#2459, snudd fra `sessionStorage` og 60 min
+ *   fra #1380): et oppsett som blir avbrutt av en melding eller en telefon
+ *   skal være der i en ny fane, etter at appen er lukket og neste dag. Utkastet
+ *   bor bare på denne enheten. Det er ingen `games`-rad, ingen invitasjon og
+ *   ingen synlighet for spillerne: «Lagre som utkast» på «Klar?» er fortsatt
+ *   den eneste veien til et serverutkast.
+ * - Nøkkel per bruker og flate: utkastet har andres e-postadresser og id-er, og
+ *   enheten kan deles. Bruker B ser aldri A sitt utkast, og utlogging og
+ *   eierbytte tømmer alle nøklene (`lib/sync/localDataCleanup.ts`).
+ * - Konvolutten bærer også `resume` (lenken «Fortsett» åpner og en kort
+ *   oppsummering), så Hjem kan vise kortet uten å montere veiviseren.
  * - Ingen `beforeunload`-dialog: persistensen gjør vakten overflødig, og en
  *   «vil du virkelig forlate siden?»-boks er ren støy.
- * - TTL på 60 minutter: et oppsett du forlot i går skal ikke spøke igjen.
  * - Korrupt/ukjent payload forkastes stille — aldri en krasj, aldri et
  *   halv-gjenopprettet skjema.
  */
 
 import type { Intent } from '@/lib/wizard/intent';
+import { WIZARD_DRAFT_KEY_PREFIX, clearAllWizardDrafts } from '@/lib/wizard/draftKeys';
 import { prizeListFromDraft } from '@/lib/games/prizes';
 import { asMinTeeShots } from '@/lib/games/teeShots';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import type { GameFormState } from './useGameFormState';
 
-/** Utkast eldre enn dette forkastes ved lesing. */
-export const WIZARD_DRAFT_TTL_MS = 60 * 60 * 1000;
+/** Utkast eldre enn dette forkastes ved lesing (#2459: 7 døgn). */
+export const WIZARD_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Payload-versjon. Bumpes når feltsettet endres på en måte eldre payloads
  * ikke kan tolkes trygt under — en payload med annen versjon forkastes stille.
  */
-export const WIZARD_DRAFT_VERSION = 1;
+export const WIZARD_DRAFT_VERSION = 2;
 
 /**
  * Feltene fra `InitialValues` som speiles. Alt her er JSON-trygt (strenger,
@@ -124,16 +132,53 @@ export type WizardDraft = {
   values: PersistedInitialValues;
 };
 
+/**
+ * #2459: det Hjem-kortet og «Fortsett» trenger, regnet ut i veiviseren (som har
+ * formatkatalogen og banelista) så Hjem slipper oppslag.
+ */
+export type WizardDraftSummary = {
+  step: 1 | 2 | 3 | 4 | 5;
+  /** Visningsnavnet på formatet, `null` før et format er valgt. */
+  formatLabel: string | null;
+  courseName: string | null;
+  selectedCount: number;
+  /** Antallet fra steg 2, `null` = uten antall. */
+  expectedCount: number | null;
+  /** Spillnavnet når arrangøren har skrevet det selv, ellers `null`. */
+  title: string | null;
+};
+
+export type WizardDraftResume = {
+  /**
+   * Sti + query slik den stod ved skrivingen, med `step` og `skjerm`. Den bærer
+   * kontekst-parametrene (`?intent=`, `?klubb=`, `?fra=` …), uten dem ville
+   * utkastet fått ulik kontekst ved «Fortsett» og blitt slettet (`loadWizardDraft`).
+   * Uten locale-prefiks: den leveres til `Link` fra `@/i18n/navigation`.
+   */
+  href: string;
+  summary: WizardDraftSummary;
+};
+
 type StoredEnvelope = {
   v: number;
   savedAt: number;
   context: string;
   draft: WizardDraft;
+  resume?: WizardDraftResume;
 };
 
-/** Nøkkel per veiviser-flate. `/admin/games/new` og `/opprett-spill` er to. */
-export function wizardDraftStorageKey(pathname: string): string {
-  return `wizard:${pathname}`;
+// Prefikset og «tøm alt» bor i lib/wizard/draftKeys.ts, så oppryddingen ved
+// utlogging (lib/sync) slipper å dra veiviseren med seg.
+export { WIZARD_DRAFT_KEY_PREFIX, clearAllWizardDrafts };
+
+/** `/en/opprett-spill` og `/opprett-spill` er samme flate, så locale-prefikset går bort. */
+function pathWithoutLocale(pathname: string): string {
+  return pathname.replace(/^\/en(?=\/|$)/, '') || '/';
+}
+
+/** Nøkkel per bruker og veiviser-flate. `/admin/games/new` og `/opprett-spill` er to. */
+export function wizardDraftStorageKey(userId: string, pathname: string): string {
+  return `${WIZARD_DRAFT_KEY_PREFIX}${userId}:${pathWithoutLocale(pathname)}`;
 }
 
 /**
@@ -325,37 +370,45 @@ export function withUrlCourse(
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// sessionStorage-tilgangen. Alt er try/catch-et: Safari i privat modus og
+// localStorage-tilgangen. Alt er try/catch-et: Safari i privat modus og
 // kvote-fulle lagre kaster, og et veiviser-utkast er aldri verdt en krasj.
 // ──────────────────────────────────────────────────────────────────────
 
 function storage(): Storage | null {
   try {
     if (typeof window === 'undefined') return null;
-    return window.sessionStorage;
+    return window.localStorage;
   } catch {
     return null;
   }
 }
 
+/**
+ * Skriv utkastet. Returnerer `true` bare når `setItem` gikk uten unntak, så
+ * «✓ Lagret som utkast» aldri står der lagringen feilet (#2459).
+ */
 export function saveWizardDraft(
   key: string,
   draft: WizardDraft,
   context: string,
   now: number = Date.now(),
-): void {
+  resume?: WizardDraftResume,
+): boolean {
   const store = storage();
-  if (!store) return;
+  if (!store) return false;
   const envelope: StoredEnvelope = {
     v: WIZARD_DRAFT_VERSION,
     savedAt: now,
     context,
     draft,
+    resume,
   };
   try {
     store.setItem(key, JSON.stringify(envelope));
+    return true;
   } catch {
     // Full kvote eller blokkert lagring — utfyllingen står fortsatt på skjermen.
+    return false;
   }
 }
 
@@ -425,6 +478,31 @@ function parseEnvelope(raw: string): StoredEnvelope | null {
           : [],
       values: draft.values,
     },
+    resume: parseResume(e.resume),
+  };
+}
+
+function parseResume(raw: unknown): WizardDraftResume | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as Partial<WizardDraftResume>;
+  const sm = r.summary as Partial<WizardDraftSummary> | undefined;
+  if (typeof r.href !== 'string' || !r.href.startsWith('/')) return undefined;
+  if (typeof sm !== 'object' || sm === null) return undefined;
+  const step = sm.step;
+  if (step !== 1 && step !== 2 && step !== 3 && step !== 4 && step !== 5) return undefined;
+  const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
+  const count = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
+  return {
+    href: r.href,
+    summary: {
+      step,
+      formatLabel: str(sm.formatLabel),
+      courseName: str(sm.courseName),
+      selectedCount: count(sm.selectedCount) ?? 0,
+      expectedCount: count(sm.expectedCount),
+      title: str(sm.title),
+    },
   };
 }
 
@@ -436,4 +514,53 @@ export function clearWizardDraft(key: string): void {
   } catch {
     // Ingenting å gjøre — neste lesing forkaster uansett på TTL/kontekst.
   }
+}
+
+/** Et utkast Hjem kan vise: det som ligger under nøkkelen, lest og validert. */
+export type ListedWizardDraft = {
+  key: string;
+  savedAt: number;
+  resume: WizardDraftResume;
+};
+
+/**
+ * Alle gyldige utkast for brukeren, nyeste først. Korrupte og utgåtte ryddes;
+ * utkast uten `resume` hoppes over. Kontekst sjekkes ikke her: veiviseren
+ * sjekker den når «Fortsett» åpner den.
+ */
+export function listWizardDrafts(
+  userId: string,
+  now: number = Date.now(),
+): ListedWizardDraft[] {
+  const store = storage();
+  if (!store) return [];
+  const prefix = `${WIZARD_DRAFT_KEY_PREFIX}${userId}:`;
+  const keys: string[] = [];
+  try {
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i);
+      if (k !== null && k.startsWith(prefix)) keys.push(k);
+    }
+  } catch {
+    return [];
+  }
+  const out: ListedWizardDraft[] = [];
+  for (const key of keys) {
+    let raw: string | null = null;
+    try {
+      raw = store.getItem(key);
+    } catch {
+      continue;
+    }
+    if (raw === null) continue;
+    const envelope = parseEnvelope(raw);
+    const age = envelope ? now - envelope.savedAt : -1;
+    if (!envelope || age < 0 || age > WIZARD_DRAFT_TTL_MS) {
+      clearWizardDraft(key);
+      continue;
+    }
+    if (!envelope.resume) continue;
+    out.push({ key, savedAt: envelope.savedAt, resume: envelope.resume });
+  }
+  return out.sort((a, b) => b.savedAt - a.savedAt);
 }

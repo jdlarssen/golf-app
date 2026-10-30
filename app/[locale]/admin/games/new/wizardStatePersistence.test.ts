@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
+  WIZARD_DRAFT_KEY_PREFIX,
   WIZARD_DRAFT_TTL_MS,
+  clearAllWizardDrafts,
   clearWizardDraft,
+  listWizardDrafts,
   loadWizardDraft,
   reconcileWizardDraft,
   saveWizardDraft,
@@ -9,6 +12,7 @@ import {
   wizardDraftStorageKey,
   withUrlCourse,
   type WizardDraft,
+  type WizardDraftResume,
 } from './wizardStatePersistence';
 import type { CourseOption, PlayerOption } from './GameForm';
 
@@ -17,7 +21,7 @@ import type { CourseOption, PlayerOption } from './GameForm';
 // gjenoppretting når bane eller spillere har forsvunnet siden utkastet ble
 // skrevet.
 
-const KEY = wizardDraftStorageKey('/admin/games/new');
+const KEY = wizardDraftStorageKey('user-a', '/admin/games/new');
 const CONTEXT = wizardDraftContext({});
 const NOW = 1_770_000_000_000;
 
@@ -68,6 +72,7 @@ function player(id: string): PlayerOption {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   window.sessionStorage.clear();
 });
 
@@ -85,10 +90,10 @@ describe('wizardStatePersistence — lagring og lesing', () => {
     expect(loadWizardDraft(KEY, CONTEXT, NOW)?.inviteEmails).toEqual(['a@example.com', 'b@example.com']);
 
     for (const bad of [undefined, 'a@example.com', [1, 2], null]) {
-      const stored = JSON.parse(window.sessionStorage.getItem(KEY)!);
+      const stored = JSON.parse(window.localStorage.getItem(KEY)!);
       stored.draft.inviteEmails = bad;
       if (bad === undefined) delete stored.draft.inviteEmails;
-      window.sessionStorage.setItem(KEY, JSON.stringify(stored));
+      window.localStorage.setItem(KEY, JSON.stringify(stored));
       expect(loadWizardDraft(KEY, CONTEXT, NOW)?.inviteEmails).toEqual([]);
     }
   });
@@ -101,7 +106,7 @@ describe('wizardStatePersistence — lagring og lesing', () => {
     saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW);
     clearWizardDraft(KEY);
 
-    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
   });
 
   it('leser fortsatt utkastet rett før TTL-en løper ut', () => {
@@ -116,7 +121,7 @@ describe('wizardStatePersistence — lagring og lesing', () => {
     saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW);
 
     expect(loadWizardDraft(KEY, CONTEXT, NOW + WIZARD_DRAFT_TTL_MS + 1)).toBeNull();
-    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
   });
 
   it('forkaster utkast med savedAt i framtida (klokke-tull)', () => {
@@ -130,10 +135,10 @@ describe('wizardStatePersistence — defensiv lesing', () => {
   it.each([
     ['ikke JSON i det hele tatt', '{ dette er ikke json'],
     ['JSON, men ikke et objekt', '"bare en streng"'],
-    ['objekt uten draft', JSON.stringify({ v: 1, savedAt: NOW, context: '' })],
+    ['objekt uten draft', JSON.stringify({ v: 2, savedAt: NOW, context: '' })],
     [
       'draft uten values',
-      JSON.stringify({ v: 1, savedAt: NOW, context: '', draft: {} }),
+      JSON.stringify({ v: 2, savedAt: NOW, context: '', draft: {} }),
     ],
     [
       'ukjent payload-versjon',
@@ -141,14 +146,14 @@ describe('wizardStatePersistence — defensiv lesing', () => {
     ],
     [
       'savedAt som ikke er et tall',
-      JSON.stringify({ v: 1, savedAt: 'i går', context: '', draft: { values: {} } }),
+      JSON.stringify({ v: 2, savedAt: 'i går', context: '', draft: { values: {} } }),
     ],
   ])('forkaster stille: %s', (_label, raw) => {
-    window.sessionStorage.setItem(KEY, raw);
+    window.localStorage.setItem(KEY, raw);
 
     expect(() => loadWizardDraft(KEY, CONTEXT, NOW)).not.toThrow();
     expect(loadWizardDraft(KEY, CONTEXT, NOW)).toBeNull();
-    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
   });
 });
 
@@ -310,5 +315,158 @@ describe('withUrlCourse (#2485)', () => {
 
   it('ignores a course the wizard does not list', () => {
     expect(withUrlCourse(draft, 'gone', TWO)).toBe(draft);
+  });
+});
+
+// #2459: utkastet bor i localStorage, per bruker og flate, i 7 døgn, og bærer
+// lenken «Fortsett» åpner. Type A: ren lagrings- og listelogikk.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function makeResume(overrides: Partial<WizardDraftResume['summary']> = {}): WizardDraftResume {
+  return {
+    href: '/opprett-spill?intent=kompis&step=4',
+    summary: {
+      step: 4,
+      formatLabel: 'Stableford',
+      courseName: 'Stiklestad GK',
+      selectedCount: 3,
+      expectedCount: 4,
+      title: null,
+      ...overrides,
+    },
+  };
+}
+
+describe('wizardStatePersistence — #2459 nøkkel og levetid', () => {
+  it('lager nøkkelen per bruker og flate, uten locale-prefiks', () => {
+    expect(wizardDraftStorageKey('u1', '/opprett-spill')).toBe(
+      `${WIZARD_DRAFT_KEY_PREFIX}u1:/opprett-spill`,
+    );
+    expect(wizardDraftStorageKey('u1', '/en/opprett-spill')).toBe(
+      wizardDraftStorageKey('u1', '/opprett-spill'),
+    );
+    expect(wizardDraftStorageKey('u1', '/opprett-spill')).not.toBe(
+      wizardDraftStorageKey('u2', '/opprett-spill'),
+    );
+    expect(wizardDraftStorageKey('u1', '/opprett-spill')).not.toBe(
+      wizardDraftStorageKey('u1', '/admin/games/new'),
+    );
+  });
+
+  it('leser et seks døgn gammelt utkast, men forkaster og rydder et åtte døgn gammelt', () => {
+    saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume());
+
+    expect(loadWizardDraft(KEY, CONTEXT, NOW + 6 * DAY_MS)).not.toBeNull();
+    expect(loadWizardDraft(KEY, CONTEXT, NOW + 8 * DAY_MS)).toBeNull();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('skriver til localStorage, ikke sessionStorage', () => {
+    saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume());
+
+    expect(window.localStorage.getItem(KEY)).not.toBeNull();
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('forkaster en v1-payload stille', () => {
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ v: 1, savedAt: NOW, context: CONTEXT, draft: makeDraft() }),
+    );
+
+    expect(loadWizardDraft(KEY, CONTEXT, NOW)).toBeNull();
+  });
+});
+
+describe('wizardStatePersistence — #2459 returverdien fra saveWizardDraft', () => {
+  it('gir true når lagringen gikk', () => {
+    expect(saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume())).toBe(true);
+  });
+
+  it('gir false når setItem kaster (full kvote, privat modus)', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
+    try {
+      expect(saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume())).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('wizardStatePersistence — #2459 listWizardDrafts', () => {
+  const OTHER_KEY = wizardDraftStorageKey('user-a', '/opprett-spill');
+
+  it('lister brukerens utkast, nyeste først, med resume', () => {
+    saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume({ step: 2 }));
+    saveWizardDraft(OTHER_KEY, makeDraft(), CONTEXT, NOW + 1000, makeResume({ step: 5 }));
+
+    const out = listWizardDrafts('user-a', NOW + 2000);
+
+    expect(out.map((d) => d.key)).toEqual([OTHER_KEY, KEY]);
+    expect(out[0].resume.summary.step).toBe(5);
+    expect(out[1].resume.href).toBe('/opprett-spill?intent=kompis&step=4');
+  });
+
+  it('viser aldri en annen brukers utkast', () => {
+    saveWizardDraft(
+      wizardDraftStorageKey('user-b', '/opprett-spill'),
+      makeDraft(),
+      CONTEXT,
+      NOW,
+      makeResume(),
+    );
+
+    expect(listWizardDrafts('user-a', NOW)).toEqual([]);
+  });
+
+  it('hopper over utkast uten resume, og rydder korrupte og utgåtte', () => {
+    saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW); // ingen resume
+    const old = wizardDraftStorageKey('user-a', '/gammel');
+    saveWizardDraft(old, makeDraft(), CONTEXT, NOW, makeResume());
+    const broken = wizardDraftStorageKey('user-a', '/ødelagt');
+    window.localStorage.setItem(broken, '{ ikke json');
+
+    expect(listWizardDrafts('user-a', NOW + 8 * DAY_MS)).toEqual([]);
+    expect(window.localStorage.getItem(old)).toBeNull();
+    expect(window.localStorage.getItem(broken)).toBeNull();
+  });
+
+  it('forkaster en resume med ugyldig steg eller lenke som ikke starter med /', () => {
+    for (const mutate of [
+      (r: { href: string; summary: { step: number } }) => {
+        r.summary.step = 9;
+      },
+      (r: { href: string; summary: { step: number } }) => {
+        r.href = 'https://example.com';
+      },
+    ]) {
+      saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume());
+      const stored = JSON.parse(window.localStorage.getItem(KEY)!);
+      mutate(stored.resume);
+      window.localStorage.setItem(KEY, JSON.stringify(stored));
+      expect(listWizardDrafts('user-a', NOW)).toEqual([]);
+    }
+  });
+});
+
+describe('wizardStatePersistence — #2459 clearAllWizardDrafts', () => {
+  it('fjerner alle utkast-nøkler for alle brukere, men ikke andre nøkler', () => {
+    saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume());
+    saveWizardDraft(
+      wizardDraftStorageKey('user-b', '/opprett-spill'),
+      makeDraft(),
+      CONTEXT,
+      NOW,
+      makeResume(),
+    );
+    window.localStorage.setItem('noe-annet', 'x');
+
+    clearAllWizardDrafts();
+
+    expect(window.localStorage.length).toBe(1);
+    expect(window.localStorage.getItem('noe-annet')).toBe('x');
   });
 });
