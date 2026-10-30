@@ -23,7 +23,9 @@ const REMINDER_MINUTES = 60;
  *
  * Auth-gated med samme mønster som leaderboard-eksporten:
  *   - innlogget bruker (proxy-verifisert)
- *   - admin ELLER deltaker i spillet
+ *   - admin, deltaker i spillet ELLER arrangøren (`created_by`). Kvitteringen
+ *     etter «Publiser» (#2458) gir arrangøren «Legg i kalenderen», også når
+ *     hen ikke spiller selv. Ruta leser bare, så det er ingen RLS-endring.
  *
  * Krever at spillet har en planlagt tee-off OG ikke er ferdigspilt — en
  * kalender-hendelse for en runde uten tidspunkt, eller en allerede avsluttet
@@ -65,7 +67,8 @@ export async function GET(
   const game = gwp.game;
 
   const isAdmin = profileRes.data?.is_admin === true;
-  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
+  const isOrganiser = game.created_by === userId;
+  if (!isAdmin && !isOrganiser && !gwp.players.some((p) => p.user_id === userId)) {
     return NextResponse.json({ error: t('errors.unavailable') }, { status: 404 });
   }
 
