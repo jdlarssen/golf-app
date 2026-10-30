@@ -42,13 +42,19 @@ import {
  *   8. games.insert(...).select('id').single
  *   9. game_players.insert(rows)
  *  10. (publish only) notifyRosterInvites
- *  11. redirect (admin → /admin/games/[id], else → /games/[id])
+ *  11. redirect (publish → /games/[id]/klar, #2458; a draft: admin →
+ *      /admin/games/[id], else → /games/[id])
  */
 
 const redirectMock = makeRedirectMock();
+// #2458: the history type of the last locale redirect ('replace' for the
+// receipt, undefined = the server action's default push).
+let lastRedirectType: string | undefined;
 vi.mock('@/i18n/navigation', () => ({
-  redirect: (arg: { href: string; locale?: string } | string) =>
-    redirectMock(typeof arg === 'string' ? arg : arg.href),
+  redirect: (arg: { href: string; locale?: string } | string, type?: string) => {
+    lastRedirectType = type;
+    return redirectMock(typeof arg === 'string' ? arg : arg.href);
+  },
 }));
 vi.mock('next-intl/server', () => ({
   getLocale: async () => 'no',
@@ -248,8 +254,10 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
       createGameDraft(fd({ name: 'Kompis-cup', side_tournament_enabled: 'false' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    // Non-admin success → game-home, not /admin/*.
+    // Non-admin success → game-home, not /admin/*. A draft has no receipt
+    // (#2458) and keeps the default push.
     expect(lastRedirect()).toBe('/games/reg-game-1');
+    expect(lastRedirectType).toBeUndefined();
 
     // The write landed on the request-scoped client (no service-role bypass).
     const gamesInsert = supabaseMock.__fromCalls.find(
@@ -298,7 +306,7 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
       supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
     ).toBe(true);
     expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
-    expect(lastRedirect()).toBe('/games/reg-game-pending');
+    expect(lastRedirect()).toBe('/games/reg-game-pending/klar');
   });
 });
 
@@ -431,10 +439,10 @@ describe('createAndPublishGame', () => {
     );
     expect((insert!.args[0] as { status: string }).status).toBe('scheduled');
     expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
-    expect(lastRedirect()).toBe('/admin/games/game-pending?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-pending/klar');
   });
 
-  it('happy path (publish): inserts scheduled game, redirects with ?status=scheduled', async () => {
+  it('happy path (publish): inserts scheduled game, redirects to the receipt', async () => {
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null }, // gate
@@ -449,7 +457,9 @@ describe('createAndPublishGame', () => {
     await expect(
       createAndPublishGame(fullPublishFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/admin/games/new-game-2?status=scheduled');
+    // #2458: the receipt, replacing the wizard in the history.
+    expect(lastRedirect()).toBe('/games/new-game-2/klar');
+    expect(lastRedirectType).toBe('replace');
   });
 
   it('happy path (fourball publish): persists mode_config with allowance_pct from form', async () => {
@@ -491,7 +501,7 @@ describe('createAndPublishGame', () => {
       ),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/admin/games/new-game-4ball?status=scheduled');
+    expect(lastRedirect()).toBe('/games/new-game-4ball/klar');
 
     const insertCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'games' && c.method === 'insert',
@@ -594,7 +604,7 @@ describe('createAndPublishGame', () => {
       ),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/admin/games/new-game-stbl?status=scheduled');
+    expect(lastRedirect()).toBe('/games/new-game-stbl/klar');
 
     const insertCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'games' && c.method === 'insert',
@@ -772,9 +782,7 @@ describe('invite-notify ved publisering (#182 → #2445)', () => {
       '[createGameInternal] roster invites failed',
       expect.objectContaining({ gameId: 'game-notify-rejected' }),
     );
-    expect(lastRedirect()).toBe(
-      '/admin/games/game-notify-rejected?status=scheduled',
-    );
+    expect(lastRedirect()).toBe('/games/game-notify-rejected/klar');
     consoleError.mockRestore();
   });
 
@@ -921,7 +929,7 @@ describe('klubb-turnering uten spillere (#2433)', () => {
       registration_mode: 'invite_only',
     });
     expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
-    expect(lastRedirect()).toBe('/admin/games/club-game?status=scheduled');
+    expect(lastRedirect()).toBe('/games/club-game/klar');
   });
 
   it('(vakt) a group_id the caller is not a member of never unlocks an empty roster', async () => {
