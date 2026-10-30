@@ -7776,6 +7776,7 @@
   "resumeDraft": {
     "kicker": "Pick up where you left off",
     "untitled": "New game",
+    "touchedAt": "{relative} at {time}",
     "playersOfTotal": "{count} of {total} players",
     "playersCount": "{count, plural, one {# player} other {# players}}",
     "stepLine": "Step {step} of {total} · {title}",
