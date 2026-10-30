@@ -500,6 +500,9 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
 
+    // #2454: the draft's format is the folded line; «Bytt» shows it checked.
+    expect(within(screen.getByTestId('format-chosen')).getByText('Matchplay')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^bytt spillform/i }));
     const formatCard = screen.getByRole('radio', { name: /^matchplay$/i });
     expect(formatCard.getAttribute('aria-checked')).toBe('true');
   });

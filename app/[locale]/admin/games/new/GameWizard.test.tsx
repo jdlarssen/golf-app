@@ -182,7 +182,16 @@ const STABLEFORD_CARD = /^(velg stableford|valgt: stableford)$/i;
 // Helper: pluck stableford-format i step 2 (Kompis-katalog har stableford
 // som primary).
 function pickStablefordFormat() {
+  openFormatList();
   fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_CARD }));
+}
+
+// #2454: a chosen format folds the list to one line. A test that starts with a
+// format already chosen (initialValues, restored draft) presses «Bytt» before
+// it picks one.
+function openFormatList() {
+  const change = screen.queryByRole('button', { name: /^bytt spillform/i });
+  if (change) fireEvent.click(change);
 }
 
 function pickBestBallFormat() {
@@ -452,6 +461,27 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     // count=3: best_ball passer ikke (trenger partall ≥2), nines passer (nøyaktig 3)
     expect(screen.queryByRole('radio', { name: /^best ball$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
+  });
+
+  // #2454: a chosen format is one line; a count it no longer fits opens the
+  // list again with nothing chosen, and «Neste» goes away as before.
+  it('formatet folder seg til én linje, og et antall det ikke passer åpner lista igjen', () => {
+    renderWizardWithNines();
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
+    fireEvent.click(screen.getByRole('button', { name: /én spiller færre/i }));
+
+    fireEvent.click(screen.getByRole('radio', { name: /nines \/ split sixes/i }));
+    expect(screen.queryByRole('radiogroup', { name: /velg spillform/i })).toBeNull();
+    expect(within(screen.getByTestId('format-chosen')).getByText(/nines/i)).toBeInTheDocument();
+    expect(screen.getByTestId('wizard-next')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /én spiller til/i }));
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
+    expect(screen.getByRole('radiogroup', { name: /velg spillform/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('wizard-next')).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: /^best ball$|velg best ball/i }));
+    expect(screen.getByTestId('format-chosen')).toBeInTheDocument();
   });
 });
 
@@ -1148,6 +1178,9 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     // Steg 2: formatet er tilbake (og «Neste» er dermed åpen).
     clickNext();
     expectStep(2);
+    // #2454: the chosen format is the folded line; «Bytt» shows it checked.
+    expect(within(screen.getByTestId('format-chosen')).getByText('Stableford')).toBeInTheDocument();
+    openFormatList();
     expect(
       screen.getByRole('radio', { name: STABLEFORD_CARD }).getAttribute('aria-checked'),
     ).toBe('true');

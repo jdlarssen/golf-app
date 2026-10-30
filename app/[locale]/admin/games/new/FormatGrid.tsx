@@ -10,6 +10,9 @@ import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLi
 import { Kicker } from '@/components/ui/Kicker';
 import { FormatLineup, useLineupText } from '@/components/FormatLineup';
 
+const PILL =
+  'shrink-0 rounded-full border border-border bg-surface font-sans font-semibold leading-[normal] text-primary';
+
 type Props = {
   formats: FormatForIntent[];
   value: string | undefined;
@@ -40,6 +43,11 @@ type Props = {
  * option is one radiogroup with one roving tab stop, so the arrow keys move
  * across the card and every row. «Reglene» is always a sibling of the radio,
  * never a button inside a button.
+ *
+ * #2454: once a format is chosen the list folds to one line (name, the rule in
+ * a sentence, «Bytt») so the setup under it is in view. A press or Enter/Space
+ * on an option folds it; the arrow keys only select, so the list stays open
+ * for them. «Bytt» opens it again on the selected format.
  */
 export function FormatGrid({
   formats,
@@ -55,6 +63,21 @@ export function FormatGrid({
   const lineupText = useLineupText();
   const legendId = useId();
   const idPrefix = useId();
+
+  // #2454: display state only, never saved in the draft. A format that is
+  // already chosen on mount (edit, restored draft, ?format=, back from step 3)
+  // starts folded. The parent clears the value when the player count no longer
+  // fits it; then the list opens again (adjusted during render, not in an
+  // effect, so the folded line never flashes).
+  const [folded, setFolded] = useState(value !== undefined);
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    if (value === undefined) setFolded(false);
+  }
+  const groupRef = useRef<HTMLDivElement | null>(null);
+  const changeRef = useRef<HTMLButtonElement | null>(null);
+  const focusAfterToggle = useRef<'change' | 'selected' | null>(null);
 
   // «Se alle» opens the rest for the count it was pressed at; a new count is a
   // new recommendation and starts folded again.
@@ -76,8 +99,15 @@ export function FormatGrid({
     : [split.rest.filter((f) => f.is_primary), split.rest.filter((f) => !f.is_primary)];
   const visible = groups.flat();
 
+  // Arrow keys, Home and End select without folding the list; a press folds it.
   const select = (slug: string) => {
     if (!disabled) onChange(slug);
+  };
+  const choose = (slug: string) => {
+    if (disabled) return;
+    onChange(slug);
+    focusAfterToggle.current = 'change';
+    setFolded(true);
   };
   const roving = useRovingFocus(
     visible.map((f) => f.slug),
@@ -90,6 +120,15 @@ export function FormatGrid({
   const revealedRef = useRef<HTMLElement | null>(null);
   const focusRevealed = useRef(false);
   useLayoutEffect(() => {
+    if (focusAfterToggle.current === 'change') {
+      // The pressed option unmounted with the list: «Bytt» takes the focus.
+      focusAfterToggle.current = null;
+      changeRef.current?.focus();
+    } else if (focusAfterToggle.current === 'selected') {
+      // «Bytt» unmounted: the roving tab stop is the selected format.
+      focusAfterToggle.current = null;
+      groupRef.current?.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
+    }
     if (!focusRevealed.current) return;
     focusRevealed.current = false;
     revealedRef.current?.focus();
@@ -114,7 +153,7 @@ export function FormatGrid({
         onClick={() => onShowGuide(slug)}
         aria-label={t('rulesAriaLabel', { name: name(slug) })}
         style={style}
-        className={`shrink-0 rounded-full border border-border bg-surface font-sans font-semibold leading-[normal] text-primary ${className}`}
+        className={`${PILL} ${className}`}
       >
         {t('rules')}
       </button>
@@ -154,7 +193,7 @@ export function FormatGrid({
             aria-checked={selected}
             aria-describedby={`${metaId} ${pitchId}`}
             disabled={disabled}
-            onClick={() => select(f.slug)}
+            onClick={() => choose(f.slug)}
             className="h-12 flex-1 rounded-full bg-primary font-sans text-[15px] font-semibold leading-[normal] text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-bg"
           >
             {selected ? (
@@ -211,7 +250,7 @@ export function FormatGrid({
           aria-labelledby={nameId}
           aria-describedby={lineId}
           disabled={disabled}
-          onClick={() => select(f.slug)}
+          onClick={() => choose(f.slug)}
           style={selected ? { outlineOffset: '-5px' } : undefined}
           // With «Reglene» beside it the gap to the button is the row's 12 px.
           className={`flex min-w-0 flex-1 items-center gap-3 self-stretch py-2.5 pl-3.5 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -251,6 +290,44 @@ export function FormatGrid({
     );
   }
 
+  function renderChosenLine(slug: string) {
+    return (
+      <div className="pt-[18px]">
+        <div
+          data-testid="format-chosen"
+          className="-mx-1 flex items-center gap-3 rounded-2xl border-2 border-primary bg-surface px-3.5 py-3"
+        >
+          <span
+            aria-hidden="true"
+            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary font-sans text-[13px] font-semibold leading-[normal] text-white dark:text-bg"
+          >
+            ✓
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-serif text-xl font-semibold leading-[normal] text-text">
+              {name(slug)}
+            </p>
+            <p className="font-sans text-xs leading-[normal] text-muted">{card(slug, 'line')}</p>
+          </div>
+          <button
+            ref={changeRef}
+            type="button"
+            aria-expanded={false}
+            aria-label={t('changeAriaLabel', { name: name(slug) })}
+            disabled={disabled}
+            onClick={() => {
+              focusAfterToggle.current = 'selected';
+              setFolded(false);
+            }}
+            className={`${PILL} h-11 px-3.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            {t('change')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function rowCard(children: ReactNode) {
     return (
       <div
@@ -261,6 +338,8 @@ export function FormatGrid({
       </div>
     );
   }
+
+  if (folded && value !== undefined) return renderChosenLine(value);
 
   if (visible.length === 0) {
     return (
@@ -341,7 +420,7 @@ export function FormatGrid({
   // legend named the group a second time («Velg spillform, gruppe» before
   // «Velg spillform, radiogruppe»). Every radio carries `disabled` itself.
   return (
-    <div role="radiogroup" aria-labelledby={legendId} aria-disabled={disabled || undefined}>
+    <div ref={groupRef} role="radiogroup" aria-labelledby={legendId} aria-disabled={disabled || undefined}>
       <p id={legendId} className="sr-only">
         {t('legend')}
       </p>

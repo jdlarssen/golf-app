@@ -59,6 +59,8 @@ describe('FormatGrid — uten antall (Klubb, Solo)', () => {
       return <FormatGrid formats={KLUBB_FORMATS} value={value} onChange={setValue} />;
     }
     render(<Wrapper />);
+    // #2454: a format chosen on mount is the folded line.
+    fireEvent.click(screen.getByRole('button', { name: /^bytt spillform/i }));
     const radios = () => screen.getAllByRole('radio');
 
     act(() => {
@@ -69,6 +71,8 @@ describe('FormatGrid — uten antall (Klubb, Solo)', () => {
     expect(radios()[4]).toHaveAttribute('aria-checked', 'true');
     expect(radios()[4]).toHaveAccessibleName('Matchplay');
     expect(document.activeElement).toBe(radios()[4]);
+    // Arrow keys select but leave the list open.
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
   });
 });
 
@@ -128,6 +132,7 @@ describe('FormatGrid — med antall (Kompis)', () => {
         playerCount={4}
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: /^bytt spillform/i }));
     expect(screen.getByRole('radio', { name: 'Valgt: Best ball' })).toHaveAttribute(
       'aria-checked',
       'true',
@@ -158,6 +163,7 @@ describe('FormatGrid — med antall (Kompis)', () => {
         playerCount={4}
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: /^bytt spillform/i }));
     const rows = screen.getAllByTestId('format-row');
     expect(rows).toHaveLength(4);
     expect(within(rows[3]).getByRole('radio', { name: 'Texas scramble' })).toHaveAttribute(
@@ -165,5 +171,108 @@ describe('FormatGrid — med antall (Kompis)', () => {
       'true',
     );
     expect(screen.getByRole('button', { name: 'Se alle 6 som passer' })).toBeInTheDocument();
+  });
+});
+
+// #2454: a chosen format folds the list to one line with «Bytt».
+describe('FormatGrid — valgt format som én linje (#2454)', () => {
+  function Wrapper({ initial }: { initial: string | undefined }) {
+    const [value, setValue] = useState<string | undefined>(initial);
+    return (
+      <>
+        <button type="button" onClick={() => setValue(undefined)}>
+          nullstill
+        </button>
+        <FormatGrid
+          formats={KOMPIS_FORMATS}
+          value={value}
+          onChange={setValue}
+          onShowGuide={vi.fn()}
+          playerCount={4}
+        />
+      </>
+    );
+  }
+
+  it('klikk på en rad folder lista til navn, regel-linje og «Bytt», med fokus på «Bytt»', () => {
+    render(<Wrapper initial={undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Se alle 6 som passer' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Wolf' }));
+
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+    const line = screen.getByTestId('format-chosen');
+    expect(within(line).getByText('Wolf')).toBeInTheDocument();
+    expect(within(line).getByText('Ulven velger partner på hvert hull')).toBeInTheDocument();
+    const change = within(line).getByRole('button', { name: 'Bytt spillform. Valgt: Wolf' });
+    expect(change).toHaveTextContent('Bytt');
+    expect(change).toHaveAttribute('aria-expanded', 'false');
+    expect(document.activeElement).toBe(change);
+  });
+
+  it('klikk på kortets knapp folder lista på samme måte', () => {
+    render(<Wrapper initial={undefined} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Velg best ball' }));
+
+    const line = screen.getByTestId('format-chosen');
+    expect(within(line).getByText('Best ball')).toBeInTheDocument();
+    expect(document.activeElement).toBe(
+      within(line).getByRole('button', { name: 'Bytt spillform. Valgt: Best ball' }),
+    );
+  });
+
+  it('piltast i åpen liste velger uten å folde lista', () => {
+    const onChange = vi.fn();
+    render(
+      <FormatGrid
+        formats={KOMPIS_FORMATS}
+        value={undefined}
+        onChange={onChange}
+        playerCount={4}
+      />,
+    );
+    const card = screen.getByRole('radio', { name: 'Velg best ball' });
+    act(() => card.focus());
+    fireEvent.keyDown(card, { key: 'ArrowDown' });
+
+    expect(onChange).toHaveBeenCalledWith('stableford');
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
+  });
+
+  it('«Bytt» åpner lista med valget markert og fokus på det valgte formatet', () => {
+    render(<Wrapper initial="wolf" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt spillform. Valgt: Wolf' }));
+
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
+    const wolf = screen.getByRole('radio', { name: 'Wolf' });
+    expect(wolf).toHaveAttribute('aria-checked', 'true');
+    expect(document.activeElement).toBe(wolf);
+  });
+
+  it('mount med valgt format starter foldet', () => {
+    render(<Wrapper initial="wolf" />);
+    expect(screen.getByTestId('format-chosen')).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+
+  it('uten valgt format er lista åpen, og den åpner seg igjen når valget forsvinner', () => {
+    render(<Wrapper initial={undefined} />);
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Velg best ball' }));
+    expect(screen.getByTestId('format-chosen')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'nullstill' }));
+    expect(screen.queryByTestId('format-chosen')).toBeNull();
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+  });
+
+  it('disabled: «Bytt» er av', () => {
+    render(
+      <FormatGrid formats={KOMPIS_FORMATS} value="wolf" onChange={vi.fn()} playerCount={4} disabled />,
+    );
+    expect(screen.getByRole('button', { name: /^bytt spillform/i })).toBeDisabled();
   });
 });
