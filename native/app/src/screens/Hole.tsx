@@ -1323,7 +1323,8 @@ const styles = StyleSheet.create({
   // webbens `ScoreCard` (#2211). Før ble bare stepperne dempet.
   cardLocked: { opacity: 0.6 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
-  meName: { fontFamily: FONTS.sansBold },
+  // Halvfet som resten av appen; fet er sollysets (#2700).
+  meName: { fontFamily: FONTS.sansSemiBold },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepperLabel: { width: 60 },
   step: {
@@ -1336,6 +1337,6 @@ const styles = StyleSheet.create({
   stepDisabled: { opacity: 0.4 },
   // Venstrestilt som stepper-etikettene, ikke midtstilt som `ui.link` er.
   undo: { alignItems: 'flex-start' },
-  stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
+  stepText: { fontSize: 22, fontFamily: FONTS.sansSemiBold },
   stepValue: { width: 44, textAlign: 'center' },
 });

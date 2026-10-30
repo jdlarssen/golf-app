@@ -33,7 +33,7 @@ import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
-import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
+import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, type ThemeColors } from '../../theme';
 import { withSystemArrows } from '../SystemArrow';
 
 /** Hva knappene viser etter navnet på resultatet: poengene, eller ingenting. */
@@ -160,7 +160,7 @@ export function ScoreRail({
   nextLabel,
   onNext,
 }: ScoreRailProps) {
-  const { colors, hole } = useTheme();
+  const { colors, hole, scheme } = useTheme();
   const insets = useSafeAreaInsets();
 
   // Skjermleseren får høre hvor skinna gikk etter hvert trykk, som webbens
@@ -184,7 +184,14 @@ export function ScoreRail({
         styles.sectionSun,
         { borderTopColor: colors.border, backgroundColor: colors.bg, paddingBottom: SUN_BOTTOM + insets.bottom },
       ]
-    : [styles.sheet, { backgroundColor: colors.surface, paddingBottom: SHEET_BOTTOM + insets.bottom }];
+    : [
+        styles.sheet,
+        {
+          backgroundColor: colors.surface,
+          shadowColor: sheetShadowColor(scheme),
+          paddingBottom: SHEET_BOTTOM + insets.bottom,
+        },
+      ];
   // Arket har et lite håndtak øverst, som designet.
   const handle = sunlight ? null : (
     <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -548,7 +555,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingHorizontal: 16,
     gap: 12,
-    shadowColor: '#1A2E1F',
+    // Skyggefargen settes i komponenten: svart i klubbhus-natt (#2700).
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
