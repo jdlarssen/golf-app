@@ -1912,6 +1912,30 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
       (container.querySelector('input[type=hidden][name=registration_mode]') as HTMLInputElement).value,
     ).toBe('open');
   });
+
+  // #2447: «Rediger spill» reads the same `mode*` keys as step 4, with its own
+  // look (selection circle, visibility pill).
+  it('«Rediger spill» viser de tre nye titlene og undertekstene', () => {
+    const row = editRow({
+      game_mode: 'texas_scramble',
+      mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 1, team_handicap_pct: 10 },
+      registration_mode: 'open',
+      registration_type: 'team',
+    });
+    renderEdit(row, EIGHT_PLAYERS.slice(0, 2), [
+      { user_id: 'u0', team_number: 1, flight_number: 1, tee_gender: 'mens' },
+      { user_id: 'u1', team_number: 1, flight_number: 1, tee_gender: 'mens' },
+    ]);
+
+    expect(screen.getByRole('radio', { name: /jeg velger dem nå/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /de ber om plass, jeg godkjenner/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /åpen påmelding/i })).toBeChecked();
+    expect(screen.getByText('Bare de du velger, er med. Privat.')).toBeInTheDocument();
+    expect(screen.getByText('Spillet vises i Finn turneringer.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Alle med lenken kan melde seg på. Spillet vises i Finn turneringer.'),
+    ).toBeInTheDocument();
+  });
   // #2566: the edit form shows the team handicap in the organiser's unit, %
   // of the team average, through the same field as the wizard (Type C, with
   // numbers on purpose: this is the only test proving GameForm renders

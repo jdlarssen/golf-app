@@ -4,6 +4,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import type { GuestOnlyVerdict } from '@/lib/games/guestOnlyRoster';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import type { RegistrationMode } from '@/lib/games/registration';
 
 /**
  * The «Klar?» checklist on step 5 (#2282): four rows, each with a status and
@@ -251,4 +252,37 @@ export function formatRowParts({
         : { kind: 'pct', pct: hcpAllowance }
       : null,
   };
+}
+
+/** The `wizard.ready.checklist.source.*` key for the registration mode (#2447). */
+export function sourceKeyFor(mode: RegistrationMode): 'invite' | 'approval' | 'open' {
+  if (mode === 'invite_only') return 'invite';
+  if (mode === 'manual_approval') return 'approval';
+  return 'open';
+}
+
+/**
+ * The Spillere row's text when the row is not red (#2447). The choice made at
+ * the top of step 4 goes last: `<players> · <how they come>`. With nobody on
+ * the list the row says only how they come, never «0 spillere». A `warn`
+ * value is already a whole sentence, so the profile note goes first there
+ * (#2441), as before. `source` is `null` for a club tournament, which has no
+ * such choice.
+ */
+export function playersRowParts({
+  status,
+  selectedCount,
+  value,
+  pendingNote,
+  source,
+}: {
+  status: 'ok' | 'warn';
+  selectedCount: number;
+  value: string;
+  pendingNote: string | null;
+  source: string | null;
+}): string[] {
+  if (selectedCount === 0 && source) return [source];
+  const parts = status === 'warn' ? [pendingNote, value] : [value, pendingNote];
+  return [...parts, source].filter((part): part is string => Boolean(part));
 }

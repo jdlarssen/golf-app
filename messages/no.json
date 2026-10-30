@@ -1006,13 +1006,13 @@
         "heading": "Påmelding",
         "whoLegend": "Hvem kan melde seg på?",
         "whatLegend": "Hva melder man på?",
-        "modeInviteTitle": "Bare de jeg inviterer",
+        "modeInviteTitle": "Jeg velger dem nå",
         "modeClubTitle": "Medlemmene i klubben",
-        "modeInviteHint": "Privat. Vises ikke i Finn turneringer. Du sender invitasjoner selv fra Spillere-fanen.",
-        "modeApprovalTitle": "Forespørsel — jeg godkjenner",
-        "modeApprovalHint": "Dukker opp i Finn turneringer. Folk ber om plass, og du godkjenner hver enkelt.",
+        "modeInviteHint": "Bare de du velger, er med. Privat.",
+        "modeApprovalTitle": "De ber om plass, jeg godkjenner",
+        "modeApprovalHint": "Spillet vises i Finn turneringer.",
         "modeOpenTitle": "Åpen påmelding",
-        "modeOpenHint": "Dukker opp i Finn turneringer så hvem som helst med lenken kan melde seg på.",
+        "modeOpenHint": "Alle med lenken kan melde seg på. Spillet vises i Finn turneringer.",
         "friendsSkipTitle": "Slipp venner direkte inn",
         "friendsSkipHint": "Venner av deg slipper rett inn uten å be om plass. Andre må fortsatt be om å bli med.",
         "typeSoloTitle": "Individuelt",
@@ -1155,7 +1155,12 @@
         "gross": "brutto",
         "playersWarn": "{selected} av {expected}. Du kan legge til flere senere.",
         "playersGuestsOnly": "Bare gjester. Gjester kan ikke logge inn, så ingen kan føre slag. Bli med selv, eller legg til en spiller med konto.",
-        "pendingProfiles": "{count, plural, one {1 venter på profil} other {# venter på profil}}"
+        "pendingProfiles": "{count, plural, one {1 venter på profil} other {# venter på profil}}",
+        "source": {
+          "invite": "Privat",
+          "approval": "Du godkjenner påmeldinger",
+          "open": "Åpen påmelding"
+        }
       },
       "advancedToggle": "Vis avanserte innstillinger",
       "publishButton": "Publiser og del invitasjonen",
@@ -1339,6 +1344,7 @@
       "2": "Hva skal dere spille?",
       "3": "Hvor og når?",
       "4": "Hvem skal spille?",
+      "4source": "Hvordan får dere spillere?",
       "5": "Klar?",
       "cupSetup": "Sett opp cupen"
     },
@@ -1383,11 +1389,11 @@
     },
     "footer": {
       "next": "Neste",
+      "nextReady": "Neste: Klar?",
       "nextTeams": "Neste: lagene",
       "nextSides": "Neste: sidene"
     },
     "step4": {
-      "emptyRosterHint": "Du bestemmer på neste steg om du vil legge til spillere her, eller la dem melde seg på selv.",
       "emptyRosterHintClub": "Du kan også la lista stå tom. Medlemmene i klubben kan melde seg på selv.",
       "pickerSubtitle": "{format} · {players}",
       "pickerSubtitleLineup": "{format} · {players}, {lineup}",
