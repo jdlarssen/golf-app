@@ -38,12 +38,12 @@ export function RulesSection({
       <Text
         ref={headingRef}
         accessibilityRole="header"
-        style={ui.sectionTitle}
+        style={ui.sectionHead}
         testID="rules-heading"
       >
         {rulesHeading(MODE_LABELS[mode])}
       </Text>
-      <View style={ui.card}>
+      <View style={[ui.card, styles.card]}>
         <Text style={ui.body}>{guide.summary}</Text>
         {guide.points.map((point) => (
           <View key={point} style={styles.point}>
@@ -62,6 +62,8 @@ export function RulesSection({
 
 const styles = StyleSheet.create({
   section: { gap: 8 },
+  // #2700: designets kortradius, som spillerlista over.
+  card: { borderRadius: 16 },
   point: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 9 },
   pointText: { flex: 1 },
