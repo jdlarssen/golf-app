@@ -590,7 +590,7 @@ export function GameForm({
     ? `${tModes(gameMode)} · ${t('lockedTag')}`
     : tModes(gameMode);
   // #2433: a club tournament is invite_only in the DB, but the members sign
-  // up themselves; «Bare de jeg inviterer» would say the opposite.
+  // up themselves; «Jeg velger dem nå» would say the opposite.
   const registrationSummary = tReg(
     state.isClubScoped
       ? 'modeClubTitle'

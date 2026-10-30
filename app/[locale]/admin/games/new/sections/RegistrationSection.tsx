@@ -124,7 +124,7 @@ export function RegistrationSection({
     return t('typeTeamTitle');
   }
 
-  // «Hvem kan melde seg på?»: tre valgkort, og under «Forespørsel» (når den er
+  // «Hvem kan melde seg på?»: tre valgkort, og under «De ber om plass» (når den er
   // valgt) avkrysningen for venner, innrykket til kortets tekst.
   const modeChoice = !hideModeChoice && (
     <>
