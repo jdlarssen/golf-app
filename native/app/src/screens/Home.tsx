@@ -517,7 +517,7 @@ function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: ()
 function SectionHead({ title }: { title: string }) {
   const { ui } = useTheme();
   return (
-    <Text accessibilityRole="header" style={[ui.kicker, styles.sectionHead]}>
+    <Text accessibilityRole="header" style={ui.sectionHead}>
       {title}
     </Text>
   );
@@ -549,7 +549,7 @@ function Section({
           onPress={() => onOpen(card.gameId)}
           testID={`game-card-${card.gameId}`}
         >
-          <Text style={ui.value}>{card.name}</Text>
+          <Text style={[styles.gameName, { color: colors.text }]}>{card.name}</Text>
           <Text style={ui.muted}>
             {[card.courseName, formatTeeOff(card.scheduledTeeOffAt)]
               .filter((part): part is string => part != null)
@@ -616,14 +616,15 @@ const styles = StyleSheet.create({
   hcpValue: { ...fraunces(600, 18, 23) },
   empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
   emptyText: { textAlign: 'center' },
-  // 22 pt luft over (14 + mellomrommet i lista) og 8 under, som i designet.
-  sectionHead: { marginTop: 14, marginHorizontal: TEXT_INSET },
+  // #2700: hjørnene og navnet som «Neste start»-kortet over (16, Fraunces
+  // 500/18), så lista ikke blir tyngre enn kortene designet tegner.
   gameCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginTop: 8,
     gap: 6,
   },
+  gameName: { ...fraunces(500, 18, 23, { multiline: true }) },
   allRounds: { alignSelf: 'flex-start' },
 });
