@@ -123,8 +123,10 @@ export const PROFILE_TEXT = {
   // Flisene under kortet, med designlerretets små etiketter under tallet.
   // Skjermleseren får hele ord i stedet ({@link seasonTileSpoken}).
   tileRounds: 'runder i år',
+  tileRoundsOne: 'runde i år',
   tileBestRound: 'beste runde',
   tileWins: 'seire',
+  tileWinsOne: 'seier',
   tileRoundsSpoken: 'Runder',
   tileBestRoundSpoken: 'Beste runde',
   tileWinsSpoken: 'Seire',
@@ -342,6 +344,19 @@ export function memberSinceLine(year: number): string {
  */
 export function seasonTileSpoken(label: string, year: number, value: string): string {
   return `${label} i ${year}: ${value}`;
+}
+
+/**
+ * Etiketten under runde-flisa følger tallet: «1 runde i år», «14 runder i år»
+ * (#2700). `null` (sesongen lastes) gir flertall, som før.
+ */
+export function seasonTileRoundsLabel(count: number | null): string {
+  return count === 1 ? PROFILE_TEXT.tileRoundsOne : PROFILE_TEXT.tileRounds;
+}
+
+/** Som {@link seasonTileRoundsLabel}: «1 seier», «3 seire». */
+export function seasonTileWinsLabel(count: number | null): string {
+  return count === 1 ? PROFILE_TEXT.tileWinsOne : PROFILE_TEXT.tileWins;
 }
 
 /**

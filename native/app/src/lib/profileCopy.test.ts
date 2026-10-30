@@ -48,7 +48,9 @@ import {
   onboardingGameLine,
   onboardingGameTitle,
   onboardingPreviewHcp,
+  seasonTileRoundsLabel,
   seasonTileSpoken,
+  seasonTileWinsLabel,
   unsentStrokesWarning,
 } from './profileCopy';
 
@@ -169,6 +171,19 @@ describe('bag-taggens linjer', () => {
 
   it('leser en flis som én setning', () => {
     expect(seasonTileSpoken(PROFILE_TEXT.tileWinsSpoken, 2026, '2')).toBe('Seire i 2026: 2');
+  });
+
+  // #2700: «1 seire» under flisa. Etiketten følger tallet; mens sesongen
+  // lastes, står flertall som før.
+  it.each([
+    [null, 'runder i år', 'seire'],
+    [0, 'runder i år', 'seire'],
+    [1, 'runde i år', 'seier'],
+    [2, 'runder i år', 'seire'],
+    [14, 'runder i år', 'seire'],
+  ])('etiketten under %s følger tallet', (count, rounds, wins) => {
+    expect(seasonTileRoundsLabel(count)).toBe(rounds);
+    expect(seasonTileWinsLabel(count)).toBe(wins);
   });
 
   it('sier «gammelt» for det samme som describeHandicapAge viser påminnelsen for', () => {
