@@ -434,13 +434,19 @@ describe('wizardStatePersistence — #2459 listWizardDrafts', () => {
     expect(window.localStorage.getItem(broken)).toBeNull();
   });
 
-  it('forkaster en resume med ugyldig steg eller lenke som ikke starter med /', () => {
+  it('forkaster en resume med ugyldig steg, eller en lenke som ikke er en lokal sti', () => {
     for (const mutate of [
       (r: { href: string; summary: { step: number } }) => {
         r.summary.step = 9;
       },
       (r: { href: string; summary: { step: number } }) => {
         r.href = 'https://example.com';
+      },
+      (r: { href: string; summary: { step: number } }) => {
+        r.href = '//evil.example/x';
+      },
+      (r: { href: string; summary: { step: number } }) => {
+        r.href = '/\\evil.example';
       },
     ]) {
       saveWizardDraft(KEY, makeDraft(), CONTEXT, NOW, makeResume());
