@@ -32,6 +32,7 @@
  */
 
 import type { Intent } from '@/lib/wizard/intent';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { WIZARD_DRAFT_KEY_PREFIX, clearAllWizardDrafts } from '@/lib/wizard/draftKeys';
 import { prizeListFromDraft } from '@/lib/games/prizes';
 import { asMinTeeShots } from '@/lib/games/teeShots';
@@ -486,7 +487,9 @@ function parseResume(raw: unknown): WizardDraftResume | undefined {
   if (typeof raw !== 'object' || raw === null) return undefined;
   const r = raw as Partial<WizardDraftResume>;
   const sm = r.summary as Partial<WizardDraftSummary> | undefined;
-  if (typeof r.href !== 'string' || !r.href.startsWith('/')) return undefined;
+  // Storage is not trusted: the href goes into a link, so it must be a same-origin path.
+  const href = safeInternalPath(r.href);
+  if (href === null) return undefined;
   if (typeof sm !== 'object' || sm === null) return undefined;
   const step = sm.step;
   if (step !== 1 && step !== 2 && step !== 3 && step !== 4 && step !== 5) return undefined;
@@ -494,7 +497,7 @@ function parseResume(raw: unknown): WizardDraftResume | undefined {
   const count = (v: unknown) =>
     typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
   return {
-    href: r.href,
+    href,
     summary: {
       step,
       formatLabel: str(sm.formatLabel),
