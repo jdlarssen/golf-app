@@ -173,7 +173,7 @@ Google regner ut aldersgrensen fra svarene.
 
 | Erklæring | Svar | Kilde |
 |---|---|---|
-| Target audience | **18 and over** (anbefaling: voksne golfspillere, og det holder appen utenfor familieprogrammet). Eieren velger i konsollen. | Velger du en aldersgruppe under 13, gjelder familieprogrammets regler (<https://support.google.com/googleplay/android-developer/answer/9867159>). |
+| Target audience | **13 and over**: eierens valg, ifølge statuskommentaren «Status Play, 29.10» på #2561 (ikke lest på nytt i konsollen 30.10). Opprinnelig anbefaling var 18+. | Velger du en aldersgruppe under 13, gjelder familieprogrammets regler (<https://support.google.com/googleplay/android-developer/answer/9867159>). |
 | Ads | **No, my app does not contain ads** | <https://support.google.com/googleplay/android-developer/answer/9859455> |
 | Advertising ID | Nei, appen bruker ikke reklame-id | Appen har ingen reklame. |
 | News app | Nei | Kategorien er Sports, og appen kaller seg ikke nyheter (<https://support.google.com/googleplay/android-developer/answer/10523915>). |
@@ -192,26 +192,10 @@ er den samme som for Apple (langtrykket på tittelen), men Google har sin egen
 review-konto med egen adresse, eget passord og egne demo-runder
 (`app-store-review-konto.md`).
 
+Teksten under står i Play Console under **Appinnhold → Påloggingsinformasjon** («Google Play review account»), ordrett slik den ble lest 30.10 (#2561). Feltet tar høyst 500 tegn (denne er 468). Brukernavn og passord står i feltene over, i Play Console (**se Play Console**), og skal aldri inn her.
+
 ```text
-Signing in normally uses a one-time code sent by email. For review we have prepared a
-dedicated account with a password. The password field is hidden behind a long press:
-
-1. Open the app. You land on the sign-in screen, titled "Tørny".
-2. Press and hold the title "Tørny" for about two seconds. A password field and a
-   button labelled "Logg inn med passord" (Sign in with password) appear.
-3. Enter the user name and password above, then tap "Logg inn med passord".
-
-Right after signing in, the app asks whether the AI may write about you
-("Kan AI-en skrive om deg?"). Both answers take you into the app.
-
-The account plays in an active demo round called "Demo Round (Google Play) — Tørny", and in a team round, "Demo Scramble (Google Play) — Tørny" (Texas scramble, two teams of two). The team round is the big card on the home screen, and the other round is under "Flere runder i gang". In the team round the app asks "Hvem sitt utslag ble brukt?" (whose tee shot was used) on each hole. Its team card can be submitted only when every player has three tee shots, so use it to look around.
-The account is also a member of a league, "Demo League (Google Play) — Tørny", under "Ligaene dine" (Your leagues) on the home screen. Its standings stay empty until a round is delivered. To play the open round, tap "Spill runden", pick a co-player such as Emma (a regular league needs one) and tap "Start runden".
-The app is in Norwegian and is available in Norway only.
-
-This account is for Google Play review only. To see account deletion without deleting
-the account, open "Profil" -> "Personvern og konto" -> "Slett konto" and stop before
-the final button "Slett kontoen min for alltid" (Delete my account forever). Account
-deletion can also be requested on the web at https://tornygolf.no/legal/slett-konto.
+Sign-in normally uses an emailed one-time code. For review: on the sign-in screen, press and hold the title "Tørny" for 2 seconds. A password field and the button "Logg inn med passord" appear. Enter the user name and password above. The account has demo rounds and a demo league ("Demo League (Google Play) — Tørny") on the home screen. The app is in Norwegian, Norway only. Account deletion: Profil > Personvern og konto > Slett konto (stop before the final button).
 ```
 
 «Til enhver tid» betyr at kontoen må virke gjennom hele det lukkede sporet, ikke bare
