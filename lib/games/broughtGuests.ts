@@ -17,7 +17,8 @@ import { displayNameForOthers } from '@/lib/users/displayName';
 // kapteinen (eierens svar 3). En gjest kan ikke selv bli kaptein (0228).
 //
 // Kapteinens trekk (`lib/games/withdrawSelf.ts`), arrangørens fjerning
-// (`games/[id]/spillere/actions.ts`), «Trekk meg»-siden og linja på «Styr
+// (`games/[id]/spillere/actions.ts` og lagringen i «Rediger»,
+// `admin/games/[id]/edit/actions.ts`), «Trekk meg»-siden og linja på «Styr
 // spillere» leser og trekker gjestene herfra. Ingen av dem leser koblingen
 // selv.
 //
@@ -254,4 +255,21 @@ export async function withdrawBroughtGuests(
     return { ok: false };
   }
   return { ok: true };
+}
+
+/**
+ * Trekk gjestene til spillerne arrangøren fjernet i én lagring (`hostIds`),
+ * med én lesing for hele spillet. Lesefeil eller skrivefeil gir `{ ok: false }`.
+ */
+export async function withdrawGuestsOfHosts(
+  admin: Admin,
+  gameId: string,
+  hostIds: readonly string[],
+  actorId: string,
+): Promise<{ ok: true } | { ok: false }> {
+  if (hostIds.length === 0) return { ok: true };
+  const read = await readBroughtGuestsInGame(admin, gameId);
+  if (!read.ok) return { ok: false };
+  const guests = hostIds.flatMap((host) => read.byHost.get(host) ?? []);
+  return withdrawBroughtGuests(admin, gameId, guests, actorId);
 }
