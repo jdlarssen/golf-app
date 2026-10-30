@@ -10,13 +10,22 @@ import { FONTS, interLine, useTheme } from '../../theme';
 export function MarkerQueueCard<T extends { gameId: string; userId: string; name: string; sub: string }>({
   rows,
   onOpen,
+  inset = true,
 }: {
   rows: T[];
   onOpen: (row: T) => void;
+  /** 16 pt fra kanten (ligasiden). Hjem har den marginen alt, og sender `false`. */
+  inset?: boolean;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.queueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.queueCard,
+        !inset && styles.flush,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
       {rows.map((row, i) => (
         <Pressable
           key={`${row.gameId}:${row.userId}`}
@@ -42,6 +51,7 @@ export function MarkerQueueCard<T extends { gameId: string; userId: string; name
 
 const styles = StyleSheet.create({
   queueCard: { marginHorizontal: 16, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  flush: { marginHorizontal: 0 },
   queueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 10 },
   queueText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   queueName: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },

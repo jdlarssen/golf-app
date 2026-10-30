@@ -334,6 +334,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           <View testID="home-marker-queue">
             <SectionHead title={MARKER_TEXT.queueHeading} />
             <MarkerQueueCard
+              inset={false}
               rows={markerRows}
               onOpen={(row) =>
                 navigation.navigate('MarkerApprove', {
