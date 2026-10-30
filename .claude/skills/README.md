@@ -9,6 +9,11 @@ Skills her lastes av alle Claude Code-økter i repoet. Når hver brukes i Tørny
 | `web-design-guidelines` | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) `skills/web-design-guidelines` @ `063bee9` | MIT (oppgitt i repoets README; repoet har ingen LICENSE-fil) | Seksjonen «Tørny-ramme» |
 | `playwright-cli` | [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) `skills/playwright-cli` @ `74354ec`, installert med `playwright-cli install --skills` (0.1.21) | Apache-2.0 (`playwright-cli/LICENSE`) | Seksjonen «Tørny-ramme» nederst |
 | `design-taste-frontend` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) `skills/taste-skill` @ `ce26fc2` | MIT (`design-taste-frontend/LICENSE`) | `description` avgrenset til markedsflater + seksjonen «Tørny-ramme» |
+| `unslop` | [heydamir/unslop](https://github.com/heydamir/unslop) `skills/unslop` @ `4652254` | CC BY 4.0 (`unslop/LICENSE`, fra repoets rot); krediteringen øverst i SKILL.md skal stå | Polermodus-setning i `description` + seksjonen «Tørny-ramme» |
+
+Installer aldri `unslop` (eller en annen skill herfra) i `~/.claude/skills/` i tillegg. En
+personlig skill med samme navn vinner over prosjektets, og da lastes ikke Tørny-rammen
+(Claude Code-dokumentasjonen, «Resolve skills that share a name»).
 
 ## Oppdatere en vendoret skill
 
