@@ -903,3 +903,51 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     await waitFor(() => expect(courseInput().value).toBe('course-2'));
   });
 });
+
+// #2459: «Fortsett» åpner nøyaktig lenka som ble lagret, med kontekst-parametrene
+// (`?intent=` …). Kontekst-vakta sletter et utkast hvis konteksten avviker, så
+// lenka må bære nok til at utkastet gjenopprettes i stedet for å forsvinne.
+describe('GameWizard — #2459 «Fortsett» gjenoppretter, og sletter ikke, med kontekst i lenka', () => {
+  it('åpner steg 4 fra den lagrede lenka uten å kaste flyten til steg 1 eller tømme utkastet', async () => {
+    const { saveWizardDraft, wizardDraftContext, wizardDraftStorageKey, listWizardDrafts } =
+      await import('./wizardStatePersistence');
+    const key = wizardDraftStorageKey('user-1', '/admin/games/new');
+    saveWizardDraft(
+      key,
+      {
+        intent: 'kompis',
+        expectedPlayerCount: 4,
+        nameTouched: false,
+        values: {
+          game_mode: 'stableford',
+          team_size: 1,
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+        },
+      },
+      wizardDraftContext({ initialIntent: 'kompis' }),
+      Date.now(),
+      {
+        href: '/admin/games/new?intent=kompis&step=4',
+        summary: {
+          step: 4,
+          formatLabel: 'Stableford',
+          courseName: 'Stiklestad GK',
+          selectedCount: 1,
+          expectedCount: 4,
+          title: null,
+        },
+      },
+    );
+
+    // What «Fortsett» does: mount on exactly the stored link.
+    const href = listWizardDrafts('user-1')[0].resume.href;
+    searchString = href.split('?')[1];
+    renderWizard({ initialIntent: 'kompis' });
+
+    expect(await screen.findByRole('heading', { name: /hvem skal spille/i })).toBeInTheDocument();
+    expect(window.localStorage.getItem(key)).not.toBeNull();
+    expect(replace).not.toHaveBeenCalledWith(expect.not.stringContaining('step=4'), expect.anything());
+  });
+});

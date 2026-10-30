@@ -94,11 +94,11 @@ describe('ResumeDraftCard', () => {
   });
 
   it('utelater det som mangler, og sier «N spillere» uten antall', async () => {
-    seed({ formatLabel: null, courseName: null, expectedCount: null, selectedCount: 3, step: 2 });
+    seed({ formatLabel: null, courseName: null, expectedCount: null, selectedCount: 3, step: 3 });
     render(<ResumeDraftCard userId={USER} />);
 
     expect(await screen.findByText('3 spillere')).toBeInTheDocument();
-    expect(screen.getByText('Steg 2 av 5 · Hva skal dere spille?')).toBeInTheDocument();
+    expect(screen.getByText('Steg 3 av 5 · Hvor og når?')).toBeInTheDocument();
   });
 
   it('sier «i går kl. 21:40» for et utkast fra i går, og «for N min siden» samme dag', async () => {
@@ -114,12 +114,19 @@ describe('ResumeDraftCard', () => {
     expect((await screen.findByTestId('resume-draft-card')).textContent).toMatch(/siden/);
   });
 
-  it('viser ikke kortet for et utkast som bare har arrangementstypen (steg 1)', async () => {
-    seed({ step: 1, formatLabel: null, courseName: null });
+  it.each([1, 2])('viser ikke kortet for et utkast som bare har arrangementstypen (steg %i, uten format)', async (step) => {
+    seed({ step: step as 1 | 2, formatLabel: null, courseName: null });
     render(<ResumeDraftCard userId={USER} />);
 
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByTestId('resume-draft-card')).toBeNull();
+  });
+
+  it('viser kortet fra steg 3 selv uten format', async () => {
+    seed({ step: 3, formatLabel: null, courseName: null });
+    render(<ResumeDraftCard userId={USER} />);
+
+    expect(await screen.findByTestId('resume-draft-card')).toBeInTheDocument();
   });
 
   it('viser aldri en annen brukers utkast', async () => {

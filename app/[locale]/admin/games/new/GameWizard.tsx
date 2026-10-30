@@ -39,7 +39,7 @@
  * steg 1 — bruker `router.replace`, ellers ville back-en gå tilbake til den
  * ugyldige URL-en og normalisere på nytt i en løkke.
  *
- * #1380: utfyllingen speiles også til sessionStorage (wizardStatePersistence)
+ * #1380: utfyllingen speiles også til localStorage (wizardStatePersistence)
  * så reload, tilbake-gest og PWA-eviction ikke tar med seg alt arrangøren har
  * fylt ut. Payloaden slettes ved publisering/utkast-lagring.
  *
@@ -201,7 +201,7 @@ type Props = {
    * eget format fra grid-et for alt som ikke passer 4 spillere (singles
    * matchplay, nines, shamble …), og da står steg 2 uten valgt kort.
    * `resumeExpectedPlayerCount` (lib/wizard/draftResumePlan.ts) eier regelen.
-   * Et gjenopprettet sessionStorage-utkast bærer sin egen verdi og vinner over
+   * Et gjenopprettet localStorage-utkast bærer sin egen verdi og vinner over
    * denne.
    */
   initialExpectedPlayerCount?: number | null;
@@ -330,7 +330,7 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
  *
  * Hvorfor remount og ikke settere: `useGameFormState` seeder ALL sin state i
  * useState-initializere fra `initialValues`. De kjører én gang, ved mount — og
- * sessionStorage kan ikke leses under render (finnes ikke på serveren, ville
+ * localStorage kan ikke leses under render (finnes ikke på serveren, ville
  * gitt hydrerings-mismatch). Vi leser derfor i en effekt etter mount og bytter
  * `key` på kroppen, slik at initializerne kjører på nytt med utkastet. Finnes
  * det ikke noe utkast — det vanlige tilfellet — skjer ingen remount i det hele
@@ -338,7 +338,7 @@ function seededStepCeiling(initialValues: InitialValues | undefined): number {
  *
  * #1383: samme effekt avgjør også om en `?step=N`-URL er foreldet. Steget
  * leses fra URL-en ved mount, men skjema-staten starter blank — en delt eller
- * bokmerket `?step=5`-lenke (ny fane, annen enhet, tømt sessionStorage) ville
+ * bokmerket `?step=5`-lenke (ny fane, annen enhet, tømt localStorage, utløpt utkast) ville
  * ellers vist «Klar?»-oppsummeringen full av defaults arrangøren aldri har
  * valgt. Finnes det verken utkast eller forvalg, sender vi flyten tilbake til
  * steg 1.
@@ -368,7 +368,7 @@ export function GameWizard(props: Props) {
   const { courses, players } = props;
   const stepCeiling = seededStepCeiling(props.initialValues);
   // #1385: et utkast som gjenopptas fra databasen seedes ALDRI fra
-  // sessionStorage. Kontekst-fingeravtrykket (wizardDraftContext) består av
+  // localStorage. Kontekst-fingeravtrykket (wizardDraftContext) består av
   // intent/tournament_id/game_mode/lock_game_mode/group_id — alt sammen
   // stabilt på tvers av besøk på samme utkast — så et lokalt utkast fra i
   // sted ville passert vakten og lagt seg OVER radens verdier
@@ -390,7 +390,7 @@ export function GameWizard(props: Props) {
     const found = storageKey ? loadWizardDraft(storageKey, draftContext) : null;
     if (found) {
       // setState i en effekt er poenget her: vi henter EKSTERN tilstand
-      // (sessionStorage) som ikke kan leses under render. React-linteren
+      // (localStorage) som ikke kan leses under render. React-linteren
       // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
       /* eslint-disable react-hooks/set-state-in-effect */
       // #2485: the URL's course goes over the draft's (see withUrlCourse).
@@ -867,7 +867,7 @@ function WizardBody({
     state.intent === 'cup' && !tournamentIdFromInitial;
 
   // ────────────────────────────────────────────────────────────────────
-  // #1380: speil utfyllingen til sessionStorage. Skrivingen er debouncet så
+  // #1380: speil utfyllingen til localStorage. Skrivingen er debouncet så
   // et navn som tastes inn ikke gir én skriving per tastetrykk, og deduppet
   // på serialisert innhold så rene re-rendere ikke skriver.
   // ────────────────────────────────────────────────────────────────────
@@ -981,7 +981,7 @@ function WizardBody({
   }, [draftJson, storageKey, draftContext, isNewCupFlow, persists]);
 
   /**
-   * Publiser/Lagre utkast → utkastet i sessionStorage skal bort. Suksess
+   * Publiser/Lagre utkast → utkastet i localStorage skal bort. Suksess
    * redirecter (actionen kaster NEXT_REDIRECT), så det finnes ingen
    * «det gikk bra»-tilstand å henge slettingen på — vi rydder derfor når
    * skjemaet sendes.
