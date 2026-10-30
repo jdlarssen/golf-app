@@ -2556,7 +2556,8 @@
         "requestDeleted": "Any pending join request will also be deleted",
         "teamNotified": "Team members and captain will be notified if you were on a team",
         "unansweredInvitesWithdrawn": "Teammates who haven't answered lose their invitation and are told",
-        "captainRequestWithdrawn": "Your sign-up is marked as withdrawn for the organiser"
+        "captainRequestWithdrawn": "Your sign-up is marked as withdrawn for the organiser",
+        "guestsWithdrawn": "{count, plural, one {Your guest, {names}, is withdrawn too} other {Your guests, {names}, are withdrawn too}}"
       },
       "preStartNote": "If you change your mind, you can sign up again as long as registration is still open.",
       "captainPreStartNote": "If you still want to play, the organiser has to add you again.",
@@ -2584,6 +2585,7 @@
       "shareCopyFailure": "Could not copy automatically. Select the link above and copy manually.",
       "sharePoster": "Print poster",
       "noPlayers": "No players yet.",
+      "broughtGuestsNote": "{count, plural, one {Signed up {names}. Remove {player} and the guest goes too.} other {Signed up {names}. Remove {player} and the guests go too.}}",
       "stateWithdrawn": "Withdrawn",
       "stateApproved": "Approved",
       "stateSubmitted": "Submitted",
@@ -4410,7 +4412,8 @@
           "no_team_slot": "The game has no available team slots.",
           "reason_too_long": "The reason is too long (max 200 characters).",
           "transfer_not_approved": "Only a player who is on the player list can become captain.",
-          "transfer_failed": "Could not hand over the captaincy. Try again."
+          "transfer_failed": "Could not hand over the captaincy. Try again.",
+          "transfer_guest": "A guest can't become captain. Pick a teammate with an account."
         },
         "tabs": {
           "pending": "Pending",
@@ -6505,7 +6508,8 @@
       "teamDashSignupClosed": "Sign-up is closed. The organiser is making final adjustments.",
       "teamDashTeamUnknown": "We couldn't find your team — ask the captain for a team invitation, or register a team of your own.",
       "teamDashDbError": "Couldn't complete the action. Please try again in a moment.",
-      "teamDashNotApproved": "Only a teammate who is on the player list can become captain."
+      "teamDashNotApproved": "Only a teammate who is on the player list can become captain.",
+      "teamDashCaptainIsGuest": "A guest can't become captain. Pick a teammate with an account."
     },
     "public": {
       "emptyRoster": "No one has signed up yet. Be the first.",

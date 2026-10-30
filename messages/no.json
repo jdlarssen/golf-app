@@ -2556,7 +2556,8 @@
         "requestDeleted": "Eventuell forespørsel om å bli med slettes også",
         "teamNotified": "Lag-medlemmer og kaptein får varsel hvis du var på lag",
         "unansweredInvitesWithdrawn": "Lagkamerater som ikke har svart, mister invitasjonen og får beskjed",
-        "captainRequestWithdrawn": "Påmeldingen din står som trukket hos arrangøren"
+        "captainRequestWithdrawn": "Påmeldingen din står som trukket hos arrangøren",
+        "guestsWithdrawn": "{count, plural, one {Gjesten din, {names}, trekkes også} other {Gjestene dine, {names}, trekkes også}}"
       },
       "preStartNote": "Hvis du ombestemmer deg, kan du melde deg på igjen så lenge påmelding fortsatt er åpen.",
       "captainPreStartNote": "Vil du være med likevel, må arrangøren legge deg til igjen.",
@@ -2584,6 +2585,7 @@
       "shareCopyFailure": "Klarte ikke å kopiere automatisk. Marker lenken over og kopier manuelt.",
       "sharePoster": "Skriv ut plakat",
       "noPlayers": "Ingen spillere ennå.",
+      "broughtGuestsNote": "{count, plural, one {Meldte på {names}. Fjerner du {player}, går gjesten også.} other {Meldte på {names}. Fjerner du {player}, går gjestene også.}}",
       "stateWithdrawn": "Trukket",
       "stateApproved": "Godkjent",
       "stateSubmitted": "Levert",
@@ -4410,7 +4412,8 @@
           "no_team_slot": "Spillet har ingen ledige lag igjen.",
           "reason_too_long": "Begrunnelsen er for lang (maks 200 tegn).",
           "transfer_not_approved": "Bare en spiller som står på spillerlisten, kan bli kaptein.",
-          "transfer_failed": "Klarte ikke å gi kapteinsbindet videre. Prøv igjen."
+          "transfer_failed": "Klarte ikke å gi kapteinsbindet videre. Prøv igjen.",
+          "transfer_guest": "En gjest kan ikke bli kaptein. Velg en lagkamerat med konto."
         },
         "tabs": {
           "pending": "Venter",
@@ -6505,7 +6508,8 @@
       "teamDashSignupClosed": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene.",
       "teamDashTeamUnknown": "Vi fant ikke laget ditt — spør kapteinen om en laginvitasjon, eller registrer eget lag.",
       "teamDashDbError": "Klarte ikke å fullføre handlingen. Prøv igjen om litt.",
-      "teamDashNotApproved": "Bare en lagkamerat som står på spillerlisten, kan bli kaptein."
+      "teamDashNotApproved": "Bare en lagkamerat som står på spillerlisten, kan bli kaptein.",
+      "teamDashCaptainIsGuest": "En gjest kan ikke bli kaptein. Velg en lagkamerat med konto."
     },
     "public": {
       "emptyRoster": "Ingen har meldt seg på ennå. Bli den første.",
