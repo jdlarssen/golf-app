@@ -4,6 +4,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
+import { Medallion } from '@/components/ui/Medallion';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { HourGlass } from '@/components/icons/HourGlass';
@@ -35,39 +36,26 @@ import { teamHeadline, teamHeadlineGap } from '@/lib/leaderboard/vsPar';
 import { PreRoundLeaderboardRealtime } from '../PreRoundLeaderboard';
 
 /**
- * Position badge — rank-aware label + accent colour.
+ * Position badge — rank-aware card accent and the drawn medallion for 1–3.
  *
  * Inlined into TeamCard because the visual treatment (gold for 1st, silver
  * for 2nd, bronze for 3rd) is tied to surrounding card styling.
  */
 function rankAccent(rank: number): {
   cardClass: string;
-  badge: string;
-  badgeClass: string;
+  /** 1–3 får den tegnede medaljen (#2700); ellers står «N.». */
+  place: 1 | 2 | 3 | null;
 } {
   if (rank === 1) {
     return {
       cardClass:
         'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]',
-      badge: '🥇',
-      badgeClass: 'text-accent',
+      place: 1,
     };
   }
-  if (rank === 2) {
-    return {
-      cardClass: 'border-muted/40',
-      badge: '🥈',
-      badgeClass: 'text-muted',
-    };
-  }
-  if (rank === 3) {
-    return {
-      cardClass: 'border-warning/40',
-      badge: '🥉',
-      badgeClass: 'text-warning-text',
-    };
-  }
-  return { cardClass: '', badge: `${rank}.`, badgeClass: 'text-muted' };
+  if (rank === 2) return { cardClass: 'border-muted/40', place: 2 };
+  if (rank === 3) return { cardClass: 'border-warning/40', place: 3 };
+  return { cardClass: '', place: null };
 }
 
 function TeamCard({
@@ -96,9 +84,13 @@ function TeamCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <span className={`text-lg ${accent.badgeClass}`}>
-                {accent.badge}
-              </span>
+              {accent.place ? (
+                <span className="shrink-0 self-center">
+                  <Medallion place={accent.place} size={24} />
+                </span>
+              ) : (
+                <span className="text-lg text-muted">{line.rank}.</span>
+              )}
               <p className="font-serif text-xl font-medium tracking-tight text-text">
                 {tc('teamLabel', { number: line.teamNumber })}
               </p>

@@ -73,10 +73,15 @@ export type DiaryResult =
 
 const MEDALS: readonly DiaryMedal[] = ['gold', 'silver', 'bronze'];
 
+/** Metallet for en plass: gull, sølv og bronse for 1–3, ellers ingen (#2700). */
+export function medalForRank(rank: number): DiaryMedal | null {
+  return MEDALS[rank - 1] ?? null;
+}
+
 /**
  * Det som står til høyre på raden. Plass og feltstørrelse fra det lagrede
  * utfallet, med medaljong på 1–3. Skins får medaljong bare med vunne skins,
- * samme vakt som `finishedResultBadge` («🥇 0 skins» gir ingen mening).
+ * samme vakt som `finishedResultBadge` («gull for 0 skins» gir ingen mening).
  * Matchplay skriver resultatet i ord («Du vant 3&2»). Uten utfall: ingenting.
  */
 export function diaryResult(summary: ResultSummary | null): DiaryResult | null {
@@ -90,7 +95,7 @@ export function diaryResult(summary: ResultSummary | null): DiaryResult | null {
     kind: 'place',
     rank: summary.rank,
     fieldSize: summary.fieldSize,
-    medal: earned ? (MEDALS[summary.rank - 1] ?? null) : null,
+    medal: earned ? medalForRank(summary.rank) : null,
     spoken: placementSpoken(summary),
   };
 }
