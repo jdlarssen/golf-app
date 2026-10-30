@@ -38,7 +38,7 @@ const CARRIED_BY_CREATOR = 'kort-levert-av-oppretteren';
 /** Et spill med én flight (≤4 aktive) der oppretteren selv spiller. */
 const SMALL_GAME = 'spill-med-en-flight';
 const FINISHED_GAME = 'ferdig-spill';
-/** #2688: en ligaflight; den som startet den er `created_by` uten å være arrangør. */
+/** #2688: en ligaflight; i en simulatorliga er den som startet den `created_by` uten å være arrangør. */
 const LEAGUE_GAME = 'ligaflight';
 
 type Game = {
@@ -243,13 +243,22 @@ describe('gameOrganiserAccess', () => {
     expect(await gameOrganiserAccess(STRANGER, GAME)).toBe('not_organiser');
   });
 
-  // #2688: i en ligaflight er ingen spiller arrangør, heller ikke den som startet den.
-  it('avviser den som startet en ligaflight', async () => {
+  // #2688 (eierens valg 30.10): i en simulatorligaflight er ingen spiller arrangør,
+  // heller ikke den som startet den. En vanlig ligaflight beholder oppretteren.
+  it('avviser den som startet en simulatorligaflight', async () => {
+    vi.mocked(readSimulatorLeagueFlight).mockResolvedValueOnce({ isSimulator: true } as never);
     expect(await gameOrganiserAccess(CREATOR, LEAGUE_GAME)).toBe('not_organiser');
+    expect(readSimulatorLeagueFlight).toHaveBeenCalledWith(LEAGUE_GAME);
   });
 
-  it('slipper fortsatt inn en admin i en ligaflight', async () => {
+  it('slipper inn den som startet en vanlig ligaflight', async () => {
+    expect(await gameOrganiserAccess(CREATOR, LEAGUE_GAME)).toBe('organiser');
+  });
+
+  it('slipper fortsatt inn en admin i en simulatorligaflight', async () => {
+    vi.mocked(readSimulatorLeagueFlight).mockResolvedValue({ isSimulator: true } as never);
     expect(await gameOrganiserAccess(ADMIN, LEAGUE_GAME)).toBe('organiser');
+    vi.mocked(readSimulatorLeagueFlight).mockResolvedValue(null);
   });
 
   it('svarer ukjent spill — også for en admin, så 404-en ikke røper rollen', async () => {

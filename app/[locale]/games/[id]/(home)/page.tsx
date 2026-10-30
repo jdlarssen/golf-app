@@ -1,4 +1,5 @@
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
 import { Suspense } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
@@ -293,9 +294,13 @@ export default async function GameHomePage({
   // (admins finish from Sekretariatet). Read from the immutable created_by on
   // the cached game row: the auto-start refetch below only selects the
   // `GameRow` columns (GAME_HOME_SELECT), and created_by isn't one of them.
-  // #2688: not in a league flight; the player who starts one is `created_by`
-  // without being its organiser, so the organiser controls below stay hidden.
-  const isCreator = gwp.game.created_by === userId && !gwp.game.league_round_id;
+  // #2688 (owner's choice 30.10): not in a simulator-league flight; the player
+  // who starts one is `created_by` without being its organiser, so the
+  // organiser controls below stay hidden. An ordinary league flight keeps its
+  // creator as organiser: nobody else finishes it.
+  const isCreator =
+    gwp.game.created_by === userId &&
+    !(gwp.game.league_round_id && (await readSimulatorLeagueFlight(id)));
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
