@@ -63,8 +63,11 @@ finnes, ikke bygging; livstegnet i `visjon.md` avgjør om noe mer skal til.
 | **Herding** | Kjernesløyfa skal aldri ødelegge en lørdag: stagingbevis-porten, staging/prod-paritet, natt-miljøets e2e | #1076 (+ flake-datapunktet #1168) |
 | **Sesongstyrt** | Kavalkaden — golfåret som delbar fortelling. Bygges mot sesongslutt; start dekomponering tidligst september | #1040 |
 | **Native app** | Etappe 1: skall i begge butikker (TWA + Capacitor, eier-bestilt 2026-07-17). Etappe 2: ekte native app (React Native + Expo) som erstatter skallene under samme oppføringer (eier-bestilt 2026-08-30) | Epic #1276 (etappe 1, del-issues #1277–#1284) + epic #1816 (etappe 2) |
+| **Arrangør-veiviseren** | Forslagene fra designgjennomgangen av «Nytt spill» (#2250) på nettsiden. Eier-bestilt 2026-10-30: «Legg de til rett mål og håndter de nå». Første bølge i november, resten mot «Liv laga» | #2447, #2448, #2454, #2458, #2459, #2607 (november); øvrige under milepælen «Liv laga» |
 
 Når en bane tømmes, beslutter eieren neste — dokumentet oppdateres i samme PR.
+
+**Åpnet 2026-10-30 — arrangør-veiviseren:** 13.10 bestemte eieren at arrangørverktøyene skulle vente til etter lanseringen. 30.10 snudde eieren det for veiviseren. Ligaen åpner først 8.11, og en veiviser som er lett å bruke for andre er det som flytter livstegnet. Betaling står fortsatt fryst (§2), så #2452 (penger på spill) bygges ikke før den flaten vekkes.
 
 **Tømt 2026-07-12 — Vekstsløyfa (Tier 1):** alle fem (#1169, #1170, #1173, #1176, #1177)
 er bygget og i prod, sammen med forutsetningene #1183 (natt-e2e) og #1192 (funnel-måling).
