@@ -102,6 +102,7 @@ function wizardElement(overrides: Partial<WizardProps> = {}) {
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={PLAYERS.map((p) => p.id)}
       backHref="/admin/games"
+      currentUserId="user-1"
       {...overrides}
     />
   );
@@ -141,6 +142,7 @@ beforeEach(() => {
   replace.mockClear();
   searchString = '';
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 describe('GameWizard — #1380 per-steg history', () => {
@@ -449,7 +451,7 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     };
 
     saveWizardDraft(
-      wizardDraftStorageKey('/admin/games/new'),
+      wizardDraftStorageKey('user-1', '/admin/games/new'),
       {
         intent: 'kompis',
         expectedPlayerCount: 4,
@@ -631,7 +633,7 @@ describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
       './wizardStatePersistence'
     );
     saveWizardDraft(
-      wizardDraftStorageKey('/admin/games/new'),
+      wizardDraftStorageKey('user-1', '/admin/games/new'),
       { intent: 'kompis', expectedPlayerCount: 4, nameTouched: false, values },
       wizardDraftContext({}),
     );
@@ -768,7 +770,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
       './wizardStatePersistence'
     );
     saveWizardDraft(
-      wizardDraftStorageKey('/admin/games/new'),
+      wizardDraftStorageKey('user-1', '/admin/games/new'),
       {
         intent: 'kompis',
         expectedPlayerCount: 4,

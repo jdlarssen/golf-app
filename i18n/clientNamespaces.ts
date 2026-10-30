@@ -50,6 +50,8 @@ export const ROOT_CLIENT_NAMESPACES = [
   'prizes',
   'profile',
   'pushSettings',
+  // #2459: «Fortsett der du slapp» on Home and its delete page.
+  'resumeDraft',
   'scorecard',
   'signup',
   'spectate',
