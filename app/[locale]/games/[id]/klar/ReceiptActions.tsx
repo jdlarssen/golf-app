@@ -6,6 +6,14 @@ import { Link } from '@/i18n/navigation';
 import { buttonClasses } from '@/components/ui/Button';
 
 /**
+ * The two half-width buttons: 48 px at 14 px / 600 with the chip's secondary
+ * colours. The artboard's `<button>` is border-box, so its 1 px border sits
+ * inside the 48 px; `Button`'s `tall` size renders 50.
+ */
+const PAIR_BUTTON =
+  'inline-flex h-12 items-center justify-center rounded-full border border-border bg-surface px-[18px] text-sm leading-[normal] font-semibold text-text transition-colors duration-100 hover:bg-primary-soft';
+
+/**
  * The four actions on the receipt after «Publiser» (#2458), as the artboard
  * `Nyttspill-forslag-spillet-klart` draws them: «Del i gruppechatten» on top,
  * «Kopier lenke» and «Legg i kalenderen» side by side, «Gå til spillet» as a
@@ -66,7 +74,7 @@ export function ReceiptActions({
         type="button"
         onClick={() => copy(shareUrl, 'copy')}
         data-testid="receipt-copy"
-        className={buttonClasses('secondary', 'tall')}
+        className={PAIR_BUTTON}
       >
         {copied === 'copy' ? t('copied') : t('copy')}
       </button>
@@ -78,7 +86,7 @@ export function ReceiptActions({
         key="calendar"
         href={calendarHref}
         data-testid="receipt-calendar"
-        className={buttonClasses('secondary', 'tall')}
+        className={PAIR_BUTTON}
       >
         {t('calendar')}
       </a>
