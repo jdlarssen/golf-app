@@ -111,7 +111,7 @@
   <!-- fork -->
   <rect x="320" y="624" width="270" height="50" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
   <text x="455" y="647" text-anchor="middle" font-size="14" font-weight="600" fill="#6B6258">Lagre som utkast</text>
-  <text x="455" y="665" text-anchor="middle" font-size="11.5" fill="#857C70">skjult, ikke sendt</text>
+  <text x="455" y="665" text-anchor="middle" font-size="11.5" fill="#857C70">skjult, ikke sendt · på serveren</text>
   <rect x="630" y="624" width="270" height="50" rx="14" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
   <text x="765" y="647" text-anchor="middle" font-size="14" font-weight="700" fill="#8A6D27">Publiser &amp; inviter</text>
   <text x="765" y="665" text-anchor="middle" font-size="11.5" fill="#9C8552">spillerne får beskjed</text>
@@ -121,6 +121,29 @@
   <rect x="565" y="692" width="400" height="66" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
   <text x="765" y="720" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
   <text x="765" y="743" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
+
+  <!-- NEW autosave (#2459): every step writes the setup to this device, and
+       Home shows it again under «Fortsett der du slapp». -->
+  <path d="M930,450 H960 V474 H994" fill="none" stroke="#8A6D27" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <g>
+    <rect x="998" y="446" width="186" height="104" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+    <text x="1012" y="470" font-size="13" font-weight="700" fill="#7A5E13">NY: Autolagring</text>
+    <rect x="1126" y="456" width="50" height="20" rx="10" fill="#C9A961"/><text x="1151" y="470" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2459</text>
+    <text x="1012" y="490" font-size="11.5" fill="#6B5526">etter hvert steg (1–5)</text>
+    <text x="1012" y="507" font-size="11.5" fill="#6B5526">«✓ Lagret som utkast»</text>
+    <text x="1012" y="528" font-size="11" fill="#8A7333">bare på denne enheten · 7 dager</text>
+  </g>
+  <line x1="1091" y1="550" x2="1091" y2="574" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M998,652 H950 V472 H936" fill="none" stroke="#8A6D27" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <g>
+    <rect x="998" y="576" width="186" height="116" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+    <text x="1012" y="600" font-size="13" font-weight="700" fill="#7A5E13">NY: Hjem</text>
+    <rect x="1126" y="586" width="50" height="20" rx="10" fill="#C9A961"/><text x="1151" y="600" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2459</text>
+    <text x="1012" y="620" font-size="11.5" fill="#6B5526">«Fortsett der du slapp»</text>
+    <text x="1012" y="637" font-size="11.5" fill="#6B5526">format · bane · 3 av 4</text>
+    <text x="1012" y="654" font-size="11.5" fill="#6B5526">«Fortsett» → samme steg</text>
+    <text x="1012" y="676" font-size="11" fill="#8A7333">«Slett utkastet» spør først</text>
+  </g>
 
   <!-- left: the win -->
   <rect x="70" y="260" width="200" height="110" rx="14" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
