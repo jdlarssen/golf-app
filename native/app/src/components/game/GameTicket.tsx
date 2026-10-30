@@ -77,6 +77,9 @@ export function GameTicket({
               <Text
                 style={[ui.kicker, styles.kicker, { color: colors.accent }]}
                 numberOfLines={1}
+                // #2688: «… – Runde 1» står sist i en ligarunde; kuttes navnet,
+                // går det i midten så rundenummeret blir stående.
+                ellipsizeMode="middle"
                 testID="game-ticket-kicker"
               >
                 {kicker}
