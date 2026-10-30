@@ -336,7 +336,7 @@ type UseGameFormStateInput = {
   initialValues?: InitialValues;
   /**
    * #1999: overstyrer navne-seeden av `nameTouched`. Et gjenopprettet
-   * sessionStorage-utkast bærer sitt eget flagg — et forslag-navn som aldri
+   * localStorage-utkast bærer sitt eget flagg — et forslag-navn som aldri
    * ble rørt skal fortsatt kunne oppdateres av forslaget etter en reload,
    * og et håndskrevet navn skal fortsatt være fredet. Utelatt = seed fra
    * `initialValues.name`.
@@ -371,7 +371,7 @@ type UseGameFormStateInput = {
   // valgfritt tall.
   initialExpectedPlayerCount?: number | null;
   // #2321: the wizard's «Inviter på e-post» addresses, restored from a
-  // sessionStorage draft. Left out = an empty list.
+  // localStorage draft. Left out = an empty list.
   initialInviteEmails?: string[];
   // #2570: false when the form only saves a round that is already scheduled
   // (GameForm's edit-scheduled). The guest stop is a publish rule, so it
