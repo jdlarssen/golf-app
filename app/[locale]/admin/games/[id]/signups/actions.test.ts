@@ -1073,6 +1073,8 @@ describe('#2358: transferTeamCaptaincy', () => {
 
   it.each([
     ['not_approved', 'transfer_not_approved'],
+    // #2607: a guest can never take the captaincy (0228).
+    ['new_captain_is_guest', 'transfer_guest'],
     ['game_locked', 'game_locked'],
     ['not_a_teammate', 'transfer_failed'],
     ['not_allowed', 'transfer_failed'],

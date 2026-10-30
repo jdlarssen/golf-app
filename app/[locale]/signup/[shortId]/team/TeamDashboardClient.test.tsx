@@ -96,13 +96,15 @@ describe('TeamDashboardClient — gi kapteinsbindet videre (#2358)', () => {
         joinEffect="instant"
         captain={{ requestId: 'cap-1', userId: 'u-cap', displayName: 'Kari', status: 'approved' }}
         members={[
-          { requestId: 'req-ola', userId: 'u-ola', displayName: 'Ola', status: 'approved' },
-          { requestId: 'req-per', userId: 'u-per', displayName: 'Per', status: 'pending' },
+          { requestId: 'req-ola', userId: 'u-ola', displayName: 'Ola', status: 'approved', isGuest: false },
+          { requestId: 'req-per', userId: 'u-per', displayName: 'Per', status: 'pending', isGuest: false },
+          // #2607: a guest can never be captain, approved or not.
+          { requestId: 'req-gjest', userId: 'u-gjest', displayName: 'Gunn Gjest', status: 'approved', isGuest: true },
         ]}
       />,
     );
 
-    // Bare den godkjente medspilleren får knappen.
+    // Bare den godkjente medspilleren med konto får knappen.
     expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
     fireEvent.click(screen.getByTestId('make-captain'));
     expect(transferCaptaincyMock).not.toHaveBeenCalled();

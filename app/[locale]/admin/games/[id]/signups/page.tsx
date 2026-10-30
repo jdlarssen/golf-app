@@ -79,6 +79,7 @@ type RawRequestRow = {
     name: string | null;
     nickname: string | null;
     hcp_index: number | null;
+    is_guest: boolean;
     email?: string;
   } | null;
 };
@@ -118,6 +119,9 @@ function toRequestRow(raw: RawRequestRow, unknownPlayer: string): RequestRow {
     displayName: displayNameOf(raw.users, unknownPlayer),
     userName: raw.users?.name ?? null,
     hcpIndex: raw.users?.hcp_index ?? null,
+    // #2607: a missing user reads as a guest, so «Gjør til kaptein» never
+    // shows for someone the page cannot place.
+    isGuest: raw.users?.is_guest ?? true,
     teamName: raw.team_name,
     isTeamCaptain: raw.is_team_captain,
     teamRequestId: raw.team_request_id,
@@ -147,8 +151,8 @@ async function loadRequestsAndRoster(
   // without a name (#2440). The admin client, because an organiser who does
   // not play cannot read the applicants' `users` rows through RLS.
   const requestColumns = isAdmin
-    ? `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname, hcp_index, email)`
-    : `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname, hcp_index)`;
+    ? `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname, hcp_index, is_guest, email)`
+    : `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname, hcp_index, is_guest)`;
   const [requestsRes, rosterRes] = await Promise.all([
     getAdminClient()
       .from('game_registration_requests')

@@ -28,6 +28,8 @@ type MemberDisplay = {
   userId: string;
   displayName: string;
   status: Status;
+  /** #2607: a guest has no login and can never take the captaincy. */
+  isGuest: boolean;
 };
 
 /**
@@ -148,6 +150,9 @@ export function TeamDashboardClient(props: Props) {
       // #2358: overføringen krever en lagkamerat som står på spillerlista.
       case 'not_approved':
         return t('errors.teamDashNotApproved');
+      // #2607: en gjest kan ikke bli kaptein (0228).
+      case 'captain_is_guest':
+        return t('errors.teamDashCaptainIsGuest');
       case 'db_error':
       default:
         return t('errors.teamDashDbError');
@@ -234,7 +239,7 @@ export function TeamDashboardClient(props: Props) {
                 <p className="min-w-0 break-words font-sans text-sm text-text">{m.displayName}</p>
                 <StatusChipMini status={m.status} />
               </div>
-              {isCaptain && m.status === 'approved' && (
+              {isCaptain && m.status === 'approved' && !m.isGuest && (
                 confirmCaptainFor === m.requestId ? (
                   <div className="space-y-2" data-testid="make-captain-confirm">
                     <p className="font-sans text-sm text-text">

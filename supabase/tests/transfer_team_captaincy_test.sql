@@ -1,6 +1,7 @@
 -- supabase/tests/transfer_team_captaincy_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Runtime test for migration 0194 (#2358): transfer_team_captaincy.
+-- Runtime test for migration 0194 (#2358): transfer_team_captaincy, and 0228
+-- (#2607): a guest can never take the captaincy.
 --
 --   1. The team's captain, the game's creator and a global admin may hand the
 --      captaincy to an approved teammate on the roster. The new captain takes
@@ -12,7 +13,9 @@
 --   2. Everyone else is refused and nothing is written: a third party gets
 --      not_allowed, another team's captain gets not_a_teammate, a pending or
 --      off-roster teammate gives not_approved, a started game gives
---      game_locked, an unknown game gives game_not_found.
+--      game_locked, an unknown game gives game_not_found. A guest on the
+--      roster gives new_captain_is_guest, whether the captain or the organiser
+--      asks (0228). The guest follows the new captain like any other child.
 --   3. Only service_role may call it.
 --
 -- Every transfer is called in its own statement and its effect is read in the
@@ -29,13 +32,13 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(34);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_ttc;
 
 -- uid(n): fixture user n. uid(0) creates every game, uid(99) is a global admin,
--- uid(98) is a signed-in player with no part in any team.
+-- uid(98) is a signed-in player with no part in any team, uid(8) is a guest.
 create or replace function torny_ttc.uid(n int) returns uuid language sql immutable as $$
   select ('00000000-0000-4000-b358-1' || lpad(n::text, 11, '0'))::uuid
 $$;
@@ -127,24 +130,31 @@ select torny_ttc.uid(n), '00000000-0000-0000-0000-000000000000'::uuid, 'authenti
        'authenticated', 'ttc-' || n || '@example.test'
   from (select generate_series(0, 30) as n union all select 98 union all select 99) as u;
 
-insert into public.users (id, email, name, is_admin)
-select id, email, 'TTC ' || email, id = torny_ttc.uid(99) from auth.users
+insert into public.users (id, email, name, is_admin, is_guest)
+select id, email, 'TTC ' || email, id = torny_ttc.uid(99), id = torny_ttc.uid(8) from auth.users
  where email like 'ttc-%@example.test'
-on conflict (id) do update set email = excluded.email, name = excluded.name, is_admin = excluded.is_admin;
+on conflict (id) do update set email = excluded.email, name = excluded.name, is_admin = excluded.is_admin,
+  is_guest = excluded.is_guest;
 
 -- Game 1 (draft). Team 1: captain 1, approved 2 and 3 on the roster, pending 4
--- (no roster row), approved 7 without a roster row. Team 2: captain 5, approved 6.
+-- (no roster row), approved 7 without a roster row, and guest 8: approved and
+-- on the roster with a confirmed place, as the organiser's guests are. Team 2:
+-- captain 5, approved 6.
 select torny_ttc.seed_game(1, 'draft');
 select torny_ttc.request(1, 1, 'approved', null);
 select torny_ttc.request(1, 2, 'approved', 1);
 select torny_ttc.request(1, 3, 'approved', 1);
 select torny_ttc.request(1, 4, 'pending', 1);
 select torny_ttc.request(1, 7, 'approved', 1);
+select torny_ttc.request(1, 8, 'approved', 1);
 select torny_ttc.request(1, 5, 'approved', null);
 select torny_ttc.request(1, 6, 'approved', 5);
 select torny_ttc.roster(1, 1, 1);
 select torny_ttc.roster(1, 2, 1);
 select torny_ttc.roster(1, 3, 1);
+select torny_ttc.roster(1, 8, 1);
+update public.game_players set accepted_at = now()
+ where game_id = torny_ttc.gid(1) and user_id = torny_ttc.uid(8);
 select torny_ttc.roster(1, 5, 2);
 select torny_ttc.roster(1, 6, 2);
 
@@ -166,6 +176,9 @@ select is(torny_ttc.shape(6), 'false|5|Lag 5', 'another team: that team is uncha
 select is(torny_ttc.transfer(1, 1, 4), 'not_approved', 'a pending teammate → not_approved');
 select is(torny_ttc.transfer(1, 1, 7), 'not_approved', 'an approved teammate off the roster → not_approved');
 select is(torny_ttc.transfer(1, 1, 1), 'not_a_teammate', 'the captain themself → not_a_teammate');
+select is(torny_ttc.transfer(1, 1, 8), 'new_captain_is_guest', 'a guest on the roster → new_captain_is_guest');
+select is(torny_ttc.transfer(1, 0, 8), 'new_captain_is_guest', 'the organiser cannot make a guest captain either');
+select is(torny_ttc.shape(8), 'false|1|Lag 1', 'guest refusal: the guest is still a member');
 select is(torny_ttc.shape(1), 'true|-|Lag 1', 'refusals: the captain is still captain');
 
 select is(torny_ttc.transfer(2, 11, 12), 'game_locked', 'an active game → game_locked');
@@ -179,7 +192,8 @@ select is(torny_ttc.shape(2), 'true|-|Lag 1', 'the new captain has the team name
 select is(torny_ttc.shape(1), 'false|2|Lag 1', 'the old captain is a member under the new one');
 select is(torny_ttc.shape(3), 'false|2|Lag 1', 'an approved teammate points at the new captain');
 select is(torny_ttc.shape(4), 'false|2|Lag 1', 'a pending teammate points at the new captain');
-select is(torny_ttc.team_numbers(1), '1:1,2:1,3:1,5:2,6:2', 'team numbers are unchanged');
+select is(torny_ttc.shape(8), 'false|2|Lag 1', 'the guest follows the new captain');
+select is(torny_ttc.team_numbers(1), '1:1,2:1,3:1,5:2,6:2,8:1', 'team numbers are unchanged');
 select is(torny_ttc.accepted(1, 1), 'yes', 'the old captain''s roster place is confirmed');
 select is(torny_ttc.accepted(1, 3), 'no', 'another teammate''s roster place is left as it was');
 select is(torny_ttc.accepted(1, 2), 'no', 'the new captain''s roster place is left as it was');

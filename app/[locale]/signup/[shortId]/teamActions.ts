@@ -1479,7 +1479,14 @@ export type TransferCaptaincyResult =
   | { ok: true }
   | {
       ok: false;
-      error: 'not_authed' | 'not_found' | 'game_locked' | 'not_approved' | 'db_error';
+      error:
+        | 'not_authed'
+        | 'not_found'
+        | 'game_locked'
+        | 'not_approved'
+        /** #2607: a guest has no login and cannot be captain (0228). */
+        | 'captain_is_guest'
+        | 'db_error';
     };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1521,6 +1528,8 @@ export async function transferCaptaincy(
       return { ok: false, error: 'game_locked' };
     case 'not_approved':
       return { ok: false, error: 'not_approved' };
+    case 'new_captain_is_guest':
+      return { ok: false, error: 'captain_is_guest' };
     // Ikke kalleren sitt lag å styre, eller ikke noe lag: samme svar som de
     // andre lag-actionene gir en fremmed.
     case 'not_allowed':

@@ -119,9 +119,11 @@ export async function transferTeamCaptaincy(
   const code =
     outcome === 'not_approved'
       ? 'transfer_not_approved'
-      : outcome === 'game_locked'
-        ? 'game_locked'
-        : 'transfer_failed';
+      : outcome === 'new_captain_is_guest'
+        ? 'transfer_guest'
+        : outcome === 'game_locked'
+          ? 'game_locked'
+          : 'transfer_failed';
   if (code === 'transfer_failed' && !error) {
     console.error('[transferTeamCaptaincy] refused', { gameId, requestId, outcome });
   }

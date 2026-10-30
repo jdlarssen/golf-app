@@ -290,10 +290,16 @@ export default async function TeamDashboardPage({
   const userIds = rows.map((r) => r.user_id);
   const { data: userRows } = await admin
     .from('users')
-    .select('id, name, email, nickname')
+    .select('id, name, email, nickname, is_guest')
     .in('id', userIds)
     .returns<
-      { id: string; name: string | null; email: string; nickname: string | null }[]
+      {
+        id: string;
+        name: string | null;
+        email: string;
+        nickname: string | null;
+        is_guest: boolean;
+      }[]
     >();
   // #2207: a teammate without a name (unfinished profile) shows as the masked
   // address — the full one never reaches TeamDashboardClient, for the captain
@@ -304,6 +310,7 @@ export default async function TeamDashboardPage({
       {
         name: displayNameForOthers({ name: u.name, email: u.email }) ?? '',
         nickname: u.nickname,
+        isGuest: u.is_guest,
       },
     ]),
   );
@@ -359,6 +366,9 @@ export default async function TeamDashboardPage({
               userId: r.user_id,
               displayName: usersById.get(r.user_id)?.name ?? t('teamDashMemberLabel'),
               status: r.status,
+              // #2607: no «Gjør til kaptein» for a guest. An unknown user reads
+              // as a guest, so a failed lookup never offers the button.
+              isGuest: usersById.get(r.user_id)?.isGuest ?? true,
             }))}
           />
         </Card>

@@ -276,9 +276,11 @@ export function PåmeldingerClient({
                           )}
                         </span>
                         {/* #2358: arrangøren utpeker ny kaptein blant dem som står
-                            på laget — bare godkjente lagmedlemmer, bare før start. */}
+                            på laget — bare godkjente lagmedlemmer, bare før start.
+                            #2607: aldri en gjest. */}
                         {view === 'approved' &&
                           row.status === 'approved' &&
+                          !row.isGuest &&
                           !locked &&
                           idx > 0 &&
                           (captainFor === row.id ? (

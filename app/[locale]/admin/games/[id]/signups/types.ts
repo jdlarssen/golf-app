@@ -21,6 +21,8 @@ export type RequestRow = {
   userName: string | null;
   /** `users.hcp_index`, signed (negative = plus handicap). */
   hcpIndex: number | null;
+  /** `users.is_guest`: a guest can never take the team captaincy (#2607). */
+  isGuest: boolean;
   teamName: string | null;
   isTeamCaptain: boolean;
   teamRequestId: string | null;
