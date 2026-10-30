@@ -20,7 +20,7 @@
  * GameForm (edit-flyten) mounter hele seksjonen samlet ett sted.
  *
  * #2282: kortstilen fra Nyttspill-5-*: «Hvem kan melde seg på?» som tre
- * valgkort med valgsirkel og synlighets-pille, «Hva melder man på?» som to
+ * valgkort med valgsirkel, «Hva melder man på?» som to
  * valgkort og startkontingenten som kortfelt. Delt med GameForm, så «Rediger
  * spill» får samme stil.
  */
@@ -28,7 +28,6 @@
 import { Fragment, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
-import { isDiscoverableRegistrationMode } from '@/lib/games/registration';
 import type {
   RegistrationMode,
   RegistrationType,
@@ -146,14 +145,6 @@ export function RegistrationSection({
                 onChange={() => setRegistrationMode(mode)}
                 disabled={lockGameMode}
                 title={modeTitle(mode)}
-                badge={
-                  <VisibilityBadge
-                    discoverable={isDiscoverableRegistrationMode(mode)}
-                    onSelectedCard={checked}
-                    labelDiscoverable={t('badgeDiscoverable')}
-                    labelPrivate={t('badgePrivate')}
-                  />
-                }
                 description={modeHint(mode)}
               />
               {mode === 'manual_approval' && checked && (
@@ -242,39 +233,5 @@ export function RegistrationSection({
         )}
       </FormSection>
     </div>
-  );
-}
-
-/**
- * Synlighets-pillen (#367): viser om påmeldingsmåten gjør spillet oppdagbart
- * i «Finn turneringer» eller holder det privat. Klassifiseringen kommer fra
- * `isDiscoverableRegistrationMode`, så den ikke kan drifte fra discovery.
- *
- * OPPDAGBAR: lys grønn med forest-tekst, og hvit på et valgt kort (det
- * valgte kortet er selv lys grønt). PRIVAT: --surface-2 med dempet tekst; om
- * natta er dempet tekst 4,21:1 der, så den bruker --text (10,45:1).
- */
-function VisibilityBadge({
-  discoverable,
-  onSelectedCard,
-  labelDiscoverable,
-  labelPrivate,
-}: {
-  discoverable: boolean;
-  onSelectedCard: boolean;
-  labelDiscoverable: string;
-  labelPrivate: string;
-}) {
-  const tone = !discoverable
-    ? 'bg-surface-2 text-muted dark:text-text'
-    : onSelectedCard
-      ? 'bg-surface text-primary'
-      : 'bg-primary-soft text-primary';
-  return (
-    <span
-      className={`inline-flex h-5 items-center rounded-full px-2 font-sans text-[10px] font-semibold tracking-[0.12em] uppercase ${tone}`}
-    >
-      {discoverable ? labelDiscoverable : labelPrivate}
-    </span>
   );
 }

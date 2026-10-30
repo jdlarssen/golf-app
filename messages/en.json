@@ -1017,8 +1017,6 @@
         "friendsSkipHint": "Your friends can join without requesting a spot. Others still need to ask.",
         "typeSoloTitle": "Individual",
         "typeTeamTitle": "Team",
-        "badgeDiscoverable": "Discoverable",
-        "badgePrivate": "Private",
         "paymentLegend": "Entry fee",
         "paymentHint": "Optional. If you charge an entry fee, players see the amount and how to pay when they sign up.",
         "entryFeeLabel": "Amount per player (kr)",

@@ -1914,7 +1914,7 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
   });
 
   // #2447: «Rediger spill» reads the same `mode*` keys as step 4, with its own
-  // look (selection circle, visibility pill).
+  // look (a selection circle, no visibility pill).
   it('«Rediger spill» viser de tre nye titlene og undertekstene', () => {
     const row = editRow({
       game_mode: 'texas_scramble',
@@ -1930,6 +1930,8 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
     expect(screen.getByRole('radio', { name: /jeg velger dem nå/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /de ber om plass, jeg godkjenner/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /åpen påmelding/i })).toBeChecked();
+    // The visibility pill is gone: «Privat» stands once, in the subtitle.
+    expect(screen.queryByText(/^(privat|oppdagbar)$/i)).toBeNull();
     expect(screen.getByText('Bare de du velger, er med. Privat.')).toBeInTheDocument();
     expect(screen.getByText('Spillet vises i Finn turneringer.')).toBeInTheDocument();
     expect(

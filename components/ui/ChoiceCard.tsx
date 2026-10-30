@@ -13,8 +13,8 @@ import type { ReactNode } from 'react';
  *   team size tiles, with the shared roving focus).
  *
  * `RadioOptionCard` is the larger sibling on step 5 (#2282): a selection
- * circle, a title with a pill beside it, and a description under it — the
- * «Hvem kan melde seg på?» cards.
+ * circle, a title and a description under it — the «Hvem kan melde seg på?»
+ * cards in «Rediger spill».
  *
  * Unavailable (#2453): a card the player count rules out, such as
  * «Tremannslag · trenger 6» with four players. A dashed hairline, no fill,
@@ -217,8 +217,7 @@ export function SelectionMark({
 
 /**
  * A choice card with room to explain itself (#2282): the selection circle on
- * the left, a Fraunces title with an optional pill beside it, and a 12 px
- * description under it. At least 64 px, 12 px × 14 px inside. A visually
+ * the left, a Fraunces title and a 12 px description under it. At least 64 px, 12 px × 14 px inside. A visually
  * hidden native radio carries the value and the keyboard; the card is its
  * label, so the label draws the focus ring (app/globals.css, #2240).
  */
@@ -229,7 +228,6 @@ export function RadioOptionCard({
   onChange,
   disabled = false,
   title,
-  badge,
   description,
 }: {
   name: string;
@@ -238,8 +236,6 @@ export function RadioOptionCard({
   onChange: () => void;
   disabled?: boolean;
   title: ReactNode;
-  /** The pill beside the title. */
-  badge?: ReactNode;
   description?: ReactNode;
 }) {
   return (
@@ -257,10 +253,7 @@ export function RadioOptionCard({
       />
       <SelectionMark checked={checked} />
       <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="font-serif text-[17px] font-semibold leading-[normal]">{title}</span>
-          {badge}
-        </span>
+        <span className="block font-serif text-[17px] font-semibold leading-[normal]">{title}</span>
         {description && (
           <span className="mt-1 block font-sans text-xs leading-[1.4] text-muted">
             {description}
