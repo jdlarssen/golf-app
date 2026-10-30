@@ -270,6 +270,15 @@ export function roundDates(opensAt: string, closesAt: string): string {
   return `${formatShortDateNb(new Date(opensAt))} – ${formatShortDateNb(new Date(closesAt))}`;
 }
 
+/**
+ * #2688: banen rundens flighter spiller, «Losby · Gul tee», på kortet for den
+ * åpne runden og på hver rad i rundelista. `null` når runden ikke har bane ennå.
+ */
+export function roundCourseLine(round: Pick<AppLeagueRound, 'courseName' | 'teeName'>): string | null {
+  if (!round.courseName) return null;
+  return round.teeName ? `${round.courseName} · ${round.teeName} tee` : round.courseName;
+}
+
 /** Under «Du har levert»: «Neste runde åpner man. 14. des.». */
 export function nextRoundOpens(opensAt: string): string {
   const date = new Date(opensAt);

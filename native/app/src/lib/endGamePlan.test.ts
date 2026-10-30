@@ -64,6 +64,7 @@ function game(overrides: Partial<BundleGame> = {}): BundleGame {
     createdBy: ME,
     scoreVisibility: 'live',
     tournamentId: null,
+    leagueRoundId: null,
     foursomesSide1TeeStarterUserId: null,
     foursomesSide2TeeStarterUserId: null,
     sideTournamentEnabled: false,

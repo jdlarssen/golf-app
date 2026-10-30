@@ -12,6 +12,7 @@ import {
   WINDOW_CHIP,
   playedByNames,
   roundClosesTitle,
+  roundCourseLine,
   roundWindowSub,
 } from '../../lib/leagueCopy';
 import { FONTS, cardShadow, fraunces, interLine, useTheme, withAlpha } from '../../theme';
@@ -37,6 +38,7 @@ export function OpenRoundCard({
 }) {
   const { colors, scheme } = useTheme();
   const meId = view.me.userId;
+  const courseLine = roundCourseLine(round);
   const locked = new Set([...round.delivered, ...round.inProgress]);
   const missing = view.participants.map((p) => p.userId).filter((id) => !locked.has(id));
   const groups = [
@@ -64,6 +66,11 @@ export function OpenRoundCard({
           {roundClosesTitle(round.closesAt)}
         </Text>
         <Text style={[styles.sub, { color: BAND_SUB }]}>{roundWindowSub(round.opensAt, round.closesAt)}</Text>
+        {courseLine ? (
+          <Text style={[styles.sub, { color: BAND_SUB }]} testID="league-open-round-course">
+            {courseLine}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.body}>
         {groups.map((group, index) => (

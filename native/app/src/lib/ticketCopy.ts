@@ -43,6 +43,8 @@ export const TICKET_TEXT = {
   finishedNoResult: 'Runden er avsluttet.',
   notPlayer: 'Du står ikke oppført som spiller her.',
   submittedPending: 'Kortet er levert. Nå venter det på en makker.',
+  /** #2688: i en ligaflight er det markøren som svarer, ikke en makker. */
+  submittedPendingMarker: 'Kortet er levert. Nå venter det på markøren.',
   submittedApproved: 'Kortet er levert og godkjent.',
   tilesLabel: 'Runden',
   tileBoard: 'Tavla',

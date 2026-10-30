@@ -4,8 +4,8 @@
 // Apple krever at spilleren svarer før navn og resultater går til språkmodellen
 // (App Review 5.1.2(i)). To knapper og ingen «senere»: et svar som venter, er
 // det samme som nei (`lib/ai/consent.ts`), og et tredje valg ville bare utsatt
-// spørsmålet. Knappene er like store og like tydelige, så ingen av dem er
-// standardvalget.
+// spørsmålet. Knappene er like store (#2688: «Nei takk» er en svakere knapp,
+// med ramme i stedet for fyll, så «Ja, det er greit» er det som lyser).
 //
 // Ingen tegning finnes for skjermen. Den følger «Fullfør profilen»: overskrift
 // i Fraunces 28, brødtekst i 15, knappene 52 høye nederst.
@@ -32,14 +32,20 @@ export function AiConsentQuestion({
 
   const button = (granted: boolean, label: string, testID: string) => (
     <Pressable
-      style={[styles.button, { backgroundColor: colors.primary }, busy && styles.buttonOff]}
+      style={[
+        styles.button,
+        granted
+          ? { backgroundColor: colors.primary }
+          : { borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
+        busy && styles.buttonOff,
+      ]}
       onPress={() => onAnswer(granted)}
       disabled={busy}
       accessibilityRole="button"
       accessibilityState={{ disabled: busy }}
       testID={testID}
     >
-      <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
+      <Text style={[styles.buttonText, { color: granted ? colors.onPrimary : colors.text }]}>
         {pending === granted ? AI_CONSENT_TEXT.saving : label}
       </Text>
     </Pressable>

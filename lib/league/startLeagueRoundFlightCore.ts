@@ -10,6 +10,7 @@ import { leagueFlightGameConfig } from './flightFormat';
 import { roundPlayerLocks } from './roundLocks';
 import { flightSizeRefusal } from './flightRules';
 import { markerRequired } from './leagueMarker';
+import { leagueFlightName } from './flightName';
 import { frozenDefaultFor } from './simSettings';
 import type { LeagueFormat } from './types';
 import type { LeagueStartRefusal } from './leagueStartRefusal';
@@ -150,7 +151,7 @@ export async function startLeagueRoundFlightCore(
 
   const { data: round, error: rErr } = await supabase
     .from('league_rounds')
-    .select('id, league_id, course_id, tee_box_id, opens_at, closes_at, original_closes_at')
+    .select('id, league_id, label, course_id, tee_box_id, opens_at, closes_at, original_closes_at')
     .eq('id', roundId)
     .maybeSingle();
   // A failed read is not «no such round»: the app answers 500, not 404.
@@ -220,7 +221,7 @@ export async function startLeagueRoundFlightCore(
   );
 
   const deliveredOutsideWindow = now > new Date(round.original_closes_at).getTime();
-  const name = `${league.name} – Runde`.slice(0, GAME_NAME_MAX);
+  const name = leagueFlightName(league.name, round.label, GAME_NAME_MAX);
 
   // #2207: league_round_id is server-owned. The league table counts finished
   // games per round with the service role, so the database lets only the

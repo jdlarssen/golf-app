@@ -293,7 +293,9 @@ export default async function GameHomePage({
   // (admins finish from Sekretariatet). Read from the immutable created_by on
   // the cached game row: the auto-start refetch below only selects the
   // `GameRow` columns (GAME_HOME_SELECT), and created_by isn't one of them.
-  const isCreator = gwp.game.created_by === userId;
+  // #2688: not in a league flight; the player who starts one is `created_by`
+  // without being its organiser, so the organiser controls below stay hidden.
+  const isCreator = gwp.game.created_by === userId && !gwp.game.league_round_id;
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =

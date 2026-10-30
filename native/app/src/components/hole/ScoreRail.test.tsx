@@ -39,6 +39,8 @@ function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
     onSkip: jest.fn(),
     onPutts: jest.fn(),
     onPuttsToggle: jest.fn(),
+    nextLabel: 'Neste hull',
+    onNext: jest.fn(),
     ...over,
   };
 }
@@ -92,6 +94,24 @@ describe('ScoreRail', () => {
     expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
     expect(screen.queryByTestId('rail-other')).toBeNull();
   });
+});
+
+it('alle har score: «Neste hull» er knappen videre, og siste hull sier «Lever scorekort» (#2688)', async () => {
+  const onNext = jest.fn();
+  const { rerender } = await render(<ScoreRail {...props({ active: null, options: [], onNext })} />);
+  expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Neste hull');
+  await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+  expect(onNext).toHaveBeenCalledTimes(1);
+
+  await rerender(
+    <ScoreRail {...props({ active: null, options: [], onNext, nextLabel: 'Lever scorekort' })} />,
+  );
+  expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+});
+
+it('en seat som mangler score: ingen «Neste hull»-knapp', async () => {
+  await render(<ScoreRail {...props()} />);
+  expect(screen.queryByTestId('score-rail-next-hole')).toBeNull();
 });
 
 it('putter på: designets «1», «2» og «3+», og stepperen går ned til 0 for en chip-in', async () => {

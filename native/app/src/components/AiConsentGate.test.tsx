@@ -6,7 +6,7 @@
 // begge knappene finnes, lagrer riktig svar, og slipper spilleren inn i appen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, Text } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text } from 'react-native';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { saveAiConsent } from '../data/aiConsent';
 import { aiConsentStepFor, rememberAiConsentAnswered } from '../data/aiConsentGate';
@@ -55,5 +55,22 @@ describe('AiConsentGate', () => {
     await waitFor(() => expect(screen.getByTestId('app-stack')).toBeTruthy());
     expect(saveAiConsent).toHaveBeenCalledWith('user-me', granted);
     expect(rememberAiConsentAnswered).toHaveBeenCalledWith('user-me');
+  });
+
+  // #2688: «Nei takk» er en svakere knapp enn «Ja, det er greit», men like stor.
+  it('«Nei takk» har ramme i stedet for fyll, og begge er like høye', async () => {
+    await render(
+      <AiConsentGate userId="user-me">
+        <Text testID="app-stack">Appen</Text>
+      </AiConsentGate>,
+    );
+    await waitFor(() => expect(screen.getByTestId('ai-consent-yes')).toBeTruthy());
+
+    const yes = StyleSheet.flatten(screen.getByTestId('ai-consent-yes').props.style);
+    const no = StyleSheet.flatten(screen.getByTestId('ai-consent-no').props.style);
+    expect(yes.backgroundColor).not.toBe('transparent');
+    expect(no.backgroundColor).toBe('transparent');
+    expect(no.borderWidth).toBe(1);
+    expect(no.height).toBe(yes.height);
   });
 });

@@ -57,6 +57,7 @@ import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { AppLeagueSummary } from '../../../../lib/league/appLeagueView';
 import { KavalkadeHomeBanner } from '../components/kavalkade/KavalkadeDoors';
 import { LeagueHomeRow } from '../components/league/LeagueHomeRow';
+import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
@@ -85,6 +86,7 @@ import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { LEAGUE_TEXT } from '../lib/leagueCopy';
+import { MARKER_TEXT, markerCardSubtitle } from '../lib/markerCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
 import { useOnResume } from '../lib/useOnResume';
@@ -264,6 +266,34 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       : null;
   const openGame = (gameId: string) => navigation.navigate('GameHome', { gameId });
 
+  // #2688: kort i ligaene dine som venter på deg som markør, med vei rett til
+  // godkjenningen. Før dette sto bare «Ingen spill på deg ennå» på Hjem.
+  const markerRows = leagues.flatMap((league) =>
+    league.markerCards.map((card) => ({
+      ...card,
+      leagueId: league.id,
+      name: card.playerName ?? MARKER_TEXT.unknownPlayer,
+      sub: markerCardSubtitle(card.roundLabel, league.name),
+    })),
+  );
+  // #2688: en ligaspiller uten runde i gang får ligaen øverst; tomtilstanden
+  // under er for den som ikke har noe annet enn å opprette et spill. Er en
+  // runde i gang, står den først som før.
+  const leaguesFirst = leagues.length > 0 && hero === null;
+  const leaguesSection =
+    leagues.length > 0 ? (
+      <View testID="home-leagues">
+        <SectionHead title={LEAGUE_TEXT.homeSection} />
+        {leagues.map((league) => (
+          <LeagueHomeRow
+            key={league.id}
+            league={league}
+            onPress={() => navigation.navigate('League', { leagueId: league.id })}
+          />
+        ))}
+      </View>
+    ) : null;
+
   const createGame = (
     <Pressable
       style={ui.button}
@@ -300,7 +330,25 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           </View>
         ) : null}
 
-        {empty ? (
+        {markerRows.length > 0 ? (
+          <View testID="home-marker-queue">
+            <SectionHead title={MARKER_TEXT.queueHeading} />
+            <MarkerQueueCard
+              rows={markerRows}
+              onOpen={(row) =>
+                navigation.navigate('MarkerApprove', {
+                  leagueId: row.leagueId,
+                  gameId: row.gameId,
+                  userId: row.userId,
+                })
+              }
+            />
+          </View>
+        ) : null}
+
+        {leaguesFirst ? leaguesSection : null}
+
+        {empty && leagues.length === 0 && markerRows.length === 0 ? (
           // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
           // webben skriver `text-primary dark:text-text`, og i lys drakt er de
           // to samme farge.
@@ -357,18 +405,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           </View>
         ) : null}
 
-        {leagues.length > 0 ? (
-          <View testID="home-leagues">
-            <SectionHead title={LEAGUE_TEXT.homeSection} />
-            {leagues.map((league) => (
-              <LeagueHomeRow
-                key={league.id}
-                league={league}
-                onPress={() => navigation.navigate('League', { leagueId: league.id })}
-              />
-            ))}
-          </View>
-        ) : null}
+        {leaguesFirst ? null : leaguesSection}
 
         <Section
           title={HOME_TEXT.myGames}

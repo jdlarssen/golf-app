@@ -5,7 +5,7 @@
 // åpnet og når du er deltaker; en kommende runde har ingenting der.
 import { StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
-import { LEAGUE_TEXT, roundDates, roundWindow } from '../../lib/leagueCopy';
+import { LEAGUE_TEXT, roundCourseLine, roundDates, roundWindow } from '../../lib/leagueCopy';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { PlayedPill, WindowChip, type PlayedState } from './LeaguePills';
 
@@ -61,6 +61,11 @@ export function RoundList({ view, now }: { view: AppLeagueView; now: Date }) {
                 <WindowChip window={window} testID={`league-round-${round.sequence}-chip`} />
               </View>
               <Text style={[styles.dates, { color: colors.muted }]}>{roundDates(round.opensAt, round.closesAt)}</Text>
+              {roundCourseLine(round) ? (
+                <Text style={[styles.dates, { color: colors.muted }]} testID={`league-round-${round.sequence}-course`}>
+                  {roundCourseLine(round)}
+                </Text>
+              ) : null}
             </View>
             {played ? <PlayedPill state={played} testID={`league-round-${round.sequence}-played`} /> : null}
           </View>

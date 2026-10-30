@@ -56,6 +56,7 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
         data: {
           id: 'r1',
           league_id: 'l1',
+          label: 'Runde 1',
           course_id: 'c1',
           tee_box_id: 'tb1',
           opens_at: '2000-01-01T00:00:00Z',
@@ -107,6 +108,7 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
         data: {
           id: 'r1',
           league_id: 'l1',
+          label: 'Runde 1',
           course_id: 'c1',
           tee_box_id: 'tb1',
           opens_at: '2000-01-01T00:00:00Z',
@@ -152,6 +154,7 @@ describe('startLeagueRoundFlight — one counted flight per player (#2214)', () 
       data: {
         id: 'r1',
         league_id: 'l1',
+        label: 'Runde 1',
         course_id: 'c1',
         tee_box_id: 'tb1',
         opens_at: '2000-01-01T00:00:00Z',
@@ -791,6 +794,7 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
         data: {
           id: 'r1',
           league_id: 'l1',
+          label: 'Runde 1',
           course_id: 'c1',
           tee_box_id: 'tb1',
           opens_at: '2000-01-01T00:00:00Z',

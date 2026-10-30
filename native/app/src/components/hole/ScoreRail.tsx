@@ -81,6 +81,13 @@ export type ScoreRailProps = {
   onPutts: (putts: number) => void;
   /** Slår putte-føring på eller av for runden. */
   onPuttsToggle: () => void;
+  /**
+   * #2688: når alle har score på hullet står en tydelig knapp videre: «Neste
+   * hull», og på siste hull «Lever scorekort». Veien dit var før bare å vite
+   * at man kunne sveipe.
+   */
+  nextLabel: string;
+  onNext: () => void;
 };
 
 /** Flaten bak en tone. */
@@ -150,6 +157,8 @@ export function ScoreRail({
   onSkip,
   onPutts,
   onPuttsToggle,
+  nextLabel,
+  onNext,
 }: ScoreRailProps) {
   const { colors, hole } = useTheme();
   const insets = useSafeAreaInsets();
@@ -188,6 +197,14 @@ export function ScoreRail({
         <Text style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
           {ALL_SCORED}
         </Text>
+        <Pressable
+          style={[styles.nextHole, { backgroundColor: colors.primary }]}
+          onPress={onNext}
+          accessibilityRole="button"
+          testID="score-rail-next-hole"
+        >
+          <Text style={[styles.nextHoleText, { color: colors.onPrimary }]}>{nextLabel}</Text>
+        </Pressable>
       </View>
     );
   }
@@ -608,4 +625,6 @@ const styles = StyleSheet.create({
   chipStep: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
   dimmed: { opacity: 0.4 },
   allScored: { fontSize: 14, fontFamily: FONTS.sans, textAlign: 'center', paddingVertical: 8 },
+  nextHole: { height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  nextHoleText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
 });

@@ -38,8 +38,16 @@ const CARRIED_BY_CREATOR = 'kort-levert-av-oppretteren';
 /** Et spill med én flight (≤4 aktive) der oppretteren selv spiller. */
 const SMALL_GAME = 'spill-med-en-flight';
 const FINISHED_GAME = 'ferdig-spill';
+/** #2688: en ligaflight; den som startet den er `created_by` uten å være arrangør. */
+const LEAGUE_GAME = 'ligaflight';
 
-type Game = { created_by: string; status: string; game_mode: string; name: string };
+type Game = {
+  created_by: string;
+  status: string;
+  game_mode: string;
+  name: string;
+  league_round_id?: string;
+};
 type RosterRow = {
   user_id: string;
   flight_number: number | null;
@@ -51,6 +59,13 @@ const GAMES: Record<string, Game> = {
   [GAME]: { created_by: CREATOR, status: 'active', game_mode: 'stableford', name: 'Sommercup' },
   [SMALL_GAME]: { created_by: CREATOR, status: 'active', game_mode: 'stableford', name: 'Firer' },
   [FINISHED_GAME]: { created_by: CREATOR, status: 'finished', game_mode: 'stableford', name: 'Ferdig' },
+  [LEAGUE_GAME]: {
+    created_by: CREATOR,
+    status: 'active',
+    game_mode: 'stableford',
+    name: 'Liga – Runde 1',
+    league_round_id: 'runde-1',
+  },
 };
 
 const ROSTERS: Record<string, RosterRow[]> = {
@@ -226,6 +241,15 @@ describe('gameOrganiserAccess', () => {
 
   it('avviser en spiller som hverken er admin eller oppretter', async () => {
     expect(await gameOrganiserAccess(STRANGER, GAME)).toBe('not_organiser');
+  });
+
+  // #2688: i en ligaflight er ingen spiller arrangør, heller ikke den som startet den.
+  it('avviser den som startet en ligaflight', async () => {
+    expect(await gameOrganiserAccess(CREATOR, LEAGUE_GAME)).toBe('not_organiser');
+  });
+
+  it('slipper fortsatt inn en admin i en ligaflight', async () => {
+    expect(await gameOrganiserAccess(ADMIN, LEAGUE_GAME)).toBe('organiser');
   });
 
   it('svarer ukjent spill — også for en admin, så 404-en ikke røper rollen', async () => {

@@ -10,6 +10,18 @@
 import type { SimSettingKey, SimSettings } from './simSettings';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 
+/**
+ * #2688: a delivered card that names the caller as its marker, as Home lists
+ * it: one tap goes straight to the marker page. `playerName` is the nickname,
+ * else the name, else null.
+ */
+export type AppMarkerCard = {
+  gameId: string;
+  userId: string;
+  playerName: string | null;
+  roundLabel: string;
+};
+
 /** One league on the app's Home («Ligaene dine»). */
 export type AppLeagueSummary = {
   id: string;
@@ -21,6 +33,8 @@ export type AppLeagueSummary = {
   delivered: boolean;
   /** The caller is playing the open round now. */
   inProgress: boolean;
+  /** #2688: cards in this league that wait for the caller as marker. */
+  markerCards: AppMarkerCard[];
 };
 
 export type AppLeagueListResponse = { leagues: AppLeagueSummary[] };

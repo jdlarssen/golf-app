@@ -57,8 +57,11 @@ import { GameNotFoundError } from './gameNotFound';
  * v11 (#2661): la til `markerUserId`, markøren spilleren valgte i en
  * simulatorliga. En v10-oppføring mangler den: en flightkamerat ville fått
  * «Godkjenn» på et kort bare markøren kan godkjenne.
+ * v12 (#2688): la til `leagueRoundId`. En v11-oppføring mangler det: spilleren
+ * som startet en ligaflight ville fått arrangørseksjonen (Trekk medspiller,
+ * Avslutt runden) på startbilletten til neste henting.
  */
-export const BUNDLE_PAYLOAD_VERSION = 11;
+export const BUNDLE_PAYLOAD_VERSION = 12;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -82,6 +85,8 @@ export interface BundleGame {
   scoreVisibility: string;
   /** Satt når spillet hører til en cup/turnering. N5 eier etikettene. */
   tournamentId: string | null;
+  /** Satt når spillet er en flight i en ligarunde; ingen spiller er da arrangør. */
+  leagueRoundId: string | null;
   /**
    * Hvem som slår ut på odde hull for hver side i foursomes. Valget gjøres på
    * nettsiden; appen viser det bare.
@@ -260,6 +265,7 @@ interface GameRow {
   created_by: string | null;
   score_visibility: string;
   tournament_id: string | null;
+  league_round_id: string | null;
   foursomes_side1_tee_starter_user_id: string | null;
   foursomes_side2_tee_starter_user_id: string | null;
   side_tournament_enabled: boolean;
@@ -327,7 +333,7 @@ const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, league_round_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 function toNumber(value: number | string | null): number | null {
   if (value == null) return null;
@@ -368,6 +374,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       createdBy: game.created_by,
       scoreVisibility: game.score_visibility,
       tournamentId: game.tournament_id,
+      leagueRoundId: game.league_round_id,
       foursomesSide1TeeStarterUserId: game.foursomes_side1_tee_starter_user_id,
       foursomesSide2TeeStarterUserId: game.foursomes_side2_tee_starter_user_id,
       sideTournamentEnabled: game.side_tournament_enabled,
