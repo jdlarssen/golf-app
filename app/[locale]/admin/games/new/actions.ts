@@ -403,6 +403,14 @@ async function createGameInternal(
     redirect({ href: `/admin/cup/${tournamentId}?status=match_added`, locale });
   }
 
+  // #2458: a publish lands on the receipt, for admin and organiser alike. It
+  // replaces the wizard in the history (a server action pushes by default),
+  // so «Tilbake» from the game goes to the receipt, never into the wizard. A
+  // failed e-mail invitation goes first and keeps the redirects below.
+  if (mode === 'publish' && !invitesFailed) {
+    redirect({ href: `/games/${game.id}/klar`, locale }, 'replace');
+  }
+
   if (isAdmin) {
     redirect({
       href: `/admin/games/${game.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}${invitesFailed ? '&error=invites_failed' : ''}`,

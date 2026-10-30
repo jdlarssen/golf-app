@@ -41,9 +41,14 @@ import {
  */
 
 const redirectMock = makeRedirectMock();
+// #2458: the history type of the last locale redirect ('replace' for the
+// receipt, undefined = the server action's default push).
+let lastRedirectType: string | undefined;
 vi.mock('@/i18n/navigation', () => ({
-  redirect: (arg: { href: string; locale?: string } | string) =>
-    redirectMock(typeof arg === 'string' ? arg : arg.href),
+  redirect: (arg: { href: string; locale?: string } | string, type?: string) => {
+    lastRedirectType = type;
+    return redirectMock(typeof arg === 'string' ? arg : arg.href);
+  },
 }));
 // lib/admin/auth.ts (shared auth gate, out of i18n scope) still redirects via
 // next/navigation — route it to the same spy so auth-gate assertions hold.
@@ -955,7 +960,28 @@ describe('invite-notify når et utkast publiseres (#2445)', () => {
       inviterUserId: 'admin-1',
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    // #2458: the receipt, replacing the wizard in the history.
+    expect(lastRedirect()).toBe('/games/game-1/klar');
+    expect(lastRedirectType).toBe('replace');
+  });
+
+  it('et cup-koblet utkast som publiseres, beholder dagens redirect (#2458)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: 'cup-1' }, error: null },
+      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      insertU4toU7,
+    ]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
     expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirectType).toBeUndefined();
   });
 
   it('save_draft med nye spillere varsler ingen', async () => {
@@ -1015,7 +1041,7 @@ describe('invite-notify når et utkast publiseres (#2445)', () => {
       '[updateGameInternal] roster invites failed',
       expect.objectContaining({ gameId: 'game-1' }),
     );
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
     consoleError.mockRestore();
   });
 });
@@ -1107,7 +1133,7 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
       publishFromDraftAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
     expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
   });
 
@@ -1132,7 +1158,7 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
       publishFromDraftAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
     expect(lastRedirect()).not.toMatch(/pending=|error=/);
     expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
   });
@@ -1568,7 +1594,7 @@ describe('klubb-turnering uten spillere (#2433)', () => {
 
     expect(gamesUpdateArgs()?.status).toBe('scheduled');
     expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
   });
 
   it('(vakt) uten klubb krever invite_only fortsatt spillere', async () => {
@@ -1738,7 +1764,7 @@ describe('held e-mail invitations when a draft is published (#2445)', () => {
       gameId: 'game-1',
       skipEmails: ['a@example.com', 'b@example.com'],
     });
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
   });
 
   it('save_draft and update_scheduled never call it', async () => {
@@ -1776,7 +1802,7 @@ describe('held e-mail invitations when a draft is published (#2445)', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(sendHeldGameInvitesMock).toHaveBeenCalledTimes(1);
-    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).toBe('/games/game-1/klar');
     consoleError.mockRestore();
   });
 

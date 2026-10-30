@@ -531,6 +531,12 @@ async function updateGameInternal(
   if (editSection) {
     redirect({ href: `${editBase}?status=updated`, locale });
   }
+  // #2458: a published draft lands on the receipt, as a new game does,
+  // replacing the wizard in the history. A cup match's draft keeps its
+  // redirect: the cup is where it belongs.
+  if (mode === 'publish' && existing.tournament_id == null) {
+    redirect({ href: `/games/${gameId}/klar`, locale }, 'replace');
+  }
   redirect({ href: `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`, locale });
 }
 
