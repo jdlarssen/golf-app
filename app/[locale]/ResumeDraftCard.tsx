@@ -38,8 +38,8 @@ export const DELETE_DRAFT_PATH = '/opprett-spill/slett-utkast';
  * this device, on Home. It lives in `localStorage` (see wizardStatePersistence),
  * so the card can only be known after mount. Server render and the first client
  * render give `null`, which keeps hydration clean; the card shows up a frame
- * later. A draft that never got past step 1 holds only the kind of event and is
- * not «something you left», so it is not shown.
+ * later. A draft that holds only the kind of event (no format chosen, not past
+ * step 2) is not «something you left», so it is not shown.
  */
 export function ResumeDraftCard({ userId }: { userId: string }) {
   const t = useTranslations('resumeDraft');
@@ -47,7 +47,11 @@ export function ResumeDraftCard({ userId }: { userId: string }) {
   const [draft, setDraft] = useState<ListedWizardDraft | null>(null);
 
   useEffect(() => {
-    const newest = listWizardDrafts(userId).find((d) => d.resume.summary.step >= 2);
+    // The wizard goes straight to step 2 when a kind of event is tapped, so a
+    // draft at step 2 with no format is still only «the kind of event».
+    const newest = listWizardDrafts(userId).find(
+      (d) => d.resume.summary.formatLabel !== null || d.resume.summary.step >= 3,
+    );
     // Reading browser storage after mount is the point: it does not exist on
     // the server, so it cannot be read during render without a hydration mismatch.
     /* eslint-disable-next-line react-hooks/set-state-in-effect */

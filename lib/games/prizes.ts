@@ -211,7 +211,7 @@ export function prizeDraftFromList(
 /**
  * Inversen av `prizeDraftFromList` — utkast tilbake til premie-liste.
  *
- * #1380: veiviser-utkastet speiles til sessionStorage som `InitialValues`, og
+ * #1380: veiviser-utkastet speiles til localStorage som `InitialValues`, og
  * `prizes` er formen hooken seeder premiebordet fra. Slott uten premie-tekst
  * hoppes over (tomt beskrivelses-felt = slottet av), akkurat som server-siden
  * gjør ved lagring — så en runde utkast → liste → utkast gir samme resultat
