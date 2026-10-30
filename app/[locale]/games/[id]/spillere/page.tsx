@@ -29,6 +29,8 @@ import {
   reopenScorecard,
 } from '@/app/[locale]/admin/games/[id]/actions';
 import { removePlayerFromGame, cancelGameInvitation } from './actions';
+import { BroughtGuestsNote } from './BroughtGuestsNote';
+import { readBroughtGuestsInGame } from '@/lib/games/broughtGuests';
 import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
 import { isGuestPlaceholderEmail } from '@/lib/games/createGuestPlayer';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -320,9 +322,26 @@ export default async function CreatorSpillerePage({
     }
     return new Set((data ?? []).map((r) => r.id));
   };
+  // #2607: who brought which guests, so the row says the guests leave with
+  // the player. One read for the whole roster, through the service role (the
+  // guests' requests are not readable for the organiser under RLS; the page is
+  // gated behind requireAdminOrCreator above). Display only: a failed read
+  // shows no line, and «Fjern» still takes the guests with it.
+  let guestNamesByHost = new Map<string, string[]>();
+  const readGuestNames = async (): Promise<Map<string, string[]>> => {
+    if (!canRemove) return new Map();
+    const read = await readBroughtGuestsInGame(getAdminClient(), gameId);
+    if (!read.ok) return new Map();
+    return new Map(
+      [...read.byHost].map(([host, guests]) => [
+        host,
+        guests.flatMap((g) => (g.name ? [g.name] : [])),
+      ]),
+    );
+  };
   if (isPreStart) {
     const rosterIds = new Set(players.map((p) => p.user_id));
-    const [invitesRes, network, pendingIds] = await Promise.all([
+    const [invitesRes, network, pendingIds, guestNames] = await Promise.all([
       supabase
         .from('invitations')
         .select('id, email')
@@ -332,8 +351,10 @@ export default async function CreatorSpillerePage({
         .returns<{ id: string; email: string }[]>(),
       getTeamCandidates(role.userId),
       readPendingProfiles(),
+      readGuestNames(),
     ]);
     pendingProfileIds = pendingIds;
+    guestNamesByHost = guestNames;
     pendingInvites = invitesRes.data ?? [];
     candidates = network.filter((c) => !rosterIds.has(c.id));
   }
@@ -546,6 +567,10 @@ export default async function CreatorSpillerePage({
                           {stateLabel}
                         </p>
                       )}
+                      <BroughtGuestsNote
+                        guestNames={guestNamesByHost.get(p.user_id)}
+                        playerName={playerName(p)}
+                      />
                     </div>
 
                     {/* Row actions. Wrapped so a submitted player in a
