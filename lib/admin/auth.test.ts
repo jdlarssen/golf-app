@@ -22,6 +22,11 @@ vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
 }));
 
+const readSimulatorLeagueFlight = vi.fn(async (_gameId: string): Promise<unknown> => null);
+vi.mock('@/lib/league/leagueFlight', () => ({
+  readSimulatorLeagueFlight: (gameId: string) => readSimulatorLeagueFlight(gameId),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -132,7 +137,21 @@ describe('requireAdminOrCreator (#2688)', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('turns away the player who started a league flight', async () => {
+  it('lets the player who started an ordinary league flight through', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Per' }, error: null },
+      { data: { created_by: creatorId, league_round_id: 'round-1' }, error: null },
+    ]);
+    setUser(creatorId, randomEmail);
+
+    const { requireAdminOrCreator } = await import('./auth');
+    const ctx = await requireAdminOrCreator(supabaseMock as never, 'game-1');
+
+    expect(ctx.userId).toBe(creatorId);
+  });
+
+  it('turns away the player who started a simulator-league flight', async () => {
+    readSimulatorLeagueFlight.mockResolvedValueOnce({ isSimulator: true });
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: false, name: 'Per' }, error: null },
       { data: { created_by: creatorId, league_round_id: 'round-1' }, error: null },
@@ -146,7 +165,7 @@ describe('requireAdminOrCreator (#2688)', () => {
     expect(lastRedirect()).toBe('/');
   });
 
-  it('still lets an admin into a league flight', async () => {
+  it('still lets an admin into a simulator-league flight', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null },
     ]);

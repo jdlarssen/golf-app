@@ -1,6 +1,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
 import type { getServerClient } from '@/lib/supabase/server';
 
 type ServerSupabase = Awaited<ReturnType<typeof getServerClient>>;
@@ -93,9 +94,13 @@ export async function requireAdminOrCreator(
     .select('created_by, league_round_id')
     .eq('id', gameId)
     .maybeSingle();
-  // #2688: the player who starts a league flight owns the row without being
-  // its organiser; only an admin (above) manages a flight.
-  if (game?.created_by === ctx.userId && !game.league_round_id) return ctx;
+  // #2688 (owner's choice 30.10): the player who starts a simulator-league
+  // flight owns the row without being its organiser; only an admin (above)
+  // manages it. An ordinary league flight keeps its creator as organiser:
+  // nobody else finishes it.
+  if (game?.created_by === ctx.userId) {
+    if (!game.league_round_id || !(await readSimulatorLeagueFlight(gameId))) return ctx;
+  }
   redirect('/');
 }
 

@@ -984,9 +984,15 @@ describe('GameHome i en ligaflight (#2688)', () => {
     expect(screen.getByTestId('organiser-section')).toBeTruthy();
   });
 
-  it('viser ingen arrangørseksjon for den som startet en ligaflight', async () => {
-    await renderFlight({ leagueRoundId: 'round-1' });
+  it('viser ingen arrangørseksjon for den som startet en simulatorligaflight', async () => {
+    await renderFlight({ leagueRoundId: 'round-1', requirePeerApproval: true });
     expect(screen.queryByTestId('organiser-section')).toBeNull();
+  });
+
+  // Eierens valg 30.10: en vanlig ligaflight avsluttes av den som startet den.
+  it('beholder arrangørseksjonen for den som startet en vanlig ligaflight', async () => {
+    await renderFlight({ leagueRoundId: 'round-1', requirePeerApproval: false });
+    expect(screen.getByTestId('organiser-section')).toBeTruthy();
   });
 
   it('sier «markøren» når kortet er levert og venter i en ligaflight', async () => {

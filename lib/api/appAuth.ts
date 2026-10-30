@@ -114,7 +114,7 @@ export type GameOrganiserAccess = 'organiser' | 'not_organiser' | 'game_not_foun
  * arrangør for dette spillet?
  *
  * Arrangør = klubb-admin (`users.is_admin`) ELLER den som opprettet runden
- * (`games.created_by`), unntatt i en ligaflight (#2688). Nøyaktig samme to-veis-regel som webbens
+ * (`games.created_by`), unntatt i en simulatorligaflight (#2688). Nøyaktig samme to-veis-regel som webbens
  * `loadAdminOrCreatorContext` bruker, uttrykt mot en id i stedet for en
  * cookie-sesjon.
  *
@@ -139,9 +139,13 @@ export async function gameOrganiserAccess(
   // 404-vs-403 lekket hvem som er admin til en tilfeldig kaller.
   if (!game) return 'game_not_found';
 
-  // #2688: i en ligaflight er den som startet flighten `created_by` uten å
-  // være arrangør (ligaen har sin egen). Bare en admin styrer flighten.
-  if (game.created_by === userId && !game.league_round_id) return 'organiser';
+  // #2688 (eierens valg 30.10): i en simulatorligaflight er den som startet
+  // flighten `created_by` uten å være arrangør; markøren og ligaen styrer
+  // runden, og flighten avslutter seg selv. Vanlige ligaflighter beholder
+  // oppretteren som arrangør (ingen annen avslutter dem). Admin er uendret.
+  if (game.created_by === userId) {
+    if (!game.league_round_id || !(await readSimulatorLeagueFlight(gameId))) return 'organiser';
+  }
 
   const { data: profile } = await admin
     .from('users')
