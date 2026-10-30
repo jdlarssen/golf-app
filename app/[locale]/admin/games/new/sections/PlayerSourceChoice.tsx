@@ -41,19 +41,19 @@ export function PlayerSourceChoice({ state }: { state: GameFormState }) {
   }
 
   return (
-    <div className="px-1 pb-1">
+    <div className="pt-4 pb-1">
       {/* The step title names the group for screen readers; the heading
           above already shows it, so this one stays out of sight. */}
       <p id={labelId} className="sr-only">
         {tWizard('stepTitle.4source')}
       </p>
-      <div role="radiogroup" aria-labelledby={labelId} className="flex flex-col gap-2">
+      <div role="radiogroup" aria-labelledby={labelId} className="flex flex-col gap-2.5">
         {MODES.map((mode) => {
           const checked = registrationMode === mode;
           return (
             <Fragment key={mode}>
               <label
-                className={`flex min-h-[76px] cursor-pointer flex-col justify-center rounded-2xl px-4 py-3 text-left text-text transition-colors duration-150 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${choiceStateClass(checked)}`}
+                className={`flex min-h-[76px] cursor-pointer flex-col justify-center rounded-2xl px-3.5 py-3 text-left text-text transition-colors duration-150 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${choiceStateClass(checked)}`}
               >
                 <input
                   type="radio"
@@ -73,7 +73,7 @@ export function PlayerSourceChoice({ state }: { state: GameFormState }) {
               </label>
               {mode === 'manual_approval' && checked && (
                 <CheckRow
-                  className="ml-7"
+                  className="ml-4"
                   title={t('friendsSkipTitle')}
                   description={t('friendsSkipHint')}
                   checked={letFriendsSkipGate}
