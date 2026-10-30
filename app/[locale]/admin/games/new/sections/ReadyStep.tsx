@@ -6,8 +6,8 @@
  * #2282: arrangøren ser invitasjonen slik gjengen får den — et lite
  * invitasjonskort med spillnavnet som felt midt i kortet — og en sjekkliste
  * med fire rader (Bane, Format, Tee-off, Spillere), hver med status og
- * «Endre». Under lista: «Hvem kan melde seg på?» i klartekst (#367-mandatet)
- * og «Vis avanserte innstillinger» med allowance-feltene, type påmelding,
+ * «Endre». Spillere-raden sier hvordan spillerne kommer (valget står på steg
+ * 4, #2447). Under lista: «Vis avanserte innstillinger» med allowance-feltene, type påmelding,
  * startkontingent, peer-godkjenning, synlighet, sideturnering og premiebord.
  * Publiser og utkast står i et brett som følger bunnen av skjermen.
  *
@@ -46,8 +46,10 @@ import { InvitationPreviewCard } from './InvitationPreviewCard';
 import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 import {
   formatRowParts,
+  playersRowParts,
   playersSummary,
   readyChecklist,
+  sourceKeyFor,
   teeOffIso,
   type ReadyRowTarget,
 } from './readyChecklistRules';
@@ -118,6 +120,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     isShamble,
     isSolo,
     isClubScoped,
+    registrationMode,
     hcpAllowance,
     setHcpAllowance,
     texasHandicapPct,
@@ -327,6 +330,11 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       ? t('checklist.pendingProfiles', { count: pendingProfileCount })
       : null;
   const PART_SEPARATOR = ' · ';
+  // #2447: how the players come was chosen at the top of step 4; a club
+  // tournament has no such choice.
+  const playersSource = isClubScoped
+    ? null
+    : t(`checklist.source.${sourceKeyFor(registrationMode)}`);
 
   // #2570: the gate's «Mangler» fragment for a round with only guests. The row
   // says the whole guest sentence instead, after any other missing player.
@@ -353,18 +361,22 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       ]
         .filter(Boolean)
         .join(' ');
-    } else if (row.status === 'warn') {
-      value = t('checklist.playersWarn', {
-        selected: selectedPlayerIds.length,
-        expected: expectedPlayerCount ?? 0,
-      });
-      if (row.key === 'players' && pendingNote) {
-        value = [pendingNote, value].join(PART_SEPARATOR);
-      }
     } else {
-      value = okValue(row.key);
-      if (row.key === 'players' && pendingNote) {
-        value = [value, pendingNote].join(PART_SEPARATOR);
+      value =
+        row.status === 'warn'
+          ? t('checklist.playersWarn', {
+              selected: selectedPlayerIds.length,
+              expected: expectedPlayerCount ?? 0,
+            })
+          : okValue(row.key);
+      if (row.key === 'players') {
+        value = playersRowParts({
+          status: row.status === 'warn' ? 'warn' : 'ok',
+          selectedCount: selectedPlayerIds.length,
+          value,
+          pendingNote,
+          source: playersSource,
+        }).join(PART_SEPARATOR);
       }
     }
     return { ...row, label: LABEL[row.key], value };
@@ -426,12 +438,6 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
         />
 
         <ReadyChecklist items={checklistItems} onEdit={handleEdit} />
-
-        {/* #1065: «Hvem kan melde seg på?»-valget i klartekst — IKKE gjemt i
-            «Vis avanserte innstillinger» (#367-mandatet: valget skal alltid
-            være synlig). Skjules for klubb-spill (isClubScoped): medlemskap =
-            invitasjon, modus er låst og valget er irrelevant der. */}
-        {!isClubScoped && <RegistrationSection state={state} onlyModeChoice />}
 
         <ToggleCard
           className="mt-4"
@@ -570,9 +576,9 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
                 />
               )}
 
-              {/* #1065: type påmelding (solo/lag) + startkontingent. «Hvem kan
-                  melde seg på?» står i klartekst over (onlyModeChoice), så her
-                  vises resten via hideModeChoice. */}
+              {/* #1065: type påmelding (solo/lag) + startkontingent. «Hvordan
+                  får dere spillere?» står på steg 4 (#2447), så her vises
+                  resten via hideModeChoice. */}
               <RegistrationSection state={state} hideHeading hideModeChoice />
 
               <AdvancedSettingsSection

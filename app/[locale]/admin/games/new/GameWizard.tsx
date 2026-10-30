@@ -12,7 +12,9 @@
  *                          2-step cup-creation-flyt) + mode-spesifikk setup
  *                          (Wolf/Nassau/Skins/.../TeamSizeSelector)
  *   Steg 3 (Bane)        → BasicsSection minus spillnavn + advanced
- *   Steg 4 (Spillere)    → PlayerPickerGrid + PlayerTray (#2321: vennene
+ *   Steg 4 (Spillere)    → PlayerSourceChoice (#2447: hvordan får dere
+ *                          spillere, ikke i en klubb-turnering) + PlayerPickerGrid
+ *                          + PlayerTray (#2321: vennene
  *                          dine som kort, sist spilt først). Lagformater og
  *                          singles matchplay fordeler lag/sider/flights på en
  *                          egen skjerm (`?step=4&skjerm=lag`) med
@@ -24,11 +26,9 @@
  * #1065: allowance-feltene og hele RegistrationSection (påmelding +
  * startkontingent) flyttet fra steg 2 til steg 5 — steg 2 er nå kun teller +
  * format-grid + mode-spesifikk setup (~1 skjermhøyde). Steg 4 sin
- * «Neste»-gate slipper samtidig på tomt roster (se `canAdvance()` under)
- * siden registreringsvalget (som tidligere gjorde spillerlisten valgfri) nå
- * tas EFTER steg 4, ikke før. Den slipper også når lista alt er valgfri
- * (`playersStepOptional`: en klubb-turnering, #2433, eller åpen påmelding
- * valgt på steg 5 før arrangøren gikk tilbake).
+ * «Neste»-gate slipper samtidig på tomt roster (se `canAdvance()` under).
+ * Den slipper også når lista er valgfri (`playersStepOptional`: en
+ * klubb-turnering, #2433, eller påmelding valgt øverst på steg 4, #2447).
  *
  * URL-state: `?step=2..5`, og `skjerm=lag` for steg 4s andre skjerm (#2321).
  * #1380: steg-overganger som arrangøren utløser
@@ -96,6 +96,7 @@ import { TeamSizeSelector } from './TeamSizeSelector';
 import { useGameFormState, PLAYER_COUNT_DEFAULT } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
 import { PlayerPickerGrid } from './sections/PlayerPickerGrid';
+import { PlayerSourceChoice } from './sections/PlayerSourceChoice';
 import { PlayerTray, PlayerTraySpacer } from './sections/PlayerTray';
 import {
   TeamsAssignmentSection,
@@ -977,19 +978,14 @@ function WizardBody({
     }
     if (step === 3) return state.courseId !== '' && state.teeBoxId !== '' && !state.teeOffInPast;
     // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
-    // #1065: registreringsvalget (hvem kan melde seg på) er flyttet til
-    // steg 5 — på en fremover-passering i kompis er det ikke tatt ennå, så
-    // `playersStepOptional` er false ('invite_only'-default). Derfor slipper
-    // vi også gaten når rosteret er tomt/urørt — det dekker admin som har
-    // tenkt å bruke selv-påmelding (velges på steg 5) uten å late som steg 4
-    // er ferdig utfylt, samtidig som en PÅBEGYNT men ugyldig seleksjon (feil
-    // antall, manglende lag-fordeling) fortsatt blokkerer — samme guardrail
-    // som før for admin som faktisk plukker spillere her.
-    // #2433: når lista alt er valgfri (klubb-turnering med individuell
-    // påmelding, eller åpen påmelding valgt på steg 5 før arrangøren gikk
-    // tilbake), slipper også en halvfull liste gjennom. Ellers ville «Neste»
-    // stått grå uten forklaring: nextDisabledHint() henter bare spiller-
-    // kodene, og de hoppes over når lista er valgfri.
+    // #1065: gaten slipper også når rosteret er tomt/urørt — et utkast må
+    // kunne lagres uten spillere — samtidig som en PÅBEGYNT men ugyldig
+    // seleksjon (feil antall, manglende lag-fordeling) fortsatt blokkerer.
+    // #2433: når lista er valgfri (klubb-turnering med individuell
+    // påmelding, eller påmelding valgt øverst på dette steget, #2447),
+    // slipper også en halvfull liste gjennom. Ellers ville «Neste» stått
+    // grå uten forklaring: nextDisabledHint() henter bare spiller-kodene,
+    // og de hoppes over når lista er valgfri.
     if (step === 4) {
       return (
         state.playersStepOptional ||
@@ -1080,16 +1076,19 @@ function WizardBody({
   // ────────────────────────────────────────────────────────────────────
   // #2260: én topp for alle steg i begge flytene — pil, kicker, stripe og
   // tittel (se WizardTop). Rutas bannere står mellom stripen og tittelen.
+  // #2447: the picker asks how the players come before it shows the list. A
+  // club tournament has no such choice, and the teams screen is still «who».
+  function stepTitle(): string {
+    if (isNewCupFlow && step === 2) return t('stepTitle.cupSetup');
+    if (step === 4 && !showTeamsScreen && !state.isClubScoped) return t('stepTitle.4source');
+    return t(`stepTitle.${step}` as Parameters<typeof t>[0]);
+  }
   const top = (
     <WizardTop
       step={step}
       totalSteps={isNewCupFlow ? 2 : TOTAL_STEPS}
       entryLabel={entryLabel ?? t('createDoor.kicker')}
-      title={
-        isNewCupFlow && step === 2
-          ? t('stepTitle.cupSetup')
-          : t(`stepTitle.${step}` as Parameters<typeof t>[0])
-      }
+      title={stepTitle()}
       backHref={backHref}
       onBack={goPrev}
       notice={notice}
@@ -1369,18 +1368,17 @@ function WizardBody({
         // #2321: velgeren (`Spillere-forslag`). Kolonnen trekkes 4 px ut som
         // på steg 2 og 3, så kortene står 16 px fra skjermkanten.
         <div className="-mx-1">
-          {/* #1065: registreringsvalget (hvem kan melde seg på) står på steg
-              5, så et tomt utvalg er en gyldig vei videre — hintet sier det.
-              #2433: en klubb-turnering har ikke det valget på steg 5. Med
-              individuell påmelding melder medlemmene seg på selv, og
-              klubb-hintet sier at lista kan stå tom. Med «Lag» må lista
-              fylles, og da står ingen hint (det gamle ville lovet et valg
-              som ikke finnes); «Velg …»-linja sier hva som trengs. */}
-          {state.selectedPlayerIds.length === 0 &&
-            (!state.isClubScoped || state.playersStepOptional) && (
-              <p className={HINT_BOX_CLASS}>
-                {t(state.isClubScoped ? 'step4.emptyRosterHintClub' : 'step4.emptyRosterHint')}
-              </p>
+          {/* #2447: hvordan får dere spillere? står før lista, og med
+              påmelding kan arrangøren gå rett til «Klar?». #2433: en
+              klubb-turnering har ikke valget. Med individuell påmelding
+              melder medlemmene seg på selv, og klubb-hintet sier at lista
+              kan stå tom. Med «Lag» må lista fylles, og da står ingen hint;
+              «Velg …»-linja sier hva som trengs. */}
+          {!state.isClubScoped && <PlayerSourceChoice state={state} />}
+          {state.isClubScoped &&
+            state.selectedPlayerIds.length === 0 &&
+            state.playersStepOptional && (
+              <p className={HINT_BOX_CLASS}>{t('step4.emptyRosterHintClub')}</p>
             )}
           {/* #464: tom-tilstand når picker-kilden ikke har andre enn deg selv
               (ingen venner, eller en klubb uten andre medlemmer). Solo viser
@@ -1425,7 +1423,7 @@ function WizardBody({
                   onNext: () => goToStep(4, true),
                 }
               : {
-                  buttonLabel: t('footer.next'),
+                  buttonLabel: t('footer.nextReady'),
                   canAdvance: canAdvance(),
                   disabledHint: nextDisabledHint(),
                   onNext: goNext,

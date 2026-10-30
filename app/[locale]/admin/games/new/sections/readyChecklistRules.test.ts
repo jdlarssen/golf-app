@@ -4,8 +4,10 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import type { GuestOnlyVerdict } from '@/lib/games/guestOnlyRoster';
 import {
   formatRowParts,
+  playersRowParts,
   playersSummary,
   readyChecklist,
+  sourceKeyFor,
   teeOffIso,
   type ReadyRow,
 } from './readyChecklistRules';
@@ -234,5 +236,29 @@ describe('formatRowParts', () => {
     ['shamble, field on step 2', { gameMode: 'shamble', teamSize: 4, hcpAllowance: 80 }, { teamSize: 4, allowance: null }],
   ])('%s', (_label, input, expected) => {
     expect(formatRowParts(input)).toEqual(expected);
+  });
+});
+
+describe('sourceKeyFor', () => {
+  it('maps each registration mode to its checklist key', () => {
+    expect(sourceKeyFor('invite_only')).toBe('invite');
+    expect(sourceKeyFor('manual_approval')).toBe('approval');
+    expect(sourceKeyFor('open')).toBe('open');
+  });
+});
+
+// #2447: the Spillere row names how the players come, last.
+describe('playersRowParts', () => {
+  const OK = { status: 'ok' as const, selectedCount: 4, value: '4 spillere', pendingNote: null, source: 'Privat' };
+
+  it.each<[string, Parameters<typeof playersRowParts>[0], string[]]>([
+    ['players and a choice: the choice goes last', OK, ['4 spillere', 'Privat']],
+    ['club tournament: no choice, as before', { ...OK, source: null }, ['4 spillere']],
+    ['nobody on the list: only the choice, never «0 spillere»', { ...OK, selectedCount: 0, value: '0 spillere', source: 'Åpen påmelding' }, ['Åpen påmelding']],
+    ['nobody on the list, club tournament: the plain value', { ...OK, selectedCount: 0, value: '0 spillere', source: null }, ['0 spillere']],
+    ['profile note after the count, the choice after both (#2441)', { ...OK, pendingNote: '1 venter på profil' }, ['4 spillere', '1 venter på profil', 'Privat']],
+    ['warn: the note first, then the sentence, then the choice', { ...OK, status: 'warn', value: '2 av 4. Du kan legge til flere senere.', selectedCount: 2, pendingNote: '1 venter på profil' }, ['1 venter på profil', '2 av 4. Du kan legge til flere senere.', 'Privat']],
+  ])('%s', (_label, input, expected) => {
+    expect(playersRowParts(input)).toEqual(expected);
   });
 });

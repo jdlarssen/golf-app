@@ -156,7 +156,8 @@ function renderWizard({
 }
 
 function clickNext() {
-  fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
+  // Step 4 → 5 reads «Neste: Klar?» (#2447); the other steps say «Neste».
+  fireEvent.click(screen.getByRole('button', { name: /^neste(: klar\?)?$/i }));
 }
 
 // «Steg N av 5» splittes av React i tre child-nodes. Sjekk via textContent.
@@ -215,13 +216,12 @@ describe('GameWizard — happy-path solo stableford', () => {
     });
     clickNext();
 
-    // Steg 4 (Spillere). #1065: tomt roster er nå en gyldig fremover-
-    // passering (registreringsvalget kommer på steg 5, ikke tatt ennå) — så
-    // «Neste» er aktivert allerede før noen spillere er valgt.
+    // Steg 4 (Spillere). #1065: tomt roster er en gyldig fremover-passering,
+    // så «Neste: Klar?» er aktivert allerede før noen spillere er valgt.
     expectStep(4);
-    expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).not.toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
-    expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).not.toBeDisabled();
     clickNext();
 
     // Steg 5 (Klar): publiser-knappen skal være enabled.
@@ -456,10 +456,10 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
 });
 
 // #1065: Påmelding (registrering + startkontingent + allowance) flyttet fra
-// steg 2 til steg 5 (ReadyStep). «Hvem kan melde seg på?» står i klartekst på
-// steg 5 (#367-mandatet); «Hva melder man på?» + kontingent bor inne i «Vis
-// avanserte innstillinger»-disclosuren.
-function goToReadyStep() {
+// steg 2 til steg 5 (ReadyStep). #2447: «Hvordan får dere spillere?» står
+// øverst på steg 4; «Hva melder man på?» + kontingent bor inne i «Vis
+// avanserte innstillinger»-disclosuren på steg 5.
+function goToStep4() {
   pickKompisIntent(); // steg 1 → 2
   pickBestBallFormat();
   clickNext(); // steg 2 → 3
@@ -473,6 +473,11 @@ function goToReadyStep() {
     target: { value: FUTURE_TEE_OFF },
   });
   clickNext(); // steg 3 → 4
+  expectStep(4);
+}
+
+function goToReadyStep() {
+  goToStep4();
   clickNext(); // steg 4 → 5 (tomt roster er nå en gyldig fremover-passering, #1065)
   expectStep(5);
 }
@@ -504,14 +509,13 @@ describe('GameWizard — steg 2 rendrer ikke lenger Påmelding/allowance (#1065)
 });
 
 describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)', () => {
-  it('rendrer «Hvem kan melde seg på?» synlig på steg 5 (utenfor disclosure) med default invite_only', () => {
+  it('steg 5 spør ikke på nytt om påmelding (#2447)', () => {
     renderWizard();
     goToReadyStep();
 
-    // Synlig UTEN å åpne «Vis avanserte innstillinger».
-    expect(
-      screen.getByRole('radio', { name: /bare de jeg inviterer/i }),
-    ).toBeChecked();
+    expect(screen.queryByRole('radio', { name: /jeg velger dem nå/i })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /åpen påmelding/i })).toBeNull();
+    expect(screen.queryByText(/hvem kan melde seg på/i)).toBeNull();
   });
 
   it('«Hva melder man på?» (individuelt/lag) ligger inne i disclosuren', () => {
@@ -567,37 +571,128 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     expect(fd.get('registration_mode')).toBe('invite_only');
     expect(fd.get('registration_type')).toBe('solo');
 
+    // The mode is picked on step 4 and rides along to the step 5 form.
+    fireEvent.click(within(screen.getByTestId('ready-row-players')).getByRole('button'));
     fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    clickNext();
     fd = new FormData(container.querySelector('form')!);
     expect(fd.get('registration_mode')).toBe('open');
   });
 });
 
-describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', () => {
-  it('steg 4 «Neste» er aktivert med tomt roster (registreringsvalget kommer på steg 5)', () => {
+describe('GameWizard — #2447 steg 4 spør om påmelding før lista', () => {
+  it('tittelen er «Hvordan får dere spillere?», med tre valgkort der «Jeg velger dem nå» er valgt', () => {
     renderWizard();
-    pickKompisIntent();
-    pickBestBallFormat();
-    clickNext(); // → steg 3
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
-    clickNext(); // → steg 4
-    expectStep(4);
+    goToStep4();
 
-    // Tomt roster: «Neste» er IKKE disabled (#1065 — gaten slipper på tomt
-    // roster i stedet for et registreringsvalg som ikke er tatt ennå).
-    expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
     expect(
-      screen.getByText(/du bestemmer på neste steg/i),
+      screen.getByRole('heading', { name: /^hvordan får dere spillere\?$/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^hvem skal spille\?$/i })).toBeNull();
+    const group = screen.getByRole('radiogroup', { name: /hvordan får dere spillere\?/i });
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
+    expect(within(group).getByRole('radio', { name: /jeg velger dem nå/i })).toBeChecked();
+    expect(
+      within(group).getByRole('radio', { name: /de ber om plass, jeg godkjenner/i }),
+    ).not.toBeChecked();
+    expect(within(group).getByRole('radio', { name: /åpen påmelding/i })).not.toBeChecked();
+    // Valgkortene står over lista.
+    expect(
+      group.compareDocumentPosition(screen.getByRole('checkbox', { name: /spiller 1/i })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Det gamle hintet er borte; valget sier det samme.
+    expect(screen.queryByText(/du bestemmer på neste steg/i)).toBeNull();
   });
+
+  it('tom liste: «Neste: Klar?» er aktiv og går til steg 5', () => {
+    renderWizard();
+    goToStep4();
+
+    expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).toBeEnabled();
+  });
+
+  it.each([
+    ['åpen påmelding', /åpen påmelding/i, 'open'],
+    ['de ber om plass, jeg godkjenner', /de ber om plass, jeg godkjenner/i, 'manual_approval'],
+  ])(
+    'best ball + deg selv + «%s»: «Neste: Klar?» er aktiv, og Publiser er aktiv på steg 5',
+    (_label, radio, mode) => {
+      const { container } = renderWizard();
+      goToStep4();
+
+      // Én spiller er ugyldig for best ball med «Jeg velger dem nå».
+      fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+      expect(screen.getByRole('button', { name: /^neste: lagene$/i })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('radio', { name: radio }));
+      expect(screen.queryByRole('button', { name: /^neste: lagene$/i })).toBeNull();
+      expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).toBeEnabled();
+      clickNext();
+
+      expectStep(5);
+      expect(screen.getByRole('button', { name: /publiser og del/i })).toBeEnabled();
+      const fd = new FormData(container.querySelector('form')!);
+      expect(fd.get('registration_mode')).toBe(mode);
+    },
+  );
+
+  it('med påmelding og tre venner krysset av står de og deg selv i payloaden', () => {
+    const { container } = renderWizard();
+    goToStep4();
+
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    for (const n of [1, 2, 3, 4]) {
+      fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`spiller ${n}`, 'i') }));
+    }
+    // Best ball med spillere fordeler lagene først (den skjermen er uendret).
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /trekk tilfeldig/i }));
+    clickNext();
+    expectStep(5);
+
+    const fd = new FormData(container.querySelector('form')!);
+    const ids = [0, 1, 2, 3].map((i) => fd.get(`player_${i}_id`)).sort();
+    expect(ids).toEqual(['u0', 'u1', 'u2', 'u3']);
+    expect(fd.get('player_4_id')).toBeNull();
+    expect(fd.get('registration_mode')).toBe('open');
+  });
+
+  it('«Slipp venner direkte inn» vises bare under «De ber om plass, jeg godkjenner» når det er valgt', () => {
+    const { container } = renderWizard();
+    goToStep4();
+    const skip = /slipp venner direkte inn/i;
+
+    expect(screen.queryByRole('checkbox', { name: skip })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    expect(screen.queryByRole('checkbox', { name: skip })).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: /de ber om plass, jeg godkjenner/i }));
+    const box = screen.getByRole('checkbox', { name: skip });
+    expect(new FormData(container.querySelector('form')!).get('let_friends_skip_gate')).toBe('');
+    fireEvent.click(box);
+    expect(new FormData(container.querySelector('form')!).get('let_friends_skip_gate')).toBe('1');
+  });
+
+  it('Spillere-raden på steg 5 sier hva som er valgt, og «Endre» går til steg 4', () => {
+    renderWizard();
+    goToStep4();
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    clickNext();
+    expectStep(5);
+
+    // Tom liste: bare valget, ikke «0 spillere».
+    const row = screen.getByTestId('ready-row-players');
+    expect(row).toHaveTextContent('Åpen påmelding');
+    expect(row).not.toHaveTextContent(/0 spillere/);
+
+    fireEvent.click(within(row).getByRole('button'));
+    expectStep(4);
+    expect(screen.getByRole('radio', { name: /åpen påmelding/i })).toBeChecked();
+  });
+});
+
+describe('GameWizard — #1065 steg-4-gate', () => {
 
   it('steg 4 «Neste» blokkeres av en PÅBEGYNT men ugyldig seleksjon (guardrail beholdt)', () => {
     renderWizard();
@@ -655,11 +750,12 @@ describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', 
     expectStep(4);
   });
 
-  it('publish-håndhevingen er uendret: valg av åpen påmelding på steg 5 gjør canPublish true selv med tomt roster', () => {
+  it('publish-håndhevingen er uendret: åpen påmelding valgt på steg 4 gjør canPublish true selv med tomt roster', () => {
     renderWizard();
-    goToReadyStep();
-
+    goToStep4();
     fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    clickNext();
+    expectStep(5);
 
     const publishBtn = screen.getByRole('button', {
       name: /publiser og del/i,
@@ -1642,7 +1738,15 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
 
     expect(screen.getByText(CLUB_HINT)).toBeInTheDocument();
     expect(screen.queryByText(OLD_HINT)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).toBeEnabled();
+  });
+
+  it('ingen valgkort, og tittelen er fortsatt «Hvem skal spille?» (#2447)', () => {
+    goToClubStep4(/^stableford$/i);
+
+    expect(screen.getByRole('heading', { name: /^hvem skal spille\?$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /hvordan får dere spillere/i })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /jeg velger dem nå/i })).toBeNull();
   });
 
   it('Texas med én spiller: «Neste» på lag-skjermen er aktiv', () => {
@@ -1653,12 +1757,12 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
     expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
   });
 
-  it('best ball med én spiller: foten sier «Neste», og den er aktiv', () => {
+  it('best ball med én spiller: foten sier «Neste: Klar?», og den er aktiv', () => {
     goToClubStep4(/^best ball$/i);
 
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     expect(screen.queryByRole('button', { name: /^neste: lagene$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^neste: klar\?$/i })).toBeEnabled();
   });
 
   it('påmeldingstype «Lag» og tom liste: ingen hint over velgeren', () => {

@@ -13,11 +13,11 @@
  * 'solo' når admin bytter til en slik modus, så payloaden alltid er
  * konsistent uten å avhenge av at admin klikker en gyldig kombinasjon manuelt.
  *
- * #1065: GameWizard (steg 5/ReadyStep) mounter seksjonen i to deler —
- * `onlyModeChoice` alene i klartekst (utenfor «Vis avanserte innstillinger»,
- * #367-mandatet: registrerings-VALGET skal alltid være synlig), og
- * `hideModeChoice` for resten (type + kontingent) inne i disclosuren.
- * GameForm (edit-flyten) fortsetter å mounte hele seksjonen samlet ett sted.
+ * #1065: GameWizard (steg 5/ReadyStep) mounter bare resten (type +
+ * kontingent) med `hideModeChoice`, inne i «Vis avanserte innstillinger».
+ * #2447: registrerings-VALGET (#367-mandatet: alltid synlig) står øverst på
+ * steg 4, i PlayerSourceChoice, som leser de samme `mode*`-tekstene.
+ * GameForm (edit-flyten) mounter hele seksjonen samlet ett sted.
  *
  * #2282: kortstilen fra Nyttspill-5-*: «Hvem kan melde seg på?» som tre
  * valgkort med valgsirkel og synlighets-pille, «Hva melder man på?» som to
@@ -58,15 +58,6 @@ type Props = {
    * ikke for medlemmer). Type-valget (solo/lag) beholdes — det gjelder fortsatt.
    */
   hideModeChoice?: boolean;
-  /**
-   * #1065: rendrer KUN «Hvem kan melde seg på?»-valget — ingen type-valg
-   * (solo/lag), ingen kontingent. Wizard-en bruker denne for den synlige
-   * registrerings-kontrollen på steg 5 (#367-mandatet: valget skal stå i
-   * klartekst, ikke gjemt i «Vis avanserte innstillinger»). Resten av seksjonen
-   * (type + kontingent) rendres separat under avanserte innstillinger via
-   * `hideModeChoice`.
-   */
-  onlyModeChoice?: boolean;
 };
 
 const REGISTRATION_MODES: readonly RegistrationMode[] = [
@@ -87,7 +78,6 @@ export function RegistrationSection({
   state,
   hideHeading = false,
   hideModeChoice = false,
-  onlyModeChoice = false,
 }: Props) {
   const t = useTranslations('wizard.sections.registration');
   const whoId = useId();
@@ -194,8 +184,6 @@ export function RegistrationSection({
       </FormSection>
     )
   );
-
-  if (onlyModeChoice) return modeChoiceBlock || null;
 
   return (
     <div>

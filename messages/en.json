@@ -1006,13 +1006,13 @@
         "heading": "Registration",
         "whoLegend": "Who can sign up?",
         "whatLegend": "What can they sign up as?",
-        "modeInviteTitle": "Only players I invite",
+        "modeInviteTitle": "I'll pick them now",
         "modeClubTitle": "Club members",
-        "modeInviteHint": "Private. Not shown in Find tournaments. You send invitations yourself from the Players tab.",
-        "modeApprovalTitle": "Request — I approve",
-        "modeApprovalHint": "Appears in Find tournaments. Players request a spot and you approve each one.",
+        "modeInviteHint": "Only the players you pick are in. Private.",
+        "modeApprovalTitle": "They ask, I approve",
+        "modeApprovalHint": "The game appears in Find tournaments.",
         "modeOpenTitle": "Open registration",
-        "modeOpenHint": "Appears in Find tournaments so anyone with the link can sign up.",
+        "modeOpenHint": "Anyone with the link can sign up. The game appears in Find tournaments.",
         "friendsSkipTitle": "Let friends join directly",
         "friendsSkipHint": "Your friends can join without requesting a spot. Others still need to ask.",
         "typeSoloTitle": "Individual",
@@ -1155,7 +1155,12 @@
         "gross": "gross",
         "playersWarn": "{selected} of {expected}. You can add more later.",
         "playersGuestsOnly": "Only guests. Guests can't log in, so nobody can enter scores. Join yourself, or add a player with an account.",
-        "pendingProfiles": "{count, plural, one {1 awaiting profile} other {# awaiting profile}}"
+        "pendingProfiles": "{count, plural, one {1 awaiting profile} other {# awaiting profile}}",
+        "source": {
+          "invite": "Private",
+          "approval": "You approve sign-ups",
+          "open": "Open registration"
+        }
       },
       "advancedToggle": "Show advanced settings",
       "publishButton": "Publish and share the invitation",
@@ -1339,6 +1344,7 @@
       "2": "What will you play?",
       "3": "Where and when?",
       "4": "Who is playing?",
+      "4source": "How do you get players?",
       "5": "Ready?",
       "cupSetup": "Set up the cup"
     },
@@ -1383,11 +1389,11 @@
     },
     "footer": {
       "next": "Next",
+      "nextReady": "Next: Ready?",
       "nextTeams": "Next: the teams",
       "nextSides": "Next: the sides"
     },
     "step4": {
-      "emptyRosterHint": "You'll decide on the next step whether to add players here, or let them sign up themselves.",
       "emptyRosterHintClub": "You can also leave the list empty. Club members can sign up themselves.",
       "pickerSubtitle": "{format} · {players}",
       "pickerSubtitleLineup": "{format} · {players}, {lineup}",
