@@ -50,7 +50,7 @@ export function finishedResultBadge(summary: ResultSummary): FinishedResultBadge
       return { key: 'result.matchTied', isWin: false };
     }
     case 'skins': {
-      // Gull kun når du faktisk leder med skins — «🥇 0 skins» gir ingen mening.
+      // Gull kun når du faktisk leder med skins — gull for «0 skins» gir ingen mening.
       const isWin = summary.rank === 1 && summary.skins > 0;
       return {
         key: isWin ? 'result.skinsWon' : 'result.skins',

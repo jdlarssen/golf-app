@@ -367,7 +367,7 @@ describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
     await view;
 
     expect(await screen.findByTestId('kavalkade-home-banner')).toHaveTextContent(
-      '🎄Kavalkaden kommer 24. desemberGolfåret ditt, kort for kort. Alt du spiller fram til julaften er med.',
+      'Kavalkaden kommer 24. desemberGolfåret ditt, kort for kort. Alt du spiller fram til julaften er med.',
     );
     expect(screen.queryByTestId('kavalkade-home-banner-cta')).toBeNull();
     const order = testIdsInOrder();

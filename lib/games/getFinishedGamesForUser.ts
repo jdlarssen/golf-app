@@ -33,7 +33,7 @@ export type FinishedGame = {
   courses: { name: string } | null;
   /**
    * The viewer's own outcome for this game (#572). Read from THIS user's
-   * `game_players` row, so the card shows «🥇 Du vant» / «2. plass av 4» etc.
+   * `game_players` row, so the card shows «Du vant» / «2. plass av 4» etc.
    * `null` for games finished before the feature shipped → 🏆-fallback.
    */
   result_summary: ResultSummary | null;

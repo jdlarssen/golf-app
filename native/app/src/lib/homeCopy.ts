@@ -179,9 +179,9 @@ export function finishedResultText(badge: FinishedResultBadge): string | null {
   const v = badge.values ?? {};
   switch (badge.key) {
     case 'result.youWon':
-      return '🥇 Du vant';
+      return 'Du vant';
     case 'result.teamWon':
-      return '🥇 Laget vant';
+      return 'Laget vant';
     case 'result.placement':
       return `${v.rank}. plass av ${v.fieldSize}`;
     case 'result.teamPlacement':
@@ -193,7 +193,7 @@ export function finishedResultText(badge: FinishedResultBadge): string | null {
     case 'result.matchTied':
       return 'Uavgjort';
     case 'result.skinsWon':
-      return `🥇 ${skinsCount(Number(v.count))}`;
+      return skinsCount(Number(v.count));
     case 'result.skins':
       return skinsCount(Number(v.count));
     default:

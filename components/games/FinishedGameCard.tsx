@@ -13,7 +13,7 @@ import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
  * hverandre (#571). Layout per #570: navn / «bane · spillform» / sluttdato +
  * spillerens eget resultat (#572).
  *
- * Resultat-badgen viser ditt utfall: «🥇 Du vant» / «🥇 Laget vant» med gull-
+ * Resultat-badgen viser ditt utfall: «Du vant» / «Laget vant» med gull-
  * accent for egen seier, «2. plass av 4» / «Du tapte 2&1» / «4 skins» dempet
  * ellers. Faller tilbake til 🏆 når `result_summary` mangler (spill avsluttet
  * før #572). Teksten kommer fra next-intl så den oversettes med #60.

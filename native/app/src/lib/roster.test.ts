@@ -211,11 +211,11 @@ describe('setningene for levering for flighten (#2200)', () => {
   });
 
   it('teller mitt eget kort med på knappen', () => {
-    expect(flightDeliveryButton([ola, gjest])).toBe('Lever 3 kort ✓');
+    expect(flightDeliveryButton([ola, gjest])).toBe('Lever 3 kort');
   });
 
   it('navngir makkerne når mitt eget kort alt er levert', () => {
-    expect(deliverForButton([ola, kari])).toBe('Lever for Ola og Kari ✓');
+    expect(deliverForButton([ola, kari])).toBe('Lever for Ola og Kari');
   });
 
   // Spillhjemmet etter egen levering (#2200), som nettsidens

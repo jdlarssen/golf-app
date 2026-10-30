@@ -55,7 +55,7 @@ describe('WolfChoiceCard', () => {
     );
 
     expect(screen.getByTestId('wolf-badge').props.children).toBe(
-      '🐺 Du er Wolf på dette hullet',
+      'Du er Wolf på dette hullet',
     );
     // Alle tre andre er partner-alternativer, og lone/blind står under.
     expect(screen.getByTestId('wolf-partner-p3')).toBeTruthy();
@@ -102,7 +102,7 @@ describe('WolfChoiceCard', () => {
     );
 
     expect(screen.getByTestId('wolf-badge').props.children).toBe(
-      '🐺 Wolf: Per Persen — venter på valg',
+      'Wolf: Per Persen — venter på valg',
     );
     expect(screen.queryByTestId('wolf-choices')).toBeNull();
   });

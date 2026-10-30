@@ -15,7 +15,7 @@ import { PuttsSubmitPrompt } from './PuttsSubmitPrompt';
 describe('PuttsSubmitPrompt', () => {
   // #2211: the chip wrote the page snapshot's strokes back with a fresh
   // stamp, overwriting a mate's later correction, and waited up to 30 s for
-  // the next drain while «Lever ✓» stayed disabled.
+  // the next drain while «Lever» stayed disabled.
   it('a chip writes only putts (snapshot strokes as fallback) and drains at once', async () => {
     render(
       <PuttsSubmitPrompt

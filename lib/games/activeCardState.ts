@@ -10,7 +10,7 @@
  */
 export type ActiveCardState =
   | 'continue' // active, not yet submitted → «Fortsett»
-  | 'submitted' // submitted, and either no peer approval needed or already approved → «Levert ✓»
+  | 'submitted' // submitted, and either no peer approval needed or already approved → «Levert»
   | 'pending_approval' // submitted, peer approval required and not yet given → «Til godkjenning»
   | 'withdrawn'; // player withdrew → «Trukket»
 

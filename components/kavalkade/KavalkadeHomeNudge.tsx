@@ -38,9 +38,6 @@ export function KavalkadeHomeNudge({
         style={{ background: 'var(--accent)' }}
       />
       <div className="flex items-start gap-3">
-        <span aria-hidden className="text-lg leading-none">
-          🎄
-        </span>
         <div className="min-w-0 flex-1">
           <p className="font-sans text-[14px] font-medium leading-tight text-text">
             {isTeaser ? t('homeTeaserTitle') : t('homeLinkTitle', { year })}

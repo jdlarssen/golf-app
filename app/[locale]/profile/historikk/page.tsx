@@ -613,9 +613,6 @@ async function KavalkadeLinkCard({ year }: { year: number }) {
       data-testid="historikk-kavalkade-link"
       className="mb-4 flex min-h-11 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-bg"
     >
-      <span aria-hidden className="text-lg leading-none">
-        🎄
-      </span>
       <span className="min-w-0 flex-1">
         <span className="block font-sans text-[14px] font-medium leading-tight text-text">
           {t('historikkLinkTitle', { year })}
