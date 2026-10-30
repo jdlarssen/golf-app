@@ -95,7 +95,7 @@ export function WolfChoiceCard({
 
       {state.badgeText ? (
         <Text style={ui.body} testID="wolf-badge">
-          {`🐺 ${state.badgeText}`}
+          {state.badgeText}
         </Text>
       ) : null}
 

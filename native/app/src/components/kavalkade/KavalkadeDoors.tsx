@@ -14,15 +14,6 @@ import type { KavalkadeHomeSlot } from '../../../../../lib/kavalkade/release';
 import { kavalkadeT as t } from '../../lib/kavalkadeCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
 
-/** Juletreet foran teksten, `text-lg leading-none` på webben. */
-function Tree() {
-  return (
-    <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.tree}>
-      🎄
-    </Text>
-  );
-}
-
 export function KavalkadeHistoryRow({ year, onOpen }: { year: number; onOpen: () => void }) {
   const { colors } = useTheme();
   const title = t('historikkLinkTitle', { year });
@@ -38,7 +29,6 @@ export function KavalkadeHistoryRow({ year, onOpen }: { year: number; onOpen: ()
       ]}
       testID="round-diary-kavalkade"
     >
-      <Tree />
       <View style={styles.text}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.body, { color: colors.muted }]}>{body}</Text>
@@ -65,7 +55,6 @@ export function KavalkadeHomeBanner({
     >
       <View style={[styles.stripe, { backgroundColor: colors.accent }]} />
       <View style={styles.bannerRow}>
-        <Tree />
         <View style={styles.text}>
           <Text style={[styles.title, { color: colors.text }]}>
             {teaser ? t('homeTeaserTitle') : t('homeLinkTitle', { year })}
@@ -89,7 +78,7 @@ export function KavalkadeHomeBanner({
   );
 }
 
-// Webben: `rounded-xl border px-4 py-3`, juletreet 18 og `gap-3`, tittelen
+// Webben: `rounded-xl border px-4 py-3` og `gap-3`, tittelen
 // 14/500 med `leading-tight`, brødteksten 13 med `leading-snug` og `mt-1`.
 // Banneret har `pl-5` og en gullstripe på 4 fra `top-2` til `bottom-2`;
 // knappen er `min-h-11 rounded-full px-4 py-2`, 13/500, med `mt-2`.
@@ -98,9 +87,6 @@ const BODY = interLine(13, 17.875, { multiline: true });
 const CTA = interLine(13, 19.5);
 
 const styles = StyleSheet.create({
-  // iOS gir 🎄 3 pt mer bredde enn Chromium på 18 pt (målt mot webbens dører),
-  // så teksten etter treet starter der den gjør på webben.
-  tree: { fontSize: 18, lineHeight: 18, marginRight: -3 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

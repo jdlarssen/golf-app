@@ -6,7 +6,7 @@ import type { QueueItemBase } from './db';
  * The Dexie sync queue is global — one queue for every round the player has
  * touched — but every surface that reports its status renders inside ONE round
  * (banner, hole page, submit screen). Without scoping, a stroke left behind by
- * yesterday's round tells today's round "1 stroke waiting" and locks «Lever ✓».
+ * yesterday's round tells today's round "1 stroke waiting" and locks «Lever».
  *
  * Deliberately Dexie-free so these rules are unit-testable without an
  * indexedDB shim, and deliberately NOT in `db.ts`: the key FORMAT stays owned

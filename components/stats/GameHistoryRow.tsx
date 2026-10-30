@@ -8,7 +8,7 @@ type Props = {
   /** Banenavn til under-linja (ofte gjentatt → sekundært). */
   courseName: string | null;
   formatLabel: string;
-  /** Ferdig-rendret utfallstekst (#572), inkl. 🥇 for seier. `null` = ingen. */
+  /** Ferdig-rendret utfallstekst (#572), som «Du vant». `null` = ingen. */
   resultText: string | null;
   /** True → gull-accent på utfallsteksten (egen seier). */
   resultIsWin: boolean;

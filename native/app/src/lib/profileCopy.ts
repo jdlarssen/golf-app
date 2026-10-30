@@ -63,7 +63,7 @@ export const PROFILE_TEXT = {
   logoutPending: 'Logger ut …',
   deleteRow: 'Slett konto',
   /** Banneret profil-rommet viser når du kommer tilbake fra en lagring. */
-  updatedBanner: '✓ Profilen din er oppdatert.',
+  updatedBanner: 'Profilen din er oppdatert.',
 
   // --- Webbens ordlyd: skjemaet (messages/no.json → profile.form) ---------
   // Webben har feltene på samme side som resten av profilen; appen har dem på

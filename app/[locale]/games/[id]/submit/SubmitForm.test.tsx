@@ -18,7 +18,7 @@ import { localDb, type SyncQueueItem, type TeeShotQueueItem } from '@/lib/sync/d
 import { SubmitForm } from './SubmitForm';
 
 /**
- * Type C render-test (én per komponent): at «Lever ✓» faktisk låses av et
+ * Type C render-test (én per komponent): at «Lever» faktisk låses av et
  * køet slag leveringen kan fryse — og bare av det (#1370) — og av en kø som
  * ikke er lest ennå (#2219: `useLiveQuery` gir `undefined` fram til Dexie har
  * svart, også i serverens HTML). Selve

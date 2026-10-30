@@ -45,9 +45,9 @@ export const ROUND_DONE_TEXT = {
   bestKicker: 'Dagens beste hull',
   worstKicker: 'Det som svidde',
   flightKicker: 'Flighten din',
-  complete: 'Alle hull ført ✓',
-  submitted: 'Har levert ✓',
-  /** Det skjermleseren sier i stedet for ✓. */
+  complete: 'Alle hull ført',
+  submitted: 'Har levert',
+  /** Det skjermleseren sier for de to linjene over. */
   completeSpoken: 'har ført alle hull',
   submittedSpoken: 'har levert',
   review: 'Se over og lever scorekortet',

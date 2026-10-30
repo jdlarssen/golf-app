@@ -338,7 +338,7 @@
     "languageRowLabel": "Language",
     "kicker": "Profile",
     "displayNameFallback": "Profile",
-    "updatedBanner": "✓ Your profile has been updated.",
+    "updatedBanner": "Your profile has been updated.",
     "sectionPersonal": "Activity",
     "sectionApp": "App",
     "sectionAccount": "Account",
@@ -2219,8 +2219,8 @@
       "cupPlayOnPending": "Choice pending — {names} withdrew, and the organiser has not yet decided whether {partner} plays alone.",
       "backToHome": "Back to home",
       "draftBanner": "Draft — admin is still planning. Details may change.",
-      "bannerSubmitted": "✓ Scorecard submitted.",
-      "bannerSubmittedPartial": "✓ Submitted, but not all of your flightmates' cards. Someone may have submitted them or entered a hole on them in the meantime.",
+      "bannerSubmitted": "Scorecard submitted.",
+      "bannerSubmittedPartial": "Submitted, but not all of your flightmates' cards. Someone may have submitted them or entered a hole on them in the meantime.",
       "rejectionBannerPrefix": "Your scorecard was rejected: «",
       "rejectionBannerSuffix": "». Edit your holes and resubmit.",
       "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",
@@ -2372,7 +2372,7 @@
       "missingHolesBanner": "{count, plural, one {1 hole is missing. If you submit now, it will be recorded as not played.} other {# holes are missing. If you submit now, they will be recorded as not played.}}",
       "wholeRoundNotice": "This delivery covers the whole round — both holes 1–9 and 10–18.",
       "editButton": "← Edit",
-      "submitButton": "Submit ✓",
+      "submitButton": "Submit",
       "submitPending": "Submitting …",
       "syncingPending": "Saving strokes …",
       "confirmBase": "Submit the scorecard? Only the organiser can undo this.",
@@ -2383,8 +2383,8 @@
         "enteredAll": "You entered every hole.",
         "enteredAllFor": "You entered every hole for {names}.",
         "guests": "{count, plural, one {{names} is a guest and can't submit on their own.} other {{names} are guests and can't submit on their own.}}",
-        "submitButton": "Submit {count} cards ✓",
-        "submitOthersButton": "Submit for {names} ✓",
+        "submitButton": "Submit {count} cards",
+        "submitOthersButton": "Submit for {names}",
         "ownDelivered": "Your card is submitted."
       },
       "puttsPrompt": {
@@ -2421,7 +2421,7 @@
         "bad_request": "Invalid request."
       },
       "banners": {
-        "approved": "✓ Scorecard approved.",
+        "approved": "Scorecard approved.",
         "rejected": "Scorecard rejected. The player has been notified."
       },
       "noPending": "No scorecards are waiting for your approval.",
@@ -2432,7 +2432,7 @@
       "colPar": "Par",
       "colSi": "SI",
       "colStrokes": "Strokes",
-      "approveButton": "Approve ✓",
+      "approveButton": "Approve",
       "approvePending": "Approving …",
       "rejectButton": "Reject",
       "rejectReasonLabel": "Reason for rejection (brief)",
@@ -2584,7 +2584,7 @@
       "shareSection": "Registration link",
       "shareUrlAriaLabel": "Registration link",
       "shareCopy": "Copy link",
-      "shareCopied": "✓ Copied",
+      "shareCopied": "Copied",
       "shareCopyFailure": "Could not copy automatically. Select the link above and copy manually.",
       "sharePoster": "Print poster",
       "noPlayers": "No players yet.",
@@ -3903,10 +3903,10 @@
         "not_found": "Game not found."
       },
       "statusMessages": {
-        "created": "✓ Game «{name}» was saved as a draft.",
-        "started": "✓ Game «{name}» has been started.",
-        "deleted": "✓ Game «{name}» has been deleted.",
-        "cancelled": "✓ «{name}» has been cancelled. {count, plural, one {# player has} other {# players have}} been told."
+        "created": "Game «{name}» was saved as a draft.",
+        "started": "Game «{name}» has been started.",
+        "deleted": "Game «{name}» has been deleted.",
+        "cancelled": "«{name}» has been cancelled. {count, plural, one {# player has} other {# players have}} been told."
       }
     },
     "dashboard": {
@@ -4098,13 +4098,13 @@
         "sideLagSuffix": "Side {n} · ",
         "lagSuffix": "Team {n} · ",
         "pendingApproval": "⏳ Awaiting approval",
-        "approved": "✓ Approved",
+        "approved": "Approved",
         "statusWithdrawn": "Withdrawn",
         "statusNotSubmitted": "Not submitted",
         "statusPlaying": "⏳ Playing",
         "statusScheduled": "Enrolled",
         "statusWaiting": "⏳ Waiting",
-        "statusSubmitted": "✓ Submitted",
+        "statusSubmitted": "Submitted",
         "undoWithdraw": "Undo",
         "withdrawLink": "Withdraw",
         "teamLabel": "Side",
@@ -4116,32 +4116,32 @@
         "colStatus": "Status"
       },
       "banners": {
-        "draft_created": "✓ Game saved as draft.",
-        "scheduled": "✓ Game published. Players can now see it in My games.",
-        "updated": "✓ Changes saved.",
-        "started": "✓ Round is underway. Players can enter strokes.",
-        "admin_approved": "✓ Scorecard approved on behalf of the flight.",
-        "finished": "✓ Game ended. Leaderboard is open to all.",
-        "scorecard_reopened": "✓ Scorecard reopened for editing.",
-        "game_reopened": "✓ Game is active again. Open the cards that need fixing under «Submitted scorecards».",
-        "invite_added": "✓ Player added to the roster.",
-        "invite_sent": "✓ Invitation sent.",
-        "invite_held": "✓ Invitation saved. The email goes out when the game is published.",
-        "player_withdrawn": "✓ Player withdrawn from the ranking.",
-        "player_reinstated": "✓ Player reinstated in the ranking.",
-        "flight_suggested": "✓ Flight assignment proposed and saved.",
-        "flight_updated": "✓ Player's flight updated.",
-        "team_suggested": "✓ Teams set up and saved.",
-        "team_updated": "✓ Player's team updated.",
+        "draft_created": "Game saved as draft.",
+        "scheduled": "Game published. Players can now see it in My games.",
+        "updated": "Changes saved.",
+        "started": "Round is underway. Players can enter strokes.",
+        "admin_approved": "Scorecard approved on behalf of the flight.",
+        "finished": "Game ended. Leaderboard is open to all.",
+        "scorecard_reopened": "Scorecard reopened for editing.",
+        "game_reopened": "Game is active again. Open the cards that need fixing under «Submitted scorecards».",
+        "invite_added": "Player added to the roster.",
+        "invite_sent": "Invitation sent.",
+        "invite_held": "Invitation saved. The email goes out when the game is published.",
+        "player_withdrawn": "Player withdrawn from the ranking.",
+        "player_reinstated": "Player reinstated in the ranking.",
+        "flight_suggested": "Flight assignment proposed and saved.",
+        "flight_updated": "Player's flight updated.",
+        "team_suggested": "Teams set up and saved.",
+        "team_updated": "Player's team updated.",
         "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count} players.",
         "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
         "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. {missing, plural, one {Move a player there} other {Move # players there}} before the round can start.",
-        "signups_closed": "✓ Signups closed. New requests will be declined.",
-        "signups_reopened": "✓ Signups reopened.",
+        "signups_closed": "Signups closed. New requests will be declined.",
+        "signups_reopened": "Signups reopened.",
         "guest_added": "The guest has been added to the game.",
-        "hole_reminded": "✓ Reminder sent.",
-        "moved": "✓ The round has moved.",
-        "moved_told": "✓ The round has moved, and the group has been told."
+        "hole_reminded": "Reminder sent.",
+        "moved": "The round has moved.",
+        "moved_told": "The round has moved, and the group has been told."
       },
       "sections": {
         "overview": "Overview",
@@ -4243,7 +4243,7 @@
         "modeManualApproval": "Manual approval",
         "shareUrlAriaLabel": "Registration link",
         "copyButton": "Copy link",
-        "copiedButton": "✓ Copied",
+        "copiedButton": "Copied",
         "copyFailure": "Could not copy automatically. Select the link above and copy manually.",
         "viewAllSignups": "View all signups →",
         "posterLink": "Print poster",
@@ -4372,8 +4372,8 @@
         "lastAction": "Last entry {relative}",
         "noActions": "No entries yet",
         "hullCount": "{filled}/{total} holes",
-        "reminderSent": "{count, plural, one {✓ Reminder sent to 1 player.} other {✓ Reminder sent to {count} players.}}",
-        "unconfirmedReminderSent": "{count, plural, one {✓ Confirmation reminder sent to 1 player.} other {✓ Confirmation reminder sent to {count} players.}}",
+        "reminderSent": "{count, plural, one {Reminder sent to 1 player.} other {Reminder sent to {count} players.}}",
+        "unconfirmedReminderSent": "{count, plural, one {Confirmation reminder sent to 1 player.} other {Confirmation reminder sent to {count} players.}}",
         "notActiveError": "The game is no longer active. You cannot send reminders.",
         "remindReady": "{count, plural, one {1 player has finished but not submitted their scorecard. Send a reminder to submit.} other {{count} players have finished but not submitted their scorecard. Send a reminder to submit.}}",
         "remindNone": "No one can be reminded right now. Those who can be reminded automatically receive a reminder when they have entered all {totalHoles} holes.",
@@ -4399,9 +4399,9 @@
         "heading": "Signups",
         "inviteOnlyBanner": "This game is invite-only and does not appear in Find tournaments. Anyone with the link can still request to join. Requests will appear here for you to approve or decline.",
         "statusBanners": {
-          "approved": "✓ Signup approved. Player added to the roster.",
-          "rejected": "✓ Signup declined. Player will be notified.",
-          "captain_transferred": "✓ The captaincy has been handed over."
+          "approved": "Signup approved. Player added to the roster.",
+          "rejected": "Signup declined. Player will be notified.",
+          "captain_transferred": "The captaincy has been handed over."
         },
         "errors": {
           "not_pending": "The request has already been decided by another administrator. Reload the page.",
@@ -4521,7 +4521,7 @@
         "holeOf": "<num>hole {hole}</num> of {count}",
         "holeOfSegment": "<num>hole {hole}</num> · {position} of {count}",
         "holesPlayed": "<num>{played}</num> of {count} holes",
-        "allSubmitted": "All handed in ✓",
+        "allSubmitted": "All handed in",
         "viewStatus": "View player status →",
         "endHint": "{total, plural, one {Opens when the player has handed in} other {Opens when all # have handed in}}",
         "endHintApproved": "{total, plural, one {Opens when the player has handed in and the card is approved} other {Opens when all # have handed in and the cards are approved}}"
@@ -4548,8 +4548,8 @@
         "unknown": "Could not complete the action. Please try again."
       },
       "success": {
-        "sent": "✓ Invitation sent to {email}.",
-        "resent": "✓ Invitation resent to {email}.",
+        "sent": "Invitation sent to {email}.",
+        "resent": "Invitation resent to {email}.",
         "resend_held": "The game is still a draft, so the invitation to {email} goes out when it is published.",
         "withdrawn": "The invitation to {email} has been withdrawn. The email address is free again.",
         "deleted": "{name} has been deleted."
@@ -4684,9 +4684,9 @@
         "delete_failed": "Failed to delete the course. Please try again in a moment."
       },
       "statusMessages": {
-        "created": "✓ Course «{name}» was saved.",
-        "updated": "✓ Course «{name}» was updated.",
-        "deleted": "✓ Course was deleted."
+        "created": "Course «{name}» was saved.",
+        "updated": "Course «{name}» was updated.",
+        "deleted": "Course was deleted."
       },
       "sortNewest": "Newest first",
       "sortUpdated": "Last modified",
@@ -4999,7 +4999,7 @@
     "copyLink": {
       "ariaLabel": "Link to join the club",
       "copyButton": "Copy link",
-      "copiedButton": "✓ Copied",
+      "copiedButton": "Copied",
       "copyError": "Could not copy automatically. Select the link and copy it manually."
     },
     "join": {
@@ -5443,7 +5443,7 @@
       "leaveLink": "Withdraw from the league",
       "notReadyYet": "Not ready yet",
       "opensOn": "Opens {date}",
-      "delivered": "Delivered ✓",
+      "delivered": "Delivered",
       "deliveredAria": "You delivered this round",
       "playButton": "Play",
       "playedBy": {
@@ -5597,7 +5597,7 @@
       "hint": "Anyone with the link can create an account and join. Players can pass it on.",
       "ariaLabel": "Link to join the league",
       "copyButton": "Copy link",
-      "copiedButton": "✓ Copied",
+      "copiedButton": "Copied",
       "copyError": "Couldn't copy automatically. Select the link and copy it yourself.",
       "rotateButton": "Make a new link",
       "rotateHint": "The old link stops working.",
@@ -5763,7 +5763,7 @@
         "helper": "Send the link to your players and they sign up themselves.",
         "ariaLabel": "Link for signing up to the cup",
         "copyButton": "Copy link",
-        "copiedButton": "✓ Copied",
+        "copiedButton": "Copied",
         "copyError": "Couldn't copy automatically. Select the link and copy it manually."
       },
       "roleHelper": "Put the players on teams and name one captain per team. The captains then pick the lineups themselves, session by session.",
@@ -6296,19 +6296,19 @@
   },
   "finishedCard": {
     "result": {
-      "youWon": "🥇 You won",
-      "teamWon": "🥇 Your team won",
+      "youWon": "You won",
+      "teamWon": "Your team won",
       "placement": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
       "teamPlacement": "Team finished {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
       "matchWon": "You won {margin}",
       "matchLost": "You lost {margin}",
       "matchTied": "Halved",
-      "skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
+      "skinsWon": "{count, plural, one {# skin} other {# skins}}",
       "skins": "{count, plural, one {# skin} other {# skins}}"
     },
     "cup": {
       "dayMarking": "Cup day",
-      "won": "🥇 Your team won the cup",
+      "won": "Your team won the cup",
       "lost": "Your team lost the cup",
       "tied": "The cup ended level",
       "finished": "The cup is over"
@@ -6317,9 +6317,9 @@
   "home": {
     "streakChipAria": "{count} weeks in a row. Tap to see your streak.",
     "handicapChipAria": "Handicap {hcp}. Tap to update.",
-    "profileUpdatedBanner": "✓ Your profile has been updated.",
-    "gameDeletedBanner": "✓ \"{name}\" has been deleted.",
-    "gameCancelledBanner": "✓ \"{name}\" has been cancelled. {count, plural, one {# player has} other {# players have}} been told.",
+    "profileUpdatedBanner": "Your profile has been updated.",
+    "gameDeletedBanner": "\"{name}\" has been deleted.",
+    "gameCancelledBanner": "\"{name}\" has been cancelled. {count, plural, one {# player has} other {# players have}} been told.",
     "emptyKicker": "READY FOR YOUR FIRST ROUND",
     "emptyWelcome": "Welcome, {name}.",
     "emptyBodyWithDiscovery": "No tournaments yet. Set up a round in the Clubhouse, or join an open tournament below.",
@@ -6331,7 +6331,7 @@
     "sectionInProgress": "In progress",
     "cupDayMarking": "Cup day",
     "cardStateContinue": "Continue",
-    "cardStateSubmitted": "Submitted ✓",
+    "cardStateSubmitted": "Submitted",
     "cardStatePendingApproval": "Awaiting approval",
     "cardStateWithdrawn": "Withdrawn",
     "sectionMyGames": "My games",

@@ -138,8 +138,8 @@ it('tavlas tall står til høyre for fremdriften når skjermen har ett, ellers i
 });
 
 it('gull bare på egen seier: medaljen i teksten og teksten i gullets lesbare tone, ingen ekstra skive', async () => {
-  const { view } = await renderStub({ kind: 'finished', result: { text: '🥇 Du vant', isWin: true } });
-  expect(screen.getByTestId('ticket-result')).toHaveTextContent('🥇 Du vant');
+  const { view } = await renderStub({ kind: 'finished', result: { text: 'Du vant', isWin: true } });
+  expect(screen.getByTestId('ticket-result')).toHaveTextContent('Du vant');
   expect(screen.getByTestId('ticket-result')).toHaveStyle({ color: PALETTES.light.accentText });
 
   await view.rerender(

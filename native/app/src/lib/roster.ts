@@ -255,12 +255,12 @@ export function flightCtaLabel(count: number): string | null {
 
 /** Lever-knappen når makkerne leveres med: mitt kort pluss deres. */
 export function flightDeliveryButton(candidates: readonly BundlePlayer[]): string {
-  return `Lever ${candidates.length + 1} kort ✓`;
+  return `Lever ${candidates.length + 1} kort`;
 }
 
 /** Knappen når mitt eget kort alt er levert, og bare makkernes står igjen. */
 export function deliverForButton(candidates: readonly BundlePlayer[]): string {
-  return `Lever for ${namesOf(candidates)} ✓`;
+  return `Lever for ${namesOf(candidates)}`;
 }
 
 /**

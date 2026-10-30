@@ -54,7 +54,7 @@ describe('finishedResultBadge', () => {
     ).toEqual({ key: 'result.skinsWon', values: { count: 4 }, isWin: true });
   });
 
-  it('skins rank 1 men 0 skins → skins, IKKE win (ingen «🥇 0 skins»)', () => {
+  it('skins rank 1 men 0 skins → skins, IKKE win (ingen gull for «0 skins»)', () => {
     expect(
       finishedResultBadge({ kind: 'skins', skins: 0, rank: 1, fieldSize: 4 }),
     ).toEqual({ key: 'result.skins', values: { count: 0 }, isWin: false });

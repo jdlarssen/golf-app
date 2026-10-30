@@ -91,14 +91,14 @@ describe('paritet mot messages/no.json', () => {
     // `{count, plural, one {# skin} other {# skins}}` — fylt for hånd.
     expect(web.finishedCard.result.skins).toBe('{count, plural, one {# skin} other {# skins}}');
     expect(web.finishedCard.result.skinsWon).toBe(
-      '🥇 {count, plural, one {# skin} other {# skins}}',
+      '{count, plural, one {# skin} other {# skins}}',
     );
     const text = (skins: number, rank: number) =>
       finishedResultText(finishedResultBadge({ kind: 'skins', skins, rank, fieldSize: 4 }));
     expect(text(1, 2)).toBe('1 skin');
     expect(text(3, 2)).toBe('3 skins');
-    expect(text(3, 1)).toBe('🥇 3 skins');
-    // Plass 1 uten skins er ingen seier, og får ingen medalje.
+    expect(text(3, 1)).toBe('3 skins');
+    // Plass 1 uten skins er ingen seier.
     expect(text(0, 1)).toBe('0 skins');
   });
 });

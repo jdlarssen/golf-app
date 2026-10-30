@@ -29,12 +29,12 @@
 //
 // #2200: den som fører, leverer for flighten. Har spilleren ført hvert hull til
 // en makker, eller er makkeren en gjest med fullt kort, leverer knappen de
-// kortene sammen med spillerens eget («Lever 3 kort ✓»), og en blokk over
+// kortene sammen med spillerens eget («Lever 3 kort»), og en blokk over
 // knappen sier hvem og hvorfor. Hvem som kan leveres, er den delte regelen
 // (`flightDeliveryFor` → `lib/games/flightDelivery.ts`) over de lokale slagene.
 // Makker-kortene går med i det samme kallet til `data/submitCard.ts`
 // (`alsoFor`), så appen har én vei inn for levering; ruta spør regelen igjen
-// og leverer bare snittet. Er mitt eget kort alt levert, står «Lever for Ola ✓»
+// og leverer bare snittet. Er mitt eget kort alt levert, står «Lever for Ola»
 // under lesevisningen, og samme kall leverer da bare makkernes kort. Kø-vakta
 // gjelder begge knappene: makkernes slag skal også være framme før kortene
 // fryses. Lag-formatene med én ball gir ingen makkere i den delte regelen.

@@ -52,7 +52,7 @@ type Props = {
 };
 
 /**
- * Wraps the final «Lever ✓» button in a confirm() guard — but only when the
+ * Wraps the final «Lever» button in a confirm() guard — but only when the
  * player has unplayed holes (they get locked in as not played, so that
  * deserves a stop). A complete card submits straight through: the review
  * screen the player is standing on is the confirmation (#1793).
@@ -69,7 +69,7 @@ type Props = {
  *
  * #1370: the block counts only strokes queued for a game THIS delivery can
  * freeze (see `blockingGameIds`). A leftover stroke from an unrelated round no
- * longer locks «Lever ✓» — it was never at risk from this submit.
+ * longer locks «Lever» — it was never at risk from this submit.
  *
  * #2219: the button also stays locked until Dexie has answered.
  * `useLiveQuery` returns `undefined` until then, and in the server HTML, so a

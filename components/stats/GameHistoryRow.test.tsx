@@ -14,7 +14,7 @@ describe('GameHistoryRow', () => {
         dateLabel="21. jun"
         courseName="Byneset North"
         formatLabel="Stableford"
-        resultText="🥇 Du vant"
+        resultText="Du vant"
         resultIsWin
         brutto={98}
         nettoLabel="77 netto"

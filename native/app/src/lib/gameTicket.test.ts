@@ -326,7 +326,7 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
     [
       'avsluttet med seier: gull',
       { status: 'finished', me: { ...me, resultSummary: { kind: 'placement' as const, rank: 1, fieldSize: 12, isTeam: false } } },
-      { kind: 'finished', result: { text: '🥇 Du vant', isWin: true } },
+      { kind: 'finished', result: { text: 'Du vant', isWin: true } },
     ],
     ['avsluttet uten plass', { status: 'finished' }, { kind: 'finished', result: null }],
     ['ukjent status', { status: 'rar' }, { kind: 'none' }],

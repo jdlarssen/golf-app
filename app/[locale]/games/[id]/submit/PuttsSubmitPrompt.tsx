@@ -23,7 +23,7 @@ interface MissingHole {
  * passing them as `strokes` wrote a stale number back over a mate's later
  * correction (or the player's own queued edit). They ride as `fallbackStrokes`,
  * used only when the local DB has no row, so a cold DB still keeps the strokes.
- * Each chip drains at once, like the hole page, so «Lever ✓» does not wait for
+ * Each chip drains at once, like the hole page, so «Lever» does not wait for
  * the next sync tick. Dismissible and never blocks the delivery below it —
  * putt-keeping is voluntary.
  */

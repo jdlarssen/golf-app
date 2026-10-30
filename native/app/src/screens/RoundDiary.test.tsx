@@ -118,7 +118,7 @@ describe('RoundDiary', () => {
     await renderScreen();
 
     const row = await screen.findByTestId('round-diary-kavalkade');
-    expect(row).toHaveTextContent('🎄Kavalkaden 2026Golfåret ditt og gjengens, kort for kort.');
+    expect(row).toHaveTextContent('Kavalkaden 2026Golfåret ditt og gjengens, kort for kort.');
     expect(row.props.accessibilityLabel).toBe('Kavalkaden 2026. Golfåret ditt og gjengens, kort for kort.');
     await fireEvent.press(row);
     expect(navigate).toHaveBeenCalledWith('Kavalkade');
