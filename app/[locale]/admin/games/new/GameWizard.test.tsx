@@ -18,6 +18,7 @@ import {
 // mellom testene så et utkast fra én test ikke gjenopprettes i den neste.
 beforeEach(() => {
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 // #928: tee-off 7 days out so the past-tee-off guard never rejects these
@@ -122,7 +123,9 @@ function renderWizard({
   clubMemberIdsByClub,
   isAdmin,
   stepOneLead,
+  currentUserId,
 }: {
+  currentUserId?: string;
   courses?: CourseOption[];
   players?: PlayerOption[];
   friendPlayerIds?: string[];
@@ -149,6 +152,7 @@ function renderWizard({
       clubs={clubs}
       clubMemberIdsByClub={clubMemberIdsByClub}
       isAdmin={isAdmin}
+      currentUserId={currentUserId}
       backHref="/"
       stepOneLead={stepOneLead}
     />,
@@ -1015,9 +1019,12 @@ describe('GameWizard — #2446 stepOneLead', () => {
 // oppførselen krever ekte history (staging-klikket er porten der); det som er
 // unit-testbart er gjenopprettingen fra sessionStorage og opprydningen når
 // spillet publiseres eller lagres som utkast.
+// #2459: utkastet er per bruker, så veiviseren må få en bruker-id for å lagre.
+const USER_ID = 'user-1';
+
 describe('GameWizard — #1380 utkast overlever reload', () => {
   // usePathname er stubbet til '/' i vitest.setup.ts.
-  const DRAFT_KEY = wizardDraftStorageKey('/');
+  const DRAFT_KEY = wizardDraftStorageKey(USER_ID, '/');
   const DRAFT_CONTEXT = wizardDraftContext({});
 
   function seedDraft(overrides: Partial<WizardDraft['values']> = {}) {
@@ -1039,9 +1046,9 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     saveWizardDraft(DRAFT_KEY, draft, DRAFT_CONTEXT);
   }
 
-  it('gjenoppretter arrangement, format, bane og spillere fra sessionStorage', () => {
+  it('gjenoppretter arrangement, format, bane og spillere fra localStorage', () => {
     seedDraft();
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
 
     // Steg 1: arrangement-valget er tilbake.
     expectStep(1);
@@ -1092,7 +1099,7 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
         flight_number: 1,
       })),
     });
-    const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 4) });
+    const { container } = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 4) });
 
     for (let i = 0; i < 6 && !screen.queryByRole('button', { name: /lagre som utkast/i }); i++) {
       // Step 4 says «Neste: lagene» for a team format, then the teams screen.
@@ -1126,19 +1133,19 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
   });
 
   it('skriver utkastet når arrangøren fyller ut noe', async () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
 
     pickKompisIntent();
     pickStablefordFormat();
 
     await waitFor(() =>
-      expect(window.sessionStorage.getItem(DRAFT_KEY)).not.toBeNull(),
+      expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull(),
     );
   });
 
   it('sletter utkastet når spillet lagres som utkast', async () => {
     seedDraft();
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
 
     clickNext(); // → steg 2
     clickNext(); // → steg 3
@@ -1149,7 +1156,7 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
 
     await waitFor(() =>
-      expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull(),
     );
   });
 });
@@ -1326,10 +1333,10 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
 // igjen. Dette er den eneste mekanismen i koden som faktisk gir symptomet
 // eieren så 6. september.
 describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () => {
-  const DRAFT_KEY = wizardDraftStorageKey('/');
+  const DRAFT_KEY = wizardDraftStorageKey(USER_ID, '/');
 
   function readDraft(): WizardDraft | null {
-    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    const raw = window.localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
     return JSON.parse(raw).draft as WizardDraft;
   }
@@ -1354,7 +1361,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
   }
 
   it('B5: navnet overlever en remount rett etter tastetrykket', () => {
-    const first = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    const first = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
     // Skriv navnet og last siden på nytt UMIDDELBART — uten å la de 400 ms
@@ -1370,7 +1377,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     expect(draft?.nameTouched).toBe(true);
 
     // Gjenopptaket bærer navnet, og auto-navnet overtar ikke.
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     clickNext();
     clickNext();
     clickNext();
@@ -1380,7 +1387,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
   });
 
   it('B6: pagehide innenfor debounce-vinduet skriver gjeldende navn', () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
     fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
@@ -1392,7 +1399,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
   });
 
   it('B6b: visibilitychange til hidden flusher på samme måte', () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
     fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
@@ -1408,7 +1415,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
   });
 
   it('B7: pagehide etter en innsending skriver IKKE utkastet tilbake', async () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
     fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
@@ -1417,17 +1424,17 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
 
     await waitFor(() =>
-      expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull(),
     );
 
     // Redirecten etter en publisering ER en pagehide. Den må ikke kunne
     // gjenopplive utkastet vi nettopp ryddet bort.
     fireEvent(window, new Event('pagehide'));
-    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
   it('B7b: et stegbytte flusher, så ingenting ligger igjen i debounce-vinduet', () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
     fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
@@ -1672,5 +1679,141 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
 
     expect(screen.queryByText(CLUB_HINT)).not.toBeInTheDocument();
     expect(screen.queryByText(OLD_HINT)).not.toBeInTheDocument();
+  });
+});
+
+// #2459: utkastet lagres av seg selv i localStorage, per bruker, og bærer
+// lenken «Fortsett» åpner. Merket «✓ Lagret som utkast» står bare når siste
+// skriving gikk.
+describe('GameWizard — #2459 autolagring', () => {
+  const KEY = wizardDraftStorageKey(USER_ID, '/');
+
+  function readEnvelope() {
+    const raw = window.localStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  function flush() {
+    fireEvent(window, new Event('pagehide'));
+  }
+
+  it('viser ikke merket når veiviseren bare åpnes, og skriver ingenting', async () => {
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    await new Promise((r) => setTimeout(r, 600));
+
+    expect(screen.queryByTestId('wizard-draft-saved')).toBeNull();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('viser «✓ Lagret som utkast» etter første endring', async () => {
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+
+    expect(await screen.findByTestId('wizard-draft-saved')).toHaveTextContent(
+      '✓ Lagret som utkast',
+    );
+  });
+
+  it('viser ikke merket når lagringen feiler (privat modus, full kvote)', async () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
+    try {
+      renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+      pickKompisIntent();
+      flush();
+      await new Promise((r) => setTimeout(r, 600));
+
+      expect(screen.queryByTestId('wizard-draft-saved')).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('skriver ingenting uten bruker-id, og viser ikke merket', async () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    flush();
+    await new Promise((r) => setTimeout(r, 600));
+
+    expect(window.localStorage.length).toBe(0);
+    expect(screen.queryByTestId('wizard-draft-saved')).toBeNull();
+  });
+
+  it('kaller ingen server-action når utkastet lagres', async () => {
+    const createDraftAction = vi.fn(NO_OP);
+    const createAndPublishAction = vi.fn(NO_OP);
+    renderWizard({
+      currentUserId: USER_ID,
+      players: EIGHT_PLAYERS.slice(0, 2),
+      createDraftAction,
+      createAndPublishAction,
+    });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    flush();
+    await screen.findByTestId('wizard-draft-saved');
+
+    expect(readEnvelope()).not.toBeNull();
+    expect(createDraftAction).not.toHaveBeenCalled();
+    expect(createAndPublishAction).not.toHaveBeenCalled();
+  });
+
+  it('lagrer lenken og oppsummeringen «Fortsett» og Hjem-kortet trenger', () => {
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    flush();
+
+    const { resume } = readEnvelope();
+    expect(resume.summary).toMatchObject({
+      step: 3,
+      courseName: 'Stiklestad GK',
+      title: null,
+    });
+    expect(resume.summary.formatLabel).toEqual(expect.any(String));
+    expect(resume.href).toBe('/?step=3');
+  });
+
+  it('et stegbytte alene gir en ny skriving med det nye steget', () => {
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    pickStablefordFormat();
+    flush();
+    expect(readEnvelope().resume.summary.step).toBe(2);
+
+    clickNext();
+    flush();
+    expect(readEnvelope().resume.summary.step).toBe(3);
+  });
+
+  it('cup-grenen skriver aldri et utkast og viser ikke merket', async () => {
+    renderWizard({ currentUserId: USER_ID });
+    fireEvent.click(screen.getByRole('button', { name: /^cup$/i }));
+    flush();
+    await new Promise((r) => setTimeout(r, 600));
+
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+    expect(screen.queryByTestId('wizard-draft-saved')).toBeNull();
+  });
+
+  it('bruker B får ikke bruker A sitt utkast, selv uten utlogging', () => {
+    saveWizardDraft(
+      wizardDraftStorageKey('user-a', '/'),
+      {
+        intent: 'kompis',
+        expectedPlayerCount: 4,
+        nameTouched: false,
+        values: { game_mode: 'stableford', course_id: 'course-1' },
+      },
+      wizardDraftContext({}),
+    );
+    renderWizard({ currentUserId: 'user-b', players: EIGHT_PLAYERS.slice(0, 2) });
+
+    expectStep(1);
   });
 });

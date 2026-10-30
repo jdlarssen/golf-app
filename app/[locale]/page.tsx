@@ -26,6 +26,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { HomeNudges } from './HomeNudges';
+import { ResumeDraftCard } from './ResumeDraftCard';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { StreakChip } from '@/components/stats/StreakChip';
 import { getUserStreak } from '@/lib/stats/getUserStreak';
@@ -714,6 +715,10 @@ async function HomeBody() {
       {/* #882: not a nav landmark — these are links to data, not site/app
           navigation. The real global nav is the bottom-nav in the layout. */}
       <div className="space-y-6">
+        {/* #2459: an unfinished new-game setup from this device (localStorage),
+            read after mount, so nothing is rendered on the server. */}
+        <ResumeDraftCard userId={userId!} />
+
         {inProgressEntries.length > 0 && (
           <Section label={t('sectionInProgress')} accent>
             {inProgressEntries.map((e) =>
