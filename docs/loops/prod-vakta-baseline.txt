@@ -105,6 +105,13 @@ authenticated_security_definer_function_executable_public_decide_join_request_p_
 authenticated_security_definer_function_executable_public_join_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_leave_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_remove_friend_p_other uuid
+#   #2485/#2692 (0222): similar_courses. «Finnes banen alt?»-panelet på
+#     ny-bane-formen. Banene, hullene og tee-ene er world-read alt (0002); det
+#     eneste definer-rettighetene legger til er et rundetall, siden games ikke
+#     er world-read (0092). Ingen games-rad, spiller eller dato forlater
+#     funksjonen. anon revoked, kun authenticated - samme mønster som de
+#     øvrige bruker-RPC-ene her.
+authenticated_security_definer_function_executable_public_similar_courses_p_query text
 #   #1919/#2189 (0181): roster_candidates. Kandidatlista native-appen tegner
 #     «Legg til spiller» fra. Kalleren er auth.uid() og ALDRI en parameter -
 #     ingen id å sende inn i stedet. p_game_id slås kun opp for en runde
