@@ -299,4 +299,5 @@ ved seier. Ingen sprett, ingen evige løkker uten grunn og ingen animasjonsbibli
 ## Verktøyene
 
 Design-skillene i `.claude/skills/` (Web Design Guidelines, Playwright CLI, Taste Skill),
-Image-to-Code-regelen og når hver brukes: `docs/style-and-brand.md` §Designverktøy.
+den globale `unslop`, Image-to-Code-regelen og når hver brukes: `docs/style-and-brand.md`
+§Designverktøy.
