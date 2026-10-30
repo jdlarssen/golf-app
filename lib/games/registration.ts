@@ -61,7 +61,7 @@ export function isRegistrationMode(v: unknown): v is RegistrationMode {
  *
  * MÅ speile filteret i `getDiscoverableGames` (`.in('registration_mode',
  * ['open','manual_approval'])`). Endrer du det ene, endre det andre — denne
- * helperen er kilden wizard-en bruker for å vise «Oppdagbar»/«Privat».
+ * helperen er kilden for hva som regnes som oppdagbart.
  */
 export function isDiscoverableRegistrationMode(mode: RegistrationMode): boolean {
   return mode === 'open' || mode === 'manual_approval';
