@@ -137,6 +137,7 @@ export function TicketStub({
           flightCta={flightCta}
           onNavigate={onNavigate}
           holeHeader={bundle ? holeHeaderParams(bundle.game, bundle.courseName) : undefined}
+          leagueFlight={bundle?.game.leagueRoundId != null}
         />
       );
     case 'none':
@@ -151,6 +152,7 @@ function ActiveStub({
   flightCta,
   onNavigate,
   holeHeader,
+  leagueFlight,
 }: {
   stub: Extract<TicketStubModel, { kind: 'active' }>;
   gameId: string;
@@ -159,6 +161,8 @@ function ActiveStub({
   onNavigate: Navigate;
   /** Toppen på hullsiden (#2228), sendt med så den står også om siden kaster. */
   holeHeader?: { gameName: string; topLine: string };
+  /** #2688: en ligaflight, der markøren (ikke en makker) svarer på kortet. */
+  leagueFlight: boolean;
 }) {
   const { colors, ui } = useTheme();
   const flightButton = flightCta ? (
@@ -179,7 +183,9 @@ function ActiveStub({
         <View testID="submitted-banner">
           <Text style={[styles.text, { color: colors.muted }]}>
             {stub.state === 'submitted_pending_approval'
-              ? TICKET_TEXT.submittedPending
+              ? leagueFlight
+                ? TICKET_TEXT.submittedPendingMarker
+                : TICKET_TEXT.submittedPending
               : TICKET_TEXT.submittedApproved}
           </Text>
         </View>

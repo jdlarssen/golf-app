@@ -79,6 +79,7 @@ const GAME_BASE: BundleGame = {
   createdBy: 'anna',
   scoreVisibility: 'live',
   tournamentId: null,
+  leagueRoundId: null,
   foursomesSide1TeeStarterUserId: null,
   foursomesSide2TeeStarterUserId: null,
   sideTournamentEnabled: false,

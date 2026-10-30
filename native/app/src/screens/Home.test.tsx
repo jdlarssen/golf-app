@@ -449,6 +449,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     openRound: { id: 'r3', label: 'Runde 3', closesAt },
     delivered: false,
     inProgress: false,
+    markerCards: [],
   };
   const ONSDAG = {
     id: 'liga-onsdag',
@@ -457,6 +458,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     openRound: { id: 'r5', label: 'Runde 5', closesAt },
     delivered: true,
     inProgress: false,
+    markerCards: [],
   };
 
   it('står rett etter «Neste start», med runden, fristen og om du har spilt (1b)', async () => {
@@ -507,5 +509,67 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     expect(screen.queryByTestId('home-leagues')).toBeNull();
     expect(screen.queryByText('Ligaene dine')).toBeNull();
     expect(screen.queryByTestId('home-error')).toBeNull();
+  });
+
+  // #2688: ligaspilleren uten runde i gang får ligaen først og ingen tomtilstand.
+  it('uten runde i gang står ligaen øverst, over «Opprett spill», og tomtilstanden er borte', async () => {
+    mockState.list = { ...LIST, cards: [], lastRound: null };
+    mockState.leagues = { ok: true, leagues: [VINTER] };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-leagues')).toBeTruthy();
+    expect(screen.queryByTestId('home-empty')).toBeNull();
+    const order = testIdsInOrder();
+    expect(order.indexOf('home-leagues')).toBeLessThan(order.indexOf('home-create-game'));
+  });
+
+  it('uten liga står tomtilstanden som før', async () => {
+    mockState.list = { ...LIST, cards: [], lastRound: null };
+    mockState.leagues = { ok: true, leagues: [] };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-empty')).toBeTruthy();
+  });
+
+  it('med en runde i gang står den først, som før, og ligaen kommer etter', async () => {
+    mockState.leagues = { ok: true, leagues: [VINTER] };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+    const order = testIdsInOrder();
+    expect(order.indexOf('home-hero-card-new')).toBeLessThan(order.indexOf('home-leagues'));
+  });
+
+  it('kort som venter på deg som markør står på Hjem, med vei rett til godkjenningen', async () => {
+    const card = { gameId: 'g-mia', userId: 'mia', playerName: 'Mia', roundLabel: 'Runde 1' };
+    mockState.list = { ...LIST, cards: [], lastRound: null };
+    mockState.leagues = { ok: true, leagues: [{ ...VINTER, markerCards: [card] }] };
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-marker-queue')).toBeTruthy();
+    expect(screen.getByText('Venter på deg som markør')).toBeTruthy();
+    expect(screen.getByText('Runde 1 i Vinterliga på Trackman')).toBeTruthy();
+    // «Ingen spill på deg ennå» sier ikke lenger noe galt.
+    expect(screen.queryByTestId('home-empty')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('marker-queue-g-mia-mia'));
+    expect(navigate).toHaveBeenCalledWith('MarkerApprove', {
+      leagueId: 'liga-vinter',
+      gameId: 'g-mia',
+      userId: 'mia',
+    });
+  });
+
+  it('ingen markørseksjon uten ventende kort', async () => {
+    mockState.leagues = { ok: true, leagues: [VINTER] };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-leagues')).toBeTruthy();
+    expect(screen.queryByTestId('home-marker-queue')).toBeNull();
   });
 });

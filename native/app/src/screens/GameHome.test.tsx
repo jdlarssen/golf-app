@@ -216,6 +216,7 @@ describe('GameHome', () => {
       createdBy: 'other',
       scoreVisibility: 'live',
       tournamentId: null,
+      leagueRoundId: null,
       foursomesSide1TeeStarterUserId: null,
       foursomesSide2TeeStarterUserId: null,
       sideTournamentEnabled: false,
@@ -308,6 +309,7 @@ describe('GameHome', () => {
       createdBy: 'rival-a',
       scoreVisibility: 'live',
       tournamentId: null,
+      leagueRoundId: null,
       foursomesSide1TeeStarterUserId: null,
       foursomesSide2TeeStarterUserId: null,
       sideTournamentEnabled: false,
@@ -431,6 +433,7 @@ describe('GameHome — trukket-banneret (#2358)', () => {
         createdBy: 'other',
         scoreVisibility: 'live',
         tournamentId: null,
+        leagueRoundId: null,
         foursomesSide1TeeStarterUserId: null,
         foursomesSide2TeeStarterUserId: null,
         sideTournamentEnabled: false,
@@ -954,5 +957,49 @@ describe('GameHome — spillet finnes ikke', () => {
     await renderMissing();
     await waitFor(() => expect(screen.getByTestId('game-error')).toBeTruthy());
     expect(screen.queryByTestId('game-not-found')).toBeNull();
+  });
+});
+
+// #2688: den som starter en ligaflight er `created_by`, men ikke arrangør.
+describe('GameHome i en ligaflight (#2688)', () => {
+  async function renderFlight(game: Partial<BundleGame>, mePlayer: Partial<BundlePlayer> = {}) {
+    mockState.bundle = homeBundle({
+      game: { createdBy: 'me', ...game },
+      players: [homePlayer({ userId: 'me', ...mePlayer }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'g-live' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await screen.findByTestId('game-ticket');
+  }
+
+  it('viser arrangørseksjonen for den som opprettet et vanlig spill', async () => {
+    await renderFlight({});
+    expect(screen.getByTestId('organiser-section')).toBeTruthy();
+  });
+
+  it('viser ingen arrangørseksjon for den som startet en ligaflight', async () => {
+    await renderFlight({ leagueRoundId: 'round-1' });
+    expect(screen.queryByTestId('organiser-section')).toBeNull();
+  });
+
+  it('sier «markøren» når kortet er levert og venter i en ligaflight', async () => {
+    const at = '2026-09-29T09:00:00.000Z';
+    const delivered = { submittedAt: at, submittedByUserId: 'me' };
+    await renderFlight({ requirePeerApproval: true, leagueRoundId: 'round-1' }, delivered);
+    expect(screen.getByTestId('submitted-banner')).toHaveTextContent('Kortet er levert. Nå venter det på markøren.');
+  });
+
+  it('sier «en makker» for det samme kortet i et vanlig spill', async () => {
+    const at = '2026-09-29T09:00:00.000Z';
+    const delivered = { submittedAt: at, submittedByUserId: 'me' };
+    await renderFlight({ requirePeerApproval: true }, delivered);
+    expect(screen.getByTestId('submitted-banner')).toHaveTextContent('Kortet er levert. Nå venter det på en makker.');
   });
 });

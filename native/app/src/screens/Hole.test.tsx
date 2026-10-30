@@ -543,6 +543,28 @@ describe('Hole', () => {
     expect(screen.queryByTestId('rail-putts')).toBeNull();
   });
 
+  // #2688: alle har score på hullet, og «Neste hull» er veien videre.
+  it('når alle har score, tar «Neste hull» deg til neste hull, og siste hull til levering', async () => {
+    mockState.scores = [localScore('me', 4, null), localScore('mate', 5, null)];
+    const first = await renderHole();
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+    });
+    expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Neste hull');
+    await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+    expect(first.setParams).toHaveBeenCalledWith({ holeNumber: 2 });
+    await screen.unmount();
+
+    mockState.scores = [localScore('me', 4, null, 18), localScore('mate', 5, null, 18)];
+    const last = await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+    });
+    expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+    await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+    expect(last.navigate).toHaveBeenCalledWith('Scorecard', { gameId: GAME_ID });
+  });
+
   // Retting: raden gir skinna til den spilleren, «Angre» skriver eksplisitt
   // `null` (utelatt felt = behold, #939), og «Annet» setter et hvilket som
   // helst tall og går videre som et vanlig trykk.

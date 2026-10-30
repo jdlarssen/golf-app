@@ -25,8 +25,17 @@ describe('assembleMyLeagues («Ligaene dine», #2638)', () => {
         openRound: { id: 'r3', label: 'Runde 3', closesAt: '2026-12-13T22:59:00Z' },
         delivered: true,
         inProgress: false,
+        markerCards: [],
       },
-      { id: 'l2', name: 'Vårliga', status: 'draft', openRound: null, delivered: false, inProgress: false },
+      {
+        id: 'l2',
+        name: 'Vårliga',
+        status: 'draft',
+        openRound: null,
+        delivered: false,
+        inProgress: false,
+        markerCards: [],
+      },
     ]);
   });
 
@@ -46,6 +55,12 @@ describe('assembleMyLeagues («Ligaene dine», #2638)', () => {
       inPlay: { delivered: false, inProgress: true },
       withdrawn: { delivered: false, inProgress: false },
     });
+  });
+
+  it('hands each league the cards that wait for the caller as marker (#2688)', () => {
+    const card = { gameId: 'g1', userId: 'mia', playerName: 'Mia', roundLabel: 'Runde 1' };
+    const [l1, l2] = assembleMyLeagues(leagues.slice(0, 2), [], new Map(), 'me', new Map([['l1', [card]]]));
+    expect({ l1: l1.markerCards, l2: l2.markerCards }).toEqual({ l1: [card], l2: [] });
   });
 
   it('no leagues gives an empty list', () => {

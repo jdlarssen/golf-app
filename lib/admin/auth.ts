@@ -90,10 +90,12 @@ export async function requireAdminOrCreator(
   if (ctx.isAdmin) return ctx;
   const { data: game } = await supabase
     .from('games')
-    .select('created_by')
+    .select('created_by, league_round_id')
     .eq('id', gameId)
     .maybeSingle();
-  if (game?.created_by === ctx.userId) return ctx;
+  // #2688: the player who starts a league flight owns the row without being
+  // its organiser; only an admin (above) manages a flight.
+  if (game?.created_by === ctx.userId && !game.league_round_id) return ctx;
   redirect('/');
 }
 

@@ -244,6 +244,24 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
     expect(screen.getByTestId('league-round-4-chip')).toHaveTextContent('Kommer');
     expect(screen.queryByTestId('league-round-4-played')).toBeNull();
   });
+
+  // #2688: banen står på kortet for den åpne runden og på hver rad.
+  it('banen står på den åpne runden og på hver rad i rundelista', async () => {
+    await renderLeague();
+    expect(screen.getByTestId('league-open-round-course')).toHaveTextContent('St Andrews · Gul tee');
+    expect(screen.getByTestId('league-round-1-course')).toHaveTextContent('St Andrews · Gul tee');
+    expect(screen.getByTestId('league-round-4-course')).toHaveTextContent('St Andrews · Gul tee');
+  });
+
+  it('en runde uten bane har ingen banelinje', async () => {
+    answer({
+      ok: true,
+      view: leagueView({ rounds: [leagueRound(1, -2, { courseName: null, teeName: null, ready: false })] }),
+    });
+    await renderLeague();
+    expect(screen.queryByTestId('league-open-round-course')).toBeNull();
+    expect(screen.queryByTestId('league-round-1-course')).toBeNull();
+  });
 });
 
 describe('tegning 6: feil og uten nett', () => {

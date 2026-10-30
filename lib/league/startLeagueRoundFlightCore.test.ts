@@ -33,6 +33,7 @@ vi.mock('@/lib/games/startScheduledGame', () => ({
 const ROUND = {
   id: 'r1',
   league_id: 'l1',
+  label: 'Runde 3',
   course_id: 'c1',
   tee_box_id: 'tb1',
   opens_at: '2000-01-01T00:00:00Z',
@@ -133,6 +134,16 @@ describe('startLeagueRoundFlightCore — the league handicap share and cap (#266
       cap: (insert?.args[0] as { hcp_max_strokes?: number | null }).hcp_max_strokes,
       readsBoth: /hcp_allowance_pct.*hcp_max_strokes/.test(String(leagueSelect?.args[0])),
     }).toEqual({ result: { ok: true, gameId: 'g1' }, share: pct, cap, readsBoth: true });
+  });
+});
+
+describe('startLeagueRoundFlightCore — the flight carries the round (#2688)', () => {
+  it('names the flight game after the league and the round', async () => {
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g1' } }]);
+    const { startLeagueRoundFlightCore } = await import('./startLeagueRoundFlightCore');
+    await startLeagueRoundFlightCore(userClient(userQueue(false, ['u1', 'u2'])), 'u1', 'r1', ['u2']);
+    const insert = adminMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+    expect((insert?.args[0] as { name: string }).name).toBe('Vinterliga – Runde 3');
   });
 });
 

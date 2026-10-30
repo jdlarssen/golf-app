@@ -13,7 +13,7 @@
 // noe hentet står feilen med «Prøv igjen».
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
@@ -21,6 +21,7 @@ import { RoundList } from '../components/league/RoundList';
 import { SimSettingsCard } from '../components/league/SimSettingsCard';
 import { StandingsTable } from '../components/league/StandingsTable';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
+import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchLeague, type LeagueLoadFailure } from '../data/league';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
@@ -202,32 +203,11 @@ function MarkerQueue<T extends { gameId: string; userId: string; name: string; s
   onOpen: (row: T) => void;
   testID: string;
 }) {
-  const { colors } = useTheme();
   if (rows.length === 0) return null;
   return (
     <View testID={testID}>
       <SectionHead title={title} />
-      <View style={[styles.queueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {rows.map((row, i) => (
-          <Pressable
-            key={`${row.gameId}:${row.userId}`}
-            onPress={() => onOpen(row)}
-            accessibilityRole="button"
-            testID={`marker-queue-${row.gameId}-${row.userId}`}
-            style={[styles.queueRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
-          >
-            <View style={styles.queueText}>
-              <Text style={[styles.queueName, { color: colors.text }]} numberOfLines={1}>
-                {row.name}
-              </Text>
-              <Text style={[styles.queueSub, { color: colors.muted }]} numberOfLines={1}>
-                {row.sub}
-              </Text>
-            </View>
-            <Text style={[styles.queueLink, { color: colors.primary }]}>{MARKER_TEXT.review}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <MarkerQueueCard rows={rows} onOpen={onOpen} />
     </View>
   );
 }
@@ -251,12 +231,6 @@ const styles = StyleSheet.create({
   season: { ...interLine(12, 16), fontFamily: FONTS.sans },
   format: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 6 + interLine(13, 16).marginTop },
   stale: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 6, paddingHorizontal: 20 },
-  queueCard: { marginHorizontal: 16, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
-  queueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 10 },
-  queueText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
-  queueName: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
-  queueSub: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 },
-  queueLink: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   sectionHead: {
     ...interLine(10, 12),
     fontFamily: FONTS.sansSemiBold,

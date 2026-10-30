@@ -64,6 +64,7 @@ function callerQueue(isSimulator: boolean): QueryResult[] {
       data: {
         id: ROUND_ID,
         league_id: 'l1',
+        label: 'Runde 1',
         course_id: 'c1',
         tee_box_id: 'tb1',
         opens_at: '2000-01-01T00:00:00Z',

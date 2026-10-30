@@ -31,6 +31,7 @@ import {
   participantLabel,
   playedByNames,
   roundClosesTitle,
+  roundCourseLine,
   roundDates,
   roundWindow,
   roundWindowSub,
@@ -269,6 +270,16 @@ describe('formatlinja og tabellens forklaring (tegning 2 og 3)', () => {
       points: `${full} · ${web.model.points}`,
       fallback: `${full} · ${web.model.best_nFallback}`,
     });
+  });
+});
+
+describe('banen på rundekortet og i rundelista (#2688)', () => {
+  it.each([
+    ['bane og tee', { courseName: 'Losby', teeName: 'Gul' }, 'Losby · Gul tee'],
+    ['bane uten tee', { courseName: 'Losby', teeName: null }, 'Losby'],
+    ['ingen bane ennå', { courseName: null, teeName: 'Gul' }, null],
+  ])('%s', (_label, round, expected) => {
+    expect(roundCourseLine(round)).toBe(expected);
   });
 });
 

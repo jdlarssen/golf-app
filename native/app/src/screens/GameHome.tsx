@@ -280,7 +280,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // avsluttet, er avatarraden i billetten eneste spillerliste.
   const showRoster = game.status === 'scheduled' || game.status === 'draft';
   // #1954 A1: «Trekk deg fra spillet» med webbens regler (lib/playerWithdraw.ts).
-  const withdrawKind = playerWithdrawKind(game, me?.player, game.createdBy === userId);
+  // Arrangør = `created_by`, men ikke i en ligaflight (#2688): der har ingen
+  // arrangørseksjon, og den som startet flighten trekker seg som alle andre.
+  const isOrganiser = game.createdBy === userId && game.leagueRoundId === null;
+  const withdrawKind = playerWithdrawKind(game, me?.player, isOrganiser);
 
   return (
     <ScrollView
@@ -387,8 +390,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       ) : null}
 
       {/* Arrangør-seksjonen henger på `created_by`, ikke på et admin-flagg:
-          appen er arrangørens flate, Sekretariatet bor på nettsiden. */}
-      {game.createdBy === userId ? (
+          appen er arrangørens flate, Sekretariatet bor på nettsiden. I en
+          ligaflight er ingen spiller arrangør (#2688): den som startet
+          flighten er bare `created_by`, og ligaen styrer runden. */}
+      {isOrganiser ? (
         <OrganiserSection
           bundle={bundle}
           userId={userId}

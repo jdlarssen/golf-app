@@ -55,6 +55,7 @@ function bundle(overrides: Partial<GameBundle> = {}): GameBundle {
       createdBy: 'user-a',
       scoreVisibility: 'live',
       tournamentId: null,
+      leagueRoundId: null,
       foursomesSide1TeeStarterUserId: null,
       foursomesSide2TeeStarterUserId: null,
       sideTournamentEnabled: false,

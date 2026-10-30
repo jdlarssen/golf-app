@@ -114,3 +114,47 @@ describe('requireAdmin', () => {
     expect(selects.map((c) => c.args[0])).toEqual(['is_admin, name']);
   });
 });
+
+describe('requireAdminOrCreator (#2688)', () => {
+  const creatorId = 'creator-uuid-1';
+
+  it('lets the creator of an ordinary game through', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Per' }, error: null },
+      { data: { created_by: creatorId, league_round_id: null }, error: null },
+    ]);
+    setUser(creatorId, randomEmail);
+
+    const { requireAdminOrCreator } = await import('./auth');
+    const ctx = await requireAdminOrCreator(supabaseMock as never, 'game-1');
+
+    expect(ctx.userId).toBe(creatorId);
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('turns away the player who started a league flight', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Per' }, error: null },
+      { data: { created_by: creatorId, league_round_id: 'round-1' }, error: null },
+    ]);
+    setUser(creatorId, randomEmail);
+
+    const { requireAdminOrCreator } = await import('./auth');
+    await expect(
+      requireAdminOrCreator(supabaseMock as never, 'game-1'),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('still lets an admin into a league flight', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null },
+    ]);
+    setUser(adminUserId, randomEmail);
+
+    const { requireAdminOrCreator } = await import('./auth');
+    const ctx = await requireAdminOrCreator(supabaseMock as never, 'game-1');
+
+    expect(ctx.isAdmin).toBe(true);
+  });
+});

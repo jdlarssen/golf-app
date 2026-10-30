@@ -77,8 +77,8 @@ function respond(op: QueryOp): QueryResponse {
 
   if (op.table === 'games') {
     // Portens oppslag ber kun om `created_by`; kjernens ber om hele raden.
-    if (op.columns === 'created_by') {
-      return { data: db.gameExists ? { created_by: CREATOR } : null };
+    if (op.columns === 'created_by, league_round_id') {
+      return { data: db.gameExists ? { created_by: CREATOR, league_round_id: null } : null };
     }
     if (db.coreThrows) throw new Error('connection reset');
     return {

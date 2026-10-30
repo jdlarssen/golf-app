@@ -997,6 +997,8 @@ function HoleView({
             onUndo={rail.undo}
             onSkip={rail.skip}
             onPutts={rail.pickPutts}
+            nextLabel={holeNumber < HOLE_COUNT ? 'Neste hull' : 'Lever scorekort'}
+            onNext={() => (holeNumber < HOLE_COUNT ? goToHole(holeNumber + 1) : onSubmit())}
           />
         </View>
       ) : null}

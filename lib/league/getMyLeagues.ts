@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
-import type { AppLeagueSummary } from './appLeagueView';
+import type { AppLeagueSummary, AppMarkerCard } from './appLeagueView';
 
 type LeagueRow = { id: string; name: string; status: string };
 type RoundRow = { id: string; league_id: string; label: string; sequence: number; closes_at: string };
@@ -9,13 +9,15 @@ type RoundRow = { id: string; league_id: string; label: string; sequence: number
 /**
  * Pure assembly of «Ligaene dine»: one entry per draft or active league, its
  * earliest open round, and whether the caller has delivered it or is playing
- * it (roundPlayerLocks, the same rule as the start gate).
+ * it (roundPlayerLocks, the same rule as the start gate). `markerCards` are
+ * the cards that wait for the caller as marker (#2688), keyed by league.
  */
 export function assembleMyLeagues(
   leagues: LeagueRow[],
   openRounds: RoundRow[],
   flightsByRound: Map<string, RoundFlight[]>,
   userId: string,
+  markerCards: ReadonlyMap<string, AppMarkerCard[]> = new Map(),
 ): AppLeagueSummary[] {
   const openByLeague = new Map<string, RoundRow>();
   for (const r of [...openRounds].sort((a, b) => a.sequence - b.sequence)) {
@@ -33,8 +35,54 @@ export function assembleMyLeagues(
         openRound: open ? { id: open.id, label: open.label, closesAt: open.closes_at } : null,
         delivered: locks.delivered.has(userId),
         inProgress: locks.inProgress.has(userId),
+        markerCards: markerCards.get(l.id) ?? [],
       };
     });
+}
+
+type MarkerCardRow = {
+  game_id: string;
+  user_id: string;
+  users: { name: string | null; nickname: string | null } | null;
+  games: {
+    status: string;
+    league_rounds: { label: string; league_id: string } | null;
+  } | null;
+};
+
+/**
+ * #2688: the delivered cards in active league flights that name the caller as
+ * marker and are not yet answered, grouped by league. The same rule as the
+ * league page's queue (`getLigaSnapshot`: submitted, not approved, not
+ * withdrawn, active flight); the marker is usually not in the flight, so it
+ * reads with the admin client, bounded to the caller's own marker rows.
+ */
+async function readMarkerCards(userId: string, leagueIds: string[]): Promise<Map<string, AppMarkerCard[]>> {
+  const { data, error } = await getAdminClient()
+    .from('game_players')
+    .select(
+      'game_id, user_id, users!game_players_user_id_fkey(name, nickname), games!inner(status, league_rounds!games_league_round_id_fkey(label, league_id))',
+    )
+    .eq('marker_user_id', userId)
+    .not('submitted_at', 'is', null)
+    .is('approved_at', null)
+    .is('withdrawn_at', null)
+    .eq('games.status', 'active');
+  if (error) throw error;
+  const byLeague = new Map<string, AppMarkerCard[]>();
+  for (const row of (data ?? []) as unknown as MarkerCardRow[]) {
+    const round = row.games?.league_rounds;
+    if (!round || !leagueIds.includes(round.league_id)) continue;
+    const list = byLeague.get(round.league_id) ?? [];
+    list.push({
+      gameId: row.game_id,
+      userId: row.user_id,
+      playerName: row.users?.nickname?.trim() || row.users?.name?.trim() || null,
+      roundLabel: round.label,
+    });
+    byLeague.set(round.league_id, list);
+  }
+  return byLeague;
 }
 
 /**
@@ -55,7 +103,7 @@ export async function getMyLeagues(userId: string, now = new Date()): Promise<Ap
   if (leagueIds.length === 0) return [];
 
   const nowIso = now.toISOString();
-  const [leaguesRes, roundsRes] = await Promise.all([
+  const [leaguesRes, roundsRes, markerCards] = await Promise.all([
     admin
       .from('leagues')
       .select('id, name, status')
@@ -68,6 +116,7 @@ export async function getMyLeagues(userId: string, now = new Date()): Promise<Ap
       .in('league_id', leagueIds)
       .lte('opens_at', nowIso)
       .gte('closes_at', nowIso),
+    readMarkerCards(userId, leagueIds),
   ]);
   if (leaguesRes.error) throw leaguesRes.error;
   if (roundsRes.error) throw roundsRes.error;
@@ -98,5 +147,11 @@ export async function getMyLeagues(userId: string, now = new Date()): Promise<Ap
     }
   }
 
-  return assembleMyLeagues((leaguesRes.data ?? []) as LeagueRow[], openRounds, flightsByRound, userId);
+  return assembleMyLeagues(
+    (leaguesRes.data ?? []) as LeagueRow[],
+    openRounds,
+    flightsByRound,
+    userId,
+    markerCards,
+  );
 }
