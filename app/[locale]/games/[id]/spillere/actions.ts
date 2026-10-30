@@ -4,7 +4,9 @@ import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { readBroughtGuests, withdrawBroughtGuests } from '@/lib/games/broughtGuests';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -50,6 +52,15 @@ function detailPathFor(isAdmin: boolean, gameId: string): string {
  * (`player_removed_team_uneven`; the start guard says `uneven_teams`). The
  * read is best effort: when it fails, the removal still reports
  * `player_removed`.
+ *
+ * #2607: the guests the player brought leave with them (owner's rule on
+ * #2570). They are read before anything is written, and withdrawn after the
+ * player's row is gone, through the service-role client like `withdrawSelf`:
+ * the gate is `requireAdminOrCreator` above, and the guests' requests are not
+ * the organiser's to write under RLS. A failed guest withdrawal answers
+ * `db_players` and the player's row is not put back: the organiser removes
+ * the guests one by one, which is safer than half a rollback. Teammates with
+ * an account stay where they are.
  */
 export async function removePlayerFromGame(
   gameId: string,
@@ -84,6 +95,14 @@ export async function removePlayerFromGame(
     redirect({ href: `${detailPath}?error=roster_locked`, locale });
   }
 
+  // A failed read is not "no guests" (#1445): nothing is written then.
+  const admin = getAdminClient();
+  const brought = await readBroughtGuests(admin, gameId, playerUserId);
+  if (!brought.ok) {
+    console.error('[removePlayerFromGame] guest lookup failed', { gameId });
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
+
   // A delete RLS refuses matches 0 rows with error == null (trap 2), so the
   // affected rows are asserted rather than trusting the missing error.
   let removedTeam: number | null = null;
@@ -108,6 +127,12 @@ export async function removePlayerFromGame(
   }
 
   expireGameCache(gameId);
+  if (!(await withdrawBroughtGuests(admin, gameId, brought.guests, ctx.userId)).ok) {
+    console.error('[removePlayerFromGame] guests withdrawal failed', { gameId });
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
+
+  // After the guests are gone, so the status counts the team that is left.
   const teamStatus = await teamStatusAfterRemoval(supabase, gameId, game, removedTeam);
   redirect({ href: `${detailPath}?${teamStatus ?? 'status=player_removed'}`, locale });
 }
