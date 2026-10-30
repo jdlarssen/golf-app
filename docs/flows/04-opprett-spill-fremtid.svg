@@ -116,10 +116,16 @@
   <text x="765" y="665" text-anchor="middle" font-size="11.5" fill="#9C8552">spillerne får beskjed</text>
   <line x1="765" y1="674" x2="765" y2="690" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
+  <!-- receipt (#2458) -->
+  <rect x="565" y="692" width="400" height="58" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <text x="765" y="716" text-anchor="middle" font-size="14.5" font-weight="700" fill="#8A6D27">✓ Kvittering: del, kalender</text>
+  <text x="765" y="736" text-anchor="middle" font-size="11.5" fill="#9C8552">hvem fikk invitasjonen · «Gå til spillet» (NY #2458)</text>
+  <line x1="765" y1="750" x2="765" y2="766" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+
   <!-- terminal -->
-  <rect x="565" y="692" width="400" height="66" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
-  <text x="765" y="720" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
-  <text x="765" y="743" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
+  <rect x="565" y="768" width="400" height="66" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
+  <text x="765" y="796" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
+  <text x="765" y="819" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
 
   <!-- left: the win -->
   <rect x="70" y="260" width="200" height="110" rx="14" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
@@ -137,6 +143,6 @@
   <text x="90" y="584" font-size="11.5" fill="#857C70">#366 bruker-baner,</text>
   <text x="90" y="601" font-size="11.5" fill="#857C70">avhenger av #22</text>
 
-  <text x="120" y="812" font-size="12.5" fill="#9A937F">Hele poenget: en kompis-runde skal settes opp på et par minutter — antall-først fjerner den vanligste snublesteinen.</text>
-  <text x="120" y="836" font-size="12.5" fill="#9A937F">Endringene er fokuserte (antall-steg + filtrert grid + tryggere defaults), ikke en ombygging av wizarden.</text>
+  <text x="120" y="880" font-size="12.5" fill="#9A937F">Hele poenget: en kompis-runde skal settes opp på et par minutter — antall-først fjerner den vanligste snublesteinen.</text>
+  <text x="120" y="904" font-size="12.5" fill="#9A937F">Endringene er fokuserte (antall-steg + filtrert grid + tryggere defaults), ikke en ombygging av wizarden.</text>
 </svg>
