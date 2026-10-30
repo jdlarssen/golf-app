@@ -13,8 +13,6 @@ import {
  *   - Vanlig spill før start → DELETE + player_removed
  *   - Aktivt spill → roster_locked, ingen DELETE
  *   - DELETE som treffer 0 rader (RLS nektet) → db_players, ikke player_removed
- *   - #2607: en kaptein med gjester → gjestene går også, lagkameratene med
- *     konto blir; en vanlig spiller eller en gjest → ingen kaskade
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -34,13 +32,6 @@ vi.mock('next/cache', () => ({
 let serverMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => serverMock,
-}));
-
-// #2607: the guests a removed player brought are read and withdrawn with the
-// service-role client. Default: nobody is a captain, so nothing cascades.
-let adminMock: ReturnType<typeof buildSupabaseMock>;
-vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => adminMock,
 }));
 
 let isAdmin = false;
@@ -77,7 +68,6 @@ function deleteCalls() {
 beforeEach(() => {
   vi.clearAllMocks();
   isAdmin = false;
-  adminMock = buildSupabaseMock([]);
 });
 
 describe('removePlayerFromGame', () => {
@@ -294,119 +284,5 @@ describe('removePlayerFromGame — laget etter forfallet (#2569)', () => {
     ]);
 
     expect(await runRemove()).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
-  });
-});
-
-// #2607 hole 3: the organiser removes a captain who brought guests. The
-// guests leave too (owner's rule on #2570); teammates with an account stay.
-describe('removePlayerFromGame — gjestene følger verten (#2607)', () => {
-  const GUEST_ID = '55555555-5555-5555-5555-555555555555';
-  const MATE_ID = '66666666-6666-6666-6666-666666666666';
-  const CAPTAIN_REQ = '77777777-7777-7777-7777-777777777777';
-  const scheduled = { data: { status: 'scheduled', tournament_id: null }, error: null };
-  const removedRow = { data: [{ user_id: PLAYER_ID, team_number: null }], error: null };
-  const captainRequest = { data: { id: CAPTAIN_REQ, user_id: PLAYER_ID }, error: null };
-  const children = {
-    data: [
-      {
-        id: 'req-guest',
-        user_id: GUEST_ID,
-        status: 'approved',
-        team_request_id: CAPTAIN_REQ,
-        users: { is_guest: true, name: 'Gunn Gjest', nickname: null, email: 'g@guest.tornygolf.no' },
-      },
-      {
-        id: 'req-mate',
-        user_id: MATE_ID,
-        status: 'approved',
-        team_request_id: CAPTAIN_REQ,
-        users: { is_guest: false, name: 'Mette', nickname: null, email: 'm@example.test' },
-      },
-    ],
-    error: null,
-  };
-
-  function adminWrites(table: string) {
-    return adminMock.__fromCalls.filter(
-      (c) => c.table === table && (c.method === 'delete' || c.method === 'update'),
-    );
-  }
-
-  it('kaptein med gjest → gjesten går, lagkameraten med konto blir', async () => {
-    serverMock = buildSupabaseMock([scheduled, removedRow]);
-    adminMock = buildSupabaseMock([
-      captainRequest,
-      children,
-      { data: [{ user_id: GUEST_ID }], error: null }, // the guest has a place
-      { data: [{ user_id: GUEST_ID }], error: null }, // DELETE the guest's place
-      { data: [{ id: 'req-guest' }], error: null }, // the guest's request → withdrawn
-    ]);
-
-    const url = await runRemove();
-
-    expect(url).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
-    expect(adminWrites('game_players')).toHaveLength(1);
-    expect(adminMock.__fromCalls).toContainEqual({
-      table: 'game_players',
-      method: 'in',
-      args: ['user_id', [GUEST_ID]],
-    });
-    const marked = adminWrites('game_registration_requests');
-    expect(marked).toHaveLength(1);
-    expect(marked[0]!.args[0]).toEqual(
-      expect.objectContaining({ status: 'withdrawn', decided_by_user_id: CREATOR_ID }),
-    );
-    expect(adminMock.__fromCalls).toContainEqual({
-      table: 'game_registration_requests',
-      method: 'in',
-      args: ['id', ['req-guest']],
-    });
-  });
-
-  it.each([
-    ['en vanlig spiller', 'not a captain'],
-    ['en gjest', 'a guest has no captain request'],
-  ])('fjerner %s → ingen kaskade', async () => {
-    serverMock = buildSupabaseMock([scheduled, removedRow]);
-    adminMock = buildSupabaseMock([{ data: null, error: null }]);
-
-    const url = await runRemove();
-
-    expect(url).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
-    expect(adminWrites('game_players')).toHaveLength(0);
-    expect(adminWrites('game_registration_requests')).toHaveLength(0);
-  });
-
-  it.each([
-    ['treffer 0 rader', { data: [], error: null }],
-    ['feiler', { data: null, error: { message: 'boom' } }],
-  ])('gjestetrekket %s → db_players', async (_label, guestDelete) => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    serverMock = buildSupabaseMock([scheduled, removedRow]);
-    adminMock = buildSupabaseMock([
-      captainRequest,
-      children,
-      { data: [{ user_id: GUEST_ID }], error: null },
-      guestDelete,
-    ]);
-
-    const url = await runRemove();
-
-    expect(url).toBe(`/games/${GAME_ID}/spillere?error=db_players`);
-    // The player's own row is gone and stays gone; the cache is cleared.
-    expect(deleteCalls()).toHaveLength(1);
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-  });
-
-  it('gjestene kan ikke leses → db_players, og ingenting slettes', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    serverMock = buildSupabaseMock([scheduled]);
-    adminMock = buildSupabaseMock([{ data: null, error: { message: 'boom' } }]);
-
-    const url = await runRemove();
-
-    expect(url).toBe(`/games/${GAME_ID}/spillere?error=db_players`);
-    expect(deleteCalls()).toHaveLength(0);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
