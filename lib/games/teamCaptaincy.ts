@@ -1,5 +1,6 @@
 import 'server-only';
 import type { getAdminClient } from '@/lib/supabase/admin';
+import { REQUEST_USER_EMBED, isGuestRequest, readBroughtGuests } from '@/lib/games/broughtGuests';
 
 // Kapteinen og laget før start (#2358): ett hjem for «har denne kapteinen et
 // lag som står bak seg?».
@@ -34,11 +35,17 @@ export type TeamChild = {
  *     på spillerlista.
  *
  * `rosterAcceptedAt`: `undefined` = ingen rad på spillerlista.
+ *
+ * En gjest har aldri takket ja (#2607): den har ingen konto å svare fra, og
+ * `accepted_at` på plassen er arrangørens, ikke gjestens. Uten unntaket fikk
+ * kapteinen `captain_has_team` og beskjed om å gi bindet til en gjest.
  */
 export function hasAcceptedTeamInvite(
   child: TeamChild,
   rosterAcceptedAt: string | null | undefined,
+  isGuest: boolean,
 ): boolean {
+  if (isGuest) return false;
   if (child.status !== 'pending' && child.status !== 'approved') return false;
   if (rosterAcceptedAt != null) return true;
   return child.status === 'approved' && child.decided_by_user_id === child.user_id;
@@ -50,7 +57,9 @@ export type CaptainTeam =
 
 /**
  * Lagkameratene under en kapteinsrad, delt i dem som har takket ja og dem som
- * ikke har svart. Avslåtte og trukne er ute av laget og telles ikke.
+ * ikke har svart. Avslåtte og trukne er ute av laget og telles ikke. Gjestene
+ * er ikke med i noen av gruppene (#2607): de leses med `readBroughtGuests` og
+ * følger kapteinen ut.
  *
  * `{ ok: false }` ved en lesefeil: en feilet spørring skal ikke leses som «ingen
  * på laget» (#1445) — da kunne kapteinen trukket seg fra et lag som står.
@@ -64,11 +73,11 @@ export async function readCaptainTeam(
   // captain's game in the database.
   const { data: children, error: childrenError } = await admin
     .from('game_registration_requests')
-    .select('id, user_id, status, decided_by_user_id')
+    .select(`id, user_id, status, decided_by_user_id, ${REQUEST_USER_EMBED}`)
     .eq('team_request_id', captainRequestId)
     .eq('game_id', gameId)
     .in('status', ['pending', 'approved'])
-    .returns<TeamChild[]>();
+    .returns<(TeamChild & { users: { is_guest: boolean } | null })[]>();
   if (childrenError) {
     console.error('[readCaptainTeam] children lookup failed', {
       gameId,
@@ -77,7 +86,10 @@ export async function readCaptainTeam(
     });
     return { ok: false };
   }
-  const rows = children ?? [];
+  // Gjestene leses med `readBroughtGuests`; her er bare lagkamerater med konto.
+  const rows: TeamChild[] = (children ?? [])
+    .filter((row) => !isGuestRequest(row))
+    .map(({ id, user_id, status, decided_by_user_id }) => ({ id, user_id, status, decided_by_user_id }));
   if (rows.length === 0) return { ok: true, accepted: [], unanswered: [] };
 
   const { data: roster, error: rosterError } = await admin
@@ -105,7 +117,8 @@ export async function readCaptainTeam(
     const rosterAcceptedAt = acceptedAt.has(row.user_id)
       ? (acceptedAt.get(row.user_id) ?? null)
       : undefined;
-    (hasAcceptedTeamInvite(row, rosterAcceptedAt) ? accepted : unanswered).push(row);
+    // isGuest = false: gjestene er filtrert ut over.
+    (hasAcceptedTeamInvite(row, rosterAcceptedAt, false) ? accepted : unanswered).push(row);
   }
   return { ok: true, accepted, unanswered };
 }
@@ -117,13 +130,19 @@ export async function readCaptainTeam(
  * `null` = kalleren er ikke kaptein, eller lesingen feilet. Siden viser da det
  * vanlige skjemaet, og kjernen er vakta uansett. `marksRequest` = påmeldingen
  * blir merket som trukket (den er ventende eller godkjent); en avvist påmelding
- * står som den er.
+ * står som den er. `guestNames` = gjestene kapteinen meldte på, som trekkes
+ * med (#2607).
  */
 export async function captainWithdrawalState(
   admin: ReturnType<typeof getAdminClient>,
   gameId: string,
   userId: string,
-): Promise<{ blocked: boolean; unanswered: number; marksRequest: boolean } | null> {
+): Promise<{
+  blocked: boolean;
+  unanswered: number;
+  marksRequest: boolean;
+  guestNames: string[];
+} | null> {
   const { data: own, error } = await admin
     .from('game_registration_requests')
     .select('id, status, is_team_captain')
@@ -132,11 +151,15 @@ export async function captainWithdrawalState(
     .maybeSingle<{ id: string; status: string; is_team_captain: boolean }>();
   if (error || !own?.is_team_captain) return null;
 
-  const team = await readCaptainTeam(admin, gameId, own.id);
-  if (!team.ok) return null;
+  const [team, brought] = await Promise.all([
+    readCaptainTeam(admin, gameId, own.id),
+    readBroughtGuests(admin, gameId, userId),
+  ]);
+  if (!team.ok || !brought.ok) return null;
   return {
     blocked: team.accepted.length > 0,
     unanswered: team.unanswered.length,
+    guestNames: brought.guests.flatMap((g) => (g.name ? [g.name] : [])),
     // Kjernen merker bare en ventende eller godkjent påmelding som trukket.
     marksRequest: own.status === 'pending' || own.status === 'approved',
   };

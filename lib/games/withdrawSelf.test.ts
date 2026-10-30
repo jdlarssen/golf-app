@@ -730,6 +730,10 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
   };
   const onRoster = { data: { user_id: USER_ID, team_number: 1 }, error: null };
   const ok = { data: null, error: null };
+  // #2607: readBroughtGuests looks the captain up again and reads the guests
+  // under them, before anything is written.
+  const hostLookup = { data: { id: MY_REQ_ID, user_id: USER_ID }, error: null };
+  const noGuests = { data: [], error: null };
 
   function writes(table: string) {
     return adminMock.__fromCalls.filter(
@@ -788,6 +792,8 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
             ],
             error: null,
           },
+          hostLookup,
+          noGuests,
           { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
           { data: [{ id: CHILD_REQ_ID }, { id: OTHER_CHILD_REQ_ID }], error: null }, // invitasjonene → withdrawn
         ],
@@ -839,6 +845,8 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
         game_registration_requests: [
           captainReq,
           { data: [], error: null },
+          hostLookup,
+          noGuests,
           { data: [{ id: MY_REQ_ID }], error: null },
         ],
       },
@@ -866,7 +874,7 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
       byTable: {
         games: [scheduledGame],
         game_players: [onRoster],
-        game_registration_requests: [captainReq, { data: [], error: null }, { data: [], error: null }],
+        game_registration_requests: [captainReq, { data: [], error: null }, hostLookup, noGuests, { data: [], error: null }],
       },
     });
     const { withdrawSelf } = await import('./withdrawSelf');
@@ -887,6 +895,8 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
         game_registration_requests: [
           { data: { ...captainReq.data, status: 'rejected' }, error: null },
           { data: [], error: null },
+          hostLookup,
+          noGuests,
         ],
       },
     });
@@ -916,6 +926,8 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
             data: [{ id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'approved', decided_by_user_id: USER_ID }],
             error: null,
           },
+          hostLookup,
+          noGuests,
           { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
           { data: null, error: { code: '08006', message: 'reset' } }, // invitasjonene feiler
         ],
@@ -941,6 +953,214 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
 
     expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
     expect(writes('game_players')).toHaveLength(0);
+  });
+
+  // #2607: the guests the captain brought leave with the captain.
+  const GUEST_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const GUEST_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  const GUEST_A_REQ = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  const GUEST_B_REQ = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const guestUser = (name: string) => ({ is_guest: true, name, nickname: null, email: `${name}@guest.invalid` });
+  const guestChild = (id: string, user_id: string, name: string) => ({
+    id,
+    user_id,
+    status: 'approved',
+    decided_by_user_id: USER_ID,
+    team_request_id: MY_REQ_ID,
+    users: guestUser(name),
+  });
+
+  it('kaptein med to gjester og én ubesvart lagkamerat → alle tre plassene og påmeldingene går, varsel bare til lagkameraten', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          // readCaptainTeam: plassen til lagkameraten med konto (ubekreftet)
+          { data: [{ user_id: TEAMMATE_ID, accepted_at: null }], error: null },
+          // readBroughtGuests: begge gjestene har plass; den ene er bekreftet
+          { data: [{ user_id: GUEST_A }, { user_id: GUEST_B }], error: null },
+          ok, // DELETE ubekreftede lagkamerater
+          { data: [{ user_id: GUEST_A }, { user_id: GUEST_B }], error: null }, // DELETE gjestene
+          ok, // DELETE egen rad
+        ],
+        game_registration_requests: [
+          captainReq,
+          {
+            data: [
+              { ...guestChild(GUEST_A_REQ, GUEST_A, 'Gunn'), decided_by_user_id: GUEST_A },
+              guestChild(GUEST_B_REQ, GUEST_B, 'Geir'),
+              {
+                id: CHILD_REQ_ID,
+                user_id: TEAMMATE_ID,
+                status: 'approved',
+                decided_by_user_id: USER_ID,
+                users: { is_guest: false, name: 'Mette', nickname: null, email: 'm@example.test' },
+              },
+            ],
+            error: null,
+          },
+          hostLookup,
+          {
+            data: [guestChild(GUEST_A_REQ, GUEST_A, 'Gunn'), guestChild(GUEST_B_REQ, GUEST_B, 'Geir')],
+            error: null,
+          },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+          { data: [{ id: CHILD_REQ_ID }], error: null }, // invitasjonen → withdrawn
+          { data: [{ id: GUEST_A_REQ }, { id: GUEST_B_REQ }], error: null }, // gjestene → withdrawn
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+
+    // Three roster deletes: the unconfirmed teammate, the guests, the captain.
+    const rosterDeletes = writes('game_players');
+    expect(rosterDeletes).toHaveLength(3);
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'in',
+      args: ['user_id', [TEAMMATE_ID]],
+    });
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'in',
+      args: ['user_id', [GUEST_A, GUEST_B]],
+    });
+    // The teammate's delete keeps its accepted_at filter; the guests' has none.
+    expect(
+      adminMock.__fromCalls.filter((c) => c.table === 'game_players' && c.method === 'is' && c.args[0] === 'accepted_at'),
+    ).toHaveLength(1);
+
+    // Every request is marked withdrawn: the captain's, the teammate's, both guests'.
+    const requestWrites = writes('game_registration_requests');
+    expect(requestWrites.map((c) => c.method)).toEqual(['update', 'update', 'update']);
+    for (const w of requestWrites) {
+      expect(w.args[0]).toEqual(expect.objectContaining({ status: 'withdrawn' }));
+    }
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_registration_requests',
+      method: 'in',
+      args: ['id', [GUEST_A_REQ, GUEST_B_REQ]],
+    });
+
+    // team_removed goes to the teammate with an account only.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: TEAMMATE_ID,
+        payload: expect.objectContaining({ reason_code: 'team_removed' }),
+      }),
+    );
+  });
+
+  it('kaptein med én gjest som har accepted_at satt → IKKE captain_has_team; kapteinen og gjesten går', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          // readCaptainTeam reads no roster: the only child is a guest.
+          { data: [{ user_id: GUEST_A }], error: null }, // readBroughtGuests: gjesten har plass
+          { data: [{ user_id: GUEST_A }], error: null }, // DELETE gjesten
+          ok, // DELETE egen rad
+        ],
+        game_registration_requests: [
+          captainReq,
+          { data: [guestChild(GUEST_A_REQ, GUEST_A, 'Gunn')], error: null },
+          hostLookup,
+          { data: [guestChild(GUEST_A_REQ, GUEST_A, 'Gunn')], error: null },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+          { data: [{ id: GUEST_A_REQ }], error: null }, // gjesten → withdrawn
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+    expect(writes('game_players')).toHaveLength(2);
+    expect(writes('game_registration_requests')).toHaveLength(2);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('kaptein med en lagkamerat med konto som har takket ja, og en gjest → fortsatt captain_has_team, ingenting skrives', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster, { data: [{ user_id: TEAMMATE_ID, accepted_at: '2026-09-29T10:00:00.000Z' }], error: null }],
+        game_registration_requests: [
+          captainReq,
+          {
+            data: [
+              guestChild(GUEST_A_REQ, GUEST_A, 'Gunn'),
+              {
+                id: CHILD_REQ_ID,
+                user_id: TEAMMATE_ID,
+                status: 'approved',
+                decided_by_user_id: USER_ID,
+                users: { is_guest: false, name: 'Mette', nickname: null, email: 'm@example.test' },
+              },
+            ],
+            error: null,
+          },
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'captain_has_team' });
+    expect(writes('game_players')).toHaveLength(0);
+    expect(writes('game_registration_requests')).toHaveLength(0);
+  });
+
+  it('gjestene kan ikke leses → db_error før noe skrives', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster],
+        game_registration_requests: [
+          captainReq,
+          { data: [], error: null },
+          hostLookup,
+          { data: null, error: { code: '08006', message: 'reset' } },
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
+    expect(writes('game_players')).toHaveLength(0);
+    expect(writes('game_registration_requests')).toHaveLength(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('gjestetrekket feiler etter at kapteinen er merket → db_error, kapteinens plass står, cachen tømmes', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          { data: [{ user_id: GUEST_A }], error: null }, // readBroughtGuests: gjesten har plass
+          { data: [], error: null }, // DELETE gjesten treffer 0 rader
+        ],
+        game_registration_requests: [
+          captainReq,
+          { data: [guestChild(GUEST_A_REQ, GUEST_A, 'Gunn')], error: null },
+          hostLookup,
+          { data: [guestChild(GUEST_A_REQ, GUEST_A, 'Gunn')], error: null },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
+    // Only the guest's delete ran; the captain's own place is never deleted.
+    expect(writes('game_players')).toHaveLength(1);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
   it.each([
