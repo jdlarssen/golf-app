@@ -1503,7 +1503,7 @@
       "too_many_players_for_mode": "Du har valgt flere spillere enn formatet tar. Ta bort noen før du publiserer.",
       "mode_locked_after_publish": "Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.",
       "invalid_game_mode": "Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.",
-      "bad_registration_mode": "Påmeldingsvalget er ugyldig. Velg hvordan spillerne kommer med på nytt.",
+      "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
       "bad_registration_type": "Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».",
       "team_registration_unsupported_mode": "Lag-påmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.",
       "unexpected": "Klarte ikke å lagre spillet ({code}). Bane, tid, format og spillere står som du satte dem, så prøv en gang til."
