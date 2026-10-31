@@ -12,7 +12,7 @@
 #   • DENY   &, nohup, setsid, disown — løsrevne prosesser TaskStop ikke når
 #   • DENY   gh pr merge --squash «Squash brukes ikke» → bruk --rebase
 #   • DENY   gh pr merge på bruker-synlig PR uten staging-verified/needs-manual-qa (#1303)
-#   • ASK    git push --force     krever eksplisitt godkjenning (lease er OK)
+#   • DENY   git push --force/-f  på selve push-leddet (lease er OK, #2713)
 #   • REMIND gh issue create uten --milestone (mandatory milestone-regel)
 #   • REMIND gh pr create         README-friskhet + Closes #N i body
 #
@@ -257,15 +257,28 @@ case "$cmd_stripped" in
     fi ;;
 esac
 
-# ── ASK: git push --force, men IKKE --force-with-lease (som rebase-flyten bruker) ──
-case "$cmd_stripped" in
-  *"git push"*)
-    stripped="${cmd_stripped//--force-with-lease/}"
-    case "$stripped" in
-      *--force*|*" -f "*|*" -f")
-        emit_ask "force-push" "git push --force krever eksplisitt eier-godkjenning (CLAUDE.md: «Aldri force-push uten god grunn»). --force-with-lease fra rebase-flyten er OK og blokkeres ikke — bekreft at dette er tiltenkt." ;;
-    esac ;;
-esac
+# ── DENY: git push --force / -f, men IKKE --force-with-lease (som rebase-flyten bruker) ──
+# Bare selve `git push`-leddet leses (#2713): kommandoen deles ved ; & | og linjeskift,
+# og -f/--force vurderes kun i ledd som er en git push. Før stod `rm -f x && git push`
+# som force-push, og en ask i en bakgrunnsøkt står fast til eieren kobler seg på
+# (#2347, 29.10). Et ekte force-push nektes i stedet for å spørre: ingen kan svare
+# på en ask der, og eieren sa ja til nekt 31.10. Heredoc-kropper og quotede strenger
+# er borte før delingen, så en commit-melding som nevner «git push -f» er tekst.
+push_segments="$(printf '%s\n' "$cmd" | awk '
+  skip { t=$0; sub(/^[ \t]+/, "", t); if (t == word) skip=0; next }
+  match($0, /<<-?[ \t]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*/) {
+    w=substr($0, RSTART, RLENGTH); sub(/^<<-?[ \t]*["'"'"']?/, "", w)
+    word=w; skip=1; print substr($0, 1, RSTART-1); next
+  }
+  { print }' | tr '\n' ';' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g" \
+  | sed -E 's/[0-9]*>&[0-9-]*/ /g; s/&>/ /g' | tr ';&|' '\n\n\n')"
+PUSH_LEAD='(^|[[:space:](){!`])git([[:space:]]+(-[Cc][[:space:]]+[^[:space:]]+|-[^[:space:]]+))*[[:space:]]+push([[:space:]]|$)'
+force_seg="$(printf '%s\n' "$push_segments" | grep -E "$PUSH_LEAD" \
+  | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g; s/--force-if-includes//g' \
+  | grep -E '(^|[[:space:]])(--force|-[A-Za-z]*f[A-Za-z]*)([[:space:]]|$)' | head -n1)"
+if [ -n "$force_seg" ]; then
+  emit_deny "force-push" "git push --force/-f er nektet (CLAUDE.md: «Aldri force-push uten god grunn»). --force-with-lease fra rebase-flyten er OK og blokkeres ikke. Trenger grenen en omskriving: push til en NY gren (git push origin HEAD:refs/heads/<ny-gren>), eller be eieren kjøre force-pushen selv."
+fi
 
 # ── REMIND: gh issue create uten --milestone ──
 case "$cmd_stripped" in

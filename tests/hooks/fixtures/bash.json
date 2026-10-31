@@ -151,9 +151,67 @@
     "payload": { "tool_input": { "command": "gh pr merge 5 --rebase" } }
   },
   {
-    "name": "git push --force → ask",
-    "expect": "ask",
+    "name": "git push --force → deny (en ask henger en bakgrunnsbygger, #2713)",
+    "expect": "deny",
+    "expect_reason_contains": ["force-with-lease"],
     "payload": { "tool_input": { "command": "git push --force origin claude/x" } }
+  },
+  {
+    "name": "git push -f etter grenen → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git fetch -q && git push origin claude/x -f" } }
+  },
+  {
+    "name": "git push -fu (klynget flagg) → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git push -fu origin claude/x" } }
+  },
+  {
+    "name": "git -C dir push --force → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git -C ../wt push --force origin claude/x" } }
+  },
+  {
+    "name": "force-push på eget ledd etter rm -f → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "rm -f x && git push -f origin claude/x" } }
+  },
+  {
+    "name": "force-push på ny linje → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "echo ok\ngit push --force origin claude/x" } }
+  },
+  {
+    "name": "rm -f i et annet ledd enn git push → none (falsk treff som stoppet #2347)",
+    "expect": "none",
+    "assert_no_log_rule": "force-push",
+    "payload": { "tool_input": { "command": "O=/tmp/out && cp $O/a.png img/ && rm -f img/old.png && git push -q origin claude/x 2>&1 | tail -1" } }
+  },
+  {
+    "name": "rm -f x && git push origin gren → none (Ferdig når, #2713)",
+    "expect": "none",
+    "assert_no_log_rule": "force-push",
+    "payload": { "tool_input": { "command": "rm -f x && git push origin claude/x" } }
+  },
+  {
+    "name": "cp -f før git push i samme kjede → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "cp -f a b; git push origin claude/x" } }
+  },
+  {
+    "name": "git push så rm -f → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git push origin claude/x && rm -f tmp.txt" } }
+  },
+  {
+    "name": "commit-melding som nevner git push -f → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git commit -m \"docs: never run git push -f\"" } }
+  },
+  {
+    "name": "git push -u (ingen force) → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git push -u origin claude/x" } }
   },
   {
     "name": "git push --force-with-lease → none (rebase-flyten)",
