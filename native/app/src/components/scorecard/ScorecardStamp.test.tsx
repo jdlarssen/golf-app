@@ -15,6 +15,7 @@ const BASE: Stamp = {
   signedBy: { kind: 'self' },
   approval: { kind: 'none' },
   locked: false,
+  leagueMarker: false,
 };
 
 describe('stampCopy', () => {
@@ -38,6 +39,9 @@ describe('stampCopy', () => {
     { approval: { kind: 'organizer' }, text: 'Godkjent av arrangøren' },
     { approval: { kind: 'approved' }, text: 'Godkjent' },
     { approval: { kind: 'pending' }, text: 'Venter på at noen i flighten godkjenner' },
+    // #2712: simulatorligaens markør står utenfor flighten.
+    { approval: { kind: 'league_marker' }, text: 'Godkjent av markøren' },
+    { approval: { kind: 'league_marker_pending' }, text: 'Venter på at markøren godkjenner' },
     { approval: { kind: 'none' }, text: null },
   ] as const)('godkjenning $approval.kind → $text', ({ approval, text }) => {
     expect(stampCopy({ ...BASE, approval }, 'Kari Nordmann').approval).toBe(text);
@@ -45,6 +49,16 @@ describe('stampCopy', () => {
 
   it('et avsluttet spill er låst', () => {
     expect(stampCopy({ ...BASE, locked: true }, 'Kari Nordmann').lock).toBe('Resultatet er låst');
+  });
+
+  // #2712: i en simulatorliga låser ingen arrangør flighten; markørens ja gjør det.
+  it('et kort med ligamarkør teller når markøren har godkjent', () => {
+    expect(stampCopy({ ...BASE, leagueMarker: true }, 'Kari Nordmann').lock).toBe(
+      'Runden teller når markøren har godkjent',
+    );
+    expect(stampCopy({ ...BASE, leagueMarker: true, locked: true }, 'Kari Nordmann').lock).toBe(
+      'Resultatet er låst',
+    );
   });
 });
 

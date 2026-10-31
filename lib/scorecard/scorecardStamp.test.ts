@@ -188,6 +188,70 @@ describe('resolveScorecardStamp — approval line', () => {
   });
 });
 
+// #2712: in a simulator league the card names a marker from the league, who is
+// usually not in the flight (every player plays their own round). The stamp
+// must not send the player looking for someone in the flight, nor call the
+// marker the organiser.
+describe('resolveScorecardStamp — simulator-league marker (#2712)', () => {
+  /** Kari plays alone; Truls is her marker, outside the game. */
+  function solo(kari: Partial<StampPlayer> = {}): StampPlayer[] {
+    return [player('kari', 1, { submitted_at: SIGNED_AT, marker_user_id: 'truls', ...kari })];
+  }
+
+  it('pending: waits for the marker, not for someone in the flight', () => {
+    const result = stamp(solo());
+    expect(result?.approval).toEqual({ kind: 'league_marker_pending' });
+    expect(result?.leagueMarker).toBe(true);
+  });
+
+  it('the marker outside the flight approved: the marker, not the organiser', () => {
+    const result = stamp(solo({ approved_at: SIGNED_AT, approved_by_user_id: 'truls' }), {
+      gameStatus: 'finished',
+    });
+    expect(result?.approval).toEqual({ kind: 'league_marker' });
+    expect(result?.locked).toBe(true);
+  });
+
+  it('someone else approved in the marker\'s stead: the organiser', () => {
+    const result = stamp(solo({ approved_at: SIGNED_AT, approved_by_user_id: 'anne' }), {
+      gameStatus: 'finished',
+    });
+    expect(result?.approval).toEqual({ kind: 'organizer' });
+  });
+
+  it('a flight mate as marker keeps the named line', () => {
+    const players = [
+      player('kari', 1, {
+        submitted_at: SIGNED_AT,
+        marker_user_id: 'ola',
+        approved_at: SIGNED_AT,
+        approved_by_user_id: 'ola',
+      }),
+      player('ola', 1),
+    ];
+    expect(stamp(players, { markerName: 'full' })?.approval).toEqual({ kind: 'marker', name: 'Ola Nordmann' });
+  });
+
+  it('a flight mate approving instead of the named marker is the organiser', () => {
+    const players = [
+      player('kari', 1, {
+        submitted_at: SIGNED_AT,
+        marker_user_id: 'truls',
+        approved_at: SIGNED_AT,
+        approved_by_user_id: 'ola',
+      }),
+      player('ola', 1),
+    ];
+    expect(stamp(players)?.approval).toEqual({ kind: 'organizer' });
+  });
+
+  it('without a named marker nothing changes', () => {
+    const result = stamp(roster());
+    expect(result?.approval).toEqual({ kind: 'pending' });
+    expect(result?.leagueMarker).toBe(false);
+  });
+});
+
 // #2385: the date in the stamp is the canvas' short form, «27.09 · 14:32».
 // The caller turns the instant into day, month, hour and minute in the time
 // zone it shows (the app: the phone's own), so the form has one home.
