@@ -86,16 +86,14 @@ export function signedCount(value: number, format: (abs: number) => string): str
 
 /** The `leaderboard.shareCard` keys `resultWords` reads, with their values. */
 export type ShareResultT = (
-  key: 'points' | 'skins' | 'par' | 'pointsVsPar',
+  key: 'points' | 'skins' | 'par',
   values?: Record<string, string | number>,
 ) => string;
 
 /**
- * The result as the headline words it: «38 poeng», «6 skins», «−4», «par»,
- * and (#2625) «+3 mot par» for points against par pace, where «+» is the good
- * side, so a bare «+3» would read as three over par. A player without a hole
- * has no number: «—» stands alone, as in the round report's facts. `at` picks
- * the «vant på» wording over «vant med».
+ * The result as the headline words it: «38 poeng», «6 skins», «−4», «par».
+ * A points game always says its points (#2738). `at` picks the «vant på»
+ * wording over «vant med».
  */
 export function resultWords(score: ShareCardScore, t: ShareResultT): { text: string; at: boolean } {
   switch (score.kind) {
@@ -105,9 +103,6 @@ export function resultWords(score: ShareCardScore, t: ShareResultT): { text: str
       return { text: t('skins', { n: score.value }), at: false };
     case 'vsPar':
       return { text: score.label === 'E' ? t('par') : score.label, at: true };
-    case 'pointsVsPar':
-      if (score.label === '—') return { text: score.label, at: true };
-      return { text: score.label === 'E' ? t('par') : t('pointsVsPar', { label: score.label }), at: true };
   }
 }
 
@@ -118,7 +113,6 @@ export function scoreFigure(score: ShareCardScore): string {
     case 'skins':
       return signedCount(score.value, String);
     case 'vsPar':
-    case 'pointsVsPar':
       return score.label; // −2 / E / +3
   }
 }

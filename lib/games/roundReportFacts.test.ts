@@ -27,6 +27,7 @@ import type {
   WolfResult,
 } from '@/lib/scoring/modes/types';
 
+import { FLAGGED_POINTS } from './__fixtures__/flaggedPointsGames';
 import { buildRoundReportFacts, factsShowAnyPlayer, type RoundReportMatchplayFacts } from './roundReportFacts';
 
 /** Narrows the decided-match branch so tests can read winnerName/margin/momentum directly. */
@@ -169,8 +170,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       par: 4,
       strokeIndex: holeNumber,
       perPlayer: [
-        { userId: 'u1', gross: 4, points: u1Points, par: 4, toPar: u1Points - 2 },
-        { userId: 'u2', gross: 4, points: u2Points, par: 4, toPar: u2Points - 2 },
+        { userId: 'u1', gross: 4, points: u1Points, par: 4 },
+        { userId: 'u2', gross: 4, points: u2Points, par: 4 },
       ],
       bestUserIds: best,
     };
@@ -179,7 +180,6 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
   const result: StablefordResult = {
     kind: 'stableford',
     variant: 'solo',
-    ranking: 'net_total',
     holes: [
       tieHole(1, 2, 2),
       tieHole(2, 2, 2),
@@ -190,8 +190,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       tieHole(7, 2, 4),
     ],
     players: [
-      { userId: 'u2', totalPoints: 14, rank: 1, holesPlayed: 7, toPar: null, tiedWith: [] },
-      { userId: 'u1', totalPoints: 14, rank: 2, holesPlayed: 7, toPar: null, tiedWith: [] },
+      { userId: 'u2', totalPoints: 14, rank: 1, holesPlayed: 7, tiedWith: [] },
+      { userId: 'u1', totalPoints: 14, rank: 2, holesPlayed: 7, tiedWith: [] },
     ],
   };
   const nameByUserId = names(['u1', 'Karl'], ['u2', 'Jørgen']);
@@ -228,8 +228,8 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
       ...result,
       holes: [tieHole(1, 4, 2)],
       players: [
-        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, toPar: null, tiedWith: [] },
-        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, toPar: null, tiedWith: [] },
+        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, tiedWith: [] },
+        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, tiedWith: [] },
       ],
     };
     const facts = buildRoundReportFacts({
@@ -241,26 +241,23 @@ describe('#1029 — final checkpoint agrees with standings at a raw-score tie', 
     expect(facts.decidedByTiebreak).toBeUndefined();
   });
 
-  it('#2625: a game ranked on points against par pace says so in the score label', () => {
-    // A bare «+3» reads as three over par; in stableford over par is the good side.
-    const paceResult: StablefordResult = {
-      ...result,
-      ranking: 'net_to_par',
-      holes: [tieHole(1, 4, 2)],
-      players: [
-        { userId: 'u1', totalPoints: 4, rank: 1, holesPlayed: 1, toPar: 2, tiedWith: [] },
-        { userId: 'u2', totalPoints: 2, rank: 2, holesPlayed: 1, toPar: 0, tiedWith: [] },
-        { userId: 'u3', totalPoints: 0, rank: 3, holesPlayed: 0, toPar: null, tiedWith: [] },
-      ],
-    };
-    const facts = buildRoundReportFacts({
-      result: paceResult,
-      nameByUserId: names(['u1', 'Karl'], ['u2', 'Jørgen'], ['u3', 'Ola']),
-      gameMode: 'stableford',
-      ...BASE,
-    });
-    // A player without a hole has no number, and no unit after the dash.
-    expect(facts.standings.map((s) => s.scoreLabel)).toEqual(['+2 mot par (poeng)', 'E mot par (poeng)', '—']);
+  it('#2738: a points game with the #2625 flag says its points in the score label', () => {
+    const facts = (r: StablefordResult) =>
+      buildRoundReportFacts({
+        result: r,
+        nameByUserId: names(['u1', 'Karl'], ['u2', 'Jørgen'], ['u3', 'Ola']),
+        gameMode: 'stableford',
+        ...BASE,
+      });
+    // Mid-round: 22 p after 12 holes leads 20 p after 9, on points.
+    expect(facts(FLAGGED_POINTS.solo as StablefordResult).standings.map((s) => [s.name, s.scoreLabel])).toEqual([
+      ['Jørgen', '22 poeng'],
+      ['Karl', '20 poeng'],
+    ]);
+    // The round of 30.10: the 25s are split on the back nine.
+    const prod = facts(FLAGGED_POINTS.prodRound as StablefordResult);
+    expect(prod.standings.map((s) => s.scoreLabel)).toEqual(['25 poeng', '25 poeng', '20 poeng']);
+    expect([prod.winnerName, prod.decidedByTiebreak]).toEqual(['Karl', true]);
   });
 
   // #2561: the tie is Karl's result too. Without his «ja» the facts may not
@@ -707,11 +704,10 @@ describe('band coverage — remaining placement kinds produce a placement band',
         result: {
           kind: 'stableford',
           variant: 'solo',
-          ranking: 'net_total',
           holes: [],
           players: [
-            { userId: 'u1', totalPoints: 30, rank: 1, holesPlayed: 18, toPar: null, tiedWith: [] },
-            { userId: 'u2', totalPoints: 25, rank: 2, holesPlayed: 18, toPar: null, tiedWith: [] },
+            { userId: 'u1', totalPoints: 30, rank: 1, holesPlayed: 18, tiedWith: [] },
+            { userId: 'u2', totalPoints: 25, rank: 2, holesPlayed: 18, tiedWith: [] },
           ],
         },
       }),

@@ -24,14 +24,12 @@ export type ShareCardBand = 'placement' | 'skins' | 'matchplay';
  * A competitor's score, structured so the route can localize it. `vsPar` is
  * locale-neutral golf notation (U+2212 minus / "E" / "+n") and carries its own
  * display label; `points`/`skins` carry the raw count for `t('points'|'skins')`.
- * #2625: `pointsVsPar` is points against par pace in the same notation, where
- * «+» is the good side, so it is worded with its unit («+3 mot par»).
+ * #2738: a points game is always `points`, never against par.
  */
 export type ShareCardScore =
   | { kind: 'points'; value: number }
   | { kind: 'skins'; value: number }
-  | { kind: 'vsPar'; label: string }
-  | { kind: 'pointsVsPar'; label: string };
+  | { kind: 'vsPar'; label: string };
 
 export type ShareCardRow = {
   rank: number;
@@ -196,14 +194,13 @@ export function buildShareCardData(opts: {
     // Stableford → 'placement' band, points
     // -----------------------------------------------------------------------
     case 'stableford': {
-      // #2625: a game ranked on net to par shows the engine's points against
-      // par pace («+3», «E», «−2»), what it is ranked on.
-      const toPar = result.ranking === 'net_to_par';
+      // #2738: the points, also in a game #2625 stamped with
+      // `ranking: 'net_to_par'`.
       if (result.variant === 'solo') {
         const rows: IndividualCompetitor[] = result.players.map((p) => ({
           userIds: [p.userId],
           rank: p.rank,
-          score: toPar ? { kind: 'pointsVsPar', label: vsParLabel(p.toPar) } : { kind: 'points', value: p.totalPoints },
+          score: { kind: 'points', value: p.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       } else {
@@ -212,7 +209,7 @@ export function buildShareCardData(opts: {
           userIds: t.playerIds,
           teamNumber: t.teamNumber,
           rank: t.rank,
-          score: toPar ? { kind: 'pointsVsPar', label: vsParLabel(t.toPar) } : { kind: 'points', value: t.totalPoints },
+          score: { kind: 'points', value: t.totalPoints },
         }));
         return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
       }
@@ -292,12 +289,8 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         teamNumber: t.teamNumber,
         rank: t.rank,
-        // patsome uses stableford points; #2625: points against par pace in a
-        // game ranked on net to par.
-        score:
-          result.ranking === 'net_to_par'
-            ? { kind: 'pointsVsPar', label: vsParLabel(t.toPar) }
-            : { kind: 'points', value: t.totalPoints },
+        // patsome uses stableford points
+        score: { kind: 'points', value: t.totalPoints },
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
     }

@@ -66,7 +66,7 @@ export function ceremonyAvailable(mode: GameMode, leagueFlight: boolean, activeP
 
 /**
  * «poeng», «mot par» or «slag» — the unit the podium shows the number in.
- * #2625: points against par pace are shown like to par («+3 mot par»).
+ * #2738: a points game always shows its points.
  */
 export type CeremonyUnit = 'points' | 'toPar' | 'net';
 
@@ -85,10 +85,9 @@ export interface CeremonyLine {
 const teamKey = (teamNumber: number) => `team-${teamNumber}`;
 
 /**
- * #2625: a team game ranked on net to par shows the team's to par (points
- * against par pace in team stableford and patsome), the number it is ranked
- * on; a team without a hole has none and is left out (as a solo player
- * without a hole).
+ * #2625: a team strokeplay game ranked on net to par shows the team's to par,
+ * the number it is ranked on; a team without a hole has none and is left out
+ * (as a solo player without a hole).
  */
 function teamToParLines(
   teams: readonly { teamNumber: number; rank: number; toPar: number | null; members: string[] }[],
@@ -103,8 +102,8 @@ function teamToParLines(
 /**
  * The engine's result as podium rows, with the same number the podium in the
  * app shows. Rows with nothing played are left out: a player with no hole,
- * and a shamble team with no counted hole (the engine has no total for it).
- * Any other format gives `[]`.
+ * a points team with no hole (#2738) and a shamble team with no counted hole
+ * (the engine has no total for it). Any other format gives `[]`.
  */
 export function ceremonyLines(result: ModeResult): CeremonyLine[] {
   switch (result.kind) {
@@ -119,16 +118,8 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
       });
     }
     case 'stableford':
-      if (result.ranking === 'net_to_par') {
-        if (result.variant === 'team') {
-          return teamToParLines(result.teams.map((t) => ({ ...t, members: t.playerIds })));
-        }
-        return result.players.flatMap((p) =>
-          p.holesPlayed === 0 || p.toPar === null
-            ? []
-            : [{ key: p.userId, rank: p.rank, total: p.toPar, unit: 'toPar' as const, members: [p.userId], teamNumber: null }],
-        );
-      }
+      // #2738: a points game shows its points, also one #2625 stamped with
+      // `ranking: 'net_to_par'`.
       if (result.variant === 'solo') {
         return result.players
           .filter((p) => p.holesPlayed > 0)
@@ -141,14 +132,16 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
             teamNumber: null,
           }));
       }
-      return result.teams.map((t) => ({
-        key: teamKey(t.teamNumber),
-        rank: t.rank,
-        total: t.totalPoints,
-        unit: 'points',
-        members: t.playerIds,
-        teamNumber: t.teamNumber,
-      }));
+      return result.teams
+        .filter((t) => t.holes.some((h) => h.players.some((p) => p.gross !== null)))
+        .map((t) => ({
+          key: teamKey(t.teamNumber),
+          rank: t.rank,
+          total: t.totalPoints,
+          unit: 'points',
+          members: t.playerIds,
+          teamNumber: t.teamNumber,
+        }));
     case 'texas_scramble':
       if (result.ranking === 'net_to_par') {
         return teamToParLines(result.teams.map((t) => ({ ...t, members: t.members.map((m) => m.userId) })));
@@ -186,17 +179,16 @@ export function ceremonyLines(result: ModeResult): CeremonyLine[] {
         teamNumber: t.teamNumber,
       }));
     case 'patsome':
-      if (result.ranking === 'net_to_par') {
-        return teamToParLines(result.teams.map((t) => ({ ...t, members: t.playerIds })));
-      }
-      return result.teams.map((t) => ({
-        key: teamKey(t.teamNumber),
-        rank: t.rank,
-        total: t.totalPoints,
-        unit: 'points',
-        members: t.playerIds,
-        teamNumber: t.teamNumber,
-      }));
+      return result.teams
+        .filter((t) => Object.values(t.segments).some((s) => s.holesPlayed > 0))
+        .map((t) => ({
+          key: teamKey(t.teamNumber),
+          rank: t.rank,
+          total: t.totalPoints,
+          unit: 'points',
+          members: t.playerIds,
+          teamNumber: t.teamNumber,
+        }));
     default:
       return [];
   }
