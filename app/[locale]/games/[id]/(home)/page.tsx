@@ -61,6 +61,9 @@ import { GetTheApp } from '@/components/app/GetTheApp';
 import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { WithdrawnBanner } from './WithdrawnBanner';
+import { ScheduledActionsCard } from './ScheduledActionsCard';
+import { bringGuestBlock } from '@/lib/games/bringGuest';
+import { readMyBroughtGuest } from '@/lib/games/broughtGuests';
 import {
   isMatchplayMode,
   computeSideShortfall,
@@ -651,11 +654,35 @@ export default async function GameHomePage({
     // confirmed timestamp. Lives outside getGameWithPlayers because
     // cross-game cache fan-out on profile edits would be expensive — same
     // trade-off as for the courses(...)/tee_boxes(...) joins above.
-    const { data: meUser } = await supabase
-      .from('users')
-      .select('hcp_index, handicap_updated_at')
-      .eq('id', userId)
-      .single<{ hcp_index: number; handicap_updated_at: string }>();
+    // #2607: «Ta med en gjest». The sign-up columns are not in the cached
+    // row (GAME_HOME_SELECT), so they are read here, slim, next to meUser.
+    const [{ data: meUser }, { data: signupCols }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('hcp_index, handicap_updated_at')
+        .eq('id', userId)
+        .single<{ hcp_index: number; handicap_updated_at: string }>(),
+      supabase
+        .from('games')
+        .select('registration_mode, registration_type, signups_closed_at')
+        .eq('id', id)
+        .maybeSingle<{
+          registration_mode: string;
+          registration_type: string;
+          signups_closed_at: string | null;
+        }>(),
+    ]);
+    // The row shows only where the player may bring a guest; a failed read
+    // shows no row (the page itself gates again).
+    const canBringGuest =
+      signupCols != null &&
+      bringGuestBlock(
+        { ...game, created_by: gwp.game.created_by, ...signupCols },
+        { userId, seat: { withdrawn_at: me.withdrawn_at }, isGuest: meIsGuest },
+      ) === null;
+    const myBroughtGuest = canBringGuest
+      ? await readMyBroughtGuest(getAdminClient(), id, userId)
+      : null;
     const showHandicapCard = meUser
       ? isHandicapStale(meUser.handicap_updated_at)
       : false;
@@ -834,6 +861,20 @@ export default async function GameHomePage({
           </h1>
         </section>
 
+        {/* #2607 (the owner's answer 31.10): the drawing's list card under
+            «Du er påmeldt»: «Ta med en gjest» when the player may bring one,
+            then calendar and map, which used to be buttons in the course card. */}
+        <ScheduledActionsCard
+          gameId={id}
+          guestRow={myBroughtGuest?.ok ? { guest: myBroughtGuest.guest } : null}
+          calendarHref={teeOffDate ? `/${locale}/games/${id}/calendar` : null}
+          mapHref={
+            game.courses?.name
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`
+              : null
+          }
+        />
+
         {/* #1068: startkontingent-oppfordring flyttet hit — venterommet er
             der spillere faktisk venter og har konteksten (#1049 rendret den
             tidligere kun i aktiv/draft/finished-grenen, aldri her). */}
@@ -886,32 +927,6 @@ export default async function GameHomePage({
               )}
             </div>
           </div>
-
-          {/* #945: kalender (.ics) + kart for planlagt tee-off. Lenken til
-              .ics-ruten er en ren <a> (ikke next/link) så Content-Disposition
-              trigger «Legg til i kalender»-arket på iOS framfor klient-nav. */}
-          {(teeOffDate || game.courses?.name) && (
-            <div className="mt-3.5 flex flex-wrap gap-2">
-              {teeOffDate && (
-                <a
-                  href={`/${locale}/games/${id}/calendar`}
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
-                >
-                  {t('addToCalendar')}
-                </a>
-              )}
-              {game.courses?.name && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
-                >
-                  {t('viewOnMap')}
-                </a>
-              )}
-            </div>
-          )}
 
           <div className="h-px bg-border my-3.5" />
 

@@ -2,6 +2,7 @@ import 'server-only';
 import { getRoleContext } from '@/lib/admin/auth';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
+import { isGuestRequest } from '@/lib/games/broughtGuests';
 import { REJECTION_REASON_MAX } from '@/lib/games/registration';
 // #2061: the cascades read both statuses; the inbox groups by the same pair.
 import { CASCADE_STATUSES } from '@/lib/games/signupInbox';
@@ -41,6 +42,12 @@ type GameSnapshot = {
   created_by: string | null;
 };
 
+/** The requester's guest flag, embedded on the request (#2607). */
+type GuestFlag = { users?: { is_guest: boolean } | null };
+
+/** `game_registration_requests` has three FKs to `users`; the embed names the requester's. */
+const GUEST_FLAG_EMBED = 'users!game_registration_requests_user_id_fkey(is_guest)';
+
 type RequestSnapshot = {
   id: string;
   game_id: string;
@@ -49,13 +56,13 @@ type RequestSnapshot = {
   is_team_captain: boolean;
   team_name: string | null;
   team_request_id: string | null;
-};
+} & GuestFlag;
 
 type CascadeRow = {
   id: string;
   user_id: string;
   status: 'pending' | 'approved';
-};
+} & GuestFlag;
 
 export type RegistrationDecisionContext = {
   request: RequestSnapshot;
@@ -117,7 +124,7 @@ export async function loadRegistrationDecision(
 
   const { data: request, error: requestError } = await admin
     .from('game_registration_requests')
-    .select('id, game_id, user_id, status, is_team_captain, team_name, team_request_id')
+    .select(`id, game_id, user_id, status, is_team_captain, team_name, team_request_id, ${GUEST_FLAG_EMBED}`)
     .eq('id', requestId)
     .maybeSingle<RequestSnapshot>();
   if (requestError) {
@@ -171,7 +178,7 @@ async function loadCascade(
   if (!request.is_team_captain) return [];
   const { data: children, error } = await getAdminClient()
     .from('game_registration_requests')
-    .select('id, user_id, status')
+    .select(`id, user_id, status, ${GUEST_FLAG_EMBED}`)
     .eq('team_request_id', request.id)
     .eq('game_id', request.game_id)
     .in('status', [...CASCADE_STATUSES])
@@ -249,7 +256,7 @@ export async function approveRegistrationCore(
   if (cascadeRows === null) return fail('db_cascade', ctx);
 
   const allRows: CascadeRow[] = [
-    { id: request.id, user_id: request.user_id, status: 'pending' },
+    { id: request.id, user_id: request.user_id, status: 'pending', users: request.users },
     ...cascadeRows,
   ];
   // The captain passed the not_pending gate above, so it is always here.
@@ -330,6 +337,11 @@ export async function approveRegistrationCore(
     flight_number: teamNumber,
     course_handicap: null,
     tee_gender: teeGenders[r.user_id],
+    // #2607: a guest has no login to confirm with, and the organiser just
+    // decided it — as createGuestPlayer does. Without this the guest stood
+    // «Ikke bekreftet» for good. A player with an account confirms
+    // (#463). Set on every row: a bulk upsert sends one column list.
+    accepted_at: isGuestRequest(r) ? decidedAt : null,
   }));
   const { data: insertedPlayers, error: insertError } = await admin
     .from('game_players')

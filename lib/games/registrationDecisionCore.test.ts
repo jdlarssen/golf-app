@@ -187,6 +187,33 @@ describe('approveRegistrationCore', () => {
     expect(nextRedirectMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['a guest (brought by a player, #2607) is seated confirmed', true],
+    ['a player with an account confirms on their own (#463)', false],
+  ])('%s', async (_label, isGuest) => {
+    const request = soloRequest();
+    adminMock = buildSupabaseMock([
+      { ...request, data: { ...request.data, users: { is_guest: isGuest } } },
+      game(),
+      { data: [{ id: SOLO_REQ }], error: null },
+      { data: [{ user_id: SOLO_USER }], error: null },
+    ]);
+    const loaded = await load();
+    if (!loaded.ok) throw new Error('load failed');
+    const { approveRegistrationCore } = await import('./registrationDecisionCore');
+
+    expect(await approveRegistrationCore(loaded.ctx)).toMatchObject({ ok: true, outcome: 'approved' });
+    const upsert = adminMock.__fromCalls.find((c) => c.method === 'upsert');
+    const [row] = upsert!.args[0] as { user_id: string; accepted_at: string | null }[];
+    expect(row!.user_id).toBe(SOLO_USER);
+    if (isGuest) expect(row!.accepted_at).toEqual(expect.any(String));
+    else expect(row!.accepted_at).toBeNull();
+    // The guest flag rides on the request read; no extra lookup.
+    expect(adminMock.__fromCalls.find((c) => c.method === 'select')!.args[0]).toContain(
+      'users!game_registration_requests_user_id_fkey(is_guest)',
+    );
+  });
+
   it('a captain takes the whole team in and reports the team name', async () => {
     adminMock = buildSupabaseMock([
       captainRequest,
