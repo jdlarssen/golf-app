@@ -43,17 +43,17 @@ describe('ScheduledActionsCard', () => {
       {
         "guestIn": [
           "bring-guest-row | /games/game-1/ta-med-gjest |  | Hilde Moen er med som gjesten din›",
-          "calendar-row | /no/games/game-1/calendar |  | Legg i kalenderen›",
+          "calendar-row | /no/games/game-1/calendar |  | Legg til i kalender›",
           "map-row | https://www.google.com/maps/search/?api=1&query=Byneset%20North | _blank | Vis på kart›",
         ],
         "guestWaiting": [
           "bring-guest-row | /games/game-1/ta-med-gjest |  | Hilde Moen venter på arrangøren›",
-          "calendar-row | /no/games/game-1/calendar |  | Legg i kalenderen›",
+          "calendar-row | /no/games/game-1/calendar |  | Legg til i kalender›",
           "map-row | https://www.google.com/maps/search/?api=1&query=Byneset%20North | _blank | Vis på kart›",
         ],
         "noGuestYet": [
           "bring-guest-row | /games/game-1/ta-med-gjest |  | Ta med en gjest›",
-          "calendar-row | /no/games/game-1/calendar |  | Legg i kalenderen›",
+          "calendar-row | /no/games/game-1/calendar |  | Legg til i kalender›",
           "map-row | https://www.google.com/maps/search/?api=1&query=Byneset%20North | _blank | Vis på kart›",
         ],
       }
@@ -68,7 +68,7 @@ describe('ScheduledActionsCard', () => {
     }).toMatchInlineSnapshot(`
       {
         "both": [
-          "calendar-row | /no/games/game-1/calendar |  | Legg i kalenderen›",
+          "calendar-row | /no/games/game-1/calendar |  | Legg til i kalender›",
           "map-row | https://www.google.com/maps/search/?api=1&query=Byneset%20North | _blank | Vis på kart›",
         ],
         "noTeeOff": [
