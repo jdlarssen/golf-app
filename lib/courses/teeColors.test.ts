@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { TEE_COLORS, TEE_COLOR_NAMES, TEE_DOT_CLASS, isTeeColor } from './teeColors';
+import { TEE_COLORS, TEE_COLOR_NAMES, TEE_DOT_CLASS, isTeeColor, teeDotColor } from './teeColors';
 
 const MIGRATION_FILE = path.resolve(
   __dirname,
@@ -52,5 +52,28 @@ describe('the maps keyed by colour', () => {
   it('TEE_DOT_CLASS and TEE_COLOR_NAMES have exactly one entry per TEE_COLORS key', () => {
     expect(Object.keys(TEE_DOT_CLASS).sort()).toEqual([...TEE_COLORS].sort());
     expect(Object.keys(TEE_COLOR_NAMES).sort()).toEqual([...TEE_COLORS].sort());
+  });
+});
+
+describe('teeDotColor (#2448)', () => {
+  const cases: [{ color: string | null; name: string }, ReturnType<typeof teeDotColor>][] = [
+    // The stored colour wins over the name.
+    [{ color: 'red', name: 'Gul' }, 'red'],
+    [{ color: 'white', name: "Men's I" }, 'white'],
+    // No colour: the name, as 0225 reads it (whole name, any case, outer spaces).
+    [{ color: null, name: 'Gul' }, 'yellow'],
+    [{ color: null, name: '  rød ' }, 'red'],
+    [{ color: null, name: 'HVIT' }, 'white'],
+    [{ color: null, name: 'Oransje' }, 'orange'],
+    // Not a whole colour name: the neutral dot.
+    [{ color: null, name: "Men's III" }, null],
+    [{ color: null, name: '57' }, null],
+    [{ color: null, name: 'Gul tee' }, null],
+    // A value outside the palette is not a colour, so the name decides.
+    [{ color: 'purple', name: 'Blå' }, 'blue'],
+    [{ color: 'purple', name: '57' }, null],
+  ];
+  it.each(cases)('%j → %s', (tee, expected) => {
+    expect(teeDotColor(tee)).toBe(expected);
   });
 });

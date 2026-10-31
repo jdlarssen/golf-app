@@ -27,6 +27,7 @@ import {
   formatHHMMOslo,
   formatWeekdayDayMonthOsloLocale,
   formatDateBlockOsloLocale,
+  formatDayChoiceLocale,
 } from './format';
 import type { AppLocale } from '@/i18n/routing';
 import {
@@ -809,5 +810,18 @@ describe('formatListLocale (#2280)', () => {
     [['Marte', 'Jonas', 'Sigrid'], 'no', 'Marte, Jonas eller Sigrid'],
   ])('disjunction %j in %s → %s', (items, locale, expected) => {
     expect(formatListLocale(items, locale, 'disjunction')).toBe(expected);
+  });
+});
+
+describe('formatDayChoiceLocale (#2480, shared by #2448)', () => {
+  it('an Oslo day as a pill: weekday with a capital, day and short month', () => {
+    expect(formatDayChoiceLocale('2026-10-03', 'no')).toBe('Lør. 3. okt');
+    expect(formatDayChoiceLocale('2026-11-07', 'no')).toBe('Lør. 7. nov');
+    expect(formatDayChoiceLocale('2026-10-03', 'en')).toBe('Sat 3 Oct');
+  });
+
+  it('keeps the calendar day across the clock change', () => {
+    expect(formatDayChoiceLocale('2026-10-25', 'no')).toBe('Søn. 25. okt');
+    expect(formatDayChoiceLocale('2027-03-28', 'no')).toBe('Søn. 28. mar');
   });
 });

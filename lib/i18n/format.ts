@@ -134,6 +134,19 @@ export function formatShortDayMonthLocale(date: Date, locale: AppLocale): string
   return `${day} ${month}`;
 }
 
+/**
+ * A day pill: «Lør. 3. okt» (nb) / «Sat 3 Oct» (en) for an Oslo day
+ * «YYYY-MM-DD». «Flytt runden» (#2480) and «Hvor og når?» (#2448) share it.
+ */
+export function formatDayChoiceLocale(day: string, locale: AppLocale): string {
+  // Noon UTC is the same calendar day in Oslo all year.
+  const noon = new Date(`${day}T12:00:00Z`);
+  const tag = intlLocaleTag(locale);
+  const weekday = new Intl.DateTimeFormat(tag, { timeZone: OSLO, weekday: 'short' }).format(noon);
+  const capitalised = weekday.charAt(0).toLocaleUpperCase(tag) + weekday.slice(1);
+  return `${capitalised} ${formatShortDayMonthLocale(noon, locale)}`;
+}
+
 export function formatTeeOffDateLocale(date: Date, locale: AppLocale): string {
   if (locale === 'no') return formatTeeOffDateNb(date);
   // Locale-driven: weekday short, day numeric, month short, no year. nb-NO
