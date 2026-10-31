@@ -254,7 +254,9 @@ function PrimaryAction({
     return (
       <View style={[styles.stateBadge, { borderColor: colors.onStrong }]} testID="home-hero-state">
         <Text style={[styles.stateText, { color: colors.onStrong }]}>
-          {model.leagueSolo ? LEAGUE_SOLO_STATE[model.state] : ACTIVE_CARD_LABELS[model.state]}
+          {model.leagueSolo && model.leagueMarker
+            ? LEAGUE_SOLO_STATE[model.state]
+            : ACTIVE_CARD_LABELS[model.state]}
         </Text>
       </View>
     );

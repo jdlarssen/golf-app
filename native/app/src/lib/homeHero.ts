@@ -95,10 +95,15 @@ export interface HeroModel {
   /** Kort som venter på godkjenningen min (samme regel som spillets side). */
   approvals: number;
   /**
-   * #2712 (eieren 31.10): en simulatorligaflight med én spiller. Hjem viser da bare
-   * poengene og «Venter på markøren» eller «Godkjent», ingen plass.
+   * #2712 (eieren 31.10): en ligaflight med én aktiv spiller. Hjem viser da
+   * bare poengene, ingen plass (samme regel som `finishedResultBadge`).
    */
   leagueSolo: boolean;
+  /**
+   * #2712: ligaflighten har markørgodkjenning (simulatorliga), så etiketten er
+   * «Venter på markøren» eller «Godkjent». Ellers den vanlige etiketten.
+   */
+  leagueMarker: boolean;
 }
 
 /**
@@ -234,12 +239,13 @@ export function buildHeroModel(opts: HeroInput): HeroModel {
     standing: live?.standing ?? null,
     unit: live?.unit ?? null,
     approvals: me ? pendingApprovals(roster, bundle.game, userId).length : 0,
-    // A simulator-league flight is `leagueRoundId` + peer approval, as in
-    // `isGameOrganiser` and `playerWithdrawKind`. An ordinary league keeps its
-    // place line: nobody approves there, so «Godkjent» would not be true.
+    // Any league flight with one active player has no placement: the same
+    // rule as `finishedResultBadge`, which «Forrige runde» uses on this screen.
     leagueSolo:
       bundle.game.leagueRoundId != null &&
-      bundle.game.requirePeerApproval &&
       bundle.players.filter((player) => player.withdrawnAt == null).length === 1,
+    // A simulator-league flight is `leagueRoundId` + peer approval, as in
+    // `isGameOrganiser` and `playerWithdrawKind`.
+    leagueMarker: bundle.game.leagueRoundId != null && bundle.game.requirePeerApproval,
   };
 }
