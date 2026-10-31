@@ -82,6 +82,7 @@ export async function SoloStablefordHolesBody({
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
       navContext={navContext}
+      leagueFlight={game.league_round_id != null}
     />
   );
 }

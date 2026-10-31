@@ -382,3 +382,33 @@ describe('waitsForChoices', () => {
     expect(waitsForChoices({ gameMode: 'wolf', modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' } }, { bingoBangoBongoHoles: [] })).toBe(true);
   });
 });
+
+// #2712 (orkestratoren 31.10, etter eierens regel): «Hull for hull» for en
+// ligarunde spilt alene har ingen plass. Modellen bærer svaret fra bundelen.
+describe('buildHoleByHole — ligarunde spilt alene (#2712)', () => {
+  const ola = [homePlayer({ userId: 'ola', name: 'Ola Kompis', courseHandicap: 0 })];
+  const game = (leagueRoundId: string | null) =>
+    homeBundle({
+      game: {
+        id: 'g1',
+        status: 'finished',
+        gameMode: 'stableford',
+        modeConfig: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        leagueRoundId,
+      },
+      players: ola,
+    });
+
+  it('alene i en ligaflight: leagueAlone, ingen leder og ingen ★', () => {
+    const card = soloCard(buildHoleByHole(game('round-1'), holeScores('g1', 'ola', 3, 4)));
+    expect(card.leagueAlone).toBe(true);
+    expect(card.standings[0]!.isLeader).toBe(false);
+    expect(card.front.holes[0]!.rows.every((r) => !r.isBest)).toBe(true);
+  });
+
+  it('alene utenfor en liga: som før', () => {
+    const card = soloCard(buildHoleByHole(game(null), holeScores('g1', 'ola', 3, 4)));
+    expect(card.leagueAlone).toBeFalsy();
+    expect(card.standings[0]!.isLeader).toBe(true);
+  });
+});

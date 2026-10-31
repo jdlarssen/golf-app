@@ -132,6 +132,7 @@ export function liveBoardFor(bundle: GameBundle, scores: readonly LocalScore[]):
       status: bundle.game.status as GameStatus,
       score_visibility: bundle.game.scoreVisibility as ScoreVisibility,
       hole_segment: bundle.game.holeSegment as HoleSegment,
+      league_round_id: bundle.game.leagueRoundId,
     },
     players,
     holesRows: toHoleRows(bundle),
@@ -150,12 +151,13 @@ export function liveStanding(
   bundle: GameBundle,
   scores: readonly LocalScore[],
   userId: string,
-): { standing: ViewerStanding; unit: LiveBoardUnit } | null {
+): { standing: ViewerStanding; unit: LiveBoardUnit; leagueAlone: boolean } | null {
   const board = liveBoardFor(bundle, scores);
   if (!board) return null;
   const standing = viewerStanding(board, userId);
   if (!standing || standing.total === null) return null;
-  return { standing, unit: board.unit };
+  // #2712: tavlas svar på om dette er en ligarunde spilt alene (uten plass).
+  return { standing, unit: board.unit, leagueAlone: board.leagueAlone === true };
 }
 
 type HeroInput = {

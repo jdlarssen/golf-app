@@ -189,6 +189,18 @@ describe('buildRoundDoneModel', () => {
   });
 });
 
+// #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
+// har ingen plass, heller ikke i «1. plass nå» på scorekortet.
+describe('buildRoundDoneModel — ligarunde spilt alene (#2712)', () => {
+  const alone = [homePlayer({ userId: ME })];
+  it('ingen plass når du er alene i en ligaflight', () => {
+    expect(model({ game: { leagueRoundId: 'round-1' }, players: alone })?.standing).toBeNull();
+  });
+  it('alene utenfor en liga beholder plassen', () => {
+    expect(model({ players: alone })?.standing).not.toBeNull();
+  });
+});
+
 describe('highlightText', () => {
   const hole = (h: Partial<RoundHighlight>): RoundHighlight => ({
     holeNumber: 7,

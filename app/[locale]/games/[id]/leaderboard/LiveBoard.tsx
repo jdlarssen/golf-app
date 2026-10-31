@@ -16,7 +16,7 @@ import type { ScoreTone } from '@/lib/scoring/scoreTone';
 import { followHref } from '@/lib/leaderboard/followPlayer';
 import { BoardPlayerPlate } from './BoardRowReactions';
 import {
-  boardShowsRank,
+  boardShowsPlace,
   isBoardLeader,
   totalLabel,
   visibleBoardRows,
@@ -28,6 +28,7 @@ import {
   columnHeading,
   pillText,
   placeLabel,
+  totalSr,
 } from './boardText';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
@@ -195,7 +196,8 @@ export function LiveBoard({
                     unit={unit}
                     name={displayName(item)}
                     isYou={item.userId === viewerUserId}
-                    showRank={boardShowsRank(board.holesPlayed)}
+                    showRank={boardShowsPlace(board)}
+                    leagueAlone={board.leagueAlone === true}
                     followHref={followToken ? followHref(followToken, item.userId) : undefined}
                     open={openUserId === item.userId}
                     onToggle={() =>
@@ -234,7 +236,14 @@ export function LiveBoard({
       )}
 
       {strip && standing && (
-        <Strip strip={strip} standing={standing} unit={unit} rows={rows} displayName={displayName} />
+        <Strip
+          strip={strip}
+          standing={standing}
+          unit={unit}
+          rows={rows}
+          displayName={displayName}
+          leagueAlone={board.leagueAlone === true}
+        />
       )}
     </div>
   );
@@ -246,6 +255,7 @@ function BoardRow({
   name,
   isYou,
   showRank,
+  leagueAlone,
   followHref,
   open,
   onToggle,
@@ -255,6 +265,8 @@ function BoardRow({
   name: string;
   isYou: boolean;
   showRank: boolean;
+  /** #2712: a league round played alone has no leader's gold. */
+  leagueAlone: boolean;
   /** The live link's `?folg=` for this row (#2286). */
   followHref?: string;
   open: boolean;
@@ -263,7 +275,7 @@ function BoardRow({
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
   const tf = useTranslations('spectate.follow');
-  const leader = isBoardLeader(row);
+  const leader = !leagueAlone && isBoardLeader(row);
   // Klubbhus-natt: primary-soft sits one step from the surface, so the
   // viewer's row also gets a sage hairline there.
   const fill = isYou ? 'bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/60' : 'bg-surface';
@@ -397,12 +409,15 @@ function Strip({
   unit,
   rows,
   displayName,
+  leagueAlone,
 }: {
   strip: LiveBoardStripAction;
   standing: ViewerStanding;
   unit: LiveBoardUnit;
   rows: LiveBoardRow[];
   displayName: (row: LiveBoardRow) => string;
+  /** #2712: a league round played alone says the score, not a place. */
+  leagueAlone: boolean;
 }) {
   const t = useTranslations('leaderboard.board');
   const place = standing.tied
@@ -424,7 +439,7 @@ function Strip({
             {t('stripKicker')}
           </p>
           <p className="mt-0.5 truncate font-serif text-[18px] font-medium tabular-nums text-text">
-            {[place, behind].filter(Boolean).join(' · ')}
+            {leagueAlone ? totalSr(t, unit, standing.total) : [place, behind].filter(Boolean).join(' · ')}
           </p>
         </div>
         {strip.kind !== 'none' && (

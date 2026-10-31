@@ -43,3 +43,17 @@ describe('TvBoard', () => {
     expect(screen.getByTestId('tv-paging')).toHaveTextContent('Side 2 av 3');
   });
 });
+
+// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
+// played alone has no place on the big screen either.
+describe('TvBoard — a league round played alone (#2712)', () => {
+  it('no medallion for the one player, and one outside a league keeps it', () => {
+    const { unmount } = render(
+      <TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 1), leagueAlone: true }} />,
+    );
+    expect(screen.queryByTestId('tv-medallion')).toBeNull();
+    unmount();
+    render(<TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 1) }} />);
+    expect(screen.getByTestId('tv-medallion')).toHaveTextContent('1');
+  });
+});

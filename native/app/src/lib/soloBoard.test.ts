@@ -251,3 +251,27 @@ describe('soloBoardFor — ligarunde spilt alene (#2712)', () => {
     expect(model.strip?.text).toBe('1. plass');
   });
 });
+
+// #2712 (orkestratoren 31.10, etter eierens regel): under runden har en
+// ligarunde spilt alene heller ingen plass; stripa sier poengene.
+describe('soloBoardFor — live, ligarunde spilt alene (#2712)', () => {
+  const live = (leagueRoundId: string | null) =>
+    soloBoardFor({
+      bundle: homeBundle({ game: { leagueRoundId }, players: [players[1]] }),
+      scores: holeScores('g-live', ME, 7, 4),
+      userId: ME,
+    })!;
+
+  it('ingen plass, ingen ledergull, og stripa sier poengene', () => {
+    const model = live('round-1');
+    expect(model.rows.map((r) => [r.userId, r.place, r.leader, r.total])).toEqual([[ME, '–', false, '14']]);
+    expect(model.rows[0].a11y).not.toMatch(/plass/);
+    expect(model.strip?.text).toBe('14 poeng');
+  });
+
+  it('samme runde utenfor en liga viser plassen', () => {
+    const model = live(null);
+    expect(model.rows[0]).toMatchObject({ place: '1', leader: true });
+    expect(model.strip?.text).toBe('1. plass');
+  });
+});

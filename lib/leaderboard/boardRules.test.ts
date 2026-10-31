@@ -4,6 +4,7 @@ import { boardRow as row } from '@/lib/leaderboard/__fixtures__/boardRow';
 import {
   COLLAPSED_ROWS,
   boardRowSrParts,
+  boardShowsPlace,
   isBoardLeader,
   placeKind,
   sentenceName,
@@ -154,5 +155,16 @@ describe('totalLabel — the board’s number (#2625)', () => {
     ['pointsToPar', null, '—'],
   ] as const)('%s %s → %s', (unit, total, expected) => {
     expect(totalLabel(unit, total)).toBe(expected);
+  });
+});
+
+// #2712: the rank column, the leader's gold and the strip's place, per board.
+describe('boardShowsPlace (#2712)', () => {
+  it('a board shows places once a hole is played', () => {
+    expect(boardShowsPlace({ holesPlayed: 3 })).toBe(true);
+    expect(boardShowsPlace({ holesPlayed: 0 })).toBe(false);
+  });
+  it('a league round played alone never does', () => {
+    expect(boardShowsPlace({ holesPlayed: 3, leagueAlone: true })).toBe(false);
   });
 });

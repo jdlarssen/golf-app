@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { LiveBoard, LiveBoardRow, LiveBoardUnit } from '@/lib/leaderboard/liveBoard';
 import { TV_PAGE_MS, tvPageCount, tvPageRows } from '@/lib/leaderboard/tvBoard';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
-import { boardShowsRank, isBoardLeader, totalLabel } from '@/lib/leaderboard/boardRules';
+import { boardShowsPlace, isBoardLeader, totalLabel } from '@/lib/leaderboard/boardRules';
 import {
   boardDisplayName,
   boardRowSr,
@@ -48,7 +48,8 @@ export function TvBoard({ board }: { board: LiveBoard }) {
 
   if (rows.length === 0) return <TvMessage>{tc('noPlayersToShow')}</TvMessage>;
 
-  const showRank = boardShowsRank(board.holesPlayed);
+  // #2712: a league round played alone shows no place and no medallion.
+  const showRank = boardShowsPlace(board);
   const players = t('players', { count: rows.length });
 
   return (

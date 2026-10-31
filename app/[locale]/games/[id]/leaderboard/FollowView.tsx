@@ -26,7 +26,7 @@ import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import type { UnderParMoment } from '@/lib/stats/achievements';
 import {
-  boardShowsRank,
+  boardShowsPlace,
   isBoardLeader,
   totalLabel,
   visibleBoardRows,
@@ -85,8 +85,9 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
 
   const { row, standing, lead, next, moment, others } = view;
   const { unit } = board;
-  const showRank = boardShowsRank(board.holesPlayed);
-  const leader = isBoardLeader(row);
+  // #2712: a league round played alone shows no place and no leader's gold.
+  const showRank = boardShowsPlace(board);
+  const leader = !board.leagueAlone && isBoardLeader(row);
   const displayName = (r: LiveBoardRow) => boardDisplayName(r, tc);
   const name = displayName(row);
 

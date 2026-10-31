@@ -26,6 +26,7 @@ import type {
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import type { HoleSegment } from '@/lib/scoring/holeSegment';
 import { resolveActiveCardState } from '@/lib/games/activeCardState';
+import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
 import { nextUnfilledHole, playOrder } from '@/lib/games/nextHole';
 import type { StartType } from '@/lib/games/startType';
 import type { GameStatus } from '@/lib/games/status';
@@ -93,6 +94,12 @@ export type LiveBoard = {
   holesPlayed: number;
   /** In the engine's order — the board never sorts on its own. */
   rows: LiveBoardRow[];
+  /**
+   * #2712 (orchestrator 31.10, after the owner's rule): a league round played
+   * alone has no place. Every view reads `boardShowsPlace`: no rank, no
+   * leader's gold, and the strip says the score instead of «1. plass».
+   */
+  leagueAlone?: boolean;
 };
 
 export type LiveBoardPlayerRow = StablefordContextPlayerRow;
@@ -108,6 +115,8 @@ export type LiveBoardGame = {
    */
   hole_segment?: HoleSegment;
   start_type?: StartType;
+  /** #2712: a league flight; played alone it shows no place (`LiveBoard.leagueAlone`). */
+  league_round_id?: string | null;
 };
 
 type SoloResult = StablefordSoloResult | SoloStrokeplayResult;
@@ -254,6 +263,7 @@ export function computeLiveBoard(opts: {
     unit,
     holesPlayed: maxHolesPlayed(scoresRows.filter((s) => activeIds.has(s.user_id))),
     rows,
+    leagueAlone: isLeagueFieldAlone(game.league_round_id != null, rows.length),
   };
 }
 
