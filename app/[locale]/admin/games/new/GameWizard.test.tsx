@@ -1722,6 +1722,10 @@ describe('GameWizard — #2457 innstillinger som rader og ark', () => {
     openSetting(/sideturnering og premier/i);
     expect(screen.getByRole('dialog', { name: 'Sideturnering og premier' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: /sideturnering/i })).toBeInTheDocument();
+    // The switch's text is the artboard's, with «nærmest pinnen» like the rest
+    // of the app (eier 31.10), and says nothing of when results show.
+    expect(screen.getByText('Poeng for lengste drive og nærmest pinnen.')).toBeInTheDocument();
+    expect(screen.queryByText(/vises etter at spillet er avsluttet/i)).toBeNull();
     expect(screen.queryByRole('switch', { name: /krev godkjenning/i })).toBeNull();
   });
 

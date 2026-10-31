@@ -1011,7 +1011,7 @@
         "visibilityLockedNote": "Kan ikke endres etter spill-start.",
         "sideTournamentLegend": "Sideturnering",
         "sideTournamentTitle": "Legg til sideturnering",
-        "sideTournamentDesc": "Poeng for lengste drive og nærmest flagget.",
+        "sideTournamentDesc": "Poeng for lengste drive og nærmest pinnen.",
         "sideLdLegend": "Lengste drive: antall hull",
         "sideCtpLegend": "Nærmest pinnen: antall hull",
         "sideLockedNote": "Kan ikke endres etter spill-start."
