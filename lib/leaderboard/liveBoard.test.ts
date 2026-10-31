@@ -38,6 +38,7 @@ function game(overrides: Partial<LiveBoardGame> = {}): LiveBoardGame {
     mode_config: STABLEFORD,
     status: 'active',
     score_visibility: 'live',
+    league_round_id: null,
     ...overrides,
   };
 }

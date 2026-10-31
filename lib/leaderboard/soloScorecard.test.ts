@@ -538,6 +538,14 @@ describe('a league round played alone (#2712)', () => {
     expect(card.front.holes[0].rows.map((r) => r.isBest)).toEqual([false]);
   });
 
+  it('a league flight of several keeps the leader, the nine leader and the ★', () => {
+    const card = soloStablefordScorecard(STABLEFORD, teeOf, { leagueFlight: true });
+    expect(card.leagueAlone).toBeFalsy();
+    expect(card.standings.map((s) => s.isLeader)).toEqual([true, false, false]);
+    expect(card.front.holes[0].rows.some((r) => r.isBest)).toBe(true);
+    expect(card.front.subtotals.some((s) => s.isLeader)).toBe(true);
+  });
+
   it('alone outside a league keeps the leader and the ★', () => {
     const card = soloStablefordScorecard(alone, teeOf);
     expect(card.leagueAlone).toBeFalsy();

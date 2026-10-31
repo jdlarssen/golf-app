@@ -197,7 +197,6 @@ export function LiveBoard({
                     name={displayName(item)}
                     isYou={item.userId === viewerUserId}
                     showRank={boardShowsPlace(board)}
-                    leagueAlone={board.leagueAlone === true}
                     followHref={followToken ? followHref(followToken, item.userId) : undefined}
                     open={openUserId === item.userId}
                     onToggle={() =>
@@ -255,7 +254,6 @@ function BoardRow({
   name,
   isYou,
   showRank,
-  leagueAlone,
   followHref,
   open,
   onToggle,
@@ -265,8 +263,6 @@ function BoardRow({
   name: string;
   isYou: boolean;
   showRank: boolean;
-  /** #2712: a league round played alone has no leader's gold. */
-  leagueAlone: boolean;
   /** The live link's `?folg=` for this row (#2286). */
   followHref?: string;
   open: boolean;
@@ -275,7 +271,8 @@ function BoardRow({
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
   const tf = useTranslations('spectate.follow');
-  const leader = !leagueAlone && isBoardLeader(row);
+  // #2712: no leader's gold where the board shows no place (`boardShowsPlace`).
+  const leader = showRank && isBoardLeader(row);
   // Klubbhus-natt: primary-soft sits one step from the surface, so the
   // viewer's row also gets a sage hairline there.
   const fill = isYou ? 'bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/60' : 'bg-surface';

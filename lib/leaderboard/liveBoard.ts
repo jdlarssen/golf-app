@@ -115,8 +115,12 @@ export type LiveBoardGame = {
    */
   hole_segment?: HoleSegment;
   start_type?: StartType;
-  /** #2712: a league flight; played alone it shows no place (`LiveBoard.leagueAlone`). */
-  league_round_id?: string | null;
+  /**
+   * #2712: a league flight; played alone it shows no place
+   * (`LiveBoard.leagueAlone`). Required so a caller can't forget it; a game
+   * outside a league passes null.
+   */
+  league_round_id: string | null;
 };
 
 type SoloResult = StablefordSoloResult | SoloStrokeplayResult;
