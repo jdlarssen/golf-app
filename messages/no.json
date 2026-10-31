@@ -6378,6 +6378,7 @@
   "finishedCard": {
     "result": {
       "youWon": "Du vant",
+      "approved": "Godkjent",
       "teamWon": "Laget vant",
       "placement": "{rank}. plass av {fieldSize}",
       "teamPlacement": "Laget ble nr {rank} av {fieldSize}",

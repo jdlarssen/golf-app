@@ -330,6 +330,8 @@ export function ticketStub(opts: {
   submittedAt: string | null;
   approvedAt: string | null;
   requirePeerApproval: boolean;
+  /** #2712: spillet er en ligaflight (spilt alene står det «Godkjent», ikke «Du vant»). */
+  leagueFlight?: boolean;
 }): TicketStub {
   const { me, status } = opts;
   if (opts.gate !== null) return { kind: 'gated', reason: opts.gate };
@@ -343,7 +345,7 @@ export function ticketStub(opts: {
   if (status === 'finished') {
     const summary = me.resultSummary ?? null;
     if (!summary) return { kind: 'finished', result: null };
-    const badge = finishedResultBadge(summary);
+    const badge = finishedResultBadge(summary, { leagueFlight: opts.leagueFlight ?? false });
     const text = finishedResultText(badge);
     return { kind: 'finished', result: text ? { text, isWin: badge.isWin } : null };
   }

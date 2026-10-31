@@ -111,6 +111,7 @@ export function homeCard(overrides: Partial<HomeCard> & { gameId: string }): Hom
     endedAt: null,
     resultSummary: null,
     flightNumber: null,
+    leagueRoundId: null,
     ...overrides,
   };
 }

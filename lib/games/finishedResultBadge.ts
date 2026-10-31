@@ -17,7 +17,20 @@ export interface FinishedResultBadge {
   isWin: boolean;
 }
 
-export function finishedResultBadge(summary: ResultSummary): FinishedResultBadge {
+export function finishedResultBadge(
+  summary: ResultSummary,
+  opts: {
+    /**
+     * #2712 (owner 31.10): the game is a league flight. Played alone, it has no
+     * placement («Du vant» of one); it finishes when the marker approves, so
+     * the card says «Godkjent». A flight of several keeps its placement.
+     */
+    leagueFlight?: boolean;
+  } = {},
+): FinishedResultBadge {
+  if (opts.leagueFlight && summary.kind === 'placement' && summary.fieldSize <= 1) {
+    return { key: 'result.approved', isWin: false };
+  }
   switch (summary.kind) {
     case 'placement': {
       if (summary.rank === 1) {

@@ -41,9 +41,12 @@ export function LastRoundCard({
   onPress: () => void;
 }) {
   const { colors, scheme } = useTheme();
-  const badge = card.resultSummary ? finishedResultBadge(card.resultSummary) : null;
+  const badge = card.resultSummary
+    ? finishedResultBadge(card.resultSummary, { leagueFlight: card.leagueRoundId != null })
+    : null;
   const win = badge?.isWin ?? false;
-  const rank = win ? 1 : medalRank(card);
+  // #2712: «Godkjent» er ingen plass, så medaljongen står uten tall.
+  const rank = win ? 1 : badge?.key === 'result.approved' ? null : medalRank(card);
   const own = score && score.gameId === card.gameId ? score : null;
 
   const parts = [
