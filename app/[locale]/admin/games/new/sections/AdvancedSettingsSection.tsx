@@ -162,6 +162,7 @@ export function AdvancedSettingsSection({
             <FormSection
               variant="list"
               legend={tBasics('sideTournamentLegend')}
+              legendHidden={part === 'sideAndPrizes'}
               data-testid="side-tournament-section"
             >
               <SwitchRow
