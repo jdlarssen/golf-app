@@ -570,6 +570,43 @@ function parseSoloPlayers(
 }
 
 /**
+ * Leser spillerne til lag-formatene der flight = lag (Texas, Ambrose,
+ * Florida, shamble og patsome) fra `player_${i}_id`/`player_${i}_team`-slots
+ * 0..`MAX_TEAM_FORMAT_PLAYERS`. Løkka leser én plass over taket (#2009), så
+ * call-site kan avvise spiller nummer 41 i stedet for å miste den stille.
+ * flight_number = team_number oppfyller DB-CHECK
+ * `game_players_team_flight_consistency` (begge satt sammen). Søsteren til
+ * `parseSoloPlayers`; de fem løkkene var byte-identiske (#2673).
+ *
+ * Returnerer `{ ok: true, players }` eller første feil: `duplicate_player`,
+ * eller `bad_team` når lagnummeret ikke er et positivt heltall (ingen øvre
+ * grense — klubb-turneringer kan ha mange lag). Call-site eier publish-,
+ * tak- og lagbalanse-sjekkene.
+ */
+export function parseTeamSlotPlayers(
+  formData: FormData,
+):
+  | { ok: true; players: GamePlayerInput[] }
+  | { ok: false; errorCode: 'duplicate_player' | 'bad_team' } {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+  return { ok: true, players };
+}
+
+/**
  * Sjekker at hvert ikke-tomt lag har en lovlig størrelse (`allowed`), og at
  * minst ett lag er fullt (`teamSize`). Returnerer `'team_balance'` ellers.
  * Delt helper for lag-formatene som teller per team_number: best-ball,
@@ -1036,23 +1073,11 @@ function validateTexasScramble(
     return { ok: false, errorCode: 'bad_min_tee_shots' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    if (!Number.isInteger(team_number) || team_number < 1) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // Texas-spillere speiler par-stableford og matchplay: flight = team for
-    // å oppfylle DB-CHECK game_players_team_flight_consistency (begge satt).
-    players.push({ user_id, team_number, flight_number: team_number });
+  const playersResult = parseTeamSlotPlayers(formData);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length === 0) {
@@ -1168,23 +1193,11 @@ function validateAmbrose(
     return { ok: false, errorCode: 'bad_min_tee_shots' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    if (!Number.isInteger(team_number) || team_number < 1) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // Ambrose speiler Texas: flight = team for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt).
-    players.push({ user_id, team_number, flight_number: team_number });
+  const playersResult = parseTeamSlotPlayers(formData);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length === 0) {
@@ -1294,23 +1307,11 @@ function validateFloridaScramble(
     return { ok: false, errorCode: 'bad_min_tee_shots' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    if (!Number.isInteger(team_number) || team_number < 1) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // Florida speiler Texas: flight = team for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt).
-    players.push({ user_id, team_number, flight_number: team_number });
+  const playersResult = parseTeamSlotPlayers(formData);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length === 0) {
@@ -2188,22 +2189,11 @@ function validateShamble(
   const scoring = parseScoringToggle(formData, 'shamble_scoring');
   const count = parseShambleCount(formData, variant);
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    if (!Number.isInteger(team_number) || team_number < 1) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // Flight = team (DB-CHECK game_players_team_flight_consistency), som Texas.
-    players.push({ user_id, team_number, flight_number: team_number });
+  const playersResult = parseTeamSlotPlayers(formData);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length === 0) {
@@ -2269,23 +2259,11 @@ function validatePatsome(
 ): ModeValidationResult {
   const patsomeScoring = parseScoringToggle(formData, 'patsome_scoring');
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    const team_number = Number(formData.get(`player_${i}_team`));
-    if (!Number.isInteger(team_number) || team_number < 1) {
-      return { ok: false, errorCode: 'bad_team' };
-    }
-    // Patsome-spillere speiler Texas/par-stableford/matchplay: flight = team
-    // for å oppfylle DB-CHECK game_players_team_flight_consistency (begge satt).
-    players.push({ user_id, team_number, flight_number: team_number });
+  const playersResult = parseTeamSlotPlayers(formData);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     if (players.length < 4) {
