@@ -101,6 +101,8 @@ export type KavalkadeGame = {
   /** Effektiv runde-dato (`effectiveDate`) — datoen kortene viser. */
   playedAt: Date | null;
   players: KavalkadePlayerRound[];
+  /** #2712: runden er en ligaflight (spilt alene: ingen seier). */
+  leagueFlight?: boolean;
 };
 
 export type KavalkadeInput = {
@@ -851,7 +853,9 @@ function buildGangFacts(games: KavalkadeGame[]): GangFacts {
         names.set(player.userId, player.name);
       }
       bump(played, player.userId, 1);
-      if (isWinningSummary(player.resultSummary)) bump(wins, player.userId, 1);
+      if (isWinningSummary(player.resultSummary, { leagueFlight: game.leagueFlight })) {
+        bump(wins, player.userId, 1);
+      }
 
       if (!ownBall) continue;
       const achievements = countRoundAchievements(player.holes);

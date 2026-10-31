@@ -23,6 +23,8 @@ export type ProfileSeasonRound = {
   completeBrutto: number | null;
   /** Spillerens lagrede utfall (`game_players.result_summary`), eller `null`. */
   resultSummary: ResultSummary | null;
+  /** #2712: runden er en ligaflight (spilt alene: ingen seier). */
+  leagueFlight?: boolean;
 };
 
 export type ProfileSeason = {
@@ -47,7 +49,9 @@ export function computeProfileSeason(
   ).find((season) => season.year === year);
 
   const wins = rounds.filter(
-    (round) => round.year === year && isWinningSummary(round.resultSummary),
+    (round) =>
+      round.year === year &&
+      isWinningSummary(round.resultSummary, { leagueFlight: round.leagueFlight }),
   ).length;
 
   return {

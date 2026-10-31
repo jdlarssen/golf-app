@@ -17,6 +17,15 @@ export interface FinishedResultBadge {
   isWin: boolean;
 }
 
+/**
+ * #2712 (owner 31.10): a league flight played alone has no placement and no
+ * win. One home for the rule: this badge («Godkjent» instead of «Du vant») and
+ * every win count (`isWinningSummary` in lib/stats/clubStats.ts) read it.
+ */
+export function isLeagueRoundAlone(summary: ResultSummary | null, leagueFlight: boolean): boolean {
+  return leagueFlight && summary?.kind === 'placement' && summary.fieldSize <= 1;
+}
+
 export function finishedResultBadge(
   summary: ResultSummary,
   opts: {
@@ -28,7 +37,7 @@ export function finishedResultBadge(
     leagueFlight?: boolean;
   } = {},
 ): FinishedResultBadge {
-  if (opts.leagueFlight && summary.kind === 'placement' && summary.fieldSize <= 1) {
+  if (isLeagueRoundAlone(summary, opts.leagueFlight ?? false)) {
     return { key: 'result.approved', isWin: false };
   }
   switch (summary.kind) {
