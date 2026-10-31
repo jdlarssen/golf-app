@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
+import { GuestBadge } from '@/components/ui/GuestBadge';
 import { firstName } from '@/lib/firstName';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { nameInitials } from '@/lib/names/initials';
@@ -19,6 +20,7 @@ type FlightRosterRow = {
     name: string | null;
     nickname: string | null;
     hcp_index: number | string | null;
+    is_guest: boolean;
   } | null;
 };
 
@@ -40,7 +42,7 @@ export async function FlightRoster({
   const query = supabase
     .from('game_players')
     .select(
-      'user_id, flight_number, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, flight_number, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index, is_guest)',
     )
     .eq('game_id', gameId)
     .order('user_id');
@@ -84,6 +86,7 @@ export async function FlightRoster({
       hcpIndex:
         row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
       acceptedAt: row.accepted_at,
+      isGuest: row.users?.is_guest === true,
     };
   });
 
@@ -134,6 +137,9 @@ export async function FlightRoster({
               </span>
             )}
           </span>
+          {/* #2607: a guest is marked as on «Styr spillere» (the drawing's
+              note on «Ta med en gjest»). Not on the leaderboard (#1009). */}
+          {p.isGuest && <GuestBadge className="shrink-0" />}
           {!p.pendingProfile && p.acceptedAt == null && !p.isCurrentUser && (
             <UnconfirmedBadge className="shrink-0" />
           )}
