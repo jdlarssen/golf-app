@@ -31,7 +31,7 @@ export function DiaryRow({
   const { colors } = useTheme();
   const date = round.date ? new Date(round.date) : null;
   const day = date ? formatDiaryDay(date) : null;
-  const result = diaryResult(round.resultSummary);
+  const result = diaryResult(round.resultSummary, { leagueFlight: round.leagueFlight });
 
   return (
     <Pressable

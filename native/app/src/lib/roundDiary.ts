@@ -84,10 +84,15 @@ export function medalForRank(rank: number): DiaryMedal | null {
  * samme vakt som `finishedResultBadge` («gull for 0 skins» gir ingen mening).
  * Matchplay skriver resultatet i ord («Du vant 3&2»). Uten utfall: ingenting.
  */
-export function diaryResult(summary: ResultSummary | null): DiaryResult | null {
+export function diaryResult(
+  summary: ResultSummary | null,
+  opts: { leagueFlight?: boolean } = {},
+): DiaryResult | null {
   if (summary == null) return null;
-  if (summary.kind === 'matchplay') {
-    const text = finishedResultText(finishedResultBadge(summary));
+  // #2712 (eieren 31.10): en ligaflight spilt alene har ingen plass, bare «Godkjent».
+  const badge = finishedResultBadge(summary, { leagueFlight: opts.leagueFlight ?? false });
+  if (summary.kind === 'matchplay' || badge.key === 'result.approved') {
+    const text = finishedResultText(badge);
     return text ? { kind: 'text', text } : null;
   }
   const earned = summary.kind === 'placement' || summary.skins > 0;
@@ -144,7 +149,7 @@ export function diarySubline(round: HistoryRound, points: number | null | undefi
  */
 export function diaryRowLabel(round: HistoryRound, points: number | null | undefined): string {
   const date = roundDate(round);
-  const result = diaryResult(round.resultSummary);
+  const result = diaryResult(round.resultSummary, { leagueFlight: round.leagueFlight });
   return [
     date ? formatWeekdayDayMonth(date) : null,
     round.name,
