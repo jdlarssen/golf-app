@@ -5,6 +5,7 @@ import {
   formatOsloDateTimeLocal,
   isTeeOffInPast,
   isDatetimeLocalInPast,
+  resolveTeeOffForSave,
   TEE_OFF_PAST_GRACE_MS,
 } from './gamePayload';
 
@@ -93,6 +94,97 @@ describe('isTeeOffInPast (#902)', () => {
 
   it('defaults nowMs to Date.now() — a far-past tee-off is in the past', () => {
     expect(isTeeOffInPast('2000-01-01T00:00:00.000Z')).toBe(true);
+  });
+});
+
+describe('resolveTeeOffForSave (#2463)', () => {
+  // Tue 23 Jun 2026 12:00Z = 14:00 in Oslo (summer time). The wall-clock
+  // values below are Oslo, as the form posts them.
+  const NOW = new Date('2026-06-23T12:00:00.000Z').getTime();
+  const resolve = (
+    raw: string,
+    now: boolean,
+    mode: 'draft' | 'publish' | 'update_scheduled',
+  ) => resolveTeeOffForSave({ raw, now, mode, nowMs: NOW });
+
+  it('«Nå» on publish is the moment the server publishes, with no past check', () => {
+    expect(resolve('', true, 'publish')).toEqual({ ok: true, iso: '2026-06-23T12:00:00.000Z' });
+    // A stale value in the field never wins over «Nå».
+    expect(resolve('2026-06-23T09:00', true, 'publish')).toEqual({
+      ok: true,
+      iso: '2026-06-23T12:00:00.000Z',
+    });
+  });
+
+  it('«Nå» in a draft saves no tee-off', () => {
+    expect(resolve('', true, 'draft')).toEqual({ ok: true, iso: null });
+    expect(resolve('2026-06-24T09:00', true, 'draft')).toEqual({ ok: true, iso: null });
+  });
+
+  it('«Nå» on a scheduled game is refused: the choice is not offered there', () => {
+    expect(resolve('', true, 'update_scheduled')).toEqual({ ok: false, error: 'tee_off_required' });
+    expect(resolve('2026-06-24T09:00', true, 'update_scheduled')).toEqual({
+      ok: false,
+      error: 'tee_off_required',
+    });
+  });
+
+  it.each([
+    ['publish', { ok: false, error: 'tee_off_required' }],
+    ['update_scheduled', { ok: false, error: 'tee_off_required' }],
+    ['draft', { ok: true, iso: null }],
+  ] as const)('an empty tee-off on %s', (mode, expected) => {
+    expect(resolve('', false, mode)).toEqual(expected);
+    expect(resolve('   ', false, mode)).toEqual(expected);
+  });
+
+  it.each([
+    ['publish', { ok: false, error: 'tee_off_required' }],
+    ['update_scheduled', { ok: false, error: 'tee_off_required' }],
+    ['draft', { ok: true, iso: null }],
+  ] as const)('a malformed tee-off on %s', (mode, expected) => {
+    expect(resolve('not-a-time', false, mode)).toEqual(expected);
+  });
+
+  it.each(['publish', 'update_scheduled', 'draft'] as const)(
+    'a future tee-off on %s is the Oslo wall clock as UTC',
+    (mode) => {
+      expect(resolve(' 2026-06-24T09:00 ', false, mode)).toEqual({
+        ok: true,
+        iso: '2026-06-24T07:00:00.000Z',
+      });
+    },
+  );
+
+  it('the five-minute grace still holds for a chosen time', () => {
+    // 13:55 Oslo is exactly five minutes ago: allowed.
+    expect(resolve('2026-06-23T13:55', false, 'publish')).toEqual({
+      ok: true,
+      iso: '2026-06-23T11:55:00.000Z',
+    });
+    // 13:54 is six minutes ago: refused on publish and on a scheduled game.
+    expect(resolve('2026-06-23T13:54', false, 'publish')).toEqual({
+      ok: false,
+      error: 'tee_off_in_past',
+    });
+    expect(resolve('2026-06-23T13:54', false, 'update_scheduled')).toEqual({
+      ok: false,
+      error: 'tee_off_in_past',
+    });
+    // A draft is not live, so it keeps a past time until it is published.
+    expect(resolve('2026-06-23T13:54', false, 'draft')).toEqual({
+      ok: true,
+      iso: '2026-06-23T11:54:00.000Z',
+    });
+  });
+
+  it('defaults nowMs to the clock', () => {
+    const before = Date.now();
+    const res = resolveTeeOffForSave({ raw: '', now: true, mode: 'publish' });
+    expect(res.ok).toBe(true);
+    const at = res.ok && res.iso ? Date.parse(res.iso) : Number.NaN;
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
   });
 });
 

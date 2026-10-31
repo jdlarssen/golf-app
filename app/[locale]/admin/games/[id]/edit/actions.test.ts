@@ -1046,6 +1046,69 @@ describe('invite-notify når et utkast publiseres (#2445)', () => {
   });
 });
 
+describe('tee-off «Nå» (#2463)', () => {
+  const insertU4toU7 = {
+    data: [4, 5, 6, 7].map((i) => ({ user_id: `u${i}` })),
+    error: null,
+  };
+  function gamesUpdateTeeOff() {
+    const update = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    return (update?.args[0] as { scheduled_tee_off_at: string | null }).scheduled_tee_off_at;
+  }
+
+  it('publishing a draft with «Nå» writes the moment of publishing', async () => {
+    supabaseMock = draftPublishMock([{ data: { is_admin: true }, error: null }], [insertU4toU7]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    const before = Date.now();
+    await expect(
+      publishFromDraftAction(
+        'game-1',
+        fullBestBallFormData({ tee_off_now: '1', scheduled_tee_off_at: '' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const at = Date.parse(gamesUpdateTeeOff() ?? '');
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
+    expect(lastRedirect()).toBe('/games/game-1/klar');
+  });
+
+  it('saving a draft with «Nå» keeps no tee-off', async () => {
+    supabaseMock = draftPublishMock([{ data: { is_admin: true }, error: null }], [insertU4toU7]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(
+      saveDraftAction('game-1', fullBestBallFormData({ tee_off_now: '1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(gamesUpdateTeeOff()).toBeNull();
+  });
+
+  it('a posted «Nå» on a scheduled game is refused before anything is written', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole: users.select
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // existing
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData({ tee_off_now: '1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=tee_off_required');
+    const writes = supabaseMock.__fromCalls.filter((c) =>
+      ['update', 'insert', 'delete'].includes(c.method),
+    );
+    expect(writes).toHaveLength(0);
+  });
+});
+
 describe('saveDraftAction — mode-lock', () => {
   it('tillater mode-bytte når spillet fortsatt er draft', async () => {
     // Drafts er fortsatt under bygging — admin må fritt kunne veksle modus
