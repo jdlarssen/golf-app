@@ -1,13 +1,14 @@
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
   BaneIcon,
+  ChevronRightIcon,
   FlaggIcon,
   FormatsIcon,
+  KalenderIcon,
   KonvoluttIcon,
   LaurbaerIcon,
   PokalIcon,
   ScorekortIcon,
-  SparkleIcon,
 } from '@/components/icons';
 
 // ─── Tile grid (presentational) ────────────────────────────────────────────
@@ -22,7 +23,7 @@ export type TileIconKind =
   | 'konvolutt'
   | 'bane'
   | 'pokal'
-  | 'sparkle'
+  | 'kalender'
   | 'formats'
   | 'laurbaer'
   | 'spillformater';
@@ -101,17 +102,14 @@ export function DenseTileList({ tiles }: { tiles: Tile[] }) {
               </span>
             )}
           </span>
-          <span
-            aria-hidden
-            className="shrink-0 text-[15px]"
+          <ChevronRightIcon
+            className="shrink-0"
             style={{
               color: tile.accent
                 ? 'rgba(240, 237, 229, 0.75)'
                 : 'var(--text-muted)',
             }}
-          >
-            →
-          </span>
+          />
         </SmartLink>
       ))}
     </div>
@@ -152,7 +150,7 @@ export function CompactTileGrid({
           >
             <TileIcon kind={tile.icon} size={18} />
           </span>
-          <span className="font-serif text-sm font-medium tracking-[-0.005em]">
+          <span className="font-serif text-sm font-medium">
             {tile.label}
           </span>
         </SmartLink>
@@ -165,7 +163,7 @@ function TileIcon({ kind, size = 22 }: { kind: TileIconKind; size?: number }) {
   if (kind === 'flagg') return <FlaggIcon width={size} height={size} />;
   if (kind === 'konvolutt') return <KonvoluttIcon width={size} height={size} />;
   if (kind === 'bane') return <BaneIcon width={size} height={size} />;
-  if (kind === 'sparkle') return <SparkleIcon width={size} height={size} />;
+  if (kind === 'kalender') return <KalenderIcon width={size} height={size} />;
   if (kind === 'formats') return <FormatsIcon width={size} height={size} />;
   if (kind === 'laurbaer') return <LaurbaerIcon width={size} height={size} />;
   if (kind === 'spillformater') return <ScorekortIcon width={size} height={size} />;

@@ -33,7 +33,6 @@ import {
 import type { HeroModel } from '../../lib/homeHero';
 import { FONTS, fraunces, heroShadow, interLine, TAP, useTheme } from '../../theme';
 import { HoleRing } from '../icons/Icons';
-import { withSystemArrows } from '../SystemArrow';
 
 export interface HomeHeroCardProps {
   card: HomeCard;
@@ -124,7 +123,7 @@ export function HomeHeroCard({
           testID="home-hero-approvals"
         >
           <Text style={[ui.body, { color: colors.primary, fontFamily: FONTS.sansSemiBold }]}>
-            {withSystemArrows(approvalsLine(model.approvals), '600')}
+            {approvalsLine(model.approvals)}
           </Text>
         </Pressable>
       ) : null}
@@ -266,7 +265,7 @@ function PrimaryAction({
       testID="home-hero-cta"
     >
       <Text style={[styles.buttonText, { color: colors.surfaceStrong }]}>
-        {withSystemArrows(label, '600')}
+        {label}
       </Text>
     </Pressable>
   );

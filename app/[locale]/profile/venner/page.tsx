@@ -27,6 +27,7 @@ import {
 } from './actions';
 import { GetTheGangCard } from './VennerClient';
 import { friendLinkPath } from '@/lib/friends/friendLinkPath';
+import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -348,10 +349,7 @@ export default async function VennerPage({
                     >
                       <Avatar initials={f.initials} className="bg-surface-strong text-bg-tint" />
                       <NameBlock name={displayName(f)} sub={friendSubline(f, sublineText)} />
-                      {/* Inter has no arrow; the artboard falls back to the system font. */}
-                      <span aria-hidden className="font-[system-ui] text-primary">
-                        →
-                      </span>
+                      <ChevronRightIcon className="shrink-0 text-primary" />
                       <span className="sr-only">{t('removeRowA11y', { name: displayName(f) })}</span>
                     </SmartLink>
                   </li>

@@ -6,7 +6,7 @@ import { SmartLink } from './SmartLink';
  * that hits 44×44 via `.tap-extend` (#2240), consistently rendered top-left
  * across every page. Children are used
  * only as the `aria-label` so callers can still pass meaningful text
- * for screen readers (e.g. "Tilbake til hjem", "← Hjem") without it
+ * for screen readers (e.g. "Tilbake til hjem", "Hjem") without it
  * showing visually. Falls back to "Tilbake" if no string was passed.
  *
  * Visual style follows the leaderboard's back arrow — Jørgen's chosen

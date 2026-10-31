@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
 import type { InboxEntryView } from '@/lib/notifications/inboxSections';
 import { InboxAvatarDisc } from './InitialsStack';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * A row under I DAG or TIDLIGERE (#2263): disc, title, subtitle and, when the
@@ -112,9 +113,7 @@ export function InboxRow({
       >
         {disc}
         {text()}
-        <span aria-hidden className="shrink-0 font-[system-ui] text-[18px] leading-[normal] text-primary">
-          →
-        </span>
+        <ChevronRightIcon className="shrink-0 text-primary" />
       </Link>
     );
   }

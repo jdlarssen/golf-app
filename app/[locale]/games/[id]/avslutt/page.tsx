@@ -272,21 +272,21 @@ export default async function CreatorAvsluttPage({
         {anyCanApprove ? (
           <Link
             href={`${detailPath}/spillere#leverte-scorekort`}
-            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
           >
             {t('approveOverrideCta')}
           </Link>
         ) : (
           <Link
             href={`${detailPath}/spillere`}
-            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
           >
             {t('ownCardCta')}
           </Link>
         )}
         <Link
           href={detailPath}
-          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
         >
           {t('backToGame')}
         </Link>
@@ -341,7 +341,7 @@ export default async function CreatorAvsluttPage({
         </form>
         <Link
           href={detailPath}
-          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
         >
           {t('cancelButton')}
         </Link>
@@ -366,7 +366,7 @@ export default async function CreatorAvsluttPage({
         </form>
         <Link
           href={detailPath}
-          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
         >
           {t('cancelButton')}
         </Link>

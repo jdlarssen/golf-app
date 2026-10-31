@@ -1265,7 +1265,7 @@
         "flights": "{count, plural, one {# flight} other {# flights}}",
         "prizes": "{count, plural, one {# prize} other {# prizes}}",
         "unassignedFlights": "{count} without a flight",
-        "startlistLink": "Set the flights on the start list →",
+        "startlistLink": "Set the flights on the start list",
         "notSet": "Not set",
         "footnote": "Each part opens on its own and saves right away. Players see the changes the next time they open the app.",
         "delete": "Cancel the round …",
@@ -1390,7 +1390,7 @@
     },
     "stepCounter": "Step {step} of {total}",
     "back": "Back",
-    "savedAsDraft": "✓ Saved as draft",
+    "savedAsDraft": "Saved as draft",
     "stepSubText": {
       "step4BestBall": "Select an even number of players, then assign teams and flights",
       "step4Matchplay": "Select 2 players and put one on each side",
@@ -1591,7 +1591,7 @@
     "closeButton": "Close",
     "listMetaTitle": "Game formats",
     "listMetaDescription": "Rules and scoring for 20+ golf game formats: scramble, stableford, match play, wolf, skins and more. With examples and net handicaps.",
-    "listBackLabel": "← Home",
+    "listBackLabel": "Home",
     "listKicker": "Game formats",
     "listPageSubtitle": "Tap a format to see how it works. You'll know what you're in for, no matter what gets set up.",
     "helper": {
@@ -1611,7 +1611,7 @@
       "rulesAriaLabel": "Rules for {name}",
       "notEveryCount": "Doesn't work with every count. The wizard checks once you've counted heads.",
       "noTeamFormat": "No team format works with 3 players.",
-      "seeAll": "Or see all {count, number} formats →",
+      "seeAll": "Or see all {count, number} formats",
       "allHeading": "All formats",
       "perTeam": "{size} per team",
       "why": {
@@ -1626,7 +1626,7 @@
         "bingo_bango_bongo": "Points for first on the green, closest to the pin and first in the hole. Even a beginner can score on every hole."
       }
     },
-    "detailBackLabel": "← All game formats",
+    "detailBackLabel": "All game formats",
     "detailKicker": "Game format",
     "detailFallbackMeta": "Game format",
     "detailHowItWorks": "How it works",
@@ -1639,7 +1639,7 @@
     "detailCtaButtonLaunched": "Get the app",
     "cardShowRules": "Show rules",
     "cardHideRules": "Hide rules",
-    "cardReadMore": "Read more →",
+    "cardReadMore": "Read more",
     "sectionSolo": "Solo and stableford",
     "sectionLag": "Team and scramble",
     "sectionMatchplay": "Matchplay",
@@ -2228,7 +2228,7 @@
   },
   "game": {
     "home": {
-      "backHome": "← Home",
+      "backHome": "Home",
       "streakGrewTitle": "{count} weeks in a row",
       "streakGrewBody": "Another week in the bag. Your streak is growing.",
       "profileGate": {
@@ -2267,7 +2267,7 @@
       "rejectionBannerSuffix": "». Edit your holes and resubmit.",
       "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",
       "pendingApprovals": "{count, plural, one {1 player is waiting for your approval} other {# players are waiting for your approval}}",
-      "reviewLink": "Review →",
+      "reviewLink": "Review",
       "tournamentKicker": "Tournament",
       "teeInfo": "Tee: {teeName}",
       "infoLabel": "Your info",
@@ -2289,7 +2289,7 @@
       "withdrawnByOrganiserBody": "Your scores don't count in the standings. If this is a mistake, talk to the organiser.",
       "undoWithdraw": "Undo",
       "undoWithdrawPending": "Undoing …",
-      "leaderboardButton": "View leaderboard →",
+      "leaderboardButton": "View leaderboard",
       "revansjeButton": "Rematch?",
       "hullForHull": "Hole by hole",
       "leaderboard": "Leaderboard",
@@ -2313,14 +2313,14 @@
       "moveGameLink": "Move the round",
       "deleteGameLink": "Delete game",
       "cancelRoundLink": "Cancel the round",
-      "ctaStartRound": "Start round →",
-      "ctaContinueRound": "Continue round →",
-      "ctaReviewAndSubmit": "Review and submit →",
+      "ctaStartRound": "Start round",
+      "ctaContinueRound": "Continue round",
+      "ctaReviewAndSubmit": "Review and submit",
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
       "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
       "ctaDeliverFlight": "{count, plural, one {Submit the card you kept} other {Submit the cards you kept ({count})}}",
-      "ctaContinueToSibling": "Continue to hole {hole} · {format} →",
+      "ctaContinueToSibling": "Continue to hole {hole} · {format}",
       "draftTeamsLabel": "Teams",
       "draftSidesLabel": "Sides",
       "draftTeeOffLabel": "Tee-off",
@@ -2413,7 +2413,7 @@
       "summaryHoles": "Holes played:",
       "missingHolesBanner": "{count, plural, one {1 hole is missing. If you submit now, it will be recorded as not played.} other {# holes are missing. If you submit now, they will be recorded as not played.}}",
       "wholeRoundNotice": "This delivery covers the whole round — both holes 1–9 and 10–18.",
-      "editButton": "← Edit",
+      "editButton": "Edit",
       "submitButton": "Submit",
       "submitPending": "Submitting …",
       "syncingPending": "Saving strokes …",
@@ -2691,7 +2691,7 @@
         "invite_sent": "Invitation sent.",
         "invite_held": "Invitation saved. The email goes out when you publish the game.",
         "player_removed": "Player removed.",
-        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count} players.",
+        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count, plural, one {# player} other {# players}}.",
         "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
         "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. {missing, plural, one {Move a player there} other {Move # players there}} before the round can start.",
         "player_withdrawn": "Player withdrawn from game.",
@@ -2823,8 +2823,8 @@
     "parGenderLadies": "Ladies: {par}",
     "parGenderJuniors": "Juniors: {par}",
     "backLabel": "Back to {name}",
-    "backToGame": "Back to game →",
-    "backToHole": "Back to hole {hole} →",
+    "backToGame": "Back to game",
+    "backToHole": "Back to hole {hole}",
     "toGameOverview": "Game overview",
     "withdrawnNotice": "You have withdrawn. Your strokes stay on the card but don't count in the standings."
   },
@@ -2905,7 +2905,7 @@
       "buttonAriaLabelPoints": "Set {strokes} for {name}: {term}, {points, plural, one {# point} other {# points}}",
       "other": "Other",
       "otherAriaLabel": "Pick another score for {name}",
-      "skip": "Next: {name} →",
+      "skip": "Next: {name}",
       "skipAriaLabel": "Skip, go to {name}",
       "nextAnnouncement": "Next: {name}",
       "allScored": "Everyone has a score on this hole. Tap a name to correct it.",
@@ -2930,12 +2930,12 @@
       "fieldLabel": "Putts"
     },
     "puttsChips": {
-      "chipAriaLabel": "{count} putts on {name}",
+      "chipAriaLabel": "{count, plural, one {# putt} other {# putts}} on {name}",
       "plusLabel": "5+",
       "plusAriaLabel": "Five or more putts on {name}",
       "decreaseAriaLabel": "Fewer putts on {name}",
       "increaseAriaLabel": "More putts on {name}",
-      "valueAriaLabel": "{count} putts"
+      "valueAriaLabel": "{count, plural, one {# putt} other {# putts}}"
     },
     "sync": {
       "sending": "Sending…",
@@ -3374,8 +3374,8 @@
       "behindStrokes": "{gap, plural, one {# stroke} other {# strokes}} behind {name}",
       "behindPointsLead": "{gap, plural, one {# point} other {# points}} behind the lead",
       "behindStrokesLead": "{gap, plural, one {# stroke} other {# strokes}} behind the lead",
-      "stripHole": "Hole {hole} →",
-      "stripSubmit": "Submit scorecard →"
+      "stripHole": "Hole {hole}",
+      "stripSubmit": "Submit scorecard"
     },
     "soloStrokeplay": {
       "grossHolesRow": "{gross} gross · {holes} holes played",
@@ -3448,7 +3448,7 @@
       "subtitle": "Bingo Bango Bongo",
       "podiumSubtitle": "Bingo Bango Bongo · Points",
       "holesSubtitle": "Bingo Bango Bongo",
-      "feietChip": "★ Sweep",
+      "feietChip": "Sweep",
       "ingenPrestasjoner": "No achievements recorded yet.",
       "ikkeSatt": "not claimed",
       "firstOnGreen": "first on the green",
@@ -4220,7 +4220,7 @@
         "flight_updated": "Player's flight updated.",
         "team_suggested": "Teams set up and saved.",
         "team_updated": "Player's team updated.",
-        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count} players.",
+        "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count, plural, one {# player} other {# players}}.",
         "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
         "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. {missing, plural, one {Move a player there} other {Move # players there}} before the round can start.",
         "signups_closed": "Signups closed. New requests will be declined.",
@@ -4276,8 +4276,8 @@
         "allReadyBody": "All players have submitted{andApproved} their scorecards. The game can be ended — the leaderboard will be open to all participants.",
         "allReadyAndApproved": " and approved",
         "endingGame": "Ending…",
-        "forceEndButton": "End anyway →",
-        "leaderboardButton": "View leaderboard →",
+        "forceEndButton": "End anyway",
+        "leaderboardButton": "View leaderboard",
         "reopenSignupsButton": "Reopen signups",
         "closeSignupsButton": "Close signups",
         "gameFullBanner": "The game is full ({current} of {max}). Remove some players to invite more."
@@ -4326,7 +4326,7 @@
         "copyButton": "Copy link",
         "copiedButton": "Copied",
         "copyFailure": "Could not copy automatically. Select the link above and copy manually.",
-        "viewAllSignups": "View all signups →",
+        "viewAllSignups": "View all signups",
         "posterLink": "Print poster",
         "viewSignupsLink": "View signups"
       },
@@ -4334,7 +4334,7 @@
         "sectionLabel": "Payment",
         "feeLabel": "Entry fee",
         "paidLabel": "Paid",
-        "viewAll": "See payment status →",
+        "viewAll": "See payment status",
         "kicker": "Payment",
         "heading": "Who has paid?",
         "rosterLabel": "Players",
@@ -4363,7 +4363,7 @@
         "selectedStrip": "<b>{name} is selected.</b> Tap the flight {name} should join.",
         "cancel": "Cancel",
         "offline": "Moving players needs a connection",
-        "moveHere": "Move {name} here →",
+        "moveHere": "Move {name} here",
         "moveHereLabel": "Move {name} to flight {n}",
         "chipLabel": "{name}, HCP {hcp}",
         "unassignedShort": "{count} without a flight"
@@ -4377,8 +4377,8 @@
         "moveButton": "Move",
         "teamAriaLabel": "Team for {name}",
         "teamOptionN": "Team {n}",
-        "teamShortHandicap": "{count} players, handicap worked out for {count}",
-        "teamShortShamble": "{count} players, counts its best scores on each hole",
+        "teamShortHandicap": "{count, plural, one {# player} other {# players}}, handicap worked out for {count}",
+        "teamShortShamble": "{count, plural, one {# player} other {# players}}, counts its best scores on each hole",
         "teamTooFew": "Only {count, plural, one {# player} other {# players}}. {missing, plural, one {Move a player here} other {Move # players here}} before the round can start.",
         "teamTooMany": "{count} players, but teams are {size}. {extra, plural, one {Move a player out} other {Move # players out}} before the round can start."
       },
@@ -4605,7 +4605,7 @@
         "holeOfSegment": "<num>hole {hole}</num> · {position} of {count}",
         "holesPlayed": "<num>{played}</num> of {count} holes",
         "allSubmitted": "All handed in",
-        "viewStatus": "View player status →",
+        "viewStatus": "View player status",
         "endHint": "{total, plural, one {Opens when the player has handed in} other {Opens when all # have handed in}}",
         "endHintApproved": "{total, plural, one {Opens when the player has handed in and the card is approved} other {Opens when all # have handed in and the cards are approved}}"
       }
@@ -4909,7 +4909,7 @@
         "edit_failed": "Failed to save the change. Please try again in a moment."
       },
       "success": {
-        "published": "Update live for {count} users.",
+        "published": "Update live for {count, plural, one {# user} other {# users}}.",
         "edited": "Update saved — {count, plural, one {1 notification} other {# notifications}} corrected."
       },
       "publishSection": "Publish new update",
@@ -5361,7 +5361,7 @@
       },
       "infoRounds": "Rounds",
       "infoParticipants": "Participants",
-      "standingsLink": "View season standings →",
+      "standingsLink": "View season standings",
       "roundsHeading": "Rounds",
       "noRoundsYet": "No rounds generated. The league was created with a custom frequency, or the frequency produced no play windows within the season range.",
       "participantsHeading": "Participants",
@@ -5994,8 +5994,8 @@
       "matchesHeading": "Matches",
       "emptyRoster": "No players yet. The roster is built from the matches.",
       "emptyMatches": "No matches yet. Open «Assign & generate» above to set up the fixtures.",
-      "openCupPage": "Open cup page →",
-      "openResults": "View results page →",
+      "openCupPage": "Open cup page",
+      "openResults": "View results page",
       "matchesSummary": "First to {points} points · {finished} of {total} matches played",
       "mot": "vs",
       "unknownPlayer": "Unknown player",
@@ -6428,7 +6428,7 @@
     "teeOffSeparator": "at",
     "teamFlight": "Team {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Finished games",
-    "archiveBackHome": "← Home",
+    "archiveBackHome": "Home",
     "archiveKicker": "Game archive",
     "archiveTitle": "Finished games",
     "archiveSubtitle": "All your rounds, newest first.",
@@ -7075,7 +7075,7 @@
       "boardKicker": "The board",
       "followName": "Follow {name}",
       "seeWholeBoard": "See the whole board",
-      "cta": "Create your own tournament in a couple of minutes →"
+      "cta": "Create your own tournament in a couple of minutes"
     },
     "tv": {
       "metaTitle": "Big screen",
@@ -7476,7 +7476,7 @@
       "lineTeam": "{format}, teams of {size}, net",
       "cta": "Use this setup",
       "note": "You can change everything before you send the invitations.",
-      "rulesLink": "How {format} is played →"
+      "rulesLink": "How {format} is played"
     },
     "audiences": {
       "firmagolf": {

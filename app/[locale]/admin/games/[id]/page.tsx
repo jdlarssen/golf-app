@@ -1129,7 +1129,7 @@ async function buildSections({
                   className="flex flex-col gap-2.5 px-2 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium tracking-tight text-text">
+                    <p className="truncate text-sm font-medium text-text">
                       {displayName(p)}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
@@ -1200,7 +1200,7 @@ async function buildSections({
             allerede har tatt. */}
         <SmartLink
           href={`/admin/games/${gameId}/edit?step=5`}
-          className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+          className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
         >
           {tCta('draftEditButton')}
         </SmartLink>
@@ -1256,7 +1256,7 @@ async function buildSections({
           </p>
           <SmartLink
             href={`/admin/games/${gameId}/edit`}
-            className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+            className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
           >
             {tCta('scheduledEditButton')}
           </SmartLink>
@@ -1266,7 +1266,7 @@ async function buildSections({
             <SmartLink
               href={`/games/${gameId}/flytt`}
               data-testid="admin-move-link"
-              className="mt-2 block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+              className="mt-2 block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium text-text transition-colors hover:bg-primary-soft"
             >
               {tCta('scheduledMoveButton')}
             </SmartLink>
@@ -1281,7 +1281,7 @@ async function buildSections({
       <div className="space-y-3 px-3.5 pb-3.5 pt-3">
         <SmartLink
           href={`/games/${gameId}/leaderboard`}
-          className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+          className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
         >
           {tCta('leaderboardButton')}
         </SmartLink>
@@ -1290,10 +1290,9 @@ async function buildSections({
           <SmartLink
             href={`/games/${gameId}/premieutdeling`}
             data-testid="ceremony-entry"
-            className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-primary-soft"
           >
             {tCeremony('entryLink')}
-            <span aria-hidden>→</span>
           </SmartLink>
         )}
         <ReopenGameButton reopenAction={reopenGameAction} />

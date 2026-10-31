@@ -13,6 +13,7 @@ export {
   KonvoluttIcon,
   LaurbaerIcon,
   ReplayIcon,
-  SparkleIcon,
   FormatsIcon,
+  KalenderIcon,
+  ChevronRightIcon,
 } from './Icons';

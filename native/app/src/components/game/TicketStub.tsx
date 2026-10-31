@@ -22,7 +22,6 @@ import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy
 import { TICKET_TEXT, playedLine } from '../../lib/ticketCopy';
 import type { ScreenProps } from '../../navigation';
 import { FONTS, fraunces, useTheme } from '../../theme';
-import { withSystemArrows } from '../SystemArrow';
 import { WebLinkButton } from '../WebLinkButton';
 import { WaitingRoom } from './WaitingRoom';
 
@@ -124,7 +123,7 @@ export function TicketStub({
             onPress={() => onNavigate('Leaderboard', { gameId })}
             testID="ticket-board"
           >
-            <Text style={ui.buttonText}>{withSystemArrows(HOME_TEXT.board, '600')}</Text>
+            <Text style={ui.buttonText}>{HOME_TEXT.board}</Text>
           </Pressable>
         </View>
       );
@@ -235,7 +234,7 @@ function ActiveStub({
         onPress={onPress}
         testID="primary-cta"
       >
-        <Text style={ui.buttonText}>{withSystemArrows(label, '600')}</Text>
+        <Text style={ui.buttonText}>{label}</Text>
       </Pressable>
     </View>
   );

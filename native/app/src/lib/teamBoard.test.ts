@@ -160,7 +160,7 @@ describe('teamBoardFor — live scramble', () => {
       kicker: 'Laget ditt',
       place: '2. plass',
       detail: '3 slag bak Lag 2',
-      action: { kind: 'hole', holeNumber: 6, label: 'Hull 6 →' },
+      action: { kind: 'hole', holeNumber: 6, label: 'Hull 6' },
     });
   });
 
@@ -390,7 +390,7 @@ describe('teamBoardFor — finished scramble', () => {
       kicker: 'Laget ditt',
       place: '3. plass',
       detail: '6 slag bak Lag 2',
-      action: { kind: 'scorecard', label: 'Scorekortet →' },
+      action: { kind: 'scorecard', label: 'Scorekortet' },
     });
   });
 });

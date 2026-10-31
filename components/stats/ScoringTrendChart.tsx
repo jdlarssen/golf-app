@@ -204,7 +204,7 @@ function BoxRow({
   return (
     <div className={`flex items-stretch gap-2 ${className ?? ''}`}>
       <span
-        className={`flex w-4 shrink-0 items-center justify-center font-sans text-[11px] font-medium tracking-wide ${labelColor}`}
+        className={`flex w-4 shrink-0 items-center justify-center font-sans text-[11px] font-medium ${labelColor}`}
         style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
       >
         {label}

@@ -93,7 +93,7 @@ export function BetalingClient({
             type="button"
             onClick={purre}
             disabled={reminding}
-            className="min-h-[44px] w-full rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft disabled:opacity-60"
+            className="min-h-[44px] w-full rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium text-text transition-colors hover:bg-primary-soft disabled:opacity-60"
           >
             {t('remindButton', { count: unpaidCount })}
           </button>

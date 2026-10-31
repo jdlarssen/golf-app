@@ -19,7 +19,7 @@ export function SectionError({ testId = 'section-error' }: { testId?: string }) 
       data-testid={testId}
       className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/[0.08] px-4 py-3"
     >
-      <p className="text-sm font-medium tracking-tight text-danger">
+      <p className="text-sm font-medium text-danger">
         {t('sectionBody')}
       </p>
       <Button

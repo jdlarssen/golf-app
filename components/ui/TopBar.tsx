@@ -11,8 +11,8 @@ import { HistoryBackLink } from './HistoryBackLink';
  *   backdrop bleed reaches the screen edges.
  * - `-mt-8 pt-5` cancels AppShell's `py-8` top padding so the bar starts
  *   flush with the top of the `<main>` element.
- * - `bg-bg/90 backdrop-blur-sm` gives the blur-through-glass effect as
- *   content scrolls underneath.
+ * - Solid `bg-bg`, no glass: DESIGN.md has no glassmorphism, and the owner
+ *   removed the last blur-through bars on 2026-10-31 (#2732).
  * - `z-30` sits below SyncBanner's `z-40` so the error banner overlays cleanly.
  *
  * `back="history"` switches the chevron to a router.back()-based control
@@ -63,7 +63,7 @@ export function TopBar({
 }) {
   const Kicker = kickerIsPageTitle ? 'h1' : 'p';
   return (
-    <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
+    <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {backHref === undefined ? (
         <span aria-hidden className="-ml-2 h-8 w-8" />
       ) : back === 'history' ? (

@@ -56,7 +56,7 @@ export async function sendTeamInvitationMail(
     teamName: escapeHtml(teamName),
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
-    em: (c) => `<em>${c}</em>`,
+    em: (c) => `<span style="font-weight:600;">${c}</span>`,
   });
 
   const html = `<!DOCTYPE html><html lang="${loc}">

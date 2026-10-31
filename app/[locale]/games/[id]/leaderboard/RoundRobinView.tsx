@@ -278,7 +278,7 @@ function SegmentCard({
   return (
     <li className="list-none" data-testid={`round-robin-segment-card-${player.userId}`}>
       <Card className="px-3.5 py-3">
-        <p className="font-serif text-[14px] font-medium tracking-[-0.005em] text-text mb-2">
+        <p className="font-serif text-[14px] font-medium text-text mb-2">
           {displayName}
         </p>
         <ul className="flex flex-col gap-1.5 list-none">

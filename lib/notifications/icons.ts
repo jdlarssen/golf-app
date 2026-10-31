@@ -13,7 +13,6 @@ export type NotificationIconName =
   | 'kalender'
   | 'profil'
   | 'klubbhus'
-  | 'sparkle'
   | 'replay';
 
 /**
@@ -22,15 +21,14 @@ export type NotificationIconName =
  * kind is a compile error here until it has one. Grouped by what the row is
  * about, not one icon per kind, so the inbox reads as a handful of families:
  *
- *  - konvolutt: an invitation, request, registration or payment reminder — mail
- *    to you;
+ *  - konvolutt: an invitation, request, registration, payment reminder or news
+ *    from Tørny — mail to you;
  *  - scorekort: a scorecard, or a reminder about one;
  *  - pokal: a result, a finished cup, an achievement;
  *  - flagg: a round starting, moving, cancelled or standing still;
  *  - kalender: a league round's window;
  *  - profil: a person (friend, new player, a member who left);
  *  - klubbhus: the club;
- *  - sparkle: news from Tørny;
  *  - replay: something reopened.
  */
 export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> = {
@@ -43,7 +41,7 @@ export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> =
   scorecard_reopened: 'replay',
   game_finished: 'pokal',
   game_reopened: 'replay',
-  product_update: 'sparkle',
+  product_update: 'konvolutt',
   team_invite: 'konvolutt',
   registration_request: 'konvolutt',
   registration_approved: 'konvolutt',
@@ -77,7 +75,7 @@ export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> =
   game_moved: 'flagg',
   auto_start_blocked: 'flagg',
   achievement_unlocked: 'pokal',
-  idea_built: 'sparkle',
+  idea_built: 'konvolutt',
   // A reminder letter about money; nothing in the set draws coins, and a new
   // icon for one kind is not worth it.
   payment_reminder: 'konvolutt',

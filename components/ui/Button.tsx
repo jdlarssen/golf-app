@@ -48,13 +48,13 @@ const BASE_CLASSES =
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'font-medium tracking-tight bg-primary hover:bg-primary-hover text-white dark:text-bg shadow-sm hover:-translate-y-px',
+    'font-medium bg-primary hover:bg-primary-hover text-white dark:text-bg shadow-sm hover:-translate-y-px',
   secondary:
-    'font-medium tracking-tight bg-transparent border border-border hover:bg-primary-soft text-text',
-  danger: 'font-medium tracking-tight bg-danger hover:opacity-90 text-white dark:text-bg',
-  ghost: 'font-medium tracking-tight bg-transparent hover:bg-primary-soft text-text',
+    'font-medium bg-transparent border border-border hover:bg-primary-soft text-text',
+  danger: 'font-medium bg-danger hover:opacity-90 text-white dark:text-bg',
+  ghost: 'font-medium bg-transparent hover:bg-primary-soft text-text',
   outline:
-    'font-medium tracking-tight border border-primary bg-surface text-primary hover:bg-primary-soft',
+    'font-medium border border-primary bg-surface text-primary hover:bg-primary-soft',
   // On --surface-strong (the front page's green top, #2261): a flat gold pill
   // and a linen outline, as the artboard draws them — no shadow, no lift.
   // `onStrong` is the filled linen pill («Del lenken din», #2267).
@@ -64,13 +64,13 @@ const VARIANTS: Record<Variant, string> = {
     'bg-accent text-text dark:text-bg font-semibold tracking-normal hover:bg-accent/90',
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong font-semibold tracking-normal hover:bg-on-strong/10',
-  quiet: 'font-medium tracking-tight bg-transparent hover:bg-primary-soft text-primary',
+  quiet: 'font-medium bg-transparent hover:bg-primary-soft text-primary',
   dashed:
-    'font-medium tracking-tight bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary',
+    'font-medium bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary',
 };
 
 // `compact` replaces the size classes instead of adding to them: no py-2.5,
-// tracking-tight, font-medium — and for primary no shadow or hover-lift.
+// font-medium — and for primary no shadow or hover-lift.
 const COMPACT_BASE =
   'inline-flex shrink-0 items-center justify-center h-11 rounded-full text-[13px] font-semibold transition-[background-color,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed';
 

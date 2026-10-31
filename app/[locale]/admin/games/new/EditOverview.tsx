@@ -255,7 +255,7 @@ export function EditOverview({
         {editNav.start && (
           <StartScheduledGameButton
             startAction={editNav.start.action}
-            label={`${editNav.start.label} →`}
+            label={editNav.start.label}
             confirmText={editNav.start.confirmText}
             className="flex min-h-11 w-full items-center text-left font-sans text-sm leading-[normal] font-semibold text-primary underline"
           />

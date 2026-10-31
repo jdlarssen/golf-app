@@ -29,6 +29,7 @@ import { readOwnAiConsent } from '@/lib/ai/consent';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatDate } from '@/lib/i18n/format';
+import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -400,9 +401,7 @@ async function VennerCard() {
               : t('friendsSublabel')}
           </p>
         </div>
-        <span aria-hidden className="text-muted shrink-0">
-          →
-        </span>
+        <ChevronRightIcon className="text-muted shrink-0" />
       </Card>
     </SmartLink>
   );

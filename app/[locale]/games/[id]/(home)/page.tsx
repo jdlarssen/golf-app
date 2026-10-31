@@ -97,6 +97,7 @@ import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from '@/lib/games/hcpAllowance';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
+import { ChevronRightIcon } from '@/components/icons';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -1616,9 +1617,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {t('hullForHull')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -1629,9 +1628,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {tScorecard(scorecardTitle(game.game_mode, game.mode_config).cardLabelKey as Parameters<typeof tScorecard>[0])}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -1642,9 +1639,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {t('leaderboard')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}

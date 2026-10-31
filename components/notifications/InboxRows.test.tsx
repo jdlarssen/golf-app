@@ -54,7 +54,7 @@ describe('InboxRow', () => {
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/admin/games/g1');
     expect(link).toHaveTextContent('4 scorekort levert');
-    expect(link).toHaveTextContent('→');
+    expect(link.querySelector('path[d="m9 6 6 6-6 6"]')).not.toBeNull(); // the chevron
     expect(link).toHaveTextContent('Ulest');
     expect(screen.getByTestId('initials-stack')).toHaveTextContent('MLJB+2');
     expect(link.querySelector('[data-testid="unread-dot"]')).not.toBeNull();
@@ -62,7 +62,7 @@ describe('InboxRow', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
 
     const plain = screen.getByRole('button');
-    expect(plain).not.toHaveTextContent('→');
+    expect(plain.querySelector('path[d="m9 6 6 6-6 6"]')).toBeNull();
     expect(plain.querySelector('[data-testid="unread-dot"]')).toBeNull();
     expect(container.querySelectorAll('a')).toHaveLength(1);
   });

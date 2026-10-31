@@ -60,8 +60,8 @@ export const BOARD_TEXT = {
   behindStrokes: '{gap} slag bak {name}',
   behindPointsLead: '{gap} poeng bak ledelsen',
   behindStrokesLead: '{gap} slag bak ledelsen',
-  stripHole: 'Hull {hole} →',
-  stripSubmit: 'Lever scorekort →',
+  stripHole: 'Hull {hole}',
+  stripSubmit: 'Lever scorekort',
 } as const;
 
 /**
@@ -112,7 +112,7 @@ export const BOARD_APP_TEXT = {
   pillFinished: 'Sluttresultat · {holes} hull',
   winner: 'Vinner',
   resultKicker: 'Ditt resultat',
-  scorecard: 'Scorekortet →',
+  scorecard: 'Scorekortet',
   /** Den korte avstanden i «Ditt resultat»: den lange bryter linja ved knappen. */
   behindShort: '{gap} bak {name}',
   behindShortLead: '{gap} bak ledelsen',

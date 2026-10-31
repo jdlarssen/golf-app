@@ -63,7 +63,7 @@ export function ShareLinkField({
           type="button"
           onClick={copy}
           data-testid={testId ? `${testId}-copy` : undefined}
-          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
         >
           {state === 'copied' ? copiedLabel : copyLabel}
         </button>

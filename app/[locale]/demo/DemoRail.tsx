@@ -282,15 +282,7 @@ export function DemoRail(props: DemoRailProps): JSX.Element {
         )}
 
         <Link href={DEMO_EXIT_HREF} data-testid="demo-skip" style={skipStyle}>
-          {/* One flex item, so the space before the arrow stays. Inter has no
-              «→»: the artboard draws it with system-ui, while our stack would
-              fall back to Arial («Inter Fallback»). */}
-          <span>
-            {`${t('skip')} `}
-            <span aria-hidden="true" className="font-[system-ui]">
-              →
-            </span>
-          </span>
+          {t('skip')}
         </Link>
       </section>
     </>

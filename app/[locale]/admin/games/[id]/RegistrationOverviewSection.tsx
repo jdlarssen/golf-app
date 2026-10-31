@@ -130,7 +130,7 @@ export async function RegistrationOverviewSection({
               <CopyShareLinkButton shareUrl={shareUrl} />
               <SmartLink
                 href={`/signup/${shortId}/plakat`}
-                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium text-text transition-colors hover:bg-primary-soft"
                 data-testid="poster-link"
               >
                 {t('posterLink')}
@@ -140,7 +140,7 @@ export async function RegistrationOverviewSection({
 
           <SmartLink
             href={`/admin/games/${gameId}/signups`}
-            className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium text-text transition-colors hover:bg-primary-soft"
           >
             {t('viewAllSignups')}
           </SmartLink>

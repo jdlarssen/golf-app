@@ -25,7 +25,7 @@ export const HOME_TEXT = {
   nextStart: 'Neste start',
   lastRound: 'Forrige runde',
   /** Åpner Rundedagboka (#2265). */
-  allRounds: 'Alle runder →',
+  allRounds: 'Alle runder',
   createGame: 'Opprett spill',
   /** Webbens `home.playerFallback`, når profilen mangler navn. */
   playerFallback: 'spiller',
@@ -33,9 +33,9 @@ export const HOME_TEXT = {
   holeKicker: 'Hull',
   playedKicker: 'Spilt',
   /** Webbens `leaderboard.board.stripSubmit`. */
-  submit: 'Lever scorekort →',
-  openRound: 'Åpne runden →',
-  board: 'Se tavla →',
+  submit: 'Lever scorekort',
+  openRound: 'Åpne runden',
+  board: 'Se tavla',
   leading: 'Du leder',
   sharedLead: 'Delt ledelse',
   noTeeOff: 'Tid ikke satt',
@@ -58,7 +58,7 @@ export function profileA11yLabel(name: string): string {
 }
 
 export function continueOnHole(hole: number): string {
-  return `Fortsett på hull ${hole} →`;
+  return `Fortsett på hull ${hole}`;
 }
 
 /** Ringens etikett når det finnes et neste hull: «Hull 8 av 18, 7 spilt». */
@@ -113,7 +113,7 @@ export function standingDetail(
 }
 
 export function approvalsLine(count: number): string {
-  return `${count} kort venter på godkjenningen din →`;
+  return `${count} kort venter på godkjenningen din`;
 }
 
 /**

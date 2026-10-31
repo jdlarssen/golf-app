@@ -199,9 +199,6 @@ export function NassauPodium({
         >
           <summary className="cursor-pointer list-none rounded-2xl px-4 py-3 font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
             {tc('showFullRankingPlayers', { count: result.players.length })}
-            <span aria-hidden className="ml-1 text-muted">
-              ›
-            </span>
           </summary>
           <ul className="flex flex-col gap-2 list-none px-4 pb-3">
             {rest.map((player) => {
@@ -300,7 +297,7 @@ function PodiumStep({
         </p>
       )}
 
-      <p className="text-center font-serif text-[13px] font-medium leading-tight tracking-[-0.005em] text-text break-words">
+      <p className="text-center font-serif text-[13px] font-medium leading-tight text-text break-words">
         {displayName}
       </p>
 

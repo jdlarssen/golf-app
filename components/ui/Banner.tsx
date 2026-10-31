@@ -24,7 +24,7 @@ export function Banner({
     <div
       role={tone === 'error' ? 'alert' : 'status'}
       data-testid={testId}
-      className={`border rounded-xl px-4 py-3 text-sm font-medium tracking-tight ${tones[tone]}`}
+      className={`border rounded-xl px-4 py-3 text-sm font-medium ${tones[tone]}`}
     >
       {children}
     </div>

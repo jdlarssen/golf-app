@@ -21,6 +21,7 @@ import {
   type ArrangedListKind,
 } from '@/lib/games/arrangedGames';
 import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
+import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{ vis?: string | string[] }>;
 
@@ -157,9 +158,7 @@ function ArrangedList({
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <StatusChip status={g.status} />
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
+                  <ChevronRightIcon className="shrink-0 text-muted" />
                 </div>
               </div>
             </Card>

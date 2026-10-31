@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getGameContext } from './gameContext';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * When a game belongs to a cup (`games.tournament_id` set), surface a link to
@@ -37,9 +38,7 @@ export async function CupStandingsLink({ gameId }: { gameId: string }) {
         <span className="text-base font-medium text-text">
           {tHome('cupStandings')}
         </span>
-        <span aria-hidden className="text-muted">
-          →
-        </span>
+        <ChevronRightIcon className="shrink-0 text-muted" />
       </Card>
     </SmartLink>
   );

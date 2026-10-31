@@ -119,8 +119,8 @@ export default async function CompleteProfile({
           />
 
           <div className="mt-auto px-5 pt-4 pb-5">
-            {/* `!`: the Button base writes font-medium, tracking-tight and a
-                shadow; the artboard's pill is 600, normal tracking, flat. */}
+            {/* `!`: the Button base writes font-medium and a
+                shadow; the artboard's pill is 600, flat. */}
             <SubmitButton
               className="h-[52px] w-full text-[15px] leading-[normal] font-semibold! tracking-normal! [box-shadow:none]!"
               pendingLabel={t('submitPending')}

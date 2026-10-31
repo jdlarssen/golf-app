@@ -1265,7 +1265,7 @@
         "flights": "{count, plural, one {# flight} other {# flighter}}",
         "prizes": "{count, plural, one {# premie} other {# premier}}",
         "unassignedFlights": "{count} uten flight",
-        "startlistLink": "Sett flightene på Startlista →",
+        "startlistLink": "Sett flightene på Startlista",
         "notSet": "Ikke satt",
         "footnote": "Hver del åpnes for seg og lagres med én gang. Spillerne ser endringene neste gang de åpner appen.",
         "delete": "Avlys runden …",
@@ -1390,7 +1390,7 @@
     },
     "stepCounter": "Steg {step} av {total}",
     "back": "Tilbake",
-    "savedAsDraft": "✓ Lagret som utkast",
+    "savedAsDraft": "Lagret som utkast",
     "stepSubText": {
       "step4BestBall": "Velg et partall spillere, så fordeler du lag og flights",
       "step4Matchplay": "Velg 2 spillere og sett én på hver side",
@@ -1591,7 +1591,7 @@
     "closeButton": "Lukk",
     "listMetaTitle": "Spillformater",
     "listMetaDescription": "Regler og poengberegning for over 20 spillformer i golf: scramble, stableford, matchplay, wolf, skins og flere til. Med eksempler og netto handicap.",
-    "listBackLabel": "← Hjem",
+    "listBackLabel": "Hjem",
     "listKicker": "Spillformater",
     "listPageSubtitle": "Trykk på et format for å se hvordan det funker. Da tør du å bli med uansett hva som settes opp.",
     "helper": {
@@ -1611,7 +1611,7 @@
       "rulesAriaLabel": "Reglene for {name}",
       "notEveryCount": "Går ikke opp med alle antall. Veiviseren sjekker det når dere har talt opp.",
       "noTeamFormat": "Ingen lagformat går opp med 3 spillere.",
-      "seeAll": "Eller se alle {count, number} spillformer →",
+      "seeAll": "Eller se alle {count, number} spillformer",
       "allHeading": "Alle spillformer",
       "perTeam": "{size} per lag",
       "why": {
@@ -1626,7 +1626,7 @@
         "bingo_bango_bongo": "Poeng for første ball på green, nærmest flagget og første i hullet. Også den som er ny, kan ta poeng på hvert hull."
       }
     },
-    "detailBackLabel": "← Alle spillformater",
+    "detailBackLabel": "Alle spillformater",
     "detailKicker": "Spillformat",
     "detailFallbackMeta": "Spillformat",
     "detailHowItWorks": "Slik fungerer det",
@@ -1639,7 +1639,7 @@
     "detailCtaButtonLaunched": "Hent appen",
     "cardShowRules": "Vis regler",
     "cardHideRules": "Skjul regler",
-    "cardReadMore": "Les mer →",
+    "cardReadMore": "Les mer",
     "sectionSolo": "Solo og stableford",
     "sectionLag": "Lag og scramble",
     "sectionMatchplay": "Matchplay",
@@ -2228,7 +2228,7 @@
   },
   "game": {
     "home": {
-      "backHome": "← Hjem",
+      "backHome": "Hjem",
       "streakGrewTitle": "{count} uker på rad",
       "streakGrewBody": "Nok en uke i boks. Serien din vokser.",
       "profileGate": {
@@ -2267,7 +2267,7 @@
       "rejectionBannerSuffix": "». Rediger hullene og lever på nytt.",
       "rejectionBannerNoReason": "Scorekortet ditt ble avvist uten begrunnelse. Rediger hullene og lever på nytt.",
       "pendingApprovals": "{count, plural, one {1 spiller venter på godkjenning fra deg} other {# spillere venter på godkjenning fra deg}}",
-      "reviewLink": "Gjennomgå →",
+      "reviewLink": "Gjennomgå",
       "tournamentKicker": "Turnering",
       "teeInfo": "Tee: {teeName}",
       "infoLabel": "Din info",
@@ -2289,7 +2289,7 @@
       "withdrawnByOrganiserBody": "Scorene dine teller ikke i rangeringen. Er det feil, si fra til arrangøren.",
       "undoWithdraw": "Angre",
       "undoWithdrawPending": "Angrer …",
-      "leaderboardButton": "Se leaderboard →",
+      "leaderboardButton": "Se leaderboard",
       "revansjeButton": "Revansje?",
       "hullForHull": "Hull for hull",
       "leaderboard": "Leaderboard",
@@ -2313,14 +2313,14 @@
       "moveGameLink": "Flytt runden",
       "deleteGameLink": "Slett spill",
       "cancelRoundLink": "Avlys runden",
-      "ctaStartRound": "Start runden →",
-      "ctaContinueRound": "Fortsett runden →",
-      "ctaReviewAndSubmit": "Gjennomgå og lever →",
+      "ctaStartRound": "Start runden",
+      "ctaContinueRound": "Fortsett runden",
+      "ctaReviewAndSubmit": "Gjennomgå og lever",
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
       "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
       "ctaDeliverFlight": "{count, plural, one {Lever kortet du har ført} other {Lever kortene du har ført ({count})}}",
-      "ctaContinueToSibling": "Videre til hull {hole} · {format} →",
+      "ctaContinueToSibling": "Videre til hull {hole} · {format}",
       "draftTeamsLabel": "Lag",
       "draftSidesLabel": "Sider",
       "draftTeeOffLabel": "Tee-off",
@@ -2413,7 +2413,7 @@
       "summaryHoles": "Spilte hull:",
       "missingHolesBanner": "{count, plural, one {1 hull mangler. Hvis du leverer nå, går dette som ikke spilt.} other {# hull mangler. Hvis du leverer nå, går disse som ikke spilt.}}",
       "wholeRoundNotice": "Denne leveringen gjelder hele runden — både hull 1–9 og 10–18.",
-      "editButton": "← Rediger",
+      "editButton": "Rediger",
       "submitButton": "Lever",
       "submitPending": "Leverer …",
       "syncingPending": "Lagrer slag …",
@@ -2691,7 +2691,7 @@
         "invite_sent": "Invitasjonen er sendt.",
         "invite_held": "Invitasjonen er lagret. E-posten går ut når du publiserer spillet.",
         "player_removed": "Spilleren er fjernet.",
-        "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count} spillere.",
+        "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count, plural, one {# spiller} other {# spillere}}.",
         "player_removed_team_short_shamble": "Spilleren er fjernet. Lag {team} spiller nå med {count} og teller de beste scorene sine på hvert hull, som før.",
         "player_removed_team_uneven": "Spilleren er fjernet. Lag {team} har bare {count, plural, one {# spiller} other {# spillere}} nå. {missing, plural, one {Flytt en spiller dit} other {Flytt # spillere dit}} før runden kan starte.",
         "player_withdrawn": "Spilleren er trukket fra spillet.",
@@ -2823,8 +2823,8 @@
     "parGenderLadies": "Damer: {par}",
     "parGenderJuniors": "Junior: {par}",
     "backLabel": "Tilbake til {name}",
-    "backToGame": "Tilbake til spillet →",
-    "backToHole": "Tilbake til hull {hole} →",
+    "backToGame": "Tilbake til spillet",
+    "backToHole": "Tilbake til hull {hole}",
     "toGameOverview": "Til spilloversikt",
     "withdrawnNotice": "Du har trukket deg. Slagene dine blir stående her, men teller ikke i rangeringen."
   },
@@ -2905,7 +2905,7 @@
       "buttonAriaLabelPoints": "Sett {strokes} slag for {name}: {term}, {points} poeng",
       "other": "Annet",
       "otherAriaLabel": "Velg en annen score for {name}",
-      "skip": "Neste: {name} →",
+      "skip": "Neste: {name}",
       "skipAriaLabel": "Hopp over, gå til {name}",
       "nextAnnouncement": "Neste: {name}",
       "allScored": "Alle har score på hullet. Trykk på et navn for å rette.",
@@ -2930,12 +2930,12 @@
       "fieldLabel": "Putter"
     },
     "puttsChips": {
-      "chipAriaLabel": "{count} putter på {name}",
+      "chipAriaLabel": "{count, plural, one {# putt} other {# putter}} på {name}",
       "plusLabel": "5+",
       "plusAriaLabel": "Fem eller flere putter på {name}",
       "decreaseAriaLabel": "Færre putter på {name}",
       "increaseAriaLabel": "Flere putter på {name}",
-      "valueAriaLabel": "{count} putter"
+      "valueAriaLabel": "{count, plural, one {# putt} other {# putter}}"
     },
     "sync": {
       "sending": "Sender…",
@@ -3374,8 +3374,8 @@
       "behindStrokes": "{gap} slag bak {name}",
       "behindPointsLead": "{gap} poeng bak ledelsen",
       "behindStrokesLead": "{gap} slag bak ledelsen",
-      "stripHole": "Hull {hole} →",
-      "stripSubmit": "Lever scorekort →"
+      "stripHole": "Hull {hole}",
+      "stripSubmit": "Lever scorekort"
     },
     "soloStrokeplay": {
       "grossHolesRow": "{gross} brutto · {holes} hull spilt",
@@ -3448,7 +3448,7 @@
       "subtitle": "Bingo Bango Bongo",
       "podiumSubtitle": "Bingo Bango Bongo · Poeng",
       "holesSubtitle": "Bingo Bango Bongo",
-      "feietChip": "★ Feiet",
+      "feietChip": "Feiet",
       "ingenPrestasjoner": "Ingen prestasjoner registrert ennå.",
       "ikkeSatt": "ikke satt",
       "firstOnGreen": "først på green",
@@ -4220,7 +4220,7 @@
         "flight_updated": "Spillerens flight er oppdatert.",
         "team_suggested": "Lagene er satt opp og lagret.",
         "team_updated": "Spillerens lag er oppdatert.",
-        "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count} spillere.",
+        "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count, plural, one {# spiller} other {# spillere}}.",
         "player_removed_team_short_shamble": "Spilleren er fjernet. Lag {team} spiller nå med {count} og teller de beste scorene sine på hvert hull, som før.",
         "player_removed_team_uneven": "Spilleren er fjernet. Lag {team} har bare {count, plural, one {# spiller} other {# spillere}} nå. {missing, plural, one {Flytt en spiller dit} other {Flytt # spillere dit}} før runden kan starte.",
         "signups_closed": "Påmeldingen er stengt. Nye søknader avvises.",
@@ -4276,8 +4276,8 @@
         "allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
         "allReadyAndApproved": " og godkjent",
         "endingGame": "Avslutter …",
-        "forceEndButton": "Avslutt likevel →",
-        "leaderboardButton": "Se leaderboard →",
+        "forceEndButton": "Avslutt likevel",
+        "leaderboardButton": "Se leaderboard",
         "reopenSignupsButton": "Gjenåpne påmeldingen",
         "closeSignupsButton": "Steng påmeldingen",
         "gameFullBanner": "Spillet er fullt ({current} av {max}). Fjern noen for å invitere flere."
@@ -4326,7 +4326,7 @@
         "copyButton": "Kopier lenke",
         "copiedButton": "Kopiert",
         "copyFailure": "Klarte ikke å kopiere automatisk. Marker lenken over og kopier manuelt.",
-        "viewAllSignups": "Vis alle påmeldinger →",
+        "viewAllSignups": "Vis alle påmeldinger",
         "posterLink": "Skriv ut plakat",
         "viewSignupsLink": "Se påmeldingene"
       },
@@ -4334,7 +4334,7 @@
         "sectionLabel": "Betaling",
         "feeLabel": "Startkontingent",
         "paidLabel": "Betalt",
-        "viewAll": "Se betalingsstatus →",
+        "viewAll": "Se betalingsstatus",
         "kicker": "Betaling",
         "heading": "Hvem har betalt?",
         "rosterLabel": "Spillere",
@@ -4363,7 +4363,7 @@
         "selectedStrip": "<b>{name} er valgt.</b> Trykk på flighten {name} skal til.",
         "cancel": "Avbryt",
         "offline": "Flytting krever nett",
-        "moveHere": "Flytt {name} hit →",
+        "moveHere": "Flytt {name} hit",
         "moveHereLabel": "Flytt {name} til flight {n}",
         "chipLabel": "{name}, HCP {hcp}",
         "unassignedShort": "{count} uten flight"
@@ -4377,8 +4377,8 @@
         "moveButton": "Flytt",
         "teamAriaLabel": "Lag for {name}",
         "teamOptionN": "Lag {n}",
-        "teamShortHandicap": "{count} spillere, handicapet regnes for {count}",
-        "teamShortShamble": "{count} spillere, teller de beste scorene sine på hvert hull",
+        "teamShortHandicap": "{count, plural, one {# spiller} other {# spillere}}, handicapet regnes for {count}",
+        "teamShortShamble": "{count, plural, one {# spiller} other {# spillere}}, teller de beste scorene sine på hvert hull",
         "teamTooFew": "Bare {count, plural, one {# spiller} other {# spillere}}. {missing, plural, one {Flytt en spiller hit} other {Flytt # spillere hit}} før runden kan starte.",
         "teamTooMany": "{count} spillere, men lagene er på {size}. {extra, plural, one {Flytt en spiller ut} other {Flytt # spillere ut}} før runden kan starte."
       },
@@ -4605,7 +4605,7 @@
         "holeOfSegment": "<num>hull {hole}</num> · {position} av {count}",
         "holesPlayed": "<num>{played}</num> av {count} hull",
         "allSubmitted": "Alle har levert",
-        "viewStatus": "Se spillerstatus →",
+        "viewStatus": "Se spillerstatus",
         "endHint": "{total, plural, one {Åpner når spilleren har levert} other {Åpner når alle # har levert}}",
         "endHintApproved": "{total, plural, one {Åpner når spilleren har levert og kortet er godkjent} other {Åpner når alle # har levert og kortene er godkjent}}"
       }
@@ -4909,7 +4909,7 @@
         "edit_failed": "Klarte ikke å lagre endringen. Prøv igjen om litt."
       },
       "success": {
-        "published": "Lanseringen er ute hos {count} brukere.",
+        "published": "Lanseringen er ute hos {count, plural, one {# bruker} other {# brukere}}.",
         "edited": "Lanseringen er oppdatert — {count, plural, one {1 varsel} other {# varsler}} rettet."
       },
       "publishSection": "Publiser ny lansering",
@@ -5361,7 +5361,7 @@
       },
       "infoRounds": "Runder",
       "infoParticipants": "Deltakere",
-      "standingsLink": "Se sesong-tabellen →",
+      "standingsLink": "Se sesong-tabellen",
       "roundsHeading": "Runder",
       "noRoundsYet": "Ingen runder generert. Ligaen ble opprettet med egendefinert frekvens, eller frekvensen ga ingen vinduer i sesong-spennet.",
       "participantsHeading": "Deltakere",
@@ -5994,8 +5994,8 @@
       "matchesHeading": "Matcher",
       "emptyRoster": "Ingen spillere. Spillerlisten fylles fra matchene.",
       "emptyMatches": "Ingen matcher ennå. Åpne «Fordel & generer» over for å sette opp kampene.",
-      "openCupPage": "Åpne cup-siden →",
-      "openResults": "Se resultatsiden →",
+      "openCupPage": "Åpne cup-siden",
+      "openResults": "Se resultatsiden",
       "matchesSummary": "Først til {points} poeng · {finished} av {total} matcher spilt",
       "mot": "mot",
       "unknownPlayer": "Ukjent spiller",
@@ -6428,7 +6428,7 @@
     "teeOffSeparator": "kl.",
     "teamFlight": "Lag {teamNumber} · Flight {flightNumber}",
     "archiveMetaTitle": "Avsluttede spill",
-    "archiveBackHome": "← Hjem",
+    "archiveBackHome": "Hjem",
     "archiveKicker": "Spill-arkiv",
     "archiveTitle": "Avsluttede spill",
     "archiveSubtitle": "Alle rundene dine, nyeste først.",
@@ -7075,7 +7075,7 @@
       "boardKicker": "Tavla",
       "followName": "Følg {name}",
       "seeWholeBoard": "Se hele tavla",
-      "cta": "Lag din egen turnering på et par minutter →"
+      "cta": "Lag din egen turnering på et par minutter"
     },
     "tv": {
       "metaTitle": "Storskjerm",
@@ -7477,7 +7477,7 @@
       "lineTeam": "{format}, lag på {size}, netto",
       "cta": "Bruk dette oppsettet",
       "note": "Du kan endre alt før du sender invitasjonene.",
-      "rulesLink": "Slik spilles {format} →"
+      "rulesLink": "Slik spilles {format}"
     },
     "audiences": {
       "firmagolf": {

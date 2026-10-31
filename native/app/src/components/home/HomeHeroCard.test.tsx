@@ -59,10 +59,10 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   );
   expect(screen.queryByTestId('home-hero-gold', HIDDEN)).toBeNull();
 
-  await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
+  await fireEvent.press(screen.getByText('Fortsett på hull 8'));
   expect(handlers.onHole).toHaveBeenCalledWith(8);
   // Hjem v2 (#2385): kortet slutter med knappen, som i designet.
-  expect(screen.queryByText('Se tavla →')).toBeNull();
+  expect(screen.queryByText('Se tavla')).toBeNull();
   await fireEvent.press(screen.getByTestId('home-hero-open'));
   expect(handlers.onOpenGame).toHaveBeenCalledTimes(1);
 
@@ -76,7 +76,7 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   );
   expect(screen.getByTestId('home-hero-place')).toHaveTextContent('Du leder');
   expect(screen.getByTestId('home-hero-gold', HIDDEN)).toBeTruthy();
-  await fireEvent.press(screen.getByText('2 kort venter på godkjenningen din →'));
+  await fireEvent.press(screen.getByText('2 kort venter på godkjenningen din'));
   expect(handlers.onApprove).toHaveBeenCalled();
 
   // Lagformat (ingen plass) med alle hull tastet: «Lever scorekort».
@@ -91,7 +91,7 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   expect(screen.getByLabelText('18 av 18 hull spilt')).toBeTruthy();
   // Ringen sier det allerede; linja leses ikke en gang til.
   expect(screen.queryByTestId('home-hero-played')).toBeNull();
-  await fireEvent.press(screen.getByText('Lever scorekort →'));
+  await fireEvent.press(screen.getByText('Lever scorekort'));
   expect(handlers.onSubmit).toHaveBeenCalled();
 
   // Levert: etiketten, ingen knapp.
@@ -121,8 +121,8 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   // Uten bundel: navn og bane, ingen ring, og «Åpne runden».
   await rerender(<HomeHeroCard card={CARD} model={null} {...handlers} />);
   expect(screen.queryByTestId('home-hero-ring')).toBeNull();
-  expect(screen.queryByText('Se tavla →')).toBeNull();
-  await fireEvent.press(screen.getByText('Åpne runden →'));
+  expect(screen.queryByText('Se tavla')).toBeNull();
+  await fireEvent.press(screen.getByText('Åpne runden'));
   expect(handlers.onOpenGame).toHaveBeenCalledTimes(2);
 
   // Et stengt spill, og en bundel som ennå sier at runden ikke er i gang: kortet
@@ -133,7 +133,7 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   ]) {
     await rerender(<HomeHeroCard card={CARD} model={model} {...handlers} />);
     expect(screen.queryByTestId('home-hero-ring')).toBeNull();
-    expect(screen.queryByText('Se tavla →')).toBeNull();
-    expect(screen.getByText('Åpne runden →')).toBeTruthy();
+    expect(screen.queryByText('Se tavla')).toBeNull();
+    expect(screen.getByText('Åpne runden')).toBeTruthy();
   }
 });

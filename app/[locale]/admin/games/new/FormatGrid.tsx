@@ -9,6 +9,7 @@ import { splitFormatsForCount } from '@/lib/wizard/formatRecommendation';
 import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 import { Kicker } from '@/components/ui/Kicker';
 import { FormatLineup, useLineupText } from '@/components/FormatLineup';
+import { ChevronRightIcon } from '@/components/icons';
 
 const PILL =
   'shrink-0 rounded-full border border-border bg-surface font-sans font-semibold leading-[normal] text-primary';
@@ -198,7 +199,6 @@ export function FormatGrid({
           >
             {selected ? (
               <>
-                <span aria-hidden="true">✓ </span>
                 {t('chosen')}
                 <span className="sr-only">: {name(f.slug)}</span>
               </>
@@ -268,20 +268,7 @@ export function FormatGrid({
               {card(f.slug, 'line')}
             </span>
           </span>
-          {!selected && (
-            // The artboard's «→» is the system font's arrow: Inter as Google
-            // Fonts serves it has no U+2192, so the browser falls through to
-            // system-ui. The app's own stack would fall to the Arial-based
-            // Inter fallback instead (a longer arrow), so the arrow names
-            // system-ui itself and matches the artboard on every device.
-            <span
-              aria-hidden="true"
-              className="text-base font-normal leading-[normal] text-primary"
-              style={{ fontFamily: 'system-ui, sans-serif' }}
-            >
-              →
-            </span>
-          )}
+          {!selected && <ChevronRightIcon className="shrink-0 text-primary" />}
         </button>
         {/* The row's 10 px padding sits around «Reglene» too, so the chosen
             row is 64 px plus its divider, as drawn. */}

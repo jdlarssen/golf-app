@@ -27,7 +27,7 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { FONTS, useTheme } from '../theme';
-import { withSystemArrows } from './SystemArrow';
+import { ChevronIcon } from './icons/Icons';
 
 type Tone = 'default' | 'danger';
 
@@ -73,12 +73,9 @@ export function SettingRow({
     : tone === 'danger'
       ? colors.danger
       : colors.text;
-  // Pila er skoggrønn som i designet, og følger tonen på en rød rad, dempet:
+  // Chevronen er skoggrønn som i designet, og følger tonen på en rød rad, dempet:
   // der skal den ikke rope like høyt som etiketten (webbens `text-danger-deep/70`).
-  const chevronStyle =
-    tone === 'danger'
-      ? { color: colors.danger, opacity: 0.7 }
-      : { color: colors.primary };
+  const chevronColor = tone === 'danger' ? colors.danger : colors.primary;
 
   return (
     <Pressable
@@ -105,7 +102,11 @@ export function SettingRow({
           ✓
         </Text>
       ) : null}
-      {chevron ? <Text style={[styles.chevron, chevronStyle]}>{withSystemArrows('→', '400')}</Text> : null}
+      {chevron ? (
+        <View style={tone === 'danger' ? styles.chevronDim : null}>
+          <ChevronIcon direction="right" color={chevronColor} size={16} strokeWidth={2} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -174,9 +175,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontFamily: FONTS.sans },
   // Ett hakk under etiketten, så raden leses som én ting og ikke som to.
   sublabel: { fontSize: 12, fontFamily: FONTS.sans },
-  // Linja er Inters, som i designet; bare pila er systemfontens
-  // (`SystemArrow.tsx`).
-  chevron: { fontSize: 15, fontFamily: FONTS.sans },
+  chevronDim: { opacity: 0.7 },
   check: { fontSize: 18, fontFamily: FONTS.sansSemiBold },
   // Designet: 1 pt i den varme skillefargen (Profil v2).
   separator: { height: 1 },

@@ -35,9 +35,9 @@ export const TICKET_TEXT = {
   calendarFailed: 'Fikk ikke åpnet kalenderen.',
   calendarDenied: 'Tørny har ikke tilgang til kalenderen. Du kan slå det på i Innstillinger.',
   /** Webbens `game.home.ctaStartRound`. */
-  startRound: 'Start runden →',
+  startRound: 'Start runden',
   /** Webbens `game.home.ctaReviewAndSubmit`. */
-  reviewAndSubmit: 'Gjennomgå og lever →',
+  reviewAndSubmit: 'Gjennomgå og lever',
   /** Webbens `game.home.draftBanner`. */
   draft: 'Utkast — admin planlegger fortsatt. Detaljer kan endre seg.',
   finishedNoResult: 'Runden er avsluttet.',

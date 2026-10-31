@@ -34,7 +34,6 @@ import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone'
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, type ThemeColors } from '../../theme';
-import { withSystemArrows } from '../SystemArrow';
 
 /** Hva knappene viser etter navnet på resultatet: poengene, eller ingenting. */
 export type RailDisplay = 'points' | 'plain';
@@ -433,7 +432,7 @@ export function ScoreRail({
               accessibilityRole="button"
               accessibilityLabel={`Hopp over, gå til ${skipTo}`}
             >
-              <Text style={[styles.linkText, { color: colors.primary }]}>{withSystemArrows(`Neste: ${skipTo} →`, '600')}</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo}`}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -487,7 +486,7 @@ function PuttsChips({
           testID={`rail-putts-${n}`}
           accessibilityRole="button"
           accessibilityState={{ selected: value === n }}
-          accessibilityLabel={`${n} putter på ${name}`}
+          accessibilityLabel={`${n} ${n === 1 ? 'putt' : 'putter'} på ${name}`}
         >
           <Text style={chipText(value === n)}>{n}</Text>
         </Pressable>

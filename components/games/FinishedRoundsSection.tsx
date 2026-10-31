@@ -12,6 +12,7 @@ import { computeRoundScore } from '@/lib/games/roundScore';
 import { getRoundScoresForGames } from '@/lib/games/getRoundScoresForGames';
 import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
 import type { FinishedEntry } from '@/lib/games/finishedEntries';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * Hjem-seksjonen «Avsluttede spill» (#986): de 3 nyeste avsluttede oppføringene.
@@ -144,9 +145,7 @@ export async function FinishedRoundsSection({
             <span className="text-base font-medium text-text">
               {t('sectionFinishedShowAll')}
             </span>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </Card>
         </SmartLink>
       )}

@@ -157,9 +157,9 @@ function CodeEntry() {
         </p>
       </div>
       <div className="px-5 pt-5">
-        {/* `!`: the Button base writes font-medium, tracking-tight, a shadow
-            and disabled:opacity-50; the artboard's pill is 600, normal
-            tracking, flat, and 45 % when off. */}
+        {/* `!`: the Button base writes font-medium, a shadow
+            and disabled:opacity-50; the artboard's pill is 600, flat,
+            and 45 % when off. */}
         <Button
           type="submit"
           disabled={hydrated && digits.length < OTP_LENGTH}

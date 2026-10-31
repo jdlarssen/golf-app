@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { loadCupLineupAccess } from '@/lib/cup/lineupAccess';
 import type { CupSessionFormat } from '@/lib/cup/cupTemplates';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * Avdekkings-øyeblikket på cup-siden (#1884), pluss kapteinens vei inn.
@@ -97,9 +98,7 @@ export async function CupLineupSpotlight({
                 {t('public.lineupDoorSubtitle')}
               </p>
             </div>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </Card>
         </SmartLink>
       )}

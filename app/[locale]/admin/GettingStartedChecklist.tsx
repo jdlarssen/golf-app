@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { ChevronRightIcon } from '@/components/icons';
 
 // ─── «Kom i gang»-sjekkliste (#1177) ───────────────────────────────────────
 //
@@ -114,9 +115,7 @@ export function GettingStartedChecklist({
               >
                 <StepMark done={false} />
                 <span className="text-[13px] font-medium text-text">{step.label}</span>
-                <span aria-hidden className="ml-auto shrink-0 text-muted">
-                  →
-                </span>
+                <ChevronRightIcon className="ml-auto shrink-0 text-muted" />
               </SmartLink>
             )}
           </li>
