@@ -42,4 +42,21 @@ describe('playerWithdrawKind', () => {
       ),
     ).toBeNull();
   });
+
+  // #2712 (eieren 31.10): ett forsøk per runde i en simulatorliga, så ingen
+  // «Trekk deg» etter at kortet er levert. Før levering og i andre spill som før.
+  describe('simulatorliga (#2712)', () => {
+    const flight = { ...base, status: 'active', leagueRoundId: 'runde-1', requirePeerApproval: true } as const;
+    it('viser ingenting etter levering', () => {
+      expect(playerWithdrawKind(flight, { withdrawnAt: null, submittedAt: '2026-10-31T11:22:31Z' }, false)).toBeNull();
+    });
+    it('viser trekket før levering', () => {
+      expect(playerWithdrawKind(flight, { withdrawnAt: null, submittedAt: null }, false)).toBe('active');
+    });
+    it('vanlig liga og vanlig spill: levert kort endrer ingenting', () => {
+      const delivered = { withdrawnAt: null, submittedAt: '2026-10-31T11:22:31Z' };
+      expect(playerWithdrawKind({ ...flight, requirePeerApproval: false }, delivered, false)).toBe('active');
+      expect(playerWithdrawKind({ ...flight, leagueRoundId: null }, delivered, false)).toBe('active');
+    });
+  });
 });

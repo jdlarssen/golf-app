@@ -6,6 +6,7 @@
 // svarer `game_locked`). Under runden vises den når formatet kjenner frafall
 // (`supportsWithdrawal`, den delte regelen). Selve trekket er kjernen bak
 // `POST /api/games/[id]/withdraw-self` — ingenting av den speiles her.
+import { withdrawLockedByDelivery } from '../../../../lib/league/leagueMarker';
 import {
   supportsWithdrawal,
   type GameMode,
@@ -17,6 +18,9 @@ interface WithdrawGame {
   status: string;
   gameMode: string;
   tournamentId: string | null;
+  /** #2712: a simulator-league flight is `leagueRoundId` + peer approval, as in `isGameOrganiser`. */
+  leagueRoundId?: string | null;
+  requirePeerApproval?: boolean;
 }
 
 /**
@@ -28,7 +32,7 @@ interface WithdrawGame {
  */
 export function playerWithdrawKind(
   game: WithdrawGame,
-  me: { withdrawnAt: string | null } | undefined,
+  me: { withdrawnAt: string | null; submittedAt?: string | null } | undefined,
   isOrganiser: boolean,
 ): PlayerWithdrawKind | null {
   if (!me || me.withdrawnAt != null) return null;
@@ -36,7 +40,10 @@ export function playerWithdrawKind(
     return game.tournamentId == null ? 'pre-start' : null;
   }
   if (game.status === 'active' && !isOrganiser && supportsWithdrawal(game.gameMode as GameMode)) {
-    return 'active';
+    // #2712 (owner 31.10): one attempt per round in a simulator league, so no
+    // withdrawal once the card is delivered (the server refuses it too).
+    const simulatorFlight = game.leagueRoundId != null && game.requirePeerApproval === true;
+    return withdrawLockedByDelivery({ simulatorFlight, submittedAt: me.submittedAt ?? null }) ? null : 'active';
   }
   return null;
 }

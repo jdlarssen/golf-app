@@ -110,6 +110,9 @@ export const PLAYER_WITHDRAW = {
     'Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en av dem på lagsiden først. Da kan du trekke deg.',
 } as const;
 
+/** #2712: et levert kort i en simulatorliga (`game.withdraw.errors.card_delivered`). */
+const CARD_DELIVERED = 'Kortet ditt er levert. Da kan du ikke trekke deg fra runden.';
+
 /**
  * Hvorfor en spillers eget trekk ikke gikk (#1954 A1), med webbens ord der
  * webben har dem: kapteinens nei får `captainHasTeamBody`, alle andre avslag
@@ -128,6 +131,9 @@ export function describePlayerWithdrawFailure(reason: SelfWithdrawFailure): stri
       return WEB_LINK_TEXT.missingBaseUrl;
     case 'unauthorized':
       return 'Logg inn på nytt og prøv igjen.';
+    // #2712: webbens `game.withdraw.errors.card_delivered`, ordrett.
+    case 'card_delivered':
+      return CARD_DELIVERED;
     case 'not_registered':
     case 'not_found':
     case 'game_locked':
@@ -220,6 +226,10 @@ export function describeSelfWithdrawFailure(
         : 'Denne runden kan du ikke trekke deg fra nå.';
     case 'not_found':
       return 'Fant ikke runden. Den er kanskje slettet.';
+    // #2712: ett forsøk per runde i en simulatorliga. Knappen vises ikke etter
+    // levering, men et eldre bilde av runden kan ha den fremme.
+    case 'card_delivered':
+      return CARD_DELIVERED;
     // #2358: knappen vises ikke for et trekk arrangøren satte, men et eldre
     // bilde av runden kan ha den fremme.
     case 'withdrawn_by_other':
