@@ -231,7 +231,8 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-name').props.value).toBe('Stableford');
     // #1980: HCP-andelen fra webbens AllowanceField.
     await fireEvent.changeText(screen.getByTestId('create-allowance'), '85');
-    await fireEvent(screen.getByTestId('create-side-toggle'), 'valueChange', true);
+    // #2709: Tørnys egen bryter (DesignSwitch), et trykk slår den på.
+    await fireEvent.press(screen.getByTestId('create-side-toggle'));
     await fireEvent.press(screen.getByTestId('create-side-ld-1'));
     await fireEvent.press(screen.getByTestId('create-side-ctp-1'));
     await fireEvent.press(screen.getByTestId('create-next'));

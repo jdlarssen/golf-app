@@ -8,8 +8,9 @@
 // Alle er tema-bevisste via `useTheme()`: dette er de første flatene i appen
 // som bygges etter #1833, så ingenting her leser den statiske lys-paletten.
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TAP, useTheme } from '../../theme';
+import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
 
 /** Etikett over et felt, med feltet under. */
 export function Field({
@@ -36,7 +37,9 @@ export function Field({
 /**
  * En rad man velger — format, bane, tee, spiller.
  *
- * `selected` tegner en gullramme (husets framhevings-farge), `disabled` demper
+ * `selected` tegner en skoggrønn ramme på lys grønn bunn, som veiviseren på
+ * nettsiden (#2709). Gull er for vinnere. Rammen er 2 pt, og luften inni er
+ * 1 pt mindre, så raden ikke flytter seg når den velges. `disabled` demper
  * raden uten å skjule den: en spiller som ikke får plass i formatet skal
  * fortsatt være synlig, ellers ser lista ut som om personen er borte.
  */
@@ -67,11 +70,9 @@ export function SelectRow({
       onPress={onPress}
       style={[
         styles.row,
-        {
-          backgroundColor: colors.surface,
-          borderColor: selected ? colors.accent : colors.border,
-          borderWidth: selected ? 2 : 1,
-        },
+        selected
+          ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, ...styles.rowSelected }
+          : { backgroundColor: colors.surface, borderColor: colors.border },
         disabled && styles.rowDisabled,
       ]}
     >
@@ -132,11 +133,9 @@ export function Chips<T extends string | number>({
             onPress={() => onChange(option.value)}
             style={[
               styles.chip,
-              {
-                borderColor: active ? colors.accent : colors.border,
-                borderWidth: active ? 2 : 1,
-                backgroundColor: active ? colors.surface : colors.bg,
-              },
+              active
+                ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, ...styles.chipSelected }
+                : { backgroundColor: colors.bg, borderColor: colors.border },
               disabled && styles.chipDisabled,
             ]}
           >
@@ -162,16 +161,20 @@ export function ToggleRow({
   onChange: (value: boolean) => void;
   testID: string;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, scheme, ui } = useTheme();
   return (
     <View style={styles.field}>
       <View style={styles.toggleRow}>
         <Text style={[ui.body, styles.toggleLabel]}>{label}</Text>
-        <Switch
+        {/* Tørnys egen bryter, som i innstillingene (#2709). */}
+        <DesignSwitch
           testID={testID}
           value={value}
+          disabled={false}
           onValueChange={onChange}
-          trackColor={{ true: colors.primary, false: colors.border }}
+          label={label}
+          onColor={colors.primary}
+          offColor={listSwitchOffColor(colors, scheme)}
         />
       </View>
       {hint ? <Text style={ui.muted}>{hint}</Text> : null}
@@ -198,11 +201,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     minHeight: TAP + 12,
-    borderRadius: 12,
+    // 16 som listene ellers i appen (#2709).
+    borderRadius: 16,
+    borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 8,
   },
+  rowSelected: { borderWidth: 2, paddingHorizontal: 13, paddingVertical: 9 },
   rowText: { flex: 1, gap: 2 },
   rowDisabled: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -210,10 +216,12 @@ const styles = StyleSheet.create({
   chip: {
     minHeight: TAP,
     borderRadius: 999,
+    borderWidth: 1,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  chipSelected: { borderWidth: 2, paddingHorizontal: 15 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

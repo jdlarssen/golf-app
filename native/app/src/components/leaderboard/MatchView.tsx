@@ -17,6 +17,7 @@ import {
   type StripOutcome,
 } from '../../lib/leaderboardModel';
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
+import { plainBoardCard } from './Table';
 
 export interface MatchSideInfo {
   sideNumber: 1 | 2;
@@ -50,7 +51,7 @@ export function MatchView({
 
   return (
     <View testID="match-view">
-      <View style={ui.card}>
+      <View style={[ui.card, plainBoardCard]}>
         <View style={styles.sideRow}>
           <Text
             style={[ui.body, styles.sideName, standing.leader === 'side1' ? styles.leading : null]}
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   versus: { flexShrink: 0 },
   sideRight: { textAlign: 'right' },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
-  leading: { fontFamily: FONTS.sansBold },
+  leading: { fontFamily: FONTS.sansSemiBold },
   strip: { gap: 4, paddingVertical: 8 },
   stripRow: { flexDirection: 'row', gap: 4 },
   // `flex: 1`, ikke en fast bredde: ni ruter deler radens bredde likt på alle
@@ -184,5 +185,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cellHole: { fontSize: 11 },
-  cellOutcome: { fontSize: 15, fontFamily: FONTS.sansBold },
+  cellOutcome: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
 });
