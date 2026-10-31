@@ -25,6 +25,7 @@ import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { runningMatchStatus } from '@/lib/scoring/modes/matchplayRunningStatus';
 import { buildShareCardData, type ShareCardBand, type ShareCardRow, type ShareCardScore } from './buildShareCardData';
+import { isLeagueFieldAlone } from './finishedResultBadge';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -33,7 +34,8 @@ import { buildShareCardData, type ShareCardBand, type ShareCardRow, type ShareCa
 export type RoundReportBand = ShareCardBand;
 
 export type RoundReportStandingRow = {
-  rank: number;
+  /** Left out for a league round played alone (#2712): one player has no place. */
+  rank?: number;
   name: string;
   /** Mode-framed score label, already formatted (vs-par / points / skins). */
   scoreLabel: string;
@@ -141,6 +143,12 @@ export type BuildRoundReportFactsOpts = {
    * Omitted = everyone (pure callers and the existing fixtures).
    */
   aiAllowedUserIds?: ReadonlySet<string>;
+  /**
+   * #2712 (owner 31.10): the game is a league flight. Played alone it has no
+   * placement and no win, so the facts crown nobody (the prompt's «Er
+   * winnerName null, kårer du ingen vinner») and the row carries no rank.
+   */
+  leagueFlight?: boolean;
 };
 
 // nb-only surface by design (#1527) — rundereferatet skrives på norsk.
@@ -180,18 +188,24 @@ export function buildRoundReportFacts(
     return joinNames(allowedIds, nameByUserId);
   };
 
+  const alone = card.band === 'placement' && isLeagueFieldAlone(opts.leagueFlight ?? false, card.podium.length);
+
   const standings: RoundReportStandingRow[] = card.podium.flatMap((row) => {
     const name = visibleName(row);
-    return name === null ? [] : [{ rank: row.rank, name, scoreLabel: formatScoreLabel(row.score) }];
+    if (name === null) return [];
+    const scoreLabel = formatScoreLabel(row.score);
+    return [alone ? { name, scoreLabel } : { rank: row.rank, name, scoreLabel }];
   });
 
   const winnerRow = card.winners[0];
   const matchplayVisible = card.band !== 'matchplay' || matchplayPartiesAllowed(result, isAllowed);
-  const winnerName = winnerRow
-    ? visibleName(winnerRow)
-    : matchplayVisible
-      ? matchplayWinnerNameFallback(card)
-      : null;
+  const winnerName = alone
+    ? null
+    : winnerRow
+      ? visibleName(winnerRow)
+      : matchplayVisible
+        ? matchplayWinnerNameFallback(card)
+        : null;
 
   const facts: RoundReportFacts = {
     gameName,
@@ -209,7 +223,8 @@ export function buildRoundReportFacts(
   } else if (card.band === 'skins' && result.kind === 'skins') {
     const skins = buildSkinsFacts(result, nameByUserId);
     if (skins.winnerUserIds.every(isAllowed)) facts.skins = skins.facts;
-  } else if (card.band === 'placement') {
+  } else if (card.band === 'placement' && !alone) {
+    // #2712: alone in a league flight nobody leads, so no checkpoints either.
     const finalLeader: FinalLeader =
       winnerRow === undefined
         ? { kind: 'none' }
