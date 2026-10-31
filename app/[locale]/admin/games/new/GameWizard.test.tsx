@@ -1775,6 +1775,26 @@ describe('GameWizard — #2457 innstillinger som rader og ark', () => {
     expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
   });
 
+  it('en premie satt i arket og lukket er med ved publisering, og raden sier det', async () => {
+    const publish = vi.fn(async (_fd: FormData): Promise<CreateGameResult> => ({ error: '' }));
+    goToStablefordReady(publish);
+
+    openSetting(/sideturnering og premier/i);
+    fireEvent.click(screen.getByRole('switch', { name: /sideturnering/i }));
+    fireEvent.change(screen.getByLabelText(/premie for 1\. plass/i), {
+      target: { value: 'Middag for to' },
+    });
+    closeSheet();
+    expect(screen.queryByLabelText(/premie for 1\. plass/i)).toBeNull();
+    expect(rowValue('sideAndPrizes')).toContain('På · 1 premie');
+
+    fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+    const sent = Array.from(publish.mock.calls[0][0].entries()).filter(([, v]) => v === 'Middag for to');
+    expect(sent).toHaveLength(1);
+    expect(sent[0][0]).toMatch(/prize/);
+  });
+
   it('verdier satt i arkene og lukket er med ved «Lagre som utkast»', async () => {
     const draft = vi.fn(async (_fd: FormData): Promise<CreateGameResult> => ({ error: '' }));
     goToStablefordReady(undefined, draft);
