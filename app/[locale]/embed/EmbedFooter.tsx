@@ -25,7 +25,7 @@ export async function EmbedFooter({
         {live && (
           <span
             aria-hidden
-            className="inline-block size-2 animate-pulse rounded-full bg-accent"
+            className="inline-block size-2 animate-pulse rounded-full bg-live-dot"
           />
         )}
         {statusLabel}

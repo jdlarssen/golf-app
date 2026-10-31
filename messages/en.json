@@ -6885,6 +6885,7 @@
       "salutationGeneric": "Hi!",
       "body": "<strong>{submitterName}</strong> has submitted an idea via Suggest a Feature.",
       "bodyText": "{submitterName} has submitted an idea via Suggest a Feature.",
+      "quote": "“{text}”",
       "openAdmin": "View idea in admin",
       "openAdminText": "View idea in admin: {url}",
       "footer": "You receive this because you are an admin. Log in at <link>tornygolf.no</link> for a full overview."

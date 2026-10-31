@@ -51,7 +51,7 @@ export default function GlobalError({
               fontSize: 15,
               lineHeight: 1.6,
               margin: '0 0 28px',
-              color: '#5b6b62',
+              color: '#4A3F30',
             }}
           >
             Vi fikk ikke lastet appen akkurat nå. Som regel er det bare en kort

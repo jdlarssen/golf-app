@@ -105,19 +105,19 @@ function buildHtml(result: UnsubscribeResult): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} — Tørny</title>
 </head>
-<body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+<body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
     <tr>
       <td align="center" style="padding:48px 16px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td>
             <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
               ${mailWordmarkHtml()}
             </h1>
-            <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:24px 0 16px;color:#1A1813;">
+            <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:24px 0 16px;color:#1A2E1F;font-weight:500;">
               ${title}
             </h2>
-            <div style="font-size:16px;line-height:1.55;color:#1A1813;">
+            <div style="font-size:16px;line-height:1.55;color:#1A2E1F;">
               ${body}
             </div>
           </td></tr>

@@ -3,6 +3,7 @@ import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
+import { OgWordmark } from '@/lib/og/wordmark';
 import { FOREST, CHAMP, LINEN } from '@/lib/og/palette';
 
 /**
@@ -55,16 +56,7 @@ export default async function OpengraphImage({
           fontFamily: sans,
         }}
       >
-        <span
-          style={{
-            fontFamily: serif,
-            fontSize: 108,
-            fontWeight: 600,
-            color: LINEN,
-          }}
-        >
-          Tørny
-        </span>
+        <OgWordmark fontFamily={serif} fontSize={108} fontWeight={600} color={LINEN} />
         <div
           style={{
             width: 96,
