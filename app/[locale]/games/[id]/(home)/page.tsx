@@ -569,12 +569,16 @@ export default async function GameHomePage({
   // calculate+allowance pipeline from start, so display and frozen never drift.
   let displayedCourseHandicap: number | null = me.course_handicap;
   // #2712: the share and cap also decide the label (frozenIsPlayingHandicap),
-  // so they are read for every render, not only before the freeze.
-  const allowancePromise = supabase
-    .from('games')
-    .select('hcp_allowance_pct, hcp_max_strokes')
-    .eq('id', id)
-    .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>();
+  // so they are read for every render, not only before the freeze. Wrapped in
+  // a real promise: a PostgREST builder fetches again on every await, and this
+  // one is awaited twice.
+  const allowancePromise = Promise.resolve(
+    supabase
+      .from('games')
+      .select('hcp_allowance_pct, hcp_max_strokes')
+      .eq('id', id)
+      .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>(),
+  );
   if (displayedCourseHandicap == null && playerRating) {
     const [meHcpRes, allowanceRes] = await Promise.all([
       supabase
