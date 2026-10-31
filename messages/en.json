@@ -7384,26 +7384,23 @@
         { "name": "Jonas", "points": "33 pts" }
       ],
       "chips": [
-        { "icon": "⛳", "label": "Closest to the pin" },
-        { "icon": "🚀", "label": "Longest drive" },
-        { "icon": "💰", "label": "Prize pot" }
+        { "label": "Closest to the pin" },
+        { "label": "Longest drive" },
+        { "label": "Prize pot" }
       ]
     },
     "points": {
       "heading": "Built for the tournament",
       "items": [
         {
-          "icon": "🎛️",
           "title": "The organiser is in charge",
           "body": "Approve scorecards, start automatically at the agreed time, and get the result by email."
         },
         {
-          "icon": "📨",
           "title": "Everyone is in within a minute",
           "body": "An email invite, a one-time code, and you are playing."
         },
         {
-          "icon": "🏆",
           "title": "The prize ceremony comes with it",
           "body": "Podium, winners and the prize table when the last putt drops."
         }

@@ -7385,26 +7385,23 @@
         { "name": "Jonas", "points": "33 p" }
       ],
       "chips": [
-        { "icon": "⛳", "label": "Nærmest pinnen" },
-        { "icon": "🚀", "label": "Lengste drive" },
-        { "icon": "💰", "label": "Premiepott" }
+        { "label": "Nærmest pinnen" },
+        { "label": "Lengste drive" },
+        { "label": "Premiepott" }
       ]
     },
     "points": {
       "heading": "Spisset for turneringen",
       "items": [
         {
-          "icon": "🎛️",
           "title": "Arrangøren har kontroll",
           "body": "Godkjenn scorekort, start automatisk til avtalt tid, og få resultatet på e-post."
         },
         {
-          "icon": "📨",
           "title": "Alle er med på et minutt",
           "body": "Invitasjon på e-post, engangskode, og spillet er i gang."
         },
         {
-          "icon": "🏆",
           "title": "Premieseremonien følger med",
           "body": "Podium, vinnere og premiebord når siste putt er i hull."
         }

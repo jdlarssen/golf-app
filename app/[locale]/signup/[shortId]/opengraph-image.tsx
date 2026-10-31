@@ -153,17 +153,17 @@ export default async function OpengraphImage({
               justifyContent: 'center',
             }}
           >
+            {/* Ordmerket står allerede øverst (lockup-en). Midten bærer
+                slagordet alene, så «Tørny» ikke står to ganger (#2725). */}
             <span
               style={{
                 fontFamily: serif,
-                fontSize: 84,
+                fontSize: 64,
                 fontWeight: 600,
+                lineHeight: 1.15,
                 color: FOREST,
               }}
             >
-              Tørny
-            </span>
-            <span style={{ fontSize: 36, color: MUTED, marginTop: 18 }}>
               {tBrand('tagline')}
             </span>
           </div>
