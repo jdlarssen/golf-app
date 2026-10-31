@@ -49,7 +49,7 @@ function rankAccent(rank: number): {
   if (rank === 1) {
     return {
       cardClass:
-        'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]',
+        'border-accent bg-accent/[0.06]',
       place: 1,
     };
   }

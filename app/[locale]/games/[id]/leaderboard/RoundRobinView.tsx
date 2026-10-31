@@ -215,7 +215,7 @@ function PlayerRow({
   const isPodium = player.rank >= 1 && player.rank <= 3;
   const isLeader = player.rank === 1;
   const cardClass = isLeader
-    ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
+    ? 'border-accent bg-accent/[0.06]'
     : '';
 
   const slotLabel = SLOT_LABEL[player.teamNumber] ?? String(player.teamNumber);

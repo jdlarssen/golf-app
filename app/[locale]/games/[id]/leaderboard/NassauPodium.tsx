@@ -128,7 +128,7 @@ export function NassauPodium({
       {sweeper && (
         <div
           data-testid="nassau-sweep"
-          className="mx-4 mb-3 rounded-2xl border border-accent bg-accent/[0.08] px-4 py-3 text-center shadow-[0_2px_12px_rgba(201,169,97,0.18)]"
+          className="mx-4 mb-3 rounded-2xl border border-accent bg-accent/[0.08] px-4 py-3 text-center"
         >
           <p className="font-serif text-[18px] font-medium leading-tight text-accent-text">
             {t('nassau.sweepLabel')}
