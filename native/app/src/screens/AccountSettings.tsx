@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DesignSwitch } from '../components/DesignSwitch';
+import { DesignSwitch, listSwitchOffColor } from '../components/DesignSwitch';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { rememberAiConsentAnswered } from '../data/aiConsentGate';
@@ -147,7 +147,7 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
       {/* Innlogging går via engangskode på e-post, så feltet er i praksis
           alltid satt — men sesjonstypen tillater null, og da er «Innlogget»
           ærligere enn en tom linje. */}
-      <View style={ui.card}>
+      <View style={[ui.card, styles.cardRound]}>
         <Text style={ui.body} testID="account-email">
           {email ?? 'Innlogget'}
         </Text>
@@ -293,7 +293,7 @@ function AiConsentSetting() {
           // `NotificationsAndTheme`), så det synes mot kortet. Kantfargen
           // forsvant nesten.
           onColor={colors.primary}
-          offColor={scheme === 'dark' ? `${colors.muted}73` : SWITCH_OFF_LIGHT}
+          offColor={listSwitchOffColor(colors, scheme)}
           testID="account-ai-consent-switch"
         />
       ) : null}
@@ -301,10 +301,9 @@ function AiConsentSetting() {
   );
 }
 
-/** Av-sporet i Varsler-tegningens liste (`#d9d2c2`). */
-const SWITCH_OFF_LIGHT = '#D9D2C2';
-
 const styles = StyleSheet.create({
+  // 16 som innstillingslistene rett under (#2709).
+  cardRound: { borderRadius: 16 },
   dangerGap: { marginTop: 24 },
   aiRow: {
     flexDirection: 'row',

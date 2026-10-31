@@ -22,7 +22,7 @@ import {
 } from '../../lib/leaderboardModel';
 import { FONTS, useTheme } from '../../theme';
 import { SettlementCard } from './SettlementCard';
-import { LeaderTable } from './Table';
+import { LeaderTable, plainBoardCard } from './Table';
 
 export function WolfView({
   result,
@@ -63,7 +63,7 @@ export function WolfView({
       />
       {catchUpRule ? (
         <Text
-          style={[styles.rule, { color: colors.text, borderLeftColor: colors.accent }]}
+          style={[styles.rule, { color: colors.text, borderLeftColor: colors.border }]}
           testID="wolf-catch-up-rule"
         >
           <Text style={styles.ruleLead}>{catchUpRule.lead}</Text> {catchUpRule.rest}
@@ -112,7 +112,7 @@ export function WolfView({
           return (
             <View
               key={hole.holeNumber}
-              style={ui.card}
+              style={[ui.card, plainBoardCard]}
               testID={`wolf-hole-${hole.holeNumber}`}
             >
               <View style={styles.holeHead}>

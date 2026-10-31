@@ -3,7 +3,7 @@
 // da «Personvern og konto» fikk en bryter for AI-tekstene (#2561). Utseende og
 // oppførsel er uendret.
 import { Pressable, StyleSheet, View } from 'react-native';
-import { PALETTES } from '../theme';
+import { PALETTES, type Scheme, type ThemeColors } from '../theme';
 
 /**
  * Bryteren fra tegningen: 52 × 32 spor og en rund knott på 26 pt, 3 pt fra
@@ -47,6 +47,15 @@ export function DesignSwitch({
       <View style={styles.switchKnob} />
     </Pressable>
   );
+}
+
+/**
+ * Av-sporet når bryteren står i en lys liste (Varsler-tegningens `#d9d2c2`).
+ * Mørk drakt har ingen tegning: den dempede tekstfargen med 45 % dekning, så
+ * sporet synes mot kortet. Én kilde for kontoinnstillingene og veiviseren (#2709).
+ */
+export function listSwitchOffColor(colors: ThemeColors, scheme: Scheme): string {
+  return scheme === 'dark' ? `${colors.muted}73` : '#D9D2C2';
 }
 
 const SWITCH_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };

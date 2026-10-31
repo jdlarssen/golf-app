@@ -677,15 +677,20 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       gap: 12,
     },
     title: {
-      // Spillnavnet kan brekke.
-      ...fraunces(600, 26, undefined, { multiline: true }),
+      // Spillnavnet kan brekke. 500 som `PageTitle`: halvfet er for tall,
+      // ord står i 500 (#2709).
+      ...fraunces(500, 26, undefined, { multiline: true }),
       color: c.text,
     },
+    /**
+     * Seksjonsoverskrift i de eldre skjermene (veiviseren, kontoinnstillingene,
+     * de enkle tavlene). Samme mål som `kicker` (#2709), med luft over.
+     */
     sectionTitle: {
-      fontSize: 13,
+      fontSize: 10,
       ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
-      letterSpacing: 1.2,
+      letterSpacing: 2,
       textTransform: 'uppercase',
       color: c.muted,
       marginTop: 16,

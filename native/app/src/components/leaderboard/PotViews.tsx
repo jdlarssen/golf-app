@@ -10,7 +10,7 @@ import {
 } from '../../lib/leaderboardModel';
 import { useTheme } from '../../theme';
 import { SettlementCard } from './SettlementCard';
-import { LeaderTable } from './Table';
+import { LeaderTable, plainBoardCard } from './Table';
 
 export function SkinsView({
   result,
@@ -89,7 +89,7 @@ export function NassauView({
       />
       <Text style={ui.sectionTitle}>De tre konkurransene</Text>
       {sections.map((section) => (
-        <View key={section.name} style={ui.card} testID={`nassau-section-${section.name}`}>
+        <View key={section.name} style={[ui.card, plainBoardCard]} testID={`nassau-section-${section.name}`}>
           <Text style={ui.body}>{NASSAU_SECTION_LABELS[section.name]}</Text>
           <Text style={ui.muted}>{nassauSectionLine(section, nameOf)}</Text>
         </View>

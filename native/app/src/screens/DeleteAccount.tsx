@@ -176,14 +176,14 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
       <Text style={ui.title}>{ACCOUNT_TEXT.heading}</Text>
 
       <Text style={ui.sectionTitle}>{ACCOUNT_TEXT.deletedHeading}</Text>
-      <View style={ui.card} testID="delete-account-deleted">
+      <View style={[ui.card, styles.cardRound]} testID="delete-account-deleted">
         {ACCOUNT_TEXT.deletedBullets.map((line) => (
           <Bullet key={line} text={line} />
         ))}
       </View>
 
       <Text style={ui.sectionTitle}>{ACCOUNT_TEXT.keptHeading}</Text>
-      <View style={ui.card} testID="delete-account-kept">
+      <View style={[ui.card, styles.cardRound]} testID="delete-account-kept">
         <Bullet text={ACCOUNT_TEXT.keptBullet} />
       </View>
 
@@ -280,9 +280,12 @@ function Bullet({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
+  // 16 som kortene og listene ellers i appen (#2709).
+  cardRound: { borderRadius: 16 },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   bulletText: { flex: 1 },
   confirm: { marginTop: 16 },
-  name: { fontFamily: FONTS.sansBold },
+  // Halvfet som resten av appen, ikke fet (#2709).
+  name: { fontFamily: FONTS.sansSemiBold },
   buttonOff: { opacity: 0.4 },
 });

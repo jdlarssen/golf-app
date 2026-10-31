@@ -30,6 +30,12 @@ export interface LeaderRow {
  * Tabellen. Rekkefølgen på radene er kallerens ansvar: motoren har allerede
  * rangert dem, og en sortering til her ville vært en ny og konkurrerende regel.
  */
+/**
+ * Kortene på de enkle tavlene (Wolf, Skins, Nassau, matchplay) har 16-hjørner
+ * som de tegnede tavlene, ikke `ui.card` sine 12 (#2709).
+ */
+export const plainBoardCard = { borderRadius: 16 } as const;
+
 export function LeaderTable({
   columns,
   rows,
@@ -41,14 +47,14 @@ export function LeaderTable({
 }) {
   const { colors, ui } = useTheme();
   return (
-    <View style={ui.card} testID={testID}>
+    <View style={[ui.card, plainBoardCard]} testID={testID}>
       <View style={[styles.row, { borderBottomColor: colors.border }]}>
         {columns.map((column) => (
           <Text
             key={column.key}
             style={[
-              ui.muted,
-              styles.headCell,
+              // Tabellhodet er appens kicker, ikke en egen variant (#2709).
+              ui.kicker,
               { flex: column.flex ?? 1 },
               column.numeric ? styles.numericCell : null,
             ]}
@@ -104,9 +110,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headCell: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   numericCell: { textAlign: 'right' },
   // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per
   // familie, så en vekt oppå Inter Regular gjør ingenting.
-  highlight: { fontFamily: FONTS.sansBold },
+  // Halvfet som resten av appen, ikke fet (#2709).
+  highlight: { fontFamily: FONTS.sansSemiBold },
 });

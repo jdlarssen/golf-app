@@ -81,7 +81,7 @@ import { PageTitle } from '../components/PageTitle';
 import { withSystemArrows } from '../components/SystemArrow';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, sheetGrabber, sheetScrim, TAP, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 type LoadState =
@@ -600,7 +600,7 @@ function FriendSheet({
   onClose: () => void;
   onRemove: (friend: FriendItem) => void;
 }) {
-  const { ui, colors } = useTheme();
+  const { ui, colors, scheme } = useTheme();
   // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
   const insets = useSafeAreaInsets();
   const values = friend ? friendSheetValues(friend, now) : null;
@@ -608,7 +608,7 @@ function FriendSheet({
     <Modal visible={friend !== null} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetRoot}>
         <Pressable
-          style={styles.backdrop}
+          style={[styles.backdrop, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={FRIENDS_TEXT.sheetClose}
@@ -623,6 +623,7 @@ function FriendSheet({
             accessibilityViewIsModal
             testID="friend-sheet"
           >
+            <View style={[styles.grabber, { backgroundColor: sheetGrabber(scheme) }]} />
             <View style={styles.sheetHead}>
               <Avatar name={friend.name} tone="strong" />
               <Text
@@ -947,16 +948,20 @@ const styles = StyleSheet.create({
   dimmed: { opacity: 0.5 },
 
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)' },
+  // Hinnen og grep-streken som de andre arkene (#2709): `sheetScrim` blir
+  // mørkere i klubbhus-natt, og hjørnene er 20 som på QR- og send-tilbake-arket.
+  backdrop: { ...StyleSheet.absoluteFill },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderWidth: 1,
     borderBottomWidth: 0,
-    // Bunnen: 36 + systemlinja, i komponenten.
-    padding: 20,
+    // Bunnen: 36 + systemlinja, i komponenten. Toppen: 8 over grep-streken.
+    paddingTop: 8,
+    paddingHorizontal: 20,
     gap: 14,
   },
+  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   // Navnet kan gå over to linjer.
   sheetName: { ...fraunces(500, 22, undefined, { multiline: true }), flex: 1 },
