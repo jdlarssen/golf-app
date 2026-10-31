@@ -82,3 +82,19 @@ describe('computeProfileSeason', () => {
     ).toBe(3);
   });
 });
+
+// #2712 (owner 31.10): a league round played alone is no win in the season.
+describe('computeProfileSeason — league round alone (#2712)', () => {
+  const solo: ResultSummary = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
+  it('counts the round, not the win', () => {
+    const out = computeProfileSeason(
+      [
+        { year: 2026, completeBrutto: 80, resultSummary: solo, leagueFlight: true },
+        { year: 2026, completeBrutto: 84, resultSummary: WON_PLACEMENT, leagueFlight: true },
+      ],
+      2026,
+    );
+    expect(out).toEqual({ rounds: 2, bestRound: 80, wins: 1 });
+  });
+});
+

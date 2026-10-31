@@ -31,6 +31,8 @@ type GameRow = {
   hole_segment: HoleSegment;
   /** #2217: a derived single owns no scores — they live on the host game. */
   source_game_id: string | null;
+  /** #2712: a league flight; played alone it counts as played, not won. */
+  league_round_id: string | null;
 };
 
 type GamePlayerRow = {
@@ -121,7 +123,7 @@ const getClubStatsAggregate = unstable_cache(
       (from, to) =>
         supabase
           .from('games')
-          .select('id, course_id, game_mode, mode_config, hole_segment, source_game_id')
+          .select('id, course_id, game_mode, mode_config, hole_segment, source_game_id, league_round_id')
           .eq('status', 'finished')
           .order('id')
           .range(from, to)
@@ -182,6 +184,8 @@ const getClubStatsAggregate = unstable_cache(
     // Shape into the pure-tally input.
     const tallyGames: FinishedGameForTally[] = games.map((g) => ({
       id: g.id,
+      // #2712: a league round played alone counts as played, not won.
+      leagueFlight: g.league_round_id != null,
       players: (playersByGame.get(g.id) ?? []).map((p) => ({
         userId: p.user_id,
         name: p.users?.name ?? null,
@@ -217,7 +221,10 @@ const getClubStatsAggregate = unstable_cache(
           const winners: string[] = [];
           for (const [uid, summary] of summaries) {
             // #1009: en gjest kan vinne runden, men skal ikke på klubbtavla.
-            if (isWinningSummary(summary) && !guestUserIds.has(uid)) {
+            if (
+              isWinningSummary(summary, { leagueFlight: game.league_round_id != null }) &&
+              !guestUserIds.has(uid)
+            ) {
               winners.push(uid);
             }
           }
