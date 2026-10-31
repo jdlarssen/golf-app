@@ -12,6 +12,8 @@
 #   3. The playwright-cli command the playwright-cli skill needs.
 #   4. .env.staging.local, written from the environment's variables, but only
 #      when they point at torny-staging. Never prod.
+#   5. A 4 GB Node heap for the session: `tsc --noEmit` (pre-push gate) needs about
+#      2.7 GB, and Node's default heap in the cloud container is about 2 GB.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -79,4 +81,9 @@ if [ ! -e "$env_file" ]; then
       echo "session-start: NEXT_PUBLIC_SUPABASE_URL is not torny-staging, so $env_file was not written" >&2
       ;;
   esac
+fi
+
+# 5. Node heap for the session ----------------------------------------------
+if [ -n "${CLAUDE_ENV_FILE:-}" ] && ! grep -qs 'max-old-space-size' "$CLAUDE_ENV_FILE"; then
+  echo 'export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=4096"' >> "$CLAUDE_ENV_FILE"
 fi

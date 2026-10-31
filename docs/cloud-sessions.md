@@ -16,6 +16,8 @@ ingenting. Skriptet:
 4. Skriver `.env.staging.local` fra miljøvariablene, men bare når
    `NEXT_PUBLIC_SUPABASE_URL` peker på torny-staging (`snwmueecmfqqdurxedxv`). Peker den et
    annet sted, skrives ingenting. Prod-nøkler skal aldri ligge i sky-miljøet.
+5. Gir Node 4 GB minne i økta. `tsc --noEmit` i pre-push-porten bruker rundt 2,7 GB, og
+   standarden i sky-containeren er rundt 2 GB.
 
 ## Hva eieren setter opp én gang (i nettleseren)
 
