@@ -105,6 +105,12 @@ const ALLOWED: Record<string, Allowed> = {
     reason:
       '(D6) vennens navn på bekreftelsessiden, lest først etter vennesjekken og maskert på serveren som navne-fallback (#2267)',
   },
+  // #2607: «Ta med en gjest».
+  'app/[locale]/games/[id]/ta-med-gjest/actions.ts': {
+    receivers: ['getAdminClient()', 'admin'],
+    reason:
+      '(c) serverside utsending: arrangørens adresse som mottaker, egen rad som avsender (navnet i varselet, maskert)',
+  },
   'app/[locale]/signup/[shortId]/actions.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending: egen rad som avsender, arrangørens adresse som mottaker',

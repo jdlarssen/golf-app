@@ -61,6 +61,9 @@ import { GetTheApp } from '@/components/app/GetTheApp';
 import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { WithdrawnBanner } from './WithdrawnBanner';
+import { BringGuestRow } from './BringGuestRow';
+import { bringGuestBlock } from '@/lib/games/bringGuest';
+import { readMyBroughtGuest } from '@/lib/games/broughtGuests';
 import {
   isMatchplayMode,
   computeSideShortfall,
@@ -651,11 +654,35 @@ export default async function GameHomePage({
     // confirmed timestamp. Lives outside getGameWithPlayers because
     // cross-game cache fan-out on profile edits would be expensive — same
     // trade-off as for the courses(...)/tee_boxes(...) joins above.
-    const { data: meUser } = await supabase
-      .from('users')
-      .select('hcp_index, handicap_updated_at')
-      .eq('id', userId)
-      .single<{ hcp_index: number; handicap_updated_at: string }>();
+    // #2607: «Ta med en gjest». The sign-up columns are not in the cached
+    // row (GAME_HOME_SELECT), so they are read here, slim, next to meUser.
+    const [{ data: meUser }, { data: signupCols }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('hcp_index, handicap_updated_at')
+        .eq('id', userId)
+        .single<{ hcp_index: number; handicap_updated_at: string }>(),
+      supabase
+        .from('games')
+        .select('registration_mode, registration_type, signups_closed_at')
+        .eq('id', id)
+        .maybeSingle<{
+          registration_mode: string;
+          registration_type: string;
+          signups_closed_at: string | null;
+        }>(),
+    ]);
+    // The row shows only where the player may bring a guest; a failed read
+    // shows no row (the page itself gates again).
+    const canBringGuest =
+      signupCols != null &&
+      bringGuestBlock(
+        { ...game, created_by: gwp.game.created_by, ...signupCols },
+        { userId, seat: { withdrawn_at: me.withdrawn_at }, isGuest: meIsGuest },
+      ) === null;
+    const myBroughtGuest = canBringGuest
+      ? await readMyBroughtGuest(getAdminClient(), id, userId)
+      : null;
     const showHandicapCard = meUser
       ? isHandicapStale(meUser.handicap_updated_at)
       : false;
@@ -833,6 +860,9 @@ export default async function GameHomePage({
                   : t('scorecardOpensWhenOrganizerStarts')}
           </h1>
         </section>
+
+        {/* #2607: «Ta med en gjest», right under «Du er påmeldt». */}
+        {myBroughtGuest?.ok && <BringGuestRow gameId={id} guest={myBroughtGuest.guest} />}
 
         {/* #1068: startkontingent-oppfordring flyttet hit — venterommet er
             der spillere faktisk venter og har konteksten (#1049 rendret den

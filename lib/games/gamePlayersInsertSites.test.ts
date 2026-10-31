@@ -35,6 +35,12 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     count: 2,
     reason: 'direct insert and the seat-claim RPC (p_tee_gender), joinTeeGenders',
   },
+  // #2607: «Ta med en gjest».
+  'app/[locale]/games/[id]/ta-med-gjest/actions.ts': {
+    count: 2,
+    reason:
+      "the brought guest's seat: the seat-claim RPC (p_tee_gender) or a direct insert, the guest's M/D/J pick clamped to the game's tee",
+  },
   'app/[locale]/signup/[shortId]/teamActions.ts': {
     count: 4,
     reason:

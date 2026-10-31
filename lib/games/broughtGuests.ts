@@ -236,11 +236,14 @@ type MyBroughtRow = {
   id: string;
   user_id: string;
   status: 'pending' | 'approved';
-  users: (NonNullable<EmbeddedUser> & {
+  users: {
+    is_guest: boolean;
+    name: string | null;
+    nickname: string | null;
     hcp_index: number | null;
     gender: 'mens' | 'ladies' | null;
     level: string | null;
-  }) | null;
+  } | null;
 };
 
 /**
@@ -256,7 +259,9 @@ export async function readMyBroughtGuest(
   const { data, error } = await admin
     .from('game_registration_requests')
     .select(
-      'id, user_id, status, users!game_registration_requests_user_id_fkey(is_guest, name, nickname, email, hcp_index, gender, level)',
+      // No email: a guest always has a name (parseGuestProfile), and the
+      // placeholder address is private (#2207).
+      'id, user_id, status, users!game_registration_requests_user_id_fkey(is_guest, name, nickname, hcp_index, gender, level)',
     )
     .eq('game_id', gameId)
     .eq('brought_by_user_id', userId)
@@ -274,7 +279,7 @@ export async function readMyBroughtGuest(
   return {
     ok: true,
     guest: {
-      ...toBroughtGuest(row),
+      ...toBroughtGuest({ ...row, users: u ? { ...u, email: null } : null }),
       hcpIndex: u?.hcp_index ?? null,
       // The guest's profile carries the category the form chose (createGuestUser).
       tee: u?.level === 'junior' ? 'J' : u?.gender === 'ladies' ? 'D' : 'M',

@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`/games/[id]/ta-med-gjest > a pending guest: «Gjesten din» with the status and «Fjern gjesten» 1`] = `
+[
+  "Lørdagsrunden",
+  "Gjesten din",
+  "Arrangøren godkjenner gjesten som en vanlig påmelding, og du ser svaret her. Trekker du deg, går gjesten også.",
+  "Gjesten",
+  "Hilde Moen",
+  "HCP 24,6 · Dame",
+  "Venter på arrangøren",
+  "Fjern gjesten",
+]
+`;
+
+exports[`/games/[id]/ta-med-gjest > no guest yet: the guest card and the note about the organiser 1`] = `
+[
+  "Lørdagsrunden",
+  "Ta med en gjest",
+  "Én gjest per spiller. Gjesten tar en plass i runden, og går ut igjen hvis du trekker deg.",
+  "Gjesten",
+  "Gjesten trenger ikke konto. Du oppgir navn og handicap, og markøren i flighten fører scoren.",
+  "Herre",
+  "Dame",
+  "Junior",
+  "Ta med gjesten",
+  "Arrangøren godkjenner gjesten på samme måte som andre påmeldinger i denne runden.",
+]
+`;
