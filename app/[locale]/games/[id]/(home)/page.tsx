@@ -61,7 +61,7 @@ import { GetTheApp } from '@/components/app/GetTheApp';
 import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { WithdrawnBanner } from './WithdrawnBanner';
-import { BringGuestRow } from './BringGuestRow';
+import { ScheduledActionsCard } from './ScheduledActionsCard';
 import { bringGuestBlock } from '@/lib/games/bringGuest';
 import { readMyBroughtGuest } from '@/lib/games/broughtGuests';
 import {
@@ -861,8 +861,19 @@ export default async function GameHomePage({
           </h1>
         </section>
 
-        {/* #2607: «Ta med en gjest», right under «Du er påmeldt». */}
-        {myBroughtGuest?.ok && <BringGuestRow gameId={id} guest={myBroughtGuest.guest} />}
+        {/* #2607 (the owner's answer 31.10): the drawing's list card under
+            «Du er påmeldt»: «Ta med en gjest» when the player may bring one,
+            then calendar and map, which used to be buttons in the course card. */}
+        <ScheduledActionsCard
+          gameId={id}
+          guestRow={myBroughtGuest?.ok ? { guest: myBroughtGuest.guest } : null}
+          calendarHref={teeOffDate ? `/${locale}/games/${id}/calendar` : null}
+          mapHref={
+            game.courses?.name
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`
+              : null
+          }
+        />
 
         {/* #1068: startkontingent-oppfordring flyttet hit — venterommet er
             der spillere faktisk venter og har konteksten (#1049 rendret den
@@ -916,32 +927,6 @@ export default async function GameHomePage({
               )}
             </div>
           </div>
-
-          {/* #945: kalender (.ics) + kart for planlagt tee-off. Lenken til
-              .ics-ruten er en ren <a> (ikke next/link) så Content-Disposition
-              trigger «Legg til i kalender»-arket på iOS framfor klient-nav. */}
-          {(teeOffDate || game.courses?.name) && (
-            <div className="mt-3.5 flex flex-wrap gap-2">
-              {teeOffDate && (
-                <a
-                  href={`/${locale}/games/${id}/calendar`}
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
-                >
-                  {t('addToCalendar')}
-                </a>
-              )}
-              {game.courses?.name && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
-                >
-                  {t('viewOnMap')}
-                </a>
-              )}
-            </div>
-          )}
 
           <div className="h-px bg-border my-3.5" />
 
