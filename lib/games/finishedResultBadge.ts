@@ -17,7 +17,38 @@ export interface FinishedResultBadge {
   isWin: boolean;
 }
 
-export function finishedResultBadge(summary: ResultSummary): FinishedResultBadge {
+/**
+ * #2712 (owner 31.10): a league flight played alone has no placement and no
+ * win. One home for the rule: this badge («Godkjent» instead of «Du vant») and
+ * every win count (`isWinningSummary` in lib/stats/clubStats.ts) read it.
+ */
+export function isLeagueRoundAlone(summary: ResultSummary | null, leagueFlight: boolean): boolean {
+  return summary?.kind === 'placement' && isLeagueFieldAlone(leagueFlight, summary.fieldSize);
+}
+
+/**
+ * The same rule for a caller that has the field size but no stored summary:
+ * the «Resultatet er klart» mail (ranked players) and the app's Home hero
+ * (active players in a live round).
+ */
+export function isLeagueFieldAlone(leagueFlight: boolean, fieldSize: number): boolean {
+  return leagueFlight && fieldSize <= 1;
+}
+
+export function finishedResultBadge(
+  summary: ResultSummary,
+  opts: {
+    /**
+     * #2712 (owner 31.10): the game is a league flight. Played alone, it has no
+     * placement («Du vant» of one); it finishes when the marker approves, so
+     * the card says «Godkjent». A flight of several keeps its placement.
+     */
+    leagueFlight?: boolean;
+  } = {},
+): FinishedResultBadge {
+  if (isLeagueRoundAlone(summary, opts.leagueFlight ?? false)) {
+    return { key: 'result.approved', isWin: false };
+  }
   switch (summary.kind) {
     case 'placement': {
       if (summary.rank === 1) {

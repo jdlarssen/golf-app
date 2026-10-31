@@ -59,6 +59,8 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   ended_at: string | null;
   course_id: string | null;
+  /** #2712: a league flight; played alone it is no win. */
+  league_round_id: string | null;
   courses: { name: string } | null;
 };
 
@@ -113,7 +115,7 @@ export async function loadKavalkadeInput(
       supabase
         .from('game_players')
         .select(
-          'game_id, games!inner(id, name, game_mode, scheduled_tee_off_at, ended_at, course_id, courses(name))',
+          'game_id, games!inner(id, name, game_mode, scheduled_tee_off_at, ended_at, course_id, league_round_id, courses(name))',
         )
         .eq('user_id', viewerUserId)
         .is('withdrawn_at', null)
@@ -241,6 +243,7 @@ export async function loadKavalkadeInput(
       endedAt: game.ended_at ? new Date(game.ended_at) : null,
       playedAt: effectiveDate(game),
       players,
+      leagueFlight: game.league_round_id != null,
     };
   });
 

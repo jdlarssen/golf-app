@@ -35,8 +35,11 @@ export const HOME_CACHE_KEY = 'home';
  * `resultSummary` og `flightNumber`, og lista fikk `lastRound`. En cache fra
  * før mangler dem, og et `undefined` i `holeSegment` ville stengt heltekortet
  * (`gateReason` tester mot `'full'`). Den leses derfor som «ingen cache».
+ *
+ * v3 (#2712): kortene fikk `leagueRoundId`, så «Forrige runde» kan si
+ * «Godkjent» i stedet for «Du vant» etter en ligaflight spilt alene.
  */
-export const HOME_PAYLOAD_VERSION = 2;
+export const HOME_PAYLOAD_VERSION = 3;
 
 /** Ett kort på hjem-skjermen. Alt kortet viser, ingenting mer. */
 export interface HomeCard {
@@ -57,6 +60,8 @@ export interface HomeCard {
   resultSummary: ResultSummary | null;
   /** Egen flight, eller null når spillet ikke er delt i flighter. */
   flightNumber: number | null;
+  /** #2712: ligarunden spillet er en flight i, eller null. */
+  leagueRoundId: string | null;
 }
 
 /**
@@ -97,6 +102,7 @@ interface HomeRow {
     ended_at: string | null;
     scheduled_tee_off_at: string | null;
     require_peer_approval: boolean;
+    league_round_id?: string | null;
     courses: { name: string } | null;
     /** #2214: cupens status, eller null for et spill utenfor cup. */
     tournament: { status: string } | null;
@@ -104,7 +110,7 @@ interface HomeRow {
 }
 
 const HOME_SELECT =
-  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, courses(name), tournament:tournaments(status))';
+  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, league_round_id, courses(name), tournament:tournaments(status))';
 
 /**
  * Statusene en spiller har noe å gjøre med. `draft` er admin-eid og usynlig.
@@ -153,6 +159,7 @@ export async function fetchHomeCards(userId: string): Promise<HomeList> {
       endedAt: row.games.ended_at,
       resultSummary: row.result_summary ?? null,
       flightNumber: row.flight_number,
+      leagueRoundId: row.games.league_round_id ?? null,
     }));
 
   return {

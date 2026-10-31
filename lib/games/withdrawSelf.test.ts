@@ -62,6 +62,12 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
+// #2712: which league a flight belongs to has its own suite; here it is the boundary.
+const readSimulatorLeagueFlightMock = vi.fn(async (..._args: unknown[]) => null as unknown);
+vi.mock('@/lib/league/leagueFlight', () => ({
+  readSimulatorLeagueFlight: (...args: unknown[]) => readSimulatorLeagueFlightMock(...args),
+}));
+
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const GAME_ID = '22222222-2222-2222-2222-222222222222';
 const CAPTAIN_ID = '33333333-3333-3333-3333-333333333333';
@@ -1135,5 +1141,79 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: CAPTAIN_ID, kind: 'team_member_withdrew' }),
     );
+  });
+});
+
+// #2712 (owner 31.10): a simulator league has one attempt per round. A
+// withdrawal frees the player for a new flight (roundLocks), so once the card
+// is delivered the player can no longer withdraw. Before delivery, and in
+// every other game, nothing changes.
+describe('withdrawSelf — simulatorliga: ikke etter levering (#2712)', () => {
+  const ROUND_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  function activeGame(leagueRoundId: string | null) {
+    return {
+      data: {
+        id: GAME_ID,
+        name: 'Liga – Runde 1',
+        short_id: 'abc12345',
+        status: 'active',
+        game_mode: 'stableford',
+        tournament_id: null,
+        created_by: USER_ID,
+        league_round_id: leagueRoundId,
+      },
+      error: null,
+    };
+  }
+  function me(submittedAt: string | null) {
+    return { data: { user_id: USER_ID, team_number: null, withdrawn_at: null, submitted_at: submittedAt }, error: null };
+  }
+  const simulatorFlight = { gameId: GAME_ID, isSimulator: true };
+
+  beforeEach(() => {
+    readSimulatorLeagueFlightMock.mockReset();
+    readSimulatorLeagueFlightMock.mockResolvedValue(null);
+  });
+
+  it('levert kort i en simulatorliga → card_delivered, ingen skriving', async () => {
+    readSimulatorLeagueFlightMock.mockResolvedValue(simulatorFlight);
+    adminMock = buildSupabaseMock([activeGame(ROUND_ID), me('2026-10-31T11:22:31Z')]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'card_delivered' });
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('før levering i en simulatorliga → mykt trekk som før', async () => {
+    readSimulatorLeagueFlightMock.mockResolvedValue(simulatorFlight);
+    adminMock = buildSupabaseMock([activeGame(ROUND_ID), me(null), { data: [{ user_id: USER_ID }], error: null }]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+  });
+
+  it('levert kort i en vanlig liga → mykt trekk som før', async () => {
+    adminMock = buildSupabaseMock([
+      activeGame(ROUND_ID),
+      me('2026-10-31T11:22:31Z'),
+      { data: [{ user_id: USER_ID }], error: null },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+    expect(readSimulatorLeagueFlightMock).toHaveBeenCalledWith(GAME_ID);
+  });
+
+  it('levert kort i et vanlig spill → mykt trekk som før, uten ligaoppslag', async () => {
+    adminMock = buildSupabaseMock([
+      activeGame(null),
+      me('2026-10-31T11:22:31Z'),
+      { data: [{ user_id: USER_ID }], error: null },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+    expect(readSimulatorLeagueFlightMock).not.toHaveBeenCalled();
   });
 });

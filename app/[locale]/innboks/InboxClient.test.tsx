@@ -134,6 +134,7 @@ function renderInbox(rows: InboxRow[]) {
       teeOffByGame={{}}
       resultByGame={{}}
       finishedGameIds={[]}
+      leagueFlightGameIds={[]}
       now={NOW}
       signupErrorText={{
         game_locked: 'Spillet er startet eller avsluttet. Påmeldinger kan ikke endres lenger.',

@@ -29,6 +29,8 @@ const LIVE: HeroModel = {
   },
   unit: 'points',
   approvals: 0,
+  leagueSolo: false,
+  leagueMarker: false,
 };
 
 const HIDDEN = { includeHiddenElements: true };
@@ -137,3 +139,30 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
     expect(screen.getByText('Åpne runden →')).toBeTruthy();
   }
 });
+
+// #2712 (eieren 31.10): en ligaflight med én spiller viser bare poengene, og
+// «Venter på markøren» når kortet er levert. Ingen plass og ingen gullprikk.
+it('ligaflight alene: poengene uten plass, og «Venter på markøren» etter levering', async () => {
+  const handlers = { onOpenGame: jest.fn(), onHole: jest.fn(), onSubmit: jest.fn(), onApprove: jest.fn() };
+  const solo: HeroModel = {
+    ...LIVE,
+    played: 18,
+    nextHole: 18,
+    state: 'pending_approval',
+    action: null,
+    standing: { rank: 1, tied: false, fieldSize: 1, total: 35, holesPlayed: 18, leaderUserIds: ['me'], gap: 0 },
+    leagueSolo: true,
+    leagueMarker: true,
+  };
+  const { rerender } = await render(<HomeHeroCard card={CARD} model={solo} {...handlers} />);
+  expect(screen.queryByTestId('home-hero-place')).toBeNull();
+  expect(screen.queryByTestId('home-hero-gold', HIDDEN)).toBeNull();
+  expect(screen.getByTestId('home-hero-detail')).toHaveTextContent('35 poeng etter 18 hull');
+  expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Venter på markøren');
+
+  // Vanlig liga alene etter et frafall: heller ingen plass, men ingen markør å vente på.
+  await rerender(<HomeHeroCard card={CARD} model={{ ...solo, leagueMarker: false }} {...handlers} />);
+  expect(screen.queryByTestId('home-hero-place')).toBeNull();
+  expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Til godkjenning');
+});
+

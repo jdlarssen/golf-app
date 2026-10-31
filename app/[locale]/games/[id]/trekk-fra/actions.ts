@@ -25,7 +25,11 @@ export async function submitWithdraw(formData: FormData): Promise<void> {
 
   const result = await withdrawFromGame(gameId);
   if (!result.ok) {
-    const code = result.error === 'captain_has_team' ? 'captain_has_team' : 'withdraw_failed';
+    // #2712: a delivered card in a simulator league has its own reason too.
+    const code =
+      result.error === 'captain_has_team' || result.error === 'card_delivered'
+        ? result.error
+        : 'withdraw_failed';
     redirect({ href: `/games/${gameId}/trekk-fra?error=${code}`, locale });
   }
 

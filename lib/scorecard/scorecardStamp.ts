@@ -20,6 +20,11 @@ export interface StampPlayer extends FlightPlayer {
   approved_by_user_id: string | null;
   name: string | null;
   nickname: string | null;
+  /**
+   * #2712: the marker named at delivery in a simulator league, usually someone
+   * outside the flight (`leagueMarker.ts`). Absent or null elsewhere.
+   */
+  marker_user_id?: string | null;
 }
 
 export type SignedBy = { kind: 'self' } | { kind: 'other'; fullName: string | null };
@@ -29,6 +34,10 @@ export type StampApproval =
   | { kind: 'organizer' }
   | { kind: 'approved' }
   | { kind: 'pending' }
+  /** #2712: the league marker outside the flight approved (no name in the roster). */
+  | { kind: 'league_marker' }
+  /** #2712: waiting for the league marker, not for someone in the flight. */
+  | { kind: 'league_marker_pending' }
   | { kind: 'none' };
 
 /** Day, month (1–12), hour and minute of the signing, in the zone shown. */
@@ -50,11 +59,24 @@ export function formatStampDate({ day, month, hour, minute }: StampDateParts): s
   return `${pad2(day)}.${pad2(month)} · ${pad2(hour)}:${pad2(minute)}`;
 }
 
+/**
+ * #2712: the approval still waits, for someone in the flight or for the league
+ * marker. One home, so the checklist's ring and the copy cannot disagree.
+ */
+export function approvalPending(approval: StampApproval): boolean {
+  return approval.kind === 'pending' || approval.kind === 'league_marker_pending';
+}
+
 export interface ScorecardStamp {
   signedAt: string;
   signedBy: SignedBy;
   approval: StampApproval;
   locked: boolean;
+  /**
+   * #2712: the card names a league marker, so the marker's approval finishes
+   * the flight; no organiser locks it.
+   */
+  leagueMarker: boolean;
 }
 
 function resolveApproval(
@@ -65,9 +87,18 @@ function resolveApproval(
   locked: boolean,
   markerName: 'first' | 'full',
 ): StampApproval {
+  const leagueMarker = owner.marker_user_id ?? null;
   if (owner.approved_at != null) {
     const approverId = owner.approved_by_user_id;
     if (approverId == null) return { kind: 'approved' };
+    // #2712: a simulator-league card names its marker. Anyone else who
+    // approved did it in the marker's stead (the organiser or an admin), also
+    // a flight mate. The named marker outside the flight has no row here, so
+    // no name: «Godkjent av markøren».
+    if (leagueMarker != null && approverId !== leagueMarker) return { kind: 'organizer' };
+    if (leagueMarker != null && !players.some((p) => p.user_id === approverId)) {
+      return { kind: 'league_marker' };
+    }
     // «Flightkamerat» reads today's roster (`isSingleFlightGame` counts the
     // players active now), the same way `canApproveScorecardFor` does. A
     // withdrawal after the approval can therefore move a game across the
@@ -86,7 +117,9 @@ function resolveApproval(
   }
   // A finished game waits for nobody: under «Resultatet er låst» a
   // «Venter på …» line would contradict the line below it.
-  if (requirePeerApproval && !locked) return { kind: 'pending' };
+  if (requirePeerApproval && !locked) {
+    return leagueMarker != null ? { kind: 'league_marker_pending' } : { kind: 'pending' };
+  }
   return { kind: 'none' };
 }
 
@@ -132,5 +165,6 @@ export function resolveScorecardStamp(opts: {
       opts.markerName ?? 'first',
     ),
     locked,
+    leagueMarker: owner.marker_user_id != null,
   };
 }

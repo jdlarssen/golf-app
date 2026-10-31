@@ -29,7 +29,7 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
   const tModes = useTranslations('modes');
   const locale = useLocale() as AppLocale;
   const badge = game.result_summary
-    ? finishedResultBadge(game.result_summary)
+    ? finishedResultBadge(game.result_summary, { leagueFlight: game.league_round_id != null })
     : null;
 
   return (

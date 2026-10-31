@@ -102,7 +102,7 @@ export default async function InboxPage() {
   // A failed lookup would stamp every signup varsel stale — and archive it
   // (#1393). readInChunks throws to the error boundary instead of guessing.
   const games = await readInChunks(lookupGameIds, (slice) =>
-    getAdminClient().from('games').select('id, status, scheduled_tee_off_at').in('id', slice),
+    getAdminClient().from('games').select('id, status, scheduled_tee_off_at, league_round_id').in('id', slice),
   );
 
   let visible = notifications;
@@ -192,6 +192,7 @@ export default async function InboxPage() {
         teeOffByGame={Object.fromEntries(games.map((g) => [g.id, g.scheduled_tee_off_at]))}
         resultByGame={Object.fromEntries(own.map((r) => [r.game_id, r.result_summary]))}
         finishedGameIds={games.filter((g) => g.status === 'finished').map((g) => g.id)}
+        leagueFlightGameIds={games.filter((g) => g.league_round_id != null).map((g) => g.id)}
         now={now}
         signupErrorText={{
           game_locked: tSignups('errors.game_locked'),

@@ -26,6 +26,7 @@ function game(over: Partial<FinishedGame> & { id: string }): FinishedGame {
     team_number: null,
     scheduled_tee_off_at: null,
     tournament: null,
+    league_round_id: null,
     ...over,
   };
 }

@@ -66,3 +66,21 @@ describe('finishedResultBadge', () => {
     ).toEqual({ key: 'result.skins', values: { count: 1 }, isWin: false });
   });
 });
+
+// #2712 (owner 31.10): a league flight played alone has no placement, so the
+// card says it was approved instead of «Du vant».
+describe('finishedResultBadge — ligaflight alene (#2712)', () => {
+  const solo = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false } as const;
+  it('ligaflight med én spiller → approved, ingen gull', () => {
+    expect(finishedResultBadge(solo, { leagueFlight: true })).toEqual({ key: 'result.approved', isWin: false });
+  });
+  it('ligaflight med flere spillere → plassen som før', () => {
+    expect(
+      finishedResultBadge({ kind: 'placement', rank: 1, fieldSize: 2, isTeam: false }, { leagueFlight: true }),
+    ).toEqual({ key: 'result.youWon', isWin: true });
+  });
+  it('vanlig spill alene → som før', () => {
+    expect(finishedResultBadge(solo)).toEqual({ key: 'result.youWon', isWin: true });
+  });
+});
+

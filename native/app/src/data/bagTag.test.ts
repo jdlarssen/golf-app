@@ -128,6 +128,31 @@ describe('fetchBagTagExtras', () => {
     expect((await subject().fetchBagTagExtras(ME, NOW)).club).toBe('Bogstad');
   });
 
+  // #2712 (eieren 31.10): en ligarunde spilt alene teller som spilt, ikke som seier.
+  it('counts a league round played alone as played, not won', async () => {
+    const { queryStub, routeFrom } = mocks();
+    const solo = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
+    const league = playerRow('liga', '2026-10-31T11:00:00.000Z', 'stableford', solo);
+    routeFrom({
+      group_members: [queryStub({ data: [], error: null })],
+      game_players: [
+        queryStub({
+          data: [
+            { ...league, games: { ...league.games, league_round_id: 'runde-1' } },
+            playerRow('alene', '2026-10-30T11:00:00.000Z', 'stableford', solo),
+          ],
+          error: null,
+        }),
+      ],
+      scores: [queryStub({ data: [], error: null })],
+      handicap_history: [queryStub({ data: [], error: null })],
+    });
+
+    const extras = await subject().fetchBagTagExtras(ME, NOW);
+    // To runder; bare den utenfor ligaen er en seier.
+    expect(extras.season).toEqual({ rounds: 2, bestRound: null, wins: 1 });
+  });
+
   it('gives no club when the player is in none', async () => {
     const { queryStub, routeFrom } = mocks();
     routeFrom({

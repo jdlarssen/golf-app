@@ -6,6 +6,7 @@
 // 20, og da ville «banehandicap 20» i hodet motsagt radene under. Tallene
 // kommer derfor fra de samme stedene som radene: `playerStrokeHandicapFor`
 // (vanlige kort) og `teamHandicapFor` (scramble-lagkort).
+import { frozenIsPlayingHandicap } from '../../../../lib/games/hcpAllowance';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
 import {
   isScrambleFamily,
@@ -38,7 +39,7 @@ export type HandicapPart = { kind: 'course' | 'playing' | 'team'; value: number 
  * hull er en forskjell mellom sidene og ikke ett tall.
  */
 export function scorecardHandicapPart(opts: {
-  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>;
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig' | 'hcpAllowancePct' | 'hcpMaxStrokes'>;
   courseHandicap: number | null;
   /** Kortet viser lagets rader (formatet deler én ball). */
   teamMode: boolean;
@@ -56,7 +57,17 @@ export function scorecardHandicapPart(opts: {
   if (opts.courseHandicap == null) return null;
   const playing = playerStrokeHandicapFor(opts.game, opts.courseHandicap);
   if (playing == null) return null;
-  return playing === opts.courseHandicap
+  // #2712: the frozen course handicap already carries the game's share and cap
+  // (`recomputeCourseHandicap`), so under 100 %, or at the cap, the stored
+  // number is the playing handicap: «spillehandicap 8», not «banehandicap 8»
+  // for a course handicap of 10 in a league at 75 %.
+  const reduced = frozenIsPlayingHandicap(
+    opts.game.gameMode,
+    opts.game.hcpAllowancePct,
+    opts.game.hcpMaxStrokes,
+    opts.courseHandicap,
+  );
+  return playing === opts.courseHandicap && !reduced
     ? { kind: 'course', value: opts.courseHandicap }
     : { kind: 'playing', value: playing };
 }

@@ -20,7 +20,7 @@
 // for skjermleseren.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { HomeCard } from '../../data/homeList';
-import { ACTIVE_CARD_LABELS } from '../../lib/display';
+import { ACTIVE_CARD_LABELS, LEAGUE_SOLO_STATE } from '../../lib/display';
 import {
   HOME_TEXT,
   approvalsLine,
@@ -29,6 +29,7 @@ import {
   placeLine,
   ringNextLabel,
   standingDetail,
+  leagueSoloDetail,
 } from '../../lib/homeCopy';
 import type { HeroModel } from '../../lib/homeHero';
 import { FONTS, fraunces, heroShadow, interLine, TAP, useTheme } from '../../theme';
@@ -196,6 +197,15 @@ function Standing({ model }: { model: HeroModel }) {
       </Text>
     );
   }
+  if (model.leagueSolo) {
+    // #2712 (eieren 31.10): alene i en ligaflight er det ingen plass å vise,
+    // bare poengene.
+    return (
+      <Text style={[styles.detail, ink]} testID="home-hero-detail">
+        {leagueSoloDetail(model.standing, model.unit, model.holeCount)}
+      </Text>
+    );
+  }
   const leads = model.standing.rank === 1;
   const detail = standingDetail(model.standing, model.unit);
   return (
@@ -244,7 +254,9 @@ function PrimaryAction({
     return (
       <View style={[styles.stateBadge, { borderColor: colors.onStrong }]} testID="home-hero-state">
         <Text style={[styles.stateText, { color: colors.onStrong }]}>
-          {ACTIVE_CARD_LABELS[model.state]}
+          {model.leagueSolo && model.leagueMarker
+            ? LEAGUE_SOLO_STATE[model.state]
+            : ACTIVE_CARD_LABELS[model.state]}
         </Text>
       </View>
     );

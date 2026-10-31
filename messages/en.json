@@ -2274,6 +2274,7 @@
       "infoLabel": "Your info",
       "soloIndividual": "Individual format. You play for yourself, no team.",
       "courseHandicap": "Course handicap",
+      "playingHandicap": "Playing handicap",
       "teamLabel": "Team",
       "teamValue": "Team {number}",
       "flightValue": "Flight {number}",
@@ -2319,6 +2320,7 @@
       "ctaReviewAndSubmit": "Review and submit →",
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
+      "ctaSubmittedPendingMarker": "Your card is in. Now it waits for your marker.",
       "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
       "ctaDeliverFlight": "{count, plural, one {Submit the card you kept} other {Submit the cards you kept ({count})}}",
       "ctaContinueToSibling": "Continue to hole {hole} · {format} →",
@@ -2585,7 +2587,8 @@
       "heading": "Withdraw from «{name}»?",
       "errors": {
         "withdraw_failed": "Could not withdraw you from the game. Please try again or contact the organiser.",
-        "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw."
+        "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw.",
+        "card_delivered": "Your card is in, so you can no longer withdraw from this round."
       },
       "captainHasTeamBody": "You're the captain, and teammates have said yes. Hand the captaincy to one of them on the team page first. Then you can withdraw.",
       "captainHasTeamLink": "Go to the team page",
@@ -6355,6 +6358,7 @@
   "finishedCard": {
     "result": {
       "youWon": "You won",
+      "approved": "Approved",
       "teamWon": "Your team won",
       "placement": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
       "teamPlacement": "Team finished {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",

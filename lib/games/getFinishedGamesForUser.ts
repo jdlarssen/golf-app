@@ -52,6 +52,8 @@ export type FinishedGame = {
   team_number: number | null;
   scheduled_tee_off_at: string | null;
   tournament: FinishedTournament | null;
+  /** #2712: a league flight; played alone it says «Godkjent», not «Du vant». */
+  league_round_id: string | null;
 };
 
 type FinishedRow = {
@@ -86,7 +88,7 @@ export async function getFinishedGamesForUser(
   const { data, error } = await supabase
     .from('game_players')
     .select(
-      'result_summary, team_number, games!inner(id, name, ended_at, game_mode, mode_config, hole_segment, tournament_id, scheduled_tee_off_at, courses(name), tournament:tournaments(name, status, winner_team, team_1_name, team_2_name))',
+      'result_summary, team_number, games!inner(id, name, ended_at, game_mode, mode_config, hole_segment, tournament_id, scheduled_tee_off_at, league_round_id, courses(name), tournament:tournaments(name, status, winner_team, team_1_name, team_2_name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')

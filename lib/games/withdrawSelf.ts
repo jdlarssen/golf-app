@@ -8,6 +8,8 @@ import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { readCaptainTeam, type TeamChild } from '@/lib/games/teamCaptaincy';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
+import { withdrawLockedByDelivery } from '@/lib/league/leagueMarker';
 
 // Selv-frafalls-kjernen (#199 chunk 11, #386 chunk 3 → #1917): ett hjem for
 // «spilleren trekker seg selv fra en runde, og angrer det igjen».
@@ -69,6 +71,11 @@ export type SelfWithdrawError =
    * gis videre før kapteinen kan trekke seg (eierens valg).
    */
   | 'captain_has_team'
+  /**
+   * #2712: the card is delivered in a simulator league. One attempt per round,
+   * so no withdrawal that would free a new flight (`withdrawLockedByDelivery`).
+   */
+  | 'card_delivered'
   | 'db_error';
 
 /**
@@ -97,12 +104,15 @@ type GameSnapshot = {
   tournament_id: string | null;
   /** #2445: a draft is the organiser's; nobody else can withdraw from it. */
   created_by: string | null;
+  /** #2712: a league flight; a simulator league locks withdrawal after delivery. */
+  league_round_id: string | null;
 };
 
 type PlayerSnapshot = {
   user_id: string;
   team_number: number | null;
   withdrawn_at: string | null;
+  submitted_at: string | null;
 };
 
 type OwnRequest = {
@@ -152,12 +162,12 @@ export async function withdrawSelf(
   const [gameRes, playerRes] = await Promise.all([
     admin
       .from('games')
-      .select('id, name, short_id, status, game_mode, tournament_id, created_by')
+      .select('id, name, short_id, status, game_mode, tournament_id, created_by, league_round_id')
       .eq('id', gameId)
       .maybeSingle<GameSnapshot>(),
     admin
       .from('game_players')
-      .select('user_id, team_number, withdrawn_at')
+      .select('user_id, team_number, withdrawn_at, submitted_at')
       .eq('game_id', gameId)
       .eq('user_id', userId)
       .maybeSingle<PlayerSnapshot>(),
@@ -202,6 +212,18 @@ export async function withdrawSelf(
     // (c) nekter en spiller. Intensjonen er oppfylt, så svaret er ok.
     if (playerRes.data.withdrawn_at != null) {
       return { ok: true, kept: true };
+    }
+    // #2712: one attempt per round in a simulator league. Only a league flight
+    // pays for the league read.
+    if (
+      playerRes.data.submitted_at != null &&
+      game.league_round_id != null &&
+      withdrawLockedByDelivery({
+        simulatorFlight: (await readSimulatorLeagueFlight(game.id)) != null,
+        submittedAt: playerRes.data.submitted_at,
+      })
+    ) {
+      return { ok: false, error: 'card_delivered' };
     }
     // UPDATE game_players SET withdrawn_at, withdrawn_by_user_id.
     // #712: expectAffected catches 0-row no-op (row vanished between the

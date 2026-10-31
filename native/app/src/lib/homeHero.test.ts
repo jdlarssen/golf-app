@@ -235,3 +235,49 @@ describe('buildHeroModel', () => {
     expect(finished).toMatchObject({ action: { kind: 'open' }, standing: null });
   });
 });
+
+// #2712 (eieren 31.10): en ligaflight med én spiller har ingen plass på Hjem.
+describe('buildHeroModel — ligaflight alene (#2712)', () => {
+  const solo = [homePlayer({ userId: ME })];
+  const scores = holeScores('g-live', ME, 7, 4);
+  it('ligaflight med én spiller → leagueSolo', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: true } }),
+      scores,
+      userId: ME,
+    });
+    expect(model.leagueSolo).toBe(true);
+  });
+  it('ligaflight med flere spillere og vanlig spill alene → som før', () => {
+    expect(
+      buildHeroModel({
+        bundle: homeBundle({
+          players: [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })],
+          game: { leagueRoundId: 'runde-1', requirePeerApproval: true },
+        }),
+        scores,
+        userId: ME,
+      }).leagueSolo,
+    ).toBe(false);
+    expect(buildHeroModel({ bundle: homeBundle({ players: solo }), scores, userId: ME }).leagueSolo).toBe(false);
+  });
+  it('vanlig liga alene (etter et frafall): ingen plass, men ingen markør å vente på', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: false } }),
+      scores,
+      userId: ME,
+    });
+    expect(model.leagueSolo).toBe(true);
+    expect(model.leagueMarker).toBe(false);
+  });
+  it('simulatorliga alene: markøren godkjenner', () => {
+    expect(
+      buildHeroModel({
+        bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: true } }),
+        scores,
+        userId: ME,
+      }).leagueMarker,
+    ).toBe(true);
+  });
+});
+

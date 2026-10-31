@@ -2274,6 +2274,7 @@
       "infoLabel": "Din info",
       "soloIndividual": "Individuelt format. Du spiller for deg selv, uten lag.",
       "courseHandicap": "Banehandicap",
+      "playingHandicap": "Spillehandicap",
       "teamLabel": "Lag",
       "teamValue": "Lag {number}",
       "flightValue": "Flight {number}",
@@ -2319,6 +2320,7 @@
       "ctaReviewAndSubmit": "Gjennomgå og lever →",
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
+      "ctaSubmittedPendingMarker": "Kortet er levert. Nå venter det på markøren.",
       "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
       "ctaDeliverFlight": "{count, plural, one {Lever kortet du har ført} other {Lever kortene du har ført ({count})}}",
       "ctaContinueToSibling": "Videre til hull {hole} · {format} →",
@@ -2585,7 +2587,8 @@
       "heading": "Trekk deg fra «{name}»?",
       "errors": {
         "withdraw_failed": "Klarte ikke å trekke deg fra spillet. Prøv igjen, eller si fra til arrangøren.",
-        "captain_has_team": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en lagkamerat før du trekker deg."
+        "captain_has_team": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en lagkamerat før du trekker deg.",
+        "card_delivered": "Kortet ditt er levert. Da kan du ikke trekke deg fra runden."
       },
       "captainHasTeamBody": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en av dem på lagsiden først. Da kan du trekke deg.",
       "captainHasTeamLink": "Til lagsiden",
@@ -6355,6 +6358,7 @@
   "finishedCard": {
     "result": {
       "youWon": "Du vant",
+      "approved": "Godkjent",
       "teamWon": "Laget vant",
       "placement": "{rank}. plass av {fieldSize}",
       "teamPlacement": "Laget ble nr {rank} av {fieldSize}",
