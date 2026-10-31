@@ -800,9 +800,10 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
     },
+    // 16 som kortene rundt (#2716); 10 lå utenfor skalaen 6/8/12/16.
     banner: {
       backgroundColor: c.surface,
-      borderRadius: 10,
+      borderRadius: 16,
       borderWidth: borderW,
       borderColor: c.border,
       padding: 14,

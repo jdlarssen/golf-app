@@ -22,7 +22,7 @@ import { ShareCardIcon } from '../icons/Icons';
 import { KavalkadeShareCard } from './KavalkadeShareCard';
 
 export function ShareKavalkadeCardButton({ year, model }: { year: number; model: KavalkadeCardModel }) {
-  const { colors, scheme, ui } = useTheme();
+  const { colors, ui } = useTheme();
   // Byggets moduler endrer seg ikke mens appen kjører.
   const [available] = useState(canShareImage);
   const card = useRef<View>(null);
@@ -41,7 +41,8 @@ export function ShareKavalkadeCardButton({ year, model }: { year: number; model:
   if (!available) return null;
 
   // Webben: hvit tekst på skogen, og linets farge i mørk drakt (`dark:text-bg`).
-  const ink = scheme === 'dark' ? colors.bg : '#FFFFFF';
+  // `onPrimary` er nettopp det paret, i temaet (#2716).
+  const ink = colors.onPrimary;
 
   return (
     <View>
