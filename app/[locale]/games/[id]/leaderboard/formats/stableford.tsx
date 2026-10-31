@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import type { SoloStablefordPlayerInfo } from '../SoloStablefordView';
 import { SoloStablefordPodium } from '../SoloStablefordPodium';
+import { LeagueAloneResult } from '../LeagueAloneResult';
 import { TeamStablefordView } from '../TeamStablefordView';
 import { TeamStablefordPodium } from '../TeamStablefordPodium';
 import {
@@ -21,6 +22,8 @@ import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { pointsHeadline } from '@/lib/leaderboard/vsPar';
+import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -343,6 +346,28 @@ export async function renderStableford(opts: {
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}
           strip={strip}
+          backHref={backHref}
+          chromeless={chromeless}
+          footerSlot={footerSlot}
+        />
+      );
+    } else if (isLeagueFieldAlone(game.league_round_id != null, result.players.length)) {
+      // #2712 (orchestrator 31.10, after the owner's rule): a league round
+      // played alone has no place and no win, so the points and «Godkjent»
+      // stand where the podium would.
+      const [only] = result.players;
+      const info = playersById.get(only.userId);
+      const headline = pointsHeadline(result.ranking, only);
+      const tSolo = await getTranslations('leaderboard.soloStableford');
+      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
+      mainContent = (chromeless, footerSlot) => (
+        <LeagueAloneResult
+          gameName={game.name}
+          userId={only.userId}
+          name={info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull')}
+          scoreText={headline.text}
+          scoreLabel={tc(headline.labelKey)}
+          subtitle={subtitle}
           backHref={backHref}
           chromeless={chromeless}
           footerSlot={footerSlot}

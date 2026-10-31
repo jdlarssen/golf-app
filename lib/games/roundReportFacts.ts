@@ -25,7 +25,7 @@ import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { runningMatchStatus } from '@/lib/scoring/modes/matchplayRunningStatus';
 import { buildShareCardData, type ShareCardBand, type ShareCardRow, type ShareCardScore } from './buildShareCardData';
-import { isLeagueFieldAlone } from './finishedResultBadge';
+import { isLeagueCardAlone } from './finishedResultBadge';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -188,7 +188,7 @@ export function buildRoundReportFacts(
     return joinNames(allowedIds, nameByUserId);
   };
 
-  const alone = card.band === 'placement' && isLeagueFieldAlone(opts.leagueFlight ?? false, card.podium.length);
+  const alone = isLeagueCardAlone(card, opts.leagueFlight ?? false);
 
   const standings: RoundReportStandingRow[] = card.podium.flatMap((row) => {
     const name = visibleName(row);
