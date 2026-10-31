@@ -474,11 +474,11 @@ export type GameModeConfig =
       ranking?: 'net_to_par';
     }
   /*
-   * #2625: `ranking: 'net_to_par'` on the stableford configs ranks the players
-   * or teams on points against par pace over the holes each has played
-   * (Σ points − the points a net par gives). Stamped on NEW games at creation
-   * (`stampNewGameModeConfig`), never added to an existing game. Absent = the
-   * original rule: the sum of points (`rankTeams`).
+   * #2738: `ranking: 'net_to_par'` on the stableford configs is a leftover.
+   * #2625 stamped it on new points games from 21.10 to 31.10.2026; the points
+   * formats rank on points only, so the engine ignores it (`ranksByNetToPar`
+   * says no for them) and nothing stamps it any more. Kept in the type because
+   * those games' rows still carry it.
    */
   | { kind: 'stableford'; team_size: 1; points_table: 'standard'; ranking?: 'net_to_par' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard'; ranking?: 'net_to_par' }
@@ -862,10 +862,8 @@ export type GameModeConfig =
        */
       patsome_scoring: 'gross' | 'net';
       /**
-       * #2625: `'net_to_par'` ranks the teams on points against par pace over
-       * the holes each team has played (Σ points − 2). Stamped on NEW games at
-       * creation (`stampNewGameModeConfig`), never added to an existing game.
-       * Absent = the original rule: the sum of points (`rankTeams`).
+       * #2738: a leftover, ignored like on the stableford configs above.
+       * Patsome ranks on points only.
        */
       ranking?: 'net_to_par';
     };
@@ -1019,14 +1017,6 @@ export interface StablefordPlayerLine {
   rank: number;
   holesPlayed: number;
   /**
-   * #2625: points against par pace — Σ (points − the points a net par gives)
-   * over the holes the player has played; `null` when it has played none. Higher
-   * is better. Always computed. It is what the game ranks on when
-   * `ranking === 'net_to_par'`; other games rank on the sum and only carry it
-   * along.
-   */
-  toPar: number | null;
-  /**
    * Tied-with: andre spilleres userIds som har EKSAKT samme tie-break-cascade
    * (totalPoints + back9 + back6 + back3 + hole18-poeng). Tom for unike rader.
    */
@@ -1054,11 +1044,6 @@ export interface StablefordSoloHolePlayerCell {
   points: number;
   /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #734. */
   par: number;
-  /**
-   * #2625: the hole's points against par pace (points − what a net par gives
-   * in the table: 2, or 0 in modified); `null` when the hole is not played.
-   */
-  toPar: number | null;
 }
 
 /**
@@ -1088,12 +1073,6 @@ export interface StablefordSoloHoleRow {
 export interface StablefordSoloResult {
   kind: 'stableford';
   variant: 'solo';
-  /**
-   * #2625: the rule the players are ranked on — `'net_to_par'` for a game with
-   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
-   * read it from the result and show to par exactly when it says so.
-   */
-  ranking: 'net_to_par' | 'net_total';
   players: StablefordPlayerLine[];
   /** Per-hull per-spiller-detalj (alle hull, sortert). Epic #496, PR 9. */
   holes: StablefordSoloHoleRow[];
@@ -1141,14 +1120,6 @@ export interface StablefordTeamLine {
   playerIds: string[];
   holes: StablefordTeamHoleRow[];
   totalPoints: number;
-  /**
-   * #2625: points against par pace — Σ (points − the points a net par gives)
-   * over the holes the team has played; `null` when it has played none. Higher
-   * is better. Always computed. It is what the game ranks on when
-   * `ranking === 'net_to_par'`; other games rank on the sum and only carry it
-   * along.
-   */
-  toPar: number | null;
   rank: number;
   tiedWith: number[];
   /**
@@ -1166,12 +1137,6 @@ export interface StablefordTeamLine {
 export interface StablefordTeamResult {
   kind: 'stableford';
   variant: 'team';
-  /**
-   * #2625: the rule the teams are ranked on — `'net_to_par'` for a game with
-   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
-   * read it from the result and show to par exactly when it says so.
-   */
-  ranking: 'net_to_par' | 'net_total';
   teams: StablefordTeamLine[];
 }
 
@@ -2548,14 +2513,6 @@ export interface PatsomeTeamLine {
     foursomes: PatsomeSegmentSubtotal;
   };
   totalPoints: number;
-  /**
-   * #2625: points against par pace — Σ (points − the points a net par gives)
-   * over the holes the team has played; `null` when it has played none. Higher
-   * is better. Always computed. It is what the game ranks on when
-   * `ranking === 'net_to_par'`; other games rank on the sum and only carry it
-   * along.
-   */
-  toPar: number | null;
   rank: number;
   tiedWith: number[];
 }
@@ -2563,12 +2520,6 @@ export interface PatsomeTeamLine {
 export interface PatsomeResult {
   kind: 'patsome';
   scoring: 'gross' | 'net';
-  /**
-   * #2625: the rule the teams are ranked on — `'net_to_par'` for a game with
-   * `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The surfaces
-   * read it from the result and show to par exactly when it says so.
-   */
-  ranking: 'net_to_par' | 'net_total';
   teams: PatsomeTeamLine[];
 }
 

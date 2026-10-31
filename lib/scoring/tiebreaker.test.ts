@@ -238,18 +238,14 @@ describe('rankingHolesByNumber', () => {
   });
 });
 
-describe('ranksByNetToPar (#2253, #2625)', () => {
+describe('ranksByNetToPar (#2253, #2625, #2738)', () => {
   // The one question every surface asks: does this game rank on net to par?
-  // Solo strokeplay (#2253), the team strokeplay formats (#2625), and the
-  // points formats and Nassau (#2625 part 2) answer yes when the flag was
-  // stamped at creation; every other game answers no.
+  // Solo strokeplay (#2253), the team strokeplay formats (#2625) and Nassau
+  // (#2625 part 2) answer yes when the flag was stamped at creation; every
+  // other game answers no. The points formats rank on points only (#2738),
+  // also the games that carry the flag from #2625.
   const flaggable: GameModeConfig[] = [
     { kind: 'solo_strokeplay', team_size: 1 },
-    { kind: 'stableford', team_size: 1, points_table: 'standard' },
-    { kind: 'stableford', team_size: 2, points_table: 'standard' },
-    { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
-    { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
-    { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
     { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
     { kind: 'best_ball', team_size: 2, teams_count: 2 },
     { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
@@ -271,6 +267,11 @@ describe('ranksByNetToPar (#2253, #2625)', () => {
   });
 
   it.each([
+    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'stableford', team_size: 2, points_table: 'standard' },
+    { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
+    { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
+    { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
     { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
     { kind: 'skins', team_size: 1, skins_scoring: 'net' },
     { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
