@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { ALL_CUP_MATCH_FORMATS, cupMatchAllowance } from '@/lib/cup/cupMatchAllowance';
 import {
+  frozenIsPlayingHandicap,
   effectiveHcpAllowancePct,
   effectiveHcpMaxStrokes,
   hcpAllowanceInPlay,
@@ -138,5 +139,20 @@ describe('hcpAllowanceInPlay (#2570)', () => {
     ['texas_scramble', undefined, false],
   ])('%s with %s → %s', (mode, scoring, expected) => {
     expect(hcpAllowanceInPlay(mode, scoring)).toBe(expected);
+  });
+});
+
+// #2712: the frozen course_handicap carries the game's share and cap, so the
+// label must say «spillehandicap» when either took something off.
+describe('frozenIsPlayingHandicap (#2712)', () => {
+  it.each([
+    { label: 'league at 75 %', mode: 'stableford', pct: 75, cap: 32, value: 8, expected: true },
+    { label: 'at the cap at 100 %', mode: 'stableford', pct: 100, cap: 32, value: 32, expected: true },
+    { label: 'under the cap at 100 %', mode: 'stableford', pct: 100, cap: 32, value: 15, expected: false },
+    { label: 'full handicap, no cap', mode: 'stableford', pct: 100, cap: null, value: 20, expected: false },
+    { label: 'no stored share (older row)', mode: 'stableford', pct: null, cap: null, value: 20, expected: false },
+    { label: 'own share in mode_config: the column is not applied', mode: 'fourball_matchplay', pct: 75, cap: 32, value: 32, expected: false },
+  ])('$label → $expected', ({ mode, pct, cap, value, expected }) => {
+    expect(frozenIsPlayingHandicap(mode, pct, cap, value)).toBe(expected);
   });
 });
