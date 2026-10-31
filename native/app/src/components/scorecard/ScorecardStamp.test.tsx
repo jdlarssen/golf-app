@@ -92,4 +92,16 @@ describe('ScorecardStatusList', () => {
     await rerender(<ScorecardStatusList stamp={BASE} ownerFullName="Kari Nordmann" />);
     expect(screen.queryByTestId('scorecard-approval')).toBeNull();
   });
+
+  // #2712: et kort som venter på ligamarkøren, venter også: stiplet sirkel, ingen hake.
+  it('kortet som venter på ligamarkøren, har stiplet sirkel', async () => {
+    await render(
+      <ScorecardStatusList
+        stamp={{ ...BASE, approval: { kind: 'league_marker_pending' }, leagueMarker: true }}
+        ownerFullName="Kari Nordmann"
+      />,
+    );
+    expect(screen.getByTestId('scorecard-approval-pending', HIDDEN)).toBeTruthy();
+    expect(screen.queryByTestId('scorecard-approval-done', HIDDEN)).toBeNull();
+  });
 });
