@@ -145,7 +145,7 @@ export async function CupMatchList({
   return (
     <section className="mb-5">
       <div className="mb-2">
-        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <h2 className="font-sans text-xs font-semibold text-muted">
           {t('manage.matchesHeading')}
         </h2>
       </div>
@@ -183,7 +183,7 @@ export async function CupMatchList({
               <Card>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    <p className="font-sans text-xs font-semibold text-muted">
                       {m.matchLabel ?? t('matchFallback')}
                     </p>
                     <p className="font-serif text-base text-text mt-1">

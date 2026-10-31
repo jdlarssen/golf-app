@@ -172,10 +172,8 @@ const puttsRowStyle: CSSProperties = {
 
 const puttsLabelStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
   color: 'var(--text-muted)',
 };
 

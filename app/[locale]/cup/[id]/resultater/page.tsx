@@ -151,7 +151,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
             }
             style={leaderboard.winner === 1 ? GOLD_CARD_STYLE : undefined}
           >
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <p className="font-sans text-xs font-semibold text-muted">
               {tournament.team_1_name}
             </p>
             <p className="font-serif text-5xl tabular-nums text-primary mt-2">
@@ -164,7 +164,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
             }
             style={leaderboard.winner === 2 ? GOLD_CARD_STYLE : undefined}
           >
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <p className="font-sans text-xs font-semibold text-muted">
               {tournament.team_2_name}
             </p>
             <p className="font-serif text-5xl tabular-nums text-primary mt-2">
@@ -204,7 +204,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
       {/* Matches-liste med resultater. Hvert kort lenker til kampens eget
           leaderboard (#1456). */}
       <section>
-        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+        <h2 className="font-sans text-xs font-semibold text-muted mb-2">
           {t('manage.matchesHeading')}
         </h2>
         {leaderboard.matches.length === 0 ? (
@@ -231,7 +231,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
                 >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                          <p className="font-sans text-xs font-semibold text-muted">
                             {m.matchLabel ?? t('matchFallback')}
                           </p>
                           <p className="font-serif text-base text-text mt-1">

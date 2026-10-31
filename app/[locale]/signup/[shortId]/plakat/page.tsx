@@ -73,7 +73,7 @@ export default async function PlakatPage({ params }: { params: Params }) {
       >
         <BrandMark size="md" />
 
-        <p className="mt-8 font-sans text-xs uppercase tracking-[0.18em] text-muted">
+        <p className="mt-8 font-sans text-xs font-semibold text-muted">
           {tModes(game.game_mode as Parameters<typeof tModes>[0])}
         </p>
         <h1 className="mt-2 font-serif text-4xl font-medium leading-tight tracking-[-0.015em] text-text">

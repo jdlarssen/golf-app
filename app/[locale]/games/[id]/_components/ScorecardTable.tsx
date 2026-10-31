@@ -38,16 +38,16 @@ export async function ScorecardTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left">
-            <th className="px-2 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2 py-1.5 text-xs font-semibold text-muted">
               {t('colHole')}
             </th>
-            <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted">
               {t('colPar')}
             </th>
-            <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted">
               {t('colSi')}
             </th>
-            <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted">
               {t('colStrokes')}
             </th>
           </tr>

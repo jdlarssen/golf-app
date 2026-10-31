@@ -113,7 +113,7 @@ export function SwapMatchPlayer({
           <input type="hidden" name="game_id" value={gameId} />
 
           <label className="block">
-            <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <span className="font-sans text-xs font-semibold text-muted">
               {t('outLabel')}
             </span>
             <select
@@ -131,7 +131,7 @@ export function SwapMatchPlayer({
           </label>
 
           <label className="block">
-            <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <span className="font-sans text-xs font-semibold text-muted">
               {t('inLabel')}
             </span>
             <select

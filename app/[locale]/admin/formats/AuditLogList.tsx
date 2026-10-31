@@ -74,7 +74,7 @@ export function AuditLogList({ entries }: Props) {
 
   return (
     <section className="space-y-2">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <h2 className="font-sans text-xs font-semibold text-muted">
         {t('auditLog.heading', { n: entries.length })}
       </h2>
       <details className="rounded-lg border border-border bg-surface md:open" open>

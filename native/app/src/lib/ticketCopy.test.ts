@@ -43,8 +43,8 @@ describe('paritet mot messages/no.json', () => {
     expect(TICKET_TEXT.side).toBe(home.sideLabel);
   });
 
-  it('«Du er påmeldt» er webbens merke i setningsform', () => {
-    expect(TICKET_TEXT.registered.toUpperCase()).toBe(home.registered);
+  it('«Du er påmeldt» er webbens merke', () => {
+    expect(TICKET_TEXT.registered).toBe(home.registered);
   });
 });
 

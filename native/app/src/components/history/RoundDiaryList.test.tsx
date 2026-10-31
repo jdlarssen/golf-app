@@ -58,9 +58,9 @@ describe('RoundDiaryList', () => {
     );
 
     // Månedene i år står uten årstall; et eldre år får det.
-    expect(screen.getByText('september')).toBeTruthy();
-    expect(screen.getByText('august')).toBeTruthy();
-    expect(screen.getByText('juli 2025')).toBeTruthy();
+    expect(screen.getByText('September')).toBeTruthy();
+    expect(screen.getByText('August')).toBeTruthy();
+    expect(screen.getByText('Juli 2025')).toBeTruthy();
 
     expect(screen.getByTestId('diary-row-line-stableford')).toHaveTextContent(
       'Byneset North · Stableford · 38 p',

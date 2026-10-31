@@ -493,7 +493,7 @@ async function DangerZone({ gameId, status }: { gameId: string; status: GameStat
   const tDetail = await getTranslations('admin.game.detail');
   return (
     <section className="mt-6">
-      <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
         {tDetail('dangerZoneLabel')}
       </p>
       <div
@@ -852,7 +852,7 @@ async function buildSections({
               data-members={members.map((m) => m.user_id).join(',')}
               className="rounded-xl border border-border px-3 py-2.5"
             >
-              <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+              <p className="mb-1.5 font-sans text-xs font-semibold text-muted">
                 {teamLabel} {team}
               </p>
               {members.length === 0 ? (
@@ -892,7 +892,7 @@ async function buildSections({
                 .join(',')}
               className="rounded-xl border border-border px-3 py-2.5"
             >
-              <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+              <p className="mb-0.5 font-sans text-xs font-semibold text-muted">
                 {tDetail('flightN', { n: f })}
               </p>
               <p className="text-sm text-text">
@@ -959,7 +959,7 @@ async function buildSections({
       <div className="overflow-x-auto px-2 pb-3.5 pt-2">
         <table className="w-full text-sm tabular-nums">
           <thead>
-            <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
+            <tr className="text-left text-xs font-semibold text-muted">
               <th className="px-2 py-1.5 font-semibold">{tDetail('colName')}</th>
               {/* Par-stableford og matchplay har flight = team mekanisk (gjort i
                   payload-laget). Vis kun Lag/Side-kolonnen — Flight-kolonnen ville

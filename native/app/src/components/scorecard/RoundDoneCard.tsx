@@ -295,10 +295,8 @@ const styles = StyleSheet.create({
   // Designet: 24 pt over, 20 på sidene og 22 under.
   band: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 22 },
   bandKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
   },
   greeting: { ...GREETING, marginTop: GREETING.marginTop + 6 },
   // Designet: 18 pt ned til en strek, og 14 pt fra streken til tallene.
@@ -318,18 +316,14 @@ const styles = StyleSheet.create({
   },
   highlightText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   cardKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
   },
   holeText: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   // Designet: 18 pt over, 20 på sidene og 8 ned til kortet.
   flightKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
     paddingTop: 18,
     paddingHorizontal: 20,
     paddingBottom: 8,

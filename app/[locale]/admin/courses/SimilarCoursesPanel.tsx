@@ -66,7 +66,7 @@ export function SimilarCoursesPanel({ query, target, onAddAnyway }: Props) {
     >
       <h2
         id="similar-courses-heading"
-        className="pb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-warning-text"
+        className="pb-2 font-sans text-xs font-semibold leading-[normal] text-warning-text"
       >
         {t('heading')}
       </h2>

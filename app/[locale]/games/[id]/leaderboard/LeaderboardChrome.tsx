@@ -174,7 +174,7 @@ export function LeaderboardHeader({
       <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} />
       {/* min-w-0 + truncate: lange navn klippes i stedet for å presse pilene (#1765). */}
       <Kicker tone="accent" className="min-w-0 truncate">
-        {gameName.toUpperCase()}
+        {gameName}
       </Kicker>
       <LeaderboardBackLinkSpacer />
     </header>

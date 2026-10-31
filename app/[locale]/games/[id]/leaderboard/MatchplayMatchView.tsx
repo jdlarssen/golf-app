@@ -270,13 +270,13 @@ function HoleGrid({
           <tr className="border-b border-border bg-primary-soft/30">
             <th
               scope="col"
-              className="px-2 py-2 text-left font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
+              className="px-2 py-2 text-left font-semibold text-xs text-muted"
             >
               {t('matchplay.colHull')}
             </th>
             <th
               scope="col"
-              className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
+              className="px-1 py-2 text-center font-semibold text-xs text-muted"
             >
               {t('matchplay.colPar')}
             </th>
@@ -285,13 +285,13 @@ function HoleGrid({
             <SideColHeader label={side2ShortName} t={t} />
             <th
               scope="col"
-              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
+              className="px-2 py-2 text-center font-semibold text-xs text-muted"
             >
               {t('matchplay.colVinner')}
             </th>
             <th
               scope="col"
-              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
+              className="px-2 py-2 text-center font-semibold text-xs text-muted"
             >
               {t('matchplay.colStilling')}
             </th>
@@ -333,7 +333,7 @@ function SideColHeader({
   return (
     <th
       scope="col"
-      className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[11px] text-muted"
+      className="px-1 py-2 text-center font-semibold text-xs text-muted"
     >
       <span className="block truncate">{label}</span>
       <span className="block text-[11px] font-normal normal-case tracking-normal opacity-80">
@@ -395,12 +395,12 @@ function HoleRow({
         {unplayed && <span className="text-muted">—</span>}
         {tied && <span className="text-muted">=</span>}
         {side1Won && (
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
+          <span className="text-xs font-semibold text-score-under-fg">
             S1
           </span>
         )}
         {side2Won && (
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-score-under-fg">
+          <span className="text-xs font-semibold text-score-under-fg">
             S2
           </span>
         )}

@@ -40,12 +40,12 @@ const PLACE_W = 34;
 const NBSP = '\u00A0';
 
 /**
- * Stripas tekst i tegningen er ett 14 px-spenn: kickeren (10 px) står på en
+ * Stripas tekst i tegningen er ett 14 px-spenn: kickeren (12 px) står på en
  * Inter 14-linje (17 px, grunnlinja der 14-teksten har sin), og neste linje
  * er like høy som «2. plass» i Fraunces 18 (23 px, grunnlinja 18).
  */
-const STRIP_KICKER = interLine(10, 17);
-const STRIP_KICKER_DROP = browserBaseline('inter', 14, 17) - browserBaseline('inter', 10, 17);
+const STRIP_KICKER = interLine(12, 17);
+const STRIP_KICKER_DROP = browserBaseline('inter', 14, 17) - browserBaseline('inter', 12, 17);
 const STRIP_LINE = fraunces(600, 18);
 const LOCK_SUB = interLine(13, 13 * 1.35, { multiline: true });
 
@@ -437,10 +437,8 @@ const styles = StyleSheet.create({
   },
   hidden: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   halfText: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   cards: { marginTop: 12, marginHorizontal: 12, gap: 8 },
   cardsUnderHalves: { marginTop: 8 },
@@ -462,10 +460,8 @@ const styles = StyleSheet.create({
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   you: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   members: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 + interLine(12, 15).marginTop },
   flush: { marginTop: interLine(12, 15).marginTop },
@@ -473,10 +469,8 @@ const styles = StyleSheet.create({
   // Vinneren: «VINNERLAGET», lagnavnet og navnelinja med 3 pt mellom.
   winnerName: { gap: 3 },
   winnerWord: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   winnerTeam: { ...fraunces(600, 18) },
   avatars: { flexDirection: 'row' },
@@ -521,10 +515,8 @@ const styles = StyleSheet.create({
   teeShotShort: { fontFamily: FONTS.sans, fontSize: 12 },
   teeShotName: { ...interLine(12, 15), fontFamily: FONTS.sans },
   holeHeading: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   holeText: { ...interLine(14, 17), fontFamily: FONTS.sans, marginTop: 6 + interLine(14, 17).marginTop },
   strip: {
@@ -544,8 +536,6 @@ const styles = StyleSheet.create({
     marginTop: STRIP_KICKER.marginTop + STRIP_KICKER_DROP,
     marginBottom: STRIP_KICKER.marginBottom - STRIP_KICKER_DROP,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
   },
   // Linja får linjeboksen til det store tallet (Fraunces 18); resten står i Inter 14.
   stripLine: {

@@ -298,7 +298,7 @@ export default async function LoginPage({
             />
             <div className="mt-6 flex items-center gap-3" aria-hidden="true">
               <span className="h-px flex-1 bg-border" />
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
+              <span className="text-xs font-semibold text-muted">
                 {t('tryDemoDivider')}
               </span>
               <span className="h-px flex-1 bg-border" />

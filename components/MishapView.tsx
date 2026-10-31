@@ -39,7 +39,7 @@ export function MishapView({
       {scene}
       <div className="flex flex-col gap-2.5 px-6 pt-2">
         {kicker && (
-          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.24em] leading-[normal] text-muted">
+          <p className="font-sans text-xs font-semibold leading-[normal] text-muted">
             {kicker}
           </p>
         )}

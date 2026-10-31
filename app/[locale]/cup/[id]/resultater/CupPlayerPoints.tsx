@@ -51,13 +51,13 @@ export function CupPlayerPoints({
 
   return (
     <section className="mb-8" data-testid="cup-player-points">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-2">
         {t('results.playerPointsHeading')}
       </h2>
       <div className="space-y-5">
         {groups.map((group) => (
           <div key={group.team}>
-            <h3 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+            <h3 className="font-sans text-xs font-semibold text-muted mb-2">
               {group.teamName}
             </h3>
             <ul className="space-y-2">
@@ -72,7 +72,7 @@ export function CupPlayerPoints({
                     {row.withdrawn && (
                       <span
                         data-testid={`cup-points-withdrawn-${row.userId}`}
-                        className="ml-2 align-middle rounded-full border border-border px-1.5 py-0.5 font-sans text-[10px] uppercase tracking-[0.12em] text-muted"
+                        className="ml-2 align-middle rounded-full border border-border px-1.5 py-0.5 font-sans text-xs font-semibold text-muted"
                       >
                         {t('manage.withdrawnChip')}
                       </span>

@@ -12,7 +12,7 @@ import { nameInitials } from '@/lib/names/initials';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { buildNotificationText, gameCancelledLine, type NotificationTranslator } from './cardContent';
 import { notificationDestination } from './deeplink';
-import { NOTIFICATION_EMOJI } from './emoji';
+import { NOTIFICATION_ICON, type NotificationIconName } from './icons';
 import { isKnownKind } from './readOnVisit';
 import type { NotificationKind, NotificationPayload } from './types';
 
@@ -522,7 +522,7 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
 export type InboxAvatar =
   | { kind: 'people'; initials: string[]; more: number }
   | { kind: 'place'; rank: number }
-  | { kind: 'emoji'; emoji: string };
+  | { kind: 'icon'; icon: NotificationIconName };
 
 export type InboxEntryView = {
   title: string;
@@ -678,7 +678,7 @@ export function teeOffLine(iso: string | null | undefined, ctx: Pick<InboxTextCo
 }
 
 function peopleAvatar(people: GroupPeople, fallback: NotificationKind): InboxAvatar {
-  if (people.named.length === 0) return { kind: 'emoji', emoji: NOTIFICATION_EMOJI[fallback] };
+  if (people.named.length === 0) return { kind: 'icon', icon: NOTIFICATION_ICON[fallback] };
   const shown = people.named.slice(0, 2);
   return {
     kind: 'people',
@@ -691,21 +691,21 @@ function singleAvatar(row: InboxRow): InboxAvatar {
   const person = inboxPerson(rowPersonName(row));
   return person
     ? { kind: 'people', initials: [person.initials], more: 0 }
-    : { kind: 'emoji', emoji: NOTIFICATION_EMOJI[row.kind] };
+    : { kind: 'icon', icon: NOTIFICATION_ICON[row.kind] };
 }
 
 function resultView(row: InboxRow, ctx: InboxTextContext): Pick<InboxEntryView, 'avatar' | 'placeLabel' | 'subtitle'> {
   const p = row.payload as NotificationPayload<'game_finished'>;
   const time = relTime(row.created_at, ctx);
-  const emoji: InboxAvatar = { kind: 'emoji', emoji: NOTIFICATION_EMOJI.game_finished };
+  const trophy: InboxAvatar = { kind: 'icon', icon: NOTIFICATION_ICON.game_finished };
   const summary = ctx.resultByGame[p.game_id] ?? null;
   if (!summary || !ctx.finishedGameIds.includes(p.game_id)) {
-    return { avatar: emoji, placeLabel: null, subtitle: [p.game_name, time].join(SEP) };
+    return { avatar: trophy, placeLabel: null, subtitle: [p.game_name, time].join(SEP) };
   }
   if (summary.kind === 'matchplay') {
     const badge = finishedResultBadge(summary);
     return {
-      avatar: emoji,
+      avatar: trophy,
       placeLabel: null,
       subtitle: [p.game_name, ctx.tFinished(badge.key, badge.values), time].join(SEP),
     };
@@ -738,7 +738,7 @@ export function buildInboxEntryView(
     quote: null,
     body: null,
     cta: null,
-    avatar: { kind: 'emoji', emoji: '' },
+    avatar: { kind: 'icon', icon: 'konvolutt' },
     placeLabel: null,
     destination: null,
     actionKey: null,

@@ -171,7 +171,7 @@ export function PåmeldingerClient({
       {inInbox ? (
         <h2
           id={headingId}
-          className="pt-[18px] pb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-warning-text"
+          className="pt-[18px] pb-2 font-sans text-xs font-semibold leading-[normal] text-warning-text"
         >
           {t('waitingHeading', { count: headingCount })}
         </h2>
@@ -270,7 +270,7 @@ export function PåmeldingerClient({
                         <span className="flex flex-wrap items-center gap-2 text-[14px] text-text">
                           {row.displayName}
                           {idx === 0 && (
-                            <span className="rounded-full border border-border px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                            <span className="rounded-full border border-border px-2 py-[2px] font-sans text-xs font-semibold text-muted">
                               {t('captainBadge')}
                             </span>
                           )}
@@ -448,7 +448,7 @@ function RejectModal({
 
           <label
             htmlFor="reject-reason"
-            className="block font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted"
+            className="block font-sans text-xs font-semibold text-muted"
           >
             {t('rejectReasonLabel')}
           </label>

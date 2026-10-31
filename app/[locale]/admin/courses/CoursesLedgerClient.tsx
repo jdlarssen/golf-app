@@ -250,7 +250,7 @@ export function CoursesLedgerClient({
       <div className="mt-3 flex items-center justify-between gap-3">
         <label
           htmlFor="courses-sort"
-          className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-muted"
+          className="font-sans text-xs font-semibold text-muted"
         >
           {t('sortLabel')}
         </label>

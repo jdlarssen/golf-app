@@ -315,7 +315,7 @@ export function InboxClient({
             <section key={key} aria-labelledby={headingId} data-testid={`inbox-section-${key}`}>
               <h2
                 id={headingId}
-                className={`px-5 pb-2 text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] ${
+                className={`px-5 pb-2 text-xs font-semibold leading-[normal] ${
                   index === 0 ? 'pt-2' : 'pt-5'
                 } ${key === 'action' ? 'text-accent-text' : 'text-muted'}`}
               >

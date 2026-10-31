@@ -101,8 +101,6 @@ export default async function OpengraphImage({
             <span
               style={{
                 fontSize: 26,
-                textTransform: 'uppercase',
-                letterSpacing: 4,
                 color: MUTED,
               }}
             >

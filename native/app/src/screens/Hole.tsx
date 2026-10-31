@@ -1296,10 +1296,8 @@ const styles = StyleSheet.create({
   railDock: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   // Nettleserens `normal` for Inter 10 er 12 (#2385).
   flightKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   flightCount: { fontSize: 12, fontFamily: FONTS.sans, fontVariant: ['tabular-nums'] },
   topTools: { flexDirection: 'row', alignItems: 'center' },

@@ -4,12 +4,10 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { ClubStamp } from '@/components/ui/ClubStamp';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { firstName } from '@/lib/firstName';
-import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
-import { osloIsoWeek, osloTimeOfDayBucket } from '@/lib/format/osloCalendar';
+import { formatWeekdayDayMonthOsloLocale } from '@/lib/i18n/format';
+import { osloIsoWeek } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
-import { getRole, TIME_OF_DAY_KEY } from './_dashboardContext';
+import { getRole } from './_dashboardContext';
 import { TilesGrid, TilesSkeleton } from './TilesGrid';
 import { PlayerKlubbhus } from './PlayerKlubbhus';
 import { ActivityLedger, LedgerSkeleton } from './ActivityLedger';
@@ -33,17 +31,13 @@ export default async function KlubbhusetPage() {
   const tNav = await getTranslations('admin.nav');
   const locale = await getLocale();
 
-  // #646: derive date, ISO week and time-of-day from Oslo wall-clock, not the
-  // server-local (UTC on Vercel) getters that showed yesterday's date and the
-  // wrong greeting just past midnight Norwegian time.
+  // #646: derive the date and ISO week from Oslo wall-clock, not the
+  // server-local (UTC on Vercel) getters that showed yesterday's date just past
+  // midnight Norwegian time. The date is the card's title; the week sits
+  // beneath it.
   const now = new Date();
-  const week = osloIsoWeek(now);
-  const dateLine = t('dateLine', {
-    date: formatShortOsloDayMonthLocale(now, locale as AppLocale),
-    week,
-  });
-  const timeOfDay = TIME_OF_DAY_KEY[osloTimeOfDayBucket(now)];
-  const timeOfDayWord = t(timeOfDay);
+  const dateTitle = formatWeekdayDayMonthOsloLocale(now, locale as AppLocale);
+  const weekLine = t('weekLine', { week: osloIsoWeek(now) });
 
   return (
     <AdminShell>
@@ -51,20 +45,11 @@ export default async function KlubbhusetPage() {
           notifications inside the room (#392). */}
       <TopBar kicker={tNav('klubbhus')} />
 
-      <Suspense
-        fallback={
-          <GreetingSkeleton
-            dateLine={dateLine}
-            saksbehandlerLabel={t('saksbehandlerLabel')}
-          />
-        }
-      >
-        <GreetingCard
-          dateLine={dateLine}
-          timeOfDayWord={timeOfDayWord}
-          firstNameValue={firstName(role.name)}
-        />
-      </Suspense>
+      <DateCard
+        dateTitle={dateTitle}
+        weekLine={weekLine}
+        saksbehandlerLabel={t('saksbehandlerLabel')}
+      />
 
       {/* «Krever handling»-stripe (#864): egen Suspense-grense, rendrer
           ingenting på rolige dager (begge tellinger 0). */}
@@ -82,7 +67,7 @@ export default async function KlubbhusetPage() {
         <KeyMetricsCard />
       </Suspense>
 
-      <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="mt-6 mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
         {t('sectionLabel')}
       </p>
       <Suspense fallback={<LedgerSkeleton />}>
@@ -94,51 +79,17 @@ export default async function KlubbhusetPage() {
   );
 }
 
-// ─── Greeting card ───────────────────────────────────────────────────────
+// ─── Date card ───────────────────────────────────────────────────────────
 
-async function GreetingCard({
-  dateLine,
-  timeOfDayWord,
-  firstNameValue,
-}: {
-  dateLine: string;
-  timeOfDayWord: string;
-  firstNameValue: string | null;
-}) {
-  // Name is resolved once by the page's cached getRole() and passed in — the
-  // greeting no longer pays its own users round-trip.
-  const t = await getTranslations('admin.dashboard');
-
-  return (
-    <section
-      className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
-      style={{
-        background:
-          'linear-gradient(180deg, var(--admin-salutation-top) 0%, var(--admin-salutation-bottom) 100%)',
-        borderColor: 'var(--admin-salutation-border)',
-      }}
-    >
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {t('saksbehandlerLabel')}
-      </p>
-      <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-        {firstNameValue
-          ? t('greetingHeading', { timeOfDay: timeOfDayWord, name: firstNameValue })
-          : t('greetingHeadingNoName', { timeOfDay: timeOfDayWord })}
-      </h1>
-      <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
-        {dateLine}
-      </p>
-      <ClubStamp className="absolute right-[14px] top-[14px]" />
-    </section>
-  );
-}
-
-function GreetingSkeleton({
-  dateLine,
+// The title is today's date, so the card needs no data and no Suspense
+// boundary: it paints with the shell.
+function DateCard({
+  dateTitle,
+  weekLine,
   saksbehandlerLabel,
 }: {
-  dateLine: string;
+  dateTitle: string;
+  weekLine: string;
   saksbehandlerLabel: string;
 }) {
   return (
@@ -150,12 +101,14 @@ function GreetingSkeleton({
         borderColor: 'var(--admin-salutation-border)',
       }}
     >
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="font-sans text-xs font-semibold text-muted">
         {saksbehandlerLabel}
       </p>
-      <Skeleton className="mt-1 h-7 w-3/5" />
+      <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
+        {dateTitle}
+      </h1>
       <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
-        {dateLine}
+        {weekLine}
       </p>
       <ClubStamp className="absolute right-[14px] top-[14px]" />
     </section>

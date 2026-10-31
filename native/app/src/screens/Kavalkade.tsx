@@ -73,7 +73,7 @@ function MessageCard({ heading, body, testID }: { heading: string; body: string;
       ]}
       testID={testID}
     >
-      <Text style={[styles.kicker, { color: colors.muted }]}>{t('kicker').toUpperCase()}</Text>
+      <Text style={[styles.kicker, { color: colors.muted }]}>{t('kicker')}</Text>
       <Text accessibilityRole="header" style={[styles.messageHeading, { color: colors.text }]}>
         {heading}
       </Text>
@@ -191,7 +191,7 @@ export function Kavalkade(_props: ScreenProps<'Kavalkade'>) {
 // webbens `Card` (`p-6`, `rounded-2xl`), banneret `rounded-xl px-4 py-3` med
 // tekst 14/500.
 const HEADING = fraunces(500, 24, 30);
-const KICKER = interLine(10, 15);
+const KICKER = interLine(12, 18);
 const BODY = interLine(14, 22.75, { multiline: true });
 const BANNER = interLine(14, 20, { multiline: true });
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   failed: { gap: 8 },
   heading: { ...HEADING, marginBottom: HEADING.marginBottom + 16, fontVariant: ['tabular-nums'] },
   card: { borderWidth: 1, borderRadius: 16, padding: 24 },
-  kicker: { ...KICKER, fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
+  kicker: { ...KICKER, fontFamily: FONTS.sansSemiBold },
   messageHeading: { ...HEADING, marginTop: HEADING.marginTop + 8 },
   messageBody: { ...BODY, fontFamily: FONTS.sans, marginTop: BODY.marginTop + 12 },
   banner: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },

@@ -1119,10 +1119,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heading: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   headline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   headlineLabel: { ...interLine(13, 16), fontFamily: FONTS.sans },
@@ -1163,10 +1161,8 @@ const styles = StyleSheet.create({
   // Kickerens mål, som `heading` over (#2716).
   groupTitle: {
     marginBottom: 4,
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   awardRow: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },
 });

@@ -17,7 +17,7 @@ export function CupShareLink({ joinUrl }: { joinUrl: string }) {
 
   return (
     <Card>
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-1">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-1">
         {t('heading')}
       </h2>
       <p className="font-sans text-sm text-muted mb-3">{t('helper')}</p>

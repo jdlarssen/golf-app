@@ -95,7 +95,7 @@ export async function CancelRoundConfirm({
       <h1 className="font-serif text-[26px] font-medium leading-[1.15]">{t('heading')}</h1>
       {whenLine && <p className="mt-1.5 text-xs leading-[1.45] text-muted">{whenLine}</p>}
 
-      <p className="mt-[18px] mb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
+      <p className="mt-[18px] mb-2 font-sans text-xs font-semibold leading-[normal] text-muted">
         {t('sectionLabel')}
       </p>
       <div className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">

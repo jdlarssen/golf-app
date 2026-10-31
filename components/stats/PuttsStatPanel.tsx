@@ -78,7 +78,7 @@ export function PuttsStatPanel({
 function PuttsStatCell({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="text-right">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
+      <p className="font-sans text-xs font-semibold text-muted leading-none mb-1">
         {label}
       </p>
       <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">

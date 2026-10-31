@@ -660,7 +660,7 @@ async function MyStatsCard({ stats }: { stats: MyStats }) {
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-bg/50 px-3 py-3 text-center">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1.5">
+      <p className="font-sans text-xs font-semibold text-muted leading-none mb-1.5">
         {label}
       </p>
       <p className="font-serif text-2xl font-medium text-text tabular-nums leading-none">

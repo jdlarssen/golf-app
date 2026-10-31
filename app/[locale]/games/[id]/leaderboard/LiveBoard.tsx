@@ -141,7 +141,7 @@ export function LiveBoard({
           <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} tone="onStrong" />
           <span
             data-testid="board-pill"
-            className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums"
+            className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-xs font-semibold tabular-nums"
           >
             {status === 'active' && (
               <span aria-hidden className="h-2 w-2 rounded-full bg-success" />
@@ -150,7 +150,7 @@ export function LiveBoard({
           </span>
         </div>
         <div className="px-3">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-bg-tint/80">
+          <p className="truncate text-xs font-semibold text-bg-tint/80">
             {gameName}
           </p>
           <h1 className="mt-1 font-serif text-[40px] font-semibold leading-[1.05]">
@@ -170,7 +170,7 @@ export function LiveBoard({
           >
             <div
               aria-hidden
-              className={`${COLUMNS} px-0.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-bg-tint`}
+              className={`${COLUMNS} px-0.5 pb-1.5 text-xs font-semibold text-bg-tint`}
             >
               <span className="text-center">{t('colPlace')}</span>
               <span>{t('colPlayer')}</span>
@@ -307,7 +307,7 @@ function BoardRow({
               <span className="flex min-w-0 items-baseline gap-1.5">
                 <span className="truncate text-[15px] font-semibold">{name}</span>
                 {isYou && (
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  <span className="shrink-0 text-xs font-semibold text-primary">
                     {t('you')}
                   </span>
                 )}
@@ -420,7 +420,7 @@ function Strip({
     >
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 shadow-[0_6px_20px_rgba(26,46,31,0.10)]">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <p className="text-xs font-semibold text-muted">
             {t('stripKicker')}
           </p>
           <p className="mt-0.5 truncate font-serif text-[18px] font-medium tabular-nums text-text">

@@ -60,10 +60,8 @@ const pillStyle: CSSProperties = {
   height: 26,
   padding: '0 10px',
   borderRadius: 999,
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.16em',
-  textTransform: 'uppercase',
   display: 'flex',
   alignItems: 'center',
 };

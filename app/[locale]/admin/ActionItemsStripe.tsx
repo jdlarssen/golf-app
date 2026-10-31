@@ -49,7 +49,7 @@ export async function ActionItemsStripe() {
 
   return (
     <section className="mb-4">
-      <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
         {t('actionItemsHeading')}
       </p>
       {/* data-focus-inset: radene er full-bleed, så `overflow-hidden` klipper en

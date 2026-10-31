@@ -460,20 +460,20 @@ function LayoutATable({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left bg-bg/40">
-            <th className="px-3 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-3 py-2.5 text-xs font-semibold text-muted">
               {t('colHole')}
             </th>
-            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted">
               {t('colPar')}
             </th>
-            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted">
               {t('colSi')}
             </th>
-            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted">
               {t('colStrokes')}
             </th>
             {showNetto && (
-              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted">
                 {t('colNetto')}
               </th>
             )}
@@ -723,16 +723,16 @@ function LayoutBTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left bg-bg/40">
-            <th className="px-2.5 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2.5 py-2.5 text-xs font-semibold text-muted">
               {t('colHole')}
             </th>
-            <th className="px-2 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+            <th className="px-2 py-2.5 text-right text-xs font-semibold text-muted">
               {t('colPar')}
             </th>
             {columns.map((c) => (
               <th
                 key={c.userId}
-                className="px-2 py-2.5 text-right text-[11px] font-medium uppercase tracking-[0.10em] text-muted"
+                className="px-2 py-2.5 text-right text-xs font-semibold text-muted"
               >
                 <span className="inline-flex items-baseline gap-1 justify-end">
                   <span className="font-serif text-[13px] text-text">

@@ -1,5 +1,5 @@
 // Force the host timezone to UTC so these tests catch the Vercel-server
-// regression (#646): the Klubbhuset greeting computed week / date / time-of-day
+// regression (#646): the Klubbhuset greeting computed week / date
 // from local-TZ getters, which on a UTC server is UTC, not Europe/Oslo.
 process.env.TZ = 'UTC';
 
@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest';
 import {
   osloDateKey,
   osloIsoWeek,
-  osloTimeOfDayBucket,
   osloWeekendDateKeys,
   osloYearWindow,
 } from './osloCalendar';
@@ -69,28 +68,6 @@ describe('osloYearWindow', () => {
     expect(w.year).toBe(2027);
     expect(instant.toISOString() >= w.startIso).toBe(true);
     expect(instant.toISOString() < w.endIso).toBe(true);
-  });
-});
-
-describe('osloTimeOfDayBucket', () => {
-  it('buckets a just-past-midnight Oslo instant as morgen (#646 regression)', () => {
-    // 23:32 UTC = 01:32 Oslo → morgen. The local-TZ (UTC) reading would be
-    // hour 23 → kveld, i.e. the wrong «God kveld» the issue reported.
-    expect(osloTimeOfDayBucket(new Date('2026-06-14T23:32:00Z'))).toBe('morgen');
-  });
-
-  it.each([
-    // [UTC instant (summer, CEST +02:00), Oslo wall-clock hour, expected bucket]
-    ['2026-06-15T05:59:00Z', '07:59', 'morgen'],
-    ['2026-06-15T07:00:00Z', '09:00', 'morgen'], // boundary: 09 < 10
-    ['2026-06-15T08:00:00Z', '10:00', 'formiddag'], // boundary: 10
-    ['2026-06-15T09:59:00Z', '11:59', 'formiddag'],
-    ['2026-06-15T10:00:00Z', '12:00', 'ettermiddag'], // boundary: 12
-    ['2026-06-15T15:59:00Z', '17:59', 'ettermiddag'],
-    ['2026-06-15T16:00:00Z', '18:00', 'kveld'], // boundary: 18
-    ['2026-06-15T21:00:00Z', '23:00', 'kveld'],
-  ] as const)('%s (Oslo %s) -> %s', (iso, _osloHour, expected) => {
-    expect(osloTimeOfDayBucket(new Date(iso))).toBe(expected);
   });
 });
 

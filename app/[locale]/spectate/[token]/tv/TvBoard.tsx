@@ -56,7 +56,7 @@ export function TvBoard({ board }: { board: LiveBoard }) {
       <div className="flex flex-col rounded-[18px] bg-tv-board px-[18px] py-2.5">
         <div
           aria-hidden
-          className={`${COLUMNS} pt-1.5 pb-2 text-[12px] font-semibold tracking-[0.2em] text-tv-text/70 uppercase`}
+          className={`${COLUMNS} pt-1.5 pb-2 text-[12px] font-semibold text-tv-text/70`}
         >
           <span>{t('colPlace')}</span>
           <span>{t('colPlayer')}</span>

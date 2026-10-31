@@ -778,14 +778,14 @@ describe('formatWeekdayDayMonthOsloLocale (#2258)', () => {
 // ---------------------------------------------------------------------------
 // formatDateBlockOsloLocale (#2269)
 // ---------------------------------------------------------------------------
-// The date block on a «Neste» row: «ONS» over «8.10». Oslo-pinned, so a late
+// The date block on a «Neste» row: «Ons» over «8.10». Oslo-pinned, so a late
 // UTC evening is the next day.
 // ---------------------------------------------------------------------------
 
 describe('formatDateBlockOsloLocale (#2269)', () => {
   it.each<[AppLocale, { weekday: string; dayMonth: string }]>([
-    ['no', { weekday: 'TOR', dayMonth: '8.10' }],
-    ['en', { weekday: 'THU', dayMonth: '8/10' }],
+    ['no', { weekday: 'Tor', dayMonth: '8.10' }],
+    ['en', { weekday: 'Thu', dayMonth: '8/10' }],
   ])('reads the day in Oslo: 23:30 UTC on Wednesday 7 Oct is Thursday 8 Oct (%s)', (locale, expected) => {
     expect(formatDateBlockOsloLocale(new Date('2026-10-07T23:30:00Z'), locale)).toEqual(expected);
   });

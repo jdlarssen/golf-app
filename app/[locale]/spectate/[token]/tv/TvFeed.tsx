@@ -31,7 +31,7 @@ export function TvFeed({ events, rows }: { events: TvFeedEvent[]; rows: LiveBoar
       data-testid="tv-feed"
       className="flex grow flex-col gap-3.5 rounded-[18px] bg-tv-text/8 p-[18px]"
     >
-      <h2 className="text-[12px] font-semibold tracking-[0.24em] text-tv-text/75 uppercase">
+      <h2 className="text-[12px] font-semibold text-tv-text/75">
         {ts('feedTitle')}
       </h2>
       {events.length === 0 ? (

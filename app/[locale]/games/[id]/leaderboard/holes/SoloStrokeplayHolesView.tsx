@@ -154,7 +154,7 @@ function TotalsHeader({
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <p className="text-xs font-semibold text-muted">
           {standingUnit({ ranking }) === 'toPar'
             ? `${t('common.stillingen')} · ${t('common.vsParLabel')}`
             : t('common.stillingen')}

@@ -67,7 +67,7 @@ describe('sendIdeaBuiltNotification', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
-                    Vi bygde det!
+                    Vi bygde det
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Hei Per!
@@ -105,7 +105,7 @@ describe('sendIdeaBuiltNotification', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
-                    Vi bygde det!
+                    Vi bygde det
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Hei Per!
@@ -143,7 +143,7 @@ describe('sendIdeaBuiltNotification', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
-                    We built it!
+                    We built it
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Hi Per!
@@ -184,7 +184,7 @@ describe('sendIdeaBuiltNotification', () => {
                     Fyr opp golfturneringen på et par minutter.
                   </p>
                   <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
-                    Vi bygde det!
+                    Vi bygde det
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Hei Per!

@@ -14,7 +14,7 @@ Sett av ~30 minutter. De fleste steg går raskt; flippen mellom rollene tar tid 
 
 - [ ] Logg inn, lands på hjem-skjermen
 - [ ] **Champagne-medaljong** med pin-flagg vises sentrert
-- [ ] **«KLUBBHUSET ER ÅPENT»** i champagne uppercase (kicker)
+- [ ] **«Klubbhuset er åpent»** i champagne, 12 px semibold (kicker, setningsstor bokstav)
 - [ ] **«Velkommen, {fornavn}.»** med punktum (Fraunces serif, 30px)
 - [ ] **Body-tekst**: «Du er klar. Admin setter opp neste runde.»
 - [ ] **Ingen CTA** (kun for admin)

@@ -132,7 +132,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
           <span
             data-testid="follow-live-pill"
             data-live={online ? 'online' : 'offline'}
-            className="flex h-6 items-center gap-1.5 rounded-full bg-on-strong/14 px-2.5 text-[10px] font-semibold uppercase leading-[normal] tracking-[0.16em]"
+            className="flex h-6 items-center gap-1.5 rounded-full bg-on-strong/14 px-2.5 text-xs font-semibold leading-[normal]"
           >
             <span
               aria-hidden
@@ -143,7 +143,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
         </div>
         <div
           aria-hidden
-          className="mt-4 text-[10px] font-semibold uppercase leading-[normal] tracking-[0.22em] text-on-strong/80"
+          className="mt-4 text-xs font-semibold leading-[normal] text-on-strong/80"
         >
           {tf('kicker')}
         </div>
@@ -174,7 +174,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
               {unit === 'pointsToPar' && row.total !== null && (
                 <span
                   data-testid="follow-total-unit"
-                  className="text-[11px] font-semibold uppercase tracking-[0.16em] text-on-strong/85"
+                  className="text-xs font-semibold text-on-strong/85"
                 >
                   {tc('vsParLabel')}
                 </span>

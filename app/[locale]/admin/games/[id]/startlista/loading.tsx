@@ -30,7 +30,7 @@ export default async function StartlistaLoading() {
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </span>
-          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <span className="font-sans text-xs font-semibold text-muted">
             {t('sectionLabel')}
           </span>
           <span className="w-11" />

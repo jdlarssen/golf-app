@@ -127,7 +127,7 @@ export function PaymentInfo({
       className={`rounded-xl border border-border bg-surface-2 px-4 py-3 ${className ?? ''}`}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+        <span className="font-sans text-xs font-semibold text-muted">
           {t('label')}
         </span>
         <span className="font-serif text-lg tabular-nums text-text">

@@ -223,10 +223,8 @@ const styles = StyleSheet.create({
   fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
   field: { flex: 1 },
   fieldLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   fieldValue: {
     ...FIELD_VALUE,

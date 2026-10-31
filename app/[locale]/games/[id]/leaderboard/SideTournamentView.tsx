@@ -942,8 +942,8 @@ function GroupSection({
   const t = useTranslations('leaderboard.sideTournament');
   const headerClass =
     group === 'penalty'
-      ? 'mb-1 text-xs uppercase tracking-wide font-semibold text-danger'
-      : 'mb-1 text-xs uppercase tracking-wide font-semibold text-muted';
+      ? 'mb-1 text-xs font-semibold text-danger'
+      : 'mb-1 text-xs font-semibold text-muted';
   return (
     <section>
       <h3 className={headerClass}>{t(`groups.${group}`)}</h3>

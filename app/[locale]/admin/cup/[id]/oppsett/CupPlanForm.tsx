@@ -62,7 +62,7 @@ const INITIAL_STATE: CupPlanActionError = { error: '' };
 
 function SectionHeading({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
+    <h2 id={id} className="font-sans text-xs font-semibold text-muted mb-3">
       {children}
     </h2>
   );

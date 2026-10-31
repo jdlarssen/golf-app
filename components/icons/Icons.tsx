@@ -194,3 +194,14 @@ export const PlusIcon = ({ size, ...rest }: IconProps) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+
+/**
+ * Flame — the streak mark. One closed outline with a notch at the tip, so it
+ * still reads as a flame at 16px (it replaces the 🔥 emoji in the streak chip,
+ * panel and game home). Colour it with the text role it sits in.
+ */
+export const FlammeIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M 12 3 C 12.5 6.3 14.3 7.5 15.9 9.5 C 17.2 11.2 18 12.9 18 14.8 A 6 6 0 0 1 6 14.8 C 6 12.5 7 11.2 8.3 9.9 C 8.8 11.3 9.4 12 10.2 12.4 C 10.2 8.7 10.7 5.7 12 3 Z" />
+  </svg>
+);

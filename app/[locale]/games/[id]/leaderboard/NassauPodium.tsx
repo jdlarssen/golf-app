@@ -58,7 +58,7 @@ export interface NassauPodiumProps {
  *   - Hoved-tallet på hvert trinn er units (med max-of-3-indikator).
  *   - Per spiller: tre unit-badges (F9 / B9 / T18) som fylles inn når
  *     `unitBreakdown.front9/back9/total18` er true.
- *   - Sweep-celebration ved units === 3 hos vinneren («Hele tavla!»).
+ *   - Sweep-celebration ved units === 3 hos vinneren («Hele tavla»).
  *   - Distinkt sessionStorage-key: `torny-nassau-podium-confetti-seen-${gameId}`.
  *
  * Resten av rangeringen (rank 4+) ligger i et collapsed `<details>` under
@@ -225,7 +225,7 @@ export function NassauPodium({
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
                         {player.units}
                       </span>
-                      <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      <span className="mt-0.5 block text-xs font-semibold text-muted">
                         {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
                       </span>
                     </div>
@@ -292,7 +292,7 @@ function PodiumStep({
 
       {tiedBadge && (
         <p
-          className={`text-center text-[11px] font-semibold uppercase tracking-[0.14em] ${
+          className={`text-center text-xs font-semibold ${
             place === 1 ? 'text-accent-text' : 'text-muted'
           }`}
         >
@@ -316,7 +316,7 @@ function PodiumStep({
         >
           {player.units}
         </span>
-        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+        <span className="mt-1 block text-xs font-semibold text-muted">
           {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
         </span>
       </div>
@@ -336,7 +336,7 @@ function UnitBadges({
 }: {
   unitBreakdown: { front9: boolean; back9: boolean; total18: boolean };
 }) {
-  const pxClass = 'px-1.5 py-0.5 text-[11px]';
+  const pxClass = 'px-1.5 py-0.5 text-xs';
   const items: Array<{ key: 'front9' | 'back9' | 'total18'; label: string }> = [
     { key: 'front9', label: 'F9' },
     { key: 'back9', label: 'B9' },
@@ -355,7 +355,7 @@ function UnitBadges({
             key={item.key}
             data-testid={`unit-badge-${item.key}`}
             data-won={won ? 'true' : 'false'}
-            className={`inline-flex items-center rounded-full font-semibold uppercase tracking-[0.12em] tabular-nums ${pxClass} ${
+            className={`inline-flex items-center rounded-full font-semibold tabular-nums ${pxClass} ${
               won
                 ? 'border border-accent bg-accent/[0.12] text-accent-text'
                 : 'border border-border bg-surface text-muted/60'

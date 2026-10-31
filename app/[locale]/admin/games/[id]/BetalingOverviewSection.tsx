@@ -33,7 +33,7 @@ export async function BetalingOverviewSection({
         <div className="space-y-3 px-3.5 pb-3.5 pt-3.5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              <p className="font-sans text-xs font-semibold text-muted">
                 {t('feeLabel')}
               </p>
               <p className="mt-0.5 font-serif text-[15px] tabular-nums text-text">
@@ -41,7 +41,7 @@ export async function BetalingOverviewSection({
               </p>
             </div>
             <div className="text-right">
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              <p className="font-sans text-xs font-semibold text-muted">
                 {t('paidLabel')}
               </p>
               <p className="mt-0.5 font-serif text-[20px] font-medium tabular-nums text-text">

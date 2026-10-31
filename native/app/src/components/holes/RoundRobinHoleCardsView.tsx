@@ -42,7 +42,7 @@ export function RoundRobinHoleCardsView({
   cards: RoundRobinHoleCards;
   subtitle: string;
   players: readonly BundlePlayer[];
-  /** Runden er ferdig: bunnteksten sier «Vel spilt!». */
+  /** Runden er ferdig: bunnteksten sier «Vel spilt». */
   finished: boolean;
 }) {
   return (

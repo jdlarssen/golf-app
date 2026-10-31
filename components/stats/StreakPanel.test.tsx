@@ -36,6 +36,9 @@ describe('StreakPanel', () => {
     );
 
     expect(screen.getByTestId('streak-active')).toBeInTheDocument();
+    // A drawn flame, not the 🔥 emoji.
+    expect(screen.getByTestId('streak-active').querySelector('svg')).not.toBeNull();
+    expect(screen.getByTestId('streak-active').textContent).not.toContain('🔥');
     expect(screen.queryByTestId('streak-dormant')).not.toBeInTheDocument();
     expect(screen.getByText('uker på rad')).toBeInTheDocument();
     expect(screen.getByText('12 runder i 2026')).toBeInTheDocument();

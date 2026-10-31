@@ -73,7 +73,7 @@ export function TopBar({
       )}
       {kicker && (
         <Kicker
-          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted ${
+          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-xs font-semibold text-muted ${
             kickerOneLine ? 'max-w-[calc(100%-7rem)] truncate' : ''
           }`}
         >
@@ -99,7 +99,7 @@ function ActionSpacer() {
   return (
     <span
       aria-hidden
-      className="invisible rounded-full border border-border px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em]"
+      className="invisible rounded-full border border-border px-2.5 py-[5px] font-sans text-xs font-semibold"
     >
       +
     </span>

@@ -162,14 +162,14 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
               {headline.text}
             </p>
             {toPar ? (
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+              <p className="mt-1 text-xs font-semibold tabular-nums text-muted">
                 {/* Two lines, so the column stays as narrow as «−7 brutto» and
                     the players' names keep their room. */}
                 <span className="block">{t('common.vsParLabel')}</span>
                 <span className="block">{t('common.grossBrutto', { count: line.total })}</span>
               </p>
             ) : (
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+              <p className="mt-1 text-xs font-semibold text-muted">
                 {teamDelta && (
                   <span className="tabular-nums mr-1.5 normal-case">
                     {teamDelta}

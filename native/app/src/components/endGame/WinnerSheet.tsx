@@ -238,10 +238,8 @@ const styles = StyleSheet.create({
   },
   headText: { flexShrink: 1 },
   kicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   // `line-height: 1.2` og 2 pt over i tegningen.
   title: { ...fraunces(500, 24, 28.8, { multiline: true }) },

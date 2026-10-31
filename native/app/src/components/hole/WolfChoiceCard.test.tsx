@@ -134,7 +134,7 @@ describe('WolfChoiceCard', () => {
         onSaved={jest.fn()}
       />,
     );
-    expect(screen.getByTestId('wolf-catch-up').props.children).toBe('CATCH-UP');
+    expect(screen.getByTestId('wolf-catch-up').props.children).toBe('Catch-up');
     expect(screen.getByTestId('wolf-catch-up-line').props.children).toBe(
       'Du ligger 5 poeng bak lederen, så du er ulv på dette hullet.',
     );

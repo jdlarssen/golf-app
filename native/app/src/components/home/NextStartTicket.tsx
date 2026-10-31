@@ -217,10 +217,8 @@ const styles = StyleSheet.create({
   // Nettleserens linjebokser: Inter 11 er 14 pt høy, og klokka har
   // `line-height: 1.1` (33 pt).
   date: {
-    ...interLine(11, 14),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.3,
-    textTransform: 'uppercase',
   },
   clock: { ...fraunces(600, 30, 33) },
   noTime: { fontSize: 13, textAlign: 'center' },

@@ -131,7 +131,7 @@ export function LeagueStandingsTable({
           : t('colTotal');
 
   const headClass =
-    'font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted';
+    'font-sans text-xs font-semibold text-muted';
 
   const renderRow = (row: LeagueStandingRow, { isLast }: { isLast: boolean }) => {
     const participant = participantMap.get(row.userId);

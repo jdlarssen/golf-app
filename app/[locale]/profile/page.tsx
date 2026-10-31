@@ -116,7 +116,7 @@ export default async function ProfilePage({
       <div className="mt-8 space-y-6">
         {/* Aktivitet */}
         <section>
-          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <p className="mb-2 px-1 font-sans text-xs font-semibold text-muted">
             {t('sectionPersonal')}
           </p>
           <SettingList>
@@ -126,7 +126,7 @@ export default async function ProfilePage({
 
         {/* App */}
         <section>
-          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <p className="mb-2 px-1 font-sans text-xs font-semibold text-muted">
             {t('sectionApp')}
           </p>
           <SettingList>
@@ -171,7 +171,7 @@ export default async function ProfilePage({
 
         {/* Konto — eksport og destruktiv slett-handling */}
         <section>
-          <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <p className="mb-2 px-1 font-sans text-xs font-semibold text-muted">
             {t('sectionAccount')}
           </p>
           <SettingList>

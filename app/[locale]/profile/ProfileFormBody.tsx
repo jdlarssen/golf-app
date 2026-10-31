@@ -220,7 +220,7 @@ export function ProfileFormBody({
           className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <span className="font-sans text-xs font-semibold text-muted">
               {t('golfProfileLabel')}
             </span>
             {!showMore && (gender || level) && (

@@ -19,7 +19,7 @@ const BASE: InboxEntryView = {
   quote: null,
   body: null,
   cta: null,
-  avatar: { kind: 'emoji', emoji: '🚫' },
+  avatar: { kind: 'icon', icon: 'konvolutt' },
   placeLabel: null,
   destination: null,
   actionKey: null,
@@ -65,6 +65,23 @@ describe('InboxRow', () => {
     expect(plain).not.toHaveTextContent('→');
     expect(plain.querySelector('[data-testid="unread-dot"]')).toBeNull();
     expect(container.querySelectorAll('a')).toHaveLength(1);
+  });
+});
+
+describe('InboxAvatarDisc', () => {
+  it('a row without a person wears a drawn icon, hidden from screen readers, not an emoji', () => {
+    render(
+      <InboxRow
+        view={{ ...BASE, title: 'Du kom ikke med i X', avatar: { kind: 'icon', icon: 'flagg' } }}
+        unread={false}
+        unreadLabel="Ulest"
+        onActivate={vi.fn()}
+      />,
+    );
+    const disc = screen.getByTestId('icon-disc');
+    expect(disc).toHaveAttribute('aria-hidden', 'true');
+    expect(disc.querySelector('svg')).not.toBeNull();
+    expect(disc.textContent).toBe('');
   });
 });
 

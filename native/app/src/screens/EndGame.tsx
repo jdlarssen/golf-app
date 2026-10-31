@@ -975,7 +975,7 @@ function Card({
   );
 }
 
-/** Seksjonsoverskrift: små sperrede versaler, 20 pt inn. */
+/** Seksjonsoverskrift: liten etikett, 20 pt inn. */
 function SectionHeading({
   text,
   color,
@@ -1399,10 +1399,8 @@ const styles = StyleSheet.create({
   body14: { ...interLine(14, 19.6, { multiline: true }), fontFamily: FONTS.sans },
   sectionBox: { paddingHorizontal: 20 },
   section: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   stack: { marginHorizontal: 16, gap: 8 },
 
@@ -1461,10 +1459,8 @@ const styles = StyleSheet.create({
   },
   strongKickerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   strongKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2.2,
-    textTransform: 'uppercase',
   },
   strongCount: { ...fraunces(500, 26, 31.2, { multiline: true }), fontVariant: ['tabular-nums'] },
   strongBody: { ...interLine(14, 20.3, { multiline: true }), fontFamily: FONTS.sans },

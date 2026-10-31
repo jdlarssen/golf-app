@@ -221,7 +221,7 @@ export function EditOverview({
       <div className="pt-1">
         <h1 className="font-serif text-[28px] font-medium text-text">{editNav.title}</h1>
         <div className="mt-1 flex items-center gap-2">
-          <span className="flex h-[22px] items-center rounded-full bg-primary-soft px-2 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <span className="flex h-[22px] items-center rounded-full bg-primary-soft px-2 font-sans text-xs font-semibold text-primary">
             {editNav.statusLabel}
           </span>
           {autoStart && (
@@ -303,7 +303,7 @@ function OverviewRow({
             {tReady(row.status === 'block' ? 'checklist.statusBlock' : 'checklist.statusOk')}{' '}
           </span>
         )}
-        <Kicker className="text-[11px]! tracking-[0.14em]! leading-[normal]">{row.title}</Kicker>
+        <Kicker className="leading-[normal]">{row.title}</Kicker>
         <p className="font-sans text-[15px] leading-[normal] font-semibold text-text">{row.value}</p>
         {row.problem && (
           <p className="font-sans text-xs leading-[normal] font-semibold text-danger">{row.problem}</p>

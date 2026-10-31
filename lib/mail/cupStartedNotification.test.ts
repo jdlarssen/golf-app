@@ -67,7 +67,7 @@ describe('sendCupStartedNotification', () => {
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
-      Lykke til på banen!
+      Lykke til på banen
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
@@ -87,7 +87,7 @@ describe('sendCupStartedNotification', () => {
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
-      Lykke til på banen!
+      Lykke til på banen
       "
     `);
   });
@@ -103,7 +103,7 @@ describe('sendCupStartedNotification', () => {
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
-      Lykke til på banen!
+      Lykke til på banen
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
@@ -125,7 +125,7 @@ describe('sendCupStartedNotification', () => {
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
-      Lykke til på banen!
+      Lykke til på banen
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
@@ -150,7 +150,7 @@ describe('sendCupStartedNotification', () => {
 
       Open leaderboard: https://tornygolf.no/en/cup/22222222-2222-2222-2222-222222222222
 
-      Good luck on the course!
+      Good luck on the course
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
@@ -170,7 +170,7 @@ describe('sendCupStartedNotification', () => {
 
       Open leaderboard: https://tornygolf.no/en/cup/22222222-2222-2222-2222-222222222222
 
-      Good luck on the course!
+      Good luck on the course
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
@@ -217,7 +217,7 @@ describe('sendCupStartedNotification', () => {
                     </a>
                   </div>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
-                    Lykke til på banen!
+                    Lykke til på banen
                   </p>
                 </td></tr>
               </table>

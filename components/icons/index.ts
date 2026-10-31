@@ -20,4 +20,5 @@ export {
   ReplayIcon,
   SparkleIcon,
   FormatsIcon,
+  FlammeIcon,
 } from './Icons';

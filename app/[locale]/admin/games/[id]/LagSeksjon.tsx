@@ -110,7 +110,7 @@ export function LagSeksjon({
                           : 'border-border'
                       }`}
                     >
-                      <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      <p className="mb-0.5 font-sans text-xs font-semibold text-muted">
                         {t('teamOptionN', { n: teamNum })}{' '}
                         <span className="tabular-nums text-muted">
                           ({count}/{teamSize})
@@ -141,7 +141,7 @@ export function LagSeksjon({
               data-testid="team-unassigned"
               className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5"
             >
-              <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-warning-text">
+              <p className="mb-0.5 font-sans text-xs font-semibold text-warning-text">
                 {t('unassignedLabel', { n: unassigned.length })}
               </p>
               <p className="text-sm text-text">
@@ -170,7 +170,7 @@ export function LagSeksjon({
 
           {/* Per-spiller-justering */}
           <div>
-            <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <p className="mb-2 font-sans text-xs font-semibold text-muted">
               {t('movePlayerLabel')}
             </p>
             <div className="space-y-2">

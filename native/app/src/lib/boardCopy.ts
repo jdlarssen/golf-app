@@ -93,7 +93,7 @@ export const WITHDRAWN_BOARD_TEXT = {
  * over lagene og låskortet, de samme ordene som webbens tavle.
  */
 export const STATE35_TEXT = {
-  segmentHalfLabel: 'HULL {from}–{to}',
+  segmentHalfLabel: 'Hull {from}–{to}',
   lockedHeading: 'Vi sees ved hull {last}',
   lockedSub: 'Hull {from}–{to} vises når arrangøren avslutter spillet.',
 } as const;

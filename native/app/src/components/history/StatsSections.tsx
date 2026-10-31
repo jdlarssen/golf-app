@@ -10,6 +10,7 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Achievements } from '../../../../../lib/stats/achievements';
+import { ACHIEVEMENT_MARKS, WALL_BADGE_ORDER } from '../../../../../lib/stats/achievementMarks';
 import type { CourseStat } from '../../../../../lib/stats/courseStats';
 import type { MyStats } from '../../../../../lib/stats/playerStats';
 import type { PuttsStats } from '../../../../../lib/stats/puttsStats';
@@ -25,7 +26,9 @@ import {
   streakSeason,
 } from '../../lib/historyCopy';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
+import { FlammeIcon } from '../icons/Icons';
 import { FONTS, TAP, fraunces, useTheme, withAlpha } from '../../theme';
+import { AchievementBadge } from './AchievementBadge';
 import { FormCurve } from './FormCurve';
 
 function Section({
@@ -125,8 +128,6 @@ export function HandicapFormSection({ differentials }: { differentials: readonly
   );
 }
 
-const BRAG_KEYS = ['holeInOne', 'eagle', 'birdie', 'turkey'] as const;
-
 /** «Sesongen din»: årsvalg (nyeste valgt), runder, snitt, beste og bragdene. */
 export function SeasonSection({ seasons }: { seasons: readonly SeasonSummary[] }) {
   const { colors } = useTheme();
@@ -142,7 +143,7 @@ export function SeasonSection({ seasons }: { seasons: readonly SeasonSummary[] }
 
   const selected = seasons.find((s) => s.year === year) ?? seasons[0];
   const previous = seasons.find((s) => s.year === selected.year - 1) ?? null;
-  const brags = BRAG_KEYS.map((key) => ({ key, count: selected.achievements[key] })).filter(
+  const brags = WALL_BADGE_ORDER.map((key) => ({ key, count: selected.achievements[key] })).filter(
     (b) => b.count > 0,
   );
   const diff = (a: number | null, b: number | null | undefined) =>
@@ -256,7 +257,9 @@ export function StreakSection({ streak, year }: { streak: StreakSummary; year: n
             accessibilityLabel={`${streak.weeklyStreak} ${HISTORY_TEXT.streakWeeksLabel}`}
             testID="stats-streak-active"
           >
-            <Text style={styles.fire}>🔥</Text>
+            <View style={styles.fire}>
+              <FlammeIcon color={colors.accentText} size={28} />
+            </View>
             <Text style={[styles.streakNumber, { color: colors.accentText }]}>
               {streak.weeklyStreak}
             </Text>
@@ -275,8 +278,6 @@ export function StreakSection({ streak, year }: { streak: StreakSummary; year: n
   );
 }
 
-const BRAG_EMOJI = { holeInOne: '🎯', eagle: '🦅', birdie: '🐦', turkey: '🦃' } as const;
-
 /** «Bragd-veggen»: de fire bragdene gjennom årene; de du ikke har, er dempet. */
 export function AchievementSection({ achievements }: { achievements: Achievements }) {
   const { colors } = useTheme();
@@ -287,7 +288,7 @@ export function AchievementSection({ achievements }: { achievements: Achievement
       testID="stats-achievements"
     >
       <View style={[styles.wall, styles.divided, { borderTopColor: colors.divider }]}>
-        {BRAG_KEYS.map((key) => {
+        {WALL_BADGE_ORDER.map((key) => {
           const count = achievements[key];
           const earned = count > 0;
           return (
@@ -306,7 +307,7 @@ export function AchievementSection({ achievements }: { achievements: Achievement
               accessibilityLabel={`${HISTORY_TEXT.brag[key]}: ${count}`}
               testID={`stats-badge-${key}`}
             >
-              <Text style={styles.badgeEmoji}>{BRAG_EMOJI[key]}</Text>
+              <AchievementBadge mark={ACHIEVEMENT_MARKS[key]} earned={earned} />
               <Text style={[styles.microLabel, styles.center, { color: colors.muted }]}>
                 {HISTORY_TEXT.brag[key]}
               </Text>
@@ -432,10 +433,8 @@ const styles = StyleSheet.create({
   yearText: { fontSize: 14, fontFamily: FONTS.sansMedium, fontVariant: ['tabular-nums'] },
   brags: { marginTop: 14 },
   microLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   chip: {
@@ -451,7 +450,9 @@ const styles = StyleSheet.create({
   chipCount: { fontSize: 13, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
   divided: { borderTopWidth: 1, marginTop: 10, paddingTop: 12 },
   streakRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  fire: { fontSize: 24 },
+  // Tegnet flamme i en rad som står på grunnlinja: den sentreres heller enn å
+  // sitte på tallets grunnlinje.
+  fire: { alignSelf: 'center' },
   streakNumber: { ...fraunces(500, 30), fontVariant: ['tabular-nums'] },
   wall: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   badge: {
@@ -464,7 +465,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  badgeEmoji: { fontSize: 24 },
   badgeCount: { ...fraunces(500, 20), fontVariant: ['tabular-nums'] },
   statRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, flexWrap: 'wrap' },
   statCell: { alignItems: 'flex-end', gap: 4 },

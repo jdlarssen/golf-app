@@ -275,7 +275,7 @@ function Header({
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
       <LeaderboardBackLink href={backHref} label={t('backAriaLabel')} />
-      <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+      <span className="flex-1 truncate text-center text-xs font-semibold text-muted">
         {gameName}
       </span>
       {onReplay ? (
@@ -335,7 +335,7 @@ function ModeChip({
   // Tab-style toggle (both modes visible at once, current is highlighted) —
   // matches the state #3.5 ModeToggle pattern, so the brutto/netto affordance
   // reads the same whether the round is mid-flight or fully revealed.
-  // Sized down vs. state #3.5 (28px vs 36px min-height, 10px uppercase vs
+  // Sized down vs. state #3.5 (28px vs 36px min-height, 12px label vs
   // 14px tracking-tight) so it sits unobtrusively under the celebratory
   // subtitle without competing with the leader-card hero.
   return (
@@ -365,7 +365,7 @@ function ModeChip({
                 publicView,
                 publicHref: backHref,
               })}
-              className={`tap-extend min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors [--tap-extend:-8px_0] ${
+              className={`tap-extend min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-xs font-semibold transition-colors [--tap-extend:-8px_0] ${
                 active
                   ? 'bg-primary-soft text-text'
                   : 'text-muted hover:text-text'
@@ -427,7 +427,7 @@ function LeaderCard({
   const modeLabel = mode === 'netto' ? t('netto') : t('brutto');
   const totalCell = (align: string) => (
     <div className={align}>
-      <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+      <span className="block text-xs font-semibold text-muted">
         {ts('totalLabel', { mode: modeLabel })}
       </span>
       <span
@@ -440,7 +440,7 @@ function LeaderCard({
   );
   const vsParCell = (align: string) => (
     <div className={align}>
-      <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+      <span className="block text-xs font-semibold text-muted">
         {ts('vsParLabel')}
       </span>
       <span
@@ -482,7 +482,7 @@ function LeaderCard({
         </div>
 
         <div className="relative flex flex-col items-center">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
+          <span className="text-xs font-semibold text-accent-text">
             {isTied
               ? t('tiedRank', { rank: line.rank })
               : ts('leaderBadge', { rank: line.rank })}
@@ -656,7 +656,7 @@ function TeamRow({
           {headline.text}
         </span>
         <span
-          className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
+          className="mt-1 block text-xs font-semibold tabular-nums text-muted"
           data-testid={toParFirst ? 'bb-team-total' : 'bb-team-vs-par'}
         >
           {toParFirst

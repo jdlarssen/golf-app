@@ -155,7 +155,7 @@ export function SideAwardsPanel({
 
   return (
     <section className="mb-5" data-testid="cup-side-awards">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-2">
         {t('heading')}
       </h2>
       <p className="text-xs text-muted mb-3">{t('hint')}</p>
@@ -167,7 +167,7 @@ export function SideAwardsPanel({
               <p className="text-sm text-muted">{t('empty')}</p>
             )}
             {rows.length > 0 && (
-              <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.25rem_3.25rem_2.25rem] gap-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              <div className="grid grid-cols-[minmax(0,1fr)_3.25rem_3.25rem_3.25rem_2.25rem] gap-2 font-sans text-xs font-semibold text-muted">
                 <span>{t('kindLabel')}</span>
                 <span>{t('holeLabel')}</span>
                 <span>{t('pointsLabel')}</span>
@@ -278,7 +278,7 @@ export function SideAwardsPanel({
 
       {showWinnerRegistration && initialAwards.length > 0 && (
         <div className="mt-4">
-          <h3 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+          <h3 className="font-sans text-xs font-semibold text-muted mb-2">
             {t('winnersHeading')}
           </h3>
           {cupFinished && (

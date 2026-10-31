@@ -224,7 +224,7 @@ function MarkerPicker({
   });
   return (
     <fieldset className="mb-5 space-y-2" data-testid="marker-picker">
-      <legend className="mb-1 block font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+      <legend className="mb-1 block font-sans text-xs font-semibold text-muted">
         {t('legend')}
       </legend>
       <p className="mb-3 text-sm text-muted">{options.length > 0 ? t('hint') : t('none')}</p>

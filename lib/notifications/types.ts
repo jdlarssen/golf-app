@@ -336,7 +336,7 @@ const cupStartedSchema = z.object({
 // påmeldingslenken (#1490). Sendes til cupens skaper — en heads-up, ingen
 // handling påkrevd (søster av club_join_request). ÉN kind med retningsfelt
 // framfor to: mottakeren har samme sted å gå uansett, og et par/av-par ville
-// duplisert både payload, deeplink og emoji.
+// duplisert både payload, deeplink og ikon.
 // `action` avgjør tittelen ved render. `group_id` velger hvilket Spillere-rom
 // deeplinken peker på (klubb-chrome vs. admin-chrome) — null for personlig cup.
 // participant_name nullable: kortet fyller den lokaliserte fallbacken ved

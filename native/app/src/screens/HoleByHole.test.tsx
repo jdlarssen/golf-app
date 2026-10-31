@@ -72,7 +72,7 @@ it('avsluttet solo stableford: overskrift, stilling, Ut og Inn, og hullvinneren 
   expect(screen.getByTestId('hole-by-hole-best-1', HIDDEN)).toBeTruthy();
   expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
   // Bunnteksten som på webben (`LeaderboardFooter`, i anførselstegn).
-  expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
 });
 
 it('blind runde som pågår: alt holdes tilbake', async () => {
@@ -226,7 +226,7 @@ describe('Wolf (#2255 PR 3b)', () => {
     // Ingen innsats over 1 på hull 1.
     expect(screen.queryByTestId('hole-by-hole-stake-1')).toBeNull();
     // Bunnteksten som på webben: runden er ferdig.
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
@@ -269,7 +269,7 @@ describe('Nines (#2255 PR 3c)', () => {
     expect(screen.queryByTestId('hole-by-hole-place-1-c')).toBeNull();
     expect(screen.getByTestId('hole-by-hole-place-1-c', HIDDEN)).toHaveTextContent('3');
     expect(screen.getByTestId('hole-by-hole-place-2-a', HIDDEN)).toHaveTextContent('–');
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
@@ -329,7 +329,7 @@ describe('Round Robin (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-outcome-2')).toHaveTextContent('Venter');
     expect(screen.getByTestId('hole-by-hole-card-2')).not.toHaveTextContent(/Vant hullet/);
     expect(screen.getByTestId('hole-by-hole-row-2-a')).toHaveTextContent(/A.*–/);
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
@@ -386,7 +386,7 @@ describe('Acey Deucey (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-waiting-2')).toHaveTextContent('Venter');
     expect(screen.getByTestId('hole-by-hole-card-2')).not.toHaveTextContent(/\+3|\u2212/);
     expect(screen.getByTestId('hole-by-hole-row-2-a')).toHaveTextContent(/^A–$/);
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
@@ -447,7 +447,7 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
   });
 
-  it('ett kort per hull: prestasjonene i fast rekkefølge, feieren i gull, «Feiet!», «ikke satt» og hull som venter', async () => {
+  it('ett kort per hull: prestasjonene i fast rekkefølge, feieren i gull, «Feiet», «ikke satt» og hull som venter', async () => {
     await render(<HoleByHoleBody bundle={bbbBundle()} scores={[]} extras={{ bingoBangoBongoHoles: bbbHoles }} />);
 
     expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
@@ -478,8 +478,8 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     }
     expect(screen.queryByTestId('hole-by-hole-swept-1')).toBeNull();
 
-    // Hull 2: Bjørn tok alle tre, «Feiet!» i hodet.
-    expect(screen.getByTestId('hole-by-hole-swept-2')).toHaveTextContent('★ Feiet!');
+    // Hull 2: Bjørn tok alle tre, «Feiet» i hodet.
+    expect(screen.getByTestId('hole-by-hole-swept-2')).toHaveTextContent('★ Feiet');
     expect(screen.queryByTestId('hole-by-hole-waiting-2')).toBeNull();
 
     // Hull 3: bare bingo, resten «ikke satt», og hullet venter ikke.
@@ -492,7 +492,7 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-none-4')).toHaveTextContent('Ingen prestasjoner registrert ennå.');
     expect(screen.queryAllByTestId(/^hole-by-hole-award-4-/)).toHaveLength(0);
 
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
@@ -524,11 +524,11 @@ describe('best ball (#2255 PR 3d)', () => {
     expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveTextContent('1');
     expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveStyle({ color: PALETTES.light.accentText });
     expect(screen.getByTestId('hole-by-hole-team-total')).toHaveTextContent('72');
-    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('E PAR');
+    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('E par');
 
     expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
-    expect(screen.getByTestId('hole-by-hole-summary-front')).toHaveTextContent(/UTP3636E/);
-    expect(screen.getByTestId('hole-by-hole-summary-back')).toHaveTextContent(/INNP3636E/);
+    expect(screen.getByTestId('hole-by-hole-summary-front')).toHaveTextContent(/UtP3636E/);
+    expect(screen.getByTestId('hole-by-hole-summary-back')).toHaveTextContent(/InnP3636E/);
     // Begge ga netto 4 på hvert hull: begge er lagets ball, og skjermleseren
     // får setningen i stedet for tallene.
     expect(screen.getAllByLabelText('Brukt netto for laget: KN, brutto 5, +1 slag, netto 4')).toHaveLength(18);
@@ -536,7 +536,7 @@ describe('best ball (#2255 PR 3d)', () => {
     expect(screen.getByTestId('hole-by-hole-team-net-1')).toHaveTextContent('4');
     expect(screen.getByTestId('hole-by-hole-holes-won')).toHaveTextContent('18 hull vunnet');
     expect(screen.getByTestId('hole-by-hole-total-vs-par')).toHaveTextContent('E');
-    // Lederen har ingen «forrige», og webben har ingen «Vel spilt!» under laget.
+    // Lederen har ingen «forrige», og webben har ingen «Vel spilt» under laget.
     expect(screen.queryByTestId('hole-by-hole-team-prev')).toBeNull();
     expect(screen.queryByTestId('hole-by-hole-footer')).toBeNull();
 
@@ -545,7 +545,7 @@ describe('best ball (#2255 PR 3d)', () => {
     expect(onTeamChange).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('hole-by-hole-team-header')).toHaveTextContent('Lag 1 · 2. plass');
     expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveStyle({ color: PALETTES.light.muted });
-    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('+18 PAR');
+    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('+18 par');
     expect(screen.getByTestId('hole-by-hole-holes-won')).toHaveTextContent('0 hull vunnet');
     expect(screen.getAllByLabelText('Brukt netto for laget: PB, brutto 5, +0 slag, netto 5')).toHaveLength(18);
     // En netto som ikke er lagets ball, leses uten «Brukt netto for laget».

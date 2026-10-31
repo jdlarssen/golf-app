@@ -41,14 +41,14 @@ export function CupAwards({
 
   return (
     <section className="mb-8" data-testid="cup-awards">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-2">
         {t('results.awardsHeading')}
       </h2>
 
       {mvp && (
         <div className="rounded-2xl p-5 text-center" style={GOLD_CARD_STYLE} data-testid="cup-award-mvp">
           <p
-            className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em]"
+            className="font-sans text-xs font-semibold"
             style={{ color: 'var(--accent-text)' }}
           >
             {t('results.mvpLabel')}
@@ -65,7 +65,7 @@ export function CupAwards({
           className="mt-3 rounded-2xl border border-border bg-surface p-4 text-center"
           data-testid="cup-award-underperformer"
         >
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <p className="font-sans text-xs font-semibold text-muted">
             {t('results.underperformerLabel')}
           </p>
           <p className="font-serif text-lg text-text mt-1.5 leading-tight">

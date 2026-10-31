@@ -86,7 +86,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
       {/* Round header */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <p className="font-sans text-xs font-semibold text-muted">
             {t('roundLabel')} <span className="tabular-nums">{round.sequence}</span>
           </p>
           <p className="font-serif text-base text-text mt-0.5">{round.label}</p>
@@ -402,7 +402,7 @@ function LockedSimSettings({
         </p>
         {groups.map((group, gi) => (
           <div key={group.key} className={gi === 0 ? 'mt-2' : 'mt-3'}>
-            <p className="font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
+            <p className="font-sans text-xs leading-[15px] font-semibold text-muted">
               {group.label}
             </p>
             <dl className="mt-1.5 space-y-1 font-sans text-[12px] leading-[18px]">

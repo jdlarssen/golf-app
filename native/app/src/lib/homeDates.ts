@@ -91,21 +91,22 @@ export function localDateParts(date: Date): { year: number; month: number; day: 
   return { year: date.getFullYear(), month: date.getMonth(), day: date.getDate() };
 }
 
-/** Datokolonnen i Rundedagboka (#2265): «20» over «LØR». */
+/** Datokolonnen i Rundedagboka (#2265): «20» over «Lør». */
 export function formatDiaryDay(date: Date): { day: string; weekday: string } {
   return {
     day: String(date.getDate()),
-    weekday: WEEKDAYS_SHORT[date.getDay()].toUpperCase(),
+    weekday: capitalize(WEEKDAYS_SHORT[date.getDay()]),
   };
 }
 
 /**
- * Overskriften over en måned i Rundedagboka (#2265): «september», eller
- * «september 2025» når året ikke er det i undertittelen. Stilen setter den i
- * versaler, som designets «SEPTEMBER».
+ * Overskriften over en måned i Rundedagboka (#2265): «September», eller
+ * «September 2025» når året ikke er det i undertittelen. Stor forbokstav, ikke
+ * versaler (eieren droppet dem 2026-10-31, #2728).
  */
 export function diaryMonthLabel(year: number, month: number, currentYear: number | null): string {
-  return year === currentYear ? MONTHS[month] : `${MONTHS[month]} ${year}`;
+  const name = capitalize(MONTHS[month]);
+  return year === currentYear ? name : `${name} ${year}`;
 }
 
 /**

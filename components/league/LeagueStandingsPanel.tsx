@@ -55,7 +55,7 @@ export function LeagueStandingsPanel({
           />
         </div>
       ) : standings.gross !== null ? (
-        <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <p className="mb-2 font-sans text-xs font-semibold text-muted">
           {t('grossOnlyCaption')}
         </p>
       ) : null}

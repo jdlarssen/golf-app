@@ -49,7 +49,7 @@ export function SideAwardDetails({
 
   return (
     <section className="mb-8" data-testid="cup-side-award-details">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-2">
         {t('results.sideAwardsHeading')}
       </h2>
       <p className="text-xs text-muted mb-2">{t('results.sideAwardsHint')}</p>
@@ -58,7 +58,7 @@ export function SideAwardDetails({
         {groups.map((group) => (
           <li key={group.holeNumber}>
             <Card>
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted tabular-nums">
+              <p className="font-sans text-xs font-semibold text-muted tabular-nums">
                 {t('sideAwards.holeShort', { n: group.holeNumber })}
               </p>
               <ul className="mt-2 space-y-2">

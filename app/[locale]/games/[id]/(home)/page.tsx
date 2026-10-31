@@ -31,6 +31,7 @@ import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
+import { FlammeIcon } from '@/components/icons/Icons';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { readCreatorStartBlock } from '@/lib/games/readCreatorStartBlock';
 import type { StartBlock } from '@/lib/games/startBlockReason';
@@ -789,7 +790,7 @@ export default async function GameHomePage({
         <header className="mb-6 flex items-center justify-between gap-4">
           <BackLink href="/">{t('backHome')}</BackLink>
           <Kicker tone="accent">
-            {localizeGameName(game.name, game.courses?.name ?? null, locale).toUpperCase()}
+            {localizeGameName(game.name, game.courses?.name ?? null, locale)}
           </Kicker>
           <span className="w-12" aria-hidden />
         </header>
@@ -1231,9 +1232,7 @@ export default async function GameHomePage({
       {isFinished && streakGrowth?.grew && (
         <Card className="mb-4 border-accent/40 bg-accent/5">
           <div className="flex items-center gap-3" data-testid="streak-celebration">
-            <span aria-hidden className="text-2xl leading-none">
-              🔥
-            </span>
+            <FlammeIcon size={28} className="shrink-0 text-accent-text" />
             <div>
               <p className="font-serif text-base font-medium text-text">
                 {t('streakGrewTitle', { count: streakGrowth.weeklyStreak })}

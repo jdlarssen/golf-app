@@ -1,8 +1,8 @@
 // #2265: dagboka i Rundedagboka — rundene måned for måned, som designlerretet
 // (`Historikk-forslag`) tegner dem.
 //
-// Over hver måned står navnet i små sperrede versaler («SEPTEMBER»), med
-// årstallet når året ikke er det i undertittelen («SEPTEMBER 2025»). Hver
+// Over hver måned står navnet som liten etikett («September»), med
+// årstallet når året ikke er det i undertittelen («September 2025»). Hver
 // måned er ett kort med 16 pt hjørner, og mellom radene går den varme
 // skillelinja (`divider`, inne i radens 64 pt), ingen etter siste rad.
 // Udaterte runder står sist under «UTEN DATO».

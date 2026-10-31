@@ -36,7 +36,7 @@ function makeResult(): BingoBangoBongoResult {
         bongoUserId: 'u3',
         pointsByPlayer: { u1: 1, u2: 1, u3: 1 },
       }),
-      // Hull 2 (sweep): Alice tok alle tre → «Feiet!».
+      // Hull 2 (sweep): Alice tok alle tre → «Feiet».
       makeHole({
         holeNumber: 2,
         bingoUserId: 'u1',
@@ -99,7 +99,7 @@ describe('BingoBangoBongoHolesView', () => {
     expect(within(card1).queryByText('Alice Andersen')).not.toBeNull();
     expect(card1.textContent).not.toContain('Feiet');
 
-    // Hull 2 (sweep): én spiller tok alle tre → «Feiet!»-markering.
+    // Hull 2 (sweep): én spiller tok alle tre → «Feiet»-markering.
     const card2 = screen.getByTestId('bbb-holes-card-2');
     expect(card2.textContent).toContain('Feiet');
 

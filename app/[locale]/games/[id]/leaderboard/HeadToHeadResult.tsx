@@ -151,7 +151,7 @@ export function HeadToHeadResult({
           <LeaderboardBackLink href={backHref} label={t('backAriaLabel')} />
           {/* min-w-0 + truncate: lange navn klippes i stedet for å presse pilene (#1765). */}
           <Kicker tone="accent" className="min-w-0 truncate">
-            {gameName.toUpperCase()}
+            {gameName}
           </Kicker>
           <LeaderboardBackLinkSpacer />
         </header>
@@ -301,7 +301,7 @@ function SidePanel({
       >
         {score}
       </span>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <span className="text-xs font-semibold text-muted">
         {unitLabel}
       </span>
       {subLabel && (

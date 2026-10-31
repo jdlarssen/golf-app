@@ -360,7 +360,7 @@ function StatSection({
 }) {
   return (
     <section className="space-y-3">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted px-1">
+      <p className="font-sans text-xs font-semibold text-muted px-1">
         {sectionLabel}
       </p>
       <Card className="p-0 overflow-hidden">

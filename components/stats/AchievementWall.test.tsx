@@ -32,6 +32,15 @@ describe('AchievementWall', () => {
       badges.filter((b) => b.getAttribute('data-earned') === 'true'),
     ).toHaveLength(2); // hole-in-one + birdie
     expect(screen.getByText('Hole-in-one')).toBeInTheDocument();
+    // Tegnet merke i stedet for emoji: golfens eget tall i ringen, skjult for
+    // skjermleseren (labelen og tallet ved siden av bærer meningen).
+    for (const mark of ['1', '\u22122', '\u22121', '3\u00d7']) {
+      const badge = screen.getByText(mark, { selector: 'span[aria-hidden="true"]' });
+      expect(badge).toBeInTheDocument();
+    }
+    // Opptjent merke får champagne-ringen, ikke-opptjent den dempede.
+    expect(screen.getByText('1', { selector: 'span[aria-hidden="true"]' }).className).toContain('border-accent');
+    expect(screen.getByText('\u22122', { selector: 'span[aria-hidden="true"]' }).className).toContain('border-border');
     // Snowman is surfaced nowhere — never a badge on the wall.
     expect(screen.queryByText('Snowman')).not.toBeInTheDocument();
 

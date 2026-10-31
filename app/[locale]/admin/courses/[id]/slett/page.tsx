@@ -108,7 +108,7 @@ export default async function SlettBanePage({
           <div
             className="mt-5 rounded-xl border border-danger/20 bg-surface px-4 py-3.5"
           >
-            <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <p className="mb-2 font-sans text-xs font-semibold text-muted">
               {t('permanentLabel')}
             </p>
             <ul className="space-y-1 font-sans text-[13px] text-text">

@@ -10,9 +10,9 @@ describe('HoleHero', () => {
     expect(screen.getByText('indeks 12')).toBeInTheDocument();
   });
 
-  it('shows the HULL kicker', () => {
+  it('shows the «Hull» kicker', () => {
     render(<HoleHero holeNumber={1} par={3} strokeIndex={1} />);
-    expect(screen.getByText('HULL')).toBeInTheDocument();
+    expect(screen.getByText('Hull')).toBeInTheDocument();
   });
 
   it('renders separate par and index lines on the right', () => {

@@ -102,7 +102,7 @@ export default async function SpectateTvPage({
           <div className="flex min-w-0 grow flex-col gap-[18px]">
             <div className="flex items-end justify-between gap-6">
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold tracking-[0.3em] text-tv-text/75 uppercase">
+                <p className="truncate text-[14px] font-semibold text-tv-text/75">
                   {overline}
                 </p>
                 <h1 className="mt-1.5 overflow-x-clip font-serif text-[56px] leading-[1.05] font-medium text-ellipsis whitespace-nowrap">

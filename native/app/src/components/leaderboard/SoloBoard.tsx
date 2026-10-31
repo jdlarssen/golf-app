@@ -353,10 +353,8 @@ const styles = StyleSheet.create({
   slab: { marginHorizontal: 12, borderRadius: 16, padding: 10, gap: 6 },
   head: { flexDirection: 'row', gap: 6, paddingHorizontal: 2 },
   headText: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   center: { textAlign: 'center' },
   grow: { flex: 1 },
@@ -379,12 +377,10 @@ const styles = StyleSheet.create({
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   nameWinnerText: { ...fraunces(600, 18) },
-  you: { ...interLine(10, 12), fontFamily: FONTS.sansSemiBold, letterSpacing: 1.4, textTransform: 'uppercase' },
+  you: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
   winnerWord: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   note: { ...interLine(11, 14), fontFamily: FONTS.sans },
   move: { ...interLine(11, 14), fontFamily: FONTS.sansSemiBold },
@@ -432,10 +428,8 @@ const styles = StyleSheet.create({
   },
   stripText: { flex: 1, minWidth: 0 },
   stripKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
   },
   stripLine: { ...fraunces(500, 18), marginTop: 2 + fraunces(500, 18).marginTop },
   stripButton: {

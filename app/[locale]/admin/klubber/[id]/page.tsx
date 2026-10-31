@@ -92,7 +92,7 @@ export default async function AdminKlubbDetailPage({
 
       {/* Members list */}
       <section className="mb-8">
-        <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
           {club.member_cap != null
             ? t('manage.membersHeadingWithCap', {
                 count: members.length,
@@ -124,7 +124,7 @@ export default async function AdminKlubbDetailPage({
 
       {/* Avtale section */}
       <section className="mb-8">
-        <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
           {t('manage.avtaleHeading')}
         </h2>
         <Card>

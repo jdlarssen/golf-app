@@ -372,7 +372,7 @@ export function CourseForm({
       <input type="hidden" name="hole_count" value={holeCount} />
       <p
         aria-hidden
-        className="mt-[18px] mb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+        className="mt-[18px] mb-2 font-sans text-xs font-semibold leading-[normal] text-muted"
       >
         {t('holeCountLegend')}
       </p>

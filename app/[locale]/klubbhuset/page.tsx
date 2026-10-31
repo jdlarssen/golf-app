@@ -82,7 +82,7 @@ export default async function KlubbhusetPage({
   return (
     <AppShell flush>
       <div className="px-5 pt-4">
-        <p className="text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
+        <p className="text-xs font-semibold leading-[normal] text-muted">
           {t('kicker')}
         </p>
         <h1 className="mt-0.5 font-serif text-[30px] font-medium leading-[normal] text-text">

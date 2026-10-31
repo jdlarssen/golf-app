@@ -332,7 +332,7 @@ export default async function GameStatusPage({
 
       {/* Spiller-liste */}
       <section className="mt-5">
-        <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <p className="mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
           {t('heading')}
         </p>
         {rows.length === 0 ? (

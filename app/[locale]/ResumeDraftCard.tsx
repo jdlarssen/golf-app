@@ -75,7 +75,7 @@ export function ResumeDraftCard({ userId }: { userId: string }) {
       <div className="mb-3 flex items-center gap-2">
         <h2
           id="resume-draft-heading"
-          className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-text"
+          className="text-xs font-semibold text-accent-text"
         >
           {t('kicker')}
         </h2>

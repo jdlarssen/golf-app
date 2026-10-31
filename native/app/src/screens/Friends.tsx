@@ -24,7 +24,7 @@
 // «Venner» stort med undertittelen øverst i innholdet (`PageTitle`).
 //
 // **Profil v2: identisk med designlerretet.** Seksjonsetikettene er
-// kicker-stilen (10 pt, sperret), med 18 pt over og 8 under. Kremen i
+// kicker-stilen (12 pt, semibold), med 18 pt over og 8 under. Kremen i
 // heltekortet er den varme (`onStrongWarm`), den stiplede ringen er tegnet
 // (iOS stipler en `border` grovere enn nettleseren), og tallene i
 // underlinjene har vanlige, ikke faste, sifferbredder.

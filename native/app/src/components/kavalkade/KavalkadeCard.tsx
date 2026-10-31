@@ -240,7 +240,7 @@ export function KavalkadeCard({
       testID={`kavalkade-card-${card.id}`}
     >
       <View accessible accessibilityLabel={kavalkadeCardLabel(body, position)}>
-        <Text style={[styles.kicker, { color: colors.muted }]}>{body.kicker.toUpperCase()}</Text>
+        <Text style={[styles.kicker, { color: colors.muted }]}>{body.kicker}</Text>
         <View style={styles.headlineRow}>
           <Text style={[large ? styles.headlineLarge : styles.headlineSmall, { color: colors.text }]}>
             {body.headline}
@@ -275,7 +275,7 @@ export function KavalkadeCard({
               ] as const
             ).map(([label, value]) => (
               <View key={label} style={styles.trendCell}>
-                <Text style={[styles.trendLabel, { color: colors.muted }]}>{label.toUpperCase()}</Text>
+                <Text style={[styles.trendLabel, { color: colors.muted }]}>{label}</Text>
                 <Text style={[styles.trendValue, { color: colors.text }]}>{valueText(value)}</Text>
               </View>
             ))}
@@ -287,11 +287,11 @@ export function KavalkadeCard({
   );
 }
 
-// Webbens mål: `p-6`, `rounded-2xl`, kicker 10/600 med 0,2 em sperring,
+// Webbens mål: `p-6`, `rounded-2xl`, kicker 12/600 uten sperring (#2728),
 // overskrift `text-4xl` (36) eller `text-2xl` (24) i Fraunces 500 med
 // `leading-tight`, enheten 14 med `ml-2`, linjene 14 med `leading-relaxed` og
 // `space-y-1`, og start/nå/beste 10/600 over Fraunces 18.
-const KICKER = interLine(10, 15);
+const KICKER = interLine(12, 18);
 const HEADLINE_LARGE = fraunces(500, 36, 45);
 const HEADLINE_SMALL = fraunces(500, 24, 30);
 const UNIT = interLine(14, 20);
@@ -302,12 +302,12 @@ const UNIT = interLine(14, 20);
 const UNIT_DROP_LARGE = browserBaseline('fraunces', 36, 45) - browserBaseline('inter', 14, 20);
 const UNIT_DROP_SMALL = browserBaseline('fraunces', 24, 30) - browserBaseline('inter', 14, 20);
 const LINE = interLine(14, 22.75, { multiline: true });
-const TREND_LABEL = interLine(10, 15);
+const TREND_LABEL = interLine(12, 18);
 const TREND_VALUE = fraunces(400, 18, 28);
 
 const styles = StyleSheet.create({
   card: { flex: 1, borderWidth: 1, borderRadius: 16, padding: 24 },
-  kicker: { ...KICKER, fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
+  kicker: { ...KICKER, fontFamily: FONTS.sansSemiBold },
   headlineRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8 },
   headlineLarge: { ...HEADLINE_LARGE, fontVariant: ['tabular-nums'], flexShrink: 1 },
   headlineSmall: { ...HEADLINE_SMALL, fontVariant: ['tabular-nums'], flexShrink: 1 },
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   narrative: { ...LINE, fontFamily: FONTS.sans, marginTop: LINE.marginTop + 16 },
   trend: { flexDirection: 'row', gap: 8, marginTop: 16, borderTopWidth: 1, paddingTop: 12 },
   trendCell: { flex: 1 },
-  trendLabel: { ...TREND_LABEL, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.5 },
+  trendLabel: { ...TREND_LABEL, fontFamily: FONTS.sansSemiBold },
   trendValue: { ...TREND_VALUE, marginTop: TREND_VALUE.marginTop + 2, fontVariant: ['tabular-nums'] },
   action: { marginTop: 'auto', paddingTop: 20 },
 });

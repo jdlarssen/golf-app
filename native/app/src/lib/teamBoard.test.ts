@@ -267,7 +267,7 @@ describe('teamBoardFor — best ball, first half', () => {
     expect(model).toMatchObject({
       variant: 'first-half',
       pill: { text: 'Live · etter 9 hull', live: true },
-      halves: { shown: 'HULL 1–9', hidden: 'Hull 10–18 er skjult' },
+      halves: { shown: 'Hull 1–9', hidden: 'Hull 10–18 er skjult' },
       lock: { heading: 'Vi sees ved hull 18', sub: 'Hull 10–18 vises når arrangøren avslutter spillet.' },
     });
     expect(model.rows.map((r) => [r.teamNumber, r.place, r.total, r.under, r.dots?.length, r.holesNote])).toEqual([

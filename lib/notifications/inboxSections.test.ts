@@ -5,7 +5,7 @@ import enMessages from '@/messages/en.json';
 import type { AppLocale } from '@/i18n/routing';
 import type { NotificationKind, NotificationPayload } from './types';
 import type { NotificationTranslator } from './cardContent';
-import { NOTIFICATION_EMOJI } from './emoji';
+import { NOTIFICATION_ICON } from './icons';
 import {
   buildInboxEntryView,
   buildInboxSections,
@@ -484,7 +484,7 @@ describe('buildInboxEntryView', () => {
         resultByGame: { [GAME]: { kind: 'matchplay', outcome: 'win', margin: '3&2' } },
         finishedGameIds: [GAME],
       }));
-      expect(v.avatar.kind).toBe('emoji');
+      expect(v.avatar).toEqual({ kind: 'icon', icon: 'pokal' });
       expect(v.subtitle).toBe('Onsdagsgolfen · Du vant 3&2 · i går');
     });
 
@@ -493,7 +493,7 @@ describe('buildInboxEntryView', () => {
         resultByGame: { [GAME]: { kind: 'placement', rank: 2, fieldSize: 12, isTeam: false } },
         finishedGameIds: [],
       }));
-      expect(v.avatar.kind).toBe('emoji');
+      expect(v.avatar).toEqual({ kind: 'icon', icon: 'pokal' });
       expect(v.placeLabel).toBeNull();
     });
   });
@@ -668,7 +668,7 @@ describe('buildInboxEntryView', () => {
       expect(v.subtitleIsFreeText).toBe(false);
       expect(v.destination).toBeNull();
       expect(v.actionKey).toBeNull();
-      expect(v.avatar).toEqual({ kind: 'emoji', emoji: '🚩' });
+      expect(v.avatar).toEqual({ kind: 'icon', icon: 'flagg' });
     });
 
     it('without a greeting, a date or a name it still says what happened', () => {
@@ -714,7 +714,7 @@ describe('buildInboxEntryView', () => {
     expect(idea.subtitleIsFreeText).toBe(true);
     expect(idea.destination).toBe('/cup');
     expect(idea.title).toBe(plain.title);
-    expect(idea.avatar).toEqual({ kind: 'emoji', emoji: NOTIFICATION_EMOJI.idea_built });
+    expect(idea.avatar).toEqual({ kind: 'icon', icon: NOTIFICATION_ICON.idea_built });
   });
 });
 

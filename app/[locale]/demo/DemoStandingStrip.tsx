@@ -22,10 +22,8 @@ const stripStyle: CSSProperties = {
 };
 
 const kickerStyle: CSSProperties = {
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.18em',
-  textTransform: 'uppercase',
   opacity: 0.8,
 };
 

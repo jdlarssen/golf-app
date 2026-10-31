@@ -42,7 +42,7 @@ describe('Kavalkade', () => {
     fetchKavalkadeMock.mockResolvedValue({ ok: true, view: { status: 'closed', opensAt: '2026-12-23T23:00:00.000Z' } });
     await renderScreen();
     expect(await screen.findByTestId('kavalkade-closed')).toHaveTextContent(
-      'KAVALKADENKavalkaden kommer 24. desemberDa åpner golfåret ditt, kort for kort. Alt du spiller fram til julaften er med.',
+      'KavalkadenKavalkaden kommer 24. desemberDa åpner golfåret ditt, kort for kort. Alt du spiller fram til julaften er med.',
     );
   });
 
@@ -99,7 +99,7 @@ describe('Kavalkade', () => {
     });
     await renderScreen();
     expect(await screen.findByTestId('kavalkade-empty')).toHaveTextContent(
-      'KAVALKADENIngen ferdige runder i 2026Kavalkaden regner på runder som er levert. Blir det en runde i år, står den her.',
+      'KavalkadenIngen ferdige runder i 2026Kavalkaden regner på runder som er levert. Blir det en runde i år, står den her.',
     );
   });
 

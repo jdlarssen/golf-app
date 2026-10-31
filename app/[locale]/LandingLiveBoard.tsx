@@ -102,7 +102,7 @@ export function LandingLiveBoard({
       <div aria-hidden="true">
         <div className="flex items-center justify-between">
           <Kicker>{kickers[frame]}</Kicker>
-          <span className="inline-flex h-[22px] items-center gap-1.5 rounded-full bg-primary-soft px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <span className="inline-flex h-[22px] items-center gap-1.5 rounded-full bg-primary-soft px-2 text-xs font-semibold text-primary">
             <span className="block size-1.5 shrink-0 rounded-full bg-live-dot" />
             {live}
           </span>

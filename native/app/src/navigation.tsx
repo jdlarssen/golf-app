@@ -318,8 +318,8 @@ export function RootNavigator() {
         <Stack.Screen
           name="GameHome"
           component={GameHome}
-          // Startbilletten (#2255, designlerretet): «STARTBILLETT» i små
-          // sperrede versaler og ingen skillelinje. Del-knappen til høyre
+          // Startbilletten (#2255, designlerretet): «Startbillett» som liten
+          // etikett (12 pt, setningsstor bokstav) og ingen skillelinje. Del-knappen til høyre
           // setter skjermen selv, for bare den vet om live-følging er på.
           options={kickerHeader(TICKET_TEXT.topTitle, TICKET_TEXT.topTitle)}
         />

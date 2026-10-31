@@ -47,7 +47,7 @@ const SECTION_COUNT = 6;
 // Section heading (eyebrow) style, shared by all six cards so the numbered
 // "Del N av 6" prefixes stay visually consistent.
 const SECTION_HEADING_CLASS =
-  'font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-4';
+  'font-sans text-xs font-semibold text-muted mb-4';
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
 type Format = 'stroke' | 'stableford' | 'modified_stableford';

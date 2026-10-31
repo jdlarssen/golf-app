@@ -276,7 +276,7 @@ export default async function KlubbDetailPage({
       {/* Pending join requests — visible only to owner/admin */}
       {isAdmin && pendingRequests.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
             {t('requestsHeading', { count: pendingRequests.length })}
           </h2>
           <div className="space-y-2">
@@ -336,7 +336,7 @@ export default async function KlubbDetailPage({
       {/* Pending email invitations (#644) — visible only to owner/admin */}
       {isAdmin && pendingInvitations.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
             {t('invitationsHeading', { count: pendingInvitations.length })}
           </h2>
           <div className="space-y-2">
@@ -373,7 +373,7 @@ export default async function KlubbDetailPage({
 
       {/* Members list */}
       <section className="mb-8">
-        <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
           {club.member_cap != null
             ? t('membersHeadingWithCap', { count: members.length, cap: club.member_cap })
             : t('membersHeading', { count: members.length })}
@@ -458,7 +458,7 @@ export default async function KlubbDetailPage({
           invite section, split by a divider, since both do the same job. */}
       {isAdmin && !frozen && (
         <section className="mb-8" data-testid="club-invite-section">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
             {t('inviteHeading')}
           </h2>
           <Card className="space-y-4">

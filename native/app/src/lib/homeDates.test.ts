@@ -131,22 +131,22 @@ describe('localDateParts', () => {
 describe('formatDiaryDay', () => {
   it('gir dagen og ukedagen i versaler, som «20 / LØR» i designet', () => {
     // 20. september 2026 er en søndag, 19. en lørdag.
-    expect(formatDiaryDay(at(8, 19))).toEqual({ day: '19', weekday: 'LØR' });
-    expect(formatDiaryDay(at(8, 16))).toEqual({ day: '16', weekday: 'ONS' });
+    expect(formatDiaryDay(at(8, 19))).toEqual({ day: '19', weekday: 'Lør' });
+    expect(formatDiaryDay(at(8, 16))).toEqual({ day: '16', weekday: 'Ons' });
   });
 
   it('holder seg på dagen rett før midnatt', () => {
-    expect(formatDiaryDay(at(7, 31, 23, 59))).toEqual({ day: '31', weekday: 'MAN' });
+    expect(formatDiaryDay(at(7, 31, 23, 59))).toEqual({ day: '31', weekday: 'Man' });
   });
 });
 
 describe('diaryMonthLabel', () => {
   it('gir bare måneden når året er undertittelens', () => {
-    expect(diaryMonthLabel(2026, 8, 2026)).toBe('september');
+    expect(diaryMonthLabel(2026, 8, 2026)).toBe('September');
   });
 
   it('tar med årstallet for et annet år', () => {
-    expect(diaryMonthLabel(2025, 8, 2026)).toBe('september 2025');
+    expect(diaryMonthLabel(2025, 8, 2026)).toBe('September 2025');
   });
 });
 

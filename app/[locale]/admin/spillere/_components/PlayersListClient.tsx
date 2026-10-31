@@ -195,7 +195,7 @@ export function PlayersListClient({
                 <p className="truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
                   {u.name ?? u.email}
                   {u.is_admin && (
-                    <span className="ml-1 font-sans text-[10px] font-semibold uppercase tracking-[0.1em] text-accent-text">
+                    <span className="ml-1 font-sans text-xs font-semibold text-accent-text">
                       Admin
                     </span>
                   )}

@@ -80,7 +80,7 @@ export function SimSettingsFields({
       {SIM_SETTING_GROUPS.map((group, gi) => (
         <div key={group.key} className="space-y-2">
           <p
-            className={`font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted ${
+            className={`font-sans text-xs leading-[15px] font-semibold text-muted ${
               gi === 0 ? '' : 'pt-1'
             }`}
           >

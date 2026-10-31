@@ -79,8 +79,6 @@ const rowLabelStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 12,
   fontWeight: 600,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.14em',
   color: 'var(--text-muted)',
   display: 'flex',
   alignItems: 'baseline',
@@ -91,8 +89,6 @@ const rowDescStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 11,
   fontWeight: 400,
-  textTransform: 'none' as const,
-  letterSpacing: 0,
   color: 'var(--text-muted)',
 };
 

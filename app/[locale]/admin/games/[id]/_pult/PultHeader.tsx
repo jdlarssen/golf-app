@@ -53,7 +53,7 @@ export async function PultHeader({
         <span aria-hidden className="w-11" />
       </div>
       <div className="px-3 pt-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-on-strong/80">
+        <p className="text-xs font-semibold text-on-strong/80">
           {t('kicker')}
         </p>
         <h1 className="mt-0.5 font-serif text-[28px] font-medium">{gameName}</h1>

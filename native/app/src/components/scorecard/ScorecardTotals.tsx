@@ -73,16 +73,15 @@ const styles = StyleSheet.create({
   left: { flexDirection: 'row', gap: 16 },
   right: { alignItems: 'flex-end' },
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
   },
   // POENG-kolonnen er den høyeste og bestemmer raden: 12 + 30, som
   // nettleserens avrundede linjer. Etikettene til venstre har sin naturlige
   // høyde, og tallene nettleserens 28, så alt står på samme punkt som i
   // designet.
-  rowLabel: { lineHeight: 12 },
+  // 12 pt setningsstil trenger 15 i linjehøyde, ellers klippes «g» (#2728).
+  rowLabel: { lineHeight: 15 },
   value: { ...fraunces(600, 22, 28) },
   // Designets `line-height: 1`, som nettleseren tegner den (#2385).
   points: { ...fraunces(600, 30, 30) },

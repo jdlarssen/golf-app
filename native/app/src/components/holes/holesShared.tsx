@@ -1,6 +1,6 @@
 // #2255: bitene alle «Hull for hull»-visningene i appen deler — navnet slik
 // webben skriver det, overskriften med formatlinja, hodet på hvert hull-kort,
-// gullbrikka i hodet, raden med poeng og brutto, etikettene i små versaler, og
+// gullbrikka i hodet, raden med poeng og brutto, etikettene (12 pt, semibold), og
 // gulltonen for den som utmerker seg. Ett hjem, så formatene ser like ut og en
 // rettelse når alle (samme grep som webbens `LeaderboardChrome`).
 import type { ReactNode } from 'react';
@@ -44,7 +44,7 @@ export function HolesTitle({ subtitle }: { subtitle: string }) {
 }
 
 /**
- * Bunnteksten, som webbens `LeaderboardFooter`: «Vel spilt!» når runden er
+ * Bunnteksten, som webbens `LeaderboardFooter`: «Vel spilt» når runden er
  * ferdig, ellers «Lykke til.», i webbens anførselstegn (`PullQuote`).
  */
 export function HolesFooter({ finished }: { finished: boolean }) {
@@ -142,18 +142,17 @@ export const holesStyles = StyleSheet.create({
   /** «brutto 5» ved siden av netto, dempet (webbens `text-[10.5px]`). */
   gross: { fontSize: 11, fontFamily: FONTS.sans },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
+  chipText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   /**
-   * Etikett i små versaler: «Stillingen» og «Vant hullet». Samme mål som
-   * Tørnys kicker (10 pt, 2 i sperring), som webbens `text-[10px] font-semibold
-   * uppercase tracking-[0.2em]` (#2716).
+   * Etikett: «Stillingen» og «Vant hullet». Samme mål som Tørnys kicker
+   * (12 pt, semibold, ingen sperring), som webbens `text-xs font-semibold`
+   * (#2716, #2728).
    */
-  kicker: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 2, textTransform: 'uppercase' },
+  kicker: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   /**
-   * Små versaler (webbens `text-[11px] uppercase tracking-[0.1em]`, vanlig
-   * vekt): enheten «p» i solo og «Venter» i Bingo Bango Bongo. Round Robins
-   * «Delt» og «Venter» er `font-medium` på webben og legger vekten på selv.
+   * Liten etikett (webbens `text-xs font-semibold`): enheten «p» i solo og
+   * «Venter» i Bingo Bango Bongo, og Round Robins «Delt» og «Venter».
    */
-  caps: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1, textTransform: 'uppercase' },
+  caps: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   footer: { ...fraunces(500, 12), fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });

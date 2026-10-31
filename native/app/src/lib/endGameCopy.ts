@@ -152,7 +152,7 @@ export const END_GAME_TEXT = {
   /** Pila i toppen på lista, og «Tilbake» fra bekreft-siden (#2578). */
   backToGame: 'Tilbake til spillet',
   backToList: 'Tilbake til avslutningen',
-  /** Etter spillnavnet i toppen. `ui.kicker` gjør den til versaler. */
+  /** Etter spillnavnet i toppen, i `ui.kicker`. */
   kickerActive: 'I gang',
   loadFailed: 'Fikk ikke tak i runden. Sjekk nettet og prøv igjen.',
   notActive: 'Denne runden er ikke i gang, så det er ingenting å avslutte.',
@@ -395,7 +395,7 @@ export function titleSubtitle(courseName: string | null, players: number): strin
   return courseName ? `${courseName}${SEP}${playerCount(players)}` : playerCount(players);
 }
 
-/** «Venter på godkjenning · 1». `ui.kicker` gjør den til versaler. */
+/** «Venter på godkjenning · 1», i `ui.kicker`. */
 export function countHeading(label: string, n: number): string {
   return `${label}${SEP}${n}`;
 }

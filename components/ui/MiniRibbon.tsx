@@ -5,7 +5,7 @@
 export function MiniRibbon({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-2.5 px-1 pt-2.5 pb-1.5">
-      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted whitespace-nowrap">
+      <span className="font-sans text-xs font-semibold text-muted whitespace-nowrap">
         {children}
       </span>
       <span

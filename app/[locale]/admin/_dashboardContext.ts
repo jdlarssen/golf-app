@@ -2,7 +2,6 @@ import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getRoleContext } from '@/lib/admin/auth';
-import type { OsloTimeOfDay } from '@/lib/format/osloCalendar';
 
 // Request-scoped Supabase client + verified user id. The id is forwarded by
 // proxy.ts (which already verified the session) so the three Suspense bodies
@@ -20,14 +19,3 @@ export const getRole = cache(async () => {
   const { supabase } = await getAdminContext();
   return getRoleContext(supabase);
 });
-
-/** Maps the Oslo time-of-day bucket to its greeting translation key. */
-export const TIME_OF_DAY_KEY: Record<
-  OsloTimeOfDay,
-  'timeOfDayMorgen' | 'timeOfDayFormiddag' | 'timeOfDayEttermiddag' | 'timeOfDayKveld'
-> = {
-  morgen: 'timeOfDayMorgen',
-  formiddag: 'timeOfDayFormiddag',
-  ettermiddag: 'timeOfDayEttermiddag',
-  kveld: 'timeOfDayKveld',
-};

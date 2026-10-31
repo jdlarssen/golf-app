@@ -74,23 +74,6 @@ export function osloYearWindow(date: Date): {
   };
 }
 
-export type OsloTimeOfDay = 'morgen' | 'formiddag' | 'ettermiddag' | 'kveld';
-
-/**
- * Time-of-day bucket from the Oslo-local hour, matching the greeting's existing
- * boundaries: morgen (<10), formiddag (<12), ettermiddag (<18), kveld (else).
- *
- * There is deliberately no «natt» bucket — pre-existing behaviour maps
- * 00:00–09:59 to «morgen», which is what #646 lists as acceptable.
- */
-export function osloTimeOfDayBucket(date: Date): OsloTimeOfDay {
-  const { hour } = osloParts(date);
-  if (hour < 10) return 'morgen';
-  if (hour < 12) return 'formiddag';
-  if (hour < 18) return 'ettermiddag';
-  return 'kveld';
-}
-
 /** «YYYY-MM-DD» from a calendar date's parts (month index 0–11). */
 function dateKeyFromParts(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

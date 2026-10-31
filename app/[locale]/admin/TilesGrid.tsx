@@ -231,7 +231,7 @@ export async function TilesGrid() {
         hasInvited={hasInvited}
       />
       <DenseTileList tiles={coreTiles} />
-      <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="mt-6 mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
         {t('moreInSecretariat')}
       </p>
       <CompactTileGrid tiles={moreTiles} />

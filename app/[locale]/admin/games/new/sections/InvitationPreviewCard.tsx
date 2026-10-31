@@ -111,7 +111,7 @@ export function InvitationPreviewCard({
       <div className="mx-3 mt-3.5 -rotate-1 rounded-[6px] bg-[var(--invitation-paper)] p-1.5 shadow-[0_10px_22px_rgba(26,46,31,0.14)]">
         <div className="rounded-[3px] border border-primary p-[3px]">
           <div className="flex flex-col items-center gap-1.5 rounded-[2px] border border-primary/35 px-3 py-3.5 text-center">
-            <p className="font-sans text-[9px] leading-[normal] font-semibold tracking-[0.3em] text-muted uppercase">
+            <p className="font-sans text-xs leading-[normal] font-semibold text-muted">
               {t('card.kicker')}
             </p>
             <div className="relative w-full">

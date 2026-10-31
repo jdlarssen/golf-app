@@ -78,7 +78,7 @@ function makeTeam(opts: {
 }
 
 describe('RevealBruttoView', () => {
-  it('renders LIVE LEADERBOARD kicker, brutto subtitle, and tease text', () => {
+  it('renders «Live leaderboard» kicker, brutto subtitle, and tease text', () => {
     render(
       <RevealBruttoView
         gameId="g1"
@@ -89,7 +89,7 @@ describe('RevealBruttoView', () => {
       />,
     );
 
-    expect(screen.getByText('LIVE LEADERBOARD')).toBeInTheDocument();
+    expect(screen.getByText('Live leaderboard')).toBeInTheDocument();
     expect(
       screen.getByText(/Vinneren avsløres når runden er ferdig/),
     ).toBeInTheDocument();

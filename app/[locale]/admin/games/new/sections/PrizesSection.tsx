@@ -100,7 +100,7 @@ export function PrizesSection({ state }: Props) {
         {/* The plain space between the spans is for the accessible name: a flex
             container does not draw it, and a screen reader would run
             «PremiebordLegg til» together. */}
-        <span className="font-sans text-[10px] leading-[normal] font-semibold tracking-[0.2em] text-muted uppercase">
+        <span className="font-sans text-xs leading-[normal] font-semibold text-muted">
           {t('legend')}
         </span>{' '}
         <span className="font-sans text-[13px] leading-[normal] font-semibold text-primary">

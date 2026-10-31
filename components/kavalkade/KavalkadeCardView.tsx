@@ -380,7 +380,7 @@ function TrendCell({
 }) {
   return (
     <div>
-      <dt className="font-sans text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">
+      <dt className="font-sans text-xs font-semibold text-muted">
         {label}
       </dt>
       <dd className="mt-0.5 font-serif text-lg tabular-nums text-text">

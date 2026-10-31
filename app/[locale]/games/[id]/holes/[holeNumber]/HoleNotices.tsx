@@ -36,10 +36,8 @@ export function StablefordTotalSubtitle({
       <span
         style={{
           fontFamily: 'var(--font-sans)',
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.18em',
           color: 'var(--text-muted)',
         }}
       >

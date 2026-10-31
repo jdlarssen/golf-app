@@ -9,14 +9,15 @@ type Props = {
 };
 
 export function Kicker({ children, tone = 'muted', className, as: Tag = 'p', id }: Props) {
-  // 10px uppercase bærer alltid informasjon (turneringsnavn, seksjonsetikett),
+  // 12px semibold bærer alltid informasjon (turneringsnavn, seksjonsetikett),
   // så accent-tonen bruker tekst-tokenen — ikke dekor-gullet (#1374).
+  // Setningsstor bokstav, ingen sperring: eieren droppet versaler 2026-10-31 (#2728).
   const color =
     tone === 'accent' ? 'text-accent-text' : tone === 'onStrong' ? 'text-on-strong/80' : 'text-muted';
   return (
     <Tag
       id={id}
-      className={`font-sans text-[10px] font-semibold uppercase tracking-[0.2em] ${color} ${className ?? ''}`}
+      className={`font-sans text-xs font-semibold ${color} ${className ?? ''}`}
     >
       {children}
     </Tag>

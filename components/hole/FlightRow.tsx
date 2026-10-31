@@ -73,10 +73,8 @@ const nameStyle: CSSProperties = {
 
 const badgeStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.16em',
   color: 'var(--primary)',
   whiteSpace: 'nowrap',
 };
@@ -172,7 +170,7 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
         <span style={nameStyle}>{name}</span>
         {/* #1447: the stroke badge is the handicap allocation, not standing —
             it stays on in a reveal game too. #2635: the rail's words, «Får 1
-            slag» or «Mister 1 slag» for a plus handicap (uppercase by CSS). */}
+            slag» or «Mister 1 slag» for a plus handicap. */}
         {strokes && (
           <span data-testid="flight-row-strokes" style={badgeStyle}>
             {t(strokes.give ? 'scoreRail.strokesGive' : 'scoreRail.strokesGet', { n: strokes.n })}

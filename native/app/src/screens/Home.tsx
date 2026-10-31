@@ -11,19 +11,20 @@
 //
 // #2385: Hjem har ingen navigasjonslinje (designlerretet). Veien til
 // profil-rommet er HCP-pillen oppe til høyre, til bunnmenyen kommer (Hjem v2,
-// eierens svar 30.09: «Trykk på HCP-pillen»). Uten handicap står lenka
-// «Profil» der pillen skulle stått, så profilen aldri blir uten dør.
+// eierens svar 30.09: «Trykk på HCP-pillen»). Uten handicap viser pillen bare
+// fornavnet, og er profilen ikke hentet, står lenka «Profil» der pillen skulle
+// stått, så profilen aldri blir uten dør.
 //
-// #2254 gjorde Hjem til startboden. Fra toppen: datoen, hilsenen med
-// HCP-pillen, heltekortet for runden du er midt i (med godkjenningsraden
-// under), «Flere runder i gang», billetten for neste start, «Mine spill» og
-// «Forrige runde». «Opprett spill» står nederst når en runde pågår, og øverst
-// ellers, som før (eierens svar på #2254).
+// #2254 gjorde Hjem til startboden. Fra toppen: datoen som tittel, med
+// profil-pillen («Sigrid · HCP 12,4») til høyre, heltekortet for runden du er
+// midt i (med godkjenningsraden under), «Flere runder i gang», billetten for
+// neste start, «Mine spill» og «Forrige runde». «Opprett spill» står nederst
+// når en runde pågår, og øverst ellers, som før (eierens svar på #2254).
 //
-// #2385 la toppen og margene på designlerretet (`Hjem-forslag`): datoen står
-// 16 pt under statuslinja og tett over hilsenen, HCP-pillen står til høyre for
-// hilsenen, seksjonsoverskriftene er små sperrede versaler uten ikon, kortene
-// står 16 pt fra kanten og tekstene 20 pt inn.
+// #2385 la toppen og margene på designlerretet (`Hjem-forslag`): tittelen står
+// 16 pt under statuslinja, HCP-pillen står til høyre for den,
+// seksjonsoverskriftene er små etiketter (12 pt) uten ikon, kortene står 16 pt
+// fra kanten og tekstene 20 pt inn.
 //
 // Heltekortet og billetten leser spill-bundelen og slagene som ligger på
 // enheten (`data/homeHero.ts`). Hvert fokus leser dem på nytt med én gang, så
@@ -84,7 +85,7 @@ import { startSyncTriggers } from '../data/syncTriggers';
 import { PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
-import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
+import { HOME_TEXT, hcpA11yLabel, profileA11yLabel } from '../lib/homeCopy';
 import { LEAGUE_TEXT } from '../lib/leagueCopy';
 import { MARKER_TEXT, markerCardSubtitle } from '../lib/markerCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
@@ -453,12 +454,12 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 }
 
 /**
- * Datoen og hilsenen i én kolonne, med HCP-pillen til høyre midt på begge
- * linjene, som i designet. Fornavnet er webbens `firstName`; pillen vises bare
+ * Tittelen er datoen («Lørdag 31. oktober»); fornavnet bor i pillen til høyre:
+ * «Sigrid · HCP 12,4». Fornavnet er webbens `firstName`; handicapet vises bare
  * når både handicap og dato finnes (webbens regel), og kanten blir gull når
- * handicapet er gammelt (`isHandicapStale`). Pillen åpner profil-rommet, der
- * handicapet oppdateres. Uten pille (ingen handicap, eller profilen er ikke
- * hentet) står lenka «Profil» på samme sted.
+ * handicapet er gammelt (`isHandicapStale`). Uten handicap viser pillen bare
+ * navnet. Pillen åpner profil-rommet, der handicapet oppdateres. Er profilen
+ * ikke hentet, står lenka «Profil» på samme sted.
  */
 function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: () => void }) {
   const { colors } = useTheme();
@@ -471,30 +472,35 @@ function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: ()
   const now = new Date();
   return (
     <View style={styles.top}>
-      <View style={styles.topText}>
-        <Text style={[styles.dateLine, { color: colors.muted }]} testID="home-date">
-          {formatWeekdayDayMonth(now)}
-        </Text>
-        {name !== null ? (
-          <Text style={[styles.greeting, { color: colors.text }]} testID="home-greeting">
-            {greeting(name, now)}
-          </Text>
-        ) : null}
-      </View>
-      {hcp !== null ? (
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: colors.text }]}
+        testID="home-date"
+      >
+        {formatWeekdayDayMonth(now)}
+      </Text>
+      {name !== null ? (
         <Pressable
           onPress={onProfile}
           hitSlop={HCP_SLOP}
           accessibilityRole="link"
-          accessibilityLabel={hcpA11yLabel(hcp)}
+          accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
           style={[
             styles.hcpPill,
             { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
           ]}
           testID="open-profile"
         >
-          <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-          <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+          <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
+            {name}
+          </Text>
+          {hcp !== null ? (
+            <>
+              <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
+              <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+              <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+            </>
+          ) : null}
         </Pressable>
       ) : (
         <Pressable
@@ -513,7 +519,7 @@ function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: ()
   );
 }
 
-/** Seksjonsoverskriften: små sperrede versaler, uten ikon, som i designet. */
+/** Seksjonsoverskriften: liten etikett (12 pt), uten ikon. */
 function SectionHead({ title }: { title: string }) {
   const { ui } = useTheme();
   return (
@@ -577,26 +583,24 @@ const PROFILE_SLOP = { top: 15, bottom: 15, left: 12, right: 12 };
 /** HCP-pillen er rundt 40 pt høy; slakken gir 44 pt å treffe på. */
 const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 
-// Et langt navn kan brekke hilsenen.
-const GREETING = fraunces(500, 28, undefined, { multiline: true });
+// En lang dato («Onsdag 30. september») kan brekke tittelen.
+const TITLE = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   // Webbens banner har `mb-4`; skjermens `gap` gir de første 8.
   kavalkade: { marginBottom: 8 },
-  // Pillen står midt på dato og hilsen sammen (designets `align-items: center`).
+  // Datoen er tittelen (#2728), og «Lørdag 31. oktober» + «Sigrid · HCP 12,4»
+  // får ikke plass på én rad, så pillen står under tittelen, som på webben.
   top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 12,
     marginHorizontal: TEXT_INSET,
   },
-  topText: { flexShrink: 1 },
-  // Nettleserens `normal` for Inter 12 er 15; datoen bestemmer hvor alt under står.
-  dateLine: { ...interLine(12, 15), fontFamily: FONTS.sans },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  greeting: { ...GREETING, marginTop: 2 + GREETING.marginTop },
+  // Tittelen krymper og brekker heller enn å dytte pillen ut av skjermen.
+  title: { ...TITLE, flexShrink: 1 },
   hcpPill: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -606,11 +610,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  // Navnet er pillens første ord og skal ikke dytte handicapet ut: det avkortes.
+  hcpName: { ...interLine(13, 16), fontFamily: FONTS.sansMedium, flexShrink: 1, maxWidth: 112 },
+  hcpDot: { ...interLine(13, 16), fontFamily: FONTS.sans },
   hcpLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   // Nettleserens linjeboks for Fraunces 18 er 23 pt; da blir pillen 41 høy.
   hcpValue: { ...fraunces(600, 18, 23) },

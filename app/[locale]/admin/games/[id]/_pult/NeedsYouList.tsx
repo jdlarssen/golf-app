@@ -61,7 +61,7 @@ export function NeedsYouList({ pendingApproval, finished, gaps }: Props) {
     <section aria-labelledby={headingId} data-testid="pult-needs-you" className="leading-[normal]">
       <h2
         id={headingId}
-        className="px-1 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-warning-text"
+        className="px-1 pt-4 pb-2 text-xs font-semibold text-warning-text"
       >
         {t('needsYouHeading')}
       </h2>

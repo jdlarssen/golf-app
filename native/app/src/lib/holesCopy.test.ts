@@ -174,7 +174,7 @@ describe('Acey Deucey (#2255 PR 3c): paritet mot messages/no.json', () => {
 
 describe('Bingo Bango Bongo (#2255 PR 3c): paritet mot messages/no.json', () => {
   const bbb = source.leaderboard.bingoBangoBongo;
-  it('undertittelen, hintene, «Feiet!», hull som venter og «ikke satt»', () => {
+  it('undertittelen, hintene, «Feiet», hull som venter og «ikke satt»', () => {
     expect(BINGO_BANGO_BONGO_HOLES_TEXT.subtitle).toBe(bbb.holesSubtitle);
     expect(BINGO_BANGO_BONGO_HOLES_TEXT.firstOnGreen).toBe(bbb.firstOnGreen);
     expect(BINGO_BANGO_BONGO_HOLES_TEXT.nearestPin).toBe(bbb.nearestPin);
@@ -241,13 +241,13 @@ describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
     expect(bestBallParAsideAria(webGenders)).toBe(fill(holes.parAsideAriaLabel, { genders: webGenders }));
   });
 
-  it('«B» og « PAR» er hardkodet i webbens drilldown, ikke i meldingene', () => {
-    expect([BEST_BALL_HOLES_TEXT.legendBest, BEST_BALL_HOLES_TEXT.vsParSuffix]).toEqual(['B', 'PAR']);
+  it('«B» og « par» er hardkodet i webbens drilldown, ikke i meldingene', () => {
+    expect([BEST_BALL_HOLES_TEXT.legendBest, BEST_BALL_HOLES_TEXT.vsParSuffix]).toEqual(['B', 'par']);
   });
 
-  it('«MOT PAR · 34 SLAG» er webbens vsParLabel og slagLabel i store bokstaver (#2625)', () => {
-    expect(BEST_BALL_HOLES_TEXT.strokesSuffix).toBe(source.leaderboard.common.slagLabel.toUpperCase());
-    expect(BEST_BALL_HOLES_TEXT.toParPrefix).toBe(source.leaderboard.common.vsParLabel.toUpperCase());
+  it('«mot par · 34 slag» er webbens vsParLabel og slagLabel (#2625, #2728)', () => {
+    expect(BEST_BALL_HOLES_TEXT.strokesSuffix).toBe(source.leaderboard.common.slagLabel);
+    expect(BEST_BALL_HOLES_TEXT.toParPrefix).toBe(source.leaderboard.common.vsParLabel);
   });
 });
 

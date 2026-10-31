@@ -177,7 +177,7 @@ export default async function PublicCoursePage({
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </SmartLink>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-on-strong/80">
+          <p className="text-xs font-semibold text-on-strong/80">
             {t('kicker')}
           </p>
           <span aria-hidden className="w-11" />
@@ -221,7 +221,7 @@ export default async function PublicCoursePage({
               key={key}
               className="flex-1 basis-0 rounded-[14px] border border-border bg-surface px-3 py-2.5"
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+              <p className="text-xs font-semibold text-muted">
                 {t(key)}
               </p>
               <p className="mt-0.5 text-[14px]">

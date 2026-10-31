@@ -253,7 +253,7 @@ describe('buildHoleByHole', () => {
     ]);
   });
 
-  it('Bingo Bango Bongo: kortene fra valgene, ikke fra slagene; feieren, «Feiet!» og hull som venter', () => {
+  it('Bingo Bango Bongo: kortene fra valgene, ikke fra slagene; feieren, «Feiet» og hull som venter', () => {
     const bundle = homeBundle({
       game: {
         id: 'gb',
