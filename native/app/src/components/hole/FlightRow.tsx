@@ -12,14 +12,17 @@
 //
 // #2385 (designlerretet, identisk):
 // - **Vanlig** (`Main`): rader på 56 pt med skive (36 pt), navn og en linje
-//   under: «Får 1 slag · 3 poeng», «Scratch · 1 poeng», «Får 2 slag · venter»,
-//   og «Tast scoren nedenfor» på raden som er på tur. Formen er 40 pt med strek
-//   på 2 og tallet i tonens farge, og den regnes av **netto** (eierens svar):
-//   Martes 4 med ett slag på par 4 er en birdie-sirkel. Raden på tur er hvit
-//   med skogkant på 2 og en stiplet sirkel med «?»; en som venter har «–».
+//   under: «Får 1 slag», «Scratch», «Får 2 slag · venter», og «Tast scoren
+//   nedenfor» på raden som er på tur. Formen er 40 pt med strek på 2 og tallet
+//   i tonens farge. Raden på tur er hvit med skogkant på 2 og en stiplet
+//   sirkel med «?»; en som venter har «–».
 // - **Sollys** (`Hull-sollys`): rader på 64 pt kant til kant med svart strek,
-//   fornavnet på 20 pt, poengene («3 p») og scoren som store tall uten form.
-//   Raden på tur er en svart flate med hvit tekst («Sigrid · din tur», «?»).
+//   fornavnet på 20 pt og scoren som store tall uten form. Raden på tur er en
+//   svart flate med hvit tekst («Sigrid · din tur», «?»).
+//
+// #2735 (eierens svar, snur #2385): mens slagene føres, viser raden bare
+// brutto. Formen regnes av slagene mot par, ikke netto: Martes 4 med ett slag
+// på par 4 er par, uten form. Ingen poeng på raden, heller ikke i sollys.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   scoreShape,
@@ -58,11 +61,6 @@ export type FlightRowProps = {
   /** Levert, eller runden er ikke aktiv (#2211). Raden kan ikke velges. */
   locked: boolean;
   submitted: boolean;
-  /**
-   * Stableford-poengene for scoren som står. `null` skjuler dem: ikke
-   * stableford, ingen score ennå, eller en blind runde (#2219).
-   */
-  points: number | null;
   /** En linje under navnet, som «Anna slår ut» i foursomes. */
   note?: string | null;
   /** Hull-sollys-artboardets rad. */
@@ -110,25 +108,21 @@ function ringCount(shape: ScoreShape): { rings: number; round: boolean } {
 }
 
 /**
- * Formen og tallet på raden. Formen og tonen regnes av netto (brutto minus
- * slagene raden får), men tallet som står, er slagene: det er dem spilleren
- * slo.
+ * Formen og tallet på raden. Begge er brutto, slagene spilleren slo mot
+ * hullets par (#2735).
  */
 function ScoreShapeView({
   seatId,
   score,
-  extraStrokes,
   par,
 }: {
   seatId: string;
   score: number;
-  extraStrokes: number | null;
   par: number;
 }) {
   const { colors } = useTheme();
-  const net = score - (extraStrokes ?? 0);
-  const shape = scoreShape(net, par);
-  const tone = scoreTone(net, par);
+  const shape = scoreShape(score, par);
+  const tone = scoreTone(score, par);
   const { rings, round } = ringCount(shape);
   const color = scoreToneColor(tone, colors);
   return (
@@ -177,16 +171,15 @@ export function FlightRow({
   active,
   locked,
   submitted,
-  points,
   note,
   sunlight = false,
   onSelect,
 }: FlightRowProps) {
   const { colors, scheme } = useTheme();
   const spoken = a11yName ?? name;
-  // Linja under navnet: slagene raden får, og så poengene eller «venter».
+  // Linja under navnet: slagene raden får, og «venter» før scoren står.
   // Raden som er på tur sier bare hva den venter på.
-  const status = score != null ? (points != null ? `${points} poeng` : null) : WAITING_STATUS;
+  const status = score != null ? null : WAITING_STATUS;
   const subLine = active
     ? [note, ACTIVE_STATUS].filter(Boolean).join(' · ')
     : [note, strokesLine(extraStrokes), status].filter(Boolean).join(' · ');
@@ -227,11 +220,6 @@ export function FlightRow({
             </Text>
           ) : null}
         </View>
-        {!active && points != null ? (
-          <Text style={[styles.pointsSun, { color: ink }]} testID={`flight-row-${seatId}-points`}>
-            {`${points} p`}
-          </Text>
-        ) : null}
         <Text style={[styles.scoreSun, { color: ink }]} testID={`flight-row-${seatId}-score`}>
           {score ?? (active ? '?' : NO_SCORE)}
         </Text>
@@ -299,7 +287,7 @@ export function FlightRow({
       </View>
 
       {score != null ? (
-        <ScoreShapeView seatId={seatId} score={score} extraStrokes={extraStrokes} par={par} />
+        <ScoreShapeView seatId={seatId} score={score} par={par} />
       ) : active ? (
         <View style={styles.shape} testID={`flight-row-${seatId}-score`}>
           <View style={styles.ringOverlay}>
@@ -349,7 +337,6 @@ const styles = StyleSheet.create({
   nameSun: { ...interLine(20, 24), fontFamily: FONTS.sansBold },
   badge: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   note: { fontSize: 12, fontFamily: FONTS.sans },
-  pointsSun: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   scoreSun: {
     ...fraunces(600, 34),
     width: SUN_SCORE_WIDTH,

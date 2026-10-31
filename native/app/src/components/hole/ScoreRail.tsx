@@ -2,10 +2,10 @@
 // `components/hole/ScoreRail.tsx` (#2251).
 //
 // Fem tall (par −1 til par +3) og «Annet», og hver knapp viser navnet på
-// resultatet mot hullets par, aldri netto (#2635). Stableford-familien har
-// poengene etter navnet, unntatt i en blind runde. Komponenten tegner bare.
-// Hvem som er aktiv og hva et trykk skriver, bestemmer `useScoreRail` og
-// hullsiden.
+// resultatet mot hullets par, aldri netto (#2635). Heller ikke poeng i
+// stableford-familien: mens slagene føres, står bare brutto (#2735, eierens
+// svar, snur #2635). Komponenten tegner bare. Hvem som er aktiv og hva et
+// trykk skriver, bestemmer `useScoreRail` og hullsiden.
 //
 // Teksten er webbens (`holes.scoreRail.*` i messages/no.json). Appen har ikke
 // i18n ennå, så den står her.
@@ -35,14 +35,10 @@ import { scoreToneColor } from '../../lib/scoreToneColor';
 import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, type ThemeColors } from '../../theme';
 
-/** Hva knappene viser etter navnet på resultatet: poengene, eller ingenting. */
-export type RailDisplay = 'points' | 'plain';
-
 /** Ett tall på skinna, med resultatet regnet ut av kalleren. */
 export type RailOption = {
   strokes: number;
   term: StrokeTerm;
-  points: number | null;
 };
 
 /** Setet skinna taster for. */
@@ -60,7 +56,6 @@ export type ScoreRailProps = {
   active: RailActiveSeat | null;
   par: number;
   options: RailOption[];
-  display: RailDisplay;
   puttsTracking: boolean;
   /**
    * Formatet fanger putter og hullet er åpent: da står «Registrer putter»
@@ -143,7 +138,6 @@ export function ScoreRail({
   active,
   par,
   options,
-  display,
   puttsTracking,
   puttsAvailable,
   skipTo,
@@ -215,18 +209,8 @@ export function ScoreRail({
     );
   }
 
-  const detailText = (option: RailOption): string => {
-    const term = shortTermText(option, par);
-    if (sunlight) return term;
-    if (display === 'points' && option.points != null) return `${term} · ${option.points} p`;
-    return term;
-  };
-
-  const labelText = (option: RailOption): string => {
-    const base = `Sett ${option.strokes} slag for ${active.name}: ${optionTermText(option, par)}`;
-    if (display === 'points' && option.points != null) return `${base}, ${option.points} poeng`;
-    return base;
-  };
+  const labelText = (option: RailOption): string =>
+    `Sett ${option.strokes} slag for ${active.name}: ${optionTermText(option, par)}`;
 
   const stepFrame = [
     styles.step,
@@ -319,7 +303,7 @@ export function ScoreRail({
                 minimumFontScale={0.8}
                 testID={`rail-option-${option.strokes}-detail`}
               >
-                {detailText(option)}
+                {shortTermText(option, par)}
               </Text>
             </Pressable>
           );

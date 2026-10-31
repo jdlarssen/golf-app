@@ -38,9 +38,13 @@
 // høyre (i sollys bare den svarte «Sollys på»-pillen). Hullstripa står
 // øverst, uten sidemarg på siden: hver del har sin egen luft. Skinna er et
 // ark som ligger fast nederst mens lista ruller under det. Eierens svar:
-// formene regnes av netto, putter er fortsatt noe man slår på, og i sollys
-// (uten stripe) bytter man hull ved å sveipe på hullnummeret, og siden går
-// selv videre når alle i flighten har score.
+// putter er fortsatt noe man slår på, og i sollys (uten stripe) bytter man
+// hull ved å sveipe på hullnummeret, og siden går selv videre når alle i
+// flighten har score.
+//
+// #2735 (eierens svar, snur #2385 og #2635): mens slagene føres, viser siden
+// bare brutto. Formene regnes av slagene mot par, og verken knappene, radene
+// eller «Stryk» viser poeng.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
@@ -65,7 +69,6 @@ import {
 } from '../../../../lib/games/visibility';
 import { firstName } from '../../../../lib/firstName';
 import { nameInitials } from '../../../../lib/names/initials';
-import { stablefordPointsForCard } from '../../../../lib/scorecard/railPoints';
 import {
   formatUsesScoreRail,
   railStrokes,
@@ -94,7 +97,6 @@ import { HoleHero } from '../components/hole/HoleHero';
 import { HoleStrip } from '../components/hole/HoleStrip';
 import {
   ScoreRail,
-  type RailDisplay,
   type RailOption,
 } from '../components/hole/ScoreRail';
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
@@ -438,8 +440,8 @@ function HoleView({
   // #2252: alle formater unntatt Bingo Bango Bongo fører slag på skinna.
   const usesRail = formatUsesScoreRail(mode);
   const isStableford = isStablefordFamily(mode);
-  // #2219: i en blind runde som pågår viser verken rader eller knapper poeng
-  // eller netto. Samme delte regel som scorekortet og resultatlista.
+  // #2219: i en blind runde som pågår viser wolf-kortet verken poengtall eller
+  // innsats. Samme delte regel som scorekortet og resultatlista.
   const hideNetto = shouldHideNetto(
     revealState(
       bundle.game.scoreVisibility as ScoreVisibility,
@@ -690,44 +692,23 @@ function HoleView({
     clearScoreFor: clearSeatScore,
   });
 
-  // Det knappene viser før trykket: navnet på resultatet, og poengene etter i
-  // stableford-familien. Aldri netto (#2635). Ingen poeng i en blind runde,
-  // og heller ikke når motoren ikke kan svare på slagene setet får.
+  // Det knappene viser før trykket: navnet på resultatet mot hullets par.
+  // Aldri netto (#2635), og ingen poeng (#2735).
   const railSeat = rail.activeSeatId == null ? undefined : seatOf(rail.activeSeatId);
-  const railDisplay: RailDisplay =
-    isStableford && !hideNetto && railSeat?.extraStrokes != null ? 'points' : 'plain';
   const railOptions: RailOption[] = railSeat
-    ? railStrokes(par).map((strokes) => ({
-        strokes,
-        term: strokeTerm(strokes, par),
-        points: stablefordPointsForCard({
-          card: { score: strokes, extraStrokes: railSeat.extraStrokes ?? 0 },
-          par,
-          gameMode: mode,
-          isStableford,
-        }),
-      }))
+    ? railStrokes(par).map((strokes) => ({ strokes, term: strokeTerm(strokes, par) }))
     : [];
   const railSkipSeat = rail.skipToSeatId == null ? undefined : seatOf(rail.skipToSeatId);
 
   // «Stryk» i «Annet»-arket: bare stableford-familien, netto dobbel bogey for
-  // setet arket er åpent for. Kan motoren ikke svare på slagene setet får,
-  // finnes ingen netto dobbel bogey å sette, og da står ikke knappen.
+  // setet arket er åpent for, uten poeng (#2735). Kan motoren ikke svare på
+  // slagene setet får, finnes ingen netto dobbel bogey å sette, og da står
+  // ikke knappen.
   const sheetSeat = sheetSeatId == null ? undefined : seatOf(sheetSeatId);
-  let sheetStrike: { value: number; label: string } | undefined;
-  if (isStableford && sheetSeat && sheetSeat.extraStrokes != null) {
-    const value = strikeStrokes(par, sheetSeat.extraStrokes);
-    const points = stablefordPointsForCard({
-      card: { score: value, extraStrokes: sheetSeat.extraStrokes },
-      par,
-      gameMode: mode,
-      isStableford,
-    });
-    sheetStrike = {
-      value,
-      label: hideNetto || points == null ? 'Stryk' : `Stryk · ${points} p`,
-    };
-  }
+  const sheetStrike =
+    isStableford && sheetSeat && sheetSeat.extraStrokes != null
+      ? { value: strikeStrokes(par, sheetSeat.extraStrokes), label: 'Stryk' }
+      : undefined;
 
   // Kortveien (Bingo Bango Bongo): «−»/«+» og tapp på kortet, som før.
   const adjustStrokes = async (playerUserId: string, delta: number) => {
@@ -869,16 +850,6 @@ function HoleView({
                 active={!locked && seat.id === rail.activeSeatId}
                 locked={seat.locked}
                 submitted={seat.submitted}
-                points={
-                  hideNetto || seat.extraStrokes == null
-                    ? null
-                    : stablefordPointsForCard({
-                        card: { score: seat.score, extraStrokes: seat.extraStrokes },
-                        par,
-                        gameMode: mode,
-                        isStableford,
-                      })
-                }
                 note={seat.note}
                 onSelect={rail.selectRow}
               />
@@ -979,7 +950,6 @@ function HoleView({
             }
             par={par}
             options={railOptions}
-            display={railDisplay}
             puttsTracking={capturesPutts && putts.enabled}
             puttsAvailable={capturesPutts}
             skipTo={railSkipSeat ? railSkipSeat.shortName : null}

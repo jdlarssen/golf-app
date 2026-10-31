@@ -1,9 +1,9 @@
 // #2252: den ene render-testen (Type C) for en rad i flighten. Formen og tonen
-// er delt kode (lib/scoring/scoreShape, scoreTone) og poengene er
-// lib/scorecard/railPoints. Her er det koblingen: linja under navnet sier
-// slagene og hva raden venter på (#2385), formen regnes av netto, en låst rad
-// kan ikke velges, aktiv rad er hvit med skogkant, og sollys-raden har
-// poengene til høyre og «?». `strokesLine` er en ren funksjon (Type A).
+// er delt kode (lib/scoring/scoreShape, scoreTone). Her er det koblingen:
+// linja under navnet sier slagene og hva raden venter på (#2385), formen
+// regnes av brutto (#2735), en låst rad kan ikke velges, aktiv rad er hvit med
+// skogkant, og sollys-raden har «?». Ingen poeng på raden (#2735).
+// `strokesLine` er en ren funksjon (Type A).
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { themeFor } from '../../theme';
 import { FlightRow, strokesLine, type FlightRowProps } from './FlightRow';
@@ -19,7 +19,6 @@ const BASE: FlightRowProps = {
   active: true,
   locked: false,
   submitted: false,
-  points: 3,
   note: 'Marte slår ut',
   onSelect: jest.fn(),
 };
@@ -36,8 +35,8 @@ describe('FlightRow', () => {
     );
     expect(screen.queryByTestId('flight-row-p1-points')).toBeNull();
     expect(screen.getByTestId('flight-row-p1-score').props.children).toBe(3);
-    // Netto (eierens svar): 3 slag med ett slag på par 4 er netto ørn, to ringer.
-    expect(screen.getByTestId('flight-row-p1-shape').props.children[0]).toHaveLength(2);
+    // Brutto (#2735): 3 slag på par 4 er birdie, én ring, også med ett slag.
+    expect(screen.getByTestId('flight-row-p1-shape').props.children[0]).toHaveLength(1);
     expect(screen.getByTestId('flight-row-p1')).toHaveStyle({
       borderWidth: 2,
       backgroundColor: themeFor('light').colors.surface,
@@ -47,16 +46,17 @@ describe('FlightRow', () => {
     await fireEvent.press(screen.getByTestId('flight-row-p1'));
     expect(onSelect).toHaveBeenCalledWith('p1');
 
-    // Tastet og ikke på tur: slagene og poengene.
-    await rerender(<FlightRow {...BASE} active={false} note={null} onSelect={onSelect} />);
-    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(`${strokesLine(1)} · 3 poeng`);
+    // Tastet og ikke på tur: bare slagene. 4 slag med ett slag på par 4 er
+    // par mot brutto, uten form.
+    await rerender(<FlightRow {...BASE} score={4} active={false} note={null} onSelect={onSelect} />);
+    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(strokesLine(1));
+    expect(screen.getByTestId('flight-row-p1-shape').props.children[0]).toHaveLength(0);
 
     // Ikke tastet og ikke på tur: «venter» og en blek skive.
     await rerender(
       <FlightRow
         {...BASE}
         score={null}
-        points={null}
         active={false}
         locked
         submitted
@@ -73,15 +73,17 @@ describe('FlightRow', () => {
     await fireEvent.press(screen.getByTestId('flight-row-p1'));
     expect(onSelect).toHaveBeenCalledTimes(1);
 
-    // Sollys: fornavn, «din tur», «?» og poengene til høyre, ingen skive.
+    // Sollys: fornavn, «din tur» og «?», ingen skive.
     await rerender(
-      <FlightRow {...BASE} name="Marte" score={null} points={null} sunlight onSelect={onSelect} />,
+      <FlightRow {...BASE} name="Marte" score={null} sunlight onSelect={onSelect} />,
     );
     expect(screen.getByText('Marte · din tur')).toBeTruthy();
     expect(screen.getByTestId('flight-row-p1-score').props.children).toBe('?');
     expect(screen.queryByTestId('flight-row-p1-avatar', HIDDEN)).toBeNull();
+    // Tastet i sollys: bare scoren, ingen poeng (#2735).
     await rerender(<FlightRow {...BASE} name="Marte" active={false} sunlight onSelect={onSelect} />);
-    expect(screen.getByTestId('flight-row-p1-points').props.children).toBe('3 p');
+    expect(screen.getByTestId('flight-row-p1-score').props.children).toBe(3);
+    expect(screen.queryByTestId('flight-row-p1-points', HIDDEN)).toBeNull();
   });
 });
 

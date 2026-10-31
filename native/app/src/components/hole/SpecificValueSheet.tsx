@@ -3,8 +3,8 @@
 //
 // Hele det lovlige spennet i ett rutenett (1 til `MAX_STROKES`), så et
 // kollapshull er ett trykk og ikke sju på stepperen. X fjerner scoren. I
-// stableford-familien står «Stryk» under rutenettet: netto dobbel bogey, med
-// poengene i etiketten. Kalleren skriver etiketten, så arket regner ingenting.
+// stableford-familien står «Stryk» under rutenettet: netto dobbel bogey.
+// Kalleren skriver etiketten, så arket regner ingenting.
 //
 // Ingen animasjon, som på web: arket står der med en gang og forsvinner med en
 // gang.
@@ -23,7 +23,7 @@ export type SpecificValueSheetProps = {
   onPick: (value: number) => void;
   onClear: () => void;
   onClose: () => void;
-  /** «Stryk» i stableford-familien: verdien og etiketten, poeng inkludert. */
+  /** «Stryk» i stableford-familien: verdien og etiketten. */
   strike?: { value: number; label: string };
 };
 

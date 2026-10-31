@@ -4,7 +4,8 @@
 // rettingen dukker opp først når det står en score, og skinna krymper når
 // alle har score. #2385: navnet står alene med slagene til høyre, par er
 // forslaget før noen score står, de tonede knappene har ingen kant, «Annet»
-// har underlinja, og nederste rad har putte-valget og «Neste».
+// har underlinja, og nederste rad har putte-valget og «Neste». #2735: knappene
+// viser bare navnet på resultatet, aldri poeng, heller ikke i sollys.
 // `railStrokesLine` er en ren funksjon (Type A).
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import source from '../../../../../messages/no.json';
@@ -22,11 +23,10 @@ function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
     active: { seatId: 'p1', name: 'Marte', extraStrokes: 1, score: null, putts: null },
     par: 4,
     options: [
-      { strokes: 3, term: 'birdie', points: 4 },
-      { strokes: 4, term: 'par', points: 3 },
-      { strokes: 8, term: 'over', points: 0 },
+      { strokes: 3, term: 'birdie' },
+      { strokes: 4, term: 'par' },
+      { strokes: 8, term: 'over' },
     ],
-    display: 'points',
     puttsTracking: false,
     puttsAvailable: true,
     skipTo: 'Tore',
@@ -56,12 +56,12 @@ describe('ScoreRail', () => {
     expect(screen.getByTestId('score-rail-strokes').props.children).toBe('Får 1 slag');
     expect(screen.getByLabelText('får 1 slag på hullet')).toBeTruthy();
     expect(screen.getByTestId('score-rail-skip')).toBeTruthy();
-    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
-    expect(screen.getByTestId('rail-option-8-detail').props.children).toBe('+4 · 0 p');
+    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
+    expect(screen.getByTestId('rail-option-8-detail').props.children).toBe('+4');
     expect(screen.getByTestId('rail-option-4')).toHaveStyle({
       height: themeFor('light').hole.railButton,
     });
-    expect(screen.getByLabelText('Sett 3 slag for Marte: Birdie, 4 poeng')).toBeTruthy();
+    expect(screen.getByLabelText('Sett 3 slag for Marte: Birdie')).toBeTruthy();
     // Uten score er det ingenting å rette, og par er forslaget.
     expect(screen.queryByTestId('rail-undo')).toBeNull();
     expect(screen.getByTestId('rail-option-4')).toHaveStyle({ borderWidth: 2 });
@@ -77,7 +77,6 @@ describe('ScoreRail', () => {
       <ScoreRail
         {...props({
           onStep,
-          display: 'plain',
           puttsTracking: true,
           active: { seatId: 'p1', name: 'Marte', extraStrokes: 1, score: 4, putts: null },
         })}
@@ -185,6 +184,9 @@ describe('bunnluften over systemlinja', () => {
       </ThemeScope>,
     );
     expect(screen.getByTestId('score-rail')).toHaveStyle({ paddingBottom: 24 + 48 });
+    // #2735: bare navnet på resultatet i sollys òg.
+    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
+    expect(screen.getByLabelText('Sett 4 slag for Marte: Par')).toBeTruthy();
   });
 
   it('når alle har score, står den krympede skinna like høyt', async () => {
