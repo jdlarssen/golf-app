@@ -72,14 +72,14 @@ export function FormatGuideSheet({
 
   return (
     <div
-      className="format-guide-backdrop fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,22,18,0.45)]"
+      className="bottom-sheet-backdrop fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,22,18,0.45)]"
       onClick={onClose}
       data-testid="format-guide-backdrop"
     >
       <div
         ref={containerRef}
         tabIndex={-1}
-        className="format-guide-sheet flex max-h-[88vh] w-full max-w-xl flex-col rounded-t-2xl bg-bg shadow-2xl"
+        className="bottom-sheet flex max-h-[88vh] w-full max-w-xl flex-col rounded-t-2xl bg-bg shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-label={t('sheetAriaLabel')}

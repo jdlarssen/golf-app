@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import { BasicsSection } from './sections/BasicsSection';
 import { useGameFormState } from './useGameFormState';
@@ -272,12 +272,13 @@ describe('GameWizard — happy-path solo stableford', () => {
     // #1400: «Skjul til slutt» er controlled state + manuell dispatch, så
     // react-doms form-reset ved feilet publisering kan ikke hoppe den tilbake
     // til «Live» — verken i state eller i DOM.
-    fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+    openSetting(/under runden/i);
     const reveal = document.querySelector<HTMLInputElement>(
       'input[type="radio"][value="reveal"]',
     )!;
     fireEvent.click(reveal);
     expect(reveal.checked).toBe(true);
+    closeSheet();
 
     fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
 
@@ -286,16 +287,21 @@ describe('GameWizard — happy-path solo stableford', () => {
     // Fortsatt på steg 5, med banen fra steg 3 i sjekklista.
     expectStep(5);
     expect(screen.getByTestId('ready-row-course')).toHaveTextContent('Stiklestad GK');
+    // Det skjulte feltet som faktisk sendes følger valget, og raden sier det.
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="score_visibility"]')!
+        .value,
+    ).toBe('reveal');
+    expect(screen.getByTestId('ready-setting-duringRound')).toHaveTextContent(
+      'Avslør på slutten',
+    );
+    // Og arket viser det samme når det åpnes igjen.
+    openSetting(/under runden/i);
     expect(
       document.querySelector<HTMLInputElement>(
         'input[type="radio"][value="reveal"]',
       )!.checked,
     ).toBe(true);
-    // Det skjulte feltet som faktisk sendes følger radioen.
-    expect(
-      document.querySelector<HTMLInputElement>('input[name="score_visibility"]')!
-        .value,
-    ).toBe('reveal');
   });
 
   it('på steg 1 er «Tilbake» en lenke ut av veiviseren (backHref)', () => {
@@ -470,8 +476,9 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
 
 // #1065: Påmelding (registrering + startkontingent + allowance) flyttet fra
 // steg 2 til steg 5 (ReadyStep). #2447: «Hvordan får dere spillere?» står
-// øverst på steg 4; «Hva melder man på?» + kontingent bor inne i «Vis
-// avanserte innstillinger»-disclosuren på steg 5.
+// øverst på steg 4. #2457: «Hva melder man på?» står under den på steg 4 (bare
+// lagformater), og kontingent og handicap bor i arkene under INNSTILLINGER på
+// steg 5.
 function goToStep4() {
   pickKompisIntent(); // steg 1 → 2
   pickBestBallFormat();
@@ -489,8 +496,14 @@ function goToReadyStep() {
   expectStep(5);
 }
 
-function openAdvanced() {
-  fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+// #2457: INNSTILLINGER på steg 5 er rader; «Endre» åpner et ark med bare
+// radens felt, og «Ferdig» lukker det.
+function openSetting(name: RegExp) {
+  fireEvent.click(within(screen.getByTestId('ready-settings')).getByRole('button', { name }));
+}
+
+function closeSheet() {
+  fireEvent.click(screen.getByRole('button', { name: 'Ferdig' }));
 }
 
 describe('GameWizard — steg 2 rendrer ikke lenger Påmelding/allowance (#1065)', () => {
@@ -525,17 +538,19 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     expect(screen.queryByText(/hvem kan melde seg på/i)).toBeNull();
   });
 
-  it('«Hva melder man på?» (individuelt/lag) ligger inne i disclosuren', () => {
+  it('«Hva melder man på?» (individuelt/lag) står på steg 4 og ikke på steg 5 (#2457)', () => {
     renderWizard();
-    goToReadyStep();
+    goToStep4();
 
-    expect(screen.queryByRole('radio', { name: /^individuelt$/i })).toBeNull();
-    openAdvanced();
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
+    clickNext();
+    expectStep(5);
+    expect(screen.queryByRole('radio', { name: /^individuelt$/i })).toBeNull();
+    expect(screen.queryByText(/hva melder man på/i)).toBeNull();
   });
 
-  it('disabler "lag" når modus er stableford (solo-modus)', () => {
-    renderWizard();
+  it('et format uten lag har ikke «Hva melder man på?», og sender solo', () => {
+    const { container } = renderWizard();
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
@@ -543,25 +558,26 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     chooseTee('tee-1');
     setTeeOff(FUTURE_TEE_OFF);
     clickNext();
-    clickNext();
-    expectStep(5);
-    openAdvanced();
+    expectStep(4);
 
-    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
-    // #1792: «begge»-radioen er fjernet fra UI-et — kun individuelt/lag igjen.
+    expect(screen.queryByRole('radio', { name: /^individuelt$/i })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /^lag$/i })).toBeNull();
+    // #1792: «begge»-radioen er fjernet fra UI-et.
     expect(screen.queryByRole('radio', { name: /^begge$/i })).toBeNull();
-    expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.get('registration_type')).toBe('solo');
   });
 
-  it('lar "lag" velges når modus er best_ball', () => {
-    renderWizard();
-    goToReadyStep();
-    openAdvanced();
+  it('lar "lag" velges på steg 4 når modus er best_ball, og sender det', () => {
+    const { container } = renderWizard();
+    goToStep4();
 
     const teamRadio = screen.getByRole('radio', { name: /^lag$/i });
     expect(teamRadio).not.toBeDisabled();
     fireEvent.click(teamRadio);
     expect(teamRadio).toBeChecked();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.get('registration_type')).toBe('team');
   });
 
   it('inkluderer registration_mode + registration_type i FormData', () => {
@@ -896,8 +912,8 @@ describe('GameWizard — «Shotgun-start» overlever til steg 5 (#2258)', () => 
   });
 });
 
-describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () => {
-  it('FormData har side_tournament_enabled + riktige counts uten å åpne «Vis avanserte innstillinger»', () => {
+describe('GameWizard — #1011 sideturnering overlever lukket ark', () => {
+  it('FormData har side_tournament_enabled + riktige counts uten at et ark er åpnet', () => {
     const { container } = renderWizard({
       players: EIGHT_PLAYERS.slice(0, 2),
       initialValues: {
@@ -919,13 +935,12 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     clickNext();
     expectStep(5);
 
-    // Disclosure ("Vis avanserte innstillinger") aldri åpnet på steg 5 —
-    // AdvancedSettingsSection (og dermed LD/CTP-radioene) er derfor ikke
-    // montert i det hele tatt.
-    expect(
-      screen.queryByText('Vis avanserte innstillinger'),
-    ).toBeInTheDocument();
+    // Intet ark er åpnet på steg 5 — AdvancedSettingsSection (og dermed
+    // LD/CTP-radioene) er derfor ikke montert i det hele tatt, men raden sier
+    // at sideturneringen er på.
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('switch', { name: /sideturnering/i })).toBeNull();
+    expect(screen.getByTestId('ready-setting-sideAndPrizes')).toHaveTextContent('På');
 
     const form = container.querySelector('form');
     const fd = new FormData(form!);
@@ -935,7 +950,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(fd.get('side_ctp_count')).toBe('1');
   });
 
-  it('åpen disclosure gir IKKE duplikat-entries (LD/CTP-feltene emitter ikke name i controlled mode)', () => {
+  it('åpent ark gir IKKE duplikat-entries (LD/CTP-feltene emitter ikke name i controlled mode)', () => {
     const { container } = renderWizard({
       players: EIGHT_PLAYERS.slice(0, 2),
       initialValues: {
@@ -957,9 +972,9 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     clickNext();
     expectStep(5);
 
-    // Åpne disclosure-en så AdvancedSettingsSection faktisk er montert
+    // Åpne arket så AdvancedSettingsSection faktisk er montert
     // samtidig med FormDataInputs-speilingen.
-    fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
+    openSetting(/sideturnering og premier/i);
     expect(
       screen.getByRole('switch', { name: /sideturnering/i }),
     ).toBeChecked();
@@ -974,8 +989,8 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
   });
 });
 
-describe('GameWizard — #1065 allowance + kontingent overlever flytting til steg 5', () => {
-  it('hcp_allowance_pct + entry_fee_kr + payment_link speiles i FormData uansett disclosure-tilstand, uten duplikater', () => {
+describe('GameWizard — #1065 allowance + kontingent overlever flytting til steg 5 og lukket ark', () => {
+  it('hcp_allowance_pct + entry_fee_kr + payment_link speiles i FormData uansett om et ark er åpent, uten duplikater', () => {
     const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
 
     pickKompisIntent();
@@ -989,7 +1004,7 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
     clickNext();
     expectStep(5);
 
-    // Disclosure lukket: default-verdier (100 % allowance, ingen kontingent)
+    // Intet ark åpent: default-verdier (100 % allowance, ingen kontingent)
     // skal likevel være i FormData — samme garanti #1011 ga sideturnering.
     let form = container.querySelector('form');
     let fd = new FormData(form!);
@@ -997,9 +1012,9 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
     expect(fd.get('entry_fee_kr')).toBe('');
     expect(fd.get('payment_link')).toBe('');
 
-    // Åpne disclosuren og sett en kontingent — feltene er nå faktisk montert
-    // (AllowanceField + RegistrationSection sin betalings-fieldset).
-    openAdvanced();
+    // Åpne kontingent-arket og sett en kontingent — feltene er nå faktisk
+    // montert (RegistrationSection sin betalings-fieldset).
+    openSetting(/startkontingent/i);
     fireEvent.change(screen.getByLabelText(/beløp per spiller/i), {
       target: { value: '150' },
     });
@@ -1009,12 +1024,19 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
 
     form = container.querySelector('form');
     fd = new FormData(form!);
-    // Nøyaktig ÉN verdi per felt — AllowanceField sin hideHiddenInput og
-    // RegistrationSection sine controlled inputs unngår duplikat-entries;
-    // FormDataInputs er eneste kilde.
+    // Nøyaktig ÉN verdi per felt — RegistrationSection sine controlled inputs
+    // unngår duplikat-entries; FormDataInputs er eneste kilde.
     expect(fd.getAll('hcp_allowance_pct')).toEqual(['100']);
     expect(fd.getAll('entry_fee_kr')).toEqual(['150']);
     expect(fd.getAll('payment_link')).toEqual(['12345']);
+
+    // Og når arket er lukket (feltene avmontert) er verdiene fortsatt med.
+    closeSheet();
+    expect(screen.queryByLabelText(/beløp per spiller/i)).toBeNull();
+    fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('entry_fee_kr')).toEqual(['150']);
+    expect(fd.getAll('payment_link')).toEqual(['12345']);
+    expect(screen.getByTestId('ready-setting-fee')).toHaveTextContent('150 kr');
   });
 });
 
@@ -1169,8 +1191,9 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
       fireEvent.click(screen.getByRole('button', { name: /^neste/i }));
     }
     expectStep(5);
-    openAdvanced();
 
+    // Shamble har prosenten på steg 2, så INNSTILLINGER har ingen Handicap-rad.
+    expect(screen.queryByTestId('ready-setting-handicap')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Handicap-andel (%)')).not.toBeInTheDocument();
     const fd = new FormData(container.querySelector('form')!);
     expect(fd.getAll('hcp_allowance_pct')).toEqual([posted]);
@@ -1523,8 +1546,8 @@ describe('GameWizard — #2282 «Klar?»-steget', () => {
   // avbrytes (fireEvent gir `false` når preventDefault ble kalt).
   it.each([
     ['navnefeltet', () => screen.getByLabelText(/^navn på runden$/i)],
-    ['beløpsfeltet', () => {
-      openAdvanced();
+    ['beløpsfeltet i et ark', () => {
+      openSetting(/startkontingent/i);
       return screen.getByLabelText(/beløp per spiller/i);
     }],
   ])('Enter i %s avbrytes, så det publiserer ikke', (_label, field) => {
@@ -1540,7 +1563,7 @@ describe('GameWizard — #2282 «Klar?»-steget', () => {
     expect(fireEvent.keyDown(button, { key: 'Enter' })).toBe(true);
   });
 
-  it('ugyldig handicapandel gir rød Format-rad, og «Endre» åpner avanserte innstillinger med fokus i feltet', async () => {
+  it('ugyldig handicapandel gir rød Format-rad, og «Endre» åpner Handicap-arket med fokus i feltet', async () => {
     renderWizard({
       players: EIGHT_PLAYERS.slice(0, 2),
       initialValues: { game_mode: 'stableford', hcp_allowance_pct: '150' },
@@ -1565,6 +1588,196 @@ describe('GameWizard — #2282 «Klar?»-steget', () => {
     const field = await screen.findByLabelText('Handicap-andel (%)');
     expect(field).toHaveAttribute('id', 'hcp_allowance_pct__input');
     await waitFor(() => expect(field).toHaveFocus());
+  });
+});
+
+// #2457: INNSTILLINGER på steg 5 er korte rader med verdien som er satt, og
+// «Endre» åpner et ark med bare radens felt. Et lukket ark er ikke montert, så
+// verdiene må leve i FormDataInputs (#1011) og overleve en feilet publisering
+// (#1400).
+describe('GameWizard — #2457 innstillinger som rader og ark', () => {
+  function goToStablefordReady(publish?: (fd: FormData) => Promise<CreateGameResult>, draft?: (fd: FormData) => Promise<CreateGameResult>) {
+    const utils = renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      createAndPublishAction: publish,
+      createDraftAction: draft,
+    });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+    return utils;
+  }
+
+  function rowValue(key: string): string {
+    return screen.getByTestId(`ready-setting-${key}`).textContent ?? '';
+  }
+
+  it('viser fire rader med verdien som er satt, og «Vis avanserte innstillinger» er borte', () => {
+    goToStablefordReady();
+
+    expect(screen.queryByText(/vis avanserte innstillinger/i)).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(rowValue('handicap')).toContain('Netto, 100 %');
+    expect(rowValue('fee')).toContain('Ingen');
+    expect(rowValue('duringRound')).toContain('Vis alt');
+    expect(rowValue('sideAndPrizes')).toContain('Av');
+    // Sjekklista står over INNSTILLINGER.
+    expect(
+      screen
+        .getByTestId('ready-row-players')
+        .compareDocumentPosition(screen.getByTestId('ready-settings')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('Format-raden nevner ikke prosenten; den står bare i Handicap-raden', () => {
+    goToStablefordReady();
+    expect(screen.getByTestId('ready-row-format')).not.toHaveTextContent('%');
+    expect(screen.getByTestId('ready-row-format')).not.toHaveTextContent(/brutto/i);
+  });
+
+  it('hvert ark åpnes med «Endre» og viser bare radens felt', () => {
+    goToStablefordReady();
+
+    openSetting(/^handicap/i);
+    expect(screen.getByRole('dialog', { name: 'Handicap' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Handicap-andel (%)')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/beløp per spiller/i)).toBeNull();
+    closeSheet();
+
+    openSetting(/startkontingent/i);
+    expect(screen.getByRole('dialog', { name: 'Startkontingent' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/beløp per spiller/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Handicap-andel (%)')).toBeNull();
+    closeSheet();
+
+    openSetting(/under runden/i);
+    expect(screen.getByRole('dialog', { name: 'Under runden' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /krev godkjenning/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /vis alt under runden/i })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /sideturnering/i })).toBeNull();
+    closeSheet();
+
+    openSetting(/sideturnering og premier/i);
+    expect(screen.getByRole('dialog', { name: 'Sideturnering og premier' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /sideturnering/i })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /krev godkjenning/i })).toBeNull();
+  });
+
+  it.each([
+    ['Ferdig', () => fireEvent.click(screen.getByRole('button', { name: 'Ferdig' }))],
+    ['✕', () => fireEvent.click(screen.getByRole('button', { name: 'Lukk' }))],
+    ['Esc', () => fireEvent.keyDown(document, { key: 'Escape' })],
+    ['bakgrunnen', () => fireEvent.click(screen.getByTestId('bottom-sheet-backdrop'))],
+  ])('%s lukker arket, og verdien står i raden', (_label, close) => {
+    goToStablefordReady();
+    openSetting(/startkontingent/i);
+    fireEvent.change(screen.getByLabelText(/beløp per spiller/i), { target: { value: '200' } });
+
+    close();
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(rowValue('fee')).toContain('200 kr');
+  });
+
+  it('verdier satt i arkene og lukket er med ved publisering', async () => {
+    const publish = vi.fn(async (_fd: FormData): Promise<CreateGameResult> => ({ error: '' }));
+    goToStablefordReady(publish);
+
+    openSetting(/^handicap/i);
+    fireEvent.change(screen.getByLabelText('Handicap-andel (%)'), { target: { value: '85' } });
+    closeSheet();
+    openSetting(/startkontingent/i);
+    fireEvent.change(screen.getByLabelText(/beløp per spiller/i), { target: { value: '200' } });
+    fireEvent.change(screen.getByLabelText(/vipps-nummer/i), { target: { value: '12345' } });
+    closeSheet();
+    openSetting(/under runden/i);
+    fireEvent.click(screen.getByRole('radio', { name: /avslør på slutten/i }));
+    fireEvent.click(screen.getByRole('switch', { name: /krev godkjenning/i }));
+    closeSheet();
+    openSetting(/sideturnering og premier/i);
+    fireEvent.click(screen.getByRole('switch', { name: /sideturnering/i }));
+    closeSheet();
+
+    expect(rowValue('handicap')).toContain('Netto, 85 %');
+    expect(rowValue('duringRound')).toContain('Avslør på slutten · Godkjenning fra flighten');
+    expect(rowValue('sideAndPrizes')).toContain('På');
+
+    fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+    const fd = publish.mock.calls[0][0];
+    expect(fd.getAll('hcp_allowance_pct')).toEqual(['85']);
+    expect(fd.getAll('entry_fee_kr')).toEqual(['200']);
+    expect(fd.getAll('payment_link')).toEqual(['12345']);
+    expect(fd.getAll('score_visibility')).toEqual(['reveal']);
+    expect(fd.getAll('require_peer_approval')).toEqual(['on']);
+    expect(fd.getAll('side_tournament_enabled')).toEqual(['true']);
+  });
+
+  it('verdier satt i arkene og lukket er med ved «Lagre som utkast»', async () => {
+    const draft = vi.fn(async (_fd: FormData): Promise<CreateGameResult> => ({ error: '' }));
+    goToStablefordReady(undefined, draft);
+
+    openSetting(/startkontingent/i);
+    fireEvent.change(screen.getByLabelText(/beløp per spiller/i), { target: { value: '200' } });
+    closeSheet();
+    openSetting(/under runden/i);
+    fireEvent.click(screen.getByRole('radio', { name: /avslør på slutten/i }));
+    closeSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
+    await waitFor(() => expect(draft).toHaveBeenCalledTimes(1));
+    const fd = draft.mock.calls[0][0];
+    expect(fd.getAll('entry_fee_kr')).toEqual(['200']);
+    expect(fd.getAll('score_visibility')).toEqual(['reveal']);
+  });
+
+  it('verdiene overlever en mislykket publisering', async () => {
+    const failing = vi.fn(async (_fd: FormData): Promise<CreateGameResult> => ({ error: 'db_game' }));
+    const { container } = goToStablefordReady(failing);
+
+    openSetting(/startkontingent/i);
+    fireEvent.change(screen.getByLabelText(/beløp per spiller/i), { target: { value: '200' } });
+    closeSheet();
+    openSetting(/under runden/i);
+    fireEvent.click(screen.getByRole('switch', { name: /krev godkjenning/i }));
+    closeSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
+    expect(await screen.findByTestId('wizard-submit-error')).toBeInTheDocument();
+
+    expect(rowValue('fee')).toContain('200 kr');
+    expect(rowValue('duringRound')).toContain('Godkjenning fra flighten');
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('entry_fee_kr')).toEqual(['200']);
+    expect(fd.getAll('require_peer_approval')).toEqual(['on']);
+  });
+
+  it('Enter i et felt i et ark publiserer ikke', () => {
+    goToStablefordReady();
+    openSetting(/startkontingent/i);
+    expect(fireEvent.keyDown(screen.getByLabelText(/beløp per spiller/i), { key: 'Enter' })).toBe(false);
+  });
+
+  it('fokus går tilbake til «Endre»-raden når arket lukkes', () => {
+    goToStablefordReady();
+    const row = within(screen.getByTestId('ready-settings')).getByRole('button', {
+      name: /startkontingent/i,
+    });
+    act(() => row.focus());
+    fireEvent.click(row);
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+
+    closeSheet();
+
+    expect(row).toHaveFocus();
   });
 });
 
@@ -1713,12 +1926,8 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
 
   it('påmeldingstype «Lag» og tom liste: ingen hint over velgeren', () => {
     goToClubStep4(/^texas scramble$/i);
-    clickNext(); // → steg 5
-    expectStep(5);
-    openAdvanced();
+    // #2457: «Hva melder man på?» står på steg 4.
     fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
-    fireEvent.click(within(screen.getByTestId('ready-row-players')).getByRole('button'));
-    expectStep(4);
 
     expect(screen.queryByText(CLUB_HINT)).not.toBeInTheDocument();
     expect(screen.queryByText(OLD_HINT)).not.toBeInTheDocument();

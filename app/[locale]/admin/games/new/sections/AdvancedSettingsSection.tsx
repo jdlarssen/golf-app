@@ -52,6 +52,13 @@ type Props = {
    * escape-hatch) har INGEN speiling og trenger inline-serialiseringen.
    */
   serializedExternally?: boolean;
+  /**
+   * #2457: which part of the section to draw. Step 5 gives «Under runden»
+   * (peer approval and visibility) and «Sideturnering og premier» their own
+   * sheet. Default `'all'` draws everything, as before — the GameForm path.
+   * The side and prize parts need `includeVisibility`.
+   */
+  part?: 'all' | 'duringRound' | 'sideAndPrizes';
 };
 
 const WINNER_COUNTS = [0, 1, 2] as const;
@@ -61,6 +68,7 @@ export function AdvancedSettingsSection({
   includeVisibility = false,
   hideHeading = false,
   serializedExternally = false,
+  part = 'all',
 }: Props) {
   const tAdv = useTranslations('wizard.sections.advanced');
   const tBasics = useTranslations('wizard.sections.basics');
@@ -89,6 +97,9 @@ export function AdvancedSettingsSection({
   // stå: siden #909 er disse feltene eneste kilde til verdiene der.
   const ownName = (name: string) => (serializedExternally ? undefined : name);
 
+  const showDuringRound = part !== 'sideAndPrizes';
+  const showSideAndPrizes = part !== 'duringRound';
+
   return (
     <section>
       {!hideHeading && (
@@ -98,52 +109,56 @@ export function AdvancedSettingsSection({
       {/* Peer-godkjenning: ett kort med én bryterrad, uten kicker. Bryteren er
           en native checkbox med `name`, så verdien går rett i FormData i begge
           pathene. */}
-      <div data-focus-inset className={`mt-4 ${LIST_CARD_CLASS}`}>
-        <SwitchRow
-          name="require_peer_approval"
-          checked={requirePeerApproval}
-          onChange={(e) => setRequirePeerApproval(e.target.checked)}
-          title={tAdv('peerApprovalTitle')}
-          description={tAdv('peerApprovalDesc')}
-        />
-      </div>
+      {showDuringRound && (
+        <div data-focus-inset className={`mt-4 ${LIST_CARD_CLASS}`}>
+          <SwitchRow
+            name="require_peer_approval"
+            checked={requirePeerApproval}
+            onChange={(e) => setRequirePeerApproval(e.target.checked)}
+            title={tAdv('peerApprovalTitle')}
+            description={tAdv('peerApprovalDesc')}
+          />
+        </div>
+      )}
 
       {includeVisibility && (
         <>
           {/* Score visibility. #1400: radioene er controlled (useGameFormState)
               i stedet for defaultChecked, så valget overlever
               `requestFormReset` når en publisering feiler. */}
-          <FormSection variant="bare" legend={tBasics('visibilityLegend')}>
-            <ChoiceCardGrid columns={1} label={tBasics('visibilityLegend')}>
-              <RadioChoiceCard
-                name={ownName('score_visibility')}
-                value="live"
-                checked={scoreVisibility === 'live'}
-                onChange={() => setScoreVisibility('live')}
-                disabled={lockScoreVisibility}
-                title={tBasics('visibilityLiveTitle')}
-                hint={tBasics('visibilityLiveDesc')}
-              />
-              <RadioChoiceCard
-                name={ownName('score_visibility')}
-                value="reveal"
-                checked={scoreVisibility === 'reveal'}
-                onChange={() => setScoreVisibility('reveal')}
-                disabled={lockScoreVisibility}
-                title={tBasics('visibilityRevealTitle')}
-                hint={tBasics('visibilityRevealDesc')}
-              />
-            </ChoiceCardGrid>
-            {lockScoreVisibility && (
-              <p className="px-1 pt-2 font-sans text-xs leading-[1.4] text-muted">
-                <strong>{tBasics('visibilityLockedNote')}</strong>
-              </p>
-            )}
-          </FormSection>
+          {showDuringRound && (
+            <FormSection variant="bare" legend={tBasics('visibilityLegend')}>
+              <ChoiceCardGrid columns={1} label={tBasics('visibilityLegend')}>
+                <RadioChoiceCard
+                  name={ownName('score_visibility')}
+                  value="live"
+                  checked={scoreVisibility === 'live'}
+                  onChange={() => setScoreVisibility('live')}
+                  disabled={lockScoreVisibility}
+                  title={tBasics('visibilityLiveTitle')}
+                  hint={tBasics('visibilityLiveDesc')}
+                />
+                <RadioChoiceCard
+                  name={ownName('score_visibility')}
+                  value="reveal"
+                  checked={scoreVisibility === 'reveal'}
+                  onChange={() => setScoreVisibility('reveal')}
+                  disabled={lockScoreVisibility}
+                  title={tBasics('visibilityRevealTitle')}
+                  hint={tBasics('visibilityRevealDesc')}
+                />
+              </ChoiceCardGrid>
+              {lockScoreVisibility && (
+                <p className="px-1 pt-2 font-sans text-xs leading-[1.4] text-muted">
+                  <strong>{tBasics('visibilityLockedNote')}</strong>
+                </p>
+              )}
+            </FormSection>
+          )}
 
           {/* Sideturnering — tilbys for alle formater. Matchplay viser LD/CTP
               kompakt under duell-kortet (#585). */}
-          {sideTournamentSupported && (
+          {showSideAndPrizes && sideTournamentSupported && (
             <FormSection
               variant="list"
               legend={tBasics('sideTournamentLegend')}
@@ -190,7 +205,7 @@ export function AdvancedSettingsSection({
           {/* #1051: premiebord — rett etter sideturnering-konfig. Egen visnings-
               gating (podium + side-counts); serialiseres av den alltid-monterte
               forelderen (FormDataInputs / GameForm-cluster), ikke her. */}
-          <PrizesSection state={state} />
+          {showSideAndPrizes && <PrizesSection state={state} />}
         </>
       )}
     </section>

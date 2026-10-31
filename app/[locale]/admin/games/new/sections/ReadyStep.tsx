@@ -7,8 +7,10 @@
  * invitasjonskort med spillnavnet som felt midt i kortet — og en sjekkliste
  * med fire rader (Bane, Format, Tee-off, Spillere), hver med status og
  * «Endre». Spillere-raden sier hvordan spillerne kommer (valget står på steg
- * 4, #2447). Under lista: «Vis avanserte innstillinger» med allowance-feltene, type påmelding,
- * startkontingent, peer-godkjenning, synlighet, sideturnering og premiebord.
+ * 4, #2447). Under lista står INNSTILLINGER (#2457): Handicap, Startkontingent,
+ * Under runden og Sideturnering og premier som korte rader med verdien som er
+ * satt; «Endre» åpner et bunn-ark med bare den radens felt (ReadySettings).
+ * Type påmelding («Hva melder man på?») står på steg 4.
  * Publiser og utkast står i et brett som følger bunnen av skjermen.
  *
  * Sjekklista er en projeksjon av publiser-gaten i useGameFormState
@@ -33,17 +35,12 @@ import type { CreateGameResult } from '../actions';
 import type { GameFormState } from '../useGameFormState';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
-import { ToggleCard } from '@/components/ui/ToggleCard';
-import { AdvancedSettingsSection } from './AdvancedSettingsSection';
-import { RegistrationSection } from './RegistrationSection';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { invitationWhen } from '@/lib/games/invitationCard';
-import { AllowanceField } from '@/components/admin/AllowanceField';
-import { TeamHandicapField } from './TeamHandicapField';
-import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 import { InvitationPreviewCard } from './InvitationPreviewCard';
 import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
+import { ReadySettings } from './ReadySettings';
+import type { ReadySettingsKey } from './readySettingsRules';
 import {
   formatRowParts,
   playersRowParts,
@@ -65,8 +62,6 @@ const NO_ERROR: CreateGameResult = { error: '' };
 type SubmitState = CreateGameResult & { seq: number };
 const NO_SUBMIT: SubmitState = { error: '', seq: 0 };
 
-const ADVANCED_ID = 'ready-advanced';
-
 type Props = {
   state: GameFormState;
   mode: GameFormMode;
@@ -87,7 +82,6 @@ type Props = {
 export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
   const t = useTranslations('wizard.ready');
   const tWizard = useTranslations('wizard');
-  const tAllowance = useTranslations('allowance');
   const locale = useLocale() as AppLocale;
   const {
     name,
@@ -115,35 +109,13 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     isMatchplay,
     isTexas,
     isAmbrose,
-    isFlorida,
-    isRoundRobin,
     isShamble,
     isSolo,
     isClubScoped,
     registrationMode,
-    hcpAllowance,
-    setHcpAllowance,
-    texasHandicapPct,
-    setTexasHandicapPct,
-    ambroseHandicapPct,
-    setAmbroseHandicapPct,
-    floridaHandicapPct,
-    setFloridaHandicapPct,
-    fourballAllowancePct,
-    setFourballAllowancePct,
-    foursomesAllowancePct,
-    setFoursomesAllowancePct,
-    greensomeAllowancePct,
-    setGreensomeAllowancePct,
-    chapmanAllowancePct,
-    setChapmanAllowancePct,
-    gruesomeAllowancePct,
-    setGruesomeAllowancePct,
-    roundRobinAllowancePct,
-    setRoundRobinAllowancePct,
   } = state;
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const advancedRef = useRef<HTMLDivElement>(null);
+  const [openSheet, setOpenSheet] = useState<ReadySettingsKey | null>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   const selectedTeeBox = availableTees.find((tee) => tee.id === teeBoxId) ?? null;
   const when = invitationWhen(teeOffIso(scheduledTeeOffAt), locale);
@@ -288,16 +260,11 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
   }
 
   function formatValue(): string {
-    const parts = formatRowParts({ gameMode, teamSize, hcpAllowance });
+    const parts = formatRowParts({ teamSize });
     const out = [modeSummaryLabel(gameMode)];
     if (parts.teamSize === 2) out.push(t('teamSize2'));
     else if (parts.teamSize === 3) out.push(t('teamSize3'));
     else if (parts.teamSize !== null) out.push(t('teamSize4'));
-    if (parts.allowance?.kind === 'pct') {
-      out.push(t('checklist.allowancePct', { pct: parts.allowance.pct }));
-    } else if (parts.allowance?.kind === 'gross') {
-      out.push(t('checklist.gross'));
-    }
     return out.join(', ');
   }
 
@@ -382,32 +349,24 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     return { ...row, label: LABEL[row.key], value };
   });
 
-  // «Endre» på Format med en ugyldig prosent åpner de avanserte innstillingene
-  // og setter fokus i prosentfeltet. Feltet finnes først når panelet er åpent,
-  // så fokuset tas etter neste render.
-  const focusAllowanceOnOpen = useRef(false);
-  function focusAllowanceField() {
-    advancedRef.current
-      ?.querySelector<HTMLInputElement>('input[id$="__input"]')
-      ?.focus();
-  }
+  // «Endre» på Format med en ugyldig prosent åpner Handicap-arket og setter
+  // fokus i prosentfeltet. useModalFocus flytter fokuset til første element i
+  // arket når det åpnes (effekten i BottomSheet, et barn av denne), så fokuset
+  // i feltet må settes etter den: effekten her kjører etter barnas.
+  const focusPercentOnOpen = useRef(false);
   useEffect(() => {
-    if (!advancedOpen || !focusAllowanceOnOpen.current) return;
-    focusAllowanceOnOpen.current = false;
-    focusAllowanceField();
-  }, [advancedOpen]);
+    if (openSheet !== 'handicap' || !focusPercentOnOpen.current) return;
+    focusPercentOnOpen.current = false;
+    settingsRef.current?.querySelector<HTMLInputElement>('input[id$="__input"]')?.focus();
+  }, [openSheet]);
 
   function handleEdit(target: Exclude<ReadyRowTarget, null>) {
-    if (target !== 'advanced') {
+    if (target !== 'handicap') {
       onGoToStep?.(target);
       return;
     }
-    if (advancedOpen) {
-      focusAllowanceField();
-      return;
-    }
-    focusAllowanceOnOpen.current = true;
-    setAdvancedOpen(true);
+    focusPercentOnOpen.current = true;
+    setOpenSheet('handicap');
   }
 
   // Enter i et tekstfelt sender skjemaet via første submit-knapp, og det er
@@ -439,156 +398,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
 
         <ReadyChecklist items={checklistItems} onEdit={handleEdit} />
 
-        <ToggleCard
-          className="mt-4"
-          label={t('advancedToggle')}
-          open={advancedOpen}
-          onToggle={() => setAdvancedOpen((v) => !v)}
-          controls={ADVANCED_ID}
-        />
-        <div id={ADVANCED_ID} ref={advancedRef}>
-          {advancedOpen && (
-            <>
-              {/* #1065: allowance-feltene flyttet hit fra steg 2 — gode
-                  defaults (85/50/100 % osv.) gjør at kompis-caset aldri
-                  trenger å røre dem. `hideHiddenInput`: FormDataInputs (montert
-                  på alle steg) speiler verdien uansett om panelet er åpent. */}
-              {gameMode === 'fourball_matchplay' && (
-                <AllowanceField
-                  fieldName="fourball_allowance_pct"
-                  defaultPct={85}
-                  legend={tWizard('allowanceProps.fourball.legend')}
-                  description={tWizard('allowanceProps.fourball.description')}
-                  nettoHelperText={tWizard('allowanceProps.fourball.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.fourball.bruttoHelper')}
-                  value={fourballAllowancePct}
-                  onChange={setFourballAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {gameMode === 'foursomes_matchplay' && (
-                <AllowanceField
-                  fieldName="foursomes_allowance_pct"
-                  defaultPct={50}
-                  legend={tWizard('allowanceProps.foursomes.legend')}
-                  description={tWizard('allowanceProps.foursomes.description')}
-                  nettoHelperText={tWizard('allowanceProps.foursomes.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.foursomes.bruttoHelper')}
-                  value={foursomesAllowancePct}
-                  onChange={setFoursomesAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {gameMode === 'greensome_matchplay' && (
-                <AllowanceField
-                  fieldName="greensome_allowance_pct"
-                  defaultPct={100}
-                  legend={tWizard('allowanceProps.greensome.legend')}
-                  description={tWizard('allowanceProps.greensome.description')}
-                  nettoHelperText={tWizard('allowanceProps.greensome.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.greensome.bruttoHelper')}
-                  value={greensomeAllowancePct}
-                  onChange={setGreensomeAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {gameMode === 'chapman_matchplay' && (
-                <AllowanceField
-                  fieldName="chapman_allowance_pct"
-                  defaultPct={100}
-                  legend={tWizard('allowanceProps.chapman.legend')}
-                  description={tWizard('allowanceProps.chapman.description')}
-                  nettoHelperText={tWizard('allowanceProps.chapman.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.chapman.bruttoHelper')}
-                  value={chapmanAllowancePct}
-                  onChange={setChapmanAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {gameMode === 'gruesome_matchplay' && (
-                <AllowanceField
-                  fieldName="gruesome_allowance_pct"
-                  defaultPct={50}
-                  legend={tWizard('allowanceProps.gruesome.legend')}
-                  description={tWizard('allowanceProps.gruesome.description')}
-                  nettoHelperText={tWizard('allowanceProps.gruesome.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.gruesome.bruttoHelper')}
-                  value={gruesomeAllowancePct}
-                  onChange={setGruesomeAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {isRoundRobin && (
-                <AllowanceField
-                  fieldName="round_robin_allowance_pct"
-                  defaultPct={85}
-                  legend={tWizard('allowanceProps.roundRobin.legend')}
-                  description={tWizard('allowanceProps.roundRobin.description')}
-                  nettoHelperText={tWizard('allowanceProps.roundRobin.nettoHelper')}
-                  bruttoHelperText={tWizard('allowanceProps.roundRobin.bruttoHelper')}
-                  value={roundRobinAllowancePct}
-                  onChange={setRoundRobinAllowancePct}
-                  hideHiddenInput
-                />
-              )}
-              {showsGeneralAllowanceField(gameMode) && (
-                <AllowanceField
-                  fieldName="hcp_allowance_pct"
-                  defaultPct={100}
-                  legend={tWizard('allowanceProps.scoring.legend')}
-                  description={tWizard('allowanceProps.scoring.description')}
-                  nettoHelperText={tWizard('allowanceProps.scoring.nettoHelper')}
-                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode))}
-                  value={hcpAllowance}
-                  onChange={setHcpAllowance}
-                  hideHiddenInput
-                />
-              )}
-              {/* Scramble-familien (#2009): arrangøren setter lag-handicapet
-                  som prosent av lagets snitt; feltet oversetter til og fra den
-                  lagrede sum-prosenten. `key={teamSize}` forser remount ved
-                  lagstørrelse-bytte så netto/brutto-minnet følger re-seedingen. */}
-              {isTexas && (
-                <TeamHandicapField
-                  key={teamSize}
-                  mode="texas_scramble"
-                  teamSize={teamSize}
-                  sumPct={texasHandicapPct}
-                  onSumPctChange={setTexasHandicapPct}
-                />
-              )}
-              {isAmbrose && (
-                <TeamHandicapField
-                  key={teamSize}
-                  mode="ambrose"
-                  teamSize={teamSize}
-                  sumPct={ambroseHandicapPct}
-                  onSumPctChange={setAmbroseHandicapPct}
-                />
-              )}
-              {isFlorida && (
-                <TeamHandicapField
-                  key={teamSize}
-                  mode="florida_scramble"
-                  teamSize={teamSize}
-                  sumPct={floridaHandicapPct}
-                  onSumPctChange={setFloridaHandicapPct}
-                />
-              )}
-
-              {/* #1065: type påmelding (solo/lag) + startkontingent. «Hvordan
-                  får dere spillere?» står på steg 4 (#2447), så her vises
-                  resten via hideModeChoice. */}
-              <RegistrationSection state={state} hideHeading hideModeChoice />
-
-              <AdvancedSettingsSection
-                state={state}
-                includeVisibility
-                hideHeading
-                serializedExternally
-              />
-            </>
-          )}
+        <div ref={settingsRef}>
+          <ReadySettings state={state} openKey={openSheet} onOpenChange={setOpenSheet} />
         </div>
       </div>
 

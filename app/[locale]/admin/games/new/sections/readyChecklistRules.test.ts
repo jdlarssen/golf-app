@@ -47,7 +47,7 @@ describe('readyChecklist — rows and targets', () => {
     ['tee_box', 'course', 3],
     ['tee_off', 'teeOff', 3],
     ['players', 'players', 4],
-    ['allowance', 'format', 'advanced'],
+    ['allowance', 'format', 'handicap'],
     // #2439: the club is chosen on step 2, above the format list.
     ['club', 'format', 2],
   ])('code %s blocks the %s row, «Endre» goes to %s', (code, key, target) => {
@@ -95,18 +95,18 @@ describe('readyChecklist — rows and targets', () => {
     });
   });
 
-  it('a locked format with an allowance code still leads to the advanced settings', () => {
+  it('a locked format with an allowance code still leads to the Handicap sheet', () => {
     const rows = readyChecklist({
       ...BASE,
       lockGameMode: true,
       codes: ['allowance'],
       messages: ['ugyldig andel'],
     });
-    expect(row(rows, 'format')).toMatchObject({ status: 'block', target: 'advanced' });
+    expect(row(rows, 'format')).toMatchObject({ status: 'block', target: 'handicap' });
   });
 
   // #2570: shamble's percentage sits under «Tellemåte» on step 2, not in the
-  // advanced settings.
+  // Handicap sheet.
   it('shamble with a broken allowance leads to step 2', () => {
     const rows = readyChecklist({
       ...BASE,
@@ -225,17 +225,14 @@ describe('playersSummary', () => {
   });
 });
 
+// #2457: the handicap share stands once, in the Handicap row of INNSTILLINGER.
 describe('formatRowParts', () => {
-  it.each<[string, Parameters<typeof formatRowParts>[0], ReturnType<typeof formatRowParts>]>([
-    ['stableford 85 %', { gameMode: 'stableford', teamSize: 1, hcpAllowance: 85 }, { teamSize: null, allowance: { kind: 'pct', pct: 85 } }],
-    ['slagspill brutto', { gameMode: 'solo_strokeplay', teamSize: 1, hcpAllowance: 0 }, { teamSize: null, allowance: { kind: 'gross' } }],
-    ['best ball in pairs', { gameMode: 'best_ball', teamSize: 2, hcpAllowance: 85 }, { teamSize: 2, allowance: { kind: 'pct', pct: 85 } }],
-    ['texas, own percentage', { gameMode: 'texas_scramble', teamSize: 4, hcpAllowance: 100 }, { teamSize: 4, allowance: null }],
-    ['skins, own percentage', { gameMode: 'skins', teamSize: 1, hcpAllowance: 100 }, { teamSize: null, allowance: null }],
-    // #2570: shamble's share is set under «Tellemåte»; the row names none.
-    ['shamble, field on step 2', { gameMode: 'shamble', teamSize: 4, hcpAllowance: 80 }, { teamSize: 4, allowance: null }],
-  ])('%s', (_label, input, expected) => {
-    expect(formatRowParts(input)).toEqual(expected);
+  it.each<[number, ReturnType<typeof formatRowParts>]>([
+    [1, { teamSize: null }],
+    [2, { teamSize: 2 }],
+    [4, { teamSize: 4 }],
+  ])('team size %s', (teamSize, expected) => {
+    expect(formatRowParts({ teamSize })).toEqual(expected);
   });
 });
 

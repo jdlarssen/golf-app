@@ -1171,7 +1171,31 @@
           "open": "Åpen påmelding"
         }
       },
-      "advancedToggle": "Vis avanserte innstillinger",
+      "settings": {
+        "kicker": "Innstillinger",
+        "rows": {
+          "handicap": "Handicap",
+          "fee": "Startkontingent",
+          "duringRound": "Under runden",
+          "sideAndPrizes": "Sideturnering og premier"
+        },
+        "values": {
+          "handicapNet": "Netto, {pct} %",
+          "handicapGross": "Brutto",
+          "handicapTeamAverage": "{pct} % av lagets snitt",
+          "feeNone": "Ingen",
+          "feeAmount": "{kr} kr",
+          "visibilityLive": "Vis alt",
+          "visibilityReveal": "Avslør på slutten",
+          "peerApproval": "Godkjenning fra flighten",
+          "sideOff": "Av",
+          "sideOn": "På",
+          "prizes": "{count, plural, one {# premie} other {# premier}}"
+        },
+        "edit": "Endre",
+        "done": "Ferdig",
+        "close": "Lukk"
+      },
       "publishButton": "Publiser og del invitasjonen",
       "publishPending": "Publiserer …",
       "draftButton": "Lagre som utkast",
