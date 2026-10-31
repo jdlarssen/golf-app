@@ -1008,7 +1008,7 @@
         "visibilityLockedNote": "Cannot be changed after the game has started.",
         "sideTournamentLegend": "Side tournament",
         "sideTournamentTitle": "Add side tournament",
-        "sideTournamentDesc": "A side contest alongside the game, where each player or each team collects points. Shown after the game has finished.",
+        "sideTournamentDesc": "Points for longest drive and closest to the pin.",
         "sideLdLegend": "Number of longest drive winners",
         "sideCtpLegend": "Number of closest-to-pin winners",
         "sideLockedNote": "Cannot be changed after the game has started."
@@ -1122,7 +1122,10 @@
         "peerApprovalDesc": "Another player in the flight must approve the scorecard after it is submitted."
       },
       "prizes": {
-        "legend": "Prize table (optional)",
+        "legend": "Prize table",
+        "toggleAdd": "Add",
+        "toggleHide": "Hide",
+        "toggleCount": "{count, plural, one {# prize} other {# prizes}}",
         "placementLabel": "{position}. place",
         "ldLabel": "Longest drive",
         "ctpLabel": "Closest to the pin",
