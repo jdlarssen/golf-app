@@ -9,6 +9,7 @@ import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { appLaunchFlag, appLaunchKey, isLaunchSwap } from '@/lib/app/appLaunch';
+import { KlubbhusIcon, KonvoluttIcon, PokalIcon } from '@/components/icons/Icons';
 import { SectionHeading, TextLink, FooterLink } from '../marketing-primitives';
 
 const ORIGIN = 'https://tornygolf.no';
@@ -22,9 +23,16 @@ type MatrixRow = { feature: string; other: string };
 /** Én rad på eksempel-tavla. Rekkefølgen i arrayet ER plasseringen. */
 type BoardRow = { name: string; points: string };
 /** Sideturnerings-chip under tavla. */
-type Chip = { icon: string; label: string };
+type Chip = { label: string };
 /** Ett ikon-punkt i «Spisset for turneringen». */
-type IconPoint = { icon: string; title: string; body: string };
+type IconPoint = { title: string; body: string };
+
+/**
+ * Tørnys tegnede ikoner for de tre punktene, i katalogens rekkefølge:
+ * arrangørens kontroll (Klubbhuset), invitasjonen (konvolutten) og
+ * premieseremonien (pokalen). Emoji som ikoner er byttet ut (#2725).
+ */
+const POINT_ICONS = [KlubbhusIcon, KonvoluttIcon, PokalIcon] as const;
 /** Ett FAQ-par. Samme form som `landing.faq`, bevisst. */
 type FaqEntry = { q: string; a: string };
 
@@ -179,7 +187,7 @@ export default async function HvorforTornyPage({
           <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
             <table className="w-full table-fixed">
               <thead>
-                <tr className="bg-surface-2 font-sans text-[10.5px] font-bold uppercase tracking-[0.1em]">
+                <tr className="bg-surface-2 font-sans text-[10.5px] font-semibold uppercase tracking-[0.1em]">
                   <th scope="col" className="px-4 py-3 text-left">
                     <span className="sr-only">{t('matrix.featureCol')}</span>
                   </th>
@@ -204,7 +212,7 @@ export default async function HvorforTornyPage({
                       {row.feature}
                     </th>
                     <td className="px-1 py-3 text-center">
-                      <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full bg-primary-soft font-sans text-sm font-bold text-success-text">
+                      <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full bg-primary-soft font-sans text-sm font-semibold text-success-text">
                         <span aria-hidden>✓</span>
                         <span className="sr-only">{t('matrix.yesLabel')}</span>
                       </span>
@@ -228,7 +236,7 @@ export default async function HvorforTornyPage({
               <span className="font-serif text-[16px] font-medium text-text">
                 {t('board.cardTitle')}
               </span>
-              <span className="inline-flex items-center gap-1.5 font-sans text-[10.5px] font-bold uppercase tracking-[0.1em] text-success-text">
+              <span className="inline-flex items-center gap-1.5 font-sans text-[10.5px] font-semibold uppercase tracking-[0.1em] text-success-text">
                 <span
                   aria-hidden
                   className="h-[7px] w-[7px] shrink-0 rounded-full bg-success"
@@ -248,9 +256,10 @@ export default async function HvorforTornyPage({
                   >
                     <span>
                       {isLeader && (
-                        <span aria-hidden className="mr-1.5">
-                          🏆
-                        </span>
+                        <PokalIcon
+                          size={16}
+                          className="mr-1.5 inline-block align-[-2px]"
+                        />
                       )}
                       {row.name}
                     </span>
@@ -265,9 +274,6 @@ export default async function HvorforTornyPage({
                   key={chip.label}
                   className="rounded-full bg-primary-soft px-3 py-1.5 font-sans text-[12px] font-semibold text-primary"
                 >
-                  <span aria-hidden className="mr-1">
-                    {chip.icon}
-                  </span>
                   {chip.label}
                 </span>
               ))}
@@ -279,25 +285,28 @@ export default async function HvorforTornyPage({
         <section>
           <SectionHeading>{t('points.heading')}</SectionHeading>
           <div className="mt-4 space-y-3">
-            {iconPoints.map((point) => (
-              <div
-                key={point.title}
-                className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-3.5"
-              >
-                <span
-                  aria-hidden
-                  className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary-soft text-[20px]"
+            {iconPoints.map((point, index) => {
+              const Icon = POINT_ICONS[index % POINT_ICONS.length];
+              return (
+                <div
+                  key={point.title}
+                  className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-3.5"
                 >
-                  {point.icon}
-                </span>
-                <span className="font-sans text-[14px] font-semibold leading-snug text-text">
-                  {point.title}
-                  <small className="mt-0.5 block font-sans text-[12.5px] font-normal leading-snug text-muted">
-                    {point.body}
-                  </small>
-                </span>
-              </div>
-            ))}
+                  <span
+                    aria-hidden
+                    className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary"
+                  >
+                    <Icon size={20} />
+                  </span>
+                  <span className="font-sans text-[14px] font-semibold leading-snug text-text">
+                    {point.title}
+                    <small className="mt-0.5 block font-sans text-[12.5px] font-normal leading-snug text-muted">
+                      {point.body}
+                    </small>
+                  </span>
+                </div>
+              );
+            })}
           </div>
           {/* Mørkegrønt sitatkort. `surface-strong` er deep forest i BEGGE
               modus (dark --primary er sage og ville invertert kontrasten), så
