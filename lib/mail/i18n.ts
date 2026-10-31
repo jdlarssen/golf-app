@@ -57,8 +57,6 @@ export async function getMailTranslator(locale: string | null | undefined) {
   });
 }
 
-export type MailTranslator = Awaited<ReturnType<typeof getMailTranslator>>;
-
 /** The app's public origin — the root of every absolute URL a mail carries. */
 export const APP_BASE_URL = 'https://tornygolf.no';
 

@@ -12,7 +12,6 @@ import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
 import type {
   ShambleResult,
   ShambleHoleRow,
-  ShambleTeamLine,
 } from '@/lib/scoring/modes/types';
 
 /**
@@ -377,6 +376,3 @@ function HoleRow({
     </li>
   );
 }
-
-// Re-export for use in ShamblePodium.
-export type { ShambleTeamLine };
