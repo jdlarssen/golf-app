@@ -7105,6 +7105,7 @@
       "finishedBody": "Spillet er ferdig. Skann koden og se resultatet.",
       "finishedQrTitle": "Resultatet på mobilen",
       "finishedQrBody": "Skann koden og se hvem som vant",
+      "finishedQrBodyResult": "Skann koden og se resultatet",
       "hiddenBody": "Tavla vises når spillet er ferdig.",
       "unsupportedBody": "Storskjermen viser bare slagspill og stableford foreløpig."
     }
