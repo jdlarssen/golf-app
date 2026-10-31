@@ -29,6 +29,8 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 
 **Endret 2026-10-30 (strategisamtale):** runde 2 av vinterligaen er åpen 22.11–6.12, så novembermålet måler at runde 1 er spilt og runde 2 åpnet. Ligaen åpner 8.11, og fram til da står byggeplassene ledige. Eieren ba derfor om å dytte noe fram i køen. De 22 veiviser-issuene fra #2250 (arrangørflaten på nettsiden) har fått milepælen «Liv laga», fordi en enklere veiviser er det som lar andre arrangere uten Jørgen. Seks av dem er trukket fram til november. Resten venter på april, som ikke finnes som måned på tavla ennå. Funn fra ligarunde 1 går foran veiviseren.
 
+**Endret 2026-10-31 (månedsstart for november):** køen sto tom og første bølge av veiviseren var levert, så eieren hentet #2463 («Nå» som tee-off) og #2457 (innstillingene på «Klar?» som korte rader) fram fra april til november. Funn fra generalprøven (#2712) og ligarunde 1 går fortsatt først.
+
 ## Slik brukes dette
 
 1. **Månedsstart:** orkestratoren tar månedens mål, lager issuene som trengs (utredning og kontrakt), og setter «Måned» på dem på tavla. Backloggen triageres mot målene: hører et issue til en måned, får det måneden; ellers blir det «Forslag».
