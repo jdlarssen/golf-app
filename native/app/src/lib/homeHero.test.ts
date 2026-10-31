@@ -261,5 +261,14 @@ describe('buildHeroModel — ligaflight alene (#2712)', () => {
     ).toBe(false);
     expect(buildHeroModel({ bundle: homeBundle({ players: solo }), scores, userId: ME }).leagueSolo).toBe(false);
   });
+  it('vanlig liga (ingen markørgodkjenning) → som før, også alene etter et frafall', () => {
+    expect(
+      buildHeroModel({
+        bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: false } }),
+        scores,
+        userId: ME,
+      }).leagueSolo,
+    ).toBe(false);
+  });
 });
 
