@@ -169,7 +169,11 @@ export function TeeOffQuickPicks({
         </PillRadio>
       </div>
       {nowChosen && (
-        <div id={nowBoxId} className="mt-3 flex flex-col gap-1 rounded-[14px] bg-primary-soft px-3.5 py-3">
+        <div
+          id={nowBoxId}
+          data-testid="tee-off-now-box"
+          className="mt-3 flex flex-col gap-1 rounded-[14px] bg-primary-soft px-3.5 py-3"
+        >
           <p className="font-sans text-[15px] font-semibold leading-[normal] text-primary">
             {t('teeOffNowTitle')}
           </p>
