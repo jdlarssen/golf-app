@@ -16,12 +16,9 @@ import { formatListLocale } from '@/lib/i18n/format';
 import type { TeeBoxData, TeeRows } from '@/lib/courses/teeChips';
 import type { SimilarCourseTarget } from '@/lib/courses/similarCoursesPanel';
 import type { AppLocale } from '@/i18n/routing';
-import { MAX_TEE_BOXES } from './constants';
 import { HoleGridEditor } from './HoleGridEditor';
 import { TeeTableEditor } from './TeeTableEditor';
 import { SimilarCoursesPanel } from './SimilarCoursesPanel';
-
-export { MAX_TEE_BOXES };
 
 // Numeric fields are stored as strings so React's controlled inputs preserve
 // in-progress decimal entry like "72." before the user types the next digit.

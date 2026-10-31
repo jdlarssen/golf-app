@@ -7,13 +7,6 @@ import { expect, type Locator, type Page } from '@playwright/test';
  * back what it just entered reads that player's row, not the active one.
  */
 
-/** The score number in the row the rail is entering now. */
-export function activeScoreNumber(page: Page): Locator {
-  return page.locator(
-    '[data-testid="flight-row"][data-active="true"] [data-testid="score-number"]',
-  );
-}
-
 /** The score number in one player's row («—» until a score is entered). */
 export function rowScoreNumber(page: Page, playerId: string): Locator {
   return page.locator(

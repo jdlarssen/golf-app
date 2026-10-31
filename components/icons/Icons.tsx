@@ -1,7 +1,7 @@
-// Tørny iconset — 10 functional 24×24 icons, currentColor, 1.5 stroke,
+// Tørny iconset — functional 24×24 icons, currentColor, 1.5 stroke,
 // round caps/joins, 2px safe-zone. Distinct from the hero 64px icons in
 // this folder (PinFlag/Laurel/MailEnvelope/HourGlass) which are
-// decorative empty-state illustrations. These ten are line-icons for
+// decorative empty-state illustrations. These are line-icons for
 // inline use in tiles, list rows, pills, and bottom-nav.
 
 import * as React from 'react';
@@ -25,15 +25,6 @@ export const FlaggIcon = ({ size, ...rest }: IconProps) => (
     <line x1="7" y1="3.5" x2="7" y2="20" />
     <line x1="4" y1="20" x2="11" y2="20" />
     <path d="M 7 4 L 16.5 6.5 L 7 10 Z" />
-  </svg>
-);
-
-export const UtslagIcon = ({ size, ...rest }: IconProps) => (
-  <svg {...base(size)} {...rest}>
-    <circle cx="12" cy="6.5" r="3" />
-    <path d="M 9.5 10 Q 12 11.4 14.5 10" />
-    <path d="M 9.8 10 L 12 18 L 14.2 10" />
-    <line x1="4" y1="20" x2="20" y2="20" />
   </svg>
 );
 
@@ -84,33 +75,6 @@ export const LaurbaerIcon = ({ size, ...rest }: IconProps) => (
     <ellipse cx="17.8" cy="14.5" rx="2.2" ry="0.95" transform="rotate(55 17.8 14.5)" />
     <ellipse cx="17.8" cy="10.5" rx="2.2" ry="0.95" transform="rotate(65 17.8 10.5)" />
     <ellipse cx="16.4" cy="6.8" rx="2.0" ry="0.85" transform="rotate(75 16.4 6.8)" />
-  </svg>
-);
-
-export const HandicapIcon = ({ size, ...rest }: IconProps) => (
-  <svg {...base(size)} {...rest}>
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="5.5" />
-    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-  </svg>
-);
-
-export const KolleIcon = ({ size, ...rest }: IconProps) => (
-  <svg {...base(size)} {...rest}>
-    <rect x="14.5" y="2.8" width="4" height="2.6" rx="0.9" />
-    <line x1="16.5" y1="5.4" x2="9.4" y2="14.6" />
-    <path d="M 9.4 14.6 L 4.4 17.4 L 6.2 20.6 L 12.3 17.6 Z" />
-    <line x1="5.5" y1="19" x2="11.2" y2="16.2" />
-  </svg>
-);
-
-export const KalenderIcon = ({ size, ...rest }: IconProps) => (
-  <svg {...base(size)} {...rest}>
-    <rect x="4" y="6" width="16" height="14" rx="1.75" />
-    <line x1="4" y1="10.5" x2="20" y2="10.5" />
-    <line x1="9" y1="4" x2="9" y2="8" />
-    <line x1="15" y1="4" x2="15" y2="8" />
-    <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 

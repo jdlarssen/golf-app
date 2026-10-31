@@ -10,7 +10,6 @@ import {
   formatTeeOffTime,
   expectedFirstScoreTime,
   osloParts,
-  formatTeeOffFieldValue,
   formatTeeOffLongDate,
 } from './teeOff';
 
@@ -112,44 +111,6 @@ describe('osloParts', () => {
     expect(parts.year).toBe(2027);
     expect(parts.month).toBe(0); // January
     expect(parts.day).toBe(1);
-  });
-});
-
-// #2426: the wizard's tee-off field shows its datetime-local value as the
-// artboard draws it. The value is wall-clock already (no zone), so the output
-// must not depend on the host timezone (TZ is UTC above).
-describe('formatTeeOffFieldValue', () => {
-  it('formats a Norwegian value with weekday, dotted month and year', () => {
-    // 2026-10-03 is a Saturday.
-    expect(formatTeeOffFieldValue('2026-10-03T09:00', 'no')).toBe('lør. 3. okt. 2026, 09:00');
-  });
-
-  it('keeps «mai» without a dot, as Norwegian writes it', () => {
-    expect(formatTeeOffFieldValue('2026-05-12T14:24', 'no')).toBe('tir. 12. mai 2026, 14:24');
-  });
-
-  it('formats English with day, month and year', () => {
-    expect(formatTeeOffFieldValue('2026-10-03T09:00', 'en')).toBe('Sat 3 Oct 2026, 09:00');
-  });
-
-  it('ignores seconds when the browser sends them', () => {
-    expect(formatTeeOffFieldValue('2026-10-03T09:00:30', 'no')).toBe('lør. 3. okt. 2026, 09:00');
-  });
-
-  it('shows the wall-clock time as typed, also across midnight', () => {
-    expect(formatTeeOffFieldValue('2026-12-31T23:59', 'no')).toBe('tor. 31. des. 2026, 23:59');
-    expect(formatTeeOffFieldValue('2027-01-01T00:05', 'no')).toBe('fre. 1. jan. 2027, 00:05');
-  });
-
-  it('returns null for an empty or malformed value', () => {
-    expect(formatTeeOffFieldValue('', 'no')).toBeNull();
-    expect(formatTeeOffFieldValue('2026-10-03', 'no')).toBeNull();
-    expect(formatTeeOffFieldValue('not a date', 'no')).toBeNull();
-  });
-
-  it('returns null for a date that does not exist', () => {
-    expect(formatTeeOffFieldValue('2026-02-30T10:00', 'no')).toBeNull();
-    expect(formatTeeOffFieldValue('2026-10-03T25:00', 'no')).toBeNull();
   });
 });
 

@@ -14,6 +14,7 @@
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
+import { escapeHtml } from './escapeHtml';
 
 export type IdeaBuiltNotificationParams = {
   /** Recipient e-mail address (the idea submitter). */
@@ -110,13 +111,4 @@ export async function sendIdeaBuiltNotification(
     html,
     text: textBody,
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

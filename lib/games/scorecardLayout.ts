@@ -478,8 +478,6 @@ export interface LayoutBPlayerTotal {
   points: number;
 }
 
-export type LayoutBMatchplayHoleResult = 'won' | 'lost' | 'tied' | 'unplayed';
-
 export interface LayoutBTotals {
   perPlayer: LayoutBPlayerTotal[];
   /** Sum av per-hull lag-best-netto. Brukes til best-ball-footer. */

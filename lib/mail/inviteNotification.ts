@@ -23,6 +23,7 @@ import {
 } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
+import { escapeHtml } from './escapeHtml';
 
 export type InviteNotificationParams = {
   to: string;
@@ -244,13 +245,4 @@ export async function sendInviteNotification(
     html,
     text,
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

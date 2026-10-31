@@ -12,7 +12,6 @@ import type { Settlement } from '@/lib/scoring/settlement';
 import type {
   SkinsResult,
   SkinsHoleRow,
-  SkinsPlayerLine,
 } from '@/lib/scoring/modes/types';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
@@ -417,6 +416,3 @@ function HoleRow({
     </li>
   );
 }
-
-// Re-export for use in SkinsPodium (avoids separate import of the same type).
-export type { SkinsPlayerLine };
