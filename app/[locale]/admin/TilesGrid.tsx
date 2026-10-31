@@ -175,7 +175,7 @@ export async function TilesGrid() {
       meta: lastPublishedAt
         ? t('metaLastPublished', { date: formatShortOsloDayMonthLocale(lastPublishedAt, locale as AppLocale) })
         : t('metaNonePublished'),
-      icon: 'sparkle',
+      icon: 'kalender',
     },
     // #50: klubber — admin governance (opprett og styr klubber).
     {
@@ -215,7 +215,7 @@ export async function TilesGrid() {
       unbuiltIdeasCount === 0
         ? t('metaIdeerNone')
         : t('metaIdeer', { n: unbuiltIdeasCount }),
-    icon: 'sparkle',
+    icon: 'konvolutt',
   };
   if (unbuiltIdeasCount > 0) {
     coreTiles.push(ideasTile);

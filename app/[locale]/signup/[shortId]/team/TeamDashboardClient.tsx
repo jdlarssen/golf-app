@@ -384,7 +384,7 @@ function StatusChipMini({ status }: { status: Status }) {
   };
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-sans text-[11px] font-medium tracking-tight ${palette[tone]}`}
+      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-sans text-[11px] font-medium ${palette[tone]}`}
     >
       {t(`memberStatus.${status}` as Parameters<typeof t>[0])}
     </span>

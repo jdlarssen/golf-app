@@ -176,10 +176,10 @@ export default async function SpectatePage({
         aria-label={t('bannerAriaLabel')}
         className={[
           'sticky top-0 z-40 flex items-center justify-between gap-2',
-          'px-4 py-2 text-xs font-medium tracking-wide',
+          'px-4 py-2 text-xs font-medium',
           live
-            ? 'bg-accent/90 text-bg backdrop-blur-sm'
-            : 'bg-primary/90 text-white backdrop-blur-sm dark:text-bg',
+            ? 'bg-accent text-bg'
+            : 'bg-primary text-white dark:text-bg',
         ].join(' ')}
       >
         {/* Diskret Tørny-branding (#1268): en delt spectate-lenke er en

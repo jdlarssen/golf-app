@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * Døra til uttaks-rommet (#1884), for arrangøren.
@@ -63,9 +64,7 @@ export async function CupLineupDoor({
               {t('manage.doors.uttakSubtitle', { count: sessionCount ?? 0 })}
             </p>
           </div>
-          <span aria-hidden className="text-muted">
-            →
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </Card>
       </SmartLink>
     </section>

@@ -126,7 +126,7 @@ describe('startbodens egne tekster', () => {
   });
 
   it('knapp, ring og hull-linje', () => {
-    expect(continueOnHole(8)).toBe('Fortsett på hull 8 →');
+    expect(continueOnHole(8)).toBe('Fortsett på hull 8');
     expect(ringNextLabel(8, 18, 7)).toBe('Hull 8 av 18, 7 spilt');
     expect(holesPlayedLine(7, 18)).toBe('7 av 18 hull spilt');
   });
@@ -177,7 +177,7 @@ describe('startbodens egne tekster', () => {
   });
 
   it('godkjenningsraden', () => {
-    expect(approvalsLine(1)).toBe('1 kort venter på godkjenningen din →');
-    expect(approvalsLine(3)).toBe('3 kort venter på godkjenningen din →');
+    expect(approvalsLine(1)).toBe('1 kort venter på godkjenningen din');
+    expect(approvalsLine(3)).toBe('3 kort venter på godkjenningen din');
   });
 });

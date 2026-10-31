@@ -44,8 +44,7 @@ export function InviteDock({
             aria-expanded={open}
             aria-controls="invite-form"
             onClick={openForm}
-            className="h-[52px] w-full rounded-full bg-primary font-sans text-[15px] font-semibold text-white dark:text-bg"
-            style={{ boxShadow: '0 6px 18px rgba(27, 67, 50, 0.28)' }}
+            className="h-[52px] w-full rounded-full bg-primary font-sans text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_8px_rgba(26,46,31,0.04)] dark:text-bg dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
           >
             {buttonLabel}
           </button>

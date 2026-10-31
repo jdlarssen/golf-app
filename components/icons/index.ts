@@ -18,7 +18,7 @@ export {
   KolleIcon,
   KalenderIcon,
   ReplayIcon,
-  SparkleIcon,
   FormatsIcon,
   FlammeIcon,
+  ChevronRightIcon,
 } from './Icons';

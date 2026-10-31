@@ -476,7 +476,7 @@ function RejectModal({
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-primary-soft"
             >
               {t('rejectCancelButton')}
             </button>

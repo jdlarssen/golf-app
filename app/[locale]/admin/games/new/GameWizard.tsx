@@ -928,7 +928,7 @@ function WizardBody({
   // #2459: bare et nytt oppsett lagres lokalt. Et serverutkast (edit-draft) og
   // de øvrige redigeringsflatene har raden i databasen som fasit.
   const persists = storageKey !== null && mode.kind === 'create';
-  // #2459: «✓ Lagret som utkast» står bare når siste skriving faktisk gikk.
+  // #2459: «Lagret som utkast» står bare når siste skriving faktisk gikk.
   const [savedOk, setSavedOk] = useState(false);
   // Initialisert til snapshot-en ved mount: å bare ÅPNE veiviseren skal ikke
   // legge igjen et utkast — først når arrangøren faktisk endrer noe.
@@ -2148,7 +2148,7 @@ function WizardTop({
   notice?: ReactNode;
   /** #1837: fokusmål ved auto-videre — se `handleIntentSelect`. */
   titleRef: RefObject<HTMLHeadingElement | null>;
-  /** #2459: «✓ Lagret som utkast» under tittelen. */
+  /** #2459: «Lagret som utkast» under tittelen. */
   saved: boolean;
 }) {
   const t = useTranslations('wizard');

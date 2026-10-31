@@ -45,7 +45,7 @@ export interface BingoBangoBongoHoleCard {
    * registrert ennå.» i stedet for radene.
    */
   pending: boolean;
-  /** Én spiller tok alle tre: «★ Feiet» i hodet. Aldri på et hull som venter. */
+  /** Én spiller tok alle tre: «Feiet» i hodet. Aldri på et hull som venter. */
   sweptAll: boolean;
   /** De tre prestasjonene i fast rekkefølge. Tom på et hull som venter. */
   rows: BingoBangoBongoHoleCardRow[];

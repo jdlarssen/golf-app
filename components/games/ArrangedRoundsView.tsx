@@ -21,6 +21,7 @@ import {
 } from '@/lib/i18n/format';
 import { blockReasonText, type NotificationTranslator } from '@/lib/notifications/cardContent';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { ChevronRightIcon } from '@/components/icons';
 
 /** Admin rows carry the format, for `showMode`. */
 type ViewGame = ArrangedGame & { game_mode?: GameMode; mode_config?: GameModeConfig };
@@ -58,7 +59,7 @@ export function ArrangedRoundsView({
   locale: AppLocale;
   /** The room shows the first three (#2493). */
   upcomingLimit?: number;
-  /** With more planned rounds than `upcomingLimit`: «Alle {n} →» in «Neste» leads here. */
+  /** With more planned rounds than `upcomingLimit`: «Alle {n}» in «Neste» leads here. */
   upcomingAllHref?: string;
   /** `ModeChip` under each live and upcoming row (`/admin/games`). */
   showMode?: boolean;
@@ -152,8 +153,7 @@ export function ArrangedRoundsView({
                   data-testid="arranged-next-all"
                   className="tap-extend text-xs font-semibold leading-[normal] text-primary [--tap-extend:-15px_-8px]"
                 >
-                  {`${t('upcomingAll', { n: rounds.upcoming.length })} `}
-                  <span className="font-[system-ui]">→</span>
+                  {t('upcomingAll', { n: rounds.upcoming.length })}
                 </SmartLink>
               ) : null
             }
@@ -197,9 +197,7 @@ export function ArrangedRoundsView({
         >
           {/* One string, one text run: split text nodes shape a hair differently. */}
           <span>{`${t('drafts', { n: rounds.drafts.count })} · ${t('draftsHint')}`}</span>
-          <span aria-hidden className="text-[18px] leading-[normal] text-muted">
-            ›
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </SmartLink>
       )}
 
@@ -212,13 +210,7 @@ export function ArrangedRoundsView({
             data-count={rounds.finished.count}
             className="inline-flex min-h-11 items-center text-sm font-semibold leading-[normal] text-primary underline"
           >
-            {/* One flex item, so the space before the arrow stays. Inter has no
-                «→»: the artboard draws it with system-ui, while our stack would
-                fall back to Arial («Inter Fallback»). */}
-            <span>
-              {`${t('finishedLink', { n: rounds.finished.count })} `}
-              <span className="font-[system-ui]">→</span>
-            </span>
+            {t('finishedLink', { n: rounds.finished.count })}
           </SmartLink>
         </div>
       )}
@@ -350,9 +342,7 @@ function UpcomingRow({
         </span>
         {modeChip}
       </span>
-      <span aria-hidden className="text-[18px] leading-[normal] text-muted">
-        ›
-      </span>
+      <ChevronRightIcon className="shrink-0 text-muted" />
     </SmartLink>
   );
 }

@@ -17,7 +17,7 @@
 //     setningen, ikke lenka, ikke solo-knappen, og ikke flight-knappen
 //     (#2200).
 //  2. **Et kort som kan leveres, kan også rettes (#2220).** «Rediger hullene»
-//     tar spilleren til hull 1, som nettsidens «← Rediger». Uten den var et
+//     tar spilleren til hull 1, som nettsidens «Rediger». Uten den var et
 //     avvist, fullt kort en blindvei: scorekortet var eneste stopp, og radene
 //     er ren visning.
 //  3. **Lever-knappen er sperret til køen er lest (#2219).** Kø-vakta (#668)

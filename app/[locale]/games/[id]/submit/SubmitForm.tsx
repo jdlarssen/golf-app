@@ -175,7 +175,7 @@ export function SubmitForm({
           aria-disabled="true"
           aria-describedby={TEE_SHOT_SHORT_BOX_ID}
           onClick={() => document.getElementById(TEE_SHOT_SHORT_BOX_ID)?.focus()}
-          className="inline-flex min-h-[44px] w-full cursor-not-allowed items-center justify-center rounded-full bg-meter-track px-[18px] py-2.5 font-medium tracking-tight text-muted"
+          className="inline-flex min-h-[44px] w-full cursor-not-allowed items-center justify-center rounded-full bg-meter-track px-[18px] py-2.5 font-medium text-muted"
         >
           {label ?? t('submitButton')}
         </button>

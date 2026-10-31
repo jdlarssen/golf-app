@@ -112,7 +112,7 @@ describe('sendInviteNotification', () => {
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til spillet <em>Stiklestad 25. mai</em> på Tørny."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til spillet <span style="font-weight:600;">Stiklestad 25. mai</span> på Tørny."`);
   });
 
   it('med gameName + gameMode: viser modus-hint (navn + sammendrag + lenke) (#309)', async () => {
@@ -163,7 +163,7 @@ describe('sendInviteNotification', () => {
       gameName: '<script>alert("x")</script>',
     });
     expect(payload.subject).toMatchInlineSnapshot(`"Du er invitert til <script>alert("x")</script> på Tørny"`);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til spillet <em>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</em> på Tørny."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til spillet <span style="font-weight:600;">&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</span> på Tørny."`);
     // Plain-text-grenen bevarer rå-strengen siden den ikke rendres som HTML.
     expect(payload.text).toMatchInlineSnapshot(`
       "Du er invitert til <script>alert("x")</script> på Tørny
@@ -217,7 +217,7 @@ describe('sendInviteNotification', () => {
       Tørny — fire up your golf tournament in a couple of minutes.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> has invited you to <em>Stiklestad 25. mai</em> on Tørny."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> has invited you to <span style="font-weight:600;">Stiklestad 25. mai</span> on Tørny."`);
   });
 
   it('locale en, med gameMode: engelsk modus-hint + /en/-lenker', async () => {

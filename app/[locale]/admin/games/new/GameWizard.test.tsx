@@ -2021,7 +2021,7 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
 });
 
 // #2459: utkastet lagres av seg selv i localStorage, per bruker, og bærer
-// lenken «Fortsett» åpner. Merket «✓ Lagret som utkast» står bare når siste
+// lenken «Fortsett» åpner. Merket «Lagret som utkast» står bare når siste
 // skriving gikk.
 describe('GameWizard — #2459 autolagring', () => {
   const KEY = wizardDraftStorageKey(USER_ID, '/');
@@ -2043,12 +2043,12 @@ describe('GameWizard — #2459 autolagring', () => {
     expect(window.localStorage.getItem(KEY)).toBeNull();
   });
 
-  it('viser «✓ Lagret som utkast» etter første endring', async () => {
+  it('viser «Lagret som utkast» etter første endring', async () => {
     renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     pickKompisIntent();
 
     expect(await screen.findByTestId('wizard-draft-saved')).toHaveTextContent(
-      '✓ Lagret som utkast',
+      'Lagret som utkast',
     );
   });
 

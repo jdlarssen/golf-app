@@ -141,8 +141,7 @@ function FormBody({
         </p>
       )}
       {invite ? (
-        // `!`: Tailwind writes tracking-normal before the Button base's
-        // tracking-tight; box-shadow is `none` outright, as on the artboard.
+        // `!`: box-shadow is `none` outright, as on the artboard.
         <Button
           type="submit"
           className="w-full h-[52px] !font-semibold !tracking-normal ![box-shadow:none]"

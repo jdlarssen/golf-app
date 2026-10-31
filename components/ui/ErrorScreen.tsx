@@ -47,7 +47,7 @@ export function ErrorScreen({
           body={t('body')}
           note={
             error.digest && (
-              <p className="font-mono text-[11px] tracking-tight text-muted">
+              <p className="font-mono text-[11px] text-muted">
                 {t('reference', { digest: error.digest })}
               </p>
             )

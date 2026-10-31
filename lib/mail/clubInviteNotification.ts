@@ -46,7 +46,7 @@ export async function sendClubInviteNotification(
     name: escapeHtml(invitedByName),
     club: escapeHtml(clubName),
     strong: (c) => `<strong>${c}</strong>`,
-    em: (c) => `<em>${c}</em>`,
+    em: (c) => `<span style="font-weight:600;">${c}</span>`,
   });
   const introLineText = t.markup('clubInvite.intro', {
     name: invitedByName,

@@ -8,7 +8,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
-import { BaneIcon } from '@/components/icons';
+import { BaneIcon, ChevronRightIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -179,9 +179,7 @@ async function CoursesLedgerSkeleton() {
               <Skeleton className="mt-1 h-3 w-2/5" delay={i * 90 + 30} />
             </div>
             <Skeleton className="ml-auto h-4 w-8" delay={i * 90 + 60} />
-            <span aria-hidden className="text-[14px] text-muted">
-              ›
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </div>
         ))}
       </div>

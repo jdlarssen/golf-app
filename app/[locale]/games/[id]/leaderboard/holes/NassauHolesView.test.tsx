@@ -144,7 +144,7 @@ describe('NassauHolesView', () => {
     const back = screen.getByTestId('nassau-holes-back9');
     const total = screen.getByTestId('nassau-holes-total18');
 
-    // Bolk-vinner markert i header (champagne ★ + navn).
+    // Bolk-vinner markert i header (champagne pille + navn).
     expect(within(front).getByTestId('nassau-holes-front9-winner').textContent)
       .toContain('Jørgen');
     expect(within(back).getByTestId('nassau-holes-back9-winner').textContent)

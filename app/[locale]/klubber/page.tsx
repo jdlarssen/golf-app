@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SectionError } from '@/components/ui/SectionError';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * /klubber — the user's club list.
@@ -73,9 +74,7 @@ export default async function KlubbListePage() {
                     <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
                       {tRoles(club.role)}
                     </span>
-                    <span aria-hidden className="text-muted">
-                      →
-                    </span>
+                    <ChevronRightIcon className="shrink-0 text-muted" />
                   </div>
                 </div>
               </Card>

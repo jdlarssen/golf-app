@@ -40,7 +40,7 @@
 // fryses. Lag-formatene med én ball gir ingen makkere i den delte regelen.
 //
 // #2220: et kort som kan leveres, kan også rettes. «Rediger hullene» tar
-// spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
+// spilleren til hull 1, som nettsidens «Rediger». Uten den var et avvist,
 // fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
 // er ren visning.
 //

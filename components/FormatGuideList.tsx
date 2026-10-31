@@ -26,7 +26,7 @@ export type FormatGuideEntry = {
 
 /**
  * Delt format-guide-liste (#498). Brukes av oppslagssiden /spillformater
- * (`withDetailLinks`) og av «?»-arket i veiviseren (uten «Les mer →», med
+ * (`withDetailLinks`) og av «?»-arket i veiviseren (uten «Les mer», med
  * `cardIdPrefix` så arket kan scrolle til et bestemt format).
  *
  * Ren presentasjon — ingen server-only-import, så den kan også havne i
@@ -49,7 +49,7 @@ export function FormatGuideList({
   showSections = false,
 }: {
   entries: FormatGuideEntry[];
-  /** Vis «Les mer →»-lenke til detaljsiden. Arket setter dette false. */
+  /** Vis «Les mer»-lenke til detaljsiden. Arket setter dette false. */
   withDetailLinks?: boolean;
   /** Rute-prefiks for detalj-lenkene. */
   routeBase?: string;

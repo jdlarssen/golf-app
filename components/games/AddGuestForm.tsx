@@ -99,7 +99,7 @@ export function AddGuestForm({ action, disabled = false }: Props) {
         <SubmitButton
           disabled={disabled}
           pendingLabel={t('submitPending')}
-          className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
+          className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
         >
           {t('submitButton')}
         </SubmitButton>

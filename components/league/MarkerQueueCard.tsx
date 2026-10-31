@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { ChevronRightIcon } from '@/components/icons';
 
 export type MarkerQueueRow = {
   key: string;
@@ -48,9 +49,7 @@ export function MarkerQueueCard({
                   </span>
                 </span>
                 <span className="shrink-0 font-sans text-sm font-medium text-primary">{reviewLabel}</span>
-                <span aria-hidden className="shrink-0 text-muted">
-                  ›
-                </span>
+                <ChevronRightIcon className="shrink-0 text-muted" />
               </SmartLink>
             </li>
           ))}

@@ -393,7 +393,7 @@ function storage(): Storage | null {
 
 /**
  * Skriv utkastet. Returnerer `true` bare når `setItem` gikk uten unntak, så
- * «✓ Lagret som utkast» aldri står der lagringen feilet (#2459).
+ * «Lagret som utkast» aldri står der lagringen feilet (#2459).
  */
 export function saveWizardDraft(
   key: string,

@@ -19,6 +19,7 @@ import {
   type GameSeats,
 } from '@/lib/games/terminliste';
 import { capDiscoveryPreview } from '@/lib/games/discoveryPreviewCap';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * «Funn turneringer»-seksjon på hjem-siden (#257). Vises når det faktisk
@@ -110,9 +111,7 @@ export function HomeDiscoverySection({
           <span className="font-sans text-sm font-medium text-text">
             {t('seeAllTournaments')}
           </span>
-          <span aria-hidden className="text-muted">
-            →
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </SmartLink>
       )}
     </section>

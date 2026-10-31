@@ -73,7 +73,7 @@ describe('sendClubInviteNotification', () => {
       "
     `);
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(
-      `"<strong>Jørgen</strong> har invitert deg til klubben <em>Stiklestad Golfklubb</em> i Tørny."`,
+      `"<strong>Jørgen</strong> har invitert deg til klubben <span style="font-weight:600;">Stiklestad Golfklubb</span> i Tørny."`,
     );
   });
 
@@ -86,7 +86,7 @@ describe('sendClubInviteNotification', () => {
       `"Du er invitert til <script>alert("x")</script> på Tørny"`,
     );
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(
-      `"<strong>Jørgen</strong> har invitert deg til klubben <em>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</em> i Tørny."`,
+      `"<strong>Jørgen</strong> har invitert deg til klubben <span style="font-weight:600;">&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</span> i Tørny."`,
     );
     // Plain-text-grenen bevarer rå-strengen siden den ikke rendres som HTML.
     expect(payload.text).toMatchInlineSnapshot(`
@@ -123,7 +123,7 @@ describe('sendClubInviteNotification', () => {
       "
     `);
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(
-      `"<strong>Jørgen</strong> has invited you to the club <em>Stiklestad Golfklubb</em> on Tørny."`,
+      `"<strong>Jørgen</strong> has invited you to the club <span style="font-weight:600;">Stiklestad Golfklubb</span> on Tørny."`,
     );
   });
 
@@ -156,7 +156,7 @@ describe('sendClubInviteNotification', () => {
                     Du er invitert til en klubb
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Jørgen</strong> har invitert deg til klubben <em>Stiklestad Golfklubb</em> i Tørny.
+                    <strong>Jørgen</strong> har invitert deg til klubben <span style="font-weight:600;">Stiklestad Golfklubb</span> i Tørny.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
                     For å bli med: gå til <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Da er du medlem med en gang.

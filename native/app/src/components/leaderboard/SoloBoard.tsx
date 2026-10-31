@@ -27,7 +27,6 @@ import {
   useTheme,
   type ThemeColors,
 } from '../../theme';
-import { withSystemArrows } from '../SystemArrow';
 
 /** Kolonnene i tegningen: plass 44, spiller, hull 46 og tallet 58, med 6 mellom. */
 const PLACE_W = 44;
@@ -339,7 +338,7 @@ export function BoardStrip({
           testID="board-strip-action"
         >
           <Text style={[styles.stripButtonText, { color: colors.onPrimary }]}>
-            {withSystemArrows(strip.action.label, '600')}
+            {strip.action.label}
           </Text>
         </Pressable>
       ) : null}

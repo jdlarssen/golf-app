@@ -237,7 +237,7 @@ export function TeamRegistrationForm({
         <GetTheApp />
         <a
           href={`/signup/${shortId}/team`}
-          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white hover:bg-primary-hover dark:text-bg"
+          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium text-white hover:bg-primary-hover dark:text-bg"
         >
           {t('goToTeamDashboard')}
         </a>
@@ -277,7 +277,7 @@ export function TeamRegistrationForm({
           field's name and was read twice with aria-describedby. */}
       <div>
         <label className="block">
-          <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
+          <span className="mb-1.5 block font-sans text-xs font-medium text-muted">
             {t('teamNameLabel')}
           </span>
           <input
@@ -294,7 +294,7 @@ export function TeamRegistrationForm({
             placeholder={t('teamNamePlaceholder')}
             aria-invalid={teamNameError ? true : undefined}
             aria-describedby={teamNameError ? teamNameErrorId : undefined}
-            className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
+            className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-text placeholder:text-muted focus:ring-2 ${
               teamNameError
                 ? 'border-danger focus:border-danger focus:ring-danger/20'
                 : 'border-border focus:border-primary focus:ring-primary/20'
@@ -424,7 +424,7 @@ export function TeamRegistrationForm({
                     aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
                     aria-describedby={slotError ? slotErrorId(idx) : undefined}
-                    className={`w-full rounded-xl border bg-surface px-3.5 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
+                    className={`w-full rounded-xl border bg-surface px-3.5 py-3 text-sm text-text placeholder:text-muted focus:ring-2 ${
                       slotError
                         ? 'border-danger focus:border-danger focus:ring-danger/20'
                         : 'border-border focus:border-primary focus:ring-primary/20'

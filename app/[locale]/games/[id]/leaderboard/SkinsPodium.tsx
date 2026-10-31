@@ -262,7 +262,7 @@ function PodiumStep({
         </p>
       )}
 
-      <p className="text-center font-serif text-[13px] font-medium leading-tight tracking-[-0.005em] text-text break-words">
+      <p className="text-center font-serif text-[13px] font-medium leading-tight text-text break-words">
         {displayName}
       </p>
 

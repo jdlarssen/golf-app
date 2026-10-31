@@ -3,6 +3,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { cupDayFinishedBadge, type FinishedEntry } from '@/lib/games/finishedEntries';
+import { ChevronRightIcon } from '@/components/icons';
 
 type CupDayEntry = Extract<FinishedEntry, { kind: 'cupDay' }>;
 
@@ -54,9 +55,7 @@ export function FinishedCupDayCard({ entry }: { entry: CupDayEntry }) {
             {t(badge.key as Parameters<typeof t>[0])}
           </span>
         ) : (
-          <span aria-hidden data-testid="finished-cupday-arrow" className="shrink-0 text-muted">
-            →
-          </span>
+          <ChevronRightIcon data-testid="finished-cupday-arrow" className="shrink-0 text-muted" />
         )
       }
     />

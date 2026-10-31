@@ -11,7 +11,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
-import { PinFlag, Laurel } from '@/components/icons';
+import { ChevronRightIcon, Laurel, PinFlag } from '@/components/icons';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip } from '@/components/ui/StatusChip';
@@ -482,9 +482,7 @@ async function GamesLedger({ view }: { view: LedgerView }) {
               <div className="text-right">
                 <StatusChip status={g.status} />
               </div>
-              <span aria-hidden className="text-[14px] text-muted">
-                ›
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </SmartLink>
           );
         })}
@@ -521,9 +519,7 @@ function GamesLedgerSkeleton() {
               <Skeleton className="mt-1 h-3 w-2/5" delay={i * 90 + 30} />
             </div>
             <Skeleton className="ml-auto h-5 w-24 rounded-full" delay={i * 90 + 60} />
-            <span aria-hidden className="text-[14px] text-muted">
-              ›
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </div>
         ))}
       </div>
