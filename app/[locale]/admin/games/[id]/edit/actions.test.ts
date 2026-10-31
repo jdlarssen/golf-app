@@ -627,10 +627,11 @@ describe('mode_config ranking on edit (#2625)', () => {
     expect(updatedModeConfig()).toMatchObject({ kind: 'texas_scramble', ranking: 'net_to_par' });
   });
 
-  it.each<{ kind: string; fields: Record<string, string> }>([
-    { kind: 'stableford', fields: { game_mode: 'stableford', stableford_team_size: '1' } },
-    { kind: 'nassau', fields: { game_mode: 'nassau', nassau_scoring: 'net' } },
-  ])('a draft that switches from texas to $kind is stamped too (#2625 part 2)', async ({ kind, fields }) => {
+  it.each<{ kind: string; fields: Record<string, string>; stamped: boolean }>([
+    // #2738: a points game ranks on points only and is never stamped.
+    { kind: 'stableford', fields: { game_mode: 'stableford', stableford_team_size: '1' }, stamped: false },
+    { kind: 'nassau', fields: { game_mode: 'nassau', nassau_scoring: 'net' }, stamped: true },
+  ])('a draft that switches from texas to $kind: stamped $stamped (#2625 part 2, #2738)', async ({ kind, fields, stamped }) => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // loadRole
       {
@@ -651,7 +652,8 @@ describe('mode_config ranking on edit (#2625)', () => {
       saveDraftAction('draft-1', fd({ name: 'Byttet format', side_tournament_enabled: 'false', ...fields })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(updatedModeConfig()).toMatchObject({ kind, ranking: 'net_to_par' });
+    expect(updatedModeConfig()).toMatchObject({ kind });
+    expect(updatedModeConfig().ranking).toBe(stamped ? 'net_to_par' : undefined);
   });
 
   it('a scheduled team strokeplay game without the flag never gets it on edit', async () => {
