@@ -240,13 +240,6 @@ export function computeLeaderboard(opts: {
   });
 }
 
-export function playerDisplayName(p: {
-  name: string;
-  nickname: string | null;
-}): string {
-  return p.nickname ? `${p.name} «${p.nickname}»` : p.name;
-}
-
 export function teamMembersLabel(players: LbPlayer[]): string {
   const names = players.map((p) =>
     p.nickname && p.nickname.length > 0 ? p.nickname : p.name.split(' ')[0],

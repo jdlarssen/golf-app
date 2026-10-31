@@ -24,9 +24,6 @@ export type RotationSlotRow = {
   flight_number: number;
 };
 
-/** The rotating-partner formats whose slot is drawn at start (#969). */
-export type RotationMode = 'wolf' | 'round_robin';
-
 /**
  * Allowed active-roster size for a rotation format, or `null` for any other
  * mode — a non-null result also means "draw rotation slots at start". Wolf

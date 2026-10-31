@@ -80,7 +80,7 @@ import {
 
 // Props-kontrakten (og defaultene) bor i `holeClientProps.ts`; re-eksportert
 // her fordi callsites og tester har importert dem herfra siden #1058.
-export type { ClientPlayer, HoleClientProps } from './holeClientProps';
+export type { HoleClientProps } from './holeClientProps';
 export { ONBOARDING_KEY } from './holeScreenState';
 
 const headerRowStyle: CSSProperties = {

@@ -10,10 +10,7 @@ import type {
   FormatWithMappings,
 } from './types';
 
-export {
-  MAPPING_INTENTS,
-} from './types';
-export type { MappingIntent, MappingEntry, FormatWithMappings };
+export type { MappingIntent, FormatWithMappings };
 
 /**
  * Admin-view-helper: henter ALLE formats sammen med ALLE mapping-rader (inkl.
