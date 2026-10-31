@@ -300,7 +300,6 @@ async function ProfileFormCard({
       </div>
       <ProfileFormBody
         email={profile.email}
-        handicapUpdatedAt={profile.handicap_updated_at}
         initial={{
           name: profile.name ?? '',
           nickname: profile.nickname ?? '',

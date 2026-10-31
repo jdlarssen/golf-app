@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/i18n/format';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SegmentedField } from '@/components/ui/SegmentedField';
-import { isHandicapStale } from '@/lib/handicap/staleness';
 import { fromSignedHcp } from '@/lib/handicap/sign';
 import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
 import { HCP_MAX } from '@/lib/users/profileInput';
@@ -26,8 +24,6 @@ type InitialValues = {
 type Props = {
   email: string;
   initial: InitialValues;
-  /** ISO-streng for sist handicap-oppdatering, eller null. */
-  handicapUpdatedAt?: string | null;
   action: (formData: FormData) => void;
   /**
    * Optional same-origin path the action should redirect to on success.
@@ -69,7 +65,6 @@ function splitInitialHcp(signed: string): { magnitude: string; isPlus: boolean }
 export function ProfileFormBody({
   email,
   initial,
-  handicapUpdatedAt,
   action,
   next,
 }: Props) {
@@ -121,19 +116,11 @@ export function ProfileFormBody({
     gender !== initial.gender ||
     level !== initial.level;
 
-  // Ferskhets-/bekreftelses-linja under hcp-raden. Når plusshandicap er på,
-  // bekrefter vi hva som lagres (sikkerhetsnett mot stille feil-oppsett).
+  // Bekreftelses-linja under hcp-raden: når plusshandicap er på, bekrefter vi
+  // hva som lagres (sikkerhetsnett mot stille feil-oppsett). Ferskheten står
+  // én gang, i profilhodet over skjemaet (#2709).
   const magnitudeNum = Number.parseFloat(magnitude.replace(',', '.'));
   const hasMagnitude = Number.isFinite(magnitudeNum);
-  const stale = isHandicapStale(handicapUpdatedAt);
-  const oppdatertDato =
-    handicapUpdatedAt && !stale
-      ? formatDate(handicapUpdatedAt, locale, {
-          timeZone: 'Europe/Oslo',
-          day: 'numeric',
-          month: 'long',
-        })
-      : null;
 
   const GENDER_OPTIONS = [
     { value: 'mens', label: t('genderMale') },
@@ -221,14 +208,6 @@ export function ProfileFormBody({
             {formatGolfboxHcp(magnitudeNum, true, locale)}
           </span>{' '}
           {t('savedAsSuffix')}
-        </p>
-      ) : stale ? (
-        <p className="-mt-1 text-xs text-warning-text">
-          {t('staleWarning')}
-        </p>
-      ) : oppdatertDato ? (
-        <p className="-mt-1 text-xs text-muted">
-          {t('updatedPrefix')} {oppdatertDato}
         </p>
       ) : null}
 
