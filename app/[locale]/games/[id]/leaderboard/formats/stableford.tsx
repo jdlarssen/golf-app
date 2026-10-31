@@ -22,7 +22,7 @@ import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { pointsHeadline } from '@/lib/leaderboard/vsPar';
-import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { leagueAlonePlayer } from '@/lib/games/finishedResultBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
@@ -304,6 +304,8 @@ export async function renderStableford(opts: {
     // duell-kortet beholdes også med sideturnering på (#589).
     // mainContent tar `chromeless` så samme reveal kan rendres frittstående
     // ELLER inni sideturnerings-fanen.
+    // #2712: the one player of a league round played alone, or null.
+    const alonePlayer = leagueAlonePlayer(result.players, game.league_round_id != null);
     let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
     if (result.players.length === 2) {
       const order = gwp.players.map((p) => p.user_id);
@@ -351,11 +353,11 @@ export async function renderStableford(opts: {
           footerSlot={footerSlot}
         />
       );
-    } else if (isLeagueFieldAlone(game.league_round_id != null, result.players.length)) {
+    } else if (alonePlayer) {
       // #2712 (orchestrator 31.10, after the owner's rule): a league round
       // played alone has no place and no win, so the points and «Godkjent»
       // stand where the podium would.
-      const [only] = result.players;
+      const only = alonePlayer;
       const info = playersById.get(only.userId);
       const headline = pointsHeadline(result.ranking, only);
       const tSolo = await getTranslations('leaderboard.soloStableford');
