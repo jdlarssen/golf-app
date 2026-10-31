@@ -21,6 +21,14 @@ describe('DemoGame', () => {
     expect(screen.getAllByTestId('demo-opponent-row')).toHaveLength(2);
     expect(screen.getAllByTestId('rail-option')).toHaveLength(5);
     expect(screen.getByTestId('rail-other')).toBeInTheDocument();
+    // #2735: som appen viser knappene og radene bare slag, ingen poeng.
+    for (const option of screen.getAllByTestId('rail-option')) {
+      expect(option.textContent).not.toMatch(/\d p$/);
+      expect(option.getAttribute('aria-label')).not.toMatch(/poeng/);
+    }
+    for (const row of screen.getAllByTestId('demo-opponent-row')) {
+      expect(row.textContent).not.toMatch(/\d p$/);
+    }
     expect(screen.getByTestId('demo-hint')).toBeInTheDocument();
     expect(screen.getByTestId('demo-skip')).toHaveAttribute('href', '/login?next=%2F');
 

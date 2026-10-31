@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { buttonClasses } from '@/components/ui/Button';
 import { railStrokes, strokeTerm } from '@/lib/scorecard/scoreRail';
-import { stablefordPointsForCard } from '@/lib/scorecard/railPoints';
 
 export interface DemoRailProps {
   name: string;
@@ -127,7 +126,8 @@ const skipStyle: CSSProperties = {
  * result before the tap, «Annet», and the way out. After a tap it shrinks to
  * «Neste hull». Its own component rather than the hole page's ScoreRail,
  * which looks different (#2281 contract, O2); the numbers come from the same
- * rules (`railStrokes`, `strokeTerm`, `stablefordPointsForCard`).
+ * rules (`railStrokes`, `strokeTerm`). Like the app, a button shows only the
+ * term against par, no points (#2735, the owner's answer).
  *
  * The panel is fixed to the screen's bottom edge, so a spacer in the page
  * keeps the bubble and the last row clear of it.
@@ -156,17 +156,6 @@ export function DemoRail(props: DemoRailProps): JSX.Element {
     // The demo says «Dobbel»/«Trippel» as its artboard does (#2281, O7).
     if (term === 'doubleBogey' || term === 'tripleBogey') return t(`term.${term}`);
     return th(`scoreRail.term.${term}`, { n: strokes - par });
-  }
-
-  function pointsFor(strokes: number): number {
-    return (
-      stablefordPointsForCard({
-        card: { score: strokes, extraStrokes },
-        par,
-        gameMode: 'stableford',
-        isStableford: true,
-      }) ?? 0
-    );
   }
 
   return (
@@ -199,16 +188,14 @@ export function DemoRail(props: DemoRailProps): JSX.Element {
                 const selected = score === strokes;
                 const isPar = strokes === par;
                 const term = termText(strokes);
-                const points = pointsFor(strokes);
                 return (
                   <button
                     key={strokes}
                     type="button"
                     data-testid="rail-option"
                     data-strokes={strokes}
-                    data-points={points}
                     aria-pressed={selected}
-                    aria-label={th('scoreRail.buttonAriaLabelPoints', { strokes, name, term, points })}
+                    aria-label={th('scoreRail.buttonAriaLabel', { strokes, name, term })}
                     onClick={() => onPick(strokes)}
                     className={selected ? 'bg-primary text-bg-tint dark:text-bg' : 'bg-surface text-text'}
                     style={{
@@ -219,7 +206,7 @@ export function DemoRail(props: DemoRailProps): JSX.Element {
                   >
                     <span style={numberStyle}>{strokes}</span>
                     <span style={detailStyle} className={selected ? undefined : 'text-muted'}>
-                      {th('scoreRail.detailPoints', { term, points })}
+                      {term}
                     </span>
                   </button>
                 );
