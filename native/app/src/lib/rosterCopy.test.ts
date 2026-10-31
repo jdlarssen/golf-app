@@ -135,6 +135,7 @@ const SELF_WITHDRAW_REASON_MAP = {
   game_locked: true,
   withdrawn_by_other: true,
   captain_has_team: true,
+  card_delivered: true,
   withdraw_failed: true,
 } as const satisfies Record<SelfWithdrawFailure, true>;
 
