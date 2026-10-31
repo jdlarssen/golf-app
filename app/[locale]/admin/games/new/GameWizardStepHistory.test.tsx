@@ -611,6 +611,17 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     expect(
       (document.querySelector('input[type=hidden][name=texas_team_handicap_pct]') as HTMLInputElement).value,
     ).toBe('26.67');
+
+    // #2457: a value set in the sheet and closed is still sent, and the row
+    // says it. 60 % of the average for three players = 20 % of the sum.
+    fireEvent.change(input, { target: { value: '60' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ferdig' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.getElementById('texas_team_handicap_pct__input')).toBeNull();
+    expect(
+      (document.querySelector('input[type=hidden][name=texas_team_handicap_pct]') as HTMLInputElement).value,
+    ).toBe('20');
+    expect(screen.getByTestId('ready-setting-handicap')).toHaveTextContent('60 % av lagets snitt');
   });
 });
 
