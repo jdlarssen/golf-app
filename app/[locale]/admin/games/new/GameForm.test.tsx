@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { buildEditFormInitialValues, type EditGameRow } from '@/lib/games/editGameInitialValues';
+import { setTeeOff } from '@/tests/courseAndTimeDriver';
 
 // Pre-refactor regresjons-net for GameForm. Disse testene fanger dagens
 // players-first-flow + best-ball-grid-default slik at vi vet om
@@ -2103,10 +2104,10 @@ describe('GameForm — one part of «Rediger spill» (#2322)', () => {
     );
 
     expect(screen.getByRole('heading', { level: 2, name: 'Bane' })).toBeInTheDocument();
-    expect(container.querySelector('#course_id')).toBeVisible();
-    expect(container.querySelector('#tee_box_id')).toBeVisible();
+    expect(screen.getByTestId('course-search')).toBeVisible();
+    expect(screen.getByTestId('tee-buttons')).toBeVisible();
     expect(container.querySelector('#name')).not.toBeVisible();
-    expect(container.querySelector('#scheduled_tee_off_at')).not.toBeVisible();
+    expect(screen.getByRole('radiogroup', { name: 'Dag', hidden: true })).not.toBeVisible();
     // The other panels are mounted but hidden, never Disclosures.
     expect(container.querySelector('details')).toBeNull();
 
@@ -2195,7 +2196,7 @@ describe('GameForm — «Si fra til gjengen» when the tee-off moves (#2480)', (
     expect([screen.queryByTestId('notify-moved'), mirror()]).toEqual([null, '0']);
 
     const moved = FUTURE_TEE_OFF.replace(/T(\d\d)/, (_m, h: string) => `T${String((Number(h) + 1) % 24).padStart(2, '0')}`);
-    fireEvent.change(container.querySelector('#scheduled_tee_off_at')!, { target: { value: moved } });
+    setTeeOff(moved);
 
     const toggle = within(screen.getByTestId('notify-moved')).getByRole('switch', { name: 'Si fra til gjengen' });
     expect([(toggle as HTMLInputElement).checked, mirror()]).toEqual([true, '1']);
@@ -2223,9 +2224,88 @@ describe('GameForm — «Si fra til gjengen» when the tee-off moves (#2480)', (
         view="navn-og-tid"
       />,
     );
-    fireEvent.change(container.querySelector('#scheduled_tee_off_at')!, { target: { value: FUTURE_TEE_OFF } });
+    setTeeOff(FUTURE_TEE_OFF);
 
     expect(screen.queryByTestId('notify-moved')).toBeNull();
     expect((container.querySelector('input[type="hidden"][name="notify_moved"]') as HTMLInputElement).value).toBe('0');
+  });
+});
+
+describe('GameForm — «Bane» and «Navn og tid» keep what the game has (#2448)', () => {
+  const TWO_COURSES: CourseOption[] = [
+    ...COURSES,
+    {
+      id: 'course-2',
+      name: 'Byneset North',
+      tee_boxes: [
+        { id: 'tee-2a', name: 'Gul', color: 'yellow', has_mens: true, has_ladies: true, has_juniors: false },
+        { id: 'tee-2b', name: 'Rød', color: 'red', has_mens: false, has_ladies: true, has_juniors: true },
+      ],
+    },
+  ];
+  const RECENT = [{ courseId: 'course-1', seasonRounds: 2, lastPlayedDay: '2026-10-24' }];
+
+  function renderEdit(view: 'bane' | 'navn-og-tid', values: { course_id: string; tee_box_id: string; scheduled_tee_off_at: string }) {
+    return render(
+      <GameForm
+        courses={TWO_COURSES}
+        players={[makePlayer('u0', 'Første Spiller')]}
+        recentCourses={RECENT}
+        teeOffNow="2026-11-04T08:30"
+        initialValues={{
+          name: 'Onsdagsrunden',
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+          ...values,
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+        view={view}
+      />,
+    );
+  }
+
+  it('a course outside your recent ones stands first as «Valgt», with its tee pressed', () => {
+    renderEdit('bane', { course_id: 'course-2', tee_box_id: 'tee-2b', scheduled_tee_off_at: '2026-11-11T13:30' });
+    const cards = screen.getAllByTestId('recent-course-card');
+    expect(cards.map((c) => [c.dataset.courseId, c.getAttribute('aria-pressed')])).toEqual([
+      ['course-2', 'true'],
+      ['course-1', 'false'],
+    ]);
+    expect(cards[0]).toHaveTextContent('Valgt');
+    const pressed = screen.getAllByTestId('tee-button').filter((b) => b.getAttribute('aria-pressed') === 'true');
+    expect(pressed.map((b) => b.dataset.teeId)).toEqual(['tee-2b']);
+  });
+
+  it('a tee-off outside the quick picks marks «Annen dag» and «Annen tid» with its values', () => {
+    renderEdit('navn-og-tid', { course_id: 'course-2', tee_box_id: 'tee-2b', scheduled_tee_off_at: '2026-11-11T13:30' });
+    expect(screen.getByRole('radio', { name: 'Annen dag' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Annen tid' })).toBeChecked();
+    expect(screen.getByLabelText('Velg dag')).toHaveValue('2026-11-11');
+    expect(screen.getByLabelText('Velg tid')).toHaveValue('13:30');
+  });
+
+  it('a tee archived since the game was made: no button pressed, and the save posts the stored tee as before', () => {
+    const { container } = renderEdit('bane', {
+      course_id: 'course-2',
+      tee_box_id: 'tee-archived',
+      scheduled_tee_off_at: '2026-11-11T13:30',
+    });
+    expect(screen.getAllByTestId('tee-button').some((b) => b.getAttribute('aria-pressed') === 'true')).toBe(false);
+    const data = new FormData(container.querySelector('form') as HTMLFormElement);
+    expect([data.get('course_id'), data.get('tee_box_id'), data.get('scheduled_tee_off_at')]).toEqual([
+      'course-2',
+      'tee-archived',
+      '2026-11-11T13:30',
+    ]);
+  });
+
+  it('a new course and tee reach the save', () => {
+    const { container } = renderEdit('bane', { course_id: 'course-1', tee_box_id: 'tee-1', scheduled_tee_off_at: '2026-11-11T13:30' });
+    fireEvent.focus(screen.getByTestId('course-search'));
+    fireEvent.click(screen.getByRole('option', { name: 'Byneset North' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Gul/ }));
+    const data = new FormData(container.querySelector('form') as HTMLFormElement);
+    expect([data.get('course_id'), data.get('tee_box_id')]).toEqual(['course-2', 'tee-2a']);
   });
 });

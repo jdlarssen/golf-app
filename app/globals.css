@@ -286,6 +286,10 @@
   --tee-red: #c8423b;
   --tee-blue: #3a6fb5;
   --tee-orange: #e88a3a;
+  /* A tee whose colour is unknown (#2448): the neutral dot on the tee
+   * buttons, the artboard's --neutral. Unlike the colours above it is not a
+   * physical colour, so the dark blocks below dim it with the night artboard. */
+  --tee-none: #9a8f7c;
 
   /* Leaderboard-backdrop opacity — fairway-vinje på state #4. Lys modus
    * holder seg svært diskret; mørk modus får litt mer luft for å lese
@@ -444,6 +448,7 @@
 
     /* New-game wizard (#2282) — see :root. */
     --slot-dashed: #8a8170;
+    --tee-none: #8a8170;
     --warning-soft: #2e2a1c;
     --par-cell: #243429;
     --save-disabled-fg: #b0a796;
@@ -587,6 +592,7 @@
   --meter-track: #243429;
   --dashed-cta: #5c6358;
   --slot-dashed: #8a8170;
+  --tee-none: #8a8170;
   --warning-soft: #2e2a1c;
   --par-cell: #243429;
   --save-disabled-fg: #b0a796;
@@ -690,6 +696,7 @@
   --color-tee-red: var(--tee-red);
   --color-tee-blue: var(--tee-blue);
   --color-tee-orange: var(--tee-orange);
+  --color-tee-none: var(--tee-none);
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-inter);

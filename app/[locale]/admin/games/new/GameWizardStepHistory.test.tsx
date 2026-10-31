@@ -4,6 +4,7 @@ import { Activity, type ComponentProps } from 'react';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
+import { chooseCourse } from '@/tests/courseAndTimeDriver';
 
 // #1380: steg-navigasjonen skriver URL-en på to helt ulike måter, og det er
 // nettopp skillet som må testes:
@@ -834,7 +835,7 @@ describe('GameWizard — #2485 ?bane= velger banen og forsvinner fra adressen', 
     rerender(element());
 
     // The organiser changes the course by hand, then comes back with course-2 again.
-    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    chooseCourse('course-1');
     expect(courseInput().value).toBe('course-1');
     searchString = 'step=3&bane=course-2';
     rerender(element());
