@@ -524,7 +524,7 @@
     "status": {
       "requested": "Friend request sent.",
       "invited": "Invitation sent to {email}.",
-      "accepted": "You're friends now!",
+      "accepted": "You're friends now",
       "already_friends": "You're already friends.",
       "already_pending": "The request has already been sent.",
       "declined": "The request was declined.",
@@ -552,7 +552,7 @@
     "removeConfirmLabel": "Remove friend",
     "removePending": "Removing …",
     "cancelLabel": "Cancel",
-    "copiedLabel": "Copied!",
+    "copiedLabel": "Copied",
     "copyPromptFallback": "Copy the link:",
     "addEmailLabel": "Email",
     "addEmailPlaceholder": "friend@email.com",
@@ -2261,7 +2261,7 @@
       "withdrawnByOrganiserBody": "Your scores don't count in the standings. If this is a mistake, talk to the organiser.",
       "undoWithdraw": "Undo",
       "undoWithdrawPending": "Undoing …",
-      "leaderboardButton": "🏆 View leaderboard →",
+      "leaderboardButton": "View leaderboard →",
       "revansjeButton": "Rematch?",
       "hullForHull": "Hole by hole",
       "leaderboard": "Leaderboard",
@@ -2720,7 +2720,7 @@
       "none": "Nobody is invited yet. Go to the game to add players.",
       "share": "Share in the group chat",
       "copy": "Copy link",
-      "copied": "Copied!",
+      "copied": "Copied",
       "copyFailed": "Couldn't copy the link. Try again.",
       "calendar": "Add to calendar",
       "goToGame": "Go to the game",
@@ -2886,7 +2886,7 @@
     "greenPin": {
       "prompt": "Standing by the green? Save the spot",
       "saving": "Saving…",
-      "thanks": "Spot saved — thanks!",
+      "thanks": "Spot saved, thanks",
       "weakGps": "The GPS signal is too weak right now",
       "denied": "Couldn't access your location",
       "failed": "Couldn't save the spot — try again"
@@ -3039,7 +3039,7 @@
         "paymentSentence": "{from} pays {to} {amount}",
         "copyHeading": "Settlement: {game} ({mode})",
         "copyButton": "Copy to the group chat",
-        "copied": "Copied!",
+        "copied": "Copied",
         "copyFailed": "Couldn't copy. Try again.",
         "disclaimer": "Tørny doesn't hold the money. You settle up yourselves."
       },
@@ -3346,7 +3346,7 @@
       "kicker": "LIVE LEADERBOARD",
       "heading": "Gross · after {count} {count, plural, one {hole} other {holes}}",
       "description": "Best-ball gross. The final standings are revealed when the round is finished.",
-      "pullquote": "🤫 The winner is revealed when the round is done"
+      "pullquote": "The winner is revealed when the round is done"
     },
     "revealHidden": {
       "kicker": "HIDDEN",
@@ -3749,7 +3749,7 @@
     "fieldHelper": "Max 2000 characters. We read everything.",
     "submitLabel": "Submit",
     "submitPending": "Sending …",
-    "successMessage": "Thanks! We've received your idea.",
+    "successMessage": "Thanks, we've received your idea.",
     "sentFollowUp": "We look at every suggestion. If we build yours, you'll hear from us.",
     "errorEmpty": "Please write something before submitting.",
     "coursePrefill": "About the course {name}: "
@@ -4130,13 +4130,13 @@
         "flightLagN": "Flight {flight} · Team {team} · ",
         "sideLagSuffix": "Side {n} · ",
         "lagSuffix": "Team {n} · ",
-        "pendingApproval": "⏳ Awaiting approval",
+        "pendingApproval": "Awaiting approval",
         "approved": "Approved",
         "statusWithdrawn": "Withdrawn",
         "statusNotSubmitted": "Not submitted",
-        "statusPlaying": "⏳ Playing",
+        "statusPlaying": "Playing",
         "statusScheduled": "Enrolled",
-        "statusWaiting": "⏳ Waiting",
+        "statusWaiting": "Waiting",
         "statusSubmitted": "Submitted",
         "undoWithdraw": "Undo",
         "withdrawLink": "Withdraw",
@@ -4229,7 +4229,7 @@
         "scrollToScorecardsButton": "Go to submitted scorecards ↑",
         "viewStatusLink": "View player status",
         "viewStatusWithReminderLink": "View player status and send reminder →",
-        "leaderboardButton": "🏆 View leaderboard →",
+        "leaderboardButton": "View leaderboard →",
         "reopenSignupsButton": "Reopen signups",
         "closeSignupsButton": "Close signups",
         "gameFullBanner": "The game is full ({current} of {max}). Remove some players to invite more."
@@ -4426,6 +4426,7 @@
         },
         "sendingBusy": "Sending …",
         "remindRowButton": "Remind",
+        "reminderTargetLabel": "Gets the reminder:",
         "remindHoleConfirm": "Send {names} a reminder about {holeCount, plural, one {hole} other {holes}} {holes}?"
       },
       "signups": {
@@ -5387,7 +5388,7 @@
       "roundLabel": "Round",
       "windowExtended": "· Play window extended",
       "flightCount": "{count, plural, one {# flight} other {# flights}}",
-      "flaggedFlights": "⚠️ {count} {count, plural, one {flight} other {flights}} outside play window",
+      "flaggedFlights": "{count} {count, plural, one {flight} other {flights}} outside play window",
       "changeCourseLabel": "Change course / tee",
       "courseLabel": "Course",
       "courseNotSelected": "Not selected",
@@ -5583,7 +5584,7 @@
       "off": "The board is off",
       "hint": "Paste the table into your club's website or info screen. Anyone with the link can see it — no login needed.",
       "copySnippet": "Copy code for your website",
-      "copied": "Copied!"
+      "copied": "Copied"
     },
     "join": {
       "kicker": "Join a league",
@@ -6998,7 +6999,7 @@
     "liveFollowOff": "Live-follow is off",
     "liveFollowHint": "Anyone with the link can follow the tournament without logging in.",
     "shareLinkLabel": "Share live link",
-    "copiedLabel": "Copied!",
+    "copiedLabel": "Copied",
     "shareText": "Follow the tournament live in Tørny",
     "copyEmbedLabel": "Copy code for your website",
     "ctaLabel": "Create your own tournament for free",
@@ -7689,7 +7690,7 @@
     "nemesisWorst": "Most strokes on the hole: {strokes}",
     "rivalKicker": "Your rival",
     "rivalMet": "{count, plural, one {# round together} other {# rounds together}}",
-    "rivalRecord": "{wins} wins, {losses} losses, {ties} ties",
+    "rivalRecord": "{wins, plural, one {# win} other {# wins}}, {losses, plural, one {# loss} other {# losses}}, {ties, plural, one {# tie} other {# ties}}",
     "rivalUndecided": "None of the rounds produced a result.",
     "formKicker": "Peak form",
     "formStretchRounds": "{count, plural, one {Best stretch over # round} other {Best stretch over # rounds}}",
@@ -7841,7 +7842,7 @@
     "tvBody": "Open the link in the browser on the PC connected to the TV.",
     "tvLinkAria": "Link to the big screen",
     "copy": "Copy",
-    "copied": "Copied!",
+    "copied": "Copied",
     "copyError": "Could not copy. Select the link and copy it yourself.",
     "tvOffBody": "The live link is off for this game, and the big screen needs it.",
     "tvTurnOn": "Turn on the big screen",

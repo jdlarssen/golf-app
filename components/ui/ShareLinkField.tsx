@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 /**
  * Delt «vis lenke + kopier»-primitiv (#1803): readonly-felt med den absolutte
- * URL-en og en kopier-knapp med kort «Kopiert!»-bekreftelse. Feiler Clipboard
+ * URL-en og en kopier-knapp med kort «Kopiert»-bekreftelse. Feiler Clipboard
  * API-et (sjeldent: ikke-sikker kontekst) vises feilteksten, og lenken kan
  * kopieres manuelt fra feltet — onFocus markerer hele verdien.
  *

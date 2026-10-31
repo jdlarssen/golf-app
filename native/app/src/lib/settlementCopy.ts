@@ -35,7 +35,7 @@ export const SETTLEMENT_TEXT = {
   paymentSentence: '{from} betaler {to} {amount}',
   copyHeading: 'Oppgjør: {game} ({mode})',
   copyButton: 'Kopier til gruppechatten',
-  copied: 'Kopiert!',
+  copied: 'Kopiert',
   copyFailed: 'Klarte ikke å kopiere. Prøv igjen.',
   disclaimer: 'Tørny holder ikke på pengene. Dere gjør opp selv.',
 } as const;

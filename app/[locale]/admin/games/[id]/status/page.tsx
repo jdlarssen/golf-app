@@ -220,7 +220,7 @@ export default async function GameStatusPage({
   // never promise more reminders than the click sends.
   const preview = await previewReminder(id);
   const targetCount = preview.ok ? preview.targets : 0;
-  // #2041: ⚠️ marks exactly the players the count covers — teammates, guests
+  // #2041: the warning dot marks exactly the players the count covers — teammates, guests
   // and #1466 split-day players included — so the two cannot disagree.
   const targetUserIds = new Set(preview.ok ? preview.targetUserIds : []);
   const unconfirmedCount = players.filter(
@@ -377,7 +377,16 @@ export default async function GameStatusPage({
                     <p
                       className={`font-sans text-[12px] font-semibold ${meta.className}`}
                     >
-                      {isTarget && !isFinished ? '⚠️ ' : ''}
+                      {isTarget && !isFinished ? (
+                        <>
+                          <span
+                            aria-hidden
+                            data-testid="status-reminder-target"
+                            className="mr-1.5 inline-block size-1.5 rounded-full bg-warning align-middle"
+                          />
+                          <span className="sr-only">{t('reminderTargetLabel')} </span>
+                        </>
+                      ) : null}
                       {label}
                     </p>
                     <p className="mt-0.5 font-sans text-[11px] tabular-nums text-muted">

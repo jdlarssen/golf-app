@@ -88,7 +88,7 @@ describe('FriendLink', () => {
     expect(screen.queryByTestId('friend-link-connect')).toBeNull();
     await view.unmount();
 
-    // Bli venner, så «Dere er venner nå!» og veien til vennene, med dine
+    // Bli venner, så «Dere er venner nå» og veien til vennene, med dine
     // initialer og pila «Tilbake».
     const fresh = await renderScreen();
     await fireEvent.press(await screen.findByRole('button', { name: FRIEND_LINK_TEXT.connectButton }));

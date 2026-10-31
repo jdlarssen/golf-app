@@ -17,7 +17,9 @@ import source from '../../../../messages/no.json';
 import type { CreateGameFailure } from '../data/createGame';
 import {
   describeCreateGameFailure,
+  describeMissingTeams,
   describePendingOthers,
+  describeTeeCount,
   PENDING_SELF_NOTE,
 } from './createGameCopy';
 
@@ -148,5 +150,19 @@ describe('merknadene om uferdige profiler (#2441)', () => {
       expect(note).not.toMatch(/publiser/i);
       expect(note).not.toContain('—');
     }
+  });
+});
+
+// #2709: «1 spillere mangler lag» og «1 teer» — entall når tallet er 1.
+describe('tellingene i veiviseren (#2709)', () => {
+  it('sier spiller og spillere om lagløse spillere', () => {
+    expect(describeMissingTeams(1)).toMatch(/^1 spiller mangler lag og blir ikke med i runden\. /);
+    expect(describeMissingTeams(3)).toMatch(/^3 spillere mangler lag og blir ikke med i runden\. /);
+  });
+
+  it('sier tee og teer under banen', () => {
+    expect(describeTeeCount(1)).toBe('1 tee');
+    expect(describeTeeCount(0)).toBe('0 teer');
+    expect(describeTeeCount(4)).toBe('4 teer');
   });
 });

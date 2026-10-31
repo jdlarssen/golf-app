@@ -65,17 +65,17 @@ describe('ReceiptActions', () => {
     setShare(undefined);
     renderActions();
     fireEvent.click(screen.getByTestId('receipt-share'));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Kopiert!'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Kopiert'));
     expect(writeTextMock).toHaveBeenCalledWith(URL);
-    expect(screen.getByTestId('receipt-share')).toHaveTextContent('Kopiert!');
+    expect(screen.getByTestId('receipt-share')).toHaveTextContent('Kopiert');
   });
 
-  it('«Kopier lenke» copies and says «Kopiert!»', async () => {
+  it('«Kopier lenke» copies and says «Kopiert»', async () => {
     renderActions();
     fireEvent.click(screen.getByTestId('receipt-copy'));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Kopiert!'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Kopiert'));
     expect(writeTextMock).toHaveBeenCalledWith(URL);
-    expect(screen.getByTestId('receipt-copy')).toHaveTextContent('Kopiert!');
+    expect(screen.getByTestId('receipt-copy')).toHaveTextContent('Kopiert');
   });
 
   it('says so when copying fails', async () => {
