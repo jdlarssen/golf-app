@@ -81,6 +81,62 @@ export function isTeeOffInPast(
   return t < nowMs - TEE_OFF_PAST_GRACE_MS;
 }
 
+/** What the save does with the form: keep a draft, publish it, or save a scheduled game. */
+export type TeeOffSaveMode = 'draft' | 'publish' | 'update_scheduled';
+
+export type TeeOffForSave =
+  | { ok: true; iso: string | null }
+  | { ok: false; error: 'tee_off_required' | 'tee_off_in_past' };
+
+/**
+ * The tee-off a save writes to `scheduled_tee_off_at`: the one home of the
+ * rule for both server actions (create and edit, AGENTS.md trap #4).
+ *
+ * `raw` is the form's Oslo wall clock («YYYY-MM-DDTHH:mm»), `now` whether the
+ * organiser chose «Nå» on step 3 (#2463, the hidden `tee_off_now` field).
+ *
+ * - «Nå»: publishing sets the tee-off to `nowMs`, the moment the server
+ *   publishes, so no time spent on the later steps can put it in the past. A
+ *   draft keeps no tee-off, and a scheduled game is refused: the wizard only
+ *   offers «Nå» before the game is published.
+ * - A chosen time: required to publish or save a scheduled game, optional in
+ *   a draft (empty or malformed → `null`). Publishing and saving a scheduled
+ *   game refuse a time more than the grace before now (#902); a draft is not
+ *   live and is checked again when it is published.
+ */
+export function resolveTeeOffForSave({
+  raw,
+  now,
+  mode,
+  nowMs = Date.now(),
+}: {
+  raw: string;
+  now: boolean;
+  mode: TeeOffSaveMode;
+  nowMs?: number;
+}): TeeOffForSave {
+  if (now) {
+    if (mode === 'publish') return { ok: true, iso: new Date(nowMs).toISOString() };
+    if (mode === 'draft') return { ok: true, iso: null };
+    return { ok: false, error: 'tee_off_required' };
+  }
+  const trimmed = raw.trim();
+  let iso: string | null = null;
+  if (trimmed) {
+    try {
+      iso = parseOsloDateTimeLocal(trimmed);
+    } catch {
+      // A malformed value (DevTools, a browser with an unexpected format) is
+      // «no tee-off»: an error when one is required, nothing in a draft.
+      iso = null;
+    }
+  }
+  if (mode === 'draft') return { ok: true, iso };
+  if (iso === null) return { ok: false, error: 'tee_off_required' };
+  if (isTeeOffInPast(iso, nowMs)) return { ok: false, error: 'tee_off_in_past' };
+  return { ok: true, iso };
+}
+
 /**
  * True when a datetime-local wall-clock value ('YYYY-MM-DDTHH:mm', browser-local)
  * is more than the grace margin before `nowMs`. Empty/malformed → false. Client-side

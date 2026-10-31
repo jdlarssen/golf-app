@@ -8,8 +8,7 @@ import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
-  parseOsloDateTimeLocal,
-  isTeeOffInPast,
+  resolveTeeOffForSave,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
 import type { GameValidationErrorCode } from '@/lib/games/gamePayload';
@@ -144,44 +143,20 @@ async function createGameInternal(
     return { error: 'invalid_game_mode' };
   }
 
-  // Tee-off handling:
-  // - Publish: required. Empty or malformed input returns an error code.
-  // - Draft: optional. Empty or malformed input silently persists as NULL,
-  //   so an admin can save a draft without committing to a tee-off yet,
-  //   and a valid value carries forward when the draft is later published.
-  let scheduledTeeOffAt: string | null = null;
-  const rawTeeOff = String(formData.get('scheduled_tee_off_at') ?? '').trim();
-  if (rawTeeOff) {
-    try {
-      scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
-    } catch {
-      // parseOsloDateTimeLocal can throw RangeError on malformed strings
-      // (DevTools tinkering, non-Chromium browsers emitting unexpected
-      // formats). Publish surfaces this as a validation error; draft
-      // tolerates it as "no tee-off provided".
-      if (mode === 'publish') {
-        return { error: 'tee_off_required' };
-      }
-      scheduledTeeOffAt = null;
-    }
-  } else if (mode === 'publish') {
-    return { error: 'tee_off_required' };
+  // Tee-off (resolveTeeOffForSave, one home with the edit action): required
+  // to publish, optional in a draft, never more than the grace in the past
+  // (#902: a past tee-off starts the round on the first visit and sends the
+  // countdowns negative). «Nå» (#2463) publishes with the server's clock, so
+  // the time spent on the later steps never puts it in the past.
+  const teeOff = resolveTeeOffForSave({
+    raw: String(formData.get('scheduled_tee_off_at') ?? ''),
+    now: formData.get('tee_off_now') === '1',
+    mode,
+  });
+  if (!teeOff.ok) {
+    return { error: teeOff.error };
   }
-
-  // #902: block publishing a game whose tee-off is in the past. A past tee-off
-  // makes the E1 auto-start fallback fire immediately (the game jumps to
-  // 'active' on first visit without "Start runden nå"), and countdowns go
-  // negative — almost always a mistyped date. Server is authoritative; the
-  // datetime-local `min` is only a UX nudge. A small grace margin still allows
-  // the legit "create the game as the round starts" flow. Drafts are exempt:
-  // they're not live yet and a valid tee-off is re-checked at publish.
-  if (
-    mode === 'publish' &&
-    scheduledTeeOffAt &&
-    isTeeOffInPast(scheduledTeeOffAt)
-  ) {
-    return { error: 'tee_off_in_past' };
-  }
+  const scheduledTeeOffAt = teeOff.iso;
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).

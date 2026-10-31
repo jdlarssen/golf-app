@@ -336,6 +336,56 @@ describe('createGameDraft — start_type (#2258)', () => {
   });
 });
 
+describe('tee-off «Nå» (#2463)', () => {
+  function gamesInsertTeeOff() {
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    return (insert?.args[0] as { scheduled_tee_off_at: string | null }).scheduled_tee_off_at;
+  }
+
+  it('publish with «Nå» writes the moment of publishing, whatever the field holds', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: { id: 'now-game-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+    const { createAndPublishGame } = await import('./actions');
+
+    const before = Date.now();
+    // An hour-old wall clock would be refused on its own (#902); «Nå» wins.
+    await expect(
+      createAndPublishGame(
+        fullPublishFormData({ tee_off_now: '1', scheduled_tee_off_at: '2020-01-01T09:00' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const at = Date.parse(gamesInsertTeeOff() ?? '');
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
+    expect(lastRedirect()).toBe('/games/now-game-1/klar');
+  });
+
+  it('a draft with «Nå» saves no tee-off', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: { id: 'now-draft-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+    const { createGameDraft } = await import('./actions');
+
+    await expect(
+      createGameDraft(
+        fd({ name: 'Rett ut', side_tournament_enabled: 'false', tee_off_now: '1', scheduled_tee_off_at: FUTURE_TEE_OFF }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(gamesInsertTeeOff()).toBeNull();
+  });
+});
+
 describe('cup link (#2207)', () => {
   function gamesInsertPayload() {
     const insert = supabaseMock.__fromCalls.find(

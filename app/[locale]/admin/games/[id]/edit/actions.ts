@@ -10,8 +10,7 @@ import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
-  parseOsloDateTimeLocal,
-  isTeeOffInPast,
+  resolveTeeOffForSave,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
 import { editedModeConfig } from '@/lib/games/modeConfigEdit';
@@ -187,35 +186,20 @@ async function updateGameInternal(
     }
   }
 
-  // Tee-off is required when publishing or editing a scheduled game (you
-  // can't have a scheduled game without a tee-off). For save_draft it's
-  // optional — drafts tolerate partial data.
-  let scheduledTeeOffAt: string | null = null;
-  const rawTeeOff = String(formData.get('scheduled_tee_off_at') ?? '').trim();
-  if (rawTeeOff) {
-    try {
-      scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
-    } catch {
-      if (mode !== 'save_draft') {
-        redirect({ href: editHref({ error: 'tee_off_required' }), locale });
-      }
-      scheduledTeeOffAt = null;
-    }
-  } else if (mode !== 'save_draft') {
-    redirect({ href: editHref({ error: 'tee_off_required' }), locale });
+  // Tee-off (resolveTeeOffForSave, one home with the create action): required
+  // when publishing a draft or editing a scheduled game, optional in a draft,
+  // and never more than the grace in the past for a live row (#902). «Nå»
+  // (#2463) publishes a draft with the server's clock; a scheduled game never
+  // offers it, so a posted `tee_off_now` there is refused.
+  const teeOff = resolveTeeOffForSave({
+    raw: String(formData.get('scheduled_tee_off_at') ?? ''),
+    now: formData.get('tee_off_now') === '1',
+    mode: mode === 'save_draft' ? 'draft' : mode,
+  });
+  if (!teeOff.ok) {
+    redirect({ href: editHref({ error: teeOff.error }), locale });
   }
-
-  // #902: same past-tee-off guard as the create flow. Applies when publishing a
-  // draft or editing a scheduled game (both produce a live, countdown-bearing
-  // row); save_draft is exempt and tolerates a past/partial tee-off. The shared
-  // isTeeOffInPast helper keeps create + edit in agreement (AGENTS.md trap #4).
-  if (
-    (mode === 'publish' || mode === 'update_scheduled') &&
-    scheduledTeeOffAt &&
-    isTeeOffInPast(scheduledTeeOffAt)
-  ) {
-    redirect({ href: editHref({ error: 'tee_off_in_past' }), locale });
-  }
+  const scheduledTeeOffAt = teeOff.ok ? teeOff.iso : null;
 
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
