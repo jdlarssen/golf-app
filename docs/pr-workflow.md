@@ -4,7 +4,7 @@
 
 #### Branch + PR-flyt (default post-v1.0)
 
-Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette: `.githooks/pre-push` blokkerer push til main; `.claude/hooks/bash-guard.sh` blokkerer `--no-verify` og `gh pr merge --squash`, og spør om lov før `git push --force` (`--force-with-lease` slipper gjennom); `.githooks/commit-msg` krever `Refs #N` i body.
+Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette: `.githooks/pre-push` blokkerer push til main; `.claude/hooks/bash-guard.sh` blokkerer `--no-verify` og `gh pr merge --squash`, og nekter `git push --force`/`-f` på selve push-leddet (`--force-with-lease` slipper gjennom); `.githooks/commit-msg` krever `Refs #N` i body.
 
 1. Jobb på worktree-branchen (eller en beskrivende ny branch fra `main`).
 2. Atomiske commits, alle med `Refs #N` i body. Subagent-prompter må inkludere issue-nr + Refs-instruks.
