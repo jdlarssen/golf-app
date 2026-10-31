@@ -1593,7 +1593,6 @@
     "listMetaDescription": "Regler og poengberegning for over 20 spillformer i golf: scramble, stableford, matchplay, wolf, skins og flere til. Med eksempler og netto handicap.",
     "listBackLabel": "Hjem",
     "listKicker": "Spillformater",
-    "listPageTitle": "Spillformater",
     "listPageSubtitle": "Trykk på et format for å se hvordan det funker. Da tør du å bli med uansett hva som settes opp.",
     "helper": {
       "title": "Hvilket format passer dere?",
@@ -4180,9 +4179,6 @@
         "unknownPlayer": "(ukjent spiller)",
         "teamEmpty": "(tom)",
         "notStarted": "Ikke startet",
-        "progressMatchDesc": "Hvor langt hver side har kommet — uten å avsløre tall.",
-        "progressFlightDesc": "Hvor langt hver flight har kommet — uten å avsløre tall.",
-        "hullN": "Hull {n}",
         "sideN": "Side {n}",
         "flightN": "Flight {n}",
         "flightLagN": "Flight {flight} · Lag {team} · ",
@@ -4280,13 +4276,7 @@
         "allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
         "allReadyAndApproved": " og godkjent",
         "endingGame": "Avslutter …",
-        "missingWarning": "{notSubmitted} av {total} spillere har ikke levert. Du kan avslutte likevel. De blir stående som «ikke levert», men scorene deres teller fortsatt i resultatet.",
         "forceEndButton": "Avslutt likevel",
-        "notSubmittedWarning": "{notSubmitted} av {total} spillere har ikke levert.",
-        "pendingApprovalWarning": "{count, plural, one {1 scorekort venter på godkjenning fra flighten.} other {{count} scorekort venter på godkjenning fra flighten.}} Får ikke en medspiller godkjent, kan du godkjenne på vegne av flighten i «Leverte scorekort» over. Da kan du avslutte spillet.",
-        "scrollToScorecardsButton": "Til leverte scorekort ↑",
-        "viewStatusLink": "Se spillerstatus",
-        "viewStatusWithReminderLink": "Se spillerstatus og send påminnelse",
         "leaderboardButton": "Se leaderboard",
         "reopenSignupsButton": "Gjenåpne påmeldingen",
         "closeSignupsButton": "Steng påmeldingen",
@@ -4773,7 +4763,6 @@
       "errors": {
         "not_found": "Banen ble ikke funnet.",
         "in_use": "Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.",
-        "not_owned": "Du kan kun slette baner du selv har laget.",
         "delete_failed": "Klarte ikke å slette banen. Prøv igjen om litt."
       },
       "statusMessages": {
@@ -4819,7 +4808,6 @@
           "tee_not_archived": "Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.",
           "bad_hole_count": "Velg 18 hull eller 9 hull.",
           "hole_count_locked": "Du kan ikke endre antall hull fordi banen er brukt i en runde.",
-          "not_owned": "Du kan bare redigere baner du har laget selv.",
           "db_course": "Klarte ikke å lagre banen. Prøv igjen om litt.",
           "db_holes": "Klarte ikke å lagre banen. Prøv igjen om litt.",
           "db_tees": "Klarte ikke å lagre banen. Prøv igjen om litt.",
@@ -4848,7 +4836,6 @@
         "inUseBanner": "Banen er i bruk i {count, plural, one {# spill} other {# spill}} og kan ikke slettes. Slett spillene som bruker den først.",
         "errors": {
           "delete_failed": "Slettingen feilet. Prøv igjen om litt.",
-          "not_owned": "Du kan bare slette baner du har laget selv.",
           "in_use": "Banen er i bruk i minst ett spill og kan ikke slettes."
         }
       }
@@ -4868,8 +4855,7 @@
       },
       "status": {
         "updated": "Endringen er lagret.",
-        "noop": "Ingen endring (verdien var allerede satt).",
-        "content_saved": "Forklaringen er lagret."
+        "noop": "Ingen endring (verdien var allerede satt)."
       },
       "intentLabels": {
         "kompis": "Kompis",
@@ -4998,7 +4984,6 @@
         "too_long": "Klubbnavnet kan ikke være lengre enn 60 tegn.",
         "email_req": "Fyll inn eierens e-postadresse.",
         "owner_not_found": "Fant ingen Tørny-bruker med e-posten {email}. Be dem opprette konto først.",
-        "owner_not_found_generic": "Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.",
         "unknown": "Noe gikk galt. Prøv igjen."
       }
     },

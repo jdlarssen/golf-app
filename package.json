@@ -17,7 +17,8 @@
     "test:rls": "if command -v supabase >/dev/null 2>&1; then supabase test db; else echo '[test:rls] Supabase CLI not found — RLS integration tests need a local Postgres. Install the CLI + start the stack, then re-run. See supabase/tests/README.md. (skipped, not failed)'; fi",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true",
     "dup": "npx --yes jscpd@5 app lib components",
-    "dup:html": "npx --yes jscpd@5 app lib components --reporters html --output ./.jscpd-report"
+    "dup:html": "npx --yes jscpd@5 app lib components --reporters html --output ./.jscpd-report",
+    "deadcode": "npx --yes knip@6"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",
@@ -45,7 +46,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
-    "@vitest/ui": "^4.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",

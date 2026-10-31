@@ -1593,7 +1593,6 @@
     "listMetaDescription": "Rules and scoring for 20+ golf game formats: scramble, stableford, match play, wolf, skins and more. With examples and net handicaps.",
     "listBackLabel": "Home",
     "listKicker": "Game formats",
-    "listPageTitle": "Game formats",
     "listPageSubtitle": "Tap a format to see how it works. You'll know what you're in for, no matter what gets set up.",
     "helper": {
       "title": "Which format suits you?",
@@ -4180,9 +4179,6 @@
         "unknownPlayer": "(unknown player)",
         "teamEmpty": "(empty)",
         "notStarted": "Not started",
-        "progressMatchDesc": "How far each side has progressed — without revealing scores.",
-        "progressFlightDesc": "How far each flight has progressed — without revealing scores.",
-        "hullN": "Hole {n}",
         "sideN": "Side {n}",
         "flightN": "Flight {n}",
         "flightLagN": "Flight {flight} · Team {team} · ",
@@ -4280,13 +4276,7 @@
         "allReadyBody": "All players have submitted{andApproved} their scorecards. The game can be ended — the leaderboard will be open to all participants.",
         "allReadyAndApproved": " and approved",
         "endingGame": "Ending…",
-        "missingWarning": "{notSubmitted} of {total} players have not submitted. You can end anyway. They will be marked as «not submitted», but their scores still count in the result.",
         "forceEndButton": "End anyway",
-        "notSubmittedWarning": "{notSubmitted} of {total} players have not submitted.",
-        "pendingApprovalWarning": "{count, plural, one {1 scorecard is awaiting flight approval.} other {{count} scorecards are awaiting flight approval.}} If a playing partner cannot approve, you can approve on behalf of the flight in «Submitted scorecards» above. Then you can end the game.",
-        "scrollToScorecardsButton": "Go to submitted scorecards ↑",
-        "viewStatusLink": "View player status",
-        "viewStatusWithReminderLink": "View player status and send reminder",
         "leaderboardButton": "View leaderboard",
         "reopenSignupsButton": "Reopen signups",
         "closeSignupsButton": "Close signups",
@@ -4773,7 +4763,6 @@
       "errors": {
         "not_found": "Course not found.",
         "in_use": "Cannot delete the course because at least one game uses it. Delete the games first.",
-        "not_owned": "You can only delete courses you created yourself.",
         "delete_failed": "Failed to delete the course. Please try again in a moment."
       },
       "statusMessages": {
@@ -4819,7 +4808,6 @@
           "tee_not_archived": "This tee is not archived, so there is nothing to reopen.",
           "bad_hole_count": "Choose 18 holes or 9 holes.",
           "hole_count_locked": "You cannot change the number of holes because the course has been used in a round.",
-          "not_owned": "You can only edit courses you created yourself.",
           "db_course": "Failed to save the course. Please try again in a moment.",
           "db_holes": "Failed to save the course. Please try again in a moment.",
           "db_tees": "Failed to save the course. Please try again in a moment.",
@@ -4848,7 +4836,6 @@
         "inUseBanner": "The course is used in {count, plural, one {# game} other {# games}} and cannot be deleted. Delete the games that use it first.",
         "errors": {
           "delete_failed": "Deletion failed. Please try again in a moment.",
-          "not_owned": "You can only delete courses you created yourself.",
           "in_use": "The course is used in at least one game and cannot be deleted."
         }
       }
@@ -4868,8 +4855,7 @@
       },
       "status": {
         "updated": "Change saved.",
-        "noop": "No change (the value was already set).",
-        "content_saved": "Description saved."
+        "noop": "No change (the value was already set)."
       },
       "intentLabels": {
         "kompis": "Friends",
@@ -4998,7 +4984,6 @@
         "too_long": "The club name cannot be longer than 60 characters.",
         "email_req": "Please enter the owner's email address.",
         "owner_not_found": "No Tørny user found with the email {email}. Ask them to create an account first.",
-        "owner_not_found_generic": "No Tørny user found with that email address. Ask them to create an account first.",
         "unknown": "Something went wrong. Please try again."
       }
     },

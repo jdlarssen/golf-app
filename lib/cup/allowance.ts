@@ -38,8 +38,6 @@ export const ALLOWANCE_DEFAULTS = {
   bestBall: 85,
 } as const;
 
-export type AllowanceFormat = keyof typeof ALLOWANCE_DEFAULTS;
-
 /**
  * Parses an allowance percentage from a form field value.
  *
