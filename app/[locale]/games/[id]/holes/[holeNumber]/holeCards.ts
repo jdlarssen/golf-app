@@ -1,11 +1,7 @@
 // Rene avledninger over spillerkortene på hull-flaten (#1716 — ren flytting
 // ut av `HoleClient`). Ingen hooks, ingen IO: gitt kortene + hvem jeg er,
-// svarer disse på «hvilket kort er mitt», «hvor mange mangler», og
-// «Dine poeng» live mens man taster. Poengene per kort bor i
-// `lib/scorecard/railPoints.ts`, så appen regner likt (#2252).
+// svarer disse på «hvilket kort er mitt» og «hvor mange mangler».
 
-import { stablefordPointsFnFor } from '@/lib/scorecard/railPoints';
-import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleCard } from './holeLiveQueries';
 
 /** Et sete er et spillerkort eller en rå spiller-rad — begge slås opp likt. */
@@ -100,46 +96,4 @@ export function summarizeMyCard(
       (c) => c.userId !== myCard?.userId && !c.submitted && c.score == null,
     ).length,
   };
-}
-
-/**
- * For stableford: regn ut «Dine poeng» live ved å justere server-totalen
- * med delta-en for current hull (server-snapshot vs live-Dexie-rad). Dette
- * gir umiddelbar feedback når brukeren taster et nytt slag — uten å vente
- * på neste server-render. For best-ball er hele blokken null.
- */
-export function computeDisplayedStablefordTotal(args: {
-  cards: HoleCard[];
-  myUserId: string;
-  par: number;
-  gameMode: GameMode;
-  isStableford: boolean;
-  myStablefordTotal: number | null;
-  myStablefordForCurrentHole: number | null;
-}): number | null {
-  const {
-    cards,
-    myUserId,
-    par,
-    gameMode,
-    isStableford,
-    myStablefordTotal,
-    myStablefordForCurrentHole,
-  } = args;
-  if (!isStableford) return null;
-  const myLiveCard = cards.find((c) => c.userId === myUserId);
-  const myLiveScoreForCurrent = myLiveCard?.score ?? null;
-  const myExtraStrokesForCurrent = myLiveCard?.extraStrokes ?? 0;
-  const myLivePointsForCurrent =
-    myLiveScoreForCurrent != null
-      ? stablefordPointsFnFor(gameMode)({
-          par,
-          netStrokes: myLiveScoreForCurrent - myExtraStrokesForCurrent,
-        })
-      : null;
-  return (
-    (myStablefordTotal ?? 0) -
-    (myStablefordForCurrentHole ?? 0) +
-    (myLivePointsForCurrent ?? 0)
-  );
 }

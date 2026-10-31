@@ -2858,7 +2858,6 @@
     "entry": {
       "backToGame": "Tilbake til turneringen",
       "viewLeaderboard": "Vis leaderboard",
-      "myPoints": "Dine poeng:",
       "hullKicker": "Hull",
       "hullAriaLabel": "Hull {n}",
       "hullAriaLabelDone": "Hull {n} – score ført",

@@ -2858,7 +2858,6 @@
     "entry": {
       "backToGame": "Back to tournament",
       "viewLeaderboard": "View leaderboard",
-      "myPoints": "Your points:",
       "hullKicker": "Hole",
       "hullAriaLabel": "Hole {n}",
       "hullAriaLabelDone": "Hole {n} – scored",

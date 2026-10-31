@@ -98,8 +98,8 @@ export interface HoleClientProps {
   selfWithdrawn?: boolean;
   /**
    * Spillets modus. Stableford bytter ut «Lever lagets scorekort» med
-   * «Lever ditt scorekort», viser «Dine poeng»-subtittel i headeren, og
-   * surfacer stableford-poeng per hull på score-kortet. Default-prop
+   * «Lever ditt scorekort». Hullsiden viser ingen poeng mens slag føres
+   * (#2735). Default-prop
    * `best_ball` holder eldre callsites bakoverkompatible inntil
    * de oppdateres.
    */
@@ -176,21 +176,6 @@ export interface HoleClientProps {
    * green_pins_gate er ytre vakt).
    */
   freshPinCount?: number;
-  /**
-   * Stableford-totalen til brukeren server-side ved render (summen av
-   * stableford-poeng over alle ferdig-tastede hull). Null for best-ball.
-   * Brukes til «Dine poeng: N»-subtittelen i headeren — oppdateres ved
-   * neste server-render (etter hull-bytte). Live optimistic-update for
-   * current hull skjer client-side via computeStablefordPoints.
-   */
-  myStablefordTotal?: number | null;
-  /**
-   * Stableford-poengene som teller for *current* hull spesifikt, ved
-   * server-side render. Null hvis hullet ikke er tastet ennå eller hvis
-   * spillet ikke er stableford. Brukes til å initialisere subtitle-en før
-   * useLiveQuery rekker å hydrere.
-   */
-  myStablefordForCurrentHole?: number | null;
   /**
    * Reveal-modus flag forwarded from the server: true only when
    * `score_visibility='reveal'` AND status is still pre-finished. Forwarded
@@ -296,8 +281,6 @@ export type ResolvedHoleClientProps = HoleClientProps &
       | 'courseId'
       | 'greenCenter'
       | 'freshPinCount'
-      | 'myStablefordTotal'
-      | 'myStablefordForCurrentHole'
       | 'hideNetto'
       | 'segmentSibling'
       | 'holeStripSibling'
@@ -321,8 +304,6 @@ export function resolveHoleClientProps(
     courseId = null,
     greenCenter = null,
     freshPinCount = 0,
-    myStablefordTotal = null,
-    myStablefordForCurrentHole = null,
     hideNetto = false,
     segmentSibling = null,
     holeStripSibling = null,
@@ -341,8 +322,6 @@ export function resolveHoleClientProps(
     courseId,
     greenCenter,
     freshPinCount,
-    myStablefordTotal,
-    myStablefordForCurrentHole,
     hideNetto,
     segmentSibling,
     holeStripSibling,

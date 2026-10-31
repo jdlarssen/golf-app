@@ -44,7 +44,6 @@ import {
   useSiblingScoredHoles,
 } from './holeLiveQueries';
 import {
-  computeDisplayedStablefordTotal,
   isMySeatSubmitted,
   summarizeMyCard,
   isCardLocked,
@@ -69,7 +68,6 @@ import {
 import { HoleBottomCta } from './HoleBottomCta';
 import {
   MissingFlightScoresHint,
-  StablefordTotalSubtitle,
   WithdrawnBanner,
 } from './HoleNotices';
 
@@ -169,8 +167,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     courseId,
     greenCenter,
     freshPinCount,
-    myStablefordTotal,
-    myStablefordForCurrentHole,
     hideNetto,
     wolfPlayers,
     wolfChoices: wolfChoicesInitial,
@@ -273,16 +269,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     myUserId,
   });
   const pendingCount = usePendingSyncCount(gameId);
-
-  const myDisplayedStablefordTotal = computeDisplayedStablefordTotal({
-    cards,
-    myUserId,
-    par,
-    gameMode,
-    isStableford,
-    myStablefordTotal,
-    myStablefordForCurrentHole,
-  });
 
   const [valueSheetFor, setValueSheetFor] = useState<string | null>(null);
 
@@ -509,11 +495,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           <PokalIcon size={20} />
         </SmartLink>
       </div>
-
-      <StablefordTotalSubtitle
-        isStableford={isStableford}
-        total={myDisplayedStablefordTotal}
-      />
 
       <HoleStrip
         gameId={gameId}

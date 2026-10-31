@@ -6,7 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { isProfileIncomplete } from '@/lib/auth/profileGate';
-import { isStablefordFamily, modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
+import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
@@ -26,7 +26,6 @@ import {
 } from './holePageData';
 import {
   computeSkinsStake,
-  computeStablefordTotals,
   computeWolfContext,
 } from './holePageScoring';
 import {
@@ -194,7 +193,6 @@ export default async function HolePage({ params }: { params: Params }) {
         .map((p) => p.user_id)
     : [];
 
-  const isStableford = isStablefordFamily(game.game_mode);
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
   const isBBB = game.game_mode === 'bingo_bango_bongo';
@@ -213,7 +211,7 @@ export default async function HolePage({ params }: { params: Params }) {
     myFormerTeamRowOwnerIds,
     flightFormerRowOwnerIds,
     siblingMatch,
-    modes: { isStableford, isWolf, isSkins, isBBB, isPatsome },
+    modes: { isWolf, isSkins, isBBB, isPatsome },
   });
 
   // Error ≠ absence (#1441): fetchHolePageData throws on query failure (error
@@ -256,15 +254,6 @@ export default async function HolePage({ params }: { params: Params }) {
     teamOwnerId: siblingScores.teamOwnerId,
     formerTeamRowOwnerIds: siblingScores.formerTeamRowOwnerIds,
     scoredHoles: siblingScores.scoredHoles,
-  });
-
-  const stableford = computeStablefordTotals({
-    isStableford,
-    game,
-    me,
-    holeNumber,
-    allHolesRes: data.allHolesRes,
-    myAllScoresRes: data.myAllScoresRes,
   });
 
   // Reveal-modus: under an active reveal-game, hide the per-card +N SLAG
@@ -370,8 +359,6 @@ export default async function HolePage({ params }: { params: Params }) {
         courseId={game.course_id}
         greenCenter={greenCenter}
         freshPinCount={freshPinCount}
-        myStablefordTotal={stableford.total}
-        myStablefordForCurrentHole={stableford.forCurrentHole}
         hideNetto={hideNetto}
         wolfPlayers={wolf.players}
         wolfChoices={wolf.choices}
