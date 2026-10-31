@@ -470,7 +470,8 @@ const styles = StyleSheet.create({
     minHeight: TAP,
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 18,
+    // 16 som chipsene i veiviseren (#2716).
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

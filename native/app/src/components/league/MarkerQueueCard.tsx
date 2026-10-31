@@ -32,7 +32,7 @@ export function MarkerQueueCard<T extends { gameId: string; userId: string; name
           onPress={() => onOpen(row)}
           accessibilityRole="button"
           testID={`marker-queue-${row.gameId}-${row.userId}`}
-          style={[styles.queueRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+          style={[styles.queueRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
         >
           <View style={styles.queueText}>
             <Text style={[styles.queueName, { color: colors.text }]} numberOfLines={1}>

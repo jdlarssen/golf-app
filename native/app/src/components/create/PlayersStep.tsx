@@ -46,6 +46,9 @@ import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
 
+/** Tee- og lagvalget står 8 pt under spillerraden, ikke klistret til den (#2716). */
+const CHIP_ROW = { marginTop: 8 } as const;
+
 /** Så mange spillere et lag rommer før det er fullt. Sider har ingen sperre her. */
 const PAIR_SIZE = 2;
 
@@ -218,6 +221,7 @@ export function PlayersStep({
       {teeNote === null ? (
         <Chips
           testID={`create-tee-row-${meId}`}
+          style={CHIP_ROW}
           value={chosen.get(meId)?.teeGender ?? null}
           onChange={(tee) => onTee(meId, tee)}
           options={teeOptions(meId, teeAvailability)}
@@ -226,6 +230,7 @@ export function PlayersStep({
       {teamLayout ? (
         <Chips
           testID={`create-team-row-${meId}`}
+          style={CHIP_ROW}
           value={chosen.get(meId)?.teamNumber ?? null}
           onChange={(team) => onTeam(meId, team)}
           options={teamOptions(teamLayout, meId, players)}
@@ -284,6 +289,7 @@ export function PlayersStep({
             {picked && teeNote === null ? (
               <Chips
                 testID={`create-tee-row-${candidate.id}`}
+                style={CHIP_ROW}
                 value={picked.teeGender}
                 onChange={(tee) => onTee(candidate.id, tee)}
                 options={teeOptions(candidate.id, teeAvailability)}
@@ -292,6 +298,7 @@ export function PlayersStep({
             {picked && teamLayout ? (
               <Chips
                 testID={`create-team-row-${candidate.id}`}
+                style={CHIP_ROW}
                 value={picked.teamNumber}
                 onChange={(team) => onTeam(candidate.id, team)}
                 options={teamOptions(teamLayout, candidate.id, players)}

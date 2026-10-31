@@ -52,6 +52,7 @@ import { BOARD_APP_TEXT, SIDE_PANEL_TEXT } from '../../lib/boardCopy';
 import { medalForRank } from '../../lib/roundDiary';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
 import { RankMedal } from '../RankMedal';
+import { ChevronIcon } from '../icons/Icons';
 import { CalmNote } from './Table';
 
 /**
@@ -409,9 +410,8 @@ function TeamRow({
         >
           {standing.totalPoints}p
         </Text>
-        <Text style={[styles.chevron, { color: colors.muted }]}>
-          {expanded ? '▴' : '▾'}
-        </Text>
+        {/* Appens tegnede pil, ikke et tegn (#2716). */}
+        <ChevronIcon color={colors.muted} size={14} strokeWidth={2} up={expanded} />
       </Pressable>
 
       {expanded ? (
@@ -1127,8 +1127,9 @@ const styles = StyleSheet.create({
   headline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   headlineLabel: { ...interLine(13, 16), fontFamily: FONTS.sans },
   headlineName: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
+  // 16 som hodekortet over (#2716).
   teamCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginTop: 8,
     overflow: 'hidden',
@@ -1153,18 +1154,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
   },
   points: { ...fraunces(600, 16) },
-  chevron: { fontSize: 14, fontFamily: FONTS.sans },
   body: {
     borderTopWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 12,
   },
+  // Kickerens mål, som `heading` over (#2716).
   groupTitle: {
     marginBottom: 4,
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 0.6,
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
   awardRow: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },

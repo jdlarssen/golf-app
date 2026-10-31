@@ -8,7 +8,7 @@
 // Alle er tema-bevisste via `useTheme()`: dette er de første flatene i appen
 // som bygges etter #1833, så ingenting her leser den statiske lys-paletten.
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { TAP, useTheme } from '../../theme';
 import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
 
@@ -111,15 +111,18 @@ export function Chips<T extends string | number>({
   value,
   onChange,
   testID,
+  style,
 }: {
   options: readonly ChipOption<T>[];
   value: T | null;
   onChange: (value: T) => void;
   testID?: string;
+  /** Luft rundt raden der den ikke står i et `Field` (spillerlista, #2716). */
+  style?: StyleProp<ViewStyle>;
 }) {
   const { colors, ui } = useTheme();
   return (
-    <View style={styles.chips} testID={testID}>
+    <View style={[styles.chips, style]} testID={testID}>
       {options.map((option) => {
         const active = option.value === value;
         const disabled = option.disabled === true;

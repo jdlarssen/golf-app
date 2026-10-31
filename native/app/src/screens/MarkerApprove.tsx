@@ -10,7 +10,7 @@
 // under, som på godkjenningsskjermen. «Send tilbake» åpner det samme arket med
 // valgfri grunn. Markøren endrer aldri et slag; spilleren retter selv.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
 import type { MarkerCardResponse } from '../../../../lib/league/appLeagueView';
@@ -104,7 +104,11 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
     return (
       <View style={ui.centered} testID={load.status === 'loading' ? 'marker-loading' : 'marker-error'}>
         {load.status === 'loading' ? (
-          <Text style={ui.muted}>{MARKER_TEXT.loading}</Text>
+          // Den vanlige ventemarkeringen, som de andre skjermene (#2716).
+          <>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={ui.muted}>{MARKER_TEXT.loading}</Text>
+          </>
         ) : (
           <>
             <Text style={ui.body}>{MARKER_TEXT.loadFailed}</Text>

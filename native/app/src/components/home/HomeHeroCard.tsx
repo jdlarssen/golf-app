@@ -339,5 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   stateText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
-  approvals: { minHeight: TAP, justifyContent: 'center' },
+  // Inni hero-kortet: mindre hjørner enn kortet rundt (nestet radius), så
+  // raden beholder sine 10 når `ui.banner` går til 16 (#2716).
+  approvals: { minHeight: TAP, justifyContent: 'center', borderRadius: 10 },
 });
