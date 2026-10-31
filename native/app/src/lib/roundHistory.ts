@@ -71,6 +71,8 @@ export interface HistoryGameInput {
   scoreDifferential: number | null;
   /** Spillerens lagrede utfall (`game_players.result_summary`). */
   resultSummary: ResultSummary | null;
+  /** #2712: spillet er en ligaflight (alene står det «Godkjent», ikke en plass). */
+  leagueFlight?: boolean;
 }
 
 /** Ett eget slag (`scores.strokes`, aldri null her — datalaget filtrerer). */
@@ -116,6 +118,8 @@ export interface HistoryRound {
   /** WHS-differensialen (frosset eller regnet), eller `null`. */
   differential: number | null;
   resultSummary: ResultSummary | null;
+  /** #2712: se `HistoryGameInput.leagueFlight`. */
+  leagueFlight?: boolean;
 }
 
 type DatedGame = Pick<HistoryGameInput, 'scheduledTeeOffAt' | 'endedAt'>;
@@ -188,6 +192,7 @@ export function buildHistoryRounds(
         putts: own.map((s) => s.putts).filter((p): p is number => p != null),
         differential: null as number | null,
         resultSummary: game.resultSummary,
+        leagueFlight: game.leagueFlight ?? false,
       } satisfies HistoryRound,
     };
   });
