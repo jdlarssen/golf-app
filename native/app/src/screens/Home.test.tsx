@@ -70,7 +70,7 @@ const mockState: {
   leagues: Awaited<ReturnType<typeof import('../data/league').fetchMyLeagues>>;
 } = {
   online: true,
-  list: { version: 2, cards: [], lastRound: null, fetchedAt: '' },
+  list: { version: 3, cards: [], lastRound: null, fetchedAt: '' },
   cached: undefined,
   bundles: {},
   leagues: { ok: true, leagues: [] },
@@ -117,7 +117,7 @@ const CARDS = [
 ];
 
 const LIST: HomeList = {
-  version: 2,
+  version: 3,
   cards: CARDS,
   lastRound: { gameId: 'last', brutto: 88, netto: 76, teamBall: false },
   fetchedAt: '2026-09-29T09:00:00.000Z',

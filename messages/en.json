@@ -6335,6 +6335,7 @@
   "finishedCard": {
     "result": {
       "youWon": "You won",
+      "approved": "Approved",
       "teamWon": "Your team won",
       "placement": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
       "teamPlacement": "Team finished {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",

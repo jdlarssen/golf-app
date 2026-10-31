@@ -83,3 +83,20 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
   expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent('Du tapte 2&1');
   expect(screen.getByTestId('home-last-round-medal', HIDDEN)).not.toHaveTextContent(/\d/);
 });
+
+// #2712 (eieren 31.10): en ligaflight spilt alene sier «Godkjent», ikke «Du vant»,
+// og har ingen plass i medaljongen.
+it('ligaflight alene: «Godkjent» og poengene, uten plass', async () => {
+  const card = homeCard({
+    gameId: 'liga',
+    name: 'Vinterliga – Runde 1',
+    status: 'finished',
+    leagueRoundId: 'runde-1',
+    resultSummary: { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false },
+  });
+  await render(<LastRoundCard card={card} score={null} points={35} onPress={jest.fn()} />);
+  expect(screen.getByTestId('home-last-round-line-liga')).toHaveTextContent('Godkjent · 35 poeng');
+  expect(screen.queryByTestId('home-last-round-gold', HIDDEN)).toBeNull();
+  expect(screen.getByTestId('home-last-round-medal', HIDDEN)).not.toHaveTextContent('1');
+});
+

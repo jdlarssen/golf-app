@@ -275,6 +275,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     submittedAt: myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null),
     approvedAt: myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null),
     requirePeerApproval: game.requirePeerApproval,
+    leagueFlight: game.leagueRoundId != null,
   });
   const inPlay = game.status === 'active' || game.status === 'finished';
   // Eierens svar på #2255: lista står bare før runden. Når den pågår eller er
