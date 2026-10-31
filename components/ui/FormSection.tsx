@@ -29,6 +29,11 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
   description?: ReactNode;
   /** `tight`: 16 px above the kicker instead of 18, as the step 4 picker draws it (#2321). */
   legendSpacing?: 'default' | 'tight';
+  /**
+   * The kicker is read by screen readers but not drawn: for a section whose
+   * name a bottom sheet's title already says (#2457).
+   */
+  legendHidden?: boolean;
 };
 
 /**
@@ -58,10 +63,13 @@ export function FormSection({
   asideFlush = false,
   description,
   legendSpacing = 'default',
+  legendHidden = false,
   className = '',
   ...rest
 }: Props) {
-  const legendClass = `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted`;
+  const legendClass = legendHidden
+    ? 'sr-only'
+    : `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted`;
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
       {aside ? (
