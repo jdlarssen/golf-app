@@ -10,14 +10,13 @@ import { SoloScorecardView } from './SoloScorecardView';
 const result: StablefordSoloResult = {
   kind: 'stableford',
   variant: 'solo',
-  ranking: 'net_total',
-  players: [{ userId: 'siri', totalPoints: 3, holesPlayed: 1, toPar: 1, rank: 1, tiedWith: [] }],
+  players: [{ userId: 'siri', totalPoints: 3, holesPlayed: 1, rank: 1, tiedWith: [] }],
   holes: [
     {
       holeNumber: 1,
       par: 4,
       strokeIndex: 1,
-      perPlayer: [{ userId: 'siri', gross: 3, points: 3, par: 4, toPar: 1 }],
+      perPlayer: [{ userId: 'siri', gross: 3, points: 3, par: 4 }],
       bestUserIds: ['siri'],
     },
   ],

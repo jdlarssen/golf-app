@@ -102,14 +102,13 @@ describe('SoloStablefordHolesView — a league round played alone (#2712)', () =
   const alone = (): StablefordSoloResult => ({
     kind: 'stableford',
     variant: 'solo',
-    ranking: 'net_total',
-    players: [{ userId: 'u1', totalPoints: 3, holesPlayed: 1, toPar: 1, rank: 1, tiedWith: [] }],
+    players: [{ userId: 'u1', totalPoints: 3, holesPlayed: 1, rank: 1, tiedWith: [] }],
     holes: [
       {
         holeNumber: 1,
         par: 4,
         strokeIndex: 1,
-        perPlayer: [{ userId: 'u1', gross: 3, points: 3, par: 4, toPar: 1 }],
+        perPlayer: [{ userId: 'u1', gross: 3, points: 3, par: 4 }],
         bestUserIds: ['u1'],
       },
     ],

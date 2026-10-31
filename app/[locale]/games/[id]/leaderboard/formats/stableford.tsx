@@ -357,7 +357,7 @@ export async function renderStableford(opts: {
       // stand where the podium would.
       const only = alonePlayer;
       const info = playersById.get(only.userId);
-      const headline = pointsHeadline(result.ranking, only);
+      const headline = pointsHeadline(only);
       const tSolo = await getTranslations('leaderboard.soloStableford');
       const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
       mainContent = (chromeless, footerSlot) => (
