@@ -331,7 +331,7 @@ function SectionPlayerRow({
   // siden ingen unit deles ut og UI-en skal speile det (samme prinsipp
   // som Wolf-tied: stake bæres uten poeng-utdeling).
   const cardClass = isWinnerHighlight
-    ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
+    ? 'border-accent bg-accent/[0.06]'
     : '';
 
   const isPodium = line.rank >= 1 && line.rank <= 3;

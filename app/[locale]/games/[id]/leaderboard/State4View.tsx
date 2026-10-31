@@ -482,7 +482,7 @@ function LeaderCard({
         </div>
 
         <div className="relative flex flex-col items-center">
-          <span className="leader-badge-pulse text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
             {isTied
               ? t('tiedRank', { rank: line.rank })
               : ts('leaderBadge', { rank: line.rank })}

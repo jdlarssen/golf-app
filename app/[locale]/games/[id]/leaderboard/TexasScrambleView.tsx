@@ -153,7 +153,7 @@ function TeamRow({
   const isPodium = rank >= 1 && rank <= 3;
   const cardClass =
     rank === 1
-      ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
+      ? 'border-accent bg-accent/[0.06]'
       : '';
 
   return (

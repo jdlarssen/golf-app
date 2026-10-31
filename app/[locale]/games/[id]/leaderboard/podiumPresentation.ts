@@ -63,7 +63,7 @@ export const SLOT_HEIGHTS_TALL: Record<PodiumSlot, string> = {
 export const TIER_ACCENT: Record<PodiumTier, string> = {
   // Champagne: forest-tinted bg + champagne border + champagne tekst-accent.
   champagne:
-    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
+    'border-accent bg-accent/[0.08]',
   // Silver: en hårfin dempet ring. Mer dempet enn champagne for å la 1.-plassen
   // dominere visuelt.
   silver: 'border-muted/40 bg-surface',

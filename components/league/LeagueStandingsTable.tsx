@@ -56,7 +56,7 @@ function RoundCell({
     <td
       className={[
         'px-0 py-2 text-center font-serif tabular-nums text-xs',
-        isPenalty ? 'italic text-muted/60' : 'text-text',
+        isPenalty ? 'text-muted' : 'text-text',
       ].join(' ')}
       title={
         isFlagged
