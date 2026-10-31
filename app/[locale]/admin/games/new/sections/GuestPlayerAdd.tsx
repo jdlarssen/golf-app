@@ -43,6 +43,7 @@ export function GuestPlayerFields({
   id?: string;
 }) {
   const t = useTranslations('game.players');
+  const tTeams = useTranslations('wizard.sections.teams');
   const fieldId = useId();
   const [name, setName] = useState('');
   const [hcp, setHcp] = useState('');
@@ -113,6 +114,7 @@ export function GuestPlayerFields({
         avail={avail}
         disabled={blocked}
         onEnter={onEnter}
+        notRatedTitle={tTeams('categoryNotRated')}
       />
       {errorText && (
         <p role="alert" className="font-sans text-sm text-danger">
