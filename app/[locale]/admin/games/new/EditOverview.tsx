@@ -9,7 +9,7 @@ import { StartScheduledGameButton } from '@/app/[locale]/admin/games/[id]/StartS
 import { formatTeeOffParts } from '@/lib/i18n/format';
 import { invitationWhen } from '@/lib/games/invitationCard';
 import { hcpAllowanceInPlay } from '@/lib/games/hcpAllowance';
-import { PRIZE_SLOTS } from '@/lib/games/prizes';
+import { countPrizesInPlay, prizeShapeFor } from '@/lib/games/prizes';
 import type { EditSection } from '@/lib/games/editSections';
 import type { StructuralBlockReason } from '@/lib/games/startBlockReasons';
 import type { GameFormState } from './useGameFormState';
@@ -170,9 +170,7 @@ export function EditOverview({
       : tReady('checklist.allowancePct', { pct: state.hcpAllowance })
     : null;
 
-  const prizeCount = PRIZE_SLOTS.filter(
-    (slot) => state.prizeDraft[slot.key].description.trim() !== '',
-  ).length;
+  const prizeCount = countPrizesInPlay(state.prizeDraft, prizeShapeFor(state));
 
   const values: Record<EditSection, string> = {
     'navn-og-tid': when ? capitalize(tReady('checklist.teeOff', when), locale) : t('notSet'),

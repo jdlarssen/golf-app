@@ -17,11 +17,15 @@ import {
   prizeFieldName,
   prizeDraftFromList,
   prizeListFromDraft,
+  emptyPrizeDraft,
+  countPrizesInPlay,
+  prizeShapeFor,
   PRIZE_MAX_SLOTS,
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
   PRIZE_LOGO_PATH_MAX,
   type GamePrize,
+  type PrizeSlotKey,
 } from './prizes';
 
 const MIGRATION_FILE = path.resolve(
@@ -267,5 +271,54 @@ describe('prunePrizes — beskjærer til gyldige slott', () => {
     expect(
       prunePrizes(full, { hasPodium: false, ldCount: 0, ctpCount: 0 }),
     ).toEqual([]);
+  });
+});
+
+describe('countPrizesInPlay — samme regel som prunePrizes (#2457)', () => {
+  const draftWith = (filled: PrizeSlotKey[]) => {
+    const d = emptyPrizeDraft();
+    for (const key of filled) d[key] = { description: 'Premie', sponsor: '', sponsorLogoPath: '' };
+    return d;
+  };
+  const stableford = { hasPodium: true, ldCount: 0, ctpCount: 0 };
+
+  it('teller utfylte slott som vises', () => {
+    expect(countPrizesInPlay(draftWith(['placement_1', 'placement_3']), stableford)).toBe(2);
+  });
+
+  it('teller ikke et tomt eller bare-mellomrom-felt', () => {
+    const d = draftWith(['placement_1']);
+    d.placement_2 = { description: '   ', sponsor: '', sponsorLogoPath: '' };
+    expect(countPrizesInPlay(d, stableford)).toBe(1);
+  });
+
+  it('teller ikke en LD-premie når sideturneringen er av (0 slott)', () => {
+    expect(countPrizesInPlay(draftWith(['ld_1']), stableford)).toBe(0);
+    expect(countPrizesInPlay(draftWith(['ld_1']), { ...stableford, ldCount: 1 })).toBe(1);
+  });
+
+  it('teller ikke ld_2 når bare ett LD-slott er aktivt', () => {
+    expect(countPrizesInPlay(draftWith(['ld_1', 'ld_2']), { ...stableford, ldCount: 1 })).toBe(1);
+  });
+
+  it('teller ikke plasseringspremier i matchplay (intet podium)', () => {
+    expect(
+      countPrizesInPlay(draftWith(['placement_1', 'ctp_1']), { hasPodium: false, ldCount: 0, ctpCount: 1 }),
+    ).toBe(1);
+  });
+
+  it('gir samme antall som prunePrizes beholder', () => {
+    const shape = { hasPodium: true, ldCount: 1, ctpCount: 0 };
+    const d = draftWith(['placement_2', 'ld_1', 'ld_2', 'ctp_1']);
+    expect(countPrizesInPlay(d, shape)).toBe(prunePrizes(prizeListFromDraft(d), shape).length);
+  });
+
+  it('prizeShapeFor: sideturnering av gir 0 LD/CTP, og matchplay mister podiet', () => {
+    expect(prizeShapeFor({ gameMode: 'stableford', sideEnabled: false, sideLdCount: 2, sideCtpCount: 2 })).toEqual(
+      { hasPodium: true, ldCount: 0, ctpCount: 0 },
+    );
+    expect(prizeShapeFor({ gameMode: 'fourball_matchplay', sideEnabled: true, sideLdCount: 1, sideCtpCount: 2 })).toEqual(
+      { hasPodium: false, ldCount: 1, ctpCount: 2 },
+    );
   });
 });

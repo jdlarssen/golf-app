@@ -28,6 +28,8 @@ import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import {
   PRIZE_DESCRIPTION_MAX,
   PRIZE_SPONSOR_MAX,
+  countPrizesInPlay,
+  prizeShapeFor,
   type PrizeSlotKey,
 } from '@/lib/games/prizes';
 import {
@@ -78,9 +80,7 @@ export function PrizesSection({ state }: Props) {
   }
   if (ctpCount >= 2) slots.push({ key: 'ctp_2', label: `${t('ctpLabel')} 2` });
 
-  const prizeCount = slots.filter(
-    (slot) => prizeDraft[slot.key].description.trim().length > 0,
-  ).length;
+  const prizeCount = countPrizesInPlay(prizeDraft, prizeShapeFor(state));
   // Åpent fra start når det finnes premier; ellers lukket. Initialverdien
   // leses ved montering, så et ark som åpnes på nytt følger det som er satt.
   const [open, setOpen] = useState(prizeCount > 0);
@@ -97,9 +97,12 @@ export function PrizesSection({ state }: Props) {
         data-testid="prizes-toggle"
         className="flex min-h-11 w-full items-center justify-between gap-3 px-1 text-left"
       >
+        {/* The plain space between the spans is for the accessible name: a flex
+            container does not draw it, and a screen reader would run
+            «PremiebordLegg til» together. */}
         <span className="font-sans text-[10px] leading-[normal] font-semibold tracking-[0.2em] text-muted uppercase">
           {t('legend')}
-        </span>
+        </span>{' '}
         <span className="font-sans text-[13px] leading-[normal] font-semibold text-primary">
           {open ? t('toggleHide') : prizeCount > 0 ? t('toggleCount', { count: prizeCount }) : t('toggleAdd')}
         </span>
