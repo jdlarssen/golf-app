@@ -59,6 +59,11 @@ export function stampCopy(stamp: Stamp, ownerFullName: string | null): StampCopy
         return 'Godkjent';
       case 'pending':
         return 'Venter på at noen i flighten godkjenner';
+      // #2712: simulatorligaens markør står som regel utenfor flighten.
+      case 'league_marker':
+        return 'Godkjent av markøren';
+      case 'league_marker_pending':
+        return 'Venter på at markøren godkjenner';
       case 'none':
         return null;
     }
@@ -69,7 +74,10 @@ export function stampCopy(stamp: Stamp, ownerFullName: string | null): StampCopy
     approval,
     lock: stamp.locked
       ? 'Resultatet er låst'
-      : 'Arrangøren låser resultatet når alle har levert',
+      : stamp.leagueMarker
+        ? // #2712: markørens ja avslutter flighten; ingen arrangør låser den.
+          'Runden teller når markøren har godkjent'
+        : 'Arrangøren låser resultatet når alle har levert',
   };
 }
 

@@ -69,6 +69,7 @@ export function toStampPlayers(players: readonly BundlePlayer[]): StampPlayer[] 
     approved_by_user_id: player.approvedByUserId ?? null,
     name: player.name,
     nickname: player.nickname,
+    marker_user_id: player.markerUserId ?? null,
   }));
 }
 
