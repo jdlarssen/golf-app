@@ -29,8 +29,6 @@ describe('followTotalLabel — the big total on the follow page', () => {
     ['toPar', -2, '−2'],
     ['toPar', 0, 'E'],
     ['toPar', 3, '+3'],
-    ['pointsToPar', 3, '+3'],
-    ['pointsToPar', -2, '−2'],
     ['points', null, '—'],
     ['net', null, '—'],
   ] as const)('%s %s → %s', (unit, total, expected) => {
@@ -57,11 +55,6 @@ describe('behindLeaderText — who the gap is to', () => {
     expect(behindLeaderText(t, { ...standing, leaderUserIds: ['a', 'b'] }, 'net', rows, name)).toBe('2 slag bak ledelsen');
     expect(behindLeaderText(t, { ...standing, gap: 0 }, 'points', rows, name)).toBeNull();
   });
-
-  it('#2625: points against par pace count the gap in points', () => {
-    const rows = [row('a', 'Marte Lie', 1), row('b', 'Jonas Berg', 2), row('c', 'Anders Moe', 3)];
-    expect(behindLeaderText(t, standing, 'pointsToPar', rows, name)).toBe('2 poeng bak Marte');
-  });
 });
 
 describe('columnHeading — the number column (#2625)', () => {
@@ -69,7 +62,6 @@ describe('columnHeading — the number column (#2625)', () => {
     ['points', 'Poeng'],
     ['net', 'Netto'],
     ['toPar', 'Netto'],
-    ['pointsToPar', 'Mot par'],
   ] as const)('%s → %s', (unit, expected) => {
     expect(columnHeading(t, unit)).toBe(expected);
   });
@@ -112,9 +104,6 @@ describe('boardRowSr — one spoken line per board row', () => {
     ['even', { row: { ...base, total: 0 }, unit: 'toPar', showRank: true, isYou: false }, '3. plass. På par. 9 hull spilt'],
     ['over par', { row: { ...base, total: 2 }, unit: 'toPar', showRank: true, isYou: false }, '3. plass. 2 over par. 9 hull spilt'],
     ['net strokes', { row: { ...base, total: 74 }, unit: 'net', showRank: true, isYou: false }, '3. plass. 74 slag netto. 9 hull spilt'],
-    ['#2625 points over par pace', { row: { ...base, total: 3 }, unit: 'pointsToPar', showRank: true, isYou: false }, '3. plass. 3 poeng over par. 9 hull spilt'],
-    ['#2625 points under par pace', { row: { ...base, total: -2 }, unit: 'pointsToPar', showRank: true, isYou: false }, '3. plass. 2 poeng under par. 9 hull spilt'],
-    ['#2625 points at par pace', { row: { ...base, total: 0 }, unit: 'pointsToPar', showRank: true, isYou: false }, '3. plass. På par. 9 hull spilt'],
   ] as const)('%s', (_name, opts, expected) => {
     expect(boardRowSr(t, tc, { ...opts, row: { ...opts.row, recent: [...opts.row.recent] } })).toBe(expected);
   });

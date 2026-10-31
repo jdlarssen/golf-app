@@ -18,7 +18,7 @@ const PAR_BY_GENDER = { mens: 4, ladies: 5, juniors: 4 };
 
 function stablefordHole(
   holeNumber: number,
-  cells: { userId: string; gross: number | null; points: number; par?: number; toPar?: number | null }[],
+  cells: { userId: string; gross: number | null; points: number; par?: number }[],
   bestUserIds: string[],
 ) {
   return {
@@ -26,8 +26,7 @@ function stablefordHole(
     par: 4,
     strokeIndex: holeNumber,
     parByGender: PAR_BY_GENDER,
-    // Standard table: a net par is worth 2 points.
-    perPlayer: cells.map((c) => ({ par: 4, toPar: c.gross == null ? null : c.points - 2, ...c })),
+    perPlayer: cells.map((c) => ({ par: 4, ...c })),
     bestUserIds,
   };
 }
@@ -35,11 +34,10 @@ function stablefordHole(
 const STABLEFORD: StablefordSoloResult = {
   kind: 'stableford',
   variant: 'solo',
-  ranking: 'net_total',
   players: [
-    { userId: 'ola', totalPoints: 7, rank: 1, holesPlayed: 3, toPar: 1, tiedWith: [] },
-    { userId: 'kari', totalPoints: 4, rank: 2, holesPlayed: 2, toPar: 0, tiedWith: [] },
-    { userId: 'per', totalPoints: 0, rank: 3, holesPlayed: 0, toPar: null, tiedWith: [] },
+    { userId: 'ola', totalPoints: 7, rank: 1, holesPlayed: 3, tiedWith: [] },
+    { userId: 'kari', totalPoints: 4, rank: 2, holesPlayed: 2, tiedWith: [] },
+    { userId: 'per', totalPoints: 0, rank: 3, holesPlayed: 0, tiedWith: [] },
   ],
   holes: [
     stablefordHole(
@@ -97,14 +95,15 @@ describe('soloStablefordScorecard', () => {
     expect(tied.standings[0]!.isLeader).toBe(false);
   });
 
-  it('#2625: stillingen bærer regelen og poeng mot par-tempo fra resultatet', () => {
+  it('#2738: et poengspill viser poengene, aldri mot par', () => {
     expect(card.ranking).toBe('net_total');
-    expect(card.standings.map((s) => [s.userId, s.toPar])).toEqual([
-      ['ola', 1],
-      ['kari', 0],
-      ['per', null],
+    expect(standingUnit(card)).toBe('total');
+    expect(card.standings.map((s) => [s.userId, s.total, s.toPar])).toEqual([
+      ['ola', 7, null],
+      ['kari', 4, null],
+      ['per', 0, null],
     ]);
-    expect(soloStablefordScorecard({ ...STABLEFORD, ranking: 'net_to_par' }, teeOf).ranking).toBe('net_to_par');
+    expect(card.standings.map((s) => standingTotalText(card, s, formatSignedPoints))).toEqual(['7', '4', '0']);
   });
 
   it('deler hullene i Ut (1–9) og Inn (10–18)', () => {
@@ -234,7 +233,7 @@ describe('likt på et hull: den som ligger best an i stillingen står først', (
       soloStablefordScorecard(
         {
           ...STABLEFORD,
-          players: order.map((userId) => ({ userId, totalPoints: 5, rank: 1, holesPlayed: 1, toPar: null, tiedWith: [] })),
+          players: order.map((userId) => ({ userId, totalPoints: 5, rank: 1, holesPlayed: 1, tiedWith: [] })),
           holes: [],
         },
         () => 'mens',
@@ -434,16 +433,14 @@ describe('mot egen par i et spill rangert mot par (#2625)', () => {
     ]);
   });
 
-  it('stableford: lederen for Ut er best mot par-tempo, også med færre spilte hull', () => {
-    // A: ett hull, 3 poeng (+1). B: to hull, 2 + 2 poeng (E). Summen gir B
-    // (4 mot 3); mot par gir A.
+  it('stableford (#2738): lederen for Ut er den med flest poeng, også med flere spilte hull', () => {
+    // A: ett hull, 3 poeng. B: to hull, 2 + 2 poeng. Poengene gir B (4 mot 3).
     const result: StablefordSoloResult = {
       kind: 'stableford',
       variant: 'solo',
-      ranking: 'net_to_par',
       players: [
-        { userId: 'A', totalPoints: 3, rank: 1, holesPlayed: 1, toPar: 1, tiedWith: [] },
-        { userId: 'B', totalPoints: 4, rank: 2, holesPlayed: 2, toPar: 0, tiedWith: [] },
+        { userId: 'B', totalPoints: 4, rank: 1, holesPlayed: 2, tiedWith: [] },
+        { userId: 'A', totalPoints: 3, rank: 2, holesPlayed: 1, tiedWith: [] },
       ],
       holes: [
         stablefordHole(
@@ -465,13 +462,8 @@ describe('mot egen par i et spill rangert mot par (#2625)', () => {
       ],
     };
     expect(soloStablefordScorecard(result, () => 'mens').front.subtotals).toEqual([
-      { userId: 'A', sum: 3, isLeader: true },
-      { userId: 'B', sum: 4, isLeader: false },
-    ]);
-    const plain = soloStablefordScorecard({ ...result, ranking: 'net_total' }, () => 'mens');
-    expect(plain.front.subtotals.map((s) => [s.userId, s.isLeader])).toEqual([
-      ['A', false],
-      ['B', true],
+      { userId: 'B', sum: 4, isLeader: true },
+      { userId: 'A', sum: 3, isLeader: false },
     ]);
   });
 });

@@ -98,7 +98,7 @@ export function TeamStablefordView({
             rank={team.rank}
             playerIds={team.playerIds}
             playersById={playersById}
-            headline={pointsHeadline(result.ranking, team)}
+            headline={pointsHeadline(team)}
             tiedWith={team.tiedWith}
             staggerIndex={i}
           />
@@ -146,7 +146,7 @@ function TeamRow({
   rank: number;
   playerIds: string[];
   playersById: Map<string, SoloStablefordPlayerInfo>;
-  /** #2625: the points, or the team's points against par pace in a net-to-par game (`pointsHeadline`). */
+  /** The team's points (`pointsHeadline`, #2738). */
   headline: ReturnType<typeof pointsHeadline>;
   tiedWith: number[];
   staggerIndex: number;

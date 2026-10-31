@@ -18,8 +18,7 @@ function makeResult(
   return {
     kind: 'stableford',
     variant: 'solo',
-    ranking: 'net_total',
-    players: players.map((p) => ({ ...p, toPar: null, tiedWith: [] })),
+    players: players.map((p) => ({ ...p, tiedWith: [] })),
     // Per-hull-data brukes ikke av SoloStablefordView (totals-liste) — den
     // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
     holes: [],

@@ -23,10 +23,10 @@ export type TeamHoleTone = VsParTone | 'unset';
 
 /**
  * The unit under the total and in the band's line: net, gross (shamble),
- * points, or to par (#2625: a team strokeplay game ranked on net to par, and
- * `pointsToPar`, a team stableford game ranked on points against par pace).
+ * points, or to par (#2625: a team strokeplay game ranked on net to par).
+ * #2738: a team stableford game always shows its points.
  */
-export type TeamDisplayUnit = 'net' | 'gross' | 'points' | 'toPar' | 'pointsToPar';
+export type TeamDisplayUnit = 'net' | 'gross' | 'points' | 'toPar';
 
 /**
  * The table a team stableford game's points are in. The result says
@@ -58,7 +58,7 @@ const RECENT_HOLES = 5;
 const MIN_HOLES_FOR_MOVEMENT = 2;
 
 export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
-  if (result.kind === 'stableford') return result.ranking === 'net_to_par' ? 'pointsToPar' : 'points';
+  if (result.kind === 'stableford') return 'points';
   if (result.ranking === 'net_to_par') return 'toPar';
   if (result.kind === 'shamble') return result.scoring === 'gross' ? 'gross' : 'net';
   return 'net';

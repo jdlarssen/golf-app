@@ -141,15 +141,15 @@ describe('headlineUnit (#2625)', () => {
   });
 });
 
-describe('pointsHeadline (#2625 part 2)', () => {
-  // A points row, podium or duel leads with what the game ranks on, and says
-  // which: «mot par» under points against par pace, «poeng» under the sum.
+describe('pointsHeadline (#2738)', () => {
+  // A points row, podium or duel always leads with the points, under «poeng»,
+  // also in a game #2625 stamped with `ranking: 'net_to_par'`.
   it.each([
-    ['net_to_par', { totalPoints: 11, toPar: 3 }, { unit: 'toPar', value: 3, text: '+3', labelKey: 'vsParLabel' }],
-    ['net_to_par', { totalPoints: 0, toPar: null }, { unit: 'toPar', value: null, text: '—', labelKey: 'vsParLabel' }],
-    ['net_total', { totalPoints: 11, toPar: 3 }, { unit: 'total', value: 11, text: '11', labelKey: 'poengLabel' }],
-  ] as const)('%s: %o → %o', (ranking, line, expected) => {
-    expect(pointsHeadline(ranking, line)).toEqual(expected);
+    [{ totalPoints: 25 }, { unit: 'total', value: 25, text: '25', labelKey: 'poengLabel' }],
+    [{ totalPoints: 0 }, { unit: 'total', value: 0, text: '0', labelKey: 'poengLabel' }],
+    [{ totalPoints: -4 }, { unit: 'total', value: -4, text: '-4', labelKey: 'poengLabel' }],
+  ] as const)('%o → %o', (line, expected) => {
+    expect(pointsHeadline(line)).toEqual(expected);
   });
 });
 

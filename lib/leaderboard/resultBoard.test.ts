@@ -27,13 +27,12 @@ const players = ['a', 'b', 'c', 'd', 'e'].map((id) => ({
 }));
 
 function sf(userId: string, totalPoints: number, rank: number, extra: Partial<StablefordPlayerLine> = {}): StablefordPlayerLine {
-  return { userId, totalPoints, rank, holesPlayed: 18, toPar: null, tiedWith: [], decidedBy: null, ...extra };
+  return { userId, totalPoints, rank, holesPlayed: 18, tiedWith: [], decidedBy: null, ...extra };
 }
 
 const stableford: StablefordSoloResult = {
   kind: 'stableford',
   variant: 'solo',
-  ranking: 'net_total',
   holes: [],
   // The engine's order, already ranked; d and e share fourth.
   players: [
@@ -260,13 +259,39 @@ describe('teamResultBoard — the rows of a finished team board', () => {
   });
 });
 
-// #2625 part 2: a team stableford game stamped `ranking: 'net_to_par'` shows
-// points against par pace, and its gap compares across a different number of
-// holes.
-describe('teamResultBoard — a net-to-par team stableford game (#2625)', () => {
-  it('unit pointsToPar, the total is the team’s points against par pace, and the gap is there across holes', () => {
-    const card = (userId: string, gross: number[]) => gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
-    // Team 1 +5 after 3 holes (11 points), team 2 +1 after 6 (13). Par 4.
+// #2738: a points game stamped `ranking: 'net_to_par'` by #2625 shows the
+// points and ranks on them; its gap compares only on the same holes played.
+describe('the finished board of a points game with the #2625 flag (#2738)', () => {
+  const card = (userId: string, gross: number[]) => gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+
+  it('the round of 30.10: 25 p, 25 p and 20 p, the back nine splits the 25s', () => {
+    // Points per hole on par 4s (CH 0): 2 → a par (4), 1 → a bogey (5), 0 → a double (6).
+    const gross = (points: number[]) => points.map((p) => 6 - p);
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g',
+        game_mode: 'stableford',
+        mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard', ranking: 'net_to_par' },
+      },
+      players: ['c', 'b', 'a'].map((userId) => ({ userId, teamNumber: null, flightNumber: null, courseHandicap: 0 })),
+      holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1 })),
+      scores: [
+        ...card('a', gross([2, 2, 2, 2, 1, 1, 1, 1, 0, 2, 2, 2, 2, 1, 1, 1, 1, 1])), // 12 + 13
+        ...card('b', gross([2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 0])), // 13 + 12
+        ...card('c', gross([2, 2, 1, 1, 1, 1, 1, 1, 0, 2, 2, 1, 1, 1, 1, 1, 1, 0])), // 10 + 10
+      ],
+    };
+    const board = soloResultBoard(computeLeaderboard(ctx) as StablefordSoloResult, players);
+    expect(board.unit).toBe('points');
+    expect(board.rows.map((r) => [r.userId, r.rank, r.total, r.decidedBy])).toEqual([
+      ['a', 1, 25, null],
+      ['b', 2, 25, 'back9'],
+      ['c', 3, 20, 'total'],
+    ]);
+  });
+
+  it('team stableford: unit points, the total is the team’s points, and no gap across different holes', () => {
+    // Team 1 has 11 points after 3 holes, team 2 13 after 6. Par 4.
     const ctx: ScoringContext = {
       game: {
         id: 'g',
@@ -283,12 +308,13 @@ describe('teamResultBoard — a net-to-par team stableford game (#2625)', () => 
       scores: [...card('p1', [2, 2, 3]), ...card('p3', [3, 4, 4, 4, 4, 4])],
     };
     const board = teamResultBoard(computeLeaderboard(ctx) as TeamBoardResult, (n) => `Lag ${n}`);
-    expect(board.unit).toBe('pointsToPar');
+    expect(teamBoardMeasure(computeLeaderboard(ctx) as TeamBoardResult).unit).toBe('points');
+    expect(board.unit).toBe('points');
     expect(board.rows.map((r) => [r.teamNumber, r.rank, r.total, r.holesPlayed])).toEqual([
-      [1, 1, 5, 3],
-      [2, 2, 1, 6],
+      [2, 1, 13, 6],
+      [1, 2, 11, 3],
     ]);
-    expect(resultStanding(board, (r) => r.teamNumber, 2)?.gap).toBe(4);
+    expect(resultStanding(board, (r) => r.teamNumber, 1)?.gap).toBeNull();
   });
 });
 

@@ -21,8 +21,8 @@ function hole(
     par: 4,
     strokeIndex: holeNumber,
     perPlayer: [
-      { userId: 'u1', gross: u1.gross, points: u1.points, par: 4, toPar: u1.gross == null ? null : u1.points - 2 },
-      { userId: 'u2', gross: u2.gross, points: u2.points, par: 4, toPar: u2.gross == null ? null : u2.points - 2 },
+      { userId: 'u1', gross: u1.gross, points: u1.points, par: 4 },
+      { userId: 'u2', gross: u2.gross, points: u2.points, par: 4 },
     ],
     bestUserIds,
   };
@@ -32,10 +32,9 @@ function makeResult(): StablefordSoloResult {
   return {
     kind: 'stableford',
     variant: 'solo',
-    ranking: 'net_total',
     players: [
-      { userId: 'u1', totalPoints: 5, holesPlayed: 4, toPar: -3, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalPoints: 3, holesPlayed: 4, toPar: -5, rank: 2, tiedWith: [] },
+      { userId: 'u1', totalPoints: 5, holesPlayed: 4, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalPoints: 3, holesPlayed: 4, rank: 2, tiedWith: [] },
     ],
     holes: [
       hole(1, { gross: 3, points: 3 }, { gross: 5, points: 1 }, ['u1']), // u1 høyest
