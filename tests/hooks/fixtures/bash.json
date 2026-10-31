@@ -182,6 +182,21 @@
     "payload": { "tool_input": { "command": "echo ok\ngit push --force origin claude/x" } }
   },
   {
+    "name": "git push origin +gren (pluss-refspec) → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git push origin +claude/x" } }
+  },
+  {
+    "name": "git push origin +HEAD:refs/heads/x → deny",
+    "expect": "deny",
+    "payload": { "tool_input": { "command": "git push origin +HEAD:refs/heads/x" } }
+  },
+  {
+    "name": "git push origin HEAD:refs/heads/x (uten pluss) → none",
+    "expect": "none",
+    "payload": { "tool_input": { "command": "git push origin HEAD:refs/heads/x" } }
+  },
+  {
     "name": "rm -f i et annet ledd enn git push → none (falsk treff som stoppet #2347)",
     "expect": "none",
     "assert_no_log_rule": "force-push",
