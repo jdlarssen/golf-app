@@ -488,6 +488,27 @@ describe('buildInboxEntryView', () => {
       expect(v.subtitle).toBe('Onsdagsgolfen · Du vant 3&2 · i går');
     });
 
+    // #2712 (owner 31.10): a league flight played alone has no placement.
+    it('a league flight played alone: «Godkjent» in the subtitle, no place disc', () => {
+      const v = view([finished()], 'earlier', ctx('no', {
+        resultByGame: { [GAME]: { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false } },
+        finishedGameIds: [GAME],
+        leagueFlightGameIds: [GAME],
+      }));
+      expect(v.avatar.kind).toBe('emoji');
+      expect(v.placeLabel).toBeNull();
+      expect(v.subtitle).toBe('Onsdagsgolfen · Godkjent · i går');
+    });
+
+    it('a league flight of several keeps its place', () => {
+      const v = view([finished()], 'earlier', ctx('no', {
+        resultByGame: { [GAME]: { kind: 'placement', rank: 1, fieldSize: 2, isTeam: false } },
+        finishedGameIds: [GAME],
+        leagueFlightGameIds: [GAME],
+      }));
+      expect(v.avatar).toEqual({ kind: 'place', rank: 1 });
+    });
+
     it('a reopened game shows no place', () => {
       const v = view([finished()], 'earlier', ctx('no', {
         resultByGame: { [GAME]: { kind: 'placement', rank: 2, fieldSize: 12, isTeam: false } },

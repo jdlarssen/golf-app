@@ -188,3 +188,16 @@ describe('diaryRowLabel', () => {
     );
   });
 });
+
+// #2712 (eieren 31.10): en ligaflight spilt alene har ingen plass; raden sier «Godkjent».
+describe('diaryResult — ligaflight alene (#2712)', () => {
+  const solo: ResultSummary = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
+  it('ligaflight med én spiller → «Godkjent», ingen medaljong', () => {
+    expect(diaryResult(solo, { leagueFlight: true })).toEqual({ kind: 'text', text: 'Godkjent' });
+  });
+  it('ligaflight med flere og vanlig spill alene → plassen som før', () => {
+    expect(diaryResult({ ...solo, fieldSize: 3 }, { leagueFlight: true })).toMatchObject({ kind: 'place', rank: 1 });
+    expect(diaryResult(solo)).toMatchObject({ kind: 'place', rank: 1, fieldSize: 1 });
+  });
+});
+

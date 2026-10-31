@@ -61,6 +61,7 @@ export function InboxClient({
   teeOffByGame,
   resultByGame,
   finishedGameIds,
+  leagueFlightGameIds,
   now,
   signupErrorText,
 }: {
@@ -68,6 +69,8 @@ export function InboxClient({
   teeOffByGame: Record<string, string | null>;
   resultByGame: Record<string, ResultSummary | null>;
   finishedGameIds: string[];
+  /** #2712: league flights among the looked-up games. */
+  leagueFlightGameIds: string[];
   /** Render time from the server, so server and browser write the same «for 2 min siden». */
   now: number;
   /**
@@ -103,6 +106,7 @@ export function InboxClient({
     teeOffByGame,
     resultByGame,
     finishedGameIds,
+    leagueFlightGameIds,
   };
 
   /**

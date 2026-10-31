@@ -50,12 +50,13 @@ interface HistoryRow {
     hole_segment: string;
     course_id: string | null;
     tee_box_id: string | null;
+    league_round_id?: string | null;
     courses: { name: string } | null;
   };
 }
 
 const HISTORY_SELECT =
-  'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, hole_segment, course_id, tee_box_id, courses(name))';
+  'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, hole_segment, course_id, tee_box_id, league_round_id, courses(name))';
 
 /** Webbens utvalg av tee-ratinger (slope, CR og par per kjønn). */
 const TEE_SELECT =
@@ -149,6 +150,7 @@ export async function fetchRoundHistory(
     courseHandicap: row.course_handicap,
     scoreDifferential: row.score_differential,
     resultSummary: row.result_summary ?? null,
+    leagueFlight: row.games.league_round_id != null,
   }));
   const wanted =
     options.year == null ? games : games.filter((game) => localRoundYear(game) === options.year);
