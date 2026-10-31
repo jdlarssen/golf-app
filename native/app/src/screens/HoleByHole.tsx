@@ -39,7 +39,8 @@ import type { ScoringExtras } from '../lib/scoringContext';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
-import { useTheme } from '../theme';
+import { fraunces, useTheme } from '../theme';
+import { holesStyles } from '../components/holes/holesShared';
 
 export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   // Best ball: nytt lag starter øverst, som webben når `?team=` byttes.
@@ -145,10 +146,19 @@ export function HoleByHoleBody({
     )
   ) {
     return (
-      <View style={[ui.card, { alignItems: 'center' }]} testID="hole-by-hole-reveal-hidden">
-        <Text style={[ui.value, { textAlign: 'center' }]}>{HOLES_TEXT.revealHiddenTitle}</Text>
-        <Text style={[ui.muted, { textAlign: 'center' }]}>{HOLES_TEXT.revealHiddenSub}</Text>
-        <Text style={[ui.body, { color: colors.muted, fontStyle: 'italic' }]}>{`«${HOLES_TEXT.goodLuck}»`}</Text>
+      // Som webbens blindkort (#2716): stiplet kort med 16-hjørner, tittelen i
+      // Fraunces 500 (ord, ikke tall), og «Lykke til» som sitatlinje under.
+      <View>
+        <View
+          style={[ui.card, { alignItems: 'center', borderRadius: 16, borderStyle: 'dashed' }]}
+          testID="hole-by-hole-reveal-hidden"
+        >
+          <Text style={[{ ...fraunces(500, 18) }, { color: colors.text, textAlign: 'center' }]}>
+            {HOLES_TEXT.revealHiddenTitle}
+          </Text>
+          <Text style={[ui.muted, { textAlign: 'center' }]}>{HOLES_TEXT.revealHiddenSub}</Text>
+        </View>
+        <Text style={[holesStyles.footer, { color: colors.muted }]}>{`«${HOLES_TEXT.goodLuck}»`}</Text>
       </View>
     );
   }

@@ -325,8 +325,8 @@ function TeamNavButton({
 }
 
 const styles = StyleSheet.create({
-  /** Webbens `text-[11px] font-semibold uppercase tracking-[0.20em]`. */
-  kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 2.2, textTransform: 'uppercase' },
+  /** Tørnys kicker, som webbens `text-[10px] font-semibold uppercase tracking-[0.2em]` (#2716). */
+  kicker: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 2, textTransform: 'uppercase' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   rank: { ...fraunces(600, 48, 52), minWidth: 50, textAlign: 'center' },
   teamName: { ...fraunces(500, 22) },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   legendFormat: { ...fraunces(500, 11), marginLeft: 'auto', fontStyle: 'italic' },
   nineBlock: { gap: 6 },
   nineLabel: { paddingHorizontal: 4 },
-  table: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  table: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   holeRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
   holeCol: { width: 40, alignItems: 'center', justifyContent: 'center' },
   holeNumber: { ...fraunces(500, 15) },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 14,
   },

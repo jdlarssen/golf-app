@@ -144,11 +144,11 @@ export const holesStyles = StyleSheet.create({
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
   /**
-   * Etikett i små versaler (webbens `text-[11px] font-semibold uppercase
-   * tracking-[0.16em]`/`[0.14em]`): «Stillingen» og «Vant hullet». Webbens
-   * `Kicker` (10 px) er appens `ui.kicker`.
+   * Etikett i små versaler: «Stillingen» og «Vant hullet». Samme mål som
+   * Tørnys kicker (10 pt, 2 i sperring), som webbens `text-[10px] font-semibold
+   * uppercase tracking-[0.2em]` (#2716).
    */
-  kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6, textTransform: 'uppercase' },
+  kicker: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 2, textTransform: 'uppercase' },
   /**
    * Små versaler (webbens `text-[11px] uppercase tracking-[0.1em]`, vanlig
    * vekt): enheten «p» i solo og «Venter» i Bingo Bango Bongo. Round Robins

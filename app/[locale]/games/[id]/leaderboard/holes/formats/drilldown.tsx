@@ -211,7 +211,7 @@ function DrilldownView({
             href={leaderboardHref({ gameId, mode, context: navContext })}
             label={t('backAriaLabel')}
           />
-          <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+          <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             {t('teamHeader', { number: view.teamNumber, rank: view.rank })}
           </span>
           <LeaderboardBackLinkSpacer />
@@ -270,7 +270,7 @@ function DrilldownView({
             skjules hele UT-seksjonen i stedet for å rendre en tom tabell. */}
         {front && (
           <>
-            <div className="px-5 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               {t('frontNineLabel')}
             </div>
             <HoleTable nine={front} summaryLabel={t('summaryUt')} />
@@ -282,7 +282,7 @@ function DrilldownView({
             ingen, back9-spill får sine her). */}
         {back && (
           <>
-            <div className="px-5 pt-5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
+            <div className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               {t('backNineLabel')}
             </div>
             <HoleTable nine={back} summaryLabel={t('summaryInn')} />
@@ -303,9 +303,9 @@ function DrilldownView({
              tidligere bg-primary-fyll (skrek til leseren) til en stille
              surface med subtil topp-border. Tall + accent-kicker bærer
              hierarkiet uten å trenge høy-kontrast fyll. */
-          <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
+          <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-2xl border border-border bg-surface px-5 py-3.5 text-text">
             <div>
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-accent-text">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">
                 {t('totalLabel')}
               </span>
               <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
@@ -371,7 +371,7 @@ function HoleTable({
   // `nine.vsPar`, like the total. «P36» still shows the par for all nine holes.
   const summaryTone = TONE_VARS[nine.tone];
   return (
-    <div className="mx-4 mt-1.5 overflow-hidden rounded-[14px] border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.03)]">
+    <div className="mx-4 mt-1.5 overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.03)]">
       {nine.rows.map((row, ii) => (
         <HoleRow key={row.holeNumber} row={row} staggerIndex={ii} />
       ))}
