@@ -124,6 +124,7 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/auth-flow.md` — OTP-innlogging, invitasjoner, mail-debug
 - `docs/bug-prevention.md` — de fem fellene, med hendelsene bak
 - `docs/changelog-conventions.md` — CHANGELOG-format
+- `docs/cloud-sessions.md` — sky-økter: oppstartsskriptet, staging-variabler, hva som bare finnes på Macen
 - `docs/collaboration.md` — hvem gjør hva, mal for tredjeparts-UI
 - `docs/copy-style.md` — mønsterkatalog for norsk bruker-copy
 - `docs/email-deliverability.md` — runbook for e-postlevering til Outlook/Hotmail
