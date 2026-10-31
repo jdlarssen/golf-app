@@ -164,3 +164,22 @@ describe('tallyClubStats', () => {
     expect(participationCounts.get('carol')).toBe(1); // still participated
   });
 });
+
+// #2712 (owner 31.10): a league flight played alone has no placement and no win.
+describe('wins: a league round played alone (#2712)', () => {
+  const solo: ResultSummary = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
+  it('isWinningSummary: no win in a league flight alone, a win everywhere else', () => {
+    expect(isWinningSummary(solo, { leagueFlight: true })).toBe(false);
+    expect(isWinningSummary({ ...solo, fieldSize: 3 }, { leagueFlight: true })).toBe(true);
+    expect(isWinningSummary(solo)).toBe(true);
+  });
+  it('tallyClubStats: the round counts as played, not as won', () => {
+    const { winnerCounts, participationCounts } = tallyClubStats(
+      [{ id: 'liga', leagueFlight: true, players: [row('siri', solo)] }],
+      new Map(),
+    );
+    expect(winnerCounts.get('siri')).toBeUndefined();
+    expect(participationCounts.get('siri')).toBe(1);
+  });
+});
+

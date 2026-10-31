@@ -1,4 +1,5 @@
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
+import { isLeagueRoundAlone } from '@/lib/games/finishedResultBadge';
 
 /**
  * Aggregering for den globale «Klubbstatistikker»-tavla (#887).
@@ -15,8 +16,15 @@ import type { ResultSummary } from '@/lib/scoring/resultSummary';
  * mode-naturlig: placement #1 (individ + lag), matchplay-seier, flest skins.
  * `null`/ukjent form vinner aldri (defensiv ved framtidig drift).
  */
-export function isWinningSummary(summary: ResultSummary | null): boolean {
+export function isWinningSummary(
+  summary: ResultSummary | null,
+  opts: {
+    /** #2712: the game is a league flight; played alone it is no win. */
+    leagueFlight?: boolean;
+  } = {},
+): boolean {
   if (summary == null) return false;
+  if (isLeagueRoundAlone(summary, opts.leagueFlight ?? false)) return false;
   switch (summary.kind) {
     case 'placement':
       return summary.rank === 1;
@@ -53,11 +61,14 @@ export type GameAggregation = {
 };
 
 /** Aggreger ett ferdig spill fra dets `game_players`-rader. */
-export function aggregateFinishedGame(players: StatPlayerRow[]): GameAggregation {
+export function aggregateFinishedGame(
+  players: StatPlayerRow[],
+  opts: { leagueFlight?: boolean } = {},
+): GameAggregation {
   const active = players.filter((p) => p.withdrawnAt == null);
   const participants = active.map((p) => p.userId);
   const winners = active
-    .filter((p) => isWinningSummary(p.resultSummary))
+    .filter((p) => isWinningSummary(p.resultSummary, opts))
     .map((p) => p.userId);
   const needsFallback =
     active.length > 0 && players.every((p) => p.resultSummary == null);
@@ -68,6 +79,8 @@ export function aggregateFinishedGame(players: StatPlayerRow[]): GameAggregation
 export type FinishedGameForTally = {
   id: string;
   players: StatPlayerRow[];
+  /** #2712: the game is a league flight (played alone: counts as played, not won). */
+  leagueFlight?: boolean;
 };
 
 export type ClubStatTally = {
@@ -93,6 +106,7 @@ export function tallyClubStats(
   for (const game of games) {
     const { participants, winners, needsFallback } = aggregateFinishedGame(
       game.players,
+      { leagueFlight: game.leagueFlight },
     );
 
     for (const userId of participants) {

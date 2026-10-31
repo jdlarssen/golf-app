@@ -947,6 +947,17 @@ describe('gjengen', () => {
     expect(build(threeRounds()).gang?.topWinner).toBeNull();
   });
 
+  // #2712 (owner 31.10): a league round played alone is no win.
+  it('counts no win for a league round played alone', () => {
+    const solo = () =>
+      game({ leagueFlight: true, players: [player(ME, { resultSummary: placement(1, 1) })] });
+    expect(build([solo(), solo(), solo()]).gang?.topWinner).toBeNull();
+    // The same placement outside a league is still a win.
+    expect(
+      build([game({ players: [player(ME, { resultSummary: placement(1, 1) })] })]).gang?.topWinner?.count,
+    ).toBe(1);
+  });
+
   it('counts birdies across the circle', () => {
     // user-a får tre birdier per runde, jeg får én.
     const facts = build([
