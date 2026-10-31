@@ -18,6 +18,7 @@ import { clampMinTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
+import { listedTeeId } from './listedTee';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
 import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import {
@@ -534,12 +535,10 @@ export function useGameFormState({
   // was made) counts as no tee, so the save waits until one is picked again.
   // The dropdown did the same: no option matched, React showed the
   // placeholder and `required` held the save. The tee buttons and the hidden
-  // `tee_box_id` field have no such fallback, so the rule lives here.
-  const [teeBoxId, setTeeBoxIdRaw] = useState<string>(() => {
-    const stored = initialValues?.tee_box_id ?? '';
-    const course = courses.find((c) => c.id === initialValues?.course_id);
-    return course?.tee_boxes.some((t) => t.id === stored) ? stored : '';
-  });
+  // `tee_box_id` field have no such fallback (`listedTeeId`).
+  const [teeBoxId, setTeeBoxIdRaw] = useState<string>(() =>
+    listedTeeId(courses, initialValues?.course_id, initialValues?.tee_box_id),
+  );
   // #1009: gjester lagt til i denne økta (skygge-brukere fra
   // createGuestForWizard). De finnes ikke i den pre-fetchede `players`-lista;
   // `allPlayers` under er den sammenslåtte lista ALT internt oppslag bruker.
