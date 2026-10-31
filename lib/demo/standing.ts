@@ -34,6 +34,8 @@ export function demoStanding(youScores: DemoYouScores): DemoStanding | null {
       mode_config: DEMO_MODE_CONFIG,
       status: 'active',
       score_visibility: 'live',
+      // #2712: the demo is never a league round.
+      league_round_id: null,
     },
     // The demo shows the arrow from the first hole: everyone starts level, so
     // hole 1 already moves you (#2281, the owner's answer E3).
