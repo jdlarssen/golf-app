@@ -1,4 +1,5 @@
 import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
+import { isLeagueFieldAlone } from './finishedResultBadge';
 
 /**
  * The prize-giving on the big screen (#2298): the organiser turns one card a
@@ -49,6 +50,18 @@ export function ceremonySupported(mode: GameMode): boolean {
       return unplaced;
     }
   }
+}
+
+/**
+ * #2712 (orchestrator 31.10, after the owner's rule «en runde alene har ingen
+ * plass og ingen seier»): the prize-giving reveals a winner, so a league round
+ * played alone has none. Every way in asks this: the entries on the game page,
+ * the organiser view and the admin page, the remote and the TV. The server
+ * action that turns the cards keeps the format check only; without an entry,
+ * a remote or a stage it has nothing to drive.
+ */
+export function ceremonyAvailable(mode: GameMode, leagueFlight: boolean, activePlayers: number): boolean {
+  return ceremonySupported(mode) && !isLeagueFieldAlone(leagueFlight, activePlayers);
 }
 
 /**

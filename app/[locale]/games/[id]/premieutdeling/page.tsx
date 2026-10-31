@@ -8,7 +8,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { ceremonySupported, type CeremonyPlace } from '@/lib/games/ceremony';
+import { ceremonyAvailable, type CeremonyPlace } from '@/lib/games/ceremony';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { requestOrigin } from '@/lib/url/requestOrigin';
 import { AppShell } from '@/components/ui/AppShell';
@@ -43,7 +43,13 @@ export default async function CeremonyPage({ params }: { params: Params }) {
   const gwp = await getGameWithPlayers(id);
   if (!gwp) notFound();
   const { game } = gwp;
-  if (game.status !== 'finished' || !ceremonySupported(game.game_mode)) {
+  // #2712: no prize-giving for a league round played alone.
+  const ceremonyOpen = ceremonyAvailable(
+    game.game_mode,
+    game.league_round_id != null,
+    gwp.players.filter((p) => p.withdrawn_at == null).length,
+  );
+  if (game.status !== 'finished' || !ceremonyOpen) {
     redirect({ href: `/games/${id}`, locale });
   }
 
