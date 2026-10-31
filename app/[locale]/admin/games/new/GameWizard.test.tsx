@@ -1918,6 +1918,24 @@ describe('GameWizard — #2459 autolagring', () => {
     expect(resume.href).toBe('/?step=3');
   });
 
+  it('merker at steg 4 åpner på «Hvordan får dere spillere?» (#2447), men ikke på lag-skjermen eller andre steg', () => {
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    flush();
+    expect(readEnvelope().resume.summary.sourceScreen).toBe(false);
+
+    fireEvent.change(screen.getByLabelText(/^tee$/i), { target: { value: 'tee-1' } });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), { target: { value: FUTURE_TEE_OFF } });
+    clickNext();
+    flush();
+    const summary = readEnvelope().resume.summary;
+    expect(summary.step).toBe(4);
+    expect(summary.sourceScreen).toBe(true);
+  });
+
   it('et stegbytte alene gir en ny skriving med det nye steget', () => {
     renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     pickKompisIntent();
