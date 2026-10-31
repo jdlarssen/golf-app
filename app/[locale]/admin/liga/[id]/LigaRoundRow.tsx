@@ -82,7 +82,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses, isSimulato
   const settingsInitial = formSimSettings(round.simSettings);
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+    <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
       {/* Round header */}
       <div className="flex items-start justify-between gap-2">
         <div>

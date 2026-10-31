@@ -907,7 +907,7 @@ function StatusPill({
           'bg-warning/10 text-warning-text border-warning/30';
   return (
     <span
-      className={`inline-flex items-center text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full border ${classes}`}
+      className={`inline-flex items-center whitespace-nowrap font-sans text-[11px] font-semibold uppercase tracking-[0.16em] px-[7px] py-[3px] rounded-full border ${classes}`}
     >
       {label}
     </span>
@@ -936,7 +936,7 @@ function ActiveStateLabel({
           : 'bg-border/40 text-muted border-border';
   return (
     <span
-      className={`inline-flex items-center text-[11px] font-medium px-2.5 py-0.5 rounded-full border whitespace-nowrap ${classes}`}
+      className={`inline-flex items-center whitespace-nowrap font-sans text-[11px] font-semibold px-[7px] py-[3px] rounded-full border ${classes}`}
     >
       {label}
     </span>

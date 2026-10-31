@@ -309,7 +309,7 @@ export function TeamRegistrationForm({
       </div>
 
       <div className="space-y-3">
-        <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
+        <p className="font-sans text-sm font-medium text-text">
           {t('slotsHeading', { count: slotCount })}
         </p>
         {slots.map((slot, idx) => {
@@ -367,7 +367,7 @@ export function TeamRegistrationForm({
               {slot.mode === 'lookup' && slot.selected ? (
                 // Valgt co-player vises som chip med maskert e-post — vi
                 // dumper ikke rå-adressen i et synlig felt.
-                <div className="flex items-center justify-between gap-2 rounded-lg border border-primary bg-primary-soft px-3 py-2">
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-primary bg-primary-soft px-3.5 py-3">
                   <span className="min-w-0 font-sans text-sm text-text">
                     <span className="font-medium">{slot.selected.name}</span>{' '}
                     <span className="text-muted">
@@ -424,7 +424,7 @@ export function TeamRegistrationForm({
                     aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
                     aria-describedby={slotError ? slotErrorId(idx) : undefined}
-                    className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
+                    className={`w-full rounded-xl border bg-surface px-3.5 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
                       slotError
                         ? 'border-danger focus:border-danger focus:ring-danger/20'
                         : 'border-border focus:border-primary focus:ring-primary/20'
@@ -436,7 +436,7 @@ export function TeamRegistrationForm({
                     // helt bort (#1402).
                     <ul
                       data-focus-inset
-                      className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
+                      className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-sm"
                     >
                       {suggestions.map((c) => (
                         <li key={c.id}>

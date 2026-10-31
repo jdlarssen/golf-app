@@ -149,7 +149,7 @@ function ShareLeagueSection({
   if (!url) return null;
   return (
     <section className="mb-6" data-testid="liga-share">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
         {t('shareLink.heading')}
       </h2>
       <Card className="p-4 sm:p-5">
@@ -301,14 +301,14 @@ export default async function LigaPublicPage({
       {/* Header */}
       <header className="mb-6">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="font-serif text-2xl text-text leading-tight tracking-[-0.015em]">
+          <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight">
             {league.name}
           </h1>
           {/* Status chip — the same word as everywhere, from gameStatus (#2491) */}
           <span
-            className="inline-block shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
+            className="inline-block shrink-0 whitespace-nowrap rounded-full px-[7px] py-[3px] font-sans text-[11px] font-semibold uppercase"
             style={{
-              letterSpacing: '0.14em',
+              letterSpacing: '0.16em',
               ...(league.status === 'active'
                 ? { background: 'var(--score-under-bg)', color: 'var(--score-under-fg)' }
                 : league.status === 'finished'
@@ -407,7 +407,7 @@ export default async function LigaPublicPage({
 
       {/* Standings table */}
       <section className="mb-8">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
           {t('seasonTableHeading')}
         </h2>
         <Card className="p-3 sm:p-4">
@@ -425,7 +425,7 @@ export default async function LigaPublicPage({
 
       {/* Rounds list */}
       <section className="mb-6">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
           {t('roundsHeading')}
         </h2>
         {rounds.length === 0 ? (

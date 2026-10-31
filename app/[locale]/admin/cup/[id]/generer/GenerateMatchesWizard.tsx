@@ -208,7 +208,7 @@ function StepIndicator({
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+    <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
       {children}
     </h2>
   );
@@ -382,7 +382,7 @@ function Step1SessionCounts({
                   })}
                   onClick={() => onAdjust(row, -1)}
                   disabled={row.effective <= 1}
-                  className="min-h-[44px] min-w-[44px] rounded-lg border border-border font-sans text-lg text-text disabled:opacity-40"
+                  className="min-h-[44px] min-w-[44px] rounded-full border border-border font-sans text-lg text-text disabled:opacity-40"
                 >
                   −
                 </button>
@@ -404,7 +404,7 @@ function Step1SessionCounts({
                   })}
                   onClick={() => onAdjust(row, 1)}
                   disabled={row.effective >= row.derived}
-                  className="min-h-[44px] min-w-[44px] rounded-lg border border-border font-sans text-lg text-text disabled:opacity-40"
+                  className="min-h-[44px] min-w-[44px] rounded-full border border-border font-sans text-lg text-text disabled:opacity-40"
                 >
                   +
                 </button>
@@ -476,7 +476,7 @@ function Step2Preview({
       <div className="space-y-5">
         {Array.from(byFormat.entries()).map(([format, formatMatches]) => (
           <div key={format}>
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
               {FORMAT_LABELS[format]}
             </p>
             <div className="space-y-3">
@@ -508,7 +508,7 @@ function Step2Preview({
                             onChange={(e) =>
                               onMatchChange(match.id, 'side1', idx, e.target.value)
                             }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
+                            className="min-h-[44px] w-full rounded-xl border border-border px-2 py-1.5 bg-surface text-text text-xs"
                           >
                             {team1Players.map((p) => {
                               const usedIds = usedIdsInSide(match, 'side1');
@@ -545,7 +545,7 @@ function Step2Preview({
                             onChange={(e) =>
                               onMatchChange(match.id, 'side2', idx, e.target.value)
                             }
-                            className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
+                            className="min-h-[44px] w-full rounded-xl border border-border px-2 py-1.5 bg-surface text-text text-xs"
                           >
                             {team2Players.map((p) => {
                               const usedIds = usedIdsInSide(match, 'side2');
@@ -775,7 +775,7 @@ function GreensomeCard({
             min={0}
             value={team1Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team1', e.target.value)}
-            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
+            className="min-h-[44px] w-full rounded-xl border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
             {side1Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t, locale)}`).join(' · ')}
@@ -794,7 +794,7 @@ function GreensomeCard({
             min={0}
             value={team2Value}
             onChange={(e) => onTeamStrokesChange(match.id, 'team2', e.target.value)}
-            className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
+            className="min-h-[44px] w-full rounded-xl border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
             {side2Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t, locale)}`).join(' · ')}
@@ -871,7 +871,7 @@ function Step2BundlePreview({
 
           return (
             <div key={flight.flightIndex}>
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
                 {t('generate.flightHeading', { n: flight.flightIndex })}
               </p>
               <div className="space-y-3">
@@ -911,7 +911,7 @@ function Step2BundlePreview({
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side1', row.slotIndex, e.target.value)
                           }
-                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-border px-2 py-1.5 bg-surface text-text text-xs"
                         >
                           {team1Players.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -933,7 +933,7 @@ function Step2BundlePreview({
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side2', row.slotIndex, e.target.value)
                           }
-                          className="w-full rounded-lg border border-border px-2 py-1.5 bg-surface text-text text-xs"
+                          className="min-h-[44px] w-full rounded-xl border border-border px-2 py-1.5 bg-surface text-text text-xs"
                         >
                           {team2Players.map((p) => (
                             <option key={p.id} value={p.id}>

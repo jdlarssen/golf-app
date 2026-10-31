@@ -36,7 +36,7 @@ describe('LedgerHeader', () => {
       />,
     );
     const leftSpan = screen.getByText('Spill');
-    expect(leftSpan.className).toContain('tracking-[0.18em]');
+    expect(leftSpan.className).toContain('tracking-[0.2em]');
     expect(leftSpan.style.letterSpacing).toBe('');
     const headerDiv = container.querySelector('div');
     expect(headerDiv?.style.background).toContain('var(--surface-strong)');

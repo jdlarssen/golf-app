@@ -62,7 +62,7 @@ const INITIAL_STATE: CupPlanActionError = { error: '' };
 
 function SectionHeading({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+    <h2 id={id} className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
       {children}
     </h2>
   );
@@ -313,7 +313,7 @@ export function CupPlanForm({
               max={100}
               value={bestBall}
               onChange={(e) => setBestBall(Number(e.target.value))}
-              className="w-24 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
+              className="min-h-[44px] w-24 rounded-xl border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
             />
             <p className="font-sans text-xs text-muted mt-1">
               {t('bestBallHint')}
@@ -332,7 +332,7 @@ export function CupPlanForm({
                   onChange={(e) =>
                     updateCustomSession(i, e.target.value as CupSessionFormat)
                   }
-                  className="flex-1 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm"
+                  className="min-h-[44px] flex-1 rounded-xl border border-border px-2.5 py-2 bg-surface text-text text-sm"
                 >
                   {SESSION_FORMATS.map((f) => (
                     <option key={f} value={f}>
@@ -344,7 +344,7 @@ export function CupPlanForm({
                   type="button"
                   onClick={() => removeCustomSession(i)}
                   aria-label={t('removeSessionAria', { n: i + 1 })}
-                  className="min-h-[44px] px-3 py-1 rounded-lg border border-border text-danger text-sm hover:bg-danger/10"
+                  className="min-h-[44px] px-3 py-1 rounded-full border border-border text-danger text-sm hover:bg-danger/10"
                 >
                   ✕
                 </button>
@@ -353,7 +353,7 @@ export function CupPlanForm({
             <button
               type="button"
               onClick={addCustomSession}
-              className="min-h-[44px] w-full rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
+              className="min-h-[44px] w-full rounded-full border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
             >
               {t('addSessionButton')}
             </button>

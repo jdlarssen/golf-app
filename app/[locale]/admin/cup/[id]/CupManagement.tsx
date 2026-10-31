@@ -406,7 +406,7 @@ export async function CupManagement({
           (eier-tilbakemelding fra staging-runden, #1441). */}
       {(roster.team1.length > 0 || roster.team2.length > 0) && (
       <section className="mb-5">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
           {t('manage.rosterHeading')}
         </h2>
         <div className="grid grid-cols-2 gap-3">

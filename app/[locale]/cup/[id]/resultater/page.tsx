@@ -204,7 +204,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
       {/* Matches-liste med resultater. Hvert kort lenker til kampens eget
           leaderboard (#1456). */}
       <section>
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
           {t('manage.matchesHeading')}
         </h2>
         {leaderboard.matches.length === 0 ? (

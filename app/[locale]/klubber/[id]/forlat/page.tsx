@@ -75,8 +75,7 @@ export default async function ForlatKlubbPage({
         </div>
 
         <div
-          className="rounded-xl border px-4 py-3.5"
-          style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
+          className="rounded-xl border px-4 py-3.5 border-danger/20"
         >
           <p className="font-sans text-sm text-text">
             {t('confirmText', { name: club.name })}

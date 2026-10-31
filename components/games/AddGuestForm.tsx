@@ -91,7 +91,7 @@ export function AddGuestForm({ action, disabled = false }: Props) {
   const t = useTranslations('game.players.guestForm');
   return (
     <div>
-      <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+      <h3 className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('sectionHeading')}
       </h3>
       <form action={action} data-testid="add-guest-form" className="space-y-3">

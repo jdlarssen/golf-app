@@ -51,13 +51,13 @@ export function CupPlayerPoints({
 
   return (
     <section className="mb-8" data-testid="cup-player-points">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
         {t('results.playerPointsHeading')}
       </h2>
       <div className="space-y-5">
         {groups.map((group) => (
           <div key={group.team}>
-            <h3 className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted mb-2">
+            <h3 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
               {group.teamName}
             </h3>
             <ul className="space-y-2">

@@ -164,7 +164,7 @@ function JoinLinkSection({
   if (league.group_id || league.status === 'finished') return null;
   return (
     <section className="mb-5">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
         {t('shareLink.heading')}
       </h2>
       <LigaJoinLinkControl leagueId={league.id} joinCode={league.join_code} />
@@ -358,7 +358,7 @@ export async function LigaManagement({
 
       {/* Runder */}
       <section className="mb-5">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
           {t('manage.roundsHeading')}
         </h2>
         {rounds.length === 0 ? (
@@ -389,7 +389,7 @@ export async function LigaManagement({
 
       {/* Deltakere */}
       <section className="mb-5">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
           {t('manage.participantsHeading')}
         </h2>
         <Card>
@@ -420,7 +420,7 @@ export async function LigaManagement({
 
           {status !== 'finished' && (
             <>
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
                 {t('manage.addParticipantsHeading')}
               </p>
               <LigaAddPlayers
@@ -438,7 +438,7 @@ export async function LigaManagement({
 
       {/* Embed på klubbsiden (#1024) */}
       <section className="mb-5">
-        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
           {t('embed.heading')}
         </h2>
         <LigaEmbedControl

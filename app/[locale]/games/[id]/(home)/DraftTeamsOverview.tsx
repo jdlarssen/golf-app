@@ -106,7 +106,7 @@ export async function DraftTeamsOverview({
                     <span className="truncate">
                       {displayName}
                       {isCurrent && (
-                        <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text ml-2">
+                        <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text ml-2">
                           {tHome('youLabel')}
                         </span>
                       )}

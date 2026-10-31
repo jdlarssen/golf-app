@@ -52,7 +52,7 @@ export function FoursomesTeeStarterBanner({
   return (
     <div
       data-testid="foursomes-tee-starter-banner"
-      className="mb-3 rounded-md border border-accent/40 bg-accent/5 px-3 py-3"
+      className="mb-3 rounded-xl border border-border bg-bg/60 px-4 py-3"
     >
       <p className="mb-2 font-serif text-sm text-text">
         {t('teeStarterQuestion')}
@@ -62,11 +62,11 @@ export function FoursomesTeeStarterBanner({
           <Button
             key={o.userId}
             type="button"
+            variant="secondary"
             onClick={() => handlePick(o.userId)}
             pending={pendingUserId === o.userId}
             disabled={isPending}
             pendingLabel={t('teeStarterSelectPending')}
-            className="min-h-[44px] rounded-md border border-border bg-surface px-3 py-2 text-center text-sm font-medium text-primary transition-colors hover:border-primary/40 disabled:opacity-60"
           >
             {o.displayName}
           </Button>

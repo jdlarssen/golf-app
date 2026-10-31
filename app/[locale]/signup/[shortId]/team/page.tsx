@@ -327,7 +327,7 @@ export default async function TeamDashboardPage({
 
       <div className="space-y-5">
         <header className="px-1">
-          <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
+          <p className="font-sans text-sm font-medium text-muted">
             {localizeGameName(game.name, game.courses?.name ?? null, locale)}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
