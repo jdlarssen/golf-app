@@ -297,7 +297,7 @@ function DrilldownSkeleton() {
             <Skeleton className="ml-auto mt-1 h-2.5 w-10" delay={120} />
           </div>
         </div>
-        <div className="mx-4 mt-2 overflow-hidden rounded-[14px] border border-border bg-surface">
+        <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-border bg-surface">
           {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div
               key={i}
