@@ -6,22 +6,12 @@ import { FormSection } from '@/components/ui/FormSection';
 import { PillRadio } from '@/components/ui/PillRadio';
 import { SwitchRow } from '@/components/ui/Switch';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { formatShortDayMonthLocale, intlLocaleTag } from '@/lib/i18n/format';
+import { formatDayChoiceLocale } from '@/lib/i18n/format';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
 import { moveGameChoices, movedTeeOffIso } from '@/lib/games/moveGameChoices';
 import type { AppLocale } from '@/i18n/routing';
 
 const OTHER = 'other';
-
-/** «Lør. 3. okt» (nb) / «Sat 3 Oct» (en) for an Oslo day «YYYY-MM-DD». */
-function dayLabel(day: string, locale: AppLocale): string {
-  // Noon UTC is the same calendar day in Oslo all year.
-  const noon = new Date(`${day}T12:00:00Z`);
-  const tag = intlLocaleTag(locale);
-  const weekday = new Intl.DateTimeFormat(tag, { timeZone: 'Europe/Oslo', weekday: 'short' }).format(noon);
-  const capitalised = weekday.charAt(0).toLocaleUpperCase(tag) + weekday.slice(1);
-  return `${capitalised} ${formatShortDayMonthLocale(noon, locale)}`;
-}
 
 /**
  * The quick choices and the message on «Flytt runden» (#2480). Day and time
@@ -85,7 +75,7 @@ export function MoveGameForm({
                   setDay(d);
                 }}
               >
-                {dayLabel(d, locale)}
+                {formatDayChoiceLocale(d, locale)}
               </PillRadio>
             ))}
             <PillRadio

@@ -37,3 +37,18 @@ export const TEE_COLOR_NAMES: Record<TeeColor, string> = {
   blue: 'Blå',
   orange: 'Oransje',
 };
+
+const COLOR_BY_NAME = new Map<string, TeeColor>(
+  TEE_COLORS.map((key) => [TEE_COLOR_NAMES[key].toLocaleLowerCase('nb'), key]),
+);
+
+/**
+ * The dot in front of a tee on «Hvor og når?» (#2448): the stored colour, or
+ * else the colour the name says, with the rule 0225 backfilled by (the whole
+ * name, any case, outer spaces ignored). `null` is the neutral dot: «Men's
+ * III» or «57» names no colour.
+ */
+export function teeDotColor(tee: { color: string | null; name: string }): TeeColor | null {
+  if (isTeeColor(tee.color)) return tee.color;
+  return COLOR_BY_NAME.get(tee.name.trim().toLocaleLowerCase('nb')) ?? null;
+}
