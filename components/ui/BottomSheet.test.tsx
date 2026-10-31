@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
 
 // Type B (docs/test-discipline.md): what the sheet renders and what closes it.
-// Focus return is covered with the rows that open it (ReadySettings.test.tsx).
+// Focus return is covered with the rows that open it (GameWizard.test.tsx, #2457).
 
 function renderSheet(props: { open?: boolean; onClose?: () => void; onSubmit?: () => void } = {}) {
   const onClose = props.onClose ?? vi.fn();
