@@ -54,7 +54,7 @@ describe('PrizesSection som rad som åpner premiebordet (#2457)', () => {
 
     const toggle = screen.getByTestId('prizes-toggle');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(toggle).toHaveAccessibleName(/premiebord/i);
+    expect(toggle).toHaveAccessibleName('Premiebord Legg til');
     expect(toggle).toHaveClass('min-h-11');
     expect(screen.queryByTestId('prize-placement_1-desc')).toBeNull();
     expect(toggle).toHaveAttribute('aria-controls');

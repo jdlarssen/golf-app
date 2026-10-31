@@ -20,7 +20,7 @@ import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Kicker } from '@/components/ui/Kicker';
-import { PRIZE_SLOTS } from '@/lib/games/prizes';
+import { countPrizesInPlay, prizeShapeFor } from '@/lib/games/prizes';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { HandicapSettings } from './HandicapSettings';
 import { RegistrationSection } from './RegistrationSection';
@@ -46,9 +46,9 @@ export function ReadySettings({
 }) {
   const t = useTranslations('wizard.ready.settings');
 
-  const prizeCount = PRIZE_SLOTS.filter(
-    (slot) => state.prizeDraft[slot.key].description.trim() !== '',
-  ).length;
+  // The same count as the prize table's own row: a prize in a slot the format
+  // does not show is dropped when the game is saved, so it is not counted.
+  const prizeCount = countPrizesInPlay(state.prizeDraft, prizeShapeFor(state));
 
   const rows = readySettingsRows({
     gameMode: state.gameMode,
