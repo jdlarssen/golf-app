@@ -828,34 +828,21 @@ describe('Hole', () => {
     expect(navigation.setParams).not.toHaveBeenCalled();
   });
 
-  // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
-  // netto. Samme bundel med og uten blind runde, så forskjellen er regelen.
-  it('stableford viser poeng på knappene, radene og «Stryk», men ikke i en blind runde', async () => {
-    const stableford = {
+  // #2735 (eierens svar, snur #2635): mens slagene føres, viser hullsiden bare
+  // brutto, også i stableford. Ingen poeng på knappene, radene eller «Stryk».
+  it('stableford viser ingen poeng på knappene, radene eller «Stryk»', async () => {
+    mockState.bundle = {
       ...mockSoloBundle,
       game: { ...GAME_BASE, gameMode: 'stableford' },
     };
-    mockState.bundle = stableford;
     mockState.scores = [localScore('mate', 5, null)];
-    const { unmount } = await render(
-      holeElement(1, { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
-    });
-    // Slagene og poengene står i linja under navnet (#2385).
-    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(`${strokesLine(1)} · 2 poeng`);
-    await fireEvent.press(screen.getByTestId('rail-other'));
-    expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk · 0 p');
-    await unmount();
-
-    mockState.bundle = { ...stableford, game: { ...stableford.game, scoreVisibility: 'reveal' } };
     await renderHole();
+
     await waitFor(() => {
       expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
     });
-    // Blind runde: slagene er tildelingen og står, men poengene er borte.
+    expect(screen.getByLabelText('Sett 4 slag for Meg Selv: Par')).toBeTruthy();
+    // Slagene er tildelingen og står; poengene er borte.
     expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(strokesLine(1));
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk');
