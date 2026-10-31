@@ -103,6 +103,9 @@ insert into fk_coverage (tbl, col, handling) values
   ('cup_lineup_sessions',        'team_2_submitted_by',                 'kept_no_pii'),
   ('game_players',               'withdrawn_by_user_id',                'kept_no_pii'),
   ('game_registration_requests', 'decided_by_user_id',                  'kept_no_pii'),
+  -- #2607 (0230): the host's pre-start seat is deleted, and the trigger
+  -- withdraws the guest; the guest's withdrawn request keeps the pointer.
+  ('game_registration_requests', 'brought_by_user_id',                  'kept_no_pii'),
   ('games',                      'created_by',                          'kept_no_pii'),
   ('group_join_requests',        'decided_by_user_id',                  'kept_no_pii'),
   ('groups',                     'created_by',                          'kept_no_pii'),

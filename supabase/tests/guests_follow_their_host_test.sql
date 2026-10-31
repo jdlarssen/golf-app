@@ -1,7 +1,9 @@
 -- supabase/tests/guests_follow_their_host_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Runtime test for migration 0229 (#2607): the guests a captain brought leave
--- when the captain's seat is deleted before the start.
+-- Runtime test for migrations 0229 and 0230 (#2607): the guests a player
+-- brought leave when the player's seat is deleted before the start. 0229: the
+-- guests under a team captain. 0230: the guest a player brought alone
+-- («Ta med en gjest», brought_by_user_id).
 --
 --   1. Service role (withdrawSelf, removePlayerFromGame's write): deleting the
 --      captain's roster row withdraws the guests under the captain, approved
@@ -16,6 +18,17 @@
 --   7. Host and guest deleted in one statement (the approval's compensation,
 --      or «Rediger» removing both): the guest's request is left as it was.
 --   8. The trigger function cannot be called by anon or authenticated.
+--   9. Service role deletes a player's seat: the guest the player brought goes,
+--      approved and seated or pending; another player's guest stays.
+--  10. The organiser's «Fjern» and the player's own delete, under RLS, take
+--      the brought guest.
+--  11. Account deletion (anonymize_user) takes the brought guest.
+--  12. guard_brought_guest refuses a row that is not a guest's, a host who is
+--      a guest or the guest itself, a host who is not on the roster, a second
+--      live guest, and a row that is both a team row and a brought guest; it
+--      lets a valid row through.
+--  13. A player cannot give their own pending request a host (PATCH under
+--      RLS), and the guard cannot be called by anon or authenticated.
 --   0. A delete that matches no row returns: a statement trigger fires on a
 --      0-row statement too, and the cascade's own delete is one, so without
 --      the early return every delete on game_players recursed until the stack
@@ -34,12 +47,12 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(55);
 
 create schema if not exists torny_bgh;
 
 -- uid(n): fixture user n. uid(0) creates every game. Guests: 2, 3, 6, 8, 11,
--- 13, 15, 17.
+-- 13, 15, 17, and for 0230: 22, 26, 28, 30, 32, 34, 38.
 create or replace function torny_bgh.uid(n int) returns uuid language sql immutable as $$
   select ('00000000-0000-4000-b607-1' || lpad(n::text, 11, '0'))::uuid
 $$;
@@ -109,16 +122,57 @@ create or replace function torny_bgh.drop_seat(p_game int, p_user int) returns v
    where game_id = torny_bgh.gid(p_game) and user_id = torny_bgh.uid(p_user)
 $$;
 
+-- seed_solo_game(n, status, mode): a stableford game players sign up to alone.
+create or replace function torny_bgh.seed_solo_game(p_n int, p_status text, p_mode text)
+  returns void language plpgsql as $$
+  begin
+    insert into public.games (id, name, game_mode, mode_config, status, registration_mode,
+                              registration_type, created_by)
+    values (torny_bgh.gid(p_n), 'BGH solo game ' || p_n, 'stableford', '{}'::jsonb,
+            p_status::public.game_status, p_mode::public.registration_mode, 'solo',
+            torny_bgh.uid(0));
+  end;
+$$;
+
+-- brought(game, guest, status, host, captain): the guest's request with the
+-- host in brought_by_user_id (0230). captain = true makes it a team row too.
+create or replace function torny_bgh.brought(
+  p_game int, p_user int, p_status text, p_host int, p_captain boolean default false
+) returns void language plpgsql as $$
+  begin
+    insert into public.game_registration_requests
+      (id, game_id, user_id, status, team_name, is_team_captain, brought_by_user_id)
+    values (torny_bgh.rid(p_user), torny_bgh.gid(p_game), torny_bgh.uid(p_user),
+            p_status::public.registration_request_status,
+            case when p_captain then 'Lag ' || p_user end, p_captain, torny_bgh.uid(p_host));
+  end;
+$$;
+
+-- attempt(sql): runs the statement and returns 'ok', or the error's
+-- 'sqlstate message'. For writes made as another role, where pgTAP's own
+-- tables are out of reach.
+create or replace function torny_bgh.attempt(p_sql text) returns text
+  language plpgsql as $$
+  begin
+    execute p_sql;
+    return 'ok';
+  exception when others then
+    return sqlstate || ' ' || sqlerrm;
+  end;
+$$;
+
 -- ── Seed ─────────────────────────────────────────────────────────────────────
 insert into auth.users (id, instance_id, aud, role, email)
 select torny_bgh.uid(n), '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated',
        'authenticated', 'bgh-' || n || '@example.test'
-  from generate_series(0, 20) as n;
+  from generate_series(0, 38) as n;
 
 insert into public.users (id, email, name, is_guest)
 select id, email, 'BGH ' || email,
        id in (torny_bgh.uid(2), torny_bgh.uid(3), torny_bgh.uid(6), torny_bgh.uid(8),
-              torny_bgh.uid(11), torny_bgh.uid(13), torny_bgh.uid(15), torny_bgh.uid(17))
+              torny_bgh.uid(11), torny_bgh.uid(13), torny_bgh.uid(15), torny_bgh.uid(17),
+              torny_bgh.uid(22), torny_bgh.uid(26), torny_bgh.uid(28), torny_bgh.uid(30),
+              torny_bgh.uid(32), torny_bgh.uid(34), torny_bgh.uid(38))
   from auth.users
  where email like 'bgh-%@example.test'
 on conflict (id) do update set email = excluded.email, name = excluded.name,
@@ -174,6 +228,45 @@ select torny_bgh.request(6, 10, 'approved', null);
 select torny_bgh.request(6, 11, 'approved', 10);
 select torny_bgh.roster(6, 10);
 select torny_bgh.roster(6, 11);
+
+-- 0230: players who signed up alone and brought a guest. The host's seat comes
+-- first: the guard wants the host on the roster.
+-- Game 7 (scheduled, open): host 21 with guest 22 (approved, seated); host 25
+-- with guest 26 (approved, seated); player 35 seated without a guest.
+select torny_bgh.seed_solo_game(7, 'scheduled', 'open');
+select torny_bgh.roster(7, 21);
+select torny_bgh.brought(7, 22, 'approved', 21);
+select torny_bgh.roster(7, 22);
+select torny_bgh.roster(7, 25);
+select torny_bgh.brought(7, 26, 'approved', 25);
+select torny_bgh.roster(7, 26);
+select torny_bgh.roster(7, 35);
+
+-- Game 8 (scheduled, manual approval): host 27 with guest 28 (pending, no
+-- seat); player 36 has a pending request of their own.
+select torny_bgh.seed_solo_game(8, 'scheduled', 'manual_approval');
+select torny_bgh.roster(8, 27);
+select torny_bgh.brought(8, 28, 'pending', 27);
+insert into public.game_registration_requests (id, game_id, user_id, status)
+values (torny_bgh.rid(36), torny_bgh.gid(8), torny_bgh.uid(36), 'pending');
+
+-- Game 9 (scheduled, open): host 29 with guest 30 — the organiser's «Fjern».
+select torny_bgh.seed_solo_game(9, 'scheduled', 'open');
+select torny_bgh.roster(9, 29);
+select torny_bgh.brought(9, 30, 'approved', 29);
+select torny_bgh.roster(9, 30);
+
+-- Game 10 (draft, open): host 31 with guest 32 — account deletion.
+select torny_bgh.seed_solo_game(10, 'draft', 'open');
+select torny_bgh.roster(10, 31);
+select torny_bgh.brought(10, 32, 'approved', 31);
+select torny_bgh.roster(10, 32);
+
+-- Game 11 (scheduled, open): host 37 with guest 38 — the host's own «Trekk meg».
+select torny_bgh.seed_solo_game(11, 'scheduled', 'open');
+select torny_bgh.roster(11, 37);
+select torny_bgh.brought(11, 38, 'approved', 37);
+select torny_bgh.roster(11, 38);
 
 -- ── 0. No self-recursion ────────────────────────────────────────────────────
 select lives_ok(
@@ -277,6 +370,87 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.withdraw_guests_of_removed_hosts()', 'execute'),
   'authenticated may not execute withdraw_guests_of_removed_hosts');
+
+-- ── 9. 0230: service role deletes the host's seat ───────────────────────────
+select torny_bgh.drop_seat(7, 21);
+select is(torny_bgh.seat(7, 22), 'no', 'brought guest: leaves with the host');
+select is(torny_bgh.req(22), 'withdrawn', 'brought guest: the request is withdrawn');
+select is(torny_bgh.decided_by(22), '21', 'brought guest: no caller, the host decided');
+select is(torny_bgh.seat(7, 26), 'yes', 'brought guest: another host''s guest keeps the seat');
+select is(torny_bgh.req(26), 'approved', 'brought guest: another host''s guest keeps the request');
+select torny_bgh.drop_seat(8, 27);
+select is(torny_bgh.req(28), 'withdrawn', 'brought guest: a pending guest is withdrawn too');
+
+-- ── 10. 0230: the organiser's «Fjern» and the host's own delete, under RLS ───
+create temp table bgh_brought_delete(who text, n int);
+grant all on bgh_brought_delete to authenticated;
+grant execute on all functions in schema torny_bgh to authenticated;
+select torny_bgh.as_user(torny_bgh.uid(0));
+with gone as (
+  delete from public.game_players
+   where game_id = torny_bgh.gid(9) and user_id = torny_bgh.uid(29)
+  returning 1
+)
+insert into bgh_brought_delete select 'organiser', count(*) from gone;
+select torny_bgh.as_postgres();
+select torny_bgh.as_user(torny_bgh.uid(37));
+with gone as (
+  delete from public.game_players
+   where game_id = torny_bgh.gid(11) and user_id = torny_bgh.uid(37)
+  returning 1
+)
+insert into bgh_brought_delete select 'host', count(*) from gone;
+select torny_bgh.as_postgres();
+select is((select n from bgh_brought_delete where who = 'organiser'), 1,
+  'brought guest: the organiser deletes the host''s seat under RLS');
+select is(torny_bgh.seat(9, 30), 'no', 'brought guest: leaves when the organiser removes the host');
+select is(torny_bgh.req(30), 'withdrawn', 'brought guest: withdrawn by the organiser''s «Fjern»');
+select is(torny_bgh.decided_by(30), '0', 'brought guest: the organiser is recorded as the one who decided');
+select is((select n from bgh_brought_delete where who = 'host'), 1,
+  'brought guest: the host deletes their own seat under RLS');
+select is(torny_bgh.seat(11, 38), 'no', 'brought guest: leaves when the host withdraws');
+select is(torny_bgh.req(38), 'withdrawn', 'brought guest: withdrawn by the host''s «Trekk meg»');
+select is(torny_bgh.decided_by(38), '37', 'brought guest: the host is recorded as the one who decided');
+
+-- ── 11. 0230: account deletion ───────────────────────────────────────────────
+select public.anonymize_user(torny_bgh.uid(31));
+select is(torny_bgh.seat(10, 32), 'no', 'brought guest: account deletion takes the guest''s seat');
+select is(torny_bgh.req(32), 'withdrawn', 'brought guest: account deletion withdraws the guest''s request');
+
+-- ── 12. 0230: the guard ──────────────────────────────────────────────────────
+select throws_ok('select torny_bgh.brought(7, 33, ''approved'', 35)',
+  '23514', 'not_a_guest', 'guard: a player with an account cannot be brought as a guest');
+select throws_ok('select torny_bgh.brought(7, 34, ''approved'', 26)',
+  '23514', 'not_a_guest', 'guard: a guest cannot bring a guest');
+select throws_ok('select torny_bgh.brought(7, 34, ''approved'', 34)',
+  '23514', 'not_a_guest', 'guard: a guest cannot be its own host');
+select throws_ok('select torny_bgh.brought(7, 34, ''approved'', 33)',
+  '23514', 'host_not_on_roster', 'guard: a host who is not signed up cannot bring a guest');
+select throws_ok('select torny_bgh.brought(7, 34, ''approved'', 25)',
+  '23514', 'brought_guest_limit', 'guard: one live guest per host');
+select throws_like('select torny_bgh.brought(7, 34, ''approved'', 35, true)',
+  '%brought_guest_not_in_team%', 'a row is a team row or a brought guest, never both');
+select lives_ok('select torny_bgh.brought(7, 34, ''approved'', 35)',
+  'guard: a signed-up player brings one guest');
+
+-- ── 13. 0230: no host by PATCH, and trigger only ─────────────────────────────
+create temp table bgh_patch(r text);
+grant all on bgh_patch to authenticated;
+grant execute on all functions in schema torny_bgh to authenticated;
+select torny_bgh.as_user(torny_bgh.uid(36));
+insert into bgh_patch select torny_bgh.attempt(format(
+  'update public.game_registration_requests set brought_by_user_id = %L, status = ''withdrawn'' where id = %L',
+  torny_bgh.uid(27), torny_bgh.rid(36)));
+select torny_bgh.as_postgres();
+select is((select r from bgh_patch), '23514 not_a_guest',
+  'PATCH: a player cannot give their own pending request a host');
+select is(torny_bgh.req(36), 'pending', 'PATCH: the player''s request is unchanged');
+select ok(
+  not has_function_privilege('anon', 'public.guard_brought_guest()', 'execute'),
+  'anon may not execute guard_brought_guest');
+select ok(
+  not has_function_privilege('authenticated', 'public.guard_brought_guest()', 'execute'),
+  'authenticated may not execute guard_brought_guest');
 
 select * from finish();
 rollback;
