@@ -64,6 +64,7 @@ export type PersistedInitialValues = Pick<
   | 'course_id'
   | 'tee_box_id'
   | 'scheduled_tee_off_at'
+  | 'tee_off_now'
   | 'start_type'
   | 'hcp_allowance_pct'
   | 'require_peer_approval'
@@ -237,6 +238,9 @@ export function wizardDraftFromState({
       course_id: state.courseId,
       tee_box_id: state.teeBoxId,
       scheduled_tee_off_at: state.scheduledTeeOffAt,
+      // #2463: optional, so an older draft without it reads as a time, and
+      // WIZARD_DRAFT_VERSION stays.
+      tee_off_now: state.teeOffNow || undefined,
       start_type: state.startType,
       hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,

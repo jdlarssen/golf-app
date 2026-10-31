@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import {
   useGameFormState,
@@ -1924,6 +1924,131 @@ describe('useGameFormState — teeOffInPast blocks canPublish (#928)', () => {
     });
     expect(result.current.teeOffInPast).toBe(false);
     expect(result.current.canPublish).toBe(true);
+  });
+});
+
+// ─── #2463 — tee-off «Nå» ────────────────────────────────────────────────────
+
+describe('useGameFormState — tee-off «Nå» (#2463)', () => {
+  const SATURDAY = '2026-11-07T09:00';
+
+  /** A publishable solo stableford, as the wizard mounts it for `intent`. */
+  function setup(
+    opts: { intent?: 'kompis' | 'solo' | 'klubb' | 'cup'; tournamentId?: string; teeOffNow?: boolean } = {},
+  ) {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: opts.intent,
+        initialValues: {
+          scheduled_tee_off_at: SATURDAY,
+          tee_off_now: opts.teeOffNow,
+          tournament_id: opts.tournamentId,
+        },
+      }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.togglePlayer('p-mann');
+    });
+    return { result };
+  }
+
+  it.each(['kompis', 'solo'] as const)('%s offers «Nå»; choosing it keeps no time and the publish is open', (intent) => {
+    const { result } = setup({ intent });
+    expect(result.current.allowTeeOffNow).toBe(true);
+    act(() => result.current.setTeeOffNow(true));
+    expect(result.current.teeOffNow).toBe(true);
+    expect(result.current.scheduledTeeOffAt).toBe('');
+    expect(result.current.hasTeeOff).toBe(true);
+    expect(result.current.teeOffInPast).toBe(false);
+    expect(result.current.missingForPublishCodes).not.toContain('tee_off');
+    expect(result.current.canPublish).toBe(true);
+  });
+
+  it('«Nå» never goes into the past, however long the later steps take', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const { result } = setup({ intent: 'kompis' });
+      act(() => result.current.setTeeOffNow(true));
+      vi.setSystemTime(Date.now() + 30 * 60 * 1000);
+      act(() => result.current.setName('Etter en halvtime'));
+      expect(result.current.teeOffInPast).toBe(false);
+      expect(result.current.canPublish).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['klubb', { intent: 'klubb' as const }],
+    ['a cup link', { intent: 'cup' as const, tournamentId: 'cup-1' }],
+    ['kompis from a cup link', { intent: 'kompis' as const, tournamentId: 'cup-1' }],
+    ['«Rediger spill» (no intent)', {}],
+  ])('%s does not offer «Nå», even from a draft that chose it', (_label, opts) => {
+    const { result } = setup({ ...opts, teeOffNow: true });
+    expect(result.current.allowTeeOffNow).toBe(false);
+    expect(result.current.teeOffNow).toBe(false);
+    expect(result.current.scheduledTeeOffAt).toBe(SATURDAY);
+  });
+
+  it('a draft that chose «Nå» opens with it chosen', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: 'kompis',
+        initialValues: { scheduled_tee_off_at: '', tee_off_now: true },
+      }),
+    );
+    expect(result.current.teeOffNow).toBe(true);
+    expect(result.current.hasTeeOff).toBe(true);
+  });
+
+  it('with «Nå» the organiser picks the players: the mode is invite_only, the choice kept', () => {
+    const { result } = setup({ intent: 'kompis' });
+    act(() => result.current.setRegistrationMode('open'));
+    expect(result.current.playersStepOptional).toBe(true);
+    act(() => result.current.setTeeOffNow(true));
+    expect(result.current.registrationMode).toBe('invite_only');
+    expect(result.current.playersStepOptional).toBe(false);
+    act(() => result.current.setTeeOffNow(false));
+    expect(result.current.registrationMode).toBe('open');
+  });
+
+  it('switching to an arrangement without «Nå» drops it and brings back the opening tee-off', () => {
+    const { result } = setup({ intent: 'kompis' });
+    act(() => result.current.setTeeOffNow(true));
+    act(() => result.current.setIntent('klubb'));
+    expect(result.current.teeOffNow).toBe(false);
+    expect(result.current.scheduledTeeOffAt).toBe(SATURDAY);
+    // Back on kompis, «Nå» is not chosen any more.
+    act(() => result.current.setIntent('kompis'));
+    expect(result.current.teeOffNow).toBe(false);
+  });
+
+  it('a local draft keeps «Nå» across a reload, and leaves it out otherwise', () => {
+    const { result } = setup({ intent: 'kompis' });
+    expect(wizardDraftFromState({ state: result.current, nameTouched: false }).values.tee_off_now).toBeUndefined();
+    act(() => result.current.setTeeOffNow(true));
+    const draft = wizardDraftFromState({ state: result.current, nameTouched: false });
+    expect(draft.values.tee_off_now).toBe(true);
+
+    const { result: resumed } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: 'kompis',
+        initialValues: JSON.parse(JSON.stringify(draft.values)),
+      }),
+    );
+    expect(resumed.current.teeOffNow).toBe(true);
+    expect(resumed.current.scheduledTeeOffAt).toBe('');
   });
 });
 

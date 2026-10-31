@@ -1,16 +1,15 @@
 'use client';
 
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useId, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { FormSection } from '@/components/ui/FormSection';
 import { PillRadio } from '@/components/ui/PillRadio';
-import { formatDayChoiceLocale } from '@/lib/i18n/format';
 import { isTeeOffInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { movedTeeOffIso } from '@/lib/games/moveGameChoices';
 import { teeOffQuickPicks } from '@/lib/games/teeOffQuickPicks';
-import type { AppLocale } from '@/i18n/routing';
 
 const OTHER = 'other';
+const NOW = 'now';
 
 const subscribeNever = () => () => {};
 
@@ -31,9 +30,15 @@ function osloMs(local: string): number {
 
 /**
  * «TEE-OFF» on «Hvor og når?» (#2448, `Nyttspill-forslag-bane`): a row of
- * days («I dag», «I morgen», «Lør. 7. nov», «Annen dag») and a row of times
- * («08:00», «09:00», «10:00», «Annen tid»). «Annen dag» and «Annen tid» open
- * a date or time field under the row, as on «Flytt runden» (#2480).
+ * days («I dag», «I morgen», «Annen dag») and a row of times («08:00»,
+ * «09:00», «10:00», «Annen tid»). «Annen dag» and «Annen tid» open a date or
+ * time field under the row, as on «Flytt runden» (#2480).
+ *
+ * #2463 (`Nyttspill-forslag-spill-na`): with `allowNow` the day row starts
+ * with «Nå». Chosen, it hides the time row and the fields and shows «Dere står
+ * på banen» instead: the tee-off is set when the game is published
+ * (`resolveTeeOffForSave`), so it travels as BasicsSection's `tee_off_now`
+ * field, never as a time here.
  *
  * The pills show the tee-off that is set, wherever it came from (#2438's
  * Saturday 09:00, a draft, the game being edited): a day or time outside the
@@ -51,19 +56,26 @@ export function TeeOffQuickPicks({
   value,
   onChange,
   teeOffNow,
+  allowNow = false,
+  now = false,
+  onNowChange,
   describedBy,
   children,
 }: {
   value: string;
   onChange: (next: string) => void;
   teeOffNow: string;
+  /** #2463: offer «Nå» first on the day row (Kompis and Solo in the wizard). */
+  allowNow?: boolean;
+  /** #2463: «Nå» is chosen. Only read with `allowNow`. */
+  now?: boolean;
+  onNowChange?: (next: boolean) => void;
   /** The id of the hint or error under the rows. */
   describedBy?: string;
   /** What stands under the rows: the hint, the error and «Shotgun-start». */
   children?: ReactNode;
 }) {
   const t = useTranslations('wizard.sections.basics');
-  const locale = useLocale() as AppLocale;
   const picks = useMemo(() => teeOffQuickPicks(teeOffNow), [teeOffNow]);
   const today = picks.days[0] ?? '';
   // The #928 pattern (useGameFormState's `teeOffInPast`): the server's «now»
@@ -75,6 +87,8 @@ export function TeeOffQuickPicks({
   const [pending, setPending] = useState({ day: '', time: '' });
   const [otherDayOpen, setOtherDayOpen] = useState(false);
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
+  const nowBoxId = useId();
+  const nowChosen = allowNow && now;
 
   const { day, time } = value ? splitTeeOff(value) : pending;
 
@@ -84,11 +98,14 @@ export function TeeOffQuickPicks({
     if (full !== value) onChange(full);
   }
 
-  const dayChoice = otherDayOpen || (day !== '' && !picks.days.includes(day)) ? OTHER : day;
+  const dayChoice = nowChosen
+    ? NOW
+    : otherDayOpen || (day !== '' && !picks.days.includes(day))
+      ? OTHER
+      : day;
   const timeChoice = otherTimeOpen || (time !== '' && !picks.times.includes(time)) ? OTHER : time;
 
-  const dayText = (d: string, i: number) =>
-    i === 0 ? t('today') : i === 1 ? t('tomorrow') : formatDayChoiceLocale(d, locale);
+  const dayText = (i: number) => (i === 0 ? t('today') : t('tomorrow'));
   const timePassed = (tm: string) => {
     if (day !== today) return false;
     const iso = movedTeeOffIso(day, tm);
@@ -99,26 +116,66 @@ export function TeeOffQuickPicks({
   const fieldClass =
     'mt-2 h-11 w-full min-w-0 appearance-none rounded-xl border border-field-border bg-surface px-3.5 font-sans text-base tabular-nums text-text [&::-webkit-date-and-time-value]:text-left';
 
+  /** Leaving «Nå» for a day: the day and time work as without it. */
+  function leaveNow() {
+    if (nowChosen) onNowChange?.(false);
+  }
+
   return (
     <FormSection legend={t('teeOffLabel')} variant="bare">
-      <div role="radiogroup" aria-label={t('dayGroup')} aria-describedby={describedBy} className="flex flex-wrap gap-2">
+      <div
+        role="radiogroup"
+        aria-label={t('dayGroup')}
+        aria-describedby={nowChosen ? nowBoxId : describedBy}
+        className="flex flex-wrap gap-2"
+      >
+        {allowNow && (
+          <PillRadio
+            value={NOW}
+            checked={nowChosen}
+            onChange={() => {
+              setOtherDayOpen(false);
+              setOtherTimeOpen(false);
+              setPending({ day: '', time: '' });
+              onNowChange?.(true);
+            }}
+          >
+            {t('teeOffNow')}
+          </PillRadio>
+        )}
         {picks.days.map((d, i) => (
           <PillRadio
             key={d}
             value={d}
             checked={dayChoice === d}
             onChange={() => {
+              leaveNow();
               setOtherDayOpen(false);
               commit(d, time);
             }}
           >
-            {dayText(d, i)}
+            {dayText(i)}
           </PillRadio>
         ))}
-        <PillRadio value={OTHER} checked={dayChoice === OTHER} onChange={() => setOtherDayOpen(true)}>
+        <PillRadio
+          value={OTHER}
+          checked={dayChoice === OTHER}
+          onChange={() => {
+            leaveNow();
+            setOtherDayOpen(true);
+          }}
+        >
           {t('otherDay')}
         </PillRadio>
       </div>
+      {nowChosen && (
+        <div id={nowBoxId} className="mt-3 flex flex-col gap-1 rounded-[14px] bg-primary-soft px-3.5 py-3">
+          <p className="font-sans text-[15px] font-semibold leading-[normal] text-primary">
+            {t('teeOffNowTitle')}
+          </p>
+          <p className="font-sans text-[13px] leading-[1.45] text-text">{t('teeOffNowBody')}</p>
+        </div>
+      )}
       {dayChoice === OTHER && (
         <input
           type="date"
@@ -131,31 +188,33 @@ export function TeeOffQuickPicks({
         />
       )}
 
-      <div
-        role="radiogroup"
-        aria-label={t('timeGroup')}
-        aria-describedby={describedBy}
-        className="mt-2 flex flex-wrap gap-2"
-      >
-        {picks.times.map((tm) => (
-          <PillRadio
-            key={tm}
-            value={tm}
-            checked={timeChoice === tm}
-            disabled={timePassed(tm)}
-            onChange={() => {
-              setOtherTimeOpen(false);
-              commit(day, tm);
-            }}
-          >
-            {tm}
+      {!nowChosen && (
+        <div
+          role="radiogroup"
+          aria-label={t('timeGroup')}
+          aria-describedby={describedBy}
+          className="mt-2 flex flex-wrap gap-2"
+        >
+          {picks.times.map((tm) => (
+            <PillRadio
+              key={tm}
+              value={tm}
+              checked={timeChoice === tm}
+              disabled={timePassed(tm)}
+              onChange={() => {
+                setOtherTimeOpen(false);
+                commit(day, tm);
+              }}
+            >
+              {tm}
+            </PillRadio>
+          ))}
+          <PillRadio value={OTHER} checked={timeChoice === OTHER} onChange={() => setOtherTimeOpen(true)}>
+            {t('otherTime')}
           </PillRadio>
-        ))}
-        <PillRadio value={OTHER} checked={timeChoice === OTHER} onChange={() => setOtherTimeOpen(true)}>
-          {t('otherTime')}
-        </PillRadio>
-      </div>
-      {timeChoice === OTHER && (
+        </div>
+      )}
+      {!nowChosen && timeChoice === OTHER && (
         <input
           type="time"
           aria-label={t('otherTimeInput')}

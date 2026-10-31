@@ -46,6 +46,7 @@ export function InvitationPreviewCard({
   name,
   onNameChange,
   when,
+  whenNow = false,
   courseName,
   teeName,
   formatName,
@@ -55,6 +56,8 @@ export function InvitationPreviewCard({
   onNameChange?: (next: string) => void;
   /** From `invitationWhen`: Oslo time. `null` → no date line. */
   when: { weekday: string; date: string; time: string } | null;
+  /** #2463: «Nå» on step 3; the line says the time is set when you publish. */
+  whenNow?: boolean;
   courseName: string | null;
   teeName: string | null;
   formatName: string;
@@ -160,9 +163,9 @@ export function InvitationPreviewCard({
                 </p>
               )}
             </div>
-            {when && (
+            {(whenNow || when) && (
               <p className="font-sans text-[13px] leading-[normal] text-text tabular-nums first-letter:uppercase">
-                {t('card.when', when)}
+                {whenNow ? t('teeOffNow') : when && t('card.when', when)}
               </p>
             )}
             <p className="font-sans text-xs leading-[normal] text-muted">{details}</p>

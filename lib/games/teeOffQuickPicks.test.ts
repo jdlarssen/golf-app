@@ -2,64 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { QUICK_PICK_TIMES, teeOffNowLocal, teeOffQuickPicks } from './teeOffQuickPicks';
 import { defaultTeeOffAt } from './defaultTeeOff';
 
-describe('teeOffQuickPicks (#2448)', () => {
-  it('a Wednesday: today, tomorrow and the Saturday after', () => {
+describe('teeOffQuickPicks (#2448, #2463)', () => {
+  it('today and tomorrow, and no Saturday (#2463)', () => {
     // Wed 4 Nov 2026
-    expect(teeOffQuickPicks('2026-11-04T14:20').days).toEqual([
-      '2026-11-04',
-      '2026-11-05',
-      '2026-11-07',
-    ]);
-  });
-
-  it('a Friday: tomorrow is Saturday, so the third day is the Saturday a week on', () => {
+    expect(teeOffQuickPicks('2026-11-04T14:20').days).toEqual(['2026-11-04', '2026-11-05']);
     // Fri 6 Nov 2026
-    expect(teeOffQuickPicks('2026-11-06T10:00').days).toEqual([
-      '2026-11-06',
-      '2026-11-07',
-      '2026-11-14',
-    ]);
-  });
-
-  it('a Saturday: tomorrow is Sunday, and the third day the next Saturday', () => {
-    // Sat 7 Nov 2026
-    expect(teeOffQuickPicks('2026-11-07T08:30').days).toEqual([
-      '2026-11-07',
-      '2026-11-08',
-      '2026-11-14',
-    ]);
-  });
-
-  it('a Sunday: Monday, then the Saturday six days on', () => {
-    expect(teeOffQuickPicks('2026-11-08T21:00').days).toEqual([
-      '2026-11-08',
-      '2026-11-09',
-      '2026-11-14',
-    ]);
+    expect(teeOffQuickPicks('2026-11-06T10:00').days).toEqual(['2026-11-06', '2026-11-07']);
   });
 
   it('runs over a month and a year', () => {
     // Thu 31 Dec 2026
-    expect(teeOffQuickPicks('2026-12-31T12:00').days).toEqual([
-      '2026-12-31',
-      '2027-01-01',
-      '2027-01-02',
-    ]);
+    expect(teeOffQuickPicks('2026-12-31T12:00').days).toEqual(['2026-12-31', '2027-01-01']);
   });
 
   it('counts calendar days over the clock change (Sun 25 Oct 2026, Sun 28 Mar 2027)', () => {
-    // Fri 23 Oct 2026, the weekend summer time ends
-    expect(teeOffQuickPicks('2026-10-23T23:30').days).toEqual([
-      '2026-10-23',
-      '2026-10-24',
-      '2026-10-31',
-    ]);
+    // Sat 24 Oct 2026, the night summer time ends
+    expect(teeOffQuickPicks('2026-10-24T23:30').days).toEqual(['2026-10-24', '2026-10-25']);
     // Sat 27 Mar 2027, the night summer time starts
-    expect(teeOffQuickPicks('2027-03-27T23:59').days).toEqual([
-      '2027-03-27',
-      '2027-03-28',
-      '2027-04-03',
-    ]);
+    expect(teeOffQuickPicks('2027-03-27T23:59').days).toEqual(['2027-03-27', '2027-03-28']);
   });
 
   it('offers 08:00, 09:00 and 10:00', () => {
@@ -72,19 +32,20 @@ describe('teeOffQuickPicks (#2448)', () => {
     expect(teeOffQuickPicks('garbage').days).toEqual([]);
   });
 
-  // #2438's default (Saturday 09:00) must land on a pill: «I morgen» on a
-  // Friday, «I dag» on a Saturday morning, the third day otherwise.
+  // #2438's default (Saturday 09:00) lands on «I morgen» on a Friday and on
+  // «I dag» on a Saturday morning. Any other day it is a day outside the
+  // picks, which TeeOffQuickPicks shows as «Annen dag» with the date (#2463).
   it.each([
-    ['Wednesday', '2026-11-04T12:00:00Z', 2],
+    ['Wednesday', '2026-11-04T12:00:00Z', -1],
     ['Friday', '2026-11-06T12:00:00Z', 1],
     ['Saturday before 09:00', '2026-11-07T07:00:00Z', 0],
-    ['Saturday after 09:00', '2026-11-07T09:30:00Z', 2],
-    ['Sunday', '2026-11-08T12:00:00Z', 2],
-  ])('the default tee-off on a %s is a quick pick', (_label, iso, index) => {
+    ['Saturday after 09:00', '2026-11-07T09:30:00Z', -1],
+    ['Sunday', '2026-11-08T12:00:00Z', -1],
+  ])('the default tee-off on a %s', (_label, iso, index) => {
     const now = new Date(iso);
     const picks = teeOffQuickPicks(teeOffNowLocal(now));
     const [day, time] = defaultTeeOffAt(now).split('T');
-    expect(picks.days[index]).toBe(day);
+    expect(picks.days.indexOf(day)).toBe(index);
     expect(picks.times).toContain(time);
   });
 });

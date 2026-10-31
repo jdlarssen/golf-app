@@ -92,6 +92,11 @@ export type InitialValues = {
   tee_box_id?: string;
   /** Format: 'YYYY-MM-DDTHH:mm' in Europe/Oslo local time (matches datetime-local input). */
   scheduled_tee_off_at?: string;
+  /**
+   * #2463: «Nå» is chosen on step 3 (the tee-off is set when the game is
+   * published). Omitted = a time. Only the wizard reads it for Kompis and Solo.
+   */
+  tee_off_now?: boolean;
   /** #2258: «Shotgun-start». Omitted = first tee. */
   start_type?: StartType;
   hcp_allowance_pct?: string;

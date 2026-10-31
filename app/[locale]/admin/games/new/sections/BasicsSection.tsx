@@ -79,6 +79,9 @@ export function BasicsSection({
     setTeeBoxId,
     scheduledTeeOffAt,
     setScheduledTeeOffAt,
+    teeOffNow: teeOffNowChosen,
+    setTeeOffNow,
+    allowTeeOffNow,
     startType,
     setStartType,
     selectedCourse,
@@ -98,6 +101,8 @@ export function BasicsSection({
       <input type="hidden" name="course_id" value={courseId} />
       <input type="hidden" name="tee_box_id" value={teeBoxId} />
       <input type="hidden" name="scheduled_tee_off_at" value={scheduledTeeOffAt} />
+      {/* #2463: «Nå», set when the server publishes. */}
+      <input type="hidden" name="tee_off_now" value={teeOffNowChosen ? '1' : ''} />
 
       <FieldGroup visible={showNameAndTime}>
       {showName && (
@@ -136,11 +141,15 @@ export function BasicsSection({
           value={scheduledTeeOffAt}
           onChange={setScheduledTeeOffAt}
           teeOffNow={teeOffNow}
+          allowNow={allowTeeOffNow}
+          now={teeOffNowChosen}
+          onNowChange={setTeeOffNow}
           describedBy={TEE_OFF_DESC_ID}
         >
           {/* No artboard draws the hint, the error or «Shotgun-start»; they
-              stay under the rows as they stood under the field (#2426). */}
-          {teeOffError ? (
+              stay under the rows as they stood under the field (#2426).
+              «Nå» draws its own box instead of the hint (#2463). */}
+          {teeOffNowChosen ? null : teeOffError ? (
             <p id={TEE_OFF_DESC_ID} role="alert" className={`${CARD_FIELD_ERROR} px-1`}>
               {teeOffError}
             </p>
