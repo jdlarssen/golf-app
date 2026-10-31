@@ -37,14 +37,28 @@ export function isLeagueFieldAlone(leagueFlight: boolean, fieldSize: number): bo
 
 /**
  * The same rule read from a share card's model (`buildShareCardData`): the AI
- * round report's facts, the share image and the web podium. A placement card
- * whose podium holds one row is a field of one.
+ * round report's facts and the share image. A placement card whose podium
+ * holds one row is a field of one; an empty card keeps its neutral headline.
  */
 export function isLeagueCardAlone(
   card: { band: string; podium: readonly unknown[] },
   leagueFlight: boolean,
 ): boolean {
-  return card.band === 'placement' && isLeagueFieldAlone(leagueFlight, card.podium.length);
+  return (
+    card.band === 'placement' &&
+    card.podium.length === 1 &&
+    isLeagueFieldAlone(leagueFlight, card.podium.length)
+  );
+}
+
+/**
+ * The one player a view draws for a league round played alone (the web
+ * board's `LeagueAloneResult`), or null. A field with no active player (the
+ * only one withdrew before the game was ended) is not alone here: the view
+ * keeps its own empty state.
+ */
+export function leagueAlonePlayer<T>(players: readonly T[], leagueFlight: boolean): T | null {
+  return players.length === 1 && isLeagueFieldAlone(leagueFlight, players.length) ? players[0] : null;
 }
 
 export function finishedResultBadge(

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { finishedResultBadge, isLeagueCardAlone } from './finishedResultBadge';
+import fs from 'node:fs';
+import path from 'node:path';
+import { finishedResultBadge, isLeagueCardAlone, leagueAlonePlayer } from './finishedResultBadge';
 
 describe('finishedResultBadge', () => {
   it('placement rank 1 (individ) → youWon, isWin', () => {
@@ -100,5 +102,40 @@ describe('isLeagueCardAlone (#2712)', () => {
   });
   it('a matchplay card is never alone', () => {
     expect(isLeagueCardAlone({ band: 'matchplay', podium: [{}] }, true)).toBe(false);
+  });
+  it('an empty card keeps its neutral headline', () => {
+    expect(isLeagueCardAlone({ band: 'placement', podium: [] }, true)).toBe(false);
+  });
+});
+
+// #2712: the one player a view draws for a league round played alone. A field
+// with no active player (the only one withdrew, then the game was ended) is
+// not alone here: the view keeps its own empty state instead of crashing.
+describe('leagueAlonePlayer (#2712)', () => {
+  const siri = { userId: 'siri' };
+  it('one player in a league flight is the one', () => {
+    expect(leagueAlonePlayer([siri], true)).toBe(siri);
+  });
+  it('an empty league flight has nobody', () => {
+    expect(leagueAlonePlayer([], true)).toBeNull();
+  });
+  it('a league flight of two has nobody alone', () => {
+    expect(leagueAlonePlayer([siri, { userId: 'ola' }], true)).toBeNull();
+  });
+  it('one player outside a league is not alone in a league', () => {
+    expect(leagueAlonePlayer([siri], false)).toBeNull();
+  });
+
+  // The solo formats' finished board picks LeagueAloneResult through it.
+  it('the solo stableford and stroke play boards read it', () => {
+    const root = path.resolve(__dirname, '../..');
+    for (const site of [
+      'app/[locale]/games/[id]/leaderboard/formats/stableford.tsx',
+      'app/[locale]/games/[id]/leaderboard/formats/soloStrokeplay.tsx',
+    ]) {
+      const src = fs.readFileSync(path.join(root, site), 'utf8');
+      expect(src, site).toContain('leagueAlonePlayer(');
+      expect(src, site).toContain('<LeagueAloneResult');
+    }
   });
 });
