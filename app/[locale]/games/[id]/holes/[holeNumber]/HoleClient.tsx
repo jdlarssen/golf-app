@@ -12,18 +12,13 @@ import { HoleHero } from '@/components/hole/HoleHero';
 import { DistanceToGreen } from '@/components/hole/DistanceToGreen';
 import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
-import {
-  ScoreRail,
-  type RailDisplay,
-  type RailOption,
-} from '@/components/hole/ScoreRail';
+import { ScoreRail, type RailOption } from '@/components/hole/ScoreRail';
 import {
   formatUsesScoreRail,
   railStrokes,
   strikeStrokes,
   strokeTerm,
 } from '@/lib/scorecard/scoreRail';
-import { stablefordPointsForCard } from '@/lib/scorecard/railPoints';
 import { PokalIcon } from '@/components/icons';
 import {
   isStablefordFamily,
@@ -433,43 +428,19 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   });
   const railCard = cards.find((c) => c.userId === rail.activeSeatId);
   // What each button gives before the tap: the term against the hole's par,
-  // never net (#2635), with the points after it in the stableford family
-  // except in a reveal game (#1447).
-  const railDisplay: RailDisplay = isStableford && !hideNetto ? 'points' : 'plain';
+  // never net (#2635) and no points (#2735).
   const railOptions: RailOption[] = railCard
-    ? railStrokes(par).map((strokes) => ({
-        strokes,
-        term: strokeTerm(strokes, par),
-        points: stablefordPointsForCard({
-          card: { ...railCard, score: strokes },
-          par,
-          gameMode,
-          isStableford,
-        }),
-      }))
+    ? railStrokes(par).map((strokes) => ({ strokes, term: strokeTerm(strokes, par) }))
     : [];
   const railSkipCard = cards.find((c) => c.userId === rail.skipToSeatId);
 
   // «Stryk» in the «Annet» sheet: stableford family only, net double bogey
-  // for the player the sheet is open for.
+  // for the player the sheet is open for, without points (#2735).
   const sheetCard = cards.find((c) => c.userId === valueSheetFor);
-  let sheetStrike: { value: number; label: string } | undefined;
-  if (isStableford && sheetCard) {
-    const value = strikeStrokes(par, sheetCard.extraStrokes);
-    const points = stablefordPointsForCard({
-      card: { ...sheetCard, score: value },
-      par,
-      gameMode,
-      isStableford,
-    });
-    sheetStrike = {
-      value,
-      label:
-        hideNetto || points == null
-          ? t('scoreRail.strike')
-          : t('scoreRail.strikeWithPoints', { points }),
-    };
-  }
+  const sheetStrike =
+    isStableford && sheetCard
+      ? { value: strikeStrokes(par, sheetCard.extraStrokes), label: t('scoreRail.strike') }
+      : undefined;
 
   const { myScoreEntered, missingFlightScoreCount } = summarizeMyCard(
     cards,
@@ -592,12 +563,9 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           <HoleFlightList
             cards={cards}
             par={par}
-            gameMode={gameMode}
-            isStableford={isStableford}
             disabled={disabled}
             withdrawn={withdrawn}
             myUserId={myUserId}
-            hideNetto={hideNetto}
             activeSeatId={rail.activeSeatId}
             onSelect={rail.selectRow}
           />
@@ -605,12 +573,9 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           <HoleScoreCardList
             cards={cards}
             par={par}
-            gameMode={gameMode}
-            isStableford={isStableford}
             disabled={disabled}
             withdrawn={withdrawn}
             myUserId={myUserId}
-            hideNetto={hideNetto}
             onSetScore={onSetScore}
             onLongPress={onLongPress}
             onClear={onClearFromCard}
@@ -679,7 +644,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
               }
               par={par}
               options={railOptions}
-              display={railDisplay}
               puttsTracking={capturesPutts && putts.enabled}
               skipTo={railSkipCard ? (railSkipCard.nickname ?? railSkipCard.name) : null}
               onPick={rail.pick}

@@ -11,7 +11,6 @@ const base: FlightRowProps = {
   par: 4,
   active: true,
   locked: false,
-  points: null,
   onSelect: () => {},
 };
 

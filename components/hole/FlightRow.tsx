@@ -19,11 +19,6 @@ export interface FlightRowProps {
   /** #2211: submitted, withdrawn or the page is locked — read-only row. */
   locked: boolean;
   submitted?: boolean;
-  /**
-   * Stableford points for the entered score. Null hides them: not a
-   * stableford format, no score yet, or a reveal game (#1447).
-   */
-  points: number | null;
   onSelect: (playerId: string) => void;
 }
 
@@ -79,19 +74,12 @@ const badgeStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const pointsStyle: CSSProperties = {
-  fontFamily: 'var(--font-sans)',
-  fontSize: 12,
-  fontWeight: 600,
-  fontVariantNumeric: 'tabular-nums',
-  color: 'var(--text-muted)',
-  whiteSpace: 'nowrap',
-};
-
 /**
  * One player (or team) in the flight on the rail hole page (#2251). The whole
  * row is one button: tapping it hands the rail to this player so their score
  * can be corrected. No nested controls, so the button semantics stay intact.
+ * The row shows only gross: the shape is the strokes against par, and there
+ * are no stableford points on it (#2735).
  */
 export function FlightRow(props: FlightRowProps): JSX.Element {
   const t = useTranslations('holes');
@@ -105,7 +93,6 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
     active,
     locked,
     submitted = false,
-    points,
     onSelect,
   } = props;
 
@@ -182,12 +169,6 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
           </span>
         )}
       </span>
-
-      {points != null && (
-        <span data-testid="flight-row-points" style={pointsStyle}>
-          {t('scoreRail.rowPoints', { points })}
-        </span>
-      )}
 
       <ScoreShape shape={shape} tone={scoreTone(score, par)} size="md">
         <span

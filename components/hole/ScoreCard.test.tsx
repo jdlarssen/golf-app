@@ -50,16 +50,6 @@ describe('ScoreCard — rendering', () => {
     expect(screen.queryByTestId('score-card-strokes')).not.toBeInTheDocument();
   });
 
-  it('renders the strokes badge also when hideNetto is true (#1447: static handicap info, not standing)', () => {
-    setup({ extraStrokes: 2, hideNetto: true });
-    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Får 2 slag');
-  });
-
-  it('renders the strokes badge when hideNetto is false and extraStrokes > 0', () => {
-    setup({ extraStrokes: 2, hideNetto: false });
-    expect(screen.getByTestId('score-card-strokes').textContent).toBe('Får 2 slag');
-  });
-
   it('renders ? when initial is null', () => {
     setup({ initial: null });
     expect(screen.getByText('?')).toBeInTheDocument();
@@ -91,64 +81,15 @@ describe('ScoreCard — helper text', () => {
     expect(screen.getByText('Trykk kort = par. Bruk − / +.')).toBeInTheDocument();
   });
 
-  it('viser «Netto X» når score er satt med positive ekstra slag', () => {
+  // #2735 (the owner's answer): while strokes are entered the card shows only
+  // gross. A set score leaves the line empty, but the div stays so the layout
+  // does not jump.
+  it('viser ingen netto-linje når score er satt, heller ikke med slag på hullet', () => {
     setup({ score: 5, extraStrokes: 2 });
-    expect(screen.getByText('Netto 3')).toBeInTheDocument();
-  });
-
-  it('viser «Netto X» når score er satt uten ekstra slag (X = score)', () => {
-    setup({ score: 5, extraStrokes: 0 });
-    expect(screen.getByText('Netto 5')).toBeInTheDocument();
-  });
-
-  it('viser «Netto X» med høyere X for plus-golfere (negative ekstra slag)', () => {
-    setup({ score: 5, extraStrokes: -1 });
-    expect(screen.getByText('Netto 6')).toBeInTheDocument();
-  });
-
-  it('viser «Netto X» med X = par når score = par og extraStrokes = 0', () => {
-    setup({ score: 4, par: 4, extraStrokes: 0 });
-    expect(screen.getByText('Netto 4')).toBeInTheDocument();
-  });
-
-  it('skjuler netto-tekst når hideNetto er true (reveal-active)', () => {
-    setup({ score: 5, extraStrokes: 2, hideNetto: true });
-    expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Bekreftet')).not.toBeInTheDocument();
-  });
-
-  it('beholder helper-div i DOM når hideNetto skjuler netto-tekst (reveal-active layout-pin)', () => {
-    setup({ score: 5, extraStrokes: 2, hideNetto: true });
     const helper = screen.getByTestId('helper-text');
     expect(helper).toBeInTheDocument();
     expect(helper.textContent).toBe('');
-  });
-
-  it('viser «Netto X · N poeng» når stablefordPoints er satt', () => {
-    setup({ score: 4, par: 4, extraStrokes: 0, stablefordPoints: 2 });
-    expect(screen.getByText('Netto 4 · 2 poeng')).toBeInTheDocument();
-  });
-
-  it('viser kun «Netto X» når stablefordPoints er null (best-ball)', () => {
-    setup({ score: 4, par: 4, extraStrokes: 0, stablefordPoints: null });
-    expect(screen.getByText('Netto 4')).toBeInTheDocument();
-    expect(screen.queryByText(/poeng/)).not.toBeInTheDocument();
-  });
-
-  it('viser «Netto X · 0 poeng» for stableford med double-bogey', () => {
-    setup({ score: 6, par: 4, extraStrokes: 0, stablefordPoints: 0 });
-    expect(screen.getByText('Netto 6 · 0 poeng')).toBeInTheDocument();
-  });
-
-  it('skjuler stableford-poeng når hideNetto er true (reveal-modus)', () => {
-    setup({
-      score: 4,
-      par: 4,
-      extraStrokes: 0,
-      stablefordPoints: 2,
-      hideNetto: true,
-    });
-    expect(screen.queryByText(/poeng/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Netto|poeng/)).not.toBeInTheDocument();
   });
 
   it('viser instruksjon-tekst når score er null uavhengig av extraStrokes', () => {
