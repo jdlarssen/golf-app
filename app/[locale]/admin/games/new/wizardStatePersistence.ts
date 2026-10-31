@@ -38,6 +38,7 @@ import { prizeListFromDraft } from '@/lib/games/prizes';
 import { asMinTeeShots } from '@/lib/games/teeShots';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import type { GameFormState } from './useGameFormState';
+import { listedTeeId } from './listedTee';
 
 /** Utkast eldre enn dette forkastes ved lesing (#2459: 7 døgn). */
 export const WIZARD_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -325,12 +326,9 @@ export function reconcileWizardDraft(
     // Banen finnes ikke lenger → tee-en hørte til den, så begge må gå.
     values.course_id = '';
     values.tee_box_id = '';
-  } else if (
-    values.tee_box_id !== undefined &&
-    values.tee_box_id !== '' &&
-    !course?.tee_boxes.some((t) => t.id === values.tee_box_id)
-  ) {
-    values.tee_box_id = '';
+  } else if (values.tee_box_id !== undefined) {
+    // #2448: the same rule the form seeds with (`listedTeeId`).
+    values.tee_box_id = listedTeeId(courses, values.course_id, values.tee_box_id);
   }
 
   // Økt-gjester (#1009) er skygge-brukere opprettet server-side; de ligger
