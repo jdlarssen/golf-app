@@ -81,14 +81,14 @@ describe('PuttsStatPanel', () => {
         stats={stats}
         pphDisplay="2,0"
         avgDisplay=""
-        statusLabel="Nesten! Du mangler putt på 1 hull i 1 runde."
+        statusLabel="Du mangler putt på 1 hull i 1 runde."
         {...labels}
       />,
     );
     expect(screen.getByText('PPH')).toBeInTheDocument();
     expect(screen.getByText('2,0')).toBeInTheDocument();
     expect(
-      screen.getByText('Nesten! Du mangler putt på 1 hull i 1 runde.'),
+      screen.getByText('Du mangler putt på 1 hull i 1 runde.'),
     ).toBeInTheDocument();
     // The gated cells should not appear until a full round qualifies.
     expect(screen.queryByText('Snitt')).not.toBeInTheDocument();

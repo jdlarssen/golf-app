@@ -156,5 +156,5 @@ export function streakSeason(count: number, year: number): string {
 
 /** Webbens `profile.historikk.puttsNearMiss`. */
 export function puttsNearMiss(missingHoles: number, partialRounds: number): string {
-  return `Nesten! Du mangler putt på ${missingHoles} hull i ${roundsWord(partialRounds)}.`;
+  return `Du mangler putt på ${missingHoles} hull i ${roundsWord(partialRounds)}.`;
 }
