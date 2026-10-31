@@ -2273,6 +2273,7 @@
       "infoLabel": "Your info",
       "soloIndividual": "Individual format. You play for yourself, no team.",
       "courseHandicap": "Course handicap",
+      "playingHandicap": "Playing handicap",
       "teamLabel": "Team",
       "teamValue": "Team {number}",
       "flightValue": "Flight {number}",

@@ -6,7 +6,7 @@
 // 20, og da ville «banehandicap 20» i hodet motsagt radene under. Tallene
 // kommer derfor fra de samme stedene som radene: `playerStrokeHandicapFor`
 // (vanlige kort) og `teamHandicapFor` (scramble-lagkort).
-import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from '../../../../lib/games/hcpAllowance';
+import { frozenIsPlayingHandicap } from '../../../../lib/games/hcpAllowance';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
 import {
   isScrambleFamily,
@@ -61,11 +61,12 @@ export function scorecardHandicapPart(opts: {
   // (`recomputeCourseHandicap`), so under 100 %, or at the cap, the stored
   // number is the playing handicap: «spillehandicap 8», not «banehandicap 8»
   // for a course handicap of 10 in a league at 75 %.
-  const mode = opts.game.gameMode;
-  const cap = effectiveHcpMaxStrokes(mode, opts.game.hcpMaxStrokes ?? null);
-  const reduced =
-    effectiveHcpAllowancePct(mode, opts.game.hcpAllowancePct ?? 100) < 100 ||
-    (cap != null && opts.courseHandicap >= cap);
+  const reduced = frozenIsPlayingHandicap(
+    opts.game.gameMode,
+    opts.game.hcpAllowancePct,
+    opts.game.hcpMaxStrokes,
+    opts.courseHandicap,
+  );
   return playing === opts.courseHandicap && !reduced
     ? { kind: 'course', value: opts.courseHandicap }
     : { kind: 'playing', value: playing };
