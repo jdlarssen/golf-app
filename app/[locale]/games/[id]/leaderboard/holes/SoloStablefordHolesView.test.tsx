@@ -96,3 +96,35 @@ describe('SoloStablefordHolesView', () => {
     expect(card11.textContent).toContain('−3');
   });
 });
+
+// #2712 (Type B, orchestrator 31.10 after the owner's rule): «Hull for hull»
+// for a league round played alone has no rank, no leader's gold and no ★.
+describe('SoloStablefordHolesView — a league round played alone (#2712)', () => {
+  const alone = (): StablefordSoloResult => ({
+    kind: 'stableford',
+    variant: 'solo',
+    ranking: 'net_total',
+    players: [{ userId: 'u1', totalPoints: 3, holesPlayed: 1, toPar: 1, rank: 1, tiedWith: [] }],
+    holes: [
+      {
+        holeNumber: 1,
+        par: 4,
+        strokeIndex: 1,
+        perPlayer: [{ userId: 'u1', gross: 3, points: 3, par: 4, toPar: 1 }],
+        bestUserIds: ['u1'],
+      },
+    ],
+  });
+
+  it('no rank and no ★ in a league flight', () => {
+    render(<SoloStablefordHolesView {...defaultProps({ result: alone(), leagueFlight: true })} />);
+    expect(screen.queryByTestId('holes-rank')).toBeNull();
+    expect(screen.queryByText('★')).toBeNull();
+  });
+
+  it('alone outside a league keeps the rank and the ★', () => {
+    render(<SoloStablefordHolesView {...defaultProps({ result: alone() })} />);
+    expect(screen.getByTestId('holes-rank')).toHaveTextContent('1');
+    expect(screen.getAllByText('★').length).toBeGreaterThan(0);
+  });
+});

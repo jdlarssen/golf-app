@@ -2,6 +2,7 @@ import type {
   SoloStrokeplayResult,
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
+import { isLeagueFieldAlone } from '../games/finishedResultBadge';
 import { byStanding, inStandingOrder } from './standingOrder';
 import { formatVsPar, headlineUnit } from './vsPar';
 
@@ -89,6 +90,34 @@ export interface SoloScorecard {
   front: SoloScorecardNine;
   /** Hull 10–18. */
   back: SoloScorecardNine;
+  /**
+   * #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
+   * har ingen plass. Visningen utelater rangtallet; leder, nier-leder og ★ er
+   * allerede tatt bort i modellen.
+   */
+  leagueAlone?: boolean;
+}
+
+/** #2712: valget byggerne tar imot. */
+export interface SoloScorecardOpts {
+  /** Spillet er en ligaflight (`league_round_id`). */
+  leagueFlight?: boolean;
+}
+
+/** #2712: ingen plass i en ligarunde spilt alene: ingen leder, ingen ★. */
+function withLeagueRule(card: SoloScorecard, playerCount: number, opts: SoloScorecardOpts): SoloScorecard {
+  if (!isLeagueFieldAlone(opts.leagueFlight ?? false, playerCount)) return card;
+  const noLead = (n: SoloScorecardNine): SoloScorecardNine => ({
+    holes: n.holes.map((h) => ({ ...h, rows: h.rows.map((r) => ({ ...r, isBest: false })) })),
+    subtotals: n.subtotals.map((s) => ({ ...s, isLeader: false })),
+  });
+  return {
+    ...card,
+    leagueAlone: true,
+    standings: card.standings.map((s) => ({ ...s, isLeader: false })),
+    front: noLead(card.front),
+    back: noLead(card.back),
+  };
 }
 
 /** Spillerens tee (`game_players.tee_gender`), eller `undefined` ukjent. */
@@ -214,6 +243,7 @@ function split(
 export function soloStablefordScorecard(
   result: StablefordSoloResult,
   teeGenderOf: TeeGenderOf,
+  opts: SoloScorecardOpts = {},
 ): SoloScorecard {
   const players = inStandingOrder(result.players);
   const rankedIds = players.map((p) => p.userId);
@@ -236,7 +266,7 @@ export function soloStablefordScorecard(
     }));
     return buildHole(hole, cells, teeGenderOf);
   });
-  return {
+  const card: SoloScorecard = {
     ranking: result.ranking,
     standings: players.map((line) => ({
       userId: line.userId,
@@ -249,12 +279,14 @@ export function soloStablefordScorecard(
     })),
     ...split(holes, rankedIds, 'high', result.ranking),
   };
+  return withLeagueRule(card, players.length, opts);
 }
 
 /** Solo slagspill: lavest netto er best. */
 export function soloStrokeplayScorecard(
   result: SoloStrokeplayResult,
   teeGenderOf: TeeGenderOf,
+  opts: SoloScorecardOpts = {},
 ): SoloScorecard {
   const players = inStandingOrder(result.players);
   const rankedIds = players.map((p) => p.userId);
@@ -278,7 +310,7 @@ export function soloStrokeplayScorecard(
     }));
     return buildHole(hole, cells, teeGenderOf);
   });
-  return {
+  const card: SoloScorecard = {
     ranking: result.ranking,
     standings: players.map((line) => ({
       userId: line.userId,
@@ -291,4 +323,5 @@ export function soloStrokeplayScorecard(
     })),
     ...split(holes, rankedIds, 'low', result.ranking),
   };
+  return withLeagueRule(card, players.length, opts);
 }

@@ -198,19 +198,21 @@ export function buildHoleByHole(
   const { result } = outcome;
   const teeGenderOf = (userId: string) =>
     bundle.players.find((p) => p.userId === userId)?.teeGender;
+  // #2712: en ligarunde spilt alene har ingen plass (modellen tar bort leder og ★).
+  const leagueOpts = { leagueFlight: bundle.game.leagueRoundId != null };
 
   if (kind === 'solo-stableford' && result.kind === 'stableford' && result.variant === 'solo') {
     return {
       kind,
       subtitle: MODE_LABELS[bundle.game.gameMode as GameMode],
-      card: soloStablefordScorecard(result, teeGenderOf),
+      card: soloStablefordScorecard(result, teeGenderOf, leagueOpts),
     };
   }
   if (kind === 'solo-strokeplay' && result.kind === 'solo_strokeplay') {
     return {
       kind,
       subtitle: HOLES_TEXT.strokeplaySubtitle,
-      card: soloStrokeplayScorecard(result, teeGenderOf),
+      card: soloStrokeplayScorecard(result, teeGenderOf, leagueOpts),
     };
   }
   if (kind === 'wolf' && result.kind === 'wolf') {

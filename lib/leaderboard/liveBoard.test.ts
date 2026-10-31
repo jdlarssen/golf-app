@@ -523,3 +523,28 @@ describe('liveBoardStripAction — a shotgun group (#2286)', () => {
     ).toEqual({ kind: 'hole', holeNumber: 12, href: '/games/g1/holes/12' });
   });
 });
+
+// #2712 (orchestrator 31.10, after the owner's rule): a league round played
+// alone has no place, so the board says so once and every view reads it.
+describe('computeLiveBoard — a league round played alone (#2712)', () => {
+  const one = { players: [player('a')], scores: card('a', { 1: 4, 2: 3 }) };
+  it('one active player in a league flight is alone', () => {
+    expect(board({ ...one, game: game({ league_round_id: 'round-1' }) }).leagueAlone).toBe(true);
+  });
+  it('a withdrawn player does not count', () => {
+    const b = board({
+      game: game({ league_round_id: 'round-1' }),
+      players: [player('a'), player('b', { withdrawn: true })],
+      scores: card('a', { 1: 4 }),
+    });
+    expect(b.leagueAlone).toBe(true);
+  });
+  it('two in a league flight, or one outside a league, are not', () => {
+    const two = {
+      players: [player('a'), player('b')],
+      scores: [...card('a', { 1: 4 }), ...card('b', { 1: 5 })],
+    };
+    expect(board({ ...two, game: game({ league_round_id: 'round-1' }) }).leagueAlone).toBe(false);
+    expect(board(one).leagueAlone).toBe(false);
+  });
+});

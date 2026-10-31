@@ -109,3 +109,36 @@ describe('SoloStrokeplayHolesView', () => {
     expect(card10.querySelector('[class*="border-accent"]')).toBeNull();
   });
 });
+
+// #2712 (Type B, orchestrator 31.10 after the owner's rule): «Hull for hull»
+// for a league round played alone has no rank, no leader's gold and no ★.
+describe('SoloStrokeplayHolesView — a league round played alone (#2712)', () => {
+  const alone = (): SoloStrokeplayResult => ({
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    players: [
+      { userId: 'u1', totalNetStrokes: 4, totalGrossStrokes: 4, holesPlayed: 1, netToPar: 0, rank: 1, tiedWith: [] },
+    ],
+    holes: [
+      {
+        holeNumber: 1,
+        par: 4,
+        strokeIndex: 1,
+        perPlayer: [{ userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 }],
+        bestUserIds: ['u1'],
+      },
+    ],
+  });
+
+  it('no rank and no ★ in a league flight', () => {
+    render(<SoloStrokeplayHolesView {...defaultProps({ result: alone(), leagueFlight: true })} />);
+    expect(screen.queryByTestId('holes-rank')).toBeNull();
+    expect(screen.queryByText('★')).toBeNull();
+  });
+
+  it('alone outside a league keeps the rank and the ★', () => {
+    render(<SoloStrokeplayHolesView {...defaultProps({ result: alone() })} />);
+    expect(screen.getByTestId('holes-rank')).toHaveTextContent('1');
+    expect(screen.getAllByText('★').length).toBeGreaterThan(0);
+  });
+});

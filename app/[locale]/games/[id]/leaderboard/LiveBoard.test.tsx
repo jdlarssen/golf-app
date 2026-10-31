@@ -115,3 +115,26 @@ describe('LiveBoard', () => {
     expect(screen.queryByRole('button', { name: /Reaksjoner til/ })).not.toBeInTheDocument();
   });
 });
+
+// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
+// played alone has no place, during the round too.
+describe('LiveBoard — a league round played alone (#2712)', () => {
+  const alone = (leagueAlone: boolean) =>
+    props({ viewerUserId: 'u1' }, { rows: rows(1), leagueAlone });
+
+  it('no rank, no leader gold, and the strip says the score', () => {
+    render(<LiveBoard {...alone(true)} />);
+    const place = screen.getByTestId('board-place');
+    expect(place).not.toHaveAttribute('data-leader');
+    expect(place.textContent).not.toContain('1');
+    const strip = screen.getByTestId('board-strip');
+    expect(strip.textContent).toContain('20 poeng');
+    expect(strip.textContent).not.toMatch(/plass/);
+  });
+
+  it('a field of one outside a league keeps its place', () => {
+    render(<LiveBoard {...alone(false)} />);
+    expect(screen.getByTestId('board-place')).toHaveAttribute('data-leader', 'true');
+    expect(screen.getByTestId('board-strip').textContent).toContain('1. plass');
+  });
+});

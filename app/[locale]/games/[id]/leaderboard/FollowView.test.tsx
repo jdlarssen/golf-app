@@ -91,3 +91,37 @@ describe('FollowView', () => {
     expect(document.querySelector('[data-follow-view]')).not.toBeNull();
   });
 });
+
+// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
+// played alone has no place on the follow page either.
+describe('FollowView — a league round played alone (#2712)', () => {
+  const only = row('marte', 1, 'Marte Lie');
+  const aloneView: FollowViewData = {
+    ...view,
+    row: only,
+    standing: { rank: 1, tied: false, fieldSize: 1, total: 26, holesPlayed: 11, leaderUserIds: ['marte'], gap: null },
+    others: [{ row: only, fullName: false }],
+  };
+  const renderAlone = (leagueAlone: boolean) =>
+    render(
+      <FollowView
+        token="tok"
+        board={{ unit: 'points', holesPlayed: 11, rows: [only], leagueAlone }}
+        view={aloneView}
+        subtitle="Vinterligaen · runde 1"
+        cta={null}
+      />,
+    );
+
+  it('no place and no leader gold', () => {
+    renderAlone(true);
+    const place = screen.getByTestId('follow-place');
+    expect(place).not.toHaveAttribute('data-leader');
+    expect(place.textContent).not.toContain('1');
+  });
+
+  it('a field of one outside a league keeps its place', () => {
+    renderAlone(false);
+    expect(screen.getByTestId('follow-place')).toHaveAttribute('data-leader', 'true');
+  });
+});

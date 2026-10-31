@@ -75,6 +75,7 @@ export async function SoloStrokeplayHolesBody({
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
       navContext={navContext}
+      leagueFlight={game.league_round_id != null}
     />
   );
 }

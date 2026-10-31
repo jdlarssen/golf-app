@@ -505,3 +505,43 @@ describe('formatSignedPoints', () => {
     expect(formatSignedPoints(4)).toBe('4');
   });
 });
+
+// #2712 (orchestrator 31.10, after the owner's rule): «Hull for hull» for a
+// league round played alone shows no place: no leader, no nine's leader and no
+// hole winner's ★, and the view leaves the rank out (`leagueAlone`).
+describe('a league round played alone (#2712)', () => {
+  const teeOf = () => 'mens' as const;
+  const ola = STABLEFORD.players[0];
+  const alone: StablefordSoloResult = {
+    ...STABLEFORD,
+    players: [ola],
+    holes: [stablefordHole(1, [{ userId: 'ola', gross: 4, points: 3 }], ['ola'])],
+  };
+  const soloStroke: SoloStrokeplayResult = {
+    ...STROKEPLAY,
+    players: [STROKEPLAY.players[0]],
+    holes: [{ ...STROKEPLAY.holes[0], perPlayer: [STROKEPLAY.holes[0].perPlayer[1]] }],
+  };
+
+  it('stableford alone in a league flight: no leader, no ★, leagueAlone', () => {
+    const card = soloStablefordScorecard(alone, teeOf, { leagueFlight: true });
+    expect(card.leagueAlone).toBe(true);
+    expect(card.standings.map((s) => s.isLeader)).toEqual([false]);
+    expect(card.front.holes[0].rows.map((r) => r.isBest)).toEqual([false]);
+    expect(card.front.subtotals.every((s) => !s.isLeader)).toBe(true);
+  });
+
+  it('stroke play alone in a league flight: the same', () => {
+    const card = soloStrokeplayScorecard(soloStroke, teeOf, { leagueFlight: true });
+    expect(card.leagueAlone).toBe(true);
+    expect(card.standings.map((s) => s.isLeader)).toEqual([false]);
+    expect(card.front.holes[0].rows.map((r) => r.isBest)).toEqual([false]);
+  });
+
+  it('alone outside a league keeps the leader and the ★', () => {
+    const card = soloStablefordScorecard(alone, teeOf);
+    expect(card.leagueAlone).toBeFalsy();
+    expect(card.standings[0].isLeader).toBe(true);
+    expect(card.front.holes[0].rows[0].isBest).toBe(true);
+  });
+});

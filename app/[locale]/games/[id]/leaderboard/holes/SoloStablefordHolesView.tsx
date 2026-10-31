@@ -45,6 +45,8 @@ export interface SoloStablefordHolesViewProps {
    * til spill-siden, som før (#1525).
    */
   navContext?: LeaderboardNavContext;
+  /** #2712: the game is a league flight; played alone it shows no place. */
+  leagueFlight?: boolean;
 }
 
 /**
@@ -64,6 +66,7 @@ export function SoloStablefordHolesView({
   scoreVisibility,
   gameStatus,
   navContext,
+  leagueFlight = false,
 }: SoloStablefordHolesViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -95,7 +98,9 @@ export function SoloStablefordHolesView({
 
   // #2255: radene, deltotalene og par-chippen regnes i `lib/leaderboard/
   // soloScorecard.ts`, som appen også tegner fra.
-  const card = soloStablefordScorecard(result, (id) => playersById.get(id)?.teeGender);
+  const card = soloStablefordScorecard(result, (id) => playersById.get(id)?.teeGender, {
+    leagueFlight,
+  });
 
   return (
     <LeaderboardShell>
@@ -111,7 +116,12 @@ export function SoloStablefordHolesView({
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">{formatLabel}</p>
       </div>
 
-      <TotalsHeader standings={card.standings} ranking={card.ranking} playersById={playersById} />
+      <TotalsHeader
+        standings={card.standings}
+        ranking={card.ranking}
+        playersById={playersById}
+        leagueAlone={card.leagueAlone === true}
+      />
 
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
         <NineBlock
@@ -145,11 +155,14 @@ function TotalsHeader({
   standings,
   ranking,
   playersById,
+  leagueAlone,
 }: {
   standings: SoloScorecardStanding[];
   /** #2625: a game ranked on net to par leads with the number it ranks on. */
   ranking: SoloScorecard['ranking'];
   playersById: Map<string, SoloStablefordPlayerInfo>;
+  /** #2712: a league round played alone shows no rank. */
+  leagueAlone: boolean;
 }) {
   const t = useTranslations('leaderboard');
   return (
@@ -176,9 +189,14 @@ function TotalsHeader({
                 className="flex items-center justify-between gap-3"
               >
                 <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="w-4 shrink-0 text-[12px] tabular-nums text-muted">
-                    {line.rank}
-                  </span>
+                  {!leagueAlone && (
+                    <span
+                      data-testid="holes-rank"
+                      className="w-4 shrink-0 text-[12px] tabular-nums text-muted"
+                    >
+                      {line.rank}
+                    </span>
+                  )}
                   <span
                     className={`min-w-0 truncate font-sans text-[14px] ${
                       isLeader ? 'font-medium text-text' : 'text-text'

@@ -16,7 +16,9 @@ import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import {
   boardRowSrParts,
+  boardShowsPlace,
   boardShowsRank,
+  boardTotalSr,
   isBoardLeader,
   placeKind,
   sentenceName,
@@ -286,7 +288,8 @@ function liveBoard(
 ): SoloBoardModel | null {
   const board = liveBoardFor(bundle, scores);
   if (!board || board.rows.length === 0) return null;
-  const showRank = boardShowsRank(board.holesPlayed);
+  // #2712: en ligarunde spilt alene har ingen plass og ingen ledergull.
+  const showRank = boardShowsPlace(board);
   const keyOf = (row: { userId: string }) => row.userId;
 
   const standing = userId ? viewerStanding(board, userId) : null;
@@ -308,7 +311,10 @@ function liveBoard(
             });
     strip = {
       kicker: BOARD_TEXT.stripKicker,
-      text: [stripPlace(standing), behind].filter(Boolean).join(' · '),
+      // #2712: alene i en ligaflight sier stripa poengene, ikke «1. plass».
+      text: board.leagueAlone
+        ? (srPartText({ key: 'total', total: boardTotalSr(board.unit, standing.total) }, null) ?? '')
+        : [stripPlace(standing), behind].filter(Boolean).join(' · '),
       action: stripAction(action),
     };
   }
