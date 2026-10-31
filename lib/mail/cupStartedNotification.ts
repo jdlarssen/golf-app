@@ -11,6 +11,7 @@ import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { formatNumber } from '@/lib/i18n/format';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
+import { escapeHtml } from './escapeHtml';
 
 export type CupStartedNotificationParams = {
   to: string;
@@ -144,13 +145,4 @@ export async function sendCupStartedNotification(
     html,
     text,
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
