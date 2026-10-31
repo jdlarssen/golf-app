@@ -8,7 +8,9 @@
  *
  * Controlled and without `name` attributes: the wizard is one big `<form>`,
  * and a field with a name would ride along in its publish POST. Each caller
- * builds its own FormData.
+ * builds its own FormData. `notRatedTitle` (the title on a category the tee
+ * has no rating for) comes from the caller: it lives in the `wizard`
+ * namespace, which only the wizard's routes send to the browser (#2227).
  */
 
 import type { KeyboardEvent } from 'react';
@@ -31,6 +33,7 @@ export function GuestProfileFields({
   avail,
   disabled,
   onEnter,
+  notRatedTitle,
 }: {
   idPrefix: string;
   name: string;
@@ -43,9 +46,9 @@ export function GuestProfileFields({
   avail: TeeGenderAvailability;
   disabled: boolean;
   onEnter?: (e: KeyboardEvent<HTMLInputElement>) => void;
+  notRatedTitle: string;
 }) {
   const t = useTranslations('game.players');
-  const tTeams = useTranslations('wizard.sections.teams');
   return (
     <>
       <FormSectionText>{t('guestForm.hint')}</FormSectionText>
@@ -88,7 +91,7 @@ export function GuestProfileFields({
           value: g,
           label,
           disabled: !avail[g],
-          title: avail[g] ? undefined : tTeams('categoryNotRated'),
+          title: avail[g] ? undefined : notRatedTitle,
         }))}
         value={tee}
         onChange={(v) => onTeeChange(v as GuestTeeChoice)}

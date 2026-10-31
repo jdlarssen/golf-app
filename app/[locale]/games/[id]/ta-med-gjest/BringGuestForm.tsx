@@ -16,9 +16,12 @@ import type { BringGuestError } from './actions';
 export function BringGuestForm({
   action,
   avail,
+  notRatedTitle,
 }: {
   action: (formData: FormData) => Promise<{ ok: false; error: BringGuestError }>;
   avail: TeeGenderAvailability;
+  /** From the server: the `wizard` namespace is not sent to this route (#2227). */
+  notRatedTitle: string;
 }) {
   const t = useTranslations('game.bringGuest');
   const tPlayers = useTranslations('game.players');
@@ -77,6 +80,7 @@ export function BringGuestForm({
         onTeeChange={setTee}
         avail={avail}
         disabled={isPending}
+        notRatedTitle={notRatedTitle}
       />
       {errorText && (
         <p role="alert" data-testid="bring-guest-error" className="font-sans text-sm text-danger">

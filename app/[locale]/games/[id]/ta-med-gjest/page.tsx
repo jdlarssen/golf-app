@@ -65,6 +65,7 @@ export default async function BringGuestPage({
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('game.bringGuest');
   const tPlayers = await getTranslations('game.players');
+  const tTeams = await getTranslations('wizard.sections.teams');
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect({ href: '/login', locale });
@@ -172,6 +173,7 @@ export default async function BringGuestPage({
             <BringGuestForm
               action={bringGuest.bind(null, id)}
               avail={teeAvailabilityOf(game.tee_boxes ?? null)}
+              notRatedTitle={tTeams('categoryNotRated')}
             />
             {isManual && (
               <p className="mt-3.5 font-sans text-xs leading-[1.45] text-muted">{t('manualNote')}</p>
