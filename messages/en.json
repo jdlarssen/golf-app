@@ -2586,7 +2586,8 @@
       "heading": "Withdraw from «{name}»?",
       "errors": {
         "withdraw_failed": "Could not withdraw you from the game. Please try again or contact the organiser.",
-        "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw."
+        "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw.",
+        "card_delivered": "Your card is in, so you can no longer withdraw from this round."
       },
       "captainHasTeamBody": "You're the captain, and teammates have said yes. Hand the captaincy to one of them on the team page first. Then you can withdraw.",
       "captainHasTeamLink": "Go to the team page",

@@ -4,6 +4,7 @@ import {
   markerRefusal,
   markerRequired,
   mayApproveAsMarker,
+  withdrawLockedByDelivery,
 } from './leagueMarker';
 
 describe('markerRequired', () => {
@@ -107,5 +108,18 @@ describe('mayApproveAsMarker', () => {
     expect(
       mayApproveAsMarker({ ...card, markerUserId: null, approverId: 'org', approverIsAdmin: false }),
     ).toBe('organizer');
+  });
+});
+
+// #2712 (owner 31.10): one attempt per round in a simulator league, so a
+// delivered card can no longer be withdrawn from.
+describe('withdrawLockedByDelivery', () => {
+  it.each([
+    { simulatorFlight: true, submittedAt: '2026-10-31T11:22:31Z', locked: true },
+    { simulatorFlight: true, submittedAt: null, locked: false },
+    { simulatorFlight: false, submittedAt: '2026-10-31T11:22:31Z', locked: false },
+    { simulatorFlight: false, submittedAt: null, locked: false },
+  ])('simulator $simulatorFlight, levert $submittedAt → $locked', ({ simulatorFlight, submittedAt, locked }) => {
+    expect(withdrawLockedByDelivery({ simulatorFlight, submittedAt })).toBe(locked);
   });
 });

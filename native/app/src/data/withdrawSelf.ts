@@ -18,7 +18,7 @@
 //   POST   200 { ok: true, kept: boolean }
 //   DELETE 200 { ok: true, kept: true }
 //   401 unauthorized · 403 not_registered · 404 not_found
-//   409 game_locked | withdrawn_by_other | captain_has_team
+//   409 game_locked | withdrawn_by_other | captain_has_team | card_delivered
 //   500 withdraw_failed
 //
 // **Appen leser ikke `kept`.** Kallstedene henter bundelen på nytt etterpå, og
@@ -48,6 +48,8 @@ export type SelfWithdrawFailure =
   | 'withdrawn_by_other'
   /** #2358: kaptein med et lag som har takket ja — bindet gis videre først. */
   | 'captain_has_team'
+  /** #2712: kortet er levert i en simulatorliga; ett forsøk per runde. */
+  | 'card_delivered'
   | 'withdraw_failed';
 
 export type SelfWithdrawResult =
@@ -96,6 +98,7 @@ function failureForStatus(
   if (status === 409) {
     if (body.error === 'withdrawn_by_other') return 'withdrawn_by_other';
     if (body.error === 'captain_has_team') return 'captain_has_team';
+    if (body.error === 'card_delivered') return 'card_delivered';
     return 'game_locked';
   }
   return 'withdraw_failed';

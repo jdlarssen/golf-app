@@ -1,5 +1,6 @@
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
+import { withdrawLockedByDelivery } from '@/lib/league/leagueMarker';
 import { Suspense } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
@@ -306,9 +307,10 @@ export default async function GameHomePage({
   // who starts one is `created_by` without being its organiser, so the
   // organiser controls below stay hidden. An ordinary league flight keeps its
   // creator as organiser: nobody else finishes it.
-  const isCreator =
-    gwp.game.created_by === userId &&
-    !(gwp.game.league_round_id && (await readSimulatorLeagueFlight(id)));
+  const simulatorFlight = Boolean(
+    gwp.game.league_round_id && (await readSimulatorLeagueFlight(id)),
+  );
+  const isCreator = gwp.game.created_by === userId && !simulatorFlight;
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
@@ -1714,7 +1716,10 @@ export default async function GameHomePage({
             kall-til-handling. */}
         {isActive &&
           !me.withdrawn_at &&
-          supportsWithdrawal(game.game_mode) && (
+          supportsWithdrawal(game.game_mode) &&
+          // #2712 (owner 31.10): one attempt per round in a simulator league,
+          // so no withdrawal once the card is delivered.
+          !withdrawLockedByDelivery({ simulatorFlight, submittedAt: me.submitted_at }) && (
             <div className="pt-1">
               <SmartLink
                 href={withdrawHref}

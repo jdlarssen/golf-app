@@ -36,7 +36,7 @@ import {
 //   DELETE 200 { ok: true, kept: true }      ← angre
 //          401 { error: 'unauthorized' }     403 { error: 'not_registered' }
 //          404 { error: 'not_found' }
-//          409 { error: 'game_locked' | 'withdrawn_by_other' | 'captain_has_team' }
+//          409 { error: 'game_locked' | 'withdrawn_by_other' | 'captain_has_team' | 'card_delivered' }
 //          500 { error: 'withdraw_failed' }
 //
 // Ingen body, ingen query. Ett verb per handling på ÉN sti, som purringen: en
@@ -63,6 +63,7 @@ const ERROR_STATUS: Record<SelfWithdrawError, number> = {
   game_locked: 409,
   withdrawn_by_other: 409,
   captain_has_team: 409,
+  card_delivered: 409,
   db_error: 500,
 };
 
@@ -77,6 +78,7 @@ const ERROR_CODE: Record<SelfWithdrawError, string> = {
   game_locked: 'game_locked',
   withdrawn_by_other: 'withdrawn_by_other',
   captain_has_team: 'captain_has_team',
+  card_delivered: 'card_delivered',
   db_error: 'withdraw_failed',
 };
 
