@@ -680,6 +680,7 @@ export type Database = {
       }
       game_registration_requests: {
         Row: {
+          brought_by_user_id: string | null
           created_at: string
           decided_at: string | null
           decided_by_user_id: string | null
@@ -694,6 +695,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brought_by_user_id?: string | null
           created_at?: string
           decided_at?: string | null
           decided_by_user_id?: string | null
@@ -708,6 +710,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brought_by_user_id?: string | null
           created_at?: string
           decided_at?: string | null
           decided_by_user_id?: string | null
@@ -722,6 +725,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "game_registration_requests_brought_by_user_id_fkey"
+            columns: ["brought_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "game_registration_requests_decided_by_user_id_fkey"
             columns: ["decided_by_user_id"]

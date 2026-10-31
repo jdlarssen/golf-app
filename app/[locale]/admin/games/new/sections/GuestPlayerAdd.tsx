@@ -15,16 +15,15 @@
  * #2321: two pieces. `GuestPlayerFields` is the card the step 4 artboards draw
  * (LEGG TIL GJEST on `Nyttspill-4-tee-gjest`); the wizard opens it from the
  * «+ Gjest» card. `GuestPlayerAdd` is GameForm's «Legg til gjest» row that
- * opens the same card under itself.
+ * opens the same card under itself. The card's fields are `GuestProfileFields`,
+ * shared with the player's «Ta med en gjest» (#2607).
  */
 
 import { useId, useState, useTransition, type KeyboardEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { createGuestForWizard } from '@/app/[locale]/games/guestPlayerActions';
 import { Button } from '@/components/ui/Button';
-import { FormSectionText } from '@/components/ui/FormSection';
-import { Input } from '@/components/ui/Input';
-import { SegmentedField } from '@/components/ui/SegmentedField';
+import { GuestProfileFields } from '@/components/games/GuestProfileFields';
 import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import type { GameFormState } from '../useGameFormState';
 
@@ -104,51 +103,18 @@ export function GuestPlayerFields({
       data-testid="wizard-guest-add"
       className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3.5"
     >
-      <FormSectionText>{t('guestForm.hint')}</FormSectionText>
-      <Input
-        variant="card"
-        id={`${fieldId}-name`}
-        label={t('guestForm.nameLabel')}
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={onEnter}
-        maxLength={80}
-        placeholder={t('guestForm.namePlaceholder')}
+      <GuestProfileFields
+        idPrefix={fieldId}
+        name={name}
+        onNameChange={setName}
+        hcp={hcp}
+        onHcpChange={setHcp}
+        tee={teeShown}
+        onTeeChange={setTee}
+        avail={avail}
         disabled={blocked}
-        autoComplete="off"
-      />
-      <Input
-        variant="card"
-        id={`${fieldId}-hcp`}
-        label={t('guestForm.hcpLabel')}
-        type="text"
-        value={hcp}
-        onChange={(e) => setHcp(e.target.value)}
-        onKeyDown={onEnter}
-        inputMode="decimal"
-        placeholder={t('guestForm.hcpPlaceholder')}
-        disabled={blocked}
-        autoComplete="off"
-      />
-      <SegmentedField
-        variant="pills"
-        legend={t('guestForm.teeLabel')}
-        options={(
-          [
-            ['M', t('guestForm.teeMens')],
-            ['D', t('guestForm.teeLadies')],
-            ['J', t('guestForm.teeJuniors')],
-          ] as const
-        ).map(([g, label]) => ({
-          value: g,
-          label,
-          disabled: !avail[g],
-          title: avail[g] ? undefined : tTeams('categoryNotRated'),
-        }))}
-        value={teeShown}
-        onChange={(v) => setTee(v as Tee)}
-        disabled={blocked}
+        onEnter={onEnter}
+        notRatedTitle={tTeams('categoryNotRated')}
       />
       {errorText && (
         <p role="alert" className="font-sans text-sm text-danger">
