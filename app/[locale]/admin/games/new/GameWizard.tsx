@@ -662,6 +662,11 @@ function WizardBody({
   const teamsScreenHasContent = teamsAssignmentHasContent(state);
   const showTeamsScreen =
     step === 4 && teamsScreen && hasTeamsScreen && teamsScreenHasContent;
+  // #2447: step 4 asks «Hvordan får dere spillere?» before the list. A club
+  // tournament has no such choice (#2433), and with «Nå» the round starts at
+  // once, so the organiser picks the players (#2463). One rule for the
+  // choice, the step title and the resume card.
+  const showsPlayerSource = !state.isClubScoped && !state.teeOffNow;
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
   // reconciler lokal state til URL — men kun når URL-strengen faktisk er
@@ -799,7 +804,8 @@ function WizardBody({
     if (state.nameTouched) return;
     const suggested = suggestGameName({
       courseName: state.selectedCourse?.name ?? null,
-      scheduledTeeOffAt: state.scheduledTeeOffAt,
+      // #2463: «Nå» names the round after today, Oslo's date from the server.
+      scheduledTeeOffAt: state.teeOffNow ? teeOffNow : state.scheduledTeeOffAt,
       locale: locale as import('@/i18n/routing').AppLocale,
     });
     if (suggested && suggested !== state.name) {
@@ -809,7 +815,7 @@ function WizardBody({
       state.applySuggestedName(suggested);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
+  }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.teeOffNow, state.nameTouched]);
 
   // The «Velg …» line, translated. Which line a format gets lives in
   // `stepFourInstruction` (#2436); this only picks the message.
@@ -913,7 +919,7 @@ function WizardBody({
       expectedCount: state.expectedPlayerCount ?? null,
       title: state.nameTouched && state.name.trim() !== '' ? state.name.trim() : null,
       // Same rule as `stepTitle()` below: the card names the screen «Fortsett» opens.
-      sourceScreen: step === 4 && !showTeamsScreen && !state.isClubScoped,
+      sourceScreen: step === 4 && !showTeamsScreen && showsPlayerSource,
     },
   };
   const draftJson = JSON.stringify({ draft: draftSnapshot, resume });
@@ -1136,7 +1142,7 @@ function WizardBody({
   // club tournament has no such choice, and the teams screen is still «who».
   function stepTitle(): string {
     if (isNewCupFlow && step === 2) return t('stepTitle.cupSetup');
-    if (step === 4 && !showTeamsScreen && !state.isClubScoped) return t('stepTitle.4source');
+    if (step === 4 && !showTeamsScreen && showsPlayerSource) return t('stepTitle.4source');
     return t(`stepTitle.${step}` as Parameters<typeof t>[0]);
   }
   const top = (
@@ -1434,7 +1440,9 @@ function WizardBody({
               melder medlemmene seg på selv, og klubb-hintet sier at lista
               kan stå tom. Med «Lag» må lista fylles, og da står ingen hint;
               «Velg …»-linja sier hva som trengs. */}
-          {!state.isClubScoped && <PlayerSourceChoice state={state} />}
+          {/* #2463: not with «Nå» either (`showsPlayerSource`); the hook
+              locks the mode to invite_only then. */}
+          {showsPlayerSource && <PlayerSourceChoice state={state} />}
           {state.isClubScoped &&
             state.selectedPlayerIds.length === 0 &&
             state.playersStepOptional && (
@@ -1608,6 +1616,7 @@ function FormDataInputs({
     courseId,
     teeBoxId,
     scheduledTeeOffAt,
+    teeOffNow,
     startType,
     hcpAllowance,
     requirePeerApproval,
@@ -1818,6 +1827,9 @@ function FormDataInputs({
         name="scheduled_tee_off_at"
         value={scheduledTeeOffAt}
       />
+      {/* #2463: «Nå» on step 3. The server sets the tee-off when it publishes
+          (resolveTeeOffForSave); the field above is empty then. */}
+      <input type="hidden" name="tee_off_now" value={teeOffNow ? '1' : ''} />
       {/* #2258: «Shotgun-start» lives in BasicsSection (step 3, no name); the
           mirror here carries it to a publish from any step. */}
       <input type="hidden" name="start_type" value={startType} />

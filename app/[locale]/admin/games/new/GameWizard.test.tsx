@@ -896,6 +896,51 @@ describe('GameWizard — «Shotgun-start» overlever til steg 5 (#2258)', () => 
   });
 });
 
+describe('GameWizard — tee-off «Nå» (#2463)', () => {
+  it('«Nå» opens step 3, skips «Hvordan får dere spillere?» and reaches «Klar?» with no time', () => {
+    const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    fireEvent.click(screen.getByRole('radio', { name: /^nå$/i }));
+    expect(screen.getByText('Dere står på banen')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+    clickNext();
+
+    expectStep(4);
+    expect(screen.getByRole('heading', { name: /^hvem skal spille\?$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /hvordan får dere spillere\?/i })).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+
+    expectStep(5);
+    expect(screen.getByTestId('ready-row-teeOff')).toHaveTextContent('Nå, når du publiserer');
+    // The checklist row and the invitation card.
+    expect(screen.getAllByText('Nå, når du publiserer')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /publiser og del/i })).toBeEnabled();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('tee_off_now')).toEqual(['1']);
+    expect(fd.getAll('scheduled_tee_off_at')).toEqual(['']);
+    expect(fd.get('registration_mode')).toBe('invite_only');
+  });
+
+  it('a club tournament has no «Nå»', () => {
+    renderWizard({
+      isAdmin: true,
+      clubs: [{ id: 'club-1', name: 'Byneset Golfklubb', role: 'member' }],
+      clubMemberIdsByClub: { 'club-1': ['u0', 'u1'] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /klubb-turnering/i }));
+    // The klubb list has no player count, so Stableford is a plain row.
+    fireEvent.click(screen.getByRole('radio', { name: /^stableford$/i }));
+    clickNext();
+    expectStep(3);
+    expect(screen.queryByRole('radio', { name: /^nå$/i })).toBeNull();
+  });
+});
+
 describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () => {
   it('FormData har side_tournament_enabled + riktige counts uten å åpne «Vis avanserte innstillinger»', () => {
     const { container } = renderWizard({

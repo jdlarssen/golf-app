@@ -126,3 +126,24 @@ describe('buildEditFormInitialValues', () => {
     expect(values.group_id).toBeUndefined();
   });
 });
+
+/**
+ * Type A (#2463). A draft saved with «Nå» has no tee-off, so it opens with
+ * «Nå» chosen again. A club, cup or league game never offers «Nå», and a
+ * scheduled game always has a tee-off.
+ */
+describe('buildEditInitialValues — tee-off «Nå»', () => {
+  const stableford: GameModeConfig = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it.each<[string, Partial<EditGameRow>, boolean | undefined]>([
+    ['utkast uten tee-off', { status: 'draft' }, true],
+    ['(vakt) utkast med tee-off', { status: 'draft', scheduled_tee_off_at: '2026-11-07T08:00:00.000Z' }, undefined],
+    ['(vakt) planlagt spill', { status: 'scheduled' }, undefined],
+    ['(vakt) klubbutkast', { status: 'draft', group_id: 'club-1' }, undefined],
+    ['(vakt) cuputkast', { status: 'draft', tournament_id: 'cup-1' }, undefined],
+    ['(vakt) ligautkast', { status: 'draft', league_round_id: 'round-1' }, undefined],
+  ])('%s → tee_off_now %s', (_label, overrides, expected) => {
+    const values = buildEditInitialValues(row(stableford, overrides), []);
+    expect(values.tee_off_now).toBe(expected);
+  });
+});

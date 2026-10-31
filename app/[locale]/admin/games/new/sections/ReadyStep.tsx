@@ -107,6 +107,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     teeBoxId,
     availableTees,
     scheduledTeeOffAt,
+    teeOffNow,
     selectedPlayerIds,
     playersByTeam,
     requiresTeams,
@@ -311,7 +312,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
         .join(', ');
     }
     if (key === 'format') return formatValue();
-    if (key === 'teeOff') return when ? t('checklist.teeOff', when) : '';
+    // #2463: «Nå» has no time yet; the server sets it when you publish.
+    if (key === 'teeOff') return teeOffNow ? t('teeOffNow') : when ? t('checklist.teeOff', when) : '';
     return playersValue();
   }
 
@@ -432,6 +434,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
           name={name}
           onNameChange={setName}
           when={when}
+          whenNow={teeOffNow}
           courseName={selectedCourse?.name ?? null}
           teeName={selectedTeeBox?.name ?? null}
           formatName={modeSummaryLabel(gameMode)}

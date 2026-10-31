@@ -565,6 +565,12 @@ export function useGameFormState({
   const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
     initialValues?.scheduled_tee_off_at ?? '',
   );
+  // #2463: «Nå» on step 3, the organiser's raw choice. Only Kompis and Solo
+  // offer it (`allowTeeOffNow` below, which also makes the effective
+  // `teeOffNow`); the server sets the tee-off when it publishes.
+  const [teeOffNowChoice, setTeeOffNowChoice] = useState<boolean>(
+    initialValues?.tee_off_now ?? false,
+  );
   // #2258: «Shotgun-start» by the tee-off. Persisted as games.start_type.
   const [startType, setStartType] = useState<StartType>(
     initialValues?.start_type ?? 'first_tee',
@@ -940,6 +946,12 @@ export function useGameFormState({
     // and clearing its club here would now be saved by the edit action.
     if (next === intent) return;
     setIntentRaw(next);
+    // #2463: an arrangement without «Nå» drops it, and the tee-off goes back
+    // to the one the form opened with (#2438's Saturday 09:00, or none).
+    if (teeOffNowChoice && !teeOffNowAllowed(next)) {
+      setTeeOffNowChoice(false);
+      setScheduledTeeOffAt(initialValues?.scheduled_tee_off_at ?? '');
+    }
     if (next !== 'klubb') setGroupId('');
     else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
     if (next === 'kompis' && currentUserId) {
@@ -964,6 +976,19 @@ export function useGameFormState({
   // bare når lagret modus alt er 'invite_only' (#2433, buildEditFormInitialValues),
   // så låsen endrer aldri en lagret modus der.
   const isClubScoped = groupId !== '';
+  // #2463: «Nå» is for the group on the first tee: Kompis and Solo, never a
+  // club tournament or a cup match (owner's answer 31.10). «Rediger spill»
+  // has no intent, so GameForm never offers it.
+  function teeOffNowAllowed(forIntent: Intent | undefined): boolean {
+    return (forIntent === 'kompis' || forIntent === 'solo') && !initialValues?.tournament_id;
+  }
+  const allowTeeOffNow = teeOffNowAllowed(intent) && !isClubScoped;
+  const teeOffNow = teeOffNowChoice && allowTeeOffNow;
+  /** «Nå» on: no time is kept, the server sets it. Off: the picks work as before. */
+  function setTeeOffNow(next: boolean) {
+    setTeeOffNowChoice(next);
+    if (next) setScheduledTeeOffAt('');
+  }
   // #715: deriver den effektive modusen i stedet for å synke state i en effekt.
   // React-regelen `set-state-in-effect` flagget den gamle effekten som en
   // cascading-render-risiko. Det rå admin-valget (`registrationModeChoice`)
@@ -971,9 +996,11 @@ export function useGameFormState({
   // valget. Alle lesere — serialisering (skjult `registration_mode`-input),
   // publish-gating (`playersStepOptional` under) og påmeldings-radioene i
   // RegistrationSection — leser denne effektive verdien via `registrationMode`.
-  const registrationMode: RegistrationMode = isClubScoped
-    ? 'invite_only'
-    : registrationModeChoice;
+  // #2463: with «Nå» the round starts at once, before anyone could sign up,
+  // so step 4 hides «Hvordan får dere spillere?» and the organiser picks the
+  // players (owner's answer 31.10): the same lock, the raw choice kept.
+  const registrationMode: RegistrationMode =
+    isClubScoped || teeOffNow ? 'invite_only' : registrationModeChoice;
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
@@ -1239,10 +1266,12 @@ export function useGameFormState({
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
-  const hasTeeOff = scheduledTeeOffAt !== '';
+  // #2463: «Nå» is a tee-off too, set when the server publishes.
+  const hasTeeOff = scheduledTeeOffAt !== '' || teeOffNow;
   // Client-side inline guard (#928): true only after hydration (hasMounted) so
   // SSR/client HTML agree on the `disabled` prop. False during SSR → no mismatch.
-  const teeOffInPast = hasMounted && isDatetimeLocalInPast(scheduledTeeOffAt);
+  // «Nå» can never be in the past (#2463).
+  const teeOffInPast = !teeOffNow && hasMounted && isDatetimeLocalInPast(scheduledTeeOffAt);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === courseId) ?? null,
@@ -2170,6 +2199,10 @@ export function useGameFormState({
     setPlayerGenders,
     scheduledTeeOffAt,
     setScheduledTeeOffAt,
+    // #2463
+    teeOffNow,
+    setTeeOffNow,
+    allowTeeOffNow,
     startType,
     setStartType,
     playerSearch,

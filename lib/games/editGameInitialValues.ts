@@ -90,11 +90,12 @@ export type EditGameRow = {
   // `lib/wizard/draftResumePlan.ts`). Revansje-flyten gjør det ikke, så de er
   // fortsatt VALGFRIE.
   //
-  // `buildEditInitialValues` leser dem bevisst IKKE. Outputen deles med
+  // `buildEditInitialValues` emitterer dem bevisst IKKE. Outputen deles med
   // revansje-prefillen, og en `group_id` emittert der ville stille latt en
   // revansje arve klubb-scopet fra spillet den ble startet fra. Bare
-  // `buildEditFormInitialValues` leser `group_id`/`tournament_id`, og bare for
-  // redigeringsskjemaene (#2433).
+  // `buildEditFormInitialValues` gir `group_id` videre, og bare for
+  // redigeringsskjemaene (#2433). #2463 leser dem bare for å avgjøre om et
+  // utkast åpnes med «Nå» (`teeOffNowDraft`).
   group_id?: string | null;
   tournament_id?: string | null;
   league_round_id?: string | null;
@@ -147,6 +148,17 @@ export function formatForDateTimeLocalInOslo(iso: string | null): string {
   return `${m.year}-${m.month}-${m.day}T${m.hour}:${m.minute}`;
 }
 
+/** `true` for a draft without a tee-off that could have chosen «Nå» (#2463), else left out. */
+function teeOffNowDraft(game: EditGameRow): true | undefined {
+  const could =
+    game.status === 'draft' &&
+    game.scheduled_tee_off_at == null &&
+    !game.group_id &&
+    !game.tournament_id &&
+    !game.league_round_id;
+  return could ? true : undefined;
+}
+
 export function buildEditInitialValues(
   game: EditGameRow,
   playerRows: EditGamePlayerRow[],
@@ -175,6 +187,10 @@ export function buildEditInitialValues(
     scheduled_tee_off_at: formatForDateTimeLocalInOslo(
       game.scheduled_tee_off_at,
     ),
+    // #2463: a draft saved with «Nå» has no tee-off, so it opens with «Nå»
+    // chosen again. Not for a club, cup or league game: those never offer it
+    // (the wizard checks the intent too). A rematch row is never a draft.
+    tee_off_now: teeOffNowDraft(game),
     hcp_allowance_pct: String(game.hcp_allowance_pct),
     require_peer_approval: game.require_peer_approval,
     score_visibility: game.score_visibility,
