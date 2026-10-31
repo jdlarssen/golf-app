@@ -79,6 +79,8 @@ export type FinishPipelineGame = {
   game_mode: GameMode;
   mode_config: GameModeConfig;
   hole_segment: HoleSegment;
+  /** #2712: a league flight; played alone the result mail has no placement. */
+  league_round_id: string | null;
 };
 
 export type RunFinishPipelineInput = {
@@ -270,6 +272,7 @@ export async function runFinishPipeline(
       course_id: game.course_id,
       game_mode: game.game_mode,
       mode_config: game.mode_config,
+      league_round_id: game.league_round_id,
     });
     const mailRecipients = recipients.filter(
       (r) => sendMailByUserId.get(r.userId) === true,
@@ -330,7 +333,7 @@ export async function runFinishPipelineForGame(
   const { data: game, error: gameErr } = await supabase
     .from('games')
     .select(
-      'id, name, status, ended_at, created_by, course_id, game_mode, mode_config, hole_segment, users!games_created_by_fkey(name)',
+      'id, name, status, ended_at, created_by, course_id, game_mode, mode_config, hole_segment, league_round_id, users!games_created_by_fkey(name)',
     )
     .eq('id', gameId)
     .maybeSingle<{
@@ -343,6 +346,7 @@ export async function runFinishPipelineForGame(
       game_mode: GameMode;
       mode_config: GameModeConfig;
       hole_segment: HoleSegment;
+      league_round_id: string | null;
       users: { name: string | null } | null;
     }>();
 
@@ -379,6 +383,7 @@ export async function runFinishPipelineForGame(
       game_mode: game.game_mode,
       mode_config: game.mode_config,
       hole_segment: game.hole_segment,
+      league_round_id: game.league_round_id,
     },
     players: players ?? [],
     // A finished game without `ended_at` is possible on old/service-role-written
