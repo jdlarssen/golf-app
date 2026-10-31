@@ -22,7 +22,8 @@ import {
   type PlayerOption,
 } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
-import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { getCourseAndTimeData, getWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { isTeeColor } from '@/lib/courses/teeColors';
 import { resumeExpectedPlayerCount } from '@/lib/wizard/draftResumePlan';
 import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
 import {
@@ -61,6 +62,7 @@ type CourseRow = {
   tee_boxes: {
     id: string;
     name: string;
+    color: string | null;
     slope_mens: number | null;
     course_rating_mens: number | null;
     par_total_mens: number | null;
@@ -189,6 +191,8 @@ export default async function EditGamePage({
             // steg 1 skal vises (IntentSelector skjuler begge uten dette).
             isAdmin
             formatGuide={wizardData.formatGuide}
+            recentCourses={wizardData.recentCourses}
+            teeOffNow={wizardData.teeOffNow}
             backHref={`/admin/games/${id}`}
             entryLabel={t('kicker')}
             notice={
@@ -306,7 +310,7 @@ const getOptions = cache(async () => {
     supabase
       .from('courses')
       .select(
-        'id, name, nine_holes, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, nine_holes, tee_boxes(id, name, color, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
@@ -337,6 +341,8 @@ const getOptions = cache(async () => {
       .map((t) => ({
         id: t.id,
         name: t.name,
+        // #2448: the dot on the tee button.
+        color: isTeeColor(t.color) ? t.color : null,
         has_mens:
           t.slope_mens !== null &&
           t.course_rating_mens !== null &&
@@ -404,15 +410,17 @@ async function EditGameFormBody({
   view: GameFormView;
   title: string;
 }) {
-  const { supabase } = await getEditContext();
+  const { supabase, userId } = await getEditContext();
 
-  const [playersResult, { courses, playerOptions }] = await Promise.all([
+  const [playersResult, { courses, playerOptions }, { recentCourses, teeOffNow }] = await Promise.all([
     supabase
       .from('game_players')
       .select('user_id, team_number, flight_number, tee_gender, withdrawn_at')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
     getOptions(),
+    // #2448: the signed-in admin's own recent courses.
+    getCourseAndTimeData(userId),
   ]);
 
   if (playersResult.error) throw playersResult.error;
@@ -428,6 +436,8 @@ async function EditGameFormBody({
         courses={courses}
         players={playerOptions}
         initialValues={initialValues}
+        recentCourses={recentCourses}
+        teeOffNow={teeOffNow}
         mode={{
           kind: 'edit-draft',
           gameId,
@@ -453,6 +463,8 @@ async function EditGameFormBody({
       courses={courses}
       players={playerOptions}
       initialValues={initialValues}
+      recentCourses={recentCourses}
+      teeOffNow={teeOffNow}
       mode={{
         kind: 'edit-scheduled',
         gameId,

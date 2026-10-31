@@ -12,7 +12,7 @@ import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm, type GameFormView } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
-import { getOrganiserWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { getCourseAndTimeData, getOrganiserWizardMountData } from '@/lib/wizard/getWizardMountData';
 import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
 import { resumeExpectedPlayerCount } from '@/lib/wizard/draftResumePlan';
 import {
@@ -159,6 +159,8 @@ export default async function CreatorEditGamePage({
             isAdmin={ctx.isAdmin}
             isClubAdmin={wizardData.isClubAdmin}
             formatGuide={wizardData.formatGuide}
+            recentCourses={wizardData.recentCourses}
+            teeOffNow={wizardData.teeOffNow}
             backHref={`/games/${id}`}
             entryLabel={t('kicker')}
             notice={
@@ -190,7 +192,7 @@ export default async function CreatorEditGamePage({
     const saved = first(sp.status) === 'updated';
     const body = (
       <Suspense fallback={<GameFormSkeleton />}>
-        <EditGameFormBody gameId={id} game={game} view={view} title={title} />
+        <EditGameFormBody gameId={id} game={game} view={view} title={title} userId={ctx.userId} />
       </Suspense>
     );
     return (
@@ -238,7 +240,7 @@ export default async function CreatorEditGamePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <EditGameFormBody gameId={id} game={game} view="full" title={title} />
+            <EditGameFormBody gameId={id} game={game} view="full" title={title} userId={ctx.userId} />
           </Suspense>
         </Card>
       </div>
@@ -251,14 +253,16 @@ async function EditGameFormBody({
   game,
   view,
   title,
+  userId,
 }: {
   gameId: string;
   game: EditGameRow;
   view: GameFormView;
   title: string;
+  userId: string;
 }) {
   const supabase = await getServerClient();
-  const [{ courses, players }, playersResult] = await Promise.all([
+  const [{ courses, players }, playersResult, { recentCourses, teeOffNow }] = await Promise.all([
     // includeEmail=false (#435): the creator-facing edit flow is non-admin, so
     // the roster must not carry co-players' e-postadresser into the payload.
     getNewGameFormData(false),
@@ -267,6 +271,8 @@ async function EditGameFormBody({
       .select('user_id, team_number, flight_number, tee_gender, withdrawn_at')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
+    // #2448: the signed-in user's own recent courses.
+    getCourseAndTimeData(userId),
   ]);
 
   if (playersResult.error) throw playersResult.error;
@@ -289,6 +295,8 @@ async function EditGameFormBody({
         courses={courses}
         players={allPlayers}
         initialValues={initialValues}
+        recentCourses={recentCourses}
+        teeOffNow={teeOffNow}
         mode={{
           kind: 'edit-draft',
           gameId,
@@ -316,6 +324,8 @@ async function EditGameFormBody({
       courses={courses}
       players={allPlayers}
       initialValues={initialValues}
+      recentCourses={recentCourses}
+      teeOffNow={teeOffNow}
       mode={{
         kind: 'edit-scheduled',
         gameId,

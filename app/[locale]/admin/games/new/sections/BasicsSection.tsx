@@ -1,37 +1,39 @@
 'use client';
 
 /**
- * BasicsSection — første kort/seksjon i opprett-spill-flyten.
+ * BasicsSection — «Hvor og når?»: steg 3 i veiviseren, og delene «Bane» og
+ * «Navn og tid» i «Rediger spill» (#2448, `Nyttspill-forslag-bane`).
  *
- * Ansvar: spillnavn (valgfritt), bane- og tee-select, tee-off-datetime og
- * «Shotgun-start» (#2258).
+ * Ansvar: spillnavn (valgfritt), de sist brukte banene som kort med søk
+ * (RecentCoursePicker), tee-knappene (TeeButtons), hurtigvalgene for tee-off
+ * (TeeOffQuickPicks) og «Shotgun-start» (#2258). Begge skjemaene bruker denne
+ * seksjonen, så de to flatene ikke kan skli fra hverandre.
  * Wizard-en skjuler navnefeltet i steg 2. «Synlighet under runden» og
  * «Sideturnering» bor i AdvancedSettingsSection — begge flatene går dit
  * (#909), og den døde inline-kopien her er fjernet (#1660).
  */
 
-import { useEffect, type ReactNode } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
-import { usePathname } from '@/i18n/navigation';
-import { courseCreateHref } from '@/lib/courses/similarCoursesPanel';
+import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { FormSection } from '@/components/ui/FormSection';
-import {
-  CARD_FIELD_CONTROL,
-  CARD_FIELD_ERROR,
-  CARD_FIELD_HINT,
-  CARD_FIELD_LABEL,
-  CardSelect,
-} from '@/components/ui/CardField';
-import { formatTeeOffFieldValue } from '@/lib/format/teeOff';
+import { CARD_FIELD_ERROR, CARD_FIELD_HINT, CARD_FIELD_LABEL } from '@/components/ui/CardField';
+import type { RecentCourse } from '@/lib/wizard/recentCourseCards';
+import { RecentCoursePicker } from './RecentCoursePicker';
+import { TeeButtons } from './TeeButtons';
+import { TeeOffQuickPicks } from './TeeOffQuickPicks';
 
 type Props = {
   state: GameFormState;
   courses: CourseOption[];
+  /** #2448: the courses you used last (`getCourseAndTimeData`). */
+  recentCourses: RecentCourse[];
+  /**
+   * #2448: Oslo's «now» from the server, «YYYY-MM-DDTHH:mm». Empty → no
+   * quick-pick days, only «Annen dag».
+   */
+  teeOffNow: string;
   /**
    * Skjul spillnavn-feltet. Wizard-en flytter navnet til steg 4 (summary).
    * GameForm beholder navn øverst i seksjonen.
@@ -56,42 +58,18 @@ function FieldGroup({ visible, children }: { visible: boolean; children: ReactNo
   return visible ? <>{children}</> : <div hidden>{children}</div>;
 }
 
-/** Current browser-local wall-clock as a `datetime-local` `min` ('YYYY-MM-DDTHH:mm'). */
-function getLocalDatetimeMin(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-}
-
-type BasicsT = ReturnType<typeof useTranslations<'wizard.sections.basics'>>;
-
-function formatRatingBadge(
-  tee: {
-    has_mens: boolean;
-    has_ladies: boolean;
-    has_juniors: boolean;
-  },
-  t: BasicsT,
-): string {
-  const parts: string[] = [];
-  if (tee.has_mens) parts.push(t('teeRatingMens'));
-  if (tee.has_ladies) parts.push(t('teeRatingLadies'));
-  if (tee.has_juniors) parts.push(t('teeRatingJuniors'));
-  return parts.join(' · ');
-}
+const TEE_OFF_DESC_ID = 'scheduled_tee_off_at-desc';
 
 export function BasicsSection({
   state,
   courses,
+  recentCourses,
+  teeOffNow,
   showName = true,
   hideHeading = false,
   visibleFields = 'all',
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
-  const locale = useLocale();
-  // #2485: «Opprett ny bane» comes back to step 3 of this very wizard.
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const {
     name,
     setName,
@@ -107,29 +85,20 @@ export function BasicsSection({
     availableTees,
   } = state;
 
-  // #902: nudge the native datetime-local picker away from past tee-offs by
-  // setting `min` to "now". Done imperatively in an effect (after mount) rather
-  // than as a render prop: the SSR HTML carries no `min`, so adding it
-  // client-side avoids a hydration mismatch, and a direct DOM write keeps it out
-  // of React state (no `react-hooks/set-state-in-effect`). Browser-local is
-  // correct here — it's the user's device, not the UTC server. UX hint only; the
-  // server action in actions.ts is the authoritative guard.
-  useEffect(() => {
-    const el = document.getElementById(
-      'scheduled_tee_off_at',
-    ) as HTMLInputElement | null;
-    if (el) el.min = getLocalDatetimeMin();
-  }, []);
-
   const teeOffError = state.teeOffInPast ? t('teeOffPastError') : undefined;
-  const teeOffText = formatTeeOffFieldValue(scheduledTeeOffAt, locale);
-  const teeOffBorder = teeOffError ? 'border-danger' : 'border-field-border';
 
   const showNameAndTime = visibleFields !== 'course';
   const showCourse = visibleFields !== 'nameAndTime';
 
   const fields = (
     <>
+      {/* The three values the server reads, posted whatever part is open:
+          the cards, buttons and pills have no `name`. The wizard mirrors
+          them in FormDataInputs too, with the same values (#1011). */}
+      <input type="hidden" name="course_id" value={courseId} />
+      <input type="hidden" name="tee_box_id" value={teeBoxId} />
+      <input type="hidden" name="scheduled_tee_off_at" value={scheduledTeeOffAt} />
+
       <FieldGroup visible={showNameAndTime}>
       {showName && (
         <Input
@@ -147,148 +116,73 @@ export function BasicsSection({
       </FieldGroup>
 
       <FieldGroup visible={showCourse}>
-      <CardSelect
-        id="course_id"
-        name="course_id"
-        label={t('courseLabel')}
-        value={courseId}
-        onChange={(e) => setCourseId(e.target.value)}
-        required
-      >
-        <option value="">{t('coursePlaceholder')}</option>
-        {courses.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nineHoles ? t('courseOptionNine', { name: c.name }) : c.name}
-          </option>
-        ))}
-      </CardSelect>
-      {/* Pulled up under the field (the card's gap is 14 px, the hint sits
-          6 px below), and 44 px high so the link is a full tap target. */}
-      <p className="-mt-2 flex min-h-11 items-center gap-1 font-sans text-[13px] leading-[normal] text-muted">
-        {t('courseNotFoundHint')}
-        <SmartLink
-          href={courseCreateHref(pathname, searchParams.toString())}
-          className="inline-flex min-h-11 items-center font-semibold text-primary underline"
-        >
-          {t('courseCreateLink')}
-        </SmartLink>
-      </p>
-
-      {/* Without a course the tee field is faded as a whole, label too. */}
-      <div className={selectedCourse ? undefined : 'opacity-[0.55]'}>
-        <CardSelect
-          id="tee_box_id"
-          name="tee_box_id"
-          label={t('teeLabel')}
-          value={teeBoxId}
-          onChange={(e) => setTeeBoxId(e.target.value)}
-          disabled={!selectedCourse}
-          required
-        >
-          <option value="">{selectedCourse ? t('teePlaceholderWithCourse') : t('teePlaceholderNoCourse')}</option>
-          {availableTees.map((tee) => (
-            <option key={tee.id} value={tee.id}>
-              {tee.name} ({formatRatingBadge(tee, t)})
-            </option>
-          ))}
-        </CardSelect>
-      </div>
+        <RecentCoursePicker
+          courses={courses}
+          recentCourses={recentCourses}
+          courseId={courseId}
+          onSelect={setCourseId}
+          today={teeOffNow.slice(0, 10)}
+        />
+        <TeeButtons
+          tees={availableTees}
+          hasCourse={selectedCourse != null}
+          teeBoxId={teeBoxId}
+          onSelect={setTeeBoxId}
+        />
       </FieldGroup>
 
       <FieldGroup visible={showNameAndTime}>
-      {/* `datetime-local` emits 'YYYY-MM-DDTHH:mm' in browser local time (no
-          offset). Server interprets in Europe/Oslo before persisting as
-          timestamptz. See actions.ts.
-          #2426: at rest the field shows the artboard's face — a calendar icon
-          and «lør. 3. okt. 2026, 09:00», or «Velg dato og tid» when empty. The
-          native input lies on top, invisible until it has focus: a tap or
-          click still lands on it and opens the phone's own picker, and while
-          it has focus it shows itself, so keyboard entry works as before. */}
-      <div>
-        <label htmlFor="scheduled_tee_off_at" className={CARD_FIELD_LABEL}>
-          {t('teeOffLabel')}
-        </label>
-        <div className="relative">
-          <div
-            aria-hidden="true"
-            className={`${CARD_FIELD_CONTROL} ${teeOffBorder} flex items-center gap-2 ${teeOffText ? 'text-text' : 'text-muted'}`}
-          >
-            <span className="flex text-muted">
-              <CalendarIcon />
-            </span>
-            <span className="min-w-0 flex-1 truncate">{teeOffText ?? t('teeOffPlaceholder')}</span>
-          </div>
-          <input
-            id="scheduled_tee_off_at"
-            name="scheduled_tee_off_at"
-            type="datetime-local"
-            value={scheduledTeeOffAt}
-            onChange={(e) => setScheduledTeeOffAt(e.target.value)}
-            aria-describedby="scheduled_tee_off_at-desc"
-            aria-invalid={teeOffError ? true : undefined}
-            // iOS: native datetime-local ignores width:100% and stretches out
-            // of the card. appearance-none + min-w-0 shrink the control to its
-            // box (same fix as the date fields in CreateLigaForm, #453).
-            className={`${CARD_FIELD_CONTROL} ${teeOffBorder} absolute inset-0 min-w-0 appearance-none text-text opacity-0 focus:opacity-100 [&::-webkit-date-and-time-value]:text-left`}
-          />
-        </div>
-        {teeOffError ? (
-          <p id="scheduled_tee_off_at-desc" className={CARD_FIELD_ERROR}>
-            {teeOffError}
-          </p>
-        ) : (
-          <p id="scheduled_tee_off_at-desc" className={CARD_FIELD_HINT}>
-            {t('teeOffHint')}
-          </p>
-        )}
-      </div>
+        <TeeOffQuickPicks
+          value={scheduledTeeOffAt}
+          onChange={setScheduledTeeOffAt}
+          teeOffNow={teeOffNow}
+          describedBy={TEE_OFF_DESC_ID}
+        >
+          {/* No artboard draws the hint, the error or «Shotgun-start»; they
+              stay under the rows as they stood under the field (#2426). */}
+          {teeOffError ? (
+            <p id={TEE_OFF_DESC_ID} role="alert" className={`${CARD_FIELD_ERROR} px-1`}>
+              {teeOffError}
+            </p>
+          ) : (
+            <p id={TEE_OFF_DESC_ID} className={`${CARD_FIELD_HINT} px-1`}>
+              {t('teeOffHint')}
+            </p>
+          )}
 
-      {/* #2258: «Shotgun-start», off by default. No artboard draws it (#2426),
-          so it takes the card's field type: the name as a field label and the
-          hint as a field hint. The whole label is the 44 px target, and the
-          hint is read as its description. No `name`: the form reads the
-          always-mounted `start_type` mirror in GameWizard / GameForm. */}
-      <label className="flex min-h-11 cursor-pointer items-start gap-2.5">
-        <input
-          type="checkbox"
-          checked={startType === 'shotgun'}
-          onChange={(e) => setStartType(e.target.checked ? 'shotgun' : 'first_tee')}
-          className="-mt-0.5 h-5 w-5 flex-shrink-0 accent-primary"
-          aria-labelledby="shotgun-start-label"
-          aria-describedby="shotgun-start-hint"
-          data-testid="shotgun-start"
-        />
-        <span>
-          <span id="shotgun-start-label" className={CARD_FIELD_LABEL}>
-            {t('shotgunLabel')}
-          </span>
-          <span id="shotgun-start-hint" className="block font-sans text-xs leading-[1.4] text-muted">
-            {t('shotgunHint')}
-          </span>
-        </span>
-      </label>
+          {/* #2258: «Shotgun-start», off by default. The whole label is the
+              44 px target, and the hint is read as its description. No
+              `name`: the form reads the always-mounted `start_type` mirror in
+              GameWizard / GameForm. */}
+          <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-2.5 px-1">
+            <input
+              type="checkbox"
+              checked={startType === 'shotgun'}
+              onChange={(e) => setStartType(e.target.checked ? 'shotgun' : 'first_tee')}
+              className="-mt-0.5 h-5 w-5 flex-shrink-0 accent-primary"
+              aria-labelledby="shotgun-start-label"
+              aria-describedby="shotgun-start-hint"
+              data-testid="shotgun-start"
+            />
+            <span>
+              <span id="shotgun-start-label" className={CARD_FIELD_LABEL}>
+                {t('shotgunLabel')}
+              </span>
+              <span id="shotgun-start-hint" className="block font-sans text-xs leading-[1.4] text-muted">
+                {t('shotgunHint')}
+              </span>
+            </span>
+          </label>
+        </TeeOffQuickPicks>
       </FieldGroup>
     </>
   );
 
-  // #909: GameForm wraps the section in a Disclosure that carries the title,
-  // so there the fields stand on their own. The wizard's step 3 draws them in
-  // a card under the «BANE OG TIDSPUNKT» kicker (#2426).
+  // #909: GameForm wraps the section in a panel that carries the title, so
+  // there the kickers stand inside it under the name. The wizard's step 3
+  // draws them straight under «Hvor og når?» (#2448).
   if (hideHeading) {
     return <section className="flex flex-col gap-3.5">{fields}</section>;
   }
-  return (
-    <FormSection legend={t('heading')} gap="lg">
-      {fields}
-    </FormSection>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M3 10h18M8 3v4M16 3v4" />
-    </svg>
-  );
+  return <div className="flex flex-col">{fields}</div>;
 }

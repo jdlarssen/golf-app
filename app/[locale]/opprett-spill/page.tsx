@@ -625,6 +625,8 @@ async function GameFormBody({
     isClubAdmin,
     formatsByIntent,
     formatGuide,
+    recentCourses,
+    teeOffNow,
   } = await getOrganiserWizardMountData(userId);
   return (
     <GameWizard
@@ -651,6 +653,8 @@ async function GameFormBody({
       isAdmin={isAdmin}
       isClubAdmin={isClubAdmin}
       formatGuide={formatGuide}
+      recentCourses={recentCourses}
+      teeOffNow={teeOffNow}
       backHref="/"
       notice={notice}
       stepOneLead={stepOneLead}

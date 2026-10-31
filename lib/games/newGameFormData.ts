@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
+import { isTeeColor } from '@/lib/courses/teeColors';
 import type { Database } from '@/lib/database.types';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
@@ -14,6 +15,7 @@ type CourseRow = {
   tee_boxes: {
     id: string;
     name: string;
+    color: string | null;
     slope_mens: number | null;
     course_rating_mens: number | null;
     par_total_mens: number | null;
@@ -129,7 +131,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     supabase
       .from('courses')
       .select(
-        'id, name, nine_holes, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors, archived_at)',
+        'id, name, nine_holes, tee_boxes(id, name, color, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors, archived_at)',
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
@@ -157,6 +159,8 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       .map((t) => ({
         id: t.id,
         name: t.name,
+        // #2448: the dot on the tee button.
+        color: isTeeColor(t.color) ? t.color : null,
         has_mens:
           t.slope_mens !== null &&
           t.course_rating_mens !== null &&

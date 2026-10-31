@@ -46,6 +46,8 @@ import type { StartType } from '@/lib/games/startType';
 import type { EditSection } from '@/lib/games/editSections';
 import { EditOverview, type EditNav } from './EditOverview';
 import { useCourseFromUrl } from './useCourseFromUrl';
+import type { TeeColor } from '@/lib/courses/teeColors';
+import type { RecentCourse } from '@/lib/wizard/recentCourseCards';
 
 export type CourseOption = {
   id: string;
@@ -55,6 +57,11 @@ export type CourseOption = {
   tee_boxes: {
     id: string;
     name: string;
+    /**
+     * #2448: `tee_boxes.color` through `isTeeColor`, for the dot on the tee
+     * button. Missing or null → the dot reads the name (`teeDotColor`).
+     */
+    color?: TeeColor | null;
     has_mens: boolean;
     has_ladies: boolean;
     has_juniors: boolean;
@@ -359,7 +366,14 @@ type Props = {
   view?: GameFormView;
   /** The overview's links and start texts. Required for every view but `'full'`. */
   editNav?: EditNav;
+  /** #2448: the cards on «Bane», as on the wizard's step 3 (`GameWizard`). */
+  recentCourses?: RecentCourse[];
+  /** #2448: Oslo's «now» from the server, for the tee-off quick picks. */
+  teeOffNow?: string;
 };
+
+/** #2448: stable default for `recentCourses`. */
+const NO_RECENT_COURSES: RecentCourse[] = [];
 
 /** Which of BasicsSection's fields the open part shows. */
 function basicsFieldsFor(section: EditSection | null): 'all' | 'nameAndTime' | 'course' {
@@ -462,6 +476,8 @@ export function GameForm({
   initialValues,
   view = 'full',
   editNav,
+  recentCourses = NO_RECENT_COURSES,
+  teeOffNow = '',
 }: Props) {
   const t = useTranslations('wizard.form');
   const tMove = useTranslations('game.move');
@@ -855,6 +871,8 @@ export function GameForm({
         <BasicsSection
           state={state}
           courses={courses}
+          recentCourses={recentCourses}
+          teeOffNow={teeOffNow}
           showName
           hideHeading
           visibleFields={basicsFieldsFor(section)}

@@ -9,6 +9,23 @@ import { orderPickerPlayers, pickerStatsIds } from '@/lib/wizard/pickerOrder';
 import { getPickerOrderStats } from '@/lib/wizard/pickerOrderStats';
 import { getCreateGamePlayerRoster } from '@/lib/games/getCreateGamePlayerRoster';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
+import { teeOffNowLocal } from '@/lib/games/teeOffQuickPicks';
+import { getRecentCourses } from '@/lib/wizard/recentCourses';
+import type { RecentCourse } from '@/lib/wizard/recentCourseCards';
+
+/**
+ * «Hvor og når?» (#2448): Oslo's «now» for the tee-off quick picks, made on
+ * the server so the client draws the same days (defaultTeeOff.ts), and the
+ * courses you used last, read against that day. Every surface that mounts the
+ * wizard or «Rediger spill» loads them here.
+ */
+export async function getCourseAndTimeData(
+  userId: string | null | undefined,
+): Promise<{ teeOffNow: string; recentCourses: RecentCourse[] }> {
+  const teeOffNow = teeOffNowLocal(new Date());
+  const recentCourses = userId ? await getRecentCourses(userId, teeOffNow.slice(0, 10)) : [];
+  return { teeOffNow, recentCourses };
+}
 
 /**
  * Alt `GameWizard` trenger for å mountes, hentet på serveren.
@@ -36,7 +53,7 @@ export async function getWizardMountData() {
       getFormatGuideEntries(),
     ]);
 
-  const [{ courses, players, clubs }, friendPlayerIds, clubMembers] =
+  const [{ courses, players, clubs }, friendPlayerIds, clubMembers, courseAndTime] =
     await Promise.all([
       getNewGameFormData(),
       // #464: venne-relasjonene til brukeren — picker-kilde for kompis/cup.
@@ -51,6 +68,7 @@ export async function getWizardMountData() {
             options: [],
           }))
         : Promise.resolve({ memberIdsByClub: {}, options: [] }),
+      getCourseAndTimeData(userId),
     ]);
 
   // #2321: the picker's order — you first, then the people you last played
@@ -81,6 +99,7 @@ export async function getWizardMountData() {
     formatGuide,
     friendPlayerIds,
     clubMemberIdsByClub: clubMembers.memberIdsByClub,
+    ...courseAndTime,
   };
 }
 
@@ -99,13 +118,14 @@ export async function getOrganiserWizardMountData(userId: string) {
     getFormatsForIntent('solo'),
     getFormatGuideEntries(),
   ]);
-  const [{ courses, players, clubs, friendPlayerIds, clubMemberIdsByClub }, isClubAdmin] =
+  const [{ courses, players, clubs, friendPlayerIds, clubMemberIdsByClub }, isClubAdmin, courseAndTime] =
     await Promise.all([
       // #464/#2018: medspillere ∪ venner ∪ klubbmedlemmer, samme cachede liste som
       // PlayerShortageBanner på /opprett-spill teller — så banneret og velgeren
       // aldri er uenige.
       getCreateGamePlayerRoster(userId),
       isClubAdminAnywhere(userId),
+      getCourseAndTimeData(userId),
     ]);
   return {
     userId,
@@ -121,5 +141,6 @@ export async function getOrganiserWizardMountData(userId: string) {
       solo: soloFormats,
     },
     formatGuide,
+    ...courseAndTime,
   };
 }
