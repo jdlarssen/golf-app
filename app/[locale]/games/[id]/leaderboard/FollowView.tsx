@@ -59,7 +59,7 @@ export interface FollowViewProps {
   view: FollowViewData;
   /** «{spillnavn} · {bane}» (`followSubtitle`). */
   subtitle: string;
-  /** «Lag din egen turnering på et par minutter →», hidden for a signed-in viewer. */
+  /** «Lag din egen turnering på et par minutter», hidden for a signed-in viewer. */
   cta: ReactNode;
   /** The withdrawn players, when there are any. */
   footerSlot?: ReactNode;

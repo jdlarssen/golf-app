@@ -8,7 +8,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueSummary } from '../../../../../lib/league/appLeagueView';
 import { LEAGUE_TEXT, homeRoundLine } from '../../lib/leagueCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
-import { withSystemArrows } from '../SystemArrow';
+import { ChevronIcon } from '../icons/Icons';
 import { PlayedPill } from './LeaguePills';
 
 export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; onPress: () => void }) {
@@ -40,13 +40,7 @@ export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; o
         </Text>
       </View>
       {open ? <PlayedPill state={state} testID={`home-league-played-${league.id}`} /> : null}
-      <Text
-        style={[styles.arrow, { color: colors.primary }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {withSystemArrows('→', '400')}
-      </Text>
+      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -68,6 +62,4 @@ const styles = StyleSheet.create({
   text: { flex: 1, minWidth: 0 },
   name: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold },
   line: { ...interLine(12, 16), fontFamily: FONTS.sans },
-  // Nettleserens `normal` for Inter 18 er 21; pila er systemfontens.
-  arrow: { ...interLine(18, 21), fontFamily: FONTS.sans },
 });

@@ -223,9 +223,6 @@ export default async function ArrangerGolfturneringPage() {
               className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover"
             >
               {t('formats.linkLabel')}
-              <span aria-hidden className="ml-1">
-                →
-              </span>
             </SmartLink>
           </div>
         </section>

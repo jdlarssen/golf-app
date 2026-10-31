@@ -63,8 +63,8 @@ describe('LiveBoard', () => {
   });
 
   it.each([
-    [{ kind: 'hole', holeNumber: 7, href: '/games/g1/holes/7' } as const, 'Hull 7 →', '/games/g1/holes/7'],
-    [{ kind: 'submit', href: '/games/g1/submit' } as const, 'Lever scorekort →', '/games/g1/submit'],
+    [{ kind: 'hole', holeNumber: 7, href: '/games/g1/holes/7' } as const, 'Hull 7', '/games/g1/holes/7'],
+    [{ kind: 'submit', href: '/games/g1/submit' } as const, 'Lever scorekort', '/games/g1/submit'],
   ])('the strip links on: %s', (strip, label, href) => {
     render(<LiveBoard {...props({ strip })} />);
 
@@ -75,7 +75,7 @@ describe('LiveBoard', () => {
   it('the strip has no button after delivery, and is gone without a strip or on public views', () => {
     const { rerender } = render(<LiveBoard {...props({ strip: { kind: 'none' } })} />);
     expect(screen.getByText('Din runde')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /→/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('board-strip-action')).not.toBeInTheDocument();
 
     rerender(<LiveBoard {...props({ strip: null })} />);
     expect(screen.queryByText('Din runde')).not.toBeInTheDocument();

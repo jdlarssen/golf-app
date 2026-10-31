@@ -60,6 +60,7 @@ import type { GameStatus } from '@/lib/games/status';
 import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
+import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{
   profile?: string | string[];
@@ -527,9 +528,7 @@ async function HomeBody() {
         trailing={
           <div className="flex items-center gap-3 shrink-0">
             <StatusPill status={g.status} label={tStatus(g.status)} />
-            <span aria-hidden className="text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </div>
         }
       />
@@ -562,9 +561,7 @@ async function HomeBody() {
           trailing={
             <div className="flex items-center gap-3 shrink-0">
               <ActiveStateLabel state={extras.state} label={stateLabel} />
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </div>
           }
         />
@@ -622,9 +619,7 @@ async function HomeBody() {
           trailing={
             <div className="flex items-center gap-3 shrink-0">
               <ActiveStateLabel state={extras.state} label={stateLabel} />
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </div>
           }
         />
@@ -698,9 +693,7 @@ async function HomeBody() {
         trailing={
           <div className="flex items-center gap-3 shrink-0">
             <StatusPill status={front9.status} label={tStatus(front9.status)} />
-            <span aria-hidden className="text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </div>
         }
       />
@@ -766,9 +759,7 @@ async function HomeBody() {
                 <span className="text-base font-medium text-text">
                   {t('discoverCard')}
                 </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
+                <ChevronRightIcon className="shrink-0 text-muted" />
               </Card>
             </SmartLink>
           </Section>
@@ -786,9 +777,7 @@ async function HomeBody() {
               <span className="text-base font-medium text-text">
                 {t('topplisteCard')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         </Section>

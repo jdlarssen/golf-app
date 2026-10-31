@@ -78,7 +78,7 @@ describe('sendTeamInvitationMail', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Jørgen</strong> vil ha deg med på laget <em>Bjørketrærne</em> i <strong>Sommercup 2026</strong>.
+                    <strong>Jørgen</strong> vil ha deg med på laget <span style="font-weight:600;">Bjørketrærne</span> i <strong>Sommercup 2026</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
@@ -96,7 +96,7 @@ describe('sendTeamInvitationMail', () => {
     expect(payload.subject).toMatchInlineSnapshot(`"Du er invitert til <u>Z</u> (<i>Y</i>)"`);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>&lt;b&gt;X&lt;/b&gt;</strong> vil ha deg med på laget <em>&lt;u&gt;Z&lt;/u&gt;</em> i <strong>&lt;i&gt;Y&lt;/i&gt;</strong>.
+                    <strong>&lt;b&gt;X&lt;/b&gt;</strong> vil ha deg med på laget <span style="font-weight:600;">&lt;u&gt;Z&lt;/u&gt;</span> i <strong>&lt;i&gt;Y&lt;/i&gt;</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
@@ -127,7 +127,7 @@ describe('sendTeamInvitationMail', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Jørgen</strong> wants you on team <em>Bjørketrærne</em> in <strong>Sommercup 2026</strong>.
+                    <strong>Jørgen</strong> wants you on team <span style="font-weight:600;">Bjørketrærne</span> in <strong>Sommercup 2026</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     To join: go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.
@@ -168,7 +168,7 @@ describe('sendTeamInvitationMail', () => {
                     Du er invitert på lag
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Jørgen</strong> vil ha deg med på laget <em>Bjørketrærne</em> i <strong>Sommercup 2026</strong>.
+                    <strong>Jørgen</strong> vil ha deg med på laget <span style="font-weight:600;">Bjørketrærne</span> i <strong>Sommercup 2026</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.

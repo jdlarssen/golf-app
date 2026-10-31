@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getActionItemCounts } from '@/lib/admin/actionItems';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * «Krever handling»-stripe (#864): surfaces the two endGame finish-blockers —
@@ -69,9 +70,7 @@ export async function ActionItemsStripe() {
             }`}
           >
             <span className="text-[13px] font-medium text-text">{row.label}</span>
-            <span aria-hidden className="shrink-0 text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </SmartLink>
         ))}
       </div>

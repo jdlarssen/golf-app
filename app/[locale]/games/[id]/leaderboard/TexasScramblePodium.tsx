@@ -197,9 +197,6 @@ export function TexasScramblePodium({
         >
           <summary className="cursor-pointer list-none rounded-2xl px-4 py-3 font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
             {t('common.showFullRankingTeams', { count: result.teams.length })}
-            <span aria-hidden className="ml-1 text-muted">
-              ›
-            </span>
           </summary>
           <ul className="flex flex-col gap-2 list-none px-4 pb-3">
             {rest.map((team) => {
@@ -311,7 +308,7 @@ function PodiumStep({
         </p>
       )}
 
-      <p className="text-center font-serif text-[14px] font-medium leading-tight tracking-[-0.005em] text-text">
+      <p className="text-center font-serif text-[14px] font-medium leading-tight text-text">
         {t('common.teamLabel', { number: team.teamNumber })}
       </p>
       <p className="text-center text-[10.5px] leading-tight text-muted break-words">

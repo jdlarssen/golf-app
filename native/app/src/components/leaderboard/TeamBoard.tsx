@@ -33,7 +33,6 @@ import {
   type ThemeColors,
 } from '../../theme';
 import { HatchBar, TavleLaasIcon } from '../icons/Icons';
-import { withSystemArrows } from '../SystemArrow';
 
 /** Plass-kolonnen i tegningen. */
 const PLACE_W = 34;
@@ -415,7 +414,7 @@ export function TeamStrip({
           testID="board-strip-action"
         >
           <Text style={[styles.stripButtonText, { color: colors.surfaceStrong }]}>
-            {withSystemArrows(strip.action.label, '600')}
+            {strip.action.label}
           </Text>
         </Pressable>
       ) : null}

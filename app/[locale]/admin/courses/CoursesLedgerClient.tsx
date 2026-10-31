@@ -8,6 +8,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
+import { ChevronRightIcon } from '@/components/icons';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
@@ -342,9 +343,7 @@ export function CoursesLedgerClient({
                   <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">
                     {course.tee_count}
                   </p>
-                  <span aria-hidden className="text-[14px] text-muted">
-                    ›
-                  </span>
+                  <ChevronRightIcon className="shrink-0 text-muted" />
                 </SmartLink>
               );
             })}

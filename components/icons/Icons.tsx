@@ -99,18 +99,6 @@ export const ReplayIcon = ({ size, ...rest }: IconProps) => (
   </svg>
 );
 
-// Four-pointed sparkle med to mindre satellitter — SVG-pendant til ✨-emojien
-// som brukes i product-update-banner og notification-card. Stor stjerne har
-// litt konkave «pinch»-kanter (samme silhuett som Unicode-glyphen); de små
-// satellittene er rene rhombuser. Holder seg innenfor 2px safe-zone.
-export const SparkleIcon = ({ size, ...rest }: IconProps) => (
-  <svg {...base(size)} {...rest}>
-    <path d="M 12 3 Q 12.6 8.4 13.5 9.3 Q 14.4 10.2 19.8 10.8 Q 14.4 11.4 13.5 12.3 Q 12.6 13.2 12 18.6 Q 11.4 13.2 10.5 12.3 Q 9.6 11.4 4.2 10.8 Q 9.6 10.2 10.5 9.3 Q 11.4 8.4 12 3 Z" />
-    <path d="M 18.5 14 L 19 16 L 21 16.5 L 19 17 L 18.5 19 L 18 17 L 16 16.5 L 18 16 Z" />
-    <path d="M 5.5 4 L 5.9 5.4 L 7.3 5.8 L 5.9 6.2 L 5.5 7.6 L 5.1 6.2 L 3.7 5.8 L 5.1 5.4 Z" />
-  </svg>
-);
-
 // F3 (#273): admin format-mapping-tile-ikon. 3x3-grid med to celler fylt
 // signalerer matrix-view + on/off-toggle. Currentcolor, 1.5 stroke som
 // resten av iconsettet.
@@ -177,5 +165,17 @@ export const PlusIcon = ({ size, ...rest }: IconProps) => (
 export const FlammeIcon = ({ size, ...rest }: IconProps) => (
   <svg {...base(size)} {...rest}>
     <path d="M 12 3 C 12.5 6.3 14.3 7.5 15.9 9.5 C 17.2 11.2 18 12.9 18 14.8 A 6 6 0 0 1 6 14.8 C 6 12.5 7 11.2 8.3 9.9 C 8.8 11.3 9.4 12 10.2 12.4 C 10.2 8.7 10.7 5.7 12 3 Z" />
+  </svg>
+);
+
+/**
+ * Chevron right — the affordance on a row or card that navigates. It replaces
+ * the «→» glyph: Inter has no arrow, so the glyph fell back to another font
+ * and a different weight on every device. Same geometry as the chevron in
+ * `SettingRow`. 16 px at a 2 stroke; colour it with the role it sits in.
+ */
+export const ChevronRightIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size ?? 16)} strokeWidth={2} {...rest}>
+    <path d="m9 6 6 6-6 6" />
   </svg>
 );

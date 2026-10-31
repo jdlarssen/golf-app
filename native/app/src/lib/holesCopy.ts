@@ -209,7 +209,7 @@ export const BINGO_BANGO_BONGO_HOLES_TEXT = {
   nearestPin: 'nærmest hullet',
   firstInHole: 'først i hull',
   /** Til høyre i hodet når én spiller tok alle tre. */
-  feietChip: '★ Feiet',
+  feietChip: 'Feiet',
   /** I stedet for radene på et hull som venter. */
   ingenPrestasjoner: 'Ingen prestasjoner registrert ennå.',
   /** Til høyre på en prestasjon ingen har fått. */

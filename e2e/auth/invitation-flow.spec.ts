@@ -246,7 +246,7 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
       }
 
       await inviteePage.goto(`/games/${TEST_GAME_ID}`);
-      // Klikker "Start runden →" som tar invitee til hull 1.
+      // Klikker "Start runden" som tar invitee til hull 1.
       await inviteePage
         .getByRole('link', { name: /Start runden|Fortsett runden/ })
         .click();

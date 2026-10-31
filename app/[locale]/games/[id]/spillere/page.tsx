@@ -453,7 +453,7 @@ export default async function CreatorSpillerePage({
           <SmartLink
             href={`/admin/games/${gameId}/signups`}
             data-testid="signups-link"
-            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium text-text transition-colors hover:bg-primary-soft"
           >
             <span>{t('signupsLink')}</span>
             {pendingSignups !== null && (
@@ -479,7 +479,7 @@ export default async function CreatorSpillerePage({
               <SmartLink
                 href={`/signup/${shareShortId}/plakat`}
                 data-testid="poster-link"
-                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+                className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium text-text transition-colors hover:bg-primary-soft"
               >
                 {t('sharePoster')}
               </SmartLink>
@@ -491,7 +491,7 @@ export default async function CreatorSpillerePage({
           <SmartLink
             href={`/admin/games/${gameId}/startlista`}
             data-testid="startlista-link"
-            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium text-text transition-colors hover:bg-primary-soft"
           >
             <span>{tFlights('sectionLabel')}</span>
             {unassignedFlightCount > 0 && (
@@ -677,7 +677,7 @@ export default async function CreatorSpillerePage({
                       />
                       <SubmitButton
                         pendingLabel={t('guestClaim.sendPending')}
-                        className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+                        className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
                       >
                         {claimedTo
                           ? t('guestClaim.resendButton')

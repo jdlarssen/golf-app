@@ -52,7 +52,7 @@ export async function BetalingOverviewSection({
 
           <SmartLink
             href={`/admin/games/${gameId}/betaling`}
-            className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+            className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium text-text transition-colors hover:bg-primary-soft"
           >
             {t('viewAll')}
           </SmartLink>

@@ -8,6 +8,7 @@ import type { AppLocale } from '@/i18n/routing';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
+import { ChevronRightIcon } from '@/components/icons';
 
 // Presentational views for the player's Klubbhus room (#892, redrawn in #2493
 // after the room artboards `Klubbhus-forslag-rom-topp-*` / `-rom-rullet-*`).
@@ -140,9 +141,7 @@ function RoomRow({
           <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
           <span className="mt-0.5 block text-xs leading-[normal] text-muted">{line}</span>
         </span>
-        <span aria-hidden className="text-[18px] leading-[normal] text-muted">
-          ›
-        </span>
+        <ChevronRightIcon className="shrink-0 text-muted" />
       </SmartLink>
     </li>
   );
@@ -182,7 +181,7 @@ export function ClubsView({ clubs }: { clubs: RoomClub[] | null }) {
           data-testid="player-no-club"
           className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted hover:text-text"
         >
-          {t('playerNoClub')} →
+          {t('playerNoClub')}
         </SmartLink>
       </section>
     );

@@ -73,7 +73,7 @@ describe('sendRegistrationRequestMail', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Per Spiller</strong> vil bli med i <em>Sommercup 2026</em>.
+                    <strong>Per Spiller</strong> vil bli med i <span style="font-weight:600;">Sommercup 2026</span>.
                   </p>"
     `);
   });
@@ -98,7 +98,7 @@ describe('sendRegistrationRequestMail', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Per Spiller</strong> vil bli med i <em>Sommercup 2026</em>.
+                    <strong>Per Spiller</strong> vil bli med i <span style="font-weight:600;">Sommercup 2026</span>.
                   </p>
                   <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">Slipp meg inn, takk</blockquote>"
     `);
@@ -113,7 +113,7 @@ describe('sendRegistrationRequestMail', () => {
     expect(payload.subject).toMatchInlineSnapshot(`"Ny påmelding til <script>alert(1)</script>"`);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Per &amp; Pål</strong> vil bli med i <em>&lt;script&gt;alert(1)&lt;/script&gt;</em>.
+                    <strong>Per &amp; Pål</strong> vil bli med i <span style="font-weight:600;">&lt;script&gt;alert(1)&lt;/script&gt;</span>.
                   </p>"
     `);
     expect(payload.text).toMatchInlineSnapshot(`
@@ -157,7 +157,7 @@ describe('sendRegistrationRequestMail', () => {
                     Ny påmelding venter
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Per Spiller</strong> vil bli med i <em>Sommercup 2026</em>.
+                    <strong>Per Spiller</strong> vil bli med i <span style="font-weight:600;">Sommercup 2026</span>.
                   </p>
                   
                   <div style="margin:32px 0;">
@@ -197,7 +197,7 @@ describe('sendRegistrationRequestMail', () => {
     `);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Per Spiller</strong> wants to join <em>Sommercup 2026</em>.
+                    <strong>Per Spiller</strong> wants to join <span style="font-weight:600;">Sommercup 2026</span>.
                   </p>"
     `);
   });

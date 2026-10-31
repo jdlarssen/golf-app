@@ -84,7 +84,7 @@ export interface LiveBoardProps {
  * Tavla (#2253): the live board for solo stableford and solo strokeplay — a
  * deep-forest header, a dark board with white plates in four columns, the
  * viewer's own row marked «DU», and a strip at the bottom with the viewer's
- * place and the way on («Hull 7 →» / «Lever scorekort →»).
+ * place and the way on («Hull 7» / «Lever scorekort»).
  *
  * All numbers come ready from `computeLiveBoard`; this component only lays them
  * out. Local state (show all, the open reaction row) has no `key` tied to the

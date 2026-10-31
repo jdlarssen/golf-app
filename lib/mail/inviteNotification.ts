@@ -139,7 +139,7 @@ export async function sendInviteNotification(
         name: escapeHtml(invitedByName),
         game: escapeHtml(gameName!),
         strong: (c) => `<strong>${c}</strong>`,
-        em: (c) => `<em>${c}</em>`,
+        em: (c) => `<span style="font-weight:600;">${c}</span>`,
       })
     : t.markup('invite.introOpen', {
         name: escapeHtml(invitedByName),

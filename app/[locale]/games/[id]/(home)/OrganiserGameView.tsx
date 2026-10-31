@@ -20,6 +20,7 @@ import { ceremonySupported } from '@/lib/games/ceremony';
 import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * `/games/[id]` for the organiser who is not on the roster (#2202). Every
@@ -120,9 +121,7 @@ export async function OrganiserGameView({
             <SmartLink href={`/games/${id}/leaderboard`} className="block">
               <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
                 <span className="text-base font-medium text-text">{t('leaderboard')}</span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
+                <ChevronRightIcon className="shrink-0 text-muted" />
               </Card>
             </SmartLink>
           )}

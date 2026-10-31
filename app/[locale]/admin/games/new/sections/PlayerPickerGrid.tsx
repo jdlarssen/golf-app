@@ -3,7 +3,7 @@
 /**
  * «Hvem skal spille?» on step 4 of the wizard (#2321), drawn as the artboard
  * `Spillere-forslag`: a search field, the players as cards in four columns
- * (three under 360 px), the dashed «+ Gjest» and «✉ E-post» cards and the hint.
+ * (three under 360 px), the dashed «+ Gjest» and «E-post» cards and the hint.
  * The tray at the bottom is `PlayerTray`.
  *
  * - The cards are the picker source (`selectableIds`: friends, club members or
@@ -14,13 +14,14 @@
  * - Each card is a `<label>` around a visually hidden checkbox, so the focus
  *   ring rule from #2240 draws on the card. At `cap` the cards that are not
  *   selected are disabled and greyed; a selected card can always be removed.
- * - «+ Gjest» opens the guest form and «✉ E-post» the e-mail form under the
+ * - «+ Gjest» opens the guest form and «E-post» the e-mail form under the
  *   grid, one at a time. Both are local state.
  */
 
-import { useEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
+import { KonvoluttIcon } from '@/components/icons';
 import { choiceStateClass } from '@/components/ui/ChoiceCard';
 import { FormSection } from '@/components/ui/FormSection';
 import { GuestBadge } from '@/components/ui/GuestBadge';
@@ -197,7 +198,7 @@ export function PlayerPickerGrid({
     ref,
   }: {
     form: 'guest' | 'email';
-    icon: string;
+    icon: ReactNode;
     iconClass: string;
     label: string;
     controls: string;
@@ -256,8 +257,8 @@ export function PlayerPickerGrid({
           {allowEmail &&
             dashedCard({
               form: 'email',
-              icon: '✉',
-              iconClass: 'text-lg',
+              icon: <KonvoluttIcon size={18} className="block" />,
+              iconClass: '',
               label: t('grid.email'),
               controls: emailFormId,
             })}

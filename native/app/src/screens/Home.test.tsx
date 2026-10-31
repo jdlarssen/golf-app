@@ -169,7 +169,7 @@ it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige 
 
   // Heltekortet er den nyeste runden, og ringen står på hull 8.
   expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
-  expect(await screen.findByText('Fortsett på hull 8 →')).toBeTruthy();
+  expect(await screen.findByText('Fortsett på hull 8')).toBeTruthy();
   // Tittelen er datoen, og fornavnet står i pillen.
   expect(await screen.findByTestId('home-date')).toHaveTextContent(
     /^(Mandag|Tirsdag|Onsdag|Torsdag|Fredag|Lørdag|Søndag) \d{1,2}\. [a-zæøå]+$/,
@@ -207,11 +207,11 @@ it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige 
     '2. plass av 8 · 88 brutto',
   );
   expect(screen.queryByTestId('home-last-round-older')).toBeNull();
-  await fireEvent.press(screen.getByText('Alle runder →'));
+  await fireEvent.press(screen.getByText('Alle runder'));
   expect(navigate).toHaveBeenCalledWith('RoundDiary', { from: 'home' });
   expect(screen.queryByTestId('home-last-round-older')).toBeNull();
 
-  await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
+  await fireEvent.press(screen.getByText('Fortsett på hull 8'));
   // #2228: toppen sendes med, så den står også om hullsiden kaster.
   expect(navigate).toHaveBeenCalledWith('Hole', {
     gameId: 'new',
@@ -246,7 +246,7 @@ it('tegner heltekortet fra enheten når nettet er borte', async () => {
   const { view } = renderHome();
   await view;
 
-  expect(await screen.findByText('Fortsett på hull 8 →')).toBeTruthy();
+  expect(await screen.findByText('Fortsett på hull 8')).toBeTruthy();
   expect(screen.getByLabelText('Hull 8 av 18, 7 spilt')).toBeTruthy();
   expect(await screen.findByTestId('home-stale')).toBeTruthy();
   // Uten profil står datoen alene, og uten pille er «Profil» veien videre.
@@ -297,7 +297,7 @@ it('bruker aldri en bundel som hører til et annet spill enn helten', async () =
   await view;
 
   expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
-  expect(await screen.findByText('Åpne runden →')).toBeTruthy();
+  expect(await screen.findByText('Åpne runden')).toBeTruthy();
   expect(screen.queryByTestId('home-hero-ring')).toBeNull();
 });
 
