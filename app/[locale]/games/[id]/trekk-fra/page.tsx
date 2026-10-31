@@ -16,6 +16,7 @@ import { supportsWithdrawal } from '@/lib/scoring';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { captainWithdrawalState } from '@/lib/games/teamCaptaincy';
+import { guestNamesOf, readBroughtGuests } from '@/lib/games/broughtGuests';
 import { submitWithdraw } from './actions';
 import { CaptainHasTeamNotice } from './CaptainHasTeamNotice';
 import { PreStartWithdrawItems } from './PreStartWithdrawItems';
@@ -123,6 +124,13 @@ export default async function TrekkFraPage({
   const captain = isPreStart
     ? await captainWithdrawalState(getAdminClient(), game.id, userId)
     : null;
+  // #2607: a player who signed up alone may have brought a guest («Ta med en
+  // gjest»), who leaves too. A failed read names nobody; the trigger still
+  // takes the guest.
+  const soloGuests =
+    isPreStart && !captain ? await readBroughtGuests(getAdminClient(), game.id, userId) : null;
+  const guestNames =
+    captain?.guestNames ?? (soloGuests?.ok ? guestNamesOf(soloGuests.guests) : []);
 
   const teeOffDate = game.scheduled_tee_off_at
     ? formatTeeOffDateLocale(new Date(game.scheduled_tee_off_at), locale)
@@ -174,7 +182,7 @@ export default async function TrekkFraPage({
           </>
         ) : (
           <>
-            <PreStartWithdrawItems captain={captain} />
+            <PreStartWithdrawItems captain={captain} guestNames={guestNames} />
             <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
               {captain ? t('captainPreStartNote') : t('preStartNote')}
             </p>

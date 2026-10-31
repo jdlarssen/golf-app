@@ -214,6 +214,49 @@ describe('withdrawSelf', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it('#2607 fase 2: en spiller som tok med en gjest alene → bare egen plass og egen påmelding slettes; gjesten tar triggeren', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: GAME_ID,
+          name: 'Lørdagsrunden',
+          short_id: 'abc12345',
+          status: 'scheduled',
+          game_mode: 'stableford',
+          created_by: CAPTAIN_ID,
+        },
+        error: null,
+      },
+      { data: { user_id: USER_ID, team_number: null }, error: null },
+      // Åpen påmelding: ingen påmeldingsrad for verten selv.
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+
+    // The only game_players delete is the host's own seat — the statement
+    // that fires withdraw_guests_of_removed_hosts (0230). The core neither
+    // reads nor writes the guest's rows.
+    const deletes = adminMock.__fromCalls.filter((c) => c.method === 'delete');
+    expect(deletes.map((c) => c.table)).toEqual(['game_players', 'game_registration_requests']);
+    for (const d of deletes) {
+      const filters = adminMock.__fromCalls
+        .slice(adminMock.__fromCalls.indexOf(d))
+        .filter((c) => c.table === d.table && c.method === 'eq')
+        .slice(0, 2)
+        .map((c) => c.args);
+      expect(filters).toEqual([
+        ['game_id', GAME_ID],
+        ['user_id', USER_ID],
+      ]);
+    }
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+    expect(adminMock.__fromCalls.some((c) => c.args.includes('brought_by_user_id'))).toBe(false);
+  });
+
   it('#2445: spiller på andres utkast → game_not_found, ingen DELETE og ingen notify', async () => {
     const ORGANISER_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
     // The team-member queue from the case below: without the draft gate the
