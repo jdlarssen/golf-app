@@ -1,3 +1,4 @@
+import { isMatchplayFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { z } from 'zod';
 
 /**
@@ -120,19 +121,25 @@ export function prunePrizes(
   prizes: GamePrize[],
   shape: PrizeGameShape,
 ): GamePrize[] {
-  return prizes.filter((p) => {
-    if (p.category === 'placement') {
-      return (
-        shape.hasPodium &&
-        p.position >= 1 &&
-        p.position <= PLACEMENT_MAX_POSITION
-      );
-    }
-    if (p.category === 'longest_drive') {
-      return p.position >= 1 && p.position <= shape.ldCount;
-    }
-    return p.position >= 1 && p.position <= shape.ctpCount;
-  });
+  return prizes.filter((p) => isPrizeSlotActive(p, shape));
+}
+
+/** Om en premie med denne kategorien og plassen lagres for modus + side-counts. */
+function isPrizeSlotActive(
+  slot: { category: PrizeCategory; position: number },
+  shape: PrizeGameShape,
+): boolean {
+  if (slot.category === 'placement') {
+    return (
+      shape.hasPodium &&
+      slot.position >= 1 &&
+      slot.position <= PLACEMENT_MAX_POSITION
+    );
+  }
+  if (slot.category === 'longest_drive') {
+    return slot.position >= 1 && slot.position <= shape.ldCount;
+  }
+  return slot.position >= 1 && slot.position <= shape.ctpCount;
 }
 
 // ── Wizard-slott-katalog (delt: state ↔ hidden inputs ↔ payload-parsing) ───────
@@ -231,4 +238,36 @@ export function prizeListFromDraft(draft: PrizeDraft): GamePrize[] {
     });
   }
   return out;
+}
+
+/**
+ * Antall premier som lagres: slott med utfylt beskrivelse som også er synlige
+ * for modus + side-counts (samme regel som `prunePrizes`). Radene i veiviseren
+ * og i «Rediger spill» og premiebord-raden teller med denne, så de aldri lover
+ * en premie som beskjæres bort ved lagring.
+ */
+export function countPrizesInPlay(
+  draft: Record<PrizeSlotKey, { description: string }>,
+  shape: PrizeGameShape,
+): number {
+  return PRIZE_SLOTS.filter(
+    (slot) => isPrizeSlotActive(slot, shape) && draft[slot.key].description.trim() !== '',
+  ).length;
+}
+
+/**
+ * Formen premiene beskjæres mot, fra skjemaets state: matchplay har intet
+ * podium, og LD/CTP-slottene følger sideturneringen (av = 0 slott).
+ */
+export function prizeShapeFor(state: {
+  gameMode: string;
+  sideEnabled: boolean;
+  sideLdCount: number;
+  sideCtpCount: number;
+}): PrizeGameShape {
+  return {
+    hasPodium: !isMatchplayFamily(state.gameMode as GameMode),
+    ldCount: state.sideEnabled ? state.sideLdCount : 0,
+    ctpCount: state.sideEnabled ? state.sideCtpCount : 0,
+  };
 }
