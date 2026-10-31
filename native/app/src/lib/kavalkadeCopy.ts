@@ -95,7 +95,7 @@ export const KAVALKADE_SHARE_TEXT = {
     soloLabel: 'Med egen ball',
     teamLabel: 'Som lag',
     gangLabel: 'Gjengen',
-    gangValue: '{players} spillere, {games} runder',
+    gangValue: '{players, plural, one {# spiller} other {# spillere}}, {games, plural, one {# runde} other {# runder}}',
   },
   bestRound: {
     title: 'Årets beste runde',
