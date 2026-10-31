@@ -30,6 +30,7 @@ const LIVE: HeroModel = {
   unit: 'points',
   approvals: 0,
   leagueSolo: false,
+  leagueMarker: false,
 };
 
 const HIDDEN = { includeHiddenElements: true };
@@ -151,11 +152,17 @@ it('ligaflight alene: poengene uten plass, og «Venter på markøren» etter lev
     action: null,
     standing: { rank: 1, tied: false, fieldSize: 1, total: 35, holesPlayed: 18, leaderUserIds: ['me'], gap: 0 },
     leagueSolo: true,
+    leagueMarker: true,
   };
-  await render(<HomeHeroCard card={CARD} model={solo} {...handlers} />);
+  const { rerender } = await render(<HomeHeroCard card={CARD} model={solo} {...handlers} />);
   expect(screen.queryByTestId('home-hero-place')).toBeNull();
   expect(screen.queryByTestId('home-hero-gold', HIDDEN)).toBeNull();
   expect(screen.getByTestId('home-hero-detail')).toHaveTextContent('35 poeng etter 18 hull');
   expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Venter på markøren');
+
+  // Vanlig liga alene etter et frafall: heller ingen plass, men ingen markør å vente på.
+  await rerender(<HomeHeroCard card={CARD} model={{ ...solo, leagueMarker: false }} {...handlers} />);
+  expect(screen.queryByTestId('home-hero-place')).toBeNull();
+  expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Til godkjenning');
 });
 
