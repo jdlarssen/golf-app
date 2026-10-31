@@ -133,9 +133,12 @@ export function RecentCoursePicker({
       )}
 
       <div onBlur={onBlur} className={cards.length > 0 ? 'mt-2.5' : undefined}>
-        {/* The field draws the focus ring around the whole box, icon too. */}
-        <label className="flex h-12 items-center gap-2 rounded-xl border border-field-border bg-surface px-3 text-muted has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-(--focus-ring)">
-          <SearchIcon />
+        {/* The input is the whole field, the icon lies on top: the app's
+            focus ring (app/globals.css) then goes round the field once. */}
+        <div className="relative">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+            <SearchIcon />
+          </span>
           <input
             type="search"
             role="combobox"
@@ -156,9 +159,9 @@ export function RecentCoursePicker({
               if (e.key === 'Escape') setOpen(false);
             }}
             // 16 px, so iOS does not zoom into the field.
-            className="h-full min-w-0 flex-1 bg-transparent font-sans text-base text-text placeholder:text-muted focus:outline-none"
+            className="h-12 w-full min-w-0 rounded-xl border border-field-border bg-surface pr-3 pl-[38px] font-sans text-base text-text placeholder:text-muted"
           />
-        </label>
+        </div>
         {open && (
           // The list keeps the focus in the field while a row is pressed, so
           // the field's blur does not close the list before the click lands.
