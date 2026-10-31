@@ -4,11 +4,14 @@ import { ScoreRail, type RailOption } from './ScoreRail';
 
 // Type C: roles, the six buttons, aria-pressed and the live region. The
 // numbers on the buttons belong to the A tests in lib/scorecard/scoreRail.test.ts.
-const options: RailOption[] = [3, 4, 5, 6, 7].map((strokes) => ({
-  strokes,
-  term: 'par',
-  points: null,
-}));
+// #2735: a button shows the number and the term against par, nothing more.
+const options: RailOption[] = [
+  { strokes: 3, term: 'birdie' },
+  { strokes: 4, term: 'par' },
+  { strokes: 5, term: 'bogey' },
+  { strokes: 6, term: 'doubleBogey' },
+  { strokes: 7, term: 'over' },
+];
 
 const handlers = {
   onPick: vi.fn(),
@@ -26,7 +29,6 @@ describe('ScoreRail', () => {
         active={{ playerId: 'u1', name: 'Marte', extraStrokes: 1, score: 5, putts: null }}
         par={4}
         options={options}
-        display="plain"
         puttsTracking={false}
         skipTo="Tore"
         {...handlers}
@@ -44,6 +46,14 @@ describe('ScoreRail', () => {
       'false',
       'false',
     ]);
+    expect(picks.map((b) => b.textContent)).toEqual([
+      '3Birdie',
+      '4Par',
+      '5Bogey',
+      '6Dobbeltbogey',
+      '7+3',
+    ]);
+    expect(picks[1].getAttribute('aria-label')).toBe('Sett 4 slag for Marte: Par');
     expect(within(rail).getByTestId('score-rail-skip')).toBeInTheDocument();
     // #2635: the strokes stand on their own line, with the full meaning for
     // the screen reader; the heading is the name alone.
@@ -59,7 +69,6 @@ describe('ScoreRail', () => {
         active={null}
         par={4}
         options={options}
-        display="plain"
         puttsTracking={false}
         skipTo={null}
         {...handlers}

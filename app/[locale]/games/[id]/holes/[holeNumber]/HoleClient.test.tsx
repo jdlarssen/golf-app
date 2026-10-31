@@ -952,41 +952,30 @@ describe('HoleClient — score rail (#2251)', () => {
     expect(railButton(4).textContent).toBe('4Par');
   });
 
-  it.each([
-    { extra: 0, points: 2 },
-    { extra: 1, points: 3 },
-    { extra: 2, points: 4 },
-  ])('stableford: par with $extra strokes on the hole shows $points points', ({ extra, points }) => {
-    const players = makePlayers();
-    players[0] = { ...players[0], extraStrokes: extra };
-    cardsFrom({ rows: empty() });
-    render(<HoleClient {...baseProps({ gameMode: 'stableford', players })} />);
-    expect(railButton(4).getAttribute('aria-label')).toContain(`${points} poeng`);
-  });
-
-  it('modified stableford: bogey shows −1 and «Stryk» −3', async () => {
-    cardsFrom({ rows: empty() });
-    render(<HoleClient {...baseProps({ gameMode: 'modified_stableford' })} />);
-    expect(railButton(5).getAttribute('aria-label')).toMatch(/[−-]1 poeng/);
-    await tap(screen.getByTestId('rail-other'));
-    expect(screen.getByTestId('specific-value-strike').textContent).toMatch(/[−-]3 p/);
-  });
-
-  it('reveal: the stroke badge stays, but no points and no net anywhere', async () => {
-    const players = makePlayers();
-    players[0] = { ...players[0], extraStrokes: 1 };
-    cardsFrom({ rows: [undefined, { strokes: 4 }, undefined, undefined] });
-    render(
-      <HoleClient {...baseProps({ gameMode: 'stableford', hideNetto: true, players })} />,
-    );
-    expect(screen.getByTestId('score-rail-strokes').textContent).toContain('Får 1 slag');
-    for (const option of screen.getAllByTestId('rail-option')) {
-      expect(option.getAttribute('aria-label')).not.toMatch(/poeng|netto/);
-    }
-    expect(screen.queryByTestId('flight-row-points')).not.toBeInTheDocument();
-    await tap(screen.getByTestId('rail-other'));
-    expect(screen.getByTestId('specific-value-strike').textContent).toBe('Stryk');
-  });
+  // #2735 (the owner's answer, reverses #2635): while strokes are entered the
+  // page shows only gross, in the stableford family too. No points on the
+  // buttons, the rows or «Stryk».
+  it.each(['stableford', 'modified_stableford'] as const)(
+    '%s: no points on the buttons, the rows or «Stryk»',
+    async (gameMode) => {
+      const players = makePlayers();
+      players[0] = { ...players[0], extraStrokes: 1 };
+      cardsFrom({ rows: [undefined, { strokes: 4 }, undefined, undefined] });
+      render(<HoleClient {...baseProps({ gameMode, players })} />);
+      expect(screen.getByTestId('score-rail-strokes').textContent).toContain('Får 1 slag');
+      expect(railButton(4).getAttribute('aria-label')).toBe('Sett 4 slag for Player 1: Par');
+      expect(railButton(4).textContent).toBe('4Par');
+      for (const option of screen.getAllByTestId('rail-option')) {
+        expect(option.getAttribute('aria-label')).not.toMatch(/poeng|netto/);
+        expect(option.textContent).not.toMatch(/\d p$/);
+      }
+      for (const row of screen.getAllByTestId('flight-row')) {
+        expect(row.textContent).not.toMatch(/\d p|poeng/);
+      }
+      await tap(screen.getByTestId('rail-other'));
+      expect(screen.getByTestId('specific-value-strike').textContent).toBe('Stryk');
+    },
+  );
 
   const teamPlayers = (): HoleClientProps['players'] =>
     [1, 2].map((team) => ({

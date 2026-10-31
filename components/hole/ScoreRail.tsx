@@ -5,17 +5,10 @@ import { useTranslations } from 'next-intl';
 import { strokesOnHole, type StrokeTerm } from '@/lib/scorecard/scoreRail';
 import { PuttsChips } from './PuttsChips';
 
-/**
- * What each rail button shows after the term: stableford points, or nothing.
- * Never net strokes (#2635); a reveal game keeps the points hidden (#1447).
- */
-export type RailDisplay = 'points' | 'plain';
-
 /** One number on the rail, with its result computed by the caller. */
 export interface RailOption {
   strokes: number;
   term: StrokeTerm;
-  points: number | null;
 }
 
 /** The seat the rail is entering. */
@@ -32,7 +25,6 @@ export interface ScoreRailProps {
   active: RailActiveSeat | null;
   par: number;
   options: RailOption[];
-  display: RailDisplay;
   puttsTracking: boolean;
   /** Name for «Neste: X →», or null when no other seat is missing a score. */
   skipTo: string | null;
@@ -188,9 +180,10 @@ const allScoredStyle: CSSProperties = {
 
 /**
  * The score rail in the thumb zone of the hole page (#2251). Five numbers
- * (par −1 … par +3) plus «Annet», each showing its result before the tap.
- * Purely presentational: `useScoreRail` owns which seat is active and what a
- * tap writes.
+ * (par −1 … par +3) plus «Annet», each showing its result against the hole's
+ * par before the tap: never net (#2635), and no points in the stableford
+ * family either (#2735, the owner's answer). Purely presentational:
+ * `useScoreRail` owns which seat is active and what a tap writes.
  */
 export function ScoreRail(props: ScoreRailProps): JSX.Element {
   const t = useTranslations('holes');
@@ -199,7 +192,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
     active,
     par,
     options,
-    display,
     puttsTracking,
     skipTo,
     onPick,
@@ -214,22 +206,6 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
 
   function termText(option: RailOption): string {
     return t(`scoreRail.term.${option.term}`, { n: option.strokes - par });
-  }
-
-  function detailText(option: RailOption): string {
-    const term = termText(option);
-    if (display === 'points' && option.points != null) {
-      return t('scoreRail.detailPoints', { term, points: option.points });
-    }
-    return term;
-  }
-
-  function ariaText(option: RailOption, name: string): string {
-    const base = { strokes: option.strokes, name, term: termText(option) };
-    if (display === 'points' && option.points != null) {
-      return t('scoreRail.buttonAriaLabelPoints', { ...base, points: option.points });
-    }
-    return t('scoreRail.buttonAriaLabel', base);
   }
 
   return (
@@ -281,9 +257,12 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
                   type="button"
                   data-testid="rail-option"
                   data-strokes={option.strokes}
-                  data-points={display === 'points' ? (option.points ?? undefined) : undefined}
                   aria-pressed={selected}
-                  aria-label={ariaText(option, active.name)}
+                  aria-label={t('scoreRail.buttonAriaLabel', {
+                    strokes: option.strokes,
+                    name: active.name,
+                    term: termText(option),
+                  })}
                   onClick={() => onPick(option.strokes)}
                   className={[
                     'motion-safe:transition-colors motion-safe:duration-150',
@@ -299,7 +278,7 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
                     style={optionDetailStyle}
                     className={selected ? undefined : 'text-muted'}
                   >
-                    {detailText(option)}
+                    {termText(option)}
                   </span>
                 </button>
               );

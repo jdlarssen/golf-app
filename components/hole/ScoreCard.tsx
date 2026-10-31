@@ -21,21 +21,6 @@ export interface ScoreCardProps {
    * the name; the card itself is locked through `disabled`.
    */
   submitted?: boolean;
-  /**
-   * When true, hides the «Netto X» helper-text under the name. Used by
-   * reveal-modus games (status `active`, `score_visibility = 'reveal'`) so
-   * the net figures stay secret until admin presses avslutt. The strokes
-   * badge stays: it is the handicap allocation, not standing (#1447).
-   * Default false — non-reveal games render the helper text as normal.
-   */
-  hideNetto?: boolean;
-  /**
-   * Stableford-poengene for current hull, for current spillerkort. Null
-   * betyr at vi enten ikke spiller stableford eller at hullet ikke er
-   * tastet ennå. Når satt: vises som «· N poeng» i helper-tekst-en etter
-   * netto-verdien. Skjules sammen med netto-info når hideNetto er true.
-   */
-  stablefordPoints?: number | null;
   onSetScore: (playerId: string, next: number) => void;
   onLongPress: (playerId: string) => void;
   /**
@@ -78,8 +63,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     par,
     disabled = false,
     submitted,
-    hideNetto = false,
-    stablefordPoints = null,
     onSetScore,
     onLongPress,
     onClear,
@@ -200,22 +183,10 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     opacity: isGhost ? 0.55 : 1,
   };
 
-  let helperText: string;
-  if (score == null) {
-    // «Tap = par» is a promise a locked card cannot keep (#2211).
-    helperText = disabled ? '' : t('tapInstruction');
-  } else if (hideNetto) {
-    helperText = '';
-  } else {
-    const netto = score - extraStrokes;
-    // For stableford-modus appendes per-hull-poengene rett etter netto-en
-    // for å vise sammenhengen netto → poeng på samme linje (sparer plass
-    // og holder per-hull-info atomisk).
-    helperText =
-      stablefordPoints !== null
-        ? t('nettoWithPoints', { netto, points: stablefordPoints })
-        : t('nettoLabel', { netto });
-  }
+  // «Tap = par» is a promise a locked card cannot keep (#2211). Once a score
+  // stands, the line stays empty: while strokes are entered the card shows
+  // only gross, no net and no points (#2735).
+  const helperText = score == null && !disabled ? t('tapInstruction') : '';
 
   // Glove-vennlige tap-targets: ≥44×44px per appens egen ≥44px-regel
   // (var 38×30). Tastes med hanske, enhåndt, i bevegelse på banen (#944).
@@ -292,9 +263,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
           <span style={nameStyle}>{name}</span>
           {/* #1447-etterprøving (eier-krav fra generalprøven): badgen er
               statisk slag-tildeling (handicap), ikke stilling — den vises
-              også på blind cup-dag (hideNetto), slik at flighten ser hvor
-              arrangørens tastede lag-slag faller. Netto-TALLENE er fortsatt
-              gatet på hideNetto. */}
+              også på blind cup-dag, slik at flighten ser hvor arrangørens
+              tastede lag-slag faller. */}
           {/* #2635: the rail's words, «Mister 1 slag» for a plus handicap too. */}
           {strokes && (
             <span data-testid="score-card-strokes" style={badgeStyle}>

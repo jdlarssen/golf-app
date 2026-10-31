@@ -15,7 +15,7 @@ export interface SpecificValueSheetProps {
   /**
    * #2251: «Stryk» in the stableford family — a full-width button under the
    * grid that picks `value` (net double bogey). The caller writes the label,
-   * points included, so the sheet never does scoring.
+   * so the sheet never does scoring.
    */
   strike?: { value: number; label: string };
 }
