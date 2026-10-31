@@ -54,8 +54,10 @@ export function TeeButtons({
                 data-testid="tee-button"
                 data-tee-id={tee.id}
                 onClick={() => onSelect(tee.id)}
-                className={`flex min-h-16 min-w-0 flex-col items-start justify-center rounded-[14px] p-2.5 text-left text-text transition-colors duration-150 ${
-                  pressed ? 'border-2 border-primary bg-primary-soft' : 'border border-border bg-surface hover:bg-primary-soft'
+                // The chosen button's 2 px border takes its extra pixel from the
+                // padding, so the text keeps its width and never rewraps on a tap.
+                className={`flex min-h-16 min-w-0 flex-col items-start justify-center rounded-[14px] text-left text-text transition-colors duration-150 ${
+                  pressed ? 'border-2 border-primary bg-primary-soft p-[9px]' : 'border border-border bg-surface p-2.5 hover:bg-primary-soft'
                 }`}
               >
                 <span className="max-w-full break-words font-serif text-[15px] font-semibold leading-[normal]">

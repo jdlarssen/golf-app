@@ -118,8 +118,10 @@ export function RecentCoursePicker({
                 data-testid="recent-course-card"
                 data-course-id={card.courseId}
                 onClick={() => onSelect(card.courseId)}
-                className={`flex min-h-[72px] min-w-0 flex-col justify-center rounded-2xl px-3 py-2.5 text-left text-text transition-colors duration-150 ${
-                  pressed ? 'border-2 border-primary bg-primary-soft' : 'border border-border bg-surface hover:bg-primary-soft'
+                // As on the tee buttons: the 2 px border takes its pixel from
+                // the padding, so a long name does not rewrap when chosen.
+                className={`flex min-h-[72px] min-w-0 flex-col justify-center rounded-2xl text-left text-text transition-colors duration-150 ${
+                  pressed ? 'border-2 border-primary bg-primary-soft px-[11px] py-[9px]' : 'border border-border bg-surface px-3 py-2.5 hover:bg-primary-soft'
                 }`}
               >
                 <span className="max-w-full break-words font-serif text-base font-semibold leading-[normal]">
