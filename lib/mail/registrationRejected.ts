@@ -40,7 +40,7 @@ export async function sendRegistrationRejectedMail(
   const bodyText = t('registrationRejected.bodyText', { gameName });
 
   const reasonHtml = reason
-    ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">${escapeHtml(
+    ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">${escapeHtml(
         reason,
       )}</blockquote>`
     : '';
@@ -54,11 +54,11 @@ export async function sendRegistrationRejectedMail(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(subject)}</title>
 </head>
-<body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+<body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
     <tr>
       <td align="center" style="padding:48px 16px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td>
             <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
               ${mailWordmarkHtml()}
@@ -66,7 +66,7 @@ export async function sendRegistrationRejectedMail(
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
               ${t('common.tagline')}
             </p>
-            <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
+            <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
               ${t('registrationRejected.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
@@ -76,7 +76,7 @@ export async function sendRegistrationRejectedMail(
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${t('registrationRejected.closing')}
             </p>
-            <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+            <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
               ${t('registrationRejected.footer')}
             </p>
           </td></tr>

@@ -214,7 +214,7 @@ export async function GET(
             <span style={{ fontFamily: serif, fontSize: 34, fontWeight: 500, color: FOREST }}>
               tornygolf.no
             </span>
-            <span style={{ fontSize: 26, color: '#8C8475', marginTop: 8 }}>{t('tagline')}</span>
+            <span style={{ fontSize: 26, color: MUTED, marginTop: 8 }}>{t('tagline')}</span>
           </div>
         </div>
       </div>

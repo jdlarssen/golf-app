@@ -103,7 +103,7 @@ describe('sendRegistrationRejectedMail', () => {
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Forespørselen din om å bli med i <strong>Sommercup 2026</strong> ble dessverre ikke godkjent.
                   </p>
-                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">Fullt opp denne gangen</blockquote>
+                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">Fullt opp denne gangen</blockquote>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Kanskje neste runde. Lykke til på banen uansett.
                   </p>"
@@ -121,7 +121,7 @@ describe('sendRegistrationRejectedMail', () => {
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Forespørselen din om å bli med i <strong>&lt;b&gt;X&lt;/b&gt;</strong> ble dessverre ikke godkjent.
                   </p>
-                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">Nei &amp; takk</blockquote>
+                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">Nei &amp; takk</blockquote>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Kanskje neste runde. Lykke til på banen uansett.
                   </p>"
@@ -141,11 +141,11 @@ describe('sendRegistrationRejectedMail', () => {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Søknad til Sommercup 2026</title>
       </head>
-      <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+      <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
           <tr>
             <td align="center" style="padding:48px 16px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
                 <tr><td>
                   <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
                     <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display:block;width:88px;height:40px;border:0;outline:none;text-decoration:none;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;color:#1B4332;">
@@ -153,7 +153,7 @@ describe('sendRegistrationRejectedMail', () => {
                   <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
                     Fyr opp golfturneringen på et par minutter.
                   </p>
-                  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
+                  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
                     Søknad ikke godkjent
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
@@ -163,7 +163,7 @@ describe('sendRegistrationRejectedMail', () => {
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Kanskje neste runde. Lykke til på banen uansett.
                   </p>
-                  <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+                  <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
                     Spørsmål? Snakk med arrangøren direkte — Tørny formidler ingen meldinger på vegne av admin.
                   </p>
                 </td></tr>
@@ -226,7 +226,7 @@ describe('sendRegistrationRejectedMail', () => {
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Unfortunately, your request to join <strong>Sommercup 2026</strong> was not approved.
                   </p>
-                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">Fully booked this time</blockquote>
+                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">Fully booked this time</blockquote>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Maybe next time. Good luck on the course anyway.
                   </p>"

@@ -61,7 +61,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en "Høst-cup 2026" har startet.
+      Cup-en «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
@@ -81,7 +81,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei!
 
-      Cup-en "Høst-cup 2026" har startet.
+      Cup-en «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
@@ -97,7 +97,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en "Høst-cup 2026" har startet.
+      Cup-en «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10,5 poeng vinner.
 
@@ -119,7 +119,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en "Høst-cup 2026" har startet.
+      Cup-en «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Vinneren kåres når cupen avsluttes.
 
@@ -190,19 +190,19 @@ describe('sendCupStartedNotification', () => {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Cup-en har startet — Høst-cup 2026</title>
       </head>
-      <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+      <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
           <tr>
             <td align="center" style="padding:48px 16px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
                 <tr><td>
                   <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
                     <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display:block;width:88px;height:40px;border:0;outline:none;text-decoration:none;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;color:#1B4332;">
                   </h1>
-                  <p style="font-size:13px;color:#5C5347;margin:0 0 32px;">
+                  <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
                     Fyr opp golfturneringen på et par minutter.
                   </p>
-                  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
+                  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
                     Hei Per!
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
@@ -212,11 +212,11 @@ describe('sendCupStartedNotification', () => {
                     <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> poeng vinner.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Åpne leaderboard
                     </a>
                   </div>
-                  <p style="font-size:13px;color:#5C5347;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+                  <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
                     Lykke til på banen!
                   </p>
                 </td></tr>

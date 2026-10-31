@@ -8,7 +8,8 @@
  */
 export const FOREST = '#1B4332';
 export const CHAMP = '#C9A961';
-export const CHAMP_DARK = '#8A6F2E';
+// Gold text on the light cards: `--accent-text`, the readable gold (DESIGN.md).
+export const CHAMP_DARK = '#7D6224';
 export const LINEN = '#F8F6F0';
 export const MUTED = '#6B6354';
 export const TAUPE = '#4A3F30';

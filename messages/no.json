@@ -6845,7 +6845,7 @@
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
       "bodyStarted": "Cup-en <strong>{tournamentName}</strong> har startet.",
-      "bodyStartedText": "Cup-en \"{tournamentName}\" har startet.",
+      "bodyStartedText": "Cup-en «{tournamentName}» har startet.",
       "bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> poeng vinner.",
       "bodyMatchupText": "{team1} møter {team2}. Først til {points} poeng vinner.",
       "bodyMatchupWeighted": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Vinneren kåres når cupen avsluttes.",
@@ -6859,7 +6859,7 @@
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
       "bodySettled": "Cup-en <strong>{tournamentName}</strong> er avgjort.",
-      "bodySettledText": "Cup-en \"{tournamentName}\" er avgjort.",
+      "bodySettledText": "Cup-en «{tournamentName}» er avgjort.",
       "teaser": "Hvordan endte det? Svaret venter på resultatsiden.",
       "viewResult": "Se resultatet",
       "viewResultText": "Se resultatet: {url}"
@@ -6912,6 +6912,7 @@
       "salutationGeneric": "Hei!",
       "body": "<strong>{submitterName}</strong> har sendt inn en idé via Foreslå en idé.",
       "bodyText": "{submitterName} har sendt inn en idé via Foreslå en idé.",
+      "quote": "«{text}»",
       "openAdmin": "Se idéen i admin",
       "openAdminText": "Se idéen i admin: {url}",
       "footer": "Du får denne meldingen fordi du er admin. Logg inn på <link>tornygolf.no</link> for full oversikt."
