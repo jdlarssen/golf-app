@@ -34,8 +34,6 @@ export const BOARD_TEXT = {
   srPoints: '{total} poeng',
   srOverPar: '{count} over par',
   srUnderPar: '{count} under par',
-  srPointsOverPar: '{count} poeng over par',
-  srPointsUnderPar: '{count} poeng under par',
   srEven: 'På par',
   srNet: '{total} slag netto',
   srNoTotal: 'Ingen hull spilt ennå',

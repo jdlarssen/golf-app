@@ -206,10 +206,10 @@ describe('teamBoardFor — a scramble ranked on net to par (#2625)', () => {
   });
 });
 
-describe('teamBoardFor — team stableford ranked on points against par pace (#2625)', () => {
-  // Laget ditt +5 etter 3 hull (4, 4, 3 poeng = 11), Lag 2 +1 etter 6 (13
-  // poeng), Lag 3 har spilt ett hull på par. Makkeren tar ett slag mer og
-  // teller aldri.
+describe('teamBoardFor — team stableford with the #2625 flag shows the points (#2738)', () => {
+  // Laget ditt 11 poeng etter 3 hull (4, 4, 3), Lag 2 13 etter 6, Lag 3 har
+  // spilt ett hull på par (2). Makkeren tar ett slag mer og teller aldri. Mot
+  // par-tempo ville satt laget ditt øverst; på poeng leder Lag 2.
   const FLAGGED = { kind: 'stableford', team_size: 2, points_table: 'standard', ranking: 'net_to_par' };
   const bundle = homeBundle({ game: { gameMode: 'stableford', modeConfig: FLAGGED }, players: teams });
   const scores = [
@@ -221,23 +221,23 @@ describe('teamBoardFor — team stableford ranked on points against par pace (#2
   ];
   const model = teamBoardFor({ bundle, scores, userId: ME })!;
 
-  it('the band says «mot par»', () => {
-    expect(teamBoardBand(bundle).subtitle).toBe('Stableford · 3 lag à 2 · mot par');
+  it('the band says «poeng»', () => {
+    expect(teamBoardBand(bundle).subtitle).toBe('Stableford · 3 lag à 2 · poeng');
   });
 
-  it('ranks on points against par pace and shows it with «+»', () => {
+  it('ranks on the points and shows them under «poeng»', () => {
     expect(model.rows.map((r) => [r.teamNumber, r.place, r.total])).toEqual([
-      [1, '1', '+5'],
-      [2, '2', '+1'],
-      [3, '3', 'E'],
+      [2, '1', '13'],
+      [1, '2', '11'],
+      [3, '3', '2'],
     ]);
-    expect(model.rows[0].under).toBe('mot par');
+    expect(model.rows.map((r) => r.under)).toEqual(['poeng', 'poeng', 'hull 1']);
   });
 
-  it('reads the number aloud in points, and the strip gives the gap in points across holes', () => {
-    expect(model.rows[0].a11y).toContain('5 poeng over par');
-    const second = teamBoardFor({ bundle, scores, userId: 'jonas' })!;
-    expect(second.strip?.detail).toBe('4 poeng bak Lag 1');
+  it('reads the number aloud as points, and gives no gap across different holes', () => {
+    // The number follows the place: «1. plass. 13 poeng.»
+    expect(model.rows.map((r) => r.a11y.match(/plass\. ([^.]+)\./)?.[1])).toEqual(['13 poeng', '11 poeng', '2 poeng']);
+    expect(model.strip?.detail).toBeNull();
   });
 });
 

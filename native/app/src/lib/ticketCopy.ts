@@ -8,7 +8,6 @@
 
 import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
-import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const TICKET_TEXT = {
   // Feltene på billetten, små etiketter i setningsstor bokstav.
@@ -111,12 +110,10 @@ export function approveButton(count: number): string {
 /**
  * Tallet til høyre for fremdriften i stubben (#2255, eierens svar a): tavlas
  * total, i helten på Hjems enhet, kort. Poeng blir «15 p», netto slag «72
- * netto», og mot par «+3» (den delte `formatVsPar`); poeng mot par-tempo «+3 mot par» (#2625).
+ * netto», og mot par «+3» (den delte `formatVsPar`). Et poengspill viser alltid poeng (#2738).
  */
 export function stubTotal(total: number, unit: LiveBoardUnit): string {
   if (unit === 'points') return `${total}\u00A0p`;
   if (unit === 'net') return `${total}\u00A0netto`;
-  // #2625: points against par pace say so, like Home; a bare «+3» reads as three over par.
-  if (unit === 'pointsToPar') return `${formatVsPar(total)}\u00A0${BOARD_COMMON_TEXT.vsParLabel}`;
   return formatVsPar(total);
 }
