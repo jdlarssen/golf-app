@@ -223,3 +223,31 @@ describe('soloBoardFor — when the screen shows something else', () => {
     expect(soloBoardFor({ bundle, scores: rows, userId: ME })).toBeNull();
   });
 });
+
+// #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
+// har ingen plass og ingen seier, så tavla viser poengene og «Godkjent».
+describe('soloBoardFor — ligarunde spilt alene (#2712)', () => {
+  const alone = (leagueRoundId: string | null) =>
+    soloBoardFor({
+      bundle: homeBundle({ game: { status: 'finished', leagueRoundId }, players: [players[1]] }),
+      scores: holeScores('g-live', ME, 18, 4),
+      userId: ME,
+    })!;
+
+  it('ingen plass, ingen vinner, «Godkjent» i stripa', () => {
+    const model = alone('round-1');
+    expect(model.rows.map((r) => [r.userId, r.place, r.leader, r.total])).toEqual([[ME, '–', false, '36']]);
+    expect(model.rows[0].a11y).not.toMatch(/plass|Vinner/);
+    expect(model.strip).toEqual({
+      kicker: 'Ditt resultat',
+      text: 'Godkjent',
+      action: { kind: 'scorecard', label: 'Scorekortet' },
+    });
+  });
+
+  it('samme runde utenfor en liga er en seier', () => {
+    const model = alone(null);
+    expect(model.rows[0]).toMatchObject({ place: '1', leader: true });
+    expect(model.strip?.text).toBe('1. plass');
+  });
+});

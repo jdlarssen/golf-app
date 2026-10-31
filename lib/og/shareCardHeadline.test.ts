@@ -215,3 +215,19 @@ describe('resultWords — the result as the headline words it (#2625)', () => {
     expect(resultWords(score, t)).toEqual(expected);
   });
 });
+
+// #2712 (orchestrator 31.10, after the owner's rule): a league round played
+// alone has no place and no win, so the card says it was approved.
+describe('headlineSpec — a league round played alone (#2712)', () => {
+  const alone = placement([row(1, ['Siri S.'], { kind: 'points', value: 29 })]);
+  it('one player in a league flight: approved, no «vant»', () => {
+    expect(headlineSpec(alone, { leagueFlight: true })).toEqual({ kind: 'approved' });
+  });
+  it('the same card outside a league names the winner', () => {
+    expect(headlineSpec(alone)).toMatchObject({ kind: 'won', names: ['Siri'] });
+  });
+  it('a league flight of two keeps the winner', () => {
+    const two = placement([row(1, ['Siri S.'], POINTS_38)], [row(2, ['Ola N.'], { kind: 'points', value: 30 })]);
+    expect(headlineSpec(two, { leagueFlight: true })).toMatchObject({ kind: 'won', names: ['Siri'] });
+  });
+});

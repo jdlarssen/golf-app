@@ -35,6 +35,18 @@ export function isLeagueFieldAlone(leagueFlight: boolean, fieldSize: number): bo
   return leagueFlight && fieldSize <= 1;
 }
 
+/**
+ * The same rule read from a share card's model (`buildShareCardData`): the AI
+ * round report's facts, the share image and the web podium. A placement card
+ * whose podium holds one row is a field of one.
+ */
+export function isLeagueCardAlone(
+  card: { band: string; podium: readonly unknown[] },
+  leagueFlight: boolean,
+): boolean {
+  return card.band === 'placement' && isLeagueFieldAlone(leagueFlight, card.podium.length);
+}
+
 export function finishedResultBadge(
   summary: ResultSummary,
   opts: {

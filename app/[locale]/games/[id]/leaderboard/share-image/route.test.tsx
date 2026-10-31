@@ -15,6 +15,7 @@ import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
+import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
 
 vi.mock('@/lib/auth/userId', () => ({ getProxyVerifiedUserId: vi.fn() }));
 vi.mock('@/lib/games/getGameWithPlayers', () => ({ getGameWithPlayers: vi.fn() }));
@@ -115,6 +116,46 @@ describe('share-image route gate (#2312)', () => {
     // Public names, no full surnames (#2319).
     expect(cardA).toContain('Anna L.');
     expect(cardA).not.toContain('Anna Lie');
+  });
+
+  // #2712 (orchestrator 31.10, after the owner's rule): a league round played
+  // alone has no place and no win.
+  describe('a league round played alone (#2712)', () => {
+    const alone = (): SoloStrokeplayResult => ({
+      kind: 'solo_strokeplay',
+      ranking: 'net_total',
+      holes: [],
+      players: [
+        { userId: 'user-a', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      ],
+    });
+    const card = () => JSON.stringify(rendered.element);
+
+    it('says «Godkjent» with the score, no medallion and no «vant»', async () => {
+      vi.mocked(getProxyVerifiedUserId).mockResolvedValue('user-a');
+      mockGame({ league_round_id: 'round-1' });
+      vi.mocked(buildModeResultForGame).mockResolvedValue(alone());
+
+      const res = await callRoute();
+
+      expect(res.status).toBe(200);
+      expect(card()).toContain('Godkjent');
+      expect(card()).not.toContain('vant');
+      expect(card()).toContain('"rank":null');
+      expect(card()).not.toContain('"winner":true');
+      expect(card()).toContain('Anna L.');
+    });
+
+    it('the same round outside a league still names the winner', async () => {
+      vi.mocked(getProxyVerifiedUserId).mockResolvedValue('user-a');
+      mockGame({ league_round_id: null });
+      vi.mocked(buildModeResultForGame).mockResolvedValue(alone());
+
+      await callRoute();
+
+      expect(card()).toContain('vant');
+      expect(card()).toContain('"winner":true');
+    });
   });
 
   it('answers 404 for a game that is not finished', async () => {

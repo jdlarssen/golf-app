@@ -3065,11 +3065,16 @@
       "waiting": "Putte-statistikken venter på {count, plural, one {# hull} other {# hull}}.",
       "cta": "Før putter"
     },
+    "leagueAlone": {
+      "kicker": "Ligarunde",
+      "heading": "Godkjent"
+    },
     "shareCard": {
       "finalResult": "Sluttresultat",
       "gameFinished": "Spillet er ferdig",
       "winnerWon": "{name} vant <gold>{margin}</gold>",
       "tied": "Uavgjort",
+      "approved": "Godkjent",
       "headlineWon": "{names} vant med <gold>{result}</gold>",
       "headlineWonAt": "{names} vant på <gold>{result}</gold>",
       "headlineShared": "{names} delte seieren med <gold>{result}</gold>",

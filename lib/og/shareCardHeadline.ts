@@ -1,4 +1,5 @@
 import type { ShareCardModel, ShareCardScore } from '@/lib/games/buildShareCardData';
+import { isLeagueCardAlone } from '@/lib/games/finishedResultBadge';
 
 import { firstName } from './shareCardLayout';
 
@@ -14,7 +15,9 @@ export type HeadlineSpec =
   | { kind: 'sharedMany'; result: ShareCardScore }
   | { kind: 'matchWon'; names: string[]; margin: string }
   | { kind: 'tied' }
-  | { kind: 'finished' };
+  | { kind: 'finished' }
+  /** #2712: a league round played alone has no place and no win. */
+  | { kind: 'approved' };
 
 /** More first names than this in a shared win makes the headline «Delt seier …». */
 const MAX_SHARED_NAMES = 4;
@@ -35,8 +38,12 @@ function headlineNames(memberNames: readonly string[]): string[] {
   );
 }
 
-export function headlineSpec(model: ShareCardModel | null): HeadlineSpec {
+export function headlineSpec(
+  model: ShareCardModel | null,
+  opts: { leagueFlight?: boolean } = {},
+): HeadlineSpec {
   if (model === null) return { kind: 'finished' };
+  if (isLeagueCardAlone(model, opts.leagueFlight ?? false)) return { kind: 'approved' };
 
   if (model.band === 'matchplay') {
     const match = model.match;
