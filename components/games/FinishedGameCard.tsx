@@ -6,6 +6,7 @@ import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
 import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
+import { PokalIcon } from '@/components/icons';
 
 /**
  * Kort for et avsluttet spill, delt mellom Hjem («Avsluttede spill», siste 5)
@@ -15,8 +16,8 @@ import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
  *
  * Resultat-badgen viser ditt utfall: «Du vant» / «Laget vant» med gull-
  * accent for egen seier, «2. plass av 4» / «Du tapte 2&1» / «4 skins» dempet
- * ellers. Faller tilbake til 🏆 når `result_summary` mangler (spill avsluttet
- * før #572). Teksten kommer fra next-intl så den oversettes med #60.
+ * ellers. Faller tilbake til den tegnede pokalen (`PokalIcon`, dempet) når
+ * `result_summary` mangler (spill avsluttet før #572). Teksten kommer fra next-intl så den oversettes med #60.
  *
  * Ren server-trygg modul (ingen 'use client') — tappet leder til leaderboardet.
  * Dato og spillform-etikett rendres locale-bevisst (#60): `formatShortOsloDayMonthLocale`
@@ -70,8 +71,12 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
             )}
           </span>
         ) : (
-          <span aria-hidden className="text-accent shrink-0">
-            🏆
+          <span
+            aria-hidden
+            data-testid="finished-card-trophy"
+            className="shrink-0 text-muted"
+          >
+            <PokalIcon size={18} />
           </span>
         )
       }

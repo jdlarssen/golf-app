@@ -108,7 +108,7 @@ function TeamCard({
             )}
             {missing > 0 && (
               <p className="text-xs text-warning-text mt-1">
-                ⚠️ {tc('missingHoles', { count: missing })}
+                {tc('missingHoles', { count: missing })}
               </p>
             )}
           </div>

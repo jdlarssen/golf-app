@@ -524,7 +524,7 @@
     "status": {
       "requested": "Venneforespørsel sendt.",
       "invited": "Invitasjon sendt til {email}.",
-      "accepted": "Dere er venner nå!",
+      "accepted": "Dere er venner nå",
       "already_friends": "Dere er allerede venner.",
       "already_pending": "Forespørselen er allerede sendt.",
       "declined": "Forespørselen er avslått.",
@@ -552,7 +552,7 @@
     "removeConfirmLabel": "Fjern venn",
     "removePending": "Fjerner …",
     "cancelLabel": "Avbryt",
-    "copiedLabel": "Kopiert!",
+    "copiedLabel": "Kopiert",
     "copyPromptFallback": "Kopier lenken:",
     "addEmailLabel": "E-post",
     "addEmailPlaceholder": "venn@epost.no",
@@ -2261,7 +2261,7 @@
       "withdrawnByOrganiserBody": "Scorene dine teller ikke i rangeringen. Er det feil, si fra til arrangøren.",
       "undoWithdraw": "Angre",
       "undoWithdrawPending": "Angrer …",
-      "leaderboardButton": "🏆 Se leaderboard →",
+      "leaderboardButton": "Se leaderboard →",
       "revansjeButton": "Revansje?",
       "hullForHull": "Hull for hull",
       "leaderboard": "Leaderboard",
@@ -2720,7 +2720,7 @@
       "none": "Ingen er invitert ennå. Gå til spillet for å legge til spillere.",
       "share": "Del i gruppechatten",
       "copy": "Kopier lenke",
-      "copied": "Kopiert!",
+      "copied": "Kopiert",
       "copyFailed": "Fikk ikke kopiert lenka. Prøv igjen.",
       "calendar": "Legg i kalenderen",
       "goToGame": "Gå til spillet",
@@ -2886,7 +2886,7 @@
     "greenPin": {
       "prompt": "Står du ved greenen? Lagre punkt",
       "saving": "Lagrer…",
-      "thanks": "Punkt lagret — takk!",
+      "thanks": "Punkt lagret, takk",
       "weakGps": "GPS-signalet er for svakt akkurat nå",
       "denied": "Fikk ikke tilgang til posisjonen din",
       "failed": "Kunne ikke lagre punktet — prøv igjen"
@@ -3039,7 +3039,7 @@
         "paymentSentence": "{from} betaler {to} {amount}",
         "copyHeading": "Oppgjør: {game} ({mode})",
         "copyButton": "Kopier til gruppechatten",
-        "copied": "Kopiert!",
+        "copied": "Kopiert",
         "copyFailed": "Klarte ikke å kopiere. Prøv igjen.",
         "disclaimer": "Tørny holder ikke på pengene. Dere gjør opp selv."
       },
@@ -3346,7 +3346,7 @@
       "kicker": "LIVE LEADERBOARD",
       "heading": "Brutto · etter {count} hull",
       "description": "Best-ball brutto. Rangeringen kommer når runden er ferdig.",
-      "pullquote": "🤫 Vinneren avsløres når runden er ferdig"
+      "pullquote": "Vinneren avsløres når runden er ferdig"
     },
     "revealHidden": {
       "kicker": "SKJULT",
@@ -3749,7 +3749,7 @@
     "fieldHelper": "Maks 2000 tegn. Vi leser alt.",
     "submitLabel": "Send inn",
     "submitPending": "Sender …",
-    "successMessage": "Takk! Vi har fått idéen din.",
+    "successMessage": "Takk, vi har fått idéen din.",
     "sentFollowUp": "Vi ser på alle forslag. Bygger vi ditt, får du beskjed.",
     "errorEmpty": "Du må skrive noe før du sender inn.",
     "coursePrefill": "Om banen {name}: "
@@ -4130,13 +4130,13 @@
         "flightLagN": "Flight {flight} · Lag {team} · ",
         "sideLagSuffix": "Side {n} · ",
         "lagSuffix": "Lag {n} · ",
-        "pendingApproval": "⏳ Venter godkjenning",
+        "pendingApproval": "Venter godkjenning",
         "approved": "Godkjent",
         "statusWithdrawn": "Trukket",
         "statusNotSubmitted": "Ikke levert",
-        "statusPlaying": "⏳ Spiller",
+        "statusPlaying": "Spiller",
         "statusScheduled": "Påmeldt",
-        "statusWaiting": "⏳ Venter",
+        "statusWaiting": "Venter",
         "statusSubmitted": "Levert",
         "undoWithdraw": "Angre",
         "withdrawLink": "Trekk",
@@ -4229,7 +4229,7 @@
         "scrollToScorecardsButton": "Til leverte scorekort ↑",
         "viewStatusLink": "Se spillerstatus",
         "viewStatusWithReminderLink": "Se spillerstatus og send påminnelse →",
-        "leaderboardButton": "🏆 Se leaderboard →",
+        "leaderboardButton": "Se leaderboard →",
         "reopenSignupsButton": "Gjenåpne påmeldingen",
         "closeSignupsButton": "Steng påmeldingen",
         "gameFullBanner": "Spillet er fullt ({current} av {max}). Fjern noen for å invitere flere."
@@ -4426,6 +4426,7 @@
         },
         "sendingBusy": "Sender …",
         "remindRowButton": "Påminn",
+        "reminderTargetLabel": "Får påminnelsen:",
         "remindHoleConfirm": "Sende påminnelse til {names} om hull {holes}?"
       },
       "signups": {
@@ -5387,7 +5388,7 @@
       "roundLabel": "Runde",
       "windowExtended": "· Vindu utvidet",
       "flightCount": "{count, plural, one {# flight} other {# flights}}",
-      "flaggedFlights": "⚠️ {count} {count, plural, one {flight} other {flights}} utenfor vindu",
+      "flaggedFlights": "{count} {count, plural, one {flight} other {flights}} utenfor vindu",
       "changeCourseLabel": "Endre bane / tee",
       "courseLabel": "Bane",
       "courseNotSelected": "Ikke valgt",
@@ -5583,7 +5584,7 @@
       "off": "Tavla er av",
       "hint": "Lim tavla inn på klubbens nettside eller infoskjerm. Alle med lenken kan se den uten å logge inn.",
       "copySnippet": "Kopier koden til nettsiden",
-      "copied": "Kopiert!"
+      "copied": "Kopiert"
     },
     "join": {
       "kicker": "Bli med i liga",
@@ -6998,7 +6999,7 @@
     "liveFollowOff": "Live-følg er av",
     "liveFollowHint": "Alle med lenken kan følge turneringen uten å logge inn.",
     "shareLinkLabel": "Del live-lenke",
-    "copiedLabel": "Kopiert!",
+    "copiedLabel": "Kopiert",
     "shareText": "Følg turneringen live i Tørny",
     "copyEmbedLabel": "Kopier koden til nettsiden",
     "ctaLabel": "Lag din egen turnering gratis",
@@ -7690,7 +7691,7 @@
     "nemesisWorst": "Flest slag på hullet: {strokes}",
     "rivalKicker": "Rivalen",
     "rivalMet": "{count, plural, one {# runde sammen} other {# runder sammen}}",
-    "rivalRecord": "{wins} seire, {losses} tap, {ties} uavgjort",
+    "rivalRecord": "{wins, plural, one {# seier} other {# seire}}, {losses} tap, {ties} uavgjort",
     "rivalUndecided": "Ingen av rundene ga et oppgjør.",
     "formKicker": "Formtoppen",
     "formStretchRounds": "{count, plural, one {Beste strekk på # runde} other {Beste strekk på # runder}}",
@@ -7842,7 +7843,7 @@
     "tvBody": "Åpne lenken i nettleseren på PC-en som er koblet til TV-en.",
     "tvLinkAria": "Lenken til storskjermen",
     "copy": "Kopier",
-    "copied": "Kopiert!",
+    "copied": "Kopiert",
     "copyError": "Fikk ikke kopiert. Merk lenken og kopier den selv.",
     "tvOffBody": "Live-lenken er slått av for dette spillet, og storskjermen trenger den.",
     "tvTurnOn": "Slå på storskjermen",

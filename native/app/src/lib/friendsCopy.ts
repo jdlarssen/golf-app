@@ -129,7 +129,7 @@ export function friendsTopBar(from: 'friendLink' | undefined): { kicker: string;
 // etter handlingen viser da hvordan det står.
 const STATUS_LINES: Partial<Record<FriendStatus, string>> = {
   requested: 'Venneforespørsel sendt.',
-  accepted: 'Dere er venner nå!',
+  accepted: 'Dere er venner nå',
   already_friends: 'Dere er allerede venner.',
   already_pending: 'Forespørselen er allerede sendt.',
   declined: 'Forespørselen er avslått.',

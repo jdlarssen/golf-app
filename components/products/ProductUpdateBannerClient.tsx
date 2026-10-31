@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { markOneAsRead } from '@/app/[locale]/innboks/actions';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SparkleIcon } from '@/components/icons';
 
 /**
  * Dismissible in-app banner for new product updates (issue #202).
@@ -68,8 +69,12 @@ export function ProductUpdateBannerClient({
         style={{ background: 'var(--accent)' }}
       />
       <div className="flex items-start gap-3">
-        <span aria-hidden className="text-lg leading-none">
-          ✨
+        <span
+          aria-hidden
+          data-testid="product-update-icon"
+          className="shrink-0 text-muted"
+        >
+          <SparkleIcon size={18} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-sans text-[14px] font-medium leading-tight text-text">

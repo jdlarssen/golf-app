@@ -44,6 +44,7 @@ import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import {
   createFailureBelongsOnWeb,
   describeCreateGameFailure,
+  describeMissingTeams,
   describePendingOthers,
   PENDING_SELF_NOTE,
 } from '../lib/createGameCopy';
@@ -669,7 +670,7 @@ function summaryWarnings(
     if (missing > 0) {
       warnings.push({
         key: 'teams',
-        text: `${missing} spillere mangler lag og blir ikke med i runden. Gå tilbake og gi dem et lag hvis alle skal spille.`,
+        text: describeMissingTeams(missing),
       });
     }
   }

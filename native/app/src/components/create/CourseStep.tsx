@@ -18,6 +18,7 @@ import DateTimePicker, {
   type DateTimePickerChangeEvent,
 } from '@react-native-community/datetimepicker';
 import type { CourseOption } from '../../data/createGame';
+import { describeTeeCount } from '../../lib/createGameCopy';
 import { formatClock, formatTeeOff } from '../../lib/display';
 import { formatWeekdayDayMonth } from '../../lib/homeDates';
 import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPicker';
@@ -136,7 +137,7 @@ export function CourseStep({
               key={course.id}
               testID={`create-course-${course.id}`}
               title={course.name}
-              subtitle={`${course.tees.length} teer`}
+              subtitle={describeTeeCount(course.tees.length)}
               selected={course.id === courseId}
               onPress={() => {
                 onCourse(course.id);

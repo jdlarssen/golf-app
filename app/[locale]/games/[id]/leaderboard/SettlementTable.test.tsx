@@ -126,7 +126,7 @@ describe('SettlementTable', () => {
     fireEvent.click(screen.getByTestId('settlement-copy'));
 
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Kopiert!');
+      expect(screen.getByRole('status')).toHaveTextContent('Kopiert');
     });
     expect(writeTextMock).toHaveBeenCalledTimes(1);
     expect(writeTextMock.mock.calls[0][0]).toMatchInlineSnapshot(`

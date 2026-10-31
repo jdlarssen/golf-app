@@ -2,7 +2,7 @@
 // #2627: «Bli venn med …» — skjermen QR-koden på bag-taggen og venne-lenka
 // åpner i appen. Tilstandene er nettsidens (`/venner/legg-til/[code]`, #369):
 // ukjent kode, din egen kode, allerede venner, og «Bli venner» med én knapp.
-// Etter trykket står «Dere er venner nå!» og veien til vennesiden.
+// Etter trykket står «Dere er venner nå» og veien til vennesiden.
 //
 // Tegningene står på bevissiden til PR-en (lys og natt, én per tilstand): «LEGG
 // TIL VENN» i toppen, eierens navn stort, og skogkortet fra Venner med

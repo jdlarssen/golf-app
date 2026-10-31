@@ -36,7 +36,7 @@ export function ReceiptActions({
   gameHref: string;
 }) {
   const t = useTranslations('game.publishReceipt');
-  // Which button said «Kopiert!» last; the status line reads it out.
+  // Which button said «Kopiert» last; the status line reads it out.
   const [copied, setCopied] = useState<'share' | 'copy' | null>(null);
   const [copyFailed, setCopyFailed] = useState(false);
 

@@ -39,7 +39,7 @@ export const KAVALKADE_TEXT = {
   nemesisWorst: 'Flest slag på hullet: {strokes}',
   rivalKicker: 'Rivalen',
   rivalMet: '{count, plural, one {# runde sammen} other {# runder sammen}}',
-  rivalRecord: '{wins} seire, {losses} tap, {ties} uavgjort',
+  rivalRecord: '{wins, plural, one {# seier} other {# seire}}, {losses} tap, {ties} uavgjort',
   rivalUndecided: 'Ingen av rundene ga et oppgjør.',
   formKicker: 'Formtoppen',
   formStretchRounds: '{count, plural, one {Beste strekk på # runde} other {Beste strekk på # runder}}',

@@ -151,3 +151,16 @@ export function describePendingOthers(count: number): string {
   }
   return `${count} spillere har ikke fullført profilen sin ennå. Runden kan ikke starte før alle har fylt inn navn og handicap.`;
 }
+
+/** Merknaden i siste steg når noen står uten lag, i entall og flertall (#2709). */
+export function describeMissingTeams(count: number): string {
+  if (count === 1) {
+    return '1 spiller mangler lag og blir ikke med i runden. Gå tilbake og gi spilleren et lag hvis alle skal spille.';
+  }
+  return `${count} spillere mangler lag og blir ikke med i runden. Gå tilbake og gi dem et lag hvis alle skal spille.`;
+}
+
+/** Antall teer under en bane i banevalget: «1 tee», ellers «N teer» (#2709). */
+export function describeTeeCount(count: number): string {
+  return count === 1 ? '1 tee' : `${count} teer`;
+}

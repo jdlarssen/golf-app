@@ -7,7 +7,7 @@ import type { ResultSummary } from '@/lib/scoring/resultSummary';
 /**
  * Type C render-test (én per komponent): verifiserer integrasjonen kort +
  * `finishedResultBadge` + next-intl-katalogen — at gull-accenten slår til ved
- * egen seier, dempes ellers, og at 🏆-fallbacken brukes når summary mangler.
+ * egen seier, dempes ellers, og at pokal-fallbacken brukes når summary mangler.
  * Per-modus utfalls-logikken testes i `resultSummary`/`finishedResultBadge`.
  */
 function makeGame(result_summary: ResultSummary | null): FinishedGame {
@@ -37,8 +37,8 @@ describe('FinishedGameCard', () => {
     );
     const badge = container.querySelector('.text-accent-text');
     expect(badge?.textContent).toContain('Du vant');
-    // Ingen 🏆 når et resultat finnes.
-    expect(container.textContent).not.toContain('🏆');
+    // Ingen pokal når et resultat finnes.
+    expect(container.querySelector('[data-testid="finished-card-trophy"]')).toBeNull();
   });
 
   it('ikke-seier → dempet badge, ingen gull-accent på teksten', () => {
@@ -52,8 +52,9 @@ describe('FinishedGameCard', () => {
     expect(container.querySelector('.text-accent-text')).toBeNull();
   });
 
-  it('manglende summary → 🏆-fallback', () => {
+  it('manglende summary → den tegnede pokalen, ingen emoji', () => {
     const { container } = render(<FinishedGameCard game={makeGame(null)} />);
-    expect(container.textContent).toContain('🏆');
+    expect(container.querySelector('[data-testid="finished-card-trophy"] svg')).not.toBeNull();
+    expect(container.textContent).not.toContain('🏆');
   });
 });

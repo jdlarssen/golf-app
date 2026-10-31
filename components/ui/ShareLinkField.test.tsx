@@ -27,7 +27,7 @@ describe('ShareLinkField', () => {
         url="https://tornygolf.no/signup/abc12345"
         ariaLabel="Påmeldingslenke"
         copyLabel="Kopier lenke"
-        copiedLabel="Kopiert!"
+        copiedLabel="Kopiert"
         errorText="Kopiering feilet"
         testId="share-link"
       />,
@@ -42,7 +42,7 @@ describe('ShareLinkField', () => {
     // The confirmation is announced through the status region (and the
     // button label swaps too, so the text appears twice).
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Kopiert!');
+      expect(screen.getByRole('status')).toHaveTextContent('Kopiert');
     });
     expect(writeTextMock).toHaveBeenCalledWith(
       'https://tornygolf.no/signup/abc12345',
