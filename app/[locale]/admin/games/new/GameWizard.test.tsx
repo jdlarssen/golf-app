@@ -1795,7 +1795,7 @@ describe('GameWizard — #2459 autolagring', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    chooseCourse('course-1');
     flush();
     await screen.findByTestId('wizard-draft-saved');
 
@@ -1809,7 +1809,7 @@ describe('GameWizard — #2459 autolagring', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    chooseCourse('course-1');
     flush();
 
     const { resume } = readEnvelope();
@@ -1827,12 +1827,12 @@ describe('GameWizard — #2459 autolagring', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    chooseCourse('course-1');
     flush();
     expect(readEnvelope().resume.summary.sourceScreen).toBe(false);
 
-    fireEvent.change(screen.getByLabelText(/^tee$/i), { target: { value: 'tee-1' } });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), { target: { value: FUTURE_TEE_OFF } });
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     flush();
     const summary = readEnvelope().resume.summary;
