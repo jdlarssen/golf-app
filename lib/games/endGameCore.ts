@@ -156,7 +156,7 @@ export async function endGameCore(
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, course_id, game_mode, mode_config, hole_segment',
+      'id, name, status, require_peer_approval, course_id, game_mode, mode_config, hole_segment, league_round_id',
     )
     .eq('id', gameId)
     .single<{
@@ -168,6 +168,7 @@ export async function endGameCore(
       game_mode: GameMode;
       mode_config: GameModeConfig;
       hole_segment: HoleSegment;
+      league_round_id: string | null;
     }>();
   if (!game || game.status !== 'active') {
     return { ok: false, reason: 'not_active' };
@@ -289,6 +290,7 @@ export async function endGameCore(
         game_mode: game.game_mode,
         mode_config: game.mode_config,
         hole_segment: game.hole_segment,
+        league_round_id: game.league_round_id,
       },
       // Unfiltered on purpose: withdrawn players still get the round-over varsel.
       players: roster,
