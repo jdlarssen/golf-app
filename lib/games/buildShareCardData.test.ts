@@ -23,6 +23,7 @@ import type {
   WolfResult,
 } from '@/lib/scoring/modes/types';
 
+import { FLAGGED_POINTS } from './__fixtures__/flaggedPointsGames';
 import { buildShareCardData } from './buildShareCardData';
 
 // ---------------------------------------------------------------------------
@@ -278,11 +279,10 @@ describe('stableford solo — score labels', () => {
   const result: StablefordResult = {
     kind: 'stableford',
     variant: 'solo',
-    ranking: 'net_total',
     holes: [],
     players: [
-      { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18, toPar: null, tiedWith: [] },
-      { userId: 'u2', totalPoints: 34, rank: 2, holesPlayed: 18, toPar: null, tiedWith: [] },
+      { userId: 'u1', totalPoints: 38, rank: 1, holesPlayed: 18, tiedWith: [] },
+      { userId: 'u2', totalPoints: 34, rank: 2, holesPlayed: 18, tiedWith: [] },
     ],
   };
 
@@ -1105,56 +1105,29 @@ describe('team strokeplay — ranked on net to par (#2625)', () => {
   });
 });
 
-// #2625 part 2: a points game ranked on net to par shows the points against
-// par pace (what it is ranked on), not the sum of points. Its own kind, so the
-// card words it «+3 mot par»: a bare «+3» reads as three over par.
-describe('points games — ranked on net to par (#2625)', () => {
+// #2738: a points game shows its points on the card, also one #2625 stamped
+// with `ranking: 'net_to_par'` — never «+3 mot par». Real engine results,
+// mid-round, so points against par pace would give another number and order.
+describe('points games with the #2625 flag show the points (#2738)', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
   const card = (result: ModeResult) =>
     buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it.each([
-    [
-      'solo stableford',
-      {
-        kind: 'stableford',
-        variant: 'solo',
-        ranking: 'net_to_par',
-        players: [
-          { userId: 'u1', totalPoints: 11, holesPlayed: 3, toPar: 5, rank: 1, tiedWith: [] },
-          { userId: 'u2', totalPoints: 13, holesPlayed: 6, toPar: 1, rank: 2, tiedWith: [] },
-        ],
-        holes: [],
-      },
-    ],
-    [
-      'team stableford',
-      {
-        kind: 'stableford',
-        variant: 'team',
-        ranking: 'net_to_par',
-        teams: [
-          { teamNumber: 1, playerIds: ['u1', 'u2'], holes: [], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
-          { teamNumber: 2, playerIds: ['u3', 'u4'], holes: [], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
-        ],
-      },
-    ],
-    [
-      'patsome',
-      {
-        kind: 'patsome',
-        scoring: 'net',
-        ranking: 'net_to_par',
-        teams: [
-          { teamNumber: 1, playerIds: ['u1', 'u2'], captainUserId: 'u1', holes: [], segments: {}, totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
-          { teamNumber: 2, playerIds: ['u3', 'u4'], captainUserId: 'u3', holes: [], segments: {}, totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
-        ],
-      },
-    ],
-  ] as unknown as [string, ModeResult][])('%s', (_kind, result) => {
-    expect(card(result).podium.map((r) => r.score)).toEqual([
-      { kind: 'pointsVsPar', label: '+5' },
-      { kind: 'pointsVsPar', label: '+1' },
+    ['solo stableford', FLAGGED_POINTS.solo, [22, 20]],
+    ['team stableford', FLAGGED_POINTS.team, [22, 20]],
+    ['modified stableford', FLAGGED_POINTS.modifiedSolo, [4, -2]],
+    ['patsome', FLAGGED_POINTS.patsome, [22, 20]],
+  ] as const)('%s', (_kind, result, points) => {
+    expect(card(result).podium.map((r) => r.score)).toEqual(points.map((value) => ({ kind: 'points', value })));
+  });
+
+  it('the round of 30.10: 25 p, 25 p and 20 p, the winner from the back nine', () => {
+    const podium = card(FLAGGED_POINTS.prodRound).podium;
+    expect(podium.map((r) => [r.rank, r.name, r.score])).toEqual([
+      [1, 'Alice', { kind: 'points', value: 25 }],
+      [2, 'Bob', { kind: 'points', value: 25 }],
+      [3, 'Cleo', { kind: 'points', value: 20 }],
     ]);
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ShareCardModel, ShareCardRow } from '@/lib/games/buildShareCardData';
+import { FLAGGED_POINTS } from '@/lib/games/__fixtures__/flaggedPointsGames';
+import { buildShareCardData, type ShareCardModel, type ShareCardRow } from '@/lib/games/buildShareCardData';
+import type { ModeResult } from '@/lib/scoring/modes/types';
 
 import { createTranslator } from 'next-intl';
 import messages from '@/messages/no.json';
@@ -191,7 +193,6 @@ describe('scoreFigure', () => {
     [{ kind: 'skins', value: 6 }, '6'],
     [{ kind: 'vsPar', label: '\u22124' }, '\u22124'],
     [{ kind: 'vsPar', label: 'E' }, 'E'],
-    [{ kind: 'pointsVsPar', label: '+3' }, '+3'],
   ] as const)('%j → %s', (score, expected) => {
     expect(scoreFigure(score)).toBe(expected);
   });
@@ -200,11 +201,7 @@ describe('scoreFigure', () => {
 describe('resultWords — the result as the headline words it (#2625)', () => {
   const t = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.shareCard' }) as unknown as ShareResultT;
   it.each([
-    [{ kind: 'pointsVsPar', label: '+3' }, { text: '+3 mot par', at: true }],
-    [{ kind: 'pointsVsPar', label: 'E' }, { text: 'par', at: true }],
-    [{ kind: 'pointsVsPar', label: '\u22122' }, { text: '\u22122 mot par', at: true }],
     // No hole played: the dash stands alone, as in the round report's facts.
-    [{ kind: 'pointsVsPar', label: '\u2014' }, { text: '\u2014', at: true }],
     [{ kind: 'vsPar', label: '\u2014' }, { text: '\u2014', at: true }],
     [{ kind: 'vsPar', label: '\u22124' }, { text: '\u22124', at: true }],
     [{ kind: 'vsPar', label: 'E' }, { text: 'par', at: true }],
@@ -229,5 +226,31 @@ describe('headlineSpec — a league round played alone (#2712)', () => {
   it('a league flight of two keeps the winner', () => {
     const two = placement([row(1, ['Siri S.'], POINTS_38)], [row(2, ['Ola N.'], { kind: 'points', value: 30 })]);
     expect(headlineSpec(two, { leagueFlight: true })).toMatchObject({ kind: 'won', names: ['Siri'] });
+  });
+});
+
+// #2738: a points game the #2625 flag ranked on par pace wins on its points:
+// «Karl vant med 25 poeng», never «vant på +3 mot par».
+describe('the headline of a points game with the #2625 flag (#2738)', () => {
+  const t = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.shareCard' }) as unknown as ShareResultT;
+  const nameByUserId = new Map([
+    ['u1', 'Karl B.'],
+    ['u2', 'Jørgen L.'],
+    ['u3', 'Ola N.'],
+    ['u4', 'Kari H.'],
+  ]);
+  const spec = (result: ModeResult) =>
+    headlineSpec(buildShareCardData({ result, nameByUserId, sharerId: null, parByHole: new Map(), sideWinners: [] }));
+
+  it.each([
+    ['the round of 30.10', FLAGGED_POINTS.prodRound, ['Karl'], '25 poeng'],
+    ['solo stableford mid-round', FLAGGED_POINTS.solo, ['Jørgen'], '22 poeng'],
+    ['team stableford mid-round', FLAGGED_POINTS.team, ['Ola', 'Kari'], '22 poeng'],
+    ['patsome mid-round', FLAGGED_POINTS.patsome, ['Ola', 'Kari'], '22 poeng'],
+  ] as const)('%s', (_name, result, names, words) => {
+    const headline = spec(result);
+    if (headline.kind !== 'won') throw new Error(`expected a winner, got ${headline.kind}`);
+    expect(headline.names).toEqual(names);
+    expect(resultWords(headline.result, t)).toEqual({ text: words, at: false });
   });
 });

@@ -12,6 +12,7 @@ import {
   ceremonyView,
   type CeremonyLine,
 } from './ceremony';
+import { FLAGGED_POINTS } from './__fixtures__/flaggedPointsGames';
 
 const MIGRATION_FILE = path.resolve(
   __dirname,
@@ -126,12 +127,17 @@ describe('ceremonyLines — the same number the podium shows', () => {
     ]);
   });
 
-  it('team stableford: the pair, team points', () => {
+  it('team stableford: the pair, team points; a pair without a hole is left out (#2738)', () => {
+    const played = [{ holeNumber: 1, players: [{ userId: 'a', gross: 4 }, { userId: 'b', gross: null }] }];
+    const unplayed = [{ holeNumber: 1, players: [{ userId: 'c', gross: null }, { userId: 'd', gross: null }] }];
     const lines = ceremonyLines(
       result({
         kind: 'stableford',
         variant: 'team',
-        teams: [{ teamNumber: 2, playerIds: ['a', 'b'], holes: [], totalPoints: 44, rank: 1, tiedWith: [] }],
+        teams: [
+          { teamNumber: 2, playerIds: ['a', 'b'], holes: played, totalPoints: 44, rank: 1, tiedWith: [] },
+          { teamNumber: 1, playerIds: ['c', 'd'], holes: unplayed, totalPoints: 0, rank: 2, tiedWith: [] },
+        ],
       }),
     );
     expect(lines).toEqual([
@@ -193,13 +199,19 @@ describe('ceremonyLines — the same number the podium shows', () => {
     ]);
   });
 
-  it('patsome: team points', () => {
+  it('patsome: team points; a team without a hole is left out (#2738)', () => {
+    const segments = (holesPlayed: number) => ({
+      fourball: { segment: 'fourball', points: 0, holesPlayed },
+      greensome: { segment: 'greensome', points: 0, holesPlayed: 0 },
+      foursomes: { segment: 'foursomes', points: 0, holesPlayed: 0 },
+    });
     const lines = ceremonyLines(
       result({
         kind: 'patsome',
         scoring: 'net',
         teams: [
-          { teamNumber: 1, playerIds: ['a', 'b'], captainUserId: 'a', holes: [], totalPoints: 37, rank: 1, tiedWith: [] },
+          { teamNumber: 1, playerIds: ['a', 'b'], captainUserId: 'a', holes: [], segments: segments(6), totalPoints: 37, rank: 1, tiedWith: [] },
+          { teamNumber: 2, playerIds: ['c', 'd'], captainUserId: 'c', holes: [], segments: segments(0), totalPoints: 0, rank: 2, tiedWith: [] },
         ],
       }),
     );
@@ -361,66 +373,20 @@ describe('ceremonyLines — team strokeplay ranked on net to par (#2625)', () =>
   });
 });
 
-// #2625 part 2: a points game ranked on net to par shows the number it is
-// ranked on — points against par pace, shown like to par («+3 mot par») —
-// and a player or team without a hole is left out.
-describe('ceremonyLines — points games ranked on net to par (#2625)', () => {
-  it('solo stableford', () => {
-    const lines = ceremonyLines(
-      result({
-        kind: 'stableford',
-        variant: 'solo',
-        ranking: 'net_to_par',
-        players: [
-          { userId: 'a', totalPoints: 11, holesPlayed: 3, toPar: 5, rank: 1, tiedWith: [] },
-          { userId: 'b', totalPoints: 13, holesPlayed: 6, toPar: 1, rank: 2, tiedWith: [] },
-          { userId: 'c', totalPoints: 0, holesPlayed: 0, toPar: null, rank: 3, tiedWith: [] },
-        ],
-        holes: [],
-      }),
-    );
-    expect(lines.map((l) => [l.key, l.rank, l.total, l.unit])).toEqual([
-      ['a', 1, 5, 'toPar'],
-      ['b', 2, 1, 'toPar'],
-    ]);
-  });
-
+// #2738: a points game shows its points on the podium, also one #2625 stamped
+// with `ranking: 'net_to_par'`, and ranks on them. Real engine results,
+// mid-round, so points against par pace would give another number and order.
+describe('ceremonyLines — points games with the #2625 flag (#2738)', () => {
   it.each([
-    [
-      'team stableford',
-      {
-        kind: 'stableford',
-        variant: 'team',
-        ranking: 'net_to_par',
-        teams: [
-          { teamNumber: 1, playerIds: ['a', 'b'], holes: [], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
-          { teamNumber: 2, playerIds: ['c', 'd'], holes: [], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
-          { teamNumber: 3, playerIds: ['e', 'f'], holes: [], totalPoints: 0, toPar: null, rank: 3, tiedWith: [] },
-        ],
-      },
-    ],
-    [
-      'patsome',
-      {
-        kind: 'patsome',
-        scoring: 'net',
-        ranking: 'net_to_par',
-        teams: [
-          { teamNumber: 2, playerIds: ['c', 'd'], totalPoints: 13, toPar: 1, rank: 2, tiedWith: [] },
-          { teamNumber: 1, playerIds: ['a', 'b'], totalPoints: 11, toPar: 5, rank: 1, tiedWith: [] },
-          { teamNumber: 3, playerIds: ['e', 'f'], totalPoints: 0, toPar: null, rank: 3, tiedWith: [] },
-        ],
-      },
-    ],
-  ])('%s', (_kind, r) => {
-    const lines = ceremonyLines(result(r));
-    expect(lines.map((l) => [l.key, l.rank, l.total, l.unit])).toEqual(
-      expect.arrayContaining([
-        ['team-1', 1, 5, 'toPar'],
-        ['team-2', 2, 1, 'toPar'],
-      ]),
-    );
-    expect(lines).toHaveLength(2);
+    ['solo stableford', FLAGGED_POINTS.solo, [['u2', 1, 22], ['u1', 2, 20]]],
+    ['team stableford', FLAGGED_POINTS.team, [['team-2', 1, 22], ['team-1', 2, 20]]],
+    ['modified stableford', FLAGGED_POINTS.modifiedSolo, [['u1', 1, 4], ['u2', 2, -2]]],
+    ['patsome', FLAGGED_POINTS.patsome, [['team-2', 1, 22], ['team-1', 2, 20]]],
+    ['the round of 30.10', FLAGGED_POINTS.prodRound, [['u1', 1, 25], ['u2', 2, 25], ['u3', 3, 20]]],
+  ] as const)('%s', (_kind, r, expected) => {
+    const lines = ceremonyLines(r);
+    expect(lines.map((l) => [l.key, l.rank, l.total])).toEqual(expected);
+    expect(lines.every((l) => l.unit === 'points')).toBe(true);
   });
 });
 
