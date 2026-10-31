@@ -12,6 +12,7 @@
 // er de delte reglene i `lib/leaderboard/`; stripas knapp er Hjem-kortets
 // (`heroAction`, samme regel som `buildHeroModel`).
 import { STATUS_LABELS } from '../../../../lib/games/status';
+import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import {
   boardRowSrParts,
@@ -366,7 +367,11 @@ function finishedBoard(
   }
   const board = soloResultBoard(result, toPlayerRows(bundle));
   if (board.rows.length === 0) return null;
-  const showRank = boardShowsRank(board.holesPlayed);
+  // #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
+  // har ingen plass og ingen seier: poengene og «Godkjent», som på Hjem.
+  const alone = isLeagueFieldAlone(bundle.game.leagueRoundId != null, board.rows.length);
+  const showRank = !alone && boardShowsRank(board.holesPlayed);
+  const winner = (row: ResultBoardRow) => !alone && isBoardLeader(row);
   const keyOf = (row: ResultBoardRow) => row.userId;
   const byId = new Map(board.rows.map((row) => [row.userId, row]));
 
@@ -394,7 +399,7 @@ function finishedBoard(
             });
     strip = {
       kicker: BOARD_APP_TEXT.resultKicker,
-      text: [stripPlace(standing), behind].filter(Boolean).join(' · '),
+      text: alone ? BOARD_APP_TEXT.approved : [stripPlace(standing), behind].filter(Boolean).join(' · '),
       action: { kind: 'scorecard', label: BOARD_APP_TEXT.scorecard },
     };
   }
@@ -408,7 +413,7 @@ function finishedBoard(
       userId: row.userId,
       name: rowName(row),
       place: placeText(row, showRank),
-      leader: isBoardLeader(row),
+      leader: winner(row),
       you: row.userId === userId,
       holesPlayed: row.holesPlayed,
       total: totalLabel(board.unit, row.total),
@@ -420,7 +425,7 @@ function finishedBoard(
         row: { ...row, movement: null, recent: [] },
         showRank,
         unit: board.unit,
-        winner: isBoardLeader(row),
+        winner: winner(row),
         note: note(row),
         you: row.userId === userId,
       }),

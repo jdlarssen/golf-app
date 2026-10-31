@@ -3065,11 +3065,16 @@
       "waiting": "Putt stats are waiting on {count, plural, one {# hole} other {# holes}}.",
       "cta": "Add putts"
     },
+    "leagueAlone": {
+      "kicker": "League round",
+      "heading": "Approved"
+    },
     "shareCard": {
       "finalResult": "Final result",
       "gameFinished": "Game finished",
       "winnerWon": "{name} won <gold>{margin}</gold>",
       "tied": "Halved",
+      "approved": "Approved",
       "headlineWon": "{names} won with <gold>{result}</gold>",
       "headlineWonAt": "{names} won at <gold>{result}</gold>",
       "headlineShared": "{names} shared the win with <gold>{result}</gold>",
