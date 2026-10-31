@@ -261,14 +261,23 @@ describe('buildHeroModel — ligaflight alene (#2712)', () => {
     ).toBe(false);
     expect(buildHeroModel({ bundle: homeBundle({ players: solo }), scores, userId: ME }).leagueSolo).toBe(false);
   });
-  it('vanlig liga (ingen markørgodkjenning) → som før, også alene etter et frafall', () => {
+  it('vanlig liga alene (etter et frafall): ingen plass, men ingen markør å vente på', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: false } }),
+      scores,
+      userId: ME,
+    });
+    expect(model.leagueSolo).toBe(true);
+    expect(model.leagueMarker).toBe(false);
+  });
+  it('simulatorliga alene: markøren godkjenner', () => {
     expect(
       buildHeroModel({
-        bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: false } }),
+        bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: true } }),
         scores,
         userId: ME,
-      }).leagueSolo,
-    ).toBe(false);
+      }).leagueMarker,
+    ).toBe(true);
   });
 });
 
