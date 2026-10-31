@@ -127,8 +127,11 @@ function renderWizard({
   isAdmin,
   stepOneLead,
   currentUserId,
+  teeOffNow,
 }: {
   currentUserId?: string;
+  /** #2448/#2463: Oslo's «now» from the server. Left out → no quick-pick days. */
+  teeOffNow?: string;
   courses?: CourseOption[];
   players?: PlayerOption[];
   friendPlayerIds?: string[];
@@ -158,6 +161,7 @@ function renderWizard({
       currentUserId={currentUserId}
       backHref="/"
       stepOneLead={stepOneLead}
+      teeOffNow={teeOffNow}
     />,
   );
 }
@@ -898,7 +902,10 @@ describe('GameWizard — «Shotgun-start» overlever til steg 5 (#2258)', () => 
 
 describe('GameWizard — tee-off «Nå» (#2463)', () => {
   it('«Nå» opens step 3, skips «Hvordan får dere spillere?» and reaches «Klar?» with no time', () => {
-    const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    const { container } = renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      teeOffNow: '2026-11-04T08:30',
+    });
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
@@ -924,6 +931,8 @@ describe('GameWizard — tee-off «Nå» (#2463)', () => {
     expect(fd.getAll('tee_off_now')).toEqual(['1']);
     expect(fd.getAll('scheduled_tee_off_at')).toEqual(['']);
     expect(fd.get('registration_mode')).toBe('invite_only');
+    // The auto-name takes today's date from the server's «now», as «I dag» would.
+    expect(fd.get('name')).toBe('Stiklestad GK 4. november');
   });
 
   it('a club tournament has no «Nå»', () => {
