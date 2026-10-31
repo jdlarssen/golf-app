@@ -17,7 +17,7 @@
 // ikke en seier. Hvilke linjer som vises, avgjør den delte
 // `resolveScorecardStamp`; her blir de bare tekst.
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
+import { approvalPending, type ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt, formatStampDateLocal } from '../../lib/display';
 import { FONTS, fraunces, useTheme, withAlpha } from '../../theme';
 import { DashedRing, HakeIcon } from '../icons/Icons';
@@ -138,7 +138,7 @@ export function ScorecardStatusList({
       <StatusLine done text={copy.signedBy} testID="scorecard-signed-by" />
       {copy.approval ? (
         <StatusLine
-          done={stamp.approval.kind !== 'pending'}
+          done={!approvalPending(stamp.approval)}
           text={copy.approval}
           testID="scorecard-approval"
         />
