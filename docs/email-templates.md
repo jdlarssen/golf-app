@@ -68,11 +68,11 @@ Begge login-malene (**Magic Link** for eksisterende brukere og **Confirm Signup*
           </tr>
           <tr>
             <td align="center" style="padding: 0 32px 36px 32px;">
-              <div style="font-size: 13px; color: #8A8175; letter-spacing: 0.06em;">&#9203;&nbsp; 60 min</div>
+              <div style="font-size: 13px; color: #4A3F30; letter-spacing: 0.06em;">60 min</div>
             </td>
           </tr>
         </table>
-        <p style="font-size: 11px; color: #8A8175; margin: 18px 0 0 0; letter-spacing: 0.04em;">Tørny &middot; golf</p>
+        <p style="font-size: 11px; color: #4A3F30; margin: 18px 0 0 0; letter-spacing: 0.04em;">Tørny &middot; golf</p>
       </td>
     </tr>
   </table>
@@ -82,7 +82,7 @@ Begge login-malene (**Magic Link** for eksisterende brukere og **Confirm Signup*
 
 > **Ordmerket er et bilde (#1985).** Ballen hviler på T-en, og det lar seg ikke tegne med tekst i en e-post. Bildet er det samme som Resend-mailene bruker (`lib/mail/wordmark.ts`), laget av `native/assets/generate-icons.mjs` med mailkortets hvite bakgrunn bakt inn, så det tåler mørk modus. Blokkerer e-postprogrammet bilder, står alt-teksten «Tørny» i stedet. Adressen går til prod, også på staging: lim inn malen først når prod-deployen som la til bildet er ute, ellers viser mailen et brutt bilde.
 
-> **Hvorfor ingen «ikke deg?»-fotnote:** kode-malen har ingen lenke å klikke og koden er verdiløs uten appen + tilgang til denne innboksen, så phishing-flaten er minimal. En sikkerhets-setning ville måtte stå på ett språk og bryte språknøytraliteten. `&#9203;` er timeglass-symbolet (gyldighet) — dekorativt, degraderer pent hvis en klient ikke viser det.
+> **Hvorfor ingen «ikke deg?»-fotnote:** kode-malen har ingen lenke å klikke og koden er verdiløs uten appen + tilgang til denne innboksen, så phishing-flaten er minimal. En sikkerhets-setning ville måtte stå på ett språk og bryte språknøytraliteten. «60 min» står alene, uten timeglass-tegn (#2725): koden ble nettopp bedt om, så tallet er nok.
 
 ---
 
@@ -109,15 +109,7 @@ Brukes hvis vi senere bytter fra `signInWithOtp` til `auth.admin.inviteUserByEma
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="480" style="max-width: 480px; background-color: #FFFFFF; border: 1px solid #E5E0D3; border-radius: 16px; overflow: hidden;">
           <tr>
             <td style="padding: 32px 32px 8px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background-color: #1B4332; color: #FFFFFF; width: 40px; height: 40px; border-radius: 10px; text-align: center; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 500; vertical-align: middle;">T</td>
-                  <td style="padding-left: 12px; vertical-align: middle;">
-                    <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 500; color: #1A2E1F; line-height: 1.2;">Tørny</div>
-                    <div style="font-size: 10px; color: #5C5347; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 2px;">Turnering</div>
-                  </td>
-                </tr>
-              </table>
+              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 40px; color: #1B4332;">
             </td>
           </tr>
           <tr>
@@ -136,26 +128,26 @@ Brukes hvis vi senere bytter fra `signInWithOtp` til `auth.admin.inviteUserByEma
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 9999px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
                       Aksepter invitasjonen
                     </a>
                   </td>
                 </tr>
               </table>
-              <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
+              <p style="font-size: 13px; color: #4A3F30; margin: 24px 0 0 0; line-height: 1.5;">
                 Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
-              <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
+              <p style="font-size: 12px; color: #4A3F30; margin: 0; line-height: 1.5;">
                 Kjenner du ikke avsender? Bare ignorer mailen. Ingen får tilgang uten at du selv aksepterer.
               </p>
             </td>
           </tr>
         </table>
-        <p style="font-size: 11px; color: #5C5347; margin: 16px 0 0 0;">
+        <p style="font-size: 11px; color: #4A3F30; margin: 16px 0 0 0;">
           Tørny · turneringsapp for golf
         </p>
       </td>
@@ -190,15 +182,7 @@ Trigges når en bruker bytter e-postadresse — sendes til den NYE adressen for 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="480" style="max-width: 480px; background-color: #FFFFFF; border: 1px solid #E5E0D3; border-radius: 16px; overflow: hidden;">
           <tr>
             <td style="padding: 32px 32px 8px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background-color: #1B4332; color: #FFFFFF; width: 40px; height: 40px; border-radius: 10px; text-align: center; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 500; vertical-align: middle;">T</td>
-                  <td style="padding-left: 12px; vertical-align: middle;">
-                    <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 500; color: #1A2E1F; line-height: 1.2;">Tørny</div>
-                    <div style="font-size: 10px; color: #5C5347; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 2px;">Turnering</div>
-                  </td>
-                </tr>
-              </table>
+              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 40px; color: #1B4332;">
             </td>
           </tr>
           <tr>
@@ -217,26 +201,26 @@ Trigges når en bruker bytter e-postadresse — sendes til den NYE adressen for 
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 9999px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
                       Bekreft ny e-post
                     </a>
                   </td>
                 </tr>
               </table>
-              <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
+              <p style="font-size: 13px; color: #4A3F30; margin: 24px 0 0 0; line-height: 1.5;">
                 Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
-              <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
+              <p style="font-size: 12px; color: #4A3F30; margin: 0; line-height: 1.5;">
                 Var det ikke deg som forespurte dette? Ignorer mailen. Adressen din blir ikke endret med mindre du klikker lenken.
               </p>
             </td>
           </tr>
         </table>
-        <p style="font-size: 11px; color: #5C5347; margin: 16px 0 0 0;">
+        <p style="font-size: 11px; color: #4A3F30; margin: 16px 0 0 0;">
           Tørny · turneringsapp for golf
         </p>
       </td>
@@ -277,15 +261,7 @@ Bruk **nøyaktig samme språknøytrale mal som seksjon 1** (Magic Link / Confirm
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="480" style="max-width: 480px; background-color: #FFFFFF; border: 1px solid #E5E0D3; border-radius: 16px; overflow: hidden;">
           <tr>
             <td style="padding: 32px 32px 8px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background-color: #1B4332; color: #FFFFFF; width: 40px; height: 40px; border-radius: 10px; text-align: center; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 500; vertical-align: middle;">T</td>
-                  <td style="padding-left: 12px; vertical-align: middle;">
-                    <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 500; color: #1A2E1F; line-height: 1.2;">Tørny</div>
-                    <div style="font-size: 10px; color: #5C5347; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 2px;">Turnering</div>
-                  </td>
-                </tr>
-              </table>
+              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 40px; color: #1B4332;">
             </td>
           </tr>
           <tr>
@@ -301,26 +277,26 @@ Bruk **nøyaktig samme språknøytrale mal som seksjon 1** (Magic Link / Confirm
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 9999px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
                       Velg nytt passord
                     </a>
                   </td>
                 </tr>
               </table>
-              <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
+              <p style="font-size: 13px; color: #4A3F30; margin: 24px 0 0 0; line-height: 1.5;">
                 Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
-              <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
+              <p style="font-size: 12px; color: #4A3F30; margin: 0; line-height: 1.5;">
                 Var det ikke deg som bestilte dette? Ignorer mailen. Passordet ditt blir ikke endret.
               </p>
             </td>
           </tr>
         </table>
-        <p style="font-size: 11px; color: #5C5347; margin: 16px 0 0 0;">
+        <p style="font-size: 11px; color: #4A3F30; margin: 16px 0 0 0;">
           Tørny · turneringsapp for golf
         </p>
       </td>
