@@ -530,9 +530,16 @@ export function useGameFormState({
   const [courseId, setCourseIdRaw] = useState<string>(
     initialValues?.course_id ?? '',
   );
-  const [teeBoxId, setTeeBoxIdRaw] = useState<string>(
-    initialValues?.tee_box_id ?? '',
-  );
+  // #2448: a stored tee the course no longer lists (archived since the game
+  // was made) counts as no tee, so the save waits until one is picked again.
+  // The dropdown did the same: no option matched, React showed the
+  // placeholder and `required` held the save. The tee buttons and the hidden
+  // `tee_box_id` field have no such fallback, so the rule lives here.
+  const [teeBoxId, setTeeBoxIdRaw] = useState<string>(() => {
+    const stored = initialValues?.tee_box_id ?? '';
+    const course = courses.find((c) => c.id === initialValues?.course_id);
+    return course?.tee_boxes.some((t) => t.id === stored) ? stored : '';
+  });
   // #1009: gjester lagt til i denne økta (skygge-brukere fra
   // createGuestForWizard). De finnes ikke i den pre-fetchede `players`-lista;
   // `allPlayers` under er den sammenslåtte lista ALT internt oppslag bruker.
