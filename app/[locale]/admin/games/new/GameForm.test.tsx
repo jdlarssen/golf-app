@@ -2285,19 +2285,25 @@ describe('GameForm — «Bane» and «Navn og tid» keep what the game has (#244
     expect(screen.getByLabelText('Velg tid')).toHaveValue('13:30');
   });
 
-  it('a tee archived since the game was made: no button pressed, and the save posts the stored tee as before', () => {
+  // As with the dropdown on main: the stored id matched no option, React showed
+  // the placeholder, the form posted an empty tee and `required` held the save
+  // until the organiser picked a tee again (contract §5).
+  it('a tee archived since the game was made counts as no tee: nothing pressed, the save waits for a new tee', () => {
     const { container } = renderEdit('bane', {
       course_id: 'course-2',
       tee_box_id: 'tee-archived',
-      scheduled_tee_off_at: '2026-11-11T13:30',
+      scheduled_tee_off_at: FUTURE_TEE_OFF,
     });
     expect(screen.getAllByTestId('tee-button').some((b) => b.getAttribute('aria-pressed') === 'true')).toBe(false);
-    const data = new FormData(container.querySelector('form') as HTMLFormElement);
-    expect([data.get('course_id'), data.get('tee_box_id'), data.get('scheduled_tee_off_at')]).toEqual([
-      'course-2',
-      'tee-archived',
-      '2026-11-11T13:30',
-    ]);
+    const form = container.querySelector('form') as HTMLFormElement;
+    expect(new FormData(form).get('tee_box_id')).toBe('');
+    const save = screen.getByRole('button', { name: /lagre endringer/i });
+    expect(save).toBeDisabled();
+    expect(document.getElementById('publish-missing')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Rød/ }));
+    expect(new FormData(form).get('tee_box_id')).toBe('tee-2b');
+    expect(save).toBeEnabled();
   });
 
   it('a new course and tee reach the save', () => {
