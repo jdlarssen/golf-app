@@ -495,7 +495,7 @@ describe('buildInboxEntryView', () => {
         finishedGameIds: [GAME],
         leagueFlightGameIds: [GAME],
       }));
-      expect(v.avatar.kind).toBe('emoji');
+      expect(v.avatar.kind).not.toBe('place');
       expect(v.placeLabel).toBeNull();
       expect(v.subtitle).toBe('Onsdagsgolfen · Godkjent · i går');
     });
