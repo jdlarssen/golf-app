@@ -104,10 +104,10 @@ describe('parity with /profile/historikk', () => {
     expect(diffCurveLabel(7)).toBe('Handicap-form over 7 fullførte runder, fra eldst til nyest.');
 
     expect(web.puttsNearMiss).toBe(
-      'Nesten! Du mangler putt på {missingHoles} hull i {partialRounds, plural, one {# runde} other {# runder}}.',
+      'Du mangler putt på {missingHoles} hull i {partialRounds, plural, one {# runde} other {# runder}}.',
     );
-    expect(puttsNearMiss(3, 1)).toBe('Nesten! Du mangler putt på 3 hull i 1 runde.');
-    expect(puttsNearMiss(5, 2)).toBe('Nesten! Du mangler putt på 5 hull i 2 runder.');
+    expect(puttsNearMiss(3, 1)).toBe('Du mangler putt på 3 hull i 1 runde.');
+    expect(puttsNearMiss(5, 2)).toBe('Du mangler putt på 5 hull i 2 runder.');
   });
 });
 
