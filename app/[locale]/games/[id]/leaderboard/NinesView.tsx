@@ -364,6 +364,3 @@ function HoleRow({
     </li>
   );
 }
-
-// Re-export for use in NinesPodium (avoids separate import of the same type).
-export type { NinesPlayerLine };

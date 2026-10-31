@@ -16,18 +16,6 @@ import {
 export type RegistrationMode = 'invite_only' | 'manual_approval' | 'open';
 export type RegistrationType = 'solo' | 'team' | 'both';
 
-export const REGISTRATION_MODES: readonly RegistrationMode[] = [
-  'invite_only',
-  'manual_approval',
-  'open',
-] as const;
-
-export const REGISTRATION_TYPES: readonly RegistrationType[] = [
-  'solo',
-  'team',
-  'both',
-] as const;
-
 /**
  * Hvorvidt en gitt scoring-modus tar generisk lag-påmelding (registration_type
  * 'team' eller 'both' gir mening). Avledet av den kanoniske spillestil-
@@ -52,19 +40,6 @@ export function gameModeSupportsTeams(mode: GameMode): boolean {
 
 export function isRegistrationMode(v: unknown): v is RegistrationMode {
   return v === 'invite_only' || v === 'manual_approval' || v === 'open';
-}
-
-/**
- * Hvorvidt et spill med denne påmeldingsmåten dukker opp i «Finn turneringer»
- * (#357): `open` + `manual_approval` er oppdagbare, `invite_only` er privat.
- * Påmeldingsmåten ER synligheten (flyt 2) — ingen egen synlighets-bryter.
- *
- * MÅ speile filteret i `getDiscoverableGames` (`.in('registration_mode',
- * ['open','manual_approval'])`). Endrer du det ene, endre det andre — denne
- * helperen er kilden for hva som regnes som oppdagbart.
- */
-export function isDiscoverableRegistrationMode(mode: RegistrationMode): boolean {
-  return mode === 'open' || mode === 'manual_approval';
 }
 
 /**
