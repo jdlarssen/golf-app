@@ -1,7 +1,6 @@
 import type { MissingForPublishCode } from '../useGameFormState';
 import type { Intent } from '@/lib/wizard/intent';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import type { GuestOnlyVerdict } from '@/lib/games/guestOnlyRoster';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import type { RegistrationMode } from '@/lib/games/registration';
@@ -17,8 +16,8 @@ import type { RegistrationMode } from '@/lib/games/registration';
 
 export type ReadyRowKey = 'course' | 'format' | 'teeOff' | 'players';
 export type ReadyRowStatus = 'ok' | 'warn' | 'block';
-/** A wizard step, the advanced settings on step 5, or no «Endre» at all. */
-export type ReadyRowTarget = 2 | 3 | 4 | 'advanced' | null;
+/** A wizard step, the Handicap sheet on step 5, or no «Endre» at all. */
+export type ReadyRowTarget = 2 | 3 | 4 | 'handicap' | null;
 
 export type ReadyRow = {
   key: ReadyRowKey;
@@ -103,7 +102,7 @@ export function readyChecklist({
       : hasAllowanceCode
         ? gameMode === 'shamble'
           ? 2
-          : 'advanced'
+          : 'handicap'
         : lockGameMode
           ? null
           : 2,
@@ -226,32 +225,14 @@ export function playersSummary({
 
 /**
  * Which parts the Format row has after the format's name: the team size when
- * teams are bigger than one, and the game's handicap share for formats that
- * use it («85 % handicap», or «brutto» for 0). Formats with their own
- * percentage in `mode_config` show none.
+ * teams are bigger than one. The handicap share is not here (#2457): it stands
+ * once, in the Handicap row of the INNSTILLINGER, and the Format row still
+ * turns red when the percentage is invalid.
  */
-export function formatRowParts({
-  gameMode,
-  teamSize,
-  hcpAllowance,
-}: {
-  gameMode: GameMode;
-  teamSize: number;
-  hcpAllowance: number;
-}): {
+export function formatRowParts({ teamSize }: { teamSize: number }): {
   teamSize: number | null;
-  allowance: { kind: 'pct'; pct: number } | { kind: 'gross' } | null;
 } {
-  return {
-    teamSize: teamSize > 1 ? teamSize : null,
-    // #2570: shamble's share is set under «Tellemåte» on step 2, and the row
-    // follows the general field, so it names none there.
-    allowance: showsGeneralAllowanceField(gameMode)
-      ? hcpAllowance === 0
-        ? { kind: 'gross' }
-        : { kind: 'pct', pct: hcpAllowance }
-      : null,
-  };
+  return { teamSize: teamSize > 1 ? teamSize : null };
 }
 
 /** The `wizard.ready.checklist.source.*` key for the registration mode (#2447). */

@@ -20,8 +20,9 @@
  *                          egen skjerm (`?step=4&skjerm=lag`) med
  *                          TeamsAssignmentSection; solo-formatene har tee per
  *                          spiller rett på velgeren.
- *   Steg 5 (Klar)        → ReadyStep (summary + påmelding/allowance/
- *                          kontingent + avanserte + publish/draft)
+ *   Steg 5 (Klar)        → ReadyStep (invitasjonskort + sjekkliste +
+ *                          INNSTILLINGER som rader med ark (#2457) + publish/
+ *                          draft)
  *
  * #1065: allowance-feltene og hele RegistrationSection (påmelding +
  * startkontingent) flyttet fra steg 2 til steg 5 — steg 2 er nå kun teller +
@@ -104,6 +105,7 @@ import {
 } from './sections/TeamsAssignmentSection';
 import { PlayerTeeChoiceInputs } from './sections/PlayerTeeChoiceInputs';
 import { ReadyStep } from './sections/ReadyStep';
+import { RegistrationSection } from './sections/RegistrationSection';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
@@ -1443,6 +1445,12 @@ function WizardBody({
           {/* #2463: not with «Nå» either (`showsPlayerSource`); the hook
               locks the mode to invite_only then. */}
           {showsPlayerSource && <PlayerSourceChoice state={state} />}
+          {/* #2457: «Hva melder man på?» (solo/lag) står under svaret på
+              «Hvordan får dere spillere?», og bare for formater med lag. De
+              andre får 'solo' fra useGameFormState. */}
+          {state.registrationModeSupportsTeams && (
+            <RegistrationSection state={state} hideHeading part="type" />
+          )}
           {state.isClubScoped &&
             state.selectedPlayerIds.length === 0 &&
             state.playersStepOptional && (
