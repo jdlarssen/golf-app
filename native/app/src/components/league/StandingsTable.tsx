@@ -210,10 +210,8 @@ const styles = StyleSheet.create({
   // `.trow.you`: 6 fra kortkanten, 4 inn, 12 i hjørnene, 1 pt grønn ramme.
   youRow: { marginHorizontal: 6, paddingHorizontal: 3, borderRadius: 12, borderWidth: 1 },
   head: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
   right: { textAlign: 'right' },
   // `align-items: stretch` i tegningen: rundekolonnene fyller hele radhøyden.

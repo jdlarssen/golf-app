@@ -48,7 +48,7 @@ export default async function PublicCoursesPage() {
         <BrandMark className="mb-8" />
 
         <header className="px-1">
-          <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
+          <p className="font-sans text-xs font-semibold text-muted">
             {t('kicker')}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">

@@ -6,7 +6,7 @@
 // seg ned når en runde pågår, og at heltekortet tegnes fra enheten når nettet
 // er borte.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import type { CardBundle } from '../data/homeHero';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
@@ -163,15 +163,16 @@ beforeEach(() => {
   mockState.leagues = { ok: true, leagues: [] };
 });
 
-it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
+it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
   const { navigate, view } = renderHome();
   await view;
 
   // Heltekortet er den nyeste runden, og ringen står på hull 8.
   expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
   expect(await screen.findByText('Fortsett på hull 8 →')).toBeTruthy();
-  expect(await screen.findByTestId('home-greeting')).toHaveTextContent(
-    /^God (morgen|dag|kveld), Sigrid$/,
+  // Tittelen er datoen, og fornavnet står i pillen.
+  expect(await screen.findByTestId('home-date')).toHaveTextContent(
+    /^(Mandag|Tirsdag|Onsdag|Torsdag|Fredag|Lørdag|Søndag) \d{1,2}\. [a-zæøå]+$/,
   );
 
   const order = testIdsInOrder();
@@ -182,7 +183,6 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   };
   const sequence = [
     'home-date',
-    'home-greeting',
     'open-profile',
     'home-hero',
     'home-active',
@@ -225,7 +225,7 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   const pill = screen.getByTestId('open-profile');
   expect(pill.props.accessibilityRole).toBe('link');
   expect(pill.props.accessibilityLabel).toBe('Profil, handicap 12,4');
-  expect(pill).toHaveTextContent('HCP12,4');
+  expect(pill).toHaveTextContent('Sigrid·HCP12,4');
   expect(screen.queryByText('Profil')).toBeNull();
   await fireEvent.press(pill);
   expect(navigate).toHaveBeenCalledWith('Profile');
@@ -251,8 +251,25 @@ it('tegner heltekortet fra enheten når nettet er borte', async () => {
   expect(await screen.findByTestId('home-stale')).toBeTruthy();
   // Uten profil står datoen alene, og uten pille er «Profil» veien videre.
   expect(screen.getByTestId('home-date')).toBeTruthy();
-  expect(screen.queryByTestId('home-greeting')).toBeNull();
   expect(screen.getByTestId('open-profile')).toHaveTextContent('Profil');
+});
+
+it('uten handicap viser pillen bare fornavnet, og den åpner fortsatt profilen', async () => {
+  const withHcp = mockState.profile;
+  mockState.profile = { ...withHcp, hcpIndex: null };
+  try {
+    const { navigate, view } = renderHome();
+    await view;
+
+    const pill = await screen.findByTestId('open-profile');
+    await waitFor(() => expect(pill).toHaveTextContent('Sigrid'));
+    expect(pill).not.toHaveTextContent('HCP');
+    expect(pill.props.accessibilityLabel).toBe('Profil for Sigrid');
+    await fireEvent.press(pill);
+    expect(navigate).toHaveBeenCalledWith('Profile');
+  } finally {
+    mockState.profile = withHcp;
+  }
 });
 
 it('uten runde i gang står «Opprett spill» øverst, som før, også på et tomt Hjem', async () => {

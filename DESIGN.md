@@ -90,10 +90,9 @@ typography:
     fontWeight: 500
   kicker:
     fontFamily: "Inter, sans-serif"
-    fontSize: 10px
+    fontSize: 12px
     fontWeight: 600
-    letterSpacing: 0.2em
-    textTransform: uppercase
+    letterSpacing: 0
 
 rounded:
   md: 6px
@@ -212,9 +211,13 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
 - **Tall er hovedpersoner.** Et tall som er selve poenget (hull, score, total,
   handicap) får `.score-num` (serif, 600, tabulære sifre). Et tall i en setning får
   `.inline-num`. Kolonner med tall får alltid `tabular-nums`.
-- **Kicker** (`components/ui/Kicker.tsx`): 10 px Inter, 600, versaler, 0,2em sperring,
-  over overskrifter og seksjoner. Den bærer alltid informasjon, derfor `accent-text`
-  når den er gull.
+- **Kicker** (`components/ui/Kicker.tsx`): 12 px Inter, 600, setningsstor bokstav, ingen
+  sperring (`letterSpacing: 0`), over overskrifter og seksjoner. Det gjelder alle små
+  etiketter og tabelloverskrifter: «Pågår nå», «Spill · protokoll», «Navn», «Banehcp».
+  Ingen `uppercase`, ingen `tracking-*` på tekst; versaler står bare der teksten selv er
+  en forkortelse (HCP, SI, CTP, LD) og i logoen. Eieren valgte dette 2026-10-31 (#2728),
+  og det gjelder foran artboardene som tegnet 10 px, versaler og 0,2em sperring. Den
+  bærer alltid informasjon, derfor `accent-text` når den er gull.
 - **Overskrifter** bruker `text-wrap: pretty` globalt. Sidetittel via `PageHeader`
   (Fraunces 30 px, 500, stram sperring).
 - **Den grønne toppen på forsiden** (#2261) har to unntak: H1 bryter med

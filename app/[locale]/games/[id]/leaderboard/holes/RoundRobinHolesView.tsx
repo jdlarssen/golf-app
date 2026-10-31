@@ -208,7 +208,7 @@ function HoleCard({
           </div>
           {/* Delt eller venter; en side som vant markeres på selve siden. */}
           {hole.outcomeKey && (
-            <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">
+            <span className="text-xs font-semibold text-muted">
               {t(`roundRobin.${hole.outcomeKey}`)}
             </span>
           )}
@@ -243,7 +243,7 @@ function SideBlock({
       }`}
     >
       {isWinner && (
-        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">
+        <span className="mb-0.5 block text-xs font-semibold text-accent-text">
           {t('roundRobin.vantHulletLabel')}
         </span>
       )}

@@ -36,7 +36,7 @@ export function SimSettingsCard({
       >
         {groups.map((group, gi) => (
           <div key={group.key} className={gi === 0 ? '' : 'mt-3'}>
-            <p className="font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
+            <p className="font-sans text-xs leading-[15px] font-semibold text-muted">
               {group.label}
             </p>
             <dl className="mt-2 space-y-2 font-sans text-[13px] leading-[19.5px]">

@@ -34,7 +34,7 @@ export function SettingsDisclosure({
         {changedLabel && (
           <span
             data-testid={`${testId}-changed`}
-            className="inline-block whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-accent-text"
+            className="inline-block whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 font-sans text-xs leading-[15px] font-semibold text-accent-text"
           >
             {changedLabel}
           </span>

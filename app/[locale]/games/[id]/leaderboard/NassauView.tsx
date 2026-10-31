@@ -256,7 +256,7 @@ function SectionBlock({
         {hasPushWinner && (
           <span
             data-testid={`${testId}-push`}
-            className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted"
+            className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-semibold text-muted"
           >
             {t('nassau.sectionTied')}
           </span>
@@ -369,7 +369,7 @@ function SectionPlayerRow({
           <span className="score-num block text-[24px] leading-none tracking-[-0.02em] text-text tabular-nums">
             {headline.text}
           </span>
-          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <span className="mt-1 block text-xs font-semibold text-muted">
             {headline.unit === 'toPar' ? t('common.vsParLabel') : t('nassau.totalEffectiveStrokesLabel')}
           </span>
         </div>

@@ -17,7 +17,7 @@ export type CourseCardGridLabels = {
   sum?: string;
 };
 
-const ROW_LABEL = 'pl-1 text-left text-[10px] tracking-[0.1em] uppercase';
+const ROW_LABEL = 'pl-1 text-left text-xs font-semibold';
 
 /**
  * The course card's two scorecards (#2277): holes 1–9 (UT) and 10–18 (INN),
@@ -72,8 +72,8 @@ export function CourseCardGrid({
             <col className="w-[34px]" />
           </colgroup>
           <thead>
-            <tr className="text-[10px] tracking-[0.1em] text-muted">
-              <th scope="row" className={`${ROW_LABEL} font-normal`}>
+            <tr className="text-xs text-muted">
+              <th scope="row" className={ROW_LABEL}>
                 {labels.hole}
               </th>
               {half.holes.map((h) => (
@@ -85,7 +85,7 @@ export function CourseCardGrid({
                   text colour there to clear 4.5:1. */}
               <th
                 scope="col"
-                className="bg-surface-2 text-center font-normal uppercase dark:text-text"
+                className="bg-surface-2 text-center font-semibold dark:text-text"
               >
                 {half.sumLabel}
               </th>
@@ -129,7 +129,7 @@ function ParRow({
 }) {
   return (
     <tr className="h-[30px] border-t border-row-divider-warm font-serif text-[16px] text-text">
-      <th scope="row" className={`${ROW_LABEL} font-sans font-normal text-muted`}>
+      <th scope="row" className={`${ROW_LABEL} font-sans text-muted`}>
         {label}
       </th>
       {holes.map((h) => (
@@ -147,7 +147,7 @@ function ParRow({
 function IndexRow({ label, holes }: { label: string; holes: PublicCourseHole[] }) {
   return (
     <tr className="h-[26px] border-t border-row-divider-warm text-muted">
-      <th scope="row" className={`${ROW_LABEL} font-semibold`}>
+      <th scope="row" className={ROW_LABEL}>
         {label}
       </th>
       {holes.map((h) => (

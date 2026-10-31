@@ -54,7 +54,7 @@ export function useHoleModeContextLine(args: {
     return (
       <HoleContextLine testId="wolf-badge" accent>
         {wolfCatchUp && (
-          <span data-testid="wolf-catch-up" style={{ letterSpacing: '0.12em' }}>
+          <span data-testid="wolf-catch-up">
             {`${t('wolf.catchUpTag')} · `}
           </span>
         )}

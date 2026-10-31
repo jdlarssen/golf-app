@@ -82,7 +82,7 @@ export function CeremonyStage({
       className="flex h-full flex-col gap-[26px] px-12 py-10 leading-[normal]"
     >
       <div className="text-center">
-        <p className="text-[15px] font-semibold tracking-[0.34em] text-tv-text/75 uppercase">{t('title')}</p>
+        <p className="text-[15px] font-semibold text-tv-text/75">{t('title')}</p>
         <h1 className="mt-1.5 overflow-x-clip font-serif text-[52px] font-medium text-ellipsis whitespace-nowrap">
           {gameName}
         </h1>
@@ -153,7 +153,7 @@ export function CeremonyStage({
                 view.current === 'side' ? 'bg-tv-text/12 ring-2 ring-tv-text/35' : 'bg-tv-text/8'
               }`}
             >
-              <span className="text-[13px] font-semibold tracking-[0.2em] text-tv-text/75 uppercase">
+              <span className="text-[13px] font-semibold text-tv-text/75">
                 {sidePrizeLabel(p, { ld: tp('ldLabel'), ctp: tp('ctpLabel') })}
               </span>
               <br />
@@ -253,7 +253,7 @@ function ShownCard({
       <span className="sr-only">{srTitle}</span>
       <Medal slot={slot} size={size.medal} />
       {title && (
-        <p className="shrink-0 text-[15px] font-semibold tracking-[0.2em] text-tv-text/75 uppercase" aria-hidden>
+        <p className="shrink-0 text-[15px] font-semibold text-tv-text/75" aria-hidden>
           {title}
         </p>
       )}

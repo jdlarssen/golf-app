@@ -77,8 +77,8 @@ describe('RoundDiary', () => {
 
     expect(await screen.findByTestId('round-diary-subtitle')).toHaveTextContent('2 runder i 2026');
     expect(screen.getByTestId('form-card')).toBeTruthy();
-    expect(screen.getByText('september')).toBeTruthy();
-    expect(screen.getByText('juni 2025')).toBeTruthy();
+    expect(screen.getByText('September')).toBeTruthy();
+    expect(screen.getByText('Juni 2025')).toBeTruthy();
     // Poengene regnes bare for formatene der tavla viser poeng, og kommer inn
     // når de er regnet.
     expect(await screen.findByText('Byneset North · Stableford · 38 p')).toBeTruthy();

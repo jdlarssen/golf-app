@@ -292,7 +292,7 @@ function TeamRow({
             >
               {headline.text}
             </span>
-            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <span className="mt-1 block text-xs font-semibold text-muted">
               {headline.unit === 'toPar' ? t('common.vsParLabel') : t('patsome.totalLabel')}
             </span>
           </div>
@@ -329,7 +329,7 @@ function HoleRow({
           className="flex items-center gap-2 px-1 py-0.5"
         >
           <div className="h-px flex-1 bg-border" />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <span className="text-xs font-semibold text-muted">
             {isFirstGreensome
               ? SEGMENT_LABELS.greensome
               : SEGMENT_LABELS.foursomes}

@@ -158,7 +158,7 @@ export default async function TrekkFraPage({
       </div>
 
       <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
-        <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <p className="mb-2 font-sans text-xs font-semibold text-muted">
           {t('whatHappensLabel')}
         </p>
         {isActiveWithdrawable ? (

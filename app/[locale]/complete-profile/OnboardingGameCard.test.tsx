@@ -23,7 +23,7 @@ describe('OnboardingGameCard', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Lørdagsrunden venter på deg' }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('onboarding-game-date')).toHaveTextContent('4okt');
+    expect(screen.getByTestId('onboarding-game-date')).toHaveTextContent('4Okt');
     expect(screen.getByText('Byneset · kl. 00:30 · Stableford')).toBeInTheDocument();
 
     rerender(<OnboardingGameCard game={{ ...game, teeOffAt: null }} />);

@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react';
 import { LeaderboardFooter } from './LeaderboardFooter';
 
 // Status→nøkkel-mappingen er den eneste rene logikken i komponenten: ferdig
-// spill → «Vel spilt!», alt annet → «Lykke til.». Speiler matchplay-familiens
+// spill → «Vel spilt», alt annet → «Lykke til.». Speiler matchplay-familiens
 // hasDecidedWinner-ternær (#605).
 describe('LeaderboardFooter', () => {
-  it('viser «Vel spilt!» når spillet er ferdig', () => {
+  it('viser «Vel spilt» når spillet er ferdig', () => {
     render(<LeaderboardFooter gameStatus="finished" />);
     expect(screen.getByText(/Vel spilt/)).toBeInTheDocument();
     expect(screen.queryByText(/Lykke til/)).not.toBeInTheDocument();

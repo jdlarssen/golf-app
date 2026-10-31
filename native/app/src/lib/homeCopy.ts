@@ -7,8 +7,9 @@
 // `messages/no.json` i `homeCopy.test.ts`. Rettes en av dem på webben uten at
 // appen følger etter, blir testen rød.
 //
-// Hjem v2 (#2385) tok hilsenen og nærheten i billetten fra designlerretet: «God
-// morgen, Sigrid» etter klokka, og «om 7 dager» med liten forbokstav.
+// Hjem v2 (#2385) tok nærheten i billetten fra designlerretet: «om 7 dager» med
+// liten forbokstav. Hilsenen «God morgen, Sigrid» er borte igjen (eieren,
+// 31.10): tittelen er datoen, og fornavnet står i HCP-pillen.
 import type { TeeOffProximity } from '../../../../lib/format/teeOffProximity';
 import type { FinishedResultBadge } from '../../../../lib/games/finishedResultBadge';
 import { isPointsUnit, type LiveBoardUnit, type ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
@@ -16,7 +17,7 @@ import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
 import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const HOME_TEXT = {
-  /** Webbens `home.sectionInProgress`; kickeren settes i versaler av stilen. */
+  /** Webbens `home.sectionInProgress`; kickeren står i `ui.sectionHead`. */
   inProgress: 'Pågår nå',
   /** Webbens `home.sectionMyGames`. */
   myGames: 'Mine spill',
@@ -46,21 +47,14 @@ export const HOME_TEXT = {
   teamRound: 'Lagrunde',
 } as const;
 
-/**
- * Hilsenen øverst på Hjem skifter med klokka på telefonen, som «God morgen,
- * Sigrid» i designet: morgen fra 05 til 10, dag fra 10 til 18 og kveld fra 18
- * til 05.
- */
-export function greeting(name: string, now: Date): string {
-  const hour = now.getHours();
-  const part =
-    hour >= 5 && hour < 10 ? 'God morgen' : hour >= 10 && hour < 18 ? 'God dag' : 'God kveld';
-  return `${part}, ${name}`;
-}
-
 /** HCP-pillen er veien til profilen, og skjermleseren sier begge deler. */
 export function hcpA11yLabel(hcp: string): string {
   return `Profil, handicap ${hcp}`;
+}
+
+/** Uten handicap viser pillen bare navnet; den er fortsatt veien til profilen. */
+export function profileA11yLabel(name: string): string {
+  return `Profil for ${name}`;
 }
 
 export function continueOnHole(hole: number): string {

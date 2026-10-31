@@ -49,7 +49,7 @@ export function ElapsedPill({
   return (
     <span
       data-testid="pult-elapsed"
-      className="flex h-6 items-center gap-1.5 rounded-full bg-on-strong/14 px-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] tabular-nums"
+      className="flex h-6 items-center gap-1.5 rounded-full bg-on-strong/14 px-2.5 text-xs font-semibold tabular-nums"
     >
       <span aria-hidden className="size-1.5 rounded-full bg-live-dot" />
       {label}

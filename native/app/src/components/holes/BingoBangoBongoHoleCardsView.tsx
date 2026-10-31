@@ -9,7 +9,7 @@
 // - den som tok to eller tre av de tre: halvfett navn i `accentText` med en
 //   stjerne foran (også `accentText`: webbens stjerne arver navnets farge),
 //   skjult for skjermleseren som webbens `aria-hidden`;
-// - én tok alle tre: «★ Feiet!» i gullbrikka i hodet (webbens
+// - én tok alle tre: «★ Feiet» i gullbrikka i hodet (webbens
 //   `border-accent/40 bg-accent/[0.08]`, teksten leses opp som på webben);
 // - ingen av de tre er satt: «Venter» i hodet og «Ingen prestasjoner
 //   registrert ennå.» i stedet for radene.
@@ -33,7 +33,7 @@ export function BingoBangoBongoHoleCardsView({
   cards: BingoBangoBongoHoleCards;
   subtitle: string;
   players: readonly BundlePlayer[];
-  /** Runden er ferdig: bunnteksten sier «Vel spilt!». */
+  /** Runden er ferdig: bunnteksten sier «Vel spilt». */
   finished: boolean;
 }) {
   return (

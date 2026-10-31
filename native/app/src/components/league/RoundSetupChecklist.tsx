@@ -89,10 +89,8 @@ const styles = StyleSheet.create({
   where: { marginTop: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
   whereRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   whereKey: {
-    ...interLine(10, 15),
+    ...interLine(12, 18),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   // `.cl-where dd`: Fraunces 17/24 på tegningen. Appen har ikke et eget snitt
   // for 400 ved 17 (`fraunces-sizes.json`: 16 og 18), så den bruker 16/24 som
@@ -100,12 +98,10 @@ const styles = StyleSheet.create({
   whereValue: { ...fraunces(400, 16, 24, { multiline: true }), flexShrink: 1, textAlign: 'right' },
   groups: { marginTop: 20 },
   groupGap: { marginTop: 16 },
-  // `.sub`: små sperrede versaler, 8 under.
+  // `.sub`: liten etikett (12 pt), 8 under.
   group: {
-    ...interLine(10, 15),
+    ...interLine(12, 18),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
     marginBottom: 8,
   },
   // `.dl`: 13/19,5, 8 mellom radene.

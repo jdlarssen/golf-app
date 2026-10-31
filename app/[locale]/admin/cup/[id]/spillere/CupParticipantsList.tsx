@@ -116,7 +116,7 @@ export function CupParticipantsList({
       {/* Påmeldte */}
       <section>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <h2 className="font-sans text-xs font-semibold text-muted">
             {t('enrolledHeading')}
           </h2>
           <span
@@ -178,7 +178,7 @@ export function CupParticipantsList({
 
       {/* Legg til */}
       <section>
-        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+        <h2 className="font-sans text-xs font-semibold text-muted mb-2">
           {t('addHeading')}
         </h2>
         {candidateCount === 0 ? (

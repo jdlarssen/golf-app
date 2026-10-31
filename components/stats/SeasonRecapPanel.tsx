@@ -149,7 +149,7 @@ export function SeasonRecapPanel({ seasons }: Props) {
 
         {brags.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <p className="mb-2 font-sans text-xs font-semibold text-muted">
               {t('seasonBragderLabel')}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -183,7 +183,7 @@ function SeasonStatTile({
 }) {
   return (
     <div className="rounded-xl border border-border bg-bg/50 px-3 py-3 text-center">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1.5">
+      <p className="font-sans text-xs font-semibold text-muted leading-none mb-1.5">
         {label}
       </p>
       <p className="font-serif text-2xl font-medium text-text tabular-nums leading-none">

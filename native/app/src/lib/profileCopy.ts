@@ -276,7 +276,7 @@ export function onboardingGameTitle(gameName: string): string {
 }
 
 /**
- * Dato-ruta på spillkortet: «4» over «OKT» (stilen setter versalene). `null`
+ * Dato-ruta på spillkortet: «4» over «Okt». `null`
  * uten tee-off, og da står ingen rute. Enhetens lokaltid, som resten av appen
  * (`homeDates.ts`): Hermes har ikke Oslo-sonen.
  */
@@ -285,7 +285,8 @@ export function onboardingGameDate(teeOffAt: string | null): { day: string; mont
   const date = new Date(teeOffAt);
   if (Number.isNaN(date.getTime())) return null;
   // `formatShortDateNb` gir «4. okt»; månedsforkortelsen har ett hjem der.
-  const month = formatShortDateNb(date).split(' ')[1] ?? '';
+  const raw = formatShortDateNb(date).split(' ')[1] ?? '';
+  const month = raw.charAt(0).toUpperCase() + raw.slice(1);
   return { day: String(date.getDate()), month };
 }
 

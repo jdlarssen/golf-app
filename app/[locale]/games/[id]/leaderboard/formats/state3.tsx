@@ -234,7 +234,7 @@ export async function renderState3(opts: {
 
       <header className="mb-6 flex items-center justify-between gap-4">
         <BackLink href={backHref}>{tc('back')}</BackLink>
-        {/* Per design spec § state 3: kicker is the literal "LEADERBOARD"
+        {/* Per design spec § state 3: kicker is the literal «Leaderboard»
             section label (not the game name like state #2 uses). */}
         <Kicker tone="accent">{tc('leaderboardKicker')}</Kicker>
         <span className="w-12" aria-hidden />
@@ -386,7 +386,7 @@ export async function renderState35(opts: {
       {/* Champagne-pille for den åpne halvdelen — signaliserer at dette ikke
           er sluttstillingen. */}
       <div className="flex justify-center mb-5">
-        <span className="inline-flex items-center text-[11px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent-text border border-accent/30">
+        <span className="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full bg-accent/10 text-accent-text border border-accent/30">
           {halfLabel}
         </span>
       </div>

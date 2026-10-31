@@ -74,7 +74,7 @@ export function FormatGuideList({
       {entries.map((entry) => (
         <div key={entry.key}>
           {showSections && entry.sectionLabel && (
-            <h2 className="mb-3 mt-6 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted first:mt-0">
+            <h2 className="mb-3 mt-6 font-sans text-xs font-semibold text-muted first:mt-0">
               {entry.sectionLabel}
             </h2>
           )}

@@ -203,7 +203,7 @@ function TeamRow({
           <span className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums">
             {headline.text}
           </span>
-          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-xs font-semibold text-muted">
             {t(`common.${headline.labelKey}`)}
           </span>
         </div>

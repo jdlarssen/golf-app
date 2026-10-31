@@ -12,7 +12,7 @@
 // halvfet tekst. Til høyre står lagets netto og mot par. Skjermleseren får én
 // setning per spiller i stedet for tallene, som webbens `role="img"`.
 //
-// Webben har ingen «Vel spilt!» under drilldownen, så heller ikke appen.
+// Webben har ingen «Vel spilt» under drilldownen, så heller ikke appen.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { TeamLine } from '../../../../../lib/leaderboard';
@@ -325,15 +325,15 @@ function TeamNavButton({
 }
 
 const styles = StyleSheet.create({
-  /** Tørnys kicker, som webbens `text-[10px] font-semibold uppercase tracking-[0.2em]` (#2716). */
-  kicker: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 2, textTransform: 'uppercase' },
+  /** Tørnys kicker, som webbens `text-xs font-semibold` (#2716, #2728). */
+  kicker: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   rank: { ...fraunces(600, 48, 52), minWidth: 50, textAlign: 'center' },
   teamName: { ...fraunces(500, 22) },
   meta: { fontSize: 11.5, fontFamily: FONTS.sans, marginTop: 2 },
   heroRight: { marginLeft: 'auto', alignItems: 'flex-end' },
   heroTotal: { ...fraunces(600, 24) },
-  heroVsPar: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase', marginTop: 4 },
+  heroVsPar: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 4 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 14, rowGap: 4, paddingHorizontal: 4 },
   legendText: { fontSize: 10.5, fontFamily: FONTS.sans },
   // Står inni legenden på 10,5 pt; rundes til nærmeste snitt (11).
@@ -345,8 +345,8 @@ const styles = StyleSheet.create({
   holeRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
   holeCol: { width: 40, alignItems: 'center', justifyContent: 'center' },
   holeNumber: { ...fraunces(500, 15) },
-  /** «P4»: webbens `text-[11px] font-semibold uppercase tracking-[0.12em]`. */
-  parText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, marginTop: 2 },
+  /** «P4»: webbens `text-xs font-semibold`. */
+  parText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 2 },
   parAside: { fontSize: 8 },
   players: { flex: 1, justifyContent: 'center', gap: 6 },
   playerLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },

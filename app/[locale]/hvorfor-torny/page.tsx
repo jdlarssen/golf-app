@@ -187,7 +187,7 @@ export default async function HvorforTornyPage({
           <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
             <table className="w-full table-fixed">
               <thead>
-                <tr className="bg-surface-2 font-sans text-[10.5px] font-semibold uppercase tracking-[0.1em]">
+                <tr className="bg-surface-2 font-sans text-xs font-semibold">
                   <th scope="col" className="px-4 py-3 text-left">
                     <span className="sr-only">{t('matrix.featureCol')}</span>
                   </th>
@@ -236,7 +236,7 @@ export default async function HvorforTornyPage({
               <span className="font-serif text-[16px] font-medium text-text">
                 {t('board.cardTitle')}
               </span>
-              <span className="inline-flex items-center gap-1.5 font-sans text-[10.5px] font-semibold uppercase tracking-[0.1em] text-success-text">
+              <span className="inline-flex items-center gap-1.5 font-sans text-xs font-semibold text-success-text">
                 <span
                   aria-hidden
                   className="h-[7px] w-[7px] shrink-0 rounded-full bg-success"

@@ -11,6 +11,7 @@
   - + dark-mode varianter
 - Typografi: `font-serif` (Fraunces) for hierarki + tall, `font-sans` (Inter) for UI
 - Tall i tabeller/leaderboards: ALLTID `tabular-nums`
+- Små etiketter og tabelloverskrifter (kicker, seksjonsoverskrift, båndtekst, chip): 12 px/pt, vekt 600, setningsstor bokstav, ingen sperring. Aldri `uppercase`/`tracking-*` eller `textTransform: 'uppercase'`, og ikke skriv strenger i store bokstaver i katalogene. Versaler bare for forkortelser (HCP, SI, CTP, LD) og logoen. Eierens valg 2026-10-31 (#2728), foran artboardene. Detaljer i `DESIGN.md` (Typografi)
 - UI primitives: bruk eksisterende i `components/ui/` — ikke duplisér
 - Mobile-first, tap-targets ≥44px
 

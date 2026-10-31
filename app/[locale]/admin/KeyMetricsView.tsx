@@ -74,7 +74,7 @@ export function KeyMetricsView({
 
   return (
     <section className="mt-6" data-testid="key-metrics">
-      <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <p className="mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
         {t('keyMetricsLabel')}
       </p>
       <Card className="p-4 sm:p-5">

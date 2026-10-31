@@ -61,10 +61,8 @@ const handleStyle: CSSProperties = {
 
 const kickerStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.20em',
-  textTransform: 'uppercase',
   color: 'var(--accent-text)',
   marginBottom: 14,
 };

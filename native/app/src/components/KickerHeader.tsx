@@ -1,6 +1,6 @@
-// Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite sperret ord
-// i midten og ingen skillelinje. Ordet sier hvor du er («STARTBILLETT»,
-// «PROFIL», «MITT SCOREKORT»); sidens egen tittel står stort i innholdet
+// Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite ord (12 pt,
+// semibold, setningsstor bokstav) i midten og ingen skillelinje. Ordet sier hvor
+// du er («Startbillett», «Profil», «Mitt scorekort»); sidens egen tittel står stort i innholdet
 // (`PageTitle`). Én stil for alle: den delte `ui.kicker`.
 //
 // #2385 flyttet den hit fra `navigation.tsx`, så en skjerm kan sette ordet
@@ -388,17 +388,13 @@ const styles = StyleSheet.create({
   },
   pillDot: { width: 8, height: 8, borderRadius: 4 },
   pillText: {
-    ...interLine(11, 14),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.32,
-    textTransform: 'uppercase',
   },
   boardTitle: { paddingHorizontal: 12 },
   boardKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   boardHeading: { ...fraunces(600, 40, 42), marginTop: 4 + fraunces(600, 40, 42).marginTop },
   boardSubtitle: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 2 + interLine(13, 16).marginTop },
@@ -415,17 +411,13 @@ const styles = StyleSheet.create({
   },
   teamPillDot: { width: 6, height: 6, borderRadius: 3 },
   teamPillText: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   teamTitle: { paddingHorizontal: 12 },
   teamKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2.2,
-    textTransform: 'uppercase',
   },
   teamHeading: { ...fraunces(500, 28) },
   teamSubtitle: { ...interLine(13, 16), fontFamily: FONTS.sans },

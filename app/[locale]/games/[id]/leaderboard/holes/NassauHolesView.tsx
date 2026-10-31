@@ -159,7 +159,7 @@ function UnitsHeader({
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <p className="text-xs font-semibold text-muted">
           {t('nassau.sectionVunnetLabel')}
         </p>
         <ul
@@ -208,7 +208,7 @@ function UnitsHeader({
 function UnitDot({ label, won }: { label: string; won: boolean }) {
   return (
     <span
-      className={`inline-flex h-5 min-w-[26px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] tabular-nums ${
+      className={`inline-flex h-5 min-w-[26px] items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums ${
         won
           ? 'border border-accent/40 bg-accent/[0.10] text-accent-text'
           : 'border border-border bg-surface text-muted/50'
@@ -264,13 +264,13 @@ function SectionBlock({
         {cleanWinnerId && (
           <span
             data-testid={`${testId}-winner`}
-            className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text"
+            className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-xs font-semibold text-accent-text"
           >
             ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
         {isPush && (
-          <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-semibold text-muted">
             {t('nassau.sectionTied')}
           </span>
         )}
@@ -349,7 +349,7 @@ function SummaryStrip({
         );
       })}
       {headlineUnit(ranking) === 'toPar' && (
-        <li className="self-center text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">
+        <li className="self-center text-xs font-semibold text-muted">
           {tc('vsParLabel')}
         </li>
       )}
@@ -483,7 +483,7 @@ function TotalBlock({
           </p>
         </div>
         {cleanWinnerId && (
-          <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text">
+          <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-xs font-semibold text-accent-text">
             ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}

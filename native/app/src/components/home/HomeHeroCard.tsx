@@ -290,10 +290,8 @@ const styles = StyleSheet.create({
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   kicker: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
   },
   where: { flexShrink: 1, fontSize: 12, fontFamily: FONTS.sans, opacity: 0.85 },
   middle: { flexDirection: 'row', alignItems: 'center', gap: 18 },
@@ -301,10 +299,8 @@ const styles = StyleSheet.create({
   ringCenter: { position: 'absolute', alignItems: 'center' },
   // Designet: «HULL» 10 pt i nettleserens linje (12), og «8» på 40 med linje 1.
   ringKicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   ringNumber: {
     ...fraunces(600, 40, 40),

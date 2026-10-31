@@ -71,7 +71,7 @@ export function GettingStartedChecklist({
       <div className="mb-1.5 flex items-baseline justify-between gap-3 px-1">
         <p
           id="getting-started-heading"
-          className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
+          className="font-sans text-xs font-semibold text-muted"
         >
           {t('gettingStarted.heading')}
         </p>

@@ -60,7 +60,7 @@ export function SideWinnersForm({
 
       {ldCount > 0 && (
         <fieldset className="space-y-3">
-          <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <legend className="font-sans text-xs font-semibold text-muted">
             {t('longestDriveLabel')}
           </legend>
           {Array.from({ length: ldCount }, (_, i) => i + 1).map((pos) => (
@@ -91,7 +91,7 @@ export function SideWinnersForm({
 
       {ctpCount > 0 && (
         <fieldset className="space-y-3">
-          <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <legend className="font-sans text-xs font-semibold text-muted">
             {t('closestToPinLabel')}
           </legend>
           {Array.from({ length: ctpCount }, (_, i) => i + 1).map((pos) => (

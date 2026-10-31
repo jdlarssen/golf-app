@@ -64,9 +64,8 @@ const nameStyle: CSSProperties = {
 
 const badgeStyle: CSSProperties = {
   display: 'block',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.08em',
   color: 'var(--accent-text)',
 };
 

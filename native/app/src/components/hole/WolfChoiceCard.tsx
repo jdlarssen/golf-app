@@ -89,7 +89,7 @@ export function WolfChoiceCard({
           ]}
           testID="wolf-catch-up"
         >
-          CATCH-UP
+          Catch-up
         </Text>
       ) : null}
 
@@ -242,9 +242,8 @@ const styles = StyleSheet.create({
   choices: { gap: 8 },
   tag: {
     alignSelf: 'flex-start',
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.3,
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,

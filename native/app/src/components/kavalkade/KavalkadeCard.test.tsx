@@ -82,18 +82,18 @@ describe('kavalkadeCardBody', () => {
 describe('KavalkadeCard', () => {
   it('draws the opening with the narrative, read as one sentence with its place', async () => {
     await render(<KavalkadeCard card={card('year')} position="Kort 1 av 5" />);
-    expect(screen.getByText('ÅRET DITT')).toBeTruthy();
+    expect(screen.getByText('Året ditt')).toBeTruthy();
     expect(screen.getByTestId('kavalkade-narrative')).toHaveTextContent('Et år å huske.');
     expect(screen.getByLabelText('Kort 1 av 5. Året ditt. 2026. 12 runder. 10 med egen ball. 2 som lag. Et år å huske.')).toBeTruthy();
   });
 
   it('draws start, now and best under the form peak', async () => {
     await render(<KavalkadeCard card={card('form-peak')} position="Kort 5 av 6" action={null} />);
-    expect(screen.getByText('START')).toBeTruthy();
+    expect(screen.getByText('Start')).toBeTruthy();
     expect(screen.getByText('92')).toBeTruthy();
-    expect(screen.getByText('NÅ')).toBeTruthy();
+    expect(screen.getByText('Nå')).toBeTruthy();
     expect(screen.getByText('86')).toBeTruthy();
-    expect(screen.getByText('BESTE')).toBeTruthy();
+    expect(screen.getByText('Beste')).toBeTruthy();
     expect(kavalkadeCardLabel(kavalkadeCardBody(card('form-peak')), 'Kort 5 av 6')).toBe(
       'Kort 5 av 6. Formtoppen. 84 slag i snitt. Beste strekk på 3 runder. 1. jun – 1. jul. Start 92. Nå 86. Beste 82',
     );

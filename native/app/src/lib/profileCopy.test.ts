@@ -407,7 +407,7 @@ describe('onboardingPreviewHcp', () => {
 // klokkeslettet her er UTC; på telefonen er det enhetens egen tid.
 describe('spillkortet', () => {
   it('dato-ruta har dagen og månedsforkortelsen', () => {
-    expect(onboardingGameDate('2026-10-04T07:20:00Z')).toEqual({ day: '4', month: 'okt' });
+    expect(onboardingGameDate('2026-10-04T07:20:00Z')).toEqual({ day: '4', month: 'Okt' });
   });
 
   it.each([null, 'ikke en dato'])('ingen dato-rute uten gyldig tee-off (%p)', (teeOffAt) => {

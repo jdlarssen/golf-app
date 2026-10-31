@@ -1,4 +1,5 @@
 import type { InboxAvatar } from '@/lib/notifications/inboxSections';
+import { NotificationIcon } from './NotificationIcon';
 
 /**
  * The 30 px discs at the start of an inbox row (#2263, artboard «Forslag:
@@ -41,7 +42,7 @@ export function InitialsStack({ initials, more }: { initials: string[]; more: nu
   );
 }
 
-/** The disc for any row: initials, the place on a result, or the kind's emoji. */
+/** The disc for any row: initials, the place on a result, or the kind's drawn icon. */
 export function InboxAvatarDisc({ avatar }: { avatar: InboxAvatar }) {
   switch (avatar.kind) {
     case 'people':
@@ -56,10 +57,14 @@ export function InboxAvatarDisc({ avatar }: { avatar: InboxAvatar }) {
           {avatar.rank}
         </span>
       );
-    case 'emoji':
+    case 'icon':
       return (
-        <span aria-hidden className={`${SHAPE} bg-place-disc`}>
-          <span className="text-[15px] leading-none">{avatar.emoji}</span>
+        <span
+          aria-hidden
+          data-testid="icon-disc"
+          className={`${SHAPE} bg-place-disc text-primary dark:text-text`}
+        >
+          <NotificationIcon name={avatar.icon} />
         </span>
       );
   }

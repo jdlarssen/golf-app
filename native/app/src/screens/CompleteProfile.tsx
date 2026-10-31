@@ -310,10 +310,8 @@ const styles = StyleSheet.create({
   },
   dateDay: { ...fraunces(600, 18, 18) },
   dateMonth: {
-    fontSize: 9,
+    fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.08,
-    textTransform: 'uppercase',
   },
   gameText: { flex: 1 },
   gameTitle: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sansSemiBold },

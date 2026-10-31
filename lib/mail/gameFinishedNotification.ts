@@ -293,7 +293,7 @@ export async function sendGameFinishedNotification(
   // (`margin:24px 0`) slik at en test-extractor kan matche denne blokken
   // uten å kollidere med body-line-paragrafens `margin:0 0 24px`-regex.
   const reportHtml = roundReport
-    ? `<p style="font-size:10px;font-weight:600;color:#4A3F30;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.2em;">
+    ? `<p style="font-size:12px;font-weight:600;color:#4A3F30;margin:0 0 8px;">
               ${escapeHtml(t('gameFinished.reportHeading'))}
             </p>
             <blockquote style="margin:24px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A2E1F;">${escapeHtml(roundReport)}</blockquote>`

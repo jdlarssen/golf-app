@@ -158,7 +158,7 @@ export function ScoringRulesPanel({
       <div className="space-y-3 border-t border-border px-3 py-3">
         {visibleGroups.map(({ group, visibleRows }) => (
           <section key={group.id}>
-            <h3 className="mb-1 font-sans text-xs uppercase tracking-wide font-semibold text-muted">
+            <h3 className="mb-1 font-sans text-xs font-semibold text-muted">
               {t(group.titleKey as Parameters<typeof t>[0])}
               {group.hintKey && (
                 <span className="ml-2 normal-case tracking-normal font-normal text-muted">

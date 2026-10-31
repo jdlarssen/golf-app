@@ -138,7 +138,7 @@ export function SettlementTable({
           teeth along the bottom edge. */}
       <div className="mx-1.5 mt-4 drop-shadow-[0_10px_24px_rgba(26,46,31,0.12)]">
         <div className="bg-[var(--receipt-paper)] px-[18px] pt-5">
-          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-muted">
+          <p className="text-center text-xs font-semibold text-muted">
             {t('receiptKicker')}
           </p>
           <p className="mt-1 text-center font-serif text-[18px] font-medium">

@@ -2,7 +2,7 @@
 // scorekortets spillnavn i Fraunces øverst i innholdet, med en undertekst når
 // siden har det. Profilen har sin egen tittelrad med «Rediger» (Profil v2).
 //
-// Toppen over (tilbake-pila og det lille sperrede ordet) er navigatorens
+// Toppen over (tilbake-pila og det lille ordet) er navigatorens
 // header (`kickerHeader`, fra #2255). Tittelen står i innholdet, som i
 // designet, og ruller med siden.
 //

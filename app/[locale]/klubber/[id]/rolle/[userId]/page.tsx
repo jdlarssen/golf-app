@@ -105,7 +105,7 @@ export default async function EndreMedlemsrollePage({
           <input type="hidden" name="targetUserId" value={targetUserId} />
 
           <fieldset className="space-y-2">
-            <legend className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <legend className="mb-2 font-sans text-xs font-semibold text-muted">
               {t('newRoleLegend')}
             </legend>
 

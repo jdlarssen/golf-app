@@ -11,7 +11,7 @@ import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
 import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const TICKET_TEXT = {
-  // Feltene på billetten. Stilen setter dem i versaler.
+  // Feltene på billetten, små etiketter i setningsstor bokstav.
   start: 'Start',
   /** Webbens `game.home.flightValueLabel`. */
   flight: 'Flight',
@@ -25,7 +25,7 @@ export const TICKET_TEXT = {
   noValue: '—',
   /** Det samme for skjermleseren, som ellers leser streken høyt. */
   noValueSpoken: 'ikke vist',
-  /** Webbens `game.home.registered` («DU ER PÅMELDT»), i setningsform. */
+  /** Webbens `game.home.registered`. */
   registered: 'Du er påmeldt',
   /** Webbens `game.home.viewOnMap`. */
   viewOnMap: 'Vis på kart',
@@ -51,7 +51,7 @@ export const TICKET_TEXT = {
   tileScorecard: 'Scorekort',
   tileRules: 'Regler',
   roster: 'Spillere',
-  /** Toppen av spillets side (designet: «STARTBILLETT», satt i versaler av stilen). */
+  /** Toppen av spillets side (designet: «Startbillett», liten etikett). */
   topTitle: 'Startbillett',
   /** Del-knappen øverst til høyre (designets `aria-label`). */
   share: 'Del spillet',

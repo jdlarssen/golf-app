@@ -151,7 +151,7 @@ function HoleCard({
             </span>
           </div>
           {hole.stake != null && (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-xs font-semibold text-accent-text tabular-nums">
               {hole.stake}x
             </span>
           )}
@@ -210,7 +210,7 @@ function HoleCard({
                     {name}
                   </span>
                   {cell.side != null && (
-                    <span className="shrink-0 text-[11px] uppercase tracking-[0.1em] text-muted">
+                    <span className="shrink-0 text-xs font-semibold text-muted">
                       {cell.side === 'wolf' ? t('wolf.wolfSide') : t('wolf.andreSide')}
                     </span>
                   )}

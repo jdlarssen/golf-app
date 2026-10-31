@@ -28,7 +28,7 @@ type Props = {
   id?: string;
   /**
    * `segments` (default): the profile page's equal-width tiles under an
-   * uppercase micro-label. `pills` (#2321): the new-game wizard's auto-width
+   * 12 px semibold label. `pills` (#2321): the new-game wizard's auto-width
    * 44 px pills under a 14 px / 600 heading, as «Tee-kategori» on the guest
    * form — the pill classes are `Button size="chip"`'s.
    */
@@ -110,7 +110,7 @@ export function SegmentedField({
 
   return (
     <fieldset id={id} disabled={disabled}>
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <legend className="font-sans text-xs font-semibold text-muted">
         {legend}
       </legend>
       <div

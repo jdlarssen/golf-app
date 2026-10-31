@@ -36,9 +36,7 @@ const LAST_HOLE = 18;
 const HOLE_NUMBERS = Array.from({ length: LAST_HOLE }, (_, i) => i + 1);
 
 /**
- * Den faste teksten på kortet. Kickerne står i vanlig skrift her og i versaler
- * på skjermen (`textTransform`), som resten av appen: da leser VoiceOver ord,
- * ikke bokstaver.
+ * Den faste teksten på kortet. Kickerne står i vanlig skrift, slik de vises.
  */
 export const ROUND_DONE_TEXT = {
   kicker: `Hull ${LAST_HOLE} · runden er ferdig`,

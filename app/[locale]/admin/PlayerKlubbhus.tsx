@@ -1,5 +1,6 @@
 import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { formatWeekdayDayMonthOsloLocale } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
 import { getNextClubRounds } from '@/lib/clubs/getNextClubRounds';
@@ -17,11 +18,10 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { SectionError } from '@/components/ui/SectionError';
 import { ArrangedRoundsSkeleton, ArrangedRoundsView } from '@/components/games/ArrangedRoundsView';
-import { firstName } from '@/lib/firstName';
 import type { AppLocale } from '@/i18n/routing';
 import { type AdminRoleContext } from '@/lib/admin/auth';
 import {
-  GreetingView,
+  RoomTitleView,
   NewRoundCard,
   NewRoundCardSkeleton,
   ClubsView,
@@ -36,7 +36,7 @@ import {
 
 /**
  * Player (non-admin) view of the universal Klubbhuset room (#392, #892),
- * redrawn as the room where your rounds live (#2493): greeting, the one door
+ * redrawn as the room where your rounds live (#2493): title, the one door
  * for a new round, «Rundene dine» (the same view and read as /klubbhuset,
  * #2269), your clubs with numbers, your cups with progress, and tools.
  *
@@ -46,7 +46,7 @@ import {
  * version (one own round, your clubs, your cup ids); the card comes with that
  * choice, and «Rundene dine», the clubs and the cups each stream behind their
  * own Suspense, from reads started at once and shared through a request cache.
- * The greeting paints at once. A failed read gives an error box in that section
+ * The title paints at once. A failed read gives an error box in that section
  * alone (#2490), never the new player's version.
  *
  * Reads with the admin client, each with its gate:
@@ -84,7 +84,7 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
     <AdminShell tone="app">
       <TopBar kicker={tNav('klubbhus')} />
 
-      <GreetingView name={firstName(role.name)} />
+      <RoomTitleView title={formatWeekdayDayMonthOsloLocale(new Date(), (await getLocale()) as AppLocale)} />
 
       <Suspense fallback={<NewRoundCardSkeleton />}>
         <TopSection userId={userId} />

@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/Card';
+import { FlammeIcon } from '@/components/icons/Icons';
 import { MIN_STREAK_WEEKS, type StreakSummary } from '@/lib/stats/streak';
 
 type Props = {
@@ -48,9 +49,7 @@ export function StreakPanel({
               data-testid="streak-active"
               className="flex items-baseline gap-2"
             >
-              <span aria-hidden className="text-2xl leading-none">
-                🔥
-              </span>
+              <FlammeIcon size={28} className="shrink-0 self-center text-accent-text" />
               <span className="font-serif text-3xl font-medium tabular-nums leading-none text-accent-text">
                 {summary.weeklyStreak}
               </span>

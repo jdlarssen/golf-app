@@ -186,7 +186,9 @@ describe('NassauView', () => {
     expect(front9Rows[0].textContent).toContain('9 hull spilt');
 
     // Header-sub-tittel inneholder Nassau + Netto.
-    expect(screen.getByText(/Nassau/)).toBeInTheDocument();
+    // The game name in the kicker is no longer upper-cased (#2728), so it also
+    // contains «Nassau»; match the subtitle by its separator.
+    expect(screen.getByText(/Nassau · Netto/)).toBeInTheDocument();
     expect(screen.getByText(/Netto/)).toBeInTheDocument();
 
     unmount();

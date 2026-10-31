@@ -101,7 +101,7 @@ export function RoundStartClient({
         )
       ) : (
         <fieldset className="space-y-2">
-          <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2 block">
+          <legend className="font-sans text-xs font-semibold text-muted mb-2 block">
             {t('coPlayersLegend')}
           </legend>
           {coPlayers.length > PICKER_VISIBLE_ROWS && (

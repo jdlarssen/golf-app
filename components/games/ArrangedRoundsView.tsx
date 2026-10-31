@@ -114,7 +114,7 @@ export function ArrangedRoundsView({
                         <span className="min-w-0 text-[15px] font-semibold leading-[normal]">{name}</span>
                         <span
                           data-testid="arranged-live-badge"
-                          className="flex h-5 shrink-0 items-center rounded-full bg-primary-soft px-[7px] text-[10px] font-semibold leading-[normal] tracking-[0.12em] text-primary"
+                          className="flex h-5 shrink-0 items-center rounded-full bg-primary-soft px-[7px] text-xs font-semibold leading-[normal] text-primary"
                         >
                           {t('liveBadge')}
                         </span>
@@ -245,7 +245,7 @@ export function RoomGroupHeading({
     <div className="flex items-baseline justify-between pt-[18px] pb-2">
       <h2
         id={id}
-        className="text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+        className="text-xs font-semibold leading-[normal] text-muted"
       >
         {children}
       </h2>
@@ -327,7 +327,7 @@ function UpcomingRow({
       >
         {block ? (
           <>
-            <span className="text-[10px] font-semibold leading-[normal] tracking-[0.12em] text-muted">
+            <span className="text-xs font-semibold leading-[normal] text-muted">
               {block.weekday}
             </span>
             <span className="font-serif text-[17px] font-semibold leading-[normal] tabular-nums">

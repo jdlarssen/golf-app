@@ -227,7 +227,7 @@ export function friendsSubtitle(count: number): string {
   return `${count} venner · de dukker opp når du fyller lag`;
 }
 
-/** «Vennene dine · 12» (versaler kommer fra stilen). */
+/** «Vennene dine · 12» (i `ui.kicker`). */
 export function friendsSectionTitle(count: number): string {
   return `${FRIENDS_TEXT.friendsSection} · ${count}`;
 }

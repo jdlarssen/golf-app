@@ -1,5 +1,5 @@
 // «Trukne spillere» under tavla (#1954 A3), webbens `WithdrawnPlayersSection`
-// i appens drakt: overskrift i små versaler, et kort med én rad per spiller og
+// i appens drakt: overskrift som liten etikett, et kort med én rad per spiller og
 // merket «Trukket» uten plassering. Lista og regelen for hvilke formater som
 // har den, kommer fra `lib/withdrawnBoard.ts`. Tom liste tegner ingenting.
 import { StyleSheet, Text, View } from 'react-native';

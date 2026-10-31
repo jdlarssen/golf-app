@@ -208,7 +208,7 @@ function StepIndicator({
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
+    <h2 className="font-sans text-xs font-semibold text-muted mb-3">
       {children}
     </h2>
   );
@@ -320,13 +320,13 @@ function Step1Roster({
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 text-center">
         <div className="rounded-xl border border-border p-3">
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <p className="font-sans text-xs font-semibold text-muted">
             {team1Name}
           </p>
           <p className="font-serif text-3xl tabular-nums text-primary mt-1">{team1Count}</p>
         </div>
         <div className="rounded-xl border border-border p-3">
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <p className="font-sans text-xs font-semibold text-muted">
             {team2Name}
           </p>
           <p className="font-serif text-3xl tabular-nums text-primary mt-1">{team2Count}</p>
@@ -476,7 +476,7 @@ function Step2Preview({
       <div className="space-y-5">
         {Array.from(byFormat.entries()).map(([format, formatMatches]) => (
           <div key={format}>
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+            <p className="font-sans text-xs font-semibold text-muted mb-2">
               {FORMAT_LABELS[format]}
             </p>
             <div className="space-y-3">
@@ -493,7 +493,7 @@ function Step2Preview({
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                       {/* Side 1 */}
                       <div className="space-y-1.5">
-                        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                        <p className="font-sans text-xs font-semibold text-muted">
                           {team1Name}
                         </p>
                         {match.side1.map((uid, idx) => (
@@ -530,7 +530,7 @@ function Step2Preview({
 
                       {/* Side 2 */}
                       <div className="space-y-1.5">
-                        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                        <p className="font-sans text-xs font-semibold text-muted">
                           {team2Name}
                         </p>
                         {match.side2.map((uid, idx) => (
@@ -871,7 +871,7 @@ function Step2BundlePreview({
 
           return (
             <div key={flight.flightIndex}>
-              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+              <p className="font-sans text-xs font-semibold text-muted mb-2">
                 {t('generate.flightHeading', { n: flight.flightIndex })}
               </p>
               <div className="space-y-3">
@@ -885,11 +885,11 @@ function Step2BundlePreview({
                     {t('generate.lineupHeading')}
                   </p>
                   <div className="grid grid-cols-[1fr_auto_1fr] gap-2 mb-1.5">
-                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    <p className="font-sans text-xs font-semibold text-muted">
                       {team1Name}
                     </p>
                     <span />
-                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted text-right">
+                    <p className="font-sans text-xs font-semibold text-muted text-right">
                       {team2Name}
                     </p>
                   </div>

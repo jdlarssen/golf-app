@@ -51,7 +51,7 @@ export function WolfHoleCardsView({
   cards: WolfHoleCards;
   subtitle: string;
   players: readonly BundlePlayer[];
-  /** Runden er ferdig: bunnteksten sier «Vel spilt!». */
+  /** Runden er ferdig: bunnteksten sier «Vel spilt». */
   finished: boolean;
 }) {
   return (
@@ -150,5 +150,5 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
 const styles = StyleSheet.create({
   wolfLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, rowGap: 4 },
   dot: { opacity: 0.4 },
-  side: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1.1, textTransform: 'uppercase', flexShrink: 0 },
+  side: { fontSize: 12, fontFamily: FONTS.sansSemiBold, flexShrink: 0 },
 });

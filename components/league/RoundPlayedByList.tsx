@@ -34,7 +34,7 @@ export function RoundPlayedByList({
     <dl className="mt-4 pt-4 border-t border-border space-y-1.5" data-testid="liga-round-played-by">
       {visible.map((row) => (
         <div key={row.key} className="flex items-baseline gap-3" data-testid={`liga-played-by-${row.key}`}>
-          <dt className="w-[72px] shrink-0 font-sans text-[10px] leading-[15px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <dt className="w-[72px] shrink-0 font-sans text-xs leading-[15px] font-semibold text-muted">
             {row.label}
           </dt>
           <dd className="font-sans text-[13px] leading-[19.5px] text-text">

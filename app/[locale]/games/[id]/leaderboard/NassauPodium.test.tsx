@@ -148,7 +148,7 @@ describe('NassauPodium', () => {
 
     // Sweep-celebration vises med kompis-ethos-tekst.
     const sweep = screen.getByTestId('nassau-sweep');
-    expect(sweep.textContent).toContain('Hele tavla!');
+    expect(sweep.textContent).toContain('Hele tavla');
     expect(sweep.textContent).toContain('Alice Andersen');
     expect(sweep.textContent).toMatch(/Tok alle tre seksjoner/i);
 

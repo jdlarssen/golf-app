@@ -107,12 +107,10 @@ const styles = StyleSheet.create({
   // kortet, også på en smal skjerm.
   summaryText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sansMedium, flexShrink: 1 },
   chevron: { marginLeft: 'auto', flexShrink: 0 },
-  // Fanenavnet over gruppa: små sperrede versaler, som tegningenes `.who-k`.
+  // Fanenavnet over gruppa: liten etikett (12 pt), som tegningenes `.who-k`.
   group: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
     paddingTop: 12,
     paddingBottom: 4,
     paddingHorizontal: 16,

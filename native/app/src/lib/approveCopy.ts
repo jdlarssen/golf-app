@@ -13,7 +13,7 @@ export const APPROVE_TEXT = {
   approve: 'Godkjenn',
   sendBack: 'Send tilbake',
   working: 'Jobber …',
-  /** Seksjonene, skrevet med `ui.kicker` (versaler). */
+  /** Seksjonene, skrevet med `ui.kicker`. */
   waitingAlso: 'Venter også',
   approvedByYou: 'Du har godkjent',
   notDeliveredYet: 'Ikke levert ennå',

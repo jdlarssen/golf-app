@@ -166,7 +166,7 @@ export function ScheduledWaitingRoom({
       {/* #543: flight-velger — kun når spillet trenger inndeling */}
       {flightOptions && flightOptions.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
-          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+          <p className="font-sans text-xs font-semibold text-muted mb-3">
             {t('joinFlightLabel')}
           </p>
           {joinError && (
@@ -198,7 +198,7 @@ export function ScheduledWaitingRoom({
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                        <span className="font-sans text-xs font-semibold text-muted">
                           {t('flightLabel', { number: opt.flightNumber })}
                         </span>
                         {opt.memberNames.length > 0 && (
@@ -212,12 +212,12 @@ export function ScheduledWaitingRoom({
                           {opt.memberCount}/{MAX_FLIGHT_SIZE}
                         </span>
                         {isMine && (
-                          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">
+                          <p className="font-sans text-xs font-semibold text-accent-text">
                             {t('flightYours')}
                           </p>
                         )}
                         {isFull && !isMine && (
-                          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                          <p className="font-sans text-xs font-semibold text-muted">
                             {t('flightFull')}
                           </p>
                         )}

@@ -63,8 +63,8 @@ export default async function SpillArkivPage() {
           {groups.map((group) => (
             <section key={group.key}>
               <div className="mb-3 flex items-center gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  {group.label}
+                <p className="text-xs font-semibold text-muted">
+                  {group.label.charAt(0).toLocaleUpperCase(locale) + group.label.slice(1)}
                 </p>
                 <div className="h-px flex-1 bg-border" />
               </div>

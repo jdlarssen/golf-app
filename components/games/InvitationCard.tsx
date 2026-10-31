@@ -16,7 +16,7 @@ export type InvitationCardVariant = 'invite' | 'public' | 'member';
 const NO_PLAY_STYLE: ReadonlySet<GameMode> = new Set(['wolf', 'round_robin']);
 
 const TERM =
-  'text-[10px] leading-[normal] font-semibold tracking-[0.18em] text-muted uppercase';
+  'text-xs leading-[normal] font-semibold text-muted';
 const VALUE = 'font-serif text-[22px] leading-[normal] font-semibold';
 
 const AVATAR_DOTS = [
@@ -83,7 +83,7 @@ export function InvitationCard({
         <div className="rounded-[3px] border border-primary p-1">
           <div className="flex flex-col items-center gap-2.5 rounded-[2px] border border-primary/35 px-[18px] pt-5 pb-[18px] text-center">
             {variant !== 'member' && (
-              <p className="text-[10px] leading-[normal] font-semibold tracking-[0.32em] text-muted uppercase">
+              <p className="text-xs leading-[normal] font-semibold text-muted">
                 {t(variant === 'invite' ? 'kicker.invite' : 'kicker.public')}
               </p>
             )}

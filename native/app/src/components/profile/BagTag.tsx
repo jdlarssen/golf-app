@@ -372,12 +372,10 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   identity: { flexShrink: 1 },
   kicker: {
-    fontSize: 10,
-    lineHeight: 12,
-    minHeight: 12,
+    fontSize: 12,
+    lineHeight: 15,
+    minHeight: 15,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   // Et tomt navn (mens raden lastes) holder linja.
   name: {
@@ -397,15 +395,13 @@ const styles = StyleSheet.create({
   side: { fontSize: 11, lineHeight: 13, fontFamily: FONTS.sans, opacity: 0.9, textAlign: 'right' },
   sideLink: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline', opacity: 1 },
   hcpLabel: {
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 12,
+    lineHeight: 15,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   hcpValue: { ...HCP_VALUE, letterSpacing: -1.28 },
   // Samme høyde som etikett + tall, så kortet står stille mens raden lastes.
-  hcpPlaceholder: { height: 12 + HCP_LINE },
+  hcpPlaceholder: { height: 15 + HCP_LINE },
   ring: {
     width: RING,
     height: RING,

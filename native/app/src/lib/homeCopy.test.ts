@@ -14,11 +14,11 @@ import {
   companionsLabel,
   continueOnHole,
   finishedResultText,
-  greeting,
   hcpA11yLabel,
   holesPlayedLine,
   moreAvatars,
   placeLine,
+  profileA11yLabel,
   proximityText,
   ringNextLabel,
   standingDetail,
@@ -120,19 +120,9 @@ describe('startbodens egne tekster', () => {
     }
   });
 
-  it('hilsenen følger klokka: morgen 05–10, dag 10–18, kveld 18–05', () => {
-    const at = (hour: number, minute = 0) => greeting('Sigrid', new Date(2026, 8, 27, hour, minute));
-    expect(at(4, 59)).toBe('God kveld, Sigrid');
-    expect(at(5)).toBe('God morgen, Sigrid');
-    expect(at(9, 59)).toBe('God morgen, Sigrid');
-    expect(at(10)).toBe('God dag, Sigrid');
-    expect(at(17, 59)).toBe('God dag, Sigrid');
-    expect(at(18)).toBe('God kveld, Sigrid');
-    expect(at(0)).toBe('God kveld, Sigrid');
-  });
-
   it('HCP-pillen leses som veien til profilen', () => {
     expect(hcpA11yLabel('14,2')).toBe('Profil, handicap 14,2');
+    expect(profileA11yLabel('Sigrid')).toBe('Profil for Sigrid');
   });
 
   it('knapp, ring og hull-linje', () => {

@@ -2108,7 +2108,7 @@ export function WizardTopBar({
         )}
         <p
           id={kickerId}
-          className="font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+          className="font-sans text-xs font-semibold leading-[normal] text-muted"
         >
           {kicker}
         </p>

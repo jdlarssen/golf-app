@@ -124,7 +124,7 @@ export function FormatHelper({
         data-testid="format-helper-result"
         className="-mx-1 mt-5 flex flex-col gap-2.5 rounded-[18px] border-2 border-primary bg-surface p-4"
       >
-        <p className="font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-primary">
+        <p className="font-sans text-xs font-semibold leading-[normal] text-primary">
           {labels.resultKicker}
         </p>
         <div className="flex items-start justify-between gap-2.5">

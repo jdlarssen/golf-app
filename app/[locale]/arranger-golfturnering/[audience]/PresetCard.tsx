@@ -33,7 +33,7 @@ export function PresetCard({ audience }: { audience: ArrangeAudience }) {
       // ends in mb-8, and the two margins collapse to 32 − 16 = 16.
       className="-mx-1 -mt-4 flex flex-col gap-3 rounded-[18px] bg-surface-strong p-4 text-on-strong dark:ring-1 dark:ring-border"
     >
-      <Kicker tone="onStrong" id={kickerId} className="tracking-[0.22em]!">
+      <Kicker tone="onStrong" id={kickerId}>
         {t('preset.kicker')}
       </Kicker>
       <p className="font-serif text-[24px] font-medium leading-[1.15]">

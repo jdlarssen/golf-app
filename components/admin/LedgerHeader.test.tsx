@@ -27,7 +27,7 @@ describe('LedgerHeader', () => {
     expect(headerDiv?.style.gridTemplateColumns).toBe('1fr 64px 14px');
   });
 
-  it('bruker tracking-utility (ikke inline letterSpacing) for ledger-stilen', () => {
+  it('setter kolonnetitlene som 12 px semibold i setningsstor bokstav, uten sperring (#2728)', () => {
     const { container } = render(
       <LedgerHeader
         leftLabel="Spill"
@@ -36,7 +36,10 @@ describe('LedgerHeader', () => {
       />,
     );
     const leftSpan = screen.getByText('Spill');
-    expect(leftSpan.className).toContain('tracking-[0.2em]');
+    expect(leftSpan.className).toContain('text-xs');
+    expect(leftSpan.className).toContain('font-semibold');
+    expect(leftSpan.className).not.toContain('uppercase');
+    expect(leftSpan.className).not.toContain('tracking-');
     expect(leftSpan.style.letterSpacing).toBe('');
     const headerDiv = container.querySelector('div');
     expect(headerDiv?.style.background).toContain('var(--surface-strong)');

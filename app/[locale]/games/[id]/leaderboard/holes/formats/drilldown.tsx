@@ -211,7 +211,7 @@ function DrilldownView({
             href={leaderboardHref({ gameId, mode, context: navContext })}
             label={t('backAriaLabel')}
           />
-          <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <span className="flex-1 truncate text-center text-xs font-semibold text-muted">
             {t('teamHeader', { number: view.teamNumber, rank: view.rank })}
           </span>
           <LeaderboardBackLinkSpacer />
@@ -245,12 +245,12 @@ function DrilldownView({
               {headline.text}
             </span>
             <span
-              className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
+              className="mt-1 block text-xs font-semibold tabular-nums text-muted"
               data-testid={toParFirst ? 'drilldown-team-total' : 'drilldown-team-vs-par'}
             >
               {toParFirst
                 ? `${tc('vsParLabel')} · ${view.total} ${tc('slagLabel')}`
-                : `${formatVsPar(view.totalVsPar)} PAR`}
+                : `${formatVsPar(view.totalVsPar)} par`}
             </span>
           </div>
         </div>
@@ -270,7 +270,7 @@ function DrilldownView({
             skjules hele UT-seksjonen i stedet for å rendre en tom tabell. */}
         {front && (
           <>
-            <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <div className="px-5 pt-1.5 text-xs font-semibold text-muted">
               {t('frontNineLabel')}
             </div>
             <HoleTable nine={front} summaryLabel={t('summaryUt')} />
@@ -282,7 +282,7 @@ function DrilldownView({
             ingen, back9-spill får sine her). */}
         {back && (
           <>
-            <div className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <div className="px-5 pt-5 pb-1.5 text-xs font-semibold text-muted">
               {t('backNineLabel')}
             </div>
             <HoleTable nine={back} summaryLabel={t('summaryInn')} />
@@ -305,7 +305,7 @@ function DrilldownView({
              hierarkiet uten å trenge høy-kontrast fyll. */
           <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-2xl border border-border bg-surface px-5 py-3.5 text-text">
             <div>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">
+              <span className="block text-xs font-semibold text-accent-text">
                 {t('totalLabel')}
               </span>
               <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
@@ -384,7 +384,7 @@ function HoleTable({
           <span className="font-serif text-[13px] font-semibold tracking-[0.04em] text-muted">
             {summaryLabel}
           </span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+          <span className="text-xs font-semibold tabular-nums text-muted">
             P{nine.par}
           </span>
         </div>
@@ -425,7 +425,7 @@ function HoleRow({
         <span className="font-serif text-[15px] font-medium leading-none tabular-nums text-text">
           {row.holeNumber}
         </span>
-        <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+        <span className="mt-0.5 text-xs font-semibold tabular-nums text-muted">
           P{row.par}
           {row.parAside && row.parByGender && (
             <sup

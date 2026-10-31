@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   status: { height: 24 },
   pillText: { ...interLine(12, 16), fontFamily: FONTS.sansSemiBold },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
-  // `.chip`: 20 høy, 8 inn, 10 pt sperret versal. Bare den lukkede har kant.
+  // `.chip`: 20 høy, 8 inn, 12 pt semibold. Bare den lukkede har kant.
   chip: {
     height: 20,
     paddingHorizontal: 8,
@@ -94,9 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipText: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
 });

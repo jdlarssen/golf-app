@@ -78,7 +78,7 @@ export function SpecificValueSheet({
         >
           <View style={[styles.handle, { backgroundColor: sheetGrabber(scheme) }]} />
           <Text style={[ui.kicker, styles.kicker]} accessibilityRole="header">
-            SPESIFIKK SCORE
+            Spesifikk score
           </Text>
           <View style={styles.grid}>
             {VALUES.map((v) => (

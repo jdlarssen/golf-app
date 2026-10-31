@@ -279,7 +279,7 @@ export function FlightRow({
               style={[styles.badge, { color: colors.muted }]}
               testID={`flight-row-${seatId}-submitted`}
             >
-              LEVERT
+              Levert
             </Text>
           ) : null}
         </View>
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
   // Nettleserens `normal` for Inter 20 er 24 (#2385).
   nameSun: { ...interLine(20, 24), fontFamily: FONTS.sansBold },
-  badge: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6 },
+  badge: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   note: { fontSize: 12, fontFamily: FONTS.sans },
   pointsSun: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   scoreSun: {

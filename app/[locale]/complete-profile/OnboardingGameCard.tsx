@@ -30,6 +30,7 @@ export function OnboardingGameCard({ game }: { game: OnboardingGameCardData }) {
   const teeOff = game.teeOffAt ? new Date(game.teeOffAt) : null;
   const validTeeOff = teeOff && !Number.isNaN(teeOff.getTime()) ? teeOff : null;
   const parts = validTeeOff ? osloParts(validTeeOff) : null;
+  const shortMonth = parts ? shortMonthLocale(parts.month, locale) : '';
 
   const modeKey = formatDisplayLabelKey(game.gameMode as GameMode, game.modeConfig) as Parameters<
     typeof tModes
@@ -57,8 +58,8 @@ export function OnboardingGameCard({ game }: { game: OnboardingGameCardData }) {
             className="flex size-11 shrink-0 flex-col items-center justify-center rounded-xl bg-on-strong/12"
           >
             <span className="score-num text-[18px] leading-none">{parts.day}</span>
-            <span className="text-[9px] leading-[normal] font-semibold tracking-[0.12em] uppercase">
-              {shortMonthLocale(parts.month, locale)}
+            <span className="text-xs leading-[normal] font-semibold">
+              {shortMonth.charAt(0).toLocaleUpperCase(locale) + shortMonth.slice(1)}
             </span>
           </span>
           <span className="sr-only">{formatShortDayMonthLocale(validTeeOff, locale)}</span>

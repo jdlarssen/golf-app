@@ -18,7 +18,7 @@ export function LeaderboardSkeleton() {
     <div className="max-w-md mx-auto pt-8 pb-24">
       <header className="px-5 pb-3.5 flex items-center gap-2.5">
         <span className="text-lg text-muted leading-none">‹</span>
-        <span className="text-[10px] font-semibold tracking-[0.20em] uppercase text-muted">
+        <span className="text-xs font-semibold text-muted">
           Leaderboard
         </span>
         <div className="flex-1" />

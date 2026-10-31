@@ -101,7 +101,7 @@ export function TeePanel({ legend, tees }: { legend: string; tees: TeeView[] }) 
       >
         {selected.ratings.map((rating, index) => (
           <div key={rating.key} className={index > 0 ? 'border-l border-on-strong/25 pl-3' : ''}>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-on-strong/80">
+            <dt className="text-xs font-semibold text-on-strong/80">
               {rating.label}
             </dt>
             <dd className="mt-0.5 text-[14px]">{rating.value}</dd>

@@ -58,13 +58,13 @@ export function HoleHero({ holeNumber, totalHoles, par, strokeIndex, sunlight = 
     >
       {sunlight ? (
         <View>
-          <Text style={[styles.kickerSun, { color: colors.text }]}>HULL</Text>
+          <Text style={[styles.kickerSun, { color: colors.text }]}>Hull</Text>
           {number}
         </View>
       ) : (
         <View style={styles.numberGroup}>
           <View>
-            <Text style={[styles.kicker, { color: colors.accentText }]}>HULL</Text>
+            <Text style={[styles.kicker, { color: colors.accentText }]}>Hull</Text>
             {number}
           </View>
           <Text style={[styles.total, { color: colors.muted }]}>{`av ${totalHoles}`}</Text>
@@ -92,9 +92,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   rowNormal: { paddingTop: 10, paddingHorizontal: 20, paddingBottom: 16 },
   rowSun: { paddingTop: 8, paddingHorizontal: 20, paddingBottom: 18 },
-  // Nettleserens `normal` for Inter på 10 pt er 12 (se `interLine`).
-  kicker: { ...interLine(10, 12), fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
-  kickerSun: { fontSize: 13, fontFamily: FONTS.sansBold, letterSpacing: 2.08 },
+  // Nettleserens `normal` for Inter på 12 pt er 15 (se `interLine`).
+  kicker: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
+  kickerSun: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
   numberGroup: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   // Designet bruker proporsjonale tall i «av 18» og «Indeks 11».
   total: { fontSize: 13, fontFamily: FONTS.sans, paddingBottom: 8 },

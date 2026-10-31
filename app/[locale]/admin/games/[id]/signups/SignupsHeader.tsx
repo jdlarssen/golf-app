@@ -55,7 +55,7 @@ export function SignupsHeader({
         <h1
           id={headingId}
           tabIndex={headingId ? -1 : undefined}
-          className="font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+          className="font-sans text-xs font-semibold leading-[normal] text-muted"
         >
           {title}
         </h1>

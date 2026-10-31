@@ -48,7 +48,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+        <h3 className="mb-2 font-sans text-xs font-semibold text-muted">
           {t('registeredHeading')}
         </h3>
         <input
@@ -105,14 +105,14 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
-        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+        <span className="font-sans text-xs font-semibold text-muted">
           {t('orSeparator')}
         </span>
         <span className="h-px flex-1 bg-border" />
       </div>
 
       <div>
-        <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+        <h3 className="mb-2 font-sans text-xs font-semibold text-muted">
           {t('emailHeading')}
         </h3>
         <form action={inviteAction} className="flex flex-col gap-2 sm:flex-row">
@@ -138,7 +138,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
-        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+        <span className="font-sans text-xs font-semibold text-muted">
           {t('orSeparator')}
         </span>
         <span className="h-px flex-1 bg-border" />

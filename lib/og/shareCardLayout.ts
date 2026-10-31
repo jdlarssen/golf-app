@@ -31,7 +31,7 @@ export const CHARS_PER_LINE = {
   headline: 14,
   /** Headline at the 80px fallback. */
   headlineSmall: 22,
-  /** Kicker, Inter 600 26px uppercase with 0.26em tracking. */
+  /** Kicker, Inter 600 26px sentence case, no tracking. */
   kicker: 36,
   /** Meta line, Inter 400 30px. */
   meta: 60,
@@ -64,8 +64,7 @@ export function estimateLines(text: string, maxChars: number): number {
  * would only repeat the course, so it gives the course alone. A name that just
  * starts with the course («Bogstad Open» on «Bogstad») is the organiser's own
  * and stays. No course: the name. Cut at one line (`CHARS_PER_LINE.kicker`,
- * counted in code points) with «…». Upper-casing is the caller's, with the
- * request locale.
+ * counted in code points) with «…». Drawn as written, in sentence case.
  */
 export function cardKicker(gameName: string, courseName: string | null): string {
   const name = gameName.trim();
@@ -167,7 +166,7 @@ export function shareCardHeight(
   opts: {
     headlineLines: number;
     headlineFontSize: number;
-    /** The kicker as rendered (before upper-casing), for its line count. */
+    /** The kicker as rendered, for its line count. */
     kicker?: string;
     /** The meta line as rendered, for its line count. */
     meta?: string;

@@ -47,7 +47,7 @@ export function OnboardingFields({
       </div>
 
       <figure className="m-0 px-5 pt-[22px]">
-        <figcaption className="font-sans text-[10px] leading-[normal] font-semibold tracking-[0.2em] text-muted uppercase">
+        <figcaption className="font-sans text-xs leading-[normal] font-semibold text-muted">
           {t('preview.kicker')}
         </figcaption>
         <div className="mt-2 flex items-center gap-3 rounded-[14px] border border-border bg-surface px-3 py-2.5">

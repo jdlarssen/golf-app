@@ -278,7 +278,7 @@ function PlayerRow({
           <span className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums">
             {totalPoints}
           </span>
-          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-xs font-semibold text-muted">
             {tWolf('wolf.poengLabel')}
           </span>
         </div>
@@ -341,7 +341,7 @@ function HoleRow({
             </span>
           </div>
           {hole.stake > 1 && (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-xs font-semibold text-accent-text tabular-nums">
               {hole.stake}x
             </span>
           )}

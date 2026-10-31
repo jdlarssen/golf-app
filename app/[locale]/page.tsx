@@ -32,7 +32,7 @@ import { StreakChip } from '@/components/stats/StreakChip';
 import { getUserStreak } from '@/lib/stats/getUserStreak';
 import { MIN_STREAK_WEEKS } from '@/lib/stats/streak';
 import { firstName } from '@/lib/firstName';
-import { formatTeeOffParts } from '@/lib/i18n/format';
+import { formatTeeOffParts, formatWeekdayDayMonthOsloLocale } from '@/lib/i18n/format';
 import { teeOffProximity } from '@/lib/format/teeOffProximity';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
 import { toFinishedEntries } from '@/lib/games/finishedEntries';
@@ -360,16 +360,19 @@ async function HomeBody() {
     .filter((e) => !isInProgressEntry(e))
     .sort((a, b) => earliestTeeOff(a) - earliestTeeOff(b));
   const firstNameValue = firstName(profile?.name) ?? t('playerFallback');
-  // Always-visible handicap reflection (#209). Only render when we have
-  // both fields — defensive against a degraded fetch.
-  const handicapChip =
-    profile?.hcp_index != null && profile?.handicap_updated_at ? (
-      <HandicapChip
-        hcpIndex={Number(profile.hcp_index)}
-        handicapUpdatedAt={profile.handicap_updated_at}
-        nextPath="/"
-      />
-    ) : null;
+  // The page title is today's date (Oslo wall-clock); the first name lives in
+  // the profile pill next to it: «Sigrid · HCP 12,0», or just «Sigrid» when the
+  // handicap is missing (always-visible reflection #209 — the pill shows the
+  // handicap only when we have both fields, defensive against a degraded fetch).
+  const dateTitle = formatWeekdayDayMonthOsloLocale(now, locale);
+  const handicapChip = (
+    <HandicapChip
+      name={firstNameValue}
+      hcpIndex={profile?.hcp_index != null ? Number(profile.hcp_index) : null}
+      handicapUpdatedAt={profile?.handicap_updated_at ?? null}
+      nextPath="/"
+    />
+  );
   // #1194: vis streak-chippen kun for en PÅGÅENDE streak på ≥ MIN_STREAK_WEEKS —
   // en enkelt uke er ikke en serie, og en hvilende streak vises aldri som tap.
   const streakChip =
@@ -381,15 +384,14 @@ async function HomeBody() {
         ariaLabel={t('streakChipAria', { count: streakSummary.weeklyStreak })}
       />
     ) : null;
-  // Monter chippene varsomt: handicap (primær refleksjon) først, streak som en
-  // liten highlight ved siden. Ingen av dem → ingen action.
-  const headerAction =
-    handicapChip || streakChip ? (
-      <div className="flex items-center gap-2">
-        {handicapChip}
-        {streakChip}
-      </div>
-    ) : null;
+  // Monter chippene varsomt: profil/handicap (primær refleksjon) først, streak
+  // som en liten highlight ved siden.
+  const headerAction = (
+    <div className="flex items-center gap-2">
+      {handicapChip}
+      {streakChip}
+    </div>
+  );
   // #392: arrangering bor i Klubbhuset nå (Spill/Baner-seksjonene inne i
   // /admin), nådd via den universelle bunn-nav-fanen. Hjem bærer ingen create-
   // dører eller Sekretariat/Klubbhus-snarveier lenger — det er play + discover-
@@ -414,14 +416,14 @@ async function HomeBody() {
             {t('emptyKicker')}
           </Kicker>
           <h1 className="font-serif text-[30px] font-medium tracking-tight leading-tight text-text">
-            {t('emptyWelcome', { name: firstNameValue })}
+            {dateTitle}
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
             {hasDiscoveryContent
               ? t('emptyBodyWithDiscovery')
               : t('emptyBodyNoDiscovery')}
           </p>
-          {handicapChip && <div className="mt-5">{handicapChip}</div>}
+          <div className="mt-5">{handicapChip}</div>
           <div className="mt-8 w-full max-w-[280px]">
             <LinkButton href="/admin" full>
               {t('emptyOpenClubhouse')}
@@ -708,8 +710,9 @@ async function HomeBody() {
   return (
     <>
       <PageHeader
-        title={t('greeting', { name: firstNameValue })}
+        title={dateTitle}
         action={headerAction}
+        actionBelow
       />
 
       {/* #882: not a nav landmark — these are links to data, not site/app
@@ -817,7 +820,7 @@ async function HomeBody() {
 // when real cards (Card + p-5 + serif title + meta lines) streamed in, and
 // (b) the skeleton always rendered the filled-list shape with section labels,
 // which jumped for a fresh user whose real state is the centered hero. Now:
-// a greeting line + card-shaped skeletons that match the real card frame and
+// a title line + card-shaped skeletons that match the real card frame and
 // height, with no section labels committing to the filled layout.
 function HomeBodySkeleton() {
   return (
@@ -861,7 +864,7 @@ function Section({
             screen-reader rotor/heading nav has more than the single h1.
             Same styling → no visual change. */}
         <h2
-          className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+          className={`text-xs font-semibold ${
             accent ? 'text-accent-text' : 'text-muted'
           }`}
         >
@@ -907,7 +910,7 @@ function StatusPill({
           'bg-warning/10 text-warning-text border-warning/30';
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap font-sans text-[11px] font-semibold uppercase tracking-[0.16em] px-[7px] py-[3px] rounded-full border ${classes}`}
+      className={`inline-flex items-center whitespace-nowrap font-sans text-xs font-semibold px-[7px] py-[3px] rounded-full border ${classes}`}
     >
       {label}
     </span>

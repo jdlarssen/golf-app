@@ -235,7 +235,7 @@ export type TeamBoardModel = {
   rows: TeamBoardRow[];
   /** Seerens lag, når seeren er med på et. */
   viewerTeam: number | null;
-  /** Best ball: «HULL 1–9» og «Hull 10–18 er skjult» over lagene. */
+  /** Best ball: «Hull 1–9» og «Hull 10–18 er skjult» over lagene. */
   halves: { shown: string; hidden: string } | null;
   /** Best ball: låskortet under lagene. */
   lock: { heading: string; sub: string } | null;

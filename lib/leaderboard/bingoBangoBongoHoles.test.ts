@@ -65,7 +65,7 @@ describe('bingoBangoBongoHoleCards', () => {
     expect(c.rows).toEqual([]);
   });
 
-  it('to av tre til samme spiller: de to radene er hans, uten «Feiet!»', () => {
+  it('to av tre til samme spiller: de to radene er hans, uten «Feiet»', () => {
     expect(rowsOf(hole(5, 'nils', 'per', 'nils'))).toEqual([
       ['bingo', 'firstOnGreen', 'nils', true],
       ['bango', 'nearestPin', 'per', false],
@@ -74,7 +74,7 @@ describe('bingoBangoBongoHoleCards', () => {
     expect(card(hole(5, 'nils', 'per', 'nils')).sweptAll).toBe(false);
   });
 
-  it('alle tre til samme spiller: «Feiet!», og alle radene er hans', () => {
+  it('alle tre til samme spiller: «Feiet», og alle radene er hans', () => {
     const c = card(hole(2, 'ola', 'ola', 'ola'));
     expect(c.sweptAll).toBe(true);
     expect(c.pending).toBe(false);

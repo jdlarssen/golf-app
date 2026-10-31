@@ -46,7 +46,7 @@ export interface BingoBangoBongoHolesViewProps {
  * BingoBangoBongoView (leaderboardet) har kun en aggregert per-spiller-tabell.
  *
  * Regnestykket (prestasjonene i fast rekkefølge, hvem som tok dem, feieren,
- * «Feiet!» og hull som venter) bor i `lib/leaderboard/bingoBangoBongoHoles.ts`,
+ * «Feiet» og hull som venter) bor i `lib/leaderboard/bingoBangoBongoHoles.ts`,
  * delt med appen (#2255 PR 3c). Her tegnes det.
  */
 export function BingoBangoBongoHolesView({
@@ -150,11 +150,11 @@ function HoleCard({
             {t('common.hullNumber', { number: hole.holeNumber })}
           </span>
           {hole.sweptAll ? (
-            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text">
+            <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-xs font-semibold text-accent-text">
               {t('bingoBangoBongo.feietChip')}
             </span>
           ) : hole.pending ? (
-            <span className="text-[11px] uppercase tracking-[0.1em] text-muted">
+            <span className="text-xs font-semibold text-muted">
               {t('common.venter')}
             </span>
           ) : null}

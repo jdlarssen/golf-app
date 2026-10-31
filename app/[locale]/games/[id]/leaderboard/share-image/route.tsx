@@ -363,7 +363,6 @@ export async function GET(
     kicker,
     meta,
   });
-  const upper = (text: string) => text.toLocaleUpperCase(resolvedLocale === 'en' ? 'en' : 'nb');
 
   return new ImageResponse(
     (
@@ -411,11 +410,10 @@ export async function GET(
             style={{
               fontSize: 24,
               fontWeight: 600,
-              letterSpacing: 5.76,
               color: ON_STRONG_MUTED,
             }}
           >
-            {upper(t('finalResult'))}
+            {t('finalResult')}
           </span>
         </div>
 
@@ -425,11 +423,10 @@ export async function GET(
             style={{
               fontSize: 26,
               fontWeight: 600,
-              letterSpacing: 6.76,
               color: ON_STRONG_MUTED,
             }}
           >
-            {upper(kicker)}
+            {kicker}
           </span>
           <div
             style={{

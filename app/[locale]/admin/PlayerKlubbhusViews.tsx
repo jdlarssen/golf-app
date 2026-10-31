@@ -16,15 +16,18 @@ import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 // without a Supabase mock.
 
 /**
- * Greeting — always shown, paints immediately. «Hei, Kari.» as the page's
- * heading, with no card, no second «Klubbhuset» label and no subtitle: the
- * TopBar above already names the room.
+ * The room's title — always shown, paints immediately. The page's own name
+ * («Klubbhuset») as its heading, with no card and no subtitle. The owner chose
+ * this over a greeting: the title says where you are, not who you are.
  */
-export function GreetingView({ name }: { name: string | null }) {
-  const t = useTranslations('admin.dashboard');
+/**
+ * Rommets tittel er datoen (#2728), som på Hjem og arrangørens Klubbhus:
+ * topplinja sier allerede «Klubbhuset», så tittelen gjentar det ikke.
+ */
+export function RoomTitleView({ title }: { title: string }) {
   return (
     <h1 className="pt-1.5 font-serif text-[28px] font-medium leading-[normal] text-text">
-      {name ? t('playerGreeting', { name }) : t('playerGreetingNoName')}
+      {title}
     </h1>
   );
 }

@@ -29,7 +29,7 @@ export async function FlightProgressList({
 
   return (
     <section data-testid="pult-flights" className="leading-[normal]">
-      <h2 className="px-1 pt-[18px] pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <h2 className="px-1 pt-[18px] pb-2 text-xs font-semibold text-muted">
         {t('flightsHeading')}
       </h2>
       <ul className="divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface">

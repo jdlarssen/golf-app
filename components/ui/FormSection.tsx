@@ -46,8 +46,9 @@ export const LIST_CARD_CLASS =
   'divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface';
 
 /**
- * The new-game wizard's section frame (#2426): an uppercase kicker over a
- * card with rounded corners, as «ANDRE SOM PASSER» over the format rows (#2260).
+ * The new-game wizard's section frame (#2426): a sentence-case kicker
+ * (12 px, 600) over a card with rounded corners, as «Andre som passer» over the
+ * format rows (#2260).
  * Every setup section on steps 2 and 3 uses it.
  *
  * The kicker sits 4 px inside the card's edge, as on the artboards. The wizard
@@ -69,7 +70,7 @@ export function FormSection({
 }: Props) {
   const legendClass = legendHidden
     ? 'sr-only'
-    : `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted`;
+    : `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-xs font-semibold leading-[normal] text-muted`;
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
       {aside ? (

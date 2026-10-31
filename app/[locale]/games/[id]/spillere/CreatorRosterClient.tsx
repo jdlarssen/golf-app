@@ -47,7 +47,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
     <div className="space-y-5">
       {candidates.length > 0 && (
         <div>
-          <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          <h3 className="mb-2 font-sans text-xs font-semibold text-muted">
             {t('rosterSearch')}
           </h3>
           <input
@@ -94,7 +94,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
       {candidates.length > 0 && (
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
-          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+          <span className="font-sans text-xs font-semibold text-muted">
             {t('rosterOr')}
           </span>
           <span className="h-px flex-1 bg-border" />
@@ -102,7 +102,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
       )}
 
       <div>
-        <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+        <h3 className="mb-2 font-sans text-xs font-semibold text-muted">
           {t('inviteByEmail')}
         </h3>
         <form action={inviteAction} className="flex flex-col gap-2 sm:flex-row">
@@ -131,7 +131,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
-        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
+        <span className="font-sans text-xs font-semibold text-muted">
           {t('rosterOr')}
         </span>
         <span className="h-px flex-1 bg-border" />

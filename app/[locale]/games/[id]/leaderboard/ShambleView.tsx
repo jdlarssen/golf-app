@@ -273,7 +273,7 @@ function TeamRow({
           >
             {headline.text}
           </span>
-          <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <span className="mt-1 block text-xs font-semibold text-muted">
             {t(headline.unit === 'toPar' ? 'common.vsParLabel' : 'common.slagLabel')}
           </span>
         </div>

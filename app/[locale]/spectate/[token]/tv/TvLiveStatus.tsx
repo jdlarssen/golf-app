@@ -20,7 +20,7 @@ export function TvLiveStatus({ live, holesPlayed }: { live: boolean; holesPlayed
   return (
     <p
       data-testid="tv-pill"
-      className="flex h-11 shrink-0 items-center gap-2.5 rounded-full bg-tv-text/12 px-[18px] text-[16px] font-semibold tracking-[0.14em] uppercase"
+      className="flex h-11 shrink-0 items-center gap-2.5 rounded-full bg-tv-text/12 px-[18px] text-[16px] font-semibold"
     >
       {live && (
         <span

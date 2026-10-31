@@ -81,7 +81,7 @@ export default async function FinnTurneringerPage({
 
           {anonGames.length > 0 ? (
             <section>
-              <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
                 {t('anon.listHeading')}
               </h2>
               <AnonDiscoverySection games={anonGames} seats={anonSeats} now={anonNow} />

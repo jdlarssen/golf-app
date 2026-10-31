@@ -33,7 +33,7 @@ export const HOLES_TEXT = {
   revealHiddenSub: 'Hull for hull åpnes når admin avslutter spillet.',
   goodLuck: 'Lykke til.',
   /** Bunnteksten når runden er ferdig, som webbens `LeaderboardFooter`. */
-  wellPlayed: 'Vel spilt!',
+  wellPlayed: 'Vel spilt',
   unknownPlayerFull: '(ukjent spiller)',
   unknownPlayer: '(ukjent)',
   /** Undertittelen i slagspill. */
@@ -209,7 +209,7 @@ export const BINGO_BANGO_BONGO_HOLES_TEXT = {
   nearestPin: 'nærmest hullet',
   firstInHole: 'først i hull',
   /** Til høyre i hodet når én spiller tok alle tre. */
-  feietChip: '★ Feiet!',
+  feietChip: '★ Feiet',
   /** I stedet for radene på et hull som venter. */
   ingenPrestasjoner: 'Ingen prestasjoner registrert ennå.',
   /** Til høyre på en prestasjon ingen har fått. */
@@ -219,7 +219,7 @@ export const BINGO_BANGO_BONGO_HOLES_TEXT = {
 /**
  * Best ball (#2255 PR 3d): webbens `leaderboard.holes.*` og
  * `leaderboard.common.teamLabel`, låst i `holesCopy.test.ts`. Hardkodet i
- * webbens drilldown, ikke i meldingene: «B» i forklaringen og « PAR» bak mot
+ * webbens drilldown, ikke i meldingene: «B» i forklaringen og « par» bak mot
  * par i heltefeltet.
  */
 export const BEST_BALL_HOLES_TEXT = {
@@ -229,20 +229,20 @@ export const BEST_BALL_HOLES_TEXT = {
   legendFormat: 'initial · brutto · netto · vs par   →   lag',
   frontNineLabel: 'Ut · hull 1–9',
   backNineLabel: 'Inn · hull 10–18',
-  summaryUt: 'UT',
-  summaryInn: 'INN',
+  summaryUt: 'Ut',
+  summaryInn: 'Inn',
   totalLabel: 'Totalt',
   /** Under lagnavnet når laget ikke har spillere. */
   noPlayers: '(uten spillere)',
-  /** Bak mot par i heltefeltet («+3 PAR»). */
-  vsParSuffix: 'PAR',
+  /** Bak mot par i heltefeltet («+3 par»). */
+  vsParSuffix: 'par',
   /**
-   * #2625: bak summen i heltefeltet når spillet rangeres mot par («17 SLAG»),
-   * webbens `common.slagLabel` i store bokstaver som «PAR».
+   * #2625: bak summen i heltefeltet når spillet rangeres mot par («17 slag»),
+   * webbens `common.slagLabel` (ikke lenger i store bokstaver, #2728).
    */
-  strokesSuffix: 'SLAG',
-  /** #2625: foran summen når spillet rangeres mot par («MOT PAR · 34 SLAG»), webbens `common.vsParLabel`. */
-  toParPrefix: 'MOT PAR',
+  strokesSuffix: 'slag',
+  /** #2625: foran summen når spillet rangeres mot par («mot par · 34 slag»), webbens `common.vsParLabel`. */
+  toParPrefix: 'mot par',
 } as const;
 
 /** «Lag 2 · 1. plass» øverst, som webbens topp. */

@@ -149,7 +149,7 @@ function ShareLeagueSection({
   if (!url) return null;
   return (
     <section className="mb-6" data-testid="liga-share">
-      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
+      <h2 className="font-sans text-xs font-semibold text-muted mb-3">
         {t('shareLink.heading')}
       </h2>
       <Card className="p-4 sm:p-5">
@@ -306,9 +306,8 @@ export default async function LigaPublicPage({
           </h1>
           {/* Status chip — the same word as everywhere, from gameStatus (#2491) */}
           <span
-            className="inline-block shrink-0 whitespace-nowrap rounded-full px-[7px] py-[3px] font-sans text-[11px] font-semibold uppercase"
+            className="inline-block shrink-0 whitespace-nowrap rounded-full px-[7px] py-[3px] font-sans text-xs font-semibold"
             style={{
-              letterSpacing: '0.16em',
               ...(league.status === 'active'
                 ? { background: 'var(--score-under-bg)', color: 'var(--score-under-fg)' }
                 : league.status === 'finished'
@@ -407,7 +406,7 @@ export default async function LigaPublicPage({
 
       {/* Standings table */}
       <section className="mb-8">
-        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
+        <h2 className="font-sans text-xs font-semibold text-muted mb-3">
           {t('seasonTableHeading')}
         </h2>
         <Card className="p-3 sm:p-4">
@@ -425,7 +424,7 @@ export default async function LigaPublicPage({
 
       {/* Rounds list */}
       <section className="mb-6">
-        <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-3">
+        <h2 className="font-sans text-xs font-semibold text-muted mb-3">
           {t('roundsHeading')}
         </h2>
         {rounds.length === 0 ? (
@@ -453,13 +452,13 @@ export default async function LigaPublicPage({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                          <span className="font-sans text-xs font-semibold text-muted">
                             {t('roundLabel', { sequence: round.sequence })}
                           </span>
                           {/* Window chip */}
                           <span
-                            className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
-                            style={{ letterSpacing: '0.14em', ...WINDOW_CHIP_STYLES[ws] }}
+                            className="inline-block rounded-full px-2 py-0.5 font-sans text-xs font-semibold"
+                            style={WINDOW_CHIP_STYLES[ws]}
                           >
                             {t(`windowChip.${ws}` as Parameters<typeof t>[0])}
                           </span>

@@ -160,7 +160,7 @@ export default async function ArrangerGolfturneringPage() {
         <nav aria-labelledby="toc-heading">
           <h2
             id="toc-heading"
-            className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
+            className="font-sans text-xs font-semibold text-muted"
           >
             {t('tocHeading')}
           </h2>

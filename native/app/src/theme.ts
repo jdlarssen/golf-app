@@ -687,24 +687,24 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
      * de enkle tavlene). Samme mål som `kicker` (#2709), med luft over.
      */
     sectionTitle: {
-      fontSize: 10,
+      fontSize: 12,
       ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      letterSpacing: 0,
       color: c.muted,
       marginTop: 16,
     },
     /**
-     * Små sperrede versaler over en seksjon (#2385, designlerretet: 10 px,
-     * 0,2em sperring). Designets seksjonsoverskrifter og feltetiketter.
+     * Liten etikett over en seksjon: 12 pt semibold, setningsstor bokstav og
+     * ingen sperring (eieren droppet de sperrede versalene 2026-10-31, #2728;
+     * designlerretet #2385 hadde 10 px, 0,2em). Seksjonsoverskrifter og
+     * feltetiketter.
      */
     kicker: {
-      fontSize: 10,
+      fontSize: 12,
       ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      letterSpacing: 0,
       color: c.muted,
     },
     /**
@@ -713,11 +713,10 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
      * teksten står litt inn fra kortkanten, som i designet.
      */
     sectionHead: {
-      fontSize: 10,
+      fontSize: 12,
       ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      letterSpacing: 0,
       color: c.muted,
       marginTop: 14,
       marginHorizontal: 4,

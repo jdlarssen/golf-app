@@ -279,6 +279,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     justifyContent: 'center',
   },
-  actionText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, textTransform: 'uppercase' },
+  actionText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   disabled: { opacity: 0.5 },
 });

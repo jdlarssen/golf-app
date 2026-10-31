@@ -93,14 +93,12 @@ const centerStyle: CSSProperties = {
 
 const kickerStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.20em',
-  textTransform: 'uppercase',
   color: 'var(--accent-text)',
 };
 
-// Stabler HULL-kickeren og segment-subtitlen (#1441) i egen kolonne, som
+// Stabler «Hull»-kickeren og segment-subtitlen (#1441) i egen kolonne, som
 // leftStyle sin baseline-rad plasserer til venstre for det store hull-tallet.
 const kickerColumnStyle: CSSProperties = {
   display: 'flex',

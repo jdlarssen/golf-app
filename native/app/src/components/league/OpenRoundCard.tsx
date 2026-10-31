@@ -181,10 +181,8 @@ const styles = StyleSheet.create({
   band: { paddingTop: 12, paddingBottom: 14, paddingHorizontal: 20 },
   bandTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   kicker: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
   bandChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
   bandChipText: { ...interLine(11, 14), fontFamily: FONTS.sansSemiBold },
@@ -204,10 +202,8 @@ const styles = StyleSheet.create({
   whoDot: { width: 8, height: 8, borderRadius: 4 },
   whoText: { flex: 1 },
   whoKey: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   whoNames: { ...interLine(15, 20), fontFamily: FONTS.sans, marginTop: 2 + interLine(15, 20).marginTop },
   // `.cta`: 52 høy, 12 over.

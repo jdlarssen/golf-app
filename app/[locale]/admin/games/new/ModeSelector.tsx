@@ -245,7 +245,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
   );
   return (
     <fieldset disabled={disabled}>
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <legend className="font-sans text-xs font-semibold text-muted">
         {t('legend')}
       </legend>
       <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

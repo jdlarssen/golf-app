@@ -48,10 +48,14 @@ export interface TeeShotName {
 /** Formene er 22 pt; hver ring til legger 7 pt utenpå (1,5 strek og 2 luft). */
 const SHAPE = 22;
 const RING_GROWTH = 7;
-/** Designets kolonner: etiketter 44, sum 38, og hullene deler resten. */
-const LABEL_WIDTH = 44;
-/** #2580: `Utslag-forslag-levering` har 52 pt til etikettene, så «UTSLAG» får plass. */
-const LABEL_WIDTH_TEE_SHOTS = 52;
+/**
+ * Etikettene er 12 pt setningsstil (#2728), ikke 10 pt versaler, så kolonnen
+ * er 8 pt bredere enn designets 44, og «Ført av» får plass. Sum 38, og hullene
+ * deler resten.
+ */
+const LABEL_WIDTH = 52;
+/** #2580: utslagsraden hadde 8 pt mer enn de andre; det holder vi (#2728). */
+const LABEL_WIDTH_TEE_SHOTS = 60;
 const SUM_WIDTH = 38;
 const MIN_COLUMN = 26;
 /**
@@ -187,11 +191,10 @@ function Half({
   const mutedNum = [styles.num, ui.num, { color: colors.muted }];
   const headStyle = [styles.head, { color: colors.muted }];
   const bandHead = [styles.head, { color: colors.onPrimary }];
-  // «UT»/«INN» står i krem på skogen, som i designet; i mørk drakt er båndet
+  // «Ut»/«Inn» står i krem på skogen, som i designet; i mørk drakt er båndet
   // salvie, og der er kremen for svak, så det følger tallene.
   const halfHead = [
     styles.head,
-    styles.halfHead,
     { color: scheme === 'dark' ? colors.onPrimary : colors.onStrongWarm },
   ];
   const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
@@ -286,7 +289,7 @@ function Half({
                   numberOfLines={1}
                   testID={`scorecard-row-label-${kind}`}
                 >
-                  {ROW_LABELS[kind].toUpperCase()}
+                  {ROW_LABELS[kind]}
                 </Text>
               </View>
             </Cell>
@@ -322,7 +325,7 @@ function Half({
           testID={`scorecard-sum-${half.key}`}
         >
           <Cell kind="hole" role="sum" corner="right">
-            <Text style={halfHead}>{HALF_TITLES[half.key].title.toUpperCase()}</Text>
+            <Text style={halfHead}>{HALF_TITLES[half.key].title}</Text>
           </Cell>
           <Cell kind="par" role="sum">
             <Text style={[...numStyle, styles.sum]}>{half.sum.par}</Text>
@@ -409,9 +412,8 @@ const styles = StyleSheet.create({
   cellLeft: { alignItems: 'flex-start' },
   bandLeft: { borderTopLeftRadius: 6 },
   bandRight: { borderTopRightRadius: 6 },
-  head: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 1 },
+  head: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   labelBox: { position: 'absolute', left: 6 },
-  halfHead: { letterSpacing: 0.8 },
   num: { fontSize: 13, fontFamily: FONTS.sans, textAlign: 'center' },
   holeNumber: { fontFamily: FONTS.sansSemiBold },
   strokeNum: { ...fraunces(600, 15), textAlign: 'center' },

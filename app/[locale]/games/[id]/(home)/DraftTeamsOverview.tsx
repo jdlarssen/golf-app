@@ -70,7 +70,7 @@ export async function DraftTeamsOverview({
           <li key={teamNum}>
             {heading && (
               <p
-                className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5"
+                className="text-xs text-muted font-semibold mb-1.5"
                 data-testid={`draft-${isMatchplay ? 'side' : 'team'}-heading-${teamNum}`}
               >
                 {heading}
@@ -106,7 +106,7 @@ export async function DraftTeamsOverview({
                     <span className="truncate">
                       {displayName}
                       {isCurrent && (
-                        <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text ml-2">
+                        <span className="font-sans text-xs font-semibold text-accent-text ml-2">
                           {tHome('youLabel')}
                         </span>
                       )}

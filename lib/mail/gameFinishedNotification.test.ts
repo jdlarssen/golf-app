@@ -119,7 +119,7 @@ describe('sendGameFinishedNotification', () => {
   // Stableford solo — celebration-cascade (1 → seier, 2-3 → solid, 4+ → nøytral)
   // ─────────────────────────────────────────────────────────────────────
 
-  it('stableford solo: 1.-plass får «Gratulerer med seieren!»', async () => {
+  it('stableford solo: 1.-plass får «Gratulerer med seieren.»', async () => {
     const payload = await send({
       to: 'vinner@example.com',
       playerFirstName: 'Alice',
@@ -139,17 +139,17 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Alice!
 
-      Runden i Sommerturnering er ferdig. Du endte på 1. plass av 5 med 38 poeng. Gratulerer med seieren!
+      Runden i Sommerturnering er ferdig. Du endte på 1. plass av 5 med 38 poeng. Gratulerer med seieren.
 
       Se leaderboard: https://tornygolf.no/games/game-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Sommerturnering</strong> er ferdig. Du endte på <strong>1. plass av 5</strong> med <strong>38 poeng</strong>. Gratulerer med seieren!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Sommerturnering</strong> er ferdig. Du endte på <strong>1. plass av 5</strong> med <strong>38 poeng</strong>. Gratulerer med seieren."`);
   });
 
-  it('stableford solo: 3.-plass får «Solid plassering!»', async () => {
+  it('stableford solo: 3.-plass får «Solid plassering.»', async () => {
     const payload = await send({
       to: 'spiller@example.com',
       playerFirstName: 'Bjørn',
@@ -168,14 +168,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Bjørn!
 
-      Runden i Sommerturnering er ferdig. Du endte på 3. plass av 12 med 28 poeng. Solid plassering!
+      Runden i Sommerturnering er ferdig. Du endte på 3. plass av 12 med 28 poeng. Solid plassering.
 
       Se leaderboard: https://tornygolf.no/games/game-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Sommerturnering</strong> er ferdig. Du endte på <strong>3. plass av 12</strong> med <strong>28 poeng</strong>. Solid plassering!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Sommerturnering</strong> er ferdig. Du endte på <strong>3. plass av 12</strong> med <strong>28 poeng</strong>. Solid plassering."`);
   });
 
   it('stableford solo: 7.-plass får INGEN celebration (nøytral tone)', async () => {
@@ -226,7 +226,7 @@ describe('sendGameFinishedNotification', () => {
 
       Hei!
 
-      Runden i Vinter-cup er ferdig. Du endte på 2. plass av 4 med 32 poeng. Solid plassering!
+      Runden i Vinter-cup er ferdig. Du endte på 2. plass av 4 med 32 poeng. Solid plassering.
 
       Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
 
@@ -260,14 +260,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Alice!
 
-      Runden i Fyrball-cup er ferdig. Laget endte på 1. plass av 4 lag med 64 poeng. Gratulerer med seieren! Du og Bjørn satt sammen på lag.
+      Runden i Fyrball-cup er ferdig. Laget endte på 1. plass av 4 lag med 64 poeng. Gratulerer med seieren. Du og Bjørn satt sammen på lag.
 
       Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>1. plass av 4 lag</strong> med <strong>64 poeng</strong>. Gratulerer med seieren! Du og <strong>Bjørn</strong> satt sammen på lag."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>1. plass av 4 lag</strong> med <strong>64 poeng</strong>. Gratulerer med seieren. Du og <strong>Bjørn</strong> satt sammen på lag."`);
   });
 
   it('stableford team: 2.-plass — «Solid plassering» + partner', async () => {
@@ -290,14 +290,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Cecilie!
 
-      Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 58 poeng. Solid plassering! Du og David satt sammen på lag.
+      Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 58 poeng. Solid plassering. Du og David satt sammen på lag.
 
       Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>2. plass av 3 lag</strong> med <strong>58 poeng</strong>. Solid plassering! Du og <strong>David</strong> satt sammen på lag."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>2. plass av 3 lag</strong> med <strong>58 poeng</strong>. Solid plassering. Du og <strong>David</strong> satt sammen på lag."`);
   });
 
   it('stableford team: 4.-plass — nøytral, men partner-setningen henger på', async () => {
@@ -350,14 +350,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Gerd!
 
-      Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 49 poeng. Solid plassering!
+      Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 49 poeng. Solid plassering.
 
       Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>2. plass av 3 lag</strong> med <strong>49 poeng</strong>. Solid plassering!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Fyrball-cup</strong> er ferdig. Laget endte på <strong>2. plass av 3 lag</strong> med <strong>49 poeng</strong>. Solid plassering."`);
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -384,14 +384,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Alice!
 
-      Runden i Matchplay-cup er ferdig. Du vant 3&2 over Per. Gratulerer med seieren!
+      Runden i Matchplay-cup er ferdig. Du vant 3&2 over Per. Gratulerer med seieren.
 
       Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Matchplay-cup</strong> er ferdig. Du vant <strong>3&amp;2</strong> over <strong>Per</strong>. Gratulerer med seieren!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Matchplay-cup</strong> er ferdig. Du vant <strong>3&amp;2</strong> over <strong>Per</strong>. Gratulerer med seieren."`);
   });
 
   it('matchplay: lost — «Du tapte {formatted} mot {opponent}» + revansje', async () => {
@@ -471,14 +471,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Eva!
 
-      Runden i Matchplay-cup er ferdig. Du vant 2up over motstanderen. Gratulerer med seieren!
+      Runden i Matchplay-cup er ferdig. Du vant 2up over motstanderen. Gratulerer med seieren.
 
       Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Matchplay-cup</strong> er ferdig. Du vant <strong>2up</strong> over <strong>motstanderen</strong>. Gratulerer med seieren!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Matchplay-cup</strong> er ferdig. Du vant <strong>2up</strong> over <strong>motstanderen</strong>. Gratulerer med seieren."`);
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -505,14 +505,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Alice!
 
-      Runden i Klubbmesterskap er ferdig. Du endte på 1. plass av 12 med 68 slag netto (74 brutto). Gratulerer med seieren!
+      Runden i Klubbmesterskap er ferdig. Du endte på 1. plass av 12 med 68 slag netto (74 brutto). Gratulerer med seieren.
 
       Se leaderboard: https://tornygolf.no/games/game-5/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>1. plass av 12</strong> med <strong>68 slag netto</strong> (74 brutto). Gratulerer med seieren!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>1. plass av 12</strong> med <strong>68 slag netto</strong> (74 brutto). Gratulerer med seieren."`);
   });
 
   it('solo strokeplay: 2.-plass — «Solid plassering»', async () => {
@@ -534,14 +534,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Bjørn!
 
-      Runden i Klubbmesterskap er ferdig. Du endte på 2. plass av 12 med 72 slag netto (78 brutto). Solid plassering!
+      Runden i Klubbmesterskap er ferdig. Du endte på 2. plass av 12 med 72 slag netto (78 brutto). Solid plassering.
 
       Se leaderboard: https://tornygolf.no/games/game-5/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>2. plass av 12</strong> med <strong>72 slag netto</strong> (78 brutto). Solid plassering!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>2. plass av 12</strong> med <strong>72 slag netto</strong> (78 brutto). Solid plassering."`);
   });
 
   it('solo strokeplay: 4.-plass — nøytral tone', async () => {
@@ -598,14 +598,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Anne!
 
-      Runden i Firma-cup er ferdig. Laget endte på 1. plass av 4 lag med 68 slag netto (78 brutto). Gratulerer med seieren! Du spilte med Bjørn.
+      Runden i Firma-cup er ferdig. Laget endte på 1. plass av 4 lag med 68 slag netto (78 brutto). Gratulerer med seieren. Du spilte med Bjørn.
 
       Se leaderboard: https://tornygolf.no/games/game-tx-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>1. plass av 4 lag</strong> med <strong>68 slag netto</strong> (78 brutto). Gratulerer med seieren! Du spilte med <strong>Bjørn</strong>."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>1. plass av 4 lag</strong> med <strong>68 slag netto</strong> (78 brutto). Gratulerer med seieren. Du spilte med <strong>Bjørn</strong>."`);
   });
 
   it('texas: 4-mannslag — komma-separert partner-liste med «og» foran siste', async () => {
@@ -628,14 +628,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Anne!
 
-      Runden i Firma-cup er ferdig. Laget endte på 2. plass av 4 lag med 72 slag netto (82 brutto). Solid plassering! Du spilte med Bjørn, Carla og Dagfinn.
+      Runden i Firma-cup er ferdig. Laget endte på 2. plass av 4 lag med 72 slag netto (82 brutto). Solid plassering. Du spilte med Bjørn, Carla og Dagfinn.
 
       Se leaderboard: https://tornygolf.no/games/game-tx-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>2. plass av 4 lag</strong> med <strong>72 slag netto</strong> (82 brutto). Solid plassering! Du spilte med <strong>Bjørn, Carla og Dagfinn</strong>."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>2. plass av 4 lag</strong> med <strong>72 slag netto</strong> (82 brutto). Solid plassering. Du spilte med <strong>Bjørn, Carla og Dagfinn</strong>."`);
   });
 
   it('texas: 4.-plass — nøytral tone, men partner-setningen henger på', async () => {
@@ -688,14 +688,14 @@ describe('sendGameFinishedNotification', () => {
 
       Hei Eli!
 
-      Runden i Firma-cup er ferdig. Laget endte på 3. plass av 4 lag med 80 slag netto (88 brutto). Solid plassering!
+      Runden i Firma-cup er ferdig. Laget endte på 3. plass av 4 lag med 80 slag netto (88 brutto). Solid plassering.
 
       Se leaderboard: https://tornygolf.no/games/game-tx-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>3. plass av 4 lag</strong> med <strong>80 slag netto</strong> (88 brutto). Solid plassering!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Firma-cup</strong> er ferdig. Laget endte på <strong>3. plass av 4 lag</strong> med <strong>80 slag netto</strong> (88 brutto). Solid plassering."`);
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -829,14 +829,14 @@ describe('sendGameFinishedNotification — engelsk', () => {
 
       Hi Ada!
 
-      The round in Vinter-cup is over. You finished in 1st place out of 5 with 38 points. Congratulations on the win!
+      The round in Vinter-cup is over. You finished in 1st place out of 5 with 38 points. Congratulations on the win.
 
       View leaderboard: https://tornygolf.no/en/games/game-1/leaderboard
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>1st place out of 5</strong> with <strong>38 points</strong>. Congratulations on the win!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>1st place out of 5</strong> with <strong>38 points</strong>. Congratulations on the win."`);
   });
 
   it('stableford solo: 2nd place, 1 point — ordinal «2nd» + singular «point»', async () => {
@@ -850,7 +850,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
         totalPlayers: 8,
       },
     });
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>2nd place out of 8</strong> with <strong>1 point</strong>. Solid finish!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>2nd place out of 8</strong> with <strong>1 point</strong>. Solid finish."`);
   });
 
   it('stableford team: 1st place + partner «teamed up»', async () => {
@@ -865,7 +865,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
         totalTeams: 4,
       },
     });
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>1st place out of 4 teams</strong> with <strong>56 points</strong>. Congratulations on the win! You and <strong>Bjørn</strong> were teamed up."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>1st place out of 4 teams</strong> with <strong>56 points</strong>. Congratulations on the win. You and <strong>Bjørn</strong> were teamed up."`);
   });
 
   it('matchplay: won', async () => {
@@ -879,7 +879,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
         selfSide: 1,
       },
     });
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You won <strong>3&amp;2</strong> over <strong>Per</strong>. Congratulations on the win!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You won <strong>3&amp;2</strong> over <strong>Per</strong>. Congratulations on the win."`);
   });
 
   it('matchplay: lost', async () => {
@@ -921,7 +921,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
         totalPlayers: 8,
       },
     });
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>3rd place out of 8</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish!"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>3rd place out of 8</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish."`);
   });
 
   it('texas scramble: 4-player team — partner list with «and»', async () => {
@@ -936,6 +936,6 @@ describe('sendGameFinishedNotification — engelsk', () => {
         totalTeams: 4,
       },
     });
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>2nd place out of 4 teams</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish! You played with <strong>Bjørn, Carla and Dagfinn</strong>."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>2nd place out of 4 teams</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish. You played with <strong>Bjørn, Carla and Dagfinn</strong>."`);
   });
 });

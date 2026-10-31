@@ -296,6 +296,16 @@ export const TavleLaasIcon = (props: IconProps) => (
 );
 
 /**
+ * Flammen: streak-merket. Samme tegning som webbens `FlammeIcon`: én lukket
+ * kontur med et hakk i tuppen, så den leses som flamme også på 16 pt.
+ */
+export const FlammeIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M 12 3 C 12.5 6.3 14.3 7.5 15.9 9.5 C 17.2 11.2 18 12.9 18 14.8 A 6 6 0 0 1 6 14.8 C 6 12.5 7 11.2 8.3 9.9 C 8.8 11.3 9.4 12 10.2 12.4 C 10.2 8.7 10.7 5.7 12 3 Z" />
+  </LineIcon>
+);
+
+/**
  * Den skraverte staven for hullene best ball holder skjult (#2579): skrå
  * striper, 3 pt `hatch` og 3 pt `track` langs 135°, og en hårlinje i `hatch`
  * rundt (tegningens `repeating-linear-gradient(135deg, …)` med

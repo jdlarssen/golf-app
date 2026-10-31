@@ -11,13 +11,13 @@ export interface LeaderboardFooterProps {
 
 /**
  * Dekorativ avslutnings-footer nederst på poeng-format-leaderboardene.
- * Status-bevisst: «Lykke til.» mens spillet er live/kommende, «Vel spilt!»
+ * Status-bevisst: «Lykke til.» mens spillet er live/kommende, «Vel spilt.»
  * når det er ferdig — speiler matchplay-familiens
  * `hasDecidedWinner ? congratulations : goodLuck`-mønster.
  *
  * Bevisst distinkt fra podiets `congratulations` («Gratulerer.»): på ferdige
  * spill renderes Viewet chromeless under podiet, så samme tekst to ganger
- * unngås. «Vel spilt!» er en kollektiv avslutnings-signatur for hele feltet.
+ * unngås. «Vel spilt.» er en kollektiv avslutnings-signatur for hele feltet.
  */
 export function LeaderboardFooter({
   gameStatus,

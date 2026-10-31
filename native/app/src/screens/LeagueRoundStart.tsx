@@ -432,7 +432,7 @@ function ConfirmRow({ checked, onToggle }: { checked: boolean; onToggle: () => v
   );
 }
 
-/** Tegningenes `.sechead`: små sperrede versaler, 22 over og 8 under. */
+/** Tegningenes `.sechead`: liten etikett (12 pt), 22 over og 8 under. */
 function SectionHead({ title }: { title: string }) {
   const { colors } = useTheme();
   return (
@@ -451,10 +451,8 @@ const styles = StyleSheet.create({
   title: { ...fraunces(500, 30, 37, { multiline: true }) },
   subtitle: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 2 + interLine(13, 16).marginTop },
   sectionHead: {
-    ...interLine(10, 12),
+    ...interLine(12, 15),
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
     paddingTop: 22,
     paddingBottom: 8,
     paddingHorizontal: 20,

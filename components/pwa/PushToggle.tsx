@@ -47,9 +47,9 @@ export function PushToggle() {
 
   // Section heading lives inside the component so it never dangles on desktop /
   // unsupported (where the component returns null above). Matches the other
-  // profile sections' uppercase tracking label.
+  // profile sections' 12 px semibold label.
   const heading = (
-    <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+    <p className="mb-2 px-1 font-sans text-xs font-semibold text-muted">
       {t('sectionHeading')}
     </p>
   );

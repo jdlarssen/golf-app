@@ -4,7 +4,7 @@ import type { BingoBangoBongoHoleRow, BingoBangoBongoResult } from '@/lib/scorin
  * #2255 PR 3c: «Hull for hull» for Bingo Bango Bongo — ett kort per hull med
  * de tre prestasjonene (bingo, bango, bongo) og hvem som tok dem, eller
  * «ikke satt». Den som tok to av tre står i gull med stjerne, og tok én alle
- * tre, står «Feiet!» i hodet. Et hull uten noen av de tre venter.
+ * tre, står «Feiet» i hodet. Et hull uten noen av de tre venter.
  *
  * Regnestykket bodde i webbens `BingoBangoBongoHolesView`. Nå bor det her, og
  * både webben og appen tegner de samme kortene. Hintet under hver prestasjon
@@ -45,7 +45,7 @@ export interface BingoBangoBongoHoleCard {
    * registrert ennå.» i stedet for radene.
    */
   pending: boolean;
-  /** Én spiller tok alle tre: «★ Feiet!» i hodet. Aldri på et hull som venter. */
+  /** Én spiller tok alle tre: «★ Feiet» i hodet. Aldri på et hull som venter. */
   sweptAll: boolean;
   /** De tre prestasjonene i fast rekkefølge. Tom på et hull som venter. */
   rows: BingoBangoBongoHoleCardRow[];

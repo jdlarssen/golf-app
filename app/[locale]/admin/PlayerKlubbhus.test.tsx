@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import {
-  GreetingView,
+  RoomTitleView,
   NewRoundCard,
   ClubsView,
   CupsView,
@@ -31,8 +31,8 @@ const CUPS: RoomCup[] = [
 ];
 
 describe('PlayerKlubbhus room (#2493)', () => {
-  it('greets with one heading: no label card, no subtitle', () => {
-    const { container } = render(<GreetingView name="Kari" />);
+  it('titles the room with one heading: no label card, no subtitle', () => {
+    const { container } = render(<RoomTitleView title="Lørdag 31. oktober" />);
     expect(screen.getAllByRole('heading')).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(container.querySelectorAll('p')).toHaveLength(0);

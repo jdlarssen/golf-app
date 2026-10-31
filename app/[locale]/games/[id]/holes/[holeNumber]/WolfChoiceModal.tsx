@@ -124,9 +124,8 @@ const buttonAccentStyle: CSSProperties = {
 const tagStyle: CSSProperties = {
   alignSelf: 'center',
   fontFamily: 'var(--font-sans)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.12em',
   color: 'var(--primary)',
   border: '1px solid var(--primary)',
   borderRadius: 999,
@@ -135,10 +134,8 @@ const tagStyle: CSSProperties = {
 
 const kickerStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: '0.2em',
-  textTransform: 'uppercase',
   color: 'var(--text-muted)',
   margin: '4px 0 0',
 };

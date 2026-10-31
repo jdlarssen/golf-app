@@ -175,11 +175,9 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   };
 
   const badgeStyle: CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.18em',
-    // Felt-kritisk info på 11px — leses utendørs, må ha tekst-tokenen (#1374).
+    // Felt-kritisk info på 12px — leses utendørs, må ha tekst-tokenen (#1374).
     color: 'var(--accent-text)',
     marginLeft: 8,
   };

@@ -514,19 +514,19 @@ async function ReviewBody({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left bg-bg/40">
-                <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted">
                   {t('colHole')}
                 </th>
-                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted">
                   {t('colPar')}
                 </th>
-                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted">
                   {t('colSi')}
                 </th>
-                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted">
                   {t('colStrokes')}
                 </th>
-                <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted">
                   {t('colEnteredBy')}
                 </th>
               </tr>
