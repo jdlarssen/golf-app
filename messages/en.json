@@ -7105,6 +7105,7 @@
       "finishedBody": "The game is over. Scan the code to see the result.",
       "finishedQrTitle": "The result on your phone",
       "finishedQrBody": "Scan the code to see who won",
+      "finishedQrBodyResult": "Scan the code to see the result",
       "hiddenBody": "The board shows when the game is finished.",
       "unsupportedBody": "The big screen only shows stroke play and stableford for now."
     }

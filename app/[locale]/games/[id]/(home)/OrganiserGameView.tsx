@@ -16,7 +16,6 @@ import { CreatorControls } from './CreatorControls';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { CeremonyEntry } from './CeremonyEntry';
-import { ceremonySupported } from '@/lib/games/ceremony';
 import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
@@ -38,6 +37,7 @@ export async function OrganiserGameView({
   game,
   locale,
   spectateToken,
+  ceremonyOpen,
   errorBanner,
   statusBanner,
   startBlockNotice = null,
@@ -46,6 +46,8 @@ export async function OrganiserGameView({
   game: GameRow;
   locale: AppLocale;
   spectateToken: string | null;
+  /** #2712: the page's `ceremonyAvailable` (no prize-giving for a league round played alone). */
+  ceremonyOpen: boolean;
   errorBanner: ReactNode;
   statusBanner: ReactNode;
   /** #2204: why a scheduled round would not start, shown over the controls. */
@@ -129,7 +131,7 @@ export async function OrganiserGameView({
 
           {/* #2298: the prize-giving on the big screen — above all for the
               organiser who runs the evening without playing. */}
-          {game.status === 'finished' && ceremonySupported(game.game_mode) && (
+          {game.status === 'finished' && ceremonyOpen && (
             <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
           )}
 

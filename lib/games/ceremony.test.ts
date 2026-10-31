@@ -7,6 +7,7 @@ import {
   ceremonyLines,
   ceremonyPlaces,
   ceremonySteps,
+  ceremonyAvailable,
   ceremonySupported,
   ceremonyView,
   type CeremonyLine,
@@ -420,5 +421,43 @@ describe('ceremonyLines — points games ranked on net to par (#2625)', () => {
       ]),
     );
     expect(lines).toHaveLength(2);
+  });
+});
+
+// #2712 (orchestrator 31.10, after the owner's rule): the prize-giving reveals
+// a winner, and a league round played alone has none.
+describe('ceremonyAvailable (#2712)', () => {
+  it('a league flight with one active player has no prize-giving', () => {
+    expect(ceremonyAvailable('stableford', true, 1)).toBe(false);
+    expect(ceremonyAvailable('solo_strokeplay', true, 1)).toBe(false);
+  });
+  it('a league flight of several keeps it', () => {
+    expect(ceremonyAvailable('stableford', true, 2)).toBe(true);
+  });
+  it('a game outside a league keeps it, even alone', () => {
+    expect(ceremonyAvailable('stableford', false, 1)).toBe(true);
+  });
+  it('a format without a podium never has one', () => {
+    expect(ceremonyAvailable('singles_matchplay', false, 4)).toBe(false);
+  });
+
+  // Every way into the prize-giving asks the same rule: the entries on the
+  // game page, the organiser view and the admin page, the remote and the TV.
+  it('every entry reads ceremonyAvailable, none ceremonySupported alone', () => {
+    const root = path.resolve(__dirname, '../..');
+    const sites = [
+      'app/[locale]/games/[id]/(home)/page.tsx',
+      'app/[locale]/admin/games/[id]/page.tsx',
+      'app/[locale]/games/[id]/premieutdeling/page.tsx',
+      'app/[locale]/spectate/[token]/tv/page.tsx',
+    ];
+    for (const site of sites) {
+      const src = fs.readFileSync(path.join(root, site), 'utf8');
+      expect(src, site).toContain('ceremonyAvailable(');
+      expect(src, site).not.toContain('ceremonySupported(');
+    }
+    // The organiser view gets the answer from the game page as a prop.
+    const organiser = 'app/[locale]/games/[id]/(home)/OrganiserGameView.tsx';
+    expect(fs.readFileSync(path.join(root, organiser), 'utf8'), organiser).not.toContain('ceremonySupported(');
   });
 });

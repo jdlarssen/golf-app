@@ -93,7 +93,7 @@ import { CreatorStartBlockNotice } from './CreatorStartBlockNotice';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { CeremonyEntry } from './CeremonyEntry';
-import { ceremonySupported } from '@/lib/games/ceremony';
+import { ceremonyAvailable } from '@/lib/games/ceremony';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import {
   effectiveHcpAllowancePct,
@@ -311,6 +311,13 @@ export default async function GameHomePage({
     gwp.game.league_round_id && (await readSimulatorLeagueFlight(id)),
   );
   const isCreator = gwp.game.created_by === userId && !simulatorFlight;
+  // #2712: the prize-giving crowns a winner, so a league round played alone
+  // has none (`ceremonyAvailable`).
+  const ceremonyOpen = ceremonyAvailable(
+    gwp.game.game_mode,
+    gwp.game.league_round_id != null,
+    gwp.players.filter((p) => p.withdrawn_at == null).length,
+  );
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =
@@ -341,6 +348,7 @@ export default async function GameHomePage({
         id={id}
         game={game}
         locale={locale}
+        ceremonyOpen={ceremonyOpen}
         spectateToken={spectateToken}
         errorBanner={
           organiserStartBlock && organiserStartBlock.reason === errorCode ? null : errorBanner
@@ -1605,7 +1613,7 @@ export default async function GameHomePage({
         )}
 
         {/* #2298: the organiser runs the prize-giving on the big screen. */}
-        {isFinished && isCreator && ceremonySupported(game.game_mode) && (
+        {isFinished && isCreator && ceremonyOpen && (
           <CeremonyEntry gameId={id} label={tCeremony('entryLink')} />
         )}
 
