@@ -21,12 +21,19 @@ export async function PrimaryCtaSection({
   gameMode,
   teamScoreOwnerId,
   formerTeamRowOwnerIds,
+  leagueFlight,
 }: {
   gameId: string;
   currentUserId: string;
   submittedAt: string | null;
   approvedAt: string | null;
   requirePeerApproval: boolean;
+  /**
+   * #2712: the game is a league flight. A delivered card there waits for the
+   * marker (the app's ticket says the same), who in a simulator league is
+   * usually outside the flight.
+   */
+  leagueFlight: boolean;
   /** #1441: limits «all holes filled» + the next-hole scan to the game's segment. */
   holeSegment: HoleSegment;
   /**
@@ -154,6 +161,7 @@ export async function PrimaryCtaSection({
       nextHole={nextHole}
       sibling={sibling}
       flightCardCount={flightCardCount}
+      pendingMessage={leagueFlight ? 'ctaSubmittedPendingMarker' : 'ctaSubmittedPendingApproval'}
     />
   );
 }
@@ -195,6 +203,7 @@ function PrimaryCta({
   nextHole,
   sibling,
   flightCardCount,
+  pendingMessage,
 }: {
   gameId: string;
   state: PrimaryCtaState;
@@ -214,6 +223,8 @@ function PrimaryCta({
   } | null;
   /** #2200: flightmates' cards I kept and can still deliver. 0 = no button. */
   flightCardCount: number;
+  /** #2712: the line under a delivered card that waits for approval. */
+  pendingMessage: 'ctaSubmittedPendingApproval' | 'ctaSubmittedPendingMarker';
 }) {
   const t = useTranslations('game.home');
   // #2200: the next thing to do once my own card is in.
@@ -298,7 +309,7 @@ function PrimaryCta({
       <div className="space-y-1.5">
         {flightCta}
         <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-          {t('ctaSubmittedPendingApproval')}
+          {t(pendingMessage)}
         </div>
         {sibling && (
           <LinkButton

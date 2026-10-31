@@ -88,6 +88,8 @@ async function callSection(opts: {
   teamScoreOwnerId: string | null;
   formerTeamRowOwnerIds?: string[];
   submittedAt?: string | null;
+  requirePeerApproval?: boolean;
+  leagueFlight?: boolean;
 }) {
   const { PrimaryCtaSection } = await import('./PrimaryCta');
   const { client, captured } = makeSupabase(opts.rows);
@@ -97,7 +99,8 @@ async function callSection(opts: {
     currentUserId: VIEWER,
     submittedAt: opts.submittedAt ?? null,
     approvedAt: null,
-    requirePeerApproval: false,
+    requirePeerApproval: opts.requirePeerApproval ?? false,
+    leagueFlight: opts.leagueFlight ?? false,
     holeSegment: 'full',
     tournamentId: null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,5 +247,32 @@ describe('PrimaryCtaSection flight cards (#2200)', () => {
     });
     expect(props.flightCardCount).toBe(0);
     errorSpy.mockRestore();
+  });
+});
+
+// #2712: in a league the card waits for the marker (the app's ticket says the
+// same), not for «en medspiller»: in a simulator league the marker is usually
+// outside the flight.
+describe('PrimaryCtaSection pending line in a league flight (#2712)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loadCardsMock.mockReset();
+    loadCardsMock.mockResolvedValue([]);
+  });
+
+  it.each([
+    { leagueFlight: true, message: 'ctaSubmittedPendingMarker' },
+    { leagueFlight: false, message: 'ctaSubmittedPendingApproval' },
+  ])('leagueFlight $leagueFlight → $message', async ({ leagueFlight, message }) => {
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(1, 18)),
+      gameMode: 'stableford',
+      teamScoreOwnerId: null,
+      submittedAt: '2026-10-31T11:22:31Z',
+      requirePeerApproval: true,
+      leagueFlight,
+    });
+    expect(props.state).toBe('submitted_pending_approval');
+    expect(props.pendingMessage).toBe(message);
   });
 });

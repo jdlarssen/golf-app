@@ -2318,6 +2318,7 @@
       "ctaReviewAndSubmit": "Review and submit",
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
+      "ctaSubmittedPendingMarker": "Your card is in. Now it waits for your marker.",
       "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
       "ctaDeliverFlight": "{count, plural, one {Submit the card you kept} other {Submit the cards you kept ({count})}}",
       "ctaContinueToSibling": "Continue to hole {hole} · {format}",

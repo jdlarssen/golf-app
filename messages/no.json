@@ -2318,6 +2318,7 @@
       "ctaReviewAndSubmit": "Gjennomgå og lever",
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
+      "ctaSubmittedPendingMarker": "Kortet er levert. Nå venter det på markøren.",
       "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
       "ctaDeliverFlight": "{count, plural, one {Lever kortet du har ført} other {Lever kortene du har ført ({count})}}",
       "ctaContinueToSibling": "Videre til hull {hole} · {format}",

@@ -1340,6 +1340,7 @@ export default async function GameHomePage({
                   submittedAt={me.submitted_at}
                   approvedAt={me.approved_at}
                   requirePeerApproval={game.require_peer_approval}
+                  leagueFlight={game.league_round_id != null}
                   holeSegment={game.hole_segment}
                   tournamentId={game.tournament_id}
                   gameMode={game.game_mode}
