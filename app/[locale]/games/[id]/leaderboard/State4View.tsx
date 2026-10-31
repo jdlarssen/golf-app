@@ -3,7 +3,7 @@
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
+import { ChevronRightIcon, Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
 import {
   LeaderboardBackLink,
@@ -253,7 +253,7 @@ function ExportLink({ gameId, t }: { gameId: string; t: ReturnType<typeof useTra
       <a
         href={`/games/${gameId}/leaderboard/export`}
         download={`torny-${gameId}-${today}.csv`}
-        className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium tracking-tight text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft"
+        className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft"
       >
         {t('downloadCsv')}
       </a>
@@ -679,9 +679,7 @@ function TeamRow({
           {rowContent}
           {/* Chevronen er lenke-affordansen — den følger lenken ut på de
               offentlige flatene, i stedet for å love en side som ikke finnes. */}
-          <span aria-hidden className="text-muted">
-            ›
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </SmartLink>
       ) : (
         <div className={rowClassName} style={rowStyle}>

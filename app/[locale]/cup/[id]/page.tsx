@@ -21,6 +21,7 @@ import { formatPoints } from '@/lib/cup/formatPoints';
 import { canSelfWithdrawFromCup } from '@/lib/cup/cupSelfWithdrawLink';
 import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
+import { ChevronRightIcon } from '@/components/icons';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string | string[] }>;
@@ -139,9 +140,7 @@ export default async function PublicCupPage({
         >
           <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
             <span className="text-base font-medium text-text">{t('public.resultsDoor')}</span>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
           </Card>
         </SmartLink>
       ) : (

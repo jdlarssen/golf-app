@@ -180,7 +180,7 @@ export function ModeToggle({
             publicView,
             publicHref: backHref,
           })}
-          className={`tap-extend min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-colors [--tap-extend:-4px_0] ${
+          className={`tap-extend min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium transition-colors [--tap-extend:-4px_0] ${
             mode === m
               ? 'bg-surface text-text shadow-sm'
               : 'text-muted hover:text-text'

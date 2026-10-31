@@ -38,6 +38,7 @@ import {
   type VsParTone,
 } from '@/lib/leaderboard/bestBallHoles';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * Den generiske «Hull for hull»-drilldownen: lagets best ball per hull. Bare
@@ -568,13 +569,13 @@ function TeamNavLink({
         isPrev ? '' : 'ml-auto'
       }`}
     >
-      {isPrev && <span aria-hidden>‹</span>}
+      {isPrev && <ChevronRightIcon size={14} className="shrink-0 rotate-180" />}
       <span>
         {isPrev
           ? t('prevTeam', { rank: target.rank, number: target.teamNumber })
           : t('nextTeam', { rank: target.rank, number: target.teamNumber })}
       </span>
-      {!isPrev && <span aria-hidden>›</span>}
+      {!isPrev && <ChevronRightIcon size={14} className="shrink-0" />}
     </SmartLink>
   );
 }

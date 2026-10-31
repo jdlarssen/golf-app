@@ -479,7 +479,7 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     expect(screen.queryByTestId('hole-by-hole-swept-1')).toBeNull();
 
     // Hull 2: Bjørn tok alle tre, «Feiet» i hodet.
-    expect(screen.getByTestId('hole-by-hole-swept-2')).toHaveTextContent('★ Feiet');
+    expect(screen.getByTestId('hole-by-hole-swept-2')).toHaveTextContent('Feiet');
     expect(screen.queryByTestId('hole-by-hole-waiting-2')).toBeNull();
 
     // Hull 3: bare bingo, resten «ikke satt», og hullet venter ikke.

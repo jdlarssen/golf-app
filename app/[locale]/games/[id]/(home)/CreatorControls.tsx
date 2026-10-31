@@ -6,6 +6,7 @@ import { type GameStatus } from '@/lib/games/status';
 import { startScheduledGameAction } from '@/app/[locale]/admin/games/[id]/actions';
 import { StartScheduledGameButton } from '@/app/[locale]/admin/games/[id]/StartScheduledGameButton';
 import { arrangedRoundHref } from '@/lib/games/arrangedGames';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * Arrangør-kontroll for spillets oppretter: Styr spillere, Start runden nå,
@@ -49,9 +50,7 @@ export function CreatorControls({
               <span className="text-base font-medium text-text">
                 {t('managePlayersLink')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -71,9 +70,7 @@ export function CreatorControls({
               <span className="text-base font-medium text-text">
                 {t('moveGameLink')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -94,9 +91,7 @@ export function CreatorControls({
               <span className="text-base font-medium text-text">
                 {t('editGameLink')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -108,9 +103,7 @@ export function CreatorControls({
               <span className="text-base font-medium text-danger">
                 {status === 'scheduled' ? t('cancelRoundLink') : t('deleteGameLink')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}

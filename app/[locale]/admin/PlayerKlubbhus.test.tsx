@@ -30,6 +30,10 @@ const CUPS: RoomCup[] = [
   { id: 'cup-2', name: 'Ryder på hjemmebane', href: '/admin/cup/cup-2', playing: false, progress: null },
 ];
 
+/** The icons on a row apart from its trailing chevron (the room's rows carry no leading icon). */
+const iconsBesidesChevron = (el: Element) =>
+  Array.from(el.querySelectorAll('svg')).filter((svg) => !svg.querySelector('path[d="m9 6 6 6-6 6"]'));
+
 describe('PlayerKlubbhus room (#2493)', () => {
   it('titles the room with one heading: no label card, no subtitle', () => {
     const { container } = render(<RoomTitleView title="Lørdag 31. oktober" />);
@@ -90,7 +94,7 @@ describe('PlayerKlubbhus room (#2493)', () => {
     const finishedRow = screen.getByTestId('player-cup-row');
     expect(finishedRow).toHaveAttribute('href', '/admin/cup');
     expect(finishedRow.dataset.finished).toBe('2');
-    expect(finishedRow.querySelector('svg')).toBeNull();
+    expect(iconsBesidesChevron(finishedRow)).toEqual([]);
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
     finishedOnly.unmount();
 
@@ -133,6 +137,6 @@ describe('PlayerKlubbhus room (#2493)', () => {
       '/spillformater?kilde=klubbhuset',
       '/foreslaa-ide',
     ]);
-    expect(tools.every((a) => a.querySelector('svg') === null)).toBe(true);
+    expect(tools.every((a) => iconsBesidesChevron(a).length === 0)).toBe(true);
   });
 });

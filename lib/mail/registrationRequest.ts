@@ -49,7 +49,7 @@ export async function sendRegistrationRequestMail(
     requesterName: escapeHtml(name),
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
-    em: (c) => `<em>${c}</em>`,
+    em: (c) => `<span style="font-weight:600;">${c}</span>`,
   });
   const bodyText = t('registrationRequest.bodyText', { requesterName: name, gameName });
 

@@ -94,6 +94,7 @@ import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from '@/lib/games/hcpAllowance';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
+import { ChevronRightIcon } from '@/components/icons';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -895,7 +896,7 @@ export default async function GameHomePage({
               {teeOffDate && (
                 <a
                   href={`/${locale}/games/${id}/calendar`}
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
+                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium transition-colors"
                 >
                   {t('addToCalendar')}
                 </a>
@@ -905,7 +906,7 @@ export default async function GameHomePage({
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(game.courses.name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium tracking-tight transition-colors"
+                  className="inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full border border-border bg-transparent hover:bg-primary-soft text-text text-sm font-medium transition-colors"
                 >
                   {t('viewOnMap')}
                 </a>
@@ -1601,9 +1602,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {t('hullForHull')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -1614,9 +1613,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {tScorecard(scorecardTitle(game.game_mode, game.mode_config).cardLabelKey as Parameters<typeof tScorecard>[0])}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}
@@ -1627,9 +1624,7 @@ export default async function GameHomePage({
               <span className="text-base font-medium text-text">
                 {t('leaderboard')}
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ChevronRightIcon className="shrink-0 text-muted" />
             </Card>
           </SmartLink>
         )}

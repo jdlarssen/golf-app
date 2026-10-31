@@ -10,6 +10,7 @@ import { firstName, socialProofForm, type GameSocialProof } from '@/lib/games/so
 import { capacityState, terminTimeNote, type TerminEntry } from '@/lib/games/terminliste';
 import { nameInitials } from '@/lib/names/initials';
 import type { AppLocale } from '@/i18n/routing';
+import { ChevronRightIcon } from '@/components/icons';
 
 const ROW = 'flex items-center gap-3 px-[14px] py-3';
 
@@ -64,9 +65,7 @@ export function TerminRow({
           data-testid="anon-discovery-card"
         >
           {body}
-          <span aria-hidden className="shrink-0 text-muted">
-            →
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </SmartLink>
       </li>
     );

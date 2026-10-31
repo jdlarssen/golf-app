@@ -887,6 +887,16 @@ h1, h2, h3, h4, h5, h6 {
   text-wrap: pretty;
 }
 
+/* Emphasis in running text is semibold. Preflight sets `bolder` (700 on the
+ * variable Inter), and Tørny's scale stops at --fw-sans-strong. In `base`, so
+ * a `font-medium` or `font-semibold` class on the element still wins. */
+@layer base {
+  b,
+  strong {
+    font-weight: var(--fw-sans-strong);
+  }
+}
+
 /* The invitation login (#2266) stands on linen, and so must the overscroll
  * and Safari's toolbar tint — they paint from <body>, not from AppShell. */
 body:has([data-page-bg='invitation']) {
@@ -976,11 +986,9 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
 /* -----------------------------------------------------------------------------
  * Leader card reveal — state #4 (status=finished).
  *
- * Three coordinated animations fire when the leaderboard mounts:
+ * Two coordinated animations fire when the leaderboard mounts:
  *  - `.leader-shimmer` runs the inset champagne hairline from 0 → 1.5px peak
  *    → resting 1px. Starts 240ms after mount per spec timing.
- *  - `.leader-badge-pulse` loops a *very subtle* opacity breath on the
- *    `Leder · 1. plass` kicker. 3s cycle, infinite.
  *  - `.reveal-up` is a generic fade-and-slide entry; the leader card uses it
  *    at 60ms delay, rows 2..N stagger via inline `animationDelay` (140 + i*80
  *    ms). This is distinct from `.lb-row` above, which still drives state
@@ -1082,20 +1090,6 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
   animation: leader-shimmer 1600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms 1 both;
 }
 
-@keyframes leader-badge-pulse {
-  0%,
-  100% {
-    opacity: 0.92;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.leader-badge-pulse {
-  animation: leader-badge-pulse 3s ease-in-out infinite;
-}
-
 /* -----------------------------------------------------------------------------
  * Confetti — one-shot burst anchored to top of leader card.
  *
@@ -1131,8 +1125,7 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal-up,
-  .leader-badge-pulse {
+  .reveal-up {
     animation: none;
     opacity: 1;
   }

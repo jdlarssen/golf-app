@@ -254,12 +254,24 @@ export const SokIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => 
   </LineIcon>
 );
 
-/** Peker ned (vis mer) som standard; `up` for «lukk». */
-export const ChevronIcon = ({ up = false, ...props }: IconProps & { up?: boolean }) => (
-  <LineIcon {...props}>
-    <Path d={up ? 'M 6 15 L 12 9 L 18 15' : 'M 6 9 L 12 15 L 18 9'} />
-  </LineIcon>
-);
+/**
+ * Peker ned (vis mer) som standard; `up` (eller `direction="up"`) for «lukk», og
+ * `direction="right"` for en rad som åpner en ny side. `direction` vinner over `up`.
+ */
+export const ChevronIcon = ({
+  up = false,
+  direction,
+  ...props
+}: IconProps & { up?: boolean; direction?: 'down' | 'up' | 'right' }) => {
+  const dir = direction ?? (up ? 'up' : 'down');
+  const d =
+    dir === 'right' ? 'M 9 6 L 15 12 L 9 18' : dir === 'up' ? 'M 6 15 L 12 9 L 18 15' : 'M 6 9 L 12 15 L 18 9';
+  return (
+    <LineIcon {...props}>
+      <Path d={d} />
+    </LineIcon>
+  );
+};
 
 /** Tilbake-pila i toppen (#2385, designlerretet): en bar vinkel mot venstre. */
 export const TilbakeIcon = (props: IconProps) => (

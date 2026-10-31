@@ -111,7 +111,7 @@ describe('EditOverview (#2322)', () => {
     // Orchestrator's decision 25.10: the line never says the round starts by
     // itself while something stops the start (as the Sekretariat's start card).
     expect(screen.queryByTestId('edit-overview-autostart')).toBeNull();
-    expect(screen.getByTestId('start-scheduled-game')).toHaveTextContent('Start runden nå →');
+    expect(screen.getByTestId('start-scheduled-game')).toHaveTextContent('Start runden nå');
   });
 
   it('another reason to stop the start sits on the row it belongs to', () => {

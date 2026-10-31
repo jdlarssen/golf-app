@@ -207,7 +207,7 @@ export default async function AvsluttLikevelPage({
 
         <Link
           href={detailPath}
-          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium text-text transition-colors hover:bg-surface-2"
         >
           {t('cancel')}
         </Link>

@@ -16,9 +16,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
 import { HOME_TEXT, bruttoText, finishedResultText, pointsText } from '../../lib/homeCopy';
-import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
-import { withSystemArrows } from '../SystemArrow';
-import { MedalDisc, PokalIcon } from '../icons/Icons';
+import { FONTS, fraunces, TAP, useTheme } from '../../theme';
+import { ChevronIcon, MedalDisc, PokalIcon } from '../icons/Icons';
 
 /** Tallet i medaljongen, eller `null` når runden ikke har en plass (matchplay). */
 function medalRank(card: HomeCard): number | null {
@@ -106,14 +105,7 @@ export function LastRoundCard({
           </Text>
         ) : null}
       </View>
-      <Text
-        style={[styles.arrow, { color: colors.primary }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        testID="home-last-round-arrow"
-      >
-        {withSystemArrows('→', '400')}
-      </Text>
+      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} testID="home-last-round-arrow" />
     </Pressable>
   );
 }
@@ -143,8 +135,4 @@ const styles = StyleSheet.create({
   text: { flex: 1 },
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   line: { fontSize: 12, fontFamily: FONTS.sans },
-  // Nettleserens `normal` for Inter 18 er 21 (#2385).
-  // Linja er Inters, som i designet; bare pila er systemfontens
-  // (`SystemArrow.tsx`).
-  arrow: { ...interLine(18, 21), fontFamily: FONTS.sans },
 });

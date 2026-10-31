@@ -29,7 +29,7 @@ export function InviteEmailForm({
 }: {
   state: GameFormState;
   room: number;
-  /** For the «✉ E-post» card's `aria-controls`. */
+  /** For the «E-post» card's `aria-controls`. */
   id: string;
 }) {
   const t = useTranslations('wizard.sections.players.email');

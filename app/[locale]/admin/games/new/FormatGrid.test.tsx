@@ -121,7 +121,7 @@ describe('FormatGrid — med antall (Kompis)', () => {
     expect(screen.queryByRole('radio', { name: /^nines/i })).toBeNull();
   });
 
-  it('valgt kort sier «Valgt», og en valgt rad får «Reglene» i stedet for pila', () => {
+  it('valgt kort sier «Valgt», og en valgt rad får «Reglene» i stedet for chevronen', () => {
     const onShowGuide = vi.fn();
     const { rerender } = render(
       <FormatGrid
@@ -149,7 +149,7 @@ describe('FormatGrid — med antall (Kompis)', () => {
     );
     const wolf = screen.getByRole('radio', { name: 'Wolf' });
     expect(wolf).toHaveAttribute('aria-checked', 'true');
-    expect(wolf).not.toHaveTextContent('→');
+    expect(wolf.querySelector('svg')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Reglene for Wolf' }));
     expect(onShowGuide).toHaveBeenCalledWith('wolf');
   });

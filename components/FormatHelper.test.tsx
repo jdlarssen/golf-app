@@ -64,7 +64,7 @@ describe('FormatHelper', () => {
       'href',
       '/spillformater/texas_scramble',
     );
-    expect(screen.getByRole('link', { name: 'Eller se alle 23 spillformer →' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Eller se alle 23 spillformer' })).toHaveAttribute(
       'href',
       '#alle-spillformer',
     );

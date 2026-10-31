@@ -26,7 +26,7 @@ export type LiveBoardFollowOpts = {
   userId: string | null;
   /** The address had a `?folg=` at all — an id that cannot be followed is forgotten. */
   hadFolg: boolean;
-  /** The follow page's «Lag din egen turnering på et par minutter →». */
+  /** The follow page's «Lag din egen turnering på et par minutter». */
   cta: ReactNode;
 };
 

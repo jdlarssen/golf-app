@@ -62,7 +62,6 @@ import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
-import { withSystemArrows } from '../components/SystemArrow';
 import type { GameBundle } from '../data/gameBundle';
 import {
   fetchCardExtras,
@@ -434,7 +433,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
               onPress={() => navigation.navigate('RoundDiary', { from: 'home' })}
               testID="home-all-rounds"
             >
-              <Text style={ui.linkText}>{withSystemArrows(HOME_TEXT.allRounds, '500')}</Text>
+              <Text style={ui.linkText}>{HOME_TEXT.allRounds}</Text>
             </Pressable>
           </View>
         ) : null}

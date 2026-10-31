@@ -79,7 +79,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
                     <SubmitButton
                       disabled={disabled}
                       pendingLabel={t('rosterAddPending')}
-                      className="min-h-[44px] rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
+                      className="min-h-[44px] rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
                     >
                       {t('rosterAddButton')}
                     </SubmitButton>
@@ -119,7 +119,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
           <SubmitButton
             disabled={disabled}
             pendingLabel={t('invitePending')}
-            className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
+            className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
           >
             {t('inviteButton')}
           </SubmitButton>

@@ -84,7 +84,7 @@ describe('soloBoardFor — live', () => {
     expect(model.strip).toEqual({
       kicker: 'Din runde',
       text: '2. plass · 7 poeng bak Marte',
-      action: { kind: 'hole', holeNumber: 8, label: 'Hull 8 →' },
+      action: { kind: 'hole', holeNumber: 8, label: 'Hull 8' },
     });
   });
 
@@ -198,7 +198,7 @@ describe('soloBoardFor — finished', () => {
     expect(model.strip).toEqual({
       kicker: 'Ditt resultat',
       text: '3. plass · 18 bak Marte',
-      action: { kind: 'scorecard', label: 'Scorekortet →' },
+      action: { kind: 'scorecard', label: 'Scorekortet' },
     });
   });
 

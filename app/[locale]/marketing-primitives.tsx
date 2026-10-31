@@ -50,9 +50,6 @@ export function TextLink({
       className={`inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-primary hover:text-primary-hover ${className}`}
     >
       {children}
-      <span aria-hidden className="ml-1">
-        →
-      </span>
     </Link>
   );
 }

@@ -266,7 +266,7 @@ function SectionBlock({
             data-testid={`${testId}-winner`}
             className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-xs font-semibold text-accent-text"
           >
-            ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
+            {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
         {isPush && (
@@ -484,7 +484,7 @@ function TotalBlock({
         </div>
         {cleanWinnerId && (
           <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-xs font-semibold text-accent-text">
-            ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
+            {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
       </header>

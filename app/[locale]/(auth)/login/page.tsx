@@ -308,8 +308,7 @@ export default async function LoginPage({
               data-testid="try-demo-link"
               className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
             >
-              {t(appLaunchKey('auth', 'tryDemo', appLaunchFlag()))}{' '}
-              <span aria-hidden="true">→</span>
+              {t(appLaunchKey('auth', 'tryDemo', appLaunchFlag()))}
             </AppCtaLink>
           </Card>
         </div>

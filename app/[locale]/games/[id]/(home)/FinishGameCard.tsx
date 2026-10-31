@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { ChevronRightIcon } from '@/components/icons';
 
 /**
  * #427: «Avslutt spillet» for the game's creator on an active game. Understated,
@@ -16,9 +17,7 @@ export function FinishGameCard({ gameId }: { gameId: string }) {
           <span className="text-base font-medium text-text">
             {t('finishGame')}
           </span>
-          <span aria-hidden className="text-muted">
-            →
-          </span>
+          <ChevronRightIcon className="shrink-0 text-muted" />
         </div>
         <p className="mt-1 text-xs text-muted">
           {t('finishGameHint')}

@@ -162,7 +162,7 @@ function WhenFields({ teeOffAt }: { teeOffAt: string | null }) {
 
 /**
  * «{bane} · {tee} tee», «{format} · hver for seg» and the format's rule in
- * italics. The rule has the same source as ModeGuideCard on the game page.
+ * muted text. The rule has the same source as ModeGuideCard on the game page.
  */
 function GameLines({
   gameMode,
@@ -210,7 +210,7 @@ function GameLines({
         </p>
       )}
       {rule && (
-        <p className="text-[12px] leading-[normal] text-muted italic">{rule}</p>
+        <p className="text-[12px] leading-[normal] text-muted">{rule}</p>
       )}
     </>
   );

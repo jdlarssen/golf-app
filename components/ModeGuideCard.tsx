@@ -5,7 +5,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 /**
  * Gjenbrukbar utvidbar modus-forklaring (#299, #307). Viser modus-navn +
  * ett-linjes sammendrag alltid, og folder ut «korte regler» når spilleren
- * trykker. Valgfri `detailHref` legger til en «Les mer →»-lenke til
+ * trykker. Valgfri `detailHref` legger til en «Les mer»-lenke til
  * detaljsiden for modus-en (#308).
  *
  * Ren presentasjonskomponent — caller henter innholdet fra
@@ -31,7 +31,7 @@ export function ModeGuideCard({
   id,
   showRulesLabel = 'Vis regler',
   hideRulesLabel = 'Skjul regler',
-  readMoreLabel = 'Les mer →',
+  readMoreLabel = 'Les mer',
 }: {
   /** Sammendrag-setning — alltid synlig i lukket tilstand. */
   summary: string;
@@ -41,7 +41,7 @@ export function ModeGuideCard({
   label: string;
   /**
    * Valgfri href til detalj-side for modus-en. Når satt rendres en
-   * «Les mer →»-lenke nederst i åpen tilstand.
+   * «Les mer»-lenke nederst i åpen tilstand.
    */
   detailHref?: string;
   /**

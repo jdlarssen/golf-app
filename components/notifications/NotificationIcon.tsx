@@ -8,7 +8,6 @@ import {
   ProfilIcon,
   ReplayIcon,
   ScorekortIcon,
-  SparkleIcon,
 } from '@/components/icons/Icons';
 import type { NotificationIconName } from '@/lib/notifications/icons';
 
@@ -20,7 +19,6 @@ const ICONS: Record<NotificationIconName, ComponentType<{ size?: number | string
   kalender: KalenderIcon,
   profil: ProfilIcon,
   klubbhus: KlubbhusIcon,
-  sparkle: SparkleIcon,
   replay: ReplayIcon,
 };
 
