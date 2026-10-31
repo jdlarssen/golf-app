@@ -1,11 +1,8 @@
 // Server-side scoring-avledningene hull-siden gjør før render (#1716 — ren
-// flytting ut av `page.tsx`): stableford-totalen i headeren, Wolf-poengene
-// klienten trenger til trailing-wolf-regelen, og skins-potten for hullet.
+// flytting ut av `page.tsx`): Wolf-poengene klienten trenger til
+// trailing-wolf-regelen, og skins-potten for hullet. Stableford-totalen i
+// headeren er borte: hullsiden viser ikke poeng mens slag føres (#2735).
 
-import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
-import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
-import { parFor } from '@/lib/scoring/modes/parResolver';
 import { computeLeaderboard } from '@/lib/scoring';
 import * as skins from '@/lib/scoring/modes/skins';
 import { wolfStakeForHole } from '@/lib/wolf/wolfPayout';
@@ -60,65 +57,6 @@ function toScoringScores(rows: ScoreRowForCtx[] | null): ScoringHoleScore[] {
     holeNumber: s.hole_number,
     gross: s.strokes,
   }));
-}
-
-/**
- * Stableford totals — komputeres server-side når modus krever det.
- * `total`: summen over alle ferdig-tastede hull (brukerens egen
- * course-handicap brukes til stroke-fordeling). `forCurrentHole`: poeng for
- * current hull spesifikt, brukes til «N poeng»-chip-en.
- */
-export function computeStablefordTotals(args: {
-  isStableford: boolean;
-  game: GameForHole;
-  me: PlayerForHole;
-  holeNumber: number;
-  allHolesRes: HolePageData['allHolesRes'];
-  myAllScoresRes: HolePageData['myAllScoresRes'];
-}): { total: number | null; forCurrentHole: number | null } {
-  const { isStableford, game, me, holeNumber, allHolesRes, myAllScoresRes } =
-    args;
-  if (!isStableford) return { total: null, forCurrentHole: null };
-  if (allHolesRes.error) throw allHolesRes.error;
-  if (myAllScoresRes.error) throw myAllScoresRes.error;
-  const myCh = me.course_handicap ?? 0;
-  const holesByNum = new Map<number, HoleRow>();
-  for (const h of allHolesRes.data ?? []) holesByNum.set(h.hole_number, h);
-  const stablefordPointsFn =
-    game.game_mode === 'modified_stableford'
-      ? computeModifiedStablefordPoints
-      : computeStablefordPoints;
-  let total = 0;
-  let forCurrentHole: number | null = null;
-  for (const s of myAllScoresRes.data ?? []) {
-    if (s.strokes == null) continue;
-    const h = holesByNum.get(s.hole_number);
-    if (!h) continue;
-    const extra = strokesForHole(myCh, h.stroke_index);
-    const net = s.strokes - extra;
-    // #240 — meg's stableford-poeng skal bruke meg's tee_gender-par.
-    // parFor() leser av per-kjønn-tabellen og faller tilbake til mens
-    // når kolonnene er like (vanlig tilfelle).
-    const myPar = parFor(
-      {
-        number: h.hole_number,
-        par: h.par_mens,
-        parByGender: {
-          mens: h.par_mens,
-          ladies: h.par_ladies,
-          juniors: h.par_juniors,
-        },
-        strokeIndex: h.stroke_index,
-      },
-      me.tee_gender,
-    );
-    const pts = stablefordPointsFn({ par: myPar, netStrokes: net });
-    total += pts;
-    if (s.hole_number === holeNumber) {
-      forCurrentHole = pts;
-    }
-  }
-  return { total, forCurrentHole };
 }
 
 export type WolfContext = {

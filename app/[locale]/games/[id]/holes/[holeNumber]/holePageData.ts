@@ -43,7 +43,6 @@ export type ScoreRow = {
 
 /** Hvilke modus-avhengige queryer bølgen skal ta med. */
 export type HoleFetchModes = {
-  isStableford: boolean;
   isWolf: boolean;
   isSkins: boolean;
   isBBB: boolean;
@@ -87,7 +86,7 @@ export async function fetchHolePageData(args: {
     siblingMatch,
     modes,
   } = args;
-  const { isStableford, isWolf, isSkins, isBBB, isPatsome } = modes;
+  const { isWolf, isSkins, isBBB, isPatsome } = modes;
 
   // Round 2 — ONE Promise.all wave with everything the page needs up front:
   // course name, hole row, flight scores, the user's completed holes, plus the
@@ -97,18 +96,12 @@ export async function fetchHolePageData(args: {
   //   scores     needs playerIds (also resolved above)
   //   scoreCount needs only id + userId, available from the start
   //
-  // For stableford-modus henter vi i tillegg ALLE hull-pars/SI + ALLE av
-  // brukerens scorer slik at server-en kan summere stableford-poeng for
-  // «Dine poeng»-headeren og per-hull-poeng-chip-en. Best-ball-modus dropper
-  // disse to ekstra queryene (de er null) for å holde latency lik dagens.
   // supabase-klienten er allerede opprettet for profil-gaten i page.tsx.
   const [
     courseNameRes,
     holeRes,
     scoresRes,
     myScoredHolesRes,
-    allHolesRes,
-    myAllScoresRes,
     wolfChoicesData,
     wolfAllScoresRes,
     wolfAllHolesRes,
@@ -157,21 +150,6 @@ export async function fetchHolePageData(args: {
         )
         .not('strokes', 'is', null)
         .returns<{ hole_number: number; user_id: string }[]>(),
-      isStableford
-        ? supabase
-            .from('course_holes')
-            .select(COURSE_HOLES_SELECT)
-            .eq('course_id', game.course_id)
-            .returns<HoleRow[]>()
-        : Promise.resolve({ data: null, error: null }),
-      isStableford
-        ? supabase
-            .from('scores')
-            .select('hole_number, strokes')
-            .eq('game_id', gameId)
-            .eq('user_id', userId)
-            .returns<{ hole_number: number; strokes: number | null }[]>()
-        : Promise.resolve({ data: null, error: null }),
       isWolf ? getWolfChoices(gameId) : Promise.resolve([]),
       isWolf
         ? selectAllRowsResult(
@@ -269,8 +247,6 @@ export async function fetchHolePageData(args: {
     hole: holeRes.data,
     scoresRes,
     myScoredHolesRes,
-    allHolesRes,
-    myAllScoresRes,
     wolfChoicesData,
     wolfAllScoresRes,
     wolfAllHolesRes,

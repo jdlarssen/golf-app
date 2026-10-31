@@ -9,56 +9,6 @@ import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 
 /**
- * Stableford-subtittel: «Dine poeng: N». Erstatter den implisitte
- * «Lagets totalsum»-narrativen for solo-modus. Plassert som en stille
- * chip-stil under headeren, før hull-stripa — informativ uten å rope.
- * Bruker tabular-nums for at totalen ikke vippes hver gang tallet
- * oppdaterer.
- */
-export function StablefordTotalSubtitle({
-  isStableford,
-  total,
-}: {
-  isStableford: boolean;
-  total: number | null;
-}): JSX.Element | null {
-  const t = useTranslations('holes');
-  if (!isStableford || total === null) return null;
-  return (
-    <div
-      data-testid="stableford-total-subtitle"
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '0 18px 6px',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--font-sans)',
-          fontSize: 12,
-          fontWeight: 600,
-          color: 'var(--text-muted)',
-        }}
-      >
-        {t('entry.myPoints')}{' '}
-        <span
-          className="score-num"
-          style={{
-            color: 'var(--accent-text)',
-            fontFamily: 'var(--font-serif)',
-            fontSize: 13,
-            marginLeft: 2,
-          }}
-        >
-          {total}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-/**
  * WD-banner: vises øverst i score-lista når innlogget spiller er
  * trukket (#386). Lenker til game-home for angre-knapp — bare når spilleren
  * trakk seg selv (#2358). Et trekk arrangøren satte, er arrangørens å angre,

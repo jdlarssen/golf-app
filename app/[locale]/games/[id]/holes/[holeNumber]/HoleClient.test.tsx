@@ -403,27 +403,12 @@ describe('HoleClient — score writes', () => {
 });
 
 describe('HoleClient — stableford-modus', () => {
-  it('viser «Dine poeng»-subtittel når gameMode=stableford', () => {
-    render(
-      <HoleClient
-        {...baseProps({
-          gameMode: 'stableford',
-          myStablefordTotal: 12,
-          myStablefordForCurrentHole: 0,
-        })}
-      />,
-    );
-    const subtitle = screen.getByTestId('stableford-total-subtitle');
-    expect(subtitle).toBeInTheDocument();
-    expect(subtitle.textContent).toContain('Dine poeng');
-    expect(subtitle.textContent).toContain('12');
-  });
-
-  it('skjuler «Dine poeng»-subtittel for best-ball', () => {
-    render(<HoleClient {...baseProps({ gameMode: 'best_ball' })} />);
-    expect(
-      screen.queryByTestId('stableford-total-subtitle'),
-    ).not.toBeInTheDocument();
+  // #2735 (the owner's answer): the hole page shows strokes only, so there is
+  // no «Dine poeng: N» either, not even with my score entered on the hole.
+  it('viser ingen poeng på hullsiden, heller ikke en poengsum', () => {
+    withLocalRows([{ strokes: 4 }, { strokes: 5 }, undefined, undefined]);
+    const { container } = render(<HoleClient {...baseProps({ gameMode: 'stableford' })} />);
+    expect(container.textContent).not.toMatch(/poeng/i);
   });
 
   it('viser «Lever ditt scorekort» på siste hull for stableford', () => {
