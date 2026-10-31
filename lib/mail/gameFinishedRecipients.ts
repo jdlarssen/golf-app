@@ -20,6 +20,7 @@ import {
   isScrambleFamily,
   type GameMode,
   type GameModeConfig,
+  type ScoringContext,
   type ScoringGender,
 } from '@/lib/scoring/modes/types';
 import { firstName } from '@/lib/firstName';
@@ -48,6 +49,120 @@ function withoutWithdrawn<
     players: players.filter((p) => p.withdrawn_at == null),
     scores: scores.filter((s) => !withdrawnIds.has(s.user_id)),
   };
+}
+
+/** Raden mottaker-grenene leser fra `game_players`, med e-posten lagt på (#2207). */
+type RecipientPlayerRow = {
+  user_id: string;
+  team_number: number | null;
+  tee_gender: ScoringGender;
+  course_handicap: number | null;
+  withdrawn_at: string | null;
+  users: { email: string | null; name: string | null; locale: string | null } | null;
+};
+
+/**
+ * Henter scores og course_holes for en gren som kjører mode-router-en, begge
+ * i parallell. `null` når én av dem feiler, etter en logglinje merket med
+ * grenen; grenen sender da ingen mail, for blasten er best-effort.
+ */
+async function fetchScoresAndHoles(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+  courseId: string,
+  logTag: string,
+): Promise<{ scores: ScoreRow[]; holes: CourseHoleRow[] } | null> {
+  const [scoresRes, holesRes] = await Promise.all([
+    selectAllRowsResult(
+      (from, to) =>
+        supabase
+          .from('scores')
+          .select(SCORES_SELECT)
+          .eq('game_id', gameId)
+          .order('id')
+          .range(from, to)
+          .returns<ScoreRow[]>(),
+      'gameFinishedRecipients scores',
+    ),
+    supabase
+      .from('course_holes')
+      .select(COURSE_HOLES_SELECT)
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+  ]);
+  if (scoresRes.error || holesRes.error) {
+    console.error(
+      `[${logTag}] failed to fetch scores/holes`,
+      scoresRes.error ?? holesRes.error,
+    );
+    return null;
+  }
+  return { scores: scoresRes.data ?? [], holes: holesRes.data ?? [] };
+}
+
+/**
+ * Mode-router-input for grenene som rangerer selv (stableford, singles
+ * matchplay, solo slagspill), med trukne spillere og slagene deres luket ut
+ * (#2057). `teamNumber` følger med fordi team-stableford grupperer på den;
+ * solo-grenene ignorerer den. #240: hvert hull har hele per-kjønn-par-
+ * tabellen, så scoring-modulen velger par per spiller eller side (parFor())
+ * når dame/junior har avvikende par.
+ */
+function rankedLeaderboardInput(
+  gameId: string,
+  gameMode: GameMode,
+  modeConfig: GameModeConfig,
+  playerRows: RecipientPlayerRow[],
+  { scores, holes }: { scores: ScoreRow[]; holes: CourseHoleRow[] },
+): ScoringContext {
+  const ranked = withoutWithdrawn(playerRows, scores);
+  return {
+    game: {
+      id: gameId,
+      game_mode: gameMode,
+      mode_config: modeConfig,
+    },
+    players: ranked.players.map((row) => ({
+      userId: row.user_id,
+      teamNumber: row.team_number,
+      flightNumber: null,
+      courseHandicap: row.course_handicap ?? 0,
+      teeGender: row.tee_gender,
+    })),
+    holes: holes.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: ranked.scores.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+}
+
+/**
+ * Mottakerne uten mode-payload: best-ball-netto, og reserven når mode-router-
+ * en gir noe uventet. Spillere uten e-post droppes.
+ */
+function neutralRecipients(playerRows: RecipientPlayerRow[]): FinishedMailRecipient[] {
+  return playerRows
+    .map((row) => ({
+      userId: row.user_id,
+      email: row.users?.email ?? null,
+      name: row.users?.name ?? null,
+      locale: row.users?.locale ?? null,
+    }))
+    .filter((r): r is FinishedMailRecipient => {
+      return typeof r.email === 'string' && r.email.length > 0;
+    });
 }
 
 export interface FinishedMailRecipient {
@@ -205,102 +320,26 @@ export async function buildGameFinishedRecipients(
 
   // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name+locale.
   if (!isStablefordFamily(game.game_mode)) {
-    return withoutGuests(
-      playerRows
-        .map((row) => ({
-          userId: row.user_id,
-          email: row.users?.email ?? null,
-          name: row.users?.name ?? null,
-          locale: row.users?.locale ?? null,
-        }))
-        .filter((r): r is FinishedMailRecipient => {
-          return typeof r.email === 'string' && r.email.length > 0;
-        }),
-    );
+    return withoutGuests(neutralRecipients(playerRows));
   }
 
   // Stableford-grenen: hent scores + course_holes for å kunne kjøre
   // mode-router-en. Begge queries i parallell for hastighet.
-  const [scoresRes, holesRes] = await Promise.all([
-    selectAllRowsResult(
-      (from, to) =>
-        supabase
-          .from('scores')
-          .select(SCORES_SELECT)
-          .eq('game_id', gameId)
-          .order('id')
-          .range(from, to)
-          .returns<ScoreRow[]>(),
-      'gameFinishedRecipients scores',
-    ),
-    supabase
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', game.course_id)
-      .order('hole_number', { ascending: true })
-      .returns<CourseHoleRow[]>(),
-  ]);
-  if (scoresRes.error || holesRes.error) {
-    console.error(
-      '[buildGameFinishedRecipients] failed to fetch scores/holes',
-      scoresRes.error ?? holesRes.error,
-    );
-    return [];
-  }
+  const data = await fetchScoresAndHoles(
+    supabase,
+    gameId,
+    game.course_id,
+    'buildGameFinishedRecipients',
+  );
+  if (!data) return [];
 
-  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
-  const result = computeLeaderboard({
-    game: {
-      id: gameId,
-      game_mode: 'stableford',
-      mode_config: game.mode_config,
-    },
-    players: ranked.players.map((row) => ({
-      userId: row.user_id,
-      // Team-grenen i stableford-scoring grupperer på teamNumber, så vi MÅ
-      // sende det videre for par-stableford. Solo-grenen ignorerer feltet,
-      // så ingen skade i å sende det også der.
-      teamNumber: row.team_number,
-      flightNumber: null,
-      courseHandicap: row.course_handicap ?? 0,
-      // #240 — stableford-poeng per spiller skal bruke per-kjønn-par når
-      // dame/junior har avvikende hull-par. parFor() leser av tabellen
-      // basert på teeGender.
-      teeGender: row.tee_gender,
-    })),
-    holes: (holesRes.data ?? []).map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — full per-kjønn-par-tabell. Lik for alle kjønn = ingen effekt;
-      // avvikende = scoring-modulen velger riktig variant per spiller.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: ranked.scores.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  });
+  const result = computeLeaderboard(
+    rankedLeaderboardInput(gameId, 'stableford', game.mode_config, playerRows, data),
+  );
 
   if (result.kind !== 'stableford') {
     // Defensive: mode-router gav noe uventet. Fall til best-ball-copy.
-    return withoutGuests(
-      playerRows
-        .map((row) => ({
-          userId: row.user_id,
-          email: row.users?.email ?? null,
-          name: row.users?.name ?? null,
-          locale: row.users?.locale ?? null,
-        }))
-        .filter((r): r is FinishedMailRecipient => {
-          return typeof r.email === 'string' && r.email.length > 0;
-        }),
-    );
+    return withoutGuests(neutralRecipients(playerRows));
   }
 
   // Solo-stableford: én rad per spiller, rank/poeng per-spiller direkte
@@ -419,89 +458,24 @@ async function buildMatchplayRecipients(
   supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
-  playerRows: {
-    user_id: string;
-    team_number: number | null;
-    tee_gender: ScoringGender;
-    course_handicap: number | null;
-    withdrawn_at: string | null;
-    users: { email: string | null; name: string | null; locale: string | null } | null;
-  }[],
+  playerRows: RecipientPlayerRow[],
 ): Promise<FinishedMailRecipient[]> {
-  const [scoresRes, holesRes] = await Promise.all([
-    selectAllRowsResult(
-      (from, to) =>
-        supabase
-          .from('scores')
-          .select(SCORES_SELECT)
-          .eq('game_id', gameId)
-          .order('id')
-          .range(from, to)
-          .returns<ScoreRow[]>(),
-      'gameFinishedRecipients scores',
-    ),
-    supabase
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', game.course_id)
-      .order('hole_number', { ascending: true })
-      .returns<CourseHoleRow[]>(),
-  ]);
-  if (scoresRes.error || holesRes.error) {
-    console.error(
-      '[buildMatchplayRecipients] failed to fetch scores/holes',
-      scoresRes.error ?? holesRes.error,
-    );
-    return [];
-  }
+  const data = await fetchScoresAndHoles(
+    supabase,
+    gameId,
+    game.course_id,
+    'buildMatchplayRecipients',
+  );
+  if (!data) return [];
 
-  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
-  const result = computeLeaderboard({
-    game: {
-      id: gameId,
-      game_mode: 'singles_matchplay',
-      mode_config: game.mode_config,
-    },
-    players: ranked.players.map((row) => ({
-      userId: row.user_id,
-      teamNumber: row.team_number,
-      flightNumber: null,
-      courseHandicap: row.course_handicap ?? 0,
-      // #240 — per-side par på matchplay-hull leses fra parFor(hole, side.teeGender).
-      teeGender: row.tee_gender,
-    })),
-    holes: (holesRes.data ?? []).map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — per-kjønn-par-tabell. Matchplay-modulen leser per-side-par via
-      // parFor() når sidene har ulik teeGender og hullet har avvik.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: ranked.scores.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  });
+  const result = computeLeaderboard(
+    rankedLeaderboardInput(gameId, 'singles_matchplay', game.mode_config, playerRows, data),
+  );
 
   // Defensive fallback: mode-router returnerte noe annet enn matchplay, eller
   // matchen er ikke avgjort. Send nøytral default copy uten mode-payload.
   if (result.kind !== 'singles_matchplay' || result.result === null) {
-    return playerRows
-      .map((row) => ({
-        userId: row.user_id,
-        email: row.users?.email ?? null,
-        name: row.users?.name ?? null,
-        locale: row.users?.locale ?? null,
-      }))
-      .filter((r): r is FinishedMailRecipient => {
-        return typeof r.email === 'string' && r.email.length > 0;
-      });
+    return neutralRecipients(playerRows);
   }
 
   const matchResult = result.result;
@@ -595,89 +569,23 @@ async function buildSoloStrokeplayRecipients(
   supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
-  playerRows: {
-    user_id: string;
-    team_number: number | null;
-    tee_gender: ScoringGender;
-    course_handicap: number | null;
-    withdrawn_at: string | null;
-    users: { email: string | null; name: string | null; locale: string | null } | null;
-  }[],
+  playerRows: RecipientPlayerRow[],
 ): Promise<FinishedMailRecipient[]> {
-  const [scoresRes, holesRes] = await Promise.all([
-    selectAllRowsResult(
-      (from, to) =>
-        supabase
-          .from('scores')
-          .select(SCORES_SELECT)
-          .eq('game_id', gameId)
-          .order('id')
-          .range(from, to)
-          .returns<ScoreRow[]>(),
-      'gameFinishedRecipients scores',
-    ),
-    supabase
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', game.course_id)
-      .order('hole_number', { ascending: true })
-      .returns<CourseHoleRow[]>(),
-  ]);
-  if (scoresRes.error || holesRes.error) {
-    console.error(
-      '[buildSoloStrokeplayRecipients] failed to fetch scores/holes',
-      scoresRes.error ?? holesRes.error,
-    );
-    return [];
-  }
+  const data = await fetchScoresAndHoles(
+    supabase,
+    gameId,
+    game.course_id,
+    'buildSoloStrokeplayRecipients',
+  );
+  if (!data) return [];
 
-  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
-  const result = computeLeaderboard({
-    game: {
-      id: gameId,
-      game_mode: 'solo_strokeplay',
-      mode_config: game.mode_config,
-    },
-    players: ranked.players.map((row) => ({
-      userId: row.user_id,
-      teamNumber: row.team_number,
-      flightNumber: null,
-      courseHandicap: row.course_handicap ?? 0,
-      // #240 — solo strokeplay ranker på netto-slag, men teeGender sendes
-      // gjennom for shape-konsistens med øvrige modi og fremtidig UI-bruk.
-      teeGender: row.tee_gender,
-    })),
-    holes: (holesRes.data ?? []).map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — per-kjønn-par-tabell. Solo strokeplay leser i hovedsak ikke
-      // par direkte (ranker på netto), men holdes konsistent på shape-laget.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: ranked.scores.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  });
+  const result = computeLeaderboard(
+    rankedLeaderboardInput(gameId, 'solo_strokeplay', game.mode_config, playerRows, data),
+  );
 
   // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
   if (result.kind !== 'solo_strokeplay') {
-    return playerRows
-      .map((row) => ({
-        userId: row.user_id,
-        email: row.users?.email ?? null,
-        name: row.users?.name ?? null,
-        locale: row.users?.locale ?? null,
-      }))
-      .filter((r): r is FinishedMailRecipient => {
-        return typeof r.email === 'string' && r.email.length > 0;
-      });
+    return neutralRecipients(playerRows);
   }
 
   const totalPlayers = result.players.length;
@@ -726,41 +634,15 @@ async function buildTexasScrambleRecipients(
   supabase: SupabaseClient<Database>,
   gameId: string,
   game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
-  playerRows: {
-    user_id: string;
-    team_number: number | null;
-    tee_gender: ScoringGender;
-    course_handicap: number | null;
-    withdrawn_at: string | null;
-    users: { email: string | null; name: string | null; locale: string | null } | null;
-  }[],
+  playerRows: RecipientPlayerRow[],
 ): Promise<FinishedMailRecipient[]> {
-  const [scoresRes, holesRes] = await Promise.all([
-    selectAllRowsResult(
-      (from, to) =>
-        supabase
-          .from('scores')
-          .select(SCORES_SELECT)
-          .eq('game_id', gameId)
-          .order('id')
-          .range(from, to)
-          .returns<ScoreRow[]>(),
-      'gameFinishedRecipients scores',
-    ),
-    supabase
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', game.course_id)
-      .order('hole_number', { ascending: true })
-      .returns<CourseHoleRow[]>(),
-  ]);
-  if (scoresRes.error || holesRes.error) {
-    console.error(
-      '[buildTexasScrambleRecipients] failed to fetch scores/holes',
-      scoresRes.error ?? holesRes.error,
-    );
-    return [];
-  }
+  const data = await fetchScoresAndHoles(
+    supabase,
+    gameId,
+    game.course_id,
+    'buildTexasScrambleRecipients',
+  );
+  if (!data) return [];
 
   // #2067: the same context the result page builds (`buildUniformContext`).
   // Scramble is one ball per team, so a captain who deleted their account
@@ -781,23 +663,14 @@ async function buildTexasScrambleRecipients(
         withdrawn_at: row.withdrawn_at,
         users: row.users ? { name: row.users.name, nickname: null } : null,
       })),
-      holesRows: holesRes.data ?? [],
-      scoresRows: scoresRes.data ?? [],
+      holesRows: data.holes,
+      scoresRows: data.scores,
     }),
   );
 
   // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
   if (result.kind !== 'texas_scramble') {
-    return playerRows
-      .map((row) => ({
-        userId: row.user_id,
-        email: row.users?.email ?? null,
-        name: row.users?.name ?? null,
-        locale: row.users?.locale ?? null,
-      }))
-      .filter((r): r is FinishedMailRecipient => {
-        return typeof r.email === 'string' && r.email.length > 0;
-      });
+    return neutralRecipients(playerRows);
   }
 
   const totalTeams = result.teams.length;
