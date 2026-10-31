@@ -90,7 +90,11 @@ import { LiveFollowControl } from './LiveFollowControl';
 import { CeremonyEntry } from './CeremonyEntry';
 import { ceremonySupported } from '@/lib/games/ceremony';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
-import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from '@/lib/games/hcpAllowance';
+import {
+  effectiveHcpAllowancePct,
+  effectiveHcpMaxStrokes,
+  frozenIsPlayingHandicap,
+} from '@/lib/games/hcpAllowance';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 
@@ -550,6 +554,13 @@ export default async function GameHomePage({
   // value verbatim (no extra fetch). displayCourseHandicap reuses the exact
   // calculate+allowance pipeline from start, so display and frozen never drift.
   let displayedCourseHandicap: number | null = me.course_handicap;
+  // #2712: the share and cap also decide the label (frozenIsPlayingHandicap),
+  // so they are read for every render, not only before the freeze.
+  const allowancePromise = supabase
+    .from('games')
+    .select('hcp_allowance_pct, hcp_max_strokes')
+    .eq('id', id)
+    .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>();
   if (displayedCourseHandicap == null && playerRating) {
     const [meHcpRes, allowanceRes] = await Promise.all([
       supabase
@@ -557,11 +568,7 @@ export default async function GameHomePage({
         .select('hcp_index')
         .eq('id', userId)
         .single<{ hcp_index: number | string }>(),
-      supabase
-        .from('games')
-        .select('hcp_allowance_pct, hcp_max_strokes')
-        .eq('id', id)
-        .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>(),
+      allowancePromise,
     ]);
     if (meHcpRes.data && allowanceRes.data) {
       displayedCourseHandicap = displayCourseHandicap({
@@ -579,6 +586,20 @@ export default async function GameHomePage({
       });
     }
   }
+  // #2712: «Spillehandicap» when the number already has the game's share or
+  // cap taken off (a league at 75 %), «Banehandicap» otherwise.
+  const allowanceRow = (await allowancePromise).data;
+  const handicapLabel =
+    displayedCourseHandicap != null &&
+    allowanceRow != null &&
+    frozenIsPlayingHandicap(
+      game.game_mode,
+      allowanceRow.hcp_allowance_pct,
+      allowanceRow.hcp_max_strokes,
+      displayedCourseHandicap,
+    )
+      ? t('playingHandicap')
+      : t('courseHandicap');
   // Plus course handicap is stored negative → «+2» (#2240).
   const courseHandicapText =
     displayedCourseHandicap != null
@@ -1393,7 +1414,7 @@ export default async function GameHomePage({
                     {playerRating
                       ? ` · Slope ${playerRating.slope} · CR ${formatCourseRating(playerRating.courseRating, locale)} · Par ${playerRating.par}`
                       : ''}
-                    {` · ${t('courseHandicap')} ${courseHandicapText}`}
+                    {` · ${handicapLabel} ${courseHandicapText}`}
                   </p>
                 )}
                 {isMatchplay ? (
@@ -1517,7 +1538,7 @@ export default async function GameHomePage({
                       {t('soloIndividual')}
                     </p>
                     <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
-                      <dt className="text-muted">{t('courseHandicap')}</dt>
+                      <dt className="text-muted">{handicapLabel}</dt>
                       <dd className="score-num text-text text-right">
                         {courseHandicapText}
                       </dd>
@@ -1546,7 +1567,7 @@ export default async function GameHomePage({
                         </dd>
                       </>
                     )}
-                    <dt className="text-muted">{t('courseHandicap')}</dt>
+                    <dt className="text-muted">{handicapLabel}</dt>
                     <dd className="score-num text-text text-right">
                       {courseHandicapText}
                     </dd>
