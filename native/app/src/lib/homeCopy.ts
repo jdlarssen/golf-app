@@ -112,6 +112,20 @@ export function standingDetail(
   return [field, total].filter(Boolean).join(' · ');
 }
 
+/**
+ * #2712 (eieren 31.10): en ligaflight med én spiller har ingen plass, så
+ * linja er bare poengene: «35 poeng etter 18 hull».
+ */
+export function leagueSoloDetail(
+  standing: Pick<ViewerStanding, 'total' | 'holesPlayed'>,
+  unit: LiveBoardUnit,
+  holeCount: number,
+): string {
+  return standing.total !== null
+    ? totalAfter(standing.total, unit, standing.holesPlayed)
+    : holesPlayedLine(standing.holesPlayed, holeCount);
+}
+
 export function approvalsLine(count: number): string {
   return `${count} kort venter på godkjenningen din`;
 }
@@ -174,6 +188,9 @@ export function finishedResultText(badge: FinishedResultBadge): string | null {
   switch (badge.key) {
     case 'result.youWon':
       return 'Du vant';
+    // #2712: en ligaflight spilt alene (`finishedCard.result.approved`).
+    case 'result.approved':
+      return 'Godkjent';
     case 'result.teamWon':
       return 'Laget vant';
     case 'result.placement':

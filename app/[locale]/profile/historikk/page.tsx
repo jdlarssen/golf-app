@@ -94,6 +94,8 @@ type GameRow = {
   tee_box_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
+  // #2712 — en ligaflight spilt alene sier «Godkjent», ikke «Du vant».
+  league_round_id: string | null;
 };
 
 type ScoreRow = {
@@ -146,7 +148,7 @@ export default async function HistorikkPage() {
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, source_game_id, courses(name))',
+      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, source_game_id, league_round_id, courses(name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')
@@ -533,7 +535,7 @@ export default async function HistorikkPage() {
             ) as Parameters<typeof tModes>[0],
           );
           const badge = game.result_summary
-            ? finishedResultBadge(game.result_summary)
+            ? finishedResultBadge(game.result_summary, { leagueFlight: game.league_round_id != null })
             : null;
           const resultText = badge
             ? tFinished(

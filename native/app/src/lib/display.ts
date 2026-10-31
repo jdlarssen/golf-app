@@ -14,6 +14,17 @@ export const ACTIVE_CARD_LABELS: Record<ActiveCardState, string> = {
   withdrawn: 'Trukket',
 };
 
+/**
+ * #2712 (eieren 31.10): etiketten på Hjem for en ligaflight spilt alene.
+ * Kortet venter på markøren, ikke på noen i flighten.
+ */
+export const LEAGUE_SOLO_STATE: Record<ActiveCardState, string> = {
+  continue: 'Fortsett',
+  submitted: 'Godkjent',
+  pending_approval: 'Venter på markøren',
+  withdrawn: 'Trukket',
+};
+
 /** Kallenavn hvis det finnes, ellers navn, ellers en rolig plassholder. */
 export function displayName(player: {
   name: string | null;
