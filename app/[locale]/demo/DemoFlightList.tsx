@@ -12,7 +12,6 @@ export interface DemoFlightRowData {
   name: string;
   extraStrokes: number;
   score: number | null;
-  points: number | null;
 }
 
 export interface DemoFlightListProps {
@@ -69,14 +68,6 @@ const badgeStyle: CSSProperties = {
   color: 'var(--accent-text)',
 };
 
-const pointsStyle: CSSProperties = {
-  width: 36,
-  flexShrink: 0,
-  textAlign: 'right',
-  fontSize: 13,
-  color: 'var(--text-muted)',
-};
-
 // Two digits need more room in the 30 px box.
 function digitSize(n: number): number {
   return n >= 10 ? 13 : 16;
@@ -104,7 +95,9 @@ function Score({ score, par }: { score: number; par: number }): JSX.Element {
 /**
  * The flight on the demo's hole (#2281): your row, which hands you the rail,
  * and the two opponents who have already entered theirs. The opponents' rows
- * are plain text, not buttons — the demo never enters scores for them.
+ * are plain text, not buttons — the demo never enters scores for them. Like
+ * the app, the rows show only gross, no points (#2735); the board on top
+ * carries the stableford points.
  */
 export function DemoFlightList(props: DemoFlightListProps): JSX.Element {
   const t = useTranslations('holes');
@@ -158,12 +151,7 @@ export function DemoFlightList(props: DemoFlightListProps): JSX.Element {
             —
           </span>
         ) : (
-          <>
-            <Score score={you.score} par={par} />
-            <span style={pointsStyle}>
-              {you.points != null ? t('scoreRail.rowPoints', { points: you.points }) : null}
-            </span>
-          </>
+          <Score score={you.score} par={par} />
         )}
       </button>
 
@@ -185,9 +173,6 @@ export function DemoFlightList(props: DemoFlightListProps): JSX.Element {
           </span>
           <span style={{ ...nameStyle, flexGrow: 1, minWidth: 0 }}>{row.name}</span>
           {row.score != null && <Score score={row.score} par={par} />}
-          <span style={pointsStyle}>
-            {row.points != null ? t('scoreRail.rowPoints', { points: row.points }) : null}
-          </span>
         </div>
       ))}
     </div>

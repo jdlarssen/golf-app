@@ -12,7 +12,6 @@ import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 import { buttonClasses } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Link } from '@/i18n/navigation';
-import { stablefordPointsForCard } from '@/lib/scorecard/railPoints';
 import { strikeStrokes } from '@/lib/scorecard/scoreRail';
 import { nextStrokes } from '@/lib/scorecard/strokeEntry';
 import {
@@ -28,16 +27,6 @@ import { DEMO_NAME_STORAGE_KEY } from '@/lib/demo/handoff';
 import { DemoStandingStrip } from './DemoStandingStrip';
 import { DemoFlightList, type DemoFlightRowData } from './DemoFlightList';
 import { DemoRail, DEMO_EXIT_HREF } from './DemoRail';
-
-/** Stableford points for a score on the hole, the same rule as the rail's buttons. */
-function pointsFor(score: number | null, extraStrokes: number, par: number): number | null {
-  return stablefordPointsForCard({
-    card: { score, extraStrokes },
-    par,
-    gameMode: 'stableford',
-    isStableford: true,
-  });
-}
 
 const YOU = DEMO_PLAYERS.find((p) => p.isYou)!;
 
@@ -176,7 +165,6 @@ export function DemoGame(): JSX.Element {
     name: YOU.name,
     extraStrokes,
     score: currentScore,
-    points: pointsFor(currentScore, extraStrokes, hole.par),
   };
   const opponents: DemoFlightRowData[] = DEMO_PLAYERS.filter((p) => !p.isYou).map((p) => {
     const strokes = strokesForHole(p.courseHandicap, hole.strokeIndex);
@@ -186,7 +174,6 @@ export function DemoGame(): JSX.Element {
       name: p.name,
       extraStrokes: strokes,
       score,
-      points: pointsFor(score, strokes, hole.par),
     };
   });
 
@@ -374,12 +361,7 @@ export function DemoGame(): JSX.Element {
             onPick={pick}
             onClear={undo}
             onClose={() => setSheetOpen(false)}
-            strike={{
-              value: strike,
-              label: th('scoreRail.strikeWithPoints', {
-                points: pointsFor(strike, extraStrokes, hole.par) ?? 0,
-              }),
-            }}
+            strike={{ value: strike, label: th('scoreRail.strike') }}
           />
         </>
       )}
