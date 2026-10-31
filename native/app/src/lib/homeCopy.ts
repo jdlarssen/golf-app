@@ -12,9 +12,8 @@
 // 31.10): tittelen er datoen, og fornavnet står i HCP-pillen.
 import type { TeeOffProximity } from '../../../../lib/format/teeOffProximity';
 import type { FinishedResultBadge } from '../../../../lib/games/finishedResultBadge';
-import { isPointsUnit, type LiveBoardUnit, type ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
+import type { LiveBoardUnit, ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
-import { BOARD_COMMON_TEXT } from './boardCopy';
 
 export const HOME_TEXT = {
   /** Webbens `home.sectionInProgress`; kickeren står i `ui.sectionHead`. */
@@ -81,8 +80,6 @@ function totalAfter(total: number, unit: LiveBoardUnit, holes: number): string {
   const after = `etter ${holes} hull`;
   if (unit === 'points') return `${total} poeng ${after}`;
   if (unit === 'net') return `${total} slag netto ${after}`;
-  // #2625: points against par pace say so; a bare «+3» would read as points.
-  if (unit === 'pointsToPar') return `${formatVsPar(total)} ${BOARD_COMMON_TEXT.vsParLabel} ${after}`;
   return `${formatVsPar(total)} ${after}`;
 }
 
@@ -102,7 +99,7 @@ export function standingDetail(
     standing.total !== null ? totalAfter(standing.total, unit, standing.holesPlayed) : null;
   if (standing.gap !== null && standing.gap > 0) {
     const behind =
-      isPointsUnit(unit) ? `${standing.gap} poeng bak ledelsen` : `${standing.gap} slag bak ledelsen`;
+      unit === 'points' ? `${standing.gap} poeng bak ledelsen` : `${standing.gap} slag bak ledelsen`;
     return [total, behind].filter(Boolean).join(' · ');
   }
   const field =

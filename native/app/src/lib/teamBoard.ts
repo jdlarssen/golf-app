@@ -27,7 +27,7 @@ import {
   totalLabel,
   type BoardRowSrPart,
 } from '../../../../lib/leaderboard/boardRules';
-import { isPointsUnit, type LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
+import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
 import {
   resultStanding,
   teamResultBoard,
@@ -111,10 +111,8 @@ function unitText(unit: TeamDisplayUnit): string {
       return BOARD_COMMON_TEXT.poengLabel;
     case 'gross':
       return BOARD_TEAM_TEXT.gross;
-    // #2625: et lagspill som rangeres mot par, viser lagets mot par (lag-
-    // stableford: poeng mot par-tempo).
+    // #2625: et lagslagspill som rangeres mot par, viser lagets mot par.
     case 'toPar':
-    case 'pointsToPar':
       return BOARD_COMMON_TEXT.vsParLabel;
     case 'net':
       return BOARD_TEAM_TEXT.net;
@@ -311,7 +309,7 @@ function behindText(
   standing: { gap: number | null; leaders: number[] },
 ): string | null {
   if (standing.gap === null || standing.gap <= 0) return null;
-  const points = isPointsUnit(board.unit);
+  const points = board.unit === 'points';
   const leader = board.rows.find((row) => row.teamNumber === standing.leaders[0]);
   if (standing.leaders.length > 1 || !leader) {
     return formatMessage(points ? BOARD_TEXT.behindPointsLead : BOARD_TEXT.behindStrokesLead, { gap: standing.gap });

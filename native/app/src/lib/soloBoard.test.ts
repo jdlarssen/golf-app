@@ -104,9 +104,9 @@ describe('soloBoardFor — live', () => {
   });
 });
 
-describe('soloBoardFor — stableford ranked on points against par pace (#2625)', () => {
-  // Marte +3 etter 3 hull (9 poeng), du +1 etter 7 (én birdie, 15 poeng),
-  // Jonas −7 etter 7. Summen ville satt deg øverst; mot par leder Marte.
+describe('soloBoardFor — stableford with the #2625 flag shows the points (#2738)', () => {
+  // Marte 9 poeng etter 3 hull (tre birdier), du 15 etter 7 (én birdie),
+  // Jonas 7 etter 7. Mot par-tempo ville satt Marte øverst; på poeng leder du.
   const FLAGGED = { kind: 'stableford', team_size: 1, points_table: 'standard', ranking: 'net_to_par' };
   const scores = [
     ...holeScores('g-live', 'marte', 3, 3),
@@ -117,19 +117,19 @@ describe('soloBoardFor — stableford ranked on points against par pace (#2625)'
   const bundle = homeBundle({ game: { modeConfig: FLAGGED }, players });
   const model = soloBoardFor({ bundle, scores, userId: ME })!;
 
-  it('heads the column «Mot par» and shows the number with a sign', () => {
-    expect(model.totalHeading).toBe('Mot par');
+  it('heads the column «Poeng» and ranks on the points', () => {
+    expect(model.totalHeading).toBe('Poeng');
     expect(model.rows.map((r) => [r.userId, r.place, r.total])).toEqual([
-      ['marte', '1', '+3'],
-      [ME, '2', '+1'],
-      ['jonas', '3', '\u22127'],
+      [ME, '1', '15'],
+      ['marte', '2', '9'],
+      ['jonas', '3', '7'],
     ]);
   });
 
-  it('reads the number aloud in points, and the strip gives the gap in points across holes', () => {
-    expect(model.rows[0].a11y).toContain('3 poeng over par');
-    expect(model.rows[2].a11y).toContain('7 poeng under par');
-    expect(model.strip?.text).toBe('2. plass · 2 poeng bak Marte');
+  it('reads the number aloud as points, never against par', () => {
+    // The number follows the place: «1. plass. 15 poeng.»
+    expect(model.rows.map((r) => r.a11y.match(/plass\. ([^.]+)\./)?.[1])).toEqual(['15 poeng', '9 poeng', '7 poeng']);
+    expect(model.strip?.text).toBe('1. plass');
   });
 });
 

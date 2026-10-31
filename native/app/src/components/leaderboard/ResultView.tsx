@@ -9,7 +9,7 @@
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
 import { showHolesColumn, teamHolesPlayed } from '../../../../../lib/leaderboard/holesColumn';
-import { headlineUnit, teamHeadline } from '../../../../../lib/leaderboard/vsPar';
+import { headlineUnit, pointsHeadline, teamHeadline } from '../../../../../lib/leaderboard/vsPar';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { BOARD_TEXT } from '../../lib/boardCopy';
@@ -146,8 +146,8 @@ export function ResultView({
             columns={[
               RANK,
               PLAYER,
-              // #2625: et spill som rangeres mot par, viser poeng mot par-tempo.
-              headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
+              // #2738: et poengspill viser alltid poengene.
+              { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
               ...(showHoles ? [HOLES] : []),
             ]}
             rows={result.players.map((player) => ({
@@ -156,7 +156,7 @@ export function ResultView({
               cells: [
                 player.rank,
                 nameOf(player.userId),
-                teamHeadline(result.ranking, { total: player.totalPoints, toPar: player.toPar }).text,
+                pointsHeadline(player).text,
                 ...(showHoles ? [player.holesPlayed] : []),
               ],
             }))}
@@ -170,7 +170,7 @@ export function ResultView({
           columns={[
             RANK,
             TEAM,
-            headlineUnit(result.ranking) === 'toPar' ? VS_PAR : { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
+            { key: 'points', label: BOARD_TEXT.colPoints, numeric: true },
           ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
@@ -178,7 +178,7 @@ export function ResultView({
             cells: [
               team.rank,
               teamLabel(team.teamNumber, team.playerIds, nameOf),
-              teamHeadline(result.ranking, { total: team.totalPoints, toPar: team.toPar }).text,
+              pointsHeadline(team).text,
             ],
           }))}
         />
