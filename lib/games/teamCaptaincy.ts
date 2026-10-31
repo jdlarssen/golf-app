@@ -1,6 +1,6 @@
 import 'server-only';
 import type { getAdminClient } from '@/lib/supabase/admin';
-import { REQUEST_USER_EMBED, isGuestRequest, readBroughtGuests } from '@/lib/games/broughtGuests';
+import { REQUEST_USER_EMBED, guestNamesOf, isGuestRequest, readBroughtGuests } from '@/lib/games/broughtGuests';
 
 // Kapteinen og laget før start (#2358): ett hjem for «har denne kapteinen et
 // lag som står bak seg?».
@@ -159,7 +159,7 @@ export async function captainWithdrawalState(
   return {
     blocked: team.accepted.length > 0,
     unanswered: team.unanswered.length,
-    guestNames: brought.guests.flatMap((g) => (g.name ? [g.name] : [])),
+    guestNames: guestNamesOf(brought.guests),
     // Kjernen merker bare en ventende eller godkjent påmelding som trukket.
     marksRequest: own.status === 'pending' || own.status === 'approved',
   };

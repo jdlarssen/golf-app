@@ -8,18 +8,20 @@ import type { AppLocale } from '@/i18n/routing';
  *
  * `captain` er `captainWithdrawalState` for en kaptein, ellers `null`.
  * #2358: en kapteins påmelding merkes trukket, ikke slettet, og kapteinen
- * melder seg ikke på igjen selv (eierens svar 2). #2607: gjestene kapteinen
- * meldte på trekkes med og navngis; linja om ubesvarte invitasjoner gjelder
- * bare lagkamerater med konto.
+ * melder seg ikke på igjen selv (eierens svar 2). #2607: gjestene spilleren
+ * meldte på trekkes med og navngis, både kapteinens og gjesten en spiller tok
+ * med alene (`guestNames`); linja om ubesvarte invitasjoner gjelder bare
+ * lagkamerater med konto.
  */
 export async function PreStartWithdrawItems({
   captain,
+  guestNames,
 }: {
-  captain: { marksRequest: boolean; unanswered: number; guestNames: string[] } | null;
+  captain: { marksRequest: boolean; unanswered: number } | null;
+  guestNames: string[];
 }) {
   const t = await getTranslations('game.withdraw');
   const locale = (await getLocale()) as AppLocale;
-  const guestNames = captain?.guestNames ?? [];
   return (
     <ul className="space-y-1 font-sans text-[13px] text-text" data-testid="withdraw-pre-start-items">
       <li>{t('preStartItems.registrationDeleted')}</li>
