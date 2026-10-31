@@ -98,7 +98,7 @@ import { PultTabs } from './_pult/PultTabs';
 import { NeedsYouList, type NeedsYouGap } from './_pult/NeedsYouList';
 import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
-import { ceremonySupported } from '@/lib/games/ceremony';
+import { ceremonyAvailable } from '@/lib/games/ceremony';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -120,6 +120,8 @@ type GameRow = {
   // Epic #41 — modus per spill. Bestemmer både hvilken Spillform-tekst som
   // vises i Format-kortet og hvilken ModeChip-variant subtittelen får.
   game_mode: GameMode;
+  /** #2712: a league flight played alone has no prize-giving. */
+  league_round_id: string | null;
   // Epic #43 — diskriminator for stableford-varianter (solo vs par/4BBB).
   // Lar Spillform-cardet skille «Stableford» fra «Par-stableford» og lar
   // lag/flight-flatene tilpasse seg for par-stableford (flight = team mekanisk).
@@ -293,7 +295,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, spectate_token, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, spectate_token, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -1286,8 +1288,13 @@ async function buildSections({
         >
           {tCta('leaderboardButton')}
         </SmartLink>
-        {/* #2298: the prize-giving on the big screen, for the podium formats. */}
-        {ceremonySupported(game.game_mode) && (
+        {/* #2298: the prize-giving on the big screen, for the podium formats.
+            #2712: not for a league round played alone. */}
+        {ceremonyAvailable(
+          game.game_mode,
+          game.league_round_id != null,
+          players.filter((p) => p.withdrawn_at == null).length,
+        ) && (
           <SmartLink
             href={`/games/${gameId}/premieutdeling`}
             data-testid="ceremony-entry"
