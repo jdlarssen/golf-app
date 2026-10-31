@@ -1781,12 +1781,20 @@ describe('GameWizard — #2457 innstillinger som rader og ark', () => {
 
     openSetting(/sideturnering og premier/i);
     fireEvent.click(screen.getByRole('switch', { name: /sideturnering/i }));
+    // Premiebordet er lukket til du åpner det (#2457).
+    expect(screen.queryByLabelText(/premie for 1\. plass/i)).toBeNull();
+    fireEvent.click(screen.getByTestId('prizes-toggle'));
     fireEvent.change(screen.getByLabelText(/premie for 1\. plass/i), {
       target: { value: 'Middag for to' },
     });
     closeSheet();
     expect(screen.queryByLabelText(/premie for 1\. plass/i)).toBeNull();
     expect(rowValue('sideAndPrizes')).toContain('På · 1 premie');
+    // Åpnes arket igjen, starter premiebordet åpent fordi det finnes en premie.
+    openSetting(/sideturnering og premier/i);
+    expect(screen.getByTestId('prizes-toggle')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText(/premie for 1\. plass/i)).toHaveValue('Middag for to');
+    closeSheet();
 
     fireEvent.click(screen.getByRole('button', { name: /publiser/i }));
     await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));

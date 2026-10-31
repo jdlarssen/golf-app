@@ -12,11 +12,16 @@
  * sideturnering-feltene, så et lukket disclosure-panel aldri dropper verdier.
  * Tomt premie-felt = slottet lagres ikke (beskjæres server-side).
  *
- * #2282: kortstilen fra Nyttspill-5-avansert-b — ett kort med 10 px mellom
- * feltene, «1. plass» og «Sponsor (valgfritt)» som synlige feltetiketter.
+ * #2457: som artboardet `Nyttspill-forslag-ark`: kickeren «PREMIEBORD» over
+ * åpne felt med «1. plass» og «Sponsor (valgfritt)» som synlige etiketter,
+ * uten kort rundt. Kickeren er en rad som åpner og lukker bordet (minst 44 px,
+ * `aria-expanded`): ni av ti ganger er det ikke noe premiebord, så det er
+ * lukket som standard. Har spillet alt premier (Rediger spill, et gjenopptatt
+ * utkast), starter det åpent. Verdiene bor i `prizeDraft`, så de overlever at
+ * bordet lukkes.
  */
 
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
@@ -32,7 +37,6 @@ import {
 import { sponsorLogoUrl } from '@/lib/storage/sponsorLogoUrl';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
-import { FormSection } from '@/components/ui/FormSection';
 import { Input } from '@/components/ui/Input';
 
 type Props = {
@@ -41,6 +45,7 @@ type Props = {
 
 export function PrizesSection({ state }: Props) {
   const t = useTranslations('wizard.sections.prizes');
+  const panelId = useId();
   const { gameMode, sideEnabled, sideLdCount, sideCtpCount, prizeDraft, setPrizeField } =
     state;
 
@@ -73,10 +78,34 @@ export function PrizesSection({ state }: Props) {
   }
   if (ctpCount >= 2) slots.push({ key: 'ctp_2', label: `${t('ctpLabel')} 2` });
 
+  const prizeCount = slots.filter(
+    (slot) => prizeDraft[slot.key].description.trim().length > 0,
+  ).length;
+  // Åpent fra start når det finnes premier; ellers lukket. Initialverdien
+  // leses ved montering, så et ark som åpnes på nytt følger det som er satt.
+  const [open, setOpen] = useState(prizeCount > 0);
+
   if (slots.length === 0) return null;
 
   return (
-    <FormSection legend={t('legend')} gap="sm" data-testid="prizes-section">
+    <div data-testid="prizes-section" className="mt-3 flex flex-col gap-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        data-testid="prizes-toggle"
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-1 text-left"
+      >
+        <span className="font-sans text-[10px] leading-[normal] font-semibold tracking-[0.2em] text-muted uppercase">
+          {t('legend')}
+        </span>
+        <span className="font-sans text-[13px] leading-[normal] font-semibold text-primary">
+          {open ? t('toggleHide') : prizeCount > 0 ? t('toggleCount', { count: prizeCount }) : t('toggleAdd')}
+        </span>
+      </button>
+      {open && (
+        <div id={panelId} className="flex flex-col gap-3">
         {slots.map((slot) => {
           // #1141: vis sponsor-feltene (navn + logo) først når slotet har en
           // premie-beskrivelse. Serveren (parsePrizesFromFormData/prunePrizes)
@@ -137,7 +166,9 @@ export function PrizesSection({ state }: Props) {
             </div>
           );
         })}
-    </FormSection>
+        </div>
+      )}
+    </div>
   );
 }
 

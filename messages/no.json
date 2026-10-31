@@ -1011,7 +1011,7 @@
         "visibilityLockedNote": "Kan ikke endres etter spill-start.",
         "sideTournamentLegend": "Sideturnering",
         "sideTournamentTitle": "Legg til sideturnering",
-        "sideTournamentDesc": "Konkurranse ved siden av spillet, der hver spiller eller hvert lag samler poeng. Vises etter at spillet er avsluttet.",
+        "sideTournamentDesc": "Poeng for lengste drive og nærmest flagget.",
         "sideLdLegend": "Lengste drive: antall hull",
         "sideCtpLegend": "Nærmest pinnen: antall hull",
         "sideLockedNote": "Kan ikke endres etter spill-start."
@@ -1125,7 +1125,10 @@
         "peerApprovalDesc": "En annen i flighten må godkjenne scorekortet etter at det er levert."
       },
       "prizes": {
-        "legend": "Premiebord (valgfritt)",
+        "legend": "Premiebord",
+        "toggleAdd": "Legg til",
+        "toggleHide": "Skjul",
+        "toggleCount": "{count, plural, one {# premie} other {# premier}}",
         "placementLabel": "{position}. plass",
         "ldLabel": "Lengste drive",
         "ctpLabel": "Nærmest pinnen",
