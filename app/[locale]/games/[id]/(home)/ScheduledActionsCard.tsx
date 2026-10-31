@@ -5,10 +5,13 @@ import type { MyBroughtGuest } from '@/lib/games/broughtGuests';
 
 /**
  * The list card under «Du er påmeldt» before the start (#2607, screens 1 and
- * 4 of the «Ta med en gjest» drawing): «Ta med en gjest ›» first, then «Legg i
- * kalenderen ›» and «Vis på kart ›». The owner's answer 31.10: build the list
- * card from the drawing, at its measure (16 px from the screen edge), and move
+ * 4 of the «Ta med en gjest» drawing): «Ta med en gjest ›» first, then the
+ * calendar and «Vis på kart ›». The owner's answer 31.10: build the list card
+ * from the drawing, at its measure (16 px from the screen edge), and move
  * calendar and map here from the course card so they are not in two places.
+ * The calendar row keeps «Legg til i kalender», the words the app's ticket
+ * shares with this page (native ticketCopy.test.ts parity), where the drawing
+ * wrote «Legg i kalenderen».
  *
  * `guestRow` is set only when `bringGuestBlock` lets the player bring a guest;
  * with a guest, the row says who and where the guest stands. A player without
