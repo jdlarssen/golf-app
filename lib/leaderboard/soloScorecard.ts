@@ -27,9 +27,9 @@ export interface SoloScorecardStanding {
   /** Poeng (stableford) eller netto slag (slagspill). */
   total: number;
   /**
-   * #2625: mot par — poeng mot par-tempo (stableford) eller netto mot par
-   * (slagspill); `null` uten spilte hull. Stillingen leder med det når
-   * `SoloScorecard.ranking` er `'net_to_par'`.
+   * #2625: netto mot par (slagspill); `null` uten spilte hull, og alltid i
+   * stableford (#2738: et poengspill viser poengene). Stillingen leder med det
+   * når `SoloScorecard.ranking` er `'net_to_par'`.
    */
   toPar: number | null;
   holesPlayed: number;
@@ -47,9 +47,9 @@ export interface SoloScorecardCell {
   /** Den ene hullvinneren. Delt beste er ingen vinner. */
   isBest: boolean;
   /**
-   * #2625: against the player's own par — points against par pace (stableford)
-   * or net − par (strokeplay); `null` when the hole is not played. A game
-   * ranked on net to par orders the rows and picks the nine's leader on it.
+   * #2625: net − the player's own par (strokeplay); `null` when the hole is not
+   * played, and always in stableford (#2738). A game ranked on net to par
+   * orders the rows and picks the nine's leader on it.
    */
   toPar: number | null;
 }
@@ -239,7 +239,10 @@ function split(
   };
 }
 
-/** Solo stableford og modifisert stableford: flest poeng er best. */
+/**
+ * Solo stableford og modifisert stableford: flest poeng er best. #2738: et
+ * poengspill rangeres og vises på poeng, så kortet er alltid `'net_total'`.
+ */
 export function soloStablefordScorecard(
   result: StablefordSoloResult,
   teeGenderOf: TeeGenderOf,
@@ -262,22 +265,22 @@ export function soloStablefordScorecard(
       par: c.par,
       value: c.gross == null ? null : c.points,
       isBest: false,
-      toPar: c.gross == null ? null : c.toPar,
+      toPar: null,
     }));
     return buildHole(hole, cells, teeGenderOf);
   });
   const card: SoloScorecard = {
-    ranking: result.ranking,
+    ranking: 'net_total',
     standings: players.map((line) => ({
       userId: line.userId,
       rank: line.rank,
       isLeader: line.rank === 1 && line.tiedWith.length === 0,
       total: line.totalPoints,
-      toPar: line.toPar,
+      toPar: null,
       holesPlayed: line.holesPlayed,
       totalGross: null,
     })),
-    ...split(holes, rankedIds, 'high', result.ranking),
+    ...split(holes, rankedIds, 'high', 'net_total'),
   };
   return withLeagueRule(card, players.length, opts);
 }

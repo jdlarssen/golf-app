@@ -97,17 +97,18 @@ export function headlineUnit(ranking: TeamRanking): 'toPar' | 'total' {
 }
 
 /**
- * #2625 part 2: what a points row, podium or duel leads with — points against
- * par pace in a game ranked on net to par, else the points — and the
- * `leaderboard.common` label under it. One home for the choice the stableford
- * and patsome surfaces make, so the number and its label cannot disagree.
+ * #2738: what a points row, podium or duel leads with — the points, in every
+ * points game — and the `leaderboard.common` label under it. One home for the
+ * stableford and patsome surfaces, so none of them shows a points game «mot
+ * par».
  */
-export function pointsHeadline(
-  ranking: TeamRanking,
-  line: { totalPoints: number; toPar: number | null },
-): ReturnType<typeof teamHeadline> & { labelKey: 'vsParLabel' | 'poengLabel' } {
-  const headline = teamHeadline(ranking, { total: line.totalPoints, toPar: line.toPar });
-  return { ...headline, labelKey: headline.unit === 'toPar' ? 'vsParLabel' : 'poengLabel' };
+export function pointsHeadline(line: { totalPoints: number }): {
+  unit: 'total';
+  value: number;
+  text: string;
+  labelKey: 'poengLabel';
+} {
+  return { unit: 'total', value: line.totalPoints, text: String(line.totalPoints), labelKey: 'poengLabel' };
 }
 
 /**

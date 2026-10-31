@@ -16,13 +16,7 @@ import {
   type BoardRowSrPart,
   type BoardTotalSr,
 } from '@/lib/leaderboard/boardRules';
-import {
-  isPointsUnit,
-  isToParUnit,
-  type LiveBoardRow,
-  type LiveBoardUnit,
-  type ViewerStanding,
-} from '@/lib/leaderboard/liveBoard';
+import type { LiveBoardRow, LiveBoardUnit, ViewerStanding } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar } from '@/lib/leaderboard/vsPar';
 
 export type BoardT = ReturnType<typeof useTranslations<'leaderboard.board'>>;
@@ -49,18 +43,16 @@ export function placeLabel(t: BoardT, row: BoardPlaceRow, showRank: boolean): st
 
 /**
  * The number column's heading: «Poeng», or «Netto» over net strokes and net
- * to par («netto −2», #2253). #2625: points against par pace say «Mot par» —
- * «Poeng» over «+3» would read as three points.
+ * to par («netto −2», #2253).
  */
 export function columnHeading(t: BoardT, unit: LiveBoardUnit): string {
-  if (unit === 'pointsToPar') return t('colVsPar');
   return unit === 'points' ? t('colPoints') : t('colNet');
 }
 
-/** The follow page's big total (#2286): «26 p», «−2» or «74 netto» (#2625: «+3» in points against par pace). */
+/** The follow page's big total (#2286): «26 p», «−2» or «74 netto». */
 export function followTotalLabel(tf: FollowT, unit: LiveBoardUnit, total: number | null): string {
   if (total === null) return '—';
-  if (isToParUnit(unit)) return formatVsPar(total);
+  if (unit === 'toPar') return formatVsPar(total);
   if (unit === 'points') return tf('totalPoints', { total });
   return tf('totalNet', { total });
 }
@@ -79,10 +71,6 @@ function totalSrText(t: BoardT, total: BoardTotalSr): string {
       return t('srOverPar', { count: total.value });
     case 'under':
       return t('srUnderPar', { count: total.value });
-    case 'pointsOver':
-      return t('srPointsOverPar', { count: total.value });
-    case 'pointsUnder':
-      return t('srPointsUnderPar', { count: total.value });
   }
 }
 
@@ -141,7 +129,7 @@ export function behindLeaderText(
   displayName: (row: LiveBoardRow) => string,
 ): string | null {
   if (standing.gap === null || standing.gap <= 0) return null;
-  const inPoints = isPointsUnit(unit);
+  const inPoints = unit === 'points';
   if (standing.leaderUserIds.length > 1) {
     return inPoints
       ? t('behindPointsLead', { gap: standing.gap })

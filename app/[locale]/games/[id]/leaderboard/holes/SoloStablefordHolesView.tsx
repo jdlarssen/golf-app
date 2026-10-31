@@ -11,11 +11,8 @@ import { scoreTone } from '@/lib/scoring/scoreTone';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 import {
-  type SoloScorecard,
   formatSignedPoints as formatPoints,
   soloStablefordScorecard,
-  standingTotalText,
-  standingUnit,
   type SoloScorecardHole,
   type SoloScorecardNine,
   type SoloScorecardStanding,
@@ -118,7 +115,6 @@ export function SoloStablefordHolesView({
 
       <TotalsHeader
         standings={card.standings}
-        ranking={card.ranking}
         playersById={playersById}
         leagueAlone={card.leagueAlone === true}
       />
@@ -153,13 +149,10 @@ export function SoloStablefordHolesView({
  */
 function TotalsHeader({
   standings,
-  ranking,
   playersById,
   leagueAlone,
 }: {
   standings: SoloScorecardStanding[];
-  /** #2625: a game ranked on net to par leads with the number it ranks on. */
-  ranking: SoloScorecard['ranking'];
   playersById: Map<string, SoloStablefordPlayerInfo>;
   /** #2712: a league round played alone shows no rank. */
   leagueAlone: boolean;
@@ -168,11 +161,7 @@ function TotalsHeader({
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
-        <p className="text-xs font-semibold text-muted">
-          {standingUnit({ ranking }) === 'toPar'
-            ? `${t('common.stillingen')} · ${t('common.vsParLabel')}`
-            : t('common.stillingen')}
-        </p>
+        <p className="text-xs font-semibold text-muted">{t('common.stillingen')}</p>
         <ul
           data-testid="solo-stableford-holes-totals"
           className="flex flex-col gap-1.5 list-none"
@@ -214,7 +203,7 @@ function TotalsHeader({
                       isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
-                    {standingTotalText({ ranking }, line, formatPoints)}
+                    {formatPoints(line.total)}
                   </span>
                 </span>
               </li>
@@ -265,10 +254,6 @@ function NineBlock({
 /**
  * Poeng-subtotal for nien per spiller, leder (HØYEST poeng) i champagne.
  * «Løpende poeng» ved Ut/Inn-bruddet.
- *
- * #2625: in a game ranked on net to par the leader is the best points against
- * par pace over the nine's played holes (`isLeader`, from `soloScorecard.ts`);
- * the chip still shows the points.
  */
 function SubtotalStrip({
   subtotals,

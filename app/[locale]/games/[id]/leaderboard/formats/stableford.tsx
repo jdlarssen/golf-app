@@ -18,7 +18,6 @@ import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
-import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { pointsHeadline } from '@/lib/leaderboard/vsPar';
@@ -213,9 +212,11 @@ export async function renderStableford(opts: {
         holeNumber: s.hole_number,
         strokes: s.strokes,
       }));
-    // #2625: a net-to-par game ranks the brutto preview on brutto to par too,
-    // so a player who has played fewer holes is not placed ahead on the sum.
-    const ranking = ranksByNetToPar(game.mode_config) ? 'net_to_par' : undefined;
+    // #2625: the brutto preview ranks on brutto to par, so a player who has
+    // played fewer holes is not placed ahead on the sum. #2738: it shows
+    // strokes, not points, so it keeps that rule in every stableford game,
+    // also now that the points themselves rank on points only.
+    const ranking = 'net_to_par' as const;
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
       players: bruttoPlayers,
@@ -312,18 +313,15 @@ export async function renderStableford(opts: {
       const [a, b] = [...result.players].sort(
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
       );
-      // #2625: a game ranked on points against par pace shows that number
-      // («+3», «E»), with the bar reading it (a player without a hole as 0);
-      // highest wins either way, and the winner comes from the rank.
+      // #2738: the duel shows the points; highest wins, and the winner
+      // comes from the rank.
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
-        const headline = pointsHeadline(result.ranking, pl);
         return {
           userId: pl.userId,
           name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
-          score: headline.value ?? 0,
-          ...(headline.unit === 'toPar' ? { scoreLabel: headline.text } : {}),
+          score: pointsHeadline(pl).value,
           subLabel: th2h('subLabelHolesPlayed', { count: pl.holesPlayed }),
         };
       };
@@ -343,7 +341,7 @@ export async function renderStableford(opts: {
           gameId={gameId}
           gameName={game.name}
           formatLabel={tModes(stablefordMode)}
-          unitLabel={tc(pointsHeadline(result.ranking, a).labelKey)}
+          unitLabel={tc(pointsHeadline(a).labelKey)}
           sideA={sideFor(a)}
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}

@@ -169,7 +169,6 @@ export function SoloStablefordPodium({
                   player={second}
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
-                  ranking={result.ranking}
                   hullChip={hullChipFor(second)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(second)}
@@ -186,7 +185,6 @@ export function SoloStablefordPodium({
               player={first}
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
-              ranking={result.ranking}
               hullChip={hullChipFor(first)}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
               tiedBadge={tiedBadge(first)}
@@ -203,7 +201,6 @@ export function SoloStablefordPodium({
                   player={third}
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
-                  ranking={result.ranking}
                   hullChip={hullChipFor(third)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(third)}
@@ -248,10 +245,10 @@ export function SoloStablefordPodium({
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
-                        {pointsHeadline(result.ranking, player).text}
+                        {pointsHeadline(player).text}
                       </span>
                       <span className="mt-0.5 block text-xs font-semibold text-muted">
-                        {t(`common.${pointsHeadline(result.ranking, player).labelKey}`)}
+                        {t(`common.${pointsHeadline(player).labelKey}`)}
                       </span>
                     </div>
                   </Card>
@@ -274,7 +271,6 @@ function PodiumStep({
   player,
   playerInfo,
   staggerIndex,
-  ranking,
   hullChip,
   unknownPlayerLabel,
   tiedBadge,
@@ -284,8 +280,6 @@ function PodiumStep({
   player: StablefordPlayerLine;
   playerInfo: SoloStablefordPlayerInfo | undefined;
   staggerIndex: number;
-  /** #2625: the result's ranking rule; points against par pace lead in a net-to-par game. */
-  ranking: StablefordSoloResult['ranking'];
   /** «X hull»-chip, eller null når hull-tallet er likt for alle (#1892). */
   hullChip: string | null;
   unknownPlayerLabel: string;
@@ -293,7 +287,7 @@ function PodiumStep({
   tiedBadge: string | null;
 }) {
   const t = useTranslations('leaderboard');
-  const headline = pointsHeadline(ranking, player);
+  const headline = pointsHeadline(player);
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
     : unknownPlayerLabel;

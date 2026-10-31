@@ -8,7 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { firstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { pointsHeadline, type TeamRanking } from '@/lib/leaderboard/vsPar';
+import { pointsHeadline } from '@/lib/leaderboard/vsPar';
 import type {
   StablefordTeamLine,
   StablefordTeamResult,
@@ -158,7 +158,6 @@ export function TeamStablefordPodium({
             {second && (
               <PodiumStep
                 slot={2}
-                ranking={result.ranking}
                 team={second}
                 playersById={playersById}
                 staggerIndex={1}
@@ -171,7 +170,6 @@ export function TeamStablefordPodium({
           <div className="col-start-2">
             <PodiumStep
               slot={1}
-              ranking={result.ranking}
               team={first}
               playersById={playersById}
               staggerIndex={0}
@@ -184,7 +182,6 @@ export function TeamStablefordPodium({
             {third && (
               <PodiumStep
                 slot={3}
-                ranking={result.ranking}
                 team={third}
                 playersById={playersById}
                 staggerIndex={2}
@@ -221,10 +218,10 @@ export function TeamStablefordPodium({
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
-                      {pointsHeadline(result.ranking, team).text}
+                      {pointsHeadline(team).text}
                     </span>
                     <span className="mt-0.5 block text-xs font-semibold text-muted">
-                      {t(`common.${pointsHeadline(result.ranking, team).labelKey}`)}
+                      {t(`common.${pointsHeadline(team).labelKey}`)}
                     </span>
                   </div>
                 </Card>
@@ -264,7 +261,6 @@ function teamPartnerLabel(
 
 function PodiumStep({
   slot,
-  ranking,
   team,
   playersById,
   staggerIndex,
@@ -272,8 +268,6 @@ function PodiumStep({
 }: {
   /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
   slot: PodiumSlot;
-  /** #2625: the result's ranking rule; points against par pace lead in a net-to-par game. */
-  ranking: TeamRanking;
   team: StablefordTeamLine;
   playersById: Map<string, SoloStablefordPlayerInfo>;
   staggerIndex: number;
@@ -291,7 +285,7 @@ function PodiumStep({
   // presentasjon (farge, medaljong, tall-styling) følger lagets faktiske rank.
   const place = podiumPlace(team.rank);
   const tierClass = TIER_ACCENT[PLACE_TIER[place]];
-  const headline = pointsHeadline(ranking, team);
+  const headline = pointsHeadline(team);
   const heightClass = SLOT_HEIGHTS_TALL[slot];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
   const medallionSize = place === 1 ? 48 : 36;
