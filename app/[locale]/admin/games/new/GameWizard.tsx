@@ -895,6 +895,8 @@ function WizardBody({
       selectedCount: state.selectedPlayerIds.length,
       expectedCount: state.expectedPlayerCount ?? null,
       title: state.nameTouched && state.name.trim() !== '' ? state.name.trim() : null,
+      // Same rule as `stepTitle()` below: the card names the screen «Fortsett» opens.
+      sourceScreen: step === 4 && !showTeamsScreen && !state.isClubScoped,
     },
   };
   const draftJson = JSON.stringify({ draft: draftSnapshot, resume });

@@ -39,6 +39,7 @@ function seed(
         selectedCount: 3,
         expectedCount: 4,
         title: null,
+        sourceScreen: false,
         ...summary,
       },
     },
@@ -83,6 +84,13 @@ describe('ResumeDraftCard', () => {
       )}`,
     );
     expect(link.className).toContain('h-12');
+  });
+
+  it('sier «Hvordan får dere spillere?» når steg 4 åpner på valget før lista (#2447)', async () => {
+    seed({ step: 4, sourceScreen: true });
+    render(<ResumeDraftCard userId={USER} />);
+
+    expect(await screen.findByText('Steg 4 av 5 · Hvordan får dere spillere?')).toBeInTheDocument();
   });
 
   it('bruker spillnavnet som tittel når arrangøren har skrevet det', async () => {

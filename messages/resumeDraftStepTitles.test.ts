@@ -11,8 +11,8 @@ describe.each([
   ['no', no],
   ['en', en],
 ] as const)('resumeDraft.stepTitle (%s)', (_locale, catalog) => {
-  it('is the same text as wizard.stepTitle for steps 1–5', () => {
-    for (const step of ['1', '2', '3', '4', '5'] as const) {
+  it('is the same text as wizard.stepTitle for steps 1–5 and the step 4 source screen', () => {
+    for (const step of ['1', '2', '3', '4', '4source', '5'] as const) {
       expect(catalog.resumeDraft.stepTitle[step]).toBe(catalog.wizard.stepTitle[step]);
     }
   });

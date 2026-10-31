@@ -66,7 +66,9 @@ export function ResumeDraftCard({ userId }: { userId: string }) {
       ? t('playersOfTotal', { count: summary.selectedCount, total: summary.expectedCount })
       : t('playersCount', { count: summary.selectedCount });
   const meta = [summary.formatLabel, summary.courseName, players].filter(Boolean).join(' · ');
-  const stepTitle = t(`stepTitle.${summary.step}` as Parameters<typeof t>[0]);
+  const stepTitle = t(
+    `stepTitle.${summary.sourceScreen ? '4source' : summary.step}` as Parameters<typeof t>[0],
+  );
 
   return (
     <section aria-labelledby="resume-draft-heading">

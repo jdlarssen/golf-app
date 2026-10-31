@@ -333,6 +333,7 @@ function makeResume(overrides: Partial<WizardDraftResume['summary']> = {}): Wiza
       selectedCount: 3,
       expectedCount: 4,
       title: null,
+      sourceScreen: false,
       ...overrides,
     },
   };

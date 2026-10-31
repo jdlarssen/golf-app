@@ -147,6 +147,11 @@ export type WizardDraftSummary = {
   expectedCount: number | null;
   /** Spillnavnet når arrangøren har skrevet det selv, ellers `null`. */
   title: string | null;
+  /**
+   * #2447: steg 4 åpner på «Hvordan får dere spillere?» (valget før lista), ikke
+   * «Hvem skal spille?». Kortet sier det samme som skjermen «Fortsett» åpner.
+   */
+  sourceScreen: boolean;
 };
 
 export type WizardDraftResume = {
@@ -505,6 +510,7 @@ function parseResume(raw: unknown): WizardDraftResume | undefined {
       selectedCount: count(sm.selectedCount) ?? 0,
       expectedCount: count(sm.expectedCount),
       title: str(sm.title),
+      sourceScreen: sm.sourceScreen === true,
     },
   };
 }
