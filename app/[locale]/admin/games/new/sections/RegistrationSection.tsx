@@ -57,6 +57,13 @@ type Props = {
    * ikke for medlemmer). Type-valget (solo/lag) beholdes — det gjelder fortsatt.
    */
   hideModeChoice?: boolean;
+  /**
+   * #2457: which part to draw. Step 4 mounts `'type'` («Hva melder man på?»)
+   * under «Hvordan får dere spillere?», and the kontingent sheet on step 5
+   * mounts `'fee'`. Default `'all'` draws the whole section, as before — the
+   * GameForm path. `'type'` and `'fee'` never draw «Hvem kan melde seg på?».
+   */
+  part?: 'all' | 'type' | 'fee';
 };
 
 const REGISTRATION_MODES: readonly RegistrationMode[] = [
@@ -77,6 +84,7 @@ export function RegistrationSection({
   state,
   hideHeading = false,
   hideModeChoice = false,
+  part = 'all',
 }: Props) {
   const t = useTranslations('wizard.sections.registration');
   const whoId = useId();
@@ -125,7 +133,7 @@ export function RegistrationSection({
 
   // «Hvem kan melde seg på?»: tre valgkort, og under «De ber om plass» (når den er
   // valgt) avkrysningen for venner, innrykket til kortets tekst.
-  const modeChoice = !hideModeChoice && (
+  const modeChoice = !hideModeChoice && part === 'all' && (
     <>
       <p
         id={whoId}
@@ -180,58 +188,62 @@ export function RegistrationSection({
     <div>
       {modeChoiceBlock}
 
-      <FormSection variant="bare" legend={t('whatLegend')}>
-        <ChoiceCardGrid columns={2} label={t('whatLegend')}>
-          {REGISTRATION_TYPES.map((type) => (
-            <RadioChoiceCard
-              key={type}
-              name="registration_type_input"
-              value={type}
-              checked={registrationType === type}
-              onChange={() => setRegistrationType(type)}
-              disabled={type === 'team' ? teamRadioDisabled : lockGameMode}
-              height={52}
-              title={typeTitle(type)}
-            />
-          ))}
-        </ChoiceCardGrid>
-      </FormSection>
+      {part !== 'fee' && (
+        <FormSection variant="bare" legend={t('whatLegend')}>
+          <ChoiceCardGrid columns={2} label={t('whatLegend')}>
+            {REGISTRATION_TYPES.map((type) => (
+              <RadioChoiceCard
+                key={type}
+                name="registration_type_input"
+                value={type}
+                checked={registrationType === type}
+                onChange={() => setRegistrationType(type)}
+                disabled={type === 'team' ? teamRadioDisabled : lockGameMode}
+                height={52}
+                title={typeTitle(type)}
+              />
+            ))}
+          </ChoiceCardGrid>
+        </FormSection>
+      )}
 
       {/* #1049: startkontingent (valgfritt). Vises for alle formater og også for
           klubbspill — en klubbkveld kan ha avgift på toppen av medlemskap. Ikke
           disabled ved lockGameMode: beløpet er informativt, ikke strukturelt.
           Feltene har ikke `name`: GameForm og veiviserens FormDataInputs
           sender verdiene fra state. */}
-      <FormSection legend={t('paymentLegend')}>
-        <FormSectionText>{t('paymentHint')}</FormSectionText>
-        <Input
-          variant="card"
-          id="registration-entry-fee"
-          label={t('entryFeeLabel')}
-          type="number"
-          inputMode="numeric"
-          min={0}
-          step={1}
-          value={entryFeeKr}
-          onChange={(e) => setEntryFeeKr(e.target.value)}
-          placeholder={t('entryFeePlaceholder')}
-          inputClassName="tabular-nums"
-        />
-        {hasEntryFee && (
+      {part !== 'type' && (
+        <FormSection legend={t('paymentLegend')}>
+          <FormSectionText>{t('paymentHint')}</FormSectionText>
           <Input
             variant="card"
-            id="registration-payment-link"
-            label={t('paymentLinkLabel')}
-            type="text"
-            inputMode="text"
-            value={paymentLink}
-            onChange={(e) => setPaymentLink(e.target.value)}
-            placeholder={t('paymentLinkPlaceholder')}
-            hint={t('paymentLinkHint')}
-            maxLength={200}
+            id="registration-entry-fee"
+            label={t('entryFeeLabel')}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={entryFeeKr}
+            onChange={(e) => setEntryFeeKr(e.target.value)}
+            placeholder={t('entryFeePlaceholder')}
+            inputClassName="tabular-nums"
           />
-        )}
-      </FormSection>
+          {hasEntryFee && (
+            <Input
+              variant="card"
+              id="registration-payment-link"
+              label={t('paymentLinkLabel')}
+              type="text"
+              inputMode="text"
+              value={paymentLink}
+              onChange={(e) => setPaymentLink(e.target.value)}
+              placeholder={t('paymentLinkPlaceholder')}
+              hint={t('paymentLinkHint')}
+              maxLength={200}
+            />
+          )}
+        </FormSection>
+      )}
     </div>
   );
 }

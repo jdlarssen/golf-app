@@ -599,8 +599,8 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     );
     expect(stepLabel, 'Forventet «Steg 5 av 5» i DOM').toBeTruthy();
 
-    // The team handicap sits under «Vis avanserte innstillinger».
-    fireEvent.click(screen.getByRole('button', { name: /avanserte innstillinger/i }));
+    // The team handicap sits in the Handicap sheet (#2457).
+    fireEvent.click(screen.getByRole('button', { name: /^handicap .*endre$/i }));
     const input = document.getElementById('texas_team_handicap_pct__input') as HTMLInputElement;
     expect(input).not.toBeNull();
     expect(input.value).toBe('80');

@@ -1175,7 +1175,31 @@
           "open": "Open registration"
         }
       },
-      "advancedToggle": "Show advanced settings",
+      "settings": {
+        "kicker": "Settings",
+        "rows": {
+          "handicap": "Handicap",
+          "fee": "Entry fee",
+          "duringRound": "During the round",
+          "sideAndPrizes": "Side tournament and prizes"
+        },
+        "values": {
+          "handicapNet": "Net, {pct} %",
+          "handicapGross": "Gross",
+          "handicapTeamAverage": "{pct} % of the team average",
+          "feeNone": "None",
+          "feeAmount": "{kr} kr",
+          "visibilityLive": "Show everything",
+          "visibilityReveal": "Reveal at the end",
+          "peerApproval": "Flight approval",
+          "sideOff": "Off",
+          "sideOn": "On",
+          "prizes": "{count, plural, one {# prize} other {# prizes}}"
+        },
+        "edit": "Edit",
+        "done": "Done",
+        "close": "Close"
+      },
       "publishButton": "Publish and share the invitation",
       "publishPending": "Publishing …",
       "draftButton": "Save as draft",

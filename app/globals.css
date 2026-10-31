@@ -1006,7 +1006,7 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
   animation: reveal-up 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-/* Format-guide-ark (#498) — glir opp fra bunnen over veiviseren. */
+/* Bunn-ark (BottomSheet, #2457; Format-guide-arket #498) — glir opp fra bunnen. */
 @keyframes format-sheet-up {
   from {
     transform: translateY(100%);
@@ -1023,15 +1023,15 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
     opacity: 1;
   }
 }
-.format-guide-sheet {
+.bottom-sheet {
   animation: format-sheet-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.format-guide-backdrop {
+.bottom-sheet-backdrop {
   animation: format-sheet-backdrop-in 180ms ease-out both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .format-guide-sheet,
-  .format-guide-backdrop {
+  .bottom-sheet,
+  .bottom-sheet-backdrop {
     animation: none;
   }
 }
