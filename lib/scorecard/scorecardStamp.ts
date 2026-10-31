@@ -59,6 +59,14 @@ export function formatStampDate({ day, month, hour, minute }: StampDateParts): s
   return `${pad2(day)}.${pad2(month)} · ${pad2(hour)}:${pad2(minute)}`;
 }
 
+/**
+ * #2712: the approval still waits, for someone in the flight or for the league
+ * marker. One home, so the checklist's ring and the copy cannot disagree.
+ */
+export function approvalPending(approval: StampApproval): boolean {
+  return approval.kind === 'pending' || approval.kind === 'league_marker_pending';
+}
+
 export interface ScorecardStamp {
   signedAt: string;
   signedBy: SignedBy;
