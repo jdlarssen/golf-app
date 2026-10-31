@@ -6050,8 +6050,8 @@
       "mot": "mot",
       "courseTeeLabel": "Bane / tee",
       "matchesLabel": "Matcher",
-      "matchesTotalLabel": "{count} matcher totalt",
-      "confirmButton": "Opprett {count} matcher",
+      "matchesTotalLabel": "{count, plural, one {# match totalt} other {# matcher totalt}}",
+      "confirmButton": "Opprett {count, plural, one {# match} other {# matcher}}",
       "confirmPending": "Genererer …",
       "prevButton": "Forrige",
       "nextButton": "Neste",
@@ -7747,7 +7747,7 @@
       "soloLabel": "Med egen ball",
       "teamLabel": "Som lag",
       "gangLabel": "Gjengen",
-      "gangValue": "{players} spillere, {games} runder"
+      "gangValue": "{players, plural, one {# spiller} other {# spillere}}, {games, plural, one {# runde} other {# runder}}"
     },
     "bestRound": {
       "title": "Årets beste runde",

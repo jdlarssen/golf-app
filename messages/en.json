@@ -6050,8 +6050,8 @@
       "mot": "vs",
       "courseTeeLabel": "Course / tee",
       "matchesLabel": "Matches",
-      "matchesTotalLabel": "{count} matches total",
-      "confirmButton": "Create {count} matches",
+      "matchesTotalLabel": "{count, plural, one {# match total} other {# matches total}}",
+      "confirmButton": "Create {count, plural, one {# match} other {# matches}}",
       "confirmPending": "Generating…",
       "prevButton": "Previous",
       "nextButton": "Next",
@@ -7746,7 +7746,7 @@
       "soloLabel": "Own ball",
       "teamLabel": "As a team",
       "gangLabel": "The gang",
-      "gangValue": "{players} players, {games} rounds"
+      "gangValue": "{players, plural, one {# player} other {# players}}, {games, plural, one {# round} other {# rounds}}"
     },
     "bestRound": {
       "title": "Best round of the year",
