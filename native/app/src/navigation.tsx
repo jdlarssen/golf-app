@@ -289,8 +289,9 @@ export function RootNavigator() {
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
           // Familienavn, ikke `fontWeight`: expo-font registrerer ett snitt per
-          // familie, så en vekt oppå Inter Regular velger ikke Bold.
-          headerTitleStyle: { color: colors.text, fontFamily: FONTS.sansBold },
+          // familie, så en vekt oppå Inter Regular velger ikke snittet. Halvfet
+          // som resten av appen, ikke fet (#2725).
+          headerTitleStyle: { color: colors.text, fontFamily: FONTS.sansSemiBold },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: colors.bg },
         }}
