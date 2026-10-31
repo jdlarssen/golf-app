@@ -136,6 +136,7 @@ import {
 import { useCourseFromUrl } from './useCourseFromUrl';
 import { COURSE_CHOSEN_PARAM, COURSE_PARAM } from '@/lib/wizard/courseParams';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
+import type { RecentCourse } from '@/lib/wizard/recentCourseCards';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -227,9 +228,23 @@ type Props = {
    * tiles sit 16 px under the title, as before.
    */
   stepOneLead?: ReactNode;
+  /**
+   * #2448: the courses you used last, one line per course, for the cards on
+   * step 3 (`getCourseAndTimeData`). Left out → no cards, only the search.
+   */
+  recentCourses?: RecentCourse[];
+  /**
+   * #2448: Oslo's «now» from the server («YYYY-MM-DDTHH:mm»), for the tee-off
+   * quick picks. Made on the server for the reason defaultTeeOff.ts gives.
+   * Left out → only «Annen dag» on the day row.
+   */
+  teeOffNow?: string;
 };
 
 const TOTAL_STEPS = 5;
+
+/** #2448: stable default for `recentCourses`. */
+const NO_RECENT_COURSES: RecentCourse[] = [];
 
 /** #2439: stable default for `clubs`, so `validClubIds` is not recomputed every render. */
 const NO_CLUB_OPTIONS: ClubOption[] = [];
@@ -484,6 +499,8 @@ function WizardBody({
   entryLabel,
   notice,
   stepOneLead,
+  recentCourses = NO_RECENT_COURSES,
+  teeOffNow = '',
   draft,
   draftSettled,
   storageKey,
@@ -1346,6 +1363,8 @@ function WizardBody({
           <BasicsSection
             state={state}
             courses={courses}
+            recentCourses={recentCourses}
+            teeOffNow={teeOffNow}
             showName={false}
           />
         </div>

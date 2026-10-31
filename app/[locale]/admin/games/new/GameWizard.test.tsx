@@ -13,6 +13,7 @@ import {
   wizardDraftStorageKey,
   type WizardDraft,
 } from './wizardStatePersistence';
+import { chooseCourse, chooseTee, setTeeOff } from '@/tests/courseAndTimeDriver';
 
 // #1380: veiviseren speiler nå utfyllingen til sessionStorage. Nullstill
 // mellom testene så et utkast fra én test ikke gjenopprettes i den neste.
@@ -214,15 +215,9 @@ describe('GameWizard — happy-path solo stableford', () => {
     // Steg 3 (Bane og tidspunkt): velg bane + tee + tee-off.
     expectStep(3);
     expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
 
     // Steg 4 (Spillere). #1065: tomt roster er en gyldig fremover-passering,
@@ -260,15 +255,9 @@ describe('GameWizard — happy-path solo stableford', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -326,15 +315,9 @@ describe('GameWizard — #464 picker-kilde (kun venner)', () => {
     pickKompisIntent(); // steg 1 → 2
     pickStablefordFormat();
     clickNext(); // steg 2 → 3
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext(); // steg 3 → 4
     expectStep(4);
   }
@@ -379,15 +362,9 @@ describe('GameWizard — best-ball inline team/flight på steg 4', () => {
     pickBestBallFormat();
     clickNext(); // → steg 3
 
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext(); // → steg 4
 
     // Velg alle 8 spillere.
@@ -493,15 +470,9 @@ function goToStep4() {
   pickKompisIntent(); // steg 1 → 2
   pickBestBallFormat();
   clickNext(); // steg 2 → 3
-  fireEvent.change(screen.getByLabelText(/^bane$/i), {
-    target: { value: 'course-1' },
-  });
-  fireEvent.change(screen.getByLabelText(/^tee$/i), {
-    target: { value: 'tee-1' },
-  });
-  fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-    target: { value: FUTURE_TEE_OFF },
-  });
+  chooseCourse('course-1');
+  chooseTee('tee-1');
+  setTeeOff(FUTURE_TEE_OFF);
   clickNext(); // steg 3 → 4
   expectStep(4);
 }
@@ -562,15 +533,9 @@ describe('GameWizard — Påmelding-felter på steg 5 (#199, flyttet av #1065)',
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     clickNext();
     expectStep(5);
@@ -729,15 +694,9 @@ describe('GameWizard — #1065 steg-4-gate', () => {
     pickKompisIntent();
     pickBestBallFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     expectStep(4);
 
@@ -805,15 +764,9 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -844,15 +797,9 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     pickKompisIntent();
     pickBestBallFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     for (const player of EIGHT_PLAYERS) {
       fireEvent.click(
@@ -901,15 +848,9 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /dame spiller/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /junior spiller/i }));
@@ -935,9 +876,7 @@ describe('GameWizard — «Shotgun-start» overlever til steg 5 (#2258)', () => 
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    setTeeOff(FUTURE_TEE_OFF);
     if (tick) fireEvent.click(screen.getByRole('checkbox', { name: 'Shotgun-start' }));
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
@@ -968,9 +907,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -1008,9 +945,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -1040,15 +975,9 @@ describe('GameWizard — #1065 allowance + kontingent overlever flytting til ste
     pickKompisIntent();
     pickStablefordFormat(); // → hcp_allowance_pct-feltet vises (stableford-familien)
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -1188,9 +1117,12 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     // Steg 3: bane, tee og tee-off er tilbake.
     clickNext();
     expectStep(3);
-    expect(screen.getByLabelText(/^bane$/i)).toHaveValue('course-1');
-    expect(screen.getByLabelText(/^tee$/i)).toHaveValue('tee-1');
-    expect(screen.getByLabelText(/^tee-off$/i)).toHaveValue(FUTURE_TEE_OFF);
+    const card = screen.getByTestId('recent-course-card');
+    expect([card.dataset.courseId, card.getAttribute('aria-pressed')]).toEqual(['course-1', 'true']);
+    const tee = screen.getByTestId('tee-button');
+    expect([tee.dataset.teeId, tee.getAttribute('aria-pressed')]).toEqual(['tee-1', 'true']);
+    expect(screen.getByLabelText(/^velg dag$/i)).toHaveValue(FUTURE_TEE_OFF.slice(0, 10));
+    expect(screen.getByLabelText(/^velg tid$/i)).toHaveValue(FUTURE_TEE_OFF.slice(11));
 
     // Steg 4: spilleren arrangøren hadde krysset av er fortsatt valgt — den
     // ligger i payloaden (og er derfor ute av den valgbare lista, som viser
@@ -1321,15 +1253,9 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: courseId },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: teeId },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse(courseId);
+    chooseTee(teeId);
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     clickNext();
     expectStep(5);
@@ -1350,9 +1276,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     clickPrev(); // → steg 4
     clickPrev(); // → steg 3
     expectStep(3);
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: LATER_TEE_OFF },
-    });
+    setTeeOff(LATER_TEE_OFF);
 
     clickNext();
     clickNext();
@@ -1372,9 +1296,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     clickPrev();
     clickPrev();
     expectStep(3);
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-2' },
-    });
+    chooseCourse('course-2');
 
     clickNext();
     clickNext();
@@ -1402,9 +1324,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     // Bytt bane → forslaget skal følge etter (fiksen må ikke fryse det).
     clickPrev();
     clickPrev();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-2' },
-    });
+    chooseCourse('course-2');
     clickNext();
     clickNext();
     expect(nameField()).toHaveValue(
@@ -1414,9 +1334,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     // Bytt tee-off → forslaget skal fortsatt følge etter.
     clickPrev();
     clickPrev();
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: LATER_TEE_OFF },
-    });
+    setTeeOff(LATER_TEE_OFF);
     clickNext();
     clickNext();
     expect(nameField()).toHaveValue(
@@ -1439,9 +1357,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
     fireEvent.change(field, { target: { value: 'Klubbkvelden' } });
     clickPrev();
     clickPrev();
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: LATER_TEE_OFF },
-    });
+    setTeeOff(LATER_TEE_OFF);
     clickNext();
     clickNext();
     expect(nameField()).toHaveValue('Klubbkvelden');
@@ -1468,15 +1384,9 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
     fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_CARD }));
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     clickNext();
     expectStep(5);
@@ -1580,7 +1490,7 @@ describe('BasicsSection — #1999 navnefeltet markerer navnet som rørt', () => 
       courses: COURSES,
     });
     onState(state.nameTouched);
-    return <BasicsSection state={state} courses={COURSES} showName />;
+    return <BasicsSection state={state} courses={COURSES} recentCourses={[]} teeOffNow="" showName />;
   }
 
   it('B4: å skrive i navnefeltet setter nameTouched', () => {
@@ -1629,15 +1539,9 @@ describe('GameWizard — #2282 «Klar?»-steget', () => {
     pickKompisIntent();
     pickStablefordFormat();
     clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: FUTURE_TEE_OFF },
-    });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
@@ -1759,9 +1663,9 @@ describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
     fireEvent.click(screen.getByRole('button', { name: /klubb-turnering/i }));
     fireEvent.click(screen.getByRole('radio', { name: format }));
     clickNext(); // → steg 3
-    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), { target: { value: 'tee-1' } });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), { target: { value: FUTURE_TEE_OFF } });
+    chooseCourse('course-1');
+    chooseTee('tee-1');
+    setTeeOff(FUTURE_TEE_OFF);
     clickNext(); // → steg 4
     expectStep(4);
   }

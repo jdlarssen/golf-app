@@ -288,6 +288,8 @@ async function GameFormBody({
     formatGuide,
     friendPlayerIds,
     clubMemberIdsByClub,
+    recentCourses,
+    teeOffNow,
   } = await getWizardMountData();
 
   return (
@@ -320,6 +322,8 @@ async function GameFormBody({
       // #477: ruten er admin-gatet (redirect over), så «Solo / Test» vises her.
       isAdmin
       formatGuide={formatGuide}
+      recentCourses={recentCourses}
+      teeOffNow={teeOffNow}
       backHref="/admin/games"
       notice={notice}
     />
