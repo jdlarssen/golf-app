@@ -160,8 +160,9 @@ export function RecentCoursePicker({
             onKeyDown={(e) => {
               if (e.key === 'Escape') setOpen(false);
             }}
-            // 16 px, so iOS does not zoom into the field.
-            className="h-12 w-full min-w-0 rounded-xl border border-field-border bg-surface pr-3 pl-[38px] font-sans text-base text-text placeholder:text-muted"
+            // 16 px, so iOS does not zoom into the field. 50 px as the artboard
+            // renders its 48 px content-box field, like the card fields.
+            className="h-[50px] w-full min-w-0 rounded-xl border border-field-border bg-surface pr-3 pl-[38px] font-sans text-base text-text placeholder:text-muted"
           />
         </div>
         {open && (
