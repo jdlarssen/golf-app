@@ -47,9 +47,9 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     reason: 'one game, the at most 3 players awaiting my approval',
   },
   'app/[locale]/games/[id]/holes/[holeNumber]/holePageData.ts': {
-    count: 4,
+    count: 3,
     reason:
-      'one hole of the roster (≤ 1 row per player); own/captain ids; eq user_id; sibling own/captain ids',
+      'one hole of the roster (≤ 1 row per player); own/captain ids; sibling own/captain ids',
   },
   'app/[locale]/games/[id]/putter/page.tsx': {
     count: 1,
