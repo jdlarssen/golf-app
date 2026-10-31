@@ -502,7 +502,7 @@ export default async function LigaPublicPage({
                             {t('playButton')}
                           </LinkButton>
                         ) : isParticipant && ws === 'open' && !roundReady ? (
-                          <span className="text-xs text-muted italic">
+                          <span className="text-xs text-muted">
                             {t('notReadyYet')}
                           </span>
                         ) : ws === 'upcoming' ? (

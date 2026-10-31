@@ -36,7 +36,7 @@ const chipStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontWeight: 700,
+  fontWeight: 600,
   fontSize: 12,
   flexShrink: 0,
 };

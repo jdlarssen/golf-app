@@ -258,7 +258,7 @@ function DrilldownView({
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-5 pb-2 text-[10.5px] text-muted">
           <span className="inline-flex items-center gap-1.5">
-            <strong className="font-serif font-bold text-text">B</strong>
+            <strong className="font-serif font-semibold text-text">B</strong>
             <span>{t('legendNetLabel')}</span>
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
@@ -477,7 +477,7 @@ function HoleRow({
             >
               <span
                 className={`w-6 text-center text-[12px] ${
-                  isBestNet ? 'font-bold text-text' : 'font-normal text-muted'
+                  isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
                 }`}
               >
                 {initial}
