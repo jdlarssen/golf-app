@@ -83,6 +83,24 @@ export function effectiveHcpMaxStrokes(
 }
 
 /**
+ * #2712: whether a frozen `game_players.course_handicap` is really the playing
+ * handicap. The freeze applies the game's share and cap
+ * (`recomputeCourseHandicap`), so under 100 %, or at the cap, the stored number
+ * is not the course handicap: a league at 75 % stores 8 for a course handicap
+ * of 10. One home for the label («banehandicap» or «spillehandicap») on the
+ * web game home and the app's scorecard header.
+ */
+export function frozenIsPlayingHandicap(
+  mode: string,
+  storedPct: number | null | undefined,
+  storedMaxStrokes: number | null | undefined,
+  value: number,
+): boolean {
+  const cap = effectiveHcpMaxStrokes(mode, storedMaxStrokes ?? null);
+  return effectiveHcpAllowancePct(mode, storedPct ?? 100) < 100 || (cap != null && value >= cap);
+}
+
+/**
  * #2570: whether the general «Handicap-andel» card (Netto/Brutto + percent)
  * shows for the format. Shamble is the exception: its setup on step 2 already
  * has a drawn Netto/Brutto choice («Tellemåte»), so its percentage field sits

@@ -2273,6 +2273,7 @@
       "infoLabel": "Din info",
       "soloIndividual": "Individuelt format. Du spiller for deg selv, uten lag.",
       "courseHandicap": "Banehandicap",
+      "playingHandicap": "Spillehandicap",
       "teamLabel": "Lag",
       "teamValue": "Lag {number}",
       "flightValue": "Flight {number}",
