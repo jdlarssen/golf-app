@@ -10,7 +10,7 @@ import {
   scorecardHeaderLine,
 } from './scorecardHeader';
 
-type Game = Pick<BundleGame, 'gameMode' | 'modeConfig'>;
+type Game = Pick<BundleGame, 'gameMode' | 'modeConfig' | 'hcpAllowancePct' | 'hcpMaxStrokes'>;
 
 const STABLEFORD: Game = {
   gameMode: 'stableford',
@@ -50,6 +50,26 @@ describe('scorecardHandicapPart', () => {
 
   it('fourball 85 %: spillehandicap, tallet slagene er fordelt fra', () => {
     expect(part(FOURBALL_85, { courseHandicap: 20 })).toEqual({ kind: 'playing', value: 17 });
+  });
+
+  // #2712: banehandicapen fryses med spillets andel og tak (`recomputeCourseHandicap`),
+  // så i en liga med 75 % og maks 32 slag er det lagrede tallet spillehandicapen.
+  it('stableford 75 %: spillehandicap, for andelen er alt trukket fra', () => {
+    expect(part({ ...STABLEFORD, hcpAllowancePct: 75, hcpMaxStrokes: 32 }, { courseHandicap: 8 })).toEqual({
+      kind: 'playing',
+      value: 8,
+    });
+  });
+
+  it('taket nådd ved 100 %: spillehandicap', () => {
+    expect(part({ ...STABLEFORD, hcpAllowancePct: 100, hcpMaxStrokes: 32 }, { courseHandicap: 32 })).toEqual({
+      kind: 'playing',
+      value: 32,
+    });
+  });
+
+  it('under taket ved 100 %: fortsatt banehandicap', () => {
+    expect(part({ ...STABLEFORD, hcpAllowancePct: 100, hcpMaxStrokes: 32 })).toEqual({ kind: 'course', value: 15 });
   });
 
   it('scramble-lagkort: lagshandicap fra motoren', () => {
