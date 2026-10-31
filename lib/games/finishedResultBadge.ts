@@ -23,7 +23,16 @@ export interface FinishedResultBadge {
  * every win count (`isWinningSummary` in lib/stats/clubStats.ts) read it.
  */
 export function isLeagueRoundAlone(summary: ResultSummary | null, leagueFlight: boolean): boolean {
-  return leagueFlight && summary?.kind === 'placement' && summary.fieldSize <= 1;
+  return summary?.kind === 'placement' && isLeagueFieldAlone(leagueFlight, summary.fieldSize);
+}
+
+/**
+ * The same rule for a caller that has the field size but no stored summary:
+ * the «Resultatet er klart» mail (ranked players) and the app's Home hero
+ * (active players in a live round).
+ */
+export function isLeagueFieldAlone(leagueFlight: boolean, fieldSize: number): boolean {
+  return leagueFlight && fieldSize <= 1;
 }
 
 export function finishedResultBadge(

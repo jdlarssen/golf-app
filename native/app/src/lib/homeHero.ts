@@ -17,6 +17,7 @@
 // Ren funksjon: ingen nett, ingen SQLite, ingen React. Kalleren har lest
 // bundelen og slagene fra enheten.
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
+import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
 import { computePrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
@@ -241,9 +242,10 @@ export function buildHeroModel(opts: HeroInput): HeroModel {
     approvals: me ? pendingApprovals(roster, bundle.game, userId).length : 0,
     // Any league flight with one active player has no placement: the same
     // rule as `finishedResultBadge`, which «Forrige runde» uses on this screen.
-    leagueSolo:
-      bundle.game.leagueRoundId != null &&
-      bundle.players.filter((player) => player.withdrawnAt == null).length === 1,
+    leagueSolo: isLeagueFieldAlone(
+      bundle.game.leagueRoundId != null,
+      bundle.players.filter((player) => player.withdrawnAt == null).length,
+    ),
     // A simulator-league flight is `leagueRoundId` + peer approval, as in
     // `isGameOrganiser` and `playerWithdrawKind`.
     leagueMarker: bundle.game.leagueRoundId != null && bundle.game.requirePeerApproval,
