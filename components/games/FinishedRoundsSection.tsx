@@ -79,7 +79,7 @@ export async function FinishedRoundsSection({
           ) ?? { strokes: [], courseHandicap: null, teamBall: false };
           const { brutto, netto } = computeRoundScore(strokes, courseHandicap);
           const badge = g.result_summary
-            ? finishedResultBadge(g.result_summary)
+            ? finishedResultBadge(g.result_summary, { leagueFlight: g.league_round_id != null })
             : null;
           return (
             <GameHistoryRow
