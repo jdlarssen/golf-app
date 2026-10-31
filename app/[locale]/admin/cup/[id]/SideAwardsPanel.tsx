@@ -155,7 +155,7 @@ export function SideAwardsPanel({
 
   return (
     <section className="mb-5" data-testid="cup-side-awards">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
         {t('heading')}
       </h2>
       <p className="text-xs text-muted mb-3">{t('hint')}</p>
@@ -182,7 +182,7 @@ export function SideAwardsPanel({
                   data-testid="side-award-kind"
                   value={row.kind}
                   onChange={(e) => setKind(i, e.target.value as 'ctp' | 'ld' | 'gir')}
-                  className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm"
+                  className="min-h-[44px] rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm"
                 >
                   <option value="ctp">{t('kindCtp')}</option>
                   <option value="ld">{t('kindLd')}</option>
@@ -196,7 +196,7 @@ export function SideAwardsPanel({
                   max={18}
                   value={row.holeNumber}
                   onChange={(e) => updateRow(i, (r) => ({ ...r, holeNumber: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
+                  className="min-h-[44px] w-full rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <input
                   type="number"
@@ -206,7 +206,7 @@ export function SideAwardsPanel({
                   step={0.5}
                   value={row.points}
                   onChange={(e) => updateRow(i, (r) => ({ ...r, points: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
+                  className="min-h-[44px] w-full rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <input
                   type="number"
@@ -217,13 +217,13 @@ export function SideAwardsPanel({
                   step={1}
                   value={countOf(row)}
                   onChange={(e) => setCount(i, Number(e.target.value))}
-                  className="w-full rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
+                  className="min-h-[44px] w-full rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums"
                 />
                 <button
                   type="button"
                   onClick={() => removeRow(i)}
                   aria-label={t('removeRow', { n: i + 1 })}
-                  className="tap-extend min-h-[36px] min-w-[36px] rounded-lg border border-border text-danger text-sm hover:bg-danger/10 [--tap-extend:-5px]"
+                  className="tap-extend min-h-[36px] min-w-[36px] rounded-full border border-border text-danger text-sm hover:bg-danger/10 [--tap-extend:-5px]"
                 >
                   ✕
                 </button>
@@ -236,7 +236,7 @@ export function SideAwardsPanel({
               type="button"
               data-testid="side-award-add"
               onClick={addRow}
-              className="min-h-[44px] w-full rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
+              className="min-h-[44px] w-full rounded-full border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
             >
               {t('addRow')}
             </button>
@@ -278,7 +278,7 @@ export function SideAwardsPanel({
 
       {showWinnerRegistration && initialAwards.length > 0 && (
         <div className="mt-4">
-          <h3 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+          <h3 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
             {t('winnersHeading')}
           </h3>
           {cupFinished && (
@@ -375,7 +375,7 @@ function SideAwardWinnerRow({
               setWinnerId(e.target.value);
               setSaved(false);
             }}
-            className="rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm"
+            className="min-h-[44px] rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm"
           >
             <option value="">{t('winnerPlaceholder')}</option>
             {rosterOptions.map((p) => (
@@ -392,7 +392,7 @@ function SideAwardWinnerRow({
             data-testid="side-award-register"
             onClick={handleRegister}
             disabled={!winnerId || isSaving}
-            className="tap-extend min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
+            className="tap-extend min-h-[36px] rounded-full bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
           >
             {isSaving ? t('registeringPending') : t('registerButton')}
           </button>
@@ -465,7 +465,7 @@ function GirCountsRow({
   }
 
   const inputClass =
-    'w-16 rounded-lg border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums';
+    'min-h-[44px] w-16 rounded-xl border border-border px-2 py-2 bg-surface text-text text-sm tabular-nums';
 
   return (
     <Card className="!p-3">
@@ -511,7 +511,7 @@ function GirCountsRow({
           data-testid="gir-register"
           onClick={handleRegister}
           disabled={!bothFilled || isSaving}
-          className="tap-extend min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
+          className="tap-extend min-h-[36px] rounded-full bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
         >
           {isSaving ? t('registeringPending') : t('registerButton')}
         </button>

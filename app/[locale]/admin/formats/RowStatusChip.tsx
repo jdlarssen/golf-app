@@ -50,7 +50,7 @@ export function RowStatusChip({
       onClick={onClick}
       disabled={disabled}
       aria-label={t('rowStatus.ariaLabel', { format: formatName, label })}
-      className="tap-extend inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 [--tap-extend:-12px_-8px] md:[--tap-extend:-10px_-8px]"
+      className="tap-extend inline-block rounded-full px-[7px] py-[3px] font-sans text-[11px] font-semibold uppercase tracking-[0.16em] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 [--tap-extend:-12px_-8px] md:[--tap-extend:-10px_-8px]"
       style={{
         background: style.bg,
         color: style.fg,

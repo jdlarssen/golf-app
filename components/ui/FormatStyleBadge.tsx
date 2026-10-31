@@ -37,7 +37,7 @@ const CHIP_STYLE: Record<ChipKind, CSSProperties> = {
 function Chip({ kind, label }: { kind: ChipKind; label: string }) {
   return (
     <span
-      className="inline-block rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium leading-none"
+      className="inline-block rounded-full border px-[7px] py-[3px] font-sans text-[11px] font-semibold leading-none"
       style={CHIP_STYLE[kind]}
     >
       {label}

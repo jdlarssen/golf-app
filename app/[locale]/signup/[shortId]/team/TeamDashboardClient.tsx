@@ -211,7 +211,7 @@ export function TeamDashboardClient(props: Props) {
       {props.captain && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3">
           <div className="min-w-0">
-            <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
+            <p className="font-sans text-sm font-medium text-muted">
               {t('teamDashCaptainLabel')}
             </p>
             <p className="break-words font-sans text-sm font-medium text-text">
@@ -224,7 +224,7 @@ export function TeamDashboardClient(props: Props) {
 
       {/* Medspillere */}
       <div className="space-y-2">
-        <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
+        <p className="font-sans text-sm font-medium text-text">
           {t('teamDashMembersHeading', { count: props.members.length })}
         </p>
         {props.members.length === 0 ? (

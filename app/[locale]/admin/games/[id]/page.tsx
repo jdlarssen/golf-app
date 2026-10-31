@@ -497,9 +497,8 @@ async function DangerZone({ gameId, status }: { gameId: string; status: GameStat
         {tDetail('dangerZoneLabel')}
       </p>
       <div
-        className="rounded-xl border bg-surface px-4 py-3.5"
+        className="rounded-xl border border-danger/20 bg-surface px-4 py-3.5"
         style={{
-          borderColor: 'rgba(180, 60, 60, 0.18)',
           boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)',
         }}
       >

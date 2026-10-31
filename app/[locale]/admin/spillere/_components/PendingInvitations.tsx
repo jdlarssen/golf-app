@@ -123,12 +123,7 @@ function ExpiredBadge({ label }: { label: string }) {
   return (
     <span
       data-testid="invitation-expired-badge"
-      className="inline-block shrink-0 rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium"
-      style={{
-        borderColor: 'rgba(180, 60, 60, 0.3)',
-        background: 'transparent',
-        color: 'var(--danger)',
-      }}
+      className="inline-block shrink-0 rounded-full border border-danger/30 px-[7px] py-[3px] font-sans text-[11px] font-semibold text-danger"
     >
       {label}
     </span>
@@ -189,11 +184,8 @@ function PendingRow({
         </form>
         <SmartLink
           href={`/admin/spillere/invitations/${inv.id}/trekk-tilbake`}
-          className="inline-flex min-h-[44px] items-center rounded-full border px-4 py-2 font-sans text-[13px] font-medium transition"
-          style={{
-            borderColor: 'rgba(180, 60, 60, 0.3)',
-            color: 'var(--danger-deep)',
-          }}
+          className="inline-flex min-h-[44px] items-center rounded-full border border-danger/30 px-4 py-2 font-sans text-[13px] font-medium transition"
+          style={{ color: 'var(--danger-deep)' }}
         >
           {withdrawButton}
         </SmartLink>

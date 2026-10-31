@@ -11,7 +11,7 @@ export function GuestBadge({ className }: { className?: string }) {
   return (
     <span
       data-testid="guest-badge"
-      className={`inline-block rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium ${className ?? ''}`}
+      className={`inline-block rounded-full border px-[7px] py-[3px] font-sans text-[11px] font-semibold ${className ?? ''}`}
       style={{
         borderColor: 'var(--border)',
         background: 'transparent',

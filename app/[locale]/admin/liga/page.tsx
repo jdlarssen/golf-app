@@ -8,6 +8,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
+import { buttonClasses } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip } from '@/components/ui/StatusChip';
@@ -135,7 +136,7 @@ export default async function LigaListPage({
       <div className="mt-6">
         <Link
           href="/admin/liga/new"
-          className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary text-white dark:text-bg px-4 py-3 text-sm font-medium hover:bg-primary/90 transition-colors min-h-[44px]"
+          className={`${buttonClasses('primary', 'default')} w-full`}
         >
           {t('ledger.createLeagueButton')}
         </Link>

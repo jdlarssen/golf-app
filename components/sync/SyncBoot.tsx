@@ -87,7 +87,7 @@ export function SyncBoot() {
           type="button"
           onClick={() => void handleRetry()}
           disabled={retrying}
-          className="inline-flex min-h-[44px] shrink-0 items-center rounded-md border border-current px-2.5 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
+          className="inline-flex min-h-[44px] shrink-0 items-center rounded-full border border-current px-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
         >
           {t('retry')}
         </button>

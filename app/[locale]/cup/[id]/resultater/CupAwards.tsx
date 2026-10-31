@@ -41,7 +41,7 @@ export function CupAwards({
 
   return (
     <section className="mb-8" data-testid="cup-awards">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
         {t('results.awardsHeading')}
       </h2>
 

@@ -215,7 +215,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
     };
 
     const actionButtonClasses =
-      'inline-flex min-h-[44px] items-center rounded-md border border-current px-3 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50';
+      'inline-flex min-h-[44px] items-center rounded-full border border-current px-3 text-sm font-medium transition-opacity disabled:opacity-50';
 
     // Quarantine variant (#1369): name the affected holes, link to them, show
     // the raw error without hover, and offer a confirmed cleanup path.
@@ -372,7 +372,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           {showLogin && (
             <Link
               href={`/login?next=${encodeURIComponent(loginNext)}`}
-              className="inline-flex min-h-[44px] items-center rounded-md border border-current px-2.5 text-xs font-semibold uppercase tracking-wide"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-current px-2.5 text-sm font-medium"
             >
               {t('loginAction')}
             </Link>
@@ -382,7 +382,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
               type="button"
               onClick={handleRetry}
               disabled={retrying}
-              className="inline-flex min-h-[44px] items-center rounded-md border border-current px-2.5 text-xs font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-current px-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
             >
               {retrying ? t('retrying') : t('retry')}
             </button>
@@ -424,7 +424,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           <button
             type="button"
             onClick={() => void handleDismissConflict(conflict.id)}
-            className="tap-extend shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide [--tap-extend:-10px_0]"
+            className="tap-extend shrink-0 rounded-full border border-current px-2.5 py-1 text-sm font-medium [--tap-extend:-10px_0]"
           >
             {t('conflictDismiss')}
           </button>

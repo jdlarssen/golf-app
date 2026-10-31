@@ -132,7 +132,7 @@ export async function CupDoorsSection({
 
   return (
     <section className="mb-5 space-y-3">
-      <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+      <h2 className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('manage.doors.heading')}
       </h2>
       <CupDoor

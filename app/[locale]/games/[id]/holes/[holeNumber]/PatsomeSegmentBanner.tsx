@@ -32,7 +32,7 @@ export function PatsomeSegmentBanner({ holeNumber }: { holeNumber: number }) {
   const { labelKey, ruleKey } = config[segment];
 
   return (
-    <div className="mb-3 rounded-md border border-border bg-bg/60 px-3 py-2.5">
+    <div className="mb-3 rounded-xl border border-border bg-bg/60 px-4 py-3">
       <div className="flex items-baseline gap-2">
         <span className="font-serif text-sm font-semibold text-primary">
           {t(labelKey)}

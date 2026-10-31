@@ -283,7 +283,7 @@ export default async function StatistikkPage() {
         kicker={t('kicker')}
       />
 
-      <h1 className="font-serif text-2xl font-medium text-text mb-1">
+      <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight mb-1">
         {t('heading')}
       </h1>
       <p className="mb-6 font-sans text-sm text-muted">
@@ -325,7 +325,7 @@ async function EmptyStateView() {
         kicker={t('kicker')}
       />
 
-      <h1 className="font-serif text-2xl font-medium text-text mb-1">
+      <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight mb-1">
         {t('heading')}
       </h1>
       <p className="mb-6 font-sans text-sm text-muted">

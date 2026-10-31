@@ -54,7 +54,7 @@ export function ClubCupsSection({
 
   return (
     <section className="mb-8" data-testid="club-cups-section">
-      <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+      <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('heading')}
       </h2>
       {cups.length > 0 ? (

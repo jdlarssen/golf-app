@@ -13,7 +13,7 @@ export function ChapmanPhaseReminder() {
   return (
     <div
       data-testid="chapman-phase-reminder"
-      className="mb-3 rounded-md border border-border bg-bg/60 px-3 py-2.5"
+      className="mb-3 rounded-xl border border-border bg-bg/60 px-4 py-3"
     >
       <span className="font-serif text-sm font-semibold text-primary">
         {t('reminderTitle')}

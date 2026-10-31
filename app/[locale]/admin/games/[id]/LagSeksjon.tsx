@@ -6,6 +6,7 @@ import { suggestTeamAssignment, setPlayerTeam } from './flightActions';
 import { teamBuckets, teamSizeStatus, type TeamPlayer } from '@/lib/games/teamScope';
 import { allowedTeamSizes } from '@/lib/games/teamFormatLimits';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { Button } from '@/components/ui/Button';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
@@ -195,7 +196,7 @@ export function LagSeksjon({
                     <select
                       name="team"
                       defaultValue={player.team_number ?? ''}
-                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:ring-2 focus:ring-primary/30"
+                      className="min-h-[44px] rounded-xl border border-border bg-surface px-2 py-1.5 text-sm text-text focus:ring-2 focus:ring-primary/30"
                       disabled={isPending}
                       aria-label={t('teamAriaLabel', { name: player.displayName })}
                     >
@@ -206,13 +207,14 @@ export function LagSeksjon({
                         </option>
                       ))}
                     </select>
-                    <button
+                    <Button
                       type="submit"
+                      variant="secondary"
+                      size="compact"
                       disabled={isPending}
-                      className="min-h-[44px] min-w-[44px] rounded-lg border border-border bg-surface px-2.5 py-1.5 font-sans text-xs font-medium text-primary hover:bg-surface-2 disabled:opacity-50"
                     >
                       {t('moveButton')}
-                    </button>
+                    </Button>
                   </form>
                 );
               })}

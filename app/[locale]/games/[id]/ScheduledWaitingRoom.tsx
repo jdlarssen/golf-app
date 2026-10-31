@@ -212,12 +212,12 @@ export function ScheduledWaitingRoom({
                           {opt.memberCount}/{MAX_FLIGHT_SIZE}
                         </span>
                         {isMine && (
-                          <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text">
+                          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">
                             {t('flightYours')}
                           </p>
                         )}
                         {isFull && !isMine && (
-                          <p className="font-sans text-[9.5px] uppercase tracking-[0.14em] text-muted">
+                          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
                             {t('flightFull')}
                           </p>
                         )}

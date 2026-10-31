@@ -23,7 +23,7 @@ type Props = {
 const INITIAL_STATE: CupActionError = { error: '' };
 
 const SELECT_CLASSES =
-  'w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text';
+  'w-full min-h-[44px] rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text';
 
 /**
  * «Bytt spiller» på et match-kort i cup-styringen (#1473). Vises kun på

@@ -188,11 +188,8 @@ export default async function EditCoursePage({
       <div className="mt-6">
         <SmartLink
           href={`/admin/courses/${id}/slett`}
-          className="block min-h-[44px] rounded-full border px-4 py-3 text-center text-sm font-medium transition-colors hover:bg-surface-2"
-          style={{
-            color: 'var(--danger-deep)',
-            borderColor: 'rgba(180, 60, 60, 0.3)',
-          }}
+          className="block min-h-[44px] rounded-full border border-danger/30 px-4 py-3 text-center text-sm font-medium transition-colors hover:bg-surface-2"
+          style={{ color: 'var(--danger-deep)' }}
         >
           {tEdit('deleteLink')}
         </SmartLink>
