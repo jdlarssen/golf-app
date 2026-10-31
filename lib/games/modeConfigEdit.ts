@@ -39,10 +39,10 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
  * #2253 / #2625 / #2314: stamps the rules a NEW game is created with onto its
  * `mode_config`. Today there are two:
  *  - solo strokeplay, the team strokeplay formats (best ball,
- *    Texas/Ambrose/Florida scramble, shamble), the points formats
- *    (stableford, modified stableford, patsome) and Nassau rank on net to par
+ *    Texas/Ambrose/Florida scramble, shamble) and Nassau rank on net to par
  *    (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
- *    engine);
+ *    engine). The points formats rank on points only and are not stamped
+ *    (#2738);
  *  - wolf gives the last holes to the player in last place only with a gap of
  *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
  *    `lib/scoring/modes/wolfTurn.ts`).

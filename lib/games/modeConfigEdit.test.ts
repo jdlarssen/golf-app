@@ -157,17 +157,25 @@ describe('stampNewGameModeConfig (#2625)', () => {
 });
 
 describe('stampNewGameModeConfig (#2625, part 2)', () => {
-  // The points formats and Nassau rank on net to par from #2625 part 2 — on
-  // new games only, so they are stamped at creation too.
+  // Nassau ranks on net to par from #2625 part 2 — on new games only, so it is
+  // stamped at creation too.
+  it('stamps net-to-par ranking on a new nassau game', () => {
+    const nassau = { kind: 'nassau', team_size: 1, nassau_scoring: 'gross' } as GameModeConfig;
+    expect(stampNewGameModeConfig(nassau)).toEqual({ ...nassau, ranking: 'net_to_par' });
+  });
+});
+
+describe('stampNewGameModeConfig (#2738)', () => {
+  // The points formats rank on points only, so a new points game is never
+  // stamped with the net-to-par flag.
   it.each<GameModeConfig>([
     { kind: 'stableford', team_size: 1, points_table: 'standard' },
     { kind: 'stableford', team_size: 2, points_table: 'standard' },
     { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
     { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
     { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
-    { kind: 'nassau', team_size: 1, nassau_scoring: 'gross' },
-  ])('stamps net-to-par ranking on a new $kind game (team size $team_size)', (config) => {
-    expect(stampNewGameModeConfig(config)).toEqual({ ...config, ranking: 'net_to_par' });
+  ])('leaves a new $kind game unchanged (team size $team_size)', (config) => {
+    expect(stampNewGameModeConfig(config)).toBe(config);
   });
 });
 
@@ -192,10 +200,10 @@ describe('editedModeConfig (#2625)', () => {
     });
   });
 
-  it('a draft that switches to a points format is stamped too', () => {
+  it('a draft that switches to Nassau is stamped too, one that switches to stableford is not (#2738)', () => {
     const nassau = { kind: 'nassau', team_size: 1, nassau_scoring: 'net' } as GameModeConfig;
-    expect(editedModeConfig(texas, stableford)).toEqual({ ...stableford, ranking: 'net_to_par' });
     expect(editedModeConfig(texas, nassau)).toEqual({ ...nassau, ranking: 'net_to_par' });
+    expect(editedModeConfig(texas, stableford)).toEqual(stableford);
   });
 
   it('a stableford game created without the flag keeps its rule through an edit', () => {

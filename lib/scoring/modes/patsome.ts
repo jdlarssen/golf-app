@@ -20,10 +20,9 @@
 // hull-poeng slik at "lavest vinner"-cascaden fungerer som "høyest vinner".
 // Cascade: total → back-9 → back-6 → back-3 → hull-18 (5-tier, gratis).
 //
-// #2625: games with `mode_config.ranking === 'net_to_par'` rank on points
-// against par pace over the holes each team has played (Σ team points − 2, a
-// net par's worth) instead. Games without the flag keep the rule above, byte
-// for byte.
+// #2738: ranks on points only, also mid-round. The engine never reads
+// `mode_config.ranking`, so the `'net_to_par'` that #2625 stamped on new
+// patsome games from 21.10 to 31.10.2026 changes nothing.
 //
 // Forutsetning: 18 hull. Degraderer trygt på kortere baner (manglende hull = 0
 // poeng per segment). Validatoren håndhever 18 hull og 2 spillere per lag ved
@@ -31,7 +30,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
-import { pointsToParRankingHoles, rankTeams, ranksByNetToPar } from '../tiebreaker';
+import { rankTeams } from '../tiebreaker';
 import { parFor } from './parResolver';
 import { computeStablefordPoints } from './stableford';
 import type {
@@ -65,19 +64,6 @@ function padTo18(perHole: number[]): number[] {
  */
 function teamPlayedHole(h: PatsomeHoleRow): boolean {
   return h.segment === 'fourball' ? h.players.some((p) => p.gross !== null) : h.teamGross !== null;
-}
-
-/**
- * #2625: a team's points against par pace per hole — team points minus what
- * a net par is worth (2) on the team's par; `null` for an unplayed hole.
- */
-function toParByHole(holes: PatsomeHoleRow[]): { holeNumber: number; toPar: number | null }[] {
-  return holes.map((h) => ({
-    holeNumber: h.holeNumber,
-    toPar: teamPlayedHole(h)
-      ? h.teamPoints - computeStablefordPoints({ par: h.par, netStrokes: h.par })
-      : null,
-  }));
 }
 
 /** Bestemmer segment fra hull-nummer. Hardkodet 6/6/6. */
@@ -187,7 +173,6 @@ export function compute(ctx: ScoringContext): PatsomeResult {
       const segmentSubtotals = buildSegmentSubtotals(holes);
 
       const totalPoints = holes.reduce((sum, h) => sum + h.teamPoints, 0);
-      const played = toParByHole(holes).filter((h) => h.toPar !== null);
 
       return {
         teamNumber,
@@ -196,22 +181,16 @@ export function compute(ctx: ScoringContext): PatsomeResult {
         holes,
         segments: segmentSubtotals,
         totalPoints,
-        toPar: played.length > 0 ? played.reduce((sum, h) => sum + h.toPar!, 0) : null,
       };
     },
   );
 
   // Ranking: negér per-hull-poeng slik at rankTeams sin "lavest vinner"-cascade
   // fungerer som "høyest vinner" på stableford-poeng. Speiler stableford.ts.
-  // #2625: a net-to-par game ranks on points against par pace, slotted by hole
-  // number; a team without a single hole ranks last.
-  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const ranked = rankTeams(
     baseLines.map((l) => ({
       id: l.teamNumber,
-      holes: netToParRanking
-        ? pointsToParRankingHoles(toParByHole(l.holes))
-        : padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
+      holes: padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
     })),
   );
   // #1574: returner i rangert rekkefølge (rank 1 først), samme kontrakt som
@@ -226,7 +205,7 @@ export function compute(ctx: ScoringContext): PatsomeResult {
     };
   });
 
-  return { kind: 'patsome', scoring, ranking: netToParRanking ? 'net_to_par' : 'net_total', teams };
+  return { kind: 'patsome', scoring, teams };
 }
 
 // ---------------------------------------------------------------------------
