@@ -193,7 +193,7 @@ describe('startboden (#2254)', () => {
 
     const list = await home().fetchHomeCards(ME);
 
-    expect(list.version).toBe(2);
+    expect(list.version).toBe(3);
     expect(list.lastRound).toBeNull();
     expect(list.cards[0]).toMatchObject({
       gameMode: 'texas_scramble',
@@ -354,6 +354,7 @@ describe('splitHomeCards', () => {
     endedAt,
     resultSummary: null,
     flightNumber: null,
+    leagueRoundId: null,
   });
 
   it('sorterer avsluttede på avslutningstid, nyest først, og faller tilbake på opprettet', () => {

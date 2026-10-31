@@ -32,6 +32,7 @@ function host(
     hole_segment: segment,
     team_number: teamNumber,
     scheduled_tee_off_at: null,
+    league_round_id: null,
     tournament,
   };
 }
