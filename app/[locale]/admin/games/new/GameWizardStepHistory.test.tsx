@@ -940,6 +940,7 @@ describe('GameWizard — #2459 «Fortsett» gjenoppretter, og sletter ikke, med 
           selectedCount: 1,
           expectedCount: 4,
           title: null,
+          sourceScreen: true,
         },
       },
     );
@@ -949,7 +950,7 @@ describe('GameWizard — #2459 «Fortsett» gjenoppretter, og sletter ikke, med 
     searchString = href.split('?')[1];
     renderWizard({ initialIntent: 'kompis' });
 
-    expect(await screen.findByRole('heading', { name: /hvem skal spille/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /hvordan får dere spillere/i })).toBeInTheDocument();
     expect(window.localStorage.getItem(key)).not.toBeNull();
     expect(replace).not.toHaveBeenCalledWith(expect.not.stringContaining('step=4'), expect.anything());
   });

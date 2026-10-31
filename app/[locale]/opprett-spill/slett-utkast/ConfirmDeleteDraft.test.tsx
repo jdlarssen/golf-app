@@ -39,6 +39,7 @@ function seed(userId = USER, path = '/opprett-spill', savedAt = Date.now()) {
         selectedCount: 2,
         expectedCount: 4,
         title: null,
+        sourceScreen: false,
       },
     },
   );
