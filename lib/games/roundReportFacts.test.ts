@@ -1135,3 +1135,42 @@ describe('#2561 — a player without «ja» never reaches the facts', () => {
     expect(factsShowAnyPlayer(facts, new Set())).toBe(false);
   });
 });
+
+// #2712 (owner 31.10): a league round played alone has no placement and no
+// win. The report keeps the player and the score, but crowns nobody.
+describe('league round played alone (#2712)', () => {
+  const solo: SoloStrokeplayResult = {
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [
+      {
+        holeNumber: 1,
+        par: 4,
+        strokeIndex: 1,
+        perPlayer: [{ userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 }],
+        bestUserIds: ['u1'],
+      },
+    ],
+    players: [
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+    ],
+  };
+  const nameByUserId = names(['u1', 'Siri']);
+
+  it('no winner, no place, no running leader; the player stays in the facts', () => {
+    const facts = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE, leagueFlight: true });
+    expect(facts.winnerName).toBeNull();
+    expect(facts.standings).toHaveLength(1);
+    expect(facts.standings[0]).not.toHaveProperty('rank');
+    expect(facts.standings[0].name).toBe('Siri');
+    expect(facts.checkpoints).toBeUndefined();
+    expect(factsShowAnyPlayer(facts, new Set(['Siri']))).toBe(true);
+  });
+
+  it('the same round outside a league keeps its winner', () => {
+    const facts = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE });
+    expect(facts.winnerName).toBe('Siri');
+    expect(facts.standings[0].rank).toBe(1);
+  });
+});
+
