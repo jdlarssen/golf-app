@@ -31,6 +31,7 @@ import {
   resultWords,
   type HeadlineSpec,
 } from '@/lib/og/shareCardHeadline';
+import { isLeagueCardAlone } from '@/lib/games/finishedResultBadge';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
@@ -69,6 +70,8 @@ function headlineNode(
       return t('gameFinished');
     case 'tied':
       return t('tied');
+    case 'approved':
+      return t('approved');
     case 'matchWon':
       return t.rich('winnerWon', { name: list.format(spec.names), margin: spec.margin, gold });
     case 'won':
@@ -183,10 +186,11 @@ type CardRow = {
   winner: boolean;
 };
 
-function placementRows(model: ShareCardModel): CardRow[] {
-  const winnerRank = model.winners.length > 0 ? model.winners[0].rank : null;
+/** `alone` (#2712): a league round played alone, so no medallion and no gold. */
+function placementRows(model: ShareCardModel, alone: boolean): CardRow[] {
+  const winnerRank = model.winners.length > 0 && !alone ? model.winners[0].rank : null;
   return model.podium.slice(0, 3).map((r: ShareCardRow) => ({
-    rank: r.rank,
+    rank: alone ? null : r.rank,
     name: rowDisplayName(r.memberNames),
     figure: scoreFigure(r.score),
     winner: winnerRank !== null && r.rank === winnerRank,
@@ -337,7 +341,9 @@ export async function GET(
           playerFallback,
         });
 
-  const spec = headlineSpec(model);
+  // #2712: a league round played alone says «Godkjent», with no place.
+  const leagueFlight = gwp.game.league_round_id != null;
+  const spec = headlineSpec(model, { leagueFlight });
   const gold = (chunks: ReactNode) => <Gold>{chunks}</Gold>;
   // The headline breaks before its preposition when that fits the artboard's
   // 116px on three lines; otherwise it runs as one wrapping block.
@@ -356,7 +362,11 @@ export async function GET(
   const meta = metaParts.join(' · ');
 
   const rows: CardRow[] =
-    model === null ? [] : model.band === 'matchplay' ? matchRows(model) : placementRows(model);
+    model === null
+      ? []
+      : model.band === 'matchplay'
+        ? matchRows(model)
+        : placementRows(model, isLeagueCardAlone(model, leagueFlight));
   const cardHeight = shareCardHeight(model, {
     headlineLines: headlineChoice.lines,
     headlineFontSize: headlineChoice.fontSize,

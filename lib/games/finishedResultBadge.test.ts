@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { finishedResultBadge } from './finishedResultBadge';
+import { finishedResultBadge, isLeagueCardAlone } from './finishedResultBadge';
 
 describe('finishedResultBadge', () => {
   it('placement rank 1 (individ) → youWon, isWin', () => {
@@ -84,3 +84,21 @@ describe('finishedResultBadge — ligaflight alene (#2712)', () => {
   });
 });
 
+
+// #2712 (orchestrator 31.10, after the owner's rule): the same rule read from a
+// share card's model, for the round report, the share image and the web podium.
+describe('isLeagueCardAlone (#2712)', () => {
+  const one = { band: 'placement', podium: [{}] };
+  it('a placement card with one row in a league flight is alone', () => {
+    expect(isLeagueCardAlone(one, true)).toBe(true);
+  });
+  it('two rows in a league flight keep their places', () => {
+    expect(isLeagueCardAlone({ band: 'placement', podium: [{}, {}] }, true)).toBe(false);
+  });
+  it('one row outside a league is a normal win', () => {
+    expect(isLeagueCardAlone(one, false)).toBe(false);
+  });
+  it('a matchplay card is never alone', () => {
+    expect(isLeagueCardAlone({ band: 'matchplay', podium: [{}] }, true)).toBe(false);
+  });
+});

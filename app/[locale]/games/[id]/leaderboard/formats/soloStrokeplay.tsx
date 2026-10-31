@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 import { SoloStrokeplayPodium } from '../SoloStrokeplayPodium';
+import { LeagueAloneResult } from '../LeagueAloneResult';
 import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
@@ -19,6 +20,8 @@ import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar, headlineUnit } from '@/lib/leaderboard/vsPar';
+import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -261,6 +264,28 @@ export async function renderSoloStrokeplay(opts: {
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}
           strip={strip}
+          backHref={backHref}
+          chromeless={chromeless}
+          footerSlot={footerSlot}
+        />
+      );
+    } else if (isLeagueFieldAlone(game.league_round_id != null, result.players.length)) {
+      // #2712 (orchestrator 31.10, after the owner's rule): a league round
+      // played alone has no place and no win, so the score and «Godkjent»
+      // stand where the podium would. The figure is the podium's own.
+      const [only] = result.players;
+      const info = playersById.get(only.userId);
+      const toPar = headlineUnit(result.ranking) === 'toPar';
+      const tSolo = await getTranslations('leaderboard.soloStrokeplay');
+      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
+      mainContent = (chromeless, footerSlot) => (
+        <LeagueAloneResult
+          gameName={game.name}
+          userId={only.userId}
+          name={info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull')}
+          scoreText={toPar ? formatVsPar(only.netToPar) : String(only.totalNetStrokes)}
+          scoreLabel={toPar ? tc('vsParLabel') : tc('slagLabel')}
+          subtitle={subtitle}
           backHref={backHref}
           chromeless={chromeless}
           footerSlot={footerSlot}
