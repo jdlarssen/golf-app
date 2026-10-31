@@ -524,7 +524,7 @@ function Step2Preview({
                         ))}
                       </div>
 
-                      <span className="font-sans text-xs font-bold text-muted">
+                      <span className="font-sans text-xs font-semibold text-muted">
                         {t('generate.mot')}
                       </span>
 
@@ -919,7 +919,7 @@ function Step2BundlePreview({
                             </option>
                           ))}
                         </select>
-                        <span className="font-sans text-xs font-bold text-muted">
+                        <span className="font-sans text-xs font-semibold text-muted">
                           {t('generate.mot')}
                         </span>
                         <select
