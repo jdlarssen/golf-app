@@ -82,3 +82,14 @@ export function mayApproveAsMarker(opts: {
   if (approverId === leagueCreatorId || approverIsAdmin) return 'organizer';
   return null;
 }
+
+/**
+ * #2712 (owner 31.10): a simulator league has one attempt per round. A
+ * withdrawal frees the player for a new flight (`roundLocks`), so once the
+ * card is delivered the player can no longer withdraw from the flight. Before
+ * delivery, and in every other game, withdrawing stays as it was. The server
+ * (`withdrawSelf`) refuses it; the web game home and the app hide the button.
+ */
+export function withdrawLockedByDelivery(opts: { simulatorFlight: boolean; submittedAt: string | null }): boolean {
+  return opts.simulatorFlight && opts.submittedAt != null;
+}
