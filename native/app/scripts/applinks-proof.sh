@@ -10,8 +10,9 @@
 # filteret ikke har noen sti).
 #
 # Regelen, motstykket til iOS-regelen om associated domains
-# (`entitlements-proof.sh`): venne-lenka, QR-koden på bag-taggen og ligalenka
-# åpner appen (#2748), og ingenting annet på tornygolf.no gjør det. Appen kan ikke
+# (`entitlements-proof.sh`): venne-lenka, QR-koden på bag-taggen, ligalenka,
+# invitasjonen og e-postene om en runde åpner appen (#2748), og ingenting annet på
+# tornygolf.no gjør det. Appen kan ikke
 # bære en nett-sesjon fra en lenke, så innlogging og påmelding skal fortsatt åpnes
 # i nettleseren.
 #  - Hver autoVerify-sti for tornygolf.no og www.tornygolf.no MÅ være en av stiene
@@ -26,7 +27,7 @@
 
 ANDROID_APPLINKS_APEX=tornygolf.no
 ANDROID_APPLINKS_HOSTS='tornygolf.no www.tornygolf.no'
-ANDROID_APPLINKS_ALLOWED='pathPrefix:/venner/legg-til/ pathPrefix:/liga/bli-med/ pathPrefix:/en/venner/legg-til/ pathPrefix:/en/liga/bli-med/'
+ANDROID_APPLINKS_ALLOWED='pathPrefix:/venner/legg-til/ pathPrefix:/liga/bli-med/ pathPrefix:/invitasjon/ pathPrefix:/runde/ pathPrefix:/en/venner/legg-til/ pathPrefix:/en/liga/bli-med/ pathPrefix:/en/invitasjon/ pathPrefix:/en/runde/'
 
 android_applinks_rules() {
   local file=$1 host spec want bad=0 seen=' ' missing=''

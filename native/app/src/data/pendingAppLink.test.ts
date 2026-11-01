@@ -20,6 +20,9 @@ const LINK = 'https://tornygolf.no/venner/legg-til/abcd1234';
 const LEAGUE_LINK = 'https://tornygolf.no/liga/bli-med/abcd2345';
 const FRIEND = { kind: 'friend', code: 'abcd1234' } as const;
 const LEAGUE = { kind: 'league', code: 'abcd2345' } as const;
+const TOKEN = '44444444-4444-4444-8444-444444444444';
+const INVITATION = { kind: 'invitation', token: TOKEN } as const;
+const ROUND = { kind: 'round', target: { name: 'GameHome', params: { gameId: TOKEN } } } as const;
 
 let urlHandler: ((event: { url: string }) => void) | null = null;
 const removeMock = jest.fn();
@@ -50,6 +53,8 @@ describe('offerAppLink / takePendingAppLink', () => {
   it.each([
     ['en venne-lenke', LINK, FRIEND],
     ['en ligalenke', LEAGUE_LINK, LEAGUE],
+    ['en invitasjon', `https://tornygolf.no/invitasjon/${TOKEN}?email=a%40b.no`, INVITATION],
+    ['en rundelenke', `https://tornygolf.no/runde/${TOKEN}`, ROUND],
   ])('holder %s til den tas, og gir den bare én gang', (_label, url, link) => {
     expect(offerAppLink(url)).toBe(true);
     expect(pendingAppLink()).toEqual(link);
@@ -156,6 +161,17 @@ describe('appLinkStep', () => {
     expect(appLinkStep(true, current, FRIEND)).toBe('push');
   });
 
+  it('hopper over når samme invitasjon alt står øverst, og åpner en annen', () => {
+    expect(appLinkStep(true, { name: 'InvitationLink', params: { token: TOKEN } }, INVITATION)).toBe('skip');
+    expect(appLinkStep(true, { name: 'InvitationLink', params: { token: 'en-annen' } }, INVITATION)).toBe('push');
+    expect(appLinkStep(true, home, INVITATION)).toBe('push');
+  });
+
+  it('en rundelenke åpnes alltid: `openPushTarget` sørger for at det ikke blir noen kopi', () => {
+    expect(appLinkStep(true, { name: 'GameHome', params: { gameId: TOKEN } }, ROUND)).toBe('push');
+    expect(appLinkStep(false, home, ROUND)).toBe('wait');
+  });
+
   it('åpner ligaskjermen over en annen skjerm, også over venne-skjermen med samme kode', () => {
     expect(appLinkStep(true, home, LEAGUE)).toBe('push');
     expect(appLinkStep(true, { name: 'FriendLink', params: { code: 'abcd2345' } }, LEAGUE)).toBe('push');
@@ -164,8 +180,9 @@ describe('appLinkStep', () => {
 });
 
 describe('appLinkScreen', () => {
-  it('venne-lenka åpner «Bli venn med …», ligalenka åpner «Bli med i liga»', () => {
+  it('hver lenke åpner sin skjerm', () => {
     expect(appLinkScreen(FRIEND)).toEqual({ name: 'FriendLink', params: { code: 'abcd1234' } });
     expect(appLinkScreen(LEAGUE)).toEqual({ name: 'LeagueJoin', params: { code: 'abcd2345' } });
+    expect(appLinkScreen(INVITATION)).toEqual({ name: 'InvitationLink', params: { token: TOKEN } });
   });
 });
