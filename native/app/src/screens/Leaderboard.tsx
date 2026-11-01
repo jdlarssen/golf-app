@@ -82,6 +82,7 @@ import {
   type SoloBoardModel,
   type SoloBoardStripAction,
 } from '../lib/soloBoard';
+import { hasPatsomeBoard, patsomeBoardFor, type PatsomeBoardModel } from '../lib/patsomeBoard';
 import {
   hasTeamBoard,
   teamBandVariant,
@@ -240,22 +241,29 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   // #2579: tavla (solo) eller lagtavla, når formatet har den og skjermen
   // tegner den. Den samme modellen gir pillen i båndet og stripa nederst.
   const soloFormat = bundle != null && hasSoloBoard(bundle.game);
-  const teamFormat = bundle != null && hasTeamBoard(bundle.game);
+  const lineupFormat = bundle != null && hasTeamBoard(bundle.game);
+  // #2751: Patsome har sin egen tavle, med lagtavlas bånd, stripe og marger.
+  const patsomeFormat = bundle != null && hasPatsomeBoard(bundle.game);
+  const teamFormat = lineupFormat || patsomeFormat;
   const boardFormat = soloFormat || teamFormat;
   const soloBoard = useMemo(
     () => (bundle && soloFormat ? soloBoardFor({ bundle, scores, userId }) : null),
     [bundle, soloFormat, scores, userId],
   );
   const teamBoard = useMemo(
-    () => (bundle && teamFormat ? teamBoardFor({ bundle, scores, userId, teeShots: teeShotRows }) : null),
-    [bundle, teamFormat, scores, userId, teeShotRows],
+    () => (bundle && lineupFormat ? teamBoardFor({ bundle, scores, userId, teeShots: teeShotRows }) : null),
+    [bundle, lineupFormat, scores, userId, teeShotRows],
+  );
+  const patsomeBoard = useMemo(
+    () => (bundle && patsomeFormat ? patsomeBoardFor({ bundle, scores, userId }) : null),
+    [bundle, patsomeFormat, scores, userId],
   );
   // Lagtavlas linje i båndet regnes fra motoren uten slag: én gang per bundel.
   const teamBand = useMemo(
     () => (bundle && teamFormat ? teamBoardBand(bundle) : null),
     [bundle, teamFormat],
   );
-  const pill = (soloBoard ?? teamBoard)?.pill ?? null;
+  const pill = (soloBoard ?? teamBoard ?? patsomeBoard)?.pill ?? null;
   const pillText = pill?.text ?? null;
   const pillLive = pill?.live ?? false;
   useLayoutEffect(() => {
@@ -351,7 +359,8 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   };
 
   if (teamFormat) {
-    const strip = teamBoard?.strip ?? null;
+    const teamModel = teamBoard ?? patsomeBoard;
+    const strip = teamModel?.strip ?? null;
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
         {focused ? <StatusBar style="light" /> : null}
@@ -369,13 +378,14 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               {SEED_FAILED_TEXT}
             </Text>
           ) : null}
-          <View style={teamBoard ? null : styles.plainBody} onLayout={onBodyLayout}>
+          <View style={teamModel ? null : styles.plainBody} onLayout={onBodyLayout}>
             <LeaderboardBody
               bundle={bundle}
               scores={scores}
               extras={extras}
               sideWinners={sideWinners}
               teamBoard={teamBoard}
+              patsomeBoard={patsomeBoard}
               roundReport={reportFor('team')}
               onReadMore={readMore}
               onReportLayout={onReportLayout}
@@ -385,7 +395,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
         {strip ? (
           <TeamStrip
             strip={strip}
-            tabular={teamBoard?.variant !== 'live'}
+            tabular={patsomeBoard != null || teamBoard?.variant !== 'live'}
             bottomInset={insets.bottom}
             onLayout={setStripHeight}
             onAction={() => onStripAction(strip.action)}
@@ -485,6 +495,7 @@ export function LeaderboardBody({
   sideWinners = NO_SIDE_WINNERS,
   soloBoard = null,
   teamBoard = null,
+  patsomeBoard = null,
   roundReport = null,
   onReadMore,
   onReportLayout,
@@ -503,6 +514,8 @@ export function LeaderboardBody({
   soloBoard?: SoloBoardModel | null;
   /** Lagtavla (#2579 PR 2) fra skjermen, med best balls låskort i seg. */
   teamBoard?: TeamBoardModel | null;
+  /** Patsome-tavla (#2751) fra skjermen. */
+  patsomeBoard?: PatsomeBoardModel | null;
   /**
    * Historien fra pressetribunen (#2632), når runden er ferdig og den finnes.
    * Sitatet står øverst og kortet nederst, men bare i den tegnede tabellen:
@@ -645,7 +658,8 @@ export function LeaderboardBody({
     );
   }
 
-  const cardMargin = teamBoard ? 16 : soloBoard ? 12 : 0;
+  const teamModel = teamBoard ?? patsomeBoard;
+  const cardMargin = teamModel ? 16 : soloBoard ? 12 : 0;
   return (
     <>
       {roundReport ? (
@@ -658,23 +672,23 @@ export function LeaderboardBody({
       <ResultView
         result={outcome.result}
         status={game.status}
-        gameId={game.id}
         settlement={settlement}
         nameOf={nameOf}
         soloBoard={soloBoard}
         teamBoard={teamBoard}
+        patsomeBoard={patsomeBoard}
       />
       {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
           nettsiden, med samme sidemarg som sideturneringen. */}
       {withdrawnSection ? (
-        <View style={soloBoard ? styles.boardSide : teamBoard ? styles.teamSide : null}>
+        <View style={soloBoard ? styles.boardSide : teamModel ? styles.teamSide : null}>
           {withdrawnSection}
         </View>
       ) : null}
       {/* Under tavla står sideturneringen 12 pt fra sidene, under lagtavla 16,
           som i tegningene. */}
-      {(soloBoard || teamBoard) && sideSection ? (
-        <View style={teamBoard ? styles.teamSide : styles.boardSide}>{sideSection}</View>
+      {(soloBoard || teamModel) && sideSection ? (
+        <View style={teamModel ? styles.teamSide : styles.boardSide}>{sideSection}</View>
       ) : (
         sideSection
       )}
