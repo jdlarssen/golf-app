@@ -539,15 +539,19 @@ async function settleRefusedTeeShot(
  * - Serveren svarer med et valg: raden tar det og er ferdig sendt. Kom makkeren
  *   først, bytter hintet navn uten melding.
  * - Avslag (rad med bare NULL: spillet er avsluttet, eller den valgte er ikke
- *   lenger på laget): raden slettes stille og hendelsen logges. Uten sesjon kan
- *   avslaget like gjerne være en utløpt økt, så da står raden.
+ *   lenger på laget): raden slettes stille og hendelsen logges.
  * - Feil: nettstopp og tak som `drainTeeShots`. Etter taket slutter telefonen å
  *   sende, og raden står som hint her.
+ *
+ * Uten sesjon sendes ingenting, og raden venter. Kallet ville gått som anon, som
+ * ikke har tilgang til funksjonen, og den feilen teller som permanent: en
+ * utlogget telefon ville brukt opp forsøkene på et valg serveren aldri har sett.
  */
 async function drainTeeStarters(
   pending: readonly LocalTeeStarter[],
   currentUserId: string | null,
 ): Promise<void> {
+  if (currentUserId == null) return;
   for (const row of pending) {
     const { gameId, teamNumber, teeStarterId, attemptCount } = row;
     const { data, error } = await supabase.rpc('set_tee_starter_if_unset', {
@@ -572,12 +576,6 @@ async function drainTeeStarters(
     const standing = reply?.tee_starter ?? null;
     if (standing != null) {
       await withTxn((txn) => settleTeeStarter(txn, gameId, teamNumber, standing));
-      continue;
-    }
-    if (currentUserId == null) {
-      await withTxn((txn) =>
-        markTeeStarterAttempt(txn, gameId, teamNumber, { attemptCount: attemptCount + 1, pending: true }),
-      );
       continue;
     }
     console.warn('[drainTeeStarters] serveren avviste valget', { gameId, teamNumber });
