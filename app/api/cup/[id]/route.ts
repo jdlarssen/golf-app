@@ -56,10 +56,19 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       .limit(1);
     if (pendingError) throw pendingError;
 
+    // Which matches the app may open is RLS's answer, read as the caller: a
+    // button to a game RLS hides would end in «fant ikke spillet».
+    const { data: readable, error: readableError } = await caller
+      .from('games')
+      .select('id')
+      .eq('tournament_id', id);
+    if (readableError) throw readableError;
+
     const body: AppCupView = buildAppCupView(snapshot, {
       userId,
       lineupPending: (pending ?? []).length > 0,
       unknownLabel: APP_CUP_UNKNOWN_PLAYER,
+      readableGameIds: new Set((readable ?? []).map((game) => game.id)),
     });
     return NextResponse.json(body);
   } catch (err) {

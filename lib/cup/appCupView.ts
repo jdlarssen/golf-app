@@ -59,11 +59,14 @@ export type AppCupMatch = {
   walkoverTeam: string;
   /** The partner playing on alone, or `null`. */
   soloPartnerName: string | null;
-  /**
-   * The caller plays this match, so the app can open it. RLS shows a player
-   * only their own matches, also in a finished cup (#1542).
-   */
+  /** The caller plays this match. Their own come first in the room. */
   mine: boolean;
+  /**
+   * RLS lets the caller read this game, so the app can open it: a player their
+   * own once it is out of draft, the creator and a global admin all of them
+   * (#1542). The answer comes from RLS itself, not from a copy of the rule.
+   */
+  canOpen: boolean;
   outcome: AppCupMatchOutcome | null;
 };
 

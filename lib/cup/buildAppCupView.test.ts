@@ -74,8 +74,36 @@ const snapshot = (
     performanceInputs: [],
   }) as unknown as CupSnapshot;
 
-const view = (snap: CupSnapshot, userId = ME, lineupPending = false) =>
-  buildAppCupView(snap, { userId, lineupPending, unknownLabel: 'Ukjent spiller' });
+const view = (snap: CupSnapshot, userId = ME, lineupPending = false, readable: string[] = []) =>
+  buildAppCupView(snap, {
+    userId,
+    lineupPending,
+    unknownLabel: 'Ukjent spiller',
+    readableGameIds: new Set(readable),
+  });
+
+describe('hvilke kamper appen kan åpne (#1542)', () => {
+  const games = [match('min-utkast', { status: 'draft', team1UserIds: [ME] }), match('annen', { status: 'active' })];
+
+  it('følger det RLS lar kalleren lese, ikke hvem som spiller', () => {
+    // En spiller: egen kamp i utkast er skjult, så ingen knapp.
+    expect(view(snapshot('active', games), ME, false, []).matches.map((m) => [m.gameId, m.mine, m.canOpen])).toEqual([
+      ['min-utkast', true, false],
+      ['annen', false, false],
+    ]);
+    // Arrangøren eller admin: leser alle, og spiller ingen av dem.
+    expect(
+      view(snapshot('active', games), 'arrangor', false, ['min-utkast', 'annen']).matches.map((m) => m.canOpen),
+    ).toEqual([true, true]);
+  });
+});
+
+describe('uttaket', () => {
+  it('en ferdig cup venter ikke på kapteinene, selv om en økt aldri ble avdekket', () => {
+    expect(view(snapshot('active', []), ME, true).lineupPending).toBe(true);
+    expect(view(snapshot('finished', []), ME, true).lineupPending).toBe(false);
+  });
+});
 
 describe('hemmeligheten mens cupen pågår (#1468)', () => {
   const finished = match('ferdig', {
