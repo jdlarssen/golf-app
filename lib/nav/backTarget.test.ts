@@ -51,6 +51,14 @@ describe('FORM_SCREENS', () => {
     '/klubber/x/rolle/u',
     '/liga/x/godkjenn/g/u',
     '/complete-profile',
+    '/liga/bli-med/k',
+    '/cup/bli-med/k',
+    '/klubber/bli-med/k',
+    '/venner/legg-til/k',
+    '/foreslaa-ide',
+    '/liga/x/runde/r/spill',
+    '/admin/cup/x/generer',
+    '/klubber/k/cup/x/oppsett',
   ])('%s er et skjema', (path) => {
     expect(isForm(path)).toBe(true);
   });
@@ -67,6 +75,9 @@ describe('FORM_SCREENS', () => {
     // Informasjonssiden om sletting, ikke skjemaet under profilen.
     '/legal/slett-konto',
     '/legal/privacy',
+    // Innloggingen hører ikke hjemme her: utlogget på personvern skal pila
+    // tilbake dit. `replace` tar den ut av historikken når du er logget inn.
+    '/login',
   ])('%s er ikke et skjema', (path) => {
     expect(isForm(path)).toBe(false);
   });
@@ -81,6 +92,10 @@ describe('pickBackEntry', () => {
     expect(
       backFromLast('/historikk', '/games/x/leaderboard', '/games/x/leaderboard/holes', '/games/x/leaderboard'),
     ).toBe('/historikk');
+  });
+
+  it('regel 4 med en annen side imellom: hull → tavla → hull → pil gir spillet', () => {
+    expect(backFromLast('/games/x', '/games/x/holes/3', '/games/x/leaderboard', '/games/x/holes/5')).toBe('/games/x');
   });
 
   it('å bla mellom hull er samme skjerm: hull 12 → pil gir spillet', () => {

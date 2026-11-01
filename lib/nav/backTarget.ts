@@ -6,8 +6,10 @@
  * på iPhone er appens startadresse hele økta, så gjetningen sa alltid ja. Bruk
  * den aldri til dette. Sammen med lenker som la nye sider oppå ga det løkka som
  * fikk #120 revertert (#121): tavla → hull-oversikt → tavla → pil → hull-oversikt.
- * Lista er trygg fordi den gjenspeiler `replace`, og fordi `traverseTo` flytter
- * deg i historikken uten å legge til noe.
+ * Lista gjenspeiler `replace`, og `traverseTo` flytter deg i historikken uten å
+ * legge til noe. Det samme må gjelde reserven: en lenke som legger til en side,
+ * gir løkka på nytt, så `useBackNavigation` klatrer med `replace` når svaret her
+ * er `null`.
  *
  * Ren modul. `useBackNavigation.ts` kobler den til pila.
  */
@@ -40,8 +42,11 @@ export const FORM_SCREENS: readonly RegExp[] = [
   /^\/opprett-spill(\/|$)/,
   /^\/opprett-bane$/,
   /^\/complete-profile$/,
-  /^\/klubber\/bli-med\//,
+  /^\/(klubber|liga|cup)\/bli-med\//,
   /^\/venner\/legg-til\//,
+  /^\/foreslaa-ide$/,
+  /^\/liga\/[^/]+\/runde\/[^/]+\/spill$/,
+  /\/cup\/[^/]+\/(generer|oppsett)$/,
 ];
 
 function isForm(key: string): boolean {
@@ -55,7 +60,7 @@ function isBelow(key: string, current: string): boolean {
 
 /**
  * Oppføringen pila skal til, eller `null` når lista ikke har noe å gå til. Da
- * tar lenka over (kald start, varsel, delt lenke).
+ * tar reserven over (kald start, delt lenke).
  */
 export function pickBackEntry(entries: readonly HistoryEntry[], currentIndex: number): number | null {
   const url = entries[currentIndex]?.url;
@@ -63,6 +68,7 @@ export function pickBackEntry(entries: readonly HistoryEntry[], currentIndex: nu
   const current = screenKey(url);
 
   // Regel 4: tavla → hull-oversikt → tavla → pil hopper forbi begge kopiene.
+  // Fra den tidligste kopien kan ingen oppføring bak den være samme skjerm.
   let start = currentIndex;
   for (let i = 0; i < currentIndex; i++) {
     const other = entries[i]?.url;
@@ -76,7 +82,7 @@ export function pickBackEntry(entries: readonly HistoryEntry[], currentIndex: nu
     const other = entries[i]?.url;
     if (!other) continue;
     const key = screenKey(other);
-    if (key === current || isForm(key) || isBelow(key, current)) continue;
+    if (isForm(key) || isBelow(key, current)) continue;
     return i;
   }
   return null;

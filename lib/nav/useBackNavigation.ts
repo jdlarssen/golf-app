@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, type MouseEvent } from 'react';
 import { pickBackEntry } from './backTarget';
 
@@ -22,26 +23,37 @@ function navigationApi(): NavigationApi | null {
 
 /**
  * Klikket på tilbake-pila (#2746). Har historikken en skjerm å gå til, går pila
- * dit. Ellers følger lenka `href` som før: kald start, varsel, delt lenke og
- * nettlesere uten Navigation API. Langt trykk og «åpne i ny fane» er lenka.
+ * dit. Ellers klatrer den til `href` med `replace`: en lenke som la til en side,
+ * ville gitt neste pil denne siden å gå tilbake til, i ring (#121).
+ *
+ * Uten Navigation API følges lenka, som før. Langt trykk og «åpne i ny fane» er
+ * også lenka.
  */
 export function useBackNavigation() {
-  return useCallback((event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const router = useRouter();
+  return useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
-    const api = navigationApi();
-    if (!api) return;
-    const entries = api.entries();
-    const target = pickBackEntry(entries, api.currentEntry!.index);
-    if (target === null) return;
+      const api = navigationApi();
+      if (!api) return;
+      const href = event.currentTarget.getAttribute('href');
+      if (!href) return;
 
-    event.preventDefault();
-    const href = event.currentTarget.href;
-    // Avvises traverseringen, skal ikke pila stå død. En ny navigasjon som
-    // avbryter den (AbortError) er derimot allerede på vei et sted.
-    api.traverseTo(entries[target]!.key).finished?.catch((error: unknown) => {
-      if ((error as { name?: string } | null)?.name !== 'AbortError') window.location.assign(href);
-    });
-  }, []);
+      event.preventDefault();
+      const entries = api.entries();
+      const target = pickBackEntry(entries, api.currentEntry!.index);
+      if (target === null) {
+        router.replace(href);
+        return;
+      }
+      // Avvises traverseringen, skal ikke pila stå død. En ny navigasjon som
+      // avbryter den (AbortError) er derimot allerede på vei et sted.
+      api.traverseTo(entries[target]!.key).finished?.catch((error: unknown) => {
+        if ((error as { name?: string } | null)?.name !== 'AbortError') router.replace(href);
+      });
+    },
+    [router],
+  );
 }
