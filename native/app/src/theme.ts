@@ -48,6 +48,16 @@ export type ThemeColors = {
    */
   warningText: string;
   warningSoft: string;
+  /**
+   * #2750: rav som dekor, kanten på flightraden uten flight. Webbens
+   * `--warning`. For lyst til tekst: tekst er `warningText`.
+   */
+  warning: string;
+  /**
+   * #2750: kanten på et valg i et ark. Webbens `--field-border`, tegningenes
+   * `--input`, et hakk mørkere enn `border`.
+   */
+  fieldBorder: string;
   /** Aktiv rad i flighten på hullsiden (#2252), webbens `--primary-soft`. */
   primarySoft: string;
   /**
@@ -176,6 +186,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     dangerBorder: 'rgba(184, 70, 62, 0.28)',
     warningText: '#7A5410',
     warningSoft: '#FBEED6',
+    warning: '#D89B3A',
+    fieldBorder: '#CFC7B3',
     primarySoft: '#E8EFE8',
     scoreUnderFg: '#2F5A3C',
     scoreParFg: '#5C5347',
@@ -221,6 +233,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     dangerBorder: 'rgba(214, 114, 104, 0.32)',
     warningText: '#E5B26F',
     warningSoft: '#2E2A1C',
+    warning: '#E5B26F',
+    fieldBorder: '#3D4F43',
     primarySoft: '#1F2C24',
     scoreUnderFg: '#7DAA8A',
     scoreParFg: '#9A9180',
@@ -520,6 +534,9 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   // #2580: samme rav som `scoreOver1Fg` her; ingen tonet flate i sollys.
   warningText: '#7A5410',
   warningSoft: '#FFFFFF',
+  // Flightraden (#2750). Hullsiden tegner den ikke: rav uten tone, svart kant.
+  warning: '#7A5410',
+  fieldBorder: '#000000',
   primarySoft: '#FFFFFF',
   scoreUnderFg: '#2F5A3C',
   scoreParFg: '#5C5347',

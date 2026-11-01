@@ -46,6 +46,7 @@ import {
   wolfRotationRule,
   type WolfRotationRule,
 } from '../../../../lib/scoring/modes/wolfTurn';
+import { FlightPicker } from '../components/game/FlightPicker';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
@@ -60,6 +61,7 @@ import type { BundlePlayer } from '../data/gameBundle';
 import { fetchOwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
+import { flightPickerVisible } from '../lib/flightPicker';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
 import { GameLoadFailed } from '../components/GameLoadFailed';
@@ -348,6 +350,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           bundle={bundle}
         />
       </GameTicket>
+
+      {/* #2750: velg eller bytt flight selv, rett under billetten. */}
+      {flightPickerVisible(bundle, userId, stub.kind) ? (
+        <FlightPicker bundle={bundle} userId={userId} onChanged={refresh} />
+      ) : null}
 
       {inPlay ? (
         <GameTiles

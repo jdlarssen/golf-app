@@ -1491,6 +1491,39 @@ Og motsatt: `guard_game_players_self_update` vakt (c) (0147, uendret i 0168) ska
 nekte appen å skrive `withdrawn_at` på sin egen rad direkte. Den vakta er grunnen til at
 ruta finnes — ikke et hinder ruta er ment å omgå.
 
+### Wire-kontrakten for flightvalget (#2750)
+
+```
+POST /api/games/{id}/flight   { flightNumber: number }
+     200 { ok: true }
+     400 bad_request  (kroppen er ikke JSON, eller tallet er ikke et positivt heltall)
+     401 unauthorized
+     403 not_member   (også for et ukjent spill, så statusen ikke røper hvilke spill som finnes)
+     409 game_not_scheduled | flight_full | flight_bound_to_team | bad_flight
+     500 flight_failed
+```
+
+Frosset, og speilet i `src/data/joinFlight.ts`. **Endres den ene, endres den andre i samme
+PR.** Regelen bor i `lib/games/joinFlight.ts`, og nettets `joinFlight` er en tynn wrapper
+rundt den samme kjernen. Appen speiler den ikke: `src/lib/flightPicker.ts` skjuler bare
+raden der velgeren ikke gjelder, med de delte `eligibleForFlightAssignment` og
+`offeredFlightNumbers`.
+
+Samme autorisasjon som selv-frafallet: bruker-id-en kommer bare fra tokenet, spill-id-en
+bare fra stien, og kjernen filtrerer hver lesing og skriving på `(gameId, userId)`. Kroppen
+bærer ett tall. Skrivingen går på service-role fordi `guard_game_players_self_update` (0168)
+nekter en spiller å skrive `flight_number` på egen rad, og den vakta står. Flighten avgjør
+hvem som fører for hvem (`can_score_for`), så porten i ruta er hele autorisasjonen.
+
+**To som tar siste plass samtidig.** Tellingen etter skrivingen (`flightMoveGuard.ts`) gir
+aldri mer enn fire i flighten og aldri to `200`. Den garanterer ikke at nøyaktig én vinner:
+skriver begge før noen har talt på nytt, ser begge fem og begge angrer. Da får begge
+`flight_full`, lista hentes på nytt, og plassen står ledig. Å fjerne det krever en lås i
+databasen, og det er ikke verdt en migrasjon for et så smalt kappløp.
+
+Kallet går aldri i sync-køen. Uten nett viser arket flightene fra siste henting, og et trykk
+gir en feiltekst.
+
 ### Wire-kontrakten for e-postinvitasjon (#1919)
 
 ```
