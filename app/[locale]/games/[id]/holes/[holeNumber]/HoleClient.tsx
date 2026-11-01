@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { BackNavLink } from '@/components/ui/BackNavLink';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { useBackNavigation } from '@/lib/nav/useBackNavigation';
 import { writeScore } from '@/lib/sync/writeScore';
 import { currentDeviceUserId } from '@/lib/sync/currentUser';
 import { mergeServerScore } from '@/lib/sync/mergeServerScore';
@@ -147,7 +147,6 @@ const railDockStyle: CSSProperties = {
 export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   const locale = useLocale();
   const t = useTranslations('holes');
-  const onBackClick = useBackNavigation();
   const {
     gameId,
     gameName,
@@ -474,14 +473,13 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   return (
     <>
       <div style={headerRowStyle}>
-        <SmartLink
+        <BackNavLink
           href={`/games/${gameId}`}
-          onClick={onBackClick}
           aria-label={t('entry.backAriaLabel')}
           style={backLinkStyle}
         >
           ‹
-        </SmartLink>
+        </BackNavLink>
         {/* The page heading for screen readers carries the hole number too;
             the visible game name next to it would only repeat it. */}
         <h1 className="sr-only">

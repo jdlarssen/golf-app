@@ -1,8 +1,5 @@
-'use client';
-
 import type { ReactNode } from 'react';
-import { useBackNavigation } from '@/lib/nav/useBackNavigation';
-import { SmartLink } from './SmartLink';
+import { BackNavLink } from './BackNavLink';
 
 /**
  * Universal back-arrow link — single chevron glyph, drawn in a 32×32 box
@@ -18,9 +15,7 @@ import { SmartLink } from './SmartLink';
  * this one keeps the 32px box and extends only the hit area, so no header
  * row moves.
  *
- * A click goes where you came from when the browser's history has somewhere to
- * go (#2746, `lib/nav/backTarget.ts`). `href` is the fallback for a cold start,
- * a notification or a shared link, and the target of a long press.
+ * A click goes where you came from, and `href` is the fallback (`BackNavLink`).
  */
 export function BackLink({
   href,
@@ -30,15 +25,13 @@ export function BackLink({
   children?: ReactNode;
 }) {
   const label = typeof children === 'string' ? children : 'Tilbake';
-  const onClick = useBackNavigation();
   return (
-    <SmartLink
+    <BackNavLink
       href={href}
-      onClick={onClick}
       aria-label={label}
       className="tap-extend -ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
     >
       ‹
-    </SmartLink>
+    </BackNavLink>
   );
 }

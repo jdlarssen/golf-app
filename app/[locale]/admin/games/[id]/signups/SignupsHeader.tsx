@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SmartLink } from '@/components/ui/SmartLink';
+import { BackNavLink } from '@/components/ui/BackNavLink';
 
 /**
  * The signups page's top (#2288, artboard «Forslag: påmeldingene»): a 44 px
@@ -33,7 +33,7 @@ export function SignupsHeader({
   return (
     <header className="-mx-5 -mt-8 leading-[normal]">
       <div className="flex items-center justify-between px-2 pt-2">
-        <SmartLink
+        <BackNavLink
           href={backHref}
           aria-label={backLabel}
           className="flex size-11 items-center justify-center text-text"
@@ -51,7 +51,7 @@ export function SignupsHeader({
           >
             <path d="M15 18l-6-6 6-6" />
           </svg>
-        </SmartLink>
+        </BackNavLink>
         <h1
           id={headingId}
           tabIndex={headingId ? -1 : undefined}

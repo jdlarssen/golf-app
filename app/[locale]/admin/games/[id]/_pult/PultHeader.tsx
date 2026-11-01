@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { SmartLink } from '@/components/ui/SmartLink';
+import { BackNavLink } from '@/components/ui/BackNavLink';
 import type { DeliveryCounts } from '@/lib/games/organizerDesk';
 import { ElapsedPill } from './ElapsedPill';
 
@@ -30,7 +30,7 @@ export async function PultHeader({
       className="-mx-5 -mt-8 bg-surface-strong px-2 pt-2 pb-4 leading-[normal] text-on-strong"
     >
       <div className="flex items-center justify-between">
-        <SmartLink
+        <BackNavLink
           href="/admin/games"
           aria-label={t('back')}
           className="flex size-11 items-center justify-center text-on-strong"
@@ -48,7 +48,7 @@ export async function PultHeader({
           >
             <path d="M15 18l-6-6 6-6" />
           </svg>
-        </SmartLink>
+        </BackNavLink>
         <ElapsedPill startedAt={startedAt} renderedAt={renderedAt} />
         <span aria-hidden className="w-11" />
       </div>

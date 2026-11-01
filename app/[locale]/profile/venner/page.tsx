@@ -1,3 +1,4 @@
+import { BackNavLink } from '@/components/ui/BackNavLink';
 import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
@@ -162,7 +163,7 @@ export default async function VennerPage({
     <AppShell flush>
       <div className="leading-[normal]">
         <div className="flex items-center justify-between px-2 pt-2">
-          <SmartLink
+          <BackNavLink
             href="/profile"
             aria-label={t('backLabel')}
             className="flex size-11 items-center justify-center text-text"
@@ -180,7 +181,7 @@ export default async function VennerPage({
             >
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </SmartLink>
+          </BackNavLink>
           <Kicker>{tProfile('kicker')}</Kicker>
           <span aria-hidden className="w-11" />
         </div>

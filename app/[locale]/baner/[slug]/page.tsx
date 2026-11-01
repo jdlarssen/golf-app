@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
-import { SmartLink } from '@/components/ui/SmartLink';
+import { BackNavLink } from '@/components/ui/BackNavLink';
 import { LinkButton } from '@/components/ui/Button';
 import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -158,7 +158,7 @@ export default async function PublicCoursePage({
         className="bg-surface-strong px-2 pt-2 pb-[18px] leading-[normal] text-on-strong"
       >
         <div className="flex items-center justify-between">
-          <SmartLink
+          <BackNavLink
             href="/baner"
             aria-label={t('backLabel')}
             className="flex size-11 items-center justify-center text-on-strong"
@@ -176,7 +176,7 @@ export default async function PublicCoursePage({
             >
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </SmartLink>
+          </BackNavLink>
           <p className="text-xs font-semibold text-on-strong/80">
             {t('kicker')}
           </p>

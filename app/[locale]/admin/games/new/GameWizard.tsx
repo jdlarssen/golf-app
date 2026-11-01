@@ -71,7 +71,7 @@ import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { FormSection } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
-import { SmartLink } from '@/components/ui/SmartLink';
+import { BackNavLink } from '@/components/ui/BackNavLink';
 import type { Intent } from '@/lib/wizard/intent';
 import { startIntent } from '@/lib/wizard/clubChoice';
 import { pickerSource, selectablePlayers } from '@/lib/wizard/selectablePlayers';
@@ -2101,9 +2101,9 @@ export function WizardTopBar({
             <ChevronLeft />
           </button>
         ) : (
-          <SmartLink href={backHref ?? '/'} aria-label={backLabel} className={BACK_CLASS}>
+          <BackNavLink href={backHref ?? '/'} aria-label={backLabel} className={BACK_CLASS}>
             <ChevronLeft />
-          </SmartLink>
+          </BackNavLink>
         )}
         <p
           id={kickerId}
