@@ -117,6 +117,24 @@ beforeEach(() => {
   callerAnswers({});
 });
 
+describe('hvilke kamper appen kan åpne', () => {
+  it('svaret er det kalleren selv får lese, med kallerens klient', async () => {
+    callerAnswers({ games: { data: [{ id: 'kamp-1' }], error: null } });
+    const open = await (await call('token-meg')).json();
+    expect(open.matches[0]).toMatchObject({ gameId: 'kamp-1', mine: true, canOpen: true });
+
+    // RLS skjuler spillet (for eksempel et utkast): ingen knapp, selv for den som spiller.
+    callerAnswers({ games: { data: [], error: null } });
+    const hidden = await (await call('token-meg')).json();
+    expect(hidden.matches[0]).toMatchObject({ gameId: 'kamp-1', mine: true, canOpen: false });
+  });
+
+  it('en lesefeil er 500, ikke en cup der ingen kamp kan åpnes', async () => {
+    callerAnswers({ games: { data: null, error: { message: 'boom' } } });
+    expect((await call('token-meg')).status).toBe(500);
+  });
+});
+
 describe('porten', () => {
   it('uten token: 401 før snapshotet leses', async () => {
     const res = await call();

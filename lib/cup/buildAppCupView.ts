@@ -87,7 +87,13 @@ function buildResults(snapshot: CupSnapshot, unknownLabel: string): AppCupResult
 
 export function buildAppCupView(
   snapshot: CupSnapshot,
-  opts: { userId: string; lineupPending: boolean; unknownLabel: string },
+  opts: {
+    userId: string;
+    lineupPending: boolean;
+    unknownLabel: string;
+    /** The cup's games the caller can read under RLS. */
+    readableGameIds: ReadonlySet<string>;
+  },
 ): AppCupView {
   const { tournament, leaderboard, roster } = snapshot;
   const { userId, unknownLabel } = opts;
@@ -126,6 +132,7 @@ export function buildAppCupView(
       walkoverTeam: values.team,
       soloPartnerName: match.soloPlayOn?.partnerName ?? null,
       mine: [...(match.team1UserIds ?? []), ...(match.team2UserIds ?? [])].includes(userId),
+      canOpen: opts.readableGameIds.has(match.gameId),
       outcome: finished ? matchOutcome(match, teamNames) : null,
     };
   });
@@ -142,7 +149,8 @@ export function buildAppCupView(
     team2Name: tournament.team_2_name,
     pointsToWin: tournament.points_to_win,
     progress: cupProgress(leaderboard),
-    lineupPending: opts.lineupPending,
+    // A finished cup has no line-up left to wait for, even with a session never revealed.
+    lineupPending: opts.lineupPending && !finished,
     matches,
     results: finished ? buildResults(snapshot, unknownLabel) : null,
   };

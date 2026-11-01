@@ -15,6 +15,7 @@ export function cupMatch(overrides: Partial<AppCupMatch> = {}): AppCupMatch {
     walkoverTeam: '',
     soloPartnerName: null,
     mine: false,
+    canOpen: false,
     outcome: null,
     ...overrides,
   };
@@ -39,6 +40,7 @@ export function liveCup(overrides: Partial<AppCupView> = {}): AppCupView {
         side2: 'Kari og Per',
         status: 'inProgress',
         mine: true,
+        canOpen: true,
       }),
       cupMatch({ gameId: 'other-1', label: 'Singel 4', status: 'scorecardsSubmitted' }),
       cupMatch({ gameId: 'other-2', label: 'Singel 5', side1: 'Marte', side2: 'Kari N.' }),
@@ -158,6 +160,7 @@ export function finishedCup(overrides: Partial<AppCupView> = {}): AppCupView {
         side2: 'Kari og Per',
         status: 'played',
         mine: true,
+        canOpen: true,
         outcome: { points1: 1, points2: 0, tied: false, formatted: '3&2', winnerName: 'Team Nord' },
       }),
       cupMatch({
