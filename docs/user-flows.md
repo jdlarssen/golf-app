@@ -135,7 +135,9 @@ venstre kant på iPhone, Androids tilbakeknapp og pila på nettsiden.
    noe annet enn sveipet.
 3. **Et skjema du har sendt, er borte fra tilbake-veien.** Det gjelder levert kort, lagret profil,
    godkjent kort, trukket fra runden, opprettet spill, avsluttet runde og sletting. Du lander på
-   skjermen skjemaet førte til, og tilbake derfra går dit skjemaet sto over.
+   skjermen skjemaet førte til, som om du hadde kommet dit fra skjermen over den i hierarkiet.
+   Leverer du kortet fra et hull du åpnet på Hjem, havner du på spillet, og tilbake går til Hjem.
+   Hullet og kortet er borte.
 4. **Går du til en skjerm du alt har bak deg, kommer du tilbake til den.** Du får aldri en ny kopi
    oppå. Hull → tavla → hull gir ett hull, ikke tre skjermer. Å bla mellom hull, eller mellom netto
    og brutto på tavla, regnes som samme skjerm.

@@ -88,16 +88,26 @@ function isAncestor(route: RouteLike, name: string, params: object | undefined):
   return route.name === 'Home';
 }
 
+/** Gjelder skjermen samme spill eller liga som målet? */
+function sharesIdentity(route: RouteLike, params: object | undefined): boolean {
+  const own = (route.params ?? {}) as Record<string, unknown>;
+  const target = (params ?? {}) as Record<string, unknown>;
+  return IDENTITY_KEYS.some((key) => target[key] !== undefined && own[key] === target[key]);
+}
+
 /**
  * Hvor mange skjermer under den du står på, skal bli liggende når `backTo`
- * legger målet inn? Skjermene til og med den nærmeste som står over målet i
- * hierarkiet. Kortet åpnet fra Hjem-kortets hull ([Hjem, Hull 18, Scorekort])
- * gir da [Hjem, Spillet], ikke [Hjem, Hull 18, Spillet] der tilbake fra
- * spillet ville gått til hullet på kortet du nettopp leverte.
+ * legger målet inn (regel 3 i §Tilbake)? Skjermer fra samme spill eller liga
+ * som ligger over den nærmeste skjermen over målet i hierarkiet, går ut sammen
+ * med skjemaet. Kortet levert fra Hjem-kortets hull ([Hjem, Hull 18,
+ * Scorekort]) gir da [Hjem, Spillet], ikke [Hjem, Hull 18, Spillet] der
+ * tilbake fra spillet ville åpnet hullet på kortet du nettopp leverte. Alt
+ * annet blir liggende.
  */
 export function keepBelow(routes: readonly RouteLike[], name: string, params: object | undefined): number {
   for (let i = routes.length - 2; i >= 0; i--) {
-    if (isAncestor(routes[i]!, name, params)) return i + 1;
+    const route = routes[i]!;
+    if (isAncestor(route, name, params) || !sharesIdentity(route, params)) return i + 1;
   }
   return 0;
 }
