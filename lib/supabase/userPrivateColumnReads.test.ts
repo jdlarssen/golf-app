@@ -111,9 +111,14 @@ const ALLOWED: Record<string, Allowed> = {
     reason:
       '(c) serverside utsending: arrangørens adresse som mottaker, egen rad som avsender (navnet i varselet, maskert)',
   },
-  'app/[locale]/signup/[shortId]/actions.ts': {
+  // #2748: flyttet fra `app/[locale]/signup/[shortId]/actions.ts`, delt med appens rute.
+  'lib/games/selfRegistration.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending: egen rad som avsender, arrangørens adresse som mottaker',
+  },
+  'lib/games/loadSignupFacts.ts': {
+    receivers: ['admin'],
+    reason: '(a) egen rad, til invitasjons-oppslaget, som på påmeldingssiden',
   },
   'app/[locale]/signup/[shortId]/page.tsx': {
     receivers: ['admin'],
