@@ -6,16 +6,15 @@ import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { chooseCourse } from '@/tests/courseAndTimeDriver';
 
-// #1380: steg-navigasjonen skriver URL-en på to helt ulike måter, og det er
-// nettopp skillet som må testes:
+// #1380: URL-en skrives av to ulike grunner, og det er nettopp skillet som må
+// testes:
 //
 //   steg    — arrangøren gikk til et nytt steg. Siden #2746 med `replace`:
-//             veiviseren tar én plass i historikken, så et ferdig skjema aldri
+//             stegene deler én plass i historikken, så det fylte skjemaet ikke
 //             ligger bak spillet. Pila og «Tilbake» går ett steg.
 //   normalisering — vi rettet en URL ingen ba om (`?step=99` → steg 1). Også
 //             `replace`, og den skal skje én gang. Effekten må ikke kjøre på
 //             nytt etter et stegbytte arrangøren gjorde selv.
-//             en felle arrangøren ikke kommer ut av.
 //
 // Det delte oppsettet (vitest.setup.ts) stubber `useSearchParams` til alltid
 // tom og gir en fersk `push`-spion per kall, så push/replace kan ikke drives

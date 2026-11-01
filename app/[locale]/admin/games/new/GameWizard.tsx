@@ -32,9 +32,11 @@
  * klubb-turnering, #2433, eller påmelding valgt øverst på steg 4, #2447).
  *
  * URL-state: `?step=2..5`, og `skjerm=lag` for steg 4s andre skjerm (#2321).
- * #2746: alle URL-skrivinger bruker `router.replace`, så veiviseren tar én
- * plass i historikken og et ferdig skjema aldri ligger bak spillet (regel 3 i
- * `docs/user-flows.md` §Tilbake). Pila og «Tilbake» går ett steg. Nettleserens
+ * #2746: alle URL-skrivinger bruker `router.replace`, så stegene ikke tar hver
+ * sin plass i historikken og det fylte skjemaet ikke ligger bak spillet (regel 7
+ * i `docs/user-flows.md` §Tilbake). En omvei til «Opprett ny bane» legger
+ * veiviseren igjen bak seg, men da med tømt utkast. Pila og «Tilbake» går ett
+ * steg. Nettleserens
  * egen tilbake går ut av veiviseren, og utkastet står. Normalisering av en
  * ugyldig `?step=99` ned til steg 1 skjer også med `replace`, men i egen effekt.
  *
@@ -728,8 +730,8 @@ function WizardBody({
     if (teams || showTeamsScreen) screenSwitchRef.current = true;
     setStep(next);
     setTeamsScreen(teams);
-    // #2746: `replace`, ikke `push`. Veiviseren tar én plass i historikken, og
-    // den erstattes når spillet opprettes, så et ferdig skjema aldri ligger bak
+    // #2746: `replace`, ikke `push`. Stegene deler én plass i historikken, og
+    // den erstattes når spillet opprettes, så det fylte skjemaet ikke ligger bak
     // spillet. Pila og «Tilbake» går ett steg med `goPrev`.
     router.replace(urlForStep(next, teams), { scroll: false });
   }
@@ -1119,8 +1121,7 @@ function WizardBody({
    * forhåndsvalgt (`?intent=cup`, revansje-prefill, gjenopprettet utkast) —
    * da er det ingen flis å trykke for å komme videre.
    *
-   * Angring: `goToStep` pusher (#1380), så både «Forrige» og browser-back
-   * tar arrangøren tilbake hit med valget intakt.
+   * Angring: pila (`goPrev`) tar arrangøren tilbake hit med valget intakt.
    */
   function handleIntentSelect(next: Intent) {
     state.setIntent(next);

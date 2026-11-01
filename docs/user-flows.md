@@ -147,14 +147,15 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
 6. **I veiviseren går tilbake ett steg.** På første steg lukkes veiviseren.
 7. **På nettsiden er pila en lenke til skjermen over.** Målet er fast, styrt av `?from=` og
    `?kilde=`, og følger ikke «dit du kom fra». Unntaket er liga, cup, kavalkade, påmelding,
-   personvern og slett konto, der pila går tilbake når du kom fra en side i Tørny. Nettleserens egen
-   tilbakeknapp blar i historikken. Et skjema som sender deg videre, erstatter seg selv, så det
-   ligger ikke bak deg. I veiviseren går pila ett steg, mens nettleserens tilbake går ut av
-   veiviseren, og utkastet står. Godkjenningen og andre skjemaer med kvittering på samme side blir
-   stående i historikken.
+   personvern og slett konto, der pila går tilbake hvis nettleseren oppgir at du kom fra en side i
+   Tørny, og ellers til det faste målet. Nettleserens egen tilbakeknapp blar i historikken. Et skjema
+   som sender deg videre, erstatter seg selv, så det ligger ikke bak deg. I veiviseren går pila ett
+   steg, mens nettleserens tilbake går ut av veiviseren, og utkastet står. Godkjenningen og andre
+   skjemaer med kvittering på samme side blir stående i historikken.
 
-   Eieren valgte faste mål 01.11. Dit du kom fra ble prøvd med nettleserens historikkliste: pila gikk
-   riktig sted, men siden var gammel, og en ny henting tømte Hjem i Chromium før innholdet kom tilbake.
+   Eieren valgte 01.11 å prøve én gang, med faste mål som reserve, og reserven ble brukt. Dit du kom
+   fra ble prøvd med nettleserens historikkliste: pila gikk riktig sted, men siden var gammel, og en
+   ny henting tømte Hjem i Chromium før innholdet kom tilbake.
 
 I appen gjør `native/app/src/lib/backTo.ts` dette: `backTo` når du forlater et skjema, `openOrReturn`
 når du går videre til en skjerm som kan ligge lenger nede i stakken. `navigate` til en slik skjerm
