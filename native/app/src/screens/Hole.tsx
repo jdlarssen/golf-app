@@ -909,21 +909,25 @@ function HoleView({
         <View style={styles.pad}>
 
         {/* #2751: Patsome-delen hullet hører til, og utslagsvalget. */}
-        {mode === 'patsome' ? <PatsomeSegmentBanner holeNumber={holeNumber} /> : null}
-        {pickerShown ? (
-          <TeeStarterPicker
-            question={
-              mode === 'patsome'
-                ? TEE_STARTER_TEXT.patsomeQuestion
-                : TEE_STARTER_TEXT.foursomesQuestion
-            }
-            options={myTeamEntries.map((entry) => ({
-              userId: entry.user_id,
-              name: shortDisplayName(entry.player),
-            }))}
-            saveFailed={teeStarterFailed}
-            onPick={(teeStarterId) => void pickTeeStarter(teeStarterId)}
-          />
+        {mode === 'patsome' || pickerShown ? (
+          <View style={styles.formatBanners}>
+            {mode === 'patsome' ? <PatsomeSegmentBanner holeNumber={holeNumber} /> : null}
+            {pickerShown ? (
+              <TeeStarterPicker
+                question={
+                  mode === 'patsome'
+                    ? TEE_STARTER_TEXT.patsomeQuestion
+                    : TEE_STARTER_TEXT.foursomesQuestion
+                }
+                options={myTeamEntries.map((entry) => ({
+                  userId: entry.user_id,
+                  name: shortDisplayName(entry.player),
+                }))}
+                saveFailed={teeStarterFailed}
+                onPick={(teeStarterId) => void pickTeeStarter(teeStarterId)}
+              />
+            ) : null}
+          </View>
         ) : null}
 
         {/* #2314: hvem er ulv på dette hullet og de tre neste. */}
@@ -1235,7 +1239,8 @@ function teeStarterNameFor(opts: {
     holeNumber: opts.holeNumber,
     memberIds: opts.card.memberIds,
   });
-  return starterId ? opts.nameOf(starterId) : null;
+  // Fornavnet, som på nettet og i lagkortets navnelinje.
+  return starterId ? (opts.nameOf(starterId).split(' ')[0] ?? '') : null;
 }
 
 /**
@@ -1420,6 +1425,7 @@ const styles = StyleSheet.create({
   // Det som ikke er i designet (kø-banneret, låst-teksten, Wolf og BBB, kort-
   // formatenes kort og «Lever»), står med appens vanlige luft.
   pad: { paddingHorizontal: 20, gap: 8 },
+  formatBanners: { marginTop: 10, gap: 8 },
   // Radene står 12 pt fra kanten (Main); i sollys går de kant til kant.
   flightList: { paddingHorizontal: 12 },
   flightHead: {
