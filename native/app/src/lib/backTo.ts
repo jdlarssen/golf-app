@@ -28,7 +28,7 @@ export type BackNavigation = {
 export type BackStep = 'popTo' | 'replace' | 'push';
 
 /** Params som sier hvilken skjerm det er. Alt annet (hull, kvittering) er valg på samme skjerm. */
-const IDENTITY_KEYS = ['gameId', 'leagueId'] as const;
+const IDENTITY_KEYS = ['gameId', 'leagueId', 'cupId'] as const;
 
 function sameIdentity(a: object | undefined, b: object | undefined): boolean {
   const left = (a ?? {}) as Record<string, unknown>;
@@ -74,6 +74,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   EndGame: 'GameHome',
   League: 'Home',
   LeagueJoin: 'Home',
+  Cup: 'Home',
   LeagueRoundStart: 'League',
   MarkerApprove: 'League',
   Profile: 'Home',

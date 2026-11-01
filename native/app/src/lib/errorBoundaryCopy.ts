@@ -51,6 +51,7 @@ const VARIANT_BY_ROUTE = {
   Kavalkade: 'default',
   League: 'default',
   LeagueJoin: 'default',
+  Cup: 'default',
   LeagueRoundStart: 'default',
   MarkerApprove: 'default',
   SyncLab: 'default',

@@ -55,11 +55,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firstName } from '../../../../lib/firstName';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
+import type { AppCupSummary } from '../../../../lib/cup/appCupView';
 import type { AppLeagueSummary } from '../../../../lib/league/appLeagueView';
 import { KavalkadeHomeBanner } from '../components/kavalkade/KavalkadeDoors';
 import { LeagueHomeRow } from '../components/league/LeagueHomeRow';
 import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
+import { CupHomeRow } from '../components/cup/CupHomeRow';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
+import { CUP_APP_TEXT } from '../lib/cupCopy';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
 import type { GameBundle } from '../data/gameBundle';
@@ -78,6 +81,7 @@ import {
   type HomeCard,
   type HomeList,
 } from '../data/homeList';
+import { fetchMyCups } from '../data/cup';
 import { fetchMyLeagues } from '../data/league';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
@@ -111,6 +115,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   // «Ligaene dine» (#2638): tom = ingen seksjon, også når kallet feilet.
   const [leagues, setLeagues] = useState<AppLeagueSummary[]>([]);
+  const [cups, setCups] = useState<AppCupSummary[]>([]);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [heroPair, setHeroPair] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
@@ -136,6 +141,11 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
     void fetchMyLeagues().then(
       (result) => setLeagues(result.ok ? result.leagues : []),
       () => setLeagues([]),
+    );
+    // Cupene: best-effort, og en feil skjuler seksjonen.
+    void fetchMyCups().then(
+      (result) => setCups(result.ok ? result.cups : []),
+      () => setCups([]),
     );
     try {
       const fresh = await refreshHomeCards(userId);
@@ -309,6 +319,16 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       </View>
     ) : null;
 
+  const cupsSection =
+    cups.length > 0 ? (
+      <View testID="home-cups">
+        <SectionHead title={CUP_APP_TEXT.homeSection} />
+        {cups.map((cup) => (
+          <CupHomeRow key={cup.id} cup={cup} onPress={() => navigation.navigate('Cup', { cupId: cup.id })} />
+        ))}
+      </View>
+    ) : null;
+
   const createGame = (
     <Pressable
       style={ui.button}
@@ -423,6 +443,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         ) : null}
 
         {leaguesFirst ? null : leaguesSection}
+        {cupsSection}
 
         <Section
           title={HOME_TEXT.myGames}

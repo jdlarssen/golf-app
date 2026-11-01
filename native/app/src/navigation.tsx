@@ -39,6 +39,7 @@ import { openPushTarget } from './lib/openPushTarget';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
+import { CUP_APP_TEXT } from './lib/cupCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
@@ -60,6 +61,7 @@ import { Hole } from './screens/Hole';
 import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
+import { Cup } from './screens/Cup';
 import { League } from './screens/League';
 import { LeagueJoin } from './screens/LeagueJoin';
 import { MarkerApprove } from './screens/MarkerApprove';
@@ -163,6 +165,8 @@ export type RootStackParamList = {
    * (`lib/appLinkUrl.ts`).
    */
   LeagueJoin: { code: string };
+  /** #2752: cup-rommet, kampene under spill og resultatene når cupen er ferdig. */
+  Cup: { cupId: string };
   /**
    * «Start runden» i en ligarunde (#2638 Del 2). Etter start erstattes den av
    * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
@@ -437,6 +441,12 @@ export function RootNavigator() {
           name="LeagueJoin"
           component={LeagueJoin}
           options={kickerHeader(LEAGUE_JOIN_TEXT.kicker, LEAGUE_JOIN_TEXT.kicker)}
+        />
+        {/* Cup-rommet (#2752): «Cup» i toppen, som nettsiden. */}
+        <Stack.Screen
+          name="Cup"
+          component={Cup}
+          options={kickerHeader(CUP_APP_TEXT.kicker, CUP_APP_TEXT.kicker)}
         />
         {/* #2661: markørens kort. Skjermen setter liganavnet i toppen selv. */}
         <Stack.Screen

@@ -46,6 +46,9 @@ jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () =
 jest.mock('../data/league', () => ({
   fetchMyLeagues: jest.fn(async () => mockState.leagues),
 }));
+jest.mock('../data/cup', () => ({
+  fetchMyCups: jest.fn(async () => mockState.cups),
+}));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
 }));
@@ -68,12 +71,14 @@ const mockState: {
   bundles: Record<string, CardBundle>;
   profile: OwnProfile;
   leagues: Awaited<ReturnType<typeof import('../data/league').fetchMyLeagues>>;
+  cups: Awaited<ReturnType<typeof import('../data/cup').fetchMyCups>>;
 } = {
   online: true,
   list: { version: 4, cards: [], lastRound: null, fetchedAt: '' },
   cached: undefined,
   bundles: {},
   leagues: { ok: true, leagues: [] },
+  cups: { ok: true, cups: [] },
   profile: {
     name: 'Sigrid Berg',
     nickname: null,
@@ -161,6 +166,7 @@ beforeEach(() => {
   mockState.cached = undefined;
   mockState.bundles = { new: HERO_BUNDLE };
   mockState.leagues = { ok: true, leagues: [] };
+  mockState.cups = { ok: true, cups: [] };
 });
 
 it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
@@ -502,6 +508,49 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
 
     await fireEvent.press(screen.getByTestId('home-league-liga-vinter'));
     expect(navigate).toHaveBeenCalledWith('League', { leagueId: 'liga-vinter' });
+  });
+
+  it('cupene står under ligaene, med fremdriften og uten poeng (#2752)', async () => {
+    mockState.leagues = { ok: true, leagues: [VINTER] };
+    mockState.cups = {
+      ok: true,
+      cups: [
+        { id: 'c1', name: 'Klubbmesterskapet', status: 'active', progress: { played: 3, total: 8 } },
+        { id: 'c2', name: 'Vårcupen', status: 'draft', progress: null },
+        { id: 'c3', name: 'Høstcupen', status: 'active', progress: null },
+      ],
+    };
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-cups')).toBeTruthy();
+    expect(screen.getByText('Cupene dine')).toBeTruthy();
+    expect(screen.getByTestId('home-cup-line-c1')).toHaveTextContent('3 av 8 matcher spilt');
+    expect(screen.getByTestId('home-cup-line-c2')).toHaveTextContent('Ikke startet ennå');
+    expect(screen.getByTestId('home-cup-line-c3')).toHaveTextContent('Fikk ikke lest kampene');
+    expect(screen.getByTestId('home-cup-c1').props.accessibilityLabel).toBe(
+      'Klubbmesterskapet. 3 av 8 matcher spilt',
+    );
+    const order = testIdsInOrder();
+    expect(order.indexOf('home-leagues')).toBeLessThan(order.indexOf('home-cups'));
+
+    await fireEvent.press(screen.getByTestId('home-cup-c1'));
+    expect(navigate).toHaveBeenCalledWith('Cup', { cupId: 'c1' });
+  });
+
+  it.each([
+    ['du ikke er med i noen cup', { ok: true as const, cups: [] }],
+    ['kallet feiler', { ok: false as const, reason: 'load_failed' as const }],
+    ['nettet er borte', { ok: false as const, reason: 'offline' as const }],
+  ])('ingen cup-seksjon og ingen feilboks når %s', async (_label, result) => {
+    mockState.cups = result;
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+    expect(screen.queryByTestId('home-cups')).toBeNull();
+    expect(screen.queryByText('Cupene dine')).toBeNull();
+    expect(screen.queryByTestId('home-error')).toBeNull();
   });
 
   it('en liga uten åpen runde har ingen pille (orkestratorens avgjørelse)', async () => {
