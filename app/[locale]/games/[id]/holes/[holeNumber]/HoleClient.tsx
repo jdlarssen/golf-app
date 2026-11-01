@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { softWithdrawOpen } from '@/lib/games/softWithdrawRule';
 import { writeScore } from '@/lib/sync/writeScore';
 import { currentDeviceUserId } from '@/lib/sync/currentUser';
 import { mergeServerScore } from '@/lib/sync/mergeServerScore';
@@ -537,7 +538,12 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         variant={usesRail ? 'rail' : 'cards'}
       />
 
-      <WithdrawnBanner withdrawn={withdrawn} selfWithdrawn={selfWithdrawn} gameId={gameId} />
+      <WithdrawnBanner
+        withdrawn={withdrawn}
+        selfWithdrawn={selfWithdrawn}
+        canUndo={softWithdrawOpen({ status: gameStatus, gameMode })}
+        gameId={gameId}
+      />
 
       <div style={listStyle}>
         {usesRail ? (

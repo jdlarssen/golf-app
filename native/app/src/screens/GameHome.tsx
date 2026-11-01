@@ -295,6 +295,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     hero?.standing?.total != null && hero.unit ? stubTotal(hero.standing.total, hero.unit) : null;
   const stub = ticketStub({
     cupGame: game.tournamentId != null,
+    gameMode: game.gameMode,
     status: game.status,
     gate: gated,
     me: me?.player,

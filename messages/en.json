@@ -2286,6 +2286,7 @@
       "derivedNoticeUnknownHost": "another round",
       "withdrawnHeading": "You have withdrawn from the game",
       "withdrawnBody": "Your scores don't count in the standings. You can undo this while the game is active.",
+      "withdrawnBodyNoUndo": "Your scores don't count in the standings.",
       "withdrawnByOrganiserHeading": "The organiser has withdrawn you from the game",
       "withdrawnByOrganiserBody": "Your scores don't count in the standings. If this is a mistake, talk to the organiser.",
       "undoWithdraw": "Undo",

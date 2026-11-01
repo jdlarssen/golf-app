@@ -61,6 +61,7 @@ import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
 import { GetTheApp } from '@/components/app/GetTheApp';
 import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
+import { softWithdrawOpen } from '@/lib/games/softWithdrawRule';
 import { WithdrawnBanner } from './WithdrawnBanner';
 import { ScheduledActionsCard } from './ScheduledActionsCard';
 import { bringGuestBlock } from '@/lib/games/bringGuest';
@@ -1366,6 +1367,7 @@ export default async function GameHomePage({
               <WithdrawnBanner
                 gameId={id}
                 selfWithdrawn={me.withdrawn_by_user_id === userId}
+                canUndo={softWithdrawOpen({ status: game.status, gameMode: game.game_mode })}
               />
             ) : (
               <Suspense fallback={<PrimaryCtaSkeleton />}>

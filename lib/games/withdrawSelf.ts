@@ -3,7 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { displayNameForOthers } from '@/lib/users/displayName';
-import { supportsWithdrawal } from '@/lib/scoring';
+import { softWithdrawOpen } from '@/lib/games/softWithdrawRule';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { readCaptainTeam, type TeamChild } from '@/lib/games/teamCaptaincy';
@@ -203,7 +203,7 @@ export async function withdrawSelf(
 
   // Active + in-scope mode → soft WD (set withdrawn_at). Pre-start → DELETE.
   // Any other combination (finished, active+unsupported) → locked.
-  if (game.status === 'active' && supportsWithdrawal(game.game_mode)) {
+  if (softWithdrawOpen({ status: game.status, gameMode: game.game_mode })) {
     if (!playerRes.data) {
       return { ok: false, error: 'not_registered' };
     }
@@ -577,7 +577,7 @@ export async function undoSelfWithdraw(
   }
   const game = gameRes.data;
 
-  if (game.status !== 'active' || !supportsWithdrawal(game.game_mode)) {
+  if (!softWithdrawOpen({ status: game.status, gameMode: game.game_mode })) {
     return { ok: false, error: 'game_locked' };
   }
 

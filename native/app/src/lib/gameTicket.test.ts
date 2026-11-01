@@ -353,13 +353,13 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
     ['ikke spiller', { me: undefined }, { kind: 'notPlayer' }],
     [
       'trukket av seg selv',
-      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'scheduled' },
-      { kind: 'withdrawn', bySelf: true },
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'active', gameMode: 'best_ball' },
+      { kind: 'withdrawn', bySelf: true, canUndo: true },
     ],
     [
       'trukket av arrangøren',
-      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'org' } },
-      { kind: 'withdrawn', bySelf: false },
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'org' }, status: 'active', gameMode: 'best_ball' },
+      { kind: 'withdrawn', bySelf: false, canUndo: false },
     ],
     [
       'trukket selv fra en planlagt cup-kamp: ingen angring, det er arrangørens (#2752)',
@@ -372,9 +372,19 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
       { kind: 'cupWithdrawn', bySelf: false },
     ],
     [
-      'trukket fra en cup-kamp som pågår: spillets egen angring gjelder',
-      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'active', cupGame: true },
-      { kind: 'withdrawn', bySelf: true },
+      'trukket fra en cup-kamp som pågår, i et format med frafall: spillets egen angring gjelder',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'active', cupGame: true, gameMode: 'best_ball' },
+      { kind: 'withdrawn', bySelf: true, canUndo: true },
+    ],
+    [
+      'trukket fra en match-play-kamp som pågår (makkeren spiller alene): ingen angring, serveren sier nei',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'active', cupGame: true, gameMode: 'fourball_matchplay' },
+      { kind: 'withdrawn', bySelf: true, canUndo: false },
+    ],
+    [
+      'trukket fra et ferdig spill: ingen angring',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'finished', gameMode: 'best_ball' },
+      { kind: 'withdrawn', bySelf: true, canUndo: false },
     ],
     ['utkast', { status: 'draft' }, { kind: 'draft' }],
     ['planlagt', { status: 'scheduled' }, { kind: 'scheduled' }],

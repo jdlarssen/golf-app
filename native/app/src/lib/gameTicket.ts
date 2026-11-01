@@ -22,6 +22,7 @@ import {
 } from '../../../../lib/games/hcpAllowance';
 import { finishedResultBadge } from '../../../../lib/games/finishedResultBadge';
 import { computePrimaryCtaState, type PrimaryCtaState } from '../../../../lib/games/primaryCtaState';
+import { softWithdrawOpen } from '../../../../lib/games/softWithdrawRule';
 import type { GameStatus } from '../../../../lib/games/status';
 import { expectedTeamSize, modeRequiresTeamNumber } from '../../../../lib/games/teamScope';
 import { getRatingForGender, type Rating, type TeeGender } from '../../../../lib/games/teeRating';
@@ -304,7 +305,7 @@ export type TicketStub =
   | { kind: 'notPlayer' }
   /** #2752: en avledet kamp i gang. Slagene føres i kampen den er avledet av. */
   | { kind: 'derived'; hostGameId: string; hostName: string | null }
-  | { kind: 'withdrawn'; bySelf: boolean }
+  | { kind: 'withdrawn'; bySelf: boolean; canUndo: boolean }
   /** Trukket fra en cup-kamp før start: bare arrangøren kan angre (#2752, E7). */
   | { kind: 'cupWithdrawn'; bySelf: boolean }
   | { kind: 'draft' }
@@ -346,6 +347,8 @@ export function ticketStub(opts: {
   leagueFlight?: boolean;
   /** #2752: spillet er en kamp i en cup. */
   cupGame?: boolean;
+  /** #2752: formatet, som avgjør om et trekk kan angres. */
+  gameMode?: string;
 }): TicketStub {
   const { me, status } = opts;
   if (opts.gate !== null) return { kind: 'gated', reason: opts.gate };
@@ -356,13 +359,17 @@ export function ticketStub(opts: {
   }
   if (me.withdrawnAt) {
     const bySelf = me.withdrawnByUserId === me.userId;
-    // #2752: spillets egen angring svarer `game_locked` før start, og i en cup er
-    // det arrangørens å angre (E7).
+    // #2752: før start kan spillet ikke angre trekket, og i en cup er det arrangørens (E7).
     if (opts.cupGame === true && (status === 'scheduled' || status === 'draft')) {
       return { kind: 'cupWithdrawn', bySelf };
     }
-    // #2358: bare den som trakk seg selv kan angre.
-    return { kind: 'withdrawn', bySelf };
+    // #2358: bare den som trakk seg selv kan angre. #2752: og bare der spillet lar
+    // det angres, ellers er knappen en blindvei.
+    return {
+      kind: 'withdrawn',
+      bySelf,
+      canUndo: bySelf && softWithdrawOpen({ status, gameMode: opts.gameMode ?? '' }),
+    };
   }
   if (status === 'draft') return { kind: 'draft' };
   if (status === 'scheduled') return { kind: 'scheduled' };
