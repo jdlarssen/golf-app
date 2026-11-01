@@ -47,6 +47,8 @@
 // `useEffect`, så testen kan ikke skille fokus fra mount.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { loadGameBundle, refreshGameBundle } from '../data/gameBundle';
+import { drainQueue } from '../data/syncWorker';
 import type { ScreenProps } from '../navigation';
 import { stackNavigation } from '../test/stackNavigation';
 import { GAME_BUNDLE_TIMEOUT_MS } from '../lib/useGameData';
@@ -390,6 +392,94 @@ describe('Scorecard', () => {
 
       await render(scorecardElement('half', jest.fn()));
 
+      await waitFor(() => expect(screen.getByTestId('queue-guard')).toBeTruthy());
+      expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+    });
+
+    const queued = (scoreId: string, abandonedAt: string | null = null) => ({
+      id: scoreId,
+      scoreId,
+      attemptCount: 0,
+      lastError: null,
+      createdAt: '2026-09-01T10:00:00.000Z',
+      abandonedAt,
+    });
+
+    // Evaluatoren på #2752: første fokus starter drainen før bundelen er lest. En
+    // telling fra den runden kjente ikke første halvdel, og åpnet knappen med
+    // slaget fortsatt i køen.
+    it('en drain som startet før bundelen var lest, åpner ikke knappen igjen', async () => {
+      let endFirstDrain: () => void = () => undefined;
+      (drainQueue as jest.Mock).mockImplementationOnce(
+        () => new Promise<void>((resolve) => { endFirstDrain = resolve; }),
+      );
+      mockState.bundle = half('back9', sibling('front9')) as never;
+      mockState.scores = scored(10, 18);
+      mockState.queue = Promise.resolve([queued('front9-game:me:3')]);
+
+      await render(scorecardElement('half', jest.fn()));
+      await waitFor(() => expect(screen.getByTestId('queue-guard')).toBeTruthy());
+
+      await act(async () => { endFirstDrain(); });
+
+      expect(screen.getByTestId('queue-guard')).toBeTruthy();
+      expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+    });
+
+    it('knappen er sperret fra første tegning med bundelen, til køen er lest med første halvdel', async () => {
+      let landBundle: (bundle: unknown) => void = () => undefined;
+      const pending = new Promise((resolve) => { landBundle = resolve; });
+      (loadGameBundle as jest.Mock).mockImplementationOnce(() => pending);
+      (refreshGameBundle as jest.Mock).mockImplementationOnce(() => pending);
+      mockState.scores = scored(10, 18);
+      mockState.queue = Promise.resolve([queued('front9-game:me:3')]);
+
+      await render(scorecardElement('half', jest.fn()));
+      await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+      let endRead: (rows: unknown[]) => void = () => undefined;
+      mockState.queue = new Promise((resolve) => { endRead = resolve; });
+      await act(async () => { landBundle(half('back9', sibling('front9'))); });
+
+      await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeTruthy());
+      expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+
+      await act(async () => { endRead([queued('front9-game:me:3')]); });
+      await waitFor(() => expect(screen.getByTestId('queue-guard')).toBeTruthy());
+      expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+    });
+
+    it.each([
+      ['køen er tom', []],
+      ['slaget er satt i karantene: det kommer aldri ut, og skal ikke låse spilleren', [queued('front9-game:me:3', '2026-09-01T11:00:00.000Z')]],
+      ['slaget hører til et helt annet spill', [queued('annet-spill:me:3')]],
+    ])('andre halvdel leverer når %s', async (_label, rows) => {
+      mockState.bundle = half('back9', sibling('front9')) as never;
+      mockState.scores = scored(10, 18);
+      mockState.queue = Promise.resolve(rows);
+
+      await render(scorecardElement('half', jest.fn()));
+
+      await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+      expect(screen.queryByTestId('queue-guard')).toBeNull();
+    });
+
+    it.each([
+      ['et vanlig spill', 'full', null],
+      ['andre halvdel uten søsken', 'back9', null],
+      ['første halvdel med andre halvdel levert', 'front9', sibling('back9', '2026-09-01T12:00:00.000Z')],
+    ])('%s holdes igjen bare av egne slag', async (_label, segment, siblingRow) => {
+      const holes = segment === 'front9' ? scored(1, 9) : segment === 'back9' ? scored(10, 18) : scored(1, 18);
+      mockState.bundle = half(segment, siblingRow) as never;
+      mockState.scores = holes;
+      mockState.queue = Promise.resolve([queued('annet-spill:me:3'), queued('front9-game:me:3'), queued('back9-game:me:12')]);
+
+      await render(scorecardElement('half', jest.fn()));
+      await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+      await screen.unmount();
+
+      mockState.queue = Promise.resolve([queued('half:me:3')]);
+      await render(scorecardElement('half', jest.fn()));
       await waitFor(() => expect(screen.getByTestId('queue-guard')).toBeTruthy());
       expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
     });
