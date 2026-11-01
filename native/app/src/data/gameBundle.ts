@@ -69,8 +69,10 @@ import { fetchSegmentSibling } from './segmentSibling';
  * v13 (#2752): la til `segmentSibling` og `sourceGameName`. En v12-oppføring
  * mangler dem: broen fra hull 9 til hull 10 ville ikke funnet den andre halvdelen,
  * og «Lever» ville stått på første halvdel til neste henting.
+ * v14 (#2751): la til `patsomeTeeStarters`, lagenes utslagsvalg. En v13-oppføring
+ * mangler det: velgeren ville spurt et lag som alt har valgt på nettet.
  */
-export const BUNDLE_PAYLOAD_VERSION = 13;
+export const BUNDLE_PAYLOAD_VERSION = 14;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -97,11 +99,18 @@ export interface BundleGame {
   /** Satt når spillet er en flight i en ligarunde; ingen spiller er da arrangør. */
   leagueRoundId: string | null;
   /**
-   * Hvem som slår ut på odde hull for hver side i foursomes. Valget gjøres på
-   * nettsiden; appen viser det bare.
+   * Hvem som slår ut på odde hull for hver side i foursomes. Valget kan også
+   * gjøres i appen (#2751), og da ligger det på telefonen til det er sendt:
+   * `useTeeStarters` leser begge.
    */
   foursomesSide1TeeStarterUserId: string | null;
   foursomesSide2TeeStarterUserId: string | null;
+  /**
+   * #2751: det samme valget i Patsome, ett per lag (`patsome_tee_starters`).
+   * Valgfri, som `approvedByUserId`: kode som bygger et spill uten den (Hjem,
+   * testene), står som før.
+   */
+  patsomeTeeStarters?: { teamNumber: number; teeStarterUserId: string }[];
   /** Slår sideturneringen av eller på for hele spillet. */
   sideTournamentEnabled: boolean;
   /**
@@ -289,6 +298,7 @@ interface GameRow {
   league_round_id: string | null;
   foursomes_side1_tee_starter_user_id: string | null;
   foursomes_side2_tee_starter_user_id: string | null;
+  patsome_tee_starters?: { team_number: number; tee_starter_user_id: string }[] | null;
   side_tournament_enabled: boolean;
   side_ld_count: number;
   side_ctp_count: number;
@@ -354,7 +364,7 @@ const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, league_round_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, league_round_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, patsome_tee_starters(team_number, tee_starter_user_id), side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 function toNumber(value: number | string | null): number | null {
   if (value == null) return null;
@@ -403,6 +413,10 @@ function toBundle(
       leagueRoundId: game.league_round_id,
       foursomesSide1TeeStarterUserId: game.foursomes_side1_tee_starter_user_id,
       foursomesSide2TeeStarterUserId: game.foursomes_side2_tee_starter_user_id,
+      patsomeTeeStarters: (game.patsome_tee_starters ?? []).map((row) => ({
+        teamNumber: row.team_number,
+        teeStarterUserId: row.tee_starter_user_id,
+      })),
       sideTournamentEnabled: game.side_tournament_enabled,
       sideLdCount: game.side_ld_count,
       sideCtpCount: game.side_ctp_count,

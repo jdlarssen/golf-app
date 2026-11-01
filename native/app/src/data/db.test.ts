@@ -42,15 +42,15 @@ async function countRows(
 describe('lokalt skjema', () => {
   useFreshModules();
 
-  it('åpner en fersk base rett på v5, uten device_settings og med utslagstabellene', async () => {
+  it('åpner en fersk base rett på v6, uten device_settings og med utslagstabellene', async () => {
     const { getCacheEntry, getDb, putCacheEntry } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
     expect(await tableNames(db)).not.toContain('device_settings');
-    expect(await tableNames(db)).toEqual(expect.arrayContaining(['tee_shots', 'tee_shot_queue']));
+    expect(await tableNames(db)).toEqual(expect.arrayContaining(['tee_shots', 'tee_shot_queue', 'tee_starters']));
 
     await putCacheEntry(db, {
       key: 'game:1',
@@ -91,7 +91,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
 
     // Slaget står, uendret.
     expect(await listScoresForGame(db, GAME)).toEqual([
@@ -140,7 +140,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
     expect(await getCacheEntry(db, 'home')).toMatchObject({ payload: '{"cards":[]}' });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
@@ -178,7 +178,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(await countRows(db, ['scores', 'sync_queue', 'cache_entries'])).toEqual({
       scores: 1,
@@ -226,7 +226,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
     expect(await countRows(db, ['scores', 'sync_queue', 'conflicts', 'cache_entries', 'tee_shots', 'tee_shot_queue'])).toEqual({
       scores: 1,
       sync_queue: 1,
@@ -239,6 +239,91 @@ describe('lokalt skjema', () => {
     expect(await listQueue(db)).toEqual([
       expect.objectContaining({ scoreId: `${GAME}:${ME}:5`, attemptCount: 2, lastError: 'nett' }),
     ]);
+  });
+
+  // #2751: en telefon på v5 får valg-tabellen og beholder hver rad, også utslagene.
+  it('løfter en v5-base til v6 uten å miste en eneste rad', async () => {
+    const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5 } =
+      require('./db') as Db;
+    const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
+
+    const existing = await openDatabaseAsync(DATABASE_NAME);
+    await existing.execAsync(MIGRATION_V1);
+    await existing.execAsync(MIGRATION_V2);
+    await existing.execAsync(MIGRATION_V3);
+    await existing.execAsync(MIGRATION_V4);
+    await existing.execAsync(MIGRATION_V5);
+    await existing.execAsync('PRAGMA user_version = 5;');
+    await existing.runAsync(
+      `INSERT INTO scores
+         (id, game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, server_updated_at)
+       VALUES ('${GAME}:${ME}:5', '${GAME}', '${ME}', 5, 3, 1, '${ME}', '2026-10-15T09:00:00.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO sync_queue (id, score_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('${GAME}:${ME}:5', '${GAME}:${ME}:5', 2, 'nett', '2026-10-15T09:00:01.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO conflicts
+         (id, game_id, user_id, hole_number, local_strokes, server_strokes, resolved_at, for_own_score)
+       VALUES ('konflikt-1', '${GAME}', '${ME}', 4, 4, 5, '2026-10-15T09:00:02.000Z', 1);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO cache_entries (key, payload, fetched_at)
+       VALUES ('game:${GAME}', '{"game":{}}', '2026-10-15T09:00:03.000Z');`,
+    );
+    await existing.runAsync(
+      `INSERT INTO tee_shots
+         (id, game_id, team_number, hole_number, tee_shot_by, entered_by, client_updated_at, server_updated_at)
+       VALUES ('${GAME}:1:7', '${GAME}', 1, 7, '${ME}', '${ME}', '2026-10-15T09:00:04.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO tee_shot_queue (id, tee_shot_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('${GAME}:1:7', '${GAME}:1:7', 0, NULL, '2026-10-15T09:00:04.000Z', NULL);`,
+    );
+
+    const { getDb, getScore, getTeeShot } = require('./db') as Db;
+    const db = await getDb();
+
+    expect(
+      await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
+    ).toEqual({ user_version: 6 });
+    expect(
+      await countRows(db, ['scores', 'sync_queue', 'conflicts', 'cache_entries', 'tee_shots', 'tee_shot_queue', 'tee_starters']),
+    ).toEqual({
+      scores: 1,
+      sync_queue: 1,
+      conflicts: 1,
+      cache_entries: 1,
+      tee_shots: 1,
+      tee_shot_queue: 1,
+      tee_starters: 0,
+    });
+    expect(await getScore(db, `${GAME}:${ME}:5`)).toMatchObject({ strokes: 3, putts: 1 });
+    expect(await getTeeShot(db, `${GAME}:1:7`)).toMatchObject({ teeShotBy: ME });
+  });
+
+  // #2751: første valg står også på telefonen, og raden gir ikke etter for et nytt trykk.
+  it('lagrer utslagsvalget per spill og lag, og et nytt trykk overskriver det ikke', async () => {
+    const { getDb, listPendingTeeStarters, listTeeStartersForGame } = require('./db') as Db;
+    const { writeTeeStarter } = require('./writeTeeStarter') as typeof import('./writeTeeStarter');
+    const db = await getDb();
+
+    expect(await writeTeeStarter({ gameId: GAME, teamNumber: 1, teeStarterId: ME })).toEqual({
+      gameId: GAME,
+      teamNumber: 1,
+      teeStarterId: ME,
+      pending: true,
+      attemptCount: 0,
+    });
+    expect(await writeTeeStarter({ gameId: GAME, teamNumber: 1, teeStarterId: 'makker' })).toMatchObject({
+      teeStarterId: ME,
+    });
+    await writeTeeStarter({ gameId: GAME, teamNumber: 2, teeStarterId: 'en-annen' });
+    await writeTeeStarter({ gameId: 'annet-spill', teamNumber: 1, teeStarterId: 'en-tredje' });
+
+    expect((await listTeeStartersForGame(db, GAME)).map((row) => row.teeStarterId)).toEqual([ME, 'en-annen']);
+    expect(await listPendingTeeStarters(db)).toHaveLength(3);
   });
 
   // #2580: utslagene og køen deres, felt for felt som webbens Dexie-typer.
@@ -334,6 +419,7 @@ describe('wipeLocalData', () => {
       putQueueItem,
       putScore,
       putTeeShot,
+      insertTeeStarterIfAbsent,
       putTeeShotQueueItem,
       wipeLocalData,
     } = require('./db') as Db;
@@ -390,6 +476,7 @@ describe('wipeLocalData', () => {
       lastError: null,
       createdAt: '2026-09-01T09:00:04.000Z',
     });
+    await insertTeeStarterIfAbsent(db, GAME, 1, ME);
 
     const tables = await tableNames(db);
 
@@ -405,6 +492,7 @@ describe('wipeLocalData', () => {
       sync_queue: 1,
       tee_shot_queue: 1,
       tee_shots: 1,
+      tee_starters: 1,
     });
 
     await wipeLocalData();
@@ -432,7 +520,7 @@ describe('wipeLocalData', () => {
     // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 5 });
+    ).toEqual({ user_version: 6 });
     expect(await getCacheEntry(db, 'home')).toBeUndefined();
 
     await putCacheEntry(db, {
