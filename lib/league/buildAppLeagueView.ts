@@ -1,5 +1,6 @@
 import type { LeagueSnapshot } from './getLigaSnapshot';
 import type { AppLeagueParticipantDetails, AppLeagueView } from './appLeagueView';
+import { participantShareUrl } from './joinCode';
 import { normalizeSimSettings } from './simSettings';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 
@@ -25,6 +26,7 @@ export function buildAppLeagueView(
   // The league's own axis: gross in a gross league, net otherwise ('both' is
   // legacy and ranks net first, as the web panel does).
   const table = (scoring === 'gross' ? standings.gross : standings.net) ?? standings.net ?? standings.gross;
+  const isParticipant = participants.some((p) => p.userId === userId);
 
   return {
     league: {
@@ -42,6 +44,7 @@ export function buildAppLeagueView(
       seasonEnd: league.season_end,
       hcpAllowancePct: league.hcp_allowance_pct,
       hcpMaxStrokes: league.hcp_max_strokes,
+      shareUrl: participantShareUrl(league, isParticipant),
     },
     rounds: rounds.map((r) => ({
       id: r.id,
@@ -80,7 +83,7 @@ export function buildAppLeagueView(
     })),
     me: {
       userId,
-      isParticipant: participants.some((p) => p.userId === userId),
+      isParticipant,
       isOrganizer: league.created_by === userId,
     },
   };

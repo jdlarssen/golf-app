@@ -27,7 +27,7 @@ import { markerQueues, type QueuedCard } from '@/lib/league/markerQueues';
 import { LeagueIntroSteps } from '@/components/league/LeagueIntroSteps';
 import { ShareLinkField } from '@/components/ui/ShareLinkField';
 import { GetTheApp } from '@/components/app/GetTheApp';
-import { leagueJoinUrl } from '@/lib/league/joinCode';
+import { participantShareUrl } from '@/lib/league/joinCode';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
@@ -86,19 +86,6 @@ const WINDOW_CHIP_STYLES: Record<
     color: 'var(--score-over2-fg)',
   },
 };
-
-/**
- * #2662: «Del ligaen» for a participant while the link is on and the season is
- * not over. Only a league without a club has a code (setLeagueJoinLink refuses
- * the rest), so a club league never shows it.
- */
-function participantShareUrl(
-  league: { join_code: string | null; status: string },
-  isParticipant: boolean,
-): string | null {
-  if (!isParticipant || !league.join_code || league.status === 'finished') return null;
-  return leagueJoinUrl(league.join_code);
-}
 
 /**
  * #2662: the receipt after joining through the shareable link (with «Hent
