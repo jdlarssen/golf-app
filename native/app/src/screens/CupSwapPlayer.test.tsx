@@ -104,26 +104,45 @@ describe('valgene', () => {
   });
 });
 
-describe('søket', () => {
+describe('en lang liste', () => {
   const many = Array.from({ length: 9 }, (_, i) => ({ userId: `u${i}`, name: `Spiller ${i}` }));
 
-  it('en kort liste har ikke søk', async () => {
+  it('en kort liste har verken søk eller «Vis alle»', async () => {
     mockView = { ok: true, view: view() };
     await renderSwap();
     await screen.findByTestId('cup-swap-label');
     expect(screen.queryByTestId('cup-swap-search')).toBeNull();
+    expect(screen.queryByTestId('cup-swap-show-all')).toBeNull();
   });
 
-  it('en lang liste har søk, og den valgte står selv om den ikke treffer', async () => {
-    mockView = { ok: true, view: view({ in: [{ userId: 'anne', name: 'Anne Admin' }, ...many] }) };
+  it('seks rader og «Vis alle», og den valgte står selv om den ligger lenger ned', async () => {
+    mockView = { ok: true, view: view({ in: many }) };
     await renderSwap();
-    await fireEvent.changeText(await screen.findByTestId('cup-swap-search'), 'spiller 3');
-    expect(screen.getByTestId('cup-swap-in-u3')).toBeTruthy();
-    expect(screen.queryByTestId('cup-swap-in-u4')).toBeNull();
-    expect(screen.getByTestId('cup-swap-in-anne').props.accessibilityState.selected).toBe(true);
+    expect(await screen.findByTestId('cup-swap-in-u5')).toBeTruthy();
+    expect(screen.queryByTestId('cup-swap-in-u6')).toBeNull();
+    await fireEvent.press(screen.getByTestId('cup-swap-show-all'));
+    await fireEvent.press(screen.getByTestId('cup-swap-in-u8'));
+    await fireEvent.press(screen.getByTestId('cup-swap-show-all'));
+    expect(screen.queryByTestId('cup-swap-in-u7')).toBeNull();
+    expect(screen.getByTestId('cup-swap-in-u8').props.accessibilityState.selected).toBe(true);
+  });
 
-    await fireEvent.press(screen.getByTestId('cup-swap-in-u3'));
-    expect(screen.getByTestId('cup-swap-summary')).toHaveTextContent('Spiller 3 går inn for Ola Kompis.');
+  it('et søk uten treff sier det', async () => {
+    mockView = { ok: true, view: view({ in: many }) };
+    await renderSwap();
+    await fireEvent.changeText(await screen.findByTestId('cup-swap-search'), 'finnes ikke');
+    expect(screen.getByTestId('cup-swap-no-match')).toHaveTextContent('Ingen spillere med det navnet.');
+  });
+
+  it('søket treffer alle, og valget er det som sendes', async () => {
+    mockView = { ok: true, view: view({ in: many }) };
+    await renderSwap();
+    await fireEvent.changeText(await screen.findByTestId('cup-swap-search'), 'spiller 8');
+    expect(screen.queryByTestId('cup-swap-in-u0')).toBeNull();
+    await fireEvent.press(screen.getByTestId('cup-swap-in-u8'));
+    expect(screen.getByTestId('cup-swap-summary')).toHaveTextContent('Spiller 8 går inn for Ola Kompis.');
+    await fireEvent.press(screen.getByTestId('cup-swap-submit'));
+    expect(swap()).toHaveBeenCalledWith('cup-1', 'g', 'ola', 'u8');
   });
 });
 

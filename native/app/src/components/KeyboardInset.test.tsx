@@ -234,6 +234,13 @@ it('scorekortet, der markørvalget har søkefelt, sprer KEYBOARD_SCROLL_PROPS p�
   expect(spreads(target[0])).toBe(true);
 });
 
+// Byttet i en cup har søkefeltet fra `PickerSearch` (#2752).
+it('byttet i en cup, med søkefelt, sprer KEYBOARD_SCROLL_PROPS på rullefeltet', () => {
+  const target = scrollViewOpeners(read('screens/CupSwapPlayer.tsx')).filter((o) => o.includes('testID="cup-swap-screen"'));
+  expect(target).toHaveLength(1);
+  expect(spreads(target[0])).toBe(true);
+});
+
 describe('Android-halvdelen: roten er pakket inn', () => {
   const app = fs.readFileSync(path.join(SRC, '..', 'App.tsx'), 'utf8');
   const wrapped = (inner: string) =>
