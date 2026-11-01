@@ -53,7 +53,7 @@ beforeEach(() => {
   afterLogin.mockClear();
   invitation = { email: EMAIL, game_id: GAME, accepted_at: null, expires_at: inDays(7) };
   invitationError = null;
-  game = { status: 'scheduled', registration_type: 'individual' };
+  game = { status: 'scheduled', registration_type: 'solo' };
   gameError = null;
   rosterRow = null;
   rosterError = null;
@@ -91,7 +91,7 @@ describe('openInvitation', () => {
   });
 
   it('a round that has started: no spot, and the invitation is still consumed', async () => {
-    game = { status: 'active', registration_type: 'individual' };
+    game = { status: 'active', registration_type: 'solo' };
     afterLogin.mockImplementationOnce(async () => {
       invitation!.accepted_at = inDays(0);
       return { landing: null };
@@ -101,7 +101,7 @@ describe('openInvitation', () => {
   });
 
   it('a guest already on a finished round gets the round', async () => {
-    game = { status: 'finished', registration_type: 'individual' };
+    game = { status: 'finished', registration_type: 'solo' };
     rosterRow = { user_id: ME };
     expect(await open()).toEqual({ status: 'in_game', gameId: GAME });
   });
@@ -115,7 +115,7 @@ describe('openInvitation', () => {
   });
 
   it('a draft is hidden, also with a roster spot (#2445)', async () => {
-    game = { status: 'draft', registration_type: 'individual' };
+    game = { status: 'draft', registration_type: 'solo' };
     expect(await open()).toEqual({ status: 'no_game' });
     rosterRow = { user_id: ME };
     expect(await open()).toEqual({ status: 'no_game' });
