@@ -12,7 +12,7 @@
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { preferredName, type CupPlayerPointsResult } from './computeCupPlayerPoints';
-import type { CupRoster } from './getCupSnapshot';
+import type { CupRoster } from './cupRoster';
 
 /**
  * Spillemodi der hver spiller fører sin EGEN ball, og prestasjon derfor kan

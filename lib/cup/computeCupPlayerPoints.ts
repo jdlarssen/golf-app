@@ -13,7 +13,8 @@
 //     lag-attribuert, ingen spiller-kobling).
 
 import { cupMatchDecision, type CupMatchSummary } from './computeCupLeaderboard';
-import type { CupRoster, CupRosterPlayer, CupSideAwardSnapshot } from './getCupSnapshot';
+import type { CupRoster, CupRosterPlayer } from './cupRoster';
+import type { CupSideAwardSnapshot } from './cupSideAwardSnapshot';
 
 export type CupPlayerContribution =
   | {
