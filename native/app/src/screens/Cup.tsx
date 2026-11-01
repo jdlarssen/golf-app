@@ -33,7 +33,13 @@ import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
-export function Cup({ route, navigation }: ScreenProps<'Cup'>) {
+export function Cup(props: ScreenProps<'Cup'>) {
+  // Et varsel om en annen cup bytter bare parameteren på den åpne skjermen. Nøkkelen
+  // gir et nytt rom, så én cup aldri står under en annens id.
+  return <CupRoom key={props.route.params.cupId} {...props} />;
+}
+
+function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
   const { cupId } = route.params;
@@ -53,6 +59,8 @@ export function Cup({ route, navigation }: ScreenProps<'Cup'>) {
       setView(result.view);
       setFailure(null);
     } else {
+      // Borte for deg: det skjermen hadde, skal ikke komme tilbake uten nett.
+      if (result.reason === 'not_found') setView(null);
       setFailure(result.reason);
     }
     setLoading(false);
@@ -78,8 +86,7 @@ export function Cup({ route, navigation }: ScreenProps<'Cup'>) {
       </View>
     );
   }
-  // Cupen finnes ikke (lenger) for deg: det skjermen hadde, er ikke ditt å se.
-  if (view === null || failure === 'not_found') {
+  if (view === null) {
     return <CupLoadFailed reason={failure ?? 'load_failed'} retrying={loading} onRetry={() => void load()} />;
   }
 

@@ -39,17 +39,20 @@ function answer(...results: CupResult[]) {
   mockLast = results[results.length - 1];
 }
 
-async function renderCup() {
-  const navigate = jest.fn();
-  const props = {
+function cupProps(navigate: jest.Mock, cupId = 'cup-1') {
+  return {
     navigation: {
       navigate,
-      getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'Cup', params: { cupId: 'cup-1' } }] }),
+      getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'Cup', params: { cupId } }] }),
     },
-    route: { key: 'cup', name: 'Cup', params: { cupId: 'cup-1' } },
-  };
-  await render(<Cup {...(props as unknown as ScreenProps<'Cup'>)} />);
-  return { navigate };
+    route: { key: 'cup', name: 'Cup', params: { cupId } },
+  } as unknown as ScreenProps<'Cup'>;
+}
+
+async function renderCup() {
+  const navigate = jest.fn();
+  const view = await render(<Cup {...cupProps(navigate)} />);
+  return { navigate, view };
 }
 
 const refocus = async () => {
@@ -90,6 +93,26 @@ describe('Cup — mens cupen pågår (#1468)', () => {
     expect(navigate).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByTestId('cup-match-mine-1'));
     expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'mine-1' });
+  });
+
+  it('en kamp du leser uten å spille (arrangøren, admin) har også en knapp inn', async () => {
+    answer({ ok: true, view: liveCup({ matches: [cupMatch({ gameId: 'other-1', canOpen: true })] }) });
+    const { navigate } = await renderCup();
+
+    expect(await screen.findByTestId('cup-other-matches')).toBeTruthy();
+    expect(screen.getByTestId('cup-match-other-1').props.accessibilityRole).toBe('button');
+    await fireEvent.press(screen.getByTestId('cup-match-other-1'));
+    expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'other-1' });
+  });
+
+  it('din egen kamp uten lesetilgang (utkast) har ingen knapp', async () => {
+    answer({ ok: true, view: liveCup({ matches: [cupMatch({ gameId: 'mine-1', mine: true, canOpen: false })] }) });
+    const { navigate } = await renderCup();
+
+    expect(await screen.findByTestId('cup-my-matches')).toBeTruthy();
+    expect(screen.getByTestId('cup-match-mine-1').props.accessibilityRole).toBeUndefined();
+    await fireEvent.press(screen.getByTestId('cup-match-mine-1'));
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('uten egne kamper heter lista «Matcher»', async () => {
@@ -215,6 +238,29 @@ describe('Cup — ferdig cup', () => {
 });
 
 describe('Cup — lasting og feil', () => {
+  it('borte for deg (404), så uten nett: den gamle cupen kommer ikke tilbake', async () => {
+    answer({ ok: true, view: liveCup() }, { ok: false, reason: 'not_found' }, { ok: false, reason: 'offline' });
+    await renderCup();
+    await screen.findByTestId('cup-name');
+    await refocus();
+    expect(screen.getByTestId('cup-not-found')).toBeTruthy();
+    await refocus();
+    expect(screen.queryByTestId('cup-stale')).toBeNull();
+    expect(screen.queryByTestId('cup-name')).toBeNull();
+    expect(screen.getByTestId('cup-load-failed')).toBeTruthy();
+  });
+
+  it('et varsel om en annen cup uten nett viser ikke den forrige under den nye id-en', async () => {
+    answer({ ok: true, view: liveCup() }, { ok: false, reason: 'offline' });
+    const { navigate, view } = await renderCup();
+    await screen.findByTestId('cup-name');
+
+    await view.rerender(<Cup {...cupProps(navigate, 'cup-2')} />);
+    expect(screen.queryByTestId('cup-name')).toBeNull();
+    expect(screen.getByTestId('cup-load-failed')).toBeTruthy();
+  });
+
+
   it('står med lasting til svaret kommer', async () => {
     let resolve: (result: CupResult) => void = () => {};
     const { fetchCup } = jest.requireMock('../data/cup') as { fetchCup: jest.Mock };
