@@ -9,10 +9,16 @@
 // Hvorfor JSON og ikke normaliserte tabeller: skjermene trenger hele bundelen
 // samlet, og normalisering er støy helt til noe faktisk spør om delene hver for
 // seg. Ingen scores her — de eier `scores`-tabellen og LWW-regelen.
+import {
+  isSegmentSiblingCandidate,
+  type SegmentSibling,
+} from '../../../../lib/games/segmentSiblingRules';
+import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { deleteCacheEntry, getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
 import { GameNotFoundError } from './gameNotFound';
+import { fetchSegmentSibling } from './segmentSibling';
 
 /**
  * Nyttelast-versjonen som ligger lagret sammen med bundelen.
@@ -60,8 +66,11 @@ import { GameNotFoundError } from './gameNotFound';
  * v12 (#2688): la til `leagueRoundId`. En v11-oppføring mangler det: spilleren
  * som startet en ligaflight ville fått arrangørseksjonen (Trekk medspiller,
  * Avslutt runden) på startbilletten til neste henting.
+ * v13 (#2752): la til `segmentSibling` og `sourceGameName`. En v12-oppføring
+ * mangler dem: broen fra hull 9 til hull 10 ville ikke funnet den andre halvdelen,
+ * og «Lever» ville stått på første halvdel til neste henting.
  */
-export const BUNDLE_PAYLOAD_VERSION = 12;
+export const BUNDLE_PAYLOAD_VERSION = 13;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -240,6 +249,18 @@ export interface GameBundle {
   /** `null` når spillet ikke har tee. Valgfri av samme grunn som over. */
   teeRatings?: BundleTeeRatings | null;
   holes: BundleHole[];
+  /**
+   * #2752: den andre halvdelen av en delt cup-dag, for denne spilleren. `null`
+   * for alle andre spill, og for en spiller uten rad i den andre halvdelen.
+   * Ligger her så broen fra hull 9 til hull 10 virker uten nett. Valgfri av samme
+   * grunn som `teeRatings`.
+   */
+  segmentSibling?: SegmentSibling | null;
+  /**
+   * #2752: navnet på kampen slagene føres i, når spillet er en avledet kamp.
+   * `null` for alle andre spill, og når raden ikke kunne leses.
+   */
+  sourceGameName?: string | null;
   /** Når bundelen sist ble hentet fra serveren (ISO). */
   fetchedAt: string;
 }
@@ -357,8 +378,13 @@ function toTeeRatings(tee: TeeBoxRow | null): BundleTeeRatings | null {
   };
 }
 
-function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
+function toBundle(
+  game: GameRow,
+  players: PlayerRow[],
+  related: Pick<GameBundle, 'segmentSibling' | 'sourceGameName'>,
+): GameBundle {
   return {
+    ...related,
     game: {
       id: game.id,
       name: game.name,
@@ -460,7 +486,36 @@ export async function fetchGameBundle(
     throw new GameNotFoundError(gameId);
   }
 
-  return toBundle(gameRes.data, playersRes.data ?? []);
+  return toBundle(gameRes.data, playersRes.data ?? [], await fetchRelated(gameRes.data, signal));
+}
+
+/**
+ * #2752: det spillet trenger fra de andre spillene i bunten. Bare for dem som har
+ * noen: et vanlig spill koster ikke et eneste ekstra kall.
+ *
+ * En feil fra søsken-ruta slipper ut og lar den forrige bundelen stå (se
+ * `refreshGameBundle`). Navnet er bare pynt: uten det står «en annen runde».
+ */
+async function fetchRelated(
+  game: GameRow,
+  signal: AbortSignal | undefined,
+): Promise<Pick<GameBundle, 'segmentSibling' | 'sourceGameName'>> {
+  const candidate = isSegmentSiblingCandidate({
+    holeSegment: game.hole_segment as HoleSegment,
+    sourceGameId: game.source_game_id,
+    tournamentId: game.tournament_id,
+  });
+  return {
+    segmentSibling: candidate ? await fetchSegmentSibling(game.id) : null,
+    sourceGameName: game.source_game_id ? await fetchGameName(game.source_game_id, signal) : null,
+  };
+}
+
+async function fetchGameName(gameId: string, signal: AbortSignal | undefined): Promise<string | null> {
+  let query = supabase.from('games').select('name').eq('id', gameId);
+  if (signal) query = query.abortSignal(signal);
+  const { data } = await query.maybeSingle<{ name: string }>();
+  return data?.name ?? null;
 }
 
 /**

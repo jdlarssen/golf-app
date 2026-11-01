@@ -5,11 +5,17 @@
 //     en tom skjerm i et vanlig spill;
 //  2. at match-etikettene sier det motoren mener. Fasiten kommer derfor FRA
 //     motoren i den siste testen, ikke fra tall skrevet for hånd her.
+import {
+  firstHalfHoleNumbersForSegment,
+  hiddenHoleNumbersForSegment,
+} from '../../../../lib/games/holeScope';
+import { buildModeResultFromData } from '../../../../lib/scoring/buildModeResultFromData';
 import type { WolfResult } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { LocalScore } from '../data/db';
 import {
   carriedPotLine,
+  firstHalfScope,
   grossLines,
   leaderboardVisibility,
   matchStanding,
@@ -372,5 +378,122 @@ describe('wolfCatchUpRuleLine (#2314)', () => {
 
   it('spill fra før #2314 har ingen linje', () => {
     expect(wolfCatchUpRuleLine({ rotation: 'random_with_trailing', players: players(4) })).toBeNull();
+  });
+});
+
+// #2752, kriterium 4: samme spill gir samme stilling og samme skjulte hull i appen
+// og på nettet. Fasiten er de delte funksjonene nettets tavle kaller.
+describe('en halvdel av en delt cup-dag', () => {
+  const players = (team: number, userId: string): BundlePlayer =>
+    player({ userId, teamNumber: team, courseHandicap: 0, name: userId });
+  const roster = [players(1, 'a'), players(1, 'b'), players(2, 'c'), players(2, 'd')];
+  const holes = Array.from({ length: 18 }, (_, i) => ({
+    holeNumber: i + 1,
+    parMens: 4,
+    parLadies: 4,
+    parJuniors: 4,
+    strokeIndex: i + 1,
+  }));
+  const bundle = (holeSegment: string, status = 'active'): GameBundle =>
+    ({
+      game: {
+        id: 'g',
+        name: 'Best ball',
+        status,
+        gameMode: 'best_ball',
+        modeConfig: { kind: 'best_ball' },
+        holeSegment,
+        sourceGameId: null,
+        scoreVisibility: 'live',
+      },
+      players: roster,
+      holes,
+      courseName: null,
+      teeBoxName: null,
+      fetchedAt: '',
+    }) as unknown as GameBundle;
+  const stroke = (userId: string, holeNumber: number, strokes = 4): LocalScore => ({
+    id: `g#${userId}#${holeNumber}`,
+    gameId: 'g',
+    userId,
+    holeNumber,
+    strokes,
+    putts: null,
+    enteredBy: 'a',
+    clientUpdatedAt: '',
+    serverUpdatedAt: null,
+  });
+  const allPlayed = (from: number, to: number) =>
+    ['a', 'b', 'c', 'd'].flatMap((userId) =>
+      Array.from({ length: to - from + 1 }, (_, i) => stroke(userId, from + i)),
+    );
+
+  it.each([
+    ['full', [1, 2, 3, 4, 5, 6, 7, 8, 9]],
+    ['front9', [1, 2, 3, 4, 5]],
+    ['back9', [10, 11, 12, 13, 14]],
+  ] as const)('%s åpner og viser det nettets port regner ut', (segment, open) => {
+    expect(firstHalfHoleNumbersForSegment(segment)).toEqual(open);
+    const [from, to] = [open[0], open[open.length - 1]];
+
+    const scope = firstHalfScope(bundle(segment), allPlayed(from, to));
+
+    expect(scope.view).toBe('first-half');
+    expect(scope.bundle.holes.map((h) => h.holeNumber)).toEqual(open);
+    expect([...new Set(scope.scores.map((s) => s.holeNumber))].sort((a, b) => a - b)).toEqual(open);
+  });
+
+  it('venter til første halvdel av SEGMENTET er spilt, ikke hull 1–9', () => {
+    expect(firstHalfScope(bundle('back9'), allPlayed(10, 13)).view).toBe('waiting');
+    expect(firstHalfScope(bundle('back9'), allPlayed(10, 14)).view).toBe('first-half');
+  });
+
+  it('skjuler resten av segmentet til arrangøren avslutter', () => {
+    expect(hiddenHoleNumbersForSegment('back9')).toEqual([15, 16, 17, 18]);
+    const scope = firstHalfScope(bundle('back9'), allPlayed(10, 18));
+    expect(scope.scores.some((s) => s.holeNumber > 14)).toBe(false);
+
+    expect(firstHalfScope(bundle('back9', 'finished'), allPlayed(10, 18)).scores).toHaveLength(36);
+  });
+
+  it('motoren regner bare hullene i segmentet, som nettets tavle', () => {
+    // Web: `buildModeResultFromData` klipper hullene med `hole_segment`. Slag
+    // utenfor segmentet (en feilført rad) skal ikke telle.
+    const shared = buildModeResultFromData(
+      {
+        id: 'g',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball' } as never,
+        course_id: 'c',
+        hole_segment: 'back9',
+      },
+      roster.map((p) => ({
+        user_id: p.userId,
+        team_number: p.teamNumber,
+        flight_number: null,
+        course_handicap: p.courseHandicap,
+        tee_gender: 'mens' as const,
+        withdrawn_at: null,
+        users: { name: p.name, nickname: null },
+      })),
+      holes.map((h) => ({
+        hole_number: h.holeNumber,
+        par_mens: h.parMens,
+        par_ladies: h.parLadies,
+        par_juniors: h.parJuniors,
+        stroke_index: h.strokeIndex,
+      })) as never,
+      allPlayed(10, 18).map((s) => ({
+        user_id: s.userId,
+        hole_number: s.holeNumber,
+        strokes: s.strokes,
+      })),
+    );
+    const app = computeGameLeaderboard(bundle('back9', 'finished'), [
+      ...allPlayed(10, 18),
+      stroke('a', 3, 9),
+    ]);
+
+    expect(app.ok && app.result).toEqual(shared);
   });
 });

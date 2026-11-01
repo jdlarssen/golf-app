@@ -260,6 +260,92 @@ describe('gameBundle', () => {
     expect(bundle.players[0]!.resultSummary).toBeNull();
   });
 
+  // #2752: broen fra hull 9 til hull 10 må virke uten nett.
+  describe('den andre halvdelen', () => {
+    const CUP_HOST = { hole_segment: 'front9', tournament_id: 'cup-1' };
+    const SIBLING = {
+      gameId: 'back9-game',
+      gameMode: 'best_ball',
+      holeSegment: 'back9',
+      mySubmittedAt: null,
+      myTeamNumber: 1,
+    };
+    const route = jest.fn();
+
+    beforeEach(() => {
+      route.mockReset();
+      jest.doMock('./segmentSibling', () => ({ fetchSegmentSibling: route }));
+    });
+
+    it('ligger i bundelen og overlever en omstart uten nett', async () => {
+      riggFetch(CUP_HOST);
+      route.mockResolvedValue(SIBLING);
+      const { loadGameBundle, refreshGameBundle } = bundleModule();
+
+      const fetched = await refreshGameBundle(GAME);
+
+      expect(route).toHaveBeenCalledWith(GAME);
+      expect(fetched.segmentSibling).toEqual(SIBLING);
+      expect((await loadGameBundle(GAME))?.segmentSibling).toEqual(SIBLING);
+    });
+
+    it('feiler spørsmålet, står forrige bundel, så «Lever» ikke dukker opp av seg selv', async () => {
+      riggFetch(CUP_HOST);
+      route.mockResolvedValue(SIBLING);
+      const { loadGameBundle, refreshGameBundle } = bundleModule();
+      const first = await refreshGameBundle(GAME);
+
+      riggFetch(CUP_HOST);
+      route.mockRejectedValue(new Error('Fant ikke den andre halvdelen: network'));
+
+      await expect(refreshGameBundle(GAME)).rejects.toThrow('network');
+      expect(await loadGameBundle(GAME)).toEqual(first);
+    });
+
+    it.each([
+      ['et vanlig spill', {}],
+      ['en halvdel uten cup', { hole_segment: 'front9', tournament_id: null }],
+      ['en avledet kamp', { ...CUP_HOST, source_game_id: 'host', hole_segment: 'back9' }],
+    ])('%s spør ikke serveren', async (_label, overrides) => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [
+          queryStub({ data: { ...GAME_ROW, ...overrides }, error: null }),
+          queryStub({ data: { name: 'Best ball, flight 1' }, error: null }),
+        ],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+      });
+      const { refreshGameBundle } = bundleModule();
+
+      const fetched = await refreshGameBundle(GAME);
+
+      expect(route).not.toHaveBeenCalled();
+      expect(fetched.segmentSibling).toBeNull();
+    });
+
+    it('en avledet kamp får navnet på kampen slagene føres i', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const nameQuery = queryStub({ data: { name: 'Best ball, flight 1' }, error: null });
+      routeFrom({
+        games: [queryStub({ data: { ...GAME_ROW, source_game_id: 'host' }, error: null }), nameQuery],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+      });
+      const { refreshGameBundle } = bundleModule();
+
+      const fetched = await refreshGameBundle(GAME);
+
+      expect(fetched.sourceGameName).toBe('Best ball, flight 1');
+      expect(nameQuery.steps).toContainEqual({ method: 'eq', args: ['id', 'host'] });
+    });
+
+    it('et vanlig spill henter ikke noe navn', async () => {
+      riggFetch();
+      const { refreshGameBundle } = bundleModule();
+
+      expect((await refreshGameBundle(GAME)).sourceGameName).toBeNull();
+    });
+  });
+
   it('lar den forrige bundelen stå når en refetch feiler', async () => {
     riggFetch();
     const { loadGameBundle, refreshGameBundle } = bundleModule();

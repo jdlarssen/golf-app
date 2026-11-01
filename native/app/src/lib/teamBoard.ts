@@ -60,6 +60,7 @@ import {
 import { formatNameList, shortDisplayName } from './display';
 import { gateReason } from './formatGate';
 import { heroAction } from './homeHero';
+import { gameSegment } from './segmentRound';
 import { formatMessage } from './kavalkadeCopy';
 import { firstHalfScope, hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
 import { computeGameLeaderboard } from './scoringContext';
@@ -472,8 +473,8 @@ function liveBoard(
     },
     rows,
     viewerTeam,
-    halves: firstHalf ? halvesText() : null,
-    lock: firstHalf ? lockText() : null,
+    halves: firstHalf ? halvesText(bundle.game) : null,
+    lock: firstHalf ? lockText(bundle.game) : null,
     holeCard:
       viewerTeam === null ? null : holeCard(bundle, result, viewerTeam, firstHalf, userId, teeShots),
     teeShotCard: null,
@@ -482,24 +483,25 @@ function liveBoard(
 }
 
 /** Hullene i første halvdel og resten, samme spenn som webbens tavle (`holeScope.ts`). */
-function halves(): { open: number[]; hidden: number[]; last: number } {
+function halves(game: GameBundle['game']): { open: number[]; hidden: number[]; last: number } {
+  const segment = gameSegment(game);
   return {
-    open: firstHalfHoleNumbersForSegment('full'),
-    hidden: hiddenHoleNumbersForSegment('full'),
-    last: lastHoleForSegment('full'),
+    open: firstHalfHoleNumbersForSegment(segment),
+    hidden: hiddenHoleNumbersForSegment(segment),
+    last: lastHoleForSegment(segment),
   };
 }
 
-function halvesText(): { shown: string; hidden: string } {
-  const { open, hidden } = halves();
+function halvesText(game: GameBundle['game']): { shown: string; hidden: string } {
+  const { open, hidden } = halves(game);
   return {
     shown: formatMessage(STATE35_TEXT.segmentHalfLabel, { from: open[0], to: open[open.length - 1] }),
     hidden: formatMessage(BOARD_TEAM_TEXT.hiddenHalf, { from: hidden[0], to: hidden[hidden.length - 1] }),
   };
 }
 
-function lockText(): { heading: string; sub: string } {
-  const { hidden, last } = halves();
+function lockText(game: GameBundle['game']): { heading: string; sub: string } {
+  const { hidden, last } = halves(game);
   return {
     heading: formatMessage(STATE35_TEXT.lockedHeading, { last }),
     sub: formatMessage(STATE35_TEXT.lockedSub, { from: hidden[0], to: hidden[hidden.length - 1] }),

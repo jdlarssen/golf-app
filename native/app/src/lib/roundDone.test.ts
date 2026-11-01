@@ -201,6 +201,26 @@ describe('buildRoundDoneModel — ligarunde spilt alene (#2712)', () => {
   });
 });
 
+// #2752: flighten på andre halvdel av en delt cup-dag eier hull 10–18.
+describe('buildRoundDoneModel — delt cup-dag', () => {
+  it('siste hull er spillets, og flighten mangler bare hull i halvdelen', () => {
+    const players = [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })];
+    const onBackNine = (userId: string, count: number) =>
+      holeScores(GAME, userId, count, 4).map((score, i) => ({ ...score, holeNumber: 10 + i }));
+
+    const front = model({ game: { holeSegment: 'front9' }, players });
+    expect(front?.lastHole).toBe(9);
+
+    const back = model({
+      game: { holeSegment: 'back9' },
+      players,
+      scores: [...onBackNine(ME, 9), ...onBackNine('mate', 8)],
+    });
+    expect(back?.lastHole).toBe(18);
+    expect(back?.flight).toEqual([expect.objectContaining({ kind: 'missing', holes: [18], firstHole: 18 })]);
+  });
+});
+
 describe('highlightText', () => {
   const hole = (h: Partial<RoundHighlight>): RoundHighlight => ({
     holeNumber: 7,

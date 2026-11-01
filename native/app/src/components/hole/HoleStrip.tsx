@@ -5,6 +5,9 @@
 // Hullet du står på er alltid synlig når siden åpnes. Spilte hull er kremfylte
 // piller, hullet du står på er fylt skog, og de som gjenstår har bare kant.
 //
+// #2752: hullene kommer inn utenfra. På en delt cup-dag er de 18 hullene to spill,
+// men stripa er den samme. Har spillet bare én halvdel, står ingen brikke.
+//
 // Trykkflatene er 44 pt høye og 34 pt brede. Ni hull på én rad gir ikke
 // plass til 44 pt i bredden på en telefon. Brikkene er avlange (22 × 30), slik
 // artboardet tegnes i nettleseren (eierens svar #2385).
@@ -31,12 +34,13 @@ function stripLabel(n: number, filled: boolean, current: number): string {
 
 export function HoleStrip({
   holeNumber,
-  holeCount,
+  holes: allHoles,
   filled,
   onGo,
 }: {
   holeNumber: number;
-  holeCount: number;
+  /** Hullene i runden, stigende. */
+  holes: readonly number[];
   /** Hullene med score på raden du fører. */
   filled: readonly number[];
   onGo: (hole: number) => void;
@@ -44,10 +48,9 @@ export function HoleStrip({
   const { colors, hole, scheme } = useTheme();
   const currentHalf = holeNumber > HALF ? 1 : 0;
   const [half, setHalf] = useState(currentHalf);
-  const halves = holeCount > HALF ? 2 : 1;
-  const first = half * HALF + 1;
-  const holes = Array.from({ length: Math.min(HALF, holeCount - half * HALF) }, (_, i) => first + i);
-  const other = half === 0 ? [HALF + 1, holeCount] : [1, HALF];
+  const inHalf = (h: number, which: number) => (h > HALF ? 1 : 0) === which;
+  const holes = allHoles.filter((n) => inHalf(n, half));
+  const otherHoles = allHoles.filter((n) => !inHalf(n, half));
   // Kremen på skogen i lys drakt; i mørk er skogen salvie, og tallet følger
   // `onPrimary`.
   const onCurrent = scheme === 'dark' ? colors.onPrimary : colors.onStrong;
@@ -92,7 +95,7 @@ export function HoleStrip({
           </Pressable>
         );
       })}
-      {halves > 1 ? (
+      {otherHoles.length > 0 ? (
         <Pressable
           onPress={() => setHalf(half === 0 ? 1 : 0)}
           // Brikka er smal i designet; trykkflaten går ut til hull 9 og til
@@ -101,11 +104,11 @@ export function HoleStrip({
           style={styles.chip}
           testID="hole-strip-other-half"
           accessibilityRole="button"
-          accessibilityLabel={`Vis hull ${other[0]}–${other[1]}`}
+          accessibilityLabel={`Vis hull ${otherHoles[0]}–${otherHoles[otherHoles.length - 1]}`}
         >
           {/* To linjer, «10–» over «18», som designet: det er ikke plass til
               begge på én linje etter ni hull. */}
-          <Text style={[styles.chipText, { color: colors.muted }]}>{`${other[0]}–\n${other[1]}`}</Text>
+          <Text style={[styles.chipText, { color: colors.muted }]}>{`${otherHoles[0]}–\n${otherHoles[otherHoles.length - 1]}`}</Text>
         </Pressable>
       ) : null}
     </View>

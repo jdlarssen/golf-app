@@ -37,6 +37,7 @@ import { GameLoadFailed } from '../components/GameLoadFailed';
 import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { useGameChoices } from '../lib/useChoices';
+import { scoresGameId } from '../lib/segmentRound';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { fraunces, useTheme } from '../theme';
@@ -50,7 +51,9 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
-  const { scores, reload } = useLocalScores(gameId);
+  // #2752: en avledet kamp har ingen slag selv, og leser dem fra verten.
+  const scoresId = bundle ? scoresGameId(bundle.game) : gameId;
+  const { scores, reload } = useLocalScores(scoresId);
   // Wolf og Bingo Bango Bongo regner med valgene fra serveren (hvem som var
   // ulv og valgte hva, hvem som tok hvilken prestasjon), som tavla. Andre
   // formater fyrer ingen spørring (`choiceSourceFor`).
@@ -70,7 +73,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   // Utfallet settes først når slagene er lest på nytt fra telefonen, ellers
   // står et tomt kort et øyeblikk mellom hjulet og det ferdige kortet.
   useEffect(() => {
-    void seedGameScores(gameId)
+    void seedGameScores(scoresId)
       .then(
         () => 'done' as const,
         () => 'failed' as const,
@@ -79,7 +82,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
         await reload();
         setSeed(result);
       });
-  }, [gameId, reload]);
+  }, [scoresId, reload]);
 
   const needsChoices = bundle != null && waitsForChoices(bundle.game, extras);
   const waiting =

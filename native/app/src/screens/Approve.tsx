@@ -60,6 +60,7 @@ import { approveRows, approveScreenState, type ApproveRow } from '../lib/approve
 import { backTo } from '../lib/backTo';
 import { displayName, formatClock, shortDisplayName } from '../lib/display';
 import { findInRoster, toRoster, toStampPlayers, type RosterEntry } from '../lib/roster';
+import { gameHoles } from '../lib/segmentRound';
 import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
@@ -172,7 +173,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     });
   /** Brutto på kortet, eller `null` når enheten ikke ser noen slag (beslutning 3). */
   const strokesOf = (ownerId: string): number | null => {
-    const grid = gridFor(bundle.holes, scores, findInRoster(roster, ownerId));
+    const grid = gridFor(gameHoles(bundle), scores, findInRoster(roster, ownerId));
     return grid.totals.played === 0 ? null : grid.totals.brutto;
   };
 
@@ -199,7 +200,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     const { pending } = state;
     const open = pending.find((entry) => entry.user_id === selectedUserId) ?? pending[0]!;
     const others = pending.filter((entry) => entry !== open);
-    const grid = gridFor(bundle.holes, scores, open);
+    const grid = gridFor(gameHoles(bundle), scores, open);
     const stamp = stampFor(open.user_id);
     const rejectEntry =
       rejectUserId == null ? undefined : pending.find((entry) => entry.user_id === rejectUserId);

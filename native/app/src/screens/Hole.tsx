@@ -45,6 +45,11 @@
 // #2735 (eierens svar, snur #2385 og #2635): mens slagene føres, viser siden
 // bare brutto. Formene regnes av slagene mot par, og verken knappene, radene
 // eller «Stryk» viser poeng.
+//
+// #2752: hullene er spillets. På en delt cup-dag er hull 1–9 og hull 10–18 to
+// spill, og siden blar over grensen med `navigation.replace`, så ingenting fra det
+// ene spillet følger med til det andre. En avledet kamp føres ikke, og sendes til
+// spillets side, som på nettet.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
@@ -113,8 +118,18 @@ import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
-import { openOrReturn } from '../lib/backTo';
+import { backTo, openOrReturn } from '../lib/backTo';
 import { holeTopLine } from '../lib/holeHeader';
+import {
+  boundaryLink,
+  bridgeHole,
+  gameHoleNumbers,
+  isDerivedGame,
+  roundHole,
+  roundHoleNumbers,
+} from '../lib/segmentRound';
+import { useSegmentSibling } from '../lib/useSegmentSibling';
+import { bridgeLabel } from '../lib/ticketCopy';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
@@ -152,7 +167,6 @@ import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 
-const HOLE_COUNT = 18;
 /**
  * Hint-linja under et utastet kort. Ordrett webbens streng
  * (`holes.scoreCard.tapInstruction` i messages/no.json) — snarveien er ny i
@@ -253,13 +267,45 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
     void refreshBundle();
   }, [holeNumber, refreshBundle]);
 
+  // #2752: den andre halvdelen ligger klar på telefonen, så broen virker uten nett.
+  const siblingFilled = useSegmentSibling(bundle, userId);
+
+  // I en ref, så en ny bundel ikke gir `goToHole` ny identitet: sollys-effekten
+  // under henger på den, og et bytte ville slettet tidtakeren midt i ventetiden.
+  const bundleRef = useRef(bundle);
+  useLayoutEffect(() => {
+    bundleRef.current = bundle;
+  }, [bundle]);
+
   const goToHole = useCallback(
     (next: number) => {
-      if (next < 1 || next > HOLE_COUNT) return;
-      navigation.setParams({ holeNumber: next });
+      const current = bundleRef.current;
+      const target = current ? roundHole(current, next) : null;
+      if (!target) return;
+      if (target.gameId === gameId) {
+        navigation.setParams({ holeNumber: next });
+        return;
+      }
+      // Over grensen på en delt cup-dag. Toppen får formatet og banen med seg, så
+      // den står mens det andre spillet leses fra telefonen.
+      navigation.replace('Hole', {
+        gameId: target.gameId,
+        holeNumber: next,
+        topLine: holeTopLine(current?.segmentSibling?.gameMode ?? '', current?.courseName ?? null),
+      });
     },
-    [navigation],
+    [navigation, gameId],
   );
+
+  // #2752: samme to omdirigeringer som nettets hullside. En avledet kamp har
+  // ingen føring, og et hull utenfor segmentet sender til segmentets første.
+  const derived = bundle != null && isDerivedGame(bundle.game);
+  const ownHoles = bundle ? gameHoleNumbers(bundle.game) : null;
+  const firstOwnHole = ownHoles && !ownHoles.includes(holeNumber) ? ownHoles[0] : null;
+  useEffect(() => {
+    if (derived) backTo(navigation, 'GameHome', { gameId });
+    else if (firstOwnHole !== null) navigation.setParams({ holeNumber: firstOwnHole });
+  }, [derived, firstOwnHole, navigation, gameId]);
 
   // #2385 (designlerretet): toppen har spillnavnet i gull med «format · bane»
   // under, og Sollys og pokalen til høyre. I sollys står ingen tittel, som på
@@ -287,10 +333,10 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
     });
   }, [navigation, sunlight, gameName, topLine, holeNumber, gameId]);
 
-  if (!bundle) {
+  if (!bundle || derived || firstOwnHole !== null) {
     return (
       <View style={ui.centered} testID="hole-loading">
-        {loading ? (
+        {loading || bundle ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
           <GameLoadFailed notFound={notFound} onRetry={() => void refreshBundle()} />
@@ -331,6 +377,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
           ? { minimum: minTeeShots, rows: teeShots.rows, reload: teeShots.reload }
           : null
       }
+      siblingFilled={siblingFilled}
       goToHole={goToHole}
       onSubmit={() => openOrReturn(navigation, 'Scorecard', { gameId })}
     />
@@ -395,6 +442,7 @@ function HoleView({
   choices,
   putts,
   teeShots,
+  siblingFilled,
   goToHole,
   onSubmit,
 }: {
@@ -415,6 +463,8 @@ function HoleView({
    * før den lokale basen er lest (tellingen og låsene ville vært feil).
    */
   teeShots: { minimum: number; rows: LocalTeeShot[]; reload: () => Promise<void> } | null;
+  /** #2752: hullene jeg har ført i den andre halvdelen av en delt cup-dag. */
+  siblingFilled: readonly number[];
   goToHole: (next: number) => void;
   onSubmit: () => void;
 }) {
@@ -476,6 +526,17 @@ function HoleView({
   // Hull-stripen teller radene JEG fører i: lagets i de kollapsede modiene,
   // mine egne ellers. Den delte regelen svarer per hull.
   const myFilled = filledHolesForOwner(scores, mode, userId, myCaptainId);
+  // #2752: hullene spillet eier, og hele runden spilleren blar i. For et vanlig
+  // spill er de like. Siste hull i runden er også det «av N» står for.
+  const ownHoles = gameHoleNumbers(bundle.game);
+  const lastOwnHole = ownHoles[ownHoles.length - 1];
+  const roundHoles = roundHoleNumbers(bundle);
+  const roundLength = roundHoles[roundHoles.length - 1];
+  const hasNext = roundHoles.includes(holeNumber + 1);
+  const hasPrev = roundHoles.includes(holeNumber - 1);
+  // Første halvdel leverer ikke selv: broen tar plassen til «Lever» (#1466).
+  const bridge = bridgeHole(bundle);
+  const boundary = boundaryLink(bundle, holeNumber);
   const byUserHole = new Map(
     scores.map((row) => [`${row.userId}#${row.holeNumber}`, row]),
   );
@@ -738,12 +799,12 @@ function HoleView({
     const before = scoredBefore.current;
     scoredBefore.current = everyoneScored;
     if (before === null) return;
-    if (!sunlight || before || !everyoneScored || holeNumber >= HOLE_COUNT) return;
+    if (!sunlight || before || !everyoneScored || !hasNext) return;
     const timer = setTimeout(() => goToHole(holeNumber + 1), AUTO_NEXT_MS);
     return () => clearTimeout(timer);
-  }, [everyoneScored, scoresLoaded, sunlight, holeNumber, goToHole]);
+  }, [everyoneScored, scoresLoaded, sunlight, holeNumber, hasNext, goToHole]);
 
-  const allHolesFilled = myFilled.length >= HOLE_COUNT;
+  const allHolesFilled = ownHoles.every((n) => myFilled.includes(n));
   // Telleren over radene: seter på skinna, spillere i kortformatene.
   const rowCount = usesRail ? seats.length : flight.length;
   const enteredCount = usesRail
@@ -768,18 +829,24 @@ function HoleView({
             uten «Forrige»/«Neste»: de ni hullene i halvdelen du står i.
             Sollys har ingen stripe (Hull-sollys). */}
         {sunlight ? null : (
-          <HoleStrip holeNumber={holeNumber} holeCount={HOLE_COUNT} filled={myFilled} onGo={goToHole} />
+          <HoleStrip
+            holeNumber={holeNumber}
+            holes={roundHoles}
+            filled={[...myFilled, ...siblingFilled]}
+            onGo={goToHole}
+          />
         )}
         <HoleSwipe
           enabled={sunlight}
           holeNumber={holeNumber}
-          holeCount={HOLE_COUNT}
-          label={`Hull ${holeNumber} av ${HOLE_COUNT}, par ${par}, indeks ${hole.strokeIndex}`}
+          canNext={hasNext}
+          canPrev={hasPrev}
+          label={`Hull ${holeNumber} av ${roundLength}, par ${par}, indeks ${hole.strokeIndex}`}
           onGo={goToHole}
         >
           <HoleHero
             holeNumber={holeNumber}
-            totalHoles={HOLE_COUNT}
+            totalHoles={roundLength}
             par={par}
             strokeIndex={hole.strokeIndex}
             sunlight={sunlight}
@@ -916,13 +983,32 @@ function HoleView({
         {/* #1954 Del B: et låst hull har ingenting å levere. Nettsiden sender et
             ferdig spill og et levert kort til spillsiden; her står forklaringen
             over («Føringen er låst»), uten knappen. */}
-        {!locked && (holeNumber === HOLE_COUNT || allHolesFilled) ? (
-          <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
-            {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
-                hjem der (#1918). */}
-            <Text style={ui.buttonText}>
-              {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
-            </Text>
+        {!locked && (holeNumber === lastOwnHole || allHolesFilled) ? (
+          bridge ? (
+            <Pressable
+              style={ui.button}
+              onPress={() => goToHole(bridge.holeNumber)}
+              testID="hole-bridge"
+            >
+              <Text style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
+              {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
+                  hjem der (#1918). */}
+              <Text style={ui.buttonText}>
+                {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
+              </Text>
+            </Pressable>
+          )
+        ) : null}
+        {boundary ? (
+          <Pressable
+            style={ui.buttonSecondary}
+            onPress={() => goToHole(boundary.holeNumber)}
+            testID="hole-boundary-link"
+          >
+            <Text style={ui.buttonSecondaryText}>{bridgeLabel(boundary.holeNumber)}</Text>
           </Pressable>
         ) : null}
         </View>
@@ -970,9 +1056,21 @@ function HoleView({
             onSkip={rail.skip}
             onPutts={rail.pickPutts}
             nextLabel={
-              holeNumber < HOLE_COUNT ? 'Neste hull' : collapsed ? 'Lever lagets kort' : 'Lever scorekort'
+              holeNumber < lastOwnHole
+                ? 'Neste hull'
+                : bridge
+                  ? bridgeLabel(bridge.holeNumber)
+                  : collapsed
+                    ? 'Lever lagets kort'
+                    : 'Lever scorekort'
             }
-            onNext={() => (holeNumber < HOLE_COUNT ? goToHole(holeNumber + 1) : onSubmit())}
+            onNext={() =>
+              holeNumber < lastOwnHole
+                ? goToHole(holeNumber + 1)
+                : bridge
+                  ? goToHole(bridge.holeNumber)
+                  : onSubmit()
+            }
           />
         </View>
       ) : null}
@@ -1004,14 +1102,17 @@ function HoleView({
 function HoleSwipe({
   enabled,
   holeNumber,
-  holeCount,
+  canNext,
+  canPrev,
   label,
   onGo,
   children,
 }: {
   enabled: boolean;
   holeNumber: number;
-  holeCount: number;
+  /** Er det et hull etter, eller før, dette i runden (#2752)? */
+  canNext: boolean;
+  canPrev: boolean;
   label: string;
   onGo: (hole: number) => void;
   children: ReactNode;
@@ -1035,8 +1136,8 @@ function HoleSwipe({
       accessible
       accessibilityLabel={label}
       accessibilityActions={[
-        ...(holeNumber < holeCount ? [{ name: 'nextHole', label: 'Neste hull' }] : []),
-        ...(holeNumber > 1 ? [{ name: 'previousHole', label: 'Forrige hull' }] : []),
+        ...(canNext ? [{ name: 'nextHole', label: 'Neste hull' }] : []),
+        ...(canPrev ? [{ name: 'previousHole', label: 'Forrige hull' }] : []),
       ]}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === 'nextHole') onGo(holeNumber + 1);

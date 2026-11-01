@@ -15,6 +15,7 @@ jest.mock('react-native-safe-area-context', () =>
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const MODEL: RoundDoneModel = {
+  lastHole: 18,
   greetingName: 'Sigrid',
   headline: { kind: 'points', value: 38 },
   birdies: 2,
@@ -34,7 +35,7 @@ it('viser seksjonene, åpner hullet som mangler, har knappene i linja og ingen p
   const { rerender } = await render(
     <>
       <RoundDoneCard model={MODEL} onOpenHole={onOpenHole} />
-      <RoundDoneBar onReview={onReview} onBack={onBack} />
+      <RoundDoneBar lastHole={18} onReview={onReview} onBack={onBack} />
     </>,
   );
 

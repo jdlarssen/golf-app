@@ -295,11 +295,56 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
     gate: null,
     me,
     filled: [] as number[],
-    totalHoles: 18,
+    holes: Array.from({ length: 18 }, (_, i) => i + 1),
     submittedAt: null,
     approvedAt: null,
     requirePeerApproval: false,
   };
+  // #2752: delt cup-dag og avledet kamp.
+  describe('halve dager', () => {
+    const backNine = [10, 11, 12, 13, 14, 15, 16, 17, 18];
+    const bridge = { gameId: 'back9', holeNumber: 10 };
+
+    it('andre halvdel teller sine ni hull og starter på hull 10', () => {
+      expect(ticketStub({ ...base, holes: backNine, filled: [10, 11] })).toMatchObject({
+        kind: 'active',
+        state: 'in_progress',
+        played: 2,
+        total: 9,
+        nextHole: 12,
+      });
+    });
+
+    it('andre halvdel ferdig ført: klar til levering', () => {
+      expect(ticketStub({ ...base, holes: backNine, filled: backNine })).toMatchObject({
+        state: 'ready_to_submit',
+      });
+    });
+
+    it('broen følger med stubben', () => {
+      expect(ticketStub({ ...base, bridge })).toMatchObject({ kind: 'active', bridge });
+    });
+
+    it('en avledet kamp i gang peker på kampen slagene føres i, også for en trukket spiller', () => {
+      const host = { gameId: 'host', name: 'Best ball' };
+      const derived = { kind: 'derived', hostGameId: 'host', hostName: 'Best ball' };
+      expect(ticketStub({ ...base, host })).toEqual(derived);
+      expect(ticketStub({ ...base, host, me: { ...me, withdrawnAt: at } })).toEqual(derived);
+    });
+
+    it('en avledet kamp som er ferdig, viser resultatet som andre', () => {
+      expect(
+        ticketStub({ ...base, status: 'finished', host: { gameId: 'host', name: null } }),
+      ).toMatchObject({ kind: 'finished' });
+    });
+
+    it('en utenforstående får ikke kampens side', () => {
+      expect(ticketStub({ ...base, me: undefined, host: { gameId: 'host', name: null } })).toEqual({
+        kind: 'notPlayer',
+      });
+    });
+  });
+
   const seven = [1, 2, 3, 4, 5, 6, 7];
   const all = Array.from({ length: 18 }, (_, i) => i + 1);
 

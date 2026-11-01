@@ -29,17 +29,13 @@ import { formatNameList, shortDisplayName } from './display';
 import { liveStanding } from './homeHero';
 import { findInRoster, resolveFlight, toRoster } from './roster';
 import type { ScorecardRow } from './scorecardRows';
+import { gameHoleNumbers, gameLastHole } from './segmentRound';
 import { SHORT_LABELS, termText } from './strokeTermText';
-
-/** Appen fører bare hele runder (`formatGate`), så hull 18 er alltid det siste. */
-const LAST_HOLE = 18;
-const HOLE_NUMBERS = Array.from({ length: LAST_HOLE }, (_, i) => i + 1);
 
 /**
  * Den faste teksten på kortet. Kickerne står i vanlig skrift, slik de vises.
  */
 export const ROUND_DONE_TEXT = {
-  kicker: `Hull ${LAST_HOLE} · runden er ferdig`,
   bestKicker: 'Dagens beste hull',
   worstKicker: 'Det som svidde',
   flightKicker: 'Flighten din',
@@ -49,7 +45,6 @@ export const ROUND_DONE_TEXT = {
   completeSpoken: 'har ført alle hull',
   submittedSpoken: 'har levert',
   review: 'Se over og lever scorekortet',
-  back: `Tilbake til hull ${LAST_HOLE}`,
   greeting: 'Godt spilt,',
   units: { points: 'poeng', net: 'netto', gross: 'slag' },
   birdie: 'birdie',
@@ -64,6 +59,16 @@ export const ROUND_DONE_TEXT = {
   openHole: 'Åpne hull',
 } as const;
 
+/** «Hull 18 · runden er ferdig». Siste hull er spillets (#2752). */
+export function roundDoneKicker(lastHole: number): string {
+  return `Hull ${lastHole} · runden er ferdig`;
+}
+
+/** «Tilbake til hull 18». */
+export function roundDoneBack(lastHole: number): string {
+  return `Tilbake til hull ${lastHole}`;
+}
+
 export type RoundDoneHeadline = 'points' | 'net' | 'gross';
 
 /** En rad under «Flighten din». */
@@ -73,6 +78,8 @@ export type RoundDoneFlightRow =
   | { kind: 'missing'; userId: string; name: string; holes: number[]; firstHole: number };
 
 export interface RoundDoneModel {
+  /** Siste hull i spillet: 18, eller 9 i første halvdel av en delt cup-dag. */
+  lastHole: number;
   greetingName: string;
   headline: { kind: RoundDoneHeadline; value: number };
   birdies: number;
@@ -129,6 +136,7 @@ export function buildRoundDoneModel(opts: {
     opts.revealActive || opts.teamMode ? null : liveStanding(bundle, opts.scores, userId);
 
   return {
+    lastHole: gameLastHole(bundle.game),
     greetingName: shortDisplayName(me.player),
     headline,
     birdies: countRoundAchievements(holes).birdie,
@@ -170,7 +178,7 @@ function flightRows(opts: {
       strokes: score.strokes,
     })),
     mode,
-    holeNumbers: HOLE_NUMBERS,
+    holeNumbers: gameHoleNumbers(bundle.game),
   });
   // Kortnavnet, eller hele navnet når to i flighten har samme kortnavn (likt
   // fornavn eller likt kallenavn): to «Jonas» på samme liste sier ikke hvem

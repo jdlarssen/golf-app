@@ -113,6 +113,14 @@ import type { MarkerOptionsResponse } from '../../../../lib/league/appLeagueView
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
 import { backTo, openOrReturn } from '../lib/backTo';
+import {
+  bridgeHole,
+  gameHoleNumbers,
+  gameHoles,
+  gameLastHole,
+  isDerivedGame,
+} from '../lib/segmentRound';
+import { bridgeLabel, WHOLE_ROUND_NOTICE } from '../lib/ticketCopy';
 import { isScoringSupported } from '../lib/formatGate';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { nameLookup } from '../lib/leaderboardModel';
@@ -161,7 +169,6 @@ import { useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 
-const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
@@ -300,6 +307,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     };
   }, [gameId, askMarker, markerMateKey, markerReload]);
 
+  // #2752: en avledet kamp har ikke noe eget kort, som nettets scorekort-side.
+  const derived = bundle != null && isDerivedGame(bundle.game);
+  useEffect(() => {
+    if (derived) backTo(navigation, 'GameHome', { gameId });
+  }, [derived, navigation, gameId]);
+
   if (!bundle) {
     // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
     // tavleskjermen. Uten dette sto «Henter scorekortet …» til skjermen ble
@@ -340,7 +353,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const leaderboard = teamMode ? computeGameLeaderboard(bundle, scores) : null;
 
   const { rows, totals } = buildScorecardRows({
-    holes: bundle.holes,
+    holes: gameHoles(bundle),
     scores,
     mode,
     game: bundle.game,
@@ -351,7 +364,15 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     teamNumber: myTeamCard?.teamNumber ?? me.player.teamNumber,
     leaderboard,
   });
-  const missing = HOLE_COUNT - totals.playedHoles;
+  const ownHoles = gameHoleNumbers(bundle.game);
+  const missing = ownHoles.length - totals.playedHoles;
+  // #2752: første halvdel av en delt cup-dag leverer ikke selv: broen står der
+  // «Lever» ellers ville stått (#1466). Hele runden leveres fra andre halvdel.
+  const bridge = bridgeHole(bundle);
+  const wholeRound =
+    bundle.game.holeSegment === 'back9' &&
+    bundle.segmentSibling != null &&
+    bundle.segmentSibling.mySubmittedAt == null;
 
   // #2262: kortet. POENG i stableford-familien, NETTO ellers. I en blind runde
   // som pågår, ingen av dem (#2219): samme delte regel som resultatlista
@@ -395,6 +416,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     bundle.game.status === 'active' &&
     me.submitted_at == null &&
     me.withdrawn_at == null &&
+    bridge === null &&
     isScoringSupported(bundle.game);
 
   // #2299: oppsummeringen, eller `null` når kortet ikke kan leveres herfra
@@ -736,11 +758,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
             <Pressable
               style={[ui.buttonSecondary, styles.editButton]}
-              onPress={() => openHole(1)}
+              onPress={() => openHole(ownHoles[0])}
               testID="scorecard-edit"
             >
               <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
             </Pressable>
+            {wholeRound ? (
+              <Text style={ui.muted} testID="scorecard-whole-round">
+                {WHOLE_ROUND_NOTICE}
+              </Text>
+            ) : null}
             {flightBlock}
             {queueGuard}
             {markerPicker}
@@ -771,7 +798,20 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           </>
         ) : (
           <>
-            {readonlyText ? (
+            {bridge && me.submitted_at == null ? (
+              <Pressable
+                style={ui.button}
+                onPress={() =>
+                  openOrReturn(navigation, 'Hole', {
+                    gameId: bridge.gameId,
+                    holeNumber: bridge.holeNumber,
+                  })
+                }
+                testID="scorecard-bridge"
+              >
+                <Text style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
+              </Pressable>
+            ) : readonlyText ? (
               <Text style={ui.muted} testID="scorecard-readonly">
                 {readonlyText}
               </Text>
@@ -822,10 +862,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </ScrollView>
       {showBar ? (
         <RoundDoneBar
+          lastHole={gameLastHole(bundle.game)}
           onReview={() =>
             scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: !reduceMotion.current })
           }
-          onBack={() => openHole(HOLE_COUNT)}
+          onBack={() => openHole(gameLastHole(bundle.game))}
         />
       ) : null}
     </View>

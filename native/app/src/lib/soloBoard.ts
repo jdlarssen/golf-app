@@ -116,7 +116,7 @@ export type SoloBoardRow = {
 };
 
 export type SoloBoardStripAction =
-  | { kind: 'hole'; holeNumber: number; label: string }
+  | { kind: 'hole'; holeNumber: number; label: string; gameId?: string }
   | { kind: 'submit'; label: string }
   | { kind: 'scorecard'; label: string };
 
@@ -247,6 +247,7 @@ export function stripAction(action: HeroAction): SoloBoardStripAction | null {
         kind: 'hole',
         holeNumber: action.holeNumber,
         label: formatMessage(BOARD_TEXT.stripHole, { hole: action.holeNumber }),
+        ...(action.gameId ? { gameId: action.gameId } : {}),
       }
     : action?.kind === 'submit'
       ? { kind: 'submit', label: BOARD_TEXT.stripSubmit }

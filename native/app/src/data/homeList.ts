@@ -22,6 +22,10 @@ import {
 import { getRoundScoresForGames } from '../../../../lib/games/getRoundScoresForGames';
 import { computeRoundScore } from '../../../../lib/games/roundScore';
 import { finishedCupBlocksPlay } from '../../../../lib/cup/finishedCup';
+import { mergePairState } from '../../../../lib/games/pairActiveCard';
+import { pairSplitDayGames } from '../../../../lib/games/splitDayPairing';
+import { localDayKey } from '../lib/homeDates';
+import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry, withTxn } from './db';
@@ -38,8 +42,12 @@ export const HOME_CACHE_KEY = 'home';
  *
  * v3 (#2712): kortene fikk `leagueRoundId`, så «Forrige runde» kan si
  * «Godkjent» i stedet for «Du vant» etter en ligaflight spilt alene.
+ *
+ * v4 (#2752): kortene fikk `tournamentId`, `cupName` og `withdrawn`. En cache
+ * fra før mangler dem, og da ville en delt cup-dag stått som to kort til neste
+ * henting.
  */
-export const HOME_PAYLOAD_VERSION = 3;
+export const HOME_PAYLOAD_VERSION = 4;
 
 /** Ett kort på hjem-skjermen. Alt kortet viser, ingenting mer. */
 export interface HomeCard {
@@ -62,6 +70,17 @@ export interface HomeCard {
   flightNumber: number | null;
   /** #2712: ligarunden spillet er en flight i, eller null. */
   leagueRoundId: string | null;
+  /** #2752: cupen spillet hører til, eller null. Delte cup-dager pares på den. */
+  tournamentId?: string | null;
+  /** #2752: cupens navn, som står på kortet for en delt cup-dag. */
+  cupName?: string | null;
+  /** #2752: spilleren er trukket. En halvdel du er trukket fra, står for seg. */
+  withdrawn?: boolean;
+  /**
+   * #2752: andre halvdel, når kortet står for hele den delte cup-dagen. Kortet er
+   * da første halvdel, for runden starter på hull 1 (`splitHomeCards`).
+   */
+  pairedGameId?: string;
 }
 
 /**
@@ -104,13 +123,14 @@ interface HomeRow {
     require_peer_approval: boolean;
     league_round_id?: string | null;
     courses: { name: string } | null;
+    tournament_id?: string | null;
     /** #2214: cupens status, eller null for et spill utenfor cup. */
-    tournament: { status: string } | null;
+    tournament: { status: string; name?: string | null } | null;
   };
 }
 
 const HOME_SELECT =
-  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, league_round_id, courses(name), tournament:tournaments(status))';
+  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, league_round_id, tournament_id, courses(name), tournament:tournaments(status, name))';
 
 /**
  * Statusene en spiller har noe å gjøre med. `draft` er admin-eid og usynlig.
@@ -160,6 +180,9 @@ export async function fetchHomeCards(userId: string): Promise<HomeList> {
       resultSummary: row.result_summary ?? null,
       flightNumber: row.flight_number,
       leagueRoundId: row.games.league_round_id ?? null,
+      tournamentId: row.games.tournament_id ?? null,
+      cupName: row.games.tournament?.name ?? null,
+      withdrawn: row.withdrawn_at != null,
     }));
 
   return {
@@ -269,6 +292,41 @@ function finishedAt(card: HomeCard): string {
 }
 
 /**
+ * #2752: ett kort for en delt cup-dag, som på nettet (#1449). Reglen for hvilke
+ * to spill som hører sammen er `pairSplitDayGames`; en halvdel uten sitt motstykke,
+ * eller en du er trukket fra, står for seg. Kortet er første halvdel, for runden
+ * starter på hull 1. Dagen er telefonens egen: Hermes mangler Oslo-tiden nettet
+ * bruker (`homeDates.ts`).
+ */
+function foldSplitDays(cards: readonly HomeCard[]): HomeCard[] {
+  return pairSplitDayGames(
+    cards.map((card) => ({
+      gameId: card.gameId,
+      tournamentId: card.tournamentId ?? null,
+      holeSegment: card.holeSegment as HoleSegment,
+      dayAnchor: new Date(card.scheduledTeeOffAt ?? card.createdAt),
+      pairEligible: card.withdrawn !== true,
+      data: card,
+    })),
+    localDayKey,
+  ).map((entry) => {
+    if (entry.kind === 'single') return entry.game.data;
+    const front = entry.front9.data;
+    const back = entry.back9.data;
+    return {
+      ...front,
+      name: front.cupName ?? front.name,
+      status: front.status === 'active' || back.status === 'active' ? 'active' : front.status,
+      state:
+        front.state && back.state
+          ? mergePairState(front.state, back.state)
+          : (front.state ?? back.state),
+      pairedGameId: back.gameId,
+    };
+  });
+}
+
+/**
  * Del kortene i de tre seksjonene hjem viser.
  *
  * Rekkefølgene er de webben bruker: planlagte etter nærmeste tee-off (spill
@@ -282,8 +340,9 @@ export function splitHomeCards(cards: readonly HomeCard[]): {
   scheduled: HomeCard[];
   finished: HomeCard[];
 } {
-  const active = cards.filter((c) => c.status === 'active');
-  const scheduled = cards
+  const running = foldSplitDays(cards.filter((c) => c.status === 'active' || c.status === 'scheduled'));
+  const active = running.filter((c) => c.status === 'active');
+  const scheduled = running
     .filter((c) => c.status === 'scheduled')
     .sort((a, b) => {
       if (a.scheduledTeeOffAt === b.scheduledTeeOffAt) return 0;

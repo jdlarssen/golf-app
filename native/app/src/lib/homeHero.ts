@@ -12,12 +12,17 @@
 //    svarer `null` for lagformater, andre formater og reveal-spill, og da viser
 //    kortet ingen plass.
 //  - **Stengte spill** følger `gateReason`: appen fører dem ikke, så kortet lover
-//    ikke «Fortsett på hull N», bare «Åpne runden».
+//    ikke «Fortsett på hull N», bare «Åpne runden». Det samme gjelder en avledet
+//    kamp, som ikke føres selv.
+//  - **Delt cup-dag** (#2752): hullene er segmentets. Første halvdel ender på
+//    broen til hull 10, og Hjem folder begge halvdelene til ett kort, med samme
+//    regel som nettet (`mergePairState`).
 //
 // Ren funksjon: ingen nett, ingen SQLite, ingen React. Kalleren har lest
 // bundelen og slagene fra enheten.
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
 import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
+import { mergePairState } from '../../../../lib/games/pairActiveCard';
 import { computePrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
@@ -38,6 +43,7 @@ import { nameLookup } from './leaderboardModel';
 import { nextUnfilledHole } from './primaryCtaState';
 import { findInRoster, pendingApprovals, toRoster } from './roster';
 import { asModeConfig, toHoleRows, toPlayerRows, toScoreRows } from './scoringContext';
+import { bridgeHole, gameHoleNumbers, isDerivedGame } from './segmentRound';
 import {
   buildTeamCards,
   filledHolesForOwner,
@@ -45,9 +51,6 @@ import {
   foldLocalScores,
   myTeamCaptainId,
 } from './teamPlay';
-
-/** Appen fører bare hele runder — segment-spill gates bort i `formatGate`. */
-export const HERO_HOLE_COUNT = 18;
 
 /** Tidspunktet «nyest» måles på: tee-off når den er satt, ellers opprettet. */
 function heroTime(card: HomeCard): string {
@@ -73,10 +76,13 @@ export function pickHeroCard(active: readonly HomeCard[]): {
  * Hva hovedknappen gjør. `hole`: fortsett på hullet. `submit`: alle hull er
  * tastet, gå til scorekortet og lever. `open`: appen kan ikke love noe mer enn
  * spillets side. `null`: kortet er levert eller du er trukket.
+ *
+ * `gameId` er satt når målet ligger i den andre halvdelen av en delt cup-dag
+ * (#2752). Uten den gjelder knappen spillet kortet står for.
  */
 export type HeroAction =
-  | { kind: 'hole'; holeNumber: number }
-  | { kind: 'submit' }
+  | { kind: 'hole'; holeNumber: number; gameId?: string }
+  | { kind: 'submit'; gameId?: string }
   | { kind: 'open' }
   | null;
 
@@ -167,6 +173,12 @@ type HeroInput = {
 };
 
 /**
+ * Den andre halvdelen av en delt cup-dag, slik den ligger på enheten. Hjem gir
+ * den til `buildHeroModel`, som da svarer for hele runden.
+ */
+type HeroSibling = Pick<HeroInput, 'bundle' | 'scores'>;
+
+/**
  * Alt på kortet unntatt plassen: tilstanden, hullene og hva knappen gjør.
  * Ren og billig (ingen motor), så tavla (#2579) kan spørre etter knappen
  * uten å regne tavla en gang til.
@@ -182,17 +194,21 @@ function heroProgress(opts: HeroInput) {
   // Samme rekkefølge som spillets side: fold først, så les.
   const scores = foldLocalScores(opts.scores, roster, mode);
   const captainId = myTeamCaptainId(roster, userId);
+  const holes = gameHoleNumbers(game);
   const teamCard =
-    captainId != null && modeCollapsesToTeamCard(mode, HERO_HOLE_COUNT)
+    // Hull 18 svarer på om runden deler kort (patsome er det eneste formatet der
+    // svaret varierer, og det er stengt). Spørsmålet gjelder ikke segmentet.
+    captainId != null && modeCollapsesToTeamCard(mode, 18)
       ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
       : null;
-  const filled = filledHolesForOwner(scores, mode, userId, captainId);
+  const own = new Set(holes);
+  const filled = filledHolesForOwner(scores, mode, userId, captainId).filter((hole) => own.has(hole));
   const played = filled.length;
-  const nextHole = nextUnfilledHole(filled, HERO_HOLE_COUNT);
+  const nextHole = nextUnfilledHole(filled, holes);
 
   const cta = computePrimaryCtaState({
     strokesCount: played,
-    totalHoles: HERO_HOLE_COUNT,
+    totalHoles: holes.length,
     submittedAt: teamCard ? teamCard.submittedAt : (me?.player.submittedAt ?? null),
     approvedAt: teamCard ? teamCard.approvedAt : (me?.player.approvedAt ?? null),
     requirePeerApproval: game.requirePeerApproval,
@@ -205,16 +221,21 @@ function heroProgress(opts: HeroInput) {
         ? 'submitted'
         : 'continue';
 
-  const playable = gate === null && me !== undefined && game.status === 'active';
+  const playable =
+    gate === null && !isDerivedGame(game) && me !== undefined && game.status === 'active';
+  // Første halvdel av en delt cup-dag leverer ikke selv: broen er hovedknappen.
+  const bridge = bridgeHole(bundle);
   const action: HeroAction = !playable
     ? { kind: 'open' }
     : state !== 'continue'
       ? null
-      : cta === 'ready_to_submit'
-        ? { kind: 'submit' }
-        : { kind: 'hole', holeNumber: nextHole };
+      : cta !== 'ready_to_submit'
+        ? { kind: 'hole', holeNumber: nextHole }
+        : bridge
+          ? { kind: 'hole', holeNumber: bridge.holeNumber, gameId: bridge.gameId }
+          : { kind: 'submit' };
 
-  return { gate, state, played, nextHole, action, playable, scores, roster, me };
+  return { gate, state, played, holeCount: holes.length, nextHole, action, playable, scores, roster, me };
 }
 
 /**
@@ -225,23 +246,59 @@ export function heroAction(opts: HeroInput): HeroAction {
   return heroProgress(opts).action;
 }
 
-export function buildHeroModel(opts: HeroInput): HeroModel {
-  const { bundle, userId } = opts;
-  const { gate, state, played, nextHole, action, playable, scores, roster, me } =
-    heroProgress(opts);
+/**
+ * Hele runden på en delt cup-dag: hullene til begge halvdelene, og knappen til
+ * der spilleren er. Første halvdel til den er ført, så andre, så leveringen.
+ * Samme rekkefølge som `mergePairExtras` på nettet.
+ */
+function foldSplitRound(
+  front: ReturnType<typeof heroProgress>,
+  backInput: HeroInput,
+): Pick<HeroModel, 'state' | 'holeCount' | 'played' | 'nextHole' | 'action'> {
+  const back = heroProgress(backInput);
+  const inFront = front.action?.kind === 'hole' && front.played < front.holeCount;
+  const backGame = backInput.bundle.game.id;
+  const backAction: HeroAction =
+    back.action?.kind === 'hole' || back.action?.kind === 'submit'
+      ? { ...back.action, gameId: backGame }
+      : back.action;
+  return {
+    state: mergePairState(front.state, back.state),
+    holeCount: front.holeCount + back.holeCount,
+    played: front.played + back.played,
+    nextHole: inFront ? front.nextHole : back.nextHole,
+    // Et kort sendt tilbake på første halvdel etter leveringen: `back` har ingen
+    // knapp, og første halvdel leverer selv igjen.
+    action: inFront ? front.action : (backAction ?? front.action),
+  };
+}
 
-  const live = playable && state !== 'withdrawn' ? liveStanding(bundle, scores, userId) : null;
+export function buildHeroModel(opts: HeroInput & { sibling?: HeroSibling | null }): HeroModel {
+  const { bundle, userId } = opts;
+  const progress = heroProgress(opts);
+  const { gate, playable, scores, roster, me } = progress;
+  const round = opts.sibling
+    ? foldSplitRound(progress, { ...opts.sibling, userId })
+    : progress;
+
+  const live =
+    playable && round.state !== 'withdrawn' ? liveStanding(bundle, scores, userId) : null;
+  const approvalsOn = (input: { bundle: GameBundle }) =>
+    pendingApprovals(toRoster(input.bundle.players), input.bundle.game, userId).length;
 
   return {
     gate,
-    state,
-    holeCount: HERO_HOLE_COUNT,
-    played,
-    nextHole,
-    action,
+    state: round.state,
+    holeCount: round.holeCount,
+    played: round.played,
+    nextHole: round.nextHole,
+    action: round.action,
     standing: live?.standing ?? null,
     unit: live?.unit ?? null,
-    approvals: me ? pendingApprovals(roster, bundle.game, userId).length : 0,
+    approvals: me
+      ? pendingApprovals(roster, bundle.game, userId).length +
+        (opts.sibling ? approvalsOn(opts.sibling) : 0)
+      : 0,
     // Any league flight with one active player has no placement: the same
     // rule as `finishedResultBadge`, which «Forrige runde» uses on this screen.
     leagueSolo: isLeagueFieldAlone(

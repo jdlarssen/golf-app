@@ -10,7 +10,12 @@
 //    at noe sier fra.
 import { gateMessage, gateReason, isScoringSupported } from './formatGate';
 
-function game(overrides: Partial<Parameters<typeof isScoringSupported>[0]> = {}) {
+type GameLike = Parameters<typeof isScoringSupported>[0] & {
+  holeSegment: string;
+  sourceGameId: string | null;
+};
+
+function game(overrides: Partial<GameLike> = {}): GameLike {
   return {
     gameMode: 'solo_strokeplay',
     holeSegment: 'full',
@@ -48,34 +53,27 @@ describe('isScoringSupported', () => {
     ['bingo bango bongo — mottakere føres på hullet', game({ gameMode: 'bingo_bango_bongo' }), true],
     // Uendret fra N3: det ene formatet som fortsatt står i gaten.
     ['patsome — segment-hybrid', game({ gameMode: 'patsome' }), false],
-    ['front9-halvdel av en delt cup-dag', game({ holeSegment: 'front9' }), false],
-    ['back9-halvdel', game({ holeSegment: 'back9' }), false],
-    ['avledet cup-spill', game({ sourceGameId: 'host-game' }), false],
+    // #2752: halve dager og avledede kamper føres og vises i appen.
+    ['front9-halvdel av en delt cup-dag', game({ holeSegment: 'front9' }), true],
+    ['back9-halvdel', game({ holeSegment: 'back9' }), true],
+    ['avledet cup-spill', game({ sourceGameId: 'host-game' }), true],
   ])('%s', (_label: string, input: Parameters<typeof isScoringSupported>[0], expected: boolean) => {
     expect(isScoringSupported(input)).toBe(expected);
   });
 });
 
 describe('gateReason', () => {
-  it('skiller formatet fra runden — teksten spilleren får er ikke den samme', () => {
+  it('stenger bare formatet, og sier det', () => {
     expect(gateReason(game({ gameMode: 'patsome' }))).toBe('mode');
-    expect(gateReason(game({ holeSegment: 'front9' }))).toBe('segment');
-    expect(gateReason(game({ sourceGameId: 'host' }))).toBe('derived');
     expect(gateReason(game())).toBeNull();
-
-    expect(gateMessage('mode')).toBe('Dette formatet føres på nettsiden ennå.');
-    expect(gateMessage('segment')).toBe('Denne runden føres på nettsiden ennå.');
-    expect(gateMessage('derived')).toBe('Denne runden føres på nettsiden ennå.');
+    expect(gateMessage()).toBe('Dette formatet føres på nettsiden ennå.');
   });
 
-  it('lar formatet stenge før runden — et patsome-front9 er stengt som format', () => {
+  it('lar formatet stenge også på en halvdel: et patsome-front9 er stengt som format', () => {
     expect(gateReason(game({ gameMode: 'patsome', holeSegment: 'front9' }))).toBe('mode');
   });
 
-  it('stenger fortsatt RUNDEN for et åpnet format — wolf på en cup-halvdel', () => {
-    // Gate-åpningen i #1832 gjelder spilleformen, ikke segment-spillene: en
-    // wolf-front9 er fortsatt N5s bord.
-    expect(gateReason(game({ gameMode: 'wolf', holeSegment: 'front9' }))).toBe('segment');
-    expect(gateReason(game({ gameMode: 'wolf' }))).toBeNull();
+  it('åpner en cup-halvdel for et åpent format: wolf på front9', () => {
+    expect(gateReason(game({ gameMode: 'wolf', holeSegment: 'front9' }))).toBeNull();
   });
 });
