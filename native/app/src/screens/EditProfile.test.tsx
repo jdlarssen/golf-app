@@ -26,6 +26,7 @@ import { Keyboard } from 'react-native';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { EditProfile, asGender, asLevel } from './EditProfile';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
@@ -46,8 +47,10 @@ jest.mock('../data/profile', () => ({
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const saveProfileMock = saveProfile as jest.Mock;
 
-const navigate = jest.fn();
 const goBack = jest.fn();
+// #2746: rommet ligger under skjemaet, så Lagre går tilbake dit.
+const nav = stackNavigation([{ name: 'Home' }, { name: 'Profile' }, { name: 'EditProfile' }]);
+const { navigate } = nav;
 
 // Lagret −1,5 = plusshandicap 1,5. Feltet skal vise magnituden, «+»-knappen
 // bærer fortegnet, og det er de to som skal ut på tråden.
@@ -60,7 +63,7 @@ async function renderScreen(routeParams: { returnTo?: 'CreateGame' } | undefined
   await render(
     <EditProfile
       {...({
-        navigation: { navigate, goBack },
+        navigation: { ...nav, goBack },
         // Navigatoren sender ALLTID `route`; fikstur uten den er ikke et
         // scenario appen kan havne i.
         route: { params: routeParams },
@@ -177,7 +180,7 @@ describe('EditProfile', () => {
       describeProfileSaveFailure('hcp_invalid'),
     );
     // Et avslag er ikke en lagring: rommet skal ikke få en kvittering.
-    expect(navigate).not.toHaveBeenCalled();
+    expect(nav.popTo).not.toHaveBeenCalled();
     // Og knappen må være trykkbar igjen — ellers står «Lagrer …» for godt.
     expect(screen.getByTestId('edit-profile-save')).toBeEnabled();
 
@@ -186,8 +189,11 @@ describe('EditProfile', () => {
     saveProfileMock.mockResolvedValue({ ok: true });
     await fireEvent.press(screen.getByTestId('edit-profile-save'));
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('Profile', { saved: true });
+      expect(nav.popTo).toHaveBeenCalledWith('Profile', { saved: true });
     });
+    // Ikke et nytt rom oppå skjemaet du lagret (#2746).
+    expect(navigate).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   // #1979: skjemaet nås nå også fra veiviserens siste steg, under merknaden om
@@ -205,7 +211,8 @@ describe('EditProfile', () => {
       expect(goBack).toHaveBeenCalledTimes(1);
     });
     // Ingen kvittering til et rom som ikke er der du skal.
-    expect(navigate).not.toHaveBeenCalled();
+    expect(nav.popTo).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it('fjerner feilen når spilleren retter feltet', async () => {

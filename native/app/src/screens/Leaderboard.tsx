@@ -49,6 +49,7 @@ import { boardHeader } from '../components/KickerHeader';
 import { WebLinkButton } from '../components/WebLinkButton';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
+import { openOrReturn } from '../lib/backTo';
 import { BOARD_TEAM_TEXT, BOARD_TEXT } from '../lib/boardCopy';
 import {
   GATE_LINK_LABEL,
@@ -329,13 +330,13 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
 
   const onStripAction = (action: SoloBoardStripAction | null) => {
     if (action?.kind === 'hole') {
-      navigation.navigate('Hole', {
+      openOrReturn(navigation, 'Hole', {
         gameId,
         holeNumber: action.holeNumber,
         ...holeHeaderParams(bundle.game, bundle.courseName),
       });
     } else if (action) {
-      navigation.navigate('Scorecard', { gameId });
+      openOrReturn(navigation, 'Scorecard', { gameId });
     }
   };
 

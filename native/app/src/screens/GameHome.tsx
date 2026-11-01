@@ -52,6 +52,7 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
+import { backTo } from '../lib/backTo';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
@@ -389,7 +390,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           gameName={game.name}
           kind={withdrawKind}
           onChanged={refresh}
-          onLeft={() => navigation.navigate('Home')}
+          onLeft={() => backTo(navigation, 'Home')}
         />
       ) : null}
 

@@ -31,6 +31,22 @@ import { CreateGame } from './CreateGame';
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
 // den må stå her selv om ingen spørring kjøres i denne testen.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2746: sperra som gjør pila, sveipet og Android-tilbake til ett steg tilbake.
+// Testen holder på det siste skjermen meldte, og trykker «tilbake» ved å kalle
+// tilbakekallet slik navigatoren gjør når skjermen er i ferd med å fjernes.
+const mockPreventRemove: {
+  enabled: boolean;
+  callback: ((event: { data: { action: { type: string } } }) => void) | null;
+} = { enabled: false, callback: null };
+jest.mock('@react-navigation/native', () => ({
+  usePreventRemove: (
+    enabled: boolean,
+    callback: (event: { data: { action: { type: string } } }) => void,
+  ) => {
+    mockPreventRemove.enabled = enabled;
+    mockPreventRemove.callback = callback;
+  },
+}));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 // #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
@@ -146,6 +162,7 @@ async function renderWizard() {
     replace: jest.fn(),
     goBack: jest.fn(),
     navigate: jest.fn(),
+    dispatch: jest.fn(),
     // Veiviseren henter profilen på nytt når den får fokus igjen (#2441).
     addListener: jest.fn(() => jest.fn()),
   } as unknown as ScreenProps<'CreateGame'>['navigation'];
@@ -309,6 +326,47 @@ describe('CreateGame', () => {
       gameId: 'new-game-1',
     });
     expect(navigation.navigate).not.toHaveBeenCalled();
+    // #2746: `replace` fjerner veiviseren, og sperra slipper den gjennom i
+    // stedet for å gå ett steg tilbake.
+    expect(mockPreventRemove.enabled).toBe(true);
+    const replaceAction = { type: 'REPLACE' };
+    await act(async () => {
+      mockPreventRemove.callback!({ data: { action: replaceAction } });
+    });
+    expect(navigation.dispatch).toHaveBeenCalledWith(replaceAction);
+  });
+
+  // #2746 (`docs/user-flows.md` §Tilbake): pila, sveipet og Android-tilbake
+  // går ett steg, som «Tilbake»-knappen. På første steg står ingen sperre, så
+  // skjermen lukkes.
+  it('tilbake går ett steg med valgene beholdt, og første steg slipper skjermen', async () => {
+    const { navigation } = await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    expect(mockPreventRemove.enabled).toBe(false);
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.changeText(screen.getByTestId('create-name'), 'Torsdagsrunden');
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.queryByTestId('create-step-setup')).toBeNull();
+
+    // Steg 3 → tilbake → steg 2, med navnet som ble skrevet.
+    expect(mockPreventRemove.enabled).toBe(true);
+    await act(async () => {
+      mockPreventRemove.callback!({ data: { action: { type: 'GO_BACK' } } });
+    });
+    expect(screen.getByTestId('create-step-setup')).toBeTruthy();
+    expect(screen.getByTestId('create-name').props.value).toBe('Torsdagsrunden');
+
+    // Steg 2 → tilbake → steg 1, med formatet fortsatt valgt.
+    await act(async () => {
+      mockPreventRemove.callback!({ data: { action: { type: 'GO_BACK' } } });
+    });
+    expect(screen.queryByTestId('create-step-setup')).toBeNull();
+    expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    // Første steg: ingen sperre, så navigatoren fjerner skjermen selv.
+    expect(mockPreventRemove.enabled).toBe(false);
+    expect(navigation.dispatch).not.toHaveBeenCalled();
   });
 
   // N6a-evaluatorens funn N2: at `selectMode` nullstiller oppsettet var

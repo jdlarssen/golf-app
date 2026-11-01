@@ -30,6 +30,7 @@ import { writeTeeShot } from '../data/writeTeeShot';
 import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { strokesLine } from '../components/hole/FlightRow';
 import { fireForeground, fireOnline } from '../test/syncTriggersMock';
 import { Hole } from './Hole';
@@ -265,6 +266,13 @@ function HoleWithTop({ holeNumber, navigation }: { holeNumber: number; navigatio
   const [top, setTop] = useState<ReactNode>(null);
   const nav = useMemo(
     () => ({
+      // #2746: spillet under hullet, uten tavle eller kort i stakken, så
+      // tavla og kortet åpnes som vanlig (`openOrReturn`).
+      getState: stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: GAME_ID } },
+        { name: 'Hole', params: { gameId: GAME_ID, holeNumber: 1 } },
+      ]).getState,
       ...navigation,
       goBack: jest.fn(),
       setOptions: (options: HeaderOptions) => {
