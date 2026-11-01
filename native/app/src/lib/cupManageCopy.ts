@@ -104,6 +104,7 @@ export const MANAGE_APP_TEXT = {
   retry: 'Prøv igjen',
   swapSummary: '{in} går inn for {out}.',
   swapBundled: 'Byttet gjelder alle kampene på denne dagen.',
+  swapSearch: 'Søk etter spiller',
   playOnQuestion: 'Skal {partner} spille alene, eller avgjøres kampen uten spill?',
 } as const;
 
