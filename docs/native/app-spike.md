@@ -364,7 +364,7 @@ nøkler; skjermkonvertering er egen oppfølger.
 
 Format-gaten er åpnet for `wolf` og `bingo_bango_bongo` — `GATED_MODES` i
 `src/lib/formatGate.ts` inneholdt da kun `patsome`. #2751 slapp også den ut, og lista
-er borte. Åpningen gjør også
+står tom. Åpningen gjør også
 wolf-/BBB-scorekort levérbare fra appen (per-spiller-rader, samme lever-flyt
 som web — tilsiktet).
 
