@@ -12,7 +12,7 @@
 // string assembly. HTML and plain-text share one message per branch — the tag
 // callbacks either wrap in <strong> (HTML) or pass the chunk through (text).
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -279,7 +279,7 @@ export async function sendGameFinishedNotification(
   const t = await getMailTranslator(locale);
 
   const subject = t('gameFinished.subject', { gameName });
-  const leaderboardUrl = mailUrl(locale, `/games/${gameId}/leaderboard`);
+  const leaderboardUrl = gameMailUrl(locale, gameId, 'leaderboard');
   const salutation = playerFirstName
     ? t('gameFinished.salutationNamed', { name: playerFirstName })
     : t('gameFinished.salutationGeneric');

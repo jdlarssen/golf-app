@@ -54,7 +54,7 @@ describe('sendPaymentReminderNotification', () => {
 
       Betal med Vipps til 12345.
 
-      Åpne spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Åpne spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -72,7 +72,7 @@ describe('sendPaymentReminderNotification', () => {
 
       Betal med Vipps til 12345.
 
-      Åpne spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Åpne spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -93,7 +93,7 @@ describe('sendPaymentReminderNotification', () => {
 
       Betal her: https://vipps.no/pay/abc
 
-      Åpne spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Åpne spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -111,7 +111,7 @@ describe('sendPaymentReminderNotification', () => {
 
       Avtal betaling med arrangøren.
 
-      Åpne spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Åpne spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -157,7 +157,7 @@ describe('sendPaymentReminderNotification', () => {
                     Betal med Vipps til 12345.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Åpne spillet
                     </a>
                   </div>
@@ -186,7 +186,7 @@ describe('sendPaymentReminderNotification', () => {
 
       Pay with Vipps to 12345.
 
-      Open the game: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111
+      Open the game: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

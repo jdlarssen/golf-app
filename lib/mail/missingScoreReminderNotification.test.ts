@@ -60,7 +60,7 @@ describe('sendMissingScoreReminderNotification', () => {
 
       Arrangøren ser at du har ført senere hull i Sommercup 2026, men ikke hull 10. Før slaget nå, så stemmer kortet når du leverer.
 
-      Åpne hull 10: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/holes/10
+      Åpne hull 10: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/holes/10
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -78,7 +78,7 @@ describe('sendMissingScoreReminderNotification', () => {
 
       Arrangøren ser at du har ført senere hull i Sommercup 2026, men ikke hull 10 og 11. Før slagene nå, så stemmer kortet når du leverer.
 
-      Åpne hull 10: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/holes/10
+      Åpne hull 10: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/holes/10
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -95,7 +95,7 @@ describe('sendMissingScoreReminderNotification', () => {
 
       The organiser can see you have scored later holes in Sommercup 2026, but not holes 10 and 11. Enter the score so your card is right when you submit it.
 
-      Open hole 10: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111/holes/10
+      Open hole 10: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111/holes/10
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -139,7 +139,7 @@ describe('sendMissingScoreReminderNotification', () => {
                     Arrangøren ser at du har ført senere hull i <strong>Sommercup 2026</strong>, men ikke hull 10. Før slaget nå, så stemmer kortet når du leverer.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/holes/10" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/holes/10" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Åpne hull 10
                     </a>
                   </div>

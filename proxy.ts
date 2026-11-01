@@ -30,7 +30,7 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 // må være nåbar utlogget, som /login. Ruta er ulenket og env-gatet (404 uten
 // REVIEW_ACCOUNT_EMAIL), så den er inert til eieren skrur den på.
 const PUBLIC_PATH_PATTERN =
-  /^\/(login|register|review-login)$|^\/(legal|signup|spectate|baner|embed|demo|opengraph-image)(\/|$)/;
+  /^\/(login|register|review-login)$|^\/(legal|signup|spectate|baner|embed|demo|opengraph-image|invitasjon|runde)(\/|$)/;
 
 // #1185: auth-optional routes. The proxy STILL resolves the user here (so a
 // logged-in visitor keeps their verified-user header — and thus their

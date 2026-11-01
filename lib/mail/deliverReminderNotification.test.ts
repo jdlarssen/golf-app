@@ -64,7 +64,7 @@ describe('sendDeliverReminderNotification', () => {
 
       Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.
 
-      Lever scorekortet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit
+      Lever scorekortet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/submit
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -83,7 +83,7 @@ describe('sendDeliverReminderNotification', () => {
 
       Du spilte ferdig Sommercup 2026, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.
 
-      Lever scorekortet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit
+      Lever scorekortet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/submit
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -136,7 +136,7 @@ describe('sendDeliverReminderNotification', () => {
                     Du spilte ferdig <strong>Sommercup 2026</strong>, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/submit" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Lever scorekortet
                     </a>
                   </div>
@@ -164,7 +164,7 @@ describe('sendDeliverReminderNotification', () => {
       'Du har ført kort i Sommercup 2026 som ikke er levert ennå. Lever dem med ett trykk, så kan arrangøren avslutte runden.',
     );
     expect(payload.text).toContain(
-      'Lever kortene: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit',
+      'Lever kortene: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/submit',
     );
     expect(payload.html).toContain('Lever kortene du har ført');
   });
@@ -191,7 +191,7 @@ describe('sendDeliverReminderNotification', () => {
 
       You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.
 
-      Submit scorecard: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111/submit
+      Submit scorecard: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111/submit
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

@@ -87,7 +87,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Vinter-cup er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.
 
-      Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -107,7 +107,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Vinter-cup er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.
 
-      Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -141,7 +141,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Sommerturnering er ferdig. Du endte på 1. plass av 5 med 38 poeng. Gratulerer med seieren.
 
-      Se leaderboard: https://tornygolf.no/games/game-2/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -170,7 +170,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Sommerturnering er ferdig. Du endte på 3. plass av 12 med 28 poeng. Solid plassering.
 
-      Se leaderboard: https://tornygolf.no/games/game-2/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -199,7 +199,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Sommerturnering er ferdig. Du endte på 7. plass av 12 med 18 poeng.
 
-      Se leaderboard: https://tornygolf.no/games/game-2/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -228,7 +228,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Vinter-cup er ferdig. Du endte på 2. plass av 4 med 32 poeng. Solid plassering.
 
-      Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -262,7 +262,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Fyrball-cup er ferdig. Laget endte på 1. plass av 4 lag med 64 poeng. Gratulerer med seieren. Du og Bjørn satt sammen på lag.
 
-      Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -292,7 +292,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 58 poeng. Solid plassering. Du og David satt sammen på lag.
 
-      Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -322,7 +322,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Fyrball-cup er ferdig. Laget endte på 4. plass av 4 lag med 41 poeng. Du og Fred satt sammen på lag.
 
-      Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -352,7 +352,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Fyrball-cup er ferdig. Laget endte på 2. plass av 3 lag med 49 poeng. Solid plassering.
 
-      Se leaderboard: https://tornygolf.no/games/game-3/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -386,7 +386,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Matchplay-cup er ferdig. Du vant 3&2 over Per. Gratulerer med seieren.
 
-      Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -415,7 +415,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Matchplay-cup er ferdig. Du tapte 1up mot Per. Godt spilt. Kanskje revansje neste runde?
 
-      Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -444,7 +444,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Matchplay-cup er ferdig. Matchen mot David endte uavgjort (AS). En jevn match. Kanskje neste gang.
 
-      Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -473,7 +473,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Matchplay-cup er ferdig. Du vant 2up over motstanderen. Gratulerer med seieren.
 
-      Se leaderboard: https://tornygolf.no/games/game-4/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -507,7 +507,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Klubbmesterskap er ferdig. Du endte på 1. plass av 12 med 68 slag netto (74 brutto). Gratulerer med seieren.
 
-      Se leaderboard: https://tornygolf.no/games/game-5/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-5/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -536,7 +536,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Klubbmesterskap er ferdig. Du endte på 2. plass av 12 med 72 slag netto (78 brutto). Solid plassering.
 
-      Se leaderboard: https://tornygolf.no/games/game-5/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-5/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -565,7 +565,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Klubbmesterskap er ferdig. Du endte på 4. plass av 12 med 80 slag netto (86 brutto).
 
-      Se leaderboard: https://tornygolf.no/games/game-5/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-5/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -600,7 +600,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Firma-cup er ferdig. Laget endte på 1. plass av 4 lag med 68 slag netto (78 brutto). Gratulerer med seieren. Du spilte med Bjørn.
 
-      Se leaderboard: https://tornygolf.no/games/game-tx-1/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-tx-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -630,7 +630,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Firma-cup er ferdig. Laget endte på 2. plass av 4 lag med 72 slag netto (82 brutto). Solid plassering. Du spilte med Bjørn, Carla og Dagfinn.
 
-      Se leaderboard: https://tornygolf.no/games/game-tx-2/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-tx-2/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -660,7 +660,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Firma-cup er ferdig. Laget endte på 4. plass av 4 lag med 92 slag netto (98 brutto). Du spilte med Bjørn.
 
-      Se leaderboard: https://tornygolf.no/games/game-tx-3/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-tx-3/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -690,7 +690,7 @@ describe('sendGameFinishedNotification', () => {
 
       Runden i Firma-cup er ferdig. Laget endte på 3. plass av 4 lag med 80 slag netto (88 brutto). Solid plassering.
 
-      Se leaderboard: https://tornygolf.no/games/game-tx-4/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-tx-4/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -719,7 +719,7 @@ describe('sendGameFinishedNotification', () => {
       Fra pressetribunen
       Ada dominerte fra hull 1 & holdt unna hele runden.
 
-      Se leaderboard: https://tornygolf.no/games/game-1/leaderboard
+      Se leaderboard: https://tornygolf.no/runde/game-1/leaderboard
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -764,7 +764,7 @@ describe('sendGameFinishedNotification', () => {
                   </p>
                   
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/game-1/leaderboard" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/game-1/leaderboard" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Se leaderboard
                     </a>
                   </div>
@@ -805,7 +805,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
 
       The round in Vinter-cup is over — every scorecard is submitted and approved, and the leaderboard is open.
 
-      View leaderboard: https://tornygolf.no/en/games/game-1/leaderboard
+      View leaderboard: https://tornygolf.no/en/runde/game-1/leaderboard
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -831,7 +831,7 @@ describe('sendGameFinishedNotification — engelsk', () => {
 
       The round in Vinter-cup is over. You finished in 1st place out of 5 with 38 points. Congratulations on the win.
 
-      View leaderboard: https://tornygolf.no/en/games/game-1/leaderboard
+      View leaderboard: https://tornygolf.no/en/runde/game-1/leaderboard
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

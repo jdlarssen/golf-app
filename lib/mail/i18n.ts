@@ -13,6 +13,7 @@
 
 import { createTranslator } from 'next-intl';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { roundLinkPath } from '@/lib/appLinks/appLinkPaths';
 import { loadMessages, type Catalog } from '@/lib/i18n/messages';
 import { toSupportedLocale } from '@/lib/i18n/resolveLocale';
 
@@ -70,4 +71,14 @@ export function mailUrl(locale: string | null | undefined, path: string): string
   const loc = resolveMailLocale(locale);
   const prefix = loc === routing.defaultLocale ? '' : `/${loc}`;
   return `${APP_BASE_URL}${prefix}${path}`;
+}
+
+/**
+ * The link to a round in a mail (#2748). It goes to `/runde/...`, not `/games/...`:
+ * the app claims that path, so someone with the app lands on the same screen a
+ * notification opens, and someone without it is sent on to the page. `subpage` is
+ * `holes/<n>`, `submit`, `avslutt` or `leaderboard`.
+ */
+export function gameMailUrl(locale: string | null | undefined, gameId: string, subpage = ''): string {
+  return mailUrl(locale, roundLinkPath(gameId, subpage));
 }

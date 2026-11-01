@@ -65,7 +65,7 @@ describe('sendRegistrationApprovedMail', () => {
 
       Arrangøren har godkjent påmeldingen din til Sommercup 2026. Du står på lista, og scorekortet åpner ved tee-off.
 
-      Se spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Se spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -84,7 +84,7 @@ describe('sendRegistrationApprovedMail', () => {
 
       Arrangøren har godkjent påmeldingen din til <b>X</b>. Du står på lista, og scorekortet åpner ved tee-off.
 
-      Se spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Se spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -124,7 +124,7 @@ describe('sendRegistrationApprovedMail', () => {
                     Arrangøren har godkjent påmeldingen din til <strong>Sommercup 2026</strong>. Du står på lista, og scorekortet åpner ved tee-off.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Se spillet
                     </a>
                   </div>
@@ -155,7 +155,7 @@ describe('sendRegistrationApprovedMail', () => {
 
       The organiser has approved your registration for Sommercup 2026. You're on the list — your scorecard will open at tee-off.
 
-      View game: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111
+      View game: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

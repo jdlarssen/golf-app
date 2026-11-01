@@ -12,7 +12,7 @@
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -44,7 +44,7 @@ export async function sendDeliverReminderNotification(
   const subject = forKeptCards
     ? t('deliverReminder.subjectKept', { gameName })
     : t('deliverReminder.subject', { gameName });
-  const submitUrl = mailUrl(locale, `/games/${gameId}/submit`);
+  const submitUrl = gameMailUrl(locale, gameId, 'submit');
   const homeUrl = mailUrl(locale, '');
 
   const salutation = playerFirstName
