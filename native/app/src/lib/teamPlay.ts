@@ -14,27 +14,26 @@
 //
 //  1. **Hvem eier raden** — `teamScoreOwnerId` (`lib/games/teamCaptain.ts`) og
 //     `scoreOwnerForHole` (`lib/games/scoreOwner.ts`). Den siste er per HULL,
-//     ikke per runde: patsome bytter halvveis, og selv om den fortsatt er gatet
-//     i appen er det regelen som gjelder — vi spør den, vi gjetter ikke.
+//     ikke per runde: patsome bytter halvveis. Vi spør den, vi gjetter ikke.
 //  2. **Hvor mange slag laget får** — motoren. `computeLeaderboard` gir
-//     `teamHandicap` for scramble og per-side `extra` per hull for
-//     alternate-shot. Webbens hull-side har en duplisert inline-kopi av 60/40-
-//     og prosent-formlene; et TREDJE hjem for dem er nøyaktig fella AGENTS.md
-//     kaller trap 4. Kan ikke motoren svare, viser vi ingen badge — vi finner
-//     ikke på et tall.
-//  3. **Utslags-rotasjonen i foursomes** — odde hull til den som ble valgt,
-//     like hull til makkeren. Kopiert regel for regel fra webbens
-//     `FoursomesTeeHint`; valget selv gjøres på nettsiden.
+//     `teamHandicap` for scramble, per-side `extra` per hull for alternate-shot
+//     og `teamExtraStrokes` per hull for patsome. Webbens hull-side har en
+//     duplisert inline-kopi av 60/40- og prosent-formlene; et TREDJE hjem for
+//     dem er nøyaktig fella AGENTS.md kaller trap 4. Kan ikke motoren svare,
+//     viser vi ingen badge — vi finner ikke på et tall.
+//  3. **Utslags-rotasjonen** i foursomes og Patsomes foursomes-del — odde hull
+//     til den som ble valgt, like hull til makkeren. Kopiert regel for regel
+//     fra webbens `FoursomesTeeHint` og `PatsomeTeeHint`.
 import { scoredHoleNumbers } from '../../../../lib/games/scoreOwner';
 import { teamScoreOwnerId } from '../../../../lib/games/teamCaptain';
 import { foldTeamRows } from '../../../../lib/scoring/context/foldTeamRows';
-import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { GameMode, PatsomeSegment } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
-import type { BundleGame } from '../data/gameBundle';
+import type { GameBundle } from '../data/gameBundle';
 import { teamLabel } from './leaderboardModel';
 import type { RosterEntry } from './roster';
-import type { LeaderboardOutcome } from './scoringContext';
+import { computeGameLeaderboard, type LeaderboardOutcome } from './scoringContext';
 
 /**
  * Ett lag slik hull-siden og scorekortet trenger det.
@@ -217,6 +216,9 @@ export function filledHolesForOwner(
  *    SI-allokeringen.
  *  - alternate shot (foursomes/greensome/chapman/gruesome → `kind:
  *    'foursomes_matchplay'`): hullets ferdig regnede per-side-extra.
+ *  - patsome: hullets `teamExtraStrokes`. Motoren regner det bare på hull med
+ *    slag, så spør med {@link teamExtraOutcome}, ellers svarer et uspilt hull 0.
+ *    Hull 1–6 har ingen lagball, og der svarer vi `null`.
  *
  * `null` betyr «vi vet ikke» — motoren kunne ikke bygge konteksten, laget står
  * ikke i resultatet, eller hullet mangler. Da vises ingen badge. Et gjettet
@@ -244,7 +246,51 @@ export function teamExtraForHole(
     return null;
   }
 
+  if (result.kind === 'patsome') {
+    const row = result.teams
+      .find((team) => team.teamNumber === teamNumber)
+      ?.holes.find((hole) => hole.holeNumber === holeNumber);
+    if (!row || row.segment === 'fourball') return null;
+    return row.teamExtraStrokes;
+  }
+
   return null;
+}
+
+/**
+ * Motorsvaret «+N» leses fra, gitt spillets slag.
+ *
+ * Patsome-motoren setter `teamExtraStrokes` til 0 på et hull uten slag. Badgen
+ * skal stå før noen har tastet, som på nettets hullside, og poengene skal ikke
+ * regnes her. Derfor spør vi motoren med én rad per spiller på hvert hull:
+ * tallene på slagene brukes ikke, bare at hullet er spilt. Formelen får ikke et
+ * tredje hjem. De andre formatene regner slagene uansett, og får de ekte radene.
+ */
+export function teamExtraOutcome(bundle: GameBundle, scores: readonly LocalScore[]): LeaderboardOutcome {
+  if (bundle.game.gameMode !== 'patsome') return computeGameLeaderboard(bundle, scores);
+  const everyHole = bundle.players.flatMap((player) =>
+    bundle.holes.map(
+      (hole): LocalScore => ({
+        id: `${bundle.game.id}:${player.userId}:${hole.holeNumber}`,
+        gameId: bundle.game.id,
+        userId: player.userId,
+        holeNumber: hole.holeNumber,
+        strokes: hole.parMens,
+        putts: null,
+        enteredBy: player.userId,
+        clientUpdatedAt: bundle.fetchedAt,
+        serverUpdatedAt: null,
+      }),
+    ),
+  );
+  return computeGameLeaderboard(bundle, everyHole);
+}
+
+/** Patsomes tre deler, 6/6/6 som i motoren. */
+export function patsomeSegmentFor(holeNumber: number): PatsomeSegment {
+  if (holeNumber <= 6) return 'fourball';
+  if (holeNumber <= 12) return 'greensome';
+  return 'foursomes';
 }
 
 /**
@@ -266,39 +312,53 @@ export function teamHandicapFor(
 }
 
 /**
- * Hvem som slår ut for siden på dette hullet i foursomes.
+ * Hvem som slår ut for laget på dette hullet.
  *
- * Regelen er webbens `FoursomesTeeHint`, tegn for tegn: odde hull til den siden
- * valgte på nettsiden, like hull til makkeren. Rotasjonen er fast hele runden,
- * så ett valg driver alle 18 hullene.
+ * Foursomes har valget på alle hull, Patsome bare i foursomes-delen (hull
+ * 13–18). Regelen er webbens `FoursomesTeeHint` og `PatsomeTeeHint`, tegn for
+ * tegn: odde hull til den laget valgte, like hull til makkeren. Greensome,
+ * chapman og gruesome deler resultatform med foursomes, men ikke rotasjonen.
  *
  * `null` når valget ikke er tatt, når laget ikke er et par, eller når den
  * valgte ikke lenger står på laget — ingen av delene er en feil, bare
  * ingenting å si.
  */
-export function foursomesTeeStarterId(opts: {
+export function teeStarterIdFor(opts: {
   gameMode: GameMode;
-  game: Pick<
-    BundleGame,
-    'foursomesSide1TeeStarterUserId' | 'foursomesSide2TeeStarterUserId'
-  >;
-  teamNumber: number;
+  /** Valget som gjelder (`effectiveTeeStarter`). */
+  chosen: string | null;
   holeNumber: number;
   memberIds: readonly string[];
 }): string | null {
-  const { gameMode, game, teamNumber, holeNumber, memberIds } = opts;
-  // Kun foursomes har kolonnene. Greensome/chapman/gruesome deler resultat-form
-  // med den, men ikke utslags-rotasjonen — samme avgrensning som webben.
-  if (gameMode !== 'foursomes_matchplay') return null;
-  const chosen =
-    teamNumber === 1
-      ? game.foursomesSide1TeeStarterUserId
-      : teamNumber === 2
-        ? game.foursomesSide2TeeStarterUserId
-        : null;
-  if (chosen == null) return null;
+  const { gameMode, chosen, holeNumber, memberIds } = opts;
+  const onHole =
+    gameMode === 'patsome'
+      ? patsomeSegmentFor(holeNumber) === 'foursomes'
+      : gameMode === 'foursomes_matchplay';
+  if (!onHole || chosen == null) return null;
   if (memberIds.length !== 2 || !memberIds.includes(chosen)) return null;
   return holeNumber % 2 === 1
     ? chosen
     : (memberIds.find((id) => id !== chosen) ?? chosen);
+}
+
+/**
+ * Skal laget mitt få spørsmålet på dette hullet? Som på nettet: foursomes på
+ * hull 1, Patsome på alle hullene i foursomes-delen til laget har valgt. Bare
+ * for et lag på to aktive der jeg selv er med, og bare mens kortet er åpent.
+ */
+export function showsTeeStarterPicker(opts: {
+  gameMode: GameMode;
+  chosen: string | null;
+  holeNumber: number;
+  /** Aktive medlemmer på laget mitt. */
+  memberIds: readonly string[];
+  userId: string;
+  locked: boolean;
+}): boolean {
+  const { gameMode, chosen, holeNumber, memberIds, userId, locked } = opts;
+  if (locked || chosen != null) return false;
+  if (memberIds.length !== 2 || !memberIds.includes(userId)) return false;
+  if (gameMode === 'patsome') return patsomeSegmentFor(holeNumber) === 'foursomes';
+  return gameMode === 'foursomes_matchplay' && holeNumber === 1;
 }

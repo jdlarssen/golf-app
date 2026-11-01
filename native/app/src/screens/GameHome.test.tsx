@@ -557,29 +557,6 @@ describe('GameHome — startbilletten (#2255)', () => {
     focus.mockRestore();
   });
 
-  it('stengt format: bare Regler-flisa, og stengeteksten med nettlenken', async () => {
-    mockState.bundle = homeBundle({
-      game: { id: 'game-1', gameMode: 'patsome', modeConfig: {} },
-      players: [homePlayer({ userId: 'me', teamNumber: 1 }), homePlayer({ userId: 'ola', teamNumber: 2 })],
-    });
-    mockState.scores = [];
-
-    await render(
-      <GameHome
-        {...({
-          route: { params: { gameId: 'game-1' } },
-          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
-        } as unknown as ScreenProps<'GameHome'>)}
-      />,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
-    expect(screen.getByTestId('open-rules')).toBeTruthy();
-    expect(screen.queryByTestId('open-leaderboard')).toBeNull();
-    expect(screen.queryByTestId('open-scorecard')).toBeNull();
-    expect(screen.getByTestId('format-gate-link')).toBeTruthy();
-  });
-
   // #2752: halve dager og avledede kamper.
   describe('delt cup-dag', () => {
     const players = [homePlayer({ userId: 'me', teamNumber: 1 }), homePlayer({ userId: 'ola', teamNumber: 2 })];
@@ -661,6 +638,30 @@ describe('GameHome — startbilletten (#2255)', () => {
       expect(screen.getByTestId('ticket-played')).toHaveTextContent(/3 av 9/);
       expect(screen.getByText('Fortsett på hull 13')).toBeTruthy();
     });
+  });
+
+  // #2751: porten er åpen, og makkerens levering stempler ikke mitt kort.
+  it('Patsome: føring, ikke nettsiden, og kortet mitt er ulevert når makkeren har levert', async () => {
+    mockState.bundle = homeBundle({
+      game: { gameMode: 'patsome', modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' } },
+      players: [
+        homePlayer({ userId: 'a-makker', teamNumber: 1, submittedAt: '2026-09-29T12:00:00.000Z' }),
+        homePlayer({ userId: 'me', teamNumber: 1 }),
+      ],
+    });
+    mockState.scores = [];
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: mockState.bundle.game.id } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('primary-cta')).toBeTruthy());
+    expect(screen.queryByTestId('format-gate-link')).toBeNull();
+    expect(screen.queryByTestId('format-gate')).toBeNull();
   });
 
   it('pågående runde: tavlas tall står til høyre for fremdriften, fra samme modell som helten på Hjem', async () => {

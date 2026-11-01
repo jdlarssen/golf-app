@@ -16,23 +16,22 @@
 //
 // #2752 åpnet segment-spillene (`hole_segment !== 'full'`) og de avledede
 // kampene (`source_game_id` satt): hullene følger segmentet, og en avledet kamp
-// viser stillingen fra vertens slag uten føring (`lib/segmentRound.ts`). Ett
-// format står igjen i gaten:
+// viser stillingen fra vertens slag uten føring (`lib/segmentRound.ts`).
 //
-//  1. **Patsome** — segment-hybrid (4BBB til hull 6, foursomes fra hull 7) med
-//     egne tee-starters (#2751).
+// #2751 åpnet det siste formatet, Patsome. Gaten står nå tom. Den er beholdt,
+// så et nytt format nettet får før appen, har et sted å stå.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 
 /**
- * Formatene som er stengt på grunn av SELVE spilleformen — ett per d.d.
+ * Formatene som er stengt på grunn av SELVE spilleformen — ingen per d.d.
  *
  * Skrevet ut som en liste og ikke utledet fra et delt predikat med vilje:
  * ingen av de delte predikatene beskriver «har ikke fått sin flate i appen
  * ennå», og en gate som later som den følger et delt begrep ville drevet fra
- * det ved neste endring. Lista har krympet én gang før (#1832 slapp wolf og
- * Bingo Bango Bongo ut), og det skal den kunne gjøre igjen — én rad om gangen.
+ * det ved neste endring. Lista har krympet to ganger (#1832 slapp wolf og Bingo
+ * Bango Bongo ut, #2751 Patsome), og den skal kunne vokse igjen, én rad om gangen.
  */
-const GATED_MODES: readonly GameMode[] = ['patsome'];
+const GATED_MODES: readonly GameMode[] = [];
 
 /** Hvorfor et spill ikke vises i appen. `null` = det vises. */
 export type GateReason = 'mode';

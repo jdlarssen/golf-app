@@ -56,12 +56,12 @@ import {
   pendingHeading,
   positionLabel,
 } from '../lib/approveCopy';
-import { approveRows, approveScreenState, type ApproveRow } from '../lib/approveState';
+import { approveRows, approveScreenState, cardScoresByHole, type ApproveRow } from '../lib/approveState';
 import { backTo } from '../lib/backTo';
 import { displayName, formatClock, shortDisplayName } from '../lib/display';
 import { findInRoster, toRoster, toStampPlayers, type RosterEntry } from '../lib/roster';
 import { gameHoles } from '../lib/segmentRound';
-import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
 import { teeShotMinimum } from '../lib/teeShotTeams';
@@ -173,7 +173,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     });
   /** Brutto på kortet, eller `null` når enheten ikke ser noen slag (beslutning 3). */
   const strokesOf = (ownerId: string): number | null => {
-    const grid = gridFor(gameHoles(bundle), scores, findInRoster(roster, ownerId));
+    const grid = gridFor(gameHoles(bundle), scores, roster, gameMode, findInRoster(roster, ownerId));
     return grid.totals.played === 0 ? null : grid.totals.brutto;
   };
 
@@ -200,7 +200,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     const { pending } = state;
     const open = pending.find((entry) => entry.user_id === selectedUserId) ?? pending[0]!;
     const others = pending.filter((entry) => entry !== open);
-    const grid = gridFor(gameHoles(bundle), scores, open);
+    const grid = gridFor(gameHoles(bundle), scores, roster, gameMode, open);
     const stamp = stampFor(open.user_id);
     const rejectEntry =
       rejectUserId == null ? undefined : pending.find((entry) => entry.user_id === rejectUserId);
@@ -350,6 +350,9 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
           <RejectSheet
             key={rejectEntry.user_id}
             name={shortDisplayName(rejectEntry.player)}
+            // Ikke leveringsregelen: serveren åpner hele laget igjen i alle format
+            // med delte hull, også Patsome, der hver spiller leverer selv
+            // (`sharedCardUserIds`). Teksten sier det serveren gjør.
             teamCard={modeCollapsesToTeamCard(gameMode, 18)}
             guest={rejectEntry.player.isGuest}
             busy={busy?.userId === rejectEntry.user_id && busy.action === 'reject'}
@@ -545,16 +548,18 @@ function ApprovedRow({
 }
 
 /**
- * Kortets grid: hullene, slagene til `owner` og paren for tee-kjønnet hens.
- * Det ene stedet skjermen bygger et grid, så det åpne kortet og radene under
- * regner brutto likt (#2577).
+ * Kortets grid: hullene, slagene på kortet til `owner` og paren for tee-kjønnet
+ * hens. Det ene stedet skjermen bygger et grid, så det åpne kortet og radene
+ * under regner brutto likt (#2577).
  */
 function gridFor(
   holes: readonly BundleHole[],
   scores: readonly LocalScore[],
+  roster: readonly RosterEntry[],
+  gameMode: GameMode,
   owner: RosterEntry | undefined,
 ): Grid {
-  const byHole = owner ? scoresByHoleFor(scores, owner.user_id) : new Map();
+  const byHole = owner ? cardScoresByHole(scores, roster, gameMode, owner.user_id) : new Map<number, LocalScore>();
   const teeGender = (owner?.player.teeGender ?? 'mens') as ScoringGender;
   return buildScorecardGrid({
     rows: holes.map((hole) => ({

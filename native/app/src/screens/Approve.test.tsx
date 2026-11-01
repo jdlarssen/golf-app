@@ -212,6 +212,63 @@ describe('Approve', () => {
     });
   });
 
+  // #2751: kortet til den som ikke er kaptein, er egne hull 1–6 og lagets 7–18.
+  it('Patsome: ett kort per spiller, og bruttoen teller begge eierne', async () => {
+    const submitted = '2026-09-17T12:00:00.000Z';
+    mockState.bundle = {
+      game: {
+        ...texasGame,
+        gameMode: 'patsome',
+        modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+      },
+      players: [
+        player({ userId: 'kaptein', name: 'Kari Kaptein', teamNumber: 1, submittedAt: submitted, submittedByUserId: 'kaptein' }),
+        player({ userId: 'makker', name: 'Mona Makker', teamNumber: 1, submittedAt: submitted, submittedByUserId: 'makker' }),
+        player({ userId: 'rival-a', teamNumber: 2 }),
+        player({ userId: 'rival-b', teamNumber: 2 }),
+      ],
+      courseName: 'Testbanen',
+      teeBoxName: 'Gul',
+      holes: Array.from({ length: 18 }, (_, i) => ({
+        holeNumber: i + 1,
+        parMens: 4,
+        parLadies: 4,
+        parJuniors: 4,
+        strokeIndex: i + 1,
+      })),
+      fetchedAt: '2026-09-17T12:00:00.000Z',
+    };
+    const row = (userId: string, holeNumber: number, strokes: number) => ({
+      id: `game-1#${userId}#${holeNumber}`,
+      gameId: 'game-1',
+      userId,
+      holeNumber,
+      strokes,
+      putts: null,
+      enteredBy: userId,
+      clientUpdatedAt: '2026-09-17T09:00:00.000Z',
+      serverUpdatedAt: null,
+    });
+    mockState.scores = [
+      // Hull 1–6: hver sin ball, makkeren på 5, kapteinen på 4.
+      ...[1, 2, 3, 4, 5, 6].flatMap((hole) => [row('kaptein', hole, 4), row('makker', hole, 5)]),
+      // Hull 7–18: lagets rad, på kapteinen, 4 slag.
+      ...[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((hole) => row('kaptein', hole, 4)),
+    ];
+
+    await renderApprove();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-screen')).toBeTruthy();
+    });
+    // Begge kortene står for seg: 6 × 4 + 12 × 4 = 72 og 6 × 5 + 12 × 4 = 78.
+    await waitFor(() => {
+      expect(screen.getByText('72')).toBeTruthy();
+    });
+    expect(screen.getByText(/Mona Makker/)).toBeTruthy();
+    expect(screen.getByText(/78/)).toBeTruthy();
+  });
+
   it('viser hullene en trukket kaptein førte på den nye kapteinens kort', async () => {
     rigPending();
     await renderApprove();
