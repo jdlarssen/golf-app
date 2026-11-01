@@ -8,7 +8,7 @@
 // sideveis mens Hull og Par står fast, når alle kolonnene ikke får plass.
 import { Fragment } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { BOARD_PATSOME_TEXT, BOARD_TEAM_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
+import { BOARD_TEAM_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
 import { HOLES_TEXT } from '../../lib/holesCopy';
 import type {
   PatsomeBoardColumn,
@@ -232,7 +232,7 @@ function HoleTable({ model }: { model: PatsomeBoardModel }) {
         <View style={styles.fixedColumns} testID="patsome-holes-fixed">
           <View style={styles.tableRowHead}>
             <Text style={[styles.headText, styles.holeCol, { color: colors.muted }]}>{BOARD_TEXT.colHoles}</Text>
-            <Text style={[styles.headText, styles.parCol, { color: colors.muted }]}>{BOARD_PATSOME_TEXT.colPar}</Text>
+            <Text style={[styles.headText, styles.parCol, { color: colors.muted }]}>{BOARD_TEXT.legendPar}</Text>
           </View>
           {model.groups.map((group) => (
             <Fragment key={group.label}>
