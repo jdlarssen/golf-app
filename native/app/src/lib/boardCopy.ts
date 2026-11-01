@@ -182,8 +182,8 @@ export const BOARD_PATSOME_TEXT = {
   groupFoursomes: 'Foursomes · hull 13–18',
   /** Opplesningen av én rad i tabellen. */
   srHole: 'Hull {hole}, par {par}',
-  srCell: '{name} {points} poeng',
-  srCellUnplayed: '{name} ikke spilt',
+  srCell: '{name}, {points} poeng',
+  srCellUnplayed: '{name}, ikke spilt',
 } as const;
 
 /**
