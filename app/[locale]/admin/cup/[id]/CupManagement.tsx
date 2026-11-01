@@ -16,7 +16,7 @@ import type { CupMatchSummary } from '@/lib/cup/computeCupLeaderboard';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import { unregisteredSideAwards } from '@/lib/cup/sideAwardsRegistered';
-import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
+import { pendingPlayOnChoices } from '@/lib/cup/pendingPlayOnChoices';
 import { isNotStartedCupMatch } from '@/lib/cup/cupWithdrawalOutcome';
 import { SideAwardsPanel, type SideAwardRosterOption } from './SideAwardsPanel';
 import { CupMatchList } from './CupMatchList';
@@ -90,33 +90,6 @@ function playersWithNotStartedMatch(matches: CupMatchSummary[]): Set<string> {
     matches
       .filter((m) => isNotStartedCupMatch(m.status))
       .flatMap((m) => [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])]),
-  );
-}
-
-/**
- * #1814 (E4): et selv-trekk i en fourball etterlater et valg bare ARRANGØREN
- * kan ta — skal makkeren spille alene, eller avgjøres kampen etter regelen? Uten
- * venter-banneret lå valget nede på ett av mange kampkort, og ingen tok det.
- *
- * Fravær av `withdrawal_play_on` = ingen har bestemt seg (`playOnChoicePending`
- * fra `cupMatchEntry`); et registrert valg — også «etter regelen» — fjerner
- * kampen herfra. Kamper uten en makker igjen å spille alene faller ut med
- * `remainingPartnerName === null`.
- */
-function pendingPlayOnChoices(
-  matches: CupMatchSummary[],
-  nameOf: (userId: string) => string,
-  fallbackLabel: string,
-): { gameId: string; label: string; partner: string }[] {
-  const rows = matches
-    .filter((m) => m.playOnChoicePending)
-    .map((m) => ({
-      gameId: m.gameId,
-      label: m.matchLabel ?? fallbackLabel,
-      partner: remainingPartnerName(m, nameOf),
-    }));
-  return rows.filter(
-    (m): m is { gameId: string; label: string; partner: string } => m.partner !== null,
   );
 }
 
