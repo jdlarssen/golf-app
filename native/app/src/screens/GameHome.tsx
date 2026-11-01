@@ -46,6 +46,7 @@ import {
   wolfRotationRule,
   type WolfRotationRule,
 } from '../../../../lib/scoring/modes/wolfTurn';
+import { CupGameLink } from '../components/cup/CupGameLink';
 import { FlightPicker } from '../components/game/FlightPicker';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
@@ -54,7 +55,6 @@ import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
 import { backTo, openOrReturn } from '../lib/backTo';
-import { CUP_TEXT } from '../lib/cupCopy';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
@@ -371,14 +371,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 
       {/* #2752: cup-rommet, som `CupStandingsLink` på nettet. */}
       {game.tournamentId ? (
-        <Pressable
-          accessibilityRole="button"
-          style={ui.buttonSecondary}
-          onPress={() => openOrReturn(navigation, 'Cup', { cupId: game.tournamentId as string })}
-          testID="open-cup"
-        >
-          <Text style={ui.buttonSecondaryText}>{CUP_TEXT.gameLink}</Text>
-        </Pressable>
+        <CupGameLink onPress={() => openOrReturn(navigation, 'Cup', { cupId: game.tournamentId as string })} />
       ) : null}
 
       {approvals.length > 0 ? (
