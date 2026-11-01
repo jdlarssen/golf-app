@@ -11,7 +11,7 @@ import {
   undoCupWithdrawalCore,
   withdrawCupPlayerCore,
   withdrawSelfFromCupCore,
-  type CupWithdrawalError,
+  type CupWithdrawalError as CoreError,
 } from './withdrawalCore';
 
 /**
@@ -19,7 +19,9 @@ import {
  * Reglene og skrivingen bor i `withdrawalCore.ts`, delt med appens ruter (#2752).
  */
 
-export type { CupWithdrawalError };
+// Not `export type { … }`: a server-actions file turns a re-export into a real one,
+// and the build fails on an action that does not exist.
+export type CupWithdrawalError = CoreError;
 
 /**
  * Kamp-ID-ene i ett skjemafelt. Bekreftelsessiden sender én avkrysningsboks per
