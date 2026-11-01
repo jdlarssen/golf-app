@@ -633,15 +633,15 @@ describe('drainQueue', () => {
       warn.mockRestore();
     });
 
-    it('avslag uten sesjon: det kan være en utløpt økt, så raden står', async () => {
+    it('uten sesjon sendes ingenting: raden venter, og ingen forsøk brukes opp', async () => {
       const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
       await pick();
       mocks().currentDeviceUserId.mockResolvedValue(null);
-      mocks().supabase.rpc.mockResolvedValue(reply(null, null));
 
       await drainQueue();
 
-      expect(await localRows()).toEqual([expect.objectContaining({ pending: true, attemptCount: 1 })]);
+      expect(tapStarterCalls()).toHaveLength(0);
+      expect(await localRows()).toEqual([expect.objectContaining({ pending: true, attemptCount: 0 })]);
     });
 
     it('nettfeil: stopper ved første, teller opp, og neste forsøk kan lykkes', async () => {
