@@ -556,6 +556,24 @@ describe('Scorecard', () => {
     expect(refreshGameBundle.mock.calls.length).toBe(calls + 1);
   });
 
+  // #2746: hullet ligger under kortet. «Rett» går tilbake dit, ikke et hull oppå.
+  it('hullet som alt ligger under kortet: tilbake dit', async () => {
+    const navigate = jest.fn();
+    const nav = stackNavigation([
+      { name: 'Home' },
+      { name: 'GameHome', params: { gameId: GAME_ID } },
+      { name: 'Hole', params: { gameId: GAME_ID, holeNumber: 7 } },
+      { name: 'Scorecard', params: { gameId: GAME_ID } },
+    ]);
+    await render(scorecardElement(GAME_ID, navigate, nav));
+    await fireEvent.press(await screen.findByTestId('scorecard-edit'));
+    expect(nav.popTo).toHaveBeenCalledWith(
+      'Hole',
+      expect.objectContaining({ gameId: GAME_ID, holeNumber: 1 }),
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {
