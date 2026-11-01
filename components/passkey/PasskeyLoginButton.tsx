@@ -44,7 +44,8 @@ export function PasskeyLoginButton({ next }: { next: string }) {
         setBusy(false);
         return;
       }
-      window.location.assign(safeInternalPath(next) ?? '/');
+      // `replace` (#2746): innloggingen skal ikke ligge bak deg i historikken.
+      window.location.replace(safeInternalPath(next) ?? '/');
     } catch {
       setError(t('loginError'));
       setBusy(false);

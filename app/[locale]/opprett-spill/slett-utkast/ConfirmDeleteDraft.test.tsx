@@ -9,11 +9,11 @@ import {
 // #2459: the confirmation page for «Slett utkastet». Nothing is deleted before
 // the confirm button; a foreign, expired or made-up key deletes nothing.
 
-const push = vi.fn();
+const replace = vi.fn();
 vi.mock('@/i18n/navigation', async () => {
   const { createElement } = await import('react');
   return {
-    useRouter: () => ({ push }),
+    useRouter: () => ({ replace }),
     Link: ({ href, children, ...rest }: { href: string; children: unknown; [k: string]: unknown }) =>
       createElement('a', { href, ...rest }, children as never),
   };
@@ -47,7 +47,7 @@ function seed(userId = USER, path = '/opprett-spill', savedAt = Date.now()) {
 
 beforeEach(() => {
   window.localStorage.clear();
-  push.mockClear();
+  replace.mockClear();
 });
 
 describe('ConfirmDeleteDraft', () => {
@@ -76,7 +76,8 @@ describe('ConfirmDeleteDraft', () => {
     fireEvent.click(await screen.findByTestId('delete-draft-confirm'));
 
     expect(window.localStorage.getItem(KEY)).toBeNull();
-    expect(push).toHaveBeenCalledWith('/');
+    // #2746: det slettede utkastet skal ikke ligge bak Hjem.
+    expect(replace).toHaveBeenCalledWith('/');
   });
 
   it('en annen brukers nøkkel gir «finnes ikke» og sletter ingenting', async () => {

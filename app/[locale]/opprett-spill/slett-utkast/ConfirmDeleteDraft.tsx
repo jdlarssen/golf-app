@@ -85,7 +85,7 @@ export function ConfirmDeleteDraft({
           style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
           onClick={() => {
             clearWizardDraft(draft.key);
-            router.push('/');
+            router.replace('/');
           }}
         >
           {t('deleteButton')}
