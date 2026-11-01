@@ -217,7 +217,7 @@ describe('soloBoardFor — when the screen shows something else', () => {
   it.each([
     ['no strokes yet', homeBundle({ players }), []],
     ['team stableford', homeBundle({ game: { modeConfig: { kind: 'stableford', team_size: 2 } }, players }), scores],
-    ['a nine-hole game the app does not run', homeBundle({ game: { holeSegment: 'front9' }, players }), scores],
+    ['a format the app does not run', homeBundle({ game: { gameMode: 'patsome' }, players }), scores],
     ['a reveal round still hiding net', homeBundle({ game: { scoreVisibility: 'reveal' }, players }), scores],
   ])('%s → null', (_name, bundle, rows) => {
     expect(soloBoardFor({ bundle, scores: rows, userId: ME })).toBeNull();

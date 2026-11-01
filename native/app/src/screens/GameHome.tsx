@@ -52,7 +52,7 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
-import { backTo } from '../lib/backTo';
+import { backTo, openOrReturn } from '../lib/backTo';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
@@ -73,6 +73,8 @@ import {
   ticketStub,
 } from '../lib/gameTicket';
 import { holeByHoleKind } from '../lib/holeByHole';
+import { bridgeHole, gameHoleNumbers, isDerivedGame, scoresGameId } from '../lib/segmentRound';
+import { useSegmentSibling } from '../lib/useSegmentSibling';
 import { buildHeroModel } from '../lib/homeHero';
 import { nameLookup } from '../lib/leaderboardModel';
 import {
@@ -104,9 +106,6 @@ import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
-/** Appen fører bare hele runder — segment-spill gates bort i `formatGate`. */
-const HOLE_COUNT = 18;
-
 export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { colors, ui } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
@@ -115,7 +114,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // #2201: det du åpner, er lest.
   useMarkVisitRead('gameHome', gameId);
   const { bundle, errorText, notFound, loading, refresh } = useGameBundle(gameId);
-  const { scores: localScores, reload } = useLocalScores(gameId);
+  // #2752: en avledet kamp har ingen slag selv, og leser dem fra verten.
+  const scoresId = bundle ? scoresGameId(bundle.game) : gameId;
+  const { scores: localScores, reload } = useLocalScores(scoresId);
+  // #2752: den andre halvdelen av en delt cup-dag ligger klar før runden starter.
+  useSegmentSibling(bundle, userId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
   const scores = useTeamScores(localScores, bundle);
@@ -127,7 +130,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Hent ned det serveren har hver gang skjermen åpnes, når appen kommer i
   // forgrunnen og når nettet er tilbake, og les lokalt etterpå (#2228). Feiler
   // seeden (offline), står de lokale radene som de var.
-  useScoreCatchUp(gameId, reload);
+  useScoreCatchUp(scoresId, reload);
 
   // Bekreft plassen min ved å ÅPNE spillet (#463) — samme modell som webben,
   // og bevisst uten UI: arrangøren ser bare at merket dukker opp i rosteret.
@@ -221,11 +224,17 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Lag-formatene: mine hull er kapteinens rader, og «levert» er lagets
   // stempel («noen på laget» — samme regel webbens lagkort bruker).
   const myCaptainId = myTeamCaptainId(roster, userId);
-  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, HOLE_COUNT);
+  // Hull 18 svarer på om runden deler kort; det gjelder også en halvdel.
+  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, 18);
   const myTeamCard = teamMode
     ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
     : null;
-  const filled = filledHolesForOwner(scores, mode, userId, myCaptainId);
+  // #2752: hullene spillet eier, og mine slag på dem. En avledet kamp har ingen.
+  const holes = gameHoleNumbers(game);
+  const derived = isDerivedGame(game);
+  const filled = filledHolesForOwner(scores, mode, userId, myCaptainId).filter((hole) =>
+    holes.includes(hole),
+  );
   // Godkjenn-lista er per SPILLER også i lag-formater: hvert medlem har sin
   // egen `game_players`-rad, og den delte regelen er alt mode-bevisst. Spillet
   // sendes med for gaten (#2220): bare når runden krever godkjenning og pågår.
@@ -272,7 +281,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     gate: gated,
     me: me?.player,
     filled,
-    totalHoles: HOLE_COUNT,
+    holes,
+    bridge: bridgeHole(bundle),
+    host: game.sourceGameId
+      ? { gameId: game.sourceGameId, name: bundle.sourceGameName ?? null }
+      : null,
     submittedAt: myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null),
     approvedAt: myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null),
     requirePeerApproval: game.requirePeerApproval,
@@ -286,7 +299,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Arrangør = `created_by`, men ikke i en ligaflight (#2688): der har ingen
   // arrangørseksjon, og den som startet flighten trekker seg som alle andre.
   const isOrganiser = isGameOrganiser(game, userId);
-  const withdrawKind = playerWithdrawKind(game, me?.player, isOrganiser);
+  const withdrawKind = derived ? null : playerWithdrawKind(game, me?.player, isOrganiser);
 
   return (
     <ScrollView
@@ -329,6 +342,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
           onChanged={refresh}
           onNavigate={navigation.navigate}
+          onOpenGame={(id) => openOrReturn(navigation, 'GameHome', { gameId: id })}
           bundle={bundle}
         />
       </GameTicket>
@@ -336,6 +350,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       {inPlay ? (
         <GameTiles
           supported={supported}
+          scorecard={!derived}
           holeByHole={game.status === 'finished' && holeByHoleKind(game) !== null}
           onBoard={() => navigation.navigate('Leaderboard', { gameId })}
           onHoleByHole={() => navigation.navigate('HoleByHole', { gameId, gameName: game.name })}

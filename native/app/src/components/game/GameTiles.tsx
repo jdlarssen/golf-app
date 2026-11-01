@@ -28,6 +28,7 @@ const ICON_STROKE = 1.8;
 
 export function GameTiles({
   supported,
+  scorecard = true,
   holeByHole,
   onBoard,
   onHoleByHole,
@@ -36,6 +37,8 @@ export function GameTiles({
 }: {
   /** Appen fører formatet (`gateReason === null`). */
   supported: boolean;
+  /** #2752: en avledet kamp har ingen slag selv, og dermed intet scorekort. */
+  scorecard?: boolean;
   /** Første flis er «Hull for hull» i stedet for «Tavla». */
   holeByHole: boolean;
   onBoard: () => void;
@@ -49,12 +52,16 @@ export function GameTiles({
           holeByHole
             ? { label: HOLES_TEXT.heading, Icon: FlaggIcon, onPress: onHoleByHole, testID: 'open-hole-by-hole' }
             : { label: TICKET_TEXT.tileBoard, Icon: BegerIcon, onPress: onBoard, testID: 'open-leaderboard' },
-          {
-            label: TICKET_TEXT.tileScorecard,
-            Icon: DokumentIcon,
-            onPress: onScorecard,
-            testID: 'open-scorecard',
-          },
+          ...(scorecard
+            ? [
+                {
+                  label: TICKET_TEXT.tileScorecard,
+                  Icon: DokumentIcon,
+                  onPress: onScorecard,
+                  testID: 'open-scorecard',
+                },
+              ]
+            : []),
         ]
       : []),
     { label: TICKET_TEXT.tileRules, Icon: InfoIcon, onPress: onRules, testID: 'open-rules' },

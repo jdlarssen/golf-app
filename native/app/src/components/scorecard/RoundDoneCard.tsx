@@ -24,6 +24,8 @@ import {
   placeSpoken,
   placeUnit,
   ROUND_DONE_TEXT,
+  roundDoneBack,
+  roundDoneKicker,
   spoken,
   type RoundDoneFlightRow,
   type RoundDoneModel,
@@ -110,6 +112,8 @@ export function roundDoneBarHeight(insetBottom: number): number {
 }
 
 export interface RoundDoneBarProps {
+  /** Hullet «Tilbake til hull N» går til: spillets siste. */
+  lastHole: number;
   /** «Se over og lever scorekortet»: ruller ned til scorekortet. */
   onReview: () => void;
   /** «Tilbake til hull 18». */
@@ -121,7 +125,7 @@ export interface RoundDoneBarProps {
  * 16 på sidene og 20 under knappene, over hjem-streken), som på
  * godkjenningsskjermen. Den ligger over rulla, festet til bunnen.
  */
-export function RoundDoneBar({ onReview, onBack }: RoundDoneBarProps) {
+export function RoundDoneBar({ lastHole, onReview, onBack }: RoundDoneBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -145,7 +149,7 @@ export function RoundDoneBar({ onReview, onBack }: RoundDoneBarProps) {
         <Text style={[styles.reviewText, { color: colors.onPrimary }]}>{ROUND_DONE_TEXT.review}</Text>
       </Pressable>
       <Pressable onPress={onBack} accessibilityRole="button" style={styles.back} testID="round-done-back">
-        <Text style={[styles.backText, { color: colors.primary }]}>{ROUND_DONE_TEXT.back}</Text>
+        <Text style={[styles.backText, { color: colors.primary }]}>{roundDoneBack(lastHole)}</Text>
       </Pressable>
     </View>
   );
@@ -179,9 +183,9 @@ function Band({ model }: { model: RoundDoneModel }) {
     <View style={[styles.band, { backgroundColor: colors.surfaceStrong }]}>
       <Text
         style={[styles.bandKicker, { color: withAlpha(ink, 0.8) }]}
-        accessibilityLabel={spoken(ROUND_DONE_TEXT.kicker)}
+        accessibilityLabel={spoken(roundDoneKicker(model.lastHole))}
       >
-        {ROUND_DONE_TEXT.kicker}
+        {roundDoneKicker(model.lastHole)}
       </Text>
       <Text
         style={[styles.greeting, { color: ink }]}

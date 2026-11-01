@@ -50,6 +50,7 @@ import type {
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
+import { gameHoleNumbers, gameHoles } from './segmentRound';
 
 /**
  * Hvorfor appen ikke kan regne ut et resultat.
@@ -300,8 +301,12 @@ export function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
   }));
 }
 
+/**
+ * Hullene i spillets segment (#2752), samme klipp som webbens tavle
+ * (`leaderboardContent.tsx`): en halvdel av en delt cup-dag er 9 hull for motoren.
+ */
 export function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
-  return bundle.holes.map((hole) => ({
+  return gameHoles(bundle).map((hole) => ({
     hole_number: hole.holeNumber,
     par_mens: hole.parMens,
     par_ladies: hole.parLadies,
@@ -358,7 +363,10 @@ export function buildScoringContext(
   // filtrerer — kan bare avgjøres på den ferdige konteksten, under.
   if (players.length === 0) return { ok: false, problem: 'no-players' };
   const rosterUserIds = new Set(players.map((player) => player.user_id));
-  const scoresRows = toScoreRows(scores, rosterUserIds);
+  const segmentHoles = new Set(gameHoleNumbers(bundle.game));
+  const scoresRows = toScoreRows(scores, rosterUserIds).filter((row) =>
+    segmentHoles.has(row.hole_number),
+  );
 
   // Halve regnestykket i wolf og BBB ligger i `wolf_hole_choices` /
   // `bingo_bango_bongo_holes`. Har kalleren dem ikke, sier vi fra — aldri en

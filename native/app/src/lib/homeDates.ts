@@ -91,6 +91,12 @@ export function localDateParts(date: Date): { year: number; month: number; day: 
   return { year: date.getFullYear(), month: date.getMonth(), day: date.getDate() };
 }
 
+/** Kalenderdagen i enhetens lokaltid som nøkkel (#2752): `2026-11-01`. */
+export function localDayKey(date: Date): string {
+  const { year, month, day } = localDateParts(date);
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /** Datokolonnen i Rundedagboka (#2265): «20» over «Lør». */
 export function formatDiaryDay(date: Date): { day: string; weekday: string } {
   return {

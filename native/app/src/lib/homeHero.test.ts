@@ -144,20 +144,24 @@ describe('buildHeroModel', () => {
   });
 
   it('et stengt spill gir «åpne runden» og hverken ring-tall eller plass', () => {
-    for (const game of [
-      { gameMode: 'patsome' },
-      { holeSegment: 'front9' },
-      { sourceGameId: 'host-game' },
-    ]) {
-      const model = buildHeroModel({
-        bundle: homeBundle({ game, players: trio }),
-        scores: liveScores,
-        userId: ME,
-      });
-      expect(model.gate).not.toBeNull();
-      expect(model.action).toEqual({ kind: 'open' });
-      expect(model.standing).toBeNull();
-    }
+    const model = buildHeroModel({
+      bundle: homeBundle({ game: { gameMode: 'patsome' }, players: trio }),
+      scores: liveScores,
+      userId: ME,
+    });
+    expect(model.gate).not.toBeNull();
+    expect(model.action).toEqual({ kind: 'open' });
+    expect(model.standing).toBeNull();
+  });
+
+  it('en avledet kamp føres ikke: «åpne runden» uten stengt format', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({ game: { gameMode: 'singles_matchplay', sourceGameId: 'host-game' }, players: trio }),
+      scores: [],
+      userId: ME,
+    });
+    expect(model.gate).toBeNull();
+    expect(model.action).toEqual({ kind: 'open' });
   });
 
   it('et reveal-spill viser ikke plass eller poeng', () => {
@@ -281,3 +285,120 @@ describe('buildHeroModel — ligaflight alene (#2712)', () => {
   });
 });
 
+// #2752: hele runden på en delt cup-dag. Testene bruker best ball på begge
+// halvdeler fordi tallene er de samme; delt kort dekkes av `teamPlay.test.ts`.
+describe('delt cup-dag', () => {
+  const SIBLING = {
+    gameId: 'back9',
+    gameMode: 'best_ball' as const,
+    holeSegment: 'back9' as const,
+    mySubmittedAt: null,
+    myTeamNumber: 1,
+  };
+  const me = homePlayer({ userId: ME, teamNumber: 1 });
+  const front9 = (segmentSibling: typeof SIBLING | null = SIBLING) => ({
+    ...homeBundle({ game: { id: 'front9', gameMode: 'best_ball', holeSegment: 'front9' }, players: [me] }),
+    segmentSibling,
+  });
+  const back9 = (submittedAt: string | null = null) =>
+    homeBundle({
+      game: { id: 'back9', gameMode: 'best_ball', holeSegment: 'back9' },
+      players: [homePlayer({ userId: ME, teamNumber: 1, submittedAt })],
+    });
+  const holes = (gameId: string, from: number, to: number) =>
+    holeScores(gameId, ME, to - from + 1, 4).map((score, index) => ({
+      ...score,
+      holeNumber: from + index,
+    }));
+
+  describe('én halvdel for seg', () => {
+    it('andre halvdel starter på hull 10 og teller ni hull', () => {
+      const model = buildHeroModel({ bundle: back9(), scores: [], userId: ME });
+      expect(model).toMatchObject({
+        holeCount: 9,
+        played: 0,
+        nextHole: 10,
+        action: { kind: 'hole', holeNumber: 10 },
+      });
+    });
+
+    it('andre halvdel med alle hull ført: lever', () => {
+      const model = buildHeroModel({ bundle: back9(), scores: holes('back9', 10, 18), userId: ME });
+      expect(model).toMatchObject({ played: 9, action: { kind: 'submit' } });
+    });
+
+    it('første halvdel med alle hull ført: broen til hull 10, ikke «lever»', () => {
+      const model = buildHeroModel({ bundle: front9(), scores: holes('front9', 1, 9), userId: ME });
+      expect(model.action).toEqual({ kind: 'hole', holeNumber: 10, gameId: 'back9' });
+    });
+
+    it('første halvdel uten søsken: lever, som på nettet', () => {
+      const model = buildHeroModel({ bundle: front9(null), scores: holes('front9', 1, 9), userId: ME });
+      expect(model.action).toEqual({ kind: 'submit' });
+    });
+  });
+
+  describe('hele runden på Hjem', () => {
+    const fold = (front: number, backTo: number) =>
+      buildHeroModel({
+        bundle: front9(),
+        scores: front > 0 ? holes('front9', 1, front) : [],
+        userId: ME,
+        sibling: { bundle: back9(), scores: backTo >= 10 ? holes('back9', 10, backTo) : [] },
+      });
+    const DELIVERED = '2026-11-01T12:00:00Z';
+    const deliveredSibling = { ...SIBLING, mySubmittedAt: DELIVERED };
+    const frontWith = (submittedAt: string | null) => ({
+      ...homeBundle({
+        game: { id: 'front9', gameMode: 'best_ball', holeSegment: 'front9' },
+        players: [homePlayer({ userId: ME, teamNumber: 1, submittedAt })],
+      }),
+      segmentSibling: deliveredSibling,
+    });
+
+    it('midt i første halvdel: neste hull der, av 18', () => {
+      expect(fold(3, 0)).toMatchObject({
+        holeCount: 18,
+        played: 3,
+        nextHole: 4,
+        action: { kind: 'hole', holeNumber: 4 },
+      });
+    });
+
+    it('første halvdel ført: hull 10 i andre halvdel', () => {
+      expect(fold(9, 0).action).toEqual({ kind: 'hole', holeNumber: 10, gameId: 'back9' });
+    });
+
+    it('midt i andre halvdel: neste hull der, ikke hull 10 på nytt', () => {
+      expect(fold(9, 12)).toMatchObject({
+        played: 12,
+        nextHole: 13,
+        action: { kind: 'hole', holeNumber: 13, gameId: 'back9' },
+      });
+    });
+
+    it('alle 18 ført: leveringen i andre halvdel', () => {
+      expect(fold(9, 18).action).toEqual({ kind: 'submit', gameId: 'back9' });
+    });
+
+    it('levert: én levering merket begge, så kortet har ingen knapp', () => {
+      const model = buildHeroModel({
+        bundle: frontWith(DELIVERED),
+        scores: holes('front9', 1, 9),
+        userId: ME,
+        sibling: { bundle: back9(DELIVERED), scores: holes('back9', 10, 18) },
+      });
+      expect(model).toMatchObject({ state: 'submitted', action: null, played: 18 });
+    });
+
+    it('første halvdel sendt tilbake etter leveringen: den leverer selv igjen', () => {
+      const model = buildHeroModel({
+        bundle: frontWith(null),
+        scores: holes('front9', 1, 9),
+        userId: ME,
+        sibling: { bundle: back9(DELIVERED), scores: holes('back9', 10, 18) },
+      });
+      expect(model).toMatchObject({ state: 'continue', action: { kind: 'submit' } });
+    });
+  });
+});

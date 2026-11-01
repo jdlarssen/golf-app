@@ -92,6 +92,7 @@ import {
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { scoresGameId } from '../lib/segmentRound';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useRoundReportArrival } from '../lib/useRoundReportArrival';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
@@ -199,7 +200,9 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   // #2201: «resultatet er klart» er lest når du har sett tavla.
   useMarkVisitRead('gameLeaderboard', gameId);
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
-  const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
+  // #2752: en avledet kamp har ingen slag selv, og leser dem fra verten.
+  const scoresId = bundle ? scoresGameId(bundle.game) : gameId;
+  const { scores: localScores, reload } = useLocalScores(scoresId, POLL_MS);
   // #2067/#2228: lagets rader følger laget. Uten foldingen mister sideturneringen
   // og den blinde bruttotabellen hullene en trukket kaptein førte.
   const scores = useTeamScores(localScores, bundle);
@@ -228,7 +231,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   // samme tidspunktene. Uten innstillingen spørres det ikke.
   const minTeeShots = bundle ? teeShotMinimum(bundle.game) : null;
   const teeShots = useTeamTeeShots(gameId, { enabled: minTeeShots != null, pollMs: POLL_MS });
-  const { seedFailed } = useScoreCatchUp(gameId, reload, {
+  const { seedFailed } = useScoreCatchUp(scoresId, reload, {
     live: true,
     reloadTeeShots: minTeeShots != null ? teeShots.reload : undefined,
   });
@@ -330,11 +333,18 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
 
   const onStripAction = (action: SoloBoardStripAction | null) => {
     if (action?.kind === 'hole') {
-      openOrReturn(navigation, 'Hole', {
-        gameId,
-        holeNumber: action.holeNumber,
-        ...holeHeaderParams(bundle.game, bundle.courseName),
-      });
+      openOrReturn(
+        navigation,
+        'Hole',
+        // #2752: broen fra første halvdel går til hull 10 i det andre spillet.
+        action.gameId
+          ? { gameId: action.gameId, holeNumber: action.holeNumber }
+          : {
+              gameId,
+              holeNumber: action.holeNumber,
+              ...holeHeaderParams(bundle.game, bundle.courseName),
+            },
+      );
     } else if (action) {
       openOrReturn(navigation, 'Scorecard', { gameId });
     }
@@ -507,9 +517,7 @@ export function LeaderboardBody({
   const { game } = bundle;
   const nameOf = nameLookup(bundle.players);
 
-  // Gaten skiller selv på hva som er stengt — formatet (gjelder alle runder i
-  // det formatet) eller nettopp denne runden (cup-halvdeler og avledninger).
-  // `gateMessage` er det ene hjemmet for de to ordlydene, delt med føring-CTA-en.
+  // `gateMessage` er det ene hjemmet for ordlyden, delt med føring-CTA-en.
   const gate = gateReason(game);
   if (gate !== null) {
     // Knappen henger på DENNE noten alene (#1891). De to søsknene lenger nede
@@ -517,7 +525,7 @@ export function LeaderboardBody({
     // for denne runden» — får ingen: der vet vi ikke om nettsiden har svaret.
     return (
       <>
-        <CalmNote text={gateMessage(gate)} testID="leaderboard-gated-format" />
+        <CalmNote text={gateMessage()} testID="leaderboard-gated-format" />
         <WebLinkButton
           label={GATE_LINK_LABEL}
           path={gameWebPath(game.id)}

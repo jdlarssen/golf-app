@@ -62,7 +62,7 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   expect(screen.queryByTestId('home-hero-gold', HIDDEN)).toBeNull();
 
   await fireEvent.press(screen.getByText('Fortsett på hull 8'));
-  expect(handlers.onHole).toHaveBeenCalledWith(8);
+  expect(handlers.onHole).toHaveBeenCalledWith(8, undefined);
   // Hjem v2 (#2385): kortet slutter med knappen, som i designet.
   expect(screen.queryByText('Se tavla')).toBeNull();
   await fireEvent.press(screen.getByTestId('home-hero-open'));

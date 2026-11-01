@@ -553,9 +553,9 @@ describe('GameHome — startbilletten (#2255)', () => {
     focus.mockRestore();
   });
 
-  it('stengt runde (halv cup-dag): bare Regler-flisa, og stengeteksten med nettlenken', async () => {
+  it('stengt format: bare Regler-flisa, og stengeteksten med nettlenken', async () => {
     mockState.bundle = homeBundle({
-      game: { id: 'game-1', gameMode: 'singles_matchplay', modeConfig: {}, holeSegment: 'front9' },
+      game: { id: 'game-1', gameMode: 'patsome', modeConfig: {} },
       players: [homePlayer({ userId: 'me', teamNumber: 1 }), homePlayer({ userId: 'ola', teamNumber: 2 })],
     });
     mockState.scores = [];
@@ -575,6 +575,86 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.queryByTestId('open-scorecard')).toBeNull();
     expect(screen.getByTestId('format-gate-link')).toBeTruthy();
   });
+
+  // #2752: halve dager og avledede kamper.
+  describe('delt cup-dag', () => {
+    const players = [homePlayer({ userId: 'me', teamNumber: 1 }), homePlayer({ userId: 'ola', teamNumber: 2 })];
+    const open = async (navigation: Record<string, unknown>) => {
+      await render(
+        <GameHome
+          {...({
+            route: { params: { gameId: 'game-1' } },
+            navigation: { navigate: jest.fn(), setOptions: jest.fn(), ...navigation },
+          } as unknown as ScreenProps<'GameHome'>)}
+        />,
+      );
+      await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
+    };
+    const scoresOn = (from: number, to: number) =>
+      holeScores('game-1', 'me', to - from + 1, 4).map((score, index) => ({
+        ...score,
+        holeNumber: from + index,
+      }));
+
+    it('en avledet kamp i gang: ingen føring, tavla står, og knappen går til kampen slagene føres i', async () => {
+      mockState.bundle = {
+        ...homeBundle({
+          game: { id: 'game-1', gameMode: 'singles_matchplay', holeSegment: 'back9', sourceGameId: 'host-1' },
+          players,
+        }),
+        sourceGameName: 'Best ball, flight 1',
+      };
+      mockState.scores = [];
+      const nav = stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]);
+
+      await open(nav);
+
+      expect(screen.getByTestId('derived-notice')).toHaveTextContent(
+        /Ingen egne slag her.*Denne matchen henter scorene fra Best ball, flight 1\..*Til Best ball, flight 1/,
+      );
+      expect(screen.getByTestId('open-leaderboard')).toBeTruthy();
+      expect(screen.queryByTestId('open-scorecard')).toBeNull();
+
+      await fireEvent.press(screen.getByTestId('derived-open-host'));
+      expect(nav.navigate).toHaveBeenCalledWith('GameHome', { gameId: 'host-1' });
+    });
+
+    it('første halvdel ført ferdig: broen til hull 10 i stedet for levering', async () => {
+      mockState.bundle = {
+        ...homeBundle({ game: { id: 'game-1', gameMode: 'best_ball', holeSegment: 'front9' }, players }),
+        segmentSibling: {
+          gameId: 'back9-game',
+          gameMode: 'best_ball',
+          holeSegment: 'back9',
+          mySubmittedAt: null,
+          myTeamNumber: 1,
+        },
+      };
+      mockState.scores = scoresOn(1, 9);
+      const navigate = jest.fn();
+
+      await open({ navigate });
+
+      expect(screen.getByTestId('ticket-played')).toHaveTextContent(/9 av 9/);
+      await fireEvent.press(screen.getByText('Gå til hull 10'));
+      expect(navigate).toHaveBeenCalledWith('Hole', { gameId: 'back9-game', holeNumber: 10 });
+      expect(screen.queryByText('Gjennomgå og lever')).toBeNull();
+    });
+
+    it('andre halvdel starter på hull 10', async () => {
+      mockState.bundle = homeBundle({
+        game: { id: 'game-1', gameMode: 'best_ball', holeSegment: 'back9' },
+        players,
+      });
+      mockState.scores = scoresOn(10, 12);
+
+      await open({});
+
+      expect(screen.getByTestId('ticket-played')).toHaveTextContent(/3 av 9/);
+      expect(screen.getByText('Fortsett på hull 13')).toBeTruthy();
+    });
+  });
+
   it('pågående runde: tavlas tall står til høyre for fremdriften, fra samme modell som helten på Hjem', async () => {
     // Samme oppsett som heltens test (`homeHero.test.ts`): 7 hull på par med
     // handicap 0 er 14 poeng.

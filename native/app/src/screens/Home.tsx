@@ -112,6 +112,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   // «Ligaene dine» (#2638): tom = ingen seksjon, også når kallet feilet.
   const [leagues, setLeagues] = useState<AppLeagueSummary[]>([]);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
+  const [heroPair, setHeroPair] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
   const [lastData, setLastData] = useState<CardBundle | null>(null);
   // Wolf- og BBB-valgene for forrige runde; bare nettet har dem.
@@ -148,6 +149,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       const last = finished[0] && countsPoints(finished[0].gameMode) ? finished[0] : null;
       await Promise.allSettled([
         hero ? refreshCardBundle(hero.gameId, { withScores: true }) : null,
+        hero?.pairedGameId ? refreshCardBundle(hero.pairedGameId, { withScores: true }) : null,
         ticket ? refreshCardBundle(ticket.gameId) : null,
         last ? refreshFinishedRound(last.gameId) : null,
         last
@@ -194,6 +196,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const { hero, rest } = pickHeroCard(split?.active ?? []);
   const ticket = split?.scheduled[0] ?? null;
   const heroId = hero?.gameId ?? null;
+  const heroPairId = hero?.pairedGameId ?? null;
   const ticketId = ticket?.gameId ?? null;
   const lastCard = split?.finished[0] ?? null;
   const lastId = lastCard && countsPoints(lastCard.gameMode) ? lastCard.gameId : null;
@@ -205,16 +208,18 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       heroId ? loadCardBundle(heroId) : Promise.resolve(null),
       ticketId ? loadCardBundle(ticketId) : Promise.resolve(null),
       lastId ? loadFinishedRound(lastId) : Promise.resolve(null),
-    ]).then(([heroCard, ticketCard, lastCard]) => {
+      heroPairId ? loadCardBundle(heroPairId) : Promise.resolve(null),
+    ]).then(([heroCard, ticketCard, lastCard, heroPairCard]) => {
       if (cancelled) return;
       setHeroData(heroCard);
+      setHeroPair(heroPairCard);
       setTicketBundle(ticketCard?.bundle ?? null);
       setLastData(lastCard);
     });
     return () => {
       cancelled = true;
     };
-  }, [heroId, ticketId, lastId, deviceTick]);
+  }, [heroId, heroPairId, ticketId, lastId, deviceTick]);
 
   if (list === null && errorText === null) {
     return (
@@ -252,7 +257,17 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const empty = list.cards.length === 0;
   const model =
     hero && heroData && heroData.bundle.game.id === hero.gameId
-      ? buildHeroModel({ bundle: heroData.bundle, scores: heroData.scores, userId })
+      ? buildHeroModel({
+          bundle: heroData.bundle,
+          scores: heroData.scores,
+          userId,
+          // #2752: en delt cup-dag er ett kort. Mangler andre halvdel på telefonen,
+          // svarer kortet for første halvdel, og knappen ender på broen.
+          sibling:
+            heroPair && heroPair.bundle.game.id === heroPairId
+              ? { bundle: heroPair.bundle, scores: heroPair.scores }
+              : null,
+        })
       : null;
   const lastRound = finished[0] ?? null;
   const lastPoints =
@@ -374,14 +389,15 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
             card={hero}
             model={model}
             onOpenGame={() => openGame(hero.gameId)}
-            onHole={(holeNumber) =>
-              navigation.navigate('Hole', {
-                gameId: hero.gameId,
-                holeNumber,
-                ...holeHeaderParams(hero, hero.courseName),
-              })
+            onHole={(holeNumber, gameId) =>
+              navigation.navigate(
+                'Hole',
+                gameId
+                  ? { gameId, holeNumber }
+                  : { gameId: hero.gameId, holeNumber, ...holeHeaderParams(hero, hero.courseName) },
+              )
             }
-            onSubmit={() => navigation.navigate('Scorecard', { gameId: hero.gameId })}
+            onSubmit={(gameId) => navigation.navigate('Scorecard', { gameId: gameId ?? hero.gameId })}
             onApprove={() => navigation.navigate('Approve', { gameId: hero.gameId })}
           />
         ) : null}

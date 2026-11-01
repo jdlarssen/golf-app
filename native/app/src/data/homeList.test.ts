@@ -193,7 +193,7 @@ describe('startboden (#2254)', () => {
 
     const list = await home().fetchHomeCards(ME);
 
-    expect(list.version).toBe(3);
+    expect(list.version).toBe(4);
     expect(list.lastRound).toBeNull();
     expect(list.cards[0]).toMatchObject({
       gameMode: 'texas_scramble',
@@ -365,6 +365,91 @@ describe('splitHomeCards', () => {
       card('uten-slutt', 'finished', '2026-09-20T08:00:00.000Z', null),
     ]);
     expect(finished.map((c) => c.gameId)).toEqual(['spilt-sist', 'uten-slutt', 'laget-sist']);
+  });
+
+  // #2752: én runde, ett kort, som på nettet (#1449).
+  describe('en delt cup-dag', () => {
+    const half = (gameId: string, holeSegment: string, overrides: Record<string, unknown> = {}) => ({
+      ...card(gameId, 'active', '2026-11-01T07:00:00.000Z'),
+      holeSegment,
+      scheduledTeeOffAt: '2026-11-01T09:00:00.000Z',
+      tournamentId: 'cup-1',
+      cupName: 'Klubbmesterskapet',
+      withdrawn: false,
+      state: 'continue' as const,
+      ...overrides,
+    });
+
+    it('står som ett kort: første halvdel, med cupens navn og andre halvdel på seg', () => {
+      const { active } = home().splitHomeCards([half('back', 'back9'), half('front', 'front9')]);
+
+      expect(active).toHaveLength(1);
+      expect(active[0]).toMatchObject({
+        gameId: 'front',
+        pairedGameId: 'back',
+        name: 'Klubbmesterskapet',
+        holeSegment: 'front9',
+      });
+    });
+
+    it('står i planlagt til en av halvdelene har startet', () => {
+      const scheduled = { status: 'scheduled', state: null };
+      const before = home().splitHomeCards([half('front', 'front9', scheduled), half('back', 'back9', scheduled)]);
+      expect(before.scheduled.map((c) => c.gameId)).toEqual(['front']);
+      expect(before.active).toEqual([]);
+
+      const started = home().splitHomeCards([half('front', 'front9'), half('back', 'back9', scheduled)]);
+      expect(started.active.map((c) => c.gameId)).toEqual(['front']);
+      expect(started.scheduled).toEqual([]);
+    });
+
+    it('kortet er levert først når begge halvdelene er det', () => {
+      const { active } = home().splitHomeCards([
+        half('front', 'front9', { state: 'submitted' }),
+        half('back', 'back9', { state: 'continue' }),
+      ]);
+      expect(active[0].state).toBe('continue');
+    });
+
+    it.each([
+      ['du er trukket fra en av halvdelene', { withdrawn: true }],
+      ['halvdelene er fra to ulike cuper', { tournamentId: 'cup-2' }],
+      ['halvdelene spilles to ulike dager', { scheduledTeeOffAt: '2026-11-02T09:00:00.000Z' }],
+    ])('står som to kort når %s', (_label, overrides) => {
+      const { active } = home().splitHomeCards([
+        half('front', 'front9'),
+        half('back', 'back9', overrides),
+      ]);
+      expect(active.map((c) => c.gameId).sort()).toEqual(['back', 'front']);
+      expect(active[0].pairedGameId).toBeUndefined();
+    });
+
+    // Hermes mangler ICU-tidssonene (`homeDates.ts`). En feil her ville tatt ned
+    // hele Hjem for alle som spiller en cup, med grønne tester i Node.
+    it('spør ikke om Oslo-tid: Hermes kaster på tidssoner', () => {
+      const real = Intl.DateTimeFormat;
+      const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(((
+        locale: string,
+        options?: Intl.DateTimeFormatOptions,
+      ) => {
+        if (options?.timeZone) throw new RangeError('Incorrect timeZone information provided');
+        return new real(locale, options);
+      }) as never);
+      try {
+        const { active } = home().splitHomeCards([half('front', 'front9'), half('back', 'back9')]);
+        expect(active.map((c) => c.pairedGameId)).toEqual(['back']);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('et vanlig spill og en halvdel uten motstykke står som før', () => {
+      const { active } = home().splitHomeCards([
+        card('plain', 'active', '2026-11-01T07:00:00.000Z'),
+        half('alone', 'back9'),
+      ]);
+      expect(active.map((c) => c.gameId)).toEqual(['plain', 'alone']);
+    });
   });
 
   it('holder grensen på fem avsluttede', () => {

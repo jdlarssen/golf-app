@@ -318,6 +318,85 @@ describe('Scorecard', () => {
     mockState.teeShotQueue = [];
   });
 
+  // #2752: delt cup-dag. Bare koblingen; reglene er `segmentRound.test.ts` sine.
+  describe('delt cup-dag', () => {
+    const sibling = (holeSegment: string, mySubmittedAt: string | null = null) => ({
+      gameId: `${holeSegment}-game`,
+      gameMode: 'best_ball',
+      holeSegment,
+      mySubmittedAt,
+      myTeamNumber: 1,
+    });
+    const half = (holeSegment: string, segmentSibling: unknown, sourceGameId: string | null = null) => ({
+      ...mockRevealBundle,
+      game: { ...mockRevealBundle.game, id: 'half', scoreVisibility: 'live', holeSegment, sourceGameId },
+      segmentSibling,
+    });
+    const scored = (from: number, to: number) =>
+      Array.from({ length: to - from + 1 }, (_, i) => ({
+        id: `half#me#${from + i}`,
+        gameId: 'half',
+        userId: 'me',
+        holeNumber: from + i,
+        strokes: 4,
+        putts: null,
+        enteredBy: 'me',
+        clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+        serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+      }));
+
+    it('første halvdel har ingen «Lever»: broen står der, og går til hull 10', async () => {
+      mockState.bundle = half('front9', sibling('back9')) as never;
+      mockState.scores = scored(1, 9);
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: 'half' } },
+        { name: 'Scorecard', params: { gameId: 'half' } },
+      ]);
+
+      await render(scorecardElement('half', nav.navigate, nav));
+
+      await fireEvent.press(await screen.findByTestId('scorecard-bridge'));
+      expect(screen.queryByTestId('submit-scorecard')).toBeNull();
+      expect(nav.navigate).toHaveBeenCalledWith('Hole', { gameId: 'back9-game', holeNumber: 10 });
+    });
+
+    it('andre halvdel leverer på sine ni hull, og sier at det gjelder hele runden', async () => {
+      mockState.bundle = half('back9', sibling('front9')) as never;
+      mockState.scores = scored(10, 18);
+
+      await render(scorecardElement('half', jest.fn()));
+
+      await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+      expect(screen.getByTestId('scorecard-whole-round')).toBeTruthy();
+      expect(screen.getByTestId('round-done-greeting')).toBeTruthy();
+    });
+
+    it('et hull mangler i andre halvdel: ingen oppsummering ennå', async () => {
+      mockState.bundle = half('back9', null) as never;
+      mockState.scores = scored(10, 17);
+
+      await render(scorecardElement('half', jest.fn()));
+
+      await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeTruthy());
+      expect(screen.queryByTestId('round-done-greeting')).toBeNull();
+      expect(screen.queryByTestId('scorecard-whole-round')).toBeNull();
+    });
+
+    it('en avledet kamp har ikke noe kort, og går tilbake til spillets side', async () => {
+      mockState.bundle = half('back9', null, 'host') as never;
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: 'half' } },
+        { name: 'Scorecard', params: { gameId: 'half' } },
+      ]);
+
+      await render(scorecardElement('half', nav.navigate, nav));
+
+      await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'half' }));
+    });
+  });
+
   // Gjennomgangen av #2622: «Lever for <makker>» etter at mitt kort alt er
   // levert. Serveren svarer `alreadySubmitted` (mitt kort sto som levert) og 0
   // makkerkort. Det er IKKE et nytt forsøk etter tidsavbrudd, så #2200-beskjeden

@@ -40,8 +40,9 @@ export interface HomeHeroCardProps {
   /** `null` når bundelen ikke finnes på enheten ennå. */
   model: HeroModel | null;
   onOpenGame: () => void;
-  onHole: (holeNumber: number) => void;
-  onSubmit: () => void;
+  /** `gameId` er satt når hullet ligger i den andre halvdelen (#2752). */
+  onHole: (holeNumber: number, gameId?: string) => void;
+  onSubmit: (gameId?: string) => void;
   onApprove: () => void;
 }
 
@@ -243,8 +244,9 @@ function PrimaryAction({
 }: {
   model: HeroModel | null;
   onOpenGame: () => void;
-  onHole: (holeNumber: number) => void;
-  onSubmit: () => void;
+  /** `gameId` er satt når hullet ligger i den andre halvdelen (#2752). */
+  onHole: (holeNumber: number, gameId?: string) => void;
+  onSubmit: (gameId?: string) => void;
 }) {
   const { colors } = useTheme();
 
@@ -264,9 +266,9 @@ function PrimaryAction({
 
   const [label, onPress] =
     action.kind === 'hole'
-      ? [continueOnHole(action.holeNumber), () => onHole(action.holeNumber)]
+      ? [continueOnHole(action.holeNumber), () => onHole(action.holeNumber, action.gameId)]
       : action.kind === 'submit'
-        ? [HOME_TEXT.submit, onSubmit]
+        ? [HOME_TEXT.submit, () => onSubmit(action.gameId)]
         : [HOME_TEXT.openRound, onOpenGame];
 
   return (

@@ -5,6 +5,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import source from '../../../../../messages/no.json';
 import { HoleStrip, STRIP_LABELS } from './HoleStrip';
 
+const ALL_HOLES = Array.from({ length: 18 }, (_, i) => i + 1);
+
 describe('HoleStrip', () => {
   it('bruker webbens skjermleser-tekster ordrett', () => {
     const web = source.holes.entry;
@@ -17,7 +19,7 @@ describe('HoleStrip', () => {
 
   it('viser halvdelen du står i, bytter halvdel med brikken, og går til hullet du trykker på', async () => {
     const onGo = jest.fn();
-    await render(<HoleStrip holeNumber={7} holeCount={18} filled={[1, 2, 3]} onGo={onGo} />);
+    await render(<HoleStrip holeNumber={7} holes={ALL_HOLES} filled={[1, 2, 3]} onGo={onGo} />);
     const current = screen.getByTestId('hole-strip-7');
 
     expect(screen.getByTestId('hole-strip-9')).toBeTruthy();
@@ -34,5 +36,14 @@ describe('HoleStrip', () => {
 
     await fireEvent.press(screen.getByTestId('hole-strip-12'));
     expect(onGo).toHaveBeenCalledWith(12);
+  });
+
+  it('har ingen brikke når spillet bare har andre halvdel (#2752)', async () => {
+    await render(<HoleStrip holeNumber={12} holes={ALL_HOLES.slice(9)} filled={[]} onGo={jest.fn()} />);
+
+    expect(screen.getByTestId('hole-strip-10')).toBeTruthy();
+    expect(screen.getByTestId('hole-strip-18')).toBeTruthy();
+    expect(screen.queryByTestId('hole-strip-9')).toBeNull();
+    expect(screen.queryByTestId('hole-strip-other-half')).toBeNull();
   });
 });

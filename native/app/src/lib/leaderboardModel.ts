@@ -34,6 +34,7 @@ import {
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { displayName } from './display';
+import { gameSegment } from './segmentRound';
 
 /**
  * Hvor mye leaderboardet får lov å vise.
@@ -235,17 +236,18 @@ export const NASSAU_SECTION_LABELS: Record<
  * avslutter. Her er porten ett sted for Resultater-skjermen og lagtavla
  * (#2579): hva tabellen får vise, og spillet og slagene klippet til det.
  *
- * `gateReason` stenger alle segment-spill ('segment'), så vi er alltid på hele
- * runden her og porten er hull 1-9 — samme liste webben regner ut. Klippet går
- * BEGGE veier, som webbens state3.5: både hull-lista og slagene, så summen
- * blir en ekte ni-hulls-sum (23), ikke en 18-hulls-sum med rader gjemt (51).
+ * Porten er første halvdel av spillets segment (#2752): hull 1–9 på hele runden,
+ * hull 1–5 og 10–14 på en halvdel av en delt cup-dag — samme liste webben regner
+ * ut. Klippet går BEGGE veier, som webbens state3.5: både hull-lista og slagene,
+ * så summen blir en ekte ni-hulls-sum (23), ikke en 18-hulls-sum med rader gjemt
+ * (51).
  */
 export function firstHalfScope(
   bundle: GameBundle,
   scores: readonly LocalScore[],
 ): { view: FirstHalfTableView; bundle: GameBundle; scores: readonly LocalScore[] } {
   const { game } = bundle;
-  const gateHoles = firstHalfHoleNumbersForSegment('full');
+  const gateHoles = firstHalfHoleNumbersForSegment(gameSegment(game));
   const openHoles = new Set(gateHoles);
   const view = firstHalfTableView({
     gameMode: game.gameMode as GameMode,

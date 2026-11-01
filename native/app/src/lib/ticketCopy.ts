@@ -24,6 +24,10 @@ export const TICKET_TEXT = {
   noValue: '—',
   /** Det samme for skjermleseren, som ellers leser streken høyt. */
   noValueSpoken: 'ikke vist',
+  /** #2752: webbens `game.home.derivedNoticeHeading`. */
+  derivedHeading: 'Ingen egne slag her',
+  /** #2752: webbens `game.home.derivedNoticeUnknownHost`. */
+  derivedUnknownHost: 'en annen runde',
   /** Webbens `game.home.registered`. */
   registered: 'Du er påmeldt',
   /** Webbens `game.home.viewOnMap`. */
@@ -117,3 +121,21 @@ export function stubTotal(total: number, unit: LiveBoardUnit): string {
   if (unit === 'net') return `${total}\u00A0netto`;
   return formatVsPar(total);
 }
+
+/** #2752: webbens `game.home.derivedNoticeBody`. */
+export function derivedBody(hostName: string | null): string {
+  return `Denne matchen henter scorene fra ${hostName ?? TICKET_TEXT.derivedUnknownHost}. Du taster slagene der.`;
+}
+
+/** #2752: webbens `game.home.derivedNoticeLink`. */
+export function derivedLink(hostName: string | null): string {
+  return `Til ${hostName ?? TICKET_TEXT.derivedUnknownHost}`;
+}
+
+/** #2752: broen fra første halvdel av en delt cup-dag. «Lever» blir denne. */
+export function bridgeLabel(hole: number): string {
+  return `Gå til hull ${hole}`;
+}
+
+/** #2752: webbens `game.submit.wholeRoundNotice`, uten tankestreken. */
+export const WHOLE_ROUND_NOTICE = 'Denne leveringen gjelder hele runden: både hull 1–9 og 10–18.';

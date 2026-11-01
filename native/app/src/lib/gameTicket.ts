@@ -36,6 +36,7 @@ import { HOME_TEXT, finishedResultText } from './homeCopy';
 import { formatClock, formatNameList } from './display';
 import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
 import { nextUnfilledHole } from './primaryCtaState';
+import type { RoundHole } from './segmentRound';
 import { scorecardHandicapPart } from './scorecardHeader';
 import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, maxStrokesPart, teePart } from './ticketCopy';
 
@@ -301,6 +302,8 @@ export function calendarEvent(
 export type TicketStub =
   | { kind: 'gated'; reason: GateReason }
   | { kind: 'notPlayer' }
+  /** #2752: en avledet kamp i gang. Slagene føres i kampen den er avledet av. */
+  | { kind: 'derived'; hostGameId: string; hostName: string | null }
   | { kind: 'withdrawn'; bySelf: boolean }
   | { kind: 'draft' }
   | { kind: 'scheduled' }
@@ -311,6 +314,8 @@ export type TicketStub =
       played: number;
       total: number;
       nextHole: number;
+      /** #2752: første halvdel av en delt cup-dag leverer ikke selv, men går hit. */
+      bridge?: RoundHole | null;
     }
   | { kind: 'none' };
 
@@ -325,7 +330,12 @@ export function ticketStub(opts: {
   me: BundlePlayer | undefined;
   /** Hull med slag: mine, eller lagets i formatene som deler kort. */
   filled: readonly number[];
-  totalHoles: number;
+  /** Hullene spillet eier: alle 18, eller segmentets (#2752). */
+  holes: readonly number[];
+  /** #2752: broen til hull 10 (`bridgeHole`), ellers `null`. */
+  bridge?: RoundHole | null;
+  /** #2752: kampen slagene føres i, når spillet er en avledet kamp. */
+  host?: { gameId: string; name: string | null } | null;
   /** Stemplene CTA-en regner på: mine, eller lagets når laget deler kort. */
   submittedAt: string | null;
   approvedAt: string | null;
@@ -336,6 +346,10 @@ export function ticketStub(opts: {
   const { me, status } = opts;
   if (opts.gate !== null) return { kind: 'gated', reason: opts.gate };
   if (!me) return { kind: 'notPlayer' };
+  // Foran trukket, som på nettet: en avledet kamp har ingenting å trekke seg fra.
+  if (status === 'active' && opts.host) {
+    return { kind: 'derived', hostGameId: opts.host.gameId, hostName: opts.host.name };
+  }
   if (me.withdrawnAt) {
     // #2358: bare den som trakk seg selv kan angre.
     return { kind: 'withdrawn', bySelf: me.withdrawnByUserId === me.userId };
@@ -353,7 +367,7 @@ export function ticketStub(opts: {
 
   const state = computePrimaryCtaState({
     strokesCount: opts.filled.length,
-    totalHoles: opts.totalHoles,
+    totalHoles: opts.holes.length,
     submittedAt: opts.submittedAt,
     approvedAt: opts.approvedAt,
     requirePeerApproval: opts.requirePeerApproval,
@@ -362,7 +376,8 @@ export function ticketStub(opts: {
     kind: 'active',
     state,
     played: opts.filled.length,
-    total: opts.totalHoles,
-    nextHole: nextUnfilledHole(opts.filled, opts.totalHoles),
+    total: opts.holes.length,
+    nextHole: nextUnfilledHole(opts.filled, opts.holes),
+    ...(opts.bridge ? { bridge: opts.bridge } : {}),
   };
 }

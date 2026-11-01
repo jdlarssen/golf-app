@@ -134,6 +134,10 @@ it('gir ingen poeng for formater som teller slag, uten egne slag, eller når tav
   expect(lastRoundPoints(finished('solo_strokeplay'), scores, 'me')).toBeNull();
   expect(lastRoundPoints(finished('stableford'), holeScores('last', 'marte', 18, 4), 'me')).toBeNull();
   expect(lastRoundPoints(finished('stableford'), scores, 'ikke-med')).toBeNull();
-  // En cup-halvdel vises ikke på tavla i appen, og da heller ikke her.
-  expect(lastRoundPoints(finished('stableford', { holeSegment: 'front9' }), scores, 'me')).toBeNull();
+});
+
+it('regner en cup-halvdel på sine ni hull (#2752)', () => {
+  const scores = holeScores('last', 'me', 18, 4);
+  // Par på ni hull, to poeng hvert. Slagene utenfor halvdelen teller ikke.
+  expect(lastRoundPoints(finished('stableford', { holeSegment: 'front9' }), scores, 'me')).toBe(18);
 });

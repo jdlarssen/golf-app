@@ -254,7 +254,13 @@ jest.mock('expo-status-bar', () => ({
 
 // RNTL 14 er asynkron hele veien: både `render` og `fireEvent` returnerer
 // løfter (de wrapper act selv). Uten await settes aldri `screen`.
-type TestNavigation = { setParams: jest.Mock; navigate: jest.Mock; setOptions: jest.Mock };
+type TestNavigation = {
+  setParams: jest.Mock;
+  navigate: jest.Mock;
+  setOptions: jest.Mock;
+  replace?: jest.Mock;
+  popTo?: jest.Mock;
+};
 type HeaderOptions = NativeStackHeaderProps['options'];
 
 /**
@@ -705,6 +711,131 @@ describe('Hole', () => {
       expect(screen.getByTestId('hole-submit')).toBeTruthy();
     });
     expect(screen.queryByTestId('hole-locked')).toBeNull();
+  });
+
+  // #2752: delt cup-dag. Reglene er `segmentRound.test.ts` sine; her låses at
+  // skjermen følger dem og aldri fører på et hull utenfor spillet.
+  describe('delt cup-dag', () => {
+    const sibling = (gameId: string, holeSegment: string, mySubmittedAt: string | null = null) => ({
+      gameId,
+      gameMode: 'best_ball',
+      holeSegment,
+      mySubmittedAt,
+      myTeamNumber: null,
+    });
+    const halfBundle = (holeSegment: string, segmentSibling: unknown = null, sourceGameId: string | null = null) => ({
+      ...mockSoloBundle,
+      game: { ...mockSoloBundle.game, holeSegment, sourceGameId, tournamentId: 'cup-1' },
+      segmentSibling,
+    });
+    const openOn = async (holeNumber: number) => {
+      const nav = {
+        ...stackNavigation([
+          { name: 'Home' },
+          { name: 'GameHome', params: { gameId: GAME_ID } },
+          { name: 'Hole', params: { gameId: GAME_ID, holeNumber } },
+        ]),
+        setParams: jest.fn(),
+        setOptions: jest.fn(),
+      };
+      await render(holeElement(holeNumber, nav));
+      return nav;
+    };
+    const scoredHere = (hole: number) => [localScore('me', 4, null, hole), localScore('mate', 5, null, hole)];
+
+    it('hull 9 på første halvdel: broen står der «Lever» ville stått, og går over til det andre spillet', async () => {
+      mockState.bundle = halfBundle('front9', sibling('back9-game', 'back9'));
+      mockState.scores = scoredHere(9);
+
+      const nav = await openOn(9);
+
+      await waitFor(() => expect(screen.getByTestId('hole-bridge')).toHaveTextContent('Gå til hull 10'));
+      expect(screen.queryByTestId('hole-submit')).toBeNull();
+      expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Gå til hull 10');
+
+      await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+      expect(nav.replace).toHaveBeenCalledWith(
+        'Hole',
+        expect.objectContaining({ gameId: 'back9-game', holeNumber: 10 }),
+      );
+      expect(nav.setParams).not.toHaveBeenCalled();
+    });
+
+    it('hull 9 uten søsken: vanlig levering, som på nettet', async () => {
+      mockState.bundle = halfBundle('front9');
+
+      await openOn(9);
+
+      await waitFor(() => expect(screen.getByTestId('hole-submit')).toBeTruthy());
+      expect(screen.queryByTestId('hole-bridge')).toBeNull();
+    });
+
+    it('hull 18 på andre halvdel leverer hele runden', async () => {
+      mockState.bundle = halfBundle('back9', sibling('front9-game', 'front9'));
+
+      await openOn(18);
+
+      await waitFor(() => expect(screen.getByTestId('hole-submit')).toBeTruthy());
+    });
+
+    it('hull 10 har veien tilbake til hull 9, og «Neste hull» blir i spillet', async () => {
+      mockState.bundle = halfBundle('back9', sibling('front9-game', 'front9'));
+      mockState.scores = scoredHere(10);
+
+      const nav = await openOn(10);
+
+      await fireEvent.press(await screen.findByTestId('hole-boundary-link'));
+      expect(nav.replace).toHaveBeenCalledWith(
+        'Hole',
+        expect.objectContaining({ gameId: 'front9-game', holeNumber: 9 }),
+      );
+
+      await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+      expect(nav.setParams).toHaveBeenCalledWith({ holeNumber: 11 });
+    });
+
+    it('stripa viser halvdelen du står i, og brikken viser den andre', async () => {
+      mockState.bundle = halfBundle('back9', sibling('front9-game', 'front9'));
+
+      const nav = await openOn(12);
+
+      await waitFor(() => expect(screen.getByTestId('hole-strip-12')).toBeTruthy());
+      expect(screen.queryByTestId('hole-strip-9')).toBeNull();
+      await fireEvent.press(screen.getByTestId('hole-strip-other-half'));
+      await fireEvent.press(screen.getByTestId('hole-strip-9'));
+      expect(nav.replace).toHaveBeenCalledWith(
+        'Hole',
+        expect.objectContaining({ gameId: 'front9-game', holeNumber: 9 }),
+      );
+    });
+
+    it('et hull utenfor spillet sender til spillets første hull, uten føring imens', async () => {
+      mockState.bundle = halfBundle('back9');
+
+      const nav = await openOn(3);
+
+      await waitFor(() => expect(nav.setParams).toHaveBeenCalledWith({ holeNumber: 10 }));
+      expect(screen.queryByTestId('hole-screen')).toBeNull();
+    });
+
+    it('en avledet kamp har ingen føring, og går tilbake til spillets side', async () => {
+      mockState.bundle = halfBundle('back9', null, 'host-game');
+
+      const nav = await openOn(10);
+
+      await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID }));
+      expect(screen.queryByTestId('hole-screen')).toBeNull();
+    });
+
+    it('et vanlig spill merker ingenting av dette', async () => {
+      const nav = await openOn(12);
+
+      await waitFor(() => expect(screen.getByTestId('hole-strip-12')).toBeTruthy());
+      expect(screen.queryByTestId('hole-bridge')).toBeNull();
+      expect(screen.queryByTestId('hole-boundary-link')).toBeNull();
+      expect(nav.setParams).not.toHaveBeenCalled();
+      expect(nav.replace).not.toHaveBeenCalled();
+    });
   });
 
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad

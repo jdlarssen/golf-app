@@ -10,6 +10,7 @@ import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'rea
 import type { GameBundle } from '../../data/gameBundle';
 import { undoSelfWithdraw } from '../../data/withdrawSelf';
 import { GATE_LINK_LABEL, gameWebPath, gateMessage } from '../../lib/formatGate';
+import type { RoundHole } from '../../lib/segmentRound';
 import { addToCalendar } from '../../lib/addToCalendar';
 import {
   mapSearchUrl,
@@ -19,7 +20,7 @@ import {
 import { holeHeaderParams } from '../../lib/holeHeader';
 import { HOME_TEXT, continueOnHole } from '../../lib/homeCopy';
 import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy';
-import { TICKET_TEXT, playedLine } from '../../lib/ticketCopy';
+import { TICKET_TEXT, bridgeLabel, derivedBody, derivedLink, playedLine } from '../../lib/ticketCopy';
 import type { ScreenProps } from '../../navigation';
 import { FONTS, fraunces, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
@@ -37,6 +38,7 @@ export function TicketStub({
   flightCta,
   onChanged,
   onNavigate,
+  onOpenGame,
   bundle,
 }: {
   stub: TicketStubModel;
@@ -59,6 +61,8 @@ export function TicketStub({
   /** Hent bundelen på nytt: etter «Angre trekk», og fra venterommet (#2219). */
   onChanged: () => void | Promise<void>;
   onNavigate: Navigate;
+  /** #2752: åpne et annet spill: kampen slagene føres i, fra en avledet kamp. */
+  onOpenGame?: (gameId: string) => void;
   /** #2204: venterommet sier hvorfor runden står fast etter tee-off. */
   bundle?: GameBundle;
 }) {
@@ -68,9 +72,24 @@ export function TicketStub({
     case 'gated':
       return (
         <View style={styles.block} testID="format-gate">
-          <Text style={[styles.text, { color: colors.muted }]}>{gateMessage(stub.reason)}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{gateMessage()}</Text>
           {/* #1891: uten knappen er setningen en blindvei. */}
           <WebLinkButton label={GATE_LINK_LABEL} path={gameWebPath(gameId)} testID="format-gate-link" />
+        </View>
+      );
+    case 'derived':
+      return (
+        <View style={styles.block} testID="derived-notice">
+          <Text style={[styles.registered, { color: colors.text }]}>{TICKET_TEXT.derivedHeading}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{derivedBody(stub.hostName)}</Text>
+          <Pressable
+            accessibilityRole="button"
+            style={[ui.buttonSecondary, styles.cta]}
+            onPress={() => onOpenGame?.(stub.hostGameId)}
+            testID="derived-open-host"
+          >
+            <Text style={ui.buttonSecondaryText}>{derivedLink(stub.hostName)}</Text>
+          </Pressable>
         </View>
       );
     case 'notPlayer':
@@ -174,11 +193,24 @@ function ActiveStub({
       <Text style={ui.buttonText}>{flightCta}</Text>
     </Pressable>
   ) : null;
+  const openBridge = (bridge: RoundHole) =>
+    onNavigate('Hole', { gameId: bridge.gameId, holeNumber: bridge.holeNumber });
 
   if (stub.state === 'submitted_pending_approval' || stub.state === 'submitted_approved') {
     return (
       <View style={styles.block}>
         {flightButton}
+        {/* Første halvdel levert for hånd på nettet: runden er ikke ferdig ennå. */}
+        {stub.bridge ? (
+          <Pressable
+            accessibilityRole="button"
+            style={[ui.buttonSecondary, styles.cta]}
+            onPress={() => openBridge(stub.bridge as RoundHole)}
+            testID="ticket-bridge"
+          >
+            <Text style={ui.buttonSecondaryText}>{bridgeLabel(stub.bridge.holeNumber)}</Text>
+          </Pressable>
+        ) : null}
         <View testID="submitted-banner">
           <Text style={[styles.text, { color: colors.muted }]}>
             {stub.state === 'submitted_pending_approval'
@@ -192,8 +224,11 @@ function ActiveStub({
     );
   }
 
+  const { bridge } = stub;
   const [label, onPress] =
-    stub.state === 'ready_to_submit'
+    stub.state === 'ready_to_submit' && bridge
+      ? [bridgeLabel(bridge.holeNumber), () => openBridge(bridge)]
+      : stub.state === 'ready_to_submit'
       ? [TICKET_TEXT.reviewAndSubmit, () => onNavigate('Scorecard', { gameId })]
       : [
           stub.state === 'not_started' ? TICKET_TEXT.startRound : continueOnHole(stub.nextHole),
