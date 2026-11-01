@@ -52,10 +52,23 @@ async function renderStub(
   return { onNavigate, view };
 }
 
+it('trukket av seg selv der spillet ikke lar det angres: ingen knapp som alltid feiler (#2752)', async () => {
+  await renderStub({ kind: 'withdrawn', bySelf: true, canUndo: false });
+  expect(screen.getByTestId('withdrawn-banner')).toHaveTextContent('Du er trukket fra dette spillet.');
+  expect(screen.queryByTestId('withdrawn-undo')).toBeNull();
+});
+
+it('trukket fra en cup-kamp før start: sier hvem som kan angre, og tilbyr ingen angring (#2752)', async () => {
+  await renderStub({ kind: 'cupWithdrawn', bySelf: true });
+  expect(screen.getByTestId('cup-withdrawn-banner')).toHaveTextContent(/må arrangøren angre trekket/);
+  expect(screen.queryByTestId('withdrawn-undo')).toBeNull();
+});
+
 it.each<[string, TicketStubModel, string]>([
   ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate-link'],
   ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
-  ['trukket av seg selv', { kind: 'withdrawn', bySelf: true }, 'withdrawn-undo'],
+  ['trukket av seg selv', { kind: 'withdrawn', bySelf: true, canUndo: true }, 'withdrawn-undo'],
+  ['trukket fra en cup-kamp før start', { kind: 'cupWithdrawn', bySelf: true }, 'cup-withdrawn-banner'],
   ['utkast', { kind: 'draft' }, 'ticket-draft'],
   ['planlagt', { kind: 'scheduled' }, 'waiting-room'],
   ['avsluttet uten plass', { kind: 'finished', result: null }, 'finished-banner'],
@@ -205,7 +218,8 @@ it.each<[string, TicketStubModel, string]>([
     { kind: 'active', state: 'submitted_pending_approval', played: 18, total: 18, nextHole: 1 },
     'submitted-banner',
   ],
-  ['trukket', { kind: 'withdrawn', bySelf: true }, 'withdrawn-banner'],
+  ['trukket', { kind: 'withdrawn', bySelf: true, canUndo: true }, 'withdrawn-banner'],
+  ['trukket fra en cup-kamp', { kind: 'cupWithdrawn', bySelf: true }, 'cup-withdrawn-banner'],
 ])('%s: brødteksten er 13 pt i muted, som i designet', async (_case, stub, testID) => {
   await renderStub(stub);
   // Første tekst i blokken er setningen; knapper kommer etter den.

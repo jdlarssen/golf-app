@@ -154,6 +154,49 @@ describe('Cup — mens cupen pågår (#1468)', () => {
   });
 });
 
+describe('Cup — dørene', () => {
+  it('den som styrer cupen får «Styr cupen», andre ikke', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true }) });
+    const { navigate } = await renderCup();
+    await fireEvent.press(await screen.findByTestId('cup-open-manage'));
+    expect(navigate).toHaveBeenCalledWith('CupManage', { cupId: 'cup-1' });
+  });
+
+  it('uten rollen: ingen dør', async () => {
+    answer({ ok: true, view: liveCup() });
+    await renderCup();
+    await screen.findByTestId('cup-name');
+    expect(screen.queryByTestId('cup-open-manage')).toBeNull();
+    expect(screen.queryByTestId('cup-withdraw-self')).toBeNull();
+  });
+
+  it('spilleren med en kamp igjen får «Trekk meg fra cupen»', async () => {
+    answer({ ok: true, view: liveCup({ canWithdrawSelf: true }) });
+    const { navigate } = await renderCup();
+    const link = await screen.findByTestId('cup-withdraw-self');
+    expect(link).toHaveTextContent('Trekk meg fra cupen');
+    await fireEvent.press(link);
+    expect(navigate).toHaveBeenCalledWith('CupWithdraw', { cupId: 'cup-1' });
+  });
+
+  it('den som har trukket seg, får nettets banner', async () => {
+    answer({ ok: true, view: liveCup({ selfWithdrawn: true }) });
+    await renderCup();
+    expect(await screen.findByTestId('cup-self-withdrawn')).toHaveTextContent(
+      'Du er trukket fra cupen. Arrangøren ser det her på cup-siden.',
+    );
+  });
+
+  it('uten nett: ingen dør som krever nett', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true, canWithdrawSelf: true }) }, { ok: false, reason: 'offline' });
+    await renderCup();
+    await screen.findByTestId('cup-open-manage');
+    await refocus();
+    expect(screen.queryByTestId('cup-open-manage')).toBeNull();
+    expect(screen.queryByTestId('cup-withdraw-self')).toBeNull();
+  });
+});
+
 describe('Cup — ferdig cup', () => {
   it('vinneren, lagenes poeng og linja under', async () => {
     answer({ ok: true, view: finishedCup() });

@@ -2286,6 +2286,7 @@
       "derivedNoticeUnknownHost": "en annen runde",
       "withdrawnHeading": "Du har trukket deg fra spillet",
       "withdrawnBody": "Scorene dine teller ikke i rangeringen. Du kan angre så lenge spillet er aktivt.",
+      "withdrawnBodyNoUndo": "Scorene dine teller ikke i rangeringen.",
       "withdrawnByOrganiserHeading": "Arrangøren har trukket deg fra spillet",
       "withdrawnByOrganiserBody": "Scorene dine teller ikke i rangeringen. Er det feil, si fra til arrangøren.",
       "undoWithdraw": "Angre",

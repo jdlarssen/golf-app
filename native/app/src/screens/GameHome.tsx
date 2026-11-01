@@ -54,6 +54,7 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
+import { fetchCupIsRunning } from '../data/cupManage';
 import { backTo, openOrReturn } from '../lib/backTo';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
@@ -129,6 +130,19 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const rulesHeadingRef = useRef<ComponentRef<typeof Text>>(null);
   const rulesY = useRef<number | null>(null);
   const [profileHcpIndex, setProfileHcpIndex] = useState<number | null>(null);
+  // #2752: en planlagt cup-kamp spør om cupen er i gang, før den tilbyr et trekk fra den.
+  const [cupRunning, setCupRunning] = useState(false);
+  const plannedCupId = bundle?.game.status === 'scheduled' ? bundle.game.tournamentId : null;
+  useEffect(() => {
+    if (!plannedCupId) return undefined;
+    let cancelled = false;
+    void fetchCupIsRunning(plannedCupId).then((running) => {
+      if (!cancelled) setCupRunning(running);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [plannedCupId]);
 
   // Hent ned det serveren har hver gang skjermen åpnes, når appen kommer i
   // forgrunnen og når nettet er tilbake, og les lokalt etterpå (#2228). Feiler
@@ -280,6 +294,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const runningTotal =
     hero?.standing?.total != null && hero.unit ? stubTotal(hero.standing.total, hero.unit) : null;
   const stub = ticketStub({
+    cupGame: game.tournamentId != null,
+    gameMode: game.gameMode,
     status: game.status,
     gate: gated,
     me: me?.player,
@@ -302,7 +318,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Arrangør = `created_by`, men ikke i en ligaflight (#2688): der har ingen
   // arrangørseksjon, og den som startet flighten trekker seg som alle andre.
   const isOrganiser = isGameOrganiser(game, userId);
-  const withdrawKind = derived ? null : playerWithdrawKind(game, me?.player, isOrganiser);
+  const anyWithdrawKind = playerWithdrawKind({ ...game, cupRunning }, me?.player, isOrganiser);
+  // En avledet kamp har ingen egne slag å trekke seg fra, men et trekk fra cupen
+  // gjelder den også (#2752).
+  const withdrawKind = derived && anyWithdrawKind !== 'cup' ? null : anyWithdrawKind;
 
   return (
     <ScrollView
@@ -421,6 +440,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           kind={withdrawKind}
           onChanged={refresh}
           onLeft={() => backTo(navigation, 'Home')}
+          onCup={() =>
+            game.tournamentId
+              ? openOrReturn(navigation, 'CupWithdraw', { cupId: game.tournamentId })
+              : undefined
+          }
         />
       ) : null}
 

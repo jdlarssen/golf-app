@@ -70,7 +70,7 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: 'cup matches, teeGenderOf (out of scope for #2209, see the PR)',
   },
-  'lib/cup/actions.ts': {
+  'lib/cup/swapCupMatchPlayerCore.ts': {
     count: 2,
     reason: 'the compensation re-inserts removed rows verbatim; the swap-in uses teeGenderOf',
   },

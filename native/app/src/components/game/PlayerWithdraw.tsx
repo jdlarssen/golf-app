@@ -6,6 +6,10 @@
 // går gjennom samme rute som arrangørens «Trekk meg» (`data/withdrawSelf.ts`),
 // og feiltekstene er webbens (`describePlayerWithdrawFailure`).
 //
+// I en cup-kamp før start går lenka til cupens egen skjerm (`kind: 'cup'`, #2752),
+// med konsekvensene for alle kampene: et trekk gjelder hele cupen, og raden slettes
+// ikke (#1937).
+//
 // Slettes påmeldingen (`kept: false`, før start), har spilleren ikke noe å gjøre
 // på siden etterpå: da går appen til Hjem, som nettsiden gjør. Beholdes raden
 // (det myke trekket under runden), blir spilleren stående, og trukket-banneret
@@ -13,6 +17,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { withdrawSelf } from '../../data/withdrawSelf';
+import { CUP_TEXT } from '../../lib/cupCopy';
 import type { PlayerWithdrawKind } from '../../lib/playerWithdraw';
 import {
   describePlayerWithdrawFailure,
@@ -27,12 +32,15 @@ export function PlayerWithdraw({
   kind,
   onChanged,
   onLeft,
+  onCup,
 }: {
   gameId: string;
   gameName: string;
   kind: PlayerWithdrawKind;
   onChanged: () => Promise<void>;
   onLeft: () => void;
+  /** `kind: 'cup'`: åpner cupens egen skjerm. */
+  onCup?: () => void;
 }) {
   const { ui, colors } = useTheme();
   const [busy, setBusy] = useState(false);
@@ -74,12 +82,12 @@ export function PlayerWithdraw({
       <Pressable
         accessibilityRole="button"
         disabled={busy}
-        onPress={confirm}
+        onPress={kind === 'cup' ? onCup : confirm}
         style={styles.link}
         testID="player-withdraw"
       >
         <Text style={[ui.muted, styles.linkText, { textDecorationColor: colors.muted }]}>
-          {PLAYER_WITHDRAW.link}
+          {kind === 'cup' ? CUP_TEXT.withdrawSelfLink : PLAYER_WITHDRAW.link}
         </Text>
       </Pressable>
       {notice ? (

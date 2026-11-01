@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
 import { undoSelfWithdraw } from '../../data/withdrawSelf';
+import { WITHDRAW_TEXT } from '../../lib/cupManageCopy';
 import { GATE_LINK_LABEL, gameWebPath, gateMessage } from '../../lib/formatGate';
 import type { RoundHole } from '../../lib/segmentRound';
 import { addToCalendar } from '../../lib/addToCalendar';
@@ -99,7 +100,15 @@ export function TicketStub({
         </View>
       );
     case 'withdrawn':
-      return <WithdrawnStub gameId={gameId} bySelf={stub.bySelf} onChanged={onChanged} />;
+      return <WithdrawnStub gameId={gameId} bySelf={stub.bySelf} canUndo={stub.canUndo} onChanged={onChanged} />;
+    case 'cupWithdrawn':
+      return (
+        <View style={styles.block} testID="cup-withdrawn-banner">
+          <Text style={[styles.text, { color: colors.muted }]}>
+            {stub.bySelf ? WITHDRAW_TEXT.alreadyWithdrawnSelf : WITHDRAW_SELF.withdrawnByOrganiser}
+          </Text>
+        </View>
+      );
     case 'draft':
       return (
         <View style={styles.block} testID="ticket-draft">
@@ -356,10 +365,12 @@ function ScheduledActions({
 function WithdrawnStub({
   gameId,
   bySelf,
+  canUndo,
   onChanged,
 }: {
   gameId: string;
   bySelf: boolean;
+  canUndo: boolean;
   onChanged: () => void | Promise<void>;
 }) {
   const { colors, ui } = useTheme();
@@ -385,7 +396,7 @@ function WithdrawnStub({
       <Text style={[styles.text, { color: colors.muted }]}>
         {bySelf ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
       </Text>
-      {bySelf ? (
+      {canUndo ? (
         <Pressable
           style={ui.buttonSecondary}
           disabled={busy}

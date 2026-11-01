@@ -277,6 +277,18 @@ describe('OrganiserSection — flight i lagformater (#2290)', () => {
 });
 
 describe('OrganiserSection', () => {
+  it('i en planlagt cup-kamp kan ingen legges til: laget i kampen er satt (#2752)', async () => {
+    await render(
+      <OrganiserSection
+        bundle={bundle('scheduled', { tournamentId: 'cup-1' })}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('organiser-add-toggle')).toBeNull();
+  });
+
   it('aapner egen rad der basen tillater det, holder den utenfor der den ikke gjoer, og tegner en tapt start-flipp som suksess', async () => {
     // Bekreftelses-dialogen svarer ja med én gang: det som testes er skrivingen
     // bak knappen, ikke at iOS tegner en Alert.

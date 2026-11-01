@@ -1,60 +1,27 @@
 'use server';
 
 import { redirect } from '@/lib/nav/redirect';
-import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
-import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Json } from '@/lib/database.types';
 import { cupBasePath } from './cupPaths';
 import {
-  hasWithdrawalPlayOnChoice,
-  isNotStartedCupMatch,
-  isPlayOnAvailable,
-  readWithdrawalPlayOn,
-} from './cupWithdrawalOutcome';
+  revalidateCup,
+  setFourballWithdrawalChoiceCore,
+  undoCupWithdrawalCore,
+  withdrawCupPlayerCore,
+  withdrawSelfFromCupCore,
+  type CupWithdrawalError as CoreError,
+} from './withdrawalCore';
 
 /**
- * Trekk underveis i en cup (#1814) — arrangørens og spillerens vei ut.
- *
- * Ryder Cup-modellen (eierbeslutning E1): et trekk er et trekk, ikke et bytte.
- * Ingen erstatter settes inn; spillerens IKKE-STARTEDE kamper flagges med
- * `withdrawn_at`, og konvoluttregelen (`cupWithdrawalOutcome.ts`) utleder
- * poengene derfra. Startede og ferdige kamper røres aldri (E3).
- *
- * Ingen skjemaendring: `game_players.withdrawn_at`/`withdrawn_by_user_id` er
- * #386-mekanikken, og fourball-valget bor i `games.mode_config`
- * (`withdrawal_play_on`) etter samme presedens som `team_strokes_override`
- * (#1441 D10). `supportsWithdrawal` — som holder matchplay utenfor med vilje —
- * røres IKKE: cup-trekket er en egen inngang med egen semantikk.
- *
- * Alle skriv går via admin-klienten med authz på call-site (samme mønster som
- * `finishTournament`/`swapCupMatchPlayer`): en klubb-styrer er ikke
- * games-creator, og 0108-triggeren nekter dessuten en spiller å PATCHe sin egen
- * rad. Gaten her ER håndhevelsen (AGENTS.md-felle #3).
+ * Nettets vei inn til trekket (#1814): skjemafeltene, gaten og redirecten.
+ * Reglene og skrivingen bor i `withdrawalCore.ts`, delt med appens ruter (#2752).
  */
 
-export type CupWithdrawalError = { error: string };
-
-/**
- * Feilkoder, alle oversatt under `cup.withdraw.errors.*`:
- *   wrong_status        cupen er ikke aktiv (utkast/avsluttet)
- *   not_participant     spilleren står ikke i noen av cupens kamper
- *   no_pending_matches  ingen ikke-startede kamper igjen å trekke seg fra
- *   not_withdrawn       angre-forsøk på en spiller som ikke er trukket
- *   match_not_eligible  fourball-valget peker på feil kamp
- *   withdraw_failed     lese-/skrivefeil (fail-closed, ingenting delvis)
- */
-
-type GameRow = {
-  id: string;
-  status: 'draft' | 'scheduled' | 'active' | 'finished';
-  game_mode: string;
-  mode_config: unknown;
-};
+// Not `export type { … }`: a server-actions file turns a re-export into a real one,
+// and the build fails on an action that does not exist.
+export type CupWithdrawalError = CoreError;
 
 /**
  * Kamp-ID-ene i ett skjemafelt. Bekreftelsessiden sender én avkrysningsboks per
@@ -72,266 +39,7 @@ function gameIdSet(formData: FormData, field: string): Set<string> {
   );
 }
 
-/** Cupens spill + spillerens rader i dem. Delt av alle fire handlingene. */
-async function readCupTarget(
-  admin: SupabaseClient<Database>,
-  tournamentId: string,
-  userId: string,
-): Promise<
-  | { error: string }
-  | {
-      groupId: string | null;
-      games: GameRow[];
-      /** Spill-ID-ene spilleren står i, i kamp-rekkefølge. */
-      myGameIds: string[];
-      /** Spill-ID-ene der spilleren alt er trukket. */
-      withdrawnGameIds: string[];
-    }
-> {
-  const { data: tournament, error: tErr } = await admin
-    .from('tournaments')
-    .select('id, status, group_id')
-    .eq('id', tournamentId)
-    .maybeSingle();
-  if (tErr) {
-    console.error('[cup] withdrawal tournament read failed', { tournamentId, tErr });
-    return { error: 'withdraw_failed' };
-  }
-  if (!tournament) return { error: 'not_found' };
-  // E7/edge: cupen må være i gang. Utkast har ingen kamper å trekke seg fra,
-  // og en avsluttet cup har et signert resultat som ikke skal endres.
-  if (tournament.status !== 'active') return { error: 'wrong_status' };
-
-  const { data: gameRows, error: gErr } = await admin
-    .from('games')
-    .select('id, status, game_mode, mode_config, created_at')
-    .eq('tournament_id', tournamentId)
-    .order('created_at', { ascending: true });
-  if (gErr) {
-    console.error('[cup] withdrawal games read failed', { tournamentId, gErr });
-    return { error: 'withdraw_failed' };
-  }
-  const games = (gameRows ?? []) as GameRow[];
-  if (games.length === 0) return { error: 'not_participant' };
-
-  const { data: playerRows, error: pErr } = await admin
-    .from('game_players')
-    .select('game_id, withdrawn_at')
-    .eq('user_id', userId)
-    .in(
-      'game_id',
-      games.map((g) => g.id),
-    );
-  if (pErr) {
-    console.error('[cup] withdrawal roster read failed', { tournamentId, pErr });
-    return { error: 'withdraw_failed' };
-  }
-  const rows = (playerRows ?? []) as { game_id: string; withdrawn_at: string | null }[];
-  if (rows.length === 0) return { error: 'not_participant' };
-
-  const order = new Map(games.map((g, i) => [g.id, i]));
-  const sorted = [...rows].sort(
-    (a, b) => (order.get(a.game_id) ?? 0) - (order.get(b.game_id) ?? 0),
-  );
-
-  return {
-    groupId: (tournament.group_id as string | null) ?? null,
-    games,
-    myGameIds: sorted.map((r) => r.game_id),
-    withdrawnGameIds: sorted.filter((r) => r.withdrawn_at != null).map((r) => r.game_id),
-  };
-}
-
-/** Buster hver cache-flate et trekk kan ha endret. */
-function revalidateCup(tournamentId: string, groupId: string | null, gameIds: string[]) {
-  expireTournamentCache(tournamentId);
-  // Hver skrevet kamp har sin egen tag (`getGameWithPlayers`) — uten dette
-  // viser venterommet og hull-siden den gamle troppen i opptil 15 minutter.
-  for (const gameId of gameIds) expireGameCache(gameId);
-  const base = cupBasePath(tournamentId, groupId);
-  revalidatePath(base);
-  revalidatePath(`${base}/spillere`);
-  revalidatePath(`/admin/cup/${tournamentId}`);
-  revalidatePath(`/cup/${tournamentId}`);
-  revalidatePath(`/cup/${tournamentId}/resultater`);
-}
-
-function baseConfig(modeConfig: unknown): Record<string, Json> {
-  return modeConfig && typeof modeConfig === 'object'
-    ? { ...(modeConfig as Record<string, Json>) }
-    : {};
-}
-
-/**
- * Skriver arrangørens valg som en EKSPLISITT boolean. `false` er ikke det samme
- * som fravær: fravær betyr «ingen har bestemt seg», og det er den tilstanden
- * venter-banneret på `CupManagement` maser om (E4). Begge gir samme utfall i
- * regelen — `readWithdrawalPlayOn` krever `=== true`.
- */
-function withPlayOn(modeConfig: unknown, on: boolean): Json {
-  const base = baseConfig(modeConfig);
-  base.withdrawal_play_on = on;
-  return base as Json;
-}
-
-/**
- * Fjerner nøkkelen helt. Brukes når det ikke lenger FINNES noe valg å ta —
- * angret trekk, eller en kompensert skriving — så kampen ikke blir stående med
- * et alene-valg uten en trukket spiller.
- */
-function withoutPlayOn(modeConfig: unknown): Json {
-  const base = baseConfig(modeConfig);
-  delete base.withdrawal_play_on;
-  return base as Json;
-}
-
-/**
- * Selve skrivingen, delt av arrangør-trekket og selv-trekket.
- *
- * Rekkefølgen er bevisst: flagg radene først, re-les statusene etterpå.
- * Cron-sveipet fyrer hvert minutt når tee-off har passert, så en kamp kan bli
- * `active` mellom lesingen og skrivingen. Den ene kampen kompenseres da (raden
- * nulles igjen) og rapporteres som hoppet over — resten står. Å rulle tilbake
- * hele trekket fordi ÉN kamp rakk å starte ville vært verre: spilleren er syk,
- * de øvrige kampene skal fortsatt flagges.
- */
-async function writeWithdrawal(
-  admin: SupabaseClient<Database>,
-  args: {
-    tournamentId: string;
-    userId: string;
-    byUserId: string;
-    games: GameRow[];
-    /**
-     * Arrangørens fourball-valg per kamp. En oppføring er et REGISTRERT valg —
-     * også `false` — så en kamp i denne mappa skriver `withdrawal_play_on` og
-     * slutter å vente på arrangøren. Tom mappe (selv-trekk) rører ingen
-     * `mode_config`: da er valget fortsatt arrangørens (E4).
-     */
-    playOnChoices: Map<string, boolean>;
-  },
-): Promise<{ error: string } | { writtenGameIds: string[]; skippedGameIds: string[] }> {
-  const { tournamentId, userId, byUserId, games, playOnChoices } = args;
-  const withdrawnAt = new Date().toISOString();
-  const written: string[] = [];
-  const gameById = new Map(games.map((g) => [g.id, g]));
-
-  /**
-   * Ruller tilbake alt vi skrev for de oppgitte kampene — både trekk-raden og
-   * `withdrawal_play_on`. Uten flagg-delen ble en kamp vi nettopp kompenserte
-   * stående med arrangørens alene-valg i `mode_config` uten at noen var
-   * trukket: kampen ville startet 1 mot 2 med fulltallige lag. Samme opprydding
-   * som `undoCupWithdrawal` gjør.
-   *
-   * `mode_config` skrives tilbake nøyaktig slik lesingen fant den — det
-   * gjenoppretter både «ingen har valgt ennå» og et eldre valg fra en annen
-   * spillers trekk.
-   */
-  async function compensate(gameIds: string[]): Promise<void> {
-    await undoRows(admin, userId, gameIds);
-    for (const gameId of gameIds) {
-      if (!playOnChoices.has(gameId)) continue;
-      const game = gameById.get(gameId);
-      if (!game) continue;
-      const { error } = await admin
-        .from('games')
-        .update({ mode_config: (game.mode_config ?? null) as Json })
-        .eq('id', gameId);
-      if (error) {
-        console.error('[cup] withdrawal play-on compensation failed', { gameId, error });
-      }
-    }
-  }
-
-  try {
-    for (const game of games) {
-      // 0 rader er en ekte feil (felle #2): lesingen fant nettopp raden, og
-      // `.is('withdrawn_at', null)` er ikke et filter som kan bomme her —
-      // planfasen plukket bare ut ikke-trukne rader.
-      expectAffected(
-        await admin
-          .from('game_players')
-          .update({ withdrawn_at: withdrawnAt, withdrawn_by_user_id: byUserId })
-          .eq('game_id', game.id)
-          .eq('user_id', userId)
-          .is('withdrawn_at', null)
-          .select('user_id'),
-        'withdrawCupPlayer/flagRow',
-      );
-      written.push(game.id);
-
-      const choice = playOnChoices.get(game.id);
-      if (choice !== undefined) {
-        expectAffected(
-          await admin
-            .from('games')
-            .update({ mode_config: withPlayOn(game.mode_config, choice) })
-            .eq('id', game.id)
-            .select('id'),
-          'withdrawCupPlayer/playOn',
-        );
-      }
-    }
-  } catch (err) {
-    console.error('[cup] withdrawCupPlayer write failed', { tournamentId, userId, err });
-    await compensate(written);
-    return { error: 'withdraw_failed' };
-  }
-
-  // TOCTOU mot cron-sveipet: en kamp som rakk å bli `active` mellom lesing og
-  // skriving skal IKKE stå flagget — den spilles, og trekket gjelder bare de
-  // ikke-startede (E3).
-  const { data: after, error: afterError } = await admin
-    .from('games')
-    .select('id, status')
-    .in('id', written);
-  if (afterError) {
-    console.error('[cup] withdrawCupPlayer recheck failed', { tournamentId, afterError });
-    await compensate(written);
-    return { error: 'withdraw_failed' };
-  }
-  const started = (after ?? [])
-    .filter((g) => !isNotStartedCupMatch(g.status as string))
-    .map((g) => g.id as string);
-  if (started.length > 0) await compensate(started);
-
-  return {
-    writtenGameIds: written.filter((id) => !started.includes(id)),
-    skippedGameIds: started,
-  };
-}
-
-/**
- * Nuller `withdrawn_at`/`withdrawn_by_user_id` for spilleren i de oppgitte
- * kampene. Brukes både av «angre trekk» og som kompensering. Best-effort ved
- * kompensering — kalleren får uansett en ærlig feilkode.
- */
-async function undoRows(
-  admin: SupabaseClient<Database>,
-  userId: string,
-  gameIds: string[],
-): Promise<void> {
-  if (gameIds.length === 0) return;
-  const { error } = await admin
-    .from('game_players')
-    .update({ withdrawn_at: null, withdrawn_by_user_id: null })
-    .in('game_id', gameIds)
-    .eq('user_id', userId);
-  if (error) console.error('[cup] withdrawal undo failed', { userId, gameIds, error });
-}
-
-/**
- * Arrangøren registrerer et trekk (E7). Skriver `withdrawn_at` på ALLE
- * spillerens ikke-startede kamper i cupen — host og avledede sammen (#1441 D3:
- * alt som rører spillerrader gjøres på hele bunten).
- *
- * `play_on_game_ids` er kampene arrangøren huket av «makkeren spiller alene»
- * for; `play_on_offered_game_ids` er kampene skjemaet i det hele tatt VISTE en
- * avkrysning for. Bare de sistnevnte får et svar skrevet: en umerket boks er
- * et svar («etter regelen»), men en boks som aldri ble vist — fordi spilleren
- * ikke har en aktiv makker igjen på siden — er ingenting, og et blindt `false`
- * der ville overskrevet arrangørens valg fra et tidligere trekk i samme kamp.
- */
+/** Arrangøren registrerer et trekk (E7). Se `withdrawCupPlayerCore`. */
 export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdrawalError> {
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
   const userId = String(formData.get('user_id') ?? '').trim();
@@ -341,42 +49,12 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
-  const admin = getAdminClient();
-
-  const target = await readCupTarget(admin, tournamentId, userId);
-  if ('error' in target) return { error: target.error };
-
-  const pending = target.games.filter(
-    (g) =>
-      isNotStartedCupMatch(g.status) &&
-      target.myGameIds.includes(g.id) &&
-      !target.withdrawnGameIds.includes(g.id),
-  );
-  if (pending.length === 0) return { error: 'no_pending_matches' };
-
-  const result = await writeWithdrawal(admin, {
+  const result = await withdrawCupPlayerCore(getAdminClient(), {
     tournamentId,
     userId,
     byUserId: actor.userId,
-    games: pending,
-    // Kun fourball-kamper kan bære flagget — en klient som sender andre ID-er
-    // skal ikke kunne skrive `withdrawal_play_on` på en foursomes.
-    //
-    // Hver fourball SKJEMAET SPURTE OM får et eksplisitt svar, også når boksen
-    // sto tom: arrangøren så avkrysningen, og å la den stå er «etter regelen»
-    // — ikke «jeg har ikke bestemt meg». Uten det kunne venter-banneret på
-    // cup-styringen aldri besvares med regelen, bare med alene-valget.
-    //
-    // Kamper skjemaet IKKE spurte om står urørt. Det gjelder den siste
-    // makkeren på en side: uten en aktiv makker igjen finnes ingen boks, og et
-    // `false` her ville stilltiende snudd svaret fra det første trekket.
-    playOnChoices: new Map(
-      pending
-        .filter(
-          (g) => g.game_mode === 'fourball_matchplay' && offeredGameIds.has(g.id),
-        )
-        .map((g) => [g.id, playOnGameIds.has(g.id)] as const),
-    ),
+    playOnGameIds,
+    offeredGameIds,
   });
   if ('error' in result) return { error: result.error };
 
@@ -386,11 +64,7 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=${status}`);
 }
 
-/**
- * Spilleren melder seg selv ut (E7). Samme skriving, men `withdrawn_by_user_id`
- * peker på hen selv, og fourball-valget settes ikke — det er arrangørens (E4).
- * Ingen selv-angre: kun arrangøren kan angre.
- */
+/** Spilleren melder seg selv ut (E7). Se `withdrawSelfFromCupCore`. */
 export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdrawalError> {
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
   if (!tournamentId) return { error: 'not_found' };
@@ -401,46 +75,20 @@ export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdr
   } = await supabase.auth.getUser();
   if (!user) return { error: 'not_authed' };
 
-  const admin = getAdminClient();
-  const target = await readCupTarget(admin, tournamentId, user.id);
-  if ('error' in target) return { error: target.error };
-
-  const pending = target.games.filter(
-    (g) =>
-      isNotStartedCupMatch(g.status) &&
-      target.myGameIds.includes(g.id) &&
-      !target.withdrawnGameIds.includes(g.id),
-  );
-  if (pending.length === 0) return { error: 'no_pending_matches' };
-
-  const result = await writeWithdrawal(admin, {
+  const result = await withdrawSelfFromCupCore(getAdminClient(), {
     tournamentId,
     userId: user.id,
-    byUserId: user.id,
-    games: pending,
-    // Tom med vilje (E4): spilleren bestemmer ikke over makkeren, så valget
-    // står som «ikke tatt» og venter-banneret ber arrangøren om svaret.
-    playOnChoices: new Map<string, boolean>(),
   });
   if ('error' in result) return { error: result.error };
 
-  revalidateCup(tournamentId, target.groupId, [
+  revalidateCup(tournamentId, result.groupId, [
     ...result.writtenGameIds,
     ...result.skippedGameIds,
   ]);
   redirect(`/cup/${tournamentId}?status=withdrawn`);
 }
 
-/**
- * Angrer et trekk (E7 — kun arrangøren, og kun for kamper som ennå ikke har
- * startet). Nuller radene, og fjerner `withdrawal_play_on` fra de kampene der
- * ingen andre står trukket etterpå: da betyr flagget ingenting og skal ikke
- * ligge og skjule seg i `mode_config`. Er en annen spiller fortsatt trukket fra
- * kampen, gjelder valget og blir stående.
- *
- * Har tee-off passert, starter cron-sveipet kampen neste minutt hvis siden er
- * komplett. Det er ønsket — arrangøren angret nettopp fordi folk er der.
- */
+/** Arrangøren angrer et trekk (E7). Se `undoCupWithdrawalCore`. */
 export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdrawalError> {
   const tournamentId = String(formData.get('tournament_id') ?? '').trim();
   const userId = String(formData.get('user_id') ?? '').trim();
@@ -448,81 +96,14 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
-  const admin = getAdminClient();
+  const result = await undoCupWithdrawalCore(getAdminClient(), { tournamentId, userId });
+  if ('error' in result) return { error: result.error };
 
-  const target = await readCupTarget(admin, tournamentId, userId);
-  if ('error' in target) return { error: target.error };
-
-  const toUndo = target.games.filter(
-    (g) => isNotStartedCupMatch(g.status) && target.withdrawnGameIds.includes(g.id),
-  );
-  if (toUndo.length === 0) return { error: 'not_withdrawn' };
-
-  // Er det ANDRE trukne rader igjen i kampen etter denne angringen, gjelder
-  // alene-valget fortsatt og skal bli stående: en fourball der begge lagene
-  // mistet en spiller mister ikke arrangørens svar fordi den ene kom tilbake.
-  const { data: otherRows, error: oErr } = await admin
-    .from('game_players')
-    .select('game_id')
-    .in(
-      'game_id',
-      toUndo.map((g) => g.id),
-    )
-    .neq('user_id', userId)
-    .not('withdrawn_at', 'is', null);
-  if (oErr) {
-    console.error('[cup] undoCupWithdrawal peer read failed', { tournamentId, oErr });
-    return { error: 'withdraw_failed' };
-  }
-  const stillWithdrawn = new Set(
-    ((otherRows ?? []) as { game_id: string }[]).map((r) => r.game_id),
-  );
-
-  try {
-    for (const game of toUndo) {
-      expectAffected(
-        await admin
-          .from('game_players')
-          .update({ withdrawn_at: null, withdrawn_by_user_id: null })
-          .eq('game_id', game.id)
-          .eq('user_id', userId)
-          .not('withdrawn_at', 'is', null)
-          .select('user_id'),
-        'undoCupWithdrawal/clearRow',
-      );
-      // Ethvert registrert valg (også en eksplisitt «etter regelen») fjernes —
-      // men bare når ingen trukket rad står igjen i kampen. Ellers finnes
-      // valget fortsatt, og å slette det ville sendt kampen tilbake til
-      // «venter på arrangøren» uten at noe var endret for den andre trukne.
-      if (!stillWithdrawn.has(game.id) && hasWithdrawalPlayOnChoice(game.mode_config)) {
-        expectAffected(
-          await admin
-            .from('games')
-            .update({ mode_config: withoutPlayOn(game.mode_config) })
-            .eq('id', game.id)
-            .select('id'),
-          'undoCupWithdrawal/clearPlayOn',
-        );
-      }
-    }
-  } catch (err) {
-    console.error('[cup] undoCupWithdrawal failed', { tournamentId, userId, err });
-    return { error: 'withdraw_failed' };
-  }
-
-  revalidateCup(
-    tournamentId,
-    actor.groupId,
-    toUndo.map((g) => g.id),
-  );
+  revalidateCup(tournamentId, actor.groupId, result.undoneGameIds);
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=withdrawal_undone`);
 }
 
-/**
- * Arrangøren velger (eller ombestemmer seg om) at makkeren spiller alene i én
- * fourball-kamp (E4). Kun mens kampen er `scheduled`, og kun når noen faktisk
- * har trukket seg fra den — ellers betyr flagget ingenting.
- */
+/** Arrangøren velger om makkeren spiller alene (E4). Se `setFourballWithdrawalChoiceCore`. */
 export async function setFourballWithdrawalChoice(
   formData: FormData,
 ): Promise<CupWithdrawalError> {
@@ -533,88 +114,12 @@ export async function setFourballWithdrawalChoice(
 
   const supabase = await getServerClient();
   const actor = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
-  const admin = getAdminClient();
-
-  // Samme cup-status-gate som de tre andre handlingene (`readCupTarget`): et
-  // utkast har ingen kamper å velge for, og en avsluttet cup har et signert
-  // resultat som ikke skal kunne endres av et alene-valg i etterkant.
-  const { data: tournament, error: tErr } = await admin
-    .from('tournaments')
-    .select('id, status')
-    .eq('id', tournamentId)
-    .maybeSingle();
-  if (tErr) {
-    console.error('[cup] setFourballWithdrawalChoice tournament read failed', {
-      tournamentId,
-      tErr,
-    });
-    return { error: 'withdraw_failed' };
-  }
-  if (!tournament) return { error: 'not_found' };
-  if (tournament.status !== 'active') return { error: 'wrong_status' };
-
-  // `game_id` kommer fra klienten — kampen MÅ høre til denne cupen, ellers
-  // ville en fremmed kamp vært skrivbar med en cup kalleren tilfeldigvis styrer.
-  const { data: game, error: gErr } = await admin
-    .from('games')
-    .select('id, tournament_id, status, game_mode, mode_config')
-    .eq('id', gameId)
-    .maybeSingle();
-  if (gErr) {
-    console.error('[cup] setFourballWithdrawalChoice read failed', { gameId, gErr });
-    return { error: 'withdraw_failed' };
-  }
-  if (!game || game.tournament_id !== tournamentId) return { error: 'not_found' };
-  if (game.status !== 'scheduled' || game.game_mode !== 'fourball_matchplay') {
-    return { error: 'match_not_eligible' };
-  }
-
-  const { data: rows, error: pErr } = await admin
-    .from('game_players')
-    .select('user_id, team_number, withdrawn_at')
-    .eq('game_id', gameId);
-  if (pErr) {
-    console.error('[cup] setFourballWithdrawalChoice roster read failed', { gameId, pErr });
-    return { error: 'withdraw_failed' };
-  }
-  const players = (rows ?? []) as {
-    user_id: string;
-    team_number: number | null;
-    withdrawn_at: string | null;
-  }[];
-  // Valget har bare mening når det kan få kampen spilt: noen har trukket seg,
-  // den siden har en makker igjen, og motstandersiden har ikke også trukket seg
-  // (da er kampen alltid halvert, #2051). Regelmodulen eier svaret. Tee-off
-  // påvirker ikke om valget kan tas, bare om et trekk er sent, så det leses ikke.
-  const available = isPlayOnAvailable({
-    status: 'scheduled',
-    gameMode: game.game_mode,
-    scheduledTeeOffAt: null,
-    playOn: readWithdrawalPlayOn(game.mode_config),
-    players: players
-      .filter((p) => p.team_number === 1 || p.team_number === 2)
-      .map((p) => ({
-        userId: p.user_id,
-        side: p.team_number as 1 | 2,
-        withdrawnAt: p.withdrawn_at,
-      })),
+  const result = await setFourballWithdrawalChoiceCore(getAdminClient(), {
+    tournamentId,
+    gameId,
+    playOn,
   });
-  if (!available) return { error: 'match_not_eligible' };
-
-  try {
-    expectAffected(
-      await admin
-        .from('games')
-        .update({ mode_config: withPlayOn(game.mode_config, playOn) })
-        .eq('id', gameId)
-        .eq('status', 'scheduled')
-        .select('id'),
-      'setFourballWithdrawalChoice',
-    );
-  } catch (err) {
-    console.error('[cup] setFourballWithdrawalChoice write failed', { gameId, err });
-    return { error: 'withdraw_failed' };
-  }
+  if ('error' in result) return { error: result.error };
 
   revalidateCup(tournamentId, actor.groupId, [gameId]);
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=play_on_saved`);

@@ -103,5 +103,11 @@ export type AppCupView = {
   lineupPending: boolean;
   /** Mine first, then by status. */
   matches: AppCupMatch[];
+  /** The caller runs this cup: the room has «Styr cupen». */
+  canManage: boolean;
+  /** The caller has a match left to withdraw from: «Trekk meg fra cupen». */
+  canWithdrawSelf: boolean;
+  /** The caller has withdrawn from the cup. */
+  selfWithdrawn: boolean;
   results: AppCupResults | null;
 };
