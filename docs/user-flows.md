@@ -57,7 +57,7 @@ flowchart TD
 
 **Persistente nav-elementer** (verifisert i `app/[locale]/layout.tsx` + sidene):
 `BrandMark` (logo, ikke klikkbar) · `InstallBanner` (PWA; med appen ute blir den «Hent Tørny-appen» der appen er, #2562) · `ProductUpdateBanner` ·
-`TopBar` (tilbake-pil + tittel, på indre sider) · `AppVersionFooter` (versjon + Personvern).
+`TopBar` (tilbake-pil + tittel, på indre sider; hvor pila fører: §Tilbake under) · `AppVersionFooter` (versjon + Personvern).
 
 **Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
 rendret globalt i `app/[locale]/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
@@ -65,7 +65,7 @@ rommet `/admin`). Skjult når du er utlogget, på `/login` og `/complete-profile
 (`/opprett-spill`, `/admin/games/new`) og på hullskjermen (`BottomNav`, `hidden`). I tillegg skjules den
 i redigeringsveiviseren på `/admin/games/[id]/edit` og `/games/[id]/rediger` (et utkast gjenopptas der,
 #2269) og på 404-siden og feilskjermen (#2287), der av CSS-regelen for `data-hides-bottom-nav` i `app/globals.css`. Fanenes forsider (Klubbhuset, Innboks, Profil) har ingen tilbakepil. Sider du åpner
-fra Klubbhuset (Baner, Spillformater, en klubb), går tilbake dit: lenkene bærer `?kilde=klubbhuset`
+fra Klubbhuset (Baner, Spillformater, en klubb), går tilbake dit (§Tilbake): lenkene bærer `?kilde=klubbhuset`
 (#2487), og kvitteringen for ny bane sier «Tilbake til Klubbhuset». «Klubbhuset» er universell:
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
 møter et **rom** (#892, tegnet om i #2493): kortet «Lag en ny runde» (den eneste døra til en ny
@@ -121,6 +121,33 @@ kortet), så forespørsler, «Folk du har spilt med» (flest runder sammen førs
 med «HCP · N runder sammen · sist …») og sendte forespørsler. En runde sammen er et ferdig spill dere
 begge sto i uten å trekke dere; handicapet vises bare for venner du har fullført minst én slik runde med.
 Et trykk på en venn åpner bekreftelsessiden `/profile/venner/fjern/[userId]` («Fjerne … som venn?»).
+
+### Tilbake
+
+Tilbake følger én regel i appen og på nettet (#2746). Med tilbake menes pila øverst, sveip fra
+venstre kant på iPhone, Androids tilbakeknapp og pila på nettsiden.
+
+1. **Tilbake fører dit du kom fra.** Åpnet du skjermen fra et varsel, en lenke eller rett fra
+   hjemskjermen, finnes ikke noe «der du kom fra». Da går tilbake til skjermen over i hierarkiet:
+   Hjem → spillet → hull, scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
+   kort. Hjem → Profil → rommene under profilen.
+2. **I appen er pila, sveipet og Android-tilbake samme handling.** Ingen skjerm har en pil som gjør
+   noe annet enn sveipet.
+3. **Et skjema du har sendt, er borte fra tilbake-veien.** Det gjelder levert kort, lagret profil,
+   godkjent kort, trukket fra runden, opprettet spill, avsluttet runde og sletting. Du lander på
+   skjermen skjemaet førte til, og tilbake derfra går dit skjemaet sto over.
+4. **Går du til en skjerm du alt har bak deg, kommer du tilbake til den.** Du får aldri en ny kopi
+   oppå. Hull → tavla → hull gir ett hull, ikke tre skjermer. Å bla mellom hull, eller mellom netto
+   og brutto på tavla, regnes som samme skjerm.
+5. **Hjem er bunnen.** Fra Hjem gjør Android-tilbake det Android alltid gjør: appen legges bort.
+   Ingen annen skjerm sender deg ut av appen når du går tilbake.
+6. **I veiviseren går tilbake ett steg.** På første steg lukkes veiviseren.
+7. **Nettsiden følger regel 1, 3, 4 og 6 med pila.** Nettleserens egen tilbakeknapp blar i
+   historikken som før, men et skjema du har sendt, ligger ikke lenger der.
+
+I appen gjør `native/app/src/lib/backTo.ts` dette: `backTo` når du forlater et skjema, `openOrReturn`
+når du går videre til en skjerm som kan ligge lenger nede i stakken. `navigate` til en slik skjerm
+legger en kopi oppå.
 
 ---
 
