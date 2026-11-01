@@ -33,7 +33,7 @@ describe('data/cupManage', () => {
     [404, 'not_found'],
     [500, 'load_failed'],
   ])('status %i blir %s', async (status, reason) => {
-    respondWith(status, { error: 'load_failed' });
+    respondWith(status, { error: status === 403 ? 'not_manager' : 'load_failed' });
     await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: false, reason });
   });
 
@@ -59,6 +59,11 @@ describe('data/cupManage', () => {
       method: 'POST',
       body: { userId: 'u', playOnGameIds: ['g1'], offeredGameIds: ['g1', 'g2'] },
     });
+  });
+
+  it('en 403 beholder koden fra ruta: en spiller som er byttet ut, er ikke «arrangør-feil»', async () => {
+    respondWith(403, { error: 'not_participant' });
+    await expect(api().withdrawSelfFromCup('c')).resolves.toEqual({ ok: false, reason: 'not_participant' });
   });
 
   it('en regel som sier nei: koden fra ruta', async () => {
@@ -87,7 +92,7 @@ describe('data/cupManage', () => {
   });
 
   it('kandidatene', async () => {
-    const view = { gameId: 'g', out: [], in: [], canSwap: true };
+    const view = { gameId: 'g', out: [], in: [], blocked: null };
     respondWith(200, view);
     await expect(api().fetchCupSwapCandidates('c', 'g')).resolves.toEqual({ ok: true, view });
     expect(sent().url).toBe(`${BASE_URL}/api/cup/c/matches/g/swap-candidates`);

@@ -133,7 +133,7 @@ describe('kandidatene til et bytte', () => {
 
   it('ut er spillerne i kampen, med lag. Inn er resten, uten ventende, sortert', () => {
     expect(swap(snapshot('active', [match('a')]), 'a')).toMatchObject({
-      canSwap: true,
+      blocked: null,
       bundled: false,
       out: [
         { userId: 'ola', name: 'Ola Kompis', teamName: 'Team Nord' },
@@ -158,12 +158,25 @@ describe('kandidatene til et bytte', () => {
     expect(body?.in.map((o) => o.userId)).toEqual(['anne', 'berit']);
   });
 
-  it('en startet kamp i bunten stopper byttet', () => {
+  it('en startet kamp i bunten stopper byttet, med vaktas egen kode', () => {
     const snap = snapshot('active', [
       match('vert', { status: 'active' }),
       match('avledet', { sourceGameId: 'vert' }),
     ]);
-    expect(swap(snap, 'avledet')?.canSwap).toBe(false);
+    expect(swap(snap, 'avledet')?.blocked).toBe('already_started');
+    expect(view(snap).matches.map((m) => [m.gameId, m.canSwap])).toEqual([['avledet', false]]);
+  });
+
+  it('et trekk et annet sted i bunten stopper byttet, og kortet og skjermen er enige', () => {
+    const snap = snapshot('active', [
+      match('vert', { withdrawal: { outcome: 'halved', withdrawnSide: 1, withdrawnUserIds: ['ola'] } }),
+      match('avledet', { sourceGameId: 'vert' }),
+    ]);
+    expect(swap(snap, 'avledet')?.blocked).toBe('match_has_withdrawal');
+    expect(view(snap).matches.map((m) => [m.gameId, m.canSwap])).toEqual([
+      ['vert', false],
+      ['avledet', false],
+    ]);
   });
 
   it('en kamp i en annen cup: null', () => {

@@ -11,9 +11,19 @@ function hasWithdrawal(match: Match): boolean {
   return match.withdrawal != null || match.soloPlayOn != null;
 }
 
-/** Scheduled with no withdrawal: a withdrawal frees no seat (E6). */
-export function matchCanSwap(match: Match): boolean {
-  return match.status === 'scheduled' && !hasWithdrawal(match);
+function bundleOf(matches: readonly Match[], match: Match): Match[] {
+  const root = match.sourceGameId ?? match.gameId;
+  return matches.filter((other) => (other.sourceGameId ?? other.gameId) === root);
+}
+
+/**
+ * Why a bundle cannot be swapped, in the same order and with the same codes as
+ * `validateMatchSwap`: the whole bundle must be scheduled, and a withdrawal frees
+ * no seat (E6). A list for the screen. The guard in the swap is what decides.
+ */
+function swapBlock(bundle: readonly Match[]): AppCupSwapCandidates['blocked'] {
+  if (bundle.some((match) => match.status !== 'scheduled')) return 'already_started';
+  return bundle.some(hasWithdrawal) ? 'match_has_withdrawal' : null;
 }
 
 function nameLookup(snapshot: CupSnapshot, unknownLabel: string) {
@@ -81,7 +91,7 @@ export function buildAppCupManageView(
       status: match.playOnChoicePending === true && showChoice ? 'playOnPending' : statusKey,
       withdrawnName: values.name,
       walkoverTeam: values.team,
-      canSwap: matchCanSwap(match),
+      canSwap: swapBlock(bundleOf(leaderboard.matches, match)) === null,
       choice: showChoice
         ? {
             partnerName: partnerName as string,
@@ -123,8 +133,7 @@ export function buildAppCupSwapCandidates(
   if (!match) return null;
   const nameOf = nameLookup(snapshot, args.unknownLabel);
 
-  const root = match.sourceGameId ?? match.gameId;
-  const bundle = leaderboard.matches.filter((other) => (other.sourceGameId ?? other.gameId) === root);
+  const bundle = bundleOf(leaderboard.matches, match);
   const team1 = new Set(bundle.flatMap((other) => other.team1UserIds ?? []));
   const inBundle = [
     ...new Set(
@@ -137,7 +146,7 @@ export function buildAppCupSwapCandidates(
     label: match.matchLabel,
     side1: match.team1PlayerName,
     side2: match.team2PlayerName,
-    canSwap: bundle.every(matchCanSwap),
+    blocked: swapBlock(bundle),
     bundled: bundle.length > 1,
     out: inBundle.map((userId) => ({
       userId,

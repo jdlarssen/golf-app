@@ -13,6 +13,7 @@ import type {
   AppCupSwapCandidates,
   AppCupWithdrawalView,
 } from '../../../../lib/cup/appCupManageView';
+import { supabase } from '../supabase';
 import { callWebRoute } from './webApi';
 
 const base = (cupId: string) => `/api/cup/${encodeURIComponent(cupId)}`;
@@ -27,9 +28,9 @@ export type CupActionResult = { ok: true; partial?: boolean } | { ok: false; rea
 function loadFailure(status: number, body: unknown): CupManageFailure {
   if (status === 401) return 'unauthorized';
   if (status === 404) return 'not_found';
-  if (status === 403) return 'not_manager';
   const error = (body as { error?: unknown } | null)?.error;
-  return typeof error === 'string' ? error : 'load_failed';
+  if (typeof error === 'string') return error;
+  return status === 403 ? 'not_manager' : 'load_failed';
 }
 
 async function read<T>(path: string, isValid: (view: Partial<T>) => boolean) {
@@ -50,6 +51,15 @@ async function post(path: string, body: Record<string, unknown>): Promise<CupAct
   if (!call.ok) return { ok: false, reason: call.reason };
   if (call.status !== 200) return { ok: false, reason: loadFailure(call.status, call.body) };
   return { ok: true, partial: (call.body as { partial?: unknown } | null)?.partial === true };
+}
+
+/**
+ * Er cupen i gang? Spillets side spør for å vite om «Trekk meg fra cupen» har noe
+ * å føre til. En feil, eller en cup RLS skjuler, svarer nei: lenka står ikke.
+ */
+export async function fetchCupIsRunning(cupId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('tournaments').select('status').eq('id', cupId).maybeSingle();
+  return !error && data?.status === 'active';
 }
 
 export function fetchCupManage(cupId: string) {

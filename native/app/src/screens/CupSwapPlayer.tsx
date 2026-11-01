@@ -90,7 +90,7 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
 
   const outPlayer = view.out.find((option) => option.userId === outId);
   const inPlayer = view.in.find((option) => option.userId === inId);
-  const ready = view.canSwap && outPlayer !== undefined && inPlayer !== undefined;
+  const ready = view.blocked === null && outPlayer !== undefined && inPlayer !== undefined;
   // En global admin kan velge blant alle, så lista er den samme velgeren som
   // medspillere og markør: noen rader, «Vis alle» og søk. Den valgte står i lista.
   const reserves = pickerRows(view.in, {
@@ -135,9 +135,9 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
         </Text>
       ) : null}
 
-      {!view.canSwap ? (
+      {view.blocked !== null ? (
         <View style={[styles.note, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="cup-swap-closed">
-          <Text style={[styles.noteText, { color: colors.muted }]}>{swapFailureText('already_started')}</Text>
+          <Text style={[styles.noteText, { color: colors.muted }]}>{swapFailureText(view.blocked)}</Text>
         </View>
       ) : view.in.length === 0 ? (
         <View style={[styles.note, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="cup-swap-no-reserves">

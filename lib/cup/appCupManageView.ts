@@ -32,7 +32,7 @@ export type AppCupManageMatch = {
   status: AppCupMatchStatus;
   withdrawnName: string;
   walkoverTeam: string;
-  /** Scheduled with no withdrawal: a withdrawal frees no seat (E6). */
+  /** Nothing in the bundle stops a swap (`swapBlock`). */
   canSwap: boolean;
   choice: AppCupPlayOnChoice | null;
 };
@@ -90,8 +90,8 @@ export type AppCupSwapCandidates = {
   label: string | null;
   side1: string;
   side2: string;
-  /** Scheduled with no withdrawal. The screen says why not otherwise. */
-  canSwap: boolean;
+  /** Why the bundle cannot be swapped, in the guard's own code. `null`: it can. */
+  blocked: 'already_started' | 'match_has_withdrawal' | null;
   /** A split day: the swap applies to every match in the bundle. */
   bundled: boolean;
   out: AppCupSwapOption[];

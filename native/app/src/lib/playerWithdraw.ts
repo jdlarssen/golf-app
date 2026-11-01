@@ -2,8 +2,9 @@
 //
 // Reglene er webbens, ikke appens egne: spillsiden viser «Trekk deg fra
 // spillet» før start for alle påmeldte som ikke er trukket. I en cup-kamp som
-// ennå ikke har startet, går veien via cupens egen skjerm (`cup`, #2752): spillet
-// alene kan ikke trekkes fra, og kjernen svarer `game_locked`. Under runden vises
+// ennå ikke har startet, går veien via cupens egen skjerm (`cup`, #2752), og bare
+// mens cupen er i gang: før det er lenka en blindvei, som nettet sier (#1814).
+// Spillet alene kan ikke trekkes fra, og kjernen svarer `game_locked`. Under runden vises
 // den når formatet kjenner frafall
 // (`supportsWithdrawal`, den delte regelen). Selve trekket er kjernen bak
 // `POST /api/games/[id]/withdraw-self` — ingenting av den speiles her.
@@ -19,6 +20,8 @@ interface WithdrawGame {
   status: string;
   gameMode: string;
   tournamentId: string | null;
+  /** Cupen er i gang. Kampene står planlagt lenge før den er det. */
+  cupRunning?: boolean;
   /** #2712: a simulator-league flight is `leagueRoundId` + peer approval, as in `isGameOrganiser`. */
   leagueRoundId?: string | null;
   requirePeerApproval?: boolean;
@@ -38,7 +41,8 @@ export function playerWithdrawKind(
 ): PlayerWithdrawKind | null {
   if (!me || me.withdrawnAt != null) return null;
   if (game.status === 'draft' || game.status === 'scheduled') {
-    return game.tournamentId == null ? 'pre-start' : 'cup';
+    if (game.tournamentId == null) return 'pre-start';
+    return game.cupRunning === true ? 'cup' : null;
   }
   if (game.status === 'active' && !isOrganiser && supportsWithdrawal(game.gameMode as GameMode)) {
     // #2712 (owner 31.10): one attempt per round in a simulator league, so no

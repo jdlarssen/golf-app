@@ -26,7 +26,7 @@ const view = (over: Partial<AppCupSwapCandidates> = {}): AppCupSwapCandidates =>
   label: 'Singel 5',
   side1: 'Ola Kompis',
   side2: 'Kari Arrangør',
-  canSwap: true,
+  blocked: null,
   bundled: false,
   out: [
     { userId: 'ola', name: 'Ola Kompis', teamName: 'Team Nord' },
@@ -156,10 +156,13 @@ describe('når byttet ikke går', () => {
     expect(screen.queryByTestId('cup-swap-submit')).toBeNull();
   });
 
-  it('kampen har startet: sier det, uten valg og knapp', async () => {
-    mockView = { ok: true, view: view({ canSwap: false }) };
+  it.each([
+    ['already_started', /for sent å bytte/],
+    ['match_has_withdrawal', /registrert trekk/],
+  ] as const)('%s: den ekte grunnen, uten valg og knapp', async (blocked, text) => {
+    mockView = { ok: true, view: view({ blocked }) };
     await renderSwap();
-    expect(await screen.findByTestId('cup-swap-closed')).toHaveTextContent(/for sent å bytte/);
+    expect(await screen.findByTestId('cup-swap-closed')).toHaveTextContent(text);
     expect(screen.queryByTestId('cup-swap-out-ola')).toBeNull();
     expect(screen.queryByTestId('cup-swap-submit')).toBeNull();
   });

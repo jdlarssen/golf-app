@@ -51,6 +51,7 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
       navigation.addListener('blur', () => {
         navigation.setParams({ notice: undefined });
         setSaved(false);
+        setSaveError(null);
       }),
     [navigation],
   );
@@ -119,7 +120,8 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
 
   const stale = failure !== null;
   const pending = view.matches.filter((match) => match.choice?.pending === true);
-  const noticeText = notice ? manageNoticeText(notice) : saved ? MANAGE_TEXT.playOnSaved : null;
+  // Det siste du gjorde her, står over det som førte deg hit.
+  const noticeText = saved ? MANAGE_TEXT.playOnSaved : notice ? manageNoticeText(notice) : null;
   const teams = [
     { team: 1 as const, name: view.team1Name },
     { team: 2 as const, name: view.team2Name },
