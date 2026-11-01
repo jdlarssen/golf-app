@@ -8,6 +8,8 @@ import { cupProgress, splitCupsForRoom } from './cupRoomRows';
 export type RoomCupRead = {
   id: string;
   name: string;
+  /** #2752: the app says «Ikke startet ennå» on a draft. */
+  status: 'draft' | 'active' | 'finished';
   created_by: string;
   group_id: string | null;
   /** In the roster or played a match; `false` = you only created it. */
@@ -77,6 +79,7 @@ export async function getRoomCups(
       return {
         id: cup.id,
         name: cup.name,
+        status: cup.status,
         created_by: cup.created_by,
         group_id: cup.group_id,
         playing: playing.has(cup.id),
