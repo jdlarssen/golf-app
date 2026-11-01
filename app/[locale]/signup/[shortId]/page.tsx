@@ -14,13 +14,9 @@ import { Banner } from '@/components/ui/Banner';
 import { GetTheApp } from '@/components/app/GetTheApp';
 import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { signupView, type SignupView } from '@/lib/games/signupOffer';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
-import { resolveRegistrationTypeView } from './registrationTypeView';
-import {
-  pendingRequestView,
-  type PendingRequestRow,
-  type PendingRequestView,
-} from './pendingRequestView';
+import { pendingRequestView, type PendingRequestRow } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
 import {
   loadInviterTeams,
@@ -293,11 +289,6 @@ export default async function PåmeldingPage({
   }
 
   const gameLocked = game.status === 'active' || game.status === 'finished';
-  // #543: påmeldingen er stengt manuelt av arrangøren, men spillet er
-  // fortsatt planlagt. Stengt vises etter allerede-påmeldt-sjekken (brukere
-  // som allerede er med, skal komme til spill-siden som vanlig) men FØR
-  // søknadsprosessen. game_locked prioriteres over signups_closed.
-  const signupsClosed = !gameLocked && game.signups_closed_at != null;
   const isAlreadyRegistered = existingPlayer != null;
   const requestView = pendingRequestView(existingRequest);
 
@@ -426,14 +417,15 @@ export default async function PåmeldingPage({
             t,
             tModes,
             game,
-            gameLocked,
-            signupsClosed,
-            isAlreadyRegistered,
-            requestView,
-            hasPendingInvitation,
+            view: signupView({
+              game,
+              isAlreadyRegistered,
+              requestView,
+              hasPendingInvitation,
+              isClubMember,
+              viewerIsFriend,
+            }),
             hasCertainTeamInvitation,
-            isClubMember,
-            viewerIsFriend,
             teamCandidates,
             captainEmail: profile.email,
             matchplaySideData,
@@ -449,14 +441,8 @@ function renderBody({
   t,
   tModes,
   game,
-  gameLocked,
-  signupsClosed,
-  isAlreadyRegistered,
-  requestView,
-  hasPendingInvitation,
+  view,
   hasCertainTeamInvitation,
-  isClubMember,
-  viewerIsFriend,
   teamCandidates,
   captainEmail,
   matchplaySideData,
@@ -465,136 +451,118 @@ function renderBody({
   t: ReturnType<typeof getTranslations<'signup'>> extends Promise<infer R> ? R : never;
   tModes: ReturnType<typeof getTranslations<'modes'>> extends Promise<infer R> ? R : never;
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
-  gameLocked: boolean;
-  signupsClosed: boolean;
-  isAlreadyRegistered: boolean;
-  requestView: PendingRequestView;
-  hasPendingInvitation: boolean;
+  /** Which branch: the rule's one home is `lib/games/signupOffer.ts` (#2748). */
+  view: SignupView;
   hasCertainTeamInvitation: boolean;
-  isClubMember: boolean;
-  viewerIsFriend: boolean;
   teamCandidates: TeamCandidate[];
   captainEmail: string | null;
   matchplaySideData: MatchplaySideData | null;
   src: string | null;
 }) {
-  if (isAlreadyRegistered) {
-    return (
-      <div className="space-y-4">
-        <Banner tone="success">{t('alreadyRegisteredBanner')}</Banner>
-        {/* #2562: «Hent appen» under kvitteringen; ingenting før appen er ute. */}
-        <GetTheApp />
-        <LinkButton href={`/games/${game.id}`} full>
-          {t('goToGameButton')}
-        </LinkButton>
-      </div>
-    );
-  }
+  switch (view) {
+    case 'already_registered':
+      return (
+        <div className="space-y-4">
+          <Banner tone="success">{t('alreadyRegisteredBanner')}</Banner>
+          {/* #2562: «Hent appen» under kvitteringen; ingenting før appen er ute. */}
+          <GetTheApp />
+          <LinkButton href={`/games/${game.id}`} full>
+            {t('goToGameButton')}
+          </LinkButton>
+        </div>
+      );
 
-  // #1422: en kaptein som har satt deg på laget sitt lager en child-rad med
-  // samme `pending`-status som en selv-sendt forespørsel. «Forespørsel sendt»
-  // var da en blindvei — svaret ditt (ja eller nei) ligger på lag-siden.
-  if (requestView === 'captain_invited') {
-    return (
-      <div className="space-y-4">
-        <Banner tone="info" testId="captain-invited-pointer">
-          {t('captainInvitedBanner')}
+    // #1422: en kaptein som har satt deg på laget sitt lager en child-rad med
+    // samme `pending`-status som en selv-sendt forespørsel. «Forespørsel sendt»
+    // var da en blindvei — svaret ditt (ja eller nei) ligger på lag-siden.
+    case 'captain_invited':
+      return (
+        <div className="space-y-4">
+          <Banner tone="info" testId="captain-invited-pointer">
+            {t('captainInvitedBanner')}
+          </Banner>
+          <LinkButton href={`/signup/${game.short_id}/team`} full>
+            {t('goToTeamButton')}
+          </LinkButton>
+        </div>
+      );
+
+    case 'self_request':
+      return (
+        <>
+          <Banner tone="info">
+            {t('pendingRequestBanner')}
+          </Banner>
+          <GetTheApp className="mt-4" />
+        </>
+      );
+
+    // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
+    // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
+    case 'team_awaiting_approval':
+      return (
+        <>
+          <Banner tone="info" testId="team-awaiting-approval">
+            {t('pendingRequestBanner')}
+          </Banner>
+          <GetTheApp className="mt-4" />
+        </>
+      );
+
+    case 'locked':
+      return (
+        <Banner tone="warning">
+          {t('gameLockedBanner', {
+            status: game.status === 'active' ? t('gameLockedActive') : t('gameLockedFinished'),
+          })}
         </Banner>
-        <LinkButton href={`/signup/${game.short_id}/team`} full>
-          {t('goToTeamButton')}
-        </LinkButton>
-      </div>
-    );
-  }
+      );
 
-  if (requestView === 'self_request') {
-    return (
-      <>
+    // #543: arrangøren har stengt påmeldingen manuelt — viser en melding uten
+    // skjema. Gjelder scheduled spill der arrangøren gjør siste justeringer.
+    case 'closed':
+      return (
         <Banner tone="info">
-          {t('pendingRequestBanner')}
+          {t('signupsClosedBanner')}
         </Banner>
-        <GetTheApp className="mt-4" />
-      </>
-    );
-  }
+      );
 
-  // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
-  // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
-  if (requestView === 'team_awaiting_approval') {
-    return (
-      <>
-        <Banner tone="info" testId="team-awaiting-approval">
-          {t('pendingRequestBanner')}
-        </Banner>
-        <GetTheApp className="mt-4" />
-      </>
-    );
-  }
+    // #442: er du medlem av spillets klubb, kan du melde deg på direkte uansett
+    // påmeldingsmåte — også invite_only. Solo-flyt; lag-klubb-spill faller
+    // gjennom til lag-logikken under.
+    case 'club_member_form':
+      return (
+        <div className="space-y-4">
+          <p className="font-sans text-sm leading-relaxed text-text">
+            {t('clubMemberDirectIntro')}
+          </p>
+          <RegistrationForm
+            mode="open"
+            shortId={game.short_id}
+            sideData={matchplaySideData}
+            src={src}
+          />
+        </div>
+      );
 
-  if (gameLocked) {
-    return (
-      <Banner tone="warning">
-        {t('gameLockedBanner', {
-          status: game.status === 'active' ? t('gameLockedActive') : t('gameLockedFinished'),
-        })}
-      </Banner>
-    );
-  }
+    // #369: er du venn av arrangøren og spillet har «Slipp venner direkte inn»
+    // aktivert, kan du melde deg på direkte selv om modus er manual_approval.
+    case 'friend_form':
+      return (
+        <div className="space-y-4">
+          <p className="font-sans text-sm leading-relaxed text-text">
+            {t('friendSkipGateIntro')}
+          </p>
+          <RegistrationForm
+            mode="open"
+            shortId={game.short_id}
+            sideData={matchplaySideData}
+            src={src}
+          />
+        </div>
+      );
 
-  // #543: arrangøren har stengt påmeldingen manuelt — viser en melding uten
-  // skjema. Gjelder scheduled spill der arrangøren gjør siste justeringer.
-  if (signupsClosed) {
-    return (
-      <Banner tone="info">
-        {t('signupsClosedBanner')}
-      </Banner>
-    );
-  }
-
-  // #442: er du medlem av spillets klubb, kan du melde deg på direkte uansett
-  // påmeldingsmåte — også invite_only. Solo-flyt; lag-klubb-spill faller
-  // gjennom til lag-logikken under.
-  if (isClubMember && game.registration_type === 'solo') {
-    return (
-      <div className="space-y-4">
-        <p className="font-sans text-sm leading-relaxed text-text">
-          {t('clubMemberDirectIntro')}
-        </p>
-        <RegistrationForm
-          mode="open"
-          shortId={game.short_id}
-          sideData={matchplaySideData}
-          src={src}
-        />
-      </div>
-    );
-  }
-
-  // #369: er du venn av arrangøren og spillet har «Slipp venner direkte inn»
-  // aktivert, kan du melde deg på direkte selv om modus er manual_approval.
-  if (
-    viewerIsFriend &&
-    game.registration_mode === 'manual_approval' &&
-    game.let_friends_skip_gate === true &&
-    game.registration_type === 'solo'
-  ) {
-    return (
-      <div className="space-y-4">
-        <p className="font-sans text-sm leading-relaxed text-text">
-          {t('friendSkipGateIntro')}
-        </p>
-        <RegistrationForm
-          mode="open"
-          shortId={game.short_id}
-          sideData={matchplaySideData}
-          src={src}
-        />
-      </div>
-    );
-  }
-
-  if (game.registration_mode === 'invite_only') {
-    if (hasPendingInvitation) {
+    case 'invite_has_invitation':
       return (
         <div className="space-y-4">
           <Banner tone="info">
@@ -605,12 +573,12 @@ function renderBody({
           </LinkButton>
         </div>
       );
-    }
+
     // Lag-spill via invitasjon (#685): invite_only er den private modusen, så en
     // uinvitert kan ikke melde seg på selv — det er meningen. Banneret forklarer
     // hva de skal gjøre (be arrangøren invitere laget). Tidligere var det en
     // stille blindvei uten vei videre; nå får de en knapp tilbake til forsiden.
-    if (game.registration_type === 'team') {
+    case 'invite_team_only':
       return (
         <div className="space-y-4">
           <Banner tone="info">
@@ -621,106 +589,99 @@ function renderBody({
           </LinkButton>
         </div>
       );
-    }
+
     // Gjør blindveien til en handling (#368): du har lenken, så du kan be
     // arrangøren om plass. Gjenbruker forespørsel-flyten — `requestApproval`
     // godtar nå invite_only. Spillet forblir uoppdagbart i «Finn turneringer».
-    return (
-      <div className="space-y-4" data-testid="invite-only-banner">
-        <p className="font-sans text-sm leading-relaxed text-text">
-          {t('inviteNotInvitedIntro')}
-        </p>
-        <RegistrationForm mode="manual_approval" shortId={game.short_id} />
-      </div>
-    );
-  }
+    case 'invite_request_form':
+      return (
+        <div className="space-y-4" data-testid="invite-only-banner">
+          <p className="font-sans text-sm leading-relaxed text-text">
+            {t('inviteNotInvitedIntro')}
+          </p>
+          <RegistrationForm mode="manual_approval" shortId={game.short_id} />
+        </div>
+      );
 
-  // Lag-/solo-flyt (#466): hvilken form vi viser avhenger av registration_type
-  // OG om modusen har lag-konsept. 'both' tillater eksplisitt solo, så en
-  // solo-format med 'both' faller til solo-formen i stedet for en blindvei —
-  // ellers blir et slikt spill umulig å melde seg på via lenken.
-  const typeView = resolveRegistrationTypeView(
-    game.registration_type,
-    gameModeSupportsTeams(game.game_mode),
-  );
-
-  if (typeView.kind === 'team_unsupported_mode') {
-    return (
-      <Banner tone="warning">
-        {t('teamUnsupportedModeBanner', {
-          mode: tModes(game.game_mode as Parameters<typeof tModes>[0]),
-        })}
-      </Banner>
-    );
-  }
-
-  if (typeView.kind === 'team_form') {
-    const teamSize = game.mode_config?.team_size ?? 4;
-    if (teamSize < 2) {
+    case 'team_unsupported_mode':
       return (
         <Banner tone="warning">
-          {t('badTeamSizeBanner')}
+          {t('teamUnsupportedModeBanner', {
+            mode: tModes(game.game_mode as Parameters<typeof tModes>[0]),
+          })}
         </Banner>
       );
-    }
-    return (
-      <div className="space-y-4">
-        {/* #1344: er du allerede invitert til et lag, ligger «Bli med på lag»
-            på /team — ikke i skjemaet under. Pekeren står over skjemaet, men
-            stenger det ikke: invitasjonen kan være foreldet, og du kan
-            legitimt ville stille med eget lag. */}
-        {shouldShowTeamInvitePointer({
-          typeViewKind: typeView.kind,
-          hasCertainTeamInvitation,
-        }) && (
-          <div className="space-y-3">
-            <Banner tone="info" testId="team-invite-pointer">
-              {t('teamInvitePointerBanner')}
-            </Banner>
-            <LinkButton
-              href={`/signup/${game.short_id}/team`}
-              full
-              variant="secondary"
-            >
-              {t('goToTeamButton')}
-            </LinkButton>
-          </div>
-        )}
-        <p className="font-sans text-sm leading-relaxed text-text">
-          {t('teamFormIntro')}
-        </p>
-        <TeamRegistrationForm
-          shortId={game.short_id}
-          teamSize={teamSize}
-          captainEmail={captainEmail}
-          candidates={teamCandidates}
-        />
-      </div>
-    );
-  }
 
-  // typeView.kind === 'solo_form' — registration_type 'solo', eller 'both' på
-  // en modus uten lag-konsept.
-  const mode = game.registration_mode === 'open' ? 'open' : 'manual_approval';
-  return (
-    <div className="space-y-4">
-      {/* For matchplay + open mode, sideData drives the side-picker which replaces
-          the standard intro text — we skip the generic text in that case. */}
-      {!(mode === 'open' && matchplaySideData) && (
-        <p className="font-sans text-sm leading-relaxed text-text">
-          {mode === 'open'
-            ? t('soloOpenIntro')
-            : t('soloManualIntro')}
-        </p>
-      )}
-      <RegistrationForm
-        mode={mode}
-        shortId={game.short_id}
-        sideData={mode === 'open' ? matchplaySideData : null}
-        src={src}
-      />
-    </div>
-  );
+    case 'team_form': {
+      const teamSize = game.mode_config?.team_size ?? 4;
+      if (teamSize < 2) {
+        return (
+          <Banner tone="warning">
+            {t('badTeamSizeBanner')}
+          </Banner>
+        );
+      }
+      return (
+        <div className="space-y-4">
+          {/* #1344: er du allerede invitert til et lag, ligger «Bli med på lag»
+              på /team — ikke i skjemaet under. Pekeren står over skjemaet, men
+              stenger det ikke: invitasjonen kan være foreldet, og du kan
+              legitimt ville stille med eget lag. */}
+          {shouldShowTeamInvitePointer({
+            typeViewKind: 'team_form',
+            hasCertainTeamInvitation,
+          }) && (
+            <div className="space-y-3">
+              <Banner tone="info" testId="team-invite-pointer">
+                {t('teamInvitePointerBanner')}
+              </Banner>
+              <LinkButton
+                href={`/signup/${game.short_id}/team`}
+                full
+                variant="secondary"
+              >
+                {t('goToTeamButton')}
+              </LinkButton>
+            </div>
+          )}
+          <p className="font-sans text-sm leading-relaxed text-text">
+            {t('teamFormIntro')}
+          </p>
+          <TeamRegistrationForm
+            shortId={game.short_id}
+            teamSize={teamSize}
+            captainEmail={captainEmail}
+            candidates={teamCandidates}
+          />
+        </div>
+      );
+    }
+
+    // registration_type 'solo', eller 'both' på en modus uten lag-konsept.
+    case 'solo_open_form':
+    case 'solo_manual_form': {
+      const mode = view === 'solo_open_form' ? 'open' : 'manual_approval';
+      return (
+        <div className="space-y-4">
+          {/* For matchplay + open mode, sideData drives the side-picker which replaces
+              the standard intro text — we skip the generic text in that case. */}
+          {!(mode === 'open' && matchplaySideData) && (
+            <p className="font-sans text-sm leading-relaxed text-text">
+              {mode === 'open'
+                ? t('soloOpenIntro')
+                : t('soloManualIntro')}
+            </p>
+          )}
+          <RegistrationForm
+            mode={mode}
+            shortId={game.short_id}
+            sideData={mode === 'open' ? matchplaySideData : null}
+            src={src}
+          />
+        </div>
+      );
+    }
+  }
 }
 
 /**
