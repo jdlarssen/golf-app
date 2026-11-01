@@ -130,7 +130,7 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   // Et stengt spill, og en bundel som ennå sier at runden ikke er i gang: kortet
   // lover ikke mer enn modellen, så heller ikke her står ring eller tavle-lenke.
   for (const model of [
-    { ...LIVE, gate: 'segment' as const, action: { kind: 'open' as const }, standing: null, unit: null },
+    { ...LIVE, gate: 'mode' as const, action: { kind: 'open' as const }, standing: null, unit: null },
     { ...LIVE, action: { kind: 'open' as const }, played: 0, standing: null, unit: null },
   ]) {
     await rerender(<HomeHeroCard card={CARD} model={model} {...handlers} />);
