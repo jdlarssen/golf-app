@@ -128,6 +128,8 @@ describe('startbodens egne tekster', () => {
   it('knapp, ring og hull-linje', () => {
     expect(continueOnHole(8)).toBe('Fortsett på hull 8');
     expect(ringNextLabel(8, 18, 7)).toBe('Hull 8 av 18, 7 spilt');
+    // #2752: andre halvdel av en delt cup-dag alene.
+    expect(ringNextLabel(12, 9, 2)).toBe('Hull 12, 2 av 9 spilt');
     expect(holesPlayedLine(7, 18)).toBe('7 av 18 hull spilt');
   });
 

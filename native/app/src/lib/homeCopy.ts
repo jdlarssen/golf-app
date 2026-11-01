@@ -60,9 +60,14 @@ export function continueOnHole(hole: number): string {
   return `Fortsett på hull ${hole}`;
 }
 
-/** Ringens etikett når det finnes et neste hull: «Hull 8 av 18, 7 spilt». */
+/**
+ * Ringens etikett når det finnes et neste hull: «Hull 8 av 18, 7 spilt». Andre
+ * halvdel av en delt cup-dag kan stå alene, og da leses aldri «hull 12 av 9».
+ */
 export function ringNextLabel(hole: number, holeCount: number, played: number): string {
-  return `Hull ${hole} av ${holeCount}, ${played} spilt`;
+  return hole > holeCount
+    ? `Hull ${hole}, ${played} av ${holeCount} spilt`
+    : `Hull ${hole} av ${holeCount}, ${played} spilt`;
 }
 
 /** «7 av 18 hull spilt» — linja uten plass, og ringens etikett når alt er spilt. */
