@@ -6,7 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import {
   registerForOpenGameCore,
   requestApprovalCore,
-  type ActionError,
+  type ActionError as CoreActionError,
 } from '@/lib/games/selfRegistration';
 import { REGISTRATION_MESSAGE_MAX } from '@/lib/games/registration';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -41,7 +41,10 @@ export type ActionResult =
   | { ok: true }
   | { ok: false; error: ActionError };
 
-export type { ActionError };
+// A plain alias on purpose: `export type { X }` compiles and passes every test,
+// but in a 'use server' file the transform keeps it as a runtime export, and the
+// signup page crashes with «ActionError is not defined».
+export type ActionError = CoreActionError;
 
 /**
  * Verifiser auth + profil. Returnerer userId hvis OK, ellers gjør redirect
