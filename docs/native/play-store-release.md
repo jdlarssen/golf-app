@@ -98,7 +98,7 @@ slutten, så bevis-fila er ufullstendig.
 | Kilde | Regel |
 |---|---|
 | `base/assets/index.android.bundle` (Hermes) | Alle bundel-reglene fra iOS-beviset, fra samme fil (`bundle-proof.sh`): begge strengtabellene og æ/ø/å-vakta, prod-adressen og `https://tornygolf.no` kreves, staging-adressen, `localhost:3111` og LAN er forbudt, loopback (`127.0.0.1`, `[::1]`, `localhost`) er bare lov som supabase-js sin bare literal (høyst så mange som pakken forklarer, uten skjema eller port), anon-nøkkelen fra miljøet må finnes, ingen verdi fra appens `.env`-filer, og `http://` må stå på lista over kjente bibliotek-strenger (`localhost` har loopback-regelen). Begrunnelsen står i tabellen i `app-store-release.md`. |
-| Manifestet (`base/manifest/AndroidManifest.xml`, protobuf) | `aapt2` fra build-tools leser det etter at skriptet har pakket manifestet og `resources.pb` om til en proto-APK. Ingen bundletool. **KREV** pakke `no.tornygolf.app`, en versionCode (tallet skrives ut) og `targetSdkVersion` ≥ 36. **FORBY** `android:debuggable="true"`. App Links (#2627): et `autoVerify`-intent-filter for `tornygolf.no` er lov **bare** for venne-stiene (`pathPrefix` `/venner/legg-til/` og `/en/venner/legg-til/`), og begge må finnes. En annen sti, et filter uten sti, et underdomene eller en vert som er en ressursreferanse (`@string/…`, kan ikke leses her) gir FAIL. Fail-closed: bare en debuggable-verdi som er tydelig usann eller ikke satt, gir PASS, og et `autoVerify` som ikke er tydelig `false`, regnes som på. Det er motstykket til iOS-regelen om associated domains. App Links-regelen står i `applinks-proof.sh` og testes uten AAB (`applinks-proof.test.js`). |
+| Manifestet (`base/manifest/AndroidManifest.xml`, protobuf) | `aapt2` fra build-tools leser det etter at skriptet har pakket manifestet og `resources.pb` om til en proto-APK. Ingen bundletool. **KREV** pakke `no.tornygolf.app`, en versionCode (tallet skrives ut) og `targetSdkVersion` ≥ 36. **FORBY** `android:debuggable="true"`. App Links (#2627, #2748): et `autoVerify`-intent-filter for `tornygolf.no` og `www.tornygolf.no` er lov **bare** for stiene i `STORE_APP_LINK_PATH_PREFIXES` (`pathPrefix` `/venner/legg-til/` og `/liga/bli-med/`, også under `/en`), og alle må finnes på begge vertene. En annen sti, et filter uten sti, et annet underdomene eller en vert som er en ressursreferanse (`@string/…`, kan ikke leses her) gir FAIL. Fail-closed: bare en debuggable-verdi som er tydelig usann eller ikke satt, gir PASS, og et `autoVerify` som ikke er tydelig `false`, regnes som på. Det er motstykket til iOS-regelen om associated domains. App Links-regelen står i `applinks-proof.sh` og testes uten AAB (`applinks-proof.test.js`). |
 | Tillatelsene | Hele `uses-permission`-lista skrives ut som informasjon. **FAIL** når en tillatelse fra `expo.android.blockedPermissions` i `native/app/app.json` står i manifestet (lista leses derfra, den kopieres ikke inn i skriptet). En `app.json` uten lista, eller et manifest som ikke ble lest, gir også FAIL. |
 | `.so`-filene (16 KB-sider) | Hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/` må ha LOAD-justering ≥ 16384. FAIL lister filene som ikke har det. En av de to mappene uten `.so` er FAIL. 32-bit (`armeabi-v7a`, `x86`) skrives ut som informasjon, for 16 KB-kravet gjelder bare 64-bit. |
 | Signaturen | AAB-en er signert, og `jarsigner -verify` godtar den. Nøyaktig én signerer, med samme SHA-256 som opplastingsnøkkelen. Avtrykket leses fra `app/.well-known/assetlinks.json/route.ts` (linja etter `// Upload key`), ikke kopiert inn i skriptet. Ikke nøyaktig ett avtrykk der gir FAIL. Debug-nøkkelen eller en annen nøkkel gir også FAIL. |
@@ -128,19 +128,25 @@ telefonen, og den signeres med debug-nøkkelen som før. Den får også
 `android.builder.sdkDownload=false`, så `expo run:android` stopper og navngir en SDK-pakke som
 mangler i stedet for å laste den ned.
 
-## Venne-lenka (App Links)
+## Lenkene (App Links)
 
-Fra #2627 har butikkvarianten et intent-filter med `autoVerify` for venne-lenka
-(`https://tornygolf.no/venner/legg-til/<kode>`, også under `/en`). Android åpner appen fra
-lenka bare når `app/.well-known/assetlinks.json/route.ts` har SHA-256 for nøkkelen appen er
+Fra #2627 og #2748 har butikkvarianten et intent-filter med `autoVerify` for venne-lenka
+(`/venner/legg-til/<kode>`) og ligalenka (`/liga/bli-med/<kode>`), også under `/en`, på
+`tornygolf.no` og `www.tornygolf.no`. Android åpner appen fra lenka bare når
+`app/.well-known/assetlinks.json/route.ts` har SHA-256 for nøkkelen appen er
 signert med. Play signerer appen om med sin egen nøkkel (Play App Signing). Begge avtrykkene
 står i ruta fra 30.10 (#2561): opplastingsnøkkelen under `// Upload key` (beviset leser linja
 etter den og krever nøyaktig ett avtrykk, så bytt den ikke ut) og Play-nøkkelen under
 `// Play app signing key`. Avtrykket står i Play Console under **Test and release → App
 integrity → App signing key certificate → SHA-256**. Etter deploy kontrolleres lenka live
-(`android-twa.md` §assetlinks.json); til den er verifisert, åpner Android 12 og nyere venne-lenka
+(`android-twa.md` §assetlinks.json); til den er verifisert, åpner Android 12 og nyere lenkene
 i nettleseren, som før.
 Android 7–11 spør i stedet om lenka skal åpnes i appen eller i nettleseren.
+
+**`www` må svare før bygget går ut.** Android 7–11 godkjenner lenkene bare når alle vertene i
+filteret er i orden. `https://www.tornygolf.no/.well-known/assetlinks.json` må derfor svare 200
+med JSON, ikke 308. Det krever at `www`-domenet i Vercel står på «serve production» (kommentaren
+i `proxy.ts`); proxyen sender fortsatt alle vanlige sider videre til `tornygolf.no`.
 
 ## Nettsiden samme dag
 
