@@ -59,7 +59,6 @@ export default async function DeleteAccountInfoPage() {
         backLabel={t('backLabel')}
         kicker={t('kicker')}
         kickerIsPageTitle
-        back="history"
       />
 
       <div className="space-y-8 text-sm leading-relaxed text-text">

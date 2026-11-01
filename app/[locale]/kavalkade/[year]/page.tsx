@@ -122,7 +122,7 @@ function KavalkadeShell({
       {/* #2131: Kavalkaden nås nå fra forsiden OG fra historikken, så
           tilbake-pila følger historikken tilbake dit spilleren faktisk kom
           fra. Profilen er fallback når det ikke finnes noen referrer. */}
-      <TopBar backHref="/profile" back="history" kicker={kicker} />
+      <TopBar backHref="/profile" kicker={kicker} />
       <div className="space-y-4">{children}</div>
     </AppShell>
   );

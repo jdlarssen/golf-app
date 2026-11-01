@@ -1,3 +1,6 @@
+'use client';
+
+import { useBackNavigation } from '@/lib/nav/useBackNavigation';
 import { SmartLink } from './SmartLink';
 
 /**
@@ -30,7 +33,8 @@ const TONE = {
 /**
  * Back arrow for the leaderboard headers. `label` is the already-translated
  * `aria-label` — the glyph itself is decorative, so the label is the only text a
- * screen reader gets.
+ * screen reader gets. A click goes where you came from, and `href` is the
+ * fallback, as in `BackLink` (#2746).
  */
 export function LeaderboardBackLink({
   href,
@@ -41,8 +45,14 @@ export function LeaderboardBackLink({
   label: string;
   tone?: keyof typeof TONE;
 }) {
+  const onClick = useBackNavigation();
   return (
-    <SmartLink href={href} aria-label={label} className={`${BACK_LINK_BOX} ${TONE[tone]}`}>
+    <SmartLink
+      href={href}
+      onClick={onClick}
+      aria-label={label}
+      className={`${BACK_LINK_BOX} ${TONE[tone]}`}
+    >
       ‹
     </SmartLink>
   );

@@ -389,7 +389,7 @@ export default async function PåmeldingPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" back="history" kicker={t('kicker')} />
+      <TopBar backHref="/" kicker={t('kicker')} />
 
       <div className="space-y-5">
         {/* #2266: the invitation card is the top of the page; everything

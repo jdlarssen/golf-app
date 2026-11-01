@@ -173,7 +173,7 @@ export default async function TeamDashboardPage({
   if (!myRow && !pendingInvitation) {
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+        <TopBar backHref={`/signup/${shortId}`} kicker={t('teamDashKicker')} />
         <Card>
           <Banner tone="info">
             {t('teamDashNoTeamBanner')}
@@ -204,7 +204,7 @@ export default async function TeamDashboardPage({
       const noCaptain = picked === null;
       return (
         <AppShell>
-          <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+          <TopBar backHref={`/signup/${shortId}`} kicker={t('teamDashKicker')} />
           <Card>
             <div
               className="space-y-4"
@@ -235,7 +235,7 @@ export default async function TeamDashboardPage({
 
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+        <TopBar backHref={`/signup/${shortId}`} kicker={t('teamDashKicker')} />
         <Card>
           <div className="space-y-4">
             <h2 className="font-serif text-[20px] font-medium text-text">
@@ -266,7 +266,7 @@ export default async function TeamDashboardPage({
     // men vi gir en vennlig melding hvis det skjer.
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+        <TopBar backHref={`/signup/${shortId}`} kicker={t('teamDashKicker')} />
         <Card>
           <Banner tone="info">
             {t('teamDashSoloPlayerBanner')}
@@ -323,7 +323,7 @@ export default async function TeamDashboardPage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+      <TopBar backHref={`/signup/${shortId}`} kicker={t('teamDashKicker')} />
 
       <div className="space-y-5">
         <header className="px-1">

@@ -96,7 +96,7 @@ export default async function PublicCupPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" back="history" kicker="Cup" />
+      <TopBar backHref="/" kicker="Cup" />
 
       <header className="mb-6 text-center">
         <h1 className="font-serif text-3xl text-text leading-tight tracking-[-0.015em]">

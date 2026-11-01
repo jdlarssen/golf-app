@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { BackLink } from './BackLink';
-import { HistoryBackLink } from './HistoryBackLink';
 
 /**
  * Sticky viewport-top navigation bar used on every page that has a back link.
@@ -15,10 +14,8 @@ import { HistoryBackLink } from './HistoryBackLink';
  *   removed the last blur-through bars on 2026-10-31 (#2732).
  * - `z-30` sits below SyncBanner's `z-40` so the error banner overlays cleanly.
  *
- * `back="history"` switches the chevron to a router.back()-based control
- * for pages that can be reached from any context (e.g. /legal/privacy
- * from the global footer link). `backHref` is then the fallback used
- * when there is no same-origin referrer.
+ * The arrow goes where you came from when the browser's history has somewhere
+ * to go, and to `backHref` otherwise (`BackLink`, #2746).
  *
  * `action` slots a node (typically a `<SmartLink>` chip such as «+ Nytt»)
  * into the right side of the bar — used by admin list pages where we want
@@ -50,7 +47,6 @@ export function TopBar({
   kicker,
   kickerIsPageTitle = false,
   kickerOneLine = false,
-  back = 'link',
   action,
 }: {
   backHref?: string;
@@ -58,7 +54,6 @@ export function TopBar({
   kicker?: string;
   kickerIsPageTitle?: boolean;
   kickerOneLine?: boolean;
-  back?: 'link' | 'history';
   action?: ReactNode;
 }) {
   const Kicker = kickerIsPageTitle ? 'h1' : 'p';
@@ -66,8 +61,6 @@ export function TopBar({
     <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {backHref === undefined ? (
         <span aria-hidden className="-ml-2 h-8 w-8" />
-      ) : back === 'history' ? (
-        <HistoryBackLink fallbackHref={backHref} ariaLabel={backLabel} />
       ) : (
         <BackLink href={backHref}>{backLabel}</BackLink>
       )}

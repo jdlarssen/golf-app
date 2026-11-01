@@ -4,10 +4,10 @@ import { safeInternalPath } from '@/lib/url/safeInternalPath';
 /**
  * Back-navigation context for the leaderboard universe (#1517).
  *
- * The back-arrows in the leaderboard are hierarchical links driven by
- * `?from=`, not `history.back()` — a deliberate choice from #117 because
- * referrer/history heuristics are unreliable in the iOS PWA shell. That only
- * works when EVERY leaderboard-internal link carries the context onward:
+ * The back-arrows go where you came from when the browser's history list has
+ * somewhere to go (#2746, `lib/nav/backTarget.ts`). These `?from=` links are the
+ * fallback: a cold start, a shared link, a browser without the Navigation API.
+ * A fallback only works when EVERY leaderboard-internal link carries the context onward:
  * before this module existed, the drilldown links and the Netto/Brutto toggle
  * rebuilt their URLs from scratch, dropped `from`, and the next back-arrow
  * fell through to `/games/{id}` instead of the cup/history page the user came
