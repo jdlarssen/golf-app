@@ -5,9 +5,10 @@
 // venter, de jeg har godkjent, de som ikke er levert, og navnene som får
 // beskjed.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
 import { homePlayer as player } from '../test/homeFixtures';
-import { approveRows, approveScreenState } from './approveState';
+import { approveRows, approveScreenState, cardScoresByHole } from './approveState';
 import { toRoster } from './roster';
 
 const SUBMITTED = '2026-10-13T12:30:00.000Z';
@@ -24,6 +25,7 @@ const approvedBy = (userId: string, by: string, extra: Partial<BundlePlayer> = {
 type Game = Pick<BundleGame, 'gameMode' | 'status' | 'requirePeerApproval'>;
 const SOLO: Game = { gameMode: 'solo_strokeplay', status: 'active', requirePeerApproval: true };
 const TEXAS: Game = { gameMode: 'texas_scramble', status: 'active', requirePeerApproval: true };
+const PATSOME: Game = { gameMode: 'patsome', status: 'active', requirePeerApproval: true };
 
 function stateOf(players: BundlePlayer[], game: Game = SOLO, userId = 'me') {
   return approveScreenState({ roster: toRoster(players), game, userId });
@@ -219,5 +221,66 @@ describe('lagkort (beslutning 5)', () => {
       { key: 'a', name: 'Marte Lie', clock: APPROVED, ownerId: 'a' },
       { key: 'b', name: 'Jonas Berg', clock: APPROVED, ownerId: 'b' },
     ]);
+  });
+});
+
+// #2751: laget deler hull 7–18, men hver spiller leverer og godkjennes for seg.
+describe('Patsome', () => {
+  const team = (extra: Partial<BundlePlayer> = {}) => ({ teamNumber: 1, ...extra });
+
+  it('makkeren på laget som ikke har levert, står som ikke levert', () => {
+    const roster = [
+      player({ userId: 'me', ...team() }),
+      player({ userId: 'mate', ...team() }),
+    ];
+    const state = stateOf(roster, PATSOME);
+    expect(state.kind).toBe('notDelivered');
+    if (state.kind !== 'notDelivered') return;
+    expect(ids(state.notDelivered)).toEqual(['mate']);
+  });
+
+  it('hver spiller er sin egen rad, ikke én rad for laget', () => {
+    const roster = [
+      player({ userId: 'me', teamNumber: 2 }),
+      delivered('a', team({ name: 'Anna' })),
+      delivered('b', team({ name: 'Bjørn' })),
+    ];
+    const rows = approveRows(roster.slice(1).map((p) => toRoster([p])[0]!), toRoster(roster), 'patsome');
+    expect(rows.map((row) => [row.key, row.ownerId])).toEqual([
+      ['a', 'a'],
+      ['b', 'b'],
+    ]);
+  });
+
+  it('kortet er egne hull 1–6 og lagets hull 7–18, også for den som ikke er kaptein', () => {
+    const roster = toRoster([player({ userId: 'a-captain', ...team() }), player({ userId: 'mate', ...team() })]);
+    const row = (userId: string, holeNumber: number, strokes: number) =>
+      ({ userId, holeNumber, strokes }) as LocalScore;
+    const scores = [
+      row('mate', 1, 5),
+      row('a-captain', 1, 9),
+      row('mate', 6, 4),
+      row('a-captain', 7, 6),
+      row('mate', 7, 8),
+      row('a-captain', 18, 3),
+    ];
+
+    const mate = cardScoresByHole(scores, roster, 'patsome', 'mate');
+    expect([...mate].map(([hole, score]) => [hole, score.strokes])).toEqual([
+      [1, 5],
+      [6, 4],
+      [7, 6],
+      [18, 3],
+    ]);
+    const captain = cardScoresByHole(scores, roster, 'patsome', 'a-captain');
+    expect(captain.get(1)?.strokes).toBe(9);
+    expect(captain.get(7)?.strokes).toBe(6);
+  });
+
+  it('andre formater leser som før: egne rader, og lagets rad i lagkort', () => {
+    const roster = toRoster([player({ userId: 'a-captain', ...team() }), player({ userId: 'mate', ...team() })]);
+    const scores = [{ userId: 'a-captain', holeNumber: 2, strokes: 4 } as LocalScore];
+    expect(cardScoresByHole(scores, roster, 'solo_strokeplay', 'mate').size).toBe(0);
+    expect(cardScoresByHole(scores, roster, 'texas_scramble', 'mate').get(2)?.strokes).toBe(4);
   });
 });
