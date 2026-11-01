@@ -30,6 +30,10 @@ jest.mock('../../data/db', () => ({
   withTxn: require('../../test/txnPassthrough').txnPassthrough(),
   listQueue: jest.fn(async () => mockState.queue),
   listTeeShotQueue: jest.fn(async () => mockState.teeShots),
+  // #2751: et utslagsvalg i køen. Banneret skal ikke lese det.
+  listPendingTeeStarters: jest.fn(async () => [
+    { gameId: 'game-1', teamNumber: 1, teeStarterId: 'me', pending: true, attemptCount: 0 },
+  ]),
   deleteTeeShotQueueItem: jest.fn(async (_db: unknown, id: string) => {
     mockState.teeShots = mockState.teeShots.filter((i) => i.id !== id);
   }),
@@ -80,6 +84,13 @@ describe('SyncBanner', () => {
   it('tegner ingenting når køen er tom og ingen konflikter finnes', async () => {
     await render(<SyncBanner gameId={GAME} />);
     await waitFor(() => expect(require('../../data/db').listQueue).toHaveBeenCalled());
+    expect(screen.queryByTestId('sync-banner')).toBeNull();
+  });
+
+  it('et utslagsvalg som venter, er ikke noe banneret sier fra om', async () => {
+    await render(<SyncBanner gameId={GAME} />);
+    await waitFor(() => expect(require('../../data/db').listQueue).toHaveBeenCalled());
+    expect(require('../../data/db').listPendingTeeStarters).not.toHaveBeenCalled();
     expect(screen.queryByTestId('sync-banner')).toBeNull();
   });
 

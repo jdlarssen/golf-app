@@ -1178,6 +1178,15 @@ describe('Hole', () => {
       });
     });
 
+    it('hull 18 sier «Lever scorekort»: hver spiller leverer sitt eget kort', async () => {
+      mockState.scores = [localScore('makker', 4, null, 18), localScore('rival-a', 5, null, 18)];
+      await renderHole(18);
+      await waitFor(() => {
+        expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+      });
+      expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+    });
+
     it('en levert makker låser de delte hullene, men ikke mine egne', async () => {
       mockState.bundle = {
         ...mockPatsomeBundle,
@@ -1263,6 +1272,16 @@ describe('Hole', () => {
       expect(writeScore).toHaveBeenCalled();
       error.mockRestore();
     });
+  });
+
+  it('et format der laget leverer samlet, sier «Lever lagets kort» på hull 18', async () => {
+    mockState.bundle = mockTeamBundle;
+    mockState.scores = [localScore('makker', 4, null, 18), localScore('rival-a', 5, null, 18)];
+    await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+    });
+    expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever lagets kort');
   });
 
   it('foursomes (#2751): velgeren står på hull 1, ikke på hull 2, og hintet følger valget', async () => {

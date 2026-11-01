@@ -142,6 +142,10 @@ jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockLocalScores),
+  // #2751: et utslagsvalg i køen. Tavla skal ikke lese det.
+  listPendingTeeStarters: jest.fn(async () => [
+    { gameId: 'game-1', teamNumber: 1, teeStarterId: 'me', pending: true, attemptCount: 0 },
+  ]),
 }));
 jest.mock('@react-navigation/native', () => ({
 
@@ -277,6 +281,23 @@ describe('Leaderboard — ferdig tavle (#2579)', () => {
   });
   afterEach(() => {
     mockBundleOverride.current = null;
+  });
+
+  // #2751: skjermen, ikke bare kroppen. Valget i køen holder ikke tavla igjen.
+  it('Patsome: tavla og stripa tegnes selv om et utslagsvalg venter', async () => {
+    mockBundleOverride.current = {
+      ...mockBundle,
+      game: {
+        ...bundleGame,
+        gameMode: 'patsome',
+        modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+      },
+    };
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('patsome-board')).toBeTruthy());
+    expect(screen.getByTestId('board-strip-action')).toBeTruthy();
+    const { listPendingTeeStarters } = require('../data/db') as { listPendingTeeStarters: jest.Mock };
+    expect(listPendingTeeStarters).not.toHaveBeenCalled();
   });
 
   it('stripas knapp åpner scorekortet', async () => {

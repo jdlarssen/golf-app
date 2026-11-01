@@ -206,6 +206,10 @@ jest.mock('../data/db', () => ({
   // #2580: utslagskøen leses ved siden av slagkøen.
   listTeeShotQueue: jest.fn(async () => mockState.teeShotQueue),
   listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
+  // #2751: et utslagsvalg i køen. Kortet skal ikke lese det.
+  listPendingTeeStarters: jest.fn(async () => [
+    { gameId: 'game-1', teamNumber: 1, teeStarterId: 'me', pending: true, attemptCount: 0 },
+  ]),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -942,6 +946,10 @@ describe('Scorecard', () => {
     expect(screen.getByTestId('submit-scorecard')).toHaveTextContent('Lever scorekort');
     expect(screen.queryByTestId('submit-team-card')).toBeNull();
     expect(screen.queryByText(/Lagets scorekort/)).toBeNull();
+    // Et utslagsvalg som venter, sperrer ikke leveringen og står ikke i køvakta.
+    const { listPendingTeeStarters } = require('../data/db') as { listPendingTeeStarters: jest.Mock };
+    expect(listPendingTeeStarters).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('queue-guard')).toBeNull();
   });
 
   it('#2580: et utslag som venter i køen, sperrer leveringen som et slag gjør', async () => {

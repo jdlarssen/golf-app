@@ -85,6 +85,7 @@ import {
   firstEntryStrokes,
   nextStrokes,
 } from '../../../../lib/scorecard/strokeEntry';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import {
   formatCapturesPutts,
@@ -525,6 +526,9 @@ function HoleView({
   // bytter halvveis), og laget mitt må faktisk ha en aktiv kaptein.
   const myCaptainId = myTeamCaptainId(roster, userId);
   const collapsed = myCaptainId != null && modeCollapsesToTeamCard(mode, holeNumber);
+  // Delte hull er ikke det samme som felles levering: i Patsome deler laget hull
+  // 7–18, men hver spiller leverer sitt eget kort (#2751).
+  const teamDelivers = myCaptainId != null && deliveryCoversWholeTeam(mode);
   const nameOf = nameLookup(bundle.players);
   // #2580: lagene i flighten med utslagsvalg (scramble: ett per lagkort,
   // shamble: flightens lag), i samme rekkefølge som på nettet. Lagkortets
@@ -1068,7 +1072,7 @@ function HoleView({
               {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
                   hjem der (#1918). */}
               <Text style={ui.buttonText}>
-                {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
+                {teamDelivers ? 'Lever lagets kort' : 'Lever scorekort'}
               </Text>
             </Pressable>
           )
@@ -1131,7 +1135,7 @@ function HoleView({
                 ? 'Neste hull'
                 : bridge
                   ? bridgeLabel(bridge.holeNumber)
-                  : collapsed
+                  : teamDelivers
                     ? 'Lever lagets kort'
                     : 'Lever scorekort'
             }
