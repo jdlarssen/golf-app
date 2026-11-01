@@ -31,7 +31,9 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: 'the approved team, joinTeeGenders per member',
   },
-  'app/[locale]/signup/[shortId]/actions.ts': {
+  // #2748: moved from `app/[locale]/signup/[shortId]/actions.ts`, now shared by
+  // the signup page and the app's route.
+  'lib/games/selfRegistration.ts': {
     count: 2,
     reason: 'direct insert and the seat-claim RPC (p_tee_gender), joinTeeGenders',
   },

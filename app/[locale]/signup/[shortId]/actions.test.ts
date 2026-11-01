@@ -21,6 +21,8 @@ const redirectMock = makeLocaleRedirectMock();
 // #2209: the shared double (lib/games/__mocks__) — the real helper would eat
 // this file's queued Supabase answers with its two reads.
 vi.mock('@/lib/games/joinTeeGenders');
+// #2748: the same reason, for the facts the shared gate reads.
+vi.mock('@/lib/games/loadSignupFacts');
 vi.mock('@/i18n/navigation', () => ({
   redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
 }));
@@ -219,7 +221,7 @@ describe('registerForOpenGame', () => {
   it('#1792: both + solo-modus (stableford) → fortsatt tillatt (solo_form er eneste inngang)', async () => {
     authedAsUser();
     adminMock = buildSupabaseMock([
-      { data: null, error: null }, // insert
+      { data: [{ user_id: USER_ID }], error: null }, // insert
       { data: { name: 'Per', nickname: null, email: 'per@x.no' }, error: null }, // notify lookup
     ]);
     getGameByShortIdMock.mockResolvedValue(
@@ -256,7 +258,7 @@ describe('registerForOpenGame', () => {
     authedAsUser();
     adminMock = buildSupabaseMock([
       // 1) game_players insert
-      { data: null, error: null },
+      { data: [{ user_id: USER_ID }], error: null },
       // 2) users lookup for requesterName i notify
       {
         data: { name: 'Per Spiller', nickname: null, email: 'per@example.com' },
@@ -384,7 +386,7 @@ describe('registerForOpenGame', () => {
     //   4) users lookup for notify-name — maybeSingle()
     adminMock = buildSupabaseMock([
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
-      { data: null, error: null },                                                            // 2) insert
+      { data: [{ user_id: USER_ID }], error: null }, // 2) insert
       {
         // 3) race guard SELECT: user is the only (and thus first) row → vinner
         data: [{ user_id: USER_ID, accepted_at: '2026-06-11T10:00:00Z' }],
@@ -428,7 +430,7 @@ describe('registerForOpenGame', () => {
     );
     adminMock = buildSupabaseMock([
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
-      { data: null, error: null },                                                            // 2) insert
+      { data: [{ user_id: USER_ID }], error: null }, // 2) insert
       {
         // 3) race guard SELECT: 2 rader, vinneren er 'winner-id' (eldre accepted_at)
         data: [
@@ -463,7 +465,7 @@ describe('registerForOpenGame', () => {
     );
     adminMock = buildSupabaseMock([
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
-      { data: null, error: null },                                                            // 2) insert
+      { data: [{ user_id: USER_ID }], error: null }, // 2) insert
       {
         // 3) race guard SELECT: current user er den FØRSTE (eldre accepted_at) → vinner
         data: [
@@ -494,7 +496,7 @@ describe('registerForOpenGame', () => {
     // Regresjonstest: non-matchplay insert er uendret.
     authedAsUser();
     adminMock = buildSupabaseMock([
-      { data: null, error: null }, // insert
+      { data: [{ user_id: USER_ID }], error: null }, // insert
       { data: { name: 'Per', nickname: null, email: 'per@x.no' }, error: null }, // notify lookup
     ]);
     getGameByShortIdMock.mockResolvedValue(makeGame()); // stableford default

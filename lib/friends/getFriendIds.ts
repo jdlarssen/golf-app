@@ -10,6 +10,19 @@ import { friendIdsFromRows, type FriendshipRow } from './friendGraph';
  * Best-effort: ved query-feil returneres tom liste.
  */
 export async function getFriendIds(userId: string): Promise<string[]> {
+  try {
+    return await readFriendIds(userId);
+  } catch (error) {
+    console.error('[getFriendIds] lookup failed', error);
+    return [];
+  }
+}
+
+/**
+ * The same lookup for a gate that writes: a failed read throws, so «we don't
+ * know» never reads as «not a friend» (#1863).
+ */
+export async function readFriendIds(userId: string): Promise<string[]> {
   const admin = getAdminClient();
   const { data, error } = await admin
     .from('friendships')
@@ -17,9 +30,6 @@ export async function getFriendIds(userId: string): Promise<string[]> {
     .eq('status', 'accepted')
     .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
     .returns<FriendshipRow[]>();
-  if (error || !data) {
-    if (error) console.error('[getFriendIds] lookup failed', error);
-    return [];
-  }
-  return friendIdsFromRows(data, userId);
+  if (error) throw error;
+  return friendIdsFromRows(data ?? [], userId);
 }
