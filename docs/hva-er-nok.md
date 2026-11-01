@@ -56,6 +56,15 @@ det ene issuet.
 gjeng som i dag fører liga i en Messenger-chat tar Tørny-ligaen i bruk. Det er en test av det som
 finnes, ikke bygging; livstegnet i `visjon.md` avgjør om noe mer skal til.
 
+**Vekket 2026-11-01 — liga, kontingent/premiebord og cup i appen:** eieren satte ny
+prioritering for butikklanseringen (#1816, «Prioritering (MoSCoW — eierbeslutning
+2026-11-01)»). Tre deler av denne flaten er Må før lanseringen og bygges i appen: å se en
+liga og bli med via delt lenke (#2748), startkontingent med betalingslenke og premiebord i
+venterommet (#2749), og cup som lages, spilles og avsluttes i appen (#2752). Det er en
+eksplisitt eier-bestilling, så frysen er opphevet for disse delene. Pengeoppgjøret mellom
+spillere står fortsatt fryst og skjult i appen til etter lanseringen, så #2452 (penger på
+spill) bygges ikke ennå. Å melde seg på og av en klubbliga er Bør, rett etter lanseringen.
+
 ## 3. Tillatte baner nå (per juli 2026)
 
 | Bane | Hva | Issues |
@@ -95,7 +104,7 @@ behandles som friksjon i brukte flater, som alltid er innenfor grensen.
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
 | Lag-påmeldings-forenklinger (slot-radioer, lagnavn-forslag + rename, kvittering→oversikt) | #1069 (lukket — triage-kart der) | Første reelle lag-påmelding i prod |
 | QR-snarvei forbi re-bekreftelsen etter OTP (open+solo) | #1069 (lukket — triage-kart der) | Eier-pull, eller turnering med plakat-QR planlagt |
-| Liga videre (§2) | — | Messenger-liga-gjengen tar Tørny-ligaen i bruk |
+| Liga videre (§2) | — | Messenger-liga-gjengen tar Tørny-ligaen i bruk. Delvis vekket 2026-11-01 for appen: se og bli med via delt lenke (#2748), se §2 |
 
 Worth-do-forenklingene fra subtraksjonsrevisjonen (#1133–#1141) er alle tatt —
 siste lukket 2026-07-15. Beslutnings-issues (f.eks. #1146) venter på eier-svar og
@@ -137,6 +146,15 @@ erstatter skallene under samme butikk-oppføringer. Etter byttet bygges ny funks
 app-først; webben består som døråpner (invitasjonslenker, tilskuere, offentlige
 banesider) og fryses på vedlikehold. RN-premisset fra 2026-07-17-researchen er dermed
 reversert av eier-bestilling.
+
+**Revidert 2026-11-01 — Må-lista for butikklanseringen:** eieren erstattet MoSCoW-en fra
+2026-08-30 (#1816). 12 Må-punkter manglet helt eller delvis i appen og har fått saker
+(#2748–#2759, i tillegg til #2348). Påmelding bygges i appen, ikke som en knapp til
+nettsiden; nettsiden er fortsatt døråpner for folk uten appen. Varsler skal virke på både
+iPhone og Android ved lanseringen. Bør-punktene (klubbliga, åpen runde, terminliste,
+lagpåmelding, oppgjøret og Face ID-lås) kommer rett etter lanseringen. Kan-punktene
+(gjester, «Revansje?»/«Som sist», flere formater og formatinnstillinger i appen) bygges
+ved behov. Det som ikke står på lista, beholder prioriteten fra 2026-08-30.
 
 ## 5. Hva teller som «pull» (vekke-kriterier)
 
