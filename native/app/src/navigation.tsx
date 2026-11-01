@@ -227,6 +227,7 @@ const refNavigation: BackNavigation = {
   popTo: (name, params) => navigationRef.dispatch(StackActions.popTo(name, params)),
   replace: (name, params) => navigationRef.dispatch(StackActions.replace(name, params)),
   navigate: (name, params) => navigationRef.dispatch(CommonActions.navigate(name, params)),
+  reset: (state) => navigationRef.dispatch(CommonActions.reset(state)),
 };
 
 function openPushTarget(target: PushTarget) {

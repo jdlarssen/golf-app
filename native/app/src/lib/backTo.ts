@@ -22,6 +22,7 @@ export type BackNavigation = {
   popTo(name: never, params?: never): void;
   replace(name: never, params?: never): void;
   navigate(name: never, params?: never): void;
+  reset(state: never): void;
 };
 
 export type BackStep = 'popTo' | 'replace' | 'push';
@@ -55,6 +56,52 @@ export function backStep(
   return fallback;
 }
 
+/**
+ * Skjermen over i hierarkiet (regel 1 i §Tilbake): Hjem → spillet → hull,
+ * scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
+ * kort. Hjem → Profil → rommene under profilen. Hjem står over alt.
+ */
+const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>> = {
+  GameHome: 'Home',
+  Hole: 'GameHome',
+  Scorecard: 'GameHome',
+  Leaderboard: 'GameHome',
+  HoleByHole: 'GameHome',
+  Approve: 'GameHome',
+  EndGame: 'GameHome',
+  League: 'Home',
+  LeagueRoundStart: 'League',
+  MarkerApprove: 'League',
+  Profile: 'Home',
+  EditProfile: 'Profile',
+};
+
+/** Er `route` en av skjermene over `name` i hierarkiet, for samme spill eller liga? */
+function isAncestor(route: RouteLike, name: string, params: object | undefined): boolean {
+  const own = (route.params ?? {}) as Record<string, unknown>;
+  const target = (params ?? {}) as Record<string, unknown>;
+  // Bare id-ene skjermen selv har: Hjem er over alle spill, spillet bare over sitt eget.
+  const sameThing = IDENTITY_KEYS.every((key) => own[key] === undefined || own[key] === target[key]);
+  for (let parent = PARENT[name as keyof RootStackParamList]; parent; parent = PARENT[parent]) {
+    if (parent === route.name) return sameThing;
+  }
+  return route.name === 'Home';
+}
+
+/**
+ * Hvor mange skjermer under den du står på, skal bli liggende når `backTo`
+ * legger målet inn? Skjermene til og med den nærmeste som står over målet i
+ * hierarkiet. Kortet åpnet fra Hjem-kortets hull ([Hjem, Hull 18, Scorekort])
+ * gir da [Hjem, Spillet], ikke [Hjem, Hull 18, Spillet] der tilbake fra
+ * spillet ville gått til hullet på kortet du nettopp leverte.
+ */
+export function keepBelow(routes: readonly RouteLike[], name: string, params: object | undefined): number {
+  for (let i = routes.length - 2; i >= 0; i--) {
+    if (isAncestor(routes[i]!, name, params)) return i + 1;
+  }
+  return 0;
+}
+
 type Args<N extends keyof RootStackParamList> = undefined extends RootStackParamList[N]
   ? [name: N, params?: RootStackParamList[N]]
   : [name: N, params: RootStackParamList[N]];
@@ -67,13 +114,24 @@ function go(navigation: BackNavigation, fallback: 'replace' | 'push', name: stri
   // navnet og params alt sjekket mot param-lista av `Args`.
   const call = (fn: (name: never, params?: never) => void) => fn(name as never, params as never);
   if (step === 'popTo') call(navigation.popTo.bind(navigation));
-  else if (step === 'replace') call(navigation.replace.bind(navigation));
-  else call(navigation.navigate.bind(navigation));
+  else if (step === 'push') call(navigation.navigate.bind(navigation));
+  else {
+    // Skjemaet byttes ut. Ligger det skjermer mellom skjemaet og skjermen
+    // over målet i hierarkiet, går de ut samtidig (ett `reset`, de som blir
+    // liggende beholder nøklene sine og er montert som før).
+    const keep = keepBelow(routes, name, params);
+    if (keep >= routes.length - 1) call(navigation.replace.bind(navigation));
+    else {
+      const next = [...routes.slice(0, keep), { name, params }];
+      navigation.reset({ index: next.length - 1, routes: next } as never);
+    }
+  }
 }
 
 /**
  * Forlat et skjema du har sendt: tilbake til skjermen når den ligger under,
- * ellers bytt ut skjemaet med den. Skjemaet blir aldri liggende i stakken.
+ * ellers bytt ut skjemaet med den, under skjermen som står over den i
+ * hierarkiet. Skjemaet blir aldri liggende i stakken.
  */
 export function backTo<N extends keyof RootStackParamList>(navigation: BackNavigation, ...args: Args<N>) {
   go(navigation, 'replace', args[0], args[1] as object | undefined);
