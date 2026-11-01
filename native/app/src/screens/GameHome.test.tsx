@@ -684,6 +684,40 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.getByTestId('ticket-total').props.children).toBe('14\u00A0p');
   });
 
+  it('et cup-spill har «Se cupen» som åpner rommet, et vanlig spill har den ikke (#2752)', async () => {
+    const navigate = jest.fn();
+    const navigation = {
+      navigate,
+      setOptions: jest.fn(),
+      getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }] }),
+    };
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'active', modeConfig: { kind: 'stableford', team_size: 1 }, tournamentId: 'cup-1' },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    const first = await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await fireEvent.press(await screen.findByTestId('open-cup'));
+    expect(navigate).toHaveBeenCalledWith('Cup', { cupId: 'cup-1' });
+    await first.unmount();
+
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'active', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await screen.findByTestId('game-ticket');
+    expect(screen.queryByTestId('open-cup')).toBeNull();
+  });
+
   it('Del-knappen står øverst når arrangøren har slått på live-følging, og deler lenka', async () => {
     const { shareLiveFollow } = require('../lib/shareLive') as { shareLiveFollow: jest.Mock };
     shareLiveFollow.mockClear();

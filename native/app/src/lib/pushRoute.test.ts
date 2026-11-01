@@ -1,4 +1,6 @@
 // #2256 PR 4: et trykk på et spillvarsel åpner spillet, et ligavarsel ligaen (#2638), alt annet åpner Hjem.
+import { notificationDestination } from '../../../../lib/notifications/deeplink';
+import type { NotificationKind, NotificationPayload } from '../../../../lib/notifications/types';
 import { pushNotificationId, pushTarget, pushUrl } from './pushRoute';
 
 const GAME = '0f8e6c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b';
@@ -18,6 +20,52 @@ describe('pushUrl', () => {
     expect(pushUrl({ content: { data: { url: '/profile' } }, trigger: { type: 'push' } })).toBe('/profile');
     expect(pushUrl({ content: { data: {} }, trigger: { type: 'push', payload: { url: 42 } } })).toBeNull();
     expect(pushUrl(null)).toBeNull();
+  });
+});
+
+describe('pushTarget — cupen (#2752)', () => {
+  const CUP = '22222222-2222-4222-8222-222222222222';
+
+  it.each([
+    [`/cup/${CUP}`],
+    [`/cup/${CUP}/resultater`],
+    [`/no/cup/${CUP}`],
+    [`/en/cup/${CUP}/resultater`],
+    [`/cup/${CUP}?varsel=${NOTE}`],
+    [`/cup/${CUP}/`],
+  ])('%s åpner cup-rommet', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'Cup', params: { cupId: CUP } });
+  });
+
+  it.each([
+    ['/cup/bli-med/ABC123'],
+    ['/no/cup/bli-med/ABC123'],
+    [`/admin/cup/${CUP}/spillere`],
+    [`/klubber/${GAME}/cup/${CUP}/spillere`],
+    ['/cups'],
+  ])('%s er ikke et cup-rom, og åpner Hjem', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'Home' });
+  });
+
+  // Serverens egne mål, ikke en kopi av dem i testen.
+  function destinationOf<K extends NotificationKind>(kind: K, payload: NotificationPayload<K>) {
+    return notificationDestination({ kind, payload });
+  }
+
+  it.each([
+    ['cup_started', destinationOf('cup_started', { tournament_id: CUP, tournament_name: 'C' })],
+    ['cup_finished', destinationOf('cup_finished', { tournament_id: CUP, tournament_name: 'C' })],
+    [
+      'cup_lineup_revealed',
+      destinationOf('cup_lineup_revealed', {
+        tournament_id: CUP,
+        tournament_name: 'C',
+        session_format: 'Foursome',
+        match_count: 2,
+      }),
+    ],
+  ])('varselet %s åpner cup-rommet', (_kind, destination) => {
+    expect(pushTarget(destination)).toEqual({ name: 'Cup', params: { cupId: CUP } });
   });
 });
 

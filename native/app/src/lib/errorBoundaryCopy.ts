@@ -52,6 +52,7 @@ const VARIANT_BY_ROUTE = {
   League: 'default',
   LeagueJoin: 'default',
   InvitationLink: 'default',
+  Cup: 'default',
   LeagueRoundStart: 'default',
   MarkerApprove: 'default',
   SyncLab: 'default',

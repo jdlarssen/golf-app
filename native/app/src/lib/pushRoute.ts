@@ -13,7 +13,10 @@
 // og åpner startsiden for runden (`LeagueRoundStart`) med ligaen under.
 // Markørens varsel (#2661)
 // peker på `/liga/{id}/godkjenn/{gameId}/{userId}` og åpner markørens skjerm
-// (`MarkerApprove`) med ligaen under.
+// (`MarkerApprove`) med ligaen under. Cupvarslene (#2752: cupen har startet, kampene
+// er avdekket, resultatet er klart) peker på `/cup/{id}` og `/cup/{id}/resultater`
+// og åpner cup-rommet (`Cup`), som har begge deler. Cup-lenka `/cup/bli-med/{kode}`
+// er ingen cup-id, og går til Hjem.
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -34,6 +37,7 @@ export type PushTarget =
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
   | { name: 'Leaderboard'; params: { gameId: string } }
   | { name: 'League'; params: { leagueId: string } }
+  | { name: 'Cup'; params: { cupId: string } }
   | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'Home' };
@@ -50,6 +54,7 @@ const LEADERBOARD_SUFFIX = /^\/leaderboard(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
+const CUP_PATH = /^\/(?:[a-z]{2}\/)?cup\/([^/?#]+)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
@@ -100,6 +105,9 @@ export function pushTarget(url: string | null): PushTarget {
     if (roundId) return { name: 'LeagueRoundStart', params: { leagueId, roundId } };
     return { name: 'League', params: { leagueId } };
   }
+  const cup = url ? CUP_PATH.exec(url) : null;
+  const cupId = cup ? decodedOrNull(cup[1]) : null;
+  if (cupId && cupId !== 'bli-med') return { name: 'Cup', params: { cupId } };
   return { name: 'Home' };
 }
 

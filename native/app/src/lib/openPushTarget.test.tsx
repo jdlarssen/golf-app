@@ -23,6 +23,7 @@ const SCREENS = [
   'Scorecard',
   'Leaderboard',
   'League',
+  'Cup',
   'LeagueRoundStart',
   'MarkerApprove',
 ] as const;
@@ -112,6 +113,19 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     expect(names()).toEqual(['Home', 'League', 'LeagueRoundStart']);
     await tap({ name: 'MarkerApprove', params: { leagueId: 'l1', gameId: 'g1', userId: 'u1' } });
     expect(names()).toEqual(['Home', 'League', 'MarkerApprove']);
+  });
+
+  it('cupen fra Hjem, og tilbake til den cupen du alt har bak deg (#2752)', async () => {
+    await stackOf();
+    await tap({ name: 'Cup', params: { cupId: 'c1' } });
+    expect(names()).toEqual(['Home', 'Cup']);
+    await back();
+    expect(names()).toEqual(['Home']);
+
+    await stackOf(['Cup', { cupId: 'c1' }], ['GameHome', G]);
+    await tap({ name: 'Cup', params: { cupId: 'c1' } });
+    expect(names()).toEqual(['Home', 'Cup']);
+    expect(top()).toEqual({ cupId: 'c1' });
   });
 
   it('uten mål: til bunnen, ikke en ny Hjem oppå', async () => {

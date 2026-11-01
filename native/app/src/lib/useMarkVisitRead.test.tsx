@@ -82,6 +82,13 @@ const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> 
   'MarkerApprove.tsx': { surface: 'leagueMarker', entity: 'gameId' },
 };
 
+// #2752: cup-rommet er webbens /cup/[id] og /cup/[id]/resultater på én skjerm, og
+// merker derfor begge flatene: varslene om start og avdekking, og om resultatet.
+const CUP_CALLS = [
+  { surface: 'cup', entity: 'cupId' },
+  { surface: 'cupResults', entity: 'cupId' },
+];
+
 describe('skjermene som merker', () => {
   it('hver skjerm ber om sin egen flate, med spillets id', () => {
     const dir = path.join(__dirname, '../screens');
@@ -92,7 +99,9 @@ describe('skjermene som merker', () => {
           /useMarkVisitRead\('(\w+)'(?:, (\w+))?\)/g,
         )].map((m) => [name, { surface: m[1], entity: m[2] ?? null }] as const),
       );
-    expect(Object.fromEntries(found)).toEqual(CALLERS);
-    expect(found).toHaveLength(Object.keys(CALLERS).length);
+    const single = found.filter(([name]) => name !== 'Cup.tsx');
+    expect(Object.fromEntries(single)).toEqual(CALLERS);
+    expect(single).toHaveLength(Object.keys(CALLERS).length);
+    expect(found.filter(([name]) => name === 'Cup.tsx').map(([, call]) => call)).toEqual(CUP_CALLS);
   });
 });
