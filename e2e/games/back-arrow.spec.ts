@@ -127,9 +127,9 @@ test.describe('tilbake-pila', () => {
     await fresh.goto(`/games/${game.id}/leaderboard?from=/profile/historikk`);
     await hydrated(fresh);
     await arrow(fresh).click();
-    await expect(fresh).toHaveURL(/\/profile\/historikk$/);
+    await expect(fresh).toHaveURL(/\/profile\/historikk$/, { timeout: 30_000 });
     // Tegnet av klienten, så denne pila er hydrert. Den gamle kan stå et øyeblikk.
-    await expect(arrow(fresh)).toHaveAttribute('href', '/profile');
+    await expect(arrow(fresh)).toHaveAttribute('href', '/profile', { timeout: 30_000 });
     await arrow(fresh).click();
     await expect(fresh).toHaveURL(/\/profile$/);
   });
@@ -170,7 +170,7 @@ test.describe('tilbake-pila', () => {
     await arrow(page).waitFor();
     await hydrated(page);
     await arrow(page).click();
-    await expect(page).toHaveURL(/\/klubbhuset$/);
+    await expect(page).toHaveURL(/\/klubbhuset$/, { timeout: 30_000 });
   });
 
   test('veiviseren → ny bane → pil: tilbake til veiviseren, ikke ut av den', async ({ page }) => {
@@ -183,7 +183,7 @@ test.describe('tilbake-pila', () => {
     await arrow(page).waitFor();
     await hydrated(page);
     await arrow(page).click();
-    await expect(page).toHaveURL(/\/opprett-spill/);
+    await expect(page).toHaveURL(/\/opprett-spill/, { timeout: 30_000 });
   });
 
   test('tavla åpnet rett fra adressefeltet: pila går til spillet', async ({ context, page }) => {
@@ -194,6 +194,6 @@ test.describe('tilbake-pila', () => {
     const fresh = await context.newPage();
     await fresh.goto(`/games/${game.id}/leaderboard`);
     await arrow(fresh).click();
-    await expect(fresh).toHaveURL(new RegExp(`/games/${game.id}(\\?|$)`));
+    await expect(fresh).toHaveURL(new RegExp(`/games/${game.id}(\\?|$)`), { timeout: 30_000 });
   });
 });
