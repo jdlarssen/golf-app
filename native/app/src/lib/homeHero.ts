@@ -33,8 +33,9 @@ import {
   type LiveBoardUnit,
   type ViewerStanding,
 } from '../../../../lib/leaderboard/liveBoard';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
-import { modeCollapsesToTeamCard, type GameMode } from '../../../../lib/scoring/modes/types';
+import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
 import type { HomeCard } from '../data/homeList';
@@ -195,10 +196,10 @@ function heroProgress(opts: HeroInput) {
   const scores = foldLocalScores(opts.scores, roster, mode);
   const captainId = myTeamCaptainId(roster, userId);
   const holes = gameHoleNumbers(game);
+  // Levert er lagets stempel bare der laget leverer samlet. I Patsome leverer
+  // hver spiller sitt eget kort (#2751), selv om laget deler hull 7–18.
   const teamCard =
-    // Hull 18 svarer på om runden deler kort (patsome er det eneste formatet der
-    // svaret varierer, og det er stengt). Spørsmålet gjelder ikke segmentet.
-    captainId != null && modeCollapsesToTeamCard(mode, 18)
+    captainId != null && deliveryCoversWholeTeam(mode)
       ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
       : null;
   const own = new Set(holes);

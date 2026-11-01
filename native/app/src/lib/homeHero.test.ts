@@ -143,15 +143,31 @@ describe('buildHeroModel', () => {
     expect(withdrawn).toMatchObject({ state: 'withdrawn', action: null, standing: null });
   });
 
-  it('et stengt spill gir «åpne runden» og hverken ring-tall eller plass', () => {
+  // #2751: laget deler hull 7–18, men hver spiller leverer sitt eget kort.
+  it('Patsome: makkerens levering stempler ikke mitt kort, og jeg kan levere fra kortet', () => {
+    const players = [
+      homePlayer({ userId: 'a-captain', teamNumber: 1, submittedAt: '2026-09-29T12:00:00.000Z' }),
+      homePlayer({ userId: ME, teamNumber: 1 }),
+    ];
+    const scores = [...holeScores('g-live', ME, 6, 4), ...holeScores('g-live', 'a-captain', 18, 4).slice(6)];
+
     const model = buildHeroModel({
-      bundle: homeBundle({ game: { gameMode: 'patsome' }, players: trio }),
-      scores: liveScores,
+      bundle: homeBundle({ game: { gameMode: 'patsome' }, players }),
+      scores,
       userId: ME,
     });
-    expect(model.gate).not.toBeNull();
-    expect(model.action).toEqual({ kind: 'open' });
-    expect(model.standing).toBeNull();
+
+    expect(model).toMatchObject({ gate: null, played: 18, state: 'continue', action: { kind: 'submit' } });
+  });
+
+  it('Patsome: fortsett-knappen peker på første tomme hull over segmentgrensa', () => {
+    const players = [homePlayer({ userId: 'a-captain', teamNumber: 1 }), homePlayer({ userId: ME, teamNumber: 1 })];
+    const model = buildHeroModel({
+      bundle: homeBundle({ game: { gameMode: 'patsome' }, players }),
+      scores: [...holeScores('g-live', ME, 6, 4), ...holeScores('g-live', 'a-captain', 7, 4).slice(6)],
+      userId: ME,
+    });
+    expect(model).toMatchObject({ played: 7, nextHole: 8, action: { kind: 'hole', holeNumber: 8 } });
   });
 
   it('en avledet kamp føres ikke: «åpne runden» uten stengt format', () => {

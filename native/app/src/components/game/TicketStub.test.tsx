@@ -53,7 +53,7 @@ async function renderStub(
 }
 
 it.each<[string, TicketStubModel, string]>([
-  ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate-link'],
+  ['stengt runde', { kind: 'gated', reason: 'segment' }, 'format-gate-link'],
   ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
   ['trukket av seg selv', { kind: 'withdrawn', bySelf: true }, 'withdrawn-undo'],
   ['utkast', { kind: 'draft' }, 'ticket-draft'],
@@ -196,7 +196,7 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
 });
 
 it.each<[string, TicketStubModel, string]>([
-  ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate'],
+  ['stengt runde', { kind: 'gated', reason: 'segment' }, 'format-gate'],
   ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
   ['utkast', { kind: 'draft' }, 'ticket-draft'],
   ['avsluttet uten plass', { kind: 'finished', result: null }, 'finished-banner'],

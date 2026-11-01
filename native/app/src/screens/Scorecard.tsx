@@ -153,11 +153,11 @@ import {
   teamTeeShotState,
 } from '../lib/teeShotTeams';
 import { TEE_SHOTS_APP_TEXT, queueGuardText, teeShotBoxText, teeShotCountText } from '../lib/teeShotsCopy';
-import { computeGameLeaderboard } from '../lib/scoringContext';
 import {
   buildTeamCards,
   findMyTeamCard,
   myTeamCaptainId,
+  teamExtraOutcome,
   teamHandicapFor,
 } from '../lib/teamPlay';
 import { GAME_BUNDLE_TIMEOUT_MS, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
@@ -364,16 +364,20 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const courseHandicap = me.player.courseHandicap ?? 0;
   const mode = bundle.game.gameMode as GameMode;
   const myCaptainId = myTeamCaptainId(roster, userId);
-  // «Deler denne runden ett kort i det hele tatt?» Hull 18 er spørsmålet som
-  // svarer på det: patsome er det eneste formatet der svaret varierer per hull,
-  // og foursomes-halvdelen der går til 18. Selve rad-eierskapet spørres likevel
-  // per hull, inne i `buildScorecardRows`.
-  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, 18);
+  // To spørsmål, og i Patsome ulike svar (#2751). «Har runden delte hull?» styrer
+  // radene og motorkallet: hull 18 svarer på det, for patsome er det eneste
+  // formatet der svaret varierer per hull, og foursomes-halvdelen der går til
+  // 18. Selve rad-eierskapet spørres likevel per hull, inne i
+  // `buildScorecardRows`.
+  const sharedHoles = myCaptainId != null && modeCollapsesToTeamCard(mode, 18);
+  // «Leverer laget samlet?» styrer alt som sier noe om leveringen, og handicapet
+  // i toppen. I Patsome leverer hver spiller sitt eget kort.
+  const teamMode = myCaptainId != null && deliveryCoversWholeTeam(mode);
   const myTeamCard = teamMode
     ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
     : null;
-  // Motoren spørres bare når det faktisk er et lagkort som skal vises.
-  const leaderboard = teamMode ? computeGameLeaderboard(bundle, scores) : null;
+  // Motoren spørres bare når kortet faktisk har delte hull.
+  const leaderboard = sharedHoles ? teamExtraOutcome(bundle, scores) : null;
 
   const { rows, totals } = buildScorecardRows({
     holes: gameHoles(bundle),
@@ -454,7 +458,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     revealActive,
     canSubmit,
     missing,
-    teamMode,
+    teamMode: sharedHoles,
   });
   const barHeight = roundDoneBarHeight(insets.bottom);
   const showBar = roundDone != null && barShown;
