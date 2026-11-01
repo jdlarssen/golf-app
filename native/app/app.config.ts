@@ -42,21 +42,36 @@ export const PROD_SUPABASE_HOST = 'glofubopddkjhymcbaph.supabase.co';
 export const STORE_WEB_BASE_URL = 'https://tornygolf.no';
 
 /**
- * Domenet venne-lenka (#2627) åpner butikkappen fra: verten i
- * {@link STORE_WEB_BASE_URL}, som QR-koden på bag-taggen bygger adressen fra.
+ * Domenet lenkene (#2627, #2748) åpner butikkappen fra: verten i
+ * {@link STORE_WEB_BASE_URL}, som QR-koden på bag-taggen og delelenkene bygges fra.
  */
 export const STORE_LINK_DOMAIN = 'tornygolf.no';
 
 /**
- * Stiene på {@link STORE_LINK_DOMAIN} som åpner appen (#2627): «legg til
- * meg»-siden, på norsk og under `/en`. Bare de. Appen kan ikke bære en
- * nett-sesjon fra en lenke, så innlogging, invitasjoner, påmelding og alt
- * annet skal fortsatt åpnes i nettleseren. Samme lister står i AASA-fila
- * (`app/.well-known/apple-app-site-association/route.ts`, som snevrer inn
- * iOS-claimet) og bygges der fra `lib/friends/friendLinkPath.ts`; testen
- * holder dem i takt (fila her er selvstendig, se toppen).
+ * Samme nettsted under `www` (#2748): knappen «Åpne i appen» på nettsiden lenker
+ * dit, fordi Safari holder en lenke til samme domene inne.
  */
-export const STORE_FRIEND_LINK_PATH_PREFIXES = ['/venner/legg-til/', '/en/venner/legg-til/'] as const;
+export const STORE_LINK_WWW_DOMAIN = 'www.tornygolf.no';
+
+/** Vertene butikkappen gjør krav på. De to, og ikke flere (begge bevisene). */
+export const STORE_LINK_DOMAINS = [STORE_LINK_DOMAIN, STORE_LINK_WWW_DOMAIN] as const;
+
+/**
+ * Stiene på {@link STORE_LINK_DOMAINS} som åpner appen på Android, på norsk og
+ * under `/en`: «legg til meg»-siden (#2627) og ligalenka (#2748). Bare de. Appen
+ * kan ikke bære en nett-sesjon fra en lenke, så innlogging, påmelding og alt
+ * annet skal fortsatt åpnes i nettleseren. Lista bygges fra
+ * `lib/appLinks/appLinkPaths.ts`; testen holder dem i takt (fila her er
+ * selvstendig, se toppen). iOS leser sine stier fra AASA-fila
+ * (`app/.well-known/apple-app-site-association/route.ts`), som flyttes til samme
+ * liste når et bygg som forstår dem, er ute.
+ */
+export const STORE_APP_LINK_PATH_PREFIXES = [
+  '/venner/legg-til/',
+  '/liga/bli-med/',
+  '/en/venner/legg-til/',
+  '/en/liga/bli-med/',
+] as const;
 
 /** Bundle-id (iOS) og pakkenavn (Android) — arvet fra skallene (#1279/#1283). */
 export const STORE_BUNDLE_ID = 'no.tornygolf.app';
@@ -220,27 +235,28 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
       // Skallet hadde ITSAppUsesNonExemptEncryption=false i Info.plist: appen
       // bruker bare OS-ets HTTPS, og eksportkontroll-dialogen stilles aldri.
       config: { ...base.ios?.config, usesNonExemptEncryption: false },
-      // #2627: domenet claimes, men AASA-fila slipper bare venne-lenka
-      // gjennom. Alle andre lenker åpnes fortsatt i Safari, der sesjonen er.
-      associatedDomains: [`applinks:${STORE_LINK_DOMAIN}`],
+      // #2627: domenet claimes, men AASA-fila bestemmer hvilke stier som
+      // slipper gjennom. Alle andre lenker åpnes fortsatt i Safari, der sesjonen
+      // er. #2748: `www` for knappen «Åpne i appen».
+      associatedDomains: STORE_LINK_DOMAINS.map((domain) => `applinks:${domain}`),
     },
     android: {
       ...base.android,
       package: STORE_BUNDLE_ID,
       versionCode: STORE_ANDROID_VERSION_CODE,
-      // #2627: App Links for venne-lenka, med stiene her (Android har ingen
-      // AASA). `autoVerify` krever Play-signeringsnøkkelen i
-      // `app/.well-known/assetlinks.json`. Til den står der, åpner Android 12+
-      // lenka i nettleseren, og Android 7–11 spør om app eller nettleser.
+      // #2627, #2748: App Links, med stiene her (Android har ingen AASA).
+      // `autoVerify` krever Play-signeringsnøkkelen i
+      // `app/.well-known/assetlinks.json`, på begge vertene. Til den står der,
+      // åpner Android 12+ lenka i nettleseren, og Android 7–11 spør om app eller
+      // nettleser. Android 7–11 godkjenner dessuten bare når ALLE vertene i
+      // filteret svarer.
       intentFilters: [
         {
           action: 'VIEW',
           autoVerify: true,
-          data: STORE_FRIEND_LINK_PATH_PREFIXES.map((pathPrefix) => ({
-            scheme: 'https',
-            host: STORE_LINK_DOMAIN,
-            pathPrefix,
-          })),
+          data: STORE_LINK_DOMAINS.flatMap((host) =>
+            STORE_APP_LINK_PATH_PREFIXES.map((pathPrefix) => ({ scheme: 'https', host, pathPrefix })),
+          ),
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],

@@ -16,12 +16,13 @@
 #    setter, viser ikke arkivet. Det bevises av et varsel til en
 #    TestFlight-installasjon.
 #  - `com.apple.developer.associated-domains` MÅ finnes, og være nøyaktig
-#    `applinks:tornygolf.no` (#2627). Venne-lenka og QR-koden på bag-taggen
-#    åpner appen. Hvilke stier som slipper gjennom, bestemmer AASA-fila på
-#    nettet (`app/.well-known/apple-app-site-association/route.ts`, bare
-#    `/venner/legg-til/*`): alle andre lenker åpnes fortsatt i Safari, der
-#    sesjonen finnes. Et annet domene, et jokertegn eller flere verdier er
-#    FAIL, og det er en manglende verdi også: da åpner ikke lenka appen.
+#    `applinks:tornygolf.no` og `applinks:www.tornygolf.no` (#2627, #2748). Lenkene
+#    fra Tørny åpner appen, og knappen «Åpne i appen» på nettsiden lenker til
+#    `www`. Hvilke stier som slipper gjennom, bestemmer AASA-fila på nettet
+#    (`app/.well-known/apple-app-site-association/route.ts`): alle andre lenker
+#    åpnes fortsatt i Safari, der sesjonen finnes. Et annet domene, et jokertegn
+#    eller flere verdier er FAIL, og det er en manglende verdi også: da åpner ikke
+#    lenka appen.
 #
 # Plist-en leses med python3 og `plistlib`, ikke plutil eller PlistBuddy: testen
 # kjører i CI på ubuntu-latest, der de ikke finnes. En tom fil er en app uten
@@ -32,11 +33,11 @@
 # bare denne fila.
 ENTITLEMENTS_PYTHON3=${PYTHON3:-/usr/bin/python3}
 
-# Den ene verdien associated domains skal ha (#2627): `applinks:` og
-# `STORE_LINK_DOMAIN` i `app.config.ts`. En konstant, som Android-regelens: et
+# De to verdiene associated domains skal ha (#2627, #2748): `applinks:` og
+# `STORE_LINK_DOMAINS` i `app.config.ts`. En konstant, som Android-regelens: et
 # miljø kan ikke endre hva beviset krever. `entitlements-proof.test.js` holder
 # den lik app.config.
-ENTITLEMENTS_APPLINKS=applinks:tornygolf.no
+ENTITLEMENTS_APPLINKS='applinks:tornygolf.no applinks:www.tornygolf.no'
 
 # Skriver `aps <missing|ok|other> <verdi>` og `ad <absent|list|other> <verdier>`,
 # eller exit 1 med grunnen på stderr. `list` er en liste av strenger (skrevet
@@ -70,6 +71,11 @@ else:
     print("ad other " + ascii(ad))
 '
 
+# Rekkefølgen i arkivet er ikke vår å bestemme, så de to sammenlignes sortert.
+entitlements_sorted() {
+  printf '%s\n' "$1" | tr ' ' '\n' | sort | tr '\n' ' '
+}
+
 entitlements_rules() {
   local file=$1 facts why aps state value ad ad_state ad_value
   if ! facts=$("$ENTITLEMENTS_PYTHON3" -c "$ENTITLEMENTS_PY" "$file" 2>&1); then
@@ -96,14 +102,14 @@ entitlements_rules() {
   ad_value=${ad#* }
   case "$ad_state" in
     list)
-      if [ "$ad_value" = "$ENTITLEMENTS_APPLINKS" ]; then
-        pass "com.apple.developer.associated-domains = ${ad_value} (AASA-fila slipper bare venne-lenka gjennom)"
+      if [ "$(entitlements_sorted "$ad_value")" = "$(entitlements_sorted "$ENTITLEMENTS_APPLINKS")" ]; then
+        pass "com.apple.developer.associated-domains = ${ad_value} (AASA-fila bestemmer stiene)"
       else
-        fail "com.apple.developer.associated-domains = ${ad_value:-<tom liste>}. Bare ${ENTITLEMENTS_APPLINKS} er lov (#2627)"
+        fail "com.apple.developer.associated-domains = ${ad_value:-<tom liste>}. Nøyaktig ${ENTITLEMENTS_APPLINKS} skal stå (#2748)"
       fi
       ;;
-    absent) fail "com.apple.developer.associated-domains mangler. Butikkappen skal ha ${ENTITLEMENTS_APPLINKS}, ellers åpner ikke venne-lenka appen (#2627)" ;;
-    other) fail "com.apple.developer.associated-domains = ${ad_value}. Bare ${ENTITLEMENTS_APPLINKS} er lov (#2627)" ;;
+    absent) fail "com.apple.developer.associated-domains mangler. Butikkappen skal ha ${ENTITLEMENTS_APPLINKS}, ellers åpner ikke lenkene appen (#2748)" ;;
+    other) fail "com.apple.developer.associated-domains = ${ad_value}. Nøyaktig ${ENTITLEMENTS_APPLINKS} skal stå (#2748)" ;;
     *) fail "kunne ikke lese com.apple.developer.associated-domains (${file}): ${facts}" ;;
   esac
 }

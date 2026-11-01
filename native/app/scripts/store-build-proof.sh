@@ -49,7 +49,7 @@
 #  3. Entitlements (`codesign`): `aps-environment` må være `development` eller
 #     `production` (appen har varsler på iOS, #2561), og verdien skrives ut.
 #     Arkivet kreves ikke å ha `production`. Associated domains er nøyaktig
-#     `applinks:tornygolf.no` (venne-lenka, #2627). Reglene og hvorfor står i
+#     `applinks:tornygolf.no` og `applinks:www.tornygolf.no` (lenkene, #2627, #2748). Reglene og hvorfor står i
 #     `entitlements-proof.sh`.
 #  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene

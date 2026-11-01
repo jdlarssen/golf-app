@@ -50,7 +50,37 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           },
           {
             "host": "tornygolf.no",
+            "pathPrefix": "/liga/bli-med/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
             "pathPrefix": "/en/venner/legg-til/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/en/liga/bli-med/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/venner/legg-til/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/liga/bli-med/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/en/venner/legg-til/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/en/liga/bli-med/",
             "scheme": "https",
           },
         ],
@@ -64,6 +94,7 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
   "ios": {
     "associatedDomains": [
       "applinks:tornygolf.no",
+      "applinks:www.tornygolf.no",
     ],
     "buildNumber": "11",
     "bundleIdentifier": "no.tornygolf.app",
