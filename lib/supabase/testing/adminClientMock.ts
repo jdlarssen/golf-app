@@ -31,7 +31,7 @@
  * `value` og tom `column` — leddet gjelder flere kolonner (#2200).
  */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or' | 'gt' | 'gte' | 'lt' | 'lte';
+  op: 'eq' | 'neq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or' | 'gt' | 'gte' | 'lt' | 'lte';
   column: string;
   value: unknown;
 };
@@ -73,6 +73,8 @@ export type QueryResponse = {
 export interface QueryChain extends PromiseLike<QueryResponse> {
   select(columns?: string): QueryChain;
   eq(column: string, value: unknown): QueryChain;
+  /** Telling uten kalleren selv (`joinFlightCore`, #2750). */
+  neq(column: string, value: unknown): QueryChain;
   gt(column: string, value: unknown): QueryChain;
   /** Tidsvinduer (`hasFinishedRoundInKavalkadeYear`, #2265). */
   gte(column: string, value: unknown): QueryChain;
@@ -167,6 +169,7 @@ export function createAdminClientMock(opts: {
         return api;
       },
       eq: (column, value) => push('eq', column, value),
+      neq: (column, value) => push('neq', column, value),
       gt: (column, value) => push('gt', column, value),
       gte: (column, value) => push('gte', column, value),
       lt: (column, value) => push('lt', column, value),
