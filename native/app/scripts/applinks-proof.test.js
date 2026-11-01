@@ -6,9 +6,8 @@
 //
 //  1. **Butikkmanifestets filter gir PASS**: fiksturen går gjennom den ekte
 //     leseren (`android-proof.py manifest`) og så regelen, som i beviset.
-//  2. **Alt utenfor lista er FAIL**: en annen sti, et filter uten sti, et annet
-//     underdomene og en ressursreferanse (TWA-ens `@string/hostName`). Andre
-//     verter er bare informasjon.
+//  2. **Alt utenfor lista er FAIL**: en annen sti, et filter uten sti, en annen
+//     vert, et annet underdomene og en ressursreferanse (TWA-ens `@string/hostName`).
 //  3. **Mangler en sti eller en vert, er det FAIL**, ellers ville et bygg uten
 //     filteret stått grønt.
 //  4. **Lista i regelen er appens**: `STORE_APP_LINK_PATH_PREFIXES` og
@@ -93,11 +92,6 @@ describe('android_applinks_rules', () => {
     expect(r.fail).toBe(0);
   });
 
-  it('lar andre verter være informasjon', () => {
-    const r = rules([...ALL, path('example.com', '*')]);
-    expect(r.fail).toBe(0);
-  });
-
   it.each([
     ['en annen sti', path(APEX, 'pathPrefix:/login')],
     ['en annen sti på www', path(WWW, 'pathPrefix:/games/')],
@@ -106,13 +100,16 @@ describe('android_applinks_rules', () => {
     ['et filter uten sti på www', path(WWW, '*')],
     ['et mønster', path(APEX, 'pathPattern:/venner/.*')],
     ['et annet underdomene', path('app.tornygolf.no', FRIEND_SPEC)],
+    ['en annen vert uten sti', path('example.com', '*')],
+    ['en annen vert med en sti fra lista', path('example.com', FRIEND_SPEC)],
+    ['en vert som bare ligner', path('tornygolf.com', FRIEND_SPEC)],
     ['en ressursreferanse (TWA)', path('@string/hostName', '*')],
   ])('gir FAIL for %s ved siden av lista', (_label, extra) => {
     const r = rules([...ALL, extra]);
     expect(r.status).toBe(0);
     expect(r.pass).toBe(0);
     expect(r.fail).toBe(1);
-    expect(r.fails[0]).toMatch(/^FAIL {2}1 autoVerify-claim\(er\) for tornygolf\.no utenfor lista/);
+    expect(r.fails[0]).toMatch(/^FAIL {2}1 autoVerify-claim\(er\) utenfor lista/);
   });
 
   it('gir FAIL når ingenting er claimet', () => {
