@@ -52,7 +52,7 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
-import { backTo, openOrReturn } from '../lib/backTo';
+import { backTo } from '../lib/backTo';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
@@ -342,7 +342,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
           onChanged={refresh}
           onNavigate={navigation.navigate}
-          onOpenGame={(id) => openOrReturn(navigation, 'GameHome', { gameId: id })}
+          // `push`, ikke `navigate`: samme skjermnavn ville byttet ut denne, og
+          // tilbake fra verten ville gått forbi kampen du kom fra (#2746, regel 1).
+          onOpenGame={(id) => navigation.push('GameHome', { gameId: id })}
           bundle={bundle}
         />
       </GameTicket>

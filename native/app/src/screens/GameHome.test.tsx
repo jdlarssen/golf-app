@@ -605,7 +605,10 @@ describe('GameHome — startbilletten (#2255)', () => {
         sourceGameName: 'Best ball, flight 1',
       };
       mockState.scores = [];
-      const nav = stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]);
+      const nav = {
+        ...stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]),
+        push: jest.fn(),
+      };
 
       await open(nav);
 
@@ -616,7 +619,8 @@ describe('GameHome — startbilletten (#2255)', () => {
       expect(screen.queryByTestId('open-scorecard')).toBeNull();
 
       await fireEvent.press(screen.getByTestId('derived-open-host'));
-      expect(nav.navigate).toHaveBeenCalledWith('GameHome', { gameId: 'host-1' });
+      expect(nav.push).toHaveBeenCalledWith('GameHome', { gameId: 'host-1' });
+      expect(nav.navigate).not.toHaveBeenCalled();
     });
 
     it('første halvdel ført ferdig: broen til hull 10 i stedet for levering', async () => {
