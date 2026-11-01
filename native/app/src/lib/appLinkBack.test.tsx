@@ -3,7 +3,7 @@
 //
 // Regel 1, 3 og 4 i `docs/user-flows.md` §Tilbake, med unntaket i regel 1. Ekte
 // `NavigationContainer`, native-stack og ruter, med stand-ins for skjermene, og
-// lenka åpnes slik navigatoren gjør det (`appLinkScreen` og `StackActions.push`).
+// lenka åpnes med den samme funksjonen navigatoren bruker (`openAppLink`).
 import {
   NavigationContainer,
   StackActions,
@@ -12,9 +12,9 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
-import { appLinkScreen } from '../data/pendingAppLink';
 import type { RootStackParamList } from '../navigation';
 import { backTo, type BackNavigation } from './backTo';
+import { openAppLink } from './openAppLink';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const ref = createNavigationContainerRef<RootStackParamList>();
@@ -52,9 +52,8 @@ async function stackOf(...opened: [name: keyof RootStackParamList, params?: obje
 }
 
 async function openLink() {
-  const screen = appLinkScreen(LINK);
   await act(async () => {
-    ref.dispatch(StackActions.push(screen.name, screen.params));
+    openAppLink(ref, LINK);
   });
 }
 

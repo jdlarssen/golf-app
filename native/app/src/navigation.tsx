@@ -14,7 +14,6 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
-  StackActions,
   createNavigationContainerRef,
   type Theme as NavigationTheme,
 } from '@react-navigation/native';
@@ -29,13 +28,13 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
 import {
-  appLinkScreen,
   appLinkStep,
   pendingAppLink,
   subscribePendingAppLink,
   takePendingAppLink,
 } from './data/pendingAppLink';
 import { listenForPushTaps } from './data/pushTaps';
+import { openAppLink } from './lib/openAppLink';
 import { openPushTarget } from './lib/openPushTarget';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
@@ -235,9 +234,7 @@ function openPendingAppLink() {
   const step = appLinkStep(ready, ready ? navigationRef.getCurrentRoute() : undefined, pendingAppLink());
   if (step === 'wait') return;
   const link = takePendingAppLink();
-  if (step !== 'push' || !link) return;
-  const screen = appLinkScreen(link);
-  navigationRef.dispatch(StackActions.push(screen.name, screen.params));
+  if (step === 'push' && link) openAppLink(navigationRef, link);
 }
 
 export function RootNavigator() {
