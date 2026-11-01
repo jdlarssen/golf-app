@@ -48,6 +48,7 @@ export const BOARD_TEXT = {
     over1: 'bogey',
     over2: 'dobbel bogey eller verre',
   },
+  legendPar: 'Par',
   legendRecent: 'Siste 5 hull',
   showAll: 'Vis alle {count} spillere',
   showFewer: 'Vis færre',
@@ -172,7 +173,6 @@ export const BOARD_TEAM_TEXT = {
  * Ingen av dem finnes i `leaderboard.board`.
  */
 export const BOARD_PATSOME_TEXT = {
-  colPar: 'Par',
   /** Lagets poeng per del, og overskriftene i tabellen. */
   fourball: '4BBB',
   greensome: 'Greensome',
