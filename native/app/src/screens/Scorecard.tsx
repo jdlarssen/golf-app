@@ -79,7 +79,7 @@ import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/score
 import { resolveScorecardStamp } from '../../../../lib/scorecard/scorecardStamp';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
-import { isActiveForGame } from '../../../../lib/sync/queueScope';
+import { isBlockingItem } from '../../../../lib/sync/queueScope';
 import {
   ScorecardGrid,
   type EnteredByName,
@@ -229,20 +229,27 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     };
   }, []);
 
+  // #2752: leveringen på andre halvdel av en delt cup-dag fryser også første
+  // halvdel (#1466), så en retting på hull 1–9 i køen må ut først. Ellers avviser
+  // serveren den, og slaget er tapt. Samme regel som nettets lever-side.
+  const frozenSibling =
+    bundle?.game.holeSegment === 'back9' ? (bundle.segmentSibling?.gameId ?? null) : null;
+
   // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
   // og intervallet prøver igjen.
   const refreshQueue = useCallback(async () => {
+    const blocking = frozenSibling ? [gameId, frozenSibling] : [gameId];
     try {
       const db = await getDb();
       const [items, teeShotItems] = await Promise.all([listQueue(db), listTeeShotQueue(db)]);
       setQueueCounts({
-        strokes: items.filter((item) => isActiveForGame(item, gameId)).length,
-        teeShots: teeShotItems.filter((item) => isActiveForGame(item, gameId)).length,
+        strokes: items.filter((item) => isBlockingItem(item, blocking)).length,
+        teeShots: teeShotItems.filter((item) => isBlockingItem(item, blocking)).length,
       });
     } catch (err: unknown) {
       console.error('[Scorecard] listQueue', err);
     }
-  }, [gameId]);
+  }, [gameId, frozenSibling]);
 
   // Drain først (port 1), les så køen og den lokale basen. Rekkefølgen er
   // hele poenget: slagene skal ut FØR kortet kan fryses. Kjeden kjører hver
