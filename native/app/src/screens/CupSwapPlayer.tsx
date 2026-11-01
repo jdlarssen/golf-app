@@ -4,10 +4,12 @@
 // på serveren, så en feil her er serverens ord.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppCupSwapCandidates } from '../../../../lib/cup/appCupManageView';
+import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { CupOption } from '../components/cup/CupOption';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
+import { PickerMore, PickerNoMatch, PickerSearchField } from '../components/PickerSearch';
 import { fetchCupSwapCandidates, swapCupPlayer } from '../data/cupManage';
 import { backTo } from '../lib/backTo';
 import { CUP_TEXT } from '../lib/cupCopy';
@@ -18,15 +20,13 @@ import {
   swapFailureText,
 } from '../lib/cupManageCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
+import { ROUND_START_TEXT, showAllLine } from '../lib/leagueCopy';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
-/** Så mange kandidater før lista får et søk. */
-const SEARCH_FROM = 8;
-
 export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'>) {
   const { colors, ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const { cupId, gameId } = route.params;
   const [view, setView] = useState<AppCupSwapCandidates | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -35,6 +35,7 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(async () => {
     const result = await fetchCupSwapCandidates(cupId, gameId);
@@ -90,12 +91,14 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
   const outPlayer = view.out.find((option) => option.userId === outId);
   const inPlayer = view.in.find((option) => option.userId === inId);
   const ready = view.canSwap && outPlayer !== undefined && inPlayer !== undefined;
-  // En global admin kan velge blant alle, så lista trenger et søk. Den valgte står
-  // alltid, så du ser hvem linja under snakker om.
-  const needle = search.trim().toLowerCase();
-  const shownIn = view.in.filter(
-    (option) => option.userId === inId || option.name.toLowerCase().includes(needle),
-  );
+  // En global admin kan velge blant alle, så lista er den samme velgeren som
+  // medspillere og markør: noen rader, «Vis alle» og søk. Den valgte står i lista.
+  const reserves = pickerRows(view.in, {
+    query: search,
+    showAll,
+    nameOf: (option) => option.name,
+    keepIds: new Set(inId ? [inId] : []),
+  });
 
   const submit = async () => {
     if (!outId || !inId) return;
@@ -113,7 +116,8 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg, paddingBottom: insets.bottom + 24 }]}
+      {...KEYBOARD_SCROLL_PROPS}
+      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg, paddingBottom: bottomInset + 24 }]}
       testID="cup-swap-screen"
     >
       <View style={styles.head}>
@@ -158,18 +162,16 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
           <Text accessibilityRole="header" style={[styles.heading, { color: colors.muted }]}>
             {SWAP_TEXT.inLabel}
           </Text>
-          {view.in.length > SEARCH_FROM ? (
-            <TextInput
+          {view.in.length > PICKER_VISIBLE_ROWS ? (
+            <PickerSearchField
               value={search}
-              onChangeText={setSearch}
-              placeholder={MANAGE_APP_TEXT.swapSearch}
-              placeholderTextColor={colors.muted}
-              autoCorrect={false}
-              style={[styles.search, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+              onChange={setSearch}
+              label={ROUND_START_TEXT.searchPlaceholder}
+              placeholder={ROUND_START_TEXT.searchPlaceholder}
               testID="cup-swap-search"
             />
           ) : null}
-          {shownIn.map((option) => (
+          {reserves.rows.map((option) => (
             <CupOption
               key={option.userId}
               label={option.name}
@@ -179,6 +181,17 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
               testID={`cup-swap-in-${option.userId}`}
             />
           ))}
+          {reserves.searching && reserves.total === 0 ? (
+            <PickerNoMatch text={ROUND_START_TEXT.noMatch} testID="cup-swap-no-match" />
+          ) : null}
+          {reserves.canExpand ? (
+            <PickerMore
+              label={showAll ? ROUND_START_TEXT.showFewer : showAllLine(reserves.total)}
+              expanded={showAll}
+              onPress={() => setShowAll((value) => !value)}
+              testID="cup-swap-show-all"
+            />
+          ) : null}
           {ready ? (
             <View style={[styles.note, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="cup-swap-summary">
               <Text style={[styles.noteText, { color: colors.muted }]}>
@@ -225,7 +238,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 16, marginBottom: 6 },
   note: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 8 },
   noteText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
-  search: { minHeight: TAP, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, marginBottom: 8, fontSize: 14, fontFamily: FONTS.sans },
   actions: { paddingTop: 14 },
   failure: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
   retry: { minHeight: TAP, justifyContent: 'center', paddingHorizontal: 20, borderWidth: 1, borderRadius: 22 },
