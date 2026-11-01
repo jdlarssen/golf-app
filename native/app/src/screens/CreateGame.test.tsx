@@ -205,13 +205,19 @@ describe('CreateGame', () => {
   });
 
   it('bærer valgene gjennom alle fem stegene, står imot en feilet publisering, og bytter ut seg selv ved suksess', async () => {
+    let releasePublish!: (result: Awaited<ReturnType<typeof publishGame>>) => void;
     // Går gjennom alle fem veiviser-stegene i én flyt (bevisst — det er nettopp
     // det testen skal bevise). Tidsgrensen står i jest.config.js (#1872).
     publishGameMock
       // Første forsøk feiler: knappen skal ikke låse seg, og meldingen skal
       // være den norske setningen for koden — ikke en rå PostgREST-streng.
       .mockResolvedValueOnce({ ok: false, error: 'db_game' })
-      .mockResolvedValueOnce({ ok: true, gameId: 'new-game-1' });
+      // Andre forsøk holdes igjen, så testen kan trykke tilbake underveis (#2746).
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          releasePublish = resolve;
+        }),
+      );
     // #2441: Ola har ikke fullført profilen. Det stopper ikke publiseringen.
     // Per venter også, men er ikke valgt, og skal ikke telles med.
     fetchRosterCandidatesMock.mockResolvedValueOnce([
@@ -315,6 +321,16 @@ describe('CreateGame', () => {
     expect(navigation.replace).not.toHaveBeenCalled();
 
     await fireEvent.press(screen.getByTestId('create-publish'));
+
+    // #2746: tilbake mens publiseringen pågår gjør ingenting, så svaret lander
+    // på steget det ble sendt fra.
+    await act(async () => {
+      mockPreventRemove.callback!({ data: { action: { type: 'GO_BACK' } } });
+    });
+    expect(screen.getByTestId('create-publish')).toBeTruthy();
+    await act(async () => {
+      releasePublish({ ok: true, gameId: 'new-game-1' });
+    });
 
     expect(publishGameMock).toHaveBeenCalledTimes(2);
     // #1954 D2: samme runde-id begge gangene, så et forsøk som faktisk lagret
