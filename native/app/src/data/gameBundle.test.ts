@@ -129,6 +129,22 @@ describe('gameBundle', () => {
     expect(fetched.game.roundReport).toBeNull();
   });
 
+  it('#2751: lagenes utslagsvalg rir med på spillet', async () => {
+    riggFetch({ patsome_tee_starters: [{ team_number: 2, tee_starter_user_id: 'marte' }] });
+    const { refreshGameBundle } = bundleModule();
+
+    const fetched = await refreshGameBundle(GAME);
+
+    expect(fetched.game.patsomeTeeStarters).toEqual([{ teamNumber: 2, teeStarterUserId: 'marte' }]);
+  });
+
+  it('#2751: et spill uten valg gir tom liste, ikke undefined', async () => {
+    riggFetch();
+    const { refreshGameBundle } = bundleModule();
+
+    expect((await refreshGameBundle(GAME)).game.patsomeTeeStarters).toEqual([]);
+  });
+
   it('#2632: round_report er med i select-lista', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
     const gamesQuery = queryStub({ data: GAME_ROW, error: null });
@@ -153,6 +169,7 @@ describe('gameBundle', () => {
       id: GAME,
       name: 'Torsdagsrunden',
       status: 'active',
+      patsomeTeeStarters: [],
       gameMode: 'stroke_play',
       modeConfig: { foo: 1 },
       courseId: 'course-1',
@@ -332,7 +349,7 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it.each([[2], [3], [6], [7]])(
+  it.each([[2], [3], [6], [7], [12]])(
     'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
     async (version: number) => {
       // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på

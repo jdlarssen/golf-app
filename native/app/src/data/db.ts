@@ -20,11 +20,25 @@ import type {
 
 export type { ConflictRecord, LocalScore, LocalTeeShot, SyncQueueItem, TeeShotQueueItem };
 
+/**
+ * #2751: utslagsvalget slik telefonen kjenner det. Webben har ingen slik tabell;
+ * valget skrives der rett til serveren, så typen bor her.
+ */
+export interface LocalTeeStarter {
+  gameId: string;
+  teamNumber: number;
+  /** Spilleren som slår ut på de odde hullene. */
+  teeStarterId: string;
+  /** Sann til serveren har svart med valget som gjelder. */
+  pending: boolean;
+  attemptCount: number;
+}
+
 /** Eksportert for migrasjonstesten — filnavnet er skjemaets identitet. */
 export const DATABASE_NAME = 'torny.db';
 
 /** Bumpes når skjemaet endres; styrer `PRAGMA user_version`-migrasjonen. */
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 /**
  * Nøkkelen for én score-rad. Speiler `scoreKey` i `lib/sync/db.ts` — den kan
@@ -156,6 +170,22 @@ CREATE TABLE IF NOT EXISTS tee_shot_queue (
 CREATE INDEX IF NOT EXISTS tee_shot_queue_created_idx ON tee_shot_queue (created_at);
 `;
 
+/**
+ * #2751: utslagsvalget i Patsome og foursomes, ett per spill og lag. Trykket
+ * lagres her og sendes senere med `set_tee_starter_if_unset`. Rent additiv: en
+ * telefon på v5 beholder hver rad.
+ */
+export const MIGRATION_V6 = `
+CREATE TABLE IF NOT EXISTS tee_starters (
+  game_id TEXT NOT NULL,
+  team_number INTEGER NOT NULL,
+  tee_starter_id TEXT NOT NULL,
+  pending INTEGER NOT NULL DEFAULT 1,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (game_id, team_number)
+);
+`;
+
 /** Verdiene `device_settings` hadde da v4 fjernet den, til noen tar dem. */
 const legacyDeviceSettings = new Map<string, string>();
 
@@ -184,10 +214,10 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     'PRAGMA user_version;',
   );
   const current = versionRow?.user_version ?? 0;
-  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → … → 5,
-  // en enhet som alt kjørte N2 går 1 → 2 → … → 5 og beholder radene sine.
-  // Skrittene rører aldri spillernes data: 1–3 og 5 legger til tabeller, og 4
-  // fjerner bare `device_settings`, etter at verdiene i den er lest.
+  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → … → 6,
+  // en enhet som alt kjørte N2 går 1 → 2 → … → 6 og beholder radene sine.
+  // Skrittene rører aldri spillernes data: 1–3, 5 og 6 legger til tabeller, og
+  // 4 fjerner bare `device_settings`, etter at verdiene i den er lest.
   if (current < 1) await db.execAsync(MIGRATION_V1);
   if (current < 2) await db.execAsync(MIGRATION_V2);
   if (current < 3) await db.execAsync(MIGRATION_V3);
@@ -196,6 +226,7 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync(MIGRATION_V4);
   }
   if (current < 5) await db.execAsync(MIGRATION_V5);
+  if (current < 6) await db.execAsync(MIGRATION_V6);
   if (current < SCHEMA_VERSION) {
     // PRAGMA tar ikke bind-parametre; SCHEMA_VERSION er en tallkonstant i denne
     // fila, aldri brukerdata.
@@ -288,6 +319,7 @@ export async function wipeLocalData(): Promise<void> {
     await txn.runAsync('DELETE FROM cache_entries;');
     await txn.runAsync('DELETE FROM tee_shots;');
     await txn.runAsync('DELETE FROM tee_shot_queue;');
+    await txn.runAsync('DELETE FROM tee_starters;');
   });
 }
 
@@ -316,6 +348,14 @@ interface TeeShotRow {
   entered_by: string;
   client_updated_at: string;
   server_updated_at: string | null;
+}
+
+interface TeeStarterRow {
+  game_id: string;
+  team_number: number;
+  tee_starter_id: string;
+  pending: number;
+  attempt_count: number;
 }
 
 interface TeeShotQueueRow {
@@ -398,6 +438,16 @@ function toLocalTeeShot(row: TeeShotRow): LocalTeeShot {
     enteredBy: row.entered_by,
     clientUpdatedAt: row.client_updated_at,
     serverUpdatedAt: row.server_updated_at,
+  };
+}
+
+function toLocalTeeStarter(row: TeeStarterRow): LocalTeeStarter {
+  return {
+    gameId: row.game_id,
+    teamNumber: row.team_number,
+    teeStarterId: row.tee_starter_id,
+    pending: row.pending === 1,
+    attemptCount: row.attempt_count,
   };
 }
 
@@ -761,4 +811,91 @@ export async function markTeeShotQueueAbandoned(
       WHERE id = $id;`,
     { $id: id, $attempt_count: patch.attemptCount, $last_error: patch.lastError, $abandoned_at: patch.abandonedAt },
   );
+}
+
+// ---------------------------------------------------------------------------
+// #2751: utslagsvalget. Ingen stempler: første valg som når serveren, gjelder.
+// ---------------------------------------------------------------------------
+
+export async function getTeeStarter(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+  teamNumber: number,
+): Promise<LocalTeeStarter | undefined> {
+  const row = await db.getFirstAsync<TeeStarterRow>(
+    'SELECT * FROM tee_starters WHERE game_id = $game_id AND team_number = $team_number;',
+    { $game_id: gameId, $team_number: teamNumber },
+  );
+  return row ? toLocalTeeStarter(row) : undefined;
+}
+
+/** Skriver valget bare når laget ikke har en rad: heller ikke telefonen overskriver et valg. */
+export async function insertTeeStarterIfAbsent(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+  teamNumber: number,
+  teeStarterId: string,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT OR IGNORE INTO tee_starters (game_id, team_number, tee_starter_id, pending, attempt_count)
+     VALUES ($game_id, $team_number, $tee_starter_id, 1, 0);`,
+    { $game_id: gameId, $team_number: teamNumber, $tee_starter_id: teeStarterId },
+  );
+}
+
+export async function listTeeStartersForGame(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+): Promise<LocalTeeStarter[]> {
+  const rows = await db.getAllAsync<TeeStarterRow>(
+    'SELECT * FROM tee_starters WHERE game_id = $game_id ORDER BY team_number;',
+    { $game_id: gameId },
+  );
+  return rows.map(toLocalTeeStarter);
+}
+
+export async function listPendingTeeStarters(db: SQLite.SQLiteDatabase): Promise<LocalTeeStarter[]> {
+  const rows = await db.getAllAsync<TeeStarterRow>(
+    'SELECT * FROM tee_starters WHERE pending = 1 ORDER BY game_id, team_number;',
+  );
+  return rows.map(toLocalTeeStarter);
+}
+
+/** Serveren svarte: raden tar valget som gjelder, og er ferdig sendt. */
+export async function settleTeeStarter(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+  teamNumber: number,
+  teeStarterId: string,
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE tee_starters SET tee_starter_id = $tee_starter_id, pending = 0
+      WHERE game_id = $game_id AND team_number = $team_number;`,
+    { $game_id: gameId, $team_number: teamNumber, $tee_starter_id: teeStarterId },
+  );
+}
+
+/** Et mislykket forsøk. `pending: false` gir opp: raden står som hint på denne telefonen. */
+export async function markTeeStarterAttempt(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+  teamNumber: number,
+  { attemptCount, pending }: { attemptCount: number; pending: boolean },
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE tee_starters SET attempt_count = $attempt_count, pending = $pending
+      WHERE game_id = $game_id AND team_number = $team_number;`,
+    { $game_id: gameId, $team_number: teamNumber, $attempt_count: attemptCount, $pending: pending ? 1 : 0 },
+  );
+}
+
+export async function deleteTeeStarter(
+  db: SQLite.SQLiteDatabase,
+  gameId: string,
+  teamNumber: number,
+): Promise<void> {
+  await db.runAsync('DELETE FROM tee_starters WHERE game_id = $game_id AND team_number = $team_number;', {
+    $game_id: gameId,
+    $team_number: teamNumber,
+  });
 }
