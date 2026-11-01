@@ -50,7 +50,7 @@ describe('getRoomCups', () => {
     expect(res).toEqual({
       ok: true,
       finishedCount: 1,
-      live: [{ id: 'a', name: 'Cup a', created_by: 'someone', group_id: null, playing: true, progress: { played: 1, total: 3 } }],
+      live: [{ id: 'a', name: 'Cup a', status: 'active', created_by: 'someone', group_id: null, playing: true, progress: { played: 1, total: 3 } }],
     });
   });
 
