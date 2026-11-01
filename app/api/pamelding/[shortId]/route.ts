@@ -5,7 +5,7 @@ import {
   buildAppRoundInviteView,
   type AppRoundInviteAnswer,
 } from '@/lib/games/appRoundInviteView';
-import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { getGameByShortId, type ShortIdGame } from '@/lib/games/getGameByShortId';
 import { loadSignupFacts } from '@/lib/games/loadSignupFacts';
 import {
   registerForOpenGameCore,
@@ -33,11 +33,13 @@ import { getAdminClient } from '@/lib/supabase/admin';
 //        500 { error: 'load_failed' }
 //   POST { intent: 'join', src? } | { intent: 'request', message? }
 //        200 { status: 'joined', gameId }   (også når du alt er på lista)
-//        200 { status: 'requested' }        (også når forespørselen alt finnes)
+//        200 { status: 'requested' }        (også når forespørselen alt venter)
 //        400 { error: 'bad_request' | 'message_too_long' }
 //        401 { error: 'unauthorized' }      404 { error: 'game_not_found' }
 //        409 { error: 'game_locked' | 'signup_closed' | 'game_full' | 'wrong_mode'
 //                  | 'use_web' | 'profile_incomplete' }
+//            `wrong_mode` også for en gammel forespørsel som ikke venter lenger:
+//            den kan ikke sendes på nytt, og «sendt» ville vært usant.
 //        429 { error: 'rate_limited' }      500 { error: 'db_error' }
 
 type RouteContext = { params: Promise<{ shortId: string }> };
@@ -110,10 +112,10 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     const ip = await getClientIp();
     if (body.intent === 'join') {
       const result = await registerForOpenGameCore({ shortId, userId, ip, side: null, src: body.src });
-      return result.ok ? joined(result.gameId) : failure(result.error, game.id);
+      return result.ok ? joined(result.gameId) : await failure(result.error, game, userId);
     }
     const result = await requestApprovalCore({ shortId, userId, ip, message: body.message });
-    return result.ok ? requested() : failure(result.error, game.id);
+    return result.ok ? requested() : await failure(result.error, game, userId);
   } catch (err) {
     console.error('[api/pamelding/[shortId]] signup failed', err);
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
@@ -148,14 +150,21 @@ function conflict(error: string) {
   return NextResponse.json({ error }, { status: 409 });
 }
 
-function failure(error: ActionError, gameId: string) {
+async function failure(error: ActionError, game: ShortIdGame, userId: string) {
   switch (error) {
     // Two quick taps: the loser's row is the winner's, and the state is what
     // the player asked for.
     case 'already_registered':
-      return joined(gameId);
-    case 'already_requested':
-      return requested();
+      return joined(game.id);
+    // The unique key answers for any old row, also one the organiser rejected.
+    // Only a request still waiting is a «sent»; the organiser hears of no other.
+    case 'already_requested': {
+      const viewer = await loadSignupFacts(game, userId);
+      const offer = signupOffer({ game, ...viewer });
+      if (offer === 'pending') return requested();
+      if (offer === 'in_game') return joined(game.id);
+      return conflict('wrong_mode');
+    }
     case 'message_too_long':
       return NextResponse.json({ error }, { status: 400 });
     case 'not_authed':
