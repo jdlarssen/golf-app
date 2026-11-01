@@ -17,11 +17,15 @@
 //   GET  /api/liga/{id}                    200 AppLeagueView · 401 · 404 · 500
 //   POST /api/liga/rounds/{roundId}/start  { coPlayerIds: string[] }
 //        200 { gameId } · 400 · 401 · 404 · 409 { error: LeagueStartRefusal } · 500
+//   GET  /api/liga/bli-med/{code}          200 AppLeagueJoinView · 401 · 404 · 500  (#2748)
+//   POST /api/liga/bli-med/{code}          200 { leagueId } · 401 · 404
+//        409 { error: 'closed' | 'profile_incomplete' } · 500 { error: 'read_failed' | 'save_failed' }
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som
 // `startGame.ts`). HTTP-status oversettes én gang, her. Teksten bor i
 // `lib/leagueCopy.ts`.
 import type {
+  AppLeagueJoinView,
   AppLeagueListResponse,
   AppLeagueSummary,
   AppLeagueView,
@@ -154,4 +158,66 @@ export async function startLeagueRound(
   if (call.status === 401) return { ok: false, reason: 'unauthorized' };
   if (call.status === 404) return { ok: false, reason: 'not_found' };
   return { ok: false, reason: 'start_failed' };
+}
+
+/** Hva ligalenka viser (#2748). */
+export type LeagueJoinLoadResult =
+  | { ok: true; view: AppLeagueJoinView }
+  | { ok: false; reason: LeagueLoadFailure };
+
+/**
+ * Hvorfor «Bli med» ikke gikk gjennom (#2748): rutas egne koder og appens egen
+ * tilstand før kallet. En kode vi ikke kjenner på wiren blir `save_failed`.
+ */
+export type LeagueJoinFailure =
+  | WebApiFailure
+  | 'not_found'
+  | 'closed'
+  | 'profile_incomplete'
+  | 'read_failed'
+  | 'save_failed';
+
+export type LeagueJoinResult = { ok: true; leagueId: string } | { ok: false; reason: LeagueJoinFailure };
+
+/** Utfallene ruta sender. En 200 med noe annet er ikke en liga å tegne. */
+const JOIN_DECISIONS: readonly unknown[] = [
+  'can_join',
+  'already_joined',
+  'closed',
+  'profile_incomplete',
+] satisfies AppLeagueJoinView['decision'][];
+
+const leagueJoinRoute = (code: string) => `/api/liga/bli-med/${encodeURIComponent(code)}`;
+
+/** Ligaen bak lenka: navn, runder, antall påmeldte og om du kan bli med. */
+export async function fetchLeagueJoin(code: string): Promise<LeagueJoinLoadResult> {
+  const call = await callWebRoute(leagueJoinRoute(code), 'GET');
+  if (!call.ok) return call;
+  if (call.status !== 200) return { ok: false, reason: loadFailureFor(call.status) };
+  const view = call.body as Partial<AppLeagueJoinView>;
+  return view.league && Array.isArray(view.rounds) && JOIN_DECISIONS.includes(view.decision)
+    ? { ok: true, view: view as AppLeagueJoinView }
+    : { ok: false, reason: 'load_failed' };
+}
+
+/**
+ * «Bli med»: du står på lista med en gang, og bekreftet. Et kall til gir samme
+ * svar og ingen ny rad. Går ALDRI i sync-køen: uten nett stopper den før kallet.
+ */
+export async function joinLeague(code: string): Promise<LeagueJoinResult> {
+  const call = await callWebRoute(leagueJoinRoute(code), 'POST');
+  if (!call.ok) return call;
+  if (call.status === 200) {
+    const { leagueId } = call.body;
+    return typeof leagueId === 'string' && leagueId !== ''
+      ? { ok: true, leagueId }
+      : { ok: false, reason: 'save_failed' };
+  }
+  if (call.status === 401) return { ok: false, reason: 'unauthorized' };
+  if (call.status === 404) return { ok: false, reason: 'not_found' };
+  const { error } = call.body;
+  if (call.status === 409 && (error === 'closed' || error === 'profile_incomplete')) {
+    return { ok: false, reason: error };
+  }
+  return { ok: false, reason: error === 'read_failed' ? 'read_failed' : 'save_failed' };
 }

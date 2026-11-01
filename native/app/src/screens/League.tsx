@@ -3,7 +3,8 @@
 // Fra toppen: navnet, status og sesong, formatlinja («Stableford netto ·
 // beste 5 av 7»), rundeinnstillingene i en simulatorliga (foldet, se
 // `SimSettingsCard`), den åpne runden med «hvem har spilt» og «Spill runden»,
-// sesongtabellen og rundelista.
+// sesongtabellen, rundelista og «Del lenka» (#2748) for en deltaker når lenka
+// står på.
 //
 // Alt kommer fra `GET /api/liga/[id]` (`data/league.ts`): tabellen, de
 // effektive innstillingene og hvem som har levert regnes på serveren, og
@@ -12,8 +13,8 @@
 // alt har hentet, med merknaden fra tegning 6 og «Spill runden» dempet; uten
 // noe hentet står feilen med «Prøv igjen».
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
@@ -41,9 +42,19 @@ import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
 export function League({ navigation, route }: ScreenProps<'League'>) {
-  const { colors } = useTheme();
+  const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
   const { leagueId } = route.params;
+  // #2748: kvitteringen etter «Bli med». Avledet av parameteren, og nullstilt
+  // når siden mister fokus, ellers sto den der igjen neste gang (som på Profil).
+  const joined = route.params.joined === true;
+  useEffect(
+    () =>
+      navigation.addListener('blur', () => {
+        navigation.setParams({ joined: false });
+      }),
+    [navigation],
+  );
   // #2638: varslene om at en runde er åpen eller stenger snart, lenker hit.
   useMarkVisitRead('league', leagueId);
   const [view, setView] = useState<AppLeagueView | null>(null);
@@ -117,6 +128,14 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
         </Text>
       </View>
 
+      {joined ? (
+        <View style={[ui.banner, styles.joined]}>
+          <Text style={ui.body} testID="league-joined-banner">
+            {LEAGUE_TEXT.joinedBanner}
+          </Text>
+        </View>
+      ) : null}
+
       {stale ? (
         <Text style={[styles.stale, { color: colors.muted }]} testID="league-stale">
           {LEAGUE_TEXT.stale}
@@ -162,6 +181,21 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
 
       <SectionHead title={LEAGUE_TEXT.rounds} />
       <RoundList view={view} now={now} />
+
+      {/* #2748: adressen og regelen er serverens (`participantShareUrl`). */}
+      {league.shareUrl ? (
+        <View testID="league-share">
+          <SectionHead title={LEAGUE_TEXT.shareHeading} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => shareLink(league.shareUrl)}
+            style={[ui.buttonSecondary, styles.share]}
+            testID="league-share-link"
+          >
+            <Text style={ui.buttonSecondaryText}>{LEAGUE_TEXT.shareButton}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 
@@ -186,6 +220,14 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
     if (!round.ready) return { kind: 'note', text: LEAGUE_TEXT.missingSetup };
     return offline ? { kind: 'play-offline' } : { kind: 'play', onPress: onPlay };
   }
+}
+
+/** Telefonens delingsark med lenka. Å lukke arket er ikke en feil. */
+function shareLink(url: string | null) {
+  if (!url) return;
+  Share.share({ message: url }).catch((err: unknown) => {
+    console.error('[League] deling feilet', err);
+  });
 }
 
 /**
@@ -230,6 +272,9 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
   season: { ...interLine(12, 16), fontFamily: FONTS.sans },
   format: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 6 + interLine(13, 16).marginTop },
+  // Kortene på siden står 16 fra kanten.
+  joined: { marginHorizontal: 16, marginTop: 12 },
+  share: { marginHorizontal: 16, marginTop: 0 },
   stale: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 6, paddingHorizontal: 20 },
   sectionHead: {
     ...interLine(12, 15),

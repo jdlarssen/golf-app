@@ -99,6 +99,31 @@ function fakeNavigation(routes: Route[]): BackNavigation & {
   };
 }
 
+// #2748: «Bli med i liga» ligger rett under Hjem, og er borte etter trykket.
+describe('skjermen ligalenka åpner', () => {
+  const join: Route = { name: 'LeagueJoin', params: { code: 'abcd2345' } };
+  const league = (leagueId: string): Route => ({ name: 'League', params: { leagueId } });
+
+  it('[Hjem, Bli med]: ligaen tar skjemaets plass', () => {
+    expect(backStep([HOME, join], 'League', { leagueId: 'l1', joined: true })).toBe('replace');
+    expect(keepBelow([HOME, join], 'League', { leagueId: 'l1' })).toBe(1);
+  });
+
+  it('ligger ligaen under, går det tilbake til den uansett kvittering', () => {
+    expect(backStep([HOME, league('l1'), join], 'League', { leagueId: 'l1' })).toBe('popTo');
+    expect(backStep([HOME, league('l1'), join], 'League', { leagueId: 'l1', joined: true })).toBe('popTo');
+  });
+
+  it('en annen liga under er ikke samme liga', () => {
+    expect(backStep([HOME, league('l2'), join], 'League', { leagueId: 'l1' })).toBe('replace');
+    expect(keepBelow([HOME, league('l2'), join], 'League', { leagueId: 'l1' })).toBe(2);
+  });
+
+  it('Hjem står over skjermen', () => {
+    expect(keepBelow([HOME, join], 'LeagueJoin', { code: 'zzzz9999' })).toBe(1);
+  });
+});
+
 describe('backTo og openOrReturn', () => {
   it('backTo går tilbake når målet ligger under', () => {
     const nav = fakeNavigation([HOME, game('g1'), card('g1')]);

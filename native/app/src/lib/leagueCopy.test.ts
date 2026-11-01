@@ -15,16 +15,22 @@ import type { AppLeagueRound } from '../../../../lib/league/appLeagueView';
 import type { LeagueStartFailure } from '../data/league';
 import { isFinishedSentence } from '../test/copy';
 import {
+  LEAGUE_JOIN_TEXT,
   LEAGUE_TEXT,
   ROUND_START_TEXT,
   CHECKLIST_TEXT,
   SIM_SETTINGS_TEXT,
   START_REFUSAL_TEXT,
   WINDOW_CHIP,
+  describeLeagueJoinFailure,
   describeLeagueLoadFailure,
   describeLeagueStartRefusal,
   formatLine,
   homeRoundLine,
+  joinFormatLine,
+  joinLateLine,
+  joinPlayersLine,
+  joinRoundsLine,
   nextRoundOf,
   nextRoundOpens,
   openRoundOf,
@@ -349,5 +355,120 @@ describe('navnene (tegningene: fornavn)', () => {
       'Deg, Martin, Ukjent spiller',
       'Martin',
     ]);
+  });
+});
+
+// #2748: «Bli med i liga», skjermen ligalenka åpner.
+describe('LEAGUE_JOIN_TEXT', () => {
+  const join = source.liga.join;
+
+  it('har nettsidens ord', () => {
+    expect({
+      kicker: LEAGUE_JOIN_TEXT.kicker,
+      placeSimulator: LEAGUE_JOIN_TEXT.placeSimulator,
+      placeAnyCourse: LEAGUE_JOIN_TEXT.placeAnyCourse,
+      noRounds: LEAGUE_JOIN_TEXT.noRounds,
+      invite: LEAGUE_JOIN_TEXT.invite,
+      joinButton: LEAGUE_JOIN_TEXT.joinButton,
+      allPlayed: LEAGUE_JOIN_TEXT.allPlayed,
+      closed: LEAGUE_JOIN_TEXT.closed,
+      seeTable: LEAGUE_JOIN_TEXT.seeTable,
+      profileIncomplete: LEAGUE_JOIN_TEXT.profileIncomplete,
+      completeProfileButton: LEAGUE_JOIN_TEXT.completeProfile,
+      joinedBanner: LEAGUE_TEXT.joinedBanner,
+      notFound: LEAGUE_JOIN_TEXT.notFound,
+      readFailed: LEAGUE_JOIN_TEXT.readFailed,
+      saveFailed: LEAGUE_JOIN_TEXT.saveFailed,
+      joinPending: LEAGUE_JOIN_TEXT.joinPending,
+      shareHeading: LEAGUE_TEXT.shareHeading,
+    }).toEqual({
+      kicker: join.kicker,
+      placeSimulator: join.placeSimulator,
+      placeAnyCourse: join.placeAnyCourse,
+      noRounds: join.noRounds,
+      invite: join.invite,
+      joinButton: join.joinButton,
+      allPlayed: join.allPlayed,
+      closed: join.closed,
+      seeTable: join.seeTable,
+      profileIncomplete: join.profileIncomplete,
+      completeProfileButton: join.completeProfileButton,
+      joinedBanner: join.joinedBanner,
+      notFound: join.errors.not_found,
+      readFailed: join.errors.read_failed,
+      saveFailed: join.errors.save_failed,
+      joinPending: player.joinPending,
+      shareHeading: source.liga.shareLink.heading,
+    });
+  });
+
+  it('feilene under knappen er ferdige setninger', () => {
+    for (const reason of ['offline', 'network', 'no-web-base-url', 'unauthorized', 'read_failed', 'save_failed'] as const) {
+      expect(isFinishedSentence(describeLeagueJoinFailure(reason))).toBe(true);
+    }
+  });
+});
+
+describe('joinFormatLine', () => {
+  const league = { id: 'l', name: 'L', format: 'stableford', isSimulator: false, courseName: null } as const;
+
+  it.each([
+    ['simulator', { ...league, isSimulator: true, courseName: 'Larvik GK' }, 'Stableford · Simulator'],
+    ['fast bane', { ...league, courseName: 'Larvik GK' }, 'Stableford · Larvik GK'],
+    ['valgfri bane', league, 'Stableford · Valgfri bane per runde'],
+    ['slagspill', { ...league, format: 'stroke' as const }, 'Slagspill · Valgfri bane per runde'],
+  ])('%s', (_label, row, line) => {
+    expect(joinFormatLine(row)).toBe(line);
+  });
+});
+
+describe('joinRoundsLine', () => {
+  const round = (sequence: number, opensAt: string, closesAt: string) => ({ sequence, opensAt, closesAt });
+
+  it('ingen runder ennå', () => {
+    expect(joinRoundsLine([])).toBe(LEAGUE_JOIN_TEXT.noRounds);
+  });
+
+  it('én runde er entall', () => {
+    expect(joinRoundsLine([round(1, '2026-11-02T12:00:00Z', '2026-11-15T12:00:00Z')])).toBe(
+      '1 runde · 2. nov 2026 – 15. nov 2026',
+    );
+  });
+
+  it('flere runder går fra første åpning til siste stenging', () => {
+    expect(
+      joinRoundsLine([
+        round(1, '2026-11-02T12:00:00Z', '2026-11-15T12:00:00Z'),
+        round(2, '2026-12-02T12:00:00Z', '2027-02-07T12:00:00Z'),
+      ]),
+    ).toBe('2 runder · 2. nov 2026 – 7. feb 2027');
+  });
+});
+
+describe('joinPlayersLine', () => {
+  it.each([
+    [0, 'Ingen påmeldt ennå'],
+    [1, '1 påmeldt'],
+    [150, '150 påmeldt'],
+  ])('%i', (count, line) => {
+    expect(joinPlayersLine(count)).toBe(line);
+  });
+});
+
+describe('joinLateLine', () => {
+  it('ingenting når ingen runde har stengt', () => {
+    expect(joinLateLine({ kind: 'none' })).toBeNull();
+  });
+
+  it.each([
+    [[1], 'Runde 1 er spilt. Du er med fra neste runde.'],
+    [[1, 2], 'Runde 1 og 2 er spilt. Du er med fra neste runde.'],
+    [[1, 2, 3], 'Runde 1, 2 og 3 er spilt. Du er med fra neste runde.'],
+  ])('rundene som er spilt: %j', (played, line) => {
+    expect(joinLateLine({ kind: 'from_next_round', played })).toBe(line);
+  });
+
+  it('alle rundene er spilt', () => {
+    expect(joinLateLine({ kind: 'all_played', played: [1, 2] })).toBe(LEAGUE_JOIN_TEXT.allPlayed);
   });
 });

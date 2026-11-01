@@ -3,9 +3,9 @@
 // skriv koden).
 //
 // Ingen `next`-redirect: `onAuthStateChange` i `App.tsx` bytter til stacken av
-// seg selv når `verifyOtp` har satt sesjonen. Den eneste lenka som kan vente
-// på innloggingen, er venne-lenka (#2627): koden står i
-// `data/pendingFriendLink.ts`, og navigatoren åpner «Bli venn med …» etterpå.
+// seg selv når `verifyOtp` har satt sesjonen. En lenke som venter på innloggingen
+// (venne-lenka #2627, ligalenka #2748), står i `data/pendingAppLink.ts`, og
+// navigatoren åpner skjermen etterpå. Båndet sier hva som venter.
 //
 // #2216: **kode-veien går gjennom nettsiden.** «Send meg kode» kaller
 // `/api/auth/send-code` (`data/loginCode.ts`) med nettsidens sperrer:
@@ -57,6 +57,7 @@ import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  appLinkLoginLine,
   APP_NAME_FALLBACK,
   LOGIN_TEXT,
   OTP_LENGTH,
@@ -80,8 +81,7 @@ import {
 } from '../devLogin';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { DashedRing } from '../components/icons/Icons';
-import { usePendingFriendCode } from '../data/pendingFriendLink';
-import { FRIEND_LINK_TEXT } from '../lib/friendsCopy';
+import { usePendingAppLink } from '../data/pendingAppLink';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
 import { StatusBarBand } from '../components/StatusBarBand';
@@ -114,7 +114,7 @@ export function Login() {
   // Løses én gang per montering: env er bakt inn i bundelen og endrer seg ikke.
   const [devConfig] = useState(() => resolveDevLoginConfig(readDevLoginEnv()));
   const [devUsers, setDevUsers] = useState<DevLoginUser[]>([]);
-  const friendLinkWaiting = usePendingFriendCode() !== null;
+  const appLink = usePendingAppLink();
   // Koden sendes av seg selv når det siste sifferet kommer. Refen hindrer at
   // samme kode sendes to ganger før svaret er tilbake.
   const submittedRef = useRef(false);
@@ -282,26 +282,26 @@ export function Login() {
               {LOGIN_TEXT.taglinePost}
             </Text>
           ) : null}
-          {friendLinkWaiting ? (
+          {appLink ? (
             <View
-              style={[styles.friendLink, { backgroundColor: withAlpha(colors.onStrongWarm, 0.1) }]}
-              testID="login-friend-link"
+              style={[styles.appLink, { backgroundColor: withAlpha(colors.onStrongWarm, 0.1) }]}
+              testID="login-app-link"
             >
               {/* Pynt: et ledig sete, som «+»-ringen på Venner. */}
               <View
-                style={styles.friendLinkRing}
+                style={styles.appLinkRing}
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               >
                 <DashedRing color={withAlpha(colors.onStrongWarm, 0.7)} kind="score" />
-                <Text style={[styles.friendLinkPlus, { color: colors.onStrongWarm }]}>+</Text>
+                <Text style={[styles.appLinkPlus, { color: colors.onStrongWarm }]}>+</Text>
               </View>
-              <View style={styles.friendLinkText}>
-                <Text style={[styles.friendLinkTitle, { color: colors.onStrongWarm }]}>
-                  {FRIEND_LINK_TEXT.loginTitle}
+              <View style={styles.appLinkText}>
+                <Text style={[styles.appLinkTitle, { color: colors.onStrongWarm }]}>
+                  {appLinkLoginLine(appLink).title}
                 </Text>
-                <Text style={[styles.friendLinkBody, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
-                  {FRIEND_LINK_TEXT.loginBody}
+                <Text style={[styles.appLinkBody, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
+                  {appLinkLoginLine(appLink).body}
                 </Text>
               </View>
             </View>
@@ -639,12 +639,12 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans },
   // #2627: venne-lenka som venter, på designets plass for invitasjonslinja:
   // kort på 14 i radius og 12 innvendig, sirkel på 40, tekst 14 med 1,4.
-  friendLink: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 12 },
-  friendLinkRing: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  friendLinkPlus: { position: 'absolute', fontSize: 18, fontFamily: FONTS.sans },
-  friendLinkText: { flexShrink: 1 },
-  friendLinkTitle: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sansSemiBold },
-  friendLinkBody: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sans },
+  appLink: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 12 },
+  appLinkRing: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  appLinkPlus: { position: 'absolute', fontSize: 18, fontFamily: FONTS.sans },
+  appLinkText: { flexShrink: 1 },
+  appLinkTitle: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sansSemiBold },
+  appLinkBody: { fontSize: 14, lineHeight: 19.6, fontFamily: FONTS.sans },
   taglineGold: { fontFamily: FONTS.sansSemiBold },
   card: {
     marginTop: 20,

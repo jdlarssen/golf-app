@@ -25,6 +25,9 @@
 // stedet for å be om en admin spilleren ikke har.
 import type { SendLoginCodeError } from '../../../../lib/auth/loginCodeErrors';
 import { isNetworkFailureMessage } from '../data/timedFetch';
+import type { AppLink } from './appLinkUrl';
+import { FRIEND_LINK_TEXT } from './friendsCopy';
+import { LEAGUE_JOIN_TEXT } from './leagueCopy';
 import { OFFLINE_NOTE } from './rosterCopy';
 
 /**
@@ -103,6 +106,20 @@ const CODE_HINT_ANDROID = 'Koden har åtte siffer.';
 
 export function codeHintFor(os: string): string {
   return os === 'ios' ? LOGIN_TEXT.codeHint : CODE_HINT_ANDROID;
+}
+
+/**
+ * Linja i båndet når en lenke venter på innloggingen (#2627, #2748): hva som
+ * skjer etterpå. Uten navn: det vises ikke før innloggingen. Uttømmende, så en
+ * ny lenketype faller på `tsc`.
+ */
+export function appLinkLoginLine(link: AppLink): { title: string; body: string } {
+  switch (link.kind) {
+    case 'friend':
+      return { title: FRIEND_LINK_TEXT.loginTitle, body: FRIEND_LINK_TEXT.loginBody };
+    case 'league':
+      return { title: LEAGUE_JOIN_TEXT.loginTitle, body: LEAGUE_JOIN_TEXT.loginBody };
+  }
 }
 
 /**

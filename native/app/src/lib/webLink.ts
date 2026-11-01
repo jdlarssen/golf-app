@@ -87,8 +87,8 @@ export function webUrl(path: string): WebUrlResult {
  * Åpne en side på webben i enhetens nettleser.
  *
  * `Linking` er del av react-native — ingen ny modul. Vi VIL at lenka åpnes i
- * nettleseren, der sesjonen deres finnes. Butikkbygget claimer tornygolf.no
- * (#2627), men AASA-fila slipper bare venne-lenka gjennom til appen, så
+ * nettleseren, der sesjonen deres finnes. Butikkbygget gjør krav på tornygolf.no
+ * (#2627), men bare på stiene i `lib/appLinks/appLinkPaths.ts` (#2748), så
  * sidene knappene her åpner, går fortsatt til nettleseren.
  *
  * `canOpenURL` spørres bevisst ikke først. Den krever `LSApplicationQueriesSchemes`

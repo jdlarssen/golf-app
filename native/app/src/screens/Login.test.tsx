@@ -26,14 +26,15 @@
 //
 // #2627 la til én render til: en venne-lenke som venter, står som en linje i
 // båndet, uten navn, og forsvinner når navigatoren har tatt koden. Hvilke
-// lenker som blir en kode, er Type A i `data/pendingFriendLink.test.ts`.
+// lenker som blir stående, er Type A i `data/pendingAppLink.test.ts`.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { DEV_LOGIN_TEXT } from '../devLogin';
 import { finishLogin, requestLoginCode } from '../data/loginCode';
-import { offerFriendLink, takePendingFriendCode } from '../data/pendingFriendLink';
+import { offerAppLink, takePendingAppLink } from '../data/pendingAppLink';
 import { FRIEND_LINK_TEXT } from '../lib/friendsCopy';
+import { LEAGUE_JOIN_TEXT } from '../lib/leagueCopy';
 import { LOGIN_TEXT, OTP_LENGTH, describeLoginError } from '../lib/loginCopy';
 import { STAGING_SUPABASE_HOST } from '../lib/stagingGate';
 import { supabase } from '../supabase';
@@ -228,31 +229,34 @@ describe('Login: ny konto gjennom nettsidens sperrer (#2216)', () => {
   });
 });
 
-describe('Login: en venne-lenke venter (#2627)', () => {
+describe('Login: en lenke venter (#2627, #2748)', () => {
   const ORIGINAL_BASE = process.env.EXPO_PUBLIC_WEB_BASE_URL;
   afterEach(() => {
-    takePendingFriendCode();
+    takePendingAppLink();
     if (ORIGINAL_BASE === undefined) delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
     else process.env.EXPO_PUBLIC_WEB_BASE_URL = ORIGINAL_BASE;
   });
 
-  it('står i båndet, uten navn, til navigatoren har tatt koden', async () => {
+  it.each([
+    ['venne-lenka', 'https://tornygolf.no/venner/legg-til/abcd1234', FRIEND_LINK_TEXT],
+    ['ligalenka', 'https://tornygolf.no/liga/bli-med/abcd2345', LEAGUE_JOIN_TEXT],
+  ])('%s står i båndet, uten navn, til navigatoren har tatt den', async (_label, url, text) => {
     process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://tornygolf.no';
     await render(<Login />);
-    expect(screen.queryByTestId('login-friend-link')).toBeNull();
+    expect(screen.queryByTestId('login-app-link')).toBeNull();
 
     await act(async () => {
-      offerFriendLink('https://tornygolf.no/venner/legg-til/abcd1234');
+      offerAppLink(url);
     });
-    expect(screen.getByTestId('login-friend-link')).toBeTruthy();
-    expect(screen.getByText(FRIEND_LINK_TEXT.loginTitle)).toBeTruthy();
-    expect(screen.getByText(FRIEND_LINK_TEXT.loginBody)).toBeTruthy();
+    expect(screen.getByTestId('login-app-link')).toBeTruthy();
+    expect(screen.getByText(text.loginTitle)).toBeTruthy();
+    expect(screen.getByText(text.loginBody)).toBeTruthy();
     // E-postfeltet står fortsatt: linja forklarer, den stopper ingenting.
     expect(screen.getByTestId('email-input')).toBeTruthy();
 
     await act(async () => {
-      takePendingFriendCode();
+      takePendingAppLink();
     });
-    expect(screen.queryByTestId('login-friend-link')).toBeNull();
+    expect(screen.queryByTestId('login-app-link')).toBeNull();
   });
 });

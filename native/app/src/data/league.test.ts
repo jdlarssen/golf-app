@@ -179,3 +179,90 @@ describe('startLeagueRound', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
+
+describe('fetchLeagueJoin (#2748)', () => {
+  useWebRoute();
+
+  const JOIN_VIEW = {
+    decision: 'can_join',
+    league: { id: LEAGUE_ID, name: 'Vinterliga', format: 'stableford', isSimulator: true, courseName: null },
+    rounds: [],
+    participantCount: 3,
+    lateJoin: { kind: 'none' },
+  };
+
+  it('leser ligaen bak lenka med GET og token, og koden står bare i stien', async () => {
+    respondWith(200, JOIN_VIEW);
+
+    expect(await league().fetchLeagueJoin('abcd2345')).toEqual({ ok: true, view: JOIN_VIEW });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}/api/liga/bli-med/abcd2345`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect((requestInit().headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(requestInit().body).toBeUndefined();
+  });
+
+  it.each([
+    [401, 'unauthorized'],
+    [404, 'not_found'],
+    [500, 'load_failed'],
+  ])('oversetter %i til %s', async (status, reason) => {
+    respondWith(status, { error: 'x' });
+    expect(await league().fetchLeagueJoin('abcd2345')).toEqual({ ok: false, reason });
+  });
+
+  it('en 200 med et utfall vi ikke kjenner, er ikke en liga å tegne', async () => {
+    respondWith(200, { ...JOIN_VIEW, decision: 'sign_in' });
+    expect(await league().fetchLeagueJoin('abcd2345')).toEqual({ ok: false, reason: 'load_failed' });
+    respondWith(200, { decision: 'can_join' });
+    expect(await league().fetchLeagueJoin('abcd2345')).toEqual({ ok: false, reason: 'load_failed' });
+  });
+
+  it('sender ingenting uten nett', async () => {
+    mockNetwork.online = false;
+    expect(await league().fetchLeagueJoin('abcd2345')).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('joinLeague (#2748)', () => {
+  useWebRoute();
+
+  it('poster til lenka uten kropp: kalleren er tokenet og koden står i stien', async () => {
+    respondWith(200, { leagueId: LEAGUE_ID });
+
+    expect(await league().joinLeague('abcd2345')).toEqual({ ok: true, leagueId: LEAGUE_ID });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}/api/liga/bli-med/abcd2345`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect((requestInit().headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(requestInit().body).toBeUndefined();
+  });
+
+  it.each([
+    [401, { error: 'unauthorized' }, 'unauthorized'],
+    [404, { error: 'not_found' }, 'not_found'],
+    [409, { error: 'closed' }, 'closed'],
+    [409, { error: 'profile_incomplete' }, 'profile_incomplete'],
+    [409, { error: 'noe_nytt' }, 'save_failed'],
+    [500, { error: 'read_failed' }, 'read_failed'],
+    [500, { error: 'save_failed' }, 'save_failed'],
+    [500, {}, 'save_failed'],
+  ])('oversetter %i %j til %s', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await league().joinLeague('abcd2345')).toEqual({ ok: false, reason });
+  });
+
+  it('en 200 uten liga er ikke en påmelding', async () => {
+    respondWith(200, {});
+    expect(await league().joinLeague('abcd2345')).toEqual({ ok: false, reason: 'save_failed' });
+  });
+
+  it('sender ingenting uten nett, og sier det', async () => {
+    mockNetwork.online = false;
+    expect(await league().joinLeague('abcd2345')).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});

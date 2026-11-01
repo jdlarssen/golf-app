@@ -50,6 +50,7 @@ const VARIANT_BY_ROUTE = {
   RoundStats: 'default',
   Kavalkade: 'default',
   League: 'default',
+  LeagueJoin: 'default',
   LeagueRoundStart: 'default',
   MarkerApprove: 'default',
   SyncLab: 'default',

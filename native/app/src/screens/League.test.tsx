@@ -5,7 +5,7 @@
 // sier, at innstillingskortet er foldet og bare står i en simulatorliga, og
 // tilstandene fra tegning 6 uten nett.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { StyleSheet } from 'react-native';
+import { Share, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { LeagueResult } from '../data/league';
 import type { ScreenProps } from '../navigation';
@@ -37,14 +37,23 @@ function answer(...results: LeagueResult[]) {
   mockLast = results[results.length - 1];
 }
 
-async function renderLeague() {
+async function renderLeague(params: { joined?: boolean } = {}) {
   const navigate = jest.fn();
+  const setParams = jest.fn();
+  const listeners: Record<string, () => void> = {};
   const props = {
-    navigation: { navigate },
-    route: { key: 'league', name: 'League', params: { leagueId: 'liga-vinter' } },
+    navigation: {
+      navigate,
+      setParams,
+      addListener: (name: string, listener: () => void) => {
+        listeners[name] = listener;
+        return () => {};
+      },
+    },
+    route: { key: 'league', name: 'League', params: { leagueId: 'liga-vinter', ...params } },
   };
   await render(<League {...(props as unknown as ScreenProps<'League'>)} />);
-  return { navigate };
+  return { navigate, setParams, listeners };
 }
 
 beforeEach(() => {
@@ -373,5 +382,50 @@ describe('#2661: markøren i en simulatorliga', () => {
     expect(screen.getByTestId(`marker-queue-g-a-${a.userId}`)).toBeTruthy();
     expect(screen.queryByTestId('marker-queue-g-me-me')).toBeNull();
     expect(screen.queryByTestId(`marker-queue-g-a-${b.userId}`)).toBeNull();
+  });
+});
+
+// #2748: regelen for lenka er serverens (`participantShareUrl`).
+describe('«Del lenka»', () => {
+  const URL = 'https://tornygolf.no/liga/bli-med/abcd2345';
+
+  it('står ikke uten lenke fra serveren', async () => {
+    await renderLeague();
+    expect(screen.queryByTestId('league-share-link')).toBeNull();
+  });
+
+  it('åpner delingsarket med adressen fra serveren', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    answer({ ok: true, view: leagueView({ league: { shareUrl: URL } }) });
+    await renderLeague();
+    await fireEvent.press(screen.getByTestId('league-share-link'));
+    expect(share).toHaveBeenCalledWith({ message: URL });
+    share.mockRestore();
+  });
+
+  it('et delingsark som feiler, velter ikke siden', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const share = jest.spyOn(Share, 'share').mockRejectedValue(new Error('nei'));
+    answer({ ok: true, view: leagueView({ league: { shareUrl: URL } }) });
+    await renderLeague();
+    await fireEvent.press(screen.getByTestId('league-share-link'));
+    await act(async () => {});
+    expect(screen.getByTestId('league-screen')).toBeTruthy();
+    share.mockRestore();
+    errorSpy.mockRestore();
+  });
+});
+
+describe('kvitteringen etter «Bli med»', () => {
+  it('står når skjermen kommer med den, og nullstilles når siden mister fokus', async () => {
+    const { listeners, setParams } = await renderLeague({ joined: true });
+    expect(screen.getByTestId('league-joined-banner')).toHaveTextContent('Du er med i ligaen.');
+    await act(async () => listeners.blur());
+    expect(setParams).toHaveBeenCalledWith({ joined: false });
+  });
+
+  it('står ikke ellers', async () => {
+    await renderLeague();
+    expect(screen.queryByTestId('league-joined-banner')).toBeNull();
   });
 });

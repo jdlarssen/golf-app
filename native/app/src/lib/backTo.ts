@@ -59,7 +59,8 @@ export function backStep(
 /**
  * Skjermen over i hierarkiet (regel 1 i §Tilbake): Hjem → spillet → hull,
  * scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
- * kort. Hjem → Profil → rommene under profilen. Hjem står over alt.
+ * kort. Hjem → Profil → rommene under profilen. Skjermer en lenke åpner, har
+ * ingen «der du kom fra» og ligger rett under Hjem (#2748). Hjem står over alt.
  */
 const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>> = {
   GameHome: 'Home',
@@ -70,6 +71,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   Approve: 'GameHome',
   EndGame: 'GameHome',
   League: 'Home',
+  LeagueJoin: 'Home',
   LeagueRoundStart: 'League',
   MarkerApprove: 'League',
   Profile: 'Home',
