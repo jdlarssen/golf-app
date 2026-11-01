@@ -750,13 +750,8 @@ describe('LeaderboardBody', () => {
   // #2752: en arrangør som ikke spiller, når kampen fra cup-rommet. RLS gir hen
   // spillet, men ikke slagene, så «ingen slag er ført» ville vært usant.
   it('du spiller ikke kampen: teksten påstår ikke at ingen har ført slag', async () => {
-    const bundle = withGame({});
-    await render(
-      <LeaderboardBody
-        bundle={{ ...bundle, players: bundle.players.filter((player) => player.userId !== 'me') }}
-        scores={[]}
-      />,
-    );
+    const others = mockBundle.players.filter((player) => player.userId !== 'me');
+    await render(<LeaderboardBody bundle={{ ...mockBundle, players: others } as never} scores={[]} />);
     expect(screen.getByTestId('leaderboard-empty')).toHaveTextContent(
       'Du spiller ikke denne kampen, og her står ingen slag.',
     );
