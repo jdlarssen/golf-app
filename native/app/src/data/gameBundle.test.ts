@@ -435,7 +435,7 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it.each([[2], [3], [6], [7], [12]])(
+  it.each([[2], [3], [6], [7], [12], [13]])(
     'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
     async (version: number) => {
       // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på
