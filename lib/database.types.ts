@@ -2577,6 +2577,13 @@ export type Database = {
           was_applied: boolean
         }[]
       }
+      set_tee_starter_if_unset: {
+        Args: { p_game_id: string; p_team_number: number; p_tee_starter: string }
+        Returns: {
+          tee_starter: string
+          was_applied: boolean
+        }[]
+      }
       sim_settings_valid: { Args: { s: Json }; Returns: boolean }
       similar_courses: {
         Args: { p_query: string }
