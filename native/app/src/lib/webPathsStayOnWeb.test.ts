@@ -3,6 +3,7 @@
 // på en av disse stiene, går knappen tilbake til appen (Android sikkert, iPhone ikke
 // prøvd), og spilleren står uten vei til siden appen ikke har. Type A.
 import { APP_LINK_PATH_PREFIXES } from '../../../../lib/appLinks/appLinkPaths';
+import { deleteBlockWebLink } from './accountCopy';
 import { CREATE_ON_WEB_PATH } from './createGameCopy';
 import { cupWebPath } from './endGameCopy';
 import { gameWebPath } from './formatGate';
@@ -18,12 +19,19 @@ describe('stiene appens egne knapper åpner', () => {
     ['spillerlista', `/games/${ID}/spillere`],
     ['cupWebPath', cupWebPath(ID)],
     ['CREATE_ON_WEB_PATH', CREATE_ON_WEB_PATH],
-    ['banen', `/admin/courses/${ID}`],
+    ['banen', `/admin/courses/${ID}/edit`],
+    ['klubbene, fra slett konto', deleteBlockWebLink('sole_club_owner')?.path ?? ''],
+    ['Klubbhuset, fra slett konto', deleteBlockWebLink('active_engagements')?.path ?? ''],
     ['PRIVACY_PATH', PRIVACY_PATH],
     ['påmeldingen', `/signup/${ID}`],
     ['innloggingen', '/login'],
   ])('%s gjør appen ikke krav på', (_label, path) => {
     expect(claims(path)).toBe(false);
+  });
+
+  it('leser de ekte stiene fra slett konto', () => {
+    expect(deleteBlockWebLink('sole_club_owner')?.path).toBe('/klubber');
+    expect(deleteBlockWebLink('active_engagements')?.path).toBe('/admin');
   });
 
   // Null-test: uten denne kunne `claims` blitt blind og stått grønn.

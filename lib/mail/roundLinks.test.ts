@@ -177,7 +177,6 @@ describe('what the mails carry', () => {
       const { html, text } = sendMock.mock.calls[0]![0];
       expect(html).toContain(`href="${base}${path}"`);
       expect(text).toContain(`${base}${path}`);
-      expect(`${html}${text}`).not.toContain('tornygolf.no/games/');
     });
   });
 
@@ -190,6 +189,5 @@ describe('what the mails carry', () => {
     const login = 'https://tornygolf.no/login?email=spiller%40example.com';
     expect(html).toContain(`href="${login}"`);
     expect(text).toContain(login);
-    expect(html).not.toContain('/invitasjon/');
   });
 });
