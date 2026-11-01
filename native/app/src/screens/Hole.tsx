@@ -113,6 +113,7 @@ import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
+import { openOrReturn } from '../lib/backTo';
 import { holeTopLine } from '../lib/holeHeader';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
@@ -280,7 +281,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
       headerRight: () => (
         <HoleTopTools
           sunlight={sunlight}
-          onLeaderboard={() => navigation.navigate('Leaderboard', { gameId })}
+          onLeaderboard={() => openOrReturn(navigation, 'Leaderboard', { gameId })}
         />
       ),
     });
@@ -331,7 +332,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
           : null
       }
       goToHole={goToHole}
-      onSubmit={() => navigation.navigate('Scorecard', { gameId })}
+      onSubmit={() => openOrReturn(navigation, 'Scorecard', { gameId })}
     />
   );
 }

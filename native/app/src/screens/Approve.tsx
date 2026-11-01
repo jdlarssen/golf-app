@@ -57,6 +57,7 @@ import {
   positionLabel,
 } from '../lib/approveCopy';
 import { approveRows, approveScreenState, type ApproveRow } from '../lib/approveState';
+import { backTo } from '../lib/backTo';
 import { displayName, formatClock, shortDisplayName } from '../lib/display';
 import { findInRoster, toRoster, toStampPlayers, type RosterEntry } from '../lib/roster';
 import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
@@ -476,7 +477,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
       >
         <Pressable
           style={[ui.button, styles.boardButton]}
-          onPress={() => navigation.navigate('Leaderboard', { gameId })}
+          onPress={() => backTo(navigation, 'Leaderboard', { gameId })}
           accessibilityRole="button"
           testID="approve-see-board"
         >
@@ -485,7 +486,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
         {/* Spillsiden, ikke `goBack`: kom du fra hjem-kortet, ville det vært Hjem. */}
         <Pressable
           style={styles.backButton}
-          onPress={() => navigation.navigate('GameHome', { gameId })}
+          onPress={() => backTo(navigation, 'GameHome', { gameId })}
           accessibilityRole="button"
           testID="approve-back-to-game"
         >

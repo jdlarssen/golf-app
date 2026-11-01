@@ -16,7 +16,8 @@
 // **Opprettelsen går aldri i sync-køen.** Den er ikke idempotent: et
 // dobbelttrykk eller en kø-retry ville laget to runder. Offline svarer vi
 // derfor rolig i stedet for å la det se ut som en databasefeil.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePreventRemove } from '@react-navigation/native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
@@ -347,6 +348,9 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
     : null;
 
+  // Settes rett før `replace` til spillet, så sperra under slipper den gjennom.
+  const leavingRef = useRef(false);
+
   const publish = useCallback(async () => {
     // Dobbelttrykk-låsen står FØRST: to gjennomkjøringer samtidig ville kjempet
     // om den samme raden.
@@ -364,6 +368,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       if (result.ok) {
         // `replace`, ikke `navigate`: en ferdig veiviser skal ikke ligge igjen
         // bak spillet i stacken — «tilbake» fra runden hører hjemme på Hjem.
+        leavingRef.current = true;
         navigation.replace('GameHome', { gameId: result.gameId });
         return;
       }
@@ -381,6 +386,17 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   }, [busy, draft, gameId, navigation]);
 
   const stepIndex = STEPS.indexOf(step);
+
+  // #2746 (`docs/user-flows.md` §Tilbake): pila, sveipet og Android-tilbake går
+  // ett steg tilbake, som «Tilbake»-knappen. På første steg står ingen sperre,
+  // og veiviseren lukkes. `replace` til spillet er også en fjerning, så
+  // `leavingRef` slipper den gjennom, samme mønster som `EndGame.tsx`. Hooken
+  // bytter tilbakekall hver render, så `stepIndex` er alltid fersk. På iOS slår
+  // sperra av sveipet mens den står; pila og knappen går fortsatt ett steg.
+  usePreventRemove(stepIndex > 0, ({ data }) => {
+    if (leavingRef.current) navigation.dispatch(data.action);
+    else setStep(STEPS[stepIndex - 1]!);
+  });
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
 
   // Belte og seler, som webbens #721-backstop: ingen skal kunne publiseres på et

@@ -15,6 +15,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { Approve } from './Approve';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -149,6 +150,67 @@ describe('Approve', () => {
       />,
     );
   }
+
+  // #2746: etter godkjenningen er skjemaet ferdig. Knappene går tilbake til
+  // spillet som ligger under, eller erstatter godkjenningen, og legger aldri en
+  // ny skjerm oppå den.
+  describe('etter godkjenningen (#2746)', () => {
+    function rigApproved(): void {
+      rigPending();
+      const bundle = mockState.bundle as GameBundle;
+      mockState.bundle = {
+        ...bundle,
+        players: bundle.players.map((p) =>
+          p.userId === 'ny-kaptein'
+            ? { ...p, approvedAt: '2026-09-17T12:30:00.000Z', approvedByUserId: 'rival-a' }
+            : p,
+        ),
+      };
+    }
+
+    async function renderApproved(nav: ReturnType<typeof stackNavigation>) {
+      rigApproved();
+      await render(
+        <Approve
+          {...({
+            route: { params: { gameId: 'game-1' } },
+            navigation: { ...nav, setOptions: jest.fn() },
+          } as unknown as ScreenProps<'Approve'>)}
+        />,
+      );
+      await waitFor(() => expect(screen.getByTestId('approve-back-to-game')).toBeTruthy());
+    }
+
+    const FROM_GAME = [
+      { name: 'Home' },
+      { name: 'GameHome', params: { gameId: 'game-1' } },
+      { name: 'Approve', params: { gameId: 'game-1' } },
+    ];
+
+    it('«Til spillet» går tilbake til spillet under', async () => {
+      const nav = stackNavigation(FROM_GAME);
+      await renderApproved(nav);
+      await fireEvent.press(screen.getByTestId('approve-back-to-game'));
+      expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'game-1' });
+      expect(nav.navigate).not.toHaveBeenCalled();
+    });
+
+    it('«Til spillet» fra Hjem-kortet erstatter godkjenningen med spillet', async () => {
+      const nav = stackNavigation([{ name: 'Home' }, { name: 'Approve', params: { gameId: 'game-1' } }]);
+      await renderApproved(nav);
+      await fireEvent.press(screen.getByTestId('approve-back-to-game'));
+      expect(nav.replace).toHaveBeenCalledWith('GameHome', { gameId: 'game-1' });
+      expect(nav.navigate).not.toHaveBeenCalled();
+    });
+
+    it('«Se tavla» erstatter godkjenningen, så tilbake fra tavla går til spillet', async () => {
+      const nav = stackNavigation(FROM_GAME);
+      await renderApproved(nav);
+      await fireEvent.press(screen.getByTestId('approve-see-board'));
+      expect(nav.replace).toHaveBeenCalledWith('Leaderboard', { gameId: 'game-1' });
+      expect(nav.navigate).not.toHaveBeenCalled();
+    });
+  });
 
   it('viser hullene en trukket kaptein førte på den nye kapteinens kort', async () => {
     rigPending();

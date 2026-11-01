@@ -12,6 +12,7 @@
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
 import {
+  CommonActions,
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
@@ -36,6 +37,7 @@ import {
   takePendingFriendCode,
 } from './data/pendingFriendLink';
 import { listenForPushTaps } from './data/pushTaps';
+import { openOrReturn, type BackNavigation } from './lib/backTo';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
@@ -214,26 +216,42 @@ function navigationThemeFor(theme: Theme): NavigationTheme {
  */
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
+/**
+ * Varslene følger samme regel som skjermene (#2746, `docs/user-flows.md`
+ * §Tilbake): ligger spillet eller ligaen alt i stakken, går trykket tilbake dit
+ * i stedet for å legge en kopi oppå. Ref-en har ikke `popTo` og `replace`, så
+ * de sendes som handlinger.
+ */
+const refNavigation: BackNavigation = {
+  getState: () => navigationRef.getRootState(),
+  popTo: (name, params) => navigationRef.dispatch(StackActions.popTo(name, params)),
+  replace: (name, params) => navigationRef.dispatch(StackActions.replace(name, params)),
+  navigate: (name, params) => navigationRef.dispatch(CommonActions.navigate(name, params)),
+};
+
 function openPushTarget(target: PushTarget) {
-  if (target.name === 'GameHome') navigationRef.navigate('GameHome', target.params);
+  if (target.name === 'GameHome') openOrReturn(refNavigation, 'GameHome', target.params);
   else if (target.name === 'Hole') {
     // #2268: the game's page under the hole, so «back» lands on the game.
-    navigationRef.navigate('GameHome', { gameId: target.params.gameId });
-    navigationRef.navigate('Hole', target.params);
+    openOrReturn(refNavigation, 'GameHome', { gameId: target.params.gameId });
+    openOrReturn(refNavigation, 'Hole', target.params);
   } else if (target.name === 'Leaderboard') {
     // #2632: spillets side under tavla, så «tilbake» lander på spillet.
-    navigationRef.navigate('GameHome', { gameId: target.params.gameId });
-    navigationRef.navigate('Leaderboard', target.params);
-  } else if (target.name === 'League') navigationRef.navigate('League', target.params);
+    openOrReturn(refNavigation, 'GameHome', { gameId: target.params.gameId });
+    openOrReturn(refNavigation, 'Leaderboard', target.params);
+  } else if (target.name === 'League') openOrReturn(refNavigation, 'League', target.params);
   else if (target.name === 'LeagueRoundStart') {
     // #2675: ligasiden under startsiden, så «tilbake» lander på ligaen.
-    navigationRef.navigate('League', { leagueId: target.params.leagueId });
-    navigationRef.navigate('LeagueRoundStart', target.params);
+    openOrReturn(refNavigation, 'League', { leagueId: target.params.leagueId });
+    openOrReturn(refNavigation, 'LeagueRoundStart', target.params);
   } else if (target.name === 'MarkerApprove') {
     // #2661: ligasiden under markørens skjerm, så «tilbake» lander på ligaen.
-    navigationRef.navigate('League', { leagueId: target.params.leagueId });
-    navigationRef.navigate('MarkerApprove', target.params);
-  } else navigationRef.navigate('Home');
+    openOrReturn(refNavigation, 'League', { leagueId: target.params.leagueId });
+    openOrReturn(refNavigation, 'MarkerApprove', target.params);
+  }
+  // Uten mål: Hjem er bunnen av stakken. `navigate('Home')` ville lagt en ny
+  // Hjem oppå, og tilbake derfra åpnet skjermen du sto på (#2746).
+  else if (navigationRef.canGoBack()) navigationRef.dispatch(StackActions.popToTop());
 }
 
 /**

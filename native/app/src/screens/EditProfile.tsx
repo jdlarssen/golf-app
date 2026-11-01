@@ -50,6 +50,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
+import { backTo } from '../lib/backTo';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
@@ -222,7 +223,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
           }
           // Tilbake til rommet med kvitteringen. Rommet viser banneret og
           // henter raden på nytt — det er der den nye verdien skal leses.
-          navigation.navigate('Profile', { saved: true });
+          backTo(navigation, 'Profile', { saved: true });
           return;
         }
         setError(describeProfileSaveFailure(result.reason));

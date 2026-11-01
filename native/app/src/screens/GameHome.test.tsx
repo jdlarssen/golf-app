@@ -17,6 +17,7 @@ import type { ReactElement } from 'react';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { TICKET_TEXT } from '../lib/ticketCopy';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { fireForeground } from '../test/syncTriggersMock';
 import { GameHome, RosterRow } from './GameHome';
@@ -759,7 +760,11 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     });
     mockState.scores = [];
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+    // #2746: spillet ble åpnet fra Hjem, så Hjem ligger under.
+    const navigation = {
+      ...stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]),
+      setOptions: jest.fn(),
+    };
     const { withdrawSelf } = require('../data/withdrawSelf') as { withdrawSelf: jest.Mock };
     // Før start slettes påmeldingen (`kept: false`): spilleren har ingen side å bli på.
     withdrawSelf.mockResolvedValueOnce({ ok: true, kept: false });
@@ -786,7 +791,10 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     await act(async () => {
       buttons.find((b) => b.text === 'Trekk meg fra spillet')!.onPress!();
     });
-    await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith('Home'));
+    // Tilbake til Hjem som ligger under, ikke en ny Hjem oppå spillet du
+    // forlot (#2746).
+    await waitFor(() => expect(navigation.popTo).toHaveBeenCalledWith('Home', undefined));
+    expect(navigation.navigate).not.toHaveBeenCalled();
     expect(withdrawSelf).toHaveBeenCalledWith('game-1');
     alert.mockRestore();
   });

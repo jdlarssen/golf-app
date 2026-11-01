@@ -48,6 +48,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { GAME_BUNDLE_TIMEOUT_MS } from '../lib/useGameData';
 import { Scorecard } from './Scorecard';
 
@@ -215,12 +216,24 @@ jest.mock('@react-navigation/native', () => ({
 
 const mockSetOptions = jest.fn();
 
-function scorecardElement(gameId: string, navigate: jest.Mock) {
+/**
+ * Stakken er spillet under kortet med mindre testen sier noe annet (#2746):
+ * da går levering tilbake til spillet med `popTo`.
+ */
+function scorecardElement(
+  gameId: string,
+  navigate: jest.Mock,
+  nav: ReturnType<typeof stackNavigation> = stackNavigation([
+    { name: 'Home' },
+    { name: 'GameHome', params: { gameId } },
+    { name: 'Scorecard', params: { gameId } },
+  ]),
+) {
   return (
     <Scorecard
       {...({
         route: { params: { gameId } },
-        navigation: { navigate, setOptions: mockSetOptions },
+        navigation: { ...nav, navigate, setOptions: mockSetOptions },
       } as unknown as ScreenProps<'Scorecard'>)}
     />
   );
@@ -389,8 +402,11 @@ describe('Scorecard', () => {
       return refreshGameBundle;
     }
 
-    async function pressDeliver(navigate: jest.Mock): Promise<void> {
-      await render(scorecardElement('game-8', navigate));
+    async function pressDeliver(
+      navigate: jest.Mock,
+      nav?: ReturnType<typeof stackNavigation>,
+    ): Promise<void> {
+      await render(scorecardElement('game-8', navigate, nav));
       await waitFor(() => expect(screen.getByTestId('submit-flight')).toBeEnabled());
       await fireEvent.press(screen.getByTestId('submit-flight'));
     }
@@ -400,12 +416,32 @@ describe('Scorecard', () => {
       refreshGameBundle.mockImplementation(async () => mockState.bundle);
     });
 
-    it('makkeren kom med i første forsøk: ingen beskjed, videre til spillsiden', async () => {
+    it('makkeren kom med i første forsøk: ingen beskjed, tilbake til spillsiden', async () => {
       rig('submitted');
       const navigate = jest.fn();
-      await pressDeliver(navigate);
-      await waitFor(() => expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: 'game-8' } },
+        { name: 'Hole', params: { gameId: 'game-8', holeNumber: 18 } },
+        { name: 'Scorecard', params: { gameId: 'game-8' } },
+      ]);
+      await pressDeliver(navigate, nav);
+      // #2746: tilbake til spillet som ligger under, ikke et nytt spill oppå
+      // kortet du nettopp leverte.
+      await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      expect(navigate).not.toHaveBeenCalled();
+      expect(nav.replace).not.toHaveBeenCalled();
       expect(screen.queryByTestId('submit-partial')).toBeNull();
+    });
+
+    it('kortet åpnet fra Hjem: spillet erstatter kortet (#2746)', async () => {
+      rig('submitted');
+      const navigate = jest.fn();
+      const nav = stackNavigation([{ name: 'Home' }, { name: 'Scorecard', params: { gameId: 'game-8' } }]);
+      await pressDeliver(navigate, nav);
+      await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      expect(navigate).not.toHaveBeenCalled();
+      expect(nav.popTo).not.toHaveBeenCalled();
     });
 
     it('makkeren kom ikke med: beskjeden står, uten «levert»-gjetningen', async () => {
@@ -428,8 +464,13 @@ describe('Scorecard', () => {
     it('en makker som har trukket seg, telles ikke som ikke levert', async () => {
       rig('withdrawn');
       const navigate = jest.fn();
-      await pressDeliver(navigate);
-      await waitFor(() => expect(navigate).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: 'game-8' } },
+        { name: 'Scorecard', params: { gameId: 'game-8' } },
+      ]);
+      await pressDeliver(navigate, nav);
+      await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'game-8' }));
       expect(screen.queryByTestId('submit-partial')).toBeNull();
     });
 

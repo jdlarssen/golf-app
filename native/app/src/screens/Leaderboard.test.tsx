@@ -17,6 +17,7 @@ import type { GameBundle } from '../data/gameBundle';
 import { soloBoardFor } from '../lib/soloBoard';
 import { teamBoardFor } from '../lib/teamBoard';
 import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
 import { fireForeground } from '../test/syncTriggersMock';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
 
@@ -170,15 +171,23 @@ function boardOrder(): string[] {
 
 const mockNavigate = jest.fn();
 
-async function renderLeaderboard() {
+/** Tavla åpnet fra spillets side (#2746): verken hull eller kort ligger under. */
+const FROM_GAME = [
+  { name: 'Home' },
+  { name: 'GameHome', params: { gameId: GAME_ID } },
+  { name: 'Leaderboard', params: { gameId: GAME_ID } },
+];
+
+async function renderLeaderboard(nav = stackNavigation(FROM_GAME)) {
   await render(
     <Leaderboard
       {...({
         route: { params: { gameId: GAME_ID } },
-        navigation: { navigate: mockNavigate, setParams: jest.fn(), setOptions: jest.fn() },
+        navigation: { ...nav, navigate: mockNavigate, setParams: jest.fn(), setOptions: jest.fn() },
       } as unknown as ScreenProps<'Leaderboard'>)}
     />,
   );
+  return nav;
 }
 
 describe('Leaderboard', () => {
@@ -241,6 +250,23 @@ describe('Leaderboard', () => {
     expect(seedGameScores).toHaveBeenCalledTimes(3);
     expect(refreshGameBundle).toHaveBeenCalledTimes(bundleCalls + 1);
     expect(subscribeGameScores).toHaveBeenCalledTimes(1);
+  });
+
+  // #2746: hull → tavla → stripa → hull. Hullet ligger alt under tavla, så
+  // stripa går tilbake dit i stedet for å legge et hull til oppå.
+  it('stripas hull går tilbake til hullet som alt ligger under tavla', async () => {
+    const nav = await renderLeaderboard(
+      stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: GAME_ID } },
+        { name: 'Hole', params: { gameId: GAME_ID, holeNumber: 2 } },
+        { name: 'Leaderboard', params: { gameId: GAME_ID } },
+      ]),
+    );
+    await waitFor(() => expect(screen.getByTestId('board-strip-action')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('board-strip-action'));
+    expect(nav.popTo).toHaveBeenCalledWith('Hole', expect.objectContaining({ gameId: GAME_ID, holeNumber: 3 }));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 

@@ -112,6 +112,7 @@ import { MarkerPicker } from '../components/MarkerPicker';
 import type { MarkerOptionsResponse } from '../../../../lib/league/appLeagueView';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
+import { backTo, openOrReturn } from '../lib/backTo';
 import { isScoringSupported } from '../lib/formatGate';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { nameLookup } from '../lib/leaderboardModel';
@@ -440,7 +441,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     updateBar();
   };
   const openHole = (holeNumber: number) =>
-    navigation.navigate('Hole', {
+    openOrReturn(navigation, 'Hole', {
       gameId,
       holeNumber,
       ...holeHeaderParams(bundle.game, bundle.courseName),
@@ -586,7 +587,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         void refresh();
         return;
       }
-      navigation.navigate('GameHome', { gameId });
+      backTo(navigation, 'GameHome', { gameId });
       return;
     }
     setBusy(false);
