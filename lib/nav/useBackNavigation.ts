@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, type MouseEvent } from 'react';
-import { namesSameScreen, pickBackEntry } from './backTarget';
+import { lacksHrefChoices, namesSubView, pickBackEntry } from './backTarget';
 
 // TypeScript 5.9 har `NavigationHistoryEntry` i lib.dom, men ikke `window.navigation`.
 type NavigationEntry = { key: string; url: string | null; index: number };
@@ -25,7 +25,8 @@ function navigationApi(): NavigationApi | null {
  * Klikket på tilbake-pila (#2746). Har historikken en skjerm å gå til, går pila
  * dit. Ellers klatrer den til `href` med `replace`: en lenke som la til en side,
  * ville gitt neste pil denne siden å gå tilbake til, i ring (#121). Det samme
- * gjelder en undervisning, som peker på sin egen forelder.
+ * gjelder en undervisning, som peker på sin egen forelder, og en oppføring som
+ * mangler det pila bærer.
  *
  * Uten Navigation API følges lenka, som før. Langt trykk og «åpne i ny fane» er
  * også lenka.
@@ -46,14 +47,15 @@ export function useBackNavigation() {
       const entries = api.entries();
       const current = api.currentEntry!;
       const target =
-        current.url && namesSameScreen(current.url, href) ? null : pickBackEntry(entries, current.index, href);
-      if (target === null) {
+        current.url && namesSubView(current.url, href) ? null : pickBackEntry(entries, current.index);
+      const entry = target === null ? null : entries[target]!;
+      if (!entry || (entry.url && lacksHrefChoices(entry.url, href))) {
         router.replace(href);
         return;
       }
       // Avvises traverseringen, skal ikke pila stå død. En ny navigasjon som
       // avbryter den (AbortError) er derimot allerede på vei et sted.
-      api.traverseTo(entries[target]!.key).finished?.catch((error: unknown) => {
+      api.traverseTo(entry.key).finished?.catch((error: unknown) => {
         if ((error as { name?: string } | null)?.name !== 'AbortError') router.replace(href);
       });
     },

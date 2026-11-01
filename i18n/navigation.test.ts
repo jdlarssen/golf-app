@@ -45,6 +45,24 @@ function sourceFiles(dir: string): string[] {
 const USES_SERVER = /^\s*['"]use server['"]/m;
 const NEXT_REDIRECT_IMPORT = /import\s*\{[^}]*\bredirect\b[^}]*\}\s*from\s*['"]next\/navigation['"]/;
 
+// Et skjema som sender fra klienten, og går videre med `push`, ville ligget igjen i
+// historikken, og pila ville gått tilbake til det. Det finnes ingen i dag.
+describe('klientkoden', () => {
+  const PUSHES = /\brouter\.push\(|\blocation\.assign\(/;
+  /** Varsler åpner en ny side med `assign`. Det er ikke et skjema. */
+  const ALLOWED = /components\/PwaBoot\.tsx$/;
+
+  it('legger ikke til sider i historikken med `router.push` eller `location.assign`', () => {
+    const offenders = ['app', 'components', 'lib'].flatMap(sourceFiles).filter((path) => {
+      if (ALLOWED.test(path)) return false;
+      // Bare koden: en kommentar kan nevne kallet.
+      const code = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*(\*|\/\/).*$/gm, '');
+      return PUSHES.test(code);
+    });
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe('server-handlingene', () => {
   it('ingen henter `redirect` rett fra next/navigation, der den legger en ny side i historikken', () => {
     const offenders = ['app', 'components', 'lib'].flatMap(sourceFiles).filter((path) => {

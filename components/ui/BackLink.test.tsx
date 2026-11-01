@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe('tilbake-pila (#2746)', () => {
   it('med et mål i historikken: går dit, og lenka følges ikke', () => {
-    const traverseTo = fakeNavigation(['/', '/games/x/submit', '/games/x']);
+    const traverseTo = fakeNavigation(['/', '/games/x/approve', '/games/x']);
     render(<BackLink href="/fallback">Tilbake</BackLink>);
     expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
     expect(traverseTo).toHaveBeenCalledWith('k0');
@@ -67,8 +67,8 @@ describe('tilbake-pila (#2746)', () => {
     expect(traverseTo).not.toHaveBeenCalled();
   });
 
-  it('med bare skjemaer bak deg: pila erstatter siden med lenkas mål', () => {
-    const traverseTo = fakeNavigation(['/games/x/submit', '/games/x']);
+  it('med bare et godkjent kort bak deg: pila erstatter siden med lenkas mål', () => {
+    const traverseTo = fakeNavigation(['/games/x/approve', '/games/x']);
     render(<BackLink href="/fallback">Tilbake</BackLink>);
     expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
     expect(routerReplace).toHaveBeenCalledWith('/fallback');
@@ -85,11 +85,28 @@ describe('tilbake-pila (#2746)', () => {
     expect(traverseTo).not.toHaveBeenCalled();
   });
 
-  it('lenkas eget mål bak deg er ikke et skjema å hoppe over', () => {
+  it('veiviseren → ny bane → pil: tilbake til veiviseren', () => {
     const traverseTo = fakeNavigation(['/profile', '/opprett-spill?step=2', '/opprett-bane']);
     render(<BackLink href="/opprett-spill?step=2">Tilbake</BackLink>);
     expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
     expect(traverseTo).toHaveBeenCalledWith('k1');
+  });
+
+  // Kvitteringen for ny bane: lenka bærer `bane=`, som den gamle oppføringen mangler.
+  it('mangler oppføringen det pila bærer, følger pila lenka', () => {
+    const traverseTo = fakeNavigation(['/profile', '/opprett-spill?step=3', '/opprett-bane?status=created']);
+    render(<BackLink href="/opprett-spill?step=3&bane=b">Tilbake</BackLink>);
+    expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
+    expect(routerReplace).toHaveBeenCalledWith('/opprett-spill?step=3&bane=b');
+    expect(traverseTo).not.toHaveBeenCalled();
+  });
+
+  it('en pil som peker på seg selv, går tilbake i lista, ikke ingen steder', () => {
+    const traverseTo = fakeNavigation(['/games/x', '/en/spectate/t']);
+    render(<BackLink href="/spectate/t">Tilbake</BackLink>);
+    expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
+    expect(traverseTo).toHaveBeenCalledWith('k0');
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('delvis støtte (Safari 26.2): uten `entries` følges lenka', () => {

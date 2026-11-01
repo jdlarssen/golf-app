@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_SCREENS, namesSameScreen, pickBackEntry, screenKey } from './backTarget';
+import { lacksHrefChoices, namesSubView, pickBackEntry, screenKey, STAYS_AFTER_SENDING } from './backTarget';
 
 // #2746: hvor pila på nettet fører. Type A. Lista er det nettleseren selv sier
 // om historikken, så testene gir den direkte.
@@ -30,70 +30,64 @@ describe('screenKey', () => {
   });
 });
 
-describe('namesSameScreen', () => {
+describe('namesSubView', () => {
   it('en undervisning som peker på sin egen forelder', () => {
-    expect(namesSameScreen(`${ORIGIN}/klubbhuset?vis=utkast`, '/klubbhuset')).toBe(true);
-    expect(namesSameScreen(`${ORIGIN}/admin/games/s/edit?del=navn-og-tid`, '/admin/games/s/edit')).toBe(true);
-    expect(namesSameScreen(`${ORIGIN}/en/admin/games/s/signups?tab=approved`, '/admin/games/s/signups')).toBe(true);
+    expect(namesSubView(`${ORIGIN}/klubbhuset?vis=utkast`, '/klubbhuset')).toBe(true);
+    expect(namesSubView(`${ORIGIN}/admin/games/s/edit?del=navn-og-tid`, '/admin/games/s/edit')).toBe(true);
+    expect(namesSubView(`${ORIGIN}/en/admin/games/s/signups?tab=approved`, '/admin/games/s/signups')).toBe(true);
   });
 
   it('en pil som peker på en annen skjerm', () => {
-    expect(namesSameScreen(`${ORIGIN}/games/x/holes/5`, '/games/x')).toBe(false);
-    expect(namesSameScreen(`${ORIGIN}/games/x/leaderboard?scoring=brutto`, '/games/x')).toBe(false);
+    expect(namesSubView(`${ORIGIN}/games/x/holes/5`, '/games/x')).toBe(false);
+    expect(namesSubView(`${ORIGIN}/games/x/leaderboard?scoring=brutto`, '/games/x')).toBe(false);
+  });
+
+  it('en pil som peker på seg selv, er ingen undervisning', () => {
+    expect(namesSubView(`${ORIGIN}/en/spectate/t`, '/spectate/t')).toBe(false);
   });
 });
 
-describe('FORM_SCREENS', () => {
-  const isForm = (path: string) => FORM_SCREENS.some((pattern) => pattern.test(path));
-
-  it.each([
-    '/games/x/submit',
-    '/games/x/approve',
-    '/games/x/slett',
-    '/games/x/trekk-fra',
-    '/games/x/avslutt',
-    '/games/x/rediger',
-    '/admin/games/new',
-    '/admin/games/x/edit',
-    '/admin/games/x/trekk-spiller/u',
-    '/profile/slett-konto',
-    '/profile/venner/fjern/u',
-    '/opprett-spill',
-    '/opprett-spill/slett-utkast',
-    '/opprett-bane',
-    '/klubber/x/rolle/u',
-    '/liga/x/godkjenn/g/u',
-    '/complete-profile',
-    '/foreslaa-ide',
-    '/liga/x/runde/r/spill',
-    '/admin/cup/x/generer',
-    '/klubber/k/cup/x/oppsett',
-  ])('%s er et skjema', (path) => {
-    expect(isForm(path)).toBe(true);
+describe('lacksHrefChoices', () => {
+  it('oppføringen mangler det pila bærer: banen du nettopp lagde', () => {
+    expect(lacksHrefChoices(`${ORIGIN}/opprett-spill?step=3`, '/opprett-spill?step=3&bane=b')).toBe(true);
   });
 
+  it('samme valg med en annen verdi', () => {
+    expect(lacksHrefChoices(`${ORIGIN}/opprett-spill?step=2`, '/opprett-spill?step=3')).toBe(true);
+  });
+
+  it('oppføringen har alt pila bærer, og gjerne mer', () => {
+    expect(lacksHrefChoices(`${ORIGIN}/opprett-spill?step=3`, '/opprett-spill?step=3')).toBe(false);
+    expect(lacksHrefChoices(`${ORIGIN}/games/x?status=submitted`, '/games/x')).toBe(false);
+  });
+
+  it('en annen skjerm enn pilas mål sier ingenting', () => {
+    expect(lacksHrefChoices(`${ORIGIN}/profile`, '/opprett-spill?step=3&bane=b')).toBe(false);
+  });
+});
+
+describe('STAYS_AFTER_SENDING', () => {
+  const stays = (path: string) => STAYS_AFTER_SENDING.some((pattern) => pattern.test(path));
+
+  it.each(['/games/x/approve', '/liga/x/godkjenn/g/u'])('%s blir stående etter sending', (path) => {
+    expect(stays(path)).toBe(true);
+  });
+
+  // Et skjema du har sendt, er borte med `replace`. Et du ikke har sendt, skal du
+  // kunne gå tilbake til (regel 1).
   it.each([
     '/',
     '/games/x',
-    '/games/x/holes',
-    '/games/x/leaderboard',
-    '/games/x/klar',
-    '/profile',
-    '/profile/venner',
-    '/liga/x',
-    // Informasjonssiden om sletting, ikke skjemaet under profilen.
-    '/legal/slett-konto',
-    '/legal/privacy',
-    // Innloggingen hører ikke hjemme her: utlogget på personvern skal pila
-    // tilbake dit. `replace` tar den ut av historikken når du er logget inn.
-    '/login',
-    // Et invitasjon du ikke har svart på, skal du kunne gå tilbake til.
-    '/liga/bli-med/k',
-    '/cup/bli-med/k',
+    '/games/x/submit',
+    '/games/x/slett',
+    '/opprett-spill',
+    '/opprett-bane',
+    '/admin/games/new',
+    '/profile/slett-konto',
     '/klubber/bli-med/k',
-    '/venner/legg-til/k',
-  ])('%s er ikke et skjema', (path) => {
-    expect(isForm(path)).toBe(false);
+    '/login',
+  ])('%s er ikke med', (path) => {
+    expect(stays(path)).toBe(false);
   });
 });
 
@@ -121,12 +115,19 @@ describe('pickBackEntry', () => {
     expect(backFromLast('/', '/profile', '/profile')).toBe('/');
   });
 
-  it('et skjema bak deg hoppes over', () => {
-    expect(backFromLast('/games/x', '/games/x/submit', '/games/x/leaderboard')).toBe('/games/x');
+  it('et godkjent kort blir stående etter sending, og hoppes over', () => {
+    expect(backFromLast('/games/x', '/games/x/approve?status=approved', '/games/x/leaderboard')).toBe('/games/x');
   });
 
-  it('bare skjemaer bak deg gir null', () => {
-    expect(backFromLast('/games/x/submit', '/games/x')).toBeNull();
+  // Regel 1: et usendt skjema er der du kom fra. Et sendt er borte med `replace`.
+  it('et usendt skjema du gikk fra, er der du kom fra', () => {
+    expect(backFromLast('/games/x', '/games/x/slett', '/legal/privacy')).toBe('/games/x/slett');
+    expect(backFromLast('/admin/games/s', '/admin/games/s/edit', '/admin/games/s/startlista')).toBe('/admin/games/s/edit');
+    expect(backFromLast('/', '/opprett-spill?step=2', '/profile/venner')).toBe('/opprett-spill?step=2');
+  });
+
+  it('bare et godkjent kort bak deg gir null', () => {
+    expect(backFromLast('/games/x/approve?status=approved', '/games/x/leaderboard')).toBeNull();
   });
 
   it('/en/games/x og /games/x er samme skjerm', () => {
@@ -137,32 +138,6 @@ describe('pickBackEntry', () => {
     expect(
       backFromLast('/games/x', '/games/x/leaderboard?scoring=netto', '/games/x/leaderboard?scoring=brutto'),
     ).toBe('/games/x');
-  });
-
-  // Veiviseren → «Opprett ny bane» uten å sende. Lista kan ikke vite at siden er
-  // usendt, men pila vet hvor den peker, og det målet er aldri et gammelt skjema.
-  describe('lenkas eget mål er ikke et skjema å hoppe over', () => {
-    const fromLast = (href: string, ...paths: string[]) => {
-      const list = entries(...paths);
-      const index = pickBackEntry(list, list.length - 1, href);
-      return index === null ? null : paths[index]!;
-    };
-
-    it('veiviseren → ny bane → pil gir veiviseren, ikke ut av den', () => {
-      expect(
-        fromLast('/opprett-spill?step=2', '/profile', '/opprett-spill?step=2', '/opprett-bane?next=/opprett-spill'),
-      ).toBe('/opprett-spill?step=2');
-    });
-
-    it('redigering → slett (avbrutt) → pil gir redigeringen', () => {
-      expect(fromLast('/admin/courses/c/edit', '/admin/courses', '/admin/courses/c/edit', '/admin/courses/c/slett')).toBe(
-        '/admin/courses/c/edit',
-      );
-    });
-
-    it('andre skjemaer bak deg hoppes fortsatt over', () => {
-      expect(fromLast('/games/x', '/', '/games/y/slett', '/games/x')).toBe('/');
-    });
   });
 
   it('oppføringer etter den du står på teller ikke', () => {
