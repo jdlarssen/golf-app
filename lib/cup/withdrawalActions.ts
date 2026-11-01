@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/lib/nav/redirect';
 import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';

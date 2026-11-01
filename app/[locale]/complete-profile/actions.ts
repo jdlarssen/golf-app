@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/lib/nav/redirect';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import { parseProfileInput } from '@/lib/users/profileInput';

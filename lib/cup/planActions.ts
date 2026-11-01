@@ -1,7 +1,7 @@
 'use server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/lib/nav/redirect';
 import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import type { Database } from '@/lib/database.types';

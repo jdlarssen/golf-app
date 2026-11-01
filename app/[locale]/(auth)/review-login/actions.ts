@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/lib/nav/redirect';
 import { getServerClient } from '@/lib/supabase/server';
 import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';

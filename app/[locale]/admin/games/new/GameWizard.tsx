@@ -32,13 +32,11 @@
  * klubb-turnering, #2433, eller påmelding valgt øverst på steg 4, #2447).
  *
  * URL-state: `?step=2..5`, og `skjerm=lag` for steg 4s andre skjerm (#2321).
- * #1380: steg-overganger som arrangøren utløser
- * (Neste/Forrige/hopp-til-steg) skriver URL-en med `router.push`, så hvert
- * steg får sin egen history-entry og browser-back fra steg N lander på N-1.
- * Back fra steg 1 går ut av wizard-en (dokumentert intensjon). URL-skriving
- * UTEN bruker-intensjon — normalisering av en ugyldig `?step=99` ned til
- * steg 1 — bruker `router.replace`, ellers ville back-en gå tilbake til den
- * ugyldige URL-en og normalisere på nytt i en løkke.
+ * #2746: alle URL-skrivinger bruker `router.replace`, så veiviseren tar én
+ * plass i historikken og et ferdig skjema aldri ligger bak spillet (regel 3 i
+ * `docs/user-flows.md` §Tilbake). Pila og «Tilbake» går ett steg. Nettleserens
+ * egen tilbake går ut av veiviseren, og utkastet står. Normalisering av en
+ * ugyldig `?step=99` ned til steg 1 skjer også med `replace`, men i egen effekt.
  *
  * #1380: utfyllingen speiles også til localStorage (wizardStatePersistence)
  * så reload, tilbake-gest og PWA-eviction ikke tar med seg alt arrangøren har
@@ -708,10 +706,8 @@ function WizardBody({
   // #1380: effekten under kan IKKE selv se forskjell på «arrangøren gikk til
   // neste steg» og «vi normaliserte en ugyldig ?step=99 ned til 1» — den
   // avhenger bare av `step`. Signalet er derfor eksplisitt: steg-handlerne
-  // (goNext/goPrev/hopp-til-steg) skriver URL-en selv med `push` og setter
-  // dette flagget, som effekten leser og nullstiller. Uten skillet ville
-  // normaliseringen pushet en history-entry, og back havnet på `?step=99`
-  // igjen → normaliser → push → back … i ring.
+  // (goNext/goPrev/hopp-til-steg) skriver URL-en selv og setter dette flagget,
+  // som effekten leser og nullstiller, så adressen ikke skrives to ganger.
   const appInitiatedStepNav = useRef(false);
 
   /** #1837: satt av `handleIntentSelect`, lest av fokus-effekten under. */
@@ -732,7 +728,10 @@ function WizardBody({
     if (teams || showTeamsScreen) screenSwitchRef.current = true;
     setStep(next);
     setTeamsScreen(teams);
-    router.push(urlForStep(next, teams), { scroll: false });
+    // #2746: `replace`, ikke `push`. Veiviseren tar én plass i historikken, og
+    // den erstattes når spillet opprettes, så et ferdig skjema aldri ligger bak
+    // spillet. Pila og «Tilbake» går ett steg med `goPrev`.
+    router.replace(urlForStep(next, teams), { scroll: false });
   }
 
   // Normaliser URL-en når den ikke speiler steget OG endringen ikke kom fra en
@@ -1094,7 +1093,7 @@ function WizardBody({
   }
 
   function goPrev() {
-    // Tilbakepila (#2260, var «Forrige») pusher som «Neste» — ikke
+    // Tilbakepila (#2260, var «Forrige») skriver adressen som «Neste» — ikke
     // router.back(). Arrangøren kan ha landet rett på `?step=3` fra en lenke,
     // og da ville back tatt dem ut av veiviseren i stedet for ett steg tilbake.
     // #2321: lag-skjermen → velgeren, og steg 5 → lag-skjermen når den gjelder.
@@ -2143,7 +2142,7 @@ function WizardTop({
   title: string;
   /** Steg 1: pila er en lenke ut av veiviseren. */
   backHref: string;
-  /** Steg 2–5: pila går ett steg tilbake (goPrev, med historikken). */
+  /** Steg 2–5: pila går ett steg tilbake (goPrev). */
   onBack: () => void;
   notice?: ReactNode;
   /** #1837: fokusmål ved auto-videre — se `handleIntentSelect`. */

@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect as redirectToRoot } from 'next/navigation';
+import { redirect as redirectToRoot } from '@/lib/nav/redirect';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
