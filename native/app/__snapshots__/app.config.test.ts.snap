@@ -55,12 +55,32 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           },
           {
             "host": "tornygolf.no",
+            "pathPrefix": "/invitasjon/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/runde/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
             "pathPrefix": "/en/venner/legg-til/",
             "scheme": "https",
           },
           {
             "host": "tornygolf.no",
             "pathPrefix": "/en/liga/bli-med/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/en/invitasjon/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/en/runde/",
             "scheme": "https",
           },
           {
@@ -75,12 +95,32 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           },
           {
             "host": "www.tornygolf.no",
+            "pathPrefix": "/invitasjon/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/runde/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
             "pathPrefix": "/en/venner/legg-til/",
             "scheme": "https",
           },
           {
             "host": "www.tornygolf.no",
             "pathPrefix": "/en/liga/bli-med/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/en/invitasjon/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/en/runde/",
             "scheme": "https",
           },
         ],

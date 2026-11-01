@@ -185,6 +185,8 @@ flowchart LR
   CP --> Home
 ```
 
+**Mailen og appen (#2748):** lenka i invitasjonsmailen går til `/invitasjon/<token>?email=…`, og lenkene i e-postene om en runde går til `/runde/<id>` (hullet, levering, tavla og avslutningen er undersider). Har du appen, åpner mailen den, på Android fra neste bygg og på iPhone når AASA-fila slipper stiene gjennom. Invitasjonen åpner skjermen `InvitationLink`, som går rett til spillet via `POST /api/invitasjon/[token]`. Runde i gang, ingen runde å åpne, en annen e-postadresse og ukjent lenke har hver sin tekst og vei til Hjem. E-posten om en runde åpner samme skjerm som varselet. Uten innlogging står det i innloggingsbåndet hva som venter, og skjermen kommer rett etter innloggingen. Uten appen sender stiene nettleseren videre til `/login?email=…&invite=<token>` og `/games/<id>…`, så gamle mailer virker som før. Appens egne knapper til nettsiden bruker de gamle adressene og åpner nettleseren.
+
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
 | Be om kode | `app/[locale]/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. Med gyldig `?invite=` står invitasjonskortet (`components/games/InvitationCard.tsx`, #2266) over skjemaet «Bli med på runden», uten demo-lenke og passkey-knapp. Redirecten til kodesteget får `sent=<unix-sekunder>` (#2349). |

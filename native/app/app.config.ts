@@ -58,8 +58,8 @@ export const STORE_LINK_DOMAINS = [STORE_LINK_DOMAIN, STORE_LINK_WWW_DOMAIN] as 
 
 /**
  * Stiene på {@link STORE_LINK_DOMAINS} som åpner appen på Android, på norsk og
- * under `/en`: «legg til meg»-siden (#2627) og ligalenka (#2748). Bare de. Appen
- * kan ikke bære en nett-sesjon fra en lenke, så innlogging, påmelding og alt
+ * under `/en`: «legg til meg»-siden (#2627), ligalenka, invitasjonen og e-postene
+ * om en runde (#2748). Bare de. Appen kan ikke bære en nett-sesjon fra en lenke, så innlogging, påmelding og alt
  * annet skal fortsatt åpnes i nettleseren. Lista bygges fra
  * `lib/appLinks/appLinkPaths.ts`; testen holder dem i takt (fila her er
  * selvstendig, se toppen). iOS leser sine stier fra AASA-fila
@@ -69,8 +69,12 @@ export const STORE_LINK_DOMAINS = [STORE_LINK_DOMAIN, STORE_LINK_WWW_DOMAIN] as 
 export const STORE_APP_LINK_PATH_PREFIXES = [
   '/venner/legg-til/',
   '/liga/bli-med/',
+  '/invitasjon/',
+  '/runde/',
   '/en/venner/legg-til/',
   '/en/liga/bli-med/',
+  '/en/invitasjon/',
+  '/en/runde/',
 ] as const;
 
 /** Bundle-id (iOS) og pakkenavn (Android) — arvet fra skallene (#1279/#1283). */

@@ -6,10 +6,14 @@
 // web-adresse, skal gi `null`, så appen åpner som vanlig.
 import { STORE_APP_LINK_PATH_PREFIXES, STORE_LINK_DOMAINS, STORE_WEB_BASE_URL } from '../../app.config';
 import { appLinkFromUrl } from './appLinkUrl';
+import { pushTarget } from './pushRoute';
 
 const BASE = 'https://tornygolf.no';
 const FRIEND = { kind: 'friend', code: 'abcd1234' };
 const LEAGUE = { kind: 'league', code: 'abcd2345' };
+const ID = '44444444-4444-4444-8444-444444444444';
+const INVITATION = { kind: 'invitation', token: ID };
+const ROUND_HOME = { kind: 'round', target: { name: 'GameHome', params: { gameId: ID } } };
 
 describe('appLinkFromUrl', () => {
   it.each([
@@ -38,6 +42,70 @@ describe('appLinkFromUrl', () => {
     ['skjema, engelsk', 'no.tornygolf.dev://en/liga/bli-med/abcd2345', LEAGUE],
   ])('leser ligalenka fra %s', (_label, url, link) => {
     expect(appLinkFromUrl(url, BASE)).toEqual(link);
+  });
+
+  it.each([
+    ['mailen', `https://tornygolf.no/invitasjon/${ID}?email=a%40b.no`, INVITATION],
+    ['den engelske siden', `https://tornygolf.no/en/invitasjon/${ID}?email=a%40b.no`, INVITATION],
+    ['skråstrek til slutt', `https://tornygolf.no/invitasjon/${ID}/`, INVITATION],
+    ['www', `https://www.tornygolf.no/invitasjon/${ID}`, INVITATION],
+    ['dev-byggets skjema', `no.tornygolf.dev://invitasjon/${ID}`, INVITATION],
+    ['skjema, engelsk', `no.tornygolf.dev://en/invitasjon/${ID}`, INVITATION],
+  ])('leser invitasjonslenka fra %s', (_label, url, link) => {
+    expect(appLinkFromUrl(url, BASE)).toEqual(link);
+  });
+
+  it.each([
+    ['mailen', `https://tornygolf.no/runde/${ID}`, ROUND_HOME],
+    ['den engelske siden', `https://tornygolf.no/en/runde/${ID}`, ROUND_HOME],
+    ['skråstrek til slutt', `https://tornygolf.no/runde/${ID}/`, ROUND_HOME],
+    ['spørring og anker', `https://tornygolf.no/runde/${ID}?varsel=abc#top`, ROUND_HOME],
+    ['www', `https://www.tornygolf.no/runde/${ID}`, ROUND_HOME],
+    ['dev-byggets skjema', `no.tornygolf.dev://runde/${ID}`, ROUND_HOME],
+  ])('leser rundelenka fra %s', (_label, url, link) => {
+    expect(appLinkFromUrl(url, BASE)).toEqual(link);
+  });
+
+  // E-posten og varselet skal aldri kunne være uenige om hvor du havner (AK 24).
+  it.each(['', '/holes/1', '/holes/18', '/submit', '/avslutt', '/leaderboard'])(
+    '/runde/<id>%s gir samme skjerm som varselet for /games/<id>%s',
+    (tail) => {
+      expect(appLinkFromUrl(`https://tornygolf.no/runde/${ID}${tail}`, BASE)).toEqual({
+        kind: 'round',
+        target: pushTarget(`/games/${ID}${tail}`),
+      });
+    },
+  );
+
+  it('åpner riktig skjerm for hullet og tavla', () => {
+    expect(appLinkFromUrl(`https://tornygolf.no/runde/${ID}/holes/7`, BASE)).toEqual({
+      kind: 'round',
+      target: { name: 'Hole', params: { gameId: ID, holeNumber: 7 } },
+    });
+    expect(appLinkFromUrl(`no.tornygolf.dev://en/runde/${ID}/leaderboard`, BASE)).toEqual({
+      kind: 'round',
+      target: { name: 'Leaderboard', params: { gameId: ID } },
+    });
+  });
+
+  it.each([
+    ['en token i feil form', 'https://tornygolf.no/invitasjon/ikke-en-token'],
+    ['invitasjon uten token', 'https://tornygolf.no/invitasjon/'],
+    ['en dypere invitasjonssti', `https://tornygolf.no/invitasjon/${ID}/mer`],
+    ['innloggingen med en invitasjon', `https://tornygolf.no/login?invite=${ID}`],
+    ['en annen vert', `https://example.com/invitasjon/${ID}`],
+    ['en id i feil form', 'https://tornygolf.no/runde/ikke-en-id'],
+    ['runde uten id', 'https://tornygolf.no/runde/'],
+    ['en underside som ikke finnes', `https://tornygolf.no/runde/${ID}/slett`],
+    ['hull 19', `https://tornygolf.no/runde/${ID}/holes/19`],
+    ['hull 0', `https://tornygolf.no/runde/${ID}/holes/0`],
+    ['en dypere rundesti', `https://tornygolf.no/runde/${ID}/holes/7/mer`],
+    ['spillet på nettet', `https://tornygolf.no/games/${ID}`],
+    ['spillet på nettet, under-side', `https://tornygolf.no/games/${ID}/submit`],
+    ['skjemaet til spillet', `no.tornygolf.dev://games/${ID}`],
+    ['en annen vert', `https://example.com/runde/${ID}`],
+  ])('gir null for %s', (_label, url) => {
+    expect(appLinkFromUrl(url, BASE)).toBeNull();
   });
 
   it.each([
@@ -82,7 +150,7 @@ describe('appLinkFromUrl', () => {
   // Stiene butikkbygget gjør krav på (app.config.ts, i takt med Android-beviset)
   // må alle bli en lenke her, ellers åpner lenka appen på Hjem og ingenting mer.
   it.each(STORE_APP_LINK_PATH_PREFIXES)('forstår hver sti butikkbygget gjør krav på: %s', (prefix) => {
-    const code = prefix.includes('liga') ? 'abcd2345' : 'abcd1234';
+    const code = prefix.includes('liga') ? 'abcd2345' : prefix.includes('venner') ? 'abcd1234' : ID;
     expect(appLinkFromUrl(`${STORE_WEB_BASE_URL}${prefix}${code}`, STORE_WEB_BASE_URL)).not.toBeNull();
   });
 

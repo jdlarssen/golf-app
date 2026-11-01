@@ -128,7 +128,16 @@ describe('android-proof.py manifest', () => {
     const f = facts(withAutoVerify(undefined, FRIEND_LINK));
     expect(f.status).toBe(0);
     expect(f['autoverify-host']).toEqual(['tornygolf.no', 'www.tornygolf.no']);
-    const paths = ['/venner/legg-til/', '/liga/bli-med/', '/en/venner/legg-til/', '/en/liga/bli-med/'];
+    const paths = [
+      '/venner/legg-til/',
+      '/liga/bli-med/',
+      '/invitasjon/',
+      '/runde/',
+      '/en/venner/legg-til/',
+      '/en/liga/bli-med/',
+      '/en/invitasjon/',
+      '/en/runde/',
+    ];
     expect(f['autoverify-path']).toEqual(
       ['tornygolf.no', 'www.tornygolf.no'].flatMap((host) => paths.map((p) => `${host} pathPrefix:${p}`)),
     );

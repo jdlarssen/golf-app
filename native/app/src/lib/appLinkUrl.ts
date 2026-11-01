@@ -3,9 +3,10 @@
 //
 // To slags lenker åpner appen:
 //  - **Lenkene på nettet**, `https://tornygolf.no/venner/legg-til/<kode>` (QR-koden
-//    på bag-taggen og «Del lenken din») og `https://tornygolf.no/liga/bli-med/<kode>`
-//    («Del lenka» på ligasiden). Butikkbygget gjør krav på domenet, og lista over
-//    stier står i `lib/appLinks/appLinkPaths.ts`. Verten må likevel være web-adressen
+//    på bag-taggen og «Del lenken din»), `/liga/bli-med/<kode>` («Del lenka» på
+//    ligasiden), `/invitasjon/<token>` (invitasjonsmailen) og `/runde/<id>` (e-postene
+//    om en runde). Butikkbygget gjør krav på domenet, og lista over stier står i
+//    `lib/appLinks/appLinkPaths.ts`. Verten må likevel være web-adressen
 //    bygget peker på: en annen vert skal aldri leses som vår. Unntaket er `www` i
 //    bygget som peker på prod. Knappen «Åpne i appen» på nettsiden lenker dit, fordi
 //    Safari holder lenker til samme domene inne.
@@ -19,13 +20,28 @@
 // Alt annet er ikke en av våre lenker, og appen åpner som vanlig. Venne-koden blir
 // små bokstaver, som RPC-en gjør. Ligakoden har én form (`isJoinCode`), og nettsiden
 // svarer 404 på alt annet.
-import { LEAGUE_LINK_PREFIX } from '../../../../lib/appLinks/appLinkPaths';
+//
+// **Rundelenka åpner samme skjerm som varselet.** Stien oversettes til `/games/...`
+// og går gjennom `pushTarget`, så e-posten og varselet aldri kan være uenige om hvor
+// du havner. Undersidene er de nettsiden tar imot (`isRoundLinkSubpage`).
+import {
+  INVITATION_LINK_PREFIX,
+  LEAGUE_LINK_PREFIX,
+  ROUND_LINK_PREFIX,
+  isRoundLinkSubpage,
+} from '../../../../lib/appLinks/appLinkPaths';
 import { FRIEND_LINK_LOCALE_PREFIXES, FRIEND_LINK_PREFIX } from '../../../../lib/friends/friendLinkPath';
 import { isJoinCode } from '../../../../lib/league/joinCode';
+import { isUuid } from '../../../../lib/url/isUuid';
+import { pushTarget, type PushTarget } from './pushRoute';
 import { webBaseUrl } from './webLink';
 
 /** Det en lenke peker på. */
-export type AppLink = { kind: 'friend'; code: string } | { kind: 'league'; code: string };
+export type AppLink =
+  | { kind: 'friend'; code: string }
+  | { kind: 'league'; code: string }
+  | { kind: 'invitation'; token: string }
+  | { kind: 'round'; target: PushTarget };
 
 /** `STORE_WEB_BASE_URL` og `www`-verten i `app.config.ts`; testen holder dem like. */
 const STORE_WEB_BASE = 'https://tornygolf.no';
@@ -37,6 +53,8 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const LOCALES = FRIEND_LINK_LOCALE_PREFIXES.map(escape).join('|');
 const FRIEND_PATH = new RegExp(`^(?:${LOCALES})${escape(FRIEND_LINK_PREFIX)}([0-9A-Za-z]{1,64})/?$`);
 const LEAGUE_PATH = new RegExp(`^(?:${LOCALES})${escape(LEAGUE_LINK_PREFIX)}([^/]+)/?$`);
+const INVITATION_PATH = new RegExp(`^(?:${LOCALES})${escape(INVITATION_LINK_PREFIX)}([^/]+)/?$`);
+const ROUND_PATH = new RegExp(`^(?:${LOCALES})${escape(ROUND_LINK_PREFIX)}([^/]+)(?:/(.*?))?/?$`);
 
 /** Vert og port i en http(s)-adresse, med små bokstaver, eller `null`. */
 function authorityOf(url: string): string | null {
@@ -76,5 +94,16 @@ export function appLinkFromUrl(
   const friend = FRIEND_PATH.exec(path);
   if (friend) return { kind: 'friend', code: friend[1].toLowerCase() };
   const league = LEAGUE_PATH.exec(path);
-  return league && isJoinCode(league[1]) ? { kind: 'league', code: league[1] } : null;
+  if (league) return isJoinCode(league[1]) ? { kind: 'league', code: league[1] } : null;
+  const invitation = INVITATION_PATH.exec(path);
+  if (invitation) return isUuid(invitation[1]) ? { kind: 'invitation', token: invitation[1] } : null;
+  const round = ROUND_PATH.exec(path);
+  return round ? roundLink(round[1], round[2] ?? '') : null;
+}
+
+/** Skjermen varselet ville åpnet for samme side, eller `null` for en side som ikke finnes. */
+function roundLink(gameId: string, subpage: string): AppLink | null {
+  if (!isUuid(gameId) || !isRoundLinkSubpage(subpage)) return null;
+  const target = pushTarget(`/games/${gameId}${subpage ? `/${subpage}` : ''}`);
+  return target.name === 'Home' ? null : { kind: 'round', target };
 }

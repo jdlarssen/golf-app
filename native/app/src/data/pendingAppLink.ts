@@ -1,8 +1,8 @@
 // native/app/src/data/pendingAppLink.ts
 // #2627, #2748: lenka som åpnet appen, til navigatoren tar den.
 //
-// Venne-lenka, QR-koden på bag-taggen og ligalenka åpner appen
-// (`lib/appLinkUrl.ts`). Lenka kan komme før noen er logget inn, og da finnes ingen
+// Venne-lenka, QR-koden på bag-taggen, ligalenka, invitasjonen og e-postene om en
+// runde åpner appen (`lib/appLinkUrl.ts`). Lenka kan komme før noen er logget inn, og da finnes ingen
 // navigator å åpne skjermen i. Den står derfor her: `App.tsx` lytter fra første
 // bilde, innloggingen viser en linje om den, og navigatoren tar den når den er
 // montert (etter innloggingen, profilen og AI-spørsmålet) og åpner skjermen.
@@ -61,13 +61,22 @@ export function offerAppLink(url: string | null | undefined): boolean {
   return true;
 }
 
+/** Lenkene som har en egen skjerm. Rundelenka går via `openPushTarget`, som varselet. */
+export type ScreenLink = Exclude<AppLink, { kind: 'round' }>;
+
+type LinkScreen =
+  | { name: 'FriendLink' | 'LeagueJoin'; params: { code: string } }
+  | { name: 'InvitationLink'; params: { token: string } };
+
 /** Skjermen en lenke åpner. Uttømmende: en ny lenketype faller på `tsc`. */
-export function appLinkScreen(link: AppLink): { name: 'FriendLink' | 'LeagueJoin'; params: { code: string } } {
+export function appLinkScreen(link: ScreenLink): LinkScreen {
   switch (link.kind) {
     case 'friend':
       return { name: 'FriendLink', params: { code: link.code } };
     case 'league':
       return { name: 'LeagueJoin', params: { code: link.code } };
+    case 'invitation':
+      return { name: 'InvitationLink', params: { token: link.token } };
   }
 }
 
@@ -80,7 +89,8 @@ export type AppLinkStep = 'wait' | 'skip' | 'push';
  *    stående, og `onReady` eller neste lenke prøver igjen.
  *  - `skip`: skjermen står alt øverst med samme kode (lenka kom både som
  *    oppstarts-lenke og som hendelse). Lenka brukes opp uten ny skjerm.
- *  - `push`: åpne skjermen.
+ *  - `push`: åpne skjermen. En rundelenke går alltid hit: `openPushTarget` sørger
+ *    selv for at det ikke blir noen kopi.
  */
 export function appLinkStep(
   isReady: boolean,
@@ -88,10 +98,11 @@ export function appLinkStep(
   link: AppLink | null,
 ): AppLinkStep {
   if (!isReady || !link) return 'wait';
+  if (link.kind === 'round') return 'push';
   const screen = appLinkScreen(link);
-  const shownCode = (currentRoute?.params as { code?: unknown } | undefined)?.code;
-  if (currentRoute?.name === screen.name && shownCode === screen.params.code) return 'skip';
-  return 'push';
+  const shown = currentRoute?.params as Record<string, unknown> | undefined;
+  const same = Object.entries(screen.params).every(([key, value]) => shown?.[key] === value);
+  return currentRoute?.name === screen.name && same ? 'skip' : 'push';
 }
 
 /**

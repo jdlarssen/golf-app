@@ -13,6 +13,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 import type { RootStackParamList } from '../navigation';
+import type { AppLink } from './appLinkUrl';
 import { backTo, type BackNavigation } from './backTo';
 import { openAppLink } from './openAppLink';
 
@@ -20,7 +21,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ref = createNavigationContainerRef<RootStackParamList>();
 const Stub = () => <View />;
 
-const SCREENS = ['Home', 'GameHome', 'Hole', 'Profile', 'League', 'LeagueJoin'] as const;
+const SCREENS = [
+  'Home',
+  'GameHome',
+  'Hole',
+  'Leaderboard',
+  'Profile',
+  'League',
+  'LeagueJoin',
+  'InvitationLink',
+] as const;
 const L1 = { leagueId: 'l1' };
 const G = { gameId: 'g1' };
 const HOLE_5 = { ...G, holeNumber: 5 };
@@ -51,11 +61,14 @@ async function stackOf(...opened: [name: keyof RootStackParamList, params?: obje
   }
 }
 
-async function openLink() {
+async function open(link: AppLink = LINK) {
   await act(async () => {
-    openAppLink(ref, LINK);
+    openAppLink(ref, link);
   });
 }
+
+const openLink = () => open();
+const INVITATION = { kind: 'invitation', token: 't1' } as const;
 
 async function joinTo(params: { leagueId: string; joined?: boolean }) {
   await act(async () => {
@@ -134,5 +147,72 @@ describe('lenka åpner «Bli med i liga» (#2748)', () => {
     expect(names()).toEqual(['Home', 'League', 'League']);
     await back();
     expect(ref.getCurrentRoute()?.params).toEqual({ leagueId: 'l2' });
+  });
+});
+
+describe('lenka åpner invitasjonen (#2748)', () => {
+  async function toGame() {
+    await act(async () => {
+      backTo(navigation, 'GameHome', G);
+    });
+  }
+
+  it('lenka åpnet appen: spillet tar skjermens plass, og tilbake går til Hjem', async () => {
+    await stackOf();
+    await open(INVITATION);
+    expect(names()).toEqual(['Home', 'InvitationLink']);
+    await toGame();
+    expect(names()).toEqual(['Home', 'GameHome']);
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('tilbake uten at noe skjedde går til Hjem', async () => {
+    await stackOf();
+    await open(INVITATION);
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('ligger spillet alt under, går du tilbake til det: ingen kopi', async () => {
+    await stackOf(['GameHome', G]);
+    await open(INVITATION);
+    await toGame();
+    expect(names()).toEqual(['Home', 'GameHome']);
+  });
+
+  it('står du på et annet spill, går tilbake dit', async () => {
+    await stackOf(['GameHome', { gameId: 'g2' }]);
+    await open(INVITATION);
+    await toGame();
+    expect(names()).toEqual(['Home', 'GameHome', 'GameHome']);
+    await back();
+    expect(ref.getCurrentRoute()?.params).toEqual({ gameId: 'g2' });
+  });
+});
+
+// Rundelenka åpner det samme som varselet (`openPushTarget`, egne tester).
+describe('e-posten om en runde (#2748)', () => {
+  const round = (target: Extract<AppLink, { kind: 'round' }>['target']): AppLink => ({ kind: 'round', target });
+
+  it('hullet: spillet under, og tilbake derfra går til Hjem', async () => {
+    await stackOf();
+    await open(round({ name: 'Hole', params: HOLE_5 }));
+    expect(names()).toEqual(['Home', 'GameHome', 'Hole']);
+    await back();
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('tavla: spillet under', async () => {
+    await stackOf();
+    await open(round({ name: 'Leaderboard', params: G }));
+    expect(names()).toEqual(['Home', 'GameHome', 'Leaderboard']);
+  });
+
+  it('ligger spillet alt under, går du tilbake til det: ingen kopi', async () => {
+    await stackOf(['GameHome', G], ['Hole', HOLE_5]);
+    await open(round({ name: 'GameHome', params: G }));
+    expect(names()).toEqual(['Home', 'GameHome']);
   });
 });

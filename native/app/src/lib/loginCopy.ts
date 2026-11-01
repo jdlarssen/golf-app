@@ -27,6 +27,7 @@ import type { SendLoginCodeError } from '../../../../lib/auth/loginCodeErrors';
 import { isNetworkFailureMessage } from '../data/timedFetch';
 import type { AppLink } from './appLinkUrl';
 import { FRIEND_LINK_TEXT } from './friendsCopy';
+import { INVITATION_LINK_TEXT } from './invitationLinkCopy';
 import { LEAGUE_JOIN_TEXT } from './leagueCopy';
 import { OFFLINE_NOTE } from './rosterCopy';
 
@@ -95,6 +96,9 @@ export const LOGIN_TEXT = {
   // på feltet, så det tomme tilfellet når aldri serveren der. «e-post» er
   // skjermens eget ord, fra passord-feilen.
   emailRequired: 'Skriv e-posten din først.',
+  /** Linja i båndet når en e-post om en runde venter (#2748). */
+  roundLinkTitle: 'Logg inn for å åpne runden',
+  roundLinkBody: 'Etterpå kommer du rett dit.',
 } as const;
 
 /**
@@ -119,6 +123,10 @@ export function appLinkLoginLine(link: AppLink): { title: string; body: string }
       return { title: FRIEND_LINK_TEXT.loginTitle, body: FRIEND_LINK_TEXT.loginBody };
     case 'league':
       return { title: LEAGUE_JOIN_TEXT.loginTitle, body: LEAGUE_JOIN_TEXT.loginBody };
+    case 'invitation':
+      return { title: INVITATION_LINK_TEXT.loginTitle, body: INVITATION_LINK_TEXT.loginBody };
+    case 'round':
+      return { title: LOGIN_TEXT.roundLinkTitle, body: LOGIN_TEXT.roundLinkBody };
   }
 }
 

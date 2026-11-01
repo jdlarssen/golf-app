@@ -3,10 +3,10 @@
 // react-navigation native-stack, ikke expo-router: expo-router krever bytte av
 // entry-point og filbasert app/-skanning oppå det uvanlige watchFolders-
 // oppsettet appen deler `lib/` gjennom. Seks skjermer trenger ikke den magien.
-// Dype lenker går ikke gjennom react-navigations linking-config. Venne-lenka
-// (#2627) og ligalenka (#2748) åpner hver sin skjerm: `App.tsx` lytter,
-// `data/pendingAppLink.ts` holder lenka, og navigatoren åpner skjermen
-// (`openPendingAppLink`). Varsler åpner skjermer via `listenForPushTaps`.
+// Dype lenker går ikke gjennom react-navigations linking-config. Lenkene fra Tørny
+// (#2627, #2748) åpner hver sin skjerm: `App.tsx` lytter, `data/pendingAppLink.ts`
+// holder lenka, og navigatoren åpner skjermen (`openPendingAppLink`). Varsler åpner
+// skjermer via `listenForPushTaps`.
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
@@ -38,6 +38,7 @@ import { openAppLink } from './lib/openAppLink';
 import { openPushTarget } from './lib/openPushTarget';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
+import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
@@ -59,6 +60,7 @@ import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
+import { InvitationLink } from './screens/InvitationLink';
 import { Leaderboard } from './screens/Leaderboard';
 import { League } from './screens/League';
 import { LeagueJoin } from './screens/LeagueJoin';
@@ -140,6 +142,11 @@ export type RootStackParamList = {
    * appen. `code` er venne-koden fra lenka (`lib/appLinkUrl.ts`).
    */
   FriendLink: { code: string };
+  /**
+   * Invitasjonsmailen åpnet appen (#2748). `token` er fra lenka
+   * (`lib/appLinkUrl.ts`). Skjermen åpner invitasjonen og går videre til spillet.
+   */
+  InvitationLink: { token: string };
   /**
    * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
    * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
@@ -401,6 +408,12 @@ export function RootNavigator() {
           name="FriendLink"
           component={FriendLink}
           options={kickerHeader(FRIEND_LINK_TEXT.kicker, FRIEND_LINK_TEXT.kicker)}
+        />
+        {/* Invitasjonen (#2748): vises bare når den ikke gir et spill å åpne. */}
+        <Stack.Screen
+          name="InvitationLink"
+          component={InvitationLink}
+          options={kickerHeader(INVITATION_LINK_TEXT.kicker, INVITATION_LINK_TEXT.kicker)}
         />
         {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
             «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}

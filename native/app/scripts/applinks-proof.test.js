@@ -1,8 +1,8 @@
 // native/app/scripts/applinks-proof.test.js
 // #2627, #2748: App Links-regelen i Android-beviset (`applinks-proof.sh`).
 //
-// Venne-lenka, QR-koden på bag-taggen og ligalenka åpner appen, og ingenting annet
-// på tornygolf.no gjør det. Fire ting må stå:
+// Venne-lenka, QR-koden på bag-taggen, ligalenka, invitasjonen og e-postene om en
+// runde åpner appen, og ingenting annet på tornygolf.no gjør det. Fire ting må stå:
 //
 //  1. **Butikkmanifestets filter gir PASS**: fiksturen går gjennom den ekte
 //     leseren (`android-proof.py manifest`) og så regelen, som i beviset.
@@ -96,6 +96,8 @@ describe('android_applinks_rules', () => {
     ['en annen sti', path(APEX, 'pathPrefix:/login')],
     ['en annen sti på www', path(WWW, 'pathPrefix:/games/')],
     ['ligasiden', path(APEX, 'pathPrefix:/liga/')],
+    ['spillet', path(APEX, 'pathPrefix:/games/')],
+    ['påmeldingen', path(APEX, 'pathPrefix:/signup/')],
     ['et filter uten sti (hele verten)', path(APEX, '*')],
     ['et filter uten sti på www', path(WWW, '*')],
     ['et mønster', path(APEX, 'pathPattern:/venner/.*')],

@@ -179,7 +179,16 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   it('claimer tornygolf.no og www for stiene på lista, og bare det', () => {
     const config = resolveConfig(base, STORE_ENV);
     expect(config.ios?.associatedDomains).toEqual(['applinks:tornygolf.no', 'applinks:www.tornygolf.no']);
-    const paths = ['/venner/legg-til/', '/liga/bli-med/', '/en/venner/legg-til/', '/en/liga/bli-med/'];
+    const paths = [
+      '/venner/legg-til/',
+      '/liga/bli-med/',
+      '/invitasjon/',
+      '/runde/',
+      '/en/venner/legg-til/',
+      '/en/liga/bli-med/',
+      '/en/invitasjon/',
+      '/en/runde/',
+    ];
     expect(config.android?.intentFilters).toEqual([
       {
         action: 'VIEW',
