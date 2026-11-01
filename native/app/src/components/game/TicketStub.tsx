@@ -100,7 +100,7 @@ export function TicketStub({
         </View>
       );
     case 'withdrawn':
-      return <WithdrawnStub gameId={gameId} bySelf={stub.bySelf} onChanged={onChanged} />;
+      return <WithdrawnStub gameId={gameId} bySelf={stub.bySelf} canUndo={stub.canUndo} onChanged={onChanged} />;
     case 'cupWithdrawn':
       return (
         <View style={styles.block} testID="cup-withdrawn-banner">
@@ -365,10 +365,12 @@ function ScheduledActions({
 function WithdrawnStub({
   gameId,
   bySelf,
+  canUndo,
   onChanged,
 }: {
   gameId: string;
   bySelf: boolean;
+  canUndo: boolean;
   onChanged: () => void | Promise<void>;
 }) {
   const { colors, ui } = useTheme();
@@ -394,7 +396,7 @@ function WithdrawnStub({
       <Text style={[styles.text, { color: colors.muted }]}>
         {bySelf ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
       </Text>
-      {bySelf ? (
+      {canUndo ? (
         <Pressable
           style={ui.buttonSecondary}
           disabled={busy}

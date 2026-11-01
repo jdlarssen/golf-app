@@ -12,15 +12,18 @@ import { SmartLink } from '@/components/ui/SmartLink';
  * WD-banner: vises øverst i score-lista når innlogget spiller er
  * trukket (#386). Lenker til game-home for angre-knapp — bare når spilleren
  * trakk seg selv (#2358). Et trekk arrangøren satte, er arrangørens å angre,
- * og game-home har ingen knapp for det.
+ * og game-home har ingen knapp for det. Det samme gjelder et format der trekket
+ * ikke kan angres (#2752, `canUndo`).
  */
 export function WithdrawnBanner({
   withdrawn,
   selfWithdrawn,
+  canUndo,
   gameId,
 }: {
   withdrawn: boolean;
   selfWithdrawn: boolean;
+  canUndo: boolean;
   gameId: string;
 }): JSX.Element | null {
   const t = useTranslations('holes');
@@ -47,7 +50,7 @@ export function WithdrawnBanner({
       <span>
         {selfWithdrawn ? t('banners.withdrawn') : t('banners.withdrawnByOrganiser')}
       </span>
-      {selfWithdrawn && (
+      {selfWithdrawn && canUndo && (
         <SmartLink
           href={`/games/${gameId}`}
           data-testid="withdrawn-undo-link"
