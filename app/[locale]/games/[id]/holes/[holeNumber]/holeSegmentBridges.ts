@@ -9,6 +9,7 @@ import {
 } from '@/lib/games/holeScope';
 import {
   findSegmentSibling,
+  isBroModus,
   isSegmentSiblingCandidate,
   type SegmentSibling,
 } from '@/lib/games/segmentSibling';
@@ -77,10 +78,7 @@ export function resolveSegmentBridges(args: {
   siblingMatch: SegmentSibling | null;
 }): SegmentBridges {
   const { game, holeNumber, siblingMatch } = args;
-  const broModus =
-    game.hole_segment === 'front9' &&
-    siblingMatch != null &&
-    siblingMatch.mySubmittedAt == null;
+  const broModus = isBroModus(game.hole_segment, siblingMatch);
 
   const isSegmentBoundaryHole =
     (game.hole_segment === 'front9' &&
