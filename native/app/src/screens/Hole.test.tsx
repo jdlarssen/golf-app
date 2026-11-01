@@ -1185,6 +1185,7 @@ describe('Hole', () => {
         expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
       });
       expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+      expect(screen.getByTestId('hole-submit')).toHaveTextContent('Lever scorekort');
     });
 
     it('en levert makker låser de delte hullene, men ikke mine egne', async () => {
@@ -1282,6 +1283,7 @@ describe('Hole', () => {
       expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
     });
     expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever lagets kort');
+    expect(screen.getByTestId('hole-submit')).toHaveTextContent('Lever lagets kort');
   });
 
   it('foursomes (#2751): velgeren står på hull 1, ikke på hull 2, og hintet følger valget', async () => {
