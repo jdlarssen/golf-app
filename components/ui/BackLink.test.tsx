@@ -5,10 +5,13 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { BackLink } from './BackLink';
 import { LeaderboardBackLink } from './LeaderboardBackLink';
 
-const { routerReplace } = vi.hoisted(() => ({ routerReplace: vi.fn() }));
+const { routerReplace, routerRefresh } = vi.hoisted(() => ({
+  routerReplace: vi.fn(),
+  routerRefresh: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: routerReplace, prefetch: vi.fn() }),
+  useRouter: () => ({ replace: routerReplace, refresh: routerRefresh, prefetch: vi.fn() }),
 }));
 
 // #2746: pila bruker nettleserens historikkliste når den har noe å gå til, og er
@@ -32,6 +35,7 @@ const followed = (link: HTMLElement, init?: MouseEventInit) => fireEvent.click(l
 afterEach(() => {
   delete (window as unknown as { navigation?: unknown }).navigation;
   routerReplace.mockClear();
+  routerRefresh.mockClear();
   vi.unstubAllGlobals();
 });
 
@@ -41,6 +45,31 @@ describe('tilbake-pila (#2746)', () => {
     render(<BackLink href="/fallback">Tilbake</BackLink>);
     expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
     expect(traverseTo).toHaveBeenCalledWith('k0');
+  });
+
+  // `traverseTo` viser siden fra Next sin hurtigbuffer for tilbake og fram. Slag går
+  // gjennom klient-synken og tømmer den ikke, så spillets knapp ville stått på
+  // «Start runden» etter fem hull.
+  it('henter siden på nytt når traverseringen er ferdig, ikke før', async () => {
+    let finish!: () => void;
+    fakeNavigation(['/', '/games/x'], {
+      traverseTo: () => ({ finished: new Promise<void>((resolve) => { finish = resolve; }) }),
+    });
+    render(<BackLink href="/fallback">Tilbake</BackLink>);
+    followed(screen.getByRole('link', { name: 'Tilbake' }));
+    expect(routerRefresh).not.toHaveBeenCalled();
+    finish();
+    await vi.waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1));
+  });
+
+  it('henter ikke på nytt når traverseringen avvises', async () => {
+    fakeNavigation(['/', '/games/x'], {
+      traverseTo: () => ({ finished: Promise.reject(new DOMException('nei', 'InvalidStateError')) }),
+    });
+    render(<BackLink href="/fallback">Tilbake</BackLink>);
+    followed(screen.getByRole('link', { name: 'Tilbake' }));
+    await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/fallback'));
+    expect(routerRefresh).not.toHaveBeenCalled();
   });
 
   it('tavlas pil gjør det samme', () => {

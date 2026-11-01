@@ -186,6 +186,40 @@ test.describe('tilbake-pila', () => {
     await expect(page).toHaveURL(/\/opprett-spill/, { timeout: 30_000 });
   });
 
+  // Pila går tilbake i historikken, og Next viser siden fra hurtigbufferen. Slag går
+  // gjennom klient-synken, så uten en ny henting peker spillets knapp på hull 1
+  // etter tre førte hull.
+  test('spillets knapp er fersk etter pila @gate', async ({ page }) => {
+    const game = await seedActiveStablefordGame('back-arrow-fresh');
+    gameIds.push(game.id);
+
+    await signInViaOtp(page, PLAYER_EMAIL!);
+    await page.goto(`/games/${game.id}`);
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.locator(`a[href="/games/${game.id}/holes/1"]:visible`).first().click();
+    await expect(page).toHaveURL(new RegExp(`/games/${game.id}/holes/1$`), { timeout: 30_000 });
+
+    const { error } = await adminClient()
+      .from('scores')
+      .upsert(
+        [1, 2, 3].map((hole_number) => ({
+          game_id: game.id,
+          user_id: game.playerUserId,
+          hole_number,
+          strokes: 4,
+          entered_by: game.playerUserId,
+          client_updated_at: new Date().toISOString(),
+        })),
+      );
+    expect(error).toBeNull();
+
+    await arrow(page).waitFor();
+    await hydrated(page);
+    await arrow(page).click();
+    await expect(page).toHaveURL(new RegExp(`/games/${game.id}(\\?|$)`), { timeout: 30_000 });
+    await expect(page.locator(`a[href="/games/${game.id}/holes/4"]:visible`).first()).toBeVisible({ timeout: 30_000 });
+  });
+
   // #2485: kvitteringen peker på veiviseren med `bane=`, som den gamle oppføringen
   // mangler. Pila skal velge banen, slik knappen på kvitteringen gjør.
   test('kvitteringen for ny bane: pila tar med banen du lagde', async ({ page }) => {

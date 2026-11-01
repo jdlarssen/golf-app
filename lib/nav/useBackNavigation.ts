@@ -53,11 +53,17 @@ export function useBackNavigation() {
         router.replace(href);
         return;
       }
-      // Avvises traverseringen, skal ikke pila stå død. En ny navigasjon som
-      // avbryter den (AbortError) er derimot allerede på vei et sted.
-      api.traverseTo(entry.key).finished?.catch((error: unknown) => {
-        if ((error as { name?: string } | null)?.name !== 'AbortError') router.replace(href);
-      });
+      // `traverseTo` viser siden fra Next sin hurtigbuffer for tilbake og fram, der
+      // utløpstiden ikke gjelder. Slag går gjennom klient-synken og tømmer den ikke,
+      // så siden må hentes på nytt når den er framme. Avvises traverseringen, skal
+      // ikke pila stå død. En ny navigasjon som avbryter den (AbortError) er derimot
+      // allerede på vei et sted.
+      api.traverseTo(entry.key).finished?.then(
+        () => router.refresh(),
+        (error: unknown) => {
+          if ((error as { name?: string } | null)?.name !== 'AbortError') router.replace(href);
+        },
+      );
     },
     [router],
   );

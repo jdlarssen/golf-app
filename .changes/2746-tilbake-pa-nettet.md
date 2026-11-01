@@ -2,4 +2,4 @@
 type: fix
 issue: 2746
 ---
-Pila på nettet tar deg dit du kom fra, og et skjema du har sendt ligger ikke lenger bak deg når du går tilbake.
+Pila på nettet tar deg dit du kom fra, og når et skjema sender deg videre, ligger det ikke lenger bak deg.
