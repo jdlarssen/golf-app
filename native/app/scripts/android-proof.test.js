@@ -122,15 +122,16 @@ describe('android-proof.py manifest', () => {
     expect(f['autoverify-host']).toEqual(['@string/hostName']);
   });
 
-  // #2627: venne-lenka. Beviset trenger stiene, ikke bare verten.
-  it('gir vert og sti for venne-lenkas filter, én linje per par', () => {
+  // #2627, #2748: lenkene. Beviset trenger stiene, ikke bare verten. Android slår
+  // sammen alle `<data>` i et filter, så hver vert gjelder hver sti.
+  it('gir vert og sti for lenkenes filter, én linje per par', () => {
     const f = facts(withAutoVerify(undefined, FRIEND_LINK));
     expect(f.status).toBe(0);
-    expect(f['autoverify-host']).toEqual(['tornygolf.no']);
-    expect(f['autoverify-path']).toEqual([
-      'tornygolf.no pathPrefix:/venner/legg-til/',
-      'tornygolf.no pathPrefix:/en/venner/legg-til/',
-    ]);
+    expect(f['autoverify-host']).toEqual(['tornygolf.no', 'www.tornygolf.no']);
+    const paths = ['/venner/legg-til/', '/liga/bli-med/', '/en/venner/legg-til/', '/en/liga/bli-med/'];
+    expect(f['autoverify-path']).toEqual(
+      ['tornygolf.no', 'www.tornygolf.no'].flatMap((host) => paths.map((p) => `${host} pathPrefix:${p}`)),
+    );
   });
 
   it('gir «*» som sti når filteret claimer hele verten', () => {

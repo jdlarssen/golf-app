@@ -8,9 +8,10 @@
 //     Begge gir PASS, og verdien står i linja. Arkivet kreves ikke å ha
 //     `production` (se `entitlements-proof.sh`). Mangler den, eller har den en
 //     annen verdi, er det FAIL.
-//  2. **Associated domains må være nøyaktig `applinks:tornygolf.no`** (#2627):
-//     venne-lenka åpner appen, og AASA-fila på nettet slipper bare den
-//     gjennom. Et ekstra domene og en manglende verdi gir begge FAIL. Fiksturene
+//  2. **Associated domains må være nøyaktig `applinks:tornygolf.no` og
+//     `applinks:www.tornygolf.no`** (#2627, #2748): lenkene åpner appen, knappen
+//     på nettsiden går via `www`, og AASA-fila på nettet bestemmer stiene. Et
+//     ekstra domene, en manglende vert og en manglende verdi gir FAIL. Fiksturene
 //     har en gyldig `aps-environment`, så den ene FAIL-en kan bare komme fra
 //     denne regelen, og testen sjekker at meldingen handler om associated
 //     domains. Ellers ville testen stått grønn med regelen slettet.
@@ -27,11 +28,11 @@ import { spawnSync } from 'child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { STORE_LINK_DOMAIN } from '../app.config';
+import { STORE_LINK_DOMAINS } from '../app.config';
 
 const LIB = join(__dirname, 'entitlements-proof.sh');
 const AD_OK =
-  'PASS  com.apple.developer.associated-domains = applinks:tornygolf.no (AASA-fila slipper bare venne-lenka gjennom)';
+  'PASS  com.apple.developer.associated-domains = applinks:tornygolf.no applinks:www.tornygolf.no (AASA-fila bestemmer stiene)';
 const fixture = (name) => join(__dirname, '__fixtures__', `entitlements-${name}.plist`);
 
 let tmp;
@@ -94,8 +95,10 @@ describe('entitlements_rules', () => {
   });
 
   it.each([
-    ['et domene til', 'ad-other-domain', /= applinks:tornygolf\.no applinks:www\.tornygolf\.no\. Bare applinks:tornygolf\.no er lov/],
-    ['ingen verdi', 'ad-missing', /mangler\. Butikkappen skal ha applinks:tornygolf\.no/],
+    ['et domene til', 'ad-other-domain', /= applinks:tornygolf\.no applinks:www\.tornygolf\.no applinks:example\.com\. Nøyaktig /],
+    ['bare tornygolf.no', 'ad-only-apex', /= applinks:tornygolf\.no\. Nøyaktig /],
+    ['bare www', 'ad-only-www', /= applinks:www\.tornygolf\.no\. Nøyaktig /],
+    ['ingen verdi', 'ad-missing', /mangler\. Butikkappen skal ha applinks:tornygolf\.no applinks:www\.tornygolf\.no/],
   ])('gir FAIL for associated domains med %s, og meldingen gjelder associated domains', (_label, name, why) => {
     const r = rules(fixture(name));
     expect(r.status).toBe(0);
@@ -117,9 +120,17 @@ describe('entitlements_rules', () => {
     expect(r.fails[1]).toMatch(/^FAIL {2}com\.apple\.developer\.associated-domains mangler/);
   });
 
-  it('krever domenet fra app.config.ts, og et miljø kan ikke endre det', () => {
+  it('godtar de to vertene i omvendt rekkefølge', () => {
+    const r = rules(fixture('ad-reversed'));
+    expect(r.fail).toBe(0);
+    expect(r.passes).toHaveLength(2);
+  });
+
+  it('krever vertene fra app.config.ts, og et miljø kan ikke endre det', () => {
     const src = readFileSync(LIB, 'utf8');
-    expect(/^ENTITLEMENTS_APPLINKS=(\S+)$/m.exec(src)?.[1]).toBe(`applinks:${STORE_LINK_DOMAIN}`);
+    expect(/^ENTITLEMENTS_APPLINKS='([^']+)'$/m.exec(src)?.[1]).toBe(
+      STORE_LINK_DOMAINS.map((domain) => `applinks:${domain}`).join(' '),
+    );
     const result = spawnSync('bash', ['-c', HARNESS, 'bash', LIB, fixture('production')], {
       encoding: 'utf8',
       env: { ...process.env, ENTITLEMENTS_APPLINKS: 'applinks:example.com' },

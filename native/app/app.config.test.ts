@@ -29,7 +29,7 @@ import {
   PROD_SUPABASE_HOST,
   STORE_ANDROID_VERSION_CODE,
   STORE_BUNDLE_ID,
-  STORE_FRIEND_LINK_PATH_PREFIXES,
+  STORE_APP_LINK_PATH_PREFIXES,
   STORE_IOS_BUILD_NUMBER,
   STORE_LINK_DOMAIN,
   STORE_PUBLIC_ENV_KEYS,
@@ -39,7 +39,7 @@ import {
   parseVariant,
   resolveConfig,
 } from './app.config';
-import { FRIEND_LINK_PATH_PREFIXES } from '../../lib/friends/friendLinkPath';
+import { APP_LINK_PATH_PREFIXES } from '../../lib/appLinks/appLinkPaths';
 import { STAGING_SUPABASE_HOST } from './src/lib/stagingGate';
 
 // JSON-importen typer `orientation` som `string`; Expo vil ha unionen. Castet
@@ -174,19 +174,19 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     }
   });
 
-  // #2627: bare venne-lenka åpner appen. iOS claimer domenet (AASA-fila
-  // snevrer inn stiene), Android har stiene i intent-filteret.
-  it('claimer tornygolf.no for venne-lenka, og bare det', () => {
+  // #2627, #2748: bare stiene på lista åpner appen. iOS claimer vertene (AASA-fila
+  // snevrer inn stiene), Android har stiene i intent-filteret, på begge vertene.
+  it('claimer tornygolf.no og www for stiene på lista, og bare det', () => {
     const config = resolveConfig(base, STORE_ENV);
-    expect(config.ios?.associatedDomains).toEqual(['applinks:tornygolf.no']);
+    expect(config.ios?.associatedDomains).toEqual(['applinks:tornygolf.no', 'applinks:www.tornygolf.no']);
+    const paths = ['/venner/legg-til/', '/liga/bli-med/', '/en/venner/legg-til/', '/en/liga/bli-med/'];
     expect(config.android?.intentFilters).toEqual([
       {
         action: 'VIEW',
         autoVerify: true,
-        data: [
-          { scheme: 'https', host: 'tornygolf.no', pathPrefix: '/venner/legg-til/' },
-          { scheme: 'https', host: 'tornygolf.no', pathPrefix: '/en/venner/legg-til/' },
-        ],
+        data: ['tornygolf.no', 'www.tornygolf.no'].flatMap((host) =>
+          paths.map((pathPrefix) => ({ scheme: 'https', host, pathPrefix })),
+        ),
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ]);
@@ -196,8 +196,8 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(STORE_WEB_BASE_URL).toBe(`https://${STORE_LINK_DOMAIN}`);
   });
 
-  it('har de samme venne-stiene som nettsiden og AASA-fila', () => {
-    expect(STORE_FRIEND_LINK_PATH_PREFIXES).toEqual(FRIEND_LINK_PATH_PREFIXES);
+  it('har de samme stiene som nettsidens liste', () => {
+    expect(STORE_APP_LINK_PATH_PREFIXES).toEqual(APP_LINK_PATH_PREFIXES);
   });
 
   it('lar dev-bygget være uten lenker: det har ingen associated domains og ingen intent-filtre', () => {
