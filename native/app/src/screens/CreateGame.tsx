@@ -390,12 +390,14 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   // #2746 (`docs/user-flows.md` §Tilbake): pila, sveipet og Android-tilbake går
   // ett steg tilbake, som «Tilbake»-knappen. På første steg står ingen sperre,
   // og veiviseren lukkes. `replace` til spillet er også en fjerning, så
-  // `leavingRef` slipper den gjennom, samme mønster som `EndGame.tsx`. Hooken
-  // bytter tilbakekall hver render, så `stepIndex` er alltid fersk. På iOS slår
-  // sperra av sveipet mens den står; pila og knappen går fortsatt ett steg.
+  // `leavingRef` slipper den gjennom, samme mønster som `EndGame.tsx`. Mens
+  // publiseringen pågår, gjør tilbake ingenting, så svaret lander på steget det
+  // ble sendt fra. Hooken bytter tilbakekall hver render, så `stepIndex` og
+  // `busy` er alltid ferske. På iOS slår sperra av sveipet mens den står; pila
+  // og knappen går fortsatt ett steg.
   usePreventRemove(stepIndex > 0, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
-    else setStep(STEPS[stepIndex - 1]!);
+    else if (!busy) setStep(STEPS[stepIndex - 1]!);
   });
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
 

@@ -1,7 +1,7 @@
 // native/app/src/lib/backTo.test.ts
 // #2746: hvor tilbake fører. Type A — ren avgjørelse over stakken, pluss
 // at hjelperne kaller den navigasjonen avgjørelsen sier.
-import { backStep, backTo, openOrReturn, type BackNavigation } from './backTo';
+import { backStep, backTo, keepBelow, openOrReturn, type BackNavigation } from './backTo';
 
 type Route = { name: string; params?: object };
 
@@ -63,16 +63,34 @@ describe('backStep', () => {
   });
 });
 
+describe('keepBelow', () => {
+  it('Hjem-kortets hull: bare Hjem blir liggende under spillet', () => {
+    expect(keepBelow([HOME, hole('g1', 18), card('g1')], 'GameHome', { gameId: 'g1' })).toBe(1);
+  });
+
+  it('spillet blir liggende under tavla', () => {
+    const routes = [HOME, game('g1'), { name: 'Approve', params: { gameId: 'g1' } }];
+    expect(keepBelow(routes, 'Leaderboard', { gameId: 'g1' })).toBe(2);
+  });
+
+  it('et annet spill står ikke over tavla', () => {
+    const routes = [HOME, game('g2'), { name: 'Approve', params: { gameId: 'g1' } }];
+    expect(keepBelow(routes, 'Leaderboard', { gameId: 'g1' })).toBe(1);
+  });
+});
+
 function fakeNavigation(routes: Route[]): BackNavigation & {
   popTo: jest.Mock;
   replace: jest.Mock;
   navigate: jest.Mock;
+  reset: jest.Mock;
 } {
   return {
     getState: () => ({ index: routes.length - 1, routes }),
     popTo: jest.fn(),
     replace: jest.fn(),
     navigate: jest.fn(),
+    reset: jest.fn(),
   };
 }
 
@@ -90,6 +108,16 @@ describe('backTo og openOrReturn', () => {
     backTo(nav, 'GameHome', { gameId: 'g1' });
     expect(nav.replace).toHaveBeenCalledWith('GameHome', { gameId: 'g1' });
     expect(nav.popTo).not.toHaveBeenCalled();
+  });
+
+  it('backTo fra Hjem-kortets hull: hullet går ut sammen med kortet', () => {
+    const nav = fakeNavigation([HOME, hole('g1', 18), card('g1')]);
+    backTo(nav, 'GameHome', { gameId: 'g1' });
+    expect(nav.reset).toHaveBeenCalledWith({
+      index: 1,
+      routes: [HOME, { name: 'GameHome', params: { gameId: 'g1' } }],
+    });
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it('openOrReturn: hull → tavla → stripa → hull gir hullet som alt ligger der', () => {

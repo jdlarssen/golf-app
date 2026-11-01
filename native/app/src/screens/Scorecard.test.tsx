@@ -434,6 +434,25 @@ describe('Scorecard', () => {
       expect(screen.queryByTestId('submit-partial')).toBeNull();
     });
 
+    it('kortet åpnet fra Hjem-kortets hull: hullet og kortet går ut, spillet står over Hjem (#2746)', async () => {
+      rig('submitted');
+      const navigate = jest.fn();
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'Hole', params: { gameId: 'game-8', holeNumber: 18 } },
+        { name: 'Scorecard', params: { gameId: 'game-8' } },
+      ]);
+      await pressDeliver(navigate, nav);
+      await waitFor(() =>
+        expect(nav.reset).toHaveBeenCalledWith({
+          index: 1,
+          routes: [{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-8' } }],
+        }),
+      );
+      expect(navigate).not.toHaveBeenCalled();
+      expect(nav.replace).not.toHaveBeenCalled();
+    });
+
     it('kortet åpnet fra Hjem: spillet erstatter kortet (#2746)', async () => {
       rig('submitted');
       const navigate = jest.fn();
