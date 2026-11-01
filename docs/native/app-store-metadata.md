@@ -13,7 +13,7 @@ venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgj
 appen viser ligaen du er med i og starter runden, men arrangøren setter den opp på
 nettsiden. Appen **oppretter** åtte formater, men
 den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
-de fleste lagformatene. Appen åpner ikke patsome, cup-dager delt i to nihullsdeler og
+de fleste lagformatene. Appen åpner ikke cup-dager delt i to nihullsdeler og
 avledede cup-kamper (`native/app/src/lib/formatGate.ts`). Beskrivelsen sier derfor aldri
 at du kan *sette opp* scramble i appen.
 
@@ -287,8 +287,8 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   ferdige tavla (sitat øverst, hele historien nederst), og varselet «Resultatet er klart»
   viser starten av den. Butikkbeskrivelsen nevner den ikke. Kavalkaden er i appen, så den
   står i beskrivelsen.
-- **Cup.** Finnes på nettsiden. Vanlige cup-kamper spilles i appen, men patsome,
-  cup-dager delt i to nihullsdeler og avledede cup-kamper åpnes ikke
+- **Cup.** Finnes på nettsiden. Vanlige cup-kamper spilles i appen, men cup-dager
+  delt i to nihullsdeler og avledede cup-kamper åpnes ikke
   (`formatGate.ts`). Ligaen er med fra bygg 9 («LIGA»): appen viser sesongtabellen og den
   åpne runden, starter runden og lar markøren godkjenne kortet i en simulatorliga
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
@@ -298,8 +298,9 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   Scramble-familien settes opp på nettsiden, og så spiller du den i appen: appen fører
   ett lagkort (`modeCollapsesToTeamCard`, N4) og viser lagtavla (`teamBoard.ts`, #2579).
   Derfor står den som «når arrangøren har satt opp runden på tornygolf.no», ikke som et
-  format du velger. Linja sier «flere lagformater» og ikke «alle», fordi patsome er et
-  lagformat appen ikke åpner. Skal beskrivelsen holdes som før, stryk den siste linja i
+  format du velger. Linja sier «flere lagformater» og ikke «alle». Den ble skrevet mens
+  patsome var stengt i appen. Det er det ikke lenger (#2751), og butikkteksten byttes
+  ved neste butikkrunde. Skal beskrivelsen holdes som før, stryk den siste linja i
   lista i begge beskrivelsene (alternativ B i PR #2615).
 - **Invitasjoner som eget punkt.** Appen kan invitere: arrangøren inviterer en
   e-postadresse inn i runden fra runden selv (`OrganiserSection.tsx`, `inviteToGame`), og

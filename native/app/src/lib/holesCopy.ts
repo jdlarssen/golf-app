@@ -46,6 +46,30 @@ export const HOLES_TEXT = {
   notAvailable: 'Hull for hull finnes ikke for denne runden.',
 } as const;
 
+/**
+ * `holes.patsome` og `holes.foursomes` (#2751): banneret og utslagsvalget på
+ * hull-siden, tegn for tegn som på nettet.
+ */
+export const PATSOME_HOLE_TEXT = {
+  fourballLabel: '4BBB · Hull 1–6',
+  fourballRule: 'Spill din egen ball. Lagets beste resultat per hull teller.',
+  greensomeLabel: 'Greensome · Hull 7–12',
+  greensomeRule: 'Begge slår ut, velg det beste utslaget, så annethvert slag.',
+  foursomesLabel: 'Foursomes · Hull 13–18',
+  foursomesRule: 'Én ball, annethvert slag fra tee.',
+} as const;
+
+export const TEE_STARTER_TEXT = {
+  patsomeQuestion: 'Hvem slår ut i foursomes for dere?',
+  foursomesQuestion: 'Hvem teer ut på hull 1 for dere?',
+  saveFailed: 'Noe gikk galt. Prøv igjen.',
+} as const;
+
+/** «Anna slår ut». */
+export function teeHint(name: string): string {
+  return `${name} slår ut`;
+}
+
 /** «7 hull». */
 export function holesPlayedChip(count: number): string {
   return `${count} hull`;

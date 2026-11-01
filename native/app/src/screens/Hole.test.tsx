@@ -27,6 +27,7 @@ import { AccessibilityInfo } from 'react-native';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
+import { writeTeeStarter } from '../data/writeTeeStarter';
 import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
@@ -160,11 +161,40 @@ const mockWithdrawnCaptainBundle = {
 
 // Hvilken bundel skjermen får, satt per test. Navnet må starte med `mock` —
 // jest.mock-factoryene heises over importene og ser bare slike variabler.
-const mockState: { bundle: unknown; scores: unknown[]; teeShots: unknown[]; teeShotQueue: unknown[] } = {
+const mockState: {
+  bundle: unknown;
+  scores: unknown[];
+  teeShots: unknown[];
+  teeShotQueue: unknown[];
+  teeStarters: unknown[];
+} = {
   bundle: mockSoloBundle,
   scores: [],
   teeShots: [],
   teeShotQueue: [],
+  teeStarters: [],
+};
+
+// #2751: Patsome, 2 lag à 2. «makker» er lex-min og kaptein på lag 1. Lag 1 har
+// 20 + 20: greensome 20 og foursomes 20, altså ett slag på SI 1–18.
+const mockPatsomeBundle = {
+  ...mockTeamBundle,
+  game: {
+    ...GAME_BASE,
+    gameMode: 'patsome',
+    modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    patsomeTeeStarters: [] as { teamNumber: number; teeStarterUserId: string }[],
+  },
+};
+
+const mockFoursomesBundle = {
+  ...mockTeamBundle,
+  game: {
+    ...GAME_BASE,
+    gameMode: 'foursomes_matchplay',
+    modeConfig: { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+    foursomesSide1TeeStarterUserId: null as string | null,
+  },
 };
 
 // #2580: Texas med firemannslag og minst 4 hver. Id-ene står i en annen
@@ -209,6 +239,9 @@ jest.mock('../data/writeScore', () => ({
 jest.mock('../data/writeTeeShot', () => ({
   writeTeeShot: jest.fn(async () => undefined),
 }));
+jest.mock('../data/writeTeeStarter', () => ({
+  writeTeeStarter: jest.fn(async () => undefined),
+}));
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockState.bundle),
   refreshGameBundle: jest.fn(async () => mockState.bundle),
@@ -230,6 +263,7 @@ jest.mock('../data/db', () => ({
   listScoresForGame: jest.fn(async () => mockState.scores),
   listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
   listTeeShotQueue: jest.fn(async () => mockState.teeShotQueue),
+  listTeeStartersForGame: jest.fn(async () => mockState.teeStarters),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -333,6 +367,7 @@ describe('Hole', () => {
     mockState.scores = [];
     mockState.teeShots = [];
     mockState.teeShotQueue = [];
+    mockState.teeStarters = [];
     mockScheme.value = 'light';
     mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
@@ -1098,6 +1133,182 @@ describe('Hole', () => {
       enteredBy: 'me',
     });
     expect(writeScore).not.toHaveBeenCalled();
+  });
+
+  describe('Patsome (#2751)', () => {
+    beforeEach(() => {
+      mockState.bundle = mockPatsomeBundle;
+    });
+
+    it('hull 1–6: ett sete per spiller, og trykket havner i min egen rad', async () => {
+      await renderHole(3);
+      await waitFor(() => {
+        expect(screen.getByTestId('flight-row-me')).toBeTruthy();
+      });
+      expect(screen.getByTestId('flight-row-makker')).toBeTruthy();
+      expect(screen.getByText('4BBB · Hull 1–6')).toBeTruthy();
+      expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent('Får 1 slag');
+
+      await fireEvent.press(screen.getByTestId('rail-option-4'));
+      expect(writeScore).toHaveBeenCalledWith({
+        gameId: GAME_ID,
+        userId: 'me',
+        holeNumber: 3,
+        strokes: 4,
+        enteredBy: 'me',
+      });
+    });
+
+    it('hull 7–18: ett lagkort per lag, «+N» før noen har tastet, og trykket havner hos kapteinen', async () => {
+      await renderHole(8);
+      await waitFor(() => {
+        expect(screen.getByTestId('flight-row-makker')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('flight-row-me')).toBeNull();
+      expect(screen.getByText('Greensome · Hull 7–12')).toBeTruthy();
+      expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent('Får 1 slag');
+
+      await fireEvent.press(screen.getByTestId('rail-option-5'));
+      expect(writeScore).toHaveBeenCalledWith({
+        gameId: GAME_ID,
+        userId: 'makker',
+        holeNumber: 8,
+        strokes: 5,
+        enteredBy: 'me',
+      });
+    });
+
+    it('hull 18 sier «Lever scorekort»: hver spiller leverer sitt eget kort', async () => {
+      mockState.scores = [localScore('makker', 4, null, 18), localScore('rival-a', 5, null, 18)];
+      await renderHole(18);
+      await waitFor(() => {
+        expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+      });
+      expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+      expect(screen.getByTestId('hole-submit')).toHaveTextContent('Lever scorekort');
+    });
+
+    it('en levert makker låser de delte hullene, men ikke mine egne', async () => {
+      mockState.bundle = {
+        ...mockPatsomeBundle,
+        players: mockPatsomeBundle.players.map((p) =>
+          p.userId === 'makker' ? { ...p, submittedAt: '2026-08-30T12:00:00.000Z' } : p,
+        ),
+      };
+      const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
+      const { rerender } = await render(holeElement(8, navigation));
+      await waitFor(() => {
+        expect(screen.getByTestId('hole-locked')).toBeTruthy();
+      });
+
+      await rerender(holeElement(3, navigation));
+      await waitFor(() => {
+        expect(screen.queryByTestId('hole-locked')).toBeNull();
+      });
+    });
+
+    it('velgeren står på hull 13, ikke på hull 12, og et trykk gjelder laget mitt', async () => {
+      const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
+      const { rerender } = await render(holeElement(12, navigation));
+      await waitFor(() => {
+        expect(screen.getByTestId('patsome-segment-banner')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
+
+      await rerender(holeElement(13, navigation));
+      await waitFor(() => {
+        expect(screen.getByTestId('tee-starter-picker')).toBeTruthy();
+      });
+      expect(screen.getByText('Foursomes · Hull 13–18')).toBeTruthy();
+      expect(screen.getByText('Hvem slår ut i foursomes for dere?')).toBeTruthy();
+      // Bare laget mitt.
+      expect(screen.getByTestId('tee-starter-me')).toBeTruthy();
+      expect(screen.getByTestId('tee-starter-makker')).toBeTruthy();
+      expect(screen.queryByTestId('tee-starter-rival-a')).toBeNull();
+
+      mockState.teeStarters = [{ gameId: GAME_ID, teamNumber: 1, teeStarterId: 'makker', pending: true, attemptCount: 0 }];
+      await fireEvent.press(screen.getByTestId('tee-starter-makker'));
+      await waitFor(() => {
+        expect(drainQueue).toHaveBeenCalledWith('utslagsvalg');
+      });
+      expect(writeTeeStarter).toHaveBeenCalledWith({ gameId: GAME_ID, teamNumber: 1, teeStarterId: 'makker' });
+
+      // Hintet står med en gang, uten nett: odde hull til den valgte.
+      await waitFor(() => {
+        expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
+      });
+      expect(screen.getByText(/Makker slår ut/)).toBeTruthy();
+    });
+
+    it('på et like hull slår makkeren ut, og bundelens valg går foran det lokale', async () => {
+      mockState.bundle = {
+        ...mockPatsomeBundle,
+        game: {
+          ...mockPatsomeBundle.game,
+          patsomeTeeStarters: [{ teamNumber: 1, teeStarterUserId: 'me' }],
+        },
+      };
+      mockState.teeStarters = [{ gameId: GAME_ID, teamNumber: 1, teeStarterId: 'makker', pending: false, attemptCount: 0 }];
+      await renderHole(14);
+      await waitFor(() => {
+        expect(screen.getByText(/Makker slår ut/)).toBeTruthy();
+      });
+      expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
+    });
+
+    it('får ikke telefonen lagret valget, sier velgeren fra, og hullet kan føres', async () => {
+      (writeTeeStarter as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+      const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      await renderHole(13);
+      await waitFor(() => {
+        expect(screen.getByTestId('tee-starter-picker')).toBeTruthy();
+      });
+
+      await fireEvent.press(screen.getByTestId('tee-starter-me'));
+
+      expect(await screen.findByText('Noe gikk galt. Prøv igjen.')).toBeTruthy();
+      expect(screen.getByTestId('tee-starter-picker')).toBeTruthy();
+      expect(drainQueue).not.toHaveBeenCalledWith('utslagsvalg');
+      await fireEvent.press(screen.getByTestId('rail-option-4'));
+      expect(writeScore).toHaveBeenCalled();
+      error.mockRestore();
+    });
+  });
+
+  it('et format der laget leverer samlet, sier «Lever lagets kort» på hull 18', async () => {
+    mockState.bundle = mockTeamBundle;
+    mockState.scores = [localScore('makker', 4, null, 18), localScore('rival-a', 5, null, 18)];
+    await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+    });
+    expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever lagets kort');
+    expect(screen.getByTestId('hole-submit')).toHaveTextContent('Lever lagets kort');
+  });
+
+  it('foursomes (#2751): velgeren står på hull 1, ikke på hull 2, og hintet følger valget', async () => {
+    mockState.bundle = mockFoursomesBundle;
+    const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
+    const { rerender } = await render(holeElement(1, navigation));
+    await waitFor(() => {
+      expect(screen.getByTestId('tee-starter-picker')).toBeTruthy();
+    });
+    expect(screen.getByText('Hvem teer ut på hull 1 for dere?')).toBeTruthy();
+    expect(screen.queryByTestId('patsome-segment-banner')).toBeNull();
+
+    await rerender(holeElement(2, navigation));
+    await waitFor(() => {
+      expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
+    });
+
+    mockState.bundle = {
+      ...mockFoursomesBundle,
+      game: { ...mockFoursomesBundle.game, foursomesSide1TeeStarterUserId: 'me' },
+    };
+    await rerender(holeElement(3, navigation));
+    await waitFor(() => {
+      expect(screen.getByText(/Meg slår ut/)).toBeTruthy();
+    });
   });
 
   // Som webben: øker antallet utslag som er gitt opp i køen, uansett hvilken

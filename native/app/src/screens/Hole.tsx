@@ -85,6 +85,7 @@ import {
   firstEntryStrokes,
   nextStrokes,
 } from '../../../../lib/scorecard/strokeEntry';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import {
   formatCapturesPutts,
@@ -100,6 +101,7 @@ import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { FlightRow } from '../components/hole/FlightRow';
 import { HoleHero } from '../components/hole/HoleHero';
 import { HoleStrip } from '../components/hole/HoleStrip';
+import { PatsomeSegmentBanner } from '../components/hole/PatsomeSegmentBanner';
 import {
   ScoreRail,
   type RailOption,
@@ -108,6 +110,7 @@ import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
 import { SaveErrorBanner } from '../components/hole/SaveErrorBanner';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
 import { TeeShotPicker } from '../components/hole/TeeShotPicker';
+import { TeeStarterPicker } from '../components/hole/TeeStarterPicker';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { WolfOrderStrip } from '../components/hole/WolfOrderStrip';
 import { PokalHankerIcon } from '../components/icons/Icons';
@@ -117,6 +120,7 @@ import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/g
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
+import { writeTeeStarter } from '../data/writeTeeStarter';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
 import { backTo, openOrReturn } from '../lib/backTo';
 import { holeTopLine } from '../lib/holeHeader';
@@ -130,7 +134,8 @@ import {
 } from '../lib/segmentRound';
 import { useSegmentSibling } from '../lib/useSegmentSibling';
 import { bridgeLabel } from '../lib/ticketCopy';
-import { displayName } from '../lib/display';
+import { displayName, shortDisplayName } from '../lib/display';
+import { TEE_STARTER_TEXT, teeHint } from '../lib/holesCopy';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
 import { isGameOrganiser } from '../lib/gameOrganiser';
@@ -141,9 +146,11 @@ import {
   buildTeamCards,
   filledHolesForOwner,
   findMyTeamCard,
-  foursomesTeeStarterId,
   myTeamCaptainId,
+  showsTeeStarterPicker,
   teamExtraForHole,
+  teamExtraOutcome,
+  teeStarterIdFor,
   type TeamCard,
 } from '../lib/teamPlay';
 import { useGameChoices, type GameChoices } from '../lib/useChoices';
@@ -153,6 +160,7 @@ import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { useGivenUpTeeShotCount } from '../lib/useGivenUpTeeShotCount';
 import { useTeamTeeShots } from '../lib/useTeamTeeShots';
+import { effectiveTeeStarter, useTeeStarters } from '../lib/useTeeStarters';
 import { setSunlight, useSunlight } from '../lib/sunlight';
 import {
   wolfHoleState,
@@ -482,9 +490,19 @@ function HoleView({
   // Hvilken skriving til den lokale basen som sist feilet (#2228), eller
   // `null`. Neste som går gjennom, fjerner banneret.
   const [saveFailed, setSaveFailed] = useState<LocalSaveAction | null>(null);
+  // #2751: telefonen fikk ikke lagret utslagsvalget. Står i velgeren, så hullet
+  // kan føres som før.
+  const [teeStarterFailed, setTeeStarterFailed] = useState(false);
 
   const roster = toRoster(bundle.players);
   const mode = bundle.game.gameMode as GameMode;
+  // #2751: utslagsvalget, slik telefonen kjenner det. Bundelens valg går foran
+  // (`effectiveTeeStarter`). Et valg makkeren gjorde, kommer med bundelen, som
+  // hentes på nytt ved hvert hullbytte.
+  const teeStarters = useTeeStarters(gameId, {
+    enabled: mode === 'patsome' || mode === 'foursomes_matchplay',
+    pollMs: POLL_MS,
+  });
   // Hvilke formater som i det hele tatt fanger putter er DELT regel — samme
   // uttrykk som webbens `HoleScoreList` gater på. Appen kopierer den ikke.
   const capturesPutts = formatCapturesPutts(mode);
@@ -508,6 +526,9 @@ function HoleView({
   // bytter halvveis), og laget mitt må faktisk ha en aktiv kaptein.
   const myCaptainId = myTeamCaptainId(roster, userId);
   const collapsed = myCaptainId != null && modeCollapsesToTeamCard(mode, holeNumber);
+  // Delte hull er ikke det samme som felles levering: i Patsome deler laget hull
+  // 7–18, men hver spiller leverer sitt eget kort (#2751).
+  const teamDelivers = myCaptainId != null && deliveryCoversWholeTeam(mode);
   const nameOf = nameLookup(bundle.players);
   // #2580: lagene i flighten med utslagsvalg (scramble: ett per lagkort,
   // shamble: flightens lag), i samme rekkefølge som på nettet. Lagkortets
@@ -550,7 +571,7 @@ function HoleView({
   // Wolf og BBB kollapser aldri (`modeCollapsesToTeamCard` dekker
   // scramble-familien, alternate shot og patsome fra hull 7), så dette
   // kallstedet trenger ingen valg — wolf-grenen under har sitt eget.
-  const leaderboard = collapsed ? computeGameLeaderboard(bundle, scores) : null;
+  const leaderboard = collapsed ? teamExtraOutcome(bundle, scores) : null;
 
   const isWolf = mode === 'wolf';
   const isBingoBangoBongo = mode === 'bingo_bango_bongo';
@@ -605,7 +626,7 @@ function HoleView({
         const teeStarter = teeStarterNameFor({
           card,
           gameMode: mode,
-          game: bundle.game,
+          chosen: effectiveTeeStarter(bundle.game, teeStarters.rows, card.teamNumber),
           holeNumber,
           nameOf,
         });
@@ -622,7 +643,7 @@ function HoleView({
             ? teamExtraForHole(leaderboard, card.teamNumber, holeNumber, hole.strokeIndex)
             : null,
           submitted: card.submittedAt != null,
-          note: teeStarter ? `${teeStarter} slår ut` : null,
+          note: teeStarter ? teeHint(teeStarter) : null,
           owner: scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
         };
       })
@@ -650,6 +671,38 @@ function HoleView({
         };
       });
   const seatOf = (seatId: string) => seats.find((seat) => seat.id === seatId);
+
+  // #2751: «Hvem slår ut?» for laget mitt. Medlemmene leses fra hele rosteret,
+  // uavhengig av hvem flighten viser.
+  const myTeamNumber = me.player.teamNumber;
+  const myTeamEntries =
+    myTeamNumber == null
+      ? []
+      : roster.filter((entry) => entry.player.teamNumber === myTeamNumber && entry.withdrawn_at == null);
+  const pickerShown =
+    myTeamNumber != null &&
+    showsTeeStarterPicker({
+      gameMode: mode,
+      chosen: effectiveTeeStarter(bundle.game, teeStarters.rows, myTeamNumber),
+      holeNumber,
+      memberIds: myTeamEntries.map((entry) => entry.user_id),
+      userId,
+      locked,
+    });
+  const pickTeeStarter = async (teeStarterId: string) => {
+    if (myTeamNumber == null) return;
+    try {
+      await writeTeeStarter({ gameId, teamNumber: myTeamNumber, teeStarterId });
+    } catch (err: unknown) {
+      console.error('[Hole] utslagsvalget ble ikke lagret', err);
+      setTeeStarterFailed(true);
+      return;
+    }
+    setTeeStarterFailed(false);
+    await teeStarters.reload();
+    await drainQueue('utslagsvalg');
+    await teeStarters.reload();
+  };
 
   // Én vei inn i den lokale basen for alle trykkene på hullet (#2228). Feiler
   // skrivingen, sier et banner fra (og skjermleseren, som CompleteProfile) i
@@ -859,6 +912,28 @@ function HoleView({
         ) : null}
         <View style={styles.pad}>
 
+        {/* #2751: Patsome-delen hullet hører til, og utslagsvalget. */}
+        {mode === 'patsome' || pickerShown ? (
+          <View style={styles.formatBanners}>
+            {mode === 'patsome' ? <PatsomeSegmentBanner holeNumber={holeNumber} /> : null}
+            {pickerShown ? (
+              <TeeStarterPicker
+                question={
+                  mode === 'patsome'
+                    ? TEE_STARTER_TEXT.patsomeQuestion
+                    : TEE_STARTER_TEXT.foursomesQuestion
+                }
+                options={myTeamEntries.map((entry) => ({
+                  userId: entry.user_id,
+                  name: shortDisplayName(entry.player),
+                }))}
+                saveFailed={teeStarterFailed}
+                onPick={(teeStarterId) => void pickTeeStarter(teeStarterId)}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
         {/* #2314: hvem er ulv på dette hullet og de tre neste. */}
         {wolfOrder ? <WolfOrderStrip strip={wolfOrder} /> : null}
 
@@ -997,7 +1072,7 @@ function HoleView({
               {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
                   hjem der (#1918). */}
               <Text style={ui.buttonText}>
-                {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
+                {teamDelivers ? 'Lever lagets kort' : 'Lever scorekort'}
               </Text>
             </Pressable>
           )
@@ -1060,7 +1135,7 @@ function HoleView({
                 ? 'Neste hull'
                 : bridge
                   ? bridgeLabel(bridge.holeNumber)
-                  : collapsed
+                  : teamDelivers
                     ? 'Lever lagets kort'
                     : 'Lever scorekort'
             }
@@ -1158,18 +1233,18 @@ function HoleSwipe({
 function teeStarterNameFor(opts: {
   card: TeamCard;
   gameMode: GameMode;
-  game: BundleGame;
+  chosen: string | null;
   holeNumber: number;
   nameOf: (userId: string) => string;
 }): string | null {
-  const starterId = foursomesTeeStarterId({
+  const starterId = teeStarterIdFor({
     gameMode: opts.gameMode,
-    game: opts.game,
-    teamNumber: opts.card.teamNumber,
+    chosen: opts.chosen,
     holeNumber: opts.holeNumber,
     memberIds: opts.card.memberIds,
   });
-  return starterId ? opts.nameOf(starterId) : null;
+  // Fornavnet, som på nettet og i lagkortets navnelinje.
+  return starterId ? (opts.nameOf(starterId).split(' ')[0] ?? '') : null;
 }
 
 /**
@@ -1354,6 +1429,7 @@ const styles = StyleSheet.create({
   // Det som ikke er i designet (kø-banneret, låst-teksten, Wolf og BBB, kort-
   // formatenes kort og «Lever»), står med appens vanlige luft.
   pad: { paddingHorizontal: 20, gap: 8 },
+  formatBanners: { marginTop: 10, gap: 8 },
   // Radene står 12 pt fra kanten (Main); i sollys går de kant til kant.
   flightList: { paddingHorizontal: 12 },
   flightHead: {

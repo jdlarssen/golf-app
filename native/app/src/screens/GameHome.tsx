@@ -40,8 +40,8 @@ import {
 } from 'react-native';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
-import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import {
   wolfRotationRule,
   type WolfRotationRule,
@@ -224,10 +224,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const gated = gateReason(game);
   const supported = gated === null;
   // Lag-formatene: mine hull er kapteinens rader, og «levert» er lagets
-  // stempel («noen på laget» — samme regel webbens lagkort bruker).
+  // stempel («noen på laget» — samme regel webbens lagkort bruker). I Patsome
+  // deler laget hull 7–18, men hver spiller leverer selv (#2751).
   const myCaptainId = myTeamCaptainId(roster, userId);
-  // Hull 18 svarer på om runden deler kort; det gjelder også en halvdel.
-  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, 18);
+  const teamMode = myCaptainId != null && deliveryCoversWholeTeam(mode);
   const myTeamCard = teamMode
     ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
     : null;

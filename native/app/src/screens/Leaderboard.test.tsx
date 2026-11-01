@@ -20,6 +20,7 @@ import type { ScreenProps } from '../navigation';
 import { stackNavigation } from '../test/stackNavigation';
 import { fireForeground } from '../test/syncTriggersMock';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
+import { patsomeBoardFor } from '../lib/patsomeBoard';
 
 const GAME_ID = 'game-1';
 
@@ -141,6 +142,10 @@ jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockLocalScores),
+  // #2751: et utslagsvalg i køen. Tavla skal ikke lese det.
+  listPendingTeeStarters: jest.fn(async () => [
+    { gameId: 'game-1', teamNumber: 1, teeStarterId: 'me', pending: true, attemptCount: 0 },
+  ]),
 }));
 jest.mock('@react-navigation/native', () => ({
 
@@ -276,6 +281,23 @@ describe('Leaderboard — ferdig tavle (#2579)', () => {
   });
   afterEach(() => {
     mockBundleOverride.current = null;
+  });
+
+  // #2751: skjermen, ikke bare kroppen. Valget i køen holder ikke tavla igjen.
+  it('Patsome: tavla og stripa tegnes selv om et utslagsvalg venter', async () => {
+    mockBundleOverride.current = {
+      ...mockBundle,
+      game: {
+        ...bundleGame,
+        gameMode: 'patsome',
+        modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+      },
+    };
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('patsome-board')).toBeTruthy());
+    expect(screen.getByTestId('board-strip-action')).toBeTruthy();
+    const { listPendingTeeStarters } = require('../data/db') as { listPendingTeeStarters: jest.Mock };
+    expect(listPendingTeeStarters).not.toHaveBeenCalled();
   });
 
   it('stripas knapp åpner scorekortet', async () => {
@@ -694,28 +716,21 @@ describe('LeaderboardBody', () => {
     expect(screen.queryByTestId('leaderboard-table')).toBeNull();
   });
 
-  it('henviser til nettsiden for et gatet format, uten å røre motoren', async () => {
-    // Patsome er formatet som fortsatt står i gaten — #1832 slapp wolf og BBB
-    // ut da valg-UI-en kom på hull-siden.
-    await render(
-      <LeaderboardBody
-        bundle={withGame({
-          gameMode: 'patsome',
-          modeConfig: {
-            kind: 'patsome',
-            team_size: 2,
-            teams_count: 2,
-            patsome_scoring: 'net',
-          },
-        })}
-        scores={mockLocalScores}
-      />,
-    );
-    expect(screen.getByTestId('leaderboard-gated-format')).toBeTruthy();
-    // Ordlyden er `gateMessage('mode')`. Nettsiden nevnes KUN her (#1844), og
-    // #1891 fester «Åpne runden på nettsiden»-knappen på nettopp denne grenen.
-    expect(screen.getByText('Dette formatet føres på nettsiden ennå.')).toBeTruthy();
-    expect(screen.getByTestId('leaderboard-gated-format-link')).toBeTruthy();
+  // #2751: porten er åpen, og tavla står der lenken til nettsiden sto.
+  it('Patsome: tegner tavla, uten henvisning til nettsiden', async () => {
+    const bundle = withGame({
+      gameMode: 'patsome',
+      modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    });
+    const model = patsomeBoardFor({ bundle, scores: mockLocalScores, userId: 'me' });
+    expect(model).not.toBeNull();
+
+    await render(<LeaderboardBody bundle={bundle} scores={mockLocalScores} patsomeBoard={model} />);
+
+    expect(screen.getByTestId('patsome-board')).toBeTruthy();
+    expect(screen.getByTestId('patsome-holes')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-gated-format')).toBeNull();
+    expect(screen.queryByTestId('leaderboard-gated-format-link')).toBeNull();
   });
 
   it('sier at oppsettet mangler — ikke at formatet finnes på nettsiden', async () => {
@@ -872,7 +887,6 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -928,7 +942,6 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -995,7 +1008,6 @@ describe('ResultView', () => {
       <ResultView
         result={result as unknown as ModeResult}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -1094,7 +1106,6 @@ describe('ResultView', () => {
       <ResultView
         result={fromTheFuture}
         status="active"
-        gameId={GAME_ID}
         settlement={null}
         nameOf={() => 'Ukjent'}
       />,

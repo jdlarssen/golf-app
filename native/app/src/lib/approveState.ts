@@ -13,9 +13,12 @@
 //
 // Et kort jeg leverte for en annen, er ikke mitt å godkjenne (#2200), og står
 // derfor ingen steder her, heller ikke mens det venter på en annen i flighten.
+import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import { teamScoreOwnerId } from '../../../../lib/games/teamCaptain';
+import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import { canApproveScorecardFor } from '../../../../lib/games/flightScope';
-import { modeCollapsesToTeamCard, type GameMode } from '../../../../lib/scoring/modes/types';
+import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { LocalScore } from '../data/db';
 import type { BundleGame } from '../data/gameBundle';
 import { displayName, formatNameList, shortDisplayName } from './display';
 import { findInRoster, pendingApprovals, type RosterEntry } from './roster';
@@ -33,9 +36,38 @@ export type ApproveScreenState =
     }
   | { kind: 'empty' };
 
-/** Lagformatene der laget fører ett felles kort (Texas scramble og slektningene). */
-function collapsesToTeamCard(gameMode: string): boolean {
-  return modeCollapsesToTeamCard(gameMode as GameMode, 18);
+/**
+ * Lagformatene der laget leverer ett kort (Texas scramble og slektningene). Ikke
+ * Patsome (#2751): der deler laget hull 7–18, men hver spiller leverer sitt
+ * eget kort, så hver spiller er sin egen rad.
+ */
+function teamDeliversOneCard(gameMode: string): boolean {
+  return deliveryCoversWholeTeam(gameMode as GameMode);
+}
+
+/**
+ * Slagene på kortet til `ownerId`, hull for hull. Hvem som eier raden, spørres
+ * per hull (`scoreOwnerForHole`): i Patsome ligger hull 1–6 på spilleren selv og
+ * hull 7–18 på lagets rad, og kortet er begge deler.
+ */
+export function cardScoresByHole(
+  scores: readonly LocalScore[],
+  roster: readonly RosterEntry[],
+  gameMode: GameMode,
+  ownerId: string,
+): Map<number, LocalScore> {
+  const teamNumber = findInRoster(roster, ownerId)?.player.teamNumber;
+  const captainId =
+    teamNumber == null
+      ? null
+      : teamScoreOwnerId(roster.filter((entry) => entry.player.teamNumber === teamNumber));
+  const byHole = new Map<number, LocalScore>();
+  for (const row of scores) {
+    if (row.userId === scoreOwnerForHole(gameMode, row.holeNumber, ownerId, captainId)) {
+      byHole.set(row.holeNumber, row);
+    }
+  }
+  return byHole;
 }
 
 export function approveScreenState({
@@ -66,7 +98,7 @@ export function approveScreenState({
   );
   // Lagkortet er mitt kort (beslutning 5): det står under «Ditt kort», ikke
   // som en makker som ikke har levert.
-  const myTeam = collapsesToTeamCard(game.gameMode) ? me.player.teamNumber : null;
+  const myTeam = teamDeliversOneCard(game.gameMode) ? me.player.teamNumber : null;
   const notDelivered = mine.filter(
     (entry) =>
       entry.submitted_at == null && (myTeam == null || entry.player.teamNumber !== myTeam),
@@ -102,7 +134,7 @@ export function approveRows(
   roster: readonly RosterEntry[],
   gameMode: string,
 ): ApproveRow[] {
-  if (!collapsesToTeamCard(gameMode)) {
+  if (!teamDeliversOneCard(gameMode)) {
     return list.map((entry) => ({
       key: entry.user_id,
       name: displayName(entry.player),

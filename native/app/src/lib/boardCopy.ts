@@ -48,6 +48,7 @@ export const BOARD_TEXT = {
     over1: 'bogey',
     over2: 'dobbel bogey eller verre',
   },
+  legendPar: 'Par',
   legendRecent: 'Siste 5 hull',
   showAll: 'Vis alle {count} spillere',
   showFewer: 'Vis færre',
@@ -165,6 +166,24 @@ export const BOARD_TEAM_TEXT = {
   /** Opplesningen: brutto-shamble, og ditt lag. */
   srGross: '{total} slag brutto',
   srYourTeam: 'Dette er laget ditt',
+} as const;
+
+/**
+ * Patsome-tavlas egne tekster (#2751, tegningen «Patsome-tavla», variant A).
+ * Ingen av dem finnes i `leaderboard.board`.
+ */
+export const BOARD_PATSOME_TEXT = {
+  /** Lagets poeng per del, og overskriftene i tabellen. */
+  fourball: '4BBB',
+  greensome: 'Greensome',
+  foursomes: 'Foursomes',
+  groupFourball: '4BBB · hull 1–6',
+  groupGreensome: 'Greensome · hull 7–12',
+  groupFoursomes: 'Foursomes · hull 13–18',
+  /** Opplesningen av én rad i tabellen. */
+  srHole: 'Hull {hole}, par {par}',
+  srCell: '{name}, {points} poeng',
+  srCellUnplayed: '{name}, ikke spilt',
 } as const;
 
 /**

@@ -1,10 +1,7 @@
 // Native N4 (#1828): motor-resultatet → én visning per resultatform.
 //
 // Switchen under er uttømmende med en `never`-vakt: får den delte motoren en ny
-// `kind`, stopper `tsc` her i stedet for at telefonen viser en tom skjerm. Det
-// ene gatede formatet (patsome) har en egen gren med ærlig tekst — den kan ikke
-// oppstå så lenge `formatGate` stenger den, men en gren er billigere enn en
-// antakelse.
+// `kind`, stopper `tsc` her i stedet for at telefonen viser en tom skjerm.
 //
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
@@ -13,37 +10,19 @@ import { headlineUnit, pointsHeadline, teamHeadline } from '../../../../../lib/l
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { BOARD_TEXT } from '../../lib/boardCopy';
-import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
+import type { PatsomeBoardModel } from '../../lib/patsomeBoard';
 import type { SoloBoardModel } from '../../lib/soloBoard';
 import type { TeamBoardModel } from '../../lib/teamBoard';
-import { WebLinkButton } from '../WebLinkButton';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
+import { PatsomeView } from './PatsomeView';
 import { NassauView, SkinsView } from './PotViews';
 import { SettlementCard } from './SettlementCard';
 import { SoloBoard } from './SoloBoard';
 import { TeamBoard } from './TeamBoard';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
-
-/**
- * Fallskjermen for patsome-grenen under — teksten en spiller ville fått hvis
- * `formatGate` slapp formatet ut FØR denne fila fikk en ekte visning for det.
- *
- * **Den er ikke det spilleren ser i dag.** Gate-grenen i `LeaderboardBody`
- * returnerer først, og den bruker `gateMessage` (`lib/formatGate.ts`) — som
- * skiller «Dette formatet …» fra «Denne runden …», noe en enkelt konstant her
- * ikke kan. Endrer du strengen under, endrer du derfor ingenting på skjermen;
- * gate-teksten bor i `formatGate.ts`.
- *
- * Begge ender likevel på «… på nettsiden ennå», og begge rendres med testID
- * `leaderboard-gated-format`. Det er hele skillet #1844 innførte: dette er det
- * ENE av de tre «vi kan ikke vise dette»-tilfellene der nettsiden faktisk har
- * svaret. De to andre ({@link UNKNOWN_FORMAT_RESULT_MESSAGE} og
- * `missing-config` i `Leaderboard.tsx`) nevner den ikke.
- */
-export const GATED_FORMAT_RESULT_MESSAGE = 'Formatet vises på nettsiden ennå.';
 
 /**
  * Teksten for et format appen ikke kjenner igjen — motoren sendte en `kind`
@@ -69,16 +48,14 @@ const VS_PAR: LeaderColumn = { key: 'vsPar', label: BOARD_TEXT.colVsPar, numeric
 export function ResultView({
   result,
   status,
-  gameId,
   settlement,
   nameOf,
   soloBoard = null,
   teamBoard = null,
+  patsomeBoard = null,
 }: {
   result: ModeResult;
   status: string;
-  /** Kun til lenke-knappen i patsome-grenen (#1891) — ingen visning leser den. */
-  gameId: string;
   /**
    * Pengeoppgjøret (#2221) fra den delte `settlementForResult`, eller null når
    * spillet ikke spiller om penger. Påkrevd, så en visning som glemmer det
@@ -96,6 +73,8 @@ export function ResultView({
    * fra `teamBoardFor`. Uten den står tabellen under, som før.
    */
   teamBoard?: TeamBoardModel | null;
+  /** Patsome-tavla (#2751) fra `patsomeBoardFor`. Uten den står tabellen under. */
+  patsomeBoard?: PatsomeBoardModel | null;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
@@ -419,25 +398,18 @@ export function ResultView({
         <BingoBangoBongoView result={result} settlement={settlement} nameOf={nameOf} />
       );
 
-    // Gatet i `formatGate` — kan ikke nås fra appen, men har en gren så en
-    // fremtidig åpning ikke møter en tom skjerm.
     case 'patsome':
+      if (patsomeBoard) return <PatsomeView model={patsomeBoard} />;
       return (
-        <>
-          <CalmNote
-            text={GATED_FORMAT_RESULT_MESSAGE}
-            testID="leaderboard-gated-format"
-          />
-          {/* Samme knapp som gate-grenen i `LeaderboardBody`, av samme grunn:
-              dette er det ene «vi kan ikke vise dette» der nettsiden faktisk
-              har svaret. Grenen under (`leaderboard-unknown-format`) får den
-              ikke — der vet vi ikke engang hva formatet er. */}
-          <WebLinkButton
-            label={GATE_LINK_LABEL}
-            path={gameWebPath(gameId)}
-            testID="leaderboard-gated-format-link"
-          />
-        </>
+        <LeaderTable
+          testID="leaderboard-table"
+          columns={[RANK, TEAM, { key: 'points', label: BOARD_TEXT.colPoints, numeric: true }]}
+          rows={result.teams.map((team) => ({
+            key: String(team.teamNumber),
+            highlight: team.rank === 1,
+            cells: [team.rank, teamLabel(team.teamNumber, team.playerIds, nameOf), team.totalPoints],
+          }))}
+        />
       );
 
     default: {

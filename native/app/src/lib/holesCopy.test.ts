@@ -10,7 +10,9 @@ import {
   BINGO_BANGO_BONGO_HOLES_TEXT,
   HOLES_TEXT,
   NINES_HOLES_TEXT,
+  PATSOME_HOLE_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
+  TEE_STARTER_TEXT,
   WOLF_HOLES_TEXT,
   aceyDeuceyBruttoLabel,
   aceyDeuceySubtitle,
@@ -31,6 +33,7 @@ import {
   roundRobinBruttoLabel,
   roundRobinSegmentLabel,
   roundRobinSideNames,
+  teeHint,
   wolfBruttoLabel,
   wolfChoicePartner,
   wolfSubtitle,
@@ -43,6 +46,25 @@ function fill(template: string, values: Record<string, string | number>): string
 }
 
 describe('paritet mot messages/no.json', () => {
+  it('#2751: banneret og utslagsvalget på hull-siden', () => {
+    const patsome = source.holes.patsome;
+    const foursomes = source.holes.foursomes;
+    expect(PATSOME_HOLE_TEXT).toEqual({
+      fourballLabel: patsome.fourballLabel,
+      fourballRule: patsome.fourballRule,
+      greensomeLabel: patsome.greensomeLabel,
+      greensomeRule: patsome.greensomeRule,
+      foursomesLabel: patsome.foursomesLabel,
+      foursomesRule: patsome.foursomesRule,
+    });
+    expect(TEE_STARTER_TEXT.patsomeQuestion).toBe(patsome.teeStarterQuestion);
+    expect(TEE_STARTER_TEXT.foursomesQuestion).toBe(foursomes.teeStarterQuestion);
+    expect(TEE_STARTER_TEXT.saveFailed).toBe(patsome.teeStarterErrors.unknown);
+    expect(TEE_STARTER_TEXT.saveFailed).toBe(foursomes.teeStarterErrors.unknown);
+    expect(teeHint('Anna')).toBe(fill(patsome.teeHint, { name: 'Anna' }));
+    expect(teeHint('Anna')).toBe(fill(foursomes.teeHint, { name: 'Anna' }));
+  });
+
   it('overskrifter, stillingen og nienes navn', () => {
     expect(HOLES_TEXT.heading).toBe(common.hullForHullHeading);
     expect(HOLES_TEXT.heading).toBe(source.game.home.hullForHull);
