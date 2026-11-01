@@ -267,7 +267,6 @@ describe('POST /api/pamelding/[shortId]', () => {
   describe('every answer from the cores has its status', () => {
     it.each<[ActionError, number, object]>([
       ['already_registered', 200, { status: 'joined', gameId: GAME_ID }],
-      ['already_requested', 200, { status: 'requested' }],
       ['message_too_long', 400, { error: 'message_too_long' }],
       ['not_authed', 401, { error: 'unauthorized' }],
       ['game_not_found', 404, { error: 'game_not_found' }],
@@ -292,6 +291,54 @@ describe('POST /api/pamelding/[shortId]', () => {
       const res2 = await post({ intent: 'request' });
       expect(res2.status).toBe(status);
       expect(await res2.json()).toEqual(body);
+    });
+  });
+
+  describe('the unique key answers for any old request, so the route looks again', () => {
+    const asked = (requestView: 'none' | 'self_request', isAlreadyRegistered = false) => ({
+      ...NO_LINK,
+      requestView,
+      isAlreadyRegistered,
+    });
+    beforeEach(() => {
+      getGameByShortIdMock.mockResolvedValue(makeGame({ registration_mode: 'manual_approval' }));
+      requestMock.mockResolvedValue({ ok: false, error: 'already_requested' });
+    });
+
+    it('two quick taps: the row is waiting, 200 requested', async () => {
+      vi.mocked(loadSignupFacts)
+        .mockResolvedValueOnce(asked('none'))
+        .mockResolvedValueOnce(asked('self_request'));
+      const res = await post({ intent: 'request' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'requested' });
+    });
+
+    it('an old rejected request: no «sent» that nobody gets', async () => {
+      vi.mocked(loadSignupFacts).mockResolvedValue(asked('none'));
+      const res = await post({ intent: 'request' });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: 'wrong_mode' });
+    });
+
+    it('approved in the meantime: on the list', async () => {
+      vi.mocked(loadSignupFacts)
+        .mockResolvedValueOnce(asked('none'))
+        .mockResolvedValueOnce(asked('none', true));
+      const res = await post({ intent: 'request' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'joined', gameId: GAME_ID });
+    });
+
+    it('a failed second look is 500 db_error, not a guess', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(loadSignupFacts)
+        .mockResolvedValueOnce(asked('none'))
+        .mockRejectedValueOnce(new Error('boom'));
+      const res = await post({ intent: 'request' });
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'db_error' });
+      spy.mockRestore();
     });
   });
 
