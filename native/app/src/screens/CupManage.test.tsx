@@ -193,6 +193,24 @@ describe('makkervalget', () => {
 });
 
 describe('kvitteringen', () => {
+  it('et valg etter et trekk: det siste du gjorde, står', async () => {
+    answer({ ok: true, view: room({ matches: [choiceMatch(true)] }) });
+    await renderManage({ notice: 'player_withdrawn' });
+    await fireEvent.press(await screen.findByTestId('cup-manage-choice-yes-fb'));
+    expect(screen.getByTestId('cup-manage-notice')).toHaveTextContent('Valget er lagret.');
+  });
+
+  it('en feil forsvinner når siden mister fokus', async () => {
+    mockSave = { ok: false, reason: 'match_not_eligible' };
+    answer({ ok: true, view: room({ matches: [choiceMatch(true)] }) });
+    const navigation = await renderManage();
+    await fireEvent.press(await screen.findByTestId('cup-manage-choice-yes-fb'));
+    expect(screen.getByTestId('cup-manage-error')).toBeTruthy();
+    const [, listener] = navigation.addListener.mock.calls[0] as unknown as [string, () => void];
+    await act(async () => listener());
+    expect(screen.queryByTestId('cup-manage-error')).toBeNull();
+  });
+
   it('etter et trekk står den, og nullstilles når siden mister fokus', async () => {
     answer({ ok: true, view: room() });
     const navigation = await renderManage({ notice: 'player_withdrawn' });

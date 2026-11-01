@@ -361,6 +361,21 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
       { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'org' } },
       { kind: 'withdrawn', bySelf: false },
     ],
+    [
+      'trukket selv fra en planlagt cup-kamp: ingen angring, det er arrangørens (#2752)',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'scheduled', cupGame: true },
+      { kind: 'cupWithdrawn', bySelf: true },
+    ],
+    [
+      'trukket av arrangøren fra en planlagt cup-kamp',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'org' }, status: 'scheduled', cupGame: true },
+      { kind: 'cupWithdrawn', bySelf: false },
+    ],
+    [
+      'trukket fra en cup-kamp som pågår: spillets egen angring gjelder',
+      { me: { ...me, withdrawnAt: at, withdrawnByUserId: 'me' }, status: 'active', cupGame: true },
+      { kind: 'withdrawn', bySelf: true },
+    ],
     ['utkast', { status: 'draft' }, { kind: 'draft' }],
     ['planlagt', { status: 'scheduled' }, { kind: 'scheduled' }],
     [

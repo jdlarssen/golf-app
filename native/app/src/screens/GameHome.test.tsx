@@ -26,6 +26,9 @@ import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
 // ingenting av det — mocken er der bare for at modulgrafen skal kunne lastes.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('../data/cupManage', () => ({
+  fetchCupIsRunning: jest.fn(async () => mockCupRunning),
+}));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
@@ -73,6 +76,8 @@ const mockState: { bundle: GameBundle | null; scores: unknown[] } = {
   bundle: null,
   scores: [],
 };
+
+let mockCupRunning = true;
 
 function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
   return {
@@ -682,6 +687,27 @@ describe('GameHome — startbilletten (#2255)', () => {
 
     await waitFor(() => expect(screen.getByTestId('ticket-total')).toBeTruthy());
     expect(screen.getByTestId('ticket-total').props.children).toBe('14\u00A0p');
+  });
+
+  it('en cup som ikke er i gang: ingen lenke, for den ville vært en blindvei (#2752)', async () => {
+    mockCupRunning = false;
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'scheduled', modeConfig: { kind: 'stableford', team_size: 1 }, tournamentId: 'cup-1' },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await screen.findByTestId('game-ticket');
+    await act(async () => {});
+    expect(screen.queryByTestId('player-withdraw')).toBeNull();
+    mockCupRunning = true;
   });
 
   it('før start i en cup-kamp går «Trekk meg fra cupen» til cupens egen skjerm, også fra en avledet (#2752)', async () => {

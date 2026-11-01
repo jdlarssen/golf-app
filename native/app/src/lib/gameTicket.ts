@@ -305,6 +305,8 @@ export type TicketStub =
   /** #2752: en avledet kamp i gang. Slagene føres i kampen den er avledet av. */
   | { kind: 'derived'; hostGameId: string; hostName: string | null }
   | { kind: 'withdrawn'; bySelf: boolean }
+  /** Trukket fra en cup-kamp før start: bare arrangøren kan angre (#2752, E7). */
+  | { kind: 'cupWithdrawn'; bySelf: boolean }
   | { kind: 'draft' }
   | { kind: 'scheduled' }
   | { kind: 'finished'; result: { text: string; isWin: boolean } | null }
@@ -342,6 +344,8 @@ export function ticketStub(opts: {
   requirePeerApproval: boolean;
   /** #2712: spillet er en ligaflight (spilt alene står det «Godkjent», ikke «Du vant»). */
   leagueFlight?: boolean;
+  /** #2752: spillet er en kamp i en cup. */
+  cupGame?: boolean;
 }): TicketStub {
   const { me, status } = opts;
   if (opts.gate !== null) return { kind: 'gated', reason: opts.gate };
@@ -351,8 +355,14 @@ export function ticketStub(opts: {
     return { kind: 'derived', hostGameId: opts.host.gameId, hostName: opts.host.name };
   }
   if (me.withdrawnAt) {
+    const bySelf = me.withdrawnByUserId === me.userId;
+    // #2752: spillets egen angring svarer `game_locked` før start, og i en cup er
+    // det arrangørens å angre (E7).
+    if (opts.cupGame === true && (status === 'scheduled' || status === 'draft')) {
+      return { kind: 'cupWithdrawn', bySelf };
+    }
     // #2358: bare den som trakk seg selv kan angre.
-    return { kind: 'withdrawn', bySelf: me.withdrawnByUserId === me.userId };
+    return { kind: 'withdrawn', bySelf };
   }
   if (status === 'draft') return { kind: 'draft' };
   if (status === 'scheduled') return { kind: 'scheduled' };
