@@ -117,6 +117,22 @@ beforeEach(() => {
   callerAnswers({});
 });
 
+describe('dørene i rommet', () => {
+  it('«Styr cupen» følger databasens svar, spurt som kalleren', async () => {
+    caller = buildSupabaseMock([], { can_manage_tournament: true }, { byTable: {} });
+    expect(await (await call('token-meg')).json()).toMatchObject({ canManage: true });
+    expect(caller.__rpcCalls).toEqual([{ name: 'can_manage_tournament', params: { p_tournament_id: CUP } }]);
+
+    caller = buildSupabaseMock([], { can_manage_tournament: false }, { byTable: {} });
+    expect(await (await call('token-meg')).json()).toMatchObject({ canManage: false });
+  });
+
+  it('en lesefeil på det svaret er 500, ikke «du styrer ikke»', async () => {
+    caller = buildSupabaseMock([], {}, { rpcErrors: { can_manage_tournament: { message: 'boom' } } });
+    expect((await call('token-meg')).status).toBe(500);
+  });
+});
+
 describe('hvilke kamper appen kan åpne', () => {
   it('svaret er det kalleren selv får lese, med kallerens klient', async () => {
     callerAnswers({ games: { data: [{ id: 'kamp-1' }], error: null } });

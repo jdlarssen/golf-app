@@ -5,6 +5,7 @@ import { computeCupPlayerPoints, preferredName } from './computeCupPlayerPoints'
 import { cupMatchStatusKey, cupMatchStatusValues } from './cupMatchStatusLabel';
 import { cupProgress } from './cupRoomRows';
 import { remainingPartnerName } from './cupSoloPartner';
+import { canSelfWithdrawFromCup } from './cupSelfWithdrawLink';
 import type { CupSnapshot } from './getCupSnapshot';
 import { buildSideAwardDetails } from './sideAwardDetails';
 
@@ -93,6 +94,8 @@ export function buildAppCupView(
     unknownLabel: string;
     /** The cup's games the caller can read under RLS. */
     readableGameIds: ReadonlySet<string>;
+    /** `can_manage_tournament`, asked as the caller. */
+    canManage: boolean;
   },
 ): AppCupView {
   const { tournament, leaderboard, roster } = snapshot;
@@ -151,6 +154,16 @@ export function buildAppCupView(
     progress: cupProgress(leaderboard),
     // A finished cup has no line-up left to wait for, even with a session never revealed.
     lineupPending: opts.lineupPending && !finished,
+    canManage: opts.canManage,
+    selfWithdrawn: [...roster.team1, ...roster.team2].some(
+      (player) => player.userId === userId && player.withdrawn === true,
+    ),
+    canWithdrawSelf: canSelfWithdrawFromCup({
+      userId,
+      cupStatus: tournament.status,
+      matches: leaderboard.matches,
+      roster,
+    }),
     matches,
     results: finished ? buildResults(snapshot, unknownLabel) : null,
   };
