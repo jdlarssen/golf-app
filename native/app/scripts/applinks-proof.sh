@@ -15,10 +15,12 @@
 # bære en nett-sesjon fra en lenke, så innlogging og påmelding skal fortsatt åpnes
 # i nettleseren.
 #  - Hver autoVerify-sti for tornygolf.no og www.tornygolf.no MÅ være en av stiene
-#    på lista. En annen sti, et filter uten sti (`*`), et annet underdomene og en
-#    vert som er en ressursreferanse (`@string/…`, kan ikke leses her) er FAIL.
+#    på lista. En annen sti og et filter uten sti (`*`) er FAIL.
+#  - Bare de to vertene er lov. En annen vert, et annet underdomene og en vert som
+#    er en ressursreferanse (`@string/…`, kan ikke leses her) er FAIL. Android 7–11
+#    godkjenner lenkene bare når alle vertene i filteret svarer, så en vert til
+#    kan stoppe dem alle.
 #  - Alle stiene MÅ finnes på begge vertene, ellers åpner ikke lenka appen.
-#  - Andre verter skrives ut som informasjon.
 # Stiene og vertene står i `app.config.ts` (`STORE_APP_LINK_PATH_PREFIXES`,
 # `STORE_LINK_DOMAINS`), og `applinks-proof.test.js` holder lista her i takt med den.
 
@@ -46,18 +48,11 @@ android_applinks_rules() {
         esac
         ;;
       *)
+        bad=$((bad + 1))
         case "$host" in
-          *."$ANDROID_APPLINKS_APEX")
-            bad=$((bad + 1))
-            say "      autoVerify: $host $spec (underdomene)"
-            ;;
-          @*)
-            bad=$((bad + 1))
-            say "      autoVerify: $host $spec (ressursreferanse som ikke kan leses her, regnes som $ANDROID_APPLINKS_APEX)"
-            ;;
-          *)
-            say "      autoVerify: $host $spec (ikke $ANDROID_APPLINKS_APEX)"
-            ;;
+          *."$ANDROID_APPLINKS_APEX") say "      autoVerify: $host $spec (annet underdomene)" ;;
+          @*) say "      autoVerify: $host $spec (ressursreferanse som ikke kan leses her)" ;;
+          *) say "      autoVerify: $host $spec (annen vert)" ;;
         esac
         ;;
     esac
@@ -73,7 +68,7 @@ android_applinks_rules() {
   done
 
   if [ "$bad" != "0" ]; then
-    fail "$bad autoVerify-claim(er) for $ANDROID_APPLINKS_APEX utenfor lista. Bare $ANDROID_APPLINKS_ALLOWED på $ANDROID_APPLINKS_HOSTS er lov (#2748)"
+    fail "$bad autoVerify-claim(er) utenfor lista. Bare $ANDROID_APPLINKS_ALLOWED på $ANDROID_APPLINKS_HOSTS er lov (#2748)"
   elif [ -n "$missing" ]; then
     fail "autoVerify mangler:$missing. Uten den åpner ikke lenka appen på Android (#2748)"
   else
