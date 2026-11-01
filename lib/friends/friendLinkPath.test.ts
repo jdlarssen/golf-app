@@ -11,8 +11,7 @@ import {
  * Type A (#2627): venne-lenkas sti har ett hjem. Lista over locale-prefikser
  * står i fila (den er uten importer, så appen kan lese den), og må dekke hver
  * locale nettsiden har. Kommer det en ny locale, blir denne testen rød, og
- * AASA-fila, appens parser og butikkbyggets intent-filter (testet mot lista)
- * følger etter.
+ * AASA-fila, appens parser og butikkbyggets intent-filter følger etter.
  */
 describe('friendLinkPath', () => {
   it('bygger stien til «legg til meg»-siden', () => {

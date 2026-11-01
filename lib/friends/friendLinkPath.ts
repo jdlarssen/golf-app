@@ -25,8 +25,9 @@ export const FRIEND_LINK_LOCALE_PREFIXES = ['', '/en'] as const;
 
 /**
  * Stiene lenka kan stå på, ett per locale: «/venner/legg-til/» og
- * «/en/venner/legg-til/». AASA-fila, butikkbyggets intent-filter (testet mot
- * denne) og appens parser bruker lista.
+ * «/en/venner/legg-til/». AASA-fila bruker lista. Butikkbyggets intent-filter
+ * og appens parser bygger på `lib/appLinks/appLinkPaths.ts`, som har ligalenka
+ * også (#2748).
  */
 export const FRIEND_LINK_PATH_PREFIXES: readonly string[] = FRIEND_LINK_LOCALE_PREFIXES.map(
   (prefix) => `${prefix}${FRIEND_LINK_PREFIX}`,
