@@ -9,7 +9,7 @@
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -17,7 +17,7 @@ import { escapeHtml } from './escapeHtml';
 export type RegistrationApprovedMailParams = {
   to: string;
   gameName: string;
-  /** UUID til games-raden — brukes til å bygge /games/[id]-deeplink. */
+  /** UUID til games-raden, brukes til lenka til runden. */
   gameId: string;
   /** Mottakerens locale (#594). Normalt udefinert → norsk. */
   locale?: string | null;
@@ -31,7 +31,7 @@ export async function sendRegistrationApprovedMail(
   const t = await getMailTranslator(locale);
 
   const subject = t('registrationApproved.subject', { gameName });
-  const gameUrl = mailUrl(locale, `/games/${gameId}`);
+  const gameUrl = gameMailUrl(locale, gameId);
   const homeUrl = mailUrl(locale, '');
 
   const bodyHtml = t.markup('registrationApproved.body', {

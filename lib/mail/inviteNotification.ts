@@ -15,6 +15,7 @@
 
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { formatLongDateOsloLocale } from '@/lib/i18n/format';
+import { invitationLinkPath } from '@/lib/appLinks/appLinkPaths';
 import {
   getMailTranslator,
   getMailMessages,
@@ -110,9 +111,12 @@ export async function sendInviteNotification(
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
   const modeHint = resolveModeHint(hasGame, gameMode, messages);
 
-  const loginQs = new URLSearchParams({ email: to });
-  if (inviteToken) loginQs.set('invite', inviteToken);
-  const loginUrl = `${mailUrl(locale, '/login')}?${loginQs.toString()}`;
+  // #2748: with a token the link goes to `/invitasjon/...`, which the app claims.
+  // Without the app, that path sends the browser on to `/login` with the card.
+  const emailQs = new URLSearchParams({ email: to }).toString();
+  const loginUrl = inviteToken
+    ? `${mailUrl(locale, invitationLinkPath(inviteToken))}?${emailQs}`
+    : `${mailUrl(locale, '/login')}?${emailQs}`;
   const formatsUrl = mailUrl(locale, '/spillformater');
 
   // Modus-hint (#309): kort callout med navn + sammendrag + lenke. Distinkt

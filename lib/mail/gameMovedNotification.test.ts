@@ -59,7 +59,7 @@ describe('sendGameMovedNotification', () => {
 
       Lørdagsrunden har fått ny tid: søndag 4. okt. kl. 09:00. Samme bane og tee.
 
-      Se runden: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Se runden: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -76,7 +76,7 @@ describe('sendGameMovedNotification', () => {
 
       Lørdagsrunden har fått ny tid: søndag 4. okt. kl. 09:00. Bane eller tee er også endret.
 
-      Se runden: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111
+      Se runden: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -94,7 +94,7 @@ describe('sendGameMovedNotification', () => {
 
       Lørdagsrunden has a new time: Sunday, Nov 8 at 09:00. Same course and tees.
 
-      See the round: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111
+      See the round: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -133,7 +133,7 @@ describe('sendGameMovedNotification', () => {
                     <strong>Lørdagsrunden</strong> har fått ny tid: søndag 4. okt. kl. 09:00. Samme bane og tee.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Se runden
                     </a>
                   </div>

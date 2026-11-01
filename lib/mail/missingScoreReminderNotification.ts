@@ -7,7 +7,7 @@
 // recipient's locale, and the hole list is joined the locale's way.
 
 import { formatListLocale } from '@/lib/i18n/format';
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -38,7 +38,7 @@ export async function sendMissingScoreReminderNotification(
   const firstHole = holes[0];
 
   const subject = t('missingScoreReminder.subject', { holes: holeList, holeCount, gameName });
-  const holeUrl = mailUrl(locale, `/games/${gameId}/holes/${firstHole}`);
+  const holeUrl = gameMailUrl(locale, gameId, `holes/${firstHole}`);
   const homeUrl = mailUrl(locale, '');
 
   const salutation = playerFirstName

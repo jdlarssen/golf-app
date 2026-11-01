@@ -12,7 +12,7 @@
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -23,7 +23,7 @@ export type OrganizerGameNoticeParams = {
   recipientFirstName: string | null;
   /** The game's display name, used in subject + body. */
   gameName: string;
-  /** Game id, for the link to /games/[id]/avslutt. */
+  /** Game id, for the link to the page that ends the round. */
   gameId: string;
   /** The recipient's locale (#594). Usually undefined → Norwegian. */
   locale?: string | null;
@@ -39,7 +39,7 @@ export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams)
   const subject = allDelivered
     ? t('organizerGameNotice.subjectAllDelivered', { gameName })
     : t('organizerGameNotice.subjectStale', { gameName });
-  const finishUrl = mailUrl(locale, `/games/${gameId}/avslutt`);
+  const finishUrl = gameMailUrl(locale, gameId, 'avslutt');
   const homeUrl = mailUrl(locale, '');
 
   const salutation = recipientFirstName

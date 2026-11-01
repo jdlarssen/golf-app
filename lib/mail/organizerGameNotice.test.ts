@@ -58,7 +58,7 @@ describe('sendOrganizerGameNotice', () => {
 
       Alle scorekortene i Sommercup 2026 er levert. Avslutt spillet, så får spillerne resultatlista.
 
-      Avslutt spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/avslutt
+      Avslutt spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/avslutt
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -76,7 +76,7 @@ describe('sendOrganizerGameNotice', () => {
 
       Det har ikke kommet nye slag i Sommercup 2026 på et døgn. Avslutt spillet når du er klar, så får spillerne resultatlista.
 
-      Avslutt spillet: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/avslutt
+      Avslutt spillet: https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/avslutt
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -94,7 +94,7 @@ describe('sendOrganizerGameNotice', () => {
 
       Every scorecard in Sommercup 2026 is in. Finish the game, and the players get the results.
 
-      Finish the game: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111/avslutt
+      Finish the game: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111/avslutt
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
@@ -142,7 +142,7 @@ describe('sendOrganizerGameNotice', () => {
                     Alle scorekortene i <strong>Sommercup 2026</strong> er levert. Avslutt spillet, så får spillerne resultatlista.
                   </p>
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/avslutt" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/runde/11111111-1111-1111-1111-111111111111/avslutt" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
                       Avslutt spillet
                     </a>
                   </div>

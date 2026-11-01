@@ -11,7 +11,7 @@
 // line is XSS-guarded via isPaymentUrl — only http(s) links become a clickable
 // «Betal her», everything else renders as a plain Vipps-number line.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { formatKr } from '@/lib/format/formatKr';
 import { isPaymentUrl } from '@/lib/payment/paymentLink';
 import { sendMail } from './send';
@@ -44,7 +44,7 @@ export async function sendPaymentReminderNotification(
 
   const amount = formatKr(entryFeeKr);
   const subject = t('paymentReminder.subject', { gameName });
-  const gameUrl = mailUrl(locale, `/games/${gameId}`);
+  const gameUrl = gameMailUrl(locale, gameId);
   const homeUrl = mailUrl(locale, '');
 
   const salutation = playerFirstName

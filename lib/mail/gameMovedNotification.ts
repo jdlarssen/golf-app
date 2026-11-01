@@ -10,7 +10,7 @@
 // Locale-aware (#594): the text comes from the `mail` catalog for the
 // recipient's locale, and the tee-off is formatted there in Oslo time.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -21,7 +21,7 @@ export type GameMovedNotificationParams = {
   recipientFirstName: string | null;
   /** The game's display name, used in subject + body. */
   gameName: string;
-  /** Game id, for the link to /games/[id]. */
+  /** Game id, for the link to the round. */
   gameId: string;
   /** The new tee-off, ISO. */
   teeOffAt: string;
@@ -38,7 +38,7 @@ export async function sendGameMovedNotification(params: GameMovedNotificationPar
   const teeOffMs = Date.parse(teeOffAt);
 
   const subject = t('gameMoved.subject', { gameName });
-  const gameUrl = mailUrl(locale, `/games/${gameId}`);
+  const gameUrl = gameMailUrl(locale, gameId);
   const homeUrl = mailUrl(locale, '');
 
   const salutation = recipientFirstName
