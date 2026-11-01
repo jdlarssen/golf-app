@@ -742,7 +742,24 @@ describe('LeaderboardBody', () => {
 
   it('sier rolig fra når ingen har ført et slag ennå', async () => {
     await render(<LeaderboardBody bundle={withGame({})} scores={[]} />);
-    expect(screen.getByTestId('leaderboard-empty')).toBeTruthy();
+    expect(screen.getByTestId('leaderboard-empty')).toHaveTextContent(
+      'Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller.',
+    );
+  });
+
+  // #2752: en arrangør som ikke spiller, når kampen fra cup-rommet. RLS gir hen
+  // spillet, men ikke slagene, så «ingen slag er ført» ville vært usant.
+  it('du spiller ikke kampen: teksten påstår ikke at ingen har ført slag', async () => {
+    const bundle = withGame({});
+    await render(
+      <LeaderboardBody
+        bundle={{ ...bundle, players: bundle.players.filter((player) => player.userId !== 'me') }}
+        scores={[]}
+      />,
+    );
+    expect(screen.getByTestId('leaderboard-empty')).toHaveTextContent(
+      'Du spiller ikke denne kampen, og her står ingen slag.',
+    );
   });
 
   // #2221 ga resultatskjermen et pengeoppgjør når spillet har kroner per enhet.

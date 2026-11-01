@@ -316,6 +316,19 @@ describe('tegning 6: feil og uten nett', () => {
     expect(screen.getByTestId('league-load-failed')).toBeTruthy();
   });
 
+  it('et varsel om en annen liga uten nett viser ikke den forrige under den nye id-en (#2752)', async () => {
+    answer({ ok: true, view: leagueView() }, { ok: false, reason: 'offline' });
+    const navigation = { navigate: jest.fn(), setParams: jest.fn(), addListener: () => () => {} };
+    const props = (leagueId: string) =>
+      ({ navigation, route: { key: 'league', name: 'League', params: { leagueId } } }) as unknown as ScreenProps<'League'>;
+    const view = await render(<League {...props('liga-vinter')} />);
+    expect(screen.getByTestId('league-name')).toBeTruthy();
+
+    await view.rerender(<League {...props('liga-sommer')} />);
+    expect(screen.queryByTestId('league-name')).toBeNull();
+    expect(screen.getByTestId('league-load-failed')).toBeTruthy();
+  });
+
   it('hentet liga, men nettet er borte: merknaden, og «Spill runden» er dempet', async () => {
     answer({ ok: true, view: leagueView() }, { ok: false, reason: 'offline' });
     const { navigate } = await renderLeague();
