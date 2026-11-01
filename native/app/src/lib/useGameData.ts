@@ -314,14 +314,3 @@ export function useTeamScores(
   );
 }
 
-/** Scorene til én spiller, slått opp på hullnummer. */
-export function scoresByHoleFor(
-  scores: readonly LocalScore[],
-  userId: string,
-): Map<number, LocalScore> {
-  const byHole = new Map<number, LocalScore>();
-  for (const row of scores) {
-    if (row.userId === userId) byHole.set(row.holeNumber, row);
-  }
-  return byHole;
-}

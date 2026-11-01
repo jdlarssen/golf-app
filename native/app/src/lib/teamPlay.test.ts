@@ -24,10 +24,13 @@ import {
   filledHolesForOwner,
   findMyTeamCard,
   foldLocalScores,
-  foursomesTeeStarterId,
   myTeamCaptainId,
+  patsomeSegmentFor,
+  showsTeeStarterPicker,
   teamExtraForHole,
+  teamExtraOutcome,
   teamHandicapFor,
+  teeStarterIdFor,
 } from './teamPlay';
 
 const SCRAMBLE: GameMode = 'texas_scramble';
@@ -603,62 +606,144 @@ describe('teamExtraForHole', () => {
   });
 });
 
-describe('foursomesTeeStarterId', () => {
+describe('teeStarterIdFor', () => {
   const base = {
     gameMode: FOURSOMES,
-    game: {
-      foursomesSide1TeeStarterUserId: 'anna',
-      foursomesSide2TeeStarterUserId: 'cato',
-    },
-    teamNumber: 1,
+    chosen: 'anna',
     memberIds: ['anna', 'bjorn'],
   };
 
-  it('odde hull: den siden valgte', () => {
-    expect(foursomesTeeStarterId({ ...base, holeNumber: 7 })).toBe('anna');
+  it('odde hull: den laget valgte', () => {
+    expect(teeStarterIdFor({ ...base, holeNumber: 7 })).toBe('anna');
   });
 
   it('like hull: makkeren', () => {
-    expect(foursomesTeeStarterId({ ...base, holeNumber: 8 })).toBe('bjorn');
-  });
-
-  it('hver side leser sin egen kolonne', () => {
-    expect(
-      foursomesTeeStarterId({
-        ...base,
-        teamNumber: 2,
-        memberIds: ['cato', 'dina'],
-        holeNumber: 1,
-      }),
-    ).toBe('cato');
+    expect(teeStarterIdFor({ ...base, holeNumber: 8 })).toBe('bjorn');
   });
 
   it('uten valg: ingen hint', () => {
-    expect(
-      foursomesTeeStarterId({
-        ...base,
-        game: {
-          foursomesSide1TeeStarterUserId: null,
-          foursomesSide2TeeStarterUserId: null,
-        },
-        holeNumber: 1,
-      }),
-    ).toBeNull();
+    expect(teeStarterIdFor({ ...base, chosen: null, holeNumber: 1 })).toBeNull();
   });
 
   it('den valgte står ikke lenger på laget: ingen hint', () => {
-    expect(
-      foursomesTeeStarterId({ ...base, memberIds: ['cato', 'dina'], holeNumber: 1 }),
-    ).toBeNull();
+    expect(teeStarterIdFor({ ...base, memberIds: ['cato', 'dina'], holeNumber: 1 })).toBeNull();
+  });
+
+  it('laget er ikke to lenger: ingen hint', () => {
+    expect(teeStarterIdFor({ ...base, memberIds: ['anna'], holeNumber: 1 })).toBeNull();
   });
 
   it('rotasjonen er foursomes-eksklusiv — greensome har den ikke', () => {
-    expect(
-      foursomesTeeStarterId({
-        ...base,
-        gameMode: 'greensome_matchplay',
-        holeNumber: 1,
-      }),
-    ).toBeNull();
+    expect(teeStarterIdFor({ ...base, gameMode: 'greensome_matchplay', holeNumber: 1 })).toBeNull();
+  });
+
+  it('Patsome: bare i foursomes-delen, hull 13–18', () => {
+    const patsome = { ...base, gameMode: 'patsome' as GameMode };
+    expect(teeStarterIdFor({ ...patsome, holeNumber: 12 })).toBeNull();
+    expect(teeStarterIdFor({ ...patsome, holeNumber: 13 })).toBe('anna');
+    expect(teeStarterIdFor({ ...patsome, holeNumber: 14 })).toBe('bjorn');
+    expect(teeStarterIdFor({ ...patsome, holeNumber: 18 })).toBe('bjorn');
+  });
+});
+
+describe('showsTeeStarterPicker', () => {
+  const base = {
+    gameMode: 'patsome' as GameMode,
+    chosen: null as string | null,
+    holeNumber: 13,
+    memberIds: ['anna', 'bjorn'],
+    userId: 'anna',
+    locked: false,
+  };
+
+  it.each<[string, Partial<typeof base>, boolean]>([
+    ['Patsome, hull 13', {}, true],
+    ['Patsome, hull 18, valget mangler ennå', { holeNumber: 18 }, true],
+    ['Patsome, hull 12', { holeNumber: 12 }, false],
+    ['Patsome, valget er tatt', { chosen: 'anna' }, false],
+    ['foursomes, hull 1', { gameMode: FOURSOMES, holeNumber: 1 }, true],
+    ['foursomes, hull 2', { gameMode: FOURSOMES, holeNumber: 2 }, false],
+    ['greensome har ikke valget', { gameMode: 'greensome_matchplay', holeNumber: 1 }, false],
+    ['kortet er låst', { locked: true }, false],
+    ['laget er ikke to', { memberIds: ['anna'] }, false],
+    ['jeg er ikke på laget (trukket)', { memberIds: ['bjorn', 'cato'] }, false],
+  ])('%s', (_label, overrides, expected) => {
+    expect(showsTeeStarterPicker({ ...base, ...overrides })).toBe(expected);
+  });
+});
+
+describe('patsomeSegmentFor', () => {
+  it('6/6/6', () => {
+    expect([1, 6, 7, 12, 13, 18].map(patsomeSegmentFor)).toEqual([
+      'fourball',
+      'fourball',
+      'greensome',
+      'greensome',
+      'foursomes',
+      'foursomes',
+    ]);
+  });
+});
+
+// #2751: hullene har SI = hullnummer. Lag 1 har 6 + 24: greensome round(0.6·6 +
+// 0.4·24) = 13, foursomes round(0.5·30) = 15. Hull 7 og 13 har ulik fordeling.
+describe('teamExtraForHole, Patsome', () => {
+  const players = [
+    player({ userId: 'anna', teamNumber: 1, courseHandicap: 6 }),
+    player({ userId: 'bjorn', teamNumber: 1, courseHandicap: 24 }),
+    player({ userId: 'cato', teamNumber: 2, courseHandicap: 0 }),
+    player({ userId: 'dina', teamNumber: 2, courseHandicap: 2 }),
+  ];
+  const patsome = (scoring: 'net' | 'gross') =>
+    bundle(
+      { gameMode: 'patsome', modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: scoring } },
+      players,
+    );
+
+  it('svarer motorens teamExtraStrokes på et spilt hull', () => {
+    const played = computeGameLeaderboard(patsome('net'), [
+      score({ userId: 'anna', holeNumber: 7, strokes: 5 }),
+      score({ userId: 'anna', holeNumber: 13, strokes: 5 }),
+      score({ userId: 'anna', holeNumber: 14, strokes: 5 }),
+    ]);
+    if (!played.ok || played.result.kind !== 'patsome') throw new Error('forventet et Patsome-resultat');
+    const team = played.result.teams.find((line) => line.teamNumber === 1)!;
+    const engine = (hole: number) => team.holes.find((row) => row.holeNumber === hole)!.teamExtraStrokes;
+
+    expect([engine(7), engine(13), engine(14)]).toEqual([1, 1, 1]);
+    expect(teamExtraForHole(played, 1, 7, 7)).toBe(engine(7));
+    expect(teamExtraForHole(played, 1, 13, 13)).toBe(engine(13));
+    expect(teamExtraForHole(played, 1, 14, 14)).toBe(engine(14));
+  });
+
+  it('står også før noen har tastet, med motorens tall for hver del', () => {
+    const outcome = teamExtraOutcome(patsome('net'), []);
+    // Hull 14 skiller delene: greensome 13 gir ikke slag på SI 14, foursomes 15 gjør det.
+    expect(teamExtraForHole(outcome, 1, 7, 7)).toBe(strokesForHole(13, 7));
+    expect(teamExtraForHole(outcome, 1, 12, 12)).toBe(strokesForHole(13, 12));
+    expect(teamExtraForHole(outcome, 1, 13, 13)).toBe(strokesForHole(15, 13));
+    expect(teamExtraForHole(outcome, 1, 14, 14)).toBe(strokesForHole(15, 14));
+    expect(teamExtraForHole(outcome, 1, 16, 16)).toBe(0);
+    // Lag 2 har 0 + 2: greensome round(0.8) = 1, foursomes round(1) = 1.
+    expect(teamExtraForHole(outcome, 2, 7, 7)).toBe(strokesForHole(1, 7));
+    expect(teamExtraForHole(outcome, 2, 13, 13)).toBe(strokesForHole(1, 13));
+  });
+
+  it('er samme tall før og etter at hullet er ført', () => {
+    const scores = [score({ userId: 'anna', holeNumber: 13, strokes: 6 })];
+    expect(teamExtraForHole(teamExtraOutcome(patsome('net'), scores), 1, 13, 13)).toBe(
+      teamExtraForHole(computeGameLeaderboard(patsome('net'), scores), 1, 13, 13),
+    );
+  });
+
+  it('brutto: 0 på alle delte hull, ikke tomt', () => {
+    const outcome = teamExtraOutcome(patsome('gross'), []);
+    for (const hole of [7, 12, 13, 18]) expect(teamExtraForHole(outcome, 1, hole, hole)).toBe(0);
+  });
+
+  it('hull 1–6 har ingen lagball, og laget må finnes', () => {
+    const outcome = teamExtraOutcome(patsome('net'), []);
+    expect(teamExtraForHole(outcome, 1, 6, 6)).toBeNull();
+    expect(teamExtraForHole(outcome, 9, 7, 7)).toBeNull();
   });
 });

@@ -349,7 +349,7 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
   const all = Array.from({ length: 18 }, (_, i) => i + 1);
 
   it.each([
-    ['stengt format slår alt', { gate: 'mode' as const, me: undefined }, { kind: 'gated', reason: 'mode' }],
+    ['stengt runde slår alt', { gate: 'segment' as const, me: undefined }, { kind: 'gated', reason: 'segment' }],
     ['ikke spiller', { me: undefined }, { kind: 'notPlayer' }],
     [
       'trukket av seg selv',

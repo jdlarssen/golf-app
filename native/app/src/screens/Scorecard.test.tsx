@@ -910,6 +910,40 @@ describe('Scorecard', () => {
     expect(screen.queryByTestId('total-netto')).toBeNull();
     expect(screen.getByTestId('total-brutto')).toBeTruthy();
   });
+  // #2751: laget deler hull 7–18, men hver spiller leverer sitt eget kort.
+  it('Patsome: mitt eget kort, med «Lever scorekort», eget handicap og lagets rader på hull 7–18', async () => {
+    mockState.bundle = {
+      ...mockBundle,
+      game: {
+        ...mockBundle.game,
+        gameMode: 'patsome',
+        modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+      },
+    };
+    const row = (userId: string, holeNumber: number) => ({
+      id: `${GAME_ID}#${userId}#${holeNumber}`,
+      gameId: GAME_ID,
+      userId,
+      holeNumber,
+      strokes: 4,
+      putts: null,
+      enteredBy: 'me',
+      clientUpdatedAt: '2026-08-30T10:00:00.000Z',
+      serverUpdatedAt: null,
+    });
+    // «makker» er kaptein: hull 7–18 ligger på raden hans.
+    mockState.scores = Array.from({ length: 18 }, (_, i) => row(i < 6 ? 'me' : 'makker', i + 1));
+
+    await render(scorecardElement(GAME_ID, jest.fn()));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
+    });
+    expect(screen.getByTestId('submit-scorecard')).toHaveTextContent('Lever scorekort');
+    expect(screen.queryByTestId('submit-team-card')).toBeNull();
+    expect(screen.queryByText(/Lagets scorekort/)).toBeNull();
+  });
+
   it('#2580: et utslag som venter i køen, sperrer leveringen som et slag gjør', async () => {
     // Slagkøen er tom. Uten utslagskøen i kø-vakta ville knappen stått åpen,
     // og serveren ville talt bare utslagene som var framme.

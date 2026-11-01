@@ -694,30 +694,6 @@ describe('LeaderboardBody', () => {
     expect(screen.queryByTestId('leaderboard-table')).toBeNull();
   });
 
-  it('henviser til nettsiden for et gatet format, uten å røre motoren', async () => {
-    // Patsome er formatet som fortsatt står i gaten — #1832 slapp wolf og BBB
-    // ut da valg-UI-en kom på hull-siden.
-    await render(
-      <LeaderboardBody
-        bundle={withGame({
-          gameMode: 'patsome',
-          modeConfig: {
-            kind: 'patsome',
-            team_size: 2,
-            teams_count: 2,
-            patsome_scoring: 'net',
-          },
-        })}
-        scores={mockLocalScores}
-      />,
-    );
-    expect(screen.getByTestId('leaderboard-gated-format')).toBeTruthy();
-    // Ordlyden er `gateMessage('mode')`. Nettsiden nevnes KUN her (#1844), og
-    // #1891 fester «Åpne runden på nettsiden»-knappen på nettopp denne grenen.
-    expect(screen.getByText('Dette formatet føres på nettsiden ennå.')).toBeTruthy();
-    expect(screen.getByTestId('leaderboard-gated-format-link')).toBeTruthy();
-  });
-
   it('sier at oppsettet mangler — ikke at formatet finnes på nettsiden', async () => {
     // Raden gir to motstridende svar på hva runden er: `game_mode` sier
     // stableford, `mode_config.kind` sier skins. Motoren narrower på `kind`,

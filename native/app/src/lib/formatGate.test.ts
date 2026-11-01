@@ -5,7 +5,8 @@
 //    2026-08-30), så en gate som spør «er feltet satt?» ville stengt HVERT
 //    eneste vanlige spill ute. Testen låser at den spør om verdien.
 //  - Familie-overgangene går begge veier. N4 åpnet scramble og alternate shot
-//    og stengte wolf/BBB; #1832 åpnet de to igjen da valg-UI-en kom på plass.
+//    og stengte wolf/BBB; #1832 åpnet de to igjen da valg-UI-en kom på plass, og
+//    #2751 slapp det siste formatet, Patsome, ut.
 //    Uten en rad per familie kan en senere endring dra en av dem tilbake uten
 //    at noe sier fra.
 import { gateMessage, gateReason, isScoringSupported } from './formatGate';
@@ -51,8 +52,8 @@ describe('isScoringSupported', () => {
     // motoren får dermed hele regnestykket.
     ['wolf — valg-UI på hullet', game({ gameMode: 'wolf' }), true],
     ['bingo bango bongo — mottakere føres på hullet', game({ gameMode: 'bingo_bango_bongo' }), true],
-    // Uendret fra N3: det ene formatet som fortsatt står i gaten.
-    ['patsome — segment-hybrid', game({ gameMode: 'patsome' }), false],
+    // #2751: føres, vises og avsluttes i appen.
+    ['patsome — segment-hybrid', game({ gameMode: 'patsome' }), true],
     // #2752: halve dager og avledede kamper føres og vises i appen.
     ['front9-halvdel av en delt cup-dag', game({ holeSegment: 'front9' }), true],
     ['back9-halvdel', game({ holeSegment: 'back9' }), true],
@@ -63,14 +64,11 @@ describe('isScoringSupported', () => {
 });
 
 describe('gateReason', () => {
-  it('stenger bare formatet, og sier det', () => {
-    expect(gateReason(game({ gameMode: 'patsome' }))).toBe('mode');
+  it('stenger ingen format lenger: Patsome går gjennom, også på en halvdel', () => {
+    expect(gateReason(game({ gameMode: 'patsome' }))).toBeNull();
+    expect(gateReason(game({ gameMode: 'patsome', holeSegment: 'front9' }))).toBeNull();
     expect(gateReason(game())).toBeNull();
     expect(gateMessage()).toBe('Dette formatet føres på nettsiden ennå.');
-  });
-
-  it('lar formatet stenge også på en halvdel: et patsome-front9 er stengt som format', () => {
-    expect(gateReason(game({ gameMode: 'patsome', holeSegment: 'front9' }))).toBe('mode');
   });
 
   it('åpner en cup-halvdel for et åpent format: wolf på front9', () => {
