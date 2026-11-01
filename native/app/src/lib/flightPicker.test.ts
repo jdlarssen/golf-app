@@ -185,7 +185,12 @@ describe('buildFlightPicker', () => {
       ['Ledige plasser', [3]],
       ['Fulle flighter', [1]],
     ]);
-    expect(flights(model)[0]).toMatchObject({ count: '4/4', status: web.flightYours, full: false });
+    expect(flights(model)[0]).toMatchObject({
+      namesMuted: true,
+      count: '4/4',
+      status: web.flightYours,
+      full: false,
+    });
     expect(flights(model)[2]).toMatchObject({
       namesMuted: true,
       count: '4/4',

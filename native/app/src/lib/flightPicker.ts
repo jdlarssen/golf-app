@@ -54,7 +54,7 @@ export type PickerFlight = {
   label: string;
   /** «Du, Marte og Jonas», eller «Ingen ennå». */
   names: string;
-  /** Navnene står dempet i en tom og en full flight, som på tegningen. */
+  /** Navnene står dempet i en tom og en full flight, også min egen, som på tegningen. */
   namesMuted: boolean;
   count: string;
   status: string;
@@ -129,7 +129,8 @@ export function buildFlightPicker(
   const flights = offeredFlightNumbers(activeCount, assigned.keys()).map((number): PickerFlight => {
     const members = (assigned.get(number) ?? []).map((entry) => entry.player);
     const mine = number === myFlight;
-    const full = !mine && members.length >= MAX_FLIGHT_SIZE;
+    const filled = members.length >= MAX_FLIGHT_SIZE;
+    const full = !mine && filled;
     const names = memberNames(members, userId);
     const status = mine ? FLIGHT_PICKER_TEXT.yours : full ? FLIGHT_PICKER_TEXT.full : action;
     const label = FLIGHT_PICKER_TEXT.flightLabel(number);
@@ -137,7 +138,7 @@ export function buildFlightPicker(
       number,
       label,
       names,
-      namesMuted: members.length === 0 || full,
+      namesMuted: members.length === 0 || filled,
       count: `${members.length}/${MAX_FLIGHT_SIZE}`,
       status,
       mine,
