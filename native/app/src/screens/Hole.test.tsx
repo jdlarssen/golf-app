@@ -573,6 +573,35 @@ describe('Hole', () => {
     expect(last.navigate).toHaveBeenCalledWith('Scorecard', { gameId: GAME_ID });
   });
 
+  // #2746: tavla og kortet som alt ligger under hullet, er det samme du kommer
+  // tilbake til. Ingen nye kopier oppå.
+  describe('skjermer som alt ligger under hullet (#2746)', () => {
+    const stack = (under: string) =>
+      stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: GAME_ID } },
+        { name: under, params: { gameId: GAME_ID } },
+        { name: 'Hole', params: { gameId: GAME_ID, holeNumber: 18 } },
+      ]);
+
+    it('pokalen går tilbake til tavla', async () => {
+      const nav = stack('Leaderboard');
+      await render(holeElement(18, { ...nav, setParams: jest.fn(), setOptions: jest.fn() }));
+      await fireEvent.press(await screen.findByTestId('hole-leaderboard'));
+      expect(nav.popTo).toHaveBeenCalledWith('Leaderboard', { gameId: GAME_ID });
+      expect(nav.navigate).not.toHaveBeenCalled();
+    });
+
+    it('«Lever scorekort» går tilbake til kortet', async () => {
+      mockState.scores = [localScore('me', 4, null, 18), localScore('mate', 5, null, 18)];
+      const nav = stack('Scorecard');
+      await render(holeElement(18, { ...nav, setParams: jest.fn(), setOptions: jest.fn() }));
+      await fireEvent.press(await screen.findByTestId('score-rail-next-hole'));
+      expect(nav.popTo).toHaveBeenCalledWith('Scorecard', { gameId: GAME_ID });
+      expect(nav.navigate).not.toHaveBeenCalled();
+    });
+  });
+
   // Retting: raden gir skinna til den spilleren, «Angre» skriver eksplisitt
   // `null` (utelatt felt = behold, #939), og «Annet» setter et hvilket som
   // helst tall og går videre som et vanlig trykk.
