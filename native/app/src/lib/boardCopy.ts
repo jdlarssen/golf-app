@@ -168,6 +168,25 @@ export const BOARD_TEAM_TEXT = {
 } as const;
 
 /**
+ * Patsome-tavlas egne tekster (#2751, tegningen «Patsome-tavla», variant A).
+ * Ingen av dem finnes i `leaderboard.board`.
+ */
+export const BOARD_PATSOME_TEXT = {
+  colPar: 'Par',
+  /** Lagets poeng per del, og overskriftene i tabellen. */
+  fourball: '4BBB',
+  greensome: 'Greensome',
+  foursomes: 'Foursomes',
+  groupFourball: '4BBB · hull 1–6',
+  groupGreensome: 'Greensome · hull 7–12',
+  groupFoursomes: 'Foursomes · hull 13–18',
+  /** Opplesningen av én rad i tabellen. */
+  srHole: 'Hull {hole}, par {par}',
+  srCell: '{name} {points} poeng',
+  srCellUnplayed: '{name} ikke spilt',
+} as const;
+
+/**
  * `leaderboard.roundReport` (#2632): overskriften over historien fra
  * pressetribunen, tegn for tegn som på nettet. Paritetslåst i `boardCopy.test.ts`.
  */
