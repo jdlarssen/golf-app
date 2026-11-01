@@ -80,6 +80,7 @@ const view = (snap: CupSnapshot, userId = ME, lineupPending = false, readable: s
     lineupPending,
     unknownLabel: 'Ukjent spiller',
     readableGameIds: new Set(readable),
+    canManage: false,
   });
 
 describe('hvilke kamper appen kan åpne (#1542)', () => {
@@ -95,6 +96,17 @@ describe('hvilke kamper appen kan åpne (#1542)', () => {
     expect(
       view(snapshot('active', games), 'arrangor', false, ['min-utkast', 'annen']).matches.map((m) => m.canOpen),
     ).toEqual([true, true]);
+  });
+});
+
+describe('«Trekk meg fra cupen»', () => {
+  const planned = match('kamp', { status: 'scheduled', team1UserIds: [ME] });
+
+  it('står med en kamp igjen i en cup som går, som lenka på cup-siden', () => {
+    expect(view(snapshot('active', [planned])).canWithdrawSelf).toBe(true);
+    expect(view(snapshot('active', [match('annen', { status: 'scheduled' })])).canWithdrawSelf).toBe(false);
+    expect(view(snapshot('active', [{ ...planned, status: 'active' }])).canWithdrawSelf).toBe(false);
+    expect(view(snapshot('finished', [planned])).canWithdrawSelf).toBe(false);
   });
 });
 

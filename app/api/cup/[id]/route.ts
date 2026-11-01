@@ -64,11 +64,18 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       .eq('tournament_id', id);
     if (readableError) throw readableError;
 
+    // Samme regel som rutene som styrer cupen (`requireCupManager`).
+    const { data: canManage, error: canManageError } = await caller.rpc('can_manage_tournament', {
+      p_tournament_id: id,
+    });
+    if (canManageError) throw canManageError;
+
     const body: AppCupView = buildAppCupView(snapshot, {
       userId,
       lineupPending: (pending ?? []).length > 0,
       unknownLabel: APP_CUP_UNKNOWN_PLAYER,
       readableGameIds: new Set((readable ?? []).map((game) => game.id)),
+      canManage: canManage === true,
     });
     return NextResponse.json(body);
   } catch (err) {
