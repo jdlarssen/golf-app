@@ -3,11 +3,10 @@
 // react-navigation native-stack, ikke expo-router: expo-router krever bytte av
 // entry-point og filbasert app/-skanning oppå det uvanlige watchFolders-
 // oppsettet appen deler `lib/` gjennom. Seks skjermer trenger ikke den magien.
-// Dype lenker går ikke gjennom react-navigations linking-config. Den eneste
-// lenka som åpner en skjerm, er venne-lenka (#2627): `App.tsx` lytter,
-// `data/pendingFriendLink.ts` holder koden, og navigatoren åpner
-// «Bli venn med …» (`openPendingFriendLink`). Varsler åpner skjermer via
-// `listenForPushTaps`.
+// Dype lenker går ikke gjennom react-navigations linking-config. Venne-lenka
+// (#2627) og ligalenka (#2748) åpner hver sin skjerm: `App.tsx` lytter,
+// `data/pendingAppLink.ts` holder lenka, og navigatoren åpner skjermen
+// (`openPendingAppLink`). Varsler åpner skjermer via `listenForPushTaps`.
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
@@ -30,17 +29,18 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
 import {
-  friendLinkStep,
-  pendingFriendCode,
-  subscribePendingFriendCode,
-  takePendingFriendCode,
-} from './data/pendingFriendLink';
+  appLinkScreen,
+  appLinkStep,
+  pendingAppLink,
+  subscribePendingAppLink,
+  takePendingAppLink,
+} from './data/pendingAppLink';
 import { listenForPushTaps } from './data/pushTaps';
 import { openPushTarget } from './lib/openPushTarget';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
-import { LEAGUE_TEXT } from './lib/leagueCopy';
+import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
@@ -62,6 +62,7 @@ import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
 import { League } from './screens/League';
+import { LeagueJoin } from './screens/LeagueJoin';
 import { MarkerApprove } from './screens/MarkerApprove';
 import { LeagueRoundStart } from './screens/LeagueRoundStart';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
@@ -137,7 +138,7 @@ export type RootStackParamList = {
   Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
   /**
    * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
-   * appen. `code` er venne-koden fra lenka (`lib/friendLinkUrl.ts`).
+   * appen. `code` er venne-koden fra lenka (`lib/appLinkUrl.ts`).
    */
   FriendLink: { code: string };
   /**
@@ -152,8 +153,17 @@ export type RootStackParamList = {
   /**
    * Ligasiden (#2638 Del 2): tabellen, rundene og innstillingene, fra
    * `GET /api/liga/[id]`. Åpnes fra «Ligaene dine» på Hjem.
+   *
+   * `joined` (#2748) er kvitteringen `LeagueJoin` sender med etter «Bli med»:
+   * siden viser «Du er med i ligaen.» og nullstiller den med det samme, som
+   * `saved` på Profil.
    */
-  League: { leagueId: string };
+  League: { leagueId: string; joined?: boolean };
+  /**
+   * «Bli med i liga» (#2748): ligalenka åpnet appen. `code` er koden fra lenka
+   * (`lib/appLinkUrl.ts`).
+   */
+  LeagueJoin: { code: string };
   /**
    * «Start runden» i en ligarunde (#2638 Del 2). Etter start erstattes den av
    * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
@@ -216,16 +226,18 @@ function navigationThemeFor(theme: Theme): NavigationTheme {
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
- * «Bli venn med …» for venne-koden som venter (#2627). Avgjørelsen er
- * `friendLinkStep`: vent til navigatoren er klar, og åpne ikke skjermen en gang
- * til når den alt står øverst med samme kode.
+ * Skjermen for lenka som venter (#2627, #2748). Avgjørelsen er `appLinkStep`:
+ * vent til navigatoren er klar, og åpne ikke skjermen en gang til når den alt
+ * står øverst med samme kode.
  */
-function openPendingFriendLink() {
+function openPendingAppLink() {
   const ready = navigationRef.isReady();
-  const step = friendLinkStep(ready, ready ? navigationRef.getCurrentRoute() : undefined, pendingFriendCode());
+  const step = appLinkStep(ready, ready ? navigationRef.getCurrentRoute() : undefined, pendingAppLink());
   if (step === 'wait') return;
-  const code = takePendingFriendCode();
-  if (step === 'push' && code) navigationRef.dispatch(StackActions.push('FriendLink', { code }));
+  const link = takePendingAppLink();
+  if (step !== 'push' || !link) return;
+  const screen = appLinkScreen(link);
+  navigationRef.dispatch(StackActions.push(screen.name, screen.params));
 }
 
 export function RootNavigator() {
@@ -246,14 +258,14 @@ export function RootNavigator() {
   useEffect(() => {
     void settlePushOwner();
   }, []);
-  // #2627: en venne-lenke som kommer mens appen er åpen. En som kom før
+  // #2627, #2748: en lenke som kommer mens appen er åpen. En som kom før
   // innloggingen (eller før navigatoren var klar), tas i `onReady`.
-  useEffect(() => subscribePendingFriendCode(openPendingFriendLink), []);
+  useEffect(() => subscribePendingAppLink(openPendingAppLink), []);
   const onReady = useCallback(() => {
     const target = pendingPush.current;
     pendingPush.current = null;
     if (target) openPushTarget(navigationRef, target);
-    openPendingFriendLink();
+    openPendingAppLink();
   }, []);
   // #2228: hver skjerm har sin egen feilgrense (`screenLayout`), så headerens
   // tilbakeknapp virker når en skjerm kaster. Varianten følger skjermen. Den
@@ -421,6 +433,13 @@ export function RootNavigator() {
           name="League"
           component={League}
           options={kickerHeader(LEAGUE_TEXT.kicker, LEAGUE_TEXT.kicker)}
+        />
+        {/* «Bli med i liga» (#2748): samme ord i toppen som nettsiden, og
+            liganavnet stort i innholdet. */}
+        <Stack.Screen
+          name="LeagueJoin"
+          component={LeagueJoin}
+          options={kickerHeader(LEAGUE_JOIN_TEXT.kicker, LEAGUE_JOIN_TEXT.kicker)}
         />
         {/* #2661: markørens kort. Skjermen setter liganavnet i toppen selv. */}
         <Stack.Screen

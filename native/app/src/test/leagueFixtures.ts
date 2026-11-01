@@ -86,6 +86,7 @@ export function leagueView(overrides: {
       seasonEnd: '2027-02-04',
       hcpAllowancePct: 75,
       hcpMaxStrokes: 32,
+      shareUrl: null,
       ...overrides.league,
     },
     rounds,

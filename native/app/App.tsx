@@ -21,9 +21,9 @@
 // sesjon. Porten (`OwnerGate`) monteres på nytt per bruker via `key`, så
 // «ikke sjekket» er startverdien hver gang — ingen effekt trenger å nullstille.
 //
-// #2627: venne-lenka og QR-koden på bag-taggen åpner appen. Lyttingen starter
-// her, før innloggingen, så en lenke som kommer mens Login vises, venter til
-// navigatoren er montert og åpner «Bli venn med …» (`data/pendingFriendLink.ts`).
+// #2627, #2748: venne-lenka, QR-koden på bag-taggen og ligalenka åpner appen.
+// Lyttingen starter her, før innloggingen, så en lenke som kommer mens Login
+// vises, venter til navigatoren er montert og åpner skjermen (`data/pendingAppLink.ts`).
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -42,7 +42,7 @@ import type { Session } from '@supabase/supabase-js';
 import { AiConsentGate } from './src/components/AiConsentGate';
 import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
-import { listenForFriendLinks } from './src/data/pendingFriendLink';
+import { listenForAppLinks } from './src/data/pendingAppLink';
 import { FRAUNCES_FILES } from './src/fonts';
 import { RootNavigator } from './src/navigation';
 import { KeyboardInset } from './src/components/KeyboardInset';
@@ -75,8 +75,8 @@ export default function App() {
     Inter_700Bold,
   });
 
-  // #2627: venne-lenker fra første bilde, også før noen er logget inn.
-  useEffect(() => listenForFriendLinks(), []);
+  // #2627, #2748: lenker fra første bilde, også før noen er logget inn.
+  useEffect(() => listenForAppLinks(), []);
 
   useEffect(() => {
     // .catch + .finally: en avvist getSession må ALDRI la splashen henge —

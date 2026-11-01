@@ -11,15 +11,16 @@
 // `homeDates.ts`: Hermes mangler ICU-tidssonene). Klokkeslettet skrives
 // «23.59» som på tegningene.
 import { firstName, sharesFirstName } from '../../../../lib/firstName';
-import { formatShortDateNb } from '../../../../lib/format/date';
+import { formatShortDateNb, formatShortDateNbWithYear } from '../../../../lib/format/date';
 import { MAX_FLIGHT_PLAYERS } from '../../../../lib/league/flightRules';
 import type {
+  AppLeagueJoinView,
   AppLeagueParticipant,
   AppLeagueRound,
   AppLeagueView,
 } from '../../../../lib/league/appLeagueView';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '../../../../lib/league/types';
-import type { LeagueLoadFailure, LeagueStartFailure } from '../data/league';
+import type { LeagueJoinFailure, LeagueLoadFailure, LeagueStartFailure } from '../data/league';
 import { OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
@@ -67,6 +68,40 @@ export const LEAGUE_TEXT = {
   needNetToStart: 'Du trenger nett for å starte runden.',
   notFound: 'Fant ikke ligaen. Den kan ha blitt slettet, eller du er ikke med i den.',
   loading: 'Henter ligaen …',
+  /** Kvitteringen etter «Bli med» (`liga.join.joinedBanner`, #2748). */
+  joinedBanner: 'Du er med i ligaen.',
+  /** «Del lenka» på ligasiden (#2748). Overskriften er `liga.shareLink.heading`. */
+  shareHeading: 'Del ligaen',
+  shareButton: 'Del lenka',
+} as const;
+
+/**
+ * «Bli med i liga» (#2748): skjermen ligalenka åpner. Ordene er nettsidens
+ * (`liga.join`, låst i testen) så langt de rekker.
+ */
+export const LEAGUE_JOIN_TEXT = {
+  kicker: 'Bli med i liga',
+  placeSimulator: 'Simulator',
+  placeAnyCourse: 'Valgfri bane per runde',
+  noRounds: 'Rundene er ikke satt opp ennå.',
+  invite: 'Trykk «Bli med», så står du på lista med en gang.',
+  joinButton: 'Bli med',
+  allPlayed: 'Alle rundene som er satt opp, er spilt.',
+  closed: 'Ligaen er avsluttet, så du kan ikke bli med lenger.',
+  seeTable: 'Se tabellen',
+  profileIncomplete: 'Du mangler handicap på profilen. Fyll det inn, så kan du bli med.',
+  completeProfile: 'Fyll ut profilen',
+  notFound: 'Fant ikke ligaen. Lenken kan være slått av.',
+  readFailed: 'Fikk ikke sjekket påmeldingen. Prøv igjen.',
+  saveFailed: 'Klarte ikke å lagre. Prøv igjen.',
+  // `liga.player.joinPending`.
+  joinPending: 'Melder deg på …',
+
+  // --- App-egent ----------------------------------------------------------
+  toHome: 'Til Hjem',
+  /** Linja i innloggingsbåndet når en ligalenke venter. Ligaen vises ikke før innloggingen. */
+  loginTitle: 'Logg inn for å bli med i ligaen',
+  loginBody: 'Etterpå ser du ligaen og kan bli med.',
 } as const;
 
 /** Innstillingskortet (`liga.simSettings.*`). */
@@ -251,6 +286,65 @@ export function seasonLine(seasonStart: string, seasonEnd: string): string {
 /** Raden på Hjem: «Runde 3 · stenger tor. 23.59». */
 export function homeRoundLine(label: string, closesAt: string): string {
   return `${label} · stenger ${weekdayClock(new Date(closesAt))}`;
+}
+
+/** Linja under navnet på ligalenka: «Stableford · Simulator» (nettsidens `subtitle`). */
+export function joinFormatLine(league: AppLeagueJoinView['league']): string {
+  const place = league.isSimulator
+    ? LEAGUE_JOIN_TEXT.placeSimulator
+    : (league.courseName ?? LEAGUE_JOIN_TEXT.placeAnyCourse);
+  return `${FORMAT[league.format]} · ${place}`;
+}
+
+/** «7 runder · 2. nov 2026 – 7. feb 2027» (`liga.join.roundsLine`), eller at de mangler. */
+export function joinRoundsLine(rounds: AppLeagueJoinView['rounds']): string {
+  const first = rounds[0];
+  const last = rounds[rounds.length - 1];
+  if (!first || !last) return LEAGUE_JOIN_TEXT.noRounds;
+  const count = rounds.length === 1 ? '1 runde' : `${rounds.length} runder`;
+  return `${count} · ${formatShortDateNbWithYear(first.opensAt)} – ${formatShortDateNbWithYear(last.closesAt)}`;
+}
+
+/** `liga.join.playersLine`. Et tall, aldri navn. */
+export function joinPlayersLine(count: number): string {
+  return count === 0 ? 'Ingen påmeldt ennå' : `${count} påmeldt`;
+}
+
+/** «1, 2 og 3», som `formatListLocale` (Hermes mangler `Intl.ListFormat`). */
+function listOf(items: readonly number[]): string {
+  if (items.length < 2) return items.join('');
+  return `${items.slice(0, -1).join(', ')} og ${items[items.length - 1]}`;
+}
+
+/** Linja til den som kommer inn etter start (`liga.join.afterStart` og `allPlayed`), eller ingenting. */
+export function joinLateLine(lateJoin: AppLeagueJoinView['lateJoin']): string | null {
+  switch (lateJoin.kind) {
+    case 'none':
+      return null;
+    case 'from_next_round':
+      return `Runde ${listOf(lateJoin.played)} er spilt. Du er med fra neste runde.`;
+    case 'all_played':
+      return LEAGUE_JOIN_TEXT.allPlayed;
+  }
+}
+
+/** Feilen under «Bli med». Avslagene som bytter hele skjermen, står ikke her. */
+export function describeLeagueJoinFailure(
+  reason: Exclude<LeagueJoinFailure, 'not_found' | 'closed' | 'profile_incomplete'>,
+): string {
+  switch (reason) {
+    case 'offline':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    case 'read_failed':
+      return LEAGUE_JOIN_TEXT.readFailed;
+    case 'network':
+    case 'save_failed':
+      return LEAGUE_JOIN_TEXT.saveFailed;
+  }
 }
 
 /** Tittelen på rundekortet: «Stenger tor. 23.59». */
