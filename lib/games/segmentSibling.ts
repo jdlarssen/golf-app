@@ -1,8 +1,22 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { candidatesOnSameSplitDay } from './splitDayPairing';
+import {
+  isSegmentSiblingCandidate,
+  oppositeSegmentHalf,
+  type SegmentHalf,
+  type SegmentSibling,
+} from './segmentSiblingRules';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
+
+export {
+  isBroModus,
+  isSegmentSiblingCandidate,
+  oppositeSegmentHalf,
+  type SegmentHalf,
+  type SegmentSibling,
+} from './segmentSiblingRules';
 
 /**
  * #1441 (owner-QA finding B): «en flight kan bruke samme scorekort hele
@@ -14,27 +28,6 @@ import type { HoleSegment } from '@/lib/scoring';
  * submit flow. Deluxe single-scorecard UI is explicitly out of scope — this
  * is navigation only, never score/data merging.
  */
-
-export type SegmentHalf = Extract<HoleSegment, 'front9' | 'back9'>;
-
-export type SegmentSibling = {
-  gameId: string;
-  gameMode: GameMode;
-  holeSegment: SegmentHalf;
-  /**
-   * #1466: the acting player's own `submitted_at` on the sibling game (null =
-   * not yet delivered there). Drives broModus (front9's bridge-as-primary CTA)
-   * and the one-delivery cascade's "already delivered?" gate on the back9 host.
-   */
-  mySubmittedAt: string | null;
-  /**
-   * #1466: the acting player's `team_number` on the sibling game (null for
-   * per-player formats / a player with no team). Drives the team-wide vs
-   * own-row form of the one-delivery cascade — a greensome front9 sibling
-   * delivers per team (#1453), a best-ball sibling per player.
-   */
-  myTeamNumber: number | null;
-};
 
 /** #1466: the acting player's own membership row on a sibling candidate. */
 type SiblingMembership = {
@@ -54,39 +47,6 @@ type SegmentHostRow = {
   scheduled_tee_off_at: string | null;
   created_at: string | null;
 };
-
-const OPPOSITE_HALF: Record<SegmentHalf, SegmentHalf> = {
-  front9: 'back9',
-  back9: 'front9',
-};
-
-/** Pure: the segment a sibling lookup should search for, given the current
- *  game's own segment. Exported for direct unit coverage. */
-export function oppositeSegmentHalf(segment: SegmentHalf): SegmentHalf {
-  return OPPOSITE_HALF[segment];
-}
-
-/**
- * Pure: whether `game` is even eligible to have a segment sibling — a HOST
- * (never a derived match, which has no entry surface at all and is
- * explicitly out of this bridge's scope) with a real half-segment and a
- * tournament. Exported for direct unit coverage.
- */
-export function isSegmentSiblingCandidate(game: {
-  holeSegment: HoleSegment;
-  sourceGameId: string | null;
-  tournamentId: string | null;
-}): game is {
-  holeSegment: SegmentHalf;
-  sourceGameId: null;
-  tournamentId: string;
-} {
-  return (
-    game.sourceGameId == null &&
-    game.tournamentId != null &&
-    (game.holeSegment === 'front9' || game.holeSegment === 'back9')
-  );
-}
 
 /**
  * Pure: given the opposite-segment HOST candidates in the tournament and the

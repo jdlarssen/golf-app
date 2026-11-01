@@ -110,9 +110,14 @@ const BUCKET_KEY_SEP = '::';
  * consumed (not re-emitted). Only a bucket with EXACTLY one eligible front9
  * and one eligible back9 forms a pair — a duplicated or missing half degrades
  * every member of that bucket to a single, so ambiguity never mis-merges.
+ *
+ * `dayKeyOf` is here for the native app (#2752): Hermes has no ICU time zones, so
+ * `osloDayKey` cannot run on the phone, and the app buckets on the device's own
+ * calendar day instead (the same choice as `native/app/src/lib/homeDates.ts`).
  */
 export function pairSplitDayGames<T>(
   games: PairableGame<T>[],
+  dayKeyOf: (date: Date) => string = osloDayKey,
 ): SplitDayEntry<T>[] {
   // Bucket the pair-eligible halves by (tournament, Oslo day).
   const buckets = new Map<string, PairableGame<T>[]>();
@@ -120,7 +125,7 @@ export function pairSplitDayGames<T>(
     if (game.pairEligible === false) continue;
     if (game.tournamentId == null || game.dayAnchor == null) continue;
     if (game.holeSegment !== 'front9' && game.holeSegment !== 'back9') continue;
-    const key = `${game.tournamentId}${BUCKET_KEY_SEP}${osloDayKey(game.dayAnchor)}`;
+    const key = `${game.tournamentId}${BUCKET_KEY_SEP}${dayKeyOf(game.dayAnchor)}`;
     const bucket = buckets.get(key);
     if (bucket) bucket.push(game);
     else buckets.set(key, [game]);
