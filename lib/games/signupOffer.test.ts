@@ -86,6 +86,7 @@ describe('signupView', () => {
       }
     }
     expect(rows).toBe(SIGNUP_FACTS_MATRIX_ROWS);
+    expect(rows).toBe(27_648);
   });
 });
 

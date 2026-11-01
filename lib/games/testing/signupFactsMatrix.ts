@@ -16,37 +16,49 @@ const REQUESTS: PendingRequestView[] = [
 ];
 const BOOLS = [false, true];
 
-export const SIGNUP_FACTS_MATRIX_ROWS = 3 * 3 * 4 * 3 * 2 * 2 * 2 * 2 * 2 * 4 * 2;
+const GAMES: SignupFacts['game'][] = MODES.flatMap((registration_mode) =>
+  TYPES.flatMap((registration_type) =>
+    FORMATS.flatMap((game_mode) =>
+      STATUSES.flatMap((status) =>
+        BOOLS.flatMap((closed) =>
+          BOOLS.map((let_friends_skip_gate) => ({
+            status,
+            registration_mode,
+            registration_type,
+            game_mode,
+            signups_closed_at: closed ? '2026-11-01T10:00:00Z' : null,
+            let_friends_skip_gate,
+          })),
+        ),
+      ),
+    ),
+  ),
+);
+
+const VIEWERS: Omit<SignupFacts, 'game'>[] = BOOLS.flatMap((isClubMember) =>
+  BOOLS.flatMap((viewerIsFriend) =>
+    BOOLS.flatMap((hasPendingInvitation) =>
+      REQUESTS.flatMap((requestView) =>
+        BOOLS.map((isAlreadyRegistered) => ({
+          isAlreadyRegistered,
+          requestView,
+          hasPendingInvitation,
+          isClubMember,
+          viewerIsFriend,
+        })),
+      ),
+    ),
+  ),
+);
+
+export const SIGNUP_FACTS_MATRIX_ROWS = GAMES.length * VIEWERS.length;
 
 /**
  * Every combination of the facts the signup rule reads (#2748, AK 36), for the
  * rule's own test and for the test that the writes agree with it.
  */
 export function* signupFactsMatrix(): Generator<SignupFacts> {
-  for (const registration_mode of MODES)
-    for (const registration_type of TYPES)
-      for (const game_mode of FORMATS)
-        for (const status of STATUSES)
-          for (const closed of BOOLS)
-            for (const let_friends_skip_gate of BOOLS)
-              for (const isClubMember of BOOLS)
-                for (const viewerIsFriend of BOOLS)
-                  for (const hasPendingInvitation of BOOLS)
-                    for (const requestView of REQUESTS)
-                      for (const isAlreadyRegistered of BOOLS)
-                        yield {
-                          game: {
-                            status,
-                            registration_mode,
-                            registration_type,
-                            game_mode,
-                            signups_closed_at: closed ? '2026-11-01T10:00:00Z' : null,
-                            let_friends_skip_gate,
-                          },
-                          isAlreadyRegistered,
-                          requestView,
-                          hasPendingInvitation,
-                          isClubMember,
-                          viewerIsFriend,
-                        };
+  for (const game of GAMES) {
+    for (const viewer of VIEWERS) yield { game, ...viewer };
+  }
 }
