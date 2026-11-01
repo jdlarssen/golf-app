@@ -2578,7 +2578,11 @@ export type Database = {
         }[]
       }
       set_tee_starter_if_unset: {
-        Args: { p_game_id: string; p_team_number: number; p_tee_starter: string }
+        Args: {
+          p_game_id: string
+          p_team_number: number
+          p_tee_starter: string
+        }
         Returns: {
           tee_starter: string
           was_applied: boolean
