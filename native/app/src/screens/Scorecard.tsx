@@ -232,16 +232,27 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2752: leveringen på andre halvdel av en delt cup-dag fryser også første
   // halvdel (#1466), så en retting på hull 1–9 i køen må ut først. Ellers avviser
   // serveren den, og slaget er tapt. Samme regel som nettets lever-side.
+  //
+  // Hvilke spill som teller, leses i det køen er lest, ikke i tegningen som
+  // startet lesingen. Første fokus starter drainen før bundelen er lest, og en
+  // telling fra den runden ville åpnet knappen med slaget fortsatt i køen. Uten
+  // bundel skrives ingen telling: `queued` står på `null`, og knappen er sperret.
+  const bundleKnown = bundle != null;
   const frozenSibling =
     bundle?.game.holeSegment === 'back9' ? (bundle.segmentSibling?.gameId ?? null) : null;
+  const blockingGames = useRef<readonly string[] | null>(null);
+  useLayoutEffect(() => {
+    blockingGames.current = !bundleKnown ? null : frozenSibling ? [gameId, frozenSibling] : [gameId];
+  }, [bundleKnown, gameId, frozenSibling]);
 
   // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
   // og intervallet prøver igjen.
   const refreshQueue = useCallback(async () => {
-    const blocking = frozenSibling ? [gameId, frozenSibling] : [gameId];
     try {
       const db = await getDb();
       const [items, teeShotItems] = await Promise.all([listQueue(db), listTeeShotQueue(db)]);
+      const blocking = blockingGames.current;
+      if (!blocking) return;
       setQueueCounts({
         strokes: items.filter((item) => isBlockingItem(item, blocking)).length,
         teeShots: teeShotItems.filter((item) => isBlockingItem(item, blocking)).length,
@@ -249,7 +260,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     } catch (err: unknown) {
       console.error('[Scorecard] listQueue', err);
     }
-  }, [gameId, frozenSibling]);
+  }, []);
+
+  // Svaret på hvilke spill som teller, er nytt: les køen med en gang.
+  useEffect(() => {
+    void refreshQueue();
+  }, [bundleKnown, gameId, frozenSibling, refreshQueue]);
 
   // Drain først (port 1), les så køen og den lokale basen. Rekkefølgen er
   // hele poenget: slagene skal ut FØR kortet kan fryses. Kjeden kjører hver
