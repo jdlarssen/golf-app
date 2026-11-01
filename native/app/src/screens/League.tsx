@@ -41,7 +41,13 @@ import {
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
-export function League({ navigation, route }: ScreenProps<'League'>) {
+export function League(props: ScreenProps<'League'>) {
+  // Et varsel om en annen liga bytter bare parameteren på den åpne skjermen. Nøkkelen
+  // gir en ny side, så én liga aldri står under en annens id (#2752).
+  return <LeagueRoom key={props.route.params.leagueId} {...props} />;
+}
+
+function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
   const { leagueId } = route.params;
@@ -72,6 +78,8 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
       setView(result.view);
       setFailure(null);
     } else {
+      // Borte for deg: det skjermen hadde, skal ikke komme tilbake uten nett (#2752).
+      if (result.reason === 'not_found') setView(null);
       setFailure(result.reason);
     }
     setLoading(false);
@@ -90,8 +98,7 @@ export function League({ navigation, route }: ScreenProps<'League'>) {
   }, [load]);
 
   if (view === null && failure === null) return <LeagueLoading />;
-  // Ligaen finnes ikke (lenger) for deg: det skjermen hadde, er ikke ditt å se.
-  if (view === null || failure === 'not_found') {
+  if (view === null) {
     return <LeagueLoadFailed reason={failure ?? 'load_failed'} retrying={loading} onRetry={() => void load()} />;
   }
 
