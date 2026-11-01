@@ -393,8 +393,8 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   // `leavingRef` slipper den gjennom, samme mønster som `EndGame.tsx`. Mens
   // publiseringen pågår, gjør tilbake ingenting, så svaret lander på steget det
   // ble sendt fra. Hooken bytter tilbakekall hver render, så `stepIndex` og
-  // `busy` er alltid ferske. På iOS slår sperra av sveipet mens den står; pila
-  // og knappen går fortsatt ett steg.
+  // `busy` er alltid ferske. Etter kildekoden går sveipet på iOS samme vei som
+  // pila (`onNativeDismissCancelled`), men det er ikke prøvd på en telefon.
   usePreventRemove(stepIndex > 0, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
     else if (!busy) setStep(STEPS[stepIndex - 1]!);
