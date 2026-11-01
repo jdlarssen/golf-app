@@ -40,6 +40,7 @@ import {
   withTxn,
   type LocalScore,
   type LocalTeeShot,
+  type LocalTeeStarter,
   type SyncQueueItem,
   type TeeShotQueueItem,
 } from './db';
@@ -93,6 +94,8 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
     const queue = await listQueue(db);
     // #2580: utslagskøen leses samtidig og drenes etter slagene, som på webben.
     const teeShotQueue = await listTeeShotQueue(db);
+    // #2751: utslagsvalgene sendes sist, og teller ikke i svaret eller i `queued`.
+    const teeStarters = await listPendingTeeStarters(db);
 
     // #1368: hvem er innlogget på DENNE enheten. Leses én gang per drain —
     // konflikt-porten under trenger den for hvert element.
@@ -259,9 +262,13 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
     }
 
     const tee = networkDown ? EMPTY_TEE : await drainTeeShots(teeShotQueue, currentUserId);
-    // #2751: utslagsvalget sendes sist, og teller ikke i svaret eller i `queued`:
-    // et hint skal ikke holde igjen noen flate som venter på at køen er tom.
-    if (!networkDown && !tee.networkDown) await drainTeeStarters(currentUserId);
+    // Et hint skal ikke holde igjen noen flate som venter på at køen er tom, og
+    // en feil her skal ikke velte drainen.
+    if (!networkDown && !tee.networkDown) {
+      await drainTeeStarters(teeStarters, currentUserId).catch((err: unknown) => {
+        console.error('[drainTeeStarters] feilet', err);
+      });
+    }
     const result: DrainResult = {
       pushed: pushed + tee.pushed,
       rejected: rejected + tee.rejected,
@@ -537,10 +544,10 @@ async function settleRefusedTeeShot(
  * - Feil: nettstopp og tak som `drainTeeShots`. Etter taket slutter telefonen å
  *   sende, og raden står som hint her.
  */
-async function drainTeeStarters(currentUserId: string | null): Promise<void> {
-  const db = await getDb();
-  const pending = await listPendingTeeStarters(db);
-
+async function drainTeeStarters(
+  pending: readonly LocalTeeStarter[],
+  currentUserId: string | null,
+): Promise<void> {
   for (const row of pending) {
     const { gameId, teamNumber, teeStarterId, attemptCount } = row;
     const { data, error } = await supabase.rpc('set_tee_starter_if_unset', {

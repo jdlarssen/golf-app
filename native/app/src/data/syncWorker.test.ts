@@ -692,6 +692,19 @@ describe('drainQueue', () => {
       expect(await localRows()).toEqual([expect.objectContaining({ pending: true, attemptCount: 0 })]);
     });
 
+    it('en feil i valg-grenen velter ikke drainen', async () => {
+      const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { drainQueue, getLastDrain } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick();
+      mocks().supabase.rpc.mockRejectedValue(new Error('uventet'));
+
+      await expect(drainQueue()).resolves.toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+
+      expect(error).toHaveBeenCalledWith('[drainTeeStarters] feilet', expect.any(Error));
+      expect(getLastDrain()).toMatchObject({ queued: 0 });
+      error.mockRestore();
+    });
+
     it('holder ingenting igjen: valget teller ikke i køen, og ikke i svaret', async () => {
       const { drainQueue, getLastDrain } = require('./syncWorker') as typeof import('./syncWorker');
       const { getDb, listQueue, listTeeShotQueue } = require('./db') as Db;
