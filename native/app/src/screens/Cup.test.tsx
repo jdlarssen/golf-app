@@ -1,9 +1,9 @@
 // #2752: cup-rommet som skjerm (Type C).
 //
 // Ruta (`GET /api/cup/[id]`) regner alt; her låses det skjermen svarer for: at en
-// cup som pågår verken viser poeng eller vinner (#1468), at dine kamper står først
-// og er de eneste med en knapp inn (#1542), resultatene i en ferdig cup, og
-// tilstandene uten nett.
+// cup som pågår verken viser poeng eller vinner (#1468), at dine kamper står først,
+// at bare kamper RLS lar deg lese har en knapp inn (#1542), resultatene i en ferdig
+// cup, og tilstandene uten nett.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import type { CupResult } from '../data/cup';
@@ -75,7 +75,7 @@ describe('Cup — mens cupen pågår (#1468)', () => {
     expect(screen.queryByTestId('cup-tied')).toBeNull();
   });
 
-  it('dine kamper står først, og bare de har en knapp inn', async () => {
+  it('som spiller: dine kamper står først, og bare de har en knapp inn', async () => {
     answer({ ok: true, view: liveCup() });
     const { navigate } = await renderCup();
 

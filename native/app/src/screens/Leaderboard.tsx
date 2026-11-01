@@ -515,6 +515,7 @@ export function LeaderboardBody({
   onReportLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const { game } = bundle;
+  const { userId } = useSession();
   const nameOf = nameLookup(bundle.players);
 
   // `gateMessage` er det ene hjemmet for ordlyden, delt med føring-CTA-en.
@@ -633,10 +634,17 @@ export function LeaderboardBody({
   if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scopedScores)) {
     // Sideturneringen henger med: LD/CTP kåres av arrangøren og finnes selv om
     // ingen rakk å føre et slag.
+    // #2752: en arrangør som ikke spiller, når kampen fra cup-rommet. RLS gir hen
+    // spillet, men ikke slagene, så «ingen slag er ført» kan være usant her.
+    const plays = bundle.players.some((player) => player.userId === userId);
     return (
       <>
         <CalmNote
-          text="Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller."
+          text={
+            plays
+              ? 'Ingen slag er ført ennå. Tabellen fyller seg mens dere spiller.'
+              : 'Du spiller ikke denne kampen, og her står ingen slag.'
+          }
           testID="leaderboard-empty"
         />
         {withdrawnSection}
