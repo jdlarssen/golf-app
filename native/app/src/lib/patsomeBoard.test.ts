@@ -147,7 +147,7 @@ describe('patsomeBoardFor, mot tegningen', () => {
     expect(hole(1)).toMatchObject({ par: 4, cells: ['3', '2', '2', '3'] });
     expect(hole(10)).toMatchObject({ par: 4, cells: ['1', '2', '—', '—'] });
     expect(hole(18)).toMatchObject({ par: 4, cells: ['—', '—', '—', '—'] });
-    expect(hole(10).a11y).toBe('Hull 10, par 4. Lag 3 1 poeng. Lag 1 2 poeng. Lag 2 ikke spilt. Lag 4 ikke spilt');
+    expect(hole(10).a11y).toBe('Hull 10, par 4. Lag 3, 1 poeng. Lag 1, 2 poeng. Lag 2, ikke spilt. Lag 4, ikke spilt');
   });
 });
 
