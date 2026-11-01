@@ -73,9 +73,14 @@ describe('keepBelow', () => {
     expect(keepBelow(routes, 'Leaderboard', { gameId: 'g1' })).toBe(2);
   });
 
-  it('et annet spill står ikke over tavla', () => {
+  it('et annet spill blir liggende, selv om det ikke står over målet', () => {
     const routes = [HOME, game('g2'), { name: 'Approve', params: { gameId: 'g1' } }];
-    expect(keepBelow(routes, 'Leaderboard', { gameId: 'g1' })).toBe(1);
+    expect(keepBelow(routes, 'Leaderboard', { gameId: 'g1' })).toBe(2);
+  });
+
+  it('bare skjermer fra samme spill går ut: ligaen under hullet blir liggende', () => {
+    const league = { name: 'League', params: { leagueId: 'l1' } };
+    expect(keepBelow([HOME, league, hole('g1', 18), card('g1')], 'GameHome', { gameId: 'g1' })).toBe(2);
   });
 });
 
