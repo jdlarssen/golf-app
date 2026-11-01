@@ -372,6 +372,28 @@ describe('Scorecard', () => {
       expect(screen.getByTestId('round-done-greeting')).toBeTruthy();
     });
 
+    // Leveringen fryser også første halvdel. En retting på hull 1–9 som står i
+    // køen, ville da blitt avvist av serveren og gått tapt.
+    it('et slag i køen for første halvdel holder leveringen på andre halvdel igjen', async () => {
+      mockState.bundle = half('back9', sibling('front9')) as never;
+      mockState.scores = scored(10, 18);
+      mockState.queue = Promise.resolve([
+        {
+          id: 'front9-game:me:3',
+          scoreId: 'front9-game:me:3',
+          attemptCount: 0,
+          lastError: null,
+          createdAt: '2026-09-01T10:00:00.000Z',
+          abandonedAt: null,
+        },
+      ]);
+
+      await render(scorecardElement('half', jest.fn()));
+
+      await waitFor(() => expect(screen.getByTestId('queue-guard')).toBeTruthy());
+      expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+    });
+
     it('et hull mangler i andre halvdel: ingen oppsummering ennå', async () => {
       mockState.bundle = half('back9', null) as never;
       mockState.scores = scored(10, 17);
