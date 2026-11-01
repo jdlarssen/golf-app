@@ -31,6 +31,20 @@ export function leagueJoinUrl(code: string): string {
   return `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/liga/bli-med/${code}`;
 }
 
+/**
+ * «Del ligaen» for a participant while the link is on and the season is not
+ * over (#2662), on the web page and in the app (#2748). Only a league without a
+ * club has a code (`setLeagueJoinLink` refuses the rest), so a club league never
+ * shows it.
+ */
+export function participantShareUrl(
+  league: { join_code: string | null; status: string },
+  isParticipant: boolean,
+): string | null {
+  if (!isParticipant || !league.join_code || league.status === 'finished') return null;
+  return leagueJoinUrl(league.join_code);
+}
+
 type FillRandom = (buf: Uint8Array) => Uint8Array;
 
 const fillRandom: FillRandom = (buf) => crypto.getRandomValues(buf);

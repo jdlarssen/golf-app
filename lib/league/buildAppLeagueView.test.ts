@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { LeagueSnapshot } from './getLigaSnapshot';
 import { buildAppLeagueView } from './buildAppLeagueView';
 
@@ -107,6 +107,7 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
         seasonEnd: '2027-02-07',
         hcpAllowancePct: 75,
         hcpMaxStrokes: 32,
+        shareUrl: null,
       },
       rounds: [
         {
@@ -159,6 +160,20 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
       { userId: 'B', name: 'Bjørn', fullName: 'Bjørn', hcpIndex: null },
       { userId: 'C', name: null, fullName: null, hcpIndex: null },
     ]);
+  });
+
+  // #2748: «Del lenka» follows the web page's rule (`participantShareUrl`, Type A
+  // in joinCode.test.ts): what is checked here is that the view passes the real
+  // participant test to it.
+  it('the share link goes to a participant only', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', undefined);
+    const base = snapshot('net');
+    const withCode = { ...base, league: { ...base.league, join_code: 'abcd2345' } };
+    const inLeague = withCode.participants[0].userId;
+    expect(buildAppLeagueView(withCode, inLeague).league.shareUrl).toBe('https://tornygolf.no/liga/bli-med/abcd2345');
+    expect(buildAppLeagueView(withCode, 'en-annen').league.shareUrl).toBeNull();
+    expect(buildAppLeagueView(base, inLeague).league.shareUrl).toBeNull();
+    vi.unstubAllEnvs();
   });
 
   it('a viewer who is not in the league is marked so', () => {

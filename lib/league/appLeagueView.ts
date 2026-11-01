@@ -8,6 +8,7 @@
  * imports this file by relative path.
  */
 import type { SimSettingKey, SimSettings } from './simSettings';
+import type { LateJoinNotice, LeagueJoinDecision } from './joinValidation';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 
 /**
@@ -123,6 +124,12 @@ export type AppLeagueView = {
      */
     hcpAllowancePct: number;
     hcpMaxStrokes: number | null;
+    /**
+     * #2748: the link a participant shares («Del lenka»), from the same rule as
+     * the web page (`participantShareUrl`). Null for someone not in the league,
+     * with the link off, and in a finished league.
+     */
+    shareUrl: string | null;
   };
   rounds: AppLeagueRound[];
   /**
@@ -174,3 +181,24 @@ export type MarkerCardResponse = {
 export type MarkerOptionsResponse =
   | { required: false }
   | { required: true; options: Array<{ userId: string; name: string | null }> };
+
+/**
+ * #2748: the league link in the app, `GET /api/liga/bli-med/[code]`. What the
+ * web's `/liga/bli-med/[code]` shows, from the same read and the same rule. A
+ * count, never names. The caller is always logged in, and an unknown code is a
+ * 404, so the two other outcomes of `evaluateLeagueJoin` never reach the app.
+ */
+export type AppLeagueJoinView = {
+  decision: Exclude<LeagueJoinDecision, 'not_found' | 'sign_in'>;
+  league: {
+    id: string;
+    name: string;
+    format: LeagueFormat;
+    isSimulator: boolean;
+    courseName: string | null;
+  };
+  /** In sequence order. */
+  rounds: Array<{ sequence: number; opensAt: string; closesAt: string }>;
+  participantCount: number;
+  lateJoin: LateJoinNotice;
+};

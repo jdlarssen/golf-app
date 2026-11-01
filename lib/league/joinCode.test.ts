@@ -6,6 +6,7 @@ import {
   isJoinCode,
   leagueJoinUrl,
   newJoinCode,
+  participantShareUrl,
   writeWithFreshJoinCode,
 } from './joinCode';
 
@@ -58,6 +59,25 @@ describe('leagueJoinUrl', () => {
     vi.stubEnv('NEXT_PUBLIC_APP_URL', undefined);
     expect(leagueJoinUrl('abcd2345')).toBe('https://tornygolf.no/liga/bli-med/abcd2345');
     vi.unstubAllEnvs();
+  });
+});
+
+describe('participantShareUrl', () => {
+  const league = { join_code: 'abcd2345', status: 'active' };
+
+  it('gives the link to a participant while the link is on and the season runs', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', undefined);
+    expect(participantShareUrl(league, true)).toBe('https://tornygolf.no/liga/bli-med/abcd2345');
+    expect(participantShareUrl({ ...league, status: 'draft' }, true)).toBe('https://tornygolf.no/liga/bli-med/abcd2345');
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['someone who is not in the league', league, false],
+    ['a link that is off', { ...league, join_code: null }, true],
+    ['a finished league', { ...league, status: 'finished' }, true],
+  ])('gives nothing for %s', (_label, row, isParticipant) => {
+    expect(participantShareUrl(row, isParticipant)).toBeNull();
   });
 });
 
