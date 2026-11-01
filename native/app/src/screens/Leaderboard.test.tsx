@@ -860,7 +860,6 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -916,7 +915,6 @@ describe('ResultView', () => {
       <ResultView
         result={result}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -983,7 +981,6 @@ describe('ResultView', () => {
       <ResultView
         result={result as unknown as ModeResult}
         status="active"
-        gameId={GAME_ID}
         settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
@@ -1082,7 +1079,6 @@ describe('ResultView', () => {
       <ResultView
         result={fromTheFuture}
         status="active"
-        gameId={GAME_ID}
         settlement={null}
         nameOf={() => 'Ukjent'}
       />,
