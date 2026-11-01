@@ -1,9 +1,9 @@
 // native/app/src/lib/appLinkBack.test.tsx
 // #2748: tilbake fra skjermene en lenke åpner, i en ekte navigator. Type C.
 //
-// Regel 1, 3 og 4 i `docs/user-flows.md` §Tilbake. Ekte `NavigationContainer`,
-// native-stack og ruter, med stand-ins for skjermene, og lenka åpnes slik
-// navigatoren gjør det (`appLinkScreen` og `StackActions.push`).
+// Regel 1, 3 og 4 i `docs/user-flows.md` §Tilbake, med unntaket i regel 1. Ekte
+// `NavigationContainer`, native-stack og ruter, med stand-ins for skjermene, og
+// lenka åpnes slik navigatoren gjør det (`appLinkScreen` og `StackActions.push`).
 import {
   NavigationContainer,
   StackActions,
@@ -20,8 +20,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ref = createNavigationContainerRef<RootStackParamList>();
 const Stub = () => <View />;
 
-const SCREENS = ['Home', 'League', 'LeagueJoin'] as const;
+const SCREENS = ['Home', 'GameHome', 'Hole', 'Profile', 'League', 'LeagueJoin'] as const;
 const L1 = { leagueId: 'l1' };
+const G = { gameId: 'g1' };
+const HOLE_5 = { ...G, holeNumber: 5 };
 const LINK = { kind: 'league', code: 'abcd2345' } as const;
 
 const navigation: BackNavigation = {
@@ -71,7 +73,7 @@ async function back() {
 const names = () => ref.getRootState()?.routes.map((route) => route.name);
 
 describe('lenka åpner «Bli med i liga» (#2748)', () => {
-  it('tilbake uten å ha gjort noe går til Hjem', async () => {
+  it('lenka åpnet appen: tilbake uten å ha gjort noe går til Hjem', async () => {
     await stackOf();
     await openLink();
     expect(names()).toEqual(['Home', 'LeagueJoin']);
@@ -97,6 +99,33 @@ describe('lenka åpner «Bli med i liga» (#2748)', () => {
     expect(names()).toEqual(['Home', 'League']);
     await back();
     expect(names()).toEqual(['Home']);
+  });
+
+  describe('andre skjermer står åpne når lenka kommer: tilbake går dit du sto', () => {
+    it('hull 5: tilbake til hullet, ikke til Hjem', async () => {
+      await stackOf(['GameHome', G], ['Hole', HOLE_5]);
+      await openLink();
+      expect(names()).toEqual(['Home', 'GameHome', 'Hole', 'LeagueJoin']);
+      await back();
+      expect(names()).toEqual(['Home', 'GameHome', 'Hole']);
+      expect(ref.getCurrentRoute()?.params).toEqual(HOLE_5);
+    });
+
+    it('Profil: tilbake til Profil', async () => {
+      await stackOf(['Profile']);
+      await openLink();
+      await back();
+      expect(names()).toEqual(['Home', 'Profile']);
+    });
+
+    it('«Bli med» fra hull 5: ligaen tar skjemaets plass, og tilbake derfra går til hullet', async () => {
+      await stackOf(['GameHome', G], ['Hole', HOLE_5]);
+      await openLink();
+      await joinTo({ ...L1, joined: true });
+      expect(names()).toEqual(['Home', 'GameHome', 'Hole', 'League']);
+      await back();
+      expect(ref.getCurrentRoute()?.params).toEqual(HOLE_5);
+    });
   });
 
   it('en annen liga under blir liggende, og lenkas liga kommer oppå', async () => {

@@ -131,6 +131,9 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
    hjemskjermen, finnes ikke noe «der du kom fra». Da går tilbake til skjermen over i hierarkiet:
    Hjem → spillet → hull, scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
    kort. Hjem → Profil → rommene under profilen.
+   Unntak (#2748): står andre skjermer åpne når varselet eller lenka kommer,
+   legges den nye skjermen oppå, og tilbake går dit du sto. Står du på hull 5 og trykker på en
+   ligalenke, er du tilbake på hull 5 med ett trykk.
 2. **I appen er pila, sveipet og Android-tilbake samme handling.** Ingen skjerm har en pil som gjør
    noe annet enn sveipet.
 3. **Et skjema du har sendt, er borte fra tilbake-veien.** Det gjelder levert kort, lagret profil,
