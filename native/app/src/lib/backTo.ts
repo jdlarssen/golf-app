@@ -76,16 +76,12 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   EditProfile: 'Profile',
 };
 
-/** Er `route` en av skjermene over `name` i hierarkiet, for samme spill eller liga? */
-function isAncestor(route: RouteLike, name: string, params: object | undefined): boolean {
-  const own = (route.params ?? {}) as Record<string, unknown>;
-  const target = (params ?? {}) as Record<string, unknown>;
-  // Bare id-ene skjermen selv har: Hjem er over alle spill, spillet bare over sitt eget.
-  const sameThing = IDENTITY_KEYS.every((key) => own[key] === undefined || own[key] === target[key]);
+/** Står skjermen `screen` over `name` i hierarkiet? */
+function isAbove(screen: string, name: string): boolean {
   for (let parent = PARENT[name as keyof RootStackParamList]; parent; parent = PARENT[parent]) {
-    if (parent === route.name) return sameThing;
+    if (parent === screen) return true;
   }
-  return route.name === 'Home';
+  return false;
 }
 
 /** Gjelder skjermen samme spill eller liga som målet? */
@@ -107,7 +103,7 @@ function sharesIdentity(route: RouteLike, params: object | undefined): boolean {
 export function keepBelow(routes: readonly RouteLike[], name: string, params: object | undefined): number {
   for (let i = routes.length - 2; i >= 0; i--) {
     const route = routes[i]!;
-    if (isAncestor(route, name, params) || !sharesIdentity(route, params)) return i + 1;
+    if (isAbove(route.name, name) || !sharesIdentity(route, params)) return i + 1;
   }
   return 0;
 }
