@@ -104,6 +104,29 @@ describe('valgene', () => {
   });
 });
 
+describe('søket', () => {
+  const many = Array.from({ length: 9 }, (_, i) => ({ userId: `u${i}`, name: `Spiller ${i}` }));
+
+  it('en kort liste har ikke søk', async () => {
+    mockView = { ok: true, view: view() };
+    await renderSwap();
+    await screen.findByTestId('cup-swap-label');
+    expect(screen.queryByTestId('cup-swap-search')).toBeNull();
+  });
+
+  it('en lang liste har søk, og den valgte står selv om den ikke treffer', async () => {
+    mockView = { ok: true, view: view({ in: [{ userId: 'anne', name: 'Anne Admin' }, ...many] }) };
+    await renderSwap();
+    await fireEvent.changeText(await screen.findByTestId('cup-swap-search'), 'spiller 3');
+    expect(screen.getByTestId('cup-swap-in-u3')).toBeTruthy();
+    expect(screen.queryByTestId('cup-swap-in-u4')).toBeNull();
+    expect(screen.getByTestId('cup-swap-in-anne').props.accessibilityState.selected).toBe(true);
+
+    await fireEvent.press(screen.getByTestId('cup-swap-in-u3'));
+    expect(screen.getByTestId('cup-swap-summary')).toHaveTextContent('Spiller 3 går inn for Ola Kompis.');
+  });
+});
+
 describe('når byttet ikke går', () => {
   it('ingen å bytte inn: sier det, uten knapp', async () => {
     mockView = { ok: true, view: view({ in: [] }) };
