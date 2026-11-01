@@ -13,13 +13,13 @@ vi.mock('@/lib/auth/useWebAuthnSupported', () => ({
   useWebAuthnSupported: () => supported,
 }));
 
-const assign = vi.fn();
+const replace = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
   supported = true;
   Object.defineProperty(window, 'location', {
-    value: { assign, href: 'http://localhost/login' },
+    value: { replace, href: 'http://localhost/login' },
     writable: true,
   });
 });
@@ -40,7 +40,7 @@ describe('PasskeyLoginButton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Logg inn med Face ID' }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('/spill'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/spill'));
     expect(signInWithPasskey).toHaveBeenCalledTimes(1);
   });
 
@@ -56,6 +56,6 @@ describe('PasskeyLoginButton', () => {
     expect(
       await screen.findByText('Fant ingen Face ID på denne enheten. Bruk koden i stedet.'),
     ).toBeInTheDocument();
-    expect(assign).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/lib/nav/redirect';
 import { cookies } from 'next/headers';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendLoginCode } from '@/lib/auth/sendLoginCode';

@@ -9,11 +9,12 @@ import { chooseCourse } from '@/tests/courseAndTimeDriver';
 // #1380: steg-navigasjonen skriver URL-en på to helt ulike måter, og det er
 // nettopp skillet som må testes:
 //
-//   push    — arrangøren gikk til et nytt steg. Hvert steg får sin egen
-//             history-entry, så browser-back lander på forrige steg.
-//   replace — vi normaliserte en URL ingen ba om (`?step=99` → steg 1).
-//             Hadde normaliseringen pushet, ville back gått tilbake til den
-//             ugyldige URL-en, som normaliserte på nytt, som pushet igjen …
+//   steg    — arrangøren gikk til et nytt steg. Siden #2746 med `replace`:
+//             veiviseren tar én plass i historikken, så et ferdig skjema aldri
+//             ligger bak spillet. Pila og «Tilbake» går ett steg.
+//   normalisering — vi rettet en URL ingen ba om (`?step=99` → steg 1). Også
+//             `replace`, og den skal skje én gang. Effekten må ikke kjøre på
+//             nytt etter et stegbytte arrangøren gjorde selv.
 //             en felle arrangøren ikke kommer ut av.
 //
 // Det delte oppsettet (vitest.setup.ts) stubber `useSearchParams` til alltid
@@ -146,16 +147,15 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-describe('GameWizard — #1380 per-steg history', () => {
-  it('steg-overgang arrangøren utløser pusher en history-entry', () => {
+describe('GameWizard — stegene i adressen (#1380, #2746)', () => {
+  it('steg-overgang arrangøren utløser erstatter adressen, og legger ingenting i historikken (#2746)', () => {
     renderWizard();
 
-    // #1794: arrangements-flisen går rett videre — klikket ER steg-overgangen,
-    // og den skal fortsatt pushe så browser-back angrer valget.
+    // #1794: arrangements-flisen går rett videre — klikket ER steg-overgangen.
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
-    expect(replace).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
+    expect(push).not.toHaveBeenCalled();
   });
 
   // #1837: overgangen unmounter flisen som ble klikket, så fokus falt til
@@ -173,14 +173,14 @@ describe('GameWizard — #1380 per-steg history', () => {
       .toHaveTextContent('Steg 2 av 5');
   });
 
-  it('«Tilbake» pusher også — hvert steg er sin egen history-entry', () => {
+  it('«Tilbake» går ett steg med replace, ikke router.back()', () => {
     searchString = 'step=2';
     renderWizard(SEEDED_BY_ROUTE);
 
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new', { scroll: false });
-    expect(replace).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/admin/games/new', { scroll: false });
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('normaliserer ugyldig ?step=99 med replace — ingen back-felle', () => {
@@ -197,7 +197,7 @@ describe('GameWizard — #1380 per-steg history', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new?klubb=k1&step=2', {
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?klubb=k1&step=2', {
       scroll: false,
     });
   });
@@ -222,13 +222,14 @@ describe('GameWizard — #1383 foreldet ?step-lenke', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?step=2', { scroll: false });
 
     // Router-en har nå committet ?step=2 (mocken speiler den ekte). Skallet
     // re-rendres med den nye URL-en — som før #1383 ikke skjedde i noen test.
     rerender(wizardElement());
 
-    expect(replace).not.toHaveBeenCalled();
+    // Bare arrangørens eget stegbytte: ingen rettelse av en «foreldet» lenke.
+    expect(replace).toHaveBeenCalledTimes(1);
   });
 
   it('sender blank flyt tilbake til steg 1 og beholder øvrige søke-parametre', () => {
@@ -404,13 +405,13 @@ describe('GameWizard — #2331 oppsett-forvalget fra guidene', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new?oppsett=firmagolf&step=3', {
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?oppsett=firmagolf&step=3', {
       scroll: false,
     });
     // The router has committed ?step=3; the shell re-renders with it.
     rerender(wizardElement(PRESET));
 
-    expect(replace).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledTimes(1);
   });
 
   it('et forvalg med bare game_mode gir også tak 2', () => {
@@ -509,9 +510,9 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     const formatCard = screen.getByRole('radio', { name: /^matchplay$/i });
     expect(formatCard.getAttribute('aria-checked')).toBe('true');
   });
-  // #2282: «Endre» i sjekklista er en steg-handler som alle andre — den pusher
-  // URL-en, så Tilbake i nettleseren lander på «Klar?» igjen.
-  it('«Endre» på Bane går til steg 3 med push, og tilbake gir steg 5', () => {
+  // #2282: «Endre» i sjekklista er en steg-handler som alle andre. Siden #2746
+  // erstatter den adressen. En adresse som endres utenfra, følges fortsatt.
+  it('«Endre» på Bane går til steg 3 med replace, og steget følger adressen', () => {
     const props: Partial<WizardProps> = {
       mode: {
         kind: 'edit-draft',
@@ -543,11 +544,10 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
 
     fireEvent.click(within(screen.getByTestId('ready-row-course')).getByRole('button'));
 
-    expect(push).toHaveBeenCalledWith('/admin/games/new?step=3', { scroll: false });
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?step=3', { scroll: false });
     expect(stepIs(3)).toBe(true);
 
-    // Nettleserens Tilbake: router-en committer forrige URL, skallet
-    // re-rendres med den.
+    // Router-en committer en annen URL, skallet re-rendres med den.
     searchString = 'step=5';
     rerender(wizardElement(props));
     expect(stepIs(5)).toBe(true);
@@ -670,21 +670,21 @@ describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
     });
   }
 
-  it('«Neste: lagene» (best ball) pusher ?step=4&skjerm=lag, og tilbakepila pusher ?step=4', async () => {
+  it('«Neste: lagene» (best ball) skriver ?step=4&skjerm=lag, og tilbakepila skriver ?step=4', async () => {
     await seedDraft(BEST_BALL_FOUR);
     searchString = 'step=4';
     render(element());
 
     fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
-    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
     expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
-    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/admin/games/new?step=4', { scroll: false });
     expect(screen.queryByRole('heading', { name: /^lag$/i })).toBeNull();
   });
 
-  it('«Neste: sidene» (singles matchplay) pusher ?step=4&skjerm=lag', async () => {
+  it('«Neste: sidene» (singles matchplay) skriver ?step=4&skjerm=lag', async () => {
     await seedDraft({
       game_mode: 'singles_matchplay',
       team_size: 1,
@@ -697,7 +697,7 @@ describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
     render(element());
 
     fireEvent.click(screen.getByRole('button', { name: /^neste: sidene$/i }));
-    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
     expect(screen.getByRole('heading', { name: /^sider$/i })).toBeInTheDocument();
   });
 
@@ -716,17 +716,17 @@ describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
     expect(screen.getByRole('checkbox', { name: /spiller 1/i })).toBeChecked();
   });
 
-  it('«Neste» på lag-skjermen pusher ?step=5 uten skjerm, og tilbakepila på steg 5 pusher ?step=4&skjerm=lag', async () => {
+  it('«Neste» på lag-skjermen skriver ?step=5 uten skjerm, og tilbakepila på steg 5 skriver ?step=4&skjerm=lag', async () => {
     await seedDraft(BEST_BALL_FOUR);
     searchString = 'step=4&skjerm=lag';
     render(element());
     expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
-    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=5', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/admin/games/new?step=5', { scroll: false });
 
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
-    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
   });
 
   it('en foreldet ?step=4&skjerm=lag uten utkast og forvalg rettes med én replace uten step og skjerm', () => {
