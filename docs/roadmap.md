@@ -16,8 +16,8 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 |---|---|---|---|
 | 2026-09 | Orkestratoren styrer arbeidet | 0.3.0 er inne, planleggingsløken er i harnesset, og første uke har gått med kapasitetsregelen | Selvkjørende loops |
 | 2026-10 | Løkkene går av seg selv, og null kjente spillerbugs | løkke-issuene er lukket, arkivkjøringen 1. oktober er verifisert, bugene i backloggen er borte, Kavalkade-kontrakten er skrevet (#1040), og livstegnet står i Sekretariatets nøkkeltall | Selvkjørende loops (31.10) |
-| 2026-11 | Vinterligaen i bruk, og gjengen er testerne | vennegjengen har spilt runde 1 av vinterligaen fra appen og runde 2 er åpnet, minst 12 testere er med i den lukkede Play-testen og TestFlight, det runde 1 viser at mangler er rettet, og første bølge av arrangør-veiviseren er bygget (#2447, #2448, #2454, #2458, #2459, #2607) | Native app |
-| 2026-12 | Kavalkaden delt i romjula, og testernes funn rettet | Kavalkaden er delt av minst tre spillere som ikke er Jørgen, og funnene fra testerne er rettet eller avvist | Runde 3 — sesongslutt (31.12) |
+| 2026-11 | Vinterligaen i bruk, og gjengen er testerne | vennegjengen har spilt runde 1 av vinterligaen fra appen og runde 2 er åpnet, minst 12 testere er med i den lukkede Play-testen og TestFlight, det runde 1 viser at mangler er rettet, første bølge av arrangør-veiviseren er bygget (#2447, #2448, #2454, #2458, #2459, #2607), og Må-sakene for november er levert (#2748, #2750, #2751, #2757, #2758, #2759) og cup (#2752) er i gang | Native app |
+| 2026-12 | Kavalkaden delt i romjula, testernes funn rettet, og Må-lista ferdig | Kavalkaden er delt av minst tre spillere som ikke er Jørgen, funnene fra testerne er rettet eller avvist, og resten av Må-sakene er levert (#2749, #2752–#2756) | Runde 3 — sesongslutt (31.12) |
 | 2027-01 | Native: butikkinnsending | begge butikkene har fått appen | Native app |
 | 2027-02 | Native: gjennomgang og rettinger | appen er godkjent i App Store og Google Play | Native app |
 | 2027-03 | I butikkene, og visjonen ses på igjen | lansert, og `hva-er-nok.md` revidert for neste år | Native app (31.03) |
@@ -30,6 +30,8 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 **Endret 2026-10-30 (strategisamtale):** runde 2 av vinterligaen er åpen 22.11–6.12, så novembermålet måler at runde 1 er spilt og runde 2 åpnet. Ligaen åpner 8.11, og fram til da står byggeplassene ledige. Eieren ba derfor om å dytte noe fram i køen. De 22 veiviser-issuene fra #2250 (arrangørflaten på nettsiden) har fått milepælen «Liv laga», fordi en enklere veiviser er det som lar andre arrangere uten Jørgen. Seks av dem er trukket fram til november. Resten venter på april, som ikke finnes som måned på tavla ennå. Funn fra ligarunde 1 går foran veiviseren.
 
 **Endret 2026-10-31 (månedsstart for november):** køen sto tom og første bølge av veiviseren var levert, så eieren hentet #2463 («Nå» som tee-off) og #2457 (innstillingene på «Klar?» som korte rader) fram fra april til november. Funn fra generalprøven (#2712) og ligarunde 1 går fortsatt først.
+
+**Endret 2026-11-01 (ny prioritering for lanseringen):** eieren erstattet MoSCoW-en fra 30.08 (#1816), og 12 Må-punkter manglet helt eller delvis i appen (#2748–#2759). Eieren beholdt innsendingen i januar, så sakene bygges i november og desember. November tar det testerne og ligaen merker nå (varsler på Android, innboksen, lenkene som åpner appen, flightvalg, ny bane, Patsome) og starter cup, som er størst. Desember tar resten. Funn fra ligarunde 1 går fortsatt først.
 
 ## Slik brukes dette
 
