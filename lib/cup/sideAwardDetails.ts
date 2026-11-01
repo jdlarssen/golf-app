@@ -11,7 +11,8 @@
 // `isSideAwardRegistered` (samme helper som finishTournament-gaten og
 // CupManagement bruker), aldri utledet på nytt her.
 
-import type { CupRoster, CupSideAwardSnapshot } from './getCupSnapshot';
+import type { CupRoster } from './cupRoster';
+import type { CupSideAwardSnapshot } from './cupSideAwardSnapshot';
 import { preferredName } from './computeCupPlayerPoints';
 import { isSideAwardRegistered } from './sideAwardsRegistered';
 
