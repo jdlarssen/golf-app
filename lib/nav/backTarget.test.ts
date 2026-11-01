@@ -64,6 +64,7 @@ describe('FORM_SCREENS', () => {
     '/klubber/x/rolle/u',
     '/liga/x/godkjenn/g/u',
     '/complete-profile',
+    '/foreslaa-ide',
     '/liga/x/runde/r/spill',
     '/admin/cup/x/generer',
     '/klubber/k/cup/x/oppsett',
