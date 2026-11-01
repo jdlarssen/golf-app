@@ -302,6 +302,20 @@ describe('tegning 6: feil og uten nett', () => {
     expect(screen.queryByTestId('league-stale')).toBeNull();
   });
 
+  it('borte for deg (404), så uten nett: den gamle ligaen kommer ikke tilbake (#2752)', async () => {
+    answer({ ok: true, view: leagueView() }, { ok: false, reason: 'not_found' }, { ok: false, reason: 'offline' });
+    await renderLeague();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('league-not-found')).toBeTruthy();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.queryByTestId('league-stale')).toBeNull();
+    expect(screen.getByTestId('league-load-failed')).toBeTruthy();
+  });
+
   it('hentet liga, men nettet er borte: merknaden, og «Spill runden» er dempet', async () => {
     answer({ ok: true, view: leagueView() }, { ok: false, reason: 'offline' });
     const { navigate } = await renderLeague();
