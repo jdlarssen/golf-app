@@ -998,10 +998,6 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
   });
 });
 
-
-// #1954 Del B: et spill som mangler eller er skjult av RLS er ikke en nettfeil.
-// Nettsiden svarer 404 («Denne havnet utenfor banen»), og appen skal si at
-// spillet ikke finnes i stedet for å be om å sjekke nettet.
 describe('GameHome — flightvelgeren (#2750)', () => {
   const STOCKS = { courseHandicap: null, acceptedAt: '2026-10-01T08:00:00.000Z' };
 
@@ -1096,6 +1092,9 @@ describe('GameHome — flightvelgeren (#2750)', () => {
   });
 });
 
+// #1954 Del B: et spill som mangler eller er skjult av RLS er ikke en nettfeil.
+// Nettsiden svarer 404 («Denne havnet utenfor banen»), og appen skal si at
+// spillet ikke finnes i stedet for å be om å sjekke nettet.
 describe('GameHome — spillet finnes ikke', () => {
   function renderMissing() {
     return render(
