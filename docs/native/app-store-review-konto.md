@@ -363,7 +363,7 @@ NOT IN THE APP
 - No location access.
 - No money: points and results only, no amounts or payments. Skins, Wolf, Nassau and similar are ways of counting points.
 - No purchases, ads or third-party tracking.
-- The app creates eight formats and plays rounds set up on our website, including scramble and most team formats. Patsome and some cup rounds open on our website in Safari.
+- The app creates eight formats and plays rounds set up on our website, including scramble and most team formats. Some cup rounds open on our website in Safari.
 
 Norway only. The account holds no real player data.
 ```
