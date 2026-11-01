@@ -12,9 +12,10 @@
 // bruker (`evaluateLeagueJoin`). Skrivingen er `POST` på samme sti. Ingenting
 // legges i kø: uten nett står feilen og «Prøv igjen», og ingenting er skrevet.
 //
-// Tilbake (`docs/user-flows.md` §Tilbake): «Bli med» er et sendt skjema, så
-// skjermen er borte fra tilbake-veien etterpå (`backTo`). Ligger ligaen alt under,
-// går du tilbake til den og får ingen kopi.
+// Tilbake (`docs/user-flows.md` §Tilbake): åpnet lenka appen, går tilbake til Hjem.
+// Sto du på en annen skjerm, går tilbake dit (unntaket i regel 1). «Bli med» er et
+// sendt skjema, så skjermen er borte fra tilbake-veien etterpå (`backTo`). Ligger
+// ligaen alt under, går du tilbake til den og får ingen kopi.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
