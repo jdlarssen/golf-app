@@ -67,8 +67,8 @@ type Props = {
   mode: GameFormMode;
   /**
    * #2282: «Endre» i sjekklista hopper til steget valget bor på (Format → 2,
-   * Bane/Tee-off → 3, Spillere → 4). GameWizard sender `goToStep`, som pusher
-   * URL-en, så Tilbake i nettleseren gir steg 5 igjen.
+   * Bane/Tee-off → 3, Spillere → 4). GameWizard sender `goToStep`. Pila derfra
+   * går ett steg bakover, ikke til «Klar?»; veien dit er «Neste».
    */
   onGoToStep?: (step: 2 | 3 | 4) => void;
   /**
