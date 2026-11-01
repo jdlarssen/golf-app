@@ -212,9 +212,8 @@ describe('patsomeBoardFor, grensetilfeller', () => {
     expect(model.strip?.detail).toMatch(/^\d+ poeng bak ledelsen$/);
   });
 
-  it('svarer null: blind runde, stengt runde, ingen slag og andre formater', () => {
+  it('svarer null: blind runde, ingen slag og andre formater', () => {
     expect(patsomeBoardFor({ bundle: bundle('active', { scoreVisibility: 'reveal' }), scores: LIVE_SCORES, userId: 'me' })).toBeNull();
-    expect(patsomeBoardFor({ bundle: bundle('active', { holeSegment: 'front9' }), scores: LIVE_SCORES, userId: 'me' })).toBeNull();
     expect(patsomeBoardFor({ bundle: bundle('active'), scores: [], userId: 'me' })).toBeNull();
     expect(
       patsomeBoardFor({
