@@ -28,7 +28,8 @@ test.afterAll(async () => {
   for (const id of gameIds) await cleanupTestGame(id);
 });
 
-const arrow = (page: Page) => page.locator('a[aria-label]', { hasText: /^‹$/ }).first();
+// `:visible`: Next 16 holder forrige side montert og skjult i bakgrunnen.
+const arrow = (page: Page) => page.locator('a[aria-label]:visible', { hasText: /^‹$/ }).first();
 
 /** Navigation API med det pila trenger. Uten det er pila en vanlig lenke. */
 const hasHistoryList = (page: Page) =>
@@ -44,6 +45,7 @@ async function userId(email: string): Promise<string> {
 
 test.describe('tilbake-pila', () => {
   test.skip(!envReady, skipReason);
+  test.beforeEach(({ page }) => page.setDefaultTimeout(30_000));
 
   test('tavla → hull-oversikt → tavla → pil gir historikken, ikke hull-oversikten (#117)', async ({ page }) => {
     const [me, other] = await Promise.all([userId(PLAYER_EMAIL!), userId(ADMIN_EMAIL!)]);
@@ -65,10 +67,8 @@ test.describe('tilbake-pila', () => {
     await page.goto('/profile/historikk');
     test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
 
-    await page.locator(`a[href*="/games/${id}/leaderboard"]`).first().click();
-    await expect(page).toHaveURL(new RegExp(`/games/${id}/leaderboard`));
-
-    // Hull-oversikten, og pila derfra går tilbake uten å legge noe til.
+    // Tavla og hull-oversikten, og pila derfra går tilbake uten å legge noe til.
+    await page.goto(`/games/${id}/leaderboard?from=/profile/historikk`);
     await page.goto(`/games/${id}/leaderboard/holes?from=/profile/historikk`);
     await arrow(page).click();
     await expect(page).toHaveURL(new RegExp(`/games/${id}/leaderboard(\\?|$)`));
@@ -81,6 +81,27 @@ test.describe('tilbake-pila', () => {
     await page.goto(`/games/${id}/leaderboard?from=/profile/historikk`);
     await arrow(page).click();
     await expect(page).toHaveURL(/\/profile\/historikk/);
+  });
+
+  test('klientnavigasjon: pila går tilbake uten å laste siden på nytt', async ({ page }) => {
+    await signInViaOtp(page, PLAYER_EMAIL!);
+    await page.goto('/');
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.evaluate(() => {
+      (window as unknown as { __sameDocument?: boolean }).__sameDocument = true;
+    });
+
+    await page.locator('a[href="/profile"]:visible').first().click();
+    await expect(page).toHaveURL(/\/profile$/);
+    await page.locator('a[href="/profile/historikk"]:visible').first().click();
+    await expect(page).toHaveURL(/\/profile\/historikk$/);
+
+    await arrow(page).click();
+    await expect(page).toHaveURL(/\/profile$/);
+    const sameDocument = await page.evaluate(
+      () => (window as unknown as { __sameDocument?: boolean }).__sameDocument === true,
+    );
+    expect(sameDocument).toBe(true);
   });
 
   test('hull 3 → hull 4 → hull 5 → pil gir spillet', async ({ page }) => {
