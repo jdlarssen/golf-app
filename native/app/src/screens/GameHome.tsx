@@ -302,7 +302,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Arrangør = `created_by`, men ikke i en ligaflight (#2688): der har ingen
   // arrangørseksjon, og den som startet flighten trekker seg som alle andre.
   const isOrganiser = isGameOrganiser(game, userId);
-  const withdrawKind = derived ? null : playerWithdrawKind(game, me?.player, isOrganiser);
+  const anyWithdrawKind = playerWithdrawKind(game, me?.player, isOrganiser);
+  // En avledet kamp har ingen egne slag å trekke seg fra, men et trekk fra cupen
+  // gjelder den også (#2752).
+  const withdrawKind = derived && anyWithdrawKind !== 'cup' ? null : anyWithdrawKind;
 
   return (
     <ScrollView
@@ -421,6 +424,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           kind={withdrawKind}
           onChanged={refresh}
           onLeft={() => backTo(navigation, 'Home')}
+          onCup={() =>
+            game.tournamentId
+              ? openOrReturn(navigation, 'CupWithdraw', { cupId: game.tournamentId })
+              : undefined
+          }
         />
       ) : null}
 

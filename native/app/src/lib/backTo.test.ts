@@ -43,6 +43,14 @@ describe('backStep', () => {
     expect(backStep([HOME, game('g1')], 'Home', undefined)).toBe('popTo');
   });
 
+  it('styringen ligger under cup-rommet, og trekket under det du kom fra (#2752)', () => {
+    const cup = { name: 'Cup', params: { cupId: 'c1' } };
+    const manage = { name: 'CupManage', params: { cupId: 'c1' } };
+    const routes = [HOME, cup, manage, { name: 'CupSwapPlayer', params: { cupId: 'c1', gameId: 'g1' } }];
+    expect(backStep(routes, 'CupManage', { cupId: 'c1' })).toBe('popTo');
+    expect(keepBelow(routes, 'CupManage', { cupId: 'c1' })).toBe(2);
+  });
+
   it('cupen sammenlignes på cupId (#2752)', () => {
     const routes = [HOME, { name: 'Cup', params: { cupId: 'c1' } }, { name: 'GameHome', params: { gameId: 'g1' } }];
     expect(backStep(routes, 'Cup', { cupId: 'c1' })).toBe('popTo');

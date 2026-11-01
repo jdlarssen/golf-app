@@ -684,6 +684,39 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.getByTestId('ticket-total').props.children).toBe('14\u00A0p');
   });
 
+  it('før start i en cup-kamp går «Trekk meg fra cupen» til cupens egen skjerm, også fra en avledet (#2752)', async () => {
+    const navigate = jest.fn();
+    const navigation = {
+      navigate,
+      setOptions: jest.fn(),
+      getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }] }),
+    };
+    for (const sourceGameId of [null, 'verten']) {
+      mockState.bundle = homeBundle({
+        game: {
+          id: 'game-1',
+          status: 'scheduled',
+          modeConfig: { kind: 'stableford', team_size: 1 },
+          tournamentId: 'cup-1',
+          sourceGameId,
+        },
+        players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+      });
+      mockState.scores = [];
+      const view = await render(
+        <GameHome
+          {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+        />,
+      );
+      const link = await screen.findByTestId('player-withdraw');
+      expect(link).toHaveTextContent('Trekk meg fra cupen');
+      navigate.mockClear();
+      await fireEvent.press(link);
+      expect(navigate).toHaveBeenCalledWith('CupWithdraw', { cupId: 'cup-1' });
+      await view.unmount();
+    }
+  });
+
   it('et cup-spill har «Se cupen» som åpner rommet, et vanlig spill har den ikke (#2752)', async () => {
     const navigate = jest.fn();
     const navigation = {
