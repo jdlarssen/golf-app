@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { BackLink } from './BackLink';
@@ -73,6 +75,23 @@ describe('tilbake-pila (#2746)', () => {
     expect(traverseTo).not.toHaveBeenCalled();
   });
 
+  // `?vis=utkast` og `?del=…` er undervisninger. «Tidligste kopi» ville hoppet
+  // over forelderen de peker på.
+  it('på en undervisning: pila går opp til forelderen den peker på', () => {
+    const traverseTo = fakeNavigation(['/', '/klubbhuset', '/klubbhuset?vis=utkast']);
+    render(<BackLink href="/klubbhuset">Tilbake</BackLink>);
+    expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
+    expect(routerReplace).toHaveBeenCalledWith('/klubbhuset');
+    expect(traverseTo).not.toHaveBeenCalled();
+  });
+
+  it('lenkas eget mål bak deg er ikke et skjema å hoppe over', () => {
+    const traverseTo = fakeNavigation(['/profile', '/opprett-spill?step=2', '/opprett-bane']);
+    render(<BackLink href="/opprett-spill?step=2">Tilbake</BackLink>);
+    expect(followed(screen.getByRole('link', { name: 'Tilbake' }))).toBe(false);
+    expect(traverseTo).toHaveBeenCalledWith('k1');
+  });
+
   it('delvis støtte (Safari 26.2): uten `entries` følges lenka', () => {
     const traverseTo = fakeNavigation(['/', '/games/x'], { entries: undefined });
     render(<BackLink href="/fallback">Tilbake</BackLink>);
@@ -112,5 +131,32 @@ describe('tilbake-pila (#2746)', () => {
     followed(screen.getByRole('link', { name: 'Tilbake' }));
     await new Promise((resolve) => setTimeout(resolve));
     expect(routerReplace).not.toHaveBeenCalled();
+  });
+});
+
+// #2746: den første gjennomgangen fant fem piler uten regelen, fordi den bare
+// lette etter `‹`. En ny pil skal ikke kunne gli ut igjen.
+describe('alle piler', () => {
+  const ARROW = /‹|M15 18l-6-6 6-6/;
+  /** Tegner en pil, men er ingen lenke: skjeletter og stand-ins. */
+  const NOT_LINKS = /(^|\/)(loading\.tsx|LeaderboardSkeleton\.tsx)$/;
+
+  function tsxFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return tsxFiles(path);
+      return entry.name.endsWith('.tsx') && !entry.name.endsWith('.test.tsx') ? [path] : [];
+    });
+  }
+
+  it('tegnes med BackNavLink', () => {
+    const offenders = ['app', 'components'].flatMap(tsxFiles).filter((path) => {
+      if (NOT_LINKS.test(path)) return false;
+      const source = readFileSync(path, 'utf8');
+      // Bare koden: en kommentar kan nevne glyfen.
+      const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      return ARROW.test(code) && !code.includes('BackNavLink');
+    });
+    expect(offenders).toEqual([]);
   });
 });

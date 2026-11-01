@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_SCREENS, pickBackEntry, screenKey } from './backTarget';
+import { FORM_SCREENS, namesSameScreen, pickBackEntry, screenKey } from './backTarget';
 
 // #2746: hvor pila på nettet fører. Type A. Lista er det nettleseren selv sier
 // om historikken, så testene gir den direkte.
@@ -30,6 +30,19 @@ describe('screenKey', () => {
   });
 });
 
+describe('namesSameScreen', () => {
+  it('en undervisning som peker på sin egen forelder', () => {
+    expect(namesSameScreen(`${ORIGIN}/klubbhuset?vis=utkast`, '/klubbhuset')).toBe(true);
+    expect(namesSameScreen(`${ORIGIN}/admin/games/s/edit?del=navn-og-tid`, '/admin/games/s/edit')).toBe(true);
+    expect(namesSameScreen(`${ORIGIN}/en/admin/games/s/signups?tab=approved`, '/admin/games/s/signups')).toBe(true);
+  });
+
+  it('en pil som peker på en annen skjerm', () => {
+    expect(namesSameScreen(`${ORIGIN}/games/x/holes/5`, '/games/x')).toBe(false);
+    expect(namesSameScreen(`${ORIGIN}/games/x/leaderboard?scoring=brutto`, '/games/x')).toBe(false);
+  });
+});
+
 describe('FORM_SCREENS', () => {
   const isForm = (path: string) => FORM_SCREENS.some((pattern) => pattern.test(path));
 
@@ -51,11 +64,6 @@ describe('FORM_SCREENS', () => {
     '/klubber/x/rolle/u',
     '/liga/x/godkjenn/g/u',
     '/complete-profile',
-    '/liga/bli-med/k',
-    '/cup/bli-med/k',
-    '/klubber/bli-med/k',
-    '/venner/legg-til/k',
-    '/foreslaa-ide',
     '/liga/x/runde/r/spill',
     '/admin/cup/x/generer',
     '/klubber/k/cup/x/oppsett',
@@ -78,6 +86,11 @@ describe('FORM_SCREENS', () => {
     // Innloggingen hører ikke hjemme her: utlogget på personvern skal pila
     // tilbake dit. `replace` tar den ut av historikken når du er logget inn.
     '/login',
+    // Et invitasjon du ikke har svart på, skal du kunne gå tilbake til.
+    '/liga/bli-med/k',
+    '/cup/bli-med/k',
+    '/klubber/bli-med/k',
+    '/venner/legg-til/k',
   ])('%s er ikke et skjema', (path) => {
     expect(isForm(path)).toBe(false);
   });
@@ -123,6 +136,32 @@ describe('pickBackEntry', () => {
     expect(
       backFromLast('/games/x', '/games/x/leaderboard?scoring=netto', '/games/x/leaderboard?scoring=brutto'),
     ).toBe('/games/x');
+  });
+
+  // Veiviseren → «Opprett ny bane» uten å sende. Lista kan ikke vite at siden er
+  // usendt, men pila vet hvor den peker, og det målet er aldri et gammelt skjema.
+  describe('lenkas eget mål er ikke et skjema å hoppe over', () => {
+    const fromLast = (href: string, ...paths: string[]) => {
+      const list = entries(...paths);
+      const index = pickBackEntry(list, list.length - 1, href);
+      return index === null ? null : paths[index]!;
+    };
+
+    it('veiviseren → ny bane → pil gir veiviseren, ikke ut av den', () => {
+      expect(
+        fromLast('/opprett-spill?step=2', '/profile', '/opprett-spill?step=2', '/opprett-bane?next=/opprett-spill'),
+      ).toBe('/opprett-spill?step=2');
+    });
+
+    it('redigering → slett (avbrutt) → pil gir redigeringen', () => {
+      expect(fromLast('/admin/courses/c/edit', '/admin/courses', '/admin/courses/c/edit', '/admin/courses/c/slett')).toBe(
+        '/admin/courses/c/edit',
+      );
+    });
+
+    it('andre skjemaer bak deg hoppes fortsatt over', () => {
+      expect(fromLast('/games/x', '/', '/games/y/slett', '/games/x')).toBe('/');
+    });
   });
 
   it('oppføringer etter den du står på teller ikke', () => {

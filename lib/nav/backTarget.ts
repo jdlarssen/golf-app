@@ -32,7 +32,10 @@ export function screenKey(url: string): string {
 /**
  * Skjema-sidene: et skjema du har sendt, er borte fra tilbake-veien (regel 3).
  * `redirect` erstatter skjemaet når det sendes, så denne lista gjelder et skjema
- * du gikk fra uten å sende. Mønstrene leser det `screenKey` gir.
+ * du gikk fra uten å sende. Det har en pris: gikk du fra et usendt skjema via en
+ * side som ikke peker dit, hopper pila over det. Derfor står bare skjemaer her,
+ * ikke invitasjoner (bli-med, venne-lenka), som du skal kunne gå tilbake til.
+ * Mønstrene leser det `screenKey` gir.
  */
 export const FORM_SCREENS: readonly RegExp[] = [
   /\/(submit|approve|slett|avslutt|avslutt-likevel|rediger|edit|new|ny|flytt|ta-med-gjest|forlat|meld-av|trekk|trekk-fra|trekk-tilbake)$/,
@@ -42,8 +45,6 @@ export const FORM_SCREENS: readonly RegExp[] = [
   /^\/opprett-spill(\/|$)/,
   /^\/opprett-bane$/,
   /^\/complete-profile$/,
-  /^\/(klubber|liga|cup)\/bli-med\//,
-  /^\/venner\/legg-til\//,
   /^\/foreslaa-ide$/,
   /^\/liga\/[^/]+\/runde\/[^/]+\/spill$/,
   /\/cup\/[^/]+\/(generer|oppsett)$/,
@@ -59,13 +60,30 @@ function isBelow(key: string, current: string): boolean {
 }
 
 /**
- * Oppføringen pila skal til, eller `null` når lista ikke har noe å gå til. Da
- * tar reserven over (kald start, delt lenke).
+ * Peker pila på skjermen du står på? Da står du på en undervisning (`?vis=`,
+ * `?del=`, `?tab=`) med forelderen som mål. «Samme skjerm» gjelder valg som
+ * netto og brutto, men de har en annen skjerm som mål, så lista ville hoppet
+ * over forelderen her. Pila skal gå dit den peker.
  */
-export function pickBackEntry(entries: readonly HistoryEntry[], currentIndex: number): number | null {
+export function namesSameScreen(currentUrl: string, href: string): boolean {
+  return screenKey(currentUrl) === screenKey(href);
+}
+
+/**
+ * Oppføringen pila skal til, eller `null` når lista ikke har noe å gå til. Da
+ * tar reserven over (kald start, delt lenke). `href` er pilas eget mål: det er
+ * aldri et gammelt skjema, selv om adressen står i `FORM_SCREENS` (veiviseren →
+ * «Opprett ny bane» → pil skal tilbake til veiviseren, #2485).
+ */
+export function pickBackEntry(
+  entries: readonly HistoryEntry[],
+  currentIndex: number,
+  href?: string,
+): number | null {
   const url = entries[currentIndex]?.url;
   if (!url) return null;
   const current = screenKey(url);
+  const target = href === undefined ? null : screenKey(href);
 
   // Regel 4: tavla → hull-oversikt → tavla → pil hopper forbi begge kopiene.
   // Fra den tidligste kopien kan ingen oppføring bak den være samme skjerm.
@@ -82,7 +100,7 @@ export function pickBackEntry(entries: readonly HistoryEntry[], currentIndex: nu
     const other = entries[i]?.url;
     if (!other) continue;
     const key = screenKey(other);
-    if (isForm(key) || isBelow(key, current)) continue;
+    if ((isForm(key) && key !== target) || isBelow(key, current)) continue;
     return i;
   }
   return null;

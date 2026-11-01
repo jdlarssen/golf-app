@@ -10,7 +10,7 @@ import { SmartLink } from './SmartLink';
  * arrow keeps its box and glyph. A click goes where you came from; `href` is the
  * fallback and the target of a long press.
  */
-export function BackNavLink(props: ComponentProps<typeof SmartLink>) {
+export function BackNavLink(props: Omit<ComponentProps<typeof SmartLink>, 'onClick'>) {
   const onClick = useBackNavigation();
   return <SmartLink {...props} onClick={onClick} />;
 }

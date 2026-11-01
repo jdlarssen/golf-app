@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, type MouseEvent } from 'react';
-import { pickBackEntry } from './backTarget';
+import { namesSameScreen, pickBackEntry } from './backTarget';
 
 // TypeScript 5.9 har `NavigationHistoryEntry` i lib.dom, men ikke `window.navigation`.
 type NavigationEntry = { key: string; url: string | null; index: number };
@@ -24,7 +24,8 @@ function navigationApi(): NavigationApi | null {
 /**
  * Klikket på tilbake-pila (#2746). Har historikken en skjerm å gå til, går pila
  * dit. Ellers klatrer den til `href` med `replace`: en lenke som la til en side,
- * ville gitt neste pil denne siden å gå tilbake til, i ring (#121).
+ * ville gitt neste pil denne siden å gå tilbake til, i ring (#121). Det samme
+ * gjelder en undervisning, som peker på sin egen forelder.
  *
  * Uten Navigation API følges lenka, som før. Langt trykk og «åpne i ny fane» er
  * også lenka.
@@ -43,7 +44,9 @@ export function useBackNavigation() {
 
       event.preventDefault();
       const entries = api.entries();
-      const target = pickBackEntry(entries, api.currentEntry!.index);
+      const current = api.currentEntry!;
+      const target =
+        current.url && namesSameScreen(current.url, href) ? null : pickBackEntry(entries, current.index, href);
       if (target === null) {
         router.replace(href);
         return;
