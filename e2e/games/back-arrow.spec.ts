@@ -83,19 +83,25 @@ test.describe('tilbake-pila', () => {
     await expect(page).toHaveURL(/\/profile\/historikk/);
   });
 
-  test('klientnavigasjon: pila går dit du kom fra, ikke til lenkas mål, uten å laste siden på nytt', async ({ page }) => {
+  test('klientnavigasjon: pila går tilbake i historikken, ikke fram med en lenke', async ({ page }) => {
     await signInViaOtp(page, PLAYER_EMAIL!);
     await page.goto('/profile');
     test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
     await page.evaluate(() => {
       (window as unknown as { __sameDocument?: boolean }).__sameDocument = true;
     });
+    const index = () =>
+      page.evaluate(() => (window as unknown as { navigation: { currentEntry: { index: number } } }).navigation.currentEntry.index);
+    const start = await index();
 
-    // Personvern har Hjem som reserve, så Profil viser at historikken ble brukt.
-    await page.locator('a[href="/legal/privacy"]:visible').first().click();
-    await expect(page).toHaveURL(/\/legal\/privacy$/);
+    await page.locator('a[href="/profile/historikk"]:visible').first().click();
+    await expect(page).toHaveURL(/\/profile\/historikk$/);
+    expect(await index()).toBe(start + 1);
+
+    // Pilas mål er det samme som lenka her. At indeksen går ned, skiller dem.
     await arrow(page).click();
     await expect(page).toHaveURL(/\/profile$/);
+    expect(await index()).toBe(start);
     const sameDocument = await page.evaluate(
       () => (window as unknown as { __sameDocument?: boolean }).__sameDocument === true,
     );
@@ -112,8 +118,15 @@ test.describe('tilbake-pila', () => {
     const fresh = await context.newPage();
     fresh.setDefaultTimeout(30_000);
     await fresh.goto(`/games/${game.id}/leaderboard?from=/profile/historikk`);
+    // Før siden er hydrert, er pila en vanlig lenke. Her gjelder det hydrerte.
+    await fresh.waitForFunction(() => {
+      const link = document.querySelector('a[aria-label="Tilbake"]');
+      return link !== null && Object.keys(link).some((key) => key.startsWith('__reactProps'));
+    });
     await arrow(fresh).click();
     await expect(fresh).toHaveURL(/\/profile\/historikk$/);
+    // Tegnet av klienten, så denne pila er hydrert. Den gamle kan stå et øyeblikk.
+    await expect(arrow(fresh)).toHaveAttribute('href', '/profile');
     await arrow(fresh).click();
     await expect(fresh).toHaveURL(/\/profile$/);
   });
