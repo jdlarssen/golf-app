@@ -83,25 +83,39 @@ test.describe('tilbake-pila', () => {
     await expect(page).toHaveURL(/\/profile\/historikk/);
   });
 
-  test('klientnavigasjon: pila går tilbake uten å laste siden på nytt', async ({ page }) => {
+  test('klientnavigasjon: pila går dit du kom fra, ikke til lenkas mål, uten å laste siden på nytt', async ({ page }) => {
     await signInViaOtp(page, PLAYER_EMAIL!);
-    await page.goto('/');
+    await page.goto('/profile');
     test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
     await page.evaluate(() => {
       (window as unknown as { __sameDocument?: boolean }).__sameDocument = true;
     });
 
-    await page.locator('a[href="/profile"]:visible').first().click();
-    await expect(page).toHaveURL(/\/profile$/);
-    await page.locator('a[href="/profile/historikk"]:visible').first().click();
-    await expect(page).toHaveURL(/\/profile\/historikk$/);
-
+    // Personvern har Hjem som reserve, så Profil viser at historikken ble brukt.
+    await page.locator('a[href="/legal/privacy"]:visible').first().click();
+    await expect(page).toHaveURL(/\/legal\/privacy$/);
     await arrow(page).click();
     await expect(page).toHaveURL(/\/profile$/);
     const sameDocument = await page.evaluate(
       () => (window as unknown as { __sameDocument?: boolean }).__sameDocument === true,
     );
     expect(sameDocument).toBe(true);
+  });
+
+  // #121 på ny vei: reserven er en lenke, og la den til en side, ville neste pil
+  // gått tilbake hit. Tavla → historikk → tavla → historikk … Pila skal klatre.
+  test('kald start: to piler etter hverandre klatrer, og går ikke i ring @gate', async ({ context, page }) => {
+    const game = await seedActiveStablefordGame('back-arrow-walk');
+    gameIds.push(game.id);
+
+    await signInViaOtp(page, PLAYER_EMAIL!);
+    const fresh = await context.newPage();
+    fresh.setDefaultTimeout(30_000);
+    await fresh.goto(`/games/${game.id}/leaderboard?from=/profile/historikk`);
+    await arrow(fresh).click();
+    await expect(fresh).toHaveURL(/\/profile\/historikk$/);
+    await arrow(fresh).click();
+    await expect(fresh).toHaveURL(/\/profile$/);
   });
 
   test('hull 3 → hull 4 → hull 5 → pil gir spillet', async ({ page }) => {
@@ -117,7 +131,20 @@ test.describe('tilbake-pila', () => {
     await expect(page).toHaveURL(new RegExp(`/games/${game.id}(\\?|$)`));
   });
 
-  test('tavla åpnet rett fra adressefeltet: pila er lenka, og går til spillet', async ({ context, page }) => {
+  test('hull åpnet fra Hjem: hullets pil går dit du kom fra, ikke til spillet', async ({ page }) => {
+    const game = await seedActiveStablefordGame('back-arrow-home');
+    gameIds.push(game.id);
+
+    await signInViaOtp(page, PLAYER_EMAIL!);
+    await page.goto('/');
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.goto(`/games/${game.id}/holes/3`);
+
+    await arrow(page).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('tavla åpnet rett fra adressefeltet: pila går til spillet', async ({ context, page }) => {
     const game = await seedActiveStablefordGame('back-arrow-cold');
     gameIds.push(game.id);
 

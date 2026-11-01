@@ -147,7 +147,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-describe('GameWizard — #1380 per-steg history', () => {
+describe('GameWizard — stegene i adressen (#1380, #2746)', () => {
   it('steg-overgang arrangøren utløser erstatter adressen, og legger ingenting i historikken (#2746)', () => {
     renderWizard();
 
