@@ -143,18 +143,33 @@ function asTeamResult(result: ModeResult): TeamBoardResult | null {
 export function teamBoardBand(bundle: GameBundle): { kicker: string; subtitle: string } {
   const label = MODE_LABELS[bundle.game.gameMode as GameMode];
   const outcome = computeGameLeaderboard(bundle, []);
+  // #2751: Patsome har ikke lagtavlas resultatform, men samme bånd.
+  if (outcome.ok && outcome.result.kind === 'patsome') {
+    const { teams, scoring } = outcome.result;
+    return {
+      kicker: bundle.game.name,
+      subtitle: [
+        label,
+        teamsText(teams.map((team) => team.playerIds.length)),
+        scoring === 'gross' ? BOARD_TEAM_TEXT.gross : BOARD_TEAM_TEXT.net,
+      ].join(' · '),
+    };
+  }
   const result = outcome.ok ? asTeamResult(outcome.result) : null;
   if (!result) return { kicker: bundle.game.name, subtitle: label };
   const rows = teamResultBoard(result, teamName).rows;
-  const sizes = new Set(rows.map((row) => row.memberIds.length));
-  const teams =
-    sizes.size === 1
-      ? formatMessage(BOARD_TEAM_TEXT.teamsOfSize, { count: rows.length, size: [...sizes][0] })
-      : formatMessage(BOARD_TEAM_TEXT.teams, { count: rows.length });
   return {
     kicker: bundle.game.name,
-    subtitle: [label, teams, unitText(teamDisplayUnit(result))].join(' · '),
+    subtitle: [label, teamsText(rows.map((row) => row.memberIds.length)), unitText(teamDisplayUnit(result))].join(' · '),
   };
+}
+
+/** «4 lag à 2», eller «4 lag» når lagene er ulikt store. */
+function teamsText(teamSizes: readonly number[]): string {
+  const sizes = new Set(teamSizes);
+  return sizes.size === 1
+    ? formatMessage(BOARD_TEAM_TEXT.teamsOfSize, { count: teamSizes.length, size: [...sizes][0] })
+    : formatMessage(BOARD_TEAM_TEXT.teams, { count: teamSizes.length });
 }
 
 export type TeamBoardRow = {
@@ -250,7 +265,7 @@ export type TeamBoardModel = {
  * navn. Motorens rekkefølge er bruker-id-ens, og rosterets følger ikke
  * radene stabilt, så navnet er den rekkefølgen som står stille.
  */
-function members(
+export function teamMembers(
   bundle: GameBundle,
   memberIds: readonly string[],
   userId: string | null,
@@ -403,7 +418,7 @@ function liveBoard(
   const rows = board.rows.map((row): TeamBoardRow => {
     const leader = showRank && isBoardLeader(row);
     const you = row.teamNumber === viewerTeam;
-    const team = members(bundle, row.memberIds, userId);
+    const team = teamMembers(bundle, row.memberIds, userId);
     const memberNames = formatNameList(team.names);
     const holes = formatMessage(BOARD_TEAM_TEXT.holes, { holes: row.holesPlayed });
     // Live har bare lederen og ditt lag prikker og bevegelse; best ball har
@@ -537,7 +552,7 @@ function holeCard(
           ? null
           : {
               before,
-              names: members(bundle, [teeShotBy], userId, BOARD_TEAM_TEXT.youInSentence).names[0] ?? '',
+              names: teamMembers(bundle, [teeShotBy], userId, BOARD_TEAM_TEXT.youInSentence).names[0] ?? '',
               after,
             },
       score: formatMessage(BOARD_TEAM_TEXT.scrambleScore, {
@@ -555,7 +570,7 @@ function holeCard(
       // Inne i setningen er seeren «deg», ikke «Deg» som først i navnelinja.
       lead: {
         before,
-        names: formatNameList(members(bundle, card.contributorIds, userId, BOARD_TEAM_TEXT.youInSentence).names),
+        names: formatNameList(teamMembers(bundle, card.contributorIds, userId, BOARD_TEAM_TEXT.youInSentence).names),
         after,
       },
       score: formatMessage(BOARD_TEAM_TEXT.bestBallScore, {
@@ -598,7 +613,7 @@ function finishedBoard(
 
   const rows = board.rows.map((row): TeamBoardRow => {
     const you = row.teamNumber === viewerTeam;
-    const team = members(bundle, row.memberIds, userId);
+    const team = teamMembers(bundle, row.memberIds, userId);
     const memberNames = formatNameList(team.names);
     const rowNote = note(row);
     return {
@@ -672,7 +687,7 @@ function teeShotCard(
   if (minimum === null) return null;
   const { status } = teamTeeShotState(teeShotTeam(bundle.players, viewerTeam), minimum, rows);
   if (status.players.length === 0) return null;
-  const named = members(
+  const named = teamMembers(
     bundle,
     status.players.map((p) => p.userId),
     userId,
