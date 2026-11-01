@@ -186,6 +186,25 @@ test.describe('tilbake-pila', () => {
     await expect(page).toHaveURL(/\/opprett-spill/, { timeout: 30_000 });
   });
 
+  // #2485: kvitteringen peker på veiviseren med `bane=`, som den gamle oppføringen
+  // mangler. Pila skal velge banen, slik knappen på kvitteringen gjør.
+  test('kvitteringen for ny bane: pila tar med banen du lagde', async ({ page }) => {
+    const { data: course } = await adminClient().from('courses').select('id').limit(1).single<{ id: string }>();
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto('/profile');
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.goto('/opprett-spill');
+    const next = encodeURIComponent('/opprett-spill?step=3');
+    await page.goto(`/opprett-bane?status=created&name=E2E&bane=${course!.id}&next=${next}`);
+
+    await arrow(page).waitFor();
+    await hydrated(page);
+    await expect(arrow(page)).toHaveAttribute('href', new RegExp(`bane=${course!.id}`));
+    await arrow(page).click();
+    await expect(page).toHaveURL(/\/opprett-spill\?.*step=3/, { timeout: 30_000 });
+    await expect(page).toHaveURL(/banevalg=1/, { timeout: 30_000 });
+  });
+
   test('tavla åpnet rett fra adressefeltet: pila går til spillet', async ({ context, page }) => {
     const game = await seedActiveStablefordGame('back-arrow-cold');
     gameIds.push(game.id);
