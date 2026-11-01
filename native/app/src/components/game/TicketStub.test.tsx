@@ -65,7 +65,7 @@ it('trukket fra en cup-kamp før start: sier hvem som kan angre, og tilbyr ingen
 });
 
 it.each<[string, TicketStubModel, string]>([
-  ['stengt runde', { kind: 'gated', reason: 'segment' }, 'format-gate-link'],
+  ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate-link'],
   ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
   ['trukket av seg selv', { kind: 'withdrawn', bySelf: true, canUndo: true }, 'withdrawn-undo'],
   ['trukket fra en cup-kamp før start', { kind: 'cupWithdrawn', bySelf: true }, 'cup-withdrawn-banner'],
@@ -209,7 +209,7 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
 });
 
 it.each<[string, TicketStubModel, string]>([
-  ['stengt runde', { kind: 'gated', reason: 'segment' }, 'format-gate'],
+  ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate'],
   ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
   ['utkast', { kind: 'draft' }, 'ticket-draft'],
   ['avsluttet uten plass', { kind: 'finished', result: null }, 'finished-banner'],
