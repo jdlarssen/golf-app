@@ -56,6 +56,9 @@ export const CUP_TEXT = {
   withdrawnChip: 'Trukket',
   /** `game.home.cupStandings`: lenka fra spillets side. */
   gameLink: 'Se cupen',
+  /** `cup.public`: spillerens vei ut. */
+  withdrawSelfLink: 'Trekk meg fra cupen',
+  withdrawnBanner: 'Du er trukket fra cupen. Arrangøren ser det her på cup-siden.',
 } as const;
 
 /** Det som er nytt i appen. */

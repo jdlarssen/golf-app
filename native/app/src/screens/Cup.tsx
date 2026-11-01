@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupView } from '../../../../lib/cup/appCupView';
 import { CupMatchRow } from '../components/cup/CupMatchRow';
 import { CupResultLine, CupResults } from '../components/cup/CupResults';
+import { ChevronIcon } from '../components/icons/Icons';
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchCup, type CupLoadFailure } from '../data/cup';
 import { openOrReturn } from '../lib/backTo';
@@ -28,6 +29,7 @@ import {
   matchesSummary,
   pointsHeader,
 } from '../lib/cupCopy';
+import { MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -127,6 +129,18 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       </View>
 
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
+      {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
+      {view.canManage && !stale ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => openOrReturn(navigation, 'CupManage', { cupId })}
+          style={[styles.doorRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="cup-open-manage"
+        >
+          <Text style={[styles.doorText, { color: colors.text }]}>{MANAGE_APP_TEXT.roomLink}</Text>
+          <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
+        </Pressable>
+      ) : null}
       {view.lineupPending ? <Note text={CUP_APP_TEXT.lineupPending} testID="cup-lineup-pending" /> : null}
 
       {view.results ? <CupResults view={view} results={view.results} userId={userId} /> : null}
@@ -157,6 +171,17 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
             <CupMatchRow key={match.gameId} match={match} onOpen={() => openMatch(match.gameId)} />
           ))}
         </View>
+      ) : null}
+
+      {view.canWithdrawSelf && !stale ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => openOrReturn(navigation, 'CupWithdraw', { cupId })}
+          style={[styles.quiet, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="cup-withdraw-self"
+        >
+          <Text style={[styles.quietText, { color: colors.text }]}>{CUP_TEXT.withdrawSelfLink}</Text>
+        </Pressable>
       ) : null}
     </ScrollView>
   );
@@ -220,6 +245,20 @@ const styles = StyleSheet.create({
   note: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4, marginBottom: 4 },
   noteText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   heading: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 16, marginBottom: 6 },
+  doorRow: {
+    minHeight: TAP,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  doorText: { flex: 1, fontSize: 14, fontFamily: FONTS.sansMedium },
+  quiet: { minHeight: TAP, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 999, marginTop: 18 },
+  quietText: { fontSize: 13, fontFamily: FONTS.sansMedium },
   failure: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
   retry: { minHeight: TAP, justifyContent: 'center', paddingHorizontal: 20, borderWidth: 1, borderRadius: 22 },
   retryText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },

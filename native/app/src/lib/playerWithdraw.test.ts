@@ -29,8 +29,9 @@ describe('playerWithdrawKind', () => {
     expect(playerWithdrawKind({ ...base, status: 'finished' }, { withdrawnAt: null }, false)).toBeNull();
   });
 
-  it('viser ingenting før start i en cup-kamp: der trekker man seg på cup-siden', () => {
-    expect(playerWithdrawKind({ ...base, tournamentId: 'cup-1' }, { withdrawnAt: null }, false)).toBeNull();
+  it('før start i en cup-kamp: veien går via cupens egen skjerm (#2752)', () => {
+    expect(playerWithdrawKind({ ...base, tournamentId: 'cup-1' }, { withdrawnAt: null }, false)).toBe('cup');
+    expect(playerWithdrawKind({ ...base, tournamentId: 'cup-1' }, { withdrawnAt: 'nå' }, false)).toBeNull();
   });
 
   it('viser ingenting under runden i et format uten frafall', () => {

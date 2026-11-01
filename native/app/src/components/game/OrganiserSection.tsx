@@ -538,7 +538,7 @@ export function OrganiserSection({
         </Pressable>
       ) : null}
 
-      {scheduled ? (
+      {scheduled && !isCupGame ? (
         <Pressable
           style={ui.buttonSecondary}
           disabled={busy}
