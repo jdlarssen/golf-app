@@ -21,18 +21,22 @@ import {
   deleteScore,
   deleteTeeShot,
   deleteTeeShotQueueItem,
+  deleteTeeStarter,
   getDb,
   getScore,
   getTeeShot,
+  listPendingTeeStarters,
   listQueue,
   listTeeShotQueue,
   markQueueAbandoned,
   markQueueRetry,
   markTeeShotQueueAbandoned,
   markTeeShotQueueRetry,
+  markTeeStarterAttempt,
   putConflict,
   putScore,
   putTeeShot,
+  settleTeeStarter,
   withTxn,
   type LocalScore,
   type LocalTeeShot,
@@ -57,6 +61,7 @@ export interface DrainLog extends DrainResult {
 }
 
 const EMPTY: DrainResult = { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+const EMPTY_TEE = { ...EMPTY, networkDown: false };
 
 let inFlight = false;
 // #2211: et kall som kom mens en drain pågikk, returnerte tomt og lot
@@ -253,7 +258,10 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       else if (outcome === 'server-wins') rejected++;
     }
 
-    const tee = networkDown ? EMPTY : await drainTeeShots(teeShotQueue, currentUserId);
+    const tee = networkDown ? EMPTY_TEE : await drainTeeShots(teeShotQueue, currentUserId);
+    // #2751: utslagsvalget sendes sist, og teller ikke i svaret eller i `queued`:
+    // et hint skal ikke holde igjen noen flate som venter på at køen er tom.
+    if (!networkDown && !tee.networkDown) await drainTeeStarters(currentUserId);
     const result: DrainResult = {
       pushed: pushed + tee.pushed,
       rejected: rejected + tee.rejected,
@@ -366,8 +374,8 @@ async function settleLockedRefusal(
 async function drainTeeShots(
   queue: readonly TeeShotQueueItem[],
   currentUserId: string | null,
-): Promise<DrainResult> {
-  const counts = { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+): Promise<DrainResult & { networkDown: boolean }> {
+  const counts = { ...EMPTY_TEE };
   if (queue.length === 0) return counts;
   const db = await getDb();
 
@@ -403,7 +411,10 @@ async function drainTeeShots(
       if (decision === 'abandon') counts.abandoned++;
       else counts.errored++;
       // #1954 D2: samme stopp som slagene, ved første nettfeil.
-      if (isNetworkFailureMessage(error.message)) break;
+      if (isNetworkFailureMessage(error.message)) {
+        counts.networkDown = true;
+        break;
+      }
       continue;
     }
 
@@ -511,4 +522,58 @@ async function settleRefusedTeeShot(
     });
     return 'abandoned' as const;
   });
+}
+
+/**
+ * #2751: utslagsvalgene som venter. Regelen er serverens: første valg som når
+ * den, gjelder, og svaret er valget som står. Et svar som går tapt, er ufarlig,
+ * for neste forsøk får samme verdi tilbake.
+ *
+ * - Serveren svarer med et valg: raden tar det og er ferdig sendt. Kom makkeren
+ *   først, bytter hintet navn uten melding.
+ * - Avslag (rad med bare NULL: spillet er avsluttet, eller den valgte er ikke
+ *   lenger på laget): raden slettes stille og hendelsen logges. Uten sesjon kan
+ *   avslaget like gjerne være en utløpt økt, så da står raden.
+ * - Feil: nettstopp og tak som `drainTeeShots`. Etter taket slutter telefonen å
+ *   sende, og raden står som hint her.
+ */
+async function drainTeeStarters(currentUserId: string | null): Promise<void> {
+  const db = await getDb();
+  const pending = await listPendingTeeStarters(db);
+
+  for (const row of pending) {
+    const { gameId, teamNumber, teeStarterId, attemptCount } = row;
+    const { data, error } = await supabase.rpc('set_tee_starter_if_unset', {
+      p_game_id: gameId,
+      p_team_number: teamNumber,
+      p_tee_starter: teeStarterId,
+    });
+
+    if (error) {
+      const decision = syncRetryDecision({ attemptCount, errorMessage: error.message });
+      await withTxn((txn) =>
+        markTeeStarterAttempt(txn, gameId, teamNumber, {
+          attemptCount: attemptCount + 1,
+          pending: decision !== 'abandon',
+        }),
+      );
+      if (isNetworkFailureMessage(error.message)) break;
+      continue;
+    }
+
+    const reply = Array.isArray(data) ? data[0] : data;
+    const standing = reply?.tee_starter ?? null;
+    if (standing != null) {
+      await withTxn((txn) => settleTeeStarter(txn, gameId, teamNumber, standing));
+      continue;
+    }
+    if (currentUserId == null) {
+      await withTxn((txn) =>
+        markTeeStarterAttempt(txn, gameId, teamNumber, { attemptCount: attemptCount + 1, pending: true }),
+      );
+      continue;
+    }
+    console.warn('[drainTeeStarters] serveren avviste valget', { gameId, teamNumber });
+    await withTxn((txn) => deleteTeeStarter(txn, gameId, teamNumber));
+  }
 }

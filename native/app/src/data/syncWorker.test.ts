@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { waitFor } from '@testing-library/react-native';
 import { useFreshModules } from '../test/harness';
-import { REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from '../../../../lib/sync/classifyError';
+import { MAX_PERMANENT_ATTEMPTS, REFUSED_TEE_SHOT_ERROR, REFUSED_WRITE_ERROR } from '../../../../lib/sync/classifyError';
 import { REFUSED_REPLY_FIXTURE } from '../../../../lib/sync/testing/refusedReplyFixture';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -567,6 +567,143 @@ describe('drainQueue', () => {
       const { getDb, listTeeShotQueue } = require('./db') as Db;
       const [item] = await listTeeShotQueue(await getDb());
       expect(item).toMatchObject({ attemptCount: 1, lastError: 'TypeError: Network request failed', abandonedAt: null });
+    });
+  });
+
+  // #2751: utslagsvalget. Første valg som når serveren, gjelder, og ingenting
+  // i svaret eller køtellingen venter på det.
+  describe('utslagsvalg (#2751)', () => {
+    const reply = (tee_starter: string | null, was_applied: boolean | null) => ({
+      data: [{ tee_starter, was_applied }],
+      error: null,
+    });
+
+    async function pick(teeStarterId = ME, teamNumber = 1): Promise<void> {
+      const { writeTeeStarter } = require('./writeTeeStarter') as typeof import('./writeTeeStarter');
+      await writeTeeStarter({ gameId: GAME, teamNumber, teeStarterId });
+    }
+
+    async function localRows() {
+      const { getDb, listTeeStartersForGame } = require('./db') as Db;
+      return listTeeStartersForGame(await getDb(), GAME);
+    }
+
+    function tapStarterCalls(): unknown[][] {
+      return mocks().supabase.rpc.mock.calls.filter((call: unknown[]) => call[0] === 'set_tee_starter_if_unset');
+    }
+
+    it('sendes med set_tee_starter_if_unset, og raden er ferdig sendt', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick();
+      mocks().supabase.rpc.mockResolvedValue(reply(ME, true));
+
+      await drainQueue();
+
+      expect(mocks().supabase.rpc).toHaveBeenCalledWith('set_tee_starter_if_unset', {
+        p_game_id: GAME,
+        p_team_number: 1,
+        p_tee_starter: ME,
+      });
+      expect(await localRows()).toEqual([expect.objectContaining({ teeStarterId: ME, pending: false })]);
+    });
+
+    it('kom makkeren først: raden tar serverens valg, og det sendes ikke igjen', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick(ME);
+      mocks().supabase.rpc.mockResolvedValue(reply(MATE, false));
+
+      await drainQueue();
+      await drainQueue();
+
+      expect(await localRows()).toEqual([expect.objectContaining({ teeStarterId: MATE, pending: false })]);
+      expect(tapStarterCalls()).toHaveLength(1);
+    });
+
+    it('avslag (avsluttet spill, eller den valgte er borte): raden slettes stille', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick();
+      mocks().supabase.rpc.mockResolvedValue(reply(null, null));
+
+      const result = await drainQueue();
+
+      expect(await localRows()).toEqual([]);
+      expect(result).toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+      expect(warn).toHaveBeenCalledWith('[drainTeeStarters] serveren avviste valget', { gameId: GAME, teamNumber: 1 });
+      warn.mockRestore();
+    });
+
+    it('avslag uten sesjon: det kan være en utløpt økt, så raden står', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick();
+      mocks().currentDeviceUserId.mockResolvedValue(null);
+      mocks().supabase.rpc.mockResolvedValue(reply(null, null));
+
+      await drainQueue();
+
+      expect(await localRows()).toEqual([expect.objectContaining({ pending: true, attemptCount: 1 })]);
+    });
+
+    it('nettfeil: stopper ved første, teller opp, og neste forsøk kan lykkes', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick(ME, 1);
+      await pick(MATE, 2);
+      mocks().supabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'TypeError: Network request failed' } });
+
+      await drainQueue();
+
+      expect(tapStarterCalls()).toHaveLength(1);
+      expect(await localRows()).toEqual([
+        expect.objectContaining({ teamNumber: 1, pending: true, attemptCount: 1 }),
+        expect.objectContaining({ teamNumber: 2, pending: true, attemptCount: 0 }),
+      ]);
+
+      mocks().supabase.rpc.mockResolvedValueOnce(reply(ME, true)).mockResolvedValueOnce(reply(MATE, true));
+      await drainQueue();
+
+      expect(await localRows()).toEqual([
+        expect.objectContaining({ teamNumber: 1, pending: false }),
+        expect.objectContaining({ teamNumber: 2, pending: false }),
+      ]);
+    });
+
+    it('permanent feil: etter taket slutter telefonen å sende, og raden står som hint', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await pick();
+      mocks().supabase.rpc.mockResolvedValue({ data: null, error: { message: 'new row violates check constraint' } });
+
+      for (let attempt = 0; attempt < 7; attempt++) await drainQueue();
+
+      expect(tapStarterCalls()).toHaveLength(MAX_PERMANENT_ATTEMPTS);
+      expect(await localRows()).toEqual([
+        expect.objectContaining({ teeStarterId: ME, pending: false, attemptCount: MAX_PERMANENT_ATTEMPTS }),
+      ]);
+    });
+
+    it('nettet er borte på slagene: valget prøves ikke i samme drain', async () => {
+      const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+      await typeStroke(4);
+      await pick();
+      mocks().supabase.rpc.mockResolvedValue({ data: null, error: { message: 'TypeError: Network request failed' } });
+
+      await drainQueue();
+
+      expect(tapStarterCalls()).toHaveLength(0);
+      expect(await localRows()).toEqual([expect.objectContaining({ pending: true, attemptCount: 0 })]);
+    });
+
+    it('holder ingenting igjen: valget teller ikke i køen, og ikke i svaret', async () => {
+      const { drainQueue, getLastDrain } = require('./syncWorker') as typeof import('./syncWorker');
+      const { getDb, listQueue, listTeeShotQueue } = require('./db') as Db;
+      await pick();
+
+      const db = await getDb();
+      expect(await listQueue(db)).toEqual([]);
+      expect(await listTeeShotQueue(db)).toEqual([]);
+
+      mocks().supabase.rpc.mockResolvedValue(reply(ME, true));
+      expect(await drainQueue()).toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+      expect(getLastDrain()).toMatchObject({ queued: 0 });
     });
   });
 });
