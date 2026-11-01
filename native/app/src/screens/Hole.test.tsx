@@ -1227,7 +1227,7 @@ describe('Hole', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
       });
-      expect(screen.getByText(/Makker Makkersen slår ut/)).toBeTruthy();
+      expect(screen.getByText(/Makker slår ut/)).toBeTruthy();
     });
 
     it('på et like hull slår makkeren ut, og bundelens valg går foran det lokale', async () => {
@@ -1241,7 +1241,7 @@ describe('Hole', () => {
       mockState.teeStarters = [{ gameId: GAME_ID, teamNumber: 1, teeStarterId: 'makker', pending: false, attemptCount: 0 }];
       await renderHole(14);
       await waitFor(() => {
-        expect(screen.getByText(/Makker Makkersen slår ut/)).toBeTruthy();
+        expect(screen.getByText(/Makker slår ut/)).toBeTruthy();
       });
       expect(screen.queryByTestId('tee-starter-picker')).toBeNull();
     });
@@ -1286,7 +1286,7 @@ describe('Hole', () => {
     };
     await rerender(holeElement(3, navigation));
     await waitFor(() => {
-      expect(screen.getByText(/Meg Selv slår ut/)).toBeTruthy();
+      expect(screen.getByText(/Meg slår ut/)).toBeTruthy();
     });
   });
 
