@@ -6,6 +6,7 @@ import source from '../../../../messages/no.json';
 import {
   BOARD_APP_TEXT,
   BOARD_COMMON_TEXT,
+  BOARD_PATSOME_TEXT,
   BOARD_TEAM_TEXT,
   BOARD_TEXT,
   ROUND_REPORT_APP_TEXT,
@@ -66,6 +67,7 @@ describe('paritet med messages/no.json', () => {
   it.each([
     ['BOARD_APP_TEXT', BOARD_APP_TEXT],
     ['BOARD_TEAM_TEXT', BOARD_TEAM_TEXT],
+    ['BOARD_PATSOME_TEXT', BOARD_PATSOME_TEXT],
     ['ROUND_REPORT_APP_TEXT', ROUND_REPORT_APP_TEXT],
   ])('appens egne tekster (%s) er ingen av verdiene i leaderboard.board', (_name, block) => {
     const web = new Set(sourceLeaves.values());
