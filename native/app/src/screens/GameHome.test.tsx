@@ -60,6 +60,10 @@ jest.mock('../data/withdrawSelf', () => ({
   withdrawSelf: jest.fn(async () => ({ ok: true, kept: true })),
   undoSelfWithdraw: jest.fn(async () => ({ ok: true })),
 }));
+// #2750: flightvalget går via ruta; her holder det å se kallet og svaret.
+jest.mock('../data/joinFlight', () => ({
+  joinFlight: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -914,6 +918,100 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
 // #1954 Del B: et spill som mangler eller er skjult av RLS er ikke en nettfeil.
 // Nettsiden svarer 404 («Denne havnet utenfor banen»), og appen skal si at
 // spillet ikke finnes i stedet for å be om å sjekke nettet.
+describe('GameHome — flightvelgeren (#2750)', () => {
+  const STOCKS = { courseHandicap: null, acceptedAt: '2026-10-01T08:00:00.000Z' };
+
+  function scheduled(
+    myFlight: number | null,
+    game: Partial<BundleGame> = {},
+    mates: BundlePlayer[] = [
+      homePlayer({ userId: 'a', name: 'Marte Lien', flightNumber: 1, ...STOCKS }),
+      homePlayer({ userId: 'b', name: 'Jonas Berg', flightNumber: 1, ...STOCKS }),
+      homePlayer({ userId: 'c', name: 'Anders Moe', flightNumber: 2, ...STOCKS }),
+      homePlayer({ userId: 'd', name: 'Eirik Dahl', flightNumber: 2, ...STOCKS }),
+    ],
+  ): GameBundle {
+    return homeBundle({
+      game: {
+        id: 'game-1',
+        status: 'scheduled',
+        modeConfig: { kind: 'stableford', team_size: 1 },
+        scheduledTeeOffAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+        ...game,
+      },
+      players: [homePlayer({ userId: 'me', flightNumber: myFlight, ...STOCKS }), ...mates],
+    });
+  }
+
+  const renderHome = () =>
+    render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+  it('et valg oppdaterer raden, feltet FLIGHT og avatarene uten at du går ut og inn', async () => {
+    const { joinFlight } = require('../data/joinFlight') as {
+      joinFlight: jest.Mock;
+    };
+    joinFlight.mockClear();
+    mockState.bundle = scheduled(null);
+    mockState.scores = [];
+
+    await renderHome();
+
+    expect(await screen.findByTestId('flight-row-sub')).toHaveTextContent(
+      'Du er ikke plassert i en flight ennå.',
+    );
+    // Uten flight teller billetten spillerne.
+    expect(screen.getByTestId('ticket-slot')).toHaveTextContent(/Spillere/);
+
+    await fireEvent.press(screen.getByTestId('flight-row'));
+    // Serveren har nå meg i flight 2.
+    mockState.bundle = scheduled(2);
+    await fireEvent.press(await screen.findByTestId('flight-option-2'));
+
+    await waitFor(() => expect(joinFlight).toHaveBeenCalledTimes(1));
+    expect(joinFlight).toHaveBeenCalledWith('game-1', 2);
+    await waitFor(() =>
+      expect(screen.getByTestId('flight-row-sub')).toHaveTextContent('Du står i flight 2.'),
+    );
+    expect(screen.queryByTestId('flight-sheet')).toBeNull();
+    // Feltet på billetten er flighten, og navnelista er de i den.
+    expect(screen.getByTestId('ticket-slot')).toHaveTextContent(/Flight/);
+    expect(screen.getByTestId('ticket-slot')).toHaveTextContent(/2 av 2/);
+    expect(screen.getByTestId('game-ticket')).toHaveTextContent(/Du, Anders og Eirik/);
+  });
+
+  it('runden sitter fast etter tee-off fordi noen mangler flight: raden står (#2204)', async () => {
+    mockState.bundle = scheduled(null, {
+      scheduledTeeOffAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+    });
+    mockState.scores = [];
+
+    await renderHome();
+
+    expect(await screen.findByTestId('flight-row')).toBeTruthy();
+  });
+
+  it('fire aktive: ingen rad', async () => {
+    mockState.bundle = scheduled(null, {}, [
+      homePlayer({ userId: 'a', name: 'Marte Lien', flightNumber: null, ...STOCKS }),
+      homePlayer({ userId: 'b', name: 'Jonas Berg', flightNumber: null, ...STOCKS }),
+      homePlayer({ userId: 'c', name: 'Anders Moe', flightNumber: null, ...STOCKS }),
+    ]);
+    mockState.scores = [];
+
+    await renderHome();
+
+    await screen.findByTestId('game-ticket');
+    expect(screen.queryByTestId('flight-row')).toBeNull();
+  });
+});
+
 describe('GameHome — spillet finnes ikke', () => {
   function renderMissing() {
     return render(

@@ -77,6 +77,8 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   skeletonTint: '--skel-tint',
   // #2580: the tee-shot box, pills and organiser line.
   warningText: '--warning-text',
+  warning: '--warning',
+  fieldBorder: '--field-border',
   warningSoft: '--warning-soft',
 };
 
