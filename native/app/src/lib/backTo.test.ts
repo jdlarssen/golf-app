@@ -43,6 +43,12 @@ describe('backStep', () => {
     expect(backStep([HOME, game('g1')], 'Home', undefined)).toBe('popTo');
   });
 
+  it('cupen sammenlignes på cupId (#2752)', () => {
+    const routes = [HOME, { name: 'Cup', params: { cupId: 'c1' } }, { name: 'GameHome', params: { gameId: 'g1' } }];
+    expect(backStep(routes, 'Cup', { cupId: 'c1' })).toBe('popTo');
+    expect(backStep(routes, 'Cup', { cupId: 'c2' })).toBe('replace');
+  });
+
   it('ligaen sammenlignes på leagueId', () => {
     const routes = [HOME, { name: 'League', params: { leagueId: 'l1' } }, { name: 'MarkerApprove' }];
     expect(backStep(routes, 'League', { leagueId: 'l1' })).toBe('popTo');
