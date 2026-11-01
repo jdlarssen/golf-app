@@ -31,6 +31,13 @@ test.afterAll(async () => {
 // `:visible`: Next 16 holder forrige side montert og skjult i bakgrunnen.
 const arrow = (page: Page) => page.locator('a[aria-label]:visible', { hasText: /^‹$/ }).first();
 
+/** Før siden er hydrert, er pila en vanlig lenke. Her gjelder det hydrerte. */
+const hydrated = (page: Page) =>
+  page.waitForFunction(() => {
+    const links = Array.from(document.querySelectorAll('a[aria-label]')).filter((a) => a.textContent?.trim() === '‹');
+    return links.some((link) => Object.keys(link).some((key) => key.startsWith('__reactProps')));
+  });
+
 /** Navigation API med det pila trenger. Uten det er pila en vanlig lenke. */
 const hasHistoryList = (page: Page) =>
   page.evaluate(() => {
@@ -118,11 +125,7 @@ test.describe('tilbake-pila', () => {
     const fresh = await context.newPage();
     fresh.setDefaultTimeout(30_000);
     await fresh.goto(`/games/${game.id}/leaderboard?from=/profile/historikk`);
-    // Før siden er hydrert, er pila en vanlig lenke. Her gjelder det hydrerte.
-    await fresh.waitForFunction(() => {
-      const link = document.querySelector('a[aria-label="Tilbake"]');
-      return link !== null && Object.keys(link).some((key) => key.startsWith('__reactProps'));
-    });
+    await hydrated(fresh);
     await arrow(fresh).click();
     await expect(fresh).toHaveURL(/\/profile\/historikk$/);
     // Tegnet av klienten, så denne pila er hydrert. Den gamle kan stå et øyeblikk.
@@ -155,6 +158,32 @@ test.describe('tilbake-pila', () => {
 
     await arrow(page).click();
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('undervisning: pila går opp til forelderen, ikke forbi den', async ({ page }) => {
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto('/');
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.goto('/klubbhuset');
+    await page.goto('/klubbhuset?vis=utkast');
+
+    await arrow(page).waitFor();
+    await hydrated(page);
+    await arrow(page).click();
+    await expect(page).toHaveURL(/\/klubbhuset$/);
+  });
+
+  test('veiviseren → ny bane → pil: tilbake til veiviseren, ikke ut av den', async ({ page }) => {
+    await signInViaOtp(page, ADMIN_EMAIL!);
+    await page.goto('/profile');
+    test.skip(!(await hasHistoryList(page)), 'Nettleseren mangler historikklista');
+    await page.goto('/opprett-spill');
+    await page.goto(`/opprett-bane?next=${encodeURIComponent('/opprett-spill')}`);
+
+    await arrow(page).waitFor();
+    await hydrated(page);
+    await arrow(page).click();
+    await expect(page).toHaveURL(/\/opprett-spill/);
   });
 
   test('tavla åpnet rett fra adressefeltet: pila går til spillet', async ({ context, page }) => {
