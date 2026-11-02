@@ -44,6 +44,7 @@ import json
 import re
 import struct
 import sys
+from xml.etree import ElementTree
 
 ATTR = re.compile(r'^A: (?:[^=]*?:)?([A-Za-z0-9_]+)(?:\(0x[0-9a-f]+\))?=(.*)$')
 RAW = re.compile(r'\(Raw: "(.*)"\)\s*$')
@@ -252,6 +253,31 @@ def google_services(path, package):
     return 0
 
 
+def fcm_token(text):
+    # Firebase legger tokenet i shared_prefs/com.google.android.gms.appid.xml, under
+    # nøkkelen <avsender>|T|<avsender>|*, som JSON. Lest ut av Store-klassen i
+    # firebase-messaging 25.0.1 (#2758). Bare selve tokenet skrives til stdout, og
+    # aldri noe av innholdet i en feilmelding.
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError:
+        print('kunne ikke lese fila', file=sys.stderr)
+        return 1
+    for entry in root.iter('string'):
+        name = entry.get('name', '')
+        if '|T|' not in name or not name.endswith('|*'):
+            continue
+        try:
+            token = json.loads(entry.text or '').get('token')
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(token, str) and token:
+            print(token)
+            return 0
+    print('fant ikke noe token', file=sys.stderr)
+    return 1
+
+
 def elf_align(path):
     with open(path, 'rb') as handle:
         data = handle.read()
@@ -304,13 +330,16 @@ def main(argv):
         return fcm_requirements(argv[2], sys.stdin.read())
     if len(argv) == 4 and argv[1] == 'google-services':
         return google_services(argv[2], argv[3])
+    if len(argv) == 2 and argv[1] == 'fcm-token':
+        return fcm_token(sys.stdin.read())
     if len(argv) == 3 and argv[1] == 'elf-align':
         return elf_align(argv[2])
     print(
         'Bruk: android-proof.py manifest < xmltree.txt | '
         'android-proof.py blocked <app.json> < xmltree.txt | '
         'android-proof.py fcm <ressursdump> < xmltree.txt | '
-        'android-proof.py google-services <fil> <pakke> | android-proof.py elf-align <fil.so>',
+        'android-proof.py google-services <fil> <pakke> | android-proof.py fcm-token < prefs.xml | '
+        'android-proof.py elf-align <fil.so>',
         file=sys.stderr,
     )
     return 2
