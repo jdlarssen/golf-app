@@ -63,7 +63,7 @@ async function renderScreen(routeParams: { returnTo?: 'CreateGame' } | undefined
   await render(
     <EditProfile
       {...({
-        navigation: { ...nav, goBack },
+        navigation: { ...nav, goBack, isFocused: () => true },
         // Navigatoren sender ALLTID `route`; fikstur uten den er ikke et
         // scenario appen kan havne i.
         route: { params: routeParams },

@@ -216,9 +216,11 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
         if (result.ok) {
           // #1979: kom du hit fra veiviseren, skal du TILBAKE dit — ikke inn i
           // profil-rommet med veiviseren begravd under. `goBack` beholder
-          // veiviserens state; den står montert like under.
+          // veiviserens state; den står montert like under. Er skjemaet alt lukket,
+          // ville `goBack` truffet veiviseren, som da gikk ett steg tilbake av seg
+          // selv (#2757).
           if (returnTo === 'CreateGame') {
-            navigation.goBack();
+            if (navigation.isFocused()) navigation.goBack();
             return;
           }
           // Tilbake til rommet med kvitteringen. Rommet viser banneret og
