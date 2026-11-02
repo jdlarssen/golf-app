@@ -119,13 +119,32 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
 
   const stepIndex = steps.indexOf(step);
   const leaving = useRef(false);
-  // Tilbake går ett steg, som i «Nytt spill». Fra første steg forlater du veiviseren.
+  // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
+  const sending = useRef(false);
+
+  const finish = () => {
+    leaving.current = true;
+    if (cupId) backTo(navigation, 'Cup', { cupId });
+  };
+
+  // Tilbake går ett steg, som i «Nytt spill». Fra første steg forlater du veiviseren. Navn og
+  // lag er ikke et steg å gå tilbake til: cupen finnes da, og «Neste» der ville laget en til.
+  // Derfra går tilbake til cupen, der utkastet står.
   usePreventRemove(stepIndex > 0, ({ data }) => {
-    if (leaving.current) navigation.dispatch(data.action);
-    else if (!busy) {
-      setError(null);
-      setStep(steps[stepIndex - 1]);
+    if (leaving.current) {
+      navigation.dispatch(data.action);
+      return;
     }
+    if (busy) return;
+    const previous = steps[stepIndex - 1];
+    if (previous === 'details') {
+      finish();
+      return;
+    }
+    setError(null);
+    setStep(previous);
+    // Lista tegnes på nytt når du kommer tilbake, og da hører ikke kvitteringen hjemme der.
+    navigation.setParams({ notice: undefined });
   });
 
   const loadCourses = useCallback(() => {
@@ -187,12 +206,9 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
     }, [loadSetup]),
   );
 
-  const finish = () => {
-    leaving.current = true;
-    if (cupId) backTo(navigation, 'Cup', { cupId });
-  };
-
   const submit = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     if (step === 'details') {
@@ -221,6 +237,7 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
       if (result.ok) setStep('players');
       else setError(awardFailureText(result.reason));
     }
+    sending.current = false;
     setBusy(false);
   };
 
@@ -287,52 +304,64 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
               testID="create-cup-name-input"
             />
           </Field>
-          <Field label={DETAILS_TEXT.team1}>
-            <TextInput
-              style={ui.input}
-              value={team1}
-              onChangeText={setTeam1}
-              placeholder={DETAILS_TEXT.team1Placeholder}
-              placeholderTextColor={colors.muted}
-              maxLength={40}
-              testID="create-cup-team1"
-            />
-          </Field>
-          <Field label={DETAILS_TEXT.team2}>
-            <TextInput
-              style={ui.input}
-              value={team2}
-              onChangeText={setTeam2}
-              placeholder={DETAILS_TEXT.team2Placeholder}
-              placeholderTextColor={colors.muted}
-              maxLength={40}
-              testID="create-cup-team2"
-            />
-          </Field>
+          <View style={styles.pair}>
+            <View style={styles.half}>
+              <Field label={DETAILS_TEXT.team1}>
+                <TextInput
+                  style={ui.input}
+                  value={team1}
+                  onChangeText={setTeam1}
+                  placeholder={DETAILS_TEXT.team1Placeholder}
+                  placeholderTextColor={colors.muted}
+                  maxLength={40}
+                  testID="create-cup-team1"
+                />
+              </Field>
+            </View>
+            <View style={styles.half}>
+              <Field label={DETAILS_TEXT.team2}>
+                <TextInput
+                  style={ui.input}
+                  value={team2}
+                  onChangeText={setTeam2}
+                  placeholder={DETAILS_TEXT.team2Placeholder}
+                  placeholderTextColor={colors.muted}
+                  maxLength={40}
+                  testID="create-cup-team2"
+                />
+              </Field>
+            </View>
+          </View>
           <Text style={ui.sectionTitle}>{DETAILS_TEXT.pointsHeading}</Text>
           <Text style={ui.muted}>{DETAILS_TEXT.pointsHint}</Text>
-          <Field label={DETAILS_TEXT.win}>
-            <TextInput
-              style={ui.input}
-              value={winPoints}
-              onChangeText={setWinPoints}
-              placeholder="1"
-              placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad"
-              testID="create-cup-win"
-            />
-          </Field>
-          <Field label={DETAILS_TEXT.tie}>
-            <TextInput
-              style={ui.input}
-              value={tiePoints}
-              onChangeText={setTiePoints}
-              placeholder="0,5"
-              placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad"
-              testID="create-cup-tie"
-            />
-          </Field>
+          <View style={styles.pair}>
+            <View style={styles.half}>
+              <Field label={DETAILS_TEXT.win}>
+                <TextInput
+                  style={ui.input}
+                  value={winPoints}
+                  onChangeText={setWinPoints}
+                  placeholder="1"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="decimal-pad"
+                  testID="create-cup-win"
+                />
+              </Field>
+            </View>
+            <View style={styles.half}>
+              <Field label={DETAILS_TEXT.tie}>
+                <TextInput
+                  style={ui.input}
+                  value={tiePoints}
+                  onChangeText={setTiePoints}
+                  placeholder="0,5"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="decimal-pad"
+                  testID="create-cup-tie"
+                />
+              </Field>
+            </View>
+          </View>
         </View>
       ) : null}
 
@@ -497,7 +526,8 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
         <CupPlayersBody
           cupId={cupId}
           notice={route.params?.notice === 'participant_removed' ? PLAYERS_TEXT.removed : null}
-          onRemove={(player, cupName) =>
+          onRemove={(player, cupName) => {
+            navigation.setParams({ notice: undefined });
             openOrReturn(navigation, 'CupRemovePlayer', {
               cupId,
               userId: player.userId,
@@ -505,8 +535,8 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
               cupName,
               captain: player.isCaptain,
               returnTo: 'CreateCup',
-            })
-          }
+            });
+          }}
         />
       ) : null}
 
@@ -540,6 +570,8 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
 
 const styles = StyleSheet.create({
   gapTop: { marginTop: 8 },
+  pair: { flexDirection: 'row', gap: 12 },
+  half: { flex: 1, minWidth: 0 },
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 4, marginTop: 10 },
   link: { minHeight: TAP, justifyContent: 'center' },
   linkText: { fontSize: 13, fontFamily: FONTS.sansMedium, textDecorationLine: 'underline' },

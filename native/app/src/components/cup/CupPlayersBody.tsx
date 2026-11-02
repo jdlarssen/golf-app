@@ -44,7 +44,9 @@ export function CupPlayersBody({
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState(false);
+  // Etter et eget trykk her gjelder det trykket, ikke kvitteringen du kom tilbake med.
+  // `undefined`: ikke noe trykk ennå. `null`: trykket ga ingen kvittering.
+  const [ownReceipt, setOwnReceipt] = useState<string | null | undefined>(undefined);
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
 
@@ -80,16 +82,7 @@ export function CupPlayersBody({
         <Text style={[styles.failure, { color: final ? colors.text : colors.danger }]}>
           {setupLoadFailureText(failure ?? 'load_failed')}
         </Text>
-        {final ? null : (
-          <Pressable
-            onPress={() => void load()}
-            accessibilityRole="button"
-            style={[styles.retry, { borderColor: colors.primary }]}
-            testID="cup-players-retry"
-          >
-            <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-          </Pressable>
-        )}
+        {final ? null : <RetryButton onPress={() => void load()} />}
       </View>
     );
   }
@@ -102,15 +95,15 @@ export function CupPlayersBody({
     showAll,
     nameOf: (candidate) => candidate.name,
   });
-  const receipt = added ? PLAYERS_TEXT.added : notice;
+  const receipt = ownReceipt === undefined ? notice : ownReceipt;
 
   const add = async (userId: string) => {
     setBusy(userId);
     setError(null);
-    setAdded(false);
+    setOwnReceipt(null);
     const result = await addCupParticipant(cupId, userId);
     if (result.ok) {
-      setAdded(true);
+      setOwnReceipt(PLAYERS_TEXT.added);
       // Den du søkte etter, er lagt til. Står søket igjen, står det at ingen heter det.
       setSearch('');
     } else {
@@ -122,7 +115,12 @@ export function CupPlayersBody({
 
   return (
     <View testID="cup-players">
-      {stale ? <Note text={SETUP_APP_TEXT.needsNet} testID="cup-players-stale" /> : null}
+      {failure !== null ? (
+        <>
+          <Note text={setupLoadFailureText(failure)} testID="cup-players-stale" />
+          <RetryButton onPress={() => void load()} />
+        </>
+      ) : null}
       {view.status !== 'draft' ? <Note text={SETUP_APP_TEXT.listLocked} testID="cup-players-locked" /> : null}
       {receipt ? <Note text={receipt} testID="cup-players-notice" /> : null}
       {error ? (
@@ -152,10 +150,11 @@ export function CupPlayersBody({
               disabled={busy !== null}
               onPress={() => {
                 // Kvitteringen gjelder det du gjorde sist, og det er snart fjerningen.
-                setAdded(false);
+                setOwnReceipt(undefined);
                 setError(null);
                 onRemove(player, view.name);
               }}
+              hitSlop={REMOVE_LINK_SLOP}
               style={styles.link}
               testID={`cup-player-remove-${player.userId}`}
             >
@@ -243,6 +242,20 @@ export function CupPlayersBody({
   );
 }
 
+function RetryButton({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={[styles.retry, { borderColor: colors.primary }]}
+      testID="cup-players-retry"
+    >
+      <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
+    </Pressable>
+  );
+}
+
 function Note({ text, testID }: { text: string; testID: string }) {
   const { colors } = useTheme();
   return (
@@ -257,6 +270,9 @@ function Note({ text, testID }: { text: string; testID: string }) {
     </View>
   );
 }
+
+// «Fjern» er smalere enn 44 pt, og teksten skal stå der den står.
+const REMOVE_LINK_SLOP = { left: 8, right: 8 };
 
 const styles = StyleSheet.create({
   center: { paddingVertical: 24, alignItems: 'center', gap: 10 },
@@ -284,6 +300,6 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, marginTop: 8 },
   cardTitle: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   failure: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
-  retry: { minHeight: TAP, justifyContent: 'center', paddingHorizontal: 20, borderWidth: 1, borderRadius: 22 },
+  retry: { minHeight: TAP, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, borderWidth: 1, borderRadius: 22 },
   retryText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
 });

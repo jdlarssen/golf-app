@@ -30,7 +30,9 @@ export function CupParticipants({ route, navigation }: ScreenProps<'CupParticipa
       <CupPlayersBody
         cupId={cupId}
         notice={notice === 'participant_removed' ? PLAYERS_TEXT.removed : null}
-        onRemove={(player, cupName) =>
+        onRemove={(player, cupName) => {
+          // Angrer du, kommer du tilbake uten kvittering. Sveiper du tilbake, sendes ingen ny.
+          navigation.setParams({ notice: undefined });
           openOrReturn(navigation, 'CupRemovePlayer', {
             cupId,
             userId: player.userId,
@@ -38,8 +40,8 @@ export function CupParticipants({ route, navigation }: ScreenProps<'CupParticipa
             cupName,
             captain: player.isCaptain,
             returnTo: 'CupParticipants',
-          })
-        }
+          });
+        }}
       />
     </ScrollView>
   );
