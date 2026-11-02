@@ -82,7 +82,7 @@ export async function fetchRoundInvite(shortId: string): Promise<RoundInviteLoad
   const view = call.body as Partial<AppRoundInviteView>;
   const complete =
     OFFERS.includes(view.offer) &&
-    view.round !== undefined &&
+    typeof view.round?.name === 'string' &&
     typeof view.playerCount === 'number' &&
     typeof view.signupPath === 'string' &&
     (view.offer !== 'in_game' || typeof view.gameId === 'string');

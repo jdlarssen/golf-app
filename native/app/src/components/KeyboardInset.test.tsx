@@ -191,6 +191,7 @@ describe('rullefeltet på skjermer med tekstfelt', () => {
       'screens/EditProfile.tsx',
       'screens/Friends.tsx',
       'screens/Login.tsx',
+      'screens/RoundInvite.tsx',
     ]);
   });
 

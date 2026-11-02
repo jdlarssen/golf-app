@@ -319,6 +319,39 @@ describe('henting', () => {
     expect(screen.getByTestId('round-invite-name')).toHaveTextContent('Lørdagsrunden');
   });
 
+  it('en henting som går når du sender, tar ikke skjemaet tilbake etter «sendt»', async () => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    mockAnswer = () => ({ ok: true, status: 'requested' });
+    await renderInvite();
+    let finish: (result: RoundInviteLoadResult) => void = () => {};
+    fetchRoundInvite.mockImplementationOnce(
+      () =>
+        new Promise<RoundInviteLoadResult>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await act(async () => {
+      mockFocus();
+    });
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
+    await act(async () => {
+      finish({ ok: true, view: view({ offer: 'request' }) });
+    });
+    expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it('en ny henting beholder hilsenen du har skrevet', async () => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    await renderInvite();
+    await fireEvent.changeText(screen.getByTestId('round-invite-message'), 'Plass?');
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('round-invite-message').props.value).toBe('Plass?');
+  });
+
   it('kommer du tilbake til skjermen, spør den på nytt og slipper stoppen', async () => {
     answer({ ok: true, view: view({ offer: 'request' }) });
     mockAnswer = () => ({ ok: false, reason: 'profile_incomplete' });

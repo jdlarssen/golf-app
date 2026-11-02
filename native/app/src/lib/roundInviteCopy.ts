@@ -87,13 +87,16 @@ export function describeRoundInviteLoadFailure(reason: RoundInviteLoadFailure): 
 }
 
 /**
- * Svar uten skriving. Koden går uttømmende: en ny kode faller på `tsc`. Skjermen
- * bytter tilstand på `game_locked`, `signup_closed`, `use_web` og `not_found`, og de
- * har derfor tekstene sine der.
+ * Svar uten skriving. Skjermen bytter tilstand på `game_locked`, `signup_closed`,
+ * `use_web` og `not_found`, og de har derfor tekstene sine der.
  */
-export function describeRoundInviteFailure(
-  reason: Exclude<RoundInviteAnswerFailure, 'game_locked' | 'signup_closed' | 'use_web' | 'not_found'>,
-): string {
+export type RoundInviteFailureWithText = Exclude<
+  RoundInviteAnswerFailure,
+  'game_locked' | 'signup_closed' | 'use_web' | 'not_found'
+>;
+
+/** Koden går uttømmende: en ny kode faller på `tsc`. */
+export function describeRoundInviteFailure(reason: RoundInviteFailureWithText): string {
   switch (reason) {
     case 'wrong_mode':
       return ROUND_INVITE_TEXT.wrongMode;
