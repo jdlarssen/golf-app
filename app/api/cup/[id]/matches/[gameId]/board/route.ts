@@ -26,8 +26,12 @@ import { isUuid } from '@/lib/url/isUuid';
 //     som pågår, er 404, også for arrangøren: den veien går spillets egen tavle.
 //   - bare i en cup kalleren får se (`canViewCupPageAs`, strengere enn nettets tavle
 //     for en klubb-cup, siden rommet er eneste vei hit).
-//   - feltene tavla ikke viser, sendes ikke: marker, avslag, hvem som leverte og
-//     godkjente, delingslenka og rundereferatet.
+//   - felter tavla ikke leser, sendes ikke: tidsstempler for levering, hvem som
+//     leverte og godkjente, marker, avslag, delingslenka, referatet, hvem som laget
+//     spillet, tee-tid, og id-ene til bane og tee. `user_id` følger med, for det er
+//     den som kobler slag til spiller. `withdrawn_at` følger med, for tavla lister
+//     hvem som trakk seg, som på nettet.
+//   - en avledet kamp får bare sine egne spilleres slag, ikke hele vertens.
 //
 // WIRE (`lib/games/gameBundleRows.ts`):
 //   GET 200 CupMatchBoardResponse · 401 unauthorized · 404 not_found · 500 load_failed
@@ -89,18 +93,32 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (scoresRes.error) throw scoresRes.error;
     if (sourceRes.error) throw sourceRes.error;
 
+    const players = playersRes.data ?? [];
+    const own = new Set(players.map((player) => player.user_id));
+    const scores = scoresRes.data ?? [];
     const body: CupMatchBoardResponse = {
-      game: { ...game, spectate_token: null, round_report: null },
-      players: (playersRes.data ?? []).map((player) => ({
+      game: {
+        ...game,
+        course_id: null,
+        tee_box_id: null,
+        scheduled_tee_off_at: null,
+        created_by: null,
+        spectate_token: null,
+        round_report: null,
+      },
+      players: players.map((player) => ({
         ...player,
+        accepted_at: null,
+        submitted_at: null,
+        submitted_by_user_id: null,
+        approved_at: null,
+        approved_by_user_id: null,
         marker_user_id: null,
         rejection_reason: null,
-        submitted_by_user_id: null,
-        approved_by_user_id: null,
         withdrawn_by_user_id: null,
       })),
       sourceGameName: sourceRes.data?.name ?? null,
-      scores: scoresRes.data ?? [],
+      scores: game.source_game_id ? scores.filter((row) => own.has(row.user_id)) : scores,
     };
     return NextResponse.json(body);
   } catch (err) {

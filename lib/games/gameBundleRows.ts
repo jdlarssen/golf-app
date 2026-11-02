@@ -102,6 +102,6 @@ export type CupMatchBoardResponse = {
   players: PlayerRow[];
   /** Verten til en avledet kamp, for overskriften. */
   sourceGameName: string | null;
-  /** Slagene, fra verten når kampen er avledet. */
+  /** Spillernes slag, lest fra verten når kampen er avledet. */
   scores: { user_id: string; hole_number: number; strokes: number | null }[];
 };

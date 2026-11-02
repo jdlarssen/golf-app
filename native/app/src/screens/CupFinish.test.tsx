@@ -110,7 +110,7 @@ describe('hele cupen', () => {
     await renderFinish();
 
     expect(screen.getByTestId('cup-finish-not-submitted')).toHaveTextContent(
-      'Noen kamper mangler leverte scorekort: Singel 4. Du kan avslutte cupen likevel — de som ikke har levert, teller ikke i resultatet.',
+      'Noen kamper mangler leverte scorekort: Singel 4. Du kan avslutte cupen likevel. Slagene deres teller fortsatt.',
     );
     expect(screen.getByTestId('cup-finish-submit')).toHaveTextContent('Avslutt likevel');
 
@@ -147,15 +147,29 @@ describe('hele cupen', () => {
     expect(navigation.popTo).not.toHaveBeenCalled();
   });
 
-  it('en kamp som ikke lot seg avslutte: navngis, og cupen står', async () => {
-    answer({ ok: true, view: room({ activeMatches: [levert] }) });
+  it('en kamp som ikke lot seg avslutte: bare den navngis, og cupen står', async () => {
+    const annen = { ...levert, gameId: 'annen', label: 'Singel 2' };
+    answer(
+      { ok: true, view: room({ activeMatches: [levert, annen] }) },
+      { ok: true, view: room({ activeMatches: [annen] }) },
+    );
     (finishCup as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'match_finish_failed' });
     const navigation = await renderFinish();
 
     await fireEvent.press(screen.getByTestId('cup-finish-submit'));
 
-    expect(screen.getByTestId('cup-finish-error')).toHaveTextContent(/^Disse kampene lot seg ikke avslutte: Singel 1\./);
+    expect(screen.getByTestId('cup-finish-error')).toHaveTextContent(/^Disse kampene lot seg ikke avslutte: Singel 2\./);
     expect(navigation.popTo).not.toHaveBeenCalled();
+  });
+
+  it('får den heller ikke hentet lista på nytt, navngis det skjermen hadde', async () => {
+    answer({ ok: true, view: room({ activeMatches: [levert] }) }, { ok: false, reason: 'offline' });
+    (finishCup as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'match_finish_failed' });
+    await renderFinish();
+
+    await fireEvent.press(screen.getByTestId('cup-finish-submit'));
+
+    expect(screen.getByTestId('cup-finish-error')).toHaveTextContent(/^Disse kampene lot seg ikke avslutte: Singel 1\./);
   });
 
   it('en cup som allerede er avsluttet, har ingen knapp', async () => {
@@ -197,7 +211,9 @@ describe('én kamp', () => {
     await renderFinish();
 
     await fireEvent.press(screen.getByTestId('cup-finish-open-match-mangler'));
-    expect(screen.getByTestId('cup-finish-match-missing')).toHaveTextContent(/^Noen har ikke levert scorekort i Singel 4\./);
+    expect(screen.getByTestId('cup-finish-match-missing')).toHaveTextContent(
+      'Noen har ikke levert scorekort i Singel 4. Du kan avslutte kampen likevel. Slagene deres teller fortsatt.',
+    );
     expect(screen.getByTestId('cup-finish-match-submit')).toHaveTextContent('Avslutt likevel');
 
     await fireEvent.press(screen.getByTestId('cup-finish-match-submit'));
