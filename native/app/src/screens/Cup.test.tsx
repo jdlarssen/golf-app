@@ -343,6 +343,12 @@ describe('Cup — lasting og feil', () => {
     expect(await screen.findByTestId('cup-name')).toBeTruthy();
   });
 
+  it('en feil hos serveren ber deg ikke sjekke nettet', async () => {
+    answer({ ok: false, reason: 'load_failed' });
+    await renderCup();
+    expect(await screen.findByTestId('cup-load-failed')).toHaveTextContent(/^Fikk ikke tak i cupen\. Prøv igjen\.Prøv igjen$/);
+  });
+
   it('en cup du ikke har tilgang til: feilteksten uten knapp, og det skjermen hadde forsvinner', async () => {
     answer({ ok: true, view: liveCup() }, { ok: false, reason: 'not_found' });
     await renderCup();

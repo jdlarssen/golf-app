@@ -73,6 +73,7 @@ export const CUP_APP_TEXT = {
   stale: 'Viser lagret cup. Fikk ikke kontakt med serveren.',
   loading: 'Henter cupen …',
   loadFailed: 'Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.',
+  serverFailed: 'Fikk ikke tak i cupen. Prøv igjen.',
   notFound: 'Fant ikke cupen. Den finnes ikke, eller du har ikke tilgang.',
   retry: 'Prøv igjen',
   retrying: 'Prøver …',
@@ -175,7 +176,8 @@ export function describeCupLoadFailure(reason: CupLoadFailure): string {
       return 'Logg inn på nytt og prøv igjen.';
     case 'offline':
     case 'network':
-    case 'load_failed':
       return CUP_APP_TEXT.loadFailed;
+    case 'load_failed':
+      return CUP_APP_TEXT.serverFailed;
   }
 }

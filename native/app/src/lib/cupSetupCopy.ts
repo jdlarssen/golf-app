@@ -209,7 +209,7 @@ export const SETUP_APP_TEXT = {
   share: 'Del lenka',
   needsNet: 'Du trenger nett for å gjøre dette. Sjekk nettet og prøv igjen.',
   loading: 'Henter cupen …',
-  loadFailed: 'Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.',
+  loadFailed: 'Fikk ikke tak i cupen. Prøv igjen.',
   notFound: 'Fant ikke cupen. Den finnes ikke, eller du har ikke tilgang.',
   notManager: 'Det er arrangøren som setter opp cupen.',
   locked: 'Cupen er i gang, så oppsettet er låst.',
@@ -218,7 +218,7 @@ export const SETUP_APP_TEXT = {
   hcp: 'HCP {hcp}',
   joinLoginTitle: 'Logg inn for å bli med i cupen',
   joinLoginBody: 'Etterpå ser du cupen og kan melde deg på.',
-  joinFailed: 'Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.',
+  joinFailed: 'Fikk ikke tak i cupen. Prøv igjen.',
 } as const;
 
 export const AWARD_KINDS = ['ctp', 'ld', 'gir'] as const;

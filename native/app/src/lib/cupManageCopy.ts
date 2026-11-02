@@ -99,7 +99,7 @@ export const MANAGE_APP_TEXT = {
   stale: 'Viser lagret cup. Fikk ikke kontakt med serveren. Du trenger nett for å trekke eller bytte spillere.',
   needsNet: 'Du trenger nett for å gjøre dette. Sjekk nettet og prøv igjen.',
   loading: 'Henter cupen …',
-  loadFailed: 'Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.',
+  loadFailed: 'Fikk ikke tak i cupen. Prøv igjen.',
   notFound: 'Fant ikke cupen. Den finnes ikke, eller du har ikke tilgang.',
   notManager: 'Det er arrangøren som styrer cupen.',
   retry: 'Prøv igjen',
