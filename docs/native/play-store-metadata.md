@@ -11,7 +11,8 @@ varsler.** Serveren sender bare til iPhone: `canUsePush` i
 `native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
 står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
 (eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
-pengeoppgjør, aldri cup. Ligaen står i beskrivelsen fra bygg 9: appen viser ligaen
+pengeoppgjør. Cup følger regelen i `app-store-metadata.md`. Ligaen står i beskrivelsen
+fra bygg 9: appen viser ligaen
 du er med i og starter runden (avsnittet «LIGA»), og arrangøren setter den opp på
 nettsiden. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
 opp på nettsiden, blant dem scramble og de fleste lagformatene (regelen står i
