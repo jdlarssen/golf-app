@@ -77,7 +77,6 @@ import {
 import { startRoundNow } from '../../data/startGame';
 import { withdrawSelf } from '../../data/withdrawSelf';
 import { displayName } from '../../lib/display';
-import { CUP_LINK_LABEL, CUP_NOTE, cupWebPath } from '../../lib/endGameCopy';
 import {
   describeInviteFailure,
   describeInviteSuccess,
@@ -647,7 +646,7 @@ export function OrganiserSection({
         </Pressable>
       ) : null}
 
-      {active && !isCupGame ? (
+      {active ? (
         <Pressable
           style={ui.button}
           disabled={busy}
@@ -656,21 +655,6 @@ export function OrganiserSection({
         >
           <Text style={ui.buttonText}>Avslutt runden</Text>
         </Pressable>
-      ) : null}
-
-      {/* `game.tournamentId !== null` og ikke `isCupGame`: samme svar, men
-          narrowingen gjør id-en til en `string` for `cupWebPath`. */}
-      {active && game.tournamentId !== null ? (
-        <>
-          <Text style={ui.muted} testID="organiser-cup-note">
-            {CUP_NOTE}
-          </Text>
-          <WebLinkButton
-            label={CUP_LINK_LABEL}
-            path={cupWebPath(game.tournamentId)}
-            testID="organiser-cup-link"
-          />
-        </>
       ) : null}
 
       {notice ? (

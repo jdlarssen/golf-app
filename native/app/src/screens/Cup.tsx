@@ -11,10 +11,10 @@
 // det skjermen alt har hentet, med en merknad; uten noe hentet står feilen med
 // «Prøv igjen». Selve kampene virker uten nett som andre spill.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { AppCupView } from '../../../../lib/cup/appCupView';
+import type { AppCupMatch, AppCupView } from '../../../../lib/cup/appCupView';
 import { CupMatchRow } from '../components/cup/CupMatchRow';
 import { CupResultLine, CupResults } from '../components/cup/CupResults';
 import { ChevronIcon } from '../components/icons/Icons';
@@ -29,7 +29,7 @@ import {
   matchesSummary,
   pointsHeader,
 } from '../lib/cupCopy';
-import { MANAGE_APP_TEXT } from '../lib/cupManageCopy';
+import { FINISH_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -44,7 +44,7 @@ export function Cup(props: ScreenProps<'Cup'>) {
 function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
-  const { cupId } = route.params;
+  const { cupId, notice } = route.params;
   const { userId } = useSession();
   // #2201: det du åpner, er lest: varslene om start, avdekking og resultat.
   useMarkVisitRead('cup', cupId);
@@ -75,6 +75,12 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
     }, [load]),
   );
 
+  // Kvitteringen etter en avslutning, nullstilt når siden mister fokus.
+  useEffect(
+    () => navigation.addListener('blur', () => navigation.setParams({ notice: undefined })),
+    [navigation],
+  );
+
   const onPull = useCallback(() => {
     setPulling(true);
     void load();
@@ -97,7 +103,18 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   const rest = view.matches.filter((match) => !match.mine);
   const finished = view.results !== null;
   const header = finished ? null : pointsHeader(view.pointsToWin, view.status);
-  const openMatch = (gameId: string) => openOrReturn(navigation, 'GameHome', { gameId });
+  const openMatch = (match: AppCupMatch) => {
+    if (match.canOpen) {
+      openOrReturn(navigation, 'GameHome', { gameId: match.gameId });
+      return;
+    }
+    openOrReturn(navigation, 'CupMatchBoard', {
+      cupId,
+      gameId: match.gameId,
+      label: match.label ?? CUP_TEXT.matchFallback,
+      names: `${match.side1} ${CUP_TEXT.mot} ${match.side2}`,
+    });
+  };
 
   return (
     <ScrollView
@@ -128,6 +145,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
         )}
       </View>
 
+      {notice === 'cup_finished' ? <Note text={FINISH_TEXT.finishedNotice} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
       {view.canManage && !stale ? (
@@ -160,7 +178,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
         <View testID="cup-my-matches">
           <Heading text={CUP_APP_TEXT.mineHeading} />
           {mine.map((match) => (
-            <CupMatchRow key={match.gameId} match={match} onOpen={() => openMatch(match.gameId)} />
+            <CupMatchRow key={match.gameId} match={match} onOpen={() => openMatch(match)} />
           ))}
         </View>
       ) : null}
@@ -168,7 +186,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
         <View testID="cup-other-matches">
           <Heading text={mine.length > 0 ? CUP_APP_TEXT.restHeading : CUP_TEXT.matchesHeading} />
           {rest.map((match) => (
-            <CupMatchRow key={match.gameId} match={match} onOpen={() => openMatch(match.gameId)} />
+            <CupMatchRow key={match.gameId} match={match} onOpen={() => openMatch(match)} />
           ))}
         </View>
       ) : null}

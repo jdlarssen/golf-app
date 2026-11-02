@@ -110,7 +110,10 @@ export function buildFinishPlan(
   organiserUserId: string,
 ): FinishPlan {
   const { game } = bundle;
-  const withdrawalSupported = supportsWithdrawal(game.gameMode as GameMode);
+  // #2752: i en cup er et frafall noe annet (halvert kamp eller walkover), og det
+  // registreres i «Styr cupen». Avkryssingen her er bare «avslutt uten kortet».
+  const withdrawalSupported =
+    game.tournamentId === null && supportsWithdrawal(game.gameMode as GameMode);
   const roster = splitFinishRoster(
     bundle.players,
     (player) => player,
@@ -377,6 +380,7 @@ export function returnsToList(reason: EndRoundFailure): boolean {
     case 'no-session':
     case 'offline':
     case 'not-found':
+    case 'cup-not-manager':
     case 'cup-game':
     case 'not-active':
     case 'no-players':

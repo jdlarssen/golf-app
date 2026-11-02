@@ -2,10 +2,17 @@
 import type { AppCupWithdrawalMatch } from '../../../../lib/cup/appCupManageView';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import {
+  FINISH_TEXT,
   MANAGE_TEXT,
+  SIDE_AWARD_TEXT,
   SWAP_TEXT,
   WITHDRAW_TEXT,
+  cupFinishFailureText,
   manageLoadFailureText,
+  matchFinishFailureText,
+  missingAwardsLine,
+  sideAwardFailureText,
+  sideAwardTitle,
   manageNoticeText,
   swapFailureText,
   withdrawFailureText,
@@ -147,5 +154,95 @@ describe('linjene', () => {
   it('kvitteringene', () => {
     expect(manageNoticeText('player_swapped')).toBe(web.manage.statusMessages.player_swapped);
     expect(manageNoticeText('player_withdrawn_partial')).toBe(web.manage.statusMessages.player_withdrawn_partial);
+  });
+});
+
+describe('sidepoeng og avslutning (#2752)', () => {
+  it.each<[keyof typeof FINISH_TEXT, string]>([
+    ['button', web.manage.finishButton],
+    ['pending', web.manage.finishPending],
+    ['sideAwardsHint', web.manage.finishSideAwardsHint],
+    ['notSubmitted', web.manage.finishNotSubmitted],
+    ['anywayButton', web.manage.finishAnywayButton],
+    ['anywayPending', web.manage.finishAnywayPending],
+    ['failed', web.manage.finishFailed],
+    ['failedPlain', web.manage.errors.finish_failed],
+    ['alreadyFinished', web.manage.errors.already_finished],
+    ['finishedNotice', web.manage.statusMessages.finished],
+  ])('avslutningen: %s er nettets', (key, value) => {
+    expect(FINISH_TEXT[key]).toBe(value);
+  });
+
+  it.each<[keyof typeof SIDE_AWARD_TEXT, string]>([
+    ['heading', web.sideAwards.heading],
+    ['empty', web.sideAwards.emptyLocked],
+    ['finishedHint', web.sideAwards.finishedHint],
+    ['none', web.sideAwards.winnerNoneOption],
+    ['register', web.sideAwards.registerButton],
+    ['registerPending', web.sideAwards.registeringPending],
+    ['registered', web.sideAwards.registered],
+    ['registeredNone', web.sideAwards.registeredNone],
+    ['girCount', web.sideAwards.girTeamCountLabel],
+    ['girRegistered', web.sideAwards.girRegistered],
+  ])('sidepoengene: %s er nettets', (key, value) => {
+    expect(SIDE_AWARD_TEXT[key]).toBe(value);
+  });
+
+  it('sidepoeng-feilene er nettets', () => {
+    expect(sideAwardFailureText('not_found')).toBe(web.sideAwards.errors.notFound);
+    expect(sideAwardFailureText('not_a_participant')).toBe(web.sideAwards.errors.notParticipant);
+    expect(sideAwardFailureText('save_failed')).toBe(web.sideAwards.errors.saveFailed);
+    expect(sideAwardFailureText('invalid_counts', 4)).toBe('Tallet må være mellom 0 og 4.');
+    expect(sideAwardFailureText('noe_nytt')).toBe(web.sideAwards.errors.saveFailed);
+  });
+
+  it('en kamp som ikke ble avsluttet, sier hvorfor', () => {
+    expect(matchFinishFailureText('not_all_approved')).toContain('godkjenning');
+    expect(matchFinishFailureText('not_active')).toContain('ikke i gang');
+    expect(matchFinishFailureText('offline')).toContain('nett');
+    expect(matchFinishFailureText('noe_nytt')).toBe('Klarte ikke å avslutte kampen. Prøv igjen.');
+  });
+
+  it('en cup som ikke ble avsluttet, navngir kampene', () => {
+    expect(cupFinishFailureText('match_finish_failed', 'Singel 1, Singel 2')).toBe(
+      'Disse kampene lot seg ikke avslutte: Singel 1, Singel 2. Prøv igjen — kampene som allerede er avsluttet, står.',
+    );
+    expect(cupFinishFailureText('finish_failed', '')).toBe(web.manage.errors.finish_failed);
+  });
+
+  it('det som mangler, står som i nettets hint', () => {
+    expect(
+      missingAwardsLine([
+        { kind: 'ctp', holeNumber: 7 },
+        { kind: 'ld', holeNumber: 9 },
+        { kind: 'gir', holeNumber: 12 },
+      ]),
+    ).toBe('Nærmest pinnen (hull 7), Lengste drive (hull 9), GIR (hull 12)');
+  });
+
+  it('plassen står bare når et hull har flere vinnere', () => {
+    const ctp = {
+      id: 'a',
+      kind: 'ctp' as const,
+      holeNumber: 7,
+      points: 1,
+      slot: 2,
+      slotCount: 3,
+      winnerUserId: null,
+      noWinner: false,
+    };
+    expect(sideAwardTitle(ctp)).toBe('Nærmest pinnen · hull 7 (2 av 3)');
+    expect(sideAwardTitle({ ...ctp, slotCount: 1 })).toBe('Nærmest pinnen · hull 7');
+    expect(
+      sideAwardTitle({
+        id: 'g',
+        kind: 'gir',
+        holeNumber: 12,
+        points: 1,
+        maxPerTeam: 4,
+        team1Count: null,
+        team2Count: null,
+      }),
+    ).toBe('GIR · hull 12');
   });
 });

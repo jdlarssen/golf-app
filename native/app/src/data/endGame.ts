@@ -41,6 +41,7 @@
 // Tom liste er derfor et rent idempotens-signal — men den er ikke ENTYDIG (en
 // nektet UPDATE filtreres også bort til 0 rader), så den løses med ett
 // oppfølgings-SELECT, som resten av datalaget gjør.
+import { finishCupMatch } from './cupManage';
 import {
   supportsWithdrawal,
   type GameMode,
@@ -79,8 +80,10 @@ export type EndRoundFailure =
   | 'offline'
   /** Spillet finnes ikke, eller er ikke synlig for oss. */
   | 'not-found'
-  /** Cup-kamp: avslutningen eies av cup-flyten på nettsiden. */
+  /** Cup-kamp: avslutningen går via cup-ruta ({@link finishCupRound}), aldri her. */
   | 'cup-game'
+  /** Cup-kamp, og cup-ruta sier at du ikke styrer cupen. */
+  | 'cup-not-manager'
   /** Samme sjekk som `endGameCore` — kun en `active` runde kan avsluttes. */
   | 'not-active'
   /** `finishGate`: spillet har ingen spillere. */
@@ -525,10 +528,10 @@ export async function finishRound(
   const game = await loadFinishGate(gameId);
   if ('error' in game) return game.error;
 
-  // Cup-kampen avsluttes fra nettsiden. Cup-flyten eier `finishDerivedGames` og
-  // undertrykkingen av per-spill-varsler; en app-flipp ville gått utenom begge
-  // og etterlatt cup-tavla halvferdig. Porten står FØRST fordi svaret er det
-  // samme uansett status: «dette gjøres på nettsiden».
+  // Cup-kampen avsluttes via ruta ({@link finishCupRound}). Cup-flyten eier
+  // `finishDerivedGames` og undertrykkingen av per-spill-varsler; en app-flipp ville
+  // gått utenom begge og etterlatt cup-tavla halvferdig. Porten står FØRST fordi
+  // svaret er det samme uansett status.
   if (game.row.tournament_id !== null) return failed('cup-game');
   // #1954 D2: et tidligere trykk kan ha avsluttet runden selv om svaret nådde
   // tidstaket. Da er runden avsluttet, slik spilleren ba om: samme suksess som
@@ -562,4 +565,31 @@ export async function finishRound(
   const finished = await flipToFinished(gameId);
   if (finished.ok) await refreshWebCache(gameId);
   return finished;
+}
+
+const CUP_ROUND_FAILURES: Record<string, EndRoundFailure> = {
+  offline: 'offline',
+  network: 'offline',
+  unauthorized: 'no-session',
+  not_manager: 'cup-not-manager',
+  not_found: 'not-found',
+  not_active: 'not-active',
+  no_players: 'no-players',
+  not_all_submitted: 'not-all-submitted',
+  not_all_approved: 'not-all-approved',
+};
+
+/**
+ * Avslutter en cup-kamp via ruta (#2752), samme vei som «Avslutt kampen» i cupen.
+ * Svaret får `finishRound` sin form, så avslutt-skjermen er den samme. Serveren
+ * eier resten: frafall skrives ikke herfra, og peer-godkjenningen slakkes aldri.
+ */
+export async function finishCupRound(
+  cupId: string,
+  gameId: string,
+  allowMissing: boolean,
+): Promise<EndRoundResult> {
+  const result = await finishCupMatch(cupId, gameId, allowMissing);
+  if (result.ok) return { ok: true, alreadyFinished: result.alreadyFinished === true };
+  return { ok: false, reason: CUP_ROUND_FAILURES[result.reason] ?? 'db' };
 }

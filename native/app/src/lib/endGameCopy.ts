@@ -49,7 +49,9 @@ export function describeEndRoundFailure(
     case 'not-found':
       return 'Fant ikke runden. Den er kanskje slettet.';
     case 'cup-game':
-      return CUP_NOTE;
+      return 'Denne runden hører til en cup. Den avslutter du fra cupen.';
+    case 'cup-not-manager':
+      return 'Det er arrangøren av cupen som avslutter kampene.';
     case 'not-active':
       return 'Runden er ikke i gang lenger. Noen andre rakk kanskje å avslutte den.';
     case 'no-players':
@@ -106,34 +108,6 @@ export function describeEndRoundFailure(
 // -----------------------------------------------------------------------------
 // Faste tekster
 // -----------------------------------------------------------------------------
-
-/**
- * Cup-runder. Står to steder: som note på spill-hjem i stedet for CTA-en, og
- * som avslag hvis noen likevel når fram til skrivingen.
- */
-export const CUP_NOTE =
-  'Denne runden hører til en cup. Den avslutter du på nettsiden, så cup-tavla følger med.';
-
-/**
- * Knappen som står under {@link CUP_NOTE} (#1891).
- *
- * Noten sto i to år uten vei videre — «på nettsiden» uten å si hvor. Etiketten
- * og stien bor sammen med noten fordi begge kallstedene (avslutt-skjermen og
- * arrangør-seksjonen) skal sende arrangøren til den SAMME siden; to inline
- * strenger ville drevet fra hverandre ved første ruteendring.
- */
-export const CUP_LINK_LABEL = 'Åpne cupen';
-
-/**
- * Cup-forsiden på webben.
- *
- * `encodeURIComponent` selv om id-en er en uuid fra vår egen bundle: en sti
- * bygget av data kodes der den bygges, ikke der noen senere antar at den var
- * trygg (samme regel som `remindPath` i `data/remind.ts`).
- */
-export function cupWebPath(tournamentId: string): string {
-  return `/cup/${encodeURIComponent(tournamentId)}`;
-}
 
 /** Slot-etikettene. `{pos}` er hvilket HULL, aldri en plassering. */
 const SLOT_LABELS: Record<FinishSlot['category'], string> = {

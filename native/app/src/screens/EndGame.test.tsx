@@ -31,7 +31,7 @@
 import { Alert } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
-import { finishRound } from '../data/endGame';
+import { finishCupRound, finishRound } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { refreshGameBundle } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
@@ -119,6 +119,7 @@ function setBundle(
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/endGame', () => ({
   finishRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
+  finishCupRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
 }));
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockBundle),
@@ -466,16 +467,46 @@ describe('EndGame', () => {
     await waitFor(() => expect(screen.queryByTestId('game-error')).toBeNull());
   });
 
-  it('avslutter ikke cup-runder — de hører til nettsiden', async () => {
-    setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], {
-      tournamentId: 'cup-1',
-    });
-    await renderScreen();
+  describe('en cup-kamp (#2752)', () => {
+    const cupGame = { tournamentId: 'cup-1', gameMode: 'singles_matchplay' };
 
-    expect(screen.getByTestId('end-game-cup-note')).toBeTruthy();
-    expect(screen.queryByTestId('end-game-submit')).toBeNull();
-    // #1891: noten sa «på nettsiden» uten å si hvor. Nå gjør den det.
-    expect(screen.getByTestId('end-game-cup-link')).toBeTruthy();
+    it('går via cup-ruta, aldri rett mot databasen', async () => {
+      setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], cupGame);
+      await renderScreen();
+
+      await submitAndConfirm();
+
+      await waitFor(() => expect(finishCupRound).toHaveBeenCalledWith('cup-1', GAME_ID, false));
+      expect(finishRound).not.toHaveBeenCalled();
+      expect(landedOnBoard()).toBe(true);
+    });
+
+    it('en spiller uten kort avsluttes uten kortet, og trekkes ikke', async () => {
+      setBundle(
+        [
+          player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+          player({ userId: MATE, name: 'Kari' }),
+        ],
+        { ...cupGame, gameMode: 'best_ball' },
+      );
+      await renderScreen();
+
+      await fireEvent.press(screen.getByTestId(`end-game-check-${MATE}`));
+      await submitAndConfirm();
+
+      await waitFor(() => expect(finishCupRound).toHaveBeenCalledWith('cup-1', GAME_ID, true));
+    });
+
+    it('et avslag fra ruta sier det samme som en vanlig runde', async () => {
+      setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], cupGame);
+      (finishCupRound as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'not-all-approved' });
+      await renderScreen();
+
+      await submitAndConfirm();
+
+      await waitFor(() => expect(finishCupRound).toHaveBeenCalled());
+      expect(landedOnBoard()).toBe(false);
+    });
   });
 
   it('purrer på dem som er ferdige, og sier hvem knappen ikke treffer', async () => {
@@ -789,7 +820,6 @@ describe('EndGame', () => {
   // #1954 D3 (kontrollrunden på #2624): cup- og ikke-aktiv-grenene er egne
   // rullevisninger og skal ende over systemlinja som resten av skjermen.
   it.each([
-    ['cup-runde', { tournamentId: 'cup-1' }],
     ['ikke aktiv', { status: 'finished' }],
   ] as const)('%s: luften under står over systemlinja', async (_case, overrides) => {
     setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], overrides);

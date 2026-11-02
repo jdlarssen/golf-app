@@ -43,6 +43,16 @@ describe('backStep', () => {
     expect(backStep([HOME, game('g1')], 'Home', undefined)).toBe('popTo');
   });
 
+  it('sidepoeng og avslutning ligger under styringen, tavla under rommet (#2752)', () => {
+    const cup = { name: 'Cup', params: { cupId: 'c1' } };
+    const manage = { name: 'CupManage', params: { cupId: 'c1' } };
+    const finish = { name: 'CupFinish', params: { cupId: 'c1' } };
+    expect(backStep([HOME, cup, manage, finish], 'Cup', { cupId: 'c1' })).toBe('popTo');
+    expect(keepBelow([HOME, cup, manage, finish], 'Cup', { cupId: 'c1' })).toBe(1);
+    expect(backStep([HOME, cup, manage, { name: 'CupSideAwards', params: { cupId: 'c1' } }], 'CupManage', { cupId: 'c1' })).toBe('popTo');
+    expect(backStep([HOME, cup, { name: 'CupMatchBoard', params: { cupId: 'c1', gameId: 'g', label: 'x', names: 'y' } }], 'Cup', { cupId: 'c1' })).toBe('popTo');
+  });
+
   it('styringen ligger under cup-rommet, og trekket under det du kom fra (#2752)', () => {
     const cup = { name: 'Cup', params: { cupId: 'c1' } };
     const manage = { name: 'CupManage', params: { cupId: 'c1' } };

@@ -439,11 +439,9 @@ describe('OrganiserSection', () => {
     //    en bekreftelses-side, ikke en knapp midt i rosteret.
     await fireEvent.press(screen.getByTestId('organiser-finish'));
     expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('organiser-cup-note')).toBeNull();
 
-    // 8. Cup-runde: ingen CTA i det hele tatt, bare setningen som sier hvor
-    //    avslutningen gjøres. Cup-flyten eier de avledede kampene og demper
-    //    per-spill-varslene; en app-flipp ville gått utenom begge.
+    // 8. Cup-runde (#2752): samme knapp. Avslutt-skjermen går via cup-ruta, som tar
+    //    med de avledede kampene og demper per-spill-varslene.
     await rerender(
       <OrganiserSection
         bundle={bundle('active', { tournamentId: 'cup-1' })}
@@ -452,9 +450,9 @@ describe('OrganiserSection', () => {
         onFinish={onFinish}
       />,
     );
-    expect(screen.queryByTestId('organiser-finish')).toBeNull();
-    expect(screen.getByTestId('organiser-cup-note')).toBeTruthy();
-    expect(screen.getByTestId('organiser-cup-link')).toBeTruthy();
+    expect(screen.getByTestId('organiser-finish')).toBeTruthy();
+    expect(screen.queryByTestId('organiser-cup-note')).toBeNull();
+    expect(screen.queryByTestId('organiser-cup-link')).toBeNull();
 
     // 9. #1937: planlagt cupkamp har ingen Fjern-knapp. RLS (0178) nekter
     //    slettingen, og knappen skal ikke love noe basen sier nei til.

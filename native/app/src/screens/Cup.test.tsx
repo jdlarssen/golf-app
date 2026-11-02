@@ -39,19 +39,21 @@ function answer(...results: CupResult[]) {
   mockLast = results[results.length - 1];
 }
 
-function cupProps(navigate: jest.Mock, cupId = 'cup-1') {
+function cupProps(navigate: jest.Mock, cupId = 'cup-1', extra: Record<string, unknown> = {}) {
   return {
     navigation: {
       navigate,
+      setParams: jest.fn(),
+      addListener: jest.fn(() => () => {}),
       getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'Cup', params: { cupId } }] }),
     },
-    route: { key: 'cup', name: 'Cup', params: { cupId } },
+    route: { key: 'cup', name: 'Cup', params: { cupId, ...extra } },
   } as unknown as ScreenProps<'Cup'>;
 }
 
-async function renderCup() {
+async function renderCup(params: Record<string, unknown> = {}) {
   const navigate = jest.fn();
-  const view = await render(<Cup {...cupProps(navigate)} />);
+  const view = await render(<Cup {...cupProps(navigate, 'cup-1', params)} />);
   return { navigate, view };
 }
 
@@ -350,5 +352,46 @@ describe('Cup — lasting og feil', () => {
     );
     expect(screen.queryByTestId('cup-retry')).toBeNull();
     expect(screen.queryByTestId('cup-name')).toBeNull();
+  });
+});
+
+describe('tavla til andres ferdige kamper (eierens svar 02.11)', () => {
+  it('en ferdig kamp du ikke kan åpne, fører til tavla', async () => {
+    answer({
+      ok: true,
+      view: liveCup({ matches: [cupMatch({ gameId: 'andres', status: 'played', boardOpen: true })] }),
+    });
+    const { navigate } = await renderCup();
+
+    await fireEvent.press(screen.getByTestId('cup-match-andres'));
+
+    expect(navigate).toHaveBeenCalledWith('CupMatchBoard', {
+      cupId: 'cup-1',
+      gameId: 'andres',
+      label: 'Singel 1',
+      names: 'Anne mot Jonas',
+    });
+  });
+
+  it('en kamp som pågår, har ingen vei inn', async () => {
+    answer({ ok: true, view: liveCup({ matches: [cupMatch({ gameId: 'pagar', status: 'inProgress' })] }) });
+    await renderCup();
+    expect(screen.getByTestId('cup-match-pagar').props.accessibilityRole).toBeUndefined();
+  });
+});
+
+describe('kvitteringen etter en avslutning (#2752)', () => {
+  it('står når du kommer fra avslutningen', async () => {
+    answer({ ok: true, view: liveCup() });
+    await renderCup({ notice: 'cup_finished' });
+    expect(screen.getByTestId('cup-notice')).toHaveTextContent(
+      'Cupen er avsluttet. Resultatet er sendt til alle deltakere.',
+    );
+  });
+
+  it('står ikke ellers', async () => {
+    answer({ ok: true, view: liveCup() });
+    await renderCup();
+    expect(screen.queryByTestId('cup-notice')).toBeNull();
   });
 });

@@ -14,12 +14,15 @@ import type {
   AppCupManagePlayer,
   AppCupManageView,
 } from '../../../../lib/cup/appCupManageView';
+import { ChevronIcon } from '../components/icons/Icons';
 import { fetchCupManage, setCupPlayOn } from '../data/cupManage';
 import { openOrReturn } from '../lib/backTo';
 import { CUP_TEXT } from '../lib/cupCopy';
 import {
+  FINISH_TEXT,
   MANAGE_APP_TEXT,
   MANAGE_TEXT,
+  SIDE_AWARD_TEXT,
   WITHDRAW_TEXT,
   manageLoadFailureText,
   manageMatchStatus,
@@ -159,6 +162,21 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
         </Text>
       ) : null}
 
+      {!stale && view.sideAwards.length > 0 ? (
+        <Door
+          text={SIDE_AWARD_TEXT.heading}
+          onPress={() => openOrReturn(navigation, 'CupSideAwards', { cupId })}
+          testID="cup-manage-open-side-awards"
+        />
+      ) : null}
+      {!stale && view.status === 'active' ? (
+        <Door
+          text={FINISH_TEXT.button}
+          onPress={() => openOrReturn(navigation, 'CupFinish', { cupId })}
+          testID="cup-manage-open-finish"
+        />
+      ) : null}
+
       {pending.length > 0 ? (
         <View testID="cup-manage-pending">
           <Heading text={MANAGE_TEXT.playOnPendingHeading} />
@@ -209,6 +227,21 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
         ))
       )}
     </ScrollView>
+  );
+}
+
+function Door({ text, onPress, testID }: { text: string; onPress: () => void; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.door, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      testID={testID}
+    >
+      <Text style={[styles.doorText, { color: colors.text }]}>{text}</Text>
+      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
+    </Pressable>
   );
 }
 
@@ -381,6 +414,18 @@ const styles = StyleSheet.create({
   noteText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   error: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 4 },
   heading: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 16, marginBottom: 6 },
+  door: {
+    minHeight: TAP,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  doorText: { fontSize: 14, fontFamily: FONTS.sansMedium },
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 4, marginBottom: 8 },
   cardLabel: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   cardBody: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },

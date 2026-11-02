@@ -23,7 +23,9 @@ const match = (cupId: string, gameId: string) =>
 /** En kode: appens egen tilstand, eller `error` fra ruta. */
 export type CupManageFailure = string;
 
-export type CupActionResult = { ok: true; partial?: boolean } | { ok: false; reason: CupManageFailure };
+export type CupActionResult =
+  | { ok: true; partial?: boolean; alreadyFinished?: boolean }
+  | { ok: false; reason: CupManageFailure };
 
 function loadFailure(status: number, body: unknown): CupManageFailure {
   if (status === 401) return 'unauthorized';
@@ -50,7 +52,12 @@ async function post(path: string, body: Record<string, unknown>): Promise<CupAct
   const call = await callWebRoute(path, 'POST', body);
   if (!call.ok) return { ok: false, reason: call.reason };
   if (call.status !== 200) return { ok: false, reason: loadFailure(call.status, call.body) };
-  return { ok: true, partial: (call.body as { partial?: unknown } | null)?.partial === true };
+  const answer = call.body as { partial?: unknown; alreadyFinished?: unknown } | null;
+  return {
+    ok: true,
+    partial: answer?.partial === true,
+    ...(answer?.alreadyFinished === true ? { alreadyFinished: true } : {}),
+  };
 }
 
 /**
@@ -64,7 +71,13 @@ export async function fetchCupIsRunning(cupId: string): Promise<boolean> {
 
 export function fetchCupManage(cupId: string) {
   return read<AppCupManageView>(`${base(cupId)}/manage`, (view) =>
-    Boolean(view.id && Array.isArray(view.players) && Array.isArray(view.matches)),
+    Boolean(
+      view.id &&
+        Array.isArray(view.players) &&
+        Array.isArray(view.matches) &&
+        Array.isArray(view.sideAwards) &&
+        view.finish,
+    ),
   );
 }
 
@@ -104,4 +117,22 @@ export function fetchCupSwapCandidates(cupId: string, gameId: string) {
 
 export function swapCupPlayer(cupId: string, gameId: string, outUserId: string, inUserId: string) {
   return post(`${match(cupId, gameId)}/swap`, { outUserId, inUserId });
+}
+
+/** `allowMissing` er «Avslutt likevel». Peer-godkjenningen slakkes aldri. */
+export function finishCup(cupId: string, allowMissing: boolean) {
+  return post(`${base(cupId)}/finish`, { allowMissing });
+}
+
+export function finishCupMatch(cupId: string, gameId: string, allowMissing: boolean) {
+  return post(`${match(cupId, gameId)}/finish`, { allowMissing });
+}
+
+/** `null` er «Ingen kvalifiserte». */
+export function registerSideAwardWinner(cupId: string, awardId: string, winnerUserId: string | null) {
+  return post(`${base(cupId)}/side-awards/${encodeURIComponent(awardId)}/winner`, { winnerUserId });
+}
+
+export function registerGirCounts(cupId: string, awardId: string, team1Count: number, team2Count: number) {
+  return post(`${base(cupId)}/side-awards/${encodeURIComponent(awardId)}/gir`, { team1Count, team2Count });
 }

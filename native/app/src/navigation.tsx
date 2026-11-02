@@ -41,7 +41,7 @@ import { END_GAME_TEXT } from './lib/endGameCopy';
 import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
-import { MANAGE_APP_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
+import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
@@ -66,6 +66,9 @@ import { InvitationLink } from './screens/InvitationLink';
 import { Leaderboard } from './screens/Leaderboard';
 import { Cup } from './screens/Cup';
 import { CupManage } from './screens/CupManage';
+import { CupFinish } from './screens/CupFinish';
+import { CupMatchBoard } from './screens/CupMatchBoard';
+import { CupSideAwards } from './screens/CupSideAwards';
 import { CupSwapPlayer } from './screens/CupSwapPlayer';
 import { CupWithdraw } from './screens/CupWithdraw';
 import { League } from './screens/League';
@@ -177,13 +180,20 @@ export type RootStackParamList = {
    */
   LeagueJoin: { code: string };
   /** #2752: cup-rommet, kampene under spill og resultatene når cupen er ferdig. */
-  Cup: { cupId: string };
+  /** `notice`: kvitteringen når cupen nettopp er avsluttet. */
+  Cup: { cupId: string; notice?: 'cup_finished' };
   /** #2752: arrangørens rom. `notice` er kvitteringen etter et trekk eller bytte. */
   CupManage: { cupId: string; notice?: CupManageNotice };
   /** #2752: trekk og angring. Uten `userId`: spilleren trekker seg selv. */
   CupWithdraw: { cupId: string; userId?: string };
   /** #2752: bytte av spiller i en kamp. */
   CupSwapPlayer: { cupId: string; gameId: string };
+  /** #2752: registrering av sidepoeng, også etter at cupen er avsluttet. */
+  CupSideAwards: { cupId: string };
+  /** #2752: avslutte kamper og hele cupen. */
+  CupFinish: { cupId: string };
+  /** #2752: tavla til en ferdig kamp du ikke spilte, lest gjennom serveren. */
+  CupMatchBoard: { cupId: string; gameId: string; label: string; names: string };
   /**
    * «Start runden» i en ligarunde (#2638 Del 2). Etter start erstattes den av
    * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
@@ -485,6 +495,21 @@ export function RootNavigator() {
           name="CupSwapPlayer"
           component={CupSwapPlayer}
           options={kickerHeader(SWAP_TEXT.heading, SWAP_TEXT.heading)}
+        />
+        <Stack.Screen
+          name="CupSideAwards"
+          component={CupSideAwards}
+          options={kickerHeader(SIDE_AWARD_TEXT.heading, SIDE_AWARD_TEXT.heading)}
+        />
+        <Stack.Screen
+          name="CupFinish"
+          component={CupFinish}
+          options={kickerHeader(FINISH_TEXT.button, FINISH_TEXT.button)}
+        />
+        <Stack.Screen
+          name="CupMatchBoard"
+          component={CupMatchBoard}
+          options={({ route }) => kickerHeader(route.params.label, route.params.label)}
         />
         {/* #2661: markørens kort. Skjermen setter liganavnet i toppen selv. */}
         <Stack.Screen

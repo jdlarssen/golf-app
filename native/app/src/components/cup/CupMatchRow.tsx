@@ -1,7 +1,8 @@
 // #2752: én kamp i cup-rommet. Lag eller navn, status, og en knapp inn når du får
-// åpne kampen. Ruta spør RLS (`canOpen`): en spiller ser bare egne kamper, også i
-// en ferdig cup (#1542), så de andre har ingen knapp som ville ført til «fant
-// ikke spillet». Arrangøren og admin leser alle.
+// åpne kampen. Ruta spør RLS (`canOpen`): en spiller ser bare egne kamper (#1542),
+// så de andre har ingen knapp som ville ført til «fant ikke spillet». Arrangøren og
+// admin leser alle. En ferdig kamp du ikke kan åpne, har knapp til tavla
+// (`boardOpen`, eierens svar 02.11), som lenka på nettets cup-side.
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppCupMatch } from '../../../../../lib/cup/appCupView';
@@ -44,7 +45,7 @@ export function CupMatchRow({ match, onOpen }: { match: AppCupMatch; onOpen: () 
   );
 
   const rowStyle = [styles.row, { backgroundColor: colors.surface, borderColor: colors.border }];
-  if (!match.canOpen) {
+  if (!match.canOpen && !match.boardOpen) {
     return (
       <View style={rowStyle} testID={`cup-match-${match.gameId}`}>
         {body}

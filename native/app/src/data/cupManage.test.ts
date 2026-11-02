@@ -18,7 +18,7 @@ describe('data/cupManage', () => {
   useWebRoute();
 
   it('leser rommet, og en 200 uten spillere er ikke noe å tegne', async () => {
-    const view = { id: 'c', players: [], matches: [] };
+    const view = { id: 'c', players: [], matches: [], sideAwards: [], finish: {} };
     respondWith(200, view);
     await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view });
     expect(sent().url).toBe(`${BASE_URL}/api/cup/c/manage`);
@@ -89,6 +89,45 @@ describe('data/cupManage', () => {
       url: `${BASE_URL}/api/cup/c/matches/g/swap`,
       body: { outUserId: 'ut', inUserId: 'inn' },
     });
+  });
+
+  it('avslutningene går til hver sin rute, og et nytt forsøk er suksess', async () => {
+    respondWith(200, { ok: true, alreadyFinished: true });
+    await expect(api().finishCup('c', true)).resolves.toMatchObject({ ok: true, alreadyFinished: true });
+    expect(sent()).toEqual({ url: `${BASE_URL}/api/cup/c/finish`, method: 'POST', body: { allowMissing: true } });
+
+    mockFetch.mockClear();
+    respondWith(200, { ok: true, alreadyFinished: false });
+    await expect(api().finishCupMatch('c', 'g', false)).resolves.toEqual({ ok: true, partial: false });
+    expect(sent()).toEqual({
+      url: `${BASE_URL}/api/cup/c/matches/g/finish`,
+      method: 'POST',
+      body: { allowMissing: false },
+    });
+  });
+
+  it('sidepoengene går til hver sin rute, og null er «ingen kvalifiserte»', async () => {
+    respondWith(200, { ok: true });
+    await api().registerSideAwardWinner('c', 'a', null);
+    expect(sent()).toEqual({
+      url: `${BASE_URL}/api/cup/c/side-awards/a/winner`,
+      method: 'POST',
+      body: { winnerUserId: null },
+    });
+
+    mockFetch.mockClear();
+    respondWith(200, { ok: true });
+    await api().registerGirCounts('c', 'a', 2, 0);
+    expect(sent()).toEqual({
+      url: `${BASE_URL}/api/cup/c/side-awards/a/gir`,
+      method: 'POST',
+      body: { team1Count: 2, team2Count: 0 },
+    });
+  });
+
+  it('en regel som stopper avslutningen: koden fra ruta', async () => {
+    respondWith(409, { error: 'side_awards_missing' });
+    await expect(api().finishCup('c', false)).resolves.toEqual({ ok: false, reason: 'side_awards_missing' });
   });
 
   it('kandidatene', async () => {
