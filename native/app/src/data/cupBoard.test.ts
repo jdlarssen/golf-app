@@ -21,7 +21,6 @@ describe('data/cupBoard', () => {
     respondWith(200, {
       game: { id: 'g' },
       players: [{ user_id: 'a' }],
-      sourceGameName: 'Vert',
       scores: [{ user_id: 'a', hole_number: 3, strokes: 4 }],
     });
 
@@ -30,7 +29,7 @@ describe('data/cupBoard', () => {
     expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/cup/c/matches/g/board`);
     expect(mockToBundle).toHaveBeenCalledWith({ id: 'g' }, [{ user_id: 'a' }], {
       segmentSibling: null,
-      sourceGameName: 'Vert',
+      sourceGameName: null,
     });
     expect(result).toMatchObject({
       ok: true,

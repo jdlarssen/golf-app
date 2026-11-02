@@ -4,6 +4,7 @@ import { APP_CUP_UNKNOWN_PLAYER } from '@/lib/cup/buildAppCupView';
 import { canViewCupPageAs } from '@/lib/cup/cupPageAccess';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import {
+  cupBoardRows,
   GAME_SELECT,
   PLAYER_SELECT,
   type CupMatchBoardResponse,
@@ -26,11 +27,7 @@ import { isUuid } from '@/lib/url/isUuid';
 //     som pågår, er 404, også for arrangøren: den veien går spillets egen tavle.
 //   - bare i en cup kalleren får se (`canViewCupPageAs`, strengere enn nettets tavle
 //     for en klubb-cup, siden rommet er eneste vei hit).
-//   - dette sendes ikke: tidsstempler for levering, hvem som leverte og godkjente,
-//     marker, avslag, delingslenka, referatet, hvem som laget spillet, tee-tid, og
-//     id-ene til bane og tee. `user_id` følger med, for det er den som kobler slag
-//     til spiller, og `withdrawn_at`, for tavla lister hvem som trakk seg. Resten
-//     av raden er oppsettet av kampen, som gjesteflagg og navnet på verten.
+//   - bare det tavla leser, sendes (`cupBoardRows`).
 //   - en avledet kamp får bare sine egne spilleres slag, ikke hele vertens.
 //
 // WIRE (`lib/games/gameBundleRows.ts`):
@@ -78,46 +75,22 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (door.kind !== 'board') return NOT_FOUND();
 
     const scoresGameId = game.source_game_id ?? game.id;
-    const [playersRes, scoresRes, sourceRes] = await Promise.all([
+    const [playersRes, scoresRes] = await Promise.all([
       admin.from('game_players').select(PLAYER_SELECT).eq('game_id', gameId).returns<PlayerRow[]>(),
       selectAllRowsResult(
         (from, to) =>
           admin.from('scores').select(SCORES_SELECT).eq('game_id', scoresGameId).order('id').range(from, to),
         'cup match board scores',
       ),
-      game.source_game_id
-        ? admin.from('games').select('name').eq('id', game.source_game_id).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
     ]);
     if (playersRes.error) throw playersRes.error;
     if (scoresRes.error) throw scoresRes.error;
-    if (sourceRes.error) throw sourceRes.error;
 
     const players = playersRes.data ?? [];
     const own = new Set(players.map((player) => player.user_id));
     const scores = scoresRes.data ?? [];
     const body: CupMatchBoardResponse = {
-      game: {
-        ...game,
-        course_id: null,
-        tee_box_id: null,
-        scheduled_tee_off_at: null,
-        created_by: null,
-        spectate_token: null,
-        round_report: null,
-      },
-      players: players.map((player) => ({
-        ...player,
-        accepted_at: null,
-        submitted_at: null,
-        submitted_by_user_id: null,
-        approved_at: null,
-        approved_by_user_id: null,
-        marker_user_id: null,
-        rejection_reason: null,
-        withdrawn_by_user_id: null,
-      })),
-      sourceGameName: sourceRes.data?.name ?? null,
+      ...cupBoardRows(game, players),
       scores: game.source_game_id ? scores.filter((row) => own.has(row.user_id)) : scores,
     };
     return NextResponse.json(body);

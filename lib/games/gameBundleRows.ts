@@ -5,7 +5,7 @@ import type { ResultSummary } from '../scoring/resultSummary';
  * disse (`native/app/src/data/gameBundle.ts`), og tavla til andres ferdige kamper
  * får samme rader fra serveren. Ett hjem, så de to ikke kan drive fra hverandre.
  *
- * Bare typer og strenger: appen importerer fila med relativ sti.
+ * Bare typer, strenger og rene funksjoner: appen importerer fila med relativ sti.
  */
 
 // Rå PostgREST-fasonger. Som i `db.ts` bor snake_case → camelCase-mappingen kun
@@ -100,8 +100,55 @@ export const GAME_SELECT =
 export type CupMatchBoardResponse = {
   game: GameRow;
   players: PlayerRow[];
-  /** Verten til en avledet kamp, for overskriften. */
-  sourceGameName: string | null;
   /** Spillernes slag, lest fra verten når kampen er avledet. */
   scores: { user_id: string; hole_number: number; strokes: number | null }[];
 };
+
+/** Tavla ser bare om noen har trukket seg, aldri når. Tidspunktet blir hos serveren. */
+const WITHDRAWN_MARK = '1970-01-01T00:00:00.000Z';
+
+/**
+ * Radene tavla til andres ferdige kamper får (#2752): bare det tavla leser, så ruta
+ * ikke gir mer enn nettets tavle. Det som står igjen, er kampens regler, navnene,
+ * hvem som spilte på hvilket lag med hvilket handicap, og banen. `user_id` er det
+ * som kobler slag til spiller.
+ *
+ * `CupMatchBoard.sameBoard.test.tsx` låser at tavla blir den samme med og uten det
+ * som fjernes her. Begynner tavla å lese et av feltene, blir den rød.
+ */
+export function cupBoardRows(
+  game: GameRow,
+  players: readonly PlayerRow[],
+): Pick<CupMatchBoardResponse, 'game' | 'players'> {
+  return {
+    game: {
+      ...game,
+      course_id: null,
+      tee_box_id: null,
+      require_peer_approval: false,
+      scheduled_tee_off_at: null,
+      source_game_id: null,
+      created_by: null,
+      tournament_id: null,
+      foursomes_side1_tee_starter_user_id: null,
+      foursomes_side2_tee_starter_user_id: null,
+      patsome_tee_starters: null,
+      spectate_token: null,
+      round_report: null,
+    },
+    players: players.map((player) => ({
+      ...player,
+      accepted_at: null,
+      submitted_at: null,
+      submitted_by_user_id: null,
+      approved_at: null,
+      approved_by_user_id: null,
+      marker_user_id: null,
+      rejection_reason: null,
+      withdrawn_at: player.withdrawn_at ? WITHDRAWN_MARK : null,
+      withdrawn_by_user_id: null,
+      result_summary: null,
+      users: player.users ? { name: player.users.name, nickname: player.users.nickname, is_guest: null } : null,
+    })),
+  };
+}

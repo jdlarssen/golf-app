@@ -30,7 +30,7 @@ export async function fetchCupMatchBoard(cupId: string, gameId: string): Promise
     ok: true,
     bundle: toBundle(body.game, body.players, {
       segmentSibling: null,
-      sourceGameName: body.sourceGameName ?? null,
+      sourceGameName: null,
     }),
     // Bare det tavla leser. Ingen av disse radene skrives til telefonen.
     scores: body.scores.map((row) => ({
