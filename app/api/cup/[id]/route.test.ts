@@ -22,6 +22,7 @@ let lineupError: { message: string } | null = null;
 
 function respond(op: QueryOp): QueryResponse {
   if (op.table === 'cup_lineup_sessions') return { data: lineupRows, error: lineupError };
+  if (op.table === 'tournament_participants') return { data: null, count: 6, error: null } as QueryResponse;
   throw new Error(`ruta leser ikke ${op.table} med admin-klienten`);
 }
 
@@ -37,6 +38,11 @@ vi.mock('@/lib/api/appAuth', async (importOriginal) => {
 let snapshot: CupSnapshot | null = null;
 vi.mock('@/lib/cup/getCupSnapshot', () => ({
   getCupSnapshot: async () => snapshot,
+}));
+
+const lineupAccess = vi.hoisted(() => ({ loadCupLineupAccessForUser: vi.fn() }));
+vi.mock('@/lib/cup/lineupAccess', () => ({
+  loadCupLineupAccessForUser: lineupAccess.loadCupLineupAccessForUser,
 }));
 
 import { NextRequest } from 'next/server';
@@ -114,6 +120,7 @@ beforeEach(() => {
   snapshot = cup('active');
   lineupRows = [];
   lineupError = null;
+  lineupAccess.loadCupLineupAccessForUser.mockResolvedValue({ role: { kind: 'none' }, participants: [] });
   callerAnswers({});
 });
 
@@ -125,6 +132,19 @@ describe('dørene i rommet', () => {
 
     caller = buildSupabaseMock([], { can_manage_tournament: false }, { byTable: {} });
     expect(await (await call('token-meg')).json()).toMatchObject({ canManage: false });
+  });
+
+  it('spillerlista har tallet til cupen er avsluttet, og bare for arrangøren', async () => {
+    caller = buildSupabaseMock([], { can_manage_tournament: true }, { byTable: {} });
+    expect((await (await call('token-meg')).json()).participantCount).toBe(6);
+
+    snapshot = cup('finished');
+    caller = buildSupabaseMock([], { can_manage_tournament: true }, { byTable: {} });
+    expect((await (await call('token-meg')).json()).participantCount).toBeNull();
+
+    snapshot = cup('active');
+    caller = buildSupabaseMock([], { can_manage_tournament: false }, { byTable: {} });
+    expect((await (await call('token-meg')).json()).participantCount).toBeNull();
   });
 
   it('en lesefeil på det svaret er 500, ikke «du styrer ikke»', async () => {
@@ -252,15 +272,36 @@ describe('hva som går ut', () => {
     expect(body.matches[0].mine).toBe(true);
   });
 
-  it('sier om kapteinene setter opp lagene, og spør bare om økter som ikke er avdekket', async () => {
-    lineupRows = [{ id: 'okt-1' }];
-
+  it('sier om kapteinene setter opp lagene når en økt ikke er avdekket', async () => {
+    lineupRows = [{ format: 'singles_matchplay', slot_count: 2, revealed_at: null }];
     const body = await (await call('token-meg')).json();
-
     expect(body.lineupPending).toBe(true);
+    expect(body.lineup).toEqual({ door: null, revealed: null });
+  });
+
+  it('en avdekket økt gir kortet, og ingen venter lenger', async () => {
+    lineupRows = [{ format: 'singles_matchplay', slot_count: 2, revealed_at: '2026-11-02T10:00:00Z' }];
+    const body = await (await call('token-meg')).json();
+    expect(body.lineupPending).toBe(false);
+    expect(body.lineup.revealed).toEqual({ format: 'singles_matchplay', slotCount: 2 });
+  });
+
+  it('rommet leser aldri plassene i et uttak, heller ikke for en kaptein', async () => {
+    lineupRows = [{ format: 'singles_matchplay', slot_count: 2, revealed_at: null }];
+    lineupAccess.loadCupLineupAccessForUser.mockResolvedValue({
+      role: { kind: 'captain', teamNumber: 1 },
+      participants: [{ userId: ME, teamNumber: 1, isCaptain: true }],
+    });
+    const body = await (await call('token-meg')).json();
+    expect(body.lineup.door).toEqual({ kind: 'captain' });
+    expect(fake.ops.some((op) => op.table === 'cup_lineup_slots')).toBe(false);
     const read = fake.ops.find((op) => op.table === 'cup_lineup_sessions');
-    expect(read?.columns).toBe('id');
-    expect(read?.filters).toContainEqual({ op: 'is', column: 'revealed_at', value: null });
+    expect(read?.columns).toBe('format, slot_count, revealed_at');
+  });
+
+  it('en lesing av tilgangen som feilet, er 500 og ikke en dør som mangler', async () => {
+    lineupAccess.loadCupLineupAccessForUser.mockResolvedValue({ role: { kind: 'none' }, participants: [], readFailed: true });
+    expect((await call('token-meg')).status).toBe(500);
   });
 
   it('reserveordet for en ukjent spiller er nettets', () => {

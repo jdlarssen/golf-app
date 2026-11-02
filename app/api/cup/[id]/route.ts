@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatedUserId, callerScopedClient } from '@/lib/api/appAuth';
 import type { AppCupView } from '@/lib/cup/appCupView';
+import { appCupLineupSummary } from '@/lib/cup/buildAppCupLineupView';
 import { APP_CUP_UNKNOWN_PLAYER, buildAppCupView } from '@/lib/cup/buildAppCupView';
+import { lineupAccessFor } from '@/lib/cup/lineupRoute';
 import { canViewCupPageAs } from '@/lib/cup/cupPageAccess';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -46,15 +48,15 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     });
     if (!allowed) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    // Bare om økter er åpne, aldri hva kapteinene har valgt (`visibleSlots` i
-    // `lineupData.ts` vokter uttakene, og de leses ikke her).
-    const { data: pending, error: pendingError } = await getAdminClient()
+    // Bare om økter finnes og hva som er avdekket, aldri hva kapteinene har valgt
+    // (`canSeeTeamLineup` i `lineupData.ts` vokter uttakene, og de leses ikke her).
+    const { data: lineupSessions, error: lineupError } = await getAdminClient()
       .from('cup_lineup_sessions')
-      .select('id')
+      .select('format, slot_count, revealed_at')
       .eq('tournament_id', id)
-      .is('revealed_at', null)
-      .limit(1);
-    if (pendingError) throw pendingError;
+      .order('session_index', { ascending: true });
+    if (lineupError) throw lineupError;
+    const lineupAccess = await lineupAccessFor(userId)(id);
 
     // Which matches the app may open is RLS's answer, read as the caller: a
     // button to a game RLS hides would end in «fant ikke spillet».
@@ -70,10 +72,10 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     });
     if (canManageError) throw canManageError;
 
-    // Døra til spillerlista viser hvor mange som er påmeldt. Bare for arrangøren av et
-    // utkast: lista har ingen lese-policy, og en startet cup har ingen dør dit.
+    // Døra til spillerlista viser hvor mange som er påmeldt. Bare for arrangøren, til cupen
+    // er avsluttet: lista har ingen lese-policy, og lag og kaptein kan settes også etter start.
     let participantCount: number | null = null;
-    if (canManage === true && snapshot.tournament.status === 'draft') {
+    if (canManage === true && snapshot.tournament.status !== 'finished') {
       const { count, error: countError } = await getAdminClient()
         .from('tournament_participants')
         .select('user_id', { count: 'exact', head: true })
@@ -84,7 +86,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
 
     const body: AppCupView = buildAppCupView(snapshot, {
       userId,
-      lineupPending: (pending ?? []).length > 0,
+      lineupPending: (lineupSessions ?? []).some((session) => session.revealed_at === null),
+      lineup: appCupLineupSummary({
+        role: lineupAccess.role,
+        participants: lineupAccess.participants,
+        sessions: lineupSessions ?? [],
+        finished: snapshot.tournament.status === 'finished',
+      }),
       unknownLabel: APP_CUP_UNKNOWN_PLAYER,
       readableGameIds: new Set((readable ?? []).map((game) => game.id)),
       canManage: canManage === true,

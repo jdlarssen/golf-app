@@ -78,6 +78,7 @@ const view = (snap: CupSnapshot, userId = ME, lineupPending = false, readable: s
   buildAppCupView(snap, {
     userId,
     lineupPending,
+    lineup: { door: null, revealed: null },
     unknownLabel: 'Ukjent spiller',
     readableGameIds: new Set(readable),
     canManage: false,

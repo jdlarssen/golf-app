@@ -324,14 +324,14 @@ describe('GET participants', () => {
 
   it('lista, lenka og taket, og de som alt er med, står ikke som kandidater', async () => {
     participantRows = [
-      { user_id: PLAYER, is_captain: true, users: { name: 'Ola Kompis', nickname: 'Ola', hcp_index: '8.1' } },
+      { user_id: PLAYER, team_number: 2, is_captain: true, users: { name: 'Ola Kompis', nickname: 'Ola', hcp_index: '8.1' } },
     ];
     core.getCupCandidatePlayers.mockResolvedValue([candidate(PLAYER), candidate('ny'), candidate('venter', true)]);
 
     const body = await (await participants(request(token, 'GET'), cupParams)).json();
 
     expect(body).toMatchObject({ shortId: 'abcd2345', cap: 40, status: 'draft' });
-    expect(body.participants).toEqual([{ userId: PLAYER, name: 'Ola', hcpIndex: 8.1, isCaptain: true }]);
+    expect(body.participants).toEqual([{ userId: PLAYER, name: 'Ola', hcpIndex: 8.1, teamNumber: 2, isCaptain: true }]);
     expect(body.candidates).toEqual([
       { userId: 'ny', name: 'Navn ny', hcpIndex: 12.4, pending: false },
       { userId: 'venter', name: 'Navn venter', hcpIndex: 12.4, pending: true },

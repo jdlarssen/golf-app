@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
         .maybeSingle(),
       admin
         .from('tournament_participants')
-        .select('user_id, is_captain, users:users!tournament_participants_user_id_fkey(name, nickname, hcp_index)')
+        .select('user_id, team_number, is_captain, users:users!tournament_participants_user_id_fkey(name, nickname, hcp_index)')
         .eq('tournament_id', id)
         .order('created_at', { ascending: true }),
     ]);
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
             userId: row.user_id,
             name: user?.nickname?.trim() || user?.name?.trim() || APP_CUP_UNKNOWN_PLAYER,
             hcpIndex: Number(user?.hcp_index ?? 0),
+            teamNumber: row.team_number === 1 || row.team_number === 2 ? row.team_number : null,
             isCaptain: row.is_captain === true,
           };
         }),
