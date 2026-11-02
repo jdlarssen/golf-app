@@ -179,20 +179,18 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       {notice === 'matches_changed' ? <Note text={GENERATE_TEXT.matchesChanged} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
-      {view.canManage && view.participantCount !== null && !stale ? (
-        <Door
-          text={SETUP_APP_TEXT.playersDoor}
-          sub={playerCountLine(view.participantCount, null)}
-          onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
-          testID="cup-open-players"
-        />
-      ) : null}
       {draft && view.canManage && !stale ? (
         <>
           <Door
             text={SETUP_APP_TEXT.continueDoor}
             onPress={() => openOrReturn(navigation, 'CreateCup', { cupId })}
             testID="cup-open-setup"
+          />
+          <Door
+            text={SETUP_APP_TEXT.playersDoor}
+            sub={playerCountLine(view.participantCount ?? 0, null)}
+            onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
+            testID="cup-open-players"
           />
           <Door
             text={GENERATE_TEXT.door}

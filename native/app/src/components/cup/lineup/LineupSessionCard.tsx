@@ -331,7 +331,7 @@ function LineupEditor({
 function Pill({ on, text }: { on: boolean; text: string }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.pill, { backgroundColor: on ? colors.primarySoft : colors.bg, borderColor: on ? colors.primarySoft : colors.border }]}>
+    <View style={[styles.pill, { backgroundColor: on ? colors.primarySoft : colors.bg, borderColor: colors.border }]}>
       <Text style={[styles.pillText, { color: on ? colors.primary : colors.muted }]}>{text}</Text>
     </View>
   );

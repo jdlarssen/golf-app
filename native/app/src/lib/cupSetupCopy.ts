@@ -219,7 +219,7 @@ export const SETUP_APP_TEXT = {
   notFound: 'Fant ikke cupen. Den finnes ikke, eller du har ikke tilgang.',
   notManager: 'Det er arrangøren som setter opp cupen.',
   locked: 'Cupen er i gang, så oppsettet er låst.',
-  listLocked: 'Cupen er i gang, så du kan ikke legge til eller fjerne spillere. Lag og kaptein kan du fortsatt sette.',
+  listLocked: 'Cupen er startet, så spillerlista er låst.',
   removeRow: 'Fjern',
   hcp: 'HCP {hcp}',
   joinLoginTitle: 'Logg inn for å bli med i cupen',

@@ -45,7 +45,6 @@ export type LineupSlotInput = {
   userIds: string[];
 };
 
-/** Én lagret rad i `cup_lineup_slots` (uten session/team, som kalleren eier). */
 /**
  * Plassene i et innsendt uttak, på formen `[{slotIndex, userIds}]`, eller `null` når det
  * ikke er en liste. Innholdet sjekker `validateLineupSubmission`.
@@ -60,6 +59,7 @@ export function lineupSlotsFrom(value: unknown): LineupSlotInput[] | null {
   }));
 }
 
+/** Én lagret rad i `cup_lineup_slots` (uten session/team, som kalleren eier). */
 export type LineupSlotRow = {
   slotIndex: number;
   seat: 1 | 2;

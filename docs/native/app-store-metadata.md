@@ -245,7 +245,7 @@ LIGA
 Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 CUP
-Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og appen holder styr på stillingen til vinneren er klar.
+Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og når cupen er ferdig, ser alle hvilket lag som vant.
 
 FØR OG UNDER RUNDEN
 Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.

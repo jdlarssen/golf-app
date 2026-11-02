@@ -29,7 +29,7 @@ import type { ScreenProps } from '../navigation';
 import { FONTS, interLine, TAP, useTheme } from '../theme';
 
 /** Hvilken knapp siste handling kom fra: feilen skal stå der (#2087). */
-type Target = { sessionId: string | null; team: 1 | 2 | null };
+type Target = { sessionId: string | null; team: 1 | 2 | null; form: 'planned' | 'open' | null };
 
 export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
   const { colors, ui } = useTheme();
@@ -39,7 +39,7 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [target, setTarget] = useState<Target>({ sessionId: null, team: null });
+  const [target, setTarget] = useState<Target>({ sessionId: null, team: null, form: null });
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
@@ -57,6 +57,8 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
   useFocusEffect(
     useCallback(() => {
       void load();
+      // En gammel feil skal ikke stå igjen når du kommer tilbake fra spillerlista.
+      return () => setError(null);
     }, [load]),
   );
 
@@ -98,12 +100,16 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
   const needsPlanned = view.hasDefaultWeights && view.plannedMatchCount === null;
   // Økta kan være borte (slettet et annet sted). Da er toppen det eneste stedet igjen.
   const errorOnCard = error !== null && target.sessionId !== null && view.sessions.some((s) => s.id === target.sessionId);
+  const plannedShown = organizer && view.bothCaptains && view.hasDefaultWeights;
+  const openShown = organizer && view.bothCaptains;
+  // Knappene står under brettet, så et nei øverst ville ikke synes uten å rulle.
+  const errorOnForm = error !== null && ((target.form === 'planned' && plannedShown) || (target.form === 'open' && openShown));
 
   const actions: LineupActions = {
-    onSubmit: (sessionId, team, slots) => void run({ sessionId, team }, () => submitCupLineup(cupId, sessionId, team, slots)),
-    onUnlock: (sessionId, team) => void run({ sessionId, team }, () => unlockCupLineup(cupId, sessionId, team)),
-    onRetry: (sessionId) => void run({ sessionId, team: null }, () => retryCupLineupReveal(cupId, sessionId)),
-    onDelete: (sessionId) => void run({ sessionId, team: null }, () => deleteCupLineupSession(cupId, sessionId)),
+    onSubmit: (sessionId, team, slots) => void run({ sessionId, team, form: null }, () => submitCupLineup(cupId, sessionId, team, slots)),
+    onUnlock: (sessionId, team) => void run({ sessionId, team, form: null }, () => unlockCupLineup(cupId, sessionId, team)),
+    onRetry: (sessionId) => void run({ sessionId, team: null, form: null }, () => retryCupLineupReveal(cupId, sessionId)),
+    onDelete: (sessionId) => void run({ sessionId, team: null, form: null }, () => deleteCupLineupSession(cupId, sessionId)),
   };
 
   return (
@@ -122,7 +128,7 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
         </View>
       ) : null}
 
-      {error !== null && !errorOnCard ? (
+      {error !== null && !errorOnCard && !errorOnForm ? (
         <Text style={[styles.error, { color: colors.danger }]} testID="cup-lineup-error">
           {error}
         </Text>
@@ -131,34 +137,38 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
       {organizer && !view.bothCaptains ? (
         <View style={styles.gapTop}>
           <Note testID="cup-lineup-needs-captains">{LINEUP_TEXT.needsCaptains}</Note>
-          <Pressable
-            accessibilityRole="button"
-            style={ui.buttonSecondary}
-            onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
-            testID="cup-lineup-open-players"
-          >
-            <Text style={ui.buttonSecondaryText}>{SETUP_APP_TEXT.playersDoor}</Text>
-          </Pressable>
+          {view.cupStatus === 'draft' ? (
+            <Pressable
+              accessibilityRole="button"
+              style={ui.buttonSecondary}
+              onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
+              testID="cup-lineup-open-players"
+            >
+              <Text style={ui.buttonSecondaryText}>{SETUP_APP_TEXT.playersDoor}</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
-      {organizer && view.bothCaptains && view.hasDefaultWeights ? (
+      {plannedShown ? (
         <PlannedCountCard
           // Et tall lagret et annet sted skal ikke bli stående som det gamle i feltet.
           key={String(view.plannedMatchCount)}
           view={view}
           busy={busy}
-          onSave={(value) => void run({ sessionId: null, team: null }, () => setCupPlannedMatchCount(cupId, value))}
+          error={errorOnForm && target.form === 'planned' ? error : null}
+          onSave={(value) => void run({ sessionId: null, team: null, form: 'planned' }, () => setCupPlannedMatchCount(cupId, value))}
         />
       ) : null}
 
-      {organizer && view.bothCaptains ? (
+      {openShown ? (
         <OpenSessionCard
           view={view}
           busy={busy}
           needsPlanned={needsPlanned}
+          error={errorOnForm && target.form === 'open' ? error : null}
           onOpen={(format, slotCount) =>
-            void run({ sessionId: null, team: null }, () => openCupLineupSession(cupId, format, slotCount))
+            void run({ sessionId: null, team: null, form: 'open' }, () => openCupLineupSession(cupId, format, slotCount))
           }
         />
       ) : null}

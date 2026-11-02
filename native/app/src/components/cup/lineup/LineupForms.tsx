@@ -26,10 +26,12 @@ const FORMATS: readonly CupSessionFormat[] = [
 export function PlannedCountCard({
   view,
   busy,
+  error,
   onSave,
 }: {
   view: AppCupLineupView;
   busy: boolean;
+  error: string | null;
   onSave: (value: string) => void;
 }) {
   const { colors, ui } = useTheme();
@@ -63,6 +65,7 @@ export function PlannedCountCard({
           {formatMessage(LINEUP_TEXT.plannedCurrent, { points: cupPoints(view.pointsToWin) })}
         </Text>
       ) : null}
+      {error ? <FormError message={error} testID="cup-lineup-planned-error" /> : null}
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled }}
@@ -81,12 +84,14 @@ export function OpenSessionCard({
   view,
   busy,
   needsPlanned,
+  error,
   onOpen,
 }: {
   view: AppCupLineupView;
   busy: boolean;
   /** Planlagt antall mangler: økta kan ikke åpnes ennå (#1902). */
   needsPlanned: boolean;
+  error: string | null;
   onOpen: (format: CupSessionFormat, slotCount: number) => void;
 }) {
   const { colors, ui } = useTheme();
@@ -136,6 +141,7 @@ export function OpenSessionCard({
           testID="cup-lineup-slot-plus"
         />
       </View>
+      {error ? <FormError message={error} testID="cup-lineup-open-error" /> : null}
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled }}
@@ -160,6 +166,15 @@ export function OpenSessionCard({
   );
 }
 
+function FormError({ message, testID }: { message: string; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <Text style={[styles.error, { color: colors.danger }]} testID={testID}>
+      {message}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, marginTop: 10 },
   heading: { ...fraunces(500, 18, 24) },
@@ -167,4 +182,5 @@ const styles = StyleSheet.create({
   countLabel: { flex: 1, minWidth: 0, ...interLine(14, 18), fontFamily: FONTS.sansMedium },
   countValue: { ...fraunces(500, 18, 24), minWidth: 28, textAlign: 'center' },
   dimmed: { opacity: 0.45 },
+  error: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
 });

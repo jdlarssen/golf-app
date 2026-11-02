@@ -72,10 +72,10 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     });
     if (canManageError) throw canManageError;
 
-    // Døra til spillerlista viser hvor mange som er påmeldt. Bare for arrangøren, til cupen
-    // er avsluttet: lista har ingen lese-policy, og lag og kaptein kan settes også etter start.
+    // Døra til spillerlista viser hvor mange som er påmeldt. Bare for arrangøren av et
+    // utkast: lista har ingen lese-policy, og en startet cup har ingen dør dit.
     let participantCount: number | null = null;
-    if (canManage === true && snapshot.tournament.status !== 'finished') {
+    if (canManage === true && snapshot.tournament.status === 'draft') {
       const { count, error: countError } = await getAdminClient()
         .from('tournament_participants')
         .select('user_id', { count: 'exact', head: true })

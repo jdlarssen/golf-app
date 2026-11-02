@@ -27,11 +27,17 @@ jest.mock('../data/cupSetup', () => ({
   unlockCupLineup: jest.fn(async () => ({ ok: true })),
   retryCupLineupReveal: jest.fn(async () => ({ ok: true })),
 }));
-const mockFocus: { run: (() => void) | null } = { run: null };
+// `run` er å forlate skjermen og komme tilbake: oppryddingen først, så lesingen.
+const mockFocus: { run: (() => void) | null; cleanup: (() => void) | void } = { run: null, cleanup: undefined };
 jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (callback: () => void) => {
-    mockFocus.run = callback;
-    require('react').useEffect(callback, [callback]);
+  useFocusEffect: (callback: () => (() => void) | void) => {
+    mockFocus.run = () => {
+      mockFocus.cleanup?.();
+      mockFocus.cleanup = callback();
+    };
+    require('react').useEffect(() => {
+      mockFocus.cleanup = callback();
+    }, [callback]);
   },
 }));
 
@@ -248,12 +254,58 @@ describe('arrangøren', () => {
   const both = { teams: [{ teamNumber: 1 as const, submittedAt: 'nå', slots: [{ slotIndex: 0, seat: 1 as const, userId: 'ola' }, { slotIndex: 0, seat: 2 as const, userId: 'tapp' }] }, { teamNumber: 2 as const, submittedAt: 'nå', slots: [{ slotIndex: 0, seat: 1 as const, userId: 'per' }, { slotIndex: 0, seat: 2 as const, userId: 'anne' }] }] as AppCupLineupSession['teams'] };
 
   it('mangler en kaptein: sier det, og åpner spillerlista', async () => {
-    answer(organizer({ bothCaptains: false, sessions: [] }));
+    answer(organizer({ bothCaptains: false, sessions: [], cupStatus: 'draft' }));
     const navigation = await renderScreen();
     expect(screen.getByTestId('cup-lineup-needs-captains')).toBeTruthy();
     expect(screen.queryByTestId('cup-lineup-open-card')).toBeNull();
     await fireEvent.press(screen.getByTestId('cup-lineup-open-players'));
     expect(navigation.navigate).toHaveBeenCalledWith('CupParticipants', { cupId: 'cup-1' });
+  });
+
+  it('en startet cup uten kaptein: setningen står, men ingen dør til en låst liste', async () => {
+    answer(organizer({ bothCaptains: false, sessions: [], cupStatus: 'active' }));
+    await renderScreen();
+    expect(screen.getByTestId('cup-lineup-needs-captains')).toBeTruthy();
+    expect(screen.queryByTestId('cup-lineup-open-players')).toBeNull();
+  });
+
+  it('et nei på antallet står i kortet, over knappen', async () => {
+    (setCupPlannedMatchCount as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'lineup_planned_total' });
+    answer(organizer({ plannedMatchCount: null, sessions: [] }));
+    await renderScreen();
+    await fireEvent.changeText(screen.getByTestId('cup-lineup-planned-input'), '1');
+    await fireEvent.press(screen.getByTestId('cup-lineup-planned-save'));
+    expect(screen.getByTestId('cup-lineup-planned-error')).toBeTruthy();
+    expect(screen.queryByTestId('cup-lineup-error')).toBeNull();
+    expect(screen.queryByTestId('cup-lineup-open-error')).toBeNull();
+  });
+
+  it('et nei på økta står i kortet, over knappen', async () => {
+    (openCupLineupSession as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'too_many_matches' });
+    answer(organizer({ sessions: [] }));
+    await renderScreen();
+    await fireEvent.press(screen.getByTestId('cup-lineup-open'));
+    expect(screen.getByTestId('cup-lineup-open-error')).toBeTruthy();
+    expect(screen.queryByTestId('cup-lineup-error')).toBeNull();
+  });
+
+  it('er kortet borte etter lesingen, står neiet øverst', async () => {
+    (openCupLineupSession as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'save_failed' });
+    answer(organizer({ sessions: [] }));
+    await renderScreen();
+    answer(organizer({ sessions: [], bothCaptains: false }));
+    await fireEvent.press(screen.getByTestId('cup-lineup-open'));
+    expect(screen.getByTestId('cup-lineup-error')).toHaveTextContent('Klarte ikke å lagre. Prøv igjen.');
+  });
+
+  it('en gammel feil er borte når du kommer tilbake til skjermen', async () => {
+    (openCupLineupSession as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'too_many_matches' });
+    answer(organizer({ sessions: [] }));
+    await renderScreen();
+    await fireEvent.press(screen.getByTestId('cup-lineup-open'));
+    expect(screen.getByTestId('cup-lineup-open-error')).toBeTruthy();
+    await act(async () => mockFocus.run?.());
+    expect(screen.queryByTestId('cup-lineup-open-error')).toBeNull();
   });
 
   it('planlagt antall: viser målet før lagring, og sender tallet', async () => {
