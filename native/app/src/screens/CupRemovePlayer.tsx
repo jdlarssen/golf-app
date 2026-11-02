@@ -29,6 +29,7 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
     if (result.ok) {
       // Har du gått tilbake mens svaret var på vei, er veiviseren der du står. Den skal stå i ro.
       if (navigation.isFocused()) leave('participant_removed');
+      else setBusy(false);
       return;
     }
     if (result.reason === 'not_draft') setLocked(true);

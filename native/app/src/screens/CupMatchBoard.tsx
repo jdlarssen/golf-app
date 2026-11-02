@@ -7,7 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { fetchCupMatchBoard, type CupBoardResult } from '../data/cupBoard';
-import { FINISH_APP_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
+import { boardFailureText, FINISH_APP_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { toRoster } from '../lib/roster';
 import { hasSoloBoard, soloBoardFor } from '../lib/soloBoard';
 import { hasTeamBoard, teamBoardFor } from '../lib/teamBoard';
@@ -60,11 +60,12 @@ export function CupMatchBoard({ route }: ScreenProps<'CupMatchBoard'>) {
     );
   }
   if (board === null) {
-    const final = !result.ok && result.reason === 'not_found';
+    const reason = result.ok ? 'load_failed' : result.reason;
+    const final = reason === 'not_found';
     return (
       <View style={ui.centered} testID="cup-board-failed">
         <Text style={[styles.failure, { color: final ? colors.text : colors.danger }]}>
-          {final ? FINISH_APP_TEXT.boardNotFound : FINISH_APP_TEXT.boardFailed}
+          {final ? FINISH_APP_TEXT.boardNotFound : boardFailureText(reason)}
         </Text>
         {final ? null : (
           <Pressable

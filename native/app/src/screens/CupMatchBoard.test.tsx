@@ -71,5 +71,13 @@ describe('CupMatchBoard', () => {
     (fetchCupMatchBoard as jest.Mock).mockResolvedValue({ ok: false, reason: 'offline' });
     await renderBoard();
     expect(await screen.findByTestId('cup-board-retry')).toBeTruthy();
+    expect(screen.getByTestId('cup-board-failed')).toHaveTextContent(/Sjekk nettet/);
+  });
+
+  it('en feil hos serveren ber deg ikke sjekke nettet', async () => {
+    (fetchCupMatchBoard as jest.Mock).mockResolvedValue({ ok: false, reason: 'load_failed' });
+    await renderBoard();
+    expect(await screen.findByTestId('cup-board-retry')).toBeTruthy();
+    expect(screen.getByTestId('cup-board-failed')).toHaveTextContent(/^Fikk ikke tak i tavla\. Prøv igjen\.Prøv igjen$/);
   });
 });
