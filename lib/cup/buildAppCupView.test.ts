@@ -317,3 +317,9 @@ describe('en ferdig cup', () => {
     expect(results?.sideAwards).toEqual([]);
   });
 });
+
+describe('døra til spillerlista (#2752)', () => {
+  it('står tom uten tallet fra ruta', () => {
+    expect(view(snapshot('draft', []), ME, false, []).participantCount).toBeNull();
+  });
+});

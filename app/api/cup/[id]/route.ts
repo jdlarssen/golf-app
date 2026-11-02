@@ -70,12 +70,25 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     });
     if (canManageError) throw canManageError;
 
+    // Døra til spillerlista viser hvor mange som er påmeldt. Bare for arrangøren av et
+    // utkast: lista har ingen lese-policy, og en startet cup har ingen dør dit.
+    let participantCount: number | null = null;
+    if (canManage === true && snapshot.tournament.status === 'draft') {
+      const { count, error: countError } = await getAdminClient()
+        .from('tournament_participants')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('tournament_id', id);
+      if (countError) throw countError;
+      participantCount = count ?? 0;
+    }
+
     const body: AppCupView = buildAppCupView(snapshot, {
       userId,
       lineupPending: (pending ?? []).length > 0,
       unknownLabel: APP_CUP_UNKNOWN_PLAYER,
       readableGameIds: new Set((readable ?? []).map((game) => game.id)),
       canManage: canManage === true,
+      participantCount,
     });
     return NextResponse.json(body);
   } catch (err) {
