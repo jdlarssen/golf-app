@@ -59,13 +59,15 @@ async function resolvePlanCourseTee(
 }> {
   const empty = { planCourseName: '', planTeeName: '', selectedTee: undefined };
   if (!plan?.course_id || !plan?.tee_box_id) return empty;
-  const { data: course } = await supabase
+  const { data: course, error } = await supabase
     .from('courses')
     .select(
       'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', plan.course_id)
     .maybeSingle<CourseRow>();
+  // En feilet lesing er ikke en plan som mangler: da ville skjermen bedt om et oppsett som finnes.
+  if (error) throw error;
   if (!course) return empty;
   const tee = (course.tee_boxes ?? []).find(
     (tb) => tb.id === plan.tee_box_id && tb.archived_at === null,
@@ -130,6 +132,7 @@ export async function loadCupGenerateInput(
       .order('created_at', { ascending: true }),
   ]);
   if (participantRes.error) throw participantRes.error;
+  if (planRes.error) throw planRes.error;
   const plan = planRes.data;
 
   // Deltakerne er alltid profil-fullførte ved add-time (Spillere-rommet gater

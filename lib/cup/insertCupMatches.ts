@@ -10,11 +10,7 @@ import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
-import type {
-  CupBundleFormat,
-  PlannedBundleMatch,
-  PlannedMatch,
-} from './cupPairing';
+import type { CupBundleFormat } from './cupPairing';
 
 /**
  * Innsettings-kjernen for cup-matcher — delt av generer-veiviseren (#219/#1441)
