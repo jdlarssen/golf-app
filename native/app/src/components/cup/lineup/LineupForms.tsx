@@ -162,9 +162,9 @@ export function OpenSessionCard({
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, marginTop: 10 },
-  heading: { ...fraunces(500, 17, 22) },
+  heading: { ...fraunces(500, 18, 24) },
   countRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   countLabel: { flex: 1, minWidth: 0, ...interLine(14, 18), fontFamily: FONTS.sansMedium },
-  countValue: { ...fraunces(500, 17, 22), minWidth: 28, textAlign: 'center' },
+  countValue: { ...fraunces(500, 18, 24), minWidth: 28, textAlign: 'center' },
   dimmed: { opacity: 0.45 },
 });
