@@ -16,11 +16,14 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { View } from 'react-native';
+import { createCourse } from '../data/createCourse';
 import { publishGame } from '../data/createGame';
+import { saveProfile } from '../data/profile';
 import type { RootStackParamList } from '../navigation';
 import { SessionProvider } from '../session';
 import { CreateCourse } from './CreateCourse';
 import { CreateGame } from './CreateGame';
+import { EditProfile } from './EditProfile';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/syncTriggers', () => ({
@@ -34,6 +37,7 @@ jest.mock('../data/formatCatalog', () => ({
   ]),
 }));
 jest.mock('../data/profile', () => ({
+  saveProfile: jest.fn(),
   fetchOwnProfile: jest.fn(async () => ({
     name: 'Jørgen Arrangør',
     nickname: null,
@@ -100,6 +104,7 @@ async function openWizard() {
           <Stack.Screen name="Home" component={HomeStub} />
           <Stack.Screen name="CreateGame" component={CreateGame} />
           <Stack.Screen name="CreateCourse" component={CreateCourse} />
+          <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="GameHome" component={GameStub} />
         </Stack.Navigator>
       </NavigationContainer>
@@ -204,5 +209,84 @@ describe('CreateGame i en ekte navigator (#2746)', () => {
     expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({
       selected: true,
     });
+  });
+
+  async function fillCourseForm() {
+    await openWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-new'));
+    await fireEvent.changeText(await screen.findByTestId('course-name'), 'Ny bane');
+    for (let hole = 1; hole <= 18; hole++) {
+      await fireEvent.changeText(screen.getByTestId(`course-index-1-${hole}`), String(hole));
+    }
+    await fireEvent.press(screen.getByTestId('tee-chip-yellow'));
+    await fireEvent.changeText(screen.getByTestId('tee-0-slope-mens'), '125');
+    await fireEvent.changeText(screen.getByTestId('tee-0-cr-mens'), '70,5');
+  }
+
+  it('tilbake under lagring gjør ingenting, og svaret lander på steg 3 med banen valgt (#2757)', async () => {
+    let answer: (result: unknown) => void = () => undefined;
+    (createCourse as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await fillCourseForm();
+    await fireEvent.press(screen.getByTestId('course-save'));
+
+    await pressBack();
+    expect(ref.getRootState()?.routes.at(-1)?.name).toBe('CreateCourse');
+    await act(async () => {
+      ref.dispatch(StackActions.pop());
+    });
+    expect(ref.getRootState()?.routes.at(-1)?.name).toBe('CreateCourse');
+
+    await act(async () => {
+      answer({ ok: true, courseId: 'course-1' });
+    });
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'CreateGame']);
+    expect(screen.getByTestId('create-step-course')).toBeTruthy();
+    expect(await screen.findByTestId('create-course-change')).toBeTruthy();
+    expect(screen.getByTestId('create-tee-tee-1')).toBeTruthy();
+  });
+
+  it('et profilsvar etter at skjemaet er lukket, flytter ikke veiviseren (#2757)', async () => {
+    let answer: (result: unknown) => void = () => undefined;
+    (saveProfile as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await openWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await act(async () => {
+      ref.navigate('EditProfile', { returnTo: 'CreateGame' });
+    });
+    await fireEvent.changeText(await screen.findByTestId('edit-profile-name'), 'Nytt Navn');
+    await fireEvent.press(screen.getByTestId('edit-profile-save'));
+
+    await pressBack();
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'CreateGame']);
+    await act(async () => {
+      answer({ ok: true });
+    });
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'CreateGame']);
+    expect(screen.getByTestId('create-step-setup')).toBeTruthy();
+  });
+
+  it('etter en feilet lagring virker tilbake igjen (#2757)', async () => {
+    (createCourse as jest.Mock).mockResolvedValueOnce({ ok: false, code: 'db' });
+    await fillCourseForm();
+    await fireEvent.press(screen.getByTestId('course-save'));
+    expect(screen.getByTestId('course-save-error')).toBeTruthy();
+
+    await pressBack();
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'CreateGame']);
+    expect(screen.getByTestId('create-step-course')).toBeTruthy();
   });
 });

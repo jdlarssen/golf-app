@@ -5,13 +5,15 @@
 // **Egen skjerm, ikke et understeg.** Veiviseren står montert under med alt du har
 // valgt. Lagret bane går tilbake dit med `backTo`, og skjemaet er borte fra
 // tilbake-veien (`docs/user-flows.md` §Tilbake, regel 3). Pil, sveip og
-// Android-tilbake lukker skjemaet uten spørsmål, som `EditProfile`.
+// Android-tilbake lukker skjemaet uten spørsmål, som `EditProfile`. Mens lagringen
+// pågår, gjør tilbake ingenting, som publiseringen i veiviseren.
 //
 // **Skjermen kjenner ingen regel.** Knappen spør `courseDraftProblem`, og den spør
 // den samme parseren som nettets serveraksjon bruker (`courseDraft.ts`).
 //
 // **Lagring krever nett**, som publiseringen av en runde. Et påbegynt skjema
 // overlever ikke at appen lukkes.
+import { usePreventRemove } from '@react-navigation/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { HoleGrid } from '../components/course/HoleGrid';
@@ -39,6 +41,15 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
   const problem = useMemo(() => courseDraftProblem(draft), [draft]);
   const blocked = problem !== null || busy;
 
+  // Svaret skal lande på skjermen det ble sendt fra. Var skjemaet lukket, ville
+  // `backTo` truffet veiviseren, som da gikk ett steg tilbake av seg selv, og den
+  // lagrede banen ble ikke valgt. Settes rett før `backTo`, så sperra slipper den
+  // gjennom, samme mønster som `EndGame.tsx`.
+  const leavingRef = useRef(false);
+  usePreventRemove(busy, ({ data }) => {
+    if (leavingRef.current) navigation.dispatch(data.action);
+  });
+
   async function save() {
     // Dobbelttrykk-låsen står først: kallet er ikke idempotent.
     if (blocked) return;
@@ -51,6 +62,7 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
     try {
       const result = await createCourse(parseCourseDraft(draft));
       if (result.ok) {
+        leavingRef.current = true;
         backTo(navigation, 'CreateGame', { createdCourseId: result.courseId });
         return;
       }
