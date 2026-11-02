@@ -394,6 +394,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     const summary = confirmSummary(plan, acknowledged, liveChoices);
     return (
       <ConfirmStep
+        inCup={game.tournamentId !== null}
         resultText={resultLine(summary.resultCount, summary.deliveredCount)}
         rows={[
           ...summary.winners.map((row) => ({
@@ -979,6 +980,7 @@ function SectionHeading({
  * kan åpne runden igjen. Ingenting skrives før «Ja, avslutt runden».
  */
 function ConfirmStep({
+  inCup,
   resultText,
   rows,
   isAdmin,
@@ -987,6 +989,7 @@ function ConfirmStep({
   onConfirm,
   onCancel,
 }: {
+  inCup: boolean;
   resultText: string;
   rows: { key: string; label: string; value: string }[];
   isAdmin: boolean;
@@ -1000,7 +1003,11 @@ function ConfirmStep({
     { key: 'result', label: END_GAME_TEXT.resultLabel, value: resultText },
     ...rows,
   ];
-  const next = [END_GAME_TEXT.nextLocked, END_GAME_TEXT.nextBoard, END_GAME_TEXT.nextNotified];
+  const next = [
+    END_GAME_TEXT.nextLocked,
+    END_GAME_TEXT.nextBoard,
+    inCup ? END_GAME_TEXT.nextNotifiedCup : END_GAME_TEXT.nextNotified,
+  ];
   return (
     <View style={[styles.fill, { backgroundColor: colors.bg }]} testID="end-game-confirm">
       <BottomBarLayout

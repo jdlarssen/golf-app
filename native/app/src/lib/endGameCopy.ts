@@ -218,6 +218,8 @@ export const END_GAME_TEXT = {
   // Sant fordi appen bare flipper status: «Resultatet er klart» og resten av
   // halen sendes av `app/api/cron/finish-pipeline` (pg_cron hvert minutt).
   nextNotified: 'Spillerne får beskjed om at resultatet er klart, som regel innen et minutt.',
+  // #2752: i en cup er varselet cupens. Kampene demper sine egne (#1501).
+  nextNotifiedCup: 'Spillerne får beskjed når cupen avsluttes.',
   // `reopenGame` på nettsiden krever admin (`requireAdmin`). Arrangøren som
   // ikke er admin, kan ikke åpne runden igjen selv.
   reopenAdmin: 'Du kan åpne den igjen fra nettsiden.',
