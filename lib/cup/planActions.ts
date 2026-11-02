@@ -1,23 +1,17 @@
 'use server';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { redirect } from '@/lib/nav/redirect';
-import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
-import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
-import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
-import { exceedsPersonalPlayerCap } from '@/lib/cup/limits';
 import { parseOsloDateTimeLocal, isTeeOffInPast } from '@/lib/games/gamePayload';
-import {
-  planCupPlanPropagation,
-  type CupPlanValues,
-  type StoredCupMatch,
-} from './cupPlanPropagation';
 import { parseCupPlanForm } from './planValidation';
-import { getCupCandidatePlayers } from './getCupCandidatePlayers';
+import {
+  addCupParticipantCore,
+  removeCupParticipantCore,
+  revalidateCupSetup,
+  saveCupPlanCore,
+} from './setupCore';
 
 /**
  * Server-actions for de to første cup-rommene (#1472): Oppsett (plan) og
@@ -46,109 +40,6 @@ export type CupPlanActionError = { error: string };
  */
 function cupPath(id: string, groupId: string | null, sub = ''): string {
   return groupId ? `/klubber/${groupId}/cup/${id}${sub}` : `/admin/cup/${id}${sub}`;
-}
-
-function revalidateCup(id: string, groupId: string | null): void {
-  expireTournamentCache(id);
-  revalidatePath(`/admin/cup/${id}`);
-  if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
-}
-
-/**
- * Skriver den nettopp lagrede planen ned på cupens ALLEREDE genererte matcher
- * (#1523). Uten dette var plan→match-kopien en engangs-hendelse ved
- * generering: endret arrangøren starttiden etterpå, ble matchene stående uten
- * tee-off, og hverken cron-sveipet eller E1-fallbacken hadde noe å fyre på.
- *
- * Hvilke rader som treffes og hvilken tid hver av dem får avgjøres av den rene
- * `planCupPlanPropagation` (som gjenskaper genereringens egen utregning) —
- * her gjøres kun I/O.
- *
- * To vern på skrivingen:
- *  - `.eq('status', 'scheduled')` gjentar status-filteret i selve UPDATE-en.
- *    Rekker cron-sveipet å starte en match mellom lesingen og skrivingen, skal
- *    den startede runden IKKE få nye verdier — invarianten er hardere enn
- *    rad-tellingen.
- *  - `expectAffected`: fant lesingen scheduled-matcher, er 0 oppdaterte rader
- *    en ekte feil (felle #2), ikke en ærlig no-op. Ingen genererte matcher =
- *    ingen UPDATE i det hele tatt.
- *
- * Én UPDATE per distinkt starttid (splittet cup-dag forskyver flightene ti
- * minutter hver) — bane og tee er like for alle. Hver oppdatert kamp får
- * cache-tagen sin revalidert her: kampene leses gjennom
- * `getGameWithPlayers`-cachen (tag `game-${id}`), så uten dette ville
- * hull-siden og kamp-hjemmet vist gammel bane og starttid.
- *
- * `false` ut betyr at planen ER lagret, men matchene ikke fikk verdiene —
- * kalleren sier fra om nettopp det. En cup uten genererte matcher er `true`
- * (ærlig no-op).
- */
-async function propagatePlanToScheduledMatches(
-  admin: SupabaseClient<Database>,
-  tournamentId: string,
-  plan: CupPlanValues,
-): Promise<boolean> {
-  try {
-    return await writePlanToScheduledMatches(admin, tournamentId, plan);
-  } catch (err) {
-    console.error('[cup] saveCupPlan match propagation failed', {
-      tournamentId,
-      err,
-    });
-    return false;
-  }
-}
-
-/** Selve lesingen og skrivingen — feil kastes til wrapperen over. */
-async function writePlanToScheduledMatches(
-  admin: SupabaseClient<Database>,
-  tournamentId: string,
-  plan: CupPlanValues,
-): Promise<boolean> {
-  const { data: rows, error } = await admin
-    .from('games')
-    .select('id, status, source_game_id, tournament_match_label, hole_segment')
-    .eq('tournament_id', tournamentId);
-  if (error) throw new Error(`propagatePlanToScheduledMatches: ${error.message}`);
-
-  const matches: StoredCupMatch[] = (rows ?? []).map((r) => ({
-    id: r.id,
-    status: r.status,
-    sourceGameId: r.source_game_id,
-    matchLabel: r.tournament_match_label,
-    holeSegment: r.hole_segment,
-  }));
-
-  const updates = planCupPlanPropagation(matches, plan);
-  if (updates.length === 0) return true;
-
-  const byTeeOff = new Map<string | null, string[]>();
-  for (const u of updates) {
-    const ids = byTeeOff.get(u.scheduledTeeOffAt) ?? [];
-    ids.push(u.gameId);
-    byTeeOff.set(u.scheduledTeeOffAt, ids);
-  }
-
-  const updatedIds: string[] = [];
-  for (const [scheduledTeeOffAt, ids] of byTeeOff) {
-    const affected = expectAffected(
-      await admin
-        .from('games')
-        .update({
-          course_id: plan.courseId,
-          tee_box_id: plan.teeBoxId,
-          scheduled_tee_off_at: scheduledTeeOffAt,
-        })
-        .in('id', ids)
-        .eq('status', 'scheduled')
-        .select('id'),
-      'saveCupPlan.propagateToMatches',
-    );
-    updatedIds.push(...affected.map((row) => row.id));
-  }
-
-  for (const gameId of updatedIds) expireGameCache(gameId);
-  return true;
 }
 
 /**
@@ -194,77 +85,21 @@ export async function saveCupPlan(
   }
 
   const supabase = await getServerClient();
-  // `groupId` kommer fra gaten (#1749) — den har allerede lest kolonnen med
-  // admin-klienten, så cup-lesingen under trenger bare `status`.
+  // `groupId` kommer fra gaten (#1749): den har allerede lest kolonnen med
+  // admin-klienten.
   const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
-  const admin = getAdminClient();
-  const { data: cup } = await admin
-    .from('tournaments')
-    .select('status')
-    .eq('id', id)
-    .maybeSingle();
-  if (!cup) return { error: 'not_found' };
-  if (cup.status !== 'draft') return { error: 'not_draft' };
-
-  // Bane må finnes; tee må tilhøre banen og ikke være arkivert.
-  const { data: course } = await admin
-    .from('courses')
-    .select('id')
-    .eq('id', courseId)
-    .maybeSingle();
-  if (!course) return { error: 'plan_course' };
-
-  const { data: tee } = await admin
-    .from('tee_boxes')
-    .select('id, course_id, archived_at')
-    .eq('id', teeBoxId)
-    .maybeSingle();
-  if (!tee || tee.course_id !== courseId || tee.archived_at !== null) {
-    return { error: 'plan_tee' };
-  }
-
-  // Upsert på `tournament_id` (unique) — én plan per cup i v1. `updated_at`
-  // settes eksplisitt (ingen ON UPDATE-trigger på tabellen). `.select()` +
-  // `expectAffected`: en 0-rads-upsert her er en ekte feil (felle #2), ikke
-  // en ærlig no-op.
-  try {
-    expectAffected(
-      await admin
-        .from('tournament_plans')
-        .upsert(
-          {
-            tournament_id: id,
-            course_id: courseId,
-            tee_box_id: teeBoxId,
-            scheduled_tee_off_at: scheduledTeeOffAt,
-            preset_id: parsed.values.presetId,
-            custom_sessions: parsed.values.customSessions,
-            strategy: parsed.values.strategy,
-            best_ball_allowance_pct: parsed.values.bestBallAllowancePct,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'tournament_id' },
-        )
-        .select('tournament_id'),
-      'saveCupPlan',
-    );
-  } catch (err) {
-    console.error('[cup] saveCupPlan upsert failed', { id, err });
-    return { error: 'plan_save_failed' };
-  }
-
-  // #1523: planen er lagret — nå ned på matchene som allerede er generert.
-  // Egen feilkode: planen ER lagret på dette punktet, så `plan_save_failed`
-  // ville løyet. Arrangøren får vite at matchene ikke fikk de nye verdiene og
-  // kan lagre på nytt (skrivingen er idempotent).
-  const propagated = await propagatePlanToScheduledMatches(admin, id, {
+  const result = await saveCupPlanCore(getAdminClient(), {
+    tournamentId: id,
     courseId,
     teeBoxId,
     scheduledTeeOffAt,
+    values: parsed.values,
   });
-  revalidateCup(id, groupId);
-  if (!propagated) return { error: 'plan_matches_not_updated' };
+  // Egen feilkode når planen ER lagret, men matchene ikke fikk verdiene: cachene
+  // må da busted uansett.
+  if (result.ok || result.error === 'plan_matches_not_updated') revalidateCupSetup(id, groupId);
+  if (!result.ok) return { error: result.error };
 
   redirect(`${cupPath(id, groupId)}?status=plan_saved`);
 }
@@ -285,73 +120,18 @@ export async function addCupParticipant(
   if (!targetUserId) return { error: 'not_candidate' };
 
   const supabase = await getServerClient();
-  // `groupId` kommer fra gaten (#1749) — se saveCupPlan.
+  // `groupId` kommer fra gaten (#1749), se saveCupPlan.
   const { userId, isAdmin, groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
-  const admin = getAdminClient();
-  const { data: cup } = await admin
-    .from('tournaments')
-    .select('status')
-    .eq('id', id)
-    .maybeSingle();
-  if (!cup) return { error: 'not_found' };
-  if (cup.status !== 'draft') return { error: 'not_draft' };
-
-  // Eligibility: brukeren MÅ være en gyldig, ikke-pending kandidat for cupen.
-  // Kilden følger kallerens rolle (samme som generer-veiviseren ser).
-  const candidates = await getCupCandidatePlayers(supabase, {
+  const result = await addCupParticipantCore(getAdminClient(), supabase, {
+    tournamentId: id,
+    targetUserId,
+    actor: { userId, isAdmin },
     groupId,
-    userId,
-    isAdmin,
-    // Kun `id`/`pending` leses under — `displayName` rendres aldri herfra, så
-    // labelen når ingen skjerm. Konstant framfor en getTranslations-runde.
-    unknownLabel: 'Ukjent spiller',
   });
-  const candidate = candidates.find((c) => c.id === targetUserId);
-  if (!candidate || candidate.pending) return { error: 'not_candidate' };
+  if (!result.ok) return { error: result.error };
 
-  // Personlig ikke-admin: håndhev deltaker-taket (#526). Teller distinkt sett
-  // etter tillegg — mirror av genereringens cap-sjekk. Et allerede påmeldt
-  // targetUserId gjør settet uendret (ingen falsk avvisning ved re-add).
-  if (!groupId && !isAdmin) {
-    const { data: existing, error: existingErr } = await admin
-      .from('tournament_participants')
-      .select('user_id')
-      .eq('tournament_id', id);
-    // #1810: uten denne sjekken ga en feilet lesing `existing = null` → settet
-    // ble 1 → taket slapp påmeldingen gjennom. Vakta må feile LUKKET (samme
-    // semantikk som `checkSwapParticipantCap`): kan vi ikke telle, sier vi nei.
-    // En vellykket lesing med 0 rader er derimot en gyldig tom cup.
-    if (existingErr) {
-      console.error('[cup] addCupParticipant cap read failed', {
-        id,
-        targetUserId,
-        error: existingErr,
-      });
-      return { error: 'plan_save_failed' };
-    }
-    const distinctAfter = new Set([
-      ...(existing ?? []).map((r) => r.user_id as string),
-      targetUserId,
-    ]).size;
-    if (exceedsPersonalPlayerCap(distinctAfter, isAdmin)) {
-      return { error: 'too_many_players' };
-    }
-  }
-
-  // Upsert med ignoreDuplicates: allerede påmeldt = stille no-op (ikke en feil).
-  const { error: insertErr } = await admin
-    .from('tournament_participants')
-    .upsert(
-      { tournament_id: id, user_id: targetUserId },
-      { onConflict: 'tournament_id,user_id', ignoreDuplicates: true },
-    );
-  if (insertErr) {
-    console.error('[cup] addCupParticipant failed', { id, targetUserId, error: insertErr });
-    return { error: 'plan_save_failed' };
-  }
-
-  revalidateCup(id, groupId);
+  revalidateCupSetup(id, groupId);
   redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_added`);
 }
 
@@ -368,33 +148,13 @@ export async function removeCupParticipant(
   if (!targetUserId) return { error: 'not_found' };
 
   const supabase = await getServerClient();
-  // `groupId` kommer fra gaten (#1749) — se saveCupPlan.
+  // `groupId` kommer fra gaten (#1749), se saveCupPlan.
   const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
 
-  const admin = getAdminClient();
-  const { data: cup } = await admin
-    .from('tournaments')
-    .select('status')
-    .eq('id', id)
-    .maybeSingle();
-  if (!cup) return { error: 'not_found' };
-  if (cup.status !== 'draft') return { error: 'not_draft' };
+  const result = await removeCupParticipantCore(getAdminClient(), { tournamentId: id, targetUserId });
+  if (!result.ok) return { error: result.error };
 
-  // Bevisst INGEN expectAffected her: en delete som treffer 0 rader er en ærlig
-  // no-op (raden er allerede borte — arrangøren ville ha deltakeren fjernet, og
-  // det er hun). I motsetning til upsert-stien over, der 0 rader ville vært en
-  // reell feil (felle #2).
-  const { error: deleteErr } = await admin
-    .from('tournament_participants')
-    .delete()
-    .eq('tournament_id', id)
-    .eq('user_id', targetUserId);
-  if (deleteErr) {
-    console.error('[cup] removeCupParticipant failed', { id, targetUserId, error: deleteErr });
-    return { error: 'plan_save_failed' };
-  }
-
-  revalidateCup(id, groupId);
+  revalidateCupSetup(id, groupId);
   redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_removed`);
 }
 

@@ -25,6 +25,7 @@ import {
   resolveCupMatchTotal,
 } from './pointsToWin';
 import { parseCupDraftForm } from './parseCupDraftForm';
+import { createTournamentDraftCore } from './setupCore';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import {
   notifyParticipantsCupStarted,
@@ -122,40 +123,15 @@ export async function createTournamentDraft(
     ? await requireAdminOrClubAdmin(supabase, groupId)
     : await getRoleContext(supabase);
 
-  const { data, error } = await supabase
-    .from('tournaments')
-    .insert({
-      name: values.name,
-      team_1_name: values.team1,
-      team_2_name: values.team2,
-      // points_to_win utelates med vilje: en draft vet ikke hvor mange matcher
-      // den får ennå. startTournament utleder målet fra det reelle antallet.
-      fourball_allowance_pct: values.fourballAllowance,
-      foursomes_allowance_pct: values.foursomesAllowance,
-      greensome_allowance_pct: values.greensomeAllowance,
-      chapman_allowance_pct: values.chapmanAllowance,
-      gruesome_allowance_pct: values.gruesomeAllowance,
-      created_by: userId,
-      group_id: groupId,
-      // #1441 (D8): utelates når feltet var tomt — DB-default 1/0,5 (migrasjon
-      // 0153) gjelder da, bit for bit dagens oppførsel for ordinære cuper.
-      ...(values.winPoints !== undefined ? { win_points: values.winPoints } : {}),
-      ...(values.tiePoints !== undefined ? { tie_points: values.tiePoints } : {}),
-    })
-    .select('id')
-    .single();
-
-  if (error || !data) {
-    console.error('[cup] createTournamentDraft failed', { error });
-    return { error: 'cup_insert_failed' };
-  }
+  const created = await createTournamentDraftCore(supabase, { userId, groupId, values });
+  if (!created.ok) return { error: created.error };
 
   // Klubb-sti: fortsett i klubb-chrome (generer kamper der). Frittstående:
   // admin-cup-detalj som før.
   redirect(
     groupId
-      ? `/klubber/${groupId}/cup/${data.id}`
-      : `/admin/cup/${data.id}?status=created`,
+      ? `/klubber/${groupId}/cup/${created.id}`
+      : `/admin/cup/${created.id}?status=created`,
   );
 }
 
