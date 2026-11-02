@@ -105,6 +105,29 @@ describe('CupParticipants', () => {
     expect(screen.queryByTestId('cup-candidate-per')).toBeNull();
   });
 
+  it('søket er tømt etter at du la til den du søkte etter', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ userId: `p${i}`, name: `Spiller ${i}`, hcpIndex: 1, pending: false }));
+    answer({ ok: true, view: room({ candidates: many }) });
+    await renderList();
+
+    await fireEvent.changeText(screen.getByTestId('cup-players-search'), 'Spiller 29');
+    await fireEvent.press(screen.getByTestId('cup-candidate-add-p29'));
+
+    expect(screen.getByTestId('cup-players-search').props.value).toBe('');
+    expect(screen.queryByTestId('cup-players-no-match')).toBeNull();
+  });
+
+  it('kvitteringen for å legge til forsvinner når du går videre til å fjerne', async () => {
+    answer({ ok: true, view: room() });
+    await renderList({ notice: 'participant_removed' });
+    await fireEvent.press(screen.getByTestId('cup-candidate-add-per'));
+    expect(screen.getByTestId('cup-players-notice')).toHaveTextContent('Spilleren er lagt til.');
+
+    await fireEvent.press(screen.getByTestId('cup-player-remove-ola'));
+
+    expect(screen.getByTestId('cup-players-notice')).toHaveTextContent('Spilleren er fjernet.');
+  });
+
   it('en venn uten profil står, men kan ikke legges til', async () => {
     answer({ ok: true, view: room() });
     await renderList();
