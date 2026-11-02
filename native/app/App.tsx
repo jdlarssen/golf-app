@@ -43,6 +43,7 @@ import { AiConsentGate } from './src/components/AiConsentGate';
 import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
 import { listenForAppLinks } from './src/data/pendingAppLink';
+import { ensurePushChannel } from './src/data/pushDevice';
 import { FRAUNCES_FILES } from './src/fonts';
 import { RootNavigator } from './src/navigation';
 import { KeyboardInset } from './src/components/KeyboardInset';
@@ -77,6 +78,10 @@ export default function App() {
 
   // #2627, #2748: lenker fra første bilde, også før noen er logget inn.
   useEffect(() => listenForAppLinks(), []);
+  // #2758: kanalen for varsler på Android finnes fra oppstart, også før innlogging.
+  useEffect(() => {
+    void ensurePushChannel();
+  }, []);
 
   useEffect(() => {
     // .catch + .finally: en avvist getSession må ALDRI la splashen henge —

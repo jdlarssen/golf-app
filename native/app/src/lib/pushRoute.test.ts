@@ -16,6 +16,15 @@ describe('pushUrl', () => {
     ).toBe(`/games/${GAME}`);
   });
 
+  it('leser url fra FCM-meldingen på Android, der vår server legger den (#2758)', () => {
+    expect(
+      pushUrl({
+        content: { data: null },
+        trigger: { type: 'push', remoteMessage: { data: { url: `/games/${GAME}`, kind: 'invite' } } },
+      }),
+    ).toBe(`/games/${GAME}`);
+  });
+
   it('faller tilbake til content.data, og gir null uten url', () => {
     expect(pushUrl({ content: { data: { url: '/profile' } }, trigger: { type: 'push' } })).toBe('/profile');
     expect(pushUrl({ content: { data: {} }, trigger: { type: 'push', payload: { url: 42 } } })).toBeNull();

@@ -8,7 +8,7 @@
 // og av, et nei fra iOS gir «Åpne Innstillinger», og en feil står under kortet.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Linking, Platform, StyleSheet } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { readPushState, turnOffPush, turnOnPush } from '../data/pushDevice';
 import { loadThemePreference, saveThemePreference } from '../lib/themePreference';
 import { PROFILE_TEXT } from '../lib/profileCopy';
@@ -84,7 +84,7 @@ describe('NotificationsAndTheme', () => {
       fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
     });
     expect(onMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOn);
+    expect(screen.getByTestId('push-status')).toHaveTextContent('På · iPhone');
     // Bryteren sier «på» til skjermleseren.
     expect(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle })).toBeChecked();
 
@@ -92,7 +92,7 @@ describe('NotificationsAndTheme', () => {
       fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
     });
     expect(offMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOn);
+    expect(screen.getByTestId('push-status')).toHaveTextContent('På · iPhone');
     expect(screen.getByTestId('push-error')).toHaveTextContent(PROFILE_TEXT.pushOffFailed);
   });
 
@@ -113,7 +113,7 @@ describe('NotificationsAndTheme', () => {
     openSettings.mockRestore();
   });
 
-  it('har ingen varsel-del uten støtte (Android, eller et bygg uten modulen)', async () => {
+  it('har ingen varsel-del i et bygg uten modulen', async () => {
     await renderScreen();
     expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
     expect(screen.queryByTestId('push-section')).toBeNull();
@@ -145,29 +145,42 @@ describe('NotificationsAndTheme', () => {
     expect(screen.getByTestId('theme-save-error')).toHaveTextContent(PROFILE_TEXT.themeSaveFailedNote);
   });
 
-  // #2560: Android har ikke push ved lansering, så siden heter «Tema» der og
-  // sier ingenting om varsler. Etiketten «Tema» over valgene ville stått rett
-  // under en tittel med samme ord, så den utgår.
-  it('heter «Tema» på Android, uten varsel-del og uten dobbel etikett', async () => {
-    platform = jest.replaceProperty(Platform, 'OS', 'android');
-    // `readPushState` svarer alltid «unsupported» på Android (`pushDevice.test.ts`).
-    readPushMock.mockResolvedValue('unsupported');
-    await renderScreen();
-    expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
-
-    expect(screen.getAllByText('Tema')).toHaveLength(1);
-    expect(screen.queryByText(PROFILE_TEXT.notificationsHeading)).toBeNull();
-    expect(screen.queryByText(PROFILE_TEXT.pushSubtitle)).toBeNull();
-    expect(screen.queryByTestId('push-section')).toBeNull();
-    // Etiketten ga 16 pt luft over lista; uten den må lista holde avstand selv.
-    expect(StyleSheet.flatten(screen.getByTestId('theme-choices').props.style).marginTop).toBe(16);
-  });
-
-  it('heter «Varsler» på iOS, med «Tema» som etikett over valgene', async () => {
-    platform = jest.replaceProperty(Platform, 'OS', 'ios');
+  it.each(['ios', 'android'] as const)('heter «Varsler» på %s, med «Tema» som etikett over valgene', async (os) => {
+    platform = jest.replaceProperty(Platform, 'OS', os);
     await renderScreen();
     expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
     expect(screen.getByText(PROFILE_TEXT.notificationsHeading)).toBeTruthy();
     expect(screen.getAllByText('Tema')).toHaveLength(1);
+  });
+
+  // #2758: statuslinja sier hvilken telefon varslene står på.
+  it.each([
+    ['ios', 'På · iPhone'],
+    ['android', 'På · Android'],
+  ] as const)('viser på %s at varslene står på', async (os, label) => {
+    platform = jest.replaceProperty(Platform, 'OS', os);
+    readPushMock.mockResolvedValue('on');
+    await renderScreen();
+
+    expect(await screen.findByTestId('push-status')).toHaveTextContent(label);
+  });
+
+  // #2758: på Android kan et nei spørres om igjen. Det er ikke «nektet», så
+  // bryteren står av og kan prøves på nytt, uten feilmelding.
+  it('lar bryteren stå av etter et nei som kan spørres om igjen', async () => {
+    platform = jest.replaceProperty(Platform, 'OS', 'android');
+    readPushMock.mockResolvedValue('off');
+    onMock.mockResolvedValue({ ok: false, reason: 'declined' });
+    await renderScreen();
+    await screen.findByTestId('push-section');
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
+    });
+
+    expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOff);
+    expect(screen.queryByTestId('push-denied')).toBeNull();
+    expect(screen.queryByTestId('push-error')).toBeNull();
+    expect(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle })).toBeEnabled();
   });
 });

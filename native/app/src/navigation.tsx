@@ -24,10 +24,9 @@ import {
 } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
-import { settlePushOwner } from './data/pushDevice';
+import { listenForPushTokenChanges, settlePushOwner, syncPushToken } from './data/pushDevice';
 import {
   appLinkStep,
   pendingAppLink,
@@ -54,7 +53,7 @@ import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
-import { PROFILE_TEXT, notificationsThemeHeading } from './lib/profileCopy';
+import { PROFILE_TEXT } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
@@ -335,9 +334,11 @@ export function RootNavigator() {
       }),
     [],
   );
-  // Ny innlogging: varsler for en annen konto på telefonen ryddes (#2256 PR 4).
+  // Ny innlogging: varsler for en annen konto på telefonen ryddes (#2256 PR 4), og
+  // står varsler på for denne kontoen, er raden oppdatert med tokenet (#2758).
   useEffect(() => {
-    void settlePushOwner();
+    void settlePushOwner().then(syncPushToken);
+    return listenForPushTokenChanges();
   }, []);
   // #2627, #2748: en lenke som kommer mens appen er åpen. En som kom før
   // innloggingen (eller før navigatoren var klar), tas i `onReady`.
@@ -471,7 +472,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={kickerHeader(PROFILE_TEXT.heading, notificationsThemeHeading(Platform.OS), {
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading, {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
         />

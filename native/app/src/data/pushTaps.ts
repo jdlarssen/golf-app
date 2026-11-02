@@ -15,8 +15,7 @@
 // varselet som lest, også når skjermen det åpner ikke er den webben ville
 // åpnet (godkjenning og resultat åpner spillets side her).
 //
-// Gjør ingenting i et bygg uten den native delen, eller på Android
-// (`canUsePush`).
+// Gjør ingenting i et bygg uten den native delen (`canUsePush`).
 import {
   pushNotificationId,
   pushTarget,

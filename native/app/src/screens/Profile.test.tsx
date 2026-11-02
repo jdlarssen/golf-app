@@ -321,12 +321,10 @@ describe('Profile', () => {
     }
   });
 
-  // #2560: Android har ikke push ved lansering, så raden lover ikke varsler.
-  it('kaller raden «Tema» på Android', async () => {
+  // #2758: varsler finnes på begge telefoner.
+  it('kaller raden «Varsler og tema» på Android', async () => {
     platform = jest.replaceProperty(Platform, 'OS', 'android');
     await renderScreen();
-    const row = screen.getByTestId('profile-notifications-theme');
-    expect(row).toHaveTextContent('Tema', { exact: false });
-    expect(row).not.toHaveTextContent(/varsl/i);
+    expect(screen.getByTestId('profile-notifications-theme')).toHaveTextContent('Varsler og tema', { exact: false });
   });
 });

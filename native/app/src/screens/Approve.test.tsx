@@ -335,13 +335,11 @@ describe('Approve', () => {
     expect(refreshGameBundle.mock.calls.length).toBe(calls + 1);
   });
 
-  // #2560: «Du får beskjed når kortet kommer» stemmer ikke på Android, som ikke
-  // har push ved lansering. Raden under en makker som ikke har levert er den
-  // eneste som sier det.
+  // #2758: varsler finnes på begge telefoner, så linja er den samme.
   it.each([
     ['ios', 'Du får beskjed når kortet kommer.'],
-    ['android', 'Kortet står her når det er levert.'],
-  ] as const)('sier «%s» under en makker som ikke har levert', async (os, hint) => {
+    ['android', 'Du får beskjed når kortet kommer.'],
+  ] as const)('sier på %s «%s» under en makker som ikke har levert', async (os, hint) => {
     const platform = jest.replaceProperty(Platform, 'OS', os);
     try {
       mockState.bundle = {

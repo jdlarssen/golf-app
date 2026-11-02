@@ -5,8 +5,6 @@
 // ligger spillet eller ligaen alt i stakken, går trykket tilbake dit i stedet
 // for å legge en kopi oppå. Står her og ikke i `navigation.tsx`, så en test kan
 // kjøre den mot en ekte navigator uten å laste alle skjermene.
-//
-// Varsler finnes bare på iPhone (`canUsePush`), så dette kjører aldri på Android.
 import {
   CommonActions,
   StackActions,
