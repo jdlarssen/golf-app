@@ -1,8 +1,6 @@
 import type { PairingStrategy } from './cupPairing';
 import type { CupSessionFormat } from './cupTemplates';
-import type { WizardPlayer } from './getCupCandidatePlayers';
-import type { CupBatchMatch } from './insertCupMatches';
-import type { WizardTeeBox } from './matchPlan';
+import type { CupBatchMatch, WizardPlayer, WizardTeeBox } from './matchPlan';
 
 /**
  * Wire-typene for «Fordel & generer» i appen (#2752). Rutene er

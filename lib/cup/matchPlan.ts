@@ -1,5 +1,3 @@
-import type { WizardPlayer } from './getCupCandidatePlayers';
-import type { CupBatchMatch } from './insertCupMatches';
 import {
   CUP_PRESETS,
   buildSessionCountRows,
@@ -28,6 +26,26 @@ import { greensomeTeamHandicap } from '../scoring/modes/greensomeMatchplay';
  * av matcher, og hva som faktisk sendes inn. Nettets veiviser og appen kaller begge
  * disse funksjonene, så de to ikke kan regne ulikt. Ingenting her leser eller skriver.
  */
+
+export type WizardPlayer = {
+  id: string;
+  displayName: string;
+  hcpIndex: number;
+  // #1441 (F3c) — optional: kun satt når kilde-queriet valgte kolonnen (alle
+  // tre spiller-kilder gjør det nå).
+  gender?: 'mens' | 'ladies' | null;
+  // #1441 (owner-QA, F3f): true for venner uten fullført profil
+  // (`profile_completed_at IS NULL`) — rendres som en IKKE-valgbar rad, aldri
+  // tildelbar til et lag (se `getFriendPlayerOptions`s `pending`-felt). Alltid
+  // `false`/`undefined` for klubb-medlem- og admin-spillerlistene — de filtrerer
+  // pending bort før noen ser dem (kun venne-kilden fikk denne synligheten).
+  pending?: boolean;
+};
+
+/** En match slik den sendes inn: greensomen med `teamStrokesOverride` (D10). */
+export type CupBatchMatch = (PlannedMatch | PlannedBundleMatch) & {
+  teamStrokesOverride?: { team1: number; team2: number };
+};
 
 /** Matchen veiviseren holder i steg 2: aldri en blanding innen samme plan. */
 export type PlanMatch = PlannedMatch | PlannedBundleMatch;

@@ -1,6 +1,6 @@
 import { isUuid } from '@/lib/url/isUuid';
 import type { CupBundleFormat } from './cupPairing';
-import type { CupBatchMatch } from './insertCupMatches';
+import type { CupBatchMatch } from './matchPlan';
 
 const FORMATS: ReadonlySet<CupBundleFormat> = new Set<CupBundleFormat>([
   'foursomes_matchplay',

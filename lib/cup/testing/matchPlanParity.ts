@@ -1,5 +1,4 @@
-import type { WizardPlayer } from '../getCupCandidatePlayers';
-import type { WizardTeeBox } from '../matchPlan';
+import type { WizardPlayer, WizardTeeBox } from '../matchPlan';
 
 /**
  * Felles fixture for kriterium 18 i #2752: fra samme plan gir appen og nettet like

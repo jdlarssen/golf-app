@@ -1,4 +1,5 @@
 import 'server-only';
+import type { WizardPlayer } from './matchPlan';
 import type { getServerClient } from '@/lib/supabase/server';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
@@ -17,24 +18,11 @@ type UserRow = {
 
 /**
  * Én kandidat-spiller for en cup — kilden til både Spillere-rommet (#1472) og
- * generer-veiviserens roster (#524/#526). Dette er typens ENE hjem;
+ * generer-veiviserens roster (#524/#526). Typen bor i `matchPlan.ts`, som appen også leser;
  * `GenerateMatches` re-eksporterer den så eksisterende importører av
  * `./GenerateMatches` er uendret.
  */
-export type WizardPlayer = {
-  id: string;
-  displayName: string;
-  hcpIndex: number;
-  // #1441 (F3c) — optional: kun satt når kilde-queriet valgte kolonnen (alle
-  // tre spiller-kilder gjør det nå).
-  gender?: 'mens' | 'ladies' | null;
-  // #1441 (owner-QA, F3f): true for venner uten fullført profil
-  // (`profile_completed_at IS NULL`) — rendres som en IKKE-valgbar rad, aldri
-  // tildelbar til et lag (se `getFriendPlayerOptions`s `pending`-felt). Alltid
-  // `false`/`undefined` for klubb-medlem- og admin-spillerlistene — de filtrerer
-  // pending bort før noen ser dem (kun venne-kilden fikk denne synligheten).
-  pending?: boolean;
-};
+export type { WizardPlayer };
 
 /**
  * Kandidat-spillerne for en cup, etter cupens kontekst (#524/#526/#464). Trukket
