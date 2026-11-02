@@ -481,6 +481,16 @@ describe('EndGame', () => {
       expect(landedOnBoard()).toBe(true);
     });
 
+    it('bekreftelsen lover ikke et varsel kampen ikke sender: det er cupens', async () => {
+      setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })], cupGame);
+      await renderScreen();
+
+      await fireEvent.press(screen.getByTestId('end-game-submit'));
+
+      expect(screen.getByText('Spillerne får beskjed når cupen avsluttes.')).toBeTruthy();
+      expect(screen.queryByText(END_GAME_TEXT.nextNotified)).toBeNull();
+    });
+
     it('en spiller uten kort avsluttes uten kortet, og trekkes ikke', async () => {
       setBundle(
         [
