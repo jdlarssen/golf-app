@@ -12,7 +12,7 @@
 //
 // **Lagring krever nett**, som publiseringen av en runde. Et påbegynt skjema
 // overlever ikke at appen lukkes.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { HoleGrid } from '../components/course/HoleGrid';
 import { SimilarCoursesPanel } from '../components/course/SimilarCoursesPanel';
@@ -33,6 +33,8 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
   const [draft, setDraft] = useState(() => emptyCourseDraft(route.params.name ?? ''));
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+
+  const scroll = useRef<ScrollView>(null);
 
   const problem = useMemo(() => courseDraftProblem(draft), [draft]);
   const blocked = problem !== null || busy;
@@ -60,8 +62,15 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
     setBusy(false);
   }
 
+  // Feilen står under knappen, og knappen kan stå helt nederst på skjermen. Uten
+  // dette ser et trykk på «Lagre bane» ut som om ingenting skjedde.
+  useEffect(() => {
+    if (failure) scroll.current?.scrollToEnd();
+  }, [failure]);
+
   return (
     <ScrollView
+      ref={scroll}
       {...KEYBOARD_SCROLL_PROPS}
       // Et trykk på par eller «Lagre bane» skal virke med tastaturet oppe.
       keyboardShouldPersistTaps="handled"

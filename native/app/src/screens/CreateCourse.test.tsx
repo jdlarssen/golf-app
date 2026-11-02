@@ -4,6 +4,7 @@
 // stående med tastet innhold, og lagret bane går tilbake med `backTo`.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
 import { createCourse } from '../data/createCourse';
 import { fetchSimilarCourses } from '../data/similarCourses';
 import { isDeviceOnline } from '../data/syncTriggers';
@@ -136,6 +137,8 @@ describe('CreateCourse', () => {
     );
     expect(navigation.popTo).not.toHaveBeenCalled();
     expect(screen.getByTestId('course-index-1-18').props.value).toBe('18');
+    // Meldingen står under knappen, så skjermen ruller ned til den.
+    expect(ScrollView.prototype.scrollToEnd).toHaveBeenCalled();
   });
 
   it.each([
