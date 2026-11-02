@@ -23,6 +23,8 @@ describe('stiene appens egne knapper åpner', () => {
     ['PRIVACY_PATH', PRIVACY_PATH],
     ['påmeldingen', `/signup/${ID}`],
     ['innloggingen', '/login'],
+    ['cup-siden', `/cup/${ID}`],
+    ['klubblenka fra cup-lenka', '/klubber/bli-med/abcd2345'],
   ])('%s gjør appen ikke krav på', (_label, path) => {
     expect(claims(path)).toBe(false);
   });
@@ -33,7 +35,7 @@ describe('stiene appens egne knapper åpner', () => {
   });
 
   // Null-test: uten denne kunne `claims` blitt blind og stått grønn.
-  it.each([`/runde/${ID}`, `/invitasjon/${ID}`, '/liga/bli-med/abcd2345', '/en/runde/x', '/pamelding/abcd2345'])(
+  it.each([`/runde/${ID}`, `/invitasjon/${ID}`, '/liga/bli-med/abcd2345', '/en/runde/x', '/pamelding/abcd2345', '/cup/bli-med/abcd2345'])(
     'fanger en sti appen gjør krav på: %s',
     (path) => {
       expect(claims(path)).toBe(true);

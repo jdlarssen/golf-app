@@ -24,7 +24,7 @@ import { formatWeekdayDayMonth } from '../../lib/homeDates';
 import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPicker';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { Field, SelectRow } from './primitives';
+import { Field, SelectRow, ToggleRow } from './primitives';
 
 /** «Herre · Dame» — hvilke tee-kjønn denne teen har rating for. */
 function describeTee(tee: CourseOption['tees'][number]): string {
@@ -47,6 +47,7 @@ export function CourseStep({
   onTeeOff,
   onRetry,
   isAdmin,
+  optionalTeeOff,
 }: {
   /** `null` mens hentingen pågår. */
   courses: CourseOption[] | null;
@@ -58,6 +59,11 @@ export function CourseStep({
   onTee: (teeBoxId: string) => void;
   onTeeOff: (date: Date) => void;
   onRetry: () => void;
+  /**
+   * En cup kan stå uten starttid (#2752): da starter arrangøren rundene selv. Uten
+   * denne er tiden påkrevd, som i et vanlig spill.
+   */
+  optionalTeeOff?: { enabled: boolean; onEnabled: (enabled: boolean) => void; label: string; hint: string };
   /**
    * Om arrangøren slipper inn i tee-editoren på nettsiden (#1934). Påkrevd, og
    * med vilje uten default: en default ville latt et framtidig kallsted glemme
@@ -207,6 +213,16 @@ export function CourseStep({
         </Field>
       ) : null}
 
+      {optionalTeeOff ? (
+        <ToggleRow
+          label={optionalTeeOff.label}
+          hint={optionalTeeOff.hint}
+          value={optionalTeeOff.enabled}
+          onChange={optionalTeeOff.onEnabled}
+          testID="create-teeoff-toggle"
+        />
+      ) : null}
+      {optionalTeeOff && !optionalTeeOff.enabled ? null : (
       <Field label="Tee-off">
         {isAndroid ? (
           <>
@@ -257,6 +273,7 @@ export function CourseStep({
           />
         ) : null}
       </Field>
+      )}
     </View>
   );
 }

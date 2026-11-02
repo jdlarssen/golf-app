@@ -5,7 +5,8 @@
 //  - **Lenkene på nettet**, `https://tornygolf.no/venner/legg-til/<kode>` (QR-koden
 //    på bag-taggen og «Del lenken din»), `/liga/bli-med/<kode>` («Del lenka» på
 //    ligasiden), `/invitasjon/<token>` (invitasjonsmailen), `/runde/<id>` (e-postene
-//    om en runde) og `/pamelding/<kode>` (lenka og QR-koden arrangøren deler). Butikkbygget gjør krav på domenet, og lista over stier står i
+//    om en runde), `/pamelding/<kode>` (lenka og QR-koden arrangøren deler) og
+//    `/cup/bli-med/<kode>` (lenka arrangøren av en cup deler, #2752). Butikkbygget gjør krav på domenet, og lista over stier står i
 //    `lib/appLinks/appLinkPaths.ts`. Verten må likevel være web-adressen
 //    bygget peker på: en annen vert skal aldri leses som vår. Unntaket er `www` i
 //    bygget som peker på prod. Knappen «Åpne i appen» på nettsiden lenker dit, fordi
@@ -25,6 +26,7 @@
 // og går gjennom `pushTarget`, så e-posten og varselet aldri kan være uenige om hvor
 // du havner. Undersidene er de nettsiden tar imot (`isRoundLinkSubpage`).
 import {
+  CUP_JOIN_LINK_PREFIX,
   INVITATION_LINK_PREFIX,
   LEAGUE_LINK_PREFIX,
   ROUND_INVITE_LINK_PREFIX,
@@ -44,7 +46,8 @@ export type AppLink =
   | { kind: 'league'; code: string }
   | { kind: 'invitation'; token: string }
   | { kind: 'round'; target: PushTarget }
-  | { kind: 'roundInvite'; shortId: string; src: string | null };
+  | { kind: 'roundInvite'; shortId: string; src: string | null }
+  | { kind: 'cupJoin'; shortId: string };
 
 /** `STORE_WEB_BASE_URL` og `www`-verten i `app.config.ts`; testen holder dem like. */
 const STORE_WEB_BASE = 'https://tornygolf.no';
@@ -59,6 +62,7 @@ const LEAGUE_PATH = new RegExp(`^(?:${LOCALES})${escape(LEAGUE_LINK_PREFIX)}([^/
 const INVITATION_PATH = new RegExp(`^(?:${LOCALES})${escape(INVITATION_LINK_PREFIX)}([^/]+)/?$`);
 const ROUND_PATH = new RegExp(`^(?:${LOCALES})${escape(ROUND_LINK_PREFIX)}([^/]+)(?:/(.*?))?/?$`);
 const ROUND_INVITE_PATH = new RegExp(`^(?:${LOCALES})${escape(ROUND_INVITE_LINK_PREFIX)}([^/]+)/?$`);
+const CUP_JOIN_PATH = new RegExp(`^(?:${LOCALES})${escape(CUP_JOIN_LINK_PREFIX)}([^/]+)/?$`);
 /** Serveren har lista over kilder (`signupSourceFromParam`). Her er det bare formen. */
 const SRC_PARAM = /[?&]src=([0-9a-z_-]{1,32})(?:&|$)/;
 
@@ -109,6 +113,8 @@ export function appLinkFromUrl(
       ? { kind: 'roundInvite', shortId: roundInvite[1], src: SRC_PARAM.exec(match[2].split('#')[0])?.[1] ?? null }
       : null;
   }
+  const cupJoin = CUP_JOIN_PATH.exec(path);
+  if (cupJoin) return isSignupShortId(cupJoin[1]) ? { kind: 'cupJoin', shortId: cupJoin[1] } : null;
   const round = ROUND_PATH.exec(path);
   return round ? roundLink(round[1], round[2] ?? '') : null;
 }

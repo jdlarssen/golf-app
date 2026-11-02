@@ -1,0 +1,199 @@
+// #2752: spillerlista som skjerm (Type C). Serveren avgjør hvem som kan legges til; her
+// låses hva lista viser, hva knappene sender, og at en startet cup er låst.
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Share } from 'react-native';
+import type { AppCupParticipantsView } from '../../../../lib/cup/appCupSetupView';
+import { addCupParticipant } from '../data/cupSetup';
+import type { ScreenProps } from '../navigation';
+import { CupParticipants } from './CupParticipants';
+
+jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+jest.mock('../lib/useMarkVisitRead', () => ({ useMarkVisitRead: (...args: unknown[]) => mockMarkRead(...args) }));
+jest.mock('../lib/webLink', () => ({
+  ...jest.requireActual('../lib/webLink'),
+  webBaseUrl: () => 'https://tornygolf.no',
+}));
+jest.mock('../data/cupSetup', () => ({
+  fetchCupParticipants: jest.fn(async () => mockResults.shift() ?? mockLast),
+  addCupParticipant: jest.fn(async () => ({ ok: true })),
+}));
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    mockFocus = callback;
+    require('react').useEffect(callback, [callback]);
+  },
+}));
+
+type Load = { ok: true; view: AppCupParticipantsView } | { ok: false; reason: string };
+const mockMarkRead = jest.fn();
+let mockFocus: () => void = () => {};
+let mockResults: Load[] = [];
+let mockLast: Load = { ok: false, reason: 'offline' };
+
+function answer(...results: Load[]) {
+  mockResults = [...results];
+  mockLast = results[results.length - 1];
+}
+
+const room = (over: Partial<AppCupParticipantsView> = {}): AppCupParticipantsView => ({
+  id: 'cup-1',
+  name: 'Klubbmesterskapet',
+  status: 'draft',
+  team1Name: 'Team Nord',
+  team2Name: 'Team Sør',
+  shortId: 'abcd2345',
+  cap: 40,
+  participants: [{ userId: 'ola', name: 'Ola Kompis', hcpIndex: 12.4, isCaptain: true }],
+  candidates: [
+    { userId: 'per', name: 'Per Putter', hcpIndex: 20, pending: false },
+    { userId: 'tapp', name: 'Testspiller Tapp', hcpIndex: 0, pending: true },
+  ],
+  ...over,
+});
+
+async function renderList(params: Record<string, unknown> = {}) {
+  const navigation = {
+    navigate: jest.fn(),
+    popTo: jest.fn(),
+    replace: jest.fn(),
+    getState: () => ({
+      index: 2,
+      routes: [{ name: 'Home' }, { name: 'Cup', params: { cupId: 'cup-1' } }, { name: 'CupParticipants', params: { cupId: 'cup-1' } }],
+    }),
+  };
+  await render(
+    <CupParticipants
+      {...({
+        navigation,
+        route: { key: 'p', name: 'CupParticipants', params: { cupId: 'cup-1', ...params } },
+      } as unknown as ScreenProps<'CupParticipants'>)}
+    />,
+  );
+  return navigation;
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('CupParticipants', () => {
+  it('å åpne lista merker varselet om påmeldingen som lest', async () => {
+    answer({ ok: true, view: room() });
+    await renderList();
+    expect(mockMarkRead).toHaveBeenCalledWith('cupParticipants', 'cup-1');
+  });
+
+  it('viser påmeldte med tak og handicap, og hvem du kan legge til', async () => {
+    answer({ ok: true, view: room() });
+    await renderList();
+
+    expect(screen.getByTestId('cup-players-count')).toHaveTextContent('1 av 40 påmeldte');
+    expect(screen.getByTestId('cup-player-ola')).toHaveTextContent(/HCP 12,4/);
+    expect(screen.getByTestId('cup-candidate-per')).toHaveTextContent(/Per Putter/);
+  });
+
+  it('«Legg til» sender spilleren, kvitterer og henter lista på nytt', async () => {
+    answer({ ok: true, view: room() }, { ok: true, view: room({ candidates: [] }) });
+    await renderList();
+
+    await fireEvent.press(screen.getByTestId('cup-candidate-add-per'));
+
+    expect(addCupParticipant).toHaveBeenCalledWith('cup-1', 'per');
+    expect(screen.getByTestId('cup-players-notice')).toHaveTextContent('Spilleren er lagt til.');
+    expect(screen.queryByTestId('cup-candidate-per')).toBeNull();
+  });
+
+  it('en venn uten profil står, men kan ikke legges til', async () => {
+    answer({ ok: true, view: room() });
+    await renderList();
+    expect(screen.getByTestId('cup-candidate-tapp')).toHaveTextContent(/Venter på profil/);
+    expect(screen.queryByTestId('cup-candidate-add-tapp')).toBeNull();
+  });
+
+  it('serverens nei står, med taket', async () => {
+    answer({ ok: true, view: room() });
+    (addCupParticipant as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'too_many_players' });
+    await renderList();
+    await fireEvent.press(screen.getByTestId('cup-candidate-add-per'));
+    expect(screen.getByTestId('cup-players-error')).toHaveTextContent('Cupen er full. Den tar 40 spillere.');
+  });
+
+  it('«Fjern» åpner bekreftelsen med det den trenger', async () => {
+    answer({ ok: true, view: room() });
+    const navigation = await renderList();
+    await fireEvent.press(screen.getByTestId('cup-player-remove-ola'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CupRemovePlayer', {
+      cupId: 'cup-1',
+      userId: 'ola',
+      name: 'Ola Kompis',
+      cupName: 'Klubbmesterskapet',
+      captain: true,
+      returnTo: 'CupParticipants',
+    });
+  });
+
+  it('kvitteringen etter en fjerning', async () => {
+    answer({ ok: true, view: room() });
+    await renderList({ notice: 'participant_removed' });
+    expect(screen.getByTestId('cup-players-notice')).toHaveTextContent('Spilleren er fjernet.');
+  });
+
+  it('«Del lenka» deler cup-lenka', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    answer({ ok: true, view: room() });
+    await renderList();
+    await fireEvent.press(screen.getByTestId('cup-share-button'));
+    expect(share).toHaveBeenCalledWith({ message: 'https://tornygolf.no/cup/bli-med/abcd2345' });
+    share.mockRestore();
+  });
+
+  it('en lang liste har søk', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ userId: `p${i}`, name: `Spiller ${i}`, hcpIndex: 1, pending: false }));
+    answer({ ok: true, view: room({ candidates: many }) });
+    await renderList();
+    expect(screen.queryByTestId('cup-candidate-p29')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('cup-players-search'), 'Spiller 29');
+    expect(screen.getByTestId('cup-candidate-p29')).toBeTruthy();
+  });
+
+  it('alle er med: det står', async () => {
+    answer({ ok: true, view: room({ candidates: [] }) });
+    await renderList();
+    expect(screen.getByTestId('cup-players-no-candidates')).toHaveTextContent('Alle tilgjengelige spillere er påmeldt.');
+  });
+
+  it('ingen å legge til ennå: det står', async () => {
+    answer({ ok: true, view: room({ candidates: [], participants: [] }) });
+    await renderList();
+    expect(screen.getByTestId('cup-players-empty')).toBeTruthy();
+    expect(screen.getByTestId('cup-players-no-candidates')).toHaveTextContent(/Inviter spillere/);
+  });
+
+  it('en cup som har startet: lista står, uten knappene', async () => {
+    answer({ ok: true, view: room({ status: 'active', candidates: [] }) });
+    await renderList();
+    expect(screen.getByTestId('cup-players-locked')).toBeTruthy();
+    expect(screen.queryByTestId('cup-player-remove-ola')).toBeNull();
+    expect(screen.queryByTestId('cup-share')).toBeNull();
+  });
+
+  it('uten nett: det skjermen har, uten knappene', async () => {
+    answer({ ok: true, view: room() }, { ok: false, reason: 'offline' });
+    await renderList();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('cup-players-stale')).toBeTruthy();
+    expect(screen.queryByTestId('cup-candidate-add-per')).toBeNull();
+    expect(screen.queryByTestId('cup-player-remove-ola')).toBeNull();
+  });
+
+  it('den som ikke styrer cupen: en setning, uten «Prøv igjen»', async () => {
+    answer({ ok: false, reason: 'not_manager' });
+    await renderList();
+    expect(screen.getByTestId('cup-players-failed')).toHaveTextContent('Det er arrangøren som setter opp cupen.');
+    expect(screen.queryByTestId('cup-players-retry')).toBeNull();
+  });
+});

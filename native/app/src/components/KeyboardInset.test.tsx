@@ -188,6 +188,7 @@ describe('rullefeltet på skjermer med tekstfelt', () => {
   it('finner skjermene med egne tekstfelt', () => {
     expect(screensWithFields.sort()).toEqual([
       'screens/CompleteProfile.tsx',
+      'screens/CreateCup.tsx',
       'screens/CupSideAwards.tsx',
       'screens/EditProfile.tsx',
       'screens/Friends.tsx',
@@ -239,6 +240,16 @@ it('scorekortet, der markørvalget har søkefelt, sprer KEYBOARD_SCROLL_PROPS p�
 // Byttet i en cup har søkefeltet fra `PickerSearch` (#2752).
 it('byttet i en cup, med søkefelt, sprer KEYBOARD_SCROLL_PROPS på rullefeltet', () => {
   const target = scrollViewOpeners(read('screens/CupSwapPlayer.tsx')).filter((o) => o.includes('testID="cup-swap-screen"'));
+  expect(target).toHaveLength(1);
+  expect(spreads(target[0])).toBe(true);
+});
+
+// Spillerlista har søkefeltet fra `PickerSearch` (#2752).
+it.each([
+  ['screens/CreateCup.tsx', 'create-cup-screen'],
+  ['screens/CupParticipants.tsx', 'cup-participants-screen'],
+])('%s sprer KEYBOARD_SCROLL_PROPS på rullefeltet', (file, testID) => {
+  const target = scrollViewOpeners(read(file)).filter((o) => o.includes(`testID="${testID}"`));
   expect(target).toHaveLength(1);
   expect(spreads(target[0])).toBe(true);
 });

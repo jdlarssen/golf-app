@@ -30,6 +30,7 @@ import { FRIEND_LINK_TEXT } from './friendsCopy';
 import { INVITATION_LINK_TEXT } from './invitationLinkCopy';
 import { LEAGUE_JOIN_TEXT } from './leagueCopy';
 import { OFFLINE_NOTE } from './rosterCopy';
+import { SETUP_APP_TEXT } from './cupSetupCopy';
 import { ROUND_INVITE_TEXT } from './roundInviteCopy';
 
 /**
@@ -130,6 +131,8 @@ export function appLinkLoginLine(link: AppLink): { title: string; body: string }
       return { title: LOGIN_TEXT.roundLinkTitle, body: LOGIN_TEXT.roundLinkBody };
     case 'roundInvite':
       return { title: ROUND_INVITE_TEXT.loginTitle, body: ROUND_INVITE_TEXT.loginBody };
+    case 'cupJoin':
+      return { title: SETUP_APP_TEXT.joinLoginTitle, body: SETUP_APP_TEXT.joinLoginBody };
   }
 }
 

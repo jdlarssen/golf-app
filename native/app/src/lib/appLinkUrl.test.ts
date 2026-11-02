@@ -56,6 +56,27 @@ describe('appLinkFromUrl', () => {
   });
 
   it.each([
+    ['lenka', 'https://tornygolf.no/cup/bli-med/abcd2345'],
+    ['den engelske siden', 'https://tornygolf.no/en/cup/bli-med/abcd2345'],
+    ['skråstrek til slutt', 'https://tornygolf.no/cup/bli-med/abcd2345/'],
+    ['www', 'https://www.tornygolf.no/cup/bli-med/abcd2345'],
+    ['dev-byggets skjema', 'no.tornygolf.dev://cup/bli-med/abcd2345'],
+    ['skjema, engelsk', 'no.tornygolf.dev://en/cup/bli-med/abcd2345'],
+  ])('leser cup-lenka fra %s (#2752)', (_label, url) => {
+    expect(appLinkFromUrl(url, BASE)).toEqual({ kind: 'cupJoin', shortId: 'abcd2345' });
+  });
+
+  it.each([
+    ['en kode med feil form', 'https://tornygolf.no/cup/bli-med/abc'],
+    ['store bokstaver', 'https://tornygolf.no/cup/bli-med/ABCD2345'],
+    ['en side under lenka', 'https://tornygolf.no/cup/bli-med/abcd2345/noe'],
+    ['cup-siden', 'https://tornygolf.no/cup/abcd2345'],
+    ['en annen vert', 'https://example.com/cup/bli-med/abcd2345'],
+  ])('leser ikke cup-lenka fra %s', (_label, url) => {
+    expect(appLinkFromUrl(url, BASE)).toBeNull();
+  });
+
+  it.each([
     ['delelenka', 'https://tornygolf.no/pamelding/abcd2345', null],
     ['den engelske siden', 'https://tornygolf.no/en/pamelding/abcd2345', null],
     ['skråstrek til slutt', 'https://tornygolf.no/pamelding/abcd2345/', null],
@@ -180,7 +201,7 @@ describe('appLinkFromUrl', () => {
   // Stiene butikkbygget gjør krav på (app.config.ts, i takt med Android-beviset)
   // må alle bli en lenke her, ellers åpner lenka appen på Hjem og ingenting mer.
   it.each(STORE_APP_LINK_PATH_PREFIXES)('forstår hver sti butikkbygget gjør krav på: %s', (prefix) => {
-    const code = prefix.includes('liga') || prefix.includes('pamelding') ? 'abcd2345' : prefix.includes('venner') ? 'abcd1234' : ID;
+    const code = prefix.includes('liga') || prefix.includes('pamelding') || prefix.includes('cup') ? 'abcd2345' : prefix.includes('venner') ? 'abcd1234' : ID;
     expect(appLinkFromUrl(`${STORE_WEB_BASE_URL}${prefix}${code}`, STORE_WEB_BASE_URL)).not.toBeNull();
   });
 
