@@ -35,6 +35,25 @@
 --    16. exactly one row holds the endpoint          → no duplicate identity
 --    17. anon cannot execute the claim RPC           → REFUSED
 --
+--   fcm_tokens (#2758, 0232 — same decision, and own-rows on all four operations):
+--    18. account B's plain upsert on A's token       → REFUSED
+--    19. A's row survives the refused upsert         → intact
+--    20. B's direct UPDATE user_id on A's row        → REFUSED (RLS hostile-PATCH)
+--    21. B reads A's rows                            → sees none
+--    22. B inserts a row carrying A's user_id        → REFUSED
+--    23. B deletes A's row                           → 0 rows
+--    24. A's row survives the DELETE                 → intact
+--    25. A inserts its own row                       → PASS
+--    26. A reads its own row                         → sees it
+--    27. A updates its own row                       → PASS
+--    28. A deletes its own row                       → PASS
+--    29. B claims A's token via claim_fcm_token      → PASS   (possession proof)
+--    30. the claimed row now belongs to B            → user_id = B
+--    31. exactly one row holds the token             → no duplicate identity
+--    32. A's OTHER device row is untouched           → claim scope = presented value only
+--    33. anon cannot execute the claim RPC           → REFUSED (no EXECUTE grant)
+--    34. anon cannot read the table                  → REFUSED (no table grant)
+--
 -- Run via:  supabase test db   (boots local stack → applies migrations → here)
 -- Catalog-level hardening asserts (search_path, grants) live in
 -- security_definer_hardening_test.sql. See supabase/tests/README.md (#440 rig).
@@ -44,7 +63,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(34);
 
 \ir fixtures/rls_helpers.psql
 
@@ -131,6 +150,86 @@ create or replace function torny_rls.try_claim_push(p_endpoint text) returns boo
   end;
 $$;
 
+-- FCM mirrors of the three probes above, plus the own-rows operations the
+-- sister tables never had a runtime probe for.
+create or replace function torny_rls.try_upsert_fcm(p_token text) returns boolean
+  language plpgsql as $$
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+  begin
+    insert into public.fcm_tokens (user_id, token, user_agent)
+      values (v_actor, p_token, 'probe-ua')
+    on conflict (token) do update
+      set user_id = excluded.user_id, user_agent = excluded.user_agent;
+    return true;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_steal_fcm(p_token text) returns boolean
+  language plpgsql as $$
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+    v_rows  int;
+  begin
+    update public.fcm_tokens set user_id = v_actor where token = p_token;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_claim_fcm(p_token text) returns boolean
+  language plpgsql as $$
+  begin
+    perform public.claim_fcm_token(p_token, 'probe-ua');
+    return true;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_insert_fcm_for(p_user uuid, p_token text) returns boolean
+  language plpgsql as $$
+  begin
+    insert into public.fcm_tokens (user_id, token) values (p_user, p_token);
+    return true;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_touch_fcm(p_token text) returns boolean
+  language plpgsql as $$
+  declare
+    v_rows int;
+  begin
+    update public.fcm_tokens set user_agent = 'probe-touched' where token = p_token;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_delete_fcm(p_token text) returns boolean
+  language plpgsql as $$
+  declare
+    v_rows int;
+  begin
+    delete from public.fcm_tokens where token = p_token;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
+create or replace function torny_rls.try_read_fcm() returns boolean
+  language plpgsql as $$
+  begin
+    perform 1 from public.fcm_tokens limit 1;
+    return true;
+  exception when insufficient_privilege then return false;
+  end;
+$$;
+
 -- as_anon(): the fixtures only ship as_user/as_service; the anon probe needs
 -- the real anon role with no JWT claims.
 create or replace function torny_rls.as_anon() returns void
@@ -152,6 +251,9 @@ insert into public.apns_tokens (user_id, token, user_agent) values
   (torny_rls.active_id(), 'rls-apns-a2', 'seed');
 insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, user_agent) values
   (torny_rls.active_id(), 'https://rls.example/ep-a', 'seed-p256dh', 'seed-auth', 'seed');
+insert into public.fcm_tokens (user_id, token, user_agent) values
+  (torny_rls.active_id(), 'rls-fcm-a',  'seed'),
+  (torny_rls.active_id(), 'rls-fcm-a2', 'seed');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- apns_tokens
@@ -262,6 +364,110 @@ select torny_rls.as_anon();
 select ok(
   not torny_rls.try_claim_push('https://rls.example/ep-a'),
   '#1790: anon has no EXECUTE on claim_push_subscription'
+);
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- fcm_tokens (#2758, 0232)
+-- ═════════════════════════════════════════════════════════════════════════════
+select torny_rls.as_user(torny_rls.flightmate_id());
+
+select ok(
+  not torny_rls.try_upsert_fcm('rls-fcm-a'),
+  '#2758: account B''s plain upsert on A''s token is REFUSED by RLS'
+);
+
+select torny_rls.as_service();
+select is(
+  (select user_id from public.fcm_tokens where token = 'rls-fcm-a'),
+  torny_rls.active_id(),
+  '#2758: the refused upsert left A''s row untouched'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  not torny_rls.try_steal_fcm('rls-fcm-a'),
+  '#2758: direct PATCH rebinding another user''s token row is REFUSED by RLS'
+);
+
+select is(
+  (select count(*) from public.fcm_tokens where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#2758: B cannot read A''s token rows'
+);
+
+select ok(
+  not torny_rls.try_insert_fcm_for(torny_rls.active_id(), 'rls-fcm-forged'),
+  '#2758: B cannot insert a row carrying A''s user_id'
+);
+
+select ok(
+  not torny_rls.try_delete_fcm('rls-fcm-a'),
+  '#2758: B''s DELETE on A''s row reaches no rows'
+);
+
+select torny_rls.as_service();
+select is(
+  (select count(*) from public.fcm_tokens where token = 'rls-fcm-a'),
+  1::bigint,
+  '#2758: A''s row survived B''s DELETE'
+);
+
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  torny_rls.try_insert_fcm_for(torny_rls.active_id(), 'rls-fcm-own'),
+  '#2758: A can insert its own row'
+);
+
+select is(
+  (select count(*) from public.fcm_tokens where token = 'rls-fcm-own'),
+  1::bigint,
+  '#2758: A can read its own row'
+);
+
+select ok(
+  torny_rls.try_touch_fcm('rls-fcm-own'),
+  '#2758: A can update its own row'
+);
+
+select ok(
+  torny_rls.try_delete_fcm('rls-fcm-own'),
+  '#2758: A can delete its own row'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  torny_rls.try_claim_fcm('rls-fcm-a'),
+  '#2758: claim_fcm_token hands the row over when B presents the exact token (possession proof)'
+);
+
+select torny_rls.as_service();
+select is(
+  (select user_id from public.fcm_tokens where token = 'rls-fcm-a'),
+  torny_rls.flightmate_id(),
+  '#2758: the claimed token row now belongs to account B'
+);
+
+select is(
+  (select count(*) from public.fcm_tokens where token = 'rls-fcm-a'),
+  1::bigint,
+  '#2758: exactly one row holds the claimed token (no duplicate device identity)'
+);
+
+select is(
+  (select user_id from public.fcm_tokens where token = 'rls-fcm-a2'),
+  torny_rls.active_id(),
+  '#2758: A''s OTHER device row is untouched — the claim only reaches the presented value'
+);
+
+select torny_rls.as_anon();
+select ok(
+  not torny_rls.try_claim_fcm('rls-fcm-a'),
+  '#2758: anon has no EXECUTE on claim_fcm_token'
+);
+
+select ok(
+  not torny_rls.try_read_fcm(),
+  '#2758: anon has no privilege on fcm_tokens'
 );
 
 select * from finish();

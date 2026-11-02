@@ -456,6 +456,41 @@ export type Database = {
           },
         ]
       }
+      fcm_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fcm_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       format_intent_mapping: {
         Row: {
           created_at: string
@@ -2422,6 +2457,10 @@ export type Database = {
         Returns: boolean
       }
       claim_apns_token: {
+        Args: { p_token: string; p_user_agent: string }
+        Returns: undefined
+      }
+      claim_fcm_token: {
         Args: { p_token: string; p_user_agent: string }
         Returns: undefined
       }

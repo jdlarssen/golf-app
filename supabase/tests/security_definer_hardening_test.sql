@@ -13,6 +13,9 @@
 --         claim_push_subscription) have SET search_path, anon has NO EXECUTE
 --         (only a logged-in device may claim), authenticated HAS EXECUTE.
 --
+-- Extended for migration 0232 (#2758):
+--   14–16. claim_fcm_token gets the same three checks.
+--
 -- These tests assert catalog state only — no runtime seed required, no role
 -- impersonation needed. Runtime hostile probes for the claim RPCs live in
 -- push_device_claim_rls_test.sql. Run via: supabase test db
@@ -22,7 +25,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(16);
 
 -- ── 1. email_is_in_auth_users: anon must NOT have EXECUTE ─────────────────────
 select ok(
@@ -178,6 +181,42 @@ select ok(
       and privilege_type  = 'EXECUTE'
   ),
   '#1790: authenticated has EXECUTE on claim_push_subscription'
+);
+
+-- ── 14–16. 0232 claim RPC (#2758): the same three checks ──────────────────────
+
+select ok(
+  exists(
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'claim_fcm_token'
+      and p.proconfig::text like '%search_path%'
+  ),
+  '#2758: claim_fcm_token() has SET search_path in proconfig'
+);
+
+select ok(
+  not exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_fcm_token'
+      and grantee         = 'anon'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#2758: anon does NOT have EXECUTE on claim_fcm_token'
+);
+
+select ok(
+  exists(
+    select 1
+    from information_schema.role_routine_grants
+    where routine_schema  = 'public'
+      and routine_name    = 'claim_fcm_token'
+      and grantee         = 'authenticated'
+      and privilege_type  = 'EXECUTE'
+  ),
+  '#2758: authenticated has EXECUTE on claim_fcm_token'
 );
 
 select * from finish();
