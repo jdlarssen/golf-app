@@ -218,7 +218,8 @@ describe('CreateGame og «Ny bane» (#2757)', () => {
     // Arrangøren sto i lista («Velg en annen bane») da hen åpnet skjemaet.
     await fireEvent.press(screen.getByTestId('create-course-change'));
     (fetchCourses as jest.Mock).mockClear();
-    (fetchCourses as jest.Mock).mockResolvedValueOnce([
+    // Lista med den nye banen, for begge hentingene under.
+    const withNewCourse = [
       {
         id: 'course-1',
         name: 'Losby Golfklubb',
@@ -229,7 +230,10 @@ describe('CreateGame og «Ny bane» (#2757)', () => {
         name: 'Testbane 2757',
         tees: [{ id: 'tee-new', name: 'Gul', hasMens: true, hasLadies: true, hasJuniors: false }],
       },
-    ]);
+    ];
+    (fetchCourses as jest.Mock)
+      .mockResolvedValueOnce(withNewCourse)
+      .mockResolvedValueOnce(withNewCourse);
 
     await rerender(
       <SessionProvider value={{ userId: 'me', email: 'admin@example.test' }}>
@@ -246,6 +250,19 @@ describe('CreateGame og «Ny bane» (#2757)', () => {
     expect(screen.getByTestId('create-next-hint')).toBeTruthy();
     expect(fetchCourses).toHaveBeenCalledTimes(1);
     expect(navigation.setParams).toHaveBeenCalledWith({ createdCourseId: undefined });
+
+    // Samme bane én gang til fra lista («Bruk denne»): lista lukkes også da.
+    const wizard = (params?: { createdCourseId?: string }) => (
+      <SessionProvider value={{ userId: 'me', email: 'admin@example.test' }}>
+        <CreateGame navigation={navigation} route={{ key: 'CreateGame-1', name: 'CreateGame', params }} />
+      </SessionProvider>
+    );
+    await rerender(wizard());
+    await fireEvent.press(screen.getByTestId('create-course-change'));
+    expect(screen.queryByTestId('create-tee-tee-new')).toBeNull();
+    await rerender(wizard({ createdCourseId: 'course-new' }));
+    expect(await screen.findByTestId('create-tee-tee-new')).toBeTruthy();
+    expect(screen.getByTestId('create-course-change')).toBeTruthy();
   });
 });
 

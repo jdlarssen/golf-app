@@ -215,11 +215,12 @@ export function TeeTable({
                         <TextInput
                           testID={`tee-${i}-cr-${gender}`}
                           accessibilityLabel={teeCellLabel(tee.name, GENDER_WORD[gender], COURSE_TEXT.teeFieldCr)}
-                          style={[ui.input, styles.number, styles.cr]}
+                          // Med tre kolonner er alle feltene like brede, så de holder 44 pt.
+                          style={[ui.input, styles.number, juniorsOpen ? styles.slope : styles.cr]}
                           value={tee[`course_rating_${gender}`]}
                           onChangeText={(text) => update(i, { [`course_rating_${gender}`]: text })}
                           keyboardType="decimal-pad"
-                          maxLength={5}
+                          maxLength={4}
                           selectTextOnFocus
                         />
                       </View>

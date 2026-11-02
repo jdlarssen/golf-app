@@ -73,14 +73,6 @@ export function CourseStep({
   const [search, setSearch] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // #2757: en bane valgt utenfra («Ny bane») lukker lista, som et trykk på en rad.
-  // Bytte under render, ikke i en effekt: ellers tegnes den gamle lista først.
-  const [seenCourseId, setSeenCourseId] = useState(courseId);
-  if (courseId !== seenCourseId) {
-    setSeenCourseId(courseId);
-    setBrowsing(false);
-    setSearch('');
-  }
 
   const selectedCourse = (courses ?? []).find((c) => c.id === courseId) ?? null;
   const showList = selectedCourse === null || browsing;

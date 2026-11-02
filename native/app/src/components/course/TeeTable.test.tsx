@@ -105,6 +105,8 @@ describe('TeeTable', () => {
     await fireEvent.press(screen.getByTestId('tee-chip-yellow'));
     await fireEvent.changeText(screen.getByTestId('tee-0-cr-mens'), '70,5');
     expect(screen.getByTestId('tee-0-cr-mens').props.value).toBe('70,5');
+    // Én desimal, som `step` på nettet: kolonnen ville rundet av en andre desimal.
+    expect(screen.getByTestId('tee-0-cr-mens').props.maxLength).toBe(4);
     const form = courseDraftToFormData({ ...emptyCourseDraft('Banen'), tees: latest });
     expect(form.get('tee_0_cr_mens')).toBe('70.5');
   });

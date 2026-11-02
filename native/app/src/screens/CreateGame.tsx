@@ -203,11 +203,15 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   // ganger.
   const createdCourseId = route.params?.createdCourseId;
   const [seenCreatedCourse, setSeenCreatedCourse] = useState<string | undefined>(undefined);
+  // Nøkkelen på banesteget: en bane utenfra lukker lista og tømmer søket, også når
+  // du velger samme bane som sto valgt.
+  const [courseReturns, setCourseReturns] = useState(0);
   if (createdCourseId !== seenCreatedCourse) {
     setSeenCreatedCourse(createdCourseId);
     if (createdCourseId) {
       setCourseId(createdCourseId);
       setTeeBoxId(null);
+      setCourseReturns((n) => n + 1);
       courses.reload();
     }
   }
@@ -464,6 +468,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
 
       {step === 'course' ? (
         <CourseStep
+          key={courseReturns}
           courses={courses.data}
           failed={courses.failed}
           courseId={courseId}
