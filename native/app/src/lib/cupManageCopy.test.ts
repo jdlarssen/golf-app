@@ -163,6 +163,7 @@ describe('sidepoeng og avslutning (#2752)', () => {
     ['button', web.manage.finishButton],
     ['pending', web.manage.finishPending],
     ['sideAwardsHint', web.manage.finishSideAwardsHint],
+    ['notSubmitted', web.manage.finishNotSubmitted],
     ['anywayButton', web.manage.finishAnywayButton],
     ['anywayPending', web.manage.finishAnywayPending],
     ['failed', web.manage.finishFailed],
@@ -190,9 +191,9 @@ describe('sidepoeng og avslutning (#2752)', () => {
 
   it('slagene til den som ikke har levert, teller, så det sier appen (#2752)', () => {
     expect(FINISH_APP_TEXT.matchNotSubmitted).toContain('Slagene deres teller fortsatt.');
-    expect(FINISH_APP_TEXT.cupNotSubmitted).toContain('Slagene deres teller fortsatt.');
+    expect(FINISH_TEXT.notSubmitted).toContain('Slagene til dem som ikke har levert, teller fortsatt.');
     expect(FINISH_APP_TEXT.matchNotSubmitted).not.toContain('teller ikke');
-    expect(FINISH_APP_TEXT.cupNotSubmitted).not.toContain('teller ikke');
+    expect(FINISH_TEXT.notSubmitted).not.toContain('teller ikke');
   });
 
   it('sidepoeng-feilene er nettets', () => {

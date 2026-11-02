@@ -6004,7 +6004,7 @@
       "finishButton": "Avslutt cupen",
       "finishPending": "Avslutter …",
       "finishSideAwardsHint": "Registrer alle sidepoeng før du kan avslutte cupen: {awards}",
-      "finishNotSubmitted": "Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel — de som ikke har levert, teller ikke i resultatet.",
+      "finishNotSubmitted": "Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel. Slagene til dem som ikke har levert, teller fortsatt.",
       "finishAnywayButton": "Avslutt likevel",
       "finishAnywayPending": "Avslutter …",
       "finishFailed": "Disse kampene lot seg ikke avslutte: {matches}. Prøv igjen — kampene som allerede er avsluttet, står.",

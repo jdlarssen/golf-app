@@ -230,7 +230,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
       ) : null}
       {running && anyway ? (
         <Warning
-          text={formatMessage(FINISH_APP_TEXT.cupNotSubmitted, { matches: blocking.map(labelOf).join(', ') })}
+          text={formatMessage(FINISH_TEXT.notSubmitted, { matches: blocking.map(labelOf).join(', ') })}
           testID="cup-finish-not-submitted"
         />
       ) : null}
