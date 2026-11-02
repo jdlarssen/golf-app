@@ -118,6 +118,15 @@ const CONFLICT_CODES = new Set([
   'cup_tie_points',
   'closed',
   'full',
+  'matches_changed',
+  'no_matches',
+  'missing_plan',
+  'tee_off_in_past',
+  'not_members',
+  'too_many_matches',
+  'invalid_team_strokes_override',
+  'invalid_source_match',
+  'too_few_matches',
 ]);
 
 /**
@@ -133,6 +142,10 @@ export function cupActionFailure(error: string, fallback: string): NextResponse 
   if (error === 'match_finish_failed') return NextResponse.json({ error }, { status: 502 });
   // The plan IS saved, and only the matches missed it. A new try is safe.
   if (error === 'plan_matches_not_updated') return NextResponse.json({ error }, { status: 502 });
+  // Hver har sin egen setning: det ene ber om et nytt forsøk, det andre om hjelp til å rydde.
+  if (error === 'profile_read_failed' || error === 'rollback_failed') {
+    return NextResponse.json({ error }, { status: 500 });
+  }
   return NextResponse.json({ error: fallback }, { status: 500 });
 }
 
