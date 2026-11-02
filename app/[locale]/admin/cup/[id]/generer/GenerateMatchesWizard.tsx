@@ -7,148 +7,47 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { MiniChip } from '@/components/ui/MiniChip';
+import { type CupSessionFormat, type SessionCountRow } from '@/lib/cup/cupTemplates';
 import {
-  CUP_PRESETS,
-  buildSessionCountRows,
-  buildSessions,
-  type CupSessionFormat,
-  type CupPreset,
-  type SessionCountRow,
-  type SessionPlan,
-} from '@/lib/cup/cupTemplates';
-import {
-  generateCupPlan,
-  generateSplitDayPlan,
   type PlannedMatch,
   type PlannedBundleMatch,
   type CupBundleFormat,
-  type CupPlayer,
   type PairingStrategy,
 } from '@/lib/cup/cupPairing';
 import {
   groupBundleMatchesByFlight,
   swapFlightPlayer,
   getFlightMatchupRows,
-  splitDayTotalMatches,
   type FlightTeamSide,
 } from '@/lib/cup/splitDayLineup';
+import {
+  adjustedSessionOverrides,
+  buildSubmissionMatches,
+  canAdvanceRoster,
+  changeMatchPlayer,
+  computeSpillehandicap,
+  generateMatchPlan,
+  greensomeDefaultOrFallback,
+  isSplitDayPreset,
+  playerLookup,
+  plannedMatchTotal,
+  rosterBlock,
+  sessionCountRowsFor,
+  type MatchPlanSetup,
+  type PlanMatch,
+  type TeamAssignment,
+  type TeamStrokesInputs,
+} from '@/lib/cup/matchPlan';
 import { createCupMatchesFromPlan } from './actions';
 import type { CupBatchMatch } from '@/lib/cup/insertCupMatches';
 import {
   MAX_PERSONAL_CUP_MATCHES,
   MAX_PERSONAL_CUP_PLAYERS,
 } from '@/lib/cup/limits';
-// #1441 (F3c): regnehjelp for greensomens manuelle lag-slag (D10) — samme
-// rating-oppslag + CH-formel som resten av appen bruker, ikke en ny formel.
-// Ren lesing (ingen skriving) fra lib/games/- og lib/scoring/-filer utenfor
-// F3c sitt skrive-forbud (begge er off-limits å ENDRE, ikke å importere
-// fra). `greensomeTeamHandicap` (owner-QA-runde, F3d) er selve 60/40-
-// motor-formelen — gjenbrukt EKSAKT for prefill-forslaget, ikke reimplementert.
-import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
-import { teeGenderOf } from '@/lib/games/teeGender';
-import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
-import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { WizardPlayer, WizardTeeBox } from './GenerateMatches';
 import { formatHcpDisplay, formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 
-// #1441 (F3c): matchen wizarden holder i steg 2 er enten en av de tre eldre
-// presetenes `PlannedMatch` eller splittet-cup-dagens `PlannedBundleMatch` —
-// aldri en blanding innen samme genererte plan (styrt av `presetId`).
-// `teamStrokesOverride` (D10) lever IKKE på denne typen — se
-// `teamStrokesInputs`-state i hovedkomponenten for hvorfor.
-type WizardMatch = PlannedMatch | PlannedBundleMatch;
-
-/** Bygger `TeeBoxRatings` (lib/games/teeRating) fra en `WizardTeeBox` — feltene
- * er valgfrie på wizard-typen (kun splittet-cup-dagen bryr seg), men
- * `getRatingForGender` vil ha dem som `number | null` (ikke `undefined`). */
-function teeRatingsFrom(tee: WizardTeeBox): TeeBoxRatings {
-  return {
-    slope_mens: tee.slope_mens ?? null,
-    course_rating_mens: tee.course_rating_mens ?? null,
-    par_total_mens: tee.par_total_mens ?? null,
-    slope_ladies: tee.slope_ladies ?? null,
-    course_rating_ladies: tee.course_rating_ladies ?? null,
-    par_total_ladies: tee.par_total_ladies ?? null,
-    slope_juniors: tee.slope_juniors ?? null,
-    course_rating_juniors: tee.course_rating_juniors ?? null,
-    par_total_juniors: tee.par_total_juniors ?? null,
-  };
-}
-
-/**
- * Spillehandicap-regnehjelp for greensomens manuelle lag-slag (#1441, D10):
- * arrangørens egen formel (40 % av høyeste spillers spillehandicap) trenger
- * hver spillers FULLE spillehandicap på valgt tee som utgangspunkt — ikke en
- * allowance-redusert versjon (allowance-feltet er irrelevant når
- * team_strokes_override erstatter formelen helt). Returnerer `null` når
- * valgt tee mangler ratingsett for spillerens kjønn — kalleren faller da
- * tilbake til å vise rå HCP-indeks i stedet.
- */
-function computeSpillehandicap(player: WizardPlayer, tee: WizardTeeBox | undefined): number | null {
-  if (!tee) return null;
-  const gender = teeGenderOf(player.gender ?? null);
-  const rating = getRatingForGender(teeRatingsFrom(tee), gender);
-  if (!rating) return null;
-  return calculateCourseHandicap({
-    hcpIndex: player.hcpIndex,
-    slope: rating.slope,
-    courseRating: rating.courseRating,
-    par: rating.par,
-  });
-}
-
-/**
- * Standardforslag for greensomens manuelle lag-slag (#1441 owner-QA: «bør
- * være ferdigplottet inn hvor mange slag de ulike har. Ikke at de står
- * tomme.»). Samme 60/40-formel motoren selv bruker for greensome
- * (`greensomeTeamHandicap`, lib/scoring/modes/greensomeMatchplay.ts) —
- * KALT VIDERE her, aldri reimplementert (avrunding inkludert). Hver spillers
- * verdi er spillehandicapet på valgt tee, eller rå HCP-indeks som fallback
- * når tee mangler ratingsett for spillerens kjønn (samme fallback som
- * `computeSpillehandicap`/`regnehjelpText` allerede bruker under feltet).
- *
- * KUN et forslag: feltet i UI-en forblir fritt redigerbart, og en
- * arrangørs egen formel (f.eks. 40 % av høyeste) skriver rett over denne
- * verdien uten noen ekstra bekreftelse (D10 — «manual strokes override»).
- */
-function greensomeTeamStrokesDefault(
-  playerA: WizardPlayer,
-  playerB: WizardPlayer,
-  tee: WizardTeeBox | undefined,
-): number {
-  const a = computeSpillehandicap(playerA, tee) ?? playerA.hcpIndex;
-  const b = computeSpillehandicap(playerB, tee) ?? playerB.hcpIndex;
-  return greensomeTeamHandicap(a, b);
-}
-
-/** Defensivt fallback (0) når paret ikke har nøyaktig to spillere — kan ikke
- * skje med gyldig bunt-output (`generateSplitDayPlan` gir alltid par av 2),
- * men holder komponenten fra å krasje på malformed data. */
-function greensomeDefaultOrFallback(pair: WizardPlayer[], tee: WizardTeeBox | undefined): number {
-  if (pair.length !== 2) return 0;
-  return greensomeTeamStrokesDefault(pair[0], pair[1], tee);
-}
-
-/**
- * Effektiv verdi for ETT lags manuelle lag-slag-felt (#1441 owner-QA, D10):
- * `raw === undefined` betyr feltet aldri er rørt av organisatoren → viser
- * (og sender) det live-utledede forslaget fra `greensomeDefaultOrFallback`,
- * som oppdaterer seg selv når spillerne i flighten endres (oppstillings-
- * editoren, `swapFlightPlayer`). Tomt eller ugyldig innhold ETTER at feltet
- * ER rørt faller ALLEREDE tilbake til samme forslag — «what you see is what
- * the engine uses» skal aldri kunne divergere fra hva som faktisk sendes inn.
- */
-function effectiveStrokes(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const trimmed = raw.trim();
-  if (trimmed === '') return fallback;
-  const n = Number(trimmed);
-  return Number.isInteger(n) && n >= 0 ? n : fallback;
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type TeamAssignment = 'team1' | 'team2' | 'unassigned';
 
 type WizardProps = {
   tournamentId: string;
@@ -700,12 +599,6 @@ function Step2Confirm({
 // er UTELUKKENDE layouten (radene ER paringen, ingen egen bytte-knapp
 // trengs — å velge lagkameraten i den andre raden ER «bytt paring»).
 
-function playerLookup(team1Players: WizardPlayer[], team2Players: WizardPlayer[]) {
-  const byId = new Map<string, WizardPlayer>();
-  for (const p of [...team1Players, ...team2Players]) byId.set(p.id, p);
-  return (userId: string) => byId.get(userId);
-}
-
 /** Regnehjelp-tekst for én spiller: spillehandicap når valgt tee har
  * ratingsett for spillerens kjønn, ellers rå HCP-indeks (#1441, D10). */
 function regnehjelpText(
@@ -735,7 +628,7 @@ function GreensomeCard({
   team2Name: string;
   players: (userId: string) => WizardPlayer | undefined;
   selectedTee: WizardTeeBox | undefined;
-  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
+  teamStrokesInputs: TeamStrokesInputs;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
@@ -825,7 +718,7 @@ function Step2BundlePreview({
   team1Name: string;
   team2Name: string;
   selectedTee: WizardTeeBox | undefined;
-  teamStrokesInputs: Record<string, { team1?: string; team2?: string }>;
+  teamStrokesInputs: TeamStrokesInputs;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   // #1441 (owner-QA rebuild, F3e): «hvem som skal være i flight» OG «hvem
   // møter hvem i singles» — begge uttrykt via det SAMME slot-valget nå, se
@@ -1006,7 +899,7 @@ export function GenerateMatchesWizard({
   });
 
   // Step 2: generated matches
-  const [matches, setMatches] = useState<WizardMatch[]>([]);
+  const [matches, setMatches] = useState<PlanMatch[]>([]);
   // #1883: organisatorens nedjusteringer av matchantall per økt, nøklet på
   // øktas posisjon i den effektive sesjonslista. Engangs-input som lag-
   // delingen — lagres ikke; regenerering senere starter fra derivert antall.
@@ -1022,9 +915,7 @@ export function GenerateMatchesWizard({
   // generering (som ville blitt stående feil etter et oppstillings-bytte,
   // `swapFlightPlayer`). Effektiv verdi (vist OG sendt inn) via
   // `effectiveStrokes` — «what you see is what the engine uses», D10.
-  const [teamStrokesInputs, setTeamStrokesInputs] = useState<
-    Record<string, { team1?: string; team2?: string }>
-  >({});
+  const [teamStrokesInputs, setTeamStrokesInputs] = useState<TeamStrokesInputs>({});
 
   // Feil fra createCupMatchesFromPlan (steg 2)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1032,7 +923,8 @@ export function GenerateMatchesWizard({
   // #1472: bane/tee/preset/strategi kommer fra den lagrede planen (props), ikke
   // lenger wizard-steg + localStorage-utkast. Ett lagringslag (server) i stedet
   // for to (server + localStorage) unngår splitt-hjerne.
-  const isSplitDay = presetId === 'splittet-cup-dag';
+  const isSplitDay = isSplitDayPreset(presetId);
+  const setup: MatchPlanSetup = { presetId, customSessions, strategy };
 
   // Derived
   const team1Players = players.filter((p) => assignments[p.id] === 'team1');
@@ -1040,105 +932,30 @@ export function GenerateMatchesWizard({
   const team1Count = team1Players.length;
   const team2Count = team2Players.length;
 
-  function getSelectedPreset(): CupPreset | null {
-    return CUP_PRESETS.find((p) => p.id === presetId) ?? null;
-  }
-
-  function getEffectiveSessions(): CupSessionFormat[] {
-    if (presetId === 'tilpasset') return customSessions;
-    return getSelectedPreset()?.sessions ?? [];
-  }
-
   function getSessionCountRows(): SessionCountRow[] {
-    const teamSize = Math.min(team1Count, team2Count);
-    return buildSessionCountRows(
-      getEffectiveSessions(),
-      teamSize,
-      sessionCountOverrides,
-    );
-  }
-
-  function getSessionPlan(): SessionPlan[] {
-    const teamSize = Math.min(team1Count, team2Count);
-    return buildSessions(
-      getEffectiveSessions(),
-      teamSize,
-      sessionCountOverrides,
-    );
+    return sessionCountRowsFor(setup, team1Count, team2Count, sessionCountOverrides);
   }
 
   // Antall matcher oppsettet gir med gjeldende lag-fordeling — brukt til både
   // cap-varselet og «Neste»-gaten på steg 1 (#1472: gatingen som lå på det gamle
   // steg 3 flyttet hit, siden format-valget nå er gjort på forhånd i planen).
-  const plannedTotal = isSplitDay
-    ? splitDayTotalMatches(team1Count, team2Count)
-    : getSessionPlan().reduce((sum, s) => sum + s.matchCount, 0);
+  const plannedTotal = plannedMatchTotal(setup, team1Count, team2Count, sessionCountOverrides);
   const overCap = matchCap !== undefined && plannedTotal > matchCap;
 
   function runGenerate() {
-    const cupTeam1: CupPlayer[] = team1Players.map((p) => ({
-      userId: p.id,
-      name: p.displayName,
-      hcpIndex: p.hcpIndex,
-    }));
-    const cupTeam2: CupPlayer[] = team2Players.map((p) => ({
-      userId: p.id,
-      name: p.displayName,
-      hcpIndex: p.hcpIndex,
-    }));
     // Regenerering nullstiller manuelt tastede lag-slag — de var tastet mot
     // FORRIGE spiller-oppstilling, som ikke lenger stemmer etter regenerering.
     setTeamStrokesInputs({});
-    if (isSplitDay) {
-      setMatches(generateSplitDayPlan({ team1: cupTeam1, team2: cupTeam2, strategy }));
-      return;
-    }
     setMatches(
-      generateCupPlan({
-        team1: cupTeam1,
-        team2: cupTeam2,
-        sessions: getSessionPlan(),
-        strategy,
-      }),
+      generateMatchPlan({ setup, team1Players, team2Players, overrides: sessionCountOverrides }),
     );
-  }
-
-  /**
-   * Bygger den faktiske innsendings-payload-en (#1441, D10 + owner-QA F3d):
-   * matchene fra `matches` (rene struktur — side1/side2/segment/sourceId)
-   * pluss `teamStrokesOverride` på hver greensome-match — ALLTID satt nå
-   * (D10-oppdatering): «what you see is what the engine uses» betyr feltet
-   * sender akkurat den effektive verdien `GreensomeCard` viste (typet
-   * forslag ELLER organisatorens eget tall — `effectiveStrokes` er samme
-   * logikk begge steder, se dens docstring), aldri lenger «ingen override,
-   * la motoren regne selv ved runde-start».
-   */
-  function buildSubmissionMatches(): CupBatchMatch[] {
-    if (!isSplitDay) return matches as CupBatchMatch[];
-    const lookup = playerLookup(team1Players, team2Players);
-    return (matches as PlannedBundleMatch[]).map((m) => {
-      if (m.format !== 'greensome_matchplay') return m;
-      const side1Players = m.side1.map(lookup).filter((p): p is WizardPlayer => Boolean(p));
-      const side2Players = m.side2.map(lookup).filter((p): p is WizardPlayer => Boolean(p));
-      const default1 = greensomeDefaultOrFallback(side1Players, selectedTee);
-      const default2 = greensomeDefaultOrFallback(side2Players, selectedTee);
-      const raw = teamStrokesInputs[m.id];
-      const team1 = effectiveStrokes(raw?.team1, default1);
-      const team2 = effectiveStrokes(raw?.team2, default2);
-      return { ...m, teamStrokesOverride: { team1, team2 } };
-    });
   }
 
   // Validation for step 1: minst `minPerTeam` per lag (fra planens preset),
   // minst én match, og — for personlig cup — under match-taket.
   function canAdvance(): boolean {
     if (step === 1) {
-      const preset = getSelectedPreset();
-      const minPerTeam = preset?.minPerTeam ?? 1;
-      if (team1Count < minPerTeam || team2Count < minPerTeam) return false;
-      if (plannedTotal === 0) return false;
-      if (matchCap !== undefined && plannedTotal > matchCap) return false;
-      return true;
+      return canAdvanceRoster(setup, team1Count, team2Count, plannedTotal, matchCap);
     }
     // Steg 2 er terminalt (ingen «Neste»), så det trenger ingen gate her.
     return true;
@@ -1163,19 +980,7 @@ export function GenerateMatchesWizard({
   }
 
   function adjustSessionCount(row: SessionCountRow, delta: 1 | -1) {
-    const next = Math.min(Math.max(1, row.effective + delta), row.derived);
-    setSessionCountOverrides((prev) => {
-      // Tilbake på derivert tak = INGEN overstyring. Lagret vi den likevel,
-      // ble økta pinnet til lagstørrelsen den ble satt ved: organisatoren som
-      // prøver stepperen på halvfordelte lag og fordeler resten etterpå, ville
-      // fått singel-økta stående på det gamle tallet i stedet for å følge det
-      // voksende laget.
-      if (next >= row.derived) {
-        const { [row.index]: _atCeiling, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [row.index]: next };
-    });
+    setSessionCountOverrides((prev) => adjustedSessionOverrides(prev, row, delta));
   }
 
   function handleMatchChange(
@@ -1184,14 +989,7 @@ export function GenerateMatchesWizard({
     idx: number,
     userId: string,
   ) {
-    setMatches((prev) =>
-      prev.map((m) => {
-        if (m.id !== matchId) return m;
-        const arr = side === 'side1' ? [...m.side1] : [...m.side2];
-        arr[idx] = userId;
-        return side === 'side1' ? { ...m, side1: arr } : { ...m, side2: arr };
-      }),
-    );
+    setMatches((prev) => changeMatchPlayer(prev, matchId, side, idx, userId));
   }
 
   // #1441 (owner-QA rebuild, F3e): «hvem som skal være i flight» OG «hvem
@@ -1223,13 +1021,14 @@ export function GenerateMatchesWizard({
   // «for få matcher» (den gamle step3ZeroMatchesMsg-en, flyttet hit i #1472).
   const step1ValidationMsg: string | null = (() => {
     if (step !== 1) return null;
-    const preset = CUP_PRESETS.find((p) => p.id === presetId);
-    const minPerTeam = preset?.minPerTeam ?? 1;
-    if (team1Count < minPerTeam)
-      return t('generate.step1ValidationMin', { team: team1Name, minPerTeam });
-    if (team2Count < minPerTeam)
-      return t('generate.step1ValidationMin', { team: team2Name, minPerTeam });
-    if (plannedTotal === 0) return t('generate.step3ZeroMatchesMsg');
+    const block = rosterBlock(setup, team1Count, team2Count, plannedTotal);
+    if (block?.kind === 'team_min') {
+      return t('generate.step1ValidationMin', {
+        team: block.side === 'team1' ? team1Name : team2Name,
+        minPerTeam: block.minPerTeam,
+      });
+    }
+    if (block?.kind === 'zero_matches') return t('generate.step3ZeroMatchesMsg');
     return null;
   })();
 
@@ -1305,7 +1104,14 @@ export function GenerateMatchesWizard({
               />
             )}
             <Step2Confirm
-              matches={buildSubmissionMatches()}
+              matches={buildSubmissionMatches({
+                presetId,
+                matches,
+                team1Players,
+                team2Players,
+                selectedTee,
+                teamStrokesInputs,
+              })}
               planCourseName={planCourseName}
               planTeeName={planTeeName}
               tournamentId={tournamentId}

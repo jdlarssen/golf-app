@@ -1,0 +1,362 @@
+{
+  "klassisk": [
+    {
+      "id": "foursomes_matchplay-1",
+      "format": "foursomes_matchplay",
+      "label": "Foursome 1",
+      "side1": [
+        "nord-1",
+        "nord-4"
+      ],
+      "side2": [
+        "sor-1",
+        "sor-4"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "foursomes_matchplay-2",
+      "format": "foursomes_matchplay",
+      "label": "Foursome 2",
+      "side1": [
+        "nord-2",
+        "nord-3"
+      ],
+      "side2": [
+        "sor-2",
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "fourball_matchplay-1",
+      "format": "fourball_matchplay",
+      "label": "Four-ball 1",
+      "side1": [
+        "nord-1",
+        "nord-4"
+      ],
+      "side2": [
+        "sor-1",
+        "sor-4"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "fourball_matchplay-2",
+      "format": "fourball_matchplay",
+      "label": "Four-ball 2",
+      "side1": [
+        "nord-2",
+        "nord-3"
+      ],
+      "side2": [
+        "sor-2",
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-1",
+      "format": "singles_matchplay",
+      "label": "Singel 1",
+      "side1": [
+        "nord-1"
+      ],
+      "side2": [
+        "sor-1"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-2",
+      "format": "singles_matchplay",
+      "label": "Singel 2",
+      "side1": [
+        "nord-2"
+      ],
+      "side2": [
+        "sor-2"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-3",
+      "format": "singles_matchplay",
+      "label": "Singel 3",
+      "side1": [
+        "nord-3"
+      ],
+      "side2": [
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-4",
+      "format": "singles_matchplay",
+      "label": "Singel 4",
+      "side1": [
+        "nord-4"
+      ],
+      "side2": [
+        "sor-4"
+      ],
+      "segment": "full"
+    }
+  ],
+  "fourball-singler": [
+    {
+      "id": "fourball_matchplay-1",
+      "format": "fourball_matchplay",
+      "label": "Four-ball 1",
+      "side1": [
+        "nord-1",
+        "nord-4"
+      ],
+      "side2": [
+        "sor-1",
+        "sor-4"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "fourball_matchplay-2",
+      "format": "fourball_matchplay",
+      "label": "Four-ball 2",
+      "side1": [
+        "nord-2",
+        "nord-3"
+      ],
+      "side2": [
+        "sor-2",
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-1",
+      "format": "singles_matchplay",
+      "label": "Singel 1",
+      "side1": [
+        "nord-1"
+      ],
+      "side2": [
+        "sor-1"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-2",
+      "format": "singles_matchplay",
+      "label": "Singel 2",
+      "side1": [
+        "nord-2"
+      ],
+      "side2": [
+        "sor-2"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-3",
+      "format": "singles_matchplay",
+      "label": "Singel 3",
+      "side1": [
+        "nord-3"
+      ],
+      "side2": [
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-4",
+      "format": "singles_matchplay",
+      "label": "Singel 4",
+      "side1": [
+        "nord-4"
+      ],
+      "side2": [
+        "sor-4"
+      ],
+      "segment": "full"
+    }
+  ],
+  "singler": [
+    {
+      "id": "singles_matchplay-1",
+      "format": "singles_matchplay",
+      "label": "Singel 1",
+      "side1": [
+        "nord-1"
+      ],
+      "side2": [
+        "sor-1"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-2",
+      "format": "singles_matchplay",
+      "label": "Singel 2",
+      "side1": [
+        "nord-2"
+      ],
+      "side2": [
+        "sor-2"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-3",
+      "format": "singles_matchplay",
+      "label": "Singel 3",
+      "side1": [
+        "nord-3"
+      ],
+      "side2": [
+        "sor-3"
+      ],
+      "segment": "full"
+    },
+    {
+      "id": "singles_matchplay-4",
+      "format": "singles_matchplay",
+      "label": "Singel 4",
+      "side1": [
+        "nord-4"
+      ],
+      "side2": [
+        "sor-4"
+      ],
+      "segment": "full"
+    }
+  ],
+  "splittet-cup-dag": [
+    {
+      "id": "greensome_matchplay-1",
+      "format": "greensome_matchplay",
+      "label": "Greensome 1",
+      "side1": [
+        "nord-1",
+        "nord-4"
+      ],
+      "side2": [
+        "sor-1",
+        "sor-4"
+      ],
+      "segment": "front9",
+      "flightIndex": 1,
+      "teamStrokesOverride": {
+        "team1": 15,
+        "team2": 17
+      }
+    },
+    {
+      "id": "best_ball-1",
+      "format": "best_ball",
+      "label": "Best ball 1",
+      "side1": [
+        "nord-1",
+        "nord-4"
+      ],
+      "side2": [
+        "sor-1",
+        "sor-4"
+      ],
+      "segment": "back9",
+      "flightIndex": 1
+    },
+    {
+      "id": "singles_matchplay-1",
+      "format": "singles_matchplay",
+      "label": "Singel 1",
+      "side1": [
+        "nord-1"
+      ],
+      "side2": [
+        "sor-1"
+      ],
+      "segment": "back9",
+      "sourceId": "best_ball-1",
+      "flightIndex": 1
+    },
+    {
+      "id": "singles_matchplay-2",
+      "format": "singles_matchplay",
+      "label": "Singel 2",
+      "side1": [
+        "nord-4"
+      ],
+      "side2": [
+        "sor-4"
+      ],
+      "segment": "back9",
+      "sourceId": "best_ball-1",
+      "flightIndex": 1
+    },
+    {
+      "id": "greensome_matchplay-2",
+      "format": "greensome_matchplay",
+      "label": "Greensome 2",
+      "side1": [
+        "nord-2",
+        "nord-3"
+      ],
+      "side2": [
+        "sor-2",
+        "sor-3"
+      ],
+      "segment": "front9",
+      "flightIndex": 2,
+      "teamStrokesOverride": {
+        "team1": 16,
+        "team2": 16
+      }
+    },
+    {
+      "id": "best_ball-2",
+      "format": "best_ball",
+      "label": "Best ball 2",
+      "side1": [
+        "nord-2",
+        "nord-3"
+      ],
+      "side2": [
+        "sor-2",
+        "sor-3"
+      ],
+      "segment": "back9",
+      "flightIndex": 2
+    },
+    {
+      "id": "singles_matchplay-3",
+      "format": "singles_matchplay",
+      "label": "Singel 3",
+      "side1": [
+        "nord-2"
+      ],
+      "side2": [
+        "sor-2"
+      ],
+      "segment": "back9",
+      "sourceId": "best_ball-2",
+      "flightIndex": 2
+    },
+    {
+      "id": "singles_matchplay-4",
+      "format": "singles_matchplay",
+      "label": "Singel 4",
+      "side1": [
+        "nord-3"
+      ],
+      "side2": [
+        "sor-3"
+      ],
+      "segment": "back9",
+      "sourceId": "best_ball-2",
+      "flightIndex": 2
+    }
+  ]
+}
