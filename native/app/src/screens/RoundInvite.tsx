@@ -19,15 +19,14 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteView';
 import { REGISTRATION_MESSAGE_MAX } from '../../../../lib/games/registration';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { WebLinkButton } from '../components/WebLinkButton';
 import {
   fetchRoundInvite,
   joinRound,
   requestToJoin,
-  type RoundInviteAnswerFailure,
   type RoundInviteAnswerResult,
   type RoundInviteLoadFailure,
 } from '../data/roundInvite';
@@ -37,6 +36,7 @@ import {
   ROUND_INVITE_TEXT,
   describeRoundInviteFailure,
   describeRoundInviteLoadFailure,
+  type RoundInviteFailureWithText,
   roundFeeLine,
   roundPlaceLine,
   roundWhenLine,
@@ -49,7 +49,7 @@ type StopReason = 'wrong_mode' | 'game_full' | 'profile_incomplete';
 
 export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const { colors, ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInsetUnlessKeyboard();
   const { shortId, src } = route.params;
   const [view, setView] = useState<AppRoundInviteView | null>(null);
   const [failure, setFailure] = useState<RoundInviteLoadFailure | null>(null);
@@ -57,13 +57,17 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [stop, setStop] = useState<StopReason | null>(null);
-  const [error, setError] = useState<RoundInviteAnswerFailure | null>(null);
+  const [error, setError] = useState<RoundInviteFailureWithText | null>(null);
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
+  // Et svar på en eldre henting skal ikke tegne over det som har skjedd siden.
+  const latestLoad = useRef(0);
 
   const load = useCallback(async () => {
+    const thisLoad = ++latestLoad.current;
     setLoading(true);
     const result = await fetchRoundInvite(shortId);
+    if (thisLoad !== latestLoad.current) return;
     setLoading(false);
     if (!result.ok) {
       setFailure(result.reason);
@@ -79,7 +83,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     setView(result.view);
   }, [navigation, shortId]);
 
-  // Også ved fokus: kommer du tilbake fra profilen eller nettsiden, kan svaret være et annet.
+  // Også ved fokus: kommer du tilbake fra profilen, kan svaret være et annet.
   useFocusEffect(
     useCallback(() => {
       void load();
@@ -90,6 +94,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     async (send: () => Promise<RoundInviteAnswerResult>) => {
       if (sending.current || !view) return;
       sending.current = true;
+      latestLoad.current += 1;
+      setLoading(false);
       setBusy(true);
       setError(null);
       const result = await send();
@@ -125,11 +131,11 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     [navigation, view],
   );
 
-  const scroll = [styles.scroll, { backgroundColor: colors.bg, paddingBottom: insets.bottom + 20 }];
+  const scroll = [styles.scroll, { backgroundColor: colors.bg, paddingBottom: bottomInset + 20 }];
 
   if (failure === 'not_found') {
     return (
-      <ScrollView contentContainerStyle={scroll} testID="round-invite-screen">
+      <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={scroll} testID="round-invite-screen">
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.body, { color: colors.text }]} testID="round-invite-not-found">
             {ROUND_INVITE_TEXT.notFound}
@@ -167,12 +173,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const { offer, round } = view;
   const trimmed = message.trim();
   const webPath = src ? `${view.signupPath}?src=${encodeURIComponent(src)}` : view.signupPath;
-  const errorText =
-    error === null
-      ? null
-      : describeRoundInviteFailure(
-          error as Parameters<typeof describeRoundInviteFailure>[0],
-        );
+  const errorText = error === null ? null : describeRoundInviteFailure(error);
   const retryable = error === 'network' || error === 'offline' || error === 'db_error';
 
   const head = (
@@ -199,9 +200,9 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           : ROUND_INVITE_TEXT.requestButton;
     return (
       <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
         contentContainerStyle={scroll}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
         testID="round-invite-screen"
       >
         {head}
@@ -262,7 +263,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   }
 
   return (
-    <ScrollView contentContainerStyle={scroll} testID="round-invite-screen">
+    <ScrollView {...KEYBOARD_SCROLL_PROPS} contentContainerStyle={scroll} testID="round-invite-screen">
       {head}
       <View
         style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}

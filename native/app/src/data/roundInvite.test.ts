@@ -55,6 +55,9 @@ describe('fetchRoundInvite', () => {
     [500, { error: 'load_failed' }, 'load_failed'],
     [200, { ...VIEW, offer: 'noe_nytt' }, 'load_failed'],
     [200, { ...VIEW, round: undefined }, 'load_failed'],
+    [200, { ...VIEW, round: null }, 'load_failed'],
+    [200, { ...VIEW, round: 'x' }, 'load_failed'],
+    [200, { ...VIEW, round: {} }, 'load_failed'],
     [200, { ...VIEW, playerCount: undefined }, 'load_failed'],
     [200, { ...VIEW, offer: 'in_game' }, 'load_failed'],
   ])('oversetter %i %j til %s', async (status, body, reason) => {
