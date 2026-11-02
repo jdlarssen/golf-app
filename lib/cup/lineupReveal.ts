@@ -8,7 +8,7 @@
 
 import { cupMatchLabel } from './cupPairing';
 import type { CupSessionFormat } from './cupTemplates';
-import type { CupBatchMatch } from './insertCupMatches';
+import type { CupBatchMatch } from './matchPlan';
 import { seatsPerSlot, type LineupPair } from './lineupValidation';
 
 /**

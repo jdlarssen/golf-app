@@ -1,0 +1,1074 @@
+import { expireTournamentCache } from '@/lib/games/expireGameCache';
+import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected } from '@/lib/supabase/affectedRows';
+import { notifyParticipantsCupLineupRevealed } from '@/lib/notifications/events';
+import { ALLOWANCE_DEFAULTS } from './allowance';
+import type { CupAllowancePcts } from './cupMatchAllowance';
+import { planCupRoleChange, type CupTeamNumber } from './captainRoles';
+import { exceedsPersonalMatchCap } from './limits';
+import {
+  DEFAULT_TIE_POINTS,
+  DEFAULT_WIN_POINTS,
+  hasDefaultCupWeights,
+  parsePlannedMatchCount,
+} from './pointsToWin';
+import { syncCupPointsToWin } from './pointsToWinSync';
+import { insertCupMatches, teeRatingsFrom } from './insertCupMatches';
+import { canWriteTeamLineup, type CupLineupAccess } from './lineupAccess';
+import { squadUserIds } from './lineupData';
+import {
+  buildRevealMatches,
+  canRetryReveal,
+  nextLabelNumber,
+} from './lineupReveal';
+import {
+  planLineupPairs,
+  sumPendingLineupSlots,
+  validateLineupSubmission,
+  validateStoredLineups,
+  type LineupSlotInput,
+  type LineupSlotRow,
+} from './lineupValidation';
+import { sessionMatchCount, type CupSessionFormat } from './cupTemplates';
+
+/**
+ * Reglene for kaptein-uttaket (#1884), delt av nettets server-actions
+ * (`lineupActions.ts`) og appens ruter (#2752).
+ *
+ * Egen fil av samme grunn som `planActions.ts`: de nye tabellene har INGEN
+ * RLS-policyer (0172, deny-by-default), så all skriving går via service-role og
+ * er gatet KUN av `loadAccess` her. Det er et distinkt
+ * sikkerhetsmønster (#1542) og hører hjemme samlet, ikke spredt utover.
+ *
+ * ⚠️ Hver eneste kjerne under MÅ starte med `loadAccess` og — for alt
+ * som rører ett lags uttak — `canWriteTeamLineup`. Det finnes ingen policy bak
+ * som fanger en kjerne som glemmer det. `loadAccess` er den ene forskjellen på de
+ * to inngangene: nettet leser brukeren fra cookien, appen fra tokenet.
+ *
+ * Feil returneres som `{ error: kode }` (#1397-mønsteret), aldri som redirect:
+ * uttaks-skjemaet er fullt av kapteinens valg, og en redirect ville tømt det.
+ */
+
+export type CupLineupActionError = { error: string };
+
+/** Hvem som spør. Se `loadCupLineupAccess` og `loadCupLineupAccessForUser`. */
+export type LoadCupLineupAccess = (tournamentId: string) => Promise<CupLineupAccess>;
+
+const OK: CupLineupActionError = { error: '' };
+
+const SESSION_FORMATS: readonly CupSessionFormat[] = [
+  'foursomes_matchplay',
+  'fourball_matchplay',
+  'singles_matchplay',
+  'greensome_matchplay',
+  'chapman_matchplay',
+  'gruesome_matchplay',
+];
+
+function revalidateCup(id: string, groupId: string | null): void {
+  expireTournamentCache(id);
+  revalidatePath(`/admin/cup/${id}`);
+  revalidatePath(`/admin/cup/${id}/uttak`);
+  revalidatePath(`/admin/cup/${id}/spillere`);
+  if (groupId) {
+    revalidatePath(`/klubber/${groupId}/cup/${id}`);
+    revalidatePath(`/klubber/${groupId}/cup/${id}/spillere`);
+  }
+  revalidatePath(`/cup/${id}`);
+}
+
+/**
+ * SK1 — arrangøren setter lag og kaptein på deltakerlista.
+ *
+ * `team` tom streng = utildelt. Kapteinsflagget følger med i samme skriving,
+ * så «flytt kapteinen til det andre laget» er én operasjon og ikke en
+ * mellomtilstand der hun er kaptein for et lag hun ikke står på.
+ */
+export async function setCupParticipantRoleCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; userId: string; teamNumber: CupTeamNumber | null; isCaptain: boolean },
+): Promise<CupLineupActionError> {
+  const { tournamentId, userId, teamNumber, isCaptain } = input;
+  if (!tournamentId || !userId) return { error: 'not_found' };
+
+  const access = await loadAccess(tournamentId);
+  // Rollen er arrangørens å dele ut. En kaptein kan ikke utnevne seg selv, og
+  // slett ikke røre motstanderlaget.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const plan = planCupRoleChange({
+    participants: access.participants,
+    userId,
+    teamNumber,
+    isCaptain,
+  });
+  if (!plan.ok) return { error: plan.error };
+
+  const admin = getAdminClient();
+
+  // Kapteinsflagget er unikt per lag (partiell indeks i 0172). Å frata den
+  // sittende kapteinen flagget FØR vi setter det nye er derfor ikke en
+  // bekvemmelighet, men det som gjør skiftet mulig i det hele tatt — uten det
+  // kolliderer inserten med indeksen.
+  if (plan.row.isCaptain && plan.row.teamNumber !== null) {
+    const { error } = await admin
+      .from('tournament_participants')
+      .update({ is_captain: false })
+      .eq('tournament_id', tournamentId)
+      .eq('team_number', plan.row.teamNumber)
+      .eq('is_captain', true)
+      .neq('user_id', userId);
+    if (error) {
+      console.error('[cup] setCupParticipantRole clear captain failed', {
+        tournamentId,
+        error,
+      });
+      return { error: 'save_failed' };
+    }
+  }
+
+  try {
+    expectAffected(
+      await admin
+        .from('tournament_participants')
+        .update({
+          team_number: plan.row.teamNumber,
+          is_captain: plan.row.isCaptain,
+        })
+        .eq('tournament_id', tournamentId)
+        .eq('user_id', userId)
+        .select('user_id'),
+      'setCupParticipantRole',
+    );
+  } catch (err) {
+    // 0 rader = deltakeren forsvant fra lista mellom lesingen og skrivingen.
+    // «Ingen feil» er ikke det samme som «rad oppdatert» (AGENTS.md-felle 2).
+    console.error('[cup] setCupParticipantRole update failed', {
+      tournamentId,
+      userId,
+      error: err,
+    });
+    return { error: 'save_failed' };
+  }
+
+  revalidateCup(tournamentId, access.groupId);
+  return OK;
+}
+
+/**
+ * #1902 — arrangøren oppgir hvor mange kamper cupen skal ha TOTALT.
+ *
+ * Poengmålet ble utledet av de kampene som fantes ved start, og uttaks-øktene
+ * legger til kamper etterpå — en Ryder Cup som startet med 8 av 28 fikk målet
+ * 4,5, og et lag kunne krones etter dag 1. Tallet her er arrangørens utsagn om
+ * hele cupen, og målet regnes av `max(faktisk, planlagt)`.
+ *
+ * Kan rettes når som helst før avslutning: en skrivefeil eller et for høyt tall
+ * skal ikke kreve at noen åpner en økt for å bli kvitt. Er cupen alt aktiv,
+ * flytter målet seg med én gang — det ER fiksen for cupen som er grunnen til
+ * issuet.
+ *
+ * Eget kort og egen action framfor et felt inne i «Åpne en økt»: den ville
+ * trengt en to-skrivs kompensasjon hvis økta feilet etter at tallet var lagret.
+ */
+export async function setCupPlannedMatchCountCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; plannedRaw: string },
+): Promise<CupLineupActionError> {
+  const { tournamentId, plannedRaw } = input;
+  if (!tournamentId) return { error: 'not_found' };
+
+  const access = await loadAccess(tournamentId);
+  // Antall kamper er arrangørens beslutning. En kaptein som kunne satt det,
+  // kunne flyttet poengmålet midt i cupen.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: cup, error: cupError } = await admin
+    .from('tournaments')
+    .select('status')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (cupError) {
+    console.error('[cup] setCupPlannedMatchCount cup read failed', {
+      tournamentId,
+      error: cupError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!cup) return { error: 'not_found' };
+  // Ferdig cup: vinneren er kåret, målet er historie.
+  if (cup.status === 'finished') return { error: 'cup_finished' };
+
+  const [{ data: sessionRows, error: sessionsErr }, { data: gameRows, error: gamesErr }] =
+    await Promise.all([
+      admin
+        .from('cup_lineup_sessions')
+        .select('slot_count, revealed_at')
+        .eq('tournament_id', tournamentId),
+      admin.from('games').select('id').eq('tournament_id', tournamentId),
+    ]);
+  // Et gulv vi ikke kan regne ut er et gulv vi ikke håndhever (I3) — samme
+  // fail-lukket-regel som tak-tellingen i openCupLineupSession.
+  if (sessionsErr || gamesErr) {
+    console.error('[cup] setCupPlannedMatchCount count read failed', {
+      tournamentId,
+      sessionsErr,
+      gamesErr,
+    });
+    return { error: 'save_failed' };
+  }
+
+  // Gulvet: kampene som alt finnes + plassene i åpnede, ikke-avdekkede økter.
+  // Et lavere tall er en skrivefeil — kampene er alt satt opp og forsvinner
+  // ikke av at noen skriver et mindre tall i et felt.
+  const pendingSlots = sumPendingLineupSlots(sessionRows ?? []);
+  const floor = Math.max(2, (gameRows ?? []).length + pendingSlots);
+
+  const planned = parsePlannedMatchCount(plannedRaw, floor);
+  if (planned === null) return { error: 'lineup_planned_total' };
+
+  // Klubb-cuper og global admin er uncapped (#526) — samme regel, samme hjem
+  // som åpningen av en økt bruker.
+  const uncapped = access.isAdmin || access.groupId !== null;
+  if (exceedsPersonalMatchCap(planned, uncapped)) {
+    return { error: 'too_many_matches' };
+  }
+
+  try {
+    expectAffected(
+      await admin
+        .from('tournaments')
+        .update({ planned_match_count: planned })
+        .eq('id', tournamentId)
+        .select('id'),
+      'setCupPlannedMatchCount',
+    );
+  } catch (err) {
+    console.error('[cup] setCupPlannedMatchCount update failed', {
+      tournamentId,
+      error: err,
+    });
+    return { error: 'save_failed' };
+  }
+
+  // Aktiv cup får det nye målet nå. Feiler synken, er tallet LIKEVEL lagret —
+  // og det er nettopp derfor feilkoden ikke er `save_failed`: den sier «klarte
+  // ikke å lagre», og arrangøren ville trodd tallet var borte. Egen kode med
+  // egen tekst forteller sannheten (tallet står, målet henger etter) og ber om
+  // det som faktisk reparerer: lagre en gang til. Synken er idempotent.
+  //
+  // Revalideringen skjer FØR retur uansett utfall: uten den viser tavla
+  // fortsatt `plannedMatchCount: null` og en sperret «Åpne en økt»-knapp, mens
+  // databasen sier noe annet — de to ville vært uenige til neste harde
+  // sidelast.
+  let syncFailed = false;
+  try {
+    await syncCupPointsToWin(admin, tournamentId);
+  } catch (err) {
+    syncFailed = true;
+    console.error('[cup] setCupPlannedMatchCount points sync failed', {
+      tournamentId,
+      error: err,
+    });
+  }
+
+  revalidateCup(tournamentId, access.groupId);
+  return syncFailed ? { error: 'planned_saved_target_failed' } : OK;
+}
+
+/**
+ * SK2 — arrangøren åpner en økt for uttak.
+ *
+ * Antall plasser default-es fra de varige lagstørrelsene (samme regel som
+ * veiviserens steppere, #1883) og kan justeres NED, aldri opp forbi det lagene
+ * kan stille med.
+ *
+ * Taket håndheves HER, ikke ved avdekking: har begge kapteiner levert, skal
+ * matchene bli til. En feilet avdekking ville etterlatt to leverte uttak og
+ * ingen kamper, uten noe arrangøren kunne gjøre med det. Regnestykket teller
+ * derfor både cupens eksisterende matcher OG plassene i allerede åpnede,
+ * ikke-avdekkede økter — ellers kunne tre økter åpnes én og én under taket og
+ * til sammen sprenge det.
+ */
+export async function openCupLineupSessionCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; format: string; slotCount: number },
+): Promise<CupLineupActionError> {
+  const { tournamentId, slotCount } = input;
+  const format = input.format as CupSessionFormat;
+  if (!tournamentId) return { error: 'not_found' };
+  if (!SESSION_FORMATS.includes(format)) return { error: 'lineup_format' };
+  if (!Number.isInteger(slotCount) || slotCount < 1) {
+    return { error: 'lineup_slot_count' };
+  }
+
+  const access = await loadAccess(tournamentId);
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: cup, error: cupError } = await admin
+    .from('tournaments')
+    .select('status, planned_match_count, win_points, tie_points')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (cupError) {
+    console.error('[cup] openCupLineupSession cup read failed', {
+      tournamentId,
+      error: cupError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!cup) return { error: 'not_found' };
+  if (cup.status === 'finished') return { error: 'cup_finished' };
+
+  // #1902: poengmålet skal være kjent FØR den første økta avdekker kamper.
+  // Gaten er her, server-side, ikke bare som en disabled knapp — UI-et speiler
+  // den, men en POST utenom skjemaet skal treffe den samme veggen.
+  //
+  // Vektede cuper (#1441 D8) slipper spørsmålet: de har ikke noe «først til X»
+  // i det hele tatt, så et planlagt antall ville ikke endret noe.
+  const weightsAreDefault = hasDefaultCupWeights(
+    (cup.win_points as number | null) ?? DEFAULT_WIN_POINTS,
+    (cup.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
+  );
+  if (weightsAreDefault && cup.planned_match_count === null) {
+    return { error: 'lineup_planned_total_missing' };
+  }
+
+  // Taket for økta: den minste stallen bestemmer, som i veiviseren.
+  const teamSize = Math.min(
+    squadUserIds(access, 1).length,
+    squadUserIds(access, 2).length,
+  );
+  const derived = sessionMatchCount(format, teamSize);
+  if (derived < 1) return { error: 'lineup_squad_too_small' };
+  if (slotCount > derived) return { error: 'lineup_slot_count' };
+
+  const [{ data: sessionRows, error: sessionsErr }, { data: gameRows, error: gamesErr }] =
+    await Promise.all([
+      admin
+        .from('cup_lineup_sessions')
+        .select('session_index, slot_count, revealed_at')
+        .eq('tournament_id', tournamentId),
+      admin.from('games').select('id').eq('tournament_id', tournamentId),
+    ]);
+  // Feiler tellingen, åpner vi ikke — «ingen feil» er ikke det samme som
+  // «0 rader» (I3), og et tak vi ikke kan regne ut er et tak vi ikke håndhever.
+  if (sessionsErr || gamesErr) {
+    console.error('[cup] openCupLineupSession count read failed', {
+      tournamentId,
+      sessionsErr,
+      gamesErr,
+    });
+    return { error: 'save_failed' };
+  }
+
+  const existingSessions = sessionRows ?? [];
+  // Samme sum som veiviseren bruker (`sumPendingLineupSlots`, #2222), over
+  // radene som alt er lest.
+  const pendingSlots = sumPendingLineupSlots(existingSessions);
+  const existingMatches = (gameRows ?? []).length;
+
+  // Klubb-cuper og global admin er uncapped (#526) — samme regel som
+  // veiviserens tak-vakt bruker.
+  const uncapped = access.isAdmin || access.groupId !== null;
+  if (
+    exceedsPersonalMatchCap(existingMatches + pendingSlots + slotCount, uncapped)
+  ) {
+    return { error: 'too_many_matches' };
+  }
+
+  // Neste ledige posisjon — ikke `length`: en slettet økt ville ellers gitt en
+  // kollisjon med unique(tournament_id, session_index).
+  const nextIndex = existingSessions.reduce(
+    (max, s) => Math.max(max, (s.session_index as number) + 1),
+    0,
+  );
+
+  const { error } = await admin.from('cup_lineup_sessions').insert({
+    tournament_id: tournamentId,
+    session_index: nextIndex,
+    format,
+    slot_count: slotCount,
+    created_by: access.userId,
+  });
+  if (error) {
+    console.error('[cup] openCupLineupSession insert failed', {
+      tournamentId,
+      error,
+    });
+    return { error: 'save_failed' };
+  }
+
+  revalidateCup(tournamentId, access.groupId);
+  return OK;
+}
+
+/**
+ * Arrangøren angrer en økt hun åpnet med feil format eller antall.
+ *
+ * Kun før avdekking: etter at matchene er opprettet er økta historie, og
+ * kampene fjernes med de vanlige slett-flatene i stedet. Kapteinenes kladd
+ * forsvinner med økta (FK cascade i 0172) — det er meningen, økta finnes ikke
+ * lenger.
+ */
+export async function deleteCupLineupSessionCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; sessionId: string },
+): Promise<CupLineupActionError> {
+  const { tournamentId, sessionId } = input;
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+
+  const access = await loadAccess(tournamentId);
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { error } = await admin
+    .from('cup_lineup_sessions')
+    .delete()
+    .eq('id', sessionId)
+    .eq('tournament_id', tournamentId)
+    .is('revealed_at', null);
+  if (error) {
+    console.error('[cup] deleteCupLineupSession failed', {
+      tournamentId,
+      sessionId,
+      error,
+    });
+    return { error: 'save_failed' };
+  }
+
+  revalidateCup(tournamentId, access.groupId);
+  return OK;
+}
+
+/**
+ * SK3 — kapteinen leverer uttaket for eget lag (SK6: arrangøren kan levere på
+ * vegne av begge).
+ *
+ * Levert = låst for kapteinen. Er BEGGE lag inne etterpå, avdekkes økta i
+ * samme kall: matchene opprettes og alle varsles.
+ */
+export async function submitCupLineupCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; sessionId: string; team: CupTeamNumber | null; slots: LineupSlotInput[] | null },
+): Promise<CupLineupActionError> {
+  const { tournamentId, sessionId, team, slots } = input;
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+  if (team === null) return { error: 'not_allowed' };
+
+  const access = await loadAccess(tournamentId);
+  // ⚠️ Hele hemmeligholdet på skrivesiden: en kaptein kommer ALDRI forbi denne
+  // med motstanderlagets nummer, uansett hvordan payloaden ser ut.
+  if (!canWriteTeamLineup(access, team)) return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: session, error: sessionError } = await admin
+    .from('cup_lineup_sessions')
+    .select(
+      'id, format, slot_count, revealed_at, team_1_submitted_at, team_2_submitted_at',
+    )
+    .eq('id', sessionId)
+    .eq('tournament_id', tournamentId)
+    .maybeSingle();
+  if (sessionError) {
+    // A failed read is not "no such session" (I3, #2082).
+    console.error('[cup] submitCupLineup session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!session) return { error: 'not_found' };
+  if (session.revealed_at !== null) return { error: 'lineup_revealed' };
+
+  const alreadySubmitted =
+    team === 1
+      ? session.team_1_submitted_at !== null
+      : session.team_2_submitted_at !== null;
+  if (alreadySubmitted) return { error: 'lineup_already_submitted' };
+
+  if (!slots) return { error: 'lineup_slot_shape' };
+
+  const validated = validateLineupSubmission({
+    format: session.format as CupSessionFormat,
+    slotCount: session.slot_count as number,
+    squadUserIds: squadUserIds(access, team),
+    slots,
+  });
+  if (!validated.ok) return { error: validated.error };
+
+  // Erstatt kladden i sin helhet: kapteinen kan ha flyttet folk mellom plasser,
+  // og en delvis oppdatering ville etterlatt spøkelser fra forrige lagring.
+  const { error: deleteError } = await admin
+    .from('cup_lineup_slots')
+    .delete()
+    .eq('session_id', sessionId)
+    .eq('team_number', team);
+  if (deleteError) {
+    console.error('[cup] submitCupLineup clear failed', {
+      tournamentId,
+      sessionId,
+      team,
+      error: deleteError,
+    });
+    return { error: 'save_failed' };
+  }
+
+  const { error: insertError } = await admin.from('cup_lineup_slots').insert(
+    validated.slots.map((s) => ({
+      session_id: sessionId,
+      team_number: team,
+      slot_index: s.slotIndex,
+      seat: s.seat,
+      user_id: s.userId,
+    })),
+  );
+  if (insertError) {
+    console.error('[cup] submitCupLineup insert failed', {
+      tournamentId,
+      sessionId,
+      team,
+      error: insertError,
+    });
+    return { error: 'save_failed' };
+  }
+
+  // Leveringsstempelet settes KUN når det ikke alt står et der: to samtidige
+  // kall for samme lag skal ikke kunne skrive over hverandre, og `.is(null)`
+  // gjør det til DB-ens avgjørelse framfor vår.
+  // Eksplisitte kolonnenavn framfor computed keys: Supabase-typene avviser et
+  // objekt med index-signatur, og en feilstavet kolonne ville blitt en stille
+  // no-op i stedet for en type-feil.
+  const stampedAt = new Date().toISOString();
+  const stampPatch =
+    team === 1
+      ? { team_1_submitted_at: stampedAt, team_1_submitted_by: access.userId }
+      : { team_2_submitted_at: stampedAt, team_2_submitted_by: access.userId };
+  const stampColumn =
+    team === 1 ? ('team_1_submitted_at' as const) : ('team_2_submitted_at' as const);
+  const { data: stamped, error: stampError } = await admin
+    .from('cup_lineup_sessions')
+    .update(stampPatch)
+    .eq('id', sessionId)
+    .is(stampColumn, null)
+    .select('team_1_submitted_at, team_2_submitted_at');
+  if (stampError) {
+    console.error('[cup] submitCupLineup stamp failed', {
+      tournamentId,
+      sessionId,
+      team,
+      error: stampError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!stamped || stamped.length === 0) {
+    // Noen andre rakk å levere for dette laget mellom lesingen og skrivingen.
+    return { error: 'lineup_already_submitted' };
+  }
+
+  const bothIn =
+    stamped[0].team_1_submitted_at !== null &&
+    stamped[0].team_2_submitted_at !== null;
+
+  revalidateCup(tournamentId, access.groupId);
+
+  if (bothIn) {
+    const revealError = await revealCupLineupSession(tournamentId, sessionId);
+    if (revealError) return revealError;
+    revalidateCup(tournamentId, access.groupId);
+  }
+
+  return OK;
+}
+
+/**
+ * SK6 — arrangørens nødluke: låser opp et levert uttak før avdekking.
+ *
+ * Kladden blir stående, så kapteinen retter og leverer på nytt i stedet for å
+ * bygge oppstillingen fra bunnen igjen.
+ */
+export async function unlockCupLineupCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; sessionId: string; team: CupTeamNumber | null },
+): Promise<CupLineupActionError> {
+  const { tournamentId, sessionId, team } = input;
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+  if (team === null) return { error: 'not_allowed' };
+
+  const access = await loadAccess(tournamentId);
+  // Bevisst arrangør-only: en kaptein som kunne låst opp seg selv etter at
+  // motstanderen leverte, ville kunnet svare på et uttak hun ikke fikk se.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const clearPatch =
+    team === 1
+      ? { team_1_submitted_at: null, team_1_submitted_by: null }
+      : { team_2_submitted_at: null, team_2_submitted_by: null };
+  const { data, error } = await admin
+    .from('cup_lineup_sessions')
+    .update(clearPatch)
+    .eq('id', sessionId)
+    .eq('tournament_id', tournamentId)
+    // Etter avdekking finnes matchene; da er `SwapMatchPlayer` veien, ikke
+    // denne. `.is(null)` gjør det til en betingelse på selve skrivingen.
+    .is('revealed_at', null)
+    .select('id');
+  if (error) {
+    console.error('[cup] unlockCupLineup failed', {
+      tournamentId,
+      sessionId,
+      team,
+      error,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!data || data.length === 0) return { error: 'lineup_revealed' };
+
+  revalidateCup(tournamentId, access.groupId);
+  return OK;
+}
+
+/**
+ * #1901 — the organiser's "Try again" on a session stuck after a failed reveal.
+ *
+ * The reveal only fires inside `submitCupLineupCore`, at the moment the second
+ * lineup lands, and nothing calls it again when it fails. A failure is either
+ * rejected before the claim (the teams changed, the plan, tee or cup is no
+ * longer usable, a read or the claim write failed), so `revealed_at` was never
+ * set, or rolled back after it when the match insert fails. Either way
+ * `revealed_at` ends up null with both submission stamps in place. This runs
+ * the same reveal once more without touching the lineups, so a captain does
+ * not have to pick the whole team again after what may have been a one-second
+ * blip.
+ *
+ * No new locking and no new compensation: `revealCupLineupSession` claims
+ * `revealed_at` only while it is still null, so only one caller reveals and a
+ * retry that races a first reveal still running cannot create a second batch
+ * of matches. A failed insert after the claim is undone by its own
+ * compensation.
+ */
+export async function retryCupLineupRevealCore(
+  loadAccess: LoadCupLineupAccess,
+  input: { tournamentId: string; sessionId: string },
+): Promise<CupLineupActionError> {
+  const { tournamentId, sessionId } = input;
+  if (!tournamentId || !sessionId) return { error: 'not_found' };
+
+  const access = await loadAccess(tournamentId);
+  // Organiser-only, like unlocking: a captain must not be able to set off the
+  // reveal (and the notifications to every participant) on their own.
+  if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
+
+  const admin = getAdminClient();
+  const { data: session, error: sessionError } = await admin
+    .from('cup_lineup_sessions')
+    .select('revealed_at, team_1_submitted_at, team_2_submitted_at')
+    .eq('id', sessionId)
+    // Not decoration: the reveal's own session read has no cup filter, so
+    // without this an organiser could reveal a guessed session in someone
+    // else's cup.
+    .eq('tournament_id', tournamentId)
+    .maybeSingle();
+  if (sessionError) {
+    // A failed read is not "no such session" (I3).
+    console.error('[cup] retryCupLineupReveal session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!session) return { error: 'not_found' };
+
+  const stuck = canRetryReveal({
+    revealedAt: session.revealed_at,
+    team1SubmittedAt: session.team_1_submitted_at,
+    team2SubmittedAt: session.team_2_submitted_at,
+  });
+  if (!stuck) {
+    if (session.revealed_at !== null) {
+      // The organiser's card is stale: a reveal already went through. Refresh
+      // first so the room shows the matches along with the message.
+      revalidateCup(tournamentId, access.groupId);
+      return { error: 'lineup_revealed' };
+    }
+    return { error: 'lineup_not_both_submitted' };
+  }
+
+  const revealError = await revealCupLineupSession(tournamentId, sessionId);
+  // Whatever the outcome: on success the card must show the revealed session,
+  // and on failure the state may still have moved underneath us.
+  revalidateCup(tournamentId, access.groupId);
+  return revealError ?? OK;
+}
+
+/**
+ * SK5 — avdekkingen. Kalles fra `submitCupLineupCore` når det andre uttaket lander.
+ *
+ * Rekkefølgen er valgt så en halv avdekking ikke kan bli stående (AGENTS.md-
+ * felle 5):
+ *
+ *  1. `revealed_at` KLEMMES først, betinget på at den var null. Vinner to
+ *     samtidige kall kappløpet, taper den ene her og gjør ingenting — uten
+ *     dette ville begge bygget matchene og cupen fått dem to ganger.
+ *  2. Matchene settes inn.
+ *  3. Feiler inserten, nullstilles `revealed_at` igjen (kompensasjon), slik at
+ *     arrangøren kan prøve på nytt i stedet for å sitte med en økt merket
+ *     avdekket og null kamper. Kompensasjonen sjekkes og prøves én gang til
+ *     (`undoRevealClaim`, #2086), og den hoppes over når inserten ikke fikk
+ *     ryddet sine egne kamper (`rollback_failed`).
+ *
+ * Returnerer `null` ved suksess, ellers feilkoden.
+ */
+type RevealContext = {
+  cup: {
+    name: string;
+    groupId: string | null;
+    createdBy: string;
+    allowances: CupAllowancePcts;
+  };
+  courseId: string;
+  teeBoxId: string;
+  teeRow: Record<string, unknown>;
+  scheduledTeeOffAt: string | undefined;
+  format: CupSessionFormat;
+  slotCount: number;
+};
+
+/**
+ * Alt avdekkingen trenger å vite før den kan skrive: cupen, den lagrede planen,
+ * teen og økta selv.
+ *
+ * Egen funksjon fordi den er ren opplasting med sine egne fem avvisninger —
+ * samlet med klem-, insert- og kompensasjons-stegene ble `reveal` en funksjon
+ * ingen kunne lese i ett jafs (eslint-complexity slo også ut).
+ */
+async function loadRevealContext(
+  tournamentId: string,
+  sessionId: string,
+): Promise<RevealContext | CupLineupActionError> {
+  const admin = getAdminClient();
+
+  const [
+    { data: cup, error: cupError },
+    { data: plan, error: planError },
+  ] = await Promise.all([
+    admin
+      .from('tournaments')
+      .select(
+        'name, status, group_id, created_by, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct, chapman_allowance_pct, gruesome_allowance_pct',
+      )
+      .eq('id', tournamentId)
+      .maybeSingle(),
+    admin
+      .from('tournament_plans')
+      .select('course_id, tee_box_id, scheduled_tee_off_at, best_ball_allowance_pct')
+      .eq('tournament_id', tournamentId)
+      .maybeSingle(),
+  ]);
+  // A failed read is not "no cup", "no plan" or "no tee" (I3, #2082): each of
+  // those tells the organiser to fix something that is not broken.
+  if (cupError || planError) {
+    console.error('[cup] loadRevealContext read failed', {
+      tournamentId,
+      sessionId,
+      error: cupError ?? planError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!cup) return { error: 'not_found' };
+  if (cup.status === 'finished') return { error: 'cup_finished' };
+  if (!plan?.course_id || !plan?.tee_box_id) return { error: 'missing_plan' };
+
+  const courseId = plan.course_id as string;
+  const teeBoxId = plan.tee_box_id as string;
+
+  const { data: teeRow, error: teeError } = await admin
+    .from('tee_boxes')
+    .select(
+      'course_id, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+    )
+    .eq('id', teeBoxId)
+    .maybeSingle();
+  if (teeError) {
+    console.error('[cup] loadRevealContext tee read failed', {
+      tournamentId,
+      sessionId,
+      error: teeError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!teeRow || teeRow.course_id !== courseId || teeRow.archived_at !== null) {
+    return { error: 'plan_tee' };
+  }
+
+  const { data: session, error: sessionError } = await admin
+    .from('cup_lineup_sessions')
+    .select('format, slot_count')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (sessionError) {
+    console.error('[cup] loadRevealContext session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
+  if (!session) return { error: 'not_found' };
+
+  const fourball =
+    (cup.fourball_allowance_pct as number | null) ?? ALLOWANCE_DEFAULTS.fourball;
+  return {
+    cup: {
+      name: cup.name as string,
+      groupId: (cup.group_id as string | null) ?? null,
+      createdBy: cup.created_by as string,
+      allowances: {
+        fourball,
+        foursomes:
+          (cup.foursomes_allowance_pct as number | null) ??
+          ALLOWANCE_DEFAULTS.foursomes,
+        greensome:
+          (cup.greensome_allowance_pct as number | null) ??
+          ALLOWANCE_DEFAULTS.greensome,
+        chapman:
+          (cup.chapman_allowance_pct as number | null) ??
+          ALLOWANCE_DEFAULTS.chapman,
+        gruesome:
+          (cup.gruesome_allowance_pct as number | null) ??
+          ALLOWANCE_DEFAULTS.gruesome,
+        bestBall: (plan.best_ball_allowance_pct as number | null) ?? fourball,
+      },
+    },
+    courseId,
+    teeBoxId,
+    teeRow: teeRow as Record<string, unknown>,
+    scheduledTeeOffAt:
+      (plan.scheduled_tee_off_at as string | null) ?? undefined,
+    format: session.format as CupSessionFormat,
+    slotCount: session.slot_count as number,
+  };
+}
+
+/**
+ * Releases the claim on `revealed_at` after a reveal that wrote no matches, so
+ * the organiser gets «Prøv igjen» instead of a session marked revealed with
+ * nothing in it.
+ *
+ * #2086: the write is checked, not trusted (AGENTS.md trap 2), and tried once
+ * more before giving up. If it still does not land, the session is stuck as
+ * revealed without matches and only manual cleanup helps, so the answer is
+ * `reveal_undo_failed` rather than the original error, whose message would say
+ * "try again".
+ */
+async function undoRevealClaim(
+  tournamentId: string,
+  sessionId: string,
+  original: CupLineupActionError,
+): Promise<CupLineupActionError> {
+  const admin = getAdminClient();
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const { data: undone, error: undoError } = await admin
+      .from('cup_lineup_sessions')
+      .update({ revealed_at: null })
+      .eq('id', sessionId)
+      .select('id');
+    if (!undoError && undone && undone.length > 0) return original;
+    lastError = undoError;
+  }
+  console.error('[cup] revealCupLineupSession undo failed', {
+    tournamentId,
+    sessionId,
+    error: lastError,
+  });
+  return { error: 'reveal_undo_failed' };
+}
+
+async function revealCupLineupSession(
+  tournamentId: string,
+  sessionId: string,
+): Promise<CupLineupActionError | null> {
+  const admin = getAdminClient();
+
+  const ctx = await loadRevealContext(tournamentId, sessionId);
+  if ('error' in ctx) return ctx;
+  const { cup, courseId, teeBoxId, teeRow, scheduledTeeOffAt, format, slotCount } =
+    ctx;
+
+  const { data: slotRows, error: slotsError } = await admin
+    .from('cup_lineup_slots')
+    .select('team_number, slot_index, seat, user_id')
+    .eq('session_id', sessionId);
+  if (slotsError) return { error: 'save_failed' };
+
+  const bySide = (team: CupTeamNumber): LineupSlotRow[] =>
+    (slotRows ?? [])
+      .filter((r) => r.team_number === team)
+      .map((r) => ({
+        slotIndex: r.slot_index as number,
+        seat: r.seat as 1 | 2,
+        userId: r.user_id as string,
+      }));
+
+  const team1 = bySide(1);
+  const team2 = bySide(2);
+
+  // Begge uttak ble validert da de ble levert — men mot stallene slik de så ut
+  // DA. Arrangøren kan lovlig ha flyttet en spiller til det andre laget eller
+  // tatt hen av lista i mellomtiden, og ingen av delene rører de lagrede
+  // plassene. Uten denne sjekken ville avdekkingen bygget kamper med samme
+  // spiller på begge sider, eller med en som ikke er med i cupen lenger.
+  const { data: currentParticipants, error: participantsError } = await admin
+    .from('tournament_participants')
+    .select('user_id, team_number')
+    .eq('tournament_id', tournamentId);
+  // Without this, a failed read looks like two empty squads and every player
+  // "changed team" (#2082).
+  if (participantsError) {
+    console.error('[cup] revealCupLineupSession participants read failed', {
+      tournamentId,
+      sessionId,
+      error: participantsError,
+    });
+    return { error: 'save_failed' };
+  }
+  const squadOf = (team: CupTeamNumber): string[] =>
+    (currentParticipants ?? [])
+      .filter((p) => p.team_number === team)
+      .map((p) => p.user_id as string);
+
+  const stored = validateStoredLineups({
+    slotCount,
+    format,
+    team1,
+    team2,
+    squad1: squadOf(1),
+    squad2: squadOf(2),
+  });
+  if (!stored.ok) {
+    console.error('[cup] revealCupLineupSession stored lineup rejected', {
+      tournamentId,
+      sessionId,
+      error: stored.error,
+      team1: team1.length,
+      team2: team2.length,
+    });
+    return { error: stored.error };
+  }
+
+  // 1. Klem avdekkingen. `.is('revealed_at', null)` gjør det til DB-ens
+  //    avgjørelse hvem som vant, ikke vår.
+  const revealedAt = new Date().toISOString();
+  const { data: claimed, error: claimError } = await admin
+    .from('cup_lineup_sessions')
+    .update({ revealed_at: revealedAt })
+    .eq('id', sessionId)
+    .is('revealed_at', null)
+    .select('id');
+  if (claimError) {
+    console.error('[cup] revealCupLineupSession claim failed', {
+      tournamentId,
+      sessionId,
+      error: claimError,
+    });
+    return { error: 'save_failed' };
+  }
+  // 0 rader = en annen forespørsel avdekket akkurat nå. Ferdig, ikke en feil.
+  if (!claimed || claimed.length === 0) return null;
+
+  const { data: existingGames, error: gamesError } = await admin
+    .from('games')
+    .select('game_mode')
+    .eq('tournament_id', tournamentId);
+  // Without the existing games the label numbers would restart at 1. Nothing
+  // is inserted yet, so undo the claim like a failed insert (#2082).
+  if (gamesError) {
+    console.error('[cup] revealCupLineupSession games read failed', {
+      tournamentId,
+      sessionId,
+      error: gamesError,
+    });
+    return undoRevealClaim(tournamentId, sessionId, { error: 'save_failed' });
+  }
+
+  const matches = buildRevealMatches({
+    sessionId,
+    format,
+    startNumber: nextLabelNumber(
+      (existingGames ?? []).map((g) => g.game_mode as string),
+      format,
+    ),
+    pairs: planLineupPairs({ slotCount, team1, team2 }),
+  });
+
+  // 2. Sett inn matchene. Admin-klient: kapteinen som utløste avdekkingen er
+  //    ikke cupens skaper, og games-INSERT-policyen er creator-basert.
+  //    `createdBy` er cupens arrangør, så eierskapet til kampene er som om hun
+  //    hadde generert dem selv.
+  const outcome = await insertCupMatches(
+    {
+      client: admin,
+      tournamentId,
+      cupName: cup.name,
+      groupId: cup.groupId,
+      courseId,
+      teeBoxId,
+      teeRatings: teeRatingsFrom(teeRow),
+      allowances: cup.allowances,
+      scheduledTeeOffAt,
+      createdBy: cup.createdBy,
+    },
+    matches,
+  );
+
+  // 3. Kompenser: uten dette står økta merket avdekket uten en eneste kamp, og
+  //    arrangøren har ingen vei videre.
+  if ('error' in outcome) {
+    // #2086: the insert could not remove the games it had made. `revealed_at`
+    // stays set on purpose, because «Prøv igjen» would add a second batch next
+    // to the leftovers. The session needs cleaning by hand.
+    if (outcome.error === 'rollback_failed') return outcome;
+    return undoRevealClaim(tournamentId, sessionId, outcome);
+  }
+
+  // #1902 sikkerhetsnettet: kampene som nettopp ble til kan ha passert det
+  // arrangøren planla — da flytter målet seg opp. Planlagt er et gulv, ikke et
+  // tak. Er faktisk antall fortsatt under planlagt, er skrivet en no-op i verdi.
+  //
+  // Bevisst best-effort, den ene lomma i denne fila: kampene ER opprettet, og
+  // en feilet omregning skal ikke rulle dem tilbake eller gi kapteinen en
+  // feilmelding om et uttak som faktisk gikk gjennom. Synken er idempotent, så
+  // neste avdekking retter tallet (det gjør en ny lagring av planlagt antall
+  // også).
+  try {
+    await syncCupPointsToWin(admin, tournamentId);
+  } catch (err) {
+    console.error('[cup] revealCupLineupSession points sync failed', {
+      tournamentId,
+      sessionId,
+      error: err,
+    });
+  }
+
+  // Varselet er best-effort og bevisst sist: kampene står, og et varsel som
+  // feiler skal ikke rulle dem tilbake.
+  const { data: participantRows } = await admin
+    .from('tournament_participants')
+    .select('user_id')
+    .eq('tournament_id', tournamentId);
+  await notifyParticipantsCupLineupRevealed(
+    (participantRows ?? []).map((r) => ({ user_id: r.user_id as string })),
+    { id: tournamentId, name: cup.name },
+    { format, matchCount: matches.length },
+    'revealCupLineupSession',
+  );
+
+  return null;
+}
