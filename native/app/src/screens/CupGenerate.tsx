@@ -5,7 +5,8 @@
 //
 // Bane, tee og format kommer fra den lagrede planen, og serveren er fasit ved innsending.
 // Alt krever nett. En generering legger til kamper, så kroppen sier hvor mange skjermen
-// så. Et nytt forsøk etter et tapt svar får `matches_changed`, og kampene er da laget.
+// så da du første gang sendte. Stemmer ikke tallet, svarer ruta `matches_changed` uten å
+// skrive, og du sendes til cupen for å se hva som finnes.
 import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -40,6 +41,7 @@ import type { ScreenProps } from '../navigation';
 import { FONTS, interLine, TAP, useTheme } from '../theme';
 
 type Step = 1 | 2;
+type CupArrival = 'matches_generated' | 'matches_changed';
 const TOTAL_STEPS = 2;
 
 export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
@@ -60,8 +62,11 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
   const leaving = useRef(false);
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
-  // Kampene finnes. Lå en annen skjerm oppå da svaret kom, går vi videre når du er tilbake.
-  const created = useRef(false);
+  // Svaret er her. Lå en annen skjerm oppå da det kom, går vi videre når du er tilbake.
+  const arrived = useRef<CupArrival | null>(null);
+  // Antallet fra første innsending. Gikk svaret tapt, kan kampene være skrevet, og en ny
+  // lesing ville vist dem som om de alltid var der. Da ville neste forsøk laget alle på nytt.
+  const sentFrom = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const result = await fetchCupGenerate(cupId);
@@ -74,15 +79,18 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
     }
   }, [cupId]);
 
-  const toCup = useCallback(() => {
-    leaving.current = true;
-    backTo(navigation, 'Cup', { cupId, notice: 'matches_generated' });
-  }, [cupId, navigation]);
+  const toCup = useCallback(
+    (notice: CupArrival) => {
+      leaving.current = true;
+      backTo(navigation, 'Cup', { cupId, notice });
+    },
+    [cupId, navigation],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      if (created.current) {
-        toCup();
+      if (arrived.current) {
+        toCup(arrived.current);
         return;
       }
       // Forslaget er laget av det som ble lest. Bare steg 1 tegnes av nye tall.
@@ -216,19 +224,20 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await createCupMatches(cupId, {
-      matches: submission,
-      expectedExisting: view.existingMatchCount,
-    });
+    const expectedExisting = sentFrom.current ?? view.existingMatchCount;
+    sentFrom.current = expectedExisting;
+    const result = await createCupMatches(cupId, { matches: submission, expectedExisting });
     sending.current = false;
     setBusy(false);
-    // `matches_changed`: kampene kom inn på et kall vi aldri fikk svar på.
-    if (result.ok || result.reason === 'matches_changed') {
-      created.current = true;
-      if (navigation.isFocused()) toCup();
+    if (!result.ok && result.reason !== 'matches_changed') {
+      setError(generateFailureText(result.reason));
       return;
     }
-    setError(generateFailureText(result.reason));
+    // `matches_changed` kan være et svar som gikk tapt, rester etter en feil eller en annen
+    // arrangør. Ingenting ble skrevet nå, så kvitteringen sier ikke at disse kampene er laget.
+    const arrival = result.ok ? 'matches_generated' : 'matches_changed';
+    arrived.current = arrival;
+    if (navigation.isFocused()) toCup(arrival);
   };
 
   const heading = step === 1 ? GENERATE_TEXT.step1Heading : GENERATE_TEXT.step2Heading;
@@ -307,6 +316,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
           </Pressable>
           <GeneratePreview
             presetId={plan.presetId}
+            disabled={busy}
             matches={matches}
             team1Name={view.team1Name}
             team2Name={view.team2Name}

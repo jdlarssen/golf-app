@@ -250,7 +250,7 @@ describe('steg 2', () => {
     expect(screen.getByTestId('cup-generate-submit')).toHaveTextContent('Opprett 2 matcher');
   });
 
-  it('et trykk på plassen viser laget, og valget bytter og lukker', async () => {
+  it('et trykk på plassen viser laget, og et valg lukker lista', async () => {
     answer(view({ plan: { ...view().plan!, presetId: 'fourball-singler' } }));
     await toPreview();
     const slot = 'cup-generate-slot-fourball_matchplay-1:side1:0';
@@ -300,12 +300,73 @@ describe('steg 2', () => {
     expect(navigation.dispatch).toHaveBeenCalledWith(backGesture);
   });
 
-  it('kampene finnes alt, fra et svar som gikk tapt: det er det samme som at de ble laget', async () => {
+  it('antallet stemmer ikke: til cupen, uten å si at disse kampene ble laget', async () => {
     (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'matches_changed' });
     const navigation = await toPreview();
     await submit();
-    expect(navigation.popTo).toHaveBeenCalledWith('Cup', { cupId: 'cup-1', notice: 'matches_generated' });
+    expect(navigation.popTo).toHaveBeenCalledWith('Cup', { cupId: 'cup-1', notice: 'matches_changed' });
     expect(screen.queryByTestId('cup-generate-error')).toBeNull();
+  });
+
+  it('svaret gikk tapt, så tilbake og «Neste»: et nytt forsøk sender tallet fra første gang', async () => {
+    (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'network' });
+    const navigation = await toPreview();
+    await submit();
+    expect(screen.getByTestId('cup-generate-error')).toHaveTextContent(/Sjekk nettet/);
+
+    // Kampene kom fram: den nye lesingen viser dem.
+    answer(view({ existingMatchCount: 2 }));
+    await back();
+    await next();
+    (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'matches_changed' });
+    await submit();
+    const sent = (createCupMatches as jest.Mock).mock.calls.map(([, body]) => body.expectedExisting);
+    expect(sent).toEqual([0, 0]);
+    expect(navigation.popTo).toHaveBeenCalledWith('Cup', { cupId: 'cup-1', notice: 'matches_changed' });
+  });
+
+  it('rester etter en feil: setningen står, og et nytt forsøk kaller det ikke en suksess', async () => {
+    (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'rollback_failed' });
+    const navigation = await toPreview();
+    await submit();
+    expect(screen.getByTestId('cup-generate-error')).toHaveTextContent(/Ta kontakt med administrator/);
+    expect(navigation.popTo).not.toHaveBeenCalled();
+
+    answer(view({ existingMatchCount: 1 }));
+    await back();
+    await next();
+    (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'matches_changed' });
+    await submit();
+    expect((createCupMatches as jest.Mock).mock.calls[1][1].expectedExisting).toBe(0);
+    expect(navigation.popTo).toHaveBeenCalledWith('Cup', { cupId: 'cup-1', notice: 'matches_changed' });
+  });
+
+  it('et nei der ingenting er skrevet, stopper ikke neste forsøk', async () => {
+    (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'tee_off_in_past' });
+    const navigation = await toPreview();
+    await submit();
+    await back();
+    await next();
+    await submit();
+    const sent = (createCupMatches as jest.Mock).mock.calls.map(([, body]) => body.expectedExisting);
+    expect(sent).toEqual([0, 0]);
+    expect(navigation.popTo).toHaveBeenCalledWith('Cup', { cupId: 'cup-1', notice: 'matches_generated' });
+  });
+
+  it('under innsendingen kan ikke forslaget endres', async () => {
+    let finish: (value: { ok: false; reason: string }) => void = () => {};
+    (createCupMatches as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await toPreview();
+    expect(screen.getByTestId('cup-generate-proposal').props.pointerEvents).toBe('auto');
+    await submit();
+    expect(screen.getByTestId('cup-generate-proposal').props.pointerEvents).toBe('none');
+    await act(async () => finish({ ok: false, reason: 'insert_failed' }));
+    expect(screen.getByTestId('cup-generate-proposal').props.pointerEvents).toBe('auto');
   });
 
   it('serverens nei står, og du kan prøve igjen', async () => {
@@ -352,6 +413,10 @@ describe('steg 2', () => {
   it('tilbake går til lagene, som står, og «Neste» lager et nytt forslag', async () => {
     const navigation = await toPreview();
     expect(mockPrevent.enabled).toBe(true);
+    const slot = 'cup-generate-slot-singles_matchplay-1:side1:0';
+    await fireEvent.press(screen.getByTestId(slot));
+    await fireEvent.press(screen.getByTestId('cup-generate-picker-singles_matchplay-1-b'));
+    expect(screen.getByTestId(slot)).toHaveTextContent('Kari');
     await back();
     expect(screen.getByTestId('cup-generate-progress')).toHaveTextContent(/^Steg 1 av 2/);
     expect(screen.getByTestId('cup-generate-count-team1')).toHaveTextContent('2');
@@ -359,6 +424,7 @@ describe('steg 2', () => {
     expect(mockPrevent.enabled).toBe(false);
     await next();
     expect(screen.getByTestId('cup-generate-progress')).toHaveTextContent(/^Steg 2 av 2/);
+    expect(screen.getByTestId(slot)).toHaveTextContent('Ola');
   });
 
   it('tilbake mens kampene lages: du blir stående, og kommer ikke ut på siden av svaret', async () => {
@@ -418,6 +484,7 @@ describe('delt dag', () => {
     await fireEvent.press(screen.getByTestId('cup-generate-lineup-1:side1:0'));
     await fireEvent.press(screen.getByTestId('cup-generate-picker-1-nord-2'));
     expect(screen.getByTestId('cup-generate-lineup-1:side1:0')).toHaveTextContent('Bjørn');
+    expect(screen.getByTestId(`cup-generate-strokes-${firstGreensome.id}-team1`).props.value).not.toBe('15');
     await submit();
     const sent = (createCupMatches as jest.Mock).mock.calls[0][1].matches as { flightIndex: number; side1: string[] }[];
     for (const match of sent.filter((m) => m.flightIndex === 1)) expect(match.side1).not.toContain('nord-1');

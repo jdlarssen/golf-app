@@ -32,9 +32,9 @@ export type AppCupGenerateView = {
 };
 
 /**
- * `expectedExisting` er antallet kampene viewet viste. En generering legger til kamper,
- * så et nytt forsøk etter et tapt svar ville laget alle på nytt. Stemmer ikke tallet,
- * svarer ruta `matches_changed` og skriver ingenting.
+ * `expectedExisting` er antallet kampene viewet viste da skjermen først sendte. En
+ * generering legger til kamper, så et nytt forsøk etter et tapt svar ville laget alle på
+ * nytt. Stemmer ikke tallet, svarer ruta `matches_changed` og skriver ingenting.
  */
 export type CupMatchesBody = {
   matches: CupBatchMatch[];

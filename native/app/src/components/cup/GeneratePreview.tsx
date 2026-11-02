@@ -36,6 +36,7 @@ type SharedProps = {
 
 export function GeneratePreview({
   presetId,
+  disabled,
   selectedTee,
   teamStrokesInputs,
   onTeamStrokesChange,
@@ -44,22 +45,28 @@ export function GeneratePreview({
   ...shared
 }: SharedProps & {
   presetId: string;
+  /** Under innsendingen: det som er sendt, skal ikke kunne endres på skjermen. */
+  disabled: boolean;
   selectedTee: WizardTeeBox;
   teamStrokesInputs: TeamStrokesInputs;
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   onMatchChange: (matchId: string, side: 'side1' | 'side2', idx: number, userId: string) => void;
   onSwapPlayer: (flightIndex: number, side: FlightTeamSide, slotIndex: 0 | 1, playerId: string) => void;
 }) {
-  return isSplitDayPreset(presetId) ? (
-    <BundlePreview
-      {...shared}
-      selectedTee={selectedTee}
-      teamStrokesInputs={teamStrokesInputs}
-      onTeamStrokesChange={onTeamStrokesChange}
-      onSwapPlayer={onSwapPlayer}
-    />
-  ) : (
-    <PlainPreview {...shared} onMatchChange={onMatchChange} />
+  return (
+    <View pointerEvents={disabled ? 'none' : 'auto'} testID="cup-generate-proposal">
+      {isSplitDayPreset(presetId) ? (
+        <BundlePreview
+          {...shared}
+          selectedTee={selectedTee}
+          teamStrokesInputs={teamStrokesInputs}
+          onTeamStrokesChange={onTeamStrokesChange}
+          onSwapPlayer={onSwapPlayer}
+        />
+      ) : (
+        <PlainPreview {...shared} onMatchChange={onMatchChange} />
+      )}
+    </View>
   );
 }
 

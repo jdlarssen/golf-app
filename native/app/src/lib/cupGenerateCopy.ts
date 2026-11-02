@@ -50,6 +50,8 @@ export const GENERATE_TEXT = {
   back9: 'Hull 10–18',
   matchPlayer: '{match}, {team}, spiller {n}',
   lineupPlayer: 'Flight {flight}, {team}, plass {n}',
+  /** Bare appen: antallet stemmer ikke med det skjermen så, og ingenting er skrevet nå. */
+  matchesChanged: 'Antallet matcher i cupen er endret. Se gjennom listen under før du lager flere.',
 } as const;
 
 export const FORMAT_LABELS: Record<CupBundleFormat, string> = {
