@@ -134,11 +134,13 @@ describe('android-proof.py manifest', () => {
       '/invitasjon/',
       '/runde/',
       '/pamelding/',
+      '/cup/bli-med/',
       '/en/venner/legg-til/',
       '/en/liga/bli-med/',
       '/en/invitasjon/',
       '/en/runde/',
       '/en/pamelding/',
+      '/en/cup/bli-med/',
     ];
     expect(f['autoverify-path']).toEqual(
       ['tornygolf.no', 'www.tornygolf.no'].flatMap((host) => paths.map((p) => `${host} pathPrefix:${p}`)),
