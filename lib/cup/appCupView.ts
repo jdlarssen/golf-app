@@ -110,6 +110,8 @@ export type AppCupView = {
   matches: AppCupMatch[];
   /** The caller runs this cup: the room has «Styr cupen». */
   canManage: boolean;
+  /** Only for an organiser while the cup is a draft: the door to the player list. */
+  participantCount: number | null;
   /** The caller has a match left to withdraw from: «Trekk meg fra cupen». */
   canWithdrawSelf: boolean;
   /** The caller has withdrawn from the cup. */
