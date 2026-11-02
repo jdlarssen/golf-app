@@ -1,6 +1,6 @@
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
-import type { ShortIdGame } from '@/lib/games/getGameByShortId';
 import type { SignupOffer } from '@/lib/games/signupOffer';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
  * The wire types of `/api/pamelding/[shortId]` (#2748). Sums and details the
@@ -29,18 +29,18 @@ export type AppRoundInviteAnswer =
   | { status: 'joined'; gameId: string }
   | { status: 'requested' };
 
-export type AppRoundInviteViewGame = Pick<
-  ShortIdGame,
-  | 'id'
-  | 'name'
-  | 'short_id'
-  | 'game_mode'
-  | 'mode_config'
-  | 'courses'
-  | 'tee_box'
-  | 'scheduled_tee_off_at'
-  | 'entry_fee_kr'
->;
+/** What the view reads of a game. Spelled out: the app reads this file's types. */
+export type AppRoundInviteViewGame = {
+  id: string;
+  name: string;
+  short_id: string;
+  game_mode: GameMode;
+  mode_config: GameModeConfig;
+  courses: { name: string } | null;
+  tee_box: { name: string } | null;
+  scheduled_tee_off_at: string | null;
+  entry_fee_kr: number;
+};
 
 export function buildAppRoundInviteView(
   game: AppRoundInviteViewGame,

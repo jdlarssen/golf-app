@@ -22,6 +22,7 @@ const FRIEND = { kind: 'friend', code: 'abcd1234' } as const;
 const LEAGUE = { kind: 'league', code: 'abcd2345' } as const;
 const TOKEN = '44444444-4444-4444-8444-444444444444';
 const INVITATION = { kind: 'invitation', token: TOKEN } as const;
+const ROUND_INVITE = { kind: 'roundInvite', shortId: 'abcd2345', src: 'plakat' } as const;
 const ROUND = { kind: 'round', target: { name: 'GameHome', params: { gameId: TOKEN } } } as const;
 
 let urlHandler: ((event: { url: string }) => void) | null = null;
@@ -167,6 +168,13 @@ describe('appLinkStep', () => {
     expect(appLinkStep(true, home, INVITATION)).toBe('push');
   });
 
+  it('hopper over når samme påmeldingslenke alt står øverst, og åpner en annen', () => {
+    const shown = (shortId: string) => ({ name: 'RoundInvite', params: { shortId, src: 'plakat' } });
+    expect(appLinkStep(true, shown('abcd2345'), ROUND_INVITE)).toBe('skip');
+    expect(appLinkStep(true, shown('zzzz9999'), ROUND_INVITE)).toBe('push');
+    expect(appLinkStep(true, home, ROUND_INVITE)).toBe('push');
+  });
+
   it('en rundelenke åpnes alltid: `openPushTarget` sørger for at det ikke blir noen kopi', () => {
     expect(appLinkStep(true, { name: 'GameHome', params: { gameId: TOKEN } }, ROUND)).toBe('push');
     expect(appLinkStep(false, home, ROUND)).toBe('wait');
@@ -184,5 +192,9 @@ describe('appLinkScreen', () => {
     expect(appLinkScreen(FRIEND)).toEqual({ name: 'FriendLink', params: { code: 'abcd1234' } });
     expect(appLinkScreen(LEAGUE)).toEqual({ name: 'LeagueJoin', params: { code: 'abcd2345' } });
     expect(appLinkScreen(INVITATION)).toEqual({ name: 'InvitationLink', params: { token: TOKEN } });
+    expect(appLinkScreen(ROUND_INVITE)).toEqual({
+      name: 'RoundInvite',
+      params: { shortId: 'abcd2345', src: 'plakat' },
+    });
   });
 });

@@ -75,6 +75,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   League: 'Home',
   LeagueJoin: 'Home',
   InvitationLink: 'Home',
+  RoundInvite: 'Home',
   Cup: 'Home',
   CupManage: 'Cup',
   CupWithdraw: 'Cup',

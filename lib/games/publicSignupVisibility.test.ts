@@ -109,7 +109,8 @@ describe('signupSourceFromParam', () => {
 // #2570: one home for the link the organiser copies (admin card, «Styr
 // spillere») and the poster's QR code.
 describe('signupShareUrl', () => {
+  // #2748: the path the app claims. Without the app it goes on to /signup.
   it('builds the absolute signup link on the main domain', () => {
-    expect(signupShareUrl('abc123')).toBe('https://tornygolf.no/signup/abc123');
+    expect(signupShareUrl('abc12345')).toBe('https://tornygolf.no/pamelding/abc12345');
   });
 });

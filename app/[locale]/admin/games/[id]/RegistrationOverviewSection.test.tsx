@@ -64,6 +64,6 @@ describe('RegistrationOverviewSection', () => {
     const { RegistrationOverviewSection } = await import('./RegistrationOverviewSection');
     render(await RegistrationOverviewSection({ ...PROPS, ...props }));
     expect(screen.queryByTestId('poster-link') !== null).toBe(shown);
-    expect(screen.queryByDisplayValue('https://tornygolf.no/signup/abc123') !== null).toBe(shown);
+    expect(screen.queryByDisplayValue('https://tornygolf.no/pamelding/abc123') !== null).toBe(shown);
   });
 });

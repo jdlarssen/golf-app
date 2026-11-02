@@ -30,6 +30,7 @@ const SCREENS = [
   'League',
   'LeagueJoin',
   'InvitationLink',
+  'RoundInvite',
 ] as const;
 const L1 = { leagueId: 'l1' };
 const G = { gameId: 'g1' };
@@ -147,6 +148,47 @@ describe('lenka åpner «Bli med i liga» (#2748)', () => {
     expect(names()).toEqual(['Home', 'League', 'League']);
     await back();
     expect(ref.getCurrentRoute()?.params).toEqual({ leagueId: 'l2' });
+  });
+});
+
+describe('lenka åpner påmeldingen (#2748)', () => {
+  const ROUND_INVITE = { kind: 'roundInvite', shortId: 'abcd2345', src: null } as const;
+
+  async function toGame() {
+    await act(async () => {
+      backTo(navigation, 'GameHome', G);
+    });
+  }
+
+  it('lenka åpnet appen: «Meld meg på» gir [Hjem, Spillet], og tilbake går til Hjem', async () => {
+    await stackOf();
+    await open(ROUND_INVITE);
+    expect(names()).toEqual(['Home', 'RoundInvite']);
+    await toGame();
+    expect(names()).toEqual(['Home', 'GameHome']);
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('tilbake uten at noe skjedde går til Hjem', async () => {
+    await stackOf();
+    await open(ROUND_INVITE);
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('sto du på et hull, går tilbake dit', async () => {
+    await stackOf(['GameHome', G], ['Hole', HOLE_5]);
+    await open(ROUND_INVITE);
+    await back();
+    expect(names()).toEqual(['Home', 'GameHome', 'Hole']);
+  });
+
+  it('ligger spillet alt under, går du tilbake til det og får ingen kopi', async () => {
+    await stackOf(['GameHome', G], ['Hole', HOLE_5]);
+    await open(ROUND_INVITE);
+    await toGame();
+    expect(names()).toEqual(['Home', 'GameHome']);
   });
 });
 

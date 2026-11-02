@@ -35,6 +35,7 @@ import { finishLogin, requestLoginCode } from '../data/loginCode';
 import { offerAppLink, takePendingAppLink } from '../data/pendingAppLink';
 import { FRIEND_LINK_TEXT } from '../lib/friendsCopy';
 import { INVITATION_LINK_TEXT } from '../lib/invitationLinkCopy';
+import { ROUND_INVITE_TEXT } from '../lib/roundInviteCopy';
 import { LEAGUE_JOIN_TEXT } from '../lib/leagueCopy';
 import { LOGIN_TEXT, OTP_LENGTH, describeLoginError } from '../lib/loginCopy';
 import { STAGING_SUPABASE_HOST } from '../lib/stagingGate';
@@ -251,6 +252,7 @@ describe('Login: en lenke venter (#2627, #2748)', () => {
       'https://tornygolf.no/runde/44444444-4444-4444-8444-444444444444/holes/7',
       { loginTitle: LOGIN_TEXT.roundLinkTitle, loginBody: LOGIN_TEXT.roundLinkBody },
     ],
+    ['den delte påmeldingslenka', 'https://tornygolf.no/pamelding/abcd2345', ROUND_INVITE_TEXT],
   ])('%s står i båndet, uten navn, til navigatoren har tatt den', async (_label, url, text) => {
     process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://tornygolf.no';
     await render(<Login />);

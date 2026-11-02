@@ -65,6 +65,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           },
           {
             "host": "tornygolf.no",
+            "pathPrefix": "/pamelding/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
             "pathPrefix": "/en/venner/legg-til/",
             "scheme": "https",
           },
@@ -81,6 +86,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           {
             "host": "tornygolf.no",
             "pathPrefix": "/en/runde/",
+            "scheme": "https",
+          },
+          {
+            "host": "tornygolf.no",
+            "pathPrefix": "/en/pamelding/",
             "scheme": "https",
           },
           {
@@ -105,6 +115,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           },
           {
             "host": "www.tornygolf.no",
+            "pathPrefix": "/pamelding/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
             "pathPrefix": "/en/venner/legg-til/",
             "scheme": "https",
           },
@@ -121,6 +136,11 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
           {
             "host": "www.tornygolf.no",
             "pathPrefix": "/en/runde/",
+            "scheme": "https",
+          },
+          {
+            "host": "www.tornygolf.no",
+            "pathPrefix": "/en/pamelding/",
             "scheme": "https",
           },
         ],
