@@ -130,7 +130,7 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
   // Tilbake går ett steg, som i «Nytt spill». Fra første steg forlater du veiviseren. Navn og
   // lag er ikke et steg å gå tilbake til: cupen finnes da, og «Neste» der ville laget en til.
   // Derfra går tilbake til cupen, der utkastet står.
-  usePreventRemove(stepIndex > 0, ({ data }) => {
+  usePreventRemove(stepIndex > 0 || busy, ({ data }) => {
     if (leaving.current) {
       navigation.dispatch(data.action);
       return;

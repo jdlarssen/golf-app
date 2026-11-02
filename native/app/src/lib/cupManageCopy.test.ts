@@ -122,7 +122,8 @@ describe('koder som ikke er kjent', () => {
   it('hva skjermen sier når den ikke får lest', () => {
     expect(manageLoadFailureText('not_found')).toContain('Fant ikke cupen');
     expect(manageLoadFailureText('not_manager')).toBe('Det er arrangøren som styrer cupen.');
-    expect(manageLoadFailureText('load_failed')).toContain('Sjekk nettet');
+    expect(manageLoadFailureText('load_failed')).toBe('Fikk ikke tak i cupen. Prøv igjen.');
+    expect(manageLoadFailureText('offline')).toContain('Sjekk nettet');
   });
 });
 

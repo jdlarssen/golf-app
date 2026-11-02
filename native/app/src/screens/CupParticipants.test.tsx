@@ -240,7 +240,7 @@ describe('CupParticipants', () => {
     await act(async () => {
       mockFocus();
     });
-    expect(screen.getByTestId('cup-players-stale')).toHaveTextContent('Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.');
+    expect(screen.getByTestId('cup-players-stale')).toHaveTextContent('Fikk ikke tak i cupen. Prøv igjen.');
     expect(screen.queryByTestId('cup-candidate-add-per')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('cup-players-retry'));

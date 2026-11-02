@@ -23,6 +23,7 @@ async function renderRemove(over: Record<string, unknown> = {}) {
     navigate: jest.fn(),
     popTo: jest.fn(),
     replace: jest.fn(),
+    isFocused: jest.fn(() => true),
     getState: () => ({
       index: 3,
       routes: [
@@ -63,6 +64,15 @@ describe('CupRemovePlayer', () => {
     await fireEvent.press(screen.getByTestId('cup-remove-submit'));
     expect(removeCupParticipant).toHaveBeenCalledWith('cup-1', 'per');
     expect(navigation.popTo).toHaveBeenCalledWith('CupParticipants', { cupId: 'cup-1', notice: 'participant_removed' });
+  });
+
+  it('et svar etter at du gikk tilbake: skjermen du står på, får stå i ro', async () => {
+    const navigation = await renderRemove({ returnTo: 'CreateCup' });
+    navigation.isFocused.mockReturnValue(false);
+    await fireEvent.press(screen.getByTestId('cup-remove-submit'));
+    expect(removeCupParticipant).toHaveBeenCalledWith('cup-1', 'per');
+    expect(navigation.popTo).not.toHaveBeenCalled();
+    expect(navigation.replace).not.toHaveBeenCalled();
   });
 
   it('fra veiviseren går den tilbake til veiviseren', async () => {

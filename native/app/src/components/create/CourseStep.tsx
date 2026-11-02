@@ -61,8 +61,11 @@ export function CourseStep({
   onTee: (teeBoxId: string) => void;
   onTeeOff: (date: Date) => void;
   onRetry: () => void;
-  /** #2757: «Finner du ikke banen?», med det du har søkt på som forslag til navn. */
-  onCreateCourse: (search: string) => void;
+  /**
+   * #2757: «Finner du ikke banen?», med det du har søkt på som forslag til navn. Uten
+   * denne er døra borte: skjemaet går tilbake til «Nytt spill», ikke til cupen (#2752).
+   */
+  onCreateCourse?: (search: string) => void;
   /**
    * En cup kan stå uten starttid (#2752): da starter arrangøren rundene selv. Uten
    * denne er tiden påkrevd, som i et vanlig spill.
@@ -156,7 +159,7 @@ export function CourseStep({
               }}
             />
           ))}
-          {courses !== null ? (
+          {courses !== null && onCreateCourse ? (
             <Pressable
               testID="create-course-new"
               accessibilityRole="button"

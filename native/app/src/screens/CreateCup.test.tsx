@@ -121,6 +121,34 @@ describe('en ny cup', () => {
     expect(navigation.dispatch).toHaveBeenCalledWith(backGesture);
   });
 
+  it('banevalget har ikke døra til «Ny bane», som går tilbake til «Nytt spill»', async () => {
+    await renderWizard();
+    await next();
+    await screen.findByTestId('create-course-bane');
+    expect(screen.queryByTestId('create-course-new')).toBeNull();
+  });
+
+  it('tilbake mens cupen lages: du blir stående, og går videre når den er laget', async () => {
+    let answer: (value: { ok: true; id: string }) => void = () => {};
+    (createCup as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const navigation = await renderWizard();
+    expect(mockPrevent.enabled).toBe(false);
+    await next();
+    expect(mockPrevent.enabled).toBe(true);
+
+    await back();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('create-cup-details')).toBeTruthy();
+
+    await act(async () => answer({ ok: true, id: 'ny' }));
+    expect(screen.getByTestId('create-cup-plan')).toBeTruthy();
+  });
+
   it('to trykk på «Neste» før skjermen er tegnet på nytt: én cup', async () => {
     let answer: (value: { ok: true; id: string }) => void = () => {};
     (createCup as jest.Mock).mockImplementationOnce(

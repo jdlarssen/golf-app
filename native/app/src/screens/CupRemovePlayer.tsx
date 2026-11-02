@@ -27,7 +27,8 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
     setError(null);
     const result = await removeCupParticipant(cupId, userId);
     if (result.ok) {
-      leave('participant_removed');
+      // Har du gått tilbake mens svaret var på vei, er veiviseren der du står. Den skal stå i ro.
+      if (navigation.isFocused()) leave('participant_removed');
       return;
     }
     if (result.reason === 'not_draft') setLocked(true);
