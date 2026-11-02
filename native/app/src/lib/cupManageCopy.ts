@@ -3,6 +3,7 @@
 // låst i `cupManageCopy.test.ts`. Det som er nytt i appen, står i `MANAGE_APP_TEXT`.
 import type {
   AppCupManageMatch,
+  AppCupSideAward,
   AppCupWithdrawalMatch,
 } from '../../../../lib/cup/appCupManageView';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
@@ -107,6 +108,73 @@ export const MANAGE_APP_TEXT = {
   playOnQuestion: 'Skal {partner} spille alene, eller avgjøres kampen uten spill?',
 } as const;
 
+/** `cup.manage`: avslutningen. */
+export const FINISH_TEXT = {
+  button: 'Avslutt cupen',
+  pending: 'Avslutter …',
+  sideAwardsHint: 'Registrer alle sidepoeng før du kan avslutte cupen: {awards}',
+  notSubmitted:
+    'Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel — de som ikke har levert, teller ikke i resultatet.',
+  anywayButton: 'Avslutt likevel',
+  anywayPending: 'Avslutter …',
+  failed:
+    'Disse kampene lot seg ikke avslutte: {matches}. Prøv igjen — kampene som allerede er avsluttet, står.',
+  failedPlain: 'Klarte ikke å avslutte cupen.',
+  alreadyFinished: 'Cupen er allerede avsluttet.',
+  finishedNotice: 'Cupen er avsluttet. Resultatet er sendt til alle deltakere.',
+} as const;
+
+/** `cup.sideAwards`: registreringen etter runden. */
+export const SIDE_AWARD_TEXT = {
+  heading: 'Sidepoeng',
+  empty: 'Ingen sidepoeng ble satt opp for denne cupen.',
+  finishedHint: 'Cupen er avsluttet. Retter du et sidepoeng, regnes vinneren på nytt.',
+  none: 'Ingen kvalifiserte',
+  register: 'Registrer',
+  registerPending: 'Lagrer …',
+  registered: 'Vinneren er registrert.',
+  registeredNone: 'Registrert: ingen vant her.',
+  girCount: 'Hvor mange GIR klarte {team}?',
+  girRegistered: 'GIR-tellingen er registrert.',
+} as const;
+
+const SIDE_AWARD_ERRORS: Record<string, string> = {
+  not_found: 'Fant ikke cupen.',
+  not_a_participant: 'Spilleren er ikke med i cupens spillerliste.',
+  invalid_counts: 'Tallet må være mellom 0 og {max}.',
+  save_failed: 'Klarte ikke å lagre. Prøv igjen om litt.',
+};
+
+/** Det som er nytt i appen. */
+export const FINISH_APP_TEXT = {
+  activeHeading: 'Kamper som pågår',
+  matchLink: 'Avslutt kampen',
+  matchHeading: 'Avslutt {match}?',
+  matchButton: 'Avslutt kampen',
+  matchPending: 'Avslutter …',
+  matchNotSubmitted:
+    'Noen har ikke levert scorekort i {match}. Du kan avslutte kampen likevel. De som ikke har levert, teller ikke i resultatet.',
+  matchFinished: 'Kampen er avsluttet.',
+  cancel: 'Avbryt',
+  registerLink: 'Registrer sidepoeng',
+  notRunning: 'Cupen er ikke i gang.',
+  stale: 'Viser lagret cup. Fikk ikke kontakt med serveren. Du trenger nett for å registrere og avslutte.',
+  girOfMax: 'av {max}',
+  boardFinal: 'Sluttresultat',
+  boardLoading: 'Henter tavla …',
+  boardFailed: 'Fikk ikke tak i tavla. Sjekk nettet og prøv igjen.',
+  boardNotFound: 'Fant ikke kampen. Tavla åpner når kampen er ferdig.',
+} as const;
+
+const MATCH_FINISH_ERRORS: Record<string, string> = {
+  not_found: 'Fant ikke kampen.',
+  not_active: 'Kampen er ikke i gang lenger. Noen andre rakk kanskje å avslutte den.',
+  no_players: 'Det står ingen spillere i kampen.',
+  not_all_submitted: 'Noen har fortsatt ikke levert. Prøv igjen.',
+  not_all_approved: 'Et levert scorekort venter på godkjenning. Det må godkjennes før kampen kan avsluttes.',
+  finish_failed: 'Klarte ikke å avslutte kampen. Prøv igjen.',
+};
+
 export type CupManageNotice =
   | 'player_withdrawn'
   | 'player_withdrawn_partial'
@@ -145,6 +213,30 @@ export function swapFailureText(reason: string): string {
   return SWAP_ERRORS.swap_failed;
 }
 
+/** Hvorfor et sidepoeng ikke ble lagret. */
+export function sideAwardFailureText(reason: string, max?: number): string {
+  const known = APP_FAILURES[reason] ?? SIDE_AWARD_ERRORS[reason] ?? SIDE_AWARD_ERRORS.save_failed;
+  return formatMessage(known, { max: max ?? 0 });
+}
+
+/** Hvorfor en kamp ikke ble avsluttet. */
+export function matchFinishFailureText(reason: string): string {
+  return APP_FAILURES[reason] ?? MATCH_FINISH_ERRORS[reason] ?? MATCH_FINISH_ERRORS.finish_failed;
+}
+
+/** Hvorfor cupen ikke ble avsluttet. `matches` er kampene som fortsatt pågår. */
+export function cupFinishFailureText(reason: string, matches: string): string {
+  if (reason === 'match_finish_failed') return formatMessage(FINISH_TEXT.failed, { matches });
+  return APP_FAILURES[reason] ?? FINISH_TEXT.failedPlain;
+}
+
+/** «Nærmest pinnen (hull 7), GIR (hull 12)», som i nettets hint. */
+export function missingAwardsLine(awards: readonly { kind: 'ctp' | 'ld' | 'gir'; holeNumber: number }[]): string {
+  return awards
+    .map((award) => `${sideAwardKind(award.kind)} (${formatMessage(CUP_TEXT.holeShort, { n: award.holeNumber })})`)
+    .join(', ');
+}
+
 /** Når skjermen ikke fikk lest det den skal vise. */
 export function manageLoadFailureText(reason: string): string {
   if (reason === 'not_found') return MANAGE_APP_TEXT.notFound;
@@ -163,6 +255,18 @@ export function withdrawalMatchLine(match: AppCupWithdrawalMatch): string {
         ? formatMessage(WITHDRAW_TEXT.outcomeWalkover, { team: outcome.teamName })
         : formatMessage(WITHDRAW_TEXT.outcomePlayOn, { partner: outcome.partnerName });
   return `${label} · ${when} → ${consequence}`;
+}
+
+export function sideAwardKind(kind: 'ctp' | 'ld' | 'gir'): string {
+  if (kind === 'ctp') return CUP_TEXT.kindCtp;
+  return kind === 'ld' ? CUP_TEXT.kindLd : CUP_TEXT.kindGir;
+}
+
+/** «Nærmest pinnen · hull 7 (1 av 2)», som på nettet. Plassen bare når det er flere. */
+export function sideAwardTitle(award: AppCupSideAward): string {
+  const head = `${sideAwardKind(award.kind)} · ${formatMessage(CUP_TEXT.holeShort, { n: award.holeNumber })}`;
+  if (award.kind === 'gir' || award.slotCount <= 1) return head;
+  return `${head} ${formatMessage(CUP_TEXT.slotOfCount, { slot: award.slot, count: award.slotCount })}`;
 }
 
 /** Statusen på en kamp i «Styr cupen». */

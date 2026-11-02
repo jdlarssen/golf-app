@@ -61,8 +61,7 @@ import { ChevronIcon, HakeIcon, LaasIcon } from '../components/icons/Icons';
 import { kickerHeader } from '../components/KickerHeader';
 import { PageTitle } from '../components/PageTitle';
 import { TeeShotOrganizerNoticeLive } from '../components/TeeShotOrganizerNotice';
-import { WebLinkButton } from '../components/WebLinkButton';
-import { finishRound } from '../data/endGame';
+import { finishCupRound, finishRound } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
 import { fetchOwnProfile } from '../data/profile';
@@ -80,9 +79,6 @@ import {
   approveConfirmBody,
   approveOnBehalfLabel,
   countHeading,
-  CUP_LINK_LABEL,
-  CUP_NOTE,
-  cupWebPath,
   describeEndRoundFailure,
   describeReminderFailure,
   describeReminderPreviewFailure,
@@ -164,7 +160,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const isAdmin = useIsAdmin(userId);
 
   const game = bundle?.game ?? null;
-  const gameActive = game !== null && game.tournamentId === null && game.status === 'active';
+  const gameActive = game !== null && game.status === 'active';
 
   // Kan runden fortsatt avsluttes? Regnet her, før de tidlige returene, så
   // bekreft-steget kan sjekke det på nytt når bundelen hentes på nytt mens
@@ -201,7 +197,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
 
   const kicker = !game
     ? ''
-    : game.tournamentId !== null || game.status !== 'active'
+    : game.status !== 'active'
       ? game.name
       : endGameKicker(
           game.name,
@@ -244,14 +240,21 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
       setBusy(true);
       setNotice(null);
       try {
-        const result = await finishRound(gameId, {
-          allowMissing: plan.missing.length > 0,
-          withdrawUserIds: withdrawUserIds(plan, acknowledged),
-          sideWinners: toSideWinners(
-            plan.slots,
-            activeChoices(choices, winnerCandidates(plan, acknowledged)),
-          ),
-        });
+        // #2752: en cup-kamp går via ruta, som tar med de avledede kampene og lar
+        // cupen eie varslene. Spørringen står her, ikke i datalaget, fordi cup-ruta
+        // verken tar frafall (plan.withdrawalSupported er av) eller kåringer.
+        const cupId = bundle?.game.tournamentId ?? null;
+        const result =
+          cupId !== null
+            ? await finishCupRound(cupId, gameId, plan.missing.length > 0)
+            : await finishRound(gameId, {
+                allowMissing: plan.missing.length > 0,
+                withdrawUserIds: withdrawUserIds(plan, acknowledged),
+                sideWinners: toSideWinners(
+                  plan.slots,
+                  activeChoices(choices, winnerCandidates(plan, acknowledged)),
+                ),
+              });
         if (result.ok) {
           leavingRef.current = true;
           navigation.replace('Leaderboard', { gameId });
@@ -274,7 +277,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         setBusy(false);
       }
     },
-    [acknowledged, choices, gameId, navigation, refresh],
+    [acknowledged, bundle, choices, gameId, navigation, refresh],
   );
 
   /**
@@ -353,31 +356,6 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           <GameLoadFailed notFound={notFound} text={END_GAME_TEXT.loadFailed} onRetry={() => void refresh()} />
         )}
       </View>
-    );
-  }
-
-  // Cup-runder eies av cup-flyten på nettsiden: den avslutter kampene som hører
-  // sammen og demper per-spill-varslene. En app-flipp ville gått utenom begge.
-  // Datamodulen avviser dem uansett; her slipper arrangøren å trykke først.
-  if (game.tournamentId !== null) {
-    return (
-      <ScrollView
-        style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={[styles.scroll, { paddingBottom: 20 + stateInsets.bottom }]}
-        testID="end-game-screen"
-      >
-        <TitleBlock title={END_GAME_TEXT.heading} />
-        <Card style={styles.stateCard}>
-          <Text style={[styles.body14, { color: colors.text }]} testID="end-game-cup-note">
-            {CUP_NOTE}
-          </Text>
-          <WebLinkButton
-            label={CUP_LINK_LABEL}
-            path={cupWebPath(game.tournamentId)}
-            testID="end-game-cup-link"
-          />
-        </Card>
-      </ScrollView>
     );
   }
 

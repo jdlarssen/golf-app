@@ -109,8 +109,9 @@ export function matchesSummary(progress: AppCupProgress): string {
 }
 
 /** Linja på Hjem. */
-export function homeCupLine(status: 'draft' | 'active', progress: AppCupProgress | null): string {
+export function homeCupLine(status: AppCupStatus, progress: AppCupProgress | null): string {
   if (status === 'draft') return CUP_APP_TEXT.homeNotStarted;
+  if (status === 'finished') return STATUS_LABELS.finished;
   return progress ? matchesSummary(progress) : CUP_APP_TEXT.homeUnknownProgress;
 }
 

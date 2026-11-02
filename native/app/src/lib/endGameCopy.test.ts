@@ -18,9 +18,6 @@ import {
   approveConfirmBody,
   approveOnBehalfLabel,
   countHeading,
-  CUP_LINK_LABEL,
-  CUP_NOTE,
-  cupWebPath,
   describeEndRoundFailure,
   describeReminderFailure,
   describeReminderPreviewFailure,
@@ -48,6 +45,7 @@ const REASON_MAP = {
   'no-session': true,
   offline: true,
   'not-found': true,
+  'cup-not-manager': true,
   'cup-game': true,
   'not-active': true,
   'no-players': true,
@@ -151,9 +149,13 @@ describe('describeEndRoundFailure', () => {
     expect(describeEndRoundFailure('db')).toBe('Noe gikk galt mot serveren.');
   });
 
-  it('peker cup-avslaget til nettsiden — det finnes ingen vei i appen', () => {
-    expect(describeEndRoundFailure('cup-game')).toBe(CUP_NOTE);
-    expect(CUP_NOTE).toContain('nettsiden');
+  it('cup-avslaget peker til cupen, ikke til nettsiden (#2752)', () => {
+    expect(describeEndRoundFailure('cup-game')).toBe(
+      'Denne runden hører til en cup. Den avslutter du fra cupen.',
+    );
+    expect(describeEndRoundFailure('cup-not-manager')).toBe(
+      'Det er arrangøren av cupen som avslutter kampene.',
+    );
   });
 });
 
@@ -320,16 +322,6 @@ describe('purre-malene', () => {
     expect(approveConfirmBody('Kari')).toBe(
       'Godkjenn kortet til Kari? Du står som den som godkjente.',
     );
-  });
-});
-
-describe('cup-lenka', () => {
-  it('peker på cupens forside, med id-en kodet', () => {
-    expect(cupWebPath('cup-1')).toBe('/cup/cup-1');
-    // En sti bygget av data kodes DER den bygges — ikke der noen senere antar
-    // at den var trygg.
-    expect(cupWebPath('a/b')).toBe('/cup/a%2Fb');
-    expect(isFinishedSentence(CUP_LINK_LABEL)).toBe(true);
   });
 });
 

@@ -142,6 +142,18 @@ describe('buildFinishPlan', () => {
     expect(plan.unapproved).toEqual([]);
   });
 
+  it('i en cup trekker ikke avslutningen noen: det er «Styr cupen» som gjør det (#2752)', () => {
+    const plan = buildFinishPlan(
+      bundle(
+        [player({ userId: ME, submittedAt: SUBMITTED }), player({ userId: MATE })],
+        { gameMode: 'best_ball', tournamentId: 'cup-1' },
+      ),
+      ME,
+    );
+    expect(plan.withdrawalSupported).toBe(false);
+    expect(plan.missing.map((entry) => entry.withdrawable)).toEqual([false]);
+  });
+
   it('lister hvem som mangler levering, og hvem av dem appen kan trekke', () => {
     const plan = buildFinishPlan(
       bundle([
@@ -470,6 +482,7 @@ describe('returnsToList', () => {
     'no-session': false,
     offline: false,
     'not-found': false,
+    'cup-not-manager': false,
     'cup-game': false,
     'not-active': false,
     'no-players': false,

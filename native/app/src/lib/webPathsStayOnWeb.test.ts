@@ -5,7 +5,6 @@
 import { APP_LINK_PATH_PREFIXES } from '../../../../lib/appLinks/appLinkPaths';
 import { deleteBlockWebLink } from './accountCopy';
 import { CREATE_ON_WEB_PATH } from './createGameCopy';
-import { cupWebPath } from './endGameCopy';
 import { gameWebPath } from './formatGate';
 import { PRIVACY_PATH } from './webLink';
 
@@ -17,7 +16,6 @@ describe('stiene appens egne knapper åpner', () => {
   it.each([
     ['gameWebPath', gameWebPath(ID)],
     ['spillerlista', `/games/${ID}/spillere`],
-    ['cupWebPath', cupWebPath(ID)],
     ['CREATE_ON_WEB_PATH', CREATE_ON_WEB_PATH],
     ['banen', `/admin/courses/${ID}/edit`],
     ['klubbene, fra slett konto', deleteBlockWebLink('sole_club_owner')?.path ?? ''],

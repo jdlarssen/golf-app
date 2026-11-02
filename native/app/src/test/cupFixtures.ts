@@ -16,6 +16,7 @@ export function cupMatch(overrides: Partial<AppCupMatch> = {}): AppCupMatch {
     soloPartnerName: null,
     mine: false,
     canOpen: false,
+    boardOpen: false,
     outcome: null,
     ...overrides,
   };

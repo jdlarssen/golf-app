@@ -36,6 +36,8 @@ const room = (over: Partial<AppCupManageView> = {}): AppCupManageView => ({
   status: 'active',
   team1Name: 'Team Nord',
   team2Name: 'Team Sør',
+  sideAwards: [],
+  finish: { progress: { played: 0, total: 1 }, missingAwards: [], activeMatches: [] },
   players: [
     { userId: 'ola', name: 'Ola Kompis', team: 1, withdrawn: false, canAct: true },
     { userId: 'tapp', name: 'Testspiller Tapp', team: 1, withdrawn: true, canAct: true },
@@ -260,5 +262,56 @@ describe('lasting og feil', () => {
     expect(screen.getByTestId('cup-manage-failed')).toHaveTextContent(text);
     expect(screen.queryByTestId('cup-manage-retry')).toBeNull();
     expect(screen.queryByTestId('cup-manage-name')).toBeNull();
+  });
+});
+
+describe('dørene til sidepoeng og avslutning (#2752)', () => {
+  const award = {
+    id: 'a1',
+    kind: 'ctp' as const,
+    holeNumber: 7,
+    points: 1,
+    slot: 1,
+    slotCount: 1,
+    winnerUserId: null,
+    noWinner: false,
+  };
+
+  it('en cup som går, har begge', async () => {
+    answer({ ok: true, view: room({ sideAwards: [award] }) });
+    const navigation = await renderManage();
+    await fireEvent.press(screen.getByTestId('cup-manage-open-side-awards'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CupSideAwards', { cupId: 'cup-1' });
+    await fireEvent.press(screen.getByTestId('cup-manage-open-finish'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CupFinish', { cupId: 'cup-1' });
+  });
+
+  it('uten sidepoeng: bare avslutningen', async () => {
+    answer({ ok: true, view: room() });
+    await renderManage();
+    expect(screen.queryByTestId('cup-manage-open-side-awards')).toBeNull();
+    expect(screen.getByTestId('cup-manage-open-finish')).toBeTruthy();
+  });
+
+  it('en ferdig cup beholder sidepoengene, som kan rettes', async () => {
+    answer({ ok: true, view: room({ status: 'finished', sideAwards: [award] }) });
+    await renderManage();
+    expect(screen.getByTestId('cup-manage-open-side-awards')).toBeTruthy();
+    expect(screen.queryByTestId('cup-manage-open-finish')).toBeNull();
+  });
+
+  it('et utkast kan ikke avsluttes', async () => {
+    answer({ ok: true, view: room({ status: 'draft' }) });
+    await renderManage();
+    expect(screen.queryByTestId('cup-manage-open-finish')).toBeNull();
+  });
+
+  it('uten nett: ingen dører', async () => {
+    answer({ ok: true, view: room({ sideAwards: [award] }) }, { ok: false, reason: 'offline' });
+    await renderManage();
+    await refocus();
+    expect(screen.getByTestId('cup-manage-stale')).toBeTruthy();
+    expect(screen.queryByTestId('cup-manage-open-side-awards')).toBeNull();
+    expect(screen.queryByTestId('cup-manage-open-finish')).toBeNull();
   });
 });

@@ -76,6 +76,7 @@ describe('linjene', () => {
     expect(homeCupLine('active', { played: 3, total: 8 })).toBe('3 av 8 matcher spilt');
     expect(homeCupLine('draft', { played: 0, total: 0 })).toBe('Ikke startet ennå');
     expect(homeCupLine('active', null)).toBe('Fikk ikke lest kampene');
+    expect(homeCupLine('finished', null)).toBe('Avsluttet');
   });
 
   it('statusen setter inn hvem som trakk seg og hvem som fikk kampen', () => {
