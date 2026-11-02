@@ -176,6 +176,7 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/create/SetupStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   'components/create/PlayersStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   // #2757: hullkortet og tee-tabellen på «Ny bane».
+  'components/cup/GeneratePreview.tsx': { host: 'screens/CupGenerate.tsx', scrollTestID: 'cup-generate-screen' },
   'components/course/HoleGrid.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   'components/course/TeeTable.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.

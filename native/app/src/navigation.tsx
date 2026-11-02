@@ -43,6 +43,7 @@ import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
+import { GENERATE_TEXT } from './lib/cupGenerateCopy';
 import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupSetupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
@@ -74,6 +75,7 @@ import { CreateCup } from './screens/CreateCup';
 import { CupFinish } from './screens/CupFinish';
 import { CupJoin } from './screens/CupJoin';
 import { CupMatchBoard } from './screens/CupMatchBoard';
+import { CupGenerate } from './screens/CupGenerate';
 import { CupParticipants } from './screens/CupParticipants';
 import { CupRemovePlayer } from './screens/CupRemovePlayer';
 import { CupSideAwards } from './screens/CupSideAwards';
@@ -197,8 +199,8 @@ export type RootStackParamList = {
    */
   LeagueJoin: { code: string };
   /** #2752: cup-rommet, kampene under spill og resultatene når cupen er ferdig. */
-  /** `notice`: kvitteringen når cupen nettopp er avsluttet. */
-  Cup: { cupId: string; notice?: 'cup_finished' };
+  /** `notice`: kvitteringen når kampene er laget, eller cupen er startet eller avsluttet. */
+  Cup: { cupId: string; notice?: 'cup_finished' | 'cup_started' | 'matches_generated' };
   /** #2752: arrangørens rom. `notice` er kvitteringen etter et trekk eller bytte. */
   CupManage: { cupId: string; notice?: CupManageNotice };
   /** #2752: trekk og angring. Uten `userId`: spilleren trekker seg selv. */
@@ -217,6 +219,8 @@ export type RootStackParamList = {
    * etter at en spiller er fjernet.
    */
   CreateCup: { cupId?: string; notice?: 'participant_removed' } | undefined;
+  /** #2752: «Fordel & generer»: lagene, forslaget og kampene. */
+  CupGenerate: { cupId: string };
   /** #2752: spillerlista, med lenka å dele. `cup_signup` åpner den. */
   CupParticipants: { cupId: string; notice?: 'participant_removed' };
   /** #2752: bekreftelsen før en spiller fjernes. `returnTo` er skjermen du kom fra. */
@@ -557,6 +561,11 @@ export function RootNavigator() {
           name="CupMatchBoard"
           component={CupMatchBoard}
           options={({ route }) => kickerHeader(route.params.label, route.params.label)}
+        />
+        <Stack.Screen
+          name="CupGenerate"
+          component={CupGenerate}
+          options={kickerHeader(GENERATE_TEXT.door, GENERATE_TEXT.door)}
         />
         <Stack.Screen
           name="CreateCup"

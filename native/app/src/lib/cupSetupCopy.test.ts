@@ -248,6 +248,7 @@ describe('setningene', () => {
   it('handicap med norsk komma', () => {
     expect(hcpLine(12.4)).toBe('HCP 12,4');
     expect(hcpLine(8)).toBe('HCP 8,0');
+    expect(hcpLine(-3)).toBe('HCP +3,0');
   });
 
   it('fornavnet', () => {

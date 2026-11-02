@@ -339,6 +339,17 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
     </Pressable>
   );
 
+  const createCup = (
+    <Pressable
+      accessibilityRole="button"
+      style={[ui.buttonSecondary, styles.createCup]}
+      onPress={() => navigation.navigate('CreateCup')}
+      testID="home-create-cup"
+    >
+      <Text style={ui.buttonSecondaryText}>{HOME_TEXT.createCup}</Text>
+    </Pressable>
+  );
+
   return (
     <>
       <ScrollView
@@ -403,6 +414,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         ) : null}
 
         {hero ? null : createGame}
+        {hero ? null : createCup}
 
         {hero ? (
           <HomeHeroCard
@@ -476,6 +488,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         ) : null}
 
         {hero ? createGame : null}
+        {hero ? createCup : null}
 
         {errorText ? (
           <Text style={ui.muted} testID="home-stale">
@@ -623,6 +636,7 @@ const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 const TITLE = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
+  createCup: { marginTop: 8 },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   // Webbens banner har `mb-4`; skjermens `gap` gir de første 8.
   kavalkade: { marginBottom: 8 },
