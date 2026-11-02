@@ -9,6 +9,7 @@
 // **Wire-kontrakten** (rutene og denne fila endres i samme PR) står i rutene under
 // `app/api/cup/`, og typene i `lib/cup/appCupSetupView.ts`.
 import type { AppCupGenerateView, CupMatchesBody } from '../../../../lib/cup/appCupGenerateView';
+import type { AppCupLineupView } from '../../../../lib/cup/appCupLineupView';
 import type {
   AppCupJoinView,
   AppCupParticipantsView,
@@ -132,4 +133,53 @@ export function createCupMatches(cupId: string, body: CupMatchesBody): Promise<C
 
 export function startCup(cupId: string): Promise<CupSetupResult> {
   return send(`${base(cupId)}/start`, 'POST');
+}
+
+// Lag og kaptein, og kapteinuttaket. Hemmeligheten står på serveren: `slots: null` i svaret
+// er alt appen får se av motstanderens uttak.
+
+export function setCupParticipantRole(
+  cupId: string,
+  userId: string,
+  body: { teamNumber: 1 | 2 | null; isCaptain: boolean },
+): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/participants/${encodeURIComponent(userId)}/role`, 'POST', body);
+}
+
+export function fetchCupLineup(cupId: string) {
+  return read<AppCupLineupView>(
+    `${base(cupId)}/lineup`,
+    (view) => typeof view.role === 'string' && Array.isArray(view.sessions),
+  );
+}
+
+export function setCupPlannedMatchCount(cupId: string, plannedMatchCount: string): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/planned-match-count`, 'PUT', { plannedMatchCount });
+}
+
+const session = (cupId: string, sessionId: string) => `${base(cupId)}/lineup/sessions/${encodeURIComponent(sessionId)}`;
+
+export function openCupLineupSession(cupId: string, format: string, slotCount: number): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/lineup/sessions`, 'POST', { format, slotCount });
+}
+
+export function deleteCupLineupSession(cupId: string, sessionId: string): Promise<CupSetupResult> {
+  return send(session(cupId, sessionId), 'DELETE');
+}
+
+export function submitCupLineup(
+  cupId: string,
+  sessionId: string,
+  team: 1 | 2,
+  slots: { slotIndex: number; userIds: string[] }[],
+): Promise<CupSetupResult> {
+  return send(`${session(cupId, sessionId)}/submit`, 'POST', { team, slots });
+}
+
+export function unlockCupLineup(cupId: string, sessionId: string, team: 1 | 2): Promise<CupSetupResult> {
+  return send(`${session(cupId, sessionId)}/unlock`, 'POST', { team });
+}
+
+export function retryCupLineupReveal(cupId: string, sessionId: string): Promise<CupSetupResult> {
+  return send(`${session(cupId, sessionId)}/reveal`, 'POST');
 }

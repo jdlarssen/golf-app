@@ -122,7 +122,7 @@ export function GenerateSessionCounts({
   );
 }
 
-function Stepper({
+export function Stepper({
   label,
   sign,
   disabled,

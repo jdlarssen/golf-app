@@ -44,6 +44,7 @@ import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
 import { GENERATE_TEXT } from './lib/cupGenerateCopy';
+import { LINEUP_TEXT } from './lib/cupLineupCopy';
 import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupSetupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
@@ -76,6 +77,7 @@ import { CupFinish } from './screens/CupFinish';
 import { CupJoin } from './screens/CupJoin';
 import { CupMatchBoard } from './screens/CupMatchBoard';
 import { CupGenerate } from './screens/CupGenerate';
+import { CupLineup } from './screens/CupLineup';
 import { CupParticipants } from './screens/CupParticipants';
 import { CupRemovePlayer } from './screens/CupRemovePlayer';
 import { CupSideAwards } from './screens/CupSideAwards';
@@ -221,6 +223,8 @@ export type RootStackParamList = {
   CreateCup: { cupId?: string; notice?: 'participant_removed' } | undefined;
   /** #2752: «Fordel & generer»: lagene, forslaget og kampene. */
   CupGenerate: { cupId: string };
+  /** #2752: kapteinuttaket, for arrangøren og kapteinene. */
+  CupLineup: { cupId: string };
   /** #2752: spillerlista, med lenka å dele. `cup_signup` åpner den. */
   CupParticipants: { cupId: string; notice?: 'participant_removed' };
   /** #2752: bekreftelsen før en spiller fjernes. `returnTo` er skjermen du kom fra. */
@@ -566,6 +570,11 @@ export function RootNavigator() {
           name="CupGenerate"
           component={CupGenerate}
           options={kickerHeader(GENERATE_TEXT.door, GENERATE_TEXT.door)}
+        />
+        <Stack.Screen
+          name="CupLineup"
+          component={CupLineup}
+          options={kickerHeader(LINEUP_TEXT.pageTitle, LINEUP_TEXT.pageTitle)}
         />
         <Stack.Screen
           name="CreateCup"

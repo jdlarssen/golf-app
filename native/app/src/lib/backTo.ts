@@ -85,6 +85,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   CupMatchBoard: 'Cup',
   CreateCup: 'Cup',
   CupGenerate: 'Cup',
+  CupLineup: 'Cup',
   CupParticipants: 'Cup',
   CupRemovePlayer: 'CupParticipants',
   CupJoin: 'Home',
