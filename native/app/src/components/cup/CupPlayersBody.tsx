@@ -7,7 +7,8 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import type { AppCupEnrolled, AppCupParticipantsView } from '../../../../../lib/cup/appCupSetupView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../../lib/league/pickerRows';
-import { addCupParticipant, fetchCupParticipants } from '../../data/cupSetup';
+import { addCupParticipant, fetchCupParticipants, setCupParticipantRole } from '../../data/cupSetup';
+import { ROLE_TEXT } from '../../lib/cupLineupCopy';
 import {
   hcpLine,
   participantFailureText,
@@ -20,6 +21,7 @@ import { cupJoinUrl } from '../../lib/cupJoinUrl';
 import { ROUND_START_TEXT, showAllLine } from '../../lib/leagueCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
 import { PickerMore, PickerNoMatch, PickerSearchField } from '../PickerSearch';
+import { PlayerRoleControls } from './PlayerRoleControls';
 
 /** Telefonens delingsark med lenka. Å lukke arket er ikke en feil. */
 function shareLink(url: string | null) {
@@ -89,6 +91,8 @@ export function CupPlayersBody({
 
   const stale = failure !== null;
   const open = view.status === 'draft' && !stale;
+  // Lag og kaptein kan settes også etter start, for øktene som kommer. Bare ikke etter slutt.
+  const rolesOpen = view.status !== 'finished' && !stale;
   const url = cupJoinUrl(view.shortId);
   const addable = pickerRows(view.candidates, {
     query: search,
@@ -113,6 +117,16 @@ export function CupPlayersBody({
     setBusy(null);
   };
 
+  const saveRole = async (userId: string, teamNumber: 1 | 2 | null, isCaptain: boolean) => {
+    setBusy(userId);
+    setError(null);
+    setOwnReceipt(null);
+    const result = await setCupParticipantRole(cupId, userId, { teamNumber, isCaptain });
+    if (!result.ok) setError(participantFailureText(result.reason, view.cap ?? 0));
+    await load();
+    setBusy(null);
+  };
+
   return (
     <View testID="cup-players">
       {failure !== null ? (
@@ -133,33 +147,53 @@ export function CupPlayersBody({
         {playerCountLine(view.participants.length, view.cap)}
       </Text>
       {view.participants.length === 0 ? <Note text={PLAYERS_TEXT.empty} testID="cup-players-empty" /> : null}
+      {rolesOpen && view.participants.length > 0 ? (
+        <Text style={ui.muted} testID="cup-players-role-helper">
+          {ROLE_TEXT.roleHelper}
+        </Text>
+      ) : null}
       {view.participants.map((player) => (
         <View
           key={player.userId}
-          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           testID={`cup-player-${player.userId}`}
         >
-          <View style={styles.text}>
-            <Text style={[styles.name, { color: colors.text }]}>{player.name}</Text>
-            <Text style={[styles.small, { color: colors.muted }]}>{hcpLine(player.hcpIndex)}</Text>
+          <View style={styles.rowTop}>
+            <View style={styles.text}>
+              <Text style={[styles.name, { color: colors.text }]}>{player.name}</Text>
+              <Text style={[styles.small, { color: colors.muted }]}>
+                {player.isCaptain ? `${hcpLine(player.hcpIndex)} · ${ROLE_TEXT.captainBadge}` : hcpLine(player.hcpIndex)}
+              </Text>
+            </View>
+            {open ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${PLAYERS_TEXT.remove}: ${player.name}`}
+                disabled={busy !== null}
+                onPress={() => {
+                  // Kvitteringen gjelder det du gjorde sist, og det er snart fjerningen.
+                  setOwnReceipt(undefined);
+                  setError(null);
+                  onRemove(player, view.name);
+                }}
+                hitSlop={REMOVE_LINK_SLOP}
+                style={styles.link}
+                testID={`cup-player-remove-${player.userId}`}
+              >
+                <Text style={[styles.linkText, { color: colors.primary }]}>{PLAYERS_TEXT.remove}</Text>
+              </Pressable>
+            ) : null}
           </View>
-          {open ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${PLAYERS_TEXT.remove}: ${player.name}`}
-              disabled={busy !== null}
-              onPress={() => {
-                // Kvitteringen gjelder det du gjorde sist, og det er snart fjerningen.
-                setOwnReceipt(undefined);
-                setError(null);
-                onRemove(player, view.name);
-              }}
-              hitSlop={REMOVE_LINK_SLOP}
-              style={styles.link}
-              testID={`cup-player-remove-${player.userId}`}
-            >
-              <Text style={[styles.linkText, { color: colors.primary }]}>{PLAYERS_TEXT.remove}</Text>
-            </Pressable>
+          {rolesOpen ? (
+            <PlayerRoleControls
+              // Et lag lagret et annet sted skal ikke bli stående som det gamle i valgene.
+              key={`${player.teamNumber}-${player.isCaptain}`}
+              player={player}
+              team1Name={view.team1Name}
+              team2Name={view.team2Name}
+              busy={busy !== null}
+              onSave={(teamNumber, isCaptain) => void saveRole(player.userId, teamNumber, isCaptain)}
+            />
           ) : null}
         </View>
       ))}
@@ -275,6 +309,8 @@ function Note({ text, testID }: { text: string; testID: string }) {
 const REMOVE_LINK_SLOP = { left: 8, right: 8 };
 
 const styles = StyleSheet.create({
+  rowCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, marginTop: 8 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   center: { paddingVertical: 24, alignItems: 'center', gap: 10 },
   heading: { fontSize: 12, fontFamily: FONTS.sansSemiBold, marginTop: 16, marginBottom: 6 },
   note: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4, marginBottom: 8 },

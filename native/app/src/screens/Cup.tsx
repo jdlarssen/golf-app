@@ -32,7 +32,9 @@ import {
 } from '../lib/cupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { playerCountLine, SETUP_APP_TEXT } from '../lib/cupSetupCopy';
-import { GENERATE_TEXT, START_TEXT, startFailureText } from '../lib/cupGenerateCopy';
+import { FORMAT_LABELS, GENERATE_TEXT, START_TEXT, startFailureText } from '../lib/cupGenerateCopy';
+import { LINEUP_ROOM_TEXT } from '../lib/cupLineupCopy';
+import { formatMessage } from '../lib/kavalkadeCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -177,18 +179,20 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       {notice === 'matches_changed' ? <Note text={GENERATE_TEXT.matchesChanged} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
+      {view.canManage && view.participantCount !== null && !stale ? (
+        <Door
+          text={SETUP_APP_TEXT.playersDoor}
+          sub={playerCountLine(view.participantCount, null)}
+          onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
+          testID="cup-open-players"
+        />
+      ) : null}
       {draft && view.canManage && !stale ? (
         <>
           <Door
             text={SETUP_APP_TEXT.continueDoor}
             onPress={() => openOrReturn(navigation, 'CreateCup', { cupId })}
             testID="cup-open-setup"
-          />
-          <Door
-            text={SETUP_APP_TEXT.playersDoor}
-            sub={playerCountLine(view.participantCount ?? 0, null)}
-            onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
-            testID="cup-open-players"
           />
           <Door
             text={GENERATE_TEXT.door}
@@ -213,7 +217,30 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
           onStart={() => void start()}
         />
       ) : null}
-      {view.lineupPending ? <Note text={CUP_APP_TEXT.lineupPending} testID="cup-lineup-pending" /> : null}
+      {view.lineup.door && !stale ? (
+        <Door
+          text={view.lineup.door.kind === 'organizer' ? LINEUP_ROOM_TEXT.organizerDoor : LINEUP_ROOM_TEXT.captainDoor}
+          sub={
+            view.lineup.door.kind === 'organizer'
+              ? formatMessage(LINEUP_ROOM_TEXT.organizerDoorSub, { count: view.lineup.door.sessionCount })
+              : LINEUP_ROOM_TEXT.captainDoorSub
+          }
+          onPress={() => openOrReturn(navigation, 'CupLineup', { cupId })}
+          testID="cup-open-lineup"
+        />
+      ) : null}
+      {view.lineupPending && !view.lineup.door ? <Note text={CUP_APP_TEXT.lineupPending} testID="cup-lineup-pending" /> : null}
+      {view.lineup.revealed ? (
+        <View style={[styles.revealed, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="cup-lineup-revealed">
+          <Text style={[styles.revealedTitle, { color: colors.text }]}>{LINEUP_ROOM_TEXT.revealedTitle}</Text>
+          <Text style={ui.muted}>
+            {formatMessage(LINEUP_ROOM_TEXT.revealedBody, {
+              format: FORMAT_LABELS[view.lineup.revealed.format],
+              count: view.lineup.revealed.slotCount,
+            })}
+          </Text>
+        </View>
+      ) : null}
 
       {view.results ? <CupResults view={view} results={view.results} userId={userId} /> : null}
       {!finished && !stale ? (
@@ -365,6 +392,8 @@ function CupLoadFailed({
 }
 
 const styles = StyleSheet.create({
+  revealed: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 4, marginTop: 8 },
+  revealedTitle: { ...fraunces(500, 17, 22) },
   start: { gap: 6, marginTop: 12 },
   startDimmed: { opacity: 0.45 },
   startError: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },

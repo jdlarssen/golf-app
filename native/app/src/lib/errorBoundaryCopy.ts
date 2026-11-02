@@ -63,6 +63,7 @@ const VARIANT_BY_ROUTE = {
   CupMatchBoard: 'default',
   CreateCup: 'default',
   CupGenerate: 'default',
+  CupLineup: 'default',
   CupParticipants: 'default',
   CupRemovePlayer: 'default',
   CupJoin: 'default',

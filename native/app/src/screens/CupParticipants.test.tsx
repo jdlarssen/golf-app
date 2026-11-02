@@ -4,7 +4,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Share } from 'react-native';
 import type { AppCupParticipantsView } from '../../../../lib/cup/appCupSetupView';
-import { addCupParticipant } from '../data/cupSetup';
+import { addCupParticipant, setCupParticipantRole } from '../data/cupSetup';
 import type { ScreenProps } from '../navigation';
 import { CupParticipants } from './CupParticipants';
 
@@ -18,6 +18,7 @@ jest.mock('../lib/webLink', () => ({
 jest.mock('../data/cupSetup', () => ({
   fetchCupParticipants: jest.fn(async () => mockResults.shift() ?? mockLast),
   addCupParticipant: jest.fn(async () => ({ ok: true })),
+  setCupParticipantRole: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => {
@@ -45,7 +46,7 @@ const room = (over: Partial<AppCupParticipantsView> = {}): AppCupParticipantsVie
   team2Name: 'Team Sør',
   shortId: 'abcd2345',
   cap: 40,
-  participants: [{ userId: 'ola', name: 'Ola Kompis', hcpIndex: 12.4, isCaptain: true }],
+  participants: [{ userId: 'ola', name: 'Ola Kompis', hcpIndex: 12.4, teamNumber: 1, isCaptain: true }],
   candidates: [
     { userId: 'per', name: 'Per Putter', hcpIndex: 20, pending: false },
     { userId: 'tapp', name: 'Testspiller Tapp', hcpIndex: 0, pending: true },
@@ -247,6 +248,74 @@ describe('CupParticipants', () => {
 
     expect(screen.queryByTestId('cup-players-stale')).toBeNull();
     expect(screen.getByTestId('cup-candidate-add-per')).toBeTruthy();
+  });
+
+  describe('lag og kaptein', () => {
+    it('«Lagre» kommer først når noe er endret, og sender lag og kaptein', async () => {
+      answer({ ok: true, view: room() });
+      await renderList();
+      const save = 'cup-player-save-role-ola';
+      expect(screen.queryByTestId(save)).toBeNull();
+      await fireEvent.press(screen.getByTestId('cup-player-team-ola-2'));
+      await fireEvent.press(screen.getByTestId(save));
+      expect(setCupParticipantRole).toHaveBeenCalledWith('cup-1', 'ola', { teamNumber: 2, isCaptain: true });
+    });
+
+    it('uten lag kan ingen være kaptein: bryteren er borte, og flagget følger med', async () => {
+      answer({ ok: true, view: room() });
+      await renderList();
+      expect(screen.getByTestId('cup-player-captain-ola')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('cup-player-team-ola-0'));
+      expect(screen.queryByTestId('cup-player-captain-ola')).toBeNull();
+      await fireEvent.press(screen.getByTestId('cup-player-save-role-ola'));
+      expect(setCupParticipantRole).toHaveBeenCalledWith('cup-1', 'ola', { teamNumber: null, isCaptain: false });
+    });
+
+    it('et nei står med nettets setning, og lista leses på nytt', async () => {
+      answer({ ok: true, view: room() });
+      (setCupParticipantRole as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'team_taken' });
+      await renderList();
+      await fireEvent.press(screen.getByTestId('cup-player-team-ola-2'));
+      await fireEvent.press(screen.getByTestId('cup-player-save-role-ola'));
+      expect(screen.getByTestId('cup-players-error')).toHaveTextContent('Laget har allerede en kaptein.');
+    });
+
+    it('lagret står uten «Lagre», når lista har lest det nye', async () => {
+      const saved = room();
+      saved.participants = saved.participants.map((p) => (p.userId === 'ola' ? { ...p, teamNumber: 2 as const } : p));
+      answer({ ok: true, view: room() }, { ok: true, view: saved });
+      await renderList();
+      await fireEvent.press(screen.getByTestId('cup-player-team-ola-2'));
+      await fireEvent.press(screen.getByTestId('cup-player-save-role-ola'));
+      expect(screen.queryByTestId('cup-player-save-role-ola')).toBeNull();
+    });
+
+    it('etter start: lag og kaptein kan settes, men lista kan ikke endres', async () => {
+      const started = room();
+      started.status = 'active';
+      answer({ ok: true, view: started });
+      await renderList();
+      expect(screen.getByTestId('cup-players-locked')).toHaveTextContent(/Lag og kaptein kan du fortsatt sette/);
+      expect(screen.getByTestId('cup-player-role-ola')).toBeTruthy();
+      expect(screen.queryByTestId('cup-player-remove-ola')).toBeNull();
+    });
+
+    it('en ferdig cup: ingen valg', async () => {
+      const finished = room();
+      finished.status = 'finished';
+      answer({ ok: true, view: finished });
+      await renderList();
+      expect(screen.queryByTestId('cup-player-role-ola')).toBeNull();
+    });
+
+    it('uten ferske tall: ingen valg', async () => {
+      answer({ ok: true, view: room() }, { ok: false, reason: 'offline' });
+      await renderList();
+      await act(async () => {
+        mockFocus();
+      });
+      expect(screen.queryByTestId('cup-player-role-ola')).toBeNull();
+    });
   });
 
   it('den som ikke styrer cupen: en setning, uten «Prøv igjen»', async () => {

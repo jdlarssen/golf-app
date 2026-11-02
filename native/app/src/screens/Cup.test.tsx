@@ -454,6 +454,57 @@ describe('dørene i et utkast (#2752)', () => {
   });
 });
 
+describe('uttaket i rommet (#2752)', () => {
+  it('arrangøren har døra, med antall økter', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true, lineup: { door: { kind: 'organizer', sessionCount: 2 }, revealed: null } }) });
+    const { navigate } = await renderCup();
+    const door = await screen.findByTestId('cup-open-lineup');
+    expect(door).toHaveTextContent(/^Uttak2 økter/);
+    await fireEvent.press(door);
+    expect(navigate).toHaveBeenCalledWith('CupLineup', { cupId: 'cup-1' });
+  });
+
+  it('kapteinen har sin dør, og setningen om kapteinene står ikke over den', async () => {
+    answer({ ok: true, view: liveCup({ lineupPending: true, lineup: { door: { kind: 'captain' }, revealed: null } }) });
+    await renderCup();
+    expect(await screen.findByTestId('cup-open-lineup')).toHaveTextContent(/^UttaketSett laget for neste økt/);
+    expect(screen.queryByTestId('cup-lineup-pending')).toBeNull();
+  });
+
+  it('en spiller ser setningen, uten dør', async () => {
+    answer({ ok: true, view: liveCup({ lineupPending: true }) });
+    await renderCup();
+    expect(await screen.findByTestId('cup-lineup-pending')).toBeTruthy();
+    expect(screen.queryByTestId('cup-open-lineup')).toBeNull();
+  });
+
+  it('kampene er klare: kortet sier format og antall', async () => {
+    answer({ ok: true, view: liveCup({ lineup: { door: null, revealed: { format: 'foursomes_matchplay', slotCount: 2 } } }) });
+    await renderCup();
+    expect(await screen.findByTestId('cup-lineup-revealed')).toHaveTextContent(
+      'Kampene er klareKapteinene har levert. Foursomes: 2 kamper er satt opp.',
+    );
+  });
+
+  it('uten nett står ikke døra', async () => {
+    answer(
+      { ok: true, view: liveCup({ lineup: { door: { kind: 'captain' }, revealed: null } }) },
+      { ok: false, reason: 'offline' },
+    );
+    await renderCup();
+    await screen.findByTestId('cup-open-lineup');
+    await refocus();
+    expect(screen.queryByTestId('cup-open-lineup')).toBeNull();
+  });
+
+  it('spillerlista har døra også etter start, for lag og kaptein', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true, participantCount: 4 }) });
+    const { navigate } = await renderCup();
+    await fireEvent.press(await screen.findByTestId('cup-open-players'));
+    expect(navigate).toHaveBeenCalledWith('CupParticipants', { cupId: 'cup-1' });
+  });
+});
+
 describe('fra utkast til start (#2752)', () => {
   const draft = (over: Partial<AppCupView> = {}) =>
     liveCup({ status: 'draft', canManage: true, participantCount: 4, matches: [], ...over });

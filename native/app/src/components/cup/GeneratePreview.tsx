@@ -2,7 +2,7 @@
 // `Step2Preview`, `Step2BundlePreview`, `GreensomeCard` og `Step2Confirm`. På nettet er
 // plassene `<select>`. Her åpner et trykk lista under kortet, og valget lukker den.
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   computeSpillehandicap,
   greensomeDefaultOrFallback,
@@ -20,11 +20,11 @@ import {
   type FlightTeamSide,
 } from '../../../../../lib/cup/splitDayLineup';
 import type { CupBundleFormat, PlannedBundleMatch } from '../../../../../lib/cup/cupPairing';
-import { ChevronIcon } from '../icons/Icons';
+import { PlayerPicker, PlayerSlot } from './PlayerPicker';
 import { FORMAT_LABELS, GENERATE_TEXT, spillehandicapText } from '../../lib/cupGenerateCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import { formatHcpNb } from '../../lib/profileCopy';
-import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 
 type SharedProps = {
   matches: readonly PlanMatch[];
@@ -117,7 +117,7 @@ function PlainPreview({
     const current = ids[idx];
     return (
       <PlayerPicker
-        players={side === 'side1' ? team1Players : team2Players}
+        players={pickerRows(side === 'side1' ? team1Players : team2Players)}
         isDisabled={(id) => id !== current && ids.includes(id)}
         current={current}
         onChoose={(id) => {
@@ -227,7 +227,7 @@ function BundlePreview({
               ))}
               {openSide ? (
                 <PlayerPicker
-                  players={openSide === 'side1' ? team1Players : team2Players}
+                  players={pickerRows(openSide === 'side1' ? team1Players : team2Players)}
                   isDisabled={() => false}
                   current={current ?? null}
                   onChoose={(id) => {
@@ -368,6 +368,8 @@ export function GenerateRecap({
   );
 }
 
+const pickerRows = (players: readonly WizardPlayer[]) => players.map((p) => ({ id: p.id, name: p.displayName }));
+
 function nameLookup(team1Players: WizardPlayer[], team2Players: WizardPlayer[]) {
   const lookup = playerLookup(team1Players, team2Players);
   return (userId: string) => lookup(userId)?.displayName ?? '';
@@ -382,83 +384,6 @@ function Card({ children, testID }: { children: ReactNode; testID?: string }) {
   );
 }
 
-function PlayerSlot({
-  name,
-  open,
-  label,
-  onPress,
-  testID,
-}: {
-  name: string;
-  open: boolean;
-  label: string;
-  onPress: () => void;
-  testID: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${name}`}
-      accessibilityState={{ expanded: open }}
-      onPress={onPress}
-      style={[
-        styles.slot,
-        open
-          ? { backgroundColor: colors.primarySoft, borderColor: colors.primary }
-          : { backgroundColor: colors.bg, borderColor: colors.border },
-      ]}
-      testID={testID}
-    >
-      <Text style={[styles.slotName, { color: colors.text }]} numberOfLines={2}>
-        {name}
-      </Text>
-      <ChevronIcon direction={open ? 'up' : 'down'} color={colors.muted} size={14} strokeWidth={2} />
-    </Pressable>
-  );
-}
-
-function PlayerPicker({
-  players,
-  isDisabled,
-  current,
-  onChoose,
-  testID,
-}: {
-  players: readonly WizardPlayer[];
-  isDisabled: (id: string) => boolean;
-  current: string | null;
-  onChoose: (id: string) => void;
-  testID: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.picker, { borderColor: colors.border }]} testID={testID}>
-      {players.map((player) => {
-        const disabled = isDisabled(player.id);
-        return (
-          <Pressable
-            key={player.id}
-            accessibilityRole="button"
-            accessibilityState={{ disabled, selected: player.id === current }}
-            disabled={disabled}
-            onPress={() => onChoose(player.id)}
-            style={[
-              styles.pickerRow,
-              { borderBottomColor: colors.border },
-              player.id === current && { backgroundColor: colors.primarySoft },
-              disabled && styles.dimmed,
-            ]}
-            testID={`${testID}-${player.id}`}
-          >
-            <Text style={[styles.value, { color: colors.text }]}>{player.displayName}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   heading: { marginTop: 16 },
   irish: { marginTop: 4 },
@@ -468,20 +393,6 @@ const styles = StyleSheet.create({
   side: { flex: 1, minWidth: 0, gap: 6 },
   mot: { ...interLine(12, 16), fontFamily: FONTS.sansSemiBold, paddingTop: 14, minWidth: 24, textAlign: 'center' },
   motSpace: { minWidth: 24 },
-  slot: {
-    minHeight: TAP,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  slotName: { flex: 1, minWidth: 0, ...interLine(13, 17, { multiline: true }), fontFamily: FONTS.sans },
-  picker: { borderWidth: 1, borderRadius: 12, overflow: 'hidden', marginTop: 2 },
-  pickerRow: { minHeight: TAP, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  dimmed: { opacity: 0.4 },
   value: { ...interLine(14, 19), fontFamily: FONTS.sans },
   names: { ...fraunces(500, 14, 19) },
   fields: { flexDirection: 'row', gap: 10 },
