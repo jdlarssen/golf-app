@@ -198,5 +198,11 @@ describe('CreateGame i en ekte navigator (#2746)', () => {
     // Tilbake fra steg 3 går ett steg, ikke inn i skjemaet (regel 6).
     await pressBack();
     expect(screen.getByTestId('create-step-setup')).toBeTruthy();
+
+    // Formatet fra steg 1 står etter hele turen.
+    await pressBack();
+    expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
   });
 });
