@@ -73,6 +73,8 @@ describe('CupRemovePlayer', () => {
     expect(removeCupParticipant).toHaveBeenCalledWith('cup-1', 'per');
     expect(navigation.popTo).not.toHaveBeenCalled();
     expect(navigation.replace).not.toHaveBeenCalled();
+    // Ligger skjermen under noe annet, skal knappene virke når du kommer tilbake.
+    expect(screen.getByTestId('cup-remove-submit')).toBeEnabled();
   });
 
   it('fra veiviseren går den tilbake til veiviseren', async () => {

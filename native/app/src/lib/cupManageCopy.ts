@@ -162,7 +162,8 @@ export const FINISH_APP_TEXT = {
   girOfMax: 'av {max}',
   boardFinal: 'Sluttresultat',
   boardLoading: 'Henter tavla …',
-  boardFailed: 'Fikk ikke tak i tavla. Sjekk nettet og prøv igjen.',
+  boardFailed: 'Fikk ikke tak i tavla. Prøv igjen.',
+  boardOffline: 'Fikk ikke tak i tavla. Sjekk nettet og prøv igjen.',
   boardNotFound: 'Fant ikke kampen. Tavla åpner når kampen er ferdig.',
 } as const;
 
@@ -235,6 +236,13 @@ export function missingAwardsLine(awards: readonly { kind: 'ctp' | 'ld' | 'gir';
   return awards
     .map((award) => `${sideAwardKind(award.kind)} (${formatMessage(CUP_TEXT.holeShort, { n: award.holeNumber })})`)
     .join(', ');
+}
+
+/** Når tavla ikke kunne leses. «Sjekk nettet» bare når det er nettet det står på. */
+export function boardFailureText(reason: string): string {
+  if (reason === 'offline' || reason === 'network') return FINISH_APP_TEXT.boardOffline;
+  if (reason === 'unauthorized') return APP_FAILURES.unauthorized;
+  return FINISH_APP_TEXT.boardFailed;
 }
 
 /** Når skjermen ikke fikk lest det den skal vise. */
