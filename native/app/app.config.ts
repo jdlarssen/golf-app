@@ -142,6 +142,16 @@ export function parseVariant(raw: string | undefined): AppVariant {
   );
 }
 
+/**
+ * Firebase-fila (#2758). Repoet er offentlig, så fila ligger utenfor det, og
+ * `TORNY_GOOGLE_SERVICES_FILE` peker dit (`store-build-android.sh` setter den).
+ * Uten variabelen er configen uendret: iOS-bygget og CI merker ingenting.
+ */
+function firebaseFields(env: VariantEnv): { googleServicesFile?: string } {
+  const file = env.TORNY_GOOGLE_SERVICES_FILE?.trim();
+  return file ? { googleServicesFile: file } : {};
+}
+
 // Skjema + autoritet, som i stagingGate.ts. Bevisst regex og ikke `new URL`:
 // en config som kaster på en rar streng skal kaste MED en melding vi eier.
 const AUTHORITY_PATTERN = /^https?:\/\/([^/?#]+)/i;
@@ -220,7 +230,13 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
           'Butikkbygget kjøres via native/app/scripts/store-build-ios.sh; dev-bygget skal ha staging-verdiene i native/app/.env.local.'
       );
     }
-    return { ...base, name: base.name, slug: base.slug };
+    const firebase = firebaseFields(env);
+    return {
+      ...base,
+      name: base.name,
+      slug: base.slug,
+      ...(firebase.googleServicesFile ? { android: { ...base.android, ...firebase } } : {}),
+    };
   }
 
   const problems = storeProblems(env);
@@ -250,6 +266,7 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
     },
     android: {
       ...base.android,
+      ...firebaseFields(env),
       package: STORE_BUNDLE_ID,
       versionCode: STORE_ANDROID_VERSION_CODE,
       // #2627, #2748: App Links, med stiene her (Android har ingen AASA).

@@ -26,6 +26,8 @@
 #     `native/app/app.json` står i manifestet. Lista har ett hjem, app.json, og
 #     kopieres aldri inn her. Fail-closed: en app.json uten lista, eller et
 #     manifest som ikke ble lest, er FAIL, aldri «ingen blokkert tillatelse».
+#     Varsler (#2758): `POST_NOTIFICATIONS`, `c2dm.permission.RECEIVE`,
+#     `google_app_id` og `gcm_defaultSenderId` må være med, ellers FAIL.
 #  4. 16 KB-sider: hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/`
 #     har LOAD-justering ≥ 16384. En av de to mappene uten `.so` er FAIL, ikke
 #     en stille PASS. 32-bit-filene (`armeabi-v7a`, `x86`) skrives ut som
@@ -221,6 +223,20 @@ if blocked_out=$("$PYTHON3" "$ANDROID_PROOF_PY" blocked "$APP_JSON" < "$WORK/man
   fi
 else
   fail "kunne ikke sjekke de blokkerte tillatelsene: $(head -c 300 "$WORK/blocked.err" | tr '\n' ' ')"
+fi
+# Varsler (#2758): tillatelsene og Firebase-verdiene må være med, ellers får
+# ingen Android-telefon varsler fra dette bygget.
+if [ -f "$WORK/proto.apk" ] \
+  && "$AAPT2" dump resources "$WORK/proto.apk" > "$WORK/resources.txt" 2> "$WORK/fcm.err" \
+  && fcm_out=$("$PYTHON3" "$ANDROID_PROOF_PY" fcm "$WORK/resources.txt" < "$WORK/manifest.xmltree" 2>> "$WORK/fcm.err"); then
+  fcm_missing=$( (printf '%s\n' "$fcm_out" | "$GREP" '^fcm-missing=' || true) | cut -d= -f2- | tr '\n' ' ' | sed 's/ $//')
+  if [ -z "$fcm_missing" ]; then
+    pass "varseltillatelsene og Firebase-verdiene er med"
+  else
+    fail "mangler for varsler: $fcm_missing"
+  fi
+else
+  fail "kunne ikke sjekke varslene: $(head -c 300 "$WORK/fcm.err" 2>/dev/null | tr '\n' ' ')"
 fi
 say ""
 

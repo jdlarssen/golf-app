@@ -140,10 +140,58 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   // (#2561, `scripts/entitlements-proof.sh`). At det opplastede bygget har
   // `production`, er ikke vist her.
   it('har varsel-pluginen i begge varianter, med butikkens bundle-ID', () => {
-    expect(resolveConfig(base, DEV_ENV).plugins).toContain('expo-notifications');
+    const isPlugin = (entry: unknown) => Array.isArray(entry) && entry[0] === 'expo-notifications';
+    expect(resolveConfig(base, DEV_ENV).plugins?.some(isPlugin)).toBe(true);
     const store = resolveConfig(base, STORE_ENV);
-    expect(store.plugins).toContain('expo-notifications');
+    expect(store.plugins?.some(isPlugin)).toBe(true);
     expect(store.ios?.bundleIdentifier).toBe('no.tornygolf.app');
+  });
+
+  // #2758: Android har varsler. Ikonet, fargen og kanalen følger med, og kanalen
+  // heter det samme som `channel_id` i lib/notifications/push/fcm.ts.
+  it('gir varsel-pluginen ikon, farge og kanal', () => {
+    const entry = base.plugins?.find((p) => Array.isArray(p) && p[0] === 'expo-notifications') as [string, object];
+    expect(entry[1]).toEqual({
+      icon: './assets/notification-icon.png',
+      color: '#1B4332',
+      defaultChannel: 'varsler',
+    });
+  });
+
+  it('blokkerer ikke varseltillatelsene lenger, og resten av lista står', () => {
+    const blocked = base.android?.blockedPermissions ?? [];
+    expect(blocked).not.toContain('android.permission.POST_NOTIFICATIONS');
+    expect(blocked).not.toContain('com.google.android.c2dm.permission.RECEIVE');
+    expect(blocked).toContain('android.permission.READ_CALENDAR');
+    expect(blocked).toContain('android.permission.RECEIVE_BOOT_COMPLETED');
+  });
+
+  // #2758: Firebase-fila ligger utenfor det offentlige repoet.
+  describe('TORNY_GOOGLE_SERVICES_FILE', () => {
+    const FILE = '/hjemme/.torny-native/google-services.json';
+
+    it.each([
+      ['dev', DEV_ENV],
+      ['butikk', STORE_ENV],
+    ])('setter fila i %s-varianten når variabelen er satt', (_name, env) => {
+      const config = resolveConfig(base, { ...env, TORNY_GOOGLE_SERVICES_FILE: FILE });
+      expect(config.android?.googleServicesFile).toBe(FILE);
+    });
+
+    it.each([
+      ['dev', DEV_ENV],
+      ['butikk', STORE_ENV],
+    ])('setter ingen fil i %s-varianten uten variabelen, eller når den er tom', (_name, env) => {
+      expect(resolveConfig(base, env).android).not.toHaveProperty('googleServicesFile');
+      expect(resolveConfig(base, { ...env, TORNY_GOOGLE_SERVICES_FILE: '  ' }).android).not.toHaveProperty(
+        'googleServicesFile',
+      );
+    });
+
+    it('endrer ikke iOS-delen', () => {
+      const withFile = resolveConfig(base, { ...STORE_ENV, TORNY_GOOGLE_SERVICES_FILE: FILE });
+      expect(withFile.ios).toStrictEqual(resolveConfig(base, STORE_ENV).ios);
+    });
   });
 
   // #2561: arkivet 1.2.0 (5) manglet to ting. Uten teksten for å skrive til

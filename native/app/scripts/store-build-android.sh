@@ -27,12 +27,16 @@
 #     (i `app.json`, begge variantene) skriver `android.builder.sdkDownload=false`
 #     i `android/gradle.properties` under prebuild, og skriptet stopper hvis
 #     linja mangler. Da stopper Gradle i stedet for å laste ned det som mangler.
+#  6. **Firebase-fila er med (#2758).** Uten den får ingen Android-telefon varsler.
+#     Repoet er offentlig, så fila ligger utenfor det. Skriptet stopper hvis den
+#     mangler eller ikke har pakken `no.tornygolf.app`.
 #
 # Bruk:  native/app/scripts/store-build-android.sh
 #
 # Miljø (valgfritt): TORNY_ENV_FILE (sti til .env.local), TORNY_DIST_DIR
 # (standard ~/.torny-native/dist), TORNY_ANDROID_KEYSTORE (standard
-# ~/.torny-native/android-upload.keystore), TORNY_ANDROID_KEY_ALIAS (standard
+# ~/.torny-native/android-upload.keystore), TORNY_GOOGLE_SERVICES_FILE (standard
+# ~/.torny-native/google-services.json), TORNY_ANDROID_KEY_ALIAS (standard
 # torny-upload), TORNY_ANDROID_KEYSTORE_PASSWORD (bare for en testnøkkel; ellers
 # hentes passordet fra nøkkelringen), ANDROID_HOME (standard
 # ~/Library/Android/sdk). Runbook: docs/native/play-store-release.md.
@@ -50,6 +54,7 @@ ANDROID_HOME=${ANDROID_HOME:-"$HOME/Library/Android/sdk"}
 export ANDROID_HOME
 KEYSTORE=${TORNY_ANDROID_KEYSTORE:-"$HOME/.torny-native/android-upload.keystore"}
 KEY_ALIAS=${TORNY_ANDROID_KEY_ALIAS:-torny-upload}
+GOOGLE_SERVICES=${TORNY_GOOGLE_SERVICES_FILE:-"$HOME/.torny-native/google-services.json"}
 KEYCHAIN_SERVICE='torny-android-upload-keystore'
 KEYCHAIN_ACCOUNT='torny'
 
@@ -151,6 +156,14 @@ done
 printf 'node %s · java %s · NDK %s · build-tools %s og %s · ANDROID_HOME %s\n' "$(node -v)" \
   "$(printf '%s' "$java_version" | sed -nE '1s/^[^"]*"([^"]+)".*$/\1/p')" "$NDK_VERSION" \
   "$BUILD_TOOLS_VERSION" "$AGP_DEFAULT_BUILD_TOOLS" "$ANDROID_HOME"
+
+# ── Firebase-fila (#2758). Før .env.local, så en feil her stopper uten å lese den.
+step "Sjekker Firebase-fila"
+[ -f "$GOOGLE_SERVICES" ] || die "Fant ikke Firebase-fila $GOOGLE_SERVICES. Uten den får ingen Android-telefon varsler. Legg den der, eller pek TORNY_GOOGLE_SERVICES_FILE til den."
+if ! google_services_check=$(python3 "$APP_DIR/scripts/android-proof.py" google-services "$GOOGLE_SERVICES" "$STORE_PACKAGE" 2>&1); then
+  die "Firebase-fila stemmer ikke: $google_services_check"
+fi
+export TORNY_GOOGLE_SERVICES_FILE="$GOOGLE_SERVICES"
 
 # ── 1. Prod-verdiene fra repo-rotas .env.local ───────────────────────────────
 step "Leser prod-verdiene fra $ENV_FILE"
