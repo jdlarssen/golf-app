@@ -16,13 +16,28 @@ describe('pushUrl', () => {
     ).toBe(`/games/${GAME}`);
   });
 
-  it('leser url fra FCM-meldingen på Android, der vår server legger den (#2758)', () => {
-    expect(
-      pushUrl({
-        content: { data: null },
-        trigger: { type: 'push', remoteMessage: { data: { url: `/games/${GAME}`, kind: 'invite' } } },
-      }),
-    ).toBe(`/games/${GAME}`);
+  // Formen er målt på emulatoren (#2758): appen lukket og i bakgrunnen gir det samme.
+  it('leser url fra et trykk på Android', () => {
+    const url = `/games/${GAME}?varsel=${NOTE}`;
+    const request = {
+      identifier: '0:1793655117861793%b53ae27eb53ae27e',
+      trigger: { channelId: null, type: 'push' },
+      content: {
+        title: null,
+        data: {
+          collapse_key: 'no.tornygolf.dev',
+          kind: 'invite',
+          url,
+          from: '772825459977',
+          'google.message_id': '0:1793655117861793%b53ae27eb53ae27e',
+          'google.original_priority': 'high',
+        },
+      },
+    };
+
+    expect(pushUrl(request)).toBe(url);
+    expect(pushNotificationId(url)).toBe(NOTE);
+    expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
   });
 
   it('faller tilbake til content.data, og gir null uten url', () => {
