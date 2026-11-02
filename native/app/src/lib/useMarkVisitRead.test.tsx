@@ -62,6 +62,7 @@ describe('useMarkVisitRead', () => {
 
 /** Skjermene, flaten de ber om, og id-en de sender med. */
 const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> = {
+  'CupParticipants.tsx': { surface: 'cupParticipants', entity: 'cupId' },
   'GameHome.tsx': { surface: 'gameHome', entity: 'gameId' },
   'Hole.tsx': { surface: 'gameHole', entity: 'gameId' },
   'Approve.tsx': { surface: 'gameApprove', entity: 'gameId' },
