@@ -101,19 +101,36 @@ export async function loadCupLineupBoard(
   tournamentId: string,
   unknownLabel: string,
 ): Promise<CupLineupBoard | null> {
-  const access = await loadCupLineupAccess(tournamentId);
+  return loadCupLineupBoardFor(await loadCupLineupAccess(tournamentId), tournamentId, unknownLabel);
+}
+
+/**
+ * Tavla filtrert for `access`, for en kaller som alt har lest tilgangen: appens ruter
+ * leser brukeren fra tokenet (#2752). `canSeeTeamLineup` under er vakten for begge.
+ *
+ * En feilet lesing kaster. En tavle uten økter ville sagt at ingen økt er åpnet.
+ */
+export async function loadCupLineupBoardFor(
+  access: CupLineupAccess,
+  tournamentId: string,
+  unknownLabel: string,
+): Promise<CupLineupBoard | null> {
   const admin = getAdminClient();
 
-  const { data: cup } = await admin
+  const { data: cup, error: cupError } = await admin
     .from('tournaments')
     .select(
       'name, status, team_1_name, team_2_name, planned_match_count, points_to_win, win_points, tie_points',
     )
     .eq('id', tournamentId)
     .maybeSingle();
+  if (cupError) throw cupError;
   if (!cup) return null;
 
-  const [{ data: sessionRows }, { count: matchCount }] = await Promise.all([
+  const [
+    { data: sessionRows, error: sessionsError },
+    { count: matchCount, error: matchCountError },
+  ] = await Promise.all([
     admin
       .from('cup_lineup_sessions')
       .select(
@@ -129,13 +146,17 @@ export async function loadCupLineupBoard(
       .eq('tournament_id', tournamentId),
   ]);
 
+  if (sessionsError) throw sessionsError;
+  if (matchCountError) throw matchCountError;
+
   const sessionIds = (sessionRows ?? []).map((r) => r.id as string);
-  const { data: slotRows } = sessionIds.length
+  const { data: slotRows, error: slotsError } = sessionIds.length
     ? await admin
         .from('cup_lineup_slots')
         .select('session_id, team_number, slot_index, seat, user_id')
         .in('session_id', sessionIds)
-    : { data: [] as never[] };
+    : { data: [] as never[], error: null };
+  if (slotsError) throw slotsError;
 
   // Navnene til alle som er nevnt: deltakerlista + alt som står i en plass.
   // Admin-client fordi en kaptein ikke ser fremmede `users`-rader under RLS —
@@ -146,12 +167,13 @@ export async function loadCupLineupBoard(
       ...(slotRows ?? []).map((r) => r.user_id as string),
     ]),
   );
-  const { data: userRows } = namedIds.length
+  const { data: userRows, error: usersError } = namedIds.length
     ? await admin
         .from('users')
         .select('id, name, nickname, hcp_index')
         .in('id', namedIds)
-    : { data: [] as never[] };
+    : { data: [] as never[], error: null };
+  if (usersError) throw usersError;
   const userById = new Map<string, UserRel>(
     ((userRows ?? []) as UserRel[]).map((u) => [u.id, u]),
   );

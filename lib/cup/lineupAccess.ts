@@ -34,6 +34,11 @@ export type CupLineupAccess = {
   role: CupLineupRole;
   /** Deltakerlista med varige roller — kallerne trenger den uansett. */
   participants: CupParticipantRole[];
+  /**
+   * En lesing feilet, så rollen kan ha falt til `none` uten at det stemmer. Gaten svarer
+   * uansett lukket. Appens ruter leser dette, så de sier «prøv igjen» og ikke «ingen tilgang».
+   */
+  readFailed?: boolean;
 };
 
 /**
@@ -51,8 +56,17 @@ export async function loadCupLineupAccess(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const userId = user?.id ?? null;
+  return loadCupLineupAccessForUser(user?.id ?? null, tournamentId);
+}
 
+/**
+ * Det samme for en bruker kalleren alt vet hvem er: appens ruter leser brukeren fra
+ * tokenet (#2752). Samme regel, samme lesinger.
+ */
+export async function loadCupLineupAccessForUser(
+  userId: string | null,
+  tournamentId: string,
+): Promise<CupLineupAccess> {
   const admin = getAdminClient();
 
   // Admin-client for BEGGE oppslagene: autorisasjons-beslutningen skal ikke
@@ -64,7 +78,10 @@ export async function loadCupLineupAccess(
   // en betinget lesing MIDT i en `Promise.all` ville flyttet på de andre når
   // brukeren er utlogget — akkurat den forskyvningen ga en TypeError i
   // gate-testene før dette ble snudd om (#1884).
-  const [{ data: cup }, { data: participantRows }] = await Promise.all([
+  const [
+    { data: cup, error: cupError },
+    { data: participantRows, error: participantsError },
+  ] = await Promise.all([
     admin
       .from('tournaments')
       .select('group_id, created_by')
@@ -77,9 +94,10 @@ export async function loadCupLineupAccess(
       .order('created_at', { ascending: true }),
   ]);
 
-  const { data: profile } = userId
+  const { data: profile, error: profileError } = userId
     ? await admin.from('users').select('is_admin').eq('id', userId).maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  let readFailed = Boolean(cupError || participantsError || profileError);
 
   const isAdmin = profile?.is_admin === true;
   const groupId = (cup?.group_id as string | null | undefined) ?? null;
@@ -104,12 +122,13 @@ export async function loadCupLineupAccess(
     if (isAdmin) {
       isOrganizer = true;
     } else if (groupId) {
-      const { data: membership } = await admin
+      const { data: membership, error: membershipError } = await admin
         .from('group_members')
         .select('role')
         .eq('group_id', groupId)
         .eq('user_id', userId)
         .maybeSingle();
+      if (membershipError) readFailed = true;
       const role = membership?.role as string | undefined;
       isOrganizer = role === 'owner' || role === 'admin';
     } else {
@@ -123,6 +142,7 @@ export async function loadCupLineupAccess(
     groupId,
     role: resolveCupLineupRole({ isOrganizer, participants, userId }),
     participants,
+    readFailed,
   };
 }
 

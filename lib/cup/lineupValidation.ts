@@ -46,6 +46,20 @@ export type LineupSlotInput = {
 };
 
 /** Én lagret rad i `cup_lineup_slots` (uten session/team, som kalleren eier). */
+/**
+ * Plassene i et innsendt uttak, på formen `[{slotIndex, userIds}]`, eller `null` når det
+ * ikke er en liste. Innholdet sjekker `validateLineupSubmission`.
+ */
+export function lineupSlotsFrom(value: unknown): LineupSlotInput[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.map((entry) => ({
+    slotIndex: Number((entry as { slotIndex?: unknown } | null)?.slotIndex),
+    userIds: Array.isArray((entry as { userIds?: unknown } | null)?.userIds)
+      ? (entry as { userIds: unknown[] }).userIds.map((u) => String(u ?? ''))
+      : [],
+  }));
+}
+
 export type LineupSlotRow = {
   slotIndex: number;
   seat: 1 | 2;
