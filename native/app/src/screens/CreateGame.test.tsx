@@ -215,6 +215,8 @@ describe('CreateGame og «Ny bane» (#2757)', () => {
     await goToCourseStep();
     await fireEvent.press(await screen.findByTestId('create-course-course-1'));
     await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    // Arrangøren sto i lista («Velg en annen bane») da hen åpnet skjemaet.
+    await fireEvent.press(screen.getByTestId('create-course-change'));
     (fetchCourses as jest.Mock).mockClear();
     (fetchCourses as jest.Mock).mockResolvedValueOnce([
       {
