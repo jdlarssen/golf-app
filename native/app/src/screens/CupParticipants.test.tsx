@@ -283,6 +283,18 @@ describe('CupParticipants', () => {
       expect((fetchCupParticipants as jest.Mock).mock.calls.length).toBe(reads + 1);
     });
 
+    it.each([
+      ['lesingen etterpå feiler', { ok: false, reason: 'offline' } as const],
+      ['cupen er startet i mellomtiden', { ok: true, view: room({ status: 'active' }) } as const],
+    ])('%s: raden har ingen valg, så neiet står øverst', async (_when, next) => {
+      answer({ ok: true, view: room() }, next);
+      (setCupParticipantRole as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'team_taken' });
+      await renderList();
+      await fireEvent.press(screen.getByTestId('cup-player-team-ola-2'));
+      await fireEvent.press(screen.getByTestId('cup-player-save-role-ola'));
+      expect(screen.getByTestId('cup-players-error')).toHaveTextContent('Laget har allerede en kaptein.');
+    });
+
     it('er spilleren borte etter lesingen, står neiet øverst', async () => {
       answer({ ok: true, view: room() }, { ok: true, view: room({ participants: [] }) });
       (setCupParticipantRole as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'not_participant' });
