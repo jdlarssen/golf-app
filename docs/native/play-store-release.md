@@ -116,6 +116,30 @@ ikke er publisert i Play ennå. Alle bygg under tallet får en oppdateringsdialo
 (`native/app/src/lib/minVersionGuard.test.ts`) holder tallet på eller under `STORE_ANDROID_VERSION_CODE`. Den
 fanger ikke en `versionCode` som ikke er publisert ennå, så det sjekkes for hånd før tallet heves.
 
+## Varsler: beviset på selve bygget (#2758)
+
+`store-fcm-proof-android.sh` installerer AAB-en på emulatoren, stopper på innloggingen, og
+sender et ekte varsel med `lib/notifications/push/fcm.ts`. Det nekter å kjøre mot alt annet enn
+en emulator. Tokenet skrives aldri ut. Tell `fcm_tokens` i prod før og etter: tallet skal være det
+samme, siden ingen logger inn.
+
+```bash
+native/app/scripts/store-fcm-proof-android.sh --aab ~/.torny-native/dist/<fil>.aab
+native/app/scripts/store-fcm-proof-android.sh --aab ~/.torny-native/dist/<fil>.aab --key throwaway
+native/app/scripts/store-fcm-proof-android.sh --apk native/app/android/app/build/outputs/apk/debug/app-debug.apk --package no.tornygolf.dev
+```
+
+De tre kjøringene er signeringsmålingen. Play signerer om appen med sin egen nøkkel, og
+`--key throwaway` etterligner det med en nøkkel Firebase aldri har sett. Består den, spiller
+avtrykket ingen rolle, heller ikke Plays.
+
+**Trykket på Android** (målt 02.11.2026 på `torny_api36`, API 36): både med appen lukket og i
+bakgrunnen er `trigger` bare `{ channelId: null, type: 'push' }`, og `url` ligger i
+`content.data`. **Tillatelsen:** første nei gir `canAskAgain: true`, andre nei `false`. Slått
+av i Innstillinger etter ja gir `canAskAgain: true`. Etter `pm revoke` og
+`clear-permission-flags` svarer Expo fortsatt `false`, fordi modulen husker at den har spurt.
+En ny installasjon simuleres derfor med `pm clear`, som også gir et nytt FCM-token.
+
 ## Etter bygget: tilbake til dev
 
 `android/` er nå butikk-varianten, med pakken `no.tornygolf.app` og signeringspluginen. Før

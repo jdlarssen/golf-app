@@ -451,3 +451,30 @@ describe('google-services', () => {
     expect(run(['google-services', join(dir, 'finnes-ikke.json'), PACKAGE], '').status).toBe(1);
   });
 });
+
+// #2758: `store-fcm-proof-android.sh` leser tokenet slik, og skriver det aldri ut.
+describe('fcm-token', () => {
+  const entry = (name, value) => `<string name="${name}">${value.replaceAll('"', '&quot;')}</string>`;
+  const prefs = (...entries) => `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n${entries.join('\n')}\n</map>\n`;
+  const VALUE = JSON.stringify({ token: 'tokenet', appVersion: '11', timestamp: 1793655025956 });
+
+  it('finner tokenet under Firebase-nøkkelen, med andre verdier rundt', () => {
+    const r = run(['fcm-token'], prefs(entry('topic_operation_queue', ''), entry('772|T|772|*', VALUE)));
+    expect(r).toMatchObject({ status: 0, stdout: 'tokenet' });
+  });
+
+  it.each([
+    ['tom fil', prefs()],
+    ['bare andre nøkler', prefs(entry('annen', VALUE))],
+    ['en verdi som ikke er JSON', prefs(entry('772|T|772|*', 'hemmelig'))],
+    ['JSON uten token', prefs(entry('772|T|772|*', '{}'))],
+    ['JSON som ikke er et objekt', prefs(entry('772|T|772|*', 'null'))],
+    ['noe som ikke er XML', 'hemmelig'],
+    ['ingenting', ''],
+  ])('stopper med exit 1 og viser ikke innholdet ved %s', (_case, text) => {
+    const r = run(['fcm-token'], text);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).not.toContain('hemmelig');
+  });
+});
