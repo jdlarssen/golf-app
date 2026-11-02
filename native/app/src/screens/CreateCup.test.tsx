@@ -1,7 +1,7 @@
 // #2752: veiviseren for en cup (Type C). Reglene er serverens; her låses stegene, hva hvert
 // steg sender, at et utkast hopper over navn og lag, og at serverens nei stopper steget.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { AppCupSetupView } from '../../../../lib/cup/appCupSetupView';
 import { createCup, fetchCupSetup, saveCupPlan, saveCupSideAwards } from '../data/cupSetup';
 import type { ScreenProps } from '../navigation';
@@ -81,6 +81,8 @@ async function renderWizard(params?: Record<string, unknown>) {
 }
 
 const next = () => fireEvent.press(screen.getByTestId('create-cup-next'));
+const backGesture = { type: 'GO_BACK' };
+const back = () => act(async () => mockPrevent.callback?.({ data: { action: backGesture } }));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -101,6 +103,41 @@ describe('en ny cup', () => {
     expect(createCup).toHaveBeenCalledWith({ name: 'Høstcupen', team1Name: 'Nord', team2Name: 'Sør', winPoints: '', tiePoints: '0.5' });
     expect(navigation.setParams).toHaveBeenCalledWith({ cupId: 'ny' });
     expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 2 av 4 · Bane og oppsett');
+  });
+
+  it('tilbake etter navn og lag går til cupen. Det lages ingen cup til', async () => {
+    const navigation = await renderWizard();
+    expect(mockPrevent.enabled).toBe(false);
+    await next();
+    expect(mockPrevent.enabled).toBe(true);
+
+    await back();
+    expect(navigation.replace).toHaveBeenCalledWith('Cup', { cupId: 'ny' });
+    expect(screen.queryByTestId('create-cup-details')).toBeNull();
+    expect(createCup).toHaveBeenCalledTimes(1);
+
+    // Navigasjonen som kommer etterpå, slipper forbi vakten.
+    await back();
+    expect(navigation.dispatch).toHaveBeenCalledWith(backGesture);
+  });
+
+  it('to trykk på «Neste» før skjermen er tegnet på nytt: én cup', async () => {
+    let answer: (value: { ok: true; id: string }) => void = () => {};
+    (createCup as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await renderWizard();
+    const button = screen.getByTestId('create-cup-next');
+    await act(async () => {
+      button.props.onClick?.({ preventDefault() {} });
+      button.props.onClick?.({ preventDefault() {} });
+    });
+    expect(createCup).toHaveBeenCalledTimes(1);
+    await act(async () => answer({ ok: true, id: 'ny' }));
+    expect(screen.getByTestId('create-cup-plan')).toBeTruthy();
   });
 
   it('serverens nei stopper steget, i nettets ord', async () => {
@@ -230,7 +267,40 @@ describe('et utkast', () => {
     expect(screen.getByTestId('create-cup-awards')).toBeTruthy();
   });
 
-  it('«Ferdig» går til cupen, og tilbake går ett steg om gangen før det', async () => {
+  it('tilbake går ett steg om gangen, og uten vakt fra første steg', async () => {
+    const navigation = await renderWizard({ cupId: 'utkast' });
+    expect(mockPrevent.enabled).toBe(false);
+    await next();
+    await next();
+    expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 3 av 3 · Spillere');
+
+    await back();
+    expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 2 av 3 · Sidepoeng');
+    await back();
+    expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 1 av 3 · Bane og oppsett');
+    expect(mockPrevent.enabled).toBe(false);
+    expect(navigation.popTo).not.toHaveBeenCalled();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('tilbake mens et steg lagres: du blir stående', async () => {
+    let answer: (value: { ok: true }) => void = () => {};
+    (saveCupSideAwards as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await renderWizard({ cupId: 'utkast' });
+    await next();
+    await next();
+    await back();
+    expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 2 av 3 · Sidepoeng');
+    await act(async () => answer({ ok: true }));
+    expect(screen.getByTestId('create-cup-progress')).toHaveTextContent('Steg 3 av 3 · Spillere');
+  });
+
+  it('«Ferdig» går til cupen', async () => {
     const navigation = await renderWizard({ cupId: 'utkast' });
     await next();
     await next();
@@ -245,6 +315,14 @@ describe('et utkast', () => {
     await next();
     await next();
     expect(screen.getByTestId('players-body')).toHaveTextContent(/Spilleren er fjernet\./);
+  });
+
+  it('kvitteringen kommer ikke igjen når du går tilbake fra lista', async () => {
+    const navigation = await renderWizard({ cupId: 'utkast', notice: 'participant_removed' });
+    await next();
+    await next();
+    await back();
+    expect(navigation.setParams).toHaveBeenCalledWith({ notice: undefined });
   });
 
   it('en cup som har startet: låst, uten skjema', async () => {

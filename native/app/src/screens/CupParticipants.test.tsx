@@ -58,6 +58,7 @@ async function renderList(params: Record<string, unknown> = {}) {
     navigate: jest.fn(),
     popTo: jest.fn(),
     replace: jest.fn(),
+    setParams: jest.fn(),
     getState: () => ({
       index: 2,
       routes: [{ name: 'Home' }, { name: 'Cup', params: { cupId: 'cup-1' } }, { name: 'CupParticipants', params: { cupId: 'cup-1' } }],
@@ -155,6 +156,26 @@ describe('CupParticipants', () => {
       captain: true,
       returnTo: 'CupParticipants',
     });
+    // Kvitteringen hører til forrige fjerning. Angrer du denne, skal den ikke stå der.
+    expect(navigation.setParams).toHaveBeenCalledWith({ notice: undefined });
+  });
+
+  it('«Fjern» er smal, men trykkflaten er 44 pt', async () => {
+    answer({ ok: true, view: room() });
+    await renderList();
+    expect(screen.getByTestId('cup-player-remove-ola').props.hitSlop).toEqual({ left: 8, right: 8 });
+  });
+
+  it('et nei på «Legg til»: feilen står alene, uten kvitteringen du kom tilbake med', async () => {
+    answer({ ok: true, view: room() });
+    (addCupParticipant as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'already_in_cup' });
+    await renderList({ notice: 'participant_removed' });
+    expect(screen.getByTestId('cup-players-notice')).toHaveTextContent('Spilleren er fjernet.');
+
+    await fireEvent.press(screen.getByTestId('cup-candidate-add-per'));
+
+    expect(screen.getByTestId('cup-players-error')).toBeTruthy();
+    expect(screen.queryByTestId('cup-players-notice')).toBeNull();
   });
 
   it('kvitteringen etter en fjerning', async () => {
@@ -211,6 +232,21 @@ describe('CupParticipants', () => {
     expect(screen.getByTestId('cup-players-stale')).toBeTruthy();
     expect(screen.queryByTestId('cup-candidate-add-per')).toBeNull();
     expect(screen.queryByTestId('cup-player-remove-ola')).toBeNull();
+  });
+
+  it('en feil hos serveren sier ikke at det er nettet ditt, og «Prøv igjen» henter lista', async () => {
+    answer({ ok: true, view: room() }, { ok: false, reason: 'load_failed' }, { ok: true, view: room() });
+    await renderList();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('cup-players-stale')).toHaveTextContent('Fikk ikke tak i cupen. Sjekk nettet og prøv igjen.');
+    expect(screen.queryByTestId('cup-candidate-add-per')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('cup-players-retry'));
+
+    expect(screen.queryByTestId('cup-players-stale')).toBeNull();
+    expect(screen.getByTestId('cup-candidate-add-per')).toBeTruthy();
   });
 
   it('den som ikke styrer cupen: en setning, uten «Prøv igjen»', async () => {
