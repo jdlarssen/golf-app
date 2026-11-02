@@ -9,6 +9,7 @@ export type StackRoute = { name: string; params?: object };
 export function stackNavigation(routes: StackRoute[]) {
   return {
     getState: () => ({ index: routes.length - 1, routes }),
+    isFocused: jest.fn(() => true),
     popTo: jest.fn(),
     replace: jest.fn(),
     navigate: jest.fn(),

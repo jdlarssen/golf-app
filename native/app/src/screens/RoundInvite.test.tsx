@@ -72,8 +72,9 @@ function answer(result: RoundInviteLoadResult) {
   mockLoad = result;
 }
 
-async function renderInvite(src: string | null = null, routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, ROUTE]) {
+async function renderInvite(src: string | null = null, routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, ROUTE], focused = true) {
   const navigation = { ...stackNavigation(routes), popToTop: jest.fn() };
+  navigation.isFocused.mockReturnValue(focused);
   const props = {
     navigation,
     route: { key: 'invite', name: 'RoundInvite', params: { shortId: SHORT_ID, src } },
@@ -86,6 +87,27 @@ beforeEach(() => {
   jest.clearAllMocks();
   answer({ ok: true, view: view() });
   mockAnswer = () => ({ ok: true, status: 'joined', gameId: GAME_ID });
+});
+
+// #2757: en lenke kan åpne skjermen oppå veiviseren. Var skjermen lukket da svaret
+// kom, traff `backTo` veiviseren, som gikk ett steg tilbake av seg selv. Selve
+// feilen er kjørt i ekte navigator; her er det sperra.
+describe('svaret kommer etter at skjermen er lukket', () => {
+  it('«du er alt med» flytter ingenting', async () => {
+    answer({ ok: true, view: view({ offer: 'in_game', gameId: GAME_ID }) });
+    const navigation = await renderInvite(null, undefined, false);
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.popTo).not.toHaveBeenCalled();
+  });
+
+  it('en påmelding som går gjennom, flytter ingenting', async () => {
+    const navigation = await renderInvite();
+    navigation.isFocused.mockReturnValue(false);
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(joinRound).toHaveBeenCalled();
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.popTo).not.toHaveBeenCalled();
+  });
 });
 
 describe('du kan melde deg på', () => {

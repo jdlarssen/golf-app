@@ -55,8 +55,9 @@ function answer(result: LeagueJoinLoadResult) {
   mockLoad = result;
 }
 
-async function renderJoin(routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, JOIN_ROUTE]) {
+async function renderJoin(routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, JOIN_ROUTE], focused = true) {
   const navigation = { ...stackNavigation(routes), popToTop: jest.fn() };
+  navigation.isFocused.mockReturnValue(focused);
   const props = {
     navigation,
     route: { key: 'join', name: 'LeagueJoin', params: { code: CODE } },
@@ -145,6 +146,27 @@ describe('du kan bli med', () => {
     await renderJoin();
     await fireEvent.press(screen.getByTestId('league-join-button'));
     expect(screen.getByTestId('league-join-not-found')).toHaveTextContent(LEAGUE_JOIN_TEXT.notFound);
+  });
+});
+
+// #2757: en lenke kan åpne skjermen oppå veiviseren. Var skjermen lukket da svaret
+// kom, traff `backTo` veiviseren, som gikk ett steg tilbake av seg selv. Selve
+// feilen er kjørt i ekte navigator; her er det sperra.
+describe('svaret kommer etter at skjermen er lukket', () => {
+  it('«du er alt med» flytter ingenting', async () => {
+    answer({ ok: true, view: view({ decision: 'already_joined' }) });
+    const navigation = await renderJoin(undefined, false);
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.popTo).not.toHaveBeenCalled();
+  });
+
+  it('en påmelding som går gjennom, flytter ingenting', async () => {
+    const navigation = await renderJoin();
+    navigation.isFocused.mockReturnValue(false);
+    await fireEvent.press(screen.getByTestId('league-join-button'));
+    expect(joinLeague).toHaveBeenCalled();
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.popTo).not.toHaveBeenCalled();
   });
 });
 
