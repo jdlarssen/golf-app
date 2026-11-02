@@ -301,7 +301,7 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   åpne runden, starter runden og lar markøren godkjenne kortet i en simulatorliga
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
   ligaer, og beskrivelsen sier ikke at den gjør det. Ligavarslene («runden åpner», «fristen
-  nærmer seg») står bare i iOS-teksten, siden Android ikke har varsler.
+  nærmer seg») står i begge tekstene.
 - **Å sette opp scramble i appen.** Opprett-veiviseren har bare de åtte formatene over.
   Scramble-familien settes opp på nettsiden, og så spiller du den i appen: appen fører
   ett lagkort (`modeCollapsesToTeamCard`, N4) og viser lagtavla (`teamBoard.ts`, #2579).

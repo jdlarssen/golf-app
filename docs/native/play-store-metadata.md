@@ -6,11 +6,9 @@ iOS-motstykket er [`app-store-metadata.md`](app-store-metadata.md), og byggeveie
 hjelpesider, lest 2026-10-18. Lenken står ved hvert avsnitt. Der Google ikke viser
 ordlyden i skjemaet, står det, og orkestratoren sjekker i konsollen før eieren svarer.
 
-**Samme regel som iOS:** vi lover bare det Android-appen gjør. **Android har ingen
-varsler.** Serveren sender bare til iPhone: `canUsePush` i
-`native/app/src/data/pushDevice.ts` svarer nei utenfor iOS, og `POST_NOTIFICATIONS`
-står i `blockedPermissions` i `native/app/app.json`. Resultatet kommer på e-post
-(eierens svar: «Ja, e-post holder først»). Aldri varsler, aldri kroner eller
+**Samme regel som iOS:** vi lover bare det Android-appen gjør. Android har varsler
+(#2758): spilleren slår dem på under «Varsler og tema», og serveren sender gjennom
+Googles varseltjeneste. Aldri kroner eller
 pengeoppgjør. Cup følger regelen i `app-store-metadata.md`. Ligaen står i beskrivelsen
 fra bygg 9: appen viser ligaen
 du er med i og starter runden (avsnittet «LIGA»), og arrangøren setter den opp på
@@ -41,7 +39,7 @@ Sett opp golfturneringen, tast slag hull for hull og følg tavla underveis.
 
 ### Full beskrivelse (maks 4000 tegn)
 
-Samme tekst som i App Store, uten varslene, og med e-posten i stedet.
+Samme tekst som i App Store.
 
 ```text
 Tørny er turneringen i lomma.
@@ -63,16 +61,16 @@ SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
 
 LIGA
-Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 CUP
 Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og når cupen er ferdig, ser alle hvilket lag som vant.
 
 FØR OG UNDER RUNDEN
-Legg runden inn i kalenderen med ett trykk. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
+Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
 
 NÅR RUNDEN ER FERDIG
-Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med. Du får det på e-post også.
+Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med.
 
 I romjula får du Kavalkaden, en oppsummering av golfåret ditt som du kan dele med gjengen. En språkmodell skriver teksten, og navnet ditt er bare med hvis du har sagt ja til det.
 
@@ -80,7 +78,7 @@ Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen p
 ```
 
 Hva som med vilje ikke står der, og hvorfor, står i `app-store-metadata.md` («Hva som
-med vilje IKKE står der»). Det gjelder Android også, og i tillegg varslene.
+med vilje IKKE står der»). Det gjelder Android også.
 
 ### Versjonsnotat (Release notes) for produksjonsslippet
 
@@ -101,7 +99,11 @@ Definisjonene er Googles
   on behalf of the developer and based on the developer's instructions.»
   Tjenesteleverandørene våre er Supabase (database og innlogging), Vercel (serveren),
   Resend (e-post) og Anthropic (AI-tekstene, se personvernerklæringen). Ingen av dem
-  bruker dataene til noe eget, så vi **deler ikke** data.
+  bruker dataene til noe eget, så vi **deler ikke** data. Google leverer varslene og ser
+  teksten i dem. Personvernerklæringen kaller Google mottaker, som Apple. I skjemaet
+  regner vi tjenesten som tjenesteleverandør etter sitatet over.
+  ASSUMPTION: det svaret er vår lesning av Googles definisjon, så orkestratoren sjekker
+  ordlyden i konsollen før det limes inn.
 - **Valgfritt:** bare når alle brukere kan la være å gi dataene («You can declare that
   your app collects certain data optionally only if all users … can either optionally
   provide information, opt-out, or opt-in»).
@@ -124,6 +126,7 @@ Svarene øverst i skjemaet:
 | Personal info → User IDs | Konto-id-en radene i databasen henger på (Supabase Auth). | Nei | Påkrevd | App functionality, Account management |
 | Personal info → Other info | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Google: «Any other personal information such as date of birth, gender identity, veteran status, etc.» | Nei | Valgfri (kjønn kan stå tomt, `lib/users/profileInput.ts:128-139`, og spillerklassen står som voksen til spilleren velger noe annet) | App functionality |
 | Contacts | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner og invitasjoner er ikke nødvendig for å spille) | App functionality |
+| Device or other IDs | Varsel-tokenet fra Google, som `turnOnPush` lagrer i `fcm_tokens` sammen med konto-id-en og Android-versjonen («Tørny-appen Android …», `userAgent()`), bare når spilleren slår på varsler. Appen har ingen reklame-id. | Nei | Valgfri | App functionality |
 | Messages → Other in-app messages | Grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake, som spilleren ser på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Google: «Any other types of messages. For example, instant messages or chat content.» | Nei | Valgfri (grunnen kan stå tom) | App functionality |
 | App activity → App interactions | At spilleren delte et kort fra Kavalkaden, hvilket kort og hvilket år, og når (`ShareKavalkadeCardButton.tsx` → `kavalkade_shares`). Vi bruker det bare til å telle hvor mange spillere som har delt. Google: «Information about how a user interacts with the app». | Nei | Valgfri (bare når spilleren deler) | Analytics |
 | App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. | Nei | Påkrevd | App functionality |
@@ -136,8 +139,6 @@ Dette hakes **ikke** av, og her er grunnen:
 
 - **Location.** Appen leser aldri hvor telefonen er (ingen `expo-location`, null treff på
   geolokasjon i `native/app/src`). «Vis på kart» åpner kartappen med banens navn.
-- **Device or other IDs.** Android har ingen varsler, så appen registrerer ikke noe
-  varsel-token. Appen har ingen reklame-id.
 - **Calendar.** «Legg til i kalender» åpner telefonens eget skjema for ny hendelse
   (`native/app/src/lib/addToCalendar.ts`), og `READ_CALENDAR` og `WRITE_CALENDAR` står i
   `blockedPermissions`. Hendelsen blir på telefonen.

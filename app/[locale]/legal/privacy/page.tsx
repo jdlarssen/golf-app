@@ -111,7 +111,7 @@ export default async function PrivacyPage() {
           </p>
         </section>
 
-        {/* Varsler (#2561): push_subscriptions og apns_tokens */}
+        {/* Varsler (#2561, #2758): push_subscriptions, apns_tokens og fcm_tokens */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('pushHeading')}

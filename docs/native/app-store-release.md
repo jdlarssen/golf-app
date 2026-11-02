@@ -276,7 +276,7 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 - **Eierens telefon (Del C)** prøves på den nyeste TestFlight-kandidaten mot prod, og
   versjon og build står i matrisen ved siden av svarene. P5, første ekte avslutning fra
   appen, hører til der.
-- Står en rad som villet avvik (kronene, AI-samtykket, push på Android), skal butikkteksten
+- Står en rad som villet avvik (kronene, AI-samtykket), skal butikkteksten
   ikke love det nettsiden gjør.
 
 ## Nettsiden samme dag
@@ -391,8 +391,8 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
   `APNS_BUNDLE_ID=no.tornygolf.dev`. Nøkkelen (`.p8`) gjelder hele teamet og kan være den
   samme. Den ligger bare hos eieren og i Vercel, aldri i repoet.
 - **Et eldre bygg** uten modulen viser ingen varsel-del (`canUsePush` i
-  `native/app/src/data/pushDevice.ts`). Android har ingen varsler (serveren sender ikke
-  dit).
+  `native/app/src/data/pushDevice.ts`). Android går gjennom Google (`lib/notifications/push/fcm.ts`),
+  og `FCM_SERVICE_ACCOUNT` må ligge i Vercel. Se `play-store-release.md`.
 
 ## Venne-lenka åpner appen
 
