@@ -96,6 +96,7 @@ export function buildAppCupView(
     readableGameIds: ReadonlySet<string>;
     /** `can_manage_tournament`, asked as the caller. */
     canManage: boolean;
+    participantCount?: number | null;
   },
 ): AppCupView {
   const { tournament, leaderboard, roster } = snapshot;
@@ -156,6 +157,7 @@ export function buildAppCupView(
     // A finished cup has no line-up left to wait for, even with a session never revealed.
     lineupPending: opts.lineupPending && !finished,
     canManage: opts.canManage,
+    participantCount: opts.participantCount ?? null,
     selfWithdrawn: [...roster.team1, ...roster.team2].some(
       (player) => player.userId === userId && player.withdrawn === true,
     ),

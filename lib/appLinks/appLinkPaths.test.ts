@@ -30,6 +30,7 @@ describe('APP_LINK_PATH_PREFIXES', () => {
         `${locale}/invitasjon/`,
         `${locale}/runde/`,
         `${locale}/pamelding/`,
+        `${locale}/cup/bli-med/`,
       ]),
     ]);
   });

@@ -57,7 +57,7 @@ export const ROUND_INVITE_LINK_PREFIX = '/pamelding/';
 
 const SIGNUP_SHORT_ID = /^[0-9a-z]{8}$/;
 
-/** A round's short id, as migration 0040's CHECK has it. */
+/** A round's or a cup's short id, as the CHECKs in migrations 0040 and 0162 have it. */
 export function isSignupShortId(shortId: string): boolean {
   return SIGNUP_SHORT_ID.test(shortId);
 }
@@ -65,6 +65,13 @@ export function isSignupShortId(shortId: string): boolean {
 /** «/pamelding/<shortId>». */
 export function roundInviteLinkPath(shortId: string): string {
   return `${ROUND_INVITE_LINK_PREFIX}${shortId}`;
+}
+
+export const CUP_JOIN_LINK_PREFIX = '/cup/bli-med/';
+
+/** «/cup/bli-med/<shortId>». */
+export function cupJoinLinkPath(shortId: string): string {
+  return `${CUP_JOIN_LINK_PREFIX}${shortId}`;
 }
 
 /** One path per link and locale: «/venner/legg-til/», «/liga/bli-med/», … «/en/pamelding/». */
@@ -75,5 +82,6 @@ export const APP_LINK_PATH_PREFIXES: readonly string[] = FRIEND_LINK_LOCALE_PREF
     INVITATION_LINK_PREFIX,
     ROUND_LINK_PREFIX,
     ROUND_INVITE_LINK_PREFIX,
+    CUP_JOIN_LINK_PREFIX,
   ].map((prefix) => `${locale}${prefix}`),
 );

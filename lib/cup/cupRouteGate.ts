@@ -96,6 +96,28 @@ const CONFLICT_CODES = new Set([
   'not_active',
   'invalid_counts',
   'not_a_participant',
+  'not_draft',
+  'plan_course',
+  'plan_tee',
+  'plan_preset',
+  'plan_strategy',
+  'plan_sessions',
+  'plan_best_ball',
+  'plan_tee_off_invalid',
+  'plan_tee_off_past',
+  'invalid_side_award',
+  'duplicate_side_award',
+  'cup_started',
+  'cup_finished',
+  'winners_already_registered',
+  'cup_name',
+  'cup_team_1',
+  'cup_team_2',
+  'cup_team_dup',
+  'cup_win_points',
+  'cup_tie_points',
+  'closed',
+  'full',
 ]);
 
 /**
@@ -109,6 +131,8 @@ export function cupActionFailure(error: string, fallback: string): NextResponse 
   if (CONFLICT_CODES.has(error)) return NextResponse.json({ error }, { status: 409 });
   // A match that would not finish is named for the screen, and the cup stands.
   if (error === 'match_finish_failed') return NextResponse.json({ error }, { status: 502 });
+  // The plan IS saved, and only the matches missed it. A new try is safe.
+  if (error === 'plan_matches_not_updated') return NextResponse.json({ error }, { status: 502 });
   return NextResponse.json({ error: fallback }, { status: 500 });
 }
 

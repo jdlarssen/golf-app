@@ -27,8 +27,14 @@ vi.mock('@/lib/cup/myCups', () => ({ getMyCupIds: (...args: unknown[]) => getMyC
 const getRoomCups = vi.fn();
 vi.mock('@/lib/cup/getRoomCups', () => ({ getRoomCups: (...args: unknown[]) => getRoomCups(...args) }));
 
+const createTournamentDraftCore = vi.fn();
+vi.mock('@/lib/cup/setupCore', () => ({
+  createTournamentDraftCore: (...args: unknown[]) => createTournamentDraftCore(...args),
+  revalidateCupSetup: vi.fn(),
+}));
+
 import { NextRequest } from 'next/server';
-import { GET } from './route';
+import { GET, POST } from './route';
 
 const call = (token?: string) =>
   GET(
@@ -41,6 +47,66 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   getMyCupIds.mockResolvedValue({ ok: true, ids: ['a'], playing: ['a'] });
+});
+
+describe('POST /api/cup', () => {
+  const body = { name: 'Klubbmesterskapet', team1Name: 'Team Nord', team2Name: 'Team Sør', winPoints: '', tiePoints: '' };
+  const post = (token: string | undefined, payload: unknown = body) => {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (token) headers.authorization = `Bearer ${token}`;
+    return POST(new NextRequest('http://localhost/api/cup', { method: 'POST', headers, body: JSON.stringify(payload) }));
+  };
+
+  it('uten token: 401, og ingenting skrives', async () => {
+    expect((await post(undefined)).status).toBe(401);
+    expect(createTournamentDraftCore).not.toHaveBeenCalled();
+  });
+
+  it('lager en personlig cup, skapt av kalleren, med nettets standard', async () => {
+    createTournamentDraftCore.mockResolvedValue({ ok: true, id: 'ny' });
+
+    const res = await post('token-meg');
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ id: 'ny' });
+    const args = createTournamentDraftCore.mock.calls[0][1];
+    expect(args.userId).toBe(ME);
+    expect(args.groupId).toBeNull();
+    expect(args.values).toMatchObject({ name: 'Klubbmesterskapet', team1: 'Team Nord', team2: 'Team Sør' });
+    expect(args.values.winPoints).toBeUndefined();
+    expect(args.values.fourballAllowance).toBeGreaterThan(0);
+  });
+
+  it('en klubb i kroppen gjør ingenting: klubb-cuper lages på nettet', async () => {
+    createTournamentDraftCore.mockResolvedValue({ ok: true, id: 'ny' });
+    await post('token-meg', { ...body, groupId: 'klubb', group_id: 'klubb' });
+    expect(createTournamentDraftCore.mock.calls[0][1].groupId).toBeNull();
+  });
+
+  it.each([
+    ['cup_name', { name: '   ' }],
+    ['cup_team_1', { team1Name: '' }],
+    ['cup_team_2', { team2Name: '' }],
+    ['cup_team_dup', { team2Name: 'team nord' }],
+    ['cup_win_points', { winPoints: '0' }],
+    ['cup_tie_points', { tiePoints: '-1' }],
+  ])('%s: 409 før noe skrives', async (error, patch) => {
+    const res = await post('token-meg', { ...body, ...patch });
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ error });
+    expect(createTournamentDraftCore).not.toHaveBeenCalled();
+  });
+
+  it('en kropp uten navn: 400', async () => {
+    expect((await post('token-meg', { team1Name: 'A' })).status).toBe(400);
+  });
+
+  it('skrivingen feiler: 500', async () => {
+    createTournamentDraftCore.mockResolvedValue({ ok: false, error: 'cup_insert_failed' });
+    const res = await post('token-meg');
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'cup_insert_failed' });
+  });
 });
 
 describe('GET /api/cup', () => {
