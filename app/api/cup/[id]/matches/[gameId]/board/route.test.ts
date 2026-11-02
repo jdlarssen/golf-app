@@ -28,6 +28,10 @@ const finishedGame = (over: Record<string, unknown> = {}) => ({
   tee_box_id: 'tee',
   scheduled_tee_off_at: '2026-11-20T09:30:00Z',
   created_by: 'arrangor',
+  require_peer_approval: true,
+  foursomes_side1_tee_starter_user_id: 'utslag-1',
+  foursomes_side2_tee_starter_user_id: 'utslag-2',
+  patsome_tee_starters: [{ team_number: 1, tee_starter_user_id: 'utslag-3' }],
   courses: { name: 'Banen', course_holes: [] },
   ...over,
 });
@@ -38,7 +42,6 @@ function respond(op: QueryOp): QueryResponse {
   queries.push(op);
   if (op.table === 'games') {
     const id = op.filters.find((f) => f.column === 'id')?.value;
-    if (id === HOST) return { data: { name: 'Vert' }, error: null };
     const cup = op.filters.find((f) => f.column === 'tournament_id')?.value;
     return { data: game && id === game.id && cup === game.tournament_id ? game : null, error: null };
   }
@@ -58,6 +61,8 @@ function respond(op: QueryOp): QueryResponse {
           approved_by_user_id: 'b',
           withdrawn_by_user_id: 'sjef',
           withdrawn_at: '2026-11-20T10:00:00Z',
+          result_summary: { kind: 'matchplay', margin: '3&2' },
+          users: { name: 'Ola', nickname: 'Olamann', is_guest: true },
         },
       ],
       error: null,
@@ -111,7 +116,6 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
     const body = await res.json();
     expect(body.game).toMatchObject({ id: GAME, status: 'finished' });
     expect(body.scores).toEqual(SCORES);
-    expect(body.sourceGameName).toBeNull();
   });
 
   // Eierens svar: «ikke for kamper som pågår», også for arrangøren.
@@ -153,6 +157,12 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
       created_by: null,
       spectate_token: null,
       round_report: null,
+      require_peer_approval: false,
+      source_game_id: null,
+      tournament_id: null,
+      foursomes_side1_tee_starter_user_id: null,
+      foursomes_side2_tee_starter_user_id: null,
+      patsome_tee_starters: null,
       courses: { name: 'Banen', course_holes: [] },
     });
     expect(body.players[0]).toEqual({
@@ -167,9 +177,12 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
       submitted_by_user_id: null,
       approved_by_user_id: null,
       withdrawn_by_user_id: null,
-      withdrawn_at: '2026-11-20T10:00:00Z',
+      // At hen trakk seg, står. Når, gjør det ikke.
+      withdrawn_at: '1970-01-01T00:00:00.000Z',
+      result_summary: null,
+      users: { name: 'Ola', nickname: 'Olamann', is_guest: null },
     });
-    for (const secret of ['hemmelig-lenke', 'feil slag', 'referat', 'arrangor', 'markør']) {
+    for (const secret of ['hemmelig-lenke', 'feil slag', 'referat', 'arrangor', 'markør', '2026-11-20', 'utslag-']) {
       expect(JSON.stringify(body)).not.toContain(secret);
     }
   });
@@ -179,7 +192,7 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
 
     const body = await (await call('token-meg')).json();
 
-    expect(body.sourceGameName).toBe('Vert');
+    expect(body).not.toHaveProperty('sourceGameName');
     // Nettets tavle viser bare kampens egne spillere, ikke hele verten.
     expect(body.scores).toEqual([{ user_id: 'a', hole_number: 1, strokes: 4 }]);
     const scores = queries.find((q) => q.table === 'scores');
