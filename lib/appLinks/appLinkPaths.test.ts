@@ -8,7 +8,9 @@ import {
   LEAGUE_LINK_PREFIX,
   invitationLinkPath,
   isRoundLinkSubpage,
+  isSignupShortId,
   leagueLinkPath,
+  roundInviteLinkPath,
   roundLinkPath,
 } from './appLinkPaths';
 
@@ -18,7 +20,7 @@ import {
  * this list, and the app's parser reads the same prefixes.
  */
 describe('APP_LINK_PATH_PREFIXES', () => {
-  it('has the friend, league, invitation and round links, under every locale the site serves', () => {
+  it('has the friend, league, invitation, round and signup links, under every locale the site serves', () => {
     const locales = routing.locales.map((locale) => (locale === routing.defaultLocale ? '' : `/${locale}`));
     expect([...FRIEND_LINK_LOCALE_PREFIXES]).toEqual(locales);
     expect(APP_LINK_PATH_PREFIXES).toEqual([
@@ -27,6 +29,7 @@ describe('APP_LINK_PATH_PREFIXES', () => {
         `${locale}/liga/bli-med/`,
         `${locale}/invitasjon/`,
         `${locale}/runde/`,
+        `${locale}/pamelding/`,
       ]),
     ]);
   });
@@ -98,4 +101,21 @@ describe('the invitation token shape', () => {
     expect(isInviteToken(value)).toBe(ok);
     expect(isUuid(value)).toBe(ok);
   });
+});
+
+describe('the signup link', () => {
+  it('builds the path', () => {
+    expect(roundInviteLinkPath('abcd2345')).toBe('/pamelding/abcd2345');
+  });
+
+  it.each(['abcd2345', '00000000', 'zzzzzzzz'])('%s has the shape of a short id', (id) => {
+    expect(isSignupShortId(id)).toBe(true);
+  });
+
+  it.each(['', 'abcd234', 'abcd23456', 'ABCD2345', 'abcd-345', 'abcd%2F5', 'abcd2345/'])(
+    '%s does not',
+    (id) => {
+      expect(isSignupShortId(id)).toBe(false);
+    },
+  );
 });

@@ -184,10 +184,12 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
       '/liga/bli-med/',
       '/invitasjon/',
       '/runde/',
+      '/pamelding/',
       '/en/venner/legg-til/',
       '/en/liga/bli-med/',
       '/en/invitasjon/',
       '/en/runde/',
+      '/en/pamelding/',
     ];
     expect(config.android?.intentFilters).toEqual([
       {

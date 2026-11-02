@@ -1,0 +1,334 @@
+// #2748: påmeldingen fra den delte lenka som skjerm (Type C).
+//
+// Regelen (`signupOffer`), skrivingen og teksten har sine egne Type A-tester. Her låses
+// det skjermen svarer for: hvilken tilstand hvert svar gir, hvor knappene fører etter
+// tilbake-regelen, at hver feilkode har sin tekst, og at et dobbelt trykk bare er ett kall.
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene */
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteView';
+import type { RoundInviteAnswerResult, RoundInviteLoadResult } from '../data/roundInvite';
+import { ROUND_INVITE_TEXT } from '../lib/roundInviteCopy';
+import { OFFLINE_NOTE } from '../lib/rosterCopy';
+import type { ScreenProps } from '../navigation';
+import { stackNavigation } from '../test/stackNavigation';
+import { RoundInvite } from './RoundInvite';
+
+jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+jest.mock('../data/roundInvite', () => ({
+  fetchRoundInvite: jest.fn(async () => mockLoads.shift() ?? mockLoad),
+  joinRound: jest.fn(async () => mockAnswer()),
+  requestToJoin: jest.fn(async () => mockAnswer()),
+}));
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    mockFocus = callback;
+    require('react').useEffect(callback, [callback]);
+  },
+}));
+const mockOpenWeb = jest.fn(async () => ({ ok: true }));
+jest.mock('../lib/webLink', () => ({
+  ...jest.requireActual('../lib/webLink'),
+  openWeb: (path: string) => (mockOpenWeb as unknown as (path: string) => Promise<unknown>)(path),
+}));
+
+let mockFocus: () => void = () => {};
+let mockLoads: RoundInviteLoadResult[] = [];
+let mockLoad: RoundInviteLoadResult = { ok: false, reason: 'load_failed' };
+let mockAnswer: () => Promise<RoundInviteAnswerResult> | RoundInviteAnswerResult = () => ({
+  ok: true,
+  status: 'requested',
+});
+
+const { fetchRoundInvite, joinRound, requestToJoin } = jest.requireMock('../data/roundInvite') as {
+  fetchRoundInvite: jest.Mock;
+  joinRound: jest.Mock;
+  requestToJoin: jest.Mock;
+};
+
+const SHORT_ID = 'abcd2345';
+const GAME_ID = 'spill-1';
+const ROUTE = { name: 'RoundInvite', params: { shortId: SHORT_ID, src: null } };
+
+function view(overrides: Partial<AppRoundInviteView> = {}): AppRoundInviteView {
+  return {
+    offer: 'join',
+    round: {
+      name: 'Lørdagsrunden',
+      modeLabel: 'Stableford',
+      courseName: 'Larvik GK',
+      teeName: 'Gul',
+      teeOffAt: new Date(2026, 10, 21, 9, 20).toISOString(),
+      entryFeeKr: 150,
+    },
+    playerCount: 7,
+    signupPath: `/signup/${SHORT_ID}`,
+    ...overrides,
+  };
+}
+
+function answer(result: RoundInviteLoadResult) {
+  mockLoads = [];
+  mockLoad = result;
+}
+
+async function renderInvite(src: string | null = null, routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, ROUTE]) {
+  const navigation = { ...stackNavigation(routes), popToTop: jest.fn() };
+  const props = {
+    navigation,
+    route: { key: 'invite', name: 'RoundInvite', params: { shortId: SHORT_ID, src } },
+  };
+  await render(<RoundInvite {...(props as unknown as ScreenProps<'RoundInvite'>)} />);
+  return navigation;
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  answer({ ok: true, view: view() });
+  mockAnswer = () => ({ ok: true, status: 'joined', gameId: GAME_ID });
+});
+
+describe('du kan melde deg på', () => {
+  it('viser runden, antallet og knappen, og spør om lenkas kode', async () => {
+    await renderInvite();
+    expect(fetchRoundInvite).toHaveBeenCalledWith(SHORT_ID);
+    expect(screen.getByTestId('round-invite-name')).toHaveTextContent('Lørdagsrunden');
+    expect(screen.getByTestId('round-invite-place')).toHaveTextContent('Stableford · Larvik GK · Gul tee');
+    expect(screen.getByTestId('round-invite-when')).toHaveTextContent('Lørdag 21. november · kl. 09:20');
+    expect(screen.getByTestId('round-invite-count')).toHaveTextContent('7 påmeldt');
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.joinButton);
+    expect(screen.queryByTestId('round-invite-message')).toBeNull();
+  });
+
+  it('kronene står ikke i appen ved lansering', async () => {
+    await renderInvite();
+    expect(screen.queryByTestId('round-invite-fee')).toBeNull();
+  });
+
+  it('[Hjem, Påmelding] blir [Hjem, Spillet], og kilden følger med', async () => {
+    const navigation = await renderInvite('plakat');
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(joinRound).toHaveBeenCalledWith(SHORT_ID, 'plakat');
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('et dobbelt trykk er ett kall, og knappen er av mens det går', async () => {
+    let finish: (result: RoundInviteAnswerResult) => void = () => {};
+    mockAnswer = () =>
+      new Promise<RoundInviteAnswerResult>((resolve) => {
+        finish = resolve;
+      });
+    await renderInvite();
+    const button = screen.getByTestId('round-invite-button');
+    await fireEvent.press(button);
+    await fireEvent.press(button);
+    expect(joinRound).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent(ROUND_INVITE_TEXT.joinPending);
+    await act(async () => {
+      finish({ ok: true, status: 'joined', gameId: GAME_ID });
+    });
+  });
+
+  it('nettfeil gir teksten og «Prøv igjen», og et nytt trykk prøver igjen', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'offline' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-error')).toHaveTextContent(OFFLINE_NOTE);
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.retry);
+    mockAnswer = () => ({ ok: true, status: 'joined', gameId: GAME_ID });
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(joinRound).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('round-invite-error')).toBeNull();
+  });
+
+  it('for mange forsøk har sin tekst, og knappen står', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'rate_limited' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-error')).toHaveTextContent(ROUND_INVITE_TEXT.rateLimited);
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.joinButton);
+  });
+});
+
+describe('du kan be om plass', () => {
+  beforeEach(() => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    mockAnswer = () => ({ ok: true, status: 'requested' });
+  });
+
+  it('skjemaet er borte, og siden sier at forespørselen er sendt', async () => {
+    await renderInvite();
+    await fireEvent.changeText(screen.getByTestId('round-invite-message'), '  Plass til meg?  ');
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(requestToJoin).toHaveBeenCalledWith(SHORT_ID, 'Plass til meg?');
+    expect(screen.getByTestId('round-invite-sent')).toHaveTextContent(ROUND_INVITE_TEXT.sentTitle);
+    expect(screen.queryByTestId('round-invite-message')).toBeNull();
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it('uten hilsen sendes ingen hilsen', async () => {
+    await renderInvite();
+    await fireEvent.changeText(screen.getByTestId('round-invite-message'), '   ');
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(requestToJoin).toHaveBeenCalledWith(SHORT_ID, null);
+  });
+
+  it('feltet tar ikke mer enn nettsidens tak', async () => {
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-message').props.maxLength).toBe(200);
+  });
+
+  it('en for lang hilsen har sin tekst, og hilsenen står', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'message_too_long' });
+    await renderInvite();
+    await fireEvent.changeText(screen.getByTestId('round-invite-message'), 'Plass?');
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-error')).toHaveTextContent(ROUND_INVITE_TEXT.messageTooLong);
+    expect(screen.getByTestId('round-invite-message').props.value).toBe('Plass?');
+  });
+
+  it('er du godkjent i mellomtiden, går du til spillet', async () => {
+    mockAnswer = () => ({ ok: true, status: 'joined', gameId: GAME_ID });
+    const navigation = await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID });
+  });
+});
+
+describe('svar som stopper skjemaet', () => {
+  it.each([
+    ['wrong_mode', ROUND_INVITE_TEXT.wrongMode],
+    ['game_full', ROUND_INVITE_TEXT.gameFull],
+  ] as const)('%s har sin tekst, ingen knapp som aldri virker, og vei til Hjem', async (reason, text) => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    mockAnswer = () => ({ ok: false, reason });
+    const navigation = await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-stop')).toHaveTextContent(text);
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+    expect(screen.queryByTestId('round-invite-message')).toBeNull();
+    await fireEvent.press(screen.getByTestId('round-invite-home'));
+    expect(navigation.popToTop).toHaveBeenCalled();
+  });
+
+  it('en profil uten handicap går til profilskjemaet', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'profile_incomplete' });
+    const navigation = await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-stop')).toHaveTextContent(ROUND_INVITE_TEXT.profileIncomplete);
+    await fireEvent.press(screen.getByTestId('round-invite-profile'));
+    expect(navigation.navigate).toHaveBeenCalledWith('EditProfile', undefined);
+  });
+
+  it.each([
+    ['game_locked', ROUND_INVITE_TEXT.locked],
+    ['signup_closed', ROUND_INVITE_TEXT.closed],
+  ] as const)('%s bytter til teksten om stengt', async (reason, text) => {
+    mockAnswer = () => ({ ok: false, reason });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it('use_web bytter til knappen for nettsiden', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'use_web' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-open-web')).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it('er runden borte, står teksten og veien til Hjem', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'not_found' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-not-found')).toHaveTextContent(ROUND_INVITE_TEXT.notFound);
+  });
+});
+
+describe('tilstandene uten skjema', () => {
+  it('står du alt på lista, går du rett til spillet uten mellomskjerm', async () => {
+    answer({ ok: true, view: view({ offer: 'in_game', gameId: GAME_ID }) });
+    const navigation = await renderInvite();
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID });
+    expect(screen.queryByTestId('round-invite-name')).toBeNull();
+  });
+
+  it('forespørselen er alt sendt: ingen knapp', async () => {
+    answer({ ok: true, view: view({ offer: 'pending' }) });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-sent')).toHaveTextContent(ROUND_INVITE_TEXT.sentTitle);
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it.each([
+    ['locked', ROUND_INVITE_TEXT.locked],
+    ['closed', ROUND_INVITE_TEXT.closed],
+  ] as const)('%s har sin tekst', async (offer, text) => {
+    answer({ ok: true, view: view({ offer }) });
+    await renderInvite();
+    expect(screen.getByTestId(`round-invite-${offer}`)).toBeTruthy();
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-button')).toBeNull();
+  });
+
+  it('lag og sidevalg åpner nettsiden, med kilden', async () => {
+    answer({ ok: true, view: view({ offer: 'web' }) });
+    await renderInvite('plakat');
+    expect(screen.getByText(ROUND_INVITE_TEXT.webIntro)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('round-invite-open-web'));
+    expect(mockOpenWeb).toHaveBeenCalledWith(`/signup/${SHORT_ID}?src=plakat`);
+  });
+
+  it('uten kilde er det bare stien', async () => {
+    answer({ ok: true, view: view({ offer: 'web' }) });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-open-web'));
+    expect(mockOpenWeb).toHaveBeenCalledWith(`/signup/${SHORT_ID}`);
+  });
+
+  it('en runde uten tee-off har ingen tidslinje', async () => {
+    answer({
+      ok: true,
+      view: view({ round: { ...view().round, teeOffAt: null } }),
+    });
+    await renderInvite();
+    expect(screen.queryByTestId('round-invite-when')).toBeNull();
+    expect(screen.getByTestId('round-invite-count')).toHaveTextContent('7 påmeldt');
+  });
+});
+
+describe('henting', () => {
+  it('404 gir teksten og veien til Hjem', async () => {
+    answer({ ok: false, reason: 'not_found' });
+    const navigation = await renderInvite();
+    expect(screen.getByTestId('round-invite-not-found')).toHaveTextContent(ROUND_INVITE_TEXT.notFound);
+    await fireEvent.press(screen.getByTestId('round-invite-home'));
+    expect(navigation.popToTop).toHaveBeenCalled();
+  });
+
+  it('nettfeil gir «Prøv igjen», og et nytt forsøk viser runden', async () => {
+    answer({ ok: false, reason: 'network' });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-load-error')).toHaveTextContent(ROUND_INVITE_TEXT.loadFailed);
+    answer({ ok: true, view: view() });
+    await fireEvent.press(screen.getByTestId('round-invite-retry'));
+    expect(screen.getByTestId('round-invite-name')).toHaveTextContent('Lørdagsrunden');
+  });
+
+  it('kommer du tilbake til skjermen, spør den på nytt og slipper stoppen', async () => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    mockAnswer = () => ({ ok: false, reason: 'profile_incomplete' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-stop')).toBeTruthy();
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.queryByTestId('round-invite-stop')).toBeNull();
+    expect(screen.getByTestId('round-invite-button')).toBeTruthy();
+  });
+});

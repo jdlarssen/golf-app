@@ -56,6 +56,36 @@ describe('appLinkFromUrl', () => {
   });
 
   it.each([
+    ['delelenka', 'https://tornygolf.no/pamelding/abcd2345', null],
+    ['den engelske siden', 'https://tornygolf.no/en/pamelding/abcd2345', null],
+    ['skråstrek til slutt', 'https://tornygolf.no/pamelding/abcd2345/', null],
+    ['www', 'https://www.tornygolf.no/pamelding/abcd2345', null],
+    ['dev-byggets skjema', 'no.tornygolf.dev://pamelding/abcd2345', null],
+    ['skjema, engelsk', 'no.tornygolf.dev://en/pamelding/abcd2345', null],
+    ['QR-koden på plakaten', 'https://tornygolf.no/pamelding/abcd2345?src=plakat', 'plakat'],
+    ['kilden blant andre', 'https://tornygolf.no/pamelding/abcd2345?a=1&src=public&b=2', 'public'],
+    ['kilden foran et anker', 'https://tornygolf.no/pamelding/abcd2345?src=plakat#top', 'plakat'],
+    ['skjema med kilde', 'no.tornygolf.dev://pamelding/abcd2345?src=plakat', 'plakat'],
+    ['en kilde med feil form', 'https://tornygolf.no/pamelding/abcd2345?src=%3Cx%3E', null],
+    ['en kilde i ankeret', 'https://tornygolf.no/pamelding/abcd2345#?src=plakat', null],
+    ['en annen parameter med samme slutt', 'https://tornygolf.no/pamelding/abcd2345?xsrc=plakat', null],
+  ])('leser påmeldingslenka fra %s', (_label, url, src) => {
+    expect(appLinkFromUrl(url, BASE)).toEqual({ kind: 'roundInvite', shortId: 'abcd2345', src });
+  });
+
+  it.each([
+    ['sju tegn', 'https://tornygolf.no/pamelding/abcd234'],
+    ['ni tegn', 'https://tornygolf.no/pamelding/abcd23456'],
+    ['store bokstaver', 'https://tornygolf.no/pamelding/ABCD2345'],
+    ['stien uten kode', 'https://tornygolf.no/pamelding/'],
+    ['en dypere sti', 'https://tornygolf.no/pamelding/abcd2345/mer'],
+    ['en annen locale enn en', 'https://tornygolf.no/de/pamelding/abcd2345'],
+    ['en annen vert', 'https://example.com/pamelding/abcd2345'],
+  ])('gir null for påmeldingslenka med %s', (_label, url) => {
+    expect(appLinkFromUrl(url, BASE)).toBeNull();
+  });
+
+  it.each([
     ['mailen', `https://tornygolf.no/runde/${ID}`, ROUND_HOME],
     ['den engelske siden', `https://tornygolf.no/en/runde/${ID}`, ROUND_HOME],
     ['skråstrek til slutt', `https://tornygolf.no/runde/${ID}/`, ROUND_HOME],
@@ -150,7 +180,7 @@ describe('appLinkFromUrl', () => {
   // Stiene butikkbygget gjør krav på (app.config.ts, i takt med Android-beviset)
   // må alle bli en lenke her, ellers åpner lenka appen på Hjem og ingenting mer.
   it.each(STORE_APP_LINK_PATH_PREFIXES)('forstår hver sti butikkbygget gjør krav på: %s', (prefix) => {
-    const code = prefix.includes('liga') ? 'abcd2345' : prefix.includes('venner') ? 'abcd1234' : ID;
+    const code = prefix.includes('liga') || prefix.includes('pamelding') ? 'abcd2345' : prefix.includes('venner') ? 'abcd1234' : ID;
     expect(appLinkFromUrl(`${STORE_WEB_BASE_URL}${prefix}${code}`, STORE_WEB_BASE_URL)).not.toBeNull();
   });
 

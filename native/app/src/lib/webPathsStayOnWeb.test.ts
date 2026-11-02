@@ -35,7 +35,7 @@ describe('stiene appens egne knapper åpner', () => {
   });
 
   // Null-test: uten denne kunne `claims` blitt blind og stått grønn.
-  it.each([`/runde/${ID}`, `/invitasjon/${ID}`, '/liga/bli-med/abcd2345', '/en/runde/x'])(
+  it.each([`/runde/${ID}`, `/invitasjon/${ID}`, '/liga/bli-med/abcd2345', '/en/runde/x', '/pamelding/abcd2345'])(
     'fanger en sti appen gjør krav på: %s',
     (path) => {
       expect(claims(path)).toBe(true);

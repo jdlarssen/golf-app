@@ -4,9 +4,10 @@
  * against this list), the Android proof and the app's parser
  * (`native/app/src/lib/appLinkUrl.ts`). Everything else stays in the browser,
  * where the session lives: login, sign-up, spectate and the pages the app's own
- * buttons open. That is why invitations and rounds have paths of their own instead
- * of `/login` and `/games/*`: without the app, those paths send you on to the page
- * (`app/[locale]/invitasjon`, `app/[locale]/runde`).
+ * buttons open. That is why invitations, rounds and the shared signup link have paths
+ * of their own instead of `/login`, `/games/*` and `/signup/*`: without the app, those
+ * paths send you on to the page (`app/[locale]/invitasjon`, `app/[locale]/runde`,
+ * `app/[locale]/pamelding`).
  *
  * iOS reads its list from the AASA file, which still has only the friend link
  * (`app/.well-known/apple-app-site-association/route.ts`): AASA applies to
@@ -52,9 +53,27 @@ export function roundLinkPath(gameId: string, subpage = ''): string {
   return `${ROUND_LINK_PREFIX}${gameId}${subpage ? `/${subpage}` : ''}`;
 }
 
-/** One path per link and locale: «/venner/legg-til/», «/liga/bli-med/», … «/en/runde/». */
+export const ROUND_INVITE_LINK_PREFIX = '/pamelding/';
+
+const SIGNUP_SHORT_ID = /^[0-9a-z]{8}$/;
+
+/** A round's short id, as migration 0040's CHECK has it. */
+export function isSignupShortId(shortId: string): boolean {
+  return SIGNUP_SHORT_ID.test(shortId);
+}
+
+/** «/pamelding/<shortId>». */
+export function roundInviteLinkPath(shortId: string): string {
+  return `${ROUND_INVITE_LINK_PREFIX}${shortId}`;
+}
+
+/** One path per link and locale: «/venner/legg-til/», «/liga/bli-med/», … «/en/pamelding/». */
 export const APP_LINK_PATH_PREFIXES: readonly string[] = FRIEND_LINK_LOCALE_PREFIXES.flatMap((locale) =>
-  [FRIEND_LINK_PREFIX, LEAGUE_LINK_PREFIX, INVITATION_LINK_PREFIX, ROUND_LINK_PREFIX].map(
-    (prefix) => `${locale}${prefix}`,
-  ),
+  [
+    FRIEND_LINK_PREFIX,
+    LEAGUE_LINK_PREFIX,
+    INVITATION_LINK_PREFIX,
+    ROUND_LINK_PREFIX,
+    ROUND_INVITE_LINK_PREFIX,
+  ].map((prefix) => `${locale}${prefix}`),
 );

@@ -34,6 +34,9 @@ describe('proxy and the link paths', () => {
     `/runde/${ID}`,
     `/runde/${ID}/holes/7`,
     `/en/runde/${ID}/leaderboard`,
+    '/pamelding/abcd2345',
+    '/pamelding/abcd2345?src=plakat',
+    '/en/pamelding/abcd2345',
   ])('%s is not sent to the login, and asks for no session', async (path) => {
     const res = await proxy(request(path));
     expect(res.headers.get('location') ?? '').not.toContain('/login');

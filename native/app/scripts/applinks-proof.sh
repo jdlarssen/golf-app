@@ -27,7 +27,7 @@
 
 ANDROID_APPLINKS_APEX=tornygolf.no
 ANDROID_APPLINKS_HOSTS='tornygolf.no www.tornygolf.no'
-ANDROID_APPLINKS_ALLOWED='pathPrefix:/venner/legg-til/ pathPrefix:/liga/bli-med/ pathPrefix:/invitasjon/ pathPrefix:/runde/ pathPrefix:/en/venner/legg-til/ pathPrefix:/en/liga/bli-med/ pathPrefix:/en/invitasjon/ pathPrefix:/en/runde/'
+ANDROID_APPLINKS_ALLOWED='pathPrefix:/venner/legg-til/ pathPrefix:/liga/bli-med/ pathPrefix:/invitasjon/ pathPrefix:/runde/ pathPrefix:/pamelding/ pathPrefix:/en/venner/legg-til/ pathPrefix:/en/liga/bli-med/ pathPrefix:/en/invitasjon/ pathPrefix:/en/runde/ pathPrefix:/en/pamelding/'
 
 android_applinks_rules() {
   local file=$1 host spec want bad=0 seen=' ' missing=''

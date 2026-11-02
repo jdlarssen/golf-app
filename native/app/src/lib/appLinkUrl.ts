@@ -4,8 +4,8 @@
 // To slags lenker åpner appen:
 //  - **Lenkene på nettet**, `https://tornygolf.no/venner/legg-til/<kode>` (QR-koden
 //    på bag-taggen og «Del lenken din»), `/liga/bli-med/<kode>` («Del lenka» på
-//    ligasiden), `/invitasjon/<token>` (invitasjonsmailen) og `/runde/<id>` (e-postene
-//    om en runde). Butikkbygget gjør krav på domenet, og lista over stier står i
+//    ligasiden), `/invitasjon/<token>` (invitasjonsmailen), `/runde/<id>` (e-postene
+//    om en runde) og `/pamelding/<kode>` (lenka og QR-koden arrangøren deler). Butikkbygget gjør krav på domenet, og lista over stier står i
 //    `lib/appLinks/appLinkPaths.ts`. Verten må likevel være web-adressen
 //    bygget peker på: en annen vert skal aldri leses som vår. Unntaket er `www` i
 //    bygget som peker på prod. Knappen «Åpne i appen» på nettsiden lenker dit, fordi
@@ -27,8 +27,10 @@
 import {
   INVITATION_LINK_PREFIX,
   LEAGUE_LINK_PREFIX,
+  ROUND_INVITE_LINK_PREFIX,
   ROUND_LINK_PREFIX,
   isRoundLinkSubpage,
+  isSignupShortId,
 } from '../../../../lib/appLinks/appLinkPaths';
 import { FRIEND_LINK_LOCALE_PREFIXES, FRIEND_LINK_PREFIX } from '../../../../lib/friends/friendLinkPath';
 import { isJoinCode } from '../../../../lib/league/joinCode';
@@ -41,7 +43,8 @@ export type AppLink =
   | { kind: 'friend'; code: string }
   | { kind: 'league'; code: string }
   | { kind: 'invitation'; token: string }
-  | { kind: 'round'; target: PushTarget };
+  | { kind: 'round'; target: PushTarget }
+  | { kind: 'roundInvite'; shortId: string; src: string | null };
 
 /** `STORE_WEB_BASE_URL` og `www`-verten i `app.config.ts`; testen holder dem like. */
 const STORE_WEB_BASE = 'https://tornygolf.no';
@@ -55,6 +58,9 @@ const FRIEND_PATH = new RegExp(`^(?:${LOCALES})${escape(FRIEND_LINK_PREFIX)}([0-
 const LEAGUE_PATH = new RegExp(`^(?:${LOCALES})${escape(LEAGUE_LINK_PREFIX)}([^/]+)/?$`);
 const INVITATION_PATH = new RegExp(`^(?:${LOCALES})${escape(INVITATION_LINK_PREFIX)}([^/]+)/?$`);
 const ROUND_PATH = new RegExp(`^(?:${LOCALES})${escape(ROUND_LINK_PREFIX)}([^/]+)(?:/(.*?))?/?$`);
+const ROUND_INVITE_PATH = new RegExp(`^(?:${LOCALES})${escape(ROUND_INVITE_LINK_PREFIX)}([^/]+)/?$`);
+/** Serveren har lista over kilder (`signupSourceFromParam`). Her er det bare formen. */
+const SRC_PARAM = /[?&]src=([0-9a-z_-]{1,32})(?:&|$)/;
 
 /** Vert og port i en http(s)-adresse, med små bokstaver, eller `null`. */
 function authorityOf(url: string): string | null {
@@ -97,6 +103,12 @@ export function appLinkFromUrl(
   if (league) return isJoinCode(league[1]) ? { kind: 'league', code: league[1] } : null;
   const invitation = INVITATION_PATH.exec(path);
   if (invitation) return isUuid(invitation[1]) ? { kind: 'invitation', token: invitation[1] } : null;
+  const roundInvite = ROUND_INVITE_PATH.exec(path);
+  if (roundInvite) {
+    return isSignupShortId(roundInvite[1])
+      ? { kind: 'roundInvite', shortId: roundInvite[1], src: SRC_PARAM.exec(match[2].split('#')[0])?.[1] ?? null }
+      : null;
+  }
   const round = ROUND_PATH.exec(path);
   return round ? roundLink(round[1], round[2] ?? '') : null;
 }

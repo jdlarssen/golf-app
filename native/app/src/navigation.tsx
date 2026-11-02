@@ -39,6 +39,7 @@ import { openPushTarget } from './lib/openPushTarget';
 import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
+import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
 import { MANAGE_APP_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
@@ -75,6 +76,7 @@ import { LeagueRoundStart } from './screens/LeagueRoundStart';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { RoundDiary } from './screens/RoundDiary';
+import { RoundInvite } from './screens/RoundInvite';
 import { RoundStats } from './screens/RoundStats';
 import { Kavalkade } from './screens/Kavalkade';
 import { Scorecard } from './screens/Scorecard';
@@ -153,6 +155,8 @@ export type RootStackParamList = {
    * (`lib/appLinkUrl.ts`). Skjermen åpner invitasjonen og går videre til spillet.
    */
   InvitationLink: { token: string };
+  /** Den delte påmeldingslenka (#2748). `src` er lenkas `?src=`, som følger med påmeldingen. */
+  RoundInvite: { shortId: string; src: string | null };
   /**
    * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
    * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
@@ -428,6 +432,12 @@ export function RootNavigator() {
           name="InvitationLink"
           component={InvitationLink}
           options={kickerHeader(INVITATION_LINK_TEXT.kicker, INVITATION_LINK_TEXT.kicker)}
+        />
+        {/* Den delte påmeldingslenka (#2748): «Meld meg på» eller «Be om å bli med». */}
+        <Stack.Screen
+          name="RoundInvite"
+          component={RoundInvite}
+          options={kickerHeader(ROUND_INVITE_TEXT.kicker, ROUND_INVITE_TEXT.kicker)}
         />
         {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
             «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}

@@ -1,3 +1,4 @@
+import { roundInviteLinkPath } from '@/lib/appLinks/appLinkPaths';
 import type { ShortIdGame } from './getGameByShortId';
 
 /**
@@ -74,9 +75,12 @@ export function isOpenForSignups(
  * admin card and on «Styr spillere», and the poster's QR code (with
  * `?src=plakat`). Always the main domain, so a copied link works wherever it
  * is pasted. Show it only when `isPubliclyViewable` holds.
+ *
+ * #2748: the path the app claims. With the app it opens the round there; without
+ * it the browser goes on to `/signup/<shortId>` (`app/[locale]/pamelding`).
  */
 export function signupShareUrl(shortId: string): string {
-  return `https://tornygolf.no/signup/${shortId}`;
+  return `https://tornygolf.no${roundInviteLinkPath(shortId)}`;
 }
 
 /**

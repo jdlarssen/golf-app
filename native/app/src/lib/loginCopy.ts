@@ -30,6 +30,7 @@ import { FRIEND_LINK_TEXT } from './friendsCopy';
 import { INVITATION_LINK_TEXT } from './invitationLinkCopy';
 import { LEAGUE_JOIN_TEXT } from './leagueCopy';
 import { OFFLINE_NOTE } from './rosterCopy';
+import { ROUND_INVITE_TEXT } from './roundInviteCopy';
 
 /**
  * Hvor lenge overskriften må holdes inne før passordfeltet vises.
@@ -127,6 +128,8 @@ export function appLinkLoginLine(link: AppLink): { title: string; body: string }
       return { title: INVITATION_LINK_TEXT.loginTitle, body: INVITATION_LINK_TEXT.loginBody };
     case 'round':
       return { title: LOGIN_TEXT.roundLinkTitle, body: LOGIN_TEXT.roundLinkBody };
+    case 'roundInvite':
+      return { title: ROUND_INVITE_TEXT.loginTitle, body: ROUND_INVITE_TEXT.loginBody };
   }
 }
 
