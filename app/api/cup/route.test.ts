@@ -55,6 +55,7 @@ describe('GET /api/cup', () => {
     getRoomCups.mockResolvedValue({
       ok: true,
       finishedCount: 2,
+      recentFinished: [],
       live: [
         { id: 'a', name: 'Cup a', status: 'active', created_by: 'x', group_id: null, playing: true, progress: { played: 3, total: 8 } },
         { id: 'b', name: 'Cup b', status: 'draft', created_by: ME, group_id: null, playing: false, progress: { played: 0, total: 0 } },
@@ -71,6 +72,30 @@ describe('GET /api/cup', () => {
       ],
     });
     expect(getMyCupIds.mock.calls[0][1]).toBe(ME);
+  });
+
+  it('de siste ferdige står under de aktive, uten fremdrift (eierens svar 02.11)', async () => {
+    getRoomCups.mockResolvedValue({
+      ok: true,
+      finishedCount: 5,
+      recentFinished: [
+        { id: 'ny', name: 'Høstcupen' },
+        { id: 'gammel', name: 'Sommercupen' },
+      ],
+      live: [
+        { id: 'a', name: 'Cup a', status: 'active', created_by: 'x', group_id: null, playing: true, progress: { played: 3, total: 8 } },
+      ],
+    });
+
+    const res = await call('token-meg');
+
+    await expect(res.json()).resolves.toEqual({
+      cups: [
+        { id: 'a', name: 'Cup a', status: 'active', progress: { played: 3, total: 8 } },
+        { id: 'ny', name: 'Høstcupen', status: 'finished', progress: null },
+        { id: 'gammel', name: 'Sommercupen', status: 'finished', progress: null },
+      ],
+    });
   });
 
   it('en feilet lesing er 500, ikke en tom liste', async () => {

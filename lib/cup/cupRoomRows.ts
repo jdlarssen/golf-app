@@ -11,6 +11,23 @@ export function splitCupsForRoom<C extends { status: string }>(
   return { live, finishedCount: cups.length - live.length };
 }
 
+/** How many finished cups Home keeps (the owner's answer 02.11). */
+export const RECENT_FINISHED_CUPS = 3;
+
+/**
+ * The latest finished cups, newest first. A finished cup with no time sorts last,
+ * since a missing time says nothing about being recent.
+ */
+export function latestFinishedCups<C extends { id: string; name: string; status: string; finished_at: string | null }>(
+  cups: readonly C[],
+): { id: string; name: string }[] {
+  return cups
+    .filter((cup) => cup.status === 'finished')
+    .sort((a, b) => (b.finished_at ?? '').localeCompare(a.finished_at ?? ''))
+    .slice(0, RECENT_FINISHED_CUPS)
+    .map(({ id, name }) => ({ id, name }));
+}
+
 /**
  * «X av N kamper spilt», from the cup page's own leaderboard
  * (`computeCupLeaderboard`: `isCupMatchSettled` decides what counts as

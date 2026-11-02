@@ -16,7 +16,12 @@ const match = (gameId: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const snapshot = (status: string, matches: unknown[], withdrawn: string[] = []) =>
+const snapshot = (
+  status: string,
+  matches: unknown[],
+  withdrawn: string[] = [],
+  sideAwards: unknown[] = [],
+) =>
   ({
     tournament: {
       id: 'cup',
@@ -33,9 +38,78 @@ const snapshot = (status: string, matches: unknown[], withdrawn: string[] = []) 
       ],
       team2: [{ userId: 'kari', name: 'Kari Arrangør', nickname: 'Kari', withdrawn: false }],
     },
+    sideAwards,
   }) as unknown as CupSnapshot;
 
 const view = (snap: CupSnapshot) => buildAppCupManageView(snap, { unknownLabel: 'Ukjent spiller' });
+
+describe('avslutningen', () => {
+  const ctp = (id: string, over: Record<string, unknown> = {}) => ({
+    id,
+    kind: 'ctp',
+    holeNumber: 7,
+    points: 1,
+    slot: 1,
+    slotCount: 1,
+    winnerUserId: null,
+    winnerTeam: null,
+    noWinner: false,
+    ...over,
+  });
+  const gir = (id: string, over: Record<string, unknown> = {}) => ({
+    id,
+    kind: 'gir',
+    holeNumber: 3,
+    points: 2,
+    maxPerTeam: 8,
+    team1Count: null,
+    team2Count: null,
+    ...over,
+  });
+
+  it('sidepoengene står med det som er registrert, og det som mangler er navngitt', () => {
+    const body = view(
+      snapshot('active', [], [], [
+        ctp('apen'),
+        ctp('vunnet', { holeNumber: 9, winnerUserId: 'ola', winnerTeam: 1 }),
+        ctp('ingen', { holeNumber: 12, noWinner: true }),
+        gir('halv', { team1Count: 4 }),
+        gir('null', { holeNumber: 5, team1Count: 0, team2Count: 0 }),
+      ]),
+    );
+    expect(body.sideAwards.map((a) => a.id)).toEqual(['apen', 'vunnet', 'ingen', 'halv', 'null']);
+    expect(body.sideAwards[1]).toEqual({
+      id: 'vunnet',
+      kind: 'ctp',
+      holeNumber: 9,
+      points: 1,
+      slot: 1,
+      slotCount: 1,
+      winnerUserId: 'ola',
+      noWinner: false,
+    });
+    expect(body.finish.missingAwards).toEqual([
+      { kind: 'ctp', holeNumber: 7 },
+      { kind: 'gir', holeNumber: 3 },
+    ]);
+  });
+
+  it('bare verter som går kan avsluttes, og en mangel krever «Avslutt likevel»', () => {
+    const body = view(
+      snapshot('active', [
+        match('levert', { status: 'active', allScorecardsSubmitted: true }),
+        match('mangler', { status: 'active', allScorecardsSubmitted: false }),
+        match('avledet', { status: 'active', sourceGameId: 'levert' }),
+        match('ferdig', { status: 'finished' }),
+        match('planlagt', { status: 'scheduled' }),
+      ]),
+    );
+    expect(body.finish.activeMatches).toEqual([
+      { gameId: 'levert', label: 'levert', side1: 'Ola', side2: 'Kari', blocksFinish: false },
+      { gameId: 'mangler', label: 'mangler', side1: 'Ola', side2: 'Kari', blocksFinish: true },
+    ]);
+  });
+});
 
 describe('spillerne', () => {
   it('står per lag, med trekk-merket, og lenken bare med en kamp igjen i en cup som går', () => {

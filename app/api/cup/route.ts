@@ -28,14 +28,20 @@ export async function GET(request: NextRequest) {
     if (!room.ok) throw new Error('room cups failed');
 
     const body: AppCupListResponse = {
-      cups: room.live.map(
-        (cup): AppCupSummary => ({
-          id: cup.id,
-          name: cup.name,
-          status: cup.status as AppCupSummary['status'],
-          progress: cup.progress,
-        }),
-      ),
+      cups: [
+        ...room.live.map(
+          (cup): AppCupSummary => ({
+            id: cup.id,
+            name: cup.name,
+            status: cup.status,
+            progress: cup.progress,
+          }),
+        ),
+        // Eierens svar 02.11: de tre siste ferdige står under de aktive.
+        ...room.recentFinished.map(
+          (cup): AppCupSummary => ({ id: cup.id, name: cup.name, status: 'finished', progress: null }),
+        ),
+      ],
     };
     return NextResponse.json(body);
   } catch (err) {

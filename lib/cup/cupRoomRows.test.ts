@@ -1,5 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { cupProgress, splitCupsForRoom } from './cupRoomRows';
+import { cupProgress, latestFinishedCups, splitCupsForRoom } from './cupRoomRows';
+
+// The owner's answer 02.11 (#2752): Home keeps the three latest finished cups.
+describe('latestFinishedCups', () => {
+  const cup = (id: string, status: string, finished_at: string | null) => ({
+    id,
+    name: `Cup ${id}`,
+    status,
+    finished_at,
+  });
+
+  it('keeps the three latest, newest first, and only finished ones', () => {
+    const cups = [
+      cup('gammel', 'finished', '2026-06-01T10:00:00Z'),
+      cup('ny', 'finished', '2026-10-01T10:00:00Z'),
+      cup('pågår', 'active', null),
+      cup('midt', 'finished', '2026-08-01T10:00:00Z'),
+      cup('eldst', 'finished', '2025-05-01T10:00:00Z'),
+    ];
+    expect(latestFinishedCups(cups).map((c) => c.id)).toEqual(['ny', 'midt', 'gammel']);
+  });
+
+  it('a finished cup with no time sorts last', () => {
+    const cups = [cup('uten', 'finished', null), cup('med', 'finished', '2026-01-01T10:00:00Z')];
+    expect(latestFinishedCups(cups).map((c) => c.id)).toEqual(['med', 'uten']);
+  });
+
+  it('hands back id and name only', () => {
+    expect(latestFinishedCups([cup('a', 'finished', '2026-01-01T10:00:00Z')])).toEqual([
+      { id: 'a', name: 'Cup a' },
+    ]);
+  });
+});
 
 // The «Cuper» rows in the Klubbhus room (#2493).
 describe('splitCupsForRoom', () => {

@@ -12,6 +12,8 @@ export type CupManagerGate = {
   ok: true;
   userId: string;
   isAdmin: boolean;
+  /** The organiser's name, for the audit log of a finish. */
+  name: string | null;
   groupId: string | null;
   caller: SupabaseClient<Database>;
 };
@@ -57,7 +59,7 @@ export async function requireCupManager(
 
   const { data: me, error: meError } = await caller
     .from('users')
-    .select('is_admin')
+    .select('is_admin, name')
     .eq('id', userId)
     .maybeSingle();
   if (meError) throw meError;
@@ -66,6 +68,7 @@ export async function requireCupManager(
     ok: true,
     userId,
     isAdmin: me?.is_admin === true,
+    name: me?.name ?? null,
     groupId: tournament.group_id ?? null,
     caller,
   };
@@ -85,6 +88,14 @@ const CONFLICT_CODES = new Set([
   'not_member',
   'profile_incomplete',
   'too_many_players',
+  'side_awards_missing',
+  'matches_not_submitted',
+  'not_all_submitted',
+  'not_all_approved',
+  'no_players',
+  'not_active',
+  'invalid_counts',
+  'not_a_participant',
 ]);
 
 /**
@@ -96,6 +107,8 @@ const CONFLICT_CODES = new Set([
 export function cupActionFailure(error: string, fallback: string): NextResponse {
   if (error === 'not_found') return NextResponse.json({ error }, { status: 404 });
   if (CONFLICT_CODES.has(error)) return NextResponse.json({ error }, { status: 409 });
+  // A match that would not finish is named for the screen, and the cup stands.
+  if (error === 'match_finish_failed') return NextResponse.json({ error }, { status: 502 });
   return NextResponse.json({ error: fallback }, { status: 500 });
 }
 

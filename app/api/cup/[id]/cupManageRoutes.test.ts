@@ -107,6 +107,7 @@ const snapshot = {
     team1: [{ userId: TARGET, name: 'Ola', nickname: null, withdrawn: false }],
     team2: [{ userId: 'kari', name: 'Kari', nickname: null, withdrawn: false }],
   },
+  sideAwards: [],
 } as unknown as CupSnapshot;
 
 function request(token: string | undefined, path: string, body?: unknown) {
