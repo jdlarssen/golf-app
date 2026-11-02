@@ -43,6 +43,10 @@ tabellen «To varianter, én `app.json`» gjelder også Android.
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Kjør fra hovedutsjekken, eller pek på fila med
   `TORNY_ENV_FILE=/sti/til/.env.local`.
 - `npm install` i `native/app/` (egen `package-lock.json`).
+- **Firebase-fila** `~/.torny-native/google-services.json` (#2758), med appene
+  `no.tornygolf.app` og `no.tornygolf.dev` (prosjektet `torny-4588d`). Repoet er offentlig, så
+  den ligger utenfor. Skriptet stopper hvis fila mangler eller ikke har butikkpakken. Et
+  dev-bygg med varsler trenger `TORNY_GOOGLE_SERVICES_FILE` satt til samme fil før prebuild.
 
 ## Bygg
 
@@ -223,7 +227,9 @@ Android-telefon tas i den lukkede testen i januar (eierens svar 18.10).
 - **Emulatoren vil ikke starte («Not enough space to create userdata partition»):** sett
   `disk.dataPartition.size=3G` i `~/.android/avd/<navn>.avd/config.ini`.
 - **Installer aldri butikk-AAB-en på en emulator eller telefon.** Den peker på prod. Bruk
-  dev-bygget mot staging til alt som skal prøves.
+  dev-bygget mot staging til alt som skal prøves. Eneste unntak er
+  `store-fcm-proof-android.sh` (#2758), som bare kjører mot en emulator, stopper på
+  innloggingen og aldri logger inn.
 
 ## Spike-funn (13.10.2026)
 
