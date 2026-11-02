@@ -7,6 +7,7 @@
 // er borte.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native';
 import type { CardBundle } from '../data/homeHero';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
@@ -154,11 +155,16 @@ function testIdsInOrder(): string[] {
 
 function renderHome(params?: { deletedCup?: string }) {
   const navigate = jest.fn();
-  const props = {
-    navigation: { navigate, addListener: () => () => {}, setParams: jest.fn() },
-    route: { key: 'home', name: 'Home', params },
+  const listeners: Record<string, () => void> = {};
+  const setParams = jest.fn();
+  const addListener = (event: string, listener: () => void) => {
+    listeners[event] = listener;
+    return () => {};
   };
-  return { navigate, view: render(<Home {...(props as unknown as ScreenProps<'Home'>)} />) };
+  const navigation = { navigate, addListener, setParams };
+  const props = (next?: { deletedCup?: string }) =>
+    ({ navigation, route: { key: 'home', name: 'Home', params: next } }) as unknown as ScreenProps<'Home'>;
+  return { navigate, listeners, setParams, props, view: render(<Home {...props(params)} />) };
 }
 
 beforeEach(() => {
@@ -649,6 +655,24 @@ describe('kvitteringen etter en slettet cup (#2752)', () => {
   it('står med navnet når du kommer hit fra slettingen', async () => {
     await renderHome({ deletedCup: 'Klubbmesterskapet' }).view;
     expect(await screen.findByTestId('home-notice')).toHaveTextContent('Cupen «Klubbmesterskapet» er slettet.');
+  });
+
+  it('er borte når du går videre', async () => {
+    const { listeners, setParams, view } = renderHome({ deletedCup: 'Klubbmesterskapet' });
+    await view;
+    await screen.findByTestId('home-notice');
+    listeners.blur();
+    expect(setParams).toHaveBeenCalledWith({ deletedCup: undefined });
+  });
+
+  it('ruller opp til kvitteringen, for Hjem står der du forlot den', async () => {
+    const { props, view } = renderHome();
+    const { rerender } = await view;
+    await screen.findAllByTestId('home-screen');
+    const scrollTo = jest.spyOn(ScrollView.prototype as unknown as { scrollTo: () => void }, 'scrollTo');
+    expect(scrollTo).not.toHaveBeenCalled();
+    await rerender(<Home {...props({ deletedCup: 'Klubbmesterskapet' })} />);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
   });
 
   it('står ikke ellers', async () => {

@@ -454,7 +454,11 @@ export async function deleteCupLineupSessionCore(
       console.error('[cup] deleteCupLineupSession re-read failed', { tournamentId, sessionId, error: readError });
       return { error: 'save_failed' };
     }
-    if (still) return { error: 'lineup_revealed' };
+    if (still) {
+      // Tavla på nettet leser ikke selv, så kortet ville stått som «Venter» med knappen.
+      revalidateCup(tournamentId, access.groupId);
+      return { error: 'lineup_revealed' };
+    }
   }
 
   revalidateCup(tournamentId, access.groupId);

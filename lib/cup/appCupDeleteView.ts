@@ -7,4 +7,6 @@ export type AppCupDeletePreview = {
   draft: boolean;
   /** The matches that go with it: the hosts and the singles that ride along. */
   matchCount: number;
+  /** Played matches, which stay as standalone games. */
+  keptCount: number;
 };

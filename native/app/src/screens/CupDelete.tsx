@@ -146,6 +146,11 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
             {formatMessage(DELETE_TEXT.neverPlayedNote, { count: preview.matchCount })}
           </Text>
         ) : null}
+        {preview.keptCount > 0 ? (
+          <Text style={[styles.small, { color: colors.muted }]} testID="cup-delete-kept">
+            {formatMessage(DELETE_TEXT.keptNote, { count: preview.keptCount })}
+          </Text>
+        ) : null}
         <Text style={[styles.small, { color: colors.muted }]}>{DELETE_TEXT.irreversibleNote}</Text>
       </View>
 

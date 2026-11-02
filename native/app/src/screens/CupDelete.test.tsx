@@ -21,6 +21,7 @@ const preview = (over = {}) => ({
   team2Name: 'Team Sør',
   draft: true,
   matchCount: 4,
+  keptCount: 0,
   ...over,
 });
 const answer = (value: object) => (fetchCupDeletePreview as jest.Mock).mockResolvedValue(value);
@@ -53,6 +54,7 @@ describe('CupDelete', () => {
     expect(screen.getByText('Team Nord mot Team Sør')).toBeTruthy();
     expect(screen.getByTestId('cup-delete-warning')).toBeTruthy();
     expect(screen.getByTestId('cup-delete-matches')).toHaveTextContent('4 genererte matcher som ikke er spilt slettes for alltid.');
+    expect(screen.queryByTestId('cup-delete-kept')).toBeNull();
     expect(deleteCup).not.toHaveBeenCalled();
   });
 
@@ -60,6 +62,12 @@ describe('CupDelete', () => {
     answer({ ok: true, view: preview({ matchCount: 0 }) });
     await renderScreen();
     expect(screen.queryByTestId('cup-delete-matches')).toBeNull();
+  });
+
+  it('spilte kamper som blir stående, står for seg, som på nettet', async () => {
+    answer({ ok: true, view: preview({ keptCount: 1 }) });
+    await renderScreen();
+    expect(screen.getByTestId('cup-delete-kept')).toHaveTextContent('1 spilte match forblir som frittstående spill (cup-koblingen fjernes).');
   });
 
   it('sletter, og ender på Hjem med kvitteringen', async () => {

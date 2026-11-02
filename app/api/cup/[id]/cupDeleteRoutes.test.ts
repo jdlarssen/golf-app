@@ -107,6 +107,7 @@ describe('GET', () => {
       team2Name: 'Team Sør',
       draft: true,
       matchCount: 3,
+      keptCount: 0,
     });
   });
 
@@ -120,6 +121,11 @@ describe('GET', () => {
     const res = await GET(request('GET'), params());
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'load_failed' });
+  });
+
+  it('spilte kamper som blir stående, telles for seg', async () => {
+    core.planTournamentGameDeletion.mockResolvedValue({ hostIdsToDelete: ['a'], derivedIdsRidingAlong: [], totalGames: 3 });
+    expect(await (await GET(request('GET'), params())).json()).toMatchObject({ matchCount: 1, keptCount: 2 });
   });
 });
 
@@ -153,6 +159,14 @@ describe('DELETE', () => {
     const res = await DELETE(request('DELETE'), params());
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'delete_failed' });
+  });
+
+  it('en lesefeil på cupen er 500, så appen ikke tror den er borte', async () => {
+    readError = { message: 'nede' };
+    const res = await DELETE(request('DELETE'), params());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'delete_failed' });
+    expect(core.deleteCupCore).not.toHaveBeenCalled();
   });
 
   it('kaster noe: 500', async () => {

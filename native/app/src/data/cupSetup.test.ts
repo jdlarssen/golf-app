@@ -26,6 +26,27 @@ const PLAN = {
 };
 
 describe('data/cupSetup', () => {
+  describe('deleteCup', () => {
+    it('sender DELETE til ruta, og 200 er slettet', async () => {
+      respondWith(200, { ok: true, name: 'Cup' });
+      expect(await api().deleteCup('c')).toEqual({ ok: true });
+      expect(sent()).toMatchObject({ url: `${BASE_URL}/api/cup/c/delete`, method: 'DELETE' });
+    });
+
+    it('«borte» må komme fra ruta selv: en 404 uten kropp er ikke en slettet cup', async () => {
+      respondWith(404, { error: 'not_found' });
+      expect(await api().deleteCup('c')).toEqual({ ok: false, reason: 'not_found' });
+      mockFetch.mockClear();
+      respondWith(404, null);
+      expect(await api().deleteCup('c')).toEqual({ ok: false, reason: 'delete_failed' });
+    });
+
+    it('et nei beholder koden sin', async () => {
+      respondWith(409, { error: 'not_draft' });
+      expect(await api().deleteCup('c')).toEqual({ ok: false, reason: 'not_draft' });
+    });
+  });
+
   useWebRoute();
 
   it('en ny cup gir id-en, og en 200 uten id er en feil', async () => {
