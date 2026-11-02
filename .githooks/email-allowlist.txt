@@ -49,3 +49,7 @@
 # ingen, og guarden kan ikke testes uten et domene som faktisk står på lista i
 # `lib/auth/disposableDomains.ts`.
 @mailinator\.com$
+
+# npm-pakke med låst versjon (#2758): `npx vercel@65.9.0` i skriptet for
+# varselnøkkelen. Ingen adresse, bare pakkenavn@versjon.
+^vercel@[0-9]+\.[0-9]+\.[0-9]+$
