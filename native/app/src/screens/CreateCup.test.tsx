@@ -295,6 +295,13 @@ describe('et utkast', () => {
     expect(screen.getByTestId('create-cup-awards')).toBeTruthy();
   });
 
+  it('steget åpner øverst, også når du trykket «Neste» nederst på det forrige', async () => {
+    await renderWizard({ cupId: 'utkast' });
+    const before = screen.getByTestId('create-cup-screen');
+    await next();
+    expect(screen.getByTestId('create-cup-screen')).not.toBe(before);
+  });
+
   it('tilbake går ett steg om gangen, og uten vakt fra første steg', async () => {
     const navigation = await renderWizard({ cupId: 'utkast' });
     expect(mockPrevent.enabled).toBe(false);
