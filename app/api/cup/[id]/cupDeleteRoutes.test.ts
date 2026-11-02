@@ -19,7 +19,9 @@ let readError: { message: string } | null = null;
 
 function respond(op: QueryOp): QueryResponse {
   if (op.table !== 'tournaments') throw new Error(`ruta leser ikke ${op.table} med admin-klienten`);
-  return { data: row, error: readError };
+  // Porten leser `group_id` først. Lesefeilen skal treffe ruta sin egen lesing.
+  if (op.columns === 'group_id') return { data: row, error: null };
+  return { data: readError ? null : row, error: readError };
 }
 const fake = createAdminClientMock({ tokens: { 'token-sjef': MANAGER, 'token-fremmed': OUTSIDER }, respond });
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
@@ -116,8 +118,15 @@ describe('GET', () => {
     expect((await (await GET(request('GET'), params())).json()).draft).toBe(false);
   });
 
-  it('en lesefeil er 500, ikke «finnes ikke»', async () => {
+  it('en feil i planen er 500', async () => {
     core.planTournamentGameDeletion.mockRejectedValue(new Error('nede'));
+    const res = await GET(request('GET'), params());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'load_failed' });
+  });
+
+  it('en lesefeil på cupen er 500, ikke «finnes ikke»', async () => {
+    readError = { message: 'nede' };
     const res = await GET(request('GET'), params());
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'load_failed' });

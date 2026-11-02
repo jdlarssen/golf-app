@@ -666,10 +666,10 @@ describe('kvitteringen etter en slettet cup (#2752)', () => {
   });
 
   it('ruller opp til kvitteringen, for Hjem står der du forlot den', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype as unknown as { scrollTo: () => void }, 'scrollTo');
     const { props, view } = renderHome();
     const { rerender } = await view;
     await screen.findAllByTestId('home-screen');
-    const scrollTo = jest.spyOn(ScrollView.prototype as unknown as { scrollTo: () => void }, 'scrollTo');
     expect(scrollTo).not.toHaveBeenCalled();
     await rerender(<Home {...props({ deletedCup: 'Klubbmesterskapet' })} />);
     expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
