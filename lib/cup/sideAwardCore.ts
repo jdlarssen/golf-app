@@ -4,6 +4,7 @@ import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { syncFinishedCupWinner } from './finishedCupWinner';
+import { expandSideAwardConfig, isValidSideAward, type SideAwardConfigInput } from './sideAwardRows';
 
 /**
  * Registreringen av sidepoeng, delt av nettets `sideAwardActions.ts` og appens ruter
@@ -16,6 +17,21 @@ export type RegisterSideAwardWinnerError = 'not_found' | 'not_a_participant' | '
 export type RegisterGirCountsError = 'not_found' | 'invalid_counts' | 'save_failed';
 
 export type SideAwardActionResult<E extends string> = { ok: true } | { ok: false; error: E };
+
+export type SaveSideAwardConfigError =
+  | 'invalid_side_award'
+  | 'duplicate_side_award'
+  | 'not_found'
+  | 'cup_finished'
+  | 'cup_started'
+  | 'winners_already_registered'
+  | 'save_failed';
+
+// Full kolonneliste for delete-så-insert-rollbacken (#1489): radene som leses
+// FØR slettingen må kunne settes ORDRETT tilbake, inkludert slot- og
+// gir-kolonnene fra migrasjon 0156.
+const SIDE_AWARD_COLUMNS =
+  'id, tournament_id, kind, hole_number, points, winner_user_id, no_winner, slot, gir_max_per_team, gir_team1_count, gir_team2_count';
 
 /** Buster det en registrering kan ha endret. */
 export function revalidateCupSideAwards(tournamentId: string, groupId: string | null): void {
@@ -162,6 +178,122 @@ export async function registerSideAwardWinnerCore(
       err,
     });
     return { ok: false, error: 'save_failed' };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Oppsettet av sidepoeng: bare mens cupen er utkast (#1455). Kalleren sender den FULLE
+ * ønskede lista, så det er delete-så-insert, og en insert-feil kompenseres ved å legge
+ * de leste radene rett tilbake (AGENTS.md felle 5). Det er trygt, for gaten under
+ * garanterer at ingen av dem har et registrert svar.
+ */
+export async function saveSideAwardConfigCore(
+  admin: SupabaseClient<Database>,
+  input: { tournamentId: string; awards: SideAwardConfigInput[] },
+): Promise<SideAwardActionResult<SaveSideAwardConfigError>> {
+  const { tournamentId, awards } = input;
+
+  if (!awards.every(isValidSideAward)) {
+    return { ok: false, error: 'invalid_side_award' };
+  }
+  // Én CONFIG-rad per (kind, hull) — flere vinner-plasser uttrykkes via
+  // `winnerCount` på raden (#1489), ikke via duplikat-rader. Avvis duplikater
+  // i SAMME innsending før noe skrives — ellers feiler inserten sent på
+  // DB-unique-en (nå (tournament_id, kind, hole_number, slot), 0156) i stedet
+  // for tidlig med en meningsfull feilkode.
+  const seen = new Set<string>();
+  for (const a of awards) {
+    const key = `${a.kind}#${a.holeNumber}`;
+    if (seen.has(key)) return { ok: false, error: 'duplicate_side_award' };
+    seen.add(key);
+  }
+
+  const { data: cup } = await admin
+    .from('tournaments')
+    .select('status')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (!cup) return { ok: false, error: 'not_found' };
+  if (cup.status === 'finished') return { ok: false, error: 'cup_finished' };
+  // #1455 (eier-overstyring av D9): sidepoeng-oppsett hører hjemme i
+  // cup-oppsettet — konfigurasjon KUN mens cupen er `draft`. Etter start er
+  // det låst (kun vinner-registrering). Rekkefølgen finished → started gir mest
+  // spesifikk melding: en avsluttet cup får fortsatt `cup_finished`.
+  if (cup.status !== 'draft') return { ok: false, error: 'cup_started' };
+
+  const { data: existing, error: existingErr } = await admin
+    .from('tournament_side_awards')
+    .select(SIDE_AWARD_COLUMNS)
+    .eq('tournament_id', tournamentId);
+  if (existingErr) return { ok: false, error: 'save_failed' };
+
+  // «Registrert» = en tastet vinner, et tastet «ingen vinner» (#1530) ELLER en
+  // tastet GIR-teller (#1489) — alle er ferdige svar fra arrangøren som aldri
+  // skal slettes stille av en re-konfig. «Ingen vinner» gir riktignok 0 poeng,
+  // men det er like fullt et svar hun har tastet; samme resonnement som
+  // GIR-telleren 0.
+  const hasRegisteredWinner = (existing ?? []).some(
+    (a) =>
+      a.winner_user_id !== null ||
+      a.no_winner === true ||
+      a.gir_team1_count !== null ||
+      a.gir_team2_count !== null,
+  );
+  if (hasRegisteredWinner) return { ok: false, error: 'winners_already_registered' };
+
+  const { error: deleteErr } = await admin
+    .from('tournament_side_awards')
+    .delete()
+    .eq('tournament_id', tournamentId);
+  if (deleteErr) {
+    console.error('[cup] saveSideAwardConfig delete failed', { tournamentId, error: deleteErr });
+    return { ok: false, error: 'save_failed' };
+  }
+
+  if (awards.length > 0) {
+    // Ekspansjon (#1489): ctp/ld-rad med winnerCount N → N DB-rader slot 1..N;
+    // gir-rad → én DB-rad (slot 1) med gir_max_per_team. Ren logikk i
+    // sideAwardRows.ts.
+    const { error: insertErr } = await admin.from('tournament_side_awards').insert(
+      expandSideAwardConfig(awards).map((row) => ({
+        tournament_id: tournamentId,
+        ...row,
+      })),
+    );
+    if (insertErr) {
+      console.error('[cup] saveSideAwardConfig insert failed', { tournamentId, error: insertErr });
+      // Kompensert rollback (AGENTS.md-felle #5): legg de FØR-slettingen-
+      // leste radene rett tilbake. Trygt — gaten over garanterte at ingen av
+      // dem hadde en registrert vinner eller GIR-teller, så ingenting går
+      // tapt. #2223: a failed re-insert leaves the cup without its side
+      // awards, so its error is logged.
+      if ((existing ?? []).length > 0) {
+        const { error: restoreErr } = await admin.from('tournament_side_awards').insert(
+          (existing ?? []).map((a) => ({
+            id: a.id,
+            tournament_id: a.tournament_id,
+            kind: a.kind,
+            hole_number: a.hole_number,
+            points: a.points,
+            winner_user_id: a.winner_user_id,
+            no_winner: a.no_winner,
+            slot: a.slot,
+            gir_max_per_team: a.gir_max_per_team,
+            gir_team1_count: a.gir_team1_count,
+            gir_team2_count: a.gir_team2_count,
+          })),
+        );
+        if (restoreErr) {
+          console.error('[cup] saveSideAwardConfig restore failed', {
+            tournamentId,
+            error: restoreErr,
+          });
+        }
+      }
+      return { ok: false, error: 'save_failed' };
+    }
   }
 
   return { ok: true };
