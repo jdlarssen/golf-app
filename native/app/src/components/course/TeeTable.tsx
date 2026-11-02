@@ -258,7 +258,8 @@ const styles = StyleSheet.create({
   otherAdd: { marginTop: 0 },
   line: { marginTop: 8 },
   tableHead: { marginTop: 16 },
-  table: { marginTop: 8, paddingVertical: 4, gap: 0 },
+  // 12 som på nettet, ikke kortets 16: tre kolonner skal få plass på 390 pt.
+  table: { marginTop: 8, paddingHorizontal: 12, paddingVertical: 4, gap: 0 },
   tee: { paddingVertical: 12, gap: 8 },
   teeDivider: { borderTopWidth: StyleSheet.hairlineWidth },
   teeHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
