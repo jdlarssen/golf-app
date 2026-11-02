@@ -61,9 +61,9 @@ export async function DELETE(request: NextRequest, ctx: RouteContext) {
     if (cup.status !== 'draft') return NextResponse.json({ error: 'not_draft' }, { status: 409 });
 
     const deleted = await deleteCupCore(gate.caller, id);
-    if (!deleted.ok) {
-      return NextResponse.json({ error: deleted.error }, { status: deleted.error === 'not_found' ? 404 : 500 });
-    }
+    // Ruta har nettopp sett raden, så `not_found` her er en rad kalleren ikke ser. Appen regner
+    // 404 som slettet, og da ville den fått kvittering for noe som står.
+    if (!deleted.ok) return NextResponse.json({ error: 'delete_failed' }, { status: 500 });
 
     revalidateCupDeleted(id, gate.groupId);
     return NextResponse.json({ ok: true, name: deleted.name });

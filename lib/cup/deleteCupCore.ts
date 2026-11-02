@@ -13,7 +13,12 @@ export type DeleteCupResult = { ok: true; name: string } | { ok: false; error: '
  * autorisasjonen, og `caller` er kalleren sin egen klient, så RLS også står bak cup-raden.
  */
 export async function deleteCupCore(caller: SupabaseClient<Database>, id: string): Promise<DeleteCupResult> {
-  const { data: cup } = await caller.from('tournaments').select('id, name').eq('id', id).maybeSingle();
+  // En lesefeil er ikke «finnes ikke». Appen regner en cup som er borte, som slettet.
+  const { data: cup, error: readError } = await caller.from('tournaments').select('id, name').eq('id', id).maybeSingle();
+  if (readError) {
+    console.error('[cup] deleteTournament read failed', { id, error: readError });
+    return { ok: false, error: 'delete_failed' };
+  }
   if (!cup) return { ok: false, error: 'not_found' };
 
   // #1441 (owner-QA finding A): matcher som aldri egentlig ble spilt (draft/

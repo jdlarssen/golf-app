@@ -148,9 +148,11 @@ describe('DELETE', () => {
     expect(core.revalidateCupDeleted).not.toHaveBeenCalled();
   });
 
-  it('borte imens: 404', async () => {
+  it('kjernen ser ikke raden ruta nettopp så: 500, for appen regner 404 som slettet', async () => {
     core.deleteCupCore.mockResolvedValue({ ok: false, error: 'not_found' });
-    expect((await DELETE(request('DELETE'), params())).status).toBe(404);
+    const res = await DELETE(request('DELETE'), params());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'delete_failed' });
   });
 
   it('kaster noe: 500', async () => {
