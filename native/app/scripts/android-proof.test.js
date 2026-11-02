@@ -22,7 +22,7 @@
 // Python kjøres som i beviset; `python3` fra PATH, som finnes på Mac-en og i
 // CI (ubuntu-latest).
 import { spawnSync } from 'child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -347,5 +347,107 @@ describe('android-proof.py elf-align', () => {
     const bytes = elf({ segments: [[PT_LOAD, 0x4000]] });
     bytes[4] = 9;
     expect(align('ukjent-klasse.so', bytes).status).toBe(1);
+  });
+});
+
+// #2758: et butikkbygg uten varseltillatelsene eller Firebase-verdiene gir ingen
+// varsler på noen Android-telefon. Regelen leses uten AAB.
+describe('fcm', () => {
+  const permissionLine = (name) =>
+    [
+      '      E: uses-permission (line=20)',
+      `        A: http://schemas.android.com/apk/res/android:name(0x01010003)="${name}" (Raw: "${name}")`,
+    ].join('\n');
+  const POST = 'android.permission.POST_NOTIFICATIONS';
+  const C2DM = 'com.google.android.c2dm.permission.RECEIVE';
+  const withPermissions = (...names) => STORE.replace(APP_LINE, `${names.map(permissionLine).join('\n')}\n${APP_LINE}`);
+  const RESOURCES = [
+    'resource 0x7f0f0030 string/google_app_id',
+    '  () "1:123:android:abc"',
+    'resource 0x7f0f0031 string/gcm_defaultSenderId',
+    '  () "123"',
+  ].join('\n');
+
+  let dir;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fcm-proof-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function check(xmltree, resources) {
+    const file = join(dir, 'resources.txt');
+    writeFileSync(file, resources);
+    const { status, stdout } = run(['fcm', file], xmltree);
+    return { status, missing: stdout.split('\n').filter(Boolean).map((line) => line.split('=')[1]) };
+  }
+
+  it('godtar et bygg med begge tillatelsene og begge verdiene', () => {
+    expect(check(withPermissions(POST, C2DM), RESOURCES)).toEqual({ status: 0, missing: [] });
+  });
+
+  it.each([
+    ['POST_NOTIFICATIONS', [C2DM], RESOURCES, POST],
+    ['c2dm', [POST], RESOURCES, C2DM],
+    ['google_app_id', [POST, C2DM], 'resource 0x7f0f0031 string/gcm_defaultSenderId', 'string/google_app_id'],
+    ['gcm_defaultSenderId', [POST, C2DM], 'resource 0x7f0f0030 string/google_app_id', 'string/gcm_defaultSenderId'],
+  ])('melder når %s mangler', (_case, permissionsInBuild, resources, missing) => {
+    expect(check(withPermissions(...permissionsInBuild), resources)).toEqual({ status: 0, missing: [missing] });
+  });
+
+  it('forveksler ikke et lengre ressursnavn med verdien', () => {
+    const resources = 'resource 1 string/google_app_id_old\nresource 2 string/gcm_defaultSenderId';
+    expect(check(withPermissions(POST, C2DM), resources).missing).toEqual(['string/google_app_id']);
+  });
+
+  it('stopper med exit 1 på en tom ressursdump', () => {
+    expect(check(withPermissions(POST, C2DM), '  \n').status).toBe(1);
+  });
+
+  it('stopper med exit 1 uten manifest', () => {
+    expect(check('', RESOURCES).status).toBe(1);
+  });
+});
+
+// #2758: `store-build-android.sh` stopper på denne før noe bygges.
+describe('google-services', () => {
+  const PACKAGE = 'no.tornygolf.app';
+  const SECRET = 'nokkel-som-ikke-skal-vises';
+  const client = (name) => ({ client_info: { android_client_info: { package_name: name } }, api_key: [{ current_key: SECRET }] });
+
+  let dir;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'google-services-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function check(contents) {
+    const file = join(dir, 'google-services.json');
+    writeFileSync(file, contents);
+    return run(['google-services', file, PACKAGE], '');
+  }
+
+  it('godtar fila når pakken er med, blant flere', () => {
+    const r = check(JSON.stringify({ client: [client('no.tornygolf.dev'), client(PACKAGE)] }));
+    expect(r.status).toBe(0);
+    expect(r.stdout).not.toContain(SECRET);
+  });
+
+  it.each([
+    ['feil pakke', JSON.stringify({ client: [client('no.tornygolf.dev')] })],
+    ['ingen klienter', JSON.stringify({ project_info: {} })],
+    ['JSON som ikke er et objekt', 'null'],
+    ['ikke JSON', `ikke json ${SECRET}`],
+  ])('stopper med exit 1 og viser ikke innholdet ved %s', (_case, contents) => {
+    const r = check(contents);
+    expect(r.status).toBe(1);
+    expect(`${r.stdout}${r.stderr}`).not.toContain(SECRET);
+  });
+
+  it('stopper med exit 1 når fila mangler', () => {
+    expect(run(['google-services', join(dir, 'finnes-ikke.json'), PACKAGE], '').status).toBe(1);
   });
 });

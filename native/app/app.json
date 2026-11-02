@@ -38,8 +38,6 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.POST_NOTIFICATIONS",
-        "com.google.android.c2dm.permission.RECEIVE",
         "com.sec.android.provider.badge.permission.READ",
         "com.sec.android.provider.badge.permission.WRITE",
         "com.htc.launcher.permission.READ_SETTINGS",
@@ -84,7 +82,14 @@
           "remindersPermission": "Tørny bruker ikke påminnelsene dine."
         }
       ],
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1B4332",
+          "defaultChannel": "varsler"
+        }
+      ],
       "./scripts/withNoSdkDownload.js"
     ]
   }

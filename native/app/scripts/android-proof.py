@@ -195,6 +195,63 @@ def blocked_permissions(app_json_path, text):
     return 0
 
 
+# Det butikkbygget må ha for å få varsler (#2758): tillatelsene fra
+# expo-notifications og Firebase, og verdiene google-services-pluginen legger inn.
+FCM_PERMISSIONS = (
+    'android.permission.POST_NOTIFICATIONS',
+    'com.google.android.c2dm.permission.RECEIVE',
+)
+FCM_RESOURCES = ('google_app_id', 'gcm_defaultSenderId')
+
+
+def fcm_requirements(resources_path, text):
+    manifest = read_manifest(text)
+    if manifest is None:
+        return 1
+    try:
+        with open(resources_path, encoding='utf-8') as handle:
+            resources = handle.read()
+    except OSError as error:
+        print(f'kunne ikke lese {resources_path}: {error}', file=sys.stderr)
+        return 1
+    if not resources.strip():
+        print('tom ressursdump fra aapt2', file=sys.stderr)
+        return 1
+    present = set(permissions(manifest))
+    if not present:
+        print('fant ingen uses-permission i manifestet: ufullstendig dump fra aapt2', file=sys.stderr)
+        return 1
+    for name in FCM_PERMISSIONS:
+        if name not in present:
+            print(f'fcm-missing={name}')
+    for name in FCM_RESOURCES:
+        if not re.search(rf'\bstring/{re.escape(name)}\b', resources):
+            print(f'fcm-missing=string/{name}')
+    return 0
+
+
+def google_services(path, package):
+    # Aldri innholdet i meldingene: fila hører ikke hjemme i en logg.
+    try:
+        with open(path, encoding='utf-8') as handle:
+            config = json.load(handle)
+    except (OSError, ValueError):
+        print(f'{path} kan ikke leses som JSON', file=sys.stderr)
+        return 1
+    clients = config.get('client') if isinstance(config, dict) else None
+    names = []
+    for client in clients if isinstance(clients, list) else []:
+        info = client.get('client_info') if isinstance(client, dict) else None
+        android = info.get('android_client_info') if isinstance(info, dict) else None
+        if isinstance(android, dict):
+            names.append(android.get('package_name'))
+    if package not in names:
+        print(f'{path} har ikke appen {package}', file=sys.stderr)
+        return 1
+    print(f'google-services-package={package}')
+    return 0
+
+
 def elf_align(path):
     with open(path, 'rb') as handle:
         data = handle.read()
@@ -243,11 +300,17 @@ def main(argv):
         return manifest_facts(sys.stdin.read())
     if len(argv) == 3 and argv[1] == 'blocked':
         return blocked_permissions(argv[2], sys.stdin.read())
+    if len(argv) == 3 and argv[1] == 'fcm':
+        return fcm_requirements(argv[2], sys.stdin.read())
+    if len(argv) == 4 and argv[1] == 'google-services':
+        return google_services(argv[2], argv[3])
     if len(argv) == 3 and argv[1] == 'elf-align':
         return elf_align(argv[2])
     print(
         'Bruk: android-proof.py manifest < xmltree.txt | '
-        'android-proof.py blocked <app.json> < xmltree.txt | android-proof.py elf-align <fil.so>',
+        'android-proof.py blocked <app.json> < xmltree.txt | '
+        'android-proof.py fcm <ressursdump> < xmltree.txt | '
+        'android-proof.py google-services <fil> <pakke> | android-proof.py elf-align <fil.so>',
         file=sys.stderr,
     )
     return 2
