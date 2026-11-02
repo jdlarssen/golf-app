@@ -24,8 +24,9 @@
 #     dev-pakken mot staging. Den som kjører, teller `fcm_tokens` i prod før og etter.
 #  3. **Tokenet skrives aldri ut**, verken i logg eller bevisfil. Det ligger i en
 #     variabel og går til senderen i miljøet.
-#  4. **Den ekte senderen.** `lib/notifications/push/fcm.ts` buntes med esbuild, med
-#     `server-only` byttet mot en tom fil (pakken er ikke installert i repoet).
+#  4. **Den ekte senderen.** `lib/notifications/push/fcm.ts` og `clampText.ts` oversettes
+#     med repoets egen TypeScript, og `server-only` er en tom modul i arbeidsmappa
+#     (pakken er ikke installert i repoet).
 #
 # Miljø (valgfritt): ADB, ANDROID_HOME, TORNY_DIST_DIR (standard
 # ~/.torny-native/dist), TORNY_ANDROID_KEYSTORE, TORNY_ANDROID_KEY_ALIAS,
@@ -98,7 +99,7 @@ BOOT_QEMU=$("$ADB" -s "$SERIAL" shell getprop ro.boot.qemu | tr -d '\r')
 adb_s() { "$ADB" -s "$SERIAL" "$@"; }
 
 [ -f "$SERVICE_ACCOUNT" ] || die "Fant ikke tjenestekontoen $SERVICE_ACCOUNT."
-[ -d "$REPO_ROOT/node_modules/esbuild" ] || die "Fant ikke esbuild. Kjør npm install i repo-rota."
+[ -d "$REPO_ROOT/node_modules/typescript" ] || die "Fant ikke TypeScript. Kjør npm install i repo-rota."
 
 STAMP=$(date '+%Y%m%d-%H%M%S')
 PROOF_DIR="$DIST/fcm-proof-$LABEL-$STAMP"
@@ -193,30 +194,40 @@ pass "appen hentet token uten innlogging (verdien vises ikke)"
 adb_s shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS
 
 # ── Senderen ────────────────────────────────────────────────────────────────
-: > "$WORK/empty.js"
-(cd "$REPO_ROOT" && node_modules/.bin/esbuild lib/notifications/push/fcm.ts --bundle --platform=node --format=esm \
-  --alias:server-only="$WORK/empty.js" --outfile="$WORK/fcm.bundle.mjs" --log-level=error) \
-  || die "Fikk ikke buntet fcm.ts."
-cat > "$WORK/send.mjs" <<'NODE'
-import { buildFcmMessage, sendFcmNotification } from './fcm.bundle.mjs';
+mkdir -p "$WORK/node_modules/server-only"
+: > "$WORK/node_modules/server-only/index.js"
+(cd "$REPO_ROOT" && node -e '
+  const ts = require("typescript");
+  const fs = require("fs");
+  const path = require("path");
+  for (const name of ["fcm", "clampText"]) {
+    const source = fs.readFileSync(path.join("lib/notifications/push", name + ".ts"), "utf8");
+    const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
+    fs.writeFileSync(path.join(process.argv[1], name + ".js"), outputText);
+  }
+' "$WORK") || die "Fikk ikke oversatt fcm.ts."
+cat > "$WORK/send.js" <<'NODE'
+const { buildFcmMessage, sendFcmNotification } = require('./fcm.js');
 const title = process.env.FCM_PROOF_TITLE;
-const result = await sendFcmNotification(process.env.FCM_PROOF_TOKEN, buildFcmMessage(title, 'Bevis fra store-fcm-proof-android.sh', '/', 'proof'));
-console.log(`status=${result.status} errorCode=${result.errorCode}`);
-process.exit(result.status >= 200 && result.status < 300 ? 0 : 1);
+sendFcmNotification(process.env.FCM_PROOF_TOKEN, buildFcmMessage(title, 'Bevis fra store-fcm-proof-android.sh', '/', 'proof')).then((result) => {
+  console.log(`status=${result.status} errorCode=${result.errorCode}`);
+  process.exit(result.status >= 200 && result.status < 300 ? 0 : 1);
+});
 NODE
 FCM_B64=$(base64 -i "$SERVICE_ACCOUNT" | tr -d '\n')
 
 send_proof() {
-  FCM_SERVICE_ACCOUNT="$FCM_B64" FCM_PROOF_TOKEN="$TOKEN" FCM_PROOF_TITLE="$1" node "$WORK/send.mjs"
+  FCM_SERVICE_ACCOUNT="$FCM_B64" FCM_PROOF_TOKEN="$TOKEN" FCM_PROOF_TITLE="$1" node "$WORK/send.js"
 }
 
-# Står varselet med denne tittelen i varsellinja for pakken?
+# Står varselet med denne tittelen i varsellinja for pakken? Leser fra fil: under
+# `pipefail` regnes `printf | grep -q` som feil når grep lukker røret tidlig.
 in_tray() {
-  local i dump
+  local i
   for i in $(seq 1 15); do
-    dump=$(adb_s shell dumpsys notification --noredact 2>/dev/null || true)
-    if printf '%s' "$dump" | /usr/bin/grep -q "pkg=$PACKAGE" \
-      && printf '%s' "$dump" | /usr/bin/grep -qF "android.title=String ($1)"; then
+    adb_s shell dumpsys notification --noredact > "$WORK/tray-now.txt" 2>/dev/null || true
+    if /usr/bin/grep -q "pkg=$PACKAGE" "$WORK/tray-now.txt" \
+      && /usr/bin/grep -qF "android.title=String ($1)" "$WORK/tray-now.txt"; then
       return 0
     fi
     sleep 2
@@ -286,7 +297,8 @@ if [ -n "$bounds" ]; then
   sleep 15
   adb_s exec-out screencap -p > "$PROOF_DIR/etter-trykk.png"
   adb_s shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
-  if adb_s exec-out cat /sdcard/ui.xml 2>/dev/null | /usr/bin/grep -q 'login-screen'; then
+  adb_s exec-out cat /sdcard/ui.xml > "$WORK/ui-after.xml" 2>/dev/null || true
+  if /usr/bin/grep -q 'login-screen' "$WORK/ui-after.xml"; then
     pass "trykket åpner appen på innloggingen"
   else
     fail "trykket åpnet ikke innloggingen"
