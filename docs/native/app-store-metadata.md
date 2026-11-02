@@ -9,9 +9,9 @@ fra, så neste innsending ikke må finne dem opp på nytt.
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
 mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning som
 venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgjør
-(appen viser dem ikke ved lansering). Cup kan stå i beskrivelsen fra bygget som har hele
-flyten (#2752): appen lager, spiller og avslutter en personlig cup, og en klubb-cup lages
-på nettsiden. Ligaen står i beskrivelsen fra bygg 9:
+(appen viser dem ikke ved lansering). Cup står i beskrivelsen fra bygget som har kapteinuttaket
+(#2752, avsnittet «CUP»): appen lager, spiller og avslutter en personlig cup, og en klubb-cup
+lages på nettsiden. Ligaen står i beskrivelsen fra bygg 9:
 appen viser ligaen du er med i og starter runden, men arrangøren setter den opp på
 nettsiden. Appen **oppretter** åtte formater, men
 den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
@@ -244,6 +244,9 @@ Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere 
 LIGA
 Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
+CUP
+Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og appen holder styr på stillingen til vinneren er klar.
+
 FØR OG UNDER RUNDEN
 Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
 
@@ -290,9 +293,10 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   står i beskrivelsen.
 - **Cup.** Fra #2752 lager, spiller og avslutter appen en personlig cup: oppsett,
   lagfordeling, kampene, start, trekk og bytte, sidepoeng og avslutning. En klubb-cup
-  lages på nettsiden, men spilles, styres og avsluttes i appen. Kapteinuttaket er på
-  nettsiden til den siste PR-en på #2752 er merget. Beskrivelsen nevner ikke cup ennå:
-  eieren velger når avsnittet kommer. Patsome åpnes ikke (`formatGate.ts`).
+  lages på nettsiden, men spilles, styres og avsluttes i appen. Kapteinuttaket er med:
+  arrangøren åpner øktene, og hver kaptein tar ut laget sitt i hemmelighet. Avsnittet
+  «CUP» limes inn sammen med det første bygget som har uttaket (eierens svar 02.11:
+  «Ja, vent»). Patsome åpnes ikke (`formatGate.ts`).
 - **Liga.** Ligaen er med fra bygg 9 («LIGA»): appen viser sesongtabellen og den
   åpne runden, starter runden og lar markøren godkjenne kortet i en simulatorliga
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
