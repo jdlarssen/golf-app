@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   readError = null;
   games = {};
-  endGameCore.mockResolvedValue({ ok: true });
+  endGameCore.mockResolvedValue({ ok: true, gameName: 'Kamp', alreadyFinished: false });
 });
 
 describe('finishCupMatchCore', () => {
@@ -110,6 +110,12 @@ describe('finishCupMatchCore', () => {
     games = { kamp: game('scheduled') };
     await expect(finish('kamp')).resolves.toEqual({ ok: false, error: 'not_active' });
     expect(endGameCore).not.toHaveBeenCalled();
+  });
+
+  it('to kall samtidig: den som tapte flippen, får vite det', async () => {
+    games = { kamp: game('active') };
+    endGameCore.mockResolvedValue({ ok: true, gameName: 'Kamp', alreadyFinished: true });
+    await expect(finish('kamp')).resolves.toEqual({ ok: true, alreadyFinished: true, gameIds: ['kamp'] });
   });
 
   it('noen rakk det mellom lesingen og skrivingen: suksess', async () => {

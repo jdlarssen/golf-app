@@ -2,6 +2,7 @@
 import type { AppCupWithdrawalMatch } from '../../../../lib/cup/appCupManageView';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import {
+  FINISH_APP_TEXT,
   FINISH_TEXT,
   MANAGE_TEXT,
   SIDE_AWARD_TEXT,
@@ -162,7 +163,6 @@ describe('sidepoeng og avslutning (#2752)', () => {
     ['button', web.manage.finishButton],
     ['pending', web.manage.finishPending],
     ['sideAwardsHint', web.manage.finishSideAwardsHint],
-    ['notSubmitted', web.manage.finishNotSubmitted],
     ['anywayButton', web.manage.finishAnywayButton],
     ['anywayPending', web.manage.finishAnywayPending],
     ['failed', web.manage.finishFailed],
@@ -186,6 +186,13 @@ describe('sidepoeng og avslutning (#2752)', () => {
     ['girRegistered', web.sideAwards.girRegistered],
   ])('sidepoengene: %s er nettets', (key, value) => {
     expect(SIDE_AWARD_TEXT[key]).toBe(value);
+  });
+
+  it('slagene til den som ikke har levert, teller, så det sier appen (#2752)', () => {
+    expect(FINISH_APP_TEXT.matchNotSubmitted).toContain('Slagene deres teller fortsatt.');
+    expect(FINISH_APP_TEXT.cupNotSubmitted).toContain('Slagene deres teller fortsatt.');
+    expect(FINISH_APP_TEXT.matchNotSubmitted).not.toContain('teller ikke');
+    expect(FINISH_APP_TEXT.cupNotSubmitted).not.toContain('teller ikke');
   });
 
   it('sidepoeng-feilene er nettets', () => {

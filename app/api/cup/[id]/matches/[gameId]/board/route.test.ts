@@ -12,7 +12,10 @@ const GAME = '55555555-5555-4555-8555-555555555555';
 const HOST = '66666666-6666-4666-8666-666666666666';
 const ME = '11111111-1111-4111-8111-111111111111';
 
-const SCORES = [{ user_id: 'a', hole_number: 1, strokes: 4 }];
+const SCORES = [
+  { user_id: 'a', hole_number: 1, strokes: 4 },
+  { user_id: 'annen-spiller-hos-verten', hole_number: 1, strokes: 5 },
+];
 const finishedGame = (over: Record<string, unknown> = {}) => ({
   id: GAME,
   name: 'Singel 1',
@@ -20,7 +23,12 @@ const finishedGame = (over: Record<string, unknown> = {}) => ({
   tournament_id: CUP,
   source_game_id: null,
   spectate_token: 'hemmelig-lenke',
-  round_report: { text: 'referat' },
+  round_report: 'referat',
+  course_id: 'bane',
+  tee_box_id: 'tee',
+  scheduled_tee_off_at: '2026-11-20T09:30:00Z',
+  created_by: 'arrangor',
+  courses: { name: 'Banen', course_holes: [] },
   ...over,
 });
 let game: Record<string, unknown> | null = finishedGame();
@@ -40,12 +48,16 @@ function respond(op: QueryOp): QueryResponse {
         {
           user_id: 'a',
           team_number: 1,
+          course_handicap: 12,
+          accepted_at: '2026-11-20T08:00:00Z',
+          submitted_at: '2026-11-20T15:00:00Z',
+          approved_at: '2026-11-20T15:30:00Z',
           marker_user_id: 'markør',
           rejection_reason: 'feil slag',
           submitted_by_user_id: 'a',
           approved_by_user_id: 'b',
           withdrawn_by_user_id: 'sjef',
-          withdrawn_at: null,
+          withdrawn_at: '2026-11-20T10:00:00Z',
         },
       ],
       error: null,
@@ -131,21 +143,35 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
     expect(getCupSnapshot).not.toHaveBeenCalled();
   });
 
-  it('feltene tavla ikke viser, sendes ikke', async () => {
+  it('felter tavla ikke leser, sendes ikke, og det den leser, står', async () => {
     const body = await (await call('token-meg')).json();
 
-    expect(body.game.spectate_token).toBeNull();
-    expect(body.game.round_report).toBeNull();
-    expect(body.players[0]).toMatchObject({
+    expect(body.game).toMatchObject({
+      course_id: null,
+      tee_box_id: null,
+      scheduled_tee_off_at: null,
+      created_by: null,
+      spectate_token: null,
+      round_report: null,
+      courses: { name: 'Banen', course_holes: [] },
+    });
+    expect(body.players[0]).toEqual({
       user_id: 'a',
+      team_number: 1,
+      course_handicap: 12,
+      accepted_at: null,
+      submitted_at: null,
+      approved_at: null,
       marker_user_id: null,
       rejection_reason: null,
       submitted_by_user_id: null,
       approved_by_user_id: null,
       withdrawn_by_user_id: null,
+      withdrawn_at: '2026-11-20T10:00:00Z',
     });
-    expect(JSON.stringify(body)).not.toContain('hemmelig-lenke');
-    expect(JSON.stringify(body)).not.toContain('feil slag');
+    for (const secret of ['hemmelig-lenke', 'feil slag', 'referat', 'arrangor', 'markør']) {
+      expect(JSON.stringify(body)).not.toContain(secret);
+    }
   });
 
   it('en avledet kamp henter slagene fra verten', async () => {
@@ -154,6 +180,8 @@ describe('GET /api/cup/[id]/matches/[gameId]/board', () => {
     const body = await (await call('token-meg')).json();
 
     expect(body.sourceGameName).toBe('Vert');
+    // Nettets tavle viser bare kampens egne spillere, ikke hele verten.
+    expect(body.scores).toEqual([{ user_id: 'a', hole_number: 1, strokes: 4 }]);
     const scores = queries.find((q) => q.table === 'scores');
     expect(scores?.filters).toContainEqual({ op: 'eq', column: 'game_id', value: HOST });
     const players = queries.find((q) => q.table === 'game_players');

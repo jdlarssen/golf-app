@@ -22,7 +22,7 @@ import {
 } from '../lib/cupManageCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../theme';
 
 const labelOf = (match: AppCupFinishMatch) => match.label ?? CUP_TEXT.matchFallback;
 
@@ -42,10 +42,11 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
     if (result.ok) {
       setView(result.view);
       setFailure(null);
-    } else {
-      if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
-      setFailure(result.reason);
+      return result.view;
     }
+    if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
+    setFailure(result.reason);
+    return null;
   }, [cupId]);
 
   useFocusEffect(
@@ -102,11 +103,13 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
       backTo(navigation, 'Cup', { cupId, notice: 'cup_finished' });
       return;
     }
+    const fresh = await load();
     // De to første betyr at skjermen er utdatert: den nye lista sier hva som mangler.
+    // Feilen navngir kampene som fortsatt pågår, som på nettet: de andre rakk det.
     if (result.reason !== 'side_awards_missing' && result.reason !== 'matches_not_submitted') {
-      setError(cupFinishFailureText(result.reason, activeMatches.map(labelOf).join(', ')));
+      const left = fresh?.finish.activeMatches ?? activeMatches;
+      setError(cupFinishFailureText(result.reason, left.map(labelOf).join(', ')));
     }
-    await load();
     setBusy(false);
   };
 
@@ -227,7 +230,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
       ) : null}
       {running && anyway ? (
         <Warning
-          text={formatMessage(FINISH_TEXT.notSubmitted, { matches: blocking.map(labelOf).join(', ') })}
+          text={formatMessage(FINISH_APP_TEXT.cupNotSubmitted, { matches: blocking.map(labelOf).join(', ') })}
           testID="cup-finish-not-submitted"
         />
       ) : null}
@@ -323,7 +326,13 @@ function Note({ text, testID }: { text: string; testID: string }) {
 function Warning({ text, testID }: { text: string; testID: string }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.note, { backgroundColor: colors.surface, borderColor: colors.danger }]} testID={testID}>
+    <View
+      style={[
+        styles.note,
+        { backgroundColor: withAlpha(colors.accent, 0.14), borderColor: withAlpha(colors.accent, 0.5) },
+      ]}
+      testID={testID}
+    >
       <Text style={[styles.noteText, { color: colors.text }]}>{text}</Text>
     </View>
   );

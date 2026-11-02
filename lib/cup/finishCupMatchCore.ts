@@ -73,7 +73,7 @@ export async function finishCupMatchCore(
     suppressPerGameNotifications: true,
     logContext: 'finishCupMatch',
   });
-  if (result.ok) return { ok: true, alreadyFinished: false, gameIds: [hostId] };
+  if (result.ok) return { ok: true, alreadyFinished: result.alreadyFinished, gameIds: [hostId] };
 
   switch (result.reason) {
     case 'not_active': {
