@@ -44,7 +44,10 @@ where r.league_id = 'a10beeb3-7d6c-458e-8d45-e27d9f114e59' and r.sequence in (1,
 order by r.sequence;
 ```
 
-Vakta er ferdig når rad 2 har `apnet_varslet = true`.
+Vakta er ferdig når rad 2 har `apnet_varslet = true`. Er rad 2 åpnet
+(`apnet = true`) men ikke varslet, kjører hovedspørringen videre, og
+`apning_forsinket` slår ut etter to timer. Vakta stopper først når varselet er
+sendt, eller når eieren sier stopp.
 
 ## Spørringen
 
@@ -114,10 +117,20 @@ ligaen ikke ble funnet.
 |---|---|---|
 | `i_arrangorkoen` > 0 | Kort over to døgn i arrangørkøen | «N kort har ventet på markøren i over to døgn. Du kan godkjenne dem under «Venter på markøren»: \<lenke til ligasiden\>» |
 | `du_er_markor` > 0 | Eieren er markøren | «N kort venter på deg som markør: \<lenke til ligasiden\>» |
-| `ditt_eget` > 0 | Eierens eget kort | «Ditt eget kort har ventet i over to døgn. Du kan ikke godkjenne det selv, så si fra til markøren.» |
+| `ditt_eget` > 0 | Kort eieren eier eller har levert | «Et kort du eier eller har levert, har ventet i over to døgn. Du kan ikke godkjenne det selv, så si fra til markøren.» |
 | `liga_status` er ikke `active`, fra 8.11 til runde 2 er åpnet | Ligaen er ikke startet | «Ligaen er ikke startet, så åpningsvarselet går ikke. Trykk «Start ligaen» på admin-siden.» |
 | `runde_uten_tee` > 0 | Runden mangler tee | «Runden mangler tee.» |
 | `sveip_aktiv` er ikke `true`, `sveip_ferskt` er ikke `true`, `sveip_feil_24t` > 0, `apning_forsinket` > 0, `paminnelse_forsinket` > 0 eller `apning_uten_varsler` > 0 | Rundevarslene svikter | Én setning om hva som mangler. Orkestratoren feilsøker lesende etter `lib/cron/AGENTS.md` før den spør eieren om noe. |
+
+Et kort kan telle i både `du_er_markor` og `ditt_eget` (eieren er markør og har
+levert kortet selv). Ingen kan godkjenne et slikt kort, for den som leverte det
+får ikke svare som markør (`mayApproveAsMarker` i `lib/league/leagueMarker.ts`).
+Send da bare `ditt_eget`-beskjeden, ikke begge.
+
+`sveip_aktiv`, `sveip_ferskt` og `sveip_feil_24t` viser bare at jobbens
+SQL-port kjørte (signal 1 i `lib/cron/AGENTS.md`), ikke at ruten svarte. Svikter
+ruten (401 eller 500), merkes det først på `apning_forsinket` og
+`paminnelse_forsinket`, og bare når et varsel skulle gått.
 
 Alt stille: ingen beskjed til eieren. Slår en regel ut, får eieren én samlet
 linje hver morgen så lenge noe er galt, i orkestrator-chatten og som varsel på
