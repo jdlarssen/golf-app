@@ -20,6 +20,7 @@ import {
   type FlightTeamSide,
 } from '../../../../../lib/cup/splitDayLineup';
 import type { CupBundleFormat, PlannedBundleMatch } from '../../../../../lib/cup/cupPairing';
+import { ChevronIcon } from '../icons/Icons';
 import { FORMAT_LABELS, GENERATE_TEXT, spillehandicapText } from '../../lib/cupGenerateCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import { formatHcpNb } from '../../lib/profileCopy';
@@ -405,6 +406,7 @@ function PlayerSlot({
       <Text style={[styles.slotName, { color: colors.text }]} numberOfLines={2}>
         {name}
       </Text>
+      <ChevronIcon direction={open ? 'up' : 'down'} color={colors.muted} size={14} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -465,9 +467,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  slotName: { ...interLine(13, 17, { multiline: true }), fontFamily: FONTS.sans },
+  slotName: { flex: 1, minWidth: 0, ...interLine(13, 17, { multiline: true }), fontFamily: FONTS.sans },
   picker: { borderWidth: 1, borderRadius: 12, overflow: 'hidden', marginTop: 2 },
   pickerRow: { minHeight: TAP, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   dimmed: { opacity: 0.4 },

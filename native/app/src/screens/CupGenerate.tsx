@@ -234,7 +234,9 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
   const heading = step === 1 ? GENERATE_TEXT.step1Heading : GENERATE_TEXT.step2Heading;
 
   return (
+    // Nøkkelen: «Neste» står nederst, og neste steg skal åpne øverst.
     <ScrollView
+      key={step}
       {...KEYBOARD_SCROLL_PROPS}
       contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
       testID="cup-generate-screen"

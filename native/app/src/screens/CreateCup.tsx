@@ -281,7 +281,9 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
     setAwards((rows) => rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
 
   return (
+    // Nøkkelen: «Neste» står nederst, og neste steg skal åpne øverst.
     <ScrollView
+      key={step}
       {...KEYBOARD_SCROLL_PROPS}
       contentContainerStyle={[ui.scroll, { paddingBottom: 20 + bottomInset }]}
       testID="create-cup-screen"

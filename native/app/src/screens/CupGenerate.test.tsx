@@ -234,6 +234,14 @@ describe('steg 2', () => {
     return navigation;
   }
 
+  it('steget åpner øverst, også når du trykket «Neste» nederst på det forrige', async () => {
+    await renderScreen();
+    await twoAgainstTwo();
+    const before = screen.getByTestId('cup-generate-screen');
+    await next();
+    expect(screen.getByTestId('cup-generate-screen')).not.toBe(before);
+  });
+
   it('viser forslaget og oppsummeringen', async () => {
     await toPreview();
     expect(screen.getByTestId('cup-generate-progress')).toHaveTextContent('Steg 2 av 2 · Forhåndsvis matcher');
