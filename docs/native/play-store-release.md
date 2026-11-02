@@ -129,9 +129,23 @@ native/app/scripts/store-fcm-proof-android.sh --aab ~/.torny-native/dist/<fil>.a
 native/app/scripts/store-fcm-proof-android.sh --apk native/app/android/app/build/outputs/apk/debug/app-debug.apk --package no.tornygolf.dev
 ```
 
+Skriptet krever `npm ci` i repo-rota (for TypeScript), og AAB-en krever `npm ci` i `native/app`, også
+i en ren utsjekk. AAB-en som brukes til beviset, er et bevis og skal ikke lastes opp.
+
 De tre kjøringene er signeringsmålingen. Play signerer om appen med sin egen nøkkel, og
 `--key throwaway` etterligner det med en nøkkel Firebase aldri har sett. Består den, spiller
 avtrykket ingen rolle, heller ikke Plays.
+
+Målt 02.11.2026 på `torny_api36`. Butikkbyggene er `TornyNative-1.2.0-11.aab` fra commit `9afef68a0`:
+
+| Bygg | Nøkkel | Token uten innlogging | Bakgrunn | Lukket | Trykk | Sum |
+|---|---|---|---|---|---|---|
+| Dev | Debug-nøkkelen | Ja | Vist | Vist | Innloggingen | 7 PASS, 0 FAIL |
+| Butikk | Opplastingsnøkkelen (SHA-1 `21:E8:4A:49…`) | Ja | Vist | Vist | Innloggingen | 7 PASS, 0 FAIL |
+| Butikk | Engangsnøkkel (SHA-1 `4F:0B:C5:55…`) | Ja | Vist | Vist | Innloggingen | 7 PASS, 0 FAIL |
+
+Alle sendinger fikk status 200. Avtrykket stoppet altså ingenting, så Firebase trenger ingen
+SHA-1 for varslene. `fcm_tokens` i prod var 0 før og 0 etter kjøringen med opplastingsnøkkelen.
 
 **Trykket på Android** (målt 02.11.2026 på `torny_api36`, API 36): både med appen lukket og i
 bakgrunnen er `trigger` bare `{ channelId: null, type: 'push' }`, og `url` ligger i
