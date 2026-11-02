@@ -19,6 +19,7 @@ describe('ordlyden er nettets', () => {
       cupEntry: web.cupEntry,
       rosterEntry: web.rosterEntry,
       neverPlayedNote: web.neverPlayedNote,
+      keptNote: web.matchesNote,
       irreversibleNote: web.irreversibleNote,
       deleteButton: web.deleteButton,
       pending: web.deletePending,

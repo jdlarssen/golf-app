@@ -366,6 +366,8 @@ describe('arrangør-only-handlingene (SK6)', () => {
         { data: { id: 'sess-1' }, error: null },
       ]);
       expect(await remove()).toEqual({ error: 'lineup_revealed' });
+      // Nettets kort skal vise at den er avdekket, ikke «Venter» med knappen.
+      expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
     });
 
     it('0 rader, og økta er borte: det er det du ville', async () => {

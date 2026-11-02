@@ -154,8 +154,14 @@ export function fetchCupDeletePreview(cupId: string) {
   );
 }
 
-export function deleteCup(cupId: string): Promise<CupSetupResult> {
-  return send(`${base(cupId)}/delete`, 'DELETE');
+export async function deleteCup(cupId: string): Promise<CupSetupResult> {
+  const call = await callWebRoute(`${base(cupId)}/delete`, 'DELETE');
+  if (!call.ok) return { ok: false, reason: call.reason };
+  if (call.status === 200) return { ok: true };
+  // Skjermen regner `not_found` som slettet, så det må komme fra ruta selv. En 404 uten kropp
+  // kan komme fra hva som helst foran den.
+  const error = (call.body as { error?: unknown } | null)?.error;
+  return { ok: false, reason: typeof error === 'string' ? error : 'delete_failed' };
 }
 
 export function fetchCupLineup(cupId: string) {

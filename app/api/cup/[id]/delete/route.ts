@@ -36,12 +36,14 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (!cup) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
     const plan = await planTournamentGameDeletion(id);
+    const matchCount = plan.hostIdsToDelete.length + plan.derivedIdsRidingAlong.length;
     const body: AppCupDeletePreview = {
       name: cup.name,
       team1Name: cup.team_1_name,
       team2Name: cup.team_2_name,
       draft: cup.status === 'draft',
-      matchCount: plan.hostIdsToDelete.length + plan.derivedIdsRidingAlong.length,
+      matchCount,
+      keptCount: plan.totalGames - matchCount,
     };
     return NextResponse.json(body);
   } catch (err) {

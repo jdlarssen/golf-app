@@ -13,6 +13,8 @@ export const DELETE_TEXT = {
   rosterEntry: 'Spillerliste og master-leaderboard',
   neverPlayedNote:
     '{count} {count, plural, one {genererte match som ikke er spilt} other {genererte matcher som ikke er spilt}} slettes for alltid.',
+  keptNote:
+    '{count} spilte {count, plural, one {match} other {matcher}} forblir som frittstående spill (cup-koblingen fjernes).',
   irreversibleNote: 'Handlingen kan ikke angres.',
   deleteButton: 'Slett cupen for alltid',
   pending: 'Sletter …',

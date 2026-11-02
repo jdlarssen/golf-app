@@ -8,7 +8,7 @@ import { isUuid } from '@/lib/url/isUuid';
 //
 // WIRE: DELETE
 //   200 { ok: true } · 401 unauthorized · 403 not_allowed · 404 not_found · 500 save_failed
-//   Som på nettet svarer en avdekket økt 200 og står urørt. Skjermen leser på nytt.
+//   409 lineup_revealed: økta er avdekket og står urørt. En økt som alt er borte, svarer 200.
 
 type RouteContext = { params: Promise<{ id: string; sessionId: string }> };
 

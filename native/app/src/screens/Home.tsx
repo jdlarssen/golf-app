@@ -41,7 +41,7 @@
 // tavla viser poeng. Samme hentinger som spillets side og tavla gjør (bundelen,
 // `seedGameScores`, og valgene i wolf og bingo bango bongo), bare for den ene
 // runden, og bundelen og slagene bare én gang etter at den er avsluttet.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -137,6 +137,11 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   // Kvitteringen etter en slettet cup (#2752), borte når du går videre.
   const deletedCup = route.params?.deletedCup;
   useEffect(() => navigation.addListener('blur', () => navigation.setParams({ deletedCup: undefined })), [navigation]);
+  // Hjem står montert der du forlot den, ofte langt nede ved «Cupene dine». Kvitteringen er øverst.
+  const homeScroll = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (deletedCup) homeScroll.current?.scrollTo({ y: 0, animated: false });
+  }, [deletedCup]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -359,6 +364,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   return (
     <>
       <ScrollView
+        ref={homeScroll}
         contentContainerStyle={[
           ui.scroll,
           styles.scroll,
