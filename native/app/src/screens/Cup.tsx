@@ -393,7 +393,7 @@ function CupLoadFailed({
 
 const styles = StyleSheet.create({
   revealed: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 4, marginTop: 8 },
-  revealedTitle: { ...fraunces(500, 17, 22) },
+  revealedTitle: { ...fraunces(500, 18, 24) },
   start: { gap: 6, marginTop: 12 },
   startDimmed: { opacity: 0.45 },
   startError: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },

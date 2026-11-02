@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, marginTop: 8 },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   cardTitle: { flex: 1, minWidth: 0, gap: 2 },
-  format: { ...fraunces(500, 17, 22) },
+  format: { ...fraunces(500, 18, 24) },
   panel: { borderWidth: 1, borderRadius: 12, padding: 10, gap: 8 },
   panelHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   teamName: { flex: 1, minWidth: 0, ...interLine(14, 18), fontFamily: FONTS.sansSemiBold },
