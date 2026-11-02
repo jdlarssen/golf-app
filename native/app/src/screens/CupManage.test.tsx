@@ -300,10 +300,11 @@ describe('dørene til sidepoeng og avslutning (#2752)', () => {
     expect(screen.queryByTestId('cup-manage-open-finish')).toBeNull();
   });
 
-  it('et utkast kan ikke avsluttes', async () => {
-    answer({ ok: true, view: room({ status: 'draft' }) });
+  it('et utkast kan verken avsluttes eller få registrert sidepoeng', async () => {
+    answer({ ok: true, view: room({ status: 'draft', sideAwards: [award] }) });
     await renderManage();
     expect(screen.queryByTestId('cup-manage-open-finish')).toBeNull();
+    expect(screen.queryByTestId('cup-manage-open-side-awards')).toBeNull();
   });
 
   it('uten nett: ingen dører', async () => {

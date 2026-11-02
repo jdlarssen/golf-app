@@ -14,6 +14,7 @@ import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import type { GameStatus } from '@/lib/games/status';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { SCORES_SELECT } from '@/lib/supabase/queryFragments';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { isUuid } from '@/lib/url/isUuid';
 
 // Tavla til en ferdig kamp du ikke spilte (#2752, eierens svar 02.11: «Knapp til
@@ -75,7 +76,11 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     const scoresGameId = game.source_game_id ?? game.id;
     const [playersRes, scoresRes, sourceRes] = await Promise.all([
       admin.from('game_players').select(PLAYER_SELECT).eq('game_id', gameId).returns<PlayerRow[]>(),
-      admin.from('scores').select(SCORES_SELECT).eq('game_id', scoresGameId),
+      selectAllRowsResult(
+        (from, to) =>
+          admin.from('scores').select(SCORES_SELECT).eq('game_id', scoresGameId).order('id').range(from, to),
+        'cup match board scores',
+      ),
       game.source_game_id
         ? admin.from('games').select('name').eq('id', game.source_game_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),

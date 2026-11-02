@@ -162,7 +162,8 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
         </Text>
       ) : null}
 
-      {!stale && view.sideAwards.length > 0 ? (
+      {/* Registreringen er etter start, som på nettet. Oppsettet kommer med oppsettet. */}
+      {!stale && view.status !== 'draft' && view.sideAwards.length > 0 ? (
         <Door
           text={SIDE_AWARD_TEXT.heading}
           onPress={() => openOrReturn(navigation, 'CupSideAwards', { cupId })}
