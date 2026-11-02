@@ -82,9 +82,13 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
     }, [load]),
   );
 
-  // Kvitteringen etter en avslutning, nullstilt når siden mister fokus.
+  // Kvitteringen og et nei på starten, nullstilt når siden mister fokus.
   useEffect(
-    () => navigation.addListener('blur', () => navigation.setParams({ notice: undefined })),
+    () =>
+      navigation.addListener('blur', () => {
+        navigation.setParams({ notice: undefined });
+        setStartError(null);
+      }),
     [navigation],
   );
 
@@ -170,6 +174,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       {notice === 'cup_finished' ? <Note text={FINISH_TEXT.finishedNotice} testID="cup-notice" /> : null}
       {notice === 'cup_started' ? <Note text={START_TEXT.started} testID="cup-notice" /> : null}
       {notice === 'matches_generated' ? <Note text={START_TEXT.matchesGenerated} testID="cup-notice" /> : null}
+      {notice === 'matches_changed' ? <Note text={GENERATE_TEXT.matchesChanged} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
       {draft && view.canManage && !stale ? (

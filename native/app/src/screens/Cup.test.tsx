@@ -525,6 +525,18 @@ describe('fra utkast til start (#2752)', () => {
     expect(screen.queryByTestId('cup-start-error')).toBeNull();
   });
 
+  it('et nei på starten står ikke igjen når du kommer tilbake til rommet', async () => {
+    (startCup as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'offline' });
+    answer({ ok: true, view: draft({ matches: twoMatches }) });
+    const props = cupProps(jest.fn());
+    await render(<Cup {...props} />);
+    await fireEvent.press(await screen.findByTestId('cup-start'));
+    expect(screen.getByTestId('cup-start-error')).toHaveTextContent(/Sjekk nettet/);
+    const [, onBlur] = (props.navigation.addListener as jest.Mock).mock.calls.find(([event]) => event === 'blur');
+    await act(async () => onBlur());
+    expect(screen.queryByTestId('cup-start-error')).toBeNull();
+  });
+
   it('en spiller har verken døra eller starten', async () => {
     answer({ ok: true, view: draft({ canManage: false, matches: twoMatches }) });
     await renderCup();
@@ -545,6 +557,7 @@ describe('fra utkast til start (#2752)', () => {
   it.each([
     ['cup_started', 'Cupen er startet. Spillerne får varsel.'],
     ['matches_generated', 'Matchene er opprettet. Se gjennom listen under.'],
+    ['matches_changed', 'Antallet matcher i cupen er endret. Se gjennom listen under før du lager flere.'],
   ])('kvitteringen %s', async (notice, text) => {
     answer({ ok: true, view: draft({ matches: twoMatches }) });
     await renderCup({ notice });

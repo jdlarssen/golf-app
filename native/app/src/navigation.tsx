@@ -200,7 +200,7 @@ export type RootStackParamList = {
   LeagueJoin: { code: string };
   /** #2752: cup-rommet, kampene under spill og resultatene når cupen er ferdig. */
   /** `notice`: kvitteringen når kampene er laget, eller cupen er startet eller avsluttet. */
-  Cup: { cupId: string; notice?: 'cup_finished' | 'cup_started' | 'matches_generated' };
+  Cup: { cupId: string; notice?: 'cup_finished' | 'cup_started' | 'matches_generated' | 'matches_changed' };
   /** #2752: arrangørens rom. `notice` er kvitteringen etter et trekk eller bytte. */
   CupManage: { cupId: string; notice?: CupManageNotice };
   /** #2752: trekk og angring. Uten `userId`: spilleren trekker seg selv. */
