@@ -59,7 +59,9 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
     }
     setFailure(null);
     if (result.view.decision === 'already_joined') {
-      backTo(navigation, 'League', { leagueId: result.view.league.id });
+      // Er skjermen lukket, ville `backTo` truffet skjermen du står på (#2757). Ligger
+      // den bare under en annen, leser fokus-effekten svaret på nytt når du er tilbake.
+      if (navigation.isFocused()) backTo(navigation, 'League', { leagueId: result.view.league.id });
       return;
     }
     setView(result.view);
@@ -81,7 +83,7 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
     joining.current = false;
     setBusy(false);
     if (result.ok) {
-      backTo(navigation, 'League', { leagueId: result.leagueId, joined: true });
+      if (navigation.isFocused()) backTo(navigation, 'League', { leagueId: result.leagueId, joined: true });
       return;
     }
     if (result.reason === 'closed' || result.reason === 'profile_incomplete') {

@@ -2,6 +2,7 @@
 // #2757: tee-brikkene og tabellen (Type C). Hva et trykk gjør, er låst i
 // `lib/courses/teeChips.test.ts`; her er koblingen på telefonen.
 import { useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { emptyCourseDraft, courseDraftToFormData, type TeeDraft } from '../../lib/courseDraft';
 import { TeeTable } from './TeeTable';
@@ -90,8 +91,13 @@ describe('TeeTable', () => {
     await fireEvent.press(screen.getByTestId('tee-chip-red'));
     expect(screen.queryByTestId('tee-0-slope-juniors')).toBeNull();
 
+    const flex = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).flex;
+    expect(flex('tee-0-cr-mens')).toBeGreaterThan(flex('tee-0-slope-mens'));
+
     await fireEvent.press(screen.getByTestId('tee-juniors-toggle'));
     expect(screen.getByTestId('tee-1-cr-juniors')).toBeTruthy();
+    // Med tre kolonner er feltene like brede, så de holder 44 pt på en smal telefon.
+    expect(flex('tee-0-cr-mens')).toBe(flex('tee-0-slope-mens'));
     await fireEvent.changeText(screen.getByTestId('tee-0-slope-juniors'), '120');
     expect(latest[0]!.slope_juniors).toBe('120');
 

@@ -77,7 +77,9 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     setStop(null);
     setError(null);
     if (result.view.offer === 'in_game' && result.view.gameId) {
-      backTo(navigation, 'GameHome', { gameId: result.view.gameId });
+      // Er skjermen lukket, ville `backTo` truffet skjermen du står på (#2757). Ligger
+      // den bare under en annen, leser fokus-effekten svaret på nytt når du er tilbake.
+      if (navigation.isFocused()) backTo(navigation, 'GameHome', { gameId: result.view.gameId });
       return;
     }
     setView(result.view);
@@ -102,8 +104,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
       sending.current = false;
       setBusy(false);
       if (result.ok) {
-        if (result.status === 'joined') backTo(navigation, 'GameHome', { gameId: result.gameId });
-        else setView({ ...view, offer: 'pending' });
+        if (result.status !== 'joined') setView({ ...view, offer: 'pending' });
+        else if (navigation.isFocused()) backTo(navigation, 'GameHome', { gameId: result.gameId });
         return;
       }
       switch (result.reason) {
