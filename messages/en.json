@@ -6004,7 +6004,7 @@
       "finishButton": "Finish cup",
       "finishPending": "Finishing…",
       "finishSideAwardsHint": "Register all side points before you can finish the cup: {awards}",
-      "finishNotSubmitted": "Some matches are missing submitted scorecards: {matches}. You can finish the cup anyway — players who haven't submitted won't count in the result.",
+      "finishNotSubmitted": "Some matches are missing submitted scorecards: {matches}. You can finish the cup anyway. Strokes from players who haven't submitted still count.",
       "finishAnywayButton": "Finish anyway",
       "finishAnywayPending": "Finishing…",
       "finishFailed": "These matches could not be finished: {matches}. Try again — matches that already finished are kept.",

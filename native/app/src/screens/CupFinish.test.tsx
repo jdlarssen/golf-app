@@ -110,7 +110,7 @@ describe('hele cupen', () => {
     await renderFinish();
 
     expect(screen.getByTestId('cup-finish-not-submitted')).toHaveTextContent(
-      'Noen kamper mangler leverte scorekort: Singel 4. Du kan avslutte cupen likevel. Slagene deres teller fortsatt.',
+      'Noen kamper mangler leverte scorekort: Singel 4. Du kan avslutte cupen likevel. Slagene til dem som ikke har levert, teller fortsatt.',
     );
     expect(screen.getByTestId('cup-finish-submit')).toHaveTextContent('Avslutt likevel');
 

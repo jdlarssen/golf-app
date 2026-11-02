@@ -113,6 +113,8 @@ export const FINISH_TEXT = {
   button: 'Avslutt cupen',
   pending: 'Avslutter …',
   sideAwardsHint: 'Registrer alle sidepoeng før du kan avslutte cupen: {awards}',
+  notSubmitted:
+    'Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel. Slagene til dem som ikke har levert, teller fortsatt.',
   anywayButton: 'Avslutt likevel',
   anywayPending: 'Avslutter …',
   failed:
@@ -152,10 +154,6 @@ export const FINISH_APP_TEXT = {
   matchPending: 'Avslutter …',
   matchNotSubmitted:
     'Noen har ikke levert scorekort i {match}. Du kan avslutte kampen likevel. Slagene deres teller fortsatt.',
-  // Ikke nettets ord (`cup.manage.finishNotSubmitted`), som sier at de som ikke har
-  // levert, ikke teller. Det stemmer ikke: slagene deres teller (`endGameCore`).
-  cupNotSubmitted:
-    'Noen kamper mangler leverte scorekort: {matches}. Du kan avslutte cupen likevel. Slagene deres teller fortsatt.',
   matchFinished: 'Kampen er avsluttet.',
   cancel: 'Avbryt',
   registerLink: 'Registrer sidepoeng',
