@@ -2,7 +2,10 @@ import { preferredName } from './computeCupPlayerPoints';
 import type { AppCupManageMatch, AppCupManageView, AppCupSwapCandidates } from './appCupManageView';
 import { cupMatchStatusKey, cupMatchStatusValues } from './cupMatchStatusLabel';
 import { remainingPartnerName } from './cupSoloPartner';
+import { cupProgress } from './cupRoomRows';
 import { isNotStartedCupMatch } from './cupWithdrawalOutcome';
+import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
+import { unregisteredSideAwards } from './sideAwardsRegistered';
 import type { CupSnapshot } from './getCupSnapshot';
 
 type Match = CupSnapshot['leaderboard']['matches'][number];
@@ -110,6 +113,45 @@ export function buildAppCupManageView(
     team2Name: tournament.team_2_name,
     players: [...roster.team1.map(rosterRow(1)), ...roster.team2.map(rosterRow(2))],
     matches,
+    sideAwards: snapshot.sideAwards.map((award) =>
+      award.kind === 'gir'
+        ? {
+            id: award.id,
+            kind: 'gir',
+            holeNumber: award.holeNumber,
+            points: award.points,
+            maxPerTeam: award.maxPerTeam,
+            team1Count: award.team1Count,
+            team2Count: award.team2Count,
+          }
+        : {
+            id: award.id,
+            kind: award.kind,
+            holeNumber: award.holeNumber,
+            points: award.points,
+            slot: award.slot,
+            slotCount: award.slotCount,
+            winnerUserId: award.winnerUserId,
+            noWinner: award.noWinner,
+          },
+    ),
+    finish: {
+      progress: cupProgress(leaderboard),
+      missingAwards: unregisteredSideAwards(snapshot.sideAwards).map((award) => ({
+        kind: award.kind,
+        holeNumber: award.holeNumber,
+      })),
+      // Hosts only: a derived match follows its host and is never ended itself.
+      activeMatches: leaderboard.matches
+        .filter((match) => (match.sourceGameId ?? null) === null && match.status === 'active')
+        .map((match) => ({
+          gameId: match.gameId,
+          label: match.matchLabel,
+          side1: match.team1PlayerName,
+          side2: match.team2PlayerName,
+          blocksFinish: matchBlocksOneTapFinish(match),
+        })),
+    },
   };
 }
 

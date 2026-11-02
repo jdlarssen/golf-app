@@ -2,7 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { getMyCupIds } from './myCups';
 import { getCupSnapshot } from './getCupSnapshot';
-import { cupProgress, splitCupsForRoom } from './cupRoomRows';
+import { cupProgress, latestFinishedCups, splitCupsForRoom } from './cupRoomRows';
 
 /** One cup row in the Klubbhus room, before the view builds its link and line. */
 export type RoomCupRead = {
@@ -22,6 +22,7 @@ export type RoomCupRead = {
 };
 
 type CupStatusRow = {
+  finished_at: string | null;
   id: string;
   name: string;
   status: 'draft' | 'active' | 'finished';
@@ -45,9 +46,18 @@ type CupStatusRow = {
 export async function getRoomCups(
   idsRes: Awaited<ReturnType<typeof getMyCupIds>>,
   unknownLabel: string,
-): Promise<{ ok: true; live: RoomCupRead[]; finishedCount: number } | { ok: false }> {
+): Promise<
+  | {
+      ok: true;
+      live: RoomCupRead[];
+      finishedCount: number;
+      /** #2752: the latest finished cups, newest first, for the app's Home. */
+      recentFinished: { id: string; name: string }[];
+    }
+  | { ok: false }
+> {
   if (!idsRes.ok) return { ok: false };
-  if (idsRes.ids.length === 0) return { ok: true, live: [], finishedCount: 0 };
+  if (idsRes.ids.length === 0) return { ok: true, live: [], finishedCount: 0, recentFinished: [] };
 
   // Service role. Gate: `idsRes.ids` are the viewer's own cup rows
   // (`getMyCupIds`). A club cup's participant who is not a club member cannot
@@ -55,7 +65,7 @@ export async function getRoomCups(
   // shape as /admin/cup).
   const { data, error } = await getAdminClient()
     .from('tournaments')
-    .select('id, name, status, created_by, group_id')
+    .select('id, name, status, created_by, group_id, finished_at')
     .in('id', idsRes.ids)
     .order('created_at', { ascending: false })
     .returns<CupStatusRow[]>();
@@ -72,6 +82,7 @@ export async function getRoomCups(
   return {
     ok: true,
     finishedCount,
+    recentFinished: latestFinishedCups(data),
     live: live.map((cup, i) => {
       const snap = snapshots[i];
       if (snap.status === 'rejected') console.error('[getRoomCups] snapshot', cup.id, snap.reason);

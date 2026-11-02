@@ -136,6 +136,7 @@ export function buildAppCupView(
       soloPartnerName: match.soloPlayOn?.partnerName ?? null,
       mine: [...(match.team1UserIds ?? []), ...(match.team2UserIds ?? [])].includes(userId),
       canOpen: opts.readableGameIds.has(match.gameId),
+      boardOpen: !opts.readableGameIds.has(match.gameId) && match.status === 'finished',
       outcome: finished ? matchOutcome(match, teamNames) : null,
     };
   });

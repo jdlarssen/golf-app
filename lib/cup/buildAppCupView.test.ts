@@ -83,6 +83,26 @@ const view = (snap: CupSnapshot, userId = ME, lineupPending = false, readable: s
     canManage: false,
   });
 
+describe('tavla til en ferdig kamp (eierens svar 02.11)', () => {
+  const games = [
+    match('ferdig', { status: 'finished' }),
+    match('ferdig-lesbar', { status: 'finished' }),
+    match('pagar', { status: 'active' }),
+    match('planlagt', { status: 'scheduled' }),
+  ];
+
+  it('åpen på ferdige kamper kalleren ikke kan lese selv, aldri på en som pågår', () => {
+    expect(
+      view(snapshot('active', games), ME, false, ['ferdig-lesbar']).matches.map((m) => [m.gameId, m.canOpen, m.boardOpen]),
+    ).toEqual([
+      ['pagar', false, false],
+      ['planlagt', false, false],
+      ['ferdig', false, true],
+      ['ferdig-lesbar', true, false],
+    ]);
+  });
+});
+
 describe('hvilke kamper appen kan åpne (#1542)', () => {
   const games = [match('min-utkast', { status: 'draft', team1UserIds: [ME] }), match('annen', { status: 'active' })];
 

@@ -37,6 +37,38 @@ export type AppCupManageMatch = {
   choice: AppCupPlayOnChoice | null;
 };
 
+/** One side award to register. A winner per slot, or a count per team for GIR. */
+export type AppCupSideAward =
+  | {
+      id: string;
+      kind: 'ctp' | 'ld';
+      holeNumber: number;
+      points: number;
+      slot: number;
+      slotCount: number;
+      winnerUserId: string | null;
+      noWinner: boolean;
+    }
+  | {
+      id: string;
+      kind: 'gir';
+      holeNumber: number;
+      points: number;
+      maxPerTeam: number;
+      team1Count: number | null;
+      team2Count: number | null;
+    };
+
+/** A match the organiser can finish now: an active host. Derived ones follow it. */
+export type AppCupFinishMatch = {
+  gameId: string;
+  label: string | null;
+  side1: string;
+  side2: string;
+  /** Someone has not delivered, so finishing it takes «Avslutt likevel». */
+  blocksFinish: boolean;
+};
+
 export type AppCupManageView = {
   id: string;
   name: string;
@@ -46,6 +78,13 @@ export type AppCupManageView = {
   players: AppCupManagePlayer[];
   /** The matches that have not started, in the cup's order. */
   matches: AppCupManageMatch[];
+  sideAwards: AppCupSideAward[];
+  /** What stands between the cup and its finish. */
+  finish: {
+    progress: { played: number; total: number };
+    missingAwards: { kind: 'ctp' | 'ld' | 'gir'; holeNumber: number }[];
+    activeMatches: AppCupFinishMatch[];
+  };
 };
 
 export type AppCupWithdrawalOutcome =

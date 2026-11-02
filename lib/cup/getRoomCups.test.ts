@@ -24,6 +24,7 @@ const cup = (id: string, status: 'draft' | 'active' | 'finished') => ({
   status,
   created_by: 'someone',
   group_id: null,
+  finished_at: status === 'finished' ? '2026-10-01T10:00:00Z' : null,
 });
 const snapshot = (finishedMatches: number, remainingMatches: number) => ({
   leaderboard: { finishedMatches, remainingMatches },
@@ -50,6 +51,7 @@ describe('getRoomCups', () => {
     expect(res).toEqual({
       ok: true,
       finishedCount: 1,
+      recentFinished: [{ id: 'f', name: 'Cup f' }],
       live: [{ id: 'a', name: 'Cup a', status: 'active', created_by: 'someone', group_id: null, playing: true, progress: { played: 1, total: 3 } }],
     });
   });
@@ -95,7 +97,12 @@ describe('getRoomCups', () => {
 
   it('no cups: no status read, no snapshots', async () => {
     ids = { ok: true, ids: [], playing: [] };
-    await expect(getRoomCups(ids, 'Ukjent')).resolves.toEqual({ ok: true, live: [], finishedCount: 0 });
+    await expect(getRoomCups(ids, 'Ukjent')).resolves.toEqual({
+      ok: true,
+      live: [],
+      finishedCount: 0,
+      recentFinished: [],
+    });
     expect(db.queries).toEqual([]);
     expect(getCupSnapshot).not.toHaveBeenCalled();
   });

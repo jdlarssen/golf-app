@@ -26,8 +26,8 @@ export type AppCupProgress = { played: number; total: number };
 export type AppCupSummary = {
   id: string;
   name: string;
-  status: Extract<AppCupStatus, 'draft' | 'active'>;
-  /** `null` when the cup could not be read, as in the Klubbhus room. */
+  status: AppCupStatus;
+  /** `null` when the cup could not be read, and on a finished cup. */
   progress: AppCupProgress | null;
 };
 
@@ -67,6 +67,11 @@ export type AppCupMatch = {
    * (#1542). The answer comes from RLS itself, not from a copy of the rule.
    */
   canOpen: boolean;
+  /**
+   * A finished match the caller cannot open: the app shows its board, read through
+   * the server, as the web's cup page links to it (#1456, the owner's answer 02.11).
+   */
+  boardOpen: boolean;
   outcome: AppCupMatchOutcome | null;
 };
 
