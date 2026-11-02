@@ -5,7 +5,7 @@
 //
 // Reglene er serverens (`lib/cup/setupCore.ts`, `parseCupDraftForm`, `parseCupPlanForm`,
 // `isValidSideAward`), så skjermen sjekker ingenting selv og viser nettets setning for
-// hver kode. Alt krever nett. Ingen dør fra Hjem før kampene kan lages i appen (PR 6).
+// hver kode. Alt krever nett.
 import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';

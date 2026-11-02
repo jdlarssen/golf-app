@@ -11,7 +11,7 @@
 // det skjermen alt har hentet, med en merknad; uten noe hentet står feilen med
 // «Prøv igjen». Selve kampene virker uten nett som andre spill.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupMatch, AppCupView } from '../../../../lib/cup/appCupView';
@@ -20,6 +20,7 @@ import { CupResultLine, CupResults } from '../components/cup/CupResults';
 import { ChevronIcon } from '../components/icons/Icons';
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchCup, type CupLoadFailure } from '../data/cup';
+import { startCup } from '../data/cupSetup';
 import { openOrReturn } from '../lib/backTo';
 import {
   CUP_APP_TEXT,
@@ -31,6 +32,7 @@ import {
 } from '../lib/cupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { playerCountLine, SETUP_APP_TEXT } from '../lib/cupSetupCopy';
+import { GENERATE_TEXT, START_TEXT, startFailureText } from '../lib/cupGenerateCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -54,6 +56,10 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   const [failure, setFailure] = useState<CupLoadFailure | null>(null);
   const [loading, setLoading] = useState(true);
   const [pulling, setPulling] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  // Knappen er deaktivert først når `starting` er tegnet. Refen stopper trykk nummer to før det.
+  const sending = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +87,20 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
     () => navigation.addListener('blur', () => navigation.setParams({ notice: undefined })),
     [navigation],
   );
+
+  const start = useCallback(async () => {
+    if (sending.current) return;
+    sending.current = true;
+    setStarting(true);
+    setStartError(null);
+    const result = await startCup(cupId);
+    sending.current = false;
+    setStarting(false);
+    if (result.ok) navigation.setParams({ notice: 'cup_started' });
+    else setStartError(startFailureText(result.reason));
+    // Også etter et nei: gikk svaret tapt, er cupen allerede i gang, og rommet skal vise det.
+    void load();
+  }, [cupId, load, navigation]);
 
   const onPull = useCallback(() => {
     setPulling(true);
@@ -148,6 +168,8 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       </View>
 
       {notice === 'cup_finished' ? <Note text={FINISH_TEXT.finishedNotice} testID="cup-notice" /> : null}
+      {notice === 'cup_started' ? <Note text={START_TEXT.started} testID="cup-notice" /> : null}
+      {notice === 'matches_generated' ? <Note text={START_TEXT.matchesGenerated} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
       {draft && view.canManage && !stale ? (
@@ -163,6 +185,11 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
             onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
             testID="cup-open-players"
           />
+          <Door
+            text={GENERATE_TEXT.door}
+            onPress={() => openOrReturn(navigation, 'CupGenerate', { cupId })}
+            testID="cup-open-generate"
+          />
         </>
       ) : null}
       {/* Et utkast uten kamper har ingenting å styre ennå. */}
@@ -171,6 +198,14 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
           text={MANAGE_APP_TEXT.roomLink}
           onPress={() => openOrReturn(navigation, 'CupManage', { cupId })}
           testID="cup-open-manage"
+        />
+      ) : null}
+      {draft && view.canManage && !stale ? (
+        <StartCup
+          canStart={view.matches.length >= 2}
+          starting={starting}
+          error={startError}
+          onStart={() => void start()}
         />
       ) : null}
       {view.lineupPending ? <Note text={CUP_APP_TEXT.lineupPending} testID="cup-lineup-pending" /> : null}
@@ -255,6 +290,45 @@ function Note({ text, testID }: { text: string; testID: string }) {
   );
 }
 
+function StartCup({
+  canStart,
+  starting,
+  error,
+  onStart,
+}: {
+  canStart: boolean;
+  starting: boolean;
+  error: string | null;
+  onStart: () => void;
+}) {
+  const { colors, ui } = useTheme();
+  const disabled = !canStart || starting;
+  return (
+    <View style={styles.start}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled, busy: starting }}
+        disabled={disabled}
+        style={[ui.button, disabled && styles.startDimmed]}
+        onPress={onStart}
+        testID="cup-start"
+      >
+        <Text style={ui.buttonText}>{starting ? START_TEXT.pending : START_TEXT.button}</Text>
+      </Pressable>
+      {canStart ? null : (
+        <Text style={ui.muted} testID="cup-start-hint">
+          {START_TEXT.hint}
+        </Text>
+      )}
+      {error ? (
+        <Text style={[styles.startError, { color: colors.danger }]} testID="cup-start-error">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 function CupLoadFailed({
   reason,
   retrying,
@@ -286,6 +360,9 @@ function CupLoadFailed({
 }
 
 const styles = StyleSheet.create({
+  start: { gap: 6, marginTop: 12 },
+  startDimmed: { opacity: 0.45 },
+  startError: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   scroll: { flexGrow: 1, paddingHorizontal: 16 },
   head: { paddingTop: 10, gap: 6, paddingBottom: 8 },
   title: { ...fraunces(500, 26, 30, { multiline: true }) },

@@ -5,6 +5,7 @@
 // `cupSetupCopy.test.ts`. Det som er nytt i appen, står i `SETUP_APP_TEXT`.
 import type { CupJoinDecision } from '../../../../lib/cup/joinValidation';
 import { formatMessage } from './kavalkadeCopy';
+import { formatHcpNb } from './profileCopy';
 
 /** `cup.join`. */
 export const JOIN_TEXT = {
@@ -298,9 +299,9 @@ export function playerCountLine(count: number, cap: number | null): string {
   return count === 1 ? SETUP_APP_TEXT.playersCountOne : formatMessage(SETUP_APP_TEXT.playersCount, { count });
 }
 
-/** Handicap med norsk komma: «12,4». Regnes ikke med `toLocaleString` (Hermes). */
+/** Handicap med norsk komma: «12,4», og plusshandicap som «+3,0», som på nettet. */
 export function hcpLine(hcpIndex: number): string {
-  return formatMessage(SETUP_APP_TEXT.hcp, { hcp: hcpIndex.toFixed(1).replace('.', ',') });
+  return formatMessage(SETUP_APP_TEXT.hcp, { hcp: formatHcpNb(hcpIndex) });
 }
 
 /** Fornavnet i bekreftelsen, som på nettet. Et kallenavn står som det er. */

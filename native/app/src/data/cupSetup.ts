@@ -8,6 +8,7 @@
 //
 // **Wire-kontrakten** (rutene og denne fila endres i samme PR) står i rutene under
 // `app/api/cup/`, og typene i `lib/cup/appCupSetupView.ts`.
+import type { AppCupGenerateView, CupMatchesBody } from '../../../../lib/cup/appCupGenerateView';
 import type {
   AppCupJoinView,
   AppCupParticipantsView,
@@ -114,4 +115,21 @@ export function joinCup(shortId: string) {
 
 export function leaveCup(shortId: string) {
   return answer(shortId, 'DELETE');
+}
+
+// «Fordel & generer» og start (rutene `generate`, `matches` og `start`).
+
+export function fetchCupGenerate(cupId: string) {
+  return read<AppCupGenerateView>(
+    `${base(cupId)}/generate`,
+    (view) => typeof view.status === 'string' && Array.isArray(view.players),
+  );
+}
+
+export function createCupMatches(cupId: string, body: CupMatchesBody): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/matches`, 'POST', body);
+}
+
+export function startCup(cupId: string): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/start`, 'POST');
 }

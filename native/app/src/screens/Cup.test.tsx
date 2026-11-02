@@ -6,6 +6,7 @@
 // cup, og tilstandene uten nett.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { startCup } from '../data/cupSetup';
 import type { AppCupView } from '../../../../lib/cup/appCupView';
 import type { CupResult } from '../data/cup';
 import type { ScreenProps } from '../navigation';
@@ -21,6 +22,7 @@ jest.mock('../session', () => ({
 jest.mock('../data/cup', () => ({
   fetchCup: jest.fn(async () => mockResults.shift() ?? mockLast),
 }));
+jest.mock('../data/cupSetup', () => ({ startCup: jest.fn(async () => ({ ok: true })) }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 // Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen.
 jest.mock('@react-navigation/native', () => ({
@@ -449,5 +451,103 @@ describe('dørene i et utkast (#2752)', () => {
     await renderCup();
     await refocus();
     expect(screen.queryByTestId('cup-open-setup')).toBeNull();
+  });
+});
+
+describe('fra utkast til start (#2752)', () => {
+  const draft = (over: Partial<AppCupView> = {}) =>
+    liveCup({ status: 'draft', canManage: true, participantCount: 4, matches: [], ...over });
+  const twoMatches = [cupMatch({ gameId: 'g1' }), cupMatch({ gameId: 'g2' })];
+
+  beforeEach(() => {
+    (startCup as jest.Mock).mockClear();
+  });
+
+  it('arrangøren har døra til «Fordel & generer»', async () => {
+    answer({ ok: true, view: draft() });
+    const { navigate } = await renderCup();
+    await fireEvent.press(await screen.findByTestId('cup-open-generate'));
+    expect(navigate).toHaveBeenCalledWith('CupGenerate', { cupId: 'cup-1' });
+  });
+
+  it('under to kamper er starten av, og sier hvorfor', async () => {
+    answer({ ok: true, view: draft({ matches: [cupMatch({ gameId: 'g1' })] }) });
+    await renderCup();
+    expect(await screen.findByTestId('cup-start')).toBeDisabled();
+    expect(screen.getByTestId('cup-start-hint')).toHaveTextContent('Du må opprette minst 2 matcher før du kan starte cupen.');
+  });
+
+  it('starter, kvitterer og leser rommet på nytt', async () => {
+    answer({ ok: true, view: draft({ matches: twoMatches }) }, { ok: true, view: liveCup({ canManage: true, matches: twoMatches }) });
+    const props = cupProps(jest.fn());
+    await render(<Cup {...props} />);
+    expect(await screen.findByTestId('cup-start')).toBeEnabled();
+    expect(screen.queryByTestId('cup-start-hint')).toBeNull();
+    await fireEvent.press(screen.getByTestId('cup-start'));
+    expect(startCup).toHaveBeenCalledWith('cup-1');
+    expect(props.navigation.setParams).toHaveBeenCalledWith({ notice: 'cup_started' });
+    expect(screen.queryByTestId('cup-start')).toBeNull();
+    expect(screen.queryByTestId('cup-open-generate')).toBeNull();
+    expect(screen.getByTestId('cup-open-manage')).toBeTruthy();
+  });
+
+  it('to trykk før skjermen er tegnet på nytt: ett kall', async () => {
+    let finish: (value: { ok: true }) => void = () => {};
+    (startCup as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    answer({ ok: true, view: draft({ matches: twoMatches }) });
+    await renderCup();
+    const button = await screen.findByTestId('cup-start');
+    await act(async () => {
+      button.props.onClick?.({ preventDefault() {} });
+      button.props.onClick?.({ preventDefault() {} });
+    });
+    expect(startCup).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('cup-start')).toHaveTextContent('Starter …');
+    await act(async () => finish({ ok: true }));
+  });
+
+  it('et nei står, og er cupen i gang likevel, viser rommet det', async () => {
+    (startCup as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'start_failed' });
+    answer({ ok: true, view: draft({ matches: twoMatches }) });
+    await renderCup();
+    await fireEvent.press(await screen.findByTestId('cup-start'));
+    expect(screen.getByTestId('cup-start-error')).toHaveTextContent('Klarte ikke å starte cupen.');
+
+    (startCup as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'wrong_status' });
+    answer({ ok: true, view: liveCup({ canManage: true, matches: twoMatches }) });
+    await fireEvent.press(screen.getByTestId('cup-start'));
+    expect(screen.queryByTestId('cup-start')).toBeNull();
+    expect(screen.queryByTestId('cup-start-error')).toBeNull();
+  });
+
+  it('en spiller har verken døra eller starten', async () => {
+    answer({ ok: true, view: draft({ canManage: false, matches: twoMatches }) });
+    await renderCup();
+    await screen.findByTestId('cup-name');
+    expect(screen.queryByTestId('cup-open-generate')).toBeNull();
+    expect(screen.queryByTestId('cup-start')).toBeNull();
+  });
+
+  it('uten nett står verken døra eller starten', async () => {
+    answer({ ok: true, view: draft({ matches: twoMatches }) }, { ok: false, reason: 'offline' });
+    await renderCup();
+    await screen.findByTestId('cup-start');
+    await refocus();
+    expect(screen.queryByTestId('cup-start')).toBeNull();
+    expect(screen.queryByTestId('cup-open-generate')).toBeNull();
+  });
+
+  it.each([
+    ['cup_started', 'Cupen er startet. Spillerne får varsel.'],
+    ['matches_generated', 'Matchene er opprettet. Se gjennom listen under.'],
+  ])('kvitteringen %s', async (notice, text) => {
+    answer({ ok: true, view: draft({ matches: twoMatches }) });
+    await renderCup({ notice });
+    expect(await screen.findByTestId('cup-notice')).toHaveTextContent(text);
   });
 });
