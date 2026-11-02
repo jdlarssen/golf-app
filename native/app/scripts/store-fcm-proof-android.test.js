@@ -80,6 +80,8 @@ describe('store-fcm-proof-android.sh nekter alt annet enn en emulator', () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('✗');
+    // Neste port stopper også, så uten denne linja ville testen vært grønn uten vakta.
+    expect(result.stderr).not.toContain('tjenestekontoen');
     expectNothingHappened();
   });
 
