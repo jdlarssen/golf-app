@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppCupEnrolled } from '../../../../../lib/cup/appCupSetupView';
 import { ROLE_TEXT } from '../../lib/cupLineupCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
-import { useTheme } from '../../theme';
+import { FONTS, interLine, useTheme } from '../../theme';
 import { Chips, ToggleRow } from '../create/primitives';
 
 type TeamChoice = 0 | 1 | 2;
@@ -15,15 +15,17 @@ export function PlayerRoleControls({
   team1Name,
   team2Name,
   busy,
+  error,
   onSave,
 }: {
   player: AppCupEnrolled;
   team1Name: string;
   team2Name: string;
   busy: boolean;
+  error: string | null;
   onSave: (teamNumber: 1 | 2 | null, isCaptain: boolean) => void;
 }) {
-  const { ui } = useTheme();
+  const { colors, ui } = useTheme();
   const [team, setTeam] = useState<TeamChoice>(player.teamNumber ?? 0);
   const [captain, setCaptain] = useState(player.isCaptain);
   const dirty = team !== (player.teamNumber ?? 0) || captain !== player.isCaptain;
@@ -52,6 +54,11 @@ export function PlayerRoleControls({
           testID={`cup-player-captain-${player.userId}`}
         />
       )}
+      {error ? (
+        <Text style={[styles.error, { color: colors.danger }]} testID={`cup-player-role-error-${player.userId}`}>
+          {error}
+        </Text>
+      ) : null}
       {dirty ? (
         <Pressable
           accessibilityRole="button"
@@ -72,4 +79,5 @@ export function PlayerRoleControls({
 const styles = StyleSheet.create({
   controls: { gap: 6 },
   dimmed: { opacity: 0.45 },
+  error: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
 });

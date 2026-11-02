@@ -497,11 +497,11 @@ describe('uttaket i rommet (#2752)', () => {
     expect(screen.queryByTestId('cup-open-lineup')).toBeNull();
   });
 
-  it('spillerlista har døra også etter start, for lag og kaptein', async () => {
-    answer({ ok: true, view: liveCup({ canManage: true, participantCount: 4 }) });
-    const { navigate } = await renderCup();
-    await fireEvent.press(await screen.findByTestId('cup-open-players'));
-    expect(navigate).toHaveBeenCalledWith('CupParticipants', { cupId: 'cup-1' });
+  it('etter start er døra til spillerlista borte, som på nettet', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true, participantCount: null, lineup: { door: { kind: 'organizer', sessionCount: 1 }, revealed: null } }) });
+    await renderCup();
+    await screen.findByTestId('cup-open-lineup');
+    expect(screen.queryByTestId('cup-open-players')).toBeNull();
   });
 });
 

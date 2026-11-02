@@ -49,7 +49,7 @@ import { NextRequest } from 'next/server';
 import { GET } from './route';
 import { APP_CUP_UNKNOWN_PLAYER } from '@/lib/cup/buildAppCupView';
 
-function cup(status: 'active' | 'finished', groupId: string | null = null): CupSnapshot {
+function cup(status: 'draft' | 'active' | 'finished', groupId: string | null = null): CupSnapshot {
   return {
     tournament: {
       id: CUP,
@@ -134,15 +134,16 @@ describe('dørene i rommet', () => {
     expect(await (await call('token-meg')).json()).toMatchObject({ canManage: false });
   });
 
-  it('spillerlista har tallet til cupen er avsluttet, og bare for arrangøren', async () => {
+  it('spillerlista har tallet bare i et utkast, og bare for arrangøren', async () => {
+    snapshot = cup('draft');
     caller = buildSupabaseMock([], { can_manage_tournament: true }, { byTable: {} });
     expect((await (await call('token-meg')).json()).participantCount).toBe(6);
 
-    snapshot = cup('finished');
+    snapshot = cup('active');
     caller = buildSupabaseMock([], { can_manage_tournament: true }, { byTable: {} });
     expect((await (await call('token-meg')).json()).participantCount).toBeNull();
 
-    snapshot = cup('active');
+    snapshot = cup('draft');
     caller = buildSupabaseMock([], { can_manage_tournament: false }, { byTable: {} });
     expect((await (await call('token-meg')).json()).participantCount).toBeNull();
   });

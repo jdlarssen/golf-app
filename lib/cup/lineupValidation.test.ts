@@ -377,9 +377,13 @@ describe('lineupSlotsFrom', () => {
   });
 
   it('rader uten plass eller spillere går videre til valideringen, som sier nei', () => {
-    expect(lineupSlotsFrom([null, { slotIndex: 'x' }])).toEqual([
+    const slots = lineupSlotsFrom([null, { slotIndex: 'x' }]);
+    expect(slots).toEqual([
       { slotIndex: Number.NaN, userIds: [] },
       { slotIndex: Number.NaN, userIds: [] },
     ]);
+    expect(
+      validateLineupSubmission({ format: 'singles_matchplay', slotCount: 2, squadUserIds: ['a', 'b'], slots: slots! }),
+    ).toEqual({ ok: false, error: 'lineup_slot_shape' });
   });
 });

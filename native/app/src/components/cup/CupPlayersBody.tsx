@@ -46,6 +46,7 @@ export function CupPlayersBody({
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState<{ userId: string; text: string } | null>(null);
   // Etter et eget trykk her gjelder det trykket, ikke kvitteringen du kom tilbake med.
   // `undefined`: ikke noe trykk ennå. `null`: trykket ga ingen kvittering.
   const [ownReceipt, setOwnReceipt] = useState<string | null | undefined>(undefined);
@@ -91,8 +92,9 @@ export function CupPlayersBody({
 
   const stale = failure !== null;
   const open = view.status === 'draft' && !stale;
-  // Lag og kaptein kan settes også etter start, for øktene som kommer. Bare ikke etter slutt.
-  const rolesOpen = view.status !== 'finished' && !stale;
+  // Et nei på lag og kaptein står ved spilleren. Er spilleren borte etter lesingen, står det øverst.
+  const roleErrorInRow = roleError !== null && view.participants.some((player) => player.userId === roleError.userId);
+  const topError = error ?? (roleError !== null && !roleErrorInRow ? roleError.text : null);
   const url = cupJoinUrl(view.shortId);
   const addable = pickerRows(view.candidates, {
     query: search,
@@ -104,6 +106,7 @@ export function CupPlayersBody({
   const add = async (userId: string) => {
     setBusy(userId);
     setError(null);
+    setRoleError(null);
     setOwnReceipt(null);
     const result = await addCupParticipant(cupId, userId);
     if (result.ok) {
@@ -120,9 +123,10 @@ export function CupPlayersBody({
   const saveRole = async (userId: string, teamNumber: 1 | 2 | null, isCaptain: boolean) => {
     setBusy(userId);
     setError(null);
+    setRoleError(null);
     setOwnReceipt(null);
     const result = await setCupParticipantRole(cupId, userId, { teamNumber, isCaptain });
-    if (!result.ok) setError(participantFailureText(result.reason, view.cap ?? 0));
+    if (!result.ok) setRoleError({ userId, text: participantFailureText(result.reason, view.cap ?? 0) });
     await load();
     setBusy(null);
   };
@@ -137,9 +141,9 @@ export function CupPlayersBody({
       ) : null}
       {view.status !== 'draft' ? <Note text={SETUP_APP_TEXT.listLocked} testID="cup-players-locked" /> : null}
       {receipt ? <Note text={receipt} testID="cup-players-notice" /> : null}
-      {error ? (
+      {topError ? (
         <Text style={[styles.error, { color: colors.danger }]} testID="cup-players-error">
-          {error}
+          {topError}
         </Text>
       ) : null}
 
@@ -147,7 +151,7 @@ export function CupPlayersBody({
         {playerCountLine(view.participants.length, view.cap)}
       </Text>
       {view.participants.length === 0 ? <Note text={PLAYERS_TEXT.empty} testID="cup-players-empty" /> : null}
-      {rolesOpen && view.participants.length > 0 ? (
+      {open && view.participants.length > 0 ? (
         <Text style={ui.muted} testID="cup-players-role-helper">
           {ROLE_TEXT.roleHelper}
         </Text>
@@ -174,6 +178,7 @@ export function CupPlayersBody({
                   // Kvitteringen gjelder det du gjorde sist, og det er snart fjerningen.
                   setOwnReceipt(undefined);
                   setError(null);
+                  setRoleError(null);
                   onRemove(player, view.name);
                 }}
                 hitSlop={REMOVE_LINK_SLOP}
@@ -184,7 +189,7 @@ export function CupPlayersBody({
               </Pressable>
             ) : null}
           </View>
-          {rolesOpen ? (
+          {open ? (
             <PlayerRoleControls
               // Et lag lagret et annet sted skal ikke bli stående som det gamle i valgene.
               key={`${player.teamNumber}-${player.isCaptain}`}
@@ -192,6 +197,7 @@ export function CupPlayersBody({
               team1Name={view.team1Name}
               team2Name={view.team2Name}
               busy={busy !== null}
+              error={roleError?.userId === player.userId ? roleError.text : null}
               onSave={(teamNumber, isCaptain) => void saveRole(player.userId, teamNumber, isCaptain)}
             />
           ) : null}
