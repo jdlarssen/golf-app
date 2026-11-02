@@ -1,4 +1,5 @@
 import 'server-only';
+import type { CupBatchMatch } from './matchPlan';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -43,9 +44,7 @@ export type CupProfile = { gender: string | null; hcpIndex: number };
  * ingenting om arrangørens manuelt tastede lag-slag, det er et felt kalleren
  * legger på FØR den sender planen hit.
  */
-export type CupBatchMatch = (PlannedMatch | PlannedBundleMatch) & {
-  teamStrokesOverride?: { team1: number; team2: number };
-};
+export type { CupBatchMatch };
 
 export type CupBatchError = { error: string };
 
