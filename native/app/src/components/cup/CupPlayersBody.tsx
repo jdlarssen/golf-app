@@ -109,8 +109,13 @@ export function CupPlayersBody({
     setError(null);
     setAdded(false);
     const result = await addCupParticipant(cupId, userId);
-    if (result.ok) setAdded(true);
-    else setError(participantFailureText(result.reason, view.cap ?? 0));
+    if (result.ok) {
+      setAdded(true);
+      // Den du søkte etter, er lagt til. Står søket igjen, står det at ingen heter det.
+      setSearch('');
+    } else {
+      setError(participantFailureText(result.reason, view.cap ?? 0));
+    }
     await load();
     setBusy(null);
   };
@@ -145,7 +150,12 @@ export function CupPlayersBody({
               accessibilityRole="button"
               accessibilityLabel={`${PLAYERS_TEXT.remove}: ${player.name}`}
               disabled={busy !== null}
-              onPress={() => onRemove(player, view.name)}
+              onPress={() => {
+                // Kvitteringen gjelder det du gjorde sist, og det er snart fjerningen.
+                setAdded(false);
+                setError(null);
+                onRemove(player, view.name);
+              }}
               style={styles.link}
               testID={`cup-player-remove-${player.userId}`}
             >
