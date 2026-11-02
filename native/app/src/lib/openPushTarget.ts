@@ -37,6 +37,11 @@ export function openPushTarget(ref: NavigationContainerRef<RootStackParamList>, 
     openOrReturn(navigation, 'Leaderboard', target.params);
   } else if (target.name === 'League') openOrReturn(navigation, 'League', target.params);
   else if (target.name === 'Cup') openOrReturn(navigation, 'Cup', target.params);
+  else if (target.name === 'CupParticipants') {
+    // #2752: cup-rommet under spillerlista, så «tilbake» lander på cupen.
+    openOrReturn(navigation, 'Cup', { cupId: target.params.cupId });
+    openOrReturn(navigation, 'CupParticipants', target.params);
+  }
   else if (target.name === 'LeagueRoundStart') {
     // #2675: ligasiden under startsiden, så «tilbake» lander på ligaen.
     openOrReturn(navigation, 'League', { leagueId: target.params.leagueId });

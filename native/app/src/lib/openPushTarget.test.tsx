@@ -24,6 +24,7 @@ const SCREENS = [
   'Leaderboard',
   'League',
   'Cup',
+  'CupParticipants',
   'LeagueRoundStart',
   'MarkerApprove',
 ] as const;
@@ -113,6 +114,16 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     expect(names()).toEqual(['Home', 'League', 'LeagueRoundStart']);
     await tap({ name: 'MarkerApprove', params: { leagueId: 'l1', gameId: 'g1', userId: 'u1' } });
     expect(names()).toEqual(['Home', 'League', 'MarkerApprove']);
+  });
+
+  it('spillerlista med cupen under, og uten en kopi av noen av dem (#2752)', async () => {
+    await stackOf();
+    await tap({ name: 'CupParticipants', params: { cupId: 'c1' } });
+    expect(names()).toEqual(['Home', 'Cup', 'CupParticipants']);
+    await tap({ name: 'CupParticipants', params: { cupId: 'c1' } });
+    expect(names()).toEqual(['Home', 'Cup', 'CupParticipants']);
+    await back();
+    expect(names()).toEqual(['Home', 'Cup']);
   });
 
   it('cupen fra Hjem, og tilbake til den cupen du alt har bak deg (#2752)', async () => {

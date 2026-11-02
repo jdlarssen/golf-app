@@ -43,6 +43,13 @@ describe('backStep', () => {
     expect(backStep([HOME, game('g1')], 'Home', undefined)).toBe('popTo');
   });
 
+  it('oppsettet og lista ligger under rommet, fjerningen under lista (#2752)', () => {
+    const cup = { name: 'Cup', params: { cupId: 'c1' } };
+    const list = { name: 'CupParticipants', params: { cupId: 'c1' } };
+    expect(backStep([HOME, cup, { name: 'CreateCup', params: { cupId: 'c1' } }], 'Cup', { cupId: 'c1' })).toBe('popTo');
+    expect(backStep([HOME, cup, list, { name: 'CupRemovePlayer', params: { cupId: 'c1' } }], 'CupParticipants', { cupId: 'c1' })).toBe('popTo');
+  });
+
   it('sidepoeng og avslutning ligger under styringen, tavla under rommet (#2752)', () => {
     const cup = { name: 'Cup', params: { cupId: 'c1' } };
     const manage = { name: 'CupManage', params: { cupId: 'c1' } };

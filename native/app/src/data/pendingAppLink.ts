@@ -2,7 +2,7 @@
 // #2627, #2748: lenka som åpnet appen, til navigatoren tar den.
 //
 // Venne-lenka, QR-koden på bag-taggen, ligalenka, invitasjonen, e-postene om en
-// runde og den delte påmeldingslenka åpner appen (`lib/appLinkUrl.ts`). Lenka kan komme før noen er logget inn, og da finnes ingen
+// runde, den delte påmeldingslenka og cup-lenka åpner appen (`lib/appLinkUrl.ts`). Lenka kan komme før noen er logget inn, og da finnes ingen
 // navigator å åpne skjermen i. Den står derfor her: `App.tsx` lytter fra første
 // bilde, innloggingen viser en linje om den, og navigatoren tar den når den er
 // montert (etter innloggingen, profilen og AI-spørsmålet) og åpner skjermen.
@@ -67,7 +67,8 @@ export type ScreenLink = Exclude<AppLink, { kind: 'round' }>;
 type LinkScreen =
   | { name: 'FriendLink' | 'LeagueJoin'; params: { code: string } }
   | { name: 'InvitationLink'; params: { token: string } }
-  | { name: 'RoundInvite'; params: { shortId: string; src: string | null } };
+  | { name: 'RoundInvite'; params: { shortId: string; src: string | null } }
+  | { name: 'CupJoin'; params: { shortId: string } };
 
 /** Skjermen en lenke åpner. Uttømmende: en ny lenketype faller på `tsc`. */
 export function appLinkScreen(link: ScreenLink): LinkScreen {
@@ -80,6 +81,8 @@ export function appLinkScreen(link: ScreenLink): LinkScreen {
       return { name: 'InvitationLink', params: { token: link.token } };
     case 'roundInvite':
       return { name: 'RoundInvite', params: { shortId: link.shortId, src: link.src } };
+    case 'cupJoin':
+      return { name: 'CupJoin', params: { shortId: link.shortId } };
   }
 }
 

@@ -16,7 +16,9 @@
 // (`MarkerApprove`) med ligaen under. Cupvarslene (#2752: cupen har startet, kampene
 // er avdekket, resultatet er klart) peker på `/cup/{id}` og `/cup/{id}/resultater`
 // og åpner cup-rommet (`Cup`), som har begge deler. Cup-lenka `/cup/bli-med/{kode}`
-// er ingen cup-id, og går til Hjem.
+// er ingen cup-id, og går til Hjem. Noen har meldt seg på eller av cupen din
+// (`cup_signup`): det peker på Spillere-rommet, `/admin/cup/{id}/spillere` eller
+// `/klubber/{klubb}/cup/{id}/spillere`, og åpner spillerlista (`CupParticipants`).
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -38,6 +40,7 @@ export type PushTarget =
   | { name: 'Leaderboard'; params: { gameId: string } }
   | { name: 'League'; params: { leagueId: string } }
   | { name: 'Cup'; params: { cupId: string } }
+  | { name: 'CupParticipants'; params: { cupId: string } }
   | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'Home' };
@@ -55,6 +58,8 @@ const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
 const CUP_PATH = /^\/(?:[a-z]{2}\/)?cup\/([^/?#]+)/;
+const CUP_PLAYERS_PATH =
+  /^\/(?:[a-z]{2}\/)?(?:admin\/cup|klubber\/[^/?#]+\/cup)\/([^/?#]+)\/spillere(?:[/?#]|$)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
@@ -105,6 +110,9 @@ export function pushTarget(url: string | null): PushTarget {
     if (roundId) return { name: 'LeagueRoundStart', params: { leagueId, roundId } };
     return { name: 'League', params: { leagueId } };
   }
+  const cupPlayers = url ? CUP_PLAYERS_PATH.exec(url) : null;
+  const playersCupId = cupPlayers ? decodedOrNull(cupPlayers[1]) : null;
+  if (playersCupId) return { name: 'CupParticipants', params: { cupId: playersCupId } };
   const cup = url ? CUP_PATH.exec(url) : null;
   const cupId = cup ? decodedOrNull(cup[1]) : null;
   if (cupId && cupId !== 'bli-med') return { name: 'Cup', params: { cupId } };

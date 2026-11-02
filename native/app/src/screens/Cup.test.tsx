@@ -6,6 +6,7 @@
 // cup, og tilstandene uten nett.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import type { AppCupView } from '../../../../lib/cup/appCupView';
 import type { CupResult } from '../data/cup';
 import type { ScreenProps } from '../navigation';
 import { cupMatch, finishedCup, liveCup, ME, RESULTS } from '../test/cupFixtures';
@@ -393,5 +394,54 @@ describe('kvitteringen etter en avslutning (#2752)', () => {
     answer({ ok: true, view: liveCup() });
     await renderCup();
     expect(screen.queryByTestId('cup-notice')).toBeNull();
+  });
+});
+
+describe('dørene i et utkast (#2752)', () => {
+  const draft = (over: Partial<AppCupView> = {}) =>
+    liveCup({ status: 'draft', canManage: true, participantCount: 6, matches: [], ...over });
+
+  it('arrangøren fortsetter oppsettet og åpner spillerlista, med tallet', async () => {
+    answer({ ok: true, view: draft() });
+    const { navigate } = await renderCup();
+
+    expect(screen.getByTestId('cup-open-players')).toHaveTextContent(/6 påmeldte/);
+    await fireEvent.press(screen.getByTestId('cup-open-setup'));
+    expect(navigate).toHaveBeenCalledWith('CreateCup', { cupId: 'cup-1' });
+    await fireEvent.press(screen.getByTestId('cup-open-players'));
+    expect(navigate).toHaveBeenCalledWith('CupParticipants', { cupId: 'cup-1' });
+  });
+
+  it('uten kamper er det ingenting å styre ennå', async () => {
+    answer({ ok: true, view: draft() });
+    await renderCup();
+    expect(screen.queryByTestId('cup-open-manage')).toBeNull();
+  });
+
+  it('med kamper står «Styr cupen» også', async () => {
+    answer({ ok: true, view: draft({ matches: [cupMatch()] }) });
+    await renderCup();
+    expect(screen.getByTestId('cup-open-manage')).toBeTruthy();
+  });
+
+  it('en spiller har ingen av dem', async () => {
+    answer({ ok: true, view: draft({ canManage: false }) });
+    await renderCup();
+    expect(screen.queryByTestId('cup-open-setup')).toBeNull();
+    expect(screen.queryByTestId('cup-open-players')).toBeNull();
+  });
+
+  it('en cup som går, har ikke oppsettet', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true }) });
+    await renderCup();
+    expect(screen.queryByTestId('cup-open-setup')).toBeNull();
+    expect(screen.getByTestId('cup-open-manage')).toBeTruthy();
+  });
+
+  it('uten nett: ingen dører', async () => {
+    answer({ ok: true, view: draft() }, { ok: false, reason: 'offline' });
+    await renderCup();
+    await refocus();
+    expect(screen.queryByTestId('cup-open-setup')).toBeNull();
   });
 });
