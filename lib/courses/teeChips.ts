@@ -8,7 +8,7 @@
  * with its id and numbers, so a slip on the edit page never turns a saved tee
  * into a new one (updateCourse archives or deletes a tee whose id is gone).
  */
-import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
+import { MAX_TEE_BOXES } from './constants';
 import { TEE_COLOR_NAMES, type TeeColor } from './teeColors';
 
 // Numeric fields are strings so a controlled input keeps an unfinished entry

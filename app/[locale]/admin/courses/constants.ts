@@ -5,4 +5,4 @@
 // en throw-funksjon — `i < X` blir `0 < function` = false og loopen iterer
 // aldri. Konstanter som krysser server/client-grensen må ligge i en ren modul.
 
-export const MAX_TEE_BOXES = 7;
+export { MAX_TEE_BOXES } from '@/lib/courses/constants';
