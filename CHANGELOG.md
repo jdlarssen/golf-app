@@ -16,6 +16,270 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.244.0 · mandag 2. november 2026
+
+<details>
+<summary><strong>Wolf: gangen i hullet og catch-up på de siste hullene</strong></summary>
+
+[#2314](https://github.com/jdlarssen/golf-app/issues/2314) — Ulvens kort sier nå hvordan hullet går, appen viser hvem som er ulv på de neste hullene, og i nye spill blir den som ligger sist, ulv på de siste hullene bare når den ligger langt nok bak.
+
+↳ /spillformater/wolf · «Se reglene for Wolf»
+</details>
+
+<details>
+<summary><strong>Spillerregisteret viser hvem som spiller</strong></summary>
+
+[#2346](https://github.com/jdlarssen/golf-app/issues/2346) — Spillerlisten viser nå hvor mange runder hver spiller har og når de spilte sist, med filter for dem som har spilt i år og for gjester. Ventende invitasjoner viser hvor langt mottakeren har kommet, og «+ Inviter en spiller» ligger fast nederst.
+
+↳ /admin/spillere · «Åpne spillerlista»
+</details>
+
+<details>
+<summary><strong>Rekkefølgen på spillformatene</strong></summary>
+
+[#2347](https://github.com/jdlarssen/golf-app/issues/2347) — Format-styring viser steg 2 slik arrangøren ser det, og med pilene flytter du et format opp eller ned.
+
+↳ /admin/formats · «Ordne formatene»
+</details>
+
+<details>
+<summary><strong>Ny runde som sist med ett trykk</strong></summary>
+
+[#2446](https://github.com/jdlarssen/golf-app/issues/2446) — Når du lager en ny runde, står forrige runde øverst med bane, tee, format og gjengen. Trykk «Bruk samme oppsett», så er alt fylt inn med lørdag kl. 09:00 som ny tid, og du står klar til å publisere.
+
+↳ /opprett-spill · «Sett opp neste runde»
+</details>
+
+<details>
+<summary><strong>Velg påmelding før du bygger spillerlista</strong></summary>
+
+[#2447](https://github.com/jdlarssen/golf-app/issues/2447) — Når du lager et spill, velger du først hvordan spillerne kommer med: du velger dem selv, de ber om plass, eller påmeldingen er åpen. Velger du påmelding, går du rett til «Klar?» uten å velge noen, også i en best ball-runde der du står på lista alene.
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Banene du spilte sist står øverst når du lager et spill</strong></summary>
+
+[#2448](https://github.com/jdlarssen/golf-app/issues/2448) — På «Hvor og når?» står de to banene du spilte sist som kort, med hvor mange runder du har spilt der i høst. Teen har egne knapper med farge, og dag og klokkeslett velger du med ett trykk. Da slipper du å lete i lista og stille hjulet.
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Valgt spillform blir én linje</strong></summary>
+
+[#2454](https://github.com/jdlarssen/golf-app/issues/2454) — Når du har valgt spillform i «Nytt spill», krymper lista til én linje med navnet, regelen i en setning og «Bytt». Oppsettet for formatet står rett under, så du slipper å rulle forbi formatene du ikke valgte.
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Innstillingene på «Klar?» som korte rader</strong></summary>
+
+[#2457](https://github.com/jdlarssen/golf-app/issues/2457) — På siste steg i «Nytt spill» står handicap, startkontingent, synlighet og sideturnering som korte rader med verdien som er satt. Du ser at handicapet er 100 % uten å åpne noe, og «Endre» åpner et ark med bare den raden. Premiebordet er lukket til du åpner det, i veiviseren og i «Rediger spill».
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Kvittering når spillet er publisert</strong></summary>
+
+[#2458](https://github.com/jdlarssen/golf-app/issues/2458) — Når du publiserer et spill, ser du hvem som har fått invitasjonen. Derfra kan du dele lenka i gruppechatten, legge runden i kalenderen eller gå rett til spillet.
+</details>
+
+<details>
+<summary><strong>Nytt spill lagres av seg selv</strong></summary>
+
+[#2459](https://github.com/jdlarssen/golf-app/issues/2459) — Veiviseren lagrer oppsettet mens du fyller ut. På Hjem står det under «Fortsett der du slapp», også i morgen og i en ny fane på samme telefon.
+
+↳ /opprett-spill · «Start et spill»
+</details>
+
+<details>
+<summary><strong>«Nå» når gjengen står på første tee</strong></summary>
+
+[#2463](https://github.com/jdlarssen/golf-app/issues/2463) — Står dere på banen, velger du «Nå» under tee-off. Tiden settes når du publiserer, så du kan bruke så lang tid du vil på spillere og lag, og runden starter med en gang. Lørdag er ikke lenger eget valg blant dagene, men lørdag kl. 09:00 står fortsatt som forslag under «Annen dag».
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Flytt runden, og gjengen får beskjed</strong></summary>
+
+[#2480](https://github.com/jdlarssen/golf-app/issues/2480) — Flytter du en planlagt runde til en ny dag eller tid, får alle på lista et varsel med den nye tiden. Velg «Flytt runden» på spillets side, eller endre tee-off i «Rediger».
+</details>
+
+<details>
+<summary><strong>Avlys runden, og gjengen får beskjed</strong></summary>
+
+[#2481](https://github.com/jdlarssen/golf-app/issues/2481) — Avlyser du en planlagt runde, får spillerne beskjed i innboksen og på e-post, med en hilsen fra deg hvis du vil.
+</details>
+
+<details>
+<summary><strong>Skriv inn 9-hullsbanen én gang</strong></summary>
+
+[#2484](https://github.com/jdlarssen/golf-app/issues/2484) — Har banen 9 hull som spilles to ganger, skriver du hullene én gang med begge indeksene fra scorekortet. Tørny lagrer dem som 18 hull.
+
+↳ /opprett-bane · «Legg til en bane»
+</details>
+
+<details>
+<summary><strong>«Finnes banen alt?» når du legger til en bane</strong></summary>
+
+[#2485](https://github.com/jdlarssen/golf-app/issues/2485) — Skriver du navnet på en ny bane, viser Tørny baner som ligner. Da kan du bruke den som finnes, i stedet for å legge den inn en gang til.
+
+↳ /opprett-bane · «Legg til en bane»
+</details>
+
+<details>
+<summary><strong>Tee-ene som brikker og én slope-tabell</strong></summary>
+
+[#2486](https://github.com/jdlarssen/golf-app/issues/2486) — Når du legger inn en bane, velger du tee-ene med fargebrikker og skriver slope og CR fra scorekortet rett inn i én tabell.
+
+↳ /opprett-bane · «Legg til en bane»
+</details>
+
+<details>
+<summary><strong>Gjestene følger kapteinen</strong></summary>
+
+[#2607](https://github.com/jdlarssen/golf-app/issues/2607) — Trekker du deg som kaptein, eller fjerner arrangøren deg, går gjestene du meldte på også, og du ser navnene før du bekrefter. En gjest kan ikke bli kaptein.
+</details>
+
+<details>
+<summary><strong>Ta med en gjest på runden</strong></summary>
+
+[#2607](https://github.com/jdlarssen/golf-app/issues/2607) — Er du med i en runde med åpen påmelding eller godkjenning, kan du nå ta med én gjest uten konto. Trekker du deg, går gjesten også.
+</details>
+
+<details>
+<summary><strong>Liga med redusert handicap</strong></summary>
+
+[#2660](https://github.com/jdlarssen/golf-app/issues/2660) — Når du lager en liga, velger du hvor mye av handicapen som teller, og om slagene skal ha et tak. En simulatorliga starter på 75 % og maks 32 slag, en vanlig liga på 95 %.
+
+↳ /admin/liga/new · «Lag en liga»
+</details>
+
+<details>
+<summary><strong>Markøren godkjenner runden i simulatorligaen</strong></summary>
+
+[#2661](https://github.com/jdlarssen/golf-app/issues/2661) — I en simulatorliga velger du en markør fra ligaen når du leverer kortet. Markøren får beskjed og godkjenner runden. Først da teller den i tabellen.
+</details>
+
+<details>
+<summary><strong>Del ligaen med én lenke</strong></summary>
+
+[#2662](https://github.com/jdlarssen/golf-app/issues/2662) — Del lenken til ligaen, så lager folk konto og blir med selv. De får en kort intro til hvordan ligaen funker, og kan sende lenken videre.
+
+↳ /admin/liga · «Åpne ligaene»
+</details>
+
+<details>
+<summary><strong>Simulatorligaen sier hva du skal stille inn før start</strong></summary>
+
+[#2666](https://github.com/jdlarssen/golf-app/issues/2666) — Før du starter en runde i en simulatorliga, viser appen bane, tee og alle innstillingene du skal sette i Trackman, og «Start runden» venter til du har krysset av for at det er gjort. Varselet når en runde åpner nevner bane og tee, og et trykk tar deg rett til startsiden. Lange lister med medspillere og markør har fått søk.
+</details>
+
+<details>
+<summary><strong>Sjekkliste for Trackman i simulatorligaen i appen</strong></summary>
+
+[#2675](https://github.com/jdlarssen/golf-app/issues/2675) — Før du starter en runde i en simulatorliga, viser appen bane, tee og alle innstillingene du skal sette i Trackman, og «Start runden» venter til du har krysset av for at det er gjort. Lange lister med medspillere og markør har fått søk, og et trykk på varselet om en åpen runde tar deg rett til startsiden.
+</details>
+
+<details>
+<summary><strong>Meld deg på rett fra lenka</strong></summary>
+
+[#2748](https://github.com/jdlarssen/golf-app/issues/2748) — Lenka og QR-koden arrangøren deler, kan nå åpne appen. Der ser du runden, og du melder deg på eller ber om plass med ett trykk. Lag og valg av side gjør du fortsatt på nettsiden.
+</details>
+
+<details>
+<summary><strong>Invitasjonen og e-postene åpner runden</strong></summary>
+
+[#2748](https://github.com/jdlarssen/golf-app/issues/2748) — Invitasjonen og e-postene om en runde kan nå åpne appen, og du havner samme sted som når du trykker på varselet. Uten appen åpner de nettsiden som før.
+</details>
+
+<details>
+<summary><strong>Bli med i ligaen rett fra lenka</strong></summary>
+
+[#2748](https://github.com/jdlarssen/golf-app/issues/2748) — Ligalenka kan nå åpne appen. Der ser du ligaen, og ett trykk er nok for å bli med. Fra ligasiden deler du lenka videre.
+</details>
+
+<details>
+<summary><strong>Velg flight selv i appen</strong></summary>
+
+[#2750](https://github.com/jdlarssen/golf-app/issues/2750) — Nå velger og bytter du flight selv rett under startbilletten i appen, fram til runden starter.
+</details>
+
+<details>
+<summary><strong>Cupen i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Følg cupene dine i appen: hvor mange matcher som er spilt, med dine egne kamper øverst. Når arrangøren avslutter cupen, står resultatet samme sted.
+</details>
+
+<details>
+<summary><strong>Delte cup-dager kan spilles i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Du kan nå føre en delt cup-dag i appen, også uten nett. Fra hull 9 går du rett videre til hull 10, og du leverer én gang for hele runden. Singlene som henter slagene fra en annen kamp, viser stillingen i appen, med en knapp til kampen der du fører.
+</details>
+
+<details>
+<summary><strong>Sidepoeng og avslutning av cupen, i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Registrer sidepoeng, avslutt én kamp eller hele cupen fra appen. Hjem viser de tre siste ferdige cupene, og i cupen kan du åpne tavla til andres ferdige kamper.
+</details>
+
+<details>
+<summary><strong>Trekk og bytte i cupen, i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Styr cupen fra appen: trekk en spiller og angre, velg om makkeren spiller alene, og bytt spiller i en kamp. Som spiller kan du trekke deg selv, og du ser hva som skjer med kampene før du trykker.
+</details>
+
+<details>
+<summary>41 rettinger</summary>
+
+- [#1378](https://github.com/jdlarssen/golf-app/issues/1378) — I appen er den åpne runden i ligatabellen markert med en prikk, og de som ikke er rangert, står samlet under egne overskrifter.
+- [#1378](https://github.com/jdlarssen/golf-app/issues/1378) — Ligatabellen har tynne skillelinjer mellom radene, uten linje ved overskriftene for dem som ikke er rangert.
+- [#1378](https://github.com/jdlarssen/golf-app/issues/1378) — Ligatabellen viser nå totalen rett etter spillernavnet, så du slipper å rulle sidelengs for å finne den. Den åpne runden er markert med en prikk, og de som ikke er rangert, står samlet under egne overskrifter.
+- [#2664](https://github.com/jdlarssen/golf-app/issues/2664) — Når du velger bane på en liga-runde, vises tee-ene for banen med en gang, uten at du må lagre først.
+- [#2688](https://github.com/jdlarssen/golf-app/issues/2688) — Ligarunden heter nå «Vinterliga – Runde 1», og den som starter en simulatorliga-flight får ikke lenger arrangørknapper. Markøren ser ventende kort på Hjem, banen står på hver runde, og «Neste hull» tar deg videre.
+- [#2700](https://github.com/jdlarssen/golf-app/issues/2700) — Premiebordet og tavlene viser den tegnede medaljen i gull, sølv og bronse i stedet for medalje-emoji.
+- [#2700](https://github.com/jdlarssen/golf-app/issues/2700) — Bekreftelser og knapper står nå uten ✓, og et vunnet spill sier bare «Du vant». Juletreet foran Kavalkaden er borte.
+- [#2709](https://github.com/jdlarssen/golf-app/issues/2709) — I appen ser veiviseren for nytt spill, venne-arket, de enkle tavlene og kontosidene ut som resten: skoggrønn ramme rundt det du velger, Tørnys egne brytere, samme overskrifter og hjørner, og venne-arket blir mørkt om kvelden.
+- [#2709](https://github.com/jdlarssen/golf-app/issues/2709) — Profilen sier fra om gammelt handicap én gang, under navnet, i stedet for to ganger.
+- [#2709](https://github.com/jdlarssen/golf-app/issues/2709) — Fire små steder på nettsiden har fått halvfet skrift som resten av Tørny, og «Ikke klar ennå» på ligasiden står ikke lenger i kursiv.
+- [#2709](https://github.com/jdlarssen/golf-app/issues/2709) — Knapper og varsler står uten emoji, og korte bekreftelser som «Kopiert» står uten utropstegn. «1 seier», «1 spiller» og «1 tee» står nå i entall, i appen og på nettsiden.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Etter en ligarunde du spilte alene, viser Hjem, Rundedagboka og innboksen nå «Godkjent» der det før sto «Du vant» eller «1. plass av 1». I en simulatorliga står det «Venter på markøren» mens kortet venter.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — I en simulatorliga kan du ikke lenger trekke deg fra runden etter at du har levert kortet, så hver runde har ett forsøk.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — En ligarunde du spilte alene, teller ikke lenger som seier i sesongtallene i appen, på statistikksiden eller i Kavalkaden.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Mailen «Resultatet er klart» gratulerer ikke lenger med seieren etter en ligarunde du spilte alene.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Når du har levert kortet i en liga, sier spillsiden på nett nå at det venter på markøren.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — I en simulatorliga sier scorekortet nå at det venter på markøren, og at runden teller når markøren har godkjent.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Etter en ligarunde spilt alene finnes det ingen premieutdeling, og TV-skjermen ber ikke lenger folk se hvem som vant.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Referatet «Fra pressetribunen» kårer deg ikke lenger til vinner når du spilte ligarunden alene.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Spiller du med en andel av handicapet, står det nå «Spillehandicap» på spillsiden på nett der det før sto «Banehandicap».
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Spiller du med en andel av handicapet, står det nå «spillehandicap» på scorekortet der det før sto «banehandicap».
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Spiller du en ligarunde alene, viser tavla, «Hull for hull» og scorekortet poengene eller slagene dine uten plass, også mens runden pågår. «1. plass», «Du leder» og ledergullet er borte.
+- [#2712](https://github.com/jdlarssen/golf-app/issues/2712) — Etter en ligarunde du spilte alene viser resultattavla og delebildet poengene og «Godkjent». Pallen, konfettien og «vant» er borte, i appen og på nett.
+- [#2716](https://github.com/jdlarssen/golf-app/issues/2716) — I appen har bannere, sideturneringen og markørkøen samme hjørner og overskrifter som kortene rundt, og markørens godkjenning viser en ventemarkering mens den laster.
+- [#2716](https://github.com/jdlarssen/golf-app/issues/2716) — Hull-for-hull-tavla har samme små overskrifter og hjørner som resten av Tørny, på nettsiden og i appen, og blindrunden i appen ser ut som på nettsiden.
+- [#2716](https://github.com/jdlarssen/golf-app/issues/2716) — Arrangøren ser «Venter på godkjenning», og putt-statistikken sier rett ut hvor mange hull som mangler putt, uten «Nesten!».
+- [#2719](https://github.com/jdlarssen/golf-app/issues/2719) — Kavalkade-kortet sier «1 runde» og «1 spiller», og cup-generatoren sier «Opprett 1 match».
+- [#2719](https://github.com/jdlarssen/golf-app/issues/2719) — Resten av nettsiden har samme mål som de tegnede skjermene: bannere og knapper på hullsiden og ved lagringsfeil, små merker, felt og knapper hos arrangøren og på lagpåmeldingen, overskrifter i cup, liga og klubber, og røde kanter som følger mørk modus.
+- [#2719](https://github.com/jdlarssen/golf-app/issues/2719) — Vinnerkortet og pallen på tavlene har gullrammen uten gull-glød, «Leder · 1. plass» står stille når spillet er ferdig, og straffepoeng i ligatabellen er lettere å lese.
+- [#2725](https://github.com/jdlarssen/golf-app/issues/2725) — E-postene har Tørnys farger, runde hjørner og pilleknapper, og delingsbildet for Tørny viser ordmerket med ballen på T-en.
+- [#2725](https://github.com/jdlarssen/golf-app/issues/2725) — «Hvorfor Tørny» bruker Tørnys tegnede ikoner i stedet for emoji og halvfet i stedet for fet skrift, og delingsbildet for en påmelding sier «Tørny» én gang.
+- [#2725](https://github.com/jdlarssen/golf-app/issues/2725) — Titlene øverst på skjermene i appen, som «Personvern og konto» og «Nytt spill», står i halvfet som resten av appen.
+- [#2728](https://github.com/jdlarssen/golf-app/issues/2728) — Hjem har datoen som tittel og fornavnet i profilknappen. Rekka og bragdene har tegnede merker i stedet for emoji, innboksen har Tørnys ikoner, og feiringene står uten utropstegn.
+- [#2728](https://github.com/jdlarssen/golf-app/issues/2728) — Småoverskriftene i hele Tørny står i vanlig setningsstil i stedet for store, sperrede bokstaver, i appen, på nettsiden, i e-postene og på delingsbildene.
+- [#2732](https://github.com/jdlarssen/golf-app/issues/2732) — Knapper og lenker står uten pil, rader som kan åpnes har Tørnys tegnede pil, og topplinja og bunnmenyen er hele flater uten glass. Små tekster har normal sperring, og «1 putt» står i entall.
+- [#2735](https://github.com/jdlarssen/golf-app/issues/2735) — Hullsiden viser nå bare brutto når du fører slag. Sirkel og firkant følger slagene dine mot par, og du ser ingen poeng før du åpner tavla.
+- [#2738](https://github.com/jdlarssen/golf-app/issues/2738) — Stableford, modifisert stableford og patsome viser poengene dine igjen, ikke «mot par», og rekkefølgen går på poeng hele runden.
+- [#2746](https://github.com/jdlarssen/golf-app/issues/2746) — Tilbake i appen tar deg dit du kom fra. Et kort du har levert eller en profil du har lagret, dukker ikke opp igjen, og i «Nytt spill» går tilbake ett steg om gangen.
+- [#2746](https://github.com/jdlarssen/golf-app/issues/2746) — Når et skjema på nettet sender deg videre, ligger det ikke lenger bak deg når du går tilbake, og «Nytt spill» tar bare én plass i historikken.
+- [#2752](https://github.com/jdlarssen/golf-app/issues/2752) — «Angre» står ikke lenger der et trekk fra spillet ikke kan angres, for eksempel i en matchplay-kamp som har startet.
+- [#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Avslutter du en cup før alle har levert, sto det at de som ikke hadde levert, ikke teller. Slagene deres teller, og nå står det.
+</details>
+
 ### 1.243.0 · mandag 26. oktober 2026
 
 <details>
