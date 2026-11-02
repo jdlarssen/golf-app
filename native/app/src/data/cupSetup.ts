@@ -8,6 +8,7 @@
 //
 // **Wire-kontrakten** (rutene og denne fila endres i samme PR) står i rutene under
 // `app/api/cup/`, og typene i `lib/cup/appCupSetupView.ts`.
+import type { AppCupDeletePreview } from '../../../../lib/cup/appCupDeleteView';
 import type { AppCupGenerateView, CupMatchesBody } from '../../../../lib/cup/appCupGenerateView';
 import type { AppCupLineupView } from '../../../../lib/cup/appCupLineupView';
 import type {
@@ -144,6 +145,17 @@ export function setCupParticipantRole(
   body: { teamNumber: 1 | 2 | null; isCaptain: boolean },
 ): Promise<CupSetupResult> {
   return send(`${base(cupId)}/participants/${encodeURIComponent(userId)}/role`, 'POST', body);
+}
+
+export function fetchCupDeletePreview(cupId: string) {
+  return read<AppCupDeletePreview>(
+    `${base(cupId)}/delete`,
+    (view) => typeof view.name === 'string' && typeof view.draft === 'boolean',
+  );
+}
+
+export function deleteCup(cupId: string): Promise<CupSetupResult> {
+  return send(`${base(cupId)}/delete`, 'DELETE');
 }
 
 export function fetchCupLineup(cupId: string) {

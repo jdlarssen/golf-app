@@ -10,6 +10,7 @@
 //
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
+import type { CupSessionFormat } from '../../../lib/cup/cupTemplates';
 import {
   DarkTheme,
   DefaultTheme,
@@ -43,6 +44,7 @@ import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
+import { DELETE_TEXT } from './lib/cupDeleteCopy';
 import { GENERATE_TEXT } from './lib/cupGenerateCopy';
 import { LINEUP_TEXT } from './lib/cupLineupCopy';
 import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupSetupCopy';
@@ -79,6 +81,8 @@ import { CupMatchBoard } from './screens/CupMatchBoard';
 import { CupGenerate } from './screens/CupGenerate';
 import { CupLineup } from './screens/CupLineup';
 import { CupParticipants } from './screens/CupParticipants';
+import { CupDelete } from './screens/CupDelete';
+import { CupDeleteSession } from './screens/CupDeleteSession';
 import { CupRemovePlayer } from './screens/CupRemovePlayer';
 import { CupSideAwards } from './screens/CupSideAwards';
 import { CupSwapPlayer } from './screens/CupSwapPlayer';
@@ -101,7 +105,8 @@ import { FONTS, useTheme, type Theme } from './theme';
 import { MARKER_TEXT } from './lib/markerCopy';
 
 export type RootStackParamList = {
-  Home: undefined;
+  /** #2752: `deletedCup` er kvitteringen etter at et utkast er slettet. */
+  Home: { deletedCup?: string } | undefined;
   /**
    * `createdCourseId` (#2757): banen «Ny bane» kom tilbake med, lagret eller
    * «Bruk denne». Veiviseren velger den og nullstiller parameteren med det samme.
@@ -236,6 +241,10 @@ export type RootStackParamList = {
     captain: boolean;
     returnTo: 'CreateCup' | 'CupParticipants';
   };
+  /** #2752: bekreftelsen før et utkast slettes. */
+  CupDelete: { cupId: string };
+  /** #2752: bekreftelsen før en økt i uttaket slettes. `delivered` er antall lag som har levert. */
+  CupDeleteSession: { cupId: string; sessionId: string; format: CupSessionFormat; slotCount: number; delivered: 0 | 1 | 2 };
   /** #2752: cup-lenka `/cup/bli-med/<kode>`. */
   CupJoin: { shortId: string };
   /**
@@ -593,6 +602,16 @@ export function RootNavigator() {
           name="CupRemovePlayer"
           component={CupRemovePlayer}
           options={kickerHeader(REMOVE_TEXT.kicker, REMOVE_TEXT.kicker)}
+        />
+        <Stack.Screen
+          name="CupDelete"
+          component={CupDelete}
+          options={kickerHeader(DELETE_TEXT.kicker, DELETE_TEXT.kicker)}
+        />
+        <Stack.Screen
+          name="CupDeleteSession"
+          component={CupDeleteSession}
+          options={kickerHeader(DELETE_TEXT.kicker, DELETE_TEXT.kicker)}
         />
         <Stack.Screen
           name="CupJoin"

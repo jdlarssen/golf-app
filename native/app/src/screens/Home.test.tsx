@@ -152,9 +152,12 @@ function testIdsInOrder(): string[] {
   return ids;
 }
 
-function renderHome() {
+function renderHome(params?: { deletedCup?: string }) {
   const navigate = jest.fn();
-  const props = { navigation: { navigate }, route: { key: 'home', name: 'Home' } };
+  const props = {
+    navigation: { navigate, addListener: () => () => {}, setParams: jest.fn() },
+    route: { key: 'home', name: 'Home', params },
+  };
   return { navigate, view: render(<Home {...(props as unknown as ScreenProps<'Home'>)} />) };
 }
 
@@ -639,5 +642,18 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
 
     expect(await screen.findByTestId('home-leagues')).toBeTruthy();
     expect(screen.queryByTestId('home-marker-queue')).toBeNull();
+  });
+});
+
+describe('kvitteringen etter en slettet cup (#2752)', () => {
+  it('står med navnet når du kommer hit fra slettingen', async () => {
+    await renderHome({ deletedCup: 'Klubbmesterskapet' }).view;
+    expect(await screen.findByTestId('home-notice')).toHaveTextContent('Cupen «Klubbmesterskapet» er slettet.');
+  });
+
+  it('står ikke ellers', async () => {
+    await renderHome().view;
+    await screen.findAllByTestId('home-screen');
+    expect(screen.queryByTestId('home-notice')).toBeNull();
   });
 });

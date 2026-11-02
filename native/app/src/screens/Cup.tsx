@@ -32,6 +32,7 @@ import {
 } from '../lib/cupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
 import { playerCountLine, SETUP_APP_TEXT } from '../lib/cupSetupCopy';
+import { DELETE_TEXT } from '../lib/cupDeleteCopy';
 import { FORMAT_LABELS, GENERATE_TEXT, START_TEXT, startFailureText } from '../lib/cupGenerateCopy';
 import { LINEUP_ROOM_TEXT } from '../lib/cupLineupCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
@@ -278,6 +279,17 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
           testID="cup-withdraw-self"
         >
           <Text style={[styles.quietText, { color: colors.text }]}>{CUP_TEXT.withdrawSelfLink}</Text>
+        </Pressable>
+      ) : null}
+
+      {draft && view.canManage && !stale ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => openOrReturn(navigation, 'CupDelete', { cupId })}
+          style={[styles.quiet, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="cup-open-delete"
+        >
+          <Text style={[styles.quietText, { color: colors.danger }]}>{DELETE_TEXT.link}</Text>
         </Pressable>
       ) : null}
     </ScrollView>

@@ -346,6 +346,43 @@ describe('arrangør-only-handlingene (SK6)', () => {
     expect(writeCalls()).toHaveLength(0);
   });
 
+  describe('sletter en økt (#2752)', () => {
+    const remove = async () => {
+      supabaseMock = buildSupabaseMock([]);
+      setUser('organizer');
+      const { deleteCupLineupSession } = await import('./lineupActions');
+      return deleteCupLineupSession(form({ id: 'cup-1', session_id: 'sess-1' }));
+    };
+
+    it('slettet er ok', async () => {
+      adminMock = buildSupabaseMock([...accessReads(), { data: [{ id: 'sess-1' }], error: null }]);
+      expect(await remove()).toEqual({ error: '' });
+    });
+
+    it('0 rader, og økta finnes: den er avdekket imens, og ingenting er slettet', async () => {
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        { data: [], error: null },
+        { data: { id: 'sess-1' }, error: null },
+      ]);
+      expect(await remove()).toEqual({ error: 'lineup_revealed' });
+    });
+
+    it('0 rader, og økta er borte: det er det du ville', async () => {
+      adminMock = buildSupabaseMock([...accessReads(), { data: [], error: null }, { data: null, error: null }]);
+      expect(await remove()).toEqual({ error: '' });
+    });
+
+    it('feiler lesingen etterpå, sier den ikke at det gikk', async () => {
+      adminMock = buildSupabaseMock([
+        ...accessReads(),
+        { data: [], error: null },
+        { data: null, error: { message: 'nede' } },
+      ]);
+      expect(await remove()).toEqual({ error: 'save_failed' });
+    });
+  });
+
   it('arrangøren kan levere på vegne av begge lag', async () => {
     adminMock = buildSupabaseMock([
       ...accessReads(),

@@ -88,6 +88,8 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   CupLineup: 'Cup',
   CupParticipants: 'Cup',
   CupRemovePlayer: 'CupParticipants',
+  CupDelete: 'Cup',
+  CupDeleteSession: 'CupLineup',
   CupJoin: 'Home',
   LeagueRoundStart: 'League',
   MarkerApprove: 'League',
