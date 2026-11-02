@@ -425,12 +425,13 @@ export async function deleteCupLineupSessionCore(
   if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
 
   const admin = getAdminClient();
-  const { error } = await admin
+  const { data: deleted, error } = await admin
     .from('cup_lineup_sessions')
     .delete()
     .eq('id', sessionId)
     .eq('tournament_id', tournamentId)
-    .is('revealed_at', null);
+    .is('revealed_at', null)
+    .select('id');
   if (error) {
     console.error('[cup] deleteCupLineupSession failed', {
       tournamentId,
@@ -438,6 +439,22 @@ export async function deleteCupLineupSessionCore(
       error,
     });
     return { error: 'save_failed' };
+  }
+
+  // 0 rader er en økt som alt er borte, og det er det kalleren ville. Finnes den, er den
+  // avdekket imens, og da er ingenting slettet (bug-prevention #2, #2752).
+  if ((deleted ?? []).length === 0) {
+    const { data: still, error: readError } = await admin
+      .from('cup_lineup_sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .eq('tournament_id', tournamentId)
+      .maybeSingle();
+    if (readError) {
+      console.error('[cup] deleteCupLineupSession re-read failed', { tournamentId, sessionId, error: readError });
+      return { error: 'save_failed' };
+    }
+    if (still) return { error: 'lineup_revealed' };
   }
 
   revalidateCup(tournamentId, access.groupId);

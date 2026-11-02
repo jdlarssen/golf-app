@@ -409,6 +409,35 @@ describe('dørene i et utkast (#2752)', () => {
   const draft = (over: Partial<AppCupView> = {}) =>
     liveCup({ status: 'draft', canManage: true, participantCount: 6, matches: [], ...over });
 
+  it('arrangøren kan slette utkastet, gjennom bekreftelsen', async () => {
+    answer({ ok: true, view: draft() });
+    const { navigate } = await renderCup();
+    await fireEvent.press(screen.getByTestId('cup-open-delete'));
+    expect(navigate).toHaveBeenCalledWith('CupDelete', { cupId: 'cup-1' });
+  });
+
+  it('en spiller har ikke knappen', async () => {
+    answer({ ok: true, view: draft({ canManage: false, participantCount: null }) });
+    await renderCup();
+    await screen.findByTestId('cup-name');
+    expect(screen.queryByTestId('cup-open-delete')).toBeNull();
+  });
+
+  it('en startet cup har ikke knappen', async () => {
+    answer({ ok: true, view: liveCup({ canManage: true, lineup: { door: { kind: 'organizer', sessionCount: 1 }, revealed: null } }) });
+    await renderCup();
+    await screen.findByTestId('cup-open-lineup');
+    expect(screen.queryByTestId('cup-open-delete')).toBeNull();
+  });
+
+  it('uten ferske tall er knappen borte', async () => {
+    answer({ ok: true, view: draft() }, { ok: false, reason: 'offline' });
+    await renderCup();
+    await screen.findByTestId('cup-open-delete');
+    await refocus();
+    expect(screen.queryByTestId('cup-open-delete')).toBeNull();
+  });
+
   it('arrangøren fortsetter oppsettet og åpner spillerlista, med tallet', async () => {
     answer({ ok: true, view: draft() });
     const { navigate } = await renderCup();

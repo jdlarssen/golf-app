@@ -13,7 +13,6 @@ import { OpenSessionCard, PlannedCountCard } from '../components/cup/lineup/Line
 import { LineupSessionCard, type LineupActions } from '../components/cup/lineup/LineupSessionCard';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import {
-  deleteCupLineupSession,
   fetchCupLineup,
   openCupLineupSession,
   retryCupLineupReveal,
@@ -109,7 +108,17 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
     onSubmit: (sessionId, team, slots) => void run({ sessionId, team, form: null }, () => submitCupLineup(cupId, sessionId, team, slots)),
     onUnlock: (sessionId, team) => void run({ sessionId, team, form: null }, () => unlockCupLineup(cupId, sessionId, team)),
     onRetry: (sessionId) => void run({ sessionId, team: null, form: null }, () => retryCupLineupReveal(cupId, sessionId)),
-    onDelete: (sessionId) => void run({ sessionId, team: null, form: null }, () => deleteCupLineupSession(cupId, sessionId)),
+    onDelete: (sessionId) => {
+      const session = view.sessions.find((s) => s.id === sessionId);
+      if (!session) return;
+      openOrReturn(navigation, 'CupDeleteSession', {
+        cupId,
+        sessionId,
+        format: session.format,
+        slotCount: session.slotCount,
+        delivered: session.teams.filter((team) => team.submittedAt !== null).length as 0 | 1 | 2,
+      });
+    },
   };
 
   return (

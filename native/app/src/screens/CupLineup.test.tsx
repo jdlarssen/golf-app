@@ -5,7 +5,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { AppCupLineupSession, AppCupLineupView } from '../../../../lib/cup/appCupLineupView';
 import {
-  deleteCupLineupSession,
   fetchCupLineup,
   openCupLineupSession,
   retryCupLineupReveal,
@@ -22,7 +21,6 @@ jest.mock('../data/cupSetup', () => ({
   fetchCupLineup: jest.fn(),
   setCupPlannedMatchCount: jest.fn(async () => ({ ok: true })),
   openCupLineupSession: jest.fn(async () => ({ ok: true })),
-  deleteCupLineupSession: jest.fn(async () => ({ ok: true })),
   submitCupLineup: jest.fn(async () => ({ ok: true })),
   unlockCupLineup: jest.fn(async () => ({ ok: true })),
   retryCupLineupReveal: jest.fn(async () => ({ ok: true })),
@@ -367,11 +365,17 @@ describe('arrangøren', () => {
     expect(unlockCupLineup).toHaveBeenCalledWith('cup-1', 'okt', 2);
   });
 
-  it('sletter en økt før avdekking', async () => {
-    answer(organizer());
-    await renderScreen();
+  it('«Slett økten» åpner bekreftelsen og sletter ingenting selv', async () => {
+    answer(organizer({ sessions: [session({ teams: [both.teams[0], { teamNumber: 2, submittedAt: null, slots: [] }] })] }));
+    const navigation = await renderScreen();
     await fireEvent.press(screen.getByTestId('cup-lineup-delete-0'));
-    expect(deleteCupLineupSession).toHaveBeenCalledWith('cup-1', 'okt');
+    expect(navigation.navigate).toHaveBeenCalledWith('CupDeleteSession', {
+      cupId: 'cup-1',
+      sessionId: 'okt',
+      format: 'foursomes_matchplay',
+      slotCount: 1,
+      delivered: 1,
+    });
   });
 
   it('begge har levert, og kampene mangler: «Prøv igjen», med feilen over knappen', async () => {
@@ -396,11 +400,11 @@ describe('arrangøren', () => {
   });
 
   it('økta er borte: feilen står øverst', async () => {
-    (deleteCupLineupSession as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'save_failed' });
-    answer(organizer());
+    (retryCupLineupReveal as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'save_failed' });
+    answer(organizer({ sessions: [session(both)] }));
     await renderScreen();
     answer(organizer({ sessions: [] }));
-    await fireEvent.press(screen.getByTestId('cup-lineup-delete-0'));
+    await fireEvent.press(screen.getByTestId('cup-lineup-retry-0'));
     expect(screen.getByTestId('cup-lineup-error')).toHaveTextContent('Klarte ikke å lagre. Prøv igjen.');
   });
 

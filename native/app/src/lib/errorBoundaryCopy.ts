@@ -66,6 +66,8 @@ const VARIANT_BY_ROUTE = {
   CupLineup: 'default',
   CupParticipants: 'default',
   CupRemovePlayer: 'default',
+  CupDelete: 'default',
+  CupDeleteSession: 'default',
   CupJoin: 'default',
   LeagueRoundStart: 'default',
   MarkerApprove: 'default',

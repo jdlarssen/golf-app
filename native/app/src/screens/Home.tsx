@@ -98,12 +98,14 @@ import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { countsPoints, lastRoundPoints } from '../lib/lastRound';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
+import { DELETE_TEXT } from '../lib/cupDeleteCopy';
+import { formatMessage } from '../lib/kavalkadeCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
 import { StatusBarBand } from '../components/StatusBarBand';
 
-export function Home({ navigation }: ScreenProps<'Home'>) {
+export function Home({ navigation, route }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
   const { userId } = useSession();
   // Uten navigasjonslinje står innholdet rett under statuslinja.
@@ -131,6 +133,10 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   // lenge appen er innlogget, ikke bare mens en hull-side står åpen. Hjem er
   // rota i stacken, så her lever de like lenge som sesjonen.
   useEffect(() => startSyncTriggers(), []);
+
+  // Kvitteringen etter en slettet cup (#2752), borte når du går videre.
+  const deletedCup = route.params?.deletedCup;
+  useEffect(() => navigation.addListener('blur', () => navigation.setParams({ deletedCup: undefined })), [navigation]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -363,6 +369,14 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         testID="home-screen"
       >
         <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+
+        {deletedCup ? (
+          <View style={[styles.notice, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="home-notice">
+            <Text style={[styles.noticeText, { color: colors.text }]}>
+              {formatMessage(DELETE_TEXT.deleted, { name: deletedCup })}
+            </Text>
+          </View>
+        ) : null}
 
         {/* #2265 PR 2: Kavalkaden i desember og januar, for spillere med en
             ferdig runde i året. Serveren avgjør vinduet. */}
@@ -636,6 +650,8 @@ const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 const TITLE = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
+  notice: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12 },
+  noticeText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   createCup: { marginTop: 8 },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   // Webbens banner har `mb-4`; skjermens `gap` gir de første 8.
