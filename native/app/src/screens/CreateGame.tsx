@@ -145,7 +145,7 @@ function defaultTeeOff(): Date {
   return date;
 }
 
-export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
+export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   const { userId } = useSession();
   const { ui } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
@@ -195,6 +195,25 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
 
   const formats = useRemote(fetchFormatCatalog);
   const courses = useRemote(fetchCourses);
+  // #2757: tilbake fra «Ny bane» med en bane, lagret eller «Bruk denne». Banen
+  // velges selv om lista ennå ikke har den: `CourseStep` viser raden så snart den
+  // er hentet. Tee står tom, som på nettet (#2485). Under render og ikke i en
+  // effekt, så steget aldri tegnes med den gamle banen. Parameteren nulles etterpå,
+  // ellers ville en ny `focus` valgt banen igjen, og samme bane kunne ikke velges to
+  // ganger.
+  const createdCourseId = route.params?.createdCourseId;
+  const [seenCreatedCourse, setSeenCreatedCourse] = useState<string | undefined>(undefined);
+  if (createdCourseId !== seenCreatedCourse) {
+    setSeenCreatedCourse(createdCourseId);
+    if (createdCourseId) {
+      setCourseId(createdCourseId);
+      setTeeBoxId(null);
+      courses.reload();
+    }
+  }
+  useEffect(() => {
+    if (createdCourseId) navigation.setParams({ createdCourseId: undefined });
+  }, [createdCourseId, navigation]);
   const candidates = useRemote(fetchRosterCandidates);
   // Egen rad, kun for å vite om tee-knappen har en mottaker (#1934).
   // `useCallback` er PÅKREVD her: effekten i `useRemote` har `fetcher` i
@@ -459,6 +478,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           onTee={setTeeBoxId}
           onTeeOff={setTeeOff}
           onRetry={courses.reload}
+          onCreateCourse={(search) => navigation.navigate('CreateCourse', { name: search })}
           // Mens profilen hentes, og om lesingen feiler, står den som
           // «ikke admin». Å skjule en knapp et øyeblikk er en bedre feil enn å
           // love en dør som er låst, og steget har ingen feillinje for

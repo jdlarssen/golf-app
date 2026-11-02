@@ -12,17 +12,18 @@
 // pynt, ikke porten: den delte `isTeeOffInPast` (med 5 minutters slingrings-
 // monn) avgjør ved publisering.
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DateTimePicker, {
   DateTimePickerAndroid,
   type DateTimePickerChangeEvent,
 } from '@react-native-community/datetimepicker';
 import type { CourseOption } from '../../data/createGame';
+import { COURSE_TEXT } from '../../lib/courseCopy';
 import { describeTeeCount } from '../../lib/createGameCopy';
 import { formatClock, formatTeeOff } from '../../lib/display';
 import { formatWeekdayDayMonth } from '../../lib/homeDates';
 import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPicker';
-import { useTheme } from '../../theme';
+import { TAP, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Field, SelectRow } from './primitives';
 
@@ -46,6 +47,7 @@ export function CourseStep({
   onTee,
   onTeeOff,
   onRetry,
+  onCreateCourse,
   isAdmin,
 }: {
   /** `null` mens hentingen pågår. */
@@ -58,6 +60,8 @@ export function CourseStep({
   onTee: (teeBoxId: string) => void;
   onTeeOff: (date: Date) => void;
   onRetry: () => void;
+  /** #2757: «Finner du ikke banen?», med det du har søkt på som forslag til navn. */
+  onCreateCourse: (search: string) => void;
   /**
    * Om arrangøren slipper inn i tee-editoren på nettsiden (#1934). Påkrevd, og
    * med vilje uten default: en default ville latt et framtidig kallsted glemme
@@ -69,6 +73,14 @@ export function CourseStep({
   const [search, setSearch] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // #2757: en bane valgt utenfra («Ny bane») lukker lista, som et trykk på en rad.
+  // Bytte under render, ikke i en effekt: ellers tegnes den gamle lista først.
+  const [seenCourseId, setSeenCourseId] = useState(courseId);
+  if (courseId !== seenCourseId) {
+    setSeenCourseId(courseId);
+    setBrowsing(false);
+    setSearch('');
+  }
 
   const selectedCourse = (courses ?? []).find((c) => c.id === courseId) ?? null;
   const showList = selectedCourse === null || browsing;
@@ -146,6 +158,16 @@ export function CourseStep({
               }}
             />
           ))}
+          {courses !== null ? (
+            <Pressable
+              testID="create-course-new"
+              accessibilityRole="button"
+              style={styles.newCourse}
+              onPress={() => onCreateCourse(search.trim())}
+            >
+              <Text style={ui.linkText}>{COURSE_TEXT.newCourseLink}</Text>
+            </Pressable>
+          ) : null}
         </Field>
       ) : (
         <Field label="Bane">
@@ -260,3 +282,7 @@ export function CourseStep({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  newCourse: { minHeight: TAP, justifyContent: 'center', marginTop: 4 },
+});

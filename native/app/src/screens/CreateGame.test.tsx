@@ -19,7 +19,7 @@
 //     veiviser.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
-import { fetchRosterCandidates, publishGame } from '../data/createGame';
+import { fetchCourses, fetchRosterCandidates, publishGame } from '../data/createGame';
 import { fetchOwnProfile } from '../data/profile';
 import { describePendingOthers } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
@@ -163,6 +163,7 @@ async function renderWizard() {
     goBack: jest.fn(),
     navigate: jest.fn(),
     dispatch: jest.fn(),
+    setParams: jest.fn(),
     // Veiviseren henter profilen på nytt når den får fokus igjen (#2441).
     addListener: jest.fn(() => jest.fn()),
   } as unknown as ScreenProps<'CreateGame'>['navigation'];
@@ -189,6 +190,62 @@ async function renderWizard() {
 
   return { ...view, navigation, focusListener };
 }
+
+async function goToCourseStep() {
+  await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+  await fireEvent.press(screen.getByTestId('create-next'));
+  await fireEvent.press(screen.getByTestId('create-next'));
+}
+
+describe('CreateGame og «Ny bane» (#2757)', () => {
+  it('døra står under lista, også når søket gir treff, og tar med det du søkte på', async () => {
+    const { navigation } = await renderWizard();
+    await goToCourseStep();
+    expect(await screen.findByTestId('create-course-course-1')).toBeTruthy();
+    expect(screen.getByTestId('create-course-new')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByTestId('create-course-search'), ' Testbane 2757 ');
+    expect(screen.getByTestId('create-course-none')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('create-course-new'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CreateCourse', { name: 'Testbane 2757' });
+  });
+
+  it('banen fra skjemaet står valgt, tee tom, lista hentes på nytt én gang og parameteren nulles', async () => {
+    const { navigation, rerender } = await renderWizard();
+    await goToCourseStep();
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    (fetchCourses as jest.Mock).mockClear();
+    (fetchCourses as jest.Mock).mockResolvedValueOnce([
+      {
+        id: 'course-1',
+        name: 'Losby Golfklubb',
+        tees: [{ id: 'tee-1', name: 'Gul', hasMens: true, hasLadies: true, hasJuniors: true }],
+      },
+      {
+        id: 'course-new',
+        name: 'Testbane 2757',
+        tees: [{ id: 'tee-new', name: 'Gul', hasMens: true, hasLadies: true, hasJuniors: false }],
+      },
+    ]);
+
+    await rerender(
+      <SessionProvider value={{ userId: 'me', email: 'admin@example.test' }}>
+        <CreateGame
+          navigation={navigation}
+          route={{ key: 'CreateGame-1', name: 'CreateGame', params: { createdCourseId: 'course-new' } }}
+        />
+      </SessionProvider>,
+    );
+
+    expect(await screen.findByTestId('create-tee-tee-new')).toBeTruthy();
+    expect(screen.getByTestId('create-course-course-new').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-tee-tee-new').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('create-next-hint')).toBeTruthy();
+    expect(fetchCourses).toHaveBeenCalledTimes(1);
+    expect(navigation.setParams).toHaveBeenCalledWith({ createdCourseId: undefined });
+  });
+});
 
 describe('CreateGame', () => {
   // #1954 D3: med tre knapper på Android ligger navigasjonslinja over bunnen av
