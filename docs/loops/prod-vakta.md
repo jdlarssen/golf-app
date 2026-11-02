@@ -5,6 +5,9 @@ en kompis sender eieren melding. En daglig GitHub Actions-cron leser
 prod-telemetri **read-only** og gjør signaler om til issues — som CI-vakta og
 interaktive økter deretter diagnostiserer og fikser.
 
+> Ikke å forveksle med ligavakta (`docs/loops/ligavakt.md`, #2714): den leser
+> tabeller for én bestemt liga og kjøres av orkestratoren, ikke av Actions.
+
 ## Arkitektur (to trinn, med vilje)
 
 1. **Signal-fangst (`.github/workflows/prod-vakt.yml` + `.github/scripts/prod-vakt.sh`):**
