@@ -31,6 +31,7 @@ const SCREENS = [
   'LeagueJoin',
   'InvitationLink',
   'RoundInvite',
+  'CupJoin',
 ] as const;
 const L1 = { leagueId: 'l1' };
 const G = { gameId: 'g1' };

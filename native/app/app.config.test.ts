@@ -185,11 +185,13 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
       '/invitasjon/',
       '/runde/',
       '/pamelding/',
+      '/cup/bli-med/',
       '/en/venner/legg-til/',
       '/en/liga/bli-med/',
       '/en/invitasjon/',
       '/en/runde/',
       '/en/pamelding/',
+      '/en/cup/bli-med/',
     ];
     expect(config.android?.intentFilters).toEqual([
       {

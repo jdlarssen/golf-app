@@ -72,11 +72,13 @@ export const STORE_APP_LINK_PATH_PREFIXES = [
   '/invitasjon/',
   '/runde/',
   '/pamelding/',
+  '/cup/bli-med/',
   '/en/venner/legg-til/',
   '/en/liga/bli-med/',
   '/en/invitasjon/',
   '/en/runde/',
   '/en/pamelding/',
+  '/en/cup/bli-med/',
 ] as const;
 
 /** Bundle-id (iOS) og pakkenavn (Android) — arvet fra skallene (#1279/#1283). */

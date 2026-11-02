@@ -30,6 +30,7 @@ import {
   pointsHeader,
 } from '../lib/cupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT } from '../lib/cupManageCopy';
+import { playerCountLine, SETUP_APP_TEXT } from '../lib/cupSetupCopy';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -102,6 +103,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   const mine = view.matches.filter((match) => match.mine);
   const rest = view.matches.filter((match) => !match.mine);
   const finished = view.results !== null;
+  const draft = view.status === 'draft';
   const header = finished ? null : pointsHeader(view.pointsToWin, view.status);
   const openMatch = (match: AppCupMatch) => {
     if (match.canOpen) {
@@ -148,16 +150,28 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       {notice === 'cup_finished' ? <Note text={FINISH_TEXT.finishedNotice} testID="cup-notice" /> : null}
       {stale ? <Note text={CUP_APP_TEXT.stale} testID="cup-stale" /> : null}
       {view.selfWithdrawn ? <Note text={CUP_TEXT.withdrawnBanner} testID="cup-self-withdrawn" /> : null}
-      {view.canManage && !stale ? (
-        <Pressable
-          accessibilityRole="button"
+      {draft && view.canManage && !stale ? (
+        <>
+          <Door
+            text={SETUP_APP_TEXT.continueDoor}
+            onPress={() => openOrReturn(navigation, 'CreateCup', { cupId })}
+            testID="cup-open-setup"
+          />
+          <Door
+            text={SETUP_APP_TEXT.playersDoor}
+            sub={playerCountLine(view.participantCount ?? 0, null)}
+            onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
+            testID="cup-open-players"
+          />
+        </>
+      ) : null}
+      {/* Et utkast uten kamper har ingenting å styre ennå. */}
+      {view.canManage && !stale && (!draft || view.matches.length > 0) ? (
+        <Door
+          text={MANAGE_APP_TEXT.roomLink}
           onPress={() => openOrReturn(navigation, 'CupManage', { cupId })}
-          style={[styles.doorRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
           testID="cup-open-manage"
-        >
-          <Text style={[styles.doorText, { color: colors.text }]}>{MANAGE_APP_TEXT.roomLink}</Text>
-          <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-        </Pressable>
+        />
       ) : null}
       {view.lineupPending ? <Note text={CUP_APP_TEXT.lineupPending} testID="cup-lineup-pending" /> : null}
 
@@ -202,6 +216,24 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
         </Pressable>
       ) : null}
     </ScrollView>
+  );
+}
+
+function Door({ text, sub, onPress, testID }: { text: string; sub?: string; onPress: () => void; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.doorRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      testID={testID}
+    >
+      <View style={styles.doorBody}>
+        <Text style={[styles.doorText, { color: colors.text }]}>{text}</Text>
+        {sub ? <Text style={[styles.doorSub, { color: colors.muted }]}>{sub}</Text> : null}
+      </View>
+      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
+    </Pressable>
   );
 }
 
@@ -274,7 +306,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 8,
   },
-  doorText: { flex: 1, fontSize: 14, fontFamily: FONTS.sansMedium },
+  doorBody: { flex: 1, gap: 2 },
+  doorText: { fontSize: 14, fontFamily: FONTS.sansMedium },
+  doorSub: { ...interLine(12, 16), fontFamily: FONTS.sans },
   quiet: { minHeight: TAP, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 999, marginTop: 18 },
   quietText: { fontSize: 13, fontFamily: FONTS.sansMedium },
   failure: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },

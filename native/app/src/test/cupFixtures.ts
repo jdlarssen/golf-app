@@ -34,6 +34,7 @@ export function liveCup(overrides: Partial<AppCupView> = {}): AppCupView {
     progress: { played: 3, total: 8 },
     lineupPending: false,
     canManage: false,
+    participantCount: null,
     canWithdrawSelf: false,
     selfWithdrawn: false,
     matches: [

@@ -27,6 +27,15 @@ describe('pushTarget — cupen (#2752)', () => {
   const CUP = '22222222-2222-4222-8222-222222222222';
 
   it.each([
+    [`/admin/cup/${CUP}/spillere`],
+    [`/klubber/${GAME}/cup/${CUP}/spillere`],
+    [`/en/admin/cup/${CUP}/spillere`],
+    [`/admin/cup/${CUP}/spillere?varsel=${NOTE}`],
+  ])('%s åpner spillerlista', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'CupParticipants', params: { cupId: CUP } });
+  });
+
+  it.each([
     [`/cup/${CUP}`],
     [`/cup/${CUP}/resultater`],
     [`/no/cup/${CUP}`],
@@ -40,8 +49,6 @@ describe('pushTarget — cupen (#2752)', () => {
   it.each([
     ['/cup/bli-med/ABC123'],
     ['/no/cup/bli-med/ABC123'],
-    [`/admin/cup/${CUP}/spillere`],
-    [`/klubber/${GAME}/cup/${CUP}/spillere`],
     ['/cups'],
   ])('%s er ikke et cup-rom, og åpner Hjem', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'Home' });

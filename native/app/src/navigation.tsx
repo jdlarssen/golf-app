@@ -43,6 +43,7 @@ import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
+import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupSetupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
@@ -69,8 +70,12 @@ import { InvitationLink } from './screens/InvitationLink';
 import { Leaderboard } from './screens/Leaderboard';
 import { Cup } from './screens/Cup';
 import { CupManage } from './screens/CupManage';
+import { CreateCup } from './screens/CreateCup';
 import { CupFinish } from './screens/CupFinish';
+import { CupJoin } from './screens/CupJoin';
 import { CupMatchBoard } from './screens/CupMatchBoard';
+import { CupParticipants } from './screens/CupParticipants';
+import { CupRemovePlayer } from './screens/CupRemovePlayer';
 import { CupSideAwards } from './screens/CupSideAwards';
 import { CupSwapPlayer } from './screens/CupSwapPlayer';
 import { CupWithdraw } from './screens/CupWithdraw';
@@ -206,6 +211,25 @@ export type RootStackParamList = {
   CupFinish: { cupId: string };
   /** #2752: tavla til en ferdig kamp du ikke spilte, lest gjennom serveren. */
   CupMatchBoard: { cupId: string; gameId: string; label: string; names: string };
+  /**
+   * #2752: veiviseren for en ny cup. Med `cupId` fortsetter den et utkast fra
+   * cup-rommet, og hopper over steget med navn og lag. `notice` er kvitteringen
+   * etter at en spiller er fjernet.
+   */
+  CreateCup: { cupId?: string; notice?: 'participant_removed' } | undefined;
+  /** #2752: spillerlista, med lenka å dele. `cup_signup` åpner den. */
+  CupParticipants: { cupId: string; notice?: 'participant_removed' };
+  /** #2752: bekreftelsen før en spiller fjernes. `returnTo` er skjermen du kom fra. */
+  CupRemovePlayer: {
+    cupId: string;
+    userId: string;
+    name: string;
+    cupName: string;
+    captain: boolean;
+    returnTo: 'CreateCup' | 'CupParticipants';
+  };
+  /** #2752: cup-lenka `/cup/bli-med/<kode>`. */
+  CupJoin: { shortId: string };
   /**
    * «Start runden» i en ligarunde (#2638 Del 2). Etter start erstattes den av
    * spillet (`replace('GameHome')`), så «tilbake» fra spillet går til ligaen.
@@ -533,6 +557,29 @@ export function RootNavigator() {
           name="CupMatchBoard"
           component={CupMatchBoard}
           options={({ route }) => kickerHeader(route.params.label, route.params.label)}
+        />
+        <Stack.Screen
+          name="CreateCup"
+          component={CreateCup}
+          options={({ route }) => {
+            const title = route.params?.cupId ? SETUP_APP_TEXT.setup : SETUP_APP_TEXT.newCup;
+            return kickerHeader(title, title);
+          }}
+        />
+        <Stack.Screen
+          name="CupParticipants"
+          component={CupParticipants}
+          options={kickerHeader(PLAYERS_TEXT.pageTitle, PLAYERS_TEXT.pageTitle)}
+        />
+        <Stack.Screen
+          name="CupRemovePlayer"
+          component={CupRemovePlayer}
+          options={kickerHeader(REMOVE_TEXT.kicker, REMOVE_TEXT.kicker)}
+        />
+        <Stack.Screen
+          name="CupJoin"
+          component={CupJoin}
+          options={kickerHeader(JOIN_TEXT.kicker, JOIN_TEXT.kicker)}
         />
         {/* #2661: markørens kort. Skjermen setter liganavnet i toppen selv. */}
         <Stack.Screen
