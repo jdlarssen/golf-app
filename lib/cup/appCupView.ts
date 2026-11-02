@@ -1,3 +1,4 @@
+import type { AppCupLineupSummary } from './appCupLineupView';
 /**
  * The cup as the app reads it (#2752): the wire shapes of `GET /api/cup` and
  * `GET /api/cup/[id]`. The server builds them (`buildAppCupView.ts`); the app
@@ -106,11 +107,13 @@ export type AppCupView = {
   progress: AppCupProgress;
   /** Line-up sessions are open: «Kapteinene setter opp lagene». */
   lineupPending: boolean;
+  /** The way into the line-up, and what has been revealed. Never who was picked. */
+  lineup: AppCupLineupSummary;
   /** Mine first, then by status. */
   matches: AppCupMatch[];
   /** The caller runs this cup: the room has «Styr cupen». */
   canManage: boolean;
-  /** Only for an organiser while the cup is a draft: the door to the player list. */
+  /** Only for an organiser until the cup is finished: the door to the player list. */
   participantCount: number | null;
   /** The caller has a match left to withdraw from: «Trekk meg fra cupen». */
   canWithdrawSelf: boolean;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  lineupSlotsFrom,
   seatsPerSlot,
   sumPendingLineupSlots,
   validateLineupSubmission,
@@ -361,5 +362,24 @@ describe('sumPendingLineupSlots (#2222)', () => {
         { slot_count: 2, revealed_at: null },
       ]),
     ).toBe(5);
+  });
+});
+
+describe('lineupSlotsFrom', () => {
+  it('leser formen `[{slotIndex, userIds}]`', () => {
+    expect(lineupSlotsFrom([{ slotIndex: 1, userIds: ['a', 'b'] }])).toEqual([{ slotIndex: 1, userIds: ['a', 'b'] }]);
+  });
+
+  it('noe annet enn en liste er null', () => {
+    expect(lineupSlotsFrom('alle')).toBeNull();
+    expect(lineupSlotsFrom({ slotIndex: 1 })).toBeNull();
+    expect(lineupSlotsFrom(null)).toBeNull();
+  });
+
+  it('rader uten plass eller spillere går videre til valideringen, som sier nei', () => {
+    expect(lineupSlotsFrom([null, { slotIndex: 'x' }])).toEqual([
+      { slotIndex: Number.NaN, userIds: [] },
+      { slotIndex: Number.NaN, userIds: [] },
+    ]);
   });
 });

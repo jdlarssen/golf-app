@@ -91,6 +91,7 @@ export function buildAppCupView(
   opts: {
     userId: string;
     lineupPending: boolean;
+    lineup: AppCupView['lineup'];
     unknownLabel: string;
     /** The cup's games the caller can read under RLS. */
     readableGameIds: ReadonlySet<string>;
@@ -156,6 +157,7 @@ export function buildAppCupView(
     progress: cupProgress(leaderboard),
     // A finished cup has no line-up left to wait for, even with a session never revealed.
     lineupPending: opts.lineupPending && !finished,
+    lineup: opts.lineup,
     canManage: opts.canManage,
     participantCount: opts.participantCount ?? null,
     selfWithdrawn: [...roster.team1, ...roster.team2].some(

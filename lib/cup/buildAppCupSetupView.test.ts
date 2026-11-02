@@ -51,7 +51,7 @@ describe('buildAppCupParticipantsView', () => {
     const view = buildAppCupParticipantsView({
       cup: { ...CUP, short_id: 'abcd2345' },
       cap: 40,
-      participants: [{ userId: 'a', name: 'A', hcpIndex: 1, isCaptain: false }],
+      participants: [{ userId: 'a', name: 'A', hcpIndex: 1, teamNumber: null, isCaptain: false }],
       candidates: [
         { userId: 'a', name: 'A', hcpIndex: 1, pending: false },
         { userId: 'b', name: 'B', hcpIndex: 2, pending: true },

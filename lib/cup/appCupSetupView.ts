@@ -34,8 +34,8 @@ export type AppCupSetupView = {
 
 export type AppCupParticipant = { userId: string; name: string; hcpIndex: number };
 
-/** On the list: the confirmation says when a team loses its captain. */
-export type AppCupEnrolled = AppCupParticipant & { isCaptain: boolean };
+/** On the list, with the team and captain the organiser has set. */
+export type AppCupEnrolled = AppCupParticipant & { teamNumber: 1 | 2 | null; isCaptain: boolean };
 
 /** `pending`: a friend without a finished profile, shown but not selectable. */
 export type AppCupCandidate = AppCupParticipant & { pending: boolean };
