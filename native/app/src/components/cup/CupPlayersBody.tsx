@@ -92,8 +92,8 @@ export function CupPlayersBody({
 
   const stale = failure !== null;
   const open = view.status === 'draft' && !stale;
-  // Et nei på lag og kaptein står ved spilleren. Er spilleren borte etter lesingen, står det øverst.
-  const roleErrorInRow = roleError !== null && view.participants.some((player) => player.userId === roleError.userId);
+  // Et nei på lag og kaptein står ved spilleren. Uten valgene på raden, eller uten spilleren, står det øverst.
+  const roleErrorInRow = roleError !== null && open && view.participants.some((player) => player.userId === roleError.userId);
   const topError = error ?? (roleError !== null && !roleErrorInRow ? roleError.text : null);
   const url = cupJoinUrl(view.shortId);
   const addable = pickerRows(view.candidates, {
