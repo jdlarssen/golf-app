@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { roundInviteLinkPath } from '@/lib/appLinks/appLinkPaths';
 import { isPubliclyViewable, signupShareUrl } from '@/lib/games/publicSignupVisibility';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -97,7 +98,7 @@ export default async function PlakatPage({ params }: { params: Params }) {
           {t('posterScanHint')}
         </p>
         <p className="mt-1 font-sans text-xs text-muted">
-          tornygolf.no/signup/{shortId}
+          tornygolf.no{roundInviteLinkPath(shortId)}
         </p>
 
         <p className="mt-8 font-sans text-xs text-muted">

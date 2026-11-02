@@ -11,9 +11,9 @@
 #
 # Regelen, motstykket til iOS-regelen om associated domains
 # (`entitlements-proof.sh`): venne-lenka, QR-koden på bag-taggen, ligalenka,
-# invitasjonen og e-postene om en runde åpner appen (#2748), og ingenting annet på
-# tornygolf.no gjør det. Appen kan ikke
-# bære en nett-sesjon fra en lenke, så innlogging og påmelding skal fortsatt åpnes
+# invitasjonen, e-postene om en runde og den delte påmeldingslenka åpner appen
+# (#2748), og ingenting annet på tornygolf.no gjør det. Appen kan ikke
+# bære en nett-sesjon fra en lenke, så innlogging og `/signup/*` skal fortsatt åpnes
 # i nettleseren.
 #  - Hver autoVerify-sti for tornygolf.no og www.tornygolf.no MÅ være en av stiene
 #    på lista. En annen sti og et filter uten sti (`*`) er FAIL.
