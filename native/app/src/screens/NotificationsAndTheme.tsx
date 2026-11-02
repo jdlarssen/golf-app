@@ -2,14 +2,14 @@
 // denne telefonen (PR 4, etter Varsler-tegningen), nederst temaet: «Lys»,
 // «Mørk» eller «Følg telefonen» (eierens svar: temaet står nederst).
 //
-// **Varslene** er ett skogkort med en bryter, som i designet. «På» ber iOS om
-// lov, registrerer telefonens token og husker det (`data/pushDevice.ts`).
-// «Av» sletter raden. Har iOS sagt nei, kan bare Innstillinger snu det, så
+// **Varslene** er ett skogkort med en bryter, som i designet. «På» ber telefonen
+// om lov, registrerer tokenet og husker det (`data/pushDevice.ts`). «Av» sletter
+// raden. Har telefonen sagt nei for godt, kan bare Innstillinger snu det, så
 // under kortet står en linje og «Åpne Innstillinger», og tilstanden leses på
 // nytt når appen kommer tilbake i forgrunnen. «Hva som varsles» og «Stille
 // tid» fra tegningen hører til #2315; til da står én linje om hva som
-// varsles der seksjonen kommer. Uten den native delen, og på Android, vises
-// ikke varsel-delen i det hele tatt.
+// varsles der seksjonen kommer. Uten den native delen vises ikke varsel-delen i
+// det hele tatt.
 //
 // **Profil v2: som designlerretet.** Tittelen er «Varsler» (28 pt), 16 pt til
 // kanten, etiketten i kicker-stil med 16 pt over og 8 under, og radene 14 pt
