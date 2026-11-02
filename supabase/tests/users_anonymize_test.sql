@@ -33,6 +33,7 @@
 --    16. level reset to 'normal' (#2561, 0210 — the player category is personal)
 --    17. idempotent — a second call succeeds without error
 --    18. admin target → REJECTED (42501 — admin accounts can't be anonymized)
+--    19. fcm_tokens deleted (#2758, 0232)
 --
 -- Runs as the `authenticated` role with a forged JWT `sub` claim — the same
 -- runtime path the app uses. See supabase/tests/README.md for how to run.
@@ -42,7 +43,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(19);
 
 \ir fixtures/rls_helpers.psql
 
@@ -67,6 +68,8 @@ insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
   values (torny_rls.active_id(), 'https://push.example/anonymize-test', 'p256dh-test', 'auth-test');
 insert into public.apns_tokens (user_id, token)
   values (torny_rls.active_id(), 'anonymize-test-apns-token');
+insert into public.fcm_tokens (user_id, token)
+  values (torny_rls.active_id(), 'anonymize-test-fcm-token');
 insert into public.kavalkades (user_id, year, facts, narrative)
   values (torny_rls.active_id(), 2026, '{"rounds": 1}'::jsonb, 'Et golfår.');
 insert into public.kavalkade_shares (user_id, year, card_kind)
@@ -176,6 +179,12 @@ select is(
   (select count(*) from public.apns_tokens where user_id = torny_rls.active_id()),
   0::bigint,
   '#1899: apns_tokens are deleted'
+);
+
+select is(
+  (select count(*) from public.fcm_tokens where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#2758: fcm_tokens are deleted'
 );
 
 select is(
