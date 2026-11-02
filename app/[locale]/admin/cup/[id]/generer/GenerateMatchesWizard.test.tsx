@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  PARITY_PLAYERS,
+  PARITY_PRESET_IDS,
+  PARITY_TEAM_1,
+  PARITY_TEAM_2,
+  PARITY_TEE,
+} from '@/lib/cup/testing/matchPlanParity';
+import expected from '@/lib/cup/testing/matchPlanParity.expected.json';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
+import { createCupMatchesFromPlan } from './actions';
 import type { WizardPlayer, WizardTeeBox } from './GenerateMatches';
 
 // Type C render-tester per docs/test-discipline.md — verifiserer at #1472s
@@ -187,5 +196,28 @@ describe('GenerateMatchesWizard', () => {
     expect(
       screen.getAllByTestId(/^cup-wizard-match-singles_matchplay-/),
     ).toHaveLength(1);
+  });
+});
+
+// #2752, kriterium 18: nettets veiviser sender fasiten for hvert av de fire
+// oppsettene. Appens `CupGenerate.test.tsx` trykker seg gjennom sin skjerm mot den
+// samme fila.
+describe('GenerateMatchesWizard: samme kamper som appen', () => {
+  it.each(PARITY_PRESET_IDS)('%s', async (presetId) => {
+    vi.mocked(createCupMatchesFromPlan).mockClear();
+    render(
+      <GenerateMatchesWizard
+        {...BASE}
+        players={PARITY_PLAYERS}
+        selectedTee={PARITY_TEE}
+        presetId={presetId}
+      />,
+    );
+    for (const p of PARITY_TEAM_1) fireEvent.click(screen.getByTestId(`cup-wizard-assign-${p.id}-team1`));
+    for (const p of PARITY_TEAM_2) fireEvent.click(screen.getByTestId(`cup-wizard-assign-${p.id}-team2`));
+    fireEvent.click(screen.getByTestId('cup-wizard-next'));
+    fireEvent.click(screen.getByTestId('cup-wizard-generate'));
+    await waitFor(() => expect(createCupMatchesFromPlan).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(createCupMatchesFromPlan).mock.calls[0][0].matches).toEqual(expected[presetId]);
   });
 });

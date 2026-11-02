@@ -14,117 +14,17 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getRoleContext } from '@/lib/admin/auth';
 import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
-import { normalizeCustomSessions } from '@/lib/cup/planValidation';
-import { type PairingStrategy } from '@/lib/cup/cupPairing';
+import { loadCupGenerateInput } from '@/lib/cup/loadCupGenerateInput';
+import type { WizardTeeBox } from '@/lib/cup/matchPlan';
 import { type WizardPlayer } from '@/lib/cup/getCupCandidatePlayers';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 
 // WizardPlayer bor i lib/cup/getCupCandidatePlayers (#1472). Re-eksportert her
 // så eksisterende importører av `./GenerateMatches` (GenerateMatchesWizard +
 // dens test) er uendret.
-export type { WizardPlayer };
-
-// #1441 (F3c): rating-feltene under (slope/course_rating/par_total × mens/
-// ladies/juniors) er kun brukt av splittet-cup-dag-bunten, for å vise hver
-// spillers spillehandicap som regnehjelp ved greensomens manuelle lag-slag
-// (D10). Optional i WizardTeeBox (ikke required) — de tre eldre presetene
-// bryr seg ikke, og eksisterende test-fixtures bygger `{id, name}` uten dem.
-type TeeBoxRow = {
-  id: string;
-  name: string;
-  archived_at: string | null;
-  slope_mens: number | null;
-  course_rating_mens: number | null;
-  par_total_mens: number | null;
-  slope_ladies: number | null;
-  course_rating_ladies: number | null;
-  par_total_ladies: number | null;
-  slope_juniors: number | null;
-  course_rating_juniors: number | null;
-  par_total_juniors: number | null;
-};
-
-type CourseRow = {
-  id: string;
-  name: string;
-  tee_boxes: TeeBoxRow[];
-};
-
-export type WizardTeeBox = {
-  id: string;
-  name: string;
-  slope_mens?: number | null;
-  course_rating_mens?: number | null;
-  par_total_mens?: number | null;
-  slope_ladies?: number | null;
-  course_rating_ladies?: number | null;
-  par_total_ladies?: number | null;
-  slope_juniors?: number | null;
-  course_rating_juniors?: number | null;
-  par_total_juniors?: number | null;
-};
-
-type ParticipantUser = {
-  id: string;
-  name: string | null;
-  nickname: string | null;
-  hcp_index: number | string;
-  gender: 'mens' | 'ladies' | null;
-};
-
-function displayNameOf(u: ParticipantUser | null, unknownLabel: string): string {
-  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
-}
+export type { WizardPlayer, WizardTeeBox };
 
 type GenerateMatchesVariant = 'admin' | 'club';
-
-/**
- * Resolve planens bane + tee (#1488, K13 — trukket ut for å holde
- * `GenerateMatches` under kompleksitetstaket). En arkivert tee (eller en slettet
- * bane/tee) resolver IKKE → `selectedTee` forblir undefined og planen regnes som
- * ufullstendig, i tråd med at genereringen ville avvist en arkivert tee
- * server-side (`plan_tee`). Byte-identisk med det tidligere inline-blokket.
- */
-async function resolvePlanCourseTee(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  plan: { course_id: string | null; tee_box_id: string | null } | null | undefined,
-): Promise<{
-  planCourseName: string;
-  planTeeName: string;
-  selectedTee: WizardTeeBox | undefined;
-}> {
-  const empty = { planCourseName: '', planTeeName: '', selectedTee: undefined };
-  if (!plan?.course_id || !plan?.tee_box_id) return empty;
-  const { data: course } = await supabase
-    .from('courses')
-    .select(
-      'id, name, tee_boxes(id, name, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
-    )
-    .eq('id', plan.course_id)
-    .maybeSingle<CourseRow>();
-  if (!course) return empty;
-  const tee = (course.tee_boxes ?? []).find(
-    (tb) => tb.id === plan.tee_box_id && tb.archived_at === null,
-  );
-  if (!tee) return empty;
-  return {
-    planCourseName: course.name,
-    planTeeName: tee.name,
-    selectedTee: {
-      id: tee.id,
-      name: tee.name,
-      slope_mens: tee.slope_mens,
-      course_rating_mens: tee.course_rating_mens,
-      par_total_mens: tee.par_total_mens,
-      slope_ladies: tee.slope_ladies,
-      course_rating_ladies: tee.course_rating_ladies,
-      par_total_ladies: tee.par_total_ladies,
-      slope_juniors: tee.slope_juniors,
-      course_rating_juniors: tee.course_rating_juniors,
-      par_total_juniors: tee.par_total_juniors,
-    },
-  };
-}
 
 /**
  * Guided empty-state-kortene (#752/#1488 K13) — vis lenke til det rommet som
@@ -219,47 +119,18 @@ export async function GenerateMatches({
 
   const admin = getAdminClient();
 
-  // Lagret plan (SELECT-policy tillater authenticated — request-klient holder)
-  // + påmeldte deltakere (admin-client så klubb-admins ser hele lista uansett
-  // users-RLS, samme som Spillere-rommet).
-  const [planRes, participantRes] = await Promise.all([
-    supabase
-      .from('tournament_plans')
-      .select(
-        'course_id, tee_box_id, scheduled_tee_off_at, preset_id, custom_sessions, strategy, best_ball_allowance_pct',
-      )
-      .eq('tournament_id', tournamentId)
-      .maybeSingle(),
-    admin
-      .from('tournament_participants')
-      .select(
-        'user_id, created_at, users:users!tournament_participants_user_id_fkey(id, name, nickname, hcp_index, gender)',
-      )
-      .eq('tournament_id', tournamentId)
-      .order('created_at', { ascending: true }),
-  ]);
-  if (participantRes.error) throw participantRes.error;
-  const plan = planRes.data;
-
-  // Deltakerne er alltid profil-fullførte ved add-time (Spillere-rommet gater
-  // det), så ingen `pending`-rader her — kartlegg rett til WizardPlayer.
-  const participants: WizardPlayer[] = (participantRes.data ?? []).map((row) => {
-    const u = row.users;
-    return {
-      id: row.user_id,
-      displayName: displayNameOf(u, unknownLabel),
-      hcpIndex: Number(u?.hcp_index ?? 0),
-      gender: u?.gender ?? null,
-    };
-  });
-
-  // Resolve planens bane + tee (navn til recap + rating-sett til greensomens
-  // regnehjelp) — se `resolvePlanCourseTee`. planReady krever at planen finnes,
-  // har bane+tee, OG at de faktisk resolver (arkivert/slettet tee → ufullstendig).
-  const { planCourseName, planTeeName, selectedTee } = await resolvePlanCourseTee(
-    supabase,
-    plan,
-  );
+  // #2752: planen og de påmeldte leses av samme funksjon som appens rute.
+  // planReady krever at planen finnes, har bane+tee, OG at de faktisk resolver
+  // (arkivert/slettet tee → ufullstendig).
+  const {
+    participants,
+    planCourseName,
+    planTeeName,
+    selectedTee,
+    presetId,
+    customSessions,
+    strategy,
+  } = await loadCupGenerateInput(supabase, admin, tournamentId, unknownLabel);
   const planReady = selectedTee !== undefined;
 
   let clubName: string | null = null;
@@ -312,11 +183,6 @@ export async function GenerateMatches({
       </Shell>
     );
   }
-
-  const presetId = plan?.preset_id ?? 'klassisk';
-  const customSessions = normalizeCustomSessions(plan?.custom_sessions);
-  const strategy: PairingStrategy =
-    plan?.strategy === 'random' ? 'random' : 'handicap';
 
   return (
     <Shell>
