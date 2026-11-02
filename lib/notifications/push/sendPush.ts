@@ -9,6 +9,12 @@ import {
   sendApnsNotification,
   type ApnsEnvironment,
 } from './apns';
+import {
+  buildFcmMessage,
+  decideFcmPruneAction,
+  isFcmConfigured,
+  sendFcmNotification,
+} from './fcm';
 import { buildNotificationText } from '@/lib/notifications/cardContent';
 import { SHOW_KRONER_IN_APP } from '@/lib/launchRules';
 import { notificationDestination } from '@/lib/notifications/deeplink';
@@ -18,13 +24,15 @@ import type { NotificationKind, NotificationPayload } from '@/lib/notifications/
 
 type SubRow = { id: string; endpoint: string; p256dh: string; auth: string };
 type ApnsRow = { id: string; token: string; environment: string | null };
+type FcmRow = { id: string; token: string };
 
 /**
- * Best-effort push fan-out to all of a user's devices, across BOTH channels:
- * Web Push for browsers and installed PWAs (#24), APNs for the iOS shell (#1282).
- * ADDITIVE on top of email — never throws, never blocks the caller. Each channel
- * no-ops on its own when unconfigured, so one missing key never silences the
- * other. Dead registrations are pruned (web 404/410, APNs per decidePruneAction).
+ * Best-effort push fan-out to all of a user's devices, across three channels:
+ * Web Push for browsers and installed PWAs (#24), APNs for iPhones (#1282), FCM
+ * for Android (#2758). ADDITIVE on top of email — never throws, never blocks the
+ * caller. Each channel no-ops on its own when unconfigured, so one missing key
+ * never silences the others. Dead registrations are pruned (web 404/410, APNs per
+ * decidePruneAction, FCM per decideFcmPruneAction).
  */
 export async function sendPushToUser<K extends NotificationKind>(opts: {
   userId: string;
@@ -37,12 +45,13 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
   try {
     const webpush = isPushConfigured() ? ensureVapid() : null;
     const apnsOn = isApnsConfigured();
-    if (!webpush && !apnsOn) return;
+    const fcmOn = isFcmConfigured();
+    if (!webpush && !apnsOn && !fcmOn) return;
 
     const admin = getAdminClient();
-    // Both channels feed the same notification, so read them in parallel — an
+    // The channels feed the same notification, so read them in parallel — an
     // unconfigured channel is skipped rather than queried.
-    const [subs, apnsTokens] = await Promise.all([
+    const [subs, apnsTokens, fcmTokens] = await Promise.all([
       webpush
         ? admin
             .from('push_subscriptions')
@@ -57,15 +66,25 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
             .eq('user_id', opts.userId)
             .then((r) => (r.data ?? []) as ApnsRow[])
         : Promise.resolve([] as ApnsRow[]),
+      fcmOn
+        ? admin
+            .from('fcm_tokens')
+            .select('id, token')
+            .eq('user_id', opts.userId)
+            .then((r) => {
+              if (r.error) console.error('[push] fcm token read failed', r.error);
+              return (r.data ?? []) as FcmRow[];
+            })
+        : Promise.resolve([] as FcmRow[]),
     ]);
     const rows = subs;
-    if (rows.length === 0 && apnsTokens.length === 0) return;
+    if (rows.length === 0 && apnsTokens.length === 0 && fcmTokens.length === 0) return;
 
     const t = await getInboxTranslator(opts.locale);
     const { title, detail } = buildNotificationText(opts.kind, opts.payload, t);
     const destination =
       notificationDestination({ kind: opts.kind, payload: opts.payload }) ?? '/';
-    // Same url for web push and APNs: the page the tap opens reads the marker.
+    // Same url for every channel: the page the tap opens reads the marker.
     const url = opts.notificationId
       ? withReadMarker(destination, opts.notificationId)
       : destination;
@@ -79,12 +98,13 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
     });
 
     // #2561: the app shows no kroner at launch (lib/launchRules.ts, the same
-    // switch the app's screens read), so APNs gets the app text: the entry-fee
-    // reminder without its amount. Web push keeps the web text.
+    // switch the app's screens read), so APNs and FCM get the app text: the
+    // entry-fee reminder without its amount. Web push keeps the web text.
     const appText = SHOW_KRONER_IN_APP
       ? { title, detail }
       : buildNotificationText(opts.kind, opts.payload, t, { surface: 'app' });
     const apnsPayload = buildApnsPayload(appText.title, appText.detail, url, opts.kind);
+    const fcmContent = buildFcmMessage(appText.title, appText.detail, url, opts.kind);
 
     await Promise.allSettled([
       ...rows.map(async (sub) => {
@@ -170,6 +190,39 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
         } catch (err) {
           // Network/HTTP2 trouble says nothing about the token — keep the row.
           console.error('[push] apns send failed', row.token, err);
+        }
+      }),
+
+      ...fcmTokens.map(async (row) => {
+        // Logs carry the row id: FCM tokens never go in a log (#2758).
+        try {
+          const res = await sendFcmNotification(row.token, fcmContent);
+
+          if (res.status >= 200 && res.status < 300) {
+            const { error: touchError } = await admin
+              .from('fcm_tokens')
+              .update({ last_used_at: new Date().toISOString() })
+              .eq('token', row.token);
+            if (touchError) {
+              console.error('[push] fcm last_used_at update failed', touchError);
+            }
+            return;
+          }
+
+          if (decideFcmPruneAction(res.status, res.errorCode) === 'prune') {
+            const { error: pruneError } = await admin
+              .from('fcm_tokens')
+              .delete()
+              .eq('token', row.token);
+            if (pruneError) {
+              console.error('[push] fcm token prune failed', pruneError);
+            }
+            return;
+          }
+          console.error('[push] fcm send failed', row.id, res.status, res.errorCode);
+        } catch (err) {
+          // Network or token-exchange trouble says nothing about the token — keep the row.
+          console.error('[push] fcm send failed', row.id, err);
         }
       }),
     ]);

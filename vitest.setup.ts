@@ -20,6 +20,8 @@ delete process.env.APNS_KEY_ID;
 delete process.env.APNS_TEAM_ID;
 delete process.env.APNS_BUNDLE_ID;
 delete process.env.APNS_PRIVATE_KEY;
+// The same for the FCM channel (#2758).
+delete process.env.FCM_SERVICE_ACCOUNT;
 
 // Stub next/navigation so components that call useRouter / usePathname /
 // useSearchParams (e.g. SmartLink) don't throw "invariant: app router not
