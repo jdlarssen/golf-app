@@ -32,6 +32,7 @@ export const ERROR_BOUNDARY_TEXT = {
 const VARIANT_BY_ROUTE = {
   Home: 'noBack',
   CreateGame: 'default',
+  CreateCourse: 'default',
   GameHome: 'game',
   Hole: 'game',
   Scorecard: 'game',

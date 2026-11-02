@@ -175,6 +175,9 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/create/CourseStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   'components/create/SetupStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   'components/create/PlayersStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
+  // #2757: hullkortet og tee-tabellen på «Ny bane».
+  'components/course/HoleGrid.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
+  'components/course/TeeTable.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.
   'components/approve/RejectSheet.tsx': 'modal',
   // #2675: søkefeltet over medspillerlista og over markørvalget.
@@ -188,6 +191,7 @@ describe('rullefeltet på skjermer med tekstfelt', () => {
   it('finner skjermene med egne tekstfelt', () => {
     expect(screensWithFields.sort()).toEqual([
       'screens/CompleteProfile.tsx',
+      'screens/CreateCourse.tsx',
       'screens/EditProfile.tsx',
       'screens/Friends.tsx',
       'screens/Login.tsx',

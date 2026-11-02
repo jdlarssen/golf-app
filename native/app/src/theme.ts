@@ -11,6 +11,7 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { PixelRatio, Platform, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
 import FRAUNCES_SIZES from '../assets/fonts/fraunces-sizes.json';
+import type { TeeColor } from '../../../lib/courses/teeColors';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
 export const TAP = 44;
@@ -161,6 +162,18 @@ export type ThemeColors = {
    * kremen i natt. Ingen annen rolle har de to verdiene.
    */
   avatarInk: string;
+};
+
+/**
+ * #2757: prikken foran en tee. Webbens `--tee-*`, de samme om dagen og om natten
+ * (`app/globals.css`); `theme.test.ts` låser dem mot paletten i `TEE_COLORS`.
+ */
+export const TEE_DOT_COLORS: Record<TeeColor, string> = {
+  white: '#ffffff',
+  yellow: '#e3c24a',
+  red: '#c8423b',
+  blue: '#3a6fb5',
+  orange: '#e88a3a',
 };
 
 /**
