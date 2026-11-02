@@ -9,13 +9,14 @@ fra, så neste innsending ikke må finne dem opp på nytt.
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
 mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning som
 venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgjør
-(appen viser dem ikke ved lansering), aldri cup. Ligaen står i beskrivelsen fra bygg 9:
+(appen viser dem ikke ved lansering). Cup kan stå i beskrivelsen fra bygget som har hele
+flyten (#2752): appen lager, spiller og avslutter en personlig cup, og en klubb-cup lages
+på nettsiden. Ligaen står i beskrivelsen fra bygg 9:
 appen viser ligaen du er med i og starter runden, men arrangøren setter den opp på
 nettsiden. Appen **oppretter** åtte formater, men
 den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
-de fleste lagformatene. Appen åpner ikke patsome, cup-dager delt i to nihullsdeler og
-avledede cup-kamper (`native/app/src/lib/formatGate.ts`). Beskrivelsen sier derfor aldri
-at du kan *sette opp* scramble i appen.
+de fleste lagformatene. Appen åpner ikke patsome (`native/app/src/lib/formatGate.ts`).
+Beskrivelsen sier derfor aldri at du kan *sette opp* scramble i appen.
 
 ## Personvern-etikett (App Privacy)
 
@@ -287,9 +288,12 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   ferdige tavla (sitat øverst, hele historien nederst), og varselet «Resultatet er klart»
   viser starten av den. Butikkbeskrivelsen nevner den ikke. Kavalkaden er i appen, så den
   står i beskrivelsen.
-- **Cup.** Finnes på nettsiden. Vanlige cup-kamper spilles i appen, men patsome,
-  cup-dager delt i to nihullsdeler og avledede cup-kamper åpnes ikke
-  (`formatGate.ts`). Ligaen er med fra bygg 9 («LIGA»): appen viser sesongtabellen og den
+- **Cup.** Fra #2752 lager, spiller og avslutter appen en personlig cup: oppsett,
+  lagfordeling, kampene, start, trekk og bytte, sidepoeng og avslutning. En klubb-cup
+  lages på nettsiden, men spilles, styres og avsluttes i appen. Kapteinuttaket er på
+  nettsiden til den siste PR-en på #2752 er merget. Beskrivelsen nevner ikke cup ennå:
+  eieren velger når avsnittet kommer. Patsome åpnes ikke (`formatGate.ts`).
+- **Liga.** Ligaen er med fra bygg 9 («LIGA»): appen viser sesongtabellen og den
   åpne runden, starter runden og lar markøren godkjenne kortet i en simulatorliga
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
   ligaer, og beskrivelsen sier ikke at den gjør det. Ligavarslene («runden åpner», «fristen
