@@ -24,7 +24,7 @@
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
 // Vår payload er `{ aps, url, kind }`, så `url` står i
 // `request.trigger.payload`, som er hele `userInfo`. `content.data` leses som
-// reserve.
+// reserve. På Android ligger den i `request.trigger.remoteMessage.data` (#2758).
 //
 // **Hvilket varsel** (#2201): serveren legger `?varsel=<id>` på lenka, så et
 // trykk kan merke akkurat det varselet som lest. Markøren endrer ikke hvor
@@ -48,7 +48,11 @@ export type PushTarget =
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
 export type PushRequestLike = {
   content?: { data?: Record<string, unknown> | null } | null;
-  trigger?: { type?: string; payload?: Record<string, unknown> | null } | null;
+  trigger?: {
+    type?: string;
+    payload?: Record<string, unknown> | null;
+    remoteMessage?: { data?: Record<string, unknown> | null } | null;
+  } | null;
 };
 
 const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
@@ -65,6 +69,8 @@ const CUP_PLAYERS_PATH =
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
   const fromPayload = request?.trigger?.payload?.url;
   if (typeof fromPayload === 'string') return fromPayload;
+  const fromRemote = request?.trigger?.remoteMessage?.data?.url;
+  if (typeof fromRemote === 'string') return fromRemote;
   const fromData = request?.content?.data?.url;
   return typeof fromData === 'string' ? fromData : null;
 }

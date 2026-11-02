@@ -152,7 +152,6 @@ export const PROFILE_TEXT = {
   /** Undertittelen under «Varsler og tema», som i designet. */
   pushSubtitle: 'Du bestemmer hva som får telefonen til å plinge.',
   pushTitle: 'Varsler på denne telefonen',
-  pushOn: 'På · iPhone',
   pushOff: 'Av',
   /** Hva som varsles i dag. Valg per gruppe kommer i #2315. */
   pushWhat:
@@ -231,18 +230,9 @@ export const PROFILE_TEXT = {
     'Du er fortsatt logget inn. Utlogging krever nett når det er en stund siden sist — koble til og prøv igjen.',
 } as const;
 
-/**
- * Menyraden som åpner temasiden. Android har ikke push ved lansering (eierens
- * valg: e-post holder først, #2560), så der lover ikke raden varsler; siden har
- * bare temaet.
- */
-export function notificationsThemeMenuLabel(os: string): string {
-  return os === 'ios' ? PROFILE_TEXT.menuNotificationsTheme : PROFILE_TEXT.themeHeading;
-}
-
-/** Tittelen på siden raden åpner: «Varsler» på iOS, «Tema» på Android (#2560). */
-export function notificationsThemeHeading(os: string): string {
-  return os === 'ios' ? PROFILE_TEXT.notificationsHeading : PROFILE_TEXT.themeHeading;
+/** Statuslinja når varslene står på: designet sier «iPhone», og Android sier sitt (#2758). */
+export function pushOnLabel(os: string): string {
+  return os === 'android' ? 'På · Android' : 'På · iPhone';
 }
 
 /**

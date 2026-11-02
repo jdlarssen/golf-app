@@ -41,7 +41,7 @@ import {
   turnOnPush,
   type PushState,
 } from '../data/pushDevice';
-import { PROFILE_TEXT, notificationsThemeHeading } from '../lib/profileCopy';
+import { PROFILE_TEXT, pushOnLabel } from '../lib/profileCopy';
 import {
   THEME_PREFERENCES,
   loadThemePreference,
@@ -109,9 +109,6 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
   }, []);
 
   const showPush = push !== null && push !== 'unsupported';
-  // Android heter siden «Tema» (#2560); da blir etiketten over valgene en dobbel.
-  const heading = notificationsThemeHeading(Platform.OS);
-  const showThemeLabel = heading !== PROFILE_TEXT.themeHeading;
 
   return (
     <ScrollView
@@ -121,14 +118,12 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
     >
       <PageTitle
         size="settings"
-        title={heading}
+        title={PROFILE_TEXT.notificationsHeading}
         subtitle={showPush ? PROFILE_TEXT.pushSubtitle : undefined}
       />
       {showPush ? <PushSection state={push} onChange={setPush} /> : null}
-      {showThemeLabel ? (
-        <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
-      ) : null}
-      <SettingList testID="theme-choices" style={[styles.list, showThemeLabel ? null : styles.listNoLabel]}>
+      <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
+      <SettingList testID="theme-choices" style={styles.list}>
         {THEME_PREFERENCES.map((preference) => (
           <SettingRow
             key={preference}
@@ -173,7 +168,8 @@ function PushSection({
         onChange(next ? 'on' : 'off');
       } else if (result.reason === 'denied') {
         onChange('denied');
-      } else {
+      } else if (result.reason !== 'declined') {
+        // Et nei som kan spørres om igjen er ingen feil: bryteren står av.
         setNote(next ? PROFILE_TEXT.pushOnFailed : PROFILE_TEXT.pushOffFailed);
       }
     },
@@ -186,7 +182,7 @@ function PushSection({
         <View style={styles.texts}>
           <Text style={[styles.cardTitle, cream]}>{PROFILE_TEXT.pushTitle}</Text>
           <Text style={[styles.cardStatus, cream]} testID="push-status">
-            {on ? PROFILE_TEXT.pushOn : PROFILE_TEXT.pushOff}
+            {on ? pushOnLabel(Platform.OS) : PROFILE_TEXT.pushOff}
           </Text>
         </View>
         <DesignSwitch
@@ -236,8 +232,6 @@ const styles = StyleSheet.create({
   // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
   label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
   list: { marginTop: 0 },
-  // Uten etiketten (Android, #2560) ligger lista rett under tittelen.
-  listNoLabel: { marginTop: 16 },
   // Siden har ingen `gap`; linja trenger luft under lista.
   note: { marginTop: 8 },
   // Designet: skogkortet 14 pt under undertittelen, 16 pt runde hjørner,
