@@ -41,6 +41,7 @@ import { END_GAME_TEXT } from './lib/endGameCopy';
 import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
 import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
+import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
@@ -53,6 +54,7 @@ import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
 import { Approve } from './screens/Approve';
+import { CreateCourse } from './screens/CreateCourse';
 import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
 import { EditProfile } from './screens/EditProfile';
@@ -91,7 +93,13 @@ import { MARKER_TEXT } from './lib/markerCopy';
 
 export type RootStackParamList = {
   Home: undefined;
-  CreateGame: undefined;
+  /**
+   * `createdCourseId` (#2757): banen «Ny bane» kom tilbake med, lagret eller
+   * «Bruk denne». Veiviseren velger den og nullstiller parameteren med det samme.
+   */
+  CreateGame: { createdCourseId?: string } | undefined;
+  /** «Ny bane» (#2757), fra banesteget. `name` er det du søkte på. */
+  CreateCourse: { name?: string };
   GameHome: { gameId: string };
   /**
    * `gameName` og `topLine` (#2228): toppen hullsiden setter selv når bundelen
@@ -337,6 +345,11 @@ export function RootNavigator() {
           name="CreateGame"
           component={CreateGame}
           options={{ title: 'Nytt spill' }}
+        />
+        <Stack.Screen
+          name="CreateCourse"
+          component={CreateCourse}
+          options={{ title: COURSE_TEXT.topTitle }}
         />
         <Stack.Screen
           name="GameHome"

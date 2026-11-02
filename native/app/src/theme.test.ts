@@ -10,6 +10,7 @@ import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
 import { FRAUNCES_FILES } from './fonts';
 import FRAUNCES_SIZES from '../assets/fonts/fraunces-sizes.json';
+import { TEE_COLORS } from '../../../lib/courses/teeColors';
 import {
   FONTS,
   fraunces,
@@ -19,6 +20,7 @@ import {
   centeredLineTop,
   PALETTES,
   SUNLIGHT_THEME,
+  TEE_DOT_COLORS,
   ThemeScope,
   resolveScheme,
   themeFor,
@@ -95,6 +97,12 @@ function cssVars(opener: string): Record<string, string> {
   }
   return vars;
 }
+
+describe('TEE_DOT_COLORS', () => {
+  it.each(TEE_COLORS)('%s er webbens --tee-token', (color) => {
+    expect(TEE_DOT_COLORS[color].toLowerCase()).toBe(cssVars(':root {')[`--tee-${color}`]);
+  });
+});
 
 describe('PALETTES', () => {
   it.each([

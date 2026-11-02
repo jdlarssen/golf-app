@@ -83,6 +83,7 @@ describe('veiviserens lenkeknapper (#1891)', () => {
       onTee: jest.fn(),
       onTeeOff: jest.fn(),
       onRetry: jest.fn(),
+      onCreateCourse: jest.fn(),
     };
 
     const { rerender } = await render(<CourseStep {...props} isAdmin />);

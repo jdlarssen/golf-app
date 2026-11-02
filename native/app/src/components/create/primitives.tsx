@@ -97,6 +97,12 @@ export interface ChipOption<T extends string | number> {
    * den grå, sier raden hva banen har.
    */
   disabled?: boolean;
+  /** Foran teksten: fargeprikken på en tee-brikke (#2757). */
+  leading?: ReactNode;
+}
+
+function isChosen<T>(value: T | null | readonly T[], option: T): boolean {
+  return Array.isArray(value) ? (value as readonly T[]).includes(option) : value === option;
 }
 
 /**
@@ -114,7 +120,8 @@ export function Chips<T extends string | number>({
   style,
 }: {
   options: readonly ChipOption<T>[];
-  value: T | null;
+  /** Ett valg, eller flere når brikkene er et flervalg (tee-ene på «Ny bane», #2757). */
+  value: T | null | readonly T[];
   onChange: (value: T) => void;
   testID?: string;
   /** Luft rundt raden der den ikke står i et `Field` (spillerlista, #2716). */
@@ -124,7 +131,7 @@ export function Chips<T extends string | number>({
   return (
     <View style={[styles.chips, style]} testID={testID}>
       {options.map((option) => {
-        const active = option.value === value;
+        const active = isChosen(value, option.value);
         const disabled = option.disabled === true;
         return (
           <Pressable
@@ -142,6 +149,7 @@ export function Chips<T extends string | number>({
               disabled && styles.chipDisabled,
             ]}
           >
+            {option.leading}
             <Text style={active ? ui.body : ui.muted}>{option.label}</Text>
           </Pressable>
         );
@@ -221,6 +229,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
