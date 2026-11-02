@@ -26,11 +26,11 @@ import { isUuid } from '@/lib/url/isUuid';
 //     som pågår, er 404, også for arrangøren: den veien går spillets egen tavle.
 //   - bare i en cup kalleren får se (`canViewCupPageAs`, strengere enn nettets tavle
 //     for en klubb-cup, siden rommet er eneste vei hit).
-//   - felter tavla ikke leser, sendes ikke: tidsstempler for levering, hvem som
-//     leverte og godkjente, marker, avslag, delingslenka, referatet, hvem som laget
-//     spillet, tee-tid, og id-ene til bane og tee. `user_id` følger med, for det er
-//     den som kobler slag til spiller. `withdrawn_at` følger med, for tavla lister
-//     hvem som trakk seg, som på nettet.
+//   - dette sendes ikke: tidsstempler for levering, hvem som leverte og godkjente,
+//     marker, avslag, delingslenka, referatet, hvem som laget spillet, tee-tid, og
+//     id-ene til bane og tee. `user_id` følger med, for det er den som kobler slag
+//     til spiller, og `withdrawn_at`, for tavla lister hvem som trakk seg. Resten
+//     av raden er oppsettet av kampen, som gjesteflagg og navnet på verten.
 //   - en avledet kamp får bare sine egne spilleres slag, ikke hele vertens.
 //
 // WIRE (`lib/games/gameBundleRows.ts`):
