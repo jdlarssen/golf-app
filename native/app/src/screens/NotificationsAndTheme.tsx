@@ -41,6 +41,7 @@ import {
   turnOnPush,
   type PushState,
 } from '../data/pushDevice';
+import { markPushPromptAnswered } from '../data/pushPrompt';
 import { PROFILE_TEXT, pushOnLabel } from '../lib/profileCopy';
 import {
   THEME_PREFERENCES,
@@ -162,6 +163,8 @@ function PushSection({
     async (next: boolean) => {
       setBusy(true);
       setNote(null);
+      // #2758: den som bruker bryteren, har svart, så kortet på Hjem kommer ikke.
+      void markPushPromptAnswered();
       const result = next ? await turnOnPush() : await turnOffPush();
       setBusy(false);
       if (result.ok) {

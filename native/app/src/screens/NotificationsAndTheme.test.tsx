@@ -14,6 +14,7 @@ import { loadThemePreference, saveThemePreference } from '../lib/themePreference
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { NotificationsAndTheme } from './NotificationsAndTheme';
+import { markPushPromptAnswered } from '../data/pushPrompt';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../lib/themePreference', () => ({
@@ -27,6 +28,7 @@ jest.mock('../data/pushDevice', () => ({
   turnOnPush: jest.fn(),
   turnOffPush: jest.fn(),
 }));
+jest.mock('../data/pushPrompt', () => ({ markPushPromptAnswered: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const readPushMock = readPushState as jest.Mock;
@@ -151,6 +153,21 @@ describe('NotificationsAndTheme', () => {
     expect(await screen.findByTestId('theme-system-check')).toBeTruthy();
     expect(screen.getByText(PROFILE_TEXT.notificationsHeading)).toBeTruthy();
     expect(screen.getAllByText('Tema')).toHaveLength(1);
+  });
+
+  // #2758: den som bruker bryteren, har svart, så kortet på Hjem kommer ikke.
+  it('lagrer svaret når bryteren brukes, og bare da', async () => {
+    readPushMock.mockResolvedValue('off');
+    onMock.mockResolvedValue({ ok: true });
+    await renderScreen();
+    await screen.findByTestId('push-section');
+    expect(markPushPromptAnswered).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
+    });
+
+    expect(markPushPromptAnswered).toHaveBeenCalledTimes(1);
   });
 
   // #2758: statuslinja sier hvilken telefon varslene står på.

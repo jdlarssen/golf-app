@@ -160,6 +160,14 @@ export const PROFILE_TEXT = {
   pushOpenSettings: 'Åpne Innstillinger',
   pushOnFailed: 'Fikk ikke slått på varsler. Prøv igjen.',
   pushOffFailed: 'Fikk ikke slått av varsler. Prøv igjen.',
+  // Kortet på Hjem (#2758). Samme tekst som webbens `pushSettings.nudge*`.
+  pushPromptTitle: 'Få beskjed med en gang',
+  pushPromptBody:
+    'Slå på varsler, så sier vi ifra når du blir invitert, et kort skal godkjennes, eller resultatet er klart.',
+  pushPromptEnable: 'Slå på varsler',
+  pushPromptLater: 'Ikke nå',
+  pushPromptDoneTitle: 'Varsler er på',
+  pushPromptDoneBody: 'Vi sier ifra med en gang noe skjer.',
   /** Designets fotnote. Appen har ingen innboks ennå, webben har. */
   pushFooter: 'Innboksen på tornygolf.no får alt uansett. Dette styrer bare pling på telefonen.',
   /** Knappen under menyen (#2256 PR 3), som i designet. */

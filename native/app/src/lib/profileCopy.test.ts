@@ -434,6 +434,19 @@ describe('spillkortet', () => {
 });
 
 
+// #2758: kortet på Hjem bruker nettsidens egen tekst, så ingen ny copy.
+describe('kortet på Hjem', () => {
+  it('har samme tekst som nettsiden', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- bare denne testen leser hele filen
+    const web = (require('../../../../messages/no.json') as { pushSettings: Record<string, string> }).pushSettings;
+    expect(PROFILE_TEXT.pushPromptTitle).toBe(web.nudgeTitle);
+    expect(PROFILE_TEXT.pushPromptBody).toBe(web.nudgeBody);
+    expect(PROFILE_TEXT.pushPromptLater).toBe(web.nudgeLater);
+    expect(PROFILE_TEXT.pushPromptDoneTitle).toBe(web.nudgeDoneTitle);
+    expect(PROFILE_TEXT.pushPromptDoneBody).toBe(web.nudgeDoneBody);
+  });
+});
+
 // #2758: statuslinja sier hvilken telefon varslene står på.
 describe('pushOnLabel', () => {
   it('sier iPhone på iPhone og Android på Android', () => {
