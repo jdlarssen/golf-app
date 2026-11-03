@@ -156,10 +156,29 @@ describe('PushPromptCard', () => {
     await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptEnable }));
 
     expect(screen.getByTestId('push-prompt-done')).toBeTruthy();
+    expect(await AsyncStorage.getItem(PUSH_PROMPT_ANSWERED_KEY)).not.toBe('retry');
     await screen.unmount();
     await open();
     expect(screen.queryByTestId('push-prompt')).toBeNull();
     expect(screen.queryByTestId('push-prompt-done')).toBeNull();
+  });
+
+  it('«Ikke nå» etter en feil avslutter det, også etter omstart', async () => {
+    mockNotifications.requestPermissionsAsync.mockImplementation(async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue(GRANTED);
+      return { granted: true, canAskAgain: true };
+    });
+    mockNotifications.getDevicePushTokenAsync.mockRejectedValue(new Error('ingen token'));
+    await open();
+    await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptEnable }));
+
+    await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptLater }));
+
+    expect(screen.queryByTestId('push-prompt')).toBeNull();
+    expect(await AsyncStorage.getItem(PUSH_PROMPT_ANSWERED_KEY)).not.toBe('retry');
+    await screen.unmount();
+    await open();
+    expect(screen.queryByTestId('push-prompt')).toBeNull();
   });
 
   it('«Ikke nå» fjerner kortet for godt, og sparer telefonens spørsmål', async () => {
