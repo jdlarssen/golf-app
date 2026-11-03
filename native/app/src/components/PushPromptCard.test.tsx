@@ -39,6 +39,7 @@ type Mocks = typeof import('../test/supabaseMock');
 const mocks = () => require('../test/supabaseMock') as Mocks;
 
 const NEVER_ASKED = { granted: false, canAskAgain: true, status: 'undetermined' };
+const GRANTED = { granted: true, canAskAgain: true, status: 'granted' };
 
 /** Rendrer kortet og venter ut lesingen av svaret og tillatelsen. */
 async function open(roundInProgress = false) {
@@ -111,21 +112,54 @@ describe('PushPromptCard', () => {
     expect(screen.queryByTestId('push-prompt')).toBeNull();
   });
 
-  it('en feil viser feilteksten, lar kortet stå, og kortet kommer igjen etter omstart', async () => {
-    mockNotifications.getDevicePushTokenAsync.mockRejectedValue(new Error('ingen token'));
+  // Feilen kommer etter at spilleren har sagt ja, så telefonen svarer «gitt» når
+  // kortet leses på nytt. På iPhone er det også svaret til en som har valgt.
+  it.each(['ios', 'android'] as const)(
+    'en feil på %s viser feilteksten, og kortet står ved neste fokus og etter omstart',
+    async (os) => {
+      jest.replaceProperty(Platform, 'OS', os);
+      mockNotifications.requestPermissionsAsync.mockImplementation(async () => {
+        mockNotifications.getPermissionsAsync.mockResolvedValue(GRANTED);
+        return { granted: true, canAskAgain: true };
+      });
+      mockNotifications.getDevicePushTokenAsync.mockRejectedValue(new Error('ingen token'));
+      await open();
+
+      await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptEnable }));
+
+      expect(screen.getByTestId('push-prompt-error')).toHaveTextContent(PROFILE_TEXT.pushOnFailed);
+      expect(announce).toHaveBeenCalledWith(PROFILE_TEXT.pushOnFailed);
+      expect(screen.getByTestId('push-prompt')).toBeTruthy();
+
+      await act(async () => {
+        mockRefocus?.();
+        await new Promise((resolve) => setImmediate(resolve));
+      });
+      expect(screen.getByTestId('push-prompt')).toBeTruthy();
+      expect(screen.queryByTestId('push-prompt-error')).toBeNull();
+
+      await screen.unmount();
+      await open();
+      expect(screen.getByTestId('push-prompt')).toBeTruthy();
+    },
+  );
+
+  it('et nytt forsøk etter en feil lagrer svaret, så kortet ikke kommer igjen', async () => {
+    mockNotifications.requestPermissionsAsync.mockImplementation(async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue(GRANTED);
+      return { granted: true, canAskAgain: true };
+    });
+    mockNotifications.getDevicePushTokenAsync.mockRejectedValueOnce(new Error('ingen token'));
     await open();
+    await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptEnable }));
 
     await fireEvent.press(screen.getByRole('button', { name: PROFILE_TEXT.pushPromptEnable }));
 
-    expect(screen.getByTestId('push-prompt-error')).toHaveTextContent(PROFILE_TEXT.pushOnFailed);
-    expect(announce).toHaveBeenCalledWith(PROFILE_TEXT.pushOnFailed);
-    expect(screen.getByTestId('push-prompt')).toBeTruthy();
-    expect(await AsyncStorage.getItem(PUSH_PROMPT_ANSWERED_KEY)).toBeNull();
-
+    expect(screen.getByTestId('push-prompt-done')).toBeTruthy();
     await screen.unmount();
     await open();
-    expect(screen.getByTestId('push-prompt')).toBeTruthy();
-    expect(screen.queryByTestId('push-prompt-error')).toBeNull();
+    expect(screen.queryByTestId('push-prompt')).toBeNull();
+    expect(screen.queryByTestId('push-prompt-done')).toBeNull();
   });
 
   it('«Ikke nå» fjerner kortet for godt, og sparer telefonens spørsmål', async () => {

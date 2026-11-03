@@ -41,6 +41,15 @@ jest.mock('../data/profile', () => ({
   }),
 }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
+// #2758: reglene for kortet har egne tester. Her gjelder det hva Hjem sier om runden.
+jest.mock('../components/PushPromptCard', () => {
+  const { createElement } = require('react');
+  const { Text } = require('react-native');
+  return {
+    PushPromptCard: ({ roundInProgress }: { roundInProgress: boolean }) =>
+      createElement(Text, { testID: 'push-prompt-stub' }, String(roundInProgress)),
+  };
+});
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
 // #2638: «Ligaene dine» spør `GET /api/liga`; uten ligaer står ingen seksjon.
@@ -392,6 +401,23 @@ it('forrige runde i slagspill henter ingenting ekstra og viser brutto', async ()
   expect(await screen.findByText('2. plass av 8 · 88 brutto')).toBeTruthy();
   expect(homeHero.refreshFinishedRound).not.toHaveBeenCalled();
   expect(homeHero.fetchCardExtras).not.toHaveBeenCalled();
+});
+
+describe('kortet om varsler (#2758)', () => {
+  it('sier fra til kortet når en runde pågår', async () => {
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('push-prompt-stub')).toHaveTextContent('true');
+  });
+
+  it('sier fra til kortet når ingen runde pågår', async () => {
+    mockState.list = { ...LIST, cards: CARDS.filter((card) => card.status !== 'active') };
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('push-prompt-stub')).toHaveTextContent('false');
+  });
 });
 
 describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
