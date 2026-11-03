@@ -441,6 +441,7 @@ describe('kortet på Hjem', () => {
     const web = (require('../../../../messages/no.json') as { pushSettings: Record<string, string> }).pushSettings;
     expect(PROFILE_TEXT.pushPromptTitle).toBe(web.nudgeTitle);
     expect(PROFILE_TEXT.pushPromptBody).toBe(web.nudgeBody);
+    expect(PROFILE_TEXT.pushPromptEnable).toBe(web.enable);
     expect(PROFILE_TEXT.pushPromptLater).toBe(web.nudgeLater);
     expect(PROFILE_TEXT.pushPromptDoneTitle).toBe(web.nudgeDoneTitle);
     expect(PROFILE_TEXT.pushPromptDoneBody).toBe(web.nudgeDoneBody);

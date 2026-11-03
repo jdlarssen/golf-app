@@ -5,15 +5,15 @@
 // bekreftelsen er borte neste gang Hjem åpnes.
 //
 // «Slå på varsler» lagrer svaret FØR telefonen spør: dreper noen appen midt i
-// dialogen, har spilleren alt svart. En feil tar svaret bort igjen, så kortet kommer
-// tilbake. Mens en runde pågår, vises ingenting.
+// dialogen, har spilleren alt svart. En feil gjør det om til et nytt forsøk, så
+// kortet står. Mens en runde pågår, vises ingenting.
 import { useCallback, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { turnOnPush } from '../data/pushDevice';
 import {
-  clearPushPromptAnswered,
   markPushPromptAnswered,
+  markPushPromptFailed,
   readShouldShowPushPrompt,
 } from '../data/pushPrompt';
 import { PROFILE_TEXT } from '../lib/profileCopy';
@@ -31,7 +31,9 @@ export function PushPromptCard({ roundInProgress }: { roundInProgress: boolean }
     useCallback(() => {
       let cancelled = false;
       void readShouldShowPushPrompt().then((show) => {
-        if (!cancelled) setView(show ? 'ask' : 'hidden');
+        if (cancelled) return;
+        setView(show ? 'ask' : 'hidden');
+        setFailed(false);
       });
       return () => {
         cancelled = true;
@@ -53,7 +55,7 @@ export function PushPromptCard({ roundInProgress }: { roundInProgress: boolean }
     } else if (result.reason === 'declined' || result.reason === 'denied') {
       setView('hidden');
     } else {
-      await clearPushPromptAnswered();
+      await markPushPromptFailed();
       setFailed(true);
       AccessibilityInfo.announceForAccessibility(PROFILE_TEXT.pushOnFailed);
     }

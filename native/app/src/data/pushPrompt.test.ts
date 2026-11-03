@@ -18,6 +18,7 @@ const facts = (over: Partial<PushPromptFacts>): PushPromptFacts => ({
   supported: true,
   answered: false,
   pushRemembered: false,
+  retryAfterFailure: false,
   os: 'ios',
   permission: NEVER_ASKED_IOS,
   ...over,
@@ -36,6 +37,9 @@ describe('shouldShowPushPrompt', () => {
     ['Android 13+, nektet én gang', { os: 'android', permission: NEVER_ASKED_ANDROID }, true],
     ['Android 13+, nektet for godt', { os: 'android', permission: DENIED_FOR_GOOD_ANDROID }, false],
     ['Android 12 og eldre, eller oppgradert: gitt uten valg', { os: 'android', permission: GRANTED_ANDROID }, true],
+    ['iPhone, gitt, og forsøket på kortet feilet: kortet står til det er besvart', { permission: GRANTED_IOS, retryAfterFailure: true }, true],
+    ['iPhone, nektet i Innstillinger etter en feil: telefonen har svart', { permission: DENIED_IOS, retryAfterFailure: true }, false],
+    ['iPhone, svaret er lagret etter en feil', { permission: GRANTED_IOS, retryAfterFailure: true, answered: true }, false],
     ['tillatelsen kunne ikke leses', { permission: null }, false],
     ['svaret slår alt annet, også Android som aldri er spurt', { os: 'android', permission: NEVER_ASKED_ANDROID, answered: true }, false],
   ])('%s', (_case, over, expected) => {
