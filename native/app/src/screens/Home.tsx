@@ -103,6 +103,7 @@ import { formatMessage } from '../lib/kavalkadeCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { PushPromptCard } from '../components/PushPromptCard';
 import { StatusBarBand } from '../components/StatusBarBand';
 
 export function Home({ navigation, route }: ScreenProps<'Home'>) {
@@ -375,6 +376,9 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         testID="home-screen"
       >
         <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+
+        {/* #2758: spørsmålet om varsler, aldri midt i en runde. */}
+        <PushPromptCard roundInProgress={(split?.active.length ?? 0) > 0} />
 
         {deletedCup ? (
           <View style={[styles.notice, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="home-notice">

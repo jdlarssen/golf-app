@@ -272,6 +272,8 @@ flowchart LR
 
 ---
 
+**Varsler i appen (#2758).** Bryteren står under Profil, Varsler og tema, på iPhone og Android. Første gang Hjem åpnes uten en runde i gang, spør et kort øverst om spilleren vil slå på varsler. Telefonens eget spørsmål kommer først etter trykk på «Slå på varsler». «Ikke nå», et nei eller bruk av bryteren lagrer svaret på telefonen, så kortet ikke kommer igjen. Ved en feil står kortet.
+
 ## 2. ADMIN / ARRANGØR-flyter
 
 ### A1 — Opprett spill (GameWizard, 5 steg)

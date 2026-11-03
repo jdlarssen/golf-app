@@ -144,6 +144,12 @@ export async function readPushState(): Promise<PushState> {
   return stored.userId === (await currentDeviceUserId()) ? 'on' : 'off';
 }
 
+/** Husker telefonen et token for kontoen som er logget inn? */
+export async function isPushRememberedForThisAccount(): Promise<boolean> {
+  const stored = await storedPush();
+  return stored !== null && stored.userId === (await currentDeviceUserId());
+}
+
 export type PushResult =
   | { ok: true }
   | { ok: false; reason: 'unsupported' | 'declined' | 'denied' | 'signed-out' | 'failed' };
