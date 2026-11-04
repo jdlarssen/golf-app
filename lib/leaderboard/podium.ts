@@ -126,8 +126,6 @@ function linesOf(result: ModeResult): Line[] | null {
       return result.players.map((p) => player(p.userId, p.rank, p.totalPoints, 'points'));
 
     case 'bingo_bango_bongo':
-      // No bingo handed out: the view says so, and nobody won.
-      if (result.players.every((p) => p.totalPoints === 0)) return null;
       return result.players.map((p) => player(p.userId, p.rank, p.totalPoints, 'points'));
 
     case 'round_robin':
@@ -137,8 +135,6 @@ function linesOf(result: ModeResult): Line[] | null {
       return result.players.map((p) => player(p.userId, p.rank, p.total, 'points'));
 
     case 'skins':
-      // A round where nobody took a skin has no winner (the card's rule, #2319).
-      if (result.players.every((p) => p.totalSkins === 0)) return null;
       return result.players.map((p) => player(p.userId, p.rank, p.totalSkins, 'skins'));
 
     case 'nassau':
@@ -164,8 +160,8 @@ function teamLines(result: Parameters<typeof teamResultBoard>[0]): Line[] {
 
 /**
  * The top of the board, or `null` when the game has none to show: the match
- * play family, an empty field, a league round played alone (#2712) and a pot
- * nobody won.
+ * play family, an empty field, a league round played alone (#2712) and a game
+ * nobody won anything in.
  */
 export function podiumFor(
   result: ModeResult,
@@ -173,6 +169,9 @@ export function podiumFor(
 ): Podium | null {
   const lines = linesOf(result);
   if (lines === null || lines.length === 0) return null;
+  // Everyone on zero of something you win (no skin taken, no bingo, every Nassau
+  // section halved): nobody won. Par on a to-par board is a real score.
+  if (lines.every((line) => line.total === 0 && line.unit !== 'toPar')) return null;
   if (isLeagueFieldAlone(opts.leagueFlight ?? false, lines.length)) return null;
   const counts = new Map<number, number>();
   for (const line of lines) counts.set(line.rank, (counts.get(line.rank) ?? 0) + 1);
