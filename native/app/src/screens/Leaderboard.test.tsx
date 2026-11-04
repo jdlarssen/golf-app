@@ -1296,6 +1296,8 @@ describe('resultatets topp', () => {
 
   afterEach(() => {
     mockBundleOverride.current = null;
+    mockNoScores.on = false;
+    jest.restoreAllMocks();
   });
 
   it('et ferdig spill: setningen sier det samme tallet som raden, og nummer to har sølv', async () => {
@@ -1344,13 +1346,12 @@ describe('resultatets topp', () => {
   });
 
   it('et stengt format: gate-noten, verken setning eller knapp', async () => {
-    const gate = jest.spyOn(require('../lib/formatGate'), 'gateReason').mockReturnValue('mode');
+    jest.spyOn(require('../lib/formatGate'), 'gateReason').mockReturnValue('mode');
     mockBundleOverride.current = game();
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('leaderboard-gated-format')).toBeTruthy());
     expect(screen.queryByTestId('result-hero')).toBeNull();
     expect(screen.queryByTestId('share-result')).toBeNull();
-    gate.mockRestore();
   });
 
   it('et ferdig spill uten slag: «ingen slag», verken setning eller knapp', async () => {
@@ -1360,7 +1361,6 @@ describe('resultatets topp', () => {
     await waitFor(() => expect(screen.getByTestId('leaderboard-empty')).toBeTruthy());
     expect(screen.queryByTestId('result-hero')).toBeNull();
     expect(screen.queryByTestId('share-result')).toBeNull();
-    mockNoScores.on = false;
   });
 
   it('et format uten tavle: setningen over tabellen, og spillnavnet står ikke to ganger', async () => {
