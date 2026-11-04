@@ -61,6 +61,14 @@ it('viser spillnavnet, setningen og formatlinja, og leser dem som én overskrift
   await act(async () => {});
 });
 
+it('skjermleseren får også beskjeden om at slagene ikke ble hentet', async () => {
+  await draw({ note: 'Fikk ikke hentet slagene' });
+  expect(screen.getByRole('header')).toHaveAccessibleName(
+    'Lørdagsrunden · Byneset, Marte vant med 38 poeng, Stableford · 2 spillere, Fikk ikke hentet slagene',
+  );
+  await act(async () => {});
+});
+
 it('kortet står utenfor skjermen, skjult for skjermleseren, med kortets tekst', async () => {
   await draw();
   expect(screen.queryByTestId('result-share-card')).toBeNull();

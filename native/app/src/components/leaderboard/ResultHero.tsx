@@ -50,7 +50,7 @@ export function ResultHero({
       ]}
       testID="result-hero"
     >
-      <View accessible accessibilityRole="header" accessibilityLabel={[kicker, hero.a11y, hero.members, subtitle].filter(Boolean).join(', ')}>
+      <View accessible accessibilityRole="header" accessibilityLabel={[kicker, hero.a11y, hero.members, subtitle, note].filter(Boolean).join(', ')}>
         <Text
           numberOfLines={1}
           ellipsizeMode="tail"

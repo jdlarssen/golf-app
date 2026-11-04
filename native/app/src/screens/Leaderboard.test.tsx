@@ -105,6 +105,9 @@ const mockLocalScores = [
   ...row,
 }));
 
+// #2756: et ferdig spill der ingen slag er ført.
+const mockNoScores = { on: false };
+
 // #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
 const mockKroner = { on: false };
 jest.mock('../../../../lib/launchRules', () => ({
@@ -150,7 +153,7 @@ jest.mock('../data/reactions', () => ({
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
-  listScoresForGame: jest.fn(async () => mockLocalScores),
+  listScoresForGame: jest.fn(async () => (mockNoScores.on ? [] : mockLocalScores)),
   // #2751: et utslagsvalg i køen. Tavla skal ikke lese det.
   listPendingTeeStarters: jest.fn(async () => [
     { gameId: 'game-1', teamNumber: 1, teeStarterId: 'me', pending: true, attemptCount: 0 },
@@ -1338,6 +1341,26 @@ describe('resultatets topp', () => {
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('leaderboard-missing-config')).toBeTruthy());
     expect(screen.queryByTestId('result-hero')).toBeNull();
+  });
+
+  it('et stengt format: gate-noten, verken setning eller knapp', async () => {
+    const gate = jest.spyOn(require('../lib/formatGate'), 'gateReason').mockReturnValue('mode');
+    mockBundleOverride.current = game();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-gated-format')).toBeTruthy());
+    expect(screen.queryByTestId('result-hero')).toBeNull();
+    expect(screen.queryByTestId('share-result')).toBeNull();
+    gate.mockRestore();
+  });
+
+  it('et ferdig spill uten slag: «ingen slag», verken setning eller knapp', async () => {
+    mockNoScores.on = true;
+    mockBundleOverride.current = game();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-empty')).toBeTruthy());
+    expect(screen.queryByTestId('result-hero')).toBeNull();
+    expect(screen.queryByTestId('share-result')).toBeNull();
+    mockNoScores.on = false;
   });
 
   it('et format uten tavle: setningen over tabellen, og spillnavnet står ikke to ganger', async () => {
