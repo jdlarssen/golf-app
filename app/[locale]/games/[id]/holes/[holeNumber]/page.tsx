@@ -61,9 +61,9 @@ export default async function HolePage({ params }: { params: Params }) {
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect({ href: '/login', locale });
 
-  // #2201: opening a hole marks the game's `missing_score_reminder` read.
-  // Registered before the profile and status gates: a reminder for a round
-  // that has ended is read even though the page sends you on.
+  // #2201: the surface for `missing_score_reminder`. #2759: that row waits until
+  // the card is delivered, and this page renders for every stroke, so the visit
+  // sends nothing (`markReadOnVisit`).
   after(() => markReadOnVisit({ userId, surface: 'gameHole', entityId: id }));
 
   // #1176: hard profil-gate ved scoring. Den myke stripa på spill-hjem lar en

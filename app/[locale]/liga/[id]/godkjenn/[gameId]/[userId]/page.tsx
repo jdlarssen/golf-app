@@ -49,8 +49,9 @@ export default async function LeagueMarkerPage({
   const viewerId = await getProxyVerifiedUserId();
   if (!viewerId) redirect({ href: '/login', locale });
 
-  // Opening the page reads the marker's notice for the game (#2201), before
-  // the gate like every caller of markReadOnVisit.
+  // The marker's notice waits until the card is approved or sent back (#2759), so
+  // the visit only checks that, before the gate like every caller of
+  // markReadOnVisit.
   after(() => markReadOnVisit({ userId: viewerId, surface: 'leagueMarker', entityId: gameId }));
 
   const review = await markerReviewAccess(viewerId, gameId, playerUserId);

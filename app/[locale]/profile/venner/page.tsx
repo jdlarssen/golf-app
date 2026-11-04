@@ -112,8 +112,8 @@ export default async function VennerPage({
     redirect({ href: '/login?next=/profile/venner', locale });
   }
 
-  // #2201: opening the friends page marks friend requests and accepted
-  // requests read.
+  // #2201: opening the friends page marks accepted requests read. #2759: a friend
+  // request waits until it is answered.
   after(() => markReadOnVisit({ userId, surface: 'friends' }));
 
   const sp = await searchParams;

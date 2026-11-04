@@ -107,9 +107,10 @@ export default async function SubmitPage({
   const { supabase, userId } = await getSubmitContext();
   if (!userId) redirect({ href: '/login', locale });
 
-  // #2201: opening the submit page marks the game's `deliver_reminder` read.
-  // Registered before the gates below: a reminder for a card already
-  // delivered is read even though the page sends you home.
+  // #2201: the surface for `deliver_reminder`. #2759: the row waits until the card
+  // is delivered, so the visit only checks that. Registered before the gates
+  // below: a reminder for a card already delivered is read even though the page
+  // sends you home.
   after(() => markReadOnVisit({ userId, surface: 'gameSubmit', entityId: id }));
 
   // games + game_players from the tag-cached helper, course/tee_box joins

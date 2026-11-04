@@ -75,7 +75,8 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
   const ws = windowStatus(round.opensAt, round.closesAt);
 
   // #2666: the opening and closing notices of a simulator league open this
-  // page (deeplink.ts), so a visit here clears them like the league page does.
+  // page (deeplink.ts). #2759: they wait until the round is played or closed, so
+  // a visit only checks that, like the league page does.
   after(() => markReadOnVisit({ userId: currentUserId!, surface: 'leagueRoundStart', entityId: leagueId }));
 
   // #2214: one counted flight per player per round. A player who delivered the

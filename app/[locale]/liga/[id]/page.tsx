@@ -155,8 +155,8 @@ function ShareLeagueSection({
 }
 
 /**
- * #2638: the league round's two messages (open, closing) link here, so
- * opening the league reads them.
+ * #2638: the league round's two messages (open, closing) link here. #2759: they
+ * wait until the round is played or closed, so the visit only checks that.
  */
 function readLeagueNoticesOnVisit(viewerId: string | null, leagueId: string) {
   if (!viewerId) return;

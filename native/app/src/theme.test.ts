@@ -167,8 +167,9 @@ describe('PALETTES', () => {
     const roles = Object.keys(PALETTES.light) as (keyof typeof PALETTES.light)[];
     expect(Object.keys(PALETTES.dark).sort()).toEqual([...roles].sort());
     // `live` og `onStrongWarm` sitter på skogflaten i begge draktene og er
-    // like med vilje, og tavleflaten (#2579) er like mørk i begge.
-    const same = ['live', 'onStrongWarm', 'boardSlab'];
+    // like med vilje, tavleflaten (#2579) er like mørk i begge, og ringen på skiva i
+    // innboksen (#2759) er den samme i begge, som webbens `.bg-place-disc`.
+    const same = ['live', 'onStrongWarm', 'boardSlab', 'placeDiscRing'];
     for (const role of roles.filter((r) => !same.includes(r))) {
       expect(PALETTES.dark[role]).not.toBe(PALETTES.light[role]);
     }

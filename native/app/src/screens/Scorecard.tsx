@@ -176,8 +176,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { userId } = useSession();
-  // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
-  // /games/[id]/submit).
+  // #2201: flaten for lever-påminnelsen (webbens /games/[id]/submit). #2759: den
+  // står til kortet er levert, så besøket merker ingenting.
   useMarkVisitRead('gameSubmit', gameId);
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);

@@ -112,9 +112,10 @@ export default async function CreatorAvsluttPage({
   // Authz gate (redirects to '/' unless admin or creator). `role.userId` hides
   // the signed-in organiser's own withdraw checkbox in the list below (#1932).
   const role = await requireAdminOrCreator(supabase, gameId);
-  // #2203: «Alle har levert» and the stale reminder link here, so opening the
-  // page reads them. Registered before the game read: after() also runs when
-  // a finished game redirects to the game page.
+  // #2203: «Alle har levert» and the stale reminder link here. #2759: they wait
+  // until the game is finished, so the visit only checks that. Registered before
+  // the game read: after() also runs when a finished game redirects to the game
+  // page.
   after(() => markReadOnVisit({ userId: role.userId, surface: 'gameFinish', entityId: gameId }));
 
   const { data: game } = await supabase

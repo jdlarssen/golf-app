@@ -204,8 +204,9 @@ export default async function PåmeldingerPage({
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, id);
 
-  // #2201: opening the page marks the game's `registration_request` varsler
-  // read. Before the game read, so a 404 still counts.
+  // #2201: opening the page marks the game's signup heads-ups read. #2759: a
+  // request that waits for an answer stays. Before the game read, so a 404 still
+  // counts.
   after(() => markReadOnVisit({ userId: role.userId, surface: 'adminSignups', entityId: id }));
 
   const { data: game, error: gameError } = await supabase

@@ -281,10 +281,10 @@ export default async function GameDetailPage({
   // see the row even if RLS would have allowed the select.
   const { userId } = await requireAdmin(supabase);
 
-  // Opening the protocol marks this game's `scorecard_submitted`, `invite`
-  // and `auto_start_blocked` varsler read (#2201): the start card shows the
-  // same block reason (#2204). Registered before the game read, so a 404
-  // still counts. Deferred with after(): Next 16 bars revalidateTag in render.
+  // Opening the protocol marks this game's `scorecard_submitted` varsler read
+  // (#2201). #2759: `invite` and `auto_start_blocked` wait until the matter is
+  // done. Registered before the game read, so a 404 still counts. Deferred with
+  // after(): Next 16 bars revalidateTag in render.
   after(() => markReadOnVisit({ userId, surface: 'adminGame', entityId: id }));
 
   const errorMessage = await buildErrorMessage();

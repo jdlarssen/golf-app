@@ -1,4 +1,4 @@
-// #2256 PR 4: trykk på et varsel åpner spillet (kriterium 16), og varsler
+// #2256 PR 4: trykk på et varsel åpner det varselet gjelder (kriterium 16, #2759), og varsler
 // vises ikke som banner mens appen er åpen. Et håndtert trykk åpnes aldri
 // igjen. Type A mot en mock av pakken.
 import { Platform } from 'react-native';
@@ -68,7 +68,7 @@ describe('listenForPushTaps', () => {
     });
 
     responseListener?.(tap(`/games/${GAME}/approve`));
-    expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
+    expect(open).toHaveBeenCalledWith({ name: 'Approve', params: { gameId: GAME } });
     // #2632: «Resultatet er klart» åpner tavla, ikke spillets side.
     responseListener?.(tap(`/games/${GAME}/leaderboard`));
     expect(open).toHaveBeenLastCalledWith({ name: 'Leaderboard', params: { gameId: GAME } });
@@ -112,7 +112,7 @@ describe('listenForPushTaps', () => {
     responseListener?.(tap(`/games/${GAME}/approve?varsel=${NOTE}`));
     expect(mockMarkNotificationRead).toHaveBeenCalledTimes(1);
     expect(mockMarkNotificationRead).toHaveBeenCalledWith(NOTE);
-    expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
+    expect(open).toHaveBeenCalledWith({ name: 'Approve', params: { gameId: GAME } });
   });
 
   it('#2201: et trykk uten gyldig ?varsel= merker ingenting', () => {
