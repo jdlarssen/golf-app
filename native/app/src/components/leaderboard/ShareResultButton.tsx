@@ -5,6 +5,7 @@
 // eller arket, står en linje under knappen.
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SHARE_CARD_WIDTH } from '../../../../../lib/og/shareCardLayout';
 import { RESULT_APP_TEXT, SHARE_RESULT_LABEL } from '../../lib/resultCardCopy';
 import type { ResultCardModel } from '../../lib/resultHero';
 import { canShareImage, shareViewImage } from '../../lib/shareImage';
@@ -23,10 +24,10 @@ export function ShareResultButton({ card }: { card: ResultCardModel }) {
   const onShare = useCallback(async () => {
     setBusy(true);
     setFailed(false);
-    const result = await shareViewImage(cardRef);
+    const result = await shareViewImage(cardRef, { width: SHARE_CARD_WIDTH, height: card.height });
     setBusy(false);
     if (!result.ok) setFailed(true);
-  }, []);
+  }, [card.height]);
 
   if (!available) return null;
 
