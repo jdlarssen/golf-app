@@ -2,6 +2,8 @@
 # fontTools 4.66.1 (`pip install fonttools==4.66.1`), som filene er sjekket med:
 #   curl -L -o Fraunces-VF.ttf https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces%5BSOFT,WONK,opsz,wght%5D.ttf
 #   shasum -a 256 Fraunces-VF.ttf  # 177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb
+#   curl -L -o Fraunces-Italic-VF.ttf https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces-Italic%5BSOFT,WONK,opsz,wght%5D.ttf
+#   shasum -a 256 Fraunces-Italic-VF.ttf  # b24448c43702fac4ee856781d461a0dfba8d8e594b6e8e190234b75fed2c0e01
 #   python3 make_fraunces_fonts.py
 #
 # Nettleseren tegner Fraunces med optisk størrelse lik skriftstørrelsen
@@ -16,6 +18,8 @@
 #    bokstav.
 #  - Hullnummeret (`FrauncesHole96.ttf`, `FrauncesHole132.ttf`): bare sifre,
 #    96 og 132 pt i vekt 600.
+#  - Kursiv (`FrauncesItalic500O{størrelse}.ttf`, #2756): gullordet i
+#    resultatsetningen (36) og på resultatkortet (14, Satoris standardsnitt).
 #
 # Hvert snitt har eget familienavn, så iOS ikke blander dem. Filene blir like
 # byte for byte hver gang (kildens tidsstempel).
@@ -26,13 +30,14 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 
 SOURCE = 'Fraunces-VF.ttf'
+SOURCE_ITALIC = 'Fraunces-Italic-VF.ttf'
 MODIFIED = TTFont(SOURCE)['head'].modified
 STYLE = {400: 'Regular', 500: 'Medium', 600: 'SemiBold'}
 
 
-def cut(opsz, weight, family, text=None):
+def cut(opsz, weight, family, text=None, source=SOURCE):
     inst = instantiateVariableFont(
-        TTFont(SOURCE),
+        TTFont(source),
         {'opsz': opsz, 'wght': weight, 'SOFT': 0, 'WONK': 1},
         inplace=False,
     )
@@ -58,7 +63,7 @@ def cut(opsz, weight, family, text=None):
     opts.layout_features = ['*']
     sub = subset.Subsetter(options=opts)
     if text is None:
-        sub.populate(unicodes=TTFont(SOURCE).getBestCmap().keys())
+        sub.populate(unicodes=TTFont(source).getBestCmap().keys())
     else:
         sub.populate(text=text)
     sub.subset(inst)
@@ -75,3 +80,6 @@ with open('fraunces-sizes.json') as f:
 for weight, sizes in SIZES.items():
     for size in sizes:
         cut(size, int(weight), f'Fraunces{weight}O{size}')
+
+for size in (14, 36):
+    cut(size, 500, f'FrauncesItalic500O{size}', source=SOURCE_ITALIC)

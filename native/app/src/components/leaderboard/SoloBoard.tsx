@@ -15,6 +15,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { toneKey, visibleBoardRows } from '../../../../../lib/leaderboard/boardRules';
 import type { ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { BOARD_APP_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
+import { Medal } from './Medal';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import type { SoloBoardModel, SoloBoardRow, SoloBoardStrip } from '../../lib/soloBoard';
 import {
@@ -160,6 +161,8 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
               {row.place}
             </Text>
           </View>
+        ) : row.medal ? (
+          <Medal rank={row.medal} size={30} label={row.place} labelStyle={[styles.discWinnerText, num]} />
         ) : (
           <Text style={[styles.place, { color: colors.text }, num]}>{row.place}</Text>
         )}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildShareCardData } from '@/lib/games/buildShareCardData';
-import { PLACE_TIER, podiumFor, podiumPlace, type PodiumRow } from './podium';
+import { PLACE_TIER, medalRank, podiumFor, podiumPlace, type PodiumRow } from './podium';
 import { soloResultBoard, teamResultBoard } from './resultBoard';
 import type {
   AceyDeuceyResult,
@@ -245,5 +245,10 @@ describe('the medallion follows the place', () => {
   it('clamps to the three places and gives the tier', () => {
     expect([1, 2, 3, 9].map(podiumPlace)).toEqual([1, 2, 3, 3]);
     expect(PLACE_TIER[podiumPlace(2)]).toBe('silver');
+  });
+
+  it('a row gets silver or bronze from its place, also a shared one', () => {
+    expect([1, 2, 3, 4].map((rank) => medalRank(rank, true))).toEqual([null, 2, 3, null]);
+    expect(medalRank(2, false)).toBeNull();
   });
 });

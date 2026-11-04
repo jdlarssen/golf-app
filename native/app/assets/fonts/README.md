@@ -17,6 +17,10 @@ størrelse den bruker, laget av den variable Fraunces (OFL, se
 - `FrauncesHole96.ttf` og `FrauncesHole132.ttf`: hullnummeret, 96 og 132 pt i
   vekt 600, med bare sifrene 0–9.
 
+- `FrauncesItalic500O36.ttf` og `FrauncesItalic500O14.ttf` (#2756): gullordet i
+  resultatsetningen på tavla (36) og på resultatkortet (14, som Satoris
+  standardsnitt). Kilden er den kursive variable Fraunces fra samme commit.
+
 Kilden er låst til google/fonts `ac502d8e` (fonten sier `Version 1.000`), og
 filene lages byte for byte likt med `make_fraunces_fonts.py` og fontTools
 4.66.1 (`pip install fonttools==4.66.1`):
@@ -24,8 +28,10 @@ filene lages byte for byte likt med `make_fraunces_fonts.py` og fontTools
 ```sh
 curl -L -o Fraunces-VF.ttf "https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces%5BSOFT,WONK,opsz,wght%5D.ttf"
 shasum -a 256 Fraunces-VF.ttf   # 177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb
+curl -L -o Fraunces-Italic-VF.ttf "https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces-Italic%5BSOFT,WONK,opsz,wght%5D.ttf"
+shasum -a 256 Fraunces-Italic-VF.ttf   # b24448c43702fac4ee856781d461a0dfba8d8e594b6e8e190234b75fed2c0e01
 python3 make_fraunces_fonts.py  # skriver alle snittene
-rm Fraunces-VF.ttf
+rm Fraunces-VF.ttf Fraunces-Italic-VF.ttf
 ```
 
 Ny størrelse: legg den i `fraunces-sizes.json`, kjør skriptet, og legg fila

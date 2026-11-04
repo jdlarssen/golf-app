@@ -115,9 +115,10 @@ export function boardHeader({
   variant = 'solo',
 }: {
   pill?: BoardPill;
-  kicker: string;
-  title: string;
-  subtitle: string;
+  /** Uten disse tre står bare raden her, og `ResultHero` tar resten (#2756). */
+  kicker?: string;
+  title?: string;
+  subtitle?: string;
   variant?: BoardBandVariant;
 }): NativeStackNavigationOptions {
   return {
@@ -158,9 +159,9 @@ function TeamBoardTopBar({
   onBack,
 }: {
   pill?: BoardPill;
-  kicker: string;
-  title: string;
-  subtitle: string;
+  kicker?: string;
+  title?: string;
+  subtitle?: string;
   live: boolean;
   onBack?: () => void;
 }) {
@@ -169,7 +170,11 @@ function TeamBoardTopBar({
   const ink = colors.onStrongWarm;
   return (
     <View
-      style={[styles.teamBoard, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong }]}
+      style={[
+        styles.teamBoard,
+        { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong },
+        title ? null : styles.rowOnly,
+      ]}
       testID="board-top-bar"
     >
       <View style={styles.boardRow}>
@@ -186,18 +191,20 @@ function TeamBoardTopBar({
         ) : null}
         <View style={styles.side} />
       </View>
-      <View
-        style={styles.teamTitle}
-        accessible
-        accessibilityRole="header"
-        accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
-      >
-        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.teamKicker, { color: withAlpha(ink, 0.8) }]}>
-          {kicker}
-        </Text>
-        <Text style={[styles.teamHeading, { color: ink }]}>{title}</Text>
-        <Text style={[styles.teamSubtitle, { color: withAlpha(ink, live ? 0.85 : 0.8) }]}>{subtitle}</Text>
-      </View>
+      {title ? (
+        <View
+          style={styles.teamTitle}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
+        >
+          <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.teamKicker, { color: withAlpha(ink, 0.8) }]}>
+            {kicker}
+          </Text>
+          <Text style={[styles.teamHeading, { color: ink }]}>{title}</Text>
+          <Text style={[styles.teamSubtitle, { color: withAlpha(ink, live ? 0.85 : 0.8) }]}>{subtitle}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -214,16 +221,20 @@ function BoardTopBar({
   onBack,
 }: {
   pill?: BoardPill;
-  kicker: string;
-  title: string;
-  subtitle: string;
+  kicker?: string;
+  title?: string;
+  subtitle?: string;
   onBack?: () => void;
 }) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <View
-      style={[styles.board, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong }]}
+      style={[
+        styles.board,
+        { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong },
+        title ? null : styles.rowOnly,
+      ]}
       testID="board-top-bar"
     >
       <View style={styles.boardRow}>
@@ -246,18 +257,20 @@ function BoardTopBar({
           </View>
         ) : null}
       </View>
-      <View
-        style={styles.boardTitle}
-        accessible
-        accessibilityRole="header"
-        accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
-      >
-        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.boardKicker, { color: colors.accent }]}>
-          {kicker}
-        </Text>
-        <Text style={[styles.boardHeading, { color: colors.onStrong }]}>{title}</Text>
-        <Text style={[styles.boardSubtitle, { color: withAlpha(colors.onStrong, 0.85) }]}>{subtitle}</Text>
-      </View>
+      {title ? (
+        <View
+          style={styles.boardTitle}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
+        >
+          <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.boardKicker, { color: colors.accent }]}>
+            {kicker}
+          </Text>
+          <Text style={[styles.boardHeading, { color: colors.onStrong }]}>{title}</Text>
+          <Text style={[styles.boardSubtitle, { color: withAlpha(colors.onStrong, 0.85) }]}>{subtitle}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -375,6 +388,8 @@ const styles = StyleSheet.create({
   // Tavlas bånd (`Tavle-forslag`): 8 pt luft rundt raden, 4 pt ned til
   // tittelblokka, og tekstene med nettleserens `normal` linjehøyde.
   board: { paddingHorizontal: BAR_INSET, paddingBottom: 12, gap: 4 },
+  // Bare raden: `ResultHero` fortsetter rett under, på samme flate.
+  rowOnly: { paddingBottom: 0 },
   boardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: {
     flexDirection: 'row',
