@@ -1,7 +1,8 @@
 // #2314 — Type C: regel-linja for de siste hullene står under stillingen bare
 // i spill med catch-up-regelen. Tallene er `wolfCatchUpRuleLine` sine.
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { WolfResult } from '../../../../../lib/scoring/modes/types';
+import { ReactionsContext } from './ReactionsProvider';
 import { WolfView } from './WolfView';
 
 function resultWith(rotation: WolfResult['rotation'], n: number): WolfResult {
@@ -52,5 +53,38 @@ describe('WolfView — catch-up-regelen (#2314)', () => {
       />,
     );
     expect(screen.queryByTestId('wolf-catch-up-rule')).toBeNull();
+  });
+});
+
+describe('WolfView — reaksjonene (#2754)', () => {
+  it('stillingen har reaksjonene én gang per spiller, og ingen andre steder', async () => {
+    const openFor = jest.fn();
+    await render(
+      <ReactionsContext.Provider
+        value={{
+          loaded: true,
+          canReact: true,
+          showHint: false,
+          target: null,
+          failure: null,
+          getRow: () => ({ counts: { '👏': 1 }, mine: [] }),
+          openFor,
+          close: jest.fn(),
+          toggle: jest.fn(),
+          onRowOpened: jest.fn(),
+        }}
+      >
+        <WolfView result={resultWith('catch_up', 4)} settlement={null} nameOf={(id) => id} />
+      </ReactionsContext.Provider>,
+    );
+    const players = resultWith('catch_up', 4).players.map((player) => player.userId);
+    expect(screen.getAllByTestId(/^reaction-plate-/, { includeHiddenElements: true }).map((plate) => plate.props.testID)).toEqual(
+      players.map((id) => `reaction-plate-${id}`),
+    );
+    expect(screen.getAllByRole('button').map((button) => button.props.testID)).toEqual(
+      players.map((id) => `leaderboard-table-row-${id}`),
+    );
+    await fireEvent.press(screen.getByTestId(`leaderboard-table-row-${players[0]}`));
+    expect(openFor).toHaveBeenCalledWith({ userId: players[0], name: players[0] });
   });
 });

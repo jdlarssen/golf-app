@@ -52,6 +52,7 @@ export const BOARD_TEXT = {
   legendRecent: 'Siste 5 hull',
   showAll: 'Vis alle {count} spillere',
   showFewer: 'Vis færre',
+  reactionsTo: 'Reaksjoner til {name}',
   stripKicker: 'Din runde',
   stripPlace: '{rank}. plass',
   stripTiedPlace: 'Delt {rank}. plass',
@@ -104,6 +105,28 @@ export const STATE35_TEXT = {
 export const SIDE_PANEL_TEXT = {
   longestDrive: 'Lengste drive',
   closestToPin: 'Nærmest pinnen',
+} as const;
+
+/** `leaderboard.reactions`: navnene og opplesningen av reaksjonene (#2754). */
+export const REACTIONS_TEXT = {
+  clap: 'Klappe',
+  fire: 'Ild',
+  laugh: 'Latter',
+  strong: 'Sterk',
+  golf: 'Golf',
+  birdie: 'Birdie',
+  groupLabel: 'Reaksjoner',
+  toggle:
+    '{count, plural, =0 {Reager med {emoji}} one {Reager med {emoji} (# reaksjon)} other {Reager med {emoji} (# reaksjoner)}}',
+  toggleActive: '{count, plural, =0 {Fjern {emoji}-reaksjon} other {Fjern {emoji}-reaksjon (# i alt)}}',
+  close: 'Lukk reaksjoner',
+} as const;
+
+/** Appens egne tekster i stripa (#2754). Eieren valgte at appen sier fra uten dekning. */
+export const REACTIONS_APP_TEXT = {
+  hint: 'Trykk på en rad for å reagere',
+  saveFailed: 'Fikk ikke lagret reaksjonen. Prøv igjen når du har dekning.',
+  denied: 'Du kan ikke reagere i denne runden.',
 } as const;
 
 /** Appens egne tekster på tavla. Ingen av dem finnes i `leaderboard.board`. */

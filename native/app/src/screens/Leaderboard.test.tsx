@@ -137,6 +137,15 @@ const mockSubscribeGameStatus = jest.fn((..._args: unknown[]) => () => undefined
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
   subscribeGameStatus: (...args: unknown[]) => mockSubscribeGameStatus(...args),
+  subscribeGameReactions: (...args: unknown[]) => mockSubscribeGameReactions(...args),
+}));
+// #2754: reaksjonene. Standard er «ingen har reagert».
+const mockFetchGameReactions = jest.fn(async (..._args: unknown[]): Promise<unknown> => ({}));
+const mockToggleReaction = jest.fn(async (..._args: unknown[]): Promise<unknown> => ({ ok: true }));
+const mockSubscribeGameReactions = jest.fn((..._args: unknown[]) => () => undefined);
+jest.mock('../data/reactions', () => ({
+  fetchGameReactions: (...args: unknown[]) => mockFetchGameReactions(...args),
+  toggleReaction: (...args: unknown[]) => mockToggleReaction(...args),
 }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
@@ -272,6 +281,141 @@ describe('Leaderboard', () => {
     await fireEvent.press(screen.getByTestId('board-strip-action'));
     expect(nav.popTo).toHaveBeenCalledWith('Hole', expect.objectContaining({ gameId: GAME_ID, holeNumber: 3 }));
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('Leaderboard — reaksjonene (#2754)', () => {
+  beforeEach(() => {
+    mockBundleOverride.current = null;
+    mockFetchGameReactions.mockReset();
+    mockFetchGameReactions.mockResolvedValue({});
+    mockToggleReaction.mockReset();
+    mockToggleReaction.mockResolvedValue({ ok: true });
+    mockSubscribeGameReactions.mockClear();
+  });
+
+  const rowSelector = 'board-row-mate';
+
+  it('stripa tar plassen til «Din runde» mens den er åpen, og tavla står', async () => {
+    await renderLeaderboard();
+    await waitFor(() => expect(mockFetchGameReactions).toHaveBeenCalledWith(GAME_ID, 'me'));
+    expect(mockSubscribeGameReactions).toHaveBeenCalledTimes(1);
+    const order = boardOrder();
+    expect(await screen.findByTestId('reaction-hint')).toBeTruthy();
+    expect(screen.getByTestId('board-strip')).toBeTruthy();
+
+    await act(async () => { fireEvent.press(screen.getByTestId(rowSelector)); });
+    expect(screen.getByTestId('reaction-strip')).toBeTruthy();
+    expect(screen.queryByTestId('board-strip')).toBeNull();
+    expect(boardOrder()).toEqual(order);
+
+    await act(async () => { fireEvent.press(screen.getByTestId('reaction-strip-close')); });
+    expect(screen.queryByTestId('reaction-strip')).toBeNull();
+    expect(screen.getByTestId('board-strip')).toBeTruthy();
+  });
+
+  it('en reaksjon vises straks og fjerner hjelpelinja', async () => {
+    await renderLeaderboard();
+    await screen.findByTestId('reaction-hint');
+    await act(async () => { fireEvent.press(screen.getByTestId(rowSelector)); });
+    await act(async () => { fireEvent.press(screen.getByTestId('reaction-button-fire')); });
+    expect(mockToggleReaction).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'me',
+      targetUserId: 'mate',
+      emoji: '🔥',
+    });
+    expect(screen.getByTestId('reaction-plate-mate', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId('reaction-hint')).toBeNull();
+  });
+
+  it('uten dekning sier stripa fra, tallet går tilbake, og tavla står', async () => {
+    mockToggleReaction.mockResolvedValue({ ok: false, failure: 'db_error' });
+    await renderLeaderboard();
+    await screen.findByTestId('reaction-hint');
+    mockFetchGameReactions.mockRejectedValue(new Error('uten nett'));
+    await act(async () => { fireEvent.press(screen.getByTestId(rowSelector)); });
+    await act(async () => { fireEvent.press(screen.getByTestId('reaction-button-fire')); });
+    expect(screen.getByTestId('reaction-strip-error')).toBeTruthy();
+    expect(screen.queryByTestId('reaction-plate-mate', { includeHiddenElements: true })).toBeNull();
+    expect(boardOrder()).toEqual(['mate', 'me']);
+  });
+
+  it('feiler lesingen ved åpning, står tavla uten reaksjoner og uten feilmelding', async () => {
+    mockFetchGameReactions.mockRejectedValue(new Error('uten nett'));
+    await renderLeaderboard();
+    await waitFor(() => expect(mockFetchGameReactions).toHaveBeenCalled());
+    expect(screen.getByTestId('solo-board')).toBeTruthy();
+    expect(screen.queryByTestId('reaction-hint')).toBeNull();
+    expect(screen.queryByTestId('reaction-strip-error')).toBeNull();
+  });
+
+  it('en arrangør som ikke spiller ser tallene, men får ingen knapp og ingen hjelpelinje', async () => {
+    mockFetchGameReactions.mockResolvedValue({ mate: { counts: { '👏': 2 }, mine: [] } });
+    mockBundleOverride.current = {
+      ...mockBundle,
+      players: mockBundle.players.map((player) =>
+        player.userId === 'me' ? { ...player, userId: 'annen' } : player,
+      ),
+    };
+    await renderLeaderboard();
+    expect(await screen.findByTestId('reaction-plate-mate', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId('reaction-hint')).toBeNull();
+    expect(screen.getByTestId(rowSelector).props.accessibilityRole).toBeUndefined();
+  });
+
+  it('en spiller som har trukket seg får heller ingen knapp', async () => {
+    mockBundleOverride.current = {
+      ...mockBundle,
+      players: mockBundle.players.map((player) =>
+        player.userId === 'me' ? { ...player, withdrawnAt: '2026-11-01T10:00:00Z' } : player,
+      ),
+    };
+    await renderLeaderboard();
+    await waitFor(() => expect(mockFetchGameReactions).toHaveBeenCalled());
+    expect(screen.getByTestId(rowSelector).props.accessibilityRole).toBeUndefined();
+  });
+
+  it('ferdig tavle: reaksjonene kan gis der også', async () => {
+    mockBundleOverride.current = { ...mockBundle, game: { ...bundleGame, status: 'finished' } };
+    await renderLeaderboard();
+    await waitFor(() => expect(mockFetchGameReactions).toHaveBeenCalled());
+    await act(async () => { fireEvent.press(await screen.findByTestId(rowSelector)); });
+    expect(screen.getByTestId('reaction-strip')).toBeTruthy();
+  });
+
+  it('skins: stripa kommer også uten egen tavle, nederst på skjermen', async () => {
+    mockBundleOverride.current = {
+      ...mockBundle,
+      game: {
+        ...bundleGame,
+        gameMode: 'skins',
+        modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+      },
+    };
+    await renderLeaderboard();
+    await act(async () => {
+      fireEvent.press(await screen.findByTestId('leaderboard-table-row-mate'));
+    });
+    expect(screen.getByTestId('reaction-strip')).toBeTruthy();
+  });
+
+  it.each([
+    ['singles_matchplay', { kind: 'singles_matchplay', team_size: 1 }],
+    ['fourball_matchplay', { kind: 'fourball_matchplay', team_size: 2 }],
+    ['best_ball', { kind: 'best_ball', team_size: 2 }],
+    ['texas_scramble', { kind: 'texas_scramble', team_size: 2 }],
+    ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }],
+    ['patsome', { kind: 'patsome', team_size: 2 }],
+  ])('%s leser ingen reaksjoner og åpner ingen kanal', async (gameMode, modeConfig) => {
+    mockBundleOverride.current = {
+      ...mockBundle,
+      game: { ...bundleGame, gameMode, modeConfig },
+    };
+    await renderLeaderboard();
+    await act(async () => { await Promise.resolve(); });
+    expect(mockFetchGameReactions).not.toHaveBeenCalled();
+    expect(mockSubscribeGameReactions).not.toHaveBeenCalled();
   });
 });
 

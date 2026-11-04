@@ -97,6 +97,8 @@ export function boardBand(bundle: GameBundle): { kicker: string; subtitle: strin
 export type SoloBoardRow = {
   userId: string;
   name: string;
+  /** Navnet i en setning: fornavnet, eller mer når to spillere heter det samme (#2754). */
+  shortName: string;
   /** «–» før noen har spilt, «T4» ved delt plass, ellers plassen. */
   place: string;
   /** Lederen live, vinneren ferdig: gullskive og gullring. */
@@ -333,6 +335,7 @@ function liveBoard(
     rows: board.rows.map((row) => ({
       userId: row.userId,
       name: rowName(row),
+      shortName: sentenceName(row, board.rows, rowName, keyOf),
       place: placeText(row, showRank),
       leader: showRank && isBoardLeader(row),
       you: row.userId === userId,
@@ -414,6 +417,7 @@ function finishedBoard(
     rows: board.rows.map((row) => ({
       userId: row.userId,
       name: rowName(row),
+      shortName: sentenceName(row, board.rows, rowName, keyOf),
       place: placeText(row, showRank),
       leader: winner(row),
       you: row.userId === userId,
