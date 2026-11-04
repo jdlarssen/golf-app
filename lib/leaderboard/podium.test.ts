@@ -229,6 +229,30 @@ describe('podiumFor: no top to show', () => {
     expect(podiumFor(result)).toBeNull();
   });
 
+  it('nassau with every section halved', () => {
+    const result = {
+      kind: 'nassau',
+      players: [
+        { userId: 'a', rank: 1, units: 0 },
+        { userId: 'b', rank: 1, units: 0 },
+      ],
+    } as unknown as NassauResult;
+    expect(podiumFor(result)).toBeNull();
+  });
+
+  it('a to-par board with everyone on par still has a top', () => {
+    const result = {
+      kind: 'solo_strokeplay',
+      ranking: 'net_to_par',
+      holes: [],
+      players: [
+        { userId: 'a', rank: 1, holesPlayed: 18, totalNetStrokes: 72, netToPar: 0, tiedWith: [], decidedBy: null },
+        { userId: 'b', rank: 1, holesPlayed: 18, totalNetStrokes: 72, netToPar: 0, tiedWith: [], decidedBy: null },
+      ],
+    } as unknown as SoloStrokeplayResult;
+    expect(podiumFor(result)!.winners).toHaveLength(2);
+  });
+
   it('bingo bango bongo with no points handed out', () => {
     const result = {
       kind: 'bingo_bango_bongo',
