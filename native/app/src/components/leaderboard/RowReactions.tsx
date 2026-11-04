@@ -2,8 +2,8 @@
 //
 // Tre biter: skiltet på raden (opptil tre reaksjoner og ett samlet tall, som
 // alltid får plass ved prikkene), raden du trykker på, og stripa nederst med de
-// seks reaksjonene. Et trykk på raden lagrer ingenting, og tavla flytter seg
-// aldri. Emojiene er spillernes eget innhold og står (#2728).
+// seks reaksjonene. Et trykk på raden lagrer ingenting, og radene flytter seg
+// ikke, men tavla ruller hvis stripa ellers ville dekket raden. Emojiene er spillernes eget innhold og står (#2728).
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
