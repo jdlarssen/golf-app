@@ -19,6 +19,7 @@ import {
 } from '../../../../lib/games/holeScope';
 import { STATUS_LABELS } from '../../../../lib/games/status';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
+import { medalRank } from '../../../../lib/leaderboard/podium';
 import {
   boardRowSrParts,
   boardShowsRank,
@@ -180,6 +181,8 @@ export type TeamBoardRow = {
   place: string;
   /** Lederen live, vinneren ferdig: gullskive og gullring. */
   leader: boolean;
+  /** Ferdig: sølv og bronse på plass to og tre (#2756). */
+  medal?: 2 | 3 | null;
   you: boolean;
   /** Navnelinja: «Deg, Marte, Jonas og Anders». */
   members: string;
@@ -621,6 +624,7 @@ function finishedBoard(
       name: row.name,
       place: placeText(row, showRank),
       leader: isBoardLeader(row),
+      medal: medalRank(row.rank, showRank),
       you,
       members: memberNames,
       initials: team.initials,

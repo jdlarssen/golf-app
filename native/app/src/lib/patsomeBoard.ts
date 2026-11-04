@@ -15,6 +15,7 @@ import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { STATUS_LABELS } from '../../../../lib/games/status';
 import { boardRowSrParts, boardShowsRank, isBoardLeader, sentenceName, totalLabel } from '../../../../lib/leaderboard/boardRules';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
+import { medalRank } from '../../../../lib/leaderboard/podium';
 import type { PatsomeHoleRow, PatsomeTeamLine, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { rankTeams } from '../../../../lib/scoring/tiebreaker';
 import type { LocalScore } from '../data/db';
@@ -40,6 +41,8 @@ export type PatsomeBoardRow = {
   place: string;
   /** Lederen live, vinneren ferdig: gullskive og gullring. */
   leader: boolean;
+  /** Ferdig: sølv og bronse på plass to og tre (#2756). */
+  medal?: 2 | 3 | null;
   you: boolean;
   /** «Deg, Jonas». */
   members: string;
@@ -216,6 +219,7 @@ export function patsomeBoardFor(opts: {
       name: line.name,
       place: placeText(line, showRank),
       leader,
+      medal: finished ? medalRank(line.rank, showRank) : null,
       you,
       members,
       total: totalLabel('points', line.total),

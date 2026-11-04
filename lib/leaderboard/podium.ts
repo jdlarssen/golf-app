@@ -34,6 +34,15 @@ export const PLACE_TIER: Record<PodiumPlace, PodiumTier> = {
   3: 'bronze',
 };
 
+/**
+ * The medal on a finished board's row: silver and bronze from the place. First
+ * place keeps the board's own gold disc, and a board without places has none.
+ */
+export function medalRank(rank: number, showRank: boolean): 2 | 3 | null {
+  if (!showRank) return null;
+  return rank === 2 || rank === 3 ? rank : null;
+}
+
 /** What the number counts. `holes` is holes won (round robin). */
 export type PodiumUnit = 'points' | 'net' | 'gross' | 'toPar' | 'skins' | 'holes';
 

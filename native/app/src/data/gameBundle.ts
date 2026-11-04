@@ -106,6 +106,12 @@ export interface BundleGame {
   /** Satt når spillet er en flight i en ligarunde; ingen spiller er da arrangør. */
   leagueRoundId: string | null;
   /**
+   * Når spillet ble avsluttet (#2756), til datoen på resultatkortet. Valgfri, så
+   * en bundel i cachen fra før feltet fantes fortsatt leses; mangler den, står
+   * kortet uten dato, som på nettet.
+   */
+  endedAt?: string | null;
+  /**
    * Hvem som slår ut på odde hull for hver side i foursomes. Valget kan også
    * gjøres i appen (#2751), og da ligger det på telefonen til det er sendt:
    * `useTeeStarters` leser begge.
@@ -333,6 +339,7 @@ export function toBundle(
       scoreVisibility: game.score_visibility,
       tournamentId: game.tournament_id,
       leagueRoundId: game.league_round_id,
+      endedAt: game.ended_at,
       foursomesSide1TeeStarterUserId: game.foursomes_side1_tee_starter_user_id,
       foursomesSide2TeeStarterUserId: game.foursomes_side2_tee_starter_user_id,
       patsomeTeeStarters: (game.patsome_tee_starters ?? []).map((row) => ({

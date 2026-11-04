@@ -21,6 +21,7 @@ export const FRAUNCES_FILES = {
   Fraunces500O30: require('../assets/fonts/Fraunces500O30.ttf'),
   Fraunces500O32: require('../assets/fonts/Fraunces500O32.ttf'),
   Fraunces500O36: require('../assets/fonts/Fraunces500O36.ttf'),
+  Fraunces500O60: require('../assets/fonts/Fraunces500O60.ttf'),
   Fraunces600O9: require('../assets/fonts/Fraunces600O9.ttf'),
   Fraunces600O11: require('../assets/fonts/Fraunces600O11.ttf'),
   Fraunces600O12: require('../assets/fonts/Fraunces600O12.ttf'),
@@ -43,6 +44,8 @@ export const FRAUNCES_FILES = {
   Fraunces600O44: require('../assets/fonts/Fraunces600O44.ttf'),
   Fraunces600O48: require('../assets/fonts/Fraunces600O48.ttf'),
   Fraunces600O64: require('../assets/fonts/Fraunces600O64.ttf'),
+  FrauncesItalic500O14: require('../assets/fonts/FrauncesItalic500O14.ttf'),
+  FrauncesItalic500O36: require('../assets/fonts/FrauncesItalic500O36.ttf'),
   FrauncesHole96: require('../assets/fonts/FrauncesHole96.ttf'),
   FrauncesHole132: require('../assets/fonts/FrauncesHole132.ttf'),
 };

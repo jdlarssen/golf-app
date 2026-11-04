@@ -9,6 +9,7 @@
 import { Fragment } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BOARD_TEAM_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
+import { Medal } from './Medal';
 import { HOLES_TEXT } from '../../lib/holesCopy';
 import type {
   PatsomeBoardColumn,
@@ -92,6 +93,8 @@ function TeamCard({ row, finished }: { row: PatsomeBoardRow; finished: boolean }
               {row.place}
             </Text>
           </View>
+        ) : row.medal ? (
+          <Medal rank={row.medal} size={32} label={row.place} labelStyle={[styles.discWinnerText, styles.tabular]} />
         ) : (
           <Text style={[styles.place, styles.tabular, { color: colors.text }]}>{row.place}</Text>
         )}

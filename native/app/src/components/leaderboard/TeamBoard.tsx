@@ -13,6 +13,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { TeamHoleTone } from '../../../../../lib/leaderboard/teamLiveBoard';
 import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
+import { Medal } from './Medal';
 import type {
   TeamBoardModel,
   TeamBoardRow,
@@ -142,6 +143,8 @@ function TeamCard({ row, variant }: { row: TeamBoardRow; variant: TeamBoardModel
               {row.place}
             </Text>
           </View>
+        ) : row.medal ? (
+          <Medal rank={row.medal} size={32} label={row.place} labelStyle={[styles.discWinnerText, num]} />
         ) : (
           <Text style={[styles.place, { color: colors.text }, num]}>{row.place}</Text>
         )}

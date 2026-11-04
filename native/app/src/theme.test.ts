@@ -395,7 +395,8 @@ describe('fraunces', () => {
     const table = Object.entries(FRAUNCES_SIZES).flatMap(([weight, sizes]) =>
       sizes.map((size) => `Fraunces${weight}O${size}`),
     );
-    const holes = ['FrauncesHole96', 'FrauncesHole132'];
+    // Hullnummeret og gullordets kursiv (#2756) står utenfor størrelsestabellen.
+    const holes = ['FrauncesHole96', 'FrauncesHole132', 'FrauncesItalic500O14', 'FrauncesItalic500O36'];
     expect(Object.keys(FRAUNCES_FILES).sort()).toEqual([...table, ...holes].sort());
     const files = readdirSync(join(__dirname, '../assets/fonts'))
       .filter((file) => file.endsWith('.ttf'))

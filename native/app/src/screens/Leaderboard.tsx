@@ -32,12 +32,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { reportQuote } from '../../../../lib/games/roundReportExcerpt';
-import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { GameMode, ModeResult } from '../../../../lib/scoring/modes/types';
 import { settlementForResult } from '../../../../lib/scoring/settlement';
 import {
   ResultView,
   UNKNOWN_FORMAT_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
+import { ResultHero } from '../components/leaderboard/ResultHero';
 import { RoundReportCard } from '../components/leaderboard/RoundReportCard';
 import {
   RoundReportQuote,
@@ -76,6 +77,8 @@ import {
   type ScoringExtras,
 } from '../lib/scoringContext';
 import { holeHeaderParams } from '../lib/holeHeader';
+import { RESULT_CARD_TEXT } from '../lib/resultCardCopy';
+import { resultHeroFor, type ResultHeroModel } from '../lib/resultHero';
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { SHOW_KRONER_IN_APP } from '../../../../lib/launchRules';
 import { buildSideTournament } from '../lib/sideTournament';
@@ -199,6 +202,73 @@ const PROBLEM_TEST_IDS: Record<ScoringContextProblem, string> = {
   'no-players': 'leaderboard-no-players',
 };
 
+/**
+ * Hva kroppen skal vise, port for port. Rekkefølgen er hele poenget: gaten først
+ * (et format appen ikke fører, viser den heller ingen tall for), reveal deretter
+ * — FØR noe regnes ut — og først til slutt motoren.
+ *
+ * #2756: skjermen spør det samme for å vite om resultatets topp skal stå, så
+ * stengt format, blind runde og motorproblem aldri kan vise setningen.
+ */
+type BoardView =
+  | { kind: 'gated' }
+  | { kind: 'hidden' }
+  | { kind: 'gross-only' }
+  | { kind: 'first-half-waiting' }
+  | { kind: 'problem'; problem: ScoringContextProblem }
+  | { kind: 'empty'; result: ModeResult }
+  | { kind: 'table'; result: ModeResult };
+
+function boardView(bundle: GameBundle, scores: readonly LocalScore[], extras: ScoringExtras): BoardView {
+  const { game } = bundle;
+  if (gateReason(game) !== null) return { kind: 'gated' };
+
+  const visibility = leaderboardVisibility(
+    game.scoreVisibility,
+    game.status,
+    game.gameMode as GameMode,
+  );
+  // Blind runde i et format der nettsiden ikke viser noe: ingenting her
+  // heller, ikke engang brutto. Lista per format er `revealActiveTable`
+  // (`lib/leaderboard/firstHalfReveal.ts`, #1981).
+  if (visibility === 'hidden') return { kind: 'hidden' };
+  if (visibility === 'gross-only') return { kind: 'gross-only' };
+
+  // #1978: best ball viser bare første halvdel mens runden pågår, som webben.
+  // Porten og klippet bor i `firstHalfScope` (delt med lagtavla, #2579).
+  // Låskortet står i lagtavla alene: en klippet tavle har alltid `teamBoard`,
+  // fordi porten åpner bare når et lag har spilt første halvdel, og da har
+  // `teamBoardFor` både lag og slag å tegne. Den gamle tabellen under
+  // (`ResultView` uten `teamBoard`) nås ikke klippet fra skjermen.
+  const scope = firstHalfScope(bundle, scores);
+  if (scope.view === 'waiting') return { kind: 'first-half-waiting' };
+
+  const outcome = computeGameLeaderboard(scope.bundle, scope.scores, extras);
+  if (!outcome.ok) return { kind: 'problem', problem: outcome.problem };
+
+  // Bingo Bango Bongo deler ut poeng for prestasjoner, ikke for slag: en bingo
+  // kan stå registrert lenge før noen har tastet et tall. Slag-vakten under
+  // ville skjult den tabellen bak «ingen slag ført ennå», som er sant og
+  // irrelevant. Alle andre formater regner FRA slagene og beholder vakten.
+  // Slag-vakten leser den KLIPPEDE lista: en klippet tabell uten slag på de
+  // ni første hullene skal si «ingen slag ført ennå», ikke tegne en tabell av
+  // bare streker. (I praksis innebærer en åpen port at slagene finnes, men de
+  // to må uansett være enige om hvilke slag de snakker om.)
+  if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scope.scores)) {
+    return { kind: 'empty', result: outcome.result };
+  }
+
+  return { kind: 'table', result: outcome.result };
+}
+
+/** Skjermens beskjed om resultatets topp, ferdig regnet. */
+type HeroView = {
+  hero: ResultHeroModel;
+  kicker: string;
+  subtitle: string;
+  note: string | null;
+};
+
 export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const { colors, ui } = useTheme();
   const { userId } = useSession();
@@ -272,22 +342,39 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
     () => (bundle && teamFormat ? teamBoardBand(bundle) : null),
     [bundle, teamFormat],
   );
+  // #2756: et avsluttet spill som kommer gjennom alle portene, får resultatets
+  // topp. Da er navigatorens topp bare pila og pillen, og resten ruller.
+  const heroModel = useMemo(() => {
+    if (!bundle || bundle.game.status !== 'finished') return null;
+    const view = boardView(bundle, scores, extras);
+    return view.kind === 'table' ? resultHeroFor({ bundle, result: view.result, userId }) : null;
+  }, [bundle, scores, extras, userId]);
+  const hasHero = heroModel !== null;
   const pill = (soloBoard ?? teamBoard ?? patsomeBoard)?.pill ?? null;
-  const pillText = pill?.text ?? null;
+  const pillText = pill?.text ?? (hasHero ? RESULT_CARD_TEXT.finalResult : null);
   const pillLive = pill?.live ?? false;
   useLayoutEffect(() => {
-    if (!bundle || !boardFormat) return;
+    if (!bundle) return;
+    if (!boardFormat && !hasHero) {
+      // Formatene uten tavle har navigatorens egen topp til resultatet er klart.
+      navigation.setOptions({ header: undefined });
+      return;
+    }
     const band = teamBand ?? boardBand(bundle);
     navigation.setOptions(
       boardHeader({
         pill: pillText ? { text: pillText, live: pillLive } : undefined,
-        kicker: band.kicker,
-        title: teamBand ? BOARD_TEAM_TEXT.title : BOARD_TEXT.title,
-        subtitle: band.subtitle,
+        ...(hasHero
+          ? {}
+          : {
+              kicker: band.kicker,
+              title: teamBand ? BOARD_TEAM_TEXT.title : BOARD_TEXT.title,
+              subtitle: band.subtitle,
+            }),
         variant: teamBand ? teamBandVariant(bundle.game) : 'solo',
       }),
     );
-  }, [navigation, bundle, boardFormat, teamBand, pillText, pillLive]);
+  }, [navigation, bundle, boardFormat, hasHero, teamBand, pillText, pillLive]);
   const [stripHeight, setStripHeight] = useState(STRIP_ESTIMATE);
 
   // #2754: reaksjonene. Lag, matchplay og Patsome koster ingen lesing og ingen kanal.
@@ -364,6 +451,16 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const quote = report ? reportQuote(report) : null;
   const reportFor = (variant: RoundReportQuoteVariant): ReportView | null =>
     report && quote ? { report, quote, variant } : null;
+  const heroFor = (): HeroView | null => {
+    if (!heroModel || !bundle) return null;
+    const band = teamBand ?? boardBand(bundle);
+    return {
+      hero: heroModel,
+      kicker: band.kicker,
+      subtitle: band.subtitle,
+      note: seedFailed ? SEED_FAILED_TEXT : null,
+    };
+  };
 
   if (!bundle || choicesPending) {
     return (
@@ -412,7 +509,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
           ]}
           testID="leaderboard-screen"
         >
-          {seedFailed ? (
+          {seedFailed && !hasHero ? (
             <Text style={[ui.muted, styles.boardSeed]} testID="leaderboard-seed-failed">
               {SEED_FAILED_TEXT}
             </Text>
@@ -425,6 +522,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
               sideWinners={sideWinners}
               teamBoard={teamBoard}
               patsomeBoard={patsomeBoard}
+              resultHero={heroFor()}
               roundReport={reportFor('team')}
               onReadMore={readMore}
               onReportLayout={onReportLayout}
@@ -471,7 +569,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
           >
             {/* Båndets siste 8 pt, bak tavleflatens øvre kant (tegningens -8). */}
             <View style={[styles.bandTail, { backgroundColor: colors.surfaceStrong }]} />
-            {seedFailed ? (
+            {seedFailed && !hasHero ? (
               <Text style={[ui.muted, styles.boardSeed]} testID="leaderboard-seed-failed">
                 {SEED_FAILED_TEXT}
               </Text>
@@ -483,6 +581,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
                 extras={extras}
                 sideWinners={sideWinners}
                 soloBoard={soloBoard}
+                resultHero={heroFor()}
                 roundReport={reportFor('solo')}
                 onReadMore={readMore}
                 onReportLayout={onReportLayout}
@@ -506,6 +605,51 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   }
 
   const plainStripBottom = STRIP_BOTTOM + insets.bottom;
+
+  // #2756: et avsluttet spill i et format uten tavle får resultatets topp, med
+  // tabellen under i vanlig luft. Reaksjonene står som på stillingen ellers.
+  if (hasHero) {
+    return (
+      <ReactionsContext.Provider value={reactionsValue}>
+        <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+          {focused ? <StatusBar style="light" /> : null}
+          <ScrollView
+            ref={scrollRef}
+            onScroll={onBoardScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              styles.boardScroll,
+              {
+                paddingBottom:
+                  reactions.target !== null
+                    ? reactionStripHeight + plainStripBottom + 12
+                    : 20 + insets.bottom,
+              },
+            ]}
+            testID="leaderboard-screen"
+          >
+            <View onLayout={onBodyLayout}>
+              <LeaderboardBody
+                bundle={bundle}
+                scores={scores}
+                extras={extras}
+                sideWinners={sideWinners}
+                resultHero={heroFor()}
+                // Sitatet står i samme bånd som toppen, med lagtavlas krem.
+                roundReport={reportFor('team')}
+                onReadMore={readMore}
+                onReportLayout={onReportLayout}
+              />
+            </View>
+          </ScrollView>
+          {reactions.target !== null ? (
+            <ReactionStrip bottom={plainStripBottom} onLayout={setReactionStripHeight} />
+          ) : null}
+        </View>
+      </ReactionsContext.Provider>
+    );
+  }
+
   return (
     <ReactionsContext.Provider value={reactionsValue}>
       <View style={styles.screen}>
@@ -566,6 +710,7 @@ export function LeaderboardBody({
   soloBoard = null,
   teamBoard = null,
   patsomeBoard = null,
+  resultHero = null,
   roundReport = null,
   onReadMore,
   onReportLayout,
@@ -586,6 +731,8 @@ export function LeaderboardBody({
   teamBoard?: TeamBoardModel | null;
   /** Patsome-tavla (#2751) fra skjermen. */
   patsomeBoard?: PatsomeBoardModel | null;
+  /** Resultatets topp (#2756), når spillet er ferdig og kommer gjennom portene. */
+  resultHero?: HeroView | null;
   /**
    * Historien fra pressetribunen (#2632), når runden er ferdig og den finnes.
    * Sitatet står øverst og kortet nederst, men bare i den tegnede tabellen:
@@ -601,9 +748,10 @@ export function LeaderboardBody({
   const { userId } = useSession();
   const nameOf = nameLookup(bundle.players);
 
+  const view = boardView(bundle, scores, extras);
+
   // `gateMessage` er det ene hjemmet for ordlyden, delt med føring-CTA-en.
-  const gate = gateReason(game);
-  if (gate !== null) {
+  if (view.kind === 'gated') {
     // Knappen henger på DENNE noten alene (#1891). De to søsknene lenger nede
     // — «Appen kjenner ikke dette formatet ennå» og «Formatet er ikke satt opp
     // for denne runden» — får ingen: der vet vi ikke om nettsiden har svaret.
@@ -625,16 +773,7 @@ export function LeaderboardBody({
   const withdrawn = withdrawnOnBoard(game, bundle.players);
   const withdrawnSection = withdrawn.length > 0 ? <WithdrawnPlayers players={withdrawn} /> : null;
 
-  const visibility = leaderboardVisibility(
-    game.scoreVisibility,
-    game.status,
-    game.gameMode as GameMode,
-  );
-
-  // Blind runde i et format der nettsiden ikke viser noe: ingenting her
-  // heller, ikke engang brutto. Lista per format er `revealActiveTable`
-  // (`lib/leaderboard/firstHalfReveal.ts`, #1981).
-  if (visibility === 'hidden') {
+  if (view.kind === 'hidden') {
     return (
       <CalmNote
         text="Resultatet avsløres når runden avsluttes."
@@ -643,7 +782,7 @@ export function LeaderboardBody({
     );
   }
 
-  if (visibility === 'gross-only') {
+  if (view.kind === 'gross-only') {
     return (
       <>
         <GrossOnlyTable bundle={bundle} scores={scores} />
@@ -652,31 +791,23 @@ export function LeaderboardBody({
     );
   }
 
-  // #1978: best ball viser bare første halvdel mens runden pågår, som webben.
-  // Porten og klippet bor i `firstHalfScope` (delt med lagtavla, #2579).
-  // Låskortet står i lagtavla alene: en klippet tavle har alltid `teamBoard`,
-  // fordi porten åpner bare når et lag har spilt første halvdel, og da har
-  // `teamBoardFor` både lag og slag å tegne. Den gamle tabellen under
-  // (`ResultView` uten `teamBoard`) nås ikke klippet fra skjermen.
-  const scope = firstHalfScope(bundle, scores);
-  if (scope.view === 'waiting') {
+  if (view.kind === 'first-half-waiting') {
     return <CalmNote text={FIRST_HALF_WAITING_NOTE} testID="leaderboard-first-half-waiting" />;
   }
-  const scopedScores = scope.scores;
-  const scopedBundle = scope.bundle;
 
-  const outcome = computeGameLeaderboard(scopedBundle, scopedScores, extras);
-  if (!outcome.ok) {
+  if (view.kind === 'problem') {
     // Ingen sideturnering her heller: uten et `ModeResult` finnes det ingen
     // fasit for lag-grupperingen, og en gjettet gruppering ville delt ut
     // sidepoengene til feil lag.
     return (
       <CalmNote
-        text={PROBLEM_MESSAGES[outcome.problem]}
-        testID={PROBLEM_TEST_IDS[outcome.problem]}
+        text={PROBLEM_MESSAGES[view.problem]}
+        testID={PROBLEM_TEST_IDS[view.problem]}
       />
     );
   }
+
+  const { result } = view;
 
   // Pengeoppgjøret (#2221) — null når formatet ikke spiller om penger eller
   // `kr_per_unit` mangler. Samme delte regel som nettsidens resultattavle, så de
@@ -685,7 +816,7 @@ export function LeaderboardBody({
   // #2561: null i appen ved lansering (rot-`lib/launchRules.ts`). Visningene tegner
   // kortet bare når `settlement` ikke er null, så det gjelder alle formater.
   const settlement = SHOW_KRONER_IN_APP
-    ? settlementForResult(outcome.result, game.modeConfig, (unit) => SETTLEMENT_TEXT.units[unit])
+    ? settlementForResult(result, game.modeConfig, (unit) => SETTLEMENT_TEXT.units[unit])
     : null;
 
   // Sideturneringen ligger UNDER hovedresultatet — ikke i en fane som på
@@ -699,22 +830,14 @@ export function LeaderboardBody({
         bundle,
         scores,
         sideWinnerRows: sideWinners.rows,
-        result: outcome.result,
+        result,
       })}
       sideWinnersUnavailable={sideWinners.neverLoaded && sideWinners.settled}
       sideWinnersLoading={!sideWinners.settled}
     />
   ) : null;
 
-  // Bingo Bango Bongo deler ut poeng for prestasjoner, ikke for slag: en bingo
-  // kan stå registrert lenge før noen har tastet et tall. Slag-vakten under
-  // ville skjult den tabellen bak «ingen slag ført ennå», som er sant og
-  // irrelevant. Alle andre formater regner FRA slagene og beholder vakten.
-  // Slag-vakten leser den KLIPPEDE lista: en klippet tabell uten slag på de
-  // ni første hullene skal si «ingen slag ført ennå», ikke tegne en tabell av
-  // bare streker. (I praksis innebærer en åpen port at slagene finnes, men de
-  // to må uansett være enige om hvilke slag de snakker om.)
-  if (game.gameMode !== 'bingo_bango_bongo' && !hasAnyStroke(scopedScores)) {
+  if (view.kind === 'empty') {
     // Sideturneringen henger med: LD/CTP kåres av arrangøren og finnes selv om
     // ingen rakk å føre et slag.
     // #2752: en arrangør som ikke spiller, når kampen fra cup-rommet. RLS gir hen
@@ -737,24 +860,19 @@ export function LeaderboardBody({
   }
 
   const teamModel = teamBoard ?? patsomeBoard;
-  const cardMargin = teamModel ? 16 : soloBoard ? 12 : 0;
-  return (
+  const plainTop = resultHero !== null && !soloBoard && !teamModel;
+  const cardMargin = teamModel ? 16 : soloBoard ? 12 : plainTop ? 20 : 0;
+  const table = (
     <>
-      {roundReport ? (
-        <RoundReportQuote
-          quote={roundReport.quote}
-          variant={roundReport.variant}
-          onReadMore={onReadMore ?? noop}
-        />
-      ) : null}
       <ResultView
-        result={outcome.result}
+        result={result}
         status={game.status}
         settlement={settlement}
         nameOf={nameOf}
         soloBoard={soloBoard}
         teamBoard={teamBoard}
         patsomeBoard={patsomeBoard}
+        resultInSentence={resultHero?.hero.resultInSentence ?? false}
       />
       {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
           nettsiden, med samme sidemarg som sideturneringen. */}
@@ -770,6 +888,28 @@ export function LeaderboardBody({
       ) : (
         sideSection
       )}
+    </>
+  );
+  return (
+    <>
+      {resultHero ? (
+        <ResultHero
+          hero={resultHero.hero}
+          kicker={resultHero.kicker}
+          subtitle={resultHero.subtitle}
+          variant={soloBoard ? 'solo' : teamModel ? 'team' : 'plain'}
+          hasQuote={roundReport !== null}
+          note={resultHero.note}
+        />
+      ) : null}
+      {roundReport ? (
+        <RoundReportQuote
+          quote={roundReport.quote}
+          variant={roundReport.variant}
+          onReadMore={onReadMore ?? noop}
+        />
+      ) : null}
+      {plainTop ? <View style={styles.plainTable}>{table}</View> : table}
       {roundReport ? (
         <RoundReportCard
           report={roundReport.report}
@@ -823,6 +963,8 @@ const styles = StyleSheet.create({
   boardSeed: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   // Notene og tomtilstanden får skjermens vanlige luft (`ui.scroll`).
   plainBody: { padding: 20, gap: 8 },
+  // Tabellen under resultatets topp, som i `Resultat-B-skins`.
+  plainTable: { paddingTop: 16, paddingHorizontal: 20, gap: 8 },
   boardSide: { marginTop: 12, marginHorizontal: 12 },
   teamSide: { marginTop: 12, marginHorizontal: 16 },
 });

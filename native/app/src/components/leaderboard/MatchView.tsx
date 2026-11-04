@@ -33,6 +33,7 @@ export function MatchView({
   holesPlayed,
   result,
   nameOf,
+  resultInSentence = false,
 }: {
   side1: MatchSideInfo;
   side2: MatchSideInfo;
@@ -41,6 +42,8 @@ export function MatchView({
   holesPlayed: number;
   result: MatchplayMatchResult | null;
   nameOf: (userId: string) => string;
+  /** Setningen over står for resultatet (#2756): kortet sier bare hvem som møttes. */
+  resultInSentence?: boolean;
 }) {
   const { colors, ui } = useTheme();
   const side1Name = side1.userIds.map(nameOf).join(' & ');
@@ -72,12 +75,16 @@ export function MatchView({
             {side2Name}
           </Text>
         </View>
-        <Text style={[ui.value, ui.num]} testID="match-standing">
-          {standing.label}
-        </Text>
-        <Text style={ui.muted} testID="match-standing-line">
-          {line}
-        </Text>
+        {resultInSentence ? null : (
+          <>
+            <Text style={[ui.value, ui.num]} testID="match-standing">
+              {standing.label}
+            </Text>
+            <Text style={ui.muted} testID="match-standing-line">
+              {line}
+            </Text>
+          </>
+        )}
       </View>
 
       <Text style={ui.sectionTitle}>Hull for hull</Text>
