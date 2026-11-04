@@ -46,7 +46,8 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
   const { leagueId, gameId, userId: playerUserId } = route.params;
-  // #2201: markørens varsel for spillet er lest når skjermen er åpnet.
+  // #2201: flaten for markørens varsel. #2759: det står til kortet er godkjent eller
+  // sendt tilbake, så besøket merker ingenting.
   useMarkVisitRead('leagueMarker', gameId);
 
   const [load, setLoad] = useState<Load>({ status: 'loading' });
