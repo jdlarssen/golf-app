@@ -2,21 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
-import type { ReactionEmoji } from '@/lib/games/reactions/palette';
+import { topReactions } from '@/lib/games/reactions/aggregate';
 import { useReactionsContext } from './ReactionsProvider';
-
-/** How many given reactions the plate shows, most given first. */
-const SHOWN_REACTIONS = 3;
-
-/** The reactions a player has been given, most given first, at most three. */
-function topReactions(
-  counts: Partial<Record<ReactionEmoji, number>>,
-): [ReactionEmoji, number][] {
-  return (Object.entries(counts) as [ReactionEmoji, number][])
-    .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, SHOWN_REACTIONS);
-}
 
 /**
  * The SPILLER plate on the live board (#2253): the name line, the dots line and

@@ -23,6 +23,37 @@ export type ReactionSummary = Record<
   }
 >;
 
+/** How many given reactions a row shows, most given first. */
+const SHOWN_REACTIONS = 3;
+
+/** The reactions a player has been given, most given first, at most three. */
+export function topReactions(
+  counts: Partial<Record<ReactionEmoji, number>>,
+): [ReactionEmoji, number][] {
+  return (Object.entries(counts) as [ReactionEmoji, number][])
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, SHOWN_REACTIONS);
+}
+
+/** Apply a viewer's own optimistic toggle to the summary (pure). */
+export function applyToggle(
+  summary: ReactionSummary,
+  targetUserId: string,
+  emoji: ReactionEmoji,
+): ReactionSummary {
+  const row = summary[targetUserId] ?? { counts: {}, mine: [] };
+  const wasActive = row.mine.includes(emoji);
+  const nextMine = wasActive
+    ? row.mine.filter((e) => e !== emoji)
+    : [...row.mine, emoji];
+  const nextVal = (row.counts[emoji] ?? 0) + (wasActive ? -1 : 1);
+  const nextCounts = { ...row.counts };
+  if (nextVal > 0) nextCounts[emoji] = nextVal;
+  else delete nextCounts[emoji];
+  return { ...summary, [targetUserId]: { counts: nextCounts, mine: nextMine } };
+}
+
 /**
  * Aggregate an array of reaction rows into a per-target summary.
  *

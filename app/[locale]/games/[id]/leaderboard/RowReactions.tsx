@@ -2,17 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { REACTION_EMOJIS, type ReactionEmoji } from '@/lib/games/reactions/palette';
-
-/** Maps each palette emoji to its i18n name key in `leaderboard.reactions`. */
-const EMOJI_NAME_KEY: Record<ReactionEmoji, 'clap' | 'fire' | 'laugh' | 'strong' | 'golf' | 'birdie'> = {
-  '👏': 'clap',
-  '🔥': 'fire',
-  '😂': 'laugh',
-  '💪': 'strong',
-  '⛳': 'golf',
-  '🐦': 'birdie',
-};
+import { EMOJI_NAME_KEY, REACTION_EMOJIS, type ReactionEmoji } from '@/lib/games/reactions/palette';
 
 const BUTTON_BASE = [
   'inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full',

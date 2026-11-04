@@ -16,6 +16,19 @@ export const REACTION_EMOJIS = ['👏', '🔥', '😂', '💪', '⛳', '🐦'] a
 
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
+/** Maps each palette emoji to its i18n name key in `leaderboard.reactions`. */
+export const EMOJI_NAME_KEY: Record<
+  ReactionEmoji,
+  'clap' | 'fire' | 'laugh' | 'strong' | 'golf' | 'birdie'
+> = {
+  '👏': 'clap',
+  '🔥': 'fire',
+  '😂': 'laugh',
+  '💪': 'strong',
+  '⛳': 'golf',
+  '🐦': 'birdie',
+};
+
 /** Narrows an unknown string to `ReactionEmoji`. */
 export function isReactionEmoji(s: string): s is ReactionEmoji {
   return (REACTION_EMOJIS as readonly string[]).includes(s);
