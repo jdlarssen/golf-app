@@ -14,7 +14,7 @@
 //  3. **Reaksjoner kan aldri hindre noe annet.** Et format uten reaksjoner koster
 //     ingen lesing og ingen kanal, og ingen feil her når tavla.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { applyToggle, type ReactionSummary } from '../../../../lib/games/reactions/aggregate';
 import type { ReactionEmoji } from '../../../../lib/games/reactions/palette';
 import {
@@ -45,7 +45,7 @@ export type ReactionFailure = 'save' | 'denied';
 export interface GameReactions {
   loaded: boolean;
   canReact: boolean;
-  /** Bare på en tom tavle, som i tegningen: reaksjoner på radene viser selv veien. */
+  /** Bare på en tom tavle mens runden går, som i tegningen. */
   showHint: boolean;
   target: ReactionTarget | null;
   failure: ReactionFailure | null;
@@ -63,16 +63,34 @@ export function useGameReactions({
   userId,
   enabled,
   canReact,
+  live,
 }: {
   gameId: string;
   userId: string | null;
   enabled: boolean;
   canReact: boolean;
+  /** Runden pågår. Tegningen av den ferdige tavla har ingen hjelpelinje. */
+  live: boolean;
 }): GameReactions {
   const [summary, setSummary] = useState<ReactionSummary>({});
   const [loaded, setLoaded] = useState(false);
   const [target, setTarget] = useState<ReactionTarget | null>(null);
   const [failure, setFailure] = useState<ReactionFailure | null>(null);
+
+  // Et varseltrykk kan gi samme skjerm en ny `gameId` (#1954 D2). Da skal det
+  // forrige spillet ikke stå igjen, og et sent svar fra det kastes (`idRef`).
+  const [shownFor, setShownFor] = useState(gameId);
+  if (shownFor !== gameId) {
+    setShownFor(gameId);
+    setSummary({});
+    setLoaded(false);
+    setTarget(null);
+    setFailure(null);
+  }
+  const idRef = useRef(gameId);
+  useLayoutEffect(() => {
+    idRef.current = gameId;
+  }, [gameId]);
 
   const alive = useRef(true);
   useEffect(() => {
@@ -84,8 +102,6 @@ export function useGameReactions({
 
   const seq = useRef(0);
   const appliedSeq = useRef(0);
-  /** Lesinger som har landet. Et feilet trykk rulles bare tilbake hvis ingen har det. */
-  const readsApplied = useRef(0);
   const inFlight = useRef(new Set<string>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,9 +111,15 @@ export function useGameReactions({
     try {
       const next = await fetchGameReactions(gameId, userId);
       // Under en skriving ser serveren ikke trykket ennå. Lagringen leser på nytt.
-      if (!alive.current || mySeq <= appliedSeq.current || inFlight.current.size > 0) return;
+      if (
+        !alive.current ||
+        idRef.current !== gameId ||
+        mySeq <= appliedSeq.current ||
+        inFlight.current.size > 0
+      ) {
+        return;
+      }
       appliedSeq.current = mySeq;
-      readsApplied.current += 1;
       setSummary(next);
       setLoaded(true);
     } catch {
@@ -159,7 +181,7 @@ export function useGameReactions({
       inFlight.current.add(key);
       setFailure(null);
       appliedSeq.current = ++seq.current;
-      const readsAtStart = readsApplied.current;
+      const openRow = target;
       setSummary((prev) => applyToggle(prev, targetUserId, emoji));
 
       const write: Promise<ReactionToggleResult> = toggleReaction({
@@ -170,27 +192,33 @@ export function useGameReactions({
       }).catch(() => ({ ok: false, failure: 'db_error' }));
       void write.then((result) => {
         inFlight.current.delete(key);
-        if (!alive.current) return;
+        if (!alive.current || idRef.current !== gameId) return;
+        // En lesing som gikk ut før lagringen var ferdig, kjenner ikke trykket.
+        appliedSeq.current = seq.current;
         if (!result.ok) {
-          // Har en lesing landet etter trykket, er det den som er sannheten.
-          if (readsApplied.current === readsAtStart) {
-            setSummary((prev) => applyToggle(prev, targetUserId, emoji));
-          }
+          // Ingen lesing kan ha landet mens skrivingen pågikk, så tilbake er riktig.
+          setSummary((prev) => applyToggle(prev, targetUserId, emoji));
           setFailure(result.failure === 'rls_denied' ? 'denied' : 'save');
+          // Si fra på raden det gjelder, også når stripa er lukket eller flyttet.
+          if (openRow) setTarget(openRow);
         }
         schedule();
       });
     },
-    [canReact, gameId, schedule, userId],
+    [canReact, gameId, schedule, target, userId],
   );
 
   const showHint = useMemo(
     () =>
       canReact &&
+      live &&
       loaded &&
       Object.values(summary).every((row) => Object.keys(row.counts).length === 0),
-    [canReact, loaded, summary],
+    [canReact, live, loaded, summary],
   );
 
-  return { loaded, canReact, showHint, target, failure, getRow, openFor, close, toggle };
+  return useMemo(
+    () => ({ loaded, canReact, showHint, target, failure, getRow, openFor, close, toggle }),
+    [loaded, canReact, showHint, target, failure, getRow, openFor, close, toggle],
+  );
 }
