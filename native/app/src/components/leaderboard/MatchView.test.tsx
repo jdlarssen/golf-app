@@ -111,4 +111,25 @@ describe('MatchView', () => {
     // horisontal ScrollView som skjuler hullene utenfor skjermen.
     expect(screen.getByTestId('match-strip').props.horizontal).toBeUndefined();
   });
+
+  // #2756: setningen over kortet står for resultatet, så «3&2» står én gang.
+  it('med resultatet i setningen sier kortet bare hvem som møttes', async () => {
+    await render(
+      <MatchView
+        side1={{ sideNumber: 1, userIds: ['a'] }}
+        side2={{ sideNumber: 2, userIds: ['c'] }}
+        holes={EIGHTEEN_HOLES}
+        holesUp={3}
+        holesPlayed={16}
+        result={{ winner: 'side1', formatted: '3&2' } as never}
+        nameOf={(id) => NAMES[id]}
+        resultInSentence
+      />,
+    );
+    expect(screen.getByTestId('match-side1-name')).toBeTruthy();
+    expect(screen.queryByTestId('match-standing')).toBeNull();
+    expect(screen.queryByTestId('match-standing-line')).toBeNull();
+    expect(screen.queryByText(/3&2/)).toBeNull();
+    expect(screen.getByTestId('match-strip')).toBeTruthy();
+  });
 });

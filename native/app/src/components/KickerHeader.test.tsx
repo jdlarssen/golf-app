@@ -87,3 +87,14 @@ it.each(['solo', 'team', 'team-live'] as const)('tavlas bånd (%s): pila går ti
   expect(screen.getByTestId('board-pill')).toBeTruthy();
   expect(screen.queryByTestId('board-pill-dot')).toBeNull();
 });
+
+// #2756: et avsluttet spill har setningen i rulleflaten, så toppen er bare raden.
+describe('boardHeader uten tittel', () => {
+  it.each(['solo', 'team'] as const)('%s: pila og pillen, ingen overskrift', async (variant) => {
+    const options = boardHeader({ pill: { text: 'Sluttresultat · 18 hull', live: false }, variant });
+    await render(<>{headerElement(true, jest.fn(), options)}</>);
+    expect(screen.getByTestId('board-pill')).toHaveTextContent('Sluttresultat · 18 hull');
+    expect(screen.queryByRole('header')).toBeNull();
+    expect(screen.getByTestId('board-top-bar')).toHaveStyle({ paddingBottom: 0 });
+  });
+});

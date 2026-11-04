@@ -14,6 +14,7 @@
 import { STATUS_LABELS } from '../../../../lib/games/status';
 import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
+import { medalRank } from '../../../../lib/leaderboard/podium';
 import {
   boardRowSrParts,
   boardShowsPlace,
@@ -101,6 +102,8 @@ export type SoloBoardRow = {
   place: string;
   /** Lederen live, vinneren ferdig: gullskive og gullring. */
   leader: boolean;
+  /** Ferdig: sølv og bronse på plass to og tre (#2756). */
+  medal?: 2 | 3 | null;
   you: boolean;
   holesPlayed: number;
   /** Tallet i tavlas enhet: «18», «−2», «74». */
@@ -416,6 +419,7 @@ function finishedBoard(
       name: rowName(row),
       place: placeText(row, showRank),
       leader: winner(row),
+      medal: medalRank(row.rank, showRank),
       you: row.userId === userId,
       holesPlayed: row.holesPlayed,
       total: totalLabel(board.unit, row.total),

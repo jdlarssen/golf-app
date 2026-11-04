@@ -11,14 +11,7 @@
 // (`lib/og/palette.ts`), som ikke bytter med drakten. Webben tegner med
 // Satori og Googles statiske Fraunces, som har optisk størrelse 14; appen
 // bruker derfor snittene for 14 pt i rutas størrelser.
-import { PixelRatio, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import {
-  BALL_CENTER_X_EM,
-  BALL_DIAMETER_EM,
-  BALL_SHADING_MIN_PX,
-  T_CAP_HEIGHT_EM,
-} from '../../../../../lib/brand/wordmarkBall';
+import { StyleSheet, Text, View } from 'react-native';
 import {
   KAVALKADE_CARD_IMAGE_WIDTH,
   computeCardHeight,
@@ -38,76 +31,18 @@ import {
   TAUPE,
 } from '../../../../../lib/og/palette';
 import { KAVALKADE_SHARE_TEXT } from '../../lib/kavalkadeCopy';
-import { FONTS, frauncesFamily, frauncesLine } from '../../theme';
+import { FONTS, frauncesFamily } from '../../theme';
+import { ShareWordmark, cardPx as px, satoriLine } from '../ShareCardParts';
 
-/** Rutas piksler per punkt her: telefonens skala. */
-const SCALE = PixelRatio.get();
 /** Bildets bredde i punkter. */
-export const SHARE_CARD_WIDTH = KAVALKADE_CARD_IMAGE_WIDTH / SCALE;
-
-const px = (value: number) => value / SCALE;
-
-/**
- * Fraunces-linja Satori tegner, i punkter her: linjeboksen fra `frauncesLine`
- * regnet i rutas piksler (der én piksel er én skjermpiksel her) og delt på
- * skalaen, så grunnlinja står der Satori og Chromium har den. Uten den legger
- * iOS grunnlinja `descent` over bunnen av linja, og tallet sto 9 px for høyt.
- */
-function satoriLine(size: number, lineHeight: number, multiline = false) {
-  const line = frauncesLine(size, lineHeight, { multiline, pixelRatio: 1 });
-  return {
-    fontSize: px(line.fontSize),
-    marginTop: px(line.marginTop),
-    marginBottom: px(line.marginBottom),
-    ...(line.lineHeight !== undefined ? { lineHeight: px(line.lineHeight) } : {}),
-    // Android (#2560): uten den legger Android win-målene rundt teksten.
-    ...(line.includeFontPadding === false ? { includeFontPadding: false } : {}),
-  };
-}
-
-/** Satori sin grunnlinje i ordmerket (`lib/og/wordmark.tsx`). */
-const SATORI_BASELINE_EM = 0.86;
-
-/** Ordmerket «Tørny» med gullballen over T-en, som `OgWordmark` (56 px, linje 1). */
-function ShareWordmark() {
-  const fontSize = px(56);
-  const d = BALL_DIAMETER_EM * fontSize;
-  const clearance = Math.max(0, BALL_DIAMETER_EM + T_CAP_HEIGHT_EM - SATORI_BASELINE_EM) * fontSize;
-  const shaded = d * SCALE >= BALL_SHADING_MIN_PX;
-  return (
-    <View style={{ paddingTop: clearance }}>
-      <Text style={styles.wordmark}>Tørny</Text>
-      {/* Flaten er to piksler større enn ballen: en flate på 14,56 px rundes
-          ned og klipper sirkelen. Sirkelen står der den står. */}
-      <Svg
-        width={d + 2 / SCALE}
-        height={d + 2 / SCALE}
-        style={{
-          position: 'absolute',
-          left: (BALL_CENTER_X_EM - BALL_DIAMETER_EM / 2) * fontSize,
-          top: clearance + (SATORI_BASELINE_EM - T_CAP_HEIGHT_EM) * fontSize - d,
-        }}
-      >
-        <Defs>
-          {/* `BALL_SHADING_CSS`: lys i 36 % / 30 %, borte ved 60 %. */}
-          <RadialGradient id="ball" cx="36%" cy="30%" r="60%" fx="36%" fy="30%">
-            <Stop offset="0" stopColor={LINEN} stopOpacity={0.55} />
-            <Stop offset="1" stopColor={LINEN} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={d / 2} cy={d / 2} r={d / 2} fill={CHAMP} />
-        {shaded ? <Circle cx={d / 2} cy={d / 2} r={d / 2} fill="url(#ball)" /> : null}
-      </Svg>
-    </View>
-  );
-}
+export const SHARE_CARD_WIDTH = px(KAVALKADE_CARD_IMAGE_WIDTH);
 
 export function KavalkadeShareCard({ model }: { model: KavalkadeCardModel }) {
   const heroSize = heroFontSize(model.hero.value);
   return (
     <View style={[styles.card, { height: px(computeCardHeight(model)) }]} testID={`kavalkade-share-${model.kind}`}>
       <View style={styles.header}>
-        <ShareWordmark />
+        <ShareWordmark size={56} weight={500} color={FOREST} />
         <View style={styles.pill}>
           <Text style={styles.eyebrow}>{model.eyebrow}</Text>
         </View>
@@ -145,7 +80,6 @@ const TITLE = satoriLine(64, 64 * 1.12, true);
 const styles = StyleSheet.create({
   card: { width: SHARE_CARD_WIDTH, backgroundColor: LINEN, padding: px(72) },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  wordmark: { ...satoriLine(56, 56), fontFamily: frauncesFamily(500, 14), color: FOREST },
   pill: {
     backgroundColor: CHAMP_PILL,
     borderRadius: 999,

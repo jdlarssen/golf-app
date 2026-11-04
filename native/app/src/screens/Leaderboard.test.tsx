@@ -8,7 +8,7 @@
 // Alt utenfor skjermen er mocket (nett, SQLite, realtime); adapteren, motoren
 // og reveal-predikatet er ekte delt kode.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
@@ -404,14 +404,15 @@ describe('Leaderboard — historien fra pressetribunen (#2632)', () => {
     expect(screen.getByTestId('round-report-quote')).toBeTruthy();
   });
 
-  it('formater uten egen tavle (skins): sitatet under «Sluttresultat», kortet nederst', async () => {
+  it('formater uten egen tavle (skins): sitatet under resultatets topp, kortet nederst', async () => {
     mockBundleOverride.current = finished({
       gameMode: 'skins',
       modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
     });
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('round-report')).toBeTruthy());
-    expect(screen.getByTestId('leaderboard-subtitle')).toHaveTextContent('Sluttresultat');
+    expect(screen.getByTestId('result-hero')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-subtitle')).toBeNull();
     expect(screen.getByTestId('round-report-quote')).toBeTruthy();
     expect(screen.queryByTestId('board-strip-action')).toBeNull();
   });
@@ -1126,5 +1127,75 @@ describe('ResultView', () => {
     // Nevner IKKE nettsiden (#1844): vi vet ikke om formatet finnes der.
     expect(screen.getByText('Appen kjenner ikke dette formatet ennå.')).toBeTruthy();
     expect(screen.queryByTestId('leaderboard-gated-format-link')).toBeNull();
+  });
+});
+
+// #2756: resultatets topp (tegningene `Resultat-B-*`). Type B: bare et avsluttet
+// spill som kommer gjennom alle portene, får setningen og knappen.
+describe('resultatets topp', () => {
+  const game = (overrides: Record<string, unknown> = {}) => ({
+    ...mockBundle,
+    game: { ...bundleGame, status: 'finished', ...overrides },
+  });
+
+  afterEach(() => {
+    mockBundleOverride.current = null;
+  });
+
+  it('et ferdig spill: setningen sier det samme tallet som raden, og nummer to har sølv', async () => {
+    mockBundleOverride.current = game();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
+    expect(screen.getByTestId('result-hero-sentence')).toHaveTextContent('Makker vant med 4 poeng');
+    expect(screen.getByTestId('board-row-mate-total')).toHaveTextContent('4');
+    expect(within(screen.getByTestId('board-row-me-place')).getByTestId('board-medal-2')).toBeTruthy();
+    // Vinneren har tavlas egen gullskive, ikke en medalje.
+    expect(within(screen.getByTestId('board-row-mate-place')).getByTestId('board-leader-disc')).toBeTruthy();
+  });
+
+  it('skjermleseren leser radene i plass-rekkefølge', async () => {
+    mockBundleOverride.current = game();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-row-me-place')).toBeTruthy());
+    const rows = screen.getAllByTestId(/^board-row-(me|mate)$/).map((row) => row.props.accessibilityLabel);
+    expect(rows[0]).toMatch(/^Makker/);
+    expect(rows[1]).toMatch(/^Meg/);
+  });
+
+  it('en aktiv runde har verken setning, knapp eller medalje', async () => {
+    mockBundleOverride.current = game({ status: 'active' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-row-mate-place')).toBeTruthy());
+    expect(screen.queryByTestId('result-hero')).toBeNull();
+    expect(screen.queryByTestId('share-result')).toBeNull();
+    expect(screen.queryByTestId('board-medal-2')).toBeNull();
+  });
+
+  it('en blind runde under spill: ingen setning', async () => {
+    mockBundleOverride.current = game({ status: 'active', scoreVisibility: 'reveal' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-gross-only')).toBeTruthy());
+    expect(screen.queryByTestId('result-hero')).toBeNull();
+  });
+
+  // Ingen format er stengt i dag (`GATED_MODES` er tom), så porten prøves med
+  // motorens svar: alt som ikke når tabellen, får ingen setning.
+  it('et motorproblem: den rolige noten, ingen setning', async () => {
+    mockBundleOverride.current = game({ modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' } });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-missing-config')).toBeTruthy());
+    expect(screen.queryByTestId('result-hero')).toBeNull();
+  });
+
+  it('et format uten tavle: setningen over tabellen, og spillnavnet står ikke to ganger', async () => {
+    mockBundleOverride.current = game({
+      gameMode: 'skins',
+      modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+    });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
+    expect(screen.getByTestId('leaderboard-table')).toBeTruthy();
+    expect(screen.queryByTestId('leaderboard-subtitle')).toBeNull();
+    expect(screen.getAllByText(/Torsdagsrunden/)).toHaveLength(1);
   });
 });

@@ -20,7 +20,7 @@ export type HeadlineSpec =
   | { kind: 'approved' };
 
 /** More first names than this in a shared win makes the headline «Delt seier …». */
-const MAX_SHARED_NAMES = 4;
+export const MAX_SHARED_NAMES = 4;
 
 /**
  * First names for a headline. When two of them are the same («Ole» and «Ole»),

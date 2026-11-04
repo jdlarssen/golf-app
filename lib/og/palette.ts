@@ -28,5 +28,8 @@ export const ACCENT_ON_STRONG = '#D4B870';
 export const HILL_FAR = '#163A2A';
 export const HILL_NEAR = '#12321F';
 export const MEDAL_INK = '#1A2E1F';
-export const MEDAL_SILVER = 'radial-gradient(circle at 50% 38%, #ffffff 0%, #cfc9bd 100%)';
-export const MEDAL_BRONZE = 'radial-gradient(circle at 50% 38%, #e8c3a4 0%, #b07c52 100%)';
+/** The medallions' two colours, centre and edge; the app draws them as SVG (#2756). */
+export const MEDAL_SILVER_STOPS = ['#ffffff', '#cfc9bd'] as const;
+export const MEDAL_BRONZE_STOPS = ['#e8c3a4', '#b07c52'] as const;
+export const MEDAL_SILVER = `radial-gradient(circle at 50% 38%, ${MEDAL_SILVER_STOPS[0]} 0%, ${MEDAL_SILVER_STOPS[1]} 100%)`;
+export const MEDAL_BRONZE = `radial-gradient(circle at 50% 38%, ${MEDAL_BRONZE_STOPS[0]} 0%, ${MEDAL_BRONZE_STOPS[1]} 100%)`;

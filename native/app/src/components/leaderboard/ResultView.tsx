@@ -53,6 +53,7 @@ export function ResultView({
   soloBoard = null,
   teamBoard = null,
   patsomeBoard = null,
+  resultInSentence = false,
 }: {
   result: ModeResult;
   status: string;
@@ -75,6 +76,8 @@ export function ResultView({
   teamBoard?: TeamBoardModel | null;
   /** Patsome-tavla (#2751) fra `patsomeBoardFor`. Uten den står tabellen under. */
   patsomeBoard?: PatsomeBoardModel | null;
+  /** Resultatets setning (#2756) sier utfallet i matchplay. */
+  resultInSentence?: boolean;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
@@ -347,6 +350,7 @@ export function ResultView({
           holesPlayed={result.holesPlayed}
           result={result.result}
           nameOf={nameOf}
+          resultInSentence={resultInSentence}
         />
       );
 
@@ -366,6 +370,7 @@ export function ResultView({
           holesPlayed={result.holesPlayed}
           result={result.result}
           nameOf={nameOf}
+          resultInSentence={resultInSentence}
         />
       );
 
@@ -387,6 +392,7 @@ export function ResultView({
           holesPlayed={result.holesPlayed}
           result={result.result}
           nameOf={nameOf}
+          resultInSentence={resultInSentence}
         />
       );
 
