@@ -69,8 +69,8 @@ export default async function KlubbDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
-  // #2201: opening the club marks its `club_join_request` and
-  // `club_role_changed` varsler read. Before the membership gate.
+  // #2201: opening the club marks its `club_role_changed` varsler read. #2759: a
+  // `club_join_request` waits until nobody waits. Before the membership gate.
   after(() => markReadOnVisit({ userId: user.id, surface: 'club', entityId: id }));
 
   const detail = await getClubDetail(supabase, id, user.id);

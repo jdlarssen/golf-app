@@ -97,7 +97,8 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
   const selfInitials = route.params?.selfInitials ?? null;
-  // #2201: venneforespørsler er lest når du har åpnet vennelista.
+  // #2201: nye venner er lest når du har åpnet vennelista. #2759: en forespørsel
+  // står til den er besvart.
   useMarkVisitRead('friends');
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
   const [line, setLine] = useState<StatusLine | null>(null);

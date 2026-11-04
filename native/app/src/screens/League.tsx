@@ -61,7 +61,8 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
       }),
     [navigation],
   );
-  // #2638: varslene om at en runde er åpen eller stenger snart, lenker hit.
+  // #2638: varslene om at en runde er åpen eller stenger snart, lenker hit. #2759:
+  // de står til runden er spilt eller stengt, så besøket merker ingenting.
   useMarkVisitRead('league', leagueId);
   const [view, setView] = useState<AppLeagueView | null>(null);
   const [failure, setFailure] = useState<LeagueLoadFailure | null>(null);

@@ -2,6 +2,28 @@ import { describe, it, expect } from 'vitest';
 import { parseNotificationPayload, type NotificationKind } from './types';
 
 describe('parseNotificationPayload', () => {
+  // #2759: the fields that let a row say whose card it means. Older rows have none of them.
+  it('scorecard_rejected: the copy to the one who delivered carries the owner\'s id', () => {
+    const id = '11111111-1111-1111-1111-111111111111';
+    expect(
+      parseNotificationPayload('scorecard_rejected', { game_id: id, player_name: 'Marte', player_id: id }).payload,
+    ).toMatchObject({ player_id: id });
+    expect(() =>
+      parseNotificationPayload('scorecard_rejected', { game_id: id, player_id: 'ikke-en-id' }),
+    ).toThrow();
+  });
+
+  it('deliver_reminder: a reminder for kept cards names them', () => {
+    const id = '11111111-1111-1111-1111-111111111111';
+    expect(
+      parseNotificationPayload('deliver_reminder', { game_id: id, game_name: 'X', others_count: 1, card_user_ids: [id] }).payload,
+    ).toMatchObject({ card_user_ids: [id] });
+    expect(parseNotificationPayload('deliver_reminder', { game_id: id, game_name: 'X', others_count: 1 }).payload).not.toHaveProperty('card_user_ids');
+    expect(() =>
+      parseNotificationPayload('deliver_reminder', { game_id: id, game_name: 'X', card_user_ids: [] }),
+    ).toThrow();
+  });
+
   it('aksepterer gyldig invite-payload', () => {
     const result = parseNotificationPayload('invite', {
       game_id: '11111111-1111-1111-1111-111111111111',

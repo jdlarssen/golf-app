@@ -75,9 +75,9 @@ export default async function ApprovePage({
   const { userId } = await getApproveContext();
   if (!userId) redirect({ href: '/login', locale });
 
-  // Opening /approve counts every pending approval varsel for the game as
-  // seen, whether or not each row gets a tap. Registered before the status
-  // and door gates (#2201): after() also runs when they redirect.
+  // #2759: an approval varsel waits until the card is approved or sent back, so
+  // the visit only checks that. Registered before the status and door gates
+  // (#2201): after() also runs when they redirect.
   after(() => markReadOnVisit({ userId, surface: 'gameApprove', entityId: id }));
 
   // games + game_players from the tag-cached helper. See

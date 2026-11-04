@@ -60,7 +60,7 @@ export function InboxRow({
     </View>
   );
 
-  if (entry.body !== null) {
+  if (entry.body != null) {
     return (
       <View style={[styles.bodyRow, divider]} testID="inbox-row">
         <Pressable

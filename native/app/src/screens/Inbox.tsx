@@ -21,7 +21,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -71,6 +73,12 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
   const acting = useRef(false);
   const latest = useRef(0);
 
+  // iOS har ingen live-region, så der leses linja opp herfra.
+  const say = useCallback((next: StatusLine) => {
+    setLine(next);
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(next.text);
+  }, []);
+
   // Bare det siste svaret teller: et tregt svar fra forrige fokus skal ikke legge
   // en gammel liste over en ny.
   const reload = useCallback(async () => {
@@ -115,20 +123,20 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
   const onMarkAll = () =>
     whileLocked(async () => {
       if (await markAllRead()) await reload();
-      else setLine({ tone: 'error', text: INBOX_TEXT.actionFailed });
+      else say({ tone: 'error', text: INBOX_TEXT.actionFailed });
     });
 
   const onClearRead = () =>
     whileLocked(async () => {
       if (await clearReadRows()) await reload();
-      else setLine({ tone: 'error', text: INBOX_TEXT.actionFailed });
+      else say({ tone: 'error', text: INBOX_TEXT.actionFailed });
     });
 
   const onDecide = (entry: InboxEntry, decision: InboxDecision) =>
     whileLocked(async () => {
       const result = await decideRegistration(entry.key, decision);
       if (result.ok) {
-        setLine({
+        say({
           tone: 'ok',
           text: decidedLine(result.outcome, {
             name: result.name,
@@ -145,21 +153,21 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
         case 'not_pending':
         case 'request_not_found':
         case 'game_not_found':
-          setLine({ tone: 'ok', text: INBOX_TEXT.alreadyDecided });
+          say({ tone: 'ok', text: INBOX_TEXT.alreadyDecided });
           await reload();
           return;
         case 'game_locked':
-          setLine({ tone: 'ok', text: INBOX_TEXT.gameLocked });
+          say({ tone: 'ok', text: INBOX_TEXT.gameLocked });
           await reload();
           return;
         case 'no_team_slot':
-          setLine({ tone: 'error', text: INBOX_TEXT.noTeamSlot });
+          say({ tone: 'error', text: INBOX_TEXT.noTeamSlot });
           return;
         case 'forbidden':
-          setLine({ tone: 'error', text: INBOX_TEXT.forbidden });
+          say({ tone: 'error', text: INBOX_TEXT.forbidden });
           return;
         default:
-          setLine({ tone: 'error', text: INBOX_TEXT.actionFailed });
+          say({ tone: 'error', text: INBOX_TEXT.actionFailed });
       }
     });
 
@@ -169,7 +177,7 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
     if (target.kind === 'screen') openScreenTarget(navigation, target.target);
     else if (target.kind === 'web') {
       const opened = await openWeb(target.path);
-      if (!opened.ok) setLine({ tone: 'error', text: describeWebLinkFailure(opened.reason) });
+      if (!opened.ok) say({ tone: 'error', text: describeWebLinkFailure(opened.reason) });
     }
   }
 

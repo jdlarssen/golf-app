@@ -220,7 +220,8 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const { colors, ui } = useTheme();
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
-  // #2201: påminnelsen om et hull uten slag er lest når du står på et hull.
+  // #2201: flaten for påminnelsen om et hull uten slag. #2759: den står til kortet
+  // er levert, så besøket merker ingenting.
   useMarkVisitRead('gameHole', gameId);
   const { bundle, loading, refresh: refreshBundle, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload, loaded: scoresLoaded } = useLocalScores(gameId, POLL_MS);

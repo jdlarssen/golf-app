@@ -77,7 +77,8 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { userId } = useSession();
-  // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
+  // #2201: flaten for godkjenningsvarslene. #2759: de står til kortet er godkjent
+  // eller sendt tilbake, så besøket merker ingenting; det gjør serveren.
   useMarkVisitRead('gameApprove', gameId);
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
