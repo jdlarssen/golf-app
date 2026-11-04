@@ -260,6 +260,36 @@ describe('subscribeGameStatus (#2219)', () => {
   });
 });
 
+describe('subscribeGameReactions (#2754)', () => {
+  useFreshModules();
+
+  it('lytter på INSERT og DELETE for spillet, og hver hendelse sier bare «les på nytt»', async () => {
+    const { subscribeGameReactions } = require('./realtime') as typeof import('./realtime');
+    const { realtimeChannels } =
+      require('../test/supabaseMock') as typeof import('../test/supabaseMock');
+    const onChange = jest.fn();
+
+    const stop = subscribeGameReactions(GAME, { onChange });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const channel = realtimeChannels.at(-1)!;
+    expect(channel.topic).toMatch(new RegExp(`^reactions:${GAME}#\\d+$`));
+    expect(channel.bindings.map(([, filter]) => filter)).toEqual(
+      ['INSERT', 'DELETE'].map((event) => ({
+        event,
+        schema: 'public',
+        table: 'reactions',
+        filter: `game_id=eq.${GAME}`,
+      })),
+    );
+
+    (channel.bindings[1]![2] as (payload: unknown) => void)({ old: { id: 'r1' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith();
+    stop();
+  });
+});
+
 // #2580: utslagene går inn lokalt etter den delte regelen `serverTeeShotWins`
 // (lib/sync/teeShotRow.ts): en rad som venter i køen overskrives aldri, ellers
 // vinner bare et strengt nyere stempel, sammenlignet som øyeblikk.
