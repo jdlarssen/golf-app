@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   discWrap: { flexShrink: 0 },
   dot: { position: 'absolute', left: -2, top: -2, width: 10, height: 10, borderRadius: 5 },
   texts: { flex: 1, minWidth: 0 },
-  title: { ...interLine(15, 18, { multiline: true }), fontFamily: FONTS.sansSemiBold },
+  title: { ...interLine(15, 19, { multiline: true }), fontFamily: FONTS.sansSemiBold },
   subtitle: { ...interLine(13, 16, { multiline: true }), fontFamily: FONTS.sans },
   body: { ...interLine(13, 16, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 2 },
   cta: {

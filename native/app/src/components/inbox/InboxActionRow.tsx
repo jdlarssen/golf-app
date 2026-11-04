@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6, flexShrink: 0 },
   texts: { flex: 1, minWidth: 0, gap: 2 },
-  title: { ...interLine(15, 18, { multiline: true }), fontFamily: FONTS.sansSemiBold },
+  title: { ...interLine(15, 19, { multiline: true }), fontFamily: FONTS.sansSemiBold },
   subtitle: { ...interLine(13, 16, { multiline: true }), fontFamily: FONTS.sans },
   buttons: { flexDirection: 'row', gap: 8, marginTop: 10, paddingLeft: 22 },
   button: {
