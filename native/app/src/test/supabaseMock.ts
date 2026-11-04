@@ -44,6 +44,7 @@ const CHAIN_METHODS = [
   'is',
   'not',
   'in',
+  'or',
   'lte',
   'gte',
   'order',

@@ -1,7 +1,7 @@
 // #2256 PR 4: trykk på et varsel, og varsler mens appen er åpen.
 //
-// **Trykk** åpner skjermen `pushTarget` peker på: spillets side for alt som
-// gjelder et spill, ellers Hjem (lib/pushRoute.ts). Et trykk som startet appen
+// **Trykk** åpner skjermen `pushTarget` peker på: det varselet gjelder, ellers
+// Hjem (lib/pushRoute.ts). Et trykk som startet appen
 // (kaldstart) hentes med `getLastNotificationResponse`. iOS husker det siste
 // trykket også når appen var åpen, så det tømmes etter HVERT trykk; ellers
 // åpnes det gamle spillet igjen neste gang navigatoren monteres (ny
@@ -12,8 +12,7 @@
 // spilleren ser alt allerede i appen.
 //
 // **Lest** (#2201): lenka bærer `?varsel=<id>`, og trykket merker akkurat det
-// varselet som lest, også når skjermen det åpner ikke er den webben ville
-// åpnet (godkjenning og resultat åpner spillets side her).
+// varselet som lest. En sak som venter, står til den er gjort (#2759).
 //
 // Gjør ingenting i et bygg uten den native delen (`canUsePush`).
 import {

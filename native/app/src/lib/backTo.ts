@@ -59,7 +59,7 @@ export function backStep(
 /**
  * Skjermen over i hierarkiet (regel 1 i §Tilbake): Hjem → spillet → hull,
  * scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
- * kort. Hjem → Profil → rommene under profilen. Skjermer en lenke åpner, ligger
+ * kort. Hjem → Profil → rommene under profilen. Hjem → innboksen. Skjermer en lenke åpner, ligger
  * rett under Hjem (#2748). Står andre skjermer åpne når lenka kommer, legges
  * skjermen likevel oppå dem, og tilbake går dit du sto (unntaket i regel 1). Hjem
  * står over alt.
@@ -95,6 +95,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   MarkerApprove: 'League',
   Profile: 'Home',
   EditProfile: 'Profile',
+  Inbox: 'Home',
 };
 
 /** Står skjermen `screen` over `name` i hierarkiet? */

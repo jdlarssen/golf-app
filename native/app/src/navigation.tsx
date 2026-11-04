@@ -26,6 +26,7 @@ import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
+import { INBOX_TEXT } from './lib/inboxCopy';
 import { listenForPushTokenChanges, settlePushOwner, syncPushToken } from './data/pushDevice';
 import {
   appLinkStep,
@@ -65,6 +66,7 @@ import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
 import { FriendLink } from './screens/FriendLink';
 import { Friends } from './screens/Friends';
+import { Inbox } from './screens/Inbox';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { HoleByHole } from './screens/HoleByHole';
@@ -166,9 +168,12 @@ export type RootStackParamList = {
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
    * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så toppen har
-   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`).
+   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`). Det samme fra et
+   * varsel, `from: 'notification'` (#2759).
    */
-  Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
+  Friends: { selfInitials?: string; from?: 'friendLink' | 'notification' } | undefined;
+  /** Innboksen (#2759), fra knappen på Hjem. */
+  Inbox: undefined;
   /**
    * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
    * appen. `code` er venne-koden fra lenka (`lib/appLinkUrl.ts`).
@@ -475,6 +480,12 @@ export function RootNavigator() {
           options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading, {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
+        />
+        {/* Eierens svar (#2256): tilbakepil til bunnmenyen kommer. Tittelen står i innholdet. */}
+        <Stack.Screen
+          name="Inbox"
+          component={Inbox}
+          options={kickerHeader('', INBOX_TEXT.heading)}
         />
         <Stack.Screen
           name="Friends"

@@ -15,6 +15,11 @@
 // fornavnet, og er profilen ikke hentet, står lenka «Profil» der pillen skulle
 // stått, så profilen aldri blir uten dør.
 //
+// #2759: konvolutten ved siden av pillen åpner innboksen, til bunnmenyen kommer
+// (eierens svar 02.11: «Ja, knapp på Hjem»). Tallet kommer fra serveren ved fokus og
+// når appen kommer i forgrunnen, uten realtime: det samme kallet merker sakene som
+// er gjort, så tallet faller uten at innboksen åpnes. Feiler kallet, står det forrige.
+//
 // #2254 gjorde Hjem til startboden. Fra toppen: datoen som tittel, med
 // profil-pillen («Sigrid · HCP 12,4») til høyre, heltekortet for runden du er
 // midt i (med godkjenningsraden under), «Flere runder i gang», billetten for
@@ -82,13 +87,15 @@ import {
   type HomeList,
 } from '../data/homeList';
 import { fetchMyCups } from '../data/cup';
+import { fetchInboxUnreadCount } from '../data/inbox';
 import { fetchMyLeagues } from '../data/league';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
-import { PinFlagHero } from '../components/icons/Icons';
+import { KonvoluttIcon, PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, hcpA11yLabel, profileA11yLabel } from '../lib/homeCopy';
+import { inboxButtonLabel } from '../lib/inboxCopy';
 import { LEAGUE_TEXT } from '../lib/leagueCopy';
 import { MARKER_TEXT, markerCardSubtitle } from '../lib/markerCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
@@ -144,11 +151,19 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     if (deletedCup) homeScroll.current?.scrollTo({ y: 0, animated: false });
   }, [deletedCup]);
 
+  const [unread, setUnread] = useState(0);
+  const latestUnread = useRef(0);
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setDeviceTick((n) => n + 1);
     // Hilsenen og HCP-pillen. Best-effort: uten profil står bare datoen.
     void fetchOwnProfile(userId).then(setProfile, () => undefined);
+    // Tallet på konvolutten. Bare det siste svaret teller.
+    const unreadCall = ++latestUnread.current;
+    void fetchInboxUnreadCount().then((count) => {
+      if (count !== null && unreadCall === latestUnread.current) setUnread(count);
+    });
     // Ligaene: best-effort, og en feil skjuler seksjonen.
     void fetchMyLeagues().then(
       (result) => setLeagues(result.ok ? result.leagues : []),
@@ -375,7 +390,12 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         ]}
         testID="home-screen"
       >
-        <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+        <Top
+          profile={profile}
+          onProfile={() => navigation.navigate('Profile')}
+          unread={unread}
+          onInbox={() => navigation.navigate('Inbox')}
+        />
 
         {/* #2758: spørsmålet om varsler, aldri midt i en runde. */}
         <PushPromptCard roundInProgress={(split?.active.length ?? 0) > 0} />
@@ -534,7 +554,17 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
  * navnet. Pillen åpner profil-rommet, der handicapet oppdateres. Er profilen
  * ikke hentet, står lenka «Profil» på samme sted.
  */
-function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: () => void }) {
+function Top({
+  profile,
+  onProfile,
+  unread,
+  onInbox,
+}: {
+  profile: OwnProfile | null;
+  onProfile: () => void;
+  unread: number;
+  onInbox: () => void;
+}) {
   const { colors } = useTheme();
   const name = profile ? (firstName(profile.name) ?? HOME_TEXT.playerFallback) : null;
   const hcp =
@@ -552,42 +582,59 @@ function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: ()
       >
         {formatWeekdayDayMonth(now)}
       </Text>
-      {name !== null ? (
+      <View style={styles.topRow}>
+        {name !== null ? (
+          <Pressable
+            onPress={onProfile}
+            hitSlop={HCP_SLOP}
+            accessibilityRole="link"
+            accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
+            style={[
+              styles.hcpPill,
+              { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
+            ]}
+            testID="open-profile"
+          >
+            <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
+              {name}
+            </Text>
+            {hcp !== null ? (
+              <>
+                <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
+                <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+                <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+              </>
+            ) : null}
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={onProfile}
+            accessibilityRole="link"
+            // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
+            hitSlop={PROFILE_SLOP}
+            testID="open-profile"
+          >
+            <Text style={[styles.profileLink, { color: colors.primary }]}>
+              {PROFILE_TEXT.heading}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
-          onPress={onProfile}
+          onPress={onInbox}
           hitSlop={HCP_SLOP}
-          accessibilityRole="link"
-          accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
-          style={[
-            styles.hcpPill,
-            { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
-          ]}
-          testID="open-profile"
+          accessibilityRole="button"
+          accessibilityLabel={inboxButtonLabel(unread)}
+          style={[styles.inbox, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="open-inbox"
         >
-          <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
-            {name}
-          </Text>
-          {hcp !== null ? (
-            <>
-              <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
-              <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-              <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
-            </>
+          <KonvoluttIcon size={20} color={colors.primary} />
+          {unread > 0 ? (
+            <Text style={[styles.inboxCount, { color: colors.text }]} testID="inbox-unread-count">
+              {unread}
+            </Text>
           ) : null}
         </Pressable>
-      ) : (
-        <Pressable
-          onPress={onProfile}
-          accessibilityRole="link"
-          // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
-          hitSlop={PROFILE_SLOP}
-          testID="open-profile"
-        >
-          <Text style={[styles.profileLink, { color: colors.primary }]}>
-            {PROFILE_TEXT.heading}
-          </Text>
-        </Pressable>
-      )}
+      </View>
     </View>
   );
 }
@@ -674,7 +721,20 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: TEXT_INSET,
   },
+  // Pillen og konvolutten side om side.
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
+  // Like høy som HCP-pillen (41 pt); slakken gir 44 pt å treffe på.
+  inbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 41,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+  },
+  inboxCount: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold },
   // Tittelen krymper og brekker heller enn å dytte pillen ut av skjermen.
   title: { ...TITLE, flexShrink: 1 },
   hcpPill: {

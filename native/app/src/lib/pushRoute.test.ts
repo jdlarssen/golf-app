@@ -1,4 +1,4 @@
-// #2256 PR 4: et trykk på et spillvarsel åpner spillet, et ligavarsel ligaen (#2638), alt annet åpner Hjem.
+// #2256 PR 4: et trykk på et spillvarsel åpner spillet eller den undersiden appen har, et ligavarsel ligaen (#2638), alt annet åpner Hjem.
 import { notificationDestination } from '../../../../lib/notifications/deeplink';
 import type { NotificationKind, NotificationPayload } from '../../../../lib/notifications/types';
 import { pushNotificationId, pushTarget, pushUrl } from './pushRoute';
@@ -103,10 +103,40 @@ describe('pushTarget — cupen (#2752)', () => {
 describe('pushTarget', () => {
   it.each([
     [`/games/${GAME}`],
-    [`/games/${GAME}/approve`],
     [`/no/games/${GAME}`],
+    [`/games/${GAME}/trekk-fra`],
   ])('%s åpner spillets side', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
+  });
+
+  // #2759: de samme skjermene som i innboksen, med eller uten språk, markør, skråstrek og anker.
+  it.each([
+    ['approve', 'Approve'],
+    ['submit', 'Scorecard'],
+    ['avslutt', 'EndGame'],
+  ])('/%s åpner %s', (suffix, name) => {
+    for (const url of [
+      `/games/${GAME}/${suffix}`,
+      `/no/games/${GAME}/${suffix}`,
+      `/games/${GAME}/${suffix}/`,
+      `/games/${GAME}/${suffix}?varsel=${NOTE}`,
+      `/games/${GAME}/${suffix}#x`,
+    ]) {
+      expect(pushTarget(url)).toEqual({ name, params: { gameId: GAME } });
+    }
+    expect(pushTarget(`/games/${GAME}/${suffix}-noe-annet`)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
+  });
+
+  it.each([
+    ['/profile/venner'],
+    ['/no/profile/venner'],
+    [`/profile/venner?varsel=${NOTE}`],
+  ])('%s åpner vennene', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'Friends', params: { from: 'notification' } });
+  });
+
+  it.each([['/profile/historikk'], [`/profile/historikk?varsel=${NOTE}`]])('%s åpner statistikken', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'RoundStats' });
   });
 
   // #2632: «Resultatet er klart» peker på tavla, med eller uten språk, markør, skråstrek eller anker.
@@ -144,7 +174,7 @@ describe('pushTarget', () => {
   );
 
   // `/games/%E0%A4%A` er en ødelagt `%`-sekvens: `decodeURIComponent` kaster.
-  it.each([['/'], [`/admin/games/${GAME}`], ['/profile/venner'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
+  it.each([['/'], [`/admin/games/${GAME}`], ['/profile'], ['/profile/vennerne'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
     '%p åpner Hjem',
     (url) => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });

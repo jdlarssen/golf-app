@@ -162,6 +162,13 @@ export type ThemeColors = {
    * kremen i natt. Ingen annen rolle har de to verdiene.
    */
   avatarInk: string;
+  /**
+   * Skiva med plass eller ikon i innboksen (#2759, webbens `.bg-place-disc`):
+   * gradienten og den innfelte ringen (60 %, `MedalDisc`).
+   */
+  placeDiscHighlight: string;
+  placeDiscEdge: string;
+  placeDiscRing: string;
 };
 
 /**
@@ -230,6 +237,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     youBorder: '#B9D3C0',
     boardHatch: '#D9D1BD',
     avatarInk: '#1B4332',
+    placeDiscHighlight: '#FFFFFF',
+    placeDiscEdge: '#E5E0D3',
+    placeDiscRing: '#9A9180',
   },
   dark: {
     bg: '#14201A',
@@ -277,6 +287,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     youBorder: 'rgba(126, 170, 128, 0.45)',
     boardHatch: '#3D4F43',
     avatarInk: '#ECE5D2',
+    placeDiscHighlight: '#1F4A37',
+    placeDiscEdge: '#0F2C1F',
+    placeDiscRing: '#9A9180',
   },
 };
 
@@ -594,6 +607,9 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   youBorder: '#B9D3C0',
   boardHatch: '#D9D1BD',
   avatarInk: '#1B4332',
+  placeDiscHighlight: '#FFFFFF',
+  placeDiscEdge: '#E5E0D3',
+  placeDiscRing: '#9A9180',
 };
 
 /**
