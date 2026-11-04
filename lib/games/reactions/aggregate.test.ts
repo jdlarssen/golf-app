@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateReactions, type ReactionRow } from './aggregate';
+import { aggregateReactions, applyToggle, topReactions, type ReactionRow } from './aggregate';
+import { EMOJI_NAME_KEY, REACTION_EMOJIS } from './palette';
 
 const ME = 'user-me';
 const OTHER = 'user-other';
@@ -131,5 +132,57 @@ describe('aggregateReactions', () => {
     ];
     const result = aggregateReactions(rows, ME);
     expect(result[TARGET_A].mine.filter((e) => e === '👏')).toHaveLength(1);
+  });
+});
+
+describe('applyToggle', () => {
+  it('adds a reaction the viewer has not given', () => {
+    const next = applyToggle({}, TARGET_A, '👏');
+    expect(next[TARGET_A]).toEqual({ counts: { '👏': 1 }, mine: ['👏'] });
+  });
+
+  it('removes a reaction the viewer has given, and drops a count that reaches zero', () => {
+    const next = applyToggle({ [TARGET_A]: { counts: { '👏': 1 }, mine: ['👏'] } }, TARGET_A, '👏');
+    expect(next[TARGET_A]).toEqual({ counts: {}, mine: [] });
+  });
+
+  it('keeps the other givers in the count', () => {
+    const next = applyToggle({ [TARGET_A]: { counts: { '🔥': 3 }, mine: ['🔥'] } }, TARGET_A, '🔥');
+    expect(next[TARGET_A]).toEqual({ counts: { '🔥': 2 }, mine: [] });
+  });
+
+  it('is undone by toggling once more', () => {
+    const start = { [TARGET_A]: { counts: { '🔥': 2 }, mine: [] } };
+    expect(applyToggle(applyToggle(start, TARGET_A, '🔥'), TARGET_A, '🔥')).toEqual(start);
+  });
+
+  it('leaves other targets and the input alone', () => {
+    const start = { [TARGET_B]: { counts: { '😂': 1 }, mine: [] } };
+    const next = applyToggle(start, TARGET_A, '👏');
+    expect(next[TARGET_B]).toBe(start[TARGET_B]);
+    expect(start).toEqual({ [TARGET_B]: { counts: { '😂': 1 }, mine: [] } });
+  });
+});
+
+describe('topReactions', () => {
+  it('sorts by count and keeps at most three', () => {
+    expect(topReactions({ '👏': 1, '🔥': 5, '😂': 3, '💪': 2 })).toEqual([
+      ['🔥', 5],
+      ['😂', 3],
+      ['💪', 2],
+    ]);
+  });
+
+  it('skips a zero count and returns nothing for an empty row', () => {
+    expect(topReactions({ '👏': 0 })).toEqual([]);
+    expect(topReactions({})).toEqual([]);
+  });
+});
+
+describe('EMOJI_NAME_KEY', () => {
+  it('names every emoji in the palette', () => {
+    expect(REACTION_EMOJIS.map((emoji) => EMOJI_NAME_KEY[emoji])).toEqual([
+      'clap', 'fire', 'laugh', 'strong', 'golf', 'birdie',
+    ]);
   });
 });

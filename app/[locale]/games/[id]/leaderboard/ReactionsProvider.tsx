@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ReactionEmoji } from '@/lib/games/reactions/palette';
-import type { ReactionSummary } from '@/lib/games/reactions/aggregate';
+import { applyToggle, type ReactionSummary } from '@/lib/games/reactions/aggregate';
 import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 import { toggleReaction, getReactionsSummary } from './actions';
 
@@ -36,24 +36,6 @@ const ReactionsContext = createContext<ReactionsContextValue | null>(null);
  */
 export function useReactionsContext(): ReactionsContextValue | null {
   return useContext(ReactionsContext);
-}
-
-/** Apply a viewer's own optimistic toggle to the summary (pure). */
-function applyToggle(
-  summary: ReactionSummary,
-  targetUserId: string,
-  emoji: ReactionEmoji,
-): ReactionSummary {
-  const row = summary[targetUserId] ?? EMPTY_ROW;
-  const wasActive = row.mine.includes(emoji);
-  const nextMine = wasActive
-    ? row.mine.filter((e) => e !== emoji)
-    : [...row.mine, emoji];
-  const nextVal = (row.counts[emoji] ?? 0) + (wasActive ? -1 : 1);
-  const nextCounts = { ...row.counts };
-  if (nextVal > 0) nextCounts[emoji] = nextVal;
-  else delete nextCounts[emoji];
-  return { ...summary, [targetUserId]: { counts: nextCounts, mine: nextMine } };
 }
 
 /**
