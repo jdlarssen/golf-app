@@ -17,6 +17,7 @@ import type { ReactionEmoji } from '../../../../lib/games/reactions/palette';
 import { NoRowsAffectedError, expectAffected } from '../../../../lib/supabase/affectedRows';
 import { supabase } from '../supabase';
 import { RLS_DENIED_CODE } from './choices';
+import { isDeviceOnline } from './syncTriggers';
 
 /** Raden finnes alt (`UNIQUE (game_id, user_id, target_user_id, emoji)`). */
 const UNIQUE_VIOLATION_CODE = '23505';
@@ -72,6 +73,9 @@ export async function toggleReaction(input: {
   emoji: ReactionEmoji;
 }): Promise<ReactionToggleResult> {
   const { gameId, userId, targetUserId, emoji } = input;
+
+  // Målt på emulatoren: i flymodus gikk det 11 s før kallet ga opp.
+  if (!isDeviceOnline()) return { ok: false, failure: 'db_error' };
 
   const existing = await supabase
     .from('reactions')
