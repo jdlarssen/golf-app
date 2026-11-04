@@ -35,20 +35,13 @@ const ICONS: Record<NotificationIconName, typeof FlaggIcon> = {
   replay: ReplayIcon,
 };
 
-/** Webbens `.bg-place-disc`, i lys og natt. */
-const PLACE_DISC = {
-  light: { highlight: '#FFFFFF', edge: '#E5E0D3', ring: '#9A9180' },
-  dark: { highlight: '#1F4A37', edge: '#0F2C1F', ring: '#9A9180' },
-} as const;
-
 function PlaceBackground() {
-  const { scheme } = useTheme();
-  const disc = PLACE_DISC[scheme];
+  const { colors, scheme } = useTheme();
   return (
     <MedalDisc
-      highlight={disc.highlight}
-      edge={disc.edge}
-      ring={disc.ring}
+      highlight={colors.placeDiscHighlight}
+      edge={colors.placeDiscEdge}
+      ring={colors.scoreUnsetFg}
       size={SIZE}
       gradientId={`inbox-place-${scheme}`}
     />

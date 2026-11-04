@@ -89,6 +89,8 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
   const [status, setStatus] = useState<Status>(null);
   /** Hvilken knapp som venter på svar: `all`, `clear` eller radens nøkkel. */
   const [busy, setBusy] = useState<string | null>(null);
+  // Staten låser ikke før neste tegning, så to trykk i samme bilde stoppes her.
+  const acting = useRef(false);
   // Det nyeste kallet vinner: en henting fra før en handling skal ikke overskrive svaret etter den.
   const loadSeq = useRef(0);
 
@@ -138,15 +140,20 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
   };
 
   const runPill = async (which: 'all' | 'clear', action: () => Promise<boolean>) => {
+    if (acting.current) return;
+    acting.current = true;
     setStatus(null);
     setBusy(which);
     const ok = await action();
     if (ok) await reload();
     else setStatus({ tone: 'error', text: INBOX_TEXT.actionFailed });
     setBusy(null);
+    acting.current = false;
   };
 
   const decide = async (entry: InboxWireEntry, decision: 'approve' | 'reject') => {
+    if (acting.current) return;
+    acting.current = true;
     setStatus(null);
     setBusy(entry.key);
     const result = await decideRequest(entry.key, decision);
@@ -170,6 +177,7 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
       if (SETTLED_REASONS.has(result.reason)) await reload();
     }
     setBusy(null);
+    acting.current = false;
   };
 
   const loadErrorText =
@@ -381,7 +389,8 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     textAlign: 'center',
   },
-  pullQuote: { ...fraunces(500, 12), fontStyle: 'italic', textAlign: 'center', paddingTop: 24 },
+  // Webben skriver dette i kursiv. Appen har ikke et kursivt Fraunces-snitt.
+  pullQuote: { ...fraunces(500, 12), textAlign: 'center', paddingTop: 24 },
   emptyFilterText: { ...interLine(13, 16, { multiline: true }), fontFamily: FONTS.sans },
   emptyFilter: {
     marginHorizontal: 16,

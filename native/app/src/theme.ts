@@ -119,6 +119,12 @@ export type ThemeColors = {
    */
   leaderFill: string;
   /**
+   * Skiva bak en plass eller et ikon i innboksen (#2759): lysest i midten.
+   * Webbens `.bg-place-disc`, som er en klasse og ikke en variabel.
+   */
+  placeDiscHighlight: string;
+  placeDiscEdge: string;
+  /**
    * Den varme kremen designet bruker for små ord på skogflaten (#2385: «UT»
    * og «INN» i scorekortets bånd; Profil v2: «HANDICAP», initialene,
    * endepunktet på kurven og «Få med gjengen»). Lik i begge draktene, som
@@ -218,6 +224,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     divider: '#EDE6D2',
     scoreUnsetFg: '#9A8F7C',
     leaderFill: '#FBF8EE',
+    placeDiscHighlight: '#FFFFFF',
+    placeDiscEdge: '#E5E0D3',
     onStrongWarm: '#ECE5D2',
     surface2: '#F0EDE5',
     formUp: '#1F6B3A',
@@ -265,6 +273,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     divider: '#2F3F34',
     scoreUnsetFg: '#9A9180',
     leaderFill: '#1A3D2E',
+    placeDiscHighlight: '#1F4A37',
+    placeDiscEdge: '#0F2C1F',
     onStrongWarm: '#ECE5D2',
     surface2: '#243429',
     formUp: '#7DAA8A',
@@ -578,6 +588,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   divider: '#000000',
   scoreUnsetFg: '#000000',
   leaderFill: '#FFFFFF',
+  placeDiscHighlight: '#FFFFFF',
+  placeDiscEdge: '#FFFFFF',
   onStrongWarm: '#F0EDE5',
   // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
   surface2: '#FFFFFF',

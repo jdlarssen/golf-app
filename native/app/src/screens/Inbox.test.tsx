@@ -10,6 +10,7 @@
 // skjermen ikke kan være i samtidig (samme grunn som Friends.test.tsx).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { InboxWire, InboxWireEntry } from '../../../../lib/notifications/inboxWire';
 import { clearRead, decideRequest, loadInbox, markAllRead } from '../data/inbox';
 import { markNotificationIdsRead } from '../data/markRead';
@@ -159,7 +160,10 @@ describe('tavla', () => {
     loadMock.mockResolvedValue({ ok: true, board: EMPTY });
     await renderScreen().view;
     expect(screen.getByText(INBOX_TEXT.emptyHeading)).toBeTruthy();
-    expect(screen.getByText(`«${INBOX_TEXT.cleanPullQuote}»`)).toBeTruthy();
+    // Appen har ikke et kursivt Fraunces-snitt, og da ville Android tegnet systemfonten.
+    const quote = StyleSheet.flatten(screen.getByText(`«${INBOX_TEXT.cleanPullQuote}»`).props.style);
+    expect(quote.fontStyle).toBeUndefined();
+    expect(quote.fontFamily).toMatch(/^Fraunces/);
     expect(screen.queryByTestId('inbox-mark-all')).toBeNull();
     expect(screen.queryByTestId('inbox-filter-all')).toBeNull();
   });
@@ -315,6 +319,17 @@ describe('«Godta» og «Avslå»', () => {
       finish({ ok: false, reason: 'error' });
     });
     expect(screen.getByTestId('inbox-approve').props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('to trykk i samme bilde sender bare ett kall', async () => {
+    decideMock.mockResolvedValue({ ok: false, reason: 'error' });
+    await renderScreen().view;
+    const button = screen.getByTestId('inbox-approve');
+    await act(async () => {
+      button.props.onClick?.({ preventDefault() {} });
+      button.props.onClick?.({ preventDefault() {} });
+    });
+    expect(decideMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([
