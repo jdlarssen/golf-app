@@ -4,7 +4,16 @@ import { join, relative } from 'node:path';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_KINDS, type NotificationKind } from './types';
 import { testPayloads } from './testPayloads';
-import { INBOX_ONLY_KINDS, KNOWN_KINDS, READ_ON_VISIT, isKnownKind, type VisitSurface } from './readOnVisit';
+import {
+  INBOX_ONLY_KINDS,
+  KNOWN_KINDS,
+  NOT_WAITING_FILTER,
+  READ_ON_VISIT,
+  isKnownKind,
+  isWaitingRow,
+  visitCanMarkRead,
+  type VisitSurface,
+} from './readOnVisit';
 
 /**
  * #2201: what you have seen is read. Every kind is cleared either by the page
@@ -176,5 +185,77 @@ describe('markReadOnVisit callers', () => {
       expect(route, file).toMatch(SURFACE_ROUTE[s]);
     }
     expect(entity === null, s).toBe(READ_ON_VISIT[s].key === null);
+  });
+});
+
+/**
+ * #2759: the rule for what waits lives in `isWaitingRow` and, for a write, in
+ * the PostgREST filter. This reads the filter the way PostgREST does and holds
+ * the two equal over every kind and the shapes that decide (AGENTS trap 4).
+ */
+describe('NOT_WAITING_FILTER agrees with isWaitingRow', () => {
+  type TestRow = { kind: string; payload: Record<string, unknown> };
+
+  function condition(cond: string, row: TestRow): boolean {
+    const inList = /^kind\.not\.in\.\((.*)\)$/.exec(cond);
+    if (inList) return !inList[1]!.split(',').includes(row.kind);
+    const eq = /^kind\.eq\.(.+)$/.exec(cond);
+    if (eq) return row.kind === eq[1];
+    const field = /^payload->>(\w+)\.(not\.)?is\.null$/.exec(cond);
+    if (!field) throw new Error(`Unknown condition: ${cond}`);
+    const isNull = row.payload[field[1]!] == null;
+    return field[2] ? !isNull : isNull;
+  }
+
+  /** Top-level commas only: `and(a,b)` and `in.(a,b)` hold commas of their own. */
+  function splitTop(filter: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let part = '';
+    for (const ch of filter) {
+      if (ch === '(') depth += 1;
+      if (ch === ')') depth -= 1;
+      if (ch === ',' && depth === 0) {
+        parts.push(part);
+        part = '';
+      } else part += ch;
+    }
+    parts.push(part);
+    return parts;
+  }
+
+  function matchesFilter(row: TestRow): boolean {
+    return splitTop(NOT_WAITING_FILTER).some((group) => {
+      const and = /^and\((.*)\)$/.exec(group);
+      return and ? splitTop(and[1]!).every((c) => condition(c, row)) : condition(group, row);
+    });
+  }
+
+  const rows: TestRow[] = [
+    ...NOTIFICATION_KINDS.map((kind) => ({ kind, payload: testPayloads[kind] as Record<string, unknown> })),
+    { kind: 'registration_request', payload: { game_id: 'g', request_id: 'r' } },
+    { kind: 'registration_request', payload: { game_id: 'g' } },
+    { kind: 'scorecard_rejected', payload: { game_id: 'g' } },
+    { kind: 'scorecard_rejected', payload: { game_id: 'g', player_name: null } },
+    { kind: 'scorecard_rejected', payload: { game_id: 'g', player_name: 'Marte' } },
+    { kind: 'scorecard_rejected', payload: { game_id: 'g', player_name: 'Marte', player_id: 'p' } },
+    { kind: 'scorecard_rejected', payload: { game_id: 'g', player_name: null, player_id: 'p' } },
+    { kind: 'deliver_reminder', payload: { game_id: 'g' } },
+    { kind: 'deliver_reminder', payload: { game_id: 'g', others_count: 2 } },
+    { kind: 'deliver_reminder', payload: { game_id: 'g', others_count: 2, card_user_ids: ['a', 'b'] } },
+  ];
+
+  it.each(rows.map((row) => [row.kind, JSON.stringify(row.payload), row] as const))(
+    '%s %s',
+    (_kind, _payload, row) => {
+      expect(matchesFilter(row)).toBe(!isWaitingRow(row));
+    },
+  );
+});
+
+describe('visitCanMarkRead', () => {
+  it('the pages whose every kind waits send no UPDATE, the hole page among them', () => {
+    const silent = surfaces.filter((s) => !visitCanMarkRead(s));
+    expect(silent.sort()).toEqual(['gameApprove', 'gameFinish', 'gameHole', 'league', 'leagueMarker', 'leagueRoundStart']);
   });
 });

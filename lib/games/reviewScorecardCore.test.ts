@@ -360,6 +360,8 @@ describe('rejectScorecardCore', () => {
           rejecter_name: 'Kari',
           reason: 'Hull 7 er feil',
           player_name: 'Ola Spiller',
+          // #2759: the row stands until THAT card is delivered again.
+          player_id: expect.any(String),
         },
       },
     ]);

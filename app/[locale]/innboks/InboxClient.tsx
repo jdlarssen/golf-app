@@ -16,7 +16,7 @@ import {
   type InboxTextContext,
 } from '@/lib/notifications/inboxSections';
 import type { NotificationPayload } from '@/lib/notifications/types';
-import { isKnownKind } from '@/lib/notifications/readOnVisit';
+import { isKnownKind, isWaitingRow } from '@/lib/notifications/readOnVisit';
 import type { NotificationTranslator } from '@/lib/notifications/cardContent';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { InboxRow } from '@/components/notifications/InboxRow';
@@ -44,6 +44,9 @@ import {
  * Every action goes through `runOptimistic` (#1394): the list is updated at
  * once, and put back with an error line if the server says no or the request
  * never arrives (offline on the course).
+ *
+ * #2759: a row that waits for you (`isWaitingRow`) stands until the matter is
+ * done, so a tap only opens it and «Marker alt lest» leaves it alone.
  *
  * The page sets its own edges (`AppShell flush`).
  */
@@ -97,7 +100,8 @@ export function InboxClient({
 
   const sections = buildInboxSections(items, { filter, now });
   const actionCount = countActionRows(items);
-  const hasUnread = items.some((n) => n.read_at == null);
+  // What «Marker alt lest» can touch. Only waiting rows left: the pill is «Tøm leste».
+  const hasMarkable = items.some((n) => n.read_at == null && !isWaitingRow(n));
   const ctx: InboxTextContext = {
     t: t as unknown as NotificationTranslator,
     tFinished: tFinished as unknown as NotificationTranslator,
@@ -134,11 +138,12 @@ export function InboxClient({
   /**
    * A tap on a row, a group or a row's button: mark what it stands for read
    * (all members of a group, also those merged as one person), then let the
-   * link navigate. Rows already read are never written again (#1665).
+   * link navigate. Rows already read are never written again (#1665), and a row
+   * that waits for you stays as it is.
    */
   function handleOpen(entry: InboxEntry) {
     setStatus(null);
-    const unreadIds = entry.rows.filter((r) => r.read_at == null).map((r) => r.id);
+    const unreadIds = entry.rows.filter((r) => r.read_at == null && !isWaitingRow(r)).map((r) => r.id);
     if (unreadIds.length === 0) return;
     const snapshot = items;
     const nowIso = new Date().toISOString();
@@ -208,7 +213,7 @@ export function InboxClient({
     setStatus(null);
     const snapshot = items;
     const nowIso = new Date().toISOString();
-    setItems((prev) => prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)));
+    setItems((prev) => prev.map((n) => (n.read_at == null && !isWaitingRow(n) ? { ...n, read_at: nowIso } : n)));
     startMarkAll(async () => {
       await runOptimistic(snapshot, () => markAllAsRead());
     });
@@ -251,7 +256,7 @@ export function InboxClient({
   // tap could race another action's rollback (#1394) — e.g. «Godta» fails, then
   // «Marker alt lest» fails and puts back a list taken without the request.
   const pillBusy = markAllPending || clearReadPending || decidePending || openPending;
-  const pillMarksAll = markAllPending ? true : clearReadPending ? false : hasUnread;
+  const pillMarksAll = markAllPending ? true : clearReadPending ? false : hasMarkable;
   const header = (
     <div className="flex items-center justify-between pb-1.5 pl-5 pr-3 pt-4">
       <h1 className="font-serif text-[28px] font-medium leading-[normal] text-text">

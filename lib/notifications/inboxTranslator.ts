@@ -21,3 +21,20 @@ export async function getInboxTranslator(
   });
   return t as unknown as NotificationTranslator;
 }
+
+/**
+ * The two translators `buildInboxEntryView` reads, for a board built on the
+ * server (`GET /api/inbox`, #2759): the `inbox` and `finishedCard` namespaces.
+ */
+export async function getInboxBoardTranslators(
+  locale: string | null | undefined,
+): Promise<{ t: NotificationTranslator; tFinished: NotificationTranslator }> {
+  const loc = resolveMailLocale(locale);
+  const messages = await getMailMessages(loc);
+  const translator = (namespace: 'inbox' | 'finishedCard') =>
+    createTranslator({ locale: loc, messages, namespace, timeZone: 'Europe/Oslo' });
+  return {
+    t: translator('inbox') as unknown as NotificationTranslator,
+    tFinished: translator('finishedCard') as unknown as NotificationTranslator,
+  };
+}

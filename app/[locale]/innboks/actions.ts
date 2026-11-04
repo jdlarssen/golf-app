@@ -7,11 +7,9 @@ import {
 } from '@/lib/notifications/markRead';
 import { archiveNotifications } from '@/lib/notifications/archive';
 import {
-  approveRegistrationCore,
-  loadRegistrationDecision,
-  rejectRegistrationCore,
-  type DecisionFailure,
-} from '@/lib/games/registrationDecisionCore';
+  decideFromInbox,
+  type DecideRegistrationResult as DecideResult,
+} from '@/lib/notifications/decideFromInbox';
 import { getServerClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/url/isUuid';
 
@@ -22,6 +20,9 @@ import { isUuid } from '@/lib/url/isUuid';
  * før dette svelget både helperne og actionene feilen og UI-et løy.
  */
 export type InboxActionResult = { ok: boolean };
+
+/** An ordinary alias: `export type { X }` from a 'use server' file crashes the page (#2748). */
+export type DecideRegistrationResult = DecideResult;
 
 /**
  * Marker ett spesifikt varsel som lest. Caller (InboxClient) sender alltid
@@ -62,7 +63,8 @@ export async function markLinkedAsRead(
 
 /**
  * Marker alle uleste varsler for current user som lest. Brukes fra
- * «Marker alle som lest»-knappen øverst i /innboks.
+ * «Marker alle som lest»-knappen øverst i /innboks. #2759: saker som venter på
+ * deg, blir stående (`markNotificationsRead`).
  */
 export async function markAllAsRead(): Promise<InboxActionResult> {
   const userId = await getProxyVerifiedUserId();
@@ -98,21 +100,9 @@ export async function markGroupAsRead(ids: string[]): Promise<InboxActionResult>
   return { ok: await markNotificationIdsRead({ userId, ids }) };
 }
 
-export type DecideRegistrationResult =
-  | { ok: true; outcome: 'approved' | 'rejected'; gameName: string; teamName: string | null }
-  | { ok: false; reason: DecisionFailure | 'error' };
-
 /**
- * «Godta» / «Avslå» on a signup request in the inbox (#2263, owner's answer
- * 13). The same core as the signup page, so the same rule decides who may
- * answer (an admin, or the game's organiser — #2440), and a captain's request
- * takes the whole team. A decline from the inbox carries no reason.
- *
- * Afterwards the varsel has done its job: archived on success, marked read
- * when the request was already settled or its game has started. Both best-effort — if they fail, the
- * next visit sees the request is no longer pending and treats it as read.
- * Anything the core throws (a read error) is `{ ok: false, reason: 'error' }`
- * and the client rolls back.
+ * «Godta» / «Avslå» from the web's inbox: the core is `decideFromInbox`, which
+ * the app's route shares (#2759). Here: who is asking, and that the ids are ids.
  */
 export async function decideRegistration(
   notificationId: string,
@@ -128,41 +118,13 @@ export async function decideRegistration(
   ) {
     return { ok: false, reason: 'error' };
   }
-
-  let result;
-  try {
-    const loaded = await loadRegistrationDecision(await getServerClient(), requestId);
-    result = !loaded.ok
-      ? loaded
-      : decision === 'approve'
-        ? await approveRegistrationCore(loaded.ctx)
-        : await rejectRegistrationCore(loaded.ctx, '');
-  } catch (err) {
-    console.error('[innboks] decideRegistration failed', err);
-    return { ok: false, reason: 'error' };
-  }
-
-  if (result.ok) {
-    await archiveNotifications({ userId, notificationId });
-    return {
-      ok: true,
-      outcome: result.outcome,
-      gameName: result.gameName,
-      teamName: result.teamName,
-    };
-  }
-  // Settled from here: answered elsewhere, gone, or the round has started
-  // (a started game locks the roster for good). Mark the varsel read so it
-  // leaves «Krever handling» instead of failing on every tap.
-  if (
-    result.reason === 'not_pending' ||
-    result.reason === 'request_not_found' ||
-    result.reason === 'game_not_found' ||
-    result.reason === 'game_locked'
-  ) {
-    await markNotificationsRead({ userId, notificationId });
-  }
-  return { ok: false, reason: result.reason };
+  return decideFromInbox({
+    client: await getServerClient(),
+    userId,
+    notificationId,
+    requestId,
+    decision,
+  });
 }
 
 /**

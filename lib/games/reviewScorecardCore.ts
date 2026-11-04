@@ -365,7 +365,8 @@ export async function rejectScorecardCore(opts: {
             notify({
               userId: alsoDeliverer,
               kind: 'scorecard_rejected',
-              payload: { ...payload, player_name: playerRes.data?.name?.trim() || null },
+              // #2759: player_id, so the row stands until THAT card is delivered again.
+              payload: { ...payload, player_name: playerRes.data?.name?.trim() || null, player_id: playerUserId },
             }),
           ]
         : []),
