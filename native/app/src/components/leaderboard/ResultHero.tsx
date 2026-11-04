@@ -19,6 +19,8 @@ const SOLO_OVERLAP = 8;
 /** Luften mot sitatets hårstrek er delt med `RoundReportQuote` (14 pt i alt). */
 const BOTTOM_TO_QUOTE = { solo: 12, team: 16, plain: 16 } as const;
 const BOTTOM_ALONE = { solo: 20, team: 16, plain: 20 } as const;
+const SENTENCE = fraunces(500, 36, 40, { multiline: true });
+const DESCENDER_ROOM = 10;
 
 export function ResultHero({
   hero,
@@ -93,10 +95,14 @@ export function ResultHero({
 const styles = StyleSheet.create({
   band: { paddingHorizontal: 20 },
   kicker: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
-  // 36/40 og 500, som tegningen; 6 pt under spillnavnet.
+  // 36/40 og 500, som tegningen; 6 pt under spillnavnet. Halen på kursiv «g» går
+  // under linjeboksen, og Android klipper teksten der, så den får plass som
+  // ikke flytter noe.
   sentence: {
-    ...fraunces(500, 36, 40, { multiline: true }),
-    marginTop: 6 + fraunces(500, 36, 40, { multiline: true }).marginTop,
+    ...SENTENCE,
+    marginTop: 6 + SENTENCE.marginTop,
+    paddingBottom: DESCENDER_ROOM,
+    marginBottom: SENTENCE.marginBottom - DESCENDER_ROOM,
   },
   gold: { color: ACCENT_ON_STRONG },
   goldItalic: { color: ACCENT_ON_STRONG, fontFamily: 'FrauncesItalic500O36' },

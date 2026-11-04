@@ -13,6 +13,7 @@
 // slik webbens rute svarer 404 og knappen der aldri blir synlig.
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { KAVALKADE_CARD_IMAGE_WIDTH, computeCardHeight } from '../../../../../lib/kavalkade/cardImageLayout';
 import type { KavalkadeCardModel } from '../../../../../lib/kavalkade/cardModel';
 import { logKavalkadeShare } from '../../data/kavalkade';
 import { KAVALKADE_APP_TEXT, KAVALKADE_SHARE_TEXT } from '../../lib/kavalkadeCopy';
@@ -32,11 +33,14 @@ export function ShareKavalkadeCardButton({ year, model }: { year: number; model:
   const onShare = useCallback(async () => {
     setBusy(true);
     setFailed(false);
-    const result = await shareViewImage(card);
+    const result = await shareViewImage(card, {
+      width: KAVALKADE_CARD_IMAGE_WIDTH,
+      height: computeCardHeight(model),
+    });
     setBusy(false);
     if (!result.ok) setFailed(true);
     else if (result.shared) void logKavalkadeShare(year, model.kind);
-  }, [year, model.kind]);
+  }, [year, model]);
 
   if (!available) return null;
 

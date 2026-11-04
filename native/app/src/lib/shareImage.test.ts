@@ -1,6 +1,6 @@
 // #2256 PR 3: «Del bag-taggen» tar bildet og åpner arket bare når de native
 // delene finnes, og en feil blir et rolig svar, aldri et kast.
-import { NativeModules, Platform, Share, TurboModuleRegistry } from 'react-native';
+import { NativeModules, PixelRatio, Platform, Share, TurboModuleRegistry } from 'react-native';
 import { canShareImage, shareViewImage, toFileUrl } from './shareImage';
 
 const mockCaptureRef = jest.fn();
@@ -51,6 +51,26 @@ beforeEach(() => {
   mockShareAsync.mockReset().mockResolvedValue(undefined);
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   nativeParts({ viewShot: true, sharing: true });
+});
+
+describe('shareViewImage med fast størrelse (#2756)', () => {
+  it('iPhone: størrelsen i punkter, så bildet aldri får en rad for mye', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
+    await shareViewImage(CARD, { width: 1080, height: 1350 });
+    expect(mockCaptureRef).toHaveBeenCalledWith(CARD, { format: 'png', result: 'tmpfile', width: 360, height: 450 });
+  });
+
+  it('Android: størrelsen i piksler', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    await shareViewImage(CARD, { width: 1080, height: 1350 });
+    expect(mockCaptureRef).toHaveBeenCalledWith(CARD, { format: 'png', result: 'tmpfile', width: 1080, height: 1350 });
+  });
+
+  it('uten størrelse: visningens egen, som bag-taggen', async () => {
+    await shareViewImage(CARD);
+    expect(mockCaptureRef).toHaveBeenCalledWith(CARD, { format: 'png', result: 'tmpfile' });
+  });
 });
 
 describe('canShareImage', () => {

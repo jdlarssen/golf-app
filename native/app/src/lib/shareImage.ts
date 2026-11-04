@@ -20,7 +20,7 @@
 // (`SharingModule.swift`), så den brukes bare utenfor iOS, der vi ikke vet.
 import { requireOptionalNativeModule } from 'expo';
 import type { RefObject } from 'react';
-import { NativeModules, Platform, Share, TurboModuleRegistry, type View } from 'react-native';
+import { NativeModules, PixelRatio, Platform, Share, TurboModuleRegistry, type View } from 'react-native';
 
 /**
  * Finnes begge de native delene i dette bygget? View-shot slås opp nøyaktig
@@ -49,8 +49,23 @@ export function toFileUrl(path: string): string {
 /** `shared`: spilleren delte bildet, i stedet for å lukke arket. */
 export type ShareImageResult = { ok: true; shared: boolean } | { ok: false };
 
+/**
+ * Bildets faste størrelse i piksler (#2756). Uten den tar view-shot størrelsen
+ * fra visningen: ligger kortet på en brøkdel av en skjermpiksel, ble bildet 1351
+ * høyt med en gjennomsiktig rad nederst. iOS vil ha punkter, Android piksler.
+ */
+export type ShareImageSize = { width: number; height: number };
+
+function captureSize(size: ShareImageSize): ShareImageSize {
+  const unit = Platform.OS === 'ios' ? PixelRatio.get() : 1;
+  return { width: size.width / unit, height: size.height / unit };
+}
+
 /** Ta bilde av kortet (PNG) og åpne delearket med det. Kaster aldri. */
-export async function shareViewImage(card: RefObject<View | null>): Promise<ShareImageResult> {
+export async function shareViewImage(
+  card: RefObject<View | null>,
+  size?: ShareImageSize,
+): Promise<ShareImageResult> {
   try {
     if (!canShareImage() || !card.current) return { ok: false };
     // Lat `require`, ikke `import()`: jest kjører ikke dynamisk import, og
@@ -59,7 +74,11 @@ export async function shareViewImage(card: RefObject<View | null>): Promise<Shar
     const { captureRef } = require('react-native-view-shot') as typeof import('react-native-view-shot');
     const sharing = require('expo-sharing') as typeof import('expo-sharing');
     /* eslint-enable @typescript-eslint/no-require-imports */
-    const path = await captureRef(card, { format: 'png', result: 'tmpfile' });
+    const path = await captureRef(card, {
+      format: 'png',
+      result: 'tmpfile',
+      ...(size ? captureSize(size) : {}),
+    });
     const url = toFileUrl(path);
     if (Platform.OS === 'ios') {
       const { action } = await Share.share({ url });

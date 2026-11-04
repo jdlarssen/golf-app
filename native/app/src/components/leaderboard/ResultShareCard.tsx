@@ -34,6 +34,8 @@ const META = 'rgba(236,229,210,0.85)';
 /** Overskriftens snitt i ruta: optisk størrelse 60, og standardsnittets kursiv. */
 const HEADLINE_FONT = 'Fraunces500O60';
 const HEADLINE_ITALIC = 'FrauncesItalic500O14';
+/** Plass under overskriftens linje til halen på kursiv «g», i rutas piksler. */
+const DESCENDER_ROOM = 24;
 
 /** Ord for ord, som Satori: hvert ord er sin egen boks, med mellomrommet som `gap`. */
 function WordLine({
@@ -41,14 +43,17 @@ function WordLine({
   gap,
   lineStyle,
   goldStyle,
+  wrap = true,
 }: {
   words: Word[];
   gap: number;
   lineStyle: object;
   goldStyle: object;
+  /** Bunnlinja står på én linje: Android brakk den selv om det var plass. */
+  wrap?: boolean;
 }) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: gap }}>
+    <View style={{ flexDirection: 'row', flexWrap: wrap ? 'wrap' : 'nowrap', columnGap: gap }}>
       {words.map((word, index) => (
         <Text key={index} allowFontScaling={false} style={[lineStyle, word.gold ? goldStyle : null]}>
           {word.text}
@@ -107,8 +112,12 @@ function Row({ row }: { row: CardRow }) {
 
 export function ResultShareCard({ card }: { card: ResultCardModel }) {
   const size = card.headline.fontSize;
+  const line = satoriLine(size, size * 1.02, true);
   const headlineLine = {
-    ...satoriLine(size, size * 1.02, true),
+    ...line,
+    // Halen på kursiv «g» går under linjeboksen, og Android klipper teksten der.
+    paddingBottom: px(DESCENDER_ROOM),
+    marginBottom: line.marginBottom - px(DESCENDER_ROOM),
     fontFamily: HEADLINE_FONT,
     color: ON_STRONG,
   };
@@ -167,7 +176,13 @@ export function ResultShareCard({ card }: { card: ResultCardModel }) {
       ) : null}
 
       <View style={styles.footer}>
-        <WordLine words={card.tagline} gap={px(6)} lineStyle={styles.tagline} goldStyle={styles.taglineGold} />
+        <WordLine
+          words={card.tagline}
+          gap={px(6)}
+          lineStyle={styles.tagline}
+          goldStyle={styles.taglineGold}
+          wrap={false}
+        />
         <Text allowFontScaling={false} style={styles.site}>
           tornygolf.no
         </Text>
