@@ -6,6 +6,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { AppShell } from '@/components/ui/AppShell';
@@ -100,10 +101,14 @@ export default async function TeamDashboardPage({
     redirect({ href: `/login?next=/signup/${shortId}/team`, locale });
   }
 
-  // #2201: opening the team page marks the game's `team_invite` and
-  // `team_member_withdrew` varsler read. Keyed on the game id, which both
-  // payloads carry (the link itself uses the short id).
-  after(() => markReadOnVisit({ userId: user.id, surface: 'teamSignup', entityId: game.id }));
+  // #2201: opening the team page marks the game's `team_member_withdrew` varsler
+  // read. Keyed on the game id (the link itself uses the short id).
+  // #2759: it also confirms a seat the captain gave you, as the game's page does
+  // (#463), and only then checks the `team_invite` that waits for it.
+  after(async () => {
+    await maybeAutoConfirmParticipation({ gameId: game.id, userId: user.id });
+    await markReadOnVisit({ userId: user.id, surface: 'teamSignup', entityId: game.id });
+  });
 
   const admin = getAdminClient();
 

@@ -1,8 +1,16 @@
 import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { findSettledActionIds, type InboxRow } from './inboxSections';
 import { chunkIds } from './inboxReads';
-import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
+import { readSettledInputs } from './loadInboxBoard';
+import {
+  NOT_WAITING_FILTER,
+  READ_ON_VISIT,
+  WAITING_KINDS,
+  visitCanMarkRead,
+  type VisitSurface,
+} from './readOnVisit';
 
 export type MarkReadOpts = {
   userId: string;
@@ -50,6 +58,9 @@ export type MarkReadOpts = {
  *
  * Brukes fra innboksen og ved push-trykk. Målsidene bruker
  * `markReadOnVisit` under.
+ *
+ * #2759: en rad som venter på deg (`isWaitingRow`), merkes aldri her. Den blir
+ * lest når saken er gjort (`markSettledRead`).
  */
 export async function markNotificationsRead(
   opts: MarkReadOpts,
@@ -60,7 +71,8 @@ export async function markNotificationsRead(
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('user_id', opts.userId)
-    .is('read_at', null);
+    .is('read_at', null)
+    .or(NOT_WAITING_FILTER);
 
   if (opts.notificationId) q = q.eq('id', opts.notificationId);
 
@@ -106,6 +118,11 @@ export type MarkReadOnVisitOpts = {
  *
  * Best-effort, never throws. 0 rows is normal (nothing unread), so the cache
  * tag is revalidated only when a row was touched: the hole page renders often.
+ *
+ * #2759: a row that waits for you stays unread through the visit. The visit is
+ * also where the web sees that the matter just got done (you approved the card,
+ * so the dot should go out without a trip to the inbox), so it checks the rows
+ * that wait about this page's entity and marks the settled ones.
  */
 export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> {
   const { kinds, key } = READ_ON_VISIT[opts.surface];
@@ -115,25 +132,81 @@ export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> 
   }
 
   try {
-    let q = getAdminClient()
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', opts.userId)
-      .is('read_at', null)
-      .in('kind', [...kinds]);
-    if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
+    if (visitCanMarkRead(opts.surface)) {
+      let q = getAdminClient()
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', opts.userId)
+        .is('read_at', null)
+        .in('kind', [...kinds])
+        .or(NOT_WAITING_FILTER);
+      if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
 
-    const { data, error } = await q.select('id');
-    if (error) {
-      console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, error });
-      return;
+      const { data, error } = await q.select('id');
+      if (error) {
+        console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, error });
+        return;
+      }
+      if ((data?.length ?? 0) > 0) {
+        revalidateTag(`notifications-${opts.userId}`, 'max');
+      }
     }
-    if ((data?.length ?? 0) > 0) {
-      revalidateTag(`notifications-${opts.userId}`, 'max');
-    }
+    await settleVisitRows(opts);
   } catch (err) {
     console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, err });
   }
+}
+
+/**
+ * Pages where no waiting row can have just been finished. The hole page renders
+ * for every stroke, and a delivery goes through the submit page; a cup or the
+ * history has no waiting rows at all.
+ */
+const NO_SETTLE_ON_VISIT: ReadonlySet<VisitSurface> = new Set([
+  'gameHole',
+  'cup',
+  'cupResults',
+  'cupParticipants',
+  'history',
+]);
+
+/**
+ * The rows that wait about this page's entity, checked against the same rules as
+ * the inbox. One small read when nothing waits, which is the usual case; the
+ * lookups only run for what these rows need. A page without an entity checks the
+ * waiting kinds it answers (the friends page).
+ *
+ * Exported for a page that has just changed what a rule reads (the game's page,
+ * after it confirmed the seat). Best-effort, never throws, like the visit.
+ */
+export async function settleOnVisit(opts: MarkReadOnVisitOpts): Promise<void> {
+  try {
+    await settleVisitRows(opts);
+  } catch (err) {
+    console.error('[notifications] settleOnVisit failed', { surface: opts.surface, err });
+  }
+}
+
+async function settleVisitRows(opts: MarkReadOnVisitOpts): Promise<void> {
+  if (NO_SETTLE_ON_VISIT.has(opts.surface)) return;
+  const { kinds, key } = READ_ON_VISIT[opts.surface];
+  const admin = getAdminClient();
+  let q = admin
+    .from('notifications')
+    .select('id, kind, payload, read_at, created_at')
+    .eq('user_id', opts.userId)
+    .is('read_at', null)
+    .is('archived_at', null)
+    .in('kind', key ? [...WAITING_KINDS] : kinds.filter((kind) => WAITING_KINDS.includes(kind)));
+  if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
+
+  const { data, error } = await q.returns<InboxRow[]>();
+  if (error) throw error;
+  if (!data || data.length === 0) return;
+
+  const now = Date.now();
+  const ids = findSettledActionIds(data, await readSettledInputs(admin, opts.userId, data, now));
+  await markSettledRead({ userId: opts.userId, ids });
 }
 
 export type MarkIdsReadOpts = {
@@ -144,10 +217,10 @@ export type MarkIdsReadOpts = {
 
 /**
  * Marks exactly these notifications read for `userId` (#2263, a tap on a
- * group row in the inbox, and the inbox's settle step). By id rather than
- * kind + game: one game can hold a group of signup heads-ups AND a pending
- * request that still needs an answer, and marking the group must not mark the
- * request.
+ * group row in the inbox). By id rather than kind + game: one game can hold a
+ * group of signup heads-ups AND a pending request that still needs an answer,
+ * and marking the group must not mark the request. #2759: a row among the ids
+ * that waits for you stays unread.
  *
  * The ids travel in the request URL, so the write goes in slices of 100
  * (`chunkIds`; a club-scale group holds 150). Same authz as
@@ -159,18 +232,32 @@ export type MarkIdsReadOpts = {
  * in the meantime); any slice that errors reports `false`.
  */
 export async function markNotificationIdsRead(opts: MarkIdsReadOpts): Promise<boolean> {
+  return markIdsRead(opts, true);
+}
+
+/**
+ * The same write for rows whose matter is done (#2759): the server has seen it
+ * (`findSettledActionIds`, or «Godta» on a request already answered), so this is
+ * the one path that also marks a row that waits.
+ */
+export async function markSettledRead(opts: MarkIdsReadOpts): Promise<boolean> {
+  return markIdsRead(opts, false);
+}
+
+async function markIdsRead(opts: MarkIdsReadOpts, notWaitingOnly: boolean): Promise<boolean> {
   if (opts.ids.length === 0) return true;
 
   const nowIso = new Date().toISOString();
   let touched = 0;
   for (const slice of chunkIds(opts.ids)) {
-    const { data, error } = await getAdminClient()
+    let q = getAdminClient()
       .from('notifications')
       .update({ read_at: nowIso })
       .eq('user_id', opts.userId)
       .in('id', slice)
-      .is('read_at', null)
-      .select('id');
+      .is('read_at', null);
+    if (notWaitingOnly) q = q.or(NOT_WAITING_FILTER);
+    const { data, error } = await q.select('id');
     if (error) {
       console.error('[notifications] markIdsRead failed', error);
       return false;

@@ -51,7 +51,7 @@ import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
-import { markReadOnVisit } from '@/lib/notifications/markRead';
+import { markReadOnVisit, settleOnVisit } from '@/lib/notifications/markRead';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
@@ -399,9 +399,12 @@ export default async function GameHomePage({
   // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder
   // «Ikke bekreftet»-badgen for aktive spillere uten et eksplisitt trykk.
   // Wrap i `after()` så DB-mutasjonen deferes til etter render. Mark-read
-  // er registrert øverst (#2201).
+  // er registrert øverst (#2201). #2759: etter bekreftelsen sjekkes besøket på
+  // nytt, ellers venter invitasjonen i innboksen til neste besøk.
   after(async () => {
-    if (me.accepted_at == null) await maybeAutoConfirmParticipation({ gameId: id, userId });
+    if (me.accepted_at != null) return;
+    await maybeAutoConfirmParticipation({ gameId: id, userId });
+    await settleOnVisit({ userId, surface: 'gameHome', entityId: id });
   });
 
   // #1814: en cup-kamp trekker man seg fra på cup-nivå — `/games/[id]/trekk-fra`

@@ -10,7 +10,12 @@ import {
 import { osloParts } from '@/lib/format/teeOff';
 import { nameInitials } from '@/lib/names/initials';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import { buildNotificationText, gameCancelledLine, type NotificationTranslator } from './cardContent';
+import {
+  buildNotificationText,
+  gameCancelledLine,
+  type NotificationSurface,
+  type NotificationTranslator,
+} from './cardContent';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_ICON, type NotificationIconName } from './icons';
 import { isKnownKind } from './readOnVisit';
@@ -21,12 +26,15 @@ import type { NotificationKind, NotificationPayload } from './types';
  * which ones group together, which section a row lands in, and what it says.
  *
  * Pure: no React, no Supabase. The web inbox (`app/[locale]/innboks`) renders
- * from it, and the app's inbox will use the same rules when it comes.
+ * from it, and so does the server route the app reads (`app/api/inbox`).
  *
  * Sections: KREVER HANDLING holds unread rows that ask you to do something;
  * the rest go under I DAG or TIDLIGERE by Oslo calendar day. Delivered cards
  * and open-signup heads-ups group per game, and read approval requests group
  * the same way, so twelve cards from one round are one row.
+ *
+ * #2759: such a row stands until the matter is done (`isWaitingRow`), so a tap
+ * only opens it. `findSettledActionIds` is the one that takes it out.
  */
 
 /** A `notifications` row as the inbox reads it. */
@@ -82,7 +90,7 @@ export type InboxEntry =
 
 export type InboxSections = Record<InboxSectionKey, InboxEntry[]>;
 
-const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
+export const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
 
 /**
  * Which button a row gets in KREVER HANDLING, or `null` when the row only
@@ -392,128 +400,266 @@ export function trimToWholeDays<T extends Pick<InboxRow, 'created_at'>>(
 // Rows that no longer wait
 // ---------------------------------------------------------------------------
 
+/** A card the settle rules read: `game_players` in the games of the viewer's rows. */
+export type SettledCard = {
+  game_id: string;
+  user_id: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+  withdrawn_at: string | null;
+  marker_user_id: string | null;
+};
+
+/** The viewer's own `game_players` row. */
+export type SettledOwnPlayer = {
+  paid_at: string | null;
+  submitted_at: string | null;
+  accepted_at: string | null;
+  withdrawn_at: string | null;
+};
+
 export type SettledInputs = {
   viewerId: string;
+  /** The request's clock. A league round whose deadline has passed has nothing left to play (#2638). */
+  now: number;
   /** `game_registration_requests.status` per request id; a missing id is gone. */
   requestStatus: ReadonlyMap<string, string>;
-  /** Cards in the games of the approval requests (RLS «shared game»). */
-  cards: ReadonlyArray<{
-    game_id: string;
-    user_id: string;
-    submitted_at: string | null;
-    approved_at: string | null;
-  }>;
-  /** The viewer's own player row per game. */
-  own: ReadonlyMap<string, { paid_at: string | null; submitted_at: string | null }>;
-  /**
-   * Games that are active or finished. A request still pending there can no
-   * longer be answered: the signup page and «Godta» both refuse a started
-   * game (`game_locked`), and the start's auto-reject is best-effort.
-   */
-  lockedGameIds?: ReadonlySet<string>;
-  /** #2203: games whose status is `finished`. The organiser's finish rows are done there. */
-  finishedGameIds?: ReadonlySet<string>;
-  /** #2638: the request's clock. A league round whose deadline has passed has nothing left to play. */
-  now?: number;
+  /** Every card in the games the rows need cards from (`loadInboxBoard`). */
+  cards: ReadonlyArray<SettledCard>;
+  /** The viewer's own player row per game; a missing id means not on the roster. */
+  own: ReadonlyMap<string, SettledOwnPlayer>;
+  /** `games.status` per game; a missing id means the game is gone. */
+  gameStatus: ReadonlyMap<string, string>;
+  /** The status of the viewer's own request per game, for team invites; a missing id was removed. */
+  ownRequestStatus: ReadonlyMap<string, string>;
+  /** Who still has a friend request waiting for the viewer. */
+  pendingFriendIds: ReadonlySet<string>;
+  /** Clubs where someone waits and the viewer is still owner or admin. */
+  pendingClubIds: ReadonlySet<string>;
+  /** League rounds where the viewer is in a flight, played or in progress (`roundPlayerLocks`). */
+  playedRoundIds: ReadonlySet<string>;
 };
 
 /** #2638: the id of the newest `league_round_closing` per round, read or not. */
 function newestClosingReminderByRound(rows: InboxRow[]): Map<string, string> {
+  return newestByKey(rows, (row) =>
+    row.kind === 'league_round_closing'
+      ? (row.payload as NotificationPayload<'league_round_closing'>).round_id
+      : null,
+  );
+}
+
+function newestByKey(rows: InboxRow[], keyOf: (row: InboxRow) => string | null): Map<string, string> {
   const newest = new Map<string, InboxRow>();
   for (const row of rows) {
-    if (row.kind !== 'league_round_closing') continue;
-    const { round_id } = row.payload as NotificationPayload<'league_round_closing'>;
-    const seen = newest.get(round_id);
-    if (!seen || Date.parse(row.created_at) > Date.parse(seen.created_at)) newest.set(round_id, row);
+    const key = keyOf(row);
+    if (key === null) continue;
+    const seen = newest.get(key);
+    if (!seen || Date.parse(row.created_at) > Date.parse(seen.created_at)) newest.set(key, row);
   }
-  return new Map([...newest].map(([roundId, row]) => [roundId, row.id]));
+  return new Map([...newest].map(([key, row]) => [key, row.id]));
 }
 
 /**
- * Unread action rows whose matter is already settled — a flightmate approved
- * the card, the request was answered or ran out or its round has started, the
- * fee is paid, the game the organiser was told to finish is finished, the
- * league round has closed. Not every
- * target page marks its notification read, so the inbox checks on load and
- * treats these as read (#2263).
+ * Whose card a «sent back» row is about, as a key, or `null` for the
+ * deliverer's copy from before #2759, which does not say. #2200: the copy to the
+ * one who delivered the card for someone else carries the owner's id.
+ */
+function sendBackKey(row: InboxRow): string | null {
+  if (row.kind !== 'scorecard_rejected' && row.kind !== 'scorecard_reopened') return null;
+  const p = row.payload as { game_id: string; player_name?: string | null; player_id?: string };
+  if (p.player_id) return `${p.game_id}:${p.player_id}`;
+  return p.player_name ? null : `${p.game_id}:own`;
+}
+
+/**
+ * Unread rows whose matter is done (#2263, #2759, the owner's answers
+ * 2026-11-04). This is the only way a row that waits gets read, on the web and
+ * in the app: a tap, a visit or «Marker alt lest» leaves it alone
+ * (`isWaitingRow`). So a rule here must see every way the matter can end, or
+ * the row stays lit with nothing left to do.
+ *
+ * In short:
+ * - the game is over or gone, or the viewer has left it, ends what was asked of
+ *   them there;
+ * - cards to approve follow THAT card (#2200: its owner, never who delivered it);
+ * - a card sent back follows THAT card too, and only the newest row per card
+ *   waits;
+ * - a confirmation waits on `accepted_at`. In an open game a team invite has no
+ *   pending request, since the captain's request approves it right away
+ *   («ikke bekreftet ennå»), so it waits on the seat like `invite`.
  */
 export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): string[] {
-  const settled: string[] = [];
   const newestClosing = newestClosingReminderByRound(rows);
-  for (const row of rows) {
-    if (row.read_at != null) continue;
+  const newestSendBack = newestByKey(rows, sendBackKey);
+  const statusOf = (gameId: string) => inputs.gameStatus.get(gameId);
+  const gameOver = (gameId: string) => {
+    const status = statusOf(gameId);
+    return status === undefined || status === 'finished';
+  };
+  const gameStarted = (gameId: string) => gameOver(gameId) || statusOf(gameId) === 'active';
+  const viewerOut = (gameId: string) => {
+    const me = inputs.own.get(gameId);
+    return !me || me.withdrawn_at != null;
+  };
+  const cardOf = (gameId: string, userId: string) =>
+    inputs.cards.find((c) => c.game_id === gameId && c.user_id === userId);
+
+  const done = (row: InboxRow): boolean => {
     switch (row.kind) {
       case 'registration_request': {
         const p = row.payload as NotificationPayload<'registration_request'>;
-        if (
-          p.request_id &&
-          (inputs.requestStatus.get(p.request_id) !== 'pending' || inputs.lockedGameIds?.has(p.game_id))
-        ) {
-          settled.push(row.id);
-        }
-        break;
+        // Started: the signup page and «Godta» both refuse it (`game_locked`),
+        // and the start's auto-reject is best-effort.
+        return (
+          p.request_id != null &&
+          (inputs.requestStatus.get(p.request_id) !== 'pending' || gameStarted(p.game_id))
+        );
       }
       case 'peer_approval_request': {
         const p = row.payload as NotificationPayload<'peer_approval_request'>;
-        const inGame = inputs.cards.filter((c) => c.game_id === p.game_id);
+        if (gameOver(p.game_id) || viewerOut(p.game_id)) return true;
         if (p.submitter_id) {
-          // The card owner's row (#2200: never the deliverer's).
-          const card = inGame.find((c) => c.user_id === p.submitter_id);
-          if (!card || card.approved_at != null || card.submitted_at == null) {
-            settled.push(row.id);
-          }
-        } else {
-          // Older rows: settled once nobody else has a card waiting.
-          const waiting = inGame.some(
-            (c) =>
-              c.user_id !== inputs.viewerId && c.submitted_at != null && c.approved_at == null,
-          );
-          if (!waiting) settled.push(row.id);
+          const card = cardOf(p.game_id, p.submitter_id);
+          return !card || card.approved_at != null || card.submitted_at == null || card.withdrawn_at != null;
         }
-        break;
+        // Older rows: settled once nobody else has a card waiting.
+        return !inputs.cards.some(
+          (c) =>
+            c.game_id === p.game_id &&
+            c.user_id !== inputs.viewerId &&
+            c.submitted_at != null &&
+            c.approved_at == null &&
+            c.withdrawn_at == null,
+        );
+      }
+      // #2661: the same states as the marker's page (`markerReviewAccess`).
+      case 'league_marker_request': {
+        const p = row.payload as NotificationPayload<'league_marker_request'>;
+        const card = cardOf(p.game_id, p.player_id);
+        return (
+          statusOf(p.game_id) !== 'active' ||
+          !card ||
+          card.approved_at != null ||
+          card.submitted_at == null ||
+          card.withdrawn_at != null ||
+          card.marker_user_id !== inputs.viewerId
+        );
       }
       case 'payment_reminder': {
         const p = row.payload as NotificationPayload<'payment_reminder'>;
-        if (inputs.own.get(p.game_id)?.paid_at != null) settled.push(row.id);
-        break;
+        return gameOver(p.game_id) || viewerOut(p.game_id) || inputs.own.get(p.game_id)?.paid_at != null;
       }
       case 'deliver_reminder': {
         const p = row.payload as NotificationPayload<'deliver_reminder'>;
-        if (!p.others_count && inputs.own.get(p.game_id)?.submitted_at != null) {
-          settled.push(row.id);
+        if (gameOver(p.game_id)) return true;
+        if (p.card_user_ids) {
+          return p.card_user_ids.every((id) => {
+            const card = cardOf(p.game_id, id);
+            return !card || card.submitted_at != null || card.withdrawn_at != null;
+          });
         }
-        break;
+        if (p.others_count) return false;
+        return viewerOut(p.game_id) || inputs.own.get(p.game_id)?.submitted_at != null;
       }
       // #2268: a delivered card has every hole, so the nudge is done.
       case 'missing_score_reminder': {
         const p = row.payload as NotificationPayload<'missing_score_reminder'>;
-        if (inputs.own.get(p.game_id)?.submitted_at != null) settled.push(row.id);
-        break;
+        return gameOver(p.game_id) || viewerOut(p.game_id) || inputs.own.get(p.game_id)?.submitted_at != null;
+      }
+      case 'scorecard_rejected':
+      case 'scorecard_reopened': {
+        const p = row.payload as NotificationPayload<'scorecard_rejected'> & { player_id?: string };
+        if (gameOver(p.game_id)) return true;
+        const key = sendBackKey(row);
+        if (key === null) return false;
+        if (newestSendBack.get(key) !== row.id) return true;
+        if (p.player_id) {
+          const card = cardOf(p.game_id, p.player_id);
+          return !card || card.submitted_at != null || card.withdrawn_at != null;
+        }
+        return viewerOut(p.game_id) || inputs.own.get(p.game_id)?.submitted_at != null;
+      }
+      // #463: opening the game (or the team page) confirms the seat.
+      case 'invite':
+      case 'player_added': {
+        const p = row.payload as NotificationPayload<'invite'>;
+        return gameOver(p.game_id) || viewerOut(p.game_id) || inputs.own.get(p.game_id)?.accepted_at != null;
+      }
+      case 'team_invite': {
+        const p = row.payload as NotificationPayload<'team_invite'>;
+        if (gameOver(p.game_id)) return true;
+        const request = inputs.ownRequestStatus.get(p.game_id);
+        if (request === 'pending') return gameStarted(p.game_id);
+        if (request !== 'approved') return true;
+        // Yes, and no seat: the captain has no team yet, so nothing to confirm.
+        return viewerOut(p.game_id) || inputs.own.get(p.game_id)?.accepted_at != null;
+      }
+      // No data says the captain has invited someone new. A tap takes it out,
+      // and once the round has started there is no one to invite.
+      case 'team_member_withdrew': {
+        const p = row.payload as NotificationPayload<'team_member_withdrew'>;
+        return gameStarted(p.game_id);
+      }
+      // Blocked from starting: done when it no longer waits to start.
+      case 'auto_start_blocked': {
+        const p = row.payload as NotificationPayload<'auto_start_blocked'>;
+        return statusOf(p.game_id) !== 'scheduled';
       }
       // #2203: both ask the organiser to finish the game; a finished game is done.
       case 'all_scorecards_delivered':
       case 'game_stale_reminder': {
         const p = row.payload as NotificationPayload<'all_scorecards_delivered'>;
-        if (inputs.finishedGameIds?.has(p.game_id)) settled.push(row.id);
-        break;
+        return gameOver(p.game_id);
       }
-      // #2638: both ask the player to play the round; a closed round cannot be played.
-      // An extended deadline sends a new reminder, and the older one names a
-      // deadline that no longer holds.
+      case 'friend_request': {
+        const p = row.payload as NotificationPayload<'friend_request'>;
+        return !inputs.pendingFriendIds.has(p.actor_id);
+      }
+      // The row names nobody by id, so it stands while anyone waits in the club.
+      case 'club_join_request': {
+        const p = row.payload as NotificationPayload<'club_join_request'>;
+        return !inputs.pendingClubIds.has(p.group_id);
+      }
+      // #2638: both ask the player to play the round; a closed round cannot be
+      // played. An extended deadline sends a new reminder, and the older one
+      // names a deadline that no longer holds. A flight the viewer withdrew
+      // from does not count (`roundPlayerLocks`): they can start a new one.
       case 'league_round_open':
       case 'league_round_closing': {
         const p = row.payload as NotificationPayload<'league_round_open'>;
-        const closed = inputs.now != null && Date.parse(p.closes_at) <= inputs.now;
-        const superseded = row.kind === 'league_round_closing' && newestClosing.get(p.round_id) !== row.id;
-        if (closed || superseded) settled.push(row.id);
-        break;
+        return (
+          Date.parse(p.closes_at) <= inputs.now ||
+          inputs.playedRoundIds.has(p.round_id) ||
+          (row.kind === 'league_round_closing' && newestClosing.get(p.round_id) !== row.id)
+        );
       }
       default:
-        break;
+        return false;
     }
-  }
-  return settled;
+  };
+  return rows.filter((row) => row.read_at == null && done(row)).map((row) => row.id);
 }
+
+/**
+ * The inbox as the web page and the app's route both read it (#2759,
+ * `loadInboxBoard`). No writes: the caller archives `staleIds` and marks
+ * `settledIds` in `after()`.
+ */
+export type InboxBoard = {
+  /** What the board shows. A settled row is read here already. */
+  rows: InboxRow[];
+  /** Signup rows about a game that is gone. Hidden; the caller archives them (#1393). */
+  staleIds: string[];
+  /** Unread rows whose matter is done. The caller marks them read (#2263). */
+  settledIds: string[];
+  teeOffByGame: Record<string, string | null>;
+  resultByGame: Record<string, ResultSummary | null>;
+  finishedGameIds: string[];
+  leagueFlightGameIds: string[];
+  /** One «now» per request, so server and browser write the same relative times. */
+  now: number;
+};
 
 // ---------------------------------------------------------------------------
 // What a row says
@@ -557,6 +703,8 @@ export type InboxTextContext = {
   finishedGameIds: readonly string[];
   /** #2712: league flights; played alone they say «Godkjent», not a place. */
   leagueFlightGameIds?: readonly string[];
+  /** The app's rows say no kroner while `SHOW_KRONER_IN_APP` is false (#2561). */
+  surface?: NotificationSurface;
 };
 
 /** Kinds whose catalog detail says something the target page does not. */
@@ -605,8 +753,8 @@ function withFirstName(row: InboxRow): NotificationPayload {
   return { ...(row.payload as object), [field]: person.short } as NotificationPayload;
 }
 
-function catalogText(row: InboxRow, t: NotificationTranslator) {
-  return buildNotificationText(row.kind, withFirstName(row), t);
+function catalogText(row: InboxRow, t: NotificationTranslator, surface?: NotificationSurface) {
+  return buildNotificationText(row.kind, withFirstName(row), t, { surface });
 }
 
 /**
@@ -927,7 +1075,7 @@ function plainText(
   if (DETAIL_KINDS.has(row.kind)) {
     return {
       title,
-      subtitle: [catalogText(row, ctx.t).detail, time].join(SEP),
+      subtitle: [catalogText(row, ctx.t, ctx.surface).detail, time].join(SEP),
       subtitleIsFreeText: FREE_TEXT_KINDS.has(row.kind),
     };
   }

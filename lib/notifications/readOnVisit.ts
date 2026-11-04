@@ -2,7 +2,8 @@ import type { NotificationKind } from './types';
 
 /**
  * The pages a notification links to (#2201). Opening one marks the viewer's
- * unread notifications it answers as read: what you have seen is read.
+ * unread notifications it answers as read: what you have seen is read. A row
+ * that still waits for you is the exception (`isWaitingRow`, #2759).
  */
 export type VisitSurface =
   | 'gameHome'
@@ -126,4 +127,91 @@ export const KNOWN_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKi
 
 export function isKnownKind(kind: string): kind is NotificationKind {
   return KNOWN_KINDS.has(kind as NotificationKind);
+}
+
+/**
+ * #2759, the owner's answers 2026-11-04: a matter under «Krever handling» stands
+ * until it is done. Opening it, a push tap, a page visit or «Marker alt lest»
+ * does not take it out. It leaves when the server sees it is done
+ * (`findSettledActionIds`), and only then gets `read_at`, so the section, the
+ * chip, the dot and the envelope all follow from the same column.
+ *
+ * Three kinds wait only with data that can say the matter is done, see
+ * `isWaitingRow`. `team_member_withdrew` has no such data at all, so it is not
+ * here, and a tap takes it out. `inboxSections.test.ts` holds this list against
+ * `inboxActionKey`.
+ */
+export const WAITING_KINDS: readonly NotificationKind[] = [
+  'invite',
+  'peer_approval_request',
+  'league_marker_request',
+  'registration_request',
+  'deliver_reminder',
+  'missing_score_reminder',
+  'scorecard_rejected',
+  'scorecard_reopened',
+  'friend_request',
+  'team_invite',
+  'club_join_request',
+  'player_added',
+  'auto_start_blocked',
+  'payment_reminder',
+  'all_scorecards_delivered',
+  'game_stale_reminder',
+  'league_round_open',
+  'league_round_closing',
+];
+
+/**
+ * Does this row wait until its matter is done? A kind in `WAITING_KINDS`,
+ * except three shapes that cannot tell:
+ * - `registration_request` without `request_id`: a heads-up from an open game,
+ *   nothing to answer.
+ * - `scorecard_rejected` with `player_name` but no `player_id`: the deliverer's
+ *   copy from before #2759, which cannot say whose card it means.
+ * - `deliver_reminder` with `others_count` but no `card_user_ids`: from before
+ *   #2759, which cannot say which cards it means.
+ *
+ * `NOT_WAITING_FILTER` is the same rule for a PostgREST write. Change both.
+ */
+export function isWaitingRow(row: { kind: string; payload: unknown }): boolean {
+  if (!WAITING_KINDS.includes(row.kind as NotificationKind)) return false;
+  const p = row.payload as {
+    request_id?: unknown;
+    player_name?: unknown;
+    player_id?: unknown;
+    others_count?: unknown;
+    card_user_ids?: unknown;
+  };
+  if (row.kind === 'registration_request') return p.request_id != null;
+  if (row.kind === 'scorecard_rejected') return p.player_name == null || p.player_id != null;
+  if (row.kind === 'deliver_reminder') return p.others_count == null || p.card_user_ids != null;
+  return true;
+}
+
+/**
+ * The rows `isWaitingRow` says no to, as a PostgREST `.or()`. Every write that
+ * marks rows read for a tap, a visit or «Marker alt lest» goes through it, on the
+ * web and in the app. `readOnVisit.test.ts` runs both forms over the same rows.
+ */
+export const NOT_WAITING_FILTER = [
+  `kind.not.in.(${WAITING_KINDS.join(',')})`,
+  'and(kind.eq.registration_request,payload->>request_id.is.null)',
+  'and(kind.eq.scorecard_rejected,payload->>player_name.not.is.null,payload->>player_id.is.null)',
+  'and(kind.eq.deliver_reminder,payload->>others_count.not.is.null,payload->>card_user_ids.is.null)',
+].join(',');
+
+/**
+ * Does the visit have anything to mark? Not when every kind on the surface waits
+ * whatever its payload says. The hole page renders for every stroke, so it
+ * should not send an UPDATE that can never match.
+ */
+export function visitCanMarkRead(surface: VisitSurface): boolean {
+  return READ_ON_VISIT[surface].kinds.some(
+    (kind) =>
+      !WAITING_KINDS.includes(kind) ||
+      kind === 'registration_request' ||
+      kind === 'scorecard_rejected' ||
+      kind === 'deliver_reminder',
+  );
 }

@@ -12,9 +12,11 @@ vi.mock('@/lib/auth/userId', () => ({
 
 const markIdsMock = vi.fn(async () => true);
 const markReadMock = vi.fn(async () => true);
+const markSettledMock = vi.fn(async () => true);
 vi.mock('@/lib/notifications/markRead', () => ({
   markNotificationIdsRead: (...args: unknown[]) => markIdsMock(...(args as [])),
   markNotificationsRead: (...args: unknown[]) => markReadMock(...(args as [])),
+  markSettledRead: (...args: unknown[]) => markSettledMock(...(args as [])),
 }));
 
 const archiveMock = vi.fn(async () => true);
@@ -22,8 +24,9 @@ vi.mock('@/lib/notifications/archive', () => ({
   archiveNotifications: (...args: unknown[]) => archiveMock(...(args as [])),
 }));
 
+const SERVER_CLIENT = {};
 vi.mock('@/lib/supabase/server', () => ({
-  getServerClient: async () => ({}),
+  getServerClient: async () => SERVER_CLIENT,
 }));
 
 const loadMock = vi.fn();
@@ -136,7 +139,7 @@ describe('decideRegistration', () => {
       gameName: 'Onsdagsgolfen',
       teamName: 'Bogeybros',
     });
-    expect(archiveMock).toHaveBeenCalledWith({ userId: 'user-1', notificationId: NOTE });
+    expect(archiveMock).toHaveBeenCalledWith({ userId: 'user-1', notificationId: NOTE, client: SERVER_CLIENT });
   });
 
   it('reject sends no reason', async () => {
@@ -164,7 +167,7 @@ describe('decideRegistration', () => {
       }
       const { decideRegistration } = await import('./actions');
       expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });
-      expect(markReadMock).toHaveBeenCalledWith({ userId: 'user-1', notificationId: NOTE });
+      expect(markSettledMock).toHaveBeenCalledWith({ userId: 'user-1', ids: [NOTE] });
       expect(archiveMock).not.toHaveBeenCalled();
     },
   );
@@ -173,7 +176,7 @@ describe('decideRegistration', () => {
     loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null, isAdmin: false });
     const { decideRegistration } = await import('./actions');
     expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });
-    expect(markReadMock).not.toHaveBeenCalled();
+    expect(markSettledMock).not.toHaveBeenCalled();
     expect(archiveMock).not.toHaveBeenCalled();
   });
 
@@ -184,7 +187,7 @@ describe('decideRegistration', () => {
       approveMock.mockResolvedValueOnce({ ok: false, reason, gameId: CTX.game.id });
       const { decideRegistration } = await import('./actions');
       expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });
-      expect(markReadMock).not.toHaveBeenCalled();
+      expect(markSettledMock).not.toHaveBeenCalled();
     },
   );
 

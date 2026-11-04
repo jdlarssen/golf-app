@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
-import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
+import type { InboxRow, SettledInputs } from './inboxSections';
+import { NOT_WAITING_FILTER, READ_ON_VISIT, type VisitSurface } from './readOnVisit';
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 // #726: markRead bruker admin-client (cookies-fri) fordi flere call-sites
@@ -9,6 +10,13 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 // feile, så mock-kilden er i seg selv regresjonsvakten.
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => supabaseMock,
+}));
+
+// The visit's settle step reads through this; what it reads is proven in
+// loadInboxBoard.test.ts. Here: what the visit does with the answer.
+const settledInputsMock = vi.fn();
+vi.mock('./loadInboxBoard', () => ({
+  readSettledInputs: (...args: unknown[]) => settledInputsMock(...args),
 }));
 
 const revalidateTagMock = vi.fn();
@@ -44,6 +52,21 @@ describe('markNotificationsRead', () => {
     // Ingen ekstra .eq utover user_id.
     const eqCalls = calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toHaveLength(1);
+  });
+
+  it.each([
+    ['«Marker alt lest»', { userId: 'u1' }, { data: null, error: null }],
+    ['et trykk', { userId: 'u1', notificationId: 'n-uuid' }, { data: [{ id: 'n-uuid' }], error: null }],
+    ['et push-trykk', { userId: 'u1', notificationId: 'n-uuid', zeroRowsOk: true }, { data: [], error: null }],
+  ])('#2759: %s tar aldri en sak som venter', async (_label, opts, result) => {
+    supabaseMock = buildSupabaseMock([result]);
+    const { markNotificationsRead } = await import('./markRead');
+
+    await markNotificationsRead(opts);
+
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'or', args: [NOT_WAITING_FILTER] }),
+    );
   });
 
   it('notificationId-filter → .eq("id", "n-uuid") (per-tap fra innboks)', async () => {
@@ -157,23 +180,134 @@ describe('markReadOnVisit', () => {
     { surface: 'club', key: 'group_id' },
     { surface: 'friends', key: null },
   ])('$surface → kinds from the map, payload key $key', async ({ surface, key }) => {
-    supabaseMock = buildSupabaseMock([{ data: [{ id: 'n1' }], error: null }]);
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'n1' }], error: null }, { data: [], error: null }]);
     const { markReadOnVisit } = await import('./markRead');
 
     await markReadOnVisit({ userId: 'u1', surface, entityId: key ? ENTITY : undefined });
 
     // The whole chain, in order: the viewer's unread rows of the surface's
-    // kinds, scoped by the payload key, with the touched ids read back (so a
-    // visit with nothing unread can skip revalidate).
-    expect(supabaseMock.__fromCalls.map((c) => [c.table, c.method, c.args])).toEqual([
+    // kinds that do not wait, scoped by the payload key, with the touched ids
+    // read back (so a visit with nothing unread can skip revalidate).
+    const chain = [
       ['notifications', 'update', [{ read_at: expect.any(String) }]],
       ['notifications', 'eq', ['user_id', 'u1']],
       ['notifications', 'is', ['read_at', null]],
       ['notifications', 'in', ['kind', [...READ_ON_VISIT[surface].kinds]]],
+      ['notifications', 'or', [NOT_WAITING_FILTER]],
       ...(key ? [['notifications', 'eq', [`payload->>${key}`, ENTITY]]] : []),
       ['notifications', 'select', ['id']],
-    ]);
+    ];
+    expect(supabaseMock.__fromCalls.slice(0, chain.length).map((c) => [c.table, c.method, c.args])).toEqual(chain);
     expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
+  });
+
+  describe('#2759: the rows that wait', () => {
+    const ROW: InboxRow = {
+      id: 'n-peer',
+      kind: 'peer_approval_request',
+      payload: { game_id: ENTITY, game_name: 'X', submitter_name: 'Marte', submitter_id: 'marte' },
+      read_at: null,
+      created_at: '2026-10-01T08:00:00Z',
+    };
+    const inputs = (over: Partial<SettledInputs>): SettledInputs => ({
+      viewerId: 'u1',
+      now: 0,
+      requestStatus: new Map(),
+      cards: [],
+      own: new Map([[ENTITY, { paid_at: null, submitted_at: null, accepted_at: 'a', withdrawn_at: null }]]),
+      gameStatus: new Map([[ENTITY, 'active']]),
+      ownRequestStatus: new Map(),
+      pendingFriendIds: new Set(),
+      pendingClubIds: new Set(),
+      playedRoundIds: new Set(),
+      ...over,
+    });
+    const card = (approved_at: string | null) => ({
+      game_id: ENTITY,
+      user_id: 'marte',
+      submitted_at: 'x',
+      approved_at,
+      withdrawn_at: null,
+      marker_user_id: null,
+    });
+    const updates = () => supabaseMock.__fromCalls.filter((c) => c.method === 'update');
+
+    it('the hole page renders for every stroke, and sends nothing at all', async () => {
+      supabaseMock = buildSupabaseMock([]);
+      const { markReadOnVisit } = await import('./markRead');
+
+      await markReadOnVisit({ userId: 'u1', surface: 'gameHole', entityId: ENTITY });
+
+      expect(supabaseMock.__fromCalls).toEqual([]);
+    });
+
+    it('a visit does not mark a row that still waits, and looks up only what it needs', async () => {
+      supabaseMock = buildSupabaseMock([{ data: [ROW], error: null }]);
+      settledInputsMock.mockResolvedValueOnce(inputs({ cards: [card(null)] }));
+      const { markReadOnVisit } = await import('./markRead');
+
+      await markReadOnVisit({ userId: 'u1', surface: 'gameApprove', entityId: ENTITY });
+
+      expect(updates()).toEqual([]);
+      expect(settledInputsMock).toHaveBeenCalledWith(supabaseMock, 'u1', [ROW], expect.any(Number));
+      expect(supabaseMock.__fromCalls).toContainEqual(
+        expect.objectContaining({ method: 'eq', args: ['payload->>game_id', ENTITY] }),
+      );
+    });
+
+    it('a visit after the card is approved marks that row read', async () => {
+      supabaseMock = buildSupabaseMock([
+        { data: [ROW], error: null },
+        { data: [{ id: ROW.id }], error: null },
+      ]);
+      settledInputsMock.mockResolvedValueOnce(inputs({ cards: [card('y')] }));
+      const { markReadOnVisit } = await import('./markRead');
+
+      await markReadOnVisit({ userId: 'u1', surface: 'gameApprove', entityId: ENTITY });
+
+      expect(updates()).toHaveLength(1);
+      expect(supabaseMock.__fromCalls).toContainEqual(
+        expect.objectContaining({ method: 'in', args: ['id', [ROW.id]] }),
+      );
+      // The settle write is the one that may touch a row that waits.
+      expect(supabaseMock.__fromCalls.filter((c) => c.method === 'or')).toEqual([]);
+    });
+
+    it('nothing waits here: one read and no lookups', async () => {
+      supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+      const { markReadOnVisit } = await import('./markRead');
+
+      await markReadOnVisit({ userId: 'u1', surface: 'gameApprove', entityId: ENTITY });
+
+      expect(settledInputsMock).not.toHaveBeenCalled();
+    });
+
+    it('the friends page has no entity, and checks only the kinds it answers', async () => {
+      supabaseMock = buildSupabaseMock([{ data: [], error: null }, { data: [], error: null }]);
+      const { markReadOnVisit } = await import('./markRead');
+
+      await markReadOnVisit({ userId: 'u1', surface: 'friends' });
+
+      expect(supabaseMock.__fromCalls).toContainEqual(
+        expect.objectContaining({ method: 'in', args: ['kind', ['friend_request']] }),
+      );
+    });
+
+    it.each(['markReadOnVisit', 'settleOnVisit'] as const)(
+      '%s: a failed lookup settles nothing and never throws',
+      async (name) => {
+        const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+        supabaseMock = buildSupabaseMock([{ data: [ROW], error: null }]);
+        settledInputsMock.mockRejectedValueOnce(new Error('nede'));
+        const mod = await import('./markRead');
+
+        await expect(mod[name]({ userId: 'u1', surface: 'gameApprove', entityId: ENTITY })).resolves.toBeUndefined();
+
+        expect(updates()).toEqual([]);
+        expect(consoleErr).toHaveBeenCalled();
+        consoleErr.mockRestore();
+      },
+    );
   });
 
   it('a keyed surface without an entity id writes nothing and logs', async () => {
@@ -221,6 +355,22 @@ describe('markReadOnVisit', () => {
  */
 describe('markNotificationIdsRead', () => {
   const HEADS_UP = ['n-open-1', 'n-open-2'];
+
+  it('#2759: a tap on a group leaves a row that waits, and the settle write does not', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: HEADS_UP.map((id) => ({ id })), error: null },
+      { data: HEADS_UP.map((id) => ({ id })), error: null },
+    ]);
+    const { markNotificationIdsRead, markSettledRead } = await import('./markRead');
+
+    await markNotificationIdsRead({ userId: 'u1', ids: HEADS_UP });
+    expect(supabaseMock.__fromCalls.filter((c) => c.method === 'or')).toEqual([
+      expect.objectContaining({ args: [NOT_WAITING_FILTER] }),
+    ]);
+
+    await markSettledRead({ userId: 'u1', ids: HEADS_UP });
+    expect(supabaseMock.__fromCalls.filter((c) => c.method === 'or')).toHaveLength(1);
+  });
 
   it('marks only the given ids, only unread ones, only the owner’s', async () => {
     supabaseMock = buildSupabaseMock([

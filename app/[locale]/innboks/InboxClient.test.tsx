@@ -127,6 +127,23 @@ function makeRequest(id: string): InboxRow {
   };
 }
 
+// A row under «Krever handling» that has no data to say it is done: a tap takes it out.
+function makeWithdrew(id: string): InboxRow {
+  return {
+    id,
+    kind: 'team_member_withdrew',
+    payload: {
+      game_id: GAME,
+      game_short_id: 'abcd1234',
+      game_name: 'Hauger Open',
+      withdrawn_player_name: 'Per',
+      team_name: 'Bogeybros',
+    },
+    read_at: null,
+    created_at: '2026-05-24T13:40:00Z',
+  };
+}
+
 function renderInbox(rows: InboxRow[]) {
   return render(
     <InboxClient
@@ -210,7 +227,7 @@ describe('InboxClient', () => {
   });
 
   it('«Marker alt lest» med uleste, «Tøm leste» når alt er lest', () => {
-    const { unmount } = renderInbox([makeInvite('a')]);
+    const { unmount } = renderInbox([makeDelivered('a', 'Marte')]);
     expect(screen.getByRole('button', { name: 'Marker alt lest' })).toBeInTheDocument();
     unmount();
     renderInbox([makeInvite('a', true)]);
@@ -218,12 +235,28 @@ describe('InboxClient', () => {
     expect(screen.getByRole('button', { name: 'Tøm leste' })).toBeInTheDocument();
   });
 
-  it('«Bekreft» markerer raden lest og lenker til spillet', () => {
+  it('#2759: bare saker som venter er ulest: knappen er «Tøm leste», og de står', () => {
+    renderInbox([makeInvite('a')]);
+    expect(screen.queryByRole('button', { name: 'Marker alt lest' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tøm leste' }));
+    expect(screen.getByTestId('inbox-section-action')).toHaveTextContent('Per inviterte deg');
+  });
+
+  it('#2759: «Bekreft» lenker til spillet, og saken står til den er gjort', () => {
     renderInbox([makeInvite('a')]);
     const button = screen.getByRole('link', { name: 'Bekreft' });
     expect(button).toHaveAttribute('href', `/games/${GAME}`);
     fireEvent.click(button);
-    expect(markOneAsReadMock).toHaveBeenCalledWith('a');
+    expect(markOneAsReadMock).not.toHaveBeenCalled();
+    expect(markGroupAsReadMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('inbox-section-action')).toHaveTextContent('Per inviterte deg');
+  });
+
+  it('#2759: en sak uten data som kan si at den er gjort, tas ut av et trykk', () => {
+    renderInbox([makeWithdrew('w')]);
+    fireEvent.click(screen.getByRole('link', { name: 'Inviter ny' }));
+    expect(markOneAsReadMock).toHaveBeenCalledWith('w');
+    expect(screen.queryByTestId('inbox-section-action')).not.toBeInTheDocument();
   });
 
   it('en lest rad skrives ikke på nytt, men lenker fortsatt', () => {
@@ -254,18 +287,23 @@ describe('InboxClient', () => {
     expect(markGroupAsReadMock).toHaveBeenCalledWith([ID(1), ID(2)]);
   });
 
-  it('«Marker alt lest» flytter handlingsradene ned', () => {
-    renderInbox([makeInvite('a')]);
-    fireEvent.click(screen.getByRole('button', { name: 'Marker alt lest' }));
+  it('#2759: «Marker alt lest» flytter ned det som ikke venter, og lar sakene stå', async () => {
+    renderInbox([makeInvite('a'), makeWithdrew('w'), makeDelivered('b', 'Marte')]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Marker alt lest' }));
+    });
     expect(markAllAsReadMock).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('inbox-section-action')).not.toBeInTheDocument();
-    expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Per inviterte deg');
+    const action = screen.getByTestId('inbox-section-action');
+    expect(action).toHaveTextContent('Per inviterte deg');
+    expect(action).not.toHaveTextContent('Bogeybros');
+    expect(screen.getByTestId('inbox-filter-action')).toHaveTextContent('Krever handling · 1');
+    expect(screen.getByTestId('inbox-clear-read')).toBeInTheDocument();
   });
 
   it('pillen beholder teksten og venter mens «Marker alt lest» pågår', async () => {
     let finish: (v: { ok: boolean }) => void = () => {};
     markAllAsReadMock.mockReturnValue(new Promise((r) => (finish = r)));
-    renderInbox([makeInvite('a')]);
+    renderInbox([makeDelivered('a', 'Marte')]);
     await act(async () => {
       fireEvent.click(screen.getByTestId('inbox-mark-all'));
     });
@@ -281,7 +319,7 @@ describe('InboxClient', () => {
   it('pillen venter også mens «Godta» pågår, så tilbakerullingene ikke krysser', async () => {
     let finish: (v: unknown) => void = () => {};
     decideMock.mockReturnValue(new Promise((r) => (finish = r)));
-    renderInbox([makeRequest('r'), makeInvite('a')]);
+    renderInbox([makeRequest('r'), makeDelivered('a', 'Marte')]);
     await act(async () => {
       fireEvent.click(screen.getByTestId('inbox-approve'));
     });

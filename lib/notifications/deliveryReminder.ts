@@ -21,6 +21,9 @@ import { notify } from './notify';
  *
  * #2200: `othersCount` > 0 betyr at påminnelsen gjelder kort mottakeren har
  * ført for andre. Da får varselet `others_count` og mailen sin egen ordlyd.
+ * #2759: `cardUserIds` er alle kortene påminnelsen gjelder, så raden i innboksen
+ * står til akkurat de er levert. Sendes bare sammen med `othersCount`: ellers er
+ * det mottakerens eget kort, og raden følger det.
  *
  * In-app-først: vi sender alltid in-app (via notify), og maler kun til
  * off-app-spillere (`shouldAlsoSendMail`). Best-effort — feiler stille i
@@ -33,6 +36,7 @@ export async function sendDeliveryReminder(opts: {
   game: { id: string; name: string };
   logPrefix: string;
   othersCount?: number;
+  cardUserIds?: readonly string[];
 }): Promise<void> {
   const { player, game, logPrefix } = opts;
   const othersCount = opts.othersCount ?? 0;
@@ -45,7 +49,9 @@ export async function sendDeliveryReminder(opts: {
       payload: {
         game_id: game.id,
         game_name: game.name,
-        ...(othersCount > 0 ? { others_count: othersCount } : {}),
+        ...(othersCount > 0
+          ? { others_count: othersCount, ...(opts.cardUserIds ? { card_user_ids: [...opts.cardUserIds] } : {}) }
+          : {}),
       },
     });
     shouldMail = r.shouldAlsoSendMail;
@@ -190,6 +196,7 @@ export async function runDeliveryReminderSweepForGame(
       game: { id: game.id, name: game.name },
       logPrefix: SWEEP_LOG_PREFIX,
       othersCount: group.otherCardUserIds.filter((id) => wonIds.has(id)).length,
+      cardUserIds: [...wonIds],
     });
     reminded += 1;
   }

@@ -109,13 +109,16 @@ const scorecardApprovedSchema = z.object({
 // ved render (#583, #1364). `reason` utelates når attestanten ikke skrev noe —
 // kortet viser da en lokalisert defaultReason i stedet for en plassholdertekst.
 // #2200: `player_name` is set on the copy sent to the one who delivered the
-// card for someone else, so their card says whose card it is.
+// card for someone else, so their card says whose card it is. #2759: `player_id`
+// is that card's owner, so the row stands until THAT card is delivered again.
+// A copy from before #2759 has only the name.
 const scorecardRejectedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1).nullable().optional(),
   rejecter_name: z.string().min(1).nullable().optional(),
   reason: z.string().optional(),
   player_name: z.string().min(1).nullable().optional(),
+  player_id: uuid.optional(),
 });
 
 // scorecard_reopened: en arrangør åpnet et allerede levert (og kanskje
@@ -238,10 +241,13 @@ const teamMemberWithdrewSchema = z.object({
 // som game_finished — game_name brukes i innboks-detalj + mail. (#376)
 // #2200: `others_count` er satt når påminnelsen gjelder kort mottakeren har
 // ført for andre; da har varselet sin egen tekst («Lever kortene du har ført»).
+// #2759: `card_user_ids` er alle kortene påminnelsen gjelder, så raden står til
+// de er levert. Rader fra før #2759 har bare antallet.
 const deliverReminderSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   others_count: z.number().int().positive().optional(),
+  card_user_ids: z.array(uuid).min(1).optional(),
 });
 
 // missing_score_reminder (#2268): arrangøren trykket «Påminn» på en hull-rad i

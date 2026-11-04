@@ -2,10 +2,17 @@ import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { chunkIds } from './inboxReads';
 
 export type ArchiveOpts = {
   userId: string;
+  /**
+   * The caller's own RLS client when there are no cookies (the app's route,
+   * `callerScopedClient`). Omitted: the request's cookie client.
+   */
+  client?: SupabaseClient<Database>;
   /**
    * Hvis satt: arkiver kun dette ene varselet (✕-knapp per kort).
    * Hvis utelatt: arkiver alle LESTE varsler for brukeren («Tøm leste»).
@@ -46,7 +53,7 @@ export type ArchiveOpts = {
 export async function archiveNotifications(
   opts: ArchiveOpts,
 ): Promise<boolean> {
-  const supabase = await getServerClient();
+  const supabase = opts.client ?? (await getServerClient());
   const nowIso = new Date().toISOString();
 
   if (opts.notificationId) {

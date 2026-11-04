@@ -126,7 +126,13 @@ describe('runDeliveryReminderSweepForGame', () => {
       {
         userId: 'kari',
         kind: 'deliver_reminder',
-        payload: { game_id: GAME.id, game_name: GAME.name, others_count: 2 },
+        payload: {
+          game_id: GAME.id,
+          game_name: GAME.name,
+          others_count: 2,
+          // #2759: the inbox row stands until exactly these cards are delivered.
+          card_user_ids: ['kari', 'ola', 'gjest'],
+        },
       },
     ]);
     const [claim, ...extra] = claims();
@@ -172,7 +178,7 @@ describe('runDeliveryReminderSweepForGame', () => {
     await run();
 
     expect(notifyMock.mock.calls[0][0]).toMatchObject({
-      payload: { others_count: 1 },
+      payload: { others_count: 1, card_user_ids: ['kari', 'ola'] },
     });
   });
 
