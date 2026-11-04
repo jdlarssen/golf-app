@@ -376,6 +376,15 @@ describe('Leaderboard — reaksjonene (#2754)', () => {
     expect(screen.getByTestId(rowSelector).props.accessibilityRole).toBeUndefined();
   });
 
+  it('ferdig tavle: ingen hjelpelinje, også når ingen har reagert', async () => {
+    mockBundleOverride.current = { ...mockBundle, game: { ...bundleGame, status: 'finished' } };
+    await renderLeaderboard();
+    await waitFor(() => expect(mockFetchGameReactions).toHaveBeenCalled());
+    await screen.findByTestId('solo-board');
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId('reaction-hint')).toBeNull();
+  });
+
   it('ferdig tavle: reaksjonene kan gis der også', async () => {
     mockBundleOverride.current = { ...mockBundle, game: { ...bundleGame, status: 'finished' } };
     await renderLeaderboard();
