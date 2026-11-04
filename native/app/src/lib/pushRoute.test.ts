@@ -103,7 +103,6 @@ describe('pushTarget — cupen (#2752)', () => {
 describe('pushTarget', () => {
   it.each([
     [`/games/${GAME}`],
-    [`/games/${GAME}/approve`],
     [`/no/games/${GAME}`],
   ])('%s åpner spillets side', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
@@ -119,6 +118,39 @@ describe('pushTarget', () => {
   ])('%s åpner tavla', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'Leaderboard', params: { gameId: GAME } });
   });
+
+  // #2759: varselet åpner skjermen som svarer på det.
+  it.each([
+    [`/games/${GAME}/approve`, 'Approve'],
+    [`/no/games/${GAME}/approve?varsel=${NOTE}`, 'Approve'],
+    [`/games/${GAME}/submit`, 'Scorecard'],
+    [`/games/${GAME}/submit/`, 'Scorecard'],
+    [`/games/${GAME}/avslutt`, 'EndGame'],
+    [`/en/games/${GAME}/avslutt#kåring`, 'EndGame'],
+  ])('%s åpner %s', (url, name) => {
+    expect(pushTarget(url)).toEqual({ name, params: { gameId: GAME } });
+  });
+
+  it.each([[`/games/${GAME}/approved`], [`/games/${GAME}/submits`], [`/games/${GAME}/avslutte`]])(
+    '%s er ingen av dem og åpner spillets side',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
+    },
+  );
+
+  it.each([['/profile/venner'], ['/no/profile/venner'], [`/profile/venner?varsel=${NOTE}`]])(
+    '%s åpner vennene',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'Friends', params: { from: 'notification' } });
+    },
+  );
+
+  it.each([['/profile/historikk'], [`/en/profile/historikk?varsel=${NOTE}`]])(
+    '%s åpner statistikken',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'RoundStats' });
+    },
+  );
 
   it('en sti som bare ligner på /leaderboard åpner spillets side', () => {
     expect(pushTarget(`/games/${GAME}/leaderboards`)).toEqual({
@@ -144,7 +176,7 @@ describe('pushTarget', () => {
   );
 
   // `/games/%E0%A4%A` er en ødelagt `%`-sekvens: `decodeURIComponent` kaster.
-  it.each([['/'], [`/admin/games/${GAME}`], ['/profile/venner'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
+  it.each([['/'], [`/admin/games/${GAME}`], ['/profile'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
     '%p åpner Hjem',
     (url) => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });

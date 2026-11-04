@@ -3,11 +3,15 @@
 // Serveren legger stien i APNs-payloaden (`url`, fra
 // `notificationDestination` i lib/notifications/deeplink.ts): `/games/{id}`,
 // `/games/{id}/approve`, `/games/{id}/leaderboard` og andre. Alt som gjelder et
-// spill åpner spillets side (`GameHome`). Resten åpner Hjem, også
-// arrangørsidene under `/admin/…`, som appen ikke har. Unntaket er
-// `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
-// hullet (`Hole`), og `/games/{id}/leaderboard` (#2632, «Resultatet er klart»):
-// den åpner tavla (`Leaderboard`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
+// spill åpner spillets side (`GameHome`), så sant stien ikke peker på en skjerm
+// i spillet: `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag)
+// åpner hullet (`Hole`), `/games/{id}/leaderboard` (#2632, «Resultatet er klart»)
+// åpner tavla (`Leaderboard`), `/games/{id}/approve` godkjenningen (`Approve`),
+// `/games/{id}/submit` scorekortet (`Scorecard`) og `/games/{id}/avslutt`
+// avslutningen (`EndGame`, alle tre #2759). `/profile/venner` åpner vennene
+// (`Friends`) og `/profile/historikk` statistikken (`RoundStats`). Resten åpner
+// Hjem, også arrangørsidene under `/admin/…`, som appen ikke har. I innboksen
+// åpner de nettsiden (`inboxTarget.ts`). Ligavarslene (#2638: runden er åpen, fristen nærmer seg)
 // peker på `/liga/{id}` og åpner ligaen (`League`). Åpningsvarselet og
 // fristvarselet i en simulatorliga (#2675) peker på `/liga/{id}/runde/{rid}/spill`
 // og åpner startsiden for runden (`LeagueRoundStart`) med ligaen under.
@@ -40,12 +44,20 @@ export type PushTarget =
   | { name: 'GameHome'; params: { gameId: string } }
   | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
   | { name: 'Leaderboard'; params: { gameId: string } }
+  | { name: 'Approve'; params: { gameId: string } }
+  | { name: 'Scorecard'; params: { gameId: string } }
+  | { name: 'EndGame'; params: { gameId: string } }
+  | { name: 'Friends'; params: { from: 'notification' } }
+  | { name: 'RoundStats' }
   | { name: 'League'; params: { leagueId: string } }
   | { name: 'Cup'; params: { cupId: string } }
   | { name: 'CupParticipants'; params: { cupId: string } }
   | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'Home' };
+
+/** Et mål med en egen skjerm, altså alt annet enn «tilbake til Hjem». */
+export type ScreenTarget = Exclude<PushTarget, { name: 'Home' }>;
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
 export type PushRequestLike = {
@@ -56,6 +68,11 @@ export type PushRequestLike = {
 const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
 const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
 const LEADERBOARD_SUFFIX = /^\/leaderboard(?:[/?#]|$)/;
+const APPROVE_SUFFIX = /^\/approve(?:[/?#]|$)/;
+const SUBMIT_SUFFIX = /^\/submit(?:[/?#]|$)/;
+const FINISH_SUFFIX = /^\/avslutt(?:[/?#]|$)/;
+const FRIENDS_PATH = /^\/(?:[a-z]{2}\/)?profile\/venner(?:[/?#]|$)/;
+const HISTORY_PATH = /^\/(?:[a-z]{2}\/)?profile\/historikk(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
@@ -95,6 +112,11 @@ export function pushTarget(url: string | null): PushTarget {
       if (LEADERBOARD_SUFFIX.test(url!.slice(match[0].length))) {
         return { name: 'Leaderboard', params: { gameId } };
       }
+      // #2759: varselet peker på skjermen som svarer på det.
+      const rest = url!.slice(match[0].length);
+      if (APPROVE_SUFFIX.test(rest)) return { name: 'Approve', params: { gameId } };
+      if (SUBMIT_SUFFIX.test(rest)) return { name: 'Scorecard', params: { gameId } };
+      if (FINISH_SUFFIX.test(rest)) return { name: 'EndGame', params: { gameId } };
       return { name: 'GameHome', params: { gameId } };
     }
   }
@@ -118,6 +140,9 @@ export function pushTarget(url: string | null): PushTarget {
   const cup = url ? CUP_PATH.exec(url) : null;
   const cupId = cup ? decodedOrNull(cup[1]) : null;
   if (cupId && cupId !== 'bli-med') return { name: 'Cup', params: { cupId } };
+  // #2759: venneforespørselen og statistikken bak et merke.
+  if (url && FRIENDS_PATH.test(url)) return { name: 'Friends', params: { from: 'notification' } };
+  if (url && HISTORY_PATH.test(url)) return { name: 'RoundStats' };
   return { name: 'Home' };
 }
 

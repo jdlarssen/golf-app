@@ -46,6 +46,7 @@ const VARIANT_BY_ROUTE = {
   AccountSettings: 'default',
   NotificationsAndTheme: 'default',
   Friends: 'default',
+  Inbox: 'default',
   FriendLink: 'default',
   RoundDiary: 'default',
   RoundStats: 'default',

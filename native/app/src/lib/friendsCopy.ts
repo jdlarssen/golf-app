@@ -119,8 +119,10 @@ export function friendLinkConnectCard(name: string): string {
  * «Bli venn med …» går pila til skjermen under (Hjem), så toppen nevner ikke
  * Profil: bare pila, med standardetiketten «Tilbake» (som Profil selv).
  */
-export function friendsTopBar(from: 'friendLink' | undefined): { kicker: string; backLabel?: string } {
-  if (from === 'friendLink') return { kicker: '', backLabel: undefined };
+export function friendsTopBar(
+  from: 'friendLink' | 'notification' | undefined,
+): { kicker: string; backLabel?: string } {
+  if (from) return { kicker: '', backLabel: undefined };
   return { kicker: PROFILE_TEXT.heading, backLabel: PROFILE_TEXT.backToProfile };
 }
 

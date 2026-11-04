@@ -9,6 +9,10 @@
 // som fire lenker under spillene dine — alt sammen ting som handler om deg og
 // ikke om runden. De bor i profil-rommet nå. Hjem handler igjen bare om spill.
 //
+// #2759: konvolutten ved siden av HCP-pillen åpner innboksen, med antall uleste
+// (eierens svar 02.11: «Ja, knapp på Hjem»). Tallet hentes med resten ved fokus og
+// når appen kommer i forgrunnen. En feilet telling lar forrige tall stå.
+//
 // #2385: Hjem har ingen navigasjonslinje (designlerretet). Veien til
 // profil-rommet er HCP-pillen oppe til høyre, til bunnmenyen kommer (Hjem v2,
 // eierens svar 30.09: «Trykk på HCP-pillen»). Uten handicap viser pillen bare
@@ -83,12 +87,14 @@ import {
 } from '../data/homeList';
 import { fetchMyCups } from '../data/cup';
 import { fetchMyLeagues } from '../data/league';
+import { unreadCount } from '../data/inbox';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
-import { PinFlagHero } from '../components/icons/Icons';
+import { KonvoluttIcon, PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, hcpA11yLabel, profileA11yLabel } from '../lib/homeCopy';
+import { inboxButtonA11yLabel } from '../lib/inboxCopy';
 import { LEAGUE_TEXT } from '../lib/leagueCopy';
 import { MARKER_TEXT, markerCardSubtitle } from '../lib/markerCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
@@ -102,7 +108,7 @@ import { DELETE_TEXT } from '../lib/cupDeleteCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { FONTS, TAP, fraunces, interLine, useTheme } from '../theme';
 import { PushPromptCard } from '../components/PushPromptCard';
 import { StatusBarBand } from '../components/StatusBarBand';
 
@@ -116,6 +122,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<OwnProfile | null>(null);
+  const [unread, setUnread] = useState(0);
   // «Ligaene dine» (#2638): tom = ingen seksjon, også når kallet feilet.
   const [leagues, setLeagues] = useState<AppLeagueSummary[]>([]);
   const [cups, setCups] = useState<AppCupSummary[]>([]);
@@ -149,6 +156,9 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     setDeviceTick((n) => n + 1);
     // Hilsenen og HCP-pillen. Best-effort: uten profil står bare datoen.
     void fetchOwnProfile(userId).then(setProfile, () => undefined);
+    void unreadCount().then((count) => {
+      if (count !== null) setUnread(count);
+    });
     // Ligaene: best-effort, og en feil skjuler seksjonen.
     void fetchMyLeagues().then(
       (result) => setLeagues(result.ok ? result.leagues : []),
@@ -375,7 +385,12 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         ]}
         testID="home-screen"
       >
-        <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+        <Top
+          profile={profile}
+          unread={unread}
+          onProfile={() => navigation.navigate('Profile')}
+          onInbox={() => navigation.navigate('Inbox')}
+        />
 
         {/* #2758: spørsmålet om varsler, aldri midt i en runde. */}
         <PushPromptCard roundInProgress={(split?.active.length ?? 0) > 0} />
@@ -534,7 +549,17 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
  * navnet. Pillen åpner profil-rommet, der handicapet oppdateres. Er profilen
  * ikke hentet, står lenka «Profil» på samme sted.
  */
-function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: () => void }) {
+function Top({
+  profile,
+  unread,
+  onProfile,
+  onInbox,
+}: {
+  profile: OwnProfile | null;
+  unread: number;
+  onProfile: () => void;
+  onInbox: () => void;
+}) {
   const { colors } = useTheme();
   const name = profile ? (firstName(profile.name) ?? HOME_TEXT.playerFallback) : null;
   const hcp =
@@ -552,42 +577,59 @@ function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: ()
       >
         {formatWeekdayDayMonth(now)}
       </Text>
-      {name !== null ? (
+      <View style={styles.topRow}>
+        {name !== null ? (
+          <Pressable
+            onPress={onProfile}
+            hitSlop={HCP_SLOP}
+            accessibilityRole="link"
+            accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
+            style={[
+              styles.hcpPill,
+              { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
+            ]}
+            testID="open-profile"
+          >
+            <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
+              {name}
+            </Text>
+            {hcp !== null ? (
+              <>
+                <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
+                <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+                <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+              </>
+            ) : null}
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={onProfile}
+            accessibilityRole="link"
+            // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
+            hitSlop={PROFILE_SLOP}
+            testID="open-profile"
+          >
+            <Text style={[styles.profileLink, { color: colors.primary }]}>
+              {PROFILE_TEXT.heading}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
-          onPress={onProfile}
+          onPress={onInbox}
           hitSlop={HCP_SLOP}
           accessibilityRole="link"
-          accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
-          style={[
-            styles.hcpPill,
-            { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
-          ]}
-          testID="open-profile"
+          accessibilityLabel={inboxButtonA11yLabel(unread)}
+          style={[styles.inboxPill, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          testID="open-inbox"
         >
-          <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
-            {name}
-          </Text>
-          {hcp !== null ? (
-            <>
-              <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
-              <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-              <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
-            </>
+          <KonvoluttIcon size={18} color={colors.text} />
+          {unread > 0 ? (
+            <Text style={[styles.inboxCount, { color: colors.text }]} testID="home-inbox-count">
+              {unread}
+            </Text>
           ) : null}
         </Pressable>
-      ) : (
-        <Pressable
-          onPress={onProfile}
-          accessibilityRole="link"
-          // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
-          hitSlop={PROFILE_SLOP}
-          testID="open-profile"
-        >
-          <Text style={[styles.profileLink, { color: colors.primary }]}>
-            {PROFILE_TEXT.heading}
-          </Text>
-        </Pressable>
-      )}
+      </View>
     </View>
   );
 }
@@ -674,6 +716,21 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: TEXT_INSET,
   },
+  // Konvolutten står ved siden av pillen, og pillen krymper heller enn å dytte den ut.
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '100%' },
+  inboxPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    flexShrink: 0,
+    minWidth: TAP,
+    minHeight: 41,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+  },
+  inboxCount: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   // Tittelen krymper og brekker heller enn å dytte pillen ut av skjermen.
   title: { ...TITLE, flexShrink: 1 },
@@ -685,6 +742,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    flexShrink: 1,
   },
   // Navnet er pillens første ord og skal ikke dytte handicapet ut: det avkortes.
   hcpName: { ...interLine(13, 16), fontFamily: FONTS.sansMedium, flexShrink: 1, maxWidth: 112 },

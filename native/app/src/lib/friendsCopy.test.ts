@@ -116,6 +116,7 @@ describe('friendsTopBar', () => {
 
   it('har bare pila, med standardetiketten, når «Bli venn med …» åpnet siden', () => {
     expect(friendsTopBar('friendLink')).toEqual({ kicker: '', backLabel: undefined });
+    expect(friendsTopBar('notification')).toEqual({ kicker: '', backLabel: undefined });
   });
 });
 

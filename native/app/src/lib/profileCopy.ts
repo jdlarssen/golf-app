@@ -168,8 +168,8 @@ export const PROFILE_TEXT = {
   pushPromptLater: 'Ikke nå',
   pushPromptDoneTitle: 'Varsler er på',
   pushPromptDoneBody: 'Vi sier ifra med en gang noe skjer.',
-  /** Designets fotnote. Appen har ingen innboks ennå, webben har. */
-  pushFooter: 'Innboksen på tornygolf.no får alt uansett. Dette styrer bare pling på telefonen.',
+  /** Designets fotnote. */
+  pushFooter: 'Innboksen i appen får alt uansett. Dette styrer bare pling på telefonen.',
   /** Knappen under menyen (#2256 PR 3), som i designet. */
   shareBagTag: 'Del bag-taggen',
   /** Når bildet eller delearket feilet. Et avbrutt ark er ingen feil. */

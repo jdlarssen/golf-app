@@ -67,7 +67,7 @@ describe('listenForPushTaps', () => {
       shouldSetBadge: false,
     });
 
-    responseListener?.(tap(`/games/${GAME}/approve`));
+    responseListener?.(tap(`/games/${GAME}`));
     expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
     // #2632: «Resultatet er klart» åpner tavla, ikke spillets side.
     responseListener?.(tap(`/games/${GAME}/leaderboard`));
@@ -112,7 +112,7 @@ describe('listenForPushTaps', () => {
     responseListener?.(tap(`/games/${GAME}/approve?varsel=${NOTE}`));
     expect(mockMarkNotificationRead).toHaveBeenCalledTimes(1);
     expect(mockMarkNotificationRead).toHaveBeenCalledWith(NOTE);
-    expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
+    expect(open).toHaveBeenCalledWith({ name: 'Approve', params: { gameId: GAME } });
   });
 
   it('#2201: et trykk uten gyldig ?varsel= merker ingenting', () => {

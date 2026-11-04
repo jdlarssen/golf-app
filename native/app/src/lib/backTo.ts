@@ -95,6 +95,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   MarkerApprove: 'League',
   Profile: 'Home',
   EditProfile: 'Profile',
+  Inbox: 'Home',
 };
 
 /** Står skjermen `screen` over `name` i hierarkiet? */

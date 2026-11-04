@@ -52,6 +52,7 @@ import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
+import { INBOX_TEXT } from './lib/inboxCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
@@ -69,6 +70,7 @@ import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
+import { Inbox } from './screens/Inbox';
 import { InvitationLink } from './screens/InvitationLink';
 import { Leaderboard } from './screens/Leaderboard';
 import { Cup } from './screens/Cup';
@@ -166,9 +168,12 @@ export type RootStackParamList = {
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
    * `from: 'friendLink'` (#2627): åpnet fra «Bli venn med …», så toppen har
-   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`).
+   * bare pila («Tilbake»), uten «PROFIL» (`friendsTopBar`). `from:
+   * 'notification'` (#2759) er det samme når et varsel åpnet den.
    */
-  Friends: { selfInitials?: string; from?: 'friendLink' } | undefined;
+  Friends: { selfInitials?: string; from?: 'friendLink' | 'notification' } | undefined;
+  /** Innboksen (#2759): varslene dine og det som venter på deg, fra konvolutten på Hjem. */
+  Inbox: undefined;
   /**
    * «Bli venn med …» (#2627): venne-lenka eller QR-koden på bag-taggen åpnet
    * appen. `code` er venne-koden fra lenka (`lib/appLinkUrl.ts`).
@@ -484,6 +489,13 @@ export function RootNavigator() {
             const top = friendsTopBar(route.params?.from);
             return kickerHeader(top.kicker, FRIENDS_TEXT.heading, { backLabel: top.backLabel });
           }}
+        />
+        {/* Innboksen (#2759): eierens svar på #2256, tilbakepil til bunnmenyen
+            kommer. «Innboks» står stort i innholdet, som i designet. */}
+        <Stack.Screen
+          name="Inbox"
+          component={Inbox}
+          options={kickerHeader('', INBOX_TEXT.kicker)}
         />
         {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
             og eierens navn stort i innholdet. */}

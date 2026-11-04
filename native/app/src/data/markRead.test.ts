@@ -2,7 +2,7 @@
 // mockede Supabase-grensen: kvitteringen (`steps`) er spørringen som går ut.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { READ_ON_VISIT, type VisitSurface } from '../../../../lib/notifications/readOnVisit';
-import { markNotificationRead, markVisitRead } from './markRead';
+import { markNotificationIdsRead, markNotificationRead, markVisitRead } from './markRead';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
@@ -90,6 +90,35 @@ describe('markNotificationRead', () => {
     const { queryStub, routeFrom } = mocks();
     routeFrom({ notifications: [queryStub({ data: null, error: { message: 'nede' } })] });
     await expect(markNotificationRead(NOTE)).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe('markNotificationIdsRead', () => {
+  it('merker radene i skiver på 100, og bare de uleste', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const first = queryStub({ data: null, error: null });
+    const second = queryStub({ data: null, error: null });
+    routeFrom({ notifications: [first, second] });
+    const ids = Array.from({ length: 150 }, (_, i) => `n-${i}`);
+
+    await markNotificationIdsRead(ids);
+
+    expect((stepArgs(first, 'in')[0]?.[1] as string[]).length).toBe(100);
+    expect((stepArgs(second, 'in')[0]?.[1] as string[]).length).toBe(50);
+    expect(stepArgs(first, 'is')).toEqual([['read_at', null]]);
+  });
+
+  it('en tom liste skriver ingenting', async () => {
+    const { supabase } = mocks();
+    await markNotificationIdsRead([]);
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('en DB-feil logges og stopper resten, og kastes aldri', async () => {
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({ notifications: [queryStub({ data: null, error: { message: 'nede' } })] });
+    await expect(markNotificationIdsRead(Array.from({ length: 150 }, (_, i) => `n-${i}`))).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
   });
 });

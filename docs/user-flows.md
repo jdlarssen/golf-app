@@ -130,7 +130,9 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
 1. **Tilbake fører dit du kom fra.** Åpnet du skjermen fra et varsel, en lenke eller rett fra
    hjemskjermen, finnes ikke noe «der du kom fra». Da går tilbake til skjermen over i hierarkiet:
    Hjem → spillet → hull, scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
-   kort. Hjem → Profil → rommene under profilen.
+   kort. Hjem → Profil → rommene under profilen. Innboksen ligger rett over Hjem, og det
+   den åpner, ligger over den, med spillet, ligaen eller cupen imellom der push også legger den under:
+   innboks → spillet → godkjenning.
    Unntak (#2748): står andre skjermer åpne når varselet eller lenka kommer,
    legges den nye skjermen oppå, og tilbake går dit du sto. Står du på hull 5 og trykker på en
    ligalenke, er du tilbake på hull 5 med ett trykk.
@@ -268,7 +270,7 @@ flowchart LR
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
 | Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |
-| Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (arrangøren av spillet eller admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`, #2440). Reglene bor i `lib/notifications/inboxSections.ts`. Et trykk markerer lest; saker som er avgjort andre steder, vises som lest neste gang. Åpner du siden et varsel lenker til, er det lest (kartet `READ_ON_VISIT` i `lib/notifications/readOnVisit.ts`, `markReadOnVisit`, #2201). Et trykk på et pushvarsel merker akkurat det varselet (lenka bærer `?varsel=<id>`, `lib/notifications/readMarker.ts`). Nyheter om Tørny tenner ikke prikken og kommer ikke som push (`QUIET_KINDS`); de står på Hjem og i innboksen. Månedsbrev-bryteren står på Profil under «App». |
+| Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (arrangøren av spillet eller admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`, #2440). Reglene bor i `lib/notifications/inboxSections.ts`. Et trykk markerer lest; saker som er avgjort andre steder, vises som lest neste gang. Åpner du siden et varsel lenker til, er det lest (kartet `READ_ON_VISIT` i `lib/notifications/readOnVisit.ts`, `markReadOnVisit`, #2201). Et trykk på et pushvarsel merker akkurat det varselet (lenka bærer `?varsel=<id>`, `lib/notifications/readMarker.ts`). Nyheter om Tørny tenner ikke prikken og kommer ikke som push (`QUIET_KINDS`); de står på Hjem og i innboksen. Månedsbrev-bryteren står på Profil under «App». I appen (#2759) åpnes innboksen fra konvolutten øverst på Hjem, med antall uleste. Tavla kommer ferdig skrevet fra `GET /api/inbox`, med de samme reglene. «Godta» og «Avslå» går gjennom `POST /api/inbox/[id]/decide`. Et trykk åpner samme skjerm som pushen, og en sti uten skjerm i appen åpner nettsiden. Innboksen krever nett. |
 
 ---
 

@@ -22,6 +22,10 @@ const SCREENS = [
   'Hole',
   'Scorecard',
   'Leaderboard',
+  'Approve',
+  'EndGame',
+  'Friends',
+  'RoundStats',
   'League',
   'Cup',
   'CupParticipants',
@@ -106,6 +110,26 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     await stackOf();
     await tap({ name: 'Leaderboard', params: G });
     expect(names()).toEqual(['Home', 'GameHome', 'Leaderboard']);
+  });
+
+  it.each([
+    ['godkjenningen', { name: 'Approve', params: G }],
+    ['scorekortet', { name: 'Scorecard', params: G }],
+    ['avslutningen', { name: 'EndGame', params: G }],
+  ] as const)('%s: spillet under, og tilbake lander på spillet (#2759)', async (_name, target) => {
+    await stackOf();
+    await tap(target);
+    expect(names()).toEqual(['Home', 'GameHome', target.name]);
+    await back();
+    expect(names()).toEqual(['Home', 'GameHome']);
+  });
+
+  it('vennene og statistikken rett over Hjem (#2759)', async () => {
+    await stackOf();
+    await tap({ name: 'Friends', params: { from: 'notification' } });
+    expect(names()).toEqual(['Home', 'Friends']);
+    await tap({ name: 'RoundStats' });
+    expect(names()).toEqual(['Home', 'Friends', 'RoundStats']);
   });
 
   it('ligaen under startsiden og markørens skjerm', async () => {

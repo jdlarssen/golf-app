@@ -13,6 +13,7 @@ import type { CardBundle } from '../data/homeHero';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
 import type { HomeList } from '../data/homeList';
 import type { OwnProfile } from '../data/profile';
+import { unreadCount } from '../data/inbox';
 import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homeCard, homePlayer } from '../test/homeFixtures';
 import { fireForeground } from '../test/syncTriggersMock';
@@ -51,6 +52,7 @@ jest.mock('../components/PushPromptCard', () => {
   };
 });
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
+jest.mock('../data/inbox', () => ({ unreadCount: jest.fn(async () => 0) }));
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
 // #2638: «Ligaene dine» spør `GET /api/liga`; uten ligaer står ingen seksjon.
 jest.mock('../data/league', () => ({
@@ -185,6 +187,42 @@ beforeEach(() => {
   mockState.bundles = { new: HERO_BUNDLE };
   mockState.leagues = { ok: true, leagues: [] };
   mockState.cups = { ok: true, cups: [] };
+});
+
+describe('konvolutten (#2759)', () => {
+  const unreadMock = unreadCount as jest.Mock;
+  afterEach(() => unreadMock.mockResolvedValue(0));
+
+  it('viser antall uleste, sier det i klartekst og åpner innboksen', async () => {
+    unreadMock.mockResolvedValue(3);
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(screen.getByTestId('home-inbox-count').props.children).toBe(3);
+    const button = screen.getByTestId('open-inbox');
+    expect(button.props.accessibilityLabel).toBe('Innboks, 3 uleste');
+    await fireEvent.press(button);
+    expect(navigate).toHaveBeenCalledWith('Inbox');
+  });
+
+  it('ved 0 står konvolutten uten tall', async () => {
+    const { view } = renderHome();
+    await view;
+    expect(screen.getByTestId('open-inbox').props.accessibilityLabel).toBe('Innboks');
+    expect(screen.queryByTestId('home-inbox-count')).toBeNull();
+  });
+
+  it('en feilet telling lar forrige tall stå', async () => {
+    unreadMock.mockResolvedValueOnce(2).mockResolvedValue(null);
+    const { view } = renderHome();
+    await view;
+    expect(screen.getByTestId('home-inbox-count').props.children).toBe(2);
+    await act(async () => {
+      fireForeground();
+    });
+    expect(unreadMock.mock.calls.length).toBeGreaterThan(1);
+    expect(screen.getByTestId('home-inbox-count').props.children).toBe(2);
+  });
 });
 
 it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
