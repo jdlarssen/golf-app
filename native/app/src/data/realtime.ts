@@ -348,6 +348,31 @@ async function mergeIncoming(
 }
 
 /**
+ * #2754: reaksjonene på tavla. Samme topic og filtre som webbens
+ * `ReactionsProvider`. Innholdet i hendelsen brukes ikke: en DELETE har bare
+ * `id` (målt på staging), så en hendelse er bare beskjed om å lese på nytt.
+ * `onResubscribed` fyrer når kanalen er tilbake etter et brudd (#2093).
+ */
+export function subscribeGameReactions(
+  gameId: string,
+  handlers: { onChange: () => void; onResubscribed?: () => void },
+): () => void {
+  const binding = {
+    schema: 'public',
+    table: 'reactions',
+    filter: `game_id=eq.${gameId}`,
+  } as const;
+  return subscribeRealtimeChannel(
+    `reactions:${gameId}`,
+    (channel) =>
+      channel
+        .on('postgres_changes', { event: 'INSERT', ...binding }, () => handlers.onChange())
+        .on('postgres_changes', { event: 'DELETE', ...binding }, () => handlers.onChange()),
+    { onResubscribed: handlers.onResubscribed },
+  );
+}
+
+/**
  * Abonner på score-endringer for ett spill. `onResubscribed` fyrer når kanalen
  * er tilbake etter et brudd (#2093) — da må skjermen hente slagene selv.
  */

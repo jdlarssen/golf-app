@@ -236,7 +236,7 @@ export function validateBingoBangoBongoHole(
 // -----------------------------------------------------------------------------
 
 /** PostgRESTs kode for «insufficient_privilege» — RLS avviste raden. */
-const RLS_DENIED_CODE = '42501';
+export const RLS_DENIED_CODE = '42501';
 
 /**
  * Les svaret på en upsert og gi den ene sannheten tilbake: gikk raden inn?
