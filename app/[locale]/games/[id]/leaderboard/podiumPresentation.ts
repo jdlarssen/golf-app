@@ -8,30 +8,13 @@
  * i den sorterte lista. Høyde, stagger og testid forblir slot-baserte.
  */
 
-export type PodiumPlace = 1 | 2 | 3;
+export { PLACE_TIER, podiumPlace } from '@/lib/leaderboard/podium';
+export type { PodiumPlace, PodiumTier } from '@/lib/leaderboard/podium';
+
+import type { PodiumTier } from '@/lib/leaderboard/podium';
 
 /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
 export type PodiumSlot = 1 | 2 | 3;
-
-export type PodiumTier = 'champagne' | 'silver' | 'bronze';
-
-/**
- * Snevrer den brede `rank: number` inn til medaljong-domenet 1|2|3. På et
- * topp-3-podium er rank alltid ≤ 3 i runtime (rank = første-tied-indeks + 1),
- * så clampen nedover til 3 er rent defensiv.
- */
-export function podiumPlace(rank: number): PodiumPlace {
-  if (rank <= 1) return 1;
-  if (rank === 2) return 2;
-  return 3;
-}
-
-/** Farge-tier følger faktisk plass (delt rank → samme tier på flere trinn). */
-export const PLACE_TIER: Record<PodiumPlace, PodiumTier> = {
-  1: 'champagne',
-  2: 'silver',
-  3: 'bronze',
-};
 
 /**
  * Trinnhøyde følger slotten — midten er alltid høyest, også når to trinn

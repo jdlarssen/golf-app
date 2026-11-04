@@ -8,7 +8,6 @@ import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   buildShareCardData,
   type ShareCardModel,
-  type ShareCardRow,
 } from '@/lib/games/buildShareCardData';
 import { formatPublicName } from '@/lib/names/formatPublicName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
@@ -22,15 +21,19 @@ import {
   SHARE_CARD_WIDTH,
   cardKicker,
   chooseHeadline,
-  rowDisplayName,
   shareCardHeight,
 } from '@/lib/og/shareCardLayout';
 import {
   headlineSpec,
-  scoreFigure,
+  headlineWordLines,
+  keepGoldTogether,
+  lineText,
+  osloDate,
   resultWords,
   type HeadlineSpec,
+  type Word,
 } from '@/lib/og/shareCardHeadline';
+import { matchRows, placementRows, type CardRow } from '@/lib/og/shareCardRows';
 import { isLeagueCardAlone } from '@/lib/games/finishedResultBadge';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
@@ -90,8 +93,6 @@ function Gold({ children }: { children?: ReactNode }) {
   return <>{children}</>;
 }
 
-type Word = { text: string; gold: boolean };
-
 /** Rich text as a flat list of words, each marked gold or not. */
 function inlineWords(node: ReactNode, gold = false): Word[] {
   if (node === null || node === undefined || typeof node === 'boolean') return [];
@@ -107,35 +108,6 @@ function inlineWords(node: ReactNode, gold = false): Word[] {
     return inlineWords(children, gold || node.type === Gold);
   }
   return [];
-}
-
-/** Joins a run of gold words into one item, so «38 poeng» never splits across lines. */
-function keepGoldTogether(words: Word[]): Word[] {
-  const out: Word[] = [];
-  for (const w of words) {
-    const last = out[out.length - 1];
-    if (w.gold && last?.gold) last.text += ` ${w.text}`;
-    else out.push({ ...w });
-  }
-  return out;
-}
-
-/**
- * The headline's words in lines. A result headline breaks before its
- * preposition, as the artboard does («Marte vant» / «med 38 poeng»); the other
- * headlines run as one block that wraps on width.
- */
-function headlineWordLines(words: Word[], spec: HeadlineSpec): Word[][] {
-  const resultHeadline =
-    spec.kind === 'won' || spec.kind === 'shared' || spec.kind === 'sharedMany';
-  const gold = words.findIndex((w) => w.gold);
-  if (!resultHeadline || gold < 1) return [words];
-  return [words.slice(0, gold - 1), words.slice(gold - 1)];
-}
-
-/** The lines as one string, «\n» between them, for `headlineLayout`. */
-function lineText(lines: Word[][]): string {
-  return lines.map((line) => line.map((w) => w.text).join(' ')).join('\n');
 }
 
 /**
@@ -174,53 +146,6 @@ function InlineText({
       ))}
     </div>
   );
-}
-
-/** One row of the card, before it is drawn. */
-type CardRow = {
-  /** The rank printed in the medallion; null for a matchplay side. */
-  rank: number | null;
-  name: string;
-  /** The figure on the right; null on a losing or halved matchplay side. */
-  figure: string | null;
-  winner: boolean;
-};
-
-/** `alone` (#2712): a league round played alone, so no medallion and no gold. */
-function placementRows(model: ShareCardModel, alone: boolean): CardRow[] {
-  const winnerRank = model.winners.length > 0 && !alone ? model.winners[0].rank : null;
-  return model.podium.slice(0, 3).map((r: ShareCardRow) => ({
-    rank: alone ? null : r.rank,
-    name: rowDisplayName(r.memberNames),
-    figure: scoreFigure(r.score),
-    winner: winnerRank !== null && r.rank === winnerRank,
-  }));
-}
-
-function matchRows(model: ShareCardModel): CardRow[] {
-  const match = model.match;
-  if (!match) return [];
-  const margin = match.headline.kind === 'winner' ? match.headline.margin : null;
-  return match.sides.map((side) => ({
-    rank: null,
-    name: rowDisplayName(side.memberNames),
-    figure: side.won ? margin : null,
-    winner: side.won,
-  }));
-}
-
-function osloDate(iso: string | null, locale: AppLocale): string | null {
-  if (!iso) return null;
-  try {
-    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'nb-NO', {
-      timeZone: 'Europe/Oslo',
-      day: 'numeric',
-      month: 'long',
-      // Satori draws a no-break space wider than a space.
-    }).format(new Date(iso)).replace(/\u00a0/g, ' ');
-  } catch {
-    return null;
-  }
 }
 
 function notFound(): Response {
@@ -307,7 +232,7 @@ export async function GET(
   );
   const parByHole = new Map(holeRows.map((h) => [h.hole_number, h.par_mens]));
   const holeCount = holeRows.length;
-  const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale);
+  const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale === 'en' ? 'en-GB' : 'nb-NO');
   const gameName = localizeGameName(game.name, courseName, resolvedLocale);
   const kicker = cardKicker(gameName, courseName);
 
