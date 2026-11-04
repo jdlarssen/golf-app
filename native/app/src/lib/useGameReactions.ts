@@ -45,7 +45,7 @@ export type ReactionFailure = 'save' | 'denied';
 export interface GameReactions {
   loaded: boolean;
   canReact: boolean;
-  /** Til du har gitt din første reaksjon i spillet. */
+  /** Bare på en tom tavle, som i tegningen: reaksjoner på radene viser selv veien. */
   showHint: boolean;
   target: ReactionTarget | null;
   failure: ReactionFailure | null;
@@ -185,7 +185,10 @@ export function useGameReactions({
   );
 
   const showHint = useMemo(
-    () => canReact && loaded && Object.values(summary).every((row) => row.mine.length === 0),
+    () =>
+      canReact &&
+      loaded &&
+      Object.values(summary).every((row) => Object.keys(row.counts).length === 0),
     [canReact, loaded, summary],
   );
 

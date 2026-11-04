@@ -286,14 +286,29 @@ describe('stripa', () => {
 });
 
 describe('hjelpelinja', () => {
-  it('står til du har gitt din første reaksjon, og aldri før første svar', async () => {
+  it('står på en tom tavle, og aldri før første svar', async () => {
     const pending = deferred<unknown>();
     fetchMock.mockReturnValueOnce(pending.promise);
     const { result } = await setup();
     expect(result.current.showHint).toBe(false);
-    await act(async () => { pending.resolve(one(2)); });
+    await act(async () => { pending.resolve({}); });
     expect(result.current.showHint).toBe(true);
+  });
+
+  it('går bort når du gir din første reaksjon, og kommer tilbake når tavla er tom igjen', async () => {
+    const { result } = await setup();
+    await flush();
     await act(async () => { result.current.toggle('mate', '👏'); });
+    expect(result.current.showHint).toBe(false);
+    await act(async () => { result.current.toggle('mate', '👏'); });
+    expect(result.current.showHint).toBe(true);
+  });
+
+  it('står ikke når andre har fått reaksjoner, selv om du ikke har gitt noen', async () => {
+    fetchMock.mockResolvedValue(one(2));
+    const { result } = await setup();
+    await flush();
+    expect(result.current.loaded).toBe(true);
     expect(result.current.showHint).toBe(false);
   });
 
