@@ -114,7 +114,7 @@ export function ReactableRow({
   );
 }
 
-/** Linja på en tom tavle. */
+/** Linja på en tom tavle mens runden går. */
 export function ReactionHint({ color }: { color?: string }) {
   const ctx = useReactionsContext();
   const { colors } = useTheme();
@@ -237,7 +237,7 @@ export function ReactionStrip({
           {message}
         </Text>
       ) : null}
-      <View style={styles.buttons} accessibilityLabel={REACTIONS_TEXT.groupLabel}>
+      <View style={styles.buttons}>
         {REACTION_EMOJIS.map((emoji) => (
           <ReactionButton
             key={emoji}

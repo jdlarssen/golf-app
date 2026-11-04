@@ -297,6 +297,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
     userId,
     enabled: reactionsOn,
     canReact: reactionsOn && canReact(bundle, userId),
+    live: bundle?.game.status !== 'finished',
   });
   const [reactionStripHeight, setReactionStripHeight] = useState(REACTION_STRIP_ESTIMATE);
   const scrollY = useRef(0);

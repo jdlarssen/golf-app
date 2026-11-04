@@ -44,7 +44,7 @@ const flush = () => act(async () => { await Promise.resolve(); await Promise.res
 
 async function setup(overrides: Partial<Parameters<typeof useGameReactions>[0]> = {}) {
   return await renderHook(() =>
-    useGameReactions({ gameId: 'g', userId: 'me', enabled: true, canReact: true, ...overrides }),
+    useGameReactions({ gameId: 'g', userId: 'me', enabled: true, canReact: true, live: true, ...overrides }),
   );
 }
 
@@ -215,7 +215,88 @@ describe('trykk', () => {
   });
 });
 
+describe('en lesing fra før lagringen var ferdig', () => {
+  it('tar ikke bort et lagret trykk', async () => {
+    const { result } = await setup();
+    await flush();
+    const write = deferred<unknown>();
+    const slowRead = deferred<unknown>();
+    toggleMock.mockReturnValue(write.promise);
+    fetchMock.mockReturnValueOnce(slowRead.promise);
+    await act(async () => { result.current.toggle('mate', '🔥'); });
+    // Trykket på en annen rad leser mens skrivingen pågår.
+    await act(async () => { result.current.openFor(MATE); });
+    await act(async () => { write.resolve({ ok: true }); });
+    await act(async () => { slowRead.resolve({}); });
+    expect(result.current.getRow('mate').mine).toEqual(['🔥']);
+  });
+});
+
+describe('et nytt spill på samme skjerm', () => {
+  const twoGames = () =>
+    renderHook(
+      ({ gameId }: { gameId: string }) =>
+        useGameReactions({ gameId, userId: 'me', enabled: true, canReact: true, live: true }),
+      { initialProps: { gameId: 'a' } },
+    );
+
+  it('tømmer tallene og lukker stripa, også når lesingen feiler', async () => {
+    fetchMock.mockResolvedValue(one(2));
+    const { result, rerender } = await twoGames();
+    await flush();
+    await act(async () => { result.current.openFor(MATE); });
+    expect(result.current.target).toEqual(MATE);
+    fetchMock.mockRejectedValue(new Error('uten nett'));
+    await rerender({ gameId: 'b' });
+    await flush();
+    expect(result.current.target).toBeNull();
+    expect(result.current.getRow('mate')).toEqual({ counts: {}, mine: [] });
+    expect(result.current.loaded).toBe(false);
+  });
+
+  it('et sent svar fra det forrige spillet kastes', async () => {
+    const { result, rerender } = await twoGames();
+    await flush();
+    const late = deferred<unknown>();
+    fetchMock.mockReturnValueOnce(late.promise);
+    await act(async () => { void mockResume.current?.(); });
+    // Det nye spillets lesing feiler, så ingen nyere lesing slår det sene svaret.
+    fetchMock.mockRejectedValue(new Error('uten nett'));
+    await rerender({ gameId: 'b' });
+    await flush();
+    await act(async () => { late.resolve(one(9)); });
+    expect(result.current.getRow('mate').counts).toEqual({});
+  });
+});
+
 describe('feil', () => {
+  it('etter at stripa er lukket, åpner stripa seg igjen på raden og sier fra', async () => {
+    const { result } = await setup();
+    await flush();
+    const write = deferred<unknown>();
+    toggleMock.mockReturnValue(write.promise);
+    await act(async () => { result.current.openFor(MATE); });
+    await act(async () => { result.current.toggle('mate', '🔥'); });
+    await act(async () => { result.current.close(); });
+    expect(result.current.target).toBeNull();
+    await act(async () => { write.resolve({ ok: false, failure: 'db_error' }); });
+    expect(result.current.target).toEqual(MATE);
+    expect(result.current.failure).toBe('save');
+    expect(result.current.getRow('mate').mine).toEqual([]);
+  });
+
+  it('etter at stripa er flyttet, går den tilbake til raden som feilet', async () => {
+    const { result } = await setup();
+    await flush();
+    const write = deferred<unknown>();
+    toggleMock.mockReturnValue(write.promise);
+    await act(async () => { result.current.openFor(MATE); });
+    await act(async () => { result.current.toggle('mate', '🔥'); });
+    await act(async () => { result.current.openFor({ userId: 'other', name: 'Jonas' }); });
+    await act(async () => { write.resolve({ ok: false, failure: 'db_error' }); });
+    expect(result.current.target).toEqual(MATE);
+  });
+
   it.each<[string, ReactionFailure]>([
     ['db_error', 'save'],
     ['no_rows', 'save'],
@@ -307,6 +388,13 @@ describe('hjelpelinja', () => {
   it('står ikke når andre har fått reaksjoner, selv om du ikke har gitt noen', async () => {
     fetchMock.mockResolvedValue(one(2));
     const { result } = await setup();
+    await flush();
+    expect(result.current.loaded).toBe(true);
+    expect(result.current.showHint).toBe(false);
+  });
+
+  it('står ikke på en ferdig tavle, for tegningen av den har ingen linje', async () => {
+    const { result } = await setup({ live: false });
     await flush();
     expect(result.current.loaded).toBe(true);
     expect(result.current.showHint).toBe(false);
