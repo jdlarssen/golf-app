@@ -10,7 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BOARD_TEXT } from '../../lib/boardCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import type { ReactionTarget } from '../../lib/useGameReactions';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, boardSelectRing, useTheme } from '../../theme';
 import { useReactionsContext } from './ReactionsProvider';
 import { ReactableRow, ReactionHint, ReactionPlate } from './RowReactions';
 
@@ -52,7 +52,7 @@ export function LeaderTable({
   rows: readonly LeaderRow[];
   testID: string;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, scheme, ui } = useTheme();
   const selectedId = useReactionsContext()?.target?.userId;
   const cellsOf = (row: LeaderRow) =>
     columns.map((column, index) => (
@@ -98,7 +98,9 @@ export function LeaderTable({
             style={[
               styles.reactableRow,
               { borderBottomColor: colors.border },
-              selectedId === row.reactionTarget.userId ? { backgroundColor: colors.primarySoft } : null,
+              selectedId === row.reactionTarget.userId
+                ? [styles.selectedRow, { boxShadow: boardSelectRing(colors, scheme) }]
+                : null,
             ]}
             testID={`${testID}-row-${row.key}`}
           >
@@ -156,6 +158,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 2,
   },
+  // Ringen får luft rundt tallene uten at innholdet flytter seg.
+  selectedRow: { borderRadius: 6, marginHorizontal: -6, paddingHorizontal: 6 },
   cells: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
   numericCell: { textAlign: 'right' },
   // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per

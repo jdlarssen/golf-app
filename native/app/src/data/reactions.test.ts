@@ -7,6 +7,9 @@ import { fetchGameReactions, toggleReaction } from './reactions';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
+const mockNetwork = { online: true };
+jest.mock('./syncTriggers', () => ({ isDeviceOnline: () => mockNetwork.online }));
+
 const { queryStub, routeFrom, stepArgs } =
   require('../test/supabaseMock') as typeof import('../test/supabaseMock');
 
@@ -43,6 +46,16 @@ describe('fetchGameReactions', () => {
 });
 
 describe('toggleReaction', () => {
+  afterEach(() => {
+    mockNetwork.online = true;
+  });
+
+  it('uten nett svarer den straks, uten å vente på et kall som ikke kommer fram', async () => {
+    mockNetwork.online = false;
+    routeFrom({ reactions: [] });
+    await expect(toggleReaction(INPUT)).resolves.toEqual({ ok: false, failure: 'db_error' });
+  });
+
   it('setter inn når raden ikke finnes, med egen bruker som giver', async () => {
     const insert = queryStub({ data: [{ id: 'r1' }], error: null });
     routeFrom({ reactions: [missing(), insert] });

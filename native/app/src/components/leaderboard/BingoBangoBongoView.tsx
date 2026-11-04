@@ -13,7 +13,7 @@ import { BOARD_TEXT } from '../../lib/boardCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import type { BingoBangoBongoResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
-import { useTheme } from '../../theme';
+import { boardSelectRing, useTheme } from '../../theme';
 import { ReactableRow, ReactionHint, ReactionPlate } from './RowReactions';
 import { useReactionsContext } from './ReactionsProvider';
 import { SettlementCard } from './SettlementCard';
@@ -28,7 +28,7 @@ export function BingoBangoBongoView({
   settlement: Settlement | null;
   nameOf: (userId: string) => string;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, scheme, ui } = useTheme();
   const selectedId = useReactionsContext()?.target?.userId;
   const anyPoints = result.players.some((player) => player.totalPoints > 0);
 
@@ -48,7 +48,7 @@ export function BingoBangoBongoView({
             ui.card,
             styles.row,
             player.rank === 1 ? { borderColor: colors.accent } : null,
-            selectedId === player.userId ? { backgroundColor: colors.primarySoft } : null,
+            selectedId === player.userId ? { boxShadow: boardSelectRing(colors, scheme) } : null,
           ]}
           testID={`bbb-player-${player.userId}`}
         >
