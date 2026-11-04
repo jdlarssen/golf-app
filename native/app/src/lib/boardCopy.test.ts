@@ -9,6 +9,8 @@ import {
   BOARD_PATSOME_TEXT,
   BOARD_TEAM_TEXT,
   BOARD_TEXT,
+  REACTIONS_APP_TEXT,
+  REACTIONS_TEXT,
   ROUND_REPORT_APP_TEXT,
   ROUND_REPORT_TEXT,
   SIDE_PANEL_TEXT,
@@ -56,6 +58,11 @@ describe('paritet med messages/no.json', () => {
     expect(ROUND_REPORT_TEXT).toStrictEqual({ heading: source.leaderboard.roundReport.heading });
   });
 
+  it('reaksjonene er leaderboard.reactions (#2754)', () => {
+    const { open: _open, ...reactions } = source.leaderboard.reactions;
+    expect(REACTIONS_TEXT).toStrictEqual(reactions);
+  });
+
   it('sideturneringens etiketter er panelets', () => {
     const rows: Record<string, string> = source.leaderboard.sideTournament.panel.rows;
     expect(SIDE_PANEL_TEXT).toStrictEqual({
@@ -69,6 +76,7 @@ describe('paritet med messages/no.json', () => {
     ['BOARD_TEAM_TEXT', BOARD_TEAM_TEXT],
     ['BOARD_PATSOME_TEXT', BOARD_PATSOME_TEXT],
     ['ROUND_REPORT_APP_TEXT', ROUND_REPORT_APP_TEXT],
+    ['REACTIONS_APP_TEXT', REACTIONS_APP_TEXT],
   ])('appens egne tekster (%s) er ingen av verdiene i leaderboard.board', (_name, block) => {
     const web = new Set(sourceLeaves.values());
     expect(Object.values(block).filter((value) => web.has(value))).toEqual([]);

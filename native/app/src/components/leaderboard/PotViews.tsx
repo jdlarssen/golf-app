@@ -39,6 +39,7 @@ export function SkinsView({
         rows={result.players.map((player) => ({
           key: player.userId,
           highlight: player.rank === 1,
+          reactionTarget: { userId: player.userId, name: nameOf(player.userId) },
           cells: [player.rank, nameOf(player.userId), player.totalSkins, player.holesWon],
         }))}
       />
@@ -84,6 +85,7 @@ export function NassauView({
         rows={result.players.map((player) => ({
           key: player.userId,
           highlight: player.rank === 1,
+          reactionTarget: { userId: player.userId, name: nameOf(player.userId) },
           cells: [player.rank, nameOf(player.userId), player.units],
         }))}
       />

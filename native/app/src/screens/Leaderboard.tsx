@@ -25,7 +25,10 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { reportQuote } from '../../../../lib/games/roundReportExcerpt';
@@ -42,6 +45,8 @@ import {
 } from '../components/leaderboard/RoundReportQuote';
 import { SideTournamentSection } from '../components/leaderboard/SideTournamentSection';
 import { WithdrawnPlayers } from '../components/leaderboard/WithdrawnPlayers';
+import { ReactionsContext, type ReactionsContextValue } from '../components/leaderboard/ReactionsProvider';
+import { ReactionStrip } from '../components/leaderboard/RowReactions';
 import { BoardStrip } from '../components/leaderboard/SoloBoard';
 import { TeamStrip } from '../components/leaderboard/TeamBoard';
 import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
@@ -94,7 +99,9 @@ import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { scoresGameId } from '../lib/segmentRound';
+import { canReact, gameHasReactions, revealScrollY } from '../lib/reactions';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useGameReactions } from '../lib/useGameReactions';
 import { useRoundReportArrival } from '../lib/useRoundReportArrival';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { teeShotMinimum } from '../lib/teeShotTeams';
@@ -124,6 +131,8 @@ type ReportView = {
 const STRIP_ESTIMATE = 70;
 /** Stripa står 20 pt over bunnen (pluss sikker sone), som i tegningen. */
 const STRIP_BOTTOM = 20;
+/** Reaksjonsstripa før den er målt: raden med tittelen, knappene og luften (#2754). */
+const REACTION_STRIP_ESTIMATE = 116;
 
 /**
  * Skal sideturneringen vises for dette spillet?
@@ -281,6 +290,21 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   }, [navigation, bundle, boardFormat, teamBand, pillText, pillLive]);
   const [stripHeight, setStripHeight] = useState(STRIP_ESTIMATE);
 
+  // #2754: reaksjonene. Lag, matchplay og Patsome koster ingen lesing og ingen kanal.
+  const reactionsOn = bundle != null && gameHasReactions(bundle.game);
+  const reactions = useGameReactions({
+    gameId,
+    userId,
+    enabled: reactionsOn,
+    canReact: reactionsOn && canReact(bundle, userId),
+  });
+  const [reactionStripHeight, setReactionStripHeight] = useState(REACTION_STRIP_ESTIMATE);
+  const scrollY = useRef(0);
+  const onBoardScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = event.nativeEvent.contentOffset.y;
+  }, []);
+  const { height: windowHeight } = useWindowDimensions();
+
   // #2632: historien fra pressetribunen, når runden er ferdig og den finnes.
   const finishedGame = bundle?.game.status === 'finished';
   const report = finishedGame ? (bundle?.game.roundReport ?? null) : null;
@@ -322,6 +346,20 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
       animated: !reduceMotion,
     });
   }, [bodyTop, reportTop, reduceMotion]);
+  // Tavla flytter seg ikke, men en rad nederst må stå over stripa.
+  const onRowOpened = useCallback(
+    (rowBottom: number) => {
+      const stripTop = windowHeight - (STRIP_BOTTOM + insets.bottom) - reactionStripHeight;
+      const y = revealScrollY({ rowBottom, stripTop, scrollY: scrollY.current });
+      if (y === null) return;
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ y, animated: !reduceMotion }));
+    },
+    [insets.bottom, reactionStripHeight, reduceMotion, windowHeight],
+  );
+  const reactionsValue = useMemo<ReactionsContextValue | null>(
+    () => (reactionsOn ? { ...reactions, onRowOpened } : null),
+    [onRowOpened, reactions, reactionsOn],
+  );
   const quote = report ? reportQuote(report) : null;
   const reportFor = (variant: RoundReportQuoteVariant): ReportView | null =>
     report && quote ? { report, quote, variant } : null;
@@ -408,78 +446,109 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   if (boardFormat) {
     const stripBottom = STRIP_BOTTOM + insets.bottom;
     const strip = soloBoard?.strip ?? null;
+    const reacting = reactions.target !== null;
     return (
-      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-        {focused ? <StatusBar style="light" /> : null}
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[
-            styles.boardScroll,
-            // Sideturneringen og «Vis alle» skal ikke havne bak stripa.
-            { paddingBottom: strip ? stripHeight + stripBottom + 12 : stripBottom },
-          ]}
-          testID="leaderboard-screen"
-        >
-          {/* Båndets siste 8 pt, bak tavleflatens øvre kant (tegningens -8). */}
-          <View style={[styles.bandTail, { backgroundColor: colors.surfaceStrong }]} />
-          {seedFailed ? (
-            <Text style={[ui.muted, styles.boardSeed]} testID="leaderboard-seed-failed">
-              {SEED_FAILED_TEXT}
-            </Text>
-          ) : null}
-          <View style={soloBoard ? null : styles.plainBody} onLayout={onBodyLayout}>
-            <LeaderboardBody
-              bundle={bundle}
-              scores={scores}
-              extras={extras}
-              sideWinners={sideWinners}
-              soloBoard={soloBoard}
-              roundReport={reportFor('solo')}
-              onReadMore={readMore}
-              onReportLayout={onReportLayout}
+      <ReactionsContext.Provider value={reactionsValue}>
+        <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+          {focused ? <StatusBar style="light" /> : null}
+          <ScrollView
+            ref={scrollRef}
+            onScroll={onBoardScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              styles.boardScroll,
+              // Sideturneringen og «Vis alle» skal ikke havne bak stripa.
+              {
+                paddingBottom: reacting
+                  ? reactionStripHeight + stripBottom + 12
+                  : strip
+                    ? stripHeight + stripBottom + 12
+                    : stripBottom,
+              },
+            ]}
+            testID="leaderboard-screen"
+          >
+            {/* Båndets siste 8 pt, bak tavleflatens øvre kant (tegningens -8). */}
+            <View style={[styles.bandTail, { backgroundColor: colors.surfaceStrong }]} />
+            {seedFailed ? (
+              <Text style={[ui.muted, styles.boardSeed]} testID="leaderboard-seed-failed">
+                {SEED_FAILED_TEXT}
+              </Text>
+            ) : null}
+            <View style={soloBoard ? null : styles.plainBody} onLayout={onBodyLayout}>
+              <LeaderboardBody
+                bundle={bundle}
+                scores={scores}
+                extras={extras}
+                sideWinners={sideWinners}
+                soloBoard={soloBoard}
+                roundReport={reportFor('solo')}
+                onReadMore={readMore}
+                onReportLayout={onReportLayout}
+              />
+            </View>
+          </ScrollView>
+          {reacting ? (
+            <ReactionStrip bottom={stripBottom} onLayout={setReactionStripHeight} />
+          ) : strip ? (
+            <BoardStrip
+              strip={strip}
+              finished={soloBoard?.variant === 'finished'}
+              bottom={stripBottom}
+              onLayout={setStripHeight}
+              onAction={() => onStripAction(strip.action)}
             />
-          </View>
-        </ScrollView>
-        {strip ? (
-          <BoardStrip
-            strip={strip}
-            finished={soloBoard?.variant === 'finished'}
-            bottom={stripBottom}
-            onLayout={setStripHeight}
-            onAction={() => onStripAction(strip.action)}
-          />
-        ) : null}
-      </View>
+          ) : null}
+        </View>
+      </ReactionsContext.Provider>
     );
   }
 
+  const plainStripBottom = STRIP_BOTTOM + insets.bottom;
   return (
-    // #1954 D3: formatene uten egen tavle; luften under står over systemlinja.
-    <ScrollView
-      ref={scrollRef}
-      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
-      testID="leaderboard-screen"
-    >
-      <Text style={ui.title}>{bundle.game.name}</Text>
-      <Text style={ui.muted} testID="leaderboard-subtitle">
-        {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
-      </Text>
-      {seedFailed ? (
-        <Text style={ui.muted} testID="leaderboard-seed-failed">
-          {SEED_FAILED_TEXT}
-        </Text>
-      ) : null}
+    <ReactionsContext.Provider value={reactionsValue}>
+      <View style={styles.screen}>
+        {/* #1954 D3: formatene uten egen tavle; luften under står over systemlinja. */}
+        <ScrollView
+          ref={scrollRef}
+          onScroll={onBoardScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={[
+            ui.scroll,
+            {
+              paddingBottom:
+                reactions.target !== null
+                  ? reactionStripHeight + plainStripBottom + 12
+                  : 20 + insets.bottom,
+            },
+          ]}
+          testID="leaderboard-screen"
+        >
+          <Text style={ui.title}>{bundle.game.name}</Text>
+          <Text style={ui.muted} testID="leaderboard-subtitle">
+            {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
+          </Text>
+          {seedFailed ? (
+            <Text style={ui.muted} testID="leaderboard-seed-failed">
+              {SEED_FAILED_TEXT}
+            </Text>
+          ) : null}
 
-      <LeaderboardBody
-        bundle={bundle}
-        scores={scores}
-        extras={extras}
-        sideWinners={sideWinners}
-        roundReport={reportFor('plain')}
-        onReadMore={readMore}
-        onReportLayout={onReportLayout}
-      />
-    </ScrollView>
+          <LeaderboardBody
+            bundle={bundle}
+            scores={scores}
+            extras={extras}
+            sideWinners={sideWinners}
+            roundReport={reportFor('plain')}
+            onReadMore={readMore}
+            onReportLayout={onReportLayout}
+          />
+        </ScrollView>
+        {reactions.target !== null ? (
+          <ReactionStrip bottom={plainStripBottom} onLayout={setReactionStripHeight} />
+        ) : null}
+      </View>
+    </ReactionsContext.Provider>
   );
 }
 

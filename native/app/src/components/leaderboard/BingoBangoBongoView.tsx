@@ -9,9 +9,13 @@
 // lenge før noen har tastet et tall. Motoren har rangert radene; her sorteres
 // ingenting om.
 import { StyleSheet, Text, View } from 'react-native';
+import { BOARD_TEXT } from '../../lib/boardCopy';
+import { formatMessage } from '../../lib/kavalkadeCopy';
 import type { BingoBangoBongoResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { useTheme } from '../../theme';
+import { ReactableRow, ReactionHint, ReactionPlate } from './RowReactions';
+import { useReactionsContext } from './ReactionsProvider';
 import { SettlementCard } from './SettlementCard';
 
 export function BingoBangoBongoView({
@@ -25,17 +29,26 @@ export function BingoBangoBongoView({
   nameOf: (userId: string) => string;
 }) {
   const { colors, ui } = useTheme();
+  const selectedId = useReactionsContext()?.target?.userId;
   const anyPoints = result.players.some((player) => player.totalPoints > 0);
 
   return (
     <View testID="bbb-view">
       {result.players.map((player) => (
-        <View
+        <ReactableRow
           key={player.userId}
+          target={{ userId: player.userId, name: nameOf(player.userId) }}
+          label={[
+            formatMessage(BOARD_TEXT.srPlace, { rank: player.rank }),
+            nameOf(player.userId),
+            `${player.bingos} bingo, ${player.bangos} bango, ${player.bongos} bongo`,
+            formatMessage(BOARD_TEXT.srPoints, { total: player.totalPoints }),
+          ].join(', ')}
           style={[
             ui.card,
             styles.row,
             player.rank === 1 ? { borderColor: colors.accent } : null,
+            selectedId === player.userId ? { backgroundColor: colors.primarySoft } : null,
           ]}
           testID={`bbb-player-${player.userId}`}
         >
@@ -52,6 +65,9 @@ export function BingoBangoBongoView({
             >
               {player.bingos} bingo · {player.bangos} bango · {player.bongos} bongo
             </Text>
+            <View style={styles.plate}>
+              <ReactionPlate userId={player.userId} />
+            </View>
           </View>
           <Text
             style={[ui.value, ui.num]}
@@ -59,8 +75,9 @@ export function BingoBangoBongoView({
           >
             {player.totalPoints}
           </Text>
-        </View>
+        </ReactableRow>
       ))}
+      <ReactionHint />
 
       {!anyPoints ? (
         <Text style={ui.muted} testID="bbb-no-points">
@@ -81,4 +98,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rank: { minWidth: 28, textAlign: 'center' },
   detail: { flex: 1, gap: 2 },
+  plate: { alignItems: 'flex-start' },
 });

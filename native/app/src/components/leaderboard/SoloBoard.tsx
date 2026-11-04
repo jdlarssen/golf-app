@@ -8,6 +8,8 @@
 //
 // Stripa nederst («Din runde», «Ditt resultat») er en egen komponent fordi
 // skjermen legger den fast over innholdet, utenfor rullingen.
+//
+// #2754: reaksjonene (`RowReactions.tsx`). Uten provider er tavla som før.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { toneKey, visibleBoardRows } from '../../../../../lib/leaderboard/boardRules';
@@ -20,6 +22,7 @@ import {
   FONTS,
   TAP,
   boardRing,
+  boardSelectRing,
   boardSlabShadow,
   boardStripShadow,
   fraunces,
@@ -27,6 +30,8 @@ import {
   useTheme,
   type ThemeColors,
 } from '../../theme';
+import { useReactionsContext } from './ReactionsProvider';
+import { ReactableRow, ReactionHint, ReactionPlate } from './RowReactions';
 
 /** Kolonnene i tegningen: plass 44, spiller, hull 46 og tallet 58, med 6 mellom. */
 const PLACE_W = 44;
@@ -82,6 +87,7 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
         )}
 
         {live ? <Legend colors={colors} /> : null}
+        <ReactionHint color={colors.onStrongWarm} />
       </View>
 
       {canCollapse ? (
@@ -105,6 +111,7 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
 
 function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; showHoles: boolean }) {
   const { colors, scheme } = useTheme();
+  const selected = useReactionsContext()?.target?.userId === row.userId;
   // Lederen live har hvite skilt og ringen rundt navnet; vinneren ferdig har
   // gull fyll og ring på alle tre.
   const winner = !live && row.leader;
@@ -115,14 +122,22 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
   // Små tekster på din rad er `text` i natt: `muted` er for svak mot `youFill`.
   const small = row.you && scheme === 'dark' ? colors.text : colors.muted;
   const num = live ? null : styles.tabular;
+  // Navneskiltet bærer alt: gullringen til lederen og ringen for åpen stripe.
+  const nameRings = [
+    BOARD_PLAQUE_SHADOW,
+    live && row.leader ? ring : null,
+    winner ? ring : null,
+    selected ? boardSelectRing(colors, scheme) : null,
+  ].filter(Boolean);
 
   return (
-    <View
+    <ReactableRow
+      target={{ userId: row.userId, name: row.shortName }}
       style={[styles.row, !live && { minHeight: winner ? 54 : 44 }]}
       // Hele raden er ett element for skjermleseren, med plass, tall og hull
       // i én setning; skiltene alene sier ikke hva tallene er.
-      accessible
-      accessibilityLabel={row.a11y}
+      plainAccessible
+      label={row.a11y}
       testID={`board-row-${row.userId}`}
     >
       <View style={[plaque, styles.cellCenter, { width: PLACE_W }, winnerPlaque]} testID={`board-row-${row.userId}-place`}>
@@ -154,8 +169,7 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
         style={[
           plaque,
           styles.nameCell,
-          live && row.leader ? { boxShadow: `${BOARD_PLAQUE_SHADOW}, ${ring}` } : null,
-          winnerPlaque,
+          { boxShadow: nameRings.join(', ') },
           !live && (winner ? styles.nameWinner : styles.nameFinished),
         ]}
         testID={`board-row-${row.userId}-name`}
@@ -174,29 +188,38 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
               </Text>
               <Movement movement={row.movement} small={small} />
             </View>
-            <View style={styles.dots}>
-              {row.recent.map((tone, index) => (
-                <View
-                  key={index}
-                  style={[styles.dot, { backgroundColor: dotColor(colors, tone) }]}
-                  testID="board-dot"
-                />
-              ))}
+            <View style={styles.dotsLine}>
+              <View style={styles.dots}>
+                {row.recent.map((tone, index) => (
+                  <View
+                    key={index}
+                    style={[styles.dot, { backgroundColor: dotColor(colors, tone) }]}
+                    testID="board-dot"
+                  />
+                ))}
+              </View>
+              <ReactionPlate userId={row.userId} ink={small} />
             </View>
           </>
         ) : (
           <>
-            <View style={[styles.nameLine, styles.shrink]}>
-              <Text
-                style={[winner ? styles.nameWinnerText : styles.name, styles.shrink, { color: colors.text }]}
-                numberOfLines={1}
-              >
-                {row.name}
-              </Text>
-              {row.you ? <Text style={[styles.you, { color: colors.primary }]}>{BOARD_TEXT.you}</Text> : null}
+            <View style={[styles.finishedLine, winner ? styles.shrink : null]}>
+              <View style={[styles.nameLine, styles.shrink]}>
+                <Text
+                  style={[winner ? styles.nameWinnerText : styles.name, styles.shrink, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {row.name}
+                </Text>
+                {row.you ? <Text style={[styles.you, { color: colors.primary }]}>{BOARD_TEXT.you}</Text> : null}
+              </View>
+              {winner ? null : <ReactionPlate userId={row.userId} ink={small} />}
             </View>
             {winner ? (
-              <Text style={[styles.winnerWord, { color: colors.accentText }]}>{BOARD_APP_TEXT.winner}</Text>
+              <View style={styles.winnerSide}>
+                <Text style={[styles.winnerWord, { color: colors.accentText }]}>{BOARD_APP_TEXT.winner}</Text>
+                <ReactionPlate userId={row.userId} ink={small} />
+              </View>
             ) : null}
             {row.note ? (
               <Text style={[styles.note, { color: small }]} testID="board-tie-note">
@@ -224,7 +247,7 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
           {row.total}
         </Text>
       </View>
-    </View>
+    </ReactableRow>
   );
 }
 
@@ -374,6 +397,8 @@ const styles = StyleSheet.create({
   nameFinished: { justifyContent: 'center', gap: 3 },
   nameWinner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  finishedLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 },
+  winnerSide: { alignItems: 'flex-end', gap: 3 },
   name: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   nameWinnerText: { ...fraunces(600, 18) },
   you: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
@@ -385,6 +410,8 @@ const styles = StyleSheet.create({
   move: { ...interLine(11, 14), fontFamily: FONTS.sansSemiBold },
   same: { ...interLine(11, 14), fontFamily: FONTS.sans },
   glyph: { fontFamily: FONTS.system, fontWeight: '600' },
+  // Reaksjonene står ved prikkene og gjør aldri raden høyere.
+  dotsLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, height: 13 },
   dots: { flexDirection: 'row', gap: 4, marginTop: 5 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   // Tegningen laster bare Fraunces 500 og 600, så hull-tallet uten vekt

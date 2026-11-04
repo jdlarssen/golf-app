@@ -643,6 +643,14 @@ export function boardRing(colors: ThemeColors, scheme: Scheme): string {
 }
 
 /**
+ * Ringen rundt raden stripa står åpen for (#2754, `Reaksjoner-b-*`). Salvie som
+ * synes mot den mørke tavla i begge drakter; gull er for lederen.
+ */
+export function boardSelectRing(colors: ThemeColors, scheme: Scheme): string {
+  return `0 0 0 2px ${scheme === 'dark' ? colors.primary : colors.live}`;
+}
+
+/**
  * Gullringen rundt lederlaget på lagtavla mens runden pågår (#2579,
  * `Lagtavle-forslag` og `Lagtavle-bestball-forslag-*`): svakere enn
  * {@link boardRing}, 70 % i lys og 80 % i klubbhus-natt.
