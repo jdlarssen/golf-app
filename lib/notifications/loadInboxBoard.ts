@@ -7,6 +7,7 @@ import { archiveStaleNotifications } from './archive';
 import { findSettledActionIds, trimToWholeDays, type InboxRow } from './inboxSections';
 import { readInChunks } from './inboxReads';
 import { markNotificationIdsRead } from './markRead';
+import { WAITING_KINDS } from './readOnVisit';
 import { collectSignupGameIds, partitionStaleSignupNotifications } from './staleNotifications';
 import type { NotificationPayload } from './types';
 
@@ -52,9 +53,10 @@ function gameIdsOf(rows: InboxRow[], kinds: ReadonlySet<string>, unreadOnly = fa
  * fails throws, so the caller shows an error instead of an empty or wrong inbox
  * (#1392).
  *
- * Not every target page marks its varsel read, so this also finds action rows
- * whose matter is settled — the card was approved, the request answered, the
- * fee paid — and returns them as read. The writes stay with the caller
+ * A row that waits leaves «Krever handling» only when its matter is done
+ * (#2759), so this also finds the rows whose matter is settled — the card was
+ * approved, the request answered, the fee paid — and returns them as read. The
+ * writes stay with the caller
  * (`settleInboxBoard`, in `after()`): no DB writes during a Next.js 16 render.
  */
 export async function loadInboxBoard(
@@ -98,7 +100,9 @@ export async function loadInboxBoard(
     notifications,
     new Set(['game_finished', 'all_scorecards_delivered', 'game_stale_reminder']),
   );
-  const lookupGameIds = [...new Set([...signupGameIds, ...finishedGameIds])];
+  // #2759: every game a row waits on: is it over, or gone?
+  const waitingGameIds = gameIdsOf(notifications, new Set<string>(WAITING_KINDS), true);
+  const lookupGameIds = [...new Set([...signupGameIds, ...finishedGameIds, ...waitingGameIds])];
   // Every `.in()` below goes in slices of 100: the inbox reads up to 600
   // rows, and a list of a few hundred ids overflows the request URL (#2263).
   // A failed lookup would stamp every signup varsel stale — and archive it
@@ -121,7 +125,16 @@ export async function loadInboxBoard(
   // The viewer's own player row: the result, and whether a reminder is settled.
   const ownGameIds = gameIdsOf(
     visible,
-    new Set(['game_finished', 'payment_reminder', 'deliver_reminder', 'missing_score_reminder']),
+    new Set([
+      'game_finished',
+      'payment_reminder',
+      'deliver_reminder',
+      'missing_score_reminder',
+      'scorecard_rejected',
+      'scorecard_reopened',
+      'invite',
+      'player_added',
+    ]),
   );
   const peerGameIds = gameIdsOf(visible, new Set(['peer_approval_request']), true);
   const requestIds = visible.flatMap((row) => {
@@ -130,11 +143,27 @@ export async function loadInboxBoard(
     return id ? [id] : [];
   });
 
-  const [own, cards, requests] = await Promise.all([
+  const unread = visible.filter((row) => row.read_at == null);
+  const markerGameIds = gameIdsOf(unread, new Set(['league_marker_request']));
+  const teamInviteGameIds = gameIdsOf(unread, new Set(['team_invite']));
+  const payloadIds = (kinds: ReadonlySet<string>, field: string): string[] => [
+    ...new Set(
+      unread.flatMap((row) => {
+        if (!kinds.has(row.kind)) return [];
+        const id = (row.payload as Record<string, unknown>)[field];
+        return typeof id === 'string' ? [id] : [];
+      }),
+    ),
+  ];
+  const friendIds = payloadIds(new Set(['friend_request']), 'actor_id');
+  const joinGroupIds = payloadIds(new Set(['club_join_request']), 'group_id');
+  const roundIds = payloadIds(new Set(['league_round_open', 'league_round_closing']), 'round_id');
+
+  const [own, cards, requests, markerCards, pendingFriends, pendingOwnRequests, pendingJoins, playedRounds] = await Promise.all([
     readInChunks(ownGameIds, (slice) =>
       client
         .from('game_players')
-        .select('game_id, result_summary, paid_at, submitted_at')
+        .select('game_id, result_summary, paid_at, submitted_at, accepted_at, withdrawn_at')
         .eq('user_id', userId)
         .in('game_id', slice)
         .overrideTypes<Array<{ result_summary: ResultSummary | null }>>(),
@@ -150,6 +179,41 @@ export async function loadInboxBoard(
     readInChunks(requestIds, (slice) =>
       getAdminClient().from('game_registration_requests').select('id, status').in('id', slice),
     ),
+    // Admin client, but only for games named in the user's own varsler: the
+    // marker need not share the game (RLS «shared game» would hide the card).
+    readInChunks(markerGameIds, (slice) =>
+      getAdminClient()
+        .from('game_players')
+        .select('game_id, user_id, submitted_at, approved_at')
+        .in('game_id', slice),
+    ),
+    // Every request below is the viewer's own, or one named in their own varsler.
+    readInChunks(friendIds, (slice) =>
+      getAdminClient()
+        .from('friendships')
+        .select('requester_id')
+        .eq('addressee_id', userId)
+        .eq('status', 'pending')
+        .in('requester_id', slice),
+    ),
+    readInChunks(teamInviteGameIds, (slice) =>
+      getAdminClient()
+        .from('game_registration_requests')
+        .select('game_id')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .in('game_id', slice),
+    ),
+    readInChunks(joinGroupIds, (slice) =>
+      getAdminClient().from('group_join_requests').select('group_id').eq('status', 'pending').in('group_id', slice),
+    ),
+    readInChunks(roundIds, (slice) =>
+      getAdminClient()
+        .from('games')
+        .select('league_round_id, game_players!inner(user_id)')
+        .eq('game_players.user_id', userId)
+        .in('league_round_id', slice),
+    ),
   ]);
 
   const now = Date.now();
@@ -157,12 +221,27 @@ export async function loadInboxBoard(
   const settledIds = findSettledActionIds(visible, {
     viewerId: userId,
     requestStatus: new Map(requests.map((r) => [r.id, r.status as string])),
-    cards,
-    own: new Map(own.map((r) => [r.game_id, { paid_at: r.paid_at, submitted_at: r.submitted_at }])),
+    cards: [...cards, ...markerCards],
+    own: new Map(
+      own.map((r) => [
+        r.game_id,
+        {
+          paid_at: r.paid_at,
+          submitted_at: r.submitted_at,
+          accepted_at: r.accepted_at,
+          withdrawn_at: r.withdrawn_at,
+        },
+      ]),
+    ),
     lockedGameIds: new Set(
       games.filter((g) => g.status === 'active' || g.status === 'finished').map((g) => g.id),
     ),
     finishedGameIds: new Set(games.filter((g) => g.status === 'finished').map((g) => g.id)),
+    gameStatus: new Map(games.map((g) => [g.id, g.status as string])),
+    pendingFriendIds: new Set(pendingFriends.map((r) => r.requester_id)),
+    pendingOwnRequestGameIds: new Set(pendingOwnRequests.map((r) => r.game_id)),
+    pendingJoinGroupIds: new Set(pendingJoins.map((r) => r.group_id)),
+    playedRoundIds: new Set(playedRounds.flatMap((r) => (r.league_round_id ? [r.league_round_id] : []))),
     now,
   });
 

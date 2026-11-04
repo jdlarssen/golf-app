@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
-import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
+import { NOT_WAITING_FILTER, READ_ON_VISIT, WAITING_KINDS, type VisitSurface } from './readOnVisit';
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 // #726: markRead bruker admin-client (cookies-fri) fordi flere call-sites
@@ -26,6 +26,14 @@ beforeEach(() => {
  * `id`). Side-besøkene (kind + payload-nøkkel) testes i `markReadOnVisit`
  * under (#2201).
  */
+// #2759: a page visit checks the rows that wait, through the inbox's own read.
+const loadBoardMock = vi.fn(async () => ({ staleIds: [], settledIds: ['s1'] }));
+const settleBoardMock = vi.fn(async () => {});
+vi.mock('./loadInboxBoard', () => ({
+  loadInboxBoard: (...args: unknown[]) => loadBoardMock(...(args as [])),
+  settleInboxBoard: (...args: unknown[]) => settleBoardMock(...(args as [])),
+}));
+
 describe('markNotificationsRead', () => {
   it('userId-only → UPDATE notifications SET read_at WHERE user_id=$1 AND read_at IS NULL', async () => {
     supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
@@ -44,6 +52,24 @@ describe('markNotificationsRead', () => {
     // Ingen ekstra .eq utover user_id.
     const eqCalls = calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toHaveLength(1);
+    // #2759: «Marker alt lest» lar saker som venter stå.
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'or', args: [NOT_WAITING_FILTER] }));
+  });
+
+  it('#2759: et trykk på et pushvarsel lar en sak som venter stå', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markNotificationsRead } = await import('./markRead');
+    await markNotificationsRead({ userId: 'u1', notificationId: 'n1', zeroRowsOk: true });
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'or', args: [NOT_WAITING_FILTER] }),
+    );
+  });
+
+  it('#2759: ett varsel uten push-markøren har ikke filteret: `decideFromInbox` vet at saken er gjort', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'n1' }], error: null }]);
+    const { markNotificationsRead } = await import('./markRead');
+    await markNotificationsRead({ userId: 'u1', notificationId: 'n1' });
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'or')).toBe(false);
   });
 
   it('notificationId-filter → .eq("id", "n-uuid") (per-tap fra innboks)', async () => {
@@ -151,6 +177,21 @@ describe('markNotificationsRead', () => {
 describe('markReadOnVisit', () => {
   const ENTITY = 'entity-uuid';
 
+  it('#2759: er det saker som venter, sjekkes de, så prikken ikke står etter at saken er gjort', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }, { data: null, error: null, count: 2 }]);
+    const { markReadOnVisit } = await import('./markRead');
+    await markReadOnVisit({ userId: 'u1', surface: 'gameHome', entityId: ENTITY });
+    expect(loadBoardMock).toHaveBeenCalledWith(supabaseMock, 'u1');
+    expect(settleBoardMock).toHaveBeenCalledWith('u1', { staleIds: [], settledIds: ['s1'] });
+  });
+
+  it('#2759: hullsiden tegnes for hvert slag, og sjekker ikke', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }, { data: null, error: null, count: 2 }]);
+    const { markReadOnVisit } = await import('./markRead');
+    await markReadOnVisit({ userId: 'u1', surface: 'gameHole', entityId: ENTITY });
+    expect(loadBoardMock).not.toHaveBeenCalled();
+  });
+
   it.each<{ surface: VisitSurface; key: string | null }>([
     { surface: 'gameHome', key: 'game_id' },
     { surface: 'cup', key: 'tournament_id' },
@@ -170,9 +211,17 @@ describe('markReadOnVisit', () => {
       ['notifications', 'eq', ['user_id', 'u1']],
       ['notifications', 'is', ['read_at', null]],
       ['notifications', 'in', ['kind', [...READ_ON_VISIT[surface].kinds]]],
+      ['notifications', 'or', [NOT_WAITING_FILTER]],
       ...(key ? [['notifications', 'eq', [`payload->>${key}`, ENTITY]]] : []),
       ['notifications', 'select', ['id']],
+      // Then the rows that wait: nothing waits here, so the check stops there.
+      ['notifications', 'select', ['id', { count: 'exact', head: true }]],
+      ['notifications', 'eq', ['user_id', 'u1']],
+      ['notifications', 'is', ['read_at', null]],
+      ['notifications', 'is', ['archived_at', null]],
+      ['notifications', 'in', ['kind', [...WAITING_KINDS]]],
     ]);
+    expect(loadBoardMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 

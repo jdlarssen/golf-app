@@ -16,10 +16,16 @@
 // innboksen står for: alle uleste i en gruppe, i skiver på 100, siden id-ene
 // går i adressen (`chunkIds`).
 //
+// **Saker som venter** (#2759, eierens svar 04.11) merkes ikke av besøk eller
+// push: de står under «Krever handling» til serveren ser at saken er gjort
+// (`NOT_WAITING_FILTER`). Et trykk i innboksen merker dem heller ikke, fordi
+// `unreadIds` fra serveren ikke har dem med.
+//
 // Alle er best-effort: 0 rader er vanlig (ingenting ulest), en feil logges, og
 // ingen av dem kaster. Uten nett skjer ingenting; neste besøk prøver igjen.
 import { chunkIds } from '../../../../lib/notifications/inboxReads';
 import {
+  NOT_WAITING_FILTER,
   READ_ON_VISIT,
   type VisitSurface,
 } from '../../../../lib/notifications/readOnVisit';
@@ -36,7 +42,8 @@ export async function markVisitRead(surface: VisitSurface, entityId?: string): P
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .is('read_at', null)
-      .in('kind', [...kinds]);
+      .in('kind', [...kinds])
+      .or(NOT_WAITING_FILTER);
     if (key && entityId) query = query.eq(`payload->>${key}`, entityId);
     const { error } = await query;
     if (error) console.error('[markRead] besøket ble ikke merket', surface, error.message);
@@ -51,7 +58,8 @@ export async function markNotificationRead(notificationId: string): Promise<void
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .eq('id', notificationId)
-      .is('read_at', null);
+      .is('read_at', null)
+      .or(NOT_WAITING_FILTER);
     if (error) console.error('[markRead] trykket ble ikke merket', error.message);
   } catch (err: unknown) {
     console.error('[markRead] trykket ble ikke merket', err);

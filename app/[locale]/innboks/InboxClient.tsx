@@ -14,6 +14,7 @@ import {
   type InboxRow as InboxRowData,
   type InboxSectionKey,
   type InboxTextContext,
+  waitsUntilDone,
 } from '@/lib/notifications/inboxSections';
 import type { NotificationPayload } from '@/lib/notifications/types';
 import { isKnownKind } from '@/lib/notifications/readOnVisit';
@@ -97,7 +98,8 @@ export function InboxClient({
 
   const sections = buildInboxSections(items, { filter, now });
   const actionCount = countActionRows(items);
-  const hasUnread = items.some((n) => n.read_at == null);
+  // #2759: «Marker alt lest» cannot mark a row that waits, so it does not count here.
+  const hasUnread = items.some((n) => n.read_at == null && !waitsUntilDone(n));
   const ctx: InboxTextContext = {
     t: t as unknown as NotificationTranslator,
     tFinished: tFinished as unknown as NotificationTranslator,
@@ -134,11 +136,12 @@ export function InboxClient({
   /**
    * A tap on a row, a group or a row's button: mark what it stands for read
    * (all members of a group, also those merged as one person), then let the
-   * link navigate. Rows already read are never written again (#1665).
+   * link navigate. Rows already read are never written again (#1665), and a row
+   * that waits stays until its matter is done (#2759).
    */
   function handleOpen(entry: InboxEntry) {
     setStatus(null);
-    const unreadIds = entry.rows.filter((r) => r.read_at == null).map((r) => r.id);
+    const unreadIds = entry.rows.filter((r) => r.read_at == null && !waitsUntilDone(r)).map((r) => r.id);
     if (unreadIds.length === 0) return;
     const snapshot = items;
     const nowIso = new Date().toISOString();
@@ -208,7 +211,9 @@ export function InboxClient({
     setStatus(null);
     const snapshot = items;
     const nowIso = new Date().toISOString();
-    setItems((prev) => prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)));
+    setItems((prev) =>
+      prev.map((n) => (n.read_at == null && !waitsUntilDone(n) ? { ...n, read_at: nowIso } : n)),
+    );
     startMarkAll(async () => {
       await runOptimistic(snapshot, () => markAllAsRead());
     });

@@ -99,9 +99,10 @@ const NEWS = entry({
 const BOARD: InboxWire = {
   actionCount: 2,
   hasUnread: true,
+  unreadCount: 3,
   sections: { action: [REVIEW, REQUEST], today: [FRIEND, CLUB, CANCELLED], earlier: [NEWS] },
 };
-const EMPTY: InboxWire = { actionCount: 0, hasUnread: false, sections: { action: [], today: [], earlier: [] } };
+const EMPTY: InboxWire = { actionCount: 0, hasUnread: false, unreadCount: 0, sections: { action: [], today: [], earlier: [] } };
 
 const NAV_ROUTES = [{ name: 'Home' }, { name: 'Inbox' }];
 function renderScreen() {
@@ -148,7 +149,7 @@ describe('tavla', () => {
   it('«Krever handling» uten noe å gjøre har brikke uten tall, og sier at det er tomt', async () => {
     loadMock.mockResolvedValue({
       ok: true,
-      board: { actionCount: 0, hasUnread: false, sections: { action: [], today: [FRIEND], earlier: [] } },
+      board: { actionCount: 0, hasUnread: false, unreadCount: 0, sections: { action: [], today: [FRIEND], earlier: [] } },
     });
     await renderScreen().view;
     expect(screen.getByText('Krever handling')).toBeTruthy();
@@ -269,7 +270,7 @@ describe('knappene øverst', () => {
   it('er alt lest, heter knappen «Tøm leste»', async () => {
     loadMock.mockResolvedValue({
       ok: true,
-      board: { actionCount: 0, hasUnread: false, sections: { action: [], today: [FRIEND], earlier: [] } },
+      board: { actionCount: 0, hasUnread: false, unreadCount: 0, sections: { action: [], today: [FRIEND], earlier: [] } },
     });
     await renderScreen().view;
     await fireEvent.press(screen.getByTestId('inbox-clear-read'));
@@ -281,7 +282,7 @@ describe('knappene øverst', () => {
     clearMock.mockResolvedValue(false);
     loadMock.mockResolvedValue({
       ok: true,
-      board: { actionCount: 0, hasUnread: false, sections: { action: [], today: [FRIEND], earlier: [] } },
+      board: { actionCount: 0, hasUnread: false, unreadCount: 0, sections: { action: [], today: [FRIEND], earlier: [] } },
     });
     await renderScreen().view;
     await fireEvent.press(screen.getByTestId('inbox-clear-read'));

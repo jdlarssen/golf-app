@@ -210,7 +210,7 @@ describe('InboxClient', () => {
   });
 
   it('«Marker alt lest» med uleste, «Tøm leste» når alt er lest', () => {
-    const { unmount } = renderInbox([makeInvite('a')]);
+    const { unmount } = renderInbox([makeDelivered('b', 'Marte')]);
     expect(screen.getByRole('button', { name: 'Marker alt lest' })).toBeInTheDocument();
     unmount();
     renderInbox([makeInvite('a', true)]);
@@ -218,12 +218,25 @@ describe('InboxClient', () => {
     expect(screen.getByRole('button', { name: 'Tøm leste' })).toBeInTheDocument();
   });
 
-  it('«Bekreft» markerer raden lest og lenker til spillet', () => {
+  // #2759, eierens svar 04.11: saken står til den er gjort.
+  it('«Bekreft» lenker til spillet, og saken står under «Krever handling»', () => {
     renderInbox([makeInvite('a')]);
     const button = screen.getByRole('link', { name: 'Bekreft' });
     expect(button).toHaveAttribute('href', `/games/${GAME}`);
     fireEvent.click(button);
-    expect(markOneAsReadMock).toHaveBeenCalledWith('a');
+    expect(markOneAsReadMock).not.toHaveBeenCalled();
+    expect(markGroupAsReadMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('inbox-section-action')).toHaveTextContent('Per');
+  });
+
+  it('er bare saker som venter ulest, heter knappen «Tøm leste», og den lar dem stå', async () => {
+    clearReadMock.mockResolvedValue({ ok: true });
+    renderInbox([makeInvite('a'), makeInvite('c', true)]);
+    expect(screen.queryByTestId('inbox-mark-all')).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('inbox-clear-read'));
+    });
+    expect(screen.getByTestId('inbox-section-action')).toHaveTextContent('Per');
   });
 
   it('en lest rad skrives ikke på nytt, men lenker fortsatt', () => {
@@ -254,18 +267,18 @@ describe('InboxClient', () => {
     expect(markGroupAsReadMock).toHaveBeenCalledWith([ID(1), ID(2)]);
   });
 
-  it('«Marker alt lest» flytter handlingsradene ned', () => {
-    renderInbox([makeInvite('a')]);
+  it('«Marker alt lest» lar saker som venter stå, og merker resten', () => {
+    renderInbox([makeInvite('a'), makeDelivered('b', 'Marte')]);
     fireEvent.click(screen.getByRole('button', { name: 'Marker alt lest' }));
     expect(markAllAsReadMock).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('inbox-section-action')).not.toBeInTheDocument();
-    expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Per inviterte deg');
+    expect(screen.getByTestId('inbox-section-action')).toHaveTextContent('Per');
+    expect(screen.getByTestId('inbox-row').querySelector('[data-testid="unread-dot"]')).toBeNull();
   });
 
   it('pillen beholder teksten og venter mens «Marker alt lest» pågår', async () => {
     let finish: (v: { ok: boolean }) => void = () => {};
     markAllAsReadMock.mockReturnValue(new Promise((r) => (finish = r)));
-    renderInbox([makeInvite('a')]);
+    renderInbox([makeDelivered('b', 'Marte')]);
     await act(async () => {
       fireEvent.click(screen.getByTestId('inbox-mark-all'));
     });
@@ -281,7 +294,7 @@ describe('InboxClient', () => {
   it('pillen venter også mens «Godta» pågår, så tilbakerullingene ikke krysser', async () => {
     let finish: (v: unknown) => void = () => {};
     decideMock.mockReturnValue(new Promise((r) => (finish = r)));
-    renderInbox([makeRequest('r'), makeInvite('a')]);
+    renderInbox([makeRequest('r'), makeDelivered('b', 'Marte')]);
     await act(async () => {
       fireEvent.click(screen.getByTestId('inbox-approve'));
     });

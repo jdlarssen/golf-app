@@ -7,9 +7,12 @@
 // reglene webben bruker (`lib/notifications/inboxSections.ts`,
 // `lib/notifications/decideFromInbox.ts`).
 //
-// **Resten går rett til Supabase under RLS.** Tallet på Hjem og de to knappene
-// øverst leser og skriver bare egne rader (`notifications_select_own`,
-// `notifications_update_own`), og det samme gjør `markRead.ts`.
+// **Tallet på Hjem kommer med tavla.** Hjem spør serveren, fordi en sak som venter
+// først blir lest når serveren ser at den er gjort (#2759). Da faller tallet
+// straks kortet er godkjent, uten at innboksen må åpnes.
+//
+// **De to knappene øverst går rett til Supabase under RLS.** De skriver bare egne
+// rader (`notifications_update_own`), og det samme gjør `markRead.ts`.
 //
 // **Ingen kø og ingen lokal kopi.** Varsler er ferskvare. Uten nett stopper
 // `callWebRoute` med `offline`, og skjermen sier at innboksen krever nett.
@@ -18,7 +21,7 @@
 // `data/friends.ts`). Skjermen leser aldri et statusnummer.
 import type { InboxAvatar, InboxSectionKey } from '../../../../lib/notifications/inboxSections';
 import type { InboxWire, InboxWireEntry } from '../../../../lib/notifications/inboxWire';
-import { DOT_KINDS } from '../../../../lib/notifications/readOnVisit';
+import { NOT_WAITING_FILTER } from '../../../../lib/notifications/readOnVisit';
 import { supabase } from '../supabase';
 import { callWebRoute, type WebApiFailure } from './webApi';
 
@@ -114,6 +117,7 @@ export async function loadInbox(): Promise<InboxLoadResult> {
     board: {
       actionCount: typeof call.body.actionCount === 'number' ? call.body.actionCount : action!.length,
       hasUnread: call.body.hasUnread === true,
+      unreadCount: typeof call.body.unreadCount === 'number' ? call.body.unreadCount : 0,
       sections: { action: action!, today: today!, earlier: earlier! },
     },
   };
@@ -148,26 +152,13 @@ export async function decideRequest(
 }
 
 /**
- * Tallet på konvolutten: samme regel som prikken på webben
- * (`useUnreadNotificationsCount`). Nyheter teller ikke. `null` når telleren
- * feilet: en feil er ikke null uleste, så Hjem lar forrige tall stå.
+ * Tallet på konvolutten, eller `null` når det ikke kunne hentes: en feil er ikke
+ * null uleste, så Hjem lar forrige tall stå. Serveren teller som prikken på
+ * webben (`DOT_KINDS`), etter at sakene som er gjort, er ute.
  */
 export async function unreadCount(): Promise<number | null> {
-  try {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .is('read_at', null)
-      .in('kind', [...DOT_KINDS]);
-    if (error) {
-      console.error('[inbox] fikk ikke telt uleste', error.message);
-      return null;
-    }
-    return count ?? 0;
-  } catch (err: unknown) {
-    console.error('[inbox] fikk ikke telt uleste', err);
-    return null;
-  }
+  const result = await loadInbox();
+  return result.ok ? result.board.unreadCount : null;
 }
 
 async function ownWrite(what: string, write: () => PromiseLike<{ error: { message: string } | null }>) {
@@ -184,10 +175,17 @@ async function ownWrite(what: string, write: () => PromiseLike<{ error: { messag
   }
 }
 
-/** «Marker alt lest». 0 rader er ingen feil: da var ingenting ulest. */
+/**
+ * «Marker alt lest». 0 rader er ingen feil: da var ingenting ulest. En sak som
+ * venter, blir stående (#2759).
+ */
 export function markAllRead(): Promise<boolean> {
   return ownWrite('marker alt lest', () =>
-    supabase.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null),
+    supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .is('read_at', null)
+      .or(NOT_WAITING_FILTER),
   );
 }
 

@@ -16,6 +16,9 @@ const GAME = '11111111-1111-1111-1111-111111111111';
 
 const AT = new Date(Date.now() - 60_000).toISOString();
 let unread: object[] = [];
+let adminGames: object[] = [];
+let pendingFriends: object[] = [];
+let ownPlayers: object[] = [];
 let readError: { message: string } | null = null;
 
 let caller: ReturnType<typeof buildSupabaseMock> | null = null;
@@ -23,7 +26,8 @@ let caller: ReturnType<typeof buildSupabaseMock> | null = null;
 const admin = createAdminClientMock({
   tokens: { [TOKEN]: ME },
   respond: (op: QueryOp) => {
-    if (op.table === 'games') return { data: [] };
+    if (op.table === 'games') return { data: adminGames };
+    if (op.table === 'friendships') return { data: pendingFriends };
     throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
   },
 });
@@ -39,7 +43,7 @@ vi.mock('@/lib/api/appAuth', async (importOriginal) => {
           notifications: readError
             ? [{ error: readError }, { error: readError }]
             : [{ data: unread }, { data: [] }],
-          game_players: [{ data: [] }],
+          game_players: [{ data: ownPlayers }],
         },
       });
       return caller;
@@ -78,6 +82,9 @@ beforeEach(() => {
   caller = null;
   admin.ops.length = 0;
   unread = [];
+  adminGames = [];
+  pendingFriends = [];
+  ownPlayers = [];
   readError = null;
 });
 
@@ -91,17 +98,20 @@ describe('GET /api/inbox', () => {
 
   it('svarer med tavla, ferdig skrevet på norsk, for tokenets bruker', async () => {
     unread = [
-      { id: 'a', kind: 'friend_request', payload: { actor_name: 'Anders Moe' }, read_at: null, created_at: AT },
+      { id: 'a', kind: 'friend_request', payload: { actor_id: 'anders', actor_name: 'Anders Moe' }, read_at: null, created_at: AT },
     ];
+    pendingFriends = [{ requester_id: 'anders' }];
     const res = await get(TOKEN);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.actionCount).toBe(1);
-    expect(body.hasUnread).toBe(true);
+    // #2759: saken venter. Den kan ikke merkes, men tallet på konvolutten teller den.
+    expect(body.hasUnread).toBe(false);
+    expect(body.unreadCount).toBe(1);
     expect(body.sections.action[0]).toMatchObject({
       key: 'a',
       unread: true,
-      unreadIds: ['a'],
+      unreadIds: [],
       friend: true,
       decidable: false,
       destination: '/profile/venner',
@@ -117,6 +127,7 @@ describe('GET /api/inbox', () => {
     await expect(res.json()).resolves.toEqual({
       actionCount: 0,
       hasUnread: false,
+      unreadCount: 0,
       sections: { action: [], today: [], earlier: [] },
     });
     expect(settle).not.toHaveBeenCalled();
@@ -129,7 +140,19 @@ describe('GET /api/inbox', () => {
     await expect(res.json()).resolves.toEqual({ error: 'load_failed' });
   });
 
+  it('#2759: en sak som er gjort andre steder, er ute av seksjonen og tallet', async () => {
+    unread = [
+      { id: 'a', kind: 'friend_request', payload: { actor_id: 'anders', actor_name: 'Anders Moe' }, read_at: null, created_at: AT },
+    ];
+    const body = await (await get(TOKEN)).json();
+    expect(body.actionCount).toBe(0);
+    expect(body.unreadCount).toBe(0);
+    expect(settle.mock.calls[0]?.[1]).toMatchObject({ settledIds: ['a'] });
+  });
+
   it('purringen sier ikke beløpet til appen', async () => {
+    adminGames = [{ id: GAME, status: 'active', scheduled_tee_off_at: null, league_round_id: null }];
+    ownPlayers = [{ game_id: GAME, result_summary: null, paid_at: null, submitted_at: null, accepted_at: null, withdrawn_at: null }];
     unread = [
       {
         id: 'p',

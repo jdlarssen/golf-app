@@ -2,7 +2,8 @@ import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { chunkIds } from './inboxReads';
-import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
+import { loadInboxBoard, settleInboxBoard } from './loadInboxBoard';
+import { NOT_WAITING_FILTER, READ_ON_VISIT, WAITING_KINDS, type VisitSurface } from './readOnVisit';
 
 export type MarkReadOpts = {
   userId: string;
@@ -15,6 +16,12 @@ export type MarkReadOpts = {
    */
   zeroRowsOk?: boolean;
 };
+
+/**
+ * #2759: a tapped row, a page visit or «Marker alt lest» must not mark a row
+ * that waits. `decideFromInbox` and the settle step know the matter is done, so
+ * they mark by id.
+ */
 
 /**
  * Markerer matching uleste varsler som lest for `userId`. Best-effort:
@@ -63,6 +70,8 @@ export async function markNotificationsRead(
     .is('read_at', null);
 
   if (opts.notificationId) q = q.eq('id', opts.notificationId);
+  // The bulk «Marker alt lest» and a push tap: the rows that wait stay (#2759).
+  if (!opts.notificationId || opts.zeroRowsOk) q = q.or(NOT_WAITING_FILTER);
 
   // Single-id: ask for the touched ids back so 0 rows is visible. Bulk: no
   // rows needed — see the two 0-row regimes in the doc comment above.
@@ -120,7 +129,8 @@ export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> 
       .update({ read_at: new Date().toISOString() })
       .eq('user_id', opts.userId)
       .is('read_at', null)
-      .in('kind', [...kinds]);
+      .in('kind', [...kinds])
+      .or(NOT_WAITING_FILTER);
     if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
 
     const { data, error } = await q.select('id');
@@ -131,9 +141,30 @@ export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> 
     if ((data?.length ?? 0) > 0) {
       revalidateTag(`notifications-${opts.userId}`, 'max');
     }
+    // The hole page renders on every stroke, and a card is not settled from there.
+    if (opts.surface !== 'gameHole') await settleWaitingRows(opts.userId);
   } catch (err) {
     console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, err });
   }
+}
+
+/**
+ * #2759: the matter behind a row that waits is usually settled somewhere else
+ * than the inbox (the card approved on its own page), and the bottom-nav dot
+ * counts `read_at is null`. So a page visit checks them, or the dot would stay
+ * lit until the next visit to the inbox. Costs one count when nothing waits.
+ */
+async function settleWaitingRows(userId: string): Promise<void> {
+  const admin = getAdminClient();
+  const { count, error } = await admin
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null)
+    .is('archived_at', null)
+    .in('kind', [...WAITING_KINDS]);
+  if (error || !count) return;
+  await settleInboxBoard(userId, await loadInboxBoard(admin, userId));
 }
 
 export type MarkIdsReadOpts = {

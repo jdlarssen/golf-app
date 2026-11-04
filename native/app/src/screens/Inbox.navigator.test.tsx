@@ -59,6 +59,7 @@ const FRIEND: InboxWireEntry = {
 const BOARD: InboxWire = {
   actionCount: 1,
   hasUnread: true,
+  unreadCount: 3,
   sections: { action: [REVIEW], today: [FRIEND], earlier: [] },
 };
 

@@ -4,7 +4,7 @@
 // denne fila eier: stien og kroppen, at et svar uten seksjoner aldri blir en tom
 // innboks (#1392), og de direkte lesingene og skrivingene under RLS.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { DOT_KINDS } from '../../../../lib/notifications/readOnVisit';
+import { NOT_WAITING_FILTER } from '../../../../lib/notifications/readOnVisit';
 import {
   BASE_URL,
   mockFetch,
@@ -49,7 +49,7 @@ describe('loadInbox', () => {
   useWebRoute();
 
   it('henter tavla med GET og gir den videre', async () => {
-    const board = { actionCount: 1, hasUnread: true, sections: { action: [ENTRY], today: [], earlier: [] } };
+    const board = { actionCount: 1, hasUnread: true, unreadCount: 3, sections: { action: [ENTRY], today: [], earlier: [] } };
     respondWith(200, board);
     await expect(inbox().loadInbox()).resolves.toEqual({ ok: true, board });
     expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/inbox`);
@@ -122,7 +122,7 @@ describe('decideRequest', () => {
   });
 });
 
-describe('lesing og skriving under RLS', () => {
+describe('skriving under RLS', () => {
   useWebRoute();
 
   let errorSpy: jest.SpyInstance;
@@ -131,19 +131,11 @@ describe('lesing og skriving under RLS', () => {
   });
   afterEach(() => errorSpy.mockRestore());
 
-  it('tallet teller uleste av de samme typene som prikken, så nyheter teller ikke', async () => {
-    const { queryStub, routeFrom, stepArgs } = mocks();
-    const stub = queryStub({ data: null, error: null, count: 3 } as never);
-    routeFrom({ notifications: [stub] });
+  it('tallet kommer fra serveren, og en feil er `null`, ikke null uleste', async () => {
+    respondWith(200, { actionCount: 0, hasUnread: false, unreadCount: 3, sections: { action: [], today: [], earlier: [] } });
     await expect(inbox().unreadCount()).resolves.toBe(3);
-    expect(stepArgs(stub, 'is')).toEqual([['read_at', null]]);
-    expect(stepArgs(stub, 'in')).toEqual([['kind', [...DOT_KINDS]]]);
-    expect(DOT_KINDS).not.toContain('product_update');
-  });
-
-  it('en feilet telling er `null`, ikke null uleste', async () => {
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({ notifications: [queryStub({ data: null, error: { message: 'nede' } })] });
+    mockFetch.mockClear();
+    respondWith(500, { error: 'load_failed' });
     await expect(inbox().unreadCount()).resolves.toBeNull();
   });
 
@@ -154,6 +146,8 @@ describe('lesing og skriving under RLS', () => {
     await expect(inbox().markAllRead()).resolves.toBe(true);
     expect(stepArgs(stub, 'update')[0]?.[0]).toHaveProperty('read_at');
     expect(stepArgs(stub, 'is')).toEqual([['read_at', null]]);
+    // #2759: en sak som venter, blir stående.
+    expect(stepArgs(stub, 'or')).toEqual([[NOT_WAITING_FILTER]]);
   });
 
   it('«Tøm leste» arkiverer bare leste, og sletter ingenting', async () => {

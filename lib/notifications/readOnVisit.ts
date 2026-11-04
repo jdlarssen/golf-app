@@ -112,6 +112,46 @@ export const INBOX_ONLY_KINDS: readonly NotificationKind[] = [
 export const QUIET_KINDS: readonly NotificationKind[] = ['product_update'];
 
 /**
+ * Kinds that stand in «Krever handling» until the matter is done (#2759, the
+ * owner's answer 04.11): a tap, a page visit or a push does not mark them read.
+ * The inbox's settle step does, once it can see the matter is done
+ * (`findSettledActionIds`). So `read_at is null` still means «in the section»,
+ * and the section, the chip, the app's envelope and the bottom-nav dot agree.
+ *
+ * Every kind here needs a settle rule, or its row never leaves. A kind nothing
+ * can tell is done (`team_member_withdrew`) is not here: a tap marks it read.
+ * `registration_request` waits only when it carries a `request_id`
+ * (`waitsUntilDone`, {@link NOT_WAITING_FILTER}).
+ */
+export const WAITING_KINDS: readonly NotificationKind[] = [
+  'peer_approval_request',
+  'league_marker_request',
+  'registration_request',
+  'deliver_reminder',
+  'missing_score_reminder',
+  'scorecard_rejected',
+  'scorecard_reopened',
+  'friend_request',
+  'team_invite',
+  'club_join_request',
+  'player_added',
+  'invite',
+  'auto_start_blocked',
+  'payment_reminder',
+  'all_scorecards_delivered',
+  'game_stale_reminder',
+  'league_round_open',
+  'league_round_closing',
+];
+
+/**
+ * PostgREST `.or()` filter for a bulk write that marks rows read: everything
+ * but the rows that wait. One home for the web's `markRead.ts` and the app's
+ * `data/markRead.ts` and `data/inbox.ts`.
+ */
+export const NOT_WAITING_FILTER = `kind.not.in.(${WAITING_KINDS.join(',')}),and(kind.eq.registration_request,payload->>request_id.is.null)`;
+
+/**
  * Every kind this code knows (#2480): the kinds of every surface plus the
  * inbox-only ones, which `readOnVisit.test.ts` holds equal to the TypeScript
  * union. A row of any other kind comes from a newer build (a new kind is

@@ -127,12 +127,40 @@ describe('buildInboxWire', () => {
     expect(wire.sections.today.every((e) => !e.decidable)).toBe(true);
   });
 
+  // #2759, eierens svar 04.11: et trykk tar ikke saken ut av «Krever handling».
+  it('en sak som venter, har ingen rader et trykk kan merke, men er ulest', () => {
+    const peer = row('peer_approval_request', { payload: { submitter_name: 'Marte Li', submitter_id: 'marte' } });
+    const wire = buildInboxWire(input([peer]), { ...TEXT, surface: 'app' });
+    expect(wire.sections.action[0]).toMatchObject({ unread: true, unreadIds: [] });
+  });
+
+  it('en rad som bare forteller noe, kan merkes', () => {
+    const cancelled = row('game_cancelled');
+    const wire = buildInboxWire(input([cancelled]), { ...TEXT, surface: 'app' });
+    expect(wire.sections.today[0]).toMatchObject({ unread: true, unreadIds: [cancelled.id] });
+  });
+
+  it('«Marker alt lest» gjelder bare rader den kan merke: bare saker som venter gir false', () => {
+    const peer = row('peer_approval_request', { payload: { submitter_name: 'Marte Li', submitter_id: 'marte' } });
+    expect(buildInboxWire(input([peer]), { ...TEXT, surface: 'app' }).hasUnread).toBe(false);
+    expect(buildInboxWire(input([peer, row('game_cancelled')]), { ...TEXT, surface: 'app' }).hasUnread).toBe(true);
+  });
+
+  it('tallet på konvolutten teller uleste og saker som venter, ikke nyheter eller ukjente typer', () => {
+    const peer = row('peer_approval_request', { payload: { submitter_name: 'Marte Li', submitter_id: 'marte' } });
+    const news = row('product_update');
+    const seen = row('game_cancelled', { read: true });
+    const unknown = { ...row('invite'), kind: 'fra_en_nyere_versjon' as NotificationKind };
+    const wire = buildInboxWire(input([peer, row('game_cancelled'), news, seen, unknown]), { ...TEXT, surface: 'app' });
+    expect(wire.unreadCount).toBe(2);
+  });
+
   it('hasUnread følger de synlige radene', () => {
     const read = row('game_cancelled', { read: true });
     expect(buildInboxWire(input([read]), { ...TEXT, surface: 'web' }).hasUnread).toBe(false);
     const unknown = { ...row('invite'), kind: 'fra_en_nyere_versjon' as NotificationKind };
     expect(buildInboxWire(input([read, unknown]), { ...TEXT, surface: 'web' }).hasUnread).toBe(false);
-    expect(buildInboxWire(input([read, row('invite')]), { ...TEXT, surface: 'web' }).hasUnread).toBe(true);
+    expect(buildInboxWire(input([read, row('game_cancelled')]), { ...TEXT, surface: 'web' }).hasUnread).toBe(true);
   });
 
   it.each([...KNOWN_KINDS])('%s gir en rad uten kast, ulest og lest', (kind) => {

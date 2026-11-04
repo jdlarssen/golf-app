@@ -1,7 +1,7 @@
 // #2201 PR 2: det du åpner i appen, er lest, som på webben. Type A mot den
 // mockede Supabase-grensen: kvitteringen (`steps`) er spørringen som går ut.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { READ_ON_VISIT, type VisitSurface } from '../../../../lib/notifications/readOnVisit';
+import { NOT_WAITING_FILTER, READ_ON_VISIT, type VisitSurface } from '../../../../lib/notifications/readOnVisit';
 import { markNotificationIdsRead, markNotificationRead, markVisitRead } from './markRead';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -42,6 +42,7 @@ describe('markVisitRead', () => {
       { method: 'update', args: [{ read_at: expect.any(String) }] },
       { method: 'is', args: ['read_at', null] },
       { method: 'in', args: ['kind', [...READ_ON_VISIT[surface].kinds]] },
+      { method: 'or', args: [NOT_WAITING_FILTER] },
       ...(key ? [{ method: 'eq', args: [`payload->>${key}`, ENTITY] }] : []),
     ]);
     expect(errorSpy).not.toHaveBeenCalled();
@@ -83,6 +84,8 @@ describe('markNotificationRead', () => {
       { method: 'update', args: [{ read_at: expect.any(String) }] },
       { method: 'eq', args: ['id', NOTE] },
       { method: 'is', args: ['read_at', null] },
+      // #2759: et trykk på en push tar ikke en sak som venter ut av innboksen.
+      { method: 'or', args: [NOT_WAITING_FILTER] },
     ]);
   });
 

@@ -19,6 +19,7 @@ import {
   rowPersonName,
   teeOffLine,
   trimToWholeDays,
+  waitsUntilDone,
   type InboxEntry,
   type InboxRow,
   type InboxTextContext,
@@ -778,6 +779,57 @@ describe('trimToWholeDays', () => {
   });
 });
 
+// #2759, eierens svar 04.11: en sak står under «Krever handling» til den er gjort.
+describe('waitsUntilDone', () => {
+  it.each([
+    'peer_approval_request',
+    'league_marker_request',
+    'deliver_reminder',
+    'missing_score_reminder',
+    'scorecard_rejected',
+    'scorecard_reopened',
+    'friend_request',
+    'team_invite',
+    'club_join_request',
+    'player_added',
+    'invite',
+    'auto_start_blocked',
+    'payment_reminder',
+    'all_scorecards_delivered',
+    'game_stale_reminder',
+    'league_round_open',
+    'league_round_closing',
+  ] as const)('%s waits', (kind) => {
+    expect(waitsUntilDone(row(kind, {}))).toBe(true);
+  });
+
+  it('a pending signup request waits; a heads-up about an open signup does not', () => {
+    expect(waitsUntilDone(signup('A', { request_id: REQ }))).toBe(true);
+    expect(waitsUntilDone(signup('A'))).toBe(false);
+  });
+
+  it('a row that only tells you something does not wait', () => {
+    expect(waitsUntilDone(row('game_finished', {}))).toBe(false);
+    expect(waitsUntilDone(row('friend_accepted', {}))).toBe(false);
+  });
+
+  it('a kind nothing can tell is done, is done when tapped', () => {
+    expect(inboxActionKey(row('team_member_withdrew', {}))).toBe('inviteNew');
+    expect(waitsUntilDone(row('team_member_withdrew', {}))).toBe(false);
+  });
+
+  it('every row that waits has a button in «Krever handling»', () => {
+    for (const r of [
+      peer('M', MARTE),
+      signup('A', { request_id: REQ }),
+      row('payment_reminder', { game_id: GAME }),
+      row('league_marker_request', { game_id: GAME }),
+    ]) {
+      expect(inboxActionKey(r)).not.toBeNull();
+    }
+  });
+});
+
 describe('findSettledActionIds', () => {
   const base = {
     viewerId: VIEWER,
@@ -785,6 +837,154 @@ describe('findSettledActionIds', () => {
     cards: [] as { game_id: string; user_id: string; submitted_at: string | null; approved_at: string | null }[],
     own: new Map<string, { paid_at: string | null; submitted_at: string | null }>(),
   };
+
+  describe('#2759: only a settled row leaves «Krever handling»', () => {
+    const status = (entries: [string, string][]) => new Map(entries);
+    const GAME_ROW = { game_id: GAME, game_name: 'Lørdagsrunden' };
+
+    it('an approval request whose game is over or gone is settled, its card never approved', () => {
+      const waiting = peer('Marte', MARTE);
+      const cards = [{ game_id: GAME, user_id: MARTE, submitted_at: 'x', approved_at: null }];
+      const run = (gameStatus: Map<string, string>) =>
+        findSettledActionIds([waiting], { ...base, cards, gameStatus });
+      expect(run(status([[GAME, 'active']]))).toEqual([]);
+      expect(run(status([[GAME, 'finished']]))).toEqual([waiting.id]);
+      expect(run(status([]))).toEqual([waiting.id]);
+    });
+
+    it('a marker request is settled when the card is approved or sent back', () => {
+      const payload = { league_id: LEAGUE, league_name: 'Liga', game_id: GAME, player_id: MARTE };
+      const waiting = row('league_marker_request', payload);
+      const run = (card: { submitted_at: string | null; approved_at: string | null }) =>
+        findSettledActionIds([waiting], {
+          ...base,
+          cards: [{ game_id: GAME, user_id: MARTE, ...card }],
+          gameStatus: status([[GAME, 'active']]),
+        });
+      expect(run({ submitted_at: 'x', approved_at: null })).toEqual([]);
+      expect(run({ submitted_at: 'x', approved_at: 'y' })).toEqual([waiting.id]);
+      expect(run({ submitted_at: null, approved_at: null })).toEqual([waiting.id]);
+    });
+
+    it.each(['scorecard_rejected', 'scorecard_reopened'] as const)(
+      '%s is settled when the card is delivered again, or the game is over',
+      (kind) => {
+        const r = row(kind, GAME_ROW);
+        const run = (submitted_at: string | null, s = 'active') =>
+          findSettledActionIds([r], {
+            ...base,
+            own: new Map([[GAME, { paid_at: null, submitted_at }]]),
+            gameStatus: status([[GAME, s]]),
+          });
+        expect(run(null)).toEqual([]);
+        expect(run('x')).toEqual([r.id]);
+        expect(run(null, 'finished')).toEqual([r.id]);
+      },
+    );
+
+    it('only the newest sendback on a game waits', () => {
+      const newer = row('scorecard_rejected', GAME_ROW, { at: new Date(NOW - 60_000).toISOString() });
+      const older = row('scorecard_rejected', GAME_ROW, { at: new Date(NOW - 120_000).toISOString() });
+      const ids = findSettledActionIds([newer, older], {
+        ...base,
+        own: new Map([[GAME, { paid_at: null, submitted_at: null }]]),
+        gameStatus: status([[GAME, 'active']]),
+      });
+      expect(ids).toEqual([older.id]);
+    });
+
+    it('a reminder about a card is settled when the game is over or you left it', () => {
+      const deliver = row('deliver_reminder', GAME_ROW);
+      const missing = row('missing_score_reminder', { ...GAME_ROW, holes: [3] });
+      const open = { paid_at: null, submitted_at: null };
+      const run = (s: string, own = open as typeof open | null) =>
+        findSettledActionIds([deliver, missing], {
+          ...base,
+          own: own ? new Map([[GAME, own]]) : new Map(),
+          gameStatus: status([[GAME, s]]),
+        });
+      expect(run('active')).toEqual([]);
+      expect(run('finished')).toEqual([deliver.id, missing.id]);
+      expect(run('active', null)).toEqual([deliver.id, missing.id]);
+    });
+
+    it('a kept reminder about others stays until the game is over', () => {
+      const kept = row('deliver_reminder', { ...GAME_ROW, others_count: 2 });
+      const own = new Map([[GAME, { paid_at: null, submitted_at: 'x' }]]);
+      expect(findSettledActionIds([kept], { ...base, own, gameStatus: status([[GAME, 'active']]) })).toEqual([]);
+      expect(findSettledActionIds([kept], { ...base, own, gameStatus: status([[GAME, 'finished']]) })).toEqual([kept.id]);
+    });
+
+    it('a payment reminder is settled when paid, or when the game is over', () => {
+      const r = row('payment_reminder', { ...GAME_ROW, entry_fee_kr: 200, payment_link: null });
+      const own = new Map([[GAME, { paid_at: null, submitted_at: null }]]);
+      expect(findSettledActionIds([r], { ...base, own, gameStatus: status([[GAME, 'active']]) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, own, gameStatus: status([[GAME, 'finished']]) })).toEqual([r.id]);
+    });
+
+    it.each(['invite', 'player_added'] as const)('%s is settled when your place is confirmed or gone', (kind) => {
+      const r = row(kind, { ...GAME_ROW, invited_by_name: 'Per', added_by_name: 'Per' });
+      const run = (own: { accepted_at?: string | null; withdrawn_at?: string | null } | null, s = 'scheduled') =>
+        findSettledActionIds([r], {
+          ...base,
+          own: own ? new Map([[GAME, { paid_at: null, submitted_at: null, ...own }]]) : new Map(),
+          gameStatus: status([[GAME, s]]),
+        });
+      expect(run({ accepted_at: null })).toEqual([]);
+      expect(run({ accepted_at: 'x' })).toEqual([r.id]);
+      expect(run({ accepted_at: null, withdrawn_at: 'x' })).toEqual([r.id]);
+      expect(run(null)).toEqual([r.id]);
+      expect(run({ accepted_at: null }, 'finished')).toEqual([r.id]);
+    });
+
+    it('a friend request is settled when it is no longer pending', () => {
+      const r = row('friend_request', { actor_id: MARTE, actor_name: 'Marte' });
+      expect(findSettledActionIds([r], { ...base, pendingFriendIds: new Set([MARTE]) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, pendingFriendIds: new Set() })).toEqual([r.id]);
+    });
+
+    it('a team invite is settled when you no longer have a pending place in the game', () => {
+      const r = row('team_invite', { ...GAME_ROW, game_short_id: 'abc', team_name: 'Lag', invited_by_name: 'Per', request_id: REQ });
+      const gameStatus = status([[GAME, 'scheduled']]);
+      expect(findSettledActionIds([r], { ...base, gameStatus, pendingOwnRequestGameIds: new Set([GAME]) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, gameStatus, pendingOwnRequestGameIds: new Set() })).toEqual([r.id]);
+    });
+
+    it('a club join request is settled when the club has nobody left waiting', () => {
+      const r = row('club_join_request', { group_id: 'club', group_name: 'Klubb', requester_name: 'Per' });
+      expect(findSettledActionIds([r], { ...base, pendingJoinGroupIds: new Set(['club']) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, pendingJoinGroupIds: new Set() })).toEqual([r.id]);
+    });
+
+    it('auto_start_blocked is settled once the game has left «scheduled»', () => {
+      const r = row('auto_start_blocked', { ...GAME_ROW, reason: 'pending_players' });
+      expect(findSettledActionIds([r], { ...base, gameStatus: status([[GAME, 'scheduled']]) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, gameStatus: status([[GAME, 'active']]) })).toEqual([r.id]);
+    });
+
+    it('a finish row is settled when the game is gone too', () => {
+      const r = row('all_scorecards_delivered', GAME_ROW);
+      expect(findSettledActionIds([r], { ...base, gameStatus: status([[GAME, 'active']]) })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, gameStatus: status([]) })).toEqual([r.id]);
+    });
+
+    it('a league round is settled when you have played it', () => {
+      const r = row('league_round_open', {
+        league_id: LEAGUE,
+        league_name: 'Liga',
+        round_id: ROUND,
+        round_label: 'Runde 3',
+        closes_at: new Date(NOW + 86_400_000).toISOString(),
+      });
+      expect(findSettledActionIds([r], { ...base, now: NOW, playedRoundIds: new Set() })).toEqual([]);
+      expect(findSettledActionIds([r], { ...base, now: NOW, playedRoundIds: new Set([ROUND]) })).toEqual([r.id]);
+    });
+
+    it('a row already read is never looked at', () => {
+      const r = row('friend_request', { actor_id: MARTE }, { read: true });
+      expect(findSettledActionIds([r], { ...base, pendingFriendIds: new Set() })).toEqual([]);
+    });
+  });
 
   it('a signup request no longer pending (or gone) is settled', () => {
     const pending = signup('A', { request_id: REQ });
