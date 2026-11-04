@@ -52,6 +52,7 @@ jest.mock('../components/PushPromptCard', () => {
 });
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
+jest.mock('../data/inbox', () => ({ fetchInboxUnreadCount: jest.fn(async () => mockState.unread) }));
 // #2638: «Ligaene dine» spør `GET /api/liga`; uten ligaer står ingen seksjon.
 jest.mock('../data/league', () => ({
   fetchMyLeagues: jest.fn(async () => mockState.leagues),
@@ -75,6 +76,7 @@ jest.mock('@react-navigation/native', () => ({
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
 let mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const mockState: {
+  unread: number | null;
   online: boolean;
   list: HomeList;
   cached: HomeList | undefined;
@@ -83,6 +85,7 @@ const mockState: {
   leagues: Awaited<ReturnType<typeof import('../data/league').fetchMyLeagues>>;
   cups: Awaited<ReturnType<typeof import('../data/cup').fetchMyCups>>;
 } = {
+  unread: 0,
   online: true,
   list: { version: 4, cards: [], lastRound: null, fetchedAt: '' },
   cached: undefined,
@@ -185,6 +188,7 @@ beforeEach(() => {
   mockState.bundles = { new: HERO_BUNDLE };
   mockState.leagues = { ok: true, leagues: [] };
   mockState.cups = { ok: true, cups: [] };
+  mockState.unread = 0;
 });
 
 it('stiller opp dato, pille, helt, flere runder, billett, mine spill og forrige runde i den rekkefølgen', async () => {
@@ -710,5 +714,45 @@ describe('kvitteringen etter en slettet cup (#2752)', () => {
     await renderHome().view;
     await screen.findAllByTestId('home-screen');
     expect(screen.queryByTestId('home-notice')).toBeNull();
+  });
+});
+
+// #2759 AK14: konvolutten. Tallet kommer ferdig fra serveren, der nyheter ikke teller.
+describe('konvolutten', () => {
+  it('viser tallet, og skjermleseren får det i klartekst', async () => {
+    mockState.unread = 3;
+    const { view, navigate } = renderHome();
+    await view;
+    expect(await screen.findByTestId('inbox-unread-count')).toHaveTextContent('3');
+    const button = screen.getByTestId('open-inbox');
+    expect(button.props.accessibilityLabel).toBe('Innboks, 3 uleste');
+    await fireEvent.press(button);
+    expect(navigate).toHaveBeenCalledWith('Inbox');
+  });
+
+  it('ved 0 står konvolutten uten tall', async () => {
+    const { view } = renderHome();
+    await view;
+    expect(screen.getByTestId('open-inbox').props.accessibilityLabel).toBe('Innboks');
+    expect(screen.queryByTestId('inbox-unread-count')).toBeNull();
+  });
+
+  it('faller når appen kommer tilbake, og et kall som feiler, lar det forrige stå', async () => {
+    mockState.unread = 2;
+    const { view } = renderHome();
+    await view;
+    expect(await screen.findByTestId('inbox-unread-count')).toHaveTextContent('2');
+
+    mockState.unread = null;
+    await act(async () => {
+      fireForeground();
+    });
+    expect(screen.getByTestId('inbox-unread-count')).toHaveTextContent('2');
+
+    mockState.unread = 1;
+    await act(async () => {
+      fireForeground();
+    });
+    await waitFor(() => expect(screen.getByTestId('inbox-unread-count')).toHaveTextContent('1'));
   });
 });

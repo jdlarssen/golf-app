@@ -91,6 +91,79 @@ export const FlaggIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** #2759: skivene i innboksen, fra webbens sett. */
+export const KonvoluttIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Rect x="3" y="6" width="18" height="13" rx="1.75" />
+    <Path d="M 3.5 7.5 L 12 13.5 L 20.5 7.5" />
+  </LineIcon>
+);
+
+export const ScorekortIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Rect x="5.5" y="5" width="13" height="16" rx="1.5" />
+    <Rect x="9.5" y="3" width="5" height="3.5" rx="0.75" />
+    <Line x1="8" y1="11" x2="16" y2="11" />
+    <Line x1="8" y1="14" x2="14" y2="14" />
+    <Line x1="8" y1="17" x2="15" y2="17" />
+  </LineIcon>
+);
+
+export const ReplayIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M 4 12 A 8 8 0 1 0 6.3 6.3" />
+    <Polyline points="3,3 4,12 13,11" />
+  </LineIcon>
+);
+
+export const ProfilIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Circle cx="12" cy="8" r="3.5" />
+    <Path d="M 5 20 Q 5 14.5 12 14.5 Q 19 14.5 19 20" />
+  </LineIcon>
+);
+
+export const KlubbhusIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M 4 20 L 4 10.5 L 20 10.5 L 20 20" />
+    <Path d="M 3 10.5 L 12 6 L 21 10.5" />
+    <Path d="M 9.5 20 L 9.5 15 L 14.5 15 L 14.5 20" />
+    <Path d="M 12 6 L 12 3" />
+    <Path d="M 12 3.2 L 15.5 4.4 L 12 5.6" />
+  </LineIcon>
+);
+
+/**
+ * Konvolutten i den tomme innboksen (#2759, webbens `MailEnvelope`): lukket
+ * flate i kortets farge og en gull prikk. Dekor; teksten under sier det samme.
+ */
+export function MailEnvelopeIcon({
+  stroke,
+  fill,
+  dot,
+  size = 56,
+}: {
+  stroke: string;
+  fill: string;
+  dot: string;
+  size?: number;
+}) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Rect x="8" y="16" width="48" height="34" rx="3" stroke={stroke} strokeWidth="1.6" fill={fill} />
+      <Path d="M8 19 L32 35 L56 19" stroke={stroke} strokeWidth="1.6" fill="none" strokeLinejoin="round" />
+      <Circle cx="50" cy="14" r="4" fill={dot} />
+    </Svg>
+  );
+}
+
 export const PokalIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" />

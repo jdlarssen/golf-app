@@ -129,8 +129,9 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
 
 1. **Tilbake fører dit du kom fra.** Åpnet du skjermen fra et varsel, en lenke eller rett fra
    hjemskjermen, finnes ikke noe «der du kom fra». Da går tilbake til skjermen over i hierarkiet:
-   Hjem → spillet → hull, scorekort, tavla og godkjenning. Hjem → ligaen → start runde og markørens
-   kort. Hjem → Profil → rommene under profilen.
+   Hjem → spillet → hull, scorekort, tavla, godkjenning og avslutning. Hjem → ligaen → start runde og
+   markørens kort. Hjem → Profil → rommene under profilen. Hjem → innboksen; det du åpner derfra, ligger
+   oppå innboksen, med spillet under (#2759), så to trykk på tilbake fra godkjenningen lander i innboksen.
    Unntak (#2748): står andre skjermer åpne når varselet eller lenka kommer,
    legges den nye skjermen oppå, og tilbake går dit du sto. Står du på hull 5 og trykker på en
    ligalenke, er du tilbake på hull 5 med ett trykk.
@@ -275,6 +276,8 @@ flowchart LR
 | Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (arrangøren av spillet eller admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`, #2440). Reglene bor i `lib/notifications/inboxSections.ts`. **En sak under «Krever handling» står til den er gjort** (eierens svar 04.11, #2759): å åpne den, et trykk på push, et sidebesøk eller «Marker alt lest» tar den ikke ut. Den blir lest når serveren ser at saken er gjort (`isWaitingRow` i `lib/notifications/readOnVisit.ts`, `findSettledActionIds`), og besøk på spillets sider sjekker dette, så prikken slukner uten en tur innom innboksen. «Marker alt lest» blir «Tøm leste» når bare ventende saker er igjen. «Et lagmedlem trakk seg» har ingen data som kan si at saken er gjort, så et trykk tar den ut. Alt annet: et trykk markerer lest, og åpner du siden et varsel lenker til, er det lest (kartet `READ_ON_VISIT`, `markReadOnVisit`, #2201). Et trykk på et pushvarsel merker akkurat det varselet (lenka bærer `?varsel=<id>`, `lib/notifications/readMarker.ts`). Lagsiden bekrefter plassen når den åpnes, slik spillets side gjør (#463). Nyheter om Tørny tenner ikke prikken og kommer ikke som push (`QUIET_KINDS`); de står på Hjem og i innboksen. Månedsbrev-bryteren står på Profil under «App». |
 
 ---
+
+**Innboksen i appen (#2759).** Konvolutten ved siden av HCP-pillen på Hjem åpner innboksen, med antall uleste (nyheter teller ikke), på iPhone og Android. Skjermen har det nettets innboks har, og tavla kommer ferdig fra serveren (`GET /api/inbox`, samme regler og tekster), så de to kan ikke si noe forskjellig. Et trykk går til samme sted som et trykk på push: godkjenningen, scorekortet, avslutningen, spillet, ligaen, cupen, vennene eller statistikken. Påmeldingssiden, lagpåmeldingen og klubben finnes ikke i appen, så de åpner nettsiden, der man må logge inn med kode. «Godta» og «Avslå» på en påmelding gjøres rett i innboksen (`POST /api/inbox/[id]/decide`, samme kjerne som nettet). Innboksen krever nett: uten nett står en setning og «Prøv igjen», og lista som alt er hentet, blir stående.
 
 **Varsler i appen (#2758).** Bryteren står under Profil, Varsler og tema, på iPhone og Android. Første gang Hjem åpnes uten en runde i gang, spør et kort øverst om spilleren vil slå på varsler. Telefonens eget spørsmål kommer først etter trykk på «Slå på varsler». «Ikke nå», et nei eller bruk av bryteren lagrer svaret på telefonen, så kortet ikke kommer igjen. Ved en feil står kortet til det er besvart.
 

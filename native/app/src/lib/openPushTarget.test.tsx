@@ -4,12 +4,17 @@
 // Ekte `NavigationContainer`, native-stack og ruter, med stand-ins for
 // skjermene. Ingen mocking av navigasjonen. Steg e i tapptesten er det samme
 // løpet, men selve varselet kan bare prøves på en fysisk iPhone.
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import {
+  CommonActions,
+  NavigationContainer,
+  StackActions,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { act, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 import type { RootStackParamList } from '../navigation';
-import { openPushTarget } from './openPushTarget';
+import { openPushTarget, openScreenTarget } from './openPushTarget';
 import type { PushTarget } from './pushRoute';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,6 +27,11 @@ const SCREENS = [
   'Hole',
   'Scorecard',
   'Leaderboard',
+  'Approve',
+  'EndGame',
+  'Inbox',
+  'Friends',
+  'RoundStats',
   'League',
   'Cup',
   'CupParticipants',
@@ -152,5 +162,68 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     expect(names()).toEqual(['Home']);
     expect(error).not.toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+describe('et trykk i innboksen (#2759)', () => {
+  /** Skjermenes `navigation`, slik `Inbox` får den. */
+  async function tapInInbox(target: Parameters<typeof openScreenTarget>[1]) {
+    await act(async () => {
+      openScreenTarget(
+        {
+          getState: () => ref.getRootState(),
+          popTo: (name, params) => ref.dispatch(StackActions.popTo(name, params)),
+          replace: (name, params) => ref.dispatch(StackActions.replace(name, params)),
+          navigate: (name, params) => ref.dispatch(CommonActions.navigate(name, params)),
+          reset: (state) => ref.dispatch(CommonActions.reset(state)),
+        },
+        target,
+      );
+    });
+  }
+
+  it.each([
+    ['Approve', { name: 'Approve', params: G }],
+    ['Scorecard', { name: 'Scorecard', params: G }],
+    ['EndGame', { name: 'EndGame', params: G }],
+    ['Hole', { name: 'Hole', params: { ...G, holeNumber: 7 } }],
+    ['Leaderboard', { name: 'Leaderboard', params: G }],
+  ] as const)('%s har spillet under, og tilbake lander i innboksen', async (name, target) => {
+    await stackOf(['Inbox']);
+    await tapInInbox(target);
+    expect(names()).toEqual(['Home', 'Inbox', 'GameHome', name]);
+    await back();
+    expect(names()).toEqual(['Home', 'Inbox', 'GameHome']);
+    await back();
+    expect(names()).toEqual(['Home', 'Inbox']);
+  });
+
+  it.each([
+    ['GameHome', { name: 'GameHome', params: G }],
+    ['Friends', { name: 'Friends', params: { from: 'notification' } }],
+    ['RoundStats', { name: 'RoundStats' }],
+    ['League', { name: 'League', params: { leagueId: 'l1' } }],
+    ['Cup', { name: 'Cup', params: { cupId: 'c1' } }],
+  ] as const)('%s ligger rett over innboksen, og tilbake lander der', async (name, target) => {
+    await stackOf(['Inbox']);
+    await tapInInbox(target);
+    expect(names()).toEqual(['Home', 'Inbox', name]);
+    await back();
+    expect(names()).toEqual(['Home', 'Inbox']);
+  });
+
+  it('kortet levert fra et trykk i innboksen: spillet står, og tilbake når innboksen', async () => {
+    await stackOf(['Inbox']);
+    await tapInInbox({ name: 'Scorecard', params: G });
+    await tapInInbox({ name: 'GameHome', params: G });
+    expect(names()).toEqual(['Home', 'Inbox', 'GameHome']);
+    await back();
+    expect(names()).toEqual(['Home', 'Inbox']);
+  });
+
+  it('et push-trykk på «scorekort venter» åpner godkjenningen med spillet under', async () => {
+    await stackOf();
+    await tap({ name: 'Approve', params: G });
+    expect(names()).toEqual(['Home', 'GameHome', 'Approve']);
   });
 });
