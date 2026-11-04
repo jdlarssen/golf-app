@@ -114,7 +114,7 @@ export function ReactableRow({
   );
 }
 
-/** Linja på en tom tavle, til du har gitt din første reaksjon i spillet. */
+/** Linja på en tom tavle. */
 export function ReactionHint({ color }: { color?: string }) {
   const ctx = useReactionsContext();
   const { colors } = useTheme();
