@@ -116,3 +116,53 @@ export function scoreFigure(score: ShareCardScore): string {
       return score.label; // −2 / E / +3
   }
 }
+
+/** One word of the headline, marked gold or not. */
+export type Word = { text: string; gold: boolean };
+
+/** Joins a run of gold words into one item, so «38 poeng» never splits across lines. */
+export function keepGoldTogether(words: Word[]): Word[] {
+  const out: Word[] = [];
+  for (const w of words) {
+    const last = out[out.length - 1];
+    if (w.gold && last?.gold) last.text += ` ${w.text}`;
+    else out.push({ ...w });
+  }
+  return out;
+}
+
+/**
+ * The headline's words in lines. A result headline breaks before its
+ * preposition, as the artboard does («Marte vant» / «med 38 poeng»); the other
+ * headlines run as one block that wraps on width.
+ */
+export function headlineWordLines(words: Word[], spec: HeadlineSpec): Word[][] {
+  const resultHeadline =
+    spec.kind === 'won' || spec.kind === 'shared' || spec.kind === 'sharedMany';
+  const gold = words.findIndex((w) => w.gold);
+  if (!resultHeadline || gold < 1) return [words];
+  return [words.slice(0, gold - 1), words.slice(gold - 1)];
+}
+
+/** The lines as one string, «\n» between them, for `headlineLayout`. */
+export function lineText(lines: Word[][]): string {
+  return lines.map((line) => line.map((w) => w.text).join(' ')).join('\n');
+}
+
+/**
+ * The date on the card's meta line, in Oslo time. `locale` is a BCP 47 tag.
+ * `null` when the date is missing or unreadable: the line then leaves it out.
+ */
+export function osloDate(iso: string | null | undefined, locale: string): string | null {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      timeZone: 'Europe/Oslo',
+      day: 'numeric',
+      month: 'long',
+      // Satori draws a no-break space wider than a space.
+    }).format(new Date(iso)).replace(/\u00a0/g, ' ');
+  } catch {
+    return null;
+  }
+}
