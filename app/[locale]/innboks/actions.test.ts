@@ -136,7 +136,7 @@ describe('decideRegistration', () => {
       gameName: 'Onsdagsgolfen',
       teamName: 'Bogeybros',
     });
-    expect(archiveMock).toHaveBeenCalledWith({ userId: 'user-1', notificationId: NOTE });
+    expect(archiveMock).toHaveBeenCalledWith({ userId: 'user-1', notificationId: NOTE, client: {} });
   });
 
   it('reject sends no reason', async () => {

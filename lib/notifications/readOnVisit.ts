@@ -124,6 +124,15 @@ export const KNOWN_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKi
   ...INBOX_ONLY_KINDS,
 ]);
 
+/**
+ * The kinds that count as unread on the dot and on the app's inbox button:
+ * every kind this code knows but the quiet ones (#2201). #2480: a kind from a
+ * newer build is not shown in the inbox, so it does not count either.
+ */
+export const DOT_KINDS: readonly NotificationKind[] = [...KNOWN_KINDS].filter(
+  (kind) => !QUIET_KINDS.includes(kind),
+);
+
 export function isKnownKind(kind: string): kind is NotificationKind {
   return KNOWN_KINDS.has(kind as NotificationKind);
 }

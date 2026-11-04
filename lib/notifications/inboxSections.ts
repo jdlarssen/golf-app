@@ -10,7 +10,12 @@ import {
 import { osloParts } from '@/lib/format/teeOff';
 import { nameInitials } from '@/lib/names/initials';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import { buildNotificationText, gameCancelledLine, type NotificationTranslator } from './cardContent';
+import {
+  buildNotificationText,
+  gameCancelledLine,
+  type NotificationSurface,
+  type NotificationTranslator,
+} from './cardContent';
 import { notificationDestination } from './deeplink';
 import { NOTIFICATION_ICON, type NotificationIconName } from './icons';
 import { isKnownKind } from './readOnVisit';
@@ -21,7 +26,7 @@ import type { NotificationKind, NotificationPayload } from './types';
  * which ones group together, which section a row lands in, and what it says.
  *
  * Pure: no React, no Supabase. The web inbox (`app/[locale]/innboks`) renders
- * from it, and the app's inbox will use the same rules when it comes.
+ * from it, and the app's inbox gets the same board from `GET /api/inbox`.
  *
  * Sections: KREVER HANDLING holds unread rows that ask you to do something;
  * the rest go under I DAG or TIDLIGERE by Oslo calendar day. Delivered cards
@@ -82,7 +87,7 @@ export type InboxEntry =
 
 export type InboxSections = Record<InboxSectionKey, InboxEntry[]>;
 
-const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
+export const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
 
 /**
  * Which button a row gets in KREVER HANDLING, or `null` when the row only
@@ -557,6 +562,8 @@ export type InboxTextContext = {
   finishedGameIds: readonly string[];
   /** #2712: league flights; played alone they say «Godkjent», not a place. */
   leagueFlightGameIds?: readonly string[];
+  /** #2759: the app shows no kroner at launch (`lib/launchRules.ts`). Default `web`. */
+  surface?: NotificationSurface;
 };
 
 /** Kinds whose catalog detail says something the target page does not. */
@@ -605,8 +612,8 @@ function withFirstName(row: InboxRow): NotificationPayload {
   return { ...(row.payload as object), [field]: person.short } as NotificationPayload;
 }
 
-function catalogText(row: InboxRow, t: NotificationTranslator) {
-  return buildNotificationText(row.kind, withFirstName(row), t);
+function catalogText(row: InboxRow, t: NotificationTranslator, surface?: NotificationSurface) {
+  return buildNotificationText(row.kind, withFirstName(row), t, { surface });
 }
 
 /**
@@ -927,7 +934,7 @@ function plainText(
   if (DETAIL_KINDS.has(row.kind)) {
     return {
       title,
-      subtitle: [catalogText(row, ctx.t).detail, time].join(SEP),
+      subtitle: [catalogText(row, ctx.t, ctx.surface).detail, time].join(SEP),
       subtitleIsFreeText: FREE_TEXT_KINDS.has(row.kind),
     };
   }

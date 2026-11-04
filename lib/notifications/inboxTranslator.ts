@@ -21,3 +21,17 @@ export async function getInboxTranslator(
   });
   return t as unknown as NotificationTranslator;
 }
+
+/** The same for `finishedCard`, which the inbox's result rows read (#2759). */
+export async function getFinishedCardTranslator(
+  locale: string | null | undefined,
+): Promise<NotificationTranslator> {
+  const loc = resolveMailLocale(locale);
+  const t = createTranslator({
+    locale: loc,
+    messages: await getMailMessages(loc),
+    namespace: 'finishedCard',
+    timeZone: 'Europe/Oslo',
+  });
+  return t as unknown as NotificationTranslator;
+}

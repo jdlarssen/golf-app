@@ -27,6 +27,24 @@ beforeEach(() => {
  * vellykket ut og kortet forsvinner fra lista uten å være arkivert.
  */
 describe('archiveNotifications', () => {
+  it('skriver med klienten kalleren ga, når ruta ikke har cookies (#2759)', async () => {
+    const own = buildSupabaseMock([{ data: [{ id: 'n-1' }], error: null }]);
+    supabaseMock = buildSupabaseMock([]);
+    const { archiveNotifications } = await import('./archive');
+
+    const ok = await archiveNotifications({
+      userId: 'u1',
+      notificationId: 'n-1',
+      client: own as never,
+    });
+
+    expect(ok).toBe(true);
+    expect(own.__fromCalls).toContainEqual(
+      expect.objectContaining({ table: 'notifications', method: 'select', args: ['id'] }),
+    );
+    expect(supabaseMock.__fromCalls).toHaveLength(0);
+  });
+
   it('ett varsel som treffer 0 rader → false, ingen revalidate', async () => {
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
     supabaseMock = buildSupabaseMock([{ data: [], error: null }]);

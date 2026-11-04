@@ -1,5 +1,7 @@
 import 'server-only';
 import { revalidateTag } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { chunkIds } from './inboxReads';
@@ -11,6 +13,11 @@ export type ArchiveOpts = {
    * Hvis utelatt: arkiver alle LESTE varsler for brukeren («Tøm leste»).
    */
   notificationId?: string;
+  /**
+   * Klienten som leser som brukeren. Uten den: cookies-klienten. Appens ruter
+   * har ingen cookies og sender klienten fra kallerens token (#2759).
+   */
+  client?: SupabaseClient<Database>;
 };
 
 /**
@@ -27,7 +34,7 @@ export type ArchiveOpts = {
  *  - `notificationId` utelatt → arkiver alle leste (`read_at is not null`).
  *    De er allerede lest, så `read_at` røres ikke og prikken er uberørt.
  *
- * Best-effort: getServerClient() (cookies → RLS via notifications_update_own),
+ * Best-effort: `client` eller getServerClient() (RLS via notifications_update_own),
  * feiler stille på error (kaster aldri), blokkerer aldri parent-flyten.
  * Invaliderer innboks-cachen så SSR ikke serverer den arkiverte raden på nytt.
  * Returnerer `false` når DB-en avviste skrivingen, `true` ellers — innboks-
@@ -46,7 +53,7 @@ export type ArchiveOpts = {
 export async function archiveNotifications(
   opts: ArchiveOpts,
 ): Promise<boolean> {
-  const supabase = await getServerClient();
+  const supabase = opts.client ?? (await getServerClient());
   const nowIso = new Date().toISOString();
 
   if (opts.notificationId) {

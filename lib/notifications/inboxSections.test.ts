@@ -19,6 +19,7 @@ import {
   rowPersonName,
   teeOffLine,
   trimToWholeDays,
+  type InboxEntry,
   type InboxRow,
   type InboxTextContext,
 } from './inboxSections';
@@ -86,6 +87,23 @@ function ctx(locale: AppLocale = 'no', over: Partial<InboxTextContext> = {}): In
     ...over,
   };
 }
+
+describe('buildInboxEntryView: flaten', () => {
+  const reminder = row(
+    'payment_reminder',
+    { game_id: GAME, game_name: 'Lørdagsrunden', entry_fee_kr: 250 },
+    { read: true },
+  );
+  const entry: InboxEntry = { type: 'single', key: reminder.id, row: reminder, rows: [reminder], unread: false };
+
+  it('uten flate viser purringen beløpet, som på webben', () => {
+    expect(buildInboxEntryView(entry, 'today', ctx()).subtitle).toMatch(/250/);
+  });
+
+  it('i appen viser den ikke beløpet (#2759)', () => {
+    expect(buildInboxEntryView(entry, 'today', ctx('no', { surface: 'app' })).subtitle).not.toMatch(/250/);
+  });
+});
 
 describe('inboxActionKey', () => {
   it.each([
