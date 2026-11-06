@@ -165,6 +165,7 @@ describe('reaksjonene på tavla (#2754)', () => {
       'a. Reaksjoner: Klappe 3, Ild 2',
     );
   });
+});
 
 // #2756: kolonnetitlene på den ferdige tavla har samme tak som resultatets topp.
 it('kolonnetitlene har tak bare på den ferdige tavla', async () => {
