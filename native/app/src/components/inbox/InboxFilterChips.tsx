@@ -26,7 +26,9 @@ export function InboxFilterChips({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.strip}
       contentContainerStyle={styles.row}
+      testID="inbox-filters"
       accessibilityLabel={INBOX_TEXT.filterLabel}
     >
       {chips.map((chip) => {
@@ -54,6 +56,9 @@ export function InboxFilterChips({
 }
 
 const styles = StyleSheet.create({
+  // En ScrollView vokser med flexGrow 1 som standard. På en kort innboks tok raden
+  // da resten av høyden, og seksjonene havnet langt under brikkene (Android, #2759).
+  strip: { flexGrow: 0 },
   row: { gap: 8, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10 },
   chip: {
     height: TAP,

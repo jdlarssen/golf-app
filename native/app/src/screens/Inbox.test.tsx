@@ -204,6 +204,11 @@ describe('tavla', () => {
     expect(screen.getByLabelText(/Resultatet er klart.*2\. plass av 12/)).toBeTruthy();
   });
 
+  it('brikkeraden er bare så høy som brikkene, også når innboksen er kort', async () => {
+    await renderInbox(ONLY_WAITING);
+    expect(screen.getByTestId('inbox-filters')).toHaveStyle({ flexGrow: 0 });
+  });
+
   it('tap-flatene er minst 44 pt', async () => {
     await renderInbox();
     for (const id of ['inbox-mark-all', 'inbox-filter-all', 'inbox-approve', 'inbox-reject', 'inbox-action-button']) {
