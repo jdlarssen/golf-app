@@ -383,6 +383,7 @@ export function TeamStrip({
   bottomInset,
   onAction,
   onLayout,
+  textCap,
 }: {
   strip: TeamBoardStrip;
   /** Faste sifre, som i den ferdige tavla og best ball (ikke `Lagtavle-forslag`). */
@@ -390,6 +391,8 @@ export function TeamStrip({
   bottomInset: number;
   onAction: () => void;
   onLayout?: (height: number) => void;
+  /** Tak på tekstskaleringen under resultatets topp (#2756), ellers dekker stripa den. */
+  textCap?: number;
 }) {
   const { colors } = useTheme();
   const ink = colors.onStrongWarm;
@@ -400,11 +403,13 @@ export function TeamStrip({
       testID="board-strip"
     >
       <View style={styles.shrink}>
-        <Text style={[styles.stripKicker, { color: withAlpha(ink, 0.8) }]}>{strip.kicker}</Text>
+        <Text maxFontSizeMultiplier={textCap} style={[styles.stripKicker, { color: withAlpha(ink, 0.8) }]}>
+          {strip.kicker}
+        </Text>
         {/* «Delt 3. plass · 9 slag bak Lag 2» får ikke plass ved knappen på
             390 pt: da bryter linja heller enn å kutte avstanden, og avstanden
             flytter samlet ned (harde mellomrom), aldri «Lag» uten tallet. */}
-        <Text style={[styles.stripLine, { color: ink }, tabular && styles.tabular]}>
+        <Text maxFontSizeMultiplier={textCap} style={[styles.stripLine, { color: ink }, tabular && styles.tabular]}>
           <Text style={styles.stripPlace}>{strip.place}</Text>
           {strip.detail ? `${NBSP}· ${strip.detail.replace(/ /g, NBSP)}` : null}
         </Text>
@@ -416,7 +421,7 @@ export function TeamStrip({
           style={[styles.stripButton, { backgroundColor: ink }]}
           testID="board-strip-action"
         >
-          <Text style={[styles.stripButtonText, { color: colors.surfaceStrong }]}>
+          <Text maxFontSizeMultiplier={textCap} style={[styles.stripButtonText, { color: colors.surfaceStrong }]}>
             {strip.action.label}
           </Text>
         </Pressable>

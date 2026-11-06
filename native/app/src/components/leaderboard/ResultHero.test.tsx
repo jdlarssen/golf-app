@@ -8,6 +8,7 @@ import { canShareImage, shareViewImage } from '../../lib/shareImage';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { homeBundle, homePlayer } from '../../test/homeFixtures';
 import { ResultHero } from './ResultHero';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 
 jest.mock('../../lib/shareImage', () => ({ canShareImage: jest.fn(), shareViewImage: jest.fn() }));
 jest.mock('../../lib/resultConfetti', () => ({ claimConfetti: jest.fn() }));
@@ -82,7 +83,7 @@ it('kortet står utenfor skjermen, skjult for skjermleseren, med kortets tekst',
 it('«Del resultat» tar bilde av kortet og er minst 44 pt høy', async () => {
   await draw();
   const button = screen.getByRole('button', { name: 'Del resultat' });
-  expect(button).toHaveStyle({ height: 44 });
+  expect(button).toHaveStyle({ minHeight: 44 });
   await fireEvent.press(button);
   await waitFor(() => expect(shareViewImage).toHaveBeenCalledTimes(1));
   expect(screen.queryByTestId('share-result-error')).toBeNull();
@@ -110,6 +111,13 @@ it('et bygg uten de native delene har ingen knapp, men setningen står', async (
   await draw();
   expect(screen.queryByTestId('share-result')).toBeNull();
   expect(screen.getByTestId('result-hero-sentence')).toBeTruthy();
+  await act(async () => {});
+});
+
+it('teksten har et tak, så knappen kan nås på største tekst', async () => {
+  await draw();
+  expect(screen.getByTestId('result-hero-sentence').props.maxFontSizeMultiplier).toBe(RESULT_TEXT_CAP);
+  expect(screen.getByText('Del resultat').props.maxFontSizeMultiplier).toBe(RESULT_TEXT_CAP);
   await act(async () => {});
 });
 

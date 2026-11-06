@@ -13,6 +13,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ROUND_REPORT_APP_TEXT } from '../../lib/boardCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 
 export type RoundReportQuoteVariant = 'solo' | 'team' | 'plain';
 
@@ -59,7 +60,7 @@ export function RoundReportQuote({
       testID="round-report-quote"
     >
       <View style={[styles.figure, { borderTopColor: rule }]}>
-        <Text style={[styles.quote, { color: ink }]} testID="round-report-quote-text">
+        <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.quote, { color: ink }]} testID="round-report-quote-text">
           {`«${quote}»`}
         </Text>
         <Pressable
@@ -69,7 +70,9 @@ export function RoundReportQuote({
           style={styles.link}
           testID="round-report-quote-link"
         >
-          <Text style={[styles.linkText, { color: linkColor }]}>{ROUND_REPORT_APP_TEXT.quoteLink}</Text>
+          <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.linkText, { color: linkColor }]}>
+            {ROUND_REPORT_APP_TEXT.quoteLink}
+          </Text>
           <ChevronIcon size={14} color={linkColor} strokeWidth={2} />
         </Pressable>
       </View>

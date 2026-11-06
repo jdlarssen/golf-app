@@ -10,9 +10,12 @@ import { ACCENT_ON_STRONG } from '../../../../../lib/og/palette';
 import type { ResultHeroModel } from '../../lib/resultHero';
 import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../../theme';
 import { ResultConfetti } from './ResultConfetti';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 import { ShareResultButton } from './ShareResultButton';
 
 export type ResultHeroVariant = 'solo' | 'team' | 'plain';
+
+
 
 /** Tavleflaten går 8 pt opp i båndet i tegningen; sitatet gjør det selv når det står under. */
 const SOLO_OVERLAP = 8;
@@ -54,6 +57,7 @@ export function ResultHero({
     >
       <View accessible accessibilityRole="header" accessibilityLabel={[kicker, hero.a11y, hero.members, subtitle, note].filter(Boolean).join(', ')}>
         <Text
+          maxFontSizeMultiplier={RESULT_TEXT_CAP}
           numberOfLines={1}
           ellipsizeMode="tail"
           style={[styles.kicker, { color: team ? soft : colors.accent }]}
@@ -61,7 +65,7 @@ export function ResultHero({
         >
           {kicker}
         </Text>
-        <Text style={[styles.sentence, { color: ink }]} testID="result-hero-sentence">
+        <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.sentence, { color: ink }]} testID="result-hero-sentence">
           {hero.lines.map((words, lineIndex) => (
             <Text key={lineIndex}>
               {lineIndex > 0 ? '\n' : ''}
@@ -75,13 +79,15 @@ export function ResultHero({
           ))}
         </Text>
         {hero.members ? (
-          <Text style={[styles.members, { color: ink }]} testID="result-hero-members">
+          <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.members, { color: ink }]} testID="result-hero-members">
             {hero.members}
           </Text>
         ) : null}
-        <Text style={[styles.subtitle, { color: soft }]}>{subtitle}</Text>
+        <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.subtitle, { color: soft }]}>
+          {subtitle}
+        </Text>
         {note ? (
-          <Text style={[styles.subtitle, { color: soft }]} testID="leaderboard-seed-failed">
+          <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.subtitle, { color: soft }]} testID="leaderboard-seed-failed">
             {note}
           </Text>
         ) : null}
