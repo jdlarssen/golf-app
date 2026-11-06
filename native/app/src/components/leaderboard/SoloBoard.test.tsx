@@ -8,6 +8,7 @@ import type { SoloBoardModel, SoloBoardRow } from '../../lib/soloBoard';
 import type { ReactionRowState } from '../../lib/useGameReactions';
 import { ReactionsContext, type ReactionsContextValue } from './ReactionsProvider';
 import { BoardStrip, SoloBoard } from './SoloBoard';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 
 const row = (userId: string, rank: number, extra: Partial<SoloBoardRow> = {}): SoloBoardRow => ({
   userId,
@@ -164,4 +165,13 @@ describe('reaksjonene på tavla (#2754)', () => {
       'a. Reaksjoner: Klappe 3, Ild 2',
     );
   });
+
+// #2756: kolonnetitlene på den ferdige tavla har samme tak som resultatets topp.
+it('kolonnetitlene har tak bare på den ferdige tavla', async () => {
+  const { rerender } = await render(<SoloBoard model={live} />);
+  expect(screen.getByText('Plass', { includeHiddenElements: true }).props.maxFontSizeMultiplier).toBeUndefined();
+  await rerender(<SoloBoard model={{ ...live, variant: 'finished' }} />);
+  for (const title of ['Plass', 'Spiller', 'total']) {
+    expect(screen.getByText(title, { includeHiddenElements: true }).props.maxFontSizeMultiplier).toBe(RESULT_TEXT_CAP);
+  }
 });
