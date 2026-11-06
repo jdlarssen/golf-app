@@ -6,6 +6,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { SoloBoardModel, SoloBoardRow } from '../../lib/soloBoard';
 import { BoardStrip, SoloBoard } from './SoloBoard';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 
 const row = (userId: string, rank: number, extra: Partial<SoloBoardRow> = {}): SoloBoardRow => ({
   userId,
@@ -88,4 +89,14 @@ it('tegner live og ferdig tavle i modellens form, og stripas knapp virker', asyn
   );
   await fireEvent.press(screen.getByTestId('board-strip-action'));
   expect(onAction).toHaveBeenCalledTimes(1);
+});
+
+// #2756: kolonnetitlene på den ferdige tavla har samme tak som resultatets topp.
+it('kolonnetitlene har tak bare på den ferdige tavla', async () => {
+  const { rerender } = await render(<SoloBoard model={live} />);
+  expect(screen.getByText('Plass', { includeHiddenElements: true }).props.maxFontSizeMultiplier).toBeUndefined();
+  await rerender(<SoloBoard model={{ ...live, variant: 'finished' }} />);
+  for (const title of ['Plass', 'Spiller', 'total']) {
+    expect(screen.getByText(title, { includeHiddenElements: true }).props.maxFontSizeMultiplier).toBe(RESULT_TEXT_CAP);
+  }
 });

@@ -14,6 +14,7 @@ import { toneKey, visibleBoardRows } from '../../../../../lib/leaderboard/boardR
 import type { ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { BOARD_APP_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
 import { Medal } from './Medal';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 import { formatMessage } from '../../lib/kavalkadeCopy';
 import type { SoloBoardModel, SoloBoardRow, SoloBoardStrip } from '../../lib/soloBoard';
 import {
@@ -38,6 +39,7 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
   const { colors, scheme } = useTheme();
   const [showAll, setShowAll] = useState(false);
   const live = model.variant === 'live';
+  const headCap = live ? undefined : RESULT_TEXT_CAP;
   const { visible, canCollapse } = visibleBoardRows(
     model.rows,
     model.viewerId,
@@ -55,19 +57,21 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
         ]}
         testID="leaderboard-table"
       >
+        {/* Den ferdige tavla står under resultatets topp, med samme tak på
+            tekststørrelsen (#2756), ellers brekker titlene bokstav for bokstav. */}
         <View style={styles.head} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <Text style={[styles.headText, styles.center, { width: PLACE_W, color: colors.onStrongWarm }]}>
+          <Text maxFontSizeMultiplier={headCap} style={[styles.headText, styles.center, { width: PLACE_W, color: colors.onStrongWarm }]}>
             {BOARD_TEXT.colPlace}
           </Text>
-          <Text style={[styles.headText, styles.grow, { color: colors.onStrongWarm }]}>
+          <Text maxFontSizeMultiplier={headCap} style={[styles.headText, styles.grow, { color: colors.onStrongWarm }]}>
             {BOARD_TEXT.colPlayer}
           </Text>
           {model.showHoles ? (
-            <Text style={[styles.headText, styles.center, { width: HOLES_W, color: colors.onStrongWarm }]}>
+            <Text maxFontSizeMultiplier={headCap} style={[styles.headText, styles.center, { width: HOLES_W, color: colors.onStrongWarm }]}>
               {BOARD_TEXT.colHoles}
             </Text>
           ) : null}
-          <Text style={[styles.headText, styles.center, { width: TOTAL_W, color: colors.onStrongWarm }]}>
+          <Text maxFontSizeMultiplier={headCap} style={[styles.headText, styles.center, { width: TOTAL_W, color: colors.onStrongWarm }]}>
             {model.totalHeading}
           </Text>
         </View>
