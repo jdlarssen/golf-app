@@ -11,6 +11,7 @@ import type { ResultCardModel } from '../../lib/resultHero';
 import { canShareImage, shareViewImage } from '../../lib/shareImage';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
 import { ShareCardIcon } from '../icons/Icons';
+import { RESULT_TEXT_CAP } from './resultTextCap';
 import { ResultShareCard } from './ResultShareCard';
 
 export function ShareResultButton({ card }: { card: ResultCardModel }) {
@@ -56,10 +57,12 @@ export function ShareResultButton({ card }: { card: ResultCardModel }) {
         testID="share-result"
       >
         <ShareCardIcon color={ink} size={16} />
-        <Text style={[styles.label, { color: ink }]}>{SHARE_RESULT_LABEL}</Text>
+        <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.label, { color: ink }]}>
+          {SHARE_RESULT_LABEL}
+        </Text>
       </Pressable>
       {failed ? (
-        <Text style={[styles.error, { color: colors.onStrong }]} testID="share-result-error">
+        <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.error, { color: colors.onStrong }]} testID="share-result-error">
           {RESULT_APP_TEXT.shareFailed}
         </Text>
       ) : null}
@@ -75,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: TAP,
+    minHeight: TAP,
     borderRadius: 999,
     paddingHorizontal: 20,
   },

@@ -1320,6 +1320,29 @@ describe('resultatets topp', () => {
     expect(rows[1]).toMatch(/^Meg/);
   });
 
+  it('stripa har tekst-tak bare under resultatets topp', async () => {
+    mockBundleOverride.current = game();
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
+    expect(within(screen.getByTestId('board-strip')).getByText('Scorekortet').props.maxFontSizeMultiplier).toBe(1.5);
+  });
+
+  it('sitatet har samme tak, så det ikke blir større enn setningen', async () => {
+    mockBundleOverride.current = game({ roundReport: 'Marte åpnet sterkt. Resten jaget forgjeves.' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('round-report-quote-text')).toBeTruthy());
+    expect(screen.getByTestId('round-report-quote-text').props.maxFontSizeMultiplier).toBe(1.5);
+  });
+
+  it('en aktiv runde: stripa følger telefonens tekst som før', async () => {
+    mockBundleOverride.current = game({ status: 'active' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('board-strip')).toBeTruthy());
+    expect(screen.getByTestId('board-strip-action').props.children).toBeTruthy();
+    const label = within(screen.getByTestId('board-strip-action')).getByText(/./);
+    expect(label.props.maxFontSizeMultiplier).toBeUndefined();
+  });
+
   it('en aktiv runde har verken setning, knapp eller medalje', async () => {
     mockBundleOverride.current = game({ status: 'active' });
     await renderLeaderboard();

@@ -328,12 +328,15 @@ export function BoardStrip({
   onAction,
   onLayout,
   bottom,
+  textCap,
 }: {
   strip: SoloBoardStrip;
   finished: boolean;
   onAction: () => void;
   onLayout?: (height: number) => void;
   bottom: number;
+  /** Tak på tekstskaleringen under resultatets topp (#2756), ellers dekker stripa den. */
+  textCap?: number;
 }) {
   const { colors, scheme } = useTheme();
   return (
@@ -351,8 +354,14 @@ export function BoardStrip({
       testID="board-strip"
     >
       <View style={styles.stripText}>
-        <Text style={[styles.stripKicker, { color: colors.accentText }]}>{strip.kicker}</Text>
-        <Text style={[styles.stripLine, { color: colors.text }, finished && styles.tabular]} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={textCap} style={[styles.stripKicker, { color: colors.accentText }]}>
+          {strip.kicker}
+        </Text>
+        <Text
+          maxFontSizeMultiplier={textCap}
+          style={[styles.stripLine, { color: colors.text }, finished && styles.tabular]}
+          numberOfLines={1}
+        >
           {strip.text}
         </Text>
       </View>
@@ -363,7 +372,7 @@ export function BoardStrip({
           style={[styles.stripButton, { backgroundColor: colors.primary }]}
           testID="board-strip-action"
         >
-          <Text style={[styles.stripButtonText, { color: colors.onPrimary }]}>
+          <Text maxFontSizeMultiplier={textCap} style={[styles.stripButtonText, { color: colors.onPrimary }]}>
             {strip.action.label}
           </Text>
         </Pressable>

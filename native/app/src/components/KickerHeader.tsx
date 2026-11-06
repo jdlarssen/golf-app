@@ -40,6 +40,7 @@ import {
   withAlpha,
 } from '../theme';
 import { TilbakeIcon } from './icons/Icons';
+import { RESULT_TEXT_CAP } from './leaderboard/resultTextCap';
 
 /** Luften over raden (under sikker-sonen) og ut til kantene, som i designet. */
 const BAR_INSET = 8;
@@ -186,7 +187,12 @@ function TeamBoardTopBar({
             {pill.live ? (
               <View style={[styles.teamPillDot, { backgroundColor: colors.live }]} testID="board-pill-dot" />
             ) : null}
-            <Text style={[styles.teamPillText, { color: ink }, !live && ui.num]}>{pill.text}</Text>
+            <Text
+              maxFontSizeMultiplier={title ? undefined : RESULT_TEXT_CAP}
+              style={[styles.teamPillText, { color: ink }, !live && ui.num]}
+            >
+              {pill.text}
+            </Text>
           </View>
         ) : null}
         <View style={styles.side} />
@@ -251,7 +257,10 @@ function BoardTopBar({
             {pill.live ? (
               <View style={[styles.pillDot, { backgroundColor: colors.live }]} testID="board-pill-dot" />
             ) : null}
-            <Text style={[styles.pillText, { color: colors.onStrong }, !pill.live && ui.num]}>
+            <Text
+              maxFontSizeMultiplier={title ? undefined : RESULT_TEXT_CAP}
+              style={[styles.pillText, { color: colors.onStrong }, !pill.live && ui.num]}
+            >
               {pill.text}
             </Text>
           </View>
