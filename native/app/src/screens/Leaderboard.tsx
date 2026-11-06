@@ -36,6 +36,7 @@ import {
   UNKNOWN_FORMAT_RESULT_MESSAGE,
 } from '../components/leaderboard/ResultView';
 import { ResultHero } from '../components/leaderboard/ResultHero';
+import { RESULT_TEXT_CAP } from '../components/leaderboard/resultTextCap';
 import { RoundReportCard } from '../components/leaderboard/RoundReportCard';
 import {
   RoundReportQuote,
@@ -495,6 +496,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
             strip={strip}
             tabular={patsomeBoard != null || teamBoard?.variant !== 'live'}
             bottomInset={insets.bottom}
+            textCap={hasHero ? RESULT_TEXT_CAP : undefined}
             onLayout={setStripHeight}
             onAction={() => onStripAction(strip.action)}
           />
@@ -544,6 +546,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
             strip={strip}
             finished={soloBoard?.variant === 'finished'}
             bottom={stripBottom}
+            textCap={hasHero ? RESULT_TEXT_CAP : undefined}
             onLayout={setStripHeight}
             onAction={() => onStripAction(strip.action)}
           />
