@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { routing } from '@/i18n/routing';
-import { FRIEND_LINK_LOCALE_PREFIXES, FRIEND_LINK_PATH_PREFIXES } from '@/lib/friends/friendLinkPath';
+import { FRIEND_LINK_LOCALE_PREFIXES } from '@/lib/friends/friendLinkPath';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { isUuid } from '@/lib/url/isUuid';
 import {
@@ -33,10 +33,6 @@ describe('APP_LINK_PATH_PREFIXES', () => {
         `${locale}/cup/bli-med/`,
       ]),
     ]);
-  });
-
-  it('includes every path the friend link already had', () => {
-    for (const prefix of FRIEND_LINK_PATH_PREFIXES) expect(APP_LINK_PATH_PREFIXES).toContain(prefix);
   });
 
   // Anything here would stop opening the browser for someone with the app.

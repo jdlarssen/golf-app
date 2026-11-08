@@ -1,8 +1,8 @@
 /**
  * Stien til «legg til meg»-siden for en venne-kode (#369): ett hjem for
- * nettsidens rute (`app/[locale]/venner/legg-til/[code]`), AASA-fila som lar
- * lenka åpne appen (#2627) og appens egne lenker (delelenka, QR-koden på
- * bag-taggen og lenka som åpner «Bli venn med …»).
+ * nettsidens rute (`app/[locale]/venner/legg-til/[code]`), lista over lenker
+ * som åpner appen (`lib/appLinks/appLinkPaths.ts`, #2627) og appens egne lenker
+ * (delelenka, QR-koden på bag-taggen og lenka som åpner «Bli venn med …»).
  *
  * Ren og uten importer, så appen kan lese den uten å dra servermoduler inn i
  * bundelen (samme grep som `friendStatus.ts`).
@@ -22,13 +22,3 @@ export function friendLinkPath(code: string): string {
  * `routing.locales`.
  */
 export const FRIEND_LINK_LOCALE_PREFIXES = ['', '/en'] as const;
-
-/**
- * Stiene lenka kan stå på, ett per locale: «/venner/legg-til/» og
- * «/en/venner/legg-til/». AASA-fila bruker lista. Butikkbyggets intent-filter
- * og appens parser bygger på `lib/appLinks/appLinkPaths.ts`, som har ligalenka
- * også (#2748).
- */
-export const FRIEND_LINK_PATH_PREFIXES: readonly string[] = FRIEND_LINK_LOCALE_PREFIXES.map(
-  (prefix) => `${prefix}${FRIEND_LINK_PREFIX}`,
-);
