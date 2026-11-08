@@ -42,6 +42,7 @@ export async function OrganiserGameView({
   errorBanner,
   statusBanner,
   startBlockNotice = null,
+  openInApp = null,
 }: {
   id: string;
   game: GameRow;
@@ -53,6 +54,8 @@ export async function OrganiserGameView({
   statusBanner: ReactNode;
   /** #2204: why a scheduled round would not start, shown over the controls. */
   startBlockNotice?: ReactNode;
+  /** #2748: «Åpne i appen» for someone a link left in a browser. */
+  openInApp?: ReactNode;
 }) {
   const t = await getTranslations('game.home');
   const tCeremony = await getTranslations('ceremony');
@@ -73,6 +76,8 @@ export async function OrganiserGameView({
       <div data-testid="organiser-view">
         <TopBar backHref="/" backLabel={t('backToHome')} kicker={t('tournamentKicker')} />
         <PageHeader title={gameName} />
+
+        {openInApp}
 
         <div className="mb-4">
           <StatusChip status={game.status} />

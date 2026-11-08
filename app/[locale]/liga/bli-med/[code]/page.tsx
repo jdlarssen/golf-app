@@ -14,10 +14,14 @@ import { formatListLocale, formatShortOsloDateWithYearLocale } from '@/lib/i18n/
 import { getLeagueJoinContext, type LeagueJoinRound } from '@/lib/league/getLeagueJoinContext';
 import { evaluateLeagueJoin, lateJoinNotice } from '@/lib/league/joinValidation';
 import { isJoinCode } from '@/lib/league/joinCode';
+import { OpenInAppButton } from '@/components/app/OpenInAppButton';
+import { leagueLinkPath } from '@/lib/appLinks/appLinkPaths';
+import { appLinkLanding, type AppLinkQuery } from '@/lib/appLinks/openInApp';
 import type { AppLocale } from '@/i18n/routing';
 import { LeagueJoinActions } from './LeagueJoinActions';
 
 type Params = Promise<{ locale: string; code: string }>;
+type SearchParams = Promise<AppLinkQuery>;
 
 const LEAGUE_FORMATS = ['stroke', 'stableford', 'modified_stableford'] as const;
 type LeagueFormatKey = (typeof LEAGUE_FORMATS)[number];
@@ -61,8 +65,15 @@ function lateJoinNow(rounds: LeagueJoinRound[]) {
  * server action enforces, so the button never shows on grounds the write does
  * not accept.
  */
-export default async function LigaBliMedPage({ params }: { params: Params }) {
+export default async function LigaBliMedPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { code } = await params;
+  const { noApp } = appLinkLanding(await searchParams);
 
   let userId = await getProxyVerifiedUserId();
   if (!userId) {
@@ -121,6 +132,9 @@ export default async function LigaBliMedPage({ params }: { params: Params }) {
     <AppShell>
       <TopBar backHref="/" kicker={t('join.kicker')} />
       <PageHeader title={league.name} subtitle={`${formatLabel} · ${place}`} />
+
+      {/* Only a link reaches this page, so the button needs no `fra=lenke`. */}
+      <OpenInAppButton path={leagueLinkPath(code)} locale={locale} fromLink noApp={noApp} className="mb-5" />
 
       <Card className="mb-5">
         <div data-testid={`liga-join-state-${decision}`} className="space-y-4">

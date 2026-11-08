@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { BrandHero } from '@/components/ui/BrandHero';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
@@ -35,6 +36,7 @@ export function PublicLandingView({
   paymentLink,
   potKr,
   prizes = [],
+  openInApp = null,
 }: {
   gameName: string;
   gameMode: GameMode;
@@ -50,6 +52,8 @@ export function PublicLandingView({
   /** #1175: aggregert innbetalt pott (kr) → ankerlinjen i PaymentInfo. */
   potKr?: number;
   prizes?: GamePrize[];
+  /** #2748: «Åpne i appen» for someone a link left in a browser. */
+  openInApp?: ReactNode;
 }) {
   const t = useTranslations('signup.public');
 
@@ -60,6 +64,8 @@ export function PublicLandingView({
         <div className="mb-4 flex justify-center">
           <LocaleSwitcher />
         </div>
+
+        {openInApp}
 
         <InvitationCard
           variant="public"

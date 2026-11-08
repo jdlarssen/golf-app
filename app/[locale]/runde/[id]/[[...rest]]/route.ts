@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isRoundLinkSubpage } from '@/lib/appLinks/appLinkPaths';
-import { linkRedirect } from '@/lib/appLinks/linkRedirect';
+import { linkLandingRedirect } from '@/lib/appLinks/linkRedirect';
 import { isUuid } from '@/lib/url/isUuid';
 
 /**
@@ -20,5 +20,5 @@ export async function GET(
   if (!isUuid(id) || !isRoundLinkSubpage(subpage)) return new NextResponse(null, { status: 404 });
 
   const path = `/games/${id}${subpage ? `/${subpage}` : ''}`;
-  return linkRedirect(request, locale, `${path}${request.nextUrl.search}`);
+  return linkLandingRedirect(request, locale, path, new URLSearchParams(request.nextUrl.search));
 }

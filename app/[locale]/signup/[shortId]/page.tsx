@@ -38,9 +38,12 @@ import { safeParsePrizes } from '@/lib/games/prizes';
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
+import { OpenInAppButton } from '@/components/app/OpenInAppButton';
+import { roundInviteLinkPath } from '@/lib/appLinks/appLinkPaths';
+import { appLinkLanding, type AppLinkQuery } from '@/lib/appLinks/openInApp';
 
 type Params = Promise<{ shortId: string; locale: string }>;
-type SearchParams = Promise<{ src?: string | string[] }>;
+type SearchParams = Promise<{ src?: string | string[] } & AppLinkQuery>;
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { locale, shortId } = await params;
@@ -104,7 +107,8 @@ export default async function PåmeldingPage({
   searchParams: SearchParams;
 }) {
   const { shortId } = await params;
-  const { src } = await searchParams;
+  const query = await searchParams;
+  const { src } = query;
   const locale = await getLocale();
   const t = await getTranslations('signup');
   const tModes = await getTranslations('modes');
@@ -113,6 +117,12 @@ export default async function PåmeldingPage({
   // gjennom login-runden og ender som game_players.signup_source ved insert.
   const srcRaw =
     typeof src === 'string' && signupSourceFromParam(src) != null ? src : null;
+
+  const openInAppProps = {
+    path: `${roundInviteLinkPath(shortId)}${srcRaw ? `?src=${srcRaw}` : ''}`,
+    locale,
+    ...appLinkLanding(query),
+  };
 
   // /signup ligger i PUBLIC_PATH_PATTERN (proxy.ts slipper alle gjennom), så
   // vi gater selv her. Spill-oppslaget skjer FØR auth-grenen fordi offentlig
@@ -158,6 +168,7 @@ export default async function PåmeldingPage({
           paymentLink={game.payment_link}
           potKr={potKr}
           prizes={safeParsePrizes(game.prizes)}
+          openInApp={<OpenInAppButton {...openInAppProps} className="mb-4" />}
         />
       );
     }
@@ -383,6 +394,8 @@ export default async function PåmeldingPage({
       <TopBar backHref="/" back="history" kicker={t('kicker')} />
 
       <div className="space-y-5">
+        <OpenInAppButton {...openInAppProps} />
+
         {/* #2266: the invitation card is the top of the page; everything
             below it (registered, waiting, closed, the forms) is unchanged. */}
         <InvitationCard
