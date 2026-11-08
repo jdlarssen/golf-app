@@ -62,9 +62,8 @@ export const STORE_LINK_DOMAINS = [STORE_LINK_DOMAIN, STORE_LINK_WWW_DOMAIN] as 
  * om en runde og den delte påmeldingslenka (#2748). Bare de. Appen kan ikke bære en nett-sesjon fra en lenke, så innlogging, påmelding og alt
  * annet skal fortsatt åpnes i nettleseren. Lista bygges fra
  * `lib/appLinks/appLinkPaths.ts`; testen holder dem i takt (fila her er
- * selvstendig, se toppen). iOS leser sine stier fra AASA-fila
- * (`app/.well-known/apple-app-site-association/route.ts`), som flyttes til samme
- * liste når et bygg som forstår dem, er ute.
+ * selvstendig, se toppen). iOS leser de samme stiene fra AASA-fila
+ * (`app/.well-known/apple-app-site-association/route.ts`).
  */
 export const STORE_APP_LINK_PATH_PREFIXES = [
   '/venner/legg-til/',
