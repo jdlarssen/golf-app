@@ -43,7 +43,7 @@ export const PRIVACY_PATH = '/legal/privacy';
 
 /**
  * «Legg til meg»-siden for en venne-kode (#369). Stien har ett hjem,
- * `lib/friends/friendLinkPath.ts`, som nettsidens AASA-fil også leser.
+ * `lib/friends/friendLinkPath.ts`, som lista AASA-fila leser, bygger på.
  * «Del lenka» på vennesiden og QR-koden på bag-taggen (#2627) bygger begge
  * adressen med den og {@link webUrl}.
  */

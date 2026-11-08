@@ -9,11 +9,10 @@
  * paths send you on to the page (`app/[locale]/invitasjon`, `app/[locale]/runde`,
  * `app/[locale]/pamelding`).
  *
- * iOS reads its list from the AASA file, which still has only the friend link
- * (`app/.well-known/apple-app-site-association/route.ts`): AASA applies to
- * every installed build that claims the domain, and older builds understand
- * only the friend link. It moves to this list when a build with the parser is
- * out.
+ * The AASA file builds its list from this one too
+ * (`app/.well-known/apple-app-site-association/route.ts`). AASA applies to every
+ * installed build that claims the domain, so a path goes in here only when the
+ * parser that reads it is in the builds people have.
  *
  * Pure and free of server modules, so the app can read it without dragging
  * them into the bundle (same approach as `friendLinkPath.ts`).
