@@ -7110,6 +7110,10 @@
     "appTitle": "Hent Tørny-appen",
     "appBody": "Den er gratis, og du logger inn med samme e-post."
   },
+  "openInApp": {
+    "button": "Åpne i appen",
+    "notice": "Åpnet ikke appen seg? Da har du den kanskje ikke, eller så stoppet nettleseren i Messenger eller Gmail den. Åpne siden i Safari eller Chrome og prøv igjen, eller fortsett her."
+  },
   "getTheApp": {
     "title": "Hent appen",
     "body": "Appen er gratis, og du logger inn med samme e-post.",

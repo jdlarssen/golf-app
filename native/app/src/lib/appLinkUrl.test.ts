@@ -220,6 +220,19 @@ describe('appLinkFromUrl', () => {
     expect(appLinkFromUrl(www, null)).toBeNull();
   });
 
+  // #2748: knappen legger på `uten-app`, og stiene på nettet `fra`. Lenka betyr det samme.
+  it.each([
+    ['https://www.tornygolf.no/liga/bli-med/abcd2345?uten-app=1', LEAGUE],
+    [`https://www.tornygolf.no/invitasjon/${ID}?email=a%40b.no&uten-app=1`, INVITATION],
+    [`https://www.tornygolf.no/runde/${ID}?uten-app=1&fra=lenke`, ROUND_HOME],
+    [
+      'https://www.tornygolf.no/pamelding/abcd2345?src=plakat&uten-app=1',
+      { kind: 'roundInvite', shortId: 'abcd2345', src: 'plakat' },
+    ],
+  ])('leser %s som lenka uten tilleggene', (url, link) => {
+    expect(appLinkFromUrl(url, BASE)).toEqual(link);
+  });
+
   it('godtar ingen andre underdomener', () => {
     expect(appLinkFromUrl('https://app.tornygolf.no/liga/bli-med/abcd2345', BASE)).toBeNull();
     expect(appLinkFromUrl('https://www.www.tornygolf.no/liga/bli-med/abcd2345', BASE)).toBeNull();

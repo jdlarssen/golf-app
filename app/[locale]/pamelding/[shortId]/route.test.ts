@@ -19,23 +19,29 @@ describe('GET /pamelding/[shortId]', () => {
   it('goes on to the signup page with a real redirect', async () => {
     expect(await open('no', SHORT_ID)).toEqual({
       status: 307,
-      location: `https://tornygolf.no/signup/${SHORT_ID}`,
+      location: `https://tornygolf.no/signup/${SHORT_ID}?fra=lenke`,
     });
   });
 
   it('keeps the locale', async () => {
-    expect((await open('en', SHORT_ID)).location).toBe(`https://tornygolf.no/en/signup/${SHORT_ID}`);
+    expect((await open('en', SHORT_ID)).location).toBe(`https://tornygolf.no/en/signup/${SHORT_ID}?fra=lenke`);
   });
 
   it('keeps the source, so the poster is still counted', async () => {
     expect((await open('no', SHORT_ID, '?src=plakat')).location).toBe(
-      `https://tornygolf.no/signup/${SHORT_ID}?src=plakat`,
+      `https://tornygolf.no/signup/${SHORT_ID}?src=plakat&fra=lenke`,
+    );
+  });
+
+  it('says so when the button came back without the app', async () => {
+    expect((await open('no', SHORT_ID, '?src=plakat&uten-app=1')).location).toBe(
+      `https://tornygolf.no/signup/${SHORT_ID}?src=plakat&uten-app=1&fra=lenke`,
     );
   });
 
   it('drops anything else in the query', async () => {
     expect((await open('no', SHORT_ID, '?next=/admin&x=1')).location).toBe(
-      `https://tornygolf.no/signup/${SHORT_ID}`,
+      `https://tornygolf.no/signup/${SHORT_ID}?fra=lenke`,
     );
   });
 

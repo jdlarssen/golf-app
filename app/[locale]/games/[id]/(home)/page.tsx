@@ -16,6 +16,9 @@ import {
   isStructuralBlockReason,
 } from '@/lib/notifications/autoStartBlocked';
 import { AppShell } from '@/components/ui/AppShell';
+import { OpenInAppButton } from '@/components/app/OpenInAppButton';
+import { roundLinkPath } from '@/lib/appLinks/appLinkPaths';
+import { appLinkLanding, type AppLinkQuery } from '@/lib/appLinks/openInApp';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PremiebordCard } from '@/components/PremiebordCard';
 import { safeParsePrizes } from '@/lib/games/prizes';
@@ -112,7 +115,7 @@ type SearchParams = Promise<{
   // #2202: a refused start carries the rotation format and count.
   mode?: string | string[];
   count?: string | string[];
-}>;
+} & AppLinkQuery>;
 
 const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
@@ -189,6 +192,9 @@ export default async function GameHomePage({
   const { id } = await params;
   const locale = await getLocale();
   const sp = await searchParams;
+  const openInApp = (
+    <OpenInAppButton path={roundLinkPath(id)} locale={locale} {...appLinkLanding(sp)} className="mb-4" />
+  );
   const t = await getTranslations('game.home');
   const tModes = await getTranslations('modes');
   const tScorecard = await getTranslations('scorecard');
@@ -361,6 +367,7 @@ export default async function GameHomePage({
             <CreatorStartBlockNotice block={organiserStartBlock} gameId={id} />
           )
         }
+        openInApp={openInApp}
       />
     );
   }
@@ -862,6 +869,8 @@ export default async function GameHomePage({
           <span className="w-12" aria-hidden />
         </header>
 
+        {openInApp}
+
         {shownErrorBanner}
         {/* #2480: «Flytt runden» lands on the scheduled view with its receipt. */}
         {statusBannerNode}
@@ -1256,6 +1265,8 @@ export default async function GameHomePage({
         kicker={t('tournamentKicker')}
       />
       <PageHeader title={localizeGameName(game.name, game.courses?.name ?? null, locale)} />
+
+      {openInApp}
 
       <div className="mb-4">
         <StatusChip status={game.status} />

@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { linkRedirect } from '@/lib/appLinks/linkRedirect';
+import { linkLandingRedirect, linkRedirect } from '@/lib/appLinks/linkRedirect';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 
 /**
@@ -17,5 +17,5 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ locale:
   const email = request.nextUrl.searchParams.get('email');
   if (email) query.set('email', email);
   query.set('invite', token);
-  return linkRedirect(request, locale, `/login?${query.toString()}`);
+  return linkLandingRedirect(request, locale, '/login', query);
 }

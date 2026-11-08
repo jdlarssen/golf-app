@@ -26,13 +26,19 @@ describe('GET /runde/[id]/[[...rest]]', () => {
   ])('%j goes on to the same page under /games', async (rest, tail) => {
     expect(await open('no', ID, rest)).toEqual({
       status: 307,
-      location: `https://tornygolf.no/games/${ID}${tail}`,
+      location: `https://tornygolf.no/games/${ID}${tail}?fra=lenke`,
     });
   });
 
   it('keeps the locale and the query', async () => {
     expect((await open('en', ID, ['leaderboard'], '?varsel=abc')).location).toBe(
-      `https://tornygolf.no/en/games/${ID}/leaderboard?varsel=abc`,
+      `https://tornygolf.no/en/games/${ID}/leaderboard?varsel=abc&fra=lenke`,
+    );
+  });
+
+  it('says so when the button came back without the app', async () => {
+    expect((await open('no', ID, undefined, '?uten-app=1')).location).toBe(
+      `https://tornygolf.no/games/${ID}?uten-app=1&fra=lenke`,
     );
   });
 

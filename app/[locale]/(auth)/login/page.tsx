@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { AppCtaLink } from '@/components/app/AppCtaLink';
+import { OpenInAppButton } from '@/components/app/OpenInAppButton';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
 import { LoginBand, type LoginBandInvite } from './_components/LoginBand';
@@ -35,6 +36,8 @@ import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { invitationLinkPath } from '@/lib/appLinks/appLinkPaths';
+import { appLinkLanding, type AppLinkQuery } from '@/lib/appLinks/openInApp';
 
 type SearchParams = Promise<{
   step?: string | string[];
@@ -44,7 +47,7 @@ type SearchParams = Promise<{
   invite?: string | string[];
   /** #2349: when `sendCode` sent the code, in unix seconds — drives the countdown. */
   sent?: string | string[];
-}>;
+} & AppLinkQuery>;
 
 // The set of valid error codes that map to a catalog key.
 // An unrecognised ?error= value falls back to 'unknown'.
@@ -232,6 +235,8 @@ export default async function LoginPage({
   // papirkortet og «Bli med på runden» som på artboardet. Demo-lenka og
   // passkey-knappen hører til den vanlige innloggingen.
   if (inviteCard) {
+    const landing = appLinkLanding(params);
+    const openInAppPath = `${invitationLinkPath(invite)}${email ? `?${new URLSearchParams({ email }).toString()}` : ''}`;
     return (
       <AppShell bgClassName="bg-[var(--invitation-page-bg)]">
         <div className="-mt-3.5" data-page-bg="invitation">
@@ -241,6 +246,12 @@ export default async function LoginPage({
           <div className="mt-4 mb-4 flex justify-center">
             <LocaleSwitcher />
           </div>
+          <OpenInAppButton
+            path={openInAppPath}
+            locale={await getLocale()}
+            {...landing}
+            className="mb-4"
+          />
           {inviteCard}
           <section
             aria-labelledby="join-card-title"

@@ -19,19 +19,25 @@ describe('GET /invitasjon/[token]', () => {
   it('goes on to the login with the address and the invitation', async () => {
     expect(await open('no', TOKEN, '?email=kari%2Bx%40example.test')).toEqual({
       status: 307,
-      location: `https://tornygolf.no/login?email=kari%2Bx%40example.test&invite=${TOKEN}`,
+      location: `https://tornygolf.no/login?email=kari%2Bx%40example.test&invite=${TOKEN}&fra=lenke`,
     });
   });
 
   it('keeps the locale', async () => {
     expect(await open('en', TOKEN, '?email=a%40b.no')).toEqual({
       status: 307,
-      location: `https://tornygolf.no/en/login?email=a%40b.no&invite=${TOKEN}`,
+      location: `https://tornygolf.no/en/login?email=a%40b.no&invite=${TOKEN}&fra=lenke`,
     });
   });
 
   it('needs no address', async () => {
-    expect((await open('no', TOKEN)).location).toBe(`https://tornygolf.no/login?invite=${TOKEN}`);
+    expect((await open('no', TOKEN)).location).toBe(`https://tornygolf.no/login?invite=${TOKEN}&fra=lenke`);
+  });
+
+  it('says so when the button came back without the app', async () => {
+    expect((await open('no', TOKEN, '?email=a%40b.no&uten-app=1')).location).toBe(
+      `https://tornygolf.no/login?email=a%40b.no&invite=${TOKEN}&uten-app=1&fra=lenke`,
+    );
   });
 
   it('a token of the wrong shape is just the login, and drops the rest', async () => {
