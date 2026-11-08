@@ -32,6 +32,7 @@ export const ROOT_CLIENT_NAMESPACES = [
   'game',
   // #2562: «Hent appen» on the confirmations, the live board and /demo.
   'getTheApp',
+  'openInApp',
   'holes',
   'inbox',
   'installBanner',
