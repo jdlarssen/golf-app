@@ -16,6 +16,100 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.245.0 · mandag 9. november 2026
+
+<details>
+<summary><strong>Knappen «Åpne i appen» på nettsiden</strong></summary>
+
+[#2748](https://github.com/jdlarssen/golf-app/issues/2748) — Kommer du til nettsiden fra en lenke, for eksempel i Messenger eller Gmail, kan du nå trykke «Åpne i appen».
+</details>
+
+<details>
+<summary><strong>Lenkene åpner appen på iPhone</strong></summary>
+
+[#2748](https://github.com/jdlarssen/golf-app/issues/2748) — Ligalenka, invitasjonen, e-postene om en runde, påmeldingslenka og cup-lenka åpner nå appen på iPhone, hvis du har den.
+</details>
+
+<details>
+<summary><strong>Patsome i appen</strong></summary>
+
+[#2751](https://github.com/jdlarssen/golf-app/issues/2751) — Du kan nå føre Patsome hull for hull i appen, også uten nett, og se alle lagene side om side på tavla. I Patsome og foursomes velger dere hvem som slår ut rett på hullet, også uten dekning.
+</details>
+
+<details>
+<summary><strong>Lag en cup i appen, fra lagfordeling til start</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Fordel spillerne på lag, se forslaget til kamper og bytt spillere før du oppretter dem, også for en delt cup-dag. Så starter du cupen fra cup-rommet. Døra til en ny cup står på Hjem.
+</details>
+
+<details>
+<summary><strong>Kapteinene tar ut lagene i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Arrangøren setter lag og kaptein i spillerlista og åpner øktene. Hver kaptein tar ut laget sitt i hemmelighet, og kampene kommer når begge har levert.
+</details>
+
+<details>
+<summary><strong>Sett opp cupen i appen, og bli med fra cup-lenka</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Fortsett oppsettet av en cup fra appen: bane, tid, format, sidepoeng og spillere, med lenka du deler. Vennene dine melder seg på og av fra lenka. Trykk på varselet om en påmelding, så åpnes spillerlista.
+</details>
+
+<details>
+<summary><strong>Slett et cup-utkast i appen</strong></summary>
+
+[#2752](https://github.com/jdlarssen/golf-app/issues/2752) — Et utkast du ikke vil ha, sletter du fra cup-rommet. Både cupen og en økt i uttaket har nå egen bekreftelse.
+</details>
+
+<details>
+<summary><strong>Reager på tavla i appen</strong></summary>
+
+[#2754](https://github.com/jdlarssen/golf-app/issues/2754) — Du kan nå gi og fjerne reaksjoner på radene på tavla i appen, både under og etter runden. Trykk på en rad, så blir stripa nederst til de seks reaksjonene, og hele tavla står synlig mens du velger.
+</details>
+
+<details>
+<summary><strong>Resultatet etter runden i appen</strong></summary>
+
+[#2756](https://github.com/jdlarssen/golf-app/issues/2756) — Når runden er ferdig, sier appen hvem som vant øverst på tavla, med medaljer på de tre beste. «Del resultat» sender resultatkortet til gruppechatten, også uten nett.
+</details>
+
+<details>
+<summary><strong>Legg inn en ny bane i appen</strong></summary>
+
+[#2757](https://github.com/jdlarssen/golf-app/issues/2757) — Finner du ikke banen når du setter opp en runde i appen, kan du nå legge den inn der, med hull, par, indeks og tee-er, og komme rett tilbake med banen valgt.
+</details>
+
+<details>
+<summary><strong>Appen spør om varsler</strong></summary>
+
+[#2758](https://github.com/jdlarssen/golf-app/issues/2758) — Appen spør én gang om du vil ha varsler, med et kort øverst på Hjem. Bryteren under Profil står som før.
+</details>
+
+<details>
+<summary><strong>Varsler på Android</strong></summary>
+
+[#2758](https://github.com/jdlarssen/golf-app/issues/2758) — Android-appen gir deg nå de samme varslene som iPhone-appen. Slå dem på under Profil, Varsler og tema.
+</details>
+
+<details>
+<summary><strong>Innboksen er i appen</strong></summary>
+
+[#2759](https://github.com/jdlarssen/golf-app/issues/2759) — Du finner nå varslene dine i appen, på iPhone og Android. Konvolutten øverst på Hjem viser hvor mange som er uleste, og det som venter på deg, står samlet øverst. Et trykk på et varsel, også på push, tar deg rett dit det gjelder.
+</details>
+
+<details>
+<summary><strong>En sak står til den er gjort</strong></summary>
+
+[#2759](https://github.com/jdlarssen/golf-app/issues/2759) — En sak under «Krever handling» står nå til den er gjort, i appen og på nett. Å åpne den eller trykke «Marker alt lest» tar den ikke ut.
+
+↳ /innboks · «Åpne innboksen»
+</details>
+
+<details>
+<summary>1 retting</summary>
+
+- [#2757](https://github.com/jdlarssen/golf-app/issues/2757) — Går du tilbake mens profilen lagres eller en lenke laster, blir «Nytt spill» stående på samme steg.
+</details>
+
 ### 1.244.0 · mandag 2. november 2026
 
 <details>
