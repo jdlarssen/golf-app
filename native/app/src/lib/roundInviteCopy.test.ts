@@ -12,12 +12,6 @@ import {
   roundWhenLine,
 } from './roundInviteCopy';
 
-let mockKroner = false;
-jest.mock('../../../../lib/launchRules', () => ({
-  get SHOW_KRONER_IN_APP() {
-    return mockKroner;
-  },
-}));
 
 const web = source.signup;
 
@@ -81,21 +75,12 @@ describe('roundWhenLine', () => {
 });
 
 describe('roundFeeLine', () => {
-  afterEach(() => {
-    mockKroner = false;
-  });
-
-  it('står ikke i appen før kronene gjør det', () => {
-    expect(roundFeeLine(150)).toBeNull();
-  });
-
-  it('har beløpet når kronene er på', () => {
-    mockKroner = true;
+  // #2749: kontingenten står i appen.
+  it('har beløpet', () => {
     expect(roundFeeLine(150)).toBe('Startkontingent 150 kr');
   });
 
   it('har ingen linje på null kroner', () => {
-    mockKroner = true;
     expect(roundFeeLine(0)).toBeNull();
   });
 });

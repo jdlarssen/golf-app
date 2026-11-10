@@ -85,20 +85,9 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/notifications/inboxTranslator', () => ({
   getInboxTranslator: async () => (key: string) => key,
 }));
-// #2561: the app text differs from the web text only where the kind says so
-// (the entry-fee amount); 'D-app' marks which one a channel got. The kroner
-// switch (lib/launchRules.ts) decides whether APNs gets it.
-const launch = vi.hoisted(() => ({ kroner: false }));
-vi.mock('@/lib/launchRules', () => ({
-  get SHOW_KRONER_IN_APP() {
-    return launch.kroner;
-  },
-}));
+const buildTextMock = vi.hoisted(() => vi.fn(() => ({ title: 'T', detail: 'D' })));
 vi.mock('@/lib/notifications/cardContent', () => ({
-  buildNotificationText: (_kind: unknown, _payload: unknown, _t: unknown, opts?: { surface?: string }) => ({
-    title: 'T',
-    detail: opts?.surface === 'app' ? 'D-app' : 'D',
-  }),
+  buildNotificationText: buildTextMock,
 }));
 vi.mock('@/lib/notifications/deeplink', () => ({
   notificationDestination: () => '/games/abc',
@@ -127,8 +116,8 @@ beforeEach(() => {
   webConfigured = false;
   apnsConfigured = true;
   sendApnsMock.mockReset();
+  buildTextMock.mockClear();
   sendNotificationMock.mockReset();
-  launch.kroner = false;
   apnsRows.length = 0;
   webRows.length = 0;
   tablesQueried.length = 0;
@@ -179,17 +168,14 @@ describe('sendPushToUser — APNs channel', () => {
     await send();
 
     expect(sendApnsMock.mock.calls[0][1]).toEqual({
-      aps: { alert: { title: 'T', body: 'D-app' }, sound: 'default' },
+      aps: { alert: { title: 'T', body: 'D' }, sound: 'default' },
       url: '/games/abc',
       kind: 'game_finished',
     });
   });
 
-  it.each([
-    { kroner: false, apns: 'D-app' },
-    { kroner: true, apns: 'D' },
-  ])('#2561: with SHOW_KRONER_IN_APP $kroner the app gets $apns, web push always the web text', async ({ kroner, apns }) => {
-    launch.kroner = kroner;
+  // #2749: the app shows the entry fee, so every channel gets the one text.
+  it('#2749: APNs gets the same text as web push', async () => {
     webConfigured = true;
     webRows.push({ id: '1', endpoint: 'https://push/x', p256dh: 'k', auth: 'a' });
     sendNotificationMock.mockResolvedValueOnce({ statusCode: 201 });
@@ -199,7 +185,8 @@ describe('sendPushToUser — APNs channel', () => {
     await send();
 
     expect(JSON.parse(sendNotificationMock.mock.calls[0][1] as string).body).toBe('D');
-    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ aps: { alert: { body: apns } } });
+    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ aps: { alert: { body: 'D' } } });
+    expect(buildTextMock).toHaveBeenCalledTimes(1);
   });
 
   it('unknown environment → tries production first and persists it on success', async () => {

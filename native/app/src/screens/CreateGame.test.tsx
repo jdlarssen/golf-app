@@ -49,15 +49,15 @@ jest.mock('@react-navigation/native', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
-// #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
-const mockKroner = { on: false };
+// #2561: oppgjørsbryteren (rot-`lib/launchRules.ts`), styrt per test.
+const mockSettlement = { on: false };
 jest.mock('../../../../lib/launchRules', () => ({
-  get SHOW_KRONER_IN_APP() {
-    return mockKroner.on;
+  get SHOW_SETTLEMENT_IN_APP() {
+    return mockSettlement.on;
   },
 }));
 beforeEach(() => {
-  mockKroner.on = false;
+  mockSettlement.on = false;
 });
 
 jest.mock('../data/syncTriggers', () => ({
@@ -483,19 +483,19 @@ describe('CreateGame', () => {
   });
 
   // #2561: wolf spiller om poeng med enhet, og appen spør om kroner per poeng
-  // bare når kronebryteren (rot-`lib/launchRules.ts`) er på. Ved lansering er
+  // bare når oppgjørsbryteren (rot-`lib/launchRules.ts`) er på. Ved lansering er
   // den av.
   it.each([
     { on: false, field: false },
     { on: true, field: true },
-  ])('#2561: «Kroner per …» i oppsettet følger kronebryteren ($on)', async ({ on, field }) => {
-    mockKroner.on = on;
+  ])('#2561: «Kroner per …» i oppsettet følger oppgjørsbryteren ($on)', async ({ on, field }) => {
+    mockSettlement.on = on;
     await renderWizard();
     await fireEvent.press(await screen.findByTestId('create-format-wolf'));
     await fireEvent.press(screen.getByTestId('create-next'));
     expect(screen.getByTestId('create-step-setup')).toBeTruthy();
     expect(screen.queryByTestId('create-kr-per-unit') !== null).toBe(field);
-    mockKroner.on = false;
+    mockSettlement.on = false;
   });
 
   it('kaster modus-spesifikke valg naar formatet byttes, og lar dobbelttrykk staa', async () => {

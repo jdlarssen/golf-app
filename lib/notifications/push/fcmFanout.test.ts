@@ -82,19 +82,9 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/notifications/inboxTranslator', () => ({
   getInboxTranslator: async () => (key: string) => key,
 }));
-// 'D-app' marks the app text, as in apnsFanout.test.ts: the kroner switch
-// (lib/launchRules.ts) decides whether the two app channels get it.
-const launch = vi.hoisted(() => ({ kroner: false }));
-vi.mock('@/lib/launchRules', () => ({
-  get SHOW_KRONER_IN_APP() {
-    return launch.kroner;
-  },
-}));
+const buildTextMock = vi.hoisted(() => vi.fn(() => ({ title: 'T', detail: 'D' })));
 vi.mock('@/lib/notifications/cardContent', () => ({
-  buildNotificationText: (_kind: unknown, _payload: unknown, _t: unknown, opts?: { surface?: string }) => ({
-    title: 'T',
-    detail: opts?.surface === 'app' ? 'D-app' : 'D',
-  }),
+  buildNotificationText: buildTextMock,
 }));
 vi.mock('@/lib/notifications/deeplink', () => ({
   notificationDestination: () => '/games/abc',
@@ -124,10 +114,10 @@ beforeEach(() => {
   apnsConfigured = false;
   fcmConfigured = true;
   fcmReadError = null;
-  launch.kroner = false;
   sendNotificationMock.mockReset();
   sendApnsMock.mockReset();
   sendFcmMock.mockReset();
+  buildTextMock.mockClear();
   for (const table of Object.keys(rows)) rows[table].length = 0;
   tablesQueried.length = 0;
   fcmUpdates.length = 0;
@@ -150,7 +140,7 @@ describe('sendPushToUser — FCM channel', () => {
     expect(sendFcmMock).toHaveBeenCalledTimes(1);
     expect(sendFcmMock.mock.calls[0][0]).toBe('token-1');
     expect(sendFcmMock.mock.calls[0][1]).toMatchObject({
-      notification: { title: 'T', body: 'D-app' },
+      notification: { title: 'T', body: 'D' },
       data: { url: `/games/abc?varsel=${id}`, kind: 'game_finished' },
     });
     expect(fcmUpdates).toHaveLength(1);
@@ -159,11 +149,8 @@ describe('sendPushToUser — FCM channel', () => {
     expect(fcmDeletes).toHaveLength(0);
   });
 
-  it.each([
-    { kroner: false, fcm: 'D-app' },
-    { kroner: true, fcm: 'D' },
-  ])('with SHOW_KRONER_IN_APP $kroner Android gets $fcm, web push always the web text', async ({ kroner, fcm }) => {
-    launch.kroner = kroner;
+  // #2749: the app shows the entry fee, so every channel gets the one text.
+  it('#2749: Android gets the same text as web push', async () => {
     webConfigured = true;
     rows.push_subscriptions.push({ id: '1', endpoint: 'https://push/x', p256dh: 'k', auth: 'a' });
     sendNotificationMock.mockResolvedValueOnce({ statusCode: 201 });
@@ -173,7 +160,8 @@ describe('sendPushToUser — FCM channel', () => {
     await send();
 
     expect(JSON.parse(sendNotificationMock.mock.calls[0][1] as string).body).toBe('D');
-    expect(sendFcmMock.mock.calls[0][1]).toMatchObject({ notification: { body: fcm } });
+    expect(sendFcmMock.mock.calls[0][1]).toMatchObject({ notification: { body: 'D' } });
+    expect(buildTextMock).toHaveBeenCalledTimes(1);
   });
 
   it('UNREGISTERED deletes that row only', async () => {

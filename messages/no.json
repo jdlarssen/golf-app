@@ -180,8 +180,7 @@
       },
       "paymentReminder": {
         "title": "Betal startkontingenten",
-        "detail": "Du mangler {amount} i {gameName}",
-        "detailApp": "Du mangler å betale startkontingenten i {gameName}"
+        "detail": "Du mangler {amount} i {gameName}"
       },
       "gameCancelled": {
         "title": "{gameName} er avlyst",

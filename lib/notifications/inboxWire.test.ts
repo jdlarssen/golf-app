@@ -109,19 +109,19 @@ describe('buildInboxWire', () => {
     expect(wire.unreadCount).toBe(1);
   });
 
-  it('AK3: the fee reminder says no kroner in the app, and the web’s row still does', () => {
+  it('#2749: the fee reminder names the amount in the app, as on the web', () => {
     const reminder = row('payment_reminder', {
       payload: { game_id: TEST_GAME_ID, game_name: 'Hauger Open', entry_fee_kr: 250 },
     });
     const app = wireOf([reminder]).sections.action[0]!;
-    expect(app.subtitle).not.toMatch(/250|kr/);
-    expect(app.subtitle).toContain('Hauger Open');
     const web = buildInboxEntryView(
       buildInboxSections([reminder], { filter: 'all', now: NOW }).action[0]!,
       'action',
       { t, tFinished, locale: 'no', now: NOW, teeOffByGame: {}, resultByGame: {}, finishedGameIds: [] },
     );
-    expect(web.subtitle).toMatch(/250/);
+    expect(app.subtitle).toMatch(/250/);
+    expect(app.subtitle).toContain('Hauger Open');
+    expect(app.subtitle).toBe(web.subtitle);
   });
 
   it('AK4: filtering on `friend` gives the same rows as the web’s «Venner» filter', () => {

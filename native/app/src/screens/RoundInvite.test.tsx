@@ -122,9 +122,10 @@ describe('du kan melde deg på', () => {
     expect(screen.queryByTestId('round-invite-message')).toBeNull();
   });
 
-  it('kronene står ikke i appen ved lansering', async () => {
+  // #2749: kontingenten står i appen, så ingen melder seg på uten å vite hva det koster.
+  it('kontingenten står på påmeldingen', async () => {
     await renderInvite();
-    expect(screen.queryByTestId('round-invite-fee')).toBeNull();
+    expect(screen.getByTestId('round-invite-fee')).toHaveTextContent('Startkontingent 150 kr');
   });
 
   it('[Hjem, Påmelding] blir [Hjem, Spillet], og kilden følger med', async () => {
