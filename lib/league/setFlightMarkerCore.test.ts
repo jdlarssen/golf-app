@@ -9,11 +9,15 @@ import type { LeagueFlight } from './leagueFlight';
  *  - outside a simulator league it is the core, unchanged;
  *  - a missing marker, the player themself and someone outside the league are
  *    refused with their own code, before anything is written or delivered;
- *  - a valid marker is written on the undelivered cards, the core delivers
- *    without asking the flightmates, and the marker is told once per card;
- *  - a second tap tells nobody; a failed league read is `db`;
- *  - only cards the caller may deliver get the marker: none for someone not
- *    playing, and only the flightmates the core's own rule allows.
+ *  - a valid marker is written on the deliverer's undelivered card, the core
+ *    delivers without asking the flightmates, and the marker is told;
+ *  - a second tap tells nobody; a failed league read is `db`.
+ *
+ * #2814: the one who keeps the flight's cards hands them over. The deliverer's
+ * own card is delivered, the kept cards get the deliverer as marker and are
+ * not delivered, and each flightmate is told to look the card over. The
+ * flightmate delivers without a marker; unchanged, the card is approved in
+ * the marker's name, changed, it waits in the marker's queue.
  */
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
@@ -29,6 +33,14 @@ vi.mock('@/lib/games/loadFlightDelivery', () => ({
 }));
 const notify = vi.fn(async () => ({ shouldAlsoSendMail: false }));
 vi.mock('@/lib/notifications/notify', () => ({ notify: (...args: unknown[]) => notify(...(args as [])) }));
+const sendDeliveryReminder = vi.fn(async (..._args: unknown[]) => {});
+vi.mock('@/lib/notifications/deliveryReminder', () => ({
+  sendDeliveryReminder: (...args: unknown[]) => sendDeliveryReminder(...args),
+}));
+const approveScorecardCore = vi.fn(async (..._args: unknown[]) => ({ ok: true, alreadyDone: false }));
+vi.mock('@/lib/games/reviewScorecardCore', () => ({
+  approveScorecardCore: (...args: unknown[]) => approveScorecardCore(...args),
+}));
 
 import { readSimulatorLeagueFlight } from './leagueFlight';
 import { submitScorecardWithMarker } from './setFlightMarkerCore';
@@ -43,17 +55,29 @@ const FLIGHT: LeagueFlight = {
   leagueCreatorId: 'org',
 };
 const MEMBERS = { data: ['a', 'b', 'm'].map((user_id) => ({ user_id })) };
-/** The deliverer's own active row in the game. */
-const ME = { data: { user_id: 'a' } };
+type Row = { user_id: string; submitted_at: string | null; marker_user_id: string | null; withdrawn_at: string | null };
+const row = (user_id: string, over: Partial<Row> = {}): Row => ({
+  user_id,
+  submitted_at: null,
+  marker_user_id: null,
+  withdrawn_at: null,
+  ...over,
+});
+/** The flight game: A alone, or A and B. */
+const ALONE = { data: [row('a')] };
+const FLIGHT_AB = { data: [row('a'), row('b')] };
 const GAME = { data: { game_mode: 'stableford', hole_segment: 'full', source_game_id: null } };
 const player = {} as SupabaseClient<Database>;
 const delivered = { ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 0 };
+const updates = () =>
+  adminMock.__fromCalls.filter((c) => c.table === 'game_players' && c.method === 'update').map((c) => c.args[0]);
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.mocked(readSimulatorLeagueFlight).mockResolvedValue(FLIGHT);
   submitScorecardCore.mockResolvedValue(delivered);
+  approveScorecardCore.mockResolvedValue({ ok: true, alreadyDone: false });
 });
 
 describe('submitScorecardWithMarker', () => {
@@ -73,7 +97,7 @@ describe('submitScorecardWithMarker', () => {
     ['the player themself', 'a', 'marker_is_self'],
     ['someone outside the league', 'z', 'marker_not_member'],
   ] as const)('refuses %s before anything is written', async (_label, markerUserId, reason) => {
-    adminMock = buildSupabaseMock([ME, MEMBERS]);
+    adminMock = buildSupabaseMock([ALONE, MEMBERS]);
     const result = await submitScorecardWithMarker(player, 'g1', 'a', { markerUserId });
     expect({
       result,
@@ -82,40 +106,32 @@ describe('submitScorecardWithMarker', () => {
     }).toEqual({ result: { ok: false, reason }, submitted: 0, wrote: false });
   });
 
-  it('refuses the owner of a flightmate card in the same delivery as marker', async () => {
-    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
-    adminMock = buildSupabaseMock([ME, GAME, MEMBERS]);
-    const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'b' });
-    expect(result).toEqual({ ok: false, reason: 'marker_is_self' });
-  });
-
-  it('writes the marker on the undelivered cards, delivers without the flight, and tells the marker', async () => {
+  it('playing alone: writes the marker on the own card, delivers without the flight, and tells the marker', async () => {
     adminMock = buildSupabaseMock([
-      ME,
+      ALONE,
       MEMBERS,
       { data: [{ user_id: 'a' }] }, // marker write
       { data: [{ user_id: 'a', users: { name: 'Anders', nickname: null } }] }, // delivered now
     ]);
     const result = await submitScorecardWithMarker(player, 'g1', 'a', { markerUserId: 'm' });
 
-    const write = adminMock.__fromCalls.find((c) => c.table === 'game_players' && c.method === 'update');
     const writeAt = adminMock.__fromCalls.findIndex((c) => c.table === 'game_players' && c.method === 'update');
     const writeFilters = adminMock.__fromCalls
       .slice(writeAt)
-      .filter((c) => c.table === 'game_players' && (c.method === 'is' || c.method === 'in'))
-      .slice(0, 3)
+      .filter((c) => c.table === 'game_players' && (c.method === 'is' || c.method === 'eq'))
+      .slice(1, 4)
       .map((c) => [c.method, ...c.args]);
     expect({
       result,
-      written: write?.args[0],
+      written: updates(),
       writeFilters,
       core: submitScorecardCore.mock.calls[0]?.slice(1),
       notified: notify.mock.calls,
     }).toEqual({
-      result: delivered,
-      written: { marker_user_id: 'm' },
+      result: { ...delivered, handedOver: 0 },
+      written: [{ marker_user_id: 'm' }],
       writeFilters: [
-        ['in', 'user_id', ['a']],
+        ['eq', 'user_id', 'a'],
         ['is', 'submitted_at', null],
         ['is', 'withdrawn_at', null],
       ],
@@ -132,31 +148,176 @@ describe('submitScorecardWithMarker', () => {
     });
   });
 
+  it('A hands B over: A\'s card goes to B as marker, B\'s card gets A as marker and is not delivered', async () => {
+    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
+    adminMock = buildSupabaseMock([
+      FLIGHT_AB,
+      MEMBERS,
+      { data: [{ user_id: 'a' }] }, // A's marker write
+      { data: [{ user_id: 'a', users: { name: 'Anders', nickname: null } }] }, // A delivered now
+      GAME,
+      { data: [{ user_id: 'b' }] }, // handover write
+      { data: { name: 'Runde 1' } }, // game name
+      {
+        data: [
+          { id: 'a', email: null, name: 'Anders', nickname: null, locale: null },
+          { id: 'b', email: 'b@example.com', name: 'Berit', nickname: null, locale: 'no' },
+        ],
+      },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'b' });
+
+    const handover = adminMock.__fromCalls.findLastIndex((c) => c.method === 'update');
+    const handoverFilters = adminMock.__fromCalls
+      .slice(handover)
+      .filter((c) => c.method === 'in' || c.method === 'is')
+      .slice(0, 4)
+      .map((c) => [c.method, ...c.args]);
+    const [ownWrite, handoverWrite] = updates() as [Record<string, unknown>, Record<string, unknown>];
+    expect({
+      result,
+      ownWrite,
+      handoverMarker: handoverWrite.marker_user_id,
+      stamped: typeof handoverWrite.deliver_reminder_sent_at,
+      handoverFilters,
+      core: submitScorecardCore.mock.calls.map((c) => c.slice(1)),
+      markerRequest: notify.mock.calls.map((c) => [(c as unknown as [{ userId: string; payload: { player_id: string } }])[0].userId, (c as unknown as [{ payload: { player_id: string } }])[0].payload.player_id]),
+      told: sendDeliveryReminder.mock.calls.map((c) => {
+        const o = c[0] as { player: { userId: string; email: string | null }; game: { id: string; name: string }; markerName: string };
+        return [o.player.userId, o.player.email, o.game, o.markerName];
+      }),
+    }).toEqual({
+      result: { ...delivered, handedOver: 1 },
+      ownWrite: { marker_user_id: 'b' },
+      handoverMarker: 'a',
+      stamped: 'string',
+      handoverFilters: [
+        ['in', 'user_id', ['b']],
+        ['is', 'submitted_at', null],
+        ['is', 'withdrawn_at', null],
+        ['is', 'marker_user_id', null],
+      ],
+      core: [['g1', 'a', { alsoFor: [], peerNotices: false }]],
+      markerRequest: [['b', 'a']],
+      told: [['b', 'b@example.com', { id: 'g1', name: 'Runde 1' }, 'Anders']],
+    });
+  });
+
+  it('a failed handover does not fail A\'s delivery', async () => {
+    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
+    adminMock = buildSupabaseMock([
+      FLIGHT_AB,
+      MEMBERS,
+      { data: [{ user_id: 'a' }] },
+      { data: [] },
+      GAME,
+      { data: null, error: { message: 'connection reset' } }, // handover write
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'm' });
+    expect({ result, told: sendDeliveryReminder.mock.calls.length }).toEqual({
+      result: { ...delivered, handedOver: 0 },
+      told: 0,
+    });
+  });
+
+  const HANDED = { data: [row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'b' }), row('b', { marker_user_id: 'a' })] };
+
+  it('B delivers the card A kept, unchanged: approved in A\'s name, nobody is asked', async () => {
+    adminMock = buildSupabaseMock([HANDED, { data: Array.from({ length: 18 }, () => ({ entered_by: 'a' })) }]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'b', {});
+    expect({
+      result,
+      wrote: updates(),
+      core: submitScorecardCore.mock.calls[0]?.slice(1),
+      approved: approveScorecardCore.mock.calls.map((c) => {
+        const { client: _client, ...rest } = c[0] as Record<string, unknown>;
+        return rest;
+      }),
+      markerRequests: notify.mock.calls.length,
+    }).toEqual({
+      result: { ...delivered, handedOver: 0 },
+      wrote: [],
+      core: ['g1', 'b', { alsoFor: [], peerNotices: false }],
+      approved: [
+        {
+          gameId: 'g1',
+          approverUserId: 'a',
+          playerUserId: 'b',
+          approverRole: 'peer',
+          delivererMayApprove: false,
+          markerUserId: 'a',
+        },
+      ],
+      markerRequests: 0,
+    });
+  });
+
+  it('B changed a hole: not approved, A is asked, and the card waits in A\'s queue', async () => {
+    adminMock = buildSupabaseMock([
+      HANDED,
+      { data: [...Array.from({ length: 17 }, () => ({ entered_by: 'a' })), { entered_by: 'b' }] },
+      { data: [{ user_id: 'b', users: { name: 'Berit', nickname: null } }] }, // delivered now
+    ]);
+    await submitScorecardWithMarker(player, 'g1', 'b', {});
+    expect({
+      approved: approveScorecardCore.mock.calls.length,
+      asked: notify.mock.calls.map((c) => (c as unknown as [{ userId: string; kind: string; payload: { player_id: string } }])[0]).map((n) => [n.userId, n.kind, n.payload.player_id]),
+    }).toEqual({ approved: 0, asked: [['a', 'league_marker_request', 'b']] });
+  });
+
+  it('a failed automatic approval leaves the card in A\'s queue and tells A', async () => {
+    approveScorecardCore.mockResolvedValueOnce({ ok: false, reason: 'not_pending' } as never);
+    adminMock = buildSupabaseMock([
+      HANDED,
+      { data: [{ entered_by: 'a' }] },
+      { data: [{ user_id: 'b', users: { name: 'Berit', nickname: null } }] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'b', {});
+    expect({ ok: result.ok, asked: notify.mock.calls.length }).toEqual({ ok: true, asked: 1 });
+  });
+
+  it('B sending a marker is ignored: the marker A stands', async () => {
+    adminMock = buildSupabaseMock([HANDED, { data: [{ entered_by: 'a' }] }]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'b', { markerUserId: 'm' });
+    expect({
+      ok: result.ok,
+      wrote: updates(),
+      membersRead: adminMock.__fromCalls.some((c) => c.table === 'league_players'),
+    }).toEqual({ ok: true, wrote: [], membersRead: false });
+  });
+
   it('a second tap (already delivered) tells nobody', async () => {
     submitScorecardCore.mockResolvedValue({ ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 });
-    adminMock = buildSupabaseMock([ME, MEMBERS, { data: [] }]);
+    adminMock = buildSupabaseMock([ALONE, MEMBERS, { data: [] }]);
     const result = await submitScorecardWithMarker(player, 'g1', 'a', { markerUserId: 'm' });
     expect({ ok: result.ok, notified: notify.mock.calls.length }).toEqual({ ok: true, notified: 0 });
   });
 
+  it('a delivered own card asks for no marker; the kept cards are still handed over', async () => {
+    submitScorecardCore.mockResolvedValue({ ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 });
+    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
+    adminMock = buildSupabaseMock([
+      { data: [row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'm' }), row('b')] },
+      GAME,
+      { data: [{ user_id: 'b' }] },
+      { data: { name: 'Runde 1' } },
+      { data: [] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'] });
+    expect({ result, membersRead: adminMock.__fromCalls.some((c) => c.table === 'league_players') }).toEqual({
+      result: { ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0, handedOver: 1 },
+      membersRead: false,
+    });
+  });
+
   it('a caller who is not playing marks nothing; the core answers', async () => {
     submitScorecardCore.mockResolvedValue({ ok: false, reason: 'not_player' });
-    adminMock = buildSupabaseMock([{ data: null }]);
+    adminMock = buildSupabaseMock([ALONE]);
     const result = await submitScorecardWithMarker(player, 'g1', 'z', { alsoFor: ['a'], markerUserId: 'm' });
     expect({
       result,
       wrote: adminMock.__fromCalls.some((c) => c.method === 'update'),
     }).toEqual({ result: { ok: false, reason: 'not_player' }, wrote: false });
-  });
-
-  it('marks only the flightmates the deliverer may deliver, as the core narrows them', async () => {
-    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
-    adminMock = buildSupabaseMock([ME, GAME, MEMBERS, { data: [{ user_id: 'a' }, { user_id: 'b' }] }, { data: [] }]);
-    await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b', 'x'], markerUserId: 'm' });
-    const filter = adminMock.__fromCalls.find(
-      (c) => c.table === 'game_players' && c.method === 'in' && c.args[0] === 'user_id',
-    );
-    expect(filter?.args[1]).toEqual(['a', 'b']);
   });
 
   it('a failed league read is db, and nothing is delivered', async () => {

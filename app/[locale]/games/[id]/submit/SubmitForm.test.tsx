@@ -24,7 +24,8 @@ import { SubmitForm } from './SubmitForm';
  * svart, også i serverens HTML). Selve
  * scope-reglene er Type A i `lib/sync/queueScope.test.ts` og re-asserteres
  * ikke her; testen kjører dem gjennom komponenten i stedet for å telle på nytt.
- * #2661: og av en markør som ikke er valgt i en simulatorliga.
+ * #2661: og av en markør som ikke er valgt i en simulatorliga. #2814: og
+ * markørlinja står bare der siden sender den.
  *
  * `@/i18n/navigation` og `next-intl` er globalt mocket i `vitest.setup.ts`
  * (ekte no.json), så verken router-stub eller provider gjentas her.
@@ -138,6 +139,16 @@ describe('SubmitForm', () => {
     expect(screen.getByTestId('submit-scorecard')).toBeEnabled();
     const picked = new FormData(screen.getByTestId('submit-scorecard').closest('form')!);
     expect(picked.get('marker')).toBe('u2');
+    expect(screen.queryByTestId('marker-note')).toBeNull();
+
+    // #2814: a flightmate kept my card and is my marker. No picker, the line
+    // in its place, and «Lever» is open.
+    rerender(<SubmitForm {...props} markerNote="Anders er markøren din." />);
+    expect({
+      picker: screen.queryByTestId('marker-picker'),
+      note: screen.getByTestId('marker-note').textContent,
+      enabled: !(screen.getByTestId('submit-scorecard') as HTMLButtonElement).disabled,
+    }).toEqual({ picker: null, note: 'Anders er markøren din.', enabled: true });
   });
 
   // #2666: the marker list is the whole league. Six rows, a search over

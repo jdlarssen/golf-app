@@ -243,11 +243,15 @@ const teamMemberWithdrewSchema = z.object({
 // ført for andre; da har varselet sin egen tekst («Lever kortene du har ført»).
 // #2759: `card_user_ids` er alle kortene påminnelsen gjelder, så raden står til
 // de er levert. Rader fra før #2759 har bare antallet.
+// #2814: `marker_name` er satt når en flightkamerat har ført kortet i en
+// simulatorliga og overlevert det. Da har varselet sin egen tekst («Mia har
+// ført kortet ditt»), og mottakeren leverer sitt eget kort.
 const deliverReminderSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   others_count: z.number().int().positive().optional(),
   card_user_ids: z.array(uuid).min(1).optional(),
+  marker_name: z.string().min(1).optional(),
 });
 
 // missing_score_reminder (#2268): arrangøren trykket «Påminn» på en hull-rad i

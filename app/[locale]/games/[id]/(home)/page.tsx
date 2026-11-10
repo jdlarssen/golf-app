@@ -122,6 +122,8 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
   // #2200: the server delivered fewer flightmates' cards than the form asked.
   submitted_partial: 'bannerSubmittedPartial',
+  // #2814: a simulator league hands the kept cards over to their owners.
+  submitted_handed_over: 'bannerSubmittedHandedOver',
 };
 
 // #2202: the organiser's «Start runden nå» and finish land here with

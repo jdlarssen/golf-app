@@ -189,6 +189,9 @@ export function flightDeliveryFor(
     withdrawn_at: player.withdrawnAt,
     team_number: player.teamNumber,
     submitted_at: player.submittedAt,
+    // #2814: et kort føreren har overlevert i en simulatorliga, har føreren som
+    // markør, og er da ikke lenger førerens å levere.
+    marker_user_id: player.markerUserId ?? null,
     is_guest: player.isGuest,
   }));
   const ids = new Set(
@@ -211,7 +214,7 @@ export function flightDeliveryFor(
 }
 
 /** «Ola», «Ola og Kari», «Ola, Kari og Per» — navnene slik rosteret viser dem. */
-function namesOf(players: readonly BundlePlayer[]): string {
+export function namesOf(players: readonly BundlePlayer[]): string {
   return formatNameList(players.map(displayName));
 }
 
