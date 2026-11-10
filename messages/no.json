@@ -149,7 +149,9 @@
         "title": "Husk å levere scorekortet",
         "detail": "Lever kortet i {gameName}, så kan arrangøren avslutte runden.",
         "titleKept": "Lever kortene du har ført",
-        "detailKept": "Du har ført kort i {gameName} som ikke er levert. Lever dem, så kan arrangøren avslutte runden."
+        "detailKept": "Du har ført kort i {gameName} som ikke er levert. Lever dem, så kan arrangøren avslutte runden.",
+        "titleHandedOver": "{markerName} har ført kortet ditt",
+        "detailHandedOver": "Se over kortet i {gameName} og send det inn."
       },
       "missingScoreReminder": {
         "title": "{extra, plural, =0 {Du mangler slag på hull {hole}} one {Du mangler slag på hull {hole} og ett hull til} other {Du mangler slag på hull {hole} og # hull til}}",
@@ -2262,6 +2264,7 @@
       "draftBanner": "Utkast — admin planlegger fortsatt. Detaljer kan endre seg.",
       "bannerSubmitted": "Scorekortet er levert.",
       "bannerSubmittedPartial": "Levert, men ikke alle makkerkortene. Noen kan ha levert dem eller ført hull på dem i mellomtiden.",
+      "bannerSubmittedHandedOver": "Kortet ditt er levert. Flightkameratene får kortene sine og sender dem inn selv.",
       "rejectionBannerPrefix": "Scorekortet ditt ble avvist: «",
       "rejectionBannerSuffix": "». Rediger hullene og lever på nytt.",
       "rejectionBannerNoReason": "Scorekortet ditt ble avvist uten begrunnelse. Rediger hullene og lever på nytt.",
@@ -2397,7 +2400,10 @@
         "noMatch": "Ingen spillere med det navnet.",
         "showAll": "Vis alle {count}",
         "showFewer": "Vis færre",
-        "unknownPlayer": "Ukjent spiller"
+        "unknownPlayer": "Ukjent spiller",
+        "handOver": "Du er markør for {names}. {names} får kortet sitt og sender det inn selv.",
+        "handOverMany": "Du er markør for {names}. De får kortene sine og sender dem inn selv.",
+        "markedBy": "{name} er markøren din. Sender du inn uten å endre noe, er kortet godkjent. Endrer du noe, godkjenner {name} endringen."
       },
       "unknownCourse": "(ukjent bane)",
       "teePrefix": "Tee: ",
@@ -2430,6 +2436,8 @@
         "guests": "{count, plural, one {{names} er gjest og kan ikke levere selv.} other {{names} er gjester og kan ikke levere selv.}}",
         "submitButton": "Lever {count} kort",
         "submitOthersButton": "Lever for {names}",
+        "handOverButton": "Send kortet til {names}",
+        "handOverButtonMany": "Send kortene til {names}",
         "ownDelivered": "Kortet ditt er levert."
       },
       "puttsPrompt": {

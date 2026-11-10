@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeFlightmates,
+  enteredAllBy,
+  handedOverMarker,
   markerCandidates,
   markerRefusal,
   markerRequired,
   mayApproveAsMarker,
+  orderMarkerOptions,
+  unchangedSinceMarker,
   withdrawLockedByDelivery,
 } from './leagueMarker';
 
@@ -121,5 +126,119 @@ describe('withdrawLockedByDelivery', () => {
     { simulatorFlight: false, submittedAt: null, locked: false },
   ])('simulator $simulatorFlight, levert $submittedAt → $locked', ({ simulatorFlight, submittedAt, locked }) => {
     expect(withdrawLockedByDelivery({ simulatorFlight, submittedAt })).toBe(locked);
+  });
+});
+
+// #2814: the one who keeps the flight's cards is the flightmates' marker. The
+// flightmate looks the card over and delivers it; unchanged, it is approved.
+describe('enteredAllBy / unchangedSinceMarker', () => {
+  const row = (entered_by: string | null) => ({ entered_by });
+
+  it('is true when every row is the marker\'s', () => {
+    expect(unchangedSinceMarker([row('a'), row('a'), row('a')], 'a')).toBe(true);
+  });
+
+  it('is false when one row is the player\'s own, even with the same strokes', () => {
+    expect(unchangedSinceMarker([row('a'), row('b'), row('a')], 'a')).toBe(false);
+  });
+
+  it('is false without rows', () => {
+    expect(unchangedSinceMarker([], 'a')).toBe(false);
+  });
+
+  it('is false for a row nobody is known to have keyed', () => {
+    expect(unchangedSinceMarker([row('a'), row(null)], 'a')).toBe(false);
+  });
+
+  it('is the same predicate as «kept by» in the flight delivery', () => {
+    expect(enteredAllBy([row('a')], 'a')).toBe(true);
+    expect(enteredAllBy([row('b')], 'a')).toBe(false);
+  });
+});
+
+describe('markerCandidates when the deliverer hands the flight over (#2814)', () => {
+  it('keeps the flightmate when only the deliverer\'s own card is delivered', () => {
+    expect(markerCandidates(['a', 'b', 'c'], ['a'], 'a')).toEqual(['b', 'c']);
+  });
+});
+
+describe('activeFlightmates', () => {
+  it('is the other active players in the flight, never a withdrawn one', () => {
+    expect(
+      activeFlightmates(
+        [
+          { user_id: 'a', withdrawn_at: null },
+          { user_id: 'b', withdrawn_at: null },
+          { user_id: 'c', withdrawn_at: '2026-11-10T10:00:00Z' },
+        ],
+        'a',
+      ),
+    ).toEqual(['b']);
+  });
+
+  it('is empty for someone playing alone', () => {
+    expect(activeFlightmates([{ user_id: 'a', withdrawn_at: null }], 'a')).toEqual([]);
+  });
+});
+
+describe('orderMarkerOptions', () => {
+  const o = (userId: string, name: string | null) => ({ userId, name });
+
+  it('puts the flightmates first, then the rest of the league, each by name', () => {
+    const options = [o('x', 'Øyvind'), o('b', 'Pål'), o('y', 'Anne'), o('c', 'Bjørn')];
+    expect(orderMarkerOptions(options, ['b', 'c']).map((m) => m.userId)).toEqual(['c', 'b', 'y', 'x']);
+  });
+
+  it('sorts a withdrawn player with the rest of the league', () => {
+    const options = [o('b', 'Pål'), o('w', 'Anne')];
+    const mates = activeFlightmates(
+      [
+        { user_id: 'a', withdrawn_at: null },
+        { user_id: 'b', withdrawn_at: null },
+        { user_id: 'w', withdrawn_at: '2026-11-10T10:00:00Z' },
+      ],
+      'a',
+    );
+    expect(orderMarkerOptions(options, mates).map((m) => m.userId)).toEqual(['b', 'w']);
+  });
+
+  it('is the league by name when nobody else is in the flight', () => {
+    expect(orderMarkerOptions([o('b', 'Pål'), o('c', null), o('d', 'Anne')], []).map((m) => m.userId)).toEqual([
+      'c',
+      'd',
+      'b',
+    ]);
+  });
+
+  it('is empty without options', () => {
+    expect(orderMarkerOptions([], ['b'])).toEqual([]);
+  });
+});
+
+describe('handedOverMarker', () => {
+  const card = (marker_user_id: string | null, submitted_at: string | null = null) => ({
+    user_id: 'b',
+    marker_user_id,
+    submitted_at,
+  });
+
+  it('is the flightmate who marked the undelivered card', () => {
+    expect(handedOverMarker(card('a'), ['a'])).toBe('a');
+  });
+
+  it('is null without a marker', () => {
+    expect(handedOverMarker(card(null), ['a'])).toBeNull();
+  });
+
+  it('is null when the marker is outside the flight', () => {
+    expect(handedOverMarker(card('m'), ['a'])).toBeNull();
+  });
+
+  it('is null once the card is delivered', () => {
+    expect(handedOverMarker(card('a', '2026-11-10T10:00:00Z'), ['a'])).toBeNull();
+  });
+
+  it('is null when the marker is the card\'s owner', () => {
+    expect(handedOverMarker(card('b'), ['a', 'b'])).toBeNull();
   });
 });

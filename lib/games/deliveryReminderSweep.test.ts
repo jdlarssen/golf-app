@@ -272,3 +272,25 @@ describe('deliveryReminderGroups', () => {
     expect(groups(players, card('gjest', 'gjest'))).toEqual([]);
   });
 });
+
+// #2814: in a simulator league the one who kept the card hands it over and
+// becomes its marker. The card is then the owner's to deliver, so the
+// reminder goes to the owner, never to the one who kept it.
+describe('deliveryReminderGroups: a card handed over in a simulator league', () => {
+  it('reminds the owner, not the one who kept it', () => {
+    const players = [
+      player('a', { submitted_at: OLD, marker_user_id: 'b' }),
+      player('b', { marker_user_id: 'a' }),
+    ];
+    expect(groups(players, card('b', 'a'))).toEqual([
+      { recipientId: 'b', cardUserIds: ['b'], otherCardUserIds: [] },
+    ]);
+  });
+
+  it('still reminds the one who kept a card that was never handed over', () => {
+    const players = [player('a', { submitted_at: OLD }), player('b')];
+    expect(groups(players, card('b', 'a'))).toEqual([
+      { recipientId: 'a', cardUserIds: ['b'], otherCardUserIds: ['b'] },
+    ]);
+  });
+});

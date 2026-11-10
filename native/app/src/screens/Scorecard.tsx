@@ -130,10 +130,13 @@ import {
   flightDeliveryButton,
   flightDeliveryFor,
   flightDeliveryLines,
+  namesOf,
   partialDeliveryNotice,
   toRoster,
   toStampPlayers,
 } from '../lib/roster';
+import { handOverButton, handOverLine, markedByLine } from '../lib/markerCopy';
+import { activeFlightmates, handedOverMarker } from '../../../../lib/league/leagueMarker';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
 import { buildRoundDoneModel, roundDoneBarVisible, submitInView } from '../lib/roundDone';
@@ -554,6 +557,31 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     me.withdrawn_at == null &&
     isScoringSupported(bundle.game);
 
+  // #2814: i en simulatorliga overleveres kortene jeg har ført. Jeg blir
+  // markør for dem, og eierne sender dem inn selv. Det er simulatorliga når
+  // serveren ber om markør, eller når mitt levert kort har en (kolonnen settes
+  // bare der). Har en flightkamerat ført mitt kort og er markøren min, står
+  // linja om det i stedet for velgeren.
+  const handOver =
+    flightMates.length > 0 && (markerChoice?.required === true || me.player.markerUserId != null);
+  const keptBy = handedOverMarker(
+    {
+      user_id: userId,
+      submitted_at: me.player.submittedAt,
+      marker_user_id: me.player.markerUserId ?? null,
+    },
+    activeFlightmates(
+      bundle.players.map((player) => ({ user_id: player.userId, withdrawn_at: player.withdrawnAt })),
+      userId,
+    ),
+  );
+  const keptByPlayer = keptBy ? bundle.players.find((player) => player.userId === keptBy) : undefined;
+  const markedByNote = keptBy ? (
+    <Text style={ui.muted} testID="marked-by">
+      {markedByLine(keptByPlayer ? namesOf([keptByPlayer]) : null)}
+    </Text>
+  ) : null;
+
   // #2580: mangler noen på et av lagene som skal leveres utslag, står boksen
   // over knappene og leverknappen er sperret, som serveren (412
   // `tee_shots_short`). «Lever likevel» finnes ikke da.
@@ -626,8 +654,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       // ut fra fersk tilstand: bare makkere som fortsatt står uten levert kort,
       // er ikke levert. Fikk vi ikke hentet, gjelder serverens tall.
       // Knappen står opptatt til beslutningen er tatt.
+      // #2814: overleverte kort leveres ikke, så tallet sier ingenting der.
       const notice =
-        result.alsoDelivered < flightMates.length
+        !handOver && result.alsoDelivered < flightMates.length
           ? await freshPartialNotice(result.alsoDelivered)
           : null;
       setBusy(false);
@@ -646,14 +675,17 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 
   const submitLabel = teamMode
     ? 'Lever lagets kort'
-    : flightMates.length > 0
+    : flightMates.length > 0 && !handOver
       ? flightDeliveryButton(flightMates)
       : 'Lever scorekort';
   const submitTestID = teamMode
     ? 'submit-team-card'
-    : flightMates.length > 0
+    : flightMates.length > 0 && !handOver
       ? 'submit-flight'
       : 'submit-scorecard';
+  const deliverForLabel = handOver
+    ? handOverButton(namesOf(flightMates), flightMates.length)
+    : deliverForButton(flightMates);
 
   // Sperret til køen er lest (`null`) og mens den har slag for spillet. #2580:
   // også til utslagene er lest, som køen (#2219): før det vet vi ikke om noen
@@ -706,7 +738,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </Text>
     ) : null;
 
-  const flightBlock =
+  const flightBlock = handOver ? (
+    <View style={ui.card} testID="hand-over">
+      <Text style={ui.body}>{handOverLine(namesOf(flightMates), flightMates.length)}</Text>
+    </View>
+  ) :
     flightMates.length > 0 ? (
       <View style={ui.card} testID="flight-delivery">
         {flightDeliveryLines(flightMates).map((line) => (
@@ -798,6 +834,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             {flightBlock}
             {queueGuard}
             {markerPicker}
+            {markedByNote}
             {teeShotBox ? (
               <TeeShotLockedSubmit
                 label={submitLabel}
@@ -851,7 +888,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 {markerPicker}
                 {teeShotBox ? (
                   <TeeShotLockedSubmit
-                    label={deliverForButton(flightMates)}
+                    label={deliverForLabel}
                     boxRef={teeShotBoxRef}
                     testID="deliver-for-flight"
                   />
@@ -867,7 +904,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                       ? 'Leverer …'
                       : syncing
                         ? syncingLabel
-                        : deliverForButton(flightMates)}
+                        : deliverForLabel}
                   </Text>
                 </Pressable>
                 )}

@@ -10,6 +10,9 @@ import source from '../../../../messages/no.json';
 import {
   MARKER_TEXT,
   awaitingMarkerLine,
+  handOverButton,
+  handOverLine,
+  markedByLine,
   markerCardHeading,
   markerCardSubtitle,
   organizerNote,
@@ -54,4 +57,14 @@ it('setningene med navn er webbens, fylt inn', () => {
   expect(organizerNote('Mia')).toBe(fill(page.organizerNote, { markerName: 'Mia' }));
   expect(awaitingMarkerLine('Mia')).toBe(fill(source.liga.player.awaitingMarker, { name: 'Mia' }));
   expect(waitsForLine('Mia')).toBe(fill(queue.waitsFor, { name: 'Mia' }));
+});
+
+it('linjene for overleveringen er webbens, fylt inn (#2814)', () => {
+  const flight = source.game.submit.flight;
+  expect(handOverLine('Berit', 1)).toBe(fill(picker.handOver, { names: 'Berit' }));
+  expect(handOverLine('Berit og Arne', 2)).toBe(fill(picker.handOverMany, { names: 'Berit og Arne' }));
+  expect(markedByLine('Anders')).toBe(fill(picker.markedBy, { name: 'Anders' }));
+  expect(markedByLine(null)).toBe(fill(picker.markedBy, { name: picker.unknownPlayer }));
+  expect(handOverButton('Berit', 1)).toBe(fill(flight.handOverButton, { names: 'Berit' }));
+  expect(handOverButton('Berit og Arne', 2)).toBe(fill(flight.handOverButtonMany, { names: 'Berit og Arne' }));
 });
