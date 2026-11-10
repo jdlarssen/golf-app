@@ -101,20 +101,22 @@ describe('leaderboardVisibility', () => {
 });
 
 describe('navn', () => {
-  it('bruker kallenavn når det finnes, og faller rolig tilbake', () => {
+  it('bruker navnet, ikke kallenavnet (#2813), og faller rolig tilbake', () => {
     const nameOf = nameLookup([
       player({ userId: 'a', name: 'Anna Andersen', nickname: 'Anna' }),
       player({ userId: 'b', name: null, nickname: null }),
+      player({ userId: 'c', name: null, nickname: 'Cato' }),
     ]);
-    expect(nameOf('a')).toBe('Anna');
+    expect(nameOf('a')).toBe('Anna Andersen');
     expect(nameOf('b')).toBe('Ukjent spiller');
+    expect(nameOf('c')).toBe('Cato');
     expect(nameOf('finnes-ikke')).toBe('Ukjent spiller');
   });
 
   it('setter lagnummeret først og navnene etter', () => {
     const nameOf = nameLookup([
-      player({ userId: 'a', nickname: 'Anna' }),
-      player({ userId: 'b', nickname: 'Bjørn' }),
+      player({ userId: 'a', name: 'Anna' }),
+      player({ userId: 'b', name: 'Bjørn' }),
     ]);
     expect(teamLabel(2, ['a', 'b'], nameOf)).toBe('Lag 2 · Anna, Bjørn');
     expect(teamLabel(3, [], nameOf)).toBe('Lag 3');
@@ -205,8 +207,8 @@ describe('matchStanding + matchStandingLine', () => {
         sideDisabledCategories: [],
       },
       players: [
-        player({ userId: 'a', nickname: 'Anna', teamNumber: 1 }),
-        player({ userId: 'b', nickname: 'Bjørn', teamNumber: 2 }),
+        player({ userId: 'a', name: 'Anna', teamNumber: 1 }),
+        player({ userId: 'b', name: 'Bjørn', teamNumber: 2 }),
       ],
       courseName: 'Testbanen',
       teeBoxName: 'Gul',
@@ -279,7 +281,7 @@ describe('potter', () => {
   });
 
   it('sier at en delt Nassau-seksjon IKKE gir poeng', () => {
-    const nameOf = nameLookup([player({ userId: 'a', nickname: 'Anna' })]);
+    const nameOf = nameLookup([player({ userId: 'a', name: 'Anna' })]);
     expect(nassauSectionLine({ winnerUserIds: ['a'], isPending: false }, nameOf)).toBe(
       'Vinner: Anna',
     );
@@ -303,9 +305,9 @@ describe('grossLines', () => {
   it('summerer kun hull med slag, og holder roster-rekkefølgen', () => {
     const lines = grossLines(
       [
-        player({ userId: 'a', nickname: 'Anna' }),
-        player({ userId: 'b', nickname: 'Bjørn' }),
-        player({ userId: 'c', nickname: 'Cato' }),
+        player({ userId: 'a', name: 'Anna' }),
+        player({ userId: 'b', name: 'Bjørn' }),
+        player({ userId: 'c', name: 'Cato' }),
       ],
       scoreRows,
     );
@@ -322,8 +324,8 @@ describe('grossLines', () => {
   it('holder trukne spillere ute', () => {
     const lines = grossLines(
       [
-        player({ userId: 'a', nickname: 'Anna' }),
-        player({ userId: 'b', nickname: 'Bjørn', withdrawnAt: '2026-08-30T09:00:00Z' }),
+        player({ userId: 'a', name: 'Anna' }),
+        player({ userId: 'b', name: 'Bjørn', withdrawnAt: '2026-08-30T09:00:00Z' }),
       ],
       scoreRows,
     );
