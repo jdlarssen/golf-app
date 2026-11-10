@@ -48,3 +48,36 @@ export const WIZARD_FEE_TEXT = {
   prizeAriaLabel: (slot: string) => `Premie for ${slot}`,
   sponsorAriaLabel: (slot: string) => `Sponsor (valgfritt) for ${slot}`,
 } as const;
+
+/**
+ * Arrangørens Betaling-kort og «Hvem har betalt?» (#2749 PR C), nettets ord
+ * (`admin.game.betaling`, `common.guestBadge`). `subline` og `loadFailed` finnes
+ * bare i appen.
+ */
+export const BETALING_TEXT = {
+  sectionLabel: 'Betaling',
+  feeLabel: 'Startkontingent',
+  paidLabel: 'Betalt',
+  viewAll: 'Se betalingsstatus',
+  kicker: 'Betaling',
+  heading: 'Hvem har betalt?',
+  rosterLabel: 'Spillere',
+  unknownPlayer: 'Ukjent spiller',
+  paid: 'Betalt',
+  unpaid: 'Mangler',
+  withdrawn: 'trukket',
+  guest: 'Gjest',
+  markPaidAria: (name: string) => `Marker ${name} som betalt`,
+  toggleError: 'Kunne ikke lagre. Prøv igjen.',
+  noFee: 'Dette spillet har ingen startkontingent.',
+  remindButton: (count: number) => `Purr de som mangler (${count})`,
+  remindDone: (count: number) => `Purret ${count} ${count === 1 ? 'spiller' : 'spillere'}.`,
+  // --- Bare i appen ---
+  /** Linja under tittelen: «Lørdagsrunden · 200 kr». */
+  subline: (gameName: string, amountKr: number) => `${gameName} · ${formatKr(amountKr)}`,
+  /** «(deg)» bak arrangørens eget navn, som i tegningen. */
+  you: (name: string) => `${name} (deg)`,
+  loadFailed: 'Fikk ikke hentet betalingene. Sjekk nettet og prøv igjen.',
+  retry: 'Prøv igjen',
+  remindFailed: 'Kunne ikke purre. Prøv igjen.',
+} as const;

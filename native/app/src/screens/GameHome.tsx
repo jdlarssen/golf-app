@@ -483,6 +483,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           userId={userId}
           onChanged={refresh}
           onFinish={() => navigation.navigate('EndGame', { gameId })}
+          onOpenPayments={() => openOrReturn(navigation, 'PaymentStatus', { gameId })}
         />
       ) : null}
 
