@@ -8,8 +8,8 @@ ordlyden i skjemaet, står det, og orkestratoren sjekker i konsollen før eieren
 
 **Samme regel som iOS:** vi lover bare det Android-appen gjør. Android har varsler
 (#2758): spilleren slår dem på under «Varsler og tema», og serveren sender gjennom
-Googles varseltjeneste. Aldri kroner eller
-pengeoppgjør. Cup følger regelen i `app-store-metadata.md`. Ligaen står i beskrivelsen
+Googles varseltjeneste. Aldri
+pengeoppgjør, og kontingenten venter på #2561 (se `app-store-metadata.md`). Cup følger regelen i `app-store-metadata.md`. Ligaen står i beskrivelsen
 fra bygg 9: appen viser ligaen
 du er med i og starter runden (avsnittet «LIGA»), og arrangøren setter den opp på
 nettsiden. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
@@ -165,7 +165,7 @@ spør om.
 |---|---|---|
 | Kategori | **All Other App Types** | IARC skiller mellom spill, apper for sosialt eller kommunikasjon, og alle andre apper (Epic Games' gjennomgang av IARC-skjemaet, <https://dev.epicgames.com/documentation/fortnite/rating-screen-in-fortnite>). Tørny er et verktøy for golfrunder. Den korte grunnen når et kort sendes tilbake, gjør ikke appen til en app for kommunikasjon. Sjekkes i konsollen av orkestratoren. |
 | Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
-| Pengespill med ekte penger | Nei | Appen har ingen innsats og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
+| Pengespill med ekte penger | Nei | Appen har ingen innsats, og pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet; betalingen skjer utenfor appen. Vurderingen mot Googles «Real-Money Gambling, Games, and Contests» står i `app-store-metadata.md`, «Kontingent og premiebord mot butikkreglene». |
 | Simulert pengespill | Nei | De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
 | Kan brukerne samhandle eller dele innhold med hverandre? | **Ja** | Spillerne ser hverandres navn, slag og resultater i felles runder, kan legge til venner, og en makker eller arrangøren kan sende et kort tilbake med en grunn i fritekst (`Approve.tsx`). Appen har ingen chat ut over det. |
 | Deler appen brukerens posisjon? | Nei | Appen leser ikke posisjon. |

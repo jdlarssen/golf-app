@@ -8,8 +8,9 @@ fra, så neste innsending ikke må finne dem opp på nytt.
 
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
 mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning som
-venter på å skje. Aldri «over 20 spillformer», aldri kroner eller pengeoppgjør
-(appen viser dem ikke ved lansering). Cup står i beskrivelsen fra bygget som har kapteinuttaket
+venter på å skje. Aldri «over 20 spillformer», aldri pengeoppgjør (appen viser det
+ikke ved lansering). Startkontingenten og premiebordet vises i appen fra #2749;
+butikkteksten nevner dem ikke før #2561 har skrevet den om. Cup står i beskrivelsen fra bygget som har kapteinuttaket
 (#2752, avsnittet «CUP»): appen lager, spiller og avslutter en personlig cup, og en klubb-cup
 lages på nettsiden. Ligaen står i beskrivelsen fra bygg 9:
 appen viser ligaen du er med i og starter runden, men arrangøren setter den opp på
@@ -182,8 +183,8 @@ Velg det som betyr «ingen».
 | Medical or Wellness: Health or Wellness Topics | None / No | Appen gir ingen råd om trening eller helse. Handicapet er et golfmål. |
 | Sexuality or Nudity (alle) | None | Ingen. |
 | Violence (alle, også våpen) | None | Ingen. |
-| Chance-Based Activities: Gambling | No | Appen har ingen pengespill og viser ingen kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`). Det finnes ingen betaling i appen. |
-| Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats: kronene er skjult (`lib/launchRules.ts`). |
+| Chance-Based Activities: Gambling | No | Appen har ingen pengespill. Pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet. Betalingen skjer utenfor appen, og ingen kan satse noe i appen. Se «Kontingent og premiebord mot butikkreglene» under. |
+| Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats: oppgjøret er skjult (`lib/launchRules.ts`). |
 | Chance-Based Activities: Contests | Frequent | Hver runde er en konkurranse med tavle og plasseringer. Det er hele appen. Frequent gir 13+. |
 | Chance-Based Activities: Loot Boxes | No | Appen har ingen kjøp. |
 | Additional Information: Override to Higher Age Rating | No | Ikke nødvendig. |
@@ -284,9 +285,10 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   vil», fordi appen bare spør når spilleren slår dem på under «Varsler og tema»
   (`NotificationsAndTheme.tsx` → `turnOnPush`). «Resultatet er klart»-mailen kommer fra
   serveren, ikke fra appen, og er derfor ikke et app-løfte.
-- **Kroner og pengeoppgjør.** Skins og Wolf spilles ofte om penger, men appen viser ikke
-  kroner ved lansering (`SHOW_KRONER_IN_APP = false` i `lib/launchRules.ts`, #2561).
-  Oppgjøret finnes på nettsiden.
+- **Pengeoppgjør.** Skins og Wolf spilles ofte om penger, men appen viser ikke
+  oppgjøret ved lansering (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`,
+  #2561, #2749). Oppgjøret finnes på nettsiden. Startkontingenten, betalingslenka og
+  premiebordet vises i appen fra #2749 (se under).
 - **Rundereferatet.** Fra #2632 viser appen AI-historien «Fra pressetribunen» på den
   ferdige tavla (sitat øverst, hele historien nederst), og varselet «Resultatet er klart»
   viser starten av den. Butikkbeskrivelsen nevner den ikke. Kavalkaden er i appen, så den
@@ -420,3 +422,47 @@ kan ikke tilhøre noen. De spiller tre runder på Byneset North: «Søndagsrunde
 «Sommeravslutningen» (avsluttet, 18 hull) og «Torsdagsmatchen» (planlagt
 matchplay). P4-dataene er ikke rørt. Fiksturen står igjen på staging, så bildene
 kan tas om igjen uten å seede på nytt.
+
+## Kontingent og premiebord mot butikkreglene (#2749)
+
+Eieren valgte 01.11 å vise startkontingenten, arrangørens betalingslenke og
+premiebordet i appen før lansering, men holde pengeoppgjøret mellom spillerne skjult.
+Reglene under er sitert ordrett fra sidene 10.11.2026. #2561 bekrefter vurderingen før
+neste bygg sendes til gjennomgang.
+
+**Apple, App Store Review Guidelines** (<https://developer.apple.com/app-store/review/guidelines/>):
+
+- 3.1.1 In-App Purchase: «If you want to unlock features or functionality within your
+  app, (by way of example: subscriptions, in-game currencies, game levels, access to
+  premium content, or unlocking a full version), you must use in-app purchase.»
+- 3.1.3(e) Goods and Services Outside of the App: «If your app enables people to purchase
+  physical goods or services that will be consumed outside of the app, you must use
+  purchase methods other than in-app purchase to collect those payments, such as Apple
+  Pay or traditional credit card entry.»
+- 5.3 Gaming, Gambling, and Lotteries: «Gaming, gambling, and lotteries can be tricky to
+  manage and tend to be one of the most regulated offerings on the App Store.» 5.3.1:
+  «Sweepstakes and contests must be sponsored by the developer of the app.» 5.3.4: «Apps
+  that offer real money gaming (such as sports betting, poker, casino games, horse
+  racing) or lotteries must have necessary licensing and permissions in the locations
+  where the app is used […]»
+
+**Google Play, «Real-Money Gambling, Games, and Contests»**
+(<https://support.google.com/googleplay/android-developer/answer/9877032>): Google Play
+«generally prohibits apps from facilitating real-money gambling and gaming», det vil si
+apper som lar brukerne «wager, stake, or participate using real money» «to obtain a prize
+of real world monetary value». Eksempel på brudd: «Games that accept money in exchange
+for an opportunity to win a physical or monetary prize».
+
+**Vurderingen:**
+
+- Kontingenten låser ikke opp noe i appen. Den betaler for en golfrunde på en ekte bane,
+  altså en tjeneste som brukes utenfor appen (3.1.3(e)), og den betales til arrangøren
+  gjennom arrangørens egen lenke eller Vipps. Appen tar ingen betaling.
+- Pengeoppgjøret, der spillerne vinner penger av hverandre på resultatet, er fortsatt
+  skjult. Svaret på «Gambling» og «Pengespill med ekte penger» er derfor fortsatt Nei.
+- ASSUMPTION: kontingent til et ekte arrangement, betalt via arrangørens egen lenke eller
+  Vipps, faller utenfor kravet om kjøp i appen og utenfor pengespill.
+- Åpent for #2561: premiebordet viser premier en arrangør (ikke Tørny) deler ut i en
+  konkurranse med kontingent. Apples 5.3.1 og Googles eksempel over handler om
+  konkurranser i selve appen; en golfturnering er et arrangement utenfor appen, men det
+  bør bekreftes før neste innsending.
