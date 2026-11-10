@@ -181,8 +181,8 @@ function flightRows(opts: {
     holeNumbers: gameHoleNumbers(bundle.game),
   });
   // Kortnavnet, eller hele navnet når to i flighten har samme kortnavn (likt
-  // fornavn eller likt kallenavn): to «Jonas» på samme liste sier ikke hvem
-  // som mangler hull. Kallenavnet hjelper ikke da, så det er `name` som brukes.
+  // fornavn, eller likt kallenavn for to uten navn): to «Jonas» på samme liste
+  // sier ikke hvem som mangler hull.
   const shortCount = new Map<string, number>();
   for (const mate of mates) {
     const short = shortDisplayName(mate.player);

@@ -266,7 +266,8 @@ describe('rosterStatus', () => {
   const at = '2026-09-27T10:00:00.000Z';
 
   it.each([
-    ['en annen leverte', { submittedAt: at, submittedByUserId: 'ola' }, 'Levert av Olabola'],
+    // #2813: the name, not the nickname ('Olabola').
+    ['en annen leverte', { submittedAt: at, submittedByUserId: 'ola' }, 'Levert av Ola Nordmann'],
     ['spilleren leverte selv', { submittedAt: at, submittedByUserId: 'me' }, 'Levert'],
     ['leverandøren er ukjent', { submittedAt: at, submittedByUserId: null }, 'Levert'],
     ['leverandøren står ikke i rosteret', { submittedAt: at, submittedByUserId: 'x' }, 'Levert'],

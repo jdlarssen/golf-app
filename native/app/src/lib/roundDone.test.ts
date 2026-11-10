@@ -158,7 +158,9 @@ describe('buildRoundDoneModel', () => {
         expect(m?.flight).toEqual([{ kind: 'complete', names: 'Jonas Berg, Jonas Rud og Marte' }]),
     },
     {
-      name: 'to med samme kallenavn får hele navnet',
+      // #2813: the short name is the first name, so a shared nickname no longer
+      // collides; two who share a first name still get the full name (the case above).
+      name: 'samme kallenavn tar ikke plassen til fornavnet',
       run: () =>
         model({
           players: [
@@ -169,7 +171,7 @@ describe('buildRoundDoneModel', () => {
           ],
         }),
       check: (m: ReturnType<typeof model>) =>
-        expect(m?.flight).toEqual([{ kind: 'complete', names: 'Per Putter, Kari Nord og Marte' }]),
+        expect(m?.flight).toEqual([{ kind: 'complete', names: 'Per, Kari og Marte' }]),
     },
     {
       name: 'fullt kort uten netto faller til slag',
