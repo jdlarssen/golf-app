@@ -26,7 +26,7 @@
 //     kvitteringen ville arrangøren ikke visst at noe skjedde.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Alert } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import { reopenScorecard, setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
@@ -60,6 +60,14 @@ jest.mock('../../data/withdrawSelf', () => ({
   withdrawSelf: jest.fn(async () => ({ ok: true })),
 }));
 
+// #2749: Betaling-kortet spør ruta om tallene.
+const mockFetchPayments = jest.fn(async () => ({
+  ok: true,
+  overview: { entryFeeKr: 200, gameName: 'X', paidCount: 2, totalCount: 4, remindable: 2, players: [] },
+}));
+jest.mock('../../data/payments', () => ({
+  fetchPayments: (...args: unknown[]) => mockFetchPayments(...(args as [])),
+}));
 jest.mock('../../data/inviteToGame', () => ({
   inviteToGame: jest.fn(async () => ({ ok: true, kind: 'sent' })),
 }));
@@ -159,6 +167,7 @@ describe('OrganiserSection — Juster (#1875)', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
@@ -177,6 +186,7 @@ describe('OrganiserSection — Juster (#1875)', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
@@ -199,6 +209,7 @@ describe('OrganiserSection — Juster (#1875)', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.queryByTestId('organiser-adjust-toggle')).toBeNull();
@@ -215,6 +226,7 @@ describe('OrganiserSection — Juster (#1875)', () => {
         userId={ME}
         onChanged={jest.fn()}
         onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.queryByTestId('organiser-adjust-toggle')).toBeNull();
@@ -249,6 +261,7 @@ describe('OrganiserSection — flight i lagformater (#2290)', () => {
         userId={ME}
         onChanged={jest.fn()}
         onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
       />,
     );
 
@@ -268,6 +281,7 @@ describe('OrganiserSection — flight i lagformater (#2290)', () => {
         userId={ME}
         onChanged={jest.fn()}
         onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
       />,
     );
 
@@ -284,6 +298,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={jest.fn()}
         onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.queryByTestId('organiser-add-toggle')).toBeNull();
@@ -305,6 +320,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
 
@@ -393,6 +409,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.getByTestId(`organiser-withdraw-${MATE}`)).toBeTruthy();
@@ -448,6 +465,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.getByTestId('organiser-finish')).toBeTruthy();
@@ -462,6 +480,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
+        onOpenPayments={jest.fn()}
       />,
     );
     expect(screen.queryByTestId(`organiser-remove-${MATE}`)).toBeNull();
@@ -484,6 +503,7 @@ describe('OrganiserSection', () => {
         userId={ME}
         onChanged={jest.fn()}
         onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
       />,
     );
 
@@ -500,11 +520,52 @@ describe('OrganiserSection', () => {
     buttons.find((b) => b.style === 'cancel')?.onPress?.();
     expect(startRoundNow).not.toHaveBeenCalled();
 
-    buttons.find((b) => b.style === 'destructive')!.onPress!();
+    // I act: startkallet setter tilstand etter et await, og utenfor act ble det
+    // en advarsel når testen gikk tregt (#2749).
+    await act(async () => {
+      buttons.find((b) => b.style === 'destructive')!.onPress!();
+    });
     await waitFor(() => {
       expect(screen.getByTestId('organiser-notice')).toHaveTextContent('Runden er i gang.');
     });
     expect(startRoundNow).toHaveBeenCalledTimes(1);
     alert.mockRestore();
+  });
+});
+
+// #2749 PR C: Betaling-kortet under «Arrangør» (`Venterom-forslag-kort`, nederst).
+describe('OrganiserSection — Betaling', () => {
+  it('står med kontingenten og «2 / 4» når spillet har en kontingent, og åpner «Hvem har betalt?»', async () => {
+    const onOpenPayments = jest.fn();
+    await render(
+      <OrganiserSection
+        bundle={bundle('scheduled', { entryFeeKr: 200 })}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+        onOpenPayments={onOpenPayments}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('payment-overview-count')).toHaveTextContent('2 / 4'));
+    expect(screen.getByTestId('payment-overview')).toHaveTextContent(
+      'BetalingStartkontingent200 krBetalt2 / 4Se betalingsstatus',
+    );
+    expect(mockFetchPayments).toHaveBeenCalledWith('game-1');
+    await fireEvent.press(screen.getByTestId('payment-overview-open'));
+    expect(onOpenPayments).toHaveBeenCalledTimes(1);
+  });
+
+  it('uten kontingent står ikke kortet', async () => {
+    await render(
+      <OrganiserSection
+        bundle={bundle('scheduled')}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('payment-overview')).toBeNull();
   });
 });

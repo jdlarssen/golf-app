@@ -61,6 +61,7 @@ import {
 } from '../../../../../lib/scoring/modes/types';
 import { ChevronIcon, PlussIcon } from '../icons/Icons';
 import { WebLinkButton } from '../WebLinkButton';
+import { PaymentOverview } from './PaymentOverview';
 import { fetchRosterCandidates, type RosterCandidate } from '../../data/createGame';
 import { inviteToGame } from '../../data/inviteToGame';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
@@ -119,6 +120,7 @@ export function OrganiserSection({
   userId,
   onChanged,
   onFinish,
+  onOpenPayments,
 }: {
   bundle: GameBundle;
   userId: string;
@@ -131,6 +133,8 @@ export function OrganiserSection({
    * ruter i dag, og avslutningen skal ikke være grunnen til at den begynner.
    */
   onFinish: () => void;
+  /** #2749: åpne «Hvem har betalt?». Sendes inn av samme grunn som `onFinish`. */
+  onOpenPayments: () => void;
 }) {
   const { colors, ui } = useTheme();
   const [notice, setNotice] = useState<string | null>(null);
@@ -347,6 +351,16 @@ export function OrganiserSection({
       <Text accessibilityRole="header" style={[ui.sectionHead, styles.heading]}>
         Arrangør
       </Text>
+
+      {/* #2749: Betaling-kortet, bare når spillet har en kontingent. */}
+      {(bundle.game.entryFeeKr ?? 0) > 0 ? (
+        <PaymentOverview
+          gameId={bundle.game.id}
+          entryFeeKr={bundle.game.entryFeeKr ?? 0}
+          refreshKey={bundle.fetchedAt}
+          onOpen={onOpenPayments}
+        />
+      ) : null}
 
       {/* Tekst, ikke ikon: «Juster» er en domenehandling, og de får aldri
           ikon alene (#1879-føringen). Står over lista, så lista vokser

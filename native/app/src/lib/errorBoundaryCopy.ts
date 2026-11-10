@@ -40,6 +40,7 @@ const VARIANT_BY_ROUTE = {
   HoleByHole: 'game',
   Approve: 'default',
   EndGame: 'default',
+  PaymentStatus: 'default',
   Profile: 'default',
   EditProfile: 'default',
   DeleteAccount: 'default',

@@ -64,6 +64,8 @@ import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
 import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
+import { PaymentStatus } from './screens/PaymentStatus';
+import { BETALING_TEXT } from './lib/paymentCopy';
 import { FriendLink } from './screens/FriendLink';
 import { Friends } from './screens/Friends';
 import { Inbox } from './screens/Inbox';
@@ -135,6 +137,8 @@ export type RootStackParamList = {
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
+  /** #2749: arrangørens «Hvem har betalt?», fra «Se betalingsstatus». */
+  PaymentStatus: { gameId: string };
   /**
    * Profil-rommet (#1906) — hvem du er, utlogging og veien til sletting.
    *
@@ -443,6 +447,11 @@ export function RootNavigator() {
           name="Approve"
           component={Approve}
           options={kickerHeader('', 'Godkjenn')}
+        />
+        <Stack.Screen
+          name="PaymentStatus"
+          component={PaymentStatus}
+          options={kickerHeader('', BETALING_TEXT.heading, { backLabel: END_GAME_TEXT.backToGame })}
         />
         <Stack.Screen
           name="EndGame"
