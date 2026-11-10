@@ -492,9 +492,9 @@ export async function publishGame(
   if (!sideResult.ok) return failed(sideResult.errorCode);
   const side = sideResult.payload;
 
-  // Premiebordet er utenfor v1 (kontingent er Won't). Den delte parseren kalles
-  // likevel: uten premie-felter gir den `[]`, og skulle veiviseren en dag få
-  // dem, persisteres de riktig uten at denne fila må røres.
+  // #2749: premiebordet fra veiviseren, gjennom den delte parseren: tomme slott
+  // droppes, og slott formatet ikke har (pallplasser i matchplay, LD/CTP over
+  // antallet hull), beskjæres her, som på nettet.
   const prizes = parsePrizesFromFormData(asSharedFormData(form), {
     hasPodium: !isMatchplayFamily(payload.game_mode),
     ldCount: side.ldCount,

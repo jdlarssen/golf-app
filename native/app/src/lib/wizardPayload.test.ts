@@ -10,7 +10,15 @@
 // Blir én av dem rød, er det ikke testen som er feil: da har et feltnavn eller
 // en regel driftet, og et spill opprettet i appen ville fått en annen rad enn
 // det samme spillet opprettet på nettsiden.
-import { buildGameInsertPayload } from '../../../../lib/games/gamePayload';
+import { buildGameInsertPayload, parsePrizesFromFormData } from '../../../../lib/games/gamePayload';
+import { parseSideTournamentFromFormData } from '../../../../lib/games/sideTournamentPayload';
+import {
+  emptyPrizeDraft,
+  prizeFieldName,
+  type PrizeDraft,
+  type PrizeSlotKey,
+} from '../../../../lib/games/prizes';
+import { isMatchplayFamily } from '../../../../lib/scoring/modes/types';
 import { APP_SUPPORTED_MODES, type AppGameMode } from './appFormats';
 import {
   buildDraftPayload,
@@ -524,5 +532,93 @@ describe('best ball med flere enn fire par (#2148)', () => {
     expect(payload.errorCode).toBeUndefined();
     expect(payload.players).toHaveLength(40);
     expect(payload.players.at(-1)).toMatchObject({ team_number: 20, flight_number: 10 });
+  });
+});
+
+// #2749 PR B: kontingent, betalingslenke og premiebord fra appens veiviser, gjennom
+// de samme delte parserne som `data/createGame.ts` kaller.
+describe('kontingent og premiebord', () => {
+  const prizes = (filled: Partial<Record<PrizeSlotKey, [string, string?]>>): PrizeDraft => {
+    const out = emptyPrizeDraft();
+    for (const [key, [description, sponsor]] of Object.entries(filled) as [PrizeSlotKey, [string, string?]][]) {
+      out[key] = { description, sponsor: sponsor ?? '', sponsorLogoPath: '' };
+    }
+    return out;
+  };
+
+  /** Det `createGame.ts` gjør: den delte byggeren og premie-parseren med spillets form. */
+  function saved(d: GameDraft) {
+    const { form, payload } = buildDraftPayload(d);
+    const side = parseSideTournamentFromFormData(asSharedFormData(form));
+    if (!side.ok) throw new Error(side.errorCode);
+    return {
+      payload,
+      prizes: parsePrizesFromFormData(asSharedFormData(form), {
+        hasPodium: !isMatchplayFamily(payload.game_mode),
+        ldCount: side.payload.ldCount,
+        ctpCount: side.payload.ctpCount,
+      }),
+    };
+  }
+
+  it('250 kr, lenke og to premier gir de samme kolonnene som nettet', () => {
+    const { payload, prizes: rows } = saved(
+      draft({
+        gameMode: 'stableford',
+        entryFeeKr: 250,
+        paymentLink: ' https://vipps.no/betal ',
+        prizes: prizes({ placement_1: ['Middag for to', 'Byneset Sport'], placement_2: ['Tolv baller'] }),
+      }),
+    );
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.entry_fee_kr).toBe(250);
+    expect(payload.payment_link).toBe('https://vipps.no/betal');
+    expect(rows).toEqual([
+      { category: 'placement', position: 1, description: 'Middag for to', sponsor: 'Byneset Sport', sponsorLogoPath: null },
+      { category: 'placement', position: 2, description: 'Tolv baller', sponsor: null, sponsorLogoPath: null },
+    ]);
+  });
+
+  it('kontingent 0 lagrer ingen lenke', () => {
+    const { payload } = saved(draft({ gameMode: 'stableford', entryFeeKr: 0, paymentLink: '12345' }));
+    expect(payload.entry_fee_kr).toBe(0);
+    expect(payload.payment_link).toBeNull();
+  });
+
+  it('uten feltene er alt som før: 0 kr, ingen lenke, tomt premiebord', () => {
+    const { payload, prizes: rows } = saved(draft({ gameMode: 'stableford' }));
+    expect(payload.entry_fee_kr).toBe(0);
+    expect(payload.payment_link).toBeNull();
+    expect(rows).toEqual([]);
+  });
+
+  it('matchplay dropper pallplassene', () => {
+    const { prizes: rows } = saved(
+      draft({
+        gameMode: 'singles_matchplay',
+        players: teamed(['a', 1], ['b', 2]),
+        sideTournamentEnabled: true,
+        sideLdCount: 1,
+        prizes: prizes({ placement_1: ['Gavekort'], ld_1: ['Ny hanske'] }),
+      }),
+    );
+    expect(rows.map((p) => `${p.category}:${p.position}`)).toEqual(['longest_drive:1']);
+  });
+
+  it('LD over antallet hull, og LD uten sideturnering, dropper', () => {
+    const filled = prizes({ ld_1: ['Ny hanske', 'Kafé Fjorden'], ld_2: ['Baller'] });
+    const one = saved(draft({ gameMode: 'stableford', sideTournamentEnabled: true, sideLdCount: 1, prizes: filled }));
+    expect(one.prizes).toEqual([
+      { category: 'longest_drive', position: 1, description: 'Ny hanske', sponsor: 'Kafé Fjorden', sponsorLogoPath: null },
+    ]);
+    const off = saved(draft({ gameMode: 'stableford', sideTournamentEnabled: false, sideLdCount: 2, prizes: filled }));
+    expect(off.prizes).toEqual([]);
+  });
+
+  it('logo-feltet er alltid tomt fra appen', () => {
+    const form = draftToFormData(
+      draft({ gameMode: 'stableford', prizes: { ...prizes({ placement_1: ['Gavekort'] }), placement_1: { description: 'Gavekort', sponsor: '', sponsorLogoPath: 'u/x.webp' } } }),
+    );
+    expect(form.get(prizeFieldName('placement_1', 'logo'))).toBe('');
   });
 });

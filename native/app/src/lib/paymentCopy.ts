@@ -26,3 +26,25 @@ export const PRIZE_TEXT = {
   /** Nettets `wizard.sections.prizes.toggleCount`: «1 premie», «5 premier». */
   count: (n: number) => `${n} ${n === 1 ? 'premie' : 'premier'}`,
 } as const;
+
+/**
+ * Veiviserens «Startkontingent» og «Premiebord» (#2749 PR B), nettets ord
+ * (`wizard.sections.registration`, `wizard.sections.prizes`).
+ */
+export const WIZARD_FEE_TEXT = {
+  paymentLegend: 'Startkontingent',
+  paymentHint:
+    'Valgfritt. Tar du en kontingent, ser spillerne beløpet og betalingsmåten når de melder seg på.',
+  entryFeeLabel: 'Beløp per spiller (kr)',
+  entryFeePlaceholder: '0',
+  paymentLinkLabel: 'Vipps-nummer eller betalingslenke',
+  paymentLinkPlaceholder: 'Vipps-nummer, f.eks. 12345',
+  paymentLinkHint: 'Legg inn Vipps-nummeret ditt, eller lim inn en betalingslenke.',
+  prizesLegend: 'Premiebord',
+  toggleAdd: 'Legg til',
+  toggleHide: 'Skjul',
+  prizePlaceholder: 'Premie, f.eks. middag for to',
+  sponsorLabel: 'Sponsor (valgfritt)',
+  prizeAriaLabel: (slot: string) => `Premie for ${slot}`,
+  sponsorAriaLabel: (slot: string) => `Sponsor (valgfritt) for ${slot}`,
+} as const;
