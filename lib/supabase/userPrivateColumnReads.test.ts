@@ -201,6 +201,10 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending',
   },
+  'lib/league/setFlightMarkerCore.ts': {
+    receivers: ['admin'],
+    reason: '(c) serverside utsending av overleveringsvarselet til flightkameraten (#2814)',
+  },
   'lib/notifications/notifyGameMoved.ts': {
     receivers: ['admin'],
     reason:
