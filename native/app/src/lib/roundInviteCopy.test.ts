@@ -83,6 +83,10 @@ describe('roundFeeLine', () => {
   it('har ingen linje på null kroner', () => {
     expect(roundFeeLine(0)).toBeNull();
   });
+
+  it('skriver tusener med mellomrom, som kontingentkortet', () => {
+    expect(roundFeeLine(1500)).toBe('Startkontingent 1 500 kr');
+  });
 });
 
 describe('feilene', () => {

@@ -8,6 +8,7 @@ import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteVie
 import type { RoundInviteAnswerFailure, RoundInviteLoadFailure } from '../data/roundInvite';
 import { formatStubClock, formatWeekdayDayMonth } from './homeDates';
 import { OFFLINE_NOTE } from './rosterCopy';
+import { PAYMENT_TEXT } from './paymentCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
 export const ROUND_INVITE_TEXT = {
@@ -67,7 +68,8 @@ export function roundWhenLine(teeOffAt: string | null): string | null {
  * appen). Over null, ellers ingenting.
  */
 export function roundFeeLine(entryFeeKr: number): string | null {
-  return entryFeeKr > 0 ? `Startkontingent ${entryFeeKr} kr` : null;
+  // Beløpet som på kontingentkortet og nettet (`formatKr`): «1 500 kr».
+  return entryFeeKr > 0 ? `${PAYMENT_TEXT.label} ${PAYMENT_TEXT.amount(entryFeeKr)}` : null;
 }
 
 export function describeRoundInviteLoadFailure(reason: RoundInviteLoadFailure): string {
