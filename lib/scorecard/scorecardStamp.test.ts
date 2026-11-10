@@ -111,7 +111,7 @@ describe('resolveScorecardStamp — approval line', () => {
   });
 
   // #2385: the app's scorecard shows the marker's full name, as on the design
-  // canvas. The web keeps the first name or nickname (the default).
+  // canvas. The web keeps the first name (the default).
   it('marker: the full name when asked for it, even with a nickname', () => {
     const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
     players[1] = { ...players[1], nickname: 'Andy' };
@@ -121,9 +121,15 @@ describe('resolveScorecardStamp — approval line', () => {
     });
   });
 
-  it('marker: uses the nickname when there is one', () => {
+  it('marker: the first name, not the nickname (#2813)', () => {
     const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
     players[1] = { ...players[1], nickname: 'Andy' };
+    expect(stamp(players)?.approval).toEqual({ kind: 'marker', name: 'Anders' });
+  });
+
+  it('marker: the nickname for a marker without a name', () => {
+    const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
+    players[1] = { ...players[1], name: null, nickname: 'Andy' };
     expect(stamp(players)?.approval).toEqual({ kind: 'marker', name: 'Andy' });
   });
 

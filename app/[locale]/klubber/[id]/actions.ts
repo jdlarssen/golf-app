@@ -6,6 +6,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { sendClubInviteNotification } from '@/lib/mail/clubInviteNotification';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * addMember — server action for the «Legg til på e-post»-form on /klubber/[id].
@@ -93,7 +94,7 @@ export async function addMember(formData: FormData) {
           : Promise.resolve({ data: null }),
       ]);
       const invitedByName =
-        meRow?.nickname?.trim() || meRow?.name?.trim() || 'En klubbvenn';
+        playerName(meRow) ?? 'En klubbvenn';
       const clubName = clubRow?.name?.trim() || 'klubben';
       await sendClubInviteNotification({ to: email, invitedByName, clubName });
     } catch (err) {

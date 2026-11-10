@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { playerName } from '@/lib/names/playerName';
 
 export type AdminClubRow = {
   id: string;
@@ -46,7 +47,7 @@ export async function getAllClubsForAdmin(): Promise<AdminClubRow[]> {
         .filter((m) => m.role === 'owner')
         .map((m) => {
           const user = m.users;
-          return user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
+          return playerName(user) ?? 'Ukjent';
         });
 
       return {

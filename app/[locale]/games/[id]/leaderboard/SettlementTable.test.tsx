@@ -133,11 +133,11 @@ describe('SettlementTable', () => {
       "Oppgjør: Lørdagsrunden (Skins)
       20 kr per skin · 4 spillere
 
-      Jonas betaler Marte 40 kr
+      Jonas betaler Marte Holm 40 kr
       Anders betaler Kristian 20 kr
 
       Sluttsum:
-      Marte +40 kr
+      Marte Holm +40 kr
       Kristian +20 kr
       Anders −20 kr
       Jonas −40 kr"

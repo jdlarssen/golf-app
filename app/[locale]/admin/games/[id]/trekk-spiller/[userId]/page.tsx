@@ -14,6 +14,7 @@ import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { adminWithdrawPlayer } from '../../actions';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string; userId: string }>;
 
@@ -85,7 +86,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
 
   const u = player.users;
   const baseName = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
-  const playerName = u?.nickname ? `${baseName} «${u.nickname}»` : baseName;
+  const playerName = playerNameWithNicknameAfter(baseName, u?.nickname);
 
   const withdrawAction = adminWithdrawPlayer.bind(null, gameId, userId);
 

@@ -301,7 +301,7 @@ describe('computeCupPlayerPoints', () => {
     expect(result.team1.find((r) => r.userId === 'p1')!.points).toBe(1.5);
   });
 
-  it('bruker nickname over name i displayName, med Ukjent spiller-fallback', () => {
+  it('bruker navnet, ikke kallenavnet, i displayName (#2813), med Ukjent spiller-fallback', () => {
     const result = computeCupPlayerPoints({
       matches: [],
       roster: {
@@ -316,7 +316,8 @@ describe('computeCupPlayerPoints', () => {
     });
 
     const names = result.team1.map((r) => r.displayName);
-    expect(names).toContain('Pelle');
+    expect(names).toContain('Per Hansen');
+    expect(names).not.toContain('Pelle');
     expect(names).toContain('Ukjent spiller');
   });
 });

@@ -9,6 +9,7 @@ import { startLeagueRoundFlight } from '@/lib/league/actions';
 import { MAX_CO_PLAYERS, MAX_FLIGHT_PLAYERS, minFlightPlayers } from '@/lib/league/flightRules';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '@/lib/league/pickerRows';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * #2214: a co-player who has delivered the round or is playing it in another
@@ -18,7 +19,7 @@ import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 export type RoundCoPlayer = LeagueParticipant & { lock: 'delivered' | 'in_progress' | null };
 
 function playerDisplayName(p: LeagueParticipant, unknownLabel: string): string {
-  return p.nickname ?? p.name ?? unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 export function RoundStartClient({

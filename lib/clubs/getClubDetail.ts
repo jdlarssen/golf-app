@@ -2,6 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { playerName } from '@/lib/names/playerName';
 
 export type ClubMember = {
   userId: string;
@@ -142,7 +143,7 @@ export async function getClubDetail(
     .map((row) => {
       const user = row.users;
       const displayName =
-        user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
+        playerName(user) ?? 'Ukjent';
 
       return {
         userId: row.user_id as string,
@@ -160,7 +161,7 @@ export async function getClubDetail(
   const pendingRequests: PendingJoinRequest[] = (requestsRes?.data ?? []).map((row) => {
     const userRow = row.users;
     const requesterName =
-      userRow?.nickname?.trim() || userRow?.name?.trim() || 'Ukjent';
+      playerName(userRow) ?? 'Ukjent';
 
     return {
       id: row.id,

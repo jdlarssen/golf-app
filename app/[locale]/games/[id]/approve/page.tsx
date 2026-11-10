@@ -29,6 +29,7 @@ import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -229,7 +230,7 @@ async function PendingApprovals({
     // Should be non-null here per the invariant above, but coalesce so TS
     // (and any future flow that loosens the invariant) stays honest.
     const name = p.users.name ?? t('unknownPlayer');
-    return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
+    return playerNameWithNicknameAfter(name, p.users.nickname);
   }
 
   if (pending.length === 0) {

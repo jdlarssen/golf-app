@@ -601,7 +601,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           holeNumber={currentHole}
           players={players.map((p) => ({
             userId: p.userId,
-            name: p.nickname ?? p.name,
+            name: p.name,
           }))}
           savedHole={bingoBangoBongo.savedHole}
           disabled={gameInactive}
@@ -622,7 +622,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
                 railCard
                   ? {
                       playerId: railCard.userId,
-                      name: railCard.nickname ?? railCard.name,
+                      name: railCard.name,
                       extraStrokes: railCard.extraStrokes,
                       score: rail.activeScore,
                       putts: railCard.putts,
@@ -632,7 +632,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
               par={par}
               options={railOptions}
               puttsTracking={capturesPutts && putts.enabled}
-              skipTo={railSkipCard ? (railSkipCard.nickname ?? railSkipCard.name) : null}
+              skipTo={railSkipCard ? railSkipCard.name : null}
               onPick={rail.pick}
               onOther={() => {
                 if (rail.activeSeatId != null) onLongPress(rail.activeSeatId);

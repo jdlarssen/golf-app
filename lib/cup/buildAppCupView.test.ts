@@ -217,7 +217,7 @@ describe('kampene', () => {
     });
   });
 
-  it('kallenavnet går foran navnet, og en ukjent spiller får reserveordet', () => {
+  it('navnet går foran kallenavnet (#2813), og en ukjent spiller får reserveordet', () => {
     const body = view(
       snapshot('active', [
         match('kari', { withdrawal: { outcome: 'halved', winnerSide: null, withdrawnUserIds: ['kari'] } } as unknown as Partial<Match>),
@@ -225,7 +225,7 @@ describe('kampene', () => {
       ]),
     );
 
-    expect(body.matches.map((m) => m.withdrawnName)).toEqual(['Kari', 'Ukjent spiller']);
+    expect(body.matches.map((m) => m.withdrawnName)).toEqual(['Kari Arrangør', 'Ukjent spiller']);
   });
 
   it('venter arrangøren med valget om makkeren spiller alene, sier statusen det', () => {

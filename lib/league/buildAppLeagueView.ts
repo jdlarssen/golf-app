@@ -3,6 +3,7 @@ import type { AppLeagueParticipantDetails, AppLeagueView } from './appLeagueView
 import { participantShareUrl } from './joinCode';
 import { normalizeSimSettings } from './simSettings';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
+import { playerName } from '../names/playerName';
 
 const SCORINGS: readonly LeagueScoring[] = ['net', 'gross', 'both'];
 const MODELS: readonly StandingsModel[] = ['total', 'average', 'best_n', 'points'];
@@ -64,7 +65,7 @@ export function buildAppLeagueView(
     })),
     participants: participants.map((p) => ({
       userId: p.userId,
-      name: p.nickname?.trim() || p.name?.trim() || null,
+      name: playerName(p),
       fullName: details?.get(p.userId)?.fullName ?? null,
       hcpIndex: details?.get(p.userId)?.hcpIndex ?? null,
     })),

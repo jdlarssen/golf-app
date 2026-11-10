@@ -15,6 +15,7 @@
 import { cupMatchDecision, type CupMatchSummary } from './computeCupLeaderboard';
 import type { CupRoster, CupRosterPlayer } from './cupRoster';
 import type { CupSideAwardSnapshot } from './cupSideAwardSnapshot';
+import { playerName } from '../names/playerName';
 
 export type CupPlayerContribution =
   | {
@@ -68,7 +69,7 @@ export type CupPlayerPointsInput = {
 // begge trimmet, `unknownLabel` når begge mangler. Eksportert fordi kåringene
 // (#1508) må navngi de samme spillerne etter nøyaktig samme regel.
 export function preferredName(p: CupRosterPlayer, unknownLabel: string): string {
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 export function computeCupPlayerPoints(input: CupPlayerPointsInput): CupPlayerPointsResult {

@@ -14,10 +14,14 @@ const member = (user_id: string, name: string | null, nickname: string | null = 
 // Type A (#2580): which short name each member gets, and the team order every
 // tee-shot surface uses.
 describe('teeShotNames', () => {
-  it('the nickname when there is one, else the first name', () => {
-    const names = teeShotNames([member('u1', 'Marte Lie'), member('u2', 'Jonas Berg', '  Joggen ')], 'Ukjent');
+  it('the first name, not the nickname; the nickname only without a name (#2813)', () => {
+    const names = teeShotNames(
+      [member('u1', 'Marte Lie'), member('u2', 'Jonas Berg', '  Joggen '), member('u3', null, 'Kaptein')],
+      'Ukjent',
+    );
     expect(names.get('u1')).toBe('Marte');
-    expect(names.get('u2')).toBe('Joggen');
+    expect(names.get('u2')).toBe('Jonas');
+    expect(names.get('u3')).toBe('Kaptein');
   });
 
   it('the full name when two on the team share a first name (#2286)', () => {
@@ -44,9 +48,13 @@ describe('sortByTeeShotName', () => {
     expect(sortByTeeShotName(team, 'Ukjent').map((m) => m.user_id)).toEqual(['u5', 'u6', 'u3', 'u1', 'u2', 'u4']);
   });
 
-  it('uses the nickname the buttons show, and the id breaks a tie', () => {
-    const team = [member('b', 'Marte Lie', 'Kaptein'), member('a', 'Jonas Berg'), member('c', 'Kari Kaptein', 'Kaptein')];
-    expect(sortByTeeShotName(team, 'Ukjent').map((m) => m.user_id)).toEqual(['a', 'b', 'c']);
+  it('uses the short name the buttons show, and the id breaks a tie', () => {
+    // Marte and Kari have a nickname, but the buttons show the first name (#2813).
+    const team = [member('b', 'Marte Lie', 'Aa'), member('a', 'Jonas Berg'), member('c', 'Kari Moe', 'Aa')];
+    expect(sortByTeeShotName(team, 'Ukjent').map((m) => m.user_id)).toEqual(['a', 'c', 'b']);
+    // Two without a name show the same nickname: the id decides.
+    const tie = [member('y', null, 'Kaptein'), member('x', null, 'Kaptein')];
+    expect(sortByTeeShotName(tie, 'Ukjent').map((m) => m.user_id)).toEqual(['x', 'y']);
   });
 });
 

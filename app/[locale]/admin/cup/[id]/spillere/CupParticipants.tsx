@@ -21,6 +21,7 @@ import {
   type AddableRow,
 } from './CupParticipantsList';
 import { CupShareLink } from './CupShareLink';
+import { playerName } from '@/lib/names/playerName';
 
 type CupRoomVariant = 'admin' | 'club';
 
@@ -32,7 +33,7 @@ type UserRel = {
 };
 
 function displayNameOf(u: UserRel | null, unknownLabel: string): string {
-  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
+  return playerName(u) ?? unknownLabel;
 }
 
 /**

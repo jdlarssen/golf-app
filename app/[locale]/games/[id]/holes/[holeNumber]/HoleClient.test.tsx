@@ -82,7 +82,6 @@ function makePlayers(n = 4): HoleClientProps['players'] {
   return Array.from({ length: n }, (_, i) => ({
     userId: `u${i + 1}`,
     name: `Player ${i + 1}`,
-    nickname: null,
     initial: `P`,
     extraStrokes: 0,
     initialStrokes: null,
@@ -200,15 +199,6 @@ describe('HoleClient — rendering', () => {
     expect(back.getAttribute('href')).toBe('/games/abc');
   });
 
-  it('prefers nickname over name on the row', () => {
-    const players = makePlayers(1);
-    players[0].name = 'Anders Andersen';
-    players[0].nickname = 'AA';
-    render(<HoleClient {...baseProps({ players })} />);
-    const row = screen.getByTestId('flight-row');
-    expect(row.textContent).toContain('AA');
-    expect(row.textContent).not.toContain('Anders Andersen');
-  });
 });
 
 describe('HoleClient — bottom CTA', () => {
@@ -482,7 +472,6 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
       {
         userId: 'captain-team-1',
         name: 'Lag 1 · Ola, Kari',
-        nickname: null,
         initial: '1',
         extraStrokes: 0,
         initialStrokes: null,
@@ -495,7 +484,6 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
       {
         userId: 'captain-team-2',
         name: 'Lag 2 · Per, Anne',
-        nickname: null,
         initial: '2',
         extraStrokes: 0,
         initialStrokes: null,
@@ -597,7 +585,6 @@ describe('HoleClient — deliver CTA for a non-captain (#1577)', () => {
     {
       userId: 'a-captain',
       name: 'Lag 1 · Ola, Kari',
-      nickname: null,
       initial: '1',
       extraStrokes: 0,
       initialStrokes: null,
@@ -966,7 +953,6 @@ describe('HoleClient — score rail (#2251)', () => {
     [1, 2].map((team) => ({
       userId: `captain-team-${team}`,
       name: `Lag ${team}`,
-      nickname: null,
       initial: String(team),
       extraStrokes: 0,
       initialStrokes: null,

@@ -12,10 +12,7 @@ import {
 import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
-
-function playerName(p: LeagueParticipant, unknownLabel: string): string {
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
-}
+import { playerName } from '@/lib/names/playerName';
 
 /** The locale's decimal for the shared formatters (`lib/league/standingsFormat`). */
 function localeDecimal(locale: AppLocale): FormatDecimal {
@@ -138,7 +135,7 @@ export function LeagueStandingsTable({
     // Én kilde for hele tabellen (#1527): samme nøkkel enten raden
     // mangler deltaker eller deltakeren mangler navn.
     const name = participant
-      ? playerName(participant, t('unknownPlayer'))
+      ? (playerName(participant) ?? t('unknownPlayer'))
       : t('unknownPlayer');
     const isFirst = row.rank === 1;
     const isUnranked = !row.ranked;

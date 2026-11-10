@@ -11,12 +11,13 @@
 import type { PlayerOption } from '../GameForm';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import type { AppLocale } from '@/i18n/routing';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 export function playerOptionShortName(p: PlayerOption, pendingLabel: string): string {
   if (p.pending) return p.email ?? pendingLabel;
   // Defensive: a player who is not pending always has a name.
   const displayName = p.name ?? p.email ?? pendingLabel;
-  return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
+  return playerNameWithNicknameAfter(displayName, p.nickname);
 }
 
 export function playerOptionLabel(p: PlayerOption, pendingLabel: string, locale: AppLocale): string {

@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import type { CupUserRel } from './cupRoster';
+import { playerName } from '@/lib/names/playerName';
 import {
   isNotStartedCupMatch,
   isPlayOnAvailable,
@@ -85,7 +86,7 @@ type PlayerRow = {
 
 function displayName(row: PlayerRow | undefined, unknownLabel: string): string {
   const u = row?.users;
-  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
+  return playerName(u) ?? unknownLabel;
 }
 
 function sideLabel(rows: PlayerRow[], unknownLabel: string): string {
@@ -157,14 +158,14 @@ export async function loadCupWithdrawalContext(args: {
 
   const pending: CupWithdrawalMatchView[] = [];
   const untouched: CupWithdrawalMatchView[] = [];
-  let playerName = unknownLabel;
+  let myName = unknownLabel;
 
   for (const game of games) {
     const rows = byGame.get(game.id) ?? [];
     const me = rows.find((r) => r.user_id === userId);
     if (!me || (me.team_number !== 1 && me.team_number !== 2)) continue;
     const side = me.team_number as 1 | 2;
-    if (playerName === unknownLabel) playerName = displayName(me, unknownLabel);
+    if (myName === unknownLabel) myName = displayName(me, unknownLabel);
 
     const sameSide = rows.filter((r) => r.team_number === side && r.user_id !== userId);
     const opponents = rows.filter((r) => r.team_number === (side === 1 ? 2 : 1));
@@ -214,7 +215,7 @@ export async function loadCupWithdrawalContext(args: {
 
   return {
     tournament: tournament as CupWithdrawalContext['tournament'],
-    player: { userId, name: playerName },
+    player: { userId, name: myName },
     pending,
     untouched,
   };

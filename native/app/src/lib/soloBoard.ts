@@ -173,11 +173,12 @@ export const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
 
 /**
  * Radens navn som webbens tavle og sidekortet skriver det (`boardDisplayName`,
- * `lib/sideTournament.ts`): kallenavnet mellom fornavn og etternavn, eller
- * «(ukjent spiller)». Det samme navnet går inn i `sentenceName`.
+ * `lib/sideTournament.ts`): kallenavnet mellom fornavn og etternavn, bare
+ * kallenavnet uten navn (#2813), eller «(ukjent spiller)». Det samme navnet går
+ * inn i `sentenceName`.
  */
 const rowName = (row: { name: string | null; nickname: string | null }) =>
-  row.name ? formatRevealName(row.name, row.nickname) : BOARD_COMMON_TEXT.unknownPlayerFull;
+  formatRevealName(row.name ?? '', row.nickname) || BOARD_COMMON_TEXT.unknownPlayerFull;
 
 /** Én del av radens opplesning med webbens ord; rekkefølgen er `boardRowSrParts`. */
 export function srPartText(part: BoardRowSrPart, note: string | null): string | null {

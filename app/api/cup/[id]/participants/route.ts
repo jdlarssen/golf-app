@@ -7,6 +7,7 @@ import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
 import { addCupParticipantCore, revalidateCupSetup } from '@/lib/cup/setupCore';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isUuid } from '@/lib/url/isUuid';
+import { playerName } from '@/lib/names/playerName';
 
 // Spillerlista i en cup fra appen (#2752), samme kilde og kjerne som nettets
 // Spillere-rom. `tournament_participants` har ingen skrive-policy (0155), så porten
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
           const user = row.users as UserRel;
           return {
             userId: row.user_id,
-            name: user?.nickname?.trim() || user?.name?.trim() || APP_CUP_UNKNOWN_PLAYER,
+            name: playerName(user) ?? APP_CUP_UNKNOWN_PLAYER,
             hcpIndex: Number(user?.hcp_index ?? 0),
             teamNumber: row.team_number === 1 || row.team_number === 2 ? row.team_number : null,
             isCaptain: row.is_captain === true,

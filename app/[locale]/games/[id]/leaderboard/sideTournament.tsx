@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
-import { firstName } from '@/lib/firstName';
+import { playerFirstName } from '@/lib/names/playerName';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { formatRevealName } from '@/lib/names/formatRevealName';
@@ -141,10 +141,9 @@ export async function computeSideTournament(opts: {
   } else {
     const unknownPlayer = tc('unknownPlayer');
     eligiblePlayers.forEach((p, idx) => {
-      const name = p.users?.name ?? unknownPlayer;
       teamGroups.push({
         teamId: idx + 1,
-        label: firstName(name) ?? name,
+        label: playerFirstName(p.users) ?? unknownPlayer,
         userIds: [p.user_id],
       });
     });
@@ -191,13 +190,12 @@ export async function computeSideTournament(opts: {
     label: tg.label,
     members: tg.userIds.map((uid) => {
       const p = eligiblePlayers.find((q) => q.user_id === uid);
-      const name = p?.users?.name ?? tc('unknownPlayer');
-      const nickname = p?.users?.nickname ?? null;
       return {
         userId: uid,
-        displayName: formatRevealName(name, nickname),
-        firstName:
-          firstName(name) ?? formatRevealName(name, nickname) ?? '?',
+        displayName:
+          formatRevealName(p?.users?.name ?? '', p?.users?.nickname ?? null) ||
+          tc('unknownPlayer'),
+        firstName: playerFirstName(p?.users) ?? '?',
       };
     }),
   }));

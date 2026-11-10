@@ -56,6 +56,7 @@ import {
 } from '@/components/games/teeShotCopy';
 import { TeeShotShortBox, type TeeShotShortBoxPlayer } from '@/components/games/TeeShotShortBox';
 import { loadMarkerChoice, type MarkerOption } from '@/lib/league/setFlightMarkerCore';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -429,7 +430,7 @@ async function ReviewBody({
     // the roster, so name is non-null in practice. Coalesce defensively.
     for (const u of nameRows ?? []) {
       const name = u.name ?? t('unknownPlayer');
-      namesById.set(u.id, u.nickname ? `${name} «${u.nickname}»` : name);
+      namesById.set(u.id, playerNameWithNicknameAfter(name, u.nickname));
     }
   }
 

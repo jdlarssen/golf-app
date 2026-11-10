@@ -24,6 +24,7 @@ import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { osloParts } from '@/lib/format/teeOff';
 import type { AppLocale } from '@/i18n/routing';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
+import { playerName } from '@/lib/names/playerName';
 
 type Props = {
   courses: CourseOption[];
@@ -58,7 +59,7 @@ type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 type Scoring = 'net' | 'gross';
 
 function preferredName(p: PlayerOption, unknownLabel: string): string {
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 const INITIAL_STATE: LeagueActionError = { error: '' };

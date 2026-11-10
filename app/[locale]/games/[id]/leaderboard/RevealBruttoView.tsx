@@ -5,7 +5,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { firstName } from '@/lib/firstName';
+import { playerFirstName } from '@/lib/names/playerName';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import type { TeamLine } from '@/lib/leaderboard';
 import { formatTeamVsPar, teamHeadline } from '@/lib/leaderboard/vsPar';
@@ -133,9 +133,7 @@ function RevealTeamRow({ line, ranking }: { line: TeamLine; ranking?: 'net_to_pa
             </p>
             <ul className="mt-1.5 flex flex-col gap-0.5 list-none">
               {line.players.map((p) => {
-                const display = p.nickname?.trim()
-                  ? p.nickname
-                  : firstName(p.name) ?? p.name;
+                const display = playerFirstName(p) ?? p.name;
                 const sum = perPlayerBrutto.get(p.userId);
                 const parPlayed = perPlayerParPlayed.get(p.userId) ?? 0;
                 const delta =

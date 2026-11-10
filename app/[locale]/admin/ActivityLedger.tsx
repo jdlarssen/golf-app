@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { formatHHMMOslo } from '@/lib/i18n/format';
-import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
+import { playerName, type PlayerNameParts } from '@/lib/names/playerName';
 import { getAdminContext } from './_dashboardContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -47,7 +47,7 @@ export async function ActivityLedger() {
   type CourseRow = {
     name: string;
     created_at: string;
-    created_by_user: DisplayNameUser;
+    created_by_user: PlayerNameParts | null;
   };
   type InvitationRow = {
     accepted_at: string;
@@ -167,7 +167,7 @@ export async function ActivityLedger() {
   for (const c of coursesEvRes.data ?? []) {
     activity.push({
       ts: c.created_at,
-      who: displayName(c.created_by_user) ?? t('actionsSecretary'),
+      who: playerName(c.created_by_user) ?? t('actionsSecretary'),
       action: t('actionsNewCourse'),
       ref: c.name,
       href: '/admin/courses',

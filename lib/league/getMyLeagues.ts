@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
 import type { AppLeagueSummary, AppMarkerCard } from './appLeagueView';
+import { playerName } from '@/lib/names/playerName';
 
 type LeagueRow = { id: string; name: string; status: string };
 type RoundRow = { id: string; league_id: string; label: string; sequence: number; closes_at: string };
@@ -77,7 +78,7 @@ async function readMarkerCards(userId: string, leagueIds: string[]): Promise<Map
     list.push({
       gameId: row.game_id,
       userId: row.user_id,
-      playerName: row.users?.nickname?.trim() || row.users?.name?.trim() || null,
+      playerName: playerName(row.users),
       roundLabel: round.label,
     });
     byLeague.set(round.league_id, list);

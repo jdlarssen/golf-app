@@ -9,9 +9,9 @@
 // organizer or admin who approves from another flight, or from no flight at
 // all, gets «Godkjent av arrangøren». The flight part of that rule lives next to
 // the approval rule in `flightScope.ts`, so the two cannot disagree.
-import { firstName } from '../firstName';
 import { isFlightMate, type FlightPlayer } from '../games/flightScope';
 import type { GameMode } from '../scoring/modes/types';
+import { playerFirstName, playerName } from '../names/playerName';
 
 export interface StampPlayer extends FlightPlayer {
   submitted_at: string | null;
@@ -108,8 +108,8 @@ function resolveApproval(
       const name = !approver
         ? null
         : markerName === 'full'
-          ? (approver.name ?? approver.nickname)
-          : firstName(approver.nickname ?? approver.name);
+          ? playerName(approver)
+          : playerFirstName(approver);
       // A flight mate without any name is still not the organizer.
       return name ? { kind: 'marker', name } : { kind: 'approved' };
     }

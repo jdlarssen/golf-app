@@ -20,6 +20,7 @@ import type { ScoreRow } from './holePageData';
 import { readMinTeeShots } from '@/lib/games/teeShots';
 import { sortByTeeShotName, teeShotNames } from '@/components/games/teeShotCopy';
 import type { TeeShotPickerTeam } from './TeeShotPicker';
+import { playerFirstName, playerName } from '@/lib/names/playerName';
 
 /**
  * Hvem som vises som kort på hull-siden. Regelen (#543: én flight ved ≤4
@@ -51,7 +52,7 @@ export function buildRoundRobinPlayers(args: {
     .map((p) => ({
       userId: p.user_id,
       teamNumber: p.team_number as number,
-      name: p.users?.nickname?.trim() || p.users?.name || unknownPlayer,
+      name: playerName(p.users) ?? unknownPlayer,
     }));
 }
 
@@ -102,10 +103,7 @@ export function buildPlayersForClient(args: {
     // 0 for the gross options (patsome holes 1–6 included). The raw frozen
     // CH made the card give strokes the leaderboard never did.
     return flight.map((p) => {
-      const name = p.users?.name ?? unknownPlayer;
-      const rawNickname = p.users?.nickname ?? null;
-      const nickname =
-        rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
+      const name = playerName(p.users) ?? unknownPlayer;
       const ch = playerStrokeHandicap(
         game.game_mode,
         game.mode_config,
@@ -115,7 +113,6 @@ export function buildPlayersForClient(args: {
       return {
         userId: p.user_id,
         name,
-        nickname,
         initial: nameInitials(name),
         extraStrokes: strokesForHole(ch, strokeIndex),
         initialStrokes: scoreRow?.strokes ?? null,
@@ -232,9 +229,8 @@ export function buildPlayersForClient(args: {
         ? sortByTeeShotName(teamPlayers, unknownPlayer)
         : teamPlayers;
     const memberNames = namedPlayers
-      .map((p) => p.users?.name ?? '')
-      .map((n) => n.split(/\s+/)[0])
-      .filter((n) => n.length > 0)
+      .map((p) => playerFirstName(p.users))
+      .filter((n): n is string => n !== null)
       .join(', ');
     const anyTeamMemberSubmitted = teamPlayers.some(
       (p) => p.submitted_at != null,
@@ -242,7 +238,6 @@ export function buildPlayersForClient(args: {
     return {
       userId: captainId,
       name: `Lag ${teamNum} · ${memberNames}`,
-      nickname: null,
       initial: String(teamNum),
       extraStrokes: strokesForHole(teamHCP, strokeIndex),
       initialStrokes: captainScoreRow?.strokes ?? null,
@@ -262,9 +257,9 @@ export function buildPlayersForClient(args: {
  * team in the flight (scramble: one block per team card; shamble: the
  * flight's team) with all its members, withdrawn ones included so a pick on
  * them still fills the hole. Null when the game does not have the setting.
- * Names are short like the artboards (nickname, else first name), and the full
- * name when two on the team share a first name (#2286); the team is ordered by
- * them (`sortByTeeShotName`).
+ * Names are short like the artboards (the first name, the nickname only
+ * without a name, #2813), and the full name when two on the team share a first
+ * name (#2286); the team is ordered by them (`sortByTeeShotName`).
  */
 export function buildTeeShotTeams(args: {
   game: GameForHole;

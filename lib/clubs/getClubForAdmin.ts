@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { type ClubMember } from './getClubDetail';
+import { playerName } from '@/lib/names/playerName';
 
 const ROLE_ORDER: Record<'owner' | 'admin' | 'member', number> = {
   owner: 0,
@@ -52,7 +53,7 @@ export async function getClubForAdmin(clubId: string): Promise<AdminClubDetail |
     .map((row) => {
       const user = row.users;
       const displayName =
-        user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
+        playerName(user) ?? 'Ukjent';
 
       return {
         userId: row.user_id as string,

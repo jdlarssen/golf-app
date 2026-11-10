@@ -7,6 +7,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeaguePlayers, type LeagueActionError } from '@/lib/league/actions';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
+import { playerName } from '@/lib/names/playerName';
 
 type Props = {
   leagueId: string;
@@ -19,7 +20,7 @@ type Props = {
 const INITIAL: LeagueActionError = { error: '' };
 
 function preferredName(p: PlayerOption, unknownLabel: string): string {
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague }: Props) {

@@ -141,16 +141,24 @@ describe('soloBoardFor — names, as the web board writes them', () => {
     homePlayer({ userId: 'marte', name: 'Marte Lie', nickname: 'Mart' }),
     homePlayer({ userId: ME, name: 'Sigrid Aas' }),
     homePlayer({ userId: 'ghost', name: null }),
+    homePlayer({ userId: 'nick', name: null, nickname: 'Knølkis' }),
   ];
   const scores = [
     ...holeScores('g-live', 'marte', 3, 3),
     ...holeScores('g-live', ME, 3, 4),
     ...holeScores('g-live', 'ghost', 3, 5),
+    ...holeScores('g-live', 'nick', 3, 6),
   ];
   const model = soloBoardFor({ bundle: homeBundle({ players: named }), scores, userId: ME })!;
 
   it('writes the nickname between first and last name, and the unknown-player fallback', () => {
-    expect(model.rows.map((r) => r.name)).toEqual(['Marte "Mart" Lie', 'Sigrid Aas', '(ukjent spiller)']);
+    expect(model.rows.map((r) => r.name)).toEqual([
+      'Marte "Mart" Lie',
+      'Sigrid Aas',
+      '(ukjent spiller)',
+      // #2813: without a name the nickname stands alone, as on the web board.
+      '"Knølkis"',
+    ]);
   });
 
   it('still names the leader by first name in the strip', () => {

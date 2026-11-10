@@ -331,7 +331,7 @@ describe('GET participants', () => {
     const body = await (await participants(request(token, 'GET'), cupParams)).json();
 
     expect(body).toMatchObject({ shortId: 'abcd2345', cap: 40, status: 'draft' });
-    expect(body.participants).toEqual([{ userId: PLAYER, name: 'Ola', hcpIndex: 8.1, teamNumber: 2, isCaptain: true }]);
+    expect(body.participants).toEqual([{ userId: PLAYER, name: 'Ola Kompis', hcpIndex: 8.1, teamNumber: 2, isCaptain: true }]);
     expect(body.candidates).toEqual([
       { userId: 'ny', name: 'Navn ny', hcpIndex: 12.4, pending: false },
       { userId: 'venter', name: 'Navn venter', hcpIndex: 12.4, pending: true },

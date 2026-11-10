@@ -94,7 +94,7 @@ describe('getClubDetail', () => {
     const detail = await getClubDetail(ownerClient(), CLUB_ID, USER_ID);
 
     expect(detail?.pendingRequests).toEqual([
-      { id: 'req-1', requesterName: 'Kari', requestedAt: '2026-06-20', message: 'slipp meg inn' },
+      { id: 'req-1', requesterName: 'Kari Nordmann', requestedAt: '2026-06-20', message: 'slipp meg inn' },
     ]);
   });
 

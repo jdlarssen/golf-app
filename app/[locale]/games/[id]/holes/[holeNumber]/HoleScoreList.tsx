@@ -47,7 +47,7 @@ export function HoleScoreCardList({
           <ScoreCard
             key={c.userId}
             playerId={c.userId}
-            name={c.nickname ?? c.name}
+            name={c.name}
             initial={c.initial}
             extraStrokes={c.extraStrokes}
             score={c.score}
@@ -92,7 +92,7 @@ export function HoleFlightList({
         <FlightRow
           key={c.userId}
           playerId={c.userId}
-          name={c.nickname ?? c.name}
+          name={c.name}
           initial={c.initial}
           extraStrokes={c.extraStrokes}
           score={c.score}

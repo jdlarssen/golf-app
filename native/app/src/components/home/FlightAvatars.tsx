@@ -18,6 +18,7 @@
 // etikett selv (raden rundt har den).
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
+import { playerName } from '../../../../../lib/names/playerName';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
 import {
@@ -73,7 +74,7 @@ export function FlightAvatars({
           testID={self ? `${testID}-self` : `${testID}-disc`}
         >
           <Text style={[initials, { color: self ? selfInk : colors.primary }]}>
-            {nameInitials(player.name ?? player.nickname)}
+            {nameInitials(playerName(player))}
           </Text>
         </View>
       ))}

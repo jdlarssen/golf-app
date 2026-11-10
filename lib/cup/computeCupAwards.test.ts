@@ -370,13 +370,13 @@ describe('computeCupUnderperformer', () => {
     expect(result).toEqual({ names: ['Per'], overPar: 18 });
   });
 
-  it('bruker kallenavn foran navn, samme regel som poengregnskapet', () => {
+  it('bruker navnet, ikke kallenavnet, samme regel som poengregnskapet (#2813)', () => {
     const result = computeCupUnderperformer({
       games: [game()],
       roster: roster({ team1: [{ userId: 'p1', name: 'Per', nickname: 'Pelle' }] }),
       unknownLabel: 'Ukjent spiller',
     });
 
-    expect(result).toEqual({ names: ['Pelle'], overPar: 9 });
+    expect(result).toEqual({ names: ['Per'], overPar: 9 });
   });
 });

@@ -19,7 +19,7 @@ import { eligibleForFlightAssignment } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { buildStartlist } from '@/lib/games/startlist';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { displayName } from '@/lib/format/displayName';
+import { playerName } from '@/lib/names/playerName';
 import { firstName, sharesFirstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
 import type { AppLocale } from '@/i18n/routing';
@@ -177,12 +177,12 @@ export default async function StartlistaPage({
 
 /**
  * The active players with the names the chips show: the first name, or the
- * full name for both when two share a first name (#2286). Nickname before
- * name (`displayName`); no name at all is «(ukjent spiller)». Never e-post.
+ * full name for both when two share a first name (#2286). The name, else the
+ * nickname (`playerName`, #2813); neither is «(ukjent spiller)». Never e-post.
  */
 function startlistaPlayers(roster: RosterRow[], unknownPlayer: string): StartlistaPlayer[] {
   const active = roster.filter((p) => p.withdrawn_at == null);
-  const names = active.map((p) => displayName(p.users));
+  const names = active.map((p) => playerName(p.users));
   return active.map((p, i) => {
     const full = names[i];
     const others = names.filter((_, j) => j !== i);

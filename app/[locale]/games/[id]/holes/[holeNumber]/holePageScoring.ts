@@ -21,6 +21,7 @@ import type {
 } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { HolePageData, HoleRow } from './holePageData';
+import { playerName } from '@/lib/names/playerName';
 
 type ScoreRowForCtx = {
   user_id: string;
@@ -133,7 +134,7 @@ export function computeWolfContext(args: {
     .map((p) => ({
       userId: p.user_id,
       teamNumber: p.team_number as number,
-      name: p.users?.nickname?.trim() || p.users?.name || unknownPlayer,
+      name: playerName(p.users) ?? unknownPlayer,
     }));
 
   // Bygg ScoringContext for compute(). Vi trenger course-holes for SI/par
