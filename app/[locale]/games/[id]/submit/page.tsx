@@ -482,12 +482,7 @@ async function ReviewBody({
   const showPuttsPrompt = puttedCount >= 1 && missingPuttHoles.length > 0;
 
 
-  // #2200: the flightmates' cards go with mine. #2814: not in a simulator
-  // league, where they are handed over (`markerNote`) and I deliver my own.
-  const deliversFlight = flightCards.length > 0 && markerNote === undefined;
-
-  // #2661: with the marker picker the form lays the two buttons side by side
-  // under the picker itself.
+  const { deliversFlight, fullWidthForm } = submitLayout(flightCards.length, markerOptions, markerNote);
   const editLink = (
     <SmartLink
       href={`/games/${gameId}/holes/${firstHoleForSegment(holeSegment)}`}
@@ -513,7 +508,7 @@ async function ReviewBody({
       teeShotBlocked={teeShotBox != null}
       markerOptions={markerOptions}
       markerNote={markerNote}
-      leading={markerOptions ? editLink : undefined}
+      leading={fullWidthForm ? editLink : undefined}
     />
   );
 
@@ -622,8 +617,9 @@ async function ReviewBody({
 
       {/* #1793: gap-6 (24px) gir feiltrykk-margin mellom Rediger og Lever —
           de to knappene har motsatt konsekvens. #2661: med markørvelgeren
-          legger skjemaet selv de to knappene side om side under velgeren. */}
-      {markerOptions ? (
+          (og #2814: markørlinja) legger skjemaet selv de to knappene side om
+          side under velgeren. */}
+      {fullWidthForm ? (
         form
       ) : (
         <div className="grid grid-cols-2 gap-6">
@@ -798,6 +794,24 @@ type TeeShotBoxData = {
   players: TeeShotShortBoxPlayer[];
   editLabel: string;
 };
+
+/**
+ * How the review body lays out the delivery. `deliversFlight`: the
+ * flightmates' cards go with mine (#2200), except in a simulator league,
+ * where they are handed over (`markerNote`, #2814) and I deliver my own.
+ * `fullWidthForm`: the marker picker (#2661) or the marker line (#2814) needs
+ * the full width, so the form lays the two buttons side by side under it.
+ */
+function submitLayout(
+  flightCardCount: number,
+  markerOptions: readonly MarkerOption[] | undefined,
+  markerNote: string | undefined,
+): { deliversFlight: boolean; fullWidthForm: boolean } {
+  return {
+    deliversFlight: flightCardCount > 0 && markerNote === undefined,
+    fullWidthForm: markerOptions !== undefined || markerNote !== undefined,
+  };
+}
 
 /** The cards a tap on «Lever» sends in: my own (unless it is in) and the flight's. */
 function deliveringCardIds(
