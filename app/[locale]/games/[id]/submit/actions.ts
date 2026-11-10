@@ -7,6 +7,7 @@ import {
   submitScorecardWithMarker,
   type SubmitWithMarkerResult,
 } from '@/lib/league/setFlightMarkerCore';
+import { deliveryReceipt } from './receipt';
 
 /** Kjernens grunner, oversatt til den redirecten webben alltid har brukt. */
 function failureHref(
@@ -52,6 +53,7 @@ function failureHref(
  * #2661: i en simulatorliga velger spilleren markør i skjemaet (`marker`).
  * `submitScorecardWithMarker` sjekker og skriver markøren og leverer så med
  * `submitScorecardCore`; utenfor simulatorligaen er det kjernen uendret.
+ * #2814: der overleveres makkerkortene i stedet (`handedOver`).
  *
  * `redirect()` kaster, så kjerne-kallet er med vilje ikke pakket i try/catch.
  */
@@ -75,11 +77,7 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
     redirect({ href: failureHref(result.reason, gameId), locale });
   }
 
-  // #2200: the core narrows `alsoFor` with its own rule, over scores that may
-  // be newer than the page. Fewer flightmates' cards than the form asked for
-  // gets its own receipt, so it never reads as if every card went.
   const askedMates = new Set(alsoFor.filter((id) => id !== user.id)).size;
-  const status =
-    result.alsoDelivered < askedMates ? 'submitted_partial' : 'submitted';
+  const status = deliveryReceipt(result, askedMates);
   redirect({ href: `/games/${gameId}?status=${status}`, locale });
 }

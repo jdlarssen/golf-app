@@ -186,6 +186,19 @@ describe('buildNotificationText', () => {
     });
   });
 
+  it('deliver_reminder for et kort en flightkamerat har ført og overlevert, har egen tekst (#2814)', () => {
+    expect(
+      buildNotificationText(
+        'deliver_reminder',
+        { game_id: 'g', game_name: 'Vinter-cup', marker_name: 'Anders' } as NotificationPayload,
+        t,
+      ),
+    ).toEqual({
+      title: `kinds.deliverReminder.titleHandedOver|${JSON.stringify({ markerName: 'Anders' })}`,
+      detail: `kinds.deliverReminder.detailHandedOver|${JSON.stringify({ gameName: 'Vinter-cup' })}`,
+    });
+  });
+
   it('missing_score_reminder gir første hull og antallet hull til (#2268)', () => {
     const textFor = (holes: number[]) =>
       buildNotificationText(

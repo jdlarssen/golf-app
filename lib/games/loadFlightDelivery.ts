@@ -31,6 +31,7 @@ type RosterRow = {
   flight_number: number | null;
   withdrawn_at: string | null;
   submitted_at: string | null;
+  marker_user_id: string | null;
   users: { name: string | null; is_guest: boolean } | null;
 };
 
@@ -38,6 +39,11 @@ type RosterRow = {
  * Kortene `actorId` kan levere i tillegg til sitt eget i `gameId`, i
  * roster-rekkefølge. Leser slag bare for spillerne som kan komme på tale
  * (`flightDeliveryPool`), så et spill uten kandidater koster én roster-lesing.
+ *
+ * #2814: et kort som alt har en markør, er ikke med (leveringsregelen leser
+ * `marker_user_id`). Det skjer bare i en simulatorliga, der føreren har
+ * overlevert kortet og er markøren for det. Da blir føreren aldri bedt om å
+ * overlevere samme kort to ganger.
  *
  * Kaster ved lesefeil. Kalleren avgjør om det er en feil eller bare «ingen
  * kort å tilby».
@@ -51,7 +57,7 @@ export async function loadFlightDeliveryCards(
   const { data: roster, error } = await admin
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, withdrawn_at, submitted_at, users!game_players_user_id_fkey(name, is_guest)',
+      'user_id, team_number, flight_number, withdrawn_at, submitted_at, marker_user_id, users!game_players_user_id_fkey(name, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<RosterRow[]>();
@@ -64,6 +70,9 @@ export async function loadFlightDeliveryCards(
     flight_number: r.flight_number,
     withdrawn_at: r.withdrawn_at,
     submitted_at: r.submitted_at,
+    // #2814: a card with a marker is never another's to deliver
+    // (`canApproveScorecardFor`).
+    marker_user_id: r.marker_user_id,
     is_guest: r.users?.is_guest ?? false,
   }));
 

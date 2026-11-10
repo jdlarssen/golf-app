@@ -3,6 +3,7 @@ import type { HoleSegment } from '@/lib/scoring/holeSegment';
 import { canApproveScorecardFor, type FlightPlayer } from './flightScope';
 import { ownedScoresByPlayer } from './filledHoles';
 import { holeCountForSegment } from './holeScope';
+import { enteredAllBy } from '../league/leagueMarker';
 
 // Levering for flighten (#2200): den som fører slagene, kan levere kortene til
 // makkerne sammen med sitt eget. Målt i prod 2026-09-25: 60 % av slagene
@@ -111,7 +112,7 @@ export function flightDeliveryCandidates(
       const rows = owned.get(p.user_id) ?? [];
       if (rows.length < holeCount) return false;
       if (p.is_guest) return true;
-      return rows.every((row) => row.entered_by === actorId);
+      return enteredAllBy(rows, actorId);
     })
     .map((p) => p.user_id);
 }

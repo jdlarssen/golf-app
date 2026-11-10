@@ -211,3 +211,23 @@ describe('runDeliveryReminderSweepForGame', () => {
     expect(claims()).toEqual([]);
   });
 });
+
+// #2814: et kort føreren har overlevert i en simulatorliga, har føreren som
+// markør. Det er eierens kort å levere, så påminnelsen går til eieren.
+describe('runDeliveryReminderSweepForGame: overlevert kort (#2814)', () => {
+  it('leser markøren og purrer eieren, ikke den som førte kortet', async () => {
+    db.roster = [
+      member('kari', { submitted_at: OLD, marker_user_id: 'ola' }),
+      member('ola', { marker_user_id: 'kari' }),
+    ];
+    db.scores = [...card('kari', 'kari'), ...card('ola', 'kari')];
+
+    await run();
+
+    const rosterRead = fake.ops.find((op) => op.table === 'game_players' && op.kind === 'select');
+    expect({
+      readsMarker: String(rosterRead?.columns ?? '').includes('marker_user_id'),
+      reminded: notifyMock.mock.calls.map((c) => (c[0] as { userId: string }).userId),
+    }).toEqual({ readsMarker: true, reminded: ['ola'] });
+  });
+});

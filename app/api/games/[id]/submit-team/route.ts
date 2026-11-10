@@ -54,6 +54,10 @@ import {
 //        422 { error: 'withdrawn' }      500 { error: 'submit_failed' }
 //        428 { error: 'marker_required' | 'marker_is_self' | 'marker_not_member' }
 //            (#2661: a simulator league needs a marker from the league)
+//   #2814: in a simulator league `alsoFor` is the cards handed over, not
+//   delivered: their owners get the caller as marker and deliver them
+//   themselves, so `alsoDelivered` is 0 there. A card a flightmate kept for
+//   the caller needs no `markerUserId`; one in the request is ignored.
 //
 // #2661: `markerUserId` (valgfri uuid) er markøren spilleren valgte i en
 // simulatorliga. Utenfor simulatorligaen ignoreres den. Et bygg uten feltet

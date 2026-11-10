@@ -210,6 +210,13 @@ export function buildNotificationText(
     }
     case 'deliver_reminder': {
       const p = payload as NotificationPayload<'deliver_reminder'>;
+      // #2814: en flightkamerat har ført kortet og er markøren for det.
+      if (p.marker_name) {
+        return {
+          title: t('kinds.deliverReminder.titleHandedOver', { markerName: p.marker_name }),
+          detail: t('kinds.deliverReminder.detailHandedOver', { gameName: p.game_name }),
+        };
+      }
       // #2200: kort mottakeren har ført for andre har sin egen tekst.
       if (p.others_count) {
         return {

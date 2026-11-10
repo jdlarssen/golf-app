@@ -149,7 +149,9 @@
         "title": "Remember to submit your scorecard",
         "detail": "Submit your card in {gameName} so the organizer can finish the round.",
         "titleKept": "Submit the cards you kept",
-        "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organizer can finish the round."
+        "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organizer can finish the round.",
+        "titleHandedOver": "{markerName} kept your card",
+        "detailHandedOver": "Look over your card in {gameName} and submit it."
       },
       "missingScoreReminder": {
         "title": "{extra, plural, =0 {You have no score on hole {hole}} one {You have no score on hole {hole} and one more} other {You have no score on hole {hole} and # more}}",
@@ -2263,6 +2265,7 @@
       "draftBanner": "Draft — admin is still planning. Details may change.",
       "bannerSubmitted": "Scorecard submitted.",
       "bannerSubmittedPartial": "Submitted, but not all of your flightmates' cards. Someone may have submitted them or entered a hole on them in the meantime.",
+      "bannerSubmittedHandedOver": "Your card is submitted. Your flightmates get their cards and submit them themselves.",
       "rejectionBannerPrefix": "Your scorecard was rejected: «",
       "rejectionBannerSuffix": "». Edit your holes and resubmit.",
       "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",
@@ -2398,7 +2401,10 @@
         "noMatch": "No players with that name.",
         "showAll": "Show all {count}",
         "showFewer": "Show fewer",
-        "unknownPlayer": "Unknown player"
+        "unknownPlayer": "Unknown player",
+        "handOver": "You are the marker for {names}. {names} gets their card and submits it themselves.",
+        "handOverMany": "You are the marker for {names}. They get their cards and submit them themselves.",
+        "markedBy": "{name} is your marker. Submit without changes and the card is approved. Change something and {name} approves the change."
       },
       "unknownCourse": "(unknown course)",
       "teePrefix": "Tee: ",
@@ -2431,6 +2437,8 @@
         "guests": "{count, plural, one {{names} is a guest and can't submit on their own.} other {{names} are guests and can't submit on their own.}}",
         "submitButton": "Submit {count} cards",
         "submitOthersButton": "Submit for {names}",
+        "handOverButton": "Send the card to {names}",
+        "handOverButtonMany": "Send the cards to {names}",
         "ownDelivered": "Your card is submitted."
       },
       "puttsPrompt": {

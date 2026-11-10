@@ -25,6 +25,10 @@ import { notify } from './notify';
  * står til akkurat de er levert. Sendes bare sammen med `othersCount`: ellers er
  * det mottakerens eget kort, og raden følger det.
  *
+ * #2814: `markerName` betyr at en flightkamerat i en simulatorliga har ført
+ * mottakerens kort og overlevert det. Varselet får `marker_name` og sin egen
+ * tekst; det gjelder mottakerens eget kort, så raden følger det.
+ *
  * In-app-først: vi sender alltid in-app (via notify), og maler kun til
  * off-app-spillere (`shouldAlsoSendMail`). Best-effort — feiler stille i
  * console.error, kaster aldri, så parent-flyten (render/server-action) aldri
@@ -37,6 +41,7 @@ export async function sendDeliveryReminder(opts: {
   logPrefix: string;
   othersCount?: number;
   cardUserIds?: readonly string[];
+  markerName?: string | null;
 }): Promise<void> {
   const { player, game, logPrefix } = opts;
   const othersCount = opts.othersCount ?? 0;
@@ -52,6 +57,7 @@ export async function sendDeliveryReminder(opts: {
         ...(othersCount > 0
           ? { others_count: othersCount, ...(opts.cardUserIds ? { card_user_ids: [...opts.cardUserIds] } : {}) }
           : {}),
+        ...(opts.markerName ? { marker_name: opts.markerName } : {}),
       },
     });
     shouldMail = r.shouldAlsoSendMail;
@@ -122,7 +128,7 @@ export async function runDeliveryReminderSweepForGame(
   const { data: roster, error: rosterError } = await admin
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, submitted_at, withdrawn_at, deliver_reminder_sent_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+      'user_id, team_number, flight_number, submitted_at, withdrawn_at, deliver_reminder_sent_at, marker_user_id, users!game_players_user_id_fkey(email, name, locale, is_guest)',
     )
     .eq('game_id', game.id)
     .returns<SweepRosterRow[]>();
@@ -149,6 +155,10 @@ export async function runDeliveryReminderSweepForGame(
     submitted_at: r.submitted_at,
     withdrawn_at: r.withdrawn_at,
     deliver_reminder_sent_at: r.deliver_reminder_sent_at,
+    // #2814: a card handed over in a simulator league has the one who kept it
+    // as marker. The delivery rule then leaves it out of their cards, so the
+    // reminder goes to the owner.
+    marker_user_id: r.marker_user_id ?? null,
     is_guest: r.users?.is_guest ?? false,
   }));
   const groups = deliveryReminderGroups({
