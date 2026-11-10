@@ -173,6 +173,7 @@ const spreads = (opener: string) => opener.includes('{...KEYBOARD_SCROLL_PROPS}'
 const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 'modal'> = {
   'components/game/OrganiserSection.tsx': { host: 'screens/GameHome.tsx', scrollTestID: 'game-home-screen' },
   'components/create/CourseStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
+  'components/create/FeeAndPrizes.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   'components/create/SetupStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   'components/create/PlayersStep.tsx': { host: 'screens/CreateGame.tsx', scrollTestID: 'create-screen' },
   // #2757: hullkortet og tee-tabellen på «Ny bane».
