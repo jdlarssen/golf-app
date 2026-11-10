@@ -13,7 +13,6 @@ import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import {
   buildNotificationText,
   gameCancelledLine,
-  type NotificationSurface,
   type NotificationTranslator,
 } from './cardContent';
 import { notificationDestination } from './deeplink';
@@ -703,8 +702,6 @@ export type InboxTextContext = {
   finishedGameIds: readonly string[];
   /** #2712: league flights; played alone they say «Godkjent», not a place. */
   leagueFlightGameIds?: readonly string[];
-  /** The app's rows say no kroner while `SHOW_KRONER_IN_APP` is false (#2561). */
-  surface?: NotificationSurface;
 };
 
 /** Kinds whose catalog detail says something the target page does not. */
@@ -753,8 +750,8 @@ function withFirstName(row: InboxRow): NotificationPayload {
   return { ...(row.payload as object), [field]: person.short } as NotificationPayload;
 }
 
-function catalogText(row: InboxRow, t: NotificationTranslator, surface?: NotificationSurface) {
-  return buildNotificationText(row.kind, withFirstName(row), t, { surface });
+function catalogText(row: InboxRow, t: NotificationTranslator) {
+  return buildNotificationText(row.kind, withFirstName(row), t);
 }
 
 /**
@@ -1075,7 +1072,7 @@ function plainText(
   if (DETAIL_KINDS.has(row.kind)) {
     return {
       title,
-      subtitle: [catalogText(row, ctx.t, ctx.surface).detail, time].join(SEP),
+      subtitle: [catalogText(row, ctx.t).detail, time].join(SEP),
       subtitleIsFreeText: FREE_TEXT_KINDS.has(row.kind),
     };
   }

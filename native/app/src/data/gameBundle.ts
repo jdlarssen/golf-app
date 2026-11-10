@@ -13,6 +13,7 @@ import {
   isSegmentSiblingCandidate,
   type SegmentSibling,
 } from '../../../../lib/games/segmentSiblingRules';
+import { safeParsePrizes, type GamePrize } from '../../../../lib/games/prizes';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import {
@@ -78,8 +79,11 @@ import { fetchSegmentSibling } from './segmentSibling';
  * og «Lever» ville stått på første halvdel til neste henting.
  * v14 (#2751): la til `patsomeTeeStarters`, lagenes utslagsvalg. En v13-oppføring
  * mangler det: velgeren ville spurt et lag som alt har valgt på nettet.
+ * v15 (#2749): la til `entryFeeKr`, `paymentLink`, `prizes` og `myPaidAt`. En
+ * v14-oppføring mangler dem: venterommet ville stått uten kontingentkort og
+ * premiebord til neste henting.
  */
-export const BUNDLE_PAYLOAD_VERSION = 14;
+export const BUNDLE_PAYLOAD_VERSION = 15;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -167,6 +171,19 @@ export interface BundleGame {
    * ikke skrevet ennå), også når kolonnen er tom eller bare mellomrom.
    */
   roundReport?: string | null;
+  /**
+   * #2749: `games.entry_fee_kr`, startkontingenten i hele kroner. 0 = ingen.
+   * Valgfri, som `hcpAllowancePct`: kode som bygger et spill uten den (testene),
+   * står som før.
+   */
+  entryFeeKr?: number;
+  /**
+   * #2749: `games.payment_link`, fritekst: en betalingslenke eller et
+   * Vipps-nummer. Tolkes ved visning (`isPaymentUrl`), aldri her.
+   */
+  paymentLink?: string | null;
+  /** #2749: premiebordet, gjennom `safeParsePrizes`; ugyldig blob gir `[]`. */
+  prizes?: GamePrize[];
 }
 
 /**
@@ -283,6 +300,12 @@ export interface GameBundle {
    * `null` for alle andre spill, og når raden ikke kunne leses.
    */
   sourceGameName?: string | null;
+  /**
+   * #2749: når arrangøren huket av spilleren selv som betalt (`game_players.paid_at`
+   * på egen rad), eller `null`. Hentes for seg, så `PLAYER_SELECT` (delt med
+   * cup-tavla) står urørt. Valgfri av samme grunn som `teeRatings`.
+   */
+  myPaidAt?: string | null;
   /** Når bundelen sist ble hentet fra serveren (ISO). */
   fetchedAt: string;
 }
@@ -319,7 +342,7 @@ function toTeeRatings(tee: TeeBoxRow | null): BundleTeeRatings | null {
 export function toBundle(
   game: GameRow,
   players: PlayerRow[],
-  related: Pick<GameBundle, 'segmentSibling' | 'sourceGameName'>,
+  related: Pick<GameBundle, 'segmentSibling' | 'sourceGameName' | 'myPaidAt'>,
 ): GameBundle {
   return {
     ...related,
@@ -356,6 +379,9 @@ export function toBundle(
       hcpMaxStrokes: game.hcp_max_strokes ?? null,
       spectateToken: game.spectate_token ?? null,
       roundReport: game.round_report?.trim() ? game.round_report : null,
+      entryFeeKr: game.entry_fee_kr ?? 0,
+      paymentLink: game.payment_link ?? null,
+      prizes: safeParsePrizes(game.prizes),
     },
     players: players.map((row) => ({
       userId: row.user_id,
@@ -429,7 +455,11 @@ export async function fetchGameBundle(
     throw new GameNotFoundError(gameId);
   }
 
-  return toBundle(gameRes.data, playersRes.data ?? [], await fetchRelated(gameRes.data, signal));
+  const [related, myPaidAt] = await Promise.all([
+    fetchRelated(gameRes.data, signal),
+    fetchMyPaidAt(gameId, signal),
+  ]);
+  return toBundle(gameRes.data, playersRes.data ?? [], { ...related, myPaidAt });
 }
 
 /**
@@ -452,6 +482,24 @@ async function fetchRelated(
     segmentSibling: candidate ? await fetchSegmentSibling(game.id) : null,
     sourceGameName: game.source_game_id ? await fetchGameName(game.source_game_id, signal) : null,
   };
+}
+
+/**
+ * #2749: om arrangøren har huket av spilleren selv som betalt. Bare egen rad, så
+ * ingen ser andres status. En feil gir `null` (kortet viser da betal-knappen, som
+ * før avhukingen), aldri en feilet bundel: kortet er pynt, banen er det viktige.
+ */
+async function fetchMyPaidAt(gameId: string, signal: AbortSignal | undefined): Promise<string | null> {
+  try {
+    const me = await currentDeviceUserId();
+    if (!me) return null;
+    let query = supabase.from('game_players').select('paid_at').eq('game_id', gameId).eq('user_id', me);
+    if (signal) query = query.abortSignal(signal);
+    const { data, error } = await query.maybeSingle<{ paid_at: string | null }>();
+    return error ? null : (data?.paid_at ?? null);
+  } catch {
+    return null;
+  }
 }
 
 async function fetchGameName(gameId: string, signal: AbortSignal | undefined): Promise<string | null> {

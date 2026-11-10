@@ -280,6 +280,20 @@ export const HakeIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** #2749: haken foran «Startkontingent betalt» (`Venterom-forslag-kort`), strek 2,2. */
+export const BetaltHakeIcon = ({ size = 18, strokeWidth = 2.2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M5 12.5l4.5 4.5L19 7.5" />
+  </LineIcon>
+);
+
+/** #2749: pila ut av appen på «Betal her» (`Venterom-forslag-kort`), strek 2. */
+export const PilUtIcon = ({ size = 16, strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M7 17L17 7M9 7h8v8" />
+  </LineIcon>
+);
+
 /**
  * Den lille haken foran «har 4» i utslagsflatene (#2580), 11 pt med strek 3 som
  * webbens `TeeShotCheck` og `Utslag-forslag-*`.

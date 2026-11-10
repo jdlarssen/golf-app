@@ -16,7 +16,6 @@ import {
   sendFcmNotification,
 } from './fcm';
 import { buildNotificationText } from '@/lib/notifications/cardContent';
-import { SHOW_KRONER_IN_APP } from '@/lib/launchRules';
 import { notificationDestination } from '@/lib/notifications/deeplink';
 import { withReadMarker } from '@/lib/notifications/readMarker';
 import { getInboxTranslator } from '@/lib/notifications/inboxTranslator';
@@ -97,14 +96,9 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
       kind: opts.kind,
     });
 
-    // #2561: the app shows no kroner at launch (lib/launchRules.ts, the same
-    // switch the app's screens read), so APNs and FCM get the app text: the
-    // entry-fee reminder without its amount. Web push keeps the web text.
-    const appText = SHOW_KRONER_IN_APP
-      ? { title, detail }
-      : buildNotificationText(opts.kind, opts.payload, t, { surface: 'app' });
-    const apnsPayload = buildApnsPayload(appText.title, appText.detail, url, opts.kind);
-    const fcmContent = buildFcmMessage(appText.title, appText.detail, url, opts.kind);
+    // #2749: the app shows the entry fee, so APNs and FCM get the web text.
+    const apnsPayload = buildApnsPayload(title, detail, url, opts.kind);
+    const fcmContent = buildFcmMessage(title, detail, url, opts.kind);
 
     await Promise.allSettled([
       ...rows.map(async (sub) => {

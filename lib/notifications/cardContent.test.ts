@@ -4,7 +4,6 @@ import noMessages from '@/messages/no.json';
 import enMessages from '@/messages/en.json';
 import { buildNotificationText } from './cardContent';
 import { formatKr } from '@/lib/format/formatKr';
-import { testPayloads } from './testPayloads';
 import type { NotificationKind, NotificationPayload } from './types';
 import type { NotificationTranslator } from './cardContent';
 import { BODY_MAX, TITLE_MAX } from './push/clampText';
@@ -39,22 +38,18 @@ describe('buildNotificationText', () => {
     expect(buildNotificationText(kind, payload, t).title).toBe(title);
   });
 
-  // #2561: the iOS app shows no kroner at launch (owner 13.10), so the APNs
-  // text for the entry-fee reminder leaves the amount out. The web text and
-  // every other kind are the same with or without the option.
-  it('#2561: payment_reminder for the app has no amount; the web text is unchanged', () => {
+  // #2749: the app shows the entry fee, so the reminder names the amount on
+  // every channel.
+  it('#2749: payment_reminder names the amount', () => {
     const payload = { game_id: 'g', game_name: 'Sommercup', entry_fee_kr: 200 } as NotificationPayload;
-    expect(buildNotificationText('payment_reminder', payload, t).detail).toBe(
-      `kinds.paymentReminder.detail|${JSON.stringify({ gameName: 'Sommercup', amount: formatKr(200) })}`,
-    );
-    expect(buildNotificationText('payment_reminder', payload, t, { surface: 'app' })).toEqual({
+    expect(buildNotificationText('payment_reminder', payload, t)).toEqual({
       title: 'kinds.paymentReminder.title',
-      detail: 'kinds.paymentReminder.detailApp|{"gameName":"Sommercup"}',
+      detail: `kinds.paymentReminder.detail|${JSON.stringify({ gameName: 'Sommercup', amount: formatKr(200) })}`,
     });
   });
 
   // #2632: the start of the round report rides in the payload and shows in the
-  // push text; without it the text is what it always was. Web and app agree.
+  // push text; without it the text is what it always was.
   it('#2632: game_finished with report_start uses the detailWithReport key', () => {
     const payload = {
       game_id: 'g',
@@ -67,25 +62,12 @@ describe('buildNotificationText', () => {
         'kinds.gameFinished.detailWithReport|{"gameName":"Sommercup","reportStart":"Ada tok den på 18."}',
     };
     expect(buildNotificationText('game_finished', payload, t)).toEqual(expected);
-    expect(buildNotificationText('game_finished', payload, t, { surface: 'app' })).toEqual(expected);
   });
 
   it('#2632: game_finished without report_start keeps the plain detail', () => {
     const payload = { game_id: 'g', game_name: 'Sommercup' } as NotificationPayload;
     expect(buildNotificationText('game_finished', payload, t).detail).toBe(
       'kinds.gameFinished.detail|{"gameName":"Sommercup"}',
-    );
-  });
-
-  // Every kind but the entry-fee reminder reads the same for the app. The
-  // fixture has one payload per kind, so a new kind is covered by itself.
-  it.each(
-    (Object.entries(testPayloads) as [NotificationKind, NotificationPayload][]).filter(
-      ([kind]) => kind !== 'payment_reminder',
-    ),
-  )('#2561: %s reads the same for the app', (kind, payload) => {
-    expect(buildNotificationText(kind, payload, t, { surface: 'app' })).toEqual(
-      buildNotificationText(kind, payload, t),
     );
   });
 

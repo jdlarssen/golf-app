@@ -39,6 +39,14 @@ export interface GameRow {
   hcp_max_strokes?: number | null;
   spectate_token?: string | null;
   round_report?: string | null;
+  /**
+   * #2749: startkontingenten, betalingslenka (fritekst: URL eller Vipps-nummer)
+   * og premiebordet (jsonb). Valgfri: kode som bygger en rad uten dem (testene)
+   * står som før.
+   */
+  entry_fee_kr?: number;
+  payment_link?: string | null;
+  prizes?: unknown;
   courses: { name: string; course_holes: CourseHoleRow[] } | null;
   tee_boxes: TeeBoxRow | null;
 }
@@ -96,7 +104,7 @@ export const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 export const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, league_round_id, ended_at, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, patsome_tee_starters(team_number, tee_starter_user_id), side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, league_round_id, ended_at, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, patsome_tee_starters(team_number, tee_starter_user_id), side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, hcp_max_strokes, spectate_token, round_report, entry_fee_kr, payment_link, prizes, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 /** Svaret fra `GET /api/cup/[id]/matches/[gameId]/board`: en ferdig kamp, bare for lesing. */
 export type CupMatchBoardResponse = {
@@ -137,6 +145,9 @@ export function cupBoardRows(
       patsome_tee_starters: null,
       spectate_token: null,
       round_report: null,
+      entry_fee_kr: 0,
+      payment_link: null,
+      prizes: null,
     },
     players: players.map((player) => ({
       ...player,

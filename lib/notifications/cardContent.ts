@@ -16,15 +16,6 @@ export type NotificationTranslator = (
 ) => string;
 
 /**
- * Where the text is shown (#2561). `'app'` is what APNs delivers: the native
- * app and the iOS Capacitor shell. A kind that names an amount says it without
- * one there; `sendPush` asks for it only while `SHOW_KRONER_IN_APP`
- * (`lib/launchRules.ts`) is off. Default `'web'`: the inbox and web push.
- * E-mail is built elsewhere and does not use this function.
- */
-export type NotificationSurface = 'web' | 'app';
-
-/**
  * Builds the title + one-line detail for a notification, per kind, from the
  * `inbox` catalog. Single source of truth used by both the inbox card (client)
  * and Web Push (server). Moved out of NotificationCard so push reuses it (#24).
@@ -33,7 +24,6 @@ export function buildNotificationText(
   kind: NotificationKind,
   payload: NotificationPayload,
   t: NotificationTranslator,
-  { surface = 'web' }: { surface?: NotificationSurface } = {},
 ): { title: string; detail: string } {
   switch (kind) {
     case 'invite': {
@@ -439,14 +429,11 @@ export function buildNotificationText(
       const p = payload as NotificationPayload<'payment_reminder'>;
       return {
         title: t('kinds.paymentReminder.title'),
-        // The only kind with kroner (#2561): the app's text has no amount.
-        detail:
-          surface === 'app'
-            ? t('kinds.paymentReminder.detailApp', { gameName: p.game_name })
-            : t('kinds.paymentReminder.detail', {
-                gameName: p.game_name,
-                amount: formatKr(p.entry_fee_kr),
-              }),
+        // #2749: the app shows the entry fee too, so every channel names it.
+        detail: t('kinds.paymentReminder.detail', {
+          gameName: p.game_name,
+          amount: formatKr(p.entry_fee_kr),
+        }),
       };
     }
     case 'game_cancelled': {

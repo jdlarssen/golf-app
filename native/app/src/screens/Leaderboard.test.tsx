@@ -108,15 +108,15 @@ const mockLocalScores = [
 // #2756: et ferdig spill der ingen slag er ført.
 const mockNoScores = { on: false };
 
-// #2561: kronebryteren (rot-`lib/launchRules.ts`), styrt per test.
-const mockKroner = { on: false };
+// #2561: oppgjørsbryteren (rot-`lib/launchRules.ts`), styrt per test.
+const mockSettlement = { on: false };
 jest.mock('../../../../lib/launchRules', () => ({
-  get SHOW_KRONER_IN_APP() {
-    return mockKroner.on;
+  get SHOW_SETTLEMENT_IN_APP() {
+    return mockSettlement.on;
   },
 }));
 beforeEach(() => {
-  mockKroner.on = false;
+  mockSettlement.on = false;
 });
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // #2579: tavla vet hvem som ser den («DU», stripa), og stripa står over sikker sone.
@@ -934,8 +934,8 @@ describe('LeaderboardBody', () => {
   // `lib/launchRules.ts`), så kortet står bare når bryteren er på. Makker vinner
   // hull 1, hull 2 er likt: 1 skin mot 0. Beløpene er Type A-dekket i
   // `lib/scoring/settlement.test.ts`.
-  it('#2561: pengeoppgjøret følger kronebryteren', async () => {
-    mockKroner.on = false;
+  it('#2561: pengeoppgjøret følger oppgjørsbryteren', async () => {
+    mockSettlement.on = false;
     const skinsConfig = { kind: 'skins', team_size: 1, skins_scoring: 'gross' };
     const { rerender } = await render(
       <LeaderboardBody
@@ -959,7 +959,7 @@ describe('LeaderboardBody', () => {
     expect(screen.queryByTestId('settlement')).toBeNull();
 
     // Bryteren på: kortet fra #2221 står som før.
-    mockKroner.on = true;
+    mockSettlement.on = true;
     await rerender(
       <LeaderboardBody
         bundle={withGame({
@@ -977,7 +977,7 @@ describe('LeaderboardBody', () => {
     expect(screen.getByTestId('settlement-payment-0-line').props.children).toBe(
       'Meg Selv → Makker Makkersen',
     );
-    mockKroner.on = false;
+    mockSettlement.on = false;
   });
 });
 

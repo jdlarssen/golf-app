@@ -12,7 +12,8 @@
 //     på en smal telefon (#1842: tekst som klippes er tekst som lyver).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, Alert, ScrollView } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { AccessibilityInfo, Alert, Linking, ScrollView } from 'react-native';
 import type { ReactElement } from 'react';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { TICKET_TEXT } from '../lib/ticketCopy';
@@ -67,6 +68,8 @@ jest.mock('../data/withdrawSelf', () => ({
 jest.mock('../data/joinFlight', () => ({
   joinFlight: jest.fn(async () => ({ ok: true })),
 }));
+// #2749: «Kopier» på kontingentkortet. Pakka har native kode; her holder det å se kallet.
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -1290,5 +1293,152 @@ describe('GameHome i en ligaflight (#2688)', () => {
     const delivered = { submittedAt: at, submittedByUserId: 'me' };
     await renderFlight({ requirePeerApproval: true }, delivered);
     expect(screen.getByTestId('submitted-banner')).toHaveTextContent('Kortet er levert. Nå venter det på en makker.');
+  });
+});
+
+describe('GameHome — kontingent og premiebord (#2749)', () => {
+  const PRIZES = [
+    { category: 'placement', position: 1, description: 'Middag for to på klubbhuset', sponsor: 'Byneset Sport', sponsorLogoPath: null },
+    { category: 'placement', position: 2, description: 'Tolv baller', sponsor: null, sponsorLogoPath: null },
+    // Bare logo, uten navn: ingen sponsorlinje i appen (logoer vises ikke).
+    { category: 'placement', position: 3, description: 'Greenfee på Byneset', sponsor: null, sponsorLogoPath: 'u/logo.webp' },
+    { category: 'longest_drive', position: 1, description: 'Ny hanske', sponsor: null, sponsorLogoPath: null },
+    { category: 'closest_to_pin', position: 1, description: 'En flaske vin', sponsor: 'Kafé Fjorden', sponsorLogoPath: null },
+  ] as BundleGame['prizes'];
+
+  function setBundle(game: Partial<BundleGame>, myPaidAt: string | null = null): void {
+    mockState.bundle = {
+      ...homeBundle({
+        game: {
+          id: 'game-1',
+          status: 'scheduled',
+          modeConfig: { kind: 'stableford', team_size: 1 },
+          scheduledTeeOffAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+          ...game,
+        },
+        players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+      }),
+      myPaidAt,
+    };
+    mockState.scores = [];
+  }
+
+  const renderHome = async () => {
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+  };
+
+  function testIdsInOrder(): string[] {
+    const ids: string[] = [];
+    const walk = (node: unknown): void => {
+      if (node == null || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(walk);
+      const element = node as { props?: { testID?: string }; children?: unknown };
+      if (element.props?.testID) ids.push(element.props.testID);
+      walk(element.children);
+    };
+    walk(screen.toJSON());
+    return ids;
+  }
+
+  it('betalingslenke: beløpet og «Betal her», som åpner lenka, rett under billetten', async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    setBundle({ entryFeeKr: 200, paymentLink: 'https://vipps.no/betal', prizes: PRIZES });
+    await renderHome();
+
+    const card = screen.getByTestId('payment-card-link');
+    expect(card).toHaveTextContent('Startkontingent200 krBetal her');
+    await fireEvent.press(screen.getByTestId('payment-pay'));
+    expect(open).toHaveBeenCalledWith('https://vipps.no/betal');
+    const order = testIdsInOrder().filter((id) => ['game-ticket', 'payment-card-link', 'prize-table', 'roster'].includes(id));
+    expect(order).toEqual(['game-ticket', 'payment-card-link', 'prize-table', 'roster']);
+    open.mockRestore();
+  });
+
+  it('Vipps-nummer: «Kopier» legger nummeret på utklippstavla og sier «Kopiert»', async () => {
+    (Clipboard.setStringAsync as jest.Mock).mockClear();
+    setBundle({ entryFeeKr: 200, paymentLink: '12345' });
+    await renderHome();
+
+    expect(screen.getByTestId('payment-card-vipps')).toHaveTextContent('Startkontingent200 krVipps til 12345Kopier');
+    expect(screen.getByTestId('payment-copy')).toHaveTextContent('Kopier');
+    await fireEvent.press(screen.getByTestId('payment-copy'));
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith('12345');
+    await waitFor(() => expect(screen.getByTestId('payment-copy')).toHaveTextContent('Kopiert'));
+  });
+
+  it('ingen lenke: beløpet og «Avtal betaling med arrangøren.»', async () => {
+    setBundle({ entryFeeKr: 200, paymentLink: null });
+    await renderHome();
+
+    expect(screen.getByTestId('payment-card-arrange')).toHaveTextContent(
+      'Startkontingent200 krAvtal betaling med arrangøren.',
+    );
+  });
+
+  it('betalt: «Startkontingent betalt» i stedet for betal-knappen', async () => {
+    setBundle({ entryFeeKr: 200, paymentLink: 'https://vipps.no/betal' }, '2026-11-01T10:00:00.000Z');
+    await renderHome();
+
+    expect(screen.getByTestId('payment-card-paid')).toHaveTextContent('Startkontingent betalt');
+    expect(screen.queryByTestId('payment-pay')).toBeNull();
+  });
+
+  it('ingen kontingent: ikke noe kort, og uten premier ingen premierad', async () => {
+    setBundle({ entryFeeKr: 0, paymentLink: '12345', prizes: [] });
+    await renderHome();
+
+    expect(screen.queryByTestId(/^payment-card/)).toBeNull();
+    expect(screen.queryByTestId('prize-table')).toBeNull();
+  });
+
+  it('premiebordet er lukket med «5 premier», og et trykk åpner lista med sponsorene', async () => {
+    setBundle({ entryFeeKr: 200, prizes: PRIZES });
+    await renderHome();
+
+    const toggle = screen.getByTestId('prize-table-toggle');
+    expect(toggle).toHaveTextContent('Premiebord5 premier');
+    expect(toggle.props.accessibilityState).toMatchObject({ expanded: false });
+    expect(screen.queryByTestId('prize-table-list')).toBeNull();
+    expect(screen.queryByText(/Sponset av/)).toBeNull();
+
+    await fireEvent.press(toggle);
+
+    expect(screen.getByTestId('prize-table-toggle').props.accessibilityState).toMatchObject({ expanded: true });
+    expect(screen.getByTestId('prize-placement-1')).toHaveTextContent(
+      '11. plass·Middag for to på klubbhusetSponset av Byneset Sport',
+    );
+    expect(screen.getByTestId('prize-placement-1-sponsor')).toHaveTextContent('Sponset av Byneset Sport');
+    expect(screen.queryByTestId('prize-placement-2-sponsor')).toBeNull();
+    expect(screen.queryByTestId('prize-placement-3-sponsor')).toBeNull();
+    expect(screen.getByTestId('prize-closest_to_pin-1-sponsor')).toHaveTextContent('Sponset av Kafé Fjorden');
+    expect(
+      testIdsInOrder().filter((id) => /^prize-[a-z_]+-\d$/.test(id)),
+    ).toEqual([
+      'prize-placement-1',
+      'prize-placement-2',
+      'prize-placement-3',
+      'prize-longest_drive-1',
+      'prize-closest_to_pin-1',
+    ]);
+
+    await fireEvent.press(screen.getByTestId('prize-table-toggle'));
+    expect(screen.queryByText(/Sponset av/)).toBeNull();
+  });
+
+  it('under runden: bare premiebordet, under flisene, og ingen kontingent', async () => {
+    setBundle({ status: 'active', entryFeeKr: 200, paymentLink: '12345', prizes: PRIZES });
+    await renderHome();
+
+    expect(screen.queryByTestId(/^payment-card/)).toBeNull();
+    const order = testIdsInOrder().filter((id) => ['game-ticket', 'game-tiles', 'prize-table'].includes(id));
+    expect(order).toEqual(['game-ticket', 'game-tiles', 'prize-table']);
   });
 });

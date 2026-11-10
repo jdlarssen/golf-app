@@ -81,7 +81,7 @@ import { holeHeaderParams } from '../lib/holeHeader';
 import { RESULT_CARD_TEXT } from '../lib/resultCardCopy';
 import { resultHeroFor, type ResultHeroModel } from '../lib/resultHero';
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
-import { SHOW_KRONER_IN_APP } from '../../../../lib/launchRules';
+import { SHOW_SETTLEMENT_IN_APP } from '../../../../lib/launchRules';
 import { buildSideTournament } from '../lib/sideTournament';
 import { withdrawnOnBoard } from '../lib/withdrawnBoard';
 import {
@@ -816,9 +816,9 @@ export function LeaderboardBody({
   // `kr_per_unit` mangler. Samme delte regel som nettsidens resultattavle, så de
   // to kan ikke vise ulike beløp. Det regnes fra resultatet over, altså etter
   // alle portene: en blind runde som pågår har returnert før denne linja.
-  // #2561: null i appen ved lansering (rot-`lib/launchRules.ts`). Visningene tegner
+  // #2561/#2749: null i appen ved lansering (rot-`lib/launchRules.ts`). Visningene tegner
   // kortet bare når `settlement` ikke er null, så det gjelder alle formater.
-  const settlement = SHOW_KRONER_IN_APP
+  const settlement = SHOW_SETTLEMENT_IN_APP
     ? settlementForResult(result, game.modeConfig, (unit) => SETTLEMENT_TEXT.units[unit])
     : null;
 

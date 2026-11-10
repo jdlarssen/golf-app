@@ -380,7 +380,8 @@ describe('fraunces', () => {
   it('runder en størrelse uten eget snitt til nærmeste, og midt mellom til det største', () => {
     expect(frauncesFamily(600, 10.5)).toBe('Fraunces600O11');
     expect(frauncesFamily(600, 46)).toBe('Fraunces600O48');
-    expect(frauncesFamily(500, 16)).toBe('Fraunces500O15');
+    // #2749: 16 står midt mellom 15 og 17, og går til det største.
+    expect(frauncesFamily(500, 16)).toBe('Fraunces500O17');
     expect(frauncesFamily(600, 200)).toBe('Fraunces600O64');
     expect(frauncesFamily(600, 4)).toBe('Fraunces600O9');
   });

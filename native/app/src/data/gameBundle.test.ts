@@ -145,6 +145,89 @@ describe('gameBundle', () => {
     expect((await refreshGameBundle(GAME)).game.patsomeTeeStarters).toEqual([]);
   });
 
+  // #2749: kontingentkortet og premiebordet i venterommet.
+  it('#2749: kontingenten, lenka og premiebordet rir med på spillet', async () => {
+    const prize = {
+      category: 'placement',
+      position: 1,
+      description: 'Gavekort 500 kr',
+      sponsor: 'Byneset Sport',
+      sponsorLogoPath: null,
+    };
+    riggFetch({ entry_fee_kr: 250, payment_link: 'https://vipps.no/x', prizes: [prize] });
+    const { refreshGameBundle } = bundleModule();
+
+    const { game } = await refreshGameBundle(GAME);
+
+    expect(game).toMatchObject({ entryFeeKr: 250, paymentLink: 'https://vipps.no/x', prizes: [prize] });
+  });
+
+  it('#2749: et ugyldig premiebord blir tom liste', async () => {
+    riggFetch({ prizes: [{ category: 'placement', position: 9, description: '' }] });
+    const { refreshGameBundle } = bundleModule();
+
+    expect((await refreshGameBundle(GAME)).game.prizes).toEqual([]);
+  });
+
+  it('#2749: kolonnene er med i select-lista', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const gamesQuery = queryStub({ data: GAME_ROW, error: null });
+    routeFrom({
+      games: [gamesQuery],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+    });
+
+    await bundleModule().refreshGameBundle(GAME);
+
+    const select = String(stepArgs(gamesQuery, 'select')[0]![0]);
+    expect(select).toContain('entry_fee_kr');
+    expect(select).toContain('payment_link');
+    expect(select).toContain('prizes');
+  });
+
+  // #2749: «Startkontingent betalt» leser egen rad, i en egen spørring.
+  it('#2749: myPaidAt kommer fra spillerens egen rad', async () => {
+    const { queryStub, routeFrom, stepArgs, currentDeviceUserId } = mocks();
+    currentDeviceUserId.mockResolvedValue(ME);
+    const own = queryStub({ data: { paid_at: '2026-11-01T10:00:00.000Z' }, error: null });
+    routeFrom({
+      games: [queryStub({ data: GAME_ROW, error: null })],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null }), own],
+    });
+
+    const fetched = await bundleModule().refreshGameBundle(GAME);
+
+    expect(fetched.myPaidAt).toBe('2026-11-01T10:00:00.000Z');
+    expect(stepArgs(own, 'select')[0]).toEqual(['paid_at']);
+    expect(stepArgs(own, 'eq')).toEqual([
+      ['game_id', GAME],
+      ['user_id', ME],
+    ]);
+  });
+
+  it.each([
+    ['en feil', { data: null, error: { message: 'nei' } }],
+    ['ingen rad', { data: null, error: null }],
+  ])('#2749: %s gir myPaidAt null, og bundelen hentes likevel', async (_name, result) => {
+    const { queryStub, routeFrom, currentDeviceUserId } = mocks();
+    currentDeviceUserId.mockResolvedValue(ME);
+    routeFrom({
+      games: [queryStub({ data: GAME_ROW, error: null })],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null }), queryStub(result)],
+    });
+
+    const fetched = await bundleModule().refreshGameBundle(GAME);
+
+    expect(fetched.myPaidAt).toBeNull();
+    expect(fetched.game.id).toBe(GAME);
+  });
+
+  it('#2749: uten økt spør den ikke etter egen rad', async () => {
+    riggFetch();
+
+    expect((await bundleModule().refreshGameBundle(GAME)).myPaidAt).toBeNull();
+  });
+
   it('#2632: round_report er med i select-lista', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
     const gamesQuery = queryStub({ data: GAME_ROW, error: null });
@@ -191,6 +274,10 @@ describe('gameBundle', () => {
       hcpMaxStrokes: 32,
       spectateToken: 'tok-123',
       roundReport: 'Første avsnitt.\nAndre avsnitt.',
+      // #2749: raden har ingen kontingent eller premier.
+      entryFeeKr: 0,
+      paymentLink: null,
+      prizes: [],
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
@@ -435,14 +522,15 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it.each([[2], [3], [6], [7], [12], [13]])(
+  it.each([[2], [3], [6], [7], [12], [13], [14]])(
     'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
     async (version: number) => {
       // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på
       // et spill med LD/CTP); v3 mangler `acceptedAt` (hele rosteret ville stått
       // «Ikke bekreftet»); v6 mangler ratingen og plassen (#2255: billetten ville
       // stått uten faktalinje og plass); v7 mangler live-tokenet (Del-knappen
-      // ville stått skjult selv om arrangøren har slått på live-følging).
+      // ville stått skjult selv om arrangøren har slått på live-følging); v14
+      // mangler kontingenten og premiebordet (#2749).
       // Falsy-hull, ikke krasj — derfor bumpen.
       const { gameBundleCacheKey, loadGameBundle } = bundleModule();
       const db = require('./db') as typeof import('./db');

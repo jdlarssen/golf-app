@@ -1,4 +1,3 @@
-import { SHOW_KRONER_IN_APP } from '@/lib/launchRules';
 import {
   FRIEND_KINDS,
   buildInboxEntryView,
@@ -54,8 +53,6 @@ export function buildInboxWire(
     resultByGame: board.resultByGame,
     finishedGameIds: board.finishedGameIds,
     leagueFlightGameIds: board.leagueFlightGameIds,
-    // The same switch as push to the app (`sendPush`).
-    surface: SHOW_KRONER_IN_APP ? 'web' : 'app',
   };
   const sections = buildInboxSections(rows, { filter: 'all', now: board.now });
   const toWire = (key: InboxSectionKey): InboxWireEntry[] =>

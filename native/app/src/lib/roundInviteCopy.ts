@@ -5,7 +5,6 @@
 // `roundInviteCopy.test.ts` låser det mot `messages/no.json` (`signup`). Resten finnes
 // bare i appen. Datoen står i enhetens lokaltid, som på Hjem (`homeDates.ts`).
 import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteView';
-import { SHOW_KRONER_IN_APP } from '../../../../lib/launchRules';
 import type { RoundInviteAnswerFailure, RoundInviteLoadFailure } from '../data/roundInvite';
 import { formatStubClock, formatWeekdayDayMonth } from './homeDates';
 import { OFFLINE_NOTE } from './rosterCopy';
@@ -64,11 +63,11 @@ export function roundWhenLine(teeOffAt: string | null): string | null {
 }
 
 /**
- * Ingen skal melde seg på uten å vite hva det koster, men kroner står ikke i appen
- * ved lansering (`SHOW_KRONER_IN_APP`). Over null, ellers ingenting.
+ * Ingen skal melde seg på uten å vite hva det koster (#2749: kontingenten står i
+ * appen). Over null, ellers ingenting.
  */
 export function roundFeeLine(entryFeeKr: number): string | null {
-  return SHOW_KRONER_IN_APP && entryFeeKr > 0 ? `Startkontingent ${entryFeeKr} kr` : null;
+  return entryFeeKr > 0 ? `Startkontingent ${entryFeeKr} kr` : null;
 }
 
 export function describeRoundInviteLoadFailure(reason: RoundInviteLoadFailure): string {

@@ -51,6 +51,8 @@ import { FlightPicker } from '../components/game/FlightPicker';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
+import { PaymentCard } from '../components/game/PaymentCard';
+import { PrizeTable } from '../components/game/PrizeTable';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
@@ -64,6 +66,7 @@ import { fetchOwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { flightPickerVisible } from '../lib/flightPicker';
+import { paymentView } from '../lib/paymentView';
 import { gateReason } from '../lib/formatGate';
 import { playerWithdrawKind } from '../lib/playerWithdraw';
 import { GameLoadFailed } from '../components/GameLoadFailed';
@@ -371,6 +374,24 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         />
       </GameTicket>
 
+      {/* #2749: hva runden koster og hva det spilles om, rett under billetten
+          før runden (`Venterom-forslag-lenke-foldet`). Kortet er spillerens, så
+          bare med en rad i spillet; premiebordet ser alle. */}
+      {game.status === 'scheduled' ? (
+        <>
+          {me ? (
+            <PaymentCard
+              view={paymentView({
+                entryFeeKr: game.entryFeeKr,
+                paymentLink: game.paymentLink,
+                paidAt: bundle.myPaidAt,
+              })}
+            />
+          ) : null}
+          <PrizeTable prizes={game.prizes} />
+        </>
+      ) : null}
+
       {/* #2750: velg eller bytt flight selv, rett under billetten. */}
       {flightPickerVisible(bundle, userId, stub.kind) ? (
         <FlightPicker bundle={bundle} userId={userId} onChanged={refresh} />
@@ -387,6 +408,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           onRules={scrollToRules}
         />
       ) : null}
+
+      {/* #2749: under runden står bare premiebordet, under flisene
+          (`Venterom-forslag-runden-foldet`). Kontingenten er borte. */}
+      {game.status === 'active' ? <PrizeTable prizes={game.prizes} /> : null}
 
       {/* #2752: cup-rommet, som `CupStandingsLink` på nettet. */}
       {game.tournamentId ? (

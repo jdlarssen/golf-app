@@ -180,8 +180,7 @@
       },
       "paymentReminder": {
         "title": "Pay the entry fee",
-        "detail": "You owe {amount} for {gameName}",
-        "detailApp": "You still owe the entry fee for {gameName}"
+        "detail": "You owe {amount} for {gameName}"
       },
       "gameCancelled": {
         "title": "{gameName} has been cancelled",

@@ -89,6 +89,9 @@ const fullGame = (c: Case): GameRow => ({
   hcp_max_strokes: null,
   spectate_token: 'lenke',
   round_report: 'Referatet',
+  entry_fee_kr: 250,
+  payment_link: '90000000',
+  prizes: [{ category: 'placement', position: 1, description: 'Gavekort', sponsor: null, sponsorLogoPath: null }],
   courses: { name: 'Bane', course_holes: HOLES },
   tee_boxes: TEE,
 });
@@ -211,5 +214,10 @@ describe('cupBoardRows', () => {
     expect(game.foursomes_side1_tee_starter_user_id).toBeNull();
     expect(game.patsome_tee_starters).toBeNull();
     expect(players[0]).toMatchObject({ submitted_at: null, approved_at: null, marker_user_id: null, result_summary: null });
+  });
+
+  // #2749: kontingenten og premiebordet rir med i spillets rad, men tavla leser dem ikke.
+  it('har ikke med kontingenten, betalingslenka eller premiebordet', () => {
+    expect(game).toMatchObject({ entry_fee_kr: 0, payment_link: null, prizes: null });
   });
 });
