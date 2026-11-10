@@ -27,6 +27,9 @@ import {
   type SummaryLine,
   type SummaryWarning,
 } from '../components/create/SummaryStep';
+import { visiblePrizeSlots, type FeeDraft } from '../components/create/FeeAndPrizes';
+import { emptyPrizeDraft } from '../../../../lib/games/prizes';
+import { PAYMENT_TEXT, PRIZE_TEXT } from '../lib/paymentCopy';
 import type { CommonSetup, SetupText } from '../components/create/SetupStep';
 import { SetupStep } from '../components/create/SetupStep';
 import {
@@ -166,6 +169,14 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     allowance: '',
     krPerUnit: '',
   });
+  // #2749: kontingent og premiebord. Står ved formatbytte: lagringen beskjærer
+  // slottene formatet ikke har, som på nettet.
+  const [fee, setFee] = useState<FeeDraft>(() => ({
+    entryFee: '',
+    paymentLink: '',
+    prizes: emptyPrizeDraft(),
+    prizesOpen: false,
+  }));
   const [courseId, setCourseId] = useState<string | null>(null);
   const [teeBoxId, setTeeBoxId] = useState<string | null>(null);
   const [teeOff, setTeeOff] = useState<Date>(defaultTeeOff);
@@ -364,8 +375,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       sideCtpCount: common.sideCtpCount,
       players,
       setup: resolvedSetup,
+      entryFeeKr: fee.entryFee === '' ? 0 : Number(fee.entryFee),
+      paymentLink: fee.paymentLink,
+      prizes: fee.prizes,
     };
-  }, [allowancePct, common, courseId, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
+  }, [allowancePct, common, courseId, fee, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
     ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
@@ -463,6 +477,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           onSetup={(patch) => setSetup((prev) => ({ ...prev, ...patch }))}
           text={setupText}
           onText={(patch) => setSetupText((prev) => ({ ...prev, ...patch }))}
+          fee={fee}
+          onFee={(patch) => setFee((prev) => ({ ...prev, ...patch }))}
         />
       ) : null}
 
@@ -611,6 +627,13 @@ function summaryLines(
   // støy i et åtte-spillers følge.
   const offMens = draft.players.filter((p) => p.teeGender !== 'M');
 
+  // Bare slottene som lagres: de formatet og sideturneringen har (`visiblePrizeSlots`).
+  const prizeCount = visiblePrizeSlots(mode, {
+    enabled: draft.sideTournamentEnabled === true,
+    ldCount: draft.sideLdCount ?? 0,
+    ctpCount: draft.sideCtpCount ?? 0,
+  }).filter((slot) => (draft.prizes?.[slot.key].description.trim() ?? '') !== '').length;
+
   const side = draft.sideTournamentEnabled
     ? [
         `${draft.sideLdCount} lengste drive`,
@@ -657,6 +680,11 @@ function summaryLines(
         ]
       : []),
     { key: 'side', label: 'Sideturnering', value: side },
+    // #2749: kontingenten og premiebordet, bare når de er satt.
+    ...((draft.entryFeeKr ?? 0) > 0
+      ? [{ key: 'fee', label: PAYMENT_TEXT.label, value: PAYMENT_TEXT.amount(draft.entryFeeKr ?? 0) }]
+      : []),
+    ...(prizeCount > 0 ? [{ key: 'prizes', label: PRIZE_TEXT.boardTitle, value: PRIZE_TEXT.count(prizeCount) }] : []),
     {
       key: 'approval',
       label: 'Levering',

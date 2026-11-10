@@ -24,6 +24,7 @@ import type { AppGameMode } from '../../lib/appFormats';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
 import type { ModeSetup } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
+import { FeeAndPrizes, type FeeDraft } from './FeeAndPrizes';
 import { Chips, Field, ToggleRow } from './primitives';
 
 /** Fellesfeltene, samlet så skjermen kan sende dem videre som én bit. */
@@ -57,6 +58,8 @@ export function SetupStep({
   onSetup,
   text,
   onText,
+  fee,
+  onFee,
 }: {
   mode: AppGameMode;
   common: CommonSetup;
@@ -65,6 +68,9 @@ export function SetupStep({
   onSetup: (patch: Partial<ModeSetup>) => void;
   text: SetupText;
   onText: (patch: Partial<SetupText>) => void;
+  /** #2749: kontingent og premiebord nederst i steget. */
+  fee: FeeDraft;
+  onFee: (patch: Partial<FeeDraft>) => void;
 }) {
   const { colors, ui } = useTheme();
   const stablefordFamily = isStablefordFamily(mode);
@@ -266,6 +272,17 @@ export function SetupStep({
           </Field>
         </>
       ) : null}
+
+      <FeeAndPrizes
+        mode={mode}
+        side={{
+          enabled: common.sideTournamentEnabled,
+          ldCount: common.sideLdCount,
+          ctpCount: common.sideCtpCount,
+        }}
+        fee={fee}
+        onFee={onFee}
+      />
     </View>
   );
 }
