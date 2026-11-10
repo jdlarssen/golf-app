@@ -26,6 +26,10 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "#2815: one game, one card owner's rows (≤ 18) for the card behind a table cell",
   },
+  'lib/league/setFlightMarkerCore.ts': {
+    count: 1,
+    reason: "#2814: one game, one card owner's rows (≤ 18), checked for «unchanged since the marker kept it»",
+  },
   'app/[locale]/admin/games/[id]/slett/page.tsx': {
     count: 1,
     reason: 'head: true count, no rows',
