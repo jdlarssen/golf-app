@@ -30,9 +30,12 @@ export function pillText(t: BoardT, holesPlayed: number | null): string {
     : t('pillLiveAfter', { holes: holesPlayed });
 }
 
-/** The player's name as the board shows it, with the unknown-player fallback. */
+/**
+ * The player's name as the board shows it: the nickname next to the name, the
+ * nickname alone without a name (#2813), else the unknown-player text.
+ */
 export function boardDisplayName(row: LiveBoardRow, tc: BoardCommonT): string {
-  return row.name ? formatRevealName(row.name, row.nickname) : tc('unknownPlayerFull');
+  return formatRevealName(row.name ?? '', row.nickname) || tc('unknownPlayerFull');
 }
 
 /** «–» before anyone has played, «T2» on a shared place, else the place. */
