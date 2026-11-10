@@ -50,7 +50,8 @@ function firstWinnerRow(awards: CupSideAwardSnapshot[]): CupSideAwardWinnerRow {
 
 describe('buildSideAwardDetails — ctp/ld outcomes', () => {
   it.each<[string, Partial<Extract<CupSideAwardSnapshot, { kind: 'ctp' | 'ld' }>>, CupSideAwardWinnerRow['outcome'], string | null, 1 | 2 | null]>([
-    ['winner on team 1', { winnerUserId: 'p1', winnerTeam: 1 }, 'won', 'Per', 1],
+    // #2813: the name, not the nickname ('Per').
+    ['winner on team 1', { winnerUserId: 'p1', winnerTeam: 1 }, 'won', 'Per Person', 1],
     ['winner on team 2', { winnerUserId: 'k1', winnerTeam: 2 }, 'won', 'Knut Kongsberg', 2],
     // #1530: «nobody won» is a finished answer, not a missing registration.
     ['answered no winner', { noWinner: true }, 'noWinner', null, null],

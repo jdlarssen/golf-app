@@ -19,7 +19,7 @@ import {
   type ArchivedTeeRow,
 } from './ArchivedTeesSection';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
-import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
+import { playerName, type PlayerNameParts } from '@/lib/names/playerName';
 import { requireAdmin } from '@/lib/admin/auth';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -39,8 +39,8 @@ function buildAuditKicker(
   course: {
     created_at: string;
     updated_at: string;
-    created_by_user: DisplayNameUser;
-    updated_by_user: DisplayNameUser;
+    created_by_user: PlayerNameParts | null;
+    updated_by_user: PlayerNameParts | null;
   },
   t: Awaited<ReturnType<typeof getTranslations<'admin.courses.edit'>>>,
   locale: AppLocale,
@@ -50,13 +50,13 @@ function buildAuditKicker(
   const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
 
   if (wasUpdated) {
-    const who = displayName(course.updated_by_user);
+    const who = playerName(course.updated_by_user);
     const when = formatShortOsloDayMonthLocale(course.updated_at, locale);
     return who
       ? t('kickerLastUpdatedBy', { date: when, who })
       : t('kickerLastUpdated', { date: when });
   }
-  const who = displayName(course.created_by_user);
+  const who = playerName(course.created_by_user);
   const when = formatShortOsloDayMonthLocale(course.created_at, locale);
   return who
     ? t('kickerAddedBy', { date: when, who })

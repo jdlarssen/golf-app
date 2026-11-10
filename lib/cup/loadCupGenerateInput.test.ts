@@ -58,7 +58,7 @@ describe('loadCupGenerateInput', () => {
     expect(input.strategy).toBe('random');
     expect(input.participants).toEqual([
       { id: 'a', displayName: 'Ola Kompis', hcpIndex: 12.4, gender: 'mens' },
-      { id: 'b', displayName: 'Kaja', hcpIndex: -3, gender: 'ladies' },
+      { id: 'b', displayName: 'Kari', hcpIndex: -3, gender: 'ladies' },
       { id: 'c', displayName: 'Ukjent spiller', hcpIndex: 0, gender: null },
     ]);
   });

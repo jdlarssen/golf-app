@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
+import { playerName } from '@/lib/names/playerName';
 import { formatKr, formatKrAmount } from '@/lib/format/formatKr';
 import { buildSettlementText } from '@/lib/format/settlementText';
 import type { Settlement } from '@/lib/scoring/settlement';
@@ -79,7 +80,7 @@ export function SettlementTable({
 
   const name = (userId: string) => {
     const info = playersById.get(userId);
-    return info?.nickname || info?.name || tCommon('unknownPlayerFull');
+    return playerName(info) ?? tCommon('unknownPlayerFull');
   };
   const modeName = tModes(mode);
   const stakeLine = t('stakeLine', {

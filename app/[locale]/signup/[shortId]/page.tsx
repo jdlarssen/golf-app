@@ -41,6 +41,7 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { OpenInAppButton } from '@/components/app/OpenInAppButton';
 import { roundInviteLinkPath } from '@/lib/appLinks/appLinkPaths';
 import { appLinkLanding, type AppLinkQuery } from '@/lib/appLinks/openInApp';
+import { playerName } from '@/lib/names/playerName';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 type SearchParams = Promise<{ src?: string | string[] } & AppLinkQuery>;
@@ -354,11 +355,7 @@ export default async function PåmeldingPage({
     const teamSize = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
     const { side1: side1Count, side2: side2Count } = countSidePlayers(rows);
 
-    const nameOf = (r: RosterItem) => {
-      const u = r.users;
-      if (!u) return null;
-      return (u.nickname ?? u.name ?? null);
-    };
+    const nameOf = (r: RosterItem) => playerName(r.users);
 
     matchplaySideData = {
       teamSize,

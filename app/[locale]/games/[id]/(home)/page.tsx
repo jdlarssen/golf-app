@@ -107,6 +107,7 @@ import {
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 import { ChevronRightIcon } from '@/components/icons';
+import { playerName } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -750,7 +751,7 @@ export default async function GameHomePage({
     // fallbacks stay here because they need `t()`.
     const cupPlayerName = (uid: string) => {
       const u = gwp.players.find((p) => p.user_id === uid)?.users;
-      return u?.nickname?.trim() || u?.name?.trim() || t('withdrawnPlayerFallback');
+      return playerName(u) ?? t('withdrawnPlayerFallback');
     };
     const {
       decision: cupWithdrawalDecision,
@@ -799,7 +800,7 @@ export default async function GameHomePage({
       // RPC says so, as in the participant list. Asked only when someone lacks
       // a name; a failed read falls back to «(ukjent)».
       const memberLabel = (p: (typeof gwp.players)[number]) =>
-        p.users?.nickname?.trim() || p.users?.name?.trim() || null;
+        playerName(p.users);
       const pendingNameless = await pendingProfileIdsAmong(
         supabase,
         activePlayers2.filter((p) => memberLabel(p) === null).map((p) => p.user_id),

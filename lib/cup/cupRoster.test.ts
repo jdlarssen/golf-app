@@ -8,8 +8,8 @@ import {
 } from './cupRoster';
 
 // Type-A unit-test for roster-/navne-byggingen trukket ut av getCupSnapshot
-// (#1522). To kontrakter låses her: navne-preferansen (kallenavn > navn >
-// unknownLabel) og REKKEFØLGEN i rosteret — UI-en lister spillerne i den
+// (#1522). To kontrakter låses her: navne-preferansen (navn > kallenavn >
+// unknownLabel, #2813) og REKKEFØLGEN i rosteret — UI-en lister spillerne i den
 // rekkefølgen kampene kom, og første treff per bruker vinner.
 
 const UNKNOWN = 'Ukjent spiller';
@@ -35,8 +35,13 @@ describe('formatSideLabel (#217)', () => {
     ['tom side → unknownLabel', [], UNKNOWN],
     ['singles → ett navn', [player('u1', 1, { name: 'Per', nickname: null })], 'Per'],
     [
-      'kallenavn slår navn',
+      'navn slår kallenavn (#2813)',
       [player('u1', 1, { name: 'Per Hansen', nickname: 'Pelle' })],
+      'Per Hansen',
+    ],
+    [
+      'uten navn: kallenavnet',
+      [player('u1', 1, { name: null, nickname: 'Pelle' })],
       'Pelle',
     ],
     [
@@ -65,7 +70,7 @@ describe('formatSideLabel (#217)', () => {
         player('u2', 1, { name: null, nickname: null }),
         player('u3', 1, { name: 'Kari', nickname: 'Kaia' }),
       ],
-      `Per/${UNKNOWN}/Kaia`,
+      `Per/${UNKNOWN}/Kari`,
     ],
   ])('%s', (_desc, sidePlayers, expected) => {
     expect(formatSideLabel(sidePlayers, UNKNOWN)).toBe(expected);

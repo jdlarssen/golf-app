@@ -5,6 +5,7 @@ import { CupJoinReadError } from './cupJoinErrors';
 import { getCupJoinContext, type CupJoinContext, type CupJoinCup } from './getCupJoinContext';
 import { evaluateCupJoin, evaluateCupLeave, type CupJoinDecision, type CupLeaveDecision } from './joinValidation';
 import { revalidateCupSetup } from './setupCore';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * Spillerens ene dør inn i en cup (#1490), delt av nettets `/cup/bli-med/[shortId]` og
@@ -61,7 +62,7 @@ async function notifyCreator(
         tournament_name: cup.name,
         group_id: cup.group_id,
         // null → innboks-kortet fyller den lokaliserte fallbacken (#583).
-        participant_name: actor?.nickname?.trim() || actor?.name?.trim() || null,
+        participant_name: playerName(actor),
         action,
       },
     });

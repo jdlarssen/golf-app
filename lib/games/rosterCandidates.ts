@@ -1,3 +1,5 @@
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
+
 /**
  * Shared roster-picker logic for the two near-identical candidate pickers: the
  * admin invite card (`InviteToGameClient`) and the creator roster picker
@@ -33,7 +35,7 @@ export type RosterCandidate = {
  */
 export function rosterDisplayName(c: RosterCandidate): string {
   const base = c.name ?? c.email ?? c.maskedEmail ?? '';
-  return c.nickname ? `${base} «${c.nickname}»` : base;
+  return playerNameWithNicknameAfter(base, c.nickname);
 }
 
 /**

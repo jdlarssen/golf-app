@@ -5,7 +5,6 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
-import { firstName } from '@/lib/firstName';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { firstHalfTableView } from '@/lib/leaderboard/firstHalfReveal';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
@@ -32,6 +31,7 @@ import {
 import { buildSideTournamentInput } from '@/lib/scoring/sideTournamentInput';
 import { revealState } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { playerFirstName } from '@/lib/names/playerName';
 import {
   getGameWithPlayers,
   type GameForHole,
@@ -624,10 +624,7 @@ export async function renderLeaderboardContent({
     members: line.players.map((p) => ({
       userId: p.userId,
       displayName: formatRevealName(p.name ?? '', p.nickname),
-      firstName:
-        firstName(p.name) ??
-        formatRevealName(p.name ?? '', p.nickname) ??
-        '?',
+      firstName: playerFirstName(p) ?? '?',
     })),
   }));
 

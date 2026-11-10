@@ -9,6 +9,7 @@ import {
   DEFAULT_WIN_POINTS,
   hasDefaultCupWeights,
 } from './pointsToWin';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * Lesingen av kaptein-uttaket (#1884) — og dermed hemmeligholdet selv.
@@ -87,7 +88,7 @@ type UserRel = {
 };
 
 function displayNameOf(u: UserRel | undefined, unknownLabel: string): string {
-  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
+  return playerName(u) ?? unknownLabel;
 }
 
 /**

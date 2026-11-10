@@ -1,13 +1,14 @@
-import { firstName, sharesFirstName } from '../firstName';
+import { playerShortName } from '../names/playerName';
 
 // «Hvem sitt utslag» (#2580): the names the tee-shot surfaces show and the
 // team order they all use, on the web and in the app alike (same team, same
 // order on every device). Relative imports only, so Metro can serve it.
 
 /**
- * Short names for a team, as the artboards write them: the nickname, else the
- * first name, and the full name when two on the team share a first name
- * (#2286). `members` is the team in team order.
+ * Short names for a team, as the artboards write them: the first name, and
+ * the full name when two on the team share a first name (#2286); the nickname
+ * only for a member without a name (`playerShortName`, #2813). `members` is
+ * the team in team order.
  */
 export function teeShotNames(
   members: readonly {
@@ -19,11 +20,8 @@ export function teeShotNames(
   const fullNames = members.map((m) => m.users?.name ?? null);
   return new Map(
     members.map((m, i) => {
-      const nickname = m.users?.nickname?.trim();
-      const fullName = fullNames[i] ?? null;
       const others = fullNames.filter((_, j) => j !== i);
-      const name =
-        nickname || (sharesFirstName(fullName, others) ? fullName : firstName(fullName)) || unknownPlayer;
+      const name = playerShortName(m.users, others) ?? unknownPlayer;
       return [m.user_id, name];
     }),
   );

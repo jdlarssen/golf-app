@@ -12,6 +12,7 @@
 // `formatTeeOff` og `displayName` er dekket av kallstedenes egne tester og
 // gjentas ikke her.
 import {
+  displayName,
   formatClock,
   formatNameList,
   formatSignedAt,
@@ -82,13 +83,24 @@ describe('formatStampDateLocal', () => {
   });
 });
 
+// #2813: navnet vinner over kallenavnet; kallenavnet bare uten navn.
+describe('displayName', () => {
+  it.each<[string, { name: string | null; nickname: string | null }, string]>([
+    ['navnet vinner over kallenavnet', { name: 'Jonas Rud', nickname: 'Rudi' }, 'Jonas Rud'],
+    ['uten navn: kallenavnet', { name: null, nickname: 'Rudi' }, 'Rudi'],
+    ['uten noen av dem: plassholderen', { name: '  ', nickname: null }, 'Ukjent spiller'],
+  ])('%s', (_case, player, expected) => {
+    expect(displayName(player)).toBe(expected);
+  });
+});
+
 // #2255: navnelista ved avatarene på startbilletten har bare fornavn, som i
 // designet («Du, Marte og Jonas»).
 describe('shortDisplayName', () => {
   it.each<[string, { name: string | null; nickname: string | null }, string]>([
     ['fornavnet av fullt navn', { name: 'Marte Holm Berg', nickname: null }, 'Marte'],
-    ['kallenavnet vinner', { name: 'Jonas Rud', nickname: 'Rudi' }, 'Rudi'],
-    ['tomt kallenavn teller ikke', { name: 'Jonas Rud', nickname: '  ' }, 'Jonas'],
+    ['navnet vinner over kallenavnet (#2813)', { name: 'Jonas Rud', nickname: 'Rudi' }, 'Jonas'],
+    ['uten navn: kallenavnet', { name: null, nickname: 'Rudi' }, 'Rudi'],
     ['uten navn: plassholderen', { name: null, nickname: null }, 'Ukjent spiller'],
   ])('%s', (_case, player, expected) => {
     expect(shortDisplayName(player)).toBe(expected);

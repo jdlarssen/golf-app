@@ -24,7 +24,6 @@ function player(userId: string): ClientPlayer {
   return {
     userId,
     name: `Player ${userId}`,
-    nickname: null,
     initial: 'P',
     extraStrokes: 0,
     initialStrokes: null,

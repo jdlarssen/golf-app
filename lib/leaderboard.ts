@@ -1,4 +1,5 @@
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { playerFirstName } from '@/lib/names/playerName';
 import { bestBallForHole } from '@/lib/scoring/modes/bestBall';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import type { ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
@@ -241,9 +242,7 @@ export function computeLeaderboard(opts: {
 }
 
 export function teamMembersLabel(players: LbPlayer[]): string {
-  const names = players.map((p) =>
-    p.nickname && p.nickname.length > 0 ? p.nickname : p.name.split(' ')[0],
-  );
+  const names = players.map((p) => playerFirstName(p) ?? '');
   return names.join(' & ');
 }
 

@@ -5,6 +5,7 @@ import type { CupSessionFormat } from './cupTemplates';
 import type { WizardPlayer } from './getCupCandidatePlayers';
 import type { WizardTeeBox } from './matchPlan';
 import { normalizeCustomSessions } from './planValidation';
+import { playerName } from '@/lib/names/playerName';
 
 // #1441 (F3c): rating-feltene under (slope/course_rating/par_total × mens/
 // ladies/juniors) er kun brukt av splittet-cup-dag-bunten, for å vise hver
@@ -40,7 +41,7 @@ type ParticipantUser = {
 };
 
 function displayNameOf(u: ParticipantUser | null, unknownLabel: string): string {
-  return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
+  return playerName(u) ?? unknownLabel;
 }
 
 /**

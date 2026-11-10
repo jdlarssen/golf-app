@@ -12,6 +12,7 @@ import {
   cleanupTestGame,
   type EphemeralPlayer,
 } from '../_helpers/games';
+import { playerFirstName } from '@/lib/names/playerName';
 
 /**
  * Per-modus finish-and-validate for ≥3-spiller-formater (#848).
@@ -70,7 +71,10 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     if (!a.data || !p.data) throw new Error('admin/player test users not seeded');
     adminId = a.data.id;
     playerId = p.data.id;
-    adminName = (a.data.nickname?.trim() || a.data.name?.trim()) ?? '';
+    // The first name (#2813): the boards show the name, with the nickname in
+    // the middle when there is one (`Ola "Kalle" Nordmann`), so the first name
+    // is the part every form contains.
+    adminName = playerFirstName(a.data) ?? '';
     // Resolved once so the winner-identity assertions are unconditional (an
     // empty name would otherwise silently skip the "A is the winner" check).
     expect(adminName, 'admin display name resolved').toBeTruthy();

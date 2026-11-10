@@ -22,6 +22,7 @@ import { canSelfWithdrawFromCup } from '@/lib/cup/cupSelfWithdrawLink';
 import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { CupLineupSpotlight } from './CupLineupSpotlight';
 import { ChevronRightIcon } from '@/components/icons';
+import { playerName } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string | string[] }>;
@@ -84,7 +85,7 @@ export default async function PublicCupPage({
   const rosterNames = new Map(
     [...roster.team1, ...roster.team2].map((p) => [
       p.userId,
-      p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer'),
+      playerName(p) ?? t('manage.unknownPlayer'),
     ]),
   );
   const myPendingMatches = canSelfWithdrawFromCup({

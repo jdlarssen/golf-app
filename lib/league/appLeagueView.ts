@@ -133,7 +133,7 @@ export type AppLeagueView = {
   };
   rounds: AppLeagueRound[];
   /**
-   * `name` is the nickname, else the name, else null. `fullName` (the
+   * `name` is the name, else the nickname, else null (`playerName`, #2813). `fullName` (the
    * avatar's initials) and `hcpIndex` (the co-player list on «Start runden»)
    * are sent only to a participant of the league, else null
    * (`AppLeagueParticipantDetails`).

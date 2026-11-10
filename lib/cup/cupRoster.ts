@@ -16,6 +16,7 @@
  */
 
 import { isNotStartedCupMatch } from './cupWithdrawalOutcome';
+import { playerName } from '../names/playerName';
 
 /** `users`-joinen: many-to-one, så PostgREST gir et objekt (eller null). */
 export type CupUserRel = { name: string | null; nickname: string | null };
@@ -75,7 +76,7 @@ function preferredName(
   unknownLabel: string,
 ): string {
   if (!p) return unknownLabel;
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 /**

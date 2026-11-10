@@ -39,6 +39,7 @@ import {
 } from '@/lib/i18n/format';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { nameInitials } from '@/lib/names/initials';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -108,7 +109,7 @@ function displayNameOf(
   unknownPlayer: string,
 ): string {
   const baseName = users?.name ?? users?.email ?? unknownPlayer;
-  return users?.nickname ? `${baseName} «${users.nickname}»` : baseName;
+  return playerNameWithNicknameAfter(baseName, users?.nickname);
 }
 
 function toRequestRow(raw: RawRequestRow, unknownPlayer: string): RequestRow {

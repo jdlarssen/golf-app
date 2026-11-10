@@ -119,7 +119,7 @@ describe('spillerne', () => {
     expect(body.players).toEqual([
       { userId: 'ola', name: 'Ola Kompis', team: 1, withdrawn: true, canAct: true },
       { userId: 'tapp', name: 'Testspiller Tapp', team: 1, withdrawn: false, canAct: false },
-      { userId: 'kari', name: 'Kari', team: 2, withdrawn: false, canAct: true },
+      { userId: 'kari', name: 'Kari Arrangør', team: 2, withdrawn: false, canAct: true },
     ]);
   });
 
@@ -211,7 +211,7 @@ describe('kandidatene til et bytte', () => {
       bundled: false,
       out: [
         { userId: 'ola', name: 'Ola Kompis', teamName: 'Team Nord' },
-        { userId: 'kari', name: 'Kari', teamName: 'Team Sør' },
+        { userId: 'kari', name: 'Kari Arrangør', teamName: 'Team Sør' },
       ],
       in: [
         { userId: 'anne', name: 'Anne' },

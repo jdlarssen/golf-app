@@ -22,7 +22,7 @@ import { useGivenUpTeeShotCount, useTeamTeeShots } from './holeLiveQueries';
 
 export interface TeeShotPickerMember {
   userId: string;
-  /** Short name: nickname, else first name (full name when two share it). */
+  /** Short name: first name (full name when two share it), else nickname. */
   name: string;
   submittedAt: string | null;
   withdrawnAt: string | null;

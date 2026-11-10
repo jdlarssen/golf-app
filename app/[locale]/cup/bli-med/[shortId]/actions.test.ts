@@ -235,7 +235,8 @@ describe('leaveCup', () => {
 
     expect(notifyMock.mock.calls[0][0].payload).toMatchObject({
       action: 'left',
-      participant_name: 'Kaia',
+      // #2813: the name, not the nickname ('Kaia').
+      participant_name: 'Kari Nord',
     });
   });
 

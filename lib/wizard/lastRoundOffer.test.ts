@@ -87,8 +87,9 @@ describe('lastRoundPeople', () => {
     ).toEqual({ initials: ['AA', 'BB', 'CC'], firstNames: ['A', 'B', 'C'], others: 2 });
   });
 
-  it('uses the nickname as the name, as the rest of the app does', () => {
-    expect(lastRoundPeople([p('Jørgen Larssen', 'Jølle')]).firstNames).toEqual(['Jølle']);
+  it('uses the first name, not the nickname, as the rest of the app does (#2813)', () => {
+    expect(lastRoundPeople([p('Jørgen Larssen', 'Jølle')]).firstNames).toEqual(['Jørgen']);
+    expect(lastRoundPeople([p(null, 'Jølle')]).firstNames).toEqual(['Jølle']);
     expect(lastRoundPeople([p('Jørgen Larssen', 'Jølle')]).initials).toEqual(['JL']);
   });
 

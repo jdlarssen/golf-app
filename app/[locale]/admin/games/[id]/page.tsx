@@ -99,6 +99,7 @@ import { NeedsYouList, type NeedsYouGap } from './_pult/NeedsYouList';
 import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
 import { ceremonyAvailable } from '@/lib/games/ceremony';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -708,7 +709,7 @@ async function buildSections({
     if (!p.users) return tDetail('unknownPlayer');
     // Pending invitee — show email until they complete their profile.
     const name = p.users.name ?? p.users.email;
-    return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
+    return playerNameWithNicknameAfter(name, p.users.nickname);
   }
 
   const startScheduledAction = startScheduledGameAction.bind(null, gameId);

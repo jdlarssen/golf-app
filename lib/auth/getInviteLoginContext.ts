@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isRosterLocked } from '@/lib/games/status';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * Kontekst-oppslag for `/login?invite=<token>` (#1169): gitt en invitasjons-
@@ -93,7 +94,7 @@ export async function getInviteLoginContext(
     if (data.games.status === 'draft') return null;
 
     const inviterName =
-      data.inviter?.name?.trim() || data.inviter?.nickname?.trim() || null;
+      playerName(data.inviter);
 
     return {
       gameId: data.games.id,

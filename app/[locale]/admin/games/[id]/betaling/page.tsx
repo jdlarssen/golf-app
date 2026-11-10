@@ -8,6 +8,7 @@ import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { BetalingClient, type BetalingPlayer } from './BetalingClient';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 
@@ -65,9 +66,7 @@ export default async function BetalingPage({ params }: { params: Params }) {
   const unknown = t('unknownPlayer');
   const players: BetalingPlayer[] = (rows ?? []).map((r) => {
     const base = r.users?.name ?? unknown;
-    const displayName = r.users?.nickname
-      ? `${base} «${r.users.nickname}»`
-      : base;
+    const displayName = playerNameWithNicknameAfter(base, r.users?.nickname);
     return {
       userId: r.user_id,
       displayName,

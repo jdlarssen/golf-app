@@ -23,6 +23,7 @@ import { CupMatchList } from './CupMatchList';
 import { CupActionsSection } from './CupActionsSection';
 import { CupDoorsSection } from './CupDoorsSection';
 import { CupLineupDoor } from './CupLineupDoor';
+import { playerName } from '@/lib/names/playerName';
 
 export type CupManagementVariant = 'admin' | 'club';
 
@@ -250,7 +251,7 @@ export async function CupManagement({
     .join(', ');
 
   function preferredName(p: CupRosterPlayer): string {
-    return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+    return playerName(p) ?? unknownLabel;
   }
 
   // #1814: trekk-flatene (lenkene i spillerlista, fourball-valget og venter-

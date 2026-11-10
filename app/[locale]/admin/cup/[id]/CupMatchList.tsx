@@ -15,6 +15,7 @@ import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
 import { adminCupMatchHref } from '@/lib/games/nonPlayerGameDoor';
 import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
 import { FourballPlayOnPanel } from './FourballPlayOnPanel';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * Reservene arrangøren kan bytte inn i en ikke-startet match (#1473).
@@ -94,7 +95,7 @@ export async function CupMatchList({
   const unknownLabel = t('manage.unknownPlayer');
 
   function preferredName(p: CupRosterPlayer): string {
-    return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+    return playerName(p) ?? unknownLabel;
   }
 
   // #1473: «Bytt spiller» finnes kun på matcher som ennå ikke er startet, så

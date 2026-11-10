@@ -1,10 +1,12 @@
+import { playerNameWithNicknameAfter } from '../names/playerName';
 import { maskEmail } from './maskEmail';
 
 /**
  * The name other people see for a user: the name, or the masked address
  * (`ol•••@gmail.com`) when the name is missing — never the full address.
  * A user without a name is one who got the login code but has not finished
- * the profile (#2207, #2271). The nickname follows in «», as everywhere else.
+ * the profile (#2207, #2271). The nickname follows in «», as everywhere else
+ * (`playerNameWithNicknameAfter`, #2813).
  *
  * Returns null when there is neither a name nor an address, so each caller
  * keeps its own fallback (the notification card's catalog text, 'Tørny', …).
@@ -19,5 +21,5 @@ export function displayNameForOthers(u: {
 }): string | null {
   const base = u.name?.trim() || (u.email ? maskEmail(u.email) : '');
   if (!base) return null;
-  return u.nickname ? `${base} «${u.nickname}»` : base;
+  return playerNameWithNicknameAfter(base, u.nickname);
 }

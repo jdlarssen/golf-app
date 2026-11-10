@@ -105,6 +105,23 @@ describe('teamBoardFor — live scramble', () => {
     expect([mine.members, mine.initials]).toEqual(['Deg, Anders og Marte', ['SA', 'AM', 'ML']]);
   });
 
+  // #2813: a team mate with a nickname is named by the first name.
+  it('names a team mate by the first name, not the nickname', () => {
+    const named = teamBoardFor({
+      bundle: homeBundle({
+        game: { gameMode: 'texas_scramble', modeConfig: TEXAS },
+        players: [
+          homePlayer({ userId: ME, name: 'Sigrid Aas', teamNumber: 1 }),
+          homePlayer({ userId: 'marte', name: 'Marte Lie', nickname: 'Mart', teamNumber: 1 }),
+          ...teams.slice(2),
+        ],
+      }),
+      scores,
+      userId: ME,
+    })!;
+    expect(named.rows.find((r) => r.you)!.members).toBe('Deg og Marte');
+  });
+
   it('reads the cards: place, leader with initials, your team with the names line', () => {
     expect(model).toMatchObject({ variant: 'live', pill: { text: 'Live · etter 5 hull', live: true }, viewerTeam: 1 });
     expect(

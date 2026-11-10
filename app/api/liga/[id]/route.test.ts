@@ -226,14 +226,14 @@ describe('GET /api/liga/[id]', () => {
       status: 200,
       participants: [
         { userId: ME, name: 'Meg', fullName: 'Meg Selv', hcpIndex: 12.6 },
-        { userId: OTHER, name: 'Martin', fullName: 'Martin Lie', hcpIndex: 9.4 },
+        { userId: OTHER, name: 'Martin Lie', fullName: 'Martin Lie', hcpIndex: 9.4 },
       ],
       columns: 'user_id, users!league_players_user_id_fkey(name, hcp_index)',
       filters: [{ op: 'eq', column: 'league_id', value: LEAGUE_ID }],
     });
   });
 
-  it('a club member who is not a participant sees the league, but never the full names or HCP', async () => {
+  it('a club member who is not a participant sees the league, but never the details (fullName, HCP)', async () => {
     callerReads({ group_members: [{ data: { user_id: OUTSIDER } }], users: [{ data: { is_admin: false } }] });
     const res = await call('token-fremmed');
     expect({
@@ -244,7 +244,9 @@ describe('GET /api/liga/[id]', () => {
       status: 200,
       participants: [
         { userId: ME, name: 'Meg', fullName: null, hcpIndex: null },
-        { userId: OTHER, name: 'Martin', fullName: null, hcpIndex: null },
+        // #2813: `name` is the name, not the nickname, as on the web page;
+        // the details (`fullName`, HCP) stay with the participants.
+        { userId: OTHER, name: 'Martin Lie', fullName: null, hcpIndex: null },
       ],
       detailsRead: false,
     });

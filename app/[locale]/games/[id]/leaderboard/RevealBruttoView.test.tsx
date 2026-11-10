@@ -129,8 +129,9 @@ describe('RevealBruttoView', () => {
     // Per-player brutto sums (4 + 5 = 9 each)
     const nines = screen.getAllByText('9');
     expect(nines.length).toBeGreaterThanOrEqual(2);
-    // Nickname rendering for u1 (Knølkis); first-name for u2 (Per)
-    expect(screen.getByText('Knølkis')).toBeInTheDocument();
+    // First names, also for u1 who has a nickname (Knølkis, #2813)
+    expect(screen.getByText('Karl')).toBeInTheDocument();
+    expect(screen.queryByText('Knølkis')).toBeNull();
     expect(screen.getByText('Per')).toBeInTheDocument();
   });
 

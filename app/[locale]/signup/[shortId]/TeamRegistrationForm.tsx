@@ -22,6 +22,7 @@ import {
   type TeamRegistrationError,
   type TeamSlotInput,
 } from './teamActions';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 const MAX_SUGGESTIONS = 6;
 
@@ -43,7 +44,7 @@ type SlotState = {
 
 function candidateLabel(c: TeamCandidate): string {
   const base = c.name?.trim() || c.maskedEmail;
-  return c.nickname ? `${base} «${c.nickname}»` : base;
+  return playerNameWithNicknameAfter(base, c.nickname);
 }
 
 /** Translate a validation error code to a user-visible string. */

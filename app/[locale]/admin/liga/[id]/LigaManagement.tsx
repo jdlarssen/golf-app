@@ -27,6 +27,7 @@ import { LigaAddPlayers } from './LigaAddPlayers';
 import { LigaStatusActions } from './LigaStatusActions';
 import { LigaSimDefaults } from './LigaSimDefaults';
 import { formSimSettings } from '@/lib/league/simSettings';
+import { playerName } from '@/lib/names/playerName';
 
 /**
  * Shared league-management surface, rendered by two routes (#485):
@@ -48,7 +49,7 @@ function preferredName(
   p: { name: string | null; nickname: string | null },
   unknownLabel: string,
 ): string {
-  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
+  return playerName(p) ?? unknownLabel;
 }
 
 export type LigaManagementVariant = 'admin' | 'club';

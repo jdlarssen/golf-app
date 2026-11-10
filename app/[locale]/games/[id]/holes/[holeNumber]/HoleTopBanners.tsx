@@ -15,6 +15,7 @@ import {
   PatsomeTeeHint,
 } from './PatsomeTeeStarterBanner';
 import { ChapmanPhaseReminder } from './ChapmanPhaseReminder';
+import { playerFirstName } from '@/lib/names/playerName';
 
 type PartnerOption = { userId: string; displayName: string };
 
@@ -24,9 +25,7 @@ function toPartnerOptions(
 ): PartnerOption[] {
   return players.map((p) => ({
     userId: p.user_id,
-    displayName:
-      (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] ||
-      playerFallback,
+    displayName: playerFirstName(p.users) ?? playerFallback,
   }));
 }
 

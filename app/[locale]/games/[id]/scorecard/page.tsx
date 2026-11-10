@@ -43,7 +43,6 @@ import {
   type FoldRosterRow,
 } from '@/lib/scoring/context/foldTeamRows';
 import { nameInitials } from '@/lib/names/initials';
-import { firstName } from '@/lib/firstName';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -54,6 +53,7 @@ import {
 } from '@/lib/games/holeScope';
 import { formatNumber } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { playerFirstName, playerName } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 
@@ -82,13 +82,13 @@ const getScorecardContext = cache(async () => {
 // name-resolution-strategi som passer presentasjons-laget.
 const columnFormatter = {
   initials(p: { users: { name: string | null; nickname: string | null } | null }) {
-    return nameInitials(p.users?.nickname ?? p.users?.name ?? null);
+    return nameInitials(playerName(p.users));
   },
   displayName(
     p: { users: { name: string | null; nickname: string | null } | null },
     fallback: string,
   ) {
-    return firstName(p.users?.nickname ?? p.users?.name) ?? fallback;
+    return playerFirstName(p.users) ?? fallback;
   },
 };
 

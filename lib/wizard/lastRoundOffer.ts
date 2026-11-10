@@ -2,6 +2,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { intlLocaleTag } from '@/lib/i18n/format';
 import { isAutoGameName } from '@/lib/games/autoGameName';
 import { nameInitials } from '@/lib/names/initials';
+import { playerFirstName, playerName } from '@/lib/names/playerName';
 import { first } from '@/lib/url/searchParams';
 import { COURSE_CHOSEN_PARAM, COURSE_PARAM } from '@/lib/wizard/courseParams';
 
@@ -71,16 +72,10 @@ export function lastRoundPeople(players: readonly LastRoundPerson[]): {
 } {
   const shown = players.length > 4 ? players.slice(0, 3) : players;
   return {
-    initials: shown.map((p) => nameInitials(p.name ?? p.nickname)),
-    firstNames: shown.map((p) => firstName(p)),
+    initials: shown.map((p) => nameInitials(playerName(p))),
+    firstNames: shown.map((p) => playerFirstName(p) ?? '?'),
     others: players.length - shown.length,
   };
-}
-
-function firstName({ name, nickname }: LastRoundPerson): string {
-  const nick = nickname?.trim();
-  if (nick) return nick;
-  return name?.trim().split(/\s+/)[0] || '?';
 }
 
 /** «A, B og C» / «A, B and C». */

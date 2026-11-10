@@ -22,8 +22,8 @@ import type { TeeShotPickerTeam } from './TeeShotPicker';
 
 export type ClientPlayer = {
   userId: string;
+  /** The name the card shows (`playerName`, #2813), else the unknown-player text. */
   name: string;
-  nickname: string | null;
   initial: string;
   extraStrokes: number;
   initialStrokes: number | null;

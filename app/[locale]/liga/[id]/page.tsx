@@ -11,6 +11,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Banner } from '@/components/ui/Banner';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
+import { playerName } from '@/lib/names/playerName';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { leagueSelfServiceState } from '@/lib/league/selfService';
 import { canViewLeague } from '@/lib/league/canViewLeague';
@@ -254,7 +255,7 @@ export default async function LigaPublicPage({
 
   const participantNames = participants.map((p) => ({
     userId: p.userId,
-    name: p.nickname?.trim() || p.name?.trim() || null,
+    name: playerName(p),
   }));
 
   const nameOf = (userId: string) =>

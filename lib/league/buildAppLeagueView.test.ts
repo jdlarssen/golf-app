@@ -128,7 +128,8 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
         },
       ],
       participants: [
-        { userId: 'A', name: 'Anne', fullName: null, hcpIndex: null },
+        // #2813: the name, not the nickname (' Anne ').
+        { userId: 'A', name: 'Anne Admin', fullName: null, hcpIndex: null },
         { userId: 'B', name: 'Bjørn', fullName: null, hcpIndex: null },
         { userId: 'C', name: null, fullName: null, hcpIndex: null },
       ],
@@ -156,7 +157,7 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
       ['B', { fullName: 'Bjørn', hcpIndex: null }],
     ]);
     expect(buildAppLeagueView(snapshot('net'), 'B', details).participants).toEqual([
-      { userId: 'A', name: 'Anne', fullName: 'Anne Admin', hcpIndex: 9.4 },
+      { userId: 'A', name: 'Anne Admin', fullName: 'Anne Admin', hcpIndex: 9.4 },
       { userId: 'B', name: 'Bjørn', fullName: 'Bjørn', hcpIndex: null },
       { userId: 'C', name: null, fullName: null, hcpIndex: null },
     ]);

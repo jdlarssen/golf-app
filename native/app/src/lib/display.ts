@@ -2,7 +2,7 @@
 //
 // Ingen i18n i appen ennå (N8 eier paritet med webbens no/en) — spike-copyen er
 // norsk og bor rett i skjermene. Dette er bare formatering.
-import { firstName } from '../../../../lib/firstName';
+import { playerFirstName, playerName } from '../../../../lib/names/playerName';
 import { formatStampDate } from '../../../../lib/scorecard/scorecardStamp';
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
 
@@ -25,29 +25,23 @@ export const LEAGUE_SOLO_STATE: Record<ActiveCardState, string> = {
   withdrawn: 'Trukket',
 };
 
-/** Kallenavn hvis det finnes, ellers navn, ellers en rolig plassholder. */
+/** Navnet, ellers kallenavnet (`playerName`, #2813), ellers en rolig plassholder. */
 export function displayName(player: {
   name: string | null;
   nickname: string | null;
 }): string {
-  const nickname = player.nickname?.trim();
-  if (nickname) return nickname;
-  const name = player.name?.trim();
-  if (name) return name;
-  return 'Ukjent spiller';
+  return playerName(player) ?? 'Ukjent spiller';
 }
 
 /**
- * Kort navn til billettens navneliste (#2255): kallenavnet hvis det finnes,
- * ellers fornavnet (den delte `firstName`), ellers samme plassholder som over.
+ * Kort navn til billettens navneliste (#2255): fornavnet, ellers kallenavnet
+ * (`playerFirstName`, #2813), ellers samme plassholder som over.
  */
 export function shortDisplayName(player: {
   name: string | null;
   nickname: string | null;
 }): string {
-  const nickname = player.nickname?.trim();
-  if (nickname) return nickname;
-  return firstName(player.name) ?? 'Ukjent spiller';
+  return playerFirstName(player) ?? 'Ukjent spiller';
 }
 
 /**

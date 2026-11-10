@@ -41,7 +41,7 @@
 //     nåværende eieren (`foldLocalScores`) før brutto og netto bygges, slik
 //     webbens `computeSideTournament` gjør. Rader som alt er foldet, endres
 //     ikke av en ny folding.
-import { firstName } from '../../../../lib/firstName';
+import { playerFirstName } from '../../../../lib/names/playerName';
 import { formatRevealName } from '../../../../lib/names/formatRevealName';
 import {
   MODE_LABELS,
@@ -235,10 +235,9 @@ function groupTeams(
 ): TeamGroup[] {
   if (grouping === 'solo') {
     return eligiblePlayers.map((player, index) => {
-      const name = player.name ?? UNKNOWN_PLAYER;
       return {
         teamId: index + 1,
-        label: firstName(name) ?? name,
+        label: playerFirstName(player) ?? UNKNOWN_PLAYER,
         userIds: [player.userId],
       };
     });
@@ -414,13 +413,12 @@ export function buildSideTournament(opts: {
     label: group.label,
     members: group.userIds.map((userId) => {
       const player = playerByUserId.get(userId);
-      const name = player?.name ?? UNKNOWN_PLAYER;
-      const nickname = player?.nickname ?? null;
-      const displayName = formatRevealName(name, nickname);
+      const displayName =
+        formatRevealName(player?.name ?? '', player?.nickname ?? null) || UNKNOWN_PLAYER;
       return {
         userId,
         displayName,
-        firstName: firstName(name) ?? displayName ?? '?',
+        firstName: playerFirstName(player) ?? '?',
       };
     }),
   }));

@@ -9,6 +9,7 @@ import type { ScorecardHole } from '@/lib/games/scorecardReviewData';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { mayApproveAsMarker } from './leagueMarker';
 import type { MarkerCardHole, MarkerCardState } from './appLeagueView';
+import { playerName } from '@/lib/names/playerName';
 
 // The marker's door to a card in a simulator-league flight (#2661).
 //
@@ -69,9 +70,6 @@ type CardRow = {
   users: { name: string | null; nickname: string | null } | null;
 };
 
-const displayName = (u: { name: string | null; nickname: string | null } | null | undefined) =>
-  u?.name?.trim() || u?.nickname?.trim() || null;
-
 /** Who may answer `playerUserId`'s card in `gameId`, and what the card looks like. */
 export async function markerReviewAccess(
   userId: string,
@@ -129,7 +127,7 @@ export async function markerReviewAccess(
       .eq('id', card.marker_user_id)
       .maybeSingle<{ name: string | null; nickname: string | null }>();
     if (error) throw new Error(`markerReviewAccess: ${error.message}`);
-    markerName = displayName(marker);
+    markerName = playerName(marker);
   }
 
   const state: MarkerCardState =
@@ -156,7 +154,7 @@ export async function markerReviewAccess(
     },
     card: {
       userId: card.user_id,
-      name: displayName(card.users),
+      name: playerName(card.users),
       markerUserId: card.marker_user_id,
       markerName,
       submittedAt: card.submitted_at,

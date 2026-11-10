@@ -25,6 +25,7 @@ import { endGameMarkingWithdrawals } from './actions';
 import { remindMissingPlayers } from '../avslutt/actions';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med —
@@ -131,7 +132,7 @@ export default async function AvsluttLikevelPage({
   ).missing.map((gp) => {
     const u = gp.users;
     const base = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
-    const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
+    const displayName = playerNameWithNicknameAfter(base, u?.nickname);
     return { userId: gp.user_id, displayName };
   });
 

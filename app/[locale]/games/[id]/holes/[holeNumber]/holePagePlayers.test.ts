@@ -207,6 +207,34 @@ describe('buildPlayersForClient — per-spiller-slag som motoren (#2218)', () =>
   });
 });
 
+// #2813 — Type A: the player card shows the name, never the nickname in its
+// place; the nickname only for a player without a name.
+describe('buildPlayersForClient — the card shows the name, not the nickname (#2813)', () => {
+  const STROKEPLAY = game('solo_strokeplay', { kind: 'solo_strokeplay' } as unknown as GameForHole['mode_config']);
+  const named = (user_id: string, name: string | null, nickname: string | null): PlayerForHole => ({
+    ...player(user_id, 1, 10),
+    users: { name, nickname, is_guest: false },
+  });
+  const cardNames = (players: PlayerForHole[]) =>
+    buildPlayersForClient({
+      game: STROKEPLAY,
+      holeNumber: 1,
+      flight: players,
+      allPlayers: players,
+      strokeIndex: 1,
+      scoresByUser: {},
+      unknownPlayer: 'Ukjent',
+    }).map((c) => c.name);
+
+  it('name and nickname: the name', () => {
+    expect(cardNames([named('a', 'Anders Andersen', 'AA')])).toEqual(['Anders Andersen']);
+  });
+
+  it('only a nickname: the nickname; neither: the unknown-player text', () => {
+    expect(cardNames([named('a', null, 'AA'), named('b', null, null)])).toEqual(['AA', 'Ukjent']);
+  });
+});
+
 // #2580 — Type A: with «Hvem sitt utslag» on, the team line «Lag 1 · …» names
 // the members in the picker's order (sortByTeeShotName), so the line and the
 // buttons under it agree. Without the setting the line is as before (roster

@@ -12,6 +12,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { markerCandidates, markerRefusal, type MarkerRefusal } from './leagueMarker';
+import { playerName } from '@/lib/names/playerName';
 
 // Delivering a card in a simulator league (#2661). The player names a marker
 // from the league, and the marker approves the card before the round counts.
@@ -211,7 +212,7 @@ async function notifyMarker(
             league_name: flight.leagueName,
             game_id: flight.gameId,
             player_id: row.user_id,
-            player_name: row.users?.name?.trim() || row.users?.nickname?.trim() || null,
+            player_name: playerName(row.users),
           },
         }),
       ),
@@ -250,7 +251,7 @@ export async function loadMarkerChoice(
     .returns<{ user_id: string; users: { name: string | null; nickname: string | null } | null }[]>();
   if (error) throw new Error(`loadMarkerChoice: ${error.message}`);
   const nameOf = new Map(
-    (data ?? []).map((m) => [m.user_id, m.users?.name?.trim() || m.users?.nickname?.trim() || null]),
+    (data ?? []).map((m) => [m.user_id, playerName(m.users)]),
   );
   const options = markerCandidates([...nameOf.keys()], cardOwnerIds, delivererId)
     .map((userId) => ({ userId, name: nameOf.get(userId) ?? null }))

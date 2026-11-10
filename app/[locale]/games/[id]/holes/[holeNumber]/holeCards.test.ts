@@ -5,7 +5,6 @@ import type { HoleCard } from './holeLiveQueries';
 function card(overrides: Partial<HoleCard> & { userId: string }): HoleCard {
   return {
     name: overrides.userId,
-    nickname: null,
     initial: 'X',
     extraStrokes: 0,
     initialStrokes: null,
