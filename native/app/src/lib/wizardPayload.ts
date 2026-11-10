@@ -14,6 +14,7 @@ import {
   buildGameInsertPayload,
   type ParsedPayload,
 } from '../../../../lib/games/gamePayload';
+import { PRIZE_SLOTS, prizeFieldName, type PrizeDraft } from '../../../../lib/games/prizes';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
@@ -94,6 +95,12 @@ export interface GameDraft {
   sideCtpCount?: 0 | 1 | 2;
   players: DraftPlayer[];
   setup?: ModeSetup;
+  /** #2749: startkontingent i hele kroner per spiller. 0 eller tom = ingen. */
+  entryFeeKr?: number;
+  /** #2749: Vipps-nummer eller betalingslenke, fritekst. Lagres bare med en kontingent. */
+  paymentLink?: string;
+  /** #2749: premiebordet, rå tekst per slott som webbens veiviser. Logo finnes ikke i appen. */
+  prizes?: PrizeDraft;
 }
 
 /** En ferdig utfylt spiller-slot, slik `player_${i}_*` bærer den. */
@@ -218,10 +225,12 @@ export function defaultGameName(mode: AppGameMode): string {
 /**
  * Veiviserens tilstand som form-felter, med webbens navn.
  *
- * Feltene appen IKKE setter (`entry_fee_kr`, `payment_link`, premie-slottene,
- * `group_id`, `tournament_id`) er utenfor scope i v1 og faller til webbens egne
- * defaults i byggeren: kontingent 0, ingen lenke, tomt premiebord, ingen
- * klubb-/cup-kobling.
+ * Kontingenten, betalingslenka og premie-slottene (#2749) har webbens navn, og
+ * de delte parserne avgjør resten: lenka lagres bare med en kontingent, et tomt
+ * premie-felt lagres ikke, og slott formatet ikke har, beskjæres
+ * (`parsePrizesFromFormData` i `data/createGame.ts`). Logo-feltet er alltid tomt:
+ * appen laster ikke opp logoer. Feltene appen IKKE setter (`group_id`,
+ * `tournament_id`) faller til webbens defaults: ingen klubb-/cup-kobling.
  */
 export function draftToFormData(draft: GameDraft): WizardFormData {
   const form = new WizardFormData();
@@ -263,6 +272,15 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('wolf_scoring', setup.wolfScoring ?? null);
   form.set('skins_scoring', setup.skinsScoring ?? null);
   form.set('kr_per_unit', setup.krPerUnit ?? null);
+
+  form.set('entry_fee_kr', draft.entryFeeKr ?? 0);
+  form.set('payment_link', draft.paymentLink ?? '');
+  for (const slot of PRIZE_SLOTS) {
+    const prize = draft.prizes?.[slot.key];
+    form.set(prizeFieldName(slot.key, 'desc'), prize?.description ?? '');
+    form.set(prizeFieldName(slot.key, 'sponsor'), prize?.sponsor ?? '');
+    form.set(prizeFieldName(slot.key, 'logo'), '');
+  }
 
   const slots = orderedSlots(draft);
   slots.forEach((slot, i) => {
