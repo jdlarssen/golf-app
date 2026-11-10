@@ -13,8 +13,8 @@ import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '
 
 /**
  * #2688: a delivered card that names the caller as its marker, as Home lists
- * it: one tap goes straight to the marker page. `playerName` is the nickname,
- * else the name, else null.
+ * it: one tap goes straight to the marker page. `playerName` is the name, else
+ * the nickname, else null (`playerName` in lib/names, #2813).
  */
 export type AppMarkerCard = {
   gameId: string;

@@ -57,6 +57,19 @@ describe('behindLeaderText — who the gap is to', () => {
   });
 });
 
+// #2813: the board keeps the nickname next to the name, and a player without
+// a name is shown by the nickname, as in the app and on the side tournament.
+describe('boardDisplayName — the name on a board row', () => {
+  it('puts the nickname next to the name', () => {
+    expect(boardDisplayName({ ...row('a', 'Marte Lie', 1), nickname: 'Mart' }, tc)).toBe('Marte "Mart" Lie');
+  });
+
+  it('shows the nickname alone without a name, and the unknown-player text without either', () => {
+    expect(boardDisplayName({ ...row('a', '', 1), name: null, nickname: 'Mart' } as LiveBoardRow, tc)).toBe('"Mart"');
+    expect(boardDisplayName({ ...row('a', '', 1), name: null } as LiveBoardRow, tc)).toBe('(ukjent spiller)');
+  });
+});
+
 describe('columnHeading — the number column (#2625)', () => {
   it.each([
     ['points', 'Poeng'],
