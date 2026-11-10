@@ -312,6 +312,63 @@ describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
     await waitFor(() => expect(screen.getByTestId('submit-error')).toBeTruthy());
     await waitFor(() => expect(fetchMarkerOptions.mock.calls.length).toBeGreaterThan(before));
   });
+
+  // #2814: jeg har ført kortet til flightkameraten. Det overleveres: linja sier
+  // at jeg er markøren, knappen leverer bare mitt, og ingen «ikke levert»-beskjed.
+  it('kortene jeg har ført, overleveres: linja står, og leveringen går tilbake uten beskjed', async () => {
+    const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+    submitCard.mockResolvedValueOnce({ ok: true, alreadySubmitted: false, alsoDelivered: 0 });
+    mockState.bundle = { ...simBundle, players: mockRevealBundle.players };
+    mockState.scores = [
+      ...fullCard,
+      ...fullCard.map((score) => ({ ...score, id: score.id.replace(':me:', ':other:'), userId: 'other' })),
+    ];
+    const nav = stackNavigation([
+      { name: 'Home' },
+      { name: 'GameHome', params: { gameId: SIM_GAME } },
+      { name: 'Scorecard', params: { gameId: SIM_GAME } },
+    ]);
+    await render(scorecardElement(SIM_GAME, jest.fn(), nav));
+    await waitFor(() => expect(screen.getByTestId('hand-over')).toBeTruthy());
+    expect(screen.getByTestId('hand-over')).toHaveTextContent(
+      'Du er markør for Ola Kompis. Ola Kompis får kortet sitt og sender det inn selv.',
+    );
+    expect(screen.queryByTestId('flight-delivery')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('marker-option-per'));
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+    await fireEvent.press(screen.getByTestId('submit-scorecard'));
+
+    await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: SIM_GAME }));
+    expect(submitCard).toHaveBeenCalledWith(SIM_GAME, ['other'], 'per');
+    expect(screen.queryByTestId('submit-partial')).toBeNull();
+  });
+
+  it('har flightkameraten ført kortet mitt, står linja i stedet for velgeren', async () => {
+    const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
+    fetchMarkerOptions.mockResolvedValue({ ok: true, options: { required: false } });
+    mockState.bundle = {
+      ...simBundle,
+      players: mockRevealBundle.players.map((player) =>
+        player.userId === 'me'
+          ? { ...player, markerUserId: 'other' }
+          : { ...player, submittedAt: '2026-09-01T12:32:00.000Z', markerUserId: 'me' },
+      ),
+    };
+    mockState.scores = fullCard.map((score) => ({ ...score, enteredBy: 'other' }));
+    await render(scorecardElement(SIM_GAME, jest.fn()));
+    await waitFor(() => expect(screen.getByTestId('marked-by')).toBeTruthy());
+    expect({
+      line: screen.getByTestId('marked-by').props.children,
+      picker: screen.queryByTestId('marker-picker'),
+      handOver: screen.queryByTestId('hand-over'),
+    }).toEqual({
+      line: 'Ola Kompis er markøren din. Sender du inn uten å endre noe, er kortet godkjent. Endrer du noe, godkjenner Ola Kompis endringen.',
+      picker: null,
+      handOver: null,
+    });
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+  });
 });
 
 describe('Scorecard', () => {

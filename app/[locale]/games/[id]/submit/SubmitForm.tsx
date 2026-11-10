@@ -45,6 +45,13 @@ type Props = {
    */
   markerOptions?: readonly { userId: string; name: string | null }[];
   /**
+   * #2814: the marker line over the button in a simulator league, in the
+   * picker's hint style: «Du er markør for Berit …» when the cards I kept are
+   * handed over, «Anders er markøren din …» in place of the picker when a
+   * flightmate kept my card. Omitted otherwise.
+   */
+  markerNote?: string;
+  /**
    * #2661: the «Rediger» link, laid out beside the button under the marker
    * picker (the picker needs the full width, inside the form).
    */
@@ -84,6 +91,7 @@ export function SubmitForm({
   label,
   teeShotBlocked = false,
   markerOptions,
+  markerNote,
   leading,
 }: Props) {
   const t = useTranslations('game.submit');
@@ -165,6 +173,11 @@ export function SubmitForm({
       ))}
       {markerOptions !== undefined && (
         <MarkerPicker options={markerOptions} value={marker} onChange={setMarker} />
+      )}
+      {markerNote && (
+        <p className="mb-5 text-sm text-muted" data-testid="marker-note">
+          {markerNote}
+        </p>
       )}
       <div className={leading ? 'grid grid-cols-2 gap-6' : undefined}>
       {leading}

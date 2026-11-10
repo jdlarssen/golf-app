@@ -8,7 +8,10 @@ import type { MarkerOptionsResponse } from '@/lib/league/appLeagueView';
 // Markørvalget før appen leverer et kort i en simulatorliga (#2661).
 //
 // Det samme nettets leveringsside viser (`loadMarkerChoice`): ligaens
-// medlemmer unntatt eierne av kortene i leveringen og den som leverer.
+// medlemmer unntatt den som leverer, flightkameratene først (#2814). Kortene
+// jeg har ført for flighten, overleveres og er ikke med i leveringen, så en
+// flightkamerat kan velges. Har en flightkamerat ført mitt kort og er markøren
+// min, eller er kortet levert, er det ingen velger (`required: false`).
 // Serveren sjekker valget på nytt ved leveringen (`submit-team`), så lista er
 // et tilbud, ikke porten.
 //
@@ -17,7 +20,9 @@ import type { MarkerOptionsResponse } from '@/lib/league/appLeagueView';
 // En ukjent spill-id og et spill kalleren ikke er med i svarer begge 404.
 //
 // WIRE (appen speiler den, `native/app/src/data/marker.ts`):
-//   GET ?alsoFor=<uuid>,<uuid>   makkerkortene i samme levering (valgfri, 0–20)
+//   GET ?alsoFor=<uuid>,<uuid>   makkerkortene (valgfri, 0–20). Godtas så eldre
+//                                appbygg ikke får 400, men påvirker ikke lista
+//                                (#2814)
 //       200 MarkerOptionsResponse (lib/league/appLeagueView.ts):
 //           { required: false } utenfor en simulatorliga,
 //           { required: true, options: { userId, name }[] } i en
@@ -50,8 +55,8 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (error) throw new Error(`player read failed: ${error.message}`);
     if (!me) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const choice = await loadMarkerChoice(gameId, userId, [userId, ...alsoFor]);
-    const body: MarkerOptionsResponse = choice
+    const choice = await loadMarkerChoice(gameId, userId);
+    const body: MarkerOptionsResponse = choice?.options
       ? { required: true, options: choice.options }
       : { required: false };
     return NextResponse.json(body);

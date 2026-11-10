@@ -60,3 +60,25 @@ export function awaitingMarkerLine(name: string): string {
 export function waitsForLine(name: string): string {
   return `venter på ${name}`;
 }
+
+/**
+ * #2814: linja over lever-knappen når jeg har ført kortene til flighten i en
+ * simulatorliga (`game.submit.marker.handOver` / `handOverMany`). `names` er
+ * ferdig oppramset («Berit og Arne»).
+ */
+export function handOverLine(names: string, count: number): string {
+  return count === 1
+    ? `Du er markør for ${names}. ${names} får kortet sitt og sender det inn selv.`
+    : `Du er markør for ${names}. De får kortene sine og sender dem inn selv.`;
+}
+
+/** #2814: knappen når mitt kort er levert og bare overleveringen står igjen (`game.submit.flight.handOverButton`). */
+export function handOverButton(names: string, count: number): string {
+  return count === 1 ? `Send kortet til ${names}` : `Send kortene til ${names}`;
+}
+
+/** #2814: i stedet for velgeren når en flightkamerat har ført kortet mitt (`game.submit.marker.markedBy`). */
+export function markedByLine(name: string | null): string {
+  const who = name ?? MARKER_TEXT.unknownPlayer;
+  return `${who} er markøren din. Sender du inn uten å endre noe, er kortet godkjent. Endrer du noe, godkjenner ${who} endringen.`;
+}

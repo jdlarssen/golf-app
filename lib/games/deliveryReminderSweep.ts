@@ -55,6 +55,9 @@ export type ReminderGroup = {
  * levere for en makker. Ellers går påminnelsen til eieren, og i formatene der én
  * levering dekker laget, til lagets radeier, så laget får én påminnelse. En
  * mottaker må være aktiv og ikke gjest; finnes ingen, sendes ingenting.
+ * #2814: et kort føreren har overlevert i en simulatorliga, har føreren som
+ * markør (`marker_user_id`). Leveringsregelen tar det da ikke med blant
+ * førerens kort, så påminnelsen går til eieren.
  *
  * Kortene samles per mottaker, og gruppen går når det nyeste siste hullet i
  * hele gruppen er minst et kvarter gammelt. Da får en fører ÉN påminnelse for

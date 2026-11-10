@@ -55,7 +55,11 @@ import {
   type TeeShotT,
 } from '@/components/games/teeShotCopy';
 import { TeeShotShortBox, type TeeShotShortBoxPlayer } from '@/components/games/TeeShotShortBox';
-import { loadMarkerChoice, type MarkerOption } from '@/lib/league/setFlightMarkerCore';
+import {
+  loadMarkerChoice,
+  type MarkerChoice,
+  type MarkerOption,
+} from '@/lib/league/setFlightMarkerCore';
 import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 type Params = Promise<{ id: string }>;
@@ -190,14 +194,13 @@ export default async function SubmitPage({
     redirect({ href: `/games/${id}`, locale });
   }
 
-  // #2661: a simulator league asks who in the league approves the cards. A
+  // #2661: a simulator league asks who in the league approves my card. A
   // failed read throws to the error boundary rather than delivering without.
-  const markerChoice = await loadMarkerChoice(
-    id,
-    userId,
-    deliveringCardIds(userId, me.submitted_at, flightCards),
-  );
+  // #2814: there the flightmates' cards I kept are handed over, not
+  // delivered, and a card a flightmate kept for me has them as marker.
+  const markerChoice = await loadMarkerChoice(id, userId);
   const markerOptions = markerChoice?.options;
+  const markerNote = await markerNoteFor(markerChoice, flightCards);
 
   // #2580 «Hvem sitt utslag»: the box over the button when someone on a team
   // this delivery covers (mine, or a flightmate's) lacks tee shots.
@@ -280,6 +283,7 @@ export default async function SubmitPage({
             teeShotBox={teeShotBox}
             holeSegment={game.hole_segment}
             markerOptions={markerOptions}
+            markerNote={markerNote}
           />
         ) : (
         <Suspense fallback={<ReviewBodySkeleton />}>
@@ -299,6 +303,7 @@ export default async function SubmitPage({
             flightCards={flightCards}
             teeShotBox={teeShotBox}
             markerOptions={markerOptions}
+            markerNote={markerNote}
           />
         </Suspense>
         )}
@@ -321,6 +326,7 @@ async function ReviewBody({
   flightCards,
   teeShotBox,
   markerOptions,
+  markerNote,
 }: {
   gameId: string;
   courseId: string;
@@ -342,6 +348,8 @@ async function ReviewBody({
   teeShotBox: TeeShotBoxData | null;
   /** #2661: the marker picker in a simulator league, else undefined. */
   markerOptions: readonly MarkerOption[] | undefined;
+  /** #2814: the marker line over the button in a simulator league (`markerNoteFor`). */
+  markerNote: string | undefined;
 }) {
   const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
@@ -474,6 +482,10 @@ async function ReviewBody({
   const showPuttsPrompt = puttedCount >= 1 && missingPuttHoles.length > 0;
 
 
+  // #2200: the flightmates' cards go with mine. #2814: not in a simulator
+  // league, where they are handed over (`markerNote`) and I deliver my own.
+  const deliversFlight = flightCards.length > 0 && markerNote === undefined;
+
   // #2661: with the marker picker the form lays the two buttons side by side
   // under the picker itself.
   const editLink = (
@@ -496,12 +508,11 @@ async function ReviewBody({
       ]}
       alsoFor={flightCards.map((c) => c.userId)}
       label={
-        flightCards.length > 0
-          ? t('flight.submitButton', { count: flightCards.length + 1 })
-          : undefined
+        deliversFlight ? t('flight.submitButton', { count: flightCards.length + 1 }) : undefined
       }
       teeShotBlocked={teeShotBox != null}
       markerOptions={markerOptions}
+      markerNote={markerNote}
       leading={markerOptions ? editLink : undefined}
     />
   );
@@ -605,7 +616,7 @@ async function ReviewBody({
         <Banner tone="info" testId="whole-round-notice">{t('wholeRoundNotice')}</Banner>
       )}
 
-      {flightCards.length > 0 && <FlightDeliveryNotice cards={flightCards} />}
+      {deliversFlight && <FlightDeliveryNotice cards={flightCards} />}
 
       {teeShotBox && <TeeShotBoxOnPage box={teeShotBox} gameId={gameId} holeSegment={holeSegment} />}
 
@@ -665,6 +676,7 @@ async function FlightOnlyBody({
   teeShotBox,
   holeSegment,
   markerOptions,
+  markerNote,
 }: {
   gameId: string;
   cards: readonly FlightDeliveryCard[];
@@ -674,6 +686,8 @@ async function FlightOnlyBody({
   holeSegment: HoleSegment;
   /** #2661: the marker picker in a simulator league, else undefined. */
   markerOptions: readonly MarkerOption[] | undefined;
+  /** #2814: in a simulator league the cards are handed over, not delivered. */
+  markerNote: string | undefined;
 }) {
   const t = await getTranslations('game.submit.flight');
   const joinNames = await nameJoiner();
@@ -682,19 +696,45 @@ async function FlightOnlyBody({
       <Card>
         <p className="text-sm text-text">{t('ownDelivered')}</p>
       </Card>
-      <FlightDeliveryNotice cards={cards} />
+      {markerNote === undefined && <FlightDeliveryNotice cards={cards} />}
       {teeShotBox && <TeeShotBoxOnPage box={teeShotBox} gameId={gameId} holeSegment={holeSegment} />}
       <SubmitForm
         submitAction={submitAction}
         missingHoles={0}
         blockingGameIds={[gameId]}
         alsoFor={cards.map((c) => c.userId)}
-        label={t('submitOthersButton', { names: joinNames(cards) })}
+        label={
+          markerNote === undefined
+            ? t('submitOthersButton', { names: joinNames(cards) })
+            : cards.length === 1
+              ? t('handOverButton', { names: joinNames(cards) })
+              : t('handOverButtonMany', { names: joinNames(cards) })
+        }
         teeShotBlocked={teeShotBox != null}
         markerOptions={markerOptions}
+        markerNote={markerNote}
       />
     </>
   );
+}
+
+/**
+ * #2814: the line over the button in a simulator league. A flightmate kept my
+ * card and is my marker: «Anders er markøren din …». I kept flightmates'
+ * cards: «Du er markør for Berit …». Otherwise no line.
+ */
+async function markerNoteFor(
+  choice: MarkerChoice | null,
+  flightCards: readonly FlightDeliveryCard[],
+): Promise<string | undefined> {
+  if (!choice) return undefined;
+  const t = await getTranslations('game.submit.marker');
+  const { markedBy } = choice;
+  if (markedBy) return t('markedBy', { name: markedBy.name ?? t('unknownPlayer') });
+  if (flightCards.length === 0) return undefined;
+  const joinNames = await nameJoiner();
+  const names = joinNames(flightCards);
+  return flightCards.length === 1 ? t('handOver', { names }) : t('handOverMany', { names });
 }
 
 /**
