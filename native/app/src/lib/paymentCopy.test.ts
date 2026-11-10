@@ -1,7 +1,7 @@
 // #2749: kontingentkortet og premiebordet har nettsidens ord (Type A), låst
 // tegn for tegn mot `messages/no.json`.
 import source from '../../../../messages/no.json';
-import { PAYMENT_TEXT, PRIZE_TEXT, WIZARD_FEE_TEXT } from './paymentCopy';
+import { BETALING_TEXT, PAYMENT_TEXT, PRIZE_TEXT, WIZARD_FEE_TEXT } from './paymentCopy';
 
 const payment = source.payment;
 const prizes = source.prizes;
@@ -83,5 +83,41 @@ describe('WIZARD_FEE_TEXT', () => {
     expect(WIZARD_FEE_TEXT.sponsorAriaLabel('1. plass')).toBe(
       wizardPrizes.sponsorAriaLabel.replace('{slot}', '1. plass'),
     );
+  });
+});
+
+describe('BETALING_TEXT', () => {
+  const betaling = source.admin.game.betaling;
+
+  it.each([
+    ['sectionLabel', BETALING_TEXT.sectionLabel, betaling.sectionLabel],
+    ['feeLabel', BETALING_TEXT.feeLabel, betaling.feeLabel],
+    ['paidLabel', BETALING_TEXT.paidLabel, betaling.paidLabel],
+    ['viewAll', BETALING_TEXT.viewAll, betaling.viewAll],
+    ['kicker', BETALING_TEXT.kicker, betaling.kicker],
+    ['heading', BETALING_TEXT.heading, betaling.heading],
+    ['rosterLabel', BETALING_TEXT.rosterLabel, betaling.rosterLabel],
+    ['unknownPlayer', BETALING_TEXT.unknownPlayer, betaling.unknownPlayer],
+    ['paid', BETALING_TEXT.paid, betaling.paid],
+    ['unpaid', BETALING_TEXT.unpaid, betaling.unpaid],
+    ['withdrawn', BETALING_TEXT.withdrawn, betaling.withdrawn],
+    ['toggleError', BETALING_TEXT.toggleError, betaling.toggleError],
+    ['noFee', BETALING_TEXT.noFee, betaling.noFee],
+    ['guest', BETALING_TEXT.guest, source.common.guestBadge],
+  ])('%s er nettets', (_key, app, web) => {
+    expect(app).toBe(web);
+  });
+
+  it('tellingene og aria-etiketten er nettets med verdien satt inn', () => {
+    expect(BETALING_TEXT.markPaidAria('Jonas Berg')).toBe(betaling.markPaidAria.replace('{name}', 'Jonas Berg'));
+    expect(BETALING_TEXT.remindButton(2)).toBe(betaling.remindButton.replace('{count}', '2'));
+    // Flertallet i `remindDone` («one»/«other»).
+    expect(BETALING_TEXT.remindDone(1)).toBe('Purret 1 spiller.');
+    expect(BETALING_TEXT.remindDone(2)).toBe('Purret 2 spillere.');
+    expect(betaling.remindDone).toBe('Purret {count, plural, one {# spiller} other {# spillere}}.');
+  });
+
+  it('linja under tittelen har beløpet med mellomrom og «kr»', () => {
+    expect(BETALING_TEXT.subline('Lørdagsrunden', 200)).toBe('Lørdagsrunden · 200 kr');
   });
 });

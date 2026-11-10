@@ -25,6 +25,7 @@ import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
+import { paymentCounts } from '@/lib/games/payments';
 import {
   isStablefordFamily,
   isScrambleFamily,
@@ -788,16 +789,21 @@ async function buildSections({
   );
 
   // #1049: betaling-telle-kort — kun når spillet har en startkontingent.
-  // Tellingen ekskluderer withdrawn, som betaling-undersiden.
+  // Tellingen ekskluderer withdrawn, som betaling-undersiden; regelen er
+  // kjernens (`paymentCounts`, #2749), som appens kort også leser.
+  const paymentTally = paymentCounts(
+    players.map((p) => ({
+      paid: p.paid_at != null,
+      withdrawn: p.withdrawn_at != null,
+      isGuest: false,
+    })),
+  );
   const betaling = game.entry_fee_kr > 0 && (
     <BetalingOverviewSection
       gameId={gameId}
       entryFeeKr={game.entry_fee_kr}
-      paidCount={
-        players.filter((p) => p.withdrawn_at == null && p.paid_at != null)
-          .length
-      }
-      totalCount={players.filter((p) => p.withdrawn_at == null).length}
+      paidCount={paymentTally.paidCount}
+      totalCount={paymentTally.totalCount}
     />
   );
 

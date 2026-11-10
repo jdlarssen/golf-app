@@ -35,10 +35,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['getAdminClient()'],
     reason: B,
   },
-  'app/[locale]/admin/games/[id]/betaling/actions.ts': {
-    receivers: ['getAdminClient()'],
-    reason: `${B}; (c) serverside utsending av betalingspåminnelse`,
-  },
   'app/[locale]/admin/games/[id]/edit/page.tsx': {
     receivers: ['getAdminClient()'],
     reason: B,
@@ -115,6 +111,12 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/games/selfRegistration.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending: egen rad som avsender, arrangørens adresse som mottaker',
+  },
+  // #2749: flyttet fra `app/[locale]/admin/games/[id]/betaling/actions.ts`, delt med
+  // appens rute (`app/api/games/[id]/payments/remind/route.ts`, arrangør-porten).
+  'lib/games/payments.ts': {
+    receivers: ['getAdminClient()'],
+    reason: '(c) serverside utsending av betalingspåminnelse, bak requireAdmin eller arrangør-porten',
   },
   'lib/games/loadSignupFacts.ts': {
     receivers: ['admin'],

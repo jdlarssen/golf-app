@@ -6,6 +6,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { paymentRoster } from '@/lib/games/payments';
 import type { AppLocale } from '@/i18n/routing';
 import { BetalingClient, type BetalingPlayer } from './BetalingClient';
 
@@ -18,17 +19,6 @@ type GameRow = {
   entry_fee_kr: number;
   payment_link: string | null;
   courses: { name: string } | null;
-};
-
-type PlayerRow = {
-  user_id: string;
-  paid_at: string | null;
-  withdrawn_at: string | null;
-  users: {
-    name: string | null;
-    nickname: string | null;
-    is_guest: boolean;
-  } | null;
 };
 
 /**
@@ -53,29 +43,18 @@ export default async function BetalingPage({ params }: { params: Params }) {
     .single<GameRow>();
   if (!game) notFound();
 
-  const { data: rows, error } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, paid_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, is_guest)',
-    )
-    .eq('game_id', id)
-    .returns<PlayerRow[]>();
-  if (error) throw error;
+  // #2749: lista og reglene bak den er kjernens, som appens «Hvem har betalt?».
+  const roster = await paymentRoster(supabase, id);
+  if (!roster) notFound();
 
   const unknown = t('unknownPlayer');
-  const players: BetalingPlayer[] = (rows ?? []).map((r) => {
-    const base = r.users?.name ?? unknown;
-    const displayName = r.users?.nickname
-      ? `${base} «${r.users.nickname}»`
-      : base;
-    return {
-      userId: r.user_id,
-      displayName,
-      isGuest: r.users?.is_guest ?? false,
-      paid: r.paid_at != null,
-      withdrawn: r.withdrawn_at != null,
-    };
-  });
+  const players: BetalingPlayer[] = roster.players.map((p) => ({
+    userId: p.userId,
+    displayName: p.name ?? unknown,
+    isGuest: p.isGuest,
+    paid: p.paid,
+    withdrawn: p.withdrawn,
+  }));
 
   const gameName = localizeGameName(
     game.name,
