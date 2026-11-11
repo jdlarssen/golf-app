@@ -33,7 +33,7 @@ vi.mock('@/lib/games/loadFlightDelivery', () => ({
 }));
 const notify = vi.fn(async () => ({ shouldAlsoSendMail: false }));
 vi.mock('@/lib/notifications/notify', () => ({ notify: (...args: unknown[]) => notify(...(args as [])) }));
-const sendDeliveryReminder = vi.fn(async (..._args: unknown[]) => {});
+const sendDeliveryReminder = vi.fn(async (..._args: unknown[]) => true);
 vi.mock('@/lib/notifications/deliveryReminder', () => ({
   sendDeliveryReminder: (...args: unknown[]) => sendDeliveryReminder(...args),
 }));
@@ -233,6 +233,23 @@ describe('submitScorecardWithMarker', () => {
       told: sendDeliveryReminder.mock.calls.length,
       stamped: updates().some((u) => 'deliver_reminder_sent_at' in (u as object)),
     }).toEqual({ handedOver: 1, told: 0, stamped: false });
+  });
+
+  it('a notice that did not land leaves that card unstamped', async () => {
+    sendDeliveryReminder.mockResolvedValueOnce(false);
+    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
+    adminMock = buildSupabaseMock([
+      FLIGHT_AB,
+      MEMBERS,
+      { data: [{ user_id: 'a' }] },
+      { data: [] },
+      GAME,
+      { data: [{ user_id: 'b' }] }, // handover write
+      { data: { name: 'Runde 1' } },
+      { data: [{ id: 'b', email: null, name: 'Berit', nickname: null, locale: null }] },
+    ]);
+    await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'm' });
+    expect(updates().some((u) => 'deliver_reminder_sent_at' in (u as object))).toBe(false);
   });
 
   it('a failed handover does not fail A\'s delivery', async () => {

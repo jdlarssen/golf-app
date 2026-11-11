@@ -29,6 +29,9 @@ import { notify } from './notify';
  * mottakerens kort og overlevert det. Varselet får `marker_name` og sin egen
  * tekst; det gjelder mottakerens eget kort, så raden følger det.
  *
+ * Svarer true når varselet i appen kom inn, false ellers (#2814: overleveringen
+ * stempler bare kortene som faktisk fikk varselet). Mailen påvirker ikke svaret.
+ *
  * In-app-først: vi sender alltid in-app (via notify), og maler kun til
  * off-app-spillere (`shouldAlsoSendMail`). Best-effort — feiler stille i
  * console.error, kaster aldri, så parent-flyten (render/server-action) aldri
@@ -42,7 +45,7 @@ export async function sendDeliveryReminder(opts: {
   othersCount?: number;
   cardUserIds?: readonly string[];
   markerName?: string | null;
-}): Promise<void> {
+}): Promise<boolean> {
   const { player, game, logPrefix } = opts;
   const othersCount = opts.othersCount ?? 0;
 
@@ -61,9 +64,11 @@ export async function sendDeliveryReminder(opts: {
       },
     });
     shouldMail = r.shouldAlsoSendMail;
+    // #2814: the in-app row is the reminder; when it did not land, say so.
+    if (r.inserted === false) return false;
   } catch (e) {
     console.error(`[${logPrefix}] deliver_reminder notify failed`, e);
-    return;
+    return false;
   }
 
   if (shouldMail && player.email) {
@@ -80,6 +85,7 @@ export async function sendDeliveryReminder(opts: {
       console.error(`[${logPrefix}] deliver_reminder mail failed`, e);
     }
   }
+  return true;
 }
 
 /** Spillet sveipen går over — lest av ruta, sendt inn her. */

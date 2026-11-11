@@ -322,6 +322,7 @@ describe('sendReminders — sending', () => {
     db.scores = [...holes('a', 18), ...holes('b', 18), ...holes('c', 18)];
     reminderMock.mockImplementation(async (opts) => {
       if (opts.player.userId === 'b') throw new Error('SMTP nede');
+      return true;
     });
 
     // Best-effort: én død adresse skal hverken stoppe de andre eller gjøre

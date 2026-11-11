@@ -90,7 +90,7 @@ vi.mock('@/lib/mail/deliverReminderNotification', () => ({
 
 import { notify } from './notify';
 import { sendDeliverReminderNotification } from '@/lib/mail/deliverReminderNotification';
-import { runDeliveryReminderSweepForGame } from './deliveryReminder';
+import { runDeliveryReminderSweepForGame, sendDeliveryReminder } from './deliveryReminder';
 
 const notifyMock = vi.mocked(notify);
 const mailMock = vi.mocked(sendDeliverReminderNotification);
@@ -229,5 +229,31 @@ describe('runDeliveryReminderSweepForGame: overlevert kort (#2814)', () => {
       readsMarker: String(rosterRead?.columns ?? '').includes('marker_user_id'),
       reminded: notifyMock.mock.calls.map((c) => (c[0] as { userId: string }).userId),
     }).toEqual({ readsMarker: true, reminded: ['ola'] });
+  });
+});
+
+// #2814: overleveringen stempler bare kortene der varselet kom inn.
+describe('sendDeliveryReminder: svaret', () => {
+  const send = () =>
+    sendDeliveryReminder({
+      player: { userId: 'ola', email: null, name: 'Ola', locale: 'no' },
+      game: { id: GAME.id, name: GAME.name },
+      logPrefix: 'test',
+      markerName: 'Kari',
+    });
+
+  it('er true når varselet kom inn', async () => {
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false, inserted: true });
+    await expect(send()).resolves.toBe(true);
+  });
+
+  it('er false når raden ikke kom inn', async () => {
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false, inserted: false });
+    await expect(send()).resolves.toBe(false);
+  });
+
+  it('er false når varslingen kaster', async () => {
+    notifyMock.mockRejectedValueOnce(new Error('connection reset'));
+    await expect(send()).resolves.toBe(false);
   });
 });
