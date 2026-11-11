@@ -99,8 +99,8 @@ export function leagueView(overrides: {
         ranked: true,
         roundsPlayed: 2,
         perRound: [
-          { roundId: 'r1', value: 38, points: null, penalised: false },
-          { roundId: 'r3', value: 36, points: null, penalised: false },
+          { roundId: 'r1', value: 38, points: null, penalised: false, gameId: 'g-martin-r1' },
+          { roundId: 'r3', value: 36, points: null, penalised: false, gameId: 'g-martin-r3' },
         ],
       },
       {
@@ -110,8 +110,8 @@ export function leagueView(overrides: {
         ranked: true,
         roundsPlayed: 2,
         perRound: [
-          { roundId: 'r1', value: 36, points: null, penalised: false },
-          { roundId: 'r2', value: 33, points: null, penalised: false },
+          { roundId: 'r1', value: 36, points: null, penalised: false, gameId: 'g-me-r1' },
+          { roundId: 'r2', value: 33, points: null, penalised: false, gameId: 'g-me-r2' },
         ],
       },
     ],

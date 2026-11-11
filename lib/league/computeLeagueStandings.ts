@@ -109,6 +109,7 @@ export function computeLeagueStandings(
             points: null,
             penalised: false,
             deliveredOutsideWindow: s.deliveredOutsideWindow,
+            gameId: s.gameId,
           }
         : {
             roundId: rm.round.roundId,
@@ -116,6 +117,7 @@ export function computeLeagueStandings(
             points: null,
             penalised: false,
             deliveredOutsideWindow: false,
+            gameId: null,
           };
     });
 

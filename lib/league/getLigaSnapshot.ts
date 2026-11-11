@@ -6,7 +6,7 @@ import { computeLeagueStandings } from './computeLeagueStandings';
 import { computeFlightRoundValues } from './roundScoring';
 import { isPointsBasedFormat } from './flightFormat';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
-import { meetsFlightMinimum } from './flightRules';
+import { countingCards } from './countingCards';
 import {
   normalizeSimSettings,
   roundSimSettings,
@@ -31,7 +31,8 @@ import { selectAllRows, selectAllRowsResult } from '@/lib/supabase/selectAllRows
  * against the tee's par, and aggregates the season table via
  * `computeLeagueStandings`.
  *
- * Counting guardrails (contract #453):
+ * Counting guardrails (contract #453; the first three live in `countingCards`,
+ * which the card view's gate shares, #2815):
  *  - only `finished` flights count;
  *  - a flight needs ≥2 non-withdrawn submitted players (the marker rule), or
  *    one in a simulator league (`meetsFlightMinimum`, #2638);
@@ -435,24 +436,16 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     if (game.delivered_outside_window) {
       flaggedByRound.set(roundId, (flaggedByRound.get(roundId) ?? 0) + 1);
     }
-    if (game.status !== 'finished') continue;
+    // The counting rule (finished flight, delivered and not withdrawn, approved
+    // in a simulator league #2661, the marker rule #2638) has one home,
+    // `countingCards`, which the card view's gate reads too (#2815).
+    const eligible = countingCards(game.status, playersByGame.get(game.id) ?? [], league.is_simulator);
+    if (eligible.length === 0) continue;
     if (!game.course_id || !game.tee_box_id) continue;
 
     const holes = holesByCourse.get(game.course_id) ?? [];
     if (holes.length === 0) continue;
     const teePar = teeParByGender.get(game.tee_box_id);
-
-    const allPlayers = playersByGame.get(game.id) ?? [];
-    // #2661: in a simulator league the marker's approval is part of «delivered».
-    const eligible = allPlayers.filter(
-      (p) =>
-        p.withdrawn_at === null &&
-        p.submitted_at !== null &&
-        (!league.is_simulator || p.approved_at !== null),
-    );
-    // Marker rule: a counted flight needs ≥2 players who actually delivered,
-    // one in a simulator league (#2638, the same bound as the start gate).
-    if (!meetsFlightMinimum(eligible.length, league.is_simulator)) continue;
 
     const gScores = scoresByGame.get(game.id) ?? [];
     // Tee-totalpar per spiller (kjønns-oppslått). Kun slagspill leser dette;
