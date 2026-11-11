@@ -29,7 +29,15 @@ export async function notify<K extends NotificationKind>(opts: {
   userId: string;
   kind: K;
   payload: NotificationPayload<K>;
-}): Promise<{ shouldAlsoSendMail: boolean }> {
+}): Promise<{
+  shouldAlsoSendMail: boolean;
+  /**
+   * #2814: false when the row did not land. Always set here; optional in the
+   * type so callers and test doubles that only know `shouldAlsoSendMail`
+   * stay as they are (a missing field counts as written).
+   */
+  inserted?: boolean;
+}> {
   const { userId, kind, payload } = opts;
 
   // Validér payload mot zod-skjema før insert — bedre å feile tidlig
@@ -70,7 +78,7 @@ export async function notify<K extends NotificationKind>(opts: {
     // Dette fanger også cascade-race: hvis bruker slettes (ON DELETE CASCADE
     // på user_id-FK) mens notify er in-flight, gir insert en FK-error og
     // vi havner her — riktig oppførsel, vi vil ikke maile en slettet bruker.
-    return { shouldAlsoSendMail: false };
+    return { shouldAlsoSendMail: false, inserted: false };
   }
 
   // Invalider innboks-cache for brukeren. Next.js 16 krever to-arg-form;
@@ -86,7 +94,7 @@ export async function notify<K extends NotificationKind>(opts: {
   // #1012: anonymiserte kontoer gates av samme grunn — den randomiserte
   // adressen kan aldri motta noe, og push-abonnementene er slettet.
   if (userRes.data?.is_guest || userRes.data?.deleted_at) {
-    return { shouldAlsoSendMail: false };
+    return { shouldAlsoSendMail: false, inserted: true };
   }
 
   const offApp = shouldSendMailFallback(userRes.data?.last_seen_at ?? null);
@@ -106,7 +114,7 @@ export async function notify<K extends NotificationKind>(opts: {
     });
   }
 
-  return { shouldAlsoSendMail: offApp };
+  return { shouldAlsoSendMail: offApp, inserted: true };
 }
 
 /**

@@ -239,6 +239,13 @@ describe('fixedMarker', () => {
     });
   });
 
+  it('is returned, never handed over, for a sent-back card that still carries the stamp', () => {
+    expect(fixedMarker(card({ rejection_reason: 'hull 7', handed_over_at: '2026-11-11T10:00:00Z' }))).toEqual({
+      reason: 'returned',
+      markerUserId: 'a',
+    });
+  });
+
   it('is assigned for a card with a marker and neither: reopened, or a delivery that failed', () => {
     expect(fixedMarker(card({}))).toEqual({ reason: 'assigned', markerUserId: 'a' });
   });

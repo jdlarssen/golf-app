@@ -173,8 +173,10 @@ export type FixedMarker = { reason: 'handedOver' | 'returned' | 'assigned'; mark
 export function fixedMarker(card: MarkerCard): FixedMarker | null {
   const marker = card.marker_user_id;
   if (card.submitted_at != null || marker == null || marker === card.user_id) return null;
-  if (card.handed_over_at != null) return { reason: 'handedOver', markerUserId: marker };
+  // Sent back first: a rejected card is never approved on delivery, also if
+  // `handed_over_at` were somehow left on it (0233 clears it).
   if (card.rejection_reason != null) return { reason: 'returned', markerUserId: marker };
+  if (card.handed_over_at != null) return { reason: 'handedOver', markerUserId: marker };
   return { reason: 'assigned', markerUserId: marker };
 }
 

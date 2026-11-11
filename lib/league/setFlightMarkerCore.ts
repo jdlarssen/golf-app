@@ -43,9 +43,9 @@ import { playerName } from '@/lib/names/playerName';
 //
 // ORDER, on purpose: the marker is written before the delivery. When the
 // delivery fails after that, the marker stands on a card that is not
-// delivered. That does no harm: nothing reads `marker_user_id` before
-// `submitted_at` is set, and the next delivery writes it again. An undo, on
-// the other hand, could race the player's second tap. Same reasoning as
+// delivered, and the card's marker is fixed (`fixedMarker`, «assigned»): the
+// next delivery goes to the marker the player just named, without a picker.
+// An undo, on the other hand, could race the player's second tap. Same reasoning as
 // `freezeRoundSettings` in the start core. The handover comes after the
 // deliverer's own card is in: when it fails, the delivery stands, the page
 // shows the flightmates' cards again, and the next tap hands them over.
@@ -263,8 +263,9 @@ async function handOver(
     return 0;
   }
   const handed = (data ?? []).map((r) => r.user_id);
-  if (handed.length > 0 && (await tellHandedOver(flight, delivererId, handed))) {
-    await stampReminded(flight.gameId, handed);
+  if (handed.length > 0) {
+    const told = await tellHandedOver(flight, delivererId, handed);
+    if (told.length > 0) await stampReminded(flight.gameId, told);
   }
   return handed.length;
 }
@@ -284,13 +285,14 @@ type UserRow = { id: string; email: string | null; name: string | null; nickname
 
 /**
  * `deliver_reminder` with the marker's name to each flightmate handed a card.
- * Best-effort: false when the reads failed and nothing was sent.
+ * Best-effort: returns the players whose notice landed, empty when the reads
+ * failed and nothing was sent.
  */
 async function tellHandedOver(
   flight: LeagueFlight,
   markerUserId: string,
   playerIds: readonly string[],
-): Promise<boolean> {
+): Promise<string[]> {
   try {
     const admin = getAdminClient();
     const [gameRes, usersRes] = await Promise.all([
@@ -306,7 +308,7 @@ async function tellHandedOver(
     const byId = new Map((usersRes.data ?? []).map((u) => [u.id, u]));
     const marker = byId.get(markerUserId);
     const markerName = playerName(marker);
-    await Promise.all(
+    const landed = await Promise.all(
       playerIds.map((playerId) => {
         const player = byId.get(playerId);
         return sendDeliveryReminder({
@@ -322,10 +324,10 @@ async function tellHandedOver(
         });
       }),
     );
-    return true;
+    return playerIds.filter((_, i) => landed[i]);
   } catch (err) {
     console.error(`[${LOG_PREFIX}] handover notice failed`, { gameId: flight.gameId, err });
-    return false;
+    return [];
   }
 }
 
