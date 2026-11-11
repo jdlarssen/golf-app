@@ -81,7 +81,7 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
   cupResults: { kinds: ['cup_finished'], key: 'tournament_id' },
   cupParticipants: { kinds: ['cup_signup'], key: 'tournament_id' },
   club: { kinds: ['club_join_request', 'club_role_changed'], key: 'group_id' },
-  // #2800: a friend's brag links here. One from a league round links to the
+  // #2800: a friend's brag links here. One to a league player links to the
   // league, which does not clear it: every kind on that page waits, so a visit
   // sends no write at all (`visitCanMarkRead`). A tap in the inbox reads it.
   friends: { kinds: ['friend_request', 'friend_accepted', 'friend_achievement'], key: null },

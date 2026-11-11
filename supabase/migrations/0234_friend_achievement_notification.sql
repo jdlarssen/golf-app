@@ -1,8 +1,8 @@
 -- 0234_friend_achievement_notification.sql
 -- =============================================================================
 -- #2800 - when a round is finished, a player's gross hole-in-one, albatross or
--- eagle is told to the people around them: the other players in the league
--- when the game is a league round, otherwise their accepted friends. Nobody
+-- eagle is told to the people around them: their accepted friends, and in a
+-- league round every player in the league as well, each person once. Nobody
 -- who played the same game is told. The finish pipeline writes one
 -- notification of kind 'friend_achievement' per recipient per player
 -- (lib/games/notifyFriendsOfAchievements.ts), with the service role.

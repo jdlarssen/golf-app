@@ -89,7 +89,7 @@ export type InboxEntry =
 
 export type InboxSections = Record<InboxSectionKey, InboxEntry[]>;
 
-// #2800: a friend's brag too. One from a league round sits here as well: the
+// #2800: a friend's brag too. One to a league player sits here as well: the
 // chip is chosen by kind alone, and there is no league chip.
 export const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set([
   'friend_request',
