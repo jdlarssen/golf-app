@@ -15,9 +15,12 @@ Dette er **sender-siden**. Mottaker-siden (selve mergen når du trykker knappen)
 er det eksisterende interactions-endepunktet fra #1124
 (`app/api/discord/interactions/route.ts`) — knapp-kortet gjenbruker `merge_pr:<N>`
 uendret. Auto-mergen bruker en egen helper (`lib/loops/autoMerge.ts`), ikke
-mottakeren: mottakerens CI-port leser kun `ci.yml`-runs og ville avvist
-docs-only-PR-er, som ikke kjører ci.yml (de har Vercel-checks pluss
-no-op-tvillingens `verify`/`e2e` og `scan`, jf. #1477).
+mottakeren. Mottakerens CI-port velger workflow ut fra endrede filer
+(`expectsRealCi`, #2835): kode- eller blandede PR-er leser `ci.yml`-runs, mens
+docs-only-PR-er, som ikke kjører ci.yml, leser no-op-tvillingen
+`ci-docs-noop.yml` (jf. #1477). Feilet eller avkortet fil-oppslag gir `ci.yml`
+(fail-closed). Å falle tilbake til tvillingen når ci.yml mangler er bevisst
+forkastet: på en blandet PR blir tvillingen grønn før ci.yml er registrert.
 
 **Branch protection er backstop bak begge merge-veiene (#1477, fra 2026-08-07).**
 Main krever grønn `verify` + `e2e` + `scan` på head-SHA-en server-side, så verken
