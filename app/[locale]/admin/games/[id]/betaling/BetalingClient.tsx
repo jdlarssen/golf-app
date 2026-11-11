@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { GuestBadge } from '@/components/ui/GuestBadge';
+import { isRemindable } from '@/lib/games/paymentRules';
 import { togglePlayerPaid, remindUnpaidPlayers } from './actions';
 
 export type BetalingPlayer = {
@@ -42,8 +43,9 @@ export function BetalingClient({
   // Gjester purres ikke (plassholder-adresse, jf. remindUnpaidPlayers), så de
   // holdes utenfor knappe-tellingen — ellers viser knappen ett høyere tall enn
   // «Purret N». De vises fortsatt i lista og kan hukes av manuelt.
-  const unpaidCount = players.filter(
-    (p) => !p.withdrawn && !p.isGuest && !isPaid(p),
+  // #2749: regelen er `isRemindable`, som purringen selv bruker.
+  const unpaidCount = players.filter((p) =>
+    isRemindable({ paid: isPaid(p), withdrawn: p.withdrawn, isGuest: p.isGuest }),
   ).length;
 
   function purre() {

@@ -6,6 +6,9 @@ import { expireGameCache } from '@/lib/games/expireGameCache';
 import { sendPaymentReminder } from '@/lib/notifications/paymentReminder';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { isRemindable, paymentCounts } from '@/lib/games/paymentRules';
+
+export { isRemindable, paymentCounts };
 
 /**
  * #2749: the entry-fee core — who has paid, ticking it, and the reminder. One
@@ -38,23 +41,6 @@ export type PaymentRoster = {
   /** Who «Purr de som mangler» reaches: not paid, not withdrawn, not a guest. */
   remindable: number;
 };
-
-type CountablePlayer = Pick<PaymentRosterPlayer, 'paid' | 'withdrawn' | 'isGuest'>;
-
-/** The reminder's target rule; the button's count and the send both read it. */
-export function isRemindable(p: CountablePlayer): boolean {
-  return !p.paid && !p.withdrawn && !p.isGuest;
-}
-
-/** The counts the web's Betaling card and the app's card show. */
-export function paymentCounts(players: readonly CountablePlayer[]) {
-  const active = players.filter((p) => !p.withdrawn);
-  return {
-    paidCount: active.filter((p) => p.paid).length,
-    totalCount: active.length,
-    remindable: players.filter(isRemindable).length,
-  };
-}
 
 type RosterRow = {
   user_id: string;

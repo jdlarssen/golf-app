@@ -29,10 +29,12 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
   const [reminding, setReminding] = useState(false);
   const [remindNote, setRemindNote] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
+  /** Henter på nytt. Sant når den nye lista kom; ellers står den forrige. */
+  const reload = useCallback(async (): Promise<boolean> => {
     const result = await fetchPayments(gameId);
     if (result.ok) setLoad({ state: 'ready', overview: result.overview });
     else setLoad((was) => (was.state === 'ready' ? was : { state: 'failed', noFee: result.reason === 'no_fee' }));
+    return result.ok;
   }, [gameId]);
 
   // Første henting inline, med `cancelled`: skjermen kan forlates før svaret kommer.
@@ -63,7 +65,9 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
       setSaveFailed(true);
       return;
     }
-    await reload();
+    // Lagringen gikk. Haken slippes bare når den nye lista har den; feiler
+    // hentingen, står haken (basen er oppdatert) til neste henting.
+    if (!(await reload())) return;
     setOptimistic((was) => {
       const rest = { ...was };
       delete rest[player.userId];
