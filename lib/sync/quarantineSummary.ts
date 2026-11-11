@@ -41,7 +41,8 @@ export interface QuarantineSummary {
   lockedOnly: boolean;
 }
 
-function parseRowKey(
+/** Game and hole from a row key, or null when the key is malformed. Exported for `roundSyncState` (#2348). */
+export function parseRowKey(
   key: string,
 ): { gameId: string; holeNumber: number } | null {
   const parts = key.split(':');
