@@ -179,11 +179,15 @@ export type MarkerCardResponse = {
 
 /**
  * #2661: the marker picker before a delivery, `GET /api/games/[id]/marker-options`.
- * #2814: `returnedBy` (optional, additive) is the marker who sent the card
- * back; it goes back to them, so there is no picker. Older builds ignore it.
+ * #2814: `marker` (optional, additive) is the card's fixed marker and why
+ * (`fixedMarker`: handed over, sent back, or reopened), so there is no
+ * picker and the screen can say who gets the card. Older builds ignore it.
  */
 export type MarkerOptionsResponse =
-  | { required: false; returnedBy?: { userId: string; name: string | null } }
+  | {
+      required: false;
+      marker?: { reason: 'handedOver' | 'returned' | 'assigned'; userId: string; name: string | null };
+    }
   | { required: true; options: Array<{ userId: string; name: string | null }> };
 
 /**

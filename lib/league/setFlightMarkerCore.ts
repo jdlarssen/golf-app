@@ -15,12 +15,12 @@ import type { HoleSegment } from '@/lib/scoring';
 import { readSimulatorLeagueFlight, type LeagueFlight } from './leagueFlight';
 import {
   activeFlightmates,
-  handedOverMarker,
+  fixedMarker,
   markerCandidates,
   markerRefusal,
   orderMarkerOptions,
-  returnedToMarker,
   unchangedSinceMarker,
+  type FixedMarker,
   type MarkerRefusal,
 } from './leagueMarker';
 import { playerName } from '@/lib/names/playerName';
@@ -70,6 +70,7 @@ type RosterRow = {
   submitted_at: string | null;
   marker_user_id: string | null;
   rejection_reason: string | null;
+  handed_over_at: string | null;
   withdrawn_at: string | null;
 };
 
@@ -77,7 +78,7 @@ type RosterRow = {
 async function readRoster(gameId: string): Promise<RosterRow[]> {
   const { data, error } = await getAdminClient()
     .from('game_players')
-    .select('user_id, submitted_at, marker_user_id, rejection_reason, withdrawn_at')
+    .select('user_id, submitted_at, marker_user_id, rejection_reason, handed_over_at, withdrawn_at')
     .eq('game_id', gameId)
     .returns<RosterRow[]>();
   if (error) throw new Error(`roster read failed: ${error.message}`, { cause: error });
@@ -168,14 +169,14 @@ async function deliverableMates(
  * Deliver the caller's card, the way `submitScorecardCore` does. In a
  * simulator league:
  *  1. the caller's own card gets the marker they named (`setFlightMarkerCore`),
- *     unless it is delivered already, a flightmate kept it and is its marker
- *     (`handedOverMarker`), or its marker sent it back (`returnedToMarker`).
- *     Then no marker is asked, and one in the request is ignored;
+ *     unless it is delivered already or its marker is fixed (`fixedMarker`:
+ *     handed over, sent back, or reopened). Then no marker is asked, and one
+ *     in the request is ignored;
  *  2. the caller's card is delivered, without the flightmates' cards;
- *  3. the marker is told (`league_marker_request`), or, for a card a
- *     flightmate kept, it is approved when unchanged (`settleHandedOverCard`).
- *     A card that was sent back is never approved on delivery: it goes back
- *     to its marker (the owner 11.11);
+ *  3. a handed-over card is approved when unchanged (`settleHandedOverCard`);
+ *     every other card's marker is told (`league_marker_request`). A card
+ *     that was sent back or reopened is never approved on delivery (the
+ *     owner 11.11);
  *  4. the cards the caller kept are handed over (`handOver`).
  *
  * In a simulator flight the flightmates are not asked to approve
@@ -204,10 +205,9 @@ export async function submitScorecardWithMarker(
   const me = roster.find((p) => p.user_id === userId && p.withdrawn_at == null);
   if (!me) return submitScorecardCore(supabase, gameId, userId, { alsoFor: [], peerNotices: false });
 
-  const keptBy = handedOverMarker(me, activeFlightmates(roster, userId));
-  const returnedTo = returnedToMarker(me);
-  let ownMarker: string | null = returnedTo;
-  if (me.submitted_at == null && keptBy == null && returnedTo == null) {
+  const fixed = fixedMarker(me);
+  let ownMarker: string | null = fixed?.markerUserId ?? null;
+  if (me.submitted_at == null && fixed == null) {
     const marker = await setFlightMarkerCore({
       flight,
       delivererId: userId,
@@ -224,7 +224,7 @@ export async function submitScorecardWithMarker(
   if (!result.ok) return result;
 
   if (!result.alreadySubmitted) {
-    if (keptBy) await settleHandedOverCard(flight, userId, keptBy);
+    if (fixed?.reason === 'handedOver') await settleHandedOverCard(flight, userId, fixed.markerUserId);
     else if (ownMarker) await notifyMarker(flight, ownMarker, [userId]);
   }
   const handedOver = await handOver(flight, userId, alsoFor);
@@ -251,7 +251,7 @@ async function handOver(
   if (!mates || mates.length === 0) return 0;
   const { data, error } = await getAdminClient()
     .from('game_players')
-    .update({ marker_user_id: delivererId })
+    .update({ marker_user_id: delivererId, handed_over_at: new Date().toISOString() })
     .eq('game_id', flight.gameId)
     .in('user_id', mates)
     .is('submitted_at', null)
@@ -423,14 +423,13 @@ export type MarkerOption = { userId: string; name: string | null };
 /**
  * What the delivery page shows about the marker in a simulator league.
  * `options` is the picker for the caller's own card, or undefined when there is
- * none: the card is delivered, `markedBy`, the flightmate who kept it, is its
- * marker, or `returnedBy`, its marker, sent it back (#2814).
+ * none: the card is delivered, or its marker is `fixed` (#2814: handed over,
+ * sent back, or reopened; `fixedMarker`), with the marker's name.
  */
 export type MarkerChoice = {
   flight: LeagueFlight;
   options: MarkerOption[] | undefined;
-  markedBy: MarkerOption | null;
-  returnedBy: MarkerOption | null;
+  fixed: (MarkerOption & { reason: FixedMarker['reason'] }) | null;
 };
 
 /**
@@ -461,12 +460,12 @@ export async function loadMarkerChoice(
   );
   const me = roster.find((p) => p.user_id === delivererId);
   const mates = activeFlightmates(roster, delivererId);
-  const option = (userId: string): MarkerOption => ({ userId, name: nameOf.get(userId) ?? null });
-  const keptBy = me ? handedOverMarker(me, mates) : null;
-  if (keptBy) return { flight, options: undefined, markedBy: option(keptBy), returnedBy: null };
-  const returnedTo = me ? returnedToMarker(me) : null;
-  if (returnedTo) return { flight, options: undefined, markedBy: null, returnedBy: option(returnedTo) };
-  if (me?.submitted_at != null) return { flight, options: undefined, markedBy: null, returnedBy: null };
+  const fixed = me ? fixedMarker(me) : null;
+  if (fixed) {
+    const name = nameOf.get(fixed.markerUserId) ?? null;
+    return { flight, options: undefined, fixed: { reason: fixed.reason, userId: fixed.markerUserId, name } };
+  }
+  if (me?.submitted_at != null) return { flight, options: undefined, fixed: null };
   const options = orderMarkerOptions(
     markerCandidates([...nameOf.keys()], [delivererId], delivererId).map((userId) => ({
       userId,
@@ -474,5 +473,5 @@ export async function loadMarkerChoice(
     })),
     mates,
   );
-  return { flight, options, markedBy: null, returnedBy: null };
+  return { flight, options, fixed: null };
 }

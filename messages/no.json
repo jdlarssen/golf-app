@@ -2404,7 +2404,8 @@
         "handOver": "Du er markør for {names}. {names} får kortet sitt og sender det inn selv.",
         "handOverMany": "Du er markør for {names}. De får kortene sine og sender dem inn selv.",
         "markedBy": "{name} er markøren din. Sender du inn uten å endre noe, er kortet godkjent. Endrer du noe, godkjenner {name} endringen.",
-        "returnedBy": "{name} sendte kortet tilbake. Rett det og send det til {name} igjen. Er dere uenige, kan arrangøren godkjenne kortet i stedet."
+        "returnedBy": "{name} sendte kortet tilbake. Rett det og send det til {name} igjen. Er dere uenige, kan arrangøren godkjenne kortet i stedet.",
+        "assignedTo": "Kortet går til {name} når du sender det inn."
       },
       "unknownCourse": "(ukjent bane)",
       "teePrefix": "Tee: ",

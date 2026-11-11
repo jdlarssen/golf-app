@@ -727,8 +727,7 @@ async function markerNoteFor(
   const t = await getTranslations('game.submit.marker');
   const joinNames = await nameJoiner();
   return markerNote((key, values) => t(key, values), {
-    markedByName: choice.markedBy ? choice.markedBy.name : undefined,
-    returnedByName: choice.returnedBy ? choice.returnedBy.name : undefined,
+    fixed: choice.fixed,
     unknownPlayer: t('unknownPlayer'),
     handOver: flightCards.length > 0 ? { names: joinNames(flightCards), count: flightCards.length } : null,
   });

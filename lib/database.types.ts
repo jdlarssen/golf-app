@@ -610,6 +610,7 @@ export type Database = {
           deliver_reminder_sent_at: string | null
           flight_number: number | null
           game_id: string
+          handed_over_at: string | null
           marker_user_id: string | null
           paid_at: string | null
           rejection_reason: string | null
@@ -632,6 +633,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id: string
+          handed_over_at?: string | null
           marker_user_id?: string | null
           paid_at?: string | null
           rejection_reason?: string | null
@@ -654,6 +656,7 @@ export type Database = {
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id?: string
+          handed_over_at?: string | null
           marker_user_id?: string | null
           paid_at?: string | null
           rejection_reason?: string | null

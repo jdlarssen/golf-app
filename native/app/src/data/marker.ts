@@ -52,15 +52,16 @@ export async function fetchMarkerOptions(
   );
   if (!call.ok) return call;
   if (call.status !== 200) return { ok: false, reason: loadFailureFor(call.status) };
-  const body = call.body as Partial<{ required: boolean; options: unknown; returnedBy: unknown }>;
+  const body = call.body as Partial<{ required: boolean; options: unknown; marker: unknown }>;
   if (body.required === false) {
-    // #2814: the marker who sent the card back, when the server says so.
-    const back = body.returnedBy as Partial<{ userId: unknown; name: unknown }> | undefined;
+    // #2814: the card's fixed marker and why, when the server says so.
+    const m = body.marker as Partial<{ reason: unknown; userId: unknown; name: unknown }> | undefined;
+    const reason = m?.reason === 'handedOver' || m?.reason === 'returned' || m?.reason === 'assigned' ? m.reason : null;
     return {
       ok: true,
       options:
-        back && typeof back.userId === 'string'
-          ? { required: false, returnedBy: { userId: back.userId, name: typeof back.name === 'string' ? back.name : null } }
+        m && reason && typeof m.userId === 'string'
+          ? { required: false, marker: { reason, userId: m.userId, name: typeof m.name === 'string' ? m.name : null } }
           : { required: false },
     };
   }
