@@ -51,6 +51,14 @@ vi.mock('@/lib/games/notifyAchievementUnlocks', () => ({
     notifyAchievementUnlocksMock(...args),
 }));
 
+// #2800: friends (or the league) hear about a gross eagle, albatross or ace.
+const notifyFriendsOfAchievementsMock =
+  vi.fn<(...a: unknown[]) => Promise<unknown>>();
+vi.mock('@/lib/games/notifyFriendsOfAchievements', () => ({
+  notifyFriendsOfAchievements: (...args: unknown[]) =>
+    notifyFriendsOfAchievementsMock(...args),
+}));
+
 const generateAndPersistRoundReportMock =
   vi.fn<(...a: unknown[]) => Promise<{ status: string; report: string | null }>>();
 vi.mock('@/lib/games/generateRoundReport', () => ({
@@ -158,6 +166,7 @@ function expectNothingRan() {
   expect(persistResultSummariesMock).not.toHaveBeenCalled();
   expect(persistScoreDifferentialsMock).not.toHaveBeenCalled();
   expect(notifyAchievementUnlocksMock).not.toHaveBeenCalled();
+  expect(notifyFriendsOfAchievementsMock).not.toHaveBeenCalled();
   expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
   expect(logAdminEventMock).not.toHaveBeenCalled();
   expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
@@ -172,6 +181,7 @@ beforeEach(() => {
   persistResultSummariesMock.mockReset().mockResolvedValue(0);
   persistScoreDifferentialsMock.mockReset().mockResolvedValue(0);
   notifyAchievementUnlocksMock.mockReset().mockResolvedValue(0);
+  notifyFriendsOfAchievementsMock.mockReset().mockResolvedValue(0);
   generateAndPersistRoundReportMock
     .mockReset()
     .mockResolvedValue({ status: 'skipped', report: null });
@@ -308,7 +318,7 @@ describe('runFinishPipeline — the finish-pipeline claim', () => {
 // ─── The tail itself ────────────────────────────────────────────────────────
 
 describe('runFinishPipeline — the tail', () => {
-  it('runs the nine steps in their documented order', async () => {
+  it('runs the ten steps in their documented order', async () => {
     const client = buildSupabaseMock([]);
 
     await runFinishPipeline(client as never, input());
@@ -318,6 +328,7 @@ describe('runFinishPipeline — the tail', () => {
       persistResultSummariesMock,
       persistScoreDifferentialsMock,
       notifyAchievementUnlocksMock,
+      notifyFriendsOfAchievementsMock,
       generateAndPersistRoundReportMock,
       logAdminEventMock,
       notifyPlayersGameFinishedMock,
@@ -352,6 +363,7 @@ describe('runFinishPipeline — the tail', () => {
     });
     expect(persistScoreDifferentialsMock).toHaveBeenCalledWith(GAME_ID);
     expect(notifyAchievementUnlocksMock).toHaveBeenCalledWith(GAME_ID);
+    expect(notifyFriendsOfAchievementsMock).toHaveBeenCalledWith(GAME_ID);
     expect(generateAndPersistRoundReportMock).toHaveBeenCalledWith(GAME_ID);
   });
 
@@ -471,6 +483,7 @@ describe('runFinishPipeline — the tail', () => {
     expect(persistResultSummariesMock).toHaveBeenCalledTimes(1);
     expect(persistScoreDifferentialsMock).toHaveBeenCalledTimes(1);
     expect(notifyAchievementUnlocksMock).toHaveBeenCalledTimes(1);
+    expect(notifyFriendsOfAchievementsMock).toHaveBeenCalledTimes(1);
     expect(generateAndPersistRoundReportMock).toHaveBeenCalledTimes(1);
     expect(logAdminEventMock).toHaveBeenCalledTimes(1);
   });
