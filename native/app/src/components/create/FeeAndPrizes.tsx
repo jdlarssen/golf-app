@@ -9,9 +9,8 @@
 // Lagringen beskjærer med samme regel (`parsePrizesFromFormData`), så et slott
 // som er skjult her, lagres aldri. Logo lastes ikke opp i appen.
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { PRIZE_SLOTS, type PrizeDraft, type PrizeSlot } from '../../../../../lib/games/prizes';
+import { activePrizeSlots, prizeShapeFor, type PrizeDraft, type PrizeSlot } from '../../../../../lib/games/prizes';
 import { sideLabel } from '../../../../../lib/games/sideLabel';
-import { isMatchplayFamily } from '../../../../../lib/scoring/modes/types';
 import type { AppGameMode } from '../../lib/appFormats';
 import { PRIZE_TEXT, WIZARD_FEE_TEXT } from '../../lib/paymentCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
@@ -25,17 +24,13 @@ export interface FeeDraft {
   prizesOpen: boolean;
 }
 
-/** Slottene veiviseren viser for formatet og sideturneringen. */
+/** Slottene veiviseren viser: de som lagres (`activePrizeSlots`, nettets regel). */
 export function visiblePrizeSlots(
   mode: AppGameMode,
   side: { enabled: boolean; ldCount: number; ctpCount: number },
 ): PrizeSlot[] {
-  const ld = side.enabled ? side.ldCount : 0;
-  const ctp = side.enabled ? side.ctpCount : 0;
-  return PRIZE_SLOTS.filter((slot) =>
-    slot.category === 'placement'
-      ? !isMatchplayFamily(mode)
-      : slot.position <= (slot.category === 'longest_drive' ? ld : ctp),
+  return activePrizeSlots(
+    prizeShapeFor({ gameMode: mode, sideEnabled: side.enabled, sideLdCount: side.ldCount, sideCtpCount: side.ctpCount }),
   );
 }
 
@@ -76,7 +71,7 @@ export function FeeAndPrizes({
   return (
     <View testID="create-fee-and-prizes">
       <Text style={[ui.sectionTitle, styles.section]}>{WIZARD_FEE_TEXT.paymentLegend}</Text>
-      <Text style={ui.muted}>{WIZARD_FEE_TEXT.paymentHint}</Text>
+      <Text style={[ui.muted, styles.hint]}>{WIZARD_FEE_TEXT.paymentHint}</Text>
       <Field label={WIZARD_FEE_TEXT.entryFeeLabel}>
         <TextInput
           testID="create-entry-fee"
@@ -84,6 +79,8 @@ export function FeeAndPrizes({
           value={fee.entryFee}
           onChangeText={(entryFee) => onFee({ entryFee: entryFee.replace(/[^0-9]/g, '') })}
           keyboardType="number-pad"
+          // Basens tak er 100 000 kr (den delte parseren klamper dit).
+          maxLength={6}
           placeholder={WIZARD_FEE_TEXT.entryFeePlaceholder}
           placeholderTextColor={colors.muted}
         />
@@ -182,6 +179,8 @@ export function FeeAndPrizes({
 const styles = StyleSheet.create({
   // 24 pt over «Startkontingent» i tegningen: `sectionTitle` har 16, og 8 til.
   section: { marginTop: 24 },
+  // 8 pt mellom overskrift og hjelpetekst, som i tegningen (kolonnens `gap`).
+  hint: { marginTop: 8 },
   numbers: { fontVariant: ['tabular-nums'] },
   // 24 pt over raden i tegningen, som over «Startkontingent».
   prizesHead: {

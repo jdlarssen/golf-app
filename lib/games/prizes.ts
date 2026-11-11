@@ -241,6 +241,14 @@ export function prizeListFromDraft(draft: PrizeDraft): GamePrize[] {
 }
 
 /**
+ * Slottene som lagres for modus + side-counts, i visningsrekkefølge (samme regel
+ * som `prunePrizes`). Appens veiviser viser akkurat disse (#2749).
+ */
+export function activePrizeSlots(shape: PrizeGameShape): PrizeSlot[] {
+  return PRIZE_SLOTS.filter((slot) => isPrizeSlotActive(slot, shape));
+}
+
+/**
  * Antall premier som lagres: slott med utfylt beskrivelse som også er synlige
  * for modus + side-counts (samme regel som `prunePrizes`). Radene i veiviseren
  * og i «Rediger spill» og premiebord-raden teller med denne, så de aldri lover
