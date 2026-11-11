@@ -129,8 +129,8 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
 
 1. **Tilbake fører dit du kom fra.** Åpnet du skjermen fra et varsel, en lenke eller rett fra
    hjemskjermen, finnes ikke noe «der du kom fra». Da går tilbake til skjermen over i hierarkiet:
-   Hjem → spillet → hull, scorekort, tavla, godkjenning og avslutning. Hjem → ligaen → start runde og
-   markørens kort. Hjem → Profil → rommene under profilen. Hjem → innboksen; det du åpner derfra, ligger
+   Hjem → spillet → hull, scorekort, tavla, godkjenning og avslutning. Hjem → ligaen → start runde,
+   markørens kort og kortet bak et resultat i tabellen (#2815). Hjem → Profil → rommene under profilen. Hjem → innboksen; det du åpner derfra, ligger
    oppå innboksen, med spillet under (#2759), så to trykk på tilbake fra godkjenningen lander i innboksen.
    Unntak (#2748): står andre skjermer åpne når varselet eller lenka kommer,
    legges den nye skjermen oppå, og tilbake går dit du sto. Står du på hull 5 og trykker på en
@@ -224,6 +224,8 @@ Lag-flyt (`/signup/[shortId]/team`): kaptein navngir lag + fyller medspiller-slo
 **Delelenka og appen (#2748):** lenka og QR-koden arrangøren deler, går til `/pamelding/<kode>`, og QR-koden på plakaten har `?src=plakat`. Har du appen, åpner lenka skjermen «Påmelding» (`RoundInvite`). Der gjelder samme regel som på nettsiden (`lib/games/signupOffer.ts`): «Meld meg på» setter deg på lista og åpner runden, «Be om å bli med» sender forespørselen, og står du alt på lista, går du rett til runden. Lag, valg av side på matchplay, en ventende invitasjon på bare-inviterte og kapteinens lag gjør du på nettsiden, og knappen åpner `/signup/<kode>` i nettleseren. Uten appen sender `/pamelding/<kode>` deg videre til `/signup/<kode>` med ekte 307, og kilden følger med.
 
 **Liga uten klubb (#2662):** `/liga/bli-med/[code]` (auth-valgfri) viser ligaen, antall påmeldte og introkortet «Slik funker ligaen i Tørny». «Bli med» går via innlogging/konto og `/complete-profile` tilbake hit, og så rett inn i ligaen (`league_players`, bekreftet) og videre til `/liga/[id]` med «Hent appen». Arrangøren slår lenken av og på eller lager en ny på ligasiden i Klubbhuset, og deltakerne deler den videre fra ligasiden. Den som kommer inn etter start, kan spille en runde som fortsatt er åpen; stengte runder teller som uteblitt. Har du appen, åpner lenka skjermen «Bli med i liga» der (#2748, `LeagueJoin`, via `GET`/`POST /api/liga/bli-med/[code]`), med samme regel og samme skriving som nettsiden. Uten innlogging står det i innloggingsbåndet hva som venter, og skjermen kommer rett etter innloggingen. «Bli med» setter deg på lista og åpner ligasiden med «Du er med i ligaen.», og skjermen er borte fra tilbake-veien. Er du alt med, går du rett til ligaen, og ligger den alt bak deg, går du tilbake til den. Ligaen står på Hjem etterpå. Ligasiden i appen har «Del lenka» for deltakere når lenka står på og sesongen ikke er over.
+
+**Kortet bak et resultat (#2815):** i sesongtabellen på ligasiden er hvert spilt runderesultat en lenke til spillerens kort for runden, `/liga/[id]/kort/[gameId]/[userId]`, og i appen åpner et trykk skjermen `LeagueCard` (via `GET /api/liga/[id]/kort/[gameId]/[userId]`). Kortet er bare til lesing: slag, netto per hull i slagspill eller poeng per hull i stableford, spillehandicapet og resultatet, som er det samme tallet som i cellen. Den som får se ligaen (`canViewLeague`), får se et kort som teller i tabellen (`countingCards`); alle andre får «finnes ikke». Straff og «–» har ikke noe kort, og innbyggingen på klubbens nettside har ingen lenker. Tilbake går til ligaen.
 
 ### P3 — Spille en runde
 
