@@ -63,7 +63,8 @@ liga og bli med via delt lenke (#2748), startkontingent med betalingslenke og pr
 venterommet (#2749), og cup som lages, spilles og avsluttes i appen (#2752). Det er en
 eksplisitt eier-bestilling, så frysen er opphevet for disse delene. Pengeoppgjøret mellom
 spillere står fortsatt fryst og skjult i appen til etter lanseringen, så #2452 (penger på
-spill) bygges ikke ennå. Å melde seg på og av en klubbliga er Bør, rett etter lanseringen.
+spill) bygges ikke ennå. Å melde seg på og av en klubbliga var Bør, rett etter lanseringen,
+men eieren hentet det fram 2026-11-12 (#2839, se §4-noten «Hentet fram 2026-11-12»).
 
 ## 3. Tillatte baner nå (per juli 2026)
 
@@ -155,6 +156,16 @@ iPhone og Android ved lanseringen. Bør-punktene (klubbliga, åpen runde, termin
 lagpåmelding, oppgjøret og Face ID-lås) kommer rett etter lanseringen. Kan-punktene
 (gjester, «Revansje?»/«Som sist», flere formater og formatinnstillinger i appen) bygges
 ved behov. Det som ikke står på lista, beholder prioriteten fra 2026-08-30.
+
+**Hentet fram 2026-11-12 — Bør-lista før lanseringen:** Må-lista var nesten levert, og
+eieren hentet fem Bør-punkter fram fra «rett etter lanseringen» til november og desember:
+påmelding til åpen runde i appen (#2837), turneringslista i appen (#2838), klubbliga-
+påmelding (#2839), lagpåmelding (#2840) og Face ID-lås (#2841). Det er en eksplisitt
+eier-bestilling. Oppgjøret mellom spillere (#2452) er ikke med og står fortsatt fryst og
+skjult i appen, fordi butikktekstene og aldersmerkingen lover at appen ikke viser
+pengeoppgjør. Lag-påmeldings-forenklingene i §4 er heller ikke med; appen speiler det nettet
+gjør. Det som er merget før bumpen til bygg 14 (27.11, #2715), blir med i innsendingsbygget;
+resten kommer som oppdateringer.
 
 ## 5. Hva teller som «pull» (vekke-kriterier)
 
