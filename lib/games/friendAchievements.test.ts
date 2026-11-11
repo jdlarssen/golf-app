@@ -73,8 +73,11 @@ describe('friendWorthyMoments', () => {
   });
 });
 
+// The owner's rule (11.11): friends always, the league's players too in a
+// league round, one notice per person, never anyone from the game. A league
+// player's notice links the league; everyone else's links Venner.
 describe('achievementRecipients', () => {
-  it('a regular game tells the player’s friends', () => {
+  it('a regular game tells the player’s friends, linking Venner', () => {
     expect(
       achievementRecipients({
         playerId: 'ola',
@@ -82,7 +85,10 @@ describe('achievementRecipients', () => {
         friendIds: ['kari', 'per'],
         gamePlayerIds: ['ola'],
       }),
-    ).toEqual(['kari', 'per']);
+    ).toEqual([
+      { userId: 'kari', inLeague: false },
+      { userId: 'per', inLeague: false },
+    ]);
   });
 
   it('never tells a friend who played the same game', () => {
@@ -93,29 +99,36 @@ describe('achievementRecipients', () => {
         friendIds: ['kari', 'per'],
         gamePlayerIds: ['ola', 'per'],
       }),
-    ).toEqual(['kari']);
+    ).toEqual([{ userId: 'kari', inLeague: false }]);
   });
 
-  it('a league game tells the other league players, not friends outside the league', () => {
+  it('a league round tells friends outside the league and every other league player', () => {
     expect(
       achievementRecipients({
         playerId: 'ola',
         leagueMemberIds: ['ola', 'liv', 'per', 'kari'],
-        friendIds: ['nils'],
+        friendIds: ['nils', 'per'],
         gamePlayerIds: ['ola', 'liv'],
       }),
-    ).toEqual(['per', 'kari']);
+    ).toEqual([
+      // A friend outside the league is told, with the Venner link.
+      { userId: 'nils', inLeague: false },
+      // A friend in the league is told once, with the league link.
+      { userId: 'per', inLeague: true },
+      // A league player who is not a friend is told too.
+      { userId: 'kari', inLeague: true },
+    ]);
   });
 
   it('never tells the player themselves, and each person once', () => {
     expect(
       achievementRecipients({
         playerId: 'ola',
-        leagueMemberIds: null,
+        leagueMemberIds: ['ola', 'kari'],
         friendIds: ['ola', 'kari', 'kari'],
         gamePlayerIds: [],
       }),
-    ).toEqual(['kari']);
+    ).toEqual([{ userId: 'kari', inLeague: true }]);
   });
 
   it('nobody to tell gives an empty list', () => {

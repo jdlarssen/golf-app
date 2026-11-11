@@ -426,7 +426,7 @@ export function buildNotificationText(
     case 'friend_achievement': {
       // #2800: the best moment names the title (hole-in-one, then albatross,
       // then eagle); the detail gives every hole in order, and the course. A
-      // missing name is «En venn» to a friend, «En spiller» in a league.
+      // missing name is «En spiller» to a league player, else «En venn».
       const p = payload as NotificationPayload<'friend_achievement'>;
       const playerName =
         p.player_name ?? (p.league_id ? t('somePlayerFallback') : t('someoneFallback'));

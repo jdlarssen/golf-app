@@ -525,11 +525,12 @@ const gameCancelledSchema = z.object({
 });
 
 // friend_achievement (#2800): a player got a gross hole-in-one, albatross or
-// eagle, told when the game is finished (`notifyFriendsOfAchievements`). In a
-// league round (`league_id` set) it goes to the other league players, else to
-// the player's friends; never to anyone from the same game, so no recipient can
-// open the game (RLS, #1542) and the payload carries what the card says. One
-// notice per player per round: `moments` holds every hole, sorted, never empty.
+// eagle, told when the game is finished (`notifyFriendsOfAchievements`). It goes
+// to the player's friends and, in a league round, to every league player; never
+// to anyone from the same game, so no recipient can open the game (RLS, #1542)
+// and the payload carries what the card says. `league_id` is set only on the
+// notice to a league player (it links the league). One notice per player per
+// recipient per round: `moments` holds every hole, sorted, never empty.
 // Language-neutral (#583): a missing player name is filled at render time.
 const friendAchievementSchema = z.object({
   game_id: uuid,

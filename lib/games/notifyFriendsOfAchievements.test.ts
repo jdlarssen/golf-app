@@ -126,7 +126,7 @@ describe('notifyFriendsOfAchievements', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
-  it('a league round tells the other league players, not friends, and links the league', async () => {
+  it('a league round tells friends and league players once each, the league link only to league players', async () => {
     round = { ...friendRound(), game: { ...friendRound().game, league_round_id: ROUND_ID } };
     admin = adminWith({
       league_rounds: [{ data: { league_id: LEAGUE }, error: null }],
@@ -134,12 +134,31 @@ describe('notifyFriendsOfAchievements', () => {
         { data: [{ user_id: OLA }, { user_id: KARI }, { user_id: LIV }, { user_id: PER }], error: null },
       ],
     });
-    readFriendIdsMock.mockResolvedValue([NILS]);
+    // Per is a friend in the league, Nils a friend outside it, Liv a league
+    // player who is not a friend; Kari is a friend who played.
+    readFriendIdsMock.mockResolvedValue([KARI, PER, NILS]);
 
-    expect(await notifyFriendsOfAchievements(GAME)).toBe(2);
-    expect(readFriendIdsMock).not.toHaveBeenCalled();
-    expect(sentTo()).toEqual([LIV, PER]);
-    expect((notifyMock.mock.calls[0][0] as { payload: { league_id: string } }).payload.league_id).toBe(LEAGUE);
+    expect(await notifyFriendsOfAchievements(GAME)).toBe(3);
+    expect(readFriendIdsMock).toHaveBeenCalledWith(OLA);
+    const leagueIdTo = Object.fromEntries(
+      notifyMock.mock.calls.map(([opts]) => {
+        const o = opts as { userId: string; payload: { league_id: string | null } };
+        return [o.userId, o.payload.league_id];
+      }),
+    );
+    expect(leagueIdTo).toEqual({ [PER]: LEAGUE, [NILS]: null, [LIV]: LEAGUE });
+  });
+
+  it('a failed read of friends in a league round sends nothing for that player', async () => {
+    round = { ...friendRound(), game: { ...friendRound().game, league_round_id: ROUND_ID } };
+    admin = adminWith({
+      league_rounds: [{ data: { league_id: LEAGUE }, error: null }],
+      league_players: [{ data: [{ user_id: OLA }, { user_id: LIV }], error: null }],
+    });
+    readFriendIdsMock.mockRejectedValue(new Error('friendships down'));
+
+    await expect(notifyFriendsOfAchievements(GAME)).resolves.toBe(0);
+    expect(notifyMock).not.toHaveBeenCalled();
   });
 
   it('a failed read of the league gives no notices and never throws', async () => {

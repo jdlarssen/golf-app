@@ -11,11 +11,12 @@ const LOG = '[notifyFriendsOfAchievements]';
 
 /**
  * Best-effort (#2800): when a game is finished, tells the people around each
- * player who got a gross hole-in-one, albatross or eagle. A league round tells
- * the other league players, any other game the player's friends; nobody from
- * the same game is told (`achievementRecipients`, the one home of that rule).
- * One `friend_achievement` notice per player per recipient, with every moment
- * of the round in it. Inbox and push only, no mail.
+ * player who got a gross hole-in-one, albatross or eagle: the player's friends,
+ * and in a league round every league player too, each person once and nobody
+ * from the same game (`achievementRecipients`, the one home of that rule). A
+ * league player's notice carries `league_id` and links the league; a friend
+ * outside it links Venner. One `friend_achievement` notice per player per
+ * recipient, with every moment of the round in it. Inbox and push only, no mail.
  *
  * Runs once per game, inside the finish pipeline's claim, right after the
  * player's own `notifyAchievementUnlocks` and on the same read
@@ -62,20 +63,24 @@ export async function notifyFriendsOfAchievements(gameId: string): Promise<numbe
         const recipients = achievementRecipients({
           playerId: scorer.userId,
           leagueMemberIds: league?.memberIds ?? null,
-          // A league round tells the league, so friends are not read at all.
-          friendIds: league ? [] : await readFriendIds(scorer.userId),
+          friendIds: await readFriendIds(scorer.userId),
           gamePlayerIds: round.rosterIds,
         });
-        const payload = {
+        const base = {
           game_id: gameId,
           player_id: scorer.userId,
           player_name: nameById.get(scorer.userId) ?? null,
           course_name: courseName,
-          league_id: league?.leagueId ?? null,
           moments: scorer.moments.map((m) => ({ kind: m.kind, hole_number: m.holeNumber })),
         };
         const sends = await Promise.allSettled(
-          recipients.map((userId) => notify({ userId, kind: 'friend_achievement', payload })),
+          recipients.map(({ userId, inLeague }) =>
+            notify({
+              userId,
+              kind: 'friend_achievement',
+              payload: { ...base, league_id: inLeague && league ? league.leagueId : null },
+            }),
+          ),
         );
         let sent = 0;
         for (const r of sends) {
@@ -100,8 +105,8 @@ export async function notifyFriendsOfAchievements(gameId: string): Promise<numbe
 
 /**
  * The league behind a league round and its players, or `null` when the game
- * is not a league round. Throws on a failed read: «we don't know who is in the
- * league» must send nothing, not fall back to friends.
+ * is not a league round. Throws on a failed read: without the list nobody can
+ * say who is in the league or which link each notice gets, so nothing is sent.
  */
 async function readLeague(
   admin: AdminClient,
