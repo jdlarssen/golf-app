@@ -346,7 +346,10 @@ describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
 
   it('har flightkameraten ført kortet mitt, står linja i stedet for velgeren', async () => {
     const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
-    fetchMarkerOptions.mockResolvedValue({ ok: true, options: { required: false } });
+    fetchMarkerOptions.mockResolvedValue({
+      ok: true,
+      options: { required: false, marker: { reason: 'handedOver', userId: 'other', name: 'Ola Kompis' } },
+    });
     mockState.bundle = {
       ...simBundle,
       players: mockRevealBundle.players.map((player) =>
@@ -376,7 +379,7 @@ describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
     const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
     fetchMarkerOptions.mockResolvedValue({
       ok: true,
-      options: { required: false, returnedBy: { userId: 'kari', name: 'Kari Arrangør' } },
+      options: { required: false, marker: { reason: 'returned', userId: 'kari', name: 'Kari Arrangør' } },
     });
     mockState.bundle = {
       ...simBundle,

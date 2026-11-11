@@ -60,6 +60,7 @@ type Row = {
   submitted_at: string | null;
   marker_user_id: string | null;
   rejection_reason: string | null;
+  handed_over_at: string | null;
   withdrawn_at: string | null;
 };
 const row = (user_id: string, over: Partial<Row> = {}): Row => ({
@@ -67,6 +68,7 @@ const row = (user_id: string, over: Partial<Row> = {}): Row => ({
   submitted_at: null,
   marker_user_id: null,
   rejection_reason: null,
+  handed_over_at: null,
   withdrawn_at: null,
   ...over,
 });
@@ -199,7 +201,7 @@ describe('submitScorecardWithMarker', () => {
     }).toEqual({
       result: { ...delivered, handedOver: 1 },
       ownWrite: { marker_user_id: 'b' },
-      handoverWrite: { marker_user_id: 'a' },
+      handoverWrite: { marker_user_id: 'a', handed_over_at: expect.any(String) },
       stamped: 'string',
       handoverFilters: [
         ['in', 'user_id', ['b']],
@@ -250,7 +252,12 @@ describe('submitScorecardWithMarker', () => {
     });
   });
 
-  const HANDED = { data: [row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'b' }), row('b', { marker_user_id: 'a' })] };
+  const HANDED = {
+    data: [
+      row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'b' }),
+      row('b', { marker_user_id: 'a', handed_over_at: '2026-11-10T18:00:01Z' }),
+    ],
+  };
 
   it('B delivers the card A kept, unchanged: approved in A\'s name, nobody is asked', async () => {
     adminMock = buildSupabaseMock([HANDED, { data: Array.from({ length: 18 }, () => ({ entered_by: 'a' })) }]);
@@ -361,6 +368,23 @@ describe('submitScorecardWithMarker', () => {
       wrote: [],
       asked: [['m', 'league_marker_request', 'a']],
     });
+  });
+
+  // #2814 (the owner 11.11, «Ja, legg til feltet»): a reopened card is not
+  // handed over any more (0233 clears handed_over_at), so it goes to its
+  // marker and is never approved on delivery, even with every row the marker's.
+  it('a reopened handed-over card sent in unchanged goes to A and is not approved', async () => {
+    adminMock = buildSupabaseMock([
+      { data: [row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'b' }), row('b', { marker_user_id: 'a' })] },
+      { data: [{ user_id: 'b', users: { name: 'Berit', nickname: null } }] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'b', {});
+    expect({
+      ok: result.ok,
+      scoresRead: adminMock.__fromCalls.some((c) => c.table === 'scores'),
+      approved: approveScorecardCore.mock.calls.length,
+      asked: requests(),
+    }).toEqual({ ok: true, scoresRead: false, approved: 0, asked: [['a', 'league_marker_request', 'b']] });
   });
 
   it('a second tap (already delivered) tells nobody', async () => {

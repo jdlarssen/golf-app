@@ -48,6 +48,7 @@ const row = (user_id: string, over: Record<string, unknown> = {}) => ({
   submitted_at: null,
   marker_user_id: null,
   rejection_reason: null,
+  handed_over_at: null,
   withdrawn_at: null,
   ...over,
 });
@@ -111,12 +112,15 @@ describe('GET /api/games/[id]/marker-options', () => {
       {
         data: [
           row('anders', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'berit' }),
-          row('berit', { marker_user_id: 'anders' }),
+          row('berit', { marker_user_id: 'anders', handed_over_at: '2026-11-10T18:00:01Z' }),
         ],
       },
     ]);
     const res = await get();
-    expect({ status: res.status, body: await res.json() }).toEqual({ status: 200, body: { required: false } });
+    expect({ status: res.status, body: await res.json() }).toEqual({
+      status: 200,
+      body: { required: false, marker: { reason: 'handedOver', userId: 'anders', name: 'Anders' } },
+    });
   });
 
   it('a card its marker sent back → no picker, and who it goes back to', async () => {
@@ -125,7 +129,10 @@ describe('GET /api/games/[id]/marker-options', () => {
       MEMBERS,
       { data: [row('anders', { marker_user_id: 'arne', rejection_reason: 'hull 3' }), row('berit')] },
     ]);
-    expect(await (await get()).json()).toEqual({ required: false, returnedBy: { userId: 'arne', name: 'Arne' } });
+    expect(await (await get()).json()).toEqual({
+      required: false,
+      marker: { reason: 'returned', userId: 'arne', name: 'Arne' },
+    });
   });
 
   it('a delivered card → required: false', async () => {
