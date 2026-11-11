@@ -738,12 +738,15 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </Text>
     ) : null;
 
-  const flightBlock = handOver ? (
-    <View style={ui.card} testID="hand-over">
-      <Text style={ui.body}>{handOverLine(namesOf(flightMates), flightMates.length)}</Text>
-    </View>
-  ) :
-    flightMates.length > 0 ? (
+  // #2814: i en simulatorliga står linja om overleveringen i velgerens
+  // hint-stil rett over knappen, som `markedByNote` og nettets linje.
+  const handOverNote = handOver ? (
+    <Text style={ui.muted} testID="hand-over">
+      {handOverLine(namesOf(flightMates), flightMates.length)}
+    </Text>
+  ) : null;
+  const flightBlock =
+    !handOver && flightMates.length > 0 ? (
       <View style={ui.card} testID="flight-delivery">
         {flightDeliveryLines(flightMates).map((line) => (
           <Text key={line} style={ui.body}>
@@ -835,6 +838,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             {queueGuard}
             {markerPicker}
             {markedByNote}
+            {handOverNote}
             {teeShotBox ? (
               <TeeShotLockedSubmit
                 label={submitLabel}
@@ -886,6 +890,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 {flightBlock}
                 {queueGuard}
                 {markerPicker}
+                {handOverNote}
                 {teeShotBox ? (
                   <TeeShotLockedSubmit
                     label={deliverForLabel}

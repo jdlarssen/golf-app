@@ -18,6 +18,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
+import { markerNote } from './markerNote';
 import { PuttsSubmitPrompt } from './PuttsSubmitPrompt';
 import { ParAsideInline } from '../_components/ParAsideInline';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
@@ -715,9 +716,8 @@ async function FlightOnlyBody({
 }
 
 /**
- * #2814: the line over the button in a simulator league. A flightmate kept my
- * card and is my marker: «Anders er markøren din …». I kept flightmates'
- * cards: «Du er markør for Berit …». Otherwise no line.
+ * #2814: the marker line over the button in a simulator league
+ * (`markerNote`), or undefined outside one.
  */
 async function markerNoteFor(
   choice: MarkerChoice | null,
@@ -725,12 +725,12 @@ async function markerNoteFor(
 ): Promise<string | undefined> {
   if (!choice) return undefined;
   const t = await getTranslations('game.submit.marker');
-  const { markedBy } = choice;
-  if (markedBy) return t('markedBy', { name: markedBy.name ?? t('unknownPlayer') });
-  if (flightCards.length === 0) return undefined;
   const joinNames = await nameJoiner();
-  const names = joinNames(flightCards);
-  return flightCards.length === 1 ? t('handOver', { names }) : t('handOverMany', { names });
+  return markerNote((key, values) => t(key, values), {
+    markedByName: choice.markedBy ? choice.markedBy.name : undefined,
+    unknownPlayer: t('unknownPlayer'),
+    handOver: flightCards.length > 0 ? { names: joinNames(flightCards), count: flightCards.length } : null,
+  });
 }
 
 /**

@@ -164,21 +164,24 @@ describe('submitScorecardWithMarker', () => {
           { id: 'b', email: 'b@example.com', name: 'Berit', nickname: null, locale: 'no' },
         ],
       },
+      { data: [{ user_id: 'b' }] }, // reminder stamp, after the notice
     ]);
     const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'b' });
 
-    const handover = adminMock.__fromCalls.findLastIndex((c) => c.method === 'update');
+    const handover = adminMock.__fromCalls.findIndex(
+      (c) => c.method === 'update' && (c.args[0] as { marker_user_id?: string }).marker_user_id === 'a',
+    );
     const handoverFilters = adminMock.__fromCalls
       .slice(handover)
       .filter((c) => c.method === 'in' || c.method === 'is')
       .slice(0, 4)
       .map((c) => [c.method, ...c.args]);
-    const [ownWrite, handoverWrite] = updates() as [Record<string, unknown>, Record<string, unknown>];
+    const [ownWrite, handoverWrite, stampWrite] = updates() as Record<string, unknown>[];
     expect({
       result,
       ownWrite,
-      handoverMarker: handoverWrite.marker_user_id,
-      stamped: typeof handoverWrite.deliver_reminder_sent_at,
+      handoverWrite,
+      stamped: typeof stampWrite?.deliver_reminder_sent_at,
       handoverFilters,
       core: submitScorecardCore.mock.calls.map((c) => c.slice(1)),
       markerRequest: notify.mock.calls.map((c) => [(c as unknown as [{ userId: string; payload: { player_id: string } }])[0].userId, (c as unknown as [{ payload: { player_id: string } }])[0].payload.player_id]),
@@ -189,7 +192,7 @@ describe('submitScorecardWithMarker', () => {
     }).toEqual({
       result: { ...delivered, handedOver: 1 },
       ownWrite: { marker_user_id: 'b' },
-      handoverMarker: 'a',
+      handoverWrite: { marker_user_id: 'a' },
       stamped: 'string',
       handoverFilters: [
         ['in', 'user_id', ['b']],
@@ -201,6 +204,26 @@ describe('submitScorecardWithMarker', () => {
       markerRequest: [['b', 'a']],
       told: [['b', 'b@example.com', { id: 'g1', name: 'Runde 1' }, 'Anders']],
     });
+  });
+
+  it('a notice that could not be sent leaves the card unstamped, so the sweep reminds B', async () => {
+    loadFlightDeliveryCards.mockResolvedValueOnce([{ userId: 'b' }]);
+    adminMock = buildSupabaseMock([
+      FLIGHT_AB,
+      MEMBERS,
+      { data: [{ user_id: 'a' }] },
+      { data: [] },
+      GAME,
+      { data: [{ user_id: 'b' }] }, // handover write
+      { data: null, error: { message: 'connection reset' } }, // game name read
+      { data: [] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', { alsoFor: ['b'], markerUserId: 'm' });
+    expect({
+      handedOver: (result as { handedOver?: number }).handedOver,
+      told: sendDeliveryReminder.mock.calls.length,
+      stamped: updates().some((u) => 'deliver_reminder_sent_at' in (u as object)),
+    }).toEqual({ handedOver: 1, told: 0, stamped: false });
   });
 
   it('a failed handover does not fail A\'s delivery', async () => {
