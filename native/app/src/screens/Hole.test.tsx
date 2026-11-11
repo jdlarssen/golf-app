@@ -167,12 +167,15 @@ const mockState: {
   teeShots: unknown[];
   teeShotQueue: unknown[];
   teeStarters: unknown[];
+  /** #2348: slagkøen lagringsbrikka leser. */
+  queue: unknown[];
 } = {
   bundle: mockSoloBundle,
   scores: [],
   teeShots: [],
   teeShotQueue: [],
   teeStarters: [],
+  queue: [],
 };
 
 // #2751: Patsome, 2 lag à 2. «makker» er lex-min og kaptein på lag 1. Lag 1 har
@@ -263,6 +266,7 @@ jest.mock('../data/db', () => ({
   listScoresForGame: jest.fn(async () => mockState.scores),
   listTeeShotsForGame: jest.fn(async () => mockState.teeShots),
   listTeeShotQueue: jest.fn(async () => mockState.teeShotQueue),
+  listQueue: jest.fn(async () => mockState.queue),
   listTeeStartersForGame: jest.fn(async () => mockState.teeStarters),
 }));
 jest.mock('../session', () => ({
@@ -368,6 +372,7 @@ describe('Hole', () => {
     mockState.teeShots = [];
     mockState.teeShotQueue = [];
     mockState.teeStarters = [];
+    mockState.queue = [];
     mockScheme.value = 'light';
     mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
@@ -1343,5 +1348,52 @@ describe('Hole', () => {
       },
       { timeout: 4000 },
     );
+  });
+
+  it('lagringsbrikka (#2348): raden står klar før første hull, uten brikke', async () => {
+    await renderHole();
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-chip-row')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('sync-chip')).toBeNull();
+  });
+
+  it('lagringsbrikka (#2348): et tastet hull uten noe i køen er «Alt er lagret»', async () => {
+    mockState.scores = [localScore('me', 4, null, 1)];
+    await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-chip-dot-saved')).toBeTruthy();
+    });
+    expect(screen.getByText('Alt er lagret')).toBeTruthy();
+  });
+
+  it('lagringsbrikka (#2348): slag som venter, gir gul brikke og ● i arket', async () => {
+    const queued = (userId: string, holeNumber: number) => ({
+      id: `${GAME_ID}:${userId}:${holeNumber}`,
+      scoreId: `${GAME_ID}:${userId}:${holeNumber}`,
+      attemptCount: 1,
+      lastError: 'TypeError: Network request failed',
+      createdAt: '2026-08-30T10:00:00.000Z',
+    });
+    mockState.scores = [localScore('me', 4, null, 1), localScore('mate', 5, null, 1), localScore('me', 4, null, 2)];
+    mockState.queue = [queued('me', 2), queued('mate', 1)];
+    await renderHole(2);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-chip-dot-pending')).toBeTruthy();
+    });
+    expect(screen.getByText('2 slag på telefonen')).toBeTruthy();
+    expect(screen.queryByTestId('sync-sheet')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('sync-chip'));
+    expect(screen.getByTestId('sync-sheet')).toBeTruthy();
+    expect(screen.getByTestId('sync-cell-1-pending')).toBeTruthy();
+    expect(screen.getByTestId('sync-cell-3-empty')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Lagring' }).props.accessibilityState).toMatchObject({
+      expanded: true,
+    });
+
+    await fireEvent.press(screen.getByText('Fortsett runden'));
+    expect(screen.queryByTestId('sync-sheet')).toBeNull();
   });
 });
