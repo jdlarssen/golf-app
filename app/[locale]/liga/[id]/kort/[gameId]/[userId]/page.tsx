@@ -91,7 +91,9 @@ export default async function LeagueCardPage({ params }: { params: Params }) {
           <p className="font-serif text-base font-medium text-text" data-testid="league-card-result">
             {pointsBased ? t('resultPoints', { value }) : t('result', { value })}
           </p>
-          <p className="mt-0.5 text-xs text-muted tabular-nums">{facts.join(' · ')}</p>
+          <p className="mt-0.5 text-xs text-muted tabular-nums" data-testid="league-card-facts">
+            {facts.join(' · ')}
+          </p>
         </div>
         <div className="px-4 py-3">
           <ScorecardTable
