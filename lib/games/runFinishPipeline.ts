@@ -5,6 +5,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { persistScoreDifferentials } from '@/lib/games/persistScoreDifferentials';
 import { notifyAchievementUnlocks } from '@/lib/games/notifyAchievementUnlocks';
+import { notifyFriendsOfAchievements } from '@/lib/games/notifyFriendsOfAchievements';
 import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
 import { reportStart } from '@/lib/games/roundReportExcerpt';
 import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
@@ -62,7 +63,7 @@ import type { HoleSegment } from '@/lib/scoring';
  * the end. That is a deliberate at-most-once choice over at-least-once, because
  * the expensive steps are the non-idempotent ones: `notifyAchievementUnlocks`
  * does a bare INSERT with no unique index (a second pass = duplicate varsler in
- * everyone's feed), `generateAndPersistRoundReport` bills an Anthropic call per
+ * everyone's feed; `notifyFriendsOfAchievements` the same in the friends'), `generateAndPersistRoundReport` bills an Anthropic call per
  * pass, and the «Resultatet er klart»-mail is re-sendable to real inboxes. A
  * crash between the claim and the last step therefore costs a missing tail on
  * one game — visible, fixable, silent to players — while the alternative costs
@@ -225,6 +226,11 @@ export async function runFinishPipeline(
   // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
   await notifyAchievementUnlocks(game.id);
+
+  // #2800: best-effort varsel til vennene (eller ligaen) om brutto eagle,
+  // albatross og hole-in-one. Inne i samme claim, så en ny sveip aldri sender
+  // to ganger. Feiler aldri ut avslutningen.
+  await notifyFriendsOfAchievements(game.id);
 
   // #1008: best-effort AI-rundereferat («Pressetribunen»). Må kjøre FØR
   // mail-blasten lenger ned slik at teksten kan bli med i «Resultatet er
