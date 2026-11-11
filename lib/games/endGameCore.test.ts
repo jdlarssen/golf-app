@@ -42,6 +42,7 @@ import { NoRowsAffectedError } from '@/lib/supabase/affectedRows';
  * Post-flip steps, in order:
  *   finishDerivedGames(client, …) · persistResultSummaries(gameObject) ·
  *   persistScoreDifferentials(gameId) · notifyAchievementUnlocks(gameId) ·
+ *   notifyFriendsOfAchievements(gameId) ·
  *   generateAndPersistRoundReport(gameId) · logAdminEvent(…) ·
  *   [unless suppressed] notifyPlayersGameFinished(…) →
  *   buildGameFinishedRecipients(adminClient, …) → sendGameFinishedNotification(…) ·
@@ -75,6 +76,12 @@ const notifyAchievementUnlocksMock = vi.fn<(...a: unknown[]) => Promise<unknown>
 vi.mock('@/lib/games/notifyAchievementUnlocks', () => ({
   notifyAchievementUnlocks: (...args: unknown[]) =>
     notifyAchievementUnlocksMock(...args),
+}));
+
+const notifyFriendsOfAchievementsMock = vi.fn<(...a: unknown[]) => Promise<unknown>>();
+vi.mock('@/lib/games/notifyFriendsOfAchievements', () => ({
+  notifyFriendsOfAchievements: (...args: unknown[]) =>
+    notifyFriendsOfAchievementsMock(...args),
 }));
 
 const generateAndPersistRoundReportMock =
@@ -226,6 +233,7 @@ function expectTailUntouched() {
   expect(persistResultSummariesMock).not.toHaveBeenCalled();
   expect(persistScoreDifferentialsMock).not.toHaveBeenCalled();
   expect(notifyAchievementUnlocksMock).not.toHaveBeenCalled();
+  expect(notifyFriendsOfAchievementsMock).not.toHaveBeenCalled();
   expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
   expect(logAdminEventMock).not.toHaveBeenCalled();
   expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
@@ -242,6 +250,7 @@ beforeEach(() => {
   persistResultSummariesMock.mockReset().mockResolvedValue(0);
   persistScoreDifferentialsMock.mockReset().mockResolvedValue(0);
   notifyAchievementUnlocksMock.mockReset().mockResolvedValue(0);
+  notifyFriendsOfAchievementsMock.mockReset().mockResolvedValue(0);
   generateAndPersistRoundReportMock
     .mockReset()
     .mockResolvedValue({ status: 'skipped', report: null });
@@ -628,6 +637,7 @@ describe('endGameCore — write order', () => {
     expect(persistResultSummariesMock).not.toHaveBeenCalled();
     expect(persistScoreDifferentialsMock).not.toHaveBeenCalled();
     expect(notifyAchievementUnlocksMock).not.toHaveBeenCalled();
+    expect(notifyFriendsOfAchievementsMock).not.toHaveBeenCalled();
     expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
     expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
@@ -675,6 +685,7 @@ describe('endGameCore — write order', () => {
     expect(persistResultSummariesMock).not.toHaveBeenCalled();
     expect(persistScoreDifferentialsMock).not.toHaveBeenCalled();
     expect(notifyAchievementUnlocksMock).not.toHaveBeenCalled();
+    expect(notifyFriendsOfAchievementsMock).not.toHaveBeenCalled();
     expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
     expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
@@ -725,6 +736,7 @@ describe('endGameCore — post-flip tail', () => {
       persistResultSummariesMock,
       persistScoreDifferentialsMock,
       notifyAchievementUnlocksMock,
+      notifyFriendsOfAchievementsMock,
       generateAndPersistRoundReportMock,
       logAdminEventMock,
       notifyPlayersGameFinishedMock,
@@ -781,6 +793,7 @@ describe('endGameCore — post-flip tail', () => {
       persistResultSummariesMock,
       persistScoreDifferentialsMock,
       notifyAchievementUnlocksMock,
+      notifyFriendsOfAchievementsMock,
       generateAndPersistRoundReportMock,
       logAdminEventMock,
       notifyPlayersGameFinishedMock,
@@ -827,6 +840,7 @@ describe('endGameCore — post-flip tail', () => {
     });
     expect(persistScoreDifferentialsMock).toHaveBeenCalledWith(GAME_ID);
     expect(notifyAchievementUnlocksMock).toHaveBeenCalledWith(GAME_ID);
+    expect(notifyFriendsOfAchievementsMock).toHaveBeenCalledWith(GAME_ID);
     expect(generateAndPersistRoundReportMock).toHaveBeenCalledWith(GAME_ID);
   });
 
@@ -991,6 +1005,7 @@ describe('endGameCore — suppressPerGameNotifications', () => {
     expect(persistResultSummariesMock).toHaveBeenCalledTimes(1);
     expect(persistScoreDifferentialsMock).toHaveBeenCalledTimes(1);
     expect(notifyAchievementUnlocksMock).toHaveBeenCalledTimes(1);
+    expect(notifyFriendsOfAchievementsMock).toHaveBeenCalledTimes(1);
     expect(generateAndPersistRoundReportMock).toHaveBeenCalledTimes(1);
     expect(logAdminEventMock).toHaveBeenCalledTimes(1);
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
