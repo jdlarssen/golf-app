@@ -1,8 +1,8 @@
 // native/app/src/screens/CreateGame.tsx
-// Native N6a (#1854): opprett-veiviseren — format, oppsett, bane og tid,
-// spillere, publiser.
+// Native N6a (#1854): opprett-veiviseren — arrangement (#2753), format,
+// oppsett, bane og tid, spillere, publiser.
 //
-// **Fem steg i ÉN skjerm**, ikke fem skjermer i stacken. Utkastet lever i
+// **Seks steg i ÉN skjerm**, ikke fem skjermer i stacken. Utkastet lever i
 // minnet og forkastes hvis arrangøren går ut; draft-lagring og gjenopptak er
 // web-eid (kontraktens Key Decision), og med lokal steg-state slipper vi å
 // tre halve utkast gjennom navigasjons-parametre.
@@ -32,6 +32,7 @@ import { countPrizesInPlay, emptyPrizeDraft, prizeShapeFor } from '../../../../l
 import { PAYMENT_TEXT, PRIZE_TEXT } from '../lib/paymentCopy';
 import type { CommonSetup, SetupText } from '../components/create/SetupStep';
 import { SetupStep } from '../components/create/SetupStep';
+import { TypeStep } from '../components/create/TypeStep';
 import {
   fetchCourses,
   fetchRosterCandidates,
@@ -40,11 +41,13 @@ import {
   type CourseOption,
   type RosterCandidate,
 } from '../data/createGame';
-import { fetchFormatCatalog } from '../data/formatCatalog';
+import { fetchFormatCatalog, type FormatIntent } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
 import { isDeviceOnline } from '../data/syncTriggers';
 import { hasHcpAllowanceField } from '../lib/allowanceCopy';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
+import { ARRANGEMENT_TEXT, type AppIntent } from '../lib/arrangementCopy';
+import { openOrReturn } from '../lib/backTo';
 import {
   createFailureBelongsOnWeb,
   describeCreateGameFailure,
@@ -75,10 +78,11 @@ import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
 
-const STEPS = ['format', 'setup', 'course', 'players', 'summary'] as const;
+const STEPS = ['type', 'format', 'setup', 'course', 'players', 'summary'] as const;
 type Step = (typeof STEPS)[number];
 
 const STEP_TITLES: Record<Step, string> = {
+  type: 'Arrangement',
   format: 'Format',
   setup: 'Oppsett',
   course: 'Bane og tid',
@@ -140,6 +144,12 @@ interface PickedPlayer {
   teeGender: TeeGenderUi | null;
 }
 
+/**
+ * Typene i steg 1 (#2753). Klubb-turnering kommer når appen kan lage den, og
+ * «Solo / test» finnes ikke i appen (eierens valg 01.11).
+ */
+const INTENTS: readonly AppIntent[] = ['kompis', 'cup'];
+
 /** Neste hele time, minst en time fram. Tee-off skal aldri starte tomt. */
 function defaultTeeOff(): Date {
   const date = new Date();
@@ -153,7 +163,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   const { ui } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
 
-  const [step, setStep] = useState<Step>('format');
+  const [step, setStep] = useState<Step>('type');
+  const [intent, setIntent] = useState<AppIntent | null>(null);
   const [gameMode, setGameMode] = useState<AppGameMode | null>(null);
   const [nameTouched, setNameTouched] = useState(false);
   const [common, setCommon] = useState<CommonSetup>({
@@ -204,7 +215,12 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     action: 'web' | null;
   } | null>(null);
 
-  const formats = useRemote(fetchFormatCatalog);
+  // Formatlista følger typen (#2753). Cup har sin egen veiviser og ingen liste
+  // her, så lista hentes for kompis til en annen type er valgt.
+  const formatIntent: FormatIntent = intent === 'klubb' ? 'klubb' : 'kompis';
+  const formats = useRemote(
+    useCallback(() => fetchFormatCatalog(formatIntent), [formatIntent]),
+  );
   const courses = useRemote(fetchCourses);
   // #2757: tilbake fra «Ny bane» med en bane, lagret eller «Bruk denne». Banen
   // velges selv om lista ennå ikke har den: `CourseStep` viser raden så snart den
@@ -436,7 +452,17 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     if (leavingRef.current) navigation.dispatch(data.action);
     else if (!busy) setStep(STEPS[stepIndex - 1]!);
   });
-  const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
+  const blocker = stepBlocker(step, intent, gameMode, common.name, courseId, teeBoxId);
+
+  // Cup lages i sin egen veiviser (#2752). Den legges oppå typevalget, så
+  // tilbake derfra står du her igjen med Cup valgt.
+  const goNext = () => {
+    if (step === 'type' && intent === 'cup') {
+      openOrReturn(navigation, 'CreateCup');
+      return;
+    }
+    setStep(STEPS[stepIndex + 1]!);
+  };
 
   // Belte og seler, som webbens #721-backstop: ingen skal kunne publiseres på et
   // tee-sett teen ikke rater — banehandicapet fryses fra det settet ved start.
@@ -454,6 +480,10 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       <Text style={ui.sectionTitle} testID="create-progress">
         {`Steg ${stepIndex + 1} av ${STEPS.length} · ${STEP_TITLES[step]}`}
       </Text>
+
+      {step === 'type' ? (
+        <TypeStep intents={INTENTS} selected={intent} onSelect={setIntent} />
+      ) : null}
 
       {step === 'format' ? (
         <FormatStep
@@ -568,7 +598,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
             accessibilityRole="button"
             style={[ui.button, styles.navButton, blocker !== null && styles.dimmed]}
             disabled={blocker !== null}
-            onPress={() => setStep(STEPS[stepIndex + 1]!)}
+            onPress={goNext}
           >
             <Text style={ui.buttonText}>Neste</Text>
           </Pressable>
@@ -587,11 +617,13 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
 /** Hva som mangler før steget er ferdig, eller `null` når det er det. */
 function stepBlocker(
   step: Step,
+  intent: AppIntent | null,
   gameMode: AppGameMode | null,
   name: string,
   courseId: string | null,
   teeBoxId: string | null,
 ): string | null {
+  if (step === 'type' && intent === null) return ARRANGEMENT_TEXT.noIntent;
   if (step === 'format' && gameMode === null) return 'Velg et format for å gå videre.';
   if (step === 'setup' && name.trim() === '') return 'Gi spillet et navn.';
   if (step === 'course' && (courseId === null || teeBoxId === null)) {

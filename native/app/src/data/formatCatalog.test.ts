@@ -45,7 +45,7 @@ describe('fetchFormatCatalog', () => {
       format_intent_mapping: [queryStub({ data: MAPPING_ROWS, error: null })],
     });
 
-    const entries = await catalog().fetchFormatCatalog();
+    const entries = await catalog().fetchFormatCatalog('kompis');
     expect(entries.map((e) => e.slug).sort()).toEqual([...APP_SUPPORTED_MODES].sort());
   });
 
@@ -72,7 +72,7 @@ describe('fetchFormatCatalog', () => {
       ],
     });
 
-    expect(await catalog().fetchFormatCatalog()).toEqual([
+    expect(await catalog().fetchFormatCatalog('kompis')).toEqual([
       {
         slug: 'stableford',
         label: 'Stableford',
@@ -90,23 +90,52 @@ describe('fetchFormatCatalog', () => {
     ]);
   });
 
-  it('slår sammen flere intent-mappinger til laveste sort_order', async () => {
+  // #2753: typen styrer lista. Filteret ligger i spørringen, så testen ser at
+  // det faktisk sendes, og at typens egen sort_order gir rekkefølgen.
+  it.each(['kompis', 'klubb'] as const)('spør bare etter mappingene for %s', async (intent) => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const mapping = queryStub({ data: MAPPING_ROWS, error: null });
+    routeFrom({
+      formats: [queryStub({ data: FORMAT_ROWS, error: null })],
+      format_intent_mapping: [mapping],
+    });
+
+    const entries = await catalog().fetchFormatCatalog(intent);
+    expect(stepArgs(mapping, 'eq')).toEqual([
+      ['intent', intent],
+      ['is_visible', true],
+    ]);
+    expect(entries.map((e) => e.sortOrder)).toEqual(
+      [...entries.map((e) => e.sortOrder)].sort((a, b) => a - b),
+    );
+  });
+
+  it('bryter likt sort_order på slug', async () => {
     const { queryStub, routeFrom } = mocks();
     routeFrom({
-      formats: [queryStub({ data: [{ slug: 'skins', icon_key: 'i' }], error: null })],
+      formats: [
+        queryStub({
+          data: [
+            { slug: 'wolf', icon_key: 'w' },
+            { slug: 'skins', icon_key: 's' },
+          ],
+          error: null,
+        }),
+      ],
       format_intent_mapping: [
         queryStub({
           data: [
-            { format_slug: 'skins', is_primary: false, sort_order: 7 },
-            { format_slug: 'skins', is_primary: true, sort_order: 3 },
+            { format_slug: 'wolf', is_primary: false, sort_order: 5 },
+            { format_slug: 'skins', is_primary: false, sort_order: 5 },
           ],
           error: null,
         }),
       ],
     });
 
-    expect(await catalog().fetchFormatCatalog()).toEqual([
-      { slug: 'skins', label: 'Skins', iconKey: 'i', isPrimary: true, sortOrder: 3 },
+    expect((await catalog().fetchFormatCatalog('kompis')).map((e) => e.slug)).toEqual([
+      'skins',
+      'wolf',
     ]);
   });
 
@@ -122,7 +151,7 @@ describe('fetchFormatCatalog', () => {
       ],
     });
 
-    const slugs = (await catalog().fetchFormatCatalog()).map((e) => e.slug);
+    const slugs = (await catalog().fetchFormatCatalog('kompis')).map((e) => e.slug);
     expect(slugs).not.toContain('wolf');
     expect(slugs).toHaveLength(APP_SUPPORTED_MODES.length - 1);
   });
@@ -138,7 +167,7 @@ describe('fetchFormatCatalog', () => {
       format_intent_mapping: [queryStub({ data: MAPPING_ROWS, error: null })],
     });
 
-    const slugs = (await catalog().fetchFormatCatalog()).map((e) => e.slug);
+    const slugs = (await catalog().fetchFormatCatalog('kompis')).map((e) => e.slug);
     expect(slugs).not.toContain('skins');
   });
 
@@ -150,7 +179,7 @@ describe('fetchFormatCatalog', () => {
     });
 
     // Tom liste ER et svar: admin har slått av alt. Det skal IKKE kaste.
-    await expect(catalog().fetchFormatCatalog()).resolves.toEqual([]);
+    await expect(catalog().fetchFormatCatalog('kompis')).resolves.toEqual([]);
   });
 
   // #1832-guardrailen: en feilet henting må kunne skilles fra en tom liste,
@@ -167,7 +196,7 @@ describe('fetchFormatCatalog', () => {
       format_intent_mapping: [queryStub(formats ? fine : boom)],
     });
 
-    await expect(catalog().fetchFormatCatalog()).rejects.toThrow('nettverket falt');
+    await expect(catalog().fetchFormatCatalog('kompis')).rejects.toThrow('nettverket falt');
   });
 
   it('har en egen note for den feilede hentingen', () => {
