@@ -373,6 +373,8 @@ describe('Hole', () => {
     mockState.teeShotQueue = [];
     mockState.teeStarters = [];
     mockState.queue = [];
+    // #2348: en test kan la lesingen av køen henge; neste test leser som vanlig.
+    (require('../data/db') as { listQueue: jest.Mock }).listQueue.mockImplementation(async () => mockState.queue);
     mockScheme.value = 'light';
     mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
@@ -847,6 +849,21 @@ describe('Hole', () => {
         'Hole',
         expect.objectContaining({ gameId: 'front9-game', holeNumber: 9 }),
       );
+    });
+
+    it('lagringsarket (#2348) viser bare spillets egne hull, ikke søsterhalvdelens', async () => {
+      mockState.bundle = halfBundle('back9', sibling('front9-game', 'front9'));
+      mockState.scores = scoredHere(10);
+
+      await openOn(11);
+
+      await waitFor(() => expect(screen.getByTestId('sync-chip')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('sync-chip'));
+      expect(screen.getByTestId('sync-cell-10-sent')).toBeTruthy();
+      expect(screen.getByTestId('sync-cell-18-empty')).toBeTruthy();
+      // Hull 1–9 føres i søsterspillet; arket kjenner ikke køen der og viser dem ikke.
+      expect(screen.queryByTestId('sync-cell-1-empty')).toBeNull();
+      expect(screen.queryByTestId('sync-cell-9-empty')).toBeNull();
     });
 
     it('et hull utenfor spillet sender til spillets første hull, uten føring imens', async () => {
@@ -1365,6 +1382,40 @@ describe('Hole', () => {
       expect(screen.getByTestId('sync-chip-dot-saved')).toBeTruthy();
     });
     expect(screen.getByText('Alt er lagret')).toBeTruthy();
+  });
+
+  it('lagringsbrikka (#2348): ingen brikke før køen er lest, heller ikke «Alt er lagret»', async () => {
+    const { listQueue } = require('../data/db') as { listQueue: jest.Mock };
+    listQueue.mockImplementation(() => new Promise(() => undefined));
+    mockState.scores = [localScore('me', 4, null, 1)];
+    await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-chip-row')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('sync-chip')).toBeNull();
+  });
+
+  it('lagringsbrikka (#2348): et hullbytte mens slag venter, gir aldri «Alt er lagret»', async () => {
+    const { listQueue } = require('../data/db') as { listQueue: jest.Mock };
+    mockState.scores = [localScore('me', 4, null, 1), localScore('me', 4, null, 2)];
+    mockState.queue = [1, 2].map((holeNumber) => ({
+      id: `${GAME_ID}:me:${holeNumber}`,
+      scoreId: `${GAME_ID}:me:${holeNumber}`,
+      attemptCount: 1,
+      lastError: 'TypeError: Network request failed',
+      createdAt: '2026-08-30T10:00:00.000Z',
+    }));
+    const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
+    const { rerender } = await render(holeElement(2, navigation));
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-chip-dot-pending')).toBeTruthy();
+    });
+    // Neste lesing svarer aldri: brikka skal stå på det den sist visste.
+    listQueue.mockImplementation(() => new Promise(() => undefined));
+    await rerender(holeElement(3, navigation));
+    expect(screen.queryByTestId('sync-chip-dot-saved')).toBeNull();
+    expect(screen.getByTestId('sync-chip-dot-pending')).toBeTruthy();
+    expect(screen.getByText('2 slag på telefonen')).toBeTruthy();
   });
 
   it('lagringsbrikka (#2348): slag som venter, gir gul brikke og ● i arket', async () => {

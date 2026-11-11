@@ -236,6 +236,10 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   // og «+» ser ett sett rader på den nye eieren. Skrivingen går fortsatt på
   // eier-id-en, aldri på en foldet rads `id`.
   const scores = useTeamScores(localScores, bundle);
+  // #2348: lagringsbrikka leser køene her, over `HoleView` som monteres på nytt
+  // per hull. Ellers startet hvert hull med tom kø og sa «Alt er lagret» til
+  // første lesing svarte, også mens slag ventet.
+  const sync = useRoundSyncState(gameId, localScores);
   // Wolf/BBB henter valgene sine fra serveren. De elleve andre formatene
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste nettkall — og
   // før bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
@@ -393,6 +397,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
           : null
       }
       siblingFilled={siblingFilled}
+      sync={sync}
       goToHole={goToHole}
       onSubmit={() => openOrReturn(navigation, 'Scorecard', { gameId })}
     />
@@ -458,6 +463,7 @@ function HoleView({
   putts,
   teeShots,
   siblingFilled,
+  sync,
   goToHole,
   onSubmit,
 }: {
@@ -480,6 +486,8 @@ function HoleView({
   teeShots: { minimum: number; rows: LocalTeeShot[]; reload: () => Promise<void> } | null;
   /** #2752: hullene jeg har ført i den andre halvdelen av en delt cup-dag. */
   siblingFilled: readonly number[];
+  /** #2348: rundens køer (`useRoundSyncState`), lest i hullskjermen. */
+  sync: ReturnType<typeof useRoundSyncState>;
   goToHole: (next: number) => void;
   onSubmit: () => void;
 }) {
@@ -500,9 +508,8 @@ function HoleView({
   // #2751: telefonen fikk ikke lagret utslagsvalget. Står i velgeren, så hullet
   // kan føres som før.
   const [teeStarterFailed, setTeeStarterFailed] = useState(false);
-  // #2348: lagringsbrikka. Leser køene og sier om slagene er sendt, ligger på
-  // telefonen eller ikke ble lagret; arket «Trygt på telefonen» er åpent eller ikke.
-  const sync = useRoundSyncState(gameId, scores);
+  // #2348: arket «Trygt på telefonen» er åpent eller ikke. Køene leses i
+  // hullskjermen (`sync`), så det står gjennom et hullbytte.
   const online = useDeviceOnline();
   const [syncSheetOpen, setSyncSheetOpen] = useState(false);
 
@@ -882,10 +889,12 @@ function HoleView({
   // toppen når brikka dukker opp etter første trykk.
   const chipState = syncChipState(sync.state);
   const roundActive = bundle.game.status === 'active';
+  // Før køene er lest, vet ingen om noe venter: da står raden tom.
   const showChip =
-    sync.state.pendingScoreCount + sync.state.pendingTeeShotCount > 0 ||
-    sync.state.quarantinedHoles.length > 0 ||
-    (roundActive && sync.scoredHoles.size > 0);
+    sync.loaded &&
+    (sync.state.pendingScoreCount + sync.state.pendingTeeShotCount > 0 ||
+      sync.state.quarantinedHoles.length > 0 ||
+      (roundActive && sync.scoredHoles.size > 0));
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID="hole-screen">
@@ -1194,7 +1203,9 @@ function HoleView({
         open={syncSheetOpen}
         state={sync.state}
         scoredHoles={sync.scoredHoles}
-        holes={roundHoles}
+        // Spillets egne hull: køen og slagene leses for dette spillet, så den
+        // andre halvdelen av en delt cupdag ville stått som «ikke tastet».
+        holes={ownHoles}
         online={online}
         sunlight={sunlight}
         onGoToHole={(n) => {
