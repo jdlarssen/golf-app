@@ -11,6 +11,7 @@ import { formatNumber } from '@/lib/i18n/format';
 import { leagueCardAccess, loadLeagueCard } from '@/lib/league/leagueCardAccess';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import { formatRoundCell } from '@/lib/league/standingsFormat';
+import { showsNetTotal } from '@/lib/scorecard/netTotal';
 import { isUuid } from '@/lib/url/isUuid';
 import { ScorecardTable } from '@/app/[locale]/games/[id]/_components/ScorecardTable';
 
@@ -65,7 +66,9 @@ export default async function LeagueCardPage({ params }: { params: Params }) {
   const facts = [
     card.playingHandicap !== null ? t('playingHandicap', { hcp: card.playingHandicap }) : null,
     t('gross', { value: card.grid.totals.brutto }),
-    !pointsBased && card.axis === 'net' && card.grid.totals.netto !== null
+    // Net after the rule of the player's own card (#2829): in stableford too,
+    // never on a gross card.
+    showsNetTotal({ axis: card.axis }) && card.grid.totals.netto !== null
       ? t('net', { value: card.grid.totals.netto })
       : null,
   ].filter((fact): fact is string => fact !== null);

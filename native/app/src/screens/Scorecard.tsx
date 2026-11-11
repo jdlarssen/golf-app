@@ -76,6 +76,7 @@ import {
 import { nameInitials } from '../../../../lib/names/initials';
 import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
+import { showsNetTotal } from '../../../../lib/scorecard/netTotal';
 import { resolveScorecardStamp } from '../../../../lib/scorecard/scorecardStamp';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
@@ -799,8 +800,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             <ScorecardTotals
               totals={grid.totals}
               // Designet har BRUTTO · NETTO også i stableford; en blind runde
-              // skjuler netto som før (#2219).
-              showNet={!revealActive}
+              // skjuler netto som før (#2219). Regelen deles med ligakortet (#2829).
+              showNet={showsNetTotal({ revealActive })}
               showPoints={valueRows.includes('points')}
             />
           }

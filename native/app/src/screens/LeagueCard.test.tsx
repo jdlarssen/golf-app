@@ -6,7 +6,7 @@
 // netto per hull i slagspill.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
+import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
 import type { LeagueCardResponse } from '../../../../lib/league/appLeagueView';
 import type { LeagueCardResult } from '../data/leagueCard';
 import { fetchLeagueCard } from '../data/leagueCard';
@@ -62,4 +62,44 @@ it('en feil gir «Prøv igjen»; kortet viser navnet, runden, resultatet og nett
   expect(screen.getByTestId('total-netto')).toHaveTextContent('12');
   expect(screen.queryByTestId('total-poeng')).toBeNull();
   expect(setOptions).toHaveBeenCalled();
+});
+
+// #2829: NETTO under kortet følger regelen for spillerens eget kort
+// (`showsNetTotal`): også i stableford, men ikke på et kort regnet uten handicap.
+describe('#2829: NETTO i summene', () => {
+  const STABLEFORD: LeagueCardResponse = {
+    ...CARD,
+    format: 'stableford',
+    value: 7,
+    grid: buildScorecardGrid({
+      rows: CARD.grid.halves.flatMap((half) =>
+        half.cells.map((cell) => ({ holeNumber: cell.holeNumber, par: cell.par, strokes: cell.strokes, extra: 1 })),
+      ),
+      pointsFn: stablefordPointsFnFor('stableford'),
+    }),
+  };
+
+  async function renderCard(card: LeagueCardResponse) {
+    mockResults = [{ ok: true, card }];
+    const props = {
+      navigation: { setOptions: jest.fn() },
+      route: { key: 'card', name: 'LeagueCard', params: { leagueId: 'liga-vinter', gameId: 'g1', userId: 'anders' } },
+    };
+    await render(<LeagueCard {...(props as unknown as ScreenProps<'LeagueCard'>)} />);
+    await waitFor(() => expect(screen.getByTestId('league-card-screen')).toBeTruthy());
+  }
+
+  it('et stableford-kort på netto-aksen har BRUTTO, NETTO og POENG, som spillerens eget kort', async () => {
+    await renderCard(STABLEFORD);
+    expect(screen.getByTestId('total-brutto')).toHaveTextContent('14');
+    expect(screen.getByTestId('total-netto')).toHaveTextContent('11');
+    expect(screen.getByTestId('total-poeng')).toBeTruthy();
+  });
+
+  it('et kort i en brutto-liga er regnet uten handicap: ingen NETTO', async () => {
+    await renderCard({ ...STABLEFORD, axis: 'gross', playingHandicap: null });
+    expect(screen.getByTestId('total-brutto')).toHaveTextContent('14');
+    expect(screen.queryByTestId('total-netto')).toBeNull();
+    expect(screen.getByTestId('total-poeng')).toBeTruthy();
+  });
 });
