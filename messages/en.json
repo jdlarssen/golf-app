@@ -5133,6 +5133,19 @@
     }
   },
   "liga": {
+    "card": {
+      "kicker": "Scorecard",
+      "heading": "{name}'s card",
+      "subtitle": "{roundLabel} in {leagueName}",
+      "result": "Result: {value}",
+      "resultPoints": "Result: {value} points",
+      "playingHandicap": "Playing handicap {hcp}",
+      "gross": "Gross {value}",
+      "net": "Net {value}",
+      "colNet": "Net",
+      "colPoints": "Points",
+      "unknownPlayer": "Unknown player"
+    },
     "marker": {
       "kicker": "Marker",
       "heading": "{name}'s card",
@@ -5618,7 +5631,8 @@
       "unknownPlayer": "Unknown player",
       "penalisedTitle": "Penalty score (not played)",
       "flaggedTitle": "Submitted after the original play window",
-      "flaggedAriaLabel": "Submitted outside play window"
+      "flaggedAriaLabel": "Submitted outside play window",
+      "openCardAriaLabel": "See {name}'s card, {round}"
     },
     "embed": {
       "heading": "Board for the club website",

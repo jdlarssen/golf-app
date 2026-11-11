@@ -406,6 +406,7 @@ export default async function LigaPublicPage({
             bestNCount={league.best_n_count}
             pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
             openRoundId={table.openRoundId}
+            leagueId={league.id}
           />
         </Card>
       </section>

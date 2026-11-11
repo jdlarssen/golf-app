@@ -5133,6 +5133,19 @@
     }
   },
   "liga": {
+    "card": {
+      "kicker": "Scorekort",
+      "heading": "Kortet til {name}",
+      "subtitle": "{roundLabel} i {leagueName}",
+      "result": "Resultat: {value}",
+      "resultPoints": "Resultat: {value} poeng",
+      "playingHandicap": "Spillehandicap {hcp}",
+      "gross": "Brutto {value}",
+      "net": "Netto {value}",
+      "colNet": "Netto",
+      "colPoints": "Poeng",
+      "unknownPlayer": "Ukjent spiller"
+    },
     "marker": {
       "kicker": "Markør",
       "heading": "Kortet til {name}",
@@ -5618,7 +5631,8 @@
       "unknownPlayer": "Ukjent spiller",
       "penalisedTitle": "Straffescore (ikke spilt)",
       "flaggedTitle": "Levert etter opprinnelig vindu",
-      "flaggedAriaLabel": "Levert utenfor vindu"
+      "flaggedAriaLabel": "Levert utenfor vindu",
+      "openCardAriaLabel": "Se kortet til {name}, {round}"
     },
     "embed": {
       "heading": "Tavle til klubbsiden",

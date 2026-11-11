@@ -243,3 +243,44 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     expect(document.querySelector('[title]')).toBeNull();
   });
 });
+
+// #2815: a played cell opens the card behind it on the league page; a penalty, a
+// «—» and the public embed (no leagueId) have no link.
+describe('LeagueStandingsTable — the card behind a cell (#2815)', () => {
+  const rows: LeagueStandings['rows'] = [
+    {
+      userId: 'A', value: 5, roundsPlayed: 2, ranked: true, rank: 1,
+      perRound: [
+        { roundId: 'r1', value: 2, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'gA1' },
+        { roundId: 'r2', value: 3, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'gA2' },
+      ],
+    },
+    {
+      userId: 'B', value: 9, roundsPlayed: 1, ranked: true, rank: 2,
+      perRound: [
+        { roundId: 'r1', value: 5, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'gB1' },
+        { roundId: 'r2', value: 4, points: null, penalised: true, deliveredOutsideWindow: false, gameId: null },
+      ],
+    },
+    { userId: 'C', value: 0, roundsPlayed: 0, ranked: false, rank: null, perRound: [] },
+  ];
+  const people: LeagueParticipant[] = [
+    ...participants,
+    { userId: 'C', name: 'Cathrine', nickname: null, acceptedAt: '2026-06-01', hasPlayed: false },
+  ];
+  const hrefs = () => screen.queryAllByTestId('liga-standings-card-link').map((a) => a.getAttribute('href'));
+
+  it('links only the played cells on the league page, and none in the embed', () => {
+    const props = { rows, rounds, participants: people, standingsModel: 'total', bestNCount: null };
+    render(<LeagueStandingsTable {...props} leagueId="l1" />);
+    const onPage = hrefs();
+    const label = screen.getAllByTestId('liga-standings-card-link')[0]?.getAttribute('aria-label');
+    cleanup();
+    render(<LeagueStandingsTable {...props} />);
+    expect({ onPage, label, embed: hrefs() }).toEqual({
+      onPage: ['/liga/l1/kort/gA1/A', '/liga/l1/kort/gA2/A', '/liga/l1/kort/gB1/B'],
+      label: 'Se kortet til Alice, Runde 1',
+      embed: [],
+    });
+  });
+});
