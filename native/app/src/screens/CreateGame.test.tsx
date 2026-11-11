@@ -25,7 +25,7 @@ import { describePendingOthers } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
-import { CreateGame } from './CreateGame';
+import { CreateGame, summaryLines } from './CreateGame';
 
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
@@ -594,5 +594,41 @@ describe('CreateGame', () => {
       expect(screen.queryByTestId('create-warning-pending-self')).toBeNull();
     });
     expect(screen.queryByTestId('create-warning-profile')).toBeNull();
+  });
+});
+
+// #2749 PR B: oppsummeringen sier kontingenten og antallet premier som lagres.
+describe('summaryLines — kontingent og premiebord', () => {
+  const prizes = () => {
+    const p = require('../../../../lib/games/prizes').emptyPrizeDraft();
+    p.placement_1 = { description: 'Middag for to', sponsor: '', sponsorLogoPath: '' };
+    p.ld_1 = { description: 'Ny hanske', sponsor: 'Byneset Sport', sponsorLogoPath: '' };
+    p.ld_2 = { description: 'Baller', sponsor: '', sponsorLogoPath: '' };
+    return p;
+  };
+  const base = {
+    name: 'Torsdagsrunden',
+    gameMode: 'stableford' as const,
+    courseId: null,
+    teeBoxId: null,
+    teeOffAt: '2026-11-20T08:00:00.000Z',
+    players: [{ userId: 'me', teeGender: 'M' as const, teamNumber: null }],
+    sideTournamentEnabled: true,
+    sideLdCount: 1 as const,
+    sideCtpCount: 0 as const,
+  };
+  const lines = (over: object) =>
+    summaryLines({ ...base, ...over }, 'stableford', [], [], new Date('2026-11-20T08:00:00.000Z'));
+
+  it('har «Startkontingent 200 kr» og «Premiebord 2 premier» (ld_2 lagres ikke med ett LD-hull)', () => {
+    const found = lines({ entryFeeKr: 200, paymentLink: '12345', prizes: prizes() });
+    expect(found.find((l) => l.key === 'fee')).toMatchObject({ label: 'Startkontingent', value: '200 kr' });
+    expect(found.find((l) => l.key === 'prizes')).toMatchObject({ label: 'Premiebord', value: '2 premier' });
+  });
+
+  it('uten kontingent og premier står ingen av linjene', () => {
+    const found = lines({ entryFeeKr: 0 });
+    expect(found.map((l) => l.key)).not.toContain('fee');
+    expect(found.map((l) => l.key)).not.toContain('prizes');
   });
 });

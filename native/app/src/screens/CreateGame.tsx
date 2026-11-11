@@ -27,8 +27,8 @@ import {
   type SummaryLine,
   type SummaryWarning,
 } from '../components/create/SummaryStep';
-import { visiblePrizeSlots, type FeeDraft } from '../components/create/FeeAndPrizes';
-import { emptyPrizeDraft } from '../../../../lib/games/prizes';
+import type { FeeDraft } from '../components/create/FeeAndPrizes';
+import { countPrizesInPlay, emptyPrizeDraft, prizeShapeFor } from '../../../../lib/games/prizes';
 import { PAYMENT_TEXT, PRIZE_TEXT } from '../lib/paymentCopy';
 import type { CommonSetup, SetupText } from '../components/create/SetupStep';
 import { SetupStep } from '../components/create/SetupStep';
@@ -607,7 +607,7 @@ const TEE_SET_WORDS: Record<TeeGenderUi, string> = {
   J: 'junior',
 };
 
-function summaryLines(
+export function summaryLines(
   draft: GameDraft,
   mode: AppGameMode,
   courses: CourseOption[] | null,
@@ -627,12 +627,18 @@ function summaryLines(
   // støy i et åtte-spillers følge.
   const offMens = draft.players.filter((p) => p.teeGender !== 'M');
 
-  // Bare slottene som lagres: de formatet og sideturneringen har (`visiblePrizeSlots`).
-  const prizeCount = visiblePrizeSlots(mode, {
-    enabled: draft.sideTournamentEnabled === true,
-    ldCount: draft.sideLdCount ?? 0,
-    ctpCount: draft.sideCtpCount ?? 0,
-  }).filter((slot) => (draft.prizes?.[slot.key].description.trim() ?? '') !== '').length;
+  // Bare premiene som lagres, med nettets teller (`countPrizesInPlay`).
+  const prizeCount = draft.prizes
+    ? countPrizesInPlay(
+        draft.prizes,
+        prizeShapeFor({
+          gameMode: mode,
+          sideEnabled: draft.sideTournamentEnabled === true,
+          sideLdCount: draft.sideLdCount ?? 0,
+          sideCtpCount: draft.sideCtpCount ?? 0,
+        }),
+      )
+    : 0;
 
   const side = draft.sideTournamentEnabled
     ? [
