@@ -73,7 +73,16 @@ function applyNetworkState(state: NetworkState): void {
   const changed = next !== connected;
   const cameBack = next && !connected;
   connected = next;
-  if (changed) for (const listener of connectivityListeners) listener(next);
+  if (changed) {
+    for (const listener of connectivityListeners) {
+      // En lytter som kaster, skal aldri stoppe drainen når nettet er tilbake.
+      try {
+        listener(next);
+      } catch {
+        // Lytteren eier sin egen feil.
+      }
+    }
+  }
   if (!cameBack) return;
   for (const listener of onlineListeners) listener();
   void drainQueue('nett tilbake');

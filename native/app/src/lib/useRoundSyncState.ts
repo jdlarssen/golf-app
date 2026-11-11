@@ -6,7 +6,11 @@
 // hva som venter og hva som ikke ble lagret, er den delte
 // (`lib/sync/roundSyncState.ts`). Klokka tikker hvert sekund mens noe venter,
 // så brikka blir gul når et slag har ventet i `SETTLE_MS` uten ny lesing.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+//
+// Kroken står i hullskjermen over hullbyttet (`HoleView` monteres på nytt per
+// hull), så det den sist leste, står gjennom et hullbytte. Før første lesing er
+// `loaded` usann: da vet ingen om noe venter, og brikka skal ikke si noe.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { roundSyncState, type RoundSyncState } from '../../../../lib/sync/roundSyncState';
 import { getDb, listQueue, listTeeShotQueue, type LocalScore, type SyncQueueItem, type TeeShotQueueItem } from '../data/db';
 import { isNetworkFailureMessage } from '../data/timedFetch';
@@ -17,6 +21,8 @@ const TICK_MS = 1000;
 
 type Queues = { scores: SyncQueueItem[]; teeShots: TeeShotQueueItem[] };
 
+const EMPTY: Queues = { scores: [], teeShots: [] };
+
 async function readQueues(): Promise<Queues> {
   const db = await getDb();
   // Sekvensielt: én forbindelse, én setning om gangen.
@@ -25,28 +31,59 @@ async function readQueues(): Promise<Queues> {
   return { scores, teeShots };
 }
 
+/** Det i køene regelen leser. Lik signatur = ingen ny render. */
+function signature({ scores, teeShots }: Queues): string {
+  return JSON.stringify([...scores, ...teeShots]);
+}
+
 export function useRoundSyncState(
   gameId: string,
   localScores: readonly LocalScore[],
 ): {
   state: RoundSyncState;
+  /** Køene er lest minst én gang for dette spillet. */
+  loaded: boolean;
   /** Hull med minst ett lokalt slag i dette spillet. */
   scoredHoles: ReadonlySet<number>;
   /** Les køene på nytt med en gang (etter «Prøv å sende nå»). */
   reload: () => Promise<void>;
 } {
-  const [queues, setQueues] = useState<Queues>({ scores: [], teeShots: [] });
+  const [queues, setQueues] = useState<Queues>(EMPTY);
+  const [loaded, setLoaded] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  // Nytt spill i samme skjerm: forrige spills kø skal ikke stå igjen. Samme grep
+  // som `useLocalScores`.
+  const [shownFor, setShownFor] = useState(gameId);
+  if (shownFor !== gameId) {
+    setShownFor(gameId);
+    setQueues(EMPTY);
+    setLoaded(false);
+  }
+
+  // Siste lesing som ble vist. En lesing som er lik, gir ingen ny render: hele
+  // hullsiden står under kroken. Spillet er med i nøkkelen, så et nytt spill
+  // alltid skrives inn.
+  const shown = useRef('');
+  const apply = useCallback(
+    (next: Queues) => {
+      const sig = `${gameId}|${signature(next)}`;
+      if (sig !== shown.current) {
+        shown.current = sig;
+        setQueues(next);
+        setNowMs(Date.now());
+      }
+      setLoaded(true);
+    },
+    [gameId],
+  );
 
   const reload = useCallback(async () => {
     try {
-      const next = await readQueues();
-      setQueues(next);
-      setNowMs(Date.now());
+      apply(await readQueues());
     } catch {
       // En base som ikke svarer skal ikke velte skjermen; neste runde prøver igjen.
     }
-  }, []);
+  }, [apply]);
 
   // Førstelesningen skrives inn her og ikke via `reload`, samme grep som
   // SyncBanner: en skjerm som er borte før SQLite svarer, får ingen state.
@@ -55,9 +92,7 @@ export function useRoundSyncState(
     const tick = async () => {
       try {
         const next = await readQueues();
-        if (cancelled) return;
-        setQueues(next);
-        setNowMs(Date.now());
+        if (!cancelled) apply(next);
       } catch {
         // Som i `reload`.
       }
@@ -68,7 +103,7 @@ export function useRoundSyncState(
       cancelled = true;
       clearInterval(interval);
     };
-  }, [gameId]);
+  }, [gameId, apply]);
 
   const state = useMemo(
     () =>
@@ -100,5 +135,5 @@ export function useRoundSyncState(
     [localScores, gameId],
   );
 
-  return { state, scoredHoles, reload };
+  return { state, loaded, scoredHoles, reload };
 }
