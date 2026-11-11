@@ -37,16 +37,23 @@ function answer(...results: LeagueResult[]) {
   mockLast = results[results.length - 1];
 }
 
-async function renderLeague(params: { joined?: boolean } = {}) {
+type StackRoute = { name: string; params?: object };
+const LEAGUE_ROUTE: StackRoute = { name: 'League', params: { leagueId: 'liga-vinter' } };
+
+async function renderLeague(params: { joined?: boolean } = {}, below: StackRoute[] = []) {
   const navigate = jest.fn();
+  const popTo = jest.fn();
   const setParams = jest.fn();
   const listeners: Record<string, () => void> = {};
+  // `openOrReturn` (#2746) leser stakken: ligaen ligger øverst, alene om
+  // ikke testen legger skjermer under den.
+  const routes = [...below, LEAGUE_ROUTE];
   const props = {
     navigation: {
       navigate,
+      popTo,
       setParams,
-      // `openOrReturn` (#2746) leser stakken: ligaen ligger alene.
-      getState: () => ({ index: 0, routes: [{ name: 'League', params: { leagueId: 'liga-vinter' } }] }),
+      getState: () => ({ index: routes.length - 1, routes }),
       addListener: (name: string, listener: () => void) => {
         listeners[name] = listener;
         return () => {};
@@ -55,7 +62,7 @@ async function renderLeague(params: { joined?: boolean } = {}) {
     route: { key: 'league', name: 'League', params: { leagueId: 'liga-vinter', ...params } },
   };
   await render(<League {...(props as unknown as ScreenProps<'League'>)} />);
-  return { navigate, setParams, listeners };
+  return { navigate, popTo, setParams, listeners };
 }
 
 beforeEach(() => {
@@ -411,6 +418,46 @@ describe('#2661: markøren i en simulatorliga', () => {
     expect(screen.getByTestId(`marker-queue-g-a-${a.userId}`)).toBeTruthy();
     expect(screen.queryByTestId('marker-queue-g-me-me')).toBeNull();
     expect(screen.queryByTestId(`marker-queue-g-a-${b.userId}`)).toBeNull();
+  });
+});
+
+// #2829: ligaskjermen åpner markørkortet og rundestarten med `openOrReturn`
+// (#2746). Ligger skjermen alt under ligaen i stakken, går appen tilbake til
+// den i stedet for å legge en skjerm til.
+describe('#2829: markørkortet og rundestarten åpnes uten en skjerm til', () => {
+  it('markørkortet som ligger under ligaen, åpnes med popTo, ikke som en ny skjerm', async () => {
+    const view = leagueView();
+    const other = view.participants.find((p) => p.userId !== 'me')!;
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        rounds: view.rounds.map((r) =>
+          r.id === 'r3'
+            ? {
+                ...r,
+                awaitingMarker: [
+                  { gameId: 'g-other', userId: other.userId, markerUserId: 'me', submittedBy: other.userId },
+                ],
+              }
+            : r,
+        ),
+      },
+    });
+    const card = { leagueId: 'liga-vinter', gameId: 'g-other', userId: other.userId };
+    const { navigate, popTo } = await renderLeague({}, [LEAGUE_ROUTE, { name: 'MarkerApprove', params: card }]);
+    await fireEvent.press(screen.getByTestId(`marker-queue-g-other-${other.userId}`));
+    expect(popTo).toHaveBeenCalledWith('MarkerApprove', card);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('rundestarten som ligger under ligaen, åpnes med popTo, ikke som en ny skjerm', async () => {
+    answer({ ok: true, view: leagueView() });
+    const start = { leagueId: 'liga-vinter', roundId: 'r3' };
+    const { navigate, popTo } = await renderLeague({}, [LEAGUE_ROUTE, { name: 'LeagueRoundStart', params: start }]);
+    await fireEvent.press(screen.getByTestId('league-play-round'));
+    expect(popTo).toHaveBeenCalledWith('LeagueRoundStart', start);
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
 
