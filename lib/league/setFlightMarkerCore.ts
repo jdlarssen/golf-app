@@ -229,9 +229,10 @@ export async function submitScorecardWithMarker(
 /**
  * #2814: the cards the deliverer kept, not delivered and without a marker,
  * get the deliverer as their marker, and each flightmate is told to look the
- * card over and deliver it. The notice is the card's reminder, so the stamp
- * is set in the same write and the sweep does not send a second one («Et
- * kvarter, én gang»). Only the rows the write hit are told.
+ * card over and deliver it. Only the rows the write hit are told. The notice
+ * is the card's reminder, so once it went out the card is stamped and the
+ * sweep does not send a second one («Et kvarter, én gang»). When the notice
+ * could not be sent, the card stays unstamped and the sweep reminds the owner.
  *
  * Never fails the delivery: a failed read or write is logged, nothing is
  * handed over, and the page offers the cards again. Returns the count.
@@ -245,7 +246,7 @@ async function handOver(
   if (!mates || mates.length === 0) return 0;
   const { data, error } = await getAdminClient()
     .from('game_players')
-    .update({ marker_user_id: delivererId, deliver_reminder_sent_at: new Date().toISOString() })
+    .update({ marker_user_id: delivererId })
     .eq('game_id', flight.gameId)
     .in('user_id', mates)
     .is('submitted_at', null)
@@ -257,18 +258,34 @@ async function handOver(
     return 0;
   }
   const handed = (data ?? []).map((r) => r.user_id);
-  if (handed.length > 0) await tellHandedOver(flight, delivererId, handed);
+  if (handed.length > 0 && (await tellHandedOver(flight, delivererId, handed))) {
+    await stampReminded(flight.gameId, handed);
+  }
   return handed.length;
+}
+
+/** The handover notice was the cards' reminder. Best-effort: a failed write is logged. */
+async function stampReminded(gameId: string, playerIds: readonly string[]): Promise<void> {
+  const { error } = await getAdminClient()
+    .from('game_players')
+    .update({ deliver_reminder_sent_at: new Date().toISOString() })
+    .eq('game_id', gameId)
+    .in('user_id', [...playerIds])
+    .is('submitted_at', null);
+  if (error) console.error(`[${LOG_PREFIX}] reminder stamp failed`, { gameId, error });
 }
 
 type UserRow = { id: string; email: string | null; name: string | null; nickname: string | null; locale: string | null };
 
-/** `deliver_reminder` with the marker's name to each flightmate handed a card. Best-effort. */
+/**
+ * `deliver_reminder` with the marker's name to each flightmate handed a card.
+ * Best-effort: false when the reads failed and nothing was sent.
+ */
 async function tellHandedOver(
   flight: LeagueFlight,
   markerUserId: string,
   playerIds: readonly string[],
-): Promise<void> {
+): Promise<boolean> {
   try {
     const admin = getAdminClient();
     const [gameRes, usersRes] = await Promise.all([
@@ -300,8 +317,10 @@ async function tellHandedOver(
         });
       }),
     );
+    return true;
   } catch (err) {
     console.error(`[${LOG_PREFIX}] handover notice failed`, { gameId: flight.gameId, err });
+    return false;
   }
 }
 
