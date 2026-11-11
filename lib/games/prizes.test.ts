@@ -12,6 +12,8 @@ import fs from 'fs';
 import path from 'path';
 
 import {
+  activePrizeSlots,
+  PRIZE_SLOTS,
   safeParsePrizes,
   prunePrizes,
   prizeFieldName,
@@ -271,6 +273,32 @@ describe('prunePrizes — beskjærer til gyldige slott', () => {
     expect(
       prunePrizes(full, { hasPodium: false, ldCount: 0, ctpCount: 0 }),
     ).toEqual([]);
+  });
+});
+
+describe('activePrizeSlots — slottene som lagres, i rekkefølge (#2749)', () => {
+  it('stableford uten sideturnering: bare pallplassene', () => {
+    expect(activePrizeSlots({ hasPodium: true, ldCount: 0, ctpCount: 0 }).map((s) => s.key)).toEqual([
+      'placement_1',
+      'placement_2',
+      'placement_3',
+    ]);
+  });
+
+  it('matchplay med ett LD- og to CTP-hull: ingen pallplasser', () => {
+    expect(activePrizeSlots({ hasPodium: false, ldCount: 1, ctpCount: 2 }).map((s) => s.key)).toEqual([
+      'ld_1',
+      'ctp_1',
+      'ctp_2',
+    ]);
+  });
+
+  it('er de samme slottene prunePrizes beholder', () => {
+    const shape = { hasPodium: true, ldCount: 1, ctpCount: 0 };
+    const all = PRIZE_SLOTS.map((s) => ({ category: s.category, position: s.position, description: 'x', sponsor: null, sponsorLogoPath: null }));
+    expect(prunePrizes(all, shape).map((p) => `${p.category}:${p.position}`)).toEqual(
+      activePrizeSlots(shape).map((s) => `${s.category}:${s.position}`),
+    );
   });
 });
 
