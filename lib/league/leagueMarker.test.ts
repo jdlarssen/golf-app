@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   activeFlightmates,
   enteredAllBy,
-  handedOverMarker,
+  fixedMarker,
   markerCandidates,
-  returnedToMarker,
   markerRefusal,
   markerRequired,
   mayApproveAsMarker,
@@ -216,68 +215,44 @@ describe('orderMarkerOptions', () => {
   });
 });
 
-describe('handedOverMarker', () => {
-  const card = (marker_user_id: string | null, submitted_at: string | null = null, rejection_reason: string | null = null) => ({
+// #2814: whether the card's marker is fixed, and why. The owner 11.11: a card
+// its marker sent back goes back to the same marker; «Ja, legg til feltet»:
+// handed over is a fact (`handed_over_at`), not a guess from the flight.
+describe('fixedMarker', () => {
+  const card = (over: Partial<{ marker_user_id: string | null; submitted_at: string | null; rejection_reason: string | null; handed_over_at: string | null }>) => ({
     user_id: 'b',
-    marker_user_id,
-    submitted_at,
-    rejection_reason,
-  });
-
-  it('is null for a card its marker sent back: it is not handed over, it is returned', () => {
-    expect(handedOverMarker(card('a', null, 'hull 7'), ['a'])).toBeNull();
-  });
-
-  it('is the flightmate who marked the undelivered card', () => {
-    expect(handedOverMarker(card('a'), ['a'])).toBe('a');
-  });
-
-  it('is null without a marker', () => {
-    expect(handedOverMarker(card(null), ['a'])).toBeNull();
-  });
-
-  it('is null when the marker is outside the flight', () => {
-    expect(handedOverMarker(card('m'), ['a'])).toBeNull();
-  });
-
-  it('is null once the card is delivered', () => {
-    expect(handedOverMarker(card('a', '2026-11-10T10:00:00Z'), ['a'])).toBeNull();
-  });
-
-  it('is null when the marker is the card\'s owner', () => {
-    expect(handedOverMarker(card('b'), ['a', 'b'])).toBeNull();
-  });
-});
-
-// #2814 (the owner 11.11): «Ola må rette opp avvisningen og sende det inn til
-// Per på nytt». A card its marker sent back goes back to the same marker: no
-// picker, and never approved on delivery.
-describe('returnedToMarker', () => {
-  const card = (over: Partial<{ marker_user_id: string | null; submitted_at: string | null; rejection_reason: string | null }>) => ({
-    user_id: 'a',
-    marker_user_id: 'b',
+    marker_user_id: 'a',
     submitted_at: null,
-    rejection_reason: 'hull 7',
+    rejection_reason: null,
+    handed_over_at: null,
     ...over,
   });
 
-  it('is the marker who sent the card back', () => {
-    expect(returnedToMarker(card({}))).toBe('b');
+  it('is handed over when the server stamped the handover', () => {
+    expect(fixedMarker(card({ handed_over_at: '2026-11-11T10:00:00Z' }))).toEqual({ reason: 'handedOver', markerUserId: 'a' });
   });
 
-  it('is the marker also outside the flight', () => {
-    expect(returnedToMarker(card({ marker_user_id: 'kari' }))).toBe('kari');
+  it('is returned when the marker sent the card back, also outside the flight', () => {
+    expect(fixedMarker(card({ marker_user_id: 'kari', rejection_reason: 'hull 7' }))).toEqual({
+      reason: 'returned',
+      markerUserId: 'kari',
+    });
   });
 
-  it('is null for a card nobody sent back', () => {
-    expect(returnedToMarker(card({ rejection_reason: null }))).toBeNull();
-  });
-
-  it('is null once the card is delivered again', () => {
-    expect(returnedToMarker(card({ submitted_at: '2026-11-11T10:00:00Z' }))).toBeNull();
+  it('is assigned for a card with a marker and neither: reopened, or a delivery that failed', () => {
+    expect(fixedMarker(card({}))).toEqual({ reason: 'assigned', markerUserId: 'a' });
   });
 
   it('is null without a marker', () => {
-    expect(returnedToMarker(card({ marker_user_id: null }))).toBeNull();
+    expect(fixedMarker(card({ marker_user_id: null }))).toBeNull();
+  });
+
+  it('is null once the card is delivered', () => {
+    expect(fixedMarker(card({ submitted_at: '2026-11-11T10:00:00Z', handed_over_at: '2026-11-11T09:00:00Z' }))).toBeNull();
+  });
+
+  it('is null when the marker is the card\'s owner', () => {
+    expect(fixedMarker(card({ marker_user_id: 'b' }))).toBeNull();
   });
 });
+

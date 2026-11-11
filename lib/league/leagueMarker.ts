@@ -14,12 +14,12 @@
  *
  * Handing over (#2814, the owner 10.11): the one who keeps the flight's cards
  * delivers only their own, and becomes the marker for the cards they kept
- * (`handedOverMarker`). The flightmate looks the card over and delivers it.
+ * (`fixedMarker`). The flightmate looks the card over and delivers it.
  * Unchanged since the marker kept it (`unchangedSinceMarker`), it is approved
  * on delivery; changed, it waits in the marker's queue. For their own card the
  * deliverer may pick a flightmate, who stands first in the picker
  * (`orderMarkerOptions`). A card the marker sends back goes back to the same
- * marker (`returnedToMarker`).
+ * marker (`fixedMarker`).
  *
  * The server reads it at delivery (`setFlightMarkerCore`) and at approval
  * (`markerReviewAccess`, `scorecardReviewAccess`). The database holds the same
@@ -139,39 +139,43 @@ export function orderMarkerOptions<T extends { userId: string; name: string | nu
   ];
 }
 
-/** The card fields the marker rules read. */
+/** The card fields the marker rules read (`game_players`). */
 export type MarkerCard = {
   user_id: string;
   submitted_at: string | null;
   marker_user_id: string | null;
   rejection_reason: string | null;
+  /** #2814: set by the server in the handover, cleared when a delivered card goes back (0233). */
+  handed_over_at: string | null;
 };
 
 /**
- * #2814: the flightmate who kept this card and became its marker, or null.
- * A card is handed over when it is not delivered, nobody sent it back, and
- * its marker is someone else in the flight. Such a card needs no marker at
- * delivery: it has one.
+ * Why a card's marker is fixed (#2814):
+ *  - `handedOver`: a flightmate kept the card and handed it over (the server
+ *    stamped `handed_over_at`). Delivered unchanged, it is approved in the
+ *    marker's name (`unchangedSinceMarker`).
+ *  - `returned`: the marker sent the card back (`rejection_reason`, cleared
+ *    by the next delivery). The owner 11.11: «Ola må rette opp avvisningen og
+ *    sende det inn til Per på nytt».
+ *  - `assigned`: the card has a marker and neither, so it was reopened, or a
+ *    delivery failed after the marker was named.
+ * Only a handed-over card can be approved on delivery.
  */
-export function handedOverMarker(card: MarkerCard, flightmateIds: readonly string[]): string | null {
-  const marker = card.marker_user_id;
-  if (card.submitted_at != null || card.rejection_reason != null) return null;
-  if (marker == null || marker === card.user_id) return null;
-  return flightmateIds.includes(marker) ? marker : null;
-}
+export type FixedMarker = { reason: 'handedOver' | 'returned' | 'assigned'; markerUserId: string };
 
 /**
- * #2814 (the owner 11.11: «Ola må rette opp avvisningen og sende det inn til
- * Per på nytt»): the marker who sent this card back, or null. The card goes
- * back to the same marker, in or outside the flight: no picker, and it is
- * never approved on delivery. A rejection sets `rejection_reason`, and the
- * next delivery clears it (`submitScorecardCore`), so the rule reads the card
- * before it is delivered again. This changes #2661, where the player picked
- * a marker again.
+ * The card's fixed marker, or null when the deliverer names one: the card is
+ * delivered, has no marker, or names its owner. A fixed marker needs no
+ * picker; one in the request is ignored. It is the same marker in or outside
+ * the flight, so a rejection by a marker outside the flight also goes back to
+ * them (this changes #2661, where the player picked a marker again).
  */
-export function returnedToMarker(card: Omit<MarkerCard, 'user_id'>): string | null {
-  if (card.submitted_at != null || card.rejection_reason == null) return null;
-  return card.marker_user_id;
+export function fixedMarker(card: MarkerCard): FixedMarker | null {
+  const marker = card.marker_user_id;
+  if (card.submitted_at != null || marker == null || marker === card.user_id) return null;
+  if (card.handed_over_at != null) return { reason: 'handedOver', markerUserId: marker };
+  if (card.rejection_reason != null) return { reason: 'returned', markerUserId: marker };
+  return { reason: 'assigned', markerUserId: marker };
 }
 
 /**

@@ -135,8 +135,7 @@ import {
   toRoster,
   toStampPlayers,
 } from '../lib/roster';
-import { handOverButton, handOverLine, markedByLine, returnedByLine } from '../lib/markerCopy';
-import { activeFlightmates, handedOverMarker } from '../../../../lib/league/leagueMarker';
+import { assignedToLine, handOverButton, handOverLine, markedByLine, returnedByLine } from '../lib/markerCopy';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
 import { buildRoundDoneModel, roundDoneBarVisible, submitInView } from '../lib/roundDone';
@@ -173,6 +172,14 @@ import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 
 const QUEUE_POLL_MS = 1500;
+
+/** #2814: linja når kortets markør står fast, etter grunnen (`fixedMarker`). */
+const FIXED_NOTE_LINE = {
+  handedOver: markedByLine,
+  returned: returnedByLine,
+  assigned: assignedToLine,
+} as const;
+const FIXED_NOTE_TEST_ID = { handedOver: 'marked-by', returned: 'returned-by', assigned: 'assigned-to' } as const;
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { colors, ui } = useTheme();
@@ -560,34 +567,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2814: i en simulatorliga overleveres kortene jeg har ført. Jeg blir
   // markør for dem, og eierne sender dem inn selv. Det er simulatorliga når
   // serveren ber om markør, eller når mitt levert kort har en (kolonnen settes
-  // bare der). Har en flightkamerat ført mitt kort og er markøren min, står
-  // linja om det i stedet for velgeren.
+  // bare der).
   const handOver =
     flightMates.length > 0 && (markerChoice?.required === true || me.player.markerUserId != null);
-  const keptBy = handedOverMarker(
-    {
-      user_id: userId,
-      submitted_at: me.player.submittedAt,
-      marker_user_id: me.player.markerUserId ?? null,
-      rejection_reason: me.player.rejectionReason,
-    },
-    activeFlightmates(
-      bundle.players.map((player) => ({ user_id: player.userId, withdrawn_at: player.withdrawnAt })),
-      userId,
-    ),
-  );
-  const keptByPlayer = keptBy ? bundle.players.find((player) => player.userId === keptBy) : undefined;
-  const markedByNote = keptBy ? (
-    <Text style={ui.muted} testID="marked-by">
-      {markedByLine(keptByPlayer ? namesOf([keptByPlayer]) : null)}
-    </Text>
-  ) : null;
-  // #2814 (eieren 11.11): markøren sendte kortet tilbake, og det går tilbake til
-  // samme markør. Navnet kommer fra serveren, for markøren kan stå utenfor flighten.
-  const returnedBy = markerChoice?.required === false ? markerChoice.returnedBy : undefined;
-  const returnedNote = returnedBy ? (
-    <Text style={ui.muted} testID="returned-by">
-      {returnedByLine(returnedBy.name)}
+  // #2814: står markøren fast (overlevert, sendt tilbake eller åpnet igjen),
+  // sier serveren hvem og hvorfor (`fixedMarker`), og linja står i stedet for
+  // velgeren. Markøren kan stå utenfor flighten, så navnet kommer derfra.
+  const fixed = markerChoice?.required === false ? markerChoice.marker : undefined;
+  const fixedNote = fixed ? (
+    <Text style={ui.muted} testID={FIXED_NOTE_TEST_ID[fixed.reason]}>
+      {FIXED_NOTE_LINE[fixed.reason](fixed.name)}
     </Text>
   ) : null;
 
@@ -748,7 +737,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     ) : null;
 
   // #2814: i en simulatorliga står linja om overleveringen i velgerens
-  // hint-stil rett over knappen, som `markedByNote` og nettets linje.
+  // hint-stil rett over knappen, som `fixedNote` og nettets linje.
   const handOverNote = handOver ? (
     <Text style={ui.muted} testID="hand-over">
       {handOverLine(namesOf(flightMates), flightMates.length)}
@@ -846,8 +835,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             {flightBlock}
             {queueGuard}
             {markerPicker}
-            {markedByNote}
-            {returnedNote}
+            {fixedNote}
             {handOverNote}
             {teeShotBox ? (
               <TeeShotLockedSubmit

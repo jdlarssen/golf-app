@@ -2404,7 +2404,8 @@
         "handOver": "You are the marker for {names}. {names} gets their card and submits it themselves.",
         "handOverMany": "You are the marker for {names}. They get their cards and submit them themselves.",
         "markedBy": "{name} is your marker. Submit without changes and the card is approved. Change something and {name} approves the change.",
-        "returnedBy": "{name} sent the card back. Fix it and send it to {name} again. If you disagree, the organizer can approve the card instead."
+        "returnedBy": "{name} sent the card back. Fix it and send it to {name} again. If you disagree, the organizer can approve the card instead.",
+        "assignedTo": "The card goes to {name} when you submit it."
       },
       "unknownCourse": "(unknown course)",
       "teePrefix": "Tee: ",

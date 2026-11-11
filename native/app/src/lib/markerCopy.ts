@@ -88,3 +88,8 @@ export function returnedByLine(name: string | null): string {
   const who = name ?? MARKER_TEXT.unknownPlayer;
   return `${who} sendte kortet tilbake. Rett det og send det til ${who} igjen. Er dere uenige, kan arrangøren godkjenne kortet i stedet.`;
 }
+
+/** #2814: kortet ble åpnet igjen eller ikke levert, og markøren står (`game.submit.marker.assignedTo`). */
+export function assignedToLine(name: string | null): string {
+  return `Kortet går til ${name ?? MARKER_TEXT.unknownPlayer} når du sender det inn.`;
+}
