@@ -172,6 +172,15 @@ describe('notifyFriendsOfAchievements', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it('a blank course name is sent as null, so the notice still passes the schema', async () => {
+    round = friendRound();
+    admin = adminWith({ courses: [{ data: { name: '  ' }, error: null }] });
+    readFriendIdsMock.mockResolvedValue([PER]);
+
+    expect(await notifyFriendsOfAchievements(GAME)).toBe(1);
+    expect(notifyMock.mock.calls[0][0]).toMatchObject({ payload: { course_name: null } });
+  });
+
   it('a missing name or course is sent as null; the card fills the fallback', async () => {
     round = friendRound();
     admin = adminWith({
