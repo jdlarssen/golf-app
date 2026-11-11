@@ -17,6 +17,7 @@ import { kickerHeader } from '../components/KickerHeader';
 import { ScorecardGrid, type ScorecardRowKind } from '../components/scorecard/ScorecardGrid';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import { fetchLeagueCard } from '../data/leagueCard';
+import { showsNetTotal } from '../../../../lib/scorecard/netTotal';
 import {
   LEAGUE_CARD_TEXT,
   isPointsBased,
@@ -105,7 +106,10 @@ export function LeagueCard({ route, navigation }: ScreenProps<'LeagueCard'>) {
         <ScorecardGrid
           grid={card.grid}
           rows={rows}
-          footer={<ScorecardTotals totals={card.grid.totals} showNet={net} showPoints={points} />}
+          footer={
+            // #2829: NETTO i summene etter samme regel som spillerens eget kort.
+            <ScorecardTotals totals={card.grid.totals} showNet={showsNetTotal({ axis: card.axis })} showPoints={points} />
+          }
         />
       </View>
     </ScrollView>
