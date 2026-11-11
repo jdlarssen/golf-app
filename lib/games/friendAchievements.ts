@@ -29,19 +29,26 @@ export function friendWorthyMoments(holes: HoleScore[], mode: GameMode): FriendW
   return moments.sort((a, b) => a.holeNumber - b.holeNumber);
 }
 
+/** One person to tell; `inLeague` gives them the league link instead of Venner. */
+export type AchievementRecipient = { userId: string; inLeague: boolean };
+
 /**
- * Who is told (the owner's answer 11.11): the other players in the league
- * when the game is a league round (`leagueMemberIds` set), otherwise the
- * player's friends. Never the player, and never anyone on the game's roster:
- * they were there. The one home of this rule.
+ * Who is told (the owner's answer 11.11): the player's friends always, and in
+ * a league round every league player as well, friend or not. Each person once:
+ * a friend who is also in the league gets one notice, with the league link.
+ * Never the player, and never anyone on the game's roster: they were there.
+ * The one home of this rule.
  */
 export function achievementRecipients(input: {
   playerId: string;
+  /** The league's players when the game is a league round, else `null`. */
   leagueMemberIds: readonly string[] | null;
   friendIds: readonly string[];
   gamePlayerIds: readonly string[];
-}): string[] {
-  const pool = input.leagueMemberIds ?? input.friendIds;
+}): AchievementRecipient[] {
+  const league = new Set(input.leagueMemberIds ?? []);
   const there = new Set([input.playerId, ...input.gamePlayerIds]);
-  return [...new Set(pool)].filter((id) => !there.has(id));
+  return [...new Set([...input.friendIds, ...league])]
+    .filter((id) => !there.has(id))
+    .map((userId) => ({ userId, inLeague: league.has(userId) }));
 }

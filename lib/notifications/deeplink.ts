@@ -193,7 +193,7 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       return null;
     case 'friend_achievement': {
       // #2800: the recipient was not in the game and cannot open it (RLS,
-      // #1542). A league round opens the league, anything else the friends.
+      // #1542). A league player's notice opens the league, a friend's Venner.
       const p = n.payload as NotificationPayload<'friend_achievement'>;
       return p.league_id ? `/liga/${p.league_id}` : '/profile/venner';
     }

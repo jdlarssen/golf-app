@@ -227,7 +227,7 @@ export async function runFinishPipeline(
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
   await notifyAchievementUnlocks(game.id);
 
-  // #2800: best-effort varsel til vennene (eller ligaen) om brutto eagle,
+  // #2800: best-effort varsel til vennene (og ligaen) om brutto eagle,
   // albatross og hole-in-one. Inne i samme claim, så en ny sveip aldri sender
   // to ganger. Feiler aldri ut avslutningen.
   await notifyFriendsOfAchievements(game.id);
