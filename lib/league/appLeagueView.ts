@@ -7,9 +7,10 @@
  * Types only, importing nothing but the pure league modules: the native app
  * imports this file by relative path.
  */
+import type { ScorecardGrid } from '../scorecard/scorecardGrid';
 import type { SimSettingKey, SimSettings } from './simSettings';
 import type { LateJoinNotice, LeagueJoinDecision } from './joinValidation';
-import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
+import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsMetric, StandingsModel } from './types';
 
 /**
  * #2688: a delivered card that names the caller as its marker, as Home lists
@@ -181,6 +182,32 @@ export type MarkerCardResponse = {
   markerName: string | null;
   state: MarkerCardState;
   holes: MarkerCardHole[];
+};
+
+/**
+ * #2815: a player's card behind a cell in the season table, read-only:
+ * `GET /api/liga/[id]/kort/[gameId]/[userId]` for the app, and the web's
+ * `/liga/[id]/kort/…`. The server builds all of it (`loadLeagueCard`); the
+ * app draws the grid and computes nothing.
+ */
+export type LeagueCardResponse = {
+  leagueId: string;
+  leagueName: string;
+  roundLabel: string;
+  gameId: string;
+  player: { userId: string; name: string | null };
+  format: LeagueFormat;
+  /** The table's axis: gross in a gross league, net otherwise. */
+  axis: StandingsMetric;
+  /** The course handicap the net axis counted with; null on the gross axis. */
+  playingHandicap: number | null;
+  /**
+   * The round's value in the table: strokes to par in stroke play, points in
+   * stableford. The grid's sums add up to it.
+   */
+  value: number;
+  /** The classic card with the net strokes or the points per hole. */
+  grid: ScorecardGrid;
 };
 
 /** #2661: the marker picker before a delivery, `GET /api/games/[id]/marker-options`. */
