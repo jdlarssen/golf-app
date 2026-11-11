@@ -19,6 +19,7 @@ const NOTHING: RoundSyncState = {
   pendingScoreCount: 0,
   pendingTeeShotCount: 0,
   pendingHoles: [],
+  pendingScoreHoles: [],
   settled: false,
   lastErrorIsNetwork: false,
   quarantinedHoles: [],
@@ -26,7 +27,13 @@ const NOTHING: RoundSyncState = {
   quarantineLockedOnly: false,
 };
 /** Artboardet: hull 1–6 sendt, 7–9 på telefonen. */
-const PENDING: RoundSyncState = { ...NOTHING, pendingScoreCount: 3, pendingHoles: [7, 8, 9], settled: true };
+const PENDING: RoundSyncState = {
+  ...NOTHING,
+  pendingScoreCount: 3,
+  pendingHoles: [7, 8, 9],
+  pendingScoreHoles: [7, 8, 9],
+  settled: true,
+};
 const NINE = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SCORED = new Set(NINE);
 
@@ -70,6 +77,35 @@ describe('SyncSheet', () => {
     expect(screen.getByTestId('sync-legend-pending', hidden)).toHaveTextContent('● på telefonen');
     expect(screen.queryByTestId('sync-legend-empty', hidden)).toBeNull();
     expect(screen.queryByTestId('sync-legend-sent')).toBeNull();
+  });
+
+  it('et slag og et utslagsvalg på hver sitt hull: setningen nevner bare slaget', async () => {
+    await renderSheet({
+      online: true,
+      state: { ...NOTHING, pendingScoreCount: 1, pendingTeeShotCount: 1, pendingHoles: [7, 9], pendingScoreHoles: [7], settled: true },
+    }).result;
+    expect(screen.getByText('Slaget fra hull 7 er lagret på telefonen. Appen prøver å sende det igjen.')).toBeTruthy();
+  });
+
+  it('forklaringen om å taste videre står bare når noe venter', async () => {
+    const { rerender } = await renderSheet().result;
+    expect(screen.getByTestId('sync-sheet-note')).toBeTruthy();
+    const props = {
+      open: true,
+      scoredHoles: SCORED,
+      holes: NINE,
+      online: true,
+      sunlight: false,
+      onGoToHole: () => undefined,
+      onRetried: () => undefined,
+      onClose: () => undefined,
+    };
+    // Bare karantene: ingenting venter, og ingenting blir sendt av seg selv.
+    await rerender(<SyncSheet {...props} state={{ ...NOTHING, quarantinedHoles: [7] }} />);
+    expect(screen.queryByTestId('sync-sheet-note')).toBeNull();
+    // Alt er sendt: heller ingen boks.
+    await rerender(<SyncSheet {...props} state={NOTHING} />);
+    expect(screen.queryByTestId('sync-sheet-note')).toBeNull();
   });
 
   it('på nett med en annen feil: ingen dekningssetning, og appen prøver igjen', async () => {

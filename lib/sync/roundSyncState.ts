@@ -28,6 +28,8 @@ export interface RoundSyncState {
   pendingTeeShotCount: number;
   /** Holes with an active item in either queue, sorted, deduped. */
   pendingHoles: number[];
+  /** Holes with an active stroke item, sorted, deduped: what «Slagene fra hull …» names. */
+  pendingScoreHoles: number[];
   /**
    * At least one active item has been tried, has failed, or is older than
    * `SETTLE_MS`. Only then is "waiting" worth showing.
@@ -70,11 +72,14 @@ export function roundSyncState({
   const activeTeeShots = teeShotItems.filter((item) => isActiveForGame(item, gameId));
   const active: QueueItem[] = [...activeScores, ...activeTeeShots];
 
-  const pendingHoles = new Set<number>();
-  for (const item of active) {
-    const parsed = parseRowKey(queueItemKey(item));
-    if (parsed) pendingHoles.add(parsed.holeNumber);
-  }
+  const holesOf = (items: readonly QueueItem[]): number[] => {
+    const holes = new Set<number>();
+    for (const item of items) {
+      const parsed = parseRowKey(queueItemKey(item));
+      if (parsed) holes.add(parsed.holeNumber);
+    }
+    return [...holes].sort((a, b) => a - b);
+  };
 
   const settled = active.some(
     (item) =>
@@ -104,7 +109,8 @@ export function roundSyncState({
   return {
     pendingScoreCount: activeScores.length,
     pendingTeeShotCount: activeTeeShots.length,
-    pendingHoles: [...pendingHoles].sort((a, b) => a - b),
+    pendingHoles: holesOf(active),
+    pendingScoreHoles: holesOf(activeScores),
     settled,
     lastErrorIsNetwork: latestError != null && isNetworkError(latestError),
     quarantinedHoles,

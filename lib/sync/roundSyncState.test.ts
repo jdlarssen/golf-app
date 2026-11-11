@@ -57,6 +57,7 @@ describe('roundSyncState', () => {
       pendingScoreCount: 0,
       pendingTeeShotCount: 0,
       pendingHoles: [],
+      pendingScoreHoles: [],
       settled: false,
       lastErrorIsNetwork: false,
       quarantinedHoles: [],
@@ -143,6 +144,12 @@ describe('roundSyncState', () => {
 
   it('a stroke and a tee shot on the same hole name the hole once', () => {
     expect(state([score('g1:a:9')], [teeShot('g1:1:9')]).pendingHoles).toEqual([9]);
+  });
+
+  it('pendingScoreHoles names only holes with a waiting stroke, never a tee-shot-only hole', () => {
+    const s = state([score('g1:a:7')], [teeShot('g1:1:9')]);
+    expect(s.pendingHoles).toEqual([7, 9]);
+    expect(s.pendingScoreHoles).toEqual([7]);
   });
 
   it.each([
