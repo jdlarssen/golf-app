@@ -93,6 +93,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   CupJoin: 'Home',
   LeagueRoundStart: 'League',
   MarkerApprove: 'League',
+  LeagueCard: 'League',
   Profile: 'Home',
   EditProfile: 'Profile',
   Inbox: 'Home',

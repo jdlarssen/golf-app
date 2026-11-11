@@ -49,7 +49,7 @@ import { GENERATE_TEXT } from './lib/cupGenerateCopy';
 import { LINEUP_TEXT } from './lib/cupLineupCopy';
 import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupSetupCopy';
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
-import { LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
+import { LEAGUE_CARD_TEXT, LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
@@ -91,6 +91,7 @@ import { CupWithdraw } from './screens/CupWithdraw';
 import { League } from './screens/League';
 import { LeagueJoin } from './screens/LeagueJoin';
 import { MarkerApprove } from './screens/MarkerApprove';
+import { LeagueCard } from './screens/LeagueCard';
 import { LeagueRoundStart } from './screens/LeagueRoundStart';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
@@ -262,6 +263,11 @@ export type RootStackParamList = {
    * fra varselet `league_marker_request`.
    */
   MarkerApprove: { leagueId: string; gameId: string; userId: string };
+  /**
+   * #2815: kortet bak et resultat i sesongtabellen, fra
+   * `GET /api/liga/[id]/kort/[gameId]/[userId]`. Åpnes fra tabellen på ligasiden.
+   */
+  LeagueCard: { leagueId: string; gameId: string; userId: string };
   SyncLab: undefined;
 };
 
@@ -635,6 +641,12 @@ export function RootNavigator() {
           name="MarkerApprove"
           component={MarkerApprove}
           options={kickerHeader(LEAGUE_TEXT.kicker, MARKER_TEXT.screenTitle)}
+        />
+        {/* #2815: kortet bak et resultat i tabellen. Skjermen setter liganavnet i toppen selv. */}
+        <Stack.Screen
+          name="LeagueCard"
+          component={LeagueCard}
+          options={kickerHeader(LEAGUE_TEXT.kicker, LEAGUE_CARD_TEXT.screenTitle)}
         />
         <Stack.Screen
           name="LeagueRoundStart"

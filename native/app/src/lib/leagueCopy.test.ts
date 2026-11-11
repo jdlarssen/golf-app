@@ -15,6 +15,7 @@ import type { AppLeagueRound } from '../../../../lib/league/appLeagueView';
 import type { LeagueStartFailure } from '../data/league';
 import { isFinishedSentence } from '../test/copy';
 import {
+  LEAGUE_CARD_TEXT,
   LEAGUE_JOIN_TEXT,
   LEAGUE_TEXT,
   ROUND_START_TEXT,
@@ -31,7 +32,11 @@ import {
   joinLateLine,
   joinPlayersLine,
   joinRoundsLine,
+  leagueCardHeading,
+  leagueCardResultLine,
+  leagueCardSubtitle,
   nextRoundOf,
+  openCardLabel,
   nextRoundOpens,
   openRoundOf,
   participantLabel,
@@ -49,6 +54,40 @@ import {
 
 const player = source.liga.player;
 const runde = player.runde;
+
+describe('#2815: kortet bak et resultat i tabellen', () => {
+  it('ordene er nettsidens (liga.card, liga.standings.openCardAriaLabel)', () => {
+    const card = source.liga.card;
+    const fill = (text: string, values: Record<string, string>) =>
+      Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, value), text);
+    expect({
+      kicker: LEAGUE_CARD_TEXT.screenTitle,
+      unknownPlayer: LEAGUE_CARD_TEXT.unknownPlayer,
+      heading: leagueCardHeading('Anders'),
+      subtitle: leagueCardSubtitle('Runde 1', 'Vinterliga'),
+      strokes: leagueCardResultLine({ format: 'stroke', value: 1, playingHandicap: 12 }),
+      points: leagueCardResultLine({ format: 'stableford', value: 34, playingHandicap: 12 }),
+      aria: openCardLabel('Martin', 'Runde 3'),
+    }).toEqual({
+      kicker: card.kicker,
+      unknownPlayer: card.unknownPlayer,
+      heading: fill(card.heading, { name: 'Anders' }),
+      subtitle: fill(card.subtitle, { roundLabel: 'Runde 1', leagueName: 'Vinterliga' }),
+      strokes: `${fill(card.result, { value: '+1' })} · ${fill(card.playingHandicap, { hcp: '12' })}`,
+      points: `${fill(card.resultPoints, { value: '34' })} · ${fill(card.playingHandicap, { hcp: '12' })}`,
+      aria: fill(source.liga.standings.openCardAriaLabel, { name: 'Martin', round: 'Runde 3' }),
+    });
+  });
+
+  it('resultatet skrives som tabellen skriver en runde; uten handicap på brutto-kortet', () => {
+    expect([
+      leagueCardResultLine({ format: 'stroke', value: 0, playingHandicap: null }),
+      leagueCardResultLine({ format: 'stroke', value: -2, playingHandicap: 5 }),
+      leagueCardResultLine({ format: 'modified_stableford', value: -3, playingHandicap: null }),
+      leagueCardHeading(null),
+    ]).toEqual(['Resultat: E', 'Resultat: −2 · Spillehandicap 5', 'Resultat: -3 poeng', 'Kortet til Ukjent spiller']);
+  });
+});
 
 describe('paritet med nettsiden (messages/no.json)', () => {
   it('hver avslagstekst er nettsidens errorMap ordrett, med {max} satt inn', () => {

@@ -45,6 +45,8 @@ async function renderLeague(params: { joined?: boolean } = {}) {
     navigation: {
       navigate,
       setParams,
+      // `openOrReturn` (#2746) leser stakken: ligaen ligger alene.
+      getState: () => ({ index: 0, routes: [{ name: 'League', params: { leagueId: 'liga-vinter' } }] }),
       addListener: (name: string, listener: () => void) => {
         listeners[name] = listener;
         return () => {};
@@ -413,6 +415,38 @@ describe('#2661: markøren i en simulatorliga', () => {
 });
 
 // #2748: regelen for lenka er serverens (`participantShareUrl`).
+describe('#2815: kortet bak et resultat i tabellen', () => {
+  it('et resultat med kort bak seg åpner kortet; et uspilt resultat kan ikke trykkes på', async () => {
+    const { navigate } = await renderLeague();
+    const cell = screen.getByTestId('league-standings-card-martin-r1');
+    expect(cell.props.accessibilityLabel).toMatch(/^Se kortet til .+, Runde 1$/);
+    await fireEvent.press(cell);
+    expect(navigate).toHaveBeenCalledWith('LeagueCard', {
+      leagueId: 'liga-vinter',
+      gameId: 'g-martin-r1',
+      userId: 'martin',
+    });
+    expect(screen.queryByTestId('league-standings-card-martin-r2')).toBeNull();
+  });
+
+  it('en server fra før #2815 sender ikke kortet: ingen celle kan trykkes på', async () => {
+    const view = leagueView();
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        standings: view.standings.map((row) => ({
+          ...row,
+          perRound: row.perRound.map(({ gameId: _gameId, ...cell }) => cell as typeof row.perRound[number]),
+        })),
+      },
+    });
+    await renderLeague();
+    expect(screen.getByTestId('league-standings')).toBeTruthy();
+    expect(screen.queryByTestId(/^league-standings-card-/)).toBeNull();
+  });
+});
+
 describe('«Del lenka»', () => {
   const URL = 'https://tornygolf.no/liga/bli-med/abcd2345';
 
