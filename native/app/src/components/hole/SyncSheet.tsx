@@ -79,7 +79,7 @@ export function SyncSheet({
   open: boolean;
   state: RoundSyncState;
   scoredHoles: ReadonlySet<number>;
-  /** Rundens hull, de samme som hullstripa (`roundHoleNumbers`). */
+  /** Spillets egne hull (`gameHoleNumbers`); køen og slagene gjelder bare dem. */
   holes: readonly number[];
   /** Telefonen melder selv at den er på nett (`useDeviceOnline`). */
   online: boolean;
@@ -156,7 +156,9 @@ export function SyncSheet({
               <Text style={[styles.body, { color: colors.muted }]} testID="sync-sheet-body">
                 {pending
                   ? `${online ? '' : `${SYNC_CHIP_TEXT.noCoverage} `}${pendingText({
-                      holes: state.pendingHoles,
+                      // Slagene nevner bare hull med slag; står bare utslagsvalg
+                      // igjen, er det de hullene.
+                      holes: state.pendingScoreCount > 0 ? state.pendingScoreHoles : state.pendingHoles,
                       pendingScoreCount: state.pendingScoreCount,
                       pendingTeeShotCount: state.pendingTeeShotCount,
                       waitingForNetwork,
@@ -242,9 +244,13 @@ export function SyncSheet({
             ))}
           </View>
 
-          <View style={[styles.noteBox, { backgroundColor: colors.trackBg }, edge]} testID="sync-sheet-note">
-            <Text style={[styles.note, { color: colors.muted }]}>{SYNC_CHIP_TEXT.keepGoing}</Text>
-          </View>
+          {/* Løftet om at slagene blir liggende og sendes, gjelder bare det som venter.
+              Karantene sendes aldri av seg selv. */}
+          {pending ? (
+            <View style={[styles.noteBox, { backgroundColor: colors.trackBg }, edge]} testID="sync-sheet-note">
+              <Text style={[styles.note, { color: colors.muted }]}>{SYNC_CHIP_TEXT.keepGoing}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             {pending ? (
