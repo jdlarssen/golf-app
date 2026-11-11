@@ -16,17 +16,23 @@ export type { ScorecardHole };
  * card. Extracted from /games/[id]/approve (#1586) so the Sekretariatet and
  * creator approval lists render the exact same card. Filters holes by the
  * game's segment itself (#1441) — callers may pass the full hole list.
+ *
+ * `extraColumn` (#2815): one more number per hole after the strokes, already
+ * computed by the caller — the league card's net strokes or points. Without
+ * it the table is the four columns it always was.
  */
 export async function ScorecardTable({
   holes,
   scores,
   teeGender,
   holeSegment,
+  extraColumn,
 }: {
   holes: ScorecardHole[];
   scores: ReadonlyMap<number, number | null>;
   teeGender: ScoringGender;
   holeSegment: HoleSegment;
+  extraColumn?: { label: string; values: ReadonlyMap<number, number | null> };
 }) {
   const t = await getTranslations('game.approve');
   const segmentHoles = holes.filter((h) =>
@@ -50,6 +56,11 @@ export async function ScorecardTable({
             <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted">
               {t('colStrokes')}
             </th>
+            {extraColumn && (
+              <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted">
+                {extraColumn.label}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -88,6 +99,11 @@ export async function ScorecardTable({
                     {s ?? '—'}
                   </ScoreShape>
                 </td>
+                {extraColumn && (
+                  <td className="score-num px-2 py-1.5 text-right text-text">
+                    {extraColumn.values.get(h.hole_number) ?? '—'}
+                  </td>
+                )}
               </tr>
             );
           })}

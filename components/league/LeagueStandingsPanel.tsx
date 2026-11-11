@@ -21,6 +21,7 @@ export function LeagueStandingsPanel({
   bestNCount,
   pointsBased = false,
   openRoundId = null,
+  leagueId = null,
 }: {
   standings: LeagueStandingsByScoring;
   rounds: LeagueRoundView[];
@@ -31,6 +32,8 @@ export function LeagueStandingsPanel({
   pointsBased?: boolean;
   /** #1378: the open round, picked on the server with `tableRounds`. */
   openRoundId?: string | null;
+  /** #2815: the league page's id links each played cell to its card; the embed has none. */
+  leagueId?: string | null;
 }) {
   const t = useTranslations('liga.standings');
   const both = standings.net !== null && standings.gross !== null;
@@ -68,6 +71,7 @@ export function LeagueStandingsPanel({
         bestNCount={bestNCount}
         pointsBased={pointsBased}
         openRoundId={openRoundId}
+        leagueId={leagueId}
       />
     </div>
   );

@@ -31,5 +31,20 @@ describe('ScorecardTable', () => {
     expect(rows).toHaveLength(18);
     expect(rows[0]?.textContent).toContain('5');
     expect(rows[17]?.textContent).toContain('—');
+
+    // #2815: the league card's extra column (net or points) only when asked for.
+    const withExtra = await ScorecardTable({
+      holes,
+      scores,
+      teeGender: 'mens',
+      holeSegment: 'full',
+      extraColumn: { label: 'Poeng', values: new Map(holes.map((h) => [h.hole_number, 1])) },
+    });
+    const extra = render(withExtra as React.ReactElement).container;
+    expect([
+      container.querySelectorAll('thead th').length,
+      extra.querySelectorAll('thead th').length,
+      extra.querySelectorAll('tbody tr')[0]?.querySelectorAll('td').length,
+    ]).toEqual([4, 5, 5]);
   });
 });

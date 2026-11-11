@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatNumber } from '@/lib/i18n/format';
@@ -26,12 +27,15 @@ function RoundCell({
   pointsBased,
   t,
   locale,
+  card,
 }: {
   cell: LeagueStandingCell | undefined;
   model: string;
   pointsBased: boolean;
   t: ReturnType<typeof useTranslations<'liga.standings'>>;
   locale: AppLocale;
+  /** #2815: where the cell's card is and how to name the link; null = no link. */
+  card: { href: string; label: string } | null;
 }) {
   const raw = roundCellValue(cell, model);
   if (!cell || raw === null) {
@@ -49,10 +53,29 @@ function RoundCell({
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
+  const content = (
+    <>
+      <span>{label}</span>
+      {isFlagged && (
+        <span
+          role="img"
+          className="ml-0.5 inline-block h-1 w-1 rounded-full align-middle"
+          style={{ background: 'var(--accent)' }}
+          aria-label={t('flaggedAriaLabel')}
+        />
+      )}
+    </>
+  );
+  // #2815: a played cell opens the card behind it. The whole cell is the
+  // target, at least 44 px high. A penalty has no card, so `card` is null.
+  // No prefetch: a table holds a link per player and round.
+  const linked = card !== null && !isPenalty;
+
   return (
     <td
       className={[
-        'px-0 py-2 text-center font-serif tabular-nums text-xs',
+        linked ? 'p-0' : 'px-0 py-2',
+        'text-center font-serif tabular-nums text-xs',
         isPenalty ? 'text-muted' : 'text-text',
       ].join(' ')}
       title={
@@ -63,14 +86,18 @@ function RoundCell({
             : undefined
       }
     >
-      <span>{label}</span>
-      {isFlagged && (
-        <span
-          role="img"
-          className="ml-0.5 inline-block h-1 w-1 rounded-full align-middle"
-          style={{ background: 'var(--accent)' }}
-          aria-label={t('flaggedAriaLabel')}
-        />
+      {linked ? (
+        <Link
+          href={card.href}
+          prefetch={false}
+          aria-label={card.label}
+          data-testid="liga-standings-card-link"
+          className="flex min-h-[44px] items-center justify-center rounded-md transition-colors hover:bg-primary-soft/50"
+        >
+          {content}
+        </Link>
+      ) : (
+        content
       )}
     </td>
   );
@@ -84,6 +111,7 @@ export function LeagueStandingsTable({
   bestNCount,
   pointsBased = false,
   openRoundId = null,
+  leagueId = null,
 }: {
   rows: LeagueStandingRow[];
   /** Rounds that have opened, in sequence (`tableRounds`); upcoming rounds get no column. */
@@ -95,6 +123,12 @@ export function LeagueStandingsTable({
   pointsBased?: boolean;
   /** #1378: the round whose window is open now; its header carries the dot. */
   openRoundId?: string | null;
+  /**
+   * #2815: the league page passes its id, and a played cell links to the card
+   * behind it. The public embed passes nothing: nobody is signed in there, so
+   * the card would be a 404.
+   */
+  leagueId?: string | null;
 }) {
   const t = useTranslations('liga.standings');
   const locale = useLocale();
@@ -196,6 +230,13 @@ export function LeagueStandingsTable({
         {/* Per-round cells */}
         {rounds.map((r) => {
           const cell = row.perRound.find((c) => c.roundId === r.id);
+          const card =
+            leagueId && cell?.gameId
+              ? {
+                  href: `/liga/${leagueId}/kort/${cell.gameId}/${row.userId}`,
+                  label: t('openCardAriaLabel', { name, round: r.label }),
+                }
+              : null;
           return (
             <RoundCell
               key={r.id}
@@ -204,6 +245,7 @@ export function LeagueStandingsTable({
               pointsBased={pointsBased}
               t={t}
               locale={locale}
+              card={card}
             />
           );
         })}
