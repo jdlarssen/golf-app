@@ -25,7 +25,7 @@ import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
-import { paymentCounts } from '@/lib/games/payments';
+import { paymentCounts } from '@/lib/games/paymentRules';
 import {
   isStablefordFamily,
   isScrambleFamily,
@@ -796,7 +796,7 @@ async function buildSections({
     players.map((p) => ({
       paid: p.paid_at != null,
       withdrawn: p.withdrawn_at != null,
-      isGuest: false,
+      isGuest: p.users?.is_guest ?? false,
     })),
   );
   const betaling = game.entry_fee_kr > 0 && (

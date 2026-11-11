@@ -95,6 +95,20 @@ describe('PaymentStatus', () => {
     expect(screen.getByTestId('payment-row-me').props.accessibilityState).toMatchObject({ checked: true });
   });
 
+  it('lagret, men lista kunne ikke hentes på nytt: haken står, uten feilmelding', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, overview: overview() });
+    mockSetPaid.mockResolvedValue({ ok: true });
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('payment-row-jonas')).toBeTruthy());
+
+    mockFetch.mockResolvedValueOnce({ ok: false, reason: 'network' });
+    await fireEvent.press(screen.getByTestId('payment-row-jonas'));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('payment-row-jonas').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.queryByTestId('payment-status-error')).toBeNull();
+  });
+
   it('purre-knappen sender og sier «Purret 2 spillere.»', async () => {
     mockFetch.mockResolvedValue({ ok: true, overview: overview() });
     mockRemind.mockResolvedValue({ ok: true, reminded: 2 });
