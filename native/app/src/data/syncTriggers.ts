@@ -20,6 +20,7 @@ const DRAIN_INTERVAL_MS = 30_000;
 let connected = true;
 
 const onlineListeners = new Set<() => void>();
+const connectivityListeners = new Set<(online: boolean) => void>();
 
 /** Siste kjente nett-status. Realtime bruker den til å parkere retries. */
 export function isDeviceOnline(): boolean {
@@ -34,6 +35,18 @@ export function addOnlineListener(listener: () => void): () => void {
   onlineListeners.add(listener);
   return () => {
     onlineListeners.delete(listener);
+  };
+}
+
+/**
+ * #2348: fyr ved hver endring i nett-statusen, både når nettet går og når det
+ * kommer tilbake. Lagringsbrikka på hullsiden sier «Du har ikke dekning her.»
+ * bare når telefonen selv melder at den er uten nett.
+ */
+export function addConnectivityListener(listener: (online: boolean) => void): () => void {
+  connectivityListeners.add(listener);
+  return () => {
+    connectivityListeners.delete(listener);
   };
 }
 
@@ -57,8 +70,10 @@ function applyNetworkState(state: NetworkState): void {
   // av `isConnected`, så `isConnected` ER signalet. Ukjent (undefined) leses som
   // tilkoblet — heller en drain for mye enn en kø som står stille.
   const next = state.isConnected ?? true;
+  const changed = next !== connected;
   const cameBack = next && !connected;
   connected = next;
+  if (changed) for (const listener of connectivityListeners) listener(next);
   if (!cameBack) return;
   for (const listener of onlineListeners) listener();
   void drainQueue('nett tilbake');

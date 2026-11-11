@@ -9,13 +9,14 @@
 // «fyr alle lyttere»-løkke (docs/test-discipline.md: aldri duplikat
 // mock-oppsett).
 //
-// Produktkoden henter fire verdier fra `data/syncTriggers`, og alle fire står
+// Produktkoden henter fem verdier fra `data/syncTriggers`, og alle fem står
 // her.
 
 type Listener = () => void;
 
 const foregroundListeners = new Set<Listener>();
 const onlineListeners = new Set<Listener>();
+const connectivityListeners = new Set<(online: boolean) => void>();
 
 export const isDeviceOnline = jest.fn(() => true);
 
@@ -30,6 +31,13 @@ export const addOnlineListener = jest.fn((listener: Listener) => {
   onlineListeners.add(listener);
   return () => {
     onlineListeners.delete(listener);
+  };
+});
+
+export const addConnectivityListener = jest.fn((listener: (online: boolean) => void) => {
+  connectivityListeners.add(listener);
+  return () => {
+    connectivityListeners.delete(listener);
   };
 });
 
@@ -48,4 +56,9 @@ export function fireForeground(): void {
 /** Nettet er tilbake: alle aktive nett-lyttere fyres. */
 export function fireOnline(): void {
   for (const listener of [...onlineListeners]) listener();
+}
+
+/** Nett-statusen endret seg (#2348): alle aktive lyttere får den nye verdien. */
+export function fireConnectivity(online: boolean): void {
+  for (const listener of [...connectivityListeners]) listener(online);
 }
