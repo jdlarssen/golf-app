@@ -22,7 +22,7 @@ import {
   type CheckRun,
   type ChecksState,
 } from '../../lib/loops/prCard';
-import { fetchCiRunsForSha } from '../../lib/loops/ciRuns';
+import { fetchChangedFiles, fetchCiRunsForSha } from '../../lib/loops/ciRuns';
 import {
   classifyAutoMerge,
   closingIssueNumbers,
@@ -82,24 +82,6 @@ async function prForSha(gh: ReturnType<typeof ghClient>, sha: string): Promise<n
   if (res.status !== 200) return null;
   const prs = (res.json as Array<{ number: number; state: string }>) ?? [];
   return (prs.find((p) => p.state === 'open') ?? prs[0])?.number ?? null;
-}
-
-// `null` = oppslaget feilet (HTTP ≠ 200) — MÅ skilles fra `[]` (tom diff), ellers
-// slås ci.yml-gaten stille AV og aldri-lista i classifyAutoMerge ser en tom
-// fil-liste (#1520). Taket på 3×100 filer er kjent og dokumentert i kontrakten.
-async function fetchChangedFiles(
-  gh: ReturnType<typeof ghClient>,
-  n: number,
-): Promise<string[] | null> {
-  const files: string[] = [];
-  for (let page = 1; page <= 3; page++) {
-    const res = await gh.rest('GET', `/repos/${REPO}/pulls/${n}/files?per_page=100&page=${page}`);
-    if (res.status !== 200) return null;
-    const batch = (res.json as Array<{ filename?: string }>) ?? [];
-    for (const f of batch) if (f.filename) files.push(f.filename);
-    if (batch.length < 100) break;
-  }
-  return files;
 }
 
 // Commit-meldingene på PR-en (samme paginering som fetchChangedFiles) — auto-merge-
@@ -197,7 +179,7 @@ async function main(): Promise<void> {
   // om diffen i det hele tatt forventer en CI-kjøring (#1520). Feilet oppslaget,
   // stopper vi her — både gaten og aldri-lista i classifyAutoMerge ville ellers
   // jobbet på en falsk tom fil-liste (fail-closed: aldri kort, aldri merge).
-  const changedFiles = await fetchChangedFiles(gh, n);
+  const changedFiles = await fetchChangedFiles(gh, REPO, n);
   if (changedFiles === null) return noCard(`PR #${n}: fikk ikke lest endrede filer`);
   const needsCiRun = expectsRealCi(changedFiles);
 

@@ -1,5 +1,11 @@
 import crypto from 'node:crypto';
-import { fetchCiRunsForSha } from './ciRuns';
+import {
+  CI_DOCS_WORKFLOW_FILE,
+  CI_WORKFLOW_FILE,
+  fetchChangedFiles,
+  fetchCiRunsForSha,
+} from './ciRuns';
+import { expectsRealCi } from './prCard';
 import { postLaunchMarker } from './launchMarker';
 import {
   validateProductUpdateInput,
@@ -285,7 +291,13 @@ async function handleMergePr(
   const pr = prRes.json as PrInfo;
   if (pr.state !== 'open') return `PR #${action.pr} er ikke åpen (${pr.state}) — ingenting å merge.`;
 
-  const ciLookup = await fetchCiRunsForSha(gh, LOOP_REPO, pr.head.sha);
+  // Docs-only-PR-er kjører ikke ci.yml (paths-ignore), bare tvillingen — velg
+  // workflow ut fra diffen, aldri «prøv ci.yml, ellers tvillingen»: på en blandet PR
+  // er tvillingen grønn før ci.yml er registrert, og det gjenåpner #1520 (#2835).
+  // Feilet eller avkortet fil-oppslag (`null`) → ci.yml-porten (fail-closed).
+  const changedFiles = await fetchChangedFiles(gh, LOOP_REPO, action.pr);
+  const workflowFile = expectsRealCi(changedFiles) ? CI_WORKFLOW_FILE : CI_DOCS_WORKFLOW_FILE;
+  const ciLookup = await fetchCiRunsForSha(gh, LOOP_REPO, pr.head.sha, workflowFile);
   if (!ciLookup.ok)
     return `Fikk ikke lest CI-status for PR #${action.pr} (HTTP ${ciLookup.status}) — ikke merget.`;
   const ciRuns = ciLookup.runs;

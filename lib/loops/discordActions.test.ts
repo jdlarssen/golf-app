@@ -10,7 +10,12 @@ import {
   type GitHubClient,
   type LanseringDeps,
 } from './discordActions';
-import { CI_WORKFLOW_FILE, fetchCiRunsForSha } from './ciRuns';
+import {
+  CI_DOCS_WORKFLOW_FILE,
+  CI_WORKFLOW_FILE,
+  fetchChangedFiles,
+  fetchCiRunsForSha,
+} from './ciRuns';
 
 // Ekte ed25519-nøkkelpar per test-kjøring — verifiseringen testes mot ekte
 // kryptografi, ikke mot en mock (Discords rå-hex-format utledes fra SPKI-DER).
@@ -168,6 +173,10 @@ const greenPr = {
 const greenCi = {
   workflow_runs: [{ id: 1, status: 'completed', conclusion: 'success' }],
 };
+// Fil-oppslaget (pulls/{n}/files) kommer mellom PR- og CI-oppslaget (#2835).
+// Kode-PR som standard: da leser porten ci.yml, som før.
+const codeFiles = { status: 200, json: [{ filename: 'lib/x.ts' }] };
+const docsFiles = { status: 200, json: [{ filename: 'docs/roadmap.md' }] };
 
 describe('executeAction: ready_issue', () => {
   it('setter autonomy:ready-labelen', async () => {
@@ -363,12 +372,13 @@ describe('executeAction: merge_pr', () => {
   it('grønn ikke-draft PR: henter PR, sjekker CI, rebase-merger', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: greenCi },
       { status: 200, json: { merged: true } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
-    expect(calls[2]).toMatchObject({
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'PUT']);
+    expect(calls[3]).toMatchObject({
       path: `/repos/${LOOP_REPO}/pulls/1112/merge`,
       body: { merge_method: 'rebase' },
     });
@@ -378,22 +388,24 @@ describe('executeAction: merge_pr', () => {
   it('draft-PR tas ut av draft via GraphQL før merge', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: { ...greenPr, draft: true } },
+      codeFiles,
       { status: 200, json: greenCi },
       { status: 200, json: { data: {} } },
       { status: 200, json: { merged: true } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'GRAPHQL', 'PUT']);
     expect(msg).toContain('rebase-merget');
   });
 
   it('rød CI → nekter å merge, navngir konklusjonen', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: { workflow_runs: [{ id: 1, status: 'completed', conclusion: 'failure' }] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(msg).toContain('ikke grønn');
     expect(msg).toContain('failure');
   });
@@ -401,6 +413,7 @@ describe('executeAction: merge_pr', () => {
   it('velger nyeste CI-kjøring (høyeste id) ved re-kjøring', async () => {
     const { gh } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       {
         status: 200,
         json: {
@@ -419,16 +432,18 @@ describe('executeAction: merge_pr', () => {
   it('CI fortsatt i gang → vent-melding, ingen merge', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: { workflow_runs: [{ id: 1, status: 'in_progress', conclusion: null }] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(msg).toContain('kjører fortsatt');
   });
 
   it('ingen CI-kjøring enda → vent-melding, ingen merge', async () => {
     const { gh } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: { workflow_runs: [] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
@@ -444,6 +459,7 @@ describe('executeAction: merge_pr', () => {
   it('merge-feil fra GitHub videreformidles med grunn', async () => {
     const { gh } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: greenCi },
       { status: 405, json: { message: 'Base branch was modified' } },
     ]);
@@ -452,11 +468,128 @@ describe('executeAction: merge_pr', () => {
   });
 
   it('CI-oppslaget feiler → ærlig melding med HTTP-status, ingen merge', async () => {
-    const { gh, calls } = mockGh([{ status: 200, json: greenPr }, { status: 502 }]);
+    const { gh, calls } = mockGh([{ status: 200, json: greenPr }, codeFiles, { status: 502 }]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(msg).toContain('502');
     expect(msg).toContain('ikke merget');
+  });
+});
+
+// ── merge_pr: workflow-valg ut fra endrede filer (#2835) ──────────────────────
+// Docs-only-PR-er kjører ikke ci.yml (paths-ignore), bare tvillingen
+// ci-docs-noop.yml. Porten velger workflow ut fra diffen — aldri «prøv ci.yml,
+// ellers tvillingen», fordi tvillingen på en blandet PR blir grønn før ci.yml er
+// registrert (#1520-vinduet).
+
+describe('executeAction: merge_pr — workflow-valg (#2835)', () => {
+  const ciPath = (file: string) =>
+    `/repos/${LOOP_REPO}/actions/workflows/${file}/runs?head_sha=${HEAD_SHA}&per_page=20`;
+  const runs = (status: string, conclusion: string | null) => ({
+    status: 200,
+    json: { workflow_runs: [{ id: 1, status, conclusion }] },
+  });
+
+  it('bare dokumenter + grønn tvilling → rebase-merger, leser tvillingen og aldri ci.yml', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: greenPr },
+      docsFiles,
+      { status: 200, json: greenCi },
+      { status: 200, json: { merged: true } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls[2].path).toBe(ciPath(CI_DOCS_WORKFLOW_FILE));
+    expect(calls.map((c) => c.path)).not.toContain(ciPath(CI_WORKFLOW_FILE));
+    expect(calls[3]).toMatchObject({ method: 'PUT', body: { merge_method: 'rebase' } });
+    expect(msg).toContain('rebase-merget');
+  });
+
+  it.each([
+    ['tvillingen mangler', { status: 200, json: { workflow_runs: [] } }, 'Fant ingen CI-kjøring'],
+    ['tvillingen kjører', runs('in_progress', null), 'kjører fortsatt'],
+    ['tvillingen er rød', runs('completed', 'failure'), 'ikke grønn'],
+  ])('bare dokumenter + %s → nekter med samme melding som for kode-PR-er', async (_navn, twin, expected) => {
+    const { gh, calls } = mockGh([{ status: 200, json: greenPr }, docsFiles, twin]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls).toHaveLength(3);
+    expect(calls[2].path).toBe(ciPath(CI_DOCS_WORKFLOW_FILE));
+    expect(msg).toContain(expected);
+  });
+
+  it('kode + dokumenter krever fortsatt ci.yml — null ci.yml-kjøringer nekter', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: greenPr },
+      { status: 200, json: [{ filename: 'lib/x.ts' }, { filename: 'docs/y.md' }] },
+      { status: 200, json: { workflow_runs: [] } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls).toHaveLength(3);
+    expect(calls[2].path).toBe(ciPath(CI_WORKFLOW_FILE));
+    expect(msg).toContain('Fant ingen CI-kjøring');
+  });
+
+  it('fil-oppslaget feiler → ci.yml-porten (fail-closed)', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: greenPr },
+      { status: 502 },
+      { status: 200, json: { workflow_runs: [] } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls[2].path).toBe(ciPath(CI_WORKFLOW_FILE));
+    expect(msg).toContain('Fant ingen CI-kjøring');
+  });
+
+  it('avkortet fil-liste (3 fulle sider) → ci.yml-porten, selv om alle filene er dokumenter', async () => {
+    const fullPage = {
+      status: 200,
+      json: Array.from({ length: 100 }, (_, i) => ({ filename: `docs/f${i}.md` })),
+    };
+    const { gh, calls } = mockGh([
+      { status: 200, json: greenPr },
+      fullPage,
+      fullPage,
+      fullPage,
+      { status: 200, json: { workflow_runs: [] } },
+    ]);
+    await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(calls[4].path).toBe(ciPath(CI_WORKFLOW_FILE));
+  });
+});
+
+// ── fetchChangedFiles (delt hjem, #2835) ─────────────────────────────────────
+
+describe('fetchChangedFiles', () => {
+  const page = (n: number, prefix = 'f') => ({
+    status: 200,
+    json: Array.from({ length: n }, (_, i) => ({ filename: `${prefix}${i}.ts` })),
+  });
+
+  it('kort side → lista', async () => {
+    const { gh, calls } = mockGh([page(2)]);
+    expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toEqual(['f0.ts', 'f1.ts']);
+    expect(calls[0].path).toBe(`/repos/${LOOP_REPO}/pulls/7/files?per_page=100&page=1`);
+  });
+
+  it('full side etterfulgt av kort side → alle filene', async () => {
+    const { gh } = mockGh([page(100), page(1, 'g')]);
+    const files = await fetchChangedFiles(gh, LOOP_REPO, 7);
+    expect(files).toHaveLength(101);
+  });
+
+  it('tre fulle sider → null (avkortet er feil, ikke svar)', async () => {
+    const { gh, calls } = mockGh([page(100), page(100), page(100)]);
+    expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toBeNull();
+    expect(calls).toHaveLength(3);
+  });
+
+  it('HTTP-feil → null, ikke tom liste', async () => {
+    const { gh } = mockGh([{ status: 500 }]);
+    expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toBeNull();
+  });
+
+  it('tom diff → [] (skilt fra null)', async () => {
+    const { gh } = mockGh([{ status: 200, json: [] }]);
+    expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toEqual([]);
   });
 });
 
@@ -473,6 +606,12 @@ describe('fetchCiRunsForSha', () => {
       path: `/repos/${LOOP_REPO}/actions/workflows/${CI_WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&per_page=20`,
     });
     expect(res).toEqual({ ok: true, runs: greenCi.workflow_runs });
+  });
+
+  it('fjerde argument velger workflow-fila (tvillingen)', async () => {
+    const { gh, calls } = mockGh([{ status: 200, json: greenCi }]);
+    await fetchCiRunsForSha(gh, LOOP_REPO, HEAD_SHA, CI_DOCS_WORKFLOW_FILE);
+    expect(calls[0].path).toContain(`/workflows/${CI_DOCS_WORKFLOW_FILE}/runs?`);
   });
 
   it('ingen registrert kjøring → ok med tom liste (ikke feil)', async () => {
@@ -653,17 +792,18 @@ describe('executeAction: merge_pr — draft-rollback', () => {
   it('draft + merge-feil → PR-en konverteres tilbake til draft med samme node_id', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: draftPr },
+      codeFiles,
       { status: 200, json: greenCi },
       graphqlOk, // flipp til ready
       mergeFailure,
       graphqlOk, // kompensasjon
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT', 'GRAPHQL']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'GRAPHQL', 'PUT', 'GRAPHQL']);
     // mockGh lagrer kun de 40 første tegnene av spørringen — nok til å skille
     // convert-mutasjonen fra markPullRequestReadyForReview.
-    expect(calls[4].path).toContain('convertPullRequest');
-    expect(calls[4].body).toEqual({ id: draftPr.node_id });
+    expect(calls[5].path).toContain('convertPullRequest');
+    expect(calls[5].body).toEqual({ id: draftPr.node_id });
     expect(msg).toContain('Base branch was modified');
     expect(msg).toContain('lagt tilbake som draft');
   });
@@ -674,13 +814,14 @@ describe('executeAction: merge_pr — draft-rollback', () => {
   ])('draft + merge-feil + kompensasjon feiler (%s) → ⚠️-svar, ingen throw', async (_navn, compensation) => {
     const { gh, calls } = mockGh([
       { status: 200, json: draftPr },
+      codeFiles,
       { status: 200, json: greenCi },
       graphqlOk,
       mergeFailure,
       compensation,
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(6);
     expect(msg).toContain('Base branch was modified');
     expect(msg).toContain('⚠️');
     expect(msg).toContain('står igjen som ready');
@@ -694,6 +835,7 @@ describe('executeAction: merge_pr — draft-rollback', () => {
     const rest = vi
       .fn()
       .mockResolvedValueOnce({ status: 200, json: draftPr })
+      .mockResolvedValueOnce(codeFiles)
       .mockResolvedValueOnce({ status: 200, json: greenCi })
       .mockResolvedValueOnce(mergeFailure);
     const gh: GitHubClient = { rest, graphql };
@@ -705,22 +847,24 @@ describe('executeAction: merge_pr — draft-rollback', () => {
   it('ikke-draft + merge-feil → ingen GraphQL-kall, svaret er uendret', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: greenPr },
+      codeFiles,
       { status: 200, json: greenCi },
       mergeFailure,
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'PUT']);
     expect(msg).toBe('Fikk ikke merget PR #1112: Base branch was modified');
   });
 
   it('flipp svarer 200 MED errors → behandles som feilet flipp, ingen merge-PUT', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: draftPr },
+      codeFiles,
       { status: 200, json: greenCi },
       { status: 200, json: { errors: [{ message: 'Resource not accessible' }] } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'GRAPHQL']);
     expect(msg).toContain('ut av draft');
     expect(msg).toContain('ikke merget');
   });
@@ -728,12 +872,13 @@ describe('executeAction: merge_pr — draft-rollback', () => {
   it('tom errors-liste er ikke en feil → mergen går som normalt', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: draftPr },
+      codeFiles,
       { status: 200, json: greenCi },
       { status: 200, json: { data: {}, errors: [] } },
       { status: 200, json: { merged: true } },
     ]);
     const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GRAPHQL', 'PUT']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'GRAPHQL', 'PUT']);
     expect(msg).toContain('rebase-merget');
   });
 });

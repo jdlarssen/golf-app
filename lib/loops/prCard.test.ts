@@ -16,7 +16,7 @@ import {
   waitForChecksToSettle,
   type CheckRun,
 } from './prCard';
-import { type CiRunsLookup } from './ciRuns';
+import { CI_DOCS_WORKFLOW_FILE, type CiRunsLookup } from './ciRuns';
 
 describe('extractPrSummary', () => {
   it('trekker ut taglinen etter Closes-linja', () => {
@@ -167,6 +167,19 @@ describe('lockstep mot .github/workflows', () => {
     expect(block, 'fant ingen paths-ignore-blokk i ci.yml').not.toBeNull();
     const patterns = [...block![1].matchAll(/-\s*'([^']+)'/g)].map((m) => m[1]);
     expect(patterns).toEqual([...CI_PATHS_IGNORE]);
+  });
+
+  it('CI_PATHS_IGNORE er nøyaktig on.pull_request.paths i ci-docs-noop.yml (tvillingen)', () => {
+    const block = /pull_request:\n(?:\s+branches:[^\n]*\n)?\s+paths:\n((?:\s*-\s*'[^']+'\n)+)/.exec(
+      workflow('ci-docs-noop.yml'),
+    );
+    expect(block, 'fant ingen paths-blokk under pull_request i ci-docs-noop.yml').not.toBeNull();
+    const patterns = [...block![1].matchAll(/-\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(patterns).toEqual([...CI_PATHS_IGNORE]);
+  });
+
+  it('CI_DOCS_WORKFLOW_FILE er navnet på tvilling-fila', () => {
+    expect(fs.existsSync(path.resolve(__dirname, '../../.github/workflows', CI_DOCS_WORKFLOW_FILE))).toBe(true);
   });
 
   it('CARD_CHECK_NAME er jobnavnet i discord-pr-card.yml', () => {
