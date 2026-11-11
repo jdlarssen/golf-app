@@ -1,6 +1,6 @@
 # Roadmap — månedsmål for Tørny
 
-Eies av Jørgen. Godkjent 2026-09-15, revidert 2026-09-16 og to ganger 2026-10-25 (strategisamtaler). Visjonen og lagene står i [`visjon.md`](visjon.md). Målene her bestemmer hvilke issues som lages; issues lages ikke først og sorteres etterpå.
+Eies av Jørgen. Godkjent 2026-09-15, revidert 2026-09-16, to ganger 2026-10-25 og 2026-11-11 (strategisamtaler). Visjonen og lagene står i [`visjon.md`](visjon.md). Målene her bestemmer hvilke issues som lages; issues lages ikke først og sorteres etterpå.
 
 ## Kapasitet per uke (håndheves av orkestratoren)
 
@@ -17,9 +17,9 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 | 2026-09 | Orkestratoren styrer arbeidet | 0.3.0 er inne, planleggingsløken er i harnesset, og første uke har gått med kapasitetsregelen | Selvkjørende loops |
 | 2026-10 | Løkkene går av seg selv, og null kjente spillerbugs | løkke-issuene er lukket, arkivkjøringen 1. oktober er verifisert, bugene i backloggen er borte, Kavalkade-kontrakten er skrevet (#1040), og livstegnet står i Sekretariatets nøkkeltall | Selvkjørende loops (31.10) |
 | 2026-11 | Vinterligaen i bruk, og gjengen er testerne | vennegjengen har spilt runde 1 av vinterligaen fra appen og runde 2 er åpnet, minst 12 testere er med i den lukkede Play-testen og TestFlight, det runde 1 viser at mangler er rettet, første bølge av arrangør-veiviseren er bygget (#2447, #2448, #2454, #2458, #2459, #2607), og Må-sakene for november er levert (#2748, #2750, #2751, #2757, #2758, #2759) og cup (#2752) er i gang | Native app |
-| 2026-12 | Kavalkaden delt i romjula, testernes funn rettet, og Må-lista ferdig | Kavalkaden er delt av minst tre spillere som ikke er Jørgen, funnene fra testerne er rettet eller avvist, og resten av Må-sakene er levert (#2749, #2752–#2756) | Runde 3 — sesongslutt (31.12) |
-| 2027-01 | Native: butikkinnsending | begge butikkene har fått appen | Native app |
-| 2027-02 | Native: gjennomgang og rettinger | appen er godkjent i App Store og Google Play | Native app |
+| 2026-12 | Kavalkaden delt i romjula, testernes funn rettet, Må-lista ferdig, og appen sendt inn | Kavalkaden er delt av minst tre spillere som ikke er Jørgen, funnene fra testerne er rettet eller avvist, resten av Må-sakene er levert (#2749, #2752–#2754, #2756), og appen er sendt inn til begge butikkene: til gjennomgang hos Apple, og med søknad om produksjonstilgang hos Google | Runde 3 — sesongslutt (31.12) |
+| 2027-01 | Native: gjennomgang og rettinger | Apple og Google har svart på innsendingen, og et eventuelt avslag er rettet og sendt inn på nytt | Native app |
+| 2027-02 | Native: buffer, og godkjent i begge butikkene | appen er godkjent i App Store og Google Play og venter på slipp 1. mars | Native app |
 | 2027-03 | I butikkene, og visjonen ses på igjen | lansert, og `hva-er-nok.md` revidert for neste år | Native app (31.03) |
 | 2027-04 | Sesongstart: første spill helt uten Jørgen | ett fullført spill der Jørgen verken arrangerte eller spilte (livstegnet i `visjon.md`) | Liv laga — sesongstart 2027 (30.06) |
 
@@ -32,6 +32,8 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 **Endret 2026-10-31 (månedsstart for november):** køen sto tom og første bølge av veiviseren var levert, så eieren hentet #2463 («Nå» som tee-off) og #2457 (innstillingene på «Klar?» som korte rader) fram fra april til november. Funn fra generalprøven (#2712) og ligarunde 1 går fortsatt først.
 
 **Endret 2026-11-01 (ny prioritering for lanseringen):** eieren erstattet MoSCoW-en fra 30.08 (#1816), og 12 Må-punkter manglet helt eller delvis i appen (#2748–#2759). Eieren beholdt innsendingen i januar, så sakene bygges i november og desember. November tar det testerne og ligaen merker nå (varsler på Android, innboksen, lenkene som åpner appen, flightvalg, ny bane, Patsome) og starter cup, som er størst. Desember tar resten. Funn fra ligarunde 1 går fortsatt først.
+
+**Endret 2026-11-11 (strategisamtale):** alle Må-sakene for november ble levert, cup er ferdig, og fire av seks Må-saker for desember er også levert (#2749, #2752, #2754, #2756). Det som står mellom appen og butikkene nå, er gjennomgangen hos Apple og Google, ikke byggingen. Eieren flyttet derfor innsendingen fra januar til desember. Apple får appen i god tid før jul, og Google får søknaden om produksjonstilgang så snart 12 testere har vært med i 14 dager. Lanseringen står fast 1. mars, fordi begge butikkene lar en godkjent versjon vente til vi slipper den. Januar og februar blir buffer: tid til et eventuelt avslag, funn fra runde 2 og testerne, og oppdateringer som #2753. #2755 (hull for hull for Skins og Nassau) er tatt ut av desember, fordi eieren har flyttet den til februar, der den venter på redesignet. Datoene i butikkpakken (#2561) følger denne endringen.
 
 ## Slik brukes dette
 
