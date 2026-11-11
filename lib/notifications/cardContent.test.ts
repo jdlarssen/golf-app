@@ -392,3 +392,80 @@ describe('buildNotificationText — game_cancelled (#2481)', () => {
     expect(buildNotificationText('game_cancelled', payload, real('en')).detail).toBe('The organizer cancelled the round');
   });
 });
+
+// #2800: a friend's or a league player's gross brag, through the real catalog
+// in both languages. The best moment names the title; the holes follow in order.
+describe('buildNotificationText — friend_achievement (#2800)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const base = {
+    game_id: '11111111-1111-1111-1111-111111111111',
+    player_id: '22222222-2222-2222-2222-222222222222',
+    player_name: 'Ola Nordmann',
+    course_name: 'Bogstad',
+    league_id: null,
+  };
+  const text = (payload: object, locale: 'no' | 'en') =>
+    buildNotificationText('friend_achievement', payload as NotificationPayload, real(locale));
+
+  it('one moment: who, what, which hole and course', () => {
+    const payload = { ...base, moments: [{ kind: 'eagle', hole_number: 4 }] };
+    expect(text(payload, 'no')).toEqual({ title: 'Ola Nordmann fikk eagle', detail: 'Hull 4 på Bogstad' });
+    expect(text(payload, 'en')).toEqual({ title: 'Ola Nordmann got an eagle', detail: 'Hole 4 at Bogstad' });
+  });
+
+  it('an albatross and a hole-in-one keep their own names', () => {
+    const albatross = { ...base, moments: [{ kind: 'albatross', hole_number: 9 }] };
+    expect(text(albatross, 'no').title).toBe('Ola Nordmann fikk albatross');
+    expect(text(albatross, 'en').title).toBe('Ola Nordmann got an albatross');
+    const ace = { ...base, moments: [{ kind: 'hole_in_one', hole_number: 7 }] };
+    expect(text(ace, 'no').title).toBe('Ola Nordmann fikk hole-in-one');
+    expect(text(ace, 'en').title).toBe('Ola Nordmann got a hole-in-one');
+  });
+
+  it('several moments: the best one names the title, every hole in the detail', () => {
+    const payload = {
+      ...base,
+      moments: [
+        { kind: 'eagle', hole_number: 4 },
+        { kind: 'hole_in_one', hole_number: 12 },
+        { kind: 'eagle', hole_number: 15 },
+      ],
+    };
+    expect(text(payload, 'no')).toEqual({
+      title: 'Ola Nordmann fikk hole-in-one',
+      detail: 'Hull 4, 12 og 15 på Bogstad',
+    });
+    expect(text(payload, 'en')).toEqual({
+      title: 'Ola Nordmann got a hole-in-one',
+      detail: 'Holes 4, 12 and 15 at Bogstad',
+    });
+  });
+
+  it('without a course: just the holes', () => {
+    const payload = {
+      ...base,
+      course_name: null,
+      moments: [
+        { kind: 'eagle', hole_number: 4 },
+        { kind: 'eagle', hole_number: 12 },
+      ],
+    };
+    expect(text(payload, 'no').detail).toBe('Hull 4 og 12');
+    expect(text(payload, 'en').detail).toBe('Holes 4 and 12');
+  });
+
+  it('without a name: «En venn» to a friend, «En spiller» in a league', () => {
+    const moments = [{ kind: 'eagle', hole_number: 4 }];
+    expect(text({ ...base, player_name: null, moments }, 'no').title).toBe('En venn fikk eagle');
+    expect(text({ ...base, player_name: null, moments }, 'en').title).toBe('A friend got an eagle');
+    const league = { ...base, player_name: null, league_id: '33333333-3333-3333-3333-333333333333', moments };
+    expect(text(league, 'no').title).toBe('En spiller fikk eagle');
+    expect(text(league, 'en').title).toBe('A player got an eagle');
+  });
+});

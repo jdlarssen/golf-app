@@ -191,5 +191,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       // #2481: the game is deleted, so there is no page to open. The card
       // carries the whole message; the push falls back to `/` (`sendPush`).
       return null;
+    case 'friend_achievement': {
+      // #2800: the recipient was not in the game and cannot open it (RLS,
+      // #1542). A league round opens the league, anything else the friends.
+      const p = n.payload as NotificationPayload<'friend_achievement'>;
+      return p.league_id ? `/liga/${p.league_id}` : '/profile/venner';
+    }
   }
 }

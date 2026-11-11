@@ -81,4 +81,6 @@ export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> =
   payment_reminder: 'konvolutt',
   // #2481: the round is off.
   game_cancelled: 'flagg',
+  // #2800: a friend's or league player's eagle, albatross or hole-in-one.
+  friend_achievement: 'pokal',
 };

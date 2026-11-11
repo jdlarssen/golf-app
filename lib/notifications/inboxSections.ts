@@ -89,7 +89,13 @@ export type InboxEntry =
 
 export type InboxSections = Record<InboxSectionKey, InboxEntry[]>;
 
-export const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
+// #2800: a friend's brag too. One from a league round sits here as well: the
+// chip is chosen by kind alone, and there is no league chip.
+export const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set([
+  'friend_request',
+  'friend_accepted',
+  'friend_achievement',
+]);
 
 /**
  * Which button a row gets in KREVER HANDLING, or `null` when the row only
@@ -155,6 +161,7 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'achievement_unlocked':
     case 'idea_built':
     case 'game_cancelled':
+    case 'friend_achievement':
       return null;
     default: {
       const unhandled: never = row.kind;
@@ -220,6 +227,7 @@ const PERSON_FIELD: Partial<Record<NotificationKind, string>> = {
   cup_signup: 'participant_name',
   player_added: 'added_by_name',
   game_moved: 'moved_by_name',
+  friend_achievement: 'player_name',
 };
 
 /** The raw name of the person a row is about, or `null`. */
@@ -723,6 +731,8 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   'league_round_closing',
   // #2480: the title names the game; the detail gives the new tee-off.
   'game_moved',
+  // #2800: the title names who and what; the detail gives the holes and course.
+  'friend_achievement',
 ]);
 
 /** Kinds whose detail carries a person's own words. */
@@ -1020,6 +1030,15 @@ export function buildInboxEntryView(
       };
     case 'game_cancelled':
       return { ...base, ...cancelledText(row, time, t), avatar: singleAvatar(row), destination };
+    // #2800: the row names the player, but the disc is the trophy: it is the
+    // brag that is news, not the person.
+    case 'friend_achievement':
+      return {
+        ...base,
+        ...plainText(row, time, ctx, catalogText(row, t).title),
+        avatar: { kind: 'icon', icon: NOTIFICATION_ICON.friend_achievement },
+        destination,
+      };
     default:
       return {
         ...base,
