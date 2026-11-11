@@ -116,7 +116,7 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   const markerRows = queues.forMarker;
   const organizerRows = queues.forOrganizer;
   const openMarker = (a: QueuedCard) =>
-    navigation.navigate('MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
+    openOrReturn(navigation, 'MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
 
   return (
     <ScrollView
@@ -180,7 +180,7 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
           view={view}
           round={open}
           action={roundAction(view, open, next, stale, () =>
-            navigation.navigate('LeagueRoundStart', { leagueId, roundId: open.id }),
+            openOrReturn(navigation, 'LeagueRoundStart', { leagueId, roundId: open.id }),
           )}
         />
       ) : null}
