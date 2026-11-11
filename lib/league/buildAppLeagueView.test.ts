@@ -70,7 +70,7 @@ function snapshot(scoring: string): LeagueSnapshot {
             roundsPlayed: 1,
             ranked: true,
             rank: 1,
-            perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false, deliveredOutsideWindow: false }],
+            perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' }],
           },
         ],
       },
@@ -82,7 +82,7 @@ function snapshot(scoring: string): LeagueSnapshot {
             roundsPlayed: 1,
             ranked: true,
             rank: 1,
-            perRound: [{ roundId: 'r1', value: 30, points: null, penalised: false, deliveredOutsideWindow: false }],
+            perRound: [{ roundId: 'r1', value: 30, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' }],
           },
         ],
       },
@@ -140,7 +140,8 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
           value: 36,
           ranked: true,
           roundsPlayed: 1,
-          perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false }],
+          // #2815: the cell names the flight, so the app can open its card.
+          perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false, gameId: 'g1' }],
         },
       ],
       me: { userId: 'B', isParticipant: true, isOrganizer: false },
@@ -148,7 +149,8 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
   });
 
   it('a gross league sends the gross table', () => {
-    expect(buildAppLeagueView(snapshot('gross'), 'A').standings[0].value).toBe(30);
+    const row = buildAppLeagueView(snapshot('gross'), 'A').standings[0];
+    expect({ value: row.value, gameId: row.perRound[0].gameId }).toEqual({ value: 30, gameId: 'g1' });
   });
 
   it('the full name and HCP come only from the details a participant gets', () => {

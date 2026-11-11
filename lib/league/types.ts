@@ -104,6 +104,8 @@ export type LeagueStandingsConfig = {
  */
 export type LeagueRoundPlayerScore = {
   userId: string;
+  /** #2815: the flight game the result came from; the table links its card. */
+  gameId: string;
   /** Per-runde-verdi på netto-aksen (mot-par for slagspill, poeng for stableford). */
   net: number;
   /** Per-runde-verdi på brutto-aksen. Stableford: poeng uten handicapslag (#2638). */
@@ -144,6 +146,12 @@ export type LeagueStandingCell = {
   /** true = verdien er en straffescore (uteblitt runde under penalty-modellen). */
   penalised: boolean;
   deliveredOutsideWindow: boolean;
+  /**
+   * #2815: the flight whose card the value came from (the earliest one when
+   * the player has several in the round, #2214). null when the player did
+   * not play the round, also for a penalty: there is no card behind it.
+   */
+  gameId: string | null;
 };
 
 /** Én rad i sesong-tabellen. */

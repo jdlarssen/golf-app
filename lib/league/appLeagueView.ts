@@ -82,6 +82,12 @@ export type AppLeagueStandingCell = {
   points: number | null;
   /** The value is a penalty for a missed round. */
   penalised: boolean;
+  /**
+   * #2815: the flight behind the value, whose card a tap opens
+   * (`GET /api/liga/[id]/kort/[gameId]/[userId]`). null for a round not played
+   * and for a penalty. Absent from a server older than #2815.
+   */
+  gameId: string | null;
 };
 
 export type AppLeagueStandingRow = {

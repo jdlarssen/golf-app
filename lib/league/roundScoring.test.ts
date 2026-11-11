@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { computeFlightRoundValues, type FlightScoringInput } from './roundScoring';
+import { computeFlightCard, computeFlightRoundValues, type FlightScoringInput } from './roundScoring';
+import { computeLeagueStandings } from './computeLeagueStandings';
+import { compute as computeStableford } from '@/lib/scoring/modes/stableford';
 import type { ScoringPlayer, ScoringHole, ScoringHoleScore } from '@/lib/scoring/modes/types';
-import type { LeagueFormat } from './types';
+import type { LeagueFormat, StandingsMetric } from './types';
 
 // 3-hull-bane, total par 11 (4/4/3). Spillere har courseHandicap 0 så netto =
 // brutto og stableford-poeng er trivielle å regne for hånd (par→2, bogey→1
@@ -148,5 +150,109 @@ describe('computeFlightRoundValues — flag passthrough', () => {
       ...computeFlightRoundValues(input('stableford', { finishedAt: at })),
     ];
     expect(rows.map((r) => r.finishedAt)).toEqual([at, at, at, at]);
+  });
+
+  it('#2815: stamps the flight game on every produced row, both formats', () => {
+    const rows = [
+      ...computeFlightRoundValues(input('stroke', { gameId: 'flight-7' })),
+      ...computeFlightRoundValues(input('stableford', { gameId: 'flight-7' })),
+    ];
+    expect(rows.map((r) => r.gameId)).toEqual(['flight-7', 'flight-7', 'flight-7', 'flight-7']);
+  });
+});
+
+describe('computeFlightCard — the card behind a cell (#2815)', () => {
+  // H plays 5-5-4 off course handicap 2: one stroke on SI 1 and SI 2, none on SI 3.
+  // Net 4-4-4 against par 4-4-3: par, par, bogey.
+  const H = { ...player('H'), courseHandicap: 2 };
+  const flight = (format: LeagueFormat) =>
+    input(format, {
+      players: [H, player('A')],
+      scores: [...card('H', [5, 5, 4]), ...card('A', [4, 4, 3])],
+      parByUser: new Map([
+        ['H', TEE_PAR],
+        ['A', TEE_PAR],
+      ]),
+    });
+
+  /** The value the season table shows for H in this round, on the axis. */
+  const cellValue = (format: LeagueFormat, metric: StandingsMetric) => {
+    const standings = computeLeagueStandings(
+      {
+        standingsModel: 'total',
+        missedRoundPolicy: 'penalty',
+        penaltyKind: 'worst_plus_one',
+        penaltyFixedOverPar: null,
+        bestNCount: null,
+        pointsBased: format !== 'stroke',
+      },
+      [{ roundId: 'r1', sequence: 1, scores: computeFlightRoundValues(flight(format)), windowOpen: false }],
+      ['H', 'A'],
+      metric,
+    );
+    return standings.rows.find((r) => r.userId === 'H')!.perRound[0].value;
+  };
+
+  it('stroke play, net: the card adds up to the cell — net strokes minus par', () => {
+    const c = computeFlightCard(flight('stroke'), 'H', 'net')!;
+    expect({
+      value: c.value,
+      cell: cellValue('stroke', 'net'),
+      fromCard: c.grid.totals.netto! - TEE_PAR,
+      brutto: c.grid.totals.brutto,
+      netPerHole: c.grid.halves.flatMap((h) => h.cells.map((cell) => cell.net)),
+      points: c.grid.totals.points,
+      playingHandicap: c.playingHandicap,
+    }).toEqual({ value: 1, cell: 1, fromCard: 1, brutto: 14, netPerHole: [4, 4, 4], points: null, playingHandicap: 2 });
+  });
+
+  it('stroke play, gross: the card adds up to the gross cell, with no handicap strokes', () => {
+    const c = computeFlightCard(flight('stroke'), 'H', 'gross')!;
+    expect({
+      value: c.value,
+      cell: cellValue('stroke', 'gross'),
+      fromCard: c.grid.totals.brutto - TEE_PAR,
+      netto: c.grid.totals.netto,
+      playingHandicap: c.playingHandicap,
+    }).toEqual({ value: 3, cell: 3, fromCard: 3, netto: 14, playingHandicap: null });
+  });
+
+  it.each([
+    ['stableford', 'net', 5],
+    ['stableford', 'gross', 3],
+    ['modified_stableford', 'net', -1],
+    ['modified_stableford', 'gross', -3],
+  ] as Array<[LeagueFormat, StandingsMetric, number]>)(
+    '%s, %s: the points on the card add up to the cell',
+    (format, metric, expected) => {
+      const c = computeFlightCard(flight(format), 'H', metric)!;
+      expect({ value: c.value, cell: cellValue(format, metric), fromCard: c.grid.totals.points }).toEqual({
+        value: expected,
+        cell: expected,
+        fromCard: expected,
+      });
+    },
+  );
+
+  it("stableford: the points per hole are the engine's hole rows", () => {
+    const c = computeFlightCard(flight('stableford'), 'H', 'net')!;
+    const engine = computeStableford({
+      game: { id: 'g1', game_mode: 'stableford', mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' } },
+      players: [H],
+      holes: HOLES,
+      scores: card('H', [5, 5, 4]),
+    });
+    if (engine.variant !== 'solo') throw new Error('expected the solo variant');
+    expect(c.grid.halves.flatMap((h) => h.cells.map((cell) => cell.points))).toEqual(
+      engine.holes.map((h) => h.perPlayer[0].points),
+    );
+  });
+
+  it('no card when the table has no value for the player: an incomplete card, an unknown tee par, a player not in the flight', () => {
+    expect([
+      computeFlightCard(input('stroke', { scores: [...card('A', [4, 4, null]), ...card('B', [5, 5, 4])] }), 'A', 'net'),
+      computeFlightCard(input('stroke', { parByUser: new Map([['B', TEE_PAR]]) }), 'A', 'net'),
+      computeFlightCard(input('stroke'), 'Z', 'net'),
+    ]).toEqual([null, null, null]);
   });
 });

@@ -13,13 +13,15 @@ const cfg = (over: Partial<LeagueStandingsConfig> = {}): LeagueStandingsConfig =
 });
 
 // gross defaults to net so net-only tests need no extra metric; pass { gross } to differ.
-// finishedAt (the flight's games.ended_at) defaults to null.
+// finishedAt (the flight's games.ended_at) defaults to null; gameId (the
+// flight the result came from) to 'g1'.
 const score = (
   userId: string,
   net: number,
-  opts: { gross?: number; outside?: boolean; finishedAt?: string | null } = {},
+  opts: { gross?: number; outside?: boolean; finishedAt?: string | null; gameId?: string } = {},
 ) => ({
   userId,
+  gameId: opts.gameId ?? 'g1',
   net,
   gross: opts.gross ?? net,
   deliveredOutsideWindow: opts.outside ?? false,
@@ -162,6 +164,51 @@ describe('computeLeagueStandings — total model', () => {
     const res = computeLeagueStandings(cfg(), rounds, ['A']);
     const cell = rowOf(res, 'A').perRound.find((c) => c.roundId === 'r1')!;
     expect(cell.deliveredOutsideWindow).toBe(true);
+  });
+});
+
+describe('computeLeagueStandings — the game behind a cell (#2815)', () => {
+  const cellOf = (res: ReturnType<typeof computeLeagueStandings>, userId: string, roundId: string) =>
+    rowOf(res, userId).perRound.find((c) => c.roundId === roundId)!;
+
+  it('a played cell names the flight its result came from; a penalty and an unplayed cell name none', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 2, { gameId: 'gA1' }), score('B', 4, { gameId: 'gB1' })]),
+      round('r2', 2, [score('A', 3, { gameId: 'gA2' })]), // B missed r2: a penalty
+      round('r3', 3, []), // nobody played r3
+    ];
+    const res = computeLeagueStandings(cfg(), rounds, ['A', 'B']);
+    expect({
+      a1: cellOf(res, 'A', 'r1').gameId,
+      a2: cellOf(res, 'A', 'r2').gameId,
+      b1: cellOf(res, 'B', 'r1').gameId,
+      b2: { gameId: cellOf(res, 'B', 'r2').gameId, penalised: cellOf(res, 'B', 'r2').penalised },
+      a3: cellOf(res, 'A', 'r3').gameId,
+    }).toEqual({ a1: 'gA1', a2: 'gA2', b1: 'gB1', b2: { gameId: null, penalised: true }, a3: null });
+  });
+
+  it('#2214: with two results in one round the cell names the earliest flight, the one that counts', () => {
+    const rounds = [
+      round('r1', 1, [
+        score('A', 2, { gameId: 'late', finishedAt: '2026-06-15T18:00:00Z' }),
+        score('A', 5, { gameId: 'early', finishedAt: '2026-06-15T12:00:00Z' }),
+      ]),
+    ];
+    const cell = cellOf(computeLeagueStandings(cfg(), rounds, ['A']), 'A', 'r1');
+    expect({ value: cell.value, gameId: cell.gameId }).toEqual({ value: 5, gameId: 'early' });
+  });
+
+  it('the net and the gross table point at the same flight', () => {
+    const rounds = [round('r1', 1, [score('A', 2, { gross: 12, gameId: 'gA1' })])];
+    const net = computeLeagueStandings(cfg(), rounds, ['A'], 'net');
+    const gross = computeLeagueStandings(cfg(), rounds, ['A'], 'gross');
+    expect([cellOf(net, 'A', 'r1').gameId, cellOf(gross, 'A', 'r1').gameId]).toEqual(['gA1', 'gA1']);
+  });
+
+  it('under the points model a played cell names the flight and an unplayed one none', () => {
+    const rounds = [round('r1', 1, [score('A', 2, { gameId: 'gA1' }), score('B', 4, { gameId: 'gB1' })])];
+    const points = computeLeagueStandings(cfg({ standingsModel: 'points' }), rounds, ['A', 'B', 'C']);
+    expect([cellOf(points, 'A', 'r1').gameId, cellOf(points, 'C', 'r1').gameId]).toEqual(['gA1', null]);
   });
 });
 

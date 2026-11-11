@@ -167,7 +167,7 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
       value,
       ranked,
       roundsPlayed,
-      perRound: roundsPlayed > 0 ? [{ roundId: 'r1', value, points: null, penalised: false }] : [],
+      perRound: roundsPlayed > 0 ? [{ roundId: 'r1', value, points: null, penalised: false, gameId: `g-${userId}` }] : [],
     });
     const withGroups = () =>
       leagueView({

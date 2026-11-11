@@ -80,6 +80,7 @@ export function buildAppLeagueView(
         value: c.value,
         points: c.points,
         penalised: c.penalised,
+        gameId: c.gameId,
       })),
     })),
     me: {

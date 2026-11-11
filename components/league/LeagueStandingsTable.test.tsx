@@ -43,15 +43,15 @@ const standings: LeagueStandings = {
     {
       userId: 'A', value: 5, roundsPlayed: 2, ranked: true, rank: 1,
       perRound: [
-        { roundId: 'r1', value: 3, points: 2, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', value: 1, points: 3, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 3, points: 2, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
+        { roundId: 'r2', value: 1, points: 3, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
       ],
     },
     {
       userId: 'B', value: 3, roundsPlayed: 2, ranked: true, rank: 2,
       perRound: [
-        { roundId: 'r1', value: 7, points: 1, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', value: 5, points: 2, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 7, points: 1, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
+        { roundId: 'r2', value: 5, points: 2, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
       ],
     },
   ],
@@ -87,15 +87,15 @@ describe('LeagueStandingsTable — stableford (pointsBased) under the total mode
     {
       userId: 'A', value: 60, roundsPlayed: 2, ranked: true, rank: 1,
       perRound: [
-        { roundId: 'r1', value: 32, points: null, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', value: 28, points: null, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 32, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
+        { roundId: 'r2', value: 28, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
       ],
     },
     {
       userId: 'B', value: 30, roundsPlayed: 1, ranked: true, rank: 2,
       perRound: [
-        { roundId: 'r1', value: 30, points: null, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', value: 0, points: null, penalised: true, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 30, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
+        { roundId: 'r2', value: 0, points: null, penalised: true, deliveredOutsideWindow: false, gameId: null },
       ],
     },
   ];
@@ -131,6 +131,7 @@ describe('LeagueStandingsTable — column order, open round and groups (#1378)',
     points: value,
     penalised: false,
     deliveredOutsideWindow: false,
+    gameId: value === null ? null : `g-${roundId}`,
   });
   const mixedRows: LeagueStandings['rows'] = [
     { userId: 'A', value: 5, roundsPlayed: 2, ranked: true, rank: 1, perRound: [cell('r1', 2), cell('r2', 3)] },
