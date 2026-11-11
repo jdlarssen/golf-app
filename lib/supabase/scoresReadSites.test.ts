@@ -22,6 +22,10 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "#2661: one game, one card owner's rows (≤ 18) for the marker's page",
   },
+  'lib/league/leagueCardAccess.ts': {
+    count: 1,
+    reason: "#2815: one game, one card owner's rows (≤ 18) for the card behind a table cell",
+  },
   'app/[locale]/admin/games/[id]/slett/page.tsx': {
     count: 1,
     reason: 'head: true count, no rows',
