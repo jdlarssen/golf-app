@@ -96,6 +96,7 @@ export function SyncSheet({
   if (!open) return null;
 
   const quarantined = state.quarantinedHoles.length > 0;
+  const retakeHoles = state.quarantinedHoles.filter((n) => !state.quarantineLockedHoles.includes(n));
   const pending = state.pendingScoreCount + state.pendingTeeShotCount > 0;
   const waitingForNetwork = !online || state.lastErrorIsNetwork;
 
@@ -165,26 +166,26 @@ export function SyncSheet({
             ) : null}
           </View>
 
-          {quarantined ? (
-            state.quarantineLockedOnly ? (
-              <Text style={[styles.body, { color: colors.muted }]} testID="sync-sheet-locked">
-                {SYNC_BANNER_TEXT.quarantineLockedHint}
-              </Text>
-            ) : (
-              <View style={styles.retakes}>
-                {state.quarantinedHoles.map((n) => (
-                  <Pressable
-                    key={n}
-                    onPress={() => onGoToHole(n)}
-                    style={styles.retake}
-                    testID={`sync-sheet-retake-${n}`}
-                    accessibilityRole="link"
-                  >
-                    <Text style={[styles.retakeText, { color: colors.danger }]}>{retakeHoleText(n)}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )
+          {state.quarantineLockedHoles.length > 0 ? (
+            <Text style={[styles.body, { color: colors.muted }]} testID="sync-sheet-locked">
+              {SYNC_BANNER_TEXT.quarantineLockedHint}
+            </Text>
+          ) : null}
+          {/* Et låst hull får ingen lenke: å taste det på nytt hjelper ikke (#2211). */}
+          {retakeHoles.length > 0 ? (
+            <View style={styles.retakes}>
+              {retakeHoles.map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => onGoToHole(n)}
+                  style={styles.retake}
+                  testID={`sync-sheet-retake-${n}`}
+                  accessibilityRole="link"
+                >
+                  <Text style={[styles.retakeText, { color: colors.danger }]}>{retakeHoleText(n)}</Text>
+                </Pressable>
+              ))}
+            </View>
           ) : null}
 
           <View style={styles.grid} testID="sync-grid">

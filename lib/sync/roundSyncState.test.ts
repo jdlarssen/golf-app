@@ -60,6 +60,7 @@ describe('roundSyncState', () => {
       settled: false,
       lastErrorIsNetwork: false,
       quarantinedHoles: [],
+      quarantineLockedHoles: [],
       quarantineLockedOnly: false,
     });
   });
@@ -97,6 +98,19 @@ describe('roundSyncState', () => {
       score('g1:a:8', { ...ABANDONED, lastError: 'server error' }),
     ]);
     expect(mixed.quarantineLockedOnly).toBe(false);
+    // Only hole 7 is locked: retyping hole 8 can still help, retyping 7 cannot.
+    expect(mixed.quarantineLockedHoles).toEqual([7]);
+  });
+
+  it('a hole is locked only when every quarantined item on it is a locked refusal', () => {
+    const s = state([
+      score('g1:a:7', { ...ABANDONED, lastError: REFUSED_WRITE_ERROR }),
+      score('g1:b:7', { ...ABANDONED, lastError: 'server error' }),
+      score('g1:a:9', { ...ABANDONED, lastError: REFUSED_WRITE_ERROR }),
+      score('g2:a:3', { ...ABANDONED, lastError: REFUSED_WRITE_ERROR }),
+    ]);
+    expect(s.quarantinedHoles).toEqual([7, 9]);
+    expect(s.quarantineLockedHoles).toEqual([9]);
   });
 
   it('a malformed key in this game counts as a stroke but names no hole', () => {

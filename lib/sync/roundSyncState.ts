@@ -1,5 +1,6 @@
 import type { SyncQueueItem, TeeShotQueueItem } from './db';
 import { isActiveForGame, queueItemKey } from './queueScope';
+import { isLockedCardError } from './classifyError';
 import { parseRowKey, summarizeQuarantine } from './quarantineSummary';
 
 /**
@@ -36,6 +37,11 @@ export interface RoundSyncState {
   lastErrorIsNetwork: boolean;
   /** Holes with quarantined items in this game (#668), sorted, deduped. */
   quarantinedHoles: number[];
+  /**
+   * Quarantined holes where every item is a locked-card refusal (#2211). Typing
+   * such a hole again cannot help, so the sheet offers no link for it.
+   */
+  quarantineLockedHoles: number[];
   /** Every quarantined item in this game is a locked-card refusal (#2211). */
   quarantineLockedOnly: boolean;
 }
@@ -84,11 +90,15 @@ export function roundSyncState({
 
   // The game's own quarantine only: `summarizeQuarantine.lockedOnly` spans
   // every game, and another round's refusal says nothing about this one.
-  const quarantine = summarizeQuarantine(
-    [...scoreItems, ...teeShotItems].filter(
-      (item) => item.abandonedAt != null && parseRowKey(queueItemKey(item))?.gameId === gameId,
-    ),
-    gameId,
+  const ownQuarantine = [...scoreItems, ...teeShotItems].filter(
+    (item) => item.abandonedAt != null && parseRowKey(queueItemKey(item))?.gameId === gameId,
+  );
+  const quarantine = summarizeQuarantine(ownQuarantine, gameId);
+  const quarantinedHoles = quarantine.currentGame?.holes ?? [];
+  const quarantineLockedHoles = quarantinedHoles.filter((hole) =>
+    ownQuarantine
+      .filter((item) => parseRowKey(queueItemKey(item))?.holeNumber === hole)
+      .every((item) => isLockedCardError(item.lastError)),
   );
 
   return {
@@ -97,7 +107,8 @@ export function roundSyncState({
     pendingHoles: [...pendingHoles].sort((a, b) => a - b),
     settled,
     lastErrorIsNetwork: latestError != null && isNetworkError(latestError),
-    quarantinedHoles: quarantine.currentGame?.holes ?? [],
+    quarantinedHoles,
+    quarantineLockedHoles,
     quarantineLockedOnly: quarantine.currentGame != null && quarantine.lockedOnly,
   };
 }

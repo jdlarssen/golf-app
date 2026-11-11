@@ -22,6 +22,7 @@ const NOTHING: RoundSyncState = {
   settled: false,
   lastErrorIsNetwork: false,
   quarantinedHoles: [],
+  quarantineLockedHoles: [],
   quarantineLockedOnly: false,
 };
 /** Artboardet: hull 1–6 sendt, 7–9 på telefonen. */
@@ -102,9 +103,21 @@ describe('SyncSheet', () => {
   });
 
   it('låst karantene: forklaringen og ingen lenke', async () => {
-    await renderSheet({ state: { ...NOTHING, quarantinedHoles: [7], quarantineLockedOnly: true } }).result;
+    await renderSheet({
+      state: { ...NOTHING, quarantinedHoles: [7], quarantineLockedHoles: [7], quarantineLockedOnly: true },
+    }).result;
     expect(screen.getByTestId('sync-sheet-locked')).toBeTruthy();
     expect(screen.queryByText('Tast hull 7 på nytt')).toBeNull();
+  });
+
+  it('blandet karantene: lenke bare til hullet som kan tastes på nytt, og forklaringen for det låste', async () => {
+    await renderSheet({
+      state: { ...NOTHING, quarantinedHoles: [10, 11], quarantineLockedHoles: [11] },
+    }).result;
+    expect(screen.getByText('Hull 10 og 11 ble ikke lagret.')).toBeTruthy();
+    expect(screen.getByText('Tast hull 10 på nytt')).toBeTruthy();
+    expect(screen.queryByText('Tast hull 11 på nytt')).toBeNull();
+    expect(screen.getByTestId('sync-sheet-locked')).toBeTruthy();
   });
 
   it('«Prøv å sende nå» drainer, viser «Sender…» og leser køen etterpå', async () => {
