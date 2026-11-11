@@ -65,6 +65,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import type { GameStatus } from '../../../../lib/games/status';
+import { syncChipState } from '../../../../lib/sync/roundSyncState';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import {
@@ -109,6 +110,8 @@ import {
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
 import { SaveErrorBanner } from '../components/hole/SaveErrorBanner';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
+import { SyncChip } from '../components/hole/SyncChip';
+import { SyncSheet } from '../components/hole/SyncSheet';
 import { TeeShotPicker } from '../components/hole/TeeShotPicker';
 import { TeeStarterPicker } from '../components/hole/TeeStarterPicker';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
@@ -173,6 +176,9 @@ import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
+import { useDeviceOnline } from '../lib/useDeviceOnline';
+import { useRoundSyncState } from '../lib/useRoundSyncState';
+import { syncChipText } from '../lib/syncChipCopy';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 
 /**
@@ -494,6 +500,11 @@ function HoleView({
   // #2751: telefonen fikk ikke lagret utslagsvalget. Står i velgeren, så hullet
   // kan føres som før.
   const [teeStarterFailed, setTeeStarterFailed] = useState(false);
+  // #2348: lagringsbrikka. Leser køene og sier om slagene er sendt, ligger på
+  // telefonen eller ikke ble lagret; arket «Trygt på telefonen» er åpent eller ikke.
+  const sync = useRoundSyncState(gameId, scores);
+  const online = useDeviceOnline();
+  const [syncSheetOpen, setSyncSheetOpen] = useState(false);
 
   const roster = toRoster(bundle.players);
   const mode = bundle.game.gameMode as GameMode;
@@ -866,6 +877,16 @@ function HoleView({
     : flight.filter((entry) => byUserHole.get(`${entry.user_id}#${holeNumber}`)?.strokes != null)
         .length;
 
+  // #2348: brikka vises fra første tastede hull, og alltid når noe venter
+  // eller ikke ble lagret. Raden står klar hele runden, så ingenting hopper i
+  // toppen når brikka dukker opp etter første trykk.
+  const chipState = syncChipState(sync.state);
+  const roundActive = bundle.game.status === 'active';
+  const showChip =
+    sync.state.pendingScoreCount + sync.state.pendingTeeShotCount > 0 ||
+    sync.state.quarantinedHoles.length > 0 ||
+    (roundActive && sync.scoredHoles.size > 0);
+
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID="hole-screen">
       <ScrollView
@@ -875,6 +896,24 @@ function HoleView({
         ]}
         testID="hole-scroll"
       >
+        {/* #2348 (eierens svar 1): brikka på egen linje rett under toppen,
+            over hullstripa. */}
+        {showChip || roundActive ? (
+          <View style={styles.syncRow} testID="sync-chip-row">
+            {showChip ? (
+              <SyncChip
+                state={chipState}
+                text={syncChipText(chipState, {
+                  pendingScoreCount: sync.state.pendingScoreCount,
+                  quarantinedHoleCount: sync.state.quarantinedHoles.length,
+                })}
+                expanded={syncSheetOpen}
+                sunlight={sunlight}
+                onPress={() => setSyncSheetOpen(true)}
+              />
+            ) : null}
+          </View>
+        ) : null}
         {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
         <View style={styles.pad}>
           <SyncBanner gameId={gameId} />
@@ -1151,6 +1190,21 @@ function HoleView({
         </View>
       ) : null}
 
+      <SyncSheet
+        open={syncSheetOpen}
+        state={sync.state}
+        scoredHoles={sync.scoredHoles}
+        holes={roundHoles}
+        online={online}
+        sunlight={sunlight}
+        onGoToHole={(n) => {
+          setSyncSheetOpen(false);
+          // Står du alt på hullet, lukker lenka bare arket.
+          if (n !== holeNumber) goToHole(n);
+        }}
+        onRetried={() => void sync.reload()}
+        onClose={() => setSyncSheetOpen(false)}
+      />
       <SpecificValueSheet
         open={sheetSeat != null && !sheetSeat.locked}
         par={par}
@@ -1430,6 +1484,8 @@ const styles = StyleSheet.create({
   // Det som ikke er i designet (kø-banneret, låst-teksten, Wolf og BBB, kort-
   // formatenes kort og «Lever»), står med appens vanlige luft.
   pad: { paddingHorizontal: 20, gap: 8 },
+  // #2348: brikkas egen linje, høyre som i artboardet; 44 høy også før brikka vises.
+  syncRow: { minHeight: TAP, paddingHorizontal: 20, marginTop: 8, marginBottom: 8, alignItems: 'flex-end' },
   formatBanners: { marginTop: 10, gap: 8 },
   // Radene står 12 pt fra kanten (Main); i sollys går de kant til kant.
   flightList: { paddingHorizontal: 12 },
