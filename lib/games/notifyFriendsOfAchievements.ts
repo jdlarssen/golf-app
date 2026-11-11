@@ -55,7 +55,7 @@ export async function notifyFriendsOfAchievements(gameId: string): Promise<numbe
     // A missing name or course only costs the card a fallback (#583).
     if (courseRes.error) console.error(`${LOG} course fetch failed`, { gameId, error: courseRes.error });
     if (usersRes.error) console.error(`${LOG} names fetch failed`, { gameId, error: usersRes.error });
-    const courseName = courseRes.data?.name ?? null;
+    const courseName = courseRes.data?.name?.trim() || null;
     const nameById = new Map((usersRes.data ?? []).map((u) => [u.id, u.name?.trim() || null]));
 
     const perScorer = await Promise.allSettled(
