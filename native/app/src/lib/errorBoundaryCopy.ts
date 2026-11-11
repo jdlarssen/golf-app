@@ -72,6 +72,7 @@ const VARIANT_BY_ROUTE = {
   CupJoin: 'default',
   LeagueRoundStart: 'default',
   MarkerApprove: 'default',
+  LeagueCard: 'default',
   SyncLab: 'default',
 } as const satisfies Record<keyof RootStackParamList, ErrorBoundaryVariant>;
 

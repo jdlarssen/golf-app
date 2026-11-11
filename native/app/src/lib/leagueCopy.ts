@@ -18,7 +18,9 @@ import type {
   AppLeagueParticipant,
   AppLeagueRound,
   AppLeagueView,
+  LeagueCardResponse,
 } from '../../../../lib/league/appLeagueView';
+import { formatRoundCell } from '../../../../lib/league/standingsFormat';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '../../../../lib/league/types';
 import type { LeagueJoinFailure, LeagueLoadFailure, LeagueStartFailure } from '../data/league';
 import { OFFLINE_NOTE } from './rosterCopy';
@@ -409,6 +411,55 @@ export function playedByNames(
     .filter((id) => id !== meId)
     .map((id) => participantLabel(byId.get(id), participants));
   return (userIds.includes(meId) ? [LEAGUE_TEXT.you, ...names] : names).join(', ');
+}
+
+/**
+ * #2815: kortet bak et resultat i sesongtabellen (`liga.card`). Overskriften,
+ * undertittelen og linja over kortet er nettsidens ordrett; `leagueCopy.test.ts`
+ * låser dem.
+ */
+export const LEAGUE_CARD_TEXT = {
+  /** `liga.card.kicker`. */
+  screenTitle: 'Scorekort',
+  loading: 'Henter kortet …',
+  /** Bare i appen: lesingen fra serveren feilet, eller kortet finnes ikke for deg. */
+  loadFailed: 'Fikk ikke hentet kortet.',
+  retry: 'Prøv igjen',
+  /** `liga.card.unknownPlayer`. */
+  unknownPlayer: 'Ukjent spiller',
+} as const;
+
+/** «Kortet til Anders Berg» (`liga.card.heading`). */
+export function leagueCardHeading(name: string | null): string {
+  return `Kortet til ${name ?? LEAGUE_CARD_TEXT.unknownPlayer}`;
+}
+
+/** «Runde 1 i Vinterliga» (`liga.card.subtitle`). */
+export function leagueCardSubtitle(roundLabel: string, leagueName: string): string {
+  return `${roundLabel} i ${leagueName}`;
+}
+
+/**
+ * Linja over kortet: resultatet i runden, skrevet som tabellen skriver en
+ * runde, og spillehandicapet når netto teller: «Resultat: +1 · Spillehandicap 12»
+ * eller «Resultat: 34 poeng · Spillehandicap 12» (`liga.card.result`,
+ * `resultPoints`, `playingHandicap`).
+ */
+export function leagueCardResultLine(card: Pick<LeagueCardResponse, 'format' | 'value' | 'playingHandicap'>): string {
+  const points = isPointsBased(card.format);
+  const value = formatRoundCell(card.value, 'total', points, comma);
+  const result = points ? `Resultat: ${value} poeng` : `Resultat: ${value}`;
+  return card.playingHandicap === null ? result : `${result} · Spillehandicap ${card.playingHandicap}`;
+}
+
+/** Skjermleserens navn på en celle i tabellen: «Se kortet til Martin, Runde 3» (`liga.standings.openCardAriaLabel`). */
+export function openCardLabel(name: string, roundLabel: string): string {
+  return `Se kortet til ${name}, ${roundLabel}`;
+}
+
+/** Appens desimaltegn: komma. */
+function comma(value: number, decimals: number): string {
+  return value.toFixed(decimals).replace('.', ',');
 }
 
 /** Feilen på ligasiden, når det ikke finnes noen liga å vise (tegning 6). */

@@ -13,7 +13,11 @@
 // #1378: den åpne runden er markert bare med en prikk foran rundens navn, uten
 // farge i kolonnen. De som ikke er rangert, står under egne overskrifter med
 // tom plass-celle, uten demping og uten forklaringstekst.
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+//
+// #2815: et resultat med et kort bak seg (`gameId` fra serveren) kan trykkes
+// på og åpner kortet. Straff og «–» har ikke noe kort. Cellen er 36 bred og
+// 48 høy; trykkflaten strekker seg 4 til hver side, så den er minst 44.
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
   formatRoundCell,
@@ -26,6 +30,7 @@ import {
 import {
   LEAGUE_TEXT,
   isPointsBased,
+  openCardLabel,
   participantLabel,
   tableCaption,
   valueHeader,
@@ -44,8 +49,19 @@ const GAP = 4;
 const FIT_ROUNDS = 3;
 /** Navnekolonnen når rundene ruller. */
 const NAME_W_SCROLL = 110;
+/** #2815: trykkflaten til en runde-celle, 36 + 2 × 4 = 44 bred. */
+const CELL_HIT_SLOP = { left: 4, right: 4 };
 
-export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }) {
+export function StandingsTable({
+  view,
+  now,
+  onOpenCard,
+}: {
+  view: AppLeagueView;
+  now: Date;
+  /** #2815: et trykk på et resultat med et kort bak seg. Uten den kan ingen celle trykkes på. */
+  onOpenCard?: (card: { gameId: string; userId: string }) => void;
+}) {
   const { colors } = useTheme();
   const { league, participants, standings, me } = view;
   const { shown: rounds, openRoundId } = tableRounds(view.rounds, now.getTime());
@@ -159,16 +175,34 @@ export function StandingsTable({ view, now }: { view: AppLeagueView; now: Date }
           {formatSeasonValue(row.value, league.standingsModel, pointsBased, comma)}
         </Text>
         {rounds.map((r) => {
-          const raw = roundCellValue(
-            row.perRound.find((c) => c.roundId === r.id),
-            league.standingsModel,
+          const cell = row.perRound.find((c) => c.roundId === r.id);
+          const raw = roundCellValue(cell, league.standingsModel);
+          const text = (
+            <Text style={[styles.cell, { color: raw === null ? colors.scoreUnsetFg : colors.text }]}>
+              {raw === null ? '–' : formatRoundCell(raw, league.standingsModel, pointsBased, comma)}
+            </Text>
           );
+          // En server fra før #2815 sender ikke `gameId`: da kan ingen celle trykkes på.
+          const gameId = raw !== null && !cell?.penalised ? cell?.gameId : null;
+          if (!gameId || !onOpenCard) {
+            return (
+              <View key={r.id} style={[styles.roundCol, styles.roundCell]}>
+                {text}
+              </View>
+            );
+          }
           return (
-            <View key={r.id} style={[styles.roundCol, styles.roundCell]}>
-              <Text style={[styles.cell, { color: raw === null ? colors.scoreUnsetFg : colors.text }]}>
-                {raw === null ? '–' : formatRoundCell(raw, league.standingsModel, pointsBased, comma)}
-              </Text>
-            </View>
+            <Pressable
+              key={r.id}
+              onPress={() => onOpenCard({ gameId, userId: row.userId })}
+              hitSlop={CELL_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel={openCardLabel(participantLabel(byId.get(row.userId), participants), r.label)}
+              style={({ pressed }) => [styles.roundCol, styles.roundCell, pressed ? styles.pressed : null]}
+              testID={`league-standings-card-${row.userId}-${r.id}`}
+            >
+              {text}
+            </Pressable>
           );
         })}
       </View>
@@ -231,6 +265,7 @@ const styles = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   roundCell: { justifyContent: 'center', alignItems: 'flex-end', paddingRight: 4 },
   cell: { ...interLine(13, 18), fontFamily: FONTS.sans, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  pressed: { opacity: 0.6 },
   // Gruppeoverskriften: 14 over, 6 under, 16 inn.
   group: { paddingTop: 14, paddingBottom: 6, paddingHorizontal: 16 },
 });

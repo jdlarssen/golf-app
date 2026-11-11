@@ -26,6 +26,7 @@ import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { StatusPill } from '../components/league/LeaguePills';
 import { fetchLeague, type LeagueLoadFailure } from '../data/league';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
+import { openOrReturn } from '../lib/backTo';
 import { MARKER_TEXT, awaitingMarkerLine, waitsForLine } from '../lib/markerCopy';
 import { markerQueues, type QueuedCard } from '../../../../lib/league/markerQueues';
 import {
@@ -185,7 +186,11 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
       ) : null}
 
       <SectionHead title={LEAGUE_TEXT.seasonTable} />
-      <StandingsTable view={view} now={now} />
+      <StandingsTable
+        view={view}
+        now={now}
+        onOpenCard={(card) => openOrReturn(navigation, 'LeagueCard', { leagueId, ...card })}
+      />
 
       <SectionHead title={LEAGUE_TEXT.rounds} />
       <RoundList view={view} now={now} />
