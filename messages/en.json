@@ -250,6 +250,14 @@
           "snowman": "Snowman"
         }
       },
+      "friendAchievement": {
+        "titleHoleInOne": "{playerName} got a hole-in-one",
+        "titleAlbatross": "{playerName} got an albatross",
+        "titleEagle": "{playerName} got an eagle",
+        "detail": "{count, plural, one {Hole} other {Holes}} {holes} at {courseName}",
+        "detailNoCourse": "{count, plural, one {Hole} other {Holes}} {holes}",
+        "and": "and"
+      },
       "ideaBuilt": {
         "title": "We built what you suggested",
         "detail": "Thanks for the idea – it's now part of Tørny."

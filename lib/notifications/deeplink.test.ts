@@ -197,6 +197,22 @@ describe('notificationDestination', () => {
     ).toBe('/profile/historikk');
   });
 
+  // #2800: the recipient was not in the game, so never /games/{id} (RLS, #1542).
+  it('maps friend_achievement to Venner, or to the league for a league round', () => {
+    const payload = {
+      game_id: GAME,
+      player_id: GAME,
+      player_name: 'Ola',
+      course_name: 'Bogstad',
+      league_id: null,
+      moments: [{ kind: 'eagle' as const, hole_number: 4 }],
+    };
+    expect(notificationDestination(n('friend_achievement', payload))).toBe('/profile/venner');
+    expect(notificationDestination(n('friend_achievement', { ...payload, league_id: GAME }))).toBe(
+      `/liga/${GAME}`,
+    );
+  });
+
   it('returns null for product_update — its link is reached via the card CTA, not a whole-card tap', () => {
     // A product_update with a long body used to whole-card-navigate to the
     // link, so tapping to read more threw you out to the link before you could

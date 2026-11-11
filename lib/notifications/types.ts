@@ -46,7 +46,8 @@ export type NotificationKind =
   | 'achievement_unlocked'
   | 'idea_built'
   | 'payment_reminder'
-  | 'game_cancelled';
+  | 'game_cancelled'
+  | 'friend_achievement';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -519,6 +520,29 @@ const gameCancelledSchema = z.object({
   message: z.string().min(1).max(CANCEL_MESSAGE_MAX).optional(),
 });
 
+// friend_achievement (#2800): a player got a gross hole-in-one, albatross or
+// eagle, told when the game is finished (`notifyFriendsOfAchievements`). In a
+// league round (`league_id` set) it goes to the other league players, else to
+// the player's friends; never to anyone from the same game, so no recipient can
+// open the game (RLS, #1542) and the payload carries what the card says. One
+// notice per player per round: `moments` holds every hole, sorted, never empty.
+// Language-neutral (#583): a missing player name is filled at render time.
+const friendAchievementSchema = z.object({
+  game_id: uuid,
+  player_id: uuid,
+  player_name: z.string().min(1).nullable(),
+  course_name: z.string().min(1).nullable(),
+  league_id: uuid.nullable(),
+  moments: z
+    .array(
+      z.object({
+        kind: z.enum(['hole_in_one', 'albatross', 'eagle']),
+        hole_number: z.number().int().min(1).max(18),
+      }),
+    )
+    .min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -558,6 +582,7 @@ const schemas = {
   idea_built: ideaBuiltSchema,
   payment_reminder: paymentReminderSchema,
   game_cancelled: gameCancelledSchema,
+  friend_achievement: friendAchievementSchema,
 } as const;
 
 /**

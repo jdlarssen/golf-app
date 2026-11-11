@@ -276,6 +276,44 @@ describe('parseNotificationPayload', () => {
     });
   });
 
+  describe('friend_achievement (#2800)', () => {
+    const id = '11111111-1111-1111-1111-111111111111';
+    const base = {
+      game_id: id,
+      player_id: id,
+      player_name: 'Ola',
+      course_name: 'Bogstad',
+      league_id: null,
+      moments: [{ kind: 'eagle', hole_number: 4 }],
+    };
+
+    it('accepts a friend round and a league round, with or without names', () => {
+      expect(parseNotificationPayload('friend_achievement', base).payload).toEqual(base);
+      const league = { ...base, league_id: id, player_name: null, course_name: null };
+      expect(parseNotificationPayload('friend_achievement', league).payload).toEqual(league);
+    });
+
+    it('takes hole-in-one, albatross and eagle, never a birdie', () => {
+      const moments = [
+        { kind: 'hole_in_one', hole_number: 3 },
+        { kind: 'albatross', hole_number: 9 },
+        { kind: 'eagle', hole_number: 18 },
+      ];
+      expect(parseNotificationPayload('friend_achievement', { ...base, moments }).payload.moments).toEqual(moments);
+      expect(() =>
+        parseNotificationPayload('friend_achievement', { ...base, moments: [{ kind: 'birdie', hole_number: 4 }] }),
+      ).toThrow();
+    });
+
+    it('refuses an empty list, a hole outside 1–18 and an empty name', () => {
+      expect(() => parseNotificationPayload('friend_achievement', { ...base, moments: [] })).toThrow();
+      expect(() =>
+        parseNotificationPayload('friend_achievement', { ...base, moments: [{ kind: 'eagle', hole_number: 19 }] }),
+      ).toThrow();
+      expect(() => parseNotificationPayload('friend_achievement', { ...base, player_name: '' })).toThrow();
+    });
+  });
+
   describe('achievement_unlocked (#947)', () => {
     const validUuid = '11111111-1111-1111-1111-111111111111';
 

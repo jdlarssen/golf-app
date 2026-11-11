@@ -416,6 +416,26 @@ export function buildNotificationText(
         }),
       };
     }
+    case 'friend_achievement': {
+      // #2800: the best moment names the title (hole-in-one, then albatross,
+      // then eagle); the detail gives every hole in order, and the course. A
+      // missing name is «En venn» to a friend, «En spiller» in a league.
+      const p = payload as NotificationPayload<'friend_achievement'>;
+      const playerName =
+        p.player_name ?? (p.league_id ? t('somePlayerFallback') : t('someoneFallback'));
+      const best = FRIEND_MOMENT_ORDER.find((kind) => p.moments.some((m) => m.kind === kind))!;
+      const holes = holeList(
+        p.moments.map((m) => m.hole_number),
+        t('kinds.friendAchievement.and'),
+      );
+      const count = p.moments.length;
+      return {
+        title: t(`kinds.friendAchievement.${FRIEND_TITLE_KEY[best]}`, { playerName }),
+        detail: p.course_name
+          ? t('kinds.friendAchievement.detail', { holes, count, courseName: p.course_name })
+          : t('kinds.friendAchievement.detailNoCourse', { holes, count }),
+      };
+    }
     case 'idea_built': {
       // «Vi bygde det du foreslo», med admins linje om hva som ble bygget
       // (#2568). Rader fra før #2568 har ingen linje og får den faste teksten.
@@ -473,6 +493,23 @@ const MOMENT_KEY: Record<'hole_in_one' | 'eagle' | 'turkey' | 'snowman', string>
   turkey: 'turkey',
   snowman: 'snowman',
 };
+
+type FriendMomentKind = NotificationPayload<'friend_achievement'>['moments'][number]['kind'];
+
+// Best first: the title names the first of these the round has.
+const FRIEND_MOMENT_ORDER: readonly FriendMomentKind[] = ['hole_in_one', 'albatross', 'eagle'];
+
+const FRIEND_TITLE_KEY: Record<FriendMomentKind, string> = {
+  hole_in_one: 'titleHoleInOne',
+  albatross: 'titleAlbatross',
+  eagle: 'titleEagle',
+};
+
+/** «4», «4 og 12», «4, 12 og 15». */
+function holeList(holes: number[], and: string): string {
+  if (holes.length === 1) return String(holes[0]);
+  return `${holes.slice(0, -1).join(', ')} ${and} ${holes.at(-1)}`;
+}
 
 /**
  * Translates the block reason from startScheduledGame to something the creator

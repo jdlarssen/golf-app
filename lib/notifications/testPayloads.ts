@@ -114,4 +114,12 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
     organizer_name: 'Per',
     message: 'Banen er stengt.',
   },
+  friend_achievement: {
+    game_id: TEST_GAME_ID,
+    player_id: OTHER_ID,
+    player_name: 'Per',
+    course_name: 'Bane',
+    league_id: null,
+    moments: [{ kind: 'eagle', hole_number: 4 }],
+  },
 };

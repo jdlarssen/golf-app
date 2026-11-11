@@ -129,6 +129,7 @@ describe('inboxActionKey', () => {
     ['achievement_unlocked', null],
     ['idea_built', null],
     ['game_cancelled', null],
+    ['friend_achievement', null],
   ] as const)('%s → %s', (kind, expected) => {
     expect(inboxActionKey({ kind, payload: {} as NotificationPayload })).toBe(expected);
   });
@@ -297,6 +298,24 @@ describe('buildInboxSections', () => {
     const s = buildInboxSections(rows, { filter: 'friends', now: NOW });
     expect(s.action.map((e) => (e as { row: InboxRow }).row.kind)).toEqual(['friend_request']);
     expect(s.today.map((e) => (e as { row: InboxRow }).row.kind)).toEqual(['friend_accepted']);
+  });
+
+  // #2800: a friend's brag sits with the friends, never under KREVER HANDLING.
+  it('filter friends → a friend’s eagle is there too, as a plain row', () => {
+    const rows = [
+      row('friend_achievement', {
+        game_id: GAME,
+        player_id: MARTE,
+        player_name: 'Marte',
+        course_name: 'Bogstad',
+        league_id: null,
+        moments: [{ kind: 'eagle', hole_number: 4 }],
+      }),
+      delivered('Per'),
+    ];
+    const s = buildInboxSections(rows, { filter: 'friends', now: NOW });
+    expect(s.action).toEqual([]);
+    expect(s.today.map((e) => (e as { row: InboxRow }).row.kind)).toEqual(['friend_achievement']);
   });
 });
 
@@ -673,6 +692,44 @@ describe('buildInboxEntryView', () => {
     expect(v.subtitle).toMatch(/^Fullt · /);
     expect(v.subtitleIsFreeText).toBe(true);
     expect(v.destination).toBeNull();
+  });
+
+  // #2800: who got what, the holes and the course; the trophy, and a first name
+  // like every other row. Friends open Venner, a league opens the league.
+  describe('friend_achievement', () => {
+    const brag = (extra: Record<string, unknown> = {}) =>
+      row('friend_achievement', {
+        game_id: GAME,
+        player_id: MARTE,
+        player_name: 'Marte Lie',
+        course_name: 'Bogstad',
+        league_id: null,
+        moments: [
+          { kind: 'eagle', hole_number: 4 },
+          { kind: 'hole_in_one', hole_number: 12 },
+        ],
+        ...extra,
+      });
+
+    it('a friend’s round: first name and the best moment, holes and course, to Venner', () => {
+      const v = view([brag()], 'today');
+      expect(v.title).toBe('Marte fikk hole-in-one');
+      expect(v.subtitle).toMatch(/^Hull 4 og 12 på Bogstad · /);
+      expect(v.avatar).toEqual({ kind: 'icon', icon: 'pokal' });
+      expect(v.destination).toBe('/profile/venner');
+      expect(v.actionKey).toBeNull();
+    });
+
+    it('a league round opens the league', () => {
+      const v = view([brag({ league_id: GAME_2 })], 'today');
+      expect(v.destination).toBe(`/liga/${GAME_2}`);
+    });
+
+    it('in English', () => {
+      const v = view([brag()], 'today', ctx('en'));
+      expect(v.title).toBe('Marte got a hole-in-one');
+      expect(v.subtitle).toMatch(/^Holes 4 and 12 at Bogstad · /);
+    });
   });
 
   // #2481: the round is gone, so nothing to open. Who cancelled and when the
