@@ -4,6 +4,7 @@ import {
   enteredAllBy,
   handedOverMarker,
   markerCandidates,
+  returnedToMarker,
   markerRefusal,
   markerRequired,
   mayApproveAsMarker,
@@ -216,10 +217,15 @@ describe('orderMarkerOptions', () => {
 });
 
 describe('handedOverMarker', () => {
-  const card = (marker_user_id: string | null, submitted_at: string | null = null) => ({
+  const card = (marker_user_id: string | null, submitted_at: string | null = null, rejection_reason: string | null = null) => ({
     user_id: 'b',
     marker_user_id,
     submitted_at,
+    rejection_reason,
+  });
+
+  it('is null for a card its marker sent back: it is not handed over, it is returned', () => {
+    expect(handedOverMarker(card('a', null, 'hull 7'), ['a'])).toBeNull();
   });
 
   it('is the flightmate who marked the undelivered card', () => {
@@ -240,5 +246,38 @@ describe('handedOverMarker', () => {
 
   it('is null when the marker is the card\'s owner', () => {
     expect(handedOverMarker(card('b'), ['a', 'b'])).toBeNull();
+  });
+});
+
+// #2814 (the owner 11.11): «Ola må rette opp avvisningen og sende det inn til
+// Per på nytt». A card its marker sent back goes back to the same marker: no
+// picker, and never approved on delivery.
+describe('returnedToMarker', () => {
+  const card = (over: Partial<{ marker_user_id: string | null; submitted_at: string | null; rejection_reason: string | null }>) => ({
+    user_id: 'a',
+    marker_user_id: 'b',
+    submitted_at: null,
+    rejection_reason: 'hull 7',
+    ...over,
+  });
+
+  it('is the marker who sent the card back', () => {
+    expect(returnedToMarker(card({}))).toBe('b');
+  });
+
+  it('is the marker also outside the flight', () => {
+    expect(returnedToMarker(card({ marker_user_id: 'kari' }))).toBe('kari');
+  });
+
+  it('is null for a card nobody sent back', () => {
+    expect(returnedToMarker(card({ rejection_reason: null }))).toBeNull();
+  });
+
+  it('is null once the card is delivered again', () => {
+    expect(returnedToMarker(card({ submitted_at: '2026-11-11T10:00:00Z' }))).toBeNull();
+  });
+
+  it('is null without a marker', () => {
+    expect(returnedToMarker(card({ marker_user_id: null }))).toBeNull();
   });
 });

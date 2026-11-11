@@ -728,6 +728,7 @@ async function markerNoteFor(
   const joinNames = await nameJoiner();
   return markerNote((key, values) => t(key, values), {
     markedByName: choice.markedBy ? choice.markedBy.name : undefined,
+    returnedByName: choice.returnedBy ? choice.returnedBy.name : undefined,
     unknownPlayer: t('unknownPlayer'),
     handOver: flightCards.length > 0 ? { names: joinNames(flightCards), count: flightCards.length } : null,
   });

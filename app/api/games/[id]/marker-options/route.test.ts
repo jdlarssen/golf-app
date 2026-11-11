@@ -47,6 +47,7 @@ const row = (user_id: string, over: Record<string, unknown> = {}) => ({
   user_id,
   submitted_at: null,
   marker_user_id: null,
+  rejection_reason: null,
   withdrawn_at: null,
   ...over,
 });
@@ -116,6 +117,15 @@ describe('GET /api/games/[id]/marker-options', () => {
     ]);
     const res = await get();
     expect({ status: res.status, body: await res.json() }).toEqual({ status: 200, body: { required: false } });
+  });
+
+  it('a card its marker sent back → no picker, and who it goes back to', async () => {
+    admin = buildSupabaseMock([
+      ME,
+      MEMBERS,
+      { data: [row('anders', { marker_user_id: 'arne', rejection_reason: 'hull 3' }), row('berit')] },
+    ]);
+    expect(await (await get()).json()).toEqual({ required: false, returnedBy: { userId: 'arne', name: 'Arne' } });
   });
 
   it('a delivered card → required: false', async () => {

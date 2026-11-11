@@ -369,6 +369,32 @@ describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
     });
     await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
   });
+
+  // #2814 (eieren 11.11): markøren sendte kortet tilbake. Det går tilbake til
+  // samme markør, uten velger, og linja sier det.
+  it('har markøren sendt kortet tilbake, står linja om det i stedet for velgeren', async () => {
+    const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
+    fetchMarkerOptions.mockResolvedValue({
+      ok: true,
+      options: { required: false, returnedBy: { userId: 'kari', name: 'Kari Arrangør' } },
+    });
+    mockState.bundle = {
+      ...simBundle,
+      players: [{ ...mockRevealBundle.players[0], markerUserId: 'kari', rejectionReason: 'hull 3' }],
+    };
+    await render(scorecardElement(SIM_GAME, jest.fn()));
+    await waitFor(() => expect(screen.getByTestId('returned-by')).toBeTruthy());
+    expect({
+      line: screen.getByTestId('returned-by').props.children,
+      picker: screen.queryByTestId('marker-picker'),
+      markedBy: screen.queryByTestId('marked-by'),
+    }).toEqual({
+      line: 'Kari Arrangør sendte kortet tilbake. Rett det og send det til Kari Arrangør igjen. Er dere uenige, kan arrangøren godkjenne kortet i stedet.',
+      picker: null,
+      markedBy: null,
+    });
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+  });
 });
 
 describe('Scorecard', () => {
