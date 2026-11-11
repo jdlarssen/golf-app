@@ -61,11 +61,13 @@ describe('paymentRoster', () => {
             data: [
               { user_id: 'a', paid_at: 'x', withdrawn_at: null, users: { name: 'Ada', nickname: 'Albatross', is_guest: false } },
               { user_id: 'b', paid_at: null, withdrawn_at: null, users: null },
+              { user_id: 'c', paid_at: null, withdrawn_at: null, users: { name: 'Bo', nickname: '  ', is_guest: false } },
             ],
           };
     const roster = await paymentRoster(client, 'g');
-    expect(roster?.players.map((r) => r.name)).toEqual(['Ada «Albatross»', null]);
-    expect(roster).toMatchObject({ entryFeeKr: 200, paidCount: 1, totalCount: 2, remindable: 1 });
+    // A blank nickname is no nickname, as everywhere else (`playerNameWithNicknameAfter`).
+    expect(roster?.players.map((r) => r.name)).toEqual(['Ada «Albatross»', null, 'Bo']);
+    expect(roster).toMatchObject({ entryFeeKr: 200, paidCount: 1, totalCount: 3, remindable: 2 });
   });
 
   it('et spill som ikke kan leses gir null; en lesefeil kaster', async () => {

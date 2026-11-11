@@ -4,6 +4,7 @@ import type { Database } from '@/lib/database.types';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { sendPaymentReminder } from '@/lib/notifications/paymentReminder';
+import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { isRemindable, paymentCounts } from '@/lib/games/paymentRules';
@@ -72,7 +73,8 @@ export async function paymentRoster(client: Client, gameId: string): Promise<Pay
 
   const players = (rows ?? []).map((r) => ({
     userId: r.user_id,
-    name: r.users?.name ? (r.users.nickname ? `${r.users.name} «${r.users.nickname}»` : r.users.name) : null,
+    // The web's name rule (`playerNameWithNicknameAfter`): `Ola Nordmann «Kalle»`.
+    name: r.users?.name ? playerNameWithNicknameAfter(r.users.name, r.users.nickname) : null,
     isGuest: r.users?.is_guest ?? false,
     withdrawn: r.withdrawn_at != null,
     paid: r.paid_at != null,
