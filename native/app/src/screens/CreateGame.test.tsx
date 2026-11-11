@@ -20,6 +20,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { fetchCourses, fetchRosterCandidates, publishGame } from '../data/createGame';
+import { fetchFormatCatalog } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
 import { describePendingOthers } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
@@ -157,8 +158,14 @@ const fetchRosterCandidatesMock = fetchRosterCandidates as jest.MockedFunction<
   typeof fetchRosterCandidates
 >;
 
-async function renderWizard() {
+/**
+ * Veiviseren rendret. Uten `atType` er Kompis-runde valgt i steg 1, så testen
+ * står på formatsteget som før #2753.
+ */
+async function renderWizard({ atType = false }: { atType?: boolean } = {}) {
   const navigation = {
+    // `openOrReturn` leser stakken (#2753). Tom stakk: Cup åpnes på vanlig måte.
+    getState: jest.fn(() => undefined),
     replace: jest.fn(),
     goBack: jest.fn(),
     navigate: jest.fn(),
@@ -188,6 +195,11 @@ async function renderWizard() {
     return call[1];
   };
 
+  if (!atType) {
+    await fireEvent.press(await screen.findByTestId('create-type-kompis'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+  }
+
   return { ...view, navigation, focusListener };
 }
 
@@ -196,6 +208,44 @@ async function goToCourseStep() {
   await fireEvent.press(screen.getByTestId('create-next'));
   await fireEvent.press(screen.getByTestId('create-next'));
 }
+
+describe('CreateGame: hva slags arrangement (#2753)', () => {
+  it('starter med Kompis-runde og Cup, uten Klubb-turnering og «Solo / test»', async () => {
+    await renderWizard({ atType: true });
+    expect(await screen.findByTestId('create-step-type')).toBeTruthy();
+    expect(screen.getByTestId('create-progress').props.children).toBe('Steg 1 av 6 · Arrangement');
+    expect(screen.getByText('Hva slags arrangement?')).toBeTruthy();
+    expect(screen.getByTestId('create-type-kompis')).toBeTruthy();
+    expect(screen.getByTestId('create-type-cup')).toBeTruthy();
+    expect(screen.queryByTestId('create-type-klubb')).toBeNull();
+    expect(screen.queryByTestId('create-type-solo')).toBeNull();
+    expect(screen.queryByText('Solo / test')).toBeNull();
+
+    // Ingen flis er valgt fra start, og «Neste» venter på et valg, som på nettet.
+    expect(screen.getByTestId('create-next').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('create-next-hint').props.children).toBe('Velg hva slags arrangement først');
+  });
+
+  it('Kompis-runde går videre til formatene for kompis', async () => {
+    (fetchFormatCatalog as jest.Mock).mockClear();
+    await renderWizard();
+    expect(await screen.findByTestId('create-step-format')).toBeTruthy();
+    expect(fetchFormatCatalog).toHaveBeenCalledWith('kompis');
+    expect(screen.getByTestId('create-format-stableford')).toBeTruthy();
+    expect(screen.getByTestId('create-format-wolf')).toBeTruthy();
+  });
+
+  it('Cup åpner cup-veiviseren og blir stående på typevalget', async () => {
+    const { navigation } = await renderWizard({ atType: true });
+    await fireEvent.press(await screen.findByTestId('create-type-cup'));
+    expect(screen.getByTestId('create-type-cup').props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CreateCup', undefined);
+    expect(screen.getByTestId('create-step-type')).toBeTruthy();
+    expect(screen.queryByTestId('create-step-format')).toBeNull();
+  });
+});
 
 describe('CreateGame og «Ny bane» (#2757)', () => {
   it('døra står under lista, også når søket gir treff, og tar med det du søkte på', async () => {
@@ -434,7 +484,8 @@ describe('CreateGame', () => {
   it('tilbake går ett steg med valgene beholdt, og første steg slipper skjermen', async () => {
     const { navigation } = await renderWizard();
     await fireEvent.press(await screen.findByTestId('create-format-stableford'));
-    expect(mockPreventRemove.enabled).toBe(false);
+    // Formatet er steg 2 etter #2753, så sperra står alt her.
+    expect(mockPreventRemove.enabled).toBe(true);
     await fireEvent.press(screen.getByTestId('create-next'));
     await fireEvent.changeText(screen.getByTestId('create-name'), 'Torsdagsrunden');
     await fireEvent.press(screen.getByTestId('create-next'));
@@ -448,12 +499,21 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-step-setup')).toBeTruthy();
     expect(screen.getByTestId('create-name').props.value).toBe('Torsdagsrunden');
 
-    // Steg 2 → tilbake → steg 1, med formatet fortsatt valgt.
+    // Steg 3 → tilbake → formatsteget, med formatet fortsatt valgt.
     await act(async () => {
       mockPreventRemove.callback!({ data: { action: { type: 'GO_BACK' } } });
     });
     expect(screen.queryByTestId('create-step-setup')).toBeNull();
     expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+
+    // Formatsteget → tilbake → typevalget, med Kompis-runde valgt (#2753).
+    expect(mockPreventRemove.enabled).toBe(true);
+    await act(async () => {
+      mockPreventRemove.callback!({ data: { action: { type: 'GO_BACK' } } });
+    });
+    expect(screen.getByTestId('create-type-kompis').props.accessibilityState).toMatchObject({
       selected: true,
     });
     // Første steg: ingen sperre, så navigatoren fjerner skjermen selv.

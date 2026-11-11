@@ -186,6 +186,30 @@ export const PokalHankerIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * #2753: de tre flisene på «Hva slags arrangement?», fra nettets
+ * `IntentSelector` (#2426). 26 pt med strek 1,6 der de brukes.
+ */
+export const KompisIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Circle cx="8" cy="8" r="3" />
+    <Circle cx="16" cy="8" r="3" />
+    <Path d="M2.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5M10.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5" />
+  </LineIcon>
+);
+
+export const KlubbIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 21h8" />
+  </LineIcon>
+);
+
+export const CupIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M4 4v16M20 4v16M4 8h5v8H4M20 8h-5v8h5M9 12h6" />
+  </LineIcon>
+);
+
 export const KalenderIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Rect x="4" y="6" width="16" height="14" rx="1.75" />

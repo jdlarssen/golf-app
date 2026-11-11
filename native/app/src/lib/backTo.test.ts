@@ -95,6 +95,12 @@ describe('backStep', () => {
 });
 
 describe('keepBelow', () => {
+  it('typevalget som åpnet cup-veiviseren, går ut med den (#2753)', () => {
+    const routes = [HOME, { name: 'CreateGame' }, { name: 'CreateCup', params: { cupId: 'c1' } }];
+    expect(backStep(routes, 'Cup', { cupId: 'c1' })).toBe('replace');
+    expect(keepBelow(routes, 'Cup', { cupId: 'c1' })).toBe(1);
+  });
+
   it('Hjem-kortets hull: bare Hjem blir liggende under spillet', () => {
     expect(keepBelow([HOME, hole('g1', 18), card('g1')], 'GameHome', { gameId: 'g1' })).toBe(1);
   });
@@ -179,6 +185,15 @@ describe('backTo og openOrReturn', () => {
       routes: [HOME, { name: 'GameHome', params: { gameId: 'g1' } }],
     });
     expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('backTo fra en cup laget via typevalget: [Hjem, Cupen] (#2753)', () => {
+    const nav = fakeNavigation([HOME, { name: 'CreateGame' }, { name: 'CreateCup', params: { cupId: 'c1' } }]);
+    backTo(nav, 'Cup', { cupId: 'c1' });
+    expect(nav.reset).toHaveBeenCalledWith({
+      index: 1,
+      routes: [HOME, { name: 'Cup', params: { cupId: 'c1' } }],
+    });
   });
 
   it('openOrReturn: hull → tavla → stripa → hull gir hullet som alt ligger der', () => {

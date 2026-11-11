@@ -115,17 +115,25 @@ function sharesIdentity(route: RouteLike, params: object | undefined): boolean {
 }
 
 /**
+ * Veivisere som startet skjemaet. «Opprett spill» åpner cup-veiviseren fra
+ * typevalget (#2753); er cupen laget, hører typevalget ikke hjemme bak den.
+ */
+const STARTERS = new Set(['CreateGame']);
+
+/**
  * Hvor mange skjermer under den du står på, skal bli liggende når `backTo`
  * legger målet inn (regel 3 i §Tilbake)? Skjermer fra samme spill eller liga
  * som ligger over den nærmeste skjermen over målet i hierarkiet, går ut sammen
  * med skjemaet. Kortet levert fra Hjem-kortets hull ([Hjem, Hull 18,
  * Scorekort]) gir da [Hjem, Spillet], ikke [Hjem, Hull 18, Spillet] der
- * tilbake fra spillet ville åpnet hullet på kortet du nettopp leverte. Alt
- * annet blir liggende.
+ * tilbake fra spillet ville åpnet hullet på kortet du nettopp leverte. En
+ * veiviser som startet skjemaet, går også ut ([Hjem, Opprett spill, Ny cup]
+ * gir [Hjem, Cupen]). Alt annet blir liggende.
  */
 export function keepBelow(routes: readonly RouteLike[], name: string, params: object | undefined): number {
   for (let i = routes.length - 2; i >= 0; i--) {
     const route = routes[i]!;
+    if (STARTERS.has(route.name)) continue;
     if (isAbove(route.name, name) || !sharesIdentity(route, params)) return i + 1;
   }
   return 0;

@@ -86,6 +86,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ref = createNavigationContainerRef<RootStackParamList>();
 
 const HomeStub = () => <View testID="home-stub" />;
+// Cup-veiviseren har sine egne tester. Her teller bare stakken.
+const CreateCupStub = () => <View testID="create-cup-stub" />;
 const GameStub = () => <View testID="game-stub" />;
 
 const wizardIsOpen = () => ref.getRootState()?.routes.at(-1)?.name === 'CreateGame';
@@ -96,7 +98,8 @@ async function pressBack() {
   });
 }
 
-async function openWizard() {
+/** Veiviseren åpnet. Uten `atType` er Kompis-runde valgt, og formatsteget står. */
+async function openWizard({ atType = false }: { atType?: boolean } = {}) {
   await render(
     <SessionProvider value={{ userId: 'me', email: 'admin@example.test' }}>
       <NavigationContainer ref={ref}>
@@ -105,6 +108,7 @@ async function openWizard() {
           <Stack.Screen name="CreateGame" component={CreateGame} />
           <Stack.Screen name="CreateCourse" component={CreateCourse} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
+          <Stack.Screen name="CreateCup" component={CreateCupStub} />
           <Stack.Screen name="GameHome" component={GameStub} />
         </Stack.Navigator>
       </NavigationContainer>
@@ -113,6 +117,10 @@ async function openWizard() {
   await act(async () => {
     ref.navigate('CreateGame');
   });
+  if (!atType) {
+    await fireEvent.press(await screen.findByTestId('create-type-kompis'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+  }
 }
 
 describe('CreateGame i en ekte navigator (#2746)', () => {
@@ -161,10 +169,17 @@ describe('CreateGame i en ekte navigator (#2746)', () => {
     expect(screen.getByTestId('create-step-setup')).toBeTruthy();
     expect(screen.getByTestId('create-name').props.value).toBe('Torsdagsrunden');
 
-    // Steg 2 → steg 1: formatet er fortsatt valgt.
+    // Oppsett → formatet: formatet er fortsatt valgt.
     await pressBack();
     expect(wizardIsOpen()).toBe(true);
     expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+
+    // Formatet → typevalget (#2753), med Kompis-runde valgt.
+    await pressBack();
+    expect(wizardIsOpen()).toBe(true);
+    expect(screen.getByTestId('create-type-kompis').props.accessibilityState).toMatchObject({
       selected: true,
     });
 
@@ -172,6 +187,24 @@ describe('CreateGame i en ekte navigator (#2746)', () => {
     await pressBack();
     expect(wizardIsOpen()).toBe(false);
     expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home']);
+  });
+
+  it('Cup legges oppå typevalget, og tilbake derfra står på typevalget (#2753)', async () => {
+    await openWizard({ atType: true });
+    await fireEvent.press(await screen.findByTestId('create-type-cup'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual([
+      'Home',
+      'CreateGame',
+      'CreateCup',
+    ]);
+
+    await pressBack();
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'CreateGame']);
+    expect(screen.getByTestId('create-step-type')).toBeTruthy();
+    expect(screen.getByTestId('create-type-cup').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
   });
 
   it('«Ny bane»: tilbake lar veiviseren stå, og lagret bane er borte fra tilbake-veien (#2757)', async () => {

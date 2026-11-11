@@ -18,10 +18,10 @@
 // `to public` men gatet på `is_admin() OR auth.role() = 'authenticated'` — en
 // innlogget app leser dem fint under vanlig RLS.
 //
-// **Intent-steget utgår.** Webben trenger intents for å ordne 22 formater;
-// appen har 8 og viser dem flatt (kontraktens Key Decision). Derfor spør vi
-// ikke om intent i det hele tatt — et format teller som synlig hvis det er
-// synlig i MINST ÉN intent.
+// **Typen styrer lista (#2753).** Veiviseren spør først om arrangementet, og
+// formatene leses for den typen: `intent`-filteret og typens egen
+// `sort_order`, som nettets `getFormatsForIntent`. Et format admin skrur av
+// for typen på nettet, forsvinner uten nytt appbygg.
 //
 // **Fetch KASTER ved feil.** Samme regel som `choices.ts` og `gameBundle.ts`:
 // tom liste er et gyldig svar («admin har slått av alt»), en feilet henting er
@@ -42,9 +42,9 @@ export interface FormatCatalogEntry {
   label: string;
   /** Ikon-nøkkelen webben bruker. Appen kan mappe den til sitt eget ikon. */
   iconKey: string;
-  /** Sant når formatet er markert som primært i minst én intent. */
+  /** Sant når formatet er markert som primært for typen. */
   isPrimary: boolean;
-  /** Laveste `sort_order` blant de synlige mappingene. Brukes som rekkefølge. */
+  /** Typens `sort_order`. Brukes som rekkefølge. */
   sortOrder: number;
 }
 
@@ -63,7 +63,14 @@ interface IntentMappingRow {
 const SUPPORTED_SLUGS: string[] = [...APP_SUPPORTED_MODES];
 
 /**
- * De formatene appen OG databasen er enige om, sortert som veiviseren viser dem.
+ * Typene som har en formatliste. Cup har sin egen veiviser, og «Solo / test»
+ * finnes ikke i appen (eierens valg 01.11).
+ */
+export type FormatIntent = 'kompis' | 'klubb';
+
+/**
+ * De formatene appen OG databasen er enige om for typen, sortert som
+ * veiviseren viser dem.
  *
  * Rekkefølgen er `sort_order` stigende med slug som tiebreak — deterministisk,
  * og den følger nettsidens egen prioritering uten at appen har en mening.
@@ -72,7 +79,9 @@ const SUPPORTED_SLUGS: string[] = [...APP_SUPPORTED_MODES];
  *   ærlige noten ({@link FORMAT_CATALOG_FETCH_NOTE}) og ikke en tom liste:
  *   en tom liste betyr «ingenting er aktivt», og det er et annet svar.
  */
-export async function fetchFormatCatalog(): Promise<FormatCatalogEntry[]> {
+export async function fetchFormatCatalog(
+  intent: FormatIntent,
+): Promise<FormatCatalogEntry[]> {
   const [formatsRes, mappingRes] = await Promise.all([
     supabase
       .from('formats')
@@ -83,6 +92,7 @@ export async function fetchFormatCatalog(): Promise<FormatCatalogEntry[]> {
     supabase
       .from('format_intent_mapping')
       .select('format_slug, is_primary, sort_order')
+      .eq('intent', intent)
       .eq('is_visible', true)
       .in('format_slug', SUPPORTED_SLUGS)
       .returns<IntentMappingRow[]>(),
@@ -97,16 +107,10 @@ export async function fetchFormatCatalog(): Promise<FormatCatalogEntry[]> {
     );
   }
 
-  // Et format kan være mappet til flere intents. Slå dem sammen: primært hvis
-  // det er primært NOEN steder, og med den laveste sort_order-en det har.
-  const visible = new Map<string, { isPrimary: boolean; sortOrder: number }>();
-  for (const row of mappingRes.data ?? []) {
-    const seen = visible.get(row.format_slug);
-    visible.set(row.format_slug, {
-      isPrimary: (seen?.isPrimary ?? false) || row.is_primary,
-      sortOrder: Math.min(seen?.sortOrder ?? row.sort_order, row.sort_order),
-    });
-  }
+  // Én rad per format og type (primærnøkkelen er `format_slug, intent`).
+  const visible = new Map<string, IntentMappingRow>(
+    (mappingRes.data ?? []).map((row) => [row.format_slug, row]),
+  );
 
   const entries: FormatCatalogEntry[] = [];
   for (const row of formatsRes.data ?? []) {
@@ -119,8 +123,8 @@ export async function fetchFormatCatalog(): Promise<FormatCatalogEntry[]> {
       slug: row.slug,
       label: APP_MODE_LABELS[row.slug],
       iconKey: row.icon_key,
-      isPrimary: mapping.isPrimary,
-      sortOrder: mapping.sortOrder,
+      isPrimary: mapping.is_primary,
+      sortOrder: mapping.sort_order,
     });
   }
 

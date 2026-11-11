@@ -316,8 +316,8 @@ it('uten runde i gang står «Opprett spill» øverst, som før, også på et to
   await empty.view;
   expect(await screen.findByTestId('home-empty')).toBeTruthy();
   expect(screen.getByTestId('home-create-game')).toBeTruthy();
-  // #2752: døra til en ny cup står under, til #2753 flytter den.
-  expect(screen.getByTestId('home-create-cup')).toBeTruthy();
+  // #2753: cupen lages fra typevalget i «Opprett spill». Hjem har én dør.
+  expect(screen.queryByTestId('home-create-cup')).toBeNull();
 });
 
 it('bruker aldri en bundel som hører til et annet spill enn helten', async () => {
