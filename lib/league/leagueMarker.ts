@@ -18,7 +18,8 @@
  * Unchanged since the marker kept it (`unchangedSinceMarker`), it is approved
  * on delivery; changed, it waits in the marker's queue. For their own card the
  * deliverer may pick a flightmate, who stands first in the picker
- * (`orderMarkerOptions`).
+ * (`orderMarkerOptions`). A card the marker sends back goes back to the same
+ * marker (`returnedToMarker`).
  *
  * The server reads it at delivery (`setFlightMarkerCore`) and at approval
  * (`markerReviewAccess`, `scorecardReviewAccess`). The database holds the same
@@ -138,18 +139,39 @@ export function orderMarkerOptions<T extends { userId: string; name: string | nu
   ];
 }
 
+/** The card fields the marker rules read. */
+export type MarkerCard = {
+  user_id: string;
+  submitted_at: string | null;
+  marker_user_id: string | null;
+  rejection_reason: string | null;
+};
+
 /**
  * #2814: the flightmate who kept this card and became its marker, or null.
- * A card is handed over when it is not delivered and its marker is someone
- * else in the flight. Such a card needs no marker at delivery: it has one.
+ * A card is handed over when it is not delivered, nobody sent it back, and
+ * its marker is someone else in the flight. Such a card needs no marker at
+ * delivery: it has one.
  */
-export function handedOverMarker(
-  card: { user_id: string; submitted_at: string | null; marker_user_id: string | null },
-  flightmateIds: readonly string[],
-): string | null {
+export function handedOverMarker(card: MarkerCard, flightmateIds: readonly string[]): string | null {
   const marker = card.marker_user_id;
-  if (card.submitted_at != null || marker == null || marker === card.user_id) return null;
+  if (card.submitted_at != null || card.rejection_reason != null) return null;
+  if (marker == null || marker === card.user_id) return null;
   return flightmateIds.includes(marker) ? marker : null;
+}
+
+/**
+ * #2814 (the owner 11.11: «Ola må rette opp avvisningen og sende det inn til
+ * Per på nytt»): the marker who sent this card back, or null. The card goes
+ * back to the same marker, in or outside the flight: no picker, and it is
+ * never approved on delivery. A rejection sets `rejection_reason`, and the
+ * next delivery clears it (`submitScorecardCore`), so the rule reads the card
+ * before it is delivered again. This changes #2661, where the player picked
+ * a marker again.
+ */
+export function returnedToMarker(card: Omit<MarkerCard, 'user_id'>): string | null {
+  if (card.submitted_at != null || card.rejection_reason == null) return null;
+  return card.marker_user_id;
 }
 
 /**

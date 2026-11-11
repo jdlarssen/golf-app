@@ -82,3 +82,9 @@ export function markedByLine(name: string | null): string {
   const who = name ?? MARKER_TEXT.unknownPlayer;
   return `${who} er markøren din. Sender du inn uten å endre noe, er kortet godkjent. Endrer du noe, godkjenner ${who} endringen.`;
 }
+
+/** #2814: i stedet for velgeren når markøren sendte kortet tilbake (`game.submit.marker.returnedBy`). */
+export function returnedByLine(name: string | null): string {
+  const who = name ?? MARKER_TEXT.unknownPlayer;
+  return `${who} sendte kortet tilbake. Rett det og send det til ${who} igjen. Er dere uenige, kan arrangøren godkjenne kortet i stedet.`;
+}

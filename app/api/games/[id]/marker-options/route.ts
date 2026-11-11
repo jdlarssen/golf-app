@@ -25,6 +25,8 @@ import type { MarkerOptionsResponse } from '@/lib/league/appLeagueView';
 //                                (#2814)
 //       200 MarkerOptionsResponse (lib/league/appLeagueView.ts):
 //           { required: false } utenfor en simulatorliga,
+//           { required: false, returnedBy: { userId, name } } når markøren
+//             sendte kortet tilbake (#2814): det går tilbake til samme markør,
 //           { required: true, options: { userId, name }[] } i en
 //       400 bad_request · 401 unauthorized · 404 not_found · 500 load_failed
 
@@ -58,7 +60,9 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     const choice = await loadMarkerChoice(gameId, userId);
     const body: MarkerOptionsResponse = choice?.options
       ? { required: true, options: choice.options }
-      : { required: false };
+      : choice?.returnedBy
+        ? { required: false, returnedBy: choice.returnedBy }
+        : { required: false };
     return NextResponse.json(body);
   } catch (err) {
     console.error('[api/games/[id]/marker-options] load failed', err);

@@ -19,6 +19,7 @@ import {
   markerCandidates,
   markerRefusal,
   orderMarkerOptions,
+  returnedToMarker,
   unchangedSinceMarker,
   type MarkerRefusal,
 } from './leagueMarker';
@@ -68,6 +69,7 @@ type RosterRow = {
   user_id: string;
   submitted_at: string | null;
   marker_user_id: string | null;
+  rejection_reason: string | null;
   withdrawn_at: string | null;
 };
 
@@ -75,7 +77,7 @@ type RosterRow = {
 async function readRoster(gameId: string): Promise<RosterRow[]> {
   const { data, error } = await getAdminClient()
     .from('game_players')
-    .select('user_id, submitted_at, marker_user_id, withdrawn_at')
+    .select('user_id, submitted_at, marker_user_id, rejection_reason, withdrawn_at')
     .eq('game_id', gameId)
     .returns<RosterRow[]>();
   if (error) throw new Error(`roster read failed: ${error.message}`, { cause: error });
@@ -166,12 +168,14 @@ async function deliverableMates(
  * Deliver the caller's card, the way `submitScorecardCore` does. In a
  * simulator league:
  *  1. the caller's own card gets the marker they named (`setFlightMarkerCore`),
- *     unless it is delivered already or a flightmate kept it and is its
- *     marker (`handedOverMarker`). Then no marker is asked, and one in the
- *     request is ignored;
+ *     unless it is delivered already, a flightmate kept it and is its marker
+ *     (`handedOverMarker`), or its marker sent it back (`returnedToMarker`).
+ *     Then no marker is asked, and one in the request is ignored;
  *  2. the caller's card is delivered, without the flightmates' cards;
  *  3. the marker is told (`league_marker_request`), or, for a card a
- *     flightmate kept, it is approved when unchanged (`settleHandedOverCard`);
+ *     flightmate kept, it is approved when unchanged (`settleHandedOverCard`).
+ *     A card that was sent back is never approved on delivery: it goes back
+ *     to its marker (the owner 11.11);
  *  4. the cards the caller kept are handed over (`handOver`).
  *
  * In a simulator flight the flightmates are not asked to approve
@@ -201,8 +205,9 @@ export async function submitScorecardWithMarker(
   if (!me) return submitScorecardCore(supabase, gameId, userId, { alsoFor: [], peerNotices: false });
 
   const keptBy = handedOverMarker(me, activeFlightmates(roster, userId));
-  let ownMarker: string | null = null;
-  if (me.submitted_at == null && keptBy == null) {
+  const returnedTo = returnedToMarker(me);
+  let ownMarker: string | null = returnedTo;
+  if (me.submitted_at == null && keptBy == null && returnedTo == null) {
     const marker = await setFlightMarkerCore({
       flight,
       delivererId: userId,
@@ -418,13 +423,14 @@ export type MarkerOption = { userId: string; name: string | null };
 /**
  * What the delivery page shows about the marker in a simulator league.
  * `options` is the picker for the caller's own card, or undefined when there is
- * none: the card is delivered, or `markedBy`, the flightmate who kept it, is
- * its marker (#2814).
+ * none: the card is delivered, `markedBy`, the flightmate who kept it, is its
+ * marker, or `returnedBy`, its marker, sent it back (#2814).
  */
 export type MarkerChoice = {
   flight: LeagueFlight;
   options: MarkerOption[] | undefined;
   markedBy: MarkerOption | null;
+  returnedBy: MarkerOption | null;
 };
 
 /**
@@ -455,11 +461,12 @@ export async function loadMarkerChoice(
   );
   const me = roster.find((p) => p.user_id === delivererId);
   const mates = activeFlightmates(roster, delivererId);
+  const option = (userId: string): MarkerOption => ({ userId, name: nameOf.get(userId) ?? null });
   const keptBy = me ? handedOverMarker(me, mates) : null;
-  if (keptBy) {
-    return { flight, options: undefined, markedBy: { userId: keptBy, name: nameOf.get(keptBy) ?? null } };
-  }
-  if (me?.submitted_at != null) return { flight, options: undefined, markedBy: null };
+  if (keptBy) return { flight, options: undefined, markedBy: option(keptBy), returnedBy: null };
+  const returnedTo = me ? returnedToMarker(me) : null;
+  if (returnedTo) return { flight, options: undefined, markedBy: null, returnedBy: option(returnedTo) };
+  if (me?.submitted_at != null) return { flight, options: undefined, markedBy: null, returnedBy: null };
   const options = orderMarkerOptions(
     markerCandidates([...nameOf.keys()], [delivererId], delivererId).map((userId) => ({
       userId,
@@ -467,5 +474,5 @@ export async function loadMarkerChoice(
     })),
     mates,
   );
-  return { flight, options, markedBy: null };
+  return { flight, options, markedBy: null, returnedBy: null };
 }

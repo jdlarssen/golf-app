@@ -55,11 +55,18 @@ const FLIGHT: LeagueFlight = {
   leagueCreatorId: 'org',
 };
 const MEMBERS = { data: ['a', 'b', 'm'].map((user_id) => ({ user_id })) };
-type Row = { user_id: string; submitted_at: string | null; marker_user_id: string | null; withdrawn_at: string | null };
+type Row = {
+  user_id: string;
+  submitted_at: string | null;
+  marker_user_id: string | null;
+  rejection_reason: string | null;
+  withdrawn_at: string | null;
+};
 const row = (user_id: string, over: Partial<Row> = {}): Row => ({
   user_id,
   submitted_at: null,
   marker_user_id: null,
+  rejection_reason: null,
   withdrawn_at: null,
   ...over,
 });
@@ -307,6 +314,53 @@ describe('submitScorecardWithMarker', () => {
       wrote: updates(),
       membersRead: adminMock.__fromCalls.some((c) => c.table === 'league_players'),
     }).toEqual({ ok: true, wrote: [], membersRead: false });
+  });
+
+  // #2814 (the owner 11.11): a card its marker sent back goes back to the same
+  // marker. No picker, no marker write, never approved on delivery.
+  const requests = () =>
+    notify.mock.calls.map((c) => (c as unknown as [{ userId: string; kind: string; payload: { player_id: string } }])[0]).map((n) => [n.userId, n.kind, n.payload.player_id]);
+
+  it('B sends back the card A sent back: it goes to A again, unchanged or not, never approved on delivery', async () => {
+    adminMock = buildSupabaseMock([
+      { data: [row('a', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'b' }), row('b', { marker_user_id: 'a', rejection_reason: 'hull 7' })] },
+      { data: [{ user_id: 'b', users: { name: 'Berit', nickname: null } }] }, // delivered now
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'b', { markerUserId: 'm' });
+    expect({
+      ok: result.ok,
+      wrote: updates(),
+      scoresRead: adminMock.__fromCalls.some((c) => c.table === 'scores'),
+      approved: approveScorecardCore.mock.calls.length,
+      asked: requests(),
+    }).toEqual({ ok: true, wrote: [], scoresRead: false, approved: 0, asked: [['a', 'league_marker_request', 'b']] });
+  });
+
+  it('A sends back the own card the flightmate B sent back: to B again, without a picker', async () => {
+    adminMock = buildSupabaseMock([
+      { data: [row('a', { marker_user_id: 'b', rejection_reason: 'hull 3' }), row('b', { submitted_at: '2026-11-10T18:00:00Z', marker_user_id: 'a' })] },
+      { data: [{ user_id: 'a', users: { name: 'Anders', nickname: null } }] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', { markerUserId: 'm' });
+    expect({
+      ok: result.ok,
+      membersRead: adminMock.__fromCalls.some((c) => c.table === 'league_players'),
+      wrote: updates(),
+      asked: requests(),
+    }).toEqual({ ok: true, membersRead: false, wrote: [], asked: [['b', 'league_marker_request', 'a']] });
+  });
+
+  it('a marker outside the flight who sent the card back gets it again; no marker is required', async () => {
+    adminMock = buildSupabaseMock([
+      { data: [row('a', { marker_user_id: 'm', rejection_reason: 'hull 3' })] },
+      { data: [{ user_id: 'a', users: { name: 'Anders', nickname: null } }] },
+    ]);
+    const result = await submitScorecardWithMarker(player, 'g1', 'a', {});
+    expect({ ok: result.ok, wrote: updates(), asked: requests() }).toEqual({
+      ok: true,
+      wrote: [],
+      asked: [['m', 'league_marker_request', 'a']],
+    });
   });
 
   it('a second tap (already delivered) tells nobody', async () => {

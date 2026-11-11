@@ -14,6 +14,7 @@ import {
   handOverLine,
   markedByLine,
   markerCardHeading,
+  returnedByLine,
   markerCardSubtitle,
   organizerNote,
   waitsForLine,
@@ -65,6 +66,7 @@ it('linjene for overleveringen er webbens, fylt inn (#2814)', () => {
   expect(handOverLine('Berit og Arne', 2)).toBe(fill(picker.handOverMany, { names: 'Berit og Arne' }));
   expect(markedByLine('Anders')).toBe(fill(picker.markedBy, { name: 'Anders' }));
   expect(markedByLine(null)).toBe(fill(picker.markedBy, { name: picker.unknownPlayer }));
+  expect(returnedByLine('Per')).toBe(fill(picker.returnedBy, { name: 'Per' }));
   expect(handOverButton('Berit', 1)).toBe(fill(flight.handOverButton, { names: 'Berit' }));
   expect(handOverButton('Berit og Arne', 2)).toBe(fill(flight.handOverButtonMany, { names: 'Berit og Arne' }));
 });
