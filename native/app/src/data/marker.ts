@@ -52,8 +52,18 @@ export async function fetchMarkerOptions(
   );
   if (!call.ok) return call;
   if (call.status !== 200) return { ok: false, reason: loadFailureFor(call.status) };
-  const body = call.body as Partial<{ required: boolean; options: unknown }>;
-  if (body.required === false) return { ok: true, options: { required: false } };
+  const body = call.body as Partial<{ required: boolean; options: unknown; returnedBy: unknown }>;
+  if (body.required === false) {
+    // #2814: the marker who sent the card back, when the server says so.
+    const back = body.returnedBy as Partial<{ userId: unknown; name: unknown }> | undefined;
+    return {
+      ok: true,
+      options:
+        back && typeof back.userId === 'string'
+          ? { required: false, returnedBy: { userId: back.userId, name: typeof back.name === 'string' ? back.name : null } }
+          : { required: false },
+    };
+  }
   return body.required === true && Array.isArray(body.options)
     ? { ok: true, options: body as MarkerOptionsResponse }
     : { ok: false, reason: 'load_failed' };

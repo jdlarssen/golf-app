@@ -18,6 +18,10 @@ describe('markerNote', () => {
     expect(markerNote(t, { ...base, markedByName: null })).toBe('markedBy(Ukjent)');
   });
 
+  it('names the marker who sent my card back (#2814, the owner 11.11)', () => {
+    expect(markerNote(t, { ...base, returnedByName: 'Per' })).toBe('returnedBy(Per)');
+  });
+
   it('names the one flightmate I hand a card to', () => {
     expect(markerNote(t, { ...base, handOver: { names: 'Per', count: 1 } })).toBe('handOver(Per)');
   });

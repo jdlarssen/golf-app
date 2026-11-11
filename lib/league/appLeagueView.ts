@@ -177,9 +177,13 @@ export type MarkerCardResponse = {
   holes: MarkerCardHole[];
 };
 
-/** #2661: the marker picker before a delivery, `GET /api/games/[id]/marker-options`. */
+/**
+ * #2661: the marker picker before a delivery, `GET /api/games/[id]/marker-options`.
+ * #2814: `returnedBy` (optional, additive) is the marker who sent the card
+ * back; it goes back to them, so there is no picker. Older builds ignore it.
+ */
 export type MarkerOptionsResponse =
-  | { required: false }
+  | { required: false; returnedBy?: { userId: string; name: string | null } }
   | { required: true; options: Array<{ userId: string; name: string | null }> };
 
 /**

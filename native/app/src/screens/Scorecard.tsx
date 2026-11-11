@@ -135,7 +135,7 @@ import {
   toRoster,
   toStampPlayers,
 } from '../lib/roster';
-import { handOverButton, handOverLine, markedByLine } from '../lib/markerCopy';
+import { handOverButton, handOverLine, markedByLine, returnedByLine } from '../lib/markerCopy';
 import { activeFlightmates, handedOverMarker } from '../../../../lib/league/leagueMarker';
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
@@ -569,6 +569,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       user_id: userId,
       submitted_at: me.player.submittedAt,
       marker_user_id: me.player.markerUserId ?? null,
+      rejection_reason: me.player.rejectionReason,
     },
     activeFlightmates(
       bundle.players.map((player) => ({ user_id: player.userId, withdrawn_at: player.withdrawnAt })),
@@ -579,6 +580,14 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const markedByNote = keptBy ? (
     <Text style={ui.muted} testID="marked-by">
       {markedByLine(keptByPlayer ? namesOf([keptByPlayer]) : null)}
+    </Text>
+  ) : null;
+  // #2814 (eieren 11.11): markøren sendte kortet tilbake, og det går tilbake til
+  // samme markør. Navnet kommer fra serveren, for markøren kan stå utenfor flighten.
+  const returnedBy = markerChoice?.required === false ? markerChoice.returnedBy : undefined;
+  const returnedNote = returnedBy ? (
+    <Text style={ui.muted} testID="returned-by">
+      {returnedByLine(returnedBy.name)}
     </Text>
   ) : null;
 
@@ -838,6 +847,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             {queueGuard}
             {markerPicker}
             {markedByNote}
+            {returnedNote}
             {handOverNote}
             {teeShotBox ? (
               <TeeShotLockedSubmit
