@@ -33,60 +33,49 @@ export function TypeStep({
 }) {
   const { colors, ui } = useTheme();
 
-  // To i bredden. En rad med én flis får en tom plass ved siden av, så flisen
-  // står like bred som de andre.
-  const rows: (AppIntent | null)[][] = [];
-  for (let i = 0; i < intents.length; i += 2) {
-    rows.push([intents[i]!, intents[i + 1] ?? null]);
-  }
-
   return (
     <View testID="create-step-type">
       <Text style={ui.title}>{ARRANGEMENT_TEXT.title}</Text>
+      {/* To i bredden: hver celle er halve rutenettet, med halve mellomrommet
+          som luft på hver side. Da står en flis alene like bred som de andre. */}
       <View style={styles.grid}>
-        {rows.map((row) => (
-          <View key={row.join('-')} style={styles.row}>
-            {row.map((intent, i) => {
-              if (intent === null) return <View key={`empty-${i}`} style={styles.tileSlot} />;
-              const active = intent === selected;
-              const Icon = ICONS[intent];
-              const tile = ARRANGEMENT_TILES[intent];
-              return (
-                <Pressable
-                  key={intent}
-                  testID={`create-type-${intent}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={tile.label}
-                  onPress={() => onSelect(intent)}
-                  style={[
-                    styles.tileSlot,
-                    styles.tile,
-                    active
-                      ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
-                      : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                >
-                  <Icon color={colors.primary} size={26} strokeWidth={1.6} />
-                  <Text style={[styles.label, { color: colors.text }]}>{tile.label}</Text>
-                  <Text style={[styles.description, { color: colors.muted }]}>
-                    {tile.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
+        {intents.map((intent) => {
+          const active = intent === selected;
+          const Icon = ICONS[intent];
+          const tile = ARRANGEMENT_TILES[intent];
+          return (
+            <View key={intent} style={styles.cell}>
+              <Pressable
+                testID={`create-type-${intent}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={tile.label}
+                onPress={() => onSelect(intent)}
+                style={[
+                  styles.tile,
+                  active
+                    ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
+                    : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+                ]}
+              >
+                <Icon color={colors.primary} size={26} strokeWidth={1.6} />
+                <Text style={[styles.label, { color: colors.text }]}>{tile.label}</Text>
+                <Text style={[styles.description, { color: colors.muted }]}>{tile.description}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 }
 
+const GAP = 10;
+
 const styles = StyleSheet.create({
-  // Artboardet har 16 fra kanten; skjermen har 20.
-  grid: { marginTop: 8, marginHorizontal: -4, gap: 10 },
-  row: { flexDirection: 'row', gap: 10 },
-  tileSlot: { flex: 1 },
+  // Artboardet har 16 fra kanten (skjermen har 20) og 10 mellom flisene.
+  grid: { marginTop: 8, marginHorizontal: -4 - GAP / 2, flexDirection: 'row', flexWrap: 'wrap', rowGap: GAP },
+  cell: { width: '50%', paddingHorizontal: GAP / 2 },
   tile: {
     minHeight: 150,
     borderRadius: 16,

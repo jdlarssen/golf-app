@@ -530,21 +530,22 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         <TypeStep intents={intents} selected={intent} onSelect={selectIntent} />
       ) : null}
 
-      {step === 'format' && intent === 'klubb' && clubs.length > 0 ? (
-        <ClubPicker
-          clubs={clubs}
-          selected={clubId}
-          onSelect={(id) => {
-            if (id === clubId) return;
-            setClubId(id);
-            // Lista er den valgte klubbens medlemmer.
-            setPicked(startRoster('klubb', userId));
-          }}
-        />
-      ) : null}
-
       {step === 'format' ? (
         <FormatStep
+          beforeList={
+            intent === 'klubb' && clubs.length > 0 ? (
+              <ClubPicker
+                clubs={clubs}
+                selected={clubId}
+                onSelect={(id) => {
+                  if (id === clubId) return;
+                  setClubId(id);
+                  // Lista er den valgte klubbens medlemmer.
+                  setPicked(startRoster('klubb', userId));
+                }}
+              />
+            ) : null
+          }
           entries={formats.data}
           failed={formats.failed}
           selected={gameMode}
