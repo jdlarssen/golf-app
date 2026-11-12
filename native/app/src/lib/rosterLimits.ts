@@ -50,15 +50,26 @@ export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   // #2753 D3: slagspill har spillertaket på 40, Patsome fulle par opp til taket.
   solo_strokeplay: TEAM_FORMAT_PLAYER_CAP,
   patsome: teamModePlayerCap('patsome', 2) ?? TEAM_FORMAT_PLAYER_CAP,
-  // #2753 D3b: spillertaket på 40. Med tremannslag tar den delte byggeren 39
-  // (13 lag) og sier fra med sin egen kode; ingen blir stille droppet.
+  // #2753 D3b: taket uten kjent lagstørrelse. Med lagstørrelsen leser
+  // `maxPlayersForMode` nettets `teamModePlayerCap` (39 med tremannslag).
   texas_scramble: TEAM_FORMAT_PLAYER_CAP,
   ambrose: TEAM_FORMAT_PLAYER_CAP,
   florida_scramble: TEAM_FORMAT_PLAYER_CAP,
   shamble: TEAM_FORMAT_PLAYER_CAP,
 };
 
-export function maxPlayersForMode(mode: AppGameMode): number {
+/** Formatene der taket følger lagstørrelsen arrangøren velger (#2753 D3b). */
+const TEAM_SIZED_MODES = new Set<AppGameMode>(['texas_scramble', 'ambrose', 'florida_scramble', 'shamble']);
+
+/**
+ * Høyeste spillerantall for modusen. For scramble-familien og shamble følger
+ * taket lagstørrelsen, som på nettet (`teamModePlayerCap`): 13 tremannslag gir
+ * 39, ikke 40, ellers ville den førtiende spilleren gitt et lag på én.
+ */
+export function maxPlayersForMode(mode: AppGameMode, teamSize?: number | null): number {
+  if (teamSize != null && TEAM_SIZED_MODES.has(mode)) {
+    return teamModePlayerCap(mode, teamSize) ?? MAX_PLAYERS_BY_MODE[mode];
+  }
   return MAX_PLAYERS_BY_MODE[mode];
 }
 

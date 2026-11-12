@@ -22,7 +22,7 @@ import {
   rosterFitsMode,
   teamLayoutFor,
 } from './rosterLimits';
-import { buildDraftPayload, type GameDraft, type ModeSetup } from './wizardPayload';
+import { buildDraftPayload, effectiveTeamSize, type GameDraft, type ModeSetup } from './wizardPayload';
 import {
   TEAM_FORMAT_PLAYER_CAP,
   maxTeamsForSize,
@@ -40,8 +40,10 @@ function draftWith(
   count: number,
   setup: ModeSetup = {},
 ): GameDraft {
-  const layout = teamLayoutFor(mode, setup.stablefordTeamSize === 2);
-  const perTeam = layout ? Math.max(1, maxPlayersForMode(mode) / layout.slots) : 0;
+  const teamSize = effectiveTeamSize(mode, setup);
+  const layout = teamLayoutFor(mode, setup.stablefordTeamSize === 2, teamSize);
+  // Lagene fylles med lagstørrelsen (#2753: scramble og shamble har 3 eller 4).
+  const perTeam = layout ? layout.size : 0;
 
   return {
     name: 'Testrunden',
@@ -68,13 +70,24 @@ const CASES: [label: string, mode: AppGameMode, setup: ModeSetup][] = [
   ['wolf', 'wolf', {}],
   ['skins', 'skins', {}],
   ['bingo_bango_bongo', 'bingo_bango_bongo', {}],
+  // #2753 D3: de seks nye formatene, med hver lagstørrelse som gir et annet tak.
+  ['solo_strokeplay', 'solo_strokeplay', {}],
+  ['patsome', 'patsome', {}],
+  ['texas_scramble (par)', 'texas_scramble', { teamSize: 2 }],
+  ['texas_scramble (tremannslag)', 'texas_scramble', { teamSize: 3 }],
+  ['texas_scramble (4-mann)', 'texas_scramble', { teamSize: 4 }],
+  ['ambrose (tremannslag)', 'ambrose', { teamSize: 3 }],
+  ['florida_scramble (tremannslag)', 'florida_scramble', { teamSize: 3 }],
+  ['florida_scramble (4-mann)', 'florida_scramble', { teamSize: 4 }],
+  ['shamble (3-mannslag)', 'shamble', { teamSize: 3 }],
+  ['shamble (4-mannslag)', 'shamble', { teamSize: 4 }],
 ];
 
 describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
   it.each(CASES)(
     '%s: taket bæres helt fram, og én over gjør det ikke',
     (_label, mode, setup) => {
-      const cap = maxPlayersForMode(mode);
+      const cap = maxPlayersForMode(mode, effectiveTeamSize(mode, setup));
 
       const atCap = buildDraftPayload(draftWith(mode, cap, setup)).payload;
       // `errorCode` er valgfritt i `ParsedPayload` og settes kun på feilgrenen.
@@ -91,7 +104,7 @@ describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
     },
   );
 
-  it('setter et tak for hver av de åtte modiene appen tilbyr', () => {
+  it('setter et tak for hver modus appen tilbyr', () => {
     for (const mode of APP_SUPPORTED_MODES) {
       expect(maxPlayersForMode(mode)).toBeGreaterThan(0);
     }

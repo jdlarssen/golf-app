@@ -164,7 +164,8 @@ export function PlayersStep({
 
   const chosen = new Map(players.map((p) => [p.userId, p]));
   const teeNote = teeChoiceNote(teeAvailability);
-  const cap = maxPlayersForMode(mode);
+  // #2753: med lag følger taket lagstørrelsen (39 med tremannslag).
+  const cap = maxPlayersForMode(mode, teamLayout?.size);
   const atCap = players.length >= cap;
   const fits = rosterFitsMode(mode, players.length);
 

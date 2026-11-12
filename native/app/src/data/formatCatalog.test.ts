@@ -1,5 +1,5 @@
 // native/app/src/data/formatCatalog.test.ts
-// Format-gaten: nøyaktig de åtte modiene når DB-lesingen lykkes, og en ÆRLIG
+// Format-gaten: nøyaktig modiene appen lager når DB-lesingen lykkes, og en ÆRLIG
 // feil når den ikke gjør det.
 //
 // Den siste raden er den viktige. En tom formatliste og en feilet henting ser
@@ -22,13 +22,13 @@ function catalog(): Catalog {
   return require('./formatCatalog') as Catalog;
 }
 
-/** Alle åtte som aktive `formats`-rader, i vilkårlig DB-rekkefølge. */
+/** Alle støttede som aktive `formats`-rader, i vilkårlig DB-rekkefølge. */
 const FORMAT_ROWS = APP_SUPPORTED_MODES.map((slug, i) => ({
   slug,
   icon_key: `icon-${i}`,
 }));
 
-/** Alle åtte som synlige mappinger, med sort_order = omvendt av lista. */
+/** Alle støttede som synlige mappinger, med sort_order = omvendt av lista. */
 const MAPPING_ROWS = APP_SUPPORTED_MODES.map((slug, i) => ({
   format_slug: slug,
   is_primary: i < 2,
@@ -38,7 +38,7 @@ const MAPPING_ROWS = APP_SUPPORTED_MODES.map((slug, i) => ({
 describe('fetchFormatCatalog', () => {
   useFreshModules();
 
-  it('gir nøyaktig de åtte støttede modiene når lesingen lykkes', async () => {
+  it('gir nøyaktig de støttede modiene når lesingen lykkes', async () => {
     const { queryStub, routeFrom } = mocks();
     routeFrom({
       formats: [queryStub({ data: FORMAT_ROWS, error: null })],

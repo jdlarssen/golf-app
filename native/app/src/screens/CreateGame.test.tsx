@@ -19,6 +19,7 @@
 //     veiviser.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { fetchCourses, fetchRosterCandidates, publishGame } from '../data/createGame';
 import { fetchClubOptions } from '../data/clubOptions';
 import { fetchFormatCatalog } from '../data/formatCatalog';
@@ -447,6 +448,10 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
 
     // Nettets standard: firemannslag, 40 av snittet = 10 % av summen.
     expect(screen.getByTestId('create-team-size-4').props.accessibilityState).toMatchObject({ selected: true });
+    // Artboardets 10 pt luft på sidene, så «Tremannslag» står på én linje.
+    expect(StyleSheet.flatten(screen.getByTestId('create-team-size-3').props.style)).toMatchObject({
+      paddingHorizontal: 10,
+    });
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('40');
     await fireEvent.press(screen.getByTestId('create-team-size-2'));
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('50');

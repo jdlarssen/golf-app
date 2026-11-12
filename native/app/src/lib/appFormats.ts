@@ -3,7 +3,7 @@
 // de heter på norsk.
 //
 // Webben har 22 aktive formater og trenger et intent-steg for å ordne dem.
-// Appen har 8, og en flat liste er riktigere native-IA (kontraktens Key
+// Appen har færre (14 etter #2753), og en flat liste er riktigere native-IA (kontraktens Key
 // Decision). Lista her er appens halvdel av den gaten — DB-halvdelen bor i
 // `data/formatCatalog.ts`, og et format må stå i BEGGE for å vises.
 //
@@ -15,7 +15,7 @@
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 
 /**
- * De åtte modiene appen kan opprette. `satisfies` binder dem til webbens
+ * Modiene appen kan opprette. `satisfies` binder dem til webbens
  * `GameMode`-union: en slug som ikke finnes der, stopper `tsc` her og ikke
  * først i en PostgREST-feil på enheten.
  *

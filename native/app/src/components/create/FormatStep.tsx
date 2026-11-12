@@ -3,7 +3,7 @@
 //
 // **Alle formatene vises, ingen filtreres bort på spillerantall.** Rosteret
 // settes først i steg 5, så på dette tidspunktet er arrangøren alene i lista;
-// et antalls-filter ville skjult seks av åtte kort på en fersk veiviser og
+// et antalls-filter ville skjult de fleste kortene på en fersk veiviser og
 // fått appen til å se ødelagt ut. Kortene bærer i stedet antallet formatet
 // krever («3–5 spillere»), og steg 5 sier fra hvis rosteret ikke passer. Det
 // er også webbens semantikk: den gater ved steg-overgangen, ikke ved å
