@@ -21,7 +21,7 @@ import type {
   DiscoverableFriendGame,
   DiscoverableOpenGame,
   PendingRequest,
-} from './getDiscoverableGames';
+} from './discoverableGameTypes';
 
 // The seat count's types and its «Fullt» live in `seatCapacity.ts`, which has
 // no imports, so the app and the signup route read them without this module's.

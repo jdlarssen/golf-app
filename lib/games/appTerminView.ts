@@ -1,6 +1,6 @@
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
-import type { PendingRequest } from '@/lib/games/getDiscoverableGames';
+import type { PendingRequest } from '@/lib/games/discoverableGameTypes';
 import type { GameSocialProof } from '@/lib/games/socialProof';
 import {
   buildTerminEntries,

@@ -3,11 +3,15 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getUpcomingClubGames } from './getUpcomingClubGames';
+import type {
+  DiscoverableClubGame,
+  DiscoverableFormat,
+  DiscoverableFriendGame,
+  DiscoverableOpenGame,
+  PendingRequest,
+} from './discoverableGameTypes';
 import type { RegistrationMode } from './registration';
 import { isOrganisedBy, isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import type { HoleSegment } from '@/lib/scoring';
-import type { StartType } from './startType';
 
 /**
  * Hjem-sidens «Funn turneringer»-seksjon (#257) henter listene via
@@ -27,78 +31,12 @@ import type { StartType } from './startType';
  * but a null-preserving `.or` on the open query (see there).
  */
 
-/**
- * Format metadata the terminliste row shows (#2258): «Bane · Format · lag på
- * N», «9 hull», and the seat cap. Game metadata, so the field whitelist
- * (#1022) holds. The selects narrow these Json/text columns with
- * `overrideTypes`, which leaves every other field typed from the select.
- */
-type DiscoverableFormat = {
-  game_mode: GameMode;
-  mode_config: GameModeConfig;
-  hole_segment: HoleSegment;
-  /** #2258 PR 2: «første start» / «shotgun» under the clock. */
-  start_type: StartType;
-};
-
-export type DiscoverableOpenGame = DiscoverableFormat & {
-  id: string;
-  name: string;
-  short_id: string;
-  scheduled_tee_off_at: string | null;
-  course_name: string | null;
-  /**
-   * Påmeldingsmåten ER synligheten (flyt 2): `open` → «Meld meg på»,
-   * `manual_approval` → «Be om å bli med». `invite_only` er privat og
-   * ekskluderes av query-filteret, så det dukker aldri opp her.
-   */
-  registration_mode: 'open' | 'manual_approval';
-};
-
-/**
- * Et klubb-scopet spill (#442). I motsetning til de globale open-spillene er
- * disse synlige for klubbens medlemmer UANSETT `registration_mode` — også
- * `invite_only` (medlemskap ER invitasjonen). `group_name` brukes til badge.
- */
-export type DiscoverableClubGame = DiscoverableFormat & {
-  id: string;
-  name: string;
-  short_id: string;
-  scheduled_tee_off_at: string | null;
-  course_name: string | null;
-  registration_mode: RegistrationMode;
-  group_name: string;
-};
-
-/**
- * Et spill skapt av en venn (#369). Vises i «Fra vennene dine»-seksjonen.
- * `joinMode` avgjør CTA-knappen: 'direct' = «Meld meg på», 'request' =
- * «Be om å bli med». Regler: open → alltid direct; manual_approval +
- * let_friends_skip_gate=true → direct; manual_approval ellers → request.
- */
-export type DiscoverableFriendGame = DiscoverableFormat & {
-  id: string;
-  name: string;
-  short_id: string;
-  scheduled_tee_off_at: string | null;
-  course_name: string | null;
-  registration_mode: 'open' | 'manual_approval';
-  /**
-   * 'direct': vennen kan melde seg på uten godkjenning.
-   * 'request': vennen må be om plass.
-   */
-  joinMode: 'direct' | 'request';
-};
-
-export type PendingRequest = {
-  id: string;
-  game_id: string;
-  short_id: string;
-  game_name: string;
-  team_name: string | null;
-  is_team_captain: boolean;
-  created_at: string;
-};
+export type {
+  DiscoverableClubGame,
+  DiscoverableFriendGame,
+  DiscoverableOpenGame,
+  PendingRequest,
+} from './discoverableGameTypes';
 
 export async function getDiscoverableGames(userId: string): Promise<{
   clubGames: DiscoverableClubGame[];

@@ -74,7 +74,8 @@ spill/bane bor inne i Klubbhuset, ikke på Hjem.** Hjem er play + discover-navet
 «Finn turneringer». **Finn turneringer er terminlista** (#2258): én liste sortert på starttid og delt i
 dager («Lørdag 4. oktober · om 3 dager»), med filterbrikkene «Alle», «Denne helga» og «Klubben min»
 (`?vis=`), plass-linja der runden har tak og «Fullt» uten knapp når den er full. Hjem og forsiden viser
-de samme dagene og radene.
+de samme dagene og radene. Appen har samme liste (#2838): raden «Finn turneringer» under «Opprett spill»
+på Hjem åpner den, og et trykk på en runde åpner påmeldingen.
 
 **Klubber** (#442 + #50, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
 turneringer kan høre til. **Opprettelse er admin-gated** (#50): vanlige brukere oppretter ikke
