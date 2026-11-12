@@ -95,9 +95,10 @@ async function readFirstName(userId: string): Promise<string> {
  * with a request of any status (#2840: a declined one still holds the row).
  * The game's rows are read whole and matched against the friends here, so a
  * long friend list never meets PostgREST's `.in()` URL limit; a round has at
- * most a few hundred rows.
+ * most a few hundred rows. The team page's «Velg en venn» reads the same list
+ * (`GET /api/pamelding/[shortId]/lag`).
  */
-async function readUnavailableFriendIds(gameId: string, userId: string): Promise<string[]> {
+export async function readUnavailableFriendIds(gameId: string, userId: string): Promise<string[]> {
   const admin = getAdminClient();
   const [friendIds, players, requests] = await Promise.all([
     readFriendIds(userId),

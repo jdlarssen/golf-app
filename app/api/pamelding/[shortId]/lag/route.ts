@@ -1,6 +1,7 @@
 import { after, NextResponse, type NextRequest } from 'next/server';
 import { authenticatedUserId, callerScopedClient } from '@/lib/api/appAuth';
-import type { AppTeamPageAnswer } from '@/lib/games/appRoundInviteView';
+import type { AppTeamPageAnswer, AppTeamPageResponse } from '@/lib/games/appRoundInviteView';
+import { readUnavailableFriendIds } from '@/lib/games/appTeamSignup';
 import {
   addTeamMemberCore,
   attachToCaptainTeamCore,
@@ -26,7 +27,9 @@ import { isUuid } from '@/lib/url/isUuid';
 //
 // WIRE (svartypen `AppTeamPageAnswer` står i `lib/games/appRoundInviteView.ts`):
 //   GET  200 TeamDashboardView fra `loadTeamDashboard` uten `not_found`:
-//            navn slik andre ser dem (#2207), aldri en adresse. Etter svaret
+//            navn slik andre ser dem (#2207), aldri en adresse. Kapteinen får i
+//            tillegg `unavailableFriendIds`, vennene som alt er i runden, så
+//            «Velg en venn» kan gråe dem ut (som lagskjemaet). Etter svaret
 //            bekreftes plassen og lagvarslene merkes lest (`onTeamPageVisit`),
 //            som siden gjør.
 //        401 { error: 'unauthorized' }   404 { error: 'game_not_found' } (også utkast)
@@ -74,6 +77,10 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     // As the page does in its `after()`: confirm a seat the captain gave you
     // (#463), then mark the game's team varsler read (#2201, #2759).
     const gameId = view.game.id;
+    const body: AppTeamPageResponse =
+      view.kind === 'captain'
+        ? { ...view, unavailableFriendIds: await readUnavailableFriendIds(gameId, userId) }
+        : view;
     after(async () => {
       try {
         await onTeamPageVisit(gameId, userId);
@@ -81,7 +88,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
         console.error('[api/pamelding/[shortId]/lag] visit side effects failed', err);
       }
     });
-    return NextResponse.json(view);
+    return NextResponse.json(body);
   } catch (err) {
     console.error('[api/pamelding/[shortId]/lag] load failed', err);
     return NextResponse.json({ error: 'load_failed' }, { status: 500 });

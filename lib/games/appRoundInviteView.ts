@@ -123,6 +123,78 @@ export type AppTeamPageAnswer =
   /** `replaced` only with `replaceRequestId`: whether the old row is gone. */
   | { status: 'added'; replaced?: boolean };
 
+/**
+ * #2840: the team page's view (`loadTeamDashboard` in `teamDashboardCore.ts`),
+ * spelled out here because the app reads this file's types and cannot import a
+ * server-only module. The core's `TeamDashboard*` types are these.
+ */
+export type TeamRequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+export type AppTeamPagePerson = {
+  requestId: string;
+  userId: string;
+  /** Name, or the masked address (#2207); null when the user row is missing. */
+  displayName: string | null;
+  status: TeamRequestStatus;
+};
+
+export type AppTeamPageMember = AppTeamPagePerson & {
+  /** #2607: no captaincy for a guest; an unknown user reads as a guest. */
+  isGuest: boolean;
+};
+
+export type AppTeamPageGame = {
+  id: string;
+  shortId: string;
+  name: string;
+  courseName: string | null;
+  /** open → straight into the game; otherwise the team waits for approval (#362). */
+  joinEffect: 'instant' | 'approval';
+  /** #543: signups closed while the game is still scheduled. */
+  signupsClosed: boolean;
+  /**
+   * #2840: players per team, the captain included (`resolveTeamSize`), so the
+   * app can show the free seats. Null when the format has no team size.
+   */
+  teamSize: number | null;
+  /** #2840: `games.scheduled_tee_off_at`, for the line under the title. */
+  teeOffAt: string | null;
+};
+
+export type AppTeamPageView =
+  | { kind: 'no_team'; game: AppTeamPageGame }
+  /** An e-mail invitation whose team we cannot tell (#1343). */
+  | { kind: 'team_unknown'; game: AppTeamPageGame; noCaptain: boolean }
+  | {
+      kind: 'invited_unknown';
+      game: AppTeamPageGame;
+      invitationId: string;
+      captainName: string | null;
+      teamName: string | null;
+    }
+  /** A solo request; it does not belong on the team page. */
+  | { kind: 'solo'; game: AppTeamPageGame }
+  | AppTeamPageTeam;
+
+/** Captain or teammate: the team with every teammate's status. */
+export type AppTeamPageTeam = {
+  kind: 'captain' | 'member';
+  game: AppTeamPageGame;
+  myRowId: string;
+  myStatus: TeamRequestStatus;
+  /** The captain's team name, else the caller's; null = none. */
+  teamName: string | null;
+  captain: AppTeamPagePerson | null;
+  members: AppTeamPageMember[];
+};
+
+/**
+ * #2840: what `GET /api/pamelding/[shortId]/lag` answers. Only the captain gets
+ * `unavailableFriendIds` (as in `AppTeamSignupForm`), so «Velg en venn» can
+ * grey out friends who are in the round already.
+ */
+export type AppTeamPageResponse = AppTeamPageView & { unavailableFriendIds?: string[] };
+
 /** What the view reads of a game. Spelled out: the app reads this file's types. */
 export type AppRoundInviteViewGame = {
   id: string;
