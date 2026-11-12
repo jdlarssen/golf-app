@@ -9,6 +9,11 @@
 // og lista kan stå tom fordi medlemmene melder seg på selv (nettets regel,
 // `rosterOptionalAtPublish`). Antallet formatet krever sjekkes ved start.
 //
+// **Og når arrangøren melder på laget sitt via lenken (#2840 del 4).** Med lagpåmelding
+// (`organiserStartsOnRoster` er usann) står ikke raden din: du melder på laget ditt fra
+// runden etter publisering. Over lista står da påmeldingsvalget for en kompisrunde
+// (`RegistrationChoice`), og med påmelding kan lista stå tom (`rosterOptionalAtPublish`).
+//
 // **Lista er medspillere, ikke venner.** `users`-RLS-en gir egen rad, admin og
 // delte spill — en venn du aldri har spilt med er ikke navnlesbar herfra, og
 // gjester kan ikke opprettes fra appen i det hele tatt. Begge begrensningene
@@ -32,8 +37,8 @@
 // hvilket lag. Settet fryser banehandicapet ved start, så et sett teen ikke
 // rater er ikke et valg — de chipsene står grå. Rater teen bare ett sett,
 // finnes det ikke noe valg å ta, og raden byttes ut med én rolig linje.
-import { useState } from 'react';
-import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { RosterCandidate } from '../../data/createGame';
 import { APP_MODE_LABELS, type AppGameMode } from '../../lib/appFormats';
 import { displayName } from '../../lib/display';
@@ -48,7 +53,7 @@ import { CLUB_TEXT } from '../../lib/arrangementCopy';
 import { CREATE_ON_WEB_PATH } from '../../lib/createGameCopy';
 import type { TeeGenderAvailability } from '../../lib/teeChoice';
 import type { DraftPlayer, TeeGenderUi } from '../../lib/wizardPayload';
-import { useTheme } from '../../theme';
+import { FONTS, interLine, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
 
@@ -136,6 +141,10 @@ export function PlayersStep({
   onTee,
   onRetry,
   club = false,
+  registration = null,
+  listHeading = null,
+  organiserOnRoster = true,
+  rosterOptional = club,
 }: {
   /** `null` mens hentingen pågår. */
   candidates: RosterCandidate[] | null;
@@ -158,6 +167,16 @@ export function PlayersStep({
   onRetry: () => void;
   /** Klubbturnering: medlemmene, du med, og ingen fast rad for deg (#2753). */
   club?: boolean;
+  /**
+   * #2840 del 4: påmeldingsvalget for en kompisrunde. Står i stedet for tittelen
+   * «Hvem spiller?», og lista får `listHeading` over seg.
+   */
+  registration?: ReactNode;
+  listHeading?: string | null;
+  /** Usann med lagpåmelding via lenken: da står ikke raden din (`organiserStartsOnRoster`). */
+  organiserOnRoster?: boolean;
+  /** Lista kan stå tom ved publisering (`rosterOptionalAtPublish`): ingen merknad om antallet. */
+  rosterOptional?: boolean;
 }) {
   const { colors, ui } = useTheme();
   const [search, setSearch] = useState('');
@@ -176,9 +195,27 @@ export function PlayersStep({
       (c) => needle === '' || displayName(c).toLowerCase().includes(needle),
     );
 
+  const searchInput = (
+    <TextInput
+      testID="create-player-search"
+      style={ui.input}
+      value={search}
+      onChangeText={setSearch}
+      placeholder="Søk etter navn"
+      placeholderTextColor={colors.muted}
+      autoCapitalize="none"
+      autoCorrect={false}
+    />
+  );
+
   return (
     <View testID="create-step-players">
-      <Text style={ui.title}>Hvem spiller?</Text>
+      {registration ?? <Text style={ui.title}>Hvem spiller?</Text>}
+      {registration && listHeading ? (
+        <Text style={[styles.sect, { color: colors.muted }]} testID="create-players-heading">
+          {listHeading}
+        </Text>
+      ) : null}
 
       {failed ? (
         <View style={ui.banner}>
@@ -204,7 +241,7 @@ export function PlayersStep({
 
       {club ? <Note testID="create-roster-club">{CLUB_TEXT.emptyRoster}</Note> : null}
 
-      {!fits && !club ? (
+      {!fits && !rosterOptional ? (
         <Note testID="create-roster-fit">
           {`${APP_MODE_LABELS[mode]} spilles med ${describePlayerCounts(mode)}. Du har ${players.length}.`}
         </Note>
@@ -214,7 +251,7 @@ export function PlayersStep({
           alle, og fire like setninger ville vært støy. */}
       {teeNote ? <Note testID="create-tee-note">{teeNote}</Note> : null}
 
-      {club ? null : (
+      {club || !organiserOnRoster ? null : (
         <>
           <SelectRow
             testID={`create-player-${meId}`}
@@ -250,7 +287,7 @@ export function PlayersStep({
         </>
       )}
 
-      {!club && candidates !== null && others.length === 0 && needle === '' ? (
+      {!rosterOptional && candidates !== null && others.length === 0 && needle === '' ? (
         <>
           <Note testID="create-players-empty">
             Du har ingen medspillere å velge fra ennå. Du kan opprette runden med
@@ -269,18 +306,12 @@ export function PlayersStep({
       ) : null}
 
       {candidates !== null && others.length > 0 ? (
-        <Field label={club ? 'Medlemmer' : 'Medspillere'}>
-          <TextInput
-            testID="create-player-search"
-            style={ui.input}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Søk etter navn"
-            placeholderTextColor={colors.muted}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </Field>
+        listHeading ? (
+          // Overskriften over lista sier alt: søket står rett under, som på tegningen.
+          <View style={styles.search}>{searchInput}</View>
+        ) : (
+          <Field label={club ? 'Medlemmer' : 'Medspillere'}>{searchInput}</Field>
+        )
       ) : null}
 
       {others.map((candidate) => {
@@ -329,3 +360,9 @@ export function PlayersStep({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // Tegningens `.sect`: 20 over, 8 under, 14 pt halvfet i dempet farge.
+  sect: { ...interLine(14, 18), fontFamily: FONTS.sansSemiBold, marginTop: 20 },
+  search: { marginTop: 8 },
+});

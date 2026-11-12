@@ -25,6 +25,8 @@ import {
   draftNeedsTeamAssignment,
   draftToFormData,
   isParStableford,
+  resolveRegistration,
+  rosterForRegistration,
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
@@ -820,5 +822,102 @@ describe('kontingent og premiebord', () => {
       draft({ gameMode: 'stableford', prizes: { ...prizes({ placement_1: ['Gavekort'] }), placement_1: { description: 'Gavekort', sponsor: '', sponsorLogoPath: 'u/x.webp' } } }),
     );
     expect(form.get(prizeFieldName('placement_1', 'logo'))).toBe('');
+  });
+});
+
+describe('påmeldingen (#2840 del 4)', () => {
+  it('sender valgt påmelding og type, som nettets veiviser', () => {
+    const input = draft({
+      gameMode: 'texas_scramble',
+      players: [],
+      registrationMode: 'open',
+      registrationType: 'team',
+    });
+    const form = draftToFormData(input);
+    expect(form.get('registration_mode')).toBe('open');
+    expect(form.get('registration_type')).toBe('team');
+    const { payload } = buildDraftPayload(input);
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload).toMatchObject({ registration_mode: 'open', registration_type: 'team', players: [] });
+  });
+
+  it('den delte byggeren godtar en kompisrunde med påmelding og uten spillere', () => {
+    for (const registrationMode of ['open', 'manual_approval'] as const) {
+      const { payload } = buildDraftPayload(
+        draft({ gameMode: 'stableford', players: [], registrationMode }),
+      );
+      expect(payload.errorCode).toBeUndefined();
+      expect(payload.players).toEqual([]);
+    }
+  });
+
+  it('uten påmelding stopper en tom liste fortsatt publiseringen', () => {
+    const { payload } = buildDraftPayload(draft({ gameMode: 'stableford', players: [] }));
+    expect(payload.errorCode).toBeDefined();
+  });
+
+  it.each(['stableford', 'wolf', 'singles_matchplay'] as const)(
+    'et format uten lag (%s) sender alltid solo',
+    (gameMode) => {
+      const input = draft({ gameMode, players: [], registrationMode: 'open', registrationType: 'team' });
+      expect(draftToFormData(input).get('registration_type')).toBe('solo');
+      expect(buildDraftPayload(input).payload).toMatchObject({ registration_type: 'solo' });
+      expect(buildDraftPayload(input).payload.errorCode).toBeUndefined();
+    },
+  );
+
+  it('en klubbturnering sender fortsatt invite_only og solo', () => {
+    const input = draft({
+      gameMode: 'texas_scramble',
+      players: [],
+      groupId: 'club-a',
+      registrationMode: 'open',
+      registrationType: 'team',
+      letFriendsSkipGate: true,
+    });
+    const form = draftToFormData(input);
+    expect(form.get('registration_mode')).toBe('invite_only');
+    expect(form.get('registration_type')).toBe('solo');
+    expect(form.get('let_friends_skip_gate')).toBe('');
+  });
+
+  it('«Slipp venner direkte inn» gjelder bare med godkjenning', () => {
+    const on = buildDraftPayload(
+      draft({ gameMode: 'stableford', players: [], registrationMode: 'manual_approval', letFriendsSkipGate: true }),
+    );
+    expect(on.form.get('let_friends_skip_gate')).toBe('1');
+    expect(on.payload.let_friends_skip_gate).toBe(true);
+
+    const open = buildDraftPayload(
+      draft({ gameMode: 'stableford', players: [], registrationMode: 'open', letFriendsSkipGate: true }),
+    );
+    expect(open.form.get('let_friends_skip_gate')).toBe('');
+    expect(open.payload.let_friends_skip_gate).toBe(false);
+  });
+
+  it('resolveRegistration: Lag står bare for formater med lag', () => {
+    expect(resolveRegistration({ clubScoped: false, gameMode: 'best_ball', mode: 'open', type: 'team' })).toEqual({
+      mode: 'open',
+      type: 'team',
+      letFriendsSkipGate: false,
+    });
+    expect(resolveRegistration({ clubScoped: false, gameMode: 'stableford', mode: 'open', type: 'team' }).type).toBe(
+      'solo',
+    );
+    expect(resolveRegistration({ clubScoped: false, gameMode: null })).toEqual({
+      mode: 'invite_only',
+      type: 'solo',
+      letFriendsSkipGate: false,
+    });
+  });
+
+  it('rosterForRegistration: arrangøren går av lista bare med lagpåmelding via lenken', () => {
+    const players = solo('me', 'a');
+    expect(rosterForRegistration(players, 'me', { mode: 'open', type: 'team' }).map((p) => p.userId)).toEqual(['a']);
+    expect(
+      rosterForRegistration(players, 'me', { mode: 'manual_approval', type: 'team' }).map((p) => p.userId),
+    ).toEqual(['a']);
+    expect(rosterForRegistration(players, 'me', { mode: 'invite_only', type: 'team' })).toEqual(players);
+    expect(rosterForRegistration(players, 'me', { mode: 'open', type: 'solo' })).toEqual(players);
   });
 });
