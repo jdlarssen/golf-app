@@ -19,5 +19,8 @@ export const loadSignupFacts = vi.fn(
     hasPendingInvitation: false,
     isClubMember: false,
     viewerIsFriend: false,
+    ownRequestCancellable: false,
+    isFull: false,
+    seats: null,
   }),
 );

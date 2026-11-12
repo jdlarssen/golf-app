@@ -1,6 +1,7 @@
 import 'server-only';
 import { resolveRegistrationTypeView } from '@/app/[locale]/signup/[shortId]/registrationTypeView';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
+import type { Database } from '@/lib/database.types';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getGameByShortId, type ShortIdGame } from '@/lib/games/getGameByShortId';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
@@ -20,7 +21,7 @@ import {
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
 import { notify } from '@/lib/notifications/notify';
-import { expectAffected } from '@/lib/supabase/affectedRows';
+import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
@@ -58,6 +59,10 @@ export type RegisterForOpenGameResult =
   | { ok: false; error: ActionError };
 
 export type RequestApprovalResult = { ok: true } | { ok: false; error: ActionError };
+
+export type WithdrawRequestResult =
+  | { ok: true }
+  | { ok: false; error: 'game_not_found' | 'not_pending' | 'db_error' };
 
 /**
  * #1792 (HCD F5): felles gate for begge solo-actions. Solo-påmelding er kun
@@ -497,10 +502,13 @@ export async function requestApprovalCore({
   // manual_approval OG invite_only tar imot «be om å bli med»-forespørsler
   // (#368). For invite_only er det en fallback for noen som har lenken men
   // ikke er invitert — spillet forblir uoppdagbart i «Finn turneringer».
-  // Kun `open` (meld-deg-på-direkte) hører ikke hjemme i request-flyten.
+  // `open` (meld-deg-på-direkte) tar bare imot en forespørsel når runden er
+  // full (#2837): da ber du om plass i stedet for å melde deg på.
+  const view = signupView({ game, ...viewer });
   if (
     game.registration_mode !== 'manual_approval' &&
-    game.registration_mode !== 'invite_only'
+    game.registration_mode !== 'invite_only' &&
+    view !== 'solo_open_full'
   ) {
     return { ok: false, error: 'wrong_mode' };
   }
@@ -517,7 +525,6 @@ export async function requestApprovalCore({
   }
 
   // #2748: the page's own answer for what the checks above do not see.
-  const view = signupView({ game, ...viewer });
   if (offerForView(view, game) !== 'request') {
     return { ok: false, error: stopError(view) };
   }
@@ -544,15 +551,22 @@ export async function requestApprovalCore({
     .select('id')
     .single<{ id: string }>();
 
+  let requestId: string;
   if (insertError) {
-    if (isDuplicateError(insertError)) {
-      return { ok: false, error: 'already_requested' };
+    if (!isDuplicateError(insertError)) {
+      console.error('[requestApproval] insert failed', insertError);
+      return { ok: false, error: 'db_error' };
     }
-    console.error('[requestApproval] insert failed', insertError);
-    return { ok: false, error: 'db_error' };
-  }
-  // AGENTS.md trap 2: an insert that returns no row is a failure, not a success.
-  if (!inserted?.id) {
+    // #2837: the unique key holds the request the player withdrew, so asking
+    // again opens that row. Any other old row stands as it was.
+    const reopened = await reopenWithdrawnRequest(game.id, userId, message);
+    if (reopened === 'not_withdrawn') return { ok: false, error: 'already_requested' };
+    if (reopened === 'db_error') return { ok: false, error: 'db_error' };
+    requestId = reopened.id;
+  } else if (inserted?.id) {
+    requestId = inserted.id;
+  } else {
+    // AGENTS.md trap 2: an insert that returns no row is a failure, not a success.
     console.error('[requestApproval] insert wrote no row', { gameId: game.id, userId });
     return { ok: false, error: 'db_error' };
   }
@@ -568,7 +582,7 @@ export async function requestApprovalCore({
         game_id: game.id,
         game_name: game.name,
         requester_name: requesterName,
-        request_id: inserted.id,
+        request_id: requestId,
         ...(message ? { message } : {}),
       },
     }).catch((err) => {
@@ -601,5 +615,102 @@ export async function requestApprovalCore({
     }
   }
 
+  return { ok: true };
+}
+
+/**
+ * Moves the player's own plain request on from one status: not a captain's
+ * team, a teammate's row or a guest someone brought (#2837). `loadSignupFacts`'
+ * `ownRequestCancellable` reads the same filter as a fact.
+ */
+function updateOwnSoloRequest(
+  gameId: string,
+  userId: string,
+  from: 'pending' | 'withdrawn',
+  values: Database['public']['Tables']['game_registration_requests']['Update'],
+) {
+  return getAdminClient()
+    .from('game_registration_requests')
+    .update(values)
+    .eq('game_id', gameId)
+    .eq('user_id', userId)
+    .eq('status', from)
+    .is('team_request_id', null)
+    .eq('is_team_captain', false)
+    .is('brought_by_user_id', null)
+    .select('id');
+}
+
+/**
+ * #2837: a withdrawn request sent again. It joins the back of the queue, the
+ * organiser's inbox sorts on `created_at`, and the old decision goes. 0 rows: the
+ * old row is not the player's own withdrawn request (an answer from the
+ * organiser, a team row), and it stays as it was.
+ */
+async function reopenWithdrawnRequest(
+  gameId: string,
+  userId: string,
+  message: string | null,
+): Promise<{ id: string } | 'not_withdrawn' | 'db_error'> {
+  try {
+    const [row] = expectAffected(
+      await updateOwnSoloRequest(gameId, userId, 'withdrawn', {
+        status: 'pending',
+        message,
+        decided_at: null,
+        decided_by_user_id: null,
+        rejection_reason: null,
+        created_at: new Date().toISOString(),
+      }),
+      'requestApproval/reopen',
+    );
+    return row;
+  } catch (err) {
+    if (err instanceof NoRowsAffectedError) return 'not_withdrawn';
+    console.error('[requestApproval] reopen failed', err);
+    return 'db_error';
+  }
+}
+
+/**
+ * «Trekk forespørselen» (#2837): the player's own waiting request becomes
+ * withdrawn. Also after the organiser has closed the signup: the requests sent
+ * before stand as a waiting list, and leaving it is always allowed. The
+ * organiser gets no message; the request is simply gone from the inbox.
+ *
+ * 0 rows: there is no waiting request of the player's own any more, most often
+ * because the organiser answered first. Nothing is written, and the caller
+ * shows the new state. Service role behind the filter; RLS (0042) allows the
+ * same change to a direct request, and nothing more.
+ */
+export async function withdrawRequestCore({
+  shortId,
+  userId,
+}: {
+  shortId: string;
+  userId: string;
+}): Promise<WithdrawRequestResult> {
+  const game = await getGameByShortId(shortId);
+  // #2445: a draft answers like a game that does not exist.
+  if (!game || game.status === 'draft') {
+    return { ok: false, error: 'game_not_found' };
+  }
+
+  try {
+    expectAffected(
+      await updateOwnSoloRequest(game.id, userId, 'pending', {
+        status: 'withdrawn',
+        decided_at: new Date().toISOString(),
+        decided_by_user_id: userId,
+      }),
+      'withdrawRequest',
+    );
+  } catch (err) {
+    if (err instanceof NoRowsAffectedError) return { ok: false, error: 'not_pending' };
+    console.error('[withdrawRequest] update failed', err);
+    return { ok: false, error: 'db_error' };
+  }
+
+  expireGameCache(game.id);
   return { ok: true };
 }

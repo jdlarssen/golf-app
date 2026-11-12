@@ -39,13 +39,16 @@ const VIEWERS: Omit<SignupFacts, 'game'>[] = BOOLS.flatMap((isClubMember) =>
   BOOLS.flatMap((viewerIsFriend) =>
     BOOLS.flatMap((hasPendingInvitation) =>
       REQUESTS.flatMap((requestView) =>
-        BOOLS.map((isAlreadyRegistered) => ({
-          isAlreadyRegistered,
-          requestView,
-          hasPendingInvitation,
-          isClubMember,
-          viewerIsFriend,
-        })),
+        BOOLS.flatMap((isAlreadyRegistered) =>
+          BOOLS.map((isFull) => ({
+            isAlreadyRegistered,
+            requestView,
+            hasPendingInvitation,
+            isClubMember,
+            viewerIsFriend,
+            isFull,
+          })),
+        ),
       ),
     ),
   ),

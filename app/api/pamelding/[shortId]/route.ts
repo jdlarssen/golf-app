@@ -10,6 +10,7 @@ import { loadSignupFacts } from '@/lib/games/loadSignupFacts';
 import {
   registerForOpenGameCore,
   requestApprovalCore,
+  withdrawRequestCore,
   type ActionError,
 } from '@/lib/games/selfRegistration';
 import { signupOffer } from '@/lib/games/signupOffer';
@@ -27,26 +28,34 @@ import { getAdminClient } from '@/lib/supabase/admin';
 // `use_web`: lag, valg av side, en ventende invitasjon på bare-inviterte og
 // kapteinens lag. Appen sender deg til nettsiden, der skjemaene bor.
 //
+// Full runde (#2837): `offer` er `request`, og `seats` har tallene. En forespørsel
+// som venter, kan trekkes (`intent: 'cancel'`) når `canCancelRequest` er sann,
+// også etter at arrangøren har stengt påmeldingen.
+//
 // WIRE (typene står i `lib/games/appRoundInviteView.ts`):
 //   GET  200 AppRoundInviteView
 //        401 { error: 'unauthorized' }   404 { error: 'game_not_found' }
 //        500 { error: 'load_failed' }
-//   POST { intent: 'join', src? } | { intent: 'request', message? }
+//   POST { intent: 'join', src? } | { intent: 'request', message? } | { intent: 'cancel' }
 //        200 { status: 'joined', gameId }   (også når du alt er på lista)
 //        200 { status: 'requested' }        (også når forespørselen alt venter)
+//        200 { status: 'cancelled' }        (forespørselen er trukket)
 //        400 { error: 'bad_request' | 'message_too_long' }
 //        401 { error: 'unauthorized' }      404 { error: 'game_not_found' }
 //        409 { error: 'game_locked' | 'signup_closed' | 'game_full' | 'wrong_mode'
-//                  | 'use_web' | 'profile_incomplete' }
+//                  | 'use_web' | 'profile_incomplete' | 'not_pending' }
 //            `wrong_mode` også for en gammel forespørsel som ikke venter lenger:
 //            den kan ikke sendes på nytt, og «sendt» ville vært usant.
+//            `not_pending`: ingen egen forespørsel venter (arrangøren rakk å
+//            svare). Ingenting er skrevet; hent visningen på nytt.
 //        429 { error: 'rate_limited' }      500 { error: 'db_error' }
 
 type RouteContext = { params: Promise<{ shortId: string }> };
 
 type PostBody =
   | { intent: 'join'; src: string | null }
-  | { intent: 'request'; message: string | null };
+  | { intent: 'request'; message: string | null }
+  | { intent: 'cancel' };
 
 const UNAUTHORIZED = { error: 'unauthorized' } as const;
 const NOT_FOUND = { error: 'game_not_found' } as const;
@@ -70,7 +79,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json(
-      buildAppRoundInviteView(game, signupOffer({ game, ...viewer }), count ?? 0),
+      buildAppRoundInviteView(game, signupOffer({ game, ...viewer }), count ?? 0, viewer),
     );
   } catch (err) {
     console.error('[api/pamelding/[shortId]] load failed', err);
@@ -87,6 +96,10 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     if (!body) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
     const { shortId } = await ctx.params;
+    // Withdrawing your own request has no offer to match: it stands also after
+    // the signup closed (#2837). The core's filter is the gate.
+    if (body.intent === 'cancel') return await cancel(shortId, userId);
+
     const game = await getGameByShortId(shortId);
     if (!game || game.status === 'draft') return NextResponse.json(NOT_FOUND, { status: 404 });
 
@@ -133,7 +146,24 @@ async function readBody(request: NextRequest): Promise<PostBody | null> {
   const { intent, src, message } = parsed as { intent?: unknown; src?: unknown; message?: unknown };
   if (intent === 'join') return { intent, src: typeof src === 'string' ? src : null };
   if (intent === 'request') return { intent, message: typeof message === 'string' ? message : null };
+  if (intent === 'cancel') return { intent };
   return null;
+}
+
+async function cancel(shortId: string, userId: string) {
+  const result = await withdrawRequestCore({ shortId, userId });
+  if (result.ok) {
+    const answer: AppRoundInviteAnswer = { status: 'cancelled' };
+    return NextResponse.json(answer);
+  }
+  switch (result.error) {
+    case 'game_not_found':
+      return NextResponse.json(NOT_FOUND, { status: 404 });
+    case 'not_pending':
+      return conflict('not_pending');
+    case 'db_error':
+      return NextResponse.json({ error: 'db_error' }, { status: 500 });
+  }
 }
 
 function joined(gameId: string) {
