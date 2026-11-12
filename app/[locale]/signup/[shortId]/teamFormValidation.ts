@@ -13,15 +13,12 @@
  * email) live in `findSlotConflicts` which sees the whole slot list.
  */
 
-import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
+// The name rule lives in `lib/games/teamName.ts` since #2840, so the app's
+// team form reads the same one; re-exported here for the web form.
+export { validateTeamName, type TeamNameValidationError } from '@/lib/games/teamName';
 
 /** Pragmatic email shape: one `@`, chars around it, a dot in the domain. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export type TeamNameValidationError =
-  | { code: 'teamNameEmpty' }
-  | { code: 'teamNameTooShort'; min: number }
-  | { code: 'teamNameTooLong'; max: number };
 
 export type SlotEmailValidationError =
   | { code: 'slotEmailEmpty' }
@@ -30,16 +27,6 @@ export type SlotEmailValidationError =
 export type SlotConflictError =
   | { code: 'slotEmailSelf' }
   | { code: 'slotEmailDuplicate' };
-
-export function validateTeamName(name: string): TeamNameValidationError | null {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return { code: 'teamNameEmpty' };
-  if (trimmed.length < TEAM_NAME_MIN)
-    return { code: 'teamNameTooShort', min: TEAM_NAME_MIN };
-  if (trimmed.length > TEAM_NAME_MAX)
-    return { code: 'teamNameTooLong', max: TEAM_NAME_MAX };
-  return null;
-}
 
 export function validateSlotEmail(value: string): SlotEmailValidationError | null {
   const trimmed = value.trim();
