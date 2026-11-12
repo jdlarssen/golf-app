@@ -18,7 +18,7 @@
 // Tilbake: lista er åpnet fra Hjem (eller fra klubbturneringene, #2753), og
 // tilbake går dit den kom fra. `RoundInvite` går tilbake hit.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppTerminEntry, AppTerminView } from '../../../../lib/games/appTerminView';
 import {
@@ -28,7 +28,8 @@ import {
   type TerminGroup,
 } from '../../../../lib/games/terminliste';
 import { PageTitle } from '../components/PageTitle';
-import { TerminRow } from '../components/terminliste/TerminRow';
+import { TerminDayCard, TerminDayHeading, TerminRow } from '../components/terminliste/TerminRow';
+import { openOrReturn } from '../lib/backTo';
 import { PlussIcon, PinFlagHero } from '../components/icons/Icons';
 import { fetchTerminliste, type TerminlisteLoadFailure } from '../data/terminliste';
 import { localDateParts } from '../lib/homeDates';
@@ -40,7 +41,7 @@ import {
   pendingTeamLine,
 } from '../lib/terminlisteCopy';
 import type { ScreenProps } from '../navigation';
-import { FONTS, TAP, fraunces, interLine, useTheme } from '../theme';
+import { FONTS, TAP, interLine, useTheme } from '../theme';
 
 const CHIPS: { filter: TerminFilter; label: string }[] = [
   { filter: 'alle', label: TERMIN_TEXT.filterAll },
@@ -85,7 +86,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
   );
   const byId = useMemo(() => new Map((view?.entries ?? []).map((entry) => [entry.id, entry])), [view]);
 
-  const openRound = (shortId: string) => navigation.navigate('RoundInvite', { shortId, src: null });
+  const openRound = (shortId: string) => openOrReturn(navigation, 'RoundInvite', { shortId, src: null });
   const scroll = [ui.scroll, styles.scroll];
 
   if (view === null) {
@@ -160,8 +161,8 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
 
           {pendingRequests.length > 0 ? (
             <View style={styles.section} testID="terminliste-requests">
-              <Heading title={TERMIN_TEXT.myRequests} />
-              <DayCard>
+              <TerminDayHeading title={TERMIN_TEXT.myRequests} />
+              <TerminDayCard>
                 {pendingRequests.map((request, index) => (
                   <Pressable
                     key={request.id}
@@ -178,20 +179,20 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
                     </Text>
                   </Pressable>
                 ))}
-              </DayCard>
+              </TerminDayCard>
             </View>
           ) : null}
 
           {groups.length > 0 ? (
             groups.map((group) => (
               <View key={group.key} style={styles.section} testID={`terminliste-day-${group.key}`}>
-                <Heading
+                <TerminDayHeading
                   title={group.kind === 'day' ? dayHeading(group.teeOff, now) : TERMIN_TEXT.undated}
                   label={group.kind === 'day' ? dayLabelText(group.label) : null}
                 />
-                <DayCard>
+                <TerminDayCard>
                   <GroupRows group={group} byId={byId} onOpen={openRound} />
-                </DayCard>
+                </TerminDayCard>
               </View>
             ))
           ) : filter !== 'alle' ? (
@@ -251,21 +252,6 @@ function GroupRows({
   );
 }
 
-function Heading({ title, label }: { title: string; label?: string | null }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.heading} accessibilityRole="header" accessible>
-      <Text style={[styles.headingTitle, { color: colors.text }]}>{title}</Text>
-      {label ? <Text style={[styles.headingLabel, { color: colors.muted }]}>{label}</Text> : null}
-    </View>
-  );
-}
-
-function DayCard({ children }: { children: ReactNode }) {
-  const { colors } = useTheme();
-  return <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>{children}</View>;
-}
-
 // Målene er nettets artboard «Forslag: terminlista» (#2258): tekst 20 fra
 // kanten, brikker og kort 16, kortene hvite med 16 i hjørnene og varm
 // skillelinje, rader med 14 inn og 12 over og under, klokkeblokken 56 bred.
@@ -275,12 +261,8 @@ const styles = StyleSheet.create({
   chip: { height: TAP, borderRadius: 999, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   chipText: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold },
   section: { marginTop: 22 },
-  heading: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 8, paddingHorizontal: 4 },
-  headingTitle: { ...fraunces(600, 18, 22) },
-  headingLabel: { ...interLine(12, 15), fontFamily: FONTS.sans },
   name: { ...interLine(15, 20, { multiline: true }), fontFamily: FONTS.sansSemiBold },
   line: { ...interLine(12, 16, { multiline: true }), fontFamily: FONTS.sans, marginTop: 2 },
-  card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   requestRow: { paddingHorizontal: 14, paddingVertical: 12, minHeight: TAP, justifyContent: 'center' },
   showAll: { minHeight: TAP, justifyContent: 'center' },
   showAllText: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold },

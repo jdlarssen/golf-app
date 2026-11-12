@@ -2,6 +2,7 @@
 // #2838: én runde i terminlista. Flyttet ut av `screens/Terminliste.tsx` i
 // #2753, så Hjem-seksjonen «Klubbturneringer» viser radene likt (én hjem for
 // raden, trap 4).
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppTerminEntry } from '../../../../../lib/games/appTerminView';
 import { capacityState, terminTimeNote } from '../../../../../lib/games/terminliste';
@@ -139,7 +140,26 @@ function ThirdLine({ entry }: { entry: AppTerminEntry }) {
   );
 }
 
+export function TerminDayHeading({ title, label }: { title: string; label?: string | null }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.heading} accessibilityRole="header" accessible>
+      <Text style={[styles.headingTitle, { color: colors.text }]}>{title}</Text>
+      {label ? <Text style={[styles.headingLabel, { color: colors.muted }]}>{label}</Text> : null}
+    </View>
+  );
+}
+
+export function TerminDayCard({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
+  return <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>{children}</View>;
+}
+
 const styles = StyleSheet.create({
+  heading: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 8, paddingHorizontal: 4 },
+  headingTitle: { ...fraunces(600, 18, 22) },
+  headingLabel: { ...interLine(12, 15), fontFamily: FONTS.sans },
+  card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: TAP },
   // Nettet: 56 innhold + 10 luft + 1 strek (content-box), og klokka flyter ut i luften når «09:20» er bredere enn 56.
   // RN klipper i stedet, så blokken har 5 pt mer innhold (61 + 10 + 1) og tallene står i ro.
