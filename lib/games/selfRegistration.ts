@@ -149,6 +149,10 @@ function stopError(view: SignupView): ActionError {
       return 'game_locked';
     case 'closed':
       return 'signup_closed';
+    // #2837: the last seat went between the screen and the tap. The form that
+    // stands now is the request, and the answer is the claim's own.
+    case 'solo_open_full':
+      return 'game_full';
     default:
       return 'wrong_mode';
   }
