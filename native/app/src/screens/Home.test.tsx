@@ -321,14 +321,14 @@ it('uten runde i gang står «Opprett spill» øverst, som før, også på et to
 });
 
 it('#2838: «Finn turneringer» står rett under «Opprett spill», alltid, og åpner terminlista', async () => {
-  // Uten runde i gang: «Opprett spill» øverst, raden rett under, så «Lag en cup».
+  // Uten runde i gang: «Opprett spill» øverst og raden rett under.
   mockState.list = { ...LIST, cards: CARDS.filter((card) => card.status !== 'active') };
   const top = renderHome();
   await top.view;
   expect(await screen.findByTestId('home-ticket-next')).toBeTruthy();
   let order = testIdsInOrder();
   expect(order.indexOf('home-find-tournaments')).toBe(order.indexOf('home-create-game') + 1);
-  expect(order.indexOf('home-find-tournaments')).toBeLessThan(order.indexOf('home-create-cup'));
+  expect(order.indexOf('home-find-tournaments')).toBeLessThan(order.indexOf('home-next-start'));
   const row = screen.getByTestId('home-find-tournaments');
   expect(row.props.accessibilityLabel).toBe('Finn turneringer. Åpne runder du kan bli med på');
   await fireEvent.press(row);
