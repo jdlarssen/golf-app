@@ -360,7 +360,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   // eller junior som arrangerte startet på herretee.
   const players = useMemo<DraftPlayer[]>(
     () =>
-      rosterForRegistration(picked, userId, registration).map((p) => ({
+      rosterForRegistration(picked, registration).map((p) => ({
         userId: p.userId,
         teamNumber: p.teamNumber,
         teeGender: resolveTeeGender(
@@ -423,7 +423,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           return prev.filter((p) => p.userId !== candidate.id);
         }
         // Taket teller lista slik den lagres: uten deg med lagpåmelding (#2840).
-        const onRoster = rosterForRegistration(prev, userId, registration).length;
+        const onRoster = rosterForRegistration(prev, registration).length;
         if (gameMode && onRoster >= maxPlayersForMode(gameMode, effectiveTeamSize(gameMode, setup))) {
           return prev;
         }

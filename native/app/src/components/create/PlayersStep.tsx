@@ -208,6 +208,12 @@ export function PlayersStep({
     />
   );
 
+  // #2840: med lagpåmelding via lenken er det ingen liste (tegningen). Lagene melder seg
+  // på selv, og payloaden sender ingen spillere (`rosterForRegistration`).
+  if (registration && !organiserOnRoster) {
+    return <View testID="create-step-players">{registration}</View>;
+  }
+
   return (
     <View testID="create-step-players">
       {registration ?? <Text style={ui.title}>Hvem spiller?</Text>}
