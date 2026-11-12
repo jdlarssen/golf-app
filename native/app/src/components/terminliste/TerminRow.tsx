@@ -92,8 +92,10 @@ export function TerminRow({
 
 /**
  * #2839: en klubbliga du kan melde deg på, som en rad i samme kort som rundene,
- * med samme flate, luft og tekststil. En liga har ingen klokke, så radene har
- * ingen tidsblokk; «Meld på» står som på en runde, og et trykk åpner ligasiden.
+ * med samme flate, luft og tekststil. En liga har ingen klokke, så blokken til
+ * venstre har «Liga» og «sesongstart» i klokkens stil og bredde; da står navnet
+ * på linje med rundenavnene. «Meld på» står som på en runde, og et trykk åpner
+ * ligasiden.
  */
 export function TerminLeagueRow({ league, onPress }: { league: AppLeagueSummary; onPress: () => void }) {
   const { colors } = useTheme();
@@ -105,6 +107,12 @@ export function TerminLeagueRow({ league, onPress }: { league: AppLeagueSummary;
       style={styles.row}
       testID={`home-joinable-league-${league.id}`}
     >
+      <View style={[styles.time, { borderRightColor: colors.divider }]} testID={`home-joinable-league-time-${league.id}`}>
+        <Text numberOfLines={1} style={[styles.clock, { color: colors.text }]}>
+          {LEAGUE_TEXT.homeSeasonLabel}
+        </Text>
+        <Text style={[styles.note, { color: colors.muted }]}>{LEAGUE_TEXT.homeSeasonNote}</Text>
+      </View>
       <View style={styles.body}>
         <Text style={[styles.name, { color: colors.text }]}>{league.name}</Text>
         <Text style={[styles.line, { color: colors.muted }]} testID={`home-joinable-league-line-${league.id}`}>
