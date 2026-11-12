@@ -44,16 +44,7 @@ type CandidateRow = {
 export async function getTeamCandidates(
   userId: string,
 ): Promise<TeamCandidate[]> {
-  const rows = await loadCandidateRows(userId);
-  return rows
-    .map(({ email, is_guest, ...rest }) => ({
-      ...rest,
-      maskedEmail: maskEmail(email),
-      isGuest: is_guest,
-    }))
-    .sort((a, b) =>
-      (a.name ?? a.maskedEmail).localeCompare(b.name ?? b.maskedEmail, 'nb'),
-    );
+  return shapeCandidates(await loadCandidateRows(userId));
 }
 
 /**
@@ -71,6 +62,32 @@ export async function getTeamCandidateEmails(
   return new Map(rows.filter((r) => wanted.has(r.id)).map((r) => [r.id, r.email]));
 }
 
+/**
+ * #2840: the team form's candidates — the captain's friends only, shaped and
+ * sorted like `getTeamCandidates`. Only a friend can be on the team; the
+ * server checks it again (`checkTeammatesAreFriends`). Best effort like its
+ * sibling: a failed read gives an empty list, which the form shows as «no
+ * friends yet», and the submit gate never trusts this list.
+ */
+export async function getTeamFriendCandidates(
+  userId: string,
+): Promise<TeamCandidate[]> {
+  const friendIds = (await getFriendIds(userId)).filter((id) => id !== userId);
+  return shapeCandidates(await loadUserRows(friendIds));
+}
+
+function shapeCandidates(rows: CandidateRow[]): TeamCandidate[] {
+  return rows
+    .map(({ email, is_guest, ...rest }) => ({
+      ...rest,
+      maskedEmail: maskEmail(email),
+      isGuest: is_guest,
+    }))
+    .sort((a, b) =>
+      (a.name ?? a.maskedEmail).localeCompare(b.name ?? b.maskedEmail, 'nb'),
+    );
+}
+
 async function loadCandidateRows(userId: string): Promise<CandidateRow[]> {
   const [friendIds, coPlayerIds] = await Promise.all([
     getFriendIds(userId),
@@ -80,6 +97,10 @@ async function loadCandidateRows(userId: string): Promise<CandidateRow[]> {
   const candidateIds = [...new Set([...friendIds, ...coPlayerIds])].filter(
     (id) => id !== userId,
   );
+  return loadUserRows(candidateIds);
+}
+
+async function loadUserRows(candidateIds: string[]): Promise<CandidateRow[]> {
   if (candidateIds.length === 0) return [];
 
   // Hent visningsdata. Bare rader med e-post er meningsfulle som

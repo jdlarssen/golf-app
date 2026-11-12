@@ -43,10 +43,16 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason:
       "the brought guest's seat: the seat-claim RPC (p_tee_gender) or a direct insert, the guest's M/D/J pick clamped to the game's tee",
   },
-  'app/[locale]/signup/[shortId]/teamActions.ts': {
-    count: 4,
+  // #2840: moved from `app/[locale]/signup/[shortId]/teamActions.ts`, now
+  // shared by the signup pages and the app's routes.
+  'lib/games/teamRegistrationCore.ts': {
+    count: 3,
     reason:
-      'captain via the seat-claim RPC, known teammate, accepted invite and attach-to-captain upserts, joinTeeGenders',
+      'captain via the seat-claim RPC, known teammate (team submit and «add a friend») and accepted invite upserts, joinTeeGenders',
+  },
+  'lib/games/teamDashboardCore.ts': {
+    count: 1,
+    reason: 'attach-to-captain upsert, joinTeeGenders',
   },
   // #2216: moved from `app/[locale]/(auth)/login/actions.ts` (`verifyCode`).
   'lib/auth/afterLogin.ts': {

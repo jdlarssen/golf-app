@@ -2,161 +2,77 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { notify } from '@/lib/notifications/notify';
-import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
-import { getGameByShortId } from '@/lib/games/getGameByShortId';
-import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
-import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
-import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
-import { getTeamCandidateEmails } from '@/lib/users/getTeamCandidates';
-import { maskEmail } from '@/lib/users/maskEmail';
-import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
-import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
-import {
-  gameModeSupportsTeams,
-  TEAM_NAME_MAX,
-  TEAM_NAME_MIN,
-} from '@/lib/games/registration';
-import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
-import { flightForTeam, type TeamPlayer } from '@/lib/games/teamScope';
-import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
-import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
-import { expectAffected } from '@/lib/supabase/affectedRows';
+import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
 import {
-  getCaptainDisplayName,
-  loadInviterTeams,
-  pickCaptainRequest,
-} from './team/captainLookup';
+  acceptTeamInviteCore,
+  declineTeamInviteCore,
+  submitTeamRegistrationCore,
+  type AcceptDeclineResult as CoreAcceptDeclineResult,
+  type TeamRegistrationError as CoreTeamRegistrationError,
+  type TeamRegistrationResult as CoreTeamRegistrationResult,
+  type TeamSlotFailReason as CoreTeamSlotFailReason,
+  type TeamSlotResult as CoreTeamSlotResult,
+} from '@/lib/games/teamRegistrationCore';
+import {
+  addTeamMemberCore,
+  attachToCaptainTeamCore,
+  removeTeamMemberCore,
+  resendTeamInviteCore,
+  transferCaptaincyCore,
+  type AddTeamMemberResult as CoreAddTeamMemberResult,
+  type AttachTeamResult as CoreAttachTeamResult,
+  type TransferCaptaincyResult as CoreTransferCaptaincyResult,
+} from '@/lib/games/teamDashboardCore';
 
 /**
- * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
- *
- * Kapteinen lander på `/signup/[shortId]`, fyller ut lag-formen og
- * submitter. Server-action gjør authz, validering, og deretter:
- *
- *   1. Insert kaptein-rad i `game_registration_requests` med
- *      `is_team_captain = true` + `team_name`.
- *   2. For hver medspiller-slot:
- *      - "lookup"-mode: forventet å være en kjent bruker (e-post matcher
- *        `users`-tabellen). Insert child-request med `team_request_id`
- *        peker til kaptein. Notify dem med `team_invite`.
- *      - "email"-mode: ukjent e-post. Sjekk om brukeren tross alt finnes
- *        (degrader til lookup hvis ja). Hvis ikke → insert `invitations`-
- *        rad med `game_id` satt + 14 dagers frist (`GAME_INVITE_TTL_DAYS`).
- *        Mailen sendes med `sendTeamInvitationMail`.
- *   3. For `open`-modus: insert game_players-rad for kaptein + alle
- *      kjente medspillere (status='approved' → de er med i spillet).
- *      Team-slot tildeles deterministisk (laveste ledige 1..N).
- *
- * Per-medspiller-feil er ikke fatale: vi catch-er og logger, så et lag
- * med én ugyldig e-post fortsatt får opprettet de andre radene. Caller
- * får aggregert status tilbake.
- *
- * Design-beslutning for chunk 9: vi hooker IKKE `verifyCode` for team-
- * invites. I stedet detekterer `/signup/[shortId]/team`-siden om
- * brukeren har en pending `invitations`-rad for spillet og tilbyr en
- * "Bli med på lag"-knapp som attacher dem til kapteinens team-request.
- * Sidesteg tatt fordi `invitations` ikke har et `team_request_id`-felt;
- * å legge til det krever migrasjon, og verifyCode-hook-en ville måtte
- * gjette hvilken kaptein-request invitasjonen tilhører. Bedre å la
- * brukeren se UI-en og bekrefte selv.
+ * Team actions for self-registration (#199 chunks 8+9). The gates and the
+ * writes live in `lib/games/teamRegistrationCore.ts` and
+ * `lib/games/teamDashboardCore.ts`, shared with the app's routes (#2840). What
+ * belongs to the web stays here: cookie auth, the redirects to /login and
+ * /complete-profile, the honeypot and the client IP.
  */
 
-export type TeamSlotInput =
-  /**
-   * #2207: en kandidat kapteinen valgte fra forslagslista — id-en, aldri
-   * adressen. Serveren slår opp adressen, og bare for id-er i kapteinens eget
-   * kandidatsett (`getTeamCandidateEmails`).
-   */
-  | { mode: 'lookup'; userId: string }
-  /** En adresse kapteinen skrev selv (i begge modi). */
-  | { mode: 'lookup' | 'email'; value: string };
+// Plain aliases on purpose: `export type { X }` compiles and passes every test,
+// but in a 'use server' file the transform keeps it as a runtime export, and the
+// page crashes with «X is not defined».
+export type TeamSlotFailReason = CoreTeamSlotFailReason;
+export type TeamSlotResult = CoreTeamSlotResult;
+export type TeamRegistrationResult = CoreTeamRegistrationResult;
+export type TeamRegistrationError = CoreTeamRegistrationError;
+export type AcceptDeclineResult = CoreAcceptDeclineResult;
+export type AttachTeamResult = CoreAttachTeamResult;
+export type TransferCaptaincyResult = CoreTransferCaptaincyResult;
+export type AddTeamMemberResult = CoreAddTeamMemberResult;
 
 export type TeamRegistrationInput = {
   shortId: string;
   teamName: string;
-  slots: TeamSlotInput[];
-  /** Honeypot — fylt = bot. */
+  /** #2840: the picked friends, as user ids. */
+  memberIds: string[];
+  /** Honeypot — filled = bot. */
   website?: string;
 };
 
-/**
- * Slot-feil-koder. Rendres locale-bevisst via `signup.slotFailReason.*` på
- * call-site (TeamRegistrationForm) — server-actionen returnerer koden, ikke
- * en ferdig-oversatt streng.
- */
-export type TeamSlotFailReason =
-  | 'userNotFound'
-  | 'alreadyRegistered'
-  | 'dbError'
-  | 'inviteFailed'
-  | 'unexpected';
-
-export type TeamSlotResult =
-  | { ok: true; outcome: 'known_added' | 'unknown_invited'; email: string }
-  | { ok: false; email: string; reason: TeamSlotFailReason };
-
-export type TeamRegistrationResult =
-  | {
-      ok: true;
-      captainRequestId: string;
-      slotResults: TeamSlotResult[];
-    }
-  | { ok: false; error: TeamRegistrationError };
-
-export type TeamRegistrationError =
-  | 'not_authed'
-  | 'profile_incomplete'
-  | 'game_not_found'
-  | 'wrong_type'
-  | 'wrong_mode'
-  | 'game_locked'
-  | 'signup_closed'
-  | 'mode_does_not_support_teams'
-  | 'team_name_invalid'
-  | 'slots_count_wrong'
-  | 'duplicate_emails'
-  | 'self_in_slots'
-  | 'disposable_email'
-  | 'already_registered'
-  | 'rate_limited'
-  | 'game_full'
-  | 'db_error';
+const SHORT_ID = /^[0-9a-z]{8}$/;
 
 /**
- * Sjekk om PG-error er UNIQUE-violation (23505). Speiler logikken i
- * `actions.ts:isDuplicateError` — vi holder dem separate for at hver
- * action-fil er selvstendig lesbar (én navigasjon for hele flyten).
- */
-function isDuplicateError(err: { code?: string; message?: string } | null): boolean {
-  if (!err) return false;
-  if (err.code === '23505') return true;
-  return String(err.message ?? '')
-    .toLowerCase()
-    .includes('duplicate');
-}
-
-/**
- * Auth- + profil-port for lag-actionene.
+ * Auth + profile gate for the team actions.
  *
- * `next` er stien brukeren skal tilbake til når porten sender dem via /login
- * eller /complete-profile. Default er base-signup-siden, som er riktig for
- * kaptein-skjemaet (`submitTeamRegistration`) — det er der den flyten startet.
- * Actionene på lag-dashboardet sender `/signup/${shortId}/team` eksplisitt:
- * uten det mistet en invitert spiller /team-konteksten i profil-runden og
- * landet på «Registrer laget»-skjemaet, ett trykk unna et duplikat-lag (#1344).
+ * `next` is where the gate sends the user back after /login or
+ * /complete-profile. The default is the base signup page, right for the
+ * captain's form. The team page's actions pass `/signup/${shortId}/team`: before
+ * that an invited player lost the /team context in the profile round and landed
+ * on «Registrer laget», one tap from a duplicate team (#1344).
  *
- * Verdien settes alltid som en hardkodet konstant på call-site, aldri fra
- * bruker-input — ingen open-redirect-flate.
+ * The value is always a constant on the call site, never user input — no
+ * open-redirect surface.
  */
 async function requireAuthedUser(
   shortId: string,
   options: { next?: string } = {},
-): Promise<{ id: string; email: string | null }> {
+): Promise<{ id: string }> {
   const next = options.next ?? `/signup/${shortId}`;
   const locale = await getLocale();
   const supabase = await getServerClient();
@@ -174,39 +90,31 @@ async function requireAuthedUser(
   if (!profile?.profile_completed_at) {
     redirect({ href: `/complete-profile?next=${next}`, locale });
   }
-  return { id: user.id, email: user.email ?? null };
+  return { id: user.id };
 }
 
-/** Retursti for actionene som kalles fra lag-dashboardet (#1344). */
+/** Return path for the actions called from the team page (#1344). */
 function teamPagePath(shortId: string): string {
   return `/signup/${shortId}/team`;
 }
 
 /**
- * Resolve effective team size from `mode_config`. Texas scramble har
- * `team_size: 2 | 3 | 4`, best ball har `team_size: 2`. Hvis modi ikke
- * støtter team i det hele tatt, returnerer vi null så caller kan
- * signalisere mode_does_not_support_teams.
+ * The core's own profile gate answers `profile_incomplete` (a race with the
+ * gate above); on the web that is the same redirect as before.
  */
-function resolveTeamSize(
-  modeConfig: { team_size?: number } | null | undefined,
-): number | null {
-  if (!modeConfig) return null;
-  const size = modeConfig.team_size;
-  if (typeof size !== 'number' || size < 2) return null;
-  return size;
+async function redirectOnProfileIncomplete(
+  result: { ok: boolean; error?: string },
+  next: string,
+): Promise<void> {
+  if (!result.ok && result.error === 'profile_incomplete') {
+    const locale = await getLocale();
+    redirect({ href: `/complete-profile?next=${next}`, locale });
+  }
 }
 
 /**
- * Kaptein submitter lag-form. Returnerer aggregert resultat per slot;
- * suksess på kaptein-raden men feil på en medspiller ruller ikke tilbake
- * resten — vi får et lag med en åpen plass, som kaptein kan fylle senere
- * via team-dashboardet.
- *
- * Bruker ikke FormData i signaturen (men aksepterer FormData som tynn
- * shim i client-component-en) fordi slots-arrayet har struktur, og
- * FormData → JSON-roundtrip er klønete. Client-componenten kaller direkte
- * med strukturert input.
+ * The captain submits the team form. Returns one result per teammate; a failed
+ * teammate does not roll back the rest.
  */
 export async function submitTeamRegistration(
   input: TeamRegistrationInput,
@@ -214,7 +122,6 @@ export async function submitTeamRegistration(
   const shortId = String(input.shortId ?? '').trim();
   const teamName = String(input.teamName ?? '').trim();
   const honeypot = String(input.website ?? '').trim();
-  const slots = Array.isArray(input.slots) ? input.slots : [];
 
   if (honeypot) {
     console.warn('[honeypot] silent reject', { route: 'submitTeamRegistration' });
@@ -224,1320 +131,127 @@ export async function submitTeamRegistration(
       slotResults: [],
     };
   }
-
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  // Checked before the auth gate, as before: a bad link or name never sends
+  // anyone through /login first.
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'game_not_found' };
   }
-
   if (teamName.length < TEAM_NAME_MIN || teamName.length > TEAM_NAME_MAX) {
     return { ok: false, error: 'team_name_invalid' };
   }
 
   const captain = await requireAuthedUser(shortId);
-  // #1727: invitéen er konto-løs, så kapteinens UI-språk er beste gjett for
-  // mail-språket — før dette gikk lag-invitasjonsmailen alltid ut på norsk.
-  const locale = await getLocale();
-
-  const game = await getGameByShortId(shortId);
-  if (!game) {
-    return { ok: false, error: 'game_not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'game_not_found' };
-  }
-  if (game.registration_type !== 'team' && game.registration_type !== 'both') {
-    return { ok: false, error: 'wrong_type' };
-  }
-  if (game.registration_mode === 'invite_only') {
-    return { ok: false, error: 'wrong_mode' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-  // #543: steng-påmelding-guard — speilar solo-flyten i actions.ts.
-  if (game.signups_closed_at != null) {
-    return { ok: false, error: 'signup_closed' };
-  }
-  if (!gameModeSupportsTeams(game.game_mode)) {
-    return { ok: false, error: 'mode_does_not_support_teams' };
-  }
-
-  const teamSize = resolveTeamSize(game.mode_config);
-  if (teamSize === null) {
-    return { ok: false, error: 'mode_does_not_support_teams' };
-  }
-
-  // Kapteinen er én av de N spillerne — slots-arrayet er N-1.
-  if (slots.length !== teamSize - 1) {
-    return { ok: false, error: 'slots_count_wrong' };
-  }
-
-  // Rate-limit FØR vi gjør tunge DB-inserts. Ett lag-submit teller som én
-  // påmelding — vi rate-limiter ikke per slot (en kaptein som inviterer 3
-  // medspillere skal ikke bli straffet for å fylle laget). Per-spill-bøtta i
-  // `registrationRateLimit.ts` er den naturlige grensen for et helt arrangement.
   const ip = await getClientIp();
-  const rateLimit = await consumeRegistrationRateLimit({
-    userId: captain.id,
-    ip,
-    gameId: game.id,
-  });
-  if (!rateLimit.ok) {
-    return { ok: false, error: 'rate_limited' };
-  }
-
-  // #2207: a picked slot carries the candidate's id. Resolve it to the address
-  // here, and only for ids that really are in the captain's own candidate set
-  // (friends ∪ co-players); any other id is a miss, like a lookup that finds
-  // nobody. The slot result for a picked slot shows the masked address, so
-  // the full one never goes back to the browser.
-  const pickedIds = slots.flatMap((s) => (s && 'userId' in s ? [String(s.userId)] : []));
-  const pickedEmails = await getTeamCandidateEmails(captain.id, pickedIds);
-
-  // Normaliser e-poster og fang duplikater / kaptein-egen-e-post.
-  const normalizedSlots = slots.map((s) => {
-    if (s && 'userId' in s) {
-      // Normalised like a typed address, so the duplicate check below compares like with like.
-      const email = (pickedEmails.get(String(s.userId)) ?? '').trim().toLowerCase();
-      return { mode: 'lookup' as const, value: email, shown: email ? maskEmail(email) : '', picked: true };
-    }
-    const value = String(s?.value ?? '').trim().toLowerCase();
-    return { mode: s?.mode ?? ('email' as const), value, shown: value, picked: false };
-  });
-
-  const seen = new Set<string>();
-  for (const slot of normalizedSlots) {
-    // A pick outside the candidate set is answered per slot below.
-    if (slot.picked && !slot.value) continue;
-    if (!slot.value || !slot.value.includes('@')) {
-      return { ok: false, error: 'team_name_invalid' };
-    }
-    // #422: reject known disposable/throwaway inbox domains for co-players.
-    // Aborts the whole submission like the other slot-validation failures —
-    // the captain fixes the address and resubmits. Always on (a disposable
-    // co-player invite never has value); mirrors the friend-invite guard.
-    if (isDisposableEmailDomain(slot.value)) {
-      return { ok: false, error: 'disposable_email' };
-    }
-    if (seen.has(slot.value)) {
-      return { ok: false, error: 'duplicate_emails' };
-    }
-    seen.add(slot.value);
-    if (captain.email && slot.value === captain.email.toLowerCase()) {
-      return { ok: false, error: 'self_in_slots' };
-    }
-  }
-
-  const admin = getAdminClient();
-  const captainStatus =
-    game.registration_mode === 'open' ? 'approved' : 'pending';
-
-  // INSERT kaptein-rad. UNIQUE (game_id, user_id) fanger dobbel-submit.
-  const { data: captainRow, error: captainError } = await admin
-    .from('game_registration_requests')
-    .insert({
-      game_id: game.id,
-      user_id: captain.id,
-      status: captainStatus,
-      team_name: teamName,
-      is_team_captain: true,
-      team_request_id: null,
-      decided_at: captainStatus === 'approved' ? new Date().toISOString() : null,
-      decided_by_user_id: captainStatus === 'approved' ? captain.id : null,
-    })
-    .select('id')
-    .single<{ id: string }>();
-
-  if (captainError) {
-    if (isDuplicateError(captainError)) {
-      return { ok: false, error: 'already_registered' };
-    }
-    console.error('[submitTeamRegistration] captain insert failed', captainError);
-    return { ok: false, error: 'db_error' };
-  }
-  const captainRequestId = captainRow.id;
-
-  const captainName = await getCaptainDisplayName(captain.id);
-
-  // For open-modus: sett kapteinen i game_players umiddelbart. Manual_approval
-  // venter på admin via det eksisterende approveRequest-action-et; the cap
-  // applies to open self-registration only (#2011, owner's choice A).
-  //
-  // #2060/#2062: claim_open_registration_seat (0177) decides the cap, picks the
-  // team number and writes the captain's row in one call that locks the game,
-  // so two captains arriving together can no longer read the same roster and
-  // take the same number. Seats, not rows: a team holds its full size from the
-  // moment it exists — its e-mail-invited teammates have only an invitations
-  // row until they join through attachToCaptainTeam, which checks no cap — and
-  // an over-full team holds every row it has. The number is the lowest in
-  // 1..maxTeamsForSize(teamSize) that no active row has; withdrawn rows hold neither seats nor
-  // numbers.
-  let assignedTeamNumber: number | null = null;
-  if (captainStatus === 'approved') {
-    const cap = teamModePlayerCap(game.game_mode, teamSize);
-    // #2209: the captain's tee category from the profile, clamped to the tee.
-    const captainTee = (await joinTeeGenders(game.id, [captain.id]))[captain.id];
-    const { data: claim, error: claimError } = await admin.rpc(
-      'claim_open_registration_seat',
-      {
-        p_game_id: game.id,
-        p_user_id: captain.id,
-        p_seat_team_size: teamSize,
-        p_max_teams: maxTeamsForSize(teamSize),
-        // #463: kapteinen melder seg selv på → bekreftet med en gang.
-        p_accepted_at: acceptedAtForActor(captain.id, captain.id)!,
-        p_new_team_size: teamSize,
-        ...(cap !== null ? { p_cap: cap } : {}),
-        p_tee_gender: captainTee,
-      },
-    );
-    if (claimError) {
-      console.error(
-        '[submitTeamRegistration] captain seat claim failed',
-        claimError,
-      );
-    }
-    const { outcome, team_number: claimedTeam } = (claimError ? {} : (claim ?? {})) as {
-      outcome?: string;
-      team_number?: number | null;
-    };
-    if (outcome === 'ok') {
-      assignedTeamNumber = claimedTeam ?? null;
-    } else {
-      // The claim refused (the game is full, every team number is taken, the
-      // captain is already on the roster, or a state gate closed after the
-      // checks above) or failed outright. It runs after the captain row
-      // exists, so roll that row back either way: the game must not be left
-      // with a team without players (AGENTS.md trap 5), and a retry must start
-      // clean — a request row left behind would answer the retry with
-      // already_registered and keep the captain off the roster (#667: without
-      // the game_players row the captain is not in the game).
-      //
-      // already_on_roster (#2072): the captain already has a game_players row
-      // (added by the organiser without a team), so the claim wrote nothing and
-      // the new team would get no number — nor would its teammates. The
-      // captain is already registered, so that is the answer.
-      let rejection: TeamRegistrationError = 'db_error';
-      if (!claimError && outcome === 'already_on_roster') {
-        rejection = 'already_registered';
-      } else if (
-        !claimError &&
-        (outcome === 'game_full' ||
-          outcome === 'game_locked' ||
-          outcome === 'signup_closed' ||
-          outcome === 'game_not_found')
-      ) {
-        rejection = outcome;
-      }
-      if (rejection === 'db_error' && !claimError) {
-        console.error('[submitTeamRegistration] unexpected seat claim outcome', claim);
-      }
-      // 0 rows = failure, not success (trap 2 / I3): a delete without
-      // `.select()` answers `error == null` even when it matched nothing.
-      // Same shape as `declineTeamInvite`.
-      try {
-        expectAffected(
-          await admin
-            .from('game_registration_requests')
-            .delete()
-            .eq('id', captainRequestId)
-            .select('id'),
-          'submitTeamRegistration',
-        );
-      } catch (rollbackErr) {
-        // The compensation failed and the request row stays behind. Log it,
-        // but never let expectAffected throw out of the server action: the
-        // captain should see an answer, not a 500.
-        console.error('[submitTeamRegistration] captain rollback failed', rollbackErr);
-      }
-      return { ok: false, error: rejection };
-    }
-  }
-
-  // Per-slot-løkke. Hver slot håndteres separat så feil på én ikke
-  // ruller tilbake resten.
-  const slotResults: TeamSlotResult[] = [];
-  const expiresAt = gameInviteExpiresAtFromNow();
-
-  for (const slot of normalizedSlots) {
-    try {
-      if (slot.picked && !slot.value) {
-        slotResults.push({ ok: false, email: slot.shown, reason: 'userNotFound' });
-        continue;
-      }
-      // Lookup-mode betyr kaptein har valgt en kjent bruker via UI-en;
-      // email-mode betyr fri-tekst-input. Vi gjør samme lookup i begge
-      // tilfeller — i email-mode degraderer vi til "kjent" hvis brukeren
-      // tross alt eksisterer, ellers oppretter vi invitations-rad.
-      const existingUser = await lookupUserByEmail(slot.value);
-
-      if (slot.mode === 'lookup' && !existingUser) {
-        slotResults.push({
-          ok: false,
-          email: slot.shown,
-          reason: 'userNotFound',
-        });
-        continue;
-      }
-
-      if (existingUser) {
-        // Kjent bruker → child-request, samme status som kaptein.
-        const { error: childError } = await admin
-          .from('game_registration_requests')
-          .insert({
-            game_id: game.id,
-            user_id: existingUser.id,
-            status: captainStatus,
-            team_name: teamName,
-            is_team_captain: false,
-            team_request_id: captainRequestId,
-            decided_at:
-              captainStatus === 'approved' ? new Date().toISOString() : null,
-            decided_by_user_id:
-              captainStatus === 'approved' ? captain.id : null,
-          });
-
-        if (childError) {
-          if (isDuplicateError(childError)) {
-            slotResults.push({
-              ok: false,
-              email: slot.shown,
-              reason: 'alreadyRegistered',
-            });
-            continue;
-          }
-          console.error(
-            '[submitTeamRegistration] child insert failed',
-            childError,
-          );
-          slotResults.push({
-            ok: false,
-            email: slot.shown,
-            reason: 'dbError',
-          });
-          continue;
-        }
-
-        // Open-modus: legg kjent medspiller i game_players umiddelbart.
-        if (captainStatus === 'approved' && assignedTeamNumber !== null) {
-          // #2209: the teammate's own tee category, not the column default.
-          const teeGenders = await joinTeeGenders(game.id, [existingUser.id]);
-          const { error: playerError } = await admin
-            .from('game_players')
-            .upsert(
-              {
-                game_id: game.id,
-                user_id: existingUser.id,
-                team_number: assignedTeamNumber,
-                flight_number: assignedTeamNumber,
-                course_handicap: null,
-                // #463: kapteinen legger til en medspiller → ikke bekreftet ennå.
-                accepted_at: acceptedAtForActor(captain.id, existingUser.id),
-                tee_gender: teeGenders[existingUser.id],
-              },
-              { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-            );
-          if (playerError) {
-            // #2223: the teammate never reached the roster, so the slot is not
-            // known_added. Roll the child request back so a retry starts clean
-            // (same shape as the captain rollback above) and skip the invite.
-            console.error('[submitTeamRegistration] player upsert failed', {
-              gameId: game.id,
-              userId: existingUser.id,
-              error: playerError,
-            });
-            try {
-              expectAffected(
-                await admin
-                  .from('game_registration_requests')
-                  .delete()
-                  .eq('team_request_id', captainRequestId)
-                  .eq('user_id', existingUser.id)
-                  .select('id'),
-                'submitTeamRegistration',
-              );
-            } catch (rollbackErr) {
-              console.error(
-                '[submitTeamRegistration] child rollback failed',
-                rollbackErr,
-              );
-            }
-            slotResults.push({
-              ok: false,
-              email: slot.shown,
-              reason: 'dbError',
-            });
-            continue;
-          }
-        }
-
-        // Best-effort notify. #463: medspilleren får ALLEREDE et team_invite-
-        // varsel (under) som nudger dem; vi dobbelt-varsler ikke med
-        // player_added. «Ikke bekreftet»-badgen + auto-bekreft-ved-åpning
-        // dekker bekreftelses-løkka for lag-medspillere. Ingen mail-reserve:
-        // push fra `notify()` dekker spillere som er borte fra appen.
-        await notifyInvitedToTeam({
-          recipientUserId: existingUser.id,
-          gameId: game.id,
-          gameShortId: game.short_id,
-          gameName: game.name,
-          teamRequestId: captainRequestId,
-          teamName,
-          invitedByName: captainName,
-        });
-
-        slotResults.push({
-          ok: true,
-          outcome: 'known_added',
-          email: slot.shown,
-        });
-      } else {
-        // Ukjent e-post → invitations-rad. Upsert via insert + ignore-
-        // duplicates på (email, game_id) hvis policy tillater; her bruker
-        // vi vanlig insert og swallow-er duplicate som "ok".
-        const { error: invError } = await admin.from('invitations').insert({
-          email: slot.value,
-          token: crypto.randomUUID(),
-          expires_at: expiresAt,
-          invited_by: captain.id,
-          game_id: game.id,
-        });
-        if (invError && !isDuplicateError(invError)) {
-          console.error(
-            '[submitTeamRegistration] invitation insert failed',
-            invError,
-          );
-          slotResults.push({
-            ok: false,
-            email: slot.shown,
-            reason: 'inviteFailed',
-          });
-          continue;
-        }
-
-        // Mail til ukjent e-post. Alltid-send fordi recipient ikke har
-        // konto, så last_seen_at-terskel gir ingen mening. Best-effort —
-        // mail-feil ruller ikke tilbake invitations-raden (admin kan
-        // re-sende via «Send påminnelse»).
-        await sendTeamInvitationMail({
-          to: slot.value,
-          captainName,
-          gameName: game.name,
-          teamName,
-          gameShortId: game.short_id,
-          locale,
-        }).catch((err) =>
-          console.error('[submitTeamRegistration] team mail failed', err),
-        );
-
-        slotResults.push({
-          ok: true,
-          outcome: 'unknown_invited',
-          email: slot.shown,
-        });
-      }
-    } catch (err) {
-      console.error('[submitTeamRegistration] slot threw', err);
-      slotResults.push({
-        ok: false,
-        email: slot.shown,
-        reason: 'unexpected',
-      });
-    }
-  }
-
-  // Notify admin (game.created_by) når vi er i manual_approval-modus så
-  // de vet at en ny forespørsel ligger og venter. For open-modus hopper
-  // vi over — admin trenger ingen handling, og påmeldinger kan komme
-  // i flokk; vi vil ikke spamme innboksen.
-  if (game.created_by && captainStatus === 'pending') {
-    await notify({
-      userId: game.created_by,
-      kind: 'registration_request',
-      payload: {
-        game_id: game.id,
-        game_name: game.name,
-        // Structured fields; «(kaptein for …)» is composed at render time (#583).
-        requester_name: captainName,
-        team_name: teamName,
-        request_id: captainRequestId,
-      },
-    }).catch((err) =>
-      console.error('[submitTeamRegistration] admin notify failed', err),
-    );
-  }
-
-  expireGameCache(game.id);
-
-  return {
-    ok: true,
-    captainRequestId,
-    slotResults,
-  };
+  const result = await submitTeamRegistrationCore(
+    captain.id,
+    {
+      shortId,
+      teamName,
+      memberIds: Array.isArray(input.memberIds) ? input.memberIds : [],
+    },
+    { ip },
+  );
+  await redirectOnProfileIncomplete(result, `/signup/${shortId}`);
+  return result;
 }
 
-/**
- * Medspiller aksepterer team-invite. Oppdaterer request-status til approved
- * (om den var pending, eller no-op om allerede approved fra open-modus), og
- * setter medspilleren i game_players på kapteinens lag — bare hvis kapteinen
- * alt har et lagnummer. Ellers venter raden på arrangørens godkjenning (#2061).
- *
- * Kalles fra `/signup/[shortId]/team`-siden av medspilleren selv.
- */
-export type AcceptDeclineResult =
-  | { ok: true }
-  | {
-      ok: false;
-      error:
-        | 'not_authed'
-        | 'not_found'
-        | 'game_locked'
-        | 'signup_closed'
-        | 'db_error';
-    };
-
-/**
- * `attachToCaptainTeam` har én utgang de andre lag-actionene ikke har:
- * `team_unknown` — invitasjonen er ekte, men vi kan ikke se hvilket lag den
- * gjelder. Egen type i stedet for et nytt medlem i `AcceptDeclineResult`, så
- * de fire andre actionene ikke arver en kode de aldri returnerer (#1343).
- */
-export type AttachTeamResult =
-  | AcceptDeclineResult
-  | { ok: false; error: 'team_unknown' };
-
+/** A teammate says yes, from the team page. */
 export async function acceptTeamInvite(
   requestId: string,
   shortId: string,
 ): Promise<AcceptDeclineResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
-  const admin = getAdminClient();
-
-  const { data: req, error: reqError } = await admin
-    .from('game_registration_requests')
-    .select(
-      'id, game_id, user_id, status, team_request_id, team_name, is_team_captain',
-    )
-    .eq('id', requestId)
-    .maybeSingle<{
-      id: string;
-      game_id: string;
-      user_id: string;
-      status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-      team_request_id: string | null;
-      team_name: string | null;
-      is_team_captain: boolean;
-    }>();
-
-  // Error ≠ absence (#1445): a transient query failure must not read as «denne
-  // invitasjonen finnes ikke». Only a genuine 0-row result — or a row that
-  // belongs to somebody else — keeps the not_found answer.
-  if (reqError) {
-    console.error('[acceptTeamInvite] request lookup failed', {
-      requestId,
-      error: reqError,
-    });
-    return { ok: false, error: 'db_error' };
-  }
-  if (!req || req.user_id !== user.id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2440: this answers a team invitation, so only a team member's own row —
-  // one with a captain. A solo request or the captain's own request waits for
-  // the organiser; approving it is not this action's to do.
-  const captainRequestId = req.team_request_id;
-  if (!captainRequestId || req.is_team_captain) {
-    return { ok: false, error: 'not_found' };
-  }
-  if (req.status === 'rejected' || req.status === 'withdrawn') {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const game = await getGameByShortId(shortId);
-  if (!game || game.id !== req.game_id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-  // #543: stengt påmelding fryser også medspiller-aksept — arrangøren skal
-  // kunne justere flighter/roster uten at laget fylles videre i mellomtiden.
-  if (game.signups_closed_at != null) {
-    return { ok: false, error: 'signup_closed' };
-  }
-
-  // Hent kapteinens team_number fra game_players. Har kapteinen ingen rad
-  // eller intet nummer (manual_approval, kapteinen venter på arrangøren),
-  // venter medspilleren også: ingen game_players-rad nå. approveRequest
-  // setter hele laget på samme lag når kapteinen godkjennes (#2061). Before
-  // this the teammate took the lowest free number for themself, the captain
-  // got the next one, and the team was split in two.
-  // Error ≠ absence (#1445): a failed lookup must not read as «no captain».
-  // #2440: the captain's row must be in this game — `team_request_id` is not
-  // bound to the same game in the database. No captain here, no invitation.
-  const { data: captainReqRow, error: captainReqError } = await admin
-    .from('game_registration_requests')
-    .select('user_id')
-    .eq('id', captainRequestId)
-    .eq('game_id', game.id)
-    .maybeSingle<{ user_id: string }>();
-  if (captainReqError) {
-    console.error('[acceptTeamInvite] captain request lookup failed', {
-      requestId,
-      error: captainReqError,
-    });
-    return { ok: false, error: 'db_error' };
-  }
-  if (!captainReqRow) {
-    return { ok: false, error: 'not_found' };
-  }
-  const { data: captainPlayer, error: captainPlayerError } = await admin
-    .from('game_players')
-    .select('team_number, flight_number, withdrawn_at')
-    .eq('game_id', game.id)
-    .eq('user_id', captainReqRow.user_id)
-    .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
-  if (captainPlayerError) {
-    console.error('[acceptTeamInvite] captain player lookup failed', {
-      requestId,
-      error: captainPlayerError,
-    });
-    return { ok: false, error: 'db_error' };
-  }
-  const teamNumber: number | null = captainPlayer?.team_number ?? null;
-  const captainRow: TeamPlayer | null = captainPlayer
-    ? { ...captainPlayer, user_id: captainReqRow.user_id }
-    : null;
-
-  const decidedAt = new Date().toISOString();
-  if (req.status === 'pending') {
-    // 0 rows = failure (trap 2): when the captain has no team yet this is the
-    // only write, so a silent no-op would answer ok for nothing.
-    try {
-      expectAffected(
-        await admin
-          .from('game_registration_requests')
-          .update({
-            status: 'approved',
-            decided_at: decidedAt,
-            decided_by_user_id: user.id,
-          })
-          .eq('id', req.id)
-          .select('id'),
-        'acceptTeamInvite',
-      );
-    } catch (updateErr) {
-      console.error('[acceptTeamInvite] update failed', updateErr);
-      return { ok: false, error: 'db_error' };
-    }
-  }
-
-  if (teamNumber !== null) {
-    // #2209: the player's tee category from the profile, clamped to the tee.
-    const teeGenders = await joinTeeGenders(game.id, [user.id]);
-    const { error: playerError } = await admin.from('game_players').upsert(
-      {
-        game_id: game.id,
-        user_id: user.id,
-        team_number: teamNumber,
-        // #2290: the flight follows the team — the captain's flight in best
-        // ball, where the organiser may have grouped pairs into flights.
-        flight_number: flightForTeam(
-          game.game_mode,
-          captainRow ? [captainRow] : [],
-          user.id,
-          teamNumber,
-        ),
-        course_handicap: null,
-        // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
-        accepted_at: acceptedAtForActor(user.id, user.id),
-        tee_gender: teeGenders[user.id],
-      },
-      { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-    );
-    if (playerError) {
-      console.error('[acceptTeamInvite] player upsert failed', playerError);
-      return { ok: false, error: 'db_error' };
-    }
-  }
-
-  expireGameCache(game.id);
-  return { ok: true };
+  const result = await acceptTeamInviteCore(user.id, { shortId, requestId });
+  await redirectOnProfileIncomplete(result, teamPagePath(shortId));
+  return result;
 }
 
-/**
- * Medspiller avslår team-invite. Setter status='rejected' på egen rad og
- * notify-er kapteinen via `team_member_withdrew`-kind.
- */
+/** A teammate says no, from the team page. */
 export async function declineTeamInvite(
   requestId: string,
   shortId: string,
 ): Promise<AcceptDeclineResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
-  const admin = getAdminClient();
-
-  const { data: req } = await admin
-    .from('game_registration_requests')
-    .select('id, game_id, user_id, status, team_request_id, team_name, is_team_captain')
-    .eq('id', requestId)
-    .maybeSingle<{
-      id: string;
-      game_id: string;
-      user_id: string;
-      status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-      team_request_id: string | null;
-      team_name: string | null;
-      is_team_captain: boolean;
-    }>();
-
-  // #2358: bare en invitasjon kan avslås. En avslått kapteinsrad ville latt
-  // lagkameratene stå under en avvist kaptein; kapteinen trekker seg med
-  // «Trekk meg», eller gir kapteinsbindet videre først.
-  if (
-    !req ||
-    req.user_id !== user.id ||
-    req.status === 'rejected' ||
-    req.is_team_captain
-  ) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const game = await getGameByShortId(shortId);
-  if (!game || game.id !== req.game_id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-
-  // Hvis brukeren allerede var i game_players (open-modus), fjern dem. #2223:
-  // the roster row goes first, so a failed delete leaves the request untouched
-  // and the player can try again. 0 rows is normal: in manual_approval mode
-  // there is no row yet.
-  const { error: playerDeleteError } = await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', user.id);
-  if (playerDeleteError) {
-    console.error('[declineTeamInvite] player delete failed', {
-      gameId: game.id,
-      userId: user.id,
-      error: playerDeleteError,
-    });
-    return { ok: false, error: 'db_error' };
-  }
-
-  // #712: expectAffected catches both DB errors and 0-row no-ops. 0 rows here
-  // means the request was already decided (race: captain removed the member
-  // at the same time) → return db_error rather than notifying the captain of
-  // a withdrawal that was never recorded. The roster row is already gone by
-  // then, which is harmless: it was on its way out either way.
-  try {
-    expectAffected(
-      await admin
-        .from('game_registration_requests')
-        .update({
-          status: 'rejected',
-          decided_at: new Date().toISOString(),
-          decided_by_user_id: user.id,
-        })
-        .eq('id', req.id)
-        .select('id'),
-      'declineTeamInvite',
-    );
-  } catch (updateErr) {
-    console.error('[declineTeamInvite] update failed', updateErr);
-    return { ok: false, error: 'db_error' };
-  }
-
-  // Notify kaptein. Best-effort. Kapteinens user_id finner vi via
-  // team_request_id-pekeren.
-  if (req.team_request_id) {
-    const { data: captainReq } = await admin
-      .from('game_registration_requests')
-      .select('user_id, team_name')
-      .eq('id', req.team_request_id)
-      .maybeSingle<{ user_id: string; team_name: string | null }>();
-    if (captainReq) {
-      const declinerName = await getCaptainDisplayName(user.id);
-      await notify({
-        userId: captainReq.user_id,
-        kind: 'team_member_withdrew',
-        payload: {
-          game_id: game.id,
-          game_short_id: game.short_id,
-          game_name: game.name,
-          withdrawn_player_name: declinerName,
-          team_name: captainReq.team_name ?? req.team_name,
-        },
-      }).catch((err) =>
-        console.error('[declineTeamInvite] notify failed', err),
-      );
-    }
-  }
-
-  expireGameCache(game.id);
-  return { ok: true };
+  const result = await declineTeamInviteCore(user.id, { shortId, requestId });
+  await redirectOnProfileIncomplete(result, teamPagePath(shortId));
+  return result;
 }
 
-/**
- * Kaptein fjerner en medspiller fra laget pre-start. Sletter child-
- * request-raden + tilhørende game_players-rad. Notify-er den fjernede
- * spilleren om at de er ute.
- *
- * Self-withdraw (medspiller fjerner seg selv) implementeres i chunk 11
- * — denne action-en er kaptein-only.
- */
+/** The captain removes a teammate before the start. */
 export async function removeTeamMember(
   childRequestId: string,
   shortId: string,
 ): Promise<AcceptDeclineResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
-  const admin = getAdminClient();
-
-  const { data: child } = await admin
-    .from('game_registration_requests')
-    .select('id, game_id, user_id, team_request_id, status')
-    .eq('id', childRequestId)
-    .maybeSingle<{
-      id: string;
-      game_id: string;
-      user_id: string;
-      team_request_id: string | null;
-      status: string;
-    }>();
-
-  if (!child || !child.team_request_id) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  // Verifiser at den autentiserte brukeren er kaptein for det laget. Etter en
-  // overføring av kapteinsbindet (#2358) peker `team_request_id` på den nye
-  // kapteinen, så den gamle styrer ikke laget lenger. En kaptein som har
-  // trukket seg, styrer det heller ikke.
-  const { data: captainReq } = await admin
-    .from('game_registration_requests')
-    .select('user_id, team_name, status')
-    .eq('id', child.team_request_id)
-    .maybeSingle<{ user_id: string; team_name: string | null; status: string }>();
-  if (
-    !captainReq ||
-    captainReq.user_id !== user.id ||
-    captainReq.status === 'withdrawn'
-  ) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const game = await getGameByShortId(shortId);
-  if (!game || game.id !== child.game_id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-
-  // Slett game_players-rad og child request-rad. #2223: the roster row goes
-  // first. A failed delete answers db_error with the request still in place,
-  // so the captain can try again; deleting a roster row is idempotent.
-  const { error: deletePlayerError } = await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', child.user_id);
-  if (deletePlayerError) {
-    console.error('[removeTeamMember] player delete failed', {
-      gameId: game.id,
-      userId: child.user_id,
-      error: deletePlayerError,
-    });
-    return { ok: false, error: 'db_error' };
-  }
-  const { error: deleteReqError } = await admin
-    .from('game_registration_requests')
-    .delete()
-    .eq('id', child.id);
-  if (deleteReqError) {
-    console.error('[removeTeamMember] request delete failed', deleteReqError);
-    return { ok: false, error: 'db_error' };
-  }
-
-  // Notify den fjernede spilleren — bruker registration_rejected-kind
-  // som dekker semantikken "du er ikke med lenger".
-  await notify({
-    userId: child.user_id,
-    kind: 'registration_rejected',
-    payload: {
-      game_id: game.id,
-      game_name: game.name,
-      // App-generated reason → localised at render time via catalog (#583).
-      reason_code: 'team_removed',
-    },
-  }).catch((err) =>
-    console.error('[removeTeamMember] notify failed', err),
-  );
-
-  expireGameCache(game.id);
-  return { ok: true };
+  return removeTeamMemberCore(user.id, { shortId, requestId: childRequestId });
 }
 
 /**
- * Chunk-9-flyten: en ukjent bruker klikket team-invitasjons-mail, fullførte
- * OTP-login og landet på `/signup/[shortId]/team`. De har en åpen
- * `invitations`-rad med `game_id` satt, men ingen `game_registration_requests`-
- * rad (kapteinen kunne ikke lage en uten user_id).
- *
- * Denne action-en finner kapteinen for spillet (det laget brukerens
- * e-post er knyttet til via mail-invitasjonen) og oppretter request-raden
- * retrospektivt. Kapteinen velges av `pickCaptainRequest`: er inviteren
- * (`invitations.invited_by`) kaptein i spillet, er det laget invitéen ble
- * invitert til. Er inviteren arrangøren — som ikke sier noe om lag — vet vi
- * ikke hvilket lag det er, og da kobler vi ingen på: `team_unknown` (#1343).
- *
- * Hvorfor ikke gjøre dette i verifyCode-hook-en? `invitations`-tabellen
- * har ikke `team_request_id`-felt — vi vet at e-posten ble invitert til
- * et spill, men ikke til hvilket lag. Å gjette i auth-hook-en gir feil
- * UX hvis det er ambiguity; bedre å la brukeren se UI-en og bekrefte.
+ * Someone invited by e-mail (before #2840) joins the captain's team. The
+ * caller's own client goes along for `befriend_inviter`.
  */
 export async function attachToCaptainTeam(
   invitationId: string,
   shortId: string,
 ): Promise<AttachTeamResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
-  const admin = getAdminClient();
-
-  const game = await getGameByShortId(shortId);
-  if (!game) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-  // #543: stengt påmelding gjelder også e-post-inviterte medspillere.
-  if (game.signups_closed_at != null) {
-    return { ok: false, error: 'signup_closed' };
-  }
-
-  // Verifiser at invitations-raden tilhører denne brukeren (matching email).
-  // #1437: utløp håndheves med samme figur som verifyCode-laget (#1348) — en
-  // utløpt invitasjon skal ikke kunne feste noen til laget, selv om den
-  // fortsatt ligger i tabellen. Filteret her dekker også vinduet mellom
-  // sidelast (der tilbudet var gyldig) og selve attach-klikket.
-  const { data: invitation } = await admin
-    .from('invitations')
-    .select('id, email, game_id, invited_by')
-    .eq('id', invitationId)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle<{
-      id: string;
-      email: string;
-      game_id: string | null;
-      invited_by: string;
-    }>();
-  if (!invitation || invitation.game_id !== game.id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // E-post-match (admin-client returnerer rad uten å sjekke RLS — vi
-  // verifiserer eierskap manuelt).
-  const { data: userRow } = await admin
-    .from('users')
-    .select('email')
-    .eq('id', user.id)
-    .maybeSingle<{ email: string }>();
-  if (
-    !userRow?.email ||
-    userRow.email.toLowerCase() !== invitation.email.toLowerCase()
-  ) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  // Alle aktive kaptein-requests for spillet, nyest først. Selve valget
-  // skjer i pickCaptainRequest: inviteren vinner hvis hen er kaptein,
-  // ellers har vi bare en gjetning (`source: 'fallback'`) — og da stopper
-  // vi under (#1343).
-  const { data: captains } = await admin
-    .from('game_registration_requests')
-    .select('id, user_id, team_name, status')
-    .eq('game_id', game.id)
-    .eq('is_team_captain', true)
-    .in('status', ['pending', 'approved'])
-    .order('created_at', { ascending: false })
-    .returns<
-      {
-        id: string;
-        user_id: string;
-        team_name: string | null;
-        status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-      }[]
-    >();
-  let picked = pickCaptainRequest(captains ?? [], invitation.invited_by);
-  // #2358: inviteren kan ha gitt kapteinsbindet videre siden. Da står hen
-  // fortsatt på laget, og egen påmelding peker på den nye kapteinen. Lagkartet
-  // leses bare når inviteren ikke selv er kaptein.
-  if (picked && picked.source !== 'invited_by') {
-    const inviterTeams = await loadInviterTeams(
-      admin,
-      game.id,
-      (captains ?? []).map((c) => c.id),
-    );
-    picked = pickCaptainRequest(captains ?? [], invitation.invited_by, inviterTeams);
-  }
-  if (!picked) {
-    return { ok: false, error: 'not_found' };
-  }
-  // Fallback = vi gjetter hvilket lag invitéen hører til. Feil lag er verre
-  // enn ingen kobling: spilleren står plutselig på fremmedes lag, og
-  // kapteinen må rydde. Vi stopper og ber dem hente en laginvitasjon eller
-  // registrere eget lag. Siden viser samme beskjed, men guarden står her
-  // også — en gammel fane kan poste action-en uansett hva siden viste (#1343).
-  if (picked.source !== 'invited_by') {
-    return { ok: false, error: 'team_unknown' };
-  }
-  const captain = picked.row;
-
-  // Match kapteinens status — open-modus betyr approved (vi er straks med),
-  // manual_approval betyr pending (vi venter på admin med resten av laget).
-  const childStatus = captain.status;
-  const decidedAt =
-    childStatus === 'approved' ? new Date().toISOString() : null;
-
-  const { data: inserted, error: insertError } = await admin
-    .from('game_registration_requests')
-    .insert({
-      game_id: game.id,
-      user_id: user.id,
-      status: childStatus,
-      team_name: captain.team_name,
-      is_team_captain: false,
-      team_request_id: captain.id,
-      decided_at: decidedAt,
-      decided_by_user_id:
-        childStatus === 'approved' ? captain.user_id : null,
-    })
-    .select('id')
-    .single<{ id: string }>();
-
-  if (insertError) {
-    if (isDuplicateError(insertError)) {
-      // Allerede attached i en parallel tab — behandle som suksess.
-      return { ok: true };
-    }
-    console.error('[attachToCaptainTeam] insert failed', insertError);
-    return { ok: false, error: 'db_error' };
-  }
-
-  // For open-modus: legg brukeren i game_players umiddelbart — på kapteinens
-  // lag. Har kapteinen intet lagnummer, skrives ingen rad: en lag-medspiller
-  // uten lag er det #2061/#2072 fjernet fra alle andre stier.
-  //
-  // #2223: a failed read or write here rolls the child request back and answers
-  // db_error before the invitation is consumed, so «Bli med på lag» is still
-  // there for the next try and the captain is not told about a teammate who
-  // never reached the roster.
-  if (childStatus === 'approved') {
-    const { data: captainPlayer, error: captainPlayerError } = await admin
-      .from('game_players')
-      .select('team_number, flight_number, withdrawn_at')
-      .eq('game_id', game.id)
-      .eq('user_id', captain.user_id)
-      .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
-    if (captainPlayerError) {
-      console.error('[attachToCaptainTeam] captain player lookup failed', {
-        gameId: game.id,
-        userId: user.id,
-        captainUserId: captain.user_id,
-        error: captainPlayerError,
-      });
-      await rollbackAttachRequest(admin, inserted.id);
-      return { ok: false, error: 'db_error' };
-    }
-    const teamNumber = captainPlayer?.team_number ?? null;
-
-    if (teamNumber === null) {
-      console.error('[attachToCaptainTeam] captain has no team number', {
-        gameId: game.id,
-        userId: user.id,
-        captainUserId: captain.user_id,
-      });
-    } else {
-      // #2209: the player's tee category from the profile, clamped to the tee.
-      const teeGenders = await joinTeeGenders(game.id, [user.id]);
-      const { error: playerError } = await admin.from('game_players').upsert(
-        {
-          game_id: game.id,
-          user_id: user.id,
-          team_number: teamNumber,
-          // #2290: the flight follows the team (the captain's in best ball).
-          flight_number: flightForTeam(
-            game.game_mode,
-            [{ ...captainPlayer!, user_id: captain.user_id }],
-            user.id,
-            teamNumber,
-          ),
-          course_handicap: null,
-          // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
-          accepted_at: acceptedAtForActor(user.id, user.id),
-          tee_gender: teeGenders[user.id],
-        },
-        { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-      );
-      if (playerError) {
-        console.error('[attachToCaptainTeam] player upsert failed', {
-          gameId: game.id,
-          userId: user.id,
-          error: playerError,
-        });
-        await rollbackAttachRequest(admin, inserted.id);
-        return { ok: false, error: 'db_error' };
-      }
-    }
-  }
-
-  // Marker invitations-raden som akseptert. The player is on the team by now,
-  // so a failed flip is only logged.
-  const { error: acceptError } = await admin
-    .from('invitations')
-    .update({ accepted_at: new Date().toISOString() })
-    .eq('id', invitation.id);
-  if (acceptError) {
-    console.error('[attachToCaptainTeam] invitation accept failed', {
-      invitationId: invitation.id,
-      error: acceptError,
-    });
-  }
-
-  // #481/#676: auto-vennskap med inviteren. For lag-scopede spill ('team'/'both')
-  // står invitasjonen pending ved innlogging, så befriend_inviter no-op-er i
-  // verifyCode (gaten krever akseptert invitasjon). Den fyres derfor her — etter
-  // at accepted_at er satt over — så vennegrafen fortsatt vokser når en e-post-
-  // invitert medspiller faktisk blir med på laget. RPC-en gateres på auth.uid()
-  // (invitéen), så vi bruker bruker-konteksten, ikke admin. Best-effort: stille.
-  if (invitation.invited_by !== user.id) {
-    const supabase = await getServerClient();
-    const { error: befriendError } = await supabase.rpc('befriend_inviter', {
-      p_inviter: invitation.invited_by,
-    });
-    if (befriendError) {
-      console.error(
-        '[attachToCaptainTeam] befriend_inviter failed',
-        befriendError,
-      );
-    }
-  }
-
-  // Notify kapteinen om at medspiller har akseptert.
-  await notify({
-    userId: captain.user_id,
-    kind: 'registration_approved',
-    payload: {
-      game_id: game.id,
-      game_name: game.name,
-    },
-  }).catch((err) =>
-    console.error('[attachToCaptainTeam] notify failed', err),
+  const result = await attachToCaptainTeamCore(
+    user.id,
+    { shortId, invitationId },
+    { userClient: await getServerClient() },
   );
-
-  expireGameCache(game.id);
-  return { ok: true };
+  await redirectOnProfileIncomplete(result, teamPagePath(shortId));
+  return result;
 }
 
-/**
- * Compensation for attachToCaptainTeam (#2223): drops the child request it just
- * inserted when the roster step failed, so a retry starts clean. Same shape as
- * the captain rollback in submitTeamRegistration; a failed rollback is logged
- * and never thrown out of the action.
- */
-async function rollbackAttachRequest(
-  admin: ReturnType<typeof getAdminClient>,
-  requestId: string,
-): Promise<void> {
-  try {
-    expectAffected(
-      await admin
-        .from('game_registration_requests')
-        .delete()
-        .eq('id', requestId)
-        .select('id'),
-      'attachToCaptainTeam',
-    );
-  } catch (rollbackErr) {
-    console.error('[attachToCaptainTeam] request rollback failed', rollbackErr);
-  }
-}
-
-/**
- * Re-send team_invite-notifikasjon til en pending medspiller. Brukes fra
- * captain-dashboardet når en medspiller ikke har akseptert ennå og
- * kapteinen ønsker å pirke på dem.
- */
+/** The captain sends the team invite again to a teammate who has not answered. */
 export async function resendTeamInvite(
   childRequestId: string,
   shortId: string,
 ): Promise<AcceptDeclineResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
-  const admin = getAdminClient();
-
-  const { data: child } = await admin
-    .from('game_registration_requests')
-    .select('id, game_id, user_id, team_request_id, team_name, status')
-    .eq('id', childRequestId)
-    .maybeSingle<{
-      id: string;
-      game_id: string;
-      user_id: string;
-      team_request_id: string | null;
-      team_name: string | null;
-      status: string;
-    }>();
-
-  if (!child || !child.team_request_id) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  // #2358: samme vakt som removeTeamMember — bare lagets nåværende kaptein,
-  // og ikke en kaptein som har trukket seg.
-  const { data: captainReq } = await admin
-    .from('game_registration_requests')
-    .select('user_id, team_name, status')
-    .eq('id', child.team_request_id)
-    .maybeSingle<{ user_id: string; team_name: string | null; status: string }>();
-  if (
-    !captainReq ||
-    captainReq.user_id !== user.id ||
-    captainReq.status === 'withdrawn'
-  ) {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const game = await getGameByShortId(shortId);
-  if (!game || game.id !== child.game_id) {
-    return { ok: false, error: 'not_found' };
-  }
-  // #2445: a draft answers like a game that does not exist — the mail below
-  // would carry its name.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const captainName = await getCaptainDisplayName(user.id);
-  await notifyInvitedToTeam({
-    recipientUserId: child.user_id,
-    gameId: game.id,
-    gameShortId: game.short_id,
-    gameName: game.name,
-    teamRequestId: child.team_request_id,
-    teamName: captainReq.team_name ?? child.team_name,
-    invitedByName: captainName,
-  });
-
-  return { ok: true };
+  return resendTeamInviteCore(user.id, { shortId, requestId: childRequestId });
 }
 
-/**
- * #2358: kapteinen gir kapteinsbindet til en lagkamerat.
- *
- * Eierens valg: en kaptein med lagkamerater som har takket ja kan ikke trekke
- * seg før start, men må gi bindet videre først. Selve flyttingen — hvem som får
- * gjøre det, hvem som kan ta imot, og hvilke rader som flyttes — bor i
- * `transfer_team_captaincy` (0194), i én transaksjon. Actionen er porten: den
- * sender den EKTE kalleren som aktør, fordi funksjonen kjører som
- * tjenesterollen og ikke kan lese `auth.uid()`.
- */
-export type TransferCaptaincyResult =
-  | { ok: true }
-  | {
-      ok: false;
-      error:
-        | 'not_authed'
-        | 'not_found'
-        | 'game_locked'
-        | 'not_approved'
-        /** #2607: a guest has no login and cannot be captain (0228). */
-        | 'captain_is_guest'
-        | 'db_error';
-    };
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
+/** #2358: the captain hands the captaincy to a teammate. */
 export async function transferCaptaincy(
   requestId: string,
   shortId: string,
 ): Promise<TransferCaptaincyResult> {
-  if (!/^[0-9a-z]{8}$/.test(shortId) || !UUID_PATTERN.test(requestId)) {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
   const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
+  return transferCaptaincyCore(user.id, { shortId, requestId });
+}
 
-  const game = await getGameByShortId(shortId);
-  if (!game) {
+/**
+ * #2840: the captain fills a free seat with a friend, or swaps a teammate who
+ * said no (`replaceRequestId`). No web UI calls it yet.
+ */
+export async function addTeamMember(
+  shortId: string,
+  friendId: string,
+  replaceRequestId?: string,
+): Promise<AddTeamMemberResult> {
+  if (!SHORT_ID.test(shortId)) {
     return { ok: false, error: 'not_found' };
   }
-  // #2445: a draft answers like a game that does not exist.
-  if (game.status === 'draft') {
-    return { ok: false, error: 'not_found' };
-  }
-
-  const { data, error } = await getAdminClient().rpc('transfer_team_captaincy', {
-    p_game_id: game.id,
-    p_actor_user_id: user.id,
-    p_new_captain_request_id: requestId,
-  });
-  if (error) {
-    console.error('[transferCaptaincy] rpc failed', { gameId: game.id, error });
-    return { ok: false, error: 'db_error' };
-  }
-
-  const outcome = (data as { outcome?: string } | null)?.outcome;
-  switch (outcome) {
-    case 'ok':
-      expireGameCache(game.id);
-      return { ok: true };
-    case 'game_locked':
-      return { ok: false, error: 'game_locked' };
-    case 'not_approved':
-      return { ok: false, error: 'not_approved' };
-    case 'new_captain_is_guest':
-      return { ok: false, error: 'captain_is_guest' };
-    // Ikke kalleren sitt lag å styre, eller ikke noe lag: samme svar som de
-    // andre lag-actionene gir en fremmed.
-    case 'not_allowed':
-    case 'not_a_teammate':
-    case 'game_not_found':
-      return { ok: false, error: 'not_found' };
-    default:
-      console.error('[transferCaptaincy] unexpected outcome', { gameId: game.id, data });
-      return { ok: false, error: 'db_error' };
-  }
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
+  return addTeamMemberCore(user.id, { shortId, friendId, replaceRequestId });
 }

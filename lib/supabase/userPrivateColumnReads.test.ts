@@ -130,13 +130,12 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending: navne-fallback i varsler',
   },
-  'app/[locale]/signup/[shortId]/team/page.tsx': {
-    receivers: ['admin', 'admin'],
-    reason: '(a) egen rad; (D6) maskeres på serveren som navne-fallback',
-  },
-  'app/[locale]/signup/[shortId]/teamActions.ts': {
-    receivers: ['admin'],
-    reason: '(a) egen rad, sammenlignes med invitasjonens adresse',
+  // #2840: flyttet fra `app/[locale]/signup/[shortId]/team/page.tsx` og
+  // `teamActions.ts`, delt med appens rute.
+  'lib/games/teamDashboardCore.ts': {
+    receivers: ['admin', 'admin', 'admin'],
+    reason:
+      '(a) egen rad, sammenlignes med invitasjonens adresse og til invitasjons-oppslaget; (D6) maskeres på serveren som navne-fallback',
   },
   'app/api/profile/route.ts': {
     receivers: ['getAdminClient()'],

@@ -2,45 +2,34 @@
 
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { GetTheApp } from '@/components/app/GetTheApp';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
 import { TEAM_NAME_MAX } from '@/lib/games/registration';
-import {
-  validateTeamName,
-  validateSlotEmail,
-  findSlotConflicts,
-  type TeamNameValidationError,
-  type SlotEmailValidationError,
-  type SlotConflictError,
-} from './teamFormValidation';
+import { validateTeamName, type TeamNameValidationError } from './teamFormValidation';
 import {
   submitTeamRegistration,
   type TeamRegistrationResult,
   type TeamRegistrationError,
-  type TeamSlotInput,
 } from './teamActions';
 import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 
 const MAX_SUGGESTIONS = 6;
 
 type SlotState = {
-  /** Toggle som styrer om feltet er en kjent bruker eller fri-tekst-e-post. */
-  mode: 'lookup' | 'email';
+  /** What the captain types to find a friend. */
+  query: string;
   /**
-   * Fri-tekst-e-posten, eller `lookup:<id>` for en valgt kandidat, så
-   * duplikat-sjekken sammenligner valgte plasser på id (#2207).
-   */
-  value: string;
-  /**
-   * Satt når kapteinen har valgt en co-player fra autocomplete-lista. Bærer
-   * bare id og maskert adresse (#2207): den fulle adressen når aldri
-   * nettleseren, og serveren slår den opp fra id-en.
+   * The friend picked for this seat. Carries the id and the masked address
+   * only (#2207); the server gets the id.
    */
   selected: { id: string; name: string; maskedEmail: string } | null;
 };
+
+/** #2840: a seat left without a friend. */
+type SlotEmptyError = { code: 'slotFriendEmpty' };
 
 function candidateLabel(c: TeamCandidate): string {
   const base = c.name?.trim() || c.maskedEmail;
@@ -56,24 +45,24 @@ function useErrorTranslator() {
       if (err.code === 'teamNameTooShort') return t('errors.teamNameTooShort', { min: err.min });
       return t('errors.teamNameTooLong', { max: err.max });
     },
-    slotError: (err: SlotEmailValidationError | SlotConflictError): string => {
-      return t(`errors.${err.code}` as Parameters<typeof t>[0]);
-    },
+    slotError: (err: SlotEmptyError): string => t(`errors.${err.code}`),
   };
 }
 
+/**
+ * The captain's team form (#362). #2840: every teammate is one of the captain's
+ * friends — each seat is a search in `candidates` (the friends, from
+ * `getTeamFriendCandidates`), and the server checks the friendship again.
+ */
 export function TeamRegistrationForm({
   shortId,
   teamSize,
-  captainEmail = null,
   candidates = [],
 }: {
   shortId: string;
-  /** Antall spillere per lag (kaptein + medspillere). Slots-rader = teamSize − 1. */
+  /** Players per team (captain + teammates). Seats = teamSize − 1. */
   teamSize: number;
-  /** Kapteinens egen e-post — brukt til inline «du er allerede med»-sjekk. */
-  captainEmail?: string | null;
-  /** Co-players kapteinen kan velge i autocomplete (#362). Tom = ingen treff. */
+  /** The captain's friends. Empty = the no-friends note instead of the seats. */
   candidates?: TeamCandidate[];
 }) {
   const t = useTranslations('signup');
@@ -83,15 +72,11 @@ export function TeamRegistrationForm({
   const [teamName, setTeamName] = useState('');
   const [teamNameError, setTeamNameError] = useState<TeamNameValidationError | null>(null);
   const [slots, setSlots] = useState<SlotState[]>(() =>
-    Array.from({ length: Math.max(teamSize - 1, 0) }, () => ({
-      mode: 'lookup' as const,
-      value: '',
-      selected: null,
-    })),
+    Array.from({ length: Math.max(teamSize - 1, 0) }, () => ({ query: '', selected: null })),
   );
-  /** Format-feil per slot, satt on-blur og ved submit-forsøk. */
-  const [slotErrors, setSlotErrors] = useState<Record<number, SlotEmailValidationError>>({});
-  /** Hvilken slot har åpen autocomplete-liste (null = ingen). */
+  /** Seats without a friend, set on a submit attempt. */
+  const [slotErrors, setSlotErrors] = useState<Record<number, SlotEmptyError>>({});
+  /** Which seat has its suggestion list open (null = none). */
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [result, setResult] = useState<TeamRegistrationResult | null>(null);
   const [website, setWebsite] = useState('');
@@ -116,25 +101,36 @@ export function TeamRegistrationForm({
 
   const slotCount = teamSize - 1;
 
-  // Cross-felt-konflikter (duplikat / kaptein-egen-e-post) regnes live fra
-  // alle slot-verdier, så de oppdateres mens kapteinen skriver.
-  const conflicts = useMemo(
-    () => findSlotConflicts(slots.map((s) => s.value), captainEmail),
-    [slots, captainEmail],
+  const labelById = useMemo(
+    () => new Map(candidates.map((c) => [c.id, candidateLabel(c)])),
+    [candidates],
   );
-
-  const errorFor = (idx: number): SlotEmailValidationError | SlotConflictError | null =>
-    slotErrors[idx] ?? conflicts[idx] ?? null;
 
   const updateSlot = (idx: number, patch: Partial<SlotState>) => {
     setSlots((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
-  const suggestionsFor = (slot: SlotState): TeamCandidate[] => {
-    const q = slot.value.trim().toLowerCase();
+  const clearSlotError = (idx: number) => {
+    setSlotErrors((prev) => {
+      if (!(idx in prev)) return prev;
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
+  };
+
+  // A friend picked for one seat is not offered for another, so the same
+  // friend can never fill two seats.
+  const suggestionsFor = (idx: number): TeamCandidate[] => {
+    const slot = slots[idx];
+    const q = slot.query.trim().toLowerCase();
     if (q.length === 0 || slot.selected) return [];
+    const taken = new Set(
+      slots.flatMap((s, i) => (i !== idx && s.selected ? [s.selected.id] : [])),
+    );
     return candidates
       .filter((c) => {
+        if (taken.has(c.id)) return false;
         const hay = `${c.name ?? ''} ${c.nickname ?? ''} ${c.maskedEmail}`.toLowerCase();
         return hay.includes(q);
       })
@@ -144,64 +140,56 @@ export function TeamRegistrationForm({
   const handleSubmit = () => {
     setResult(null);
 
-    // Full validering klientside — blokkerer submit ved feil og hopper til
-    // første ugyldige felt, i stedet for å sende serveren en input vi vet
-    // er ugyldig (som ville gitt en misvisende feilmelding).
+    // Validate on the client first and jump to the first bad field, instead of
+    // sending input we know the server rejects.
     const nameErr = validateTeamName(teamName);
-    const formatErrs: Record<number, SlotEmailValidationError> = {};
+    const emptyErrs: Record<number, SlotEmptyError> = {};
     slots.forEach((s, i) => {
-      if (s.selected) return; // valgt co-player er gyldig per definisjon
-      const err = validateSlotEmail(s.value);
-      if (err) formatErrs[i] = err;
+      if (!s.selected) emptyErrs[i] = { code: 'slotFriendEmpty' };
     });
-    const liveConflicts = findSlotConflicts(
-      slots.map((s) => s.value),
-      captainEmail,
-    );
 
     setTeamNameError(nameErr);
-    setSlotErrors(formatErrs);
+    setSlotErrors(emptyErrs);
 
     if (nameErr) {
       teamNameRef.current?.focus();
       return;
     }
-    const firstBadSlot = slots.findIndex(
-      (_, i) => formatErrs[i] || liveConflicts[i],
-    );
+    const firstBadSlot = slots.findIndex((_, i) => emptyErrs[i]);
     if (firstBadSlot !== -1) {
       slotRefs.current[firstBadSlot]?.focus();
       return;
     }
 
-    // #2207: a picked candidate goes as its id; a typed address as text.
-    const payloadSlots: TeamSlotInput[] = slots.map((s) =>
-      s.mode === 'lookup' && s.selected
-        ? { mode: 'lookup', userId: s.selected.id }
-        : { mode: s.mode, value: s.value.trim().toLowerCase() },
-    );
+    const memberIds = slots.flatMap((s) => (s.selected ? [s.selected.id] : []));
     startTransition(async () => {
       const res = await submitTeamRegistration({
         shortId,
         teamName: teamName.trim(),
-        slots: payloadSlots,
+        memberIds,
         website,
       });
       setResult(res);
     });
   };
 
-  // Suksess-state. Vi rendrer en oppsummering inline (i stedet for å
-  // redirecte) så kaptein ser hvilke medspillere som ble lagt til OK
-  // og hvilke som feilet — det er nyttig data for å re-prøve enkelt-
-  // slots eller for å plukke opp ukjente e-poster manuelt.
+  // #2840: only friends can be on the team, so without friends there is no
+  // team to fill.
+  if (candidates.length === 0) {
+    return (
+      <div className="space-y-3" data-testid="team-no-friends">
+        <Banner tone="info">{t('teamNoFriends')}</Banner>
+        <LinkButton href="/profile/venner" full variant="secondary">
+          {t('teamNoFriendsLink')}
+        </LinkButton>
+      </div>
+    );
+  }
+
+  // Success: an inline receipt (instead of a redirect) so the captain sees
+  // which teammates went in and which did not.
   if (result?.ok) {
-    const knownAdded = result.slotResults.filter(
-      (r) => r.ok && r.outcome === 'known_added',
-    );
-    const invited = result.slotResults.filter(
-      (r) => r.ok && r.outcome === 'unknown_invited',
-    );
+    const knownAdded = result.slotResults.filter((r) => r.ok);
     const failed = result.slotResults.filter((r) => !r.ok);
     return (
       <div ref={receiptRef} tabIndex={-1} className="space-y-4">
@@ -213,18 +201,13 @@ export function TeamRegistrationForm({
             {t('teamSuccessKnown', { count: knownAdded.length })}
           </p>
         )}
-        {invited.length > 0 && (
-          <p className="font-sans text-sm text-text">
-            {t('teamSuccessInvited', { count: invited.length })}
-          </p>
-        )}
         {failed.length > 0 && (
           <Banner tone="warning">
             {t('teamSuccessFailedBanner')}
             <ul className="mt-1 list-inside list-disc">
               {failed.map((f, i) => (
-                <li key={`${i}-${f.email}`}>
-                  {f.email} —{' '}
+                <li key={`${i}-${f.userId}`}>
+                  {labelById.get(f.userId) ?? t('teamDashMemberLabel')} —{' '}
                   {!f.ok
                     ? t(`slotFailReason.${f.reason}` as Parameters<typeof t>[0])
                     : ''}
@@ -314,60 +297,17 @@ export function TeamRegistrationForm({
           {t('slotsHeading', { count: slotCount })}
         </p>
         {slots.map((slot, idx) => {
-          const slotError = errorFor(idx);
-          const suggestions = suggestionsFor(slot);
-          const showList =
-            slot.mode === 'lookup' && openSlot === idx && suggestions.length > 0;
+          const slotError = slotErrors[idx] ?? null;
+          const suggestions = suggestionsFor(idx);
+          const showList = openSlot === idx && suggestions.length > 0;
           return (
             <div
               key={idx}
               className="space-y-2 rounded-xl border border-border bg-surface/40 p-3"
             >
-              {/* Each mode label draws 16px and hits 44px (#2240): up into the
-                  card padding, down only through the 8px gap above the field,
-                  sideways to the middle of the 12px gap between the two. */}
-              <div className="flex items-center gap-3">
-                <label className="tap-extend flex items-center gap-1.5 font-sans text-xs text-text [--tap-extend:-20px_-6px_-8px]">
-                  <input
-                    type="radio"
-                    name={`slot-${idx}-mode`}
-                    checked={slot.mode === 'lookup'}
-                    onChange={() =>
-                      // A picked candidate's value is `lookup:<id>` — never
-                      // leave it behind as text in the field (#2207).
-                      updateSlot(idx, {
-                        mode: 'lookup',
-                        selected: null,
-                        ...(slot.selected ? { value: '' } : {}),
-                      })
-                    }
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {t('slotModeExisting')}
-                </label>
-                <label className="tap-extend flex items-center gap-1.5 font-sans text-xs text-text [--tap-extend:-20px_-6px_-8px]">
-                  <input
-                    type="radio"
-                    name={`slot-${idx}-mode`}
-                    checked={slot.mode === 'email'}
-                    onChange={() =>
-                      // A picked candidate's value is `lookup:<id>` — never
-                      // leave it behind as text in the field (#2207).
-                      updateSlot(idx, {
-                        mode: 'email',
-                        selected: null,
-                        ...(slot.selected ? { value: '' } : {}),
-                      })
-                    }
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {t('slotModeEmail')}
-                </label>
-              </div>
-
-              {slot.mode === 'lookup' && slot.selected ? (
-                // Valgt co-player vises som chip med maskert e-post — vi
-                // dumper ikke rå-adressen i et synlig felt.
+              {slot.selected ? (
+                // The picked friend as a chip with the masked address — the raw
+                // address is never in a visible field.
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-primary bg-primary-soft px-3.5 py-3">
                   <span className="min-w-0 font-sans text-sm text-text">
                     <span className="font-medium">{slot.selected.name}</span>{' '}
@@ -377,9 +317,7 @@ export function TeamRegistrationForm({
                   </span>
                   <button
                     type="button"
-                    onClick={() =>
-                      updateSlot(idx, { selected: null, value: '' })
-                    }
+                    onClick={() => updateSlot(idx, { selected: null, query: '' })}
                     aria-label={t('slotRemoveAriaLabel', { name: slot.selected.name })}
                     className="tap-extend shrink-0 text-base leading-none text-muted hover:text-text [--tap-extend:-14px_-18px]"
                   >
@@ -392,35 +330,15 @@ export function TeamRegistrationForm({
                     ref={(el) => {
                       slotRefs.current[idx] = el;
                     }}
-                    type={slot.mode === 'email' ? 'email' : 'text'}
-                    value={slot.value}
+                    type="text"
+                    value={slot.query}
                     onChange={(e) => {
-                      updateSlot(idx, { value: e.target.value, selected: null });
-                      if (slotErrors[idx]) {
-                        setSlotErrors((prev) => {
-                          const next = { ...prev };
-                          delete next[idx];
-                          return next;
-                        });
-                      }
+                      updateSlot(idx, { query: e.target.value });
+                      clearSlotError(idx);
                     }}
                     onFocus={() => setOpenSlot(idx)}
-                    onBlur={() => {
-                      setOpenSlot((cur) => (cur === idx ? null : cur));
-                      const err = validateSlotEmail(slot.value);
-                      setSlotErrors((prev) => {
-                        const next = { ...prev };
-                        if (err) next[idx] = err;
-                        else delete next[idx];
-                        return next;
-                      });
-                    }}
-                    placeholder={
-                      slot.mode === 'lookup'
-                        ? t('slotLookupPlaceholder')
-                        : t('slotEmailPlaceholder')
-                    }
-                    required
+                    onBlur={() => setOpenSlot((cur) => (cur === idx ? null : cur))}
+                    placeholder={t('slotLookupPlaceholder')}
                     autoComplete="off"
                     aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
@@ -443,12 +361,12 @@ export function TeamRegistrationForm({
                         <li key={c.id}>
                           <button
                             type="button"
-                            // onMouseDown (ikke onClick) så valget skjer FØR
-                            // input-blur lukker lista.
+                            // onMouseDown (not onClick) so the pick happens
+                            // BEFORE the input's blur closes the list.
                             onMouseDown={(e) => {
                               e.preventDefault();
                               updateSlot(idx, {
-                                value: `lookup:${c.id}`,
+                                query: '',
                                 selected: {
                                   id: c.id,
                                   name: candidateLabel(c),
@@ -456,11 +374,7 @@ export function TeamRegistrationForm({
                                 },
                               });
                               setOpenSlot(null);
-                              setSlotErrors((prev) => {
-                                const next = { ...prev };
-                                delete next[idx];
-                                return next;
-                              });
+                              clearSlotError(idx);
                             }}
                             className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-primary-soft"
                           >
