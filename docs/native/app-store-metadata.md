@@ -88,6 +88,13 @@ Dette hakes **ikke** av, og her er grunnen:
 - **Kalenderen.** «Legg til i kalender» åpner iOS sitt eget ark for ny hendelse
   (`native/app/src/lib/addToCalendar.ts`). Hendelsen blir på telefonen, og vi får
   ingenting tilbake, så den er ikke samlet inn.
+- **Biometri (Face ID og Touch ID).** Låsen på appen (#2841, `AppLockGate.tsx`) spør
+  telefonen om ansiktet eller fingeren passer, og får bare et ja eller nei tilbake.
+  Appen ser aldri ansiktet eller fingeren, og valget om å låse ligger på telefonen, ikke
+  på serveren. Apple: «Data that is processed only on device is not 'collected'», så
+  ingen rad i Sensitive Info eller Identifiers. Det som kreves, er teksten
+  `NSFaceIDUsageDescription` i Info.plist (`app.json`); uten den krasjer appen første
+  gang den spør, og `privacy-proof.sh` stopper et bygg uten den.
 - **Delingen.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis til
   iOS sitt delingsark (`native/app/src/lib/shareImage.ts`), og «følg live»-lenka
   (når arrangøren har slått på live-følging) deles på samme måte (`shareLive.ts`). Spilleren velger selv hvor det

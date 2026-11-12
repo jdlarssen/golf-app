@@ -7,7 +7,8 @@
 # `privacy_rules <Info.plist> <PrivacyInfo.xcprivacy> <yes|no> <antall>`: tredje
 # argument sier om binærene importerer disk-API-er, fjerde hvor mange binærer
 # som ble skannet. Kalleren leser symbolene med `nm -u` og teller treffene med
-# `disk_api_hits`. `locale_rules <Info.plist>` sjekker språket appen oppgir.
+# `disk_api_hits`. `locale_rules <Info.plist>` sjekker språket appen oppgir, og
+# `faceid_rules <Info.plist>` at teksten for Face ID står der (#2841).
 #
 # Reglene:
 #  - `NSPhotoLibraryAddUsageDescription` MÅ stå i Info.plist, med tekst.
@@ -26,6 +27,12 @@
 #    (1.1.0 (3) ble godkjent, 1.2.0 (5) ble lastet opp), så regelen er
 #    forebygging, ikke gjentakelse av et avslag. Importerer de ikke API-ene, er
 #    DiskSpace ikke påkrevd.
+#  - `NSFaceIDUsageDescription` MÅ stå i Info.plist, med tekst (#2841). Appen låses
+#    opp med Face ID (`expo-local-authentication`), og Apple krever teksten:
+#    uten den krasjer appen første gang den spør, på en iPhone med Face ID. Et
+#    butikkbygg uten teksten kunne ellers sluppet gjennom. Android trenger ingen
+#    regel her: `USE_BIOMETRIC` legges til av pluginen og er ingen
+#    brukertillatelse.
 #  - Appen oppgir norsk (`nb`) som utviklingsregion og lokalisering. Uten det
 #    står Info.plist på `en`, og UIKit viser engelske systemtekster (Copy, Save
 #    Image, Print, Lim inn) ved siden av appens norske tekster.
@@ -44,7 +51,7 @@ disk_api_hits() {
 }
 
 # Skriver `<verdi>` på én linje, eller exit 1 med grunnen på stderr.
-# argv: fil, modus (`photo` | `disk` | `locale`). Ingen enkle anførselstegn i koden.
+# argv: fil, modus (`photo` | `face` | `disk` | `locale`). Ingen enkle anførselstegn i koden.
 PRIVACY_PY='
 import plistlib, sys
 try:
@@ -56,8 +63,9 @@ except Exception as e:
 if not isinstance(data, dict):
     sys.stderr.write("roten er ikke en dict\n")
     sys.exit(1)
-if sys.argv[2] == "photo":
-    text = data.get("NSPhotoLibraryAddUsageDescription")
+if sys.argv[2] in ("photo", "face"):
+    key = "NSPhotoLibraryAddUsageDescription" if sys.argv[2] == "photo" else "NSFaceIDUsageDescription"
+    text = data.get(key)
     print("ok" if isinstance(text, str) and text.strip() else "missing")
 elif sys.argv[2] == "locale":
     region = data.get("CFBundleDevelopmentRegion")
@@ -124,5 +132,19 @@ locale_rules() {
     pass "CFBundleDevelopmentRegion = nb og CFBundleLocalizations har nb"
   else
     fail "språket er ikke norsk (${locale#wrong }). Uten nb står systemtekstene i delearket og tekstfeltene på engelsk (#2561)"
+  fi
+}
+
+# Teksten iOS viser når appen spør om Face ID (#2841). Uten `NSFaceIDUsageDescription`
+# krasjer appen første gang `authenticateAsync` kjører på en iPhone med Face ID.
+faceid_rules() {
+  local info=$1 face why
+  if ! face=$("$PRIVACY_PYTHON3" -c "$PRIVACY_PY" "$info" face 2>&1); then
+    why=$(printf '%s' "$face" | tail -1)
+    fail "kunne ikke lese Info.plist (${info}): ${why}"
+  elif [ "$face" = ok ]; then
+    pass "NSFaceIDUsageDescription står i Info.plist"
+  else
+    fail "NSFaceIDUsageDescription mangler i Info.plist. Appen krasjer første gang den spør om Face ID (#2841)"
   fi
 }

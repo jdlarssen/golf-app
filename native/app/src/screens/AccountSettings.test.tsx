@@ -23,11 +23,19 @@
 // i samtidig med utgangspunktet. Samme unntak som `Profile.test.tsx` hadde for
 // de samme testene før flyttingen (Profil v2).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, Alert, type AlertButton } from 'react-native';
+import {
+  authenticateAsync,
+  hasHardwareAsync,
+  isEnrolledAsync,
+  supportedAuthenticationTypesAsync,
+} from 'expo-local-authentication';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
+import { APP_LOCK_STORAGE_KEY, getAppLock, loadAppLock, setAppLock } from '../lib/appLock';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
@@ -53,6 +61,11 @@ jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiCons
 jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
+// #2841: låsen på appen. Telefonen har Face ID og svarer ja som standard.
+jest.mock('expo-local-authentication', () => require('../test/localAuthMock').localAuthMock());
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest'),
+);
 
 const openWebMock = openWeb as jest.Mock;
 const logOutMock = logOut as jest.Mock;
@@ -68,8 +81,11 @@ async function renderScreen() {
 }
 
 describe('AccountSettings', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await AsyncStorage.clear();
+    setAppLock(false);
+    await loadAppLock();
     openWebMock.mockResolvedValue({ ok: true });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
@@ -118,6 +134,90 @@ describe('AccountSettings', () => {
     expect(screen.getByTestId('account-ai-consent-switch')).not.toBeChecked();
     expect(screen.getByTestId('account-ai-consent-error')).toBeTruthy();
     expect(announce).toHaveBeenCalledWith(AI_CONSENT_TEXT.toggleFailed);
+  });
+
+  describe('#2841: lås med Face ID', () => {
+    it('står øverst i «Du bestemmer», og navnet følger telefonen', async () => {
+      await renderScreen();
+      expect(await screen.findByText('Lås med Face ID')).toBeTruthy();
+      expect(screen.getByText('Appen spør når den åpnes')).toBeTruthy();
+      expect(screen.getByTestId('account-app-lock-switch')).not.toBeChecked();
+      const list = screen.getByTestId('account-you-decide');
+      expect(list.children[0]).toBe(screen.getByTestId('account-app-lock'));
+    });
+
+    it('finnes ikke uten maskinvare', async () => {
+      (hasHardwareAsync as jest.Mock).mockResolvedValueOnce(false);
+      await renderScreen();
+      await screen.findByTestId('account-ai-consent-switch');
+      expect(screen.queryByTestId('account-app-lock')).toBeNull();
+    });
+
+    it('slår seg på først når telefonen har sagt ja, og lagrer da nøkkelen', async () => {
+      await renderScreen();
+      await act(async () => {
+        fireEvent.press(await screen.findByTestId('account-app-lock-switch'));
+      });
+      expect(authenticateAsync).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('account-app-lock-switch')).toBeChecked();
+      expect(getAppLock()).toBe(true);
+      expect(await AsyncStorage.getItem(APP_LOCK_STORAGE_KEY)).toBe('1');
+    });
+
+    it.each(['user_cancel', 'authentication_failed', 'lockout'] as const)(
+      'står av og lagrer ingenting når spørsmålet feiler eller avbrytes (%s)',
+      async (error) => {
+        (authenticateAsync as jest.Mock).mockResolvedValueOnce({ success: false, error });
+        await renderScreen();
+        await act(async () => {
+          fireEvent.press(await screen.findByTestId('account-app-lock-switch'));
+        });
+        expect(screen.getByTestId('account-app-lock-switch')).not.toBeChecked();
+        expect(getAppLock()).toBe(false);
+        expect(await AsyncStorage.getItem(APP_LOCK_STORAGE_KEY)).toBeNull();
+      },
+    );
+
+    it('slås av uten nytt spørsmål', async () => {
+      setAppLock(true);
+      await renderScreen();
+      await act(async () => {
+        fireEvent.press(await screen.findByTestId('account-app-lock-switch'));
+      });
+      expect(authenticateAsync).not.toHaveBeenCalled();
+      expect(screen.getByTestId('account-app-lock-switch')).not.toBeChecked();
+      expect(await AsyncStorage.getItem(APP_LOCK_STORAGE_KEY)).toBeNull();
+    });
+
+    it('er dempet med en forklaring når ingenting er registrert', async () => {
+      (isEnrolledAsync as jest.Mock).mockResolvedValueOnce(false);
+      await renderScreen();
+      expect(await screen.findByText('Slå på Face ID i innstillingene til telefonen først')).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('account-app-lock-switch'));
+      });
+      expect(authenticateAsync).not.toHaveBeenCalled();
+      expect(screen.getByTestId('account-app-lock-switch')).not.toBeChecked();
+    });
+
+    it('kan slås av når den er på og ingenting er registrert lenger, og sier at den ikke virker', async () => {
+      setAppLock(true);
+      (isEnrolledAsync as jest.Mock).mockResolvedValueOnce(false);
+      await renderScreen();
+      expect(
+        await screen.findByText('Virker ikke før du har registrert Face ID i innstillingene til telefonen'),
+      ).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('account-app-lock-switch'));
+      });
+      expect(getAppLock()).toBe(false);
+    });
+
+    it('bruker «Lås med Touch ID» på en iPhone med finger', async () => {
+      (supportedAuthenticationTypesAsync as jest.Mock).mockResolvedValueOnce([1]);
+      await renderScreen();
+      expect(await screen.findByText('Lås med Touch ID')).toBeTruthy();
+    });
   });
 
   it('shows the e-mail, opens the privacy policy, and leads to the delete confirmation', async () => {

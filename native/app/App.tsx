@@ -21,10 +21,15 @@
 // sesjon. Porten (`OwnerGate`) monteres på nytt per bruker via `key`, så
 // «ikke sjekket» er startverdien hver gang — ingen effekt trenger å nullstille.
 //
+// #2841: låsen med Face ID. Valget bor på telefonen som sollys og tema, og leses
+// sammen med dem før splashen slippes. Er det på og en sesjon finnes ved
+// kaldstart, står `AppLockGate` foran alt som henter data til telefonen har sagt
+// ja. Den spør bare ved kaldstart; en ny innlogging i en kjørende app låses ikke.
+//
 // #2627, #2748: venne-lenka, QR-koden på bag-taggen og ligalenka åpner appen.
 // Lyttingen starter her, før innloggingen, så en lenke som kommer mens Login
 // vises, venter til navigatoren er montert og åpner skjermen (`data/pendingAppLink.ts`).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -40,6 +45,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import type { Session } from '@supabase/supabase-js';
 import { AiConsentGate } from './src/components/AiConsentGate';
+import { AppLockGate } from './src/components/AppLockGate';
 import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
 import { listenForAppLinks } from './src/data/pendingAppLink';
@@ -51,6 +57,7 @@ import { Login } from './src/screens/Login';
 import { applyStoredThemePreference } from './src/lib/themePreference';
 import { useUpdateGuard } from './src/lib/useUpdateGuard';
 import { SessionProvider } from './src/session';
+import { getAppLock, loadAppLock } from './src/lib/appLock';
 import { loadSunlight } from './src/lib/sunlight';
 import { supabase } from './src/supabase';
 import { useTheme } from './src/theme';
@@ -59,7 +66,7 @@ SplashScreen.preventAutoHideAsync();
 
 /**
  * Så lenge splashen venter på valgene som bor på telefonen (sollys #2252,
- * tema #2256) før den slippes uansett.
+ * tema #2256, lås #2841) før den slippes uansett.
  */
 const DEVICE_CHOICES_TIMEOUT_MS = 1000;
 
@@ -97,12 +104,12 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Ingen av de to kaster: en lesefeil gir sollys av og «Følg telefonen».
+  // Ingen av de tre kaster: en lesefeil gir sollys av, «Følg telefonen» og låsen av.
   // Svarer ikke lagrene innen et sekund, slippes splashen likevel (aldri heng
   // på splash); valgene kommer da på plass når lesingen blir ferdig.
   useEffect(() => {
     const timer = setTimeout(() => setDeviceChoicesLoaded(true), DEVICE_CHOICES_TIMEOUT_MS);
-    void Promise.allSettled([loadSunlight(), applyStoredThemePreference()]).finally(() => {
+    void Promise.allSettled([loadSunlight(), applyStoredThemePreference(), loadAppLock()]).finally(() => {
       clearTimeout(timer);
       setDeviceChoicesLoaded(true);
     });
@@ -130,6 +137,19 @@ export default function App() {
     );
   }
 
+  return <ReadyApp session={session} />;
+}
+
+/**
+ * Alt etter at splashen er klar. Egen komponent så `startLocked` leses én gang,
+ * i det appen er klar: låsen gjelder en sesjon som finnes ved kaldstart, ikke en
+ * innlogging i en kjørende app. Den nullstilles når telefonen har sagt ja, så en
+ * ny innlogging etter utlogging aldri låses.
+ */
+function ReadyApp({ session }: { session: Session | null }) {
+  const [startLocked, setStartLocked] = useState(() => session != null && getAppLock());
+  const onUnlocked = useCallback(() => setStartLocked(false), []);
+
   // #2216: innfellingen har ett hjem for hele appen. Login og «Fullfør
   // profilen» står utenfor navigatoren og trenger den også; navigatoren bruker
   // denne i stedet for sin egen. `initialWindowMetrics` gjør at første bilde
@@ -148,24 +168,26 @@ export default function App() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       {/* #1954 Del B: edge to edge, Android no longer shrinks the window for the keyboard. */}
       <KeyboardInset>
-        <OwnerGate key={session.user.id} userId={session.user.id}>
-          <SessionProvider
-            value={{ userId: session.user.id, email: session.user.email ?? null }}
-          >
-            {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
-                tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
-                fantes i lys drakt. */}
-            <StatusBar style="auto" />
-            {/* #2216: steget for navn og handicap står foran stacken når
-                profilen ikke er fullført, samme regel som nettsidens `/`. */}
-            <ProfileGate userId={session.user.id}>
-              {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
-              <AiConsentGate userId={session.user.id}>
-                <RootNavigator />
-              </AiConsentGate>
-            </ProfileGate>
-          </SessionProvider>
-        </OwnerGate>
+        <AppLockGate startLocked={startLocked} onUnlocked={onUnlocked}>
+          <OwnerGate key={session.user.id} userId={session.user.id}>
+            <SessionProvider
+              value={{ userId: session.user.id, email: session.user.email ?? null }}
+            >
+              {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
+                  tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
+                  fantes i lys drakt. */}
+              <StatusBar style="auto" />
+              {/* #2216: steget for navn og handicap står foran stacken når
+                  profilen ikke er fullført, samme regel som nettsidens `/`. */}
+              <ProfileGate userId={session.user.id}>
+                {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
+                <AiConsentGate userId={session.user.id}>
+                  <RootNavigator />
+                </AiConsentGate>
+              </ProfileGate>
+            </SessionProvider>
+          </OwnerGate>
+        </AppLockGate>
       </KeyboardInset>
     </SafeAreaProvider>
   );

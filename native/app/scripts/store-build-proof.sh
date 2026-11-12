@@ -51,7 +51,8 @@
 #     Arkivet kreves ikke å ha `production`. Associated domains er nøyaktig
 #     `applinks:tornygolf.no` og `applinks:www.tornygolf.no` (lenkene, #2627, #2748). Reglene og hvorfor står i
 #     `entitlements-proof.sh`.
-#  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` i Info.plist, og
+#  4. Personvern (#2561): `NSPhotoLibraryAddUsageDescription` og
+#     `NSFaceIDUsageDescription` (#2841) i Info.plist, og
 #     `NSPrivacyAccessedAPICategoryDiskSpace` i app-manifestet når binærene
 #     importerer disk-API-er (`statfs`/`statvfs`/`getattrlist`-familien,
 #     `NSFileSystem*`, `NSURLVolume*Capacity`). Norsk utviklingsregion og
@@ -200,6 +201,7 @@ else
   if [ "$build" != '<mangler>' ] && [ -n "$build" ]; then pass "build satt ($build)"; else fail "CFBundleVersion mangler"; fi
   if [ "$non_exempt" = "false" ]; then pass "ITSAppUsesNonExemptEncryption = false"; else fail "ITSAppUsesNonExemptEncryption er «${non_exempt}», skal være false"; fi
   locale_rules "$PLIST"
+  faceid_rules "$PLIST"
 fi
 say ""
 
