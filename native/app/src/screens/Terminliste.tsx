@@ -326,7 +326,10 @@ function ThirdLine({ entry }: { entry: AppTerminEntry }) {
             style={[styles.fill, { width: `${Math.round(fillRatio * 100)}%`, backgroundColor: warn ? colors.warning : colors.primary }]}
           />
         </View>
-        <Text style={[styles.small, warn ? { color: colors.warningText, fontFamily: FONTS.sansSemiBold } : { color: colors.muted }]}>
+        <Text
+          numberOfLines={1}
+          style={[styles.small, styles.seatLabel, warn ? { color: colors.warningText, fontFamily: FONTS.sansSemiBold } : { color: colors.muted }]}
+        >
           {seatLineText(entry.capacity)}
         </Text>
       </View>
@@ -404,7 +407,9 @@ const styles = StyleSheet.create({
   line: { ...interLine(12, 16, { multiline: true }), fontFamily: FONTS.sans, marginTop: 2 },
   third: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
   small: { ...interLine(11, 14, { multiline: true }), fontFamily: FONTS.sans, flexShrink: 1 },
-  track: { width: 64, height: 6, borderRadius: 3, overflow: 'hidden' },
+  // Teksten går først: søylen (64 pt i artboardet) gir etter, så «40 av 40 plasser ledige» står på én linje ved 390 pt.
+  track: { width: 64, minWidth: 8, flexShrink: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  seatLabel: { flexShrink: 0 },
   fill: { height: 6 },
   bubble: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   bubbleText: { fontSize: 9, fontFamily: FONTS.sansSemiBold },
