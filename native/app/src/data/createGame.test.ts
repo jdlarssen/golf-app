@@ -456,9 +456,11 @@ describe('publishGame', () => {
       const { routeFrom } = mocks();
       routeFrom({});
 
+      // #2753 D3 gjorde patsome til et format appen har skjermer for, så
+      // assertionen trenger nå et format som fortsatt mangler dem.
       expect(
         await publish(
-          draft({ gameMode: 'patsome' as GameDraft['gameMode'] }),
+          draft({ gameMode: 'nassau' as GameDraft['gameMode'] }),
         ),
       ).toEqual({ ok: false, error: 'unsupported_mode' });
     });
