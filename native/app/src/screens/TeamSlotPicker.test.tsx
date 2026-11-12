@@ -70,6 +70,16 @@ it('venner på laget og i runden står bleke med grunnen, og «Legg til venn» s
   expect(screen.getByTestId('team-slot-submit')).toHaveTextContent('Velg en venn');
 });
 
+it('#2840: vennene du kan velge står først, de bleke sist (tegningen)', async () => {
+  mockFriends = {
+    ok: true,
+    data: { friends: [FRIENDS[2], FRIENDS[3], FRIENDS[0], FRIENDS[1]], incoming: [], outgoing: [], suggestions: [], friendCode: 'kode1' },
+  };
+  await renderPicker();
+  const order = screen.getAllByTestId(/^team-slot-friend-[a-z]+$/).map((node) => node.props.testID);
+  expect(order).toEqual(['team-slot-friend-ingrid', 'team-slot-friend-anders', 'team-slot-friend-ola', 'team-slot-friend-eirik']);
+});
+
 it('«Legg til venn» står også når søket ikke treffer', async () => {
   await renderPicker();
   await fireEvent.changeText(screen.getByTestId('team-slot-search'), 'Jonas');
