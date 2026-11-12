@@ -40,6 +40,12 @@ function teamPage(): typeof import('./teamPage') {
 describe('fetchTeamPage', () => {
   useWebRoute();
 
+  it('#2840: en titt (raden «Laget ditt») spør uten å telle som besøk', async () => {
+    respondWith(200, CAPTAIN);
+    expect(await teamPage().fetchTeamPage(SHORT_ID, { visit: false })).toEqual({ ok: true, view: CAPTAIN });
+    expect(mockFetch).toHaveBeenCalledWith(`${PATH}?visit=0`, expect.objectContaining({ method: 'GET' }));
+  });
+
   it('spør lagsidens sti og leser kapteinens visning', async () => {
     respondWith(200, CAPTAIN);
     expect(await teamPage().fetchTeamPage(SHORT_ID)).toEqual({ ok: true, view: CAPTAIN });

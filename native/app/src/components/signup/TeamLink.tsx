@@ -35,7 +35,7 @@ export function TeamLink({
   useFocusEffect(
     useCallback(() => {
       const thisLoad = ++latest.current;
-      void fetchTeamPage(shortId).then((result) => {
+      void fetchTeamPage(shortId, { visit: false }).then((result) => {
         if (thisLoad !== latest.current) return;
         if (result.ok && (result.view.kind === 'captain' || result.view.kind === 'member')) setTeam(result.view);
         else if (result.ok) setTeam(null);

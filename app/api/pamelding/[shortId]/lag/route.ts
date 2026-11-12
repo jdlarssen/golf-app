@@ -31,7 +31,8 @@ import { isUuid } from '@/lib/url/isUuid';
 //            tillegg `unavailableFriendIds`, vennene som alt er i runden, så
 //            «Velg en venn» kan gråe dem ut (som lagskjemaet). Etter svaret
 //            bekreftes plassen og lagvarslene merkes lest (`onTeamPageVisit`),
-//            som siden gjør.
+//            som siden gjør. Med `?visit=0` skjer ingen av delene: raden «Laget
+//            ditt» i runden og på påmeldingsskjermen er en titt, ikke et besøk.
 //        401 { error: 'unauthorized' }   404 { error: 'game_not_found' } (også utkast)
 //        500 { error: 'load_failed' }
 //   POST { intent: 'remove' | 'resend' | 'transfer', requestId: uuid }
@@ -75,13 +76,16 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     }
 
     // As the page does in its `after()`: confirm a seat the captain gave you
-    // (#463), then mark the game's team varsler read (#2201, #2759).
+    // (#463), then mark the game's team varsler read (#2201, #2759). `?visit=0`
+    // is a look, not a visit (#2840): the «Laget ditt» row on the round and the
+    // signup screen reads the team without marking anything read.
+    const isVisit = request.nextUrl.searchParams.get('visit') !== '0';
     const gameId = view.game.id;
     const body: AppTeamPageResponse =
       view.kind === 'captain'
         ? { ...view, unavailableFriendIds: await readUnavailableFriendIds(gameId, userId) }
         : view;
-    after(async () => {
+    if (isVisit) after(async () => {
       try {
         await onTeamPageVisit(gameId, userId);
       } catch (err) {
