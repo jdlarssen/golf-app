@@ -44,21 +44,30 @@ export function ShareWordmark({
   size,
   weight,
   color,
+  lineHeightEm = 1,
 }: {
   /** I rutas piksler. */
   size: number;
   weight: 500 | 600;
   color: string;
+  /**
+   * Linjehøyden i em. 1 er Satoris, og gir delebildene det de alltid har hatt.
+   * Låseskjermen (#2841) tegner ordmerket på skjermen, der Android klipper halen
+   * på «y» mot en så stram linjeboks; et høyere tall gir den plass under grunnlinja.
+   * Grunnlinja følger halve tillegget, så ballen står der den skal.
+   */
+  lineHeightEm?: number;
 }) {
   const fontSize = cardPx(size);
+  const baselineEm = SATORI_BASELINE_EM + (lineHeightEm - 1) / 2;
   const d = BALL_DIAMETER_EM * fontSize;
-  const clearance = Math.max(0, BALL_DIAMETER_EM + T_CAP_HEIGHT_EM - SATORI_BASELINE_EM) * fontSize;
+  const clearance = Math.max(0, BALL_DIAMETER_EM + T_CAP_HEIGHT_EM - baselineEm) * fontSize;
   const shaded = d * SCALE >= BALL_SHADING_MIN_PX;
   return (
     <View style={{ paddingTop: clearance }}>
       <Text
         allowFontScaling={false}
-        style={{ ...satoriLine(size, size), fontFamily: frauncesFamily(weight, 14), color }}
+        style={{ ...satoriLine(size, size * lineHeightEm), fontFamily: frauncesFamily(weight, 14), color }}
       >
         Tørny
       </Text>
@@ -70,7 +79,7 @@ export function ShareWordmark({
         style={{
           position: 'absolute',
           left: (BALL_CENTER_X_EM - BALL_DIAMETER_EM / 2) * fontSize,
-          top: clearance + (SATORI_BASELINE_EM - T_CAP_HEIGHT_EM) * fontSize - d,
+          top: clearance + (baselineEm - T_CAP_HEIGHT_EM) * fontSize - d,
         }}
       >
         <Defs>

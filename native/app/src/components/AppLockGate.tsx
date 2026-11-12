@@ -11,7 +11,7 @@
 //
 // **Dekket i appvelgeren.** Er låsen på, legges et ugjennomsiktig dekke med
 // bakgrunnsfargen og ordmerket over appen så snart `AppState` er `inactive` eller
-// `background`, og det fjernes ved `active`. Dekket låser ikke og spør ikke:
+// `background` (på Android også ved `blur`), og det fjernes ved `active`. Dekket låser ikke og spør ikke:
 // barna står montert hele tiden, så spilleren lander på samme hull og synken går
 // videre. Fordi bare dekket står, kan Face ID-dialogen (som gir `inactive`) ikke
 // lage en løkke. Dekket skjuler barna for skjermleseren.
@@ -28,12 +28,14 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AppState,
   PixelRatio,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { askForUnlock, useAppLock } from '../lib/appLock';
@@ -45,6 +47,8 @@ const LOCK_MARK_PT = 65;
 const LOCK_MARK_TOP = 0.36;
 const COVER_MARK_PT = 79;
 const COVER_MARK_TOP = 0.4;
+/** Android klipper halen på «y» mot Satoris stramme linjeboks (målt på emulatoren); iOS er uendret. */
+const MARK_LINE_HEIGHT_EM = Platform.OS === 'android' ? 1.3 : 1;
 
 type Props = {
   /** Låsen var på da appen startet, og spilleren hadde en sesjon. Leses ved kaldstart. */
@@ -57,6 +61,7 @@ type Props = {
 export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
   const lockOn = useAppLock();
   const [away, setAway] = useState(isAway(AppState.currentState));
+  const [blurred, setBlurred] = useState(false);
   const [asking, setAsking] = useState(false);
   const askingRef = useRef(false);
   const aliveRef = useRef(true);
@@ -71,6 +76,19 @@ export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => setAway(isAway(next)));
     return () => sub.remove();
+  }, []);
+
+  // Android tar bildet til appvelgeren når aktiviteten pauser, før `change` sier
+  // «background», og viste da innholdet (målt på emulatoren). Vinduet mister
+  // fokus først, og `blur` kommer før pausen, så dekket rekker å tegnes.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const blur = AppState.addEventListener('blur', () => setBlurred(true));
+    const focus = AppState.addEventListener('focus', () => setBlurred(false));
+    return () => {
+      blur.remove();
+      focus.remove();
+    };
   }, []);
 
   const ask = useCallback(async () => {
@@ -109,7 +127,7 @@ export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
     );
   }
 
-  const covered = lockOn && away;
+  const covered = lockOn && (away || blurred);
   // Dekket er søsken til barna, ikke barn av dem: ellers ville det skjules for
   // skjermleseren sammen med innholdet. Omslaget står alltid, så barna aldri monteres på nytt.
   return (
@@ -138,6 +156,8 @@ function LockScreen({ asking, onUnlock }: { asking: boolean; onUnlock: () => voi
   const insets = useSafeAreaInsets();
   return (
     <Backdrop markPt={LOCK_MARK_PT} markTop={LOCK_MARK_TOP} testID="app-lock-screen">
+      {/* Statuslinjen i appen står bak låsen og er ikke montert ennå: uten denne er teksten lys på lin. */}
+      <StatusBar style="auto" />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={APP_LOCK_TEXT.unlockButton}
@@ -175,7 +195,12 @@ function Backdrop({
     <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} testID={testID}>
       <View style={[styles.mark, { top: height * markTop }]}>
         {/* `ShareWordmark` regner i rutas piksler (`size / PixelRatio`), så pt-størrelsen skaleres opp. */}
-        <ShareWordmark size={markPt * PixelRatio.get()} weight={500} color={colors.text} />
+        <ShareWordmark
+          size={markPt * PixelRatio.get()}
+          weight={500}
+          color={colors.text}
+          lineHeightEm={MARK_LINE_HEIGHT_EM}
+        />
       </View>
       {children}
     </View>
