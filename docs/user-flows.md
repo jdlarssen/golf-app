@@ -75,7 +75,7 @@ spill/bane bor inne i Klubbhuset, ikke på Hjem.** Hjem er play + discover-navet
 dager («Lørdag 4. oktober · om 3 dager»), med filterbrikkene «Alle», «Denne helga» og «Klubben min»
 (`?vis=`), plass-linja der runden har tak og «Fullt» uten knapp når den er full. Hjem og forsiden viser
 de samme dagene og radene. Appen har samme liste (#2838): raden «Finn turneringer» under «Opprett spill»
-på Hjem åpner den, og et trykk på en runde åpner påmeldingen.
+på Hjem åpner den, og et trykk på en runde åpner påmeldingen. Klubbturneringer du kan melde deg på, står også i en egen seksjon «Klubbturneringer» på Hjem (#2753), under ligaene og cupene og bare når det finnes rader: terminlistas klubbrader fra og med i dag, med klubben foran banen (`clubRoundsForHome`, samme rad som lista, `TerminRow`). Du melder deg på derfra og av fra rundens side; da står runden i seksjonen igjen.
 
 **Klubber** (#442 + #50, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
 turneringer kan høre til. **Opprettelse er admin-gated** (#50): vanlige brukere oppretter ikke

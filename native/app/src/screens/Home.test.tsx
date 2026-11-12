@@ -60,6 +60,10 @@ jest.mock('../data/league', () => ({
 jest.mock('../data/cup', () => ({
   fetchMyCups: jest.fn(async () => mockState.cups),
 }));
+// #2753 D4: klubbturneringene kommer fra terminlista.
+jest.mock('../data/terminliste', () => ({
+  fetchTerminliste: jest.fn(async () => mockState.termin),
+}));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
 }));
@@ -84,6 +88,7 @@ const mockState: {
   profile: OwnProfile;
   leagues: Awaited<ReturnType<typeof import('../data/league').fetchMyLeagues>>;
   cups: Awaited<ReturnType<typeof import('../data/cup').fetchMyCups>>;
+  termin: Awaited<ReturnType<typeof import('../data/terminliste').fetchTerminliste>>;
 } = {
   unread: 0,
   online: true,
@@ -92,6 +97,7 @@ const mockState: {
   bundles: {},
   leagues: { ok: true, leagues: [] },
   cups: { ok: true, cups: [] },
+  termin: { ok: true, view: { entries: [], pendingRequests: [] } },
   profile: {
     name: 'Sigrid Berg',
     nickname: null,
@@ -173,7 +179,8 @@ function renderHome(params?: { deletedCup?: string }) {
     listeners[event] = listener;
     return () => {};
   };
-  const navigation = { navigate, addListener, setParams };
+  // `getState` for `openOrReturn` (#2753): tom stakk, så den åpner som `navigate`.
+  const navigation = { navigate, addListener, setParams, getState: () => undefined };
   const props = (next?: { deletedCup?: string }) =>
     ({ navigation, route: { key: 'home', name: 'Home', params: next } }) as unknown as ScreenProps<'Home'>;
   return { navigate, listeners, setParams, props, view: render(<Home {...props(params)} />) };
@@ -188,6 +195,7 @@ beforeEach(() => {
   mockState.bundles = { new: HERO_BUNDLE };
   mockState.leagues = { ok: true, leagues: [] };
   mockState.cups = { ok: true, cups: [] };
+  mockState.termin = { ok: true, view: { entries: [], pendingRequests: [] } };
   mockState.unread = 0;
 });
 
@@ -609,6 +617,62 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
 
     await fireEvent.press(screen.getByTestId('home-cup-c1'));
     expect(navigate).toHaveBeenCalledWith('Cup', { cupId: 'c1' });
+  });
+
+  it('klubbturneringene står under cupene, med klubben, og åpner påmeldingen (#2753)', async () => {
+    const termin = (id: string, over: Record<string, unknown>) => ({
+      id,
+      name: `Runde ${id}`,
+      short_id: `short-${id}`,
+      scheduled_tee_off_at: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+      course_name: 'Byneset North',
+      game_mode: 'stableford',
+      mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+      hole_segment: 'full',
+      start_type: 'first_tee',
+      source: 'club',
+      cta: 'direct',
+      capacity: null,
+      full: false,
+      modeLabel: 'Stableford',
+      teamSize: 1,
+      socialProof: null,
+      clubName: 'Byneset GK',
+      ...over,
+    });
+    mockState.cups = { ok: true, cups: [{ id: 'c1', name: 'Vårcupen', status: 'draft', progress: null }] };
+    mockState.termin = {
+      ok: true,
+      view: {
+        entries: [termin('k1', {}), termin('f1', { source: 'friend', clubName: null })],
+        pendingRequests: [],
+      },
+    } as typeof mockState.termin;
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-club-rounds')).toBeTruthy();
+    expect(screen.getByText('Klubbturneringer')).toBeTruthy();
+    expect(screen.getByTestId('terminliste-row-k1')).toBeTruthy();
+    expect(screen.queryByTestId('terminliste-row-f1')).toBeNull();
+    expect(screen.getByText('Byneset GK · Byneset North · Stableford')).toBeTruthy();
+    const order = testIdsInOrder();
+    expect(order.indexOf('home-cups')).toBeLessThan(order.indexOf('home-club-rounds'));
+
+    await fireEvent.press(screen.getByTestId('terminliste-row-k1'));
+    expect(navigate).toHaveBeenCalledWith('RoundInvite', { shortId: 'short-k1', src: null });
+  });
+
+  it.each([
+    ['ingen klubbrunder', { ok: true as const, view: { entries: [], pendingRequests: [] } }],
+    ['kallet feiler', { ok: false as const, reason: 'load_failed' as const }],
+  ])('ingen klubbseksjon når %s', async (_label, result) => {
+    mockState.termin = result;
+    const { view } = renderHome();
+    await view;
+    expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+    expect(screen.queryByTestId('home-club-rounds')).toBeNull();
+    expect(screen.queryByText('Klubbturneringer')).toBeNull();
   });
 
   it.each([

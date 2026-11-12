@@ -26,6 +26,8 @@ export const HOME_TEXT = {
   /** Åpner Rundedagboka (#2265). */
   allRounds: 'Alle runder',
   createGame: 'Opprett spill',
+  /** #2753: klubbrundene du kan melde deg på, fra terminlista. */
+  clubRounds: 'Klubbturneringer',
   /** #2838: raden under «Opprett spill». Webbens `discover.kicker` og `discover.termin.subtitle`. */
   findTournaments: 'Finn turneringer',
   findTournamentsSub: 'Åpne runder du kan bli med på',
