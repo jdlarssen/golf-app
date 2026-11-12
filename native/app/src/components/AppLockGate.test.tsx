@@ -10,6 +10,7 @@ import { AppState, Text, type AppStateStatus } from 'react-native';
 import { authenticateAsync } from 'expo-local-authentication';
 import * as SplashScreen from 'expo-splash-screen';
 import { loadAppLock, setAppLock } from '../lib/appLock';
+import { setRecentsScreenshotEnabled } from '../lib/recentsScreenshot';
 import { AppLockGate } from './AppLockGate';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -18,6 +19,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('expo-local-authentication', () => require('../test/localAuthMock').localAuthMock());
 jest.mock('expo-splash-screen', () => ({ hideAsync: jest.fn().mockResolvedValue(true) }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
+jest.mock('../lib/recentsScreenshot', () => ({ setRecentsScreenshotEnabled: jest.fn() }));
 
 const authenticate = authenticateAsync as jest.Mock;
 let handlers: Array<(state: AppStateStatus) => void> = [];
@@ -171,6 +173,32 @@ describe('AppLockGate', () => {
     await goTo('active');
     expect(screen.queryByTestId('app-lock-cover')).toBeNull();
     expect(mounts).toBe(1);
+  });
+
+  it('ber Android la være å ta appvelger-bilde mens låsen er på, og slår det på igjen når den slås av eller porten forsvinner', async () => {
+    const recents = setRecentsScreenshotEnabled as jest.Mock;
+    const view = await render(<Harness initiallyLocked={false} />);
+    expect(recents).toHaveBeenLastCalledWith(true);
+
+    await act(async () => setAppLock(true));
+    expect(recents).toHaveBeenLastCalledWith(false);
+
+    recents.mockClear();
+    await goTo('active');
+    expect(recents).toHaveBeenCalledWith(false);
+
+    await act(async () => setAppLock(false));
+    expect(recents).toHaveBeenLastCalledWith(true);
+
+    await act(async () => setAppLock(true));
+    await view.unmount();
+    expect(recents).toHaveBeenLastCalledWith(true);
+  });
+
+  it('holder appvelger-bildet av også mens låseskjermen står', async () => {
+    setAppLock(true);
+    await render(<Harness initiallyLocked />);
+    expect(setRecentsScreenshotEnabled).toHaveBeenLastCalledWith(false);
   });
 
   it('dekket kommer og går når låsen slås på og av mens appen står åpen', async () => {
