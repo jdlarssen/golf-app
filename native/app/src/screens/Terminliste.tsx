@@ -284,6 +284,7 @@ function Row({ entry, onPress }: { entry: AppTerminEntry; onPress: () => void })
     >
       <View style={[styles.time, { borderRightColor: colors.divider }]}>
         <Text
+          numberOfLines={1}
           style={[styles.clock, { color: clock ? colors.text : colors.muted }]}
           testID={`terminliste-clock-${entry.id}`}
         >
@@ -391,9 +392,11 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: TAP },
   requestRow: { paddingHorizontal: 14, paddingVertical: 12, minHeight: TAP, justifyContent: 'center' },
-  // Nettet: 56 innhold + 10 luft + 1 strek (content-box); RN regner border-box.
-  time: { width: 67, paddingRight: 10, borderRightWidth: 1, alignItems: 'center' },
-  clock: { ...fraunces(600, 20, 24), fontVariant: ['tabular-nums'] },
+  // Nettet: 56 innhold + 10 luft + 1 strek (content-box), og klokka flyter ut i luften når «09:20» er bredere enn 56.
+  // RN klipper i stedet, så blokken har 5 pt mer innhold (61 + 10 + 1) og tallene står i ro.
+  time: { width: 72, paddingRight: 10, borderRightWidth: 1, alignItems: 'center' },
+  // Proporsjonale tall som i artboardet: tabellsifrene gjør «09:20» for bred for de 56 pt, og klokka brekker.
+  clock: { ...fraunces(600, 20, 24) },
   note: { ...interLine(11, 14), fontFamily: FONTS.sans },
   body: { flex: 1, minWidth: 0 },
   name: { ...interLine(15, 20, { multiline: true }), fontFamily: FONTS.sansSemiBold },
