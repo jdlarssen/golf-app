@@ -95,7 +95,7 @@ const mockState: {
   list: { version: 4, cards: [], lastRound: null, fetchedAt: '' },
   cached: undefined,
   bundles: {},
-  leagues: { ok: true, leagues: [] },
+  leagues: { ok: true, joinable: [], leagues: [] },
   cups: { ok: true, cups: [] },
   termin: { ok: true, view: { entries: [], pendingRequests: [] } },
   profile: {
@@ -193,7 +193,7 @@ beforeEach(() => {
   mockState.list = LIST;
   mockState.cached = undefined;
   mockState.bundles = { new: HERO_BUNDLE };
-  mockState.leagues = { ok: true, leagues: [] };
+  mockState.leagues = { ok: true, joinable: [], leagues: [] };
   mockState.cups = { ok: true, cups: [] };
   mockState.termin = { ok: true, view: { entries: [], pendingRequests: [] } };
   mockState.unread = 0;
@@ -566,7 +566,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   };
 
   it('står rett etter «Neste start», med runden, fristen og om du har spilt (1b)', async () => {
-    mockState.leagues = { ok: true, leagues: [VINTER, ONSDAG] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [VINTER, ONSDAG] };
     const { navigate, view } = renderHome();
     await view;
 
@@ -592,7 +592,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   });
 
   it('cupene står under ligaene, med fremdriften og uten poeng (#2752)', async () => {
-    mockState.leagues = { ok: true, leagues: [VINTER] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [VINTER] };
     mockState.cups = {
       ok: true,
       cups: [
@@ -665,6 +665,92 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     expect(navigate).toHaveBeenCalledWith('RoundInvite', { shortId: 'short-k1', src: null });
   });
 
+  // #2839: klubbligaer du kan melde deg på står i klubbseksjonen, ikke i «Ligaene dine».
+  describe('klubbligaer du kan melde deg på (#2839)', () => {
+    const KLUBBLIGA = {
+      id: 'kl1',
+      name: 'Klubbens vinterliga',
+      status: 'draft' as const,
+      openRound: null,
+      delivered: false,
+      inProgress: false,
+      markerCards: [],
+    };
+
+    it('står som en rad i klubbseksjonen med linja, og et trykk åpner ligasiden', async () => {
+      mockState.leagues = { ok: true, leagues: [], joinable: [KLUBBLIGA] };
+      const { navigate, view } = renderHome();
+      await view;
+
+      const section = await screen.findByTestId('home-club-rounds');
+      expect(screen.getByText('Klubbturneringer')).toBeTruthy();
+      expect(within(section).getByTestId('home-joinable-league-line-kl1')).toHaveTextContent(
+        'Ikke påmeldt · meld deg på før start',
+      );
+      expect(within(section).getByText('Klubbens vinterliga')).toBeTruthy();
+      // Ikke i «Ligaene dine».
+      expect(screen.queryByTestId('home-leagues')).toBeNull();
+      await fireEvent.press(screen.getByTestId('home-joinable-league-kl1'));
+      expect(navigate).toHaveBeenCalledWith('League', { leagueId: 'kl1' });
+    });
+
+    it('står under klubbrundene i samme seksjon', async () => {
+      mockState.leagues = { ok: true, leagues: [], joinable: [KLUBBLIGA] };
+      mockState.termin = {
+        ok: true,
+        view: {
+          entries: [
+            {
+              id: 'k1',
+              name: 'Runde k1',
+              short_id: 'short-k1',
+              scheduled_tee_off_at: inDays(3),
+              course_name: 'Byneset North',
+              game_mode: 'stableford',
+              mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+              hole_segment: 'full',
+              start_type: 'first_tee',
+              source: 'club',
+              cta: 'direct',
+              capacity: null,
+              full: false,
+              modeLabel: 'Stableford',
+              teamSize: 1,
+              socialProof: null,
+              clubName: 'Byneset GK',
+            },
+          ],
+          pendingRequests: [],
+        },
+      } as unknown as typeof mockState.termin;
+      const { view } = renderHome();
+      await view;
+      await screen.findByTestId('home-club-rounds');
+      const order = testIdsInOrder();
+      expect(order.indexOf('terminliste-row-k1')).toBeLessThan(order.indexOf('home-joinable-league-kl1'));
+    });
+
+    it('påmeldt: ligaen står i «Ligaene dine» og ikke lenger i klubbseksjonen, og leaguesFirst teller bare den', async () => {
+      mockState.leagues = { ok: true, leagues: [KLUBBLIGA], joinable: [] };
+      const { view } = renderHome();
+      await view;
+      expect(await screen.findByTestId('home-league-kl1')).toBeTruthy();
+      expect(screen.queryByTestId('home-joinable-league-kl1')).toBeNull();
+      expect(screen.queryByTestId('home-club-rounds')).toBeNull();
+    });
+
+    it('en ikke-påmeldt klubbliga skyver ikke tomtilstanden ned for den som ikke har noe annet', async () => {
+      mockState.leagues = { ok: true, leagues: [], joinable: [KLUBBLIGA] };
+      mockState.list = { ...LIST, cards: [], lastRound: null };
+      const { view } = renderHome();
+      await view;
+      await screen.findByTestId('home-club-rounds');
+      const order = testIdsInOrder();
+      expect(order.indexOf('home-empty')).toBeGreaterThanOrEqual(0);
+      expect(order.indexOf('home-empty')).toBeLessThan(order.indexOf('home-club-rounds'));
+    });
+  });
+
   it.each([
     ['ingen klubbrunder', { ok: true as const, view: { entries: [], pendingRequests: [] } }],
     ['kallet feiler', { ok: false as const, reason: 'load_failed' as const }],
@@ -693,7 +779,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   });
 
   it('en liga uten åpen runde har ingen pille (orkestratorens avgjørelse)', async () => {
-    mockState.leagues = { ok: true, leagues: [{ ...VINTER, openRound: null }] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [{ ...VINTER, openRound: null }] };
     const { view } = renderHome();
     await view;
 
@@ -702,7 +788,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   });
 
   it.each([
-    ['du ikke er med i noen liga (1c)', { ok: true as const, leagues: [] }],
+    ['du ikke er med i noen liga (1c)', { ok: true as const, leagues: [], joinable: [] }],
     ['kallet feiler', { ok: false as const, reason: 'load_failed' as const }],
     ['nettet er borte', { ok: false as const, reason: 'offline' as const }],
   ])('ingen seksjon og ingen feilboks når %s', async (_label, result) => {
@@ -719,7 +805,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   // #2688: ligaspilleren uten runde i gang får ligaen først og ingen tomtilstand.
   it('uten runde i gang står ligaen øverst, over «Opprett spill», og tomtilstanden er borte', async () => {
     mockState.list = { ...LIST, cards: [], lastRound: null };
-    mockState.leagues = { ok: true, leagues: [VINTER] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [VINTER] };
     const { view } = renderHome();
     await view;
 
@@ -731,7 +817,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
 
   it('uten liga står tomtilstanden som før', async () => {
     mockState.list = { ...LIST, cards: [], lastRound: null };
-    mockState.leagues = { ok: true, leagues: [] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [] };
     const { view } = renderHome();
     await view;
 
@@ -739,7 +825,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   });
 
   it('med en runde i gang står den først, som før, og ligaen kommer etter', async () => {
-    mockState.leagues = { ok: true, leagues: [VINTER] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [VINTER] };
     const { view } = renderHome();
     await view;
 
@@ -751,7 +837,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   it('kort som venter på deg som markør står på Hjem, med vei rett til godkjenningen', async () => {
     const card = { gameId: 'g-mia', userId: 'mia', playerName: 'Mia', roundLabel: 'Runde 1' };
     mockState.list = { ...LIST, cards: [], lastRound: null };
-    mockState.leagues = { ok: true, leagues: [{ ...VINTER, markerCards: [card] }] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [{ ...VINTER, markerCards: [card] }] };
     const { navigate, view } = renderHome();
     await view;
 
@@ -770,7 +856,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
   });
 
   it('ingen markørseksjon uten ventende kort', async () => {
-    mockState.leagues = { ok: true, leagues: [VINTER] };
+    mockState.leagues = { ok: true, joinable: [], leagues: [VINTER] };
     const { view } = renderHome();
     await view;
 

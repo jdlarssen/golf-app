@@ -48,7 +48,7 @@ describe('fetchMyLeagues', () => {
     const leagues = [{ id: LEAGUE_ID, name: 'Vinterliga', status: 'active', openRound: null, delivered: false, inProgress: false }];
     respondWith(200, { leagues });
 
-    expect(await league().fetchMyLeagues()).toEqual({ ok: true, leagues });
+    expect(await league().fetchMyLeagues()).toEqual({ ok: true, leagues, joinable: [] });
     expect(mockFetch).toHaveBeenCalledWith(`${BASE_URL}/api/liga`, expect.objectContaining({ method: 'GET' }));
     expect((requestInit().headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
     expect(requestInit().body).toBeUndefined();
@@ -71,6 +71,21 @@ describe('fetchMyLeagues', () => {
     mockNetwork.online = false;
     expect(await league().fetchMyLeagues()).toEqual({ ok: false, reason: 'offline' });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchMyLeagues joinable (#2839)', () => {
+  useWebRoute();
+
+  it('sender med klubbligaene du kan melde deg på', async () => {
+    const row = { id: 'kl1', name: 'Klubbliga', status: 'draft', openRound: null, delivered: false, inProgress: false, markerCards: [] };
+    respondWith(200, { leagues: [], joinable: [row] });
+    expect(await league().fetchMyLeagues()).toEqual({ ok: true, leagues: [], joinable: [row] });
+  });
+
+  it('en server uten feltet gir en tom liste, ikke en feil', async () => {
+    respondWith(200, { leagues: [] });
+    expect(await league().fetchMyLeagues()).toEqual({ ok: true, leagues: [], joinable: [] });
   });
 });
 

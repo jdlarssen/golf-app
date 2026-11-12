@@ -13,7 +13,7 @@
 // er startet.
 //
 // **Wire-kontrakten** (rutene og denne fila endres i samme PR):
-//   GET  /api/liga                         200 { leagues: AppLeagueSummary[] } · 401 · 500
+//   GET  /api/liga                         200 { leagues: AppLeagueSummary[], joinable: AppLeagueSummary[] } · 401 · 500
 //   GET  /api/liga/{id}                    200 AppLeagueView · 401 · 404 · 500
 //   POST /api/liga/rounds/{roundId}/start  { coPlayerIds: string[] }
 //        200 { gameId } · 400 · 401 · 404 · 409 { error: LeagueStartRefusal } · 500
@@ -41,7 +41,8 @@ import { callWebRoute, type WebApiFailure } from './webApi';
 export type LeagueLoadFailure = WebApiFailure | 'not_found' | 'load_failed';
 
 export type MyLeaguesResult =
-  | { ok: true; leagues: AppLeagueSummary[] }
+  // `joinable` (#2839): draft-klubbligaer du kan melde deg på. Tom fra en server uten feltet.
+  | { ok: true; leagues: AppLeagueSummary[]; joinable: AppLeagueSummary[] }
   | { ok: false; reason: LeagueLoadFailure };
 
 export type LeagueResult =
@@ -116,14 +117,17 @@ function loadFailureFor(status: number): LeagueLoadFailure {
 
 /**
  * «Ligaene dine» på Hjem: ligaene du er med i som er `draft` eller `active`,
- * med den åpne runden. Hjem skjuler seksjonen ved enhver feil.
+ * med den åpne runden. Hjem skjuler seksjonen ved enhver feil. `joinable` er
+ * klubbligaene du kan melde deg på (#2839), som Hjem viser i klubbseksjonen.
  */
 export async function fetchMyLeagues(): Promise<MyLeaguesResult> {
   const call = await callWebRoute('/api/liga', 'GET');
   if (!call.ok) return call;
   if (call.status !== 200) return { ok: false, reason: loadFailureFor(call.status) };
-  const leagues = (call.body as Partial<AppLeagueListResponse>).leagues;
-  return Array.isArray(leagues) ? { ok: true, leagues } : { ok: false, reason: 'load_failed' };
+  const { leagues, joinable } = call.body as Partial<AppLeagueListResponse>;
+  return Array.isArray(leagues)
+    ? { ok: true, leagues, joinable: Array.isArray(joinable) ? joinable : [] }
+    : { ok: false, reason: 'load_failed' };
 }
 
 /** Ligasiden: tabellen, rundene og innstillingene, regnet på serveren. */
