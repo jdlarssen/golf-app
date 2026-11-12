@@ -23,7 +23,7 @@ export type ProfileSeasonRound = {
   completeBrutto: number | null;
   /** Spillerens lagrede utfall (`game_players.result_summary`), eller `null`. */
   resultSummary: ResultSummary | null;
-  /** #2712: runden er en ligaflight (spilt alene: ingen seier). */
+  /** #2712: runden er en ligaflight (ingen seier). */
   leagueFlight?: boolean;
 };
 

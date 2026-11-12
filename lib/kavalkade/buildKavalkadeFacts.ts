@@ -101,7 +101,7 @@ export type KavalkadeGame = {
   /** Effektiv runde-dato (`effectiveDate`) — datoen kortene viser. */
   playedAt: Date | null;
   players: KavalkadePlayerRound[];
-  /** #2712: runden er en ligaflight (spilt alene: ingen seier). */
+  /** #2712: runden er en ligaflight (ingen seier). */
   leagueFlight?: boolean;
 };
 
