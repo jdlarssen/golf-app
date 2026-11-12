@@ -211,7 +211,9 @@ export function SetupStep({
               }))}
             />
           </Field>
-          <Field label={TEAM_HANDICAP_TEXT.legend} hint={TEAM_HANDICAP_TEXT.description}>
+          <Field label={TEAM_HANDICAP_TEXT.legend}>
+            {/* Forklaringen står under overskriften, før valget, som på nettet. */}
+            <Text style={ui.muted}>{TEAM_HANDICAP_TEXT.description}</Text>
             <Chips
               value={text.allowance === '0' ? 'brutto' : 'netto'}
               onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
