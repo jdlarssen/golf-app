@@ -27,8 +27,11 @@ export type BackNavigation = {
 
 export type BackStep = 'popTo' | 'replace' | 'push';
 
-/** Params som sier hvilken skjerm det er. Alt annet (hull, kvittering) er valg på samme skjerm. */
-const IDENTITY_KEYS = ['gameId', 'leagueId', 'cupId'] as const;
+/**
+ * Params som sier hvilken skjerm det er. Alt annet (hull, kvittering) er valg på samme skjerm.
+ * `shortId` (#2840): påmeldingen og lagsiden til én runde er ikke den til en annen.
+ */
+const IDENTITY_KEYS = ['gameId', 'leagueId', 'cupId', 'shortId'] as const;
 
 function sameIdentity(a: object | undefined, b: object | undefined): boolean {
   const left = (a ?? {}) as Record<string, unknown>;
@@ -76,6 +79,10 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   LeagueJoin: 'Home',
   InvitationLink: 'Home',
   RoundInvite: 'Home',
+  TeamPage: 'Home',
+  TeamRemoveConfirm: 'TeamPage',
+  TeamTransferConfirm: 'TeamPage',
+  TeamSlotPicker: 'TeamPage',
   Cup: 'Home',
   CupManage: 'Cup',
   CupWithdraw: 'Cup',

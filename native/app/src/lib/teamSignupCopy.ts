@@ -153,7 +153,7 @@ export function teamFormMeta(view: Pick<AppRoundInviteView, 'round' | 'seats'>):
 }
 
 /** Runden og tiden: «Onsdagsgolfen · ons 19. nov kl. 17:30». */
-export function teamRoundLine(round: AppRoundInviteView['round']): string {
+export function teamRoundLine(round: Pick<AppRoundInviteView['round'], 'name' | 'teeOffAt'>): string {
   return [round.name, shortDayAndClock(round.teeOffAt)]
     .filter((part): part is string => part !== null)
     .join(' · ');

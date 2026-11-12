@@ -42,6 +42,7 @@ import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
 import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
+import { TEAM_PAGE_TEXT } from './lib/teamPageCopy';
 import { TERMIN_TEXT } from './lib/terminlisteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
@@ -102,6 +103,9 @@ import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { RoundDiary } from './screens/RoundDiary';
 import { RoundInvite } from './screens/RoundInvite';
+import { TeamPage } from './screens/TeamPage';
+import { TeamRemoveConfirm, TeamTransferConfirm } from './screens/TeamConfirm';
+import { TeamSlotPicker } from './screens/TeamSlotPicker';
 import { Terminliste } from './screens/Terminliste';
 import { RoundStats } from './screens/RoundStats';
 import { Kavalkade } from './screens/Kavalkade';
@@ -195,6 +199,34 @@ export type RootStackParamList = {
   InvitationLink: { token: string };
   /** Den delte påmeldingslenka (#2748). `src` er lenkas `?src=`, som følger med påmeldingen. */
   RoundInvite: { shortId: string; src: string | null };
+  /** #2840 del 3: lagsiden, fra påmeldingen, runden og lagvarslene (`/signup/<kode>/team`). */
+  TeamPage: { shortId: string };
+  /**
+   * #2840: bekreftelsen før kapteinen tar en medspiller ut av laget. Destruktive flyter
+   * får egen skjerm. `pending`: medspilleren har ikke svart, så invitasjonen faller bort.
+   */
+  TeamRemoveConfirm: {
+    shortId: string;
+    requestId: string;
+    name: string | null;
+    teamName: string | null;
+    pending: boolean;
+  };
+  /** #2840: bekreftelsen før kapteinen gir rollen videre. */
+  TeamTransferConfirm: { shortId: string; requestId: string; name: string | null; teamName: string | null };
+  /**
+   * #2840: «Velg en venn» og «Bytt med en venn». `replaceRequestId` er raden som byttes
+   * ut (en som takket nei). `teamUserIds` er de som står på laget, og
+   * `unavailableFriendIds` vennene som alt er i runden, så lista kan gråe dem ut.
+   */
+  TeamSlotPicker: {
+    shortId: string;
+    teamName: string;
+    open: number;
+    replaceRequestId: string | null;
+    teamUserIds: string[];
+    unavailableFriendIds: string[];
+  };
   /**
    * Terminlista (#2838): «Finn turneringer», åpne runder sortert på dag. `filter`
    * åpner den rett på en brikke (klubbturneringene, #2753, åpner «klubb»).
@@ -540,6 +572,27 @@ export function RootNavigator() {
           name="RoundInvite"
           component={RoundInvite}
           options={kickerHeader(ROUND_INVITE_TEXT.kicker, ROUND_INVITE_TEXT.kicker)}
+        />
+        {/* #2840 del 3: lagsiden, bekreftelsene og «Velg en venn». */}
+        <Stack.Screen
+          name="TeamPage"
+          component={TeamPage}
+          options={kickerHeader(TEAM_PAGE_TEXT.heading, TEAM_PAGE_TEXT.heading)}
+        />
+        <Stack.Screen
+          name="TeamRemoveConfirm"
+          component={TeamRemoveConfirm}
+          options={kickerHeader(TEAM_PAGE_TEXT.remove, TEAM_PAGE_TEXT.remove)}
+        />
+        <Stack.Screen
+          name="TeamTransferConfirm"
+          component={TeamTransferConfirm}
+          options={kickerHeader(TEAM_PAGE_TEXT.transfer, TEAM_PAGE_TEXT.transfer)}
+        />
+        <Stack.Screen
+          name="TeamSlotPicker"
+          component={TeamSlotPicker}
+          options={kickerHeader(TEAM_PAGE_TEXT.pickFriend, TEAM_PAGE_TEXT.pickFriend)}
         />
         {/* Terminlista (#2838): «Finn turneringer», åpne runder du kan bli med på. */}
         <Stack.Screen
