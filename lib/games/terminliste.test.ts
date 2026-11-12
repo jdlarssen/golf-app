@@ -396,3 +396,44 @@ describe('terminTimeNote', () => {
     expect(terminTimeNote({ hole_segment: 'full', start_type: 'first_tee', scheduled_tee_off_at: 'nope' })).toBeNull();
   });
 });
+
+// #2838: the native app passes the phone's calendar, because Hermes has no
+// Europe/Oslo zone. The default stays Oslo for the web.
+describe('groupTerminByDate / filterTermin — injected date parts (#2838)', () => {
+  const utcParts = (date: Date) => ({
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+    day: date.getUTCDate(),
+  });
+
+  it('groups on the injected calendar: 23:30 UTC stays on its own day', () => {
+    const groups = groupTerminByDate(
+      [
+        entry({ id: 'a', scheduled_tee_off_at: '2026-10-02T21:30:00Z' }),
+        entry({ id: 'b', scheduled_tee_off_at: '2026-10-02T23:30:00Z' }),
+      ],
+      NOW,
+      utcParts,
+    );
+    expect(groups.map((g) => [g.key, g.entries.map((e) => e.id)])).toEqual([
+      ['2026-10-02', ['a', 'b']],
+    ]);
+  });
+
+  it('labels the days from the injected calendar', () => {
+    const groups = groupTerminByDate(
+      [entry({ id: 'd2', scheduled_tee_off_at: '2026-10-03T07:20:00Z' })],
+      NOW,
+      utcParts,
+    );
+    expect(groups[0]).toMatchObject({ kind: 'day', label: { kind: 'days', days: 2 } });
+  });
+
+  it('«Denne helga» reads the weekend on the injected calendar', () => {
+    const rows = [
+      entry({ id: 'sat', scheduled_tee_off_at: '2026-10-03T10:00:00Z' }),
+      entry({ id: 'sun', scheduled_tee_off_at: '2026-10-04T10:00:00Z' }),
+    ];
+    expect(filterTermin(rows, 'helg', NOW, utcParts).map((e) => e.id)).toEqual(['sat', 'sun']);
+  });
+});
