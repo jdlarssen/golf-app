@@ -71,7 +71,7 @@ import {
   teamFormMeta,
 } from '../../lib/teamSignupCopy';
 import { describeWebLinkFailure, friendLinkPath, webUrl } from '../../lib/webLink';
-import { useBottomInsetUnlessKeyboard } from '../KeyboardInset';
+import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../KeyboardInset';
 import { PickerMore } from '../PickerSearch';
 import { BlyantIcon, SokIcon } from '../icons/Icons';
 import { QrCode } from '../profile/QrCode';
@@ -320,7 +320,12 @@ export function TeamSignupForm({
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} ref={rootRef} testID="team-form">
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" testID="team-form-scroll">
+      <ScrollView
+        {...KEYBOARD_SCROLL_PROPS}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        testID="team-form-scroll"
+      >
         {editing ? (
           <>
             <View style={[styles.edit, { backgroundColor: colors.surface2 }]}>
