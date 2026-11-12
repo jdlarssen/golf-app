@@ -23,6 +23,7 @@ import { ClubPicker } from '../components/create/ClubPicker';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
 import { PlayersStep } from '../components/create/PlayersStep';
+import { RegistrationChoice } from '../components/create/RegistrationChoice';
 import {
   SummaryStep,
   type SummaryLine,
@@ -50,6 +51,17 @@ import { hasHcpAllowanceField } from '../lib/allowanceCopy';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import { ARRANGEMENT_TEXT, CLUB_TEXT, type AppIntent } from '../lib/arrangementCopy';
 import { isValidClubChoice, startClubId } from '../../../../lib/wizard/clubChoice';
+import {
+  gameModeSupportsTeams,
+  organiserStartsOnRoster,
+  rosterOptionalAtPublish,
+  type RegistrationMode,
+} from '../../../../lib/games/registration';
+import {
+  REGISTRATION_TEXT,
+  registrationSummary,
+  type AppRegistrationType,
+} from '../lib/registrationCopy';
 import { averagePctToSumPct } from '../../../../lib/games/teamHandicapUnit';
 import { openOrReturn } from '../lib/backTo';
 import {
@@ -70,9 +82,12 @@ import { resolveTeeGender, teeAvailability } from '../lib/teeChoice';
 import {
   defaultGameName,
   draftNeedsTeamAssignment,
+  draftRegistration,
   effectiveTeamSize,
   isParStableford,
   isScrambleFamily,
+  resolveRegistration,
+  rosterForRegistration,
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
@@ -210,6 +225,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   const [picked, setPicked] = useState<PickedPlayer[]>([
     { userId, teamNumber: null, teeGender: null },
   ]);
+  // #2840 del 4: hvordan spillerne kommer, og hva man melder på. Arrangørens rå valg;
+  // det som lagres, avgjør `resolveRegistration` (klubb låst, format uten lag = solo).
+  const [registrationModeChoice, setRegistrationModeChoice] = useState<RegistrationMode>('invite_only');
+  const [registrationTypeChoice, setRegistrationTypeChoice] = useState<AppRegistrationType>('solo');
+  const [letFriendsSkipGate, setLetFriendsSkipGate] = useState(false);
   const [busy, setBusy] = useState(false);
   // #1954 D2: runde-id-en lages én gang per veiviser. Når publiseringen når
   // tidstaket etter at serveren lagret, treffer neste trykk den samme raden i
@@ -305,6 +325,27 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   /** Hvilke tee-sett den valgte teen rater. Ingen tee valgt → alle tre. */
   const teeAvail = useMemo(() => teeAvailability(selectedTee), [selectedTee]);
 
+  const registration = useMemo(
+    () =>
+      resolveRegistration({
+        clubScoped: intent === 'klubb',
+        gameMode,
+        mode: registrationModeChoice,
+        type: registrationTypeChoice,
+        letFriendsSkipGate,
+      }),
+    [gameMode, intent, letFriendsSkipGate, registrationModeChoice, registrationTypeChoice],
+  );
+  // #2840 (eierens valg): med lagpåmelding via lenken står ikke arrangøren på lista.
+  // Regelen bor i `organiserStartsOnRoster`. Raden din blir stående i `picked`, så du er
+  // med igjen når valget går tilbake: i appen kan du ikke krysse av deg selv.
+  const organiserOnRoster = organiserStartsOnRoster(registration.mode, registration.type);
+  const rosterOptional = rosterOptionalAtPublish({
+    registrationMode: registration.mode,
+    registrationType: registration.type,
+    clubScoped: intent === 'klubb',
+  });
+
   // Tee-settet UTLEDES i stedet for å kopieres inn i state: profilens default
   // (delt `playerGenderDefault`, junior inkludert), arrangørens overstyring der
   // den finnes, og klemmen til noe teen faktisk rater.
@@ -319,7 +360,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   // eller junior som arrangerte startet på herretee.
   const players = useMemo<DraftPlayer[]>(
     () =>
-      picked.map((p) => ({
+      rosterForRegistration(picked, userId, registration).map((p) => ({
         userId: p.userId,
         teamNumber: p.teamNumber,
         teeGender: resolveTeeGender(
@@ -330,7 +371,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           teeAvail,
         ),
       })),
-    [rosterSource, picked, profile.data, teeAvail, userId],
+    [registration, rosterSource, picked, profile.data, teeAvail, userId],
   );
 
   // #2753: typebytte nullstiller formatet, klubben og spillerlista. Formatene,
@@ -365,6 +406,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       // en kr-per-poeng fra forrige format hører like lite hjemme her.
       setSetup({});
       setSetupText({ allowance: '', krPerUnit: '' });
+      // #2840 del 4: et format uten lag kan ikke ha lagpåmelding. Valget går tilbake
+      // til Individuelt, som `useGameFormState` gjør på nettet.
+      if (!gameModeSupportsTeams(mode)) setRegistrationTypeChoice('solo');
       setCommon((prev) =>
         nameTouched ? prev : { ...prev, name: defaultGameName(mode) },
       );
@@ -378,7 +422,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         if (prev.some((p) => p.userId === candidate.id)) {
           return prev.filter((p) => p.userId !== candidate.id);
         }
-        if (gameMode && prev.length >= maxPlayersForMode(gameMode, effectiveTeamSize(gameMode, setup))) {
+        // Taket teller lista slik den lagres: uten deg med lagpåmelding (#2840).
+        const onRoster = rosterForRegistration(prev, userId, registration).length;
+        if (gameMode && onRoster >= maxPlayersForMode(gameMode, effectiveTeamSize(gameMode, setup))) {
           return prev;
         }
         // `teeGender: null` — tas en spiller bort og legges til igjen, faller
@@ -386,7 +432,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         return [...prev, { userId: candidate.id, teamNumber: null, teeGender: null }];
       });
     },
-    [gameMode, setup],
+    [gameMode, registration, setup, userId],
   );
 
   const assignTeam = useCallback((playerId: string, teamNumber: number) => {
@@ -450,8 +496,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       paymentLink: fee.paymentLink,
       prizes: fee.prizes,
       groupId: intent === 'klubb' && clubId !== '' ? clubId : null,
+      registrationMode: registration.mode,
+      registrationType: registration.type,
+      letFriendsSkipGate: registration.letFriendsSkipGate,
     };
-  }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, resolvedSetup, teeBoxId, teeOff]);
+  }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, registration, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
     ? teamLayoutFor(
@@ -632,6 +681,27 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           onTee={assignTee}
           onRetry={candidates.reload}
           club={intent === 'klubb'}
+          // #2840 del 4: påmeldingsvalget for en kompisrunde. Klubbturneringen har det
+          // ikke: den er låst til «Jeg velger dem nå» og Individuelt (#643).
+          registration={
+            intent === 'klubb' ? null : (
+              <RegistrationChoice
+                mode={registration.mode}
+                type={registration.type}
+                letFriendsSkipGate={registration.letFriendsSkipGate}
+                supportsTeams={gameModeSupportsTeams(gameMode)}
+                organiserOffRoster={!organiserOnRoster}
+                onMode={setRegistrationModeChoice}
+                onType={setRegistrationTypeChoice}
+                onLetFriendsSkipGate={setLetFriendsSkipGate}
+              />
+            )
+          }
+          listHeading={
+            registration.mode === 'invite_only' ? REGISTRATION_TEXT.listInvite : REGISTRATION_TEXT.listOptional
+          }
+          organiserOnRoster={organiserOnRoster}
+          rosterOptional={rosterOptional}
         />
       ) : null}
 
@@ -643,7 +713,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
             // ikke spiller en klubbturnering, stoppes ikke av egen profil.
             selfPending: selfPending && draft.players.some((p) => p.userId === userId),
             othersPending: othersPendingCount(draft, rosterSource, userId),
-            club: draft.groupId != null,
+            rosterOptional,
           })}
           error={failure?.text ?? null}
           errorAction={failure?.action ?? null}
@@ -738,6 +808,13 @@ export function summaryLines(
     return candidate ? displayName(candidate) : 'Deg';
   };
   const names = draft.players.map((p) => nameOf(p.userId));
+  // #2840 del 4: en klubbturnering har ikke valget, så raden står bare for en kompisrunde.
+  const club = draft.groupId != null;
+  const registration = draftRegistration(draft);
+  const emptyRoster =
+    !club && registration.mode !== 'invite_only' && registration.type === 'team'
+      ? REGISTRATION_TEXT.teamsSignUpThemselves
+      : CLUB_TEXT.noPlayers;
 
   // Bare de som IKKE spiller fra herretee. Står alle på herre, sier linja
   // ingenting nytt — og en oppsummering som gjentar standarden per spiller er
@@ -786,11 +863,22 @@ export function summaryLines(
       label: 'Tee-off',
       value: formatTeeOff(teeOff.toISOString()) ?? 'Ikke valgt',
     },
+    // Tegningen v3.1: «Påmelding» står over spillerne, i klar-stegets ord på nettet.
+    ...(club
+      ? []
+      : [
+          {
+            key: 'registration',
+            label: REGISTRATION_TEXT.summaryLabel,
+            value: registrationSummary(registration.mode, registration.type),
+          },
+        ]),
     {
       key: 'players',
       label: `Spillere (${draft.players.length})`,
-      // #2753: en klubbturnering kan publiseres uten spillere.
-      value: names.length > 0 ? names.join(', ') : CLUB_TEXT.noPlayers,
+      // #2753: en klubbturnering kan publiseres uten spillere, og med påmelding en
+      // kompisrunde også (#2840).
+      value: names.length > 0 ? names.join(', ') : emptyRoster,
     },
     ...(offMens.length > 0
       ? [
@@ -846,13 +934,14 @@ function othersPendingCount(
 function summaryWarnings(
   draft: GameDraft,
   mode: AppGameMode,
-  profiles: { selfPending: boolean; othersPending: number; club: boolean },
+  profiles: { selfPending: boolean; othersPending: number; rosterOptional: boolean },
 ): SummaryWarning[] {
   const warnings: SummaryWarning[] = [];
 
-  // #2753: i en klubbturnering melder medlemmene seg på selv, så antallet
-  // formatet krever sjekkes ved start, som på nettet (`rosterOptionalAtPublish`).
-  if (!profiles.club && !rosterFitsMode(mode, draft.players.length)) {
+  // #2753, #2840: når spillerne kan melde seg på selv (en klubbturnering, eller en
+  // kompisrunde med påmelding), sjekkes antallet formatet krever ved start, som på
+  // nettet (`rosterOptionalAtPublish`).
+  if (!profiles.rosterOptional && !rosterFitsMode(mode, draft.players.length)) {
     warnings.push({
       key: 'fit',
       text: `${APP_MODE_LABELS[mode]} spilles med ${describePlayerCounts(mode)}. Du har ${draft.players.length}.`,

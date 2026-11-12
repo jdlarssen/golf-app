@@ -15,7 +15,12 @@ import {
   type ParsedPayload,
 } from '../../../../lib/games/gamePayload';
 import { PRIZE_SLOTS, prizeFieldName, type PrizeDraft } from '../../../../lib/games/prizes';
-import { isClubTournament } from '../../../../lib/games/registration';
+import {
+  gameModeSupportsTeams,
+  isClubTournament,
+  organiserStartsOnRoster,
+  type RegistrationMode,
+} from '../../../../lib/games/registration';
 import {
   DEFAULT_SHAMBLE_SETUP,
   defaultTeamHandicapPct,
@@ -28,6 +33,7 @@ import {
   usesTeamAssignment,
   type AppGameMode,
 } from './appFormats';
+import type { AppRegistrationType } from './registrationCopy';
 import { WizardFormData, asSharedFormData } from './wizardFormData';
 
 /**
@@ -152,6 +158,83 @@ export interface GameDraft {
    * (`guard_games_competition_links`).
    */
   groupId?: string | null;
+  /**
+   * #2840 del 4: hvordan spillerne kommer, og hva man melder på. Utelatt =
+   * `invite_only` og `solo`, som før. Lagres slik {@link resolveRegistration}
+   * avgjør: en klubbturnering og et format uten lag kan ikke få noe annet.
+   */
+  registrationMode?: RegistrationMode;
+  registrationType?: AppRegistrationType;
+  /** «Slipp venner direkte inn». Gjelder bare med `manual_approval`. */
+  letFriendsSkipGate?: boolean;
+}
+
+/** Påmeldingen slik runden lagres. */
+export interface ResolvedRegistration {
+  mode: RegistrationMode;
+  type: AppRegistrationType;
+  letFriendsSkipGate: boolean;
+}
+
+/**
+ * Påmeldingen som gjelder, ut fra arrangørens valg (#2840 del 4).
+ *
+ * - En klubbturnering er låst til `invite_only` og `solo` (#643, #2753): medlemskapet
+ *   er invitasjonen.
+ * - Et format uten lag (`gameModeSupportsTeams`) får alltid `solo`. Den delte byggeren
+ *   ville ellers svart `team_registration_unsupported_mode`.
+ * - «Slipp venner direkte inn» gjelder bare «De ber om plass, jeg godkjenner», som i
+ *   byggeren.
+ *
+ * Veiviseren og payloaden leser begge denne, så skjermen aldri viser et valg som ikke
+ * blir lagret.
+ */
+export function resolveRegistration({
+  clubScoped,
+  gameMode,
+  mode = 'invite_only',
+  type = 'solo',
+  letFriendsSkipGate = false,
+}: {
+  clubScoped: boolean;
+  gameMode: AppGameMode | null;
+  mode?: RegistrationMode;
+  type?: AppRegistrationType;
+  letFriendsSkipGate?: boolean;
+}): ResolvedRegistration {
+  if (clubScoped) return { mode: 'invite_only', type: 'solo', letFriendsSkipGate: false };
+  return {
+    mode,
+    type: gameMode !== null && gameModeSupportsTeams(gameMode) ? type : 'solo',
+    letFriendsSkipGate: mode === 'manual_approval' && letFriendsSkipGate,
+  };
+}
+
+/**
+ * Lista uten arrangøren når påmeldingen er lag via lenken (#2840, eierens valg). Regelen
+ * bor i `organiserStartsOnRoster`; her er bare filteret. Arrangøren melder på laget sitt
+ * fra runden etter publisering, og stod hen på lista, ville påmeldingen svart
+ * `already_registered` (#2072).
+ */
+export function rosterForRegistration<T extends { userId: string }>(
+  players: readonly T[],
+  organiserId: string,
+  registration: Pick<ResolvedRegistration, 'mode' | 'type'>,
+): T[] {
+  return organiserStartsOnRoster(registration.mode, registration.type)
+    ? [...players]
+    : players.filter((p) => p.userId !== organiserId);
+}
+
+/** Påmeldingen for et utkast: {@link resolveRegistration} med utkastets klubb og format. */
+export function draftRegistration(draft: GameDraft): ResolvedRegistration {
+  return resolveRegistration({
+    clubScoped: isClubTournament({ groupId: draft.groupId, tournamentId: null }),
+    gameMode: draft.gameMode,
+    mode: draft.registrationMode,
+    type: draft.registrationType,
+    letFriendsSkipGate: draft.letFriendsSkipGate,
+  });
 }
 
 /** En ferdig utfylt spiller-slot, slik `player_${i}_*` bærer den. */
@@ -297,12 +380,15 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('score_visibility', draft.scoreVisibility ?? 'live');
   form.set('scheduled_tee_off_at', draft.teeOffAt ?? '');
 
-  // Appen inviterer alltid eksplisitt. Verdien er ikke bare en default:
-  // `buildGameInsertPayload` degraderer modus-valideringen til 'draft' når
-  // registration_mode er noe ANNET enn 'invite_only' (der `effectiveMode`
-  // settes), og da ville spillerantall-portene stilltiende sluttet å gjelde.
-  form.set('registration_mode', 'invite_only');
-  form.set('registration_type', 'solo');
+  // #2840 del 4: arrangørens valg, som nettets veiviser sender dem. Med påmelding
+  // er lista valgfri ved publisering: den delte byggeren kjører da formatets
+  // validator som 'draft' (`rosterOptionalAtPublish`), og spillerantallet sjekkes
+  // ved start. Uten valg står `invite_only` og `solo`, og antallet gjelder som før.
+  // Bryteren sendes som nettets skjulte felt: '1' når den er på.
+  const registration = draftRegistration(draft);
+  form.set('registration_mode', registration.mode);
+  form.set('registration_type', registration.type);
+  form.set('let_friends_skip_gate', registration.letFriendsSkipGate ? '1' : '');
 
   const sideEnabled = draft.sideTournamentEnabled === true;
   form.set('side_tournament_enabled', sideEnabled ? 'true' : 'false');

@@ -321,9 +321,12 @@ describe('CreateGame: klubbturnering (#2753)', () => {
     expect(screen.queryByText('Du er alltid med')).toBeNull();
     expect(screen.queryByTestId('create-player-p2')).toBeNull();
     expect(screen.queryByTestId('create-roster-fit')).toBeNull();
+    // #2840 del 4: klubbturneringen har ikke påmeldingsvalget (#643).
+    expect(screen.queryByTestId('create-registration')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('create-next'));
     expect(screen.getByText('Ingen spillere ennå.')).toBeTruthy();
+    expect(screen.queryByTestId('create-summary-registration')).toBeNull();
     await fireEvent.press(screen.getByTestId('create-publish'));
 
     const [draft] = publishGameMock.mock.calls.at(-1)!;
@@ -498,6 +501,132 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
     await fireEvent.press(screen.getByTestId('create-shamble-gross'));
     expect(screen.queryByTestId('create-shamble-allowance')).toBeNull();
     expect(screen.getByTestId('create-shamble-count-3').props.accessibilityState).toMatchObject({ selected: true });
+  });
+});
+
+const TEXAS_AND_STABLEFORD = [
+  { slug: 'texas_scramble', label: 'Texas scramble', iconKey: 't', isPrimary: false, sortOrder: 1 },
+  { slug: 'stableford', label: 'Stableford', iconKey: 'flag', isPrimary: true, sortOrder: 2 },
+];
+
+/** Fra formatsteget til spillersteget. Første gang velges bane og tee; de står etterpå. */
+async function formatToPlayers(slug: string, { pickCourse = true }: { pickCourse?: boolean } = {}) {
+  await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+  await fireEvent.press(screen.getByTestId('create-next'));
+  await fireEvent.press(screen.getByTestId('create-next'));
+  if (pickCourse) {
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+  }
+  await fireEvent.press(screen.getByTestId('create-next'));
+}
+
+describe('CreateGame: påmeldingen i en kompisrunde (#2840 del 4)', () => {
+  afterEach(() => publishGameMock.mockClear());
+
+  it('tre valg, bryteren bare under godkjenning, og ingen «Hva melder man på?» uten lag', async () => {
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'g-approval' });
+    await renderWizard();
+    await formatToPlayers('stableford');
+
+    expect(screen.getByText('Hvordan får dere spillere?')).toBeTruthy();
+    for (const mode of ['invite_only', 'manual_approval', 'open']) {
+      expect(screen.getByTestId(`create-registration-${mode}`)).toBeTruthy();
+    }
+    expect(screen.getByTestId('create-registration-invite_only').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.queryByTestId('create-registration-what')).toBeNull();
+    expect(screen.queryByTestId('create-registration-friends')).toBeNull();
+    expect(screen.getByTestId('create-players-heading').props.children).toBe('Hvem spiller?');
+
+    await fireEvent.press(screen.getByTestId('create-registration-manual_approval'));
+    expect(screen.getByText('Slipp venner direkte inn')).toBeTruthy();
+    expect(screen.getByTestId('create-players-heading').props.children).toBe(
+      'Vil du legge inn noen nå? Lista kan stå tom.',
+    );
+    // Uten lag står du på lista som før.
+    expect(screen.getByTestId('create-player-me')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('create-registration-friends-switch'));
+
+    await fireEvent.press(screen.getByTestId('create-registration-open'));
+    expect(screen.queryByTestId('create-registration-friends')).toBeNull();
+    await fireEvent.press(screen.getByTestId('create-registration-manual_approval'));
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-summary-registration').props.children).toBe('Du godkjenner påmeldinger');
+    await fireEvent.press(screen.getByTestId('create-publish'));
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft).toMatchObject({
+      registrationMode: 'manual_approval',
+      registrationType: 'solo',
+      letFriendsSkipGate: true,
+    });
+    expect(draft.players.map((p) => p.userId)).toEqual(['me']);
+  });
+
+  it('Texas med åpen påmelding og Lag: du går av lista, og runden publiseres uten spillere', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce(TEXAS_AND_STABLEFORD);
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'g-team' });
+    const { navigation } = await renderWizard();
+    await formatToPlayers('texas_scramble');
+
+    expect(screen.getByTestId('create-registration-what')).toBeTruthy();
+    expect(screen.getByTestId('create-registration-type-solo').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    // «Jeg velger dem nå» og Lag: du står på lista, ingen merknad.
+    await fireEvent.press(screen.getByTestId('create-registration-type-team'));
+    expect(screen.queryByTestId('create-registration-organiser-note')).toBeNull();
+    expect(screen.getByTestId('create-player-me')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('create-registration-open'));
+    expect(screen.getByTestId('create-registration-organiser-note').props.children).toBe(
+      'Du står ikke på lista nå. Når runden er publisert, melder du på laget ditt fra runden.',
+    );
+    expect(screen.queryByTestId('create-player-me')).toBeNull();
+    expect(screen.getByTestId('create-roster-count').props.children).toMatch(/^0 av /);
+    expect(screen.queryByTestId('create-roster-fit')).toBeNull();
+
+    // Lista kan stå tom: «Neste» er åpen, og publiseringen likeså.
+    expect(screen.getByTestId('create-next').props.accessibilityState).not.toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-summary-registration').props.children).toBe('Åpen påmelding · lag');
+    expect(screen.getByText('Spillere (0)')).toBeTruthy();
+    expect(screen.getByTestId('create-summary-players').props.children).toBe('Lagene melder seg på selv');
+    expect(screen.queryByTestId('create-warning-fit')).toBeNull();
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft).toMatchObject({ registrationMode: 'open', registrationType: 'team', players: [] });
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: 'g-team' });
+  });
+
+  it('et format uten lag setter typen tilbake til Individuelt, og du er på lista igjen', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce(TEXAS_AND_STABLEFORD);
+    await renderWizard();
+    await formatToPlayers('texas_scramble');
+    await fireEvent.press(screen.getByTestId('create-registration-open'));
+    await fireEvent.press(screen.getByTestId('create-registration-type-team'));
+    expect(screen.queryByTestId('create-player-me')).toBeNull();
+
+    // Tilbake til formatene: Stableford har ikke lag.
+    for (let i = 0; i < 3; i += 1) await fireEvent.press(screen.getByTestId('create-back'));
+    await formatToPlayers('stableford', { pickCourse: false });
+    expect(screen.queryByTestId('create-registration-what')).toBeNull();
+    expect(screen.queryByTestId('create-registration-organiser-note')).toBeNull();
+    expect(screen.getByTestId('create-player-me')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-summary-registration').props.children).toBe('Åpen påmelding');
+
+    // Og Texas igjen: Individuelt står valgt, som på nettet.
+    await fireEvent.press(screen.getByTestId('create-back'));
+    for (let i = 0; i < 3; i += 1) await fireEvent.press(screen.getByTestId('create-back'));
+    await formatToPlayers('texas_scramble', { pickCourse: false });
+    expect(screen.getByTestId('create-registration-type-solo').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
   });
 });
 
