@@ -211,11 +211,15 @@ flowchart LR
 ```mermaid
 flowchart TD
   S["/signup/[shortId]"] --> M{registration_mode}
-  M -- open --> O["«Meld meg på» → game_players<br/>→ /games/[id]"]
+  M -- open --> F{full?}
+  F -- nei --> O["«Meld meg på» → game_players<br/>→ /games/[id]"]
+  F -- ja --> R
   M -- manual_approval --> R["«Be om å bli med» + melding<br/>→ game_registration_requests (pending)<br/>→ varsel til arrangøren"]
   M -- invite_only --> I["«Krever invitasjon»<br/>→ /innboks hvis ventende"]
   S -. "registration_type = team" .-> T["/signup/[shortId]/team<br/>lag-påmelding"]
 ```
+
+**Full runde (#2837):** har formatet et tak (fast antall spillere, eller lagformatets rutenett) og alle plassene er tatt, viser en åpen runde forespørselsskjemaet med banneret «Runden er full» i stedet for «Meld meg på». Tellingen er den samme som plassen tas med (`getRegistrationSeats`, terminlistas «Fullt»), og regelen står i `signupOffer` (`solo_open_full`), så nettsiden og appen sier det samme. Matchplay har fortsatt sidevelgeren. Forespørselen går til arrangøren som en vanlig forespørsel. Stengt påmelding slår full runde: da sendes ingen ny forespørsel, men de som alt står, kan godkjennes. En forespørsel som er trukket, kan sendes på nytt og havner da bakerst i køen.
 
 Lag-flyt (`/signup/[shortId]/team`): kaptein navngir lag + fyller medspiller-slots (kjent bruker oppslag eller ukjent e-post). Kjente → in-app-varsel + auto-`game_players`. Ukjente → Resend-invitasjon (`lib/mail/teamInvitation.ts`) → OTP → profil → «Bli med på lag».
 
