@@ -9,10 +9,10 @@
 // og lista kan stå tom fordi medlemmene melder seg på selv (nettets regel,
 // `rosterOptionalAtPublish`). Antallet formatet krever sjekkes ved start.
 //
-// **Og når arrangøren melder på laget sitt via lenken (#2840 del 4).** Med lagpåmelding
-// (`organiserStartsOnRoster` er usann) står ikke raden din: du melder på laget ditt fra
-// runden etter publisering. Over lista står da påmeldingsvalget for en kompisrunde
+// **Påmeldingsvalget for en kompisrunde (#2840 del 4)** står over lista
 // (`RegistrationChoice`), og med påmelding kan lista stå tom (`rosterOptionalAtPublish`).
+// Med lagpåmelding via lenken (`organiserStartsOnRoster` er usann) er det ingen liste:
+// lagene melder seg på selv, og du melder på laget ditt fra runden etter publisering.
 //
 // **Lista er medspillere, ikke venner.** `users`-RLS-en gir egen rad, admin og
 // delte spill — en venn du aldri har spilt med er ikke navnlesbar herfra, og
@@ -257,7 +257,7 @@ export function PlayersStep({
           alle, og fire like setninger ville vært støy. */}
       {teeNote ? <Note testID="create-tee-note">{teeNote}</Note> : null}
 
-      {club || !organiserOnRoster ? null : (
+      {club ? null : (
         <>
           <SelectRow
             testID={`create-player-${meId}`}
