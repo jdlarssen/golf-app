@@ -167,7 +167,7 @@ export function liveStanding(
   if (!board) return null;
   const standing = viewerStanding(board, userId);
   if (!standing || standing.total === null) return null;
-  // #2712: tavlas svar på om dette er en ligarunde spilt alene (uten plass).
+  // #2712, #2850: tavlas svar på om dette er en ligaflight (uten plass).
   return { standing, unit: board.unit, leagueFlight: board.leagueFlight === true };
 }
 

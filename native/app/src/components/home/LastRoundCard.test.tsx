@@ -84,7 +84,7 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
   expect(screen.getByTestId('home-last-round-medal', HIDDEN)).not.toHaveTextContent(/\d/);
 });
 
-// #2712 (eieren 31.10): en ligaflight spilt alene sier «Godkjent», ikke «Du vant»,
+// #2712 (eieren 31.10): en ligaflight sier «Godkjent», ikke «Du vant»,
 // og har ingen plass i medaljongen.
 it('ligaflight alene: «Godkjent» og poengene, uten plass', async () => {
   const card = homeCard({

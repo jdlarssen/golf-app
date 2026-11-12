@@ -1,5 +1,5 @@
 // #2712 (Type B, orkestratoren 31.10 etter eierens regel): «Hull for hull» for
-// en ligarunde spilt alene viser ingen plass i stillingen. Hullene (og ★) tegnes
+// en ligaflight viser ingen plass i stillingen. Hullene (og ★) tegnes
 // først når en ni åpnes; at ★ er borte, låser modellen (holeByHole.test.ts).
 import { render, screen } from '@testing-library/react-native';
 import { soloStablefordScorecard } from '../../../../../lib/leaderboard/soloScorecard';

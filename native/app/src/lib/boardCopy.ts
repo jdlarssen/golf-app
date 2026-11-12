@@ -134,7 +134,7 @@ export const BOARD_APP_TEXT = {
   pillFinished: 'Sluttresultat · {holes} hull',
   winner: 'Vinner',
   resultKicker: 'Ditt resultat',
-  /** #2712: en ligarunde spilt alene har ingen plass, bare markørens godkjenning. */
+  /** #2712: en ligaflight har ingen plass, bare markørens godkjenning. */
   approved: 'Godkjent',
   scorecard: 'Scorekortet',
   /** Den korte avstanden i «Ditt resultat»: den lange bryter linja ved knappen. */

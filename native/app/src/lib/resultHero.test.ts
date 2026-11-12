@@ -128,6 +128,19 @@ describe('setningen', () => {
     expect(model.celebrates).toBe(false);
   });
 
+  it('ligaflight på to: «Godkjent», ingen feiring, ingen plass (#2850)', () => {
+    const model = hero(stableford([['a', 34, 1], ['b', 30, 2]]), bundle(['a', 'b'], { leagueRoundId: 'round-1' }));
+    expect(text(model.lines)).toEqual(['Godkjent']);
+    expect(model.celebrates).toBe(false);
+    expect(model.card.rows.map((r) => [r.rank, r.winner])).toEqual([[null, false], [null, false]]);
+  });
+
+  it('to utenfor en liga: vinneren feires som før', () => {
+    const model = hero(stableford([['a', 34, 1], ['b', 30, 2]]), bundle(['a', 'b']));
+    expect(text(model.lines)).not.toEqual(['Godkjent']);
+    expect(model.card.rows[0]).toMatchObject({ rank: 1, winner: true });
+  });
+
   it('ligarunde alene: «Godkjent», ingen feiring (#2712)', () => {
     const model = hero(stableford([['a', 34, 1]]), bundle(['a'], { leagueRoundId: 'round-1' }));
     expect(text(model.lines)).toEqual(['Godkjent']);

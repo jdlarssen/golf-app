@@ -343,7 +343,7 @@ export function ticketStub(opts: {
   submittedAt: string | null;
   approvedAt: string | null;
   requirePeerApproval: boolean;
-  /** #2712: spillet er en ligaflight (spilt alene står det «Godkjent», ikke «Du vant»). */
+  /** #2712: spillet er en ligaflight (det står «Godkjent», ikke plass eller «Du vant»). */
   leagueFlight?: boolean;
   /** #2752: spillet er en kamp i en cup. */
   cupGame?: boolean;

@@ -193,7 +193,7 @@ export function finishedResultText(badge: FinishedResultBadge): string | null {
   switch (badge.key) {
     case 'result.youWon':
       return 'Du vant';
-    // #2712: en ligaflight spilt alene (`finishedCard.result.approved`).
+    // #2712: en ligaflight (`finishedCard.result.approved`).
     case 'result.approved':
       return 'Godkjent';
     case 'result.teamWon':

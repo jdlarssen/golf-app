@@ -89,7 +89,7 @@ export function diaryResult(
   opts: { leagueFlight?: boolean } = {},
 ): DiaryResult | null {
   if (summary == null) return null;
-  // #2712 (eieren 31.10): en ligaflight spilt alene har ingen plass, bare «Godkjent».
+  // #2712 (eieren 31.10): en ligaflight har ingen plass, bare «Godkjent».
   const badge = finishedResultBadge(summary, { leagueFlight: opts.leagueFlight ?? false });
   if (summary.kind === 'matchplay' || badge.key === 'result.approved') {
     const text = finishedResultText(badge);
