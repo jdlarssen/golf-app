@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildAppRoundInviteView, type AppRoundInviteViewGame } from './appRoundInviteView';
+import {
+  buildAppRoundInviteView,
+  type AppRoundInviteViewGame,
+  type AppTeamSignupForm,
+} from './appRoundInviteView';
 
 /** Type A (#2748): what the app gets about a round before you are on it. */
 
@@ -33,7 +37,23 @@ describe('buildAppRoundInviteView', () => {
       seats: null,
       canCancelRequest: false,
       signupPath: '/signup/abc12345',
+      teamSignup: null,
+      hasTeamPage: false,
     });
+  });
+
+  // #2840
+  it('carries the team screen and the team page beside the offer, which stays web', () => {
+    const teamSignup: AppTeamSignupForm = {
+      kind: 'form',
+      teamSize: 2,
+      nameMin: 3,
+      nameMax: 40,
+      suggestedName: 'Martins lag',
+      unavailableFriendIds: [],
+    };
+    const view = buildAppRoundInviteView(GAME, 'web', 3, NO_EXTRAS, { teamSignup, hasTeamPage: true });
+    expect(view).toMatchObject({ offer: 'web', teamSignup, hasTeamPage: true });
   });
 
   it('carries the seats as numbers (#2837)', () => {
