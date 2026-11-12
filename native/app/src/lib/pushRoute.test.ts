@@ -271,3 +271,34 @@ describe('?varsel= på lenka', () => {
     expect(pushNotificationId(url)).toBe(id);
   });
 });
+
+// #2840: lagvarslene peker på `/signup/<kode>/team` og åpner påmeldingsskjermen, der
+// svaret på invitasjonen står. Del 3 flytter `/team` til lagsiden.
+describe('påmeldingen', () => {
+  it.each([
+    '/signup/abcd1234',
+    '/signup/abcd1234/',
+    '/signup/abcd1234/team',
+    '/signup/abcd1234/team/',
+    `/signup/abcd1234/team?varsel=${NOTE}`,
+    `/signup/abcd1234?varsel=${NOTE}`,
+    '/en/signup/abcd1234/team',
+  ])('%s åpner påmeldingen med koden', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } });
+  });
+
+  it.each(['/signup/abcd1234/noe', '/signup/ABCD1234', '/signup/kort', '/signup/', '/signupx/abcd1234'])(
+    '%s er ingen påmelding, og går til Hjem',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'Home' });
+    },
+  );
+
+  it('laginvitasjonen fra serveren åpner påmeldingen', () => {
+    const url = notificationDestination({
+      kind: 'team_invite',
+      payload: { game_short_id: 'abcd1234' } as NotificationPayload<'team_invite'>,
+    });
+    expect(pushTarget(url)).toEqual({ name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } });
+  });
+});

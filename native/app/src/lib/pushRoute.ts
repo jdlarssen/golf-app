@@ -23,6 +23,11 @@
 // (`cup_signup`): det peker på Spillere-rommet, `/admin/cup/{id}/spillere` eller
 // `/klubber/{klubb}/cup/{id}/spillere`, og åpner spillerlista (`CupParticipants`).
 //
+// Lagvarslene (#2840: en kaptein vil ha deg med, en medspiller trakk seg) peker på
+// `/signup/{kode}/team`, og `/signup/{kode}` er påmeldingssiden. Begge åpner
+// påmeldingsskjermen (`RoundInvite`) med koden, der lagskjemaet og svaret på
+// invitasjonen står. Lagsiden i appen (del 3) tar over `/team`.
+//
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
 // Vår payload er `{ aps, url, kind }`, så `url` står i
@@ -37,6 +42,7 @@
 // `readMarkerFrom`, så regelen for hva som er en gyldig id har ett hjem.
 //
 // Ren og I/O-fri (Type A).
+import { isSignupShortId } from '../../../../lib/appLinks/appLinkPaths';
 import { readMarkerFrom } from '../../../../lib/notifications/readMarker';
 
 export type PushTarget =
@@ -53,6 +59,7 @@ export type PushTarget =
   | { name: 'CupParticipants'; params: { cupId: string } }
   | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
+  | { name: 'RoundInvite'; params: { shortId: string; src: null } }
   | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
@@ -73,6 +80,7 @@ const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
 const CUP_PATH = /^\/(?:[a-z]{2}\/)?cup\/([^/?#]+)/;
+const SIGNUP_PATH = /^\/(?:[a-z]{2}\/)?signup\/([^/?#]+)(?:\/team)?\/?(?:[?#]|$)/;
 const CUP_PLAYERS_PATH =
   /^\/(?:[a-z]{2}\/)?(?:admin\/cup|klubber\/[^/?#]+\/cup)\/([^/?#]+)\/spillere(?:[/?#]|$)/;
 
@@ -133,6 +141,9 @@ export function pushTarget(url: string | null): PushTarget {
   const cup = url ? CUP_PATH.exec(url) : null;
   const cupId = cup ? decodedOrNull(cup[1]) : null;
   if (cupId && cupId !== 'bli-med') return { name: 'Cup', params: { cupId } };
+  const signup = url ? SIGNUP_PATH.exec(url) : null;
+  const shortId = signup ? decodedOrNull(signup[1]) : null;
+  if (shortId && isSignupShortId(shortId)) return { name: 'RoundInvite', params: { shortId, src: null } };
   if (url && FRIENDS_PATH.test(url)) return { name: 'Friends', params: { from: 'notification' } };
   if (url && HISTORY_PATH.test(url)) return { name: 'RoundStats' };
   return { name: 'Home' };

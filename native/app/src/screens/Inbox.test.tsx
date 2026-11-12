@@ -290,18 +290,19 @@ describe('et trykk', () => {
     expect(screen.queryByTestId('inbox-row-arrow')).toBeNull();
   });
 
+  // Lagvarslene (`/signup/…`) åpner påmeldingsskjermen siden #2840; klubben finnes ikke i appen.
   it('på noe appen ikke har, åpner nettsiden', async () => {
-    const team = entry({ key: 't', title: 'Lag', destination: '/signup/abcd1234/team' });
-    await renderInbox({ ...BOARD, sections: { action: [], today: [team], earlier: [] } });
-    await fireEvent.press(screen.getByText('Lag'));
-    expect(openWebMock).toHaveBeenCalledWith('/signup/abcd1234/team');
+    const club = entry({ key: 't', title: 'Klubb', destination: '/klubber/k1' });
+    await renderInbox({ ...BOARD, sections: { action: [], today: [club], earlier: [] } });
+    await fireEvent.press(screen.getByText('Klubb'));
+    expect(openWebMock).toHaveBeenCalledWith('/klubber/k1');
   });
 
   it('en lenke som ikke kunne åpnes, sier fra', async () => {
     openWebMock.mockResolvedValueOnce({ ok: false, reason: 'open-failed' });
-    const team = entry({ key: 't', title: 'Lag', destination: '/signup/abcd1234/team' });
-    await renderInbox({ ...BOARD, sections: { action: [], today: [team], earlier: [] } });
-    await fireEvent.press(screen.getByText('Lag'));
+    const club = entry({ key: 't', title: 'Klubb', destination: '/klubber/k1' });
+    await renderInbox({ ...BOARD, sections: { action: [], today: [club], earlier: [] } });
+    await fireEvent.press(screen.getByText('Klubb'));
     expect(await screen.findByTestId('inbox-action-error')).toBeTruthy();
   });
 

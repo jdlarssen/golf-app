@@ -24,14 +24,29 @@ describe('inboxTarget', () => {
     ['/klubber/k1/cup/c1/spillere', { name: 'CupParticipants', params: { cupId: 'c1' } }],
     ['/profile/venner', { name: 'Friends', params: { from: 'notification' } }],
     ['/profile/historikk', { name: 'RoundStats' }],
+    // #2840: laginvitasjonen og en medspiller som trakk seg åpner påmeldingsskjermen.
+    ['/signup/abcd1234', { name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } }],
+    ['/signup/abcd1234/team', { name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } }],
   ])('%s åpner skjermen', (path, target) => {
     expect(inboxTarget(path)).toEqual({ kind: 'screen', target });
   });
 
-  it.each([`/admin/games/${GAME}/signups`, '/signup/abcd1234/team', '/klubber/k1'])(
+  it.each([`/admin/games/${GAME}/signups`, '/klubber/k1'])(
     '%s finnes ikke i appen, og åpner nettsiden',
     (path) => {
       expect(inboxTarget(path)).toEqual({ kind: 'web', path });
+    },
+  );
+
+  it.each(['team_invite', 'team_member_withdrew'] as NotificationKind[])(
+    '%s åpner påmeldingsskjermen med rundens kode (#2840)',
+    (kind) => {
+      const destination = notificationDestination({ kind, payload: testPayloads[kind] });
+      const target = inboxTarget(destination);
+      expect(target).toEqual({
+        kind: 'screen',
+        target: { name: 'RoundInvite', params: { shortId: expect.any(String), src: null } },
+      });
     },
   );
 
