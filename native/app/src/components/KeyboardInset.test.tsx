@@ -185,6 +185,11 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/approve/RejectSheet.tsx': 'modal',
   // #2675: søkefeltet over medspillerlista og over markørvalget.
   'components/PickerSearch.tsx': { host: 'screens/LeagueRoundStart.tsx', scrollTestID: 'round-start-scroll' },
+  // #2840: lagnavnet og søket i lagskjemaet, i skjemaets eget rullefelt.
+  'components/signup/TeamSignupForm.tsx': {
+    host: 'components/signup/TeamSignupForm.tsx',
+    scrollTestID: 'team-form-scroll',
+  },
 };
 
 describe('rullefeltet på skjermer med tekstfelt', () => {
