@@ -158,8 +158,15 @@ export function readTeamPageView(body: unknown): AppTeamPageResponse | null {
 }
 
 /** Laget ditt i runden, eller hvorfor det ikke er noe lag å vise. */
-export async function fetchTeamPage(shortId: string): Promise<TeamPageLoadResult> {
-  const call = await callWebRoute(route(shortId), 'GET');
+/**
+ * `visit: false` er en titt (#2840): raden «Laget ditt» leser laget uten at plassen
+ * bekreftes eller lagvarslene merkes lest. Det gjør bare lagsiden selv.
+ */
+export async function fetchTeamPage(
+  shortId: string,
+  { visit = true }: { visit?: boolean } = {},
+): Promise<TeamPageLoadResult> {
+  const call = await callWebRoute(visit ? route(shortId) : `${route(shortId)}?visit=0`, 'GET');
   if (!call.ok) return call;
   if (call.status === 401) return { ok: false, reason: 'unauthorized' };
   if (call.status === 404) return { ok: false, reason: 'not_found' };

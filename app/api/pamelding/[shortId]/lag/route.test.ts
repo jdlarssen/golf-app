@@ -63,9 +63,9 @@ import { GET, POST } from './route';
 
 const params = { params: Promise.resolve({ shortId: SHORT_ID }) };
 
-function get(token: string | null = 'token-meg') {
+function get(token: string | null = 'token-meg', query = '') {
   return GET(
-    new NextRequest(`http://localhost/api/pamelding/${SHORT_ID}/lag`, {
+    new NextRequest(`http://localhost/api/pamelding/${SHORT_ID}/lag${query}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     }),
     params,
@@ -135,6 +135,13 @@ describe('GET /api/pamelding/[shortId]/lag', () => {
     expect(core.loadTeamDashboard).toHaveBeenCalledWith(SHORT_ID, ME);
     expect(readUnavailableFriendIds).toHaveBeenCalledWith(GAME_ID, ME);
     expect(core.onTeamPageVisit).toHaveBeenCalledWith(GAME_ID, ME);
+  });
+
+  it('#2840: ?visit=0 reads the team without recording a visit (the «Laget ditt» row)', async () => {
+    const res = await get('token-meg', '?visit=0');
+    expect(res.status).toBe(200);
+    expect(core.loadTeamDashboard).toHaveBeenCalledWith(SHORT_ID, ME);
+    expect(core.onTeamPageVisit).not.toHaveBeenCalled();
   });
 
   it('#2840: only the captain gets the friends who are in the round', async () => {

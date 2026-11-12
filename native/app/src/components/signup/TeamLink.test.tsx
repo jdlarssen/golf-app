@@ -51,6 +51,8 @@ it('med et lag: lagnavnet og linja, og et trykk åpner lagsiden', async () => {
   expect(screen.getByTestId('team-link-line')).toHaveTextContent('Laget ditt · 2 av 3 har svart ja');
   await fireEvent.press(screen.getByTestId('team-link'));
   expect(onOpen).toHaveBeenCalledTimes(1);
+  // #2840: raden er en titt. Varslene merkes lest først når lagsiden åpnes.
+  expect(require('../../data/teamPage').fetchTeamPage).toHaveBeenCalledWith('abcd2345', { visit: false });
 });
 
 it.each([
