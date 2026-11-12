@@ -16,10 +16,54 @@ const GAME_ID = '22222222-2222-4222-8222-222222222222';
 const SHORT_ID = 'abc12345';
 const IP = '203.0.113.7';
 
+const FRIEND_A = '33333333-3333-4333-8333-333333333333';
+const FRIEND_B = '44444444-4444-4444-8444-444444444444';
+const FRIEND_C = '55555555-5555-4555-8555-555555555555';
+const STRANGER = '66666666-6666-4666-8666-666666666666';
+const REQUEST_ID = '77777777-7777-4777-8777-777777777777';
+
 let countAnswer: { count?: number; error?: { message: string } } = { count: 5 };
-const fake = createAdminClientMock({ tokens: { 'token-meg': ME }, respond: () => countAnswer });
+/** #2840: the team reads. `ownRow` is the caller's request row in the round. */
+let ownRow: Record<string, unknown> | null = null;
+let rosterRows: { user_id: string }[] = [];
+let requestRows: { user_id: string }[] = [];
+let myName: string | null = 'Martin Hansen';
+const fake = createAdminClientMock({
+  tokens: { 'token-meg': ME },
+  respond: (op) => {
+    if (op.table === 'game_players') return { ...countAnswer, data: rosterRows };
+    if (op.table === 'game_registration_requests') return { data: op.single ? ownRow : requestRows };
+    if (op.table === 'users') return { data: { name: myName } };
+    return {};
+  },
+});
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
 vi.mock('@/lib/games/loadSignupFacts');
+
+const readFriendIdsMock = vi.fn();
+vi.mock('@/lib/friends/getFriendIds', () => ({
+  readFriendIds: (userId: string) => readFriendIdsMock(userId),
+}));
+
+const loadTeamDashboardMock = vi.fn();
+vi.mock('@/lib/games/teamDashboardCore', () => ({
+  loadTeamDashboard: (...args: unknown[]) => loadTeamDashboardMock(...args),
+}));
+
+const submitTeamMock = vi.fn();
+const acceptTeamMock = vi.fn();
+const declineTeamMock = vi.fn();
+vi.mock('@/lib/games/teamRegistrationCore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/games/teamRegistrationCore')>()),
+  submitTeamRegistrationCore: (...args: unknown[]) => submitTeamMock(...args),
+  acceptTeamInviteCore: (...args: unknown[]) => acceptTeamMock(...args),
+  declineTeamInviteCore: (...args: unknown[]) => declineTeamMock(...args),
+}));
+
+const displayNameMock = vi.fn();
+vi.mock('@/app/[locale]/signup/[shortId]/team/captainLookup', () => ({
+  getCaptainDisplayName: (userId: string) => displayNameMock(userId),
+}));
 
 const getGameByShortIdMock = vi.fn();
 vi.mock('@/lib/games/getGameByShortId', () => ({
@@ -102,6 +146,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   countAnswer = { count: 5 };
+  ownRow = null;
+  rosterRows = [];
+  requestRows = [];
+  myName = 'Martin Hansen';
+  readFriendIdsMock.mockResolvedValue([]);
+  displayNameMock.mockImplementation(async (id: string) => `Navn ${id.slice(0, 4)}`);
+  submitTeamMock.mockResolvedValue({ ok: true, captainRequestId: REQUEST_ID, slotResults: [] });
+  acceptTeamMock.mockResolvedValue({ ok: true });
+  declineTeamMock.mockResolvedValue({ ok: true });
   getGameByShortIdMock.mockResolvedValue(makeGame());
   vi.mocked(loadSignupFacts).mockResolvedValue(NO_LINK);
   registerMock.mockResolvedValue({ ok: true, gameId: GAME_ID });
@@ -145,6 +198,8 @@ describe('GET /api/pamelding/[shortId]', () => {
       seats: null,
       canCancelRequest: false,
       signupPath: `/signup/${SHORT_ID}`,
+      teamSignup: null,
+      hasTeamPage: false,
     });
     expect(loadSignupFacts).toHaveBeenCalledWith(expect.objectContaining({ id: GAME_ID }), ME);
     const count = fake.ops.find((op) => op.table === 'game_players');
@@ -428,5 +483,284 @@ describe('POST /api/pamelding/[shortId]', () => {
     expect(await res.json()).toEqual({ error: 'db_error' });
     expect(registerMock).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+// #2840: the team screens in the app.
+const TEAM_ROUND = { registration_type: 'team', game_mode: 'best_ball', mode_config: { kind: 'best_ball', team_size: 2 } };
+
+describe('GET /api/pamelding/[shortId]: the team screens (#2840)', () => {
+  it('a captain-to-be gets the form, and the offer stays web for old builds', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    const body = await (await get()).json();
+    expect(body).toMatchObject({
+      offer: 'web',
+      teamSignup: {
+        kind: 'form',
+        teamSize: 2,
+        nameMin: 3,
+        nameMax: 40,
+        suggestedName: 'Martins lag',
+        unavailableFriendIds: [],
+      },
+      hasTeamPage: false,
+    });
+  });
+
+  it('greys out only friends already in the round: on the list or with a live request', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    readFriendIdsMock.mockResolvedValue([FRIEND_A, FRIEND_B, FRIEND_C]);
+    rosterRows = [{ user_id: FRIEND_A }, { user_id: STRANGER }, { user_id: ME }];
+    requestRows = [{ user_id: FRIEND_B }, { user_id: '88888888-8888-4888-8888-888888888888' }];
+    const body = await (await get()).json();
+    expect(body.teamSignup.unavailableFriendIds).toEqual([FRIEND_A, FRIEND_B]);
+    expect(readFriendIdsMock).toHaveBeenCalledWith(ME);
+
+    const roster = fake.ops.find((op) => op.table === 'game_players' && op.columns === 'user_id' && op.filters.length === 2);
+    expect(roster?.filters).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', column: 'game_id', value: GAME_ID },
+        { op: 'is', column: 'withdrawn_at', value: null },
+      ]),
+    );
+    const requests = fake.ops.find((op) => op.table === 'game_registration_requests' && !op.single);
+    expect(requests?.filters).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', column: 'game_id', value: GAME_ID },
+        { op: 'in', column: 'status', value: ['pending', 'approved'] },
+      ]),
+    );
+  });
+
+  it('no name gives «Laget mitt»', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    myName = null;
+    expect((await (await get()).json()).teamSignup.suggestedName).toBe('Laget mitt');
+  });
+
+  it('an invited teammate gets the yes/no, with the names the team page shows and no ids', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, requestView: 'captain_invited' });
+    ownRow = { status: 'pending', is_team_captain: false, team_request_id: 'captain-row' };
+    loadTeamDashboardMock.mockResolvedValue({
+      kind: 'member',
+      game: { id: GAME_ID, shortId: SHORT_ID, name: 'x', courseName: null, joinEffect: 'instant', signupsClosed: false },
+      myRowId: REQUEST_ID,
+      myStatus: 'pending',
+      teamName: 'Martins lag',
+      captain: { requestId: 'captain-row', userId: FRIEND_A, displayName: 'Martin Hansen', status: 'approved' },
+      members: [{ requestId: REQUEST_ID, userId: ME, displayName: 'ka•••@gmail.com', status: 'pending', isGuest: false }],
+    });
+    const res = await get();
+    const body = await res.json();
+    expect(body.offer).toBe('web');
+    expect(body.hasTeamPage).toBe(true);
+    expect(body.teamSignup).toEqual({
+      kind: 'invited',
+      requestId: REQUEST_ID,
+      captainName: 'Martin Hansen',
+      teamName: 'Martins lag',
+      joinEffect: 'instant',
+      members: [
+        { name: 'Martin Hansen', isCaptain: true, status: 'approved' },
+        { name: 'ka•••@gmail.com', isCaptain: false, status: 'pending' },
+      ],
+    });
+    expect(loadTeamDashboardMock).toHaveBeenCalledWith(SHORT_ID, ME);
+    expect(JSON.stringify(body)).not.toContain(FRIEND_A);
+  });
+
+  it.each<[string, () => void]>([
+    ['a solo round', () => {}],
+    ['a team round you are on', () => {
+      getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+      vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, isAlreadyRegistered: true });
+    }],
+    ['a closed team round', () => getGameByShortIdMock.mockResolvedValue(makeGame({ ...TEAM_ROUND, signups_closed_at: '2026-11-01T10:00:00Z' }))],
+    ['an invite-only team round', () => getGameByShortIdMock.mockResolvedValue(makeGame({ ...TEAM_ROUND, registration_mode: 'invite_only' }))],
+  ])('no team screen on %s', async (_name, arrange) => {
+    arrange();
+    const body = await (await get()).json();
+    expect(body.teamSignup).toBeNull();
+    expect(readFriendIdsMock).not.toHaveBeenCalled();
+    expect(loadTeamDashboardMock).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, Record<string, unknown> | null, boolean]>([
+    ['captain', { status: 'approved', is_team_captain: true, team_request_id: null }, true],
+    ['teammate', { status: 'approved', is_team_captain: false, team_request_id: 'c' }, true],
+    ['a solo request', { status: 'pending', is_team_captain: false, team_request_id: null }, false],
+    ['a teammate who said no', { status: 'rejected', is_team_captain: false, team_request_id: 'c' }, false],
+    ['a captain who withdrew', { status: 'withdrawn', is_team_captain: true, team_request_id: null }, false],
+    ['no row', null, false],
+  ])('hasTeamPage: %s', async (_name, row, expected) => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, isAlreadyRegistered: true });
+    ownRow = row;
+    const body = await (await get()).json();
+    expect(body.hasTeamPage).toBe(expected);
+    const own = fake.ops.find((op) => op.table === 'game_registration_requests' && op.single);
+    expect(own?.filters).toEqual([
+      { op: 'eq', column: 'game_id', value: GAME_ID },
+      { op: 'eq', column: 'user_id', value: ME },
+    ]);
+  });
+
+  it('a failed friend read is 500 load_failed, never a form that greys out nobody', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+    readFriendIdsMock.mockRejectedValue(new Error('boom'));
+    const res = await get();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'load_failed' });
+    spy.mockRestore();
+  });
+});
+
+describe('POST /api/pamelding/[shortId]: the team intents (#2840)', () => {
+  beforeEach(() => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
+  });
+
+  it.each([
+    ['team', { intent: 'team', teamName: 'Martins lag', memberIds: [FRIEND_A] }],
+    ['accept_team', { intent: 'accept_team', requestId: REQUEST_ID }],
+    ['decline_team', { intent: 'decline_team', requestId: REQUEST_ID }],
+  ])('%s: 401 without a token, and no core is called', async (_name, body) => {
+    const res = await post(body, null);
+    expect(res.status).toBe(401);
+    expect(submitTeamMock).not.toHaveBeenCalled();
+    expect(acceptTeamMock).not.toHaveBeenCalled();
+    expect(declineTeamMock).not.toHaveBeenCalled();
+  });
+
+  it('team: the captain from the token, the round from the path, the ip, whatever the body says', async () => {
+    submitTeamMock.mockResolvedValue({
+      ok: true,
+      captainRequestId: REQUEST_ID,
+      slotResults: [
+        { ok: true, outcome: 'known_added', userId: FRIEND_A },
+        { ok: false, userId: FRIEND_B, reason: 'alreadyRegistered' },
+      ],
+    });
+    displayNameMock.mockImplementation(async (id: string) => (id === FRIEND_A ? 'Kari Nordmann' : null));
+    getGameByShortIdMock.mockResolvedValue(makeGame({ ...TEAM_ROUND, mode_config: { kind: 'best_ball', team_size: 3 } }));
+    const res = await post({
+      intent: 'team',
+      teamName: 'Martins lag',
+      memberIds: [FRIEND_A, FRIEND_B],
+      user_id: STRANGER,
+      userId: STRANGER,
+      shortId: 'zzzzzzzz',
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      status: 'team_registered',
+      captainRequestId: REQUEST_ID,
+      joinEffect: 'instant',
+      slotResults: [
+        { ok: true, userId: FRIEND_A, name: 'Kari Nordmann' },
+        { ok: false, userId: FRIEND_B, name: null, reason: 'alreadyRegistered' },
+      ],
+    });
+    expect(getGameByShortIdMock).toHaveBeenCalledWith(SHORT_ID);
+    expect(submitTeamMock).toHaveBeenCalledWith(
+      ME,
+      { shortId: SHORT_ID, teamName: 'Martins lag', memberIds: [FRIEND_A, FRIEND_B] },
+      { ip: IP },
+    );
+  });
+
+  it('team on manual approval: the team waits for the organiser', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ ...TEAM_ROUND, registration_mode: 'manual_approval' }));
+    const body = await (await post({ intent: 'team', teamName: 'Lag', memberIds: [FRIEND_A] })).json();
+    expect(body).toMatchObject({ status: 'team_registered', joinEffect: 'approval' });
+  });
+
+  it.each([
+    ['accept_team', acceptTeamMock, 'team_accepted'],
+    ['decline_team', declineTeamMock, 'team_declined'],
+  ] as const)('%s: the caller from the token, the request from the body', async (intent, core, status) => {
+    const res = await post({ intent, requestId: REQUEST_ID, user_id: STRANGER, userId: STRANGER });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status });
+    expect(core).toHaveBeenCalledWith(ME, { shortId: SHORT_ID, requestId: REQUEST_ID });
+  });
+
+  it.each<[string, unknown]>([
+    ['team without a name', { intent: 'team', memberIds: [FRIEND_A] }],
+    ['team with a name that is not text', { intent: 'team', teamName: 7, memberIds: [FRIEND_A] }],
+    ['team with an absurd name', { intent: 'team', teamName: 'x'.repeat(201), memberIds: [FRIEND_A] }],
+    ['team without members', { intent: 'team', teamName: 'Lag' }],
+    ['team with members that are not a list', { intent: 'team', teamName: 'Lag', memberIds: FRIEND_A }],
+    ['team with an address for a member', { intent: 'team', teamName: 'Lag', memberIds: ['kari@example.com'] }],
+    ['team with a number for a member', { intent: 'team', teamName: 'Lag', memberIds: [7] }],
+    ['team with too many members', { intent: 'team', teamName: 'Lag', memberIds: Array(9).fill(FRIEND_A) }],
+    ['accept_team without a request', { intent: 'accept_team' }],
+    ['decline_team with a request that is no uuid', { intent: 'decline_team', requestId: 'abc' }],
+  ])('400 bad_request: %s', async (_name, body) => {
+    const res = await post(body);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'bad_request' });
+    expect(submitTeamMock).not.toHaveBeenCalled();
+    expect(acceptTeamMock).not.toHaveBeenCalled();
+    expect(declineTeamMock).not.toHaveBeenCalled();
+  });
+
+  it('team on a missing or draft round is 404, and the core is not called', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ ...TEAM_ROUND, status: 'draft' }));
+    const res = await post({ intent: 'team', teamName: 'Lag', memberIds: [FRIEND_A] });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: 'game_not_found' });
+    expect(submitTeamMock).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, number, object]>([
+    ['team_name_invalid', 400, { error: 'team_name_invalid' }],
+    ['slots_count_wrong', 400, { error: 'slots_count_wrong' }],
+    ['duplicate_members', 400, { error: 'duplicate_members' }],
+    ['self_in_slots', 400, { error: 'self_in_slots' }],
+    ['not_authed', 401, { error: 'unauthorized' }],
+    ['teammate_not_friend', 403, { error: 'teammate_not_friend' }],
+    ['game_not_found', 404, { error: 'game_not_found' }],
+    ['game_locked', 409, { error: 'game_locked' }],
+    ['signup_closed', 409, { error: 'signup_closed' }],
+    ['game_full', 409, { error: 'game_full' }],
+    ['already_registered', 409, { error: 'already_registered' }],
+    ['wrong_type', 409, { error: 'wrong_type' }],
+    ['wrong_mode', 409, { error: 'wrong_mode' }],
+    ['mode_does_not_support_teams', 409, { error: 'mode_does_not_support_teams' }],
+    ['profile_incomplete', 409, { error: 'profile_incomplete' }],
+    ['rate_limited', 429, { error: 'rate_limited' }],
+    ['db_error', 500, { error: 'db_error' }],
+  ])('team: %s', async (error, status, body) => {
+    submitTeamMock.mockResolvedValue({ ok: false, error });
+    const res = await post({ intent: 'team', teamName: 'Lag', memberIds: [FRIEND_A] });
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual(body);
+  });
+
+  it.each<[string, number, object]>([
+    ['not_authed', 401, { error: 'unauthorized' }],
+    ['profile_incomplete', 409, { error: 'profile_incomplete' }],
+    ['not_found', 404, { error: 'not_found' }],
+    ['game_locked', 409, { error: 'game_locked' }],
+    ['signup_closed', 409, { error: 'signup_closed' }],
+    ['db_error', 500, { error: 'db_error' }],
+  ])('accept_team and decline_team: %s', async (error, status, body) => {
+    for (const [intent, core] of [['accept_team', acceptTeamMock], ['decline_team', declineTeamMock]] as const) {
+      core.mockResolvedValue({ ok: false, error });
+      const res = await post({ intent, requestId: REQUEST_ID });
+      expect(res.status).toBe(status);
+      expect(await res.json()).toEqual(body);
+    }
+  });
+
+  it('join on a team round still answers use_web, and no core is called', async () => {
+    const res = await post({ intent: 'join' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'use_web' });
+    expect(registerMock).not.toHaveBeenCalled();
+    expect(submitTeamMock).not.toHaveBeenCalled();
   });
 });

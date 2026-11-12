@@ -162,6 +162,18 @@ export function offerForView(
   }
 }
 
+/**
+ * #2840: the team screens the app has of its own, beside `offerForView`. That
+ * one stays `web` for a team round, so an old build still shows the website's
+ * button; a new build reads this. `form`: the captain-to-be names the team and
+ * picks friends. `invited`: a captain put you on a team, and you say yes or no.
+ */
+export function teamSignupFor(view: SignupView): 'form' | 'invited' | null {
+  if (view === 'team_form') return 'form';
+  if (view === 'captain_invited') return 'invited';
+  return null;
+}
+
 export function signupOffer(facts: SignupFacts): SignupOffer {
   return offerForView(signupView(facts), facts.game);
 }

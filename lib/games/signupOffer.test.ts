@@ -8,6 +8,7 @@ import {
   offerForView,
   signupOffer,
   signupView,
+  teamSignupFor,
   type SignupFacts,
   type SignupOffer,
   type SignupView,
@@ -155,6 +156,31 @@ describe('signupOffer', () => {
         expect(['club_member_form', 'friend_form', 'solo_open_form']).toContain(signupView(facts));
         expect(facts.isFull).toBe(false);
       }
+    }
+  });
+});
+
+// #2840: the app's own team screens. A rule beside `offerForView`, which stays
+// as it is: old app builds still read `web` on a team round.
+describe('teamSignupFor', () => {
+  it('the team form for team_form, the yes/no for captain_invited, nothing else', () => {
+    const seen = new Set<SignupView>();
+    for (const facts of signupFactsMatrix()) {
+      const view = signupView(facts);
+      seen.add(view);
+      const expected = view === 'team_form' ? 'form' : view === 'captain_invited' ? 'invited' : null;
+      if (teamSignupFor(view) !== expected) {
+        expect.fail(`${view}: ${teamSignupFor(view)}, expected ${expected}`);
+      }
+    }
+    expect(seen).toContain('team_form');
+    expect(seen).toContain('captain_invited');
+  });
+
+  it('leaves the old offer on a team round: web', () => {
+    for (const facts of signupFactsMatrix()) {
+      const view = signupView(facts);
+      if (teamSignupFor(view) !== null) expect(offerForView(view, facts.game)).toBe('web');
     }
   });
 });
