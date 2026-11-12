@@ -76,6 +76,12 @@ function answer(result: RoundInviteLoadResult) {
   mockLoad = result;
 }
 
+/** The first load, then what the route answers once the write is in. */
+function answerThen(first: AppRoundInviteView, after: AppRoundInviteView) {
+  mockLoads = [{ ok: true, view: first }];
+  mockLoad = { ok: true, view: after };
+}
+
 async function renderInvite(src: string | null = null, routes: Array<{ name: string; params?: object }> = [{ name: 'Home' }, ROUTE], focused = true) {
   const navigation = { ...stackNavigation(routes), popToTop: jest.fn() };
   navigation.isFocused.mockReturnValue(focused);
@@ -181,11 +187,11 @@ describe('du kan melde deg på', () => {
 
 describe('du kan be om plass', () => {
   beforeEach(() => {
-    answer({ ok: true, view: view({ offer: 'request' }) });
+    answerThen(view({ offer: 'request' }), view({ offer: 'pending', canCancelRequest: true }));
     mockAnswer = () => ({ ok: true, status: 'requested' });
   });
 
-  it('skjemaet er borte, og siden sier at forespørselen er sendt', async () => {
+  it('skjemaet er borte, siden sier at forespørselen er sendt, og den kan trekkes', async () => {
     await renderInvite();
     await fireEvent.changeText(screen.getByTestId('round-invite-message'), '  Plass til meg?  ');
     await fireEvent.press(screen.getByTestId('round-invite-button'));
@@ -193,6 +199,18 @@ describe('du kan be om plass', () => {
     expect(screen.getByTestId('round-invite-sent')).toHaveTextContent(ROUND_INVITE_TEXT.sentTitle);
     expect(screen.queryByTestId('round-invite-message')).toBeNull();
     expect(screen.queryByTestId('round-invite-button')).toBeNull();
+    // #2837: ruta vet om forespørselen kan trekkes, så skjermen spør på nytt.
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('round-invite-cancel')).toHaveTextContent(ROUND_INVITE_TEXT.cancelButton);
+  });
+
+  it('svarer ikke ruta når skjermen spør igjen, står «sendt» uten knapp', async () => {
+    mockLoads = [{ ok: true, view: view({ offer: 'request' }) }];
+    mockLoad = { ok: false, reason: 'network' };
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-cancel')).toBeNull();
   });
 
   it('uten hilsen sendes ingen hilsen', async () => {
@@ -346,7 +364,7 @@ describe('henting', () => {
   });
 
   it('en henting som går når du sender, tar ikke skjemaet tilbake etter «sendt»', async () => {
-    answer({ ok: true, view: view({ offer: 'request' }) });
+    answerThen(view({ offer: 'request' }), view({ offer: 'pending', canCancelRequest: true }));
     mockAnswer = () => ({ ok: true, status: 'requested' });
     await renderInvite();
     let finish: (result: RoundInviteLoadResult) => void = () => {};
@@ -397,7 +415,10 @@ describe('full runde', () => {
   const FULL = { kind: 'capped', cap: 12, held: 12 } as const;
 
   it('viser plassene, at runden er full, og «Be om plass»', async () => {
-    answer({ ok: true, view: view({ offer: 'request', seats: FULL, playerCount: 12 }) });
+    answerThen(
+      view({ offer: 'request', seats: FULL, playerCount: 12 }),
+      view({ offer: 'pending', seats: FULL, playerCount: 12, canCancelRequest: true }),
+    );
     mockAnswer = () => ({ ok: true, status: 'requested' });
     await renderInvite();
     expect(screen.getByTestId('round-invite-seats')).toHaveTextContent('12 av 12 plasser · fullt');
@@ -425,6 +446,16 @@ describe('full runde', () => {
     expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
     expect(screen.queryByTestId('round-invite-stop')).toBeNull();
     expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.fullButton);
+  });
+
+  it('sier ruta fortsatt «Meld meg på» etter game_full, står teksten om full runde', async () => {
+    answer({ ok: true, view: view({ seats: { kind: 'capped', cap: 12, held: 11 } }) });
+    mockAnswer = () => ({ ok: false, reason: 'game_full' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('round-invite-error')).toHaveTextContent(ROUND_INVITE_TEXT.gameFull);
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.joinButton);
   });
 });
 
