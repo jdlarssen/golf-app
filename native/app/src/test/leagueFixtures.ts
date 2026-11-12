@@ -115,6 +115,6 @@ export function leagueView(overrides: {
         ],
       },
     ],
-    me: { userId: 'me', isParticipant: true, isOrganizer: false, ...overrides.me },
+    me: { userId: 'me', isParticipant: true, isOrganizer: false, canJoin: false, canLeave: false, ...overrides.me },
   };
 }

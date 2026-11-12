@@ -4,7 +4,9 @@
 // beste 5 av 7»), rundeinnstillingene i en simulatorliga (foldet, se
 // `SimSettingsCard`), den åpne runden med «hvem har spilt» og «Spill runden»,
 // sesongtabellen, rundelista og «Del lenka» (#2748) for en deltaker når lenka
-// står på.
+// står på. Et klubbmedlem får «Bli med i ligaen» før ligaen starter, og en
+// deltaker «Meld deg av ligaen» (egen bekreftelsesskjerm) til hen har spilt
+// (#2839). Hvilke av dem som vises, avgjør serveren (`me.canJoin` / `me.canLeave`).
 //
 // Alt kommer fra `GET /api/liga/[id]` (`data/league.ts`): tabellen, de
 // effektive innstillingene og hvem som har levert regnes på serveren, og
@@ -13,7 +15,7 @@
 // alt har hentet, med merknaden fra tegning 6 og «Spill runden» dempet; uten
 // noe hentet står feilen med «Prøv igjen».
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
@@ -24,13 +26,15 @@ import { StandingsTable } from '../components/league/StandingsTable';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
 import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { StatusPill } from '../components/league/LeaguePills';
-import { fetchLeague, type LeagueLoadFailure } from '../data/league';
+import { fetchLeague, joinClubLeague, type LeagueLoadFailure } from '../data/league';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import { openOrReturn } from '../lib/backTo';
 import { MARKER_TEXT, awaitingMarkerLine, waitsForLine } from '../lib/markerCopy';
 import { markerQueues, type QueuedCard } from '../../../../lib/league/markerQueues';
 import {
+  LEAGUE_SELF_TEXT,
   LEAGUE_TEXT,
+  describeClubLeagueJoinFailure,
   formatLine,
   leagueStatusLabel,
   nextRoundOf,
@@ -40,7 +44,7 @@ import {
   settingsHeading,
 } from '../lib/leagueCopy';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
 export function League(props: ScreenProps<'League'>) {
   // Et varsel om en annen liga bytter bare parameteren på den åpne skjermen. Nøkkelen
@@ -71,6 +75,11 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   // Bare dra-ned viser hjulet; en henting ved fokus går stille.
   const [pulling, setPulling] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  // #2839: «Bli med i ligaen». Knappen er deaktivert først når `joining` er tegnet;
+  // refen stopper trykk nummer to før det.
+  const [joining, setJoining] = useState(false);
+  const [selfError, setSelfError] = useState<string | null>(null);
+  const joinInFlight = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +107,24 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
     setPulling(true);
     void load();
   }, [load]);
+
+  const onJoin = useCallback(async () => {
+    if (joinInFlight.current) return;
+    joinInFlight.current = true;
+    setJoining(true);
+    setSelfError(null);
+    const result = await joinClubLeague(leagueId);
+    joinInFlight.current = false;
+    setJoining(false);
+    if (result.ok) {
+      // Kvitteringen er den fra ligalenka (#2748); ligaen hentes på nytt, så kortet blir lenka.
+      navigation.setParams({ joined: true });
+    } else {
+      setSelfError(describeClubLeagueJoinFailure(result.reason));
+    }
+    // Også ved avslag: reglene kan ha endret seg siden siden ble tegnet.
+    void load();
+  }, [leagueId, load, navigation]);
 
   if (view === null && failure === null) return <LeagueLoading />;
   if (view === null) {
@@ -149,6 +176,33 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
         <Text style={[styles.stale, { color: colors.muted }]} testID="league-stale">
           {LEAGUE_TEXT.stale}
         </Text>
+      ) : null}
+
+      {selfError ? (
+        <Text style={[styles.selfError, { color: colors.danger }]} testID="league-self-error">
+          {selfError}
+        </Text>
+      ) : null}
+
+      {me.canJoin ? (
+        <View style={[styles.signup, { backgroundColor: colors.surfaceStrong }]} testID="league-signup">
+          <Text style={[styles.signupTitle, { color: colors.onStrongWarm }]} accessibilityRole="header">
+            {LEAGUE_SELF_TEXT.joinHeading}
+          </Text>
+          <Text style={[styles.signupBody, { color: colors.onStrongWarm }]}>{LEAGUE_SELF_TEXT.joinSubtitle}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: joining, busy: joining }}
+            disabled={joining}
+            onPress={() => void onJoin()}
+            style={[styles.signupButton, { backgroundColor: colors.onStrongWarm }, joining ? styles.dimmed : null]}
+            testID="league-signup-button"
+          >
+            <Text style={[styles.signupButtonText, { color: colors.surfaceStrong }]}>
+              {joining ? LEAGUE_SELF_TEXT.joinPending : LEAGUE_SELF_TEXT.joinButton}
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
       <MarkerQueue
@@ -208,6 +262,18 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
             <Text style={ui.buttonSecondaryText}>{LEAGUE_TEXT.shareButton}</Text>
           </Pressable>
         </View>
+      ) : null}
+
+      {/* #2839: avmeldingen er en destruktiv handling, så den har sin egen skjerm. */}
+      {me.canLeave ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => openOrReturn(navigation, 'LeagueLeave', { leagueId })}
+          style={styles.leaveLink}
+          testID="league-leave-link"
+        >
+          <Text style={[styles.leaveLinkText, { color: colors.muted }]}>{LEAGUE_SELF_TEXT.leaveLink}</Text>
+        </Pressable>
       ) : null}
     </ScrollView>
   );
@@ -288,6 +354,16 @@ const styles = StyleSheet.create({
   // Kortene på siden står 16 fra kanten.
   joined: { marginHorizontal: 16, marginTop: 12 },
   share: { marginHorizontal: 16, marginTop: 0 },
+  // Kortet fra «Bli med» (`LeagueJoin`): skogkort, kremknapp 52 pt.
+  signup: { borderRadius: 18, padding: 16, gap: 10, marginTop: 16, marginHorizontal: 16 },
+  signupTitle: { ...fraunces(500, 20, 26, { multiline: true }) },
+  signupBody: { ...interLine(15, 21.75, { multiline: true }), fontFamily: FONTS.sans },
+  signupButton: { height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  signupButtonText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  dimmed: { opacity: 0.5 },
+  selfError: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 10, paddingHorizontal: 20 },
+  leaveLink: { minHeight: TAP, justifyContent: 'center', alignItems: 'center', marginTop: 12 },
+  leaveLinkText: { ...interLine(14, 20), fontFamily: FONTS.sans, textDecorationLine: 'underline' },
   stale: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 6, paddingHorizontal: 20 },
   sectionHead: {
     ...interLine(12, 15),

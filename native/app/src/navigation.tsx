@@ -94,6 +94,7 @@ import { CupSwapPlayer } from './screens/CupSwapPlayer';
 import { CupWithdraw } from './screens/CupWithdraw';
 import { League } from './screens/League';
 import { LeagueJoin } from './screens/LeagueJoin';
+import { LeagueLeave } from './screens/LeagueLeave';
 import { MarkerApprove } from './screens/MarkerApprove';
 import { LeagueCard } from './screens/LeagueCard';
 import { LeagueRoundStart } from './screens/LeagueRoundStart';
@@ -222,6 +223,8 @@ export type RootStackParamList = {
    * (`lib/appLinkUrl.ts`).
    */
   LeagueJoin: { code: string };
+  /** «Meld deg av ligaen» (#2839): egen bekreftelsesskjerm, aldri en dialog. */
+  LeagueLeave: { leagueId: string };
   /** #2752: cup-rommet, kampene under spill og resultatene når cupen er ferdig. */
   /** `notice`: kvitteringen når kampene er laget, eller cupen er startet eller avsluttet. */
   Cup: { cupId: string; notice?: 'cup_finished' | 'cup_started' | 'matches_generated' | 'matches_changed' };
@@ -579,6 +582,11 @@ export function RootNavigator() {
           name="LeagueJoin"
           component={LeagueJoin}
           options={kickerHeader(LEAGUE_JOIN_TEXT.kicker, LEAGUE_JOIN_TEXT.kicker)}
+        />
+        <Stack.Screen
+          name="LeagueLeave"
+          component={LeagueLeave}
+          options={kickerHeader(LEAGUE_TEXT.kicker, LEAGUE_TEXT.kicker)}
         />
         {/* Cup-rommet (#2752): «Cup» i toppen, som nettsiden. */}
         <Stack.Screen

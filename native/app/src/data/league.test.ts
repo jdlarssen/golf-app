@@ -266,3 +266,49 @@ describe('joinLeague (#2748)', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
+
+describe.each([
+  ['joinClubLeague', 'meld-pa', ['not_draft', 'not_member', 'not_club_league']],
+  ['leaveClubLeague', 'meld-av', ['finished', 'not_member', 'already_played', 'not_club_league']],
+] as const)('%s (#2839)', (fn, path, refusals) => {
+  useWebRoute();
+
+  it('poster til ligaens sti uten kropp: kalleren er tokenet og ligaen står i stien', async () => {
+    respondWith(200, { leagueId: LEAGUE_ID });
+
+    expect(await league()[fn](LEAGUE_ID)).toEqual({ ok: true, leagueId: LEAGUE_ID });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}/api/liga/${LEAGUE_ID}/${path}`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect((requestInit().headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(requestInit().body).toBeUndefined();
+  });
+
+  it.each(refusals)('en 409 med %s blir samme kode', async (code) => {
+    respondWith(409, { error: code });
+    expect(await league()[fn](LEAGUE_ID)).toEqual({ ok: false, reason: code });
+  });
+
+  it.each([
+    [401, { error: 'unauthorized' }, 'unauthorized'],
+    [404, { error: 'not_found' }, 'not_found'],
+    [409, { error: 'noe_nytt' }, 'save_failed'],
+    [500, { error: 'save_failed' }, 'save_failed'],
+    [500, {}, 'save_failed'],
+  ])('oversetter %i %j til %s', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await league()[fn](LEAGUE_ID)).toEqual({ ok: false, reason });
+  });
+
+  it('en 200 uten liga er ikke en vellykket endring', async () => {
+    respondWith(200, {});
+    expect(await league()[fn](LEAGUE_ID)).toEqual({ ok: false, reason: 'save_failed' });
+  });
+
+  it('sender ingenting uten nett, og sier det', async () => {
+    mockNetwork.online = false;
+    expect(await league()[fn](LEAGUE_ID)).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
