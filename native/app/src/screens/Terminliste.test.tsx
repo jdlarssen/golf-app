@@ -187,11 +187,21 @@ it('et trykk på raden åpner påmeldingen med rundens short_id, uten src', asyn
   expect(navigate).toHaveBeenCalledWith('RoundInvite', { shortId: 'short-nine', src: null });
 });
 
-it('skjermleseren leser «Meld meg på …» og «Be om å bli med i …»', async () => {
+it('skjermleseren leser knappen først, så klokka, bane og format og plass-linja', async () => {
   await loaded();
-  expect(screen.getByTestId('terminliste-row-nine').props.accessibilityLabel).toBe('Meld meg på Ni hull');
-  expect(screen.getByTestId('terminliste-row-shot').props.accessibilityLabel).toBe('Be om å bli med i Shotgun-lørdag');
-  expect(screen.getByTestId('terminliste-row-full').props.accessibilityLabel).toBe('Fullt hus. Fullt');
+  expect(screen.getByTestId('terminliste-row-nine').props.accessibilityLabel).toBe(
+    'Meld meg på Ni hull. kl. 09:20. 9 hull. Byneset North · Stableford',
+  );
+  expect(screen.getByTestId('terminliste-row-shot').props.accessibilityLabel).toBe(
+    'Be om å bli med i Shotgun-lørdag. kl. 12:40. shotgun. Byneset North · Stableford. 2 plasser igjen',
+  );
+  expect(screen.getByTestId('terminliste-row-undated').props.accessibilityLabel).toBe(
+    'Meld meg på Uten tid. Dato ikke satt. Byneset North · Stableford',
+  );
+  // En full rad har ingen knapp å love: navnet og «Fullt» først, så resten.
+  expect(screen.getByTestId('terminliste-row-full').props.accessibilityLabel).toBe(
+    'Fullt hus. Fullt. kl. 13:00. første start. Byneset North · Stableford',
+  );
 });
 
 it('«Denne helga» viser bare lørdag og søndag; «Alle» henter ikke på nytt', async () => {

@@ -9,7 +9,7 @@
 //
 // Datoene står i telefonens tid, som resten av appen (`homeDates.ts`, Hermes
 // mangler Oslo-sonen).
-import type { TerminDayLabel, TerminTimeNote } from '../../../../lib/games/terminliste';
+import { capacityState, type TerminDayLabel, type TerminTimeNote } from '../../../../lib/games/terminliste';
 import type { GameSocialProof } from '../../../../lib/games/socialProof';
 import { socialProofForm, firstName } from '../../../../lib/games/socialProof';
 import type { TerminlisteLoadFailure } from '../data/terminliste';
@@ -92,6 +92,32 @@ export function courseFormatLine(courseName: string | null, modeLabel: string, t
   const parts = [courseName ?? TERMIN_TEXT.courseNotSet, modeLabel];
   if (teamSize > 1) parts.push(teamOf(teamSize));
   return parts.join(' · ');
+}
+
+/** Plass-linja: «Fullt», «2 plasser igjen» eller «6 av 8 plasser ledige». */
+export function seatLineText(capacity: { cap: number; held: number }): string {
+  const { free, tone } = capacityState(capacity);
+  return tone === 'full' ? TERMIN_TEXT.full : tone === 'low' ? seatsLeft(free) : seatsFree(free, capacity.cap);
+}
+
+/**
+ * Det skjermleseren sier for en rad. Knappen kommer først («Meld meg på {spill}»,
+ * som nettets knapp), så det raden ellers viser: klokka, den lille linja,
+ * «Bane · Format», og plass-linja eller vennene. Nettet har raden som vanlig tekst,
+ * så der leses alt; i appen er hele raden ett trykkpunkt og må ta det med selv.
+ */
+export function rowA11yLabel(args: {
+  name: string;
+  full: boolean;
+  cta: 'direct' | 'request';
+  clock: string | null;
+  note: string | null;
+  courseFormat: string;
+  third: string | null;
+}): string {
+  const head = args.full ? `${args.name}. ${TERMIN_TEXT.full}` : args.cta === 'direct' ? signUpLabel(args.name) : requestLabel(args.name);
+  const when = args.clock ? [`kl. ${args.clock}`, args.note] : [TERMIN_TEXT.undated, null];
+  return [head, ...when, args.courseFormat, args.full ? null : args.third].filter((part) => part !== null && part !== '').join('. ');
 }
 
 /** Webbens `socialProof` (fornavn, som i raden på nettet). */
