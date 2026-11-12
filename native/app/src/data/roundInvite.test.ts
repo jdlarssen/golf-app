@@ -29,6 +29,8 @@ const VIEW = {
     entryFeeKr: 150,
   },
   playerCount: 7,
+  seats: null,
+  canCancelRequest: false,
   signupPath: `/signup/${SHORT_ID}`,
 };
 
@@ -68,6 +70,50 @@ describe('fetchRoundInvite', () => {
   it('sender ingenting uten nett', async () => {
     mockNetwork.online = false;
     expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  // #2837: plassene og «Trekk forespørselen» kom etter #2748. Et svar uten dem er et
+  // svar uten tak og uten knapp, ikke en feil.
+  it('et svar uten plasser og trekk-flagg gir ingen plasser og ingen knapp', async () => {
+    const { seats: _seats, canCancelRequest: _can, ...older } = VIEW;
+    respondWith(200, older);
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: VIEW });
+  });
+
+  it('plassene og flagget følger med', async () => {
+    const full = { ...VIEW, offer: 'pending', seats: { kind: 'capped', cap: 12, held: 12 }, canCancelRequest: true };
+    respondWith(200, full);
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: full });
+  });
+});
+
+describe('cancelRequest (#2837)', () => {
+  useWebRoute();
+
+  it('«Trekk forespørselen» sender bare hensikten', async () => {
+    respondWith(200, { status: 'cancelled' });
+    expect(await invite().cancelRequest(SHORT_ID)).toEqual({ ok: true, status: 'cancelled' });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}/api/pamelding/${SHORT_ID}`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(JSON.parse(String(requestInit().body))).toEqual({ intent: 'cancel' });
+  });
+
+  it.each([
+    [409, { error: 'not_pending' }, 'not_pending'],
+    [401, {}, 'unauthorized'],
+    [404, { error: 'game_not_found' }, 'not_found'],
+    [500, { error: 'db_error' }, 'db_error'],
+  ])('oversetter %i %j til %s', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await invite().cancelRequest(SHORT_ID)).toEqual({ ok: false, reason });
+  });
+
+  it('sender ingenting uten nett', async () => {
+    mockNetwork.online = false;
+    expect(await invite().cancelRequest(SHORT_ID)).toEqual({ ok: false, reason: 'offline' });
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
