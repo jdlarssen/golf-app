@@ -21,6 +21,7 @@ import {
   hasHcpAllowanceField,
 } from '../../lib/allowanceCopy';
 import type { AppGameMode } from '../../lib/appFormats';
+import { PATSOME_TEXT } from '../../lib/formatSetupCopy';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
 import type { ModeSetup } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
@@ -171,6 +172,27 @@ export function SetupStep({
               />
             </Field>
           )}
+        </Field>
+      ) : null}
+
+      {/* #2753 D3: Patsome, som nettets PatsomeSetup. Lagstørrelsen er alltid 2. */}
+      {mode === 'patsome' ? (
+        <Field label={PATSOME_TEXT.legend} hint={PATSOME_TEXT.handicapNote}>
+          {PATSOME_TEXT.segments.map((segment) => (
+            <Text key={segment.holes} style={ui.body} testID={`create-patsome-${segment.holes}`}>
+              <Text style={ui.label}>{segment.holes} </Text>
+              {`${segment.format} ${segment.body}`}
+            </Text>
+          ))}
+          <Text style={ui.label}>{PATSOME_TEXT.scoringFrom}</Text>
+          <Chips
+            value={setup.patsomeScoring ?? 'net'}
+            onChange={(patsomeScoring) => onSetup({ patsomeScoring })}
+            options={[
+              { value: 'net' as const, label: PATSOME_TEXT.net, testID: 'create-patsome-net' },
+              { value: 'gross' as const, label: PATSOME_TEXT.gross, testID: 'create-patsome-gross' },
+            ]}
+          />
         </Field>
       ) : null}
 

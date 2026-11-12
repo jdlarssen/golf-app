@@ -401,6 +401,40 @@ describe('CreateGame: klubbturnering (#2753)', () => {
   });
 });
 
+describe('CreateGame: de nye formatene (#2753 D3)', () => {
+  it('Patsome viser segmentene, tar tellemåten og fordeler i lag', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug: 'patsome', label: 'Patsome', iconKey: 'patsome', isPrimary: false, sortOrder: 50 },
+    ]);
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'patsome-game' });
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-patsome'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByTestId('create-patsome-Hull 1–6')).toBeTruthy();
+    expect(screen.getByTestId('create-patsome-net').props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(screen.getByTestId('create-patsome-gross'));
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    // Lagknappene står, som for best ball.
+    await fireEvent.press(await screen.findByTestId('create-player-p2'));
+    await fireEvent.press(screen.getByTestId('create-team-me-1'));
+    await fireEvent.press(screen.getByTestId('create-team-p2-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft.gameMode).toBe('patsome');
+    expect(draft.setup).toMatchObject({ patsomeScoring: 'gross' });
+    expect(draft.players.map((p: { teamNumber: number | null }) => p.teamNumber)).toEqual([1, 1]);
+    publishGameMock.mockClear();
+  });
+});
+
 describe('CreateGame og «Ny bane» (#2757)', () => {
   it('døra står under lista, også når søket gir treff, og tar med det du søkte på', async () => {
     const { navigation } = await renderWizard();

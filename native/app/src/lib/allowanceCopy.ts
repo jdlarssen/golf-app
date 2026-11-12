@@ -14,6 +14,7 @@ export const HCP_ALLOWANCE_MODES = [
   'modified_stableford',
   'singles_matchplay',
   'best_ball',
+  'solo_strokeplay',
 ] as const satisfies readonly AppGameMode[];
 
 export type HcpAllowanceMode = (typeof HCP_ALLOWANCE_MODES)[number];
@@ -40,4 +41,5 @@ export const BRUTTO_HELPER: Record<HcpAllowanceMode, string> = {
     'Modified-stableford-poeng beregnes på bruttoscore mot par (pro-skala). Scratch-format.',
   singles_matchplay: 'Scratch-matchplay — laveste bruttoscore per hull vinner.',
   best_ball: 'Ingen handicap — laveste bruttoscore per hull per lag vinner.',
+  solo_strokeplay: 'Scratch-slagspill — lavest sum av bruttoslag vinner.',
 };

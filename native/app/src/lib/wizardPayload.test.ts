@@ -173,9 +173,70 @@ const CASES: {
       { user_id: 'c', team_number: null, flight_number: null },
     ],
   },
+  // #2753 D3: samme mode_config som nettets egne tester (`strokeplayFd` og
+  // `patsomeFd` i lib/games/gamePayload.test.ts).
+  {
+    mode: 'solo_strokeplay',
+    draft: draft({ gameMode: 'solo_strokeplay', players: solo('a', 'b') }),
+    modeConfig: { kind: 'solo_strokeplay', team_size: 1 },
+    players: [
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+    ],
+  },
+  {
+    mode: 'patsome',
+    draft: draft({
+      gameMode: 'patsome',
+      players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
+    }),
+    modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    // flight = lag (DB-sjekken game_players_team_flight_consistency).
+    players: [
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ],
+  },
 ];
 
-describe('payload-paritet for alle åtte modi', () => {
+describe('de nye formatene i D3 (#2753)', () => {
+  it('Patsome med brutto bærer valget videre', () => {
+    const input = draft({
+      gameMode: 'patsome',
+      players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
+      setup: { patsomeScoring: 'gross' },
+    });
+    expect(buildDraftPayload(input).payload.mode_config).toMatchObject({ patsome_scoring: 'gross' });
+  });
+
+  it('Patsome med et lag på tre gir nettets team_balance', () => {
+    const input = draft({
+      gameMode: 'patsome',
+      players: teamed(['a', 1], ['b', 1], ['c', 1], ['d', 2]),
+    });
+    expect(buildDraftPayload(input).payload.errorCode).toBe('team_balance');
+  });
+
+  it('Patsome med tre spillere gir nettets min_players_for_mode', () => {
+    const input = draft({ gameMode: 'patsome', players: teamed(['a', 1], ['b', 1], ['c', 2]) });
+    expect(buildDraftPayload(input).payload.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('slagspill uten spillere gir nettets min_players_for_mode', () => {
+    expect(buildDraftPayload(draft({ gameMode: 'solo_strokeplay', players: [] })).payload.errorCode).toBe(
+      'min_players_for_mode',
+    );
+  });
+
+  it('slagspill med brutto lagrer andelen 0, som på nettet', () => {
+    const input = draft({ gameMode: 'solo_strokeplay', players: solo('a'), hcpAllowancePct: 0 });
+    expect(buildDraftPayload(input).payload.hcp_allowance_pct).toBe(0);
+  });
+});
+
+describe('payload-paritet for alle modiene appen lager', () => {
   it('dekker nøyaktig APP_SUPPORTED_MODES', () => {
     expect(CASES.map((c) => c.mode).sort()).toEqual([...APP_SUPPORTED_MODES].sort());
   });

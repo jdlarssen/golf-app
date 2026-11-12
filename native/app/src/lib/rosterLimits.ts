@@ -47,6 +47,9 @@ export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   wolf: START_COUNT_RANGES.wolf.max,
   bingo_bango_bongo: START_COUNT_RANGES.bingo_bango_bongo.max,
   skins: START_COUNT_RANGES.skins.max,
+  // #2753 D3: slagspill har spillertaket på 40, Patsome fulle par opp til taket.
+  solo_strokeplay: TEAM_FORMAT_PLAYER_CAP,
+  patsome: teamModePlayerCap('patsome', 2) ?? TEAM_FORMAT_PLAYER_CAP,
 };
 
 export function maxPlayersForMode(mode: AppGameMode): number {
@@ -129,6 +132,7 @@ export function teamLayoutFor(
   if (mode === 'best_ball') return { slots: maxTeamsForSize(2), noun: 'lag' };
   if (mode === 'singles_matchplay') return { slots: 2, noun: 'side' };
   if (mode === 'greensome_matchplay') return { slots: 2, noun: 'side' };
+  if (mode === 'patsome') return { slots: maxTeamsForSize(2), noun: 'lag' };
   if (parStableford) return { slots: maxTeamsForSize(2), noun: 'lag' };
   return null;
 }
