@@ -4,7 +4,6 @@ import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
@@ -15,15 +14,7 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
-import {
-  getCaptainDisplayName,
-  loadInviterTeams,
-  pickCaptainRequest,
-  pickPendingInvitation,
-  type InviterTeams,
-} from './captainLookup';
-import { emailMatchPattern } from '@/lib/supabase/emailMatch';
-import { displayNameForOthers } from '@/lib/users/displayName';
+import { loadTeamDashboard } from '@/lib/games/teamDashboardCore';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -32,28 +23,6 @@ export async function generateMetadata({ params }: { params: Params }) {
   const t = await getTranslations({ locale: locale as AppLocale, namespace: 'signup' });
   return { title: t('teamDashMetaTitle') };
 }
-
-type TeamMemberRow = {
-  id: string;
-  user_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-  is_team_captain: boolean;
-  team_name: string | null;
-  team_request_id: string | null;
-};
-
-type PendingInvitation = {
-  id: string;
-  email: string;
-  invited_by: string;
-};
-
-type CaptainRequestRow = {
-  id: string;
-  user_id: string;
-  team_name: string | null;
-  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-};
 
 /**
  * Lag-oversikt for kapteinen og medspillerne (#199 chunks 8+9).
@@ -88,11 +57,6 @@ export default async function TeamDashboardPage({
     notFound();
   }
 
-  // Hva «bli med» fører til: open → rett inn i spillet, ellers venter laget
-  // på at arrangøren godkjenner. Styrer neste-steg-copy (#362).
-  const joinEffect: 'instant' | 'approval' =
-    game.registration_mode === 'open' ? 'instant' : 'approval';
-
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -105,77 +69,20 @@ export default async function TeamDashboardPage({
   // read. Keyed on the game id (the link itself uses the short id).
   // #2759: it also confirms a seat the captain gave you, as the game's page does
   // (#463), and only then checks the `team_invite` that waits for it.
+  // The app's route runs the same pair through `onTeamPageVisit` (#2840).
   after(async () => {
     await maybeAutoConfirmParticipation({ gameId: game.id, userId: user.id });
     await markReadOnVisit({ userId: user.id, surface: 'teamSignup', entityId: game.id });
   });
 
-  const admin = getAdminClient();
-
-  // Brukerens egen rad — bestemmer rolle.
-  const { data: myRow } = await admin
-    .from('game_registration_requests')
-    .select('id, user_id, status, is_team_captain, team_name, team_request_id')
-    .eq('game_id', game.id)
-    .eq('user_id', user.id)
-    .maybeSingle<TeamMemberRow>();
-
-  // Hvis brukeren ikke har noen request-rad, sjekk om de har en åpen
-  // invitations-rad for spillet — da kan vi tilby attach-knapp.
-  let pendingInvitation: PendingInvitation | null = null;
-  let captainRows: CaptainRequestRow[] = [];
-  let inviterTeams: InviterTeams = new Map();
-  if (!myRow) {
-    const { data: userRow } = await admin
-      .from('users')
-      .select('email')
-      .eq('id', user.id)
-      .maybeSingle<{ email: string }>();
-    if (userRow?.email) {
-      // Ingen unique på (email, game_id): både arrangøren og en kaptein kan ha
-      // invitert samme e-post. `.maybeSingle()` ville feilet med PGRST116 og
-      // sendt brukeren i en blindvei — vi henter alle åpne og lar
-      // `pickPendingInvitation` velge (#1343).
-      // #1437: kun uutløpte invitasjoner gir attach-tilbud — samme
-      // utløpssemantikk som login-porten (#1348).
-      const { data: invitations } = await admin
-        .from('invitations')
-        .select('id, email, invited_by')
-        .filter('email', 'imatch', emailMatchPattern(userRow.email))
-        .eq('game_id', game.id)
-        .is('accepted_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .returns<PendingInvitation[]>();
-      if (invitations && invitations.length > 0) {
-        // Kaptein-radene hentes FØR vi velger invitasjon: det er de som avgjør
-        // hvilken invitasjon som gir et sikkert lag-treff. Tar vi bare den
-        // nyeste, skygger arrangørens invitasjon for kapteinens (#1343).
-        const { data: captains } = await admin
-          .from('game_registration_requests')
-          .select('id, user_id, team_name, status')
-          .eq('game_id', game.id)
-          .eq('is_team_captain', true)
-          .in('status', ['pending', 'approved'])
-          .order('created_at', { ascending: false })
-          .returns<CaptainRequestRow[]>();
-        captainRows = captains ?? [];
-        // #2358: en kaptein som har gitt fra seg bindet, står fortsatt på
-        // laget — invitasjonene hen sendte gjelder det laget.
-        inviterTeams = await loadInviterTeams(
-          admin,
-          game.id,
-          captainRows.map((r) => r.id),
-        );
-        pendingInvitation = pickPendingInvitation(invitations, [
-          ...captainRows.map((r) => r.user_id),
-          ...inviterTeams.keys(),
-        ]);
-      }
-    }
+  // #2840: the read lives in lib/games/teamDashboardCore, shared with the app.
+  const view = await loadTeamDashboard(shortId, user.id);
+  if (view.kind === 'not_found') {
+    notFound();
   }
+  const gameName = localizeGameName(view.game.name, view.game.courseName, locale);
 
-  if (!myRow && !pendingInvitation) {
+  if (view.kind === 'no_team') {
     return (
       <AppShell>
         <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
@@ -188,71 +95,56 @@ export default async function TeamDashboardPage({
     );
   }
 
-  // Hvis brukeren har en pending invitation men ingen request-rad,
-  // rendrer vi attach-flyt. Disse landed her via mail-link-en kaptein
-  // sendte da brukeren var ukjent.
-  if (!myRow && pendingInvitation) {
-    // Vi kobler kun på når vi VET hvilket lag det er: inviteren må selv være
-    // kaptein i spillet. Traff vi bare fallback-heuristikken, stopper vi og
-    // sier fra — å sette noen på feil lag er verre enn å be dem spørre
-    // kapteinen (#1343). `captainRows` er alt hentet over.
-    const picked = pickCaptainRequest(
-      captainRows,
-      pendingInvitation.invited_by,
-      inviterTeams,
-    );
-    if (picked?.source !== 'invited_by') {
-      // Eierbeslutning på #1343: to stopp-varianter. `picked === null` betyr
-      // at spillet ikke har noen aktiv kaptein i det hele tatt — da finnes
-      // det ingen å spørre om laginvitasjon, og teksten peker rett på eget
-      // lag i stedet.
-      const noCaptain = picked === null;
-      return (
-        <AppShell>
-          <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
-          <Card>
-            <div
-              className="space-y-4"
-              data-testid={
-                noCaptain ? 'team-stop-no-captain' : 'team-stop-unknown-team'
-              }
+  if (view.kind === 'team_unknown') {
+    // Owner's decision on #1343: two stop variants. `noCaptain` means the game
+    // has no active captain at all, so there is nobody to ask for a team
+    // invitation and the text points at your own team instead.
+    return (
+      <AppShell>
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
+        <Card>
+          <div
+            className="space-y-4"
+            data-testid={
+              view.noCaptain ? 'team-stop-no-captain' : 'team-stop-unknown-team'
+            }
+          >
+            <Banner tone="info">
+              {view.noCaptain
+                ? t('teamDashNoCaptainBanner')
+                : t('teamDashTeamUnknownBanner')}
+            </Banner>
+            <LinkButton
+              href={`/signup/${shortId}`}
+              full
+              variant="secondary"
             >
-              <Banner tone="info">
-                {noCaptain
-                  ? t('teamDashNoCaptainBanner')
-                  : t('teamDashTeamUnknownBanner')}
-              </Banner>
-              <LinkButton
-                href={`/signup/${shortId}`}
-                full
-                variant="secondary"
-              >
-                {t('teamDashRegisterOwnTeamButton')}
-              </LinkButton>
-            </div>
-          </Card>
-        </AppShell>
-      );
-    }
+              {t('teamDashRegisterOwnTeamButton')}
+            </LinkButton>
+          </div>
+        </Card>
+      </AppShell>
+    );
+  }
 
-    const captainName = await getCaptainDisplayName(picked.row.user_id);
-    const invitedTeamName = picked.row.team_name;
-
+  if (view.kind === 'invited_unknown') {
+    // Landed here from the mail link a captain sent while the address was
+    // unknown (before #2840).
     return (
       <AppShell>
         <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
         <Card>
           <div className="space-y-4">
             <h2 className="font-serif text-[20px] font-medium text-text">
-              {t('teamDashInvitedHeading', { gameName: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
+              {t('teamDashInvitedHeading', { gameName })}
             </h2>
             <TeamDashboardClient
               mode="invited_unknown"
               shortId={shortId}
-              invitationId={pendingInvitation.id}
-              joinEffect={joinEffect}
-              teamName={invitedTeamName ?? undefined}
-              captainName={captainName ?? undefined}
+              invitationId={view.invitationId}
+              joinEffect={view.game.joinEffect}
+              teamName={view.teamName ?? undefined}
+              captainName={view.captainName ?? undefined}
             />
           </div>
         </Card>
@@ -260,15 +152,9 @@ export default async function TeamDashboardPage({
     );
   }
 
-  // Bygg lag-context: hvis brukeren er kaptein → de er kaptein-raden.
-  // Hvis medspiller → hent kapteinens rad via team_request_id.
-  const captainRequestId = myRow!.is_team_captain
-    ? myRow!.id
-    : myRow!.team_request_id;
-
-  if (!captainRequestId) {
-    // Solo-rad (ikke et lag) — bør egentlig ikke ende opp på team-siden,
-    // men vi gir en vennlig melding hvis det skjer.
+  if (view.kind === 'solo') {
+    // A solo request should not end up on the team page; a friendly note if
+    // it does.
     return (
       <AppShell>
         <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
@@ -281,50 +167,7 @@ export default async function TeamDashboardPage({
     );
   }
 
-  const { data: allRows } = await admin
-    .from('game_registration_requests')
-    .select('id, user_id, status, is_team_captain, team_name, team_request_id')
-    .or(`id.eq.${captainRequestId},team_request_id.eq.${captainRequestId}`)
-    .returns<TeamMemberRow[]>();
-
-  const rows = allRows ?? [];
-  const captainRow = rows.find((r) => r.is_team_captain);
-  const memberRows = rows.filter((r) => !r.is_team_captain);
-
-  // User-display lookup — best-effort.
-  const userIds = rows.map((r) => r.user_id);
-  const { data: userRows } = await admin
-    .from('users')
-    .select('id, name, email, nickname, is_guest')
-    .in('id', userIds)
-    .returns<
-      {
-        id: string;
-        name: string | null;
-        email: string;
-        nickname: string | null;
-        is_guest: boolean;
-      }[]
-    >();
-  // #2207: a teammate without a name (unfinished profile) shows as the masked
-  // address — the full one never reaches TeamDashboardClient, for the captain
-  // or anyone else on the team.
-  const usersById = new Map(
-    (userRows ?? []).map((u) => [
-      u.id,
-      {
-        name: displayNameForOthers({ name: u.name, email: u.email }) ?? '',
-        nickname: u.nickname,
-        isGuest: u.is_guest,
-      },
-    ]),
-  );
-
-  const isCaptain = myRow!.is_team_captain;
-  const teamName =
-    captainRow?.team_name ??
-    myRow!.team_name ??
-    localizeGameName(game.name, game.courses?.name ?? null, locale);
+  const teamName = view.teamName ?? gameName;
 
   return (
     <AppShell>
@@ -333,7 +176,7 @@ export default async function TeamDashboardPage({
       <div className="space-y-5">
         <header className="px-1">
           <p className="font-sans text-sm font-medium text-muted">
-            {localizeGameName(game.name, game.courses?.name ?? null, locale)}
+            {gameName}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
             {teamName}
@@ -342,7 +185,7 @@ export default async function TeamDashboardPage({
 
         {/* #543: stengt påmelding — aksept-handlinger avvises server-side
             med signup_closed; banneret forklarer hvorfor på forhånd. */}
-        {game.signups_closed_at != null && game.status === 'scheduled' && (
+        {view.game.signupsClosed && (
           <Banner tone="info">
             {t('teamDashSignupsClosedBanner')}
           </Banner>
@@ -350,30 +193,22 @@ export default async function TeamDashboardPage({
 
         <Card>
           <TeamDashboardClient
-            mode={isCaptain ? 'captain' : 'member'}
+            mode={view.kind}
             shortId={shortId}
-            myRowId={myRow!.id}
-            myStatus={myRow!.status}
-            joinEffect={joinEffect}
+            myRowId={view.myRowId}
+            myStatus={view.myStatus}
+            joinEffect={view.game.joinEffect}
             captain={
-              captainRow
+              view.captain
                 ? {
-                    requestId: captainRow.id,
-                    userId: captainRow.user_id,
-                    displayName:
-                      usersById.get(captainRow.user_id)?.name ?? t('teamDashCaptainLabel'),
-                    status: captainRow.status,
+                    ...view.captain,
+                    displayName: view.captain.displayName ?? t('teamDashCaptainLabel'),
                   }
                 : null
             }
-            members={memberRows.map((r) => ({
-              requestId: r.id,
-              userId: r.user_id,
-              displayName: usersById.get(r.user_id)?.name ?? t('teamDashMemberLabel'),
-              status: r.status,
-              // #2607: no «Gjør til kaptein» for a guest. An unknown user reads
-              // as a guest, so a failed lookup never offers the button.
-              isGuest: usersById.get(r.user_id)?.isGuest ?? true,
+            members={view.members.map((m) => ({
+              ...m,
+              displayName: m.displayName ?? t('teamDashMemberLabel'),
             }))}
           />
         </Card>

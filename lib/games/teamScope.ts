@@ -15,7 +15,7 @@
  * DB-kontrakt: CHECK `game_players_team_flight_consistency` (0030/0095) sier at
  * `team_number NOT NULL` impliserer `flight_number NOT NULL`. Derfor setter
  * forslaget alltid en flight sammen med laget — samme konvensjon som
- * lag-påmeldingen i `signup/[shortId]/teamActions.ts`.
+ * lag-påmeldingen i `lib/games/teamRegistrationCore.ts`.
  */
 
 import { isSoloFormat, type GameMode } from '@/lib/scoring/modes/types';

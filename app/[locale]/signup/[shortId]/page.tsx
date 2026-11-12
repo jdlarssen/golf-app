@@ -23,7 +23,7 @@ import {
   loadInviterTeams,
   resolveCertainTeamInvitation,
 } from './team/captainLookup';
-import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
+import { getTeamFriendCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
   isPubliclyViewable,
   signupSourceFromParam,
@@ -320,7 +320,7 @@ export default async function PåmeldingPage({
     viewerIsFriend = friendIds.includes(game.created_by);
   }
 
-  // Co-player-kandidater til autocomplete i lag-formen (#362). Hentes bare
+  // Kandidatene i lag-formen (#362): #2840 bare vennene dine. Hentes bare
   // når lag-formen faktisk skal rendres — ellers er det en unødig query.
   const willRenderTeamForm =
     (game.registration_type === 'team' || game.registration_type === 'both') &&
@@ -329,7 +329,7 @@ export default async function PåmeldingPage({
     !gameLocked &&
     gameModeSupportsTeams(game.game_mode);
   const teamCandidates: TeamCandidate[] = willRenderTeamForm
-    ? await getTeamCandidates(user.id)
+    ? await getTeamFriendCandidates(user.id)
     : [];
 
   // #544: side-velger for åpne matchplay-spill. Henter en slank roster
@@ -441,7 +441,6 @@ export default async function PåmeldingPage({
             }),
             hasCertainTeamInvitation,
             teamCandidates,
-            captainEmail: profile.email,
             matchplaySideData,
             src: srcRaw,
           })}
@@ -458,7 +457,6 @@ function renderBody({
   view,
   hasCertainTeamInvitation,
   teamCandidates,
-  captainEmail,
   matchplaySideData,
   src,
 }: {
@@ -469,7 +467,6 @@ function renderBody({
   view: SignupView;
   hasCertainTeamInvitation: boolean;
   teamCandidates: TeamCandidate[];
-  captainEmail: string | null;
   matchplaySideData: MatchplaySideData | null;
   src: string | null;
 }) {
@@ -664,7 +661,6 @@ function renderBody({
           <TeamRegistrationForm
             shortId={game.short_id}
             teamSize={teamSize}
-            captainEmail={captainEmail}
             candidates={teamCandidates}
           />
         </div>
