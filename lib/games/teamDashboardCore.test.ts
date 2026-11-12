@@ -148,6 +148,15 @@ describe('remove and resend follow the captaincy (#2358)', () => {
   });
   const input = { shortId: SHORT_ID, requestId: CHILD_REQUEST_ID };
 
+  it('#2840: a failed read of the teammate or the captain is db_error, not «not yours»', async () => {
+    adminMock = buildSupabaseMock([{ data: null, error: { message: 'boom' } }]);
+    expect(await removeTeamMemberCore(NEW_CAPTAIN_ID, input)).toEqual({ ok: false, error: 'db_error' });
+    adminMock = buildSupabaseMock([childRow(), { data: null, error: { message: 'boom' } }]);
+    expect(await resendTeamInviteCore(NEW_CAPTAIN_ID, input)).toEqual({ ok: false, error: 'db_error' });
+    expect(calls('game_players', 'delete')).toHaveLength(0);
+    expect(calls('game_registration_requests', 'delete')).toHaveLength(0);
+  });
+
   it('the current captain removes a teammate: roster row, then request, then a notice', async () => {
     adminMock = buildSupabaseMock([
       childRow(),

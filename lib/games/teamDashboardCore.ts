@@ -104,9 +104,9 @@ async function loadOwnTeamChild(
     status: string;
   };
   captainReq: { user_id: string; team_name: string | null; status: string };
-} | null> {
+} | null | 'db_error'> {
   const admin = getAdminClient();
-  const { data: child } = await admin
+  const { data: child, error: childError } = await admin
     .from('game_registration_requests')
     .select('id, game_id, user_id, team_request_id, team_name, status')
     .eq('id', childRequestId)
@@ -118,13 +118,22 @@ async function loadOwnTeamChild(
       team_name: string | null;
       status: string;
     }>();
+  // #2840: a failed read is not «not your team» (I3).
+  if (childError) {
+    console.error('[loadOwnTeamChild] teammate read failed', { childRequestId, childError });
+    return 'db_error';
+  }
   if (!child || !child.team_request_id) return null;
 
-  const { data: captainReq } = await admin
+  const { data: captainReq, error: captainError } = await admin
     .from('game_registration_requests')
     .select('user_id, team_name, status')
     .eq('id', child.team_request_id)
     .maybeSingle<{ user_id: string; team_name: string | null; status: string }>();
+  if (captainError) {
+    console.error('[loadOwnTeamChild] captain read failed', { childRequestId, captainError });
+    return 'db_error';
+  }
   if (!captainReq || captainReq.user_id !== userId || captainReq.status === 'withdrawn') {
     return null;
   }
@@ -143,6 +152,9 @@ export async function removeTeamMemberCore(
     return { ok: false, error: 'not_found' };
   }
   const own = await loadOwnTeamChild(userId, input.requestId);
+  if (own === 'db_error') {
+    return { ok: false, error: 'db_error' };
+  }
   if (!own) {
     return { ok: false, error: 'not_found' };
   }
@@ -211,6 +223,9 @@ export async function resendTeamInviteCore(
     return { ok: false, error: 'not_found' };
   }
   const own = await loadOwnTeamChild(userId, input.requestId);
+  if (own === 'db_error') {
+    return { ok: false, error: 'db_error' };
+  }
   if (!own) {
     return { ok: false, error: 'not_found' };
   }

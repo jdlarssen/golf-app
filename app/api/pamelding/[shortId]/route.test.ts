@@ -507,7 +507,7 @@ describe('GET /api/pamelding/[shortId]: the team screens (#2840)', () => {
     });
   });
 
-  it('greys out only friends already in the round: on the list or with a live request', async () => {
+  it('greys out only friends already in the round: on the list or with any request (#2840: a declined invite still holds the unique row)', async () => {
     getGameByShortIdMock.mockResolvedValue(makeGame(TEAM_ROUND));
     readFriendIdsMock.mockResolvedValue([FRIEND_A, FRIEND_B, FRIEND_C]);
     rosterRows = [{ user_id: FRIEND_A }, { user_id: STRANGER }, { user_id: ME }];
@@ -527,9 +527,9 @@ describe('GET /api/pamelding/[shortId]: the team screens (#2840)', () => {
     expect(requests?.filters).toEqual(
       expect.arrayContaining([
         { op: 'eq', column: 'game_id', value: GAME_ID },
-        { op: 'in', column: 'status', value: ['pending', 'approved'] },
       ]),
     );
+    expect(requests?.filters.some((f: { column: string }) => f.column === 'status')).toBe(false);
   });
 
   it('no name gives «Laget mitt»', async () => {

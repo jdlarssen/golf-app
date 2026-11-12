@@ -92,9 +92,10 @@ async function readFirstName(userId: string): Promise<string> {
 
 /**
  * Your friends who are in the round already: on the list (not withdrawn), or
- * with a request waiting or approved. The game's rows are read whole and
- * matched against the friends here, so a long friend list never meets
- * PostgREST's `.in()` URL limit; a round has at most a few hundred rows.
+ * with a request of any status (#2840: a declined one still holds the row).
+ * The game's rows are read whole and matched against the friends here, so a
+ * long friend list never meets PostgREST's `.in()` URL limit; a round has at
+ * most a few hundred rows.
  */
 async function readUnavailableFriendIds(gameId: string, userId: string): Promise<string[]> {
   const admin = getAdminClient();
@@ -110,7 +111,8 @@ async function readUnavailableFriendIds(gameId: string, userId: string): Promise
       .from('game_registration_requests')
       .select('user_id')
       .eq('game_id', gameId)
-      .in('status', ['pending', 'approved'])
+      // #2840: any status. A declined or withdrawn request keeps the unique
+      // (game_id, user_id) row, so that friend cannot be picked again either.
       .returns<{ user_id: string }[]>(),
   ]);
   if (players.error) throw players.error;
