@@ -68,6 +68,7 @@ function entry(over: Partial<AppTerminEntry> & Pick<AppTerminEntry, 'id'>): AppT
     hole_segment: 'full',
     start_type: 'first_tee',
     source: 'open',
+    clubName: null,
     cta: 'direct',
     capacity: null,
     full: false,

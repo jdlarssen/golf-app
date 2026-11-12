@@ -87,6 +87,11 @@ import {
   type HomeList,
 } from '../data/homeList';
 import { fetchMyCups } from '../data/cup';
+import { fetchTerminliste } from '../data/terminliste';
+import { TerminRow } from '../components/terminliste/TerminRow';
+import { clubRoundsForHome } from '../lib/clubRounds';
+import { openOrReturn } from '../lib/backTo';
+import type { AppTerminEntry } from '../../../../lib/games/appTerminView';
 import { fetchInboxUnreadCount } from '../data/inbox';
 import { fetchMyLeagues } from '../data/league';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
@@ -126,6 +131,8 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   // «Ligaene dine» (#2638): tom = ingen seksjon, også når kallet feilet.
   const [leagues, setLeagues] = useState<AppLeagueSummary[]>([]);
   const [cups, setCups] = useState<AppCupSummary[]>([]);
+  // #2753 D4: klubbturneringene du kan melde deg på, fra terminlista.
+  const [clubRounds, setClubRounds] = useState<AppTerminEntry[]>([]);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [heroPair, setHeroPair] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
@@ -173,6 +180,12 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     void fetchMyCups().then(
       (result) => setCups(result.ok ? result.cups : []),
       () => setCups([]),
+    );
+    // Klubbturneringene: best-effort, og en feil skjuler seksjonen. Hentes på
+    // nytt ved hvert fokus, så en runde du meldte deg av, står her igjen.
+    void fetchTerminliste().then(
+      (result) => setClubRounds(result.ok ? clubRoundsForHome(result.view.entries, new Date()) : []),
+      () => setClubRounds([]),
     );
     try {
       const fresh = await refreshHomeCards(userId);
@@ -356,6 +369,29 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
       </View>
     ) : null;
 
+  // #2753 D4: under ligaene og cupene, bare når det finnes rader (eierens svar
+  // 12.11). Radene er terminlistas, med klubben foran banen.
+  const clubRoundsSection =
+    clubRounds.length > 0 ? (
+      <View testID="home-club-rounds">
+        <SectionHead title={HOME_TEXT.clubRounds} />
+        <View style={[styles.clubRounds, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {clubRounds.map((entry, index) => (
+            <View
+              key={entry.id}
+              style={index > 0 ? { borderTopWidth: 1, borderTopColor: colors.divider } : undefined}
+            >
+              <TerminRow
+                entry={entry}
+                showClub
+                onPress={() => openOrReturn(navigation, 'RoundInvite', { shortId: entry.short_id, src: null })}
+              />
+            </View>
+          ))}
+        </View>
+      </View>
+    ) : null;
+
   const createGame = (
     <Pressable
       style={ui.button}
@@ -506,6 +542,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
 
         {leaguesFirst ? null : leaguesSection}
         {cupsSection}
+        {clubRoundsSection}
 
         <Section
           title={HOME_TEXT.myGames}
@@ -713,6 +750,7 @@ const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 const TITLE = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
+  clubRounds: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   notice: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12 },
   noticeText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   // Samme rad som «Ligaene dine» (`LeagueHomeRow`): navn og linje, pila til høyre.
