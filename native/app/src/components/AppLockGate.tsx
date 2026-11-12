@@ -11,10 +11,16 @@
 //
 // **Dekket i appvelgeren.** Er låsen på, legges et ugjennomsiktig dekke med
 // bakgrunnsfargen og ordmerket over appen så snart `AppState` er `inactive` eller
-// `background` (på Android også ved `blur`), og det fjernes ved `active`. Dekket låser ikke og spør ikke:
+// `background`, og det fjernes ved `active`. Dekket låser ikke og spør ikke:
 // barna står montert hele tiden, så spilleren lander på samme hull og synken går
 // videre. Fordi bare dekket står, kan Face ID-dialogen (som gir `inactive`) ikke
 // lage en løkke. Dekket skjuler barna for skjermleseren.
+//
+// **Gjelder iOS.** Android tar bildet til appvelgeren når aktiviteten pauser, før
+// `AppState` sier «background», så dekket rekker ikke å tegnes der (målt på
+// emulatoren). Å dekke på Androids `blur` gjør det verre: en RN-`Modal` eller
+// `Alert` tar vindusfokus, så dekket la seg bak hvert bunnark og hver dialog (målt).
+// Hva Android skal gjøre i stedet er et produktvalg, se PR-en (#2841).
 //
 // **Låseskjermen** er bakgrunnen, ordmerket og én knapp, «Lås opp», som spør på
 // nytt. Ingen «Logg ut»: telefonens kode er alltid reserveveien. Avbryter
@@ -61,7 +67,6 @@ type Props = {
 export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
   const lockOn = useAppLock();
   const [away, setAway] = useState(isAway(AppState.currentState));
-  const [blurred, setBlurred] = useState(false);
   const [asking, setAsking] = useState(false);
   const askingRef = useRef(false);
   const aliveRef = useRef(true);
@@ -76,19 +81,6 @@ export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => setAway(isAway(next)));
     return () => sub.remove();
-  }, []);
-
-  // Android tar bildet til appvelgeren når aktiviteten pauser, før `change` sier
-  // «background», og viste da innholdet (målt på emulatoren). Vinduet mister
-  // fokus først, og `blur` kommer før pausen, så dekket rekker å tegnes.
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const blur = AppState.addEventListener('blur', () => setBlurred(true));
-    const focus = AppState.addEventListener('focus', () => setBlurred(false));
-    return () => {
-      blur.remove();
-      focus.remove();
-    };
   }, []);
 
   const ask = useCallback(async () => {
@@ -127,7 +119,7 @@ export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
     );
   }
 
-  const covered = lockOn && (away || blurred);
+  const covered = lockOn && away;
   // Dekket er søsken til barna, ikke barn av dem: ellers ville det skjules for
   // skjermleseren sammen med innholdet. Omslaget står alltid, så barna aldri monteres på nytt.
   return (

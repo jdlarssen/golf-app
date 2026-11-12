@@ -31,7 +31,7 @@
 #    opp med Face ID (`expo-local-authentication`), og Apple krever teksten:
 #    uten den krasjer appen første gang den spør, på en iPhone med Face ID. Et
 #    butikkbygg uten teksten kunne ellers sluppet gjennom. Android trenger ingen
-#    regel her: `USE_BIOMETRIC` legges til av pluginen og er ingen
+#    regel her: `USE_BIOMETRIC` og `USE_FINGERPRINT` legges til av pluginen og er ingen
 #    brukertillatelse.
 #  - Appen oppgir norsk (`nb`) som utviklingsregion og lokalisering. Uten det
 #    står Info.plist på `en`, og UIKit viser engelske systemtekster (Copy, Save

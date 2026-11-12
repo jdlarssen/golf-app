@@ -106,7 +106,11 @@ export default function App() {
 
   // Ingen av de tre kaster: en lesefeil gir sollys av, «Følg telefonen» og låsen av.
   // Svarer ikke lagrene innen et sekund, slippes splashen likevel (aldri heng
-  // på splash); valgene kommer da på plass når lesingen blir ferdig.
+  // på splash); sollys og tema kommer da på plass når lesingen blir ferdig.
+  // ASSUMPTION (#2841): låsen gjør ikke det. `startLocked` leses én gang når appen er
+  // klar, så en lesing som tar over et sekund åpner appen ulåst denne ene starten.
+  // Som en lesefeil (appLock.ts) er det så sjelden at å slippe inn er bedre enn å la
+  // splashen henge eller å låse spilleren ute av en runde.
   useEffect(() => {
     const timer = setTimeout(() => setDeviceChoicesLoaded(true), DEVICE_CHOICES_TIMEOUT_MS);
     void Promise.allSettled([loadSunlight(), applyStoredThemePreference(), loadAppLock()]).finally(() => {
@@ -144,7 +148,9 @@ export default function App() {
  * Alt etter at splashen er klar. Egen komponent så `startLocked` leses én gang,
  * i det appen er klar: låsen gjelder en sesjon som finnes ved kaldstart, ikke en
  * innlogging i en kjørende app. Den nullstilles når telefonen har sagt ja, så en
- * ny innlogging etter utlogging aldri låses.
+ * ny innlogging etter utlogging ikke låses. Mister appen sesjonen FØR opplåsing
+ * (utløpt token ved kaldstart), står `startLocked` igjen, og neste innlogging
+ * spør om Face ID. Det er ufarlig, og det er ikke noen vei inn uten svar.
  */
 function ReadyApp({ session }: { session: Session | null }) {
   const [startLocked, setStartLocked] = useState(() => session != null && getAppLock());

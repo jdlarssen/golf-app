@@ -6,7 +6,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { useEffect, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AppState, Platform, Text, type AppStateStatus } from 'react-native';
+import { AppState, Text, type AppStateStatus } from 'react-native';
 import { authenticateAsync } from 'expo-local-authentication';
 import * as SplashScreen from 'expo-splash-screen';
 import { loadAppLock, setAppLock } from '../lib/appLock';
@@ -171,35 +171,6 @@ describe('AppLockGate', () => {
     await goTo('active');
     expect(screen.queryByTestId('app-lock-cover')).toBeNull();
     expect(mounts).toBe(1);
-  });
-
-  it('på Android dekker også blur (appvelgeren tar bildet før background), og focus fjerner dekket', async () => {
-    jest.replaceProperty(Platform, 'OS', 'android');
-    setAppLock(true);
-    const byType: Record<string, () => void> = {};
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((type, handler) => {
-      byType[type] = handler as () => void;
-      return { remove: jest.fn() };
-    });
-    await render(<Harness initiallyLocked={false} />);
-
-    await act(async () => byType.blur());
-    expect(screen.getByTestId('app-lock-cover')).toBeTruthy();
-    expect(mounts).toBe(1);
-
-    await act(async () => byType.focus());
-    expect(screen.queryByTestId('app-lock-cover')).toBeNull();
-    expect(authenticate).not.toHaveBeenCalled();
-  });
-
-  it('på iOS finnes ingen blur-lytter', async () => {
-    const types: string[] = [];
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((type) => {
-      types.push(type);
-      return { remove: jest.fn() };
-    });
-    await render(<Harness initiallyLocked={false} />);
-    expect(types).toEqual(['change']);
   });
 
   it('dekket kommer og går når låsen slås på og av mens appen står åpen', async () => {
