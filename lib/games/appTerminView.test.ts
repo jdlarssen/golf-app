@@ -122,6 +122,16 @@ describe('buildAppTerminView', () => {
     expect(ids).toEqual(['c1', 'f1', 'o1', 'o2']);
   });
 
+  it('names the club on a club round, and nothing on the others (#2753)', () => {
+    const view = buildAppTerminView(data, seats, {});
+    expect(view.entries.map((e) => [e.id, e.clubName])).toEqual([
+      ['c1', 'Byneset GK'],
+      ['f1', null],
+      ['o1', null],
+      ['o2', null],
+    ]);
+  });
+
   it('marks a capped round at its cap as full', () => {
     const full = buildAppTerminView(data, seats, {}).entries.find((e) => e.id === 'o2');
     expect(full).toMatchObject({ full: true, capacity: { cap: 8, held: 8 } });
