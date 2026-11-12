@@ -599,6 +599,19 @@ describe('lag', () => {
     expect(screen.queryByTestId('round-invite-open-web')).toBeNull();
   });
 
+  it('#2840: færre ledige plasser enn laget trenger gir også «Runden er full»', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM, seats: { kind: 'capped', cap: 12, held: 9 } }) });
+    await renderInvite();
+    expect(screen.getByTestId('stub-team-full')).toBeTruthy();
+    expect(screen.queryByTestId('stub-team-form')).toBeNull();
+  });
+
+  it('akkurat plass til laget gir skjemaet', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM, seats: { kind: 'capped', cap: 12, held: 8 } }) });
+    await renderInvite();
+    expect(screen.getByTestId('stub-team-form')).toBeTruthy();
+  });
+
   it('en full runde gir «Runden er full» i stedet for skjemaet', async () => {
     answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM, seats: { kind: 'capped', cap: 12, held: 12 } }) });
     await renderInvite();

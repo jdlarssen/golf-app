@@ -5,7 +5,7 @@
 // `roundInviteCopy.test.ts` låser det mot `messages/no.json` (`signup`). Resten finnes
 // bare i appen. Datoen står i enhetens lokaltid, som på Hjem (`homeDates.ts`).
 import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteView';
-import { isCappedFull } from '../../../../lib/games/seatCapacity';
+import { capacityState, isCappedFull } from '../../../../lib/games/seatCapacity';
 import type { RoundInviteAnswerFailure, RoundInviteLoadFailure } from '../data/roundInvite';
 import { formatStubClock, formatWeekdayDayMonth } from './homeDates';
 import { OFFLINE_NOTE } from './rosterCopy';
@@ -75,6 +75,14 @@ export function roundWhenLine(teeOffAt: string | null): string | null {
  */
 export function isRoundFull(seats: AppRoundInviteView['seats']): boolean {
   return isCappedFull(seats);
+}
+
+/**
+ * #2840: et lag trenger én plass per spiller. Har runden tak og færre ledige plasser
+ * enn laget, svarer plassen `game_full`, så skjermen sier det før skjemaet fylles ut.
+ */
+export function teamDoesNotFit(seats: AppRoundInviteView['seats'], teamSize: number): boolean {
+  return seats?.kind === 'capped' && capacityState(seats).free < teamSize;
 }
 
 /**

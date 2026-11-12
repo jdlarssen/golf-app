@@ -47,6 +47,7 @@ export const TEAM_SIGNUP_TEXT = {
   teammateNotFriend: 'Du kan bare melde på venner. Legg dem til som venner først.',
   duplicateMembers: 'Du har valgt samme venn to ganger.',
   teamFull: 'Laget er fullt.',
+  gameFull: 'Spillet er fullt — alle plassene er tatt.',
   teamNameInvalid: 'Lag-navnet må være 3–40 tegn.',
   slotsCountWrong: 'Feil antall medspillere. Fyll inn alle plassene.',
   selfInSlots: 'Du kan ikke legge til deg selv som medspiller.',
@@ -183,12 +184,13 @@ export function slotResultLabel(result: AppTeamSlotResult): string {
 }
 
 /**
- * Feilene skjemaet og svaret viser. `game_full`, `game_locked`, `signup_closed` og
- * `not_found` viser de ikke: der spør skjermen på nytt og viser det som gjelder nå.
+ * Feilene skjemaet og svaret viser. `game_locked`, `signup_closed` og `not_found` viser
+ * de ikke: der spør skjermen på nytt og viser det som gjelder nå. `game_full` står
+ * (#2840): står skjemaet også etter ny henting, skal trykket ikke ende i ingenting.
  */
 export type TeamSignupFailureWithText = Exclude<
   TeamSignupFailure,
-  'game_full' | 'game_locked' | 'signup_closed' | 'not_found'
+  'game_locked' | 'signup_closed' | 'not_found'
 >;
 
 /** Koden går uttømmende: en ny kode faller på `tsc`. */
@@ -200,6 +202,8 @@ export function describeTeamSignupFailure(reason: TeamSignupFailureWithText): st
       return TEAM_SIGNUP_TEXT.duplicateMembers;
     case 'team_full':
       return TEAM_SIGNUP_TEXT.teamFull;
+    case 'game_full':
+      return TEAM_SIGNUP_TEXT.gameFull;
     case 'team_name_invalid':
       return TEAM_SIGNUP_TEXT.teamNameInvalid;
     case 'slots_count_wrong':

@@ -39,6 +39,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppRoundInviteView, AppTeamSignupForm } from '../../../../../lib/games/appRoundInviteView';
+import { TEAM_NAME_MAX } from '../../../../../lib/games/registration';
 import { validateTeamName } from '../../../../../lib/games/teamName';
 import { pickerRows } from '../../../../../lib/league/pickerRows';
 import { nameInitials } from '../../../../../lib/names/initials';
@@ -303,6 +304,9 @@ export function TeamSignupForm({
     }
     switch (result.reason) {
       case 'game_full':
+        // Står skjemaet også etter ny henting (tellingen feilet, eller en plass
+        // ble ledig igjen), skal trykket ikke ende i ingenting.
+        setError('game_full');
         onStale(true);
         return;
       case 'game_locked':
@@ -341,7 +345,7 @@ export function TeamSignupForm({
                 testID="team-form-name-input"
               />
               <Text style={[styles.counter, { color: colors.muted }]} testID="team-form-name-count">
-                {nameCounter(draft.trim().length, form.nameMax)}
+                {nameCounter(draft.trim().length, TEAM_NAME_MAX)}
               </Text>
               <Pressable
                 accessibilityRole="button"

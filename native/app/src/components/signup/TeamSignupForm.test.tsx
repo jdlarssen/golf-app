@@ -283,6 +283,15 @@ describe('å sende', () => {
     expect(submit()).toHaveTextContent(ROUND_INVITE_TEXT.retry);
   });
 
+  it('#2840: game_full sier at laget ikke får plass, også når skjemaet står etter ny henting', async () => {
+    mockRegister = { ok: false, reason: 'game_full' };
+    await renderForm();
+    await pick('ola', 'kari', 'per');
+    await fireEvent.press(submit());
+    expect(screen.getByTestId('team-form-error')).toBeTruthy();
+    expect(onStale).toHaveBeenCalledWith(true);
+  });
+
   it.each([
     ['game_full', true],
     ['signup_closed', false],
