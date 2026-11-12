@@ -43,9 +43,9 @@ export type AppRoundInviteView = {
 
 /**
  * #2840: the team form. `unavailableFriendIds` are your friends who are on the
- * list already or have a request waiting or approved, so the picker can grey
- * them out; never anyone else's id, never an address. The friends themselves
- * come from `GET /api/friends`.
+ * list already or have a request of any status (a declined one still holds the
+ * row), so the picker can grey them out; never anyone else's id, never an
+ * address. The friends themselves come from `GET /api/friends`.
  */
 export type AppTeamSignupForm = {
   kind: 'form';
