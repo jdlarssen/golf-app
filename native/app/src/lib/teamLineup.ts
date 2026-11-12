@@ -4,7 +4,6 @@
 // Tar du en venn ut, blir plassen ledig og de andre blir stående, så en skive aldri
 // hopper sidelengs. Ren og I/O-fri (Type A).
 import type { AppTeamSignupMember } from '../../../../lib/games/appRoundInviteView';
-import { displayNameForOthers } from '../../../../lib/users/displayName';
 
 /** Plassene etter deg: en venns id, eller `null` for en ledig plass. */
 export type TeamSlots = readonly (string | null)[];
@@ -46,22 +45,9 @@ export function pickedIds(slots: TeamSlots): string[] {
 }
 
 /**
- * Hvem på laget som er deg, i svaret på en invitasjon. Visningen sier det ikke
- * (`AppTeamSignupMember` har ingen id), så regelen er: du er ikke kapteinen, og du har
- * ikke svart ennå. Er bare én slik, er det deg. Er det flere, er det den som har
- * navnet ditt slik andre ser det (navnet, ellers den maskerte adressen). Ellers `-1`:
- * da står ingen skive merket som deg.
+ * Hvem på laget som er deg, i svaret på en invitasjon. Serveren merker din egen
+ * rad (`isYou`, #2840). Uten merket rad (en eldre server) er ingen skive merket.
  */
-export function selfMemberIndex(
-  members: readonly AppTeamSignupMember[],
-  self: { name: string | null; email: string | null },
-): number {
-  const open = members.flatMap((member, index) =>
-    !member.isCaptain && member.status === 'pending' ? [index] : [],
-  );
-  if (open.length === 1) return open[0];
-  const ownName = displayNameForOthers({ name: self.name, email: self.email });
-  if (!ownName) return -1;
-  const named = open.filter((index) => members[index].name === ownName);
-  return named.length === 1 ? named[0] : -1;
+export function selfMemberIndex(members: readonly AppTeamSignupMember[]): number {
+  return members.findIndex((member) => member.isYou);
 }

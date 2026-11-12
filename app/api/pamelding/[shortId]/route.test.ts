@@ -562,8 +562,8 @@ describe('GET /api/pamelding/[shortId]: the team screens (#2840)', () => {
       teamName: 'Martins lag',
       joinEffect: 'instant',
       members: [
-        { name: 'Martin Hansen', isCaptain: true, status: 'approved' },
-        { name: 'ka•••@gmail.com', isCaptain: false, status: 'pending' },
+        { name: 'Martin Hansen', isCaptain: true, isYou: false, status: 'approved' },
+        { name: 'ka•••@gmail.com', isCaptain: false, isYou: true, status: 'pending' },
       ],
     });
     expect(loadTeamDashboardMock).toHaveBeenCalledWith(SHORT_ID, ME);

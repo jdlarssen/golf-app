@@ -41,30 +41,16 @@ describe('plassene', () => {
 });
 
 describe('hvem på laget som er deg', () => {
-  const captain: AppTeamSignupMember = { name: 'Kari Nord', isCaptain: true, status: 'pending' };
-  const ola: AppTeamSignupMember = { name: 'Ola Kompis', isCaptain: false, status: 'approved' };
-  const me: AppTeamSignupMember = { name: 'Martin Berg', isCaptain: false, status: 'pending' };
-  const per: AppTeamSignupMember = { name: 'Per Hansen', isCaptain: false, status: 'pending' };
-  const self = { name: 'Martin Berg', email: 'martin@example.com' };
+  const captain: AppTeamSignupMember = { name: 'Kari Nord', isCaptain: true, isYou: false, status: 'pending' };
+  const ola: AppTeamSignupMember = { name: 'Ola Kompis', isCaptain: false, isYou: false, status: 'approved' };
+  const me: AppTeamSignupMember = { name: 'Martin Berg', isCaptain: false, isYou: true, status: 'pending' };
+  const per: AppTeamSignupMember = { name: 'Per Hansen', isCaptain: false, isYou: false, status: 'pending' };
 
-  it('den eneste som ikke har svart, er deg, også uten navn', () => {
-    expect(selfMemberIndex([captain, ola, me], { name: null, email: null })).toBe(2);
+  it('#2840: serveren sier hvem som er deg, også når to har samme navn', () => {
+    expect(selfMemberIndex([captain, { ...per, name: 'Martin Berg' }, me])).toBe(2);
   });
 
-  it('med flere som ikke har svart, er det navnet ditt som avgjør', () => {
-    expect(selfMemberIndex([captain, ola, me, per], self)).toBe(2);
-  });
-
-  it('uten navn er det den maskerte adressen andre ser', () => {
-    const masked: AppTeamSignupMember = { name: 'ma•••@example.com', isCaptain: false, status: 'pending' };
-    expect(selfMemberIndex([captain, per, masked], { name: null, email: 'martin@example.com' })).toBe(2);
-  });
-
-  it.each([
-    ['to med samme navn', [captain, me, { ...me }]],
-    ['ingen med navnet ditt', [captain, per, { ...per, name: 'Ingrid Næss' }]],
-    ['ingen som venter', [captain, ola]],
-  ])('%s: ingen er merket', (_label, members) => {
-    expect(selfMemberIndex(members as AppTeamSignupMember[], self)).toBe(-1);
+  it('uten merket rad (eldre server) er ingen merket', () => {
+    expect(selfMemberIndex([captain, ola, per])).toBe(-1);
   });
 });

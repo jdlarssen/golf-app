@@ -47,10 +47,10 @@ const INVITED: AppTeamSignupInvited = {
   teamName: 'Birdie-jegerne',
   joinEffect: 'instant',
   members: [
-    { name: 'Kari Nord', isCaptain: true, status: 'approved' },
-    { name: 'Ola Kompis', isCaptain: false, status: 'approved' },
-    { name: 'Martin Berg', isCaptain: false, status: 'pending' },
-    { name: 'Per Hansen', isCaptain: false, status: 'pending' },
+    { name: 'Kari Nord', isCaptain: true, isYou: false, status: 'approved' },
+    { name: 'Ola Kompis', isCaptain: false, isYou: false, status: 'approved' },
+    { name: 'Martin Berg', isCaptain: false, isYou: true, status: 'pending' },
+    { name: 'Per Hansen', isCaptain: false, isYou: false, status: 'pending' },
   ],
 };
 
