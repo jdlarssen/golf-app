@@ -144,11 +144,16 @@ describe('appens tak og lag følger nettsiden (#2148)', () => {
   });
 
   it('lag-oppsettet tilbyr like mange lag som taket gir par, og sidene står', () => {
-    expect(teamLayoutFor('best_ball', false)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag' });
-    expect(teamLayoutFor('stableford', true)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag' });
-    expect(teamLayoutFor('singles_matchplay', false)).toEqual({ slots: 2, noun: 'side' });
-    expect(teamLayoutFor('greensome_matchplay', false)).toEqual({ slots: 2, noun: 'side' });
+    expect(teamLayoutFor('best_ball', false)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag', size: 2 });
+    expect(teamLayoutFor('stableford', true)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag', size: 2 });
+    expect(teamLayoutFor('singles_matchplay', false)).toEqual({ slots: 2, noun: 'side', size: 1 });
+    expect(teamLayoutFor('greensome_matchplay', false)).toEqual({ slots: 2, noun: 'side', size: 2 });
     expect(teamLayoutFor('stableford', false)).toBeNull();
+    // #2753 D3: Patsome i par, scramble og shamble i valgt lagstørrelse.
+    expect(teamLayoutFor('patsome', false)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag', size: 2 });
+    expect(teamLayoutFor('texas_scramble', false, 4)).toEqual({ slots: maxTeamsForSize(4), noun: 'lag', size: 4 });
+    expect(teamLayoutFor('florida_scramble', false, 3)).toEqual({ slots: maxTeamsForSize(3), noun: 'lag', size: 3 });
+    expect(teamLayoutFor('shamble', false, 3)).toEqual({ slots: maxTeamsForSize(3), noun: 'lag', size: 3 });
   });
 
   it('en gammel app-runde med 8 i best ball bygges som før (N5)', () => {

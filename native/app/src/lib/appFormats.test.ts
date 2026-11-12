@@ -31,6 +31,10 @@ describe('APP_SUPPORTED_MODES', () => {
       'skins',
       'solo_strokeplay',
       'patsome',
+      'texas_scramble',
+      'ambrose',
+      'florida_scramble',
+      'shamble',
     ]);
   });
 
@@ -43,7 +47,7 @@ describe('APP_SUPPORTED_MODES', () => {
       expect(isAppSupportedMode(mode)).toBe(true);
     }
     // Aktive formater på web som appen bevisst IKKE tilbyr.
-    for (const mode of ['texas_scramble', 'nassau', 'nines', '']) {
+    for (const mode of ['nassau', 'nines', 'round_robin', 'acey_deucey', '']) {
       expect(isAppSupportedMode(mode)).toBe(false);
     }
   });
@@ -69,6 +73,10 @@ describe('usesTeamAssignment', () => {
       'singles_matchplay',
       'greensome_matchplay',
       'patsome',
+      'texas_scramble',
+      'ambrose',
+      'florida_scramble',
+      'shamble',
     ]);
   });
 

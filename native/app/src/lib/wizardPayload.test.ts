@@ -199,7 +199,146 @@ const CASES: {
       { user_id: 'd', team_number: 2, flight_number: 2 },
     ],
   },
+  // #2753 D3b: med nettets standarder, samme mode_config som nettets
+  // `texasFd`/`ambroseFd`/`floridaFd`/`shambleFd` gir for samme valg.
+  {
+    mode: 'texas_scramble',
+    draft: draft({
+      gameMode: 'texas_scramble',
+      players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
+      setup: { teamSize: 2 },
+    }),
+    modeConfig: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+    players: [
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ],
+  },
+  {
+    mode: 'ambrose',
+    draft: draft({
+      gameMode: 'ambrose',
+      players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
+      setup: { teamSize: 2 },
+    }),
+    modeConfig: { kind: 'ambrose', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+    players: [
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ],
+  },
+  {
+    mode: 'florida_scramble',
+    // Standarden: tremannslag og 15 % av summen.
+    draft: draft({
+      gameMode: 'florida_scramble',
+      players: teamed(['a', 1], ['b', 1], ['c', 1], ['d', 2], ['e', 2], ['f', 2]),
+    }),
+    modeConfig: { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+    players: [
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 1, flight_number: 1 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+      { user_id: 'e', team_number: 2, flight_number: 2 },
+      { user_id: 'f', team_number: 2, flight_number: 2 },
+    ],
+  },
+  {
+    mode: 'shamble',
+    // Standarden: firemannslag, shamble, to teller, netto.
+    draft: draft({
+      gameMode: 'shamble',
+      players: teamed(['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 2], ['f', 2], ['g', 2], ['h', 2]),
+    }),
+    modeConfig: {
+      kind: 'shamble',
+      team_size: 4,
+      teams_count: 2,
+      shamble_variant: 'shamble',
+      shamble_count: 2,
+      shamble_scoring: 'net',
+    },
+    players: [
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 1, flight_number: 1 },
+      { user_id: 'd', team_number: 1, flight_number: 1 },
+      { user_id: 'e', team_number: 2, flight_number: 2 },
+      { user_id: 'f', team_number: 2, flight_number: 2 },
+      { user_id: 'g', team_number: 2, flight_number: 2 },
+      { user_id: 'h', team_number: 2, flight_number: 2 },
+    ],
+  },
 ];
+
+describe('scramble-familien og shamble (#2753 D3b)', () => {
+  const four = teamed(['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 2], ['f', 2], ['g', 2], ['h', 2]);
+
+  it('Texas uten valg starter på nettets standard: firemannslag, 10 % av summen', () => {
+    const cfg = buildDraftPayload(draft({ gameMode: 'texas_scramble', players: four })).payload.mode_config;
+    expect(cfg).toMatchObject({ team_size: 4, team_handicap_pct: 10 });
+  });
+
+  it('Ambrose tremannslag bruker Ambrose-formelen', () => {
+    const six = teamed(['a', 1], ['b', 1], ['c', 1], ['d', 2], ['e', 2], ['f', 2]);
+    const cfg = buildDraftPayload(draft({ gameMode: 'ambrose', players: six, setup: { teamSize: 3 } })).payload
+      .mode_config as { team_handicap_pct: number };
+    expect(cfg.team_handicap_pct).toBeCloseTo(100 / 6, 2);
+  });
+
+  it('valgt lag-handicap og brutto bæres videre', () => {
+    const gross = buildDraftPayload(
+      draft({ gameMode: 'texas_scramble', players: four, setup: { teamHandicapSumPct: 0 } }),
+    ).payload;
+    expect(gross.errorCode).toBeUndefined();
+    expect(gross.mode_config).toMatchObject({ team_handicap_pct: 0 });
+  });
+
+  it('champagne med tre som teller og brutto', () => {
+    const cfg = buildDraftPayload(
+      draft({
+        gameMode: 'shamble',
+        players: four,
+        setup: { shambleVariant: 'champagne', shambleCount: 3, shambleScoring: 'gross' },
+      }),
+    ).payload.mode_config;
+    expect(cfg).toMatchObject({ shamble_variant: 'champagne', shamble_count: 3, shamble_scoring: 'gross' });
+  });
+
+  it('Florida med par gir nettets unsupported_mode_size_combo', () => {
+    const pairs = teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]);
+    const result = buildDraftPayload(draft({ gameMode: 'florida_scramble', players: pairs, setup: { teamSize: 2 } }));
+    expect(result.payload.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('ujevne lag gir nettets team_balance', () => {
+    const uneven = teamed(['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 2], ['f', 2]);
+    expect(buildDraftPayload(draft({ gameMode: 'texas_scramble', players: uneven })).payload.errorCode).toBe(
+      'team_balance',
+    );
+  });
+
+  // Som best ball (webbens skjema): en spiller uten lag kommer ikke med, og
+  // oppsummeringen sier fra (`draftNeedsTeamAssignment`, `describeMissingTeams`).
+  it('en spiller uten lag kommer ikke med, og lag-modusen krever tildeling', () => {
+    const missing = [...teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]), { userId: 'e', teeGender: 'M' as const, teamNumber: null }];
+    const input = draft({ gameMode: 'texas_scramble', players: missing, setup: { teamSize: 2 } });
+    expect(buildDraftPayload(input).payload.players.map((p) => p.user_id)).not.toContain('e');
+    expect(draftNeedsTeamAssignment(input)).toBe(true);
+  });
+
+  it('et lag-handicap over hele snittet gir nettets bad_allowance', () => {
+    const result = buildDraftPayload(
+      draft({ gameMode: 'texas_scramble', players: four, setup: { teamHandicapSumPct: 40 } }),
+    );
+    expect(result.payload.errorCode).toBe('bad_allowance');
+  });
+});
 
 describe('de nye formatene i D3 (#2753)', () => {
   it('Patsome med brutto bærer valget videre', () => {

@@ -21,9 +21,18 @@ import {
   hasHcpAllowanceField,
 } from '../../lib/allowanceCopy';
 import type { AppGameMode } from '../../lib/appFormats';
-import { PATSOME_TEXT } from '../../lib/formatSetupCopy';
+import {
+  PATSOME_TEXT,
+  SHAMBLE_TEXT,
+  TEAM_HANDICAP_TEXT,
+  TEAM_SIZE_TEXT,
+  sumEquivalentText,
+} from '../../lib/formatSetupCopy';
+import { defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefaults';
+import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimits';
+import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
-import type { ModeSetup } from '../../lib/wizardPayload';
+import { effectiveTeamSize, isScrambleFamily, type ModeSetup } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
 import { FeeAndPrizes, type FeeDraft } from './FeeAndPrizes';
 import { Chips, Field, ToggleRow } from './primitives';
@@ -81,6 +90,16 @@ export function SetupStep({
   // #2561: appen spør ikke om kroner per enhet ved lansering (rot-
   // `lib/launchRules.ts`), for noe format; oppgjøret settes på nettet.
   const wagerUnit = SHOW_SETTLEMENT_IN_APP ? settlementUnitKeyFor(mode) : null;
+  // #2753 D3b: lagstørrelse og lag-handicap (scramble) som nettets
+  // TeamSizeSelector og TeamHandicapField. Arrangøren skriver prosent av lagets
+  // snitt; lagret verdi er prosent av summen (`teamHandicapUnit`).
+  const teamSize = effectiveTeamSize(mode, setup);
+  const sizes = (TEAM_FORMAT_TEAM_SIZES[mode] ?? []) as readonly (2 | 3 | 4)[];
+  const defaultSumPct = isScrambleFamily(mode) ? (defaultTeamHandicapPct(mode, teamSize) ?? 0) : 0;
+  const teamHandicapSumPct =
+    text.allowance === '' ? defaultSumPct : averagePctToSumPct(Number(text.allowance), teamSize);
+  const shambleNet = (setup.shambleScoring ?? 'net') === 'net';
+  const champagne = setup.shambleVariant === 'champagne';
 
   return (
     <View testID="create-step-setup">
@@ -172,6 +191,121 @@ export function SetupStep({
               />
             </Field>
           )}
+        </Field>
+      ) : null}
+
+      {isScrambleFamily(mode) ? (
+        <>
+          <Field label={TEAM_SIZE_TEXT.legend}>
+            <Chips
+              value={teamSize}
+              onChange={(next) => {
+                onSetup({ teamSize: next });
+                // Ny størrelse, ny standard: nettet setter andelen på nytt.
+                onText({ allowance: '' });
+              }}
+              options={sizes.map((n) => ({
+                value: n,
+                label: TEAM_SIZE_TEXT.sizes[n],
+                testID: `create-team-size-${n}`,
+              }))}
+            />
+          </Field>
+          <Field label={TEAM_HANDICAP_TEXT.legend} hint={TEAM_HANDICAP_TEXT.description}>
+            <Chips
+              value={text.allowance === '0' ? 'brutto' : 'netto'}
+              onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
+              options={[
+                { value: 'netto' as const, label: ALLOWANCE_TEXT.nettoLabel, testID: 'create-team-hcp-netto' },
+                { value: 'brutto' as const, label: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-team-hcp-brutto' },
+              ]}
+            />
+            {text.allowance === '0' ? (
+              <Text style={ui.muted} testID="create-team-hcp-brutto-helper">
+                {TEAM_HANDICAP_TEXT.bruttoHelper}
+              </Text>
+            ) : (
+              <Field
+                label={TEAM_HANDICAP_TEXT.inputLabel}
+                hint={TEAM_HANDICAP_TEXT.nettoHelper[mode][teamSize]}
+              >
+                <TextInput
+                  testID="create-team-hcp"
+                  style={ui.input}
+                  value={text.allowance}
+                  onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
+                  keyboardType="number-pad"
+                  placeholder={String(sumPctToAveragePct(defaultSumPct, teamSize))}
+                  placeholderTextColor={colors.muted}
+                />
+                <Text style={ui.muted} testID="create-team-hcp-sum">
+                  {sumEquivalentText(teamHandicapSumPct)}
+                </Text>
+              </Field>
+            )}
+          </Field>
+        </>
+      ) : null}
+
+      {/* #2753 D3b: shamble og Champagne Scramble, som nettets ShambleSetup. */}
+      {mode === 'shamble' ? (
+        <Field label={SHAMBLE_TEXT.legend}>
+          <Text style={ui.label}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
+          <Chips
+            value={teamSize}
+            onChange={(next) => onSetup({ teamSize: next })}
+            options={([3, 4] as const).map((n) => ({
+              value: n,
+              label: SHAMBLE_TEXT.teamSize[n],
+              testID: `create-shamble-size-${n}`,
+            }))}
+          />
+          <Text style={ui.label}>{SHAMBLE_TEXT.variantLabel}</Text>
+          <Chips
+            value={setup.shambleVariant ?? 'shamble'}
+            onChange={(shambleVariant) => onSetup({ shambleVariant })}
+            options={[
+              { value: 'shamble' as const, label: SHAMBLE_TEXT.variantShamble, testID: 'create-shamble-variant-shamble' },
+              { value: 'champagne' as const, label: SHAMBLE_TEXT.variantChampagne, testID: 'create-shamble-variant-champagne' },
+            ]}
+          />
+          {champagne ? (
+            <>
+              <Text style={ui.label}>{SHAMBLE_TEXT.countLabel}</Text>
+              <Chips
+                value={setup.shambleCount ?? 2}
+                onChange={(shambleCount) => onSetup({ shambleCount })}
+                options={([1, 2, 3] as const).map((n) => ({
+                  value: n,
+                  label: `${n} ${n === 1 ? SHAMBLE_TEXT.countSingle : SHAMBLE_TEXT.countPlural}`,
+                  testID: `create-shamble-count-${n}`,
+                }))}
+              />
+            </>
+          ) : null}
+          <Text style={ui.label}>{SHAMBLE_TEXT.scoringLabel}</Text>
+          <Chips
+            value={setup.shambleScoring ?? 'net'}
+            onChange={(shambleScoring) => onSetup({ shambleScoring })}
+            options={[
+              { value: 'net' as const, label: SHAMBLE_TEXT.net, testID: 'create-shamble-net' },
+              { value: 'gross' as const, label: SHAMBLE_TEXT.gross, testID: 'create-shamble-gross' },
+            ]}
+          />
+          {/* #2570: andelen står rett under tellemåten, bare med Netto. */}
+          {shambleNet ? (
+            <Field label={SHAMBLE_TEXT.allowanceLabel} hint={SHAMBLE_TEXT.allowanceHint}>
+              <TextInput
+                testID="create-shamble-allowance"
+                style={ui.input}
+                value={text.allowance}
+                onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad"
+                placeholder="100"
+                placeholderTextColor={colors.muted}
+              />
+            </Field>
+          ) : null}
         </Field>
       ) : null}
 

@@ -55,9 +55,6 @@ import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
 /** Tee- og lagvalget står 8 pt under spillerraden, ikke klistret til den (#2716). */
 const CHIP_ROW = { marginTop: 8 } as const;
 
-/** Så mange spillere et lag rommer før det er fullt. Sider har ingen sperre her. */
-const PAIR_SIZE = 2;
-
 function teamOptions(layout: TeamLayout, userId: string, players: DraftPlayer[]) {
   const noun = layout.noun === 'lag' ? 'Lag' : 'Side';
   if (layout.noun === 'side') {
@@ -76,7 +73,7 @@ function teamOptions(layout: TeamLayout, userId: string, players: DraftPlayer[])
   const highestTeam = Math.max(0, ...membersByTeam.keys());
   const count = Math.min(
     layout.slots,
-    Math.max(teamGridSize(players.length, PAIR_SIZE), highestTeam),
+    Math.max(teamGridSize(players.length, layout.size), highestTeam),
   );
 
   return Array.from({ length: count }, (_, i) => {
@@ -86,7 +83,7 @@ function teamOptions(layout: TeamLayout, userId: string, players: DraftPlayer[])
       value: team,
       label: `${noun} ${team}`,
       testID: `create-team-${userId}-${team}`,
-      disabled: members.length >= PAIR_SIZE && !members.includes(userId),
+      disabled: members.length >= layout.size && !members.includes(userId),
     };
   });
 }
