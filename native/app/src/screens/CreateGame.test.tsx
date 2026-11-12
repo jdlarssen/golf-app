@@ -85,6 +85,41 @@ jest.mock('../data/formatCatalog', () => ({
   ]),
 }));
 
+// #2753: klubbvalget fra ruta. Uten klubbrolle står ikke flisen, som før.
+const NO_CLUB = { canCreateClubGame: false, clubs: [], membersByClub: {} };
+const mockClubOptions: { value: unknown } = { value: NO_CLUB };
+jest.mock('../data/clubOptions', () => ({
+  fetchClubOptions: jest.fn(async () => mockClubOptions.value),
+}));
+beforeEach(() => {
+  mockClubOptions.value = NO_CLUB;
+});
+
+const member = (id: string, name: string) => ({
+  id,
+  name,
+  nickname: null,
+  hcpIndex: 14.2,
+  gender: 'mens' as const,
+  level: 'normal' as const,
+  pending: false,
+});
+const CLUB_A = { id: 'club-a', name: 'Byneset GK', role: 'admin' as const, memberCount: 2 };
+const CLUB_B = { id: 'club-b', name: 'Trondheim GK', role: 'member' as const, memberCount: 1 };
+const ONE_CLUB = {
+  canCreateClubGame: true,
+  clubs: [CLUB_A],
+  membersByClub: { 'club-a': [member('p5', 'Bente Birdie'), member('me', 'Jørgen Arrangør')] },
+};
+const TWO_CLUBS = {
+  canCreateClubGame: true,
+  clubs: [CLUB_A, CLUB_B],
+  membersByClub: {
+    ...ONE_CLUB.membersByClub,
+    'club-b': [member('p6', 'Trine Tee')],
+  },
+};
+
 // #1934: veiviseren leser egen profilrad for admin-flagget, og (#2441) for om
 // din egen profil er fullført. Stubbet som de andre hentingene, så lesingen
 // faktisk lykkes i riggen i stedet for å ende i en avvist promise som
@@ -244,6 +279,94 @@ describe('CreateGame: hva slags arrangement (#2753)', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('CreateCup', undefined);
     expect(screen.getByTestId('create-step-type')).toBeTruthy();
     expect(screen.queryByTestId('create-step-format')).toBeNull();
+  });
+});
+
+describe('CreateGame: klubbturnering (#2753)', () => {
+  it('en klubbadmin ser Kompis-runde, Klubb-turnering og Cup', async () => {
+    mockClubOptions.value = ONE_CLUB;
+    await renderWizard({ atType: true });
+    expect(await screen.findByTestId('create-type-klubb')).toBeTruthy();
+    expect(screen.getByTestId('create-type-kompis')).toBeTruthy();
+    expect(screen.getByTestId('create-type-cup')).toBeTruthy();
+  });
+
+  it('med én klubb er den valgt, lista er medlemmene, og runden publiseres uten spillere', async () => {
+    mockClubOptions.value = ONE_CLUB;
+    (fetchFormatCatalog as jest.Mock).mockClear();
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'club-game' });
+    const { navigation } = await renderWizard({ atType: true });
+
+    await fireEvent.press(await screen.findByTestId('create-type-klubb'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(fetchFormatCatalog).toHaveBeenLastCalledWith('klubb');
+    expect(screen.getByTestId('create-club-club-a').props.accessibilityState).toMatchObject({ selected: true });
+
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    // Spillersteget: medlemmene, du med, ingen valgt, og ingen fast rad for deg.
+    expect(screen.getByTestId('create-roster-club')).toBeTruthy();
+    expect(screen.getByTestId('create-player-p5').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('create-player-me').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.queryByText('Du er alltid med')).toBeNull();
+    expect(screen.queryByTestId('create-player-p2')).toBeNull();
+    expect(screen.queryByTestId('create-roster-fit')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft.groupId).toBe('club-a');
+    expect(draft.players).toEqual([]);
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: 'club-game' });
+    // Kallene lekker ellers til neste test, som teller dem.
+    publishGameMock.mockClear();
+  });
+
+  it('med flere klubber venter «Neste» på et valg, og lista følger klubben', async () => {
+    mockClubOptions.value = TWO_CLUBS;
+    await renderWizard({ atType: true });
+    await fireEvent.press(await screen.findByTestId('create-type-klubb'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+
+    expect(screen.getByTestId('create-next').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('create-next-hint').props.children).toBe('Velg klubben først');
+
+    await fireEvent.press(screen.getByTestId('create-club-club-b'));
+    expect(screen.getByTestId('create-next').props.accessibilityState).toMatchObject({ disabled: false });
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-player-p6')).toBeTruthy();
+    expect(screen.queryByTestId('create-player-p5')).toBeNull();
+  });
+
+  it('typebytte nullstiller formatet og spillerlista, navnet står', async () => {
+    mockClubOptions.value = ONE_CLUB;
+    await renderWizard({ atType: true });
+    await fireEvent.press(await screen.findByTestId('create-type-kompis'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.changeText(screen.getByTestId('create-name'), 'Klubbkvelden');
+
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-type-klubb'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByTestId('create-format-stableford').props.accessibilityState).toMatchObject({ selected: false });
+    await fireEvent.press(screen.getByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId('create-name').props.value).toBe('Klubbkvelden');
   });
 });
 

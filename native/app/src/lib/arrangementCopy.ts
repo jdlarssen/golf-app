@@ -31,3 +31,24 @@ export const ARRANGEMENT_TILES: Record<AppIntent, { label: string; description: 
     description: 'To lag, flere matcher, lag-totalen vinner',
   },
 };
+
+/** «Klubb-turnering» (#2753): `wizard.club`, `wizard.disabledHint.step2NoClub`, `wizard.step4`. */
+export const CLUB_TEXT = {
+  legend: 'Hvilken klubb?',
+  hint: 'Medlemmene kan se og melde seg på alle spill du setter opp for klubben.',
+  noClub: 'Velg klubben først',
+  emptyRoster: 'Du kan også la lista stå tom. Medlemmene i klubben kan melde seg på selv.',
+} as const;
+
+/** `klubb.roles`, for eier og admin. Et vanlig medlem får ingen rolle på kortet. */
+const ROLE_LABELS = { owner: 'Eier', admin: 'Admin' } as const;
+
+/** «12 medlemmer», «1 medlem». `wizard.club.memberCount`. */
+export function memberCountText(count: number): string {
+  return `${count} ${count === 1 ? 'medlem' : 'medlemmer'}`;
+}
+
+/** Linja under klubbnavnet: «Eier · 12 medlemmer» eller «84 medlemmer». `wizard.club.roleAndCount`. */
+export function clubCardLine(role: 'owner' | 'admin' | 'member', count: number): string {
+  return role === 'member' ? memberCountText(count) : `${ROLE_LABELS[role]} · ${memberCountText(count)}`;
+}

@@ -19,6 +19,7 @@
 import { usePreventRemove } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ClubPicker } from '../components/create/ClubPicker';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
 import { PlayersStep } from '../components/create/PlayersStep';
@@ -41,12 +42,14 @@ import {
   type CourseOption,
   type RosterCandidate,
 } from '../data/createGame';
+import { fetchClubOptions } from '../data/clubOptions';
 import { fetchFormatCatalog, type FormatIntent } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
 import { isDeviceOnline } from '../data/syncTriggers';
 import { hasHcpAllowanceField } from '../lib/allowanceCopy';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
-import { ARRANGEMENT_TEXT, type AppIntent } from '../lib/arrangementCopy';
+import { ARRANGEMENT_TEXT, CLUB_TEXT, type AppIntent } from '../lib/arrangementCopy';
+import { isValidClubChoice, startClubId } from '../../../../lib/wizard/clubChoice';
 import { openOrReturn } from '../lib/backTo';
 import {
   createFailureBelongsOnWeb,
@@ -145,10 +148,17 @@ interface PickedPlayer {
 }
 
 /**
- * Typene i steg 1 (#2753). Klubb-turnering kommer når appen kan lage den, og
- * «Solo / test» finnes ikke i appen (eierens valg 01.11).
+ * Typene i steg 1 (#2753). Klubb-turnering står bare for den som får flisen på
+ * nettet (serveren avgjør, `GET /api/games/club-options`), og «Solo / test»
+ * finnes ikke i appen (eierens valg 01.11).
  */
 const INTENTS: readonly AppIntent[] = ['kompis', 'cup'];
+const INTENTS_WITH_CLUB: readonly AppIntent[] = ['kompis', 'klubb', 'cup'];
+
+/** Du i spillerlista fra start: med i en kompisrunde, ikke i en klubbturnering. */
+function startRoster(intent: AppIntent | null, userId: string): PickedPlayer[] {
+  return intent === 'klubb' ? [] : [{ userId, teamNumber: null, teeGender: null }];
+}
 
 /** Neste hele time, minst en time fram. Tee-off skal aldri starte tomt. */
 function defaultTeeOff(): Date {
@@ -165,6 +175,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
 
   const [step, setStep] = useState<Step>('type');
   const [intent, setIntent] = useState<AppIntent | null>(null);
+  // #2753: klubben en klubbturnering hører til. Tom streng = ingen valgt, som
+  // nettets `groupId`.
+  const [clubId, setClubId] = useState('');
   const [gameMode, setGameMode] = useState<AppGameMode | null>(null);
   const [nameTouched, setNameTouched] = useState(false);
   const [common, setCommon] = useState<CommonSetup>({
@@ -222,6 +235,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     useCallback(() => fetchFormatCatalog(formatIntent), [formatIntent]),
   );
   const courses = useRemote(fetchCourses);
+  // #2753: om du får «Klubb-turnering», og klubbene med medlemmene. Feiler
+  // hentingen, står flisen ikke, som når oppslaget feiler på nettet.
+  const clubOptions = useRemote(fetchClubOptions);
+  const clubs = useMemo(() => clubOptions.data?.clubs ?? [], [clubOptions.data]);
+  const intents = clubOptions.data?.canCreateClubGame ? INTENTS_WITH_CLUB : INTENTS;
   // #2757: tilbake fra «Ny bane» med en bane, lagret eller «Bruk denne». Banen
   // velges selv om lista ennå ikke har den: `CourseStep` viser raden så snart den
   // er hentet. Tee står tom, som på nettet (#2485). Under render og ikke i en
@@ -246,6 +264,12 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     if (createdCourseId) navigation.setParams({ createdCourseId: undefined });
   }, [createdCourseId, navigation]);
   const candidates = useRemote(fetchRosterCandidates);
+  // Spillerne veiviseren tilbyr: klubbens medlemmer i en klubbturnering (du med),
+  // ellers venner og medspillere.
+  const rosterSource = useMemo<RosterCandidate[] | null>(
+    () => (intent === 'klubb' ? (clubOptions.data?.membersByClub[clubId] ?? []) : candidates.data),
+    [candidates.data, clubId, clubOptions.data, intent],
+  );
   // Egen rad, kun for å vite om tee-knappen har en mottaker (#1934).
   // `useCallback` er PÅKREVD her: effekten i `useRemote` har `fetcher` i
   // dep-lista, så en fersk pilfunksjon per render ville hentet i det uendelige.
@@ -299,11 +323,26 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           p.teeGender,
           p.userId === userId
             ? profile.data
-            : (candidates.data?.find((c) => c.id === p.userId) ?? null),
+            : (rosterSource?.find((c) => c.id === p.userId) ?? null),
           teeAvail,
         ),
       })),
-    [candidates.data, picked, profile.data, teeAvail, userId],
+    [rosterSource, picked, profile.data, teeAvail, userId],
+  );
+
+  // #2753: typebytte nullstiller formatet, klubben og spillerlista. Formatene,
+  // lagene og lista er ulike per type; bane, tid og navn står.
+  const selectIntent = useCallback(
+    (next: AppIntent) => {
+      if (next === intent) return;
+      setIntent(next);
+      setGameMode(null);
+      setSetup({});
+      setSetupText({ allowance: '', krPerUnit: '' });
+      setClubId(startClubId({ intent: next, seeded: '', clubIds: clubs.map((c) => c.id) }));
+      setPicked(startRoster(next, userId));
+    },
+    [clubs, intent, userId],
   );
 
   const selectMode = useCallback(
@@ -394,8 +433,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       entryFeeKr: fee.entryFee === '' ? 0 : Number(fee.entryFee),
       paymentLink: fee.paymentLink,
       prizes: fee.prizes,
+      groupId: intent === 'klubb' && clubId !== '' ? clubId : null,
     };
-  }, [allowancePct, common, courseId, fee, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
+  }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
     ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
@@ -452,7 +492,12 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     if (leavingRef.current) navigation.dispatch(data.action);
     else if (!busy) setStep(STEPS[stepIndex - 1]!);
   });
-  const blocker = stepBlocker(step, intent, gameMode, common.name, courseId, teeBoxId);
+  const clubChosen = isValidClubChoice({
+    intent: intent === 'klubb' ? 'klubb' : 'kompis',
+    groupId: clubId,
+    clubIds: clubs.map((c) => c.id),
+  });
+  const blocker = stepBlocker(step, intent, gameMode, clubChosen, common.name, courseId, teeBoxId);
 
   // Cup lages i sin egen veiviser (#2752). Den legges oppå typevalget, så
   // tilbake derfra står du her igjen med Cup valgt.
@@ -482,7 +527,20 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       </Text>
 
       {step === 'type' ? (
-        <TypeStep intents={INTENTS} selected={intent} onSelect={setIntent} />
+        <TypeStep intents={intents} selected={intent} onSelect={selectIntent} />
+      ) : null}
+
+      {step === 'format' && intent === 'klubb' && clubs.length > 0 ? (
+        <ClubPicker
+          clubs={clubs}
+          selected={clubId}
+          onSelect={(id) => {
+            if (id === clubId) return;
+            setClubId(id);
+            // Lista er den valgte klubbens medlemmer.
+            setPicked(startRoster('klubb', userId));
+          }}
+        />
       ) : null}
 
       {step === 'format' ? (
@@ -540,8 +598,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
 
       {step === 'players' && gameMode ? (
         <PlayersStep
-          candidates={candidates.data}
-          failed={candidates.failed}
+          candidates={rosterSource}
+          failed={intent === 'klubb' ? false : candidates.failed}
           meId={userId}
           selfPending={selfPending}
           mode={gameMode}
@@ -552,15 +610,17 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           onTeam={assignTeam}
           onTee={assignTee}
           onRetry={candidates.reload}
+          club={intent === 'klubb'}
         />
       ) : null}
 
       {step === 'summary' && draft && gameMode ? (
         <SummaryStep
-          lines={summaryLines(draft, gameMode, courses.data, candidates.data, teeOff)}
+          lines={summaryLines(draft, gameMode, courses.data, rosterSource, teeOff)}
           warnings={summaryWarnings(draft, gameMode, {
             selfPending,
-            othersPending: othersPendingCount(draft, candidates.data, userId),
+            othersPending: othersPendingCount(draft, rosterSource, userId),
+            club: draft.groupId != null,
           })}
           error={failure?.text ?? null}
           errorAction={failure?.action ?? null}
@@ -619,12 +679,14 @@ function stepBlocker(
   step: Step,
   intent: AppIntent | null,
   gameMode: AppGameMode | null,
+  clubChosen: boolean,
   name: string,
   courseId: string | null,
   teeBoxId: string | null,
 ): string | null {
   if (step === 'type' && intent === null) return ARRANGEMENT_TEXT.noIntent;
   if (step === 'format' && gameMode === null) return 'Velg et format for å gå videre.';
+  if (step === 'format' && !clubChosen) return CLUB_TEXT.noClub;
   if (step === 'setup' && name.trim() === '') return 'Gi spillet et navn.';
   if (step === 'course' && (courseId === null || teeBoxId === null)) {
     return 'Velg både bane og tee.';
@@ -760,11 +822,13 @@ function othersPendingCount(
 function summaryWarnings(
   draft: GameDraft,
   mode: AppGameMode,
-  profiles: { selfPending: boolean; othersPending: number },
+  profiles: { selfPending: boolean; othersPending: number; club: boolean },
 ): SummaryWarning[] {
   const warnings: SummaryWarning[] = [];
 
-  if (!rosterFitsMode(mode, draft.players.length)) {
+  // #2753: i en klubbturnering melder medlemmene seg på selv, så antallet
+  // formatet krever sjekkes ved start, som på nettet (`rosterOptionalAtPublish`).
+  if (!profiles.club && !rosterFitsMode(mode, draft.players.length)) {
     warnings.push({
       key: 'fit',
       text: `${APP_MODE_LABELS[mode]} spilles med ${describePlayerCounts(mode)}. Du har ${draft.players.length}.`,

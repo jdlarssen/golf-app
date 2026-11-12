@@ -425,6 +425,18 @@ async function replacePlayers(
 }
 
 /**
+ * Et nytt forsøk på en runde som nå er uten spillere (#2753): fjern dem et
+ * tidligere forsøk lagret. 0 rader er riktig når det ikke fantes noen.
+ */
+async function clearPlayers(
+  gameId: string,
+): Promise<{ ok: true } | { ok: false; error: 'db_error'; message: string }> {
+  const removed = await supabase.from('game_players').delete().eq('game_id', gameId).select('user_id');
+  if (removed.error) return { ok: false, error: 'db_error', message: removed.error.message };
+  return { ok: true };
+}
+
+/**
  * Opprett og publiser runden.
  *
  * Rekkefølgen er webbens `createGameInternal`, steg for steg:
@@ -530,9 +542,10 @@ export async function publishGame(
     scheduled_tee_off_at: scheduledTeeOffAt,
     created_by: userId,
     started_at: null,
-    // Klubb- og cup-kobling er web-eid (Should i MoSCoW-porten). Satt
-    // eksplisitt så kolonnesettet er identisk med webbens insert.
-    group_id: null,
+    // #2753: klubben for en «Klubb-turnering». Triggeren sjekker at du er
+    // medlem. Cup-kobling er web-eid; satt eksplisitt så kolonnesettet er
+    // identisk med webbens insert.
+    group_id: draft.groupId ?? null,
     tournament_id: null,
     tournament_match_label: null,
   };
@@ -593,12 +606,19 @@ export async function publishGame(
     accepted_at: acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
   }));
 
-  const savedPlayers = retry
-    ? await replacePlayers(gameId, playerRows)
-    : readWriteResult(
-        await supabase.from('game_players').insert(playerRows).select('user_id'),
-        'publishGame(game_players)',
-      );
+  // #2753: en klubbturnering kan publiseres uten spillere. Da finnes det ingen
+  // rader å skrive, og et innlegg av null rader ville lest som en feil.
+  const savedPlayers =
+    playerRows.length === 0
+      ? retry
+        ? await clearPlayers(gameId)
+        : ({ ok: true } as const)
+      : retry
+        ? await replacePlayers(gameId, playerRows)
+        : readWriteResult(
+            await supabase.from('game_players').insert(playerRows).select('user_id'),
+            'publishGame(game_players)',
+          );
   if (!savedPlayers.ok) {
     // #737: rull tilbake games-raden. Uten dette står det igjen en runde uten
     // spillere som ingen kan rydde. Arrangøren har DELETE-RLS på egne spill

@@ -15,6 +15,7 @@ import {
   type ParsedPayload,
 } from '../../../../lib/games/gamePayload';
 import { PRIZE_SLOTS, prizeFieldName, type PrizeDraft } from '../../../../lib/games/prizes';
+import { isClubTournament } from '../../../../lib/games/registration';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
@@ -101,6 +102,13 @@ export interface GameDraft {
   paymentLink?: string;
   /** #2749: premiebordet, rå tekst per slott som webbens veiviser. Logo finnes ikke i appen. */
   prizes?: PrizeDraft;
+  /**
+   * #2753: klubben en «Klubb-turnering» hører til, ellers `null`. Med klubb kan
+   * runden publiseres uten spillere: medlemmene melder seg på selv
+   * (`rosterOptionalAtPublish`). Databasen sjekker medlemskapet
+   * (`guard_games_competition_links`).
+   */
+  groupId?: string | null;
 }
 
 /** En ferdig utfylt spiller-slot, slik `player_${i}_*` bærer den. */
@@ -321,6 +329,8 @@ export function buildDraftPayload(draft: GameDraft): {
   const form = draftToFormData(draft);
   return {
     form,
-    payload: buildGameInsertPayload(asSharedFormData(form), 'publish'),
+    payload: buildGameInsertPayload(asSharedFormData(form), 'publish', {
+      clubScoped: isClubTournament({ groupId: draft.groupId, tournamentId: null }),
+    }),
   };
 }
