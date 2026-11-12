@@ -73,8 +73,8 @@
   <text x="782" y="566" font-size="13" fill="#46604F">  medlemmer (ikke venner)</text>
   <text x="782" y="592" font-size="13" fill="#46604F">• Medlemmene ser klubbens</text>
   <text x="782" y="611" font-size="13" fill="#46604F">  ligaer og spiller som vanlig</text>
-  <text x="782" y="637" font-size="13" fill="#46604F">• Medlemmer kan melde seg på</text>
-  <text x="782" y="656" font-size="13" fill="#46604F">  selv før ligaen starter (#452)</text>
+  <text x="782" y="637" font-size="13" fill="#46604F">• Medlemmer kan melde seg på og av</text>
+  <text x="782" y="656" font-size="13" fill="#46604F">  selv, på nett og i app (#452, #2839)</text>
 
   <!-- embed exit from standings (#1024) -->
   <path d="M680,568 L710,568 L710,744 L692,744" fill="none" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
