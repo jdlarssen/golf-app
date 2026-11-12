@@ -1,5 +1,5 @@
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import { isLeagueRoundAlone } from '@/lib/games/finishedResultBadge';
+import { isUnplacedLeagueRound } from '@/lib/games/finishedResultBadge';
 
 /**
  * Aggregering for den globale «Klubbstatistikker»-tavla (#887).
@@ -19,12 +19,12 @@ import { isLeagueRoundAlone } from '@/lib/games/finishedResultBadge';
 export function isWinningSummary(
   summary: ResultSummary | null,
   opts: {
-    /** #2712: the game is a league flight; played alone it is no win. */
+    /** #2712, #2850: the game is a league flight; it is never a win. */
     leagueFlight?: boolean;
   } = {},
 ): boolean {
   if (summary == null) return false;
-  if (isLeagueRoundAlone(summary, opts.leagueFlight ?? false)) return false;
+  if (isUnplacedLeagueRound(summary, opts.leagueFlight ?? false)) return false;
   switch (summary.kind) {
     case 'placement':
       return summary.rank === 1;
@@ -79,7 +79,7 @@ export function aggregateFinishedGame(
 export type FinishedGameForTally = {
   id: string;
   players: StatPlayerRow[];
-  /** #2712: the game is a league flight (played alone: counts as played, not won). */
+  /** #2712: the game is a league flight (counts as played, not won). */
   leagueFlight?: boolean;
 };
 

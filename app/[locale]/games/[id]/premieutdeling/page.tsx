@@ -43,12 +43,8 @@ export default async function CeremonyPage({ params }: { params: Params }) {
   const gwp = await getGameWithPlayers(id);
   if (!gwp) notFound();
   const { game } = gwp;
-  // #2712: no prize-giving for a league round played alone.
-  const ceremonyOpen = ceremonyAvailable(
-    game.game_mode,
-    game.league_round_id != null,
-    gwp.players.filter((p) => p.withdrawn_at == null).length,
-  );
+  // #2712, #2850: no prize-giving for a league flight.
+  const ceremonyOpen = ceremonyAvailable(game.game_mode, game.league_round_id != null);
   if (game.status !== 'finished' || !ceremonyOpen) {
     redirect({ href: `/games/${id}`, locale });
   }

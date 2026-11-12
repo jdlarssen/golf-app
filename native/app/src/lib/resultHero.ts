@@ -11,7 +11,7 @@ import {
   buildShareCardData,
   type ShareCardModel,
 } from '../../../../lib/games/buildShareCardData';
-import { isLeagueCardAlone } from '../../../../lib/games/finishedResultBadge';
+import { isUnplacedLeagueCard } from '../../../../lib/games/finishedResultBadge';
 import { formatDisplayLabelKey } from '../../../../lib/games/formatLabel';
 import { isHoleInSegment } from '../../../../lib/games/holeScope';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
@@ -147,7 +147,7 @@ function cardModel(bundle: GameBundle, model: ShareCardModel, spec: HeadlineSpec
   ]
     .filter(Boolean)
     .join(' · ');
-  const alone = isLeagueCardAlone(model, game.leagueRoundId != null);
+  const unplaced = isUnplacedLeagueCard(model, game.leagueRoundId != null);
   return {
     kicker,
     headline: {
@@ -155,7 +155,7 @@ function cardModel(bundle: GameBundle, model: ShareCardModel, spec: HeadlineSpec
       fontSize: choice.fontSize,
     },
     meta,
-    rows: model.band === 'matchplay' ? matchRows(model) : placementRows(model, alone),
+    rows: model.band === 'matchplay' ? matchRows(model) : placementRows(model, unplaced),
     tagline: keepGoldTogether(templateWords(RESULT_CARD_TEXT.taglinePun)),
     height: shareCardHeight(model, {
       headlineLines: choice.lines,

@@ -256,30 +256,41 @@ describe('buildHeroModel', () => {
   });
 });
 
-// #2712 (eieren 31.10): en ligaflight med én spiller har ingen plass på Hjem.
-describe('buildHeroModel — ligaflight alene (#2712)', () => {
+// #2712, #2850 (eieren 12.11): en ligaflight har ingen plass på Hjem, alene
+// eller med andre. Etiketten «Venter på markøren» er en egen sjekk: den gjelder
+// bare flighten med én spiller.
+describe('buildHeroModel — ligaflight (#2712, #2850)', () => {
   const solo = [homePlayer({ userId: ME })];
   const scores = holeScores('g-live', ME, 7, 4);
-  it('ligaflight med én spiller → leagueSolo', () => {
+  it('ligaflight med én spiller → leagueFlight', () => {
     const model = buildHeroModel({
       bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: true } }),
       scores,
       userId: ME,
     });
-    expect(model.leagueSolo).toBe(true);
+    expect(model.leagueFlight).toBe(true);
   });
-  it('ligaflight med flere spillere og vanlig spill alene → som før', () => {
+  it('ligaflight med flere spillere → leagueFlight, men ingen markøretikett', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({
+        players: [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })],
+        game: { leagueRoundId: 'runde-1', requirePeerApproval: true },
+      }),
+      scores,
+      userId: ME,
+    });
+    expect(model.leagueFlight).toBe(true);
+    expect(model.leagueMarkerLabel).toBe(false);
+  });
+  it('vanlig spill, alene eller med andre → som før', () => {
+    expect(buildHeroModel({ bundle: homeBundle({ players: solo }), scores, userId: ME }).leagueFlight).toBe(false);
     expect(
       buildHeroModel({
-        bundle: homeBundle({
-          players: [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })],
-          game: { leagueRoundId: 'runde-1', requirePeerApproval: true },
-        }),
+        bundle: homeBundle({ players: [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })] }),
         scores,
         userId: ME,
-      }).leagueSolo,
+      }).leagueFlight,
     ).toBe(false);
-    expect(buildHeroModel({ bundle: homeBundle({ players: solo }), scores, userId: ME }).leagueSolo).toBe(false);
   });
   it('vanlig liga alene (etter et frafall): ingen plass, men ingen markør å vente på', () => {
     const model = buildHeroModel({
@@ -287,8 +298,8 @@ describe('buildHeroModel — ligaflight alene (#2712)', () => {
       scores,
       userId: ME,
     });
-    expect(model.leagueSolo).toBe(true);
-    expect(model.leagueMarker).toBe(false);
+    expect(model.leagueFlight).toBe(true);
+    expect(model.leagueMarkerLabel).toBe(false);
   });
   it('simulatorliga alene: markøren godkjenner', () => {
     expect(
@@ -296,7 +307,7 @@ describe('buildHeroModel — ligaflight alene (#2712)', () => {
         bundle: homeBundle({ players: solo, game: { leagueRoundId: 'runde-1', requirePeerApproval: true } }),
         scores,
         userId: ME,
-      }).leagueMarker,
+      }).leagueMarkerLabel,
     ).toBe(true);
   });
 });

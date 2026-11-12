@@ -167,7 +167,7 @@ export async function generateAndPersistRoundReport(
       gameMode: game.game_mode,
       parByHole,
       totalHoles: holeCountForSegment(game.hole_segment),
-      // #2712: a league round played alone crowns nobody.
+      // #2712: a league flight crowns nobody.
       leagueFlight: game.league_round_id != null,
       aiAllowedUserIds,
     });

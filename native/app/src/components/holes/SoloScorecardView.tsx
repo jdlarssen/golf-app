@@ -57,8 +57,8 @@ export function SoloScorecardView({
         {card.standings.map((line) => (
           <View key={line.userId} style={styles.standing} testID={`hole-by-hole-standing-${line.userId}`}>
             <View style={styles.standingName}>
-              {/* #2712: en ligarunde spilt alene har ingen plass. */}
-              {!card.leagueAlone && (
+              {/* #2712, #2850: en ligaflight har ingen plass. */}
+              {!card.leagueFlight && (
                 <Text style={[ui.muted, ui.num, styles.rank]} testID="hole-by-hole-rank">
                   {line.rank}
                 </Text>

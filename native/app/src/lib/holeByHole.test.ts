@@ -399,16 +399,16 @@ describe('buildHoleByHole — ligarunde spilt alene (#2712)', () => {
       players: ola,
     });
 
-  it('alene i en ligaflight: leagueAlone, ingen leder og ingen ★', () => {
+  it('en ligaflight: leagueFlight, ingen leder og ingen ★', () => {
     const card = soloCard(buildHoleByHole(game('round-1'), holeScores('g1', 'ola', 3, 4)));
-    expect(card.leagueAlone).toBe(true);
+    expect(card.leagueFlight).toBe(true);
     expect(card.standings[0]!.isLeader).toBe(false);
     expect(card.front.holes[0]!.rows.every((r) => !r.isBest)).toBe(true);
   });
 
   it('alene utenfor en liga: som før', () => {
     const card = soloCard(buildHoleByHole(game(null), holeScores('g1', 'ola', 3, 4)));
-    expect(card.leagueAlone).toBeFalsy();
+    expect(card.leagueFlight).toBeFalsy();
     expect(card.standings[0]!.isLeader).toBe(true);
   });
 });

@@ -122,7 +122,7 @@ type GameRow = {
   // Epic #41 — modus per spill. Bestemmer både hvilken Spillform-tekst som
   // vises i Format-kortet og hvilken ModeChip-variant subtittelen får.
   game_mode: GameMode;
-  /** #2712: a league flight played alone has no prize-giving. */
+  /** #2712: a league flight has no prize-giving. */
   league_round_id: string | null;
   // Epic #43 — diskriminator for stableford-varianter (solo vs par/4BBB).
   // Lar Spillform-cardet skille «Stableford» fra «Par-stableford» og lar
@@ -1295,12 +1295,8 @@ async function buildSections({
           {tCta('leaderboardButton')}
         </SmartLink>
         {/* #2298: the prize-giving on the big screen, for the podium formats.
-            #2712: not for a league round played alone. */}
-        {ceremonyAvailable(
-          game.game_mode,
-          game.league_round_id != null,
-          players.filter((p) => p.withdrawn_at == null).length,
-        ) && (
+            #2712, #2850: not for a league flight. */}
+        {ceremonyAvailable(game.game_mode, game.league_round_id != null) && (
           <SmartLink
             href={`/games/${gameId}/premieutdeling`}
             data-testid="ceremony-entry"

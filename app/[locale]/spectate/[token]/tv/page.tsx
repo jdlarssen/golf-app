@@ -29,7 +29,7 @@ import { TvFeed } from './TvFeed';
 import { CeremonyStage } from './CeremonyStage';
 import { CeremonyPoller } from './CeremonyPoller';
 import { CEREMONY_MAX_STEP, ceremonyAvailable } from '@/lib/games/ceremony';
-import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
 import { loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 
 type Params = Promise<{ token: string }>;
@@ -68,10 +68,9 @@ export default async function SpectateTvPage({
 
   const admin = getAdminClient();
   const live = game.status === 'active';
-  // #2712: a league round played alone has no winner, so no prize-giving and
-  // no «se hvem som vant».
-  const activePlayers = players.filter((p) => p.withdrawn_at == null).length;
-  const leagueAlone = isLeagueFieldAlone(game.league_round_id != null, activePlayers);
+  // #2712, #2850: a league flight has no winner, so no prize-giving and no
+  // «se hvem som vant».
+  const leagueFlight = leagueFlightHasNoPlace(game.league_round_id != null);
 
   const [locale, t, tModes, courseName, origin] = await Promise.all([
     getLocale(),
@@ -140,7 +139,7 @@ export default async function SpectateTvPage({
                 <p className="font-serif text-[20px] font-semibold">
                   {live ? t('qrTitle') : t('finishedQrTitle')}
                 </p>
-                <p className="mt-0.5 text-[13px]">{live ? t('qrBody') : leagueAlone ? t('finishedQrBodyResult') : t('finishedQrBody')}</p>
+                <p className="mt-0.5 text-[13px]">{live ? t('qrBody') : leagueFlight ? t('finishedQrBodyResult') : t('finishedQrBody')}</p>
               </div>
             </div>
           </div>
@@ -153,7 +152,7 @@ export default async function SpectateTvPage({
     // #2298: a podium format can hold a prize-giving the organiser drives
     // from the phone. The step is read fresh, and the poller asks for it on
     // «Ferdig spilt» too, so «Start premieutdelingen» reaches the TV.
-    if (ceremonyAvailable(game.game_mode, game.league_round_id != null, activePlayers)) {
+    if (ceremonyAvailable(game.game_mode, game.league_round_id != null)) {
       const { data: state, error } = await admin
         .from('games')
         .select('ceremony_step')

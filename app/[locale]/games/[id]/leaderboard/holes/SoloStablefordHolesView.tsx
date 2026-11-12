@@ -42,7 +42,7 @@ export interface SoloStablefordHolesViewProps {
    * til spill-siden, som før (#1525).
    */
   navContext?: LeaderboardNavContext;
-  /** #2712: the game is a league flight; played alone it shows no place. */
+  /** #2712: the game is a league flight; it shows no place. */
   leagueFlight?: boolean;
 }
 
@@ -116,7 +116,7 @@ export function SoloStablefordHolesView({
       <TotalsHeader
         standings={card.standings}
         playersById={playersById}
-        leagueAlone={card.leagueAlone === true}
+        leagueFlight={card.leagueFlight === true}
       />
 
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
@@ -150,12 +150,12 @@ export function SoloStablefordHolesView({
 function TotalsHeader({
   standings,
   playersById,
-  leagueAlone,
+  leagueFlight,
 }: {
   standings: SoloScorecardStanding[];
   playersById: Map<string, SoloStablefordPlayerInfo>;
-  /** #2712: a league round played alone shows no rank. */
-  leagueAlone: boolean;
+  /** #2712: a league flight shows no rank. */
+  leagueFlight: boolean;
 }) {
   const t = useTranslations('leaderboard');
   return (
@@ -178,7 +178,7 @@ function TotalsHeader({
                 className="flex items-center justify-between gap-3"
               >
                 <span className="flex min-w-0 items-baseline gap-2">
-                  {!leagueAlone && (
+                  {!leagueFlight && (
                     <span
                       data-testid="holes-rank"
                       className="w-4 shrink-0 text-[12px] tabular-nums text-muted"

@@ -2,7 +2,7 @@ import type {
   SoloStrokeplayResult,
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
-import { isLeagueFieldAlone } from '../games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '../games/finishedResultBadge';
 import { byStanding, inStandingOrder } from './standingOrder';
 import { formatVsPar, headlineUnit } from './vsPar';
 
@@ -91,11 +91,11 @@ export interface SoloScorecard {
   /** Hull 10–18. */
   back: SoloScorecardNine;
   /**
-   * #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
-   * har ingen plass. Visningen utelater rangtallet; leder, nier-leder og ★ er
+   * #2712, #2850 (eieren 12.11): en ligaflight har ingen plass, alene eller
+   * med andre. Visningen utelater rangtallet; leder, nier-leder og ★ er
    * allerede tatt bort i modellen.
    */
-  leagueAlone?: boolean;
+  leagueFlight?: boolean;
 }
 
 /** #2712: valget byggerne tar imot. */
@@ -104,16 +104,16 @@ export interface SoloScorecardOpts {
   leagueFlight?: boolean;
 }
 
-/** #2712: ingen plass i en ligarunde spilt alene: ingen leder, ingen ★. */
-function withLeagueRule(card: SoloScorecard, playerCount: number, opts: SoloScorecardOpts): SoloScorecard {
-  if (!isLeagueFieldAlone(opts.leagueFlight ?? false, playerCount)) return card;
+/** #2712, #2850: ingen plass i en ligaflight: ingen leder, ingen ★. */
+function withLeagueRule(card: SoloScorecard, opts: SoloScorecardOpts): SoloScorecard {
+  if (!leagueFlightHasNoPlace(opts.leagueFlight ?? false)) return card;
   const noLead = (n: SoloScorecardNine): SoloScorecardNine => ({
     holes: n.holes.map((h) => ({ ...h, rows: h.rows.map((r) => ({ ...r, isBest: false })) })),
     subtotals: n.subtotals.map((s) => ({ ...s, isLeader: false })),
   });
   return {
     ...card,
-    leagueAlone: true,
+    leagueFlight: true,
     standings: card.standings.map((s) => ({ ...s, isLeader: false })),
     front: noLead(card.front),
     back: noLead(card.back),
@@ -282,7 +282,7 @@ export function soloStablefordScorecard(
     })),
     ...split(holes, rankedIds, 'high', 'net_total'),
   };
-  return withLeagueRule(card, players.length, opts);
+  return withLeagueRule(card, opts);
 }
 
 /** Solo slagspill: lavest netto er best. */
@@ -326,5 +326,5 @@ export function soloStrokeplayScorecard(
     })),
     ...split(holes, rankedIds, 'low', result.ranking),
   };
-  return withLeagueRule(card, players.length, opts);
+  return withLeagueRule(card, opts);
 }

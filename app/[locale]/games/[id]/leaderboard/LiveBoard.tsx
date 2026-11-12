@@ -241,7 +241,7 @@ export function LiveBoard({
           unit={unit}
           rows={rows}
           displayName={displayName}
-          leagueAlone={board.leagueAlone === true}
+          leagueFlight={board.leagueFlight === true}
         />
       )}
     </div>
@@ -406,15 +406,15 @@ function Strip({
   unit,
   rows,
   displayName,
-  leagueAlone,
+  leagueFlight,
 }: {
   strip: LiveBoardStripAction;
   standing: ViewerStanding;
   unit: LiveBoardUnit;
   rows: LiveBoardRow[];
   displayName: (row: LiveBoardRow) => string;
-  /** #2712: a league round played alone says the score, not a place. */
-  leagueAlone: boolean;
+  /** #2712: a league flight says the score, not a place. */
+  leagueFlight: boolean;
 }) {
   const t = useTranslations('leaderboard.board');
   const place = standing.tied
@@ -436,7 +436,7 @@ function Strip({
             {t('stripKicker')}
           </p>
           <p className="mt-0.5 truncate font-serif text-[18px] font-medium tabular-nums text-text">
-            {leagueAlone ? totalSr(t, unit, standing.total) : [place, behind].filter(Boolean).join(' · ')}
+            {leagueFlight ? totalSr(t, unit, standing.total) : [place, behind].filter(Boolean).join(' · ')}
           </p>
         </div>
         {strip.kind !== 'none' && (

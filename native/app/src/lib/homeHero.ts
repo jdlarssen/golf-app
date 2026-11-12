@@ -21,7 +21,7 @@
 // Ren funksjon: ingen nett, ingen SQLite, ingen React. Kalleren har lest
 // bundelen og slagene fra enheten.
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
-import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '../../../../lib/games/finishedResultBadge';
 import { mergePairState } from '../../../../lib/games/pairActiveCard';
 import { computePrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -103,15 +103,19 @@ export interface HeroModel {
   /** Kort som venter på godkjenningen min (samme regel som spillets side). */
   approvals: number;
   /**
-   * #2712 (eieren 31.10): en ligaflight med én aktiv spiller. Hjem viser da
-   * bare poengene, ingen plass (samme regel som `finishedResultBadge`).
+   * #2712, #2850 (eieren 12.11): en ligaflight, alene eller med andre. Hjem
+   * viser da bare poengene, ingen plass (samme regel som
+   * `finishedResultBadge`).
    */
-  leagueSolo: boolean;
+  leagueFlight: boolean;
   /**
-   * #2712: ligaflighten har markørgodkjenning (simulatorliga), så etiketten er
-   * «Venter på markøren» eller «Godkjent». Ellers den vanlige etiketten.
+   * #2712: ligaflighten har én aktiv spiller med markørgodkjenning
+   * (simulatorliga), så etiketten er «Venter på markøren» eller «Godkjent».
+   * Ellers den vanlige etiketten. Dette er ikke plassregelen: etiketten handler
+   * om hvem som godkjenner et levert kort, og i en flight på flere går
+   * godkjenningen mellom spillerne (#2814).
    */
-  leagueMarker: boolean;
+  leagueMarkerLabel: boolean;
 }
 
 /**
@@ -158,13 +162,13 @@ export function liveStanding(
   bundle: GameBundle,
   scores: readonly LocalScore[],
   userId: string,
-): { standing: ViewerStanding; unit: LiveBoardUnit; leagueAlone: boolean } | null {
+): { standing: ViewerStanding; unit: LiveBoardUnit; leagueFlight: boolean } | null {
   const board = liveBoardFor(bundle, scores);
   if (!board) return null;
   const standing = viewerStanding(board, userId);
   if (!standing || standing.total === null) return null;
   // #2712: tavlas svar på om dette er en ligarunde spilt alene (uten plass).
-  return { standing, unit: board.unit, leagueAlone: board.leagueAlone === true };
+  return { standing, unit: board.unit, leagueFlight: board.leagueFlight === true };
 }
 
 type HeroInput = {
@@ -300,14 +304,16 @@ export function buildHeroModel(opts: HeroInput & { sibling?: HeroSibling | null 
       ? pendingApprovals(roster, bundle.game, userId).length +
         (opts.sibling ? approvalsOn(opts.sibling) : 0)
       : 0,
-    // Any league flight with one active player has no placement: the same
-    // rule as `finishedResultBadge`, which «Forrige runde» uses on this screen.
-    leagueSolo: isLeagueFieldAlone(
-      bundle.game.leagueRoundId != null,
-      bundle.players.filter((player) => player.withdrawnAt == null).length,
-    ),
+    // Any league flight has no placement: the same rule as
+    // `finishedResultBadge`, which «Forrige runde» uses on this screen.
+    leagueFlight: leagueFlightHasNoPlace(bundle.game.leagueRoundId != null),
     // A simulator-league flight is `leagueRoundId` + peer approval, as in
-    // `isGameOrganiser` and `playerWithdrawKind`.
-    leagueMarker: bundle.game.leagueRoundId != null && bundle.game.requirePeerApproval,
+    // `isGameOrganiser` and `playerWithdrawKind`. The label «Venter på
+    // markøren» is for the one-player flight only: it has no one else to
+    // approve it. It does not follow the placement rule.
+    leagueMarkerLabel:
+      bundle.game.leagueRoundId != null &&
+      bundle.game.requirePeerApproval &&
+      bundle.players.filter((player) => player.withdrawnAt == null).length === 1,
   };
 }

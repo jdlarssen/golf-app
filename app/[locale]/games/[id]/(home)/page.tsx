@@ -322,13 +322,9 @@ export default async function GameHomePage({
     gwp.game.league_round_id && (await readSimulatorLeagueFlight(id)),
   );
   const isCreator = gwp.game.created_by === userId && !simulatorFlight;
-  // #2712: the prize-giving crowns a winner, so a league round played alone
-  // has none (`ceremonyAvailable`).
-  const ceremonyOpen = ceremonyAvailable(
-    gwp.game.game_mode,
-    gwp.game.league_round_id != null,
-    gwp.players.filter((p) => p.withdrawn_at == null).length,
-  );
+  // #2712, #2850: the prize-giving crowns a winner, so a league flight has
+  // none (`ceremonyAvailable`).
+  const ceremonyOpen = ceremonyAvailable(gwp.game.game_mode, gwp.game.league_round_id != null);
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =

@@ -48,7 +48,7 @@ export function TvBoard({ board }: { board: LiveBoard }) {
 
   if (rows.length === 0) return <TvMessage>{tc('noPlayersToShow')}</TvMessage>;
 
-  // #2712: a league round played alone shows no place and no medallion.
+  // #2712: a league flight shows no place and no medallion.
   const showRank = boardShowsPlace(board);
   const players = t('players', { count: rows.length });
 

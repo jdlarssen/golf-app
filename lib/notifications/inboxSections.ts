@@ -708,7 +708,7 @@ export type InboxTextContext = {
   resultByGame: Readonly<Record<string, ResultSummary | null>>;
   /** Games whose status is `finished` — a reopened game shows no place. */
   finishedGameIds: readonly string[];
-  /** #2712: league flights; played alone they say «Godkjent», not a place. */
+  /** #2712: league flights; they say «Godkjent», not a place. */
   leagueFlightGameIds?: readonly string[];
 };
 
@@ -862,7 +862,7 @@ function resultView(row: InboxRow, ctx: InboxTextContext): Pick<InboxEntryView, 
   const badge = finishedResultBadge(summary, {
     leagueFlight: ctx.leagueFlightGameIds?.includes(p.game_id) ?? false,
   });
-  // Matchplay, and (#2712) a league flight played alone: words, no place disc.
+  // Matchplay, and (#2712) a league flight: words, no place disc.
   if (summary.kind === 'matchplay' || badge.key === 'result.approved') {
     return {
       avatar: trophy,

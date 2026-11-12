@@ -92,9 +92,10 @@ describe('FollowView', () => {
   });
 });
 
-// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
-// played alone has no place on the follow page either.
-describe('FollowView — a league round played alone (#2712)', () => {
+// #2712, #2850 (Type B, owner 12.11): a league flight has no place on the
+// follow page either. The view reads the board's flag only, so a flight of
+// several behaves as one alone; a game outside a league keeps its place.
+describe('FollowView — a league flight (#2712, #2850)', () => {
   const only = row('marte', 1, 'Marte Lie');
   const aloneView: FollowViewData = {
     ...view,
@@ -102,11 +103,11 @@ describe('FollowView — a league round played alone (#2712)', () => {
     standing: { rank: 1, tied: false, fieldSize: 1, total: 26, holesPlayed: 11, leaderUserIds: ['marte'], gap: null },
     others: [{ row: only, fullName: false }],
   };
-  const renderAlone = (leagueAlone: boolean) =>
+  const renderAlone = (leagueFlight: boolean) =>
     render(
       <FollowView
         token="tok"
-        board={{ unit: 'points', holesPlayed: 11, rows: [only], leagueAlone }}
+        board={{ unit: 'points', holesPlayed: 11, rows: [only], leagueFlight }}
         view={aloneView}
         subtitle="Vinterligaen · runde 1"
         cta={null}

@@ -116,11 +116,26 @@ describe('LiveBoard', () => {
   });
 });
 
-// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
-// played alone has no place, during the round too.
-describe('LiveBoard — a league round played alone (#2712)', () => {
-  const alone = (leagueAlone: boolean) =>
-    props({ viewerUserId: 'u1' }, { rows: rows(1), leagueAlone });
+// #2712, #2850 (Type B, owner 12.11): a league flight has no place, alone or
+// with others, during the round too.
+describe('LiveBoard — a league flight (#2712, #2850)', () => {
+  const alone = (leagueFlight: boolean, count = 1) =>
+    props({ viewerUserId: 'u1' }, { rows: rows(count), leagueFlight });
+
+  it('a flight of two: no rank, no leader gold, and the strip says the score', () => {
+    render(<LiveBoard {...alone(true, 2)} />);
+    for (const place of screen.getAllByTestId('board-place')) {
+      expect(place).not.toHaveAttribute('data-leader');
+    }
+    const strip = screen.getByTestId('board-strip');
+    expect(strip.textContent).toContain('poeng');
+    expect(strip.textContent).not.toMatch(/plass/);
+  });
+
+  it('two outside a league keep their places', () => {
+    render(<LiveBoard {...alone(false, 2)} />);
+    expect(screen.getByTestId('board-strip').textContent).toContain('1. plass');
+  });
 
   it('no rank, no leader gold, and the strip says the score', () => {
     render(<LiveBoard {...alone(true)} />);

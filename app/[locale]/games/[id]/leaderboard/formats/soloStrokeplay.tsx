@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 import { SoloStrokeplayPodium } from '../SoloStrokeplayPodium';
-import { LeagueAloneResult } from '../LeagueAloneResult';
+import { LeagueFlightResult } from '../LeagueFlightResult';
 import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
@@ -20,7 +20,7 @@ import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar, headlineUnit } from '@/lib/leaderboard/vsPar';
-import { leagueAlonePlayer } from '@/lib/games/finishedResultBadge';
+import { leagueFlightPlayers } from '@/lib/games/finishedResultBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
@@ -216,12 +216,39 @@ export async function renderSoloStrokeplay(opts: {
     const reportSection = game.round_report ? (
       <RoundReportCard text={game.round_report} />
     ) : null;
-    // mainContent: duell-kort (2 spillere) eller podium (1/3+). Tar `chromeless`
+    // mainContent: ligaflight (ingen plass), duell-kort (2 spillere) eller podium. Tar `chromeless`
     // så samme reveal kan rendres frittstående ELLER inni sideturnerings-fanen.
-    // #2712: the one player of a league round played alone, or null.
-    const alonePlayer = leagueAlonePlayer(result.players, game.league_round_id != null);
+    // #2712, #2850: the players of a league flight, drawn without a place, or null.
+    const leaguePlayers = leagueFlightPlayers(result.players, game.league_round_id != null);
     let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
-    if (result.players.length === 2) {
+    if (leaguePlayers) {
+      // #2712, #2850 (owner 12.11): a league flight has no place and no win,
+      // alone or with others, so «Godkjent» and every player's score stand
+      // where the duel or the podium would. This comes BEFORE the duel branch.
+      // The figure is the podium's own.
+      const toPar = headlineUnit(result.ranking) === 'toPar';
+      const tSolo = await getTranslations('leaderboard.soloStrokeplay');
+      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
+      const rows = leaguePlayers.map((pl) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull'),
+          scoreText: toPar ? formatVsPar(pl.netToPar) : String(pl.totalNetStrokes),
+          scoreLabel: toPar ? tc('vsParLabel') : tc('slagLabel'),
+        };
+      });
+      mainContent = (chromeless, footerSlot) => (
+        <LeagueFlightResult
+          gameName={game.name}
+          rows={rows}
+          subtitle={subtitle}
+          backHref={backHref}
+          chromeless={chromeless}
+          footerSlot={footerSlot}
+        />
+      );
+    } else if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -266,28 +293,6 @@ export async function renderSoloStrokeplay(opts: {
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}
           strip={strip}
-          backHref={backHref}
-          chromeless={chromeless}
-          footerSlot={footerSlot}
-        />
-      );
-    } else if (alonePlayer) {
-      // #2712 (orchestrator 31.10, after the owner's rule): a league round
-      // played alone has no place and no win, so the score and «Godkjent»
-      // stand where the podium would. The figure is the podium's own.
-      const only = alonePlayer;
-      const info = playersById.get(only.userId);
-      const toPar = headlineUnit(result.ranking) === 'toPar';
-      const tSolo = await getTranslations('leaderboard.soloStrokeplay');
-      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
-      mainContent = (chromeless, footerSlot) => (
-        <LeagueAloneResult
-          gameName={game.name}
-          userId={only.userId}
-          name={info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull')}
-          scoreText={toPar ? formatVsPar(only.netToPar) : String(only.totalNetStrokes)}
-          scoreLabel={toPar ? tc('vsParLabel') : tc('slagLabel')}
-          subtitle={subtitle}
           backHref={backHref}
           chromeless={chromeless}
           footerSlot={footerSlot}

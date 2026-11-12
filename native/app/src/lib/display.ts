@@ -15,10 +15,11 @@ export const ACTIVE_CARD_LABELS: Record<ActiveCardState, string> = {
 };
 
 /**
- * #2712 (eieren 31.10): etiketten på Hjem for en ligaflight spilt alene.
- * Kortet venter på markøren, ikke på noen i flighten.
+ * #2712 (eieren 31.10): etiketten på Hjem for en ligaflight med én spiller.
+ * Kortet venter på markøren, ikke på noen i flighten. Dette handler om hvem
+ * som godkjenner, ikke om plass (#2850).
  */
-export const LEAGUE_SOLO_STATE: Record<ActiveCardState, string> = {
+export const LEAGUE_MARKER_STATE: Record<ActiveCardState, string> = {
   continue: 'Fortsett',
   submitted: 'Godkjent',
   pending_approval: 'Venter på markøren',

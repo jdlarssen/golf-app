@@ -17,11 +17,11 @@ export type CardRow = {
   winner: boolean;
 };
 
-/** `alone` (#2712): a league round played alone, so no medallion and no gold. */
-export function placementRows(model: ShareCardModel, alone: boolean): CardRow[] {
-  const winnerRank = model.winners.length > 0 && !alone ? model.winners[0].rank : null;
+/** `unplaced` (#2712, #2850): a league flight, so no place, no medallion and no gold. */
+export function placementRows(model: ShareCardModel, unplaced: boolean): CardRow[] {
+  const winnerRank = model.winners.length > 0 && !unplaced ? model.winners[0].rank : null;
   return model.podium.slice(0, 3).map((r: ShareCardRow) => ({
-    rank: alone ? null : r.rank,
+    rank: unplaced ? null : r.rank,
     name: rowDisplayName(r.memberNames),
     figure: scoreFigure(r.score),
     winner: winnerRank !== null && r.rank === winnerRank,

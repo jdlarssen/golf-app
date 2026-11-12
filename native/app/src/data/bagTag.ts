@@ -72,7 +72,7 @@ async function fetchSeason(userId: string, year: number): Promise<ProfileSeason>
       year: round.year,
       completeBrutto: round.completeBrutto,
       resultSummary: round.resultSummary,
-      // #2712: a league round played alone is no win.
+      // #2712: a league flight is no win.
       leagueFlight: round.leagueFlight,
     })),
     year,

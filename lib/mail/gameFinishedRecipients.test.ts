@@ -1624,8 +1624,8 @@ describe('buildGameFinishedRecipients', () => {
     expect(recipients.find((r) => r.userId === 'u3')?.mode).toBeUndefined();
   });
 
-  // #2712 (owner 31.10): a league round played alone has no placement and no
-  // win, so the «Resultatet er klart» mail takes the neutral line, never
+  // #2712 (owner 31.10): a league flight has no placement and no win, so the
+  // «Resultatet er klart» mail takes the neutral line, never
   // «1. plass av 1 … Gratulerer med seieren!».
   it.each([
     { game_mode: 'stableford' as const, mode_config: STABLEFORD_CONFIG },
@@ -1665,5 +1665,55 @@ describe('buildGameFinishedRecipients', () => {
     );
     expect(plain[0].mode).toMatchObject({ rank: 1, totalPlayers: 1 });
   });
-});
 
+  // #2850 (owner 12.11): a league flight of several has no placement either.
+  it.each([
+    { game_mode: 'stableford' as const, mode_config: STABLEFORD_CONFIG },
+    { game_mode: 'solo_strokeplay' as const, mode_config: { kind: 'solo_strokeplay', team_size: 1 } },
+  ])('ligaflight på to ($game_mode): ingen plassering i mailen', async ({ game_mode, mode_config }) => {
+    const fixture = () => [
+      {
+        data: [
+          { user_id: 'u1', team_number: null, course_handicap: 0, users: { email: 'a@example.com', name: 'Ada' } },
+          { user_id: 'u2', team_number: null, course_handicap: 0, users: { email: 'b@example.com', name: 'Bo' } },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u1', hole_number: 2, strokes: 4 },
+          { user_id: 'u2', hole_number: 1, strokes: 6 },
+          { user_id: 'u2', hole_number: 2, strokes: 6 },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+          { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
+        ],
+        error: null,
+      },
+    ];
+    const league = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rosterClient(fixture()) as any,
+      'game-1',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { course_id: 'c1', game_mode, mode_config: mode_config as any, league_round_id: 'runde-1' },
+    );
+    expect(league).toHaveLength(2);
+    expect(league.map((r) => r.mode)).toEqual([undefined, undefined]);
+
+    // Two outside a league keep their placement.
+    const plain = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rosterClient(fixture()) as any,
+      'game-1',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { course_id: 'c1', game_mode, mode_config: mode_config as any, league_round_id: null },
+    );
+    expect(plain.map((r) => (r.mode as { rank: number }).rank)).toEqual([1, 2]);
+  });
+});

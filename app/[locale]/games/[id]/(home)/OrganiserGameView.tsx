@@ -48,7 +48,7 @@ export async function OrganiserGameView({
   game: GameRow;
   locale: AppLocale;
   spectateToken: string | null;
-  /** #2712: the page's `ceremonyAvailable` (no prize-giving for a league round played alone). */
+  /** #2712: the page's `ceremonyAvailable` (no prize-giving for a league flight). */
   ceremonyOpen: boolean;
   errorBanner: ReactNode;
   statusBanner: ReactNode;
