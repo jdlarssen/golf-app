@@ -503,6 +503,15 @@ export async function requestApprovalCore({
   if (!viewer.profileCompleted) {
     return { ok: false, error: 'profile_incomplete' };
   }
+  // Startet og stengt først (#2837): et skjema tegnet før arrangøren stengte,
+  // får «Påmeldingen er stengt», uansett påmeldingsmåte.
+  if (game.status !== 'scheduled') {
+    return { ok: false, error: 'game_locked' };
+  }
+  // #543: steng-påmelding-guard — speilar registerForOpenGame.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
+  }
   // manual_approval OG invite_only tar imot «be om å bli med»-forespørsler
   // (#368). For invite_only er det en fallback for noen som har lenken men
   // ikke er invitert — spillet forblir uoppdagbart i «Finn turneringer».
@@ -515,13 +524,6 @@ export async function requestApprovalCore({
     view !== 'solo_open_full'
   ) {
     return { ok: false, error: 'wrong_mode' };
-  }
-  if (game.status !== 'scheduled') {
-    return { ok: false, error: 'game_locked' };
-  }
-  // #543: steng-påmelding-guard — speilar registerForOpenGame.
-  if (game.signups_closed_at != null) {
-    return { ok: false, error: 'signup_closed' };
   }
   // #1792: samme solo-gate som registerForOpenGame — se isSoloRegistrationView.
   if (!isSoloRegistrationView(game)) {
