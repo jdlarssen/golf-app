@@ -31,6 +31,11 @@ export type SignupFacts = {
   hasPendingInvitation: boolean;
   isClubMember: boolean;
   viewerIsFriend: boolean;
+  /**
+   * #2837: every seat is taken, by the count the seat claim uses. Only formats
+   * with a player cap fill up; without a cap, or when the count failed, false.
+   */
+  isFull: boolean;
 };
 
 /** The page's branches, in the page's order. */
@@ -49,6 +54,7 @@ export type SignupView =
   | 'team_unsupported_mode'
   | 'team_form'
   | 'solo_open_form'
+  | 'solo_open_full'
   | 'solo_manual_form';
 
 /**
@@ -59,6 +65,17 @@ export type SignupView =
 export type SignupOffer = 'in_game' | 'pending' | 'locked' | 'closed' | 'join' | 'request' | 'web';
 
 export function signupView(facts: SignupFacts): SignupView {
+  const view = formView(facts);
+  // #2837: a full round asks the organiser instead of signing you up. After
+  // `locked` and `closed`, so a closed round never says «full». Matchplay keeps
+  // its side picker, which says which side has room.
+  if (facts.isFull && isDirectJoinView(view) && !isMatchplayMode(facts.game.game_mode)) {
+    return 'solo_open_full';
+  }
+  return view;
+}
+
+function formView(facts: SignupFacts): SignupView {
   const { game, isAlreadyRegistered, requestView, hasPendingInvitation, isClubMember, viewerIsFriend } =
     facts;
   if (isAlreadyRegistered) return 'already_registered';
@@ -124,6 +141,7 @@ export function offerForView(
     case 'solo_open_form':
       return isMatchplayMode(game.game_mode) ? 'web' : 'join';
     case 'solo_manual_form':
+    case 'solo_open_full':
       return 'request';
     // The page's invite-only branch knows 'team' only, so 'both' on a team format
     // lands here too, on a form the solo gate refuses (#1792). The app never

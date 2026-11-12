@@ -5,6 +5,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { readSeatFacts } from '@/lib/games/loadSignupFacts';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { AppShell } from '@/components/ui/AppShell';
@@ -303,6 +304,8 @@ export default async function PåmeldingPage({
   const gameLocked = game.status === 'active' || game.status === 'finished';
   const isAlreadyRegistered = existingPlayer != null;
   const requestView = pendingRequestView(existingRequest);
+  // #2837: a full round asks instead, on the count the seat claim uses.
+  const { isFull } = await readSeatFacts(game);
 
   // #369: er brukeren en akseptert venn av spill-eieren? Brukes til å vise
   // «Meld meg på» i stedet for «Be om å bli med» for manual_approval-spill
@@ -434,6 +437,7 @@ export default async function PåmeldingPage({
               hasPendingInvitation,
               isClubMember,
               viewerIsFriend,
+              isFull,
             }),
             hasCertainTeamInvitation,
             teamCandidates,
@@ -666,6 +670,19 @@ function renderBody({
         </div>
       );
     }
+
+    // #2837: alle plassene er tatt. I stedet for «Meld meg på», som bare ville
+    // feilet, sender du en forespørsel til arrangøren, som på en runde med
+    // godkjenning.
+    case 'solo_open_full':
+      return (
+        <div className="space-y-4">
+          <Banner tone="info" testId="game-full-request">
+            {t('soloOpenFullBanner')}
+          </Banner>
+          <RegistrationForm mode="manual_approval" shortId={game.short_id} />
+        </div>
+      );
 
     // registration_type 'solo', eller 'both' på en modus uten lag-konsept.
     case 'solo_open_form':

@@ -15,9 +15,11 @@ const GAME: AppRoundInviteViewGame = {
   entry_fee_kr: 200,
 };
 
+const NO_EXTRAS = { seats: null, ownRequestCancellable: false };
+
 describe('buildAppRoundInviteView', () => {
   it('has the card details, the count and the web path', () => {
-    expect(buildAppRoundInviteView(GAME, 'join', 7)).toEqual({
+    expect(buildAppRoundInviteView(GAME, 'join', 7, NO_EXTRAS)).toEqual({
       offer: 'join',
       round: {
         name: 'Sommercup 2026',
@@ -28,14 +30,30 @@ describe('buildAppRoundInviteView', () => {
         entryFeeKr: 200,
       },
       playerCount: 7,
+      seats: null,
+      canCancelRequest: false,
       signupPath: '/signup/abc12345',
     });
   });
 
+  it('carries the seats as numbers (#2837)', () => {
+    const seats = { kind: 'capped', cap: 12, held: 12 } as const;
+    expect(buildAppRoundInviteView(GAME, 'request', 12, { ...NO_EXTRAS, seats }).seats).toEqual(seats);
+  });
+
+  it('offers to withdraw only a waiting request that can be withdrawn (#2837)', () => {
+    const can = { ...NO_EXTRAS, ownRequestCancellable: true };
+    expect(buildAppRoundInviteView(GAME, 'pending', 7, can).canCancelRequest).toBe(true);
+    expect(buildAppRoundInviteView(GAME, 'pending', 7, NO_EXTRAS).canCancelRequest).toBe(false);
+    for (const offer of ['in_game', 'locked', 'closed', 'join', 'request', 'web'] as const) {
+      expect(buildAppRoundInviteView(GAME, offer, 7, can).canCancelRequest).toBe(false);
+    }
+  });
+
   it('gives the game id only to a player on the list', () => {
-    expect(buildAppRoundInviteView(GAME, 'in_game', 7).gameId).toBe(GAME.id);
+    expect(buildAppRoundInviteView(GAME, 'in_game', 7, NO_EXTRAS).gameId).toBe(GAME.id);
     for (const offer of ['pending', 'locked', 'closed', 'join', 'request', 'web'] as const) {
-      expect(buildAppRoundInviteView(GAME, offer, 7)).not.toHaveProperty('gameId');
+      expect(buildAppRoundInviteView(GAME, offer, 7, NO_EXTRAS)).not.toHaveProperty('gameId');
     }
   });
 
@@ -44,12 +62,12 @@ describe('buildAppRoundInviteView', () => {
       ...GAME,
       mode_config: { kind: 'stableford', team_size: 2 } as AppRoundInviteViewGame['mode_config'],
     };
-    expect(buildAppRoundInviteView(game, 'web', 0).round.modeLabel).toBe('4BBB Stableford');
+    expect(buildAppRoundInviteView(game, 'web', 0, NO_EXTRAS).round.modeLabel).toBe('4BBB Stableford');
   });
 
   it('has no course, tee or tee-off when the round has none', () => {
     const game = { ...GAME, courses: null, tee_box: null, scheduled_tee_off_at: null };
-    expect(buildAppRoundInviteView(game, 'join', 0).round).toMatchObject({
+    expect(buildAppRoundInviteView(game, 'join', 0, NO_EXTRAS).round).toMatchObject({
       courseName: null,
       teeName: null,
       teeOffAt: null,

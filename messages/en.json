@@ -6492,6 +6492,7 @@
     "teamFormIntro": "You're signing up a whole team as captain. Fill in the team name and your playing partners. Anyone already on Tørny gets a notification in the app, and anyone new gets an email invitation.",
     "soloOpenIntro": "Tap \"Sign me up\" to join the game straight away.",
     "soloManualIntro": "Send a request to the organiser. You'll be notified once it's been approved.",
+    "soloOpenFullBanner": "The round is full. Send a request and the organiser will hear about it.",
     "sidePickerIntro": "Choose which side you want to play on.",
     "sidePickerAriaLabel": "Choose side",
     "sideLabel": "Side {n}",

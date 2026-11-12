@@ -23,6 +23,13 @@ const fake = createAdminClientMock({
 });
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
 
+// Its own suite proves the count; here only what the rule makes of it.
+const seatsMock = vi.fn<(games: readonly unknown[]) => Promise<Map<string, GameSeats>>>();
+vi.mock('./getRegistrationSeats', () => ({
+  getRegistrationSeats: (games: readonly unknown[]) => seatsMock(games),
+}));
+
+import type { GameSeats } from './terminliste';
 import { loadSignupFacts, type SignupFactsGame } from './loadSignupFacts';
 
 const GAME: SignupFactsGame = {
@@ -31,6 +38,8 @@ const GAME: SignupFactsGame = {
   registration_mode: 'open',
   let_friends_skip_gate: false,
   created_by: ORGANISER,
+  game_mode: 'wolf',
+  mode_config: { kind: 'wolf' } as SignupFactsGame['mode_config'],
 };
 const CLUB_GATED: SignupFactsGame = {
   ...GAME,
@@ -50,6 +59,8 @@ const FAILED = { error: { message: 'boom' } };
 
 beforeEach(() => {
   fake.reset();
+  seatsMock.mockReset();
+  seatsMock.mockResolvedValue(new Map());
   answers = {
     users: { data: { profile_completed_at: '2026-01-01T00:00:00Z', email: 'me@example.test' } },
   };
@@ -64,6 +75,9 @@ describe('loadSignupFacts', () => {
       hasPendingInvitation: false,
       isClubMember: false,
       viewerIsFriend: false,
+      ownRequestCancellable: false,
+      isFull: false,
+      seats: null,
     });
     expect(fake.ops.map((op) => op.table)).toEqual([
       'users',
@@ -163,6 +177,48 @@ describe('loadSignupFacts', () => {
       await expect(loadSignupFacts(CLUB_GATED, ME)).rejects.toBeTruthy();
     },
   );
+
+  // #2837: full is the terminliste's «Fullt» on the seat count the claim uses.
+  it.each<[string, GameSeats | undefined, boolean]>([
+    ['seats left', { kind: 'capped', cap: 12, held: 11 }, false],
+    ['at the cap', { kind: 'capped', cap: 12, held: 12 }, true],
+    ['over the cap (approved past it)', { kind: 'capped', cap: 12, held: 13 }, true],
+    ['no cap', undefined, false],
+  ])('full from the seats: %s', async (_name, seats, isFull) => {
+    seatsMock.mockResolvedValue(seats ? new Map([[GAME_ID, seats]]) : new Map());
+    const facts = await loadSignupFacts(GAME, ME);
+    expect(facts.isFull).toBe(isFull);
+    expect(facts.seats).toEqual(seats ?? null);
+    expect(seatsMock).toHaveBeenCalledWith([
+      { id: GAME_ID, game_mode: 'wolf', mode_config: { kind: 'wolf' } },
+    ]);
+  });
+
+  it('matchplay is not counted: the side picker on the website says which side has room', async () => {
+    const facts = await loadSignupFacts({ ...GAME, game_mode: 'singles_matchplay' }, ME);
+    expect(facts).toMatchObject({ isFull: false, seats: null });
+    expect(seatsMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed seat read is not full: the form shows and the claim decides', async () => {
+    seatsMock.mockRejectedValue(new Error('boom'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(loadSignupFacts(GAME, ME)).resolves.toMatchObject({ isFull: false, seats: null });
+    spy.mockRestore();
+  });
+
+  it.each<[string, Record<string, unknown> | null, boolean]>([
+    ['your own request, waiting', { status: 'pending', team_request_id: null, is_team_captain: false, brought_by_user_id: null }, true],
+    ['a captain\'s team request', { status: 'pending', team_request_id: null, is_team_captain: true, brought_by_user_id: null }, false],
+    ['a captain put you on a team', { status: 'pending', team_request_id: 'c', is_team_captain: false, brought_by_user_id: null }, false],
+    ['a guest someone brought', { status: 'pending', team_request_id: null, is_team_captain: false, brought_by_user_id: 'h' }, false],
+    ['answered', { status: 'rejected', team_request_id: null, is_team_captain: false, brought_by_user_id: null }, false],
+    ['withdrawn', { status: 'withdrawn', team_request_id: null, is_team_captain: false, brought_by_user_id: null }, false],
+    ['no request', null, false],
+  ])('the request can be withdrawn here: %s', async (_name, row, cancellable) => {
+    answers.game_registration_requests = { data: row };
+    expect((await loadSignupFacts(GAME, ME)).ownRequestCancellable).toBe(cancellable);
+  });
 
   it('a failed read of the captain throws', async () => {
     answers.game_registration_requests = (op) =>

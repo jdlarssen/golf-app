@@ -8,6 +8,9 @@ import { readFriendIds } from '@/lib/friends/getFriendIds';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import type { ShortIdGame } from './getGameByShortId';
+import { getRegistrationSeats } from './getRegistrationSeats';
+import { isMatchplayMode } from './matchplaySides';
+import { capacityState, type GameSeats } from './terminliste';
 
 /**
  * What the signup rule (`signupOffer.ts`) needs to know about one player in one
@@ -27,12 +30,27 @@ export type SignupViewerFacts = {
   hasPendingInvitation: boolean;
   isClubMember: boolean;
   viewerIsFriend: boolean;
+  /**
+   * #2837: the player's own solo request waits, so «Trekk forespørselen» can go
+   * through. Not a captain's team, a teammate's row or a guest someone brought:
+   * those belong to someone else's signup.
+   */
+  ownRequestCancellable: boolean;
+  /** #2837: every seat is taken. False without a cap or when the count failed. */
+  isFull: boolean;
+  /** The count behind `isFull`, for «12 av 12 plasser». Numbers, never names. */
+  seats: GameSeats | null;
 };
 
 export type SignupFactsGame = Pick<
   ShortIdGame,
-  'id' | 'group_id' | 'registration_mode' | 'let_friends_skip_gate' | 'created_by'
+  'id' | 'group_id' | 'registration_mode' | 'let_friends_skip_gate' | 'created_by' | 'game_mode' | 'mode_config'
 >;
+
+type RequestRow = PendingRequestRow & {
+  is_team_captain: boolean;
+  brought_by_user_id: string | null;
+};
 
 export async function loadSignupFacts(
   game: SignupFactsGame,
@@ -57,16 +75,17 @@ export async function loadSignupFacts(
 
   const { data: request, error: requestError } = await admin
     .from('game_registration_requests')
-    .select('status, team_request_id')
+    .select('status, team_request_id, is_team_captain, brought_by_user_id')
     .eq('game_id', game.id)
     .eq('user_id', userId)
-    .maybeSingle<PendingRequestRow>();
+    .maybeSingle<RequestRow>();
   if (requestError) throw requestError;
 
   if (player == null && request) {
     request.captain_status = await readCaptainStatus(request);
   }
 
+  const { isFull, seats } = await readSeatFacts(game);
   return {
     profileCompleted: profile?.profile_completed_at != null,
     isAlreadyRegistered: player != null,
@@ -74,6 +93,45 @@ export async function loadSignupFacts(
     hasPendingInvitation: profile ? await readHasPendingInvitation(game.id, profile.email) : false,
     isClubMember: await readIsClubMember(game, userId),
     viewerIsFriend: await readViewerIsFriend(game, userId),
+    ownRequestCancellable: isOwnPendingRequest(request),
+    isFull,
+    seats,
+  };
+}
+
+/** The filter `withdrawRequestCore` writes with, as a fact about the row. */
+function isOwnPendingRequest(row: RequestRow | null): boolean {
+  return (
+    row?.status === 'pending' &&
+    row.team_request_id == null &&
+    !row.is_team_captain &&
+    row.brought_by_user_id == null
+  );
+}
+
+/**
+ * #2837: the terminliste's count (`getRegistrationSeats`, #2258), on the SQL
+ * function the seat claim counts with, so «full» here is full there. Matchplay
+ * is skipped: its side picker on the website says which side has room. A failed
+ * count is no count: the form shows and the claim decides, as before. Shared
+ * with `/signup/[shortId]`, which reads its own facts.
+ */
+export async function readSeatFacts(
+  game: Pick<SignupFactsGame, 'id' | 'game_mode' | 'mode_config'>,
+): Promise<{ isFull: boolean; seats: GameSeats | null }> {
+  if (isMatchplayMode(game.game_mode)) return { isFull: false, seats: null };
+  let seats: GameSeats | null = null;
+  try {
+    const all = await getRegistrationSeats([
+      { id: game.id, game_mode: game.game_mode, mode_config: game.mode_config },
+    ]);
+    seats = all.get(game.id) ?? null;
+  } catch (err) {
+    console.error('[loadSignupFacts] seat count failed', { gameId: game.id, err });
+  }
+  return {
+    isFull: seats?.kind === 'capped' && capacityState(seats).free === 0,
+    seats,
   };
 }
 

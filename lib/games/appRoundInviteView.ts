@@ -1,5 +1,6 @@
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import type { SignupOffer } from '@/lib/games/signupOffer';
+import type { GameSeats } from '@/lib/games/terminliste';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
@@ -21,13 +22,21 @@ export type AppRoundInviteView = {
     entryFeeKr: number;
   };
   playerCount: number;
+  /**
+   * #2837: the seats on a format with a player cap, for «12 av 12 plasser».
+   * Null without a cap, or when the count failed.
+   */
+  seats: GameSeats | null;
+  /** #2837: at `pending`, «Trekk forespørselen» goes through. */
+  canCancelRequest: boolean;
   /** The website's form, for `web`. */
   signupPath: string;
 };
 
 export type AppRoundInviteAnswer =
   | { status: 'joined'; gameId: string }
-  | { status: 'requested' };
+  | { status: 'requested' }
+  | { status: 'cancelled' };
 
 /** What the view reads of a game. Spelled out: the app reads this file's types. */
 export type AppRoundInviteViewGame = {
@@ -46,6 +55,7 @@ export function buildAppRoundInviteView(
   game: AppRoundInviteViewGame,
   offer: SignupOffer,
   playerCount: number,
+  { seats, ownRequestCancellable }: { seats: GameSeats | null; ownRequestCancellable: boolean },
 ): AppRoundInviteView {
   return {
     offer,
@@ -59,6 +69,8 @@ export function buildAppRoundInviteView(
       entryFeeKr: game.entry_fee_kr,
     },
     playerCount,
+    seats,
+    canCancelRequest: offer === 'pending' && ownRequestCancellable,
     signupPath: `/signup/${game.short_id}`,
   };
 }

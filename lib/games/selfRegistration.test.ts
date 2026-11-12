@@ -47,7 +47,7 @@ vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }));
 
 import { joinTeeGenders } from './joinTeeGenders';
 import { loadSignupFacts } from './loadSignupFacts';
-import { registerForOpenGameCore, requestApprovalCore } from './selfRegistration';
+import { registerForOpenGameCore, requestApprovalCore, withdrawRequestCore } from './selfRegistration';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const GAME_ID = '22222222-2222-4222-8222-222222222222';
@@ -65,6 +65,9 @@ const NO_LINK: SignupViewerFacts = {
   hasPendingInvitation: false,
   isClubMember: false,
   viewerIsFriend: false,
+  ownRequestCancellable: false,
+  isFull: false,
+  seats: null,
 };
 
 function makeGame(over: Record<string, unknown> = {}) {
@@ -105,7 +108,10 @@ function wrote(admin: ReturnType<typeof buildSupabaseMock>): boolean {
 function withFacts(facts: SignupFacts): void {
   const { game, ...viewer } = facts;
   getGameByShortIdMock.mockResolvedValue(makeGame(game));
-  vi.mocked(loadSignupFacts).mockResolvedValue({ profileCompleted: true, ...viewer });
+  vi.mocked(loadSignupFacts).mockResolvedValue({
+    ...NO_LINK,
+    ...viewer,
+  });
 }
 
 beforeEach(() => {
@@ -412,5 +418,185 @@ describe('the same effect as on the web (AK 45)', () => {
     await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: true });
     expect(sendMailMock).toHaveBeenCalledTimes(1);
     spy.mockRestore();
+  });
+});
+
+describe('a full open round takes a request (#2837)', () => {
+  const fullWolf = { game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } };
+  const FULL: SignupViewerFacts = { ...NO_LINK, isFull: true, seats: { kind: 'capped', cap: 5, held: 5 } };
+
+  it('the request goes in, and the organiser hears of it like any request', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(fullWolf));
+    vi.mocked(loadSignupFacts).mockResolvedValue(FULL);
+    await expect(requestApprovalCore({ ...REQUEST, message: 'Plass til én til?' })).resolves.toEqual({ ok: true });
+    const insert = adminMock.__fromCalls.find((c: { method: string }) => c.method === 'insert');
+    expect(insert?.table).toBe('game_registration_requests');
+    expect(insert?.args[0]).toMatchObject({ game_id: GAME_ID, user_id: USER_ID, status: 'pending', message: 'Plass til én til?' });
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: ORGANISER,
+        kind: 'registration_request',
+        payload: expect.objectContaining({ request_id: 'request-1' }),
+      }),
+    );
+    // Asking is not signing up: the seat claim is never called.
+    expect(adminMock.__rpcCalls).toEqual([]);
+  });
+
+  it('with seats left an open round still says wrong_mode, with nothing written', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(fullWolf));
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'wrong_mode' });
+    expect(wrote(adminMock)).toBe(false);
+  });
+
+  it('full, then closed: no new request', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ ...fullWolf, signups_closed_at: '2026-11-01T10:00:00Z' }));
+    vi.mocked(loadSignupFacts).mockResolvedValue(FULL);
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'wrong_mode' });
+    getGameByShortIdMock.mockResolvedValue(makeGame({ ...fullWolf, registration_mode: 'manual_approval', signups_closed_at: '2026-11-01T10:00:00Z' }));
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'signup_closed' });
+    expect(wrote(adminMock)).toBe(false);
+  });
+
+  it('a full round does not sign you up directly, so the claim is never tried', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(fullWolf));
+    vi.mocked(loadSignupFacts).mockResolvedValue(FULL);
+    await expect(registerForOpenGameCore(REGISTER)).resolves.toEqual({ ok: false, error: 'wrong_mode' });
+    expect(wrote(adminMock)).toBe(false);
+  });
+});
+
+describe('asking again after withdrawing (#2837)', () => {
+  const DUPLICATE = { data: null, error: { code: '23505', message: 'duplicate key' } };
+
+  function updateOf(admin: ReturnType<typeof buildSupabaseMock>) {
+    const at = admin.__fromCalls.findIndex(
+      (c: { table: string; method: string }) => c.table === 'game_registration_requests' && c.method === 'update',
+    );
+    const calls = admin.__fromCalls.slice(at);
+    const end = calls.findIndex((c: { method: string }, i: number) => i > 0 && c.method === 'select');
+    return { args: calls[0]?.args[0] as Record<string, unknown> | undefined, filters: calls.slice(1, end) };
+  }
+
+  beforeEach(() => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ registration_mode: 'manual_approval' }));
+  });
+
+  it('the withdrawn row opens again, at the back of the queue, and the organiser hears of it', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [DUPLICATE, { data: [{ id: 'old-request' }], error: null }] },
+    });
+    const before = Date.now();
+    await expect(requestApprovalCore({ ...REQUEST, message: 'Nå kan jeg likevel' })).resolves.toEqual({ ok: true });
+    const { args, filters } = updateOf(adminMock);
+    expect(args).toMatchObject({
+      status: 'pending',
+      message: 'Nå kan jeg likevel',
+      decided_at: null,
+      decided_by_user_id: null,
+      rejection_reason: null,
+    });
+    expect(Date.parse(String(args?.created_at))).toBeGreaterThanOrEqual(before);
+    expect(filters.map((f: { method: string; args: unknown[] }) => [f.method, ...f.args])).toEqual(
+      expect.arrayContaining([
+        ['eq', 'game_id', GAME_ID],
+        ['eq', 'user_id', USER_ID],
+        ['eq', 'status', 'withdrawn'],
+        ['is', 'team_request_id', null],
+        ['eq', 'is_team_captain', false],
+        ['is', 'brought_by_user_id', null],
+      ]),
+    );
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ payload: expect.objectContaining({ request_id: 'old-request' }) }),
+    );
+  });
+
+  it('a row the organiser answered stays answered: already_requested, and nobody hears of it', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [DUPLICATE, { data: [], error: null }] },
+    });
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'already_requested' });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed reopen is db_error', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [DUPLICATE, { data: null, error: { message: 'boom' } }] },
+    });
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'db_error' });
+    expect(notifyMock).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+describe('withdrawRequestCore (#2837)', () => {
+  const WITHDRAW = { shortId: SHORT_ID, userId: USER_ID };
+
+  function updateCall(admin: ReturnType<typeof buildSupabaseMock>) {
+    return admin.__fromCalls.find(
+      (c: { table: string; method: string }) => c.table === 'game_registration_requests' && c.method === 'update',
+    );
+  }
+
+  it('your own waiting request becomes withdrawn, by you, now', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [{ data: [{ id: 'request-1' }], error: null }] },
+    });
+    const before = Date.now();
+    await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: true });
+    const update = updateCall(adminMock)?.args[0] as Record<string, unknown>;
+    expect(update).toMatchObject({ status: 'withdrawn', decided_by_user_id: USER_ID });
+    expect(Date.parse(String(update.decided_at))).toBeGreaterThanOrEqual(before);
+    const filters = adminMock.__fromCalls
+      .filter((c: { table: string; method: string }) => c.table === 'game_registration_requests' && ['eq', 'is'].includes(c.method))
+      .map((c: { method: string; args: unknown[] }) => [c.method, ...c.args]);
+    expect(filters).toEqual(
+      expect.arrayContaining([
+        ['eq', 'game_id', GAME_ID],
+        ['eq', 'user_id', USER_ID],
+        ['eq', 'status', 'pending'],
+        ['is', 'team_request_id', null],
+        ['eq', 'is_team_captain', false],
+        ['is', 'brought_by_user_id', null],
+      ]),
+    );
+    // The organiser gets no mail about a request taken back.
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it('after closing, the waiting list can still be left', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ signups_closed_at: '2026-11-01T10:00:00Z' }));
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [{ data: [{ id: 'request-1' }], error: null }] },
+    });
+    await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: true });
+  });
+
+  it('0 rows: the organiser answered first, so nothing is withdrawn', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [{ data: [], error: null }] },
+    });
+    await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: false, error: 'not_pending' });
+  });
+
+  it('a failed write is db_error', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [{ data: null, error: { message: 'boom' } }] },
+    });
+    await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: false, error: 'db_error' });
+    spy.mockRestore();
+  });
+
+  it.each([
+    ['unknown', null],
+    ['draft', makeGame({ status: 'draft' })],
+  ])('%s round answers game_not_found, with nothing written', async (_name, game) => {
+    getGameByShortIdMock.mockResolvedValue(game);
+    await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: false, error: 'game_not_found' });
+    expect(updateCall(adminMock)).toBeUndefined();
   });
 });

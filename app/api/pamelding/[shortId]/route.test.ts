@@ -28,9 +28,11 @@ vi.mock('@/lib/games/getGameByShortId', () => ({
 
 const registerMock = vi.fn();
 const requestMock = vi.fn();
+const withdrawMock = vi.fn();
 vi.mock('@/lib/games/selfRegistration', () => ({
   registerForOpenGameCore: (...args: unknown[]) => registerMock(...args),
   requestApprovalCore: (...args: unknown[]) => requestMock(...args),
+  withdrawRequestCore: (...args: unknown[]) => withdrawMock(...args),
 }));
 
 vi.mock('@/lib/admin/rateLimit', () => ({ getClientIp: async () => IP }));
@@ -46,6 +48,9 @@ const NO_LINK = {
   hasPendingInvitation: false,
   isClubMember: false,
   viewerIsFriend: false,
+  ownRequestCancellable: false,
+  isFull: false,
+  seats: null,
 };
 
 function makeGame(over: Record<string, unknown> = {}) {
@@ -101,6 +106,7 @@ beforeEach(() => {
   vi.mocked(loadSignupFacts).mockResolvedValue(NO_LINK);
   registerMock.mockResolvedValue({ ok: true, gameId: GAME_ID });
   requestMock.mockResolvedValue({ ok: true });
+  withdrawMock.mockResolvedValue({ ok: true });
 });
 
 describe('GET /api/pamelding/[shortId]', () => {
@@ -136,6 +142,8 @@ describe('GET /api/pamelding/[shortId]', () => {
         entryFeeKr: 200,
       },
       playerCount: 5,
+      seats: null,
+      canCancelRequest: false,
       signupPath: `/signup/${SHORT_ID}`,
     });
     expect(loadSignupFacts).toHaveBeenCalledWith(expect.objectContaining({ id: GAME_ID }), ME);
@@ -147,6 +155,29 @@ describe('GET /api/pamelding/[shortId]', () => {
         { op: 'is', column: 'withdrawn_at', value: null },
       ]),
     );
+  });
+
+  // #2837
+  it('a full round: the request, and the seats as numbers', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf' } }));
+    vi.mocked(loadSignupFacts).mockResolvedValue({
+      ...NO_LINK,
+      isFull: true,
+      seats: { kind: 'capped', cap: 5, held: 5 },
+    });
+    expect(await (await get()).json()).toMatchObject({
+      offer: 'request',
+      seats: { kind: 'capped', cap: 5, held: 5 },
+    });
+  });
+
+  it.each<[string, Record<string, unknown>, boolean]>([
+    ['your own request, waiting', { requestView: 'self_request', ownRequestCancellable: true }, true],
+    ['a team waiting for the organiser', { requestView: 'team_awaiting_approval', ownRequestCancellable: false }, false],
+    ['a captain\'s own team request', { requestView: 'self_request', ownRequestCancellable: false }, false],
+  ])('the request can be withdrawn here: %s', async (_name, over, can) => {
+    vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, ...over });
+    expect(await (await get()).json()).toMatchObject({ offer: 'pending', canCancelRequest: can });
   });
 
   it('the game id only for a player on the list', async () => {
@@ -226,6 +257,53 @@ describe('POST /api/pamelding/[shortId]', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: 'requested' });
     expect(requestMock).toHaveBeenCalledWith({ shortId: SHORT_ID, userId: ME, ip: IP, message: 'Plass?' });
+  });
+
+  it('a full open round takes the request (#2837)', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ game_mode: 'wolf', mode_config: { kind: 'wolf' } }));
+    vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, isFull: true, seats: { kind: 'capped', cap: 5, held: 5 } });
+    const res = await post({ intent: 'request', message: 'Plass?' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: 'requested' });
+    expect(requestMock).toHaveBeenCalledWith({ shortId: SHORT_ID, userId: ME, ip: IP, message: 'Plass?' });
+    expect(registerMock).not.toHaveBeenCalled();
+  });
+
+  describe('cancel: «Trekk forespørselen» (#2837)', () => {
+    it('the caller from the token, the round from the path, whatever the body says', async () => {
+      const res = await post({ intent: 'cancel', user_id: 'someone-else', game_id: 'another-game', shortId: 'zzzzzzzz' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'cancelled' });
+      expect(withdrawMock).toHaveBeenCalledWith({ shortId: SHORT_ID, userId: ME });
+      expect(registerMock).not.toHaveBeenCalled();
+      expect(requestMock).not.toHaveBeenCalled();
+    });
+
+    it('also after the organiser has closed the signup', async () => {
+      getGameByShortIdMock.mockResolvedValue(makeGame({ signups_closed_at: '2026-11-01T10:00:00Z' }));
+      vi.mocked(loadSignupFacts).mockResolvedValue({ ...NO_LINK, requestView: 'self_request', ownRequestCancellable: true });
+      const res = await post({ intent: 'cancel' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'cancelled' });
+    });
+
+    it('401 without a token, and nothing is written', async () => {
+      const res = await post({ intent: 'cancel' }, null);
+      expect(res.status).toBe(401);
+      expect(await res.json()).toEqual({ error: 'unauthorized' });
+      expect(withdrawMock).not.toHaveBeenCalled();
+    });
+
+    it.each<[string, number, object]>([
+      ['not_pending', 409, { error: 'not_pending' }],
+      ['game_not_found', 404, { error: 'game_not_found' }],
+      ['db_error', 500, { error: 'db_error' }],
+    ])('%s', async (error, status, body) => {
+      withdrawMock.mockResolvedValue({ ok: false, error });
+      const res = await post({ intent: 'cancel' });
+      expect(res.status).toBe(status);
+      expect(await res.json()).toEqual(body);
+    });
   });
 
   it('a src or a message that is not text counts as none', async () => {

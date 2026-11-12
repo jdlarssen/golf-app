@@ -4,6 +4,7 @@ import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { SIGNUP_FACTS_MATRIX_ROWS, signupFactsMatrix } from '@/lib/games/testing/signupFactsMatrix';
 import {
+  isDirectJoinView,
   offerForView,
   signupOffer,
   signupView,
@@ -17,6 +18,8 @@ import {
  * one home. `legacyRenderBody` below is the branch order `renderBody` had in
  * `app/[locale]/signup/[shortId]/page.tsx` before the rule moved, typed out
  * from that file: the moved rule has to land on the same branch for every row.
+ * #2837 adds one branch on top: a form that signs you up directly turns into
+ * the request on a full round, unless a side is picked there (matchplay).
  */
 
 function legacyRenderBody(f: SignupFacts): SignupView {
@@ -61,6 +64,7 @@ function row(over: RowOverrides = {}): SignupFacts {
     hasPendingInvitation: false,
     isClubMember: false,
     viewerIsFriend: false,
+    isFull: false,
     ...over,
     game: {
       status: 'scheduled',
@@ -80,13 +84,17 @@ describe('signupView', () => {
     for (const facts of signupFactsMatrix()) {
       rows += 1;
       const actual = signupView(facts);
-      const expected = legacyRenderBody(facts);
+      const legacy = legacyRenderBody(facts);
+      const expected =
+        facts.isFull && isDirectJoinView(legacy) && !isMatchplayMode(facts.game.game_mode)
+          ? 'solo_open_full'
+          : legacy;
       if (actual !== expected) {
         expect.fail(`${JSON.stringify(facts)}: ${actual}, expected ${expected}`);
       }
     }
     expect(rows).toBe(SIGNUP_FACTS_MATRIX_ROWS);
-    expect(rows).toBe(27_648);
+    expect(rows).toBe(55_296);
   });
 });
 
@@ -122,6 +130,18 @@ describe('signupOffer', () => {
     ['invite only, club member with an invitation', { isClubMember: true, hasPendingInvitation: true, game: { registration_mode: 'invite_only' } }, 'join'],
     ['invite only, club member on matchplay', { isClubMember: true, game: { registration_mode: 'invite_only', game_mode: 'singles_matchplay' } }, 'web'],
     ['invite only, club member, both on a solo format', { isClubMember: true, game: { registration_mode: 'invite_only', registration_type: 'both' } }, 'request'],
+    // #2837: a full round asks instead of signing up.
+    ['open solo, full', { isFull: true, game: { game_mode: 'wolf' } }, 'request'],
+    ['open solo, seats left', { isFull: false, game: { game_mode: 'wolf' } }, 'join'],
+    ['full and closed', { isFull: true, game: { game_mode: 'wolf', signups_closed_at: '2026-11-01T10:00:00Z' } }, 'closed'],
+    ['full and started', { isFull: true, game: { game_mode: 'wolf', status: 'active' } }, 'locked'],
+    ['full matchplay picks a side', { isFull: true, game: { game_mode: 'singles_matchplay' } }, 'web'],
+    ['full, club member', { isFull: true, isClubMember: true, game: { game_mode: 'wolf', registration_mode: 'invite_only' } }, 'request'],
+    ['full, friend through the gate', { isFull: true, viewerIsFriend: true, game: { game_mode: 'wolf', registration_mode: 'manual_approval', let_friends_skip_gate: true } }, 'request'],
+    ['full team round', { isFull: true, game: { registration_type: 'team', game_mode: 'best_ball' } }, 'web'],
+    ['full, asked already', { isFull: true, requestView: 'self_request', game: { game_mode: 'wolf' } }, 'pending'],
+    ['full, asked already, then closed', { isFull: true, requestView: 'self_request', game: { game_mode: 'wolf', signups_closed_at: '2026-11-01T10:00:00Z' } }, 'pending'],
+    ['full manual approval', { isFull: true, game: { game_mode: 'wolf', registration_mode: 'manual_approval' } }, 'request'],
   ])('%s', (_name, over, expected) => {
     expect(signupOffer(row(over))).toBe(expected);
   });
@@ -133,6 +153,7 @@ describe('signupOffer', () => {
       if (offer === 'join') {
         expect(isMatchplayMode(facts.game.game_mode)).toBe(false);
         expect(['club_member_form', 'friend_form', 'solo_open_form']).toContain(signupView(facts));
+        expect(facts.isFull).toBe(false);
       }
     }
   });
