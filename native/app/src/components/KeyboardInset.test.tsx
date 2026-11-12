@@ -190,11 +190,9 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
     host: 'components/signup/TeamSignupForm.tsx',
     scrollTestID: 'team-form-scroll',
   },
-  // #2840: søket i vennevelgeren, i lagskjemaets rullefelt.
-  'components/signup/FriendPicker.tsx': {
-    host: 'components/signup/TeamSignupForm.tsx',
-    scrollTestID: 'team-form-scroll',
-  },
+  // #2840: søket i vennevelgeren, delt med lagskjemaet over. «Velg en venn» på lagsiden
+  // (#2840 del 3) er den andre verten.
+  'components/signup/FriendPicker.tsx': { host: 'screens/TeamSlotPicker.tsx', scrollTestID: 'team-slot-scroll' },
 };
 
 describe('rullefeltet på skjermer med tekstfelt', () => {

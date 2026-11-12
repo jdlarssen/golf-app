@@ -159,7 +159,10 @@ export function Dock({ children, bottomInset }: { children: ReactNode; bottomIns
   );
 }
 
-/** En hel knapp i docken: `primary`, `line` (kant i `primary`) eller `wait` (kan ikke trykkes). */
+/**
+ * En hel knapp i docken: `primary`, `line` (kant i `primary`), `danger` (rød, til en
+ * bekreftelse som tar noe bort) eller `wait` (kan ikke trykkes).
+ */
 export function DockButton({
   label,
   variant,
@@ -168,7 +171,7 @@ export function DockButton({
   testID,
 }: {
   label: string;
-  variant: 'primary' | 'line' | 'wait';
+  variant: 'primary' | 'line' | 'danger' | 'wait';
   onPress?: () => void;
   busy?: boolean;
   testID: string;
@@ -197,12 +200,20 @@ export function DockButton({
         styles.button,
         variant === 'primary'
           ? { backgroundColor: colors.primary }
-          : { borderWidth: 1, borderColor: colors.primary },
+          : variant === 'danger'
+            ? { backgroundColor: colors.danger }
+            : { borderWidth: 1, borderColor: colors.primary },
         pressed || busy ? styles.pressed : null,
       ]}
       testID={testID}
     >
-      <Text style={[styles.buttonText, { color: variant === 'primary' ? colors.onPrimary : colors.primary }]}>
+      <Text
+        style={[
+          styles.buttonText,
+          // `.btn.danger`: hvit tekst på rødt, i begge drakter.
+          { color: variant === 'primary' ? colors.onPrimary : variant === 'danger' ? '#FFFFFF' : colors.primary },
+        ]}
+      >
         {label}
       </Text>
     </Pressable>

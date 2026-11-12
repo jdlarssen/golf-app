@@ -39,6 +39,20 @@ describe('backStep', () => {
     expect(backStep([HOME, card('g1')], 'GameHome', { gameId: 'g1' }, 'push')).toBe('push');
   });
 
+  // #2840: påmeldingen og lagsiden gjelder én runde, og koden sier hvilken.
+  it('går tilbake til lagsiden for samme runde, ikke til en annen rundes', () => {
+    const page = (shortId: string) => ({ name: 'TeamPage', params: { shortId } });
+    const confirm = { name: 'TeamRemoveConfirm', params: { shortId: 'abcd2345', requestId: 'r1' } };
+    expect(backStep([HOME, page('abcd2345'), confirm], 'TeamPage', { shortId: 'abcd2345' })).toBe('popTo');
+    expect(backStep([HOME, page('abcd2345'), confirm], 'TeamPage', { shortId: 'wxyz6789' }, 'push')).toBe('push');
+    expect(
+      backStep([HOME, { name: 'RoundInvite', params: { shortId: 'abcd2345', src: null } }, page('abcd2345')], 'RoundInvite', {
+        shortId: 'wxyz6789',
+        src: null,
+      }, 'push'),
+    ).toBe('push');
+  });
+
   it('Hjem uten params er alltid bunnen', () => {
     expect(backStep([HOME, game('g1')], 'Home', undefined)).toBe('popTo');
   });
