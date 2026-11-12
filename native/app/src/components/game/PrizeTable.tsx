@@ -44,6 +44,9 @@ export function PrizeTable({ prizes }: { prizes: readonly GamePrize[] | undefine
           {rows.map((row) => (
             <PrizeLine key={row.key} row={row} medalFill={row.medal ? medal[row.medal] : null} medalInk={medalInk} />
           ))}
+          <Text style={[styles.note, { color: colors.muted }]} testID="prize-table-organiser-note">
+            {PRIZE_TEXT.organiserNote()}
+          </Text>
         </View>
       ) : null}
     </View>
@@ -110,4 +113,6 @@ const styles = StyleSheet.create({
   dot: { ...interLine(14, 20), fontFamily: FONTS.sans, flexShrink: 0 },
   description: { ...fraunces(500, 14, 20), flexShrink: 1, minWidth: 0 },
   sponsor: { ...interLine(12, 16), fontFamily: FONTS.sans, paddingLeft: 26 },
+  // Linja er til spillerne, så den står under hele lista (#2561), ikke under én premie.
+  note: { ...interLine(12, 16), fontFamily: FONTS.sans, marginTop: 4 },
 });
