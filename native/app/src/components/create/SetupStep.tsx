@@ -258,101 +258,105 @@ export function SetupStep({
       {/* #2753 D3b: shamble og Champagne Scramble, som nettets ShambleSetup. */}
       {mode === 'shamble' ? (
         <Field label={SHAMBLE_TEXT.legend}>
-          <Text style={ui.label}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
-          {/* Kortene fra `Nyttspill-2-shamble`. */}
-          <ChoiceCards
-            columns={2}
-            minHeight={64}
-            value={teamSize}
-            onChange={(next) => onSetup({ teamSize: next })}
-            options={([3, 4] as const).map((n) => ({
-              value: n,
-              title: SHAMBLE_TEXT.teamSize[n],
-              hint: SHAMBLE_TEXT.teamSizeDesc[n],
-              testID: `create-shamble-size-${n}`,
-            }))}
-          />
-          <Text style={ui.label}>{SHAMBLE_TEXT.variantLabel}</Text>
-          <ChoiceCards
-            columns={2}
-            minHeight={64}
-            value={setup.shambleVariant ?? 'shamble'}
-            onChange={(shambleVariant) => onSetup({ shambleVariant })}
-            options={[
-              {
-                value: 'shamble' as const,
-                title: SHAMBLE_TEXT.variantShamble,
-                hint: SHAMBLE_TEXT.variantShambleDesc,
-                testID: 'create-shamble-variant-shamble',
-              },
-              {
-                value: 'champagne' as const,
-                title: SHAMBLE_TEXT.variantChampagne,
-                hint: SHAMBLE_TEXT.variantChampagneDesc,
-                testID: 'create-shamble-variant-champagne',
-              },
-            ]}
-          />
-          {champagne ? (
-            <>
-              <Text style={ui.label}>{SHAMBLE_TEXT.countLabel}</Text>
-              <ChoiceCards
-                columns={3}
-                minHeight={60}
-                centered
-                value={setup.shambleCount ?? 2}
-                onChange={(shambleCount) => onSetup({ shambleCount })}
-                options={([1, 2, 3] as const).map((n) => ({
-                  value: n,
-                  title: String(n),
-                  hint: n === 1 ? SHAMBLE_TEXT.countSingle : SHAMBLE_TEXT.countPlural,
-                  testID: `create-shamble-count-${n}`,
-                }))}
-              />
-            </>
-          ) : null}
-          <Text style={ui.label}>{SHAMBLE_TEXT.scoringLabel}</Text>
-          <ChoiceCards
-            columns={2}
-            minHeight={60}
-            value={setup.shambleScoring ?? 'net'}
-            onChange={(shambleScoring) => onSetup({ shambleScoring })}
-            options={[
-              { value: 'net' as const, title: SHAMBLE_TEXT.net, hint: SHAMBLE_TEXT.netDesc, testID: 'create-shamble-net' },
-              { value: 'gross' as const, title: SHAMBLE_TEXT.gross, hint: SHAMBLE_TEXT.grossDesc, testID: 'create-shamble-gross' },
-            ]}
-          />
-          {/* #2570: andelen står rett under tellemåten, bare med Netto. */}
-          {shambleNet ? (
-            <Field label={SHAMBLE_TEXT.allowanceLabel} hint={SHAMBLE_TEXT.allowanceHint}>
-              <TextInput
-                testID="create-shamble-allowance"
-                style={ui.input}
-                value={text.allowance}
-                onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
-                keyboardType="number-pad"
-                placeholder="100"
-                placeholderTextColor={colors.muted}
-              />
-            </Field>
-          ) : null}
+          {/* Valgene står i et kort, som på artboardet. */}
+          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={ui.label}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
+            {/* Kortene fra `Nyttspill-2-shamble`. */}
+            <ChoiceCards
+              columns={2}
+              minHeight={64}
+              value={teamSize}
+              onChange={(next) => onSetup({ teamSize: next })}
+              options={([3, 4] as const).map((n) => ({
+                value: n,
+                title: SHAMBLE_TEXT.teamSize[n],
+                hint: SHAMBLE_TEXT.teamSizeDesc[n],
+                testID: `create-shamble-size-${n}`,
+              }))}
+            />
+            <Text style={ui.label}>{SHAMBLE_TEXT.variantLabel}</Text>
+            <ChoiceCards
+              columns={2}
+              minHeight={64}
+              value={setup.shambleVariant ?? 'shamble'}
+              onChange={(shambleVariant) => onSetup({ shambleVariant })}
+              options={[
+                {
+                  value: 'shamble' as const,
+                  title: SHAMBLE_TEXT.variantShamble,
+                  hint: SHAMBLE_TEXT.variantShambleDesc,
+                  testID: 'create-shamble-variant-shamble',
+                },
+                {
+                  value: 'champagne' as const,
+                  title: SHAMBLE_TEXT.variantChampagne,
+                  hint: SHAMBLE_TEXT.variantChampagneDesc,
+                  testID: 'create-shamble-variant-champagne',
+                },
+              ]}
+            />
+            {champagne ? (
+              <>
+                <Text style={ui.label}>{SHAMBLE_TEXT.countLabel}</Text>
+                <ChoiceCards
+                  columns={3}
+                  minHeight={60}
+                  centered
+                  value={setup.shambleCount ?? 2}
+                  onChange={(shambleCount) => onSetup({ shambleCount })}
+                  options={([1, 2, 3] as const).map((n) => ({
+                    value: n,
+                    title: String(n),
+                    hint: n === 1 ? SHAMBLE_TEXT.countSingle : SHAMBLE_TEXT.countPlural,
+                    testID: `create-shamble-count-${n}`,
+                  }))}
+                />
+              </>
+            ) : null}
+            <Text style={ui.label}>{SHAMBLE_TEXT.scoringLabel}</Text>
+            <ChoiceCards
+              columns={2}
+              minHeight={60}
+              value={setup.shambleScoring ?? 'net'}
+              onChange={(shambleScoring) => onSetup({ shambleScoring })}
+              options={[
+                { value: 'net' as const, title: SHAMBLE_TEXT.net, hint: SHAMBLE_TEXT.netDesc, testID: 'create-shamble-net' },
+                { value: 'gross' as const, title: SHAMBLE_TEXT.gross, hint: SHAMBLE_TEXT.grossDesc, testID: 'create-shamble-gross' },
+              ]}
+            />
+            {/* #2570: andelen står rett under tellemåten, bare med Netto. */}
+            {shambleNet ? (
+              <Field label={SHAMBLE_TEXT.allowanceLabel} hint={SHAMBLE_TEXT.allowanceHint}>
+                <TextInput
+                  testID="create-shamble-allowance"
+                  style={ui.input}
+                  value={text.allowance}
+                  onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
+                  keyboardType="number-pad"
+                  placeholder="100"
+                  placeholderTextColor={colors.muted}
+                />
+              </Field>
+            ) : null}
+          </View>
         </Field>
       ) : null}
 
       {/* #2753 D3: Patsome, som nettets PatsomeSetup. Lagstørrelsen er alltid 2. */}
       {mode === 'patsome' ? (
         <Field label={PATSOME_TEXT.legend}>
-          {/* Segmentene i en egen boks, som `Nyttspill-2-patsome`. */}
-          <View style={[styles.segments, { backgroundColor: colors.surface2 }]}>
-            {PATSOME_TEXT.segments.map((segment) => (
-              <View key={segment.holes} style={styles.segment} testID={`create-patsome-${segment.holes}`}>
-                <Text style={[styles.segmentHoles, { color: colors.text }]}>{segment.holes}</Text>
-                <Text style={[styles.segmentBody, { color: colors.text }]}>
-                  <Text style={styles.segmentFormat}>{segment.format}</Text>
-                  {` ${segment.body}`}
-                </Text>
-              </View>
-            ))}
+          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {/* Segmentene i en egen boks, som `Nyttspill-2-patsome`. */}
+            <View style={[styles.segments, { backgroundColor: colors.surface2 }]}>
+              {PATSOME_TEXT.segments.map((segment) => (
+                <View key={segment.holes} style={styles.segment} testID={`create-patsome-${segment.holes}`}>
+                  <Text style={[styles.segmentHoles, { color: colors.text }]}>{segment.holes}</Text>
+                  <Text style={[styles.segmentBody, { color: colors.text }]}>
+                    <Text style={styles.segmentFormat}>{segment.format}</Text>
+                    {` ${segment.body}`}
+                  </Text>
+                </View>
+              ))}
           </View>
           <Text style={ui.muted}>{PATSOME_TEXT.handicapNote}</Text>
           <Text style={ui.label}>{PATSOME_TEXT.scoringFrom}</Text>
@@ -366,6 +370,7 @@ export function SetupStep({
               { value: 'gross' as const, title: PATSOME_TEXT.gross, hint: PATSOME_TEXT.grossDesc, testID: 'create-patsome-gross' },
             ]}
           />
+          </View>
         </Field>
       ) : null}
 
@@ -483,6 +488,9 @@ export function SetupStep({
 }
 
 const styles = StyleSheet.create({
+  // Kortet rundt shamble- og Patsome-oppsettet: 16 fra kanten (skjermen har
+  // 20), 14 luft og 12 mellom radene, som artboardene.
+  setupCard: { marginHorizontal: -4, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   // `Nyttspill-2-patsome`: boksen med de tre delene av runden.
   segments: { borderRadius: 12, padding: 12, gap: 10 },
   segment: { flexDirection: 'row', gap: 10 },
