@@ -182,6 +182,7 @@ export function ChoiceCards<T extends string | number>({
   titleSize = 17,
   centered = false,
   bleed = 0,
+  paddingX = 12,
   testID,
 }: {
   options: readonly ChoiceCardOption<T>[];
@@ -195,6 +196,11 @@ export function ChoiceCards<T extends string | number>({
   centered?: boolean;
   /** Hvor langt rutenettet går ut over feltets kant (lagstørrelsen: 4). */
   bleed?: number;
+  /**
+   * Luften på sidene inne i kortet: 12, og 10 på lagstørrelsen, der
+   * «Tremannslag» ellers brekker midt i ordet (artboardet `Nyttspill-2-texas`).
+   */
+  paddingX?: 10 | 12;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -215,7 +221,7 @@ export function ChoiceCards<T extends string | number>({
               onPress={() => onChange(option.value)}
               style={[
                 styles.card,
-                { minHeight, alignItems: centered ? 'center' : 'flex-start' },
+                { minHeight, paddingHorizontal: paddingX, alignItems: centered ? 'center' : 'flex-start' },
                 active
                   ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
@@ -305,7 +311,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 12,
     justifyContent: 'center',
   },
   cardHint: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 + interLine(12, 15).marginTop },

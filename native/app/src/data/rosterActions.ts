@@ -420,7 +420,7 @@ export async function addPlayerToGame(
   if (isAppSupportedMode(game.row.game_mode)) {
     const roster = await loadGrouping(gameId);
     if ('error' in roster) return roster.error;
-    if (roster.rows.length >= maxPlayersForMode(game.row.game_mode)) {
+    if (roster.rows.length >= maxPlayersForMode(game.row.game_mode, game.row.mode_config?.team_size)) {
       return failed('roster-full');
     }
   }

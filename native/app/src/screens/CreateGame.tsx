@@ -378,13 +378,15 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         if (prev.some((p) => p.userId === candidate.id)) {
           return prev.filter((p) => p.userId !== candidate.id);
         }
-        if (gameMode && prev.length >= maxPlayersForMode(gameMode)) return prev;
+        if (gameMode && prev.length >= maxPlayersForMode(gameMode, effectiveTeamSize(gameMode, setup))) {
+          return prev;
+        }
         // `teeGender: null` — tas en spiller bort og legges til igjen, faller
         // hen tilbake på profilen sin. Samme som på web.
         return [...prev, { userId: candidate.id, teamNumber: null, teeGender: null }];
       });
     },
-    [gameMode],
+    [gameMode, setup],
   );
 
   const assignTeam = useCallback((playerId: string, teamNumber: number) => {

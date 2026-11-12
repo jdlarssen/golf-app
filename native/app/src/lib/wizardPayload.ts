@@ -8,7 +8,7 @@
 // og lar den delte byggeren dømme.
 //
 // Derfor er paritetstesten (`wizardPayload.test.ts`) verdt mer enn koden: den
-// kjører shim + delt bygger for alle åtte modiene og krever webbens
+// kjører shim + delt bygger for alle modiene appen lager og krever webbens
 // payload-fasong tilbake. Driver feltnavnene, blir den rød.
 import {
   buildGameInsertPayload,

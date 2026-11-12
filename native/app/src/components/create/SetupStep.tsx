@@ -203,6 +203,7 @@ export function SetupStep({
               minHeight={72}
               titleSize={15}
               bleed={4}
+              paddingX={10}
               value={teamSize}
               onChange={(next) => {
                 onSetup({ teamSize: next });

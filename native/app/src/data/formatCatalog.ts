@@ -3,7 +3,7 @@
 //
 // Gaten er tre-lags, og alle tre må si ja:
 //
-//  1. **Appen** — `APP_SUPPORTED_MODES` (`lib/appFormats.ts`). De åtte modiene
+//  1. **Appen** — `APP_SUPPORTED_MODES` (`lib/appFormats.ts`). Modiene
 //     appen har skjermer for. Konstant, ingen DB involvert.
 //  2. **DB-en** — `formats.is_active` ∧ `format_intent_mapping.is_visible`.
 //     Admin kan slå av et format på nettsiden, og da skal det forsvinne fra

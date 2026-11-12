@@ -3,7 +3,7 @@
 //
 // Hele N6a hviler på at appen IKKE bygger sin egen `mode_config`. Byggeren er
 // delt kode; det eneste appen eier er feltnavnene den fyller inn. Denne fila
-// kjører derfor shim + delt bygger for hver av de åtte modiene og krever
+// kjører derfor shim + delt bygger for hver av modiene appen lager og krever
 // webbens payload-fasong tilbake — med riktig `kind`, riktig lagfordeling og
 // `errorCode` udefinert.
 //
@@ -57,7 +57,7 @@ function draft(over: Partial<GameDraft> & { gameMode: AppGameMode }): GameDraft 
   };
 }
 
-/** De åtte modiene med en roster som faktisk er publiserbar for hver. */
+/** Modiene appen lager, med en roster som faktisk er publiserbar for hver. */
 const CASES: {
   mode: AppGameMode;
   draft: GameDraft;
