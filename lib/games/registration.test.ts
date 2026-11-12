@@ -4,6 +4,7 @@ import {
   isClubTournament,
   isRegistrationMode,
   isRegistrationType,
+  organiserStartsOnRoster,
   rosterOptionalAtPublish,
   type RegistrationMode,
   type RegistrationType,
@@ -125,5 +126,27 @@ describe('isClubTournament (#2433)', () => {
     ['(vakt) tomme strenger → ikke klubb-turnering', '', '', false],
   ] as const)('%s', (_label, groupId, tournamentId, expected) => {
     expect(isClubTournament({ groupId, tournamentId })).toBe(expected);
+  });
+});
+
+describe('organiserStartsOnRoster (#2840)', () => {
+  it.each([
+    ['invite_only', 'solo', true],
+    ['invite_only', 'team', true],
+    ['manual_approval', 'solo', true],
+    ['open', 'solo', true],
+    ['manual_approval', 'team', false],
+    ['open', 'team', false],
+  ] as const)('%s + %s → %s', (mode, type, expected) => {
+    expect(organiserStartsOnRoster(mode, type)).toBe(expected);
+  });
+
+  it('a round without the organiser can still be published: team registration makes the roster optional', () => {
+    for (const mode of ['manual_approval', 'open'] as const) {
+      expect(organiserStartsOnRoster(mode, 'team')).toBe(false);
+      expect(
+        rosterOptionalAtPublish({ registrationMode: mode, registrationType: 'team', clubScoped: false }),
+      ).toBe(true);
+    }
   });
 });
