@@ -10,6 +10,10 @@
 // som «Bli med i liga», med rundens navn stort og skogkortet med den kremfargede
 // knappen.
 //
+// Full runde (#2837): plasslinja sier «12 av 12 plasser · fullt», og knappen er «Be om
+// plass». Forespørselen kan trekkes fra «Forespørselen er sendt», og etterpå spør
+// skjermen på nytt.
+//
 // Alt kommer fra `GET /api/pamelding/[shortId]`. Skrivingen er `POST` på samme sti.
 // Ingenting legges i kø: uten nett står feilen, og ingenting er skrevet.
 //
@@ -24,6 +28,7 @@ import { REGISTRATION_MESSAGE_MAX } from '../../../../lib/games/registration';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { WebLinkButton } from '../components/WebLinkButton';
 import {
+  cancelRequest,
   fetchRoundInvite,
   joinRound,
   requestToJoin,
@@ -36,16 +41,21 @@ import {
   ROUND_INVITE_TEXT,
   describeRoundInviteFailure,
   describeRoundInviteLoadFailure,
+  isRoundFull,
   type RoundInviteFailureWithText,
   roundFeeLine,
   roundPlaceLine,
+  roundSeatsLine,
   roundWhenLine,
 } from '../lib/roundInviteCopy';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../theme';
 
-/** Svarene som stopper skjemaet: et nytt forsøk gir det samme. */
-type StopReason = 'wrong_mode' | 'game_full' | 'profile_incomplete';
+/**
+ * Svarene som stopper skjemaet: et nytt forsøk gir det samme. `game_full` er ikke en av
+ * dem lenger (#2837): noen tok siste plass, og skjermen spør på nytt og viser «Be om plass».
+ */
+type StopReason = 'wrong_mode' | 'profile_incomplete';
 
 export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const { colors, ui } = useTheme();
@@ -104,8 +114,14 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
       sending.current = false;
       setBusy(false);
       if (result.ok) {
-        if (result.status !== 'joined') setView({ ...view, offer: 'pending' });
-        else if (navigation.isFocused()) backTo(navigation, 'GameHome', { gameId: result.gameId });
+        if (result.status === 'joined') {
+          if (navigation.isFocused()) backTo(navigation, 'GameHome', { gameId: result.gameId });
+        } else if (result.status === 'cancelled') {
+          // Trukket: det som gjelder nå (plass igjen, full eller stengt) kommer fra ruta.
+          void load();
+        } else {
+          setView({ ...view, offer: 'pending' });
+        }
         return;
       }
       switch (result.reason) {
@@ -121,8 +137,12 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
         case 'not_found':
           setFailure('not_found');
           return;
-        case 'wrong_mode':
+        // Noen tok siste plass, eller arrangøren rakk å svare på forespørselen.
         case 'game_full':
+        case 'not_pending':
+          void load();
+          return;
+        case 'wrong_mode':
         case 'profile_incomplete':
           setStop(result.reason);
           return;
@@ -130,7 +150,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           setError(result.reason);
       }
     },
-    [navigation, view],
+    [load, navigation, view],
   );
 
   const scroll = [styles.scroll, { backgroundColor: colors.bg, paddingBottom: bottomInset + 20 }];
@@ -191,6 +211,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
 
   if (stop === null && (offer === 'join' || offer === 'request')) {
     const onStrong = colors.onStrongWarm;
+    const full = offer === 'request' && isRoundFull(view.seats);
     const label = busy
       ? offer === 'join'
         ? ROUND_INVITE_TEXT.joinPending
@@ -199,7 +220,11 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
         ? ROUND_INVITE_TEXT.retry
         : offer === 'join'
           ? ROUND_INVITE_TEXT.joinButton
-          : ROUND_INVITE_TEXT.requestButton;
+          : full
+            ? ROUND_INVITE_TEXT.fullButton
+            : ROUND_INVITE_TEXT.requestButton;
+    const intro =
+      offer === 'join' ? ROUND_INVITE_TEXT.joinIntro : full ? ROUND_INVITE_TEXT.fullIntro : ROUND_INVITE_TEXT.requestIntro;
     return (
       <ScrollView
         {...KEYBOARD_SCROLL_PROPS}
@@ -210,9 +235,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
         {head}
         <View style={[styles.hero, { backgroundColor: colors.surfaceStrong }]} testID={`round-invite-${offer}`}>
           <Facts view={view} color={withAlpha(onStrong, 0.85)} />
-          <Text style={[styles.body, { color: onStrong }]}>
-            {offer === 'join' ? ROUND_INVITE_TEXT.joinIntro : ROUND_INVITE_TEXT.requestIntro}
-          </Text>
+          <Text style={[styles.body, { color: onStrong }]}>{intro}</Text>
           {offer === 'request' ? (
             <View style={styles.field}>
               <Text style={[styles.label, { color: withAlpha(onStrong, 0.85) }]} nativeID="round-invite-message-label">
@@ -293,6 +316,25 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
               {ROUND_INVITE_TEXT.sentTitle}
             </Text>
             <Text style={[styles.body, { color: colors.text }]}>{ROUND_INVITE_TEXT.sentBody}</Text>
+            {view.canCancelRequest ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: busy, busy }}
+                disabled={busy}
+                onPress={() => void onSend(() => cancelRequest(shortId))}
+                style={[styles.secondary, { borderColor: colors.primary }, busy ? styles.dimmed : null]}
+                testID="round-invite-cancel"
+              >
+                <Text style={[styles.buttonText, { color: colors.primary }]}>
+                  {busy ? ROUND_INVITE_TEXT.cancelPending : ROUND_INVITE_TEXT.cancelButton}
+                </Text>
+              </Pressable>
+            ) : null}
+            {errorText ? (
+              <Text style={[styles.body, { color: colors.danger }]} testID="round-invite-error">
+                {errorText}
+              </Text>
+            ) : null}
           </>
         ) : offer === 'web' ? (
           <>
@@ -323,10 +365,14 @@ function PrimaryButton({ label, onPress, testID }: { label: string; onPress: () 
   );
 }
 
-/** Når, hvor mange og hva det koster, med tall i like bredder. Aldri navn. */
+/**
+ * Når, hvor mange og hva det koster, med tall i like bredder. Aldri navn. Har runden
+ * tak, står plassene i stedet for antallet: «9 av 12 plasser» sier begge deler (#2837).
+ */
 function Facts({ view, color }: { view: AppRoundInviteView; color: string }) {
   const when = roundWhenLine(view.round.teeOffAt);
   const fee = roundFeeLine(view.round.entryFeeKr);
+  const seats = roundSeatsLine(view.seats);
   return (
     <View style={styles.facts}>
       {when ? (
@@ -334,9 +380,15 @@ function Facts({ view, color }: { view: AppRoundInviteView; color: string }) {
           {when}
         </Text>
       ) : null}
-      <Text style={[styles.fact, { color }]} testID="round-invite-count">
-        {joinPlayersLine(view.playerCount)}
-      </Text>
+      {seats ? (
+        <Text style={[styles.fact, { color }]} testID="round-invite-seats">
+          {seats}
+        </Text>
+      ) : (
+        <Text style={[styles.fact, { color }]} testID="round-invite-count">
+          {joinPlayersLine(view.playerCount)}
+        </Text>
+      )}
       {fee ? (
         <Text style={[styles.fact, { color }]} testID="round-invite-fee">
           {fee}
@@ -373,6 +425,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
   },
   button: { height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  secondary: { height: 52, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   dimmed: { opacity: 0.5 },
   state: { flex: 1, alignItems: 'center', gap: 12, paddingTop: 26, paddingHorizontal: 24 },
