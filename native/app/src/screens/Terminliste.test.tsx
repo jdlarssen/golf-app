@@ -109,7 +109,8 @@ const VIEW: AppTerminView = { entries: ENTRIES, pendingRequests: [] };
 
 async function renderScreen(params?: { filter?: 'alle' | 'helg' | 'klubb' }) {
   const navigate = jest.fn();
-  const navigation = { navigate } as unknown as ScreenProps<'Terminliste'>['navigation'];
+  // `getState` for `openOrReturn` (#2753): tom stakk, så den åpner som `navigate`.
+  const navigation = { navigate, getState: () => undefined } as unknown as ScreenProps<'Terminliste'>['navigation'];
   const route = { key: 'terminliste', name: 'Terminliste', params } as unknown as ScreenProps<'Terminliste'>['route'];
   await render(<Terminliste navigation={navigation} route={route} />);
   return { navigate };

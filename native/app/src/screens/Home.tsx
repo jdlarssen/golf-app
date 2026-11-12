@@ -88,7 +88,10 @@ import {
 } from '../data/homeList';
 import { fetchMyCups } from '../data/cup';
 import { fetchTerminliste } from '../data/terminliste';
-import { TerminRow } from '../components/terminliste/TerminRow';
+import { TerminDayCard, TerminDayHeading, TerminRow } from '../components/terminliste/TerminRow';
+import { groupTerminByDate } from '../../../../lib/games/terminliste';
+import { TERMIN_TEXT, dayHeading, dayLabelText } from '../lib/terminlisteCopy';
+import { localDateParts } from '../lib/homeDates';
 import { clubRoundsForHome } from '../lib/clubRounds';
 import { openOrReturn } from '../lib/backTo';
 import type { AppTerminEntry } from '../../../../lib/games/appTerminView';
@@ -370,25 +373,40 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     ) : null;
 
   // #2753 D4: under ligaene og cupene, bare når det finnes rader (eierens svar
-  // 12.11). Radene er terminlistas, med klubben foran banen.
+  // 12.11). Radene er terminlistas, delt i dager under terminlistas egne
+  // overskrifter («Lørdag 14. november · om 2 dager»), med klubben foran banen.
+  const clubNow = new Date();
+  const clubById = new Map(clubRounds.map((entry) => [entry.id, entry]));
   const clubRoundsSection =
     clubRounds.length > 0 ? (
       <View testID="home-club-rounds">
         <SectionHead title={HOME_TEXT.clubRounds} />
-        <View style={[styles.clubRounds, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {clubRounds.map((entry, index) => (
-            <View
-              key={entry.id}
-              style={index > 0 ? { borderTopWidth: 1, borderTopColor: colors.divider } : undefined}
-            >
-              <TerminRow
-                entry={entry}
-                showClub
-                onPress={() => openOrReturn(navigation, 'RoundInvite', { shortId: entry.short_id, src: null })}
-              />
-            </View>
-          ))}
-        </View>
+        {groupTerminByDate(clubRounds, clubNow, localDateParts).map((group) => (
+          <View key={group.key} style={styles.clubDay} testID={`home-club-day-${group.key}`}>
+            <TerminDayHeading
+              title={group.kind === 'day' ? dayHeading(group.teeOff, clubNow) : TERMIN_TEXT.undated}
+              label={group.kind === 'day' ? dayLabelText(group.label) : null}
+            />
+            <TerminDayCard>
+              {group.entries.map((row, index) => {
+                const entry = clubById.get(row.id);
+                if (!entry) return null;
+                return (
+                  <View
+                    key={entry.id}
+                    style={index > 0 ? { borderTopWidth: 1, borderTopColor: colors.divider } : undefined}
+                  >
+                    <TerminRow
+                      entry={entry}
+                      showClub
+                      onPress={() => openOrReturn(navigation, 'RoundInvite', { shortId: entry.short_id, src: null })}
+                    />
+                  </View>
+                );
+              })}
+            </TerminDayCard>
+          </View>
+        ))}
       </View>
     ) : null;
 
@@ -750,7 +768,7 @@ const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 const TITLE = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
-  clubRounds: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  clubDay: { marginBottom: 12 },
   notice: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12 },
   noticeText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   // Samme rad som «Ligaene dine» (`LeagueHomeRow`): navn og linje, pila til høyre.
