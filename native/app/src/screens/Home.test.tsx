@@ -745,6 +745,16 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
       expect(screen.queryByTestId('home-club-day-leagues')).toBeNull();
     });
 
+    it('startdagen er gått: raden står i blokken «Klubbligaer» uten «starter» (ingen dato over raden)', async () => {
+      mockState.leagues = { ok: true, leagues: [], joinable: [KLUBBLIGA] }; // seasonStart 2026-11-02, før i dag
+      const { view } = renderHome();
+      await view;
+      const block = await screen.findByTestId('home-club-day-leagues');
+      const time = within(block).getByTestId('home-joinable-league-time-kl1');
+      expect(within(time).getByText('Liga')).toBeTruthy();
+      expect(within(time).queryByText('starter')).toBeNull();
+    });
+
     it('påmeldt: ligaen står i «Ligaene dine» og ikke lenger i klubbseksjonen, og leaguesFirst teller bare den', async () => {
       mockState.leagues = { ok: true, leagues: [KLUBBLIGA], joinable: [] };
       const { view } = renderHome();

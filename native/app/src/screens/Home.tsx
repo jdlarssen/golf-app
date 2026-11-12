@@ -412,6 +412,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
                 <TerminLeagueRow
                   key={league.id}
                   league={league}
+                  showStartNote={group.kind === 'day'}
                   onPress={() => navigation.navigate('League', { leagueId: league.id })}
                 />,
               );
