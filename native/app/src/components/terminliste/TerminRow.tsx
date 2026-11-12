@@ -6,12 +6,15 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppTerminEntry } from '../../../../../lib/games/appTerminView';
 import { capacityState, terminTimeNote } from '../../../../../lib/games/terminliste';
+import type { AppLeagueSummary } from '../../../../../lib/league/appLeagueView';
 import { nameInitials } from '../../../../../lib/names/initials';
 import { formatStubClock } from '../../lib/homeDates';
+import { LEAGUE_TEXT } from '../../lib/leagueCopy';
 import {
   TERMIN_TEXT,
   courseFormatLine,
   rowA11yLabel,
+  signUpLabel,
   seatLineText,
   socialProofText,
   timeNoteText,
@@ -83,6 +86,34 @@ export function TerminRow({
           <Text style={[styles.ctaText, { color: colors.primary }]}>{TERMIN_TEXT.request}</Text>
         </View>
       )}
+    </Pressable>
+  );
+}
+
+/**
+ * #2839: en klubbliga du kan melde deg på, som en rad i samme kort som rundene,
+ * med samme flate, luft og tekststil. En liga har ingen klokke, så radene har
+ * ingen tidsblokk; «Meld på» står som på en runde, og et trykk åpner ligasiden.
+ */
+export function TerminLeagueRow({ league, onPress }: { league: AppLeagueSummary; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${league.name}. ${LEAGUE_TEXT.homeNotJoined}. ${signUpLabel(league.name)}`}
+      onPress={onPress}
+      style={styles.row}
+      testID={`home-joinable-league-${league.id}`}
+    >
+      <View style={styles.body}>
+        <Text style={[styles.name, { color: colors.text }]}>{league.name}</Text>
+        <Text style={[styles.line, { color: colors.muted }]} testID={`home-joinable-league-line-${league.id}`}>
+          {LEAGUE_TEXT.homeNotJoined}
+        </Text>
+      </View>
+      <View style={[styles.cta, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.ctaText, { color: colors.onPrimary }]}>{TERMIN_TEXT.signUp}</Text>
+      </View>
     </Pressable>
   );
 }

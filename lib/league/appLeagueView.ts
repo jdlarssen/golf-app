@@ -29,6 +29,11 @@ export type AppLeagueSummary = {
   id: string;
   name: string;
   status: Extract<LeagueStatus, 'draft' | 'active'>;
+  /**
+   * #2839: the season's first day, `YYYY-MM-DD` (the league's `season_start`).
+   * Home's club section files a joinable league under that day.
+   */
+  seasonStart: string;
   /** The round whose window is open now (the earliest one), or null. */
   openRound: { id: string; label: string; closesAt: string } | null;
   /** The caller has delivered the open round. */

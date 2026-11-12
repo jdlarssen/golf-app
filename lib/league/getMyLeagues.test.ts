@@ -3,9 +3,9 @@ import { assembleMyLeagues } from './getMyLeagues';
 import type { RoundFlight } from './roundLocks';
 
 const leagues = [
-  { id: 'l1', name: 'Vinterliga', status: 'active' },
-  { id: 'l2', name: 'Vårliga', status: 'draft' },
-  { id: 'l3', name: 'Høstliga', status: 'finished' },
+  { id: 'l1', name: 'Vinterliga', status: 'active', season_start: '2026-11-02' },
+  { id: 'l2', name: 'Vårliga', status: 'draft', season_start: '2027-03-01' },
+  { id: 'l3', name: 'Høstliga', status: 'finished', season_start: '2026-08-15' },
 ];
 
 describe('assembleMyLeagues («Ligaene dine», #2638)', () => {
@@ -22,6 +22,7 @@ describe('assembleMyLeagues («Ligaene dine», #2638)', () => {
         id: 'l1',
         name: 'Vinterliga',
         status: 'active',
+        seasonStart: '2026-11-02',
         openRound: { id: 'r3', label: 'Runde 3', closesAt: '2026-12-13T22:59:00Z' },
         delivered: true,
         inProgress: false,
@@ -31,6 +32,7 @@ describe('assembleMyLeagues («Ligaene dine», #2638)', () => {
         id: 'l2',
         name: 'Vårliga',
         status: 'draft',
+        seasonStart: '2027-03-01',
         openRound: null,
         delivered: false,
         inProgress: false,

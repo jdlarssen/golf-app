@@ -4,7 +4,7 @@ import { roundPlayerLocks, type RoundFlight } from './roundLocks';
 import type { AppLeagueListResponse, AppLeagueSummary, AppMarkerCard } from './appLeagueView';
 import { playerName } from '@/lib/names/playerName';
 
-type LeagueRow = { id: string; name: string; status: string };
+type LeagueRow = { id: string; name: string; status: string; season_start: string };
 type RoundRow = { id: string; league_id: string; label: string; sequence: number; closes_at: string };
 
 /**
@@ -33,6 +33,7 @@ export function assembleMyLeagues(
         id: l.id,
         name: l.name,
         status: l.status,
+        seasonStart: l.season_start,
         openRound: open ? { id: open.id, label: open.label, closesAt: open.closes_at } : null,
         delivered: locks.delivered.has(userId),
         inProgress: locks.inProgress.has(userId),
@@ -128,7 +129,7 @@ async function readJoinableClubLeagues(userId: string, ownLeagueIds: string[]): 
     if (clubIds.length === 0) return [];
     const { data, error } = await admin
       .from('leagues')
-      .select('id, name, status')
+      .select('id, name, status, season_start')
       .in('group_id', clubIds)
       .eq('status', 'draft')
       .order('name');
@@ -150,7 +151,7 @@ async function readMyLeagues(userId: string, leagueIds: string[], now: Date): Pr
   const [leaguesRes, roundsRes, markerCards] = await Promise.all([
     admin
       .from('leagues')
-      .select('id, name, status')
+      .select('id, name, status, season_start')
       .in('id', leagueIds)
       .in('status', ['draft', 'active'])
       .order('name'),
