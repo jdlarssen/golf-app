@@ -27,13 +27,16 @@ export const PATSOME_TEXT = {
     'Netto bruker riktige handicap per segment: full handicap i 4BBB, 60/40 i greensome og 50 % av summen i foursomes.',
   scoringFrom: 'Poeng fra',
   net: 'Netto',
+  netDesc: 'Handicap-justert',
   gross: 'Brutto',
+  grossDesc: 'Rå slag',
 } as const;
 
 /** `wizard.teamSize`: kortene for lagstørrelsen i scramble-familien. */
 export const TEAM_SIZE_TEXT = {
   legend: 'Velg lagstørrelse',
   sizes: { 2: 'Par', 3: 'Tremannslag', 4: '4-mann' } as Record<2 | 3 | 4, string>,
+  hints: { 2: '2 spillere', 3: '3 spillere', 4: '4 spillere' } as Record<2 | 3 | 4, string>,
 } as const;
 
 /** Formatene med lag-handicap i prosent av lagets snitt (`TeamHandicapField`). */
@@ -76,15 +79,20 @@ export const SHAMBLE_TEXT = {
   legend: 'Shamble-oppsett',
   teamSizeLabel: 'Lagstørrelse',
   teamSize: { 3: '3-mannslag', 4: '4-mannslag' } as Record<3 | 4, string>,
+  teamSizeDesc: { 3: '3 spillere per lag', 4: '4 spillere per lag' } as Record<3 | 4, string>,
   variantLabel: 'Variant',
   variantShamble: 'Shamble',
+  variantShambleDesc: 'Best 2 teller',
   variantChampagne: 'Champagne Scramble',
+  variantChampagneDesc: 'Velg antall',
   countLabel: 'Antall som teller',
   countSingle: 'laveste score',
   countPlural: 'laveste scorer',
   scoringLabel: 'Tellemåte',
   net: 'Netto',
+  netDesc: 'Handicap-justert',
   gross: 'Brutto',
+  grossDesc: 'Rå slag',
   allowanceLabel: 'Handicap-andel (%)',
   allowanceHint: 'Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard).',
 } as const;

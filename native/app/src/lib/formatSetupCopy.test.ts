@@ -17,6 +17,8 @@ describe('Patsome-oppsettet er nettets', () => {
     expect(PATSOME_TEXT.scoringFrom).toBe(patsome.scoringFromLabel);
     expect(PATSOME_TEXT.net).toBe(patsome.scoringNetTitle);
     expect(PATSOME_TEXT.gross).toBe(patsome.scoringGrossTitle);
+    expect(PATSOME_TEXT.netDesc).toBe(patsome.scoringNetDesc);
+    expect(PATSOME_TEXT.grossDesc).toBe(patsome.scoringGrossDesc);
   });
 
   it.each([0, 1, 2] as const)('segment %i', (i) => {
@@ -38,6 +40,11 @@ describe('scramble-familien og shamble er nettets (D3b)', () => {
     expect(TEAM_SIZE_TEXT.sizes[2]).toBe(wizard.teamSize.par.title);
     expect(TEAM_SIZE_TEXT.sizes[3]).toBe(wizard.teamSize.tremannslag.title);
     expect(TEAM_SIZE_TEXT.sizes[4]).toBe(wizard.teamSize.firemann.title);
+    expect(TEAM_SIZE_TEXT.hints).toEqual({
+      2: wizard.teamSize.par.hint,
+      3: wizard.teamSize.tremannslag.hint,
+      4: wizard.teamSize.firemann.hint,
+    });
   });
 
   it.each([
@@ -68,15 +75,20 @@ describe('scramble-familien og shamble er nettets (D3b)', () => {
       legend: web.legend,
       teamSizeLabel: web.teamSizeLabel,
       teamSize: { 3: web.teamSize3Title, 4: web.teamSize4Title },
+      teamSizeDesc: { 3: web.teamSize3Desc, 4: web.teamSize4Desc },
       variantLabel: web.variantLabel,
       variantShamble: web.variantShambleTitle,
+      variantShambleDesc: web.variantShambleDesc,
       variantChampagne: web.variantChampagneTitle,
+      variantChampagneDesc: web.variantChampagneDesc,
       countLabel: web.countLabel,
       countSingle: web.countSingle,
       countPlural: web.countPlural,
       scoringLabel: web.scoringLabel,
       net: web.scoringNetTitle,
+      netDesc: web.scoringNetDesc,
       gross: web.scoringGrossTitle,
+      grossDesc: web.scoringGrossDesc,
       allowanceLabel: web.allowanceLabel,
       allowanceHint: web.allowanceHint,
     });

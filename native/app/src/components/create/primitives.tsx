@@ -9,7 +9,7 @@
 // som bygges etter #1833, så ingenting her leser den statiske lys-paletten.
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { TAP, useTheme } from '../../theme';
+import { FONTS, TAP, fraunces, interLine, useTheme } from '../../theme';
 import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
 
 /** Etikett over et felt, med feltet under. */
@@ -158,6 +158,81 @@ export function Chips<T extends string | number>({
   );
 }
 
+export interface ChoiceCardOption<T extends string | number> {
+  value: T;
+  title: string;
+  hint?: string;
+  testID: string;
+}
+
+/**
+ * Valg som kort med tittel og en linje under (#2753 D3): lagstørrelse,
+ * shamble-varianten og tellemåten, som nettets ChoiceCard og artboardene
+ * `Nyttspill-2-texas`, `-shamble` og `-patsome`. Hver celle er en brøkdel av
+ * rutenettet med halve mellomrommet som luft, så kortene er like brede også
+ * når en rad ikke er full. Valgt kort har 2 pt skoggrønn ramme på lys grønn
+ * bunn, som `SelectRow`.
+ */
+export function ChoiceCards<T extends string | number>({
+  options,
+  value,
+  onChange,
+  columns,
+  minHeight,
+  titleSize = 17,
+  centered = false,
+  bleed = 0,
+  testID,
+}: {
+  options: readonly ChoiceCardOption<T>[];
+  value: T;
+  onChange: (value: T) => void;
+  columns: number;
+  minHeight: number;
+  /** Fraunces-størrelsen på tittelen: 15 på lagstørrelsen, 17 ellers. */
+  titleSize?: 15 | 17;
+  /** Tallkortene (antall som teller) står midtstilt. */
+  centered?: boolean;
+  /** Hvor langt rutenettet går ut over feltets kant (lagstørrelsen: 4). */
+  bleed?: number;
+  testID?: string;
+}) {
+  const { colors } = useTheme();
+  const gap = 8;
+  return (
+    <View
+      testID={testID}
+      style={[styles.cards, { marginHorizontal: -bleed - gap / 2, rowGap: gap }]}
+    >
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <View key={option.testID} style={{ width: `${100 / columns}%`, paddingHorizontal: gap / 2 }}>
+            <Pressable
+              testID={option.testID}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => onChange(option.value)}
+              style={[
+                styles.card,
+                { minHeight, alignItems: centered ? 'center' : 'flex-start' },
+                active
+                  ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
+                  : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+              ]}
+            >
+              <Text style={[fraunces(600, titleSize), { color: colors.text }]}>{option.title}</Text>
+              {option.hint ? (
+                <Text style={[styles.cardHint, { color: colors.muted }]}>{option.hint}</Text>
+              ) : null}
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 /** Av/på med forklaring under — sideturnering, makker-godkjenning. */
 export function ToggleRow({
   label,
@@ -223,6 +298,14 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowDisabled: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cards: { flexDirection: 'row', flexWrap: 'wrap' },
+  card: {
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  cardHint: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 + interLine(12, 15).marginTop },
   chipDisabled: { opacity: 0.4 },
   chip: {
     minHeight: TAP,
