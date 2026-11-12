@@ -158,9 +158,10 @@ describe('store-build-proof.sh bruker personvern-reglene', () => {
     expect(text).toMatch(/^ {2}privacy_rules "\$PLIST" "\$APP\/PrivacyInfo\.xcprivacy" "\$disk_imports" "\$scanned"$/m);
   });
 
-  it('teller disk-API-ene med disk_api_hits og kaller locale_rules', () => {
+  it('teller disk-API-ene med disk_api_hits og kaller locale_rules og faceid_rules', () => {
     expect(text).toMatch(/^ {4}n=\$\(disk_api_hits "\$DISK"\)$/m);
     expect(text).toMatch(/^ {2}locale_rules "\$PLIST"$/m);
+    expect(text).toMatch(/^ {2}faceid_rules "\$PLIST"$/m);
   });
 });
 
@@ -251,5 +252,46 @@ locale_rules "$2"`;
     const lines = run(body);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatch(/^FAIL {2}språket er ikke norsk/);
+  });
+});
+
+// Teksten for Face ID (#2841): uten `NSFaceIDUsageDescription` krasjer appen første
+// gang den spør på en iPhone med Face ID.
+describe('faceid_rules', () => {
+  const run = (info) => {
+    const harness = `set -euo pipefail
+export LC_ALL=C
+say()  { printf '%s\\n' "$*"; }
+pass() { say "PASS  $*"; }
+fail() { say "FAIL  $*"; }
+. "$1"
+faceid_rules "$2"`;
+    const result = spawnSync('bash', ['-c', harness, 'bash', LIB, info], { encoding: 'utf8' });
+    return result.stdout.split('\n').filter(Boolean);
+  };
+
+  it('gir PASS når teksten står i Info.plist', () => {
+    const file = write(
+      'face-ok.plist',
+      plist('<key>NSFaceIDUsageDescription</key><string>Tørny bruker Face ID til å låse opp appen når du har slått på låsen.</string>'),
+    );
+    expect(run(file)).toEqual(['PASS  NSFaceIDUsageDescription står i Info.plist']);
+  });
+
+  it.each([
+    ['mangler', INFO_NONE],
+    ['er tom', plist('<key>NSFaceIDUsageDescription</key><string>  </string>')],
+    // Foto-teksten er ikke Face ID-teksten.
+    ['bare foto-teksten står der', INFO_WITH_TEXT],
+  ])('gir FAIL når teksten %s', (_label, info) => {
+    const lines = run(write('face-bad.plist', info));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^FAIL {2}NSFaceIDUsageDescription mangler/);
+  });
+
+  it('er fail-closed når fila ikke er en plist: én FAIL, ingen PASS', () => {
+    const lines = run(write('face-junk.xml', 'dette er ikke en plist\n'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^FAIL {2}kunne ikke lese Info\.plist/);
   });
 });

@@ -18,7 +18,16 @@
 // nederst i rødt med luft over. Luften er ikke pynt — den er avstanden en
 // tommel på vei mot raden over trenger for ikke å treffe sletting.
 import { useCallback, useEffect, useState } from 'react';
-import { AccessibilityInfo, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Alert,
+  AppState,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DesignSwitch, listSwitchOffColor } from '../components/DesignSwitch';
 import { SettingList, SettingRow } from '../components/SettingRow';
@@ -26,6 +35,14 @@ import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { rememberAiConsentAnswered } from '../data/aiConsentGate';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
+import {
+  askForUnlock,
+  readAppLockSupport,
+  setAppLock,
+  useAppLock,
+  type AppLockSupport,
+} from '../lib/appLock';
+import { appLockLabel, appLockSublabel } from '../lib/appLockCopy';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
@@ -171,6 +188,7 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
 
       <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionYouDecide}</Text>
       <SettingList testID="account-you-decide">
+        <AppLockSetting />
         <AiConsentSetting />
         <SettingRow
           label={PROFILE_TEXT.privacyRow}
@@ -219,6 +237,79 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         </SettingList>
       </View>
     </ScrollView>
+  );
+}
+
+/**
+ * #2841: «Lås med Face ID». Raden følger `AiConsentSetting` (samme tegning, tittel
+ * 15/600, undertekst 12, bryter 52 × 32), og står øverst i «Du bestemmer».
+ *
+ * Raden finnes bare når telefonen har Face ID, Touch ID eller fingeravtrykk, og
+ * navnet følger telefonen. Står ingenting registrert, er bryteren dempet og
+ * underteksten sier hva spilleren må gjøre. Registrerer spilleren noe og kommer
+ * tilbake, leses det på nytt.
+ *
+ * **Slå på krever ett vellykket spørsmål.** Bryteren går til «på» først når
+ * telefonen har sagt ja; ellers står den av og ingenting lagres, så ingen låser
+ * seg ute på første forsøk. Slå av krever ikke nytt spørsmål: spilleren er alt inne.
+ */
+function AppLockSetting() {
+  const { colors, scheme } = useTheme();
+  const on = useAppLock();
+  const [support, setSupport] = useState<AppLockSupport | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const read = () => {
+      void readAppLockSupport().then((next) => {
+        if (!cancelled) setSupport(next);
+      });
+    };
+    read();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') read();
+    });
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
+
+  const onToggle = async (next: boolean) => {
+    if (!next) {
+      setAppLock(false);
+      return;
+    }
+    setBusy(true);
+    const answer = await askForUnlock();
+    setBusy(false);
+    if (answer === 'success') setAppLock(true);
+  };
+
+  if (!support) return null;
+  const title = appLockLabel(support.types, Platform.OS);
+  // Er låsen på uten at noe er registrert, kan den fortsatt slås av.
+  const disabled = busy || (!support.enrolled && !on);
+
+  return (
+    <View style={styles.aiRow} testID="account-app-lock">
+      <View style={styles.aiTexts}>
+        <Text style={[styles.aiTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.aiSub, { color: colors.muted }]} testID="account-app-lock-sub">
+          {appLockSublabel(support.types, Platform.OS, { enrolled: support.enrolled, on })}
+        </Text>
+      </View>
+      <DesignSwitch
+        value={on}
+        disabled={disabled}
+        onValueChange={(next) => void onToggle(next)}
+        label={title}
+        onColor={colors.primary}
+        offColor={listSwitchOffColor(colors, scheme)}
+        testID="account-app-lock-switch"
+      />
+    </View>
   );
 }
 

@@ -231,6 +231,12 @@ exports[`resolveConfig — butikk-varianten (APP_VARIANT=store) snapshot 1`] = `
         "icon": "./assets/notification-icon.png",
       },
     ],
+    [
+      "expo-local-authentication",
+      {
+        "faceIDPermission": "Tørny bruker Face ID til å låse opp appen når du har slått på låsen.",
+      },
+    ],
     "./scripts/withNoSdkDownload.js",
     "./scripts/withUploadSigning.js",
   ],
@@ -331,6 +337,12 @@ exports[`resolveConfig — dev-varianten (ingen APP_VARIANT) snapshot 1`] = `
         "color": "#1B4332",
         "defaultChannel": "varsler",
         "icon": "./assets/notification-icon.png",
+      },
+    ],
+    [
+      "expo-local-authentication",
+      {
+        "faceIDPermission": "Tørny bruker Face ID til å låse opp appen når du har slått på låsen.",
       },
     ],
     "./scripts/withNoSdkDownload.js",

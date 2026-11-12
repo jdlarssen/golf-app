@@ -90,6 +90,12 @@
           "defaultChannel": "varsler"
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Tørny bruker Face ID til å låse opp appen når du har slått på låsen."
+        }
+      ],
       "./scripts/withNoSdkDownload.js"
     ]
   }

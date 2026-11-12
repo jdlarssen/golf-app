@@ -142,6 +142,12 @@ Dette hakes **ikke** av, og her er grunnen:
 - **Calendar.** «Legg til i kalender» åpner telefonens eget skjema for ny hendelse
   (`native/app/src/lib/addToCalendar.ts`), og `READ_CALENDAR` og `WRITE_CALENDAR` står i
   `blockedPermissions`. Hendelsen blir på telefonen.
+- **Biometri (fingeravtrykk).** Låsen på appen (#2841, `AppLockGate.tsx`) spør telefonen
+  om fingeren passer og får bare et ja eller nei tilbake, aldri fingeravtrykket. Googles
+  «'Collect' means transmitting data from your app off a user's device» treffer ikke:
+  ingenting forlater telefonen, og valget ligger på telefonen. Pluginen legger til
+  `USE_BIOMETRIC`, som er en normal tillatelse uten spørsmål og ikke en datatype i
+  skjemaet.
 - **Photos and videos.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis
   til telefonens delingsark (`native/app/src/lib/shareImage.ts`). Det lastes ikke opp til
   oss. For Kavalkade-kort lagrer vi bare at det ble delt (raden App interactions).
