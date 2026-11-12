@@ -71,6 +71,20 @@ export function rosterOptionalAtPublish({
 }
 
 /**
+ * Whether the organiser starts on the roster (#2840, owner's choice). With team
+ * registration through the link, the organiser signs up their own team like
+ * everyone else: on the roster from the start, their team submit would answer
+ * `already_registered` (#2072). This is the rule's one home; the web wizard
+ * (`useGameFormState`) and the app's wizard read it.
+ */
+export function organiserStartsOnRoster(
+  registrationMode: RegistrationMode,
+  registrationType: RegistrationType,
+): boolean {
+  return !(registrationType === 'team' && registrationMode !== 'invite_only');
+}
+
+/**
  * Whether a game is a club tournament when its roster is judged (#2433): it
  * belongs to a club and is not a cup match. A cup match in a club cup carries
  * `group_id` too (`insertCupMatches` writes it on every match) and stays on

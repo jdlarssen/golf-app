@@ -1098,6 +1098,57 @@ describe('useGameFormState — lag-handicap over taket stopper publisering uanse
   });
 });
 
+describe('useGameFormState — arrangøren og lagpåmelding (#2840)', () => {
+  function kompisTexas() {
+    const hook = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES, currentUserId: 'p-mann' }),
+    );
+    act(() => {
+      hook.result.current.setIntent('kompis');
+      hook.result.current.handleModeChange('texas_scramble');
+    });
+    return hook;
+  }
+
+  it('lagpåmelding tar arrangøren ut av lista, og lista blir valgfri ved publisering', () => {
+    const { result } = kompisTexas();
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']);
+
+    act(() => result.current.setRegistrationMode('open'));
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']); // still solo signup
+
+    act(() => result.current.setRegistrationType('team'));
+    expect(result.current.selectedPlayerIds).toEqual([]);
+    expect(result.current.playersStepOptional).toBe(true);
+  });
+
+  it('typen først, så påmeldingen: arrangøren går ut når påmeldingen åpnes', () => {
+    const { result } = kompisTexas();
+    act(() => result.current.setRegistrationType('team'));
+    expect(result.current.selectedPlayerIds).toEqual(['p-mann']); // invite_only: the organiser picks
+
+    act(() => result.current.setRegistrationMode('manual_approval'));
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+
+  it('bytter du tilbake, legges arrangøren ikke inn igjen av seg selv', () => {
+    const { result } = kompisTexas();
+    act(() => result.current.setRegistrationMode('open'));
+    act(() => result.current.setRegistrationType('team'));
+    act(() => result.current.setRegistrationType('solo'));
+    act(() => result.current.setRegistrationMode('invite_only'));
+    expect(result.current.selectedPlayerIds).toEqual([]);
+  });
+
+  it('andre spillere blir stående', () => {
+    const { result } = kompisTexas();
+    act(() => result.current.togglePlayer('p-dame'));
+    act(() => result.current.setRegistrationMode('open'));
+    act(() => result.current.setRegistrationType('team'));
+    expect(result.current.selectedPlayerIds).toEqual(['p-dame']);
+  });
+});
+
 describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-intent (#1066)', () => {
   it('setIntent("kompis") preselecter currentUserId når selection er tom', () => {
     const { result } = renderHook(() =>

@@ -29,6 +29,7 @@ import {
 import {
   gameModeSupportsTeams,
   isClubTournament,
+  organiserStartsOnRoster,
   rosterOptionalAtPublish,
   type RegistrationMode,
   type RegistrationType,
@@ -824,13 +825,13 @@ export function useGameFormState({
   // pre-fyller fra initialValues hvis spillet allerede er konfigurert.
   // Rå admin-valg (det brukeren faktisk klikket i påmeldings-radioene). Den
   // effektive modusen deriveres lenger ned fra dette pluss klubb-scope.
-  const [registrationModeChoice, setRegistrationMode] = useState<RegistrationMode>(
+  const [registrationModeChoice, setRegistrationModeRaw] = useState<RegistrationMode>(
     initialValues?.registration_mode ?? 'invite_only',
   );
   // #1792: 'both' er ikke lenger valgbart i UI-et. Et eksisterende both-spill
   // (edit-flyt / restaurert wizard-draft) behandles som lag — coercion her gjør
   // at «Lag»-radioen står valgt i stedet for at ingen radio matcher state.
-  const [registrationType, setRegistrationType] = useState<RegistrationType>(
+  const [registrationType, setRegistrationTypeRaw] = useState<RegistrationType>(
     initialValues?.registration_type === 'both'
       ? 'team'
       : (initialValues?.registration_type ?? 'solo'),
@@ -895,7 +896,13 @@ export function useGameFormState({
     }
     if (next !== 'klubb') setGroupId('');
     else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
-    if (next === 'kompis' && currentUserId) {
+    // #2840: not with team registration — the organiser signs up their team
+    // through the link like everyone else.
+    if (
+      next === 'kompis' &&
+      currentUserId &&
+      organiserStartsOnRoster(registrationModeChoice, registrationType)
+    ) {
       setSelectedPlayerIds((prev) =>
         prev.length === 0 ? [currentUserId] : prev,
       );
@@ -942,6 +949,30 @@ export function useGameFormState({
   // players (owner's answer 31.10): the same lock, the raw choice kept.
   const registrationMode: RegistrationMode =
     isClubScoped || teeOffNow ? 'invite_only' : registrationModeChoice;
+
+  // #2840 (owner's choice): when the choice becomes team registration, the
+  // organiser leaves the roster with their team and flight, so they can sign
+  // up their own team through the link. Switching back does not re-add them.
+  // The rule's home is organiserStartsOnRoster; the effective mode counts, so
+  // a club tournament or «Nå» (locked to invite_only) keeps the organiser.
+  function dropOrganiserIfTeamSignup(mode: RegistrationMode, type: RegistrationType) {
+    const effective = isClubScoped || teeOffNow ? 'invite_only' : mode;
+    if (
+      currentUserId &&
+      !organiserStartsOnRoster(effective, type) &&
+      selectedPlayerIds.includes(currentUserId)
+    ) {
+      togglePlayer(currentUserId);
+    }
+  }
+  function setRegistrationMode(next: RegistrationMode) {
+    setRegistrationModeRaw(next);
+    dropOrganiserIfTeamSignup(next, registrationType);
+  }
+  function setRegistrationType(next: RegistrationType) {
+    setRegistrationTypeRaw(next);
+    dropOrganiserIfTeamSignup(registrationModeChoice, next);
+  }
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
@@ -1084,7 +1115,7 @@ export function useGameFormState({
     // til 'solo' — ellers ville payload-validatoren feilet med
     // `team_registration_unsupported_mode` ved publish.
     if (!gameModeSupportsTeams(next)) {
-      setRegistrationType('solo');
+      setRegistrationTypeRaw('solo');
     }
   }
 
