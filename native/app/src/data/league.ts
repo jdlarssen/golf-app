@@ -20,6 +20,10 @@
 //   GET  /api/liga/bli-med/{code}          200 AppLeagueJoinView · 401 · 404 · 500  (#2748)
 //   POST /api/liga/bli-med/{code}          200 { leagueId } · 401 · 404
 //        409 { error: 'closed' | 'profile_incomplete' } · 500 { error: 'read_failed' | 'save_failed' }
+//   POST /api/liga/{id}/meld-pa            200 { leagueId } · 401 · 404
+//        409 { error: 'not_draft' | 'not_member' | 'not_club_league' } · 500 { error: 'save_failed' }  (#2839)
+//   POST /api/liga/{id}/meld-av            200 { leagueId } · 401 · 404
+//        409 { error: 'finished' | 'not_member' | 'already_played' | 'not_club_league' } · 500 { error: 'save_failed' }
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som
 // `startGame.ts`). HTTP-status oversettes én gang, her. Teksten bor i
@@ -220,4 +224,74 @@ export async function joinLeague(code: string): Promise<LeagueJoinResult> {
     return { ok: false, reason: error };
   }
   return { ok: false, reason: error === 'read_failed' ? 'read_failed' : 'save_failed' };
+}
+
+/**
+ * Hvorfor klubbligaens «Bli med» ikke gikk gjennom (#2839): rutas egne koder og
+ * appens egen tilstand før kallet. En kode vi ikke kjenner på wiren blir
+ * `save_failed`.
+ */
+export type ClubLeagueJoinFailure =
+  | WebApiFailure
+  | 'not_found'
+  | 'not_draft'
+  | 'not_member'
+  | 'not_club_league'
+  | 'save_failed';
+
+/** Hvorfor «Meld deg av» ikke gikk gjennom (#2839). */
+export type ClubLeagueLeaveFailure =
+  | WebApiFailure
+  | 'not_found'
+  | 'finished'
+  | 'not_member'
+  | 'already_played'
+  | 'not_club_league'
+  | 'save_failed';
+
+export type ClubLeagueJoinResult = { ok: true; leagueId: string } | { ok: false; reason: ClubLeagueJoinFailure };
+export type ClubLeagueLeaveResult = { ok: true; leagueId: string } | { ok: false; reason: ClubLeagueLeaveFailure };
+
+const JOIN_REFUSALS: readonly unknown[] = ['not_draft', 'not_member', 'not_club_league'];
+const LEAVE_REFUSALS: readonly unknown[] = ['finished', 'not_member', 'already_played', 'not_club_league'];
+
+/** Felles for de to rutene: 200 → ok, 409 → kjent kode, alt annet → generisk. */
+async function postSelfService<R extends string>(
+  leagueId: string,
+  route: 'meld-pa' | 'meld-av',
+  refusals: readonly unknown[],
+): Promise<{ ok: true; leagueId: string } | { ok: false; reason: R | WebApiFailure | 'not_found' | 'save_failed' }> {
+  const call = await callWebRoute(`/api/liga/${encodeURIComponent(leagueId)}/${route}`, 'POST');
+  if (!call.ok) return call;
+  if (call.status === 200) {
+    const id = call.body.leagueId;
+    return typeof id === 'string' && id !== '' ? { ok: true, leagueId: id } : { ok: false, reason: 'save_failed' };
+  }
+  if (call.status === 401) return { ok: false, reason: 'unauthorized' };
+  if (call.status === 404) return { ok: false, reason: 'not_found' };
+  const { error } = call.body;
+  if (call.status === 409 && refusals.includes(error)) return { ok: false, reason: error as R };
+  return { ok: false, reason: 'save_failed' };
+}
+
+/**
+ * «Bli med i ligaen» for et klubbmedlem (#2839): du står på lista med en gang.
+ * Et kall til gir samme svar og ingen ny rad. Går ALDRI i sync-køen: uten nett
+ * stopper den før kallet.
+ */
+export function joinClubLeague(leagueId: string): Promise<ClubLeagueJoinResult> {
+  return postSelfService<Exclude<ClubLeagueJoinFailure, WebApiFailure | 'not_found' | 'save_failed'>>(
+    leagueId,
+    'meld-pa',
+    JOIN_REFUSALS,
+  );
+}
+
+/** «Meld meg av» (#2839): raden din i ligaen er borte, til du er med igjen. Aldri i sync-køen. */
+export function leaveClubLeague(leagueId: string): Promise<ClubLeagueLeaveResult> {
+  return postSelfService<Exclude<ClubLeagueLeaveFailure, WebApiFailure | 'not_found' | 'save_failed'>>(
+    leagueId,
+    'meld-av',
+    LEAVE_REFUSALS,
+  );
 }

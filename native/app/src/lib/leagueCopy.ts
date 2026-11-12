@@ -22,7 +22,13 @@ import type {
 } from '../../../../lib/league/appLeagueView';
 import { formatRoundCell } from '../../../../lib/league/standingsFormat';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '../../../../lib/league/types';
-import type { LeagueJoinFailure, LeagueLoadFailure, LeagueStartFailure } from '../data/league';
+import type {
+  ClubLeagueJoinFailure,
+  ClubLeagueLeaveFailure,
+  LeagueJoinFailure,
+  LeagueLoadFailure,
+  LeagueStartFailure,
+} from '../data/league';
 import { OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
@@ -105,6 +111,79 @@ export const LEAGUE_JOIN_TEXT = {
   loginTitle: 'Logg inn for å bli med i ligaen',
   loginBody: 'Etterpå ser du ligaen og kan bli med.',
 } as const;
+
+/**
+ * Medlemmets påmelding og avmelding på ligasiden (#2839), med nettets ord:
+ * `liga.player.join*`, `liga.player.leaveLink` og `liga.player.meldAv.*`.
+ */
+export const LEAGUE_SELF_TEXT = {
+  joinHeading: 'Bli med i ligaen',
+  joinSubtitle: 'Du er medlem i klubben. Meld deg på før ligaen starter.',
+  joinButton: 'Bli med i ligaen',
+  joinPending: 'Melder deg på …',
+  leaveLink: 'Meld deg av ligaen',
+  /** `liga.player.meldAv.heading`, med `{name}`. */
+  leaveHeading: 'Meld deg av «{name}»?',
+  leaveSubtitle: 'Du tas ut av sesong-tabellen, men kan bli med igjen så lenge ligaen ikke har startet.',
+  leaveButton: 'Meld meg av',
+  leavePending: 'Melder deg av …',
+  cancel: 'Avbryt',
+  /** `liga.player.joinErrors.join_failed` og `meldAv.errors.leave_failed`. */
+  failed: 'Noe gikk galt. Prøv igjen.',
+} as const;
+
+function selfServiceTransportFailure(reason: 'offline' | 'no-web-base-url' | 'unauthorized'): string {
+  switch (reason) {
+    case 'offline':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+  }
+}
+
+/** Feilen under «Bli med i ligaen» (`liga.player.joinErrors.*`). */
+export function describeClubLeagueJoinFailure(reason: ClubLeagueJoinFailure): string {
+  switch (reason) {
+    case 'offline':
+    case 'no-web-base-url':
+    case 'unauthorized':
+      return selfServiceTransportFailure(reason);
+    case 'not_draft':
+      return 'Ligaen har allerede startet. Be klubb-admin om å legge deg til.';
+    case 'not_member':
+      return 'Du er ikke medlem av klubben.';
+    case 'not_club_league':
+      return 'Denne ligaen kan du ikke bli med i selv.';
+    case 'not_found':
+    case 'network':
+    case 'save_failed':
+      return LEAGUE_SELF_TEXT.failed;
+  }
+}
+
+/** Feilen under «Meld meg av» (`liga.player.meldAv.errors.*`). */
+export function describeClubLeagueLeaveFailure(reason: ClubLeagueLeaveFailure): string {
+  switch (reason) {
+    case 'offline':
+    case 'no-web-base-url':
+    case 'unauthorized':
+      return selfServiceTransportFailure(reason);
+    case 'already_played':
+      return 'Du har allerede spilt en runde. Be klubb-admin om å fjerne deg.';
+    case 'finished':
+      return 'Ligaen er avsluttet.';
+    case 'not_member':
+      return 'Du er ikke med i denne ligaen.';
+    case 'not_club_league':
+      return 'Denne ligaen kan du ikke melde deg av selv.';
+    case 'not_found':
+    case 'network':
+    case 'save_failed':
+      return LEAGUE_SELF_TEXT.failed;
+  }
+}
 
 /** Innstillingskortet (`liga.simSettings.*`). */
 export const SIM_SETTINGS_TEXT = {

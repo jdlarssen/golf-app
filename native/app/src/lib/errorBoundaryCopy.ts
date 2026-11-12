@@ -54,6 +54,7 @@ const VARIANT_BY_ROUTE = {
   Kavalkade: 'default',
   League: 'default',
   LeagueJoin: 'default',
+  LeagueLeave: 'default',
   InvitationLink: 'default',
   RoundInvite: 'default',
   Terminliste: 'default',

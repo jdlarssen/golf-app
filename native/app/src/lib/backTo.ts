@@ -94,6 +94,7 @@ const PARENT: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>
   LeagueRoundStart: 'League',
   MarkerApprove: 'League',
   LeagueCard: 'League',
+  LeagueLeave: 'League',
   Profile: 'Home',
   EditProfile: 'Profile',
   Inbox: 'Home',

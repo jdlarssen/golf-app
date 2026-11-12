@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Share, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import type { LeagueResult } from '../data/league';
+import type { ClubLeagueJoinResult, LeagueResult } from '../data/league';
 import type { ScreenProps } from '../navigation';
 import { leagueRound, leagueView } from '../test/leagueFixtures';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
@@ -17,6 +17,7 @@ jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/league', () => ({
   fetchLeague: jest.fn(async () => mockResults.shift() ?? mockLast),
+  joinClubLeague: jest.fn(async () => mockSelfJoin()),
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 // Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen.
@@ -31,6 +32,12 @@ jest.mock('@react-navigation/native', () => ({
 let mockFocus: () => void = () => {};
 let mockResults: LeagueResult[] = [];
 let mockLast: LeagueResult = { ok: false, reason: 'offline' };
+let mockSelfJoin: () => Promise<ClubLeagueJoinResult> | ClubLeagueJoinResult = () => ({ ok: true, leagueId: 'liga-vinter' });
+
+const { fetchLeague, joinClubLeague } = jest.requireMock('../data/league') as {
+  fetchLeague: jest.Mock;
+  joinClubLeague: jest.Mock;
+};
 
 function answer(...results: LeagueResult[]) {
   mockResults = [...results];
@@ -66,7 +73,9 @@ async function renderLeague(params: { joined?: boolean } = {}, below: StackRoute
 }
 
 beforeEach(() => {
+  jest.clearAllMocks();
   answer({ ok: true, view: leagueView() });
+  mockSelfJoin = () => ({ ok: true, leagueId: 'liga-vinter' });
 });
 
 describe('tegning 2: øvre del', () => {
@@ -131,7 +140,7 @@ describe('når «Spill runden» ikke vises', () => {
 
   it.each([
     ['du er i gang', (v: ReturnType<typeof leagueView>) => ({ ...v, rounds: v.rounds.map((r) => (r.id === 'r3' ? { ...r, inProgress: ['me'] } : r)) })],
-    ['du ikke er deltaker', (v: ReturnType<typeof leagueView>) => ({ ...v, me: { userId: 'me', isParticipant: false, isOrganizer: false } })],
+    ['du ikke er deltaker', (v: ReturnType<typeof leagueView>) => ({ ...v, me: { userId: 'me', isParticipant: false, isOrganizer: false, canJoin: false, canLeave: false } })],
     ['ligaen ikke er startet', (v: ReturnType<typeof leagueView>) => ({ ...v, league: { ...v.league, status: 'draft' as const } })],
   ])('%s', async (_label, change) => {
     answer({ ok: true, view: change(leagueView()) });
@@ -535,5 +544,79 @@ describe('kvitteringen etter «Bli med»', () => {
   it('står ikke ellers', async () => {
     await renderLeague();
     expect(screen.queryByTestId('league-joined-banner')).toBeNull();
+  });
+});
+
+// #2839: klubbmedlemmet melder seg på og av. Hvilke knapper som vises, avgjør
+// serveren (`me.canJoin` / `me.canLeave`); skjermen regner ingen regel selv.
+describe('meld deg på og av en klubbliga (#2839)', () => {
+  const notIn = { isParticipant: false, canJoin: true, canLeave: false };
+
+  it('«Bli med»-kortet vises bare når serveren sier canJoin, og lenka bare ved canLeave', async () => {
+    answer({ ok: true, view: leagueView({ me: notIn }) });
+    await renderLeague();
+    expect(screen.getByText('Du er medlem i klubben. Meld deg på før ligaen starter.')).toBeTruthy();
+    expect(screen.getByTestId('league-signup-button')).toHaveTextContent('Bli med i ligaen');
+    expect(screen.queryByTestId('league-leave-link')).toBeNull();
+  });
+
+  it('en deltaker som kan melde seg av, får lenka og ikke kortet', async () => {
+    answer({ ok: true, view: leagueView({ me: { canLeave: true } }) });
+    await renderLeague();
+    expect(screen.getByTestId('league-leave-link')).toHaveTextContent('Meld deg av ligaen');
+    expect(screen.queryByTestId('league-signup')).toBeNull();
+  });
+
+  it('ingen av dem når serveren sier nei (spilt, avsluttet, frittstående)', async () => {
+    await renderLeague();
+    expect(screen.queryByTestId('league-signup')).toBeNull();
+    expect(screen.queryByTestId('league-leave-link')).toBeNull();
+  });
+
+  it('lenka åpner bekreftelsesskjermen for denne ligaen', async () => {
+    answer({ ok: true, view: leagueView({ me: { canLeave: true } }) });
+    const { navigate } = await renderLeague();
+    await fireEvent.press(screen.getByTestId('league-leave-link'));
+    expect(navigate).toHaveBeenCalledWith('LeagueLeave', { leagueId: 'liga-vinter' });
+  });
+
+  it('ett trykk er ett kall, knappen er av mens det går, og ligaen hentes på nytt med kvitteringen', async () => {
+    let finish: (result: ClubLeagueJoinResult) => void = () => {};
+    mockSelfJoin = () =>
+      new Promise<ClubLeagueJoinResult>((resolve) => {
+        finish = resolve;
+      });
+    answer({ ok: true, view: leagueView({ me: notIn }) }, { ok: true, view: leagueView({ me: { canLeave: true } }) });
+    const { setParams } = await renderLeague();
+    const button = screen.getByTestId('league-signup-button');
+    await fireEvent.press(button);
+    await fireEvent.press(button);
+    expect(joinClubLeague).toHaveBeenCalledTimes(1);
+    expect(joinClubLeague).toHaveBeenCalledWith('liga-vinter');
+    expect(screen.getByTestId('league-signup-button')).toBeDisabled();
+    expect(screen.getByTestId('league-signup-button')).toHaveTextContent('Melder deg på …');
+
+    await act(async () => finish({ ok: true, leagueId: 'liga-vinter' }));
+    expect(setParams).toHaveBeenCalledWith({ joined: true });
+    expect(fetchLeague).toHaveBeenCalledTimes(2);
+    // Etter ny henting er kortet borte og lenka er der.
+    expect(screen.queryByTestId('league-signup')).toBeNull();
+    expect(screen.getByTestId('league-leave-link')).toBeTruthy();
+  });
+
+  it.each([
+    ['not_draft', 'Ligaen har allerede startet. Be klubb-admin om å legge deg til.'],
+    ['not_member', 'Du er ikke medlem av klubben.'],
+    ['not_club_league', 'Denne ligaen kan du ikke bli med i selv.'],
+    ['offline', 'Du er uten nett. Prøv igjen når nettet er tilbake.'],
+    ['save_failed', 'Noe gikk galt. Prøv igjen.'],
+  ] as const)('feilen %s står med riktig tekst, og knappen står igjen', async (reason, text) => {
+    mockSelfJoin = () => ({ ok: false, reason });
+    answer({ ok: true, view: leagueView({ me: notIn }) });
+    const { setParams } = await renderLeague();
+    await fireEvent.press(screen.getByTestId('league-signup-button'));
+    expect(screen.getByTestId('league-self-error')).toHaveTextContent(text);
+    expect(screen.getByTestId('league-signup-button')).not.toBeDisabled();
+    expect(setParams).not.toHaveBeenCalledWith({ joined: true });
   });
 });
