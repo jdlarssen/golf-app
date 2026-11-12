@@ -1,5 +1,5 @@
 // native/app/src/components/create/CourseStep.tsx
-// Native N6a (#1854): steg 3 — hvor og når.
+// Native N6a (#1854, #2753): steg 4 — hvor og når.
 //
 // Bane-lista kollapser til den valgte banen så snart arrangøren har valgt.
 // Med et titalls baner er en åpen liste bare skrolling mellom tee-valget og

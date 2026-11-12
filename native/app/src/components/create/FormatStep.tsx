@@ -1,11 +1,11 @@
 // native/app/src/components/create/FormatStep.tsx
-// Native N6a (#1854): steg 1 — hvilket spill skal dette være?
+// Native N6a (#1854, #2753): steg 2 — hvilket spill skal dette være?
 //
 // **Alle formatene vises, ingen filtreres bort på spillerantall.** Rosteret
-// settes først i steg 4, så på dette tidspunktet er arrangøren alene i lista;
+// settes først i steg 5, så på dette tidspunktet er arrangøren alene i lista;
 // et antalls-filter ville skjult seks av åtte kort på en fersk veiviser og
 // fått appen til å se ødelagt ut. Kortene bærer i stedet antallet formatet
-// krever («3–5 spillere»), og steg 4 sier fra hvis rosteret ikke passer. Det
+// krever («3–5 spillere»), og steg 5 sier fra hvis rosteret ikke passer. Det
 // er også webbens semantikk: den gater ved steg-overgangen, ikke ved å
 // nullstille formatvalget under føttene på arrangøren.
 //

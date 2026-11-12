@@ -115,10 +115,14 @@ function sharesIdentity(route: RouteLike, params: object | undefined): boolean {
 }
 
 /**
- * Veivisere som startet skjemaet. «Opprett spill» åpner cup-veiviseren fra
- * typevalget (#2753); er cupen laget, hører typevalget ikke hjemme bak den.
+ * Skjemaer som åpnes fra en veiviser og tar den med seg ut. Cup-veiviseren
+ * legges oppå typevalget i «Opprett spill» (#2753); er cupen laget, hører
+ * typevalget ikke hjemme bak den. Bare rett under skjemaet: en lenkeskjerm
+ * over en åpen veiviser lar veiviseren stå (regel 1, #2748).
  */
-const STARTERS = new Set(['CreateGame']);
+const STARTED_FROM: Partial<Record<keyof RootStackParamList, keyof RootStackParamList>> = {
+  CreateCup: 'CreateGame',
+};
 
 /**
  * Hvor mange skjermer under den du står på, skal bli liggende når `backTo`
@@ -126,14 +130,16 @@ const STARTERS = new Set(['CreateGame']);
  * som ligger over den nærmeste skjermen over målet i hierarkiet, går ut sammen
  * med skjemaet. Kortet levert fra Hjem-kortets hull ([Hjem, Hull 18,
  * Scorekort]) gir da [Hjem, Spillet], ikke [Hjem, Hull 18, Spillet] der
- * tilbake fra spillet ville åpnet hullet på kortet du nettopp leverte. En
- * veiviser som startet skjemaet, går også ut ([Hjem, Opprett spill, Ny cup]
+ * tilbake fra spillet ville åpnet hullet på kortet du nettopp leverte. Veiviseren
+ * som åpnet skjemaet rett over seg, går også ut ([Hjem, Opprett spill, Ny cup]
  * gir [Hjem, Cupen]). Alt annet blir liggende.
  */
 export function keepBelow(routes: readonly RouteLike[], name: string, params: object | undefined): number {
+  const form = routes.at(-1)?.name as keyof RootStackParamList | undefined;
+  const starter = form ? STARTED_FROM[form] : undefined;
   for (let i = routes.length - 2; i >= 0; i--) {
     const route = routes[i]!;
-    if (STARTERS.has(route.name)) continue;
+    if (i === routes.length - 2 && route.name === starter) continue;
     if (isAbove(route.name, name) || !sharesIdentity(route, params)) return i + 1;
   }
   return 0;

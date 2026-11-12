@@ -15,11 +15,12 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { createCourse } from '../data/createCourse';
 import { publishGame } from '../data/createGame';
 import { saveProfile } from '../data/profile';
-import type { RootStackParamList } from '../navigation';
+import { backTo } from '../lib/backTo';
+import type { RootStackParamList, ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { CreateCourse } from './CreateCourse';
 import { CreateGame } from './CreateGame';
@@ -86,8 +87,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ref = createNavigationContainerRef<RootStackParamList>();
 
 const HomeStub = () => <View testID="home-stub" />;
-// Cup-veiviseren har sine egne tester. Her teller bare stakken.
-const CreateCupStub = () => <View testID="create-cup-stub" />;
+// Cup-veiviseren har sine egne tester. Her teller bare stakken: «ferdig» går til
+// cup-rommet slik `CreateCup` gjør når cupen er laget.
+const CreateCupStub = ({ navigation }: ScreenProps<'CreateCup'>) => (
+  <Pressable testID="cup-done" onPress={() => backTo(navigation, 'Cup', { cupId: 'c1' })} />
+);
+const CupStub = () => <View testID="cup-stub" />;
+// En lenkeskjerm (#2748) som sender deg til runden når du er med, slik
+// `RoundInvite` gjør.
+const InviteStub = ({ navigation }: ScreenProps<'RoundInvite'>) => (
+  <Pressable testID="invite-done" onPress={() => backTo(navigation, 'GameHome', { gameId: 'g1' })} />
+);
 const GameStub = () => <View testID="game-stub" />;
 
 const wizardIsOpen = () => ref.getRootState()?.routes.at(-1)?.name === 'CreateGame';
@@ -109,6 +119,8 @@ async function openWizard({ atType = false }: { atType?: boolean } = {}) {
           <Stack.Screen name="CreateCourse" component={CreateCourse} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="CreateCup" component={CreateCupStub} />
+          <Stack.Screen name="RoundInvite" component={InviteStub} />
+          <Stack.Screen name="Cup" component={CupStub} />
           <Stack.Screen name="GameHome" component={GameStub} />
         </Stack.Navigator>
       </NavigationContainer>
@@ -205,6 +217,29 @@ describe('CreateGame i en ekte navigator (#2746)', () => {
     expect(screen.getByTestId('create-type-cup').props.accessibilityState).toMatchObject({
       selected: true,
     });
+
+    // Laget cupen: typevalget går ut med cup-veiviseren, og tilbake fra cupen er Hjem.
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('cup-done'));
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual(['Home', 'Cup']);
+  });
+
+  it.each([
+    ['steg 1', true],
+    ['steg 2', false],
+  ])('en lenke over veiviseren på %s: runden legges oppå, veiviseren står (#2748, #2753)', async (_step, atType) => {
+    await openWizard({ atType });
+    await act(async () => {
+      ref.navigate('RoundInvite', { shortId: 'abc123', src: null });
+    });
+    await fireEvent.press(screen.getByTestId('invite-done'));
+    expect(ref.getRootState()?.routes.map((route) => route.name)).toEqual([
+      'Home',
+      'CreateGame',
+      'GameHome',
+    ]);
+    await pressBack();
+    expect(screen.getByTestId(atType ? 'create-step-type' : 'create-step-format')).toBeTruthy();
   });
 
   it('«Ny bane»: tilbake lar veiviseren stå, og lagret bane er borte fra tilbake-veien (#2757)', async () => {

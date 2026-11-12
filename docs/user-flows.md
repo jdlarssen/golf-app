@@ -142,7 +142,9 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
    skjermen skjemaet førte til. Lå den bak deg, går du tilbake til den, og tilbake derfra går dit
    du kom fra. Lå den ikke bak deg, tar den skjemaets plass, og skjermer fra samme spill rett under
    skjemaet går ut sammen med det, så sant de ikke står over den i hierarkiet. Leverer du kortet
-   fra et hull du åpnet på Hjem, havner du på spillet, og tilbake går til Hjem.
+   fra et hull du åpnet på Hjem, havner du på spillet, og tilbake går til Hjem. Lager du en cup
+   fra typevalget i «Opprett spill», går typevalget ut sammen med cup-veiviseren, og tilbake fra
+   cupen går til Hjem (#2753). En lenke som åpnes over en veiviser, lar veiviseren stå (regel 1).
 4. **Går du til en skjerm du alt har bak deg, kommer du tilbake til den.** Du får aldri en ny kopi
    oppå. Hull → tavla → hull gir ett hull, ikke tre skjermer. Å bla mellom hull, eller mellom netto
    og brutto på tavla, regnes som samme skjerm.
