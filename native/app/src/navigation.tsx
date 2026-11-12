@@ -11,6 +11,7 @@
 // Param-lista er hele kontrakten mellom skjermene: en skjerm kan ikke åpnes
 // uten id-ene den trenger, og `tsc` sier fra hvis noen navigerer feil.
 import type { CupSessionFormat } from '../../../lib/cup/cupTemplates';
+import type { TerminFilter } from '../../../lib/games/terminliste';
 import {
   DarkTheme,
   DefaultTheme,
@@ -41,6 +42,7 @@ import type { PushTarget } from './lib/pushRoute';
 import { END_GAME_TEXT } from './lib/endGameCopy';
 import { INVITATION_LINK_TEXT } from './lib/invitationLinkCopy';
 import { ROUND_INVITE_TEXT } from './lib/roundInviteCopy';
+import { TERMIN_TEXT } from './lib/terminlisteCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { COURSE_TEXT } from './lib/courseCopy';
 import { CUP_APP_TEXT } from './lib/cupCopy';
@@ -99,6 +101,7 @@ import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { RoundDiary } from './screens/RoundDiary';
 import { RoundInvite } from './screens/RoundInvite';
+import { Terminliste } from './screens/Terminliste';
 import { RoundStats } from './screens/RoundStats';
 import { Kavalkade } from './screens/Kavalkade';
 import { Scorecard } from './screens/Scorecard';
@@ -191,6 +194,11 @@ export type RootStackParamList = {
   InvitationLink: { token: string };
   /** Den delte påmeldingslenka (#2748). `src` er lenkas `?src=`, som følger med påmeldingen. */
   RoundInvite: { shortId: string; src: string | null };
+  /**
+   * Terminlista (#2838): «Finn turneringer», åpne runder sortert på dag. `filter`
+   * åpner den rett på en brikke (klubbturneringene, #2753, åpner «klubb»).
+   */
+  Terminliste: { filter?: TerminFilter } | undefined;
   /**
    * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
    * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
@@ -529,6 +537,12 @@ export function RootNavigator() {
           name="RoundInvite"
           component={RoundInvite}
           options={kickerHeader(ROUND_INVITE_TEXT.kicker, ROUND_INVITE_TEXT.kicker)}
+        />
+        {/* Terminlista (#2838): «Finn turneringer», åpne runder du kan bli med på. */}
+        <Stack.Screen
+          name="Terminliste"
+          component={Terminliste}
+          options={kickerHeader(TERMIN_TEXT.kicker, TERMIN_TEXT.kicker)}
         />
         {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
             «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}

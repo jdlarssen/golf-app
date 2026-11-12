@@ -56,6 +56,7 @@ const VARIANT_BY_ROUTE = {
   LeagueJoin: 'default',
   InvitationLink: 'default',
   RoundInvite: 'default',
+  Terminliste: 'default',
   Cup: 'default',
   CupManage: 'default',
   CupWithdraw: 'default',

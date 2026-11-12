@@ -26,6 +26,9 @@ export const HOME_TEXT = {
   /** Åpner Rundedagboka (#2265). */
   allRounds: 'Alle runder',
   createGame: 'Opprett spill',
+  /** #2838: raden under «Opprett spill». Webbens `discover.kicker` og `discover.termin.subtitle`. */
+  findTournaments: 'Finn turneringer',
+  findTournamentsSub: 'Åpne runder du kan bli med på',
   /** Webbens `home.playerFallback`, når profilen mangler navn. */
   playerFallback: 'spiller',
   hcp: 'HCP',
