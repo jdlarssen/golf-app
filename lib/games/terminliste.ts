@@ -9,7 +9,11 @@
  */
 
 import { osloParts } from '@/lib/format/teeOff';
-import { osloDateKey, osloWeekendDateKeys } from '@/lib/format/osloCalendar';
+import {
+  osloDateKey,
+  osloWeekendDateKeys,
+  type DatePartsReader,
+} from '@/lib/format/osloCalendar';
 import { holeCountForSegment } from './holeScope';
 import type {
   DiscoverableClubGame,
@@ -142,8 +146,8 @@ function teeOffTime(entry: TerminEntry): number | null {
  * Whole-day ordinal of a wall-clock date. TZ-free: two such numbers are only
  * ever subtracted (the same idiom as `teeOffProximity`).
  */
-function dayNumber(date: Date): number {
-  const { year, month, day } = osloParts(date);
+function dayNumber(date: Date, parts: DatePartsReader): number {
+  const { year, month, day } = parts(date);
   return Math.floor(Date.UTC(year, month, day) / 86_400_000);
 }
 
@@ -153,10 +157,14 @@ function dayNumber(date: Date): number {
  * `teeOffProximity` there is no six-day stop. A day before today (a round still
  * `scheduled`/`draft` after its date) sorts first, without a label. Rounds
  * without a readable time come last in one «Dato ikke satt» group.
+ *
+ * `parts` is the calendar the days are read on: Oslo by default, the device's
+ * own in the native app, where Hermes has no Europe/Oslo zone (#2838).
  */
 export function groupTerminByDate(
   entries: readonly TerminEntry[],
   now: Date,
+  parts: DatePartsReader = osloParts,
 ): TerminGroup[] {
   const byName = (a: TerminEntry, b: TerminEntry) => a.name.localeCompare(b.name, 'nb');
 
@@ -166,17 +174,17 @@ export function groupTerminByDate(
     .sort((a, b) => a.time - b.time || byName(a.entry, b.entry));
   const undated = entries.filter((e) => teeOffTime(e) === null).sort(byName);
 
-  const today = dayNumber(now);
+  const today = dayNumber(now, parts);
   const groups: TerminGroup[] = [];
   for (const { entry } of dated) {
     const teeOff = new Date(entry.scheduled_tee_off_at as string);
-    const key = osloDateKey(teeOff);
+    const key = osloDateKey(teeOff, parts);
     const last = groups[groups.length - 1];
     if (last?.kind === 'day' && last.key === key) {
       last.entries.push(entry);
       continue;
     }
-    const diff = dayNumber(teeOff) - today;
+    const diff = dayNumber(teeOff, parts) - today;
     const label: TerminDayLabel =
       diff < 0
         ? null
@@ -207,19 +215,21 @@ export function parseTerminFilter(raw: string | null | undefined): TerminFilter 
 
 /**
  * «Denne helga» keeps rounds on the coming (or current) Oslo weekend;
- * «Klubben min» keeps the rounds from your clubs, dated or not.
+ * «Klubben min» keeps the rounds from your clubs, dated or not. `parts` as in
+ * `groupTerminByDate`.
  */
 export function filterTermin(
   entries: readonly TerminEntry[],
   filter: TerminFilter,
   now: Date,
+  parts: DatePartsReader = osloParts,
 ): TerminEntry[] {
   if (filter === 'klubb') return entries.filter((e) => e.source === 'club');
   if (filter === 'helg') {
-    const weekend = new Set(osloWeekendDateKeys(now));
+    const weekend = new Set(osloWeekendDateKeys(now, parts));
     return entries.filter((e) => {
       const t = teeOffTime(e);
-      return t !== null && weekend.has(osloDateKey(new Date(t)));
+      return t !== null && weekend.has(osloDateKey(new Date(t), parts));
     });
   }
   return [...entries];
