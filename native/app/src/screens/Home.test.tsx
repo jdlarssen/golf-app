@@ -6,7 +6,7 @@
 // seg ned når en runde pågår, og at heltekortet tegnes fra enheten når nettet
 // er borte.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native';
 import type { CardBundle } from '../data/homeHero';
@@ -656,6 +656,8 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     expect(screen.getByTestId('terminliste-row-k1')).toBeTruthy();
     expect(screen.queryByTestId('terminliste-row-f1')).toBeNull();
     expect(screen.getByText('Byneset GK · Byneset North · Stableford')).toBeTruthy();
+    // Datoen står i dagoverskriften, som i terminlista (evaluatorens funn på D4).
+    expect(within(screen.getByTestId('home-club-rounds')).getByText('om 3 dager')).toBeTruthy();
     const order = testIdsInOrder();
     expect(order.indexOf('home-cups')).toBeLessThan(order.indexOf('home-club-rounds'));
 
