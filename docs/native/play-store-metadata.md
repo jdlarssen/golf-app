@@ -148,6 +148,11 @@ Dette hakes **ikke** av, og her er grunnen:
   ingenting forlater telefonen, og valget ligger på telefonen. Pluginen legger til
   `USE_BIOMETRIC` og `USE_FINGERPRINT`, som er normale tillatelser uten spørsmål og
   ikke en datatype i skjemaet.
+  Appvelgeren: fra Android 13 (API 33) ber appen systemet la være å ta bilde til
+  appvelgeren mens låsen er på (`Activity.setRecentsScreenshotEnabled(false)`,
+  `native/app/modules/recents-screenshot`); det rører verken skjermbilder eller
+  skjermopptak og er ikke noe som sendes fra telefonen. Under Android 13 finnes ikke
+  metoden, og appvelgeren viser innholdet som før.
 - **Photos and videos.** Bildet av bag-taggen eller Kavalkaden lages på telefonen og gis
   til telefonens delingsark (`native/app/src/lib/shareImage.ts`). Det lastes ikke opp til
   oss. For Kavalkade-kort lagrer vi bare at det ble delt (raden App interactions).

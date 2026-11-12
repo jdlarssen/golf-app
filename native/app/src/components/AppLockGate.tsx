@@ -16,11 +16,13 @@
 // videre. Fordi bare dekket står, kan Face ID-dialogen (som gir `inactive`) ikke
 // lage en løkke. Dekket skjuler barna for skjermleseren.
 //
-// **Gjelder iOS.** Android tar bildet til appvelgeren når aktiviteten pauser, før
-// `AppState` sier «background», så dekket rekker ikke å tegnes der (målt på
-// emulatoren). Å dekke på Androids `blur` gjør det verre: en RN-`Modal` eller
-// `Alert` tar vindusfokus, så dekket la seg bak hvert bunnark og hver dialog (målt).
-// Hva Android skal gjøre i stedet er et produktvalg, se PR-en (#2841).
+// **Android** har ikke dekket. Android tar bildet til appvelgeren når aktiviteten
+// pauser, før `AppState` sier «background», så et dekk i React rekker det ikke. Dekket
+// på Androids `blur` rakk det, men la seg bak hvert bunnark og hver dialog (en RN-`Modal`
+// tar vindusfokus; målt på emulatoren). I stedet ber vi systemet la være å ta bildet
+// mens låsen er på (`lib/recentsScreenshot.ts`, Android 13 og nyere): appvelgeren viser
+// da temaets bakgrunn uten innhold, og skjermbilder virker som før (eierens valg
+// 12.11). Under Android 13 er det ingen beskyttelse i appvelgeren.
 //
 // **Låseskjermen** er bakgrunnen, ordmerket og én knapp, «Lås opp», som spør på
 // nytt. Ingen «Logg ut»: telefonens kode er alltid reserveveien. Avbryter
@@ -46,6 +48,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { askForUnlock, useAppLock } from '../lib/appLock';
 import { APP_LOCK_TEXT } from '../lib/appLockCopy';
+import { setRecentsScreenshotEnabled } from '../lib/recentsScreenshot';
 import { useTheme } from '../theme';
 import { ShareWordmark } from './ShareCardParts';
 
@@ -82,6 +85,22 @@ export function AppLockGate({ startLocked, onUnlocked, children }: Props) {
     const sub = AppState.addEventListener('change', (next) => setAway(isAway(next)));
     return () => sub.remove();
   }, []);
+
+  // Android 13+: ingen bilde til appvelgeren mens låsen er på, også mens låseskjermen
+  // står. Aktiviteten kan gjenskapes (tema, språk), så kallet gjentas når appen blir aktiv.
+  useEffect(() => {
+    const apply = () => {
+      setRecentsScreenshotEnabled(!lockOn);
+    };
+    apply();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') apply();
+    });
+    return () => {
+      sub.remove();
+      setRecentsScreenshotEnabled(true);
+    };
+  }, [lockOn]);
 
   const ask = useCallback(async () => {
     if (askingRef.current) return;

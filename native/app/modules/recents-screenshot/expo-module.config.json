@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["no.tornygolf.recentsscreenshot.RecentsScreenshotModule"]
+  }
+}

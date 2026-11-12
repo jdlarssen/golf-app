@@ -1,0 +1,17 @@
+// native/app/modules/recents-screenshot/android/build.gradle
+// #2841: se RecentsScreenshotModule.kt.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'no.tornygolf'
+version = '1.0.0'
+
+android {
+  namespace "no.tornygolf.recentsscreenshot"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
