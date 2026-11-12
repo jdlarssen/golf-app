@@ -74,6 +74,12 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 // #2840 del 3: raden til lagsiden har egne tester (`TeamLink.test.tsx`).
+jest.mock('../components/signup/OwnTeamCard', () => ({
+  OwnTeamCard: (props: { shortId: string; onOpen: () => void }) => {
+    const { Pressable } = require('react-native');
+    return <Pressable testID={`stub-own-team-${props.shortId}`} onPress={props.onOpen} />;
+  },
+}));
 jest.mock('../components/signup/TeamLink', () => ({
   TeamLink: (props: { shortId: string; onOpen: () => void }) => {
     const { Pressable } = require('react-native');
@@ -721,6 +727,41 @@ describe('GameHome — startbilletten (#2255)', () => {
     }
     await fireEvent.press(screen.getByTestId('stub-team-link-abcd2345'));
     expect(navigation.navigate).toHaveBeenCalledWith('TeamPage', { shortId: 'abcd2345' });
+  });
+
+  it.each([
+    ['arrangøren uten plass på lista, åpen påmelding: kortet og raden står', { createdBy: 'me' }, ['ola'], true, true],
+    ['med godkjenning: kortet står', { createdBy: 'me', registrationMode: 'manual_approval' }, ['ola'], true, true],
+    ['arrangøren står på lista: ingen kort', { createdBy: 'me' }, ['me', 'ola'], false, true],
+    ['«Jeg velger dem nå»: ingen kort', { createdBy: 'me', registrationMode: 'invite_only' }, ['ola'], false, true],
+    ['påmelding alene: ingen kort', { createdBy: 'me', registrationType: 'solo' }, ['ola'], false, false],
+    ['runden er i gang: ingen kort', { createdBy: 'me', status: 'active' }, ['ola'], false, false],
+  ] as const)('#2840 del 4: %s', async (_label, game, roster, card, row) => {
+    mockState.bundle = homeBundle({
+      game: {
+        id: 'game-1',
+        status: 'scheduled',
+        registrationType: 'team',
+        registrationMode: 'open',
+        modeConfig: { kind: 'stableford', team_size: 1 },
+        shortId: 'abcd2345',
+        ...game,
+      },
+      players: roster.map((userId) => homePlayer({ userId })),
+    });
+    mockState.scores = [];
+    const navigation = { ...stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]), setOptions: jest.fn() };
+    await render(
+      <GameHome {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)} />,
+    );
+    await screen.findByTestId('game-ticket');
+    expect(screen.queryByTestId('stub-team-link-abcd2345') !== null).toBe(row);
+    if (!card) {
+      expect(screen.queryByTestId('stub-own-team-abcd2345')).toBeNull();
+      return;
+    }
+    await fireEvent.press(screen.getByTestId('stub-own-team-abcd2345'));
+    expect(navigation.navigate).toHaveBeenCalledWith('RoundInvite', { shortId: 'abcd2345', src: null });
   });
 
   it('en cup som ikke er i gang: ingen lenke, for den ville vært en blindvei (#2752)', async () => {

@@ -55,6 +55,7 @@ import { PaymentCard } from '../components/game/PaymentCard';
 import { PrizeTable } from '../components/game/PrizeTable';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
+import { OwnTeamCard } from '../components/signup/OwnTeamCard';
 import { TeamLink } from '../components/signup/TeamLink';
 import { TicketStub } from '../components/game/TicketStub';
 import { fetchCupIsRunning } from '../data/cupManage';
@@ -327,9 +328,20 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // gjelder den også (#2752).
   const withdrawKind = derived && anyWithdrawKind !== 'cup' ? null : anyWithdrawKind;
   // #2840 del 3: før start har en lagrunde en rad til laget ditt, under billetten
-  // (tegningen v3.1, «Veien inn fra runden»). Bare da spør raden etter laget.
+  // (tegningen v3.1, «Veien inn fra runden»). Bare da spør raden etter laget. Del 4:
+  // arrangøren også, for med lagpåmelding står hen ikke på lista, og med godkjenning
+  // heller ikke etter at laget er sendt.
   const teamShortId =
-    game.status === 'scheduled' && game.registrationType === 'team' && me ? (game.shortId ?? null) : null;
+    game.status === 'scheduled' && game.registrationType === 'team' && (me || isOrganiser)
+      ? (game.shortId ?? null)
+      : null;
+  // #2840 del 4 (eierens svar 2): arrangøren av en lagrunde med påmelding står ikke på
+  // lista fra start (`organiserStartsOnRoster`), og får «Meld på laget ditt» med seg selv
+  // som kaptein. Kortet ser selv etter om du alt har et lag; da står raden under i stedet.
+  const ownTeamShortId =
+    teamShortId !== null && isOrganiser && !me && game.registrationMode != null && game.registrationMode !== 'invite_only'
+      ? teamShortId
+      : null;
 
   return (
     <ScrollView
@@ -378,6 +390,13 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           bundle={bundle}
         />
       </GameTicket>
+
+      {ownTeamShortId ? (
+        <OwnTeamCard
+          shortId={ownTeamShortId}
+          onOpen={() => openOrReturn(navigation, 'RoundInvite', { shortId: ownTeamShortId, src: null })}
+        />
+      ) : null}
 
       {teamShortId ? (
         <TeamLink

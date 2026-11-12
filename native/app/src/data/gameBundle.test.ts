@@ -187,16 +187,21 @@ describe('gameBundle', () => {
 
   // #2840 del 3: raden til lagsiden på runden før start.
   it('#2840: påmeldingskoden og -typen rir med på spillet', async () => {
-    riggFetch({ short_id: 'abcd2345', registration_type: 'team' });
+    riggFetch({ short_id: 'abcd2345', registration_type: 'team', registration_mode: 'open' });
     expect((await bundleModule().refreshGameBundle(GAME)).game).toMatchObject({
       shortId: 'abcd2345',
       registrationType: 'team',
+      registrationMode: 'open',
     });
   });
 
   it('#2840: en rad uten dem gir null', async () => {
     riggFetch();
-    expect((await bundleModule().refreshGameBundle(GAME)).game).toMatchObject({ shortId: null, registrationType: null });
+    expect((await bundleModule().refreshGameBundle(GAME)).game).toMatchObject({
+      shortId: null,
+      registrationType: null,
+      registrationMode: null,
+    });
   });
 
   it('#2840: kolonnene er med i select-lista', async () => {
@@ -212,6 +217,7 @@ describe('gameBundle', () => {
     const select = String(stepArgs(gamesQuery, 'select')[0]![0]);
     expect(select).toContain('short_id');
     expect(select).toContain('registration_type');
+    expect(select).toContain('registration_mode');
   });
 
   // #2749: «Startkontingent betalt» leser egen rad, i en egen spørring.
@@ -309,6 +315,7 @@ describe('gameBundle', () => {
       prizes: [],
       shortId: null,
       registrationType: null,
+      registrationMode: null,
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
