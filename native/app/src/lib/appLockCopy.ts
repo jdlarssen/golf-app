@@ -47,13 +47,12 @@ export function appLockSublabel(
 ): string {
   if (state.enrolled) return APP_LOCK_TEXT.subtitle;
   const name = appLockMethodName(types, os);
-  const what = name ?? 'ansikt eller fingeravtrykk';
   if (!name) {
     return state.on
       ? 'Virker ikke før du har lagt til ansikt eller fingeravtrykk i innstillingene til telefonen'
       : 'Legg til ansikt eller fingeravtrykk i innstillingene til telefonen først';
   }
   return state.on
-    ? `Virker ikke før du har registrert ${what} i innstillingene til telefonen`
-    : `Slå på ${what} i innstillingene til telefonen først`;
+    ? `Virker ikke før du har registrert ${name} i innstillingene til telefonen`
+    : `Slå på ${name} i innstillingene til telefonen først`;
 }
