@@ -34,6 +34,11 @@ export const APP_SUPPORTED_MODES = [
   // #2753 D3: slagspill og Patsome er synlige for både kompis og klubb.
   'solo_strokeplay',
   'patsome',
+  // #2753 D3b: scramble-familien og shamble.
+  'texas_scramble',
+  'ambrose',
+  'florida_scramble',
+  'shamble',
 ] as const satisfies readonly GameMode[];
 
 export type AppGameMode = (typeof APP_SUPPORTED_MODES)[number];
@@ -50,6 +55,10 @@ export const APP_MODE_LABELS: Record<AppGameMode, string> = {
   skins: 'Skins',
   solo_strokeplay: 'Slagspill',
   patsome: 'Patsome',
+  texas_scramble: 'Texas scramble',
+  ambrose: 'Ambrose',
+  florida_scramble: 'Florida Scramble',
+  shamble: 'Shamble / Champagne Scramble',
 };
 
 const SUPPORTED = new Set<string>(APP_SUPPORTED_MODES);
@@ -76,6 +85,11 @@ export const MODES_WITH_TEAM_ASSIGNMENT: readonly AppGameMode[] = [
   'greensome_matchplay',
   // Patsome spilles i par hele runden (4BBB, greensome, foursomes).
   'patsome',
+  // #2753 D3b: lagene settes i spillersteget, som på nettet.
+  'texas_scramble',
+  'ambrose',
+  'florida_scramble',
+  'shamble',
 ];
 
 const TEAM_ASSIGNED = new Set<string>(MODES_WITH_TEAM_ASSIGNMENT);

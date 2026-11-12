@@ -435,6 +435,65 @@ describe('CreateGame: de nye formatene (#2753 D3)', () => {
   });
 });
 
+describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
+  it('Texas: lagstørrelse, lag-handicap i snitt-prosent, og lagene', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug: 'texas_scramble', label: 'Texas scramble', iconKey: 't', isPrimary: false, sortOrder: 10 },
+    ]);
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'texas-game' });
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-texas_scramble'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    // Nettets standard: firemannslag, 40 av snittet = 10 % av summen.
+    expect(screen.getByTestId('create-team-size-4').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('40');
+    await fireEvent.press(screen.getByTestId('create-team-size-2'));
+    expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('50');
+    await fireEvent.changeText(screen.getByTestId('create-team-hcp'), '60');
+    expect(screen.getByTestId('create-team-hcp-sum').props.children).toBe(
+      'Valget ditt tilsvarer 30\u00a0% av summen av banehandicapene.',
+    );
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-player-p2'));
+    await fireEvent.press(screen.getByTestId('create-team-me-1'));
+    await fireEvent.press(screen.getByTestId('create-team-p2-1'));
+    // Laget er fullt med to: lag 1 er grått for den tredje.
+    await fireEvent.press(screen.getByTestId('create-player-p3'));
+    expect(screen.getByTestId('create-team-p3-1').props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByTestId('create-player-p3'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft.gameMode).toBe('texas_scramble');
+    expect(draft.setup).toMatchObject({ teamSize: 2, teamHandicapSumPct: 30 });
+    publishGameMock.mockClear();
+  });
+
+  it('Shamble: champagne viser antallet, brutto skjuler andelen', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug: 'shamble', label: 'Shamble / Champagne Scramble', iconKey: 's', isPrimary: false, sortOrder: 20 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-shamble'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByTestId('create-shamble-size-4').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('create-shamble-count-3')).toBeNull();
+    expect(screen.getByTestId('create-shamble-allowance')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('create-shamble-variant-champagne'));
+    await fireEvent.press(screen.getByTestId('create-shamble-count-3'));
+    await fireEvent.press(screen.getByTestId('create-shamble-gross'));
+    expect(screen.queryByTestId('create-shamble-allowance')).toBeNull();
+    expect(screen.getByTestId('create-shamble-count-3').props.accessibilityState).toMatchObject({ selected: true });
+  });
+});
+
 describe('CreateGame og «Ny bane» (#2757)', () => {
   it('døra står under lista, også når søket gir treff, og tar med det du søkte på', async () => {
     const { navigation } = await renderWizard();

@@ -50,6 +50,7 @@ import { hasHcpAllowanceField } from '../lib/allowanceCopy';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import { ARRANGEMENT_TEXT, CLUB_TEXT, type AppIntent } from '../lib/arrangementCopy';
 import { isValidClubChoice, startClubId } from '../../../../lib/wizard/clubChoice';
+import { averagePctToSumPct } from '../../../../lib/games/teamHandicapUnit';
 import { openOrReturn } from '../lib/backTo';
 import {
   createFailureBelongsOnWeb,
@@ -69,7 +70,9 @@ import { resolveTeeGender, teeAvailability } from '../lib/teeChoice';
 import {
   defaultGameName,
   draftNeedsTeamAssignment,
+  effectiveTeamSize,
   isParStableford,
+  isScrambleFamily,
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
@@ -410,6 +413,12 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           : undefined,
       krPerUnit:
         setupText.krPerUnit === '' ? undefined : Number(setupText.krPerUnit),
+      // #2753 D3b: arrangøren skriver prosent av lagets snitt; den delte
+      // byggeren vil ha prosent av summen. Tomt = formatets standard, 0 = brutto.
+      teamHandicapSumPct:
+        gameMode && isScrambleFamily(gameMode) && setupText.allowance !== ''
+          ? averagePctToSumPct(Number(setupText.allowance), effectiveTeamSize(gameMode, setup))
+          : undefined,
     }),
     [gameMode, setup, setupText],
   );
@@ -422,7 +431,12 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       courseId,
       teeBoxId,
       teeOffAt: teeOffInstant(teeOff),
-      hcpAllowancePct: hasHcpAllowanceField(gameMode) ? allowancePct : undefined,
+      // Shamble har andelen i sitt eget oppsett, og bare med Netto (#2570).
+      hcpAllowancePct:
+        hasHcpAllowanceField(gameMode) ||
+        (gameMode === 'shamble' && (resolvedSetup.shambleScoring ?? 'net') === 'net')
+          ? allowancePct
+          : undefined,
       requirePeerApproval: common.requirePeerApproval,
       scoreVisibility: common.scoreVisibility,
       sideTournamentEnabled: common.sideTournamentEnabled,
@@ -438,7 +452,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
-    ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
+    ? teamLayoutFor(
+        gameMode,
+        isParStableford(gameMode, resolvedSetup),
+        effectiveTeamSize(gameMode, resolvedSetup),
+      )
     : null;
 
   // Settes rett før `replace` til spillet, så sperra under slipper den gjennom.

@@ -222,73 +222,14 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
   return { selectedPlayerIds, teamByPlayer, flightByPlayer };
 }
 
-/**
- * Velger default-lagstørrelse for en gitt modus, alltid en av størrelsene
- * velgeren viser. Scramble- og Stableford-familien leser størrelsene fra
- * `selectableTeamSizes` (`lib/games/teamFormatLimits.ts`, #2453): Stableford
- * → 1 (solo), Texas/Ambrose → 4, Florida → 3, Shamble → 4. Resten leser
- * `TeamSizeSelector.ENABLED_COMBOS`: Best ball → 2, Singles matchplay → 1
- * (én spiller per side, men TeamSizeSelector er skjult for matchplay siden
- * det ikke finnes noen reell lagstørrelse å velge mellom), Solo strokeplay →
- * 1 (én spiller = én rad). Holdt synk separat fordi GameForm trenger en ren
- * funksjon for state-initialisering uten å eksponere selector-internt.
- */
-export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
-  if (mode === 'stableford') return 1;
-  // Modified stableford (#281): solo som default, par valgbart via selector.
-  if (mode === 'modified_stableford') return 1;
-  if (mode === 'singles_matchplay') return 1;
-  if (mode === 'solo_strokeplay') return 1;
-  // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).
-  // 2-mannslag valgbart via TeamSizeSelector.
-  if (mode === 'texas_scramble') return 4;
-  // Ambrose (#284): default 4-mannslag (mest vanlig i klubb-turneringer).
-  // 2-mannslag valgbart via TeamSizeSelector.
-  if (mode === 'ambrose') return 4;
-  // Florida Scramble (#283): default 3-mannslag (step-aside-regelen er mest
-  // naturlig med 3 spillere). 4-mannslag valgbart via TeamSizeSelector.
-  if (mode === 'florida_scramble') return 3;
-  // Wolf: hver spiller er sin egen «row». team_number 1..n (#465: n=3-5)
-  // brukes som rotation-slot, ikke som lag-tildeling. team_size=1 betyr
-  // requiresTeams=false så vi får solo-style player-selection i step 3.
-  if (mode === 'wolf') return 1;
-  // Nassau / Skins / Bingo Bango Bongo: solo-formater (ingen lag), 2-16
-  // spillere (#460). team_size=1 betyr requiresTeams=false → orderedPayload tar
-  // solo-stien og emitter de valgte spillerne med team/flight null. Uten
-  // disse entry-ene falt de til default-2, requiresTeams ble true, og
-  // orderedPayload endte tom → publish sendte 0 spillere.
-  if (mode === 'nassau') return 1;
-  if (mode === 'skins') return 1;
-  if (mode === 'bingo_bango_bongo') return 1;
-  // Nines / Split Sixes (#278): solo-format (ingen lag), team_size=1 betyr
-  // requiresTeams=false så vi får solo-style player-selection i step 3.
-  if (mode === 'nines') return 1;
-  // Round Robin: 4 spillere, team_number 1-4 = rotation-slot (A/B/C/D).
-  // team_size=1 som Wolf — ingen lag-grid, solo-style player-selection.
-  if (mode === 'round_robin') return 1;
-  // Acey Deucey: individuelt format, eksakt 4 spillere, team_size=1.
-  if (mode === 'acey_deucey') return 1;
-  // Shamble / Champagne Scramble: lag-format, default 4-mannslag (klassisk
-  // shamble-størrelse). Admin kan endre til 3 via ShambleSetup.
-  if (mode === 'shamble') return 4;
-  // Patsome (#286): lag à 2, alltid 2-mannslag.
-  if (mode === 'patsome') return 2;
-  return 2;
-}
-
-/**
- * NGF-default for Texas-scramble-lag-handicap, prosent av summert spille-HCP.
- * Settes som default i GameForm når admin endrer lagstørrelse — admin kan
- * deretter justere fritt innenfor 0–100 % av lagets snitt (#2566).
- */
-export function defaultTexasHandicapPct(teamSize: TeamSize): number {
-  if (teamSize === 2) return 25;
-  // 3-mannslag (#2009): 15 % — samme verdi som NGF-tabellen gir Florida for
-  // 3-mannslag, og den ligger mellom Texas' 25 % (2-mann) og 10 % (4-mann).
-  if (teamSize === 3) return 15;
-  if (teamSize === 4) return 10;
-  return 25;
-}
+// #2753: the defaults moved to `lib/games/formatSetupDefaults.ts` so the app's
+// wizard reads the same values (trap 4). Re-exported for the existing callers.
+import {
+  DEFAULT_SHAMBLE_SETUP,
+  defaultTeamSizeForMode,
+  defaultTexasHandicapPct,
+} from '@/lib/games/formatSetupDefaults';
+export { defaultTeamSizeForMode, defaultTexasHandicapPct };
 
 // Re-derive gender-toggle defaults fra spillerens profil. Brukes ved mount og
 // ved bane-bytte i `setCourseId`, slik at admin ikke mister D/J-merkene når
@@ -778,15 +719,15 @@ export function useGameFormState({
   // defensivt tilbake til 'shamble'/'net'/2 ved ugyldige verdier. Shamble-
   // preset låser count til 2 server-side; Champagne lar arrangør velge 1/2/3.
   const [shambleVariant, setShambleVariant] = useState<'shamble' | 'champagne'>(
-    initialValues?.shamble_variant === 'champagne' ? 'champagne' : 'shamble',
+    initialValues?.shamble_variant === 'champagne' ? 'champagne' : DEFAULT_SHAMBLE_SETUP.variant,
   );
   const [shambleCount, setShambleCount] = useState<1 | 2 | 3>(() => {
     const raw = initialValues?.shamble_count;
     if (raw === 1 || raw === 2 || raw === 3) return raw;
-    return 2;
+    return DEFAULT_SHAMBLE_SETUP.count;
   });
   const [shambleScoring, setShambleScoring] = useState<'gross' | 'net'>(
-    initialValues?.shamble_scoring === 'gross' ? 'gross' : 'net',
+    initialValues?.shamble_scoring === 'gross' ? 'gross' : DEFAULT_SHAMBLE_SETUP.scoring,
   );
   // The count that will be stored: the Shamble preset is always 2 (#285).
   // A champagne team needs at least this many players (#2569).

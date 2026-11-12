@@ -50,6 +50,12 @@ export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   // #2753 D3: slagspill har spillertaket på 40, Patsome fulle par opp til taket.
   solo_strokeplay: TEAM_FORMAT_PLAYER_CAP,
   patsome: teamModePlayerCap('patsome', 2) ?? TEAM_FORMAT_PLAYER_CAP,
+  // #2753 D3b: spillertaket på 40. Med tremannslag tar den delte byggeren 39
+  // (13 lag) og sier fra med sin egen kode; ingen blir stille droppet.
+  texas_scramble: TEAM_FORMAT_PLAYER_CAP,
+  ambrose: TEAM_FORMAT_PLAYER_CAP,
+  florida_scramble: TEAM_FORMAT_PLAYER_CAP,
+  shamble: TEAM_FORMAT_PLAYER_CAP,
 };
 
 export function maxPlayersForMode(mode: AppGameMode): number {
@@ -112,6 +118,12 @@ export interface TeamLayout {
    * finnes ikke i en match.
    */
   noun: 'lag' | 'side';
+  /**
+   * Spillere per lag (#2753): når et lag er fullt, står lagknappen grå for de
+   * andre. 2 for par-formatene, lagstørrelsen for scramble-familien og shamble.
+   * Sider har ingen sperre.
+   */
+  size: number;
 }
 
 /**
@@ -128,11 +140,20 @@ export interface TeamLayout {
 export function teamLayoutFor(
   mode: AppGameMode,
   parStableford: boolean,
+  teamSize = 2,
 ): TeamLayout | null {
-  if (mode === 'best_ball') return { slots: maxTeamsForSize(2), noun: 'lag' };
-  if (mode === 'singles_matchplay') return { slots: 2, noun: 'side' };
-  if (mode === 'greensome_matchplay') return { slots: 2, noun: 'side' };
-  if (mode === 'patsome') return { slots: maxTeamsForSize(2), noun: 'lag' };
-  if (parStableford) return { slots: maxTeamsForSize(2), noun: 'lag' };
+  if (mode === 'best_ball') return { slots: maxTeamsForSize(2), noun: 'lag', size: 2 };
+  if (mode === 'singles_matchplay') return { slots: 2, noun: 'side', size: 1 };
+  if (mode === 'greensome_matchplay') return { slots: 2, noun: 'side', size: 2 };
+  if (mode === 'patsome') return { slots: maxTeamsForSize(2), noun: 'lag', size: 2 };
+  if (
+    mode === 'texas_scramble' ||
+    mode === 'ambrose' ||
+    mode === 'florida_scramble' ||
+    mode === 'shamble'
+  ) {
+    return { slots: maxTeamsForSize(teamSize), noun: 'lag', size: teamSize };
+  }
+  if (parStableford) return { slots: maxTeamsForSize(2), noun: 'lag', size: 2 };
   return null;
 }

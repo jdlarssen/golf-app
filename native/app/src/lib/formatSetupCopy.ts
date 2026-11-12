@@ -29,3 +29,62 @@ export const PATSOME_TEXT = {
   net: 'Netto',
   gross: 'Brutto',
 } as const;
+
+/** `wizard.teamSize`: kortene for lagstørrelsen i scramble-familien. */
+export const TEAM_SIZE_TEXT = {
+  legend: 'Velg lagstørrelse',
+  sizes: { 2: 'Par', 3: 'Tremannslag', 4: '4-mann' } as Record<2 | 3 | 4, string>,
+} as const;
+
+/** Formatene med lag-handicap i prosent av lagets snitt (`TeamHandicapField`). */
+export type ScrambleMode = 'texas_scramble' | 'ambrose' | 'florida_scramble';
+
+/** `wizard.allowanceProps.texas|ambrose|florida`, og `sumEquivalent`. */
+export const TEAM_HANDICAP_TEXT = {
+  legend: 'Lag-handicap',
+  description:
+    'Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.',
+  bruttoHelper:
+    'Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.',
+  inputLabel: 'Prosent av lagets snitt-handicap',
+  nettoHelper: {
+    texas_scramble: {
+      2: 'NGF-standard for 2-mannslag: 50 (25\u00a0% av summen).',
+      3: 'NGF-standard for 3-mannslag: 45 (15\u00a0% av summen).',
+      4: 'NGF-standard for 4-mannslag: 40 (10\u00a0% av summen).',
+    },
+    ambrose: {
+      2: 'Ambrose-formelen gir alltid halve snittet: 50 (25\u00a0% av summen for 2-mannslag).',
+      3: 'Ambrose-formelen gir alltid halve snittet: 50 (16,7\u00a0% av summen for 3-mannslag).',
+      4: 'Ambrose-formelen gir alltid halve snittet: 50 (12,5\u00a0% av summen for 4-mannslag).',
+    },
+    florida_scramble: {
+      3: 'NGF-standard for 3-mannslag: 45 (15\u00a0% av summen).',
+      4: 'NGF-standard for 4-mannslag: 40 (10\u00a0% av summen).',
+    },
+  } as Record<ScrambleMode, Partial<Record<2 | 3 | 4, string>>>,
+} as const;
+
+/** «Valget ditt tilsvarer 12,5\u00a0% av summen av banehandicapene.» Én desimal, som nettets `Intl`. */
+export function sumEquivalentText(sumPct: number): string {
+  const rounded = Math.round(sumPct * 10) / 10;
+  return `Valget ditt tilsvarer ${String(rounded).replace('.', ',')}\u00a0% av summen av banehandicapene.`;
+}
+
+/** `wizard.sections.shamble`. */
+export const SHAMBLE_TEXT = {
+  legend: 'Shamble-oppsett',
+  teamSizeLabel: 'Lagstørrelse',
+  teamSize: { 3: '3-mannslag', 4: '4-mannslag' } as Record<3 | 4, string>,
+  variantLabel: 'Variant',
+  variantShamble: 'Shamble',
+  variantChampagne: 'Champagne Scramble',
+  countLabel: 'Antall som teller',
+  countSingle: 'laveste score',
+  countPlural: 'laveste scorer',
+  scoringLabel: 'Tellemåte',
+  net: 'Netto',
+  gross: 'Brutto',
+  allowanceLabel: 'Handicap-andel (%)',
+  allowanceHint: 'Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard).',
+} as const;

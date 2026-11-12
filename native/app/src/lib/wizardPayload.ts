@@ -16,6 +16,11 @@ import {
 } from '../../../../lib/games/gamePayload';
 import { PRIZE_SLOTS, prizeFieldName, type PrizeDraft } from '../../../../lib/games/prizes';
 import { isClubTournament } from '../../../../lib/games/registration';
+import {
+  DEFAULT_SHAMBLE_SETUP,
+  defaultTeamHandicapPct,
+  defaultTeamSizeForMode,
+} from '../../../../lib/games/formatSetupDefaults';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
@@ -68,6 +73,42 @@ export interface ModeSetup {
   krPerUnit?: number;
   /** patsome (#2753): poeng fra netto eller brutto. Default `'net'`, som på nettet. */
   patsomeScoring?: 'gross' | 'net';
+  /**
+   * #2753 D3b: lagstørrelsen i scramble-familien og shamble. Utelatt =
+   * formatets standard (`defaultTeamSizeForMode`, delt med nettet).
+   */
+  teamSize?: 2 | 3 | 4;
+  /**
+   * Texas, Ambrose og Florida: lag-handicap i prosent av SUMMEN, slik den delte
+   * byggeren lagrer det. Utelatt = formatets standard for lagstørrelsen
+   * (`defaultTeamHandicapPct`). 0 er brutto.
+   */
+  teamHandicapSumPct?: number;
+  /** shamble: varianten, antall som teller (champagne) og tellemåten. */
+  shambleVariant?: 'shamble' | 'champagne';
+  shambleCount?: 1 | 2 | 3;
+  shambleScoring?: 'gross' | 'net';
+}
+
+/** Feltprefikset den delte byggeren leser for scramble-familien. */
+const SCRAMBLE_PREFIX = {
+  texas_scramble: 'texas',
+  ambrose: 'ambrose',
+  florida_scramble: 'florida',
+} as const;
+
+export type ScrambleFamilyMode = keyof typeof SCRAMBLE_PREFIX;
+
+export function isScrambleFamily(mode: AppGameMode): mode is ScrambleFamilyMode {
+  return mode in SCRAMBLE_PREFIX;
+}
+
+/**
+ * Lagstørrelsen som gjelder: arrangørens valg, ellers formatets standard. Bare
+ * meningsfull for scramble-familien og shamble.
+ */
+export function effectiveTeamSize(mode: AppGameMode, setup: ModeSetup | undefined): 2 | 3 | 4 {
+  return setup?.teamSize ?? (defaultTeamSizeForMode(mode) as 2 | 3 | 4);
 }
 
 /**
@@ -283,6 +324,24 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('skins_scoring', setup.skinsScoring ?? null);
   form.set('kr_per_unit', setup.krPerUnit ?? null);
   form.set('patsome_scoring', setup.patsomeScoring ?? null);
+  // #2753 D3b: scramble-familien og shamble, med nettets standarder der
+  // arrangøren ikke har valgt. Lag-handicapet MÅ være satt for scramble: tomt
+  // felt gir `bad_allowance` fra den delte byggeren.
+  if (isScrambleFamily(draft.gameMode)) {
+    const prefix = SCRAMBLE_PREFIX[draft.gameMode];
+    const size = effectiveTeamSize(draft.gameMode, setup);
+    form.set(`${prefix}_team_size`, size);
+    form.set(
+      `${prefix}_team_handicap_pct`,
+      setup.teamHandicapSumPct ?? defaultTeamHandicapPct(draft.gameMode, size),
+    );
+  }
+  if (draft.gameMode === 'shamble') {
+    form.set('shamble_team_size', effectiveTeamSize('shamble', setup));
+    form.set('shamble_variant', setup.shambleVariant ?? DEFAULT_SHAMBLE_SETUP.variant);
+    form.set('shamble_count', setup.shambleCount ?? DEFAULT_SHAMBLE_SETUP.count);
+    form.set('shamble_scoring', setup.shambleScoring ?? DEFAULT_SHAMBLE_SETUP.scoring);
+  }
 
   form.set('entry_fee_kr', draft.entryFeeKr ?? 0);
   form.set('payment_link', draft.paymentLink ?? '');
