@@ -153,12 +153,13 @@ const FOOTER_LINE = 32;
 const FOOTER_AIR = 40;
 
 /** Lines the name on each row takes, in render order. */
-function rowNames(model: ShareCardModel | null): string[] {
+function rowNames(model: ShareCardModel | null, unplaced: boolean): string[] {
   if (model === null) return [];
   if (model.band === 'matchplay') {
     return model.match ? model.match.sides.map((s) => rowDisplayName(s.memberNames)) : [];
   }
-  return model.podium.slice(0, 3).map((r) => rowDisplayName(r.memberNames));
+  // A league flight lists every player in the flight (#2850); the rest show three.
+  return (unplaced ? model.podium : model.podium.slice(0, 3)).map((r) => rowDisplayName(r.memberNames));
 }
 
 export function shareCardHeight(
@@ -170,11 +171,13 @@ export function shareCardHeight(
     kicker?: string;
     /** The meta line as rendered, for its line count. */
     meta?: string;
+    /** A league flight (#2850): every row is shown, not three. */
+    unplaced?: boolean;
   },
 ): number {
   const kickerLines = opts.kicker ? estimateLines(opts.kicker, CHARS_PER_LINE.kicker) : 1;
   const metaLines = opts.meta ? estimateLines(opts.meta, CHARS_PER_LINE.meta) : 1;
-  const names = rowNames(model);
+  const names = rowNames(model, opts.unplaced ?? false);
 
   let h = TOP_PAD + HEADER_ROW;
   h += KICKER_GAP + kickerLines * KICKER_LINE;

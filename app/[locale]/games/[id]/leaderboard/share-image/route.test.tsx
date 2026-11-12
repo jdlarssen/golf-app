@@ -146,6 +146,35 @@ describe('share-image route gate (#2312)', () => {
       expect(card()).toContain('Anna L.');
     });
 
+    it('a flight of four lists all four players, none ranked (#2850)', async () => {
+      vi.mocked(getProxyVerifiedUserId).mockResolvedValue('user-a');
+      mockGame({ league_round_id: 'round-1' });
+      const player = (userId: string, net: number, rank: number) => ({
+        userId, totalNetStrokes: net, totalGrossStrokes: net + 4, holesPlayed: 18, netToPar: net - 72, rank, tiedWith: [],
+      });
+      vi.mocked(buildModeResultForGame).mockResolvedValue({
+        ...alone(),
+        players: [player('user-a', 70, 1), player('user-b', 72, 2), player('user-c', 75, 3), player('user-d', 80, 4)],
+      });
+      vi.mocked(getGameWithPlayers).mockResolvedValue({
+        game: { id: GAME_ID, name: 'Fredagsrunden', status: 'finished', course_id: 'course-1', game_mode: 'solo_strokeplay', mode_config: {}, hole_segment: null, source_game_id: null, side_tournament_enabled: false, league_round_id: 'round-1' },
+        players: [
+          { user_id: 'user-a', withdrawn_at: null, users: { name: 'Anna Lie', nickname: null, is_guest: false } },
+          { user_id: 'user-b', withdrawn_at: null, users: { name: 'Bjørn Aas', nickname: null, is_guest: false } },
+          { user_id: 'user-c', withdrawn_at: null, users: { name: 'Cecilie Dahl', nickname: null, is_guest: false } },
+          { user_id: 'user-d', withdrawn_at: null, users: { name: 'Dag Ek', nickname: null, is_guest: false } },
+        ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      await callRoute();
+
+      for (const name of ['Anna L.', 'Bjørn A.', 'Cecilie D.', 'Dag E.']) expect(card()).toContain(name);
+      expect(card()).toContain('Godkjent');
+      expect(card()).not.toContain('"winner":true');
+      expect(card()).not.toMatch(/"rank":[1-9]/);
+    });
+
     it('the same round outside a league still names the winner', async () => {
       vi.mocked(getProxyVerifiedUserId).mockResolvedValue('user-a');
       mockGame({ league_round_id: null });

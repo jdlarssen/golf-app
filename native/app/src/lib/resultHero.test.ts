@@ -135,6 +135,15 @@ describe('setningen', () => {
     expect(model.card.rows.map((r) => [r.rank, r.winner])).toEqual([[null, false], [null, false]]);
   });
 
+  it('ligaflight på fire: kortet har alle fire, uten plass (#2850)', () => {
+    const four = stableford([['a', 36, 1], ['b', 33, 2], ['c', 30, 3], ['d', 24, 4]]);
+    const model = hero(four, bundle(['a', 'b', 'c', 'd'], { leagueRoundId: 'round-1' }));
+    expect(model.card.rows).toHaveLength(4);
+    expect(model.card.rows.every((r) => r.rank === null && !r.winner)).toBe(true);
+    const plain = hero(four, bundle(['a', 'b', 'c', 'd']));
+    expect(plain.card.rows).toHaveLength(3);
+  });
+
   it('to utenfor en liga: vinneren feires som før', () => {
     const model = hero(stableford([['a', 34, 1], ['b', 30, 2]]), bundle(['a', 'b']));
     expect(text(model.lines)).not.toEqual(['Godkjent']);

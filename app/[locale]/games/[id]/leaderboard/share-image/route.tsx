@@ -253,6 +253,10 @@ export async function GET(
   const headlineSerif = hasFrauncesDisplay ? 'FrauncesDisplay' : serif;
   const sans = hasInter ? 'Inter' : 'sans-serif';
 
+  // #2712, #2850: a league flight says «Godkjent», with no place, and lists
+  // every player in the flight.
+  const leagueFlight = gwp.game.league_round_id != null;
+
   // Finished but no computable result (no scores yet) → minimal brand card.
   const model: ShareCardModel | null =
     result === null
@@ -264,10 +268,9 @@ export async function GET(
           parByHole,
           sideWinners: [],
           playerFallback,
+          leagueFlight,
         });
 
-  // #2712: a league flight says «Godkjent», with no place.
-  const leagueFlight = gwp.game.league_round_id != null;
   const spec = headlineSpec(model, { leagueFlight });
   const gold = (chunks: ReactNode) => <Gold>{chunks}</Gold>;
   // The headline breaks before its preposition when that fits the artboard's
@@ -286,17 +289,19 @@ export async function GET(
   ].filter(Boolean);
   const meta = metaParts.join(' · ');
 
+  const unplaced = model !== null && isUnplacedLeagueCard(model, leagueFlight);
   const rows: CardRow[] =
     model === null
       ? []
       : model.band === 'matchplay'
         ? matchRows(model)
-        : placementRows(model, isUnplacedLeagueCard(model, leagueFlight));
+        : placementRows(model, unplaced);
   const cardHeight = shareCardHeight(model, {
     headlineLines: headlineChoice.lines,
     headlineFontSize: headlineChoice.fontSize,
     kicker,
     meta,
+    unplaced,
   });
 
   return new ImageResponse(

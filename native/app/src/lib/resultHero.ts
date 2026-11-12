@@ -162,6 +162,7 @@ function cardModel(bundle: GameBundle, model: ShareCardModel, spec: HeadlineSpec
       headlineFontSize: choice.fontSize,
       kicker,
       meta,
+      unplaced,
     }),
   };
 }
@@ -293,6 +294,7 @@ export function resultHeroFor(opts: {
     parByHole,
     sideWinners: [],
     playerFallback: RESULT_CARD_TEXT.playerFallback,
+    leagueFlight,
   });
   const spec = headlineSpec(model, { leagueFlight });
   const podium = podiumFor(result, { leagueFlight });

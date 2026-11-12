@@ -1131,3 +1131,35 @@ describe('points games with the #2625 flag show the points (#2738)', () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2850: a league flight has no place, so nobody is cut at three
+// ---------------------------------------------------------------------------
+describe('solo_strokeplay — a league flight of four (#2850)', () => {
+  const result: SoloStrokeplayResult = {
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [],
+    players: [
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
+      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 3, rank: 3, tiedWith: [] },
+      { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 84, holesPlayed: 18, netToPar: 8, rank: 4, tiedWith: [] },
+    ],
+  };
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie'], ['u4', 'Dave']);
+  const build = (leagueFlight?: boolean) =>
+    buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', parByHole: PAR_72, sideWinners: [], leagueFlight });
+
+  it('lists all four players in the order of the board', () => {
+    const card = build(true);
+    expect(card.podium.map((r) => r.name)).toEqual(['Alice', 'Bob', 'Charlie', 'Dave']);
+    expect(card.sharerStrip).toBeNull();
+  });
+
+  it('the same field outside a league keeps the podium at three, with the sharer on the strip', () => {
+    const card = build(false);
+    expect(card.podium.map((r) => r.name)).toEqual(['Alice', 'Bob', 'Charlie']);
+    expect(card.sharerStrip?.name).toBe('Dave');
+  });
+});
