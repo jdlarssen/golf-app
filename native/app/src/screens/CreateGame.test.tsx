@@ -579,13 +579,19 @@ describe('CreateGame: påmeldingen i en kompisrunde (#2840 del 4)', () => {
     await fireEvent.press(screen.getByTestId('create-registration-type-team'));
     expect(screen.queryByTestId('create-registration-organiser-note')).toBeNull();
     expect(screen.getByTestId('create-player-me')).toBeTruthy();
+    // En venn valgt før påmeldingen byttes til lag via lenken.
+    await fireEvent.press(screen.getByTestId('create-player-p2'));
 
     await fireEvent.press(screen.getByTestId('create-registration-open'));
     expect(screen.getByTestId('create-registration-organiser-note').props.children).toBe(
       'Du står ikke på lista nå. Når runden er publisert, melder du på laget ditt fra runden.',
     );
+    // #2840: ingen liste med lag via lenken (tegningen): lagene melder seg på selv, og
+    // en valgt venn ville stått uten lag og ikke kunnet melde på sitt eget.
     expect(screen.queryByTestId('create-player-me')).toBeNull();
-    expect(screen.getByTestId('create-roster-count').props.children).toMatch(/^0 av /);
+    expect(screen.queryByTestId('create-player-p2')).toBeNull();
+    expect(screen.queryByTestId('create-roster-count')).toBeNull();
+    expect(screen.queryByTestId('create-players-heading')).toBeNull();
     expect(screen.queryByTestId('create-roster-fit')).toBeNull();
 
     // Lista kan stå tom: «Neste» er åpen, og publiseringen likeså.

@@ -911,13 +911,11 @@ describe('påmeldingen (#2840 del 4)', () => {
     });
   });
 
-  it('rosterForRegistration: arrangøren går av lista bare med lagpåmelding via lenken', () => {
+  it('rosterForRegistration: med lagpåmelding via lenken står ingen på lista fra start', () => {
     const players = solo('me', 'a');
-    expect(rosterForRegistration(players, 'me', { mode: 'open', type: 'team' }).map((p) => p.userId)).toEqual(['a']);
-    expect(
-      rosterForRegistration(players, 'me', { mode: 'manual_approval', type: 'team' }).map((p) => p.userId),
-    ).toEqual(['a']);
-    expect(rosterForRegistration(players, 'me', { mode: 'invite_only', type: 'team' })).toEqual(players);
-    expect(rosterForRegistration(players, 'me', { mode: 'open', type: 'solo' })).toEqual(players);
+    expect(rosterForRegistration(players, { mode: 'open', type: 'team' })).toEqual([]);
+    expect(rosterForRegistration(players, { mode: 'manual_approval', type: 'team' })).toEqual([]);
+    expect(rosterForRegistration(players, { mode: 'invite_only', type: 'team' })).toEqual(players);
+    expect(rosterForRegistration(players, { mode: 'open', type: 'solo' })).toEqual(players);
   });
 });

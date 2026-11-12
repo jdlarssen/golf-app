@@ -366,6 +366,14 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         </View>
       ) : null}
 
+      {/* #2840: «Meld på laget ditt» over billetten (tegningen ownTeam). */}
+      {ownTeamShortId ? (
+        <OwnTeamCard
+          shortId={ownTeamShortId}
+          onOpen={() => openOrReturn(navigation, 'RoundInvite', { shortId: ownTeamShortId, src: null })}
+        />
+      ) : null}
+
       <GameTicket
         kicker={bundle.courseName ? game.name : null}
         title={bundle.courseName ?? game.name}
@@ -390,13 +398,6 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           bundle={bundle}
         />
       </GameTicket>
-
-      {ownTeamShortId ? (
-        <OwnTeamCard
-          shortId={ownTeamShortId}
-          onOpen={() => openOrReturn(navigation, 'RoundInvite', { shortId: ownTeamShortId, src: null })}
-        />
-      ) : null}
 
       {teamShortId ? (
         <TeamLink

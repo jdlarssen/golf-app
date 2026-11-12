@@ -211,19 +211,17 @@ export function resolveRegistration({
 }
 
 /**
- * Lista uten arrangøren når påmeldingen er lag via lenken (#2840, eierens valg). Regelen
- * bor i `organiserStartsOnRoster`; her er bare filteret. Arrangøren melder på laget sitt
- * fra runden etter publisering, og stod hen på lista, ville påmeldingen svart
- * `already_registered` (#2072).
+ * Med lagpåmelding via lenken står ingen på lista fra start (#2840, eierens valg og
+ * tegningen). Lagene melder seg på selv: arrangøren fra runden etter publisering, de andre
+ * fra lenken. En som sto på lista uten lag, ville fått `already_registered` både på eget
+ * lag og på en kapteins (#2072). Regelen bor i `organiserStartsOnRoster`; her er bare
+ * filteret, og det gjelder også spillere valgt før påmeldingen ble byttet.
  */
 export function rosterForRegistration<T extends { userId: string }>(
   players: readonly T[],
-  organiserId: string,
   registration: Pick<ResolvedRegistration, 'mode' | 'type'>,
 ): T[] {
-  return organiserStartsOnRoster(registration.mode, registration.type)
-    ? [...players]
-    : players.filter((p) => p.userId !== organiserId);
+  return organiserStartsOnRoster(registration.mode, registration.type) ? [...players] : [];
 }
 
 /** Påmeldingen for et utkast: {@link resolveRegistration} med utkastets klubb og format. */
