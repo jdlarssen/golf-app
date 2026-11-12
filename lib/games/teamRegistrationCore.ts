@@ -681,11 +681,16 @@ export async function declineTeamInviteCore(
   if (profile !== 'ok') return { ok: false, error: profile };
   const admin = getAdminClient();
 
-  const { data: req } = await admin
+  const { data: req, error: reqError } = await admin
     .from('game_registration_requests')
     .select('id, game_id, user_id, status, team_request_id, team_name, is_team_captain')
     .eq('id', requestId)
     .maybeSingle<OwnRequestRow>();
+  // #2840: a failed read is not «no such invitation» (I3).
+  if (reqError) {
+    console.error('[declineTeamInvite] request read failed', { requestId, reqError });
+    return { ok: false, error: 'db_error' };
+  }
 
   // #2358: only an invitation can be declined. A rejected captain row would
   // leave the teammates under a rejected captain; the captain withdraws with
