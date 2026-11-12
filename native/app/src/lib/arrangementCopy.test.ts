@@ -36,6 +36,7 @@ describe('klubbvalget sier det samme som nettet (#2753)', () => {
     expect(CLUB_TEXT.hint).toBe(web.club.hint);
     expect(CLUB_TEXT.noClub).toBe(web.disabledHint.step2NoClub);
     expect(CLUB_TEXT.emptyRoster).toBe(web.step4.emptyRosterHintClub);
+    expect(CLUB_TEXT.noPlayers).toBe(source.game.players.noPlayers);
   });
 
   // ICU-flertallet fylles ikke av en enkel erstatning; formene står her.

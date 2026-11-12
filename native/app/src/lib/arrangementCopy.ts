@@ -38,6 +38,8 @@ export const CLUB_TEXT = {
   hint: 'Medlemmene kan se og melde seg på alle spill du setter opp for klubben.',
   noClub: 'Velg klubben først',
   emptyRoster: 'Du kan også la lista stå tom. Medlemmene i klubben kan melde seg på selv.',
+  /** `game.players.noPlayers`: oppsummeringen når lista står tom. */
+  noPlayers: 'Ingen spillere ennå.',
 } as const;
 
 /** `klubb.roles`, for eier og admin. Et vanlig medlem får ingen rolle på kortet. */

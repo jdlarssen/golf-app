@@ -20,9 +20,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { fetchCourses, fetchRosterCandidates, publishGame } from '../data/createGame';
+import { fetchClubOptions } from '../data/clubOptions';
 import { fetchFormatCatalog } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
-import { describePendingOthers } from '../lib/createGameCopy';
+import { describePendingOthers, PENDING_SELF_NOTE } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
@@ -252,6 +253,9 @@ describe('CreateGame: hva slags arrangement (#2753)', () => {
     expect(screen.getByText('Hva slags arrangement?')).toBeTruthy();
     expect(screen.getByTestId('create-type-kompis')).toBeTruthy();
     expect(screen.getByTestId('create-type-cup')).toBeTruthy();
+    // Vent til klubbvalget er hentet, så fravær av flisen betyr noe.
+    await waitFor(() => expect(fetchClubOptions).toHaveBeenCalled());
+    await act(async () => {});
     expect(screen.queryByTestId('create-type-klubb')).toBeNull();
     expect(screen.queryByTestId('create-type-solo')).toBeNull();
     expect(screen.queryByText('Solo / test')).toBeNull();
@@ -318,6 +322,7 @@ describe('CreateGame: klubbturnering (#2753)', () => {
     expect(screen.queryByTestId('create-roster-fit')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByText('Ingen spillere ennå.')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('create-publish'));
 
     const [draft] = publishGameMock.mock.calls.at(-1)!;
@@ -326,6 +331,32 @@ describe('CreateGame: klubbturnering (#2753)', () => {
     expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: 'club-game' });
     // Kallene lekker ellers til neste test, som teller dem.
     publishGameMock.mockClear();
+  });
+
+  it('en arrangør som ikke spiller, får ingen merknad om egen profil', async () => {
+    mockClubOptions.value = ONE_CLUB;
+    fetchOwnProfileMock.mockResolvedValue({ ...mockProfile, profileCompletedAt: null });
+    try {
+      await renderWizard({ atType: true });
+      await fireEvent.press(await screen.findByTestId('create-type-klubb'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+      await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      expect(screen.queryByText(PENDING_SELF_NOTE)).toBeNull();
+
+      // Velger arrangøren seg selv, gjelder sperren, og merknaden står.
+      await fireEvent.press(screen.getByTestId('create-back'));
+      await fireEvent.press(screen.getByTestId('create-player-me'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      expect(screen.getByText(PENDING_SELF_NOTE)).toBeTruthy();
+    } finally {
+      fetchOwnProfileMock.mockResolvedValue(mockProfile);
+    }
   });
 
   it('med flere klubber venter «Neste» på et valg, og lista følger klubben', async () => {

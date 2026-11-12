@@ -619,7 +619,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         <SummaryStep
           lines={summaryLines(draft, gameMode, courses.data, rosterSource, teeOff)}
           warnings={summaryWarnings(draft, gameMode, {
-            selfPending,
+            // #2753: startsperren gjelder bare spillerne på lista. En arrangør som
+            // ikke spiller en klubbturnering, stoppes ikke av egen profil.
+            selfPending: selfPending && draft.players.some((p) => p.userId === userId),
             othersPending: othersPendingCount(draft, rosterSource, userId),
             club: draft.groupId != null,
           })}
@@ -767,7 +769,8 @@ export function summaryLines(
     {
       key: 'players',
       label: `Spillere (${draft.players.length})`,
-      value: names.join(', '),
+      // #2753: en klubbturnering kan publiseres uten spillere.
+      value: names.length > 0 ? names.join(', ') : CLUB_TEXT.noPlayers,
     },
     ...(offMens.length > 0
       ? [

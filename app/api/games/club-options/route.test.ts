@@ -111,6 +111,17 @@ describe('GET /api/games/club-options', () => {
     expect(body.canCreateClubGame).toBe(false);
   });
 
+  it('en utløpt klubb står ikke i lista, selv for en som er admin i en annen', async () => {
+    ownRows = [
+      { role: 'admin', groups: { id: CLUB, name: 'Byneset GK', valid_until: null } },
+      { role: 'owner', groups: { id: 'gammel', name: 'Gammel GK', valid_until: '2020-01-01' } },
+    ];
+    const body = await (await call('token-meg')).json();
+    expect(body.canCreateClubGame).toBe(true);
+    expect(body.clubs.map((c: { id: string }) => c.id)).toEqual([CLUB]);
+    expect(Object.keys(body.membersByClub)).toEqual([CLUB]);
+  });
+
   it('feiler profil-lesingen: 500 load_failed', async () => {
     profileFails = true;
     const res = await call('token-meg');
