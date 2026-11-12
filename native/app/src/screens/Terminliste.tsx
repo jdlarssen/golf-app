@@ -41,10 +41,8 @@ import {
   dayLabelText,
   describeTerminlisteFailure,
   pendingTeamLine,
-  requestLabel,
-  seatsFree,
-  seatsLeft,
-  signUpLabel,
+  rowA11yLabel,
+  seatLineText,
   socialProofText,
   timeNoteText,
 } from '../lib/terminlisteCopy';
@@ -269,11 +267,16 @@ function Row({ entry, onPress }: { entry: AppTerminEntry; onPress: () => void })
   const { colors } = useTheme();
   const clock = formatStubClock(entry.scheduled_tee_off_at)?.replace(/^kl\. /, '') ?? null;
   const note = timeNoteText(terminTimeNote(entry));
-  const label = entry.full
-    ? `${entry.name}. ${TERMIN_TEXT.full}`
-    : entry.cta === 'direct'
-      ? signUpLabel(entry.name)
-      : requestLabel(entry.name);
+  const courseFormat = courseFormatLine(entry.course_name, entry.modeLabel, entry.teamSize);
+  const label = rowA11yLabel({
+    name: entry.name,
+    full: entry.full,
+    cta: entry.cta,
+    clock,
+    note,
+    courseFormat,
+    third: entry.capacity ? seatLineText(entry.capacity) : entry.socialProof ? socialProofText(entry.socialProof) : null,
+  });
   return (
     <Pressable
       accessibilityRole="button"
@@ -294,9 +297,7 @@ function Row({ entry, onPress }: { entry: AppTerminEntry; onPress: () => void })
       </View>
       <View style={styles.body}>
         <Text style={[styles.name, { color: colors.text }]}>{entry.name}</Text>
-        <Text style={[styles.line, { color: colors.muted }]}>
-          {courseFormatLine(entry.course_name, entry.modeLabel, entry.teamSize)}
-        </Text>
+        <Text style={[styles.line, { color: colors.muted }]}>{courseFormat}</Text>
         <ThirdLine entry={entry} />
       </View>
       {entry.full ? null : entry.cta === 'direct' ? (
@@ -316,7 +317,7 @@ function Row({ entry, onPress }: { entry: AppTerminEntry; onPress: () => void })
 function ThirdLine({ entry }: { entry: AppTerminEntry }) {
   const { colors } = useTheme();
   if (entry.capacity) {
-    const { free, fillRatio, tone } = capacityState(entry.capacity);
+    const { fillRatio, tone } = capacityState(entry.capacity);
     const warn = tone !== 'normal';
     return (
       <View style={styles.third} testID={`terminliste-seats-${entry.id}`}>
@@ -326,7 +327,7 @@ function ThirdLine({ entry }: { entry: AppTerminEntry }) {
           />
         </View>
         <Text style={[styles.small, warn ? { color: colors.warningText, fontFamily: FONTS.sansSemiBold } : { color: colors.muted }]}>
-          {tone === 'full' ? TERMIN_TEXT.full : tone === 'low' ? seatsLeft(free) : seatsFree(free, entry.capacity.cap)}
+          {seatLineText(entry.capacity)}
         </Text>
       </View>
     );
@@ -345,7 +346,7 @@ function ThirdLine({ entry }: { entry: AppTerminEntry }) {
     <View style={styles.third} testID={`terminliste-proof-${entry.id}`}>
       {friends.map((friend, i) => (
         <View
-          key={friend}
+          key={`${friend}-${i}`}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           style={[

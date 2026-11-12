@@ -20,6 +20,8 @@ import {
   inDays,
   pendingTeamLine,
   requestLabel,
+  rowA11yLabel,
+  seatLineText,
   seatsFree,
   seatsLeft,
   signUpLabel,
@@ -156,5 +158,35 @@ describe('linjene', () => {
     const texts = reasons.map(describeTerminlisteFailure);
     expect(texts.every((text) => text.trim().length > 10 && !text.includes('{'))).toBe(true);
     expect(describeTerminlisteFailure('no-web-base-url')).toBe(WEB_LINK_TEXT.missingBaseUrl);
+  });
+});
+
+describe('skjermleserens rad', () => {
+  const base = { name: 'Lørdagsrunden', full: false, cta: 'direct' as const, clock: '09:20', note: 'første start', courseFormat: 'Byneset North · Stableford', third: '6 av 8 plasser ledige' };
+
+  it('knappen først, så klokka, den lille linja, bane og format og plass-linja', () => {
+    expect(rowA11yLabel(base)).toBe(
+      'Meld meg på Lørdagsrunden. kl. 09:20. første start. Byneset North · Stableford. 6 av 8 plasser ledige',
+    );
+    expect(rowA11yLabel({ ...base, cta: 'request', note: null, third: null })).toBe(
+      'Be om å bli med i Lørdagsrunden. kl. 09:20. Byneset North · Stableford',
+    );
+  });
+
+  it('en runde uten tid sier «Dato ikke satt», og en full runde har «Fullt» foran og ingen plass-linje', () => {
+    expect(rowA11yLabel({ ...base, clock: null, note: null, third: null })).toBe(
+      'Meld meg på Lørdagsrunden. Dato ikke satt. Byneset North · Stableford',
+    );
+    expect(rowA11yLabel({ ...base, full: true, third: 'Fullt' })).toBe(
+      'Lørdagsrunden. Fullt. kl. 09:20. første start. Byneset North · Stableford',
+    );
+  });
+
+  it('plass-linja: ledige, få igjen og fullt', () => {
+    expect([seatLineText({ cap: 8, held: 2 }), seatLineText({ cap: 8, held: 7 }), seatLineText({ cap: 8, held: 8 })]).toEqual([
+      '6 av 8 plasser ledige',
+      '1 plass igjen',
+      'Fullt',
+    ]);
   });
 });
