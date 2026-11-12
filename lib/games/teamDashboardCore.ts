@@ -812,6 +812,15 @@ type CaptainRequestRow = {
 };
 
 /**
+ * #2840: a failed read must not look like «no team» (I3, #877). The page's
+ * error boundary and the app route's 500 take it from here. The display-name
+ * read further down stays best effort, as it always was.
+ */
+function throwRead(what: string, error: { message?: string }): never {
+  throw new Error(`[loadTeamDashboard] ${what} read failed: ${error.message ?? 'unknown'}`);
+}
+
+/**
  * The team page's read (#199 chunks 8+9). Three roles share it:
  *   - captain: every teammate with a status;
  *   - member: the team and the caller's own answer;
@@ -839,26 +848,28 @@ export async function loadTeamDashboard(
   const admin = getAdminClient();
 
   // The caller's own row decides the role.
-  const { data: myRow } = await admin
+  const { data: myRow, error: myRowError } = await admin
     .from('game_registration_requests')
     .select('id, user_id, status, is_team_captain, team_name, team_request_id')
     .eq('game_id', game.id)
     .eq('user_id', userId)
     .maybeSingle<TeamMemberRow>();
+  if (myRowError) throwRead('own row', myRowError);
 
   if (!myRow) {
     // No request row: an open invitation for the game may offer «Bli med».
-    const { data: userRow } = await admin
+    const { data: userRow, error: userError } = await admin
       .from('users')
       .select('email')
       .eq('id', userId)
       .maybeSingle<{ email: string }>();
+    if (userError) throwRead('own e-mail', userError);
     if (!userRow?.email) return { kind: 'no_team', game: view };
 
     // No unique on (email, game_id): both the organiser and a captain may have
     // invited the same address, so read every open one and let
     // pickPendingInvitation choose (#1343). #1437: unexpired only.
-    const { data: invitations } = await admin
+    const { data: invitations, error: invitationsError } = await admin
       .from('invitations')
       .select('id, email, invited_by')
       .filter('email', 'imatch', emailMatchPattern(userRow.email))
@@ -867,11 +878,12 @@ export async function loadTeamDashboard(
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .returns<{ id: string; email: string; invited_by: string }[]>();
+    if (invitationsError) throwRead('invitations', invitationsError);
     if (!invitations || invitations.length === 0) return { kind: 'no_team', game: view };
 
     // The captain rows decide which invitation is a certain team match, so
     // they are read before the invitation is picked (#1343).
-    const { data: captains } = await admin
+    const { data: captains, error: captainsError } = await admin
       .from('game_registration_requests')
       .select('id, user_id, team_name, status')
       .eq('game_id', game.id)
@@ -879,6 +891,7 @@ export async function loadTeamDashboard(
       .in('status', ['pending', 'approved'])
       .order('created_at', { ascending: false })
       .returns<CaptainRequestRow[]>();
+    if (captainsError) throwRead('captain rows', captainsError);
     const captainRows = captains ?? [];
     // #2358: a captain who handed on the captaincy is still on the team.
     const inviterTeams: InviterTeams = await loadInviterTeams(
@@ -911,11 +924,12 @@ export async function loadTeamDashboard(
     return { kind: 'solo', game: view };
   }
 
-  const { data: allRows } = await admin
+  const { data: allRows, error: allRowsError } = await admin
     .from('game_registration_requests')
     .select('id, user_id, status, is_team_captain, team_name, team_request_id')
     .or(`id.eq.${captainRequestId},team_request_id.eq.${captainRequestId}`)
     .returns<TeamMemberRow[]>();
+  if (allRowsError) throwRead('team rows', allRowsError);
   const rows = allRows ?? [];
   const captainRow = rows.find((r) => r.is_team_captain);
   const memberRows = rows.filter((r) => !r.is_team_captain);

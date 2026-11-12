@@ -686,6 +686,14 @@ describe('loadTeamDashboard', () => {
     expect(await loadTeamDashboard(SHORT_ID, CAPTAIN_ID)).toEqual({ kind: 'not_found' });
   });
 
+  it('#2840: a failed read throws instead of reading as «no team»', async () => {
+    adminMock = buildSupabaseMock([{ data: null, error: { message: 'boom' } }]);
+    await expect(loadTeamDashboard(SHORT_ID, CAPTAIN_ID)).rejects.toThrow();
+
+    adminMock = buildSupabaseMock([myRow({}), { data: null, error: { message: 'boom' } }]);
+    await expect(loadTeamDashboard(SHORT_ID, CAPTAIN_ID)).rejects.toThrow();
+  });
+
   it('the captain sees the team; a nameless teammate shows masked, an unknown user reads as a guest', async () => {
     adminMock = buildSupabaseMock([
       myRow({}),

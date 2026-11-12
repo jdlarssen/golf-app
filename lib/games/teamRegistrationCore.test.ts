@@ -722,6 +722,13 @@ describe('declineTeamInviteCore', () => {
     );
   });
 
+  it('#2840: the request cannot be read → db_error, nothing written', async () => {
+    adminMock = buildSupabaseMock([PROFILE_OK, { data: null, error: { message: 'boom' } }]);
+    expect(await decline()).toEqual({ ok: false, error: 'db_error' });
+    expect(calls('game_players', 'delete')).toHaveLength(0);
+    expect(calls('game_registration_requests', 'update')).toHaveLength(0);
+  });
+
   it('#2223: the roster row cannot be deleted → db_error, the request untouched', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     adminMock = buildSupabaseMock([
