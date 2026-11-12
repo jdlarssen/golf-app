@@ -16,13 +16,14 @@
 // videre. Fordi bare dekket står, kan Face ID-dialogen (som gir `inactive`) ikke
 // lage en løkke. Dekket skjuler barna for skjermleseren.
 //
-// **Android** har ikke dekket. Android tar bildet til appvelgeren når aktiviteten
-// pauser, før `AppState` sier «background», så et dekk i React rekker det ikke. Dekket
-// på Androids `blur` rakk det, men la seg bak hvert bunnark og hver dialog (en RN-`Modal`
-// tar vindusfokus; målt på emulatoren). I stedet ber vi systemet la være å ta bildet
-// mens låsen er på (`lib/recentsScreenshot.ts`, Android 13 og nyere): appvelgeren viser
-// da temaets bakgrunn uten innhold, og skjermbilder virker som før (eierens valg
-// 12.11). Under Android 13 er det ingen beskyttelse i appvelgeren.
+// **Android** er beskyttet av noe annet enn dekket. Dekket tegnes også der ved
+// `background`, men Android tar bildet til appvelgeren når aktiviteten pauser, før
+// `AppState` sier det, så det rekker ikke bildet. Å dekke på Androids `blur` rakk det,
+// men la seg bak hvert bunnark og hver dialog (en RN-`Modal` tar vindusfokus; målt på
+// emulatoren). I stedet ber vi systemet la være å ta bildet mens låsen er på
+// (`lib/recentsScreenshot.ts`, Android 13 og nyere): appvelgeren viser da temaets
+// bakgrunn uten innhold, og skjermbilder virker som før (eierens valg 12.11). Under
+// Android 13 er det ingen beskyttelse i appvelgeren.
 //
 // **Låseskjermen** er bakgrunnen, ordmerket og én knapp, «Lås opp», som spør på
 // nytt. Ingen «Logg ut»: telefonens kode er alltid reserveveien. Avbryter
