@@ -191,6 +191,11 @@ export interface BundleGame {
    */
   shortId?: string | null;
   registrationType?: string | null;
+  /**
+   * #2840 del 4: `games.registration_mode`, så arrangøren av en lagrunde med påmelding
+   * får «Meld på laget ditt». Valgfri på samme måte som de to over.
+   */
+  registrationMode?: string | null;
 }
 
 /**
@@ -391,6 +396,7 @@ export function toBundle(
       prizes: safeParsePrizes(game.prizes),
       shortId: game.short_id ?? null,
       registrationType: game.registration_type ?? null,
+      registrationMode: game.registration_mode ?? null,
     },
     players: players.map((row) => ({
       userId: row.user_id,
