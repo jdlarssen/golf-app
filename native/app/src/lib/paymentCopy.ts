@@ -1,9 +1,10 @@
 // native/app/src/lib/paymentCopy.ts
 // #2749: tekstene på kontingentkortet og premiebordet i venterommet.
 //
-// Hver streng er nettsidens ordrett, og `paymentCopy.test.ts` låser dem mot
-// `messages/no.json` (`payment`, `prizes`, `wizard.sections.prizes`), så de to
-// ikke glir fra hverandre.
+// Hver streng er nettsidens ordrett (unntatt de under «Bare i appen»), og
+// `paymentCopy.test.ts` låser dem mot `messages/no.json` (`payment`, `prizes`,
+// `wizard.sections.prizes`), så de to ikke glir fra hverandre.
+import { Platform } from 'react-native';
 import { formatKr } from '../../../../lib/format/formatKr';
 
 export const PAYMENT_TEXT = {
@@ -25,6 +26,18 @@ export const PRIZE_TEXT = {
   sponsoredBy: (sponsor: string) => `Sponset av ${sponsor}`,
   /** Nettets `wizard.sections.prizes.toggleCount`: «1 premie», «5 premier». */
   count: (n: number) => `${n} ${n === 1 ? 'premie' : 'premier'}`,
+  // --- Bare i appen ---
+  /**
+   * Linja under premiene (#2561): arrangøren deler ut premiene, Tørny står ikke
+   * bak. App Store Review 5.3.2 vil ha «Apple is not a sponsor» der en
+   * konkurranse har premier; Google trenger ikke navnet. Nøkkelen finnes bare i
+   * appen, så `paymentCopy.test.ts` binder den ikke til `messages/no.json`.
+   * Valget følger `Platform.OS` ved hvert kall, ikke ved import.
+   */
+  organiserNote: () =>
+    Platform.OS === 'ios'
+      ? 'Arrangøren deler ut premiene. Verken Tørny eller Apple står bak konkurransen.'
+      : 'Arrangøren deler ut premiene. Tørny står ikke bak konkurransen.',
 } as const;
 
 /**
