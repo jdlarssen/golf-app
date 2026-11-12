@@ -30,6 +30,11 @@ import { isUuid } from '@/lib/url/isUuid';
 // rader du har delt et spill med, så en ligakamerat du aldri har spilt med,
 // er usynlig for bruker-klienten. Alle andre som får se ligaen, får `null`.
 //
+// `me.canJoin` / `me.canLeave` (#2839) er nettsidens regel (`leagueSelfServiceState`).
+// `canViewLeague` svarer `isClubMember: false` for en som alt er deltaker; det er
+// ufarlig, siden `canJoin` krever at du ikke er deltaker og `canLeave` ikke leser
+// medlemskap.
+//
 // Som nettsiden bekrefter ruta deltakelsen når en deltaker åpner ligaen
 // (#463, `maybeAutoConfirmLeagueParticipation`), så en som bare bruker appen
 // ikke blir stående som «Ikke bekreftet». Det skjer etter svaret (`after`).
@@ -66,7 +71,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
 
     const caller = callerScopedClient(request);
     if (!caller) throw new Error('caller-scoped client unavailable');
-    const { allowed } = await canViewLeague(caller, {
+    const { allowed, isClubMember } = await canViewLeague(caller, {
       groupId: leagueRes.data.group_id,
       userId,
       isParticipant: meRes.data !== null,
@@ -81,7 +86,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (meRes.data && meRes.data.accepted_at == null) {
       after(() => maybeAutoConfirmLeagueParticipation({ leagueId: id, userId }));
     }
-    return NextResponse.json(buildAppLeagueView(snapshot, userId, details));
+    return NextResponse.json(buildAppLeagueView(snapshot, userId, details, isClubMember));
   } catch (err) {
     console.error('[api/liga/[id]] load failed', err);
     return NextResponse.json({ error: 'load_failed' }, { status: 500 });

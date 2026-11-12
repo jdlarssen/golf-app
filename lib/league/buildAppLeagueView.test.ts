@@ -144,7 +144,7 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
           perRound: [{ roundId: 'r1', value: 36, points: null, penalised: false, gameId: 'g1' }],
         },
       ],
-      me: { userId: 'B', isParticipant: true, isOrganizer: false },
+      me: { userId: 'B', isParticipant: true, isOrganizer: false, canJoin: false, canLeave: false },
     });
   });
 
@@ -184,8 +184,46 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
       userId: 'Z',
       isParticipant: false,
       isOrganizer: false,
+      canJoin: false,
+      canLeave: false,
     });
     // #2661: the league's creator may approve in a marker's stead.
     expect(buildAppLeagueView(snapshot('net'), 'admin').me.isOrganizer).toBe(true);
+  });
+
+  // #2839: the buttons are `leagueSelfServiceState`'s answer for the viewer. The
+  // rule itself has its table in selfService.test.ts; here we check that the view
+  // feeds it the snapshot's club, status, participant row and `hasPlayed`.
+  describe('self-service (#2839)', () => {
+    type Case = {
+      name: string;
+      group: string | null;
+      status: string;
+      viewer: string; // 'A' has played, 'B' has not, 'Z' is not in the league
+      clubMember: boolean;
+      canJoin: boolean;
+      canLeave: boolean;
+    };
+    const cases: Case[] = [
+      { name: 'standalone league, outsider', group: null, status: 'draft', viewer: 'Z', clubMember: true, canJoin: false, canLeave: false },
+      { name: 'standalone league, participant', group: null, status: 'draft', viewer: 'B', clubMember: false, canJoin: false, canLeave: false },
+      { name: 'club draft, member not in', group: 'k1', status: 'draft', viewer: 'Z', clubMember: true, canJoin: true, canLeave: false },
+      { name: 'club draft, non-member', group: 'k1', status: 'draft', viewer: 'Z', clubMember: false, canJoin: false, canLeave: false },
+      { name: 'club active, member not in', group: 'k1', status: 'active', viewer: 'Z', clubMember: true, canJoin: false, canLeave: false },
+      { name: 'club finished, member not in', group: 'k1', status: 'finished', viewer: 'Z', clubMember: true, canJoin: false, canLeave: false },
+      { name: 'club draft, participant not played', group: 'k1', status: 'draft', viewer: 'B', clubMember: true, canJoin: false, canLeave: true },
+      { name: 'club active, participant not played', group: 'k1', status: 'active', viewer: 'B', clubMember: true, canJoin: false, canLeave: true },
+      { name: 'club active, participant has played', group: 'k1', status: 'active', viewer: 'A', clubMember: true, canJoin: false, canLeave: false },
+      { name: 'club finished, participant not played', group: 'k1', status: 'finished', viewer: 'B', clubMember: true, canJoin: false, canLeave: false },
+      // `canViewLeague` says isClubMember:false for a participant (short-circuit),
+      // so an admin-added participant who is no club member can still leave.
+      { name: 'club draft, participant who is no club member', group: 'k1', status: 'draft', viewer: 'B', clubMember: false, canJoin: false, canLeave: true },
+    ];
+    it.each(cases)('$name', ({ group, status, viewer, clubMember, canJoin, canLeave }) => {
+      const base = snapshot('net');
+      const snap = { ...base, league: { ...base.league, group_id: group, status } };
+      const me = buildAppLeagueView(snap, viewer, null, clubMember).me;
+      expect({ canJoin: me.canJoin, canLeave: me.canLeave }).toEqual({ canJoin, canLeave });
+    });
   });
 });

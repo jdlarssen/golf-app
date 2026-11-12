@@ -24,7 +24,7 @@ export type AppMarkerCard = {
   roundLabel: string;
 };
 
-/** One league on the app's Home («Ligaene dine»). */
+/** One league on the app's Home («Ligaene dine»), or a club league the caller can join (#2839). */
 export type AppLeagueSummary = {
   id: string;
   name: string;
@@ -39,7 +39,15 @@ export type AppLeagueSummary = {
   markerCards: AppMarkerCard[];
 };
 
-export type AppLeagueListResponse = { leagues: AppLeagueSummary[] };
+export type AppLeagueListResponse = {
+  /** The leagues the caller is in. */
+  leagues: AppLeagueSummary[];
+  /**
+   * #2839: draft club leagues in the caller's clubs that the caller is not in
+   * yet. Absent from a server older than #2839.
+   */
+  joinable: AppLeagueSummary[];
+};
 
 export type AppLeagueRound = {
   id: string;
@@ -148,8 +156,12 @@ export type AppLeagueView = {
   participants: AppLeagueParticipant[];
   /** The table on the league's own axis (net, or gross in a gross league). */
   standings: AppLeagueStandingRow[];
-  /** `isOrganizer` (#2661): the league's creator, who may approve in a marker's stead. */
-  me: { userId: string; isParticipant: boolean; isOrganizer: boolean };
+  /**
+   * `isOrganizer` (#2661): the league's creator, who may approve in a marker's stead.
+   * `canJoin` / `canLeave` (#2839): the web page's self-service buttons
+   * (`leagueSelfServiceState`); the SQL functions stay the authority at the tap.
+   */
+  me: { userId: string; isParticipant: boolean; isOrganizer: boolean; canJoin: boolean; canLeave: boolean };
 };
 
 /**
