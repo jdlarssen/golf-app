@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Intent } from './intent';
-import { isValidClubChoice, startClubId, startIntent } from './clubChoice';
+import { canCreateClubGame, isValidClubChoice, startClubId, startIntent } from './clubChoice';
 
 // Type A (docs/test-discipline.md): the one home of the rule «a club
 // tournament needs a valid club» (#2439). `clubIds` is the wizard's list of
@@ -45,5 +45,17 @@ describe('startIntent', () => {
     ['no intent stays none', undefined, ['a'], undefined],
   ])('%s', (_label, intent, clubIds, expected) => {
     expect(startIntent({ intent, clubIds })).toBe(expected);
+  });
+});
+
+describe('canCreateClubGame', () => {
+  it.each([
+    [{ isAdmin: false, isClubAdmin: false, hasClub: true }, false],
+    [{ isAdmin: false, isClubAdmin: true, hasClub: true }, true],
+    [{ isAdmin: true, isClubAdmin: false, hasClub: true }, true],
+    [{ isAdmin: true, isClubAdmin: true, hasClub: false }, false],
+    [{ isAdmin: false, isClubAdmin: true, hasClub: false }, false],
+  ])('%o → %s', (input, expected) => {
+    expect(canCreateClubGame(input)).toBe(expected);
   });
 });

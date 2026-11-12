@@ -365,6 +365,70 @@ describe('publishGame', () => {
     });
   });
 
+  // #2753: en klubbturnering hører til klubben og kan publiseres uten spillere.
+  describe('klubbturnering (#2753)', () => {
+    const CLUB = 'club-1';
+
+    it('skriver klubben på runden, og ingen spillerrader når lista er tom', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub(GAME_ROW);
+      // Ingen `game_players` rigget: en spørring dit ville kastet.
+      routeFrom({ formats: [queryStub(ACTIVE_FORMAT)], games: [gameInsert] });
+
+      expect(await publish(draft({ groupId: CLUB, players: [] }))).toEqual({ ok: true, gameId: GAME_ID });
+      const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
+      expect(row).toMatchObject({
+        group_id: CLUB,
+        registration_mode: 'invite_only',
+        registration_type: 'solo',
+        tournament_id: null,
+      });
+      expect(mockFetch.mock.calls.map((c) => c[0])).toContain(
+        `${BASE_URL}/api/games/${GAME_ID}/invite-roster`,
+      );
+    });
+
+    it('skriver de valgte medlemmene som før', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const players = queryStub({ data: [{ user_id: MATE }], error: null });
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(GAME_ROW)],
+        game_players: [players],
+      });
+
+      const clubDraft = draft({ groupId: CLUB, players: [{ userId: MATE, teeGender: 'D', teamNumber: null }] });
+      expect(await publish(clubDraft)).toEqual({ ok: true, gameId: GAME_ID });
+      const rows = stepArgs(players, 'insert')[0]![0] as { user_id: string }[];
+      expect(rows.map((r) => r.user_id)).toEqual([MATE]);
+    });
+
+    it('uten klubb er tom liste fortsatt en feil, og ingenting skrives', async () => {
+      const { routeFrom } = mocks();
+      routeFrom({});
+      const result = await publish(draft({ groupId: null, players: [] }));
+      expect(result.ok).toBe(false);
+    });
+
+    it('et nytt forsøk med tom liste fjerner spillerne et tidligere forsøk lagret', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const clear = queryStub({ data: [{ user_id: MATE }], error: null });
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [
+          queryStub({ data: null, error: { message: 'duplicate key value violates unique constraint "games_pkey"', code: '23505' } }),
+          queryStub(GAME_ROW),
+        ],
+        game_players: [clear],
+      });
+
+      expect(await publish(draft({ groupId: CLUB, players: [] }))).toEqual({ ok: true, gameId: GAME_ID });
+      expect(stepArgs(clear, 'delete')).toHaveLength(1);
+      expect(stepArgs(clear, 'eq')).toEqual([['game_id', GAME_ID]]);
+      expect(stepArgs(clear, 'not')).toEqual([]);
+    });
+  });
+
   describe('portene foran skrivingen', () => {
     it('nekter uten sesjon, uten å røre databasen', async () => {
       const { routeFrom } = mocks();

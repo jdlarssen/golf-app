@@ -4,6 +4,11 @@
 // **Du står alltid øverst og kan ikke tas bort.** Arrangøren er med i sin egen
 // runde; en avhukbar rad ville bare vært en felle.
 //
+// **Unntaket er en klubbturnering (#2753).** Der er lista klubbens medlemmer,
+// du med, og ingen er valgt fra start: arrangøren legges ikke inn av seg selv,
+// og lista kan stå tom fordi medlemmene melder seg på selv (nettets regel,
+// `rosterOptionalAtPublish`). Antallet formatet krever sjekkes ved start.
+//
 // **Lista er medspillere, ikke venner.** `users`-RLS-en gir egen rad, admin og
 // delte spill — en venn du aldri har spilt med er ikke navnlesbar herfra, og
 // gjester kan ikke opprettes fra appen i det hele tatt. Begge begrensningene
@@ -39,6 +44,7 @@ import {
   type TeamLayout,
 } from '../../lib/rosterLimits';
 import { teamGridSize } from '../../../../../lib/games/teamFormatLimits';
+import { CLUB_TEXT } from '../../lib/arrangementCopy';
 import { CREATE_ON_WEB_PATH } from '../../lib/createGameCopy';
 import type { TeeGenderAvailability } from '../../lib/teeChoice';
 import type { DraftPlayer, TeeGenderUi } from '../../lib/wizardPayload';
@@ -132,6 +138,7 @@ export function PlayersStep({
   onTeam,
   onTee,
   onRetry,
+  club = false,
 }: {
   /** `null` mens hentingen pågår. */
   candidates: RosterCandidate[] | null;
@@ -152,6 +159,8 @@ export function PlayersStep({
   onTeam: (userId: string, teamNumber: number) => void;
   onTee: (userId: string, teeGender: TeeGenderUi) => void;
   onRetry: () => void;
+  /** Klubbturnering: medlemmene, du med, og ingen fast rad for deg (#2753). */
+  club?: boolean;
 }) {
   const { colors, ui } = useTheme();
   const [search, setSearch] = useState('');
@@ -164,7 +173,7 @@ export function PlayersStep({
 
   const needle = search.trim().toLowerCase();
   const others = (candidates ?? [])
-    .filter((c) => c.id !== meId)
+    .filter((c) => club || c.id !== meId)
     .filter(
       (c) => needle === '' || displayName(c).toLowerCase().includes(needle),
     );
@@ -195,7 +204,9 @@ export function PlayersStep({
         {`${players.length} av ${cap} spillere valgt`}
       </Text>
 
-      {!fits ? (
+      {club ? <Note testID="create-roster-club">{CLUB_TEXT.emptyRoster}</Note> : null}
+
+      {!fits && !club ? (
         <Note testID="create-roster-fit">
           {`${APP_MODE_LABELS[mode]} spilles med ${describePlayerCounts(mode)}. Du har ${players.length}.`}
         </Note>
@@ -205,39 +216,43 @@ export function PlayersStep({
           alle, og fire like setninger ville vært støy. */}
       {teeNote ? <Note testID="create-tee-note">{teeNote}</Note> : null}
 
-      <SelectRow
-        testID={`create-player-${meId}`}
-        title="Deg"
-        // #1979: din egen rad sa «Du er alltid med» selv når profilen din
-        // manglet navn og handicap, mens hver ANNEN ufullført spiller ble
-        // merket to linjer lenger ned. Merkingen står nå på begge.
-        subtitle={
-          selfPending
-            ? 'Du er alltid med. Men du har ikke fullført profilen din ennå.'
-            : 'Du er alltid med'
-        }
-        selected
-      />
-      {teeNote === null ? (
-        <Chips
-          testID={`create-tee-row-${meId}`}
-          style={CHIP_ROW}
-          value={chosen.get(meId)?.teeGender ?? null}
-          onChange={(tee) => onTee(meId, tee)}
-          options={teeOptions(meId, teeAvailability)}
-        />
-      ) : null}
-      {teamLayout ? (
-        <Chips
-          testID={`create-team-row-${meId}`}
-          style={CHIP_ROW}
-          value={chosen.get(meId)?.teamNumber ?? null}
-          onChange={(team) => onTeam(meId, team)}
-          options={teamOptions(teamLayout, meId, players)}
-        />
-      ) : null}
+      {club ? null : (
+        <>
+          <SelectRow
+            testID={`create-player-${meId}`}
+            title="Deg"
+            // #1979: din egen rad sa «Du er alltid med» selv når profilen din
+            // manglet navn og handicap, mens hver ANNEN ufullført spiller ble
+            // merket to linjer lenger ned. Merkingen står nå på begge.
+            subtitle={
+              selfPending
+                ? 'Du er alltid med. Men du har ikke fullført profilen din ennå.'
+                : 'Du er alltid med'
+            }
+            selected
+          />
+          {teeNote === null ? (
+            <Chips
+              testID={`create-tee-row-${meId}`}
+              style={CHIP_ROW}
+              value={chosen.get(meId)?.teeGender ?? null}
+              onChange={(tee) => onTee(meId, tee)}
+              options={teeOptions(meId, teeAvailability)}
+            />
+          ) : null}
+          {teamLayout ? (
+            <Chips
+              testID={`create-team-row-${meId}`}
+              style={CHIP_ROW}
+              value={chosen.get(meId)?.teamNumber ?? null}
+              onChange={(team) => onTeam(meId, team)}
+              options={teamOptions(teamLayout, meId, players)}
+            />
+          ) : null}
+        </>
+      )}
 
-      {candidates !== null && others.length === 0 && needle === '' ? (
+      {!club && candidates !== null && others.length === 0 && needle === '' ? (
         <>
           <Note testID="create-players-empty">
             Du har ingen medspillere å velge fra ennå. Du kan opprette runden med
@@ -256,7 +271,7 @@ export function PlayersStep({
       ) : null}
 
       {candidates !== null && others.length > 0 ? (
-        <Field label="Medspillere">
+        <Field label={club ? 'Medlemmer' : 'Medspillere'}>
           <TextInput
             testID="create-player-search"
             style={ui.input}

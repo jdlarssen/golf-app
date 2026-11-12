@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 import type { Intent } from '@/lib/wizard/intent';
 import { choiceStateClass } from '@/components/ui/ChoiceCard';
+import { canCreateClubGame as offersClubTile } from '@/lib/wizard/clubChoice';
 
 type Props = {
   value: Intent | undefined;
@@ -126,7 +127,7 @@ export function IntentSelector({
   // er med i en gyldig klubb. Begge kortene beholdes hvis
   // et eksisterende spill med den intent-en redigeres (value-sjekken) så det
   // valgte arrangementet ikke forsvinner fra UI-en.
-  const canCreateClubGame = (isAdmin || isClubAdmin) && hasClub;
+  const canCreateClubGame = offersClubTile({ isAdmin, isClubAdmin, hasClub });
   const tiles = TILES.filter(
     (tile) =>
       (tile.intent !== 'solo' || isAdmin || value === 'solo') &&

@@ -59,3 +59,22 @@ export function startIntent({
   if (intent === 'klubb' && clubIds.length === 0) return undefined;
   return intent;
 }
+
+/**
+ * Whether «Klubb-turnering» is offered on step 1 (#525, #2439): to a global
+ * admin or the owner or admin of a club that has not expired, and only when
+ * you are a member of at least one valid club. The web's `IntentSelector` and
+ * the app's `GET /api/games/club-options` (#2753) both ask this, so the two
+ * cannot disagree.
+ */
+export function canCreateClubGame({
+  isAdmin,
+  isClubAdmin,
+  hasClub,
+}: {
+  isAdmin: boolean;
+  isClubAdmin: boolean;
+  hasClub: boolean;
+}): boolean {
+  return (isAdmin || isClubAdmin) && hasClub;
+}
