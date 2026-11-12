@@ -14,6 +14,13 @@
 // plass». Forespørselen kan trekkes fra «Forespørselen er sendt», og etterpå spør
 // skjermen på nytt.
 //
+// Lag (#2840, tegningen v3.1): sier ruta `teamSignup.kind === 'form'`, står lagskjemaet
+// her (`components/signup/TeamSignupForm.tsx`), og «Runden er full» i stedet når alle
+// plassene er tatt. `invited` er svaret på en laginvitasjon (`TeamAnswer.tsx`). Ved åpen
+// påmelding går du til runden etterpå; ved godkjenning står «Laget er sendt til
+// arrangøren». Uten `teamSignup` (en eldre server, eller en lagrunde appen ikke tar)
+// står nettknappen som før.
+//
 // Alt kommer fra `GET /api/pamelding/[shortId]`. Skrivingen er `POST` på samme sti.
 // Ingenting legges i kø: uten nett står feilen, og ingenting er skrevet.
 //
@@ -27,6 +34,8 @@ import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteVie
 import { REGISTRATION_MESSAGE_MAX } from '../../../../lib/games/registration';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { WebLinkButton } from '../components/WebLinkButton';
+import { TeamInviteAnswer, TeamRoundFull, TeamSent } from '../components/signup/TeamAnswer';
+import { TeamSignupForm, type SentTeam } from '../components/signup/TeamSignupForm';
 import {
   cancelRequest,
   fetchRoundInvite,
@@ -68,6 +77,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const [message, setMessage] = useState('');
   const [stop, setStop] = useState<StopReason | null>(null);
   const [error, setError] = useState<RoundInviteFailureWithText | null>(null);
+  // #2840: laget er sendt og venter på arrangøren. Står til du går fra skjermen.
+  const [teamSent, setTeamSent] = useState<SentTeam | null>(null);
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
   // Et svar på en eldre henting skal ikke tegne over det som har skjedd siden.
@@ -164,6 +175,18 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     [load, navigation, view],
   );
 
+  // #2840: åpen påmelding går til runden, som «Meld meg på». Svaret har ingen spill-id,
+  // så skjermen spør på nytt og følger `in_game`. Ved godkjenning står «Sendt».
+  const onTeamRegistered = useCallback(
+    (joinEffect: 'instant' | 'approval', sent: SentTeam) => {
+      if (joinEffect === 'approval') setTeamSent(sent);
+      else void load();
+    },
+    [load],
+  );
+  const onTeamStale = useCallback((afterFull: boolean) => void load(afterFull), [load]);
+  const onTeamAnswered = useCallback(() => void load(), [load]);
+
   const scroll = [styles.scroll, { backgroundColor: colors.bg, paddingBottom: bottomInset + 20 }];
 
   if (failure === 'not_found') {
@@ -201,6 +224,26 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
         </Pressable>
       </View>
     );
+  }
+
+  if (teamSent) return <TeamSent shortId={shortId} round={view.round} sent={teamSent} />;
+  const team = view.teamSignup ?? null;
+  if (team?.kind === 'form') {
+    if (isRoundFull(view.seats)) return <TeamRoundFull view={view} />;
+    return (
+      <TeamSignupForm
+        // Et annet lagformat gir nye plasser.
+        key={team.teamSize}
+        shortId={shortId}
+        view={view}
+        form={team}
+        onRegistered={onTeamRegistered}
+        onStale={onTeamStale}
+      />
+    );
+  }
+  if (team?.kind === 'invited') {
+    return <TeamInviteAnswer shortId={shortId} round={view.round} invited={team} onDone={onTeamAnswered} />;
   }
 
   const { offer, round } = view;

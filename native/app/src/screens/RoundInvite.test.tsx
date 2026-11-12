@@ -33,6 +33,33 @@ jest.mock('../lib/webLink', () => ({
   openWeb: (path: string) => (mockOpenWeb as unknown as (path: string) => Promise<unknown>)(path),
 }));
 
+// #2840: lagflatene har egne tester (`components/signup/*.test.tsx`). Her står de som
+// stubber, så testene låser hvilken flate hvert svar gir og hva skjermen gjør etterpå.
+jest.mock('../components/signup/TeamSignupForm', () => ({
+  TeamSignupForm: (props: Record<string, unknown>) => {
+    mockTeamProps = props;
+    const { View } = require('react-native');
+    return <View testID="stub-team-form" />;
+  },
+}));
+jest.mock('../components/signup/TeamAnswer', () => ({
+  TeamInviteAnswer: (props: Record<string, unknown>) => {
+    mockTeamProps = props;
+    const { View } = require('react-native');
+    return <View testID="stub-team-invite" />;
+  },
+  TeamRoundFull: () => {
+    const { View } = require('react-native');
+    return <View testID="stub-team-full" />;
+  },
+  TeamSent: (props: Record<string, unknown>) => {
+    mockTeamProps = props;
+    const { View } = require('react-native');
+    return <View testID="stub-team-sent" />;
+  },
+}));
+
+let mockTeamProps: Record<string, unknown> = {};
 let mockFocus: () => void = () => {};
 let mockLoads: RoundInviteLoadResult[] = [];
 let mockLoad: RoundInviteLoadResult = { ok: false, reason: 'load_failed' };
@@ -541,5 +568,87 @@ describe('trekk forespørselen', () => {
     expect(screen.getByTestId('round-invite-error')).toHaveTextContent(OFFLINE_NOTE);
     expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
     expect(screen.getByTestId('round-invite-cancel')).toHaveTextContent(ROUND_INVITE_TEXT.cancelButton);
+  });
+});
+
+// #2840: lagpåmeldingen i appen.
+describe('lag', () => {
+  const FORM = {
+    kind: 'form' as const,
+    teamSize: 4,
+    nameMin: 3,
+    nameMax: 40,
+    suggestedName: 'Martins lag',
+    unavailableFriendIds: [],
+  };
+  const INVITED = {
+    kind: 'invited' as const,
+    requestId: 'req-1',
+    captainName: 'Kari Nord',
+    teamName: 'Birdie-jegerne',
+    joinEffect: 'instant' as const,
+    members: [],
+  };
+
+  it('`form` gir lagskjemaet med lenkas kode, ikke nettknappen', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM }) });
+    await renderInvite();
+    expect(screen.getByTestId('stub-team-form')).toBeTruthy();
+    expect(mockTeamProps.shortId).toBe(SHORT_ID);
+    expect(mockTeamProps.form).toEqual(FORM);
+    expect(screen.queryByTestId('round-invite-open-web')).toBeNull();
+  });
+
+  it('en full runde gir «Runden er full» i stedet for skjemaet', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM, seats: { kind: 'capped', cap: 12, held: 12 } }) });
+    await renderInvite();
+    expect(screen.getByTestId('stub-team-full')).toBeTruthy();
+    expect(screen.queryByTestId('stub-team-form')).toBeNull();
+  });
+
+  it('`invited` gir svaret på invitasjonen', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: INVITED }) });
+    await renderInvite();
+    expect(screen.getByTestId('stub-team-invite')).toBeTruthy();
+    expect(mockTeamProps.invited).toEqual(INVITED);
+  });
+
+  it('uten lagskjerm står nettknappen som før', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: null }) });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-open-web')).toBeTruthy();
+  });
+
+  it('åpen påmelding: etter sendingen spør skjermen på nytt og går til runden', async () => {
+    answerThen(view({ offer: 'web', teamSignup: FORM }), view({ offer: 'in_game', gameId: GAME_ID }));
+    const navigation = await renderInvite();
+    await act(async () => {
+      (mockTeamProps.onRegistered as (effect: string, sent: unknown) => void)('instant', { teamName: 'X', rows: [] });
+    });
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID });
+  });
+
+  it('godkjenning: «Laget er sendt» står, også når skjermen spør på nytt', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM }) });
+    await renderInvite();
+    const sent = { teamName: 'Birdie-jegerne', rows: [] };
+    await act(async () => {
+      (mockTeamProps.onRegistered as (effect: string, sent: unknown) => void)('approval', sent);
+    });
+    expect(screen.getByTestId('stub-team-sent')).toBeTruthy();
+    expect(mockTeamProps.sent).toEqual(sent);
+    answer({ ok: true, view: view({ offer: 'pending' }) });
+    await act(async () => mockFocus());
+    expect(screen.getByTestId('stub-team-sent')).toBeTruthy();
+  });
+
+  it('et svar på invitasjonen gir ny lasting', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: INVITED }) });
+    await renderInvite();
+    await act(async () => {
+      (mockTeamProps.onDone as () => void)();
+    });
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
   });
 });

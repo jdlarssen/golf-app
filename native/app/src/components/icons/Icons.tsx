@@ -357,6 +357,13 @@ export const SolIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** #2840: blyanten ved lagnavnet i lagskjemaet (tegning v3.1, `i-pen`), strek 2. */
+export const BlyantIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M4 20h4L19 9l-4-4L4 16v4z" />
+  </LineIcon>
+);
+
 /** Forstørrelsesglasset i søkefeltet over en lang spillerliste (#2675, tegning 9a). */
 export const SokIcon = ({ size = 18, strokeWidth = 2, ...props }: IconProps) => (
   <LineIcon size={size} strokeWidth={strokeWidth} {...props}>

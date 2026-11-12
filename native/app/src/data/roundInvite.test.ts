@@ -34,6 +34,30 @@ const VIEW = {
   signupPath: `/signup/${SHORT_ID}`,
 };
 
+/** Det `fetchRoundInvite` gir for `VIEW`: ingen lagskjerm (#2840). */
+const READ = { ...VIEW, teamSignup: null, hasTeamPage: false };
+
+const FORM = {
+  kind: 'form',
+  teamSize: 4,
+  nameMin: 3,
+  nameMax: 40,
+  suggestedName: 'Martins lag',
+  unavailableFriendIds: ['f9'],
+};
+
+const INVITED = {
+  kind: 'invited',
+  requestId: 'req-1',
+  captainName: 'Kari Nord',
+  teamName: 'Birdie-jegerne',
+  joinEffect: 'instant',
+  members: [
+    { name: 'Kari Nord', isCaptain: true, status: 'approved' },
+    { name: 'Ola Kompis', isCaptain: false, status: 'approved' },
+  ],
+};
+
 function invite(): typeof import('./roundInvite') {
   return require('./roundInvite') as typeof import('./roundInvite');
 }
@@ -43,7 +67,7 @@ describe('fetchRoundInvite', () => {
 
   it('spør stien med tokenet', async () => {
     respondWith(200, VIEW);
-    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: VIEW });
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: READ });
     expect(mockFetch).toHaveBeenCalledWith(
       `${BASE_URL}/api/pamelding/${SHORT_ID}`,
       expect.objectContaining({ method: 'GET' }),
@@ -78,13 +102,136 @@ describe('fetchRoundInvite', () => {
   it('et svar uten plasser og trekk-flagg gir ingen plasser og ingen knapp', async () => {
     const { seats: _seats, canCancelRequest: _can, ...older } = VIEW;
     respondWith(200, older);
-    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: VIEW });
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: READ });
   });
 
   it('plassene og flagget følger med', async () => {
     const full = { ...VIEW, offer: 'pending', seats: { kind: 'capped', cap: 12, held: 12 }, canCancelRequest: true };
     respondWith(200, full);
-    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: full });
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({ ok: true, view: { ...READ, ...full } });
+  });
+
+  // #2840: lagskjemaet og ja/nei. En eldre server sender ingen av dem.
+  it.each([
+    ['skjemaet', FORM],
+    ['invitasjonen', INVITED],
+  ])('%s følger med', async (_label, teamSignup) => {
+    respondWith(200, { ...VIEW, offer: 'web', teamSignup, hasTeamPage: true });
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({
+      ok: true,
+      view: { ...READ, offer: 'web', teamSignup, hasTeamPage: true },
+    });
+  });
+
+  it.each([
+    ['en ukjent type', { kind: 'noe_nytt' }],
+    ['et skjema uten lagstørrelse', { ...FORM, teamSize: undefined }],
+    ['et skjema uten id-liste', { ...FORM, unavailableFriendIds: null }],
+    ['en invitasjon uten forespørsel', { ...INVITED, requestId: undefined }],
+    ['en invitasjon uten medlemsliste', { ...INVITED, members: 'x' }],
+  ])('%s leses som ingen lagskjerm', async (_label, teamSignup) => {
+    respondWith(200, { ...VIEW, offer: 'web', teamSignup });
+    expect(await invite().fetchRoundInvite(SHORT_ID)).toEqual({
+      ok: true,
+      view: { ...READ, offer: 'web' },
+    });
+  });
+});
+
+describe('lagpåmeldingen (#2840)', () => {
+  useWebRoute();
+
+  it('«Meld på laget» sender navnet og vennene, og ingen identitet', async () => {
+    const registered = {
+      status: 'team_registered',
+      captainRequestId: 'r1',
+      joinEffect: 'approval',
+      slotResults: [
+        { ok: true, userId: 'u2', name: 'Ola Kompis' },
+        { ok: false, userId: 'u3', name: 'Per Hansen', reason: 'alreadyRegistered' },
+      ],
+    };
+    respondWith(200, registered);
+    expect(await invite().registerTeam(SHORT_ID, 'Birdie-jegerne', ['u2', 'u3'])).toEqual({
+      ok: true,
+      ...registered,
+    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}/api/pamelding/${SHORT_ID}`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(JSON.parse(String(requestInit().body))).toEqual({
+      intent: 'team',
+      teamName: 'Birdie-jegerne',
+      memberIds: ['u2', 'u3'],
+    });
+  });
+
+  it.each([
+    ['acceptTeamInvite', 'accept_team', 'team_accepted'],
+    ['declineTeamInvite', 'decline_team', 'team_declined'],
+  ] as const)('%s sender forespørselen', async (fn, intent, status) => {
+    respondWith(200, { status });
+    expect(await invite()[fn](SHORT_ID, 'req-1')).toEqual({ ok: true, status });
+    expect(JSON.parse(String(requestInit().body))).toEqual({ intent, requestId: 'req-1' });
+  });
+
+  it.each([
+    [400, 'team_name_invalid'],
+    [400, 'slots_count_wrong'],
+    [400, 'duplicate_members'],
+    [400, 'self_in_slots'],
+    [403, 'teammate_not_friend'],
+    [409, 'game_locked'],
+    [409, 'signup_closed'],
+    [409, 'game_full'],
+    [409, 'already_registered'],
+    [409, 'wrong_type'],
+    [409, 'wrong_mode'],
+    [409, 'mode_does_not_support_teams'],
+    [409, 'profile_incomplete'],
+    [409, 'team_full'],
+    [429, 'rate_limited'],
+  ])('%i %s er koden sin', async (status, error) => {
+    respondWith(status, { error });
+    expect(await invite().registerTeam(SHORT_ID, 'Laget', ['u2'])).toEqual({ ok: false, reason: error });
+  });
+
+  it.each([
+    [401, {}, 'unauthorized'],
+    [404, { error: 'game_not_found' }, 'not_found'],
+    [404, { error: 'not_found' }, 'not_found'],
+    [500, { error: 'db_error' }, 'db_error'],
+    [400, { error: 'bad_request' }, 'db_error'],
+    [409, { error: 'use_web' }, 'db_error'],
+    [200, { status: 'joined', gameId: 'g1' }, 'db_error'],
+    [200, { status: 'team_registered', joinEffect: 'instant', slotResults: [] }, 'db_error'],
+    [200, { status: 'team_registered', captainRequestId: 'r1', joinEffect: 'noe', slotResults: [] }, 'db_error'],
+  ])('oversetter %i %j til %s', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await invite().registerTeam(SHORT_ID, 'Laget', ['u2'])).toEqual({ ok: false, reason });
+  });
+
+  it('en rad i svaret uten id faller bort', async () => {
+    respondWith(200, {
+      status: 'team_registered',
+      captainRequestId: 'r1',
+      joinEffect: 'instant',
+      slotResults: [{ ok: true, userId: 'u2', name: null }, { ok: true }],
+    });
+    expect(await invite().registerTeam(SHORT_ID, 'Laget', ['u2'])).toEqual({
+      ok: true,
+      status: 'team_registered',
+      captainRequestId: 'r1',
+      joinEffect: 'instant',
+      slotResults: [{ ok: true, userId: 'u2', name: null }],
+    });
+  });
+
+  it('sender ingenting uten nett', async () => {
+    mockNetwork.online = false;
+    expect(await invite().acceptTeamInvite(SHORT_ID, 'req-1')).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
