@@ -94,7 +94,7 @@ type GameRow = {
   tee_box_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
-  // #2712 — en ligaflight spilt alene sier «Godkjent», ikke «Du vant».
+  // #2712 — en ligaflight sier «Godkjent», ikke «Du vant».
   league_round_id: string | null;
 };
 
