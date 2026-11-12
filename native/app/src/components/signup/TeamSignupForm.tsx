@@ -21,29 +21,23 @@
 // Bare venner kan være på laget (kontrakt v3, endring 1). Vennene kommer fra
 // `/api/friends`, og hvem som alt er i runden fra påmeldingsvisningen. Ruta sjekker
 // begge deler på nytt, så skjemaet er ikke porten.
-import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   Animated,
   Easing,
-  Modal,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppRoundInviteView, AppTeamSignupForm } from '../../../../../lib/games/appRoundInviteView';
 import { TEAM_NAME_MAX } from '../../../../../lib/games/registration';
 import { validateTeamName } from '../../../../../lib/games/teamName';
 import { pickerRows } from '../../../../../lib/league/pickerRows';
 import { nameInitials } from '../../../../../lib/names/initials';
-import { fetchFriends, type FriendItem } from '../../data/friends';
 import { registerTeam, type TeamSignupResult } from '../../data/roundInvite';
 import { landingTap } from '../../lib/haptics';
 import { ROUND_START_TEXT, showAllLine } from '../../lib/leagueCopy';
@@ -71,12 +65,19 @@ import {
   submitTeamLabel,
   teamFormMeta,
 } from '../../lib/teamSignupCopy';
-import { describeWebLinkFailure, friendLinkPath, webUrl } from '../../lib/webLink';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../KeyboardInset';
 import { PickerMore } from '../PickerSearch';
-import { BlyantIcon, SokIcon } from '../icons/Icons';
-import { QrCode } from '../profile/QrCode';
-import { FONTS, TAP, fraunces, interLine, sheetScrim, useTheme } from '../../theme';
+import { BlyantIcon } from '../icons/Icons';
+import { FONTS, TAP, fraunces, interLine, useTheme } from '../../theme';
+import {
+  AddFriendSheet,
+  FriendRow,
+  FriendSearchBar,
+  FriendsStatus,
+  NoFriends,
+  friendListStyle,
+  useFriends,
+} from './FriendPicker';
 import { Dock, DockButton, Lineup, LineupCell, TeamDisc, teamStyles, useOwnName } from './TeamParts';
 
 /** Glidet fra raden til plassen: et kvart sekund (tegningen). */
@@ -89,11 +90,6 @@ export type SentTeam = {
   teamName: string;
   rows: { userId: string; name: string; result: Extract<TeamSignupResult, { status: 'team_registered' }>['slotResults'][number] }[];
 };
-
-type FriendsState =
-  | { state: 'loading' }
-  | { state: 'failed' }
-  | { state: 'ready'; friends: FriendItem[]; friendCode: string | null };
 
 type Box = { x: number; y: number; width: number; height: number };
 type Flight = { id: string; index: number; dx: number; dy: number; left: number; top: number };
@@ -157,14 +153,13 @@ export function TeamSignupForm({
   const [slots, setSlots] = useState<TeamSlots>(() => emptySlots(form.teamSize));
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
-  const [friends, setFriends] = useState<FriendsState>({ state: 'loading' });
+  const { friends, reload: reloadFriends, retry: retryFriends } = useFriends();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<TeamSignupFailureWithText | null>(null);
   const [flight, setFlight] = useState<Flight | null>(null);
   const sending = useRef(false);
   const alive = useRef(true);
-  const latestFriends = useRef(0);
   const flightToken = useRef(0);
   // Ikke en ref: verdien leses i render (interpolasjonene under).
   const [progress] = useState(() => new Animated.Value(1));
@@ -177,25 +172,6 @@ export function TeamSignupForm({
       alive.current = false;
     },
     [],
-  );
-
-  const loadFriends = useCallback(async () => {
-    const thisLoad = ++latestFriends.current;
-    const result = await fetchFriends();
-    if (!alive.current || thisLoad !== latestFriends.current) return;
-    if (result.ok) {
-      setFriends({ state: 'ready', friends: result.data.friends, friendCode: result.data.friendCode });
-    } else {
-      // En henting som feiler etter at lista sto, lar lista stå.
-      setFriends((current) => (current.state === 'ready' ? current : { state: 'failed' }));
-    }
-  }, []);
-
-  // Også ved fokus: en ny venn fra delelenka dukker opp når du kommer tilbake.
-  useFocusEffect(
-    useCallback(() => {
-      void loadFriends();
-    }, [loadFriends]),
   );
 
   const unavailable = useMemo(() => new Set(form.unavailableFriendIds), [form.unavailableFriendIds]);
@@ -277,8 +253,8 @@ export function TeamSignupForm({
 
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
-    void loadFriends();
-  }, [loadFriends]);
+    reloadFriends();
+  }, [reloadFriends]);
 
   const submit = useCallback(async () => {
     if (sending.current || open > 0) return;
@@ -420,128 +396,41 @@ export function TeamSignupForm({
         </Lineup>
 
         {editing ? null : friends.state === 'ready' && friends.friends.length === 0 ? (
-          <>
-            <Text style={[styles.emptyLine, { color: colors.muted }]} testID="team-form-no-friends">
-              {TEAM_SIGNUP_TEXT.noFriends}
-            </Text>
-            <View style={styles.firstFriend}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSheetOpen(true)}
-                style={[styles.lineButton, { borderColor: colors.primary }]}
-                testID="team-form-add-first-friend"
-              >
-                <Text style={[styles.lineButtonText, { color: colors.primary }]}>{`+ ${TEAM_SIGNUP_TEXT.addFirstFriend}`}</Text>
-              </Pressable>
-            </View>
-          </>
+          <NoFriends onAddFriend={() => setSheetOpen(true)} idPrefix="team-form" />
         ) : (
           <>
-            <View style={styles.searchBar}>
-              <View style={[styles.search, { backgroundColor: colors.surface2 }]}>
-                <SokIcon color={colors.muted} />
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder={TEAM_SIGNUP_TEXT.search}
-                  placeholderTextColor={colors.muted}
-                  accessibilityLabel={TEAM_SIGNUP_TEXT.search}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="search"
-                  clearButtonMode="while-editing"
-                  style={[styles.searchInput, { color: colors.text }]}
-                  testID="team-form-search"
-                />
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={TEAM_SIGNUP_TEXT.addFriend}
-                onPress={() => setSheetOpen(true)}
-                style={({ pressed }) => [styles.addFriend, { borderColor: colors.primary }, pressed ? styles.pressed : null]}
-                testID="team-form-add-friend"
-              >
-                <Text style={[styles.addPlus, { color: colors.primary }]}>+</Text>
-                <Text style={[styles.addText, { color: colors.primary }]}>{TEAM_SIGNUP_TEXT.addFriend}</Text>
-              </Pressable>
-            </View>
+            <FriendSearchBar query={query} onQuery={setQuery} onAddFriend={() => setSheetOpen(true)} idPrefix="team-form" />
 
-            {friends.state === 'loading' ? (
-              <View style={styles.status} testID="team-form-friends-loading">
-                <ActivityIndicator color={colors.primary} />
-                <Text style={[styles.statusText, { color: colors.muted }]}>{TEAM_SIGNUP_TEXT.friendsLoading}</Text>
-              </View>
-            ) : friends.state === 'failed' ? (
-              <View style={styles.status}>
-                <Text style={[styles.statusText, { color: colors.danger }]} testID="team-form-friends-failed">
-                  {TEAM_SIGNUP_TEXT.friendsFailed}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setFriends({ state: 'loading' });
-                    void loadFriends();
-                  }}
-                  style={[styles.retry, { borderColor: colors.primary }]}
-                  testID="team-form-friends-retry"
-                >
-                  <Text style={[styles.retryText, { color: colors.primary }]}>{ROUND_INVITE_TEXT.retry}</Text>
-                </Pressable>
-              </View>
+            {friends.state !== 'ready' ? (
+              <FriendsStatus friends={friends} onRetry={retryFriends} idPrefix="team-form" />
             ) : rows.total === 0 ? (
-              <Text style={[styles.emptyLine, { color: colors.muted }]} testID="team-form-no-hit">
+              <Text style={[friendListStyle.emptyLine, { color: colors.muted }]} testID="team-form-no-hit">
                 {noHitLine(query)}
               </Text>
             ) : (
               <>
-                <View style={[styles.list, { backgroundColor: colors.surface }]} testID="team-form-friends">
+                <View style={[friendListStyle.list, { backgroundColor: colors.surface }]} testID="team-form-friends">
                   {rows.rows.map(({ friend }) => {
                     const selected = picked.has(friend.id);
                     const taken = unavailable.has(friend.id);
-                    const disabled = taken || (!selected && open === 0);
-                    const line = taken ? TEAM_SIGNUP_TEXT.unavailable : friendTeamLine(friend);
                     return (
-                      <Pressable
+                      <FriendRow
                         key={friend.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={line ? `${friend.name}, ${line}` : friend.name}
-                        accessibilityState={{ selected, disabled }}
-                        disabled={disabled}
+                        friend={friend}
+                        line={taken ? TEAM_SIGNUP_TEXT.unavailable : friendTeamLine(friend)}
+                        selected={selected}
+                        disabled={taken || (!selected && open === 0)}
                         onPress={() => (selected ? unpick(friend.id) : pick(friend.id))}
-                        style={({ pressed }) => [
-                          styles.row,
-                          disabled ? styles.dim : null,
-                          pressed ? { backgroundColor: colors.primarySoft } : null,
-                        ]}
-                        testID={`team-form-friend-${friend.id}`}
-                      >
-                        <TeamDisc
-                          kind="other"
-                          label={nameInitials(friend.name)}
-                          size="md"
-                          selected={selected}
-                          ground={colors.surface}
-                          ref={(node) => {
-                            rowDiscRefs.current.set(friend.id, node);
-                          }}
-                          testID={`team-form-friend-${friend.id}-disc`}
-                        />
-                        <View style={styles.rowText}>
-                          <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>
-                            {friend.name}
-                          </Text>
-                          {line ? (
-                            <Text style={[styles.rowLine, { color: colors.muted }]} numberOfLines={1}>
-                              {line}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </Pressable>
+                        idPrefix="team-form"
+                        discRef={(node) => {
+                          rowDiscRefs.current.set(friend.id, node);
+                        }}
+                      />
                     );
                   })}
                 </View>
                 {rows.canExpand ? (
-                  <View style={styles.more}>
+                  <View style={friendListStyle.more}>
                     <PickerMore
                       label={showAll ? ROUND_START_TEXT.showFewer : showAllLine(rows.total)}
                       expanded={showAll}
@@ -611,83 +500,6 @@ export function TeamSignupForm({
   );
 }
 
-/**
- * «Legg til en venn» (tegningen, «Arket: legg til en venn»): QR-koden for når dere står
- * sammen, og delelenka for resten. Den som åpner lenka, blir venn med deg med en gang,
- * og lista hentes på nytt når arket lukkes og når skjermen får fokus igjen.
- */
-function AddFriendSheet({
-  visible,
-  friendCode,
-  onClose,
-}: {
-  visible: boolean;
-  friendCode: string | null;
-  onClose: () => void;
-}) {
-  const { colors, scheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const [note, setNote] = useState<string | null>(null);
-  const target = friendCode ? webUrl(friendLinkPath(friendCode)) : null;
-  const url = target?.ok ? target.url : null;
-
-  const share = useCallback(async () => {
-    setNote(null);
-    if (!target) {
-      setNote(TEAM_SIGNUP_TEXT.noFriendLink);
-      return;
-    }
-    if (!target.ok) {
-      setNote(describeWebLinkFailure(target.reason));
-      return;
-    }
-    try {
-      await Share.share({ message: target.url });
-    } catch (err: unknown) {
-      console.error('[TeamSignupForm] deling feilet', err);
-    }
-  }, [target]);
-
-  return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.sheetRoot}>
-        <Pressable
-          style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
-          onPress={onClose}
-          accessible={false}
-          testID="team-sheet-scrim"
-        />
-        <View
-          style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: 22 + insets.bottom }]}
-          accessibilityViewIsModal
-          onAccessibilityEscape={onClose}
-          testID="team-sheet"
-        >
-          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-          <Text style={[styles.sheetTitle, { color: colors.text }]} accessibilityRole="header">
-            {TEAM_SIGNUP_TEXT.sheetTitle}
-          </Text>
-          <Text style={[styles.sheetText, { color: colors.muted }]}>{TEAM_SIGNUP_TEXT.sheetBody}</Text>
-          {url ? (
-            <View style={styles.qr} testID="team-sheet-qr">
-              <QrCode value={url} size={152} color="#000000" />
-            </View>
-          ) : null}
-          {note ? (
-            <Text style={[styles.sheetText, { color: colors.danger }]} testID="team-sheet-note">
-              {note}
-            </Text>
-          ) : null}
-          <View style={styles.sheetButtons}>
-            <DockButton label={TEAM_SIGNUP_TEXT.sheetShare} variant="primary" onPress={() => void share()} testID="team-sheet-share" />
-            <DockButton label={TEAM_SIGNUP_TEXT.sheetClose} variant="line" onPress={onClose} testID="team-sheet-close" />
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 const EDIT_LINE = fraunces(500, 24, 28.8);
 
 const styles = StyleSheet.create({
@@ -716,51 +528,7 @@ const styles = StyleSheet.create({
   done: { minHeight: TAP, paddingHorizontal: 14, borderRadius: 999, justifyContent: 'center' },
   doneText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   error: { ...interLine(13, 16, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 6, paddingHorizontal: 20 },
-  // `.sbar`: 14 over, 16 fra kanten, 8 mellom feltet og knappen.
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginHorizontal: 16 },
-  // `.search`: 48 høy, 14 i hjørnene, fylt og uten kant.
-  search: { flex: 1, minWidth: 0, height: 48, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
-  searchInput: { flex: 1, height: 48, fontSize: 16, fontFamily: FONTS.sans, paddingVertical: 0 },
-  // `.addf`: 48 høy, 14 fra kanten inni, 1,5 pt kant i `primary`.
-  addFriend: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  addPlus: { fontSize: 18, fontFamily: FONTS.sansMedium },
-  addText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
-  // `.list`: 12 over, 16 fra kanten, 18 i hjørnene, 4 over og under radene.
-  list: { marginTop: 12, marginHorizontal: 16, borderRadius: 18, paddingVertical: 4, overflow: 'hidden' },
-  // `.r`: minst 60 høy, 8/14 inni, 12 mellom skiva og navnet.
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingVertical: 8, paddingHorizontal: 14 },
-  rowText: { flex: 1, minWidth: 0 },
-  rowName: { fontSize: 16, fontFamily: FONTS.sansMedium },
-  rowLine: { fontSize: 13, fontFamily: FONTS.sans, marginTop: 2, fontVariant: ['tabular-nums'] },
-  dim: { opacity: 0.4 },
-  more: { paddingHorizontal: 20, paddingTop: 4 },
-  // `.empty-line`: 14 over, 20 fra kanten, 15 pt i `muted`.
-  emptyLine: { ...interLine(15, 21.75, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 14, paddingHorizontal: 20 },
-  firstFriend: { paddingTop: 14, paddingHorizontal: 16 },
-  lineButton: { minHeight: 52, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  lineButtonText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
-  status: { alignItems: 'center', gap: 12, paddingTop: 20, paddingHorizontal: 20 },
-  statusText: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
-  retry: { minHeight: TAP, borderWidth: 1, borderRadius: 999, paddingHorizontal: 20, justifyContent: 'center' },
-  retryText: { ...interLine(16, 19), fontFamily: FONTS.sansSemiBold },
   dockError: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
   hidden: { opacity: 0 },
   flight: { position: 'absolute', width: 60, height: 60 },
-  pressed: { opacity: 0.6 },
-  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  // `.sheet`: 10 over, 20 fra kanten, 22 under, 22 i hjørnene, 12 mellom delene.
-  sheet: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    gap: 12,
-    alignItems: 'center',
-  },
-  grabber: { width: 40, height: 5, borderRadius: 3 },
-  sheetTitle: { ...fraunces(500, 22, 27.5, { multiline: true }), textAlign: 'center' },
-  sheetText: { ...interLine(14, 19.6, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center', maxWidth: 260 },
-  // `.qr`: 180 pt hvit flate med 14 pt luft rundt koden, 14 i hjørnene.
-  qr: { width: 180, height: 180, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 14 },
-  sheetButtons: { alignSelf: 'stretch', gap: 12 },
 });
