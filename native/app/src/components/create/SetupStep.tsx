@@ -14,7 +14,7 @@
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '../../../../../lib/scoring/settlement';
 import { SHOW_SETTLEMENT_IN_APP } from '../../../../../lib/launchRules';
-import { Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   ALLOWANCE_TEXT,
   BRUTTO_HELPER,
@@ -33,9 +33,9 @@ import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimit
 import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
 import { effectiveTeamSize, isScrambleFamily, type ModeSetup } from '../../lib/wizardPayload';
-import { useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { FeeAndPrizes, type FeeDraft } from './FeeAndPrizes';
-import { Chips, Field, ToggleRow } from './primitives';
+import { ChoiceCards, Chips, Field, ToggleRow } from './primitives';
 
 /** Fellesfeltene, samlet så skjermen kan sende dem videre som én bit. */
 export interface CommonSetup {
@@ -197,7 +197,12 @@ export function SetupStep({
       {isScrambleFamily(mode) ? (
         <>
           <Field label={TEAM_SIZE_TEXT.legend}>
-            <Chips
+            {/* Kortene fra `Nyttspill-2-texas`: tre i bredden, 72 høye. */}
+            <ChoiceCards
+              columns={3}
+              minHeight={72}
+              titleSize={15}
+              bleed={4}
               value={teamSize}
               onChange={(next) => {
                 onSetup({ teamSize: next });
@@ -206,7 +211,8 @@ export function SetupStep({
               }}
               options={sizes.map((n) => ({
                 value: n,
-                label: TEAM_SIZE_TEXT.sizes[n],
+                title: TEAM_SIZE_TEXT.sizes[n],
+                hint: TEAM_SIZE_TEXT.hints[n],
                 testID: `create-team-size-${n}`,
               }))}
             />
@@ -253,45 +259,67 @@ export function SetupStep({
       {mode === 'shamble' ? (
         <Field label={SHAMBLE_TEXT.legend}>
           <Text style={ui.label}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
-          <Chips
+          {/* Kortene fra `Nyttspill-2-shamble`. */}
+          <ChoiceCards
+            columns={2}
+            minHeight={64}
             value={teamSize}
             onChange={(next) => onSetup({ teamSize: next })}
             options={([3, 4] as const).map((n) => ({
               value: n,
-              label: SHAMBLE_TEXT.teamSize[n],
+              title: SHAMBLE_TEXT.teamSize[n],
+              hint: SHAMBLE_TEXT.teamSizeDesc[n],
               testID: `create-shamble-size-${n}`,
             }))}
           />
           <Text style={ui.label}>{SHAMBLE_TEXT.variantLabel}</Text>
-          <Chips
+          <ChoiceCards
+            columns={2}
+            minHeight={64}
             value={setup.shambleVariant ?? 'shamble'}
             onChange={(shambleVariant) => onSetup({ shambleVariant })}
             options={[
-              { value: 'shamble' as const, label: SHAMBLE_TEXT.variantShamble, testID: 'create-shamble-variant-shamble' },
-              { value: 'champagne' as const, label: SHAMBLE_TEXT.variantChampagne, testID: 'create-shamble-variant-champagne' },
+              {
+                value: 'shamble' as const,
+                title: SHAMBLE_TEXT.variantShamble,
+                hint: SHAMBLE_TEXT.variantShambleDesc,
+                testID: 'create-shamble-variant-shamble',
+              },
+              {
+                value: 'champagne' as const,
+                title: SHAMBLE_TEXT.variantChampagne,
+                hint: SHAMBLE_TEXT.variantChampagneDesc,
+                testID: 'create-shamble-variant-champagne',
+              },
             ]}
           />
           {champagne ? (
             <>
               <Text style={ui.label}>{SHAMBLE_TEXT.countLabel}</Text>
-              <Chips
+              <ChoiceCards
+                columns={3}
+                minHeight={60}
+                centered
                 value={setup.shambleCount ?? 2}
                 onChange={(shambleCount) => onSetup({ shambleCount })}
                 options={([1, 2, 3] as const).map((n) => ({
                   value: n,
-                  label: `${n} ${n === 1 ? SHAMBLE_TEXT.countSingle : SHAMBLE_TEXT.countPlural}`,
+                  title: String(n),
+                  hint: n === 1 ? SHAMBLE_TEXT.countSingle : SHAMBLE_TEXT.countPlural,
                   testID: `create-shamble-count-${n}`,
                 }))}
               />
             </>
           ) : null}
           <Text style={ui.label}>{SHAMBLE_TEXT.scoringLabel}</Text>
-          <Chips
+          <ChoiceCards
+            columns={2}
+            minHeight={60}
             value={setup.shambleScoring ?? 'net'}
             onChange={(shambleScoring) => onSetup({ shambleScoring })}
             options={[
-              { value: 'net' as const, label: SHAMBLE_TEXT.net, testID: 'create-shamble-net' },
-              { value: 'gross' as const, label: SHAMBLE_TEXT.gross, testID: 'create-shamble-gross' },
+              { value: 'net' as const, title: SHAMBLE_TEXT.net, hint: SHAMBLE_TEXT.netDesc, testID: 'create-shamble-net' },
+              { value: 'gross' as const, title: SHAMBLE_TEXT.gross, hint: SHAMBLE_TEXT.grossDesc, testID: 'create-shamble-gross' },
             ]}
           />
           {/* #2570: andelen står rett under tellemåten, bare med Netto. */}
@@ -313,20 +341,29 @@ export function SetupStep({
 
       {/* #2753 D3: Patsome, som nettets PatsomeSetup. Lagstørrelsen er alltid 2. */}
       {mode === 'patsome' ? (
-        <Field label={PATSOME_TEXT.legend} hint={PATSOME_TEXT.handicapNote}>
-          {PATSOME_TEXT.segments.map((segment) => (
-            <Text key={segment.holes} style={ui.body} testID={`create-patsome-${segment.holes}`}>
-              <Text style={ui.label}>{segment.holes} </Text>
-              {`${segment.format} ${segment.body}`}
-            </Text>
-          ))}
+        <Field label={PATSOME_TEXT.legend}>
+          {/* Segmentene i en egen boks, som `Nyttspill-2-patsome`. */}
+          <View style={[styles.segments, { backgroundColor: colors.surface2 }]}>
+            {PATSOME_TEXT.segments.map((segment) => (
+              <View key={segment.holes} style={styles.segment} testID={`create-patsome-${segment.holes}`}>
+                <Text style={[styles.segmentHoles, { color: colors.text }]}>{segment.holes}</Text>
+                <Text style={[styles.segmentBody, { color: colors.text }]}>
+                  <Text style={styles.segmentFormat}>{segment.format}</Text>
+                  {` ${segment.body}`}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text style={ui.muted}>{PATSOME_TEXT.handicapNote}</Text>
           <Text style={ui.label}>{PATSOME_TEXT.scoringFrom}</Text>
-          <Chips
+          <ChoiceCards
+            columns={2}
+            minHeight={60}
             value={setup.patsomeScoring ?? 'net'}
             onChange={(patsomeScoring) => onSetup({ patsomeScoring })}
             options={[
-              { value: 'net' as const, label: PATSOME_TEXT.net, testID: 'create-patsome-net' },
-              { value: 'gross' as const, label: PATSOME_TEXT.gross, testID: 'create-patsome-gross' },
+              { value: 'net' as const, title: PATSOME_TEXT.net, hint: PATSOME_TEXT.netDesc, testID: 'create-patsome-net' },
+              { value: 'gross' as const, title: PATSOME_TEXT.gross, hint: PATSOME_TEXT.grossDesc, testID: 'create-patsome-gross' },
             ]}
           />
         </Field>
@@ -444,3 +481,12 @@ export function SetupStep({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // `Nyttspill-2-patsome`: boksen med de tre delene av runden.
+  segments: { borderRadius: 12, padding: 12, gap: 10 },
+  segment: { flexDirection: 'row', gap: 10 },
+  segmentHoles: { ...fraunces(600, 13), minWidth: 74 },
+  segmentBody: { ...interLine(13, 18.85, { multiline: true }), fontFamily: FONTS.sans, flexShrink: 1 },
+  segmentFormat: { fontFamily: FONTS.sansSemiBold },
+});
