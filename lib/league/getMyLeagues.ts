@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
-import type { AppLeagueSummary, AppMarkerCard } from './appLeagueView';
+import type { AppLeagueListResponse, AppLeagueSummary, AppMarkerCard } from './appLeagueView';
 import { playerName } from '@/lib/names/playerName';
 
 type LeagueRow = { id: string; name: string; status: string };
@@ -87,21 +87,55 @@ async function readMarkerCards(userId: string, leagueIds: string[]): Promise<Map
 }
 
 /**
- * The caller's draft and active leagues for the app's Home (#2638). Read with
- * the admin client, bounded to the caller's own `league_players` rows; the
+ * The leagues for the app's Home (#2638): the caller's draft and active leagues
+ * (`leagues`), and the draft club leagues in the caller's clubs that the caller
+ * can still sign up for (`joinable`, #2839). Read with the admin client,
+ * bounded to the caller's own `league_players` and `group_members` rows; the
  * user id comes only from the validated token. A participant always sees their
- * own league (canViewLeague), so no further gate is needed. Throws on a failed
- * read: the route answers 500 and the app hides the section.
+ * own league (canViewLeague), and a club member sees their club's leagues, so
+ * no further gate is needed. Throws on a failed read: the route answers 500 and
+ * the app hides the section.
  */
-export async function getMyLeagues(userId: string, now = new Date()): Promise<AppLeagueSummary[]> {
+export async function getMyLeagues(userId: string, now = new Date()): Promise<AppLeagueListResponse> {
   const admin = getAdminClient();
-  const { data: memberships, error: mErr } = await admin
-    .from('league_players')
-    .select('league_id')
-    .eq('user_id', userId);
-  if (mErr) throw mErr;
-  const leagueIds = (memberships ?? []).map((m) => m.league_id);
+  const [membershipsRes, clubsRes] = await Promise.all([
+    admin.from('league_players').select('league_id').eq('user_id', userId),
+    admin.from('group_members').select('group_id').eq('user_id', userId),
+  ]);
+  if (membershipsRes.error) throw membershipsRes.error;
+  if (clubsRes.error) throw clubsRes.error;
+  const leagueIds = (membershipsRes.data ?? []).map((m) => m.league_id);
+  const clubIds = (clubsRes.data ?? []).map((c) => c.group_id);
+
+  const [leagues, joinable] = await Promise.all([
+    readMyLeagues(userId, leagueIds, now),
+    readJoinableClubLeagues(clubIds, leagueIds),
+  ]);
+  return { leagues, joinable };
+}
+
+/**
+ * #2839: draft club leagues in the caller's clubs that the caller is not in.
+ * `join_club_league` (0086) is the authority at the tap; this only decides what
+ * the list shows. A draft league has no played round, so every state is empty.
+ */
+async function readJoinableClubLeagues(clubIds: string[], ownLeagueIds: string[]): Promise<AppLeagueSummary[]> {
+  if (clubIds.length === 0) return [];
+  const { data, error } = await getAdminClient()
+    .from('leagues')
+    .select('id, name, status')
+    .in('group_id', clubIds)
+    .eq('status', 'draft')
+    .order('name');
+  if (error) throw error;
+  const own = new Set(ownLeagueIds);
+  const open = ((data ?? []) as LeagueRow[]).filter((l) => !own.has(l.id));
+  return assembleMyLeagues(open, [], new Map(), '');
+}
+
+async function readMyLeagues(userId: string, leagueIds: string[], now: Date): Promise<AppLeagueSummary[]> {
   if (leagueIds.length === 0) return [];
+  const admin = getAdminClient();
 
   const nowIso = now.toISOString();
   const [leaguesRes, roundsRes, markerCards] = await Promise.all([

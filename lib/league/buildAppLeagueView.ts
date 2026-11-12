@@ -1,6 +1,7 @@
 import type { LeagueSnapshot } from './getLigaSnapshot';
 import type { AppLeagueParticipantDetails, AppLeagueView } from './appLeagueView';
 import { participantShareUrl } from './joinCode';
+import { leagueSelfServiceState } from './selfService';
 import { normalizeSimSettings } from './simSettings';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 import { playerName } from '../names/playerName';
@@ -16,24 +17,39 @@ const STATUSES: readonly LeagueStatus[] = ['draft', 'active', 'finished'];
  *
  * `details` is the full name and HCP per participant, which the route reads
  * only for a caller who is a participant; without it both stay null.
+ *
+ * `isClubMember` comes from `canViewLeague`, which answers false for a caller
+ * who is already a participant. That is harmless here: `canJoin` needs
+ * `!isParticipant` and `canLeave` does not read membership (#2839).
  */
 export function buildAppLeagueView(
   snapshot: LeagueSnapshot,
   userId: string,
   details: ReadonlyMap<string, AppLeagueParticipantDetails> | null = null,
+  isClubMember = false,
 ): AppLeagueView {
   const { league, rounds, participants, standings } = snapshot;
   const scoring = SCORINGS.find((s) => s === league.scoring) ?? 'net';
   // The league's own axis: gross in a gross league, net otherwise ('both' is
   // legacy and ranks net first, as the web panel does).
   const table = (scoring === 'gross' ? standings.gross : standings.net) ?? standings.net ?? standings.gross;
-  const isParticipant = participants.some((p) => p.userId === userId);
+  const mine = participants.find((p) => p.userId === userId);
+  const isParticipant = mine !== undefined;
+  const status = STATUSES.find((s) => s === league.status) ?? 'draft';
+  // The web page's rule (#452), so the app shows the same buttons (#2839).
+  const { canJoin, canLeave } = leagueSelfServiceState({
+    groupId: league.group_id,
+    status,
+    isClubMember,
+    isParticipant,
+    hasPlayed: mine?.hasPlayed ?? false,
+  });
 
   return {
     league: {
       id: league.id,
       name: league.name,
-      status: STATUSES.find((s) => s === league.status) ?? 'draft',
+      status,
       // DB CHECK (0087) allows the three formats only.
       format: league.format as LeagueFormat,
       scoring,
@@ -87,6 +103,8 @@ export function buildAppLeagueView(
       userId,
       isParticipant,
       isOrganizer: league.created_by === userId,
+      canJoin,
+      canLeave,
     },
   };
 }

@@ -171,8 +171,21 @@ describe('GET /api/liga/[id]', () => {
     expect({ status: res.status, league: res.body.league.name, me: res.body.me }).toEqual({
       status: 200,
       league: 'Klubbens vinterliga',
-      // #2661: the fixture's league was created by ME.
-      me: { userId: ME, isParticipant: true, isOrganizer: true },
+      // #2661: the fixture's league was created by ME. #2839: ME is no club member
+      // here (the default `group_members` read is empty) and has not played, so
+      // the short-circuit in `canViewLeague` still lets ME leave.
+      me: { userId: ME, isParticipant: true, isOrganizer: true, canJoin: false, canLeave: true },
+    });
+  });
+
+  it('#2839: a club member who is not in a draft club league can join it, and not leave', async () => {
+    snapshot = { ...clubSnapshot('club-1'), league: { ...clubSnapshot('club-1').league, status: 'draft' } };
+    callerReads({ group_members: [{ data: { user_id: OUTSIDER } }], users: [{ data: { is_admin: false } }] });
+    const res = await call('token-fremmed');
+    expect({ status: res.status, canJoin: res.body.me.canJoin, canLeave: res.body.me.canLeave }).toEqual({
+      status: 200,
+      canJoin: true,
+      canLeave: false,
     });
   });
 

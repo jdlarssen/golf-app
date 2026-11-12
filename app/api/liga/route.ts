@@ -7,12 +7,15 @@ import type { AppLeagueListResponse } from '@/lib/league/appLeagueView';
 // `draft` eller `active`, med den åpne runden og om kalleren har levert den
 // eller er i gang. Sammenstillingen bor i `getMyLeagues`.
 //
+// #2839: `joinable` er `draft`-klubbligaer i klubber kalleren er medlem av og ikke
+// står i ennå. Appens klubbseksjon viser dem med «meld deg på».
+//
 // AUTH: `authenticatedUserId` — id-en kommer bare fra det validerte tokenet,
 // aldri fra query eller kropp. Lesingen er avgrenset til kallerens egne
 // `league_players`-rader.
 //
 // WIRE (appen speiler den, `lib/league/appLeagueView.ts`):
-//   GET 200 { leagues: AppLeagueSummary[] }
+//   GET 200 { leagues: AppLeagueSummary[], joinable: AppLeagueSummary[] }
 //       401 { error: 'unauthorized' }
 //       500 { error: 'load_failed' }   (appen skjuler da seksjonen)
 
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
     const userId = await authenticatedUserId(request);
     if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-    const body: AppLeagueListResponse = { leagues: await getMyLeagues(userId) };
+    const body: AppLeagueListResponse = await getMyLeagues(userId);
     return NextResponse.json(body);
   } catch (err) {
     console.error('[api/liga] load failed', err);

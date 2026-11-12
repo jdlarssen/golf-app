@@ -36,7 +36,7 @@ async function call(token?: string, query = '') {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => {});
-  getMyLeagues.mockResolvedValue([]);
+  getMyLeagues.mockResolvedValue({ leagues: [], joinable: [] });
 });
 
 describe('GET /api/liga', () => {
@@ -51,7 +51,7 @@ describe('GET /api/liga', () => {
   it('reads the leagues of the token’s user only, whatever the query says', async () => {
     const res = await call('token-meg', `?userId=99999999-9999-4999-8999-999999999999`);
     expect({ res, args: getMyLeagues.mock.calls[0] }).toEqual({
-      res: { status: 200, body: { leagues: [] } },
+      res: { status: 200, body: { leagues: [], joinable: [] } },
       args: [ME],
     });
   });
