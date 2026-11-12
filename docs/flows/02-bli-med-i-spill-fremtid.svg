@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1180" viewBox="0 0 1240 1180" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1256" viewBox="0 0 1240 1256" font-family="-apple-system, Helvetica, Arial, sans-serif">
   <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5E6B63"/></marker></defs>
-  <rect width="1240" height="1180" fill="#F8F6F0"/>
+  <rect width="1240" height="1256" fill="#F8F6F0"/>
 
   <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1B4332">2 · Bli med i et spill — slik blir det</text>
   <text x="121" y="88" font-size="15" fill="#6B7770">Fremtidig flyt. Nytt: påmeldingsmåten styrer synligheten, «Finn turneringer» er en fast inngang, og bekreftelsen peker til appen.</text>
@@ -114,6 +114,13 @@
   <text x="432" y="689" font-size="11.5" fill="#6B5526">App Store / Google Play; nettleseren virker fortsatt</text>
   <text x="432" y="706" font-size="11.5" fill="#6B5526">slås på samme dag som appen er i butikken</text>
 
+  <!-- full runde: be om plass, og trekk forespørselen (#2837) -->
+  <rect x="110" y="760" width="1020" height="64" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="1060" y="770" width="58" height="20" rx="10" fill="#C9A961"/><text x="1089" y="784" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2837</text>
+  <text x="134" y="790" font-size="14.5" font-weight="700" fill="#7A5E13">Full runde? Be om plass</text>
+  <text x="134" y="811" font-size="13" fill="#6B5526">Er en åpen runde full (B eller C), sender du en forespørsel i stedet for «Meld meg på». Den står hos arrangøren, og i appen kan du trekke den.</text>
+
+  <g transform="translate(0,76)">
   <!-- KEY CHANGE band: visibility = registration mode -->
   <rect x="110" y="760" width="1020" height="96" rx="16" fill="#EAF1F7" stroke="#6B9AD1" stroke-width="1.5"/>
   <rect x="1066" y="772" width="44" height="20" rx="10" fill="#C9A961"/><text x="1088" y="786" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#367</text>
@@ -135,4 +142,5 @@
   <text x="134" y="1023" font-size="12.5" fill="#857C70">lenka og QR-koden åpner «Bli venn med …» i appen når den er installert, med innlogging først om nødvendig (#2627)</text>
 
   <text x="120" y="1062" font-size="12.5" fill="#9A937F">Rekkefølge: #367 (velg åpen) fyller lista → #357 (fast Finn turneringer) viser den → #368 fjerner blindvei → #369 venner ✓ (bygget).</text>
+  </g>
 </svg>
