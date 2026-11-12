@@ -73,7 +73,12 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   // Et svar på en eldre henting skal ikke tegne over det som har skjedd siden.
   const latestLoad = useRef(0);
 
-  const load = useCallback(async () => {
+  /**
+   * `afterFull`: «Meld meg på» fikk `game_full`. Sier ruta fortsatt «Meld meg på»
+   * (tellingen feilet, eller en plass ble ledig igjen), står teksten om full runde
+   * under knappen, så trykket ikke ender i ingenting.
+   */
+  const load = useCallback(async (afterFull = false) => {
     const thisLoad = ++latestLoad.current;
     setLoading(true);
     const result = await fetchRoundInvite(shortId);
@@ -93,6 +98,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
       return;
     }
     setView(result.view);
+    if (afterFull && result.view.offer === 'join') setError('game_full');
   }, [navigation, shortId]);
 
   // Også ved fokus: kommer du tilbake fra profilen, kan svaret være et annet.
@@ -120,7 +126,10 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           // Trukket: det som gjelder nå (plass igjen, full eller stengt) kommer fra ruta.
           void load();
         } else {
+          // «Sendt» med en gang. Om forespørselen kan trekkes, vet ruta (en kapteins
+          // lag kan ikke), så skjermen spør på nytt for knappen.
           setView({ ...view, offer: 'pending' });
+          void load();
         }
         return;
       }
@@ -139,6 +148,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           return;
         // Noen tok siste plass, eller arrangøren rakk å svare på forespørselen.
         case 'game_full':
+          void load(true);
+          return;
         case 'not_pending':
           void load();
           return;
