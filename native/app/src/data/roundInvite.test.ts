@@ -53,8 +53,8 @@ const INVITED = {
   teamName: 'Birdie-jegerne',
   joinEffect: 'instant',
   members: [
-    { name: 'Kari Nord', isCaptain: true, status: 'approved' },
-    { name: 'Ola Kompis', isCaptain: false, status: 'approved' },
+    { name: 'Kari Nord', isCaptain: true, isYou: false, status: 'approved' },
+    { name: 'Ola Kompis', isCaptain: false, isYou: true, status: 'approved' },
   ],
 };
 

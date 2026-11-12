@@ -63,6 +63,8 @@ export type AppTeamSignupMember = {
   /** The name, or the masked address (#2207); null when the user row is gone. */
   name: string | null;
   isCaptain: boolean;
+  /** #2840: this row is the viewer's own, so the lineup can mark «Deg». */
+  isYou: boolean;
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
 };
 

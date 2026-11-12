@@ -132,9 +132,14 @@ async function loadInvited(shortId: string, userId: string): Promise<AppTeamSign
   if (team.kind !== 'member') return null;
   const members: AppTeamSignupMember[] = [
     ...(team.captain
-      ? [{ name: team.captain.displayName, isCaptain: true, status: team.captain.status }]
+      ? [{ name: team.captain.displayName, isCaptain: true, isYou: false, status: team.captain.status }]
       : []),
-    ...team.members.map((m) => ({ name: m.displayName, isCaptain: false, status: m.status })),
+    ...team.members.map((m) => ({
+      name: m.displayName,
+      isCaptain: false,
+      isYou: m.requestId === team.myRowId,
+      status: m.status,
+    })),
   ];
   return {
     kind: 'invited',

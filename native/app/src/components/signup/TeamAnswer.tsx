@@ -26,7 +26,7 @@ import {
 import { describeWebLinkFailure, openWeb } from '../../lib/webLink';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { useBottomInsetUnlessKeyboard } from '../KeyboardInset';
-import { Dock, DockButton, Lineup, LineupCell, TeamDisc, teamStyles, useOwnName } from './TeamParts';
+import { Dock, DockButton, Lineup, LineupCell, TeamDisc, teamStyles } from './TeamParts';
 import type { SentTeam } from './TeamSignupForm';
 
 /** Overskriften og linja under: `.head` i tegningen. */
@@ -58,14 +58,13 @@ export function TeamInviteAnswer({
 }) {
   const { colors } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
-  const self = useOwnName();
   const [busy, setBusy] = useState<'accept' | 'decline' | null>(null);
   const [error, setError] = useState<{ action: 'accept' | 'decline'; reason: TeamSignupFailureWithText } | null>(null);
   const sending = useRef(false);
 
   // Et nei eller en som er tatt ut, er ikke lenger på laget.
   const members = invited.members.filter((m) => m.status === 'pending' || m.status === 'approved');
-  const selfIndex = selfMemberIndex(members, self);
+  const selfIndex = selfMemberIndex(members);
 
   const answer = useCallback(
     async (action: 'accept' | 'decline') => {

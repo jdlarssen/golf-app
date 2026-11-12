@@ -178,6 +178,7 @@ function readTeamSignup(value: unknown): AppTeamSignup | null {
               {
                 name: typeof m.name === 'string' ? m.name : null,
                 isCaptain: m.isCaptain === true,
+                isYou: m.isYou === true,
                 status: m.status as AppTeamSignupMember['status'],
               },
             ]
