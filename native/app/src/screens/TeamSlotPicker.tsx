@@ -53,7 +53,13 @@ export function TeamSlotPicker({ navigation, route }: ScreenProps<'TeamSlotPicke
 
   const onTeam = useMemo(() => new Set(teamUserIds), [teamUserIds]);
   const taken = useMemo(() => new Set(unavailableFriendIds), [unavailableFriendIds]);
-  const friendList = useMemo(() => (friends.state === 'ready' ? friends.friends : []), [friends]);
+  // Som tegningen: vennene du kan velge, først. De på laget og de som alt er i runden,
+  // står sist, så de valgbare aldri havner bak «Vis alle». Ellers serverens rekkefølge.
+  const friendList = useMemo(() => {
+    if (friends.state !== 'ready') return [];
+    const dimmed = (id: string) => onTeam.has(id) || taken.has(id);
+    return [...friends.friends.filter((f) => !dimmed(f.id)), ...friends.friends.filter((f) => dimmed(f.id))];
+  }, [friends, onTeam, taken]);
   const keepIds = useMemo(() => new Set(selected ? [selected] : []), [selected]);
   const rows = useMemo(
     () =>
