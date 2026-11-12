@@ -19,7 +19,7 @@ import {
 const modeSource = source.modes as unknown as Record<string, unknown>;
 
 describe('APP_SUPPORTED_MODES', () => {
-  it('er de åtte modiene kontrakten navngir', () => {
+  it('er modiene kontraktene navngir (N6a og #2753 D3)', () => {
     expect([...APP_SUPPORTED_MODES]).toEqual([
       'stableford',
       'modified_stableford',
@@ -29,6 +29,8 @@ describe('APP_SUPPORTED_MODES', () => {
       'wolf',
       'bingo_bango_bongo',
       'skins',
+      'solo_strokeplay',
+      'patsome',
     ]);
   });
 
@@ -36,12 +38,12 @@ describe('APP_SUPPORTED_MODES', () => {
     expect(new Set(APP_SUPPORTED_MODES).size).toBe(APP_SUPPORTED_MODES.length);
   });
 
-  it('isAppSupportedMode slipper gjennom de åtte og ingen andre', () => {
+  it('isAppSupportedMode slipper gjennom de støttede og ingen andre', () => {
     for (const mode of APP_SUPPORTED_MODES) {
       expect(isAppSupportedMode(mode)).toBe(true);
     }
     // Aktive formater på web som appen bevisst IKKE tilbyr.
-    for (const mode of ['patsome', 'texas_scramble', 'nassau', 'nines', '']) {
+    for (const mode of ['texas_scramble', 'nassau', 'nines', '']) {
       expect(isAppSupportedMode(mode)).toBe(false);
     }
   });
@@ -61,17 +63,18 @@ describe('paritet med messages/no.json', () => {
 });
 
 describe('usesTeamAssignment', () => {
-  it('gjelder de tre lag-/side-modiene', () => {
+  it('gjelder lag-/side-modiene', () => {
     expect([...MODES_WITH_TEAM_ASSIGNMENT]).toEqual([
       'best_ball',
       'singles_matchplay',
       'greensome_matchplay',
+      'patsome',
     ]);
   });
 
   // #969: wolf-slottene trekkes ved START, ikke ved publisering. En veiviser
   // som tildelte lag her ville vist et tall som blir overskrevet.
-  it.each(['wolf', 'stableford', 'modified_stableford', 'skins', 'bingo_bango_bongo'] as const)(
+  it.each(['wolf', 'stableford', 'modified_stableford', 'skins', 'bingo_bango_bongo', 'solo_strokeplay'] as const)(
     '%s har ingen lag-tildeling i veiviseren',
     (mode) => {
       expect(usesTeamAssignment(mode)).toBe(false);

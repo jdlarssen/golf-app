@@ -31,6 +31,9 @@ export const APP_SUPPORTED_MODES = [
   'wolf',
   'bingo_bango_bongo',
   'skins',
+  // #2753 D3: slagspill og Patsome er synlige for både kompis og klubb.
+  'solo_strokeplay',
+  'patsome',
 ] as const satisfies readonly GameMode[];
 
 export type AppGameMode = (typeof APP_SUPPORTED_MODES)[number];
@@ -45,11 +48,13 @@ export const APP_MODE_LABELS: Record<AppGameMode, string> = {
   wolf: 'Wolf',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   skins: 'Skins',
+  solo_strokeplay: 'Slagspill',
+  patsome: 'Patsome',
 };
 
 const SUPPORTED = new Set<string>(APP_SUPPORTED_MODES);
 
-/** Type-guard: er slug-en en av de åtte appen kan opprette? */
+/** Type-guard: er slug-en et format appen kan opprette? */
 export function isAppSupportedMode(slug: string): slug is AppGameMode {
   return SUPPORTED.has(slug);
 }
@@ -69,6 +74,8 @@ export const MODES_WITH_TEAM_ASSIGNMENT: readonly AppGameMode[] = [
   'best_ball',
   'singles_matchplay',
   'greensome_matchplay',
+  // Patsome spilles i par hele runden (4BBB, greensome, foursomes).
+  'patsome',
 ];
 
 const TEAM_ASSIGNED = new Set<string>(MODES_WITH_TEAM_ASSIGNMENT);
