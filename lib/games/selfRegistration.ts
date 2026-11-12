@@ -566,7 +566,8 @@ export async function requestApprovalCore({
       // Best-effort — Promise.allSettled-svelg i caller-context (catch-en
       // i .catch() under) sørger for at en mail-feil ikke ruller tilbake
       // selve forespørselen.
-      const { data: adminRow } = await getAdminClient()
+      const admin = getAdminClient();
+      const { data: adminRow } = await admin
         .from('users')
         .select('email, locale')
         .eq('id', game.created_by)
