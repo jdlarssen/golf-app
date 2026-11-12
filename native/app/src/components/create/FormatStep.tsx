@@ -12,6 +12,7 @@
 // Feilet hentingen, vises den ærlige noten — aldri en tom liste. «Ingen
 // formater er aktive» og «vi fikk ikke sjekket» er to forskjellige svar, og
 // bare det ene betyr at det er nettet som er nede (#1832-guardrailen).
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import {
   FORMAT_CATALOG_FETCH_NOTE,
@@ -33,6 +34,7 @@ export function FormatStep({
   selected,
   onSelect,
   onRetry,
+  beforeList,
 }: {
   /** `null` mens hentingen pågår. */
   entries: FormatCatalogEntry[] | null;
@@ -40,12 +42,16 @@ export function FormatStep({
   selected: AppGameMode | null;
   onSelect: (mode: AppGameMode) => void;
   onRetry: () => void;
+  /** Mellom tittelen og lista: klubbvalget i en klubbturnering (#2753). */
+  beforeList?: ReactNode;
 }) {
   const { colors, ui } = useTheme();
 
   return (
     <View testID="create-step-format">
       <Text style={ui.title}>Hva skal dere spille?</Text>
+
+      {beforeList}
 
       {failed ? (
         <View style={ui.banner}>
