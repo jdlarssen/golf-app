@@ -45,7 +45,7 @@ export const LEAGUE_TEXT = {
   homeNotJoined: 'Ikke påmeldt · meld deg på før start',
   /** #2839: blokken til venstre på ligaraden, i klokkens sted (en liga har ingen klokke). */
   homeSeasonLabel: 'Liga',
-  homeSeasonNote: 'sesongstart',
+  homeSeasonNote: 'starter',
   notPlayed: 'Ikke spilt',
   /** `liga.player.playedBy.*`. */
   delivered: 'Har spilt',

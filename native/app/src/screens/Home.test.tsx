@@ -738,7 +738,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
       expect(within(dayBlock).getByTestId('home-joinable-league-kl1')).toBeTruthy();
       // Blokken til venstre i klokkens sted, så navnet står på linje med rundenavnet.
       expect(within(screen.getByTestId('home-joinable-league-time-kl1')).getByText('Liga')).toBeTruthy();
-      expect(within(screen.getByTestId('home-joinable-league-time-kl1')).getByText('sesongstart')).toBeTruthy();
+      expect(within(screen.getByTestId('home-joinable-league-time-kl1')).getByText('starter')).toBeTruthy();
       const order = testIdsInOrder();
       expect(order.indexOf('terminliste-row-k1')).toBeLessThan(order.indexOf('home-joinable-league-kl1'));
       // Ingen blokk for ligaer: den har en dag.
