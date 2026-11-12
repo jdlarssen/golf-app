@@ -9,6 +9,7 @@ import {
   describeRoundInviteLoadFailure,
   roundFeeLine,
   roundPlaceLine,
+  roundSeatsLine,
   roundWhenLine,
 } from './roundInviteCopy';
 
@@ -112,5 +113,33 @@ describe('feilene', () => {
     ['unauthorized', ROUND_INVITE_TEXT.unauthorized],
   ] as const)('henting: %s har sin tekst', (reason, text) => {
     expect(describeRoundInviteLoadFailure(reason)).toBe(text);
+  });
+});
+
+// #2837: plassene på en runde med tak. Tallene er de samme som terminlista teller med.
+describe('roundSeatsLine', () => {
+  it.each<[string, Parameters<typeof roundSeatsLine>[0], string | null]>([
+    ['plass igjen', { kind: 'capped', cap: 12, held: 9 }, '9 av 12 plasser'],
+    ['full', { kind: 'capped', cap: 12, held: 12 }, '12 av 12 plasser · fullt'],
+    ['godkjent over taket står som full', { kind: 'capped', cap: 12, held: 13 }, '12 av 12 plasser · fullt'],
+    ['ingen tatt', { kind: 'capped', cap: 4, held: 0 }, '0 av 4 plasser'],
+    ['uten tak', null, null],
+    ['matchplay har sidene sine', { kind: 'matchplay', full: true }, null],
+  ])('%s', (_name, seats, line) => {
+    expect(roundSeatsLine(seats)).toBe(line);
+  });
+});
+
+describe('fullt og trekk', () => {
+  it('teksten for full runde, og knappene', () => {
+    expect(ROUND_INVITE_TEXT.fullIntro).toBe('Runden er full. Be om plass, så får arrangøren beskjed.');
+    expect(ROUND_INVITE_TEXT.fullButton).toBe('Be om plass');
+    expect(ROUND_INVITE_TEXT.cancelButton).toBe('Trekk forespørselen');
+    expect(ROUND_INVITE_TEXT.cancelPending).toBe('Trekker forespørselen …');
+  });
+
+  it('nettsiden og appen sier det samme om en full runde', () => {
+    expect(web.soloOpenFullBanner.startsWith('Runden er full.')).toBe(true);
+    expect(ROUND_INVITE_TEXT.fullIntro.startsWith('Runden er full.')).toBe(true);
   });
 });

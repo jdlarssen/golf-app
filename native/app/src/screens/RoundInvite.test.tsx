@@ -19,6 +19,7 @@ jest.mock('../data/roundInvite', () => ({
   fetchRoundInvite: jest.fn(async () => mockLoads.shift() ?? mockLoad),
   joinRound: jest.fn(async () => mockAnswer()),
   requestToJoin: jest.fn(async () => mockAnswer()),
+  cancelRequest: jest.fn(async () => mockAnswer()),
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => {
@@ -40,10 +41,11 @@ let mockAnswer: () => Promise<RoundInviteAnswerResult> | RoundInviteAnswerResult
   status: 'requested',
 });
 
-const { fetchRoundInvite, joinRound, requestToJoin } = jest.requireMock('../data/roundInvite') as {
+const { fetchRoundInvite, joinRound, requestToJoin, cancelRequest } = jest.requireMock('../data/roundInvite') as {
   fetchRoundInvite: jest.Mock;
   joinRound: jest.Mock;
   requestToJoin: jest.Mock;
+  cancelRequest: jest.Mock;
 };
 
 const SHORT_ID = 'abcd2345';
@@ -225,7 +227,6 @@ describe('du kan be om plass', () => {
 describe('svar som stopper skjemaet', () => {
   it.each([
     ['wrong_mode', ROUND_INVITE_TEXT.wrongMode],
-    ['game_full', ROUND_INVITE_TEXT.gameFull],
   ] as const)('%s har sin tekst, ingen knapp som aldri virker, og vei til Hjem', async (reason, text) => {
     answer({ ok: true, view: view({ offer: 'request' }) });
     mockAnswer = () => ({ ok: false, reason });
@@ -388,5 +389,104 @@ describe('henting', () => {
     });
     expect(screen.queryByTestId('round-invite-stop')).toBeNull();
     expect(screen.getByTestId('round-invite-button')).toBeTruthy();
+  });
+});
+
+// #2837: en full runde, og forespørselen som kan trekkes.
+describe('full runde', () => {
+  const FULL = { kind: 'capped', cap: 12, held: 12 } as const;
+
+  it('viser plassene, at runden er full, og «Be om plass»', async () => {
+    answer({ ok: true, view: view({ offer: 'request', seats: FULL, playerCount: 12 }) });
+    mockAnswer = () => ({ ok: true, status: 'requested' });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-seats')).toHaveTextContent('12 av 12 plasser · fullt');
+    expect(screen.queryByTestId('round-invite-count')).toBeNull();
+    expect(screen.getByText(ROUND_INVITE_TEXT.fullIntro)).toBeTruthy();
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.fullButton);
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(requestToJoin).toHaveBeenCalledWith(SHORT_ID, null);
+    expect(screen.getByTestId('round-invite-sent')).toHaveTextContent(ROUND_INVITE_TEXT.sentTitle);
+  });
+
+  it('med plass igjen står tallene, og du melder deg på som før', async () => {
+    answer({ ok: true, view: view({ seats: { kind: 'capped', cap: 12, held: 9 } }) });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-seats')).toHaveTextContent('9 av 12 plasser');
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.joinButton);
+  });
+
+  it('noen tok siste plass mens du så på: skjermen spør på nytt og viser «Be om plass»', async () => {
+    answer({ ok: true, view: view({ seats: { kind: 'capped', cap: 12, held: 11 } }) });
+    mockAnswer = () => ({ ok: false, reason: 'game_full' });
+    await renderInvite();
+    mockLoads = [{ ok: true, view: view({ offer: 'request', seats: FULL }) }];
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('round-invite-stop')).toBeNull();
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.fullButton);
+  });
+});
+
+describe('trekk forespørselen', () => {
+  beforeEach(() => {
+    answer({ ok: true, view: view({ offer: 'pending', canCancelRequest: true }) });
+    mockAnswer = () => ({ ok: true, status: 'cancelled' });
+  });
+
+  it('knappen står under «Forespørselen er sendt», og trekker med lenkas kode', async () => {
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-sent')).toHaveTextContent(ROUND_INVITE_TEXT.sentTitle);
+    expect(screen.getByTestId('round-invite-cancel')).toHaveTextContent(ROUND_INVITE_TEXT.cancelButton);
+    mockLoads = [{ ok: true, view: view({ offer: 'request', seats: { kind: 'capped', cap: 12, held: 12 } }) }];
+    await fireEvent.press(screen.getByTestId('round-invite-cancel'));
+    expect(cancelRequest).toHaveBeenCalledWith(SHORT_ID);
+    // Trukket: skjermen spør på nytt, og du kan be igjen.
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('round-invite-sent')).toBeNull();
+    expect(screen.getByTestId('round-invite-button')).toHaveTextContent(ROUND_INVITE_TEXT.fullButton);
+  });
+
+  it('uten flagget er det ingen knapp (lag, kaptein)', async () => {
+    answer({ ok: true, view: view({ offer: 'pending', canCancelRequest: false }) });
+    await renderInvite();
+    expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
+    expect(screen.queryByTestId('round-invite-cancel')).toBeNull();
+  });
+
+  it('et dobbelt trykk er ett kall, og knappen er av mens det går', async () => {
+    let finish: (result: RoundInviteAnswerResult) => void = () => {};
+    mockAnswer = () =>
+      new Promise<RoundInviteAnswerResult>((resolve) => {
+        finish = resolve;
+      });
+    await renderInvite();
+    const button = screen.getByTestId('round-invite-cancel');
+    await fireEvent.press(button);
+    await fireEvent.press(button);
+    expect(cancelRequest).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent(ROUND_INVITE_TEXT.cancelPending);
+    await act(async () => {
+      finish({ ok: true, status: 'cancelled' });
+    });
+  });
+
+  it('arrangøren rakk å svare: skjermen spør på nytt og viser det som gjelder', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'not_pending' });
+    const navigation = await renderInvite();
+    mockLoads = [{ ok: true, view: view({ offer: 'in_game', gameId: GAME_ID }) }];
+    await fireEvent.press(screen.getByTestId('round-invite-cancel'));
+    expect(fetchRoundInvite).toHaveBeenCalledTimes(2);
+    expect(navigation.replace).toHaveBeenCalledWith('GameHome', { gameId: GAME_ID });
+  });
+
+  it('uten nett står teksten, forespørselen står, og knappen kan prøves igjen', async () => {
+    mockAnswer = () => ({ ok: false, reason: 'offline' });
+    await renderInvite();
+    await fireEvent.press(screen.getByTestId('round-invite-cancel'));
+    expect(screen.getByTestId('round-invite-error')).toHaveTextContent(OFFLINE_NOTE);
+    expect(screen.getByTestId('round-invite-sent')).toBeTruthy();
+    expect(screen.getByTestId('round-invite-cancel')).toHaveTextContent(ROUND_INVITE_TEXT.cancelButton);
   });
 });

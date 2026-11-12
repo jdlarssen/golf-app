@@ -9,11 +9,14 @@
 // `lib/games/appRoundInviteView.ts`):
 //   GET  /api/pamelding/{shortId}   200 AppRoundInviteView · 401 · 404 · 500
 //   POST /api/pamelding/{shortId}   { intent: 'join', src? } | { intent: 'request', message? }
-//        200 { status: 'joined', gameId } | { status: 'requested' }
+//                                   | { intent: 'cancel' }
+//        200 { status: 'joined', gameId } | { status: 'requested' } | { status: 'cancelled' }
 //        400 { error: 'bad_request' | 'message_too_long' } · 401 · 404
 //        409 { error: 'game_locked' | 'signup_closed' | 'game_full' | 'wrong_mode'
-//                  | 'use_web' | 'profile_incomplete' }
+//                  | 'use_web' | 'profile_incomplete' | 'not_pending' }
 //        429 { error: 'rate_limited' } · 500 { error: 'db_error' }
+//   `seats` og `canCancelRequest` kom med #2837. Et svar uten dem (en eldre server)
+//   leses som ingen plasser og ingen «Trekk forespørselen».
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst. HTTP-status oversettes én gang, her.
 // Teksten bor i `lib/roundInviteCopy.ts`.
@@ -38,7 +41,8 @@ export type RoundInviteRefusal =
   | 'use_web'
   | 'profile_incomplete'
   | 'rate_limited'
-  | 'message_too_long';
+  | 'message_too_long'
+  | 'not_pending';
 
 export type RoundInviteAnswerFailure = RoundInviteRefusal | WebApiFailure | 'not_found' | 'db_error';
 
@@ -56,6 +60,7 @@ const REFUSALS: Record<RoundInviteRefusal, true> = {
   profile_incomplete: true,
   rate_limited: true,
   message_too_long: true,
+  not_pending: true,
 };
 
 const REFUSAL_CODES: ReadonlySet<unknown> = new Set(Object.keys(REFUSALS));
@@ -86,7 +91,15 @@ export async function fetchRoundInvite(shortId: string): Promise<RoundInviteLoad
     typeof view.playerCount === 'number' &&
     typeof view.signupPath === 'string' &&
     (view.offer !== 'in_game' || typeof view.gameId === 'string');
-  return complete ? { ok: true, view: view as AppRoundInviteView } : { ok: false, reason: 'load_failed' };
+  if (!complete) return { ok: false, reason: 'load_failed' };
+  return {
+    ok: true,
+    view: {
+      ...(view as AppRoundInviteView),
+      seats: view.seats ?? null,
+      canCancelRequest: view.canCancelRequest === true,
+    },
+  };
 }
 
 async function answer(
@@ -100,7 +113,9 @@ async function answer(
     if (status === 'joined' && typeof gameId === 'string' && gameId !== '') {
       return { ok: true, status, gameId };
     }
-    return status === 'requested' ? { ok: true, status } : { ok: false, reason: 'db_error' };
+    return status === 'requested' || status === 'cancelled'
+      ? { ok: true, status }
+      : { ok: false, reason: 'db_error' };
   }
   if (call.status === 401) return { ok: false, reason: 'unauthorized' };
   if (call.status === 404) return { ok: false, reason: 'not_found' };
@@ -124,4 +139,12 @@ export function requestToJoin(
   message: string | null,
 ): Promise<RoundInviteAnswerResult> {
   return answer(shortId, { intent: 'request', ...(message ? { message } : {}) });
+}
+
+/**
+ * «Trekk forespørselen» (#2837). Bare din egen forespørsel som venter, også etter at
+ * påmeldingen er stengt. `not_pending`: arrangøren rakk å svare, og ingenting er skrevet.
+ */
+export function cancelRequest(shortId: string): Promise<RoundInviteAnswerResult> {
+  return answer(shortId, { intent: 'cancel' });
 }
