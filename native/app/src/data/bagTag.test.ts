@@ -128,7 +128,7 @@ describe('fetchBagTagExtras', () => {
     expect((await subject().fetchBagTagExtras(ME, NOW)).club).toBe('Bogstad');
   });
 
-  // #2712 (eieren 31.10): en ligarunde spilt alene teller som spilt, ikke som seier.
+  // #2712 (eieren 31.10): en ligaflight teller som spilt, ikke som seier.
   it('counts a league round played alone as played, not won', async () => {
     const { queryStub, routeFrom } = mocks();
     const solo = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };

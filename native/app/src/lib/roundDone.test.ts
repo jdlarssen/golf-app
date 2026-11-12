@@ -191,12 +191,16 @@ describe('buildRoundDoneModel', () => {
   });
 });
 
-// #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
-// har ingen plass, heller ikke i «1. plass nå» på scorekortet.
-describe('buildRoundDoneModel — ligarunde spilt alene (#2712)', () => {
+// #2712, #2850 (eieren 12.11): en ligaflight har ingen plass, heller ikke i
+// «1. plass nå» på scorekortet.
+describe('buildRoundDoneModel — ligaflight (#2712, #2850)', () => {
   const alone = [homePlayer({ userId: ME })];
   it('ingen plass når du er alene i en ligaflight', () => {
     expect(model({ game: { leagueRoundId: 'round-1' }, players: alone })?.standing).toBeNull();
+  });
+  it('ingen plass når flighten er flere', () => {
+    const flight = [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })];
+    expect(model({ game: { leagueRoundId: 'round-1' }, players: flight })?.standing).toBeNull();
   });
   it('alene utenfor en liga beholder plassen', () => {
     expect(model({ players: alone })?.standing).not.toBeNull();

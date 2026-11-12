@@ -41,7 +41,7 @@ export const HOME_CACHE_KEY = 'home';
  * (`gateReason` tester mot `'full'`). Den leses derfor som «ingen cache».
  *
  * v3 (#2712): kortene fikk `leagueRoundId`, så «Forrige runde» kan si
- * «Godkjent» i stedet for «Du vant» etter en ligaflight spilt alene.
+ * «Godkjent» i stedet for «Du vant» etter en ligaflight.
  *
  * v4 (#2752): kortene fikk `tournamentId`, `cupName` og `withdrawn`. En cache
  * fra før mangler dem, og da ville en delt cup-dag stått som to kort til neste

@@ -198,7 +198,7 @@ export function buildHoleByHole(
   const { result } = outcome;
   const teeGenderOf = (userId: string) =>
     bundle.players.find((p) => p.userId === userId)?.teeGender;
-  // #2712: en ligarunde spilt alene har ingen plass (modellen tar bort leder og ★).
+  // #2712: en ligaflight har ingen plass (modellen tar bort leder og ★).
   const leagueOpts = { leagueFlight: bundle.game.leagueRoundId != null };
 
   if (kind === 'solo-stableford' && result.kind === 'stableford' && result.variant === 'solo') {

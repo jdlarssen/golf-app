@@ -384,8 +384,8 @@ describe('waitsForChoices', () => {
 });
 
 // #2712 (orkestratoren 31.10, etter eierens regel): «Hull for hull» for en
-// ligarunde spilt alene har ingen plass. Modellen bærer svaret fra bundelen.
-describe('buildHoleByHole — ligarunde spilt alene (#2712)', () => {
+// ligaflight har ingen plass. Modellen bærer svaret fra bundelen.
+describe('buildHoleByHole — ligaflight (#2712, #2850)', () => {
   const ola = [homePlayer({ userId: 'ola', name: 'Ola Kompis', courseHandicap: 0 })];
   const game = (leagueRoundId: string | null) =>
     homeBundle({

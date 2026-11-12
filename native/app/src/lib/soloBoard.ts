@@ -385,7 +385,8 @@ function finishedBoard(
   const byId = new Map(board.rows.map((row) => [row.userId, row]));
 
   const note = (row: ResultBoardRow): string | null => {
-    if (row.decidedBy === null || row.decidedBy === 'total' || row.above === null) return null;
+    // A league flight has no place, so no tie-break note about who stands above (#2850).
+    if (unplaced || row.decidedBy === null || row.decidedBy === 'total' || row.above === null) return null;
     const above = byId.get(row.above);
     return above
       ? formatMessage(DECIDED_TEXT[row.decidedBy], { name: sentenceName(above, board.rows, rowName, keyOf) })

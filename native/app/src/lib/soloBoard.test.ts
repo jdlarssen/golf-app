@@ -232,9 +232,9 @@ describe('soloBoardFor — when the screen shows something else', () => {
   });
 });
 
-// #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
-// har ingen plass og ingen seier, så tavla viser poengene og «Godkjent».
-describe('soloBoardFor — ligarunde spilt alene (#2712)', () => {
+// #2712, #2850 (eieren 12.11): en ligaflight har ingen plass og ingen seier,
+// alene eller med andre, så tavla viser poengene og «Godkjent».
+describe('soloBoardFor — ligaflight (#2712, #2850)', () => {
   const alone = (leagueRoundId: string | null) =>
     soloBoardFor({
       bundle: homeBundle({ game: { status: 'finished', leagueRoundId }, players: [players[1]] }),
@@ -258,11 +258,37 @@ describe('soloBoardFor — ligarunde spilt alene (#2712)', () => {
     expect(model.rows[0]).toMatchObject({ place: '1', leader: true });
     expect(model.strip?.text).toBe('1. plass');
   });
+
+  const several = (leagueRoundId: string | null) =>
+    soloBoardFor({
+      bundle: homeBundle({ game: { status: 'finished', leagueRoundId }, players }),
+      scores: [
+        ...holeScores('g-live', 'marte', 18, 3),
+        ...holeScores('g-live', ME, 18, 4),
+        ...holeScores('g-live', 'jonas', 18, 5),
+      ],
+      userId: ME,
+    })!;
+
+  it('flere i flighten: ingen plass, vinner, medalje eller notat, og «Godkjent»', () => {
+    const model = several('round-1');
+    expect(model.rows).toHaveLength(3);
+    expect(model.rows.every((r) => r.place === '–' && !r.leader && r.medal === null && r.note === null)).toBe(true);
+    expect(model.rows.every((r) => !/plass|Vinner/.test(r.a11y))).toBe(true);
+    expect(model.strip?.text).toBe('Godkjent');
+  });
+
+  it('flere utenfor en liga beholder plassene', () => {
+    const model = several(null);
+    expect(model.rows.map((r) => r.place)).toEqual(['1', '2', '3']);
+    expect(model.rows[0].leader).toBe(true);
+    expect(model.strip?.text).toMatch(/^2\. plass/);
+  });
 });
 
-// #2712 (orkestratoren 31.10, etter eierens regel): under runden har en
-// ligarunde spilt alene heller ingen plass; stripa sier poengene.
-describe('soloBoardFor — live, ligarunde spilt alene (#2712)', () => {
+// #2712, #2850 (eieren 12.11): under runden har en ligaflight heller ingen
+// plass; stripa sier poengene.
+describe('soloBoardFor — live, ligaflight (#2712, #2850)', () => {
   const live = (leagueRoundId: string | null) =>
     soloBoardFor({
       bundle: homeBundle({ game: { leagueRoundId }, players: [players[1]] }),
