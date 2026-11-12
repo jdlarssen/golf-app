@@ -99,8 +99,13 @@ export async function loadSignupFacts(
   };
 }
 
-/** The filter `withdrawRequestCore` writes with, as a fact about the row. */
-function isOwnPendingRequest(row: RequestRow | null): boolean {
+/**
+ * The filter `withdrawRequestCore` writes with, as a fact about the row.
+ * `selfRegistration.test.ts` checks that the two agree on every row.
+ */
+export function isOwnPendingRequest(
+  row: Pick<RequestRow, 'status' | 'team_request_id' | 'is_team_captain' | 'brought_by_user_id'> | null,
+): boolean {
   return (
     row?.status === 'pending' &&
     row.team_request_id == null &&

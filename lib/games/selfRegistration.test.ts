@@ -458,10 +458,12 @@ describe('a full open round takes a request (#2837)', () => {
     expect(wrote(adminMock)).toBe(false);
   });
 
-  it('a full round does not sign you up directly, so the claim is never tried', async () => {
+  // Someone took the last seat between the screen and the tap: the answer is
+  // «full», as the claim would have said, not «signup is not open».
+  it('a full round does not sign you up directly: game_full, and the claim is never tried', async () => {
     getGameByShortIdMock.mockResolvedValue(makeGame(fullWolf));
     vi.mocked(loadSignupFacts).mockResolvedValue(FULL);
-    await expect(registerForOpenGameCore(REGISTER)).resolves.toEqual({ ok: false, error: 'wrong_mode' });
+    await expect(registerForOpenGameCore(REGISTER)).resolves.toEqual({ ok: false, error: 'game_full' });
     expect(wrote(adminMock)).toBe(false);
   });
 });
@@ -598,5 +600,42 @@ describe('withdrawRequestCore (#2837)', () => {
     getGameByShortIdMock.mockResolvedValue(game);
     await expect(withdrawRequestCore(WITHDRAW)).resolves.toEqual({ ok: false, error: 'game_not_found' });
     expect(updateCall(adminMock)).toBeUndefined();
+  });
+});
+
+describe('one rule for «your own request» (#2837)', () => {
+  it('the withdraw filter and the cancellable fact agree on every row', async () => {
+    const { isOwnPendingRequest } = await vi.importActual<typeof import('./loadSignupFacts')>(
+      './loadSignupFacts',
+    );
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: { game_registration_requests: [{ data: [{ id: 'request-1' }], error: null }] },
+    });
+    await withdrawRequestCore({ shortId: SHORT_ID, userId: USER_ID });
+    const filters = adminMock.__fromCalls
+      .filter(
+        (c: { table: string; method: string }) =>
+          c.table === 'game_registration_requests' && (c.method === 'eq' || c.method === 'is'),
+      )
+      .map((c: { args: unknown[] }) => ({ column: String(c.args[0]), value: c.args[1] }))
+      .filter((f: { column: string }) => f.column !== 'game_id' && f.column !== 'user_id');
+    expect(filters.length).toBeGreaterThan(1);
+
+    let rows = 0;
+    for (const status of ['pending', 'approved', 'rejected', 'withdrawn'] as const) {
+      for (const team_request_id of [null, 'captain-row']) {
+        for (const is_team_captain of [false, true]) {
+          for (const brought_by_user_id of [null, 'host']) {
+            rows += 1;
+            const row = { status, team_request_id, is_team_captain, brought_by_user_id };
+            const filterMatches = filters.every(
+              (f: { column: string; value: unknown }) => row[f.column as keyof typeof row] === f.value,
+            );
+            expect(isOwnPendingRequest(row)).toBe(filterMatches);
+          }
+        }
+      }
+    }
+    expect(rows).toBe(32);
   });
 });
