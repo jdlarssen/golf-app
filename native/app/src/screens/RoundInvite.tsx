@@ -51,6 +51,7 @@ import {
   describeRoundInviteFailure,
   describeRoundInviteLoadFailure,
   isRoundFull,
+  teamDoesNotFit,
   type RoundInviteFailureWithText,
   roundFeeLine,
   roundPlaceLine,
@@ -229,7 +230,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   if (teamSent) return <TeamSent shortId={shortId} round={view.round} sent={teamSent} />;
   const team = view.teamSignup ?? null;
   if (team?.kind === 'form') {
-    if (isRoundFull(view.seats)) return <TeamRoundFull view={view} />;
+    if (teamDoesNotFit(view.seats, team.teamSize)) return <TeamRoundFull view={view} />;
     return (
       <TeamSignupForm
         // Et annet lagformat gir nye plasser.

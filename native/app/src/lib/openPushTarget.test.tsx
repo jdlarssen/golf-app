@@ -37,6 +37,7 @@ const SCREENS = [
   'CupParticipants',
   'LeagueRoundStart',
   'MarkerApprove',
+  'RoundInvite',
 ] as const;
 
 const G = { gameId: 'g1' };
@@ -116,6 +117,15 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     await stackOf();
     await tap({ name: 'Leaderboard', params: G });
     expect(names()).toEqual(['Home', 'GameHome', 'Leaderboard']);
+  });
+
+  it('#2840: et lagvarsel åpner påmeldingsskjermen med koden, og bare én', async () => {
+    await stackOf();
+    await tap({ name: 'RoundInvite', params: { shortId: 'x2840aa6', src: null } });
+    expect(names()).toEqual(['Home', 'RoundInvite']);
+    expect(top()).toEqual({ shortId: 'x2840aa6', src: null });
+    await tap({ name: 'RoundInvite', params: { shortId: 'x2840aa6', src: null } });
+    expect(names()).toEqual(['Home', 'RoundInvite']);
   });
 
   it('ligaen under startsiden og markørens skjerm', async () => {

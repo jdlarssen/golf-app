@@ -40,6 +40,7 @@ describe('nettsidens ordlyd', () => {
     ['teammateNotFriend', TEAM_SIGNUP_TEXT.teammateNotFriend, errors.teammate_not_friend],
     ['duplicateMembers', TEAM_SIGNUP_TEXT.duplicateMembers, errors.duplicate_members],
     ['teamFull', TEAM_SIGNUP_TEXT.teamFull, errors.team_full],
+    ['gameFull', TEAM_SIGNUP_TEXT.gameFull, errors.game_full],
     ['teamNameInvalid', TEAM_SIGNUP_TEXT.teamNameInvalid, errors.team_name_invalid],
     ['slotsCountWrong', TEAM_SIGNUP_TEXT.slotsCountWrong, errors.slots_count_wrong],
     ['selfInSlots', TEAM_SIGNUP_TEXT.selfInSlots, errors.self_in_slots],
