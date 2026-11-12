@@ -68,11 +68,12 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   expect(onPress).toHaveBeenCalled();
 
   // Uten tee-off og uten bundel: «Tid ikke satt», ingen nærhet og ingen skiver.
-  // Formatnavnet kommer fra appens åtte opprett-formater (`APP_MODE_LABELS`);
-  // et format utenfor dem står ikke i linja.
+  // Formatnavnet kommer fra appens opprett-formater (`APP_MODE_LABELS`); et
+  // format utenfor dem står ikke i linja. #2753 D3 la solo_strokeplay til
+  // dem, så assertionen trenger nå et format som fortsatt mangler skjermer.
   await rerender(
     <NextStartTicket
-      card={{ ...card, scheduledTeeOffAt: null, gameMode: 'solo_strokeplay' }}
+      card={{ ...card, scheduledTeeOffAt: null, gameMode: 'nassau' }}
       bundle={null}
       userId="me"
       now={now}
