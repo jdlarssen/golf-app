@@ -11,10 +11,21 @@ import { FONTS, TAP, interLine, useTheme } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
 import { PlayedPill } from './LeaguePills';
 
-export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; onPress: () => void }) {
+export function LeagueHomeRow({
+  league,
+  onPress,
+  notJoined = false,
+}: {
+  league: AppLeagueSummary;
+  onPress: () => void;
+  /** #2839: en klubbliga du kan melde deg på. Raden åpner ligasiden, der «Bli med» står. */
+  notJoined?: boolean;
+}) {
   const { colors } = useTheme();
-  const open = league.openRound;
-  const line = open
+  const open = notJoined ? null : league.openRound;
+  const line = notJoined
+    ? LEAGUE_TEXT.homeNotJoined
+    : open
     ? homeRoundLine(open.label, open.closesAt)
     : league.status === 'draft'
       ? LEAGUE_TEXT.homeNotStarted
@@ -29,13 +40,13 @@ export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; o
       // Pillen er en del av raden for skjermleseren også: navn, runde og om du har spilt.
       accessibilityLabel={[league.name, line, open ? stateText : null].filter(Boolean).join('. ')}
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      testID={`home-league-${league.id}`}
+      testID={notJoined ? `home-joinable-league-${league.id}` : `home-league-${league.id}`}
     >
       <View style={styles.text}>
         <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
           {league.name}
         </Text>
-        <Text style={[styles.line, { color: colors.muted }]} testID={`home-league-line-${league.id}`}>
+        <Text style={[styles.line, { color: colors.muted }]} testID={notJoined ? `home-joinable-league-line-${league.id}` : `home-league-line-${league.id}`}>
           {line}
         </Text>
       </View>

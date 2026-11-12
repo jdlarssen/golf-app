@@ -136,6 +136,8 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   const [cups, setCups] = useState<AppCupSummary[]>([]);
   // #2753 D4: klubbturneringene du kan melde deg på, fra terminlista.
   const [clubRounds, setClubRounds] = useState<AppTerminEntry[]>([]);
+  // #2839: klubbligaene du kan melde deg på, i samme seksjon som klubbrundene.
+  const [joinableLeagues, setJoinableLeagues] = useState<AppLeagueSummary[]>([]);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [heroPair, setHeroPair] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
@@ -176,8 +178,14 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     });
     // Ligaene: best-effort, og en feil skjuler seksjonen.
     void fetchMyLeagues().then(
-      (result) => setLeagues(result.ok ? result.leagues : []),
-      () => setLeagues([]),
+      (result) => {
+        setLeagues(result.ok ? result.leagues : []);
+        setJoinableLeagues(result.ok ? result.joinable : []);
+      },
+      () => {
+        setLeagues([]);
+        setJoinableLeagues([]);
+      },
     );
     // Cupene: best-effort, og en feil skjuler seksjonen.
     void fetchMyCups().then(
@@ -377,8 +385,10 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   // overskrifter («Lørdag 14. november · om 2 dager»), med klubben foran banen.
   const clubNow = new Date();
   const clubById = new Map(clubRounds.map((entry) => [entry.id, entry]));
+  // #2839: en klubbliga du kan melde deg på står under rundene som en rad, og
+  // flytter til «Ligaene dine» når du har meldt deg på (Hjem leser på nytt ved fokus).
   const clubRoundsSection =
-    clubRounds.length > 0 ? (
+    clubRounds.length > 0 || joinableLeagues.length > 0 ? (
       <View testID="home-club-rounds">
         <SectionHead title={HOME_TEXT.clubRounds} />
         {groupTerminByDate(clubRounds, clubNow, localDateParts).map((group) => (
@@ -406,6 +416,14 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
               })}
             </TerminDayCard>
           </View>
+        ))}
+        {joinableLeagues.map((league) => (
+          <LeagueHomeRow
+            key={league.id}
+            league={league}
+            notJoined
+            onPress={() => navigation.navigate('League', { leagueId: league.id })}
+          />
         ))}
       </View>
     ) : null;

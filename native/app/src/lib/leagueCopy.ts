@@ -41,6 +41,8 @@ export const LEAGUE_TEXT = {
   homeSection: 'Ligaene dine',
   homeNoOpenRound: 'Ingen åpen runde nå',
   homeNotStarted: 'Ikke startet ennå',
+  /** #2839: raden for en klubbliga du kan melde deg på, i klubbseksjonen på Hjem. */
+  homeNotJoined: 'Ikke påmeldt · meld deg på før start',
   notPlayed: 'Ikke spilt',
   /** `liga.player.playedBy.*`. */
   delivered: 'Har spilt',
