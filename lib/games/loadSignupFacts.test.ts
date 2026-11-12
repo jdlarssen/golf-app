@@ -29,7 +29,7 @@ vi.mock('./getRegistrationSeats', () => ({
   getRegistrationSeats: (games: readonly unknown[]) => seatsMock(games),
 }));
 
-import type { GameSeats } from './terminliste';
+import type { GameSeats } from './seatCapacity';
 import { loadSignupFacts, type SignupFactsGame } from './loadSignupFacts';
 
 const GAME: SignupFactsGame = {

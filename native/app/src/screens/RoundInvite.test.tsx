@@ -62,6 +62,8 @@ function view(overrides: Partial<AppRoundInviteView> = {}): AppRoundInviteView {
       entryFeeKr: 150,
     },
     playerCount: 7,
+    seats: null,
+    canCancelRequest: false,
     signupPath: `/signup/${SHORT_ID}`,
     ...overrides,
   };

@@ -10,7 +10,7 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import type { ShortIdGame } from './getGameByShortId';
 import { getRegistrationSeats } from './getRegistrationSeats';
 import { isMatchplayMode } from './matchplaySides';
-import { capacityState, type GameSeats } from './terminliste';
+import { isCappedFull, type GameSeats } from './seatCapacity';
 
 /**
  * What the signup rule (`signupOffer.ts`) needs to know about one player in one
@@ -129,10 +129,7 @@ export async function readSeatFacts(
   } catch (err) {
     console.error('[loadSignupFacts] seat count failed', { gameId: game.id, err });
   }
-  return {
-    isFull: seats?.kind === 'capped' && capacityState(seats).free === 0,
-    seats,
-  };
+  return { isFull: isCappedFull(seats), seats };
 }
 
 /**

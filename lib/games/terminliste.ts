@@ -11,6 +11,7 @@
 import { osloParts } from '@/lib/format/teeOff';
 import { osloDateKey, osloWeekendDateKeys } from '@/lib/format/osloCalendar';
 import { holeCountForSegment } from './holeScope';
+import { capacityState, type GameSeats } from './seatCapacity';
 import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
@@ -18,15 +19,9 @@ import type {
   PendingRequest,
 } from './getDiscoverableGames';
 
-/**
- * Seats on a game, from `getRegistrationSeats`. `capped`: a format with a
- * player cap, and the seats the active roster holds (the same count the seat
- * claim checks). `matchplay`: whether both sides are full. A game without a cap
- * that is not matchplay has no entry.
- */
-export type GameSeats =
-  | { kind: 'capped'; cap: number; held: number }
-  | { kind: 'matchplay'; full: boolean };
+// The seat count's types and its «Fullt» live in `seatCapacity.ts`, which has
+// no imports, so the app and the signup route read them without this module's.
+export { capacityState, type CapacityTone, type GameSeats } from './seatCapacity';
 
 export type TerminSource = 'club' | 'friend' | 'open';
 
@@ -223,24 +218,6 @@ export function filterTermin(
     });
   }
   return [...entries];
-}
-
-export type CapacityTone = 'normal' | 'low' | 'full';
-
-/**
- * The capacity line: free seats, how much of the bar is filled (the share
- * taken, clamped to 0–1) and its tone — `low` with one or two seats left,
- * `full` at none.
- */
-export function capacityState({ cap, held }: { cap: number; held: number }): {
-  free: number;
-  fillRatio: number;
-  tone: CapacityTone;
-} {
-  const free = Math.max(0, cap - held);
-  const fillRatio = cap <= 0 ? 1 : Math.min(1, Math.max(0, held / cap));
-  const tone: CapacityTone = free === 0 ? 'full' : free <= 2 ? 'low' : 'normal';
-  return { free, fillRatio, tone };
 }
 
 /** The small line under the clock: «9 hull», «første start» or «shotgun». */

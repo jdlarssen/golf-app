@@ -1,6 +1,6 @@
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import type { SignupOffer } from '@/lib/games/signupOffer';
-import type { GameSeats } from '@/lib/games/terminliste';
+import type { GameSeats } from '@/lib/games/seatCapacity';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
