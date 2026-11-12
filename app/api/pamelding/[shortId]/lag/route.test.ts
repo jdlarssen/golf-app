@@ -46,6 +46,12 @@ vi.mock('@/lib/games/teamDashboardCore', () => ({
   addTeamMemberCore: (...a: unknown[]) => core.addTeamMemberCore(...a),
 }));
 
+// #2840: the captain's friends who are in the round already («Velg en venn»).
+const readUnavailableFriendIds = vi.fn();
+vi.mock('@/lib/games/appTeamSignup', () => ({
+  readUnavailableFriendIds: (...a: unknown[]) => readUnavailableFriendIds(...a),
+}));
+
 // next/server's after() does not exist outside the Next runtime: run it at once.
 vi.mock('next/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/server')>();
@@ -109,6 +115,7 @@ beforeEach(() => {
   fake.reset();
   core.loadTeamDashboard.mockResolvedValue(CAPTAIN_VIEW);
   core.onTeamPageVisit.mockResolvedValue(undefined);
+  readUnavailableFriendIds.mockResolvedValue([FRIEND]);
   for (const name of WRITES) core[name].mockResolvedValue({ ok: true });
 });
 
@@ -124,9 +131,26 @@ describe('GET /api/pamelding/[shortId]/lag', () => {
   it('the team page\'s view for the caller, then the visit is recorded as on the web', async () => {
     const res = await get();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(CAPTAIN_VIEW);
+    expect(await res.json()).toEqual({ ...CAPTAIN_VIEW, unavailableFriendIds: [FRIEND] });
     expect(core.loadTeamDashboard).toHaveBeenCalledWith(SHORT_ID, ME);
+    expect(readUnavailableFriendIds).toHaveBeenCalledWith(GAME_ID, ME);
     expect(core.onTeamPageVisit).toHaveBeenCalledWith(GAME_ID, ME);
+  });
+
+  it('#2840: only the captain gets the friends who are in the round', async () => {
+    const memberView = { ...CAPTAIN_VIEW, kind: 'member' };
+    core.loadTeamDashboard.mockResolvedValue(memberView);
+    const res = await get();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(memberView);
+    expect(readUnavailableFriendIds).not.toHaveBeenCalled();
+  });
+
+  it('#2840: a failed read of those friends is 500, never a picker that greys out nobody', async () => {
+    readUnavailableFriendIds.mockRejectedValue(new Error('boom'));
+    const res = await get();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'load_failed' });
   });
 
   it('404 for a missing round or a draft, and no visit is recorded', async () => {

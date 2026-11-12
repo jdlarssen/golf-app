@@ -98,6 +98,7 @@ function makeGame(overrides: Record<string, unknown> = {}) {
     game_mode: 'texas_scramble',
     mode_config: { kind: 'texas_scramble', team_size: 3, teams_count: 4, team_handicap_pct: 10 },
     signups_closed_at: null,
+    scheduled_tee_off_at: '2026-06-12T15:30:00Z',
     created_by: ORGANISER_ID,
     courses: { name: 'Bjaavann' },
     ...overrides,
@@ -730,7 +731,15 @@ describe('loadTeamDashboard', () => {
       myRowId: CAPTAIN_REQUEST_ID,
       myStatus: 'approved',
       teamName: 'Lag A',
-      game: { id: GAME_ID, joinEffect: 'instant', signupsClosed: false, courseName: 'Bjaavann' },
+      // #2840: the team size and tee-off, for the app's free seats and its line under the title.
+      game: {
+        id: GAME_ID,
+        joinEffect: 'instant',
+        signupsClosed: false,
+        courseName: 'Bjaavann',
+        teamSize: 3,
+        teeOffAt: '2026-06-12T15:30:00Z',
+      },
       captain: { requestId: CAPTAIN_REQUEST_ID, userId: CAPTAIN_ID, displayName: 'Kari Kaptein' },
     });
     if (view.kind !== 'captain') return;
@@ -744,7 +753,14 @@ describe('loadTeamDashboard', () => {
   });
 
   it('a teammate gets the member view of the captain\'s team', async () => {
-    getGameByShortIdMock.mockResolvedValue(makeGame({ registration_mode: 'manual_approval', signups_closed_at: '2026-06-11T10:00:00Z' }));
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'manual_approval',
+        signups_closed_at: '2026-06-11T10:00:00Z',
+        scheduled_tee_off_at: null,
+        mode_config: { kind: 'texas_scramble' },
+      }),
+    );
     adminMock = buildSupabaseMock([
       myRow({ id: CHILD_REQUEST_ID, user_id: MATE_ID, is_team_captain: false, team_request_id: CAPTAIN_REQUEST_ID, status: 'pending' }),
       { data: [], error: null },
@@ -754,7 +770,8 @@ describe('loadTeamDashboard', () => {
       kind: 'member',
       myRowId: CHILD_REQUEST_ID,
       myStatus: 'pending',
-      game: { joinEffect: 'approval', signupsClosed: true },
+      // #2840: no team size in the config, no tee-off: both null, never a guess.
+      game: { joinEffect: 'approval', signupsClosed: true, teamSize: null, teeOffAt: null },
     });
   });
 

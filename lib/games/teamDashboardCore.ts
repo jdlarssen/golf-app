@@ -7,6 +7,12 @@ import {
   pickPendingInvitation,
   type InviterTeams,
 } from '@/app/[locale]/signup/[shortId]/team/captainLookup';
+import type {
+  AppTeamPageGame,
+  AppTeamPageMember,
+  AppTeamPagePerson,
+  AppTeamPageView,
+} from '@/lib/games/appRoundInviteView';
 import type { Database } from '@/lib/database.types';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
@@ -761,54 +767,12 @@ export async function onTeamPageVisit(gameId: string, userId: string): Promise<v
   await markReadOnVisit({ userId, surface: 'teamSignup', entityId: gameId });
 }
 
-export type TeamDashboardPerson = {
-  requestId: string;
-  userId: string;
-  /** Name, or the masked address (#2207); null when the user row is missing. */
-  displayName: string | null;
-  status: RequestStatus;
-};
-
-export type TeamDashboardMember = TeamDashboardPerson & {
-  /** #2607: no captaincy for a guest; an unknown user reads as a guest. */
-  isGuest: boolean;
-};
-
-export type TeamDashboardGame = {
-  id: string;
-  shortId: string;
-  name: string;
-  courseName: string | null;
-  /** open → straight into the game; otherwise the team waits for approval (#362). */
-  joinEffect: 'instant' | 'approval';
-  /** #543: signups closed while the game is still scheduled. */
-  signupsClosed: boolean;
-};
-
-export type TeamDashboardView =
-  | { kind: 'not_found' }
-  | { kind: 'no_team'; game: TeamDashboardGame }
-  /** An e-mail invitation whose team we cannot tell (#1343). */
-  | { kind: 'team_unknown'; game: TeamDashboardGame; noCaptain: boolean }
-  | {
-      kind: 'invited_unknown';
-      game: TeamDashboardGame;
-      invitationId: string;
-      captainName: string | null;
-      teamName: string | null;
-    }
-  /** A solo request; it does not belong on the team page. */
-  | { kind: 'solo'; game: TeamDashboardGame }
-  | {
-      kind: 'captain' | 'member';
-      game: TeamDashboardGame;
-      myRowId: string;
-      myStatus: RequestStatus;
-      /** The captain's team name, else the caller's; null = none. */
-      teamName: string | null;
-      captain: TeamDashboardPerson | null;
-      members: TeamDashboardMember[];
-    };
+// #2840: the view's shape lives with the app's wire types, which the app can
+// import; these names stay for the web page and the tests.
+export type TeamDashboardPerson = AppTeamPagePerson;
+export type TeamDashboardMember = AppTeamPageMember;
+export type TeamDashboardGame = AppTeamPageGame;
+export type TeamDashboardView = { kind: 'not_found' } | AppTeamPageView;
 
 type TeamMemberRow = {
   id: string;
@@ -858,6 +822,8 @@ export async function loadTeamDashboard(
     courseName: game.courses?.name ?? null,
     joinEffect: game.registration_mode === 'open' ? 'instant' : 'approval',
     signupsClosed: game.signups_closed_at != null && game.status === 'scheduled',
+    teamSize: resolveTeamSize(game.mode_config),
+    teeOffAt: game.scheduled_tee_off_at,
   };
 
   const admin = getAdminClient();
