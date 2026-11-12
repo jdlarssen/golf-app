@@ -260,7 +260,7 @@ export function SetupStep({
         <Field label={SHAMBLE_TEXT.legend}>
           {/* Valgene står i et kort, som på artboardet. */}
           <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={ui.label}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
+            <Text style={[styles.cardLabel, { color: colors.text }]}>{SHAMBLE_TEXT.teamSizeLabel}</Text>
             {/* Kortene fra `Nyttspill-2-shamble`. */}
             <ChoiceCards
               columns={2}
@@ -274,7 +274,7 @@ export function SetupStep({
                 testID: `create-shamble-size-${n}`,
               }))}
             />
-            <Text style={ui.label}>{SHAMBLE_TEXT.variantLabel}</Text>
+            <Text style={[styles.cardLabel, { color: colors.text }]}>{SHAMBLE_TEXT.variantLabel}</Text>
             <ChoiceCards
               columns={2}
               minHeight={64}
@@ -297,7 +297,7 @@ export function SetupStep({
             />
             {champagne ? (
               <>
-                <Text style={ui.label}>{SHAMBLE_TEXT.countLabel}</Text>
+                <Text style={[styles.cardLabel, { color: colors.text }]}>{SHAMBLE_TEXT.countLabel}</Text>
                 <ChoiceCards
                   columns={3}
                   minHeight={60}
@@ -313,7 +313,7 @@ export function SetupStep({
                 />
               </>
             ) : null}
-            <Text style={ui.label}>{SHAMBLE_TEXT.scoringLabel}</Text>
+            <Text style={[styles.cardLabel, { color: colors.text }]}>{SHAMBLE_TEXT.scoringLabel}</Text>
             <ChoiceCards
               columns={2}
               minHeight={60}
@@ -359,7 +359,7 @@ export function SetupStep({
               ))}
           </View>
           <Text style={ui.muted}>{PATSOME_TEXT.handicapNote}</Text>
-          <Text style={ui.label}>{PATSOME_TEXT.scoringFrom}</Text>
+          <Text style={[styles.cardLabel, { color: colors.text }]}>{PATSOME_TEXT.scoringFrom}</Text>
           <ChoiceCards
             columns={2}
             minHeight={60}
@@ -491,6 +491,8 @@ const styles = StyleSheet.create({
   // Kortet rundt shamble- og Patsome-oppsettet: 16 fra kanten (skjermen har
   // 20), 14 luft og 12 mellom radene, som artboardene.
   setupCard: { marginHorizontal: -4, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
+  // Underoverskriftene i kortet: 14 pt halvfet, som artboardene.
+  cardLabel: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   // `Nyttspill-2-patsome`: boksen med de tre delene av runden.
   segments: { borderRadius: 12, padding: 12, gap: 10 },
   segment: { flexDirection: 'row', gap: 10 },

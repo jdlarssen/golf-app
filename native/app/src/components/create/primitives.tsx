@@ -223,7 +223,9 @@ export function ChoiceCards<T extends string | number>({
             >
               <Text style={[fraunces(600, titleSize), { color: colors.text }]}>{option.title}</Text>
               {option.hint ? (
-                <Text style={[styles.cardHint, { color: colors.muted }]}>{option.hint}</Text>
+                <Text style={[styles.cardHint, { color: colors.muted }, centered && styles.centeredText]}>
+                  {option.hint}
+                </Text>
               ) : null}
             </Pressable>
           </View>
@@ -299,6 +301,7 @@ const styles = StyleSheet.create({
   rowDisabled: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   cards: { flexDirection: 'row', flexWrap: 'wrap' },
+  centeredText: { textAlign: 'center' },
   card: {
     borderRadius: 14,
     paddingVertical: 10,
