@@ -44,7 +44,10 @@ describe('appLockSublabel', () => {
       'Slå på fingeravtrykk i innstillingene til telefonen først',
     );
     expect(appLockSublabel([IRIS], 'android', { enrolled: false, on: false })).toBe(
-      'Slå på ansikt eller fingeravtrykk i innstillingene til telefonen først',
+      'Legg til ansikt eller fingeravtrykk i innstillingene til telefonen først',
+    );
+    expect(appLockSublabel([IRIS], 'android', { enrolled: false, on: true })).toBe(
+      'Virker ikke før du har lagt til ansikt eller fingeravtrykk i innstillingene til telefonen',
     );
   });
 
