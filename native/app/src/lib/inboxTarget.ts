@@ -5,8 +5,9 @@
 // skjerm den er, så et varsel går til samme sted fra push og fra innboks. Et mål
 // som ender på `Home` uten å være tomt, er en side appen ikke har (arrangørens
 // påmeldinger, klubben): den åpnes i nettleseren (eierens svar 02.11: «Ja, vis
-// alle»). Påmeldingssiden og lagpåmeldingen (`/signup/…`) åpner appens
-// påmeldingsskjerm siden #2840. Uten sti er det ingen steder å gå, og trykket merker bare raden lest.
+// alle»). Påmeldingssiden (`/signup/…`) åpner appens påmeldingsskjerm, og lagvarslene
+// (`/signup/…/team`) lagsiden (#2840). Uten sti er det ingen steder å gå, og trykket
+// merker bare raden lest.
 import type { ScreenTarget } from './openPushTarget';
 import { pushTarget } from './pushRoute';
 

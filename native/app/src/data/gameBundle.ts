@@ -184,6 +184,13 @@ export interface BundleGame {
   paymentLink?: string | null;
   /** #2749: premiebordet, gjennom `safeParsePrizes`; ugyldig blob gir `[]`. */
   prizes?: GamePrize[];
+  /**
+   * #2840 del 3: `games.short_id` og `games.registration_type`, så en planlagt lagrunde
+   * kan vise raden til lagsiden. Valgfri og uten ny versjon: en bundel i cachen uten
+   * dem viser bare ikke raden før neste henting, som skjer når skjermen åpnes.
+   */
+  shortId?: string | null;
+  registrationType?: string | null;
 }
 
 /**
@@ -382,6 +389,8 @@ export function toBundle(
       entryFeeKr: game.entry_fee_kr ?? 0,
       paymentLink: game.payment_link ?? null,
       prizes: safeParsePrizes(game.prizes),
+      shortId: game.short_id ?? null,
+      registrationType: game.registration_type ?? null,
     },
     players: players.map((row) => ({
       userId: row.user_id,

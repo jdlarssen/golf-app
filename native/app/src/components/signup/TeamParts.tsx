@@ -18,7 +18,8 @@ import { UtslagHakeIcon } from '../icons/Icons';
 export type DiscKind = 'me' | 'other' | 'empty' | 'unknown';
 
 /**
- * Én skive. `lg` er oppstillingens 60 pt, `md` listas 40 pt. `empty` er den stiplede
+ * Én skive. `lg` er oppstillingens 60 pt, `md` listas 40 pt, `sm` 30 pt i raden til
+ * laget på runden (#2840 del 3). `empty` er den stiplede
  * ledige plassen med «+». `unknown` er deg i svaret på invitasjonen: stiplet i
  * `primary` med «?», fordi du ikke har svart ennå.
  */
@@ -27,7 +28,7 @@ export const TeamDisc = forwardRef<
   {
     kind: DiscKind;
     label: string;
-    size: 'lg' | 'md';
+    size: 'lg' | 'md' | 'sm';
     captain?: boolean;
     selected?: boolean;
     /** Fargen rundt merket og ringen: flaten skiva står på. */
@@ -37,7 +38,7 @@ export const TeamDisc = forwardRef<
   }
 >(function TeamDisc({ kind, label, size, captain = false, selected = false, ground, faded = false, testID }, ref) {
   const { colors, scheme } = useTheme();
-  const side = size === 'lg' ? 60 : 40;
+  const side = size === 'lg' ? 60 : size === 'md' ? 40 : 30;
   const dashed = kind === 'empty' || kind === 'unknown';
   const fill =
     kind === 'me' ? colors.primary : dashed ? 'transparent' : scheme === 'dark' ? colors.surfaceStrong : colors.primarySoft;
@@ -63,7 +64,7 @@ export const TeamDisc = forwardRef<
     >
       <Text
         style={[
-          dashed ? styles.markText : size === 'lg' ? styles.lgText : styles.mdText,
+          dashed ? styles.markText : size === 'lg' ? styles.lgText : size === 'md' ? styles.mdText : styles.smText,
           { color: ink },
         ]}
       >
@@ -262,6 +263,7 @@ const styles = StyleSheet.create({
   faded: { opacity: 0.55 },
   lgText: { fontSize: 18, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
   mdText: { fontSize: 14, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
+  smText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
   markText: { fontSize: 22, fontFamily: FONTS.sans },
   // `0 0 0 2px <flaten>, 0 0 0 4px primary`: 2 pt luft, så 2 pt ring.
   ring: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderWidth: 2 },

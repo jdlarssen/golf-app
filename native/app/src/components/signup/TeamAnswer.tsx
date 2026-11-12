@@ -23,7 +23,6 @@ import {
   slotResultLabel,
   teamRoundLine,
 } from '../../lib/teamSignupCopy';
-import { describeWebLinkFailure, openWeb } from '../../lib/webLink';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { useBottomInsetUnlessKeyboard } from '../KeyboardInset';
 import { Dock, DockButton, Lineup, LineupCell, TeamDisc, teamStyles } from './TeamParts';
@@ -164,27 +163,19 @@ export function TeamInviteAnswer({
   );
 }
 
-/**
- * «Laget er sendt til arrangøren»: svaret per venn, og «Se laget». Lagsiden i appen
- * kommer i del 3; til da åpner knappen lagsiden på nettet.
- */
+/** «Laget er sendt til arrangøren»: svaret per venn, og «Se laget», som åpner lagsiden. */
 export function TeamSent({
-  shortId,
   round,
   sent,
+  onSeeTeam,
 }: {
-  shortId: string;
   round: AppRoundInviteView['round'];
   sent: SentTeam;
+  /** «Se laget»: lagsiden i appen (#2840 del 3). */
+  onSeeTeam: () => void;
 }) {
   const { colors } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
-  const [note, setNote] = useState<string | null>(null);
-
-  const seeTeam = useCallback(async () => {
-    const result = await openWeb(`/signup/${shortId}/team`);
-    setNote(result.ok ? null : describeWebLinkFailure(result.reason));
-  }, [shortId]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID="team-sent">
@@ -228,12 +219,7 @@ export function TeamSent({
         </View>
       </ScrollView>
       <Dock bottomInset={bottomInset}>
-        {note ? (
-          <Text style={[styles.dockError, { color: colors.danger }]} testID="team-sent-note">
-            {note}
-          </Text>
-        ) : null}
-        <DockButton label={TEAM_SIGNUP_TEXT.seeTeam} variant="primary" onPress={() => void seeTeam()} testID="team-sent-see-team" />
+        <DockButton label={TEAM_SIGNUP_TEXT.seeTeam} variant="primary" onPress={onSeeTeam} testID="team-sent-see-team" />
       </Dock>
     </View>
   );

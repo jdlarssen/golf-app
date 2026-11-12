@@ -272,33 +272,47 @@ describe('?varsel= på lenka', () => {
   });
 });
 
-// #2840: lagvarslene peker på `/signup/<kode>/team` og åpner påmeldingsskjermen, der
-// svaret på invitasjonen står. Del 3 flytter `/team` til lagsiden.
-describe('påmeldingen', () => {
+// #2840: lagvarslene peker på `/signup/<kode>/team` og åpner lagsiden (del 3). Selve
+// påmeldingssiden, `/signup/<kode>`, åpner påmeldingsskjermen.
+describe('påmeldingen og lagsiden', () => {
   it.each([
     '/signup/abcd1234',
     '/signup/abcd1234/',
-    '/signup/abcd1234/team',
-    '/signup/abcd1234/team/',
-    `/signup/abcd1234/team?varsel=${NOTE}`,
     `/signup/abcd1234?varsel=${NOTE}`,
-    '/en/signup/abcd1234/team',
+    '/en/signup/abcd1234',
   ])('%s åpner påmeldingen med koden', (url) => {
     expect(pushTarget(url)).toEqual({ name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } });
   });
 
-  it.each(['/signup/abcd1234/noe', '/signup/ABCD1234', '/signup/kort', '/signup/', '/signupx/abcd1234'])(
+  it.each([
+    '/signup/abcd1234/team',
+    '/signup/abcd1234/team/',
+    `/signup/abcd1234/team?varsel=${NOTE}`,
+    '/en/signup/abcd1234/team',
+  ])('%s åpner lagsiden med koden', (url) => {
+    expect(pushTarget(url)).toEqual({ name: 'TeamPage', params: { shortId: 'abcd1234' } });
+  });
+
+  it.each([
+    '/signup/abcd1234/noe',
+    '/signup/abcd1234/teams',
+    '/signup/ABCD1234',
+    '/signup/ABCD1234/team',
+    '/signup/kort',
+    '/signup/',
+    '/signupx/abcd1234',
+  ])(
     '%s er ingen påmelding, og går til Hjem',
     (url) => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });
     },
   );
 
-  it('laginvitasjonen fra serveren åpner påmeldingen', () => {
+  it('laginvitasjonen fra serveren åpner lagsiden', () => {
     const url = notificationDestination({
       kind: 'team_invite',
       payload: { game_short_id: 'abcd1234' } as NotificationPayload<'team_invite'>,
     });
-    expect(pushTarget(url)).toEqual({ name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } });
+    expect(pushTarget(url)).toEqual({ name: 'TeamPage', params: { shortId: 'abcd1234' } });
   });
 });

@@ -223,6 +223,33 @@ describe('medspilleren', () => {
   });
 });
 
+// #2840: varselet «Kari vil ha deg med på laget» peker på lagsiden, men svaret står på
+// påmeldingsskjermen (tegningen, «2. Svaret på invitasjonen»).
+describe('en medspiller som ikke har svart', () => {
+  const pending = () =>
+    captainView({
+      kind: 'member',
+      myRowId: 'r-Kari',
+      myStatus: 'pending',
+      captain: { requestId: 'r-ola', userId: 'u-ola', displayName: 'Ola Kompis', status: 'approved' },
+    });
+
+  it('går videre til svaret på påmeldingsskjermen, og lagsiden går ut av stakken', async () => {
+    show(pending());
+    const navigation = await renderPage();
+    expect(navigation.replace).toHaveBeenCalledWith('RoundInvite', { shortId: SHORT_ID, src: null });
+  });
+
+  it('flytter ingenting når skjermen ikke står øverst lenger', async () => {
+    show(pending());
+    const navigation = { ...stackNavigation([{ name: 'Home' }, { name: 'TeamPage', params: { shortId: SHORT_ID } }]), popToTop: jest.fn() };
+    navigation.isFocused.mockReturnValue(false);
+    const props = { navigation, route: { key: 'team', name: 'TeamPage', params: { shortId: SHORT_ID } } };
+    await render(<TeamPage {...(props as unknown as ScreenProps<'TeamPage'>)} />);
+    expect(navigation.replace).not.toHaveBeenCalled();
+  });
+});
+
 describe('en gammel invitasjon på e-post', () => {
   it('«Bli med på laget» kobler deg på, og skjermen spør på nytt', async () => {
     mockLoads = [

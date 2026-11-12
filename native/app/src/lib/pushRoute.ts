@@ -24,9 +24,9 @@
 // `/klubber/{klubb}/cup/{id}/spillere`, og åpner spillerlista (`CupParticipants`).
 //
 // Lagvarslene (#2840: en kaptein vil ha deg med, en medspiller trakk seg) peker på
-// `/signup/{kode}/team`, og `/signup/{kode}` er påmeldingssiden. Begge åpner
-// påmeldingsskjermen (`RoundInvite`) med koden, der lagskjemaet og svaret på
-// invitasjonen står. Lagsiden i appen (del 3) tar over `/team`.
+// `/signup/{kode}/team` og åpner lagsiden (`TeamPage`, del 3). Har du ikke svart på
+// invitasjonen, sender lagsiden deg videre til svaret på påmeldingsskjermen.
+// `/signup/{kode}` er påmeldingssiden og åpner påmeldingsskjermen (`RoundInvite`).
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -60,6 +60,7 @@ export type PushTarget =
   | { name: 'LeagueRoundStart'; params: { leagueId: string; roundId: string } }
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'RoundInvite'; params: { shortId: string; src: null } }
+  | { name: 'TeamPage'; params: { shortId: string } }
   | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
@@ -80,7 +81,7 @@ const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
 const CUP_PATH = /^\/(?:[a-z]{2}\/)?cup\/([^/?#]+)/;
-const SIGNUP_PATH = /^\/(?:[a-z]{2}\/)?signup\/([^/?#]+)(?:\/team)?\/?(?:[?#]|$)/;
+const SIGNUP_PATH = /^\/(?:[a-z]{2}\/)?signup\/([^/?#]+)(\/team)?\/?(?:[?#]|$)/;
 const CUP_PLAYERS_PATH =
   /^\/(?:[a-z]{2}\/)?(?:admin\/cup|klubber\/[^/?#]+\/cup)\/([^/?#]+)\/spillere(?:[/?#]|$)/;
 
@@ -143,7 +144,9 @@ export function pushTarget(url: string | null): PushTarget {
   if (cupId && cupId !== 'bli-med') return { name: 'Cup', params: { cupId } };
   const signup = url ? SIGNUP_PATH.exec(url) : null;
   const shortId = signup ? decodedOrNull(signup[1]) : null;
-  if (shortId && isSignupShortId(shortId)) return { name: 'RoundInvite', params: { shortId, src: null } };
+  if (shortId && isSignupShortId(shortId)) {
+    return signup![2] ? { name: 'TeamPage', params: { shortId } } : { name: 'RoundInvite', params: { shortId, src: null } };
+  }
   if (url && FRIENDS_PATH.test(url)) return { name: 'Friends', params: { from: 'notification' } };
   if (url && HISTORY_PATH.test(url)) return { name: 'RoundStats' };
   return { name: 'Home' };

@@ -59,6 +59,16 @@ jest.mock('../components/signup/TeamAnswer', () => ({
   },
 }));
 
+// #2840 del 3: raden til lagsiden har egne tester (`TeamLink.test.tsx`).
+jest.mock('../components/signup/TeamLink', () => ({
+  TeamLink: (props: Record<string, unknown>) => {
+    mockLinkProps = props;
+    const { View } = require('react-native');
+    return <View testID="stub-team-link" />;
+  },
+}));
+
+let mockLinkProps: Record<string, unknown> = {};
 let mockTeamProps: Record<string, unknown> = {};
 let mockFocus: () => void = () => {};
 let mockLoads: RoundInviteLoadResult[] = [];
@@ -654,6 +664,31 @@ describe('lag', () => {
     answer({ ok: true, view: view({ offer: 'pending' }) });
     await act(async () => mockFocus());
     expect(screen.getByTestId('stub-team-sent')).toBeTruthy();
+  });
+
+  it('«Se laget» etter sendingen åpner lagsiden', async () => {
+    answer({ ok: true, view: view({ offer: 'web', teamSignup: FORM }) });
+    const navigation = await renderInvite();
+    await act(async () => {
+      (mockTeamProps.onRegistered as (effect: string, sent: unknown) => void)('approval', { teamName: 'X', rows: [] });
+    });
+    await act(async () => (mockTeamProps.onSeeTeam as () => void)());
+    expect(navigation.navigate).toHaveBeenCalledWith('TeamPage', { shortId: SHORT_ID });
+  });
+
+  it('del 3: med et lag i runden står «Laget ditt», og raden åpner lagsiden', async () => {
+    answer({ ok: true, view: view({ offer: 'pending', hasTeamPage: true }) });
+    const navigation = await renderInvite();
+    expect(screen.getByTestId('stub-team-link')).toBeTruthy();
+    expect(mockLinkProps.shortId).toBe(SHORT_ID);
+    await act(async () => (mockLinkProps.onOpen as () => void)());
+    expect(navigation.navigate).toHaveBeenCalledWith('TeamPage', { shortId: SHORT_ID });
+  });
+
+  it('del 3: uten lag står ingen rad', async () => {
+    answer({ ok: true, view: view({ offer: 'pending', hasTeamPage: false }) });
+    await renderInvite();
+    expect(screen.queryByTestId('stub-team-link')).toBeNull();
   });
 
   it('et svar på invitasjonen gir ny lasting', async () => {

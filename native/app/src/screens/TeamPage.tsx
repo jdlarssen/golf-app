@@ -16,6 +16,9 @@
 // slik serveren har det. Serveren avgjør hvem som får gjøre hva; skjermen viser bare
 // kapteinens knapper til kapteinen.
 //
+// Lagvarslene peker hit, også «Kari vil ha deg med på laget». En medspiller som ikke
+// har svart, sendes videre til svaret på påmeldingsskjermen (`backTo`), der det står.
+//
 // Tilbake (`docs/user-flows.md` §Tilbake): lagsiden ligger under Hjem, eller over
 // skjermen som åpnet den (påmeldingen, runden, innboksen).
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,7 +40,7 @@ import {
   type TeamPageActionFailure,
   type TeamPageLoadFailure,
 } from '../data/teamPage';
-import { openOrReturn } from '../lib/backTo';
+import { backTo, openOrReturn } from '../lib/backTo';
 import { ROUND_INVITE_TEXT } from '../lib/roundInviteCopy';
 import {
   TEAM_PAGE_TEXT,
@@ -71,20 +74,37 @@ export function TeamPage({ navigation, route }: ScreenProps<'TeamPage'>) {
   const [failure, setFailure] = useState<TeamPageLoadFailure | null>(null);
   const [loading, setLoading] = useState(false);
   const latestLoad = useRef(0);
+  const loadedFor = useRef(shortId);
 
   const load = useCallback(async () => {
     const thisLoad = ++latestLoad.current;
+    // Et varsel for en annen runde kan bytte koden på skjermen (`navigate` til skjermen
+    // som står øverst): den forrige rundens lag skal ikke stå mens den nye hentes.
+    if (loadedFor.current !== shortId) {
+      loadedFor.current = shortId;
+      setView(null);
+      setFailure(null);
+    }
     setLoading(true);
     const result = await fetchTeamPage(shortId);
     if (thisLoad !== latestLoad.current) return;
     setLoading(false);
     if (result.ok) {
+      // Varselet «Kari vil ha deg med på laget» peker hit, men svaret står på
+      // påmeldingsskjermen (tegningen, «2. Svaret på invitasjonen»). Er skjermen lukket,
+      // ville `backTo` truffet skjermen du står på (#2757), så bare når den har fokus.
+      if (result.view.kind === 'member' && result.view.myStatus === 'pending') {
+        if (navigation.isFocused()) {
+          backTo(navigation, 'RoundInvite', { shortId, src: null });
+          return;
+        }
+      }
       setFailure(null);
       setView(result.view);
     } else {
       setFailure(result.reason);
     }
-  }, [shortId]);
+  }, [navigation, shortId]);
 
   // Også ved fokus: etter en bekreftelse eller «Velg en venn» står laget som det er nå.
   useFocusEffect(
