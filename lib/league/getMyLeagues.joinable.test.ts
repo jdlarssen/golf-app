@@ -14,10 +14,11 @@ const ME = '11111111-1111-4111-8111-111111111111';
 let myLeagueRows: Array<{ league_id: string }> = [];
 let myClubRows: Array<{ group_id: string }> = [];
 let clubLeagueRows: Array<{ id: string; name: string; status: string }> = [];
+let clubsError: { message: string } | null = null;
 
 function respond(op: QueryOp): QueryResponse {
   if (op.table === 'league_players') return { data: myLeagueRows };
-  if (op.table === 'group_members') return { data: myClubRows };
+  if (op.table === 'group_members') return { data: myClubRows, error: clubsError };
   if (op.table === 'leagues') {
     const byGroup = op.filters.some((f) => f.column === 'group_id');
     // `readMyLeagues` asks by id; the joinable read asks by club.
@@ -39,6 +40,8 @@ beforeEach(() => {
   myLeagueRows = [];
   myClubRows = [];
   clubLeagueRows = [];
+  clubsError = null;
+  vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('getMyLeagues joinable (#2839)', () => {
@@ -83,5 +86,13 @@ describe('getMyLeagues joinable (#2839)', () => {
       joinable: res.joinable,
       clubReads: fake.ops.filter((op) => op.filters.some((f) => f.column === 'group_id')).length,
     }).toEqual({ joinable: [], clubReads: 0 });
+  });
+
+  it('a failed club read gives an empty joinable list and keeps «Ligaene dine»', async () => {
+    myLeagueRows = [{ league_id: 'l1' }];
+    clubsError = { message: 'boom' };
+    const res = await getMyLeagues(ME);
+    expect(res.joinable).toEqual([]);
+    expect(res.leagues).toEqual([]); // the leagues read is the empty fake; what matters is that nothing threw
   });
 });
