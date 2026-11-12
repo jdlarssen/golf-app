@@ -270,6 +270,8 @@ export type CreateTestGameOpts = {
    * alltid `TEST-Påmelding-` så manuell opprydding via en LIKE-spørring er
    * triviell. */
   nameSuffix?: string;
+  /** Standard `stableford` (uten tak). Et format med fast antall gir et tak (#2837). */
+  gameMode?: 'stableford' | 'nines';
 };
 
 /**
@@ -337,7 +339,7 @@ export async function createTestGame(
       name,
       course_id: course.id,
       tee_box_id: teeBox.id,
-      game_mode: 'stableford',
+      game_mode: opts.gameMode ?? 'stableford',
       mode_config: {},
       registration_mode: opts.registrationMode,
       registration_type: opts.registrationType ?? 'solo',
