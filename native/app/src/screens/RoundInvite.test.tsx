@@ -386,6 +386,28 @@ describe('henting', () => {
     expect(screen.queryByTestId('round-invite-button')).toBeNull();
   });
 
+  it('en henting som går når sendingen feiler, tar ikke bort feilteksten', async () => {
+    answer({ ok: true, view: view({ offer: 'request' }) });
+    mockAnswer = () => ({ ok: false, reason: 'network' });
+    await renderInvite();
+    let finish: (result: RoundInviteLoadResult) => void = () => {};
+    fetchRoundInvite.mockImplementationOnce(
+      () =>
+        new Promise<RoundInviteLoadResult>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await act(async () => {
+      mockFocus();
+    });
+    await fireEvent.press(screen.getByTestId('round-invite-button'));
+    expect(screen.getByTestId('round-invite-error')).toBeTruthy();
+    await act(async () => {
+      finish({ ok: true, view: view({ offer: 'request' }) });
+    });
+    expect(screen.getByTestId('round-invite-error')).toBeTruthy();
+  });
+
   it('en ny henting beholder hilsenen du har skrevet', async () => {
     answer({ ok: true, view: view({ offer: 'request' }) });
     await renderInvite();
