@@ -101,6 +101,18 @@ describe('keepBelow', () => {
     expect(keepBelow(routes, 'Cup', { cupId: 'c1' })).toBe(1);
   });
 
+  it('en lenkeskjerm over en åpen veiviser lar veiviseren stå (#2748, #2753)', () => {
+    const invite = { name: 'RoundInvite', params: { shortId: 'abc123' } };
+    expect(keepBelow([HOME, { name: 'CreateGame' }, invite], 'GameHome', { gameId: 'g1' })).toBe(2);
+    expect(keepBelow([HOME, { name: 'CreateGame' }, { name: 'LeagueJoin' }], 'League', { leagueId: 'l1' })).toBe(2);
+  });
+
+  it('typevalget går bare ut når cup-veiviseren står rett over det (#2753)', () => {
+    const cupForm = { name: 'CreateCup', params: { cupId: 'c1' } };
+    const routes = [HOME, { name: 'CreateGame' }, { name: 'CreateCourse' }, cupForm];
+    expect(keepBelow(routes, 'Cup', { cupId: 'c1' })).toBe(3);
+  });
+
   it('Hjem-kortets hull: bare Hjem blir liggende under spillet', () => {
     expect(keepBelow([HOME, hole('g1', 18), card('g1')], 'GameHome', { gameId: 'g1' })).toBe(1);
   });

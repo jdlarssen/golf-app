@@ -1,5 +1,5 @@
 // native/app/src/components/create/PlayersStep.tsx
-// Native N6a (#1854): steg 4 — hvem spiller, og på hvilket lag.
+// Native N6a (#1854, #2753): steg 5 — hvem spiller, og på hvilket lag.
 //
 // **Du står alltid øverst og kan ikke tas bort.** Arrangøren er med i sin egen
 // runde; en avhukbar rad ville bare vært en felle.

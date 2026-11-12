@@ -1,5 +1,5 @@
 // native/app/src/components/create/SetupStep.tsx
-// Native N6a (#1854): steg 2 — reglene for runden.
+// Native N6a (#1854, #2753): steg 3 — reglene for runden.
 //
 // Feltene her er nøyaktig de `modeValidators` faktisk leser, og ikke ett til:
 // et felt uten mottaker i den delte byggeren ville sett ut som en innstilling
