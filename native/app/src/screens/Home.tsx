@@ -46,7 +46,7 @@
 // tavla viser poeng. Samme hentinger som spillets side og tavla gjør (bundelen,
 // `seedGameScores`, og valgene i wolf og bingo bango bongo), bare for den ene
 // runden, og bundelen og slagene bare én gang etter at den er avsluttet.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -88,11 +88,10 @@ import {
 } from '../data/homeList';
 import { fetchMyCups } from '../data/cup';
 import { fetchTerminliste } from '../data/terminliste';
-import { TerminDayCard, TerminDayHeading, TerminRow } from '../components/terminliste/TerminRow';
-import { groupTerminByDate } from '../../../../lib/games/terminliste';
+import { TerminDayCard, TerminDayHeading, TerminLeagueRow, TerminRow } from '../components/terminliste/TerminRow';
 import { TERMIN_TEXT, dayHeading, dayLabelText } from '../lib/terminlisteCopy';
 import { localDateParts } from '../lib/homeDates';
-import { clubRoundsForHome } from '../lib/clubRounds';
+import { clubRoundsForHome, clubSectionGroups } from '../lib/clubRounds';
 import { openOrReturn } from '../lib/backTo';
 import type { AppTerminEntry } from '../../../../lib/games/appTerminView';
 import { fetchInboxUnreadCount } from '../data/inbox';
@@ -384,47 +383,65 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
   // 12.11). Radene er terminlistas, delt i dager under terminlistas egne
   // overskrifter («Lørdag 14. november · om 2 dager»), med klubben foran banen.
   const clubNow = new Date();
-  const clubById = new Map(clubRounds.map((entry) => [entry.id, entry]));
-  // #2839: en klubbliga du kan melde deg på står under rundene som en rad, og
-  // flytter til «Ligaene dine» når du har meldt deg på (Hjem leser på nytt ved fokus).
+  // #2839: en klubbliga du kan melde deg på står som en rad i samme kort som
+  // rundene, under dagen sesongen starter. Er startdagen gått, står den i en
+  // egen blokk nederst, med overskrift som dagene. Den flytter til «Ligaene
+  // dine» når du har meldt deg på (Hjem leser på nytt ved fokus).
+  const clubGroups = clubSectionGroups(clubRounds, joinableLeagues, clubNow);
   const clubRoundsSection =
-    clubRounds.length > 0 || joinableLeagues.length > 0 ? (
+    clubGroups.length > 0 ? (
       <View testID="home-club-rounds">
         <SectionHead title={HOME_TEXT.clubRounds} />
-        {groupTerminByDate(clubRounds, clubNow, localDateParts).map((group) => (
-          <View key={group.key} style={styles.clubDay} testID={`home-club-day-${group.key}`}>
-            <TerminDayHeading
-              title={group.kind === 'day' ? dayHeading(group.teeOff, clubNow) : TERMIN_TEXT.undated}
-              label={group.kind === 'day' ? dayLabelText(group.label) : null}
-            />
-            <TerminDayCard>
-              {group.entries.map((row, index) => {
-                const entry = clubById.get(row.id);
-                if (!entry) return null;
-                return (
+        {clubGroups.map((group) => {
+          const rows: ReactNode[] = [];
+          if (group.kind !== 'leagues') {
+            for (const entry of group.rounds) {
+              rows.push(
+                <TerminRow
+                  key={entry.id}
+                  entry={entry}
+                  showClub
+                  onPress={() => openOrReturn(navigation, 'RoundInvite', { shortId: entry.short_id, src: null })}
+                />,
+              );
+            }
+          }
+          if (group.kind !== 'undated') {
+            for (const league of group.leagues) {
+              rows.push(
+                <TerminLeagueRow
+                  key={league.id}
+                  league={league}
+                  onPress={() => navigation.navigate('League', { leagueId: league.id })}
+                />,
+              );
+            }
+          }
+          return (
+            <View key={group.key} style={styles.clubDay} testID={`home-club-day-${group.key}`}>
+              <TerminDayHeading
+                title={
+                  group.kind === 'day'
+                    ? dayHeading(group.teeOff, clubNow)
+                    : group.kind === 'leagues'
+                      ? HOME_TEXT.clubLeagues
+                      : TERMIN_TEXT.undated
+                }
+                label={group.kind === 'day' ? dayLabelText(group.label) : null}
+              />
+              <TerminDayCard>
+                {rows.map((row, index) => (
                   <View
-                    key={entry.id}
+                    key={(row as { key: string }).key}
                     style={index > 0 ? { borderTopWidth: 1, borderTopColor: colors.divider } : undefined}
                   >
-                    <TerminRow
-                      entry={entry}
-                      showClub
-                      onPress={() => openOrReturn(navigation, 'RoundInvite', { shortId: entry.short_id, src: null })}
-                    />
+                    {row}
                   </View>
-                );
-              })}
-            </TerminDayCard>
-          </View>
-        ))}
-        {joinableLeagues.map((league) => (
-          <LeagueHomeRow
-            key={league.id}
-            league={league}
-            notJoined
-            onPress={() => navigation.navigate('League', { leagueId: league.id })}
-          />
-        ))}
+                ))}
+              </TerminDayCard>
+            </View>
+          );
+        })}
       </View>
     ) : null;
 

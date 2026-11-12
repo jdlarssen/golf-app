@@ -550,6 +550,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     id: 'liga-vinter',
     name: 'Vinterliga på Trackman',
     status: 'active' as const,
+    seasonStart: '2026-11-02',
     openRound: { id: 'r3', label: 'Runde 3', closesAt },
     delivered: false,
     inProgress: false,
@@ -559,6 +560,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
     id: 'liga-onsdag',
     name: 'Onsdagsligaen',
     status: 'active' as const,
+    seasonStart: '2026-11-02',
     openRound: { id: 'r5', label: 'Runde 5', closesAt },
     delivered: true,
     inProgress: false,
@@ -671,6 +673,7 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
       id: 'kl1',
       name: 'Klubbens vinterliga',
       status: 'draft' as const,
+      seasonStart: '2026-11-02',
       openRound: null,
       delivered: false,
       inProgress: false,
@@ -688,14 +691,18 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
         'Ikke påmeldt · meld deg på før start',
       );
       expect(within(section).getByText('Klubbens vinterliga')).toBeTruthy();
+      // Startdagen er gått, så den står i en egen blokk med overskrift som dagene.
+      expect(within(screen.getByTestId('home-club-day-leagues')).getByText('Klubbligaer')).toBeTruthy();
       // Ikke i «Ligaene dine».
       expect(screen.queryByTestId('home-leagues')).toBeNull();
       await fireEvent.press(screen.getByTestId('home-joinable-league-kl1'));
       expect(navigate).toHaveBeenCalledWith('League', { leagueId: 'kl1' });
     });
 
-    it('står under klubbrundene i samme seksjon', async () => {
-      mockState.leagues = { ok: true, leagues: [], joinable: [KLUBBLIGA] };
+    it('starter sesongen samme dag som en runde, står den i samme kort, etter runden', async () => {
+      const day = new Date(Date.now() + 3 * 86_400_000);
+      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+      mockState.leagues = { ok: true, leagues: [], joinable: [{ ...KLUBBLIGA, seasonStart: key }] };
       mockState.termin = {
         ok: true,
         view: {
@@ -726,8 +733,13 @@ describe('«Ligaene dine» (#2638, tegning 1)', () => {
       const { view } = renderHome();
       await view;
       await screen.findByTestId('home-club-rounds');
+      const dayBlock = screen.getByTestId(`home-club-day-${key}`);
+      expect(within(dayBlock).getByTestId('terminliste-row-k1')).toBeTruthy();
+      expect(within(dayBlock).getByTestId('home-joinable-league-kl1')).toBeTruthy();
       const order = testIdsInOrder();
       expect(order.indexOf('terminliste-row-k1')).toBeLessThan(order.indexOf('home-joinable-league-kl1'));
+      // Ingen blokk for ligaer: den har en dag.
+      expect(screen.queryByTestId('home-club-day-leagues')).toBeNull();
     });
 
     it('påmeldt: ligaen står i «Ligaene dine» og ikke lenger i klubbseksjonen, og leaguesFirst teller bare den', async () => {

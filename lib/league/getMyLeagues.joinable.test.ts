@@ -13,7 +13,7 @@ const ME = '11111111-1111-4111-8111-111111111111';
 
 let myLeagueRows: Array<{ league_id: string }> = [];
 let myClubRows: Array<{ group_id: string }> = [];
-let clubLeagueRows: Array<{ id: string; name: string; status: string }> = [];
+let clubLeagueRows: Array<{ id: string; name: string; status: string; season_start: string }> = [];
 let clubsError: { message: string } | null = null;
 
 function respond(op: QueryOp): QueryResponse {
@@ -47,11 +47,11 @@ beforeEach(() => {
 describe('getMyLeagues joinable (#2839)', () => {
   it('lists the draft club leagues in my clubs, with no round state', async () => {
     myClubRows = [{ group_id: 'k1' }];
-    clubLeagueRows = [{ id: 'l1', name: 'Klubbligaen', status: 'draft' }];
+    clubLeagueRows = [{ id: 'l1', name: 'Klubbligaen', status: 'draft', season_start: '2026-11-16' }];
     expect(await getMyLeagues(ME)).toEqual({
       leagues: [],
       joinable: [
-        { id: 'l1', name: 'Klubbligaen', status: 'draft', openRound: null, delivered: false, inProgress: false, markerCards: [] },
+        { id: 'l1', name: 'Klubbligaen', status: 'draft', seasonStart: '2026-11-16', openRound: null, delivered: false, inProgress: false, markerCards: [] },
       ],
     });
   });
@@ -73,8 +73,8 @@ describe('getMyLeagues joinable (#2839)', () => {
     myLeagueRows = [{ league_id: 'l1' }];
     myClubRows = [{ group_id: 'k1' }];
     clubLeagueRows = [
-      { id: 'l1', name: 'Jeg er med', status: 'draft' },
-      { id: 'l2', name: 'Ikke med', status: 'draft' },
+      { id: 'l1', name: 'Jeg er med', status: 'draft', season_start: '2026-11-16' },
+      { id: 'l2', name: 'Ikke med', status: 'draft', season_start: '2026-11-16' },
     ];
     const { joinable } = await getMyLeagues(ME);
     expect(joinable.map((l) => l.id)).toEqual(['l2']);
