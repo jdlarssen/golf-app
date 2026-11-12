@@ -227,7 +227,17 @@ export function ChoiceCards<T extends string | number>({
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
               ]}
             >
-              <Text style={[fraunces(600, titleSize), { color: colors.text }]}>{option.title}</Text>
+              {/* Én linje: et ord som «Tremannslag» skal aldri deles. iOS tegner
+                  Fraunces litt bredere enn nettleseren, så tittelen krymper
+                  heller litt når den ellers ikke får plass. */}
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                style={[fraunces(600, titleSize), { color: colors.text }]}
+              >
+                {option.title}
+              </Text>
               {option.hint ? (
                 <Text style={[styles.cardHint, { color: colors.muted }, centered && styles.centeredText]}>
                   {option.hint}
