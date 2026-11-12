@@ -38,6 +38,8 @@ const SCREENS = [
   'LeagueRoundStart',
   'MarkerApprove',
   'RoundInvite',
+  'TeamPage',
+  'TeamRemoveConfirm',
 ] as const;
 
 const G = { gameId: 'g1' };
@@ -126,6 +128,32 @@ describe('openPushTarget i en ekte navigator (#2746)', () => {
     expect(top()).toEqual({ shortId: 'x2840aa6', src: null });
     await tap({ name: 'RoundInvite', params: { shortId: 'x2840aa6', src: null } });
     expect(names()).toEqual(['Home', 'RoundInvite']);
+  });
+
+  it('#2840 del 3: et lagvarsel åpner lagsiden, og bare én', async () => {
+    await stackOf();
+    await tap({ name: 'TeamPage', params: { shortId: 'x2840aa6' } });
+    expect(names()).toEqual(['Home', 'TeamPage']);
+    expect(top()).toEqual({ shortId: 'x2840aa6' });
+    await tap({ name: 'TeamPage', params: { shortId: 'x2840aa6' } });
+    expect(names()).toEqual(['Home', 'TeamPage']);
+    await back();
+    expect(names()).toEqual(['Home']);
+  });
+
+  it('#2840 del 3: står du på bekreftelsen, går varselet tilbake til lagsiden under', async () => {
+    await stackOf(['TeamPage', { shortId: 'x2840aa6' }], ['TeamRemoveConfirm', { shortId: 'x2840aa6', requestId: 'r1' }]);
+    await tap({ name: 'TeamPage', params: { shortId: 'x2840aa6' } });
+    expect(names()).toEqual(['Home', 'TeamPage']);
+  });
+
+  // Som for spillet: står lagsiden øverst, bytter `navigate` rundens kode på den i
+  // stedet for å legge en ny oppå. Lagsiden leser koden og spør på nytt.
+  it('#2840 del 3: et lagvarsel for en annen runde mens lagsiden står øverst, viser den andre runden', async () => {
+    await stackOf(['TeamPage', { shortId: 'x2840aa6' }]);
+    await tap({ name: 'TeamPage', params: { shortId: 'y2840bb7' } });
+    expect(names()).toEqual(['Home', 'TeamPage']);
+    expect(top()).toEqual({ shortId: 'y2840bb7' });
   });
 
   it('ligaen under startsiden og markørens skjerm', async () => {

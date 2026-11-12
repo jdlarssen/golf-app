@@ -73,6 +73,13 @@ jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
+// #2840 del 3: raden til lagsiden har egne tester (`TeamLink.test.tsx`).
+jest.mock('../components/signup/TeamLink', () => ({
+  TeamLink: (props: { shortId: string; onOpen: () => void }) => {
+    const { Pressable } = require('react-native');
+    return <Pressable testID={`stub-team-link-${props.shortId}`} onPress={props.onOpen} />;
+  },
+}));
 
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
 const mockState: { bundle: GameBundle | null; scores: unknown[] } = {
@@ -691,6 +698,29 @@ describe('GameHome — startbilletten (#2255)', () => {
 
     await waitFor(() => expect(screen.getByTestId('ticket-total')).toBeTruthy());
     expect(screen.getByTestId('ticket-total').props.children).toBe('14\u00A0p');
+  });
+
+  it.each([
+    ['en planlagt lagrunde: raden står og åpner lagsiden', { status: 'scheduled', registrationType: 'team' }, true],
+    ['runden er i gang: ingen rad', { status: 'active', registrationType: 'team' }, false],
+    ['påmelding alene: ingen rad', { status: 'scheduled', registrationType: 'solo' }, false],
+  ] as const)('#2840 del 3: %s', async (_label, game, shown) => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', modeConfig: { kind: 'stableford', team_size: 1 }, shortId: 'abcd2345', ...game },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+    const navigation = { ...stackNavigation([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'game-1' } }]), setOptions: jest.fn() };
+    await render(
+      <GameHome {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)} />,
+    );
+    await screen.findByTestId('game-ticket');
+    if (!shown) {
+      expect(screen.queryByTestId('stub-team-link-abcd2345')).toBeNull();
+      return;
+    }
+    await fireEvent.press(screen.getByTestId('stub-team-link-abcd2345'));
+    expect(navigation.navigate).toHaveBeenCalledWith('TeamPage', { shortId: 'abcd2345' });
   });
 
   it('en cup som ikke er i gang: ingen lenke, for den ville vært en blindvei (#2752)', async () => {

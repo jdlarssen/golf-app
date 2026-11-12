@@ -19,11 +19,6 @@ jest.mock('../../data/roundInvite', () => ({
   acceptTeamInvite: jest.fn(async () => mockAnswer),
   declineTeamInvite: jest.fn(async () => mockAnswer),
 }));
-const mockOpenWeb = jest.fn(async () => ({ ok: true }));
-jest.mock('../../lib/webLink', () => ({
-  ...jest.requireActual('../../lib/webLink'),
-  openWeb: (path: string) => (mockOpenWeb as unknown as (path: string) => Promise<unknown>)(path),
-}));
 
 let mockAnswer: TeamSignupResult;
 const { acceptTeamInvite, declineTeamInvite } = jest.requireMock('../../data/roundInvite') as {
@@ -109,10 +104,11 @@ describe('svaret på invitasjonen', () => {
 });
 
 describe('sendt til arrangøren', () => {
-  it('svaret per venn, og «Se laget» åpner lagsiden på nettet', async () => {
+  it('svaret per venn, og «Se laget» åpner lagsiden', async () => {
+    const onSeeTeam = jest.fn();
     await render(
       <TeamSent
-        shortId="k3x9pq"
+        onSeeTeam={onSeeTeam}
         round={ROUND}
         sent={{
           teamName: 'Birdie-jegerne',
@@ -132,7 +128,7 @@ describe('sendt til arrangøren', () => {
     expect(screen.getByTestId('team-sent-row-ola')).toHaveTextContent(`OKOla Kompis${TEAM_SIGNUP_TEXT.willBeNotified}`);
     expect(screen.getByTestId('team-sent-row-per-failed')).toHaveTextContent(TEAM_SIGNUP_TEXT.slotAlreadyRegistered);
     await fireEvent.press(screen.getByTestId('team-sent-see-team'));
-    expect(mockOpenWeb).toHaveBeenCalledWith('/signup/k3x9pq/team');
+    expect(onSeeTeam).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -55,8 +55,11 @@ export function openScreenTarget(navigation: BackNavigation, target: ScreenTarge
     openOrReturn(navigation, 'Cup', { cupId: target.params.cupId });
     openOrReturn(navigation, 'CupParticipants', target.params);
   } else if (target.name === 'RoundInvite') {
-    // #2840: lagvarslene åpner påmeldingsskjermen, der svaret på invitasjonen står.
+    // #2840: påmeldingssiden, der lagskjemaet og svaret på invitasjonen står.
     openOrReturn(navigation, 'RoundInvite', target.params);
+  } else if (target.name === 'TeamPage') {
+    // #2840 del 3: lagvarslene åpner lagsiden.
+    openOrReturn(navigation, 'TeamPage', target.params);
   } else if (target.name === 'LeagueRoundStart') {
     league(target.params.leagueId);
     openOrReturn(navigation, 'LeagueRoundStart', target.params);

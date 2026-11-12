@@ -19,7 +19,8 @@
 // plassene er tatt. `invited` er svaret på en laginvitasjon (`TeamAnswer.tsx`). Ved åpen
 // påmelding går du til runden etterpå; ved godkjenning står «Laget er sendt til
 // arrangøren». Uten `teamSignup` (en eldre server, eller en lagrunde appen ikke tar)
-// står nettknappen som før.
+// står nettknappen som før. Har du et lag her (`hasTeamPage`), står «Laget ditt» under
+// kortet og åpner lagsiden (`TeamPage`, del 3), som «Se laget» etter sendingen.
 //
 // Alt kommer fra `GET /api/pamelding/[shortId]`. Skrivingen er `POST` på samme sti.
 // Ingenting legges i kø: uten nett står feilen, og ingenting er skrevet.
@@ -35,6 +36,7 @@ import { REGISTRATION_MESSAGE_MAX } from '../../../../lib/games/registration';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { TeamInviteAnswer, TeamRoundFull, TeamSent } from '../components/signup/TeamAnswer';
+import { TeamLink } from '../components/signup/TeamLink';
 import { TeamSignupForm, type SentTeam } from '../components/signup/TeamSignupForm';
 import {
   cancelRequest,
@@ -187,6 +189,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   );
   const onTeamStale = useCallback((afterFull: boolean) => void load(afterFull), [load]);
   const onTeamAnswered = useCallback(() => void load(), [load]);
+  // #2840 del 3: lagsiden. Ligger den under, går «Se laget» tilbake dit.
+  const openTeam = useCallback(() => openOrReturn(navigation, 'TeamPage', { shortId }), [navigation, shortId]);
 
   const scroll = [styles.scroll, { backgroundColor: colors.bg, paddingBottom: bottomInset + 20 }];
 
@@ -227,7 +231,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
     );
   }
 
-  if (teamSent) return <TeamSent shortId={shortId} round={view.round} sent={teamSent} />;
+  if (teamSent) return <TeamSent round={view.round} sent={teamSent} onSeeTeam={openTeam} />;
   const team = view.teamSignup ?? null;
   if (team?.kind === 'form') {
     if (teamDoesNotFit(view.seats, team.teamSize)) return <TeamRoundFull view={view} />;
@@ -402,6 +406,8 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           </Text>
         )}
       </View>
+      {/* #2840 del 3: «Laget ditt», når du er kaptein eller medspiller på et lag her. */}
+      {view.hasTeamPage ? <TeamLink shortId={shortId} onOpen={openTeam} /> : null}
     </ScrollView>
   );
 }

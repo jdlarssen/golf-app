@@ -70,7 +70,17 @@ export function menuActions(member: Pick<AppTeamPageMember, 'status' | 'isGuest'
 }
 
 export type LineupEntry =
-  | { kind: 'person'; key: string; userId: string; name: string | null; isYou: boolean; captain: boolean; faded: boolean }
+  | {
+      kind: 'person';
+      key: string;
+      userId: string;
+      name: string | null;
+      isYou: boolean;
+      captain: boolean;
+      faded: boolean;
+      /** Takket nei: blek i oppstillingen, og ikke med blant skivene på runden. */
+      declined: boolean;
+    }
   | { kind: 'free'; key: string };
 
 /**
@@ -88,6 +98,7 @@ export function teamLineup(team: AppTeamPageTeam): LineupEntry[] {
       isYou: team.kind === 'captain' || team.captain.requestId === team.myRowId,
       captain: true,
       faded: false,
+      declined: memberState(team.captain.status) === 'declined',
     });
   }
   for (const member of orderedMembers(team.members)) {
@@ -99,6 +110,7 @@ export function teamLineup(team: AppTeamPageTeam): LineupEntry[] {
       isYou: member.requestId === team.myRowId,
       captain: false,
       faded: member.status !== 'approved',
+      declined: memberState(member.status) === 'declined',
     });
   }
   for (let i = 0; i < freeSlotCount(team); i++) entries.push({ kind: 'free', key: `free-${i}` });

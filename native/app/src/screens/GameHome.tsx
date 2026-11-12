@@ -55,6 +55,7 @@ import { PaymentCard } from '../components/game/PaymentCard';
 import { PrizeTable } from '../components/game/PrizeTable';
 import { PlayerWithdraw } from '../components/game/PlayerWithdraw';
 import { RulesSection } from '../components/game/RulesSection';
+import { TeamLink } from '../components/signup/TeamLink';
 import { TicketStub } from '../components/game/TicketStub';
 import { fetchCupIsRunning } from '../data/cupManage';
 import { backTo, openOrReturn } from '../lib/backTo';
@@ -325,6 +326,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // En avledet kamp har ingen egne slag å trekke seg fra, men et trekk fra cupen
   // gjelder den også (#2752).
   const withdrawKind = derived && anyWithdrawKind !== 'cup' ? null : anyWithdrawKind;
+  // #2840 del 3: før start har en lagrunde en rad til laget ditt, under billetten
+  // (tegningen v3.1, «Veien inn fra runden»). Bare da spør raden etter laget.
+  const teamShortId =
+    game.status === 'scheduled' && game.registrationType === 'team' && me ? (game.shortId ?? null) : null;
 
   return (
     <ScrollView
@@ -373,6 +378,14 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           bundle={bundle}
         />
       </GameTicket>
+
+      {teamShortId ? (
+        <TeamLink
+          shortId={teamShortId}
+          onOpen={() => openOrReturn(navigation, 'TeamPage', { shortId: teamShortId })}
+          style={styles.teamLink}
+        />
+      ) : null}
 
       {/* #2749: hva runden koster og hva det spilles om, rett under billetten
           før runden (`Venterom-forslag-lenke-foldet`). Kortet er spillerens, så
@@ -599,6 +612,8 @@ const styles = StyleSheet.create({
    * felles toppen (#2403) er designets rad (8 + 44 pt).
    */
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
+  // Skjermen har alt kanten og 8 pt mellom delene: raden får de 4 som mangler til 12.
+  teamLink: { marginHorizontal: 0, marginTop: 4 },
   // #2700: designets kortradius (16) under billetten. `ui.card` har fortsatt 12
   // på skjermene som ikke er gått gjennom ennå.
   card: { borderRadius: 16 },

@@ -107,6 +107,10 @@ describe('oppstillingen', () => {
     ]);
   });
 
+  it('den som takket nei, er merket, så raden på runden kan la skiva være', () => {
+    expect(teamLineup(team()).map((e) => e.kind === 'person' && e.declined)).toEqual([false, false, false, true]);
+  });
+
   it('en ledig plass står stiplet til slutt', () => {
     const lineup = teamLineup(team({ members: [member('Ola', 'approved'), member('Kari', 'pending')] }));
     expect(lineup.map((e) => e.kind)).toEqual(['person', 'person', 'person', 'free']);

@@ -24,9 +24,9 @@ describe('inboxTarget', () => {
     ['/klubber/k1/cup/c1/spillere', { name: 'CupParticipants', params: { cupId: 'c1' } }],
     ['/profile/venner', { name: 'Friends', params: { from: 'notification' } }],
     ['/profile/historikk', { name: 'RoundStats' }],
-    // #2840: laginvitasjonen og en medspiller som trakk seg åpner påmeldingsskjermen.
+    // #2840: påmeldingssiden åpner påmeldingsskjermen, og lagvarslene lagsiden (del 3).
     ['/signup/abcd1234', { name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } }],
-    ['/signup/abcd1234/team', { name: 'RoundInvite', params: { shortId: 'abcd1234', src: null } }],
+    ['/signup/abcd1234/team', { name: 'TeamPage', params: { shortId: 'abcd1234' } }],
   ])('%s åpner skjermen', (path, target) => {
     expect(inboxTarget(path)).toEqual({ kind: 'screen', target });
   });
@@ -39,13 +39,13 @@ describe('inboxTarget', () => {
   );
 
   it.each(['team_invite', 'team_member_withdrew'] as NotificationKind[])(
-    '%s åpner påmeldingsskjermen med rundens kode (#2840)',
+    '%s åpner lagsiden med rundens kode (#2840 del 3)',
     (kind) => {
       const destination = notificationDestination({ kind, payload: testPayloads[kind] });
       const target = inboxTarget(destination);
       expect(target).toEqual({
         kind: 'screen',
-        target: { name: 'RoundInvite', params: { shortId: expect.any(String), src: null } },
+        target: { name: 'TeamPage', params: { shortId: expect.any(String) } },
       });
     },
   );
