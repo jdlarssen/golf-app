@@ -452,6 +452,8 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
     expect(StyleSheet.flatten(screen.getByTestId('create-team-size-3').props.style)).toMatchObject({
       paddingHorizontal: 10,
     });
+    // iOS tegner Fraunces bredere enn tegningen: tittelen krymper heller enn å dele ordet.
+    expect(screen.getByText('Tremannslag').props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('40');
     await fireEvent.press(screen.getByTestId('create-team-size-2'));
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('50');
