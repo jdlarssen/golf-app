@@ -149,3 +149,28 @@ describe('osloWeekendDateKeys (#2258)', () => {
     ]);
   });
 });
+
+// #2838: the native app reads the days on the phone's calendar (Hermes has no
+// Europe/Oslo zone). The default stays Oslo for the web.
+describe('osloDateKey / osloWeekendDateKeys — injected date parts (#2838)', () => {
+  const utcParts = (date: Date) => ({
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+    day: date.getUTCDate(),
+  });
+
+  it('osloDateKey gives the same key as the default when handed the Oslo parts', () => {
+    const date = new Date('2026-10-02T23:30:00Z');
+    expect(osloDateKey(date, osloParts)).toBe(osloDateKey(date));
+  });
+
+  it('osloDateKey reads the date from the injected parts', () => {
+    // 23:30 UTC Friday is Saturday in Oslo, but still Friday on a UTC calendar.
+    expect(osloDateKey(new Date('2026-10-02T23:30:00Z'), utcParts)).toBe('2026-10-02');
+  });
+
+  it('osloWeekendDateKeys reads the weekday from the injected parts', () => {
+    // 22:30 UTC Sunday is Monday in Oslo (next weekend), but Sunday on a UTC calendar.
+    expect(osloWeekendDateKeys(new Date('2026-10-04T22:30:00Z'), utcParts)).toEqual(['2026-10-04']);
+  });
+});
