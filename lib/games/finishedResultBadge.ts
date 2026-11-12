@@ -18,61 +18,56 @@ export interface FinishedResultBadge {
 }
 
 /**
- * #2712 (owner 31.10): a league flight played alone has no placement and no
- * win. One home for the rule: this badge («Godkjent» instead of «Du vant») and
- * every win count (`isWinningSummary` in lib/stats/clubStats.ts) read it.
+ * #2850 (owner 12.11): a league flight has no placement and no winner, whether
+ * one, two or four play in it. The league round is decided when the round
+ * closes, across every flight, and the place in the league stands on the league
+ * page. One home for the rule: this badge («Godkjent» instead of «2. plass av
+ * 2» or «Du vant»), every win count, the boards, the podium, the share image
+ * and the mail read it. #2712 had it for a flight of one; the size is gone.
  */
-export function isLeagueRoundAlone(summary: ResultSummary | null, leagueFlight: boolean): boolean {
-  return summary?.kind === 'placement' && isLeagueFieldAlone(leagueFlight, summary.fieldSize);
+export function leagueFlightHasNoPlace(leagueFlight: boolean): boolean {
+  return leagueFlight;
 }
 
-/**
- * The same rule for a caller that has the field size but no stored summary:
- * the «Resultatet er klart» mail (ranked players) and the app's Home hero
- * (active players in a live round).
- */
-export function isLeagueFieldAlone(leagueFlight: boolean, fieldSize: number): boolean {
-  return leagueFlight && fieldSize <= 1;
+/** The same rule read from a stored summary: the card, the win counts. */
+export function isUnplacedLeagueRound(summary: ResultSummary | null, leagueFlight: boolean): boolean {
+  return summary?.kind === 'placement' && leagueFlightHasNoPlace(leagueFlight);
 }
 
 /**
  * The same rule read from a share card's model (`buildShareCardData`): the AI
- * round report's facts and the share image. A placement card whose podium
- * holds one row is a field of one; an empty card keeps its neutral headline.
+ * round report's facts and the share image. An empty card (no row on the
+ * podium) keeps its neutral headline.
  */
-export function isLeagueCardAlone(
+export function isUnplacedLeagueCard(
   card: { band: string; podium: readonly unknown[] },
   leagueFlight: boolean,
 ): boolean {
-  return (
-    card.band === 'placement' &&
-    card.podium.length === 1 &&
-    isLeagueFieldAlone(leagueFlight, card.podium.length)
-  );
+  return card.band === 'placement' && card.podium.length >= 1 && leagueFlightHasNoPlace(leagueFlight);
 }
 
 /**
- * The one player a view draws for a league round played alone (the web
- * board's `LeagueAloneResult`), or null. A field with no active player (the
- * only one withdrew before the game was ended) is not alone here: the view
+ * The players a view draws without a place for a league flight (the web
+ * board's `LeagueFlightResult`), or null. A flight with no active player (the
+ * only one withdrew before the game was ended) is not drawn here: the view
  * keeps its own empty state.
  */
-export function leagueAlonePlayer<T>(players: readonly T[], leagueFlight: boolean): T | null {
-  return players.length === 1 && isLeagueFieldAlone(leagueFlight, players.length) ? players[0] : null;
+export function leagueFlightPlayers<T>(players: readonly T[], leagueFlight: boolean): readonly T[] | null {
+  return players.length >= 1 && leagueFlightHasNoPlace(leagueFlight) ? players : null;
 }
 
 export function finishedResultBadge(
   summary: ResultSummary,
   opts: {
     /**
-     * #2712 (owner 31.10): the game is a league flight. Played alone, it has no
-     * placement («Du vant» of one); it finishes when the marker approves, so
-     * the card says «Godkjent». A flight of several keeps its placement.
+     * #2712, #2850 (owner 12.11): the game is a league flight. It has no
+     * placement, alone or with others («Du vant» of one, «2. plass av 2»); it
+     * finishes when the marker approves, so the card says «Godkjent».
      */
     leagueFlight?: boolean;
   } = {},
 ): FinishedResultBadge {
-  if (isLeagueRoundAlone(summary, opts.leagueFlight ?? false)) {
+  if (isUnplacedLeagueRound(summary, opts.leagueFlight ?? false)) {
     return { key: 'result.approved', isWin: false };
   }
   switch (summary.kind) {

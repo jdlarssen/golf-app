@@ -34,7 +34,7 @@ import {
   type Word,
 } from '@/lib/og/shareCardHeadline';
 import { matchRows, placementRows, type CardRow } from '@/lib/og/shareCardRows';
-import { isLeagueCardAlone } from '@/lib/games/finishedResultBadge';
+import { isUnplacedLeagueCard } from '@/lib/games/finishedResultBadge';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
@@ -266,7 +266,7 @@ export async function GET(
           playerFallback,
         });
 
-  // #2712: a league round played alone says «Godkjent», with no place.
+  // #2712: a league flight says «Godkjent», with no place.
   const leagueFlight = gwp.game.league_round_id != null;
   const spec = headlineSpec(model, { leagueFlight });
   const gold = (chunks: ReactNode) => <Gold>{chunks}</Gold>;
@@ -291,7 +291,7 @@ export async function GET(
       ? []
       : model.band === 'matchplay'
         ? matchRows(model)
-        : placementRows(model, isLeagueCardAlone(model, leagueFlight));
+        : placementRows(model, isUnplacedLeagueCard(model, leagueFlight));
   const cardHeight = shareCardHeight(model, {
     headlineLines: headlineChoice.lines,
     headlineFontSize: headlineChoice.fontSize,

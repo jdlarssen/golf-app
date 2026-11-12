@@ -140,8 +140,8 @@ export function buildRoundDoneModel(opts: {
     greetingName: shortDisplayName(me.player),
     headline,
     birdies: countRoundAchievements(holes).birdie,
-    // #2712: en ligarunde spilt alene har ingen plass, så ingen «1. plass nå».
-    standing: live && !live.leagueAlone ? { rank: live.standing.rank, tied: live.standing.tied } : null,
+    // #2712, #2850: en ligaflight har ingen plass, så ingen «1. plass nå».
+    standing: live && !live.leagueFlight ? { rank: live.standing.rank, tied: live.standing.tied } : null,
     best,
     worst,
     flight: flightRows(opts),

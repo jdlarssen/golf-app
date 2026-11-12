@@ -26,7 +26,7 @@ import type {
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import type { HoleSegment } from '@/lib/scoring/holeSegment';
 import { resolveActiveCardState } from '@/lib/games/activeCardState';
-import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
 import { nextUnfilledHole, playOrder } from '@/lib/games/nextHole';
 import type { StartType } from '@/lib/games/startType';
 import type { GameStatus } from '@/lib/games/status';
@@ -81,11 +81,12 @@ export type LiveBoard = {
   /** In the engine's order — the board never sorts on its own. */
   rows: LiveBoardRow[];
   /**
-   * #2712 (orchestrator 31.10, after the owner's rule): a league round played
-   * alone has no place. Every view reads `boardShowsPlace`: no rank, no
-   * leader's gold, and the strip says the score instead of «1. plass».
+   * #2712, #2850 (owner 12.11): a league flight has no place, alone or with
+   * others. Every view reads `boardShowsPlace`: no rank, no leader's gold, and
+   * the strip says the score instead of «1. plass». The rows keep the engine's
+   * order: that is the result of the strokes, not a place.
    */
-  leagueAlone?: boolean;
+  leagueFlight?: boolean;
 };
 
 export type LiveBoardPlayerRow = StablefordContextPlayerRow;
@@ -102,8 +103,8 @@ export type LiveBoardGame = {
   hole_segment?: HoleSegment;
   start_type?: StartType;
   /**
-   * #2712: a league flight; played alone it shows no place
-   * (`LiveBoard.leagueAlone`). Required so a caller can't forget it; a game
+   * #2712: a league flight; it shows no place
+   * (`LiveBoard.leagueFlight`). Required so a caller can't forget it; a game
    * outside a league passes null.
    */
   league_round_id: string | null;
@@ -253,7 +254,7 @@ export function computeLiveBoard(opts: {
     unit,
     holesPlayed: maxHolesPlayed(scoresRows.filter((s) => activeIds.has(s.user_id))),
     rows,
-    leagueAlone: isLeagueFieldAlone(game.league_round_id != null, rows.length),
+    leagueFlight: leagueFlightHasNoPlace(game.league_round_id != null),
   };
 }
 

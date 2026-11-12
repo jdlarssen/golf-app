@@ -31,7 +31,7 @@ type GameRow = {
   hole_segment: HoleSegment;
   /** #2217: a derived single owns no scores — they live on the host game. */
   source_game_id: string | null;
-  /** #2712: a league flight; played alone it counts as played, not won. */
+  /** #2712: a league flight; it counts as played, not won. */
   league_round_id: string | null;
 };
 
@@ -184,7 +184,7 @@ const getClubStatsAggregate = unstable_cache(
     // Shape into the pure-tally input.
     const tallyGames: FinishedGameForTally[] = games.map((g) => ({
       id: g.id,
-      // #2712: a league round played alone counts as played, not won.
+      // #2712: a league flight counts as played, not won.
       leagueFlight: g.league_round_id != null,
       players: (playersByGame.get(g.id) ?? []).map((p) => ({
         userId: p.user_id,

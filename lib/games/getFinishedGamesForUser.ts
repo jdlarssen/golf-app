@@ -52,7 +52,7 @@ export type FinishedGame = {
   team_number: number | null;
   scheduled_tee_off_at: string | null;
   tournament: FinishedTournament | null;
-  /** #2712: a league flight; played alone it says «Godkjent», not «Du vant». */
+  /** #2712: a league flight; it says «Godkjent», not «Du vant». */
   league_round_id: string | null;
 };
 

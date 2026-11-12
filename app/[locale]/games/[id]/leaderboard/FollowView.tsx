@@ -84,7 +84,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
 
   const { row, standing, lead, next, moment, others } = view;
   const { unit } = board;
-  // #2712: a league round played alone shows no place and no leader's gold.
+  // #2712: a league flight shows no place and no leader's gold.
   const showRank = boardShowsPlace(board);
   const leader = showRank && isBoardLeader(row);
   const displayName = (r: LiveBoardRow) => boardDisplayName(r, tc);

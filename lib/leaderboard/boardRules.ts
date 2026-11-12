@@ -51,10 +51,10 @@ export function boardShowsRank(holesPlayed: number): boolean {
 
 /**
  * #2712: the rank column, the leader's gold and the strip's place for this
- * board. Also never for a league round played alone (`LiveBoard.leagueAlone`).
+ * board. Also never for a league flight (`LiveBoard.leagueFlight`, #2850).
  */
-export function boardShowsPlace(board: { holesPlayed: number; leagueAlone?: boolean }): boolean {
-  return board.leagueAlone !== true && boardShowsRank(board.holesPlayed);
+export function boardShowsPlace(board: { holesPlayed: number; leagueFlight?: boolean }): boolean {
+  return board.leagueFlight !== true && boardShowsRank(board.holesPlayed);
 }
 
 /** The leader's row: first place, and at least one hole played. */

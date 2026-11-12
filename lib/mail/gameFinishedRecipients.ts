@@ -25,7 +25,7 @@ import {
 } from '@/lib/scoring/modes/types';
 import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
-import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import {
   getPrivateUserFields,
@@ -207,7 +207,7 @@ export async function buildGameFinishedRecipients(
     game_mode: GameMode;
     mode_config: GameModeConfig;
     /**
-     * #2712: a league flight. Played alone it has no placement and no win, so
+     * #2712: a league flight. It has no placement and no win, so
      * the mail takes the neutral line (no «1. plass av 1 … Gratulerer»).
      */
     league_round_id?: string | null;
@@ -353,14 +353,14 @@ export async function buildGameFinishedRecipients(
   if (result.variant === 'solo') {
     const totalPlayers = result.players.length;
     const lineByUserId = new Map(result.players.map((p) => [p.userId, p]));
-    const leagueAlone = isLeagueFieldAlone(game.league_round_id != null, totalPlayers);
+    const leagueFlight = leagueFlightHasNoPlace(game.league_round_id != null);
 
     const recipients: FinishedMailRecipient[] = [];
     for (const row of playerRows) {
       const email = row.users?.email ?? null;
       if (!email) continue;
       const line = lineByUserId.get(row.user_id);
-      const mode: GameFinishedNotificationMode | undefined = line && !leagueAlone
+      const mode: GameFinishedNotificationMode | undefined = line && !leagueFlight
         ? {
             kind: 'stableford',
             variant: 'solo',
@@ -607,15 +607,15 @@ async function buildSoloStrokeplayRecipients(
 
   const totalPlayers = result.players.length;
   const lineByUserId = new Map(result.players.map((p) => [p.userId, p]));
-  // #2712: a league round played alone takes the neutral line.
-  const leagueAlone = isLeagueFieldAlone(game.league_round_id != null, totalPlayers);
+  // #2712, #2850: a league flight takes the neutral line, no place.
+  const leagueFlight = leagueFlightHasNoPlace(game.league_round_id != null);
 
   const recipients: FinishedMailRecipient[] = [];
   for (const row of playerRows) {
     const email = row.users?.email ?? null;
     if (!email) continue;
     const line = lineByUserId.get(row.user_id);
-    const mode: GameFinishedNotificationMode | undefined = line && !leagueAlone
+    const mode: GameFinishedNotificationMode | undefined = line && !leagueFlight
       ? {
           kind: 'solo_strokeplay',
           rank: line.rank,

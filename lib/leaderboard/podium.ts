@@ -6,7 +6,7 @@
 // par: the sentence would say −10 over a row saying 62 netto. No sorting here:
 // the rows stand in the engine's order.
 
-import { isLeagueFieldAlone } from '@/lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
 import { boardUnit } from '@/lib/leaderboard/liveBoard';
 import { soloResultBoard, teamResultBoard } from '@/lib/leaderboard/resultBoard';
 import { teamDisplayUnit } from '@/lib/leaderboard/teamLiveBoard';
@@ -160,7 +160,7 @@ function teamLines(result: Parameters<typeof teamResultBoard>[0]): Line[] {
 
 /**
  * The top of the board, or `null` when the game has none to show: the match
- * play family, an empty field, a league round played alone (#2712) and a game
+ * play family, an empty field, a league flight (#2712, #2850) and a game
  * nobody won anything in.
  */
 export function podiumFor(
@@ -172,7 +172,7 @@ export function podiumFor(
   // Everyone on zero of something you win (no skin taken, no bingo, every Nassau
   // section halved): nobody won. Par on a to-par board is a real score.
   if (lines.every((line) => line.total === 0 && line.unit !== 'toPar')) return null;
-  if (isLeagueFieldAlone(opts.leagueFlight ?? false, lines.length)) return null;
+  if (leagueFlightHasNoPlace(opts.leagueFlight ?? false)) return null;
   const counts = new Map<number, number>();
   for (const line of lines) counts.set(line.rank, (counts.get(line.rank) ?? 0) + 1);
   const rows = lines.map((line): PodiumRow => ({ ...line, tied: (counts.get(line.rank) ?? 0) > 1 }));

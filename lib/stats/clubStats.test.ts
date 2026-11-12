@@ -165,13 +165,16 @@ describe('tallyClubStats', () => {
   });
 });
 
-// #2712 (owner 31.10): a league flight played alone has no placement and no win.
-describe('wins: a league round played alone (#2712)', () => {
+// #2712, #2850 (owner 12.11): a league flight has no placement and no win,
+// alone or with others.
+describe('wins: a league flight (#2712, #2850)', () => {
   const solo: ResultSummary = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
-  it('isWinningSummary: no win in a league flight alone, a win everywhere else', () => {
+  it('isWinningSummary: no win in a league flight, a win everywhere else', () => {
     expect(isWinningSummary(solo, { leagueFlight: true })).toBe(false);
-    expect(isWinningSummary({ ...solo, fieldSize: 3 }, { leagueFlight: true })).toBe(true);
+    expect(isWinningSummary({ ...solo, fieldSize: 3 }, { leagueFlight: true })).toBe(false);
+    expect(isWinningSummary({ ...solo, fieldSize: 2 }, { leagueFlight: true })).toBe(false);
     expect(isWinningSummary(solo)).toBe(true);
+    expect(isWinningSummary({ ...solo, fieldSize: 3 })).toBe(true);
   });
   it('tallyClubStats: the round counts as played, not as won', () => {
     const { winnerCounts, participationCounts } = tallyClubStats(

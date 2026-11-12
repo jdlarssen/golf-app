@@ -83,8 +83,8 @@ describe('computeProfileSeason', () => {
   });
 });
 
-// #2712 (owner 31.10): a league round played alone is no win in the season.
-describe('computeProfileSeason — league round alone (#2712)', () => {
+// #2712, #2850 (owner 12.11): a league flight is no win in the season.
+describe('computeProfileSeason — league flight (#2712, #2850)', () => {
   const solo: ResultSummary = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false };
   it('counts the round, not the win', () => {
     const out = computeProfileSeason(
@@ -94,7 +94,7 @@ describe('computeProfileSeason — league round alone (#2712)', () => {
       ],
       2026,
     );
-    expect(out).toEqual({ rounds: 2, bestRound: 80, wins: 1 });
+    expect(out).toEqual({ rounds: 2, bestRound: 80, wins: 0 });
   });
 });
 

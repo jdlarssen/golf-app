@@ -3077,7 +3077,7 @@
       "waiting": "Putte-statistikken venter på {count, plural, one {# hull} other {# hull}}.",
       "cta": "Før putter"
     },
-    "leagueAlone": {
+    "leagueFlight": {
       "kicker": "Ligarunde",
       "heading": "Godkjent"
     },

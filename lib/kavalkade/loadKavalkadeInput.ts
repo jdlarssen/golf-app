@@ -59,7 +59,7 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   ended_at: string | null;
   course_id: string | null;
-  /** #2712: a league flight; played alone it is no win. */
+  /** #2712: a league flight; it is no win. */
   league_round_id: string | null;
   courses: { name: string } | null;
 };

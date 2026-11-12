@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { finishedResultBadge, isLeagueCardAlone, leagueAlonePlayer } from './finishedResultBadge';
+import {
+  finishedResultBadge,
+  isUnplacedLeagueCard,
+  isUnplacedLeagueRound,
+  leagueFlightHasNoPlace,
+  leagueFlightPlayers,
+} from './finishedResultBadge';
 
 describe('finishedResultBadge', () => {
   it('placement rank 1 (individ) → youWon, isWin', () => {
@@ -69,73 +75,120 @@ describe('finishedResultBadge', () => {
   });
 });
 
-// #2712 (owner 31.10): a league flight played alone has no placement, so the
-// card says it was approved instead of «Du vant».
-describe('finishedResultBadge — ligaflight alene (#2712)', () => {
+// #2712, #2850 (owner 12.11): a league flight has no placement, alone or with
+// others; the league round is decided when the round closes, across every
+// flight. The card says it was approved instead of «Du vant» or «2. plass av 2».
+describe('finishedResultBadge — ligaflight (#2712, #2850)', () => {
   const solo = { kind: 'placement', rank: 1, fieldSize: 1, isTeam: false } as const;
   it('ligaflight med én spiller → approved, ingen gull', () => {
     expect(finishedResultBadge(solo, { leagueFlight: true })).toEqual({ key: 'result.approved', isWin: false });
   });
-  it('ligaflight med flere spillere → plassen som før', () => {
+  it('ligaflight med flere spillere → approved, ingen plass og ingen gull', () => {
     expect(
       finishedResultBadge({ kind: 'placement', rank: 1, fieldSize: 2, isTeam: false }, { leagueFlight: true }),
-    ).toEqual({ key: 'result.youWon', isWin: true });
+    ).toEqual({ key: 'result.approved', isWin: false });
+  });
+  it('ligaflight: 2. plass av 2 → approved (issuet)', () => {
+    expect(
+      finishedResultBadge({ kind: 'placement', rank: 2, fieldSize: 2, isTeam: false }, { leagueFlight: true }),
+    ).toEqual({ key: 'result.approved', isWin: false });
+  });
+  it('vanlig spill på to → plassen som før', () => {
+    expect(finishedResultBadge({ kind: 'placement', rank: 2, fieldSize: 2, isTeam: false })).toEqual({
+      key: 'result.placement',
+      values: { rank: 2, fieldSize: 2 },
+      isWin: false,
+    });
+    expect(finishedResultBadge({ kind: 'placement', rank: 1, fieldSize: 2, isTeam: false })).toEqual({
+      key: 'result.youWon',
+      isWin: true,
+    });
   });
   it('vanlig spill alene → som før', () => {
     expect(finishedResultBadge(solo)).toEqual({ key: 'result.youWon', isWin: true });
   });
 });
 
-
-// #2712 (orchestrator 31.10, after the owner's rule): the same rule read from a
-// share card's model, for the round report, the share image and the web podium.
-describe('isLeagueCardAlone (#2712)', () => {
-  const one = { band: 'placement', podium: [{}] };
-  it('a placement card with one row in a league flight is alone', () => {
-    expect(isLeagueCardAlone(one, true)).toBe(true);
-  });
-  it('two rows in a league flight keep their places', () => {
-    expect(isLeagueCardAlone({ band: 'placement', podium: [{}, {}] }, true)).toBe(false);
-  });
-  it('one row outside a league is a normal win', () => {
-    expect(isLeagueCardAlone(one, false)).toBe(false);
-  });
-  it('a matchplay card is never alone', () => {
-    expect(isLeagueCardAlone({ band: 'matchplay', podium: [{}] }, true)).toBe(false);
-  });
-  it('an empty card keeps its neutral headline', () => {
-    expect(isLeagueCardAlone({ band: 'placement', podium: [] }, true)).toBe(false);
+describe('leagueFlightHasNoPlace (#2850)', () => {
+  it('is the flag, whatever the field size', () => {
+    expect(leagueFlightHasNoPlace(true)).toBe(true);
+    expect(leagueFlightHasNoPlace(false)).toBe(false);
   });
 });
 
-// #2712: the one player a view draws for a league round played alone. A field
-// with no active player (the only one withdrew, then the game was ended) is
-// not alone here: the view keeps its own empty state instead of crashing.
-describe('leagueAlonePlayer (#2712)', () => {
+describe('isUnplacedLeagueRound (#2850)', () => {
+  const two = { kind: 'placement', rank: 2, fieldSize: 2, isTeam: false } as const;
+  it('a placement in a league flight, of any size, is unplaced', () => {
+    expect(isUnplacedLeagueRound(two, true)).toBe(true);
+    expect(isUnplacedLeagueRound({ ...two, rank: 1, fieldSize: 1 }, true)).toBe(true);
+    expect(isUnplacedLeagueRound({ ...two, rank: 3, fieldSize: 4 }, true)).toBe(true);
+  });
+  it('the same outside a league is placed', () => {
+    expect(isUnplacedLeagueRound(two, false)).toBe(false);
+  });
+  it('no summary, matchplay and skins are never unplaced here', () => {
+    expect(isUnplacedLeagueRound(null, true)).toBe(false);
+    expect(isUnplacedLeagueRound({ kind: 'matchplay', outcome: 'win', margin: '2&1' }, true)).toBe(false);
+  });
+});
+
+// The same rule read from a share card's model, for the round report, the
+// share image and the web podium.
+describe('isUnplacedLeagueCard (#2712, #2850)', () => {
+  const one = { band: 'placement', podium: [{}] };
+  it('a placement card in a league flight is unplaced, with one row or several', () => {
+    expect(isUnplacedLeagueCard(one, true)).toBe(true);
+    expect(isUnplacedLeagueCard({ band: 'placement', podium: [{}, {}] }, true)).toBe(true);
+    expect(isUnplacedLeagueCard({ band: 'placement', podium: [{}, {}, {}] }, true)).toBe(true);
+  });
+  it('rows outside a league are a normal placement', () => {
+    expect(isUnplacedLeagueCard(one, false)).toBe(false);
+    expect(isUnplacedLeagueCard({ band: 'placement', podium: [{}, {}] }, false)).toBe(false);
+  });
+  it('a matchplay card is never unplaced', () => {
+    expect(isUnplacedLeagueCard({ band: 'matchplay', podium: [{}] }, true)).toBe(false);
+  });
+  it('an empty card keeps its neutral headline', () => {
+    expect(isUnplacedLeagueCard({ band: 'placement', podium: [] }, true)).toBe(false);
+  });
+});
+
+// #2850: the players a view draws without a place. A flight with no active
+// player (the only one withdrew, then the game was ended) is not drawn here:
+// the view keeps its own empty state instead of crashing.
+describe('leagueFlightPlayers (#2850)', () => {
   const siri = { userId: 'siri' };
-  it('one player in a league flight is the one', () => {
-    expect(leagueAlonePlayer([siri], true)).toBe(siri);
+  const ola = { userId: 'ola' };
+  it('one player in a league flight is drawn', () => {
+    expect(leagueFlightPlayers([siri], true)).toEqual([siri]);
+  });
+  it('a league flight of two or more is drawn in the given order', () => {
+    expect(leagueFlightPlayers([ola, siri], true)).toEqual([ola, siri]);
   });
   it('an empty league flight has nobody', () => {
-    expect(leagueAlonePlayer([], true)).toBeNull();
+    expect(leagueFlightPlayers([], true)).toBeNull();
   });
-  it('a league flight of two has nobody alone', () => {
-    expect(leagueAlonePlayer([siri, { userId: 'ola' }], true)).toBeNull();
-  });
-  it('one player outside a league is not alone in a league', () => {
-    expect(leagueAlonePlayer([siri], false)).toBeNull();
+  it('players outside a league are not drawn this way', () => {
+    expect(leagueFlightPlayers([siri], false)).toBeNull();
+    expect(leagueFlightPlayers([siri, ola], false)).toBeNull();
   });
 
-  // The solo formats' finished board picks LeagueAloneResult through it.
-  it('the solo stableford and stroke play boards read it', () => {
+  // The solo formats' finished board picks LeagueFlightResult through it, and
+  // BEFORE the duel branch: with exactly two players the duel would crown a
+  // winner (#2850).
+  it('the solo stableford and stroke play boards read it before the duel', () => {
     const root = path.resolve(__dirname, '../..');
     for (const site of [
       'app/[locale]/games/[id]/leaderboard/formats/stableford.tsx',
       'app/[locale]/games/[id]/leaderboard/formats/soloStrokeplay.tsx',
     ]) {
       const src = fs.readFileSync(path.join(root, site), 'utf8');
-      expect(src, site).toContain('leagueAlonePlayer(');
-      expect(src, site).toContain('<LeagueAloneResult');
+      expect(src, site).toContain('leagueFlightPlayers(');
+      expect(src, site).toContain('<LeagueFlightResult');
+      expect(src.indexOf('if (leaguePlayers)'), site).toBeGreaterThan(-1);
+      expect(src.indexOf('if (leaguePlayers)'), site).toBeLessThan(
+        src.indexOf('result.players.length === 2'),
+      );
     }
   });
 });

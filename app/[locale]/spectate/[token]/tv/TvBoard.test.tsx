@@ -44,12 +44,22 @@ describe('TvBoard', () => {
   });
 });
 
-// #2712 (Type B, orchestrator 31.10 after the owner's rule): a league round
-// played alone has no place on the big screen either.
-describe('TvBoard — a league round played alone (#2712)', () => {
+// #2712, #2850 (Type B, owner 12.11): a league flight has no place on the big
+// screen either, alone or with others.
+describe('TvBoard — a league flight (#2712, #2850)', () => {
+  it('no medallion for a flight of several, and several outside a league keep it', () => {
+    const { unmount } = render(
+      <TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 2), leagueFlight: true }} />,
+    );
+    expect(screen.queryByTestId('tv-medallion')).toBeNull();
+    unmount();
+    render(<TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 2) }} />);
+    expect(screen.getByTestId('tv-medallion')).toHaveTextContent('1');
+  });
+
   it('no medallion for the one player, and one outside a league keeps it', () => {
     const { unmount } = render(
-      <TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 1), leagueAlone: true }} />,
+      <TvBoard board={{ unit: 'points', holesPlayed: 11, rows: rows.slice(0, 1), leagueFlight: true }} />,
     );
     expect(screen.queryByTestId('tv-medallion')).toBeNull();
     unmount();

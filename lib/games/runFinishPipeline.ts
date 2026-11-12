@@ -80,7 +80,7 @@ export type FinishPipelineGame = {
   game_mode: GameMode;
   mode_config: GameModeConfig;
   hole_segment: HoleSegment;
-  /** #2712: a league flight; played alone the result mail has no placement. */
+  /** #2712: a league flight; the result mail has no placement. */
   league_round_id: string | null;
 };
 

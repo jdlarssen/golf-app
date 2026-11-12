@@ -12,7 +12,7 @@
 // er de delte reglene i `lib/leaderboard/`; stripas knapp er Hjem-kortets
 // (`heroAction`, samme regel som `buildHeroModel`).
 import { STATUS_LABELS } from '../../../../lib/games/status';
-import { isLeagueFieldAlone } from '../../../../lib/games/finishedResultBadge';
+import { leagueFlightHasNoPlace } from '../../../../lib/games/finishedResultBadge';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import { medalRank } from '../../../../lib/leaderboard/podium';
 import {
@@ -290,7 +290,7 @@ function liveBoard(
 ): SoloBoardModel | null {
   const board = liveBoardFor(bundle, scores);
   if (!board || board.rows.length === 0) return null;
-  // #2712: en ligarunde spilt alene har ingen plass og ingen ledergull.
+  // #2712, #2850: en ligaflight har ingen plass og ingen ledergull.
   const showRank = boardShowsPlace(board);
   const keyOf = (row: { userId: string }) => row.userId;
 
@@ -313,8 +313,8 @@ function liveBoard(
             });
     strip = {
       kicker: BOARD_TEXT.stripKicker,
-      // #2712: alene i en ligaflight sier stripa poengene, ikke «1. plass».
-      text: board.leagueAlone
+      // #2712, #2850: en ligaflight sier stripa poengene, ikke «1. plass».
+      text: board.leagueFlight
         ? (srPartText({ key: 'total', total: boardTotalSr(board.unit, standing.total) }, null) ?? '')
         : [stripPlace(standing), behind].filter(Boolean).join(' · '),
       action: stripAction(action),
@@ -376,11 +376,11 @@ function finishedBoard(
   }
   const board = soloResultBoard(result, toPlayerRows(bundle));
   if (board.rows.length === 0) return null;
-  // #2712 (orkestratoren 31.10, etter eierens regel): en ligarunde spilt alene
-  // har ingen plass og ingen seier: poengene og «Godkjent», som på Hjem.
-  const alone = isLeagueFieldAlone(bundle.game.leagueRoundId != null, board.rows.length);
-  const showRank = !alone && boardShowsRank(board.holesPlayed);
-  const winner = (row: ResultBoardRow) => !alone && isBoardLeader(row);
+  // #2712, #2850 (eieren 12.11): en ligaflight har ingen plass og ingen
+  // vinner, alene eller med andre: poengene og «Godkjent», som på Hjem.
+  const unplaced = leagueFlightHasNoPlace(bundle.game.leagueRoundId != null);
+  const showRank = !unplaced && boardShowsRank(board.holesPlayed);
+  const winner = (row: ResultBoardRow) => !unplaced && isBoardLeader(row);
   const keyOf = (row: ResultBoardRow) => row.userId;
   const byId = new Map(board.rows.map((row) => [row.userId, row]));
 
@@ -408,7 +408,7 @@ function finishedBoard(
             });
     strip = {
       kicker: BOARD_APP_TEXT.resultKicker,
-      text: alone ? BOARD_APP_TEXT.approved : [stripPlace(standing), behind].filter(Boolean).join(' · '),
+      text: unplaced ? BOARD_APP_TEXT.approved : [stripPlace(standing), behind].filter(Boolean).join(' · '),
       action: { kind: 'scorecard', label: BOARD_APP_TEXT.scorecard },
     };
   }

@@ -3077,7 +3077,7 @@
       "waiting": "Putt stats are waiting on {count, plural, one {# hole} other {# holes}}.",
       "cta": "Add putts"
     },
-    "leagueAlone": {
+    "leagueFlight": {
       "kicker": "League round",
       "heading": "Approved"
     },

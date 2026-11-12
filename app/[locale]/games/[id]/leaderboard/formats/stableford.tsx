@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import type { SoloStablefordPlayerInfo } from '../SoloStablefordView';
 import { SoloStablefordPodium } from '../SoloStablefordPodium';
-import { LeagueAloneResult } from '../LeagueAloneResult';
+import { LeagueFlightResult } from '../LeagueFlightResult';
 import { TeamStablefordView } from '../TeamStablefordView';
 import { TeamStablefordPodium } from '../TeamStablefordPodium';
 import {
@@ -21,7 +21,7 @@ import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { pointsHeadline } from '@/lib/leaderboard/vsPar';
-import { leagueAlonePlayer } from '@/lib/games/finishedResultBadge';
+import { leagueFlightPlayers } from '@/lib/games/finishedResultBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
@@ -305,10 +305,36 @@ export async function renderStableford(opts: {
     // duell-kortet beholdes også med sideturnering på (#589).
     // mainContent tar `chromeless` så samme reveal kan rendres frittstående
     // ELLER inni sideturnerings-fanen.
-    // #2712: the one player of a league round played alone, or null.
-    const alonePlayer = leagueAlonePlayer(result.players, game.league_round_id != null);
+    // #2712, #2850: the players of a league flight, drawn without a place, or null.
+    const leaguePlayers = leagueFlightPlayers(result.players, game.league_round_id != null);
     let mainContent: (chromeless: boolean, footerSlot?: ReactNode) => ReactNode;
-    if (result.players.length === 2) {
+    if (leaguePlayers) {
+      // #2712, #2850 (owner 12.11): a league flight has no place and no win,
+      // alone or with others, so «Godkjent» and every player's points stand
+      // where the duel or the podium would. This comes BEFORE the duel branch.
+      const tSolo = await getTranslations('leaderboard.soloStableford');
+      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
+      const rows = leaguePlayers.map((pl) => {
+        const info = playersById.get(pl.userId);
+        const headline = pointsHeadline(pl);
+        return {
+          userId: pl.userId,
+          name: info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull'),
+          scoreText: headline.text,
+          scoreLabel: tc(headline.labelKey),
+        };
+      });
+      mainContent = (chromeless, footerSlot) => (
+        <LeagueFlightResult
+          gameName={game.name}
+          rows={rows}
+          subtitle={subtitle}
+          backHref={backHref}
+          chromeless={chromeless}
+          footerSlot={footerSlot}
+        />
+      );
+    } else if (result.players.length === 2) {
       const order = gwp.players.map((p) => p.user_id);
       const [a, b] = [...result.players].sort(
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
@@ -346,28 +372,6 @@ export async function renderStableford(opts: {
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}
           strip={strip}
-          backHref={backHref}
-          chromeless={chromeless}
-          footerSlot={footerSlot}
-        />
-      );
-    } else if (alonePlayer) {
-      // #2712 (orchestrator 31.10, after the owner's rule): a league round
-      // played alone has no place and no win, so the points and «Godkjent»
-      // stand where the podium would.
-      const only = alonePlayer;
-      const info = playersById.get(only.userId);
-      const headline = pointsHeadline(only);
-      const tSolo = await getTranslations('leaderboard.soloStableford');
-      const subtitle = tSolo('podiumSubtitle', { holes: holesPlayed });
-      mainContent = (chromeless, footerSlot) => (
-        <LeagueAloneResult
-          gameName={game.name}
-          userId={only.userId}
-          name={info ? formatRevealName(info.name, info.nickname) : tc('unknownPlayerFull')}
-          scoreText={headline.text}
-          scoreLabel={tc(headline.labelKey)}
-          subtitle={subtitle}
           backHref={backHref}
           chromeless={chromeless}
           footerSlot={footerSlot}

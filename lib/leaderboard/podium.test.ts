@@ -210,12 +210,16 @@ describe('podiumFor: no top to show', () => {
     expect(podiumFor(solo([]))).toBeNull();
   });
 
-  it('a league round played alone (#2712)', () => {
+  it('a league flight, alone or with others (#2712, #2850)', () => {
     const alone = solo([['a', 34, 1]]);
+    const two = solo([['a', 34, 1], ['b', 30, 2]]);
+    const four = solo([['a', 34, 1], ['b', 30, 2], ['c', 28, 3], ['d', 20, 4]]);
     expect(podiumFor(alone, { leagueFlight: true })).toBeNull();
+    expect(podiumFor(two, { leagueFlight: true })).toBeNull();
+    expect(podiumFor(four, { leagueFlight: true })).toBeNull();
+    // Outside a league the same fields keep their podium.
     expect(podiumFor(alone, { leagueFlight: false })).not.toBeNull();
-    // Two in the league flight are a real field.
-    expect(podiumFor(solo([['a', 34, 1], ['b', 30, 2]]), { leagueFlight: true })).not.toBeNull();
+    expect(podiumFor(two)).not.toBeNull();
   });
 
   it('skins where nobody took a skin', () => {

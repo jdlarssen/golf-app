@@ -158,7 +158,7 @@ describe('boardShowsPlace (#2712)', () => {
     expect(boardShowsPlace({ holesPlayed: 3 })).toBe(true);
     expect(boardShowsPlace({ holesPlayed: 0 })).toBe(false);
   });
-  it('a league round played alone never does', () => {
-    expect(boardShowsPlace({ holesPlayed: 3, leagueAlone: true })).toBe(false);
+  it('a league flight never does (#2850)', () => {
+    expect(boardShowsPlace({ holesPlayed: 3, leagueFlight: true })).toBe(false);
   });
 });

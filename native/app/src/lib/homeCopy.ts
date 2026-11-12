@@ -118,10 +118,10 @@ export function standingDetail(
 }
 
 /**
- * #2712 (eieren 31.10): en ligaflight med én spiller har ingen plass, så
- * linja er bare poengene: «35 poeng etter 18 hull».
+ * #2712, #2850 (eieren 12.11): en ligaflight har ingen plass, så linja er
+ * bare poengene: «35 poeng etter 18 hull».
  */
-export function leagueSoloDetail(
+export function leagueFlightDetail(
   standing: Pick<ViewerStanding, 'total' | 'holesPlayed'>,
   unit: LiveBoardUnit,
   holeCount: number,

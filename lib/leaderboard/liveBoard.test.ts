@@ -518,12 +518,12 @@ describe('liveBoardStripAction — a shotgun group (#2286)', () => {
   });
 });
 
-// #2712 (orchestrator 31.10, after the owner's rule): a league round played
-// alone has no place, so the board says so once and every view reads it.
-describe('computeLiveBoard — a league round played alone (#2712)', () => {
+// #2712, #2850 (owner 12.11): a league flight has no place, alone or with
+// others, so the board says so once and every view reads it.
+describe('computeLiveBoard — a league flight (#2712, #2850)', () => {
   const one = { players: [player('a')], scores: card('a', { 1: 4, 2: 3 }) };
-  it('one active player in a league flight is alone', () => {
-    expect(board({ ...one, game: game({ league_round_id: 'round-1' }) }).leagueAlone).toBe(true);
+  it('one active player in a league flight has no place', () => {
+    expect(board({ ...one, game: game({ league_round_id: 'round-1' }) }).leagueFlight).toBe(true);
   });
   it('a withdrawn player does not count', () => {
     const b = board({
@@ -531,14 +531,21 @@ describe('computeLiveBoard — a league round played alone (#2712)', () => {
       players: [player('a'), player('b', { withdrawn: true })],
       scores: card('a', { 1: 4 }),
     });
-    expect(b.leagueAlone).toBe(true);
+    expect(b.leagueFlight).toBe(true);
   });
-  it('two in a league flight, or one outside a league, are not', () => {
+  it('two in a league flight have no place either (#2850)', () => {
     const two = {
       players: [player('a'), player('b')],
       scores: [...card('a', { 1: 4 }), ...card('b', { 1: 5 })],
     };
-    expect(board({ ...two, game: game({ league_round_id: 'round-1' }) }).leagueAlone).toBe(false);
-    expect(board(one).leagueAlone).toBe(false);
+    expect(board({ ...two, game: game({ league_round_id: 'round-1' }) }).leagueFlight).toBe(true);
+  });
+  it('a game outside a league keeps its places, alone or with others', () => {
+    const two = {
+      players: [player('a'), player('b')],
+      scores: [...card('a', { 1: 4 }), ...card('b', { 1: 5 })],
+    };
+    expect(board(two).leagueFlight).toBe(false);
+    expect(board(one).leagueFlight).toBe(false);
   });
 });
