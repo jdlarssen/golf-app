@@ -449,10 +449,12 @@ describe('a full open round takes a request (#2837)', () => {
     expect(wrote(adminMock)).toBe(false);
   });
 
-  it('full, then closed: no new request', async () => {
+  // A form drawn before the organiser closed says «Påmeldingen er stengt» on the
+  // tap, whatever the mode (the owner's answer 2).
+  it('full, then closed: no new request, and the answer is signup_closed', async () => {
     getGameByShortIdMock.mockResolvedValue(makeGame({ ...fullWolf, signups_closed_at: '2026-11-01T10:00:00Z' }));
     vi.mocked(loadSignupFacts).mockResolvedValue(FULL);
-    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'wrong_mode' });
+    await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'signup_closed' });
     getGameByShortIdMock.mockResolvedValue(makeGame({ ...fullWolf, registration_mode: 'manual_approval', signups_closed_at: '2026-11-01T10:00:00Z' }));
     await expect(requestApprovalCore(REQUEST)).resolves.toEqual({ ok: false, error: 'signup_closed' });
     expect(wrote(adminMock)).toBe(false);
