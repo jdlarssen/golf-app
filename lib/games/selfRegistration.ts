@@ -538,38 +538,9 @@ export async function requestApprovalCore({
     return { ok: false, error: 'rate_limited' };
   }
 
-  const admin = getAdminClient();
-  const { data: inserted, error: insertError } = await admin
-    .from('game_registration_requests')
-    .insert({
-      game_id: game.id,
-      user_id: userId,
-      status: 'pending',
-      is_team_captain: false,
-      message,
-    })
-    .select('id')
-    .single<{ id: string }>();
-
-  let requestId: string;
-  if (insertError) {
-    if (!isDuplicateError(insertError)) {
-      console.error('[requestApproval] insert failed', insertError);
-      return { ok: false, error: 'db_error' };
-    }
-    // #2837: the unique key holds the request the player withdrew, so asking
-    // again opens that row. Any other old row stands as it was.
-    const reopened = await reopenWithdrawnRequest(game.id, userId, message);
-    if (reopened === 'not_withdrawn') return { ok: false, error: 'already_requested' };
-    if (reopened === 'db_error') return { ok: false, error: 'db_error' };
-    requestId = reopened.id;
-  } else if (inserted?.id) {
-    requestId = inserted.id;
-  } else {
-    // AGENTS.md trap 2: an insert that returns no row is a failure, not a success.
-    console.error('[requestApproval] insert wrote no row', { gameId: game.id, userId });
-    return { ok: false, error: 'db_error' };
-  }
+  const written = await writeRequest(game.id, userId, message);
+  if (typeof written === 'string') return { ok: false, error: written };
+  const requestId = written.id;
 
   expireGameCache(game.id);
 
@@ -595,7 +566,7 @@ export async function requestApprovalCore({
       // Best-effort — Promise.allSettled-svelg i caller-context (catch-en
       // i .catch() under) sørger for at en mail-feil ikke ruller tilbake
       // selve forespørselen.
-      const { data: adminRow } = await admin
+      const { data: adminRow } = await getAdminClient()
         .from('users')
         .select('email, locale')
         .eq('id', game.created_by)
@@ -639,6 +610,45 @@ function updateOwnSoloRequest(
     .eq('is_team_captain', false)
     .is('brought_by_user_id', null)
     .select('id');
+}
+
+/**
+ * The request row, new or, when the player withdrew one, that one opened again
+ * (#2837). Any other old row stands as it was: `already_requested`.
+ */
+async function writeRequest(
+  gameId: string,
+  userId: string,
+  message: string | null,
+): Promise<{ id: string } | 'already_requested' | 'db_error'> {
+  const { data: inserted, error: insertError } = await getAdminClient()
+    .from('game_registration_requests')
+    .insert({
+      game_id: gameId,
+      user_id: userId,
+      status: 'pending',
+      is_team_captain: false,
+      message,
+    })
+    .select('id')
+    .single<{ id: string }>();
+
+  if (insertError) {
+    if (!isDuplicateError(insertError)) {
+      console.error('[requestApproval] insert failed', insertError);
+      return 'db_error';
+    }
+    // The unique key holds the request the player withdrew, so asking again
+    // opens that row.
+    const reopened = await reopenWithdrawnRequest(gameId, userId, message);
+    return reopened === 'not_withdrawn' ? 'already_requested' : reopened;
+  }
+  // AGENTS.md trap 2: an insert that returns no row is a failure, not a success.
+  if (!inserted?.id) {
+    console.error('[requestApproval] insert wrote no row', { gameId, userId });
+    return 'db_error';
+  }
+  return inserted;
 }
 
 /**
