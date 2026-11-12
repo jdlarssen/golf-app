@@ -91,7 +91,7 @@ import { fetchInboxUnreadCount } from '../data/inbox';
 import { fetchMyLeagues } from '../data/league';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
-import { KonvoluttIcon, PinFlagHero } from '../components/icons/Icons';
+import { ChevronIcon, KonvoluttIcon, PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, hcpA11yLabel, profileA11yLabel } from '../lib/homeCopy';
@@ -109,7 +109,7 @@ import { DELETE_TEXT } from '../lib/cupDeleteCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, fraunces, interLine, useTheme } from '../theme';
+import { FONTS, TAP, fraunces, interLine, useTheme } from '../theme';
 import { PushPromptCard } from '../components/PushPromptCard';
 import { StatusBarBand } from '../components/StatusBarBand';
 
@@ -366,6 +366,23 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     </Pressable>
   );
 
+  // #2838: veien inn til åpne runder, under «Opprett spill». Står der alltid.
+  const findTournaments = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${HOME_TEXT.findTournaments}. ${HOME_TEXT.findTournamentsSub}`}
+      style={[styles.findRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      onPress={() => navigation.navigate('Terminliste')}
+      testID="home-find-tournaments"
+    >
+      <View style={styles.findText}>
+        <Text style={[styles.findTitle, { color: colors.text }]}>{HOME_TEXT.findTournaments}</Text>
+        <Text style={[styles.findSub, { color: colors.muted }]}>{HOME_TEXT.findTournamentsSub}</Text>
+      </View>
+      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
+    </Pressable>
+  );
+
   const createCup = (
     <Pressable
       accessibilityRole="button"
@@ -458,6 +475,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         ) : null}
 
         {hero ? null : createGame}
+        {hero ? null : findTournaments}
         {hero ? null : createCup}
 
         {hero ? (
@@ -532,6 +550,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         ) : null}
 
         {hero ? createGame : null}
+        {hero ? findTournaments : null}
         {hero ? createCup : null}
 
         {errorText ? (
@@ -710,6 +729,21 @@ const styles = StyleSheet.create({
   notice: { borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12 },
   noticeText: { ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sans },
   createCup: { marginTop: 8 },
+  // Samme rad som «Ligaene dine» (`LeagueHomeRow`): navn og linje, pila til høyre.
+  findRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minHeight: Math.max(TAP, 64),
+  },
+  findText: { flex: 1, minWidth: 0 },
+  findTitle: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold },
+  findSub: { ...interLine(12, 16), fontFamily: FONTS.sans },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   // Webbens banner har `mb-4`; skjermens `gap` gir de første 8.
   kavalkade: { marginBottom: 8 },

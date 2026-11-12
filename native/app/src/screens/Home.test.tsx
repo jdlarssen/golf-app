@@ -320,6 +320,38 @@ it('uten runde i gang står «Opprett spill» øverst, som før, også på et to
   expect(screen.getByTestId('home-create-cup')).toBeTruthy();
 });
 
+it('#2838: «Finn turneringer» står rett under «Opprett spill», alltid, og åpner terminlista', async () => {
+  // Uten runde i gang: «Opprett spill» øverst, raden rett under, så «Lag en cup».
+  mockState.list = { ...LIST, cards: CARDS.filter((card) => card.status !== 'active') };
+  const top = renderHome();
+  await top.view;
+  expect(await screen.findByTestId('home-ticket-next')).toBeTruthy();
+  let order = testIdsInOrder();
+  expect(order.indexOf('home-find-tournaments')).toBe(order.indexOf('home-create-game') + 1);
+  expect(order.indexOf('home-find-tournaments')).toBeLessThan(order.indexOf('home-create-cup'));
+  const row = screen.getByTestId('home-find-tournaments');
+  expect(row.props.accessibilityLabel).toBe('Finn turneringer. Åpne runder du kan bli med på');
+  await fireEvent.press(row);
+  expect(top.navigate).toHaveBeenCalledWith('Terminliste');
+
+  // Med runde i gang står «Opprett spill» nederst, og raden følger den.
+  await screen.unmount();
+  mockState.list = LIST;
+  const hero = renderHome();
+  await hero.view;
+  expect(await screen.findByTestId('home-hero')).toBeTruthy();
+  order = testIdsInOrder();
+  expect(order.indexOf('home-find-tournaments')).toBe(order.indexOf('home-create-game') + 1);
+
+  // Et tomt Hjem har den også: veien til å finne en runde er størst der.
+  await screen.unmount();
+  mockState.list = { ...LIST, cards: [], lastRound: null };
+  const empty = renderHome();
+  await empty.view;
+  expect(await screen.findByTestId('home-empty')).toBeTruthy();
+  expect(screen.getByTestId('home-find-tournaments')).toBeTruthy();
+});
+
 it('bruker aldri en bundel som hører til et annet spill enn helten', async () => {
   // Cachen ga bundelen for en annen runde (id-en stemmer ikke med helten).
   mockState.bundles = { new: { ...HERO_BUNDLE, bundle: { ...HERO_BUNDLE.bundle, game: { ...HERO_BUNDLE.bundle.game, id: 'old' } } } };

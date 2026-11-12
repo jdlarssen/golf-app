@@ -20,7 +20,7 @@ import type {
   DiscoverableFriendGame,
   DiscoverableOpenGame,
   PendingRequest,
-} from './getDiscoverableGames';
+} from './discoverableGameTypes';
 
 /**
  * Seats on a game, from `getRegistrationSeats`. `capped`: a format with a

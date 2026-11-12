@@ -45,6 +45,9 @@ describe('paritet mot messages/no.json', () => {
     expect(HOME_TEXT.myGames).toBe(web.home.sectionMyGames);
     expect(HOME_TEXT.teamRound).toBe(web.home.roundTeamBall);
     expect(HOME_TEXT.submit).toBe(board.stripSubmit);
+    // #2838: raden til terminlista er nettsidens kicker og undertittel.
+    expect(HOME_TEXT.findTournaments).toBe(web.discover.kicker);
+    expect(HOME_TEXT.findTournamentsSub).toBe(web.discover.termin.subtitle);
     // Samme ord som webben; bare forbokstaven er liten i stubben.
     expect(HOME_TEXT.tomorrow).toBe(lowerFirst(web.home.proximity.tomorrow));
     expect(proximityText({ kind: 'days', days: 3 })).toBe(
