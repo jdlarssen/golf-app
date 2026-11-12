@@ -1185,6 +1185,24 @@ describe('league flight (#2712, #2850)', () => {
     expect(facts.checkpoints).toBeUndefined();
   });
 
+  it('a flight of four: every player stays in the facts, none ranked (#2850)', () => {
+    const player = (userId: string, net: number, rank: number) => ({
+      userId, totalNetStrokes: net, totalGrossStrokes: net + 4, holesPlayed: 18, netToPar: net - 72, rank, tiedWith: [],
+    });
+    const four: SoloStrokeplayResult = {
+      ...solo,
+      players: [player('u1', 70, 1), player('u2', 72, 2), player('u3', 75, 3), player('u4', 80, 4)],
+    };
+    const nameMap = names(['u1', 'Siri'], ['u2', 'Ola'], ['u3', 'Kari'], ['u4', 'Per']);
+    const flight = buildRoundReportFacts({ result: four, nameByUserId: nameMap, gameMode: 'solo_strokeplay', ...BASE, leagueFlight: true });
+    expect(flight.standings.map((r) => r.name)).toEqual(['Siri', 'Ola', 'Kari', 'Per']);
+    expect(flight.standings.every((r) => !('rank' in r))).toBe(true);
+    expect(flight.winnerName).toBeNull();
+    // Outside a league the podium keeps three.
+    const plain = buildRoundReportFacts({ result: four, nameByUserId: nameMap, gameMode: 'solo_strokeplay', ...BASE });
+    expect(plain.standings.map((r) => r.name)).toEqual(['Siri', 'Ola', 'Kari']);
+  });
+
   it('the same round outside a league keeps its winner', () => {
     const facts = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE });
     expect(facts.winnerName).toBe('Siri');

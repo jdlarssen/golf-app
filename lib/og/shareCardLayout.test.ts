@@ -228,6 +228,12 @@ describe('shareCardHeight', () => {
     expect(shareCardHeight(long, base)).toBeGreaterThan(shareCardHeight(short, base));
   });
 
+  it('a league flight of four is taller than the three rows a podium shows (#2850)', () => {
+    const base = { headlineLines: 8, headlineFontSize: 116 };
+    const four = placement(['Alice'], ['Bob'], ['Charlie'], ['Dina']);
+    expect(shareCardHeight(four, { ...base, unplaced: true })).toBeGreaterThan(shareCardHeight(four, base));
+  });
+
   it('more lines in the headline never make the card shorter', () => {
     const model = placement(['Alice'], ['Bob'], ['Charlie']);
     const two = shareCardHeight(model, { headlineLines: 2, headlineFontSize: 116 });

@@ -134,6 +134,11 @@ export function buildShareCardData(opts: {
    * rows. Off by default, so the share card's rows are unchanged.
    */
   withUserIds?: boolean;
+  /**
+   * #2850: the game is a league flight. It has no place, so the card lists
+   * every player in the flight instead of cutting the podium at three.
+   */
+  leagueFlight?: boolean;
 }): ShareCardModel {
   const {
     result,
@@ -143,6 +148,7 @@ export function buildShareCardData(opts: {
     sideWinners,
     playerFallback = '',
     withUserIds = false,
+    leagueFlight = false,
   } = opts;
   const vsParScore = makeVsParScore(parByHole);
 
@@ -187,7 +193,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'skins', value: p.totalSkins },
       }));
-      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('skins', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     // -----------------------------------------------------------------------
@@ -202,7 +208,7 @@ export function buildShareCardData(opts: {
           rank: p.rank,
           score: { kind: 'points', value: p.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
       } else {
         // team stableford
         const rows: IndividualCompetitor[] = result.teams.map((t) => ({
@@ -211,7 +217,7 @@ export function buildShareCardData(opts: {
           rank: t.rank,
           score: { kind: 'points', value: t.totalPoints },
         }));
-        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+        return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
       }
     }
 
@@ -230,7 +236,7 @@ export function buildShareCardData(opts: {
             ? { kind: 'vsPar', label: vsParLabel(p.netToPar) }
             : vsParScore(p.totalNetStrokes, soloUnplayedHoles(result.holes, p.userId), result.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     // -----------------------------------------------------------------------
@@ -248,7 +254,7 @@ export function buildShareCardData(opts: {
             ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
             : vsParScore(t.total, teamUnplayedHoles(t.holes), t.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'texas_scramble': {
@@ -261,7 +267,7 @@ export function buildShareCardData(opts: {
             ? { kind: 'vsPar', label: vsParLabel(t.toPar) }
             : vsParScore(t.totalNet, teamUnplayedHoles(t.holes), t.holes.length),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'shamble': {
@@ -281,7 +287,7 @@ export function buildShareCardData(opts: {
                 result.count,
               ),
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'patsome': {
@@ -292,7 +298,7 @@ export function buildShareCardData(opts: {
         // patsome uses stableford points
         score: { kind: 'points', value: t.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     // -----------------------------------------------------------------------
@@ -304,7 +310,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'nassau': {
@@ -314,7 +320,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.units },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'bingo_bango_bongo': {
@@ -323,7 +329,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'nines': {
@@ -332,7 +338,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalPoints },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'round_robin': {
@@ -342,7 +348,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.totalHoleWins },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     case 'acey_deucey': {
@@ -352,7 +358,7 @@ export function buildShareCardData(opts: {
         rank: p.rank,
         score: { kind: 'points', value: p.total },
       }));
-      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds);
+      return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback, withUserIds, leagueFlight);
     }
 
     default: {
@@ -383,7 +389,8 @@ type IndividualCompetitor = {
 /**
  * Builds the placement/skins band model from a flat list of competitors.
  * Sorts by rank ascending, secondary by resolved display name for stability on ties.
- * Takes the top 3 for the podium. Computes sharerStrip when applicable.
+ * Takes the top 3 for the podium, or every row in a league flight (#2850).
+ * Computes sharerStrip when applicable.
  */
 function buildPlacementModel(
   band: ShareCardBand,
@@ -393,6 +400,7 @@ function buildPlacementModel(
   sideTournaments: ShareCardSide[],
   playerFallback: string,
   withUserIds: boolean,
+  leagueFlight: boolean,
 ): ShareCardModel {
   // Sort: rank ascending, then name ascending for stable tie ordering
   const sorted = [...competitors].sort((a, b) => {
@@ -414,7 +422,9 @@ function buildPlacementModel(
       : {}),
   }));
 
-  const podium = allRows.slice(0, 3);
+  // A league flight has no place (#2850), so nobody is cut at three: the card
+  // and the round report list every player in the flight.
+  const podium = leagueFlight ? allRows : allRows.slice(0, 3);
   // A skins round where nobody took a skin has no winner, even though the
   // whole field shares rank 1: plain rows, no gold on «0 skins».
   const nobodyWon =

@@ -174,6 +174,7 @@ export function buildRoundReportFacts(
     sideWinners: [],
     playerFallback: PLAYER_FALLBACK,
     withUserIds: true,
+    leagueFlight: opts.leagueFlight ?? false,
   });
 
   /** The row's name as the facts may show it, or null when the row must go. */

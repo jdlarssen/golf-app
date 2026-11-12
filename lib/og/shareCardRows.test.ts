@@ -41,6 +41,16 @@ describe('placementRows', () => {
     expect(rows.every((r) => !r.winner)).toBe(true);
   });
 
+  it('a league flight of four lists everyone, with no medallion and no gold (#2850)', () => {
+    const rows = placementRows(model({ podium, winners: [podium[0]] }), true);
+    expect(rows.map((r) => [r.rank, r.name, r.figure, r.winner])).toEqual([
+      [null, 'Marte L.', '38', false],
+      [null, 'Jonas B.', '36', false],
+      [null, 'Sigrid A.', '34', false],
+      [null, 'Ola N.', '30', false],
+    ]);
+  });
+
   it('a league round played alone has no medallion and no gold (#2712)', () => {
     const only = row(1, 'Siri S.', 34);
     const [one] = placementRows(model({ podium: [only], winners: [only] }), true);

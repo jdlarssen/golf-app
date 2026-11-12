@@ -20,7 +20,9 @@ export type CardRow = {
 /** `unplaced` (#2712, #2850): a league flight, so no place, no medallion and no gold. */
 export function placementRows(model: ShareCardModel, unplaced: boolean): CardRow[] {
   const winnerRank = model.winners.length > 0 && !unplaced ? model.winners[0].rank : null;
-  return model.podium.slice(0, 3).map((r: ShareCardRow) => ({
+  // A league flight lists every player in the flight (#2850); the rest show three.
+  const shown = unplaced ? model.podium : model.podium.slice(0, 3);
+  return shown.map((r: ShareCardRow) => ({
     rank: unplaced ? null : r.rank,
     name: rowDisplayName(r.memberNames),
     figure: scoreFigure(r.score),
