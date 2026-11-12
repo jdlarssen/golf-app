@@ -97,19 +97,16 @@ async function readMarkerCards(userId: string, leagueIds: string[]): Promise<Map
  * the app hides the section.
  */
 export async function getMyLeagues(userId: string, now = new Date()): Promise<AppLeagueListResponse> {
-  const admin = getAdminClient();
-  const [membershipsRes, clubsRes] = await Promise.all([
-    admin.from('league_players').select('league_id').eq('user_id', userId),
-    admin.from('group_members').select('group_id').eq('user_id', userId),
-  ]);
-  if (membershipsRes.error) throw membershipsRes.error;
-  if (clubsRes.error) throw clubsRes.error;
-  const leagueIds = (membershipsRes.data ?? []).map((m) => m.league_id);
-  const clubIds = (clubsRes.data ?? []).map((c) => c.group_id);
+  const { data: memberships, error: mErr } = await getAdminClient()
+    .from('league_players')
+    .select('league_id')
+    .eq('user_id', userId);
+  if (mErr) throw mErr;
+  const leagueIds = (memberships ?? []).map((m) => m.league_id);
 
   const [leagues, joinable] = await Promise.all([
     readMyLeagues(userId, leagueIds, now),
-    readJoinableClubLeagues(clubIds, leagueIds),
+    readJoinableClubLeagues(userId, leagueIds),
   ]);
   return { leagues, joinable };
 }
@@ -118,19 +115,31 @@ export async function getMyLeagues(userId: string, now = new Date()): Promise<Ap
  * #2839: draft club leagues in the caller's clubs that the caller is not in.
  * `join_club_league` (0086) is the authority at the tap; this only decides what
  * the list shows. A draft league has no played round, so every state is empty.
+ *
+ * A failed read gives an empty list and a log line, never a thrown error: this
+ * list is an extra, and «Ligaene dine» must not disappear because it failed.
  */
-async function readJoinableClubLeagues(clubIds: string[], ownLeagueIds: string[]): Promise<AppLeagueSummary[]> {
-  if (clubIds.length === 0) return [];
-  const { data, error } = await getAdminClient()
-    .from('leagues')
-    .select('id, name, status')
-    .in('group_id', clubIds)
-    .eq('status', 'draft')
-    .order('name');
-  if (error) throw error;
-  const own = new Set(ownLeagueIds);
-  const open = ((data ?? []) as LeagueRow[]).filter((l) => !own.has(l.id));
-  return assembleMyLeagues(open, [], new Map(), '');
+async function readJoinableClubLeagues(userId: string, ownLeagueIds: string[]): Promise<AppLeagueSummary[]> {
+  try {
+    const admin = getAdminClient();
+    const { data: clubs, error: cErr } = await admin.from('group_members').select('group_id').eq('user_id', userId);
+    if (cErr) throw cErr;
+    const clubIds = (clubs ?? []).map((c) => c.group_id);
+    if (clubIds.length === 0) return [];
+    const { data, error } = await admin
+      .from('leagues')
+      .select('id, name, status')
+      .in('group_id', clubIds)
+      .eq('status', 'draft')
+      .order('name');
+    if (error) throw error;
+    const own = new Set(ownLeagueIds);
+    const open = ((data ?? []) as LeagueRow[]).filter((l) => !own.has(l.id));
+    return assembleMyLeagues(open, [], new Map(), userId);
+  } catch (err) {
+    console.error('[getMyLeagues] joinable read failed', err);
+    return [];
+  }
 }
 
 async function readMyLeagues(userId: string, leagueIds: string[], now: Date): Promise<AppLeagueSummary[]> {
