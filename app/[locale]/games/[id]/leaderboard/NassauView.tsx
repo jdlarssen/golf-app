@@ -1,12 +1,21 @@
 import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Card } from '@/components/ui/Card';
 import { Medallion } from '@/components/ui/Medallion';
 import { PullQuote } from '@/components/ui/PullQuote';
+import { LeaderboardBackLink } from '@/components/ui/LeaderboardBackLink';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { teamHeadline } from '@/lib/leaderboard/vsPar';
+import { firstName } from '@/lib/firstName';
+import { headlineUnit, teamHeadline } from '@/lib/leaderboard/vsPar';
+import {
+  NASSAU_SECTION_KEYS,
+  summarizeNassau,
+  type NassauCardSummary,
+  type NassauSectionKey,
+} from '@/lib/leaderboard/nassauBoard';
+import { pillText } from './boardText';
+import { NassauSectionTabs, type NassauCardView } from './NassauSectionTabs';
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
 import type {
@@ -48,12 +57,12 @@ export interface NassauViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
-  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i pillen. */
   holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
-   * Når true, dropper outer Shell + Header — caller eier ytre page-chrome.
+   * Når true, dropper outer Shell + tilbakepila — caller eier ytre page-chrome.
    * Brukes inne i LeaderboardTabs eller når en parent (podium) wrapper.
    */
   chromeless?: boolean;
@@ -66,18 +75,25 @@ export interface NassauViewProps {
    * referatet til.
    */
   footerSlot?: ReactNode;
+  /**
+   * #2327: the player looking at the board — their own line on each card and
+   * their row marked in the list. `null`/empty for spectators, embeds and an
+   * organizer who does not play: no «Du» line then.
+   */
+  viewerUserId?: string | null;
 }
 
 /**
- * Live/post-finished leaderboard for Nassau. Tre stacked sections:
+ * Live/post-finished leaderboard for Nassau (#2327): the three matches —
+ * Front 9, Back 9 and Totalt — as three cards under a forest-green head. The
+ * card of the match being played is selected and its full list shows under
+ * the cards; a tap on another card shows that list instead.
  *
- *   - Front 9 — hull 1–9, ranking på effective-strokes for spilte hull
- *   - Back 9 — hull 10–18, samme prinsipp
- *   - Totalt 18 hull — hele runden, total-ranking
- *
- * Hver seksjon har sin egen rank-en-til-N-liste. Ren vinner får champagne-
- * tinted highlight; push (tied etter cascade) viser «T1» + flere navn uten
- * highlight; pending (ingen har fullført seksjonen) viser en venterom-tekst.
+ * A match is decided when every player has played all its holes, or the game
+ * is finished (`summarizeNassau`). Until then it has a leader and a ranked
+ * list, but no winner and no gold. When one player has won every decided
+ * match alone and a match is still open, an amber line says they can take all
+ * three.
  *
  * Reveal-modus (scoreVisibility='reveal' && status='active'): vi rendrer
  * en venterom-melding i stedet for tall — Nassau-formatet er drama-drevet
@@ -97,9 +113,13 @@ export function NassauView({
   chromeless = false,
   settlement,
   footerSlot,
+  viewerUserId,
 }: NassauViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const tb = useTranslations('leaderboard.nassau.board');
+  const tBoard = useTranslations('leaderboard.board');
+  const tStatus = useTranslations('gameStatus');
 
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
@@ -137,133 +157,248 @@ export function NassauView({
     );
   }
 
-  const subtitleParts = [
-    gameStatus === 'finished' ? tc('afterNHoles', { holes: holesPlayed }) : tc('live'),
-    'Nassau',
-    result.scoring === 'net' ? tc('netto') : tc('brutto'),
-  ];
+  const viewer = viewerUserId || null;
+  const board = summarizeNassau(result, { finished: gameStatus === 'finished', viewerUserId: viewer });
+  const viewerPlays = viewer !== null && result.players.some((p) => p.userId === viewer);
+
+  // The cards and the sweep line name players short: the nickname, else the
+  // first name. The list keeps the full name (`formatRevealName`).
+  const shortName = (userId: string): string => {
+    const info = playersById.get(userId);
+    return info?.nickname || firstName(info?.name) || tc('unknownPlayer');
+  };
+
+  const kicker: Record<NassauSectionKey, string> = {
+    front9: t('nassau.front9Heading'),
+    back9: t('nassau.back9Heading'),
+    total18: t('nassau.totalLabel'),
+  };
+
+  const cardView = (key: NassauSectionKey, s: NassauCardSummary): NassauCardView => {
+    const sole = s.leaderUserIds.length === 1 ? s.leaderUserIds[0] : null;
+    return {
+      kicker: kicker[key],
+      status:
+        s.state === 'decided'
+          ? tb('stateDecided')
+          : s.state === 'live'
+            ? tb('stateLive', { done: s.holesDone, total: s.holesTotal })
+            : tb('stateWaiting'),
+      decided: s.state === 'decided',
+      leaderMark:
+        sole === null ? null : s.state === 'decided' ? (
+          <span aria-hidden className="flex shrink-0">
+            <Medallion place={1} size={22} />
+          </span>
+        ) : (
+          <span
+            aria-hidden
+            className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border border-primary font-serif text-[11px] font-semibold"
+          >
+            1
+          </span>
+        ),
+      leaderName:
+        s.state === 'waiting'
+          ? null
+          : sole !== null
+            ? sole === viewer
+              ? tb('you')
+              : shortName(sole)
+            : s.leaderUserIds.length > 1
+              ? s.state === 'decided'
+                ? tb('pushed')
+                : tb('tiedLead')
+              : tb('noWinner'),
+      score: s.leaderHeadline?.text ?? null,
+      viewer: viewerLine(s),
+    };
+  };
+
+  const viewerLine = (s: NassauCardSummary): NassauCardView['viewer'] => {
+    const v = s.viewer;
+    if (!v) return null;
+    if (s.state === 'decided' && s.leaderUserIds.length === 1 && s.leaderUserIds[0] === viewer) {
+      return { text: tb('viewerWon'), sr: tb('viewerWon'), strong: true };
+    }
+    if (s.state === 'live' && v.rank === 1 && !v.tied) {
+      const text = v.lead === null ? tb('viewerLead') : tb('viewerLeadBy', { lead: v.lead });
+      return { text, sr: text, strong: true };
+    }
+    const tied = String(v.tied);
+    return v.gap === null
+      ? { text: tb('viewerRank', { tied, rank: v.rank }), sr: tb('viewerSr', { tied, rank: v.rank }), strong: false }
+      : {
+          text: tb('viewerRankGap', { tied, rank: v.rank, gap: v.gap }),
+          sr: tb('viewerSrGap', { tied, rank: v.rank, gap: v.gap }),
+          strong: false,
+        };
+  };
+
+  const cards = {} as Record<NassauSectionKey, NassauCardView>;
+  const panels = {} as Record<NassauSectionKey, ReactNode>;
+  for (const key of NASSAU_SECTION_KEYS) {
+    cards[key] = cardView(key, board.sections[key]);
+    panels[key] = (
+      <SectionBlock
+        sectionKey={key}
+        summary={board.sections[key]}
+        section={result.sections[key]}
+        ranking={result.ranking}
+        scoring={result.scoring}
+        playersById={playersById}
+        viewerUserId={viewer}
+        headingLevel={chromeless ? 'h3' : 'h2'}
+        // Only the open list renders, so the reactions still show once per
+        // player on the screen (#943).
+        showReactions
+      />
+    );
+  }
+
+  const sweep = board.sweep;
+  const sweepLine = sweep ? (
+    <p
+      data-testid="nassau-sweep"
+      className="mt-3 rounded-[14px] border border-warning/40 bg-warning-soft px-3.5 py-2.5 text-[13px] text-text"
+    >
+      <span className="font-semibold">
+        {sweep.userId === viewer ? tb('sweepSelf') : tb('sweepOther', { name: shortName(sweep.userId) })}
+      </span>
+      {/* Spectators and organizers who do not play get the first sentence only. */}
+      {viewerPlays && sweep.userId !== viewer && (
+        <> {tb('stopSweep', { section: sweep.openSection })}</>
+      )}
+    </p>
+  ) : null;
+
+  const pill =
+    gameStatus === 'finished'
+      ? tc('afterNHoles', { holes: holesPlayed })
+      : gameStatus === 'active'
+        ? pillText(tBoard, holesPlayed)
+        : tStatus(gameStatus);
+  const Title = chromeless ? 'h2' : 'h1';
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
-      {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
+      <div className={chromeless ? 'px-3.5 pt-3' : undefined}>
+        <header
+          data-focus-surface="strong"
+          className="rounded-2xl bg-surface-strong px-2 pt-2 pb-5 text-bg-tint"
+        >
+          <div className="flex items-center justify-between gap-3">
+            {chromeless ? (
+              <span aria-hidden className="h-11 w-11 shrink-0" />
+            ) : (
+              <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} tone="onStrong" />
+            )}
+            <span
+              data-testid="nassau-pill"
+              className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-xs font-semibold tabular-nums"
+            >
+              {gameStatus === 'active' && (
+                <span aria-hidden className="h-2 w-2 rounded-full bg-success" />
+              )}
+              {pill}
+            </span>
+          </div>
+          <div className="px-3">
+            <p className="truncate text-xs font-semibold text-bg-tint/80">
+              {tb('kicker', { game: gameName, scoring: result.scoring })}
+            </p>
+            <Title className="mt-1 font-serif text-[28px] font-medium leading-[1.1]">
+              {tb('title')}
+            </Title>
+            <p className="mt-0.5 text-[13px] text-bg-tint/85">{tb('subtitle')}</p>
+          </div>
+        </header>
 
-      <div className="px-6 pt-1.5 pb-3.5 text-center">
-        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
-        </h1>
-        <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
-        </p>
+        <NassauSectionTabs
+          cards={cards}
+          defaultSection={board.defaultSection}
+          panels={panels}
+          tablistLabel={tb('tablistLabel')}
+          aside={sweepLine}
+          hint={tb('tapHint')}
+        />
+
+        {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+        {settlement && (
+          <div className="pt-5">
+            <SettlementTable
+              settlement={settlement}
+              playersById={playersById}
+              gameName={gameName}
+              mode="nassau"
+              isFinal={gameStatus === 'finished'}
+            />
+          </div>
+        )}
       </div>
 
-      <div
-        data-testid="nassau-sections"
-        className="flex flex-col gap-5 px-3.5 pt-3 pb-3.5"
-      >
-        <SectionBlock
-          testId="nassau-section-front9"
-          heading={t('nassau.front9Heading')}
-          subheading={t('nassau.front9Sub')}
-          section={result.sections.front9}
-          ranking={result.ranking}
-          playersById={playersById}
-          t={t}
-        />
-        <SectionBlock
-          testId="nassau-section-back9"
-          heading={t('nassau.back9Heading')}
-          subheading={t('nassau.back9Sub')}
-          section={result.sections.back9}
-          ranking={result.ranking}
-          playersById={playersById}
-          t={t}
-        />
-        <SectionBlock
-          testId="nassau-section-total18"
-          heading={t('nassau.total18Heading')}
-          subheading={t('nassau.total18Sub')}
-          section={result.sections.total18}
-          ranking={result.ranking}
-          playersById={playersById}
-          t={t}
-          // Reactions live once per player, on the aggregate (Totalt 18) section
-          // only — not repeated under Front 9 / Back 9 (#943).
-          showReactions
-        />
-      </div>
-
-      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
-      {settlement && (
-        <div className="px-3.5 pb-3.5">
-          <SettlementTable
-            settlement={settlement}
-            playersById={playersById}
-            gameName={gameName}
-            mode="nassau"
-            isFinal={gameStatus === 'finished'}
-          />
-        </div>
-      )}
-
-      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
+      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-4 pb-4" />
     </LeaderboardShell>
   );
 }
 
 /**
- * Én av de tre seksjonene (Front 9 / Back 9 / Totalt). Header + per-spiller-
- * rader. Pending-tilstand vises som en egen meldings-rad; vinner-highlight
- * gjelder kun ren-vinner-tilfellet (push får ingen accent, men T1-prefix-en
- * gjør at brukeren skjønner at to står på første plass).
+ * The open match's full list (#2327): one card with a row per player — place,
+ * name, holes played and the number the match ranks on. A match nobody has
+ * started shows the waiting box. Gold, the medals and the tied chip belong to
+ * a decided match only, so nobody sees a winner before everyone has played.
  */
 function SectionBlock({
-  testId,
-  heading,
-  subheading,
+  sectionKey,
+  summary,
   section,
   ranking,
+  scoring,
   playersById,
-  t,
+  viewerUserId,
+  headingLevel,
   showReactions = false,
 }: {
-  testId: string;
-  heading: string;
-  subheading: string;
+  sectionKey: NassauSectionKey;
+  summary: NassauCardSummary;
   section: NassauSection;
   /** #2625: a section ranked on strokes to par shows it («−2», «E»). */
   ranking: NassauResult['ranking'];
+  scoring: NassauResult['scoring'];
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  viewerUserId: string | null;
+  headingLevel: 'h2' | 'h3';
   showReactions?: boolean;
 }) {
+  const t = useTranslations('leaderboard');
+  const tb = useTranslations('leaderboard.nassau.board');
   const tc = useTranslations('leaderboard.common');
-  const hasCleanWinner =
-    !section.isPending && section.winnerUserIds.length === 1;
-  const hasPushWinner =
-    !section.isPending && section.winnerUserIds.length > 1;
+  const testId = `nassau-section-${sectionKey}`;
+  const decided = summary.state === 'decided';
+  const winnerUserIds = decided ? summary.leaderUserIds : [];
+  const unit = headlineUnit(ranking) === 'toPar' ? 'toPar' : scoring;
+  const Heading = headingLevel;
 
   return (
-    <section data-testid={testId} className="flex flex-col gap-2">
-      <header className="flex items-baseline justify-between gap-3 px-1">
-        <div>
-          <h2 className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-            {heading}
-          </h2>
-          <p className="mt-0.5 text-[11px] tabular-nums text-muted">
-            {subheading}
-          </p>
-        </div>
-        {hasPushWinner && (
-          <span
-            data-testid={`${testId}-push`}
-            className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-semibold text-muted"
-          >
-            {t('nassau.sectionTied')}
-          </span>
-        )}
+    <section data-testid={testId}>
+      <header className="flex items-baseline justify-between gap-3 px-1 pt-4 pb-2">
+        <span className="flex min-w-0 items-baseline gap-2">
+          <Heading className="text-xs leading-[normal] font-semibold text-muted">
+            {tb('panelHeading', { section: sectionKey })}
+          </Heading>
+          {winnerUserIds.length > 1 && (
+            <span
+              data-testid={`${testId}-push`}
+              className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold text-muted"
+            >
+              {t('nassau.sectionTied')}
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 text-xs leading-[normal] text-muted">{tb('listUnit', { unit })}</span>
       </header>
 
-      {section.isPending ? (
+      {summary.state === 'waiting' ? (
         <div
           data-testid={`${testId}-pending`}
           className="rounded-2xl border border-dashed border-border bg-surface px-4 py-5 text-center"
@@ -276,32 +411,35 @@ function SectionBlock({
           </p>
         </div>
       ) : (
-        <ul
+        <ol
           data-testid={`${testId}-list`}
-          className="flex flex-col gap-2 list-none"
+          className="list-none overflow-hidden rounded-2xl border border-border bg-surface"
         >
           {section.players.map((line, i) => {
+            const isViewer = line.userId === viewerUserId;
             const info = playersById.get(line.userId);
-            const displayName = info
-              ? formatRevealName(info.name, info.nickname)
-              : tc('unknownPlayerFull');
-            const isWinnerHighlight =
-              hasCleanWinner && section.winnerUserIds[0] === line.userId;
-
+            const displayName = isViewer
+              ? tb('you')
+              : info
+                ? formatRevealName(info.name, info.nickname)
+                : tc('unknownPlayerFull');
             return (
               <SectionPlayerRow
                 key={line.userId}
                 line={line}
                 ranking={ranking}
                 displayName={displayName}
-                isWinnerHighlight={isWinnerHighlight}
+                decided={decided}
+                isWinnerHighlight={winnerUserIds.length === 1 && winnerUserIds[0] === line.userId}
+                isViewer={isViewer}
+                first={i === 0}
                 staggerIndex={i}
-                t={t}
+                holesLabel={tb('rowHoles', { holes: line.holesPlayed })}
                 showReactions={showReactions}
               />
             );
           })}
-        </ul>
+        </ol>
       )}
     </section>
   );
@@ -311,69 +449,56 @@ function SectionPlayerRow({
   line,
   ranking,
   displayName,
+  decided,
   isWinnerHighlight,
+  isViewer,
+  first,
   staggerIndex,
-  t,
+  holesLabel,
   showReactions = false,
 }: {
   line: NassauSectionLine;
   ranking: NassauResult['ranking'];
   displayName: string;
+  decided: boolean;
   isWinnerHighlight: boolean;
+  isViewer: boolean;
+  first: boolean;
   staggerIndex: number;
-  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  holesLabel: string;
   showReactions?: boolean;
 }) {
   const isTied = line.tiedWith.length > 0;
   const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;
   const headline = teamHeadline(ranking, { total: line.totalEffectiveStrokes, toPar: line.toPar });
-  // Champagne-tinted Card kun for ren vinner; push/T1 viser nøytral rad
-  // siden ingen unit deles ut og UI-en skal speile det (samme prinsipp
-  // som Wolf-tied: stake bæres uten poeng-utdeling).
-  const cardClass = isWinnerHighlight
-    ? 'border-accent bg-accent/[0.06]'
-    : '';
-
-  const isPodium = line.rank >= 1 && line.rank <= 3;
+  // Champagne tint only for a clean winner of a decided match; a tie (push)
+  // shows neutral rows, since no unit is given out — the same principle as
+  // Wolf-tied. The viewer's own row is marked when it is not the winner's.
+  const rowTone = isWinnerHighlight ? 'bg-accent/10' : isViewer ? 'bg-primary-soft' : '';
+  const medal = decided && !isTied && line.rank >= 1 && line.rank <= 3;
 
   return (
     <li
-      className="list-none reveal-up"
+      className={`list-none reveal-up ${first ? '' : 'border-t border-row-divider-warm'}`}
       style={{ animationDelay: `${60 + staggerIndex * 70}ms` }}
       data-testid={`nassau-row-${line.userId}`}
       data-winner={isWinnerHighlight ? 'true' : undefined}
+      data-viewer={isViewer ? 'true' : undefined}
     >
-      <Card className={`flex items-center gap-3.5 px-4 py-3 ${cardClass}`}>
-        {isPodium && !isTied ? (
-          <span className="shrink-0">
-            <Medallion place={line.rank as 1 | 2 | 3} size={32} />
+      <div
+        className={`grid grid-cols-[28px_minmax(0,1fr)_60px_44px] items-center gap-2 px-3.5 py-2.5 leading-[normal] ${rowTone}`}
+      >
+        {medal ? (
+          <span className="flex justify-center">
+            <Medallion place={line.rank as 1 | 2 | 3} size={28} />
           </span>
         ) : (
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[15px] font-medium text-muted tabular-nums">
-            {rankLabel}
-          </span>
+          <span className="text-center font-serif font-semibold">{rankLabel}</span>
         )}
-
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-            {displayName}
-          </p>
-          <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {t('nassau.sectionBrutto', { gross: line.totalGrossStrokes })}
-            {' · '}
-            {t('nassau.sectionHullSpilt', { holes: line.holesPlayed })}
-          </p>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <span className="score-num block text-[24px] leading-none tracking-[-0.02em] text-text tabular-nums">
-            {headline.text}
-          </span>
-          <span className="mt-1 block text-xs font-semibold text-muted">
-            {headline.unit === 'toPar' ? t('common.vsParLabel') : t('nassau.totalEffectiveStrokesLabel')}
-          </span>
-        </div>
-      </Card>
+        <span className="truncate text-[15px] font-semibold text-text">{displayName}</span>
+        <span className="text-right text-xs leading-[normal] text-muted">{holesLabel}</span>
+        <span className="score-num text-right text-[18px] text-text">{headline.text}</span>
+      </div>
       {showReactions && <RowReactionsForPlayer targetUserId={line.userId} />}
     </li>
   );
