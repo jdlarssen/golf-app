@@ -71,6 +71,7 @@ import {
   hasAnyStroke,
   leaderboardVisibility,
   nameLookup,
+  shortNameLookup,
 } from '../lib/leaderboardModel';
 import {
   computeGameLeaderboard,
@@ -750,6 +751,7 @@ export function LeaderboardBody({
   const { game } = bundle;
   const { userId } = useSession();
   const nameOf = nameLookup(bundle.players);
+  const shortNameOf = shortNameLookup(bundle.players);
 
   const view = boardView(bundle, scores, extras);
 
@@ -877,6 +879,7 @@ export function LeaderboardBody({
         patsomeBoard={patsomeBoard}
         resultInSentence={resultHero?.hero.resultInSentence ?? false}
         viewerUserId={userId}
+        shortNameOf={shortNameOf}
       />
       {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
           nettsiden, med samme sidemarg som sideturneringen. */}

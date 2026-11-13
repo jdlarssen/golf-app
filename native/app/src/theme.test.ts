@@ -70,6 +70,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   scoreOver2Bg: '--score-over2-bg',
   onStrong: '--bg-tint',
   accentText: '--accent-text',
+  successText: '--success-text',
   trackBg: '--hole-completed-bg',
   divider: '--row-divider-warm',
   scoreUnsetFg: '--score-unset-fg',

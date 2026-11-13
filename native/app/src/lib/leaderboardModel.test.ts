@@ -23,7 +23,7 @@ import {
   matchStandingLine,
   matchStrip,
   nameLookup,
-  nassauSectionLine,
+  shortNameLookup,
   skinsCoinLabel,
   skinsCount,
   skinsHolesWon,
@@ -116,6 +116,20 @@ describe('navn', () => {
     expect(nameOf('b')).toBe('Ukjent spiller');
     expect(nameOf('c')).toBe('Cato');
     expect(nameOf('finnes-ikke')).toBe('Ukjent spiller');
+  });
+
+  it('gir fornavnet, fullt navn når to deler det, og «(ukjent)» for ukjent id (#2813)', () => {
+    const shortNameOf = shortNameLookup([
+      player({ userId: 'a', name: 'Anna Andersen' }),
+      player({ userId: 'b', name: 'Anna Berg' }),
+      player({ userId: 'c', name: 'Cato Dahl' }),
+      player({ userId: 'd', name: null, nickname: 'Dino' }),
+    ]);
+    expect(shortNameOf('a')).toBe('Anna Andersen');
+    expect(shortNameOf('b')).toBe('Anna Berg');
+    expect(shortNameOf('c')).toBe('Cato');
+    expect(shortNameOf('d')).toBe('Dino');
+    expect(shortNameOf('finnes-ikke')).toBe('(ukjent)');
   });
 
   it('setter lagnummeret først og navnene etter', () => {
@@ -323,19 +337,6 @@ describe('potter', () => {
     expect(carriedPotLine(3, 'finished')).toBe('3 skins ble aldri vunnet.');
     // #2317: ett skin er entall («1 skins» sto på skjermen).
     expect(carriedPotLine(1, 'finished')).toBe('1 skin ble aldri vunnet.');
-  });
-
-  it('sier at en delt Nassau-seksjon IKKE gir poeng', () => {
-    const nameOf = nameLookup([player({ userId: 'a', name: 'Anna' })]);
-    expect(nassauSectionLine({ winnerUserIds: ['a'], isPending: false }, nameOf)).toBe(
-      'Vinner: Anna',
-    );
-    expect(
-      nassauSectionLine({ winnerUserIds: ['a', 'b'], isPending: false }, nameOf),
-    ).toBe('Delt — ingen poeng');
-    expect(nassauSectionLine({ winnerUserIds: [], isPending: true }, nameOf)).toBe(
-      'Ikke avgjort ennå',
-    );
   });
 });
 

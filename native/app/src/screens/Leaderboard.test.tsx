@@ -11,6 +11,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { ResultView } from '../components/leaderboard/ResultView';
+import { fours, nassauResult } from '../../../../lib/leaderboard/__fixtures__/nassauResult';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
 import type { GameBundle } from '../data/gameBundle';
@@ -396,7 +397,7 @@ describe('Leaderboard — reaksjonene (#2754)', () => {
     expect(screen.getByTestId('reaction-strip')).toBeTruthy();
   });
 
-  it('nassau: stripa kommer også uten egen tavle, nederst på skjermen', async () => {
+  it('nassau: stripa kommer fra radene i lista, nederst på skjermen', async () => {
     mockBundleOverride.current = {
       ...mockBundle,
       game: {
@@ -407,7 +408,7 @@ describe('Leaderboard — reaksjonene (#2754)', () => {
     };
     await renderLeaderboard();
     await act(async () => {
-      fireEvent.press(await screen.findByTestId('leaderboard-table-row-mate'));
+      fireEvent.press(await screen.findByTestId('nassau-row-mate'));
     });
     expect(screen.getByTestId('reaction-strip')).toBeTruthy();
   });
@@ -1132,29 +1133,9 @@ describe('ResultView', () => {
   // laget på nettsiden. Den eneste testen av at disse grenene tegner kortet.
   const twoPlayers = <T extends object>(line: (userId: string, i: number) => T) =>
     ['me', 'mate'].map((userId, i) => ({ userId, rank: i + 1, tiedWith: [], ...line(userId, i) }));
-  const nassauSection = (name: string) => ({
-    name,
-    holeNumbers: [],
-    players: [],
-    winnerUserIds: [],
-    isPending: true,
-  });
-
   it.each([
-    [
-      'nassau',
-      {
-        kind: 'nassau',
-        scoring: 'net',
-        sections: {
-          front9: nassauSection('front9'),
-          back9: nassauSection('back9'),
-          total18: nassauSection('total18'),
-        },
-        players: twoPlayers((_id, i) => ({ units: 1 - i })),
-        holes: [],
-      },
-    ],
+    // #2755: Nassau har egen tavle, så resultatet kommer fra den ekte motoren.
+    ['nassau', nassauResult({ me: fours(9), mate: fours(9) })],
     [
       'nines',
       {
@@ -1184,7 +1165,7 @@ describe('ResultView', () => {
       />,
     );
 
-    expect(screen.getByTestId('leaderboard-table')).toBeTruthy();
+    expect(screen.getByTestId(_kind === 'nassau' ? 'nassau-view' : 'leaderboard-table')).toBeTruthy();
     expect(screen.getByTestId('settlement')).toBeTruthy();
   });
 
@@ -1390,8 +1371,8 @@ describe('resultatets topp', () => {
 
   it('et format uten tavle: setningen over tabellen, og spillnavnet står ikke to ganger', async () => {
     mockBundleOverride.current = game({
-      gameMode: 'nassau',
-      modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
+      gameMode: 'nines',
+      modeConfig: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' },
     });
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
