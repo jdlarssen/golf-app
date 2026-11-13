@@ -288,6 +288,8 @@ flowchart LR
 
 **Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/tv`) og innbyggingen (`/embed`) får den ikke.
 
+**Skinspotten (#2317):** mens et Skins-spill pågår, står potten øverst på et skoggrønt kort: hvor mange skins som står på spill og på hvilket hull, hvilke delte hull som fikk potten til å vokse, og om hullet venter på resten av slagene. Under står «Hull for hull» som én mynt per hull (vinnerens initialer, stiplet mynt for delt hull, gullring der potten ble vunnet) og stillingen som en slank liste. Et ferdig spill har pallen i stedet for kortet. Utregningen bor i `lib/leaderboard/skinsPot.ts`.
+
 **Oppgjøret som kvittering (#2296):** spiller dere Skins, Nassau, Wolf, Bingo Bango Bongo, Acey Deucey eller Nines med kroner, står oppgjøret som en kvittering under tavla (og under duellkortet med to spillere): hvem betaler hvem og sluttsummen, med tittelen «Oppgjøret så langt» mens runden pågår; når spillet er ferdig og noen skal betale, kopierer «Kopier til gruppechatten» det som ren tekst (`lib/format/settlementText.ts`).
 
 ### P5 — Profil, historikk & konto

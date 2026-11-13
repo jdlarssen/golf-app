@@ -3287,17 +3287,35 @@
       "skinLabel": "{count, plural, one {skin} other {skins}}",
       "skinCount": "{count, plural, one {1 skin} other {# skins}}",
       "atStakeLabel": "{count, plural, one {1 skin på spill} other {# skins på spill}}",
-      "outcomeWon": "Vunnet",
-      "outcomeCarryover": "Delt",
       "outcomePending": "Venter på score",
       "carriedInLabel": "{count, plural, one {# skin rullet inn} other {# skins rullet inn}}",
-      "carriedForward": "ruller videre",
       "unwonNote": "ikke vunnet. Siste spilte hull ble delt.",
       "skinsWinnerKronet": "Skins-vinneren kåret",
       "skinsWinnerSubtitle": "Skins · {scoring}",
       "holesWonCount": "{count, plural, one {# hull vunnet} other {# hull vunnet}}",
       "drattVidere": "Delt → dratt videre",
-      "bruttoLabel": "brutto {count}"
+      "bruttoLabel": "brutto {count}",
+      "pot": {
+        "onHole": "på spill på hull {hole}",
+        "carriedFrom": "Delt på {holes}, så potten har vokst",
+        "waiting": "Avgjøres når alle har ført hull {hole}.",
+        "settled": "Alle hull er avgjort",
+        "settlementLink": "Se oppgjøret"
+      },
+      "coins": {
+        "title": "Hull for hull",
+        "won": "Hull {hole}: {name} vant {count, plural, one {# skin} other {# skins}}",
+        "carried": "Hull {hole}: delt, {count, plural, one {# skin ruller} other {# skins ruller}} videre",
+        "current": "Hull {hole}: {count, plural, one {# skin} other {# skins}} på spill nå",
+        "future": "Hull {hole}: ikke avgjort",
+        "legendWon": "Initialer: vant hullet",
+        "legendCarried": "delt, ruller videre",
+        "legendPot": "Gullring: potten"
+      },
+      "standing": {
+        "title": "Stillingen",
+        "holes": "{count, plural, one {# hull} other {# hull}}"
+      }
     },
     "matchplay": {
       "matchCannotShow": "Matchen kan ikke vises",
