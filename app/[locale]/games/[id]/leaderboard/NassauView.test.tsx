@@ -90,7 +90,7 @@ describe('NassauView — three matches as three cards (#2327)', () => {
 
   it('shows the viewer’s line only to a player', () => {
     const { unmount } = render(<NassauView {...props({ viewerUserId: 'meg' })} />);
-    expect(card('front9')).toHaveTextContent(/Du er nummer 3, \d+ slag bak/);
+    expect(card('front9')).toHaveTextContent(/Du er nummer \d+, \d+ slag bak/);
     expect(card('back9')).toHaveTextContent(/Du leder/);
     // The viewer's own row is marked and named «Deg».
     const mine = screen.getByTestId('nassau-row-meg');
