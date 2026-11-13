@@ -12,6 +12,7 @@ import {
   type FirstHalfTableView,
 } from '../../../../lib/leaderboard/firstHalfReveal';
 import { isFrontNineOpen } from '../../../../lib/leaderboard/frontNineGate';
+import type { CoinState, SkinsPotNow } from '../../../../lib/leaderboard/skinsPot';
 import { revealState, shouldHideNetto } from '../../../../lib/games/visibility';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -33,7 +34,7 @@ import {
 } from '../../../../lib/wolf/holeLabels';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
-import { displayName } from './display';
+import { displayName, formatNameList } from './display';
 import { gameSegment } from './segmentRound';
 
 /**
@@ -186,6 +187,63 @@ export function matchStandingLine(opts: {
 // ---------------------------------------------------------------------------
 // Potter
 // ---------------------------------------------------------------------------
+
+/** «1 skin», «4 skins» — webbens `skins.skinCount`. */
+export function skinsCount(count: number): string {
+  return count === 1 ? '1 skin' : `${count} skins`;
+}
+
+/**
+ * Toppkortet i Skins (#2317): tallet øverst og linjene under, samme tekst som
+ * webbens `leaderboard.skins.pot.*`. Hvor potten står, regner den delte
+ * `skinsPotNow` ut (`lib/leaderboard/skinsPot.ts`).
+ */
+export function skinsPotLines(pot: SkinsPotNow): { headline: string; lines: string[] } {
+  if (pot.kind === 'settled') {
+    return {
+      headline: 'Alle hull er avgjort',
+      lines:
+        pot.hanging > 0
+          ? [`${skinsCount(pot.hanging)} hang igjen. Siste spilte hull ble delt.`]
+          : [],
+    };
+  }
+  const lines = [`på spill på hull ${pot.holeNumber}`];
+  if (pot.carriedFrom.length > 0) {
+    lines.push(`Delt på ${formatNameList(pot.carriedFrom.map(String))}, så potten har vokst`);
+  }
+  if (pot.waiting) lines.push(`Avgjøres når alle har ført hull ${pot.holeNumber}.`);
+  return { headline: skinsCount(pot.atStake), lines };
+}
+
+/**
+ * Det skjermleseren sier om én mynt i «Hull for hull» (#2317), som webbens
+ * `leaderboard.skins.coins.*`. `count` er skinsene vunnet, rullet videre eller
+ * på spill; `name` er vinneren.
+ */
+export function skinsCoinLabel(
+  state: CoinState,
+  hole: number,
+  count: number,
+  name: string | null,
+): string {
+  switch (state) {
+    case 'won':
+    case 'potWon':
+      return `Hull ${hole}: ${name} vant ${skinsCount(count)}`;
+    case 'carried':
+      return `Hull ${hole}: delt, ${skinsCount(count)} ruller videre`;
+    case 'current':
+      return `Hull ${hole}: ${skinsCount(count)} på spill nå`;
+    case 'future':
+      return `Hull ${hole}: ikke avgjort`;
+  }
+}
+
+/** Hullene i stillingen: «3 hull» som tegningen, «3 hull vunnet» til skjermleseren. */
+export function skinsHolesWon(count: number): { shown: string; label: string } {
+  return { shown: `${count} hull`, label: `${count} hull vunnet` };
+}
 
 /**
  * Skins-potten som henger igjen. Motoren kjenner ikke spillets status og gir
