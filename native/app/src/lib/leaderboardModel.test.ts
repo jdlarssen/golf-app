@@ -11,6 +11,7 @@ import {
 } from '../../../../lib/games/holeScope';
 import { buildModeResultFromData } from '../../../../lib/scoring/buildModeResultFromData';
 import type { WolfResult } from '../../../../lib/scoring/modes/types';
+import type { CoinState, SkinsPotNow } from '../../../../lib/leaderboard/skinsPot';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { LocalScore } from '../data/db';
 import {
@@ -23,6 +24,10 @@ import {
   matchStrip,
   nameLookup,
   nassauSectionLine,
+  skinsCoinLabel,
+  skinsCount,
+  skinsHolesWon,
+  skinsPotLines,
   teamLabel,
   wolfCatchUpRuleLine,
   wolfChoiceLabel,
@@ -269,6 +274,44 @@ describe('matchStanding + matchStandingLine', () => {
         side2Name: 'Bjørn',
       }),
     ).toBe('Anna 1up etter 4 hull');
+  });
+});
+
+// #2317: skinspotten sier det samme som nettets `leaderboard.skins.pot.*` og
+// `leaderboard.skins.coins.*`.
+describe('skinspotten', () => {
+  it.each([
+    [{ kind: 'pending', holeNumber: 1, atStake: 1, carriedFrom: [], waiting: false }, ['1 skin', 'på spill på hull 1']],
+    [
+      { kind: 'pending', holeNumber: 12, atStake: 3, carriedFrom: [10, 11], waiting: true },
+      ['3 skins', 'på spill på hull 12', 'Delt på 10 og 11, så potten har vokst', 'Avgjøres når alle har ført hull 12.'],
+    ],
+    [
+      { kind: 'pending', holeNumber: 5, atStake: 4, carriedFrom: [2, 3, 4], waiting: false },
+      ['4 skins', 'på spill på hull 5', 'Delt på 2, 3 og 4, så potten har vokst'],
+    ],
+    [{ kind: 'settled', hanging: 0 }, ['Alle hull er avgjort']],
+    [{ kind: 'settled', hanging: 2 }, ['Alle hull er avgjort', '2 skins hang igjen. Siste spilte hull ble delt.']],
+  ] as const)('toppkortet for %j', (pot, lines) => {
+    const out = skinsPotLines(pot as SkinsPotNow);
+    expect([out.headline, ...out.lines]).toEqual(lines);
+  });
+
+  it.each([
+    ['won', 3, 'Marte Lie', 1, 'Hull 3: Marte Lie vant 1 skin'],
+    ['potWon', 8, 'Marte Lie', 2, 'Hull 8: Marte Lie vant 2 skins'],
+    ['carried', 4, null, 2, 'Hull 4: delt, 2 skins ruller videre'],
+    ['carried', 2, null, 1, 'Hull 2: delt, 1 skin ruller videre'],
+    ['current', 12, null, 3, 'Hull 12: 3 skins på spill nå'],
+    ['future', 13, null, 1, 'Hull 13: ikke avgjort'],
+  ] as const)('mynten %s på hull %i sier hva den er', (state, hole, name, count, label) => {
+    expect(skinsCoinLabel(state as CoinState, hole, count, name)).toBe(label);
+  });
+
+  it('stillingen skriver hull og skins som tegningen', () => {
+    expect(skinsCount(1)).toBe('1 skin');
+    expect(skinsCount(4)).toBe('4 skins');
+    expect(skinsHolesWon(3)).toEqual({ shown: '3 hull', label: '3 hull vunnet' });
   });
 });
 
