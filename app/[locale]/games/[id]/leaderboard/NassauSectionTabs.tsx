@@ -2,7 +2,10 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
+import { topReactions } from '@/lib/games/reactions/aggregate';
 import { NASSAU_SECTION_KEYS, type NassauSectionKey } from '@/lib/leaderboard/nassauBoard';
+import { useReactionsContext } from './ReactionsProvider';
+import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 /** One card's finished text: the server builds it, so this stays presentational. */
 export interface NassauCardView {
@@ -95,6 +98,7 @@ export function NassauSectionTabs({
               )}
               {card.viewer && (
                 <span
+                  data-testid="nassau-card-you"
                   className={`border-t pt-1.5 text-[11px] ${
                     selected ? 'border-success/30 dark:border-primary/40' : 'border-row-divider-warm'
                   } ${card.viewer.strong ? 'font-semibold text-primary' : 'text-muted'}`}
@@ -116,5 +120,104 @@ export function NassauSectionTabs({
 
       <p className="px-1 pt-2.5 text-[13px] font-semibold text-primary">{hint}</p>
     </div>
+  );
+}
+
+/**
+ * One row of the open match's list (#2327): place, name, holes played and
+ * the number, in the artboard's columns. As on the live board (#2253), the
+ * row itself opens the reaction row under it, and the reactions a player has
+ * been given show as small counts by the name — so a row keeps its height
+ * until someone opens it. Without a `ReactionsProvider` (spectate, embed) or
+ * with an inert one (an organizer who does not play) the row is a plain `div`
+ * that still shows the counts.
+ */
+export function NassauListRow({
+  userId,
+  place,
+  name,
+  holes,
+  score,
+  tone,
+  first,
+  winner,
+  viewer,
+  staggerIndex,
+  reactionsLabel,
+}: {
+  userId: string;
+  /** The medal or the place number, already rendered. */
+  place: ReactNode;
+  name: string;
+  holes: string;
+  score: string;
+  /** Background for the winner's or the viewer's row. */
+  tone: string;
+  first: boolean;
+  winner: boolean;
+  viewer: boolean;
+  staggerIndex: number;
+  /** «Reaksjoner til {navn}», read after the row on the button. */
+  reactionsLabel: string;
+}) {
+  const ctx = useReactionsContext();
+  const [open, setOpen] = useState(false);
+  const panelId = `${useId()}-reactions`;
+  const given = ctx ? topReactions(ctx.getRow(userId).counts) : [];
+  const interactive = ctx !== null && !ctx.disabled;
+
+  // The divider sits inside the row's box, so a row is 44 px with it, as on the artboard.
+  const grid = `grid w-full grid-cols-[28px_minmax(0,1fr)_60px_44px] items-center gap-2 px-3.5 py-2.5 text-left leading-[normal] ${
+    first ? '' : 'border-t border-row-divider-warm'
+  } ${tone}`;
+  const cells = (
+    <>
+      {place}
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate text-[15px] font-semibold text-text">{name}</span>
+        {given.length > 0 && (
+          <span aria-hidden className="flex shrink-0 gap-1.5 text-[11px] leading-none tabular-nums">
+            {given.map(([emoji, n]) => (
+              <span key={emoji} className="inline-flex items-center gap-0.5">
+                {emoji}
+                <span className="text-muted">{n}</span>
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+      <span className="text-right text-xs leading-[normal] text-muted">{holes}</span>
+      <span className="score-num text-right text-[18px] text-text">{score}</span>
+    </>
+  );
+
+  return (
+    <li
+      className="list-none reveal-up"
+      style={{ animationDelay: `${60 + staggerIndex * 70}ms` }}
+      data-testid={`nassau-row-${userId}`}
+      data-winner={winner ? 'true' : undefined}
+      data-viewer={viewer ? 'true' : undefined}
+    >
+      {interactive ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          onClick={() => setOpen((o) => !o)}
+          className={`min-h-11 ${grid}`}
+        >
+          {cells}
+          <span className="sr-only">{reactionsLabel}</span>
+        </button>
+      ) : (
+        <div className={grid}>{cells}</div>
+      )}
+      {open && (
+        <div id={panelId} className="px-3.5 pb-2">
+          <RowReactionsForPlayer targetUserId={userId} />
+        </div>
+      )}
+    </li>
   );
 }

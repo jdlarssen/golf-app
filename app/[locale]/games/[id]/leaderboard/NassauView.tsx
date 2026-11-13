@@ -15,15 +15,10 @@ import {
   type NassauSectionKey,
 } from '@/lib/leaderboard/nassauBoard';
 import { pillText } from './boardText';
-import { NassauSectionTabs, type NassauCardView } from './NassauSectionTabs';
+import { NassauListRow, NassauSectionTabs, type NassauCardView } from './NassauSectionTabs';
 import { SettlementTable } from './SettlementTable';
 import type { Settlement } from '@/lib/scoring/settlement';
-import type {
-  NassauResult,
-  NassauSection,
-  NassauSectionLine,
-} from '@/lib/scoring/modes/types';
-import { RowReactionsForPlayer } from './RowReactionsForPlayer';
+import type { NassauResult, NassauSection } from '@/lib/scoring/modes/types';
 
 /**
  * Spillerinfo for NassauView. En map fra userId → navn + kallenavn.
@@ -249,9 +244,6 @@ export function NassauView({
         playersById={playersById}
         viewerUserId={viewer}
         headingLevel={chromeless ? 'h3' : 'h2'}
-        // Only the open list renders, so the reactions still show once per
-        // player on the screen (#943).
-        showReactions
       />
     );
   }
@@ -259,7 +251,7 @@ export function NassauView({
   const sweep = board.sweep;
   const sweepLine = sweep ? (
     <p
-      data-testid="nassau-sweep"
+      data-testid="nassau-sweep-line"
       className="mt-3 rounded-[14px] border border-warning/40 bg-warning-soft px-3.5 py-2.5 text-[13px] text-text"
     >
       <span className="font-semibold">
@@ -347,6 +339,8 @@ export function NassauView({
  * name, holes played and the number the match ranks on. A match nobody has
  * started shows the waiting box. Gold, the medals and the tied chip belong to
  * a decided match only, so nobody sees a winner before everyone has played.
+ * Only the open list renders, so each player's reactions show once on the
+ * screen (#943).
  */
 function SectionBlock({
   sectionKey,
@@ -357,7 +351,6 @@ function SectionBlock({
   playersById,
   viewerUserId,
   headingLevel,
-  showReactions = false,
 }: {
   sectionKey: NassauSectionKey;
   summary: NassauCardSummary;
@@ -368,11 +361,11 @@ function SectionBlock({
   playersById: Map<string, NassauPlayerInfo>;
   viewerUserId: string | null;
   headingLevel: 'h2' | 'h3';
-  showReactions?: boolean;
 }) {
   const t = useTranslations('leaderboard');
   const tb = useTranslations('leaderboard.nassau.board');
   const tc = useTranslations('leaderboard.common');
+  const tBoard = useTranslations('leaderboard.board');
   const testId = `nassau-section-${sectionKey}`;
   const decided = summary.state === 'decided';
   const winnerUserIds = decided ? summary.leaderUserIds : [];
@@ -413,6 +406,7 @@ function SectionBlock({
       ) : (
         <ol
           data-testid={`${testId}-list`}
+          data-focus-inset
           className="list-none overflow-hidden rounded-2xl border border-border bg-surface"
         >
           {section.players.map((line, i) => {
@@ -423,83 +417,41 @@ function SectionBlock({
               : info
                 ? formatRevealName(info.name, info.nickname)
                 : tc('unknownPlayerFull');
+            const isTied = line.tiedWith.length > 0;
+            const isWinner = winnerUserIds.length === 1 && winnerUserIds[0] === line.userId;
+            // Medals only in a decided match; a match under way shows plain places.
+            const medal = decided && !isTied && line.rank >= 1 && line.rank <= 3;
             return (
-              <SectionPlayerRow
+              <NassauListRow
                 key={line.userId}
-                line={line}
-                ranking={ranking}
-                displayName={displayName}
-                decided={decided}
-                isWinnerHighlight={winnerUserIds.length === 1 && winnerUserIds[0] === line.userId}
-                isViewer={isViewer}
+                userId={line.userId}
+                place={
+                  medal ? (
+                    <span className="flex justify-center">
+                      <Medallion place={line.rank as 1 | 2 | 3} size={28} />
+                    </span>
+                  ) : (
+                    <span className="text-center font-serif font-semibold">
+                      {isTied ? `T${line.rank}` : line.rank}
+                    </span>
+                  )
+                }
+                name={displayName}
+                holes={tb('rowHoles', { holes: line.holesPlayed })}
+                score={teamHeadline(ranking, { total: line.totalEffectiveStrokes, toPar: line.toPar }).text}
+                // Champagne tint only for a clean winner of a decided match; a
+                // tie (push) gives no unit, so its rows stay neutral, as Wolf-tied.
+                tone={isWinner ? 'bg-accent/10' : isViewer ? 'bg-primary-soft' : ''}
                 first={i === 0}
+                winner={isWinner}
+                viewer={isViewer}
                 staggerIndex={i}
-                holesLabel={tb('rowHoles', { holes: line.holesPlayed })}
-                showReactions={showReactions}
+                reactionsLabel={tBoard('reactionsTo', { name: displayName })}
               />
             );
           })}
         </ol>
       )}
     </section>
-  );
-}
-
-function SectionPlayerRow({
-  line,
-  ranking,
-  displayName,
-  decided,
-  isWinnerHighlight,
-  isViewer,
-  first,
-  staggerIndex,
-  holesLabel,
-  showReactions = false,
-}: {
-  line: NassauSectionLine;
-  ranking: NassauResult['ranking'];
-  displayName: string;
-  decided: boolean;
-  isWinnerHighlight: boolean;
-  isViewer: boolean;
-  first: boolean;
-  staggerIndex: number;
-  holesLabel: string;
-  showReactions?: boolean;
-}) {
-  const isTied = line.tiedWith.length > 0;
-  const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;
-  const headline = teamHeadline(ranking, { total: line.totalEffectiveStrokes, toPar: line.toPar });
-  // Champagne tint only for a clean winner of a decided match; a tie (push)
-  // shows neutral rows, since no unit is given out — the same principle as
-  // Wolf-tied. The viewer's own row is marked when it is not the winner's.
-  const rowTone = isWinnerHighlight ? 'bg-accent/10' : isViewer ? 'bg-primary-soft' : '';
-  const medal = decided && !isTied && line.rank >= 1 && line.rank <= 3;
-
-  return (
-    <li
-      className={`list-none reveal-up ${first ? '' : 'border-t border-row-divider-warm'}`}
-      style={{ animationDelay: `${60 + staggerIndex * 70}ms` }}
-      data-testid={`nassau-row-${line.userId}`}
-      data-winner={isWinnerHighlight ? 'true' : undefined}
-      data-viewer={isViewer ? 'true' : undefined}
-    >
-      <div
-        className={`grid grid-cols-[28px_minmax(0,1fr)_60px_44px] items-center gap-2 px-3.5 py-2.5 leading-[normal] ${rowTone}`}
-      >
-        {medal ? (
-          <span className="flex justify-center">
-            <Medallion place={line.rank as 1 | 2 | 3} size={28} />
-          </span>
-        ) : (
-          <span className="text-center font-serif font-semibold">{rankLabel}</span>
-        )}
-        <span className="truncate text-[15px] font-semibold text-text">{displayName}</span>
-        <span className="text-right text-xs leading-[normal] text-muted">{holesLabel}</span>
-        <span className="score-num text-right text-[18px] text-text">{headline.text}</span>
-      </div>
-      {showReactions && <RowReactionsForPlayer targetUserId={line.userId} />}
-    </li>
   );
 }

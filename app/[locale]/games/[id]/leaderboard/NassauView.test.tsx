@@ -107,24 +107,24 @@ describe('NassauView — three matches as three cards (#2327)', () => {
 
   it('says when one player can take all three, and where a player can stop it', () => {
     const { unmount } = render(<NassauView {...props({ viewerUserId: 'meg' })} />);
-    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(
+    expect(screen.getByTestId('nassau-sweep-line')).toHaveTextContent(
       'Marte kan ta alle tre. Du kan stoppe det på back 9.',
     );
     unmount();
 
     // A spectator gets the first sentence only.
     const spectator = render(<NassauView {...props({ viewerUserId: null })} />);
-    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(/^Marte kan ta alle tre\.$/);
+    expect(screen.getByTestId('nassau-sweep-line')).toHaveTextContent(/^Marte kan ta alle tre\.$/);
     spectator.unmount();
 
     render(<NassauView {...props({ viewerUserId: 'marte' })} />);
-    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(/^Du kan ta alle tre\.$/);
+    expect(screen.getByTestId('nassau-sweep-line')).toHaveTextContent(/^Du kan ta alle tre\.$/);
   });
 
   it('has no sweep line when the decided match ended tied', () => {
     const result = nassauResult({ a: fours(10), b: fours(10), c: [5, ...fours(9)] });
     render(<NassauView {...props({ result })} />);
-    expect(screen.queryByTestId('nassau-sweep')).toBeNull();
+    expect(screen.queryByTestId('nassau-sweep-line')).toBeNull();
     fireEvent.click(card('front9'));
     expect(screen.getByTestId('nassau-section-front9-push')).toBeInTheDocument();
   });
@@ -137,7 +137,7 @@ describe('NassauView — three matches as three cards (#2327)', () => {
     expect(card('total18')).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Tre kamper i én' })).toBeInTheDocument();
-    expect(screen.queryByTestId('nassau-sweep')).toBeNull();
+    expect(screen.queryByTestId('nassau-sweep-line')).toBeNull();
   });
 
   it('keeps the waiting room in a reveal game mid-round', () => {
