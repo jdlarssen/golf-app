@@ -1,278 +1,166 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import {
   NassauView,
   type NassauPlayerInfo,
   type NassauViewProps,
 } from './NassauView';
-import type {
-  NassauResult,
-  NassauSection,
-  NassauSectionLine,
-} from '@/lib/scoring/modes/types';
+import { AFTER_13, fours, nassauResult } from '@/lib/leaderboard/__fixtures__/nassauResult';
 
-function makeLine(
-  userId: string,
-  rank: number,
-  totalEffective: number,
-  totalGross: number,
-  holesPlayed: number,
-  tiedWith: string[] = [],
-): NassauSectionLine {
-  return {
-    userId,
-    totalEffectiveStrokes: totalEffective,
-    totalGrossStrokes: totalGross,
-    holesPlayed,
-    toPar: null,
-    rank,
-    tiedWith,
-  };
-}
+const PLAYERS = new Map<string, NassauPlayerInfo>([
+  ['meg', { name: 'Sigrid Aas', nickname: null }],
+  ['marte', { name: 'Marte Lie', nickname: null }],
+  ['jonas', { name: 'Jonas Berg', nickname: 'Jonken' }],
+  ['kari', { name: 'Kari Holm', nickname: null }],
+]);
 
-function makeSection(
-  name: 'front9' | 'back9' | 'total18',
-  players: NassauSectionLine[],
-  winnerUserIds: string[],
-  isPending = false,
-): NassauSection {
-  const holeNumbers =
-    name === 'front9'
-      ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
-      : name === 'back9'
-        ? [10, 11, 12, 13, 14, 15, 16, 17, 18]
-        : Array.from({ length: 18 }, (_, i) => i + 1);
-  return {
-    name,
-    holeNumbers,
-    players,
-    winnerUserIds,
-    isPending,
-  };
-}
-
-function makeResult(): NassauResult {
-  // Blandet utfall: A vinner Front 9, B vinner Back 9, C vinner Total 18.
-  return {
-    kind: 'nassau',
-    scoring: 'net',
-    ranking: 'net_total',
-    sections: {
-      front9: makeSection(
-        'front9',
-        [
-          makeLine('uA', 1, 36, 40, 9),
-          makeLine('uB', 2, 38, 42, 9),
-          makeLine('uC', 3, 40, 44, 9),
-        ],
-        ['uA'],
-      ),
-      back9: makeSection(
-        'back9',
-        [
-          makeLine('uB', 1, 35, 39, 9),
-          makeLine('uA', 2, 39, 43, 9),
-          makeLine('uC', 3, 41, 45, 9),
-        ],
-        ['uB'],
-      ),
-      total18: makeSection(
-        'total18',
-        [
-          makeLine('uC', 1, 75, 83, 18),
-          makeLine('uA', 2, 76, 84, 18),
-          makeLine('uB', 3, 78, 86, 18),
-        ],
-        ['uC'],
-      ),
-    },
-    players: [
-      {
-        userId: 'uA',
-        units: 1,
-        unitBreakdown: { front9: true, back9: false, total18: false },
-        total18EffectiveStrokes: 76,
-        total18SectionRank: 2,
-        rank: 1,
-        tiedWith: ['uB', 'uC'],
-      },
-      {
-        userId: 'uB',
-        units: 1,
-        unitBreakdown: { front9: false, back9: true, total18: false },
-        total18EffectiveStrokes: 78,
-        total18SectionRank: 3,
-        rank: 1,
-        tiedWith: ['uA', 'uC'],
-      },
-      {
-        userId: 'uC',
-        units: 1,
-        unitBreakdown: { front9: false, back9: false, total18: true },
-        total18EffectiveStrokes: 75,
-        total18SectionRank: 1,
-        rank: 1,
-        tiedWith: ['uA', 'uB'],
-      },
-    ],
-    // Per-hull-data brukes ikke av NassauView (seksjons-sammendrag) — den
-    // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
-    holes: [],
-  };
-}
-
-function makePlayers(
-  rows: Array<[string, string, string | null]>,
-): Map<string, NassauPlayerInfo> {
-  return new Map(
-    rows.map(([userId, name, nickname]) => [userId, { name, nickname }]),
-  );
-}
-
-function defaultProps(
-  overrides: Partial<NassauViewProps> = {},
-): NassauViewProps {
+function props(overrides: Partial<NassauViewProps> = {}): NassauViewProps {
   return {
     gameId: 'g1',
-    gameName: 'Sommer-Nassau',
-    result: makeResult(),
-    playersById: makePlayers([
-      ['uA', 'Alice Andersen', null],
-      ['uB', 'Bjørn Berg', 'Bjørnen'],
-      ['uC', 'Camilla Carlsen', null],
-    ]),
+    gameName: 'Lørdagsrunden',
+    result: nassauResult(AFTER_13),
+    playersById: PLAYERS,
     scoreVisibility: 'live',
-    gameStatus: 'finished',
-    holesPlayed: 18,
+    gameStatus: 'active',
+    holesPlayed: 13,
     backHref: '/games/g1',
     ...overrides,
   };
 }
 
-describe('NassauView', () => {
-  it('rendrer alle tre seksjoner med headers, vinner-highlight, spillere og effective-totaler', () => {
-    const { unmount } = render(<NassauView {...defaultProps()} />);
+const card = (key: string) => screen.getByTestId(`nassau-card-${key}`);
 
-    // Tre seksjons-headere er synlige.
-    expect(screen.getByText('Front 9')).toBeInTheDocument();
-    expect(screen.getByText('Back 9')).toBeInTheDocument();
-    expect(screen.getByText('Totalt 18 hull')).toBeInTheDocument();
+describe('NassauView — three matches as three cards (#2327)', () => {
+  it('shows a card per match and opens the list of the match being played', () => {
+    render(<NassauView {...props({ viewerUserId: 'meg' })} />);
 
-    // Front 9: A er vinner (rank 1, highlightet), B og C under
-    const front9 = screen.getByTestId('nassau-section-front9');
-    const front9Rows = within(front9).getAllByRole('listitem');
-    expect(front9Rows).toHaveLength(3);
-    expect(front9Rows[0].textContent).toContain('Alice Andersen');
-    expect(front9Rows[0].textContent).toContain('36');
-    expect(front9Rows[0].dataset.winner).toBe('true');
-    expect(front9Rows[1].dataset.winner).toBeUndefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tre kamper i én' })).toBeInTheDocument();
+    const tabs = within(screen.getByRole('tablist', { name: 'Tre kamper' })).getAllByRole('tab');
+    expect(tabs).toHaveLength(3);
+    expect(card('front9')).toHaveTextContent('Avgjort');
+    expect(card('back9')).toHaveTextContent('av 9 hull');
+    expect(card('total18')).toHaveTextContent('av 18 hull');
 
-    // Back 9: B er vinner
-    const back9 = screen.getByTestId('nassau-section-back9');
-    const back9Rows = within(back9).getAllByRole('listitem');
-    expect(back9Rows[0].textContent).toContain('Bjørnen');
-    expect(back9Rows[0].textContent).toContain('35');
-    expect(back9Rows[0].dataset.winner).toBe('true');
-
-    // Total 18: C er vinner
-    const total18 = screen.getByTestId('nassau-section-total18');
-    const total18Rows = within(total18).getAllByRole('listitem');
-    expect(total18Rows[0].textContent).toContain('Camilla Carlsen');
-    expect(total18Rows[0].textContent).toContain('75');
-    expect(total18Rows[0].dataset.winner).toBe('true');
-
-    // Brutto + hull-spilt vises som sekundær tekst.
-    expect(front9Rows[0].textContent).toContain('40 brutto');
-    expect(front9Rows[0].textContent).toContain('9 hull spilt');
-
-    // Header-sub-tittel inneholder Nassau + Netto.
-    // The game name in the kicker is no longer upper-cased (#2728), so it also
-    // contains «Nassau»; match the subtitle by its separator.
-    expect(screen.getByText(/Nassau · Netto/)).toBeInTheDocument();
-    expect(screen.getByText(/Netto/)).toBeInTheDocument();
-
-    unmount();
-  });
-
-  it('viser «Resultatene avsløres etter runden» i reveal-modus midt-runde', () => {
-    render(
-      <NassauView
-        {...defaultProps({
-          scoreVisibility: 'reveal',
-          gameStatus: 'active',
-        })}
-      />,
-    );
-    const hidden = screen.getByTestId('nassau-reveal-hidden');
-    expect(hidden.textContent).toContain('Resultatene avsløres etter runden');
-    // Selve seksjonene skal ikke være rendret.
-    expect(screen.queryByTestId('nassau-sections')).toBeNull();
+    // Back 9 is under way, so its card is selected and its list is the one shown.
+    expect(card('back9')).toHaveAttribute('aria-selected', 'true');
+    expect(card('front9')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tabpanel')).toContainElement(screen.getByTestId('nassau-section-back9'));
     expect(screen.queryByTestId('nassau-section-front9')).toBeNull();
+    expect(screen.getByText('Trykk på en kamp for å se hele lista')).toBeInTheDocument();
   });
 
-  it('viser pending-melding når en seksjon ikke har noen ferdig-spiller', () => {
-    const pendingResult = makeResult();
-    pendingResult.sections.back9 = makeSection(
-      'back9',
-      [
-        makeLine('uA', 1, 18, 20, 5),
-        makeLine('uB', 2, 20, 22, 4),
-        makeLine('uC', 3, 25, 26, 3),
-      ],
-      [],
-      true,
-    );
-    render(<NassauView {...defaultProps({ result: pendingResult })} />);
-    const pending = screen.getByTestId('nassau-section-back9-pending');
-    expect(pending.textContent).toMatch(/Venter på spilte hull/i);
-    // Front 9 og Total 18 fortsatt rendret normalt.
-    expect(screen.getByTestId('nassau-section-front9-list')).toBeInTheDocument();
-    expect(screen.getByTestId('nassau-section-total18-list')).toBeInTheDocument();
+  it('switches the list by tap and by arrow key', () => {
+    render(<NassauView {...props()} />);
+
+    fireEvent.click(card('front9'));
+    expect(card('front9')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('nassau-section-front9')).toBeInTheDocument();
+    expect(screen.queryByTestId('nassau-section-back9')).toBeNull();
+
+    fireEvent.keyDown(card('front9'), { key: 'ArrowRight' });
+    expect(card('back9')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('nassau-section-back9')).toBeInTheDocument();
   });
 
-  it('viser «Delt 1.-plass»-chip og T-prefix når flere spillere deler vinst (push)', () => {
-    const pushResult = makeResult();
-    pushResult.sections.front9 = makeSection(
-      'front9',
-      [
-        makeLine('uA', 1, 36, 40, 9, ['uB']),
-        makeLine('uB', 1, 36, 41, 9, ['uA']),
-        makeLine('uC', 3, 40, 44, 9),
-      ],
-      ['uA', 'uB'],
-    );
-    render(<NassauView {...defaultProps({ result: pushResult })} />);
+  it('gives gold only to the winner of a decided match', () => {
+    render(<NassauView {...props()} />);
 
+    // Front 9 is decided: its winner has the medal on the card and the gold row.
+    expect(card('front9').querySelector('svg')).not.toBeNull();
+    // Back 9 and the total are under way: a leader, no medal, no gold row.
+    expect(card('back9').querySelector('svg')).toBeNull();
+    expect(card('total18').querySelector('svg')).toBeNull();
+    const back9 = screen.getByTestId('nassau-section-back9');
+    expect(within(back9).getAllByRole('listitem').some((li) => li.dataset.winner)).toBe(false);
+    expect(back9.querySelector('svg')).toBeNull();
+
+    fireEvent.click(card('front9'));
     const front9 = screen.getByTestId('nassau-section-front9');
-    expect(within(front9).getByTestId('nassau-section-front9-push')).toBeInTheDocument();
-    const rows = within(front9).getAllByRole('listitem');
-    expect(rows[0].textContent).toContain('T1');
-    expect(rows[1].textContent).toContain('T1');
-    // Ingen ren vinner-highlight i push-tilstand.
-    expect(rows[0].dataset.winner).toBeUndefined();
-    expect(rows[1].dataset.winner).toBeUndefined();
+    expect(within(front9).getAllByRole('listitem').filter((li) => li.dataset.winner)).toHaveLength(1);
   });
 
-  it('#2625: a net-to-par game shows each section row against par under «mot par»', () => {
-    const props = defaultProps();
-    const toPar = (section: NassauSection, offset: number): NassauSection => ({
-      ...section,
-      players: section.players.map((p, i) => ({ ...p, toPar: i === 0 ? offset : i })),
-    });
-    const result: NassauResult = {
-      ...props.result,
-      ranking: 'net_to_par',
-      sections: {
-        front9: toPar(props.result.sections.front9, -2),
-        back9: toPar(props.result.sections.back9, 0),
-        total18: toPar(props.result.sections.total18, -1),
-      },
-    };
-    render(<NassauView {...props} result={result} />);
-    const front = screen.getByTestId('nassau-section-front9');
-    expect(within(front).getByText('−2')).toBeInTheDocument();
-    expect(within(front).getAllByText('mot par')).toHaveLength(3);
-    expect(within(screen.getByTestId('nassau-section-back9')).getByText('E')).toBeInTheDocument();
-    expect(within(front).queryByText('slag')).not.toBeInTheDocument();
+  it('a match is decided only when every player has finished it', () => {
+    // Everyone but kari has finished the front 9: the engine has a winner,
+    // the card still says the match is under way and shows no medal.
+    const result = nassauResult({ ...AFTER_13, kari: [5, 4, 5, 4, 4, 4, 4] });
+    render(<NassauView {...props({ result })} />);
+    expect(card('front9')).not.toHaveTextContent('Avgjort');
+    expect(card('front9').querySelector('svg')).toBeNull();
+  });
+
+  it('shows the viewer’s line only to a player', () => {
+    const { unmount } = render(<NassauView {...props({ viewerUserId: 'meg' })} />);
+    expect(card('front9')).toHaveTextContent(/Du er nummer 3, \d+ slag bak/);
+    expect(card('back9')).toHaveTextContent(/Du leder/);
+    // The viewer's own row is marked and named «Deg».
+    const mine = screen.getByTestId('nassau-row-meg');
+    expect(mine.dataset.viewer).toBe('true');
+    expect(mine).toHaveTextContent('Deg');
+    unmount();
+
+    render(<NassauView {...props({ viewerUserId: null })} />);
+    for (const key of ['front9', 'back9', 'total18']) {
+      expect(card(key)).not.toHaveTextContent(/Du /);
+    }
+    expect(screen.getByTestId('nassau-row-meg')).toHaveTextContent('Sigrid Aas');
+  });
+
+  it('says when one player can take all three, and where a player can stop it', () => {
+    const { unmount } = render(<NassauView {...props({ viewerUserId: 'meg' })} />);
+    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(
+      'Marte kan ta alle tre. Du kan stoppe det på back 9.',
+    );
+    unmount();
+
+    // A spectator gets the first sentence only.
+    const spectator = render(<NassauView {...props({ viewerUserId: null })} />);
+    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(/^Marte kan ta alle tre\.$/);
+    spectator.unmount();
+
+    render(<NassauView {...props({ viewerUserId: 'marte' })} />);
+    expect(screen.getByTestId('nassau-sweep')).toHaveTextContent(/^Du kan ta alle tre\.$/);
+  });
+
+  it('has no sweep line when the decided match ended tied', () => {
+    const result = nassauResult({ a: fours(10), b: fours(10), c: [5, ...fours(9)] });
+    render(<NassauView {...props({ result })} />);
+    expect(screen.queryByTestId('nassau-sweep')).toBeNull();
+    fireEvent.click(card('front9'));
+    expect(screen.getByTestId('nassau-section-front9-push')).toBeInTheDocument();
+  });
+
+  it('a finished game opens on the total, with the title as h2 under the podium', () => {
+    const result = nassauResult({ meg: fours(18), marte: [3, ...fours(17)], jonas: fours(18) });
+    render(
+      <NassauView {...props({ result, gameStatus: 'finished', holesPlayed: 18, chromeless: true })} />,
+    );
+    expect(card('total18')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Tre kamper i én' })).toBeInTheDocument();
+    expect(screen.queryByTestId('nassau-sweep')).toBeNull();
+  });
+
+  it('keeps the waiting room in a reveal game mid-round', () => {
+    render(<NassauView {...props({ scoreVisibility: 'reveal' })} />);
+    expect(screen.getByTestId('nassau-reveal-hidden')).toHaveTextContent(
+      'Resultatene avsløres etter runden',
+    );
+    expect(screen.queryByTestId('nassau-sections')).toBeNull();
+    expect(screen.queryByRole('tab')).toBeNull();
+  });
+
+  it('shows the waiting box for a match nobody has started', () => {
+    render(<NassauView {...props({ result: nassauResult({ meg: fours(5), marte: fours(5) }) })} />);
+    fireEvent.click(card('back9'));
+    expect(screen.getByTestId('nassau-section-back9-pending')).toHaveTextContent(
+      'Venter på spilte hull',
+    );
+  });
+
+  it('#2625: a net-to-par game labels the list «mot par»', () => {
+    render(<NassauView {...props({ result: nassauResult(AFTER_13, 'net_to_par') })} />);
+    const back9 = screen.getByTestId('nassau-section-back9');
+    expect(within(back9).getByText('mot par')).toBeInTheDocument();
+    expect(within(back9).queryByText('netto slag')).toBeNull();
   });
 });

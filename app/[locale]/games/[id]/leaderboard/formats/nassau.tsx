@@ -21,9 +21,9 @@ import { formatListLocale } from '@/lib/i18n/format';
  * mode-router-en (`computeModeResult`) og velger view per `game.status`:
  *
  *   - `finished` → NassauPodium + NassauView (chromeless): aggregert unit-
- *     podium med sweep-feiring + tre stacked seksjon-rangeringer under.
- *   - alt annet (active/scheduled) → NassauView alene: tre stacked seksjon-
- *     rangeringer (Front 9 / Back 9 / Totalt 18 hull) live.
+ *     podium med sweep-feiring + de tre kampkortene under, med Totalt åpen.
+ *   - alt annet (active/scheduled) → NassauView alene: de tre kampkortene
+ *     (Front 9 / Back 9 / Totalt) live, med kampen som spilles åpen (#2327).
  *
  * I motsetning til Wolf trenger Nassau ingen per-hull-tabell — scoring kjører
  * fra eksisterende `scores`-tabell. Strukturen speiler `renderSoloStrokeplay`-
@@ -47,12 +47,17 @@ export async function renderNassau(opts: {
   backHref: string;
   /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
   prizeAwardsNode?: ReactNode;
+  /**
+   * #2327: the player looking at the board, for their own line on the match
+   * cards; `null` for spectate and embed (they pass an empty viewer).
+   */
+  viewerUserId: string | null;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tn = await getTranslations('leaderboard.nassau');
   const locale = (await getLocale()) as AppLocale;
   const tSettle = await getTranslations('leaderboard.common.settlement');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode, viewerUserId } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
   // (NassauHolesBody), så map-logikken ikke dupliseres.
@@ -217,6 +222,7 @@ export async function renderNassau(opts: {
             chromeless
             settlement={settlement}
             footerSlot={footerSlot}
+            viewerUserId={viewerUserId}
           />
         </>
       );
@@ -253,6 +259,7 @@ export async function renderNassau(opts: {
       gameStatus={game.status}
       backHref={backHref}
       settlement={settlement}
+      viewerUserId={viewerUserId}
     />
   );
 }
