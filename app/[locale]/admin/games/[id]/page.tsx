@@ -101,6 +101,7 @@ import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
 import { ceremonyAvailable } from '@/lib/games/ceremony';
 import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
+import { liveBoardCovers } from '@/lib/leaderboard/liveBoard';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -1559,6 +1560,7 @@ async function PultBody({
         spectateToken={game.spectate_token}
         locale={locale}
         gameName={gameName}
+        compactEmbed={liveBoardCovers(game)}
       />
     </>
   );

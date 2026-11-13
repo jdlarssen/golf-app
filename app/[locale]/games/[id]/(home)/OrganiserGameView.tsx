@@ -20,6 +20,7 @@ import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { ChevronRightIcon } from '@/components/icons';
+import { liveBoardCovers } from '@/lib/leaderboard/liveBoard';
 
 /**
  * `/games/[id]` for the organiser who is not on the roster (#2202). Every
@@ -147,6 +148,7 @@ export async function OrganiserGameView({
                 spectateToken={spectateToken}
                 locale={locale}
                 gameName={gameName}
+                compactEmbed={liveBoardCovers(game)}
               />
             </>
           )}
