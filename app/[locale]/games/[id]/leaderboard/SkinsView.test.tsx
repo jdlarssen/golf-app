@@ -128,9 +128,10 @@ describe('SkinsView', () => {
     expect(screen.queryByTestId('skins-pot-hero')).toBeNull();
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
-    // «Hull for hull»: én mynt per hull.
+    // «Hull for hull»: én mynt per hull, og ni eller færre hull gir én rad.
     const coins = screen.getByTestId('skins-coins');
     expect(within(coins).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(coins).getAllByRole('list')).toHaveLength(1);
 
     // «Stillingen» (h2) står over lista, én rad per spiller i rank-rekkefølge.
     const leaderboard = screen.getByTestId('skins-leaderboard');

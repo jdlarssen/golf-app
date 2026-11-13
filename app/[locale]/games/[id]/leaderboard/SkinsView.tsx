@@ -225,7 +225,7 @@ export function SkinsView({
           <a
             href="#oppgjoret"
             data-testid="skins-settlement-link"
-            className="tap-extend mt-2.5 flex min-h-11 items-center justify-center text-[14px] font-semibold leading-[normal] text-primary"
+            className="tap-extend mt-2.5 flex min-h-11 items-center justify-center text-[14px] font-semibold leading-[normal] text-primary underline"
           >
             {/* One flex item, so the space before the arrow survives. Inter has
                 no «↓»; the artboard's stack falls back to system-ui. */}
