@@ -92,7 +92,7 @@ export async function renderTeamLiveBoard(opts: {
     getTranslations('leaderboard.common'),
     getTranslations('modes'),
     getTranslations('gameStatus'),
-    getTranslations('leaderboard.board.team'),
+    getTranslations('leaderboard.teamBoard'),
     getLocale() as Promise<AppLocale>,
   ]);
   const startType = parseStartType(game.start_type);
