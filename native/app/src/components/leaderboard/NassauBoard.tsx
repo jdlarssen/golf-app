@@ -185,7 +185,7 @@ function Card({
   shortNameOf: (userId: string) => string;
   onPress: () => void;
 }) {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const sole = card.leaderUserIds.length === 1 ? card.leaderUserIds[0] : null;
   const decided = card.state === 'decided';
   const status = decided
@@ -210,11 +210,8 @@ function Card({
   const kicker = NASSAU_CARD_KICKER[sectionKey];
   // Skjermleseren får kortet som én setning; medaljongen, ringen og «·» leses ikke.
   const spoken = [kicker, status, leaderName, score, viewer?.sr].filter(Boolean).join(', ');
-  const divider = selected
-    ? scheme === 'dark'
-      ? withAlpha(colors.primary, 0.4)
-      : withAlpha(colors.successText, 0.3)
-    : colors.divider;
+  // Det valgte kortet har tegningens grønne ramme og skillelinje (`youBorder`).
+  const divider = selected ? colors.youBorder : colors.divider;
 
   return (
     <Pressable
@@ -227,7 +224,7 @@ function Card({
         selected
           ? {
               backgroundColor: colors.primarySoft,
-              borderColor: scheme === 'dark' ? colors.primary : withAlpha(colors.successText, 0.3),
+              borderColor: colors.youBorder,
             }
           : { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
