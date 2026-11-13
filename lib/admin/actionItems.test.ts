@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
-  computeActionItemCounts,
   holesFilledByGame,
+  liveRoundRows,
+  needsYouRows,
   type ActiveGameInput,
   type ActivePlayerInput,
   type HolesRosterRow,
   type HolesScoreRow,
+  type LiveRoundRow,
+  type NeedsYouRow,
 } from './actionItems';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -35,15 +38,22 @@ function makePlayer(
 
 // ─── Tests ────────────────────────────────────────────────────────────────
 
-describe('computeActionItemCounts', () => {
-  it('returns empty lists when there are no active games', () => {
-    const result = computeActionItemCounts([], []);
-    expect(result).toEqual({ unsubmitted: [], pendingApproval: [] });
+describe('needsYouRows', () => {
+  const row = (overrides: Partial<NeedsYouRow> = {}): NeedsYouRow => ({
+    gameId: 'g1',
+    name: 'Tirsdagsrunde',
+    notDelivered: 0,
+    pendingApproval: 0,
+    allDelivered: false,
+    ...overrides,
   });
 
-  it('returns empty lists when a game has no players', () => {
-    const result = computeActionItemCounts([makeGame()], []);
-    expect(result).toEqual({ unsubmitted: [], pendingApproval: [] });
+  it('returns no rows when there are no active games', () => {
+    expect(needsYouRows([], [])).toEqual([]);
+  });
+
+  it('returns no rows when a game has no players', () => {
+    expect(needsYouRows([makeGame()], [])).toEqual([]);
   });
 
   it.each([
@@ -51,89 +61,90 @@ describe('computeActionItemCounts', () => {
     ['playing (mid-round, 9 holes)', 9],
     ['playing (17 holes)', 17],
   ])('does not count a mid-round player (%s)', (_label, holesFilled) => {
-    const result = computeActionItemCounts(
-      [makeGame()],
-      [makePlayer('g1', { holesFilled })],
-    );
-    expect(result).toEqual({ unsubmitted: [], pendingApproval: [] });
+    expect(needsYouRows([makeGame()], [makePlayer('g1', { holesFilled })])).toEqual([]);
   });
 
-  it('counts a game with a ready_not_delivered player as unsubmitted', () => {
-    const result = computeActionItemCounts(
-      [makeGame()],
-      [makePlayer('g1', { holesFilled: 18 })],
-    );
-    expect(result.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
-    expect(result.pendingApproval).toEqual([]);
+  it('counts a ready_not_delivered player as a scorecard not delivered', () => {
+    expect(needsYouRows([makeGame()], [makePlayer('g1', { holesFilled: 18 })])).toEqual([
+      row({ notDelivered: 1 }),
+    ]);
   });
 
-  it('does not count a game in unsubmitted when the only player has already submitted', () => {
-    const result = computeActionItemCounts(
-      [makeGame()],
-      [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
-    );
-    expect(result.unsubmitted).toEqual([]);
+  it('has no row when the only player has already submitted', () => {
+    expect(
+      needsYouRows(
+        [makeGame()],
+        [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
+      ),
+    ).toEqual([]);
   });
 
-  it('counts a submitted-not-approved player in pendingApproval when requirePeerApproval=true', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ requirePeerApproval: true })],
-      [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
-    );
-    expect(result.pendingApproval).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
-    expect(result.unsubmitted).toEqual([]);
+  it('counts a submitted-not-approved player when requirePeerApproval=true, and everyone has delivered', () => {
+    expect(
+      needsYouRows(
+        [makeGame({ requirePeerApproval: true })],
+        [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
+      ),
+    ).toEqual([row({ pendingApproval: 1, allDelivered: true })]);
   });
 
-  it('does NOT count a submitted-not-approved player when requirePeerApproval=false', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ requirePeerApproval: false })],
-      [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
-    );
-    expect(result).toEqual({ unsubmitted: [], pendingApproval: [] });
+  it('has no row for a submitted-not-approved player when requirePeerApproval=false', () => {
+    expect(
+      needsYouRows(
+        [makeGame({ requirePeerApproval: false })],
+        [makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' })],
+      ),
+    ).toEqual([]);
   });
 
-  it('excludes withdrawn players from both lists', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ requirePeerApproval: true })],
-      [
-        makePlayer('g1', {
-          holesFilled: 18,
-          withdrawnAt: '2024-01-01T09:00:00Z',
-        }),
-      ],
-    );
-    expect(result).toEqual({ unsubmitted: [], pendingApproval: [] });
+  it('a card waiting for approval while another player still plays is not «all delivered»', () => {
+    expect(
+      needsYouRows(
+        [makeGame({ requirePeerApproval: true })],
+        [
+          makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' }),
+          makePlayer('g1', { holesFilled: 12 }),
+        ],
+      ),
+    ).toEqual([row({ pendingApproval: 1, allDelivered: false })]);
   });
 
-  it('puts a game in both lists when different players trigger each condition', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ requirePeerApproval: true })],
-      [
-        // ready_not_delivered → unsubmitted
-        makePlayer('g1', { holesFilled: 18, submittedAt: null }),
-        // submitted, not approved → pendingApproval
-        makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' }),
-      ],
-    );
-    expect(result.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
-    expect(result.pendingApproval).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
+  it('leaves withdrawn players out of every count', () => {
+    expect(
+      needsYouRows(
+        [makeGame({ requirePeerApproval: true })],
+        [makePlayer('g1', { holesFilled: 18, withdrawnAt: '2024-01-01T09:00:00Z' })],
+      ),
+    ).toEqual([]);
   });
 
-  it('deduplicates: a game appears once even when multiple players trigger the same condition', () => {
-    const result = computeActionItemCounts(
-      [makeGame()],
-      [
-        makePlayer('g1', { holesFilled: 18 }),
-        makePlayer('g1', { holesFilled: 18 }),
-      ],
-    );
-    expect(result.unsubmitted).toHaveLength(1);
+  it('gives one row with both counts when different players trigger each condition', () => {
+    expect(
+      needsYouRows(
+        [makeGame({ requirePeerApproval: true })],
+        [
+          // ready_not_delivered
+          makePlayer('g1', { holesFilled: 18, submittedAt: null }),
+          // submitted, not approved
+          makePlayer('g1', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' }),
+        ],
+      ),
+    ).toEqual([row({ notDelivered: 1, pendingApproval: 1 })]);
   });
 
-  it('handles multiple games independently', () => {
+  it('counts every player but gives the game one row', () => {
+    expect(
+      needsYouRows(
+        [makeGame()],
+        [makePlayer('g1', { holesFilled: 18 }), makePlayer('g1', { holesFilled: 18 })],
+      ),
+    ).toEqual([row({ notDelivered: 2 })]);
+  });
+
+  it('handles multiple games independently and puts undelivered games first', () => {
     const games: ActiveGameInput[] = [
-      makeGame({ id: 'g1', name: 'Spill 1' }),
       makeGame({ id: 'g2', name: 'Spill 2', requirePeerApproval: true }),
+      makeGame({ id: 'g1', name: 'Spill 1' }),
       makeGame({ id: 'g3', name: 'Spill 3' }), // all clean
     ];
     const players: ActivePlayerInput[] = [
@@ -141,50 +152,108 @@ describe('computeActionItemCounts', () => {
       makePlayer('g2', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z' }), // pending_approval
       makePlayer('g3', { holesFilled: 18, submittedAt: '2024-01-01T10:00:00Z', approvedAt: '2024-01-01T11:00:00Z' }), // delivered
     ];
-    const result = computeActionItemCounts(games, players);
-    expect(result.unsubmitted).toEqual([{ gameId: 'g1', name: 'Spill 1' }]);
-    expect(result.pendingApproval).toEqual([{ gameId: 'g2', name: 'Spill 2' }]);
+    expect(needsYouRows(games, players)).toEqual([
+      row({ gameId: 'g1', name: 'Spill 1', notDelivered: 1 }),
+      row({ gameId: 'g2', name: 'Spill 2', pendingApproval: 1, allDelivered: true }),
+    ]);
   });
 
-  it('count===1 case: returns the actual gameId and name for single-game navigation', () => {
-    const result = computeActionItemCounts(
+  it('returns the actual gameId and name for the link', () => {
+    const [first] = needsYouRows(
       [makeGame({ id: 'abc-123', name: 'Cupfinale' })],
       [makePlayer('abc-123', { holesFilled: 18 })],
     );
-    expect(result.unsubmitted[0]).toEqual({ gameId: 'abc-123', name: 'Cupfinale' });
+    expect(first).toMatchObject({ gameId: 'abc-123', name: 'Cupfinale' });
   });
 
   // #1441 (F5 polish): a segment game (front9/back9) is "ready" at 9 holes,
   // not 18 — without expectedHoles a finished split-day round never surfaced.
-  it('counts a finished 9-hole segment game (expectedHoles=9) as ready_not_delivered at 9 holes', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ expectedHoles: 9 })],
-      [makePlayer('g1', { holesFilled: 9 })],
-    );
-    expect(result.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
+  it('counts a finished 9-hole segment game (expectedHoles=9) as not delivered at 9 holes', () => {
+    expect(
+      needsYouRows([makeGame({ expectedHoles: 9 })], [makePlayer('g1', { holesFilled: 9 })]),
+    ).toEqual([row({ notDelivered: 1 })]);
   });
 
-  it('does not count a 9-hole segment game as ready at 17 holes (still 18-hole thinking without expectedHoles)', () => {
-    const result = computeActionItemCounts(
-      [makeGame({ expectedHoles: 9 })],
-      [makePlayer('g1', { holesFilled: 8 })],
-    );
-    expect(result.unsubmitted).toEqual([]);
+  it('does not count a 9-hole segment game as ready at 8 holes', () => {
+    expect(
+      needsYouRows([makeGame({ expectedHoles: 9 })], [makePlayer('g1', { holesFilled: 8 })]),
+    ).toEqual([]);
   });
 
   it('defaults to 18 expected holes when expectedHoles is omitted (full-18 games unchanged)', () => {
-    const result = computeActionItemCounts(
-      [makeGame()],
-      [makePlayer('g1', { holesFilled: 9 })],
+    expect(needsYouRows([makeGame()], [makePlayer('g1', { holesFilled: 9 })])).toEqual([]);
+  });
+});
+
+// ─── liveRoundRows (#2345) ────────────────────────────────────────────────
+
+describe('liveRoundRows', () => {
+  const submitted = '2026-11-13T10:00:00Z';
+  const withdrawn = '2026-11-13T09:00:00Z';
+
+  it.each<[string, Partial<ActiveGameInput>, Partial<Omit<ActivePlayerInput, 'gameId'>>[], Pick<LiveRoundRow, 'playerCount' | 'hole' | 'state'>]>([
+    [
+      'the tail: the lowest hole among those still playing',
+      {},
+      [{ holesFilled: 14 }, { holesFilled: 11 }, { holesFilled: 18 }],
+      { playerCount: 3, hole: 11, state: 'playing' },
+    ],
+    [
+      'everyone finished: delivered or ready, nobody playing',
+      {},
+      [{ holesFilled: 18, submittedAt: submitted }, { holesFilled: 18 }],
+      { playerCount: 2, hole: null, state: 'done' },
+    ],
+    [
+      'nobody has entered a stroke',
+      {},
+      [{ holesFilled: 0 }, { holesFilled: 0 }],
+      { playerCount: 2, hole: null, state: 'none' },
+    ],
+    [
+      'a withdrawn player is out of the count and the tail',
+      {},
+      [{ holesFilled: 3, withdrawnAt: withdrawn }, { holesFilled: 12 }],
+      { playerCount: 1, hole: 12, state: 'playing' },
+    ],
+    [
+      '9 holes: a player at 9 is finished, the tail is the one at 5',
+      { expectedHoles: 9 },
+      [{ holesFilled: 9 }, { holesFilled: 5 }],
+      { playerCount: 2, hole: 5, state: 'playing' },
+    ],
+    [
+      '9 holes: both at 9 are done',
+      { expectedHoles: 9 },
+      [{ holesFilled: 9 }, { holesFilled: 9, submittedAt: submitted }],
+      { playerCount: 2, hole: null, state: 'done' },
+    ],
+    ['no players at all', {}, [], { playerCount: 0, hole: null, state: 'none' }],
+  ])('%s', (_label, gameOverrides, playerOverrides, expected) => {
+    expect(
+      liveRoundRows(
+        [makeGame(gameOverrides)],
+        playerOverrides.map((o) => makePlayer('g1', o)),
+      ),
+    ).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde', ...expected }]);
+  });
+
+  it('keeps the games in the order given, one row each', () => {
+    const rows = liveRoundRows(
+      [makeGame({ id: 'b', name: 'B' }), makeGame({ id: 'a', name: 'A' })],
+      [makePlayer('a', { holesFilled: 4 }), makePlayer('b', { holesFilled: 7 })],
     );
-    expect(result.unsubmitted).toEqual([]);
+    expect(rows.map((r) => [r.gameId, r.hole])).toEqual([
+      ['b', 7],
+      ['a', 4],
+    ]);
   });
 });
 
 // ─── holesFilledByGame (#2045) ────────────────────────────────────────────
 
 /**
- * Type A: stripa teller hull med samme hjem som purringen (#2017) —
+ * Type A: «Trenger deg» teller hull med samme hjem som purringen (#2017) —
  * `filledHolesByPlayer`, gruppert per spill med spillets modus. Eierskaps-
  * reglene har egne suiter; her bevises at limet grupperer og spør riktig.
  */
@@ -217,14 +286,14 @@ describe('holesFilledByGame', () => {
 
     expect(asObject(holes)).toEqual({ 'g1:a': 18, 'g1:b': 18 });
 
-    const counts = computeActionItemCounts(
+    const needs = needsYouRows(
       [makeGame({ id: 'g1' })],
       [
         makePlayer('g1', { holesFilled: holes.get('g1:a')!, submittedAt: '2026-09-17T10:00:00Z' }),
         makePlayer('g1', { holesFilled: holes.get('g1:b')! }),
       ],
     );
-    expect(counts.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
+    expect(needs.map((r) => [r.gameId, r.notDelivered])).toEqual([['g1', 1]]);
   });
 
   it('patsome: makkerens løse rader på 7–18 og kapteinens rader på 1–6 teller ikke for makkeren', () => {
@@ -246,14 +315,14 @@ describe('holesFilledByGame', () => {
     });
 
     expect(holes.get('g1:b')).toBe(17);
-    const counts = computeActionItemCounts(
+    const needs = needsYouRows(
       [makeGame({ id: 'g1' })],
       [
         makePlayer('g1', { holesFilled: holes.get('g1:a')!, submittedAt: '2026-09-17T10:00:00Z' }),
         makePlayer('g1', { holesFilled: holes.get('g1:b')! }),
       ],
     );
-    expect(counts.unsubmitted).toEqual([]);
+    expect(needs).toEqual([]);
   });
 
   it('scramble: lagkameraten uten egne rader får kapteinens 18', () => {
@@ -325,7 +394,7 @@ describe('holesFilledByGame', () => {
     expect(holes.get('g1:b')).toBe(18);
     expect(holes.get('g1:c')).toBe(18);
 
-    const counts = computeActionItemCounts(
+    const needs = needsYouRows(
       [makeGame({ id: 'g1' })],
       [
         makePlayer('g1', {
@@ -336,6 +405,6 @@ describe('holesFilledByGame', () => {
         makePlayer('g1', { holesFilled: holes.get('g1:c')!, submittedAt: '2026-09-17T10:00:00Z' }),
       ],
     );
-    expect(counts.unsubmitted).toEqual([]);
+    expect(needs).toEqual([]);
   });
 });

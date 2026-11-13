@@ -77,10 +77,8 @@ export function KeyMetricsView({
       : null;
 
   return (
-    <section className="mt-6" data-testid="key-metrics">
-      <p className="mb-1.5 px-1 font-sans text-xs font-semibold text-muted">
-        {t('keyMetricsLabel')}
-      </p>
+    // The page's TopBar carries «Nøkkeltall» as the h1 (#2345).
+    <section data-testid="key-metrics">
       <Card className="p-4 sm:p-5">
         <LivstegnSection
           months={metrics.months}

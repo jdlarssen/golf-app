@@ -26,8 +26,8 @@ const getCounts = cache(async () => {
   const supabase = await getServerClient();
   // userCount counts fully-onboarded players only (profile_completed_at NOT NULL)
   // to match what PlayersList shows; otherwise pending-invitee trigger rows
-  // would inflate the count. Samme kjede i Klubbhus-flisen (admin/TilesGrid.tsx)
-  // — ett tall, én regel (#1662).
+  // would inflate the count. Samme kjede i «Kom i gang»-sjekklista
+  // (admin/_morgen/GettingStartedSection.tsx) — ett tall, én regel (#1662).
   const [usersRes, pendingRes] = await Promise.all([
     supabase
       .from('users')
@@ -36,8 +36,8 @@ const getCounts = cache(async () => {
       // #1012: anonymiserte husk-rader telles ikke som spillere.
       .is('deleted_at', null),
     // Alle uaksepterte, utløpte inkludert — samme definisjon som ventelista
-    // under (_components/PendingInvitations.tsx) og Klubbhus-flisen
-    // (admin/TilesGrid.tsx). Ett tall, én regel (#1615).
+    // under (_components/PendingInvitations.tsx) og «Kom i gang»-sjekklista
+    // (admin/_morgen/GettingStartedSection.tsx). Ett tall, én regel (#1615).
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })

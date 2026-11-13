@@ -82,11 +82,14 @@ vi.mock('@/components/ui/SmartLink', () => ({
   ),
 }));
 
-import { ActivityLedger } from './ActivityLedger';
+import { getActivityEntries } from '@/lib/admin/activityLedger';
+import { ActivityLedgerList } from './ActivityLedger';
 
-describe('ActivityLedger (#2340)', () => {
+describe('getActivityEntries + ActivityLedgerList (#2340)', () => {
   it('shows the newest game start, then the newest ends, newest first', async () => {
-    const { container } = render(await ActivityLedger());
+    const rows = await getActivityEntries();
+    expect(rows).not.toBeNull();
+    const { container } = render(<ActivityLedgerList rows={rows!} />);
 
     expect(
       container.querySelector('a[href="/admin/games/started-today"]'),

@@ -1,3 +1,4 @@
+import { SectionError } from '@/components/ui/SectionError';
 import { getAdminContext } from './_dashboardContext';
 import { countKavalkadeSharers } from '@/lib/kavalkade/countKavalkadeSharers';
 import { KeyMetricsView, type KeyMetrics } from './KeyMetricsView';
@@ -7,16 +8,15 @@ import { KeyMetricsView, type KeyMetrics } from './KeyMetricsView';
  * rounds seed new rounds? All aggregation lives in the `admin_key_metrics`
  * RPC (SECURITY DEFINER, in-body is_admin() gate — migration 0126); this
  * wrapper just calls it with the admin's JWT and hands the parsed payload to
- * the presentational view. Own Suspense boundary on the dashboard; renders
- * nothing on RPC failure or shape drift (ActionItemsStripe discipline: a
- * broken metrics card must never break the room).
+ * the presentational view. It is the whole of /admin/nokkeltall (#2345), so
+ * an RPC failure or shape drift shows an error line, never an empty page.
  */
 export async function KeyMetricsCard() {
   const { supabase } = await getAdminContext();
   const { data, error } = await supabase.rpc('admin_key_metrics');
   if (error) {
     console.error('[admin/klubbhuset] admin_key_metrics failed', error);
-    return null;
+    return <SectionError testId="key-metrics-error" />;
   }
   const metrics = parseMetrics(data);
   if (!metrics) {
@@ -24,7 +24,7 @@ export async function KeyMetricsCard() {
       '[admin/klubbhuset] admin_key_metrics returned unexpected shape',
       data,
     );
-    return null;
+    return <SectionError testId="key-metrics-error" />;
   }
   // #2131: delt-av-tallet ligger ikke i RPC-en — det leses med service-rollen
   // (RLS gir bare egne rader, migrasjon 0183). Lesingen skjer FØRST etter at
@@ -42,7 +42,7 @@ export async function KeyMetricsCard() {
   return <KeyMetricsView metrics={metrics} kavalkadeShares={kavalkadeShares} />;
 }
 
-/** Narrows the RPC's jsonb payload; null on any drift (caller renders nothing). */
+/** Narrows the RPC's jsonb payload; null on any drift (callers show an error). */
 export function parseMetrics(data: unknown): KeyMetrics | null {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     return null;
