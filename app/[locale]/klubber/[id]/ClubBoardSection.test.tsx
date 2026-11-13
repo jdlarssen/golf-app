@@ -39,7 +39,8 @@ describe('ClubBoardSection (#2326)', () => {
     const { rerender } = render(<ClubBoardSection year={2026} rows={rows} me={rows[1]} />);
     expect(screen.getByTestId('club-board-me')).toHaveTextContent('Du: 2. plass');
     rerender(<ClubBoardSection year={2026} rows={rows} me={null} />);
-    expect(screen.getByTestId('club-board-me')).toHaveTextContent('Ingen seire ennå i 2026.');
+    // In the fold's line, without the full stop: «Ingen seire ennå i 2026 · Se hele brettet».
+    expect(screen.getByTestId('club-board-me')).toHaveTextContent(/^Ingen seire ennå i 2026$/);
   });
 
   it('has no fold with three rows or fewer', () => {
