@@ -567,6 +567,45 @@ describe('liveBoardStripAction — the strip’s button', () => {
   });
 });
 
+describe('liveBoardStripAction — a team’s filled holes (#2316)', () => {
+  const playing = { submitted_at: null, approved_at: null, withdrawn_at: null };
+  const base = {
+    gameId: 'g1',
+    status: 'active' as const,
+    holeSegment: 'full' as const,
+    requirePeerApproval: false,
+    viewer: playing,
+    // The scramble captain owns the team's rows: the teammate has none of their own.
+    viewerScores: [],
+  };
+
+  it('a scramble teammate follows the holes the captain has filled', () => {
+    expect(liveBoardStripAction({ ...base, filledHoles: [1, 2, 3, 4, 5] })).toEqual({
+      kind: 'hole',
+      holeNumber: 6,
+      href: '/games/g1/holes/6',
+    });
+  });
+
+  it('points to «Lever scorekort» when the team has filled every hole', () => {
+    expect(
+      liveBoardStripAction({
+        ...base,
+        holeSegment: 'front9',
+        filledHoles: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      }),
+    ).toEqual({ kind: 'submit', href: '/games/g1/submit' });
+  });
+
+  it('without filledHoles the viewer’s own rows decide, as on the solo board', () => {
+    expect(liveBoardStripAction({ ...base, viewerScores: card('me', { 1: 4, 2: 4 }) })).toEqual({
+      kind: 'hole',
+      holeNumber: 3,
+      href: '/games/g1/holes/3',
+    });
+  });
+});
+
 describe('liveBoardStripAction — a shotgun group (#2286)', () => {
   it('points on from the hole the group started on', () => {
     expect(

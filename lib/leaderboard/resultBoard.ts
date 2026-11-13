@@ -15,6 +15,7 @@ import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import type { TieDecider } from '@/lib/scoring/tiebreaker';
 import type {
   BestBallResult,
+  ModeResult,
   ShambleResult,
   SoloStrokeplayResult,
   StablefordSoloResult,
@@ -87,6 +88,24 @@ export function soloResultBoard(
 
 /** The team formats with a team board (#2579). */
 export type TeamBoardResult = TexasScrambleResult | StablefordTeamResult | BestBallResult | ShambleResult;
+
+/**
+ * The engine's answer as a team board result, or `null` for any other format
+ * (and for stableford without a team result: solo stableford has the solo
+ * board, #2253). The web's feeder (`formats/teamLiveBoard.tsx`) reads it.
+ */
+export function asTeamBoardResult(result: ModeResult): TeamBoardResult | null {
+  switch (result.kind) {
+    case 'texas_scramble':
+    case 'best_ball':
+    case 'shamble':
+      return result;
+    case 'stableford':
+      return result.variant === 'team' ? result : null;
+    default:
+      return null;
+  }
+}
 
 /**
  * How a team format counts a team's played holes (N: «hull 11», the pill,

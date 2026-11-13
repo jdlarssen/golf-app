@@ -248,6 +248,18 @@ describe('teamLiveBoard — movement since each team’s latest hole', () => {
     expect(withoutLatestHolePerTeam(rows, teamOf).map((r) => r.hole_number)).toEqual([1, 1, 1, 1]);
   });
 
+  it('a shotgun team’s latest hole follows the flight’s own order (#2316)', () => {
+    // The team started on hole 17: holes 17, 18, 1, 2 are played, so hole 2 is the latest.
+    const rows = [17, 18, 1, 2].map((hole_number) => ({ user_id: 'a1', hole_number, strokes: 4 }));
+    expect(
+      withoutLatestHolePerTeam(rows, () => 1, 'full', 'shotgun').map((r) => r.hole_number),
+    ).toEqual([17, 18, 1]);
+    // From the first tee the same rows end on hole 18.
+    expect(
+      withoutLatestHolePerTeam(rows, () => 1, 'full', 'first_tee').map((r) => r.hole_number),
+    ).toEqual([17, 1, 2]);
+  });
+
   it('is the place before minus the place now', () => {
     const previous = { ...now, scores: now.scores.filter((s) => s.holeNumber === 1) };
     const board = teamLiveBoard(
