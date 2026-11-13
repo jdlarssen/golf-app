@@ -78,7 +78,8 @@ export default async function EmbedGamePage({
   return (
     // data-embed: CSS in app/globals.css hides what cannot work in an iframe
     // without a session or clipboard access (the settlement copy button, #2296).
-    <div data-embed>
+    // data-embed-compact: the compact card's frame is transparent around it (#2330).
+    <div data-embed data-embed-compact={card ? '' : undefined}>
       <EmbedThemeScript theme={theme} />
       {card ? (
         <EmbedBoard

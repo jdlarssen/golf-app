@@ -101,7 +101,7 @@ import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
 import { ceremonyAvailable } from '@/lib/games/ceremony';
 import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
-import { liveBoardCovers } from '@/lib/leaderboard/liveBoard';
+import { embedSnippetHeight } from '@/lib/embed/embedHeight';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -155,6 +155,8 @@ type GameRow = {
   entry_fee_kr: number;
   // #2275: live-follow on the desk's Live tab (null while it is off).
   spectate_token: string | null;
+  /** #2330: the sponsors size the compact embed's frame (`embedSnippetHeight`). */
+  prizes: unknown;
   courses: { name: string } | null;
   // #1795: kun navnet leses her. Rating-radene (slope/CR/par per kjønn) er ute
   // av protokoll-kortet, så selecten henter ikke lenger de ni rating-kolonnene.
@@ -298,7 +300,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, spectate_token, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, spectate_token, prizes, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -1560,7 +1562,7 @@ async function PultBody({
         spectateToken={game.spectate_token}
         locale={locale}
         gameName={gameName}
-        compactEmbed={liveBoardCovers(game)}
+        embed={embedSnippetHeight(game)}
       />
     </>
   );
