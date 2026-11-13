@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { setLiveFollow } from '@/lib/games/spectate';
-import { buildEmbedSnippet, EMBED_HEIGHT } from '@/lib/embed/snippet';
+import { buildEmbedSnippet } from '@/lib/embed/snippet';
 import { routing } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
@@ -30,7 +30,7 @@ export function LiveFollowControl({
   spectateToken: initialToken,
   locale,
   gameName,
-  compactEmbed,
+  embed,
 }: {
   gameId: string;
   spectateToken: string | null;
@@ -38,10 +38,10 @@ export function LiveFollowControl({
   /** #1024: brukes i embed-snuttens iframe-title. */
   gameName: string;
   /**
-   * #2330: the game gets the compact embed card (`liveBoardCovers`), so the
-   * snippet asks for the lower frame.
+   * #2330: the embed frame from `embedSnippetHeight` — the compact card's own
+   * height (by the game's sponsors), or 700 px for the full board.
    */
-  compactEmbed: boolean;
+  embed: { compact: boolean; height: number };
 }) {
   const t = useTranslations('spectate');
   const [token, setToken] = useState<string | null>(initialToken);
@@ -159,7 +159,7 @@ export function LiveFollowControl({
           type="button"
           onClick={async () => {
             const snippet = buildEmbedSnippet(embedUrl(token), {
-              height: compactEmbed ? EMBED_HEIGHT.compact : EMBED_HEIGHT.full,
+              height: embed.height,
               title: `Tørny – ${gameName}`,
             });
             try {
@@ -174,6 +174,12 @@ export function LiveFollowControl({
         >
           {embedCopied ? t('copiedLabel') : t('copyEmbedLabel')}
         </button>
+      )}
+      {/* #2330: the compact card's frame is sized by today's sponsors. */}
+      {token && embed.compact && (
+        <p data-testid="embed-sponsor-note" className="mt-1.5 px-1 text-xs leading-relaxed text-muted">
+          {t('copyEmbedSponsorNote')}
+        </p>
       )}
 
       {/* #2275: the big screen for the clubhouse TV, in a new tab on the PC

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildEmbedSnippet, EMBED_HEIGHT } from './snippet';
+import { buildEmbedSnippet, compactEmbedHeight, EMBED_HEIGHT } from './snippet';
 
 describe('buildEmbedSnippet', () => {
   it('builds a plain iframe with src, title, height and lazy loading', () => {
@@ -27,8 +27,35 @@ describe('buildEmbedSnippet', () => {
   });
 });
 
-describe('EMBED_HEIGHT (#2330)', () => {
-  it('the compact card gets a lower frame than the full board', () => {
-    expect(EMBED_HEIGHT).toEqual({ compact: 560, full: 700 });
+describe('compactEmbedHeight (#2330) — the frame the compact card needs', () => {
+  // Measured on staging (Chromium, 320–480 px wide): the card with five rows,
+  // «Vis alle» and the footer is 349 px; each row of logos adds to the strip.
+  // Two 112 px logos fit side by side at 320 px, so the rows are ceil(n / 2).
+  it.each([
+    [0, 349],
+    [1, 393],
+    [2, 393],
+    [3, 429],
+    [4, 429],
+    [5, 465],
+    [6, 465],
+    [7, 501],
+  ])('%i logos → %i px', (logos, height) => {
+    expect(compactEmbedHeight({ logos, names: [] })).toBe(height);
+  });
+
+  it('sponsor names without a logo add their text line under the strip', () => {
+    const one = compactEmbedHeight({ logos: 0, names: ['Baren'] });
+    expect(one).toBeGreaterThan(349);
+    expect(compactEmbedHeight({ logos: 2, names: ['Baren'] })).toBeGreaterThan(393);
+    // A long list wraps to more lines, so the frame grows with it.
+    const long = compactEmbedHeight({ logos: 0, names: ['Klubbshoppen på Byneset', 'Golfbaren og kafeen', 'Fjordbrygga restaurant'] });
+    expect(long).toBeGreaterThan(one);
+  });
+});
+
+describe('EMBED_HEIGHT', () => {
+  it('every other format keeps the full board\'s 700 px', () => {
+    expect(EMBED_HEIGHT.full).toBe(700);
   });
 });

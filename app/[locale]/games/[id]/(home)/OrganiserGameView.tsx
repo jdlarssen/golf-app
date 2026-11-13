@@ -20,7 +20,6 @@ import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
 import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { ChevronRightIcon } from '@/components/icons';
-import { liveBoardCovers } from '@/lib/leaderboard/liveBoard';
 
 /**
  * `/games/[id]` for the organiser who is not on the roster (#2202). Every
@@ -39,6 +38,7 @@ export async function OrganiserGameView({
   game,
   locale,
   spectateToken,
+  embed,
   ceremonyOpen,
   errorBanner,
   statusBanner,
@@ -49,6 +49,8 @@ export async function OrganiserGameView({
   game: GameRow;
   locale: AppLocale;
   spectateToken: string | null;
+  /** #2330: the embed frame for «Kopier koden til nettsiden» (`embedSnippetHeight`). */
+  embed: { compact: boolean; height: number };
   /** #2712: the page's `ceremonyAvailable` (no prize-giving for a league flight). */
   ceremonyOpen: boolean;
   errorBanner: ReactNode;
@@ -148,7 +150,7 @@ export async function OrganiserGameView({
                 spectateToken={spectateToken}
                 locale={locale}
                 gameName={gameName}
-                compactEmbed={liveBoardCovers(game)}
+                embed={embed}
               />
             </>
           )}

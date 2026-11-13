@@ -7,12 +7,48 @@
  * wrapper is a v2 idea (contract: Out of Scope).
  */
 
+/** Every format without the compact card: the full board's frame (#1024). */
+export const EMBED_HEIGHT = { full: 700 } as const;
+
+// The compact card (#2330, `EmbedBoard.tsx`), as measured on staging. Owner
+// 13.11: «Ja, etter sponsorene» — the frame is as high as the card, so it
+// never scrolls between 320 and 480 px and has no air inside or under it.
+/** Border 2 + top 48 + format line 18 + five rows 202 + «Vis alle» 45 + footer 34. */
+const CARD_PX = 349;
+/** The strip's padding (`py-2`), a logo row (`h-7`) and the gap between rows (`gap-y-2`). */
+const STRIP_PAD_PX = 16;
+const LOGO_ROW_PX = 28;
+const LOGO_GAP_PX = 8;
+/** Logos up to 112 px wide with a 16 px gap: two fit side by side at 320 px (286 px inside the strip). */
+const LOGOS_PER_ROW = 2;
+/** The names line (11 px Inter, normal line height ≈ 13.3 px) and its gap under the logos (`space-y-1.5`). */
+const NAME_LINE_PX = 14;
+const NAME_GAP_PX = 6;
+/** «Premier sponset av …» at 320 px: about 286 px of text width, ~6.5 px per character, counted high. */
+const NAME_LINE_CHARS = 44;
+const NAME_PREFIX_CHARS = 20;
+const NAME_SEPARATOR_CHARS = 4;
+
 /**
- * The frame height the snippet asks for (#2330): the compact card for solo
- * strokeplay and solo stableford (`liveBoardCovers`) fits in 560 px; every
- * other format keeps the full board's 700 px.
+ * The frame the compact card needs: the card with five rows, «Vis alle» and
+ * the footer, plus the sponsor strip for these logos and names at the
+ * narrowest width (320 px). A card that is shorter (fewer players, a reveal
+ * game, wider frames with more logos per row) ends where its content ends
+ * and the rest of the frame is transparent. Sponsors added after the code
+ * was copied need a new copy.
  */
-export const EMBED_HEIGHT = { compact: 560, full: 700 } as const;
+export function compactEmbedHeight(sponsors: { logos: number; names: readonly string[] }): number {
+  const { logos, names } = sponsors;
+  if (logos === 0 && names.length === 0) return CARD_PX;
+  const rows = Math.ceil(logos / LOGOS_PER_ROW);
+  const logoPx = rows === 0 ? 0 : rows * LOGO_ROW_PX + (rows - 1) * LOGO_GAP_PX;
+  const nameChars = names.length === 0
+    ? 0
+    : NAME_PREFIX_CHARS + names.reduce((sum, n) => sum + n.length, 0) + (names.length - 1) * NAME_SEPARATOR_CHARS;
+  const nameLines = Math.ceil(nameChars / NAME_LINE_CHARS);
+  const namePx = nameLines === 0 ? 0 : (rows === 0 ? 0 : NAME_GAP_PX) + nameLines * NAME_LINE_PX;
+  return CARD_PX + STRIP_PAD_PX + logoPx + namePx;
+}
 
 /** Escape the characters that could break out of a double-quoted attribute. */
 function escapeAttr(value: string): string {

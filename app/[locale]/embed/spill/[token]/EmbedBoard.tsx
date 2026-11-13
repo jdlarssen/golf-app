@@ -15,8 +15,11 @@ const COLUMNS = 'grid grid-cols-[28px_minmax(0,1fr)_40px_44px] items-center gap-
  * The embed card (#2330): the club website's board for solo strokeplay and
  * solo stableford — «Tavla», the pill, the format line, the top five, «Vis
  * alle N →» and a footer, as drawn («Forslag: tavla på klubbens nettside»).
- * It fills the frame, so the club page never gets a box that scrolls inside
- * itself. The links open the live link in a new tab: the frame cannot grow.
+ * The snippet's frame is as high as the card (`compactEmbedHeight`, owner
+ * 13.11: «Ja, etter sponsorene»), so the club page never gets a box that
+ * scrolls inside itself. A shorter card ends where its content ends and the
+ * rest of the frame is transparent (`[data-embed-compact]` in globals.css).
+ * The links open the live link in a new tab: the frame cannot grow.
  *
  * All numbers come ready from `buildEmbedBoard`; this component only lays
  * them out. `board` is `null` while a reveal game hides net results.
@@ -49,7 +52,7 @@ export function EmbedBoard({
   return (
     <div
       data-testid="embed-board"
-      className="flex min-h-dvh flex-col overflow-hidden rounded-[14px] border border-embed-card-border bg-bg leading-[normal] text-text"
+      className="flex flex-col overflow-hidden rounded-[14px] border border-embed-card-border bg-bg leading-[normal] text-text"
     >
       <div className="flex items-center justify-between gap-2 border-b border-row-divider-warm px-3.5 py-3">
         <h1 className="font-serif text-[18px] font-semibold">
@@ -104,8 +107,7 @@ export function EmbedBoard({
         </>
       )}
 
-      {/* The space a taller frame gives goes above the sponsors and the footer. */}
-      <div className="mt-auto">
+      <div>
         <SponsorStrip prizes={prizes} />
         <div className="flex items-center justify-between gap-3 bg-embed-foot px-3.5 py-2.5 text-[11px] text-muted">
           <span>{live ? t('autoUpdates') : te('resultStatus')}</span>

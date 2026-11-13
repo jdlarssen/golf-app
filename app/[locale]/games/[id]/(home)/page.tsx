@@ -108,7 +108,7 @@ import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 import { ChevronRightIcon } from '@/components/icons';
 import { playerName } from '@/lib/names/playerName';
-import { liveBoardCovers } from '@/lib/leaderboard/liveBoard';
+import { embedSnippetHeight } from '@/lib/embed/embedHeight';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -358,6 +358,7 @@ export default async function GameHomePage({
         locale={locale}
         ceremonyOpen={ceremonyOpen}
         spectateToken={spectateToken}
+        embed={embedSnippetHeight(gwp.game)}
         errorBanner={
           organiserStartBlock && organiserStartBlock.reason === errorCode ? null : errorBanner
         }
@@ -1709,7 +1710,7 @@ export default async function GameHomePage({
             spectateToken={spectateToken}
             locale={locale}
             gameName={localizeGameName(game.name, game.courses?.name ?? null, locale)}
-            compactEmbed={liveBoardCovers(game)}
+            embed={embedSnippetHeight(gwp.game)}
           />
         )}
 

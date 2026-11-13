@@ -911,6 +911,20 @@ h1, h2, h3, h4, h5, h6 {
 
 /* The invitation login (#2266) stands on linen, and so must the overscroll
  * and Safari's toolbar tint — they paint from <body>, not from AppShell. */
+/* The compact embed card (#2330) ends where its content ends; the rest of
+ * the frame shows the club's own page. The root layout's meta says
+ * `color-scheme: light dark`, and a frame whose scheme differs from the club
+ * page's gets an opaque backdrop from the browser (dark on a dark machine,
+ * Chrome and Safari). Locking it to light keeps the frame transparent; the
+ * card draws its own colours from the tokens, also with `?theme=dark`. */
+html:has([data-embed-compact]),
+html:has([data-embed-compact]) body {
+  background: transparent;
+}
+html:has([data-embed-compact]) {
+  color-scheme: light;
+}
+
 body:has([data-page-bg='invitation']) {
   background: var(--invitation-page-bg);
 }
