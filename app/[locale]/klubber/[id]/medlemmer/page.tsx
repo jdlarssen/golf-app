@@ -69,41 +69,48 @@ export default async function KlubbMedlemmerPage({
             ? t('membersHeadingWithCap', { count: members.length, cap: club.member_cap })
             : t('membersHeading', { count: members.length })}
         </h2>
-        <div className="space-y-2">
+        <ul className="list-none space-y-2 p-0">
           {members.map((member) => (
-            <Card key={member.userId} className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="truncate font-sans text-[15px] font-medium text-text">
-                  {member.name}
-                  {member.userId === user.id && (
-                    <span className="ml-1.5 text-muted font-normal">{t('youSuffix')}</span>
-                  )}
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {tRoles(member.role)}
+            <li key={member.userId}>
+              <Card className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate font-sans text-[15px] font-medium text-text">
+                    {member.name}
+                    {member.userId === user.id && (
+                      <>
+                        {' '}
+                        <span className="ml-0.5 text-muted font-normal">{t('youSuffix')}</span>
+                      </>
+                    )}
                   </span>
-                  {myRole === 'owner' && member.userId !== user.id && (
-                    <SmartLink
-                      href={`/klubber/${club.id}/rolle/${member.userId}`}
-                      className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-primary hover:underline"
-                    >
-                      {t('changeRoleLink')}
-                    </SmartLink>
-                  )}
-                  {isAdmin && member.userId !== user.id && (
-                    <SmartLink
-                      href={`/klubber/${club.id}/fjern/${member.userId}`}
-                      className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-danger hover:underline"
-                    >
-                      {t('removeLink')}
-                    </SmartLink>
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
+                      {tRoles(member.role)}
+                    </span>
+                    {myRole === 'owner' && member.userId !== user.id && (
+                      <SmartLink
+                        href={`/klubber/${club.id}/rolle/${member.userId}`}
+                        aria-label={t('changeRoleLabel', { name: member.name })}
+                        className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-primary hover:underline"
+                      >
+                        {t('changeRoleLink')}
+                      </SmartLink>
+                    )}
+                    {isAdmin && member.userId !== user.id && (
+                      <SmartLink
+                        href={`/klubber/${club.id}/fjern/${member.userId}`}
+                        aria-label={t('removeLabel', { name: member.name })}
+                        className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-danger hover:underline"
+                      >
+                        {t('removeLink')}
+                      </SmartLink>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
     </AppShell>
   );

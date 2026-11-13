@@ -271,7 +271,10 @@ export default async function KlubbDetailPage({
               <span className="truncate text-[15px] font-medium text-text">
                 {member.name}
                 {member.userId === user.id && (
-                  <span className="ml-1.5 font-normal text-muted">{t('youSuffix')}</span>
+                  <>
+                    {' '}
+                    <span className="ml-0.5 font-normal text-muted">{t('youSuffix')}</span>
+                  </>
                 )}
               </span>
               <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
