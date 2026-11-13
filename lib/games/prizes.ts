@@ -97,6 +97,34 @@ const prizesArraySchema = z
  * slottene fra de faste `PRIZE_SLOTS`, trimmer og beskjærer lengdene, så dataene
  * er gyldige fordi de er konstruert slik. En ny skrivesti må selv sørge for det.
  */
+/**
+ * What the sponsor strip shows (#1052, one home since #2330): one logo per
+ * storage path, named by its sponsor (`null` = no name, the strip says
+ * «logo»), and the sponsors without a logo, each once. A name that already
+ * stands with a logo is not repeated as text. `SponsorStrip` draws this; the
+ * embed snippet sizes its frame by it.
+ */
+export function sponsorStripItems(prizes: readonly GamePrize[]): {
+  logos: { path: string; alt: string | null }[];
+  names: string[];
+} {
+  const logos: { path: string; alt: string | null }[] = [];
+  const seenPaths = new Set<string>();
+  const namesWithLogo = new Set<string>();
+  for (const p of prizes) {
+    if (!p.sponsorLogoPath) continue;
+    const name = p.sponsor?.trim() ?? '';
+    if (name) namesWithLogo.add(name);
+    if (seenPaths.has(p.sponsorLogoPath)) continue;
+    seenPaths.add(p.sponsorLogoPath);
+    logos.push({ path: p.sponsorLogoPath, alt: name || null });
+  }
+  const names = Array.from(
+    new Set(prizes.map((p) => p.sponsor?.trim()).filter((s): s is string => s != null && s.length > 0)),
+  ).filter((name) => !namesWithLogo.has(name));
+  return { logos, names };
+}
+
 export function safeParsePrizes(raw: unknown): GamePrize[] {
   const res = prizesArraySchema.safeParse(raw);
   return res.success ? res.data : [];
