@@ -115,7 +115,10 @@ export function FriendSearchBar({
   const t = useTranslations('signup.friendPicker');
   const id = useId();
   return (
-    <div className="flex items-center gap-2">
+    // #2840: at 390 px the field and «+ Legg til venn» share the card's 310 px. The chip
+    // size (14 px, 14 px sides) at 48 px, a 6 px gap and the field's 8 px right pad leave
+    // «Søk i vennene» room; with the 15 px medium button the placeholder was cut.
+    <div className="flex items-center gap-1.5">
       <SearchField
         id={id}
         label={t('search')}
@@ -128,10 +131,10 @@ export function FriendSearchBar({
       <Button
         type="button"
         variant="outline"
-        size="medium"
+        size="chip"
         onClick={onAddFriend}
         data-testid="add-friend"
-        className="shrink-0 whitespace-nowrap"
+        className="shrink-0 !h-12"
       >
         <span aria-hidden className="mr-1.5 text-lg font-medium leading-none">
           +

@@ -71,7 +71,7 @@ export function SearchField({
           tone === 'filled'
             ? 'h-12 rounded-[14px] border border-transparent bg-surface-2 pl-[40px]'
             : `${size === 'large' ? 'h-[52px] pl-[38px]' : 'h-[50px] pl-[40px]'} rounded-xl border border-field-border bg-surface`
-        } w-full pr-3 font-sans text-base text-text placeholder:text-muted`}
+        } w-full ${tone === 'filled' ? 'pr-2' : 'pr-3'} font-sans text-base text-text placeholder:text-muted`}
       />
     </div>
   );
