@@ -190,6 +190,10 @@ describe('needsYouRows', () => {
 describe('liveRoundRows', () => {
   const submitted = '2026-11-13T10:00:00Z';
   const withdrawn = '2026-11-13T09:00:00Z';
+  // The rounds below started an hour before `now`, inside the last day.
+  const now = new Date('2026-11-13T12:00:00Z');
+  const startedAt = '2026-11-13T11:00:00Z';
+  const liveGame = (overrides: Partial<ActiveGameInput> = {}) => makeGame({ startedAt, ...overrides });
 
   it.each<[string, Partial<ActiveGameInput>, Partial<Omit<ActivePlayerInput, 'gameId'>>[], Pick<LiveRoundRow, 'playerCount' | 'hole' | 'state'>]>([
     [
@@ -232,21 +236,42 @@ describe('liveRoundRows', () => {
   ])('%s', (_label, gameOverrides, playerOverrides, expected) => {
     expect(
       liveRoundRows(
-        [makeGame(gameOverrides)],
+        [liveGame(gameOverrides)],
         playerOverrides.map((o) => makePlayer('g1', o)),
+        now,
       ),
     ).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde', ...expected }]);
   });
 
   it('keeps the games in the order given, one row each', () => {
     const rows = liveRoundRows(
-      [makeGame({ id: 'b', name: 'B' }), makeGame({ id: 'a', name: 'A' })],
+      [liveGame({ id: 'b', name: 'B' }), liveGame({ id: 'a', name: 'A' })],
       [makePlayer('a', { holesFilled: 4 }), makePlayer('b', { holesFilled: 7 })],
+      now,
     );
     expect(rows.map((r) => [r.gameId, r.hole])).toEqual([
       ['b', 7],
       ['a', 4],
     ]);
+  });
+
+  // Owner's answer 13.11 («Ja, siste døgn (B)»): «I dag» holds the rounds
+  // started in the last 24 hours. An older active round stays on the games
+  // list, and under «Trenger deg» when it has cards waiting.
+  it.each<[string, string | null, boolean]>([
+    ['started an hour ago', '2026-11-13T11:00:00Z', true],
+    ['started 23 h 59 min ago', '2026-11-12T12:01:00Z', true],
+    ['started exactly 24 h ago', '2026-11-12T12:00:00Z', true],
+    ['started 24 h 1 min ago', '2026-11-12T11:59:00Z', false],
+    ['started 16 days ago, stuck on hole 6', '2026-10-28T12:00:00Z', false],
+    ['no start time', null, false],
+  ])('%s (%s) → kept: %s', (_label, gameStartedAt, kept) => {
+    const rows = liveRoundRows(
+      [makeGame({ startedAt: gameStartedAt })],
+      [makePlayer('g1', { holesFilled: 6 })],
+      now,
+    );
+    expect(rows.map((r) => r.gameId)).toEqual(kept ? ['g1'] : []);
   });
 });
 

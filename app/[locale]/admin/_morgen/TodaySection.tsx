@@ -11,7 +11,8 @@ import { MorningRow, MorningSection, RowCard } from './parts';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * «I dag» (#2345): the rounds in play, then the rounds that tee off today.
+ * «I dag» (#2345): the rounds in play that started in the last 24 hours
+ * (owner's answer 13.11), then the rounds that tee off today.
  * A scheduled round starts by itself at tee-off (the cron sweep in
  * app/api/cron/start-scheduled-games); one still waiting after its tee-off
  * says so. Every row opens the game.
@@ -59,7 +60,7 @@ export async function TodaySection() {
     for (const r of roster) playerCounts.set(r.game_id, (playerCounts.get(r.game_id) ?? 0) + 1);
   }
 
-  const live = liveRoundRows(delivery.games, delivery.players);
+  const live = liveRoundRows(delivery.games, delivery.players, now);
   const scheduled = scheduledTodayRows(scheduledGames, playerCounts, now);
 
   const liveLine = (row: LiveRoundRow) =>
