@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildEmbedSnippet } from './snippet';
+import { buildEmbedSnippet, EMBED_HEIGHT } from './snippet';
 
 describe('buildEmbedSnippet', () => {
   it('builds a plain iframe with src, title, height and lazy loading', () => {
@@ -24,5 +24,11 @@ describe('buildEmbedSnippet', () => {
     expect(snippet).toContain('src="https://x.no/e?a=1&amp;b=&quot;2&quot;"');
     expect(snippet).toContain('title="&lt;Liga&gt; &amp; &quot;venner&quot;"');
     expect(snippet).not.toMatch(/src="[^"]*"[^ ]/);
+  });
+});
+
+describe('EMBED_HEIGHT (#2330)', () => {
+  it('the compact card gets a lower frame than the full board', () => {
+    expect(EMBED_HEIGHT).toEqual({ compact: 560, full: 700 });
   });
 });
