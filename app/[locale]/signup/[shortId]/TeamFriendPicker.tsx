@@ -291,7 +291,6 @@ export function AddFriendSheet({
       open={open}
       title={t('sheetTitle')}
       onClose={onClose}
-      doneLabel={t('sheetClose')}
       closeLabel={t('sheetClose')}
     >
       <p className="text-sm leading-snug text-muted">

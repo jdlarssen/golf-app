@@ -9,7 +9,9 @@ import { useModalFocus } from '@/hooks/useModalFocus';
  * and a «Ferdig» button. The innstillinger rows on the wizard's step 5 each
  * open one with only that row's fields.
  *
- * Four things close it: ✕, a tap on the backdrop, Esc and «Ferdig». A closed
+ * Four things close it: ✕, a tap on the backdrop, Esc and «Ferdig». Without a
+ * `doneLabel` there is no «Ferdig», for a sheet whose own buttons are the way
+ * on («Legg til en venn», #2840). A closed
  * sheet is not mounted, so the caller must keep the values somewhere else (the
  * wizard's FormDataInputs does, #1011). Focus goes into the sheet on open, is
  * held there, and returns to the button that opened it (`useModalFocus`).
@@ -28,8 +30,8 @@ export function BottomSheet({
   open: boolean;
   title: string;
   onClose: () => void;
-  /** The button at the bottom: «Ferdig». */
-  doneLabel: string;
+  /** The button at the bottom: «Ferdig». Left out, the sheet has none. */
+  doneLabel?: string;
   /** `aria-label` of the ✕: «Lukk». */
   closeLabel: string;
   children: ReactNode;
@@ -84,9 +86,11 @@ export function BottomSheet({
 
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain">{children}</div>
 
-        <Button type="button" size="large" onClick={onClose} className="w-full shrink-0">
-          {doneLabel}
-        </Button>
+        {doneLabel && (
+          <Button type="button" size="large" onClick={onClose} className="w-full shrink-0">
+            {doneLabel}
+          </Button>
+        )}
       </div>
     </div>
   );
