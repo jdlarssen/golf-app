@@ -24,7 +24,7 @@ export type TeamHoleCardData =
     };
 
 export function TeamHoleCard(card: TeamHoleCardData): JSX.Element {
-  const tt = useTranslations('leaderboard.board.team');
+  const tt = useTranslations('leaderboard.teamBoard');
   const th = useTranslations('holes');
   // The same words as the score rail on the hole page, in lower case inside a sentence.
   const term = th(`scoreRail.term.${card.term}`, { n: card.overPar }).toLowerCase();

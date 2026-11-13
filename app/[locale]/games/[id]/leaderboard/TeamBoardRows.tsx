@@ -109,7 +109,7 @@ export function TeamBoard({
   testId,
 }: TeamBoardProps): JSX.Element {
   const t = useTranslations('leaderboard.board');
-  const tt = useTranslations('leaderboard.board.team');
+  const tt = useTranslations('leaderboard.teamBoard');
   const ts35 = useTranslations('leaderboard.state35');
   const tc = useTranslations('leaderboard.common');
   const [showAll, setShowAll] = useState(false);
@@ -230,7 +230,7 @@ function TeamRow({
   t: BoardT;
   tc: BoardCommonT;
 }): JSX.Element {
-  const tt = useTranslations('leaderboard.board.team');
+  const tt = useTranslations('leaderboard.teamBoard');
   const firstHalf = board.firstHalf !== null;
   // No leader's gold where the board shows no place (#2712).
   const leader = showPlace && isBoardLeader(row);
@@ -412,7 +412,7 @@ function Initials({ initials }: { initials: string[] }): JSX.Element {
 
 function TeamStrip({ strip }: { strip: TeamStripData }): JSX.Element {
   const t = useTranslations('leaderboard.board');
-  const tt = useTranslations('leaderboard.board.team');
+  const tt = useTranslations('leaderboard.teamBoard');
   const place = strip.tied
     ? t('stripTiedPlace', { rank: strip.rank })
     : t('stripPlace', { rank: strip.rank });
