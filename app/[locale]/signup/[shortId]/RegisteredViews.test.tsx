@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AlreadyRegisteredView, TeamAwaitingApprovalView } from './RegisteredViews';
+import { AlreadyRegisteredView, RequestSentView } from './RegisteredViews';
 
 // Type B (docs/test-discipline.md): what the signup page shows once you are in.
 // #2840 del 5: after a team signup the page has a way to the team page.
@@ -28,10 +28,16 @@ describe('AlreadyRegisteredView', () => {
   });
 });
 
-describe('TeamAwaitingApprovalView', () => {
-  it('waiting for the organiser, with the way to the team', () => {
-    render(<TeamAwaitingApprovalView shortId="abc12345" />);
-    expect(screen.getByTestId('team-awaiting-approval')).toBeInTheDocument();
+describe('RequestSentView', () => {
+  it('a team waiting for the organiser: the request line and the way to the team', () => {
+    render(<RequestSentView shortId="abc12345" withTeam testId="team-awaiting-approval" />);
+    expect(screen.getByTestId('team-awaiting-approval')).toHaveTextContent('Forespørsel sendt');
     expect(screen.getByRole('link', { name: 'Gå til laget' })).toHaveAttribute('href', '/signup/abc12345/team');
+  });
+
+  it('a request of your own without a team: the line and no link', () => {
+    render(<RequestSentView shortId="abc12345" withTeam={false} />);
+    expect(screen.getByText(/Forespørsel sendt/)).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

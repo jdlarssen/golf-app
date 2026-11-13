@@ -40,17 +40,31 @@ export function AlreadyRegisteredView({
   );
 }
 
-/** #2061: you said yes to a team the organiser has not approved yet. */
-export function TeamAwaitingApprovalView({ shortId }: { shortId: string }) {
+/**
+ * «Forespørsel sendt»: the organiser has not decided. `withTeam` for a captain
+ * whose team waits (`self_request`) and for a teammate who said yes to it
+ * (`team_awaiting_approval`, #2061).
+ */
+export function RequestSentView({
+  shortId,
+  withTeam,
+  testId,
+}: {
+  shortId: string;
+  withTeam: boolean;
+  testId?: string;
+}) {
   const t = useTranslations('signup');
   return (
     <div className="space-y-4">
-      <Banner tone="info" testId="team-awaiting-approval">
+      <Banner tone="info" testId={testId}>
         {t('pendingRequestBanner')}
       </Banner>
-      <LinkButton href={`/signup/${shortId}/team`} full>
-        {t('goToTeamButton')}
-      </LinkButton>
+      {withTeam && (
+        <LinkButton href={`/signup/${shortId}/team`} full>
+          {t('goToTeamButton')}
+        </LinkButton>
+      )}
       <GetTheApp />
     </div>
   );

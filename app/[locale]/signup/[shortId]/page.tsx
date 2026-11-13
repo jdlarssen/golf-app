@@ -12,14 +12,13 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { GetTheApp } from '@/components/app/GetTheApp';
 import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { signupView, type SignupView } from '@/lib/games/signupOffer';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { pendingRequestView, type PendingRequestRow } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
-import { AlreadyRegisteredView, TeamAwaitingApprovalView } from './RegisteredViews';
+import { AlreadyRegisteredView, RequestSentView } from './RegisteredViews';
 import { hasTeamPage } from '@/lib/games/teamPageModel';
 import {
   loadInviterTeams,
@@ -553,19 +552,12 @@ function renderBody({
       );
 
     case 'self_request':
-      return (
-        <>
-          <Banner tone="info">
-            {t('pendingRequestBanner')}
-          </Banner>
-          <GetTheApp className="mt-4" />
-        </>
-      );
+      return <RequestSentView shortId={game.short_id} withTeam={ownTeam != null} />;
 
     // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
     // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
     case 'team_awaiting_approval':
-      return <TeamAwaitingApprovalView shortId={game.short_id} />;
+      return <RequestSentView shortId={game.short_id} withTeam testId="team-awaiting-approval" />;
 
     case 'locked':
       return (
