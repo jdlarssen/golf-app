@@ -7307,7 +7307,21 @@
     "liveStatus": "Live",
     "resultStatus": "Final result",
     "seasonRunning": "Season in progress",
-    "seasonDone": "Season finished"
+    "seasonDone": "Season finished",
+    "board": {
+      "formatLine": "{format} · {unit} · {players}",
+      "unit": {
+        "points": "points",
+        "net": "net",
+        "toPar": "net to par"
+      },
+      "showAll": "Show all {count} →",
+      "fullResult": "See the full result →",
+      "autoUpdates": "Updates by itself",
+      "liveFrom": "Live from <brand>Tørny</brand>",
+      "from": "From <brand>Tørny</brand>",
+      "hidden": "Places show when the game is finished"
+    }
   },
   "landing": {
     "metaTitle": "Tørny — run a golf tournament free in your browser",
