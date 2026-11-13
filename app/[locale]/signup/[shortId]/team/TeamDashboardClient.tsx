@@ -265,16 +265,24 @@ function TeamView({
   const tp = useTranslations('signup.friendPicker');
   const [screen, setScreen] = useState<Screen>({ kind: 'team' });
   // #2840: the screens replace each other in place, so the button that had focus
-  // unmounts. Focus moves to the new screen's heading (not on the first render).
-  const firstScreen = useRef(true);
+  // unmounts. Focus moves to the new screen's heading when the screen changes, never
+  // on the first render (compared with the last screen, so StrictMode's second run
+  // in development does not count as a change).
+  const lastScreen = useRef(screen.kind);
   useEffect(() => {
-    if (firstScreen.current) {
-      firstScreen.current = false;
-      return;
-    }
+    if (lastScreen.current === screen.kind) return;
+    lastScreen.current = screen.kind;
     document.querySelector<HTMLElement>('[data-team-screen-heading]')?.focus();
   }, [screen.kind]);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  // «Send på nytt» closes the menu, so its focused item disappears. Focus goes back
+  // to that row's «•••» once the action is done and the button is enabled again.
+  const refocusMenu = useRef<string | null>(null);
+  useEffect(() => {
+    if (isPending || refocusMenu.current === null) return;
+    document.querySelector<HTMLElement>(`[data-row-menu="${refocusMenu.current}"]`)?.focus();
+    refocusMenu.current = null;
+  }, [isPending]);
 
   const isCaptain = props.mode === 'captain';
   const canEdit = isCaptain && !props.signupsClosed;
@@ -476,6 +484,7 @@ function TeamView({
               )}
               {actions.length > 0 && (
                 <RowMenu
+                  menuKey={m.requestId}
                   name={m.displayName}
                   actions={actions}
                   open={menuFor === m.requestId}
@@ -484,6 +493,7 @@ function TeamView({
                   onPick={(action) => {
                     if (action === 'resend') {
                       setMenuFor(null);
+                      refocusMenu.current = m.requestId;
                       runAction(
                         `resend:${m.requestId}`,
                         () => resendTeamInvite(m.requestId, props.shortId),
@@ -577,6 +587,7 @@ function TeamView({
  * teammate. Esc or a click outside closes it, and focus goes back to «•••».
  */
 function RowMenu({
+  menuKey,
   name,
   actions,
   open,
@@ -584,6 +595,8 @@ function RowMenu({
   onPick,
   busy,
 }: {
+  /** The row's request id, so focus can come back to this «•••». */
+  menuKey: string;
   name: string;
   actions: MenuAction[];
   open: boolean;
@@ -636,6 +649,7 @@ function RowMenu({
         aria-label={tt('more', { name })}
         aria-haspopup="menu"
         aria-expanded={open}
+        data-row-menu={menuKey}
         disabled={busy}
         onClick={() => onToggle(!open)}
         data-testid="team-row-menu"
