@@ -5036,7 +5036,7 @@
       "membersHeadingWithCap": "Medlemmer ({count} / {cap})",
       "youSuffix": "(deg)",
       "changeRoleLink": "Endre rolle",
-      "changeRoleLabel": "Endre rollen til {name}",
+      "changeRoleLabel": "Endre rolle for {name}",
       "removeLink": "Fjern",
       "removeLabel": "Fjern {name} fra klubben",
       "setupRoundButton": "Sett opp en runde for klubben",
