@@ -3,6 +3,7 @@
 import { Text, View } from 'react-native';
 import type { NassauResult, SkinsResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
+import { skinsPotNow } from '../../../../../lib/leaderboard/skinsPot';
 import {
   carriedPotLine,
   NASSAU_SECTION_LABELS,
@@ -10,8 +11,15 @@ import {
 } from '../../lib/leaderboardModel';
 import { useTheme } from '../../theme';
 import { SettlementCard } from './SettlementCard';
+import { SkinsCoinGrid, SkinsPotHero, SkinsStanding } from './SkinsPot';
 import { LeaderTable, plainBoardCard } from './Table';
 
+/**
+ * Skins (#2317, skinspotten): toppkortet mens runden pågår, én mynt per hull og
+ * en slank stilling uten plass, medaljer og reaksjoner, som tegningen og
+ * nettets `SkinsView`. Et ferdig spill har resultatets topp over seg i stedet
+ * for kortet, og linja om skinsene som aldri ble vunnet.
+ */
 export function SkinsView({
   result,
   status,
@@ -25,33 +33,31 @@ export function SkinsView({
   nameOf: (userId: string) => string;
 }) {
   const { ui } = useTheme();
-  const potLine = carriedPotLine(result.carriedPot, status);
+  const finished = status === 'finished';
+  const pot = skinsPotNow(result.holes, result.carriedPot);
+  // Mens runden pågår står potten i toppkortet; linja er bare for ferdige spill.
+  const potLine = finished ? carriedPotLine(result.carriedPot, status) : null;
   return (
     <View testID="skins-view">
-      <LeaderTable
-        testID="leaderboard-table"
-        columns={[
-          { key: 'rank', label: '#', flex: 0.5, numeric: true },
-          { key: 'name', label: 'Navn', flex: 3 },
-          { key: 'skins', label: 'Skins', numeric: true },
-          { key: 'holes', label: 'Hull', numeric: true },
-        ]}
-        rows={result.players.map((player) => ({
-          key: player.userId,
-          highlight: player.rank === 1,
-          reactionTarget: { userId: player.userId, name: nameOf(player.userId) },
-          cells: [player.rank, nameOf(player.userId), player.totalSkins, player.holesWon],
-        }))}
+      {finished ? null : <SkinsPotHero scoring={result.scoring} pot={pot} />}
+      {/* Et spill som ble avsluttet før alle hull var spilt, har ingen pott på spill. */}
+      <SkinsCoinGrid
+        holes={result.holes}
+        currentHoleNumber={!finished && pot.kind === 'pending' ? pot.holeNumber : null}
+        nameOf={nameOf}
       />
+      <SkinsStanding players={result.players} nameOf={nameOf} />
       {potLine ? (
         <Text style={ui.muted} testID="skins-pot">
           {potLine}
         </Text>
       ) : null}
       {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
-      <Text style={ui.muted}>
-        {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
-      </Text>
+      {finished ? (
+        <Text style={ui.muted}>
+          {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
+        </Text>
+      ) : null}
     </View>
   );
 }
