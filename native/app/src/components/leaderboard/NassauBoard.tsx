@@ -162,7 +162,7 @@ export function NassauBoard({
       {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
       {/* Et ferdig spill har ikke hodet med kickeren; scoringen står her i stedet. */}
       {finished ? (
-        <Text style={ui.muted} testID="nassau-scoring">
+        <Text style={[ui.muted, styles.scoring]} testID="nassau-scoring">
           {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
         </Text>
       ) : null}
@@ -486,5 +486,6 @@ const styles = StyleSheet.create({
   rowName: { ...interLine(15, 18), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
   rowHoles: { ...interLine(12, 15), fontFamily: FONTS.sans, width: 60, textAlign: 'right' },
   rowScore: { ...fraunces(600, 18, 22), width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  scoring: { marginTop: 12 },
   hint: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold, paddingHorizontal: 4, paddingTop: 10 },
 });
