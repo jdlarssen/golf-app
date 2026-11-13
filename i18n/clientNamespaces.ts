@@ -68,6 +68,8 @@ export const SCOPED_NAMESPACES = [
   'formatGuide',
   'cup',
   'liga',
+  // #2840: the team form's and the team page's friend picker (≈3 kB).
+  'friends',
 ] as const satisfies readonly Namespace[];
 
 export type ScopedNamespace = (typeof SCOPED_NAMESPACES)[number];
