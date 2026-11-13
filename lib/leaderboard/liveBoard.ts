@@ -16,7 +16,7 @@ import {
 } from '@/lib/scoring/context/buildStablefordContext';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import { isSoloFormat, isStablefordFamily } from '@/lib/scoring/modes/types';
 import type {
   GameMode,
   GameModeConfig,
@@ -156,6 +156,57 @@ export function withoutLatestHolePerPlayer<
 }
 
 /**
+ * The formats with a live board (#2330): solo strokeplay and the solo
+ * stableford family. The one home for the rule — `computeLiveBoard` reads it,
+ * and so do the embed card and the embed snippet's frame height.
+ */
+export function liveBoardCovers(game: Pick<LiveBoardGame, 'game_mode' | 'mode_config'>): boolean {
+  if (game.game_mode === 'solo_strokeplay') return true;
+  return isStablefordFamily(game.game_mode) && isSoloFormat(game.game_mode, game.mode_config.team_size ?? 1);
+}
+
+/**
+ * The engine's result for a solo board, or `null` for any other format. It
+ * does not look at the status, so a finished game gets its result here too
+ * (#2330: the embed card's finished board, via `soloResultBoard`).
+ */
+export function soloResult(opts: {
+  gameId: string;
+  game: Pick<LiveBoardGame, 'game_mode' | 'mode_config'>;
+  players: LiveBoardPlayerRow[];
+  holesRows: StablefordContextHoleRow[];
+  scoresRows: StablefordContextScoreRow[];
+}): SoloResult | null {
+  const { gameId, game, players, holesRows, scoresRows } = opts;
+  if (isStablefordFamily(game.game_mode)) {
+    const result = computeLeaderboard(
+      buildStablefordContext({
+        gameId,
+        gameMode: game.game_mode === 'modified_stableford' ? 'modified_stableford' : 'stableford',
+        modeConfig: game.mode_config,
+        players,
+        holesRows,
+        scoresRows,
+      }),
+    );
+    return result.kind === 'stableford' && result.variant === 'solo' ? result : null;
+  }
+  if (game.game_mode === 'solo_strokeplay') {
+    const result = computeLeaderboard(
+      buildSoloStrokeplayContext({
+        gameId,
+        modeConfig: game.mode_config,
+        players,
+        holesRows,
+        scoresRows,
+      }),
+    );
+    return result.kind === 'solo_strokeplay' ? result : null;
+  }
+  return null;
+}
+
+/**
  * The live board, or `null` when the game should not show it: another format,
  * team stableford, a finished game (podium or duel) or a reveal game that is
  * still hiding net results.
@@ -173,37 +224,12 @@ export function computeLiveBoard(opts: {
   minHolesForMovement?: number;
 }): LiveBoard | null {
   const { gameId, game, players, holesRows, scoresRows, minHolesForMovement = 2 } = opts;
+  if (!liveBoardCovers(game)) return null;
   if (game.status === 'finished') return null;
   if (shouldHideNetto(revealState(game.score_visibility, game.status))) return null;
 
-  const resultFor = (scores: StablefordContextScoreRow[]): SoloResult | null => {
-    if (isStablefordFamily(game.game_mode)) {
-      const result = computeLeaderboard(
-        buildStablefordContext({
-          gameId,
-          gameMode: game.game_mode === 'modified_stableford' ? 'modified_stableford' : 'stableford',
-          modeConfig: game.mode_config,
-          players,
-          holesRows,
-          scoresRows: scores,
-        }),
-      );
-      return result.kind === 'stableford' && result.variant === 'solo' ? result : null;
-    }
-    if (game.game_mode === 'solo_strokeplay') {
-      const result = computeLeaderboard(
-        buildSoloStrokeplayContext({
-          gameId,
-          modeConfig: game.mode_config,
-          players,
-          holesRows,
-          scoresRows: scores,
-        }),
-      );
-      return result.kind === 'solo_strokeplay' ? result : null;
-    }
-    return null;
-  };
+  const resultFor = (scores: StablefordContextScoreRow[]): SoloResult | null =>
+    soloResult({ gameId, game, players, holesRows, scoresRows: scores });
 
   const result = resultFor(scoresRows);
   if (!result) return null;
