@@ -16,6 +16,15 @@ describe('buildEmbedSnippet', () => {
     );
   });
 
+  it('the compact card locks the frame to a light colour scheme, so a dark club page shows through (#2330)', () => {
+    const snippet = buildEmbedSnippet('https://tornygolf.no/embed/spill/abc', {
+      height: 349,
+      title: 'Tørny – spill',
+      lightScheme: true,
+    });
+    expect(snippet).toContain('style="width:100%;max-width:480px;height:349px;border:0;border-radius:12px;color-scheme:light;"');
+  });
+
   it('escapes attribute-breaking characters in url and title', () => {
     const snippet = buildEmbedSnippet('https://x.no/e?a=1&b="2"', {
       height: 400,
@@ -51,6 +60,12 @@ describe('compactEmbedHeight (#2330) — the frame the compact card needs', () =
     // A long list wraps to more lines, so the frame grows with it.
     const long = compactEmbedHeight({ logos: 0, names: ['Klubbshoppen på Byneset', 'Golfbaren og kafeen', 'Fjordbrygga restaurant'] });
     expect(long).toBeGreaterThan(one);
+  });
+
+  it('capitals are wider: three names in capitals need 407 px at 320 px (measured, round 2)', () => {
+    expect(
+      compactEmbedHeight({ logos: 0, names: ['WILHELMSEN HAMAR TANNLEGESENTER', 'INTERIØR', 'BYNESET REGNSKAP'] }),
+    ).toBeGreaterThanOrEqual(407);
   });
 });
 

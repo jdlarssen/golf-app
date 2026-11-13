@@ -87,17 +87,6 @@ const prizesArraySchema = z
   );
 
 /**
- * Defensiv parse — returnerer [] på ugyldig input. Brukes på lese-/visningsstien
- * (spill-hjem, leaderboard, spectate, embed, signup) så en malformert prizes-blob
- * aldri krasjer en flate.
- *
- * Dette er den eneste Zod-sjekken av premiebordet. DB-CHECK-en (0136) låser bare
- * at `prizes` er en array med høyst 7 elementer. Skrivestien
- * (`parsePrizesFromFormData` i gamePayload.ts) kjører ikke Zod: den bygger
- * slottene fra de faste `PRIZE_SLOTS`, trimmer og beskjærer lengdene, så dataene
- * er gyldige fordi de er konstruert slik. En ny skrivesti må selv sørge for det.
- */
-/**
  * What the sponsor strip shows (#1052, one home since #2330): one logo per
  * storage path, named by its sponsor (`null` = no name, the strip says
  * «logo»), and the sponsors without a logo, each once. A name that already
@@ -125,6 +114,17 @@ export function sponsorStripItems(prizes: readonly GamePrize[]): {
   return { logos, names };
 }
 
+/**
+ * Defensiv parse — returnerer [] på ugyldig input. Brukes på lese-/visningsstien
+ * (spill-hjem, leaderboard, spectate, embed, signup) så en malformert prizes-blob
+ * aldri krasjer en flate.
+ *
+ * Dette er den eneste Zod-sjekken av premiebordet. DB-CHECK-en (0136) låser bare
+ * at `prizes` er en array med høyst 7 elementer. Skrivestien
+ * (`parsePrizesFromFormData` i gamePayload.ts) kjører ikke Zod: den bygger
+ * slottene fra de faste `PRIZE_SLOTS`, trimmer og beskjærer lengdene, så dataene
+ * er gyldige fordi de er konstruert slik. En ny skrivesti må selv sørge for det.
+ */
 export function safeParsePrizes(raw: unknown): GamePrize[] {
   const res = prizesArraySchema.safeParse(raw);
   return res.success ? res.data : [];
