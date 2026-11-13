@@ -96,16 +96,21 @@ export type LastDayStamp = { kind: 'time'; time: string } | { kind: 'yesterday' 
 /**
  * The three newest events from the last 24 hours, newest first. An event on
  * `now`'s Oslo day is stamped with its Oslo time, an earlier one «i går»
- * (inside 24 hours that can only be the day before).
+ * (inside 24 hours that can only be the day before). An event stamped after
+ * `now` is left out: it did not happen in the last day, and would sort first.
  */
 export function lastDayEntries<T extends { ts: string }>(
   entries: readonly T[],
   now: Date,
 ): { entry: T; stamp: LastDayStamp }[] {
-  const since = now.getTime() - DAY_MS;
+  const until = now.getTime();
+  const since = until - DAY_MS;
   const today = osloDateKey(now);
   return entries
-    .filter((e) => Date.parse(e.ts) >= since)
+    .filter((e) => {
+      const t = Date.parse(e.ts);
+      return t >= since && t <= until;
+    })
     .sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts))
     .slice(0, LAST_DAY_MAX)
     .map((entry) => ({
