@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { setLiveFollow } from '@/lib/games/spectate';
-import { buildEmbedSnippet } from '@/lib/embed/snippet';
+import { buildEmbedSnippet, EMBED_HEIGHT } from '@/lib/embed/snippet';
 import { routing } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
@@ -30,12 +30,18 @@ export function LiveFollowControl({
   spectateToken: initialToken,
   locale,
   gameName,
+  compactEmbed,
 }: {
   gameId: string;
   spectateToken: string | null;
   locale: string;
   /** #1024: brukes i embed-snuttens iframe-title. */
   gameName: string;
+  /**
+   * #2330: the game gets the compact embed card (`liveBoardCovers`), so the
+   * snippet asks for the lower frame.
+   */
+  compactEmbed: boolean;
 }) {
   const t = useTranslations('spectate');
   const [token, setToken] = useState<string | null>(initialToken);
@@ -153,7 +159,7 @@ export function LiveFollowControl({
           type="button"
           onClick={async () => {
             const snippet = buildEmbedSnippet(embedUrl(token), {
-              height: 700,
+              height: compactEmbed ? EMBED_HEIGHT.compact : EMBED_HEIGHT.full,
               title: `Tørny – ${gameName}`,
             });
             try {
