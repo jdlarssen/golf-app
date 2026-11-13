@@ -27,17 +27,61 @@ export function MorningSection({
   );
 }
 
-/** The white card the rows sit in, 16 px from the screen edge as drawn. */
-export function RowCard({ children }: { children: ReactNode }) {
+/**
+ * The white card the rows sit in, 16 px from the screen edge as drawn. `more`
+ * goes at the card's foot (a `MoreRows`).
+ */
+export function RowCard({ children, more }: { children: ReactNode; more?: ReactNode }) {
   // data-focus-inset: the rows are full-bleed, so `overflow-hidden` would clip
   // an outline with a positive offset (#1402).
   return (
-    <ul
+    <div
       data-focus-inset
       className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface"
     >
-      {children}
-    </ul>
+      <ul>{children}</ul>
+      {more}
+    </div>
+  );
+}
+
+/**
+ * The rows past the first few, behind a native `<details>` at the card's foot,
+ * as «Vis n til» on the club page (#2864). No animation (#2345).
+ */
+export function MoreRows({
+  showLabel,
+  hideLabel,
+  count,
+  testId,
+  children,
+}: {
+  showLabel: string;
+  hideLabel: string;
+  count: number;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <details data-testid={testId} data-count={count} className="group border-t border-row-divider-warm">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1.5 text-[13px] font-semibold leading-[normal] text-primary [&::-webkit-details-marker]:hidden">
+        <span className="group-open:hidden">{showLabel}</span>
+        <span className="hidden group-open:inline">{hideLabel}</span>
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="size-4 shrink-0 group-open:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </summary>
+      <ul className="border-t border-row-divider-warm">{children}</ul>
+    </details>
   );
 }
 

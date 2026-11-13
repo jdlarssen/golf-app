@@ -4128,6 +4128,8 @@
         "needsYouAllDelivered": "Alle har levert. Venter på at du godkjenner.",
         "needsYouPendingApproval": "{n, plural, one {# scorekort venter på at du godkjenner} other {# scorekort venter på at du godkjenner}}",
         "needsYouIdeas": "{n, plural, one {# ny idé fra spillerne} other {# nye ideer fra spillerne}}",
+        "needsYouMore": "Vis {count} til",
+        "needsYouFewer": "Vis færre",
         "todayHeading": "I dag",
         "todayLive": "Live",
         "todayPlaying": "{count, plural, one {# spiller} other {# spillere}} · hull {hole}",

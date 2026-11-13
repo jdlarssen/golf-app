@@ -2,12 +2,14 @@ import { getTranslations } from 'next-intl/server';
 import { SectionError } from '@/components/ui/SectionError';
 import { getActiveRoundsDelivery, needsYouRows, type NeedsYouRow } from '@/lib/admin/actionItems';
 import { getAdminContext } from '../_dashboardContext';
-import { MorningRow, MorningSection, RowArrow, RowCard } from './parts';
+import { MorningSection } from './parts';
+import { NeedsYouList, type NeedsYouListRow } from './NeedsYouList';
 
 /**
  * «Trenger deg · n» (#2345): one row per active game with a card not handed
  * in or waiting for approval, plus the players' unseen ideas. Each row opens
- * the place to act. Renders nothing when nothing waits.
+ * the place to act; past five, the rest fold behind «Vis n til». Renders
+ * nothing when nothing waits.
  */
 export async function NeedsYouSection() {
   const { supabase } = await getAdminContext();
@@ -32,8 +34,7 @@ export async function NeedsYouSection() {
 
   const games = needsYouRows(delivery.games, delivery.players);
   const ideas = ideasRes.count ?? 0;
-  const count = games.length + (ideas > 0 ? 1 : 0);
-  if (count === 0) return null;
+  if (games.length === 0 && ideas === 0) return null;
 
   const line = (row: NeedsYouRow) =>
     row.notDelivered > 0
@@ -42,42 +43,27 @@ export async function NeedsYouSection() {
         ? t('needsYouAllDelivered')
         : t('needsYouPendingApproval', { n: row.pendingApproval });
 
-  return (
-    <MorningSection id="morning-needs-you" heading={t('needsYouHeading', { count })}>
-      <RowCard>
-        {games.map((row) => (
-          <MorningRow
-            key={row.gameId}
-            href={`/admin/games/${row.gameId}/status`}
-            testId="morning-needs-you-row"
-            minHeight="min-h-[56px]"
-            lead={<Dot warning={row.notDelivered > 0} />}
-            name={row.name}
-            line={line(row)}
-            trail={<RowArrow />}
-          />
-        ))}
-        {ideas > 0 && (
-          <MorningRow
-            href="/admin/ideer"
-            testId="morning-needs-you-ideas"
-            minHeight="min-h-[56px]"
-            lead={<Dot warning={false} />}
-            name={t('needsYouIdeas', { n: ideas })}
-            trail={<RowArrow />}
-          />
-        )}
-      </RowCard>
-    </MorningSection>
-  );
-}
+  const rows: NeedsYouListRow[] = games.map((row) => ({
+    key: row.gameId,
+    href: `/admin/games/${row.gameId}/status`,
+    name: row.name,
+    line: line(row),
+    warning: row.notDelivered > 0,
+    testId: 'morning-needs-you-row',
+  }));
+  if (ideas > 0) {
+    rows.push({
+      key: 'ideas',
+      href: '/admin/ideer',
+      name: t('needsYouIdeas', { n: ideas }),
+      warning: false,
+      testId: 'morning-needs-you-ideas',
+    });
+  }
 
-/** Amber for cards not handed in, green for everything else. */
-function Dot({ warning }: { warning: boolean }) {
   return (
-    <span
-      aria-hidden
-      className={`h-2.5 w-2.5 shrink-0 rounded-full ${warning ? 'bg-warning' : 'bg-primary'}`}
-    />
+    <MorningSection id="morning-needs-you" heading={t('needsYouHeading', { count: rows.length })}>
+      <NeedsYouList rows={rows} />
+    </MorningSection>
   );
 }
