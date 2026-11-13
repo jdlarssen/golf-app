@@ -2,8 +2,8 @@ import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import type { RankedEntry } from '@/lib/stats/aeresbrett';
 
-/** Rows on the board: the first three stand, the rest of the top 10 fold. */
-const VISIBLE = 3;
+/** Rows on the board: the first two stand, as drawn; the rest of the top 10 fold. */
+const VISIBLE = 2;
 const TOP = 10;
 
 const MEDAL: Record<number, string> = {
@@ -15,9 +15,9 @@ const MEDAL: Record<number, string> = {
 /**
  * «Klubbens æresbrett · 2026» on /klubber/[id] (#2326 PR2, artboard
  * «Forslag: klubbens side»): wins in the club's finished rounds this Oslo
- * year, current members only, on a green card. Places 1–3 get a gold, silver
- * and bronze medallion; equal counts share a place (`rankBoard`). Under the
- * rows: «Du: 7. plass» or «Ingen seire ennå i 2026.», and «Se hele brettet»
+ * year, current members only, on a green card. Two rows stand, as drawn; places
+ * 1–3 get a gold, silver and bronze medallion, also in the fold, and equal
+ * counts share a place (`rankBoard`). Under the rows: «Du: 7. plass» or «Ingen seire ennå i 2026.», and «Se hele brettet»
  * folds out the rest of the top 10 (native `<details>`).
  *
  * Presentation only; the page decides the year, the rows and whether the board

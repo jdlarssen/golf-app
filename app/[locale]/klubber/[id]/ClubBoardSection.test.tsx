@@ -23,16 +23,19 @@ describe('ClubBoardSection (#2326)', () => {
     expect(screen.getByRole('region', { name: 'Klubbens æresbrett · 2026' })).toBeInTheDocument();
   });
 
-  it('shows three rows, with places and wins, and the rest behind the fold', () => {
+  it('shows two rows, as drawn, with places and wins, and the rest behind the fold', () => {
     const { container } = render(<ClubBoardSection year={2026} rows={rows} me={null} />);
     const details = container.querySelector('details') as HTMLElement;
     const outside = [...container.querySelectorAll('li')].filter((li) => !details.contains(li));
-    expect(outside.map((li) => li.getAttribute('data-place'))).toEqual(['1', '2', '3']);
+    expect(outside.map((li) => li.getAttribute('data-place'))).toEqual(['1', '2']);
     expect(within(outside[0]).getByText('Marte Lie')).toBeInTheDocument();
     expect(within(outside[0]).getByText('3 seire')).toBeInTheDocument();
-    expect(within(outside[2]).getByText('1 seier')).toBeInTheDocument();
+    expect(within(outside[1]).getByText('2 seire')).toBeInTheDocument();
     expect(details).not.toHaveAttribute('open');
-    expect(within(details).getAllByRole('listitem', { hidden: true }).map((li) => li.getAttribute('data-place'))).toEqual(['3', '3']);
+    const folded = within(details).getAllByRole('listitem', { hidden: true });
+    expect(folded.map((li) => li.getAttribute('data-place'))).toEqual(['3', '3', '3']);
+    // Place 3 keeps its bronze medallion in the fold.
+    expect(within(folded[0]).getByText('1 seier')).toBeInTheDocument();
   });
 
   it('says where you are, or that you have no wins this year', () => {
@@ -43,7 +46,7 @@ describe('ClubBoardSection (#2326)', () => {
     expect(screen.getByTestId('club-board-me')).toHaveTextContent(/^Ingen seire ennå i 2026$/);
   });
 
-  it('has no fold with three rows or fewer', () => {
+  it('has no fold with two rows or fewer', () => {
     const { container } = render(<ClubBoardSection year={2025} rows={rows.slice(0, 2)} me={null} />);
     expect(container.querySelector('details')).toBeNull();
     expect(screen.getByTestId('club-board-me')).toHaveTextContent('Ingen seire ennå i 2025.');
