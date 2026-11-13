@@ -4,6 +4,7 @@ process.env.TZ = 'UTC';
 
 import { describe, it, expect } from 'vitest';
 import {
+  buildClubRoundEntries,
   buildTerminEntries,
   capacityState,
   filterTermin,
@@ -11,6 +12,7 @@ import {
   hasOpenRounds,
   parseTerminFilter,
   terminTimeNote,
+  type ClubRoundGame,
   type GameSeats,
   type TerminEntry,
 } from './terminliste';
@@ -435,5 +437,120 @@ describe('groupTerminByDate / filterTermin — injected date parts (#2838)', () 
       entry({ id: 'sun', scheduled_tee_off_at: '2026-10-04T10:00:00Z' }),
     ];
     expect(filterTermin(rows, 'helg', NOW, utcParts).map((e) => e.id)).toEqual(['sat', 'sun']);
+  });
+});
+
+describe('buildClubRoundEntries — the club page\'s rounds (#2326)', () => {
+  const ME = 'user-me';
+
+  function round(over: Partial<ClubRoundGame> = {}): ClubRoundGame {
+    return {
+      id: 'r1',
+      name: 'Onsdagsgolfen',
+      short_id: 'rnd00001',
+      scheduled_tee_off_at: '2026-10-08T15:30:00Z',
+      course_name: 'Byneset North',
+      game_mode: 'stableford',
+      mode_config: STABLEFORD,
+      hole_segment: 'full',
+      start_type: 'first_tee',
+      created_by: 'someone-else',
+      signups_closed_at: null,
+      ...over,
+    };
+  }
+
+  const build = (games: ClubRoundGame[], joined: string[] = [], seats = NO_SEATS) =>
+    buildClubRoundEntries(games, { joinedIds: new Set(joined), userId: ME, seats, now: NOW });
+
+  it('is empty without rounds', () => {
+    expect(build([])).toEqual([]);
+  });
+
+  it('marks a round you are on «joined», one you set up «organizer», others none', () => {
+    const rows = build(
+      [
+        round({ id: 'a', name: 'A', scheduled_tee_off_at: '2026-10-05T10:00:00Z' }),
+        round({ id: 'b', name: 'B', scheduled_tee_off_at: '2026-10-06T10:00:00Z', created_by: ME }),
+        round({ id: 'c', name: 'C', scheduled_tee_off_at: '2026-10-07T10:00:00Z' }),
+      ],
+      ['a'],
+    );
+    expect(rows.map((r) => [r.id, r.mine])).toEqual([
+      ['a', 'joined'],
+      ['b', 'organizer'],
+      ['c', null],
+    ]);
+  });
+
+  it('«joined» wins over «organizer» when you set up the round and play it', () => {
+    const [row] = build([round({ created_by: ME })], ['r1']);
+    expect(row.mine).toBe('joined');
+  });
+
+  it('a round without an organiser is nobody\'s', () => {
+    const [row] = build([round({ created_by: null })]);
+    expect(row.mine).toBeNull();
+  });
+
+  it('is a club row with a direct button', () => {
+    const [row] = build([round()]);
+    expect(row.source).toBe('club');
+    expect(row.cta).toBe('direct');
+  });
+
+  it('sorts on tee-off, then name, with undated rounds last by name', () => {
+    const rows = build([
+      round({ id: 'u2', name: 'Zulu', scheduled_tee_off_at: null }),
+      round({ id: 'late', name: 'Sen', scheduled_tee_off_at: '2026-10-09T10:00:00Z' }),
+      round({ id: 'tieB', name: 'Bravo', scheduled_tee_off_at: '2026-10-04T07:00:00Z' }),
+      round({ id: 'u1', name: 'Alfa', scheduled_tee_off_at: null }),
+      round({ id: 'tieA', name: 'Alfa', scheduled_tee_off_at: '2026-10-04T07:00:00Z' }),
+    ]);
+    expect(rows.map((r) => r.id)).toEqual(['tieA', 'tieB', 'late', 'u1', 'u2']);
+  });
+
+  it('reads an unreadable tee-off as undated', () => {
+    const rows = build([
+      round({ id: 'bad', name: 'A', scheduled_tee_off_at: 'not-a-date' }),
+      round({ id: 'ok', name: 'B' }),
+    ]);
+    expect(rows.map((r) => r.id)).toEqual(['ok', 'bad']);
+  });
+
+  it('keeps a round earlier today and drops one before today\'s Oslo date', () => {
+    const rows = build([
+      // 06:00 Oslo today (NOW is 12:00 Oslo on 1 Oct): already teed off, still today.
+      round({ id: 'today', scheduled_tee_off_at: '2026-10-01T04:00:00Z' }),
+      // 23:59 Oslo yesterday.
+      round({ id: 'yesterday', scheduled_tee_off_at: '2026-09-30T21:59:00Z' }),
+    ]);
+    expect(rows.map((r) => r.id)).toEqual(['today']);
+  });
+
+  it('reads the day on the Oslo calendar, not UTC', () => {
+    // 22:30Z on 30 Sep is 00:30 on 1 Oct in Oslo: today, so it stays.
+    const rows = build([round({ id: 'oslo', scheduled_tee_off_at: '2026-09-30T22:30:00Z' })]);
+    expect(rows.map((r) => r.id)).toEqual(['oslo']);
+  });
+
+  it('drops a closed round that is not yours, keeps a closed one you are in or set up', () => {
+    const closed = '2026-09-29T10:00:00Z';
+    const rows = build(
+      [
+        round({ id: 'other', name: 'A', signups_closed_at: closed }),
+        round({ id: 'joined', name: 'B', signups_closed_at: closed }),
+        round({ id: 'mine', name: 'C', signups_closed_at: closed, created_by: ME }),
+      ],
+      ['joined'],
+    );
+    expect(rows.map((r) => r.id)).toEqual(['joined', 'mine']);
+  });
+
+  it('carries the seats like the terminliste', () => {
+    const seats = new Map<string, GameSeats>([['r1', { kind: 'capped', cap: 12, held: 12 }]]);
+    const [row] = build([round()], [], seats);
+    expect(row.capacity).toEqual({ cap: 12, held: 12 });
+    expect(row.full).toBe(true);
   });
 });

@@ -9,7 +9,7 @@ import { sendClubInviteNotification } from '@/lib/mail/clubInviteNotification';
 import { playerName } from '@/lib/names/playerName';
 
 /**
- * addMember — server action for the «Legg til på e-post»-form on /klubber/[id].
+ * addMember — server action for the «Legg til på e-post»-form on /klubber/[id]/administrer.
  *
  * Calls the `add_club_member_by_email` SECURITY DEFINER RPC (migrasjon 0075).
  * The RPC requires the caller to be an owner/admin of the club.
@@ -45,7 +45,7 @@ export async function addMember(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim();
 
   if (!groupId) redirect({ href: '/klubber', locale });
-  if (!email) redirect({ href: `/klubber/${groupId}?error=email_req`, locale });
+  if (!email) redirect({ href: `/klubber/${groupId}/administrer?error=email_req`, locale });
 
   const { data, error } = await supabase.rpc('add_club_member_by_email', {
     p_group_id: groupId,
@@ -55,28 +55,28 @@ export async function addMember(formData: FormData) {
   if (error) {
     const msg = error.message ?? '';
     if (msg.includes('not_authorized')) {
-      redirect({ href: `/klubber/${groupId}?error=not_auth`, locale });
+      redirect({ href: `/klubber/${groupId}/administrer?error=not_auth`, locale });
     }
     if (msg.includes('email_required')) {
-      redirect({ href: `/klubber/${groupId}?error=email_req`, locale });
+      redirect({ href: `/klubber/${groupId}/administrer?error=email_req`, locale });
     }
     console.error('[addMember]', error);
-    redirect({ href: `/klubber/${groupId}?error=unknown&email=${encodeURIComponent(email)}`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?error=unknown&email=${encodeURIComponent(email)}`, locale });
   }
 
   if (data === 'not_found') {
     // #644: the RPC no longer returns this for unknown emails (it invites
     // instead). Kept as a defensive fallback in case an older RPC is still live.
-    redirect({ href: `/klubber/${groupId}?error=not_found&email=${encodeURIComponent(email)}`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?error=not_found&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'already_member') {
-    redirect({ href: `/klubber/${groupId}?error=already&email=${encodeURIComponent(email)}`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?error=already&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'club_full') {
-    redirect({ href: `/klubber/${groupId}?error=full&email=${encodeURIComponent(email)}`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?error=full&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'club_expired') {
-    redirect({ href: `/klubber/${groupId}?error=expired&email=${encodeURIComponent(email)}`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?error=expired&email=${encodeURIComponent(email)}`, locale });
   }
 
   // #644: data === 'invited' — an unregistered email got a pending invitation.
@@ -102,19 +102,22 @@ export async function addMember(formData: FormData) {
       // the organizer knows to follow up, but treat it as a non-blocking notice.
       console.error('[addMember] club invite mail failed', err);
       revalidatePath(`/klubber/${groupId}`);
-      redirect({ href: `/klubber/${groupId}?invited=${encodeURIComponent(email)}&mail=failed`, locale });
+      revalidatePath(`/klubber/${groupId}/administrer`);
+      redirect({ href: `/klubber/${groupId}/administrer?invited=${encodeURIComponent(email)}&mail=failed`, locale });
     }
     revalidatePath(`/klubber/${groupId}`);
-    redirect({ href: `/klubber/${groupId}?invited=${encodeURIComponent(email)}`, locale });
+    revalidatePath(`/klubber/${groupId}/administrer`);
+    redirect({ href: `/klubber/${groupId}/administrer?invited=${encodeURIComponent(email)}`, locale });
   }
 
   // data === 'added'
   revalidatePath(`/klubber/${groupId}`);
-  redirect({ href: `/klubber/${groupId}?added=${encodeURIComponent(email)}`, locale });
+  revalidatePath(`/klubber/${groupId}/administrer`);
+  redirect({ href: `/klubber/${groupId}/administrer?added=${encodeURIComponent(email)}`, locale });
 }
 
 /**
- * decideRequest — server action for the Godkjenn/Avslå-forms on /klubber/[id].
+ * decideRequest — server action for the Godkjenn/Avslå-forms on /klubber/[id]/administrer.
  *
  * Calls the `decide_join_request` SECURITY DEFINER RPC (migrasjon 0075).
  * The RPC requires the caller to be an owner/admin of the club, inserts a
@@ -156,22 +159,23 @@ export async function decideRequest(formData: FormData) {
   if (error) {
     const msg = error.message ?? '';
     if (msg.includes('not_authorized')) {
-      redirect({ href: `/klubber/${groupId}?decided=not_auth`, locale });
+      redirect({ href: `/klubber/${groupId}/administrer?decided=not_auth`, locale });
     }
     if (msg.includes('already_decided')) {
-      redirect({ href: `/klubber/${groupId}?decided=already`, locale });
+      redirect({ href: `/klubber/${groupId}/administrer?decided=already`, locale });
     }
     if (msg.includes('request_not_found')) {
-      redirect({ href: `/klubber/${groupId}?decided=not_found`, locale });
+      redirect({ href: `/klubber/${groupId}/administrer?decided=not_found`, locale });
     }
     console.error('[decideRequest]', error);
-    redirect({ href: `/klubber/${groupId}?decided=unknown`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?decided=unknown`, locale });
   }
 
   // Invalidate club path so pending-requests list and member list refresh.
   revalidatePath(`/klubber/${groupId}`);
+  revalidatePath(`/klubber/${groupId}/administrer`);
 
-  redirect({ href: `/klubber/${groupId}?decided=${data ?? (approve ? 'approved' : 'rejected')}`, locale });
+  redirect({ href: `/klubber/${groupId}/administrer?decided=${data ?? (approve ? 'approved' : 'rejected')}`, locale });
 }
 
 /**
@@ -197,7 +201,7 @@ export async function cancelInvitation(formData: FormData) {
   const groupId = String(formData.get('groupId') ?? '').trim();
 
   if (!groupId) redirect({ href: '/klubber', locale });
-  if (!invitationId) redirect({ href: `/klubber/${groupId}`, locale });
+  if (!invitationId) redirect({ href: `/klubber/${groupId}/administrer`, locale });
 
   const { error } = await supabase
     .from('club_invitations')
@@ -207,9 +211,10 @@ export async function cancelInvitation(formData: FormData) {
 
   if (error) {
     console.error('[cancelInvitation]', error);
-    redirect({ href: `/klubber/${groupId}?cancelled=error`, locale });
+    redirect({ href: `/klubber/${groupId}/administrer?cancelled=error`, locale });
   }
 
   revalidatePath(`/klubber/${groupId}`);
-  redirect({ href: `/klubber/${groupId}?cancelled=ok`, locale });
+  revalidatePath(`/klubber/${groupId}/administrer`);
+  redirect({ href: `/klubber/${groupId}/administrer?cancelled=ok`, locale });
 }

@@ -146,8 +146,9 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       return `/cup/${p.tournament_id}`;
     }
     case 'club_join_request': {
+      // #2326: the requests stand on the club's back room, not its front page.
       const p = n.payload as NotificationPayload<'club_join_request'>;
-      return `/klubber/${p.group_id}`;
+      return `/klubber/${p.group_id}/administrer`;
     }
     case 'club_role_changed': {
       const p = n.payload as NotificationPayload<'club_role_changed'>;

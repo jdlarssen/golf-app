@@ -92,5 +92,6 @@ export async function setMemberRole(formData: FormData) {
   }
 
   revalidatePath(`/klubber/${groupId}`);
-  redirect({ href: `/klubber/${groupId}?role_changed=${data ?? role}`, locale });
+  revalidatePath(`/klubber/${groupId}/medlemmer`);
+  redirect({ href: `/klubber/${groupId}/medlemmer?role_changed=${data ?? role}`, locale });
 }

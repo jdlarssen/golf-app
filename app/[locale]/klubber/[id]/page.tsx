@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { first } from '@/lib/url/searchParams';
 import { klubbhusBackHref } from '@/lib/url/klubbhusOrigin';
 import { notFound } from 'next/navigation';
@@ -5,50 +6,47 @@ import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
-import { formatDate } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
+import { getClubRounds } from '@/lib/clubs/getClubRounds';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
+import { nameInitials } from '@/lib/names/initials';
 import { AppShell } from '@/components/ui/AppShell';
-import { TopBar } from '@/components/ui/TopBar';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
-import { SubmitButton } from '@/components/ui/SubmitButton';
-import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SectionError } from '@/components/ui/SectionError';
-import { CopyJoinLinkButton } from './CopyJoinLinkButton';
+import { ChevronRightIcon } from '@/components/icons';
 import { ClubLeaguesSection } from './ClubLeaguesSection';
 import { ClubCupsSection } from './ClubCupsSection';
+import { ClubRoundsSection, ClubRoundsSkeleton } from './ClubRoundsSection';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
-import { addMember, decideRequest, cancelInvitation } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
-  added?: string | string[];
-  invited?: string | string[];
-  mail?: string | string[];
-  cancelled?: string | string[];
-  error?: string | string[];
-  email?: string | string[];
-  decided?: string | string[];
-  role_changed?: string | string[];
   kilde?: string | string[];
   status?: string | string[];
   name?: string | string[];
 }>;
 
+/** Members listed on the page; the rest are on /klubber/[id]/medlemmer. */
+const MEMBERS_SHOWN = 5;
+/** Initials in the green head. */
+const INITIALS_SHOWN = 3;
+
 /**
- * /klubber/[id] — club detail page.
+ * /klubber/[id] — the club's page for its members (#2326, artboard «Forslag:
+ * klubbens side»): the green head with the name, a row of initials and «32
+ * medlemmer · du er eier», the club's next rounds, the first five members,
+ * the club's leagues and cups, «Sett opp en runde for klubben» and «Forlat
+ * klubb» (hidden for the only owner, whose confirm page would block them).
  *
- * Shows the member list with role badges. Owner/admin see:
- *   - Add member by email form (reads ?added= / ?error= searchParams for result banner)
- *   - Copy join-link affordance (/klubber/bli-med/[short_id])
- *   - Remove-member links per non-self member → /klubber/[id]/fjern/[userId]
- * All members see a «Forlat klubb» link → /klubber/[id]/forlat (hidden for
- * last-owner since that confirm page would block them anyway; avoid dead path).
+ * Owner and admin get one door under the head, «Administrer klubben»
+ * (/klubber/[id]/administrer): requests, invitations, «Legg til medlem» and
+ * the club link live there. The whole member list with «Endre rolle» and
+ * «Fjern» is /klubber/[id]/medlemmer. This page keeps the banners for an
+ * expired club and for a deleted club cup or league (#2329), whose lists
+ * stand here.
  *
  * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
  */
@@ -69,14 +67,14 @@ export default async function KlubbDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
-  // #2201: opening the club marks its `club_role_changed` varsler read. #2759: a
-  // `club_join_request` waits until nobody waits. Before the membership gate.
+  // #2201: opening the club marks its `club_role_changed` varsler read; a
+  // `club_join_request` is read on /administrer (#2326). Before the membership gate.
   after(() => markReadOnVisit({ userId: user.id, surface: 'club', entityId: id }));
 
   const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
-  const { club, members, myRole, pendingRequests, pendingInvitations } = detail;
+  const { club, members, myRole, pendingRequests } = detail;
   const isAdmin = myRole === 'owner' || myRole === 'admin';
 
   // #480: klubbens ligaer. RLS («leagues select scoped») lar medlemmer se
@@ -85,8 +83,8 @@ export default async function KlubbDetailPage({
   // #1491: mine egne roster-rader, så en kladd-cup kan vise «Meld deg på» eller
   // «Påmeldt» rett i lista. Filtrert på meg selv og lest med request-klienten
   // (policyen `tournament_participants_select_authenticated`, 0155, er
-  // `using (true)`) — ingen service-role på denne siden. Alle tre kjører
-  // parallelt: roster-raden trenger ikke cup-id-ene, bare mitt bruker-id.
+  // `using (true)`). Alle tre kjører parallelt: roster-raden trenger ikke
+  // cup-id-ene, bare mitt bruker-id.
   const [leaguesRes, cupsRes, rosterRes] =
     await Promise.all([
       supabase
@@ -120,22 +118,14 @@ export default async function KlubbDetailPage({
   }));
 
   // #50: en utløpt klubb (frossen avtale) tar ikke imot nye medlemmer eller
-  // spill. Vi fryser legg-til-medlem, del-lenke og «sett opp runde», og viser
-  // et utløpt-banner. Medlemsstyring (roller, fjern, forlat) er fortsatt mulig.
+  // spill. Vi skjuler rundene og «sett opp runde», og viser et utløpt-banner.
+  // Medlemsstyring (roller, fjern, forlat) er fortsatt mulig.
   const frozen = isClubExpired(club.valid_until);
 
   // Determine whether to show leave link (hide for the only owner).
   const ownerCount = members.filter((m) => m.role === 'owner').length;
   const iSoleOwner = myRole === 'owner' && ownerCount === 1;
 
-  const addedEmail = first(sp.added);
-  const invitedEmail = first(sp.invited);
-  const invitedMailFailed = first(sp.mail) === 'failed';
-  const cancelledCode = first(sp.cancelled);
-  const errorCode = first(sp.error);
-  const errorEmail = first(sp.email);
-  const decidedCode = first(sp.decided);
-  const roleChanged = first(sp.role_changed);
   const statusCode = first(sp.status);
   const deletedName = first(sp.name);
 
@@ -161,347 +151,184 @@ export default async function KlubbDetailPage({
   // aldri gikk gjennom (#2487).
   const backHref = klubbhusBackHref(sp.kilde, '/klubber');
 
-  // Build error message for the add-member form.
-  function getErrorMessage(): string {
-    if (!errorCode) return t('errors.fallback');
-    switch (errorCode) {
-      case 'not_found':
-        return errorEmail
-          ? t('errors.not_found', { email: errorEmail })
-          : t('errors.not_found_generic');
-      case 'already':
-        return errorEmail
-          ? t('errors.already', { email: errorEmail })
-          : t('errors.already_generic');
-      case 'full':
-        return club.member_cap
-          ? t('errors.full', { cap: club.member_cap })
-          : t('errors.full_generic');
-      default:
-        return t(`errors.${errorCode}` as Parameters<typeof t>[0], undefined as never) ?? t('errors.fallback');
-    }
-  }
-
-  // Build decided banner message.
-  function getDecidedMessage(): { tone: 'success' | 'error'; text: string } | null {
-    if (!decidedCode) return null;
-    switch (decidedCode) {
-      case 'approved': return { tone: 'success', text: t('decided.approved') };
-      case 'rejected': return { tone: 'success', text: t('decided.rejected') };
-      case 'not_auth': return { tone: 'error', text: t('decided.not_auth') };
-      case 'already': return { tone: 'error', text: t('decided.already') };
-      case 'not_found': return { tone: 'error', text: t('decided.not_found') };
-      case 'club_full': return {
-        tone: 'error',
-        text: club.member_cap
-          ? t('decided.club_full', { cap: club.member_cap })
-          : t('decided.club_full_generic'),
-      };
-      case 'club_expired': return { tone: 'error', text: t('decided.club_expired') };
-      default: return { tone: 'error', text: t('decided.unknown') };
-    }
-  }
-
-  const decidedBanner = getDecidedMessage();
-
-  const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/klubber/bli-med/${club.short_id}`;
-
   return (
-    <AppShell>
-      <TopBar
-        backHref={backHref}
-        backLabel={backHref === '/admin' ? tNav('backToClubhouse') : undefined}
-        kicker={club.name}
-      />
-      <PageHeader title={club.name} />
+    <AppShell flush>
+      <header
+        data-focus-surface="strong"
+        data-testid="club-head"
+        className="bg-surface-strong px-2 pt-2 pb-[18px] leading-[normal] text-on-strong"
+      >
+        <div className="flex items-center justify-between">
+          <SmartLink
+            href={backHref}
+            aria-label={backHref === '/admin' ? tNav('backToClubhouse') : t('backToClubs')}
+            className="flex size-11 items-center justify-center text-on-strong"
+          >
+            <svg
+              aria-hidden
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </SmartLink>
+          <p className="text-xs font-semibold text-on-strong/80">{t('kicker')}</p>
+          <span aria-hidden className="w-11" />
+        </div>
+        <div className="px-3">
+          <h1 className="font-serif text-[30px] font-medium">{club.name}</h1>
+          <div className="mt-2 flex items-center gap-2">
+            <span aria-hidden className="flex">
+              {members.slice(0, INITIALS_SHOWN).map((member, i) => (
+                <span
+                  key={member.userId}
+                  className={`flex size-[26px] items-center justify-center rounded-full bg-on-strong text-[9px] font-semibold text-surface-strong ring-2 ring-surface-strong${
+                    i > 0 ? ' -ml-1.5' : ''
+                  }`}
+                >
+                  {nameInitials(member.name)}
+                </span>
+              ))}
+            </span>
+            <span className="text-[13px] text-on-strong/90" data-testid="club-member-line">
+              {t('memberLine', { count: members.length, role: myRole })}
+            </span>
+          </div>
+        </div>
+      </header>
 
       {deletedMessage && (
-        <div className="mb-6">
+        <div className="mx-4 mt-4">
           <Banner tone="success" testId="club-deleted-banner">
             {deletedMessage}
           </Banner>
         </div>
       )}
 
-      {addedEmail && (
-        <div className="mb-6">
-          <Banner tone="success">{t('addedBanner', { email: addedEmail })}</Banner>
-        </div>
-      )}
-
-      {invitedEmail && (
-        <div className="mb-6">
-          <Banner tone={invitedMailFailed ? 'warning' : 'success'}>
-            {invitedMailFailed
-              ? t('invitedMailFailedBanner', { email: invitedEmail })
-              : t('invitedBanner', { email: invitedEmail })}
-          </Banner>
-        </div>
-      )}
-
-      {cancelledCode && (
-        <div className="mb-6">
-          <Banner tone={cancelledCode === 'ok' ? 'success' : 'error'}>
-            {cancelledCode === 'ok'
-              ? t('cancelledBanner')
-              : t('cancelledErrorBanner')}
-          </Banner>
-        </div>
-      )}
-
-      {errorCode && (
-        <div className="mb-6">
-          <Banner tone="error">{getErrorMessage()}</Banner>
-        </div>
-      )}
-
-      {decidedBanner && (
-        <div className="mb-6">
-          <Banner tone={decidedBanner.tone}>{decidedBanner.text}</Banner>
-        </div>
-      )}
-
-      {roleChanged && (
-        <div className="mb-6">
-          <Banner tone="success">{t('roleChangedBanner')}</Banner>
-        </div>
-      )}
-
       {frozen && (
-        <div className="mb-6">
+        <div className="mx-4 mt-4">
           <Banner tone="warning">{t('frozenBanner')}</Banner>
         </div>
       )}
 
-      {/* Pending join requests — visible only to owner/admin */}
-      {isAdmin && pendingRequests.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
-            {t('requestsHeading', { count: pendingRequests.length })}
-          </h2>
-          <div className="space-y-2">
-            {pendingRequests.map((req) => (
-              <Card key={req.id} className="p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-sans text-[15px] font-medium text-text">
-                      {req.requesterName}
-                    </span>
-                    <span className="font-sans text-xs text-muted">
-                      {formatDate(req.requestedAt, locale, {
-                        timeZone: 'Europe/Oslo',
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                    {req.message && (
-                      <span className="mt-1 break-words font-sans text-sm text-muted">
-                        {req.message}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <form action={decideRequest}>
-                      <input type="hidden" name="requestId" value={req.id} />
-                      <input type="hidden" name="groupId" value={club.id} />
-                      <input type="hidden" name="approve" value="true" />
-                      <SubmitButton
-                        className="min-h-[44px] px-4 text-sm"
-                        pendingLabel={t('approvePending')}
-                      >
-                        {t('approveButton')}
-                      </SubmitButton>
-                    </form>
-                    <form action={decideRequest}>
-                      <input type="hidden" name="requestId" value={req.id} />
-                      <input type="hidden" name="groupId" value={club.id} />
-                      <input type="hidden" name="approve" value="false" />
-                      <SubmitButton
-                        variant="secondary"
-                        className="min-h-[44px] px-4 text-sm"
-                        pendingLabel={t('rejectPending')}
-                      >
-                        {t('rejectButton')}
-                      </SubmitButton>
-                    </form>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Pending email invitations (#644) — visible only to owner/admin */}
-      {isAdmin && pendingInvitations.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
-            {t('invitationsHeading', { count: pendingInvitations.length })}
-          </h2>
-          <div className="space-y-2">
-            {pendingInvitations.map((inv) => (
-              <Card key={inv.id} className="p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-sans text-[15px] font-medium text-text">
-                      {inv.email}
-                    </span>
-                    <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                      {t('invitationPendingBadge')}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0">
-                    <form action={cancelInvitation}>
-                      <input type="hidden" name="invitationId" value={inv.id} />
-                      <input type="hidden" name="groupId" value={club.id} />
-                      <SubmitButton
-                        variant="secondary"
-                        className="min-h-[44px] px-4 text-sm"
-                        pendingLabel={t('cancelInvitePending')}
-                      >
-                        {t('cancelInviteButton')}
-                      </SubmitButton>
-                    </form>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Members list */}
-      <section className="mb-8">
-        <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
-          {club.member_cap != null
-            ? t('membersHeadingWithCap', { count: members.length, cap: club.member_cap })
-            : t('membersHeading', { count: members.length })}
-        </h2>
-        <div className="space-y-2">
-          {members.map((member) => (
-            <Card key={member.userId} className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="truncate font-sans text-[15px] font-medium text-text">
-                  {member.name}
-                  {member.userId === user.id && (
-                    <span className="ml-1.5 text-muted font-normal">{t('youSuffix')}</span>
-                  )}
+      {/* Owner and admin: one door to requests, invitations and the club link. */}
+      {isAdmin && (
+        <div className="mx-4 mt-4">
+          <SmartLink
+            href={`/klubber/${club.id}/administrer`}
+            data-testid="club-manage-door"
+            className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface px-[14px] py-3 leading-[normal] text-text transition-colors hover:bg-surface-2"
+          >
+            <span className="block min-w-0 grow">
+              <span className="block text-[15px] font-semibold">{t('manageDoor')}</span>
+              {pendingRequests.length > 0 && (
+                <span className="mt-0.5 block text-[12px] font-semibold text-warning-text">
+                  {t('manageWaiting', { count: pendingRequests.length })}
                 </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {tRoles(member.role)}
-                  </span>
-                  {myRole === 'owner' && member.userId !== user.id && (
-                    <SmartLink
-                      href={`/klubber/${club.id}/rolle/${member.userId}`}
-                      className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
-                    >
-                      {t('changeRoleLink')}
-                    </SmartLink>
-                  )}
-                  {isAdmin && member.userId !== user.id && (
-                    <SmartLink
-                      href={`/klubber/${club.id}/fjern/${member.userId}`}
-                      className="min-h-[44px] flex items-center font-sans text-xs text-danger hover:underline"
-                    >
-                      {t('removeLink')}
-                    </SmartLink>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+              )}
+            </span>
+            <ChevronRightIcon className="shrink-0 text-muted" />
+          </SmartLink>
         </div>
+      )}
+
+      {/* «Neste runder i klubben» — not in an expired club, which takes no rounds. */}
+      {!frozen && (
+        <Suspense fallback={<ClubRoundsSkeleton />}>
+          <RoundsSection clubId={club.id} userId={user.id} />
+        </Suspense>
+      )}
+
+      {/* The first five members; the whole list is on /medlemmer. */}
+      <section aria-labelledby="club-members-heading" data-testid="club-members">
+        <div className="flex items-baseline justify-between px-5 pt-[18px] pb-2 leading-[normal]">
+          <h2 id="club-members-heading" className="text-xs font-semibold text-muted">
+            {club.member_cap != null
+              ? t('membersSectionWithCap', { count: members.length, cap: club.member_cap })
+              : t('membersSection', { count: members.length })}
+          </h2>
+          <SmartLink
+            href={`/klubber/${club.id}/medlemmer`}
+            aria-label={t('seeAllMembersLabel')}
+            className="flex min-h-11 items-center text-[13px] font-semibold text-primary underline"
+          >
+            {t('seeAllMembers')}
+          </SmartLink>
+        </div>
+        <ul className="mx-4 list-none divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface p-0">
+          {members.slice(0, MEMBERS_SHOWN).map((member) => (
+            <li
+              key={member.userId}
+              className="flex min-h-11 items-center justify-between gap-3 px-[14px] py-2.5 leading-[normal]"
+            >
+              <span className="truncate text-[15px] font-medium text-text">
+                {member.name}
+                {member.userId === user.id && (
+                  <span className="ml-1.5 font-normal text-muted">{t('youSuffix')}</span>
+                )}
+              </span>
+              <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
+                {tRoles(member.role)}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      {/* Klubbens ligaer (#480) — alle medlemmer ser lista; owner/admin oppretter. */}
-      {leaguesRes.error ? (
-        <div className="mb-8">
-          <SectionError testId="club-leagues-error" />
-        </div>
-      ) : (
-        <ClubLeaguesSection
-          leagues={leaguesRes.data ?? []}
-          clubId={club.id}
-          canCreate={isAdmin && !frozen}
-          canManage={isAdmin}
-        />
-      )}
+      <div className="px-5 pt-8">
+        {/* Klubbens ligaer (#480) — alle medlemmer ser lista; owner/admin oppretter. */}
+        {leaguesRes.error ? (
+          <div className="mb-8">
+            <SectionError testId="club-leagues-error" />
+          </div>
+        ) : (
+          <ClubLeaguesSection
+            leagues={leaguesRes.data ?? []}
+            clubId={club.id}
+            canCreate={isAdmin && !frozen}
+            canManage={isAdmin}
+          />
+        )}
 
-      {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter.
-          Kladd-rader har påmeldings-døra (#1491). */}
-      {cupsError ? (
-        <div className="mb-8">
-          <SectionError testId="club-cups-error" />
-        </div>
-      ) : (
-        <ClubCupsSection
-          cups={cupRows}
-          clubId={club.id}
-          canCreate={isAdmin && !frozen}
-          canManage={isAdmin}
-        />
-      )}
+        {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter.
+            Kladd-rader har påmeldings-døra (#1491). */}
+        {cupsError ? (
+          <div className="mb-8">
+            <SectionError testId="club-cups-error" />
+          </div>
+        ) : (
+          <ClubCupsSection
+            cups={cupRows}
+            clubId={club.id}
+            canCreate={isAdmin && !frozen}
+            canManage={isAdmin}
+          />
+        )}
+      </div>
 
       {/* Create a game scoped to this club (any member) — frozen when expired. */}
       {!frozen && (
-        <section className="mb-8">
-          <LinkButton href={`/opprett-spill?klubb=${club.id}`} full>
+        <section className="mx-4 mb-4">
+          <LinkButton
+            href={`/opprett-spill?klubb=${club.id}`}
+            size="large"
+            full
+            className="text-[15px]!"
+          >
             {t('setupRoundButton')}
           </LinkButton>
         </section>
       )}
 
-      {/* Admin controls — hidden when the club is frozen (no new members).
-          #1135: the add-by-email and share-link cards are merged into one
-          invite section, split by a divider, since both do the same job. */}
-      {isAdmin && !frozen && (
-        <section className="mb-8" data-testid="club-invite-section">
-          <h2 className="mb-3 font-sans text-xs font-semibold text-muted">
-            {t('inviteHeading')}
-          </h2>
-          <Card className="space-y-4">
-            {/* Add member by email */}
-            <div className="space-y-3">
-              <h3 className="font-sans text-[13px] font-semibold text-text">
-                {t('addMemberHeading')}
-              </h3>
-              <form action={addMember} className="space-y-4">
-                <input type="hidden" name="groupId" value={club.id} />
-                <Input
-                  id="member-email"
-                  name="email"
-                  type="email"
-                  label={t('emailLabel')}
-                  placeholder={t('emailPlaceholder')}
-                  defaultValue={errorEmail ?? ''}
-                  autoComplete="off"
-                  hint={t('emailHint')}
-                />
-                <SubmitButton className="w-full" pendingLabel={t('addMemberPending')}>
-                  {t('addMemberButton')}
-                </SubmitButton>
-              </form>
-            </div>
-
-            {/* Join link */}
-            <div className="space-y-2 border-t border-border pt-4">
-              <h3 className="font-sans text-[13px] font-semibold text-text">
-                {t('joinLinkHeading')}
-              </h3>
-              <p className="font-sans text-sm text-muted">
-                {t('joinLinkDescription')}
-              </p>
-              <CopyJoinLinkButton joinUrl={joinUrl} />
-            </div>
-          </Card>
-        </section>
-      )}
-
       {/* Leave club */}
       {!iSoleOwner && (
-        <section className="mt-2">
+        <section className="mx-4">
           <SmartLink
             href={`/klubber/${club.id}/forlat`}
             className="block rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-danger min-h-[44px] flex items-center justify-center"
@@ -512,4 +339,22 @@ export default async function KlubbDetailPage({
       )}
     </AppShell>
   );
+}
+
+/**
+ * The club's rounds (#2326), streamed behind their own Suspense. The page has
+ * already confirmed the membership with `getClubDetail`, which is the gate
+ * for the service-role read inside `getClubRounds`.
+ */
+async function RoundsSection({ clubId, userId }: { clubId: string; userId: string }) {
+  const supabase = await getServerClient();
+  const read = await getClubRounds(supabase, clubId, userId, new Date());
+  if (!read.ok) {
+    return (
+      <div className="mx-4 pt-4">
+        <SectionError testId="club-rounds-error" />
+      </div>
+    );
+  }
+  return <ClubRoundsSection entries={read.entries} socialProof={read.socialProof} />;
 }

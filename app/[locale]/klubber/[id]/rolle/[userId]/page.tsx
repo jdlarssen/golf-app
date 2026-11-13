@@ -49,12 +49,12 @@ export default async function EndreMedlemsrollePage({
 
   // Only the owner may change roles.
   if (myRole !== 'owner') {
-    redirect({ href: `/klubber/${id}`, locale });
+    redirect({ href: `/klubber/${id}/medlemmer`, locale });
   }
 
   // Can't change your own role via this route.
   if (targetUserId === user.id) {
-    redirect({ href: `/klubber/${id}`, locale });
+    redirect({ href: `/klubber/${id}/medlemmer`, locale });
   }
 
   const target = members.find((m) => m.userId === targetUserId);
@@ -73,7 +73,7 @@ export default async function EndreMedlemsrollePage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/klubber/${id}`} kicker={club.name} />
+      <TopBar backHref={`/klubber/${id}/medlemmer`} kicker={club.name} />
 
       {errorMessage && (
         <div className="mb-6">
@@ -140,7 +140,7 @@ export default async function EndreMedlemsrollePage({
         </form>
 
         <SmartLink
-          href={`/klubber/${id}`}
+          href={`/klubber/${id}/medlemmer`}
           className="block rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-text min-h-[44px] flex items-center justify-center"
         >
           {t('cancelLink')}

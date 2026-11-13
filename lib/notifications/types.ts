@@ -375,7 +375,7 @@ const cupLineupRevealedSchema = z.object({
 });
 
 // club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
-// klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id] hvor
+// klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id]/administrer hvor
 // forespørselen godkjennes/avslås. (#442)
 const clubJoinRequestSchema = z.object({
   group_id: uuid,

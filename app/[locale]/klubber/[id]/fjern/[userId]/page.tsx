@@ -50,7 +50,7 @@ export default async function FjernMedlemPage({
 
   // Only owner/admin may access this page.
   if (myRole !== 'owner' && myRole !== 'admin') {
-    redirect({ href: `/klubber/${id}`, locale });
+    redirect({ href: `/klubber/${id}/medlemmer`, locale });
   }
 
   // Prevent removing yourself via this route (use /forlat instead).
@@ -70,7 +70,7 @@ export default async function FjernMedlemPage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/klubber/${id}`} kicker={club.name} />
+      <TopBar backHref={`/klubber/${id}/medlemmer`} kicker={club.name} />
 
       {errorMessage && (
         <div className="mb-6">
@@ -112,7 +112,7 @@ export default async function FjernMedlemPage({
             </SubmitButton>
           </form>
           <SmartLink
-            href={`/klubber/${id}`}
+            href={`/klubber/${id}/medlemmer`}
             className="rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-text min-h-[44px] flex items-center justify-center"
           >
             {t('cancelLink')}
