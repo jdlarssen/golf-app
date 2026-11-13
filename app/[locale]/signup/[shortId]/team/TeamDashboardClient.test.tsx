@@ -102,6 +102,10 @@ describe('TeamDashboardClient — the captain (#2840 del 5)', () => {
     fireEvent.click(openMenu('req-kari').getByText('Send på nytt'));
     await vi.waitFor(() => expect(resendTeamInviteMock).toHaveBeenCalledWith('req-kari', SHORT_ID));
     expect(screen.queryByTestId('team-confirm-button')).toBeNull();
+    // Focus goes back to Kari's «•••», not to the page body.
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(within(screen.getByTestId('team-row-req-kari')).getByTestId('team-row-menu')),
+    );
   });
 
   it('#2840: with signups closed the captain sees the team but cannot change it', () => {
