@@ -24,10 +24,22 @@ const LOGOS_PER_ROW = 2;
 /** The names line (11 px Inter, normal line height ≈ 13.3 px) and its gap under the logos (`space-y-1.5`). */
 const NAME_LINE_PX = 14;
 const NAME_GAP_PX = 6;
-/** «Premier sponset av …» at 320 px: about 286 px of text width, ~6.5 px per character, counted high. */
+/**
+ * «Premier sponset av …» at 320 px: about 286 px of text width, ~6.5 px per
+ * character, counted high. A capital counts 1.2 (Inter's capitals are wider:
+ * three all-caps names needed a third line, round 2 of #2330).
+ */
 const NAME_LINE_CHARS = 44;
 const NAME_PREFIX_CHARS = 20;
 const NAME_SEPARATOR_CHARS = 4;
+const CAPITAL_CHARS = 1.2;
+
+/** A name's width in average characters. */
+function nameWidth(name: string): number {
+  let width = 0;
+  for (const ch of name) width += ch !== ch.toLowerCase() ? CAPITAL_CHARS : 1;
+  return width;
+}
 
 /**
  * The frame the compact card needs: the card with five rows, «Vis alle» and
@@ -44,7 +56,7 @@ export function compactEmbedHeight(sponsors: { logos: number; names: readonly st
   const logoPx = rows === 0 ? 0 : rows * LOGO_ROW_PX + (rows - 1) * LOGO_GAP_PX;
   const nameChars = names.length === 0
     ? 0
-    : NAME_PREFIX_CHARS + names.reduce((sum, n) => sum + n.length, 0) + (names.length - 1) * NAME_SEPARATOR_CHARS;
+    : NAME_PREFIX_CHARS + names.reduce((sum, n) => sum + nameWidth(n), 0) + (names.length - 1) * NAME_SEPARATOR_CHARS;
   const nameLines = Math.ceil(nameChars / NAME_LINE_CHARS);
   const namePx = nameLines === 0 ? 0 : (rows === 0 ? 0 : NAME_GAP_PX) + nameLines * NAME_LINE_PX;
   return CARD_PX + STRIP_PAD_PX + logoPx + namePx;
@@ -61,9 +73,20 @@ function escapeAttr(value: string): string {
 
 export function buildEmbedSnippet(
   url: string,
-  opts: { height: number; title: string },
+  opts: {
+    height: number;
+    title: string;
+    /**
+     * #2330: the compact card's frame is transparent around the card. The
+     * frame's own page is locked to light (globals.css), and a club page that
+     * declares a dark scheme would otherwise get an opaque backdrop: the
+     * scheme on the iframe element has to match.
+     */
+    lightScheme?: boolean;
+  },
 ): string {
   const src = escapeAttr(url);
   const title = escapeAttr(opts.title);
-  return `<iframe src="${src}" title="${title}" style="width:100%;max-width:480px;height:${opts.height}px;border:0;border-radius:12px;" loading="lazy"></iframe>`;
+  const scheme = opts.lightScheme ? 'color-scheme:light;' : '';
+  return `<iframe src="${src}" title="${title}" style="width:100%;max-width:480px;height:${opts.height}px;border:0;border-radius:12px;${scheme}" loading="lazy"></iframe>`;
 }

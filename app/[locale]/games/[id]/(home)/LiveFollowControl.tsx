@@ -160,6 +160,7 @@ export function LiveFollowControl({
           onClick={async () => {
             const snippet = buildEmbedSnippet(embedUrl(token), {
               height: embed.height,
+              lightScheme: embed.compact,
               title: `Tørny – ${gameName}`,
             });
             try {
