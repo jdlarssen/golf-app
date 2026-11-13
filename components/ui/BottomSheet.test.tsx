@@ -5,7 +5,9 @@ import { BottomSheet } from './BottomSheet';
 // Type B (docs/test-discipline.md): what the sheet renders and what closes it.
 // Focus return is covered with the rows that open it (GameWizard.test.tsx, #2457).
 
-function renderSheet(props: { open?: boolean; onClose?: () => void; onSubmit?: () => void } = {}) {
+function renderSheet(
+  props: { open?: boolean; onClose?: () => void; onSubmit?: () => void; doneLabel?: string | null } = {},
+) {
   const onClose = props.onClose ?? vi.fn();
   const onSubmit = props.onSubmit ?? vi.fn();
   render(
@@ -19,7 +21,7 @@ function renderSheet(props: { open?: boolean; onClose?: () => void; onSubmit?: (
         open={props.open ?? true}
         title="Handicap"
         onClose={onClose}
-        doneLabel="Ferdig"
+        doneLabel={props.doneLabel === null ? undefined : (props.doneLabel ?? 'Ferdig')}
         closeLabel="Lukk"
       >
         <p>Innhold</p>
@@ -70,5 +72,11 @@ describe('BottomSheet', () => {
     fireEvent.click(done);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('without a done label: only the ✕, no button at the bottom (#2840)', () => {
+    renderSheet({ doneLabel: null });
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Lukk' })).toBeInTheDocument();
   });
 });

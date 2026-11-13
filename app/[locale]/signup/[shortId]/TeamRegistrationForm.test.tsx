@@ -103,6 +103,13 @@ describe('TeamRegistrationForm (#2840 del 5)', () => {
     const sheet = within(screen.getByRole('dialog', { name: 'Legg til en venn' }));
     expect(sheet.getByTestId('copy-friend-link')).toHaveTextContent('Kopier lenken din');
     expect(sheet.getByRole('link', { name: 'Gå til Venner' })).toHaveAttribute('href', '/profile/venner');
+    // v3.1: «Kopier lenken din» and «Gå til Venner» are the only buttons; ✕ closes it.
+    expect(sheet.getAllByRole('button').map((b) => b.getAttribute('data-testid') ?? b.getAttribute('aria-label'))).toEqual([
+      'Lukk',
+      'copy-friend-link',
+    ]);
+    fireEvent.click(sheet.getByRole('button', { name: 'Lukk' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('without friends: the note and a whole «Legg til en venn»', () => {
